@@ -17,7 +17,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Share } from "react-native";
 import { useOrg } from "@/providers/org";
-import { Button, Icon, Locked, Text, useToast } from "@/ui";
+import { Button, Icon, Locked, RoleMark, Text, useToast } from "@/ui";
 import { useColors } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { type ActionItem, ActionList, copyText, successHaptic } from "../shared/parts";
@@ -33,6 +33,7 @@ function useRoleRows(roles: readonly OrgRole[]) {
   const everyone = everyoneOf(roles);
   return givableOf(roles).map((r) => ({
     key: r.id,
+    leading: <RoleMark color={r.color} icon={r.icon} size={24} />,
     label: r.name,
     hint: roleSummary(t, i18n.language, r, everyone),
   }));
