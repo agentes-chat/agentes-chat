@@ -39,7 +39,7 @@ import {
 import type { DataListener, DataSocket, DataSockets } from "../../runner/streams";
 import { IosHelper, WDA_VERSION } from "../../runner/wda";
 import { pairingQr, pairOutcome, parseMdnsServices, serialOfMdnsName } from "../../runner/wifi-pair";
-import { fakeUsbmuxd, freePort } from "./fake-usbmuxd";
+import { fakeUsbmuxd } from "./fake-usbmuxd";
 import { errorCode, removeDirs, tempDir } from "./helpers";
 
 // Each fake Xcode tool is a process of its own: an iPhone helper's build, check and start take seconds on a busy machine.
@@ -843,9 +843,9 @@ test("iOS simulator: install with its bundle id, launch, screenshot, record, flo
 });
 
 test("a real iPhone: install and launch through devicectl, the rest through its test helper once it's set up", async () => {
-  const [wda, mjpeg] = [await freePort(), await freePort()];
   const muxDir = tempDir("mux-");
   dirs.push(muxDir);
+  const [wda, mjpeg] = [path.join(muxDir, "wda.sock"), path.join(muxDir, "mjpeg.sock")];
   const mux = await fakeUsbmuxd(muxDir, [{ id: 5, serial: IPHONE }], { 8100: wda, 9100: mjpeg });
   let helper: IosHelper | null = null;
   const r = rig(
@@ -867,7 +867,7 @@ test("a real iPhone: install and launch through devicectl, the rest through its 
         );
         helper = new IosHelper({
           home: root,
-          env: { ...env, FAKE_WDA_PORT: String(wda), FAKE_MJPEG_PORT: String(mjpeg) },
+          env: { ...env, FAKE_WDA_SOCKET: wda, FAKE_MJPEG_SOCKET: mjpeg },
           log: () => {},
           now,
           usbmuxSocket: mux.file,
