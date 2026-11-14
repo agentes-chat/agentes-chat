@@ -140,6 +140,29 @@ test("PUT …/permissions/{row}: everyone and the roles in one call, for who man
   expect((await workspace(ana)).permissions).not.toContain("control_computers");
 });
 
+test("PUT …/permissions/{row} as someone who manages roles: never their own role or one above, never a key they lack", async () => {
+  const { owner, ana, anaId, api, roles } = await start();
+  const create = async (json: unknown) => ((await (await api(owner, "/roles", { json })).json()) as { id: string }).id;
+  const leads = await create({ name: "Leads", permissions: ["manage_roles", "create_channels"] });
+  const devs = await create({ name: "Devs" });
+  await api(owner, `/members/${anaId}/roles`, { method: "PUT", json: { roleIds: [leads] } });
+  const set = (json: unknown, row = "create_channels") => api(ana, `/permissions/${row}`, { method: "PUT", json });
+  // Her own role is above her: listing it at another level is refused, and nothing changes.
+  const own = await set({ everyone: 1, roles: [{ id: leads, level: 0 }] });
+  expect(own.status).toBe(403);
+  expect(await own.json()).toMatchObject({ error: { code: "role.above_you" } });
+  // A key she doesn't hold, given or taken away from everyone.
+  const lacks = await set({ everyone: 0, roles: [{ id: devs, level: 1 }] }, "view_usage");
+  expect(lacks.status).toBe(403);
+  expect(await lacks.json()).toMatchObject({ error: { code: "role.grant_forbidden" } });
+  // What she holds, on the roles below her: Devs gets it, everyone loses it, her own role keeps it.
+  expect((await set({ everyone: 0, roles: [{ id: devs, level: 1 }] })).status).toBe(200);
+  const now = await roles(owner);
+  expect(now.find((r) => r.id === devs)?.permissions).toEqual(["create_channels"]);
+  expect(now.find((r) => r.id === leads)?.permissions.sort()).toEqual(["create_channels", "manage_roles"]);
+  expect(now.find((r) => r.kind === "everyone")?.permissions).not.toContain("create_channels");
+});
+
 test("GET …/roles carries each role's reach; POST …/roles copies one with `copyFrom`", async () => {
   const { owner, ana, api, roles } = await start();
   const { id } = (await (await api(owner, "/roles", { json: { name: "Support", color: "teal" } })).json()) as {
