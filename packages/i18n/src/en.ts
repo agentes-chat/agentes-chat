@@ -7183,6 +7183,8 @@ export const en = {
     budget: "Monthly budget (US$)",
     budgetHelp: "At the limit, {{name}} stops and says so.",
     budgetInvalid: "Use a value greater than zero.",
+    budgetCapped: "Uses the workspace default. Only an admin can raise it.",
+    budgetCappedAmount: "Uses the workspace default ({{amount}}). Only an admin can raise it.",
     warnsOwner: "We alert {{name}} at 80%.",
     warnsAdmins: "We alert the admins at 80%.",
     upTo: "up to {{amount}}/month",

@@ -7241,6 +7241,8 @@
     "budget": "Miesięczny budżet (USD)",
     "budgetHelp": "Po osiągnięciu limitu {{name}} zatrzymuje się i o tym informuje.",
     "budgetInvalid": "Użyj wartości większej od zera.",
+    "budgetCapped": "Używa domyślnego budżetu przestrzeni roboczej. Tylko administrator może go podnieść.",
+    "budgetCappedAmount": "Używa domyślnego budżetu przestrzeni roboczej ({{amount}}). Tylko administrator może go podnieść.",
     "warnsOwner": "Przy 80% powiadomimy: {{name}}.",
     "warnsAdmins": "Przy 80% powiadomimy administratorów.",
     "upTo": "do {{amount}}/mies.",

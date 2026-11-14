@@ -7173,6 +7173,8 @@ export const ptBR = {
     budgetHelp: "Ao atingir o limite, o {{name}} para e avisa.",
     budgetHelp_female: "Ao atingir o limite, a {{name}} para e avisa.",
     budgetInvalid: "Use um valor maior que zero.",
+    budgetCapped: "Usa o padrão do workspace. Só um admin aumenta.",
+    budgetCappedAmount: "Usa o padrão do workspace ({{amount}}). Só um admin aumenta.",
     warnsOwner: "Avisamos {{name}} aos 80%.",
     warnsAdmins: "Avisamos os admins aos 80%.",
     upTo: "até {{amount}}/mês",

@@ -7016,6 +7016,8 @@
     "budget": "Budget mensuel (US$)",
     "budgetHelp": "À la limite, {{name}} s'arrête et le signale.",
     "budgetInvalid": "Utilisez une valeur supérieure à zéro.",
+    "budgetCapped": "Utilise la valeur par défaut de l'espace de travail. Seul un admin peut l'augmenter.",
+    "budgetCappedAmount": "Utilise la valeur par défaut de l'espace de travail ({{amount}}). Seul un admin peut l'augmenter.",
     "warnsOwner": "Nous prévenons {{name}} à 80 %.",
     "warnsAdmins": "Nous prévenons les admins à 80 %.",
     "upTo": "jusqu'à {{amount}}/mois",

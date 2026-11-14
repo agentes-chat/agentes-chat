@@ -6964,6 +6964,8 @@
     "budget": "Presupuesto mensual (US$)",
     "budgetHelp": "Al llegar al límite, {{name}} se detiene y lo avisa.",
     "budgetInvalid": "Usa un valor mayor que cero.",
+    "budgetCapped": "Usa el predeterminado del espacio de trabajo. Solo un admin puede subirlo.",
+    "budgetCappedAmount": "Usa el predeterminado del espacio de trabajo ({{amount}}). Solo un admin puede subirlo.",
     "warnsOwner": "Le avisamos a {{name}} al 80%.",
     "warnsAdmins": "Les avisamos a los admins al 80%.",
     "upTo": "hasta {{amount}}/mes",

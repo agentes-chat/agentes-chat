@@ -6817,6 +6817,8 @@
     "budgetHelp": "Bij de limiet stopt {{name}} en meldt dat.",
     "budgetHelp_female": "Bij de limiet stopt {{name}} en meldt dat.",
     "budgetInvalid": "Gebruik een waarde groter dan nul.",
+    "budgetCapped": "Gebruikt de standaard van de werkruimte. Alleen een beheerder kan die verhogen.",
+    "budgetCappedAmount": "Gebruikt de standaard van de werkruimte ({{amount}}). Alleen een beheerder kan die verhogen.",
     "warnsOwner": "We waarschuwen {{name}} bij 80%.",
     "warnsAdmins": "We waarschuwen de beheerders bij 80%.",
     "upTo": "tot {{amount}}/maand",

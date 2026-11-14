@@ -6528,6 +6528,8 @@
     "budget": "月間予算（US$）",
     "budgetHelp": "上限に達すると、{{name}}は停止してそれを伝えます。",
     "budgetInvalid": "0より大きい値を使ってください。",
+    "budgetCapped": "ワークスペースのデフォルトを使います。上げられるのは管理者だけです。",
+    "budgetCappedAmount": "ワークスペースのデフォルト（{{amount}}）を使います。上げられるのは管理者だけです。",
     "warnsOwner": "80%に達したら{{name}}に通知します。",
     "warnsAdmins": "80%に達したら管理者に通知します。",
     "upTo": "月{{amount}}まで",
