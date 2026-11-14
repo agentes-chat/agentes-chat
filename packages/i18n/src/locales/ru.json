@@ -2859,6 +2859,9 @@
       "update_role": "Изменить роль <b>{{name}}</b>",
       "delete_role": "Удалить роль <b>{{name}}</b> навсегда",
       "move_role": "Переместить роль <b>{{name}}</b>",
+      "set_permission_holders": "Изменить, кто может <b>{{short}}</b>",
+      "set_permission_holders_computers": "Изменить, кто пользуется <b>компьютерами агентов</b>",
+      "holdersOwnersOnly": "Только владельцы",
       "set_member_roles": "Изменить роли <b>{{name}}</b>: {{change}}",
       "set_channel_permissions": "Изменить, что {{who}} может делать в <b>#{{channel}}</b>",
       "set_my_status": "Установить ваш статус: <b>{{what}}</b>",
@@ -3706,6 +3709,8 @@
       "changed_update_role": "Изменена роль <b>{{name}}</b>",
       "changed_delete_role": "Удалена роль <b>{{name}}</b>",
       "changed_move_role": "Перемещена роль <b>{{name}}</b>",
+      "changed_set_permission_holders": "Изменено, кто может <b>{{short}}</b>",
+      "changed_set_permission_holders_computers": "Изменено, кто пользуется <b>компьютерами агентов</b>",
       "changed_set_member_roles": "Изменены роли <b>{{name}}</b>: {{change}}",
       "changed_set_channel_permissions": "Изменено, что {{who}} может делать в <b>#{{channel}}</b>",
       "changed_set_my_status": "Установлен ваш статус: <b>{{what}}</b>",
@@ -4729,6 +4734,10 @@
   "approval": {
     "expiredChip": "Истёк · {{when}}",
     "canceledChip": "Отменён · {{when}}",
+    "line": {
+      "after": "выполнится после «{{title}}»",
+      "notRun": "не выполнено: предыдущий запрос не одобрен"
+    },
     "waitingFor": "Ждёт {{name}}",
     "waitingAdmin": "Ждёт администратора",
     "reasonLine": "Причина: {{reason}}",
@@ -5378,8 +5387,15 @@
       "canceled": "Отменено",
       "failed": "Сбой",
       "running": "Выполняется",
-      "scheduled": "Запланировано"
+      "scheduled": "Запланировано",
+      "queued": "В очереди",
+      "notRun": "Не выполнено"
     },
+    "queuedLine": "Одобрено. Выполнится после «{{title}}», запрошенного раньше.",
+    "notRunRefused": "«{{title}}», запрошенное раньше, отклонили после того, как этот запрос был одобрен. Поэтому он не выполнен.",
+    "notRunExpired": "Срок «{{title}}», запрошенного раньше, истёк без решения после того, как этот запрос был одобрен. Поэтому он не выполнен.",
+    "notRunEarlier": "Предыдущий запрос отклонили или его срок истёк после того, как этот был одобрен. Поэтому он не выполнен.",
+    "position": "{{n}} из {{total}}",
     "expiredLine": "За 24 ч никто не принял решение, поэтому ничего не сделано.",
     "canceledLine": "Запуск остановился до решения.",
     "supersededLine": "Агент запросил снова, с более новой версией. Эта не была выполнена.",
@@ -5446,8 +5462,10 @@
       "email": "Письмо",
       "text": "Что будет опубликовано",
       "textDone": "Что опубликовано",
+      "textNot": "Что было бы опубликовано",
       "values": "Что будет сделано",
       "valuesDone": "Что было сделано",
+      "valuesNot": "Что было бы сделано",
       "trail": "Как до этого дошло",
       "showSteps": "Посмотреть каждый шаг",
       "hideSteps": "Скрыть шаги",
@@ -16035,6 +16053,10 @@
         "left": "Выход из рабочего пространства",
         "role_changed": "Изменена роль участника",
         "password_link": "Создал(а) ссылку для нового пароля участника"
+      },
+      "role": {
+        "permission_set": "Изменено, кто может {{short}}",
+        "permission_set_computers": "Изменено, кто пользуется компьютерами агентов"
       },
       "apps": {
         "connected": "Подключено {{app}}",

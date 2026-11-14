@@ -2580,6 +2580,9 @@
       "update_role": "ロール<b>{{name}}</b>を変更",
       "delete_role": "ロール<b>{{name}}</b>を完全に削除",
       "move_role": "ロール<b>{{name}}</b>の順番を変える",
+      "set_permission_holders": "「<b>{{short}}</b>」ができる人を変更",
+      "set_permission_holders_computers": "<b>エージェントのコンピューター</b>を使える人を変更",
+      "holdersOwnersOnly": "オーナーのみ",
       "set_member_roles": "<b>{{name}}</b>のロールを変更: {{change}}",
       "set_channel_permissions": "<b>#{{channel}}</b>で{{who}}ができることを変更",
       "set_my_status": "ステータスを設定: <b>{{what}}</b>",
@@ -3352,6 +3355,8 @@
       "changed_update_role": "ロール<b>{{name}}</b>を変更しました",
       "changed_delete_role": "ロール<b>{{name}}</b>を削除しました",
       "changed_move_role": "ロール<b>{{name}}</b>の順番を変えました",
+      "changed_set_permission_holders": "「<b>{{short}}</b>」ができる人を変更しました",
+      "changed_set_permission_holders_computers": "<b>エージェントのコンピューター</b>を使える人を変更しました",
       "changed_set_member_roles": "<b>{{name}}</b>のロールを変更しました: {{change}}",
       "changed_set_channel_permissions": "<b>#{{channel}}</b>で{{who}}ができることを変更しました",
       "changed_set_my_status": "ステータスを設定しました: <b>{{what}}</b>",
@@ -4298,6 +4303,10 @@
   "approval": {
     "expiredChip": "期限切れ · {{when}}",
     "canceledChip": "キャンセル済み · {{when}}",
+    "line": {
+      "after": "「{{title}}」の後に実行",
+      "notRun": "未実行：前の依頼が承認されませんでした"
+    },
     "waitingFor": "{{name}}の対応待ち",
     "waitingAdmin": "管理者の対応待ち",
     "reasonLine": "理由: {{reason}}",
@@ -4846,8 +4855,15 @@
       "canceled": "キャンセル済み",
       "failed": "失敗",
       "running": "実行中",
-      "scheduled": "予定済み"
+      "scheduled": "予定済み",
+      "queued": "順番待ち",
+      "notRun": "未実行"
     },
+    "queuedLine": "承認済み。先に依頼された「{{title}}」の後に実行されます。",
+    "notRunRefused": "先に依頼された「{{title}}」が、これを承認した後に却下されたため、これは実行されませんでした。",
+    "notRunExpired": "先に依頼された「{{title}}」が、これを承認した後に判断のないまま期限切れになったため、これは実行されませんでした。",
+    "notRunEarlier": "これを承認した後に前の依頼が却下されたか期限切れになったため、これは実行されませんでした。",
+    "position": "{{n}} / {{total}}",
     "expiredLine": "24時間以内に誰も判断しなかったため、何も行われていません。",
     "canceledLine": "判断の前に実行が停止しました。",
     "supersededLine": "エージェントが新しい版で依頼し直したため、これは実行されませんでした。",
@@ -4914,8 +4930,10 @@
       "email": "メール",
       "text": "公開される内容",
       "textDone": "公開した内容",
+      "textNot": "公開されるはずだった内容",
       "values": "実行する内容",
       "valuesDone": "実行した内容",
+      "valuesNot": "実行するはずだった内容",
       "trail": "ここまでの流れ",
       "showSteps": "各ステップを見る",
       "hideSteps": "ステップを隠す",
@@ -14536,6 +14554,10 @@
         "left": "ワークスペースから退出",
         "role_changed": "メンバーのロールを変更",
         "password_link": "メンバーの新しいパスワードのリンクを作成しました"
+      },
+      "role": {
+        "permission_set": "「{{short}}」ができる人を変更",
+        "permission_set_computers": "エージェントのコンピューターを使える人を変更"
       },
       "apps": {
         "connected": "{{app}}を接続",

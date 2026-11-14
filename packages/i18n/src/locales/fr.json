@@ -2770,6 +2770,9 @@
       "update_role": "Modifier le rôle <b>{{name}}</b>",
       "delete_role": "Supprimer définitivement le rôle <b>{{name}}</b>",
       "move_role": "Déplacer le rôle <b>{{name}}</b>",
+      "set_permission_holders": "Modifier qui peut <b>{{short}}</b>",
+      "set_permission_holders_computers": "Modifier qui utilise <b>les ordinateurs des agents</b>",
+      "holdersOwnersOnly": "Seulement les propriétaires",
       "set_member_roles": "Modifier les rôles de <b>{{name}}</b> : {{change}}",
       "set_channel_permissions": "Modifier ce que {{who}} peut faire dans <b>#{{channel}}</b>",
       "set_my_status": "Mettre votre statut : <b>{{what}}</b>",
@@ -3594,6 +3597,8 @@
       "changed_update_role": "J'ai modifié le rôle <b>{{name}}</b>",
       "changed_delete_role": "J'ai supprimé le rôle <b>{{name}}</b>",
       "changed_move_role": "J'ai déplacé le rôle <b>{{name}}</b>",
+      "changed_set_permission_holders": "J'ai modifié qui peut <b>{{short}}</b>",
+      "changed_set_permission_holders_computers": "J'ai modifié qui utilise <b>les ordinateurs des agents</b>",
       "changed_set_member_roles": "J'ai modifié les rôles de <b>{{name}}</b> : {{change}}",
       "changed_set_channel_permissions": "J'ai modifié ce que {{who}} peut faire dans <b>#{{channel}}</b>",
       "changed_set_my_status": "J'ai mis votre statut : <b>{{what}}</b>",
@@ -4574,6 +4579,10 @@
   "approval": {
     "expiredChip": "Expirée · {{when}}",
     "canceledChip": "Annulée · {{when}}",
+    "line": {
+      "after": "s'exécute après « {{title}} »",
+      "notRun": "pas exécutée : la demande précédente n'a pas été approuvée"
+    },
     "waitingFor": "En attente de {{name}}",
     "waitingAdmin": "En attente d'un admin",
     "reasonLine": "Raison : {{reason}}",
@@ -5193,8 +5202,15 @@
       "canceled": "Annulée",
       "failed": "Échec",
       "running": "En cours",
-      "scheduled": "Prévue"
+      "scheduled": "Prévue",
+      "queued": "En file d'attente",
+      "notRun": "Pas exécutée"
     },
+    "queuedLine": "Approuvée. S'exécute après « {{title}} », demandée avant.",
+    "notRunRefused": "« {{title}} », demandée avant, a été refusée après l'approbation de celle-ci. Celle-ci n'a donc pas été exécutée.",
+    "notRunExpired": "« {{title}} », demandée avant, a expiré sans décision après l'approbation de celle-ci. Celle-ci n'a donc pas été exécutée.",
+    "notRunEarlier": "Une demande précédente a été refusée ou a expiré après l'approbation de celle-ci. Celle-ci n'a donc pas été exécutée.",
+    "position": "{{n}} sur {{total}}",
     "expiredLine": "Personne n'a décidé dans les 24 h, donc rien n'a été fait.",
     "canceledLine": "L'exécution s'est arrêtée avant une décision.",
     "supersededLine": "L'agent a redemandé avec une version plus récente. Celle-ci n'a pas été faite.",
@@ -5263,8 +5279,10 @@
       "email": "L'e-mail",
       "text": "Ce qui sera publié",
       "textDone": "Ce qui a été publié",
+      "textNot": "Ce qui aurait été publié",
       "values": "Ce qui sera fait",
       "valuesDone": "Ce qui a été fait",
+      "valuesNot": "Ce qui aurait été fait",
       "trail": "Comment on en est arrivé là",
       "showSteps": "Voir chaque étape",
       "hideSteps": "Masquer les étapes",
@@ -15577,6 +15595,10 @@
         "left": "A quitté l'espace de travail",
         "role_changed": "A changé le rôle d'un membre",
         "password_link": "A créé un lien de nouveau mot de passe pour un membre"
+      },
+      "role": {
+        "permission_set": "A modifié qui peut {{short}}",
+        "permission_set_computers": "A modifié qui utilise les ordinateurs des agents"
       },
       "apps": {
         "connected": "A connecté {{app}}",
