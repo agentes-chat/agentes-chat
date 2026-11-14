@@ -362,7 +362,7 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
       let waitsForRoom = false;
       // Nobody asked for it directly: the note meets the brakes on unrequested work before it wakes anyone (ADR 0131).
       const braked = (await runAuthorityById(db, ctx.orgId, ctx.runId)).kind !== "person";
-      const headsUp = input.heads_up === true && Boolean(here && isAgentOnlyDm(here));
+      const headsUp = input.heads_up === true && Boolean(here && isAgentOnlyDm(here) && !isRoutineRoomKey(here.dmKey));
       const sent = await sendNote(db, {
         orgId: ctx.orgId,
         agentId: ctx.agentId,
@@ -1078,8 +1078,9 @@ async function closeConsultation(
  * What came of a question or note asked from an agents' DM, for the run there that asked (it answers another agent,
  * ADR 0095), in the close's transaction with that run locked. It joins the answer that run owes for what it read
  * (`[@x, to whom @a handed part of it]: …`), which goes back with its reply once nothing it handed on is out
- * (`settleOwed`); a heads-up joins none. A run still at work also reads it at its next step. Nothing starts a run in an agents' DM to read a
- * result (`handOn` leaves one unread there): no person would read what it says. Returns the notice to publish.
+ * (`settleOwed`); a heads-up joins none. A run still at work also reads it at its next step. Nothing starts a run in
+ * an agents' DM to read a result (`handOn` leaves one unread there): no person would read what it says. Returns the
+ * notice to publish.
  */
 async function handBack(tx: Executor, asker: AgentRun, closed: AgentConsultationRow, handle: string, told: boolean) {
   if (told) return null;
