@@ -216,14 +216,17 @@ export interface SkillFileInput {
 
 /** A skill folder's files → the SKILL.md (found at the root, or under one top folder) and the rest. */
 export function splitSkillFolder(files: SkillFileInput[]) {
-  const normalized = files.map((f) => ({ ...f, path: safePath(f.path) }));
+  // Dropped before the top folder is found: a folder zipped by the Mac's Finder also holds `__MACOSX/<folder>/._*`.
+  const normalized = files
+    .map((f) => ({ ...f, path: safePath(f.path) }))
+    .filter((f) => !f.path.split("/").some((p) => (p.startsWith(".") && p !== ".") || p === "__MACOSX"));
   const firstSegments = new Set(normalized.map((f) => f.path.split("/")[0]));
   let root = "";
   if (!normalized.some((f) => f.path.toLowerCase() === "skill.md") && firstSegments.size === 1) {
     root = `${[...firstSegments][0]}/`;
   }
   const inRoot = normalized
-    .filter((f) => f.path.startsWith(root) && !f.path.split("/").some((p) => p.startsWith(".") && p !== "."))
+    .filter((f) => f.path.startsWith(root))
     .map((f) => ({ ...f, path: f.path.slice(root.length) }));
   const main = inRoot.find((f) => f.path.toLowerCase() === "skill.md");
   if (!main) throw new ValidationError("No SKILL.md at the top of the skill folder", "skill.no_skill_md_zip");

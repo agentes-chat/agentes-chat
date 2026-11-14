@@ -258,6 +258,25 @@ describe("import", () => {
     expect(again.version).toBe(2);
   });
 
+  test("a folder zipped by the Mac's Finder installs: its __MACOSX copies and .DS_Store are left out", async () => {
+    f = await setup();
+    const skill = await importSkillZip(
+      skillDeps(),
+      f.owner.id,
+      f.org.id,
+      zip({
+        "relatorio-semanal/SKILL.md": SKILL_MD,
+        "relatorio-semanal/.DS_Store": "\0\0\0\x01Bud1",
+        "relatorio-semanal/templates/relatorio.md": "# Semana {{n}}",
+        "__MACOSX/relatorio-semanal/._SKILL.md": "\0\x05\x16\x07",
+        "__MACOSX/relatorio-semanal/templates/._relatorio.md": "\0\x05\x16\x07",
+        ".DS_Store": "\0\0\0\x01Bud1",
+      }),
+    );
+    expect(skill).toMatchObject({ name: "relatorio-semanal", source: "upload" });
+    expect(skill.files.map((x) => x.path)).toEqual(["templates/relatorio.md"]);
+  });
+
   test("two files that collapse to one path are refused (no shared blob key, no undercounted size)", async () => {
     f = await setup();
     // `a.md` and `./a.md` both normalize to `a.md`: without the guard the big one overwrites the small one
