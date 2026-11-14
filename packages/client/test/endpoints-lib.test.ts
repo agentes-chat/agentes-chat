@@ -28,15 +28,16 @@ describe("the endpoint form", () => {
   });
 
   test("a save's tests go into the key's models, as the server keeps them", () => {
-    const key = {
+    const key: Pick<Credential, "id" | "endpoint"> = {
       id: "k",
-      endpoint: { style: "openai" as const, baseURL: "https://api.example.com/v1", models: [{ id: "a" }, { id: "b" }] },
+      endpoint: { style: "openai", baseURL: "https://api.example.com/v1", models: [{ id: "a" }, { id: "b" }] },
     };
+    const bare: Pick<Credential, "id" | "endpoint"> = { id: "k" };
     expect(withChecks(key, [{ model: "b", check: "ok" }]).endpoint?.models).toEqual([
       { id: "a" },
       { id: "b", check: "ok" },
     ]);
-    expect(withChecks({ id: "k" }, [{ model: "b", check: "ok" }])).toEqual({ id: "k" });
+    expect(withChecks(bare, [{ model: "b", check: "ok" }])).toEqual({ id: "k" });
   });
 
   test("a model taken off leaves the others as they were", () => {
