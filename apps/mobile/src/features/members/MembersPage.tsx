@@ -156,7 +156,7 @@ function Members() {
  * "Remover do workspace" (or "Sair do workspace"): what goes with the person, as the server reads it, in the system's
  * confirmation; then the removal, and the person's own leaving goes back to the start.
  */
-function useRemoveFlow() {
+export function useRemoveFlow() {
   const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
   const api = useApi();
@@ -169,7 +169,7 @@ function useRemoveFlow() {
     errorHaptic();
     toast({ title: knownErrorText(t, e, i18n.language) ?? t("mobile.app.failed"), icon: "x" });
   };
-  return async (m: Person) => {
+  return async (m: Pick<Person, "userId" | "name">) => {
     const mine = m.userId === meId;
     let lines: string[];
     let preview: RemovalPreview;

@@ -1,9 +1,24 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { eq, schema, tracingLogger } from "@agenteschat/db";
-import { DEFAULT_AGENT_BUDGET_NANO_USD, grantScopes, monthStartUtc, type ToolSource } from "@agenteschat/engine";
+import {
+  addRunStep,
+  DEFAULT_AGENT_BUDGET_NANO_USD,
+  grantScopes,
+  monthStartUtc,
+  type ToolSource,
+} from "@agenteschat/engine";
 import { createLogger } from "../src/logger";
 import { createOperatorApp } from "../src/operator/app";
-import { type Browser, browser, createTestServer, joinByInvitation, seedOrg, signUp, type TestServer } from "./harness";
+import {
+  type Browser,
+  browser,
+  createTestServer,
+  joinByInvitation,
+  planOfLast,
+  seedOrg,
+  signUp,
+  type TestServer,
+} from "./harness";
 
 /**
  * ADR 0056, runs and conversations: a workspace's runs, one run's trace, a conversation's timeline and why a message
@@ -43,9 +58,29 @@ const tools: ToolSource = {
       describe: () => ({ title: "canary-approval-title" }),
       execute: async () => ({ content: "canary-shipped" }),
     },
+    {
+      name: "acme_get_issue",
+      description: "Reads an issue",
+      scope: "acme:read",
+      connectionId: CONNECTION,
+      connectorLabel: "Acme tracker",
+      service: "github",
+      inputSchema: { type: "object", properties: { q: { type: "string" } } },
+      execute: async () => ({ content: "canary-issue" }),
+    },
+    // Never granted: a call of it is refused.
+    {
+      name: "purge",
+      description: "Purges it",
+      scope: "test:admin",
+      inputSchema: { type: "object", properties: { q: { type: "string" } } },
+      execute: async () => ({ content: "canary-purged" }),
+    },
   ],
 };
 const WHY = "canary-why: the person asked for it and nothing else answers this.";
+/** A connected app's connection: `acme_get_issue` is its tool. */
+const CONNECTION = "0c0c0c0c-0c0c-4c0c-8c0c-0c0c0c0c0c0c";
 
 let t: TestServer;
 let owner: Browser;
@@ -222,6 +257,8 @@ const explain = async (messageId: string) => ok<Explained>(await get(`/messages/
 const everyRead = async () => [
   `/orgs/${org.orgId}/runs?limit=200`,
   `/orgs/${org.orgId}/runs?groupBy=error&from=2026-01-01T00:00:00Z&to=2100-01-01T00:00:00Z`,
+  `/orgs/${org.orgId}/tool-calls?limit=200&${HOUR_EACH_WAY}`,
+  ...["tool", "agent", "outcome"].map((by) => `/orgs/${org.orgId}/tool-calls?groupBy=${by}&${HOUR_EACH_WAY}`),
   ...Object.values(sent).flatMap((id) => [`/messages/${id}/explain`]),
   ...(
     await t.db
@@ -385,6 +422,7 @@ test("a run's trace: its steps without their contents, what it asked, its jobs a
   expect(look.run).toMatchObject({ triggerMessageId: sent.look, status: "done", turns: 2 });
   const none = {
     tool: null,
+    builtIn: null,
     connector: null,
     isError: null,
     refusal: null,
@@ -413,6 +451,7 @@ test("a run's trace: its steps without their contents, what it asked, its jobs a
       kind: "tool_call",
       at: TIME,
       tool: "lookup",
+      builtIn: true,
       chars: JSON.stringify({ q: "canary-tool-input" }).length + 1,
     },
     {
@@ -421,6 +460,7 @@ test("a run's trace: its steps without their contents, what it asked, its jobs a
       kind: "tool_result",
       at: TIME,
       tool: "lookup",
+      builtIn: true,
       isError: false,
       chars: "canary-tool-result".length,
       durationMs: expect.any(Number),
@@ -550,6 +590,205 @@ test("a run's trace: its steps without their contents, what it asked, its jobs a
     expect({ bad, status: res.status }).toEqual({ bad, status: 400 });
   }
   expect((await get("/runs/nope/trace")).status).toBe(400);
+});
+
+test("tool calls: which tool and whose, how each ended and how big it was; filters, pages and counts", async () => {
+  type Call = Record<string, unknown> & { tool: string; at: string };
+  type Page = { from: string; to: string; calls: Call[]; next: string | null };
+  type Counts = { from: string; to: string; groups: Record<string, unknown>[]; more: boolean };
+  const calls = (query = "") => get(`/orgs/${org.orgId}/tool-calls${query}`);
+  const told = async (query = "") => (await ok<Page>(await calls(query))).calls.map((c) => c.tool);
+  const look = await runOf(sent.look);
+  const ship = await runOf(sent.ship);
+  const fact = { runId: ID, agentId: org.agentId, at: TIME, seq: expect.any(Number) };
+  const own = { ...fact, builtIn: true, connector: null, connectorKind: null, refusal: null, code: null };
+  const LOOKUP = {
+    ...own,
+    runId: look.id,
+    tool: "lookup",
+    outcome: "ok",
+    durationMs: expect.any(Number),
+    inputChars: JSON.stringify({ q: "canary-tool-input" }).length + 1,
+    resultChars: "canary-tool-result".length,
+  };
+  const ASK = {
+    ...own,
+    tool: "ask_user",
+    outcome: "ok",
+    durationMs: expect.any(Number),
+    inputChars: expect.any(Number),
+    resultChars: expect.any(Number),
+  };
+  // Waiting on its approval: no result yet.
+  const SHIP = {
+    ...own,
+    runId: ship.id,
+    tool: "ship",
+    outcome: "pending",
+    durationMs: null,
+    inputChars: expect.any(Number),
+    resultChars: null,
+  };
+  const history = await ok<Page>(await calls());
+  expect(history.calls).toEqual([SHIP, ASK, LOOKUP]);
+  expect(history.next).toBeNull();
+  expect(Date.parse(history.to) - Date.parse(history.from)).toBe(7 * 86_400_000);
+
+  // Three more calls through the Tool Gateway, which says what each name was: a name it doesn't know, a connected
+  // app's tool, and one of the server's own the agent may not call. In the run still at work: an ended run calls
+  // nothing.
+  await grantScopes(t.db, org.orgId, org.agentId, [{ connectionId: CONNECTION, scope: "acme:read" }]);
+  const ctx = {
+    db: t.db,
+    orgId: org.orgId,
+    agentId: org.agentId,
+    runId: ship.id,
+    channelId: ship.channelId,
+    threadRootId: ship.threadRootId,
+    triggerMessageId: ship.triggerMessageId,
+  };
+  for (const name of ["rm_rf", "acme_get_issue", "purge"]) {
+    await t.engine.tools.invoke(ctx, { toolUseId: `call-${name}`, name, input: { q: "canary-gateway-input" } });
+  }
+  const sized = {
+    durationMs: expect.any(Number),
+    inputChars: JSON.stringify({ q: "canary-gateway-input" }).length + 1,
+  };
+  const UNKNOWN_NAME = {
+    ...own,
+    ...sized,
+    runId: ship.id,
+    tool: "rm_rf",
+    builtIn: false,
+    outcome: "error",
+    resultChars: "Unknown tool rm_rf".length,
+  };
+  const CONNECTED = {
+    ...own,
+    ...sized,
+    runId: ship.id,
+    tool: "acme_get_issue",
+    builtIn: false,
+    connector: "Acme tracker",
+    connectorKind: "github",
+    outcome: "ok",
+    resultChars: "canary-issue".length,
+  };
+  const REFUSED = {
+    ...own,
+    ...sized,
+    runId: ship.id,
+    tool: "purge",
+    outcome: "refused",
+    refusal: "noAccess",
+    resultChars: expect.any(Number),
+  };
+  // A range that ends "now" leaves out a step written in the same millisecond: this one ends later.
+  const page = await ok<Page>(await calls(`?${HOUR_EACH_WAY}`));
+  expect(page.calls).toEqual([REFUSED, CONNECTED, UNKNOWN_NAME, SHIP, ASK, LOOKUP]);
+  expect(JSON.stringify(page)).not.toContain("canary");
+
+  // A run's trace says the same of each step, a result from its call.
+  const marked = (await trace(sent.ship)).steps.filter((s) => s.tool).map((s) => [s.kind, s.tool, s.builtIn]);
+  expect(marked).toEqual([
+    ["tool_call", "ship", true],
+    ["tool_call", "rm_rf", false],
+    ["tool_result", "rm_rf", false],
+    ["tool_call", "acme_get_issue", false],
+    ["tool_result", "acme_get_issue", false],
+    ["tool_call", "purge", true],
+    ["tool_result", "purge", true],
+  ]);
+
+  // Filters, alone and together.
+  expect(await told("?outcome=refused")).toEqual(["purge"]);
+  expect(await told("?outcome=pending")).toEqual(["ship"]);
+  expect(await told("?outcome=error")).toEqual(["rm_rf"]);
+  expect(await told("?outcome=ok")).toEqual(["acme_get_issue", "ask_user", "lookup"]);
+  expect(await told("?tool=ISSUE")).toEqual(["acme_get_issue"]);
+  expect(await told("?tool=%25")).toEqual([]);
+  expect(await told(`?runId=${ship.id}`)).toEqual(["purge", "acme_get_issue", "rm_rf", "ship"]);
+  expect(await told(`?runId=${look.id}&outcome=ok&tool=look`)).toEqual(["lookup"]);
+  expect(await told(`?agentId=${org.agentId}`)).toHaveLength(6);
+  expect(await told(`?agentId=${UNKNOWN}`)).toEqual([]);
+  // The dates are the calls' own.
+  const [newest, , third] = page.calls;
+  expect(await told(`?from=${third?.at}`)).toEqual(["purge", "acme_get_issue", "rm_rf"]);
+  expect(await told(`?to=${newest?.at}`)).toEqual(["acme_get_issue", "rm_rf", "ship", "ask_user", "lookup"]);
+  expect(await told("?from=2026-01-01T00:00:00Z&to=2026-01-02T00:00:00Z")).toEqual([]);
+
+  // Pages.
+  const first = await ok<Page>(await calls("?limit=4"));
+  expect(first.calls).toEqual(page.calls.slice(0, 4));
+  const rest = await ok<Page>(await calls(`?limit=4&cursor=${first.next}`));
+  expect(rest.calls).toEqual(page.calls.slice(4));
+  expect(rest.next).toBeNull();
+
+  // Counts instead of calls.
+  const by = async (groupBy: string, query = "") => ok<Counts>(await calls(`?groupBy=${groupBy}${query}`));
+  const one = { calls: 1, errors: 0, refused: 0, pending: 0 };
+  expect((await by("tool")).groups).toEqual([
+    { ...one, group: "acme_get_issue", builtIn: false },
+    { ...one, group: "ask_user", builtIn: true },
+    { ...one, group: "lookup", builtIn: true },
+    { ...one, group: "purge", builtIn: true, refused: 1 },
+    { ...one, group: "rm_rf", builtIn: false, errors: 1 },
+    { ...one, group: "ship", builtIn: true, pending: 1 },
+  ]);
+  expect(await by("outcome")).toEqual({
+    from: TIME,
+    to: TIME,
+    groups: [
+      { group: "ok", builtIn: null, calls: 3, errors: 0, refused: 0, pending: 0 },
+      { group: "error", builtIn: null, calls: 1, errors: 1, refused: 0, pending: 0 },
+      { group: "pending", builtIn: null, calls: 1, errors: 0, refused: 0, pending: 1 },
+      { group: "refused", builtIn: null, calls: 1, errors: 0, refused: 1, pending: 0 },
+    ],
+    more: false,
+  });
+  expect((await by("agent")).groups).toEqual([
+    { group: org.agentId, builtIn: null, calls: 6, errors: 1, refused: 1, pending: 1 },
+  ]);
+  expect((await by("agent", `&runId=${look.id}`)).groups).toEqual([
+    { group: org.agentId, builtIn: null, calls: 1, errors: 0, refused: 0, pending: 0 },
+  ]);
+  const cut = await by("tool", "&limit=2");
+  expect([cut.groups.map((g) => g.group), cut.more]).toEqual([["acme_get_issue", "ask_user"], true]);
+
+  // A step written before the gateway kept what a name was says nothing of it: not known to be the server's own.
+  // Counted by name it is, since another call of that name was.
+  await addRunStep(t.db, ship, "tool_call", { toolUseId: "old", name: "lookup", input: {} });
+  const [old] = (await ok<Page>(await calls(`?runId=${ship.id}&${HOUR_EACH_WAY}`))).calls;
+  expect(old).toMatchObject({ tool: "lookup", builtIn: false, outcome: "pending" });
+  expect((await by("tool", `&tool=lookup&${HOUR_EACH_WAY}`)).groups).toEqual([
+    { group: "lookup", builtIn: true, calls: 2, errors: 0, refused: 0, pending: 1 },
+  ]);
+
+  expect(await refusal(await get(`/orgs/${UNKNOWN}/tool-calls`))).toEqual([404, "not_found"]);
+  expect(await refusal(await calls(`?runId=${UNKNOWN}`))).toEqual([404, "not_found"]);
+  for (const bad of [
+    "?outcome=nope",
+    "?groupBy=day",
+    "?tool=",
+    "?tool=a%00b",
+    "?runId=nope",
+    "?limit=201",
+    "?cursor=nope",
+    "?from=2026-02-01T00:00:00Z&to=2026-01-01T00:00:00Z",
+    "?from=2026-01-01T00:00:00Z&to=2026-03-01T00:00:00Z",
+  ]) {
+    const res = await calls(bad);
+    expect({ bad, status: res.status }).toEqual({ bad, status: 400 });
+  }
+});
+
+test("a workspace's tool calls are found by its id and their dates, through the index of tool calls alone", async () => {
+  const plan = await planOfLast(t, "agent_run_steps", () => get(`/orgs/${org.orgId}/tool-calls`), [
+    "enable_bitmapscan",
+  ]);
+  expect(plan).toMatch(
+    /Index Scan using agent_run_steps_tool_calls_idx on agent_run_steps\s+Index Cond: \(\(org_id = .+ AND \(created_at >= .+ AND \(created_at < /,
+  );
 });
 
 test("a conversation's timeline: messages by who and how long, decisions, runs and asks, in order", async () => {

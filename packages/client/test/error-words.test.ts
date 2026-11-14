@@ -389,6 +389,9 @@ const PLAIN_LINE = new Set([
   "feedback.file_too_large",
   "feedback.file_type",
   "feedback.files_many",
+  // Only the landing page's partner form meets these, and it words them itself.
+  "invalid_name",
+  "invalid_whatsapp",
   // A phone that follows its computer's rule shows the computer's, with no control of its own; only the installer
   // meets a bad connect code.
   "device.follows_host",
@@ -508,6 +511,7 @@ const PLAIN_LINE = new Set([
   "storage.daily_full",
   "storage.full",
   "storage.invalid_bucket",
+  "team_week.no_skip",
   "team_week.own_path",
   "timeout",
   "tls",

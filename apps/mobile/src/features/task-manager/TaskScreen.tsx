@@ -20,7 +20,6 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { RunSteps } from "../chat/ToolCalls";
-import { chatHref } from "../links/logic";
 import { useOpenQueue } from "../queue/QueueSheet";
 import { AgentFace, Face, OpensAgent } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useNow } from "../shared/hooks";
@@ -28,14 +27,15 @@ import { agentLook } from "../shared/logic";
 import { PushedHeader } from "../shared/parts";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { useStopper, useTasksToday } from "./hooks";
-import { endedText, rowState, taskSubline } from "./logic";
+import { endedText, rowState, taskHref, taskSubline } from "./logic";
 import { StateLine } from "./parts";
 
 /**
  * A task's screen (ADR 0128), pushed from the task manager or an agent's tasks: whose it is (its face running while it
- * works) and how it stands, on one head; who asked and where, a row that opens the conversation; its steps so far;
- * its place in its computer's line, when it waits for room; and "Parar tarefa" as the list's red row, confirmed by
- * a system alert that says what happens. Once it ends, how it ended and how long it took.
+ * works) and how it stands, on one head; what was asked, whole (the lists cut it to one line), with who asked and
+ * where, a row that opens the conversation; its steps so far; its place in its computer's line, when it waits for
+ * room; and "Parar tarefa" as the list's red row, confirmed by a system alert that says what happens. Once it ends,
+ * how it ended and how long it took.
  */
 export function TaskScreen({ runId }: { runId: string }) {
   return (
@@ -163,12 +163,13 @@ function Page({
 }: {
   task: Pick<ManagedTask, "runId" | "agentId" | "channelId" | "threadId" | "background" | "betweenAgents"> & {
     requester?: ManagedTask["requester"];
+    delegation?: ManagedTask["delegation"];
   };
   title: string;
   /** How it stands, under the agent's name. */
   state: ReactNode;
   working: boolean;
-  /** Where it is and who asked ("#produto · Ana pediu"). */
+  /** Where it is and who asked ("#produto · Ana pediu"), under the title. */
   request: string;
   steps: { calls: number; live: boolean };
   /** It waits for room on this computer: its row opens its line (`QueueSheet`). */
@@ -185,7 +186,7 @@ function Page({
   const openQueue = useOpenQueue();
   const agent = dir.anyAgent(task.agentId);
   const requester = task.requester ?? null;
-  const opens = !(task.background || task.betweenAgents);
+  const opens = taskHref(task);
   return (
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
       <PushedHeader title={title} solid={false} grouped />
@@ -205,27 +206,22 @@ function Page({
             {state}
           </View>
         </View>
-        {request ? (
-          <>
-            <GroupedHeader>{t("mobile.taskManager.request")}</GroupedHeader>
-            <GroupedList>
-              <GroupedRow
-                leading={
-                  requester ? (
-                    <Face who={{ type: "person", id: requester.userId }} size={28} />
-                  ) : (
-                    <AgentFace agentId={task.agentId} size={28} live={false} />
-                  )
-                }
-                label={request}
-                labelLines={2}
-                {...(opens
-                  ? { chevron: true, onPress: () => router.push(chatHref(task.channelId, task.threadId)) }
-                  : {})}
-              />
-            </GroupedList>
-          </>
-        ) : null}
+        <GroupedHeader>{t("mobile.taskManager.request")}</GroupedHeader>
+        <GroupedList>
+          <GroupedRow
+            leading={
+              requester ? (
+                <Face who={{ type: "person", id: requester.userId }} size={28} />
+              ) : (
+                <AgentFace agentId={task.agentId} size={28} live={false} />
+              )
+            }
+            label={title}
+            labelLines={0}
+            {...(request ? { sub: request, subLines: 0 } : {})}
+            {...(opens ? { chevron: true, onPress: () => router.push(opens) } : {})}
+          />
+        </GroupedList>
         <Section title={t("taskManager.panel.steps")}>
           <RunSteps runId={task.runId} color={agentLook(agent).color} calls={steps.calls} live={steps.live} />
         </Section>
