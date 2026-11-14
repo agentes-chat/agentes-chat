@@ -20,9 +20,9 @@ import {
   useResendInvitation,
   useRevokeInvitation,
   useRoles,
-  useSetInvitationRoles,
   useSetMemberRoles,
   useSuggestPerson,
+  useUpdateInvitation,
   useWorkspaceLimits,
 } from "@agenteschat/client";
 import { errorCode, errorText } from "@agenteschat/client/lib/errors";
@@ -1035,7 +1035,7 @@ function InvitationRoles({
   const { org } = useOrg();
   const toast = useToast();
   const orgRoles = useRoles(org.id).data?.roles ?? [];
-  const save = useSetInvitationRoles(org.id);
+  const save = useUpdateInvitation(org.id);
   const [value, setValue] = useState<string[]>(invitation.roleIds ?? []);
   const title = t("members.invitations.roleTitle", { email: invitation.email });
   return (

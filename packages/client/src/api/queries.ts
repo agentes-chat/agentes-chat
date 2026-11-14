@@ -122,6 +122,7 @@ import type {
   GifCategory,
   GifKey,
   InviteBatch,
+  InviteLinkChoices,
   Issue,
   IssueActivity,
   IssueActivityEvent,
@@ -2810,13 +2811,13 @@ export function useInviteMany(orgId: string) {
   });
 }
 
-/** The roles a pending invitation gives (ADR 0090): the same link, nothing is sent. */
-export function useSetInvitationRoles(orgId: string) {
+/** What a pending invitation gives (ADR 0090, 0184): its cargos, channels and agents. The same link, nothing is sent. */
+export function useUpdateInvitation(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { id: string; roleIds: string[] }) =>
-      api.orgs.setInvitationRoles(orgId, input.id, input.roleIds),
+    mutationFn: ({ id, ...change }: { id: string; roleIds?: string[]; channelIds?: string[]; agentIds?: string[] }) =>
+      api.orgs.updateInvitation(orgId, id, change),
     onSettled: () => qc.invalidateQueries({ queryKey: keys.invitations(orgId) }),
   });
 }
@@ -2875,13 +2876,23 @@ export const useInviteLinks = (orgId: string, enabled = true) => {
   return useQuery({ queryKey: keys.inviteLinks(orgId), queryFn: () => api.invites.links(orgId), enabled });
 };
 
-/** "Make a link": the active one, or a new one. */
+/** "Make a link": the active one, or a new one; with choices, a link of its own (ADR 0184). */
 export function useMakeInviteLink(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.invites.createLink(orgId),
+    mutationFn: (choices?: InviteLinkChoices) => api.invites.createLink(orgId, choices),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.inviteLinks(orgId) }),
+  });
+}
+
+/** "Editar link" (ADR 0184): what it gives, at the same address. */
+export function useEditInviteLink(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...choices }: InviteLinkChoices & { id: string }) => api.invites.editLink(orgId, id, choices),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.inviteLinks(orgId) }),
   });
 }
 
@@ -2926,7 +2937,13 @@ export function useApproveJoinRequest(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { id: string; roleIds?: string[] }) => api.joinRequests.approve(orgId, input.id, input.roleIds),
+    mutationFn: (input: { id: string; roleIds?: string[]; channelIds?: string[]; agentIds?: string[] }) =>
+      input.channelIds || input.agentIds
+        ? api.joinRequests.approve(orgId, input.id, input.roleIds, {
+            channelIds: input.channelIds,
+            agentIds: input.agentIds,
+          })
+        : api.joinRequests.approve(orgId, input.id, input.roleIds),
     onSettled: () => refreshAnswered(qc, orgId),
   });
 }

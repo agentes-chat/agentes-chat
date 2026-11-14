@@ -3995,7 +3995,10 @@
     "yourApproval": "onayınız",
     "yourAnswer": "yanıtınız",
     "later": "takip {{when}}",
-    "laterShort": "takip"
+    "laterShort": "takip",
+    "plan": "plan limitini bekliyor",
+    "budget": "bütçeyi bekliyor",
+    "stopping": "durduruluyor…"
   },
   "followUps": {
     "when": {
@@ -13687,6 +13690,8 @@
     },
     "join": {
       "linkClosed": "Bu bağlantı artık çalışmıyor. Gönderen kişiden yenisini isteyin.",
+      "linkFull": "Bu bağlantı alabileceği herkesi zaten aldı. Gönderen kişiden yenisini isteyin.",
+      "linkFullApproval": "Bu isteğin bağlantısı alabileceği herkesi zaten aldı. Onaylamak için bağlantının kişi sınırını artırın.",
       "full": "Bu çalışma alanında bekleyen çok sayıda istek var. Daha sonra tekrar deneyin ya da oradan birinin sizi davet etmesini isteyin.",
       "rateLimited": "Buradan çok fazla istek geldi. Bir saat sonra tekrar deneyin.",
       "linkBusy": "Son bir saatte bu bağlantı üzerinden çok kişi istekte bulundu. Daha sonra tekrar deneyin.",
@@ -17777,6 +17782,22 @@
       "message": "{{name}} ajanına mesaj gönder",
       "chooseOnWeb": "agentes.chat üzerinde, Ayarlar › Cihazlar bölümünden seçin."
     }
+  },
+  "agora": {
+    "label": "Şimdi",
+    "working_one": "{{count}} ajan çalışıyor",
+    "working_other": "{{count}} ajan çalışıyor",
+    "waiting_one": "{{count}} şey sizi bekliyor",
+    "waiting_other": "{{count}} şey sizi bekliyor",
+    "sections": {
+      "you": "Sizi bekliyor",
+      "working": "Çalışıyor",
+      "waiting": "Beklemede"
+    },
+    "allWaiting_one": "{{count}} şey sizi bekliyor",
+    "allWaiting_other": "Sizi bekleyen {{count}} şeyin hepsi",
+    "actions": "Diğer işlemler",
+    "openManager": "Görev yöneticisini aç"
   },
   "taskManager": {
     "title": "Görev yöneticisi",
