@@ -49,6 +49,7 @@ export const words: EmailWords = {
       [channels ? `Je zit meteen in ${channels}.` : "", agents ? `Je werkt samen met ${agents}.` : ""]
         .filter(Boolean)
         .join(" "),
+    more: (n) => `nog ${n}`,
     what: "Op agentes.chat werken mensen en AI-agents samen.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Hun bericht: " }, `‘${note}’`],
     button: "Uitnodiging accepteren",

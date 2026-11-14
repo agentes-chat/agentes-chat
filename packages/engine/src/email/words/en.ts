@@ -65,6 +65,8 @@ export const en = {
       [channels ? `You'll start in ${channels}.` : "", agents ? `You'll work with ${agents}.` : ""]
         .filter(Boolean)
         .join(" "),
+    /** The last place of a list cut short: how many more it holds (always 2 or more). */
+    more: (n: number) => `${n} more`,
     what: "agentes.chat is where people and AI agents work together.",
     noteFrom: (inviter: string, note: string): Text => [{ b: inviter ? `${inviter}: ` : "Their note: " }, `“${note}”`],
     button: "Accept invitation",

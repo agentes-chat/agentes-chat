@@ -432,6 +432,8 @@ const crewOr = (crew: Look[] | undefined) => (crew?.length ? crew.slice(0, CREW)
 
 /** The inviter's note as the invitation shows it (ADR 0090). */
 const INVITE_NOTE_SHOWN = 300;
+/** The cargos, channels or agents an invitation's email names in one list (ADR 0184). */
+const INVITE_NAMES_SHOWN = 5;
 /** A name typed on an invitation link's page, as the admins' email shows it (ADR 0068). */
 const JOIN_NAME_SHOWN = 60;
 /** An admin's reason for denying a request to join, as long as it is kept. */
@@ -500,7 +502,13 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
     case "invitation": {
       const c = inMode(w.invitation, t.personal);
       const org = inertText(t.orgName);
-      const list = (items: string[]) => new Intl.ListFormat(lang, { type: "conjunction" }).format(items);
+      // Past `INVITE_NAMES_SHOWN` names, the last place says how many more: a line, never a page of names.
+      const list = (items: string[]) =>
+        new Intl.ListFormat(lang, { type: "conjunction" }).format(
+          items.length > INVITE_NAMES_SHOWN
+            ? [...items.slice(0, INVITE_NAMES_SHOWN - 1), c.more(items.length - INVITE_NAMES_SHOWN + 1)]
+            : items,
+        );
       // An owner's invitation reads "as an owner", whatever cargos come with it: an owner may everything.
       const role =
         t.roles?.length && t.role !== "owner"

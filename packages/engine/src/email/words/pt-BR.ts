@@ -38,6 +38,7 @@ export const ptBR: Words = {
       [channels ? `Você já entra em ${channels}.` : "", agents ? `Vai trabalhar com ${agents}.` : ""]
         .filter(Boolean)
         .join(" "),
+    more: (n) => `mais ${n}`,
     what: "O agentes.chat é onde pessoas e agentes de IA trabalham juntos.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Recado: " }, `“${note}”`],
     button: "Aceitar convite",

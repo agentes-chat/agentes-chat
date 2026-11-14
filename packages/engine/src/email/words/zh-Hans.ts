@@ -40,6 +40,7 @@ export const words: EmailWords = {
         : [`你受邀以${role}身份加入 `, { b: org }, "。"],
     starts: (channels, agents) =>
       [channels ? `你会直接加入 ${channels}。` : "", agents ? `你将和 ${agents} 一起工作。` : ""].join(""),
+    more: (n) => `另外${n}个`,
     what: "agentes.chat 是成员和 AI 智能体一起工作的地方。",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}：` : "附言：" }, `“${note}”`],
     button: "接受邀请",

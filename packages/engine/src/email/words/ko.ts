@@ -47,6 +47,7 @@ export const words: EmailWords = {
       [channels ? `${channels} 채널에 바로 참여해요.` : "", agents ? `함께 일할 에이전트: ${agents}.` : ""]
         .filter(Boolean)
         .join(" "),
+    more: (n) => `${n}개 더`,
     what: "agentes.chat은 사람과 AI 에이전트가 함께 일하는 곳이에요.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "보낸 메시지: " }, `“${note}”`],
     button: "초대 수락",

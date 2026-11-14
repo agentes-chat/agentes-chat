@@ -818,6 +818,25 @@ describe("outbox delivery", () => {
     }
   });
 
+  test("invitation: what it gives, named, a list cut at five places; an owner's stays an owner's (ADR 0184)", () => {
+    const base = EMAIL_SAMPLES["invitation-starts.en"] as Extract<EmailTemplate, { kind: "invitation" }>;
+    const said = (t: Partial<typeof base>, locale: "en" | "pt-BR" = "pt-BR") =>
+      renderEmail({ ...base, ...t, locale }, art).text.replace(/\s+/g, " ");
+    expect(said({})).toContain("como Suporte. Você já entra em #suporte e #chamados-urgentes. Vai trabalhar com Max.");
+    expect(said({}, "en")).toContain(
+      "as Suporte. You'll start in #suporte and #chamados-urgentes. You'll work with Max.",
+    );
+    // Only agents, or nothing past #general and the right hand: no line at all.
+    expect(said({ channels: [] })).toContain("como Suporte. Vai trabalhar com Max.");
+    expect(said({ channels: [], agents: [] })).not.toContain("Você já entra");
+    const channels = Array.from({ length: 7 }, (_, i) => `canal-${i + 1}`);
+    expect(said({ channels, roles: ["Suporte", "Financeiro"] })).toContain(
+      "como Suporte e Financeiro. Você já entra em #canal-1, #canal-2, #canal-3, #canal-4 e mais 3.",
+    );
+    expect(said({ channels }, "en")).toContain("#canal-1, #canal-2, #canal-3, #canal-4, and 3 more.");
+    expect(said({ role: "owner" })).toContain("como dono.");
+  });
+
   test("invitation: the inviter's address goes in the body, so the invitee can judge who sent it", async () => {
     f = await setup();
     // The fixture's addresses end in a random hex suffix, which typed-text masking hides whenever it has 7 digits in a row.

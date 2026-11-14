@@ -52,6 +52,7 @@ export const words: EmailWords = {
       ]
         .filter(Boolean)
         .join(" "),
+    more: (n) => plural("pl", n, { one: `${n} inny`, few: `${n} inne`, many: `${n} innych`, other: `${n} innych` }),
     what: "agentes.chat to miejsce, w którym osoby i agenci AI pracują razem.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Wiadomość: " }, `„${note}”`],
     button: "Przyjmij zaproszenie",

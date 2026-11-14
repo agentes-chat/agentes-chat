@@ -54,6 +54,7 @@ export const words: EmailWords = {
       ]
         .filter(Boolean)
         .join(" "),
+    more: (n) => `${n} tane daha`,
     what: "agentes.chat, kişilerin ve yapay zeka ajanlarının birlikte çalıştığı yer.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Davet notu: " }, `“${note}”`],
     button: "Daveti kabul et",
