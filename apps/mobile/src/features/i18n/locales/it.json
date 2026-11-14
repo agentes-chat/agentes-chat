@@ -1212,6 +1212,9 @@
     "addWorkspaceTeamShort": "Entra nel server del tuo team",
     "addWorkspaceTeamSubShort": "Indirizzo o codice QR del computer",
     "addWorkspaceFoot": "Non esci da nessuno spazio di lavoro.",
+    "addAccount": "Accedi a un altro account",
+    "addAccountSub": "Su {{host}}, senza uscire da questo",
+    "accountNoWorkspace": "Ancora nessuno spazio di lavoro",
     "teamServerLeadShort": "Quello che il tuo team apre nel browser.",
     "teamServerQuestion": "Qual è l'indirizzo del tuo team?",
     "account": {

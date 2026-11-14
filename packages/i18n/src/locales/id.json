@@ -502,6 +502,7 @@
       "noPassword": "Akun ini masuk dari aplikasi agentes.chat.",
       "noPasswordLead": "Di komputer yang menjalankan server ini, buka aplikasinya lalu pilih Tambah kata sandi di Pengaturan › Akunmu.",
       "backToSignIn": "Kembali ke halaman masuk",
+      "backToAccount": "Kembali ke {{name}}",
       "toAuthorizeApp": "Untuk menghubungkan aplikasi ke agentes.chat."
     },
     "desktop": {
@@ -1785,6 +1786,8 @@
     "newWorkspace": "Ruang kerja baru",
     "addWorkspace": "Tambah ruang kerja",
     "addWorkspaceHint": "Masuk ke yang sudah ada, buat yang baru, atau pakai server tim kamu",
+    "addAccount": "Tambah akun",
+    "addAccountHint": "Masuk ke akun lain tanpa keluar dari akun ini",
     "yourServer": "Servermu",
     "serverHere": "agentes.chat di {{device}} ini",
     "serverStopped": "berhenti",
@@ -2577,6 +2580,9 @@
       "update_role": "Ubah peran <b>{{name}}</b>",
       "delete_role": "Hapus peran <b>{{name}}</b> selamanya",
       "move_role": "Pindahkan peran <b>{{name}}</b>",
+      "set_permission_holders": "Ubah siapa yang boleh <b>{{short}}</b>",
+      "set_permission_holders_computers": "Ubah siapa yang memakai <b>komputer agen</b>",
+      "holdersOwnersOnly": "Hanya pemilik",
       "set_member_roles": "Ubah peran yang dimiliki <b>{{name}}</b>: {{change}}",
       "set_channel_permissions": "Ubah apa yang boleh dilakukan {{who}} di <b>#{{channel}}</b>",
       "set_my_status": "Atur statusmu: <b>{{what}}</b>",
@@ -3360,6 +3366,8 @@
       "changed_update_role": "Mengubah peran <b>{{name}}</b>",
       "changed_delete_role": "Menghapus peran <b>{{name}}</b>",
       "changed_move_role": "Memindahkan peran <b>{{name}}</b>",
+      "changed_set_permission_holders": "Mengubah siapa yang boleh <b>{{short}}</b>",
+      "changed_set_permission_holders_computers": "Mengubah siapa yang memakai <b>komputer agen</b>",
       "changed_set_member_roles": "Mengubah peran yang dimiliki <b>{{name}}</b>: {{change}}",
       "changed_set_channel_permissions": "Mengubah apa yang boleh dilakukan {{who}} di <b>#{{channel}}</b>",
       "changed_set_my_status": "Mengatur statusmu: <b>{{what}}</b>",
@@ -4309,6 +4317,10 @@
   "approval": {
     "expiredChip": "Kedaluwarsa · {{when}}",
     "canceledChip": "Dibatalkan · {{when}}",
+    "line": {
+      "after": "berjalan setelah “{{title}}”",
+      "notRun": "tidak dijalankan: permintaan sebelumnya tidak disetujui"
+    },
     "waitingFor": "Menunggu {{name}}",
     "waitingAdmin": "Menunggu admin",
     "reasonLine": "Alasan: {{reason}}",
@@ -4861,8 +4873,15 @@
       "canceled": "Dibatalkan",
       "failed": "Gagal",
       "running": "Berjalan",
-      "scheduled": "Dijadwalkan"
+      "scheduled": "Dijadwalkan",
+      "queued": "Dalam antrean",
+      "notRun": "Tidak dijalankan"
     },
+    "queuedLine": "Disetujui. Berjalan setelah “{{title}}”, yang diminta lebih dulu.",
+    "notRunRefused": "“{{title}}”, yang diminta lebih dulu, ditolak setelah permintaan ini disetujui. Karena itu yang ini tidak dijalankan.",
+    "notRunExpired": "“{{title}}”, yang diminta lebih dulu, kedaluwarsa tanpa keputusan setelah permintaan ini disetujui. Karena itu yang ini tidak dijalankan.",
+    "notRunEarlier": "Permintaan sebelumnya ditolak atau kedaluwarsa setelah yang ini disetujui. Karena itu yang ini tidak dijalankan.",
+    "position": "{{n}} dari {{total}}",
     "expiredLine": "Tidak ada yang memutuskan dalam 24 jam, jadi tidak ada yang dilakukan.",
     "canceledLine": "Proses berhenti sebelum ada keputusan.",
     "supersededLine": "Agen meminta lagi dengan versi yang lebih baru. Yang ini tidak dijalankan.",
@@ -4929,8 +4948,10 @@
       "email": "Email-nya",
       "text": "Yang akan diterbitkan",
       "textDone": "Yang sudah diterbitkan",
+      "textNot": "Yang tadinya akan diterbitkan",
       "values": "Yang akan dilakukan",
       "valuesDone": "Yang dilakukan",
+      "valuesNot": "Yang tadinya akan dilakukan",
       "trail": "Bagaimana sampai di sini",
       "showSteps": "Lihat setiap langkah",
       "hideSteps": "Sembunyikan langkah",
@@ -14586,6 +14607,10 @@
         "left": "Keluar dari ruang kerja",
         "role_changed": "Mengubah peran anggota",
         "password_link": "Membuat tautan kata sandi baru untuk anggota"
+      },
+      "role": {
+        "permission_set": "Mengubah siapa yang boleh {{short}}",
+        "permission_set_computers": "Mengubah siapa yang memakai komputer agen"
       },
       "apps": {
         "connected": "Menghubungkan {{app}}",

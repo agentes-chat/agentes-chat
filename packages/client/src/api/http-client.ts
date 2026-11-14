@@ -97,6 +97,7 @@ import type {
   DesktopPictureView,
   DesktopRelease,
   DesktopStatus,
+  DeviceAccount,
   DeviceRequest,
   DevicesList,
   DirectMessage,
@@ -198,6 +199,7 @@ import type {
   Reminder,
   RemovalPreview,
   RightHandApprovals,
+  RoleMailLoss,
   RosterMember,
   Routine,
   RoutineHook,
@@ -603,6 +605,15 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         nullOn(401, () =>
           request<{ organizations: { orgId: string; unread: number; waiting: number }[] }>("/api/app/me/unread"),
         ),
+      deviceAccounts: async () =>
+        (await nullOn(404, () => request<{ accounts: DeviceAccount[] }>("/api/app/device-accounts")))?.accounts ?? [],
+      switchDeviceAccount: (userId) =>
+        request<void>("/api/app/device-accounts/switch", { method: "POST", json: { userId } }),
+      signOutDeviceAccount: (userId) =>
+        request<{ signedIn: boolean }>("/api/app/device-accounts/sign-out", {
+          method: "POST",
+          json: userId ? { userId } : {},
+        }),
       updateMe: (input) => request<void>("/api/app/me", { method: "PATCH", json: input }),
       setWorkArea: (area) => request<void>("/api/app/me/work-area", { method: "PUT", json: { area } }),
       phoneSignIn: () => request<PhoneSignIn>("/api/app/phone-sign-in", { json: {} }),
@@ -768,12 +779,20 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<void>(`${org(orgId)}/roles/${enc(roleId)}`, { method: "PATCH", json: patch }),
       remove: (orgId, roleId) => request<void>(`${org(orgId)}/roles/${enc(roleId)}`, { method: "DELETE" }),
       reorder: (orgId, ids) => request<void>(`${org(orgId)}/roles/order`, { method: "PUT", json: { ids } }),
-      setFor: (orgId, userId, roleIds, via) =>
+      setFor: (orgId, userId, roleIds, via, mailLossSeen) =>
         request<{ roleIds: string[] }>(`${org(orgId)}/members/${enc(userId)}/roles`, {
           method: "PUT",
-          json: { roleIds },
+          json: { roleIds, ...(mailLossSeen ? { mailLossSeen } : {}) },
           query: via ? { via } : {},
         }),
+      setRow: (orgId, row, holders) =>
+        request<OrgRoles>(`${org(orgId)}/permissions/${enc(row)}`, { method: "PUT", json: holders }),
+      mailLoss: async (orgId, roleId, userIds) =>
+        (
+          await request<{ mailboxes: RoleMailLoss[] }>(`${org(orgId)}/roles/${enc(roleId)}/members/preview`, {
+            json: { userIds },
+          })
+        ).mailboxes,
     },
     agentGroups: {
       list: async (orgId) => (await request<{ groups: AgentGroup[] }>(`${org(orgId)}/agent-groups`)).groups,

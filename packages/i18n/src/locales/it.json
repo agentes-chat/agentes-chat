@@ -514,6 +514,7 @@
       "noPassword": "Questo account accede dall'app agentes.chat.",
       "noPasswordLead": "Sul computer che fa girare questo server, apri l'app e scegli Aggiungi una password in Impostazioni › Il tuo account.",
       "backToSignIn": "Torna all'accesso",
+      "backToAccount": "Torna a {{name}}",
       "toAuthorizeApp": "Per collegare un'app ad agentes.chat."
     },
     "desktop": {
@@ -1869,6 +1870,8 @@
     "newWorkspace": "Nuovo spazio di lavoro",
     "addWorkspace": "Aggiungi spazio di lavoro",
     "addWorkspaceHint": "Entra in uno che hai già, creane uno nuovo o usa il server del tuo team",
+    "addAccount": "Aggiungi account",
+    "addAccountHint": "Accedi a un altro account senza uscire da questo",
     "yourServer": "Il tuo server",
     "serverHere": "L’agentes.chat di questo {{device}}",
     "serverStopped": "fermo",
@@ -2762,6 +2765,9 @@
       "update_role": "Modifica il ruolo <b>{{name}}</b>",
       "delete_role": "Elimina per sempre il ruolo <b>{{name}}</b>",
       "move_role": "Sposta il ruolo <b>{{name}}</b>",
+      "set_permission_holders": "Cambia chi può <b>{{short}}</b>",
+      "set_permission_holders_computers": "Cambia chi usa <b>i computer degli agenti</b>",
+      "holdersOwnersOnly": "Solo i proprietari",
       "set_member_roles": "Cambia i ruoli di <b>{{name}}</b>: {{change}}",
       "set_channel_permissions": "Cambia cosa può fare {{who}} in <b>#{{channel}}</b>",
       "set_my_status": "Imposta il tuo stato: <b>{{what}}</b>",
@@ -3592,6 +3598,8 @@
       "changed_update_role": "Ho modificato il ruolo <b>{{name}}</b>",
       "changed_delete_role": "Ho eliminato il ruolo <b>{{name}}</b>",
       "changed_move_role": "Ho spostato il ruolo <b>{{name}}</b>",
+      "changed_set_permission_holders": "Ho cambiato chi può <b>{{short}}</b>",
+      "changed_set_permission_holders_computers": "Ho cambiato chi usa <b>i computer degli agenti</b>",
       "changed_set_member_roles": "Ho cambiato i ruoli di <b>{{name}}</b>: {{change}}",
       "changed_set_channel_permissions": "Ho cambiato cosa può fare {{who}} in <b>#{{channel}}</b>",
       "changed_set_my_status": "Ho impostato il tuo stato: <b>{{what}}</b>",
@@ -4574,6 +4582,10 @@
   "approval": {
     "expiredChip": "Scaduta · {{when}}",
     "canceledChip": "Annullata · {{when}}",
+    "line": {
+      "after": "viene eseguita dopo “{{title}}”",
+      "notRun": "non eseguita: la richiesta precedente non è stata approvata"
+    },
     "waitingFor": "In attesa di {{name}}",
     "waitingAdmin": "In attesa di un admin",
     "reasonLine": "Motivo: {{reason}}",
@@ -5195,8 +5207,15 @@
       "canceled": "Annullata",
       "failed": "Non riuscita",
       "running": "In esecuzione",
-      "scheduled": "Programmata"
+      "scheduled": "Programmata",
+      "queued": "In coda",
+      "notRun": "Non eseguita"
     },
+    "queuedLine": "Approvata. Viene eseguita dopo “{{title}}”, chiesta prima.",
+    "notRunRefused": "“{{title}}”, chiesta prima, è stata rifiutata dopo l'approvazione di questa. Per questo questa non è stata eseguita.",
+    "notRunExpired": "“{{title}}”, chiesta prima, è scaduta senza decisione dopo l'approvazione di questa. Per questo questa non è stata eseguita.",
+    "notRunEarlier": "Una richiesta precedente è stata rifiutata o è scaduta dopo l'approvazione di questa. Per questo questa non è stata eseguita.",
+    "position": "{{n}} di {{total}}",
     "expiredLine": "Nessuno ha deciso entro 24 h, quindi non è stato fatto nulla.",
     "canceledLine": "L'esecuzione si è fermata prima di una decisione.",
     "supersededLine": "L'agente ha chiesto di nuovo con una versione più recente. Questa non è stata eseguita.",
@@ -5265,8 +5284,10 @@
       "email": "L'email",
       "text": "Cosa verrà pubblicato",
       "textDone": "Cosa è stato pubblicato",
+      "textNot": "Cosa sarebbe stato pubblicato",
       "values": "Cosa farà",
       "valuesDone": "Cosa ha fatto",
+      "valuesNot": "Cosa avrebbe fatto",
       "trail": "Come ci è arrivato",
       "showSteps": "Vedi ogni passo",
       "hideSteps": "Nascondi i passi",
@@ -15583,6 +15604,10 @@
         "left": "È uscito dallo spazio di lavoro",
         "role_changed": "Ha cambiato il ruolo di un membro",
         "password_link": "Ha creato un link per una nuova password per un membro"
+      },
+      "role": {
+        "permission_set": "Ha cambiato chi può {{short}}",
+        "permission_set_computers": "Ha cambiato chi usa i computer degli agenti"
       },
       "apps": {
         "connected": "Ha collegato {{app}}",

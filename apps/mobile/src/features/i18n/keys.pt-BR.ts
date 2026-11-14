@@ -1180,6 +1180,11 @@ export const featureKeysPtBR = {
     addWorkspaceTeamShort: "Entrar no servidor da equipe",
     addWorkspaceTeamSubShort: "Endereço ou QR code do computador",
     addWorkspaceFoot: "Você não sai de nenhum workspace.",
+    /** Another account on the server the app is on, signed in beside this one (ADR 0183). */
+    addAccount: "Entrar com outra conta",
+    addAccountSub: "Em {{host}}, sem sair desta",
+    /** In Workspaces, under an account of this phone that has no workspace. */
+    accountNoWorkspace: "Sem workspace ainda",
     teamServerLeadShort: "O que o time abre no navegador.",
     /** A tela do servidor da equipe: a pergunta é o título, em duas linhas, na régua do login. */
     teamServerQuestion: "Qual é o endereço da sua equipe?",

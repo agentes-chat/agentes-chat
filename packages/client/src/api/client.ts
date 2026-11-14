@@ -130,6 +130,7 @@ import type {
   DesktopPictureView,
   DesktopRelease,
   DesktopStatus,
+  DeviceAccount,
   DeviceAudience,
   DeviceRequest,
   DevicesList,
@@ -265,12 +266,14 @@ import type {
   RightHandApprovalsInput,
   Role,
   RoleInput,
+  RoleMailLoss,
   RosterMember,
   Routine,
   RoutineHook,
   RoutineInput,
   RoutinePatch,
   RoutineRun,
+  RowHolders,
   RuleInfo,
   Run,
   RunConsultation,
@@ -432,6 +435,18 @@ export interface ApiClient {
     me(): Promise<Me | null>;
     /** Unread and waiting in each workspace, in one call (`GET /me/unread`, ADR 0154); null signed out. */
     unread(): Promise<{ organizations: { orgId: string; unread: number; waiting: number }[] } | null>;
+    /**
+     * The accounts signed in on this browser, the current one first (`GET /device-accounts`, ADR 0183); empty on a
+     * server from before it and with nobody signed in.
+     */
+    deviceAccounts(): Promise<DeviceAccount[]>;
+    /** Moves this browser to another account signed in on it; every account stays signed in. */
+    switchDeviceAccount(userId: string): Promise<void>;
+    /**
+     * Signs one account out of this browser, the current one without `userId`; the others stay. `signedIn`: the
+     * browser still has an account, the next one when the current one left.
+     */
+    signOutDeviceAccount(userId?: string): Promise<{ signedIn: boolean }>;
     /** My app language (emails and pushes are written in it). */
     updateMe(input: { locale: AppLocale; auto?: boolean }): Promise<void>;
     /** My own area, asked once during the onboarding, or `skipped` (`PUT /me/work-area`). */
@@ -652,8 +667,21 @@ export interface ApiClient {
     remove(orgId: string, roleId: string): Promise<void>;
     /** Every role but `everyone`, top first. */
     reorder(orgId: string, ids: string[]): Promise<void>;
-    /** A person's roles, exactly these. */
-    setFor(orgId: string, userId: string, roleIds: string[], via?: string): Promise<{ roleIds: string[] }>;
+    /**
+     * A person's roles, exactly these. `mailLossSeen`: the mailboxes they were told agents lose (`mailLoss`); one
+     * given since refuses it (409 `agent.mail_loss_changed`).
+     */
+    setFor(
+      orgId: string,
+      userId: string,
+      roleIds: string[],
+      via?: string,
+      mailLossSeen?: string[],
+    ): Promise<{ roleIds: string[] }>;
+    /** "Quem pode…": who holds one row (a key, or `computers`), `everyone` and the roles at once; the roles after it. */
+    setRow(orgId: string, row: string, holders: RowHolders): Promise<OrgRoles>;
+    /** The mailboxes agents would lose if `userIds` got the role, taking nothing. */
+    mailLoss(orgId: string, roleId: string, userIds: string[]): Promise<RoleMailLoss[]>;
   };
   /** Groups of agents (ADR 0083): everyone reads them, owners and admins change them; each change answers with all. */
   agentGroups: {

@@ -751,6 +751,8 @@ function Chat({
   // Held at the start of a long message someone else wrote (see "Reading from the top"), or where "Ver mais" opened
   // one: the list doesn't follow the end until the person gets there, sends, or takes the pill.
   const [readHold, setReadHold] = useState(false);
+  // The person's first touch here, anywhere (a scroll, the box, a message): the day's greeting closes a while after.
+  const [touched, setTouched] = useState(false);
   // The messages "Ver mais" opened in place: they stay open while the screen lives (rows unmount off screen).
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
   const openedMessages = useMemo<OpenedMessages>(
@@ -2316,7 +2318,10 @@ function Chat({
   return (
     <AskStoreProvider store={asks}>
       <AskProbes messages={shownMessages} />
-      <View style={[styles.screen, { backgroundColor: c.bg }]}>
+      <View
+        style={[styles.screen, { backgroundColor: c.bg }]}
+        onTouchStart={touched ? undefined : () => setTouched(true)}
+      >
         {/* A clear bar on every conversation (DM, channel, thread): the band behind it is ours, below, so the
             system's scroll edge never makes one look different from another. */}
         <PushedHeader title={pill ?? title} plate solid={false} right={right} />
@@ -2503,6 +2508,7 @@ function Chat({
               messages={top.data}
               agentIds={channelAgents}
               top={headerHeight + 8}
+              touched={touched}
             />
           ) : null}
           {peeking ? null : (

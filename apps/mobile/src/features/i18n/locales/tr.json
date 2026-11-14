@@ -1138,6 +1138,9 @@
     "addWorkspaceTeamShort": "Ekibinizin sunucusuna katıl",
     "addWorkspaceTeamSubShort": "Adres veya bilgisayardaki QR kod",
     "addWorkspaceFoot": "Hiçbir çalışma alanından çıkmazsınız.",
+    "addAccount": "Başka bir hesapla giriş yap",
+    "addAccountSub": "{{host}} üzerinde, bu hesaptan çıkmadan",
+    "accountNoWorkspace": "Henüz çalışma alanı yok",
     "teamServerLeadShort": "Ekibinizin tarayıcıda açtığı adres.",
     "teamServerQuestion": "Ekibinizin adresi nedir?",
     "account": {

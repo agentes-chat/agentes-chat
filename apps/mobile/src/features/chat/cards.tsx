@@ -19,6 +19,7 @@ import {
 } from "@agenteschat/client/lib/agent-work";
 import {
   approvalCardItems,
+  approvalLine,
   approvalRuns,
   approveAllScope,
   approveAlwaysAlso,
@@ -26,6 +27,7 @@ import {
   asOfNow,
   cardDeadline,
   itemOwnWords,
+  type LinePlace,
   runKeys,
 } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
@@ -197,6 +199,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
   const always = approveAlwaysOn(items);
   const runs = approvalRuns(items);
   const keys = runKeys(runs);
+  const line = approvalLine(items);
   const [only] = runs;
   const single = runs.length === 1 && only && only.length > 1 ? only : null;
   const busy = one.isPending || all.isPending;
@@ -255,6 +258,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
       lead={leadItem}
       name={name}
       always={!inRun && always.has(a.id)}
+      place={line.get(a.id)}
       busy={busy}
       onApprove={() => approveOne(a)}
       onAlways={() => approveAlways(a)}
@@ -426,6 +430,7 @@ function ApprovalGroupItem({
   lead,
   name,
   always,
+  place,
   busy,
   onApprove,
   onAlways,
@@ -436,6 +441,8 @@ function ApprovalGroupItem({
   lead: Approval;
   name: string;
   always: boolean;
+  /** Where it stands on the card: an approved one runs after what the agent asked before it (`approvalLine`). */
+  place: LinePlace | undefined;
   busy: boolean;
   onApprove: () => void;
   onAlways: () => void;
@@ -563,6 +570,12 @@ function ApprovalGroupItem({
                 {[
                   decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name),
                   scheduled && t("approval.ahead.scheduled", { when: nextLabel(i18n.language, scheduled) }),
+                  place?.waitsOn
+                    ? t("approval.line.after", {
+                        // With its place on the card: two requests of one kind tell apart by it ("1 de 2").
+                        title: `${approvalTitleText(t, place.waitsOn)} (${t("approvals.position", { n: place.waitsOnAt, total: place.count })})`,
+                      })
+                    : a.result?.notRunAfter && t("approval.line.notRun"),
                 ]
                   .filter(Boolean)
                   .join(" · ")}
