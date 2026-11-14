@@ -38,15 +38,26 @@ export function ChannelBoard({
   onLinked?: () => void;
 }) {
   const { t } = useTranslation();
+  const { org } = useOrg();
+  // The address's widget, unless a thread or an agent's page holds the panel (one at a time, `channelPanelSearch`).
+  const [, setWidgetId] = useOpenParam("widget");
+  const widgetId = useRouterState({
+    select: (s) => channelPanelSearch(s.location.search as Record<string, unknown>).widget ?? null,
+  });
   const label = t("channelBoard.label", { channel: channel.name });
-  const body = <Body channel={channel} onLinked={onLinked} />;
+  const body = <Body channel={channel} onLinked={onLinked} onWidget={setWidgetId} />;
+  const panel = <WidgetPanel orgId={org.id} widgetId={widgetId} onClose={() => setWidgetId(null)} />;
   if (!onClose) {
     return (
       <aside className="members-side channel-board" aria-label={label}>
         <div className="channel-board__scroll">{body}</div>
+        {panel}
       </aside>
     );
   }
+  // Floating, a widget's panel takes the board's place (one pane over the chat, never two); closing it brings the
+  // board back.
+  if (widgetId) return panel;
   return (
     <Floating label={label} onClose={onClose}>
       {body}
@@ -73,7 +84,15 @@ function Floating({ label, onClose, children }: { label: string; onClose: () => 
   );
 }
 
-function Body({ channel, onLinked }: { channel: Channel; onLinked?: () => void }) {
+function Body({
+  channel,
+  onLinked,
+  onWidget,
+}: {
+  channel: Channel;
+  onLinked?: () => void;
+  onWidget: (id: string) => void;
+}) {
   const { org } = useOrg();
   const { dashboardId: linked, manages } = useChannelDashboard(channel);
   const [changing, setChanging] = useState(false);
@@ -109,6 +128,7 @@ function Body({ channel, onLinked }: { channel: Channel; onLinked?: () => void }
       channel={channel}
       manages={manages}
       onChange={() => setChanging(true)}
+      onWidget={onWidget}
     />
   );
 }
@@ -241,20 +261,17 @@ function Board({
   channel,
   manages,
   onChange,
+  onWidget,
 }: {
   board: Dashboard;
   channel: Channel;
   manages: boolean;
   onChange: () => void;
+  onWidget: (id: string) => void;
 }) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const navigate = useNavigate();
-  // The address's widget, unless a thread or an agent's page holds the panel (one at a time, `channelPanelSearch`).
-  const [, setWidgetId] = useOpenParam("widget");
-  const widgetId = useRouterState({
-    select: (s) => channelPanelSearch(s.location.search as Record<string, unknown>).widget ?? null,
-  });
   const [arranging, setArranging] = useState(false);
   const [adding, setAdding] = useState(false);
   const { link } = useLink(channel);
@@ -310,15 +327,8 @@ function Board({
           {t(board.canEdit ? "dashboards.empty.text" : "dashboards.empty.viewer")}
         </EmptyState>
       ) : (
-        <WidgetBoard
-          orgId={org.id}
-          board={board}
-          arranging={arranging}
-          onOpen={(id) => setWidgetId(id)}
-          onChangeSchedule={(id) => setWidgetId(id)}
-        />
+        <WidgetBoard orgId={org.id} board={board} arranging={arranging} onOpen={onWidget} onChangeSchedule={onWidget} />
       )}
-      <WidgetPanel orgId={org.id} widgetId={widgetId} onClose={() => setWidgetId(null)} />
       <NewWidgetDialog orgId={org.id} open={adding} onClose={() => setAdding(false)} dashboardId={board.id} />
     </>
   );

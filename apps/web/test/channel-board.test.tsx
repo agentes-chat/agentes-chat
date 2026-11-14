@@ -191,4 +191,20 @@ describe("a channel's dashboard (ADR 0135 §21)", () => {
     await settle(6);
     expect((router.state.location.search as { widget?: string }).widget).toBeTruthy();
   });
+
+  test("floating, a widget's panel takes the board's place and closing it brings the board back", async () => {
+    widthIs(CHANNEL_BOARD_NARROW_QUERY);
+    const { router } = await open();
+    await click(toggle() as HTMLElement);
+    await settle(3);
+    await click(within(column() as HTMLElement).getByText("Receita hoje"));
+    await settle(6);
+    expect((router.state.location.search as { widget?: string }).widget).toBeTruthy();
+    expect(column()).toBeNull();
+    expect(document.querySelectorAll(".thread-panel").length).toBe(0);
+    const dialog = screen().getByRole("dialog");
+    await click(within(dialog).getAllByRole("button", { name: "Fechar" })[0] as HTMLElement);
+    await settle(6);
+    expect(column()?.classList.contains("channel-board--float")).toBe(true);
+  });
 });
