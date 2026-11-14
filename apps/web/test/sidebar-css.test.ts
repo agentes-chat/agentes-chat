@@ -198,6 +198,12 @@ test("you and the bell in one raised card, a plate each inside its curve; the be
   ]);
 });
 
+test("a setor's mark on its sidebar header keeps its color, as on Equipe: nothing grays or dims it", () => {
+  const rules = (css.match(/[^{}]+\{[^}]*\}/g) ?? []).filter((r) => r.includes("sidebar__section--group"));
+  const quieted = rules.filter((r) => r.includes(".ac-rolemark") && /\b(filter|opacity)\s*:/.test(r));
+  expect(quieted).toEqual([]);
+});
+
 test("every role mark is a full circle", async () => {
   const ui = await Bun.file(join(import.meta.dir, "../../../packages/ui/src/styles/components.css")).text();
   expect(declarations(ui, ".ac-rolemark").findLast(([p]) => p === "border-radius")?.[1]).toBe("50%");
