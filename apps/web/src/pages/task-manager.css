@@ -534,3 +534,28 @@ html:not([data-pointer]) .tm-more:focus-visible {
   font-size: 14px;
   color: var(--muted);
 }
+/* Narrow: the tile and the name on one line, the facts whole and the way out under them, full width. Its words'
+   tip still opens from the way out. */
+@media (max-width: 760px) {
+  .tm-cause {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: var(--space-1) var(--space-3);
+  }
+  .tm-cause > .tm-cause__text {
+    display: contents;
+  }
+  .tm-cause__text b {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .tm-cause__text small {
+    grid-column: 1 / -1;
+    margin-left: 0;
+    white-space: normal;
+  }
+  .tm-cause > .ac-link {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
