@@ -23,7 +23,14 @@ import {
   SQL_READS,
   sqlReadsTarget,
 } from "../approval-rules";
-import { fedByRoutine, type RunAuthority, runAuthorityById, UUID } from "../authority";
+import {
+  fedByRoutine,
+  MAX_AUTHORITY_CHAIN,
+  type RunAuthority,
+  runAuthorityById,
+  steeredByOf,
+  UUID,
+} from "../authority";
 import { type CostKind, costlyGate, costlyKind, LONG_STEPS, unrequested } from "../brakes";
 import { countToolCall } from "../connector-usage";
 import { actionLevel, nameWords, openEnded } from "../connectors/classify";
@@ -38,7 +45,7 @@ import { mergeReposOfCall, recordMergeDone, reposOfGithubCall } from "../git/rep
 import { recordRead } from "../outbound";
 import { routineCreatorOf } from "../requester";
 import { isRightHand, RIGHT_HAND_NOT_OFFERED } from "../right-hand";
-import type { RoutineBrief } from "../routine-brief";
+import { type RoutineBrief, routineBriefOf } from "../routine-brief";
 import { keysOfCall, RUN_CODE_TOOL, routineKeysAllowed, routineKeysKind } from "../routine-keys";
 import { addRunStep } from "../runs";
 import { describeWhen } from "../schedule";
@@ -86,7 +93,7 @@ import {
 } from "./scopes";
 import type { AheadOutcome, AheadRequest, ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./types";
 
-const { approvals, agents, agentRunSteps, routines } = schema;
+const { approvals, agents, agentConsultations, agentRuns, agentRunSteps, messages, routines } = schema;
 type AuditOutcome = schema.AuditOutcome;
 
 /** Merge, deploy and rollback need a person whatever a connector says, unless the agent never asks (ADR 0173). */
@@ -858,6 +865,98 @@ export function createToolGateway(deps: {
     return row ?? null;
   }
 
+  /** The messages a run read after its trigger, as they joined it (between steps or live: `steeredMessageIds`). */
+  async function joinedReads(ctx: ToolContext, runId: string) {
+    const steps = await ctx.db
+      .select({ data: agentRunSteps.data })
+      .from(agentRunSteps)
+      .where(
+        and(
+          eq(agentRunSteps.orgId, ctx.orgId),
+          eq(agentRunSteps.runId, runId),
+          eq(agentRunSteps.kind, "context"),
+          sql`${agentRunSteps.data} ? 'steeredMessageIds'`,
+        ),
+      );
+    const ids = steps.flatMap((s) => (Array.isArray(s.data.steeredMessageIds) ? s.data.steeredMessageIds : []));
+    return [...new Set(ids)].filter((id): id is string => typeof id === "string" && UUID.test(id));
+  }
+
+  /** The notice a message is, as the server wrote it; never a person's message. */
+  async function noticeOfMessage(ctx: ToolContext, messageId: string) {
+    const [m] = await ctx.db
+      .select({ authorType: messages.authorType, meta: messages.meta })
+      .from(messages)
+      .where(and(eq(messages.orgId, ctx.orgId), eq(messages.id, messageId)));
+    if (!m || m.authorType === "person") return null;
+    return (m.meta.notice ?? null) as { kind?: unknown; refs?: Record<string, unknown> } | null;
+  }
+
+  /** The run that asked the question a `consult_reply` notice answers, when a teammate of this agent answered it. */
+  async function answeredAsker(ctx: ToolContext, notice: { kind?: unknown; refs?: Record<string, unknown> } | null) {
+    const id = notice?.kind === "consult_reply" ? notice.refs?.consultationId : null;
+    if (typeof id !== "string" || !UUID.test(id)) return null;
+    const [c] = await ctx.db
+      .select({ askerRunId: agentConsultations.askerRunId, targetAgentId: agentConsultations.targetAgentId })
+      .from(agentConsultations)
+      .where(
+        and(
+          eq(agentConsultations.orgId, ctx.orgId),
+          eq(agentConsultations.id, id),
+          eq(agentConsultations.askerAgentId, ctx.agentId),
+          eq(agentConsultations.kind, "question"),
+          eq(agentConsultations.status, "answered"),
+        ),
+      );
+    return c && c.targetAgentId !== ctx.agentId ? c.askerRunId : null;
+  }
+
+  /**
+   * Whether a run nobody is behind still does routine `routineId`'s own job (ADR 0053, addendum 2026-11-13): that
+   * routine's report woke it (`routine_handoff`) and nothing joined it since, or a teammate's answer to a question a
+   * run doing that job asked woke it (that routine's own run included) and what joined it since is only more answers
+   * to that run's questions. Walked through the server's links (a notice's run, a consultation's asker), never text.
+   */
+  async function onOwnJob(ctx: ToolContext, routineId: string) {
+    let runId = ctx.runId;
+    let mustBeRoutine = false;
+    for (let depth = 0; depth <= MAX_AUTHORITY_CHAIN; depth++) {
+      const [run] = await ctx.db
+        .select({
+          agentId: agentRuns.agentId,
+          background: agentRuns.background,
+          triggerMessageId: agentRuns.triggerMessageId,
+          transcript: agentRuns.transcript,
+        })
+        .from(agentRuns)
+        .where(and(eq(agentRuns.orgId, ctx.orgId), eq(agentRuns.id, runId)));
+      if (!run || run.agentId !== ctx.agentId) return false;
+      if (run.background) {
+        const [trigger] = await ctx.db
+          .select({ meta: messages.meta })
+          .from(messages)
+          .where(and(eq(messages.orgId, ctx.orgId), eq(messages.id, run.triggerMessageId)));
+        return routineBriefOf(trigger?.meta)?.routineId === routineId;
+      }
+      // A person who wrote into a run is behind it from then on: what it asked is theirs, not the routine's.
+      if (mustBeRoutine || steeredByOf(run.transcript)) return false;
+      const notice = await noticeOfMessage(ctx, run.triggerMessageId);
+      const joined = await joinedReads(ctx, runId);
+      if (notice?.kind === "routine_handoff") {
+        const reporter = notice.refs?.runId;
+        if (joined.length > 0 || typeof reporter !== "string" || !UUID.test(reporter)) return false;
+        runId = reporter;
+        mustBeRoutine = true;
+        continue;
+      }
+      const asker = await answeredAsker(ctx, notice);
+      if (!asker) return false;
+      for (const id of joined) if ((await answeredAsker(ctx, await noticeOfMessage(ctx, id))) !== asker) return false;
+      runId = asker;
+    }
+    return false;
+  }
+
   /**
    * Whether a routine's run may do this call without a card (`routines.own_actions`, ADR 0053 §2 addendum of
    * 2026-11-03: setting the routine up approved its job, so it doesn't ask every run). Every action the call runs is one its creator
@@ -1319,11 +1418,22 @@ export function createToolGateway(deps: {
       const remember = kinds[0] ?? null;
       if (await coveredBy(kinds)) approves = false;
       // The routine's own job: an action its creator allowed when they set it up runs like an allowed one, every run,
-      // unless its agent always asks.
-      const ownJob =
-        approves && level !== "always" && authority?.kind === "routine" && authority.brief
-          ? await ownJobCovers(ctx, authority.brief, tool, call.input)
-          : false;
+      // unless its agent always asks. The run its report woke does that job too, and so does the run a teammate's
+      // answer to that job's question woke (`onOwnJob`, ADR 0053, addendum 2026-11-13): anything else that woke or
+      // joined it (the end of a task, another routine's report, another agent's message) is not the job the person
+      // set up, and would choose an allowed action's arguments.
+      const ownJobBrief =
+        !approves || level === "always"
+          ? null
+          : authority?.kind === "routine"
+            ? authority.brief
+            : authority?.kind === "unattended" &&
+                fedByRoutine(authority) &&
+                authority.brief &&
+                (await onOwnJob(ctx, authority.brief.routineId))
+              ? authority.brief
+              : null;
+      const ownJob = ownJobBrief ? await ownJobCovers(ctx, ownJobBrief, tool, call.input) : false;
       if (ownJob) approves = false;
       // A routine's own run puts Vault keys in a command only where its creator allowed them, or its agent never asks
       // (ADR 0144 §2): else a person says yes first, and "Sempre nesta rotina" keeps those keys as the routine's own.

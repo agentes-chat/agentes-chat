@@ -12,19 +12,22 @@ import { formatLineTime } from "@agenteschat/client/lib/format";
 import {
   type AgentTasks,
   agentSummary,
+  causeWords,
+  computerRoomText,
+  computersBesides,
   endedState,
   groupLead,
   groupTasks,
   hiddenCount,
   returnCanceledText,
   returnPlace,
+  shownCauses,
   taskPlace,
   taskState,
   taskTime,
   taskTitle,
   taskWaitWords,
   type WaitCause,
-  waitCauses,
 } from "@agenteschat/client/lib/task-manager";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -69,16 +72,7 @@ import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { type ActionItem, ActionList, Tile } from "../shared/parts";
 import { SheetHostProvider, useSheet } from "../shared/SheetHost";
 import { useStopper, useTasksToday } from "./hooks";
-import {
-  computerLine,
-  endedLatestFirst,
-  endedText,
-  groupLine,
-  type RowState,
-  rowState,
-  taskStateWords,
-  taskSubline,
-} from "./logic";
+import { endedLatestFirst, endedText, groupLine, type RowState, rowState, taskStateWords, taskSubline } from "./logic";
 import { TaskMark, useAgentColor, WaitLines } from "./parts";
 
 /** Rows whose agent moves (a long list stays light). */
@@ -173,7 +167,8 @@ function TaskManager() {
   const askedCount = groups.reduce((n, g) => n + g.tasks.length, 0);
   const delegatedCount = delegated.reduce((n, g) => n + g.tasks.length, 0);
   const computers = view?.computers ?? [];
-  const causes = waitCauses(all).slice(0, CAUSES_MAX);
+  const causes = shownCauses(all);
+  const listed = computersBesides(computers, causes);
   const done = view?.doneToday ?? ended.filter((e) => e.status === "done").length;
   return (
     <PushedLargeTitle
@@ -224,10 +219,10 @@ function TaskManager() {
                 {t("taskManager.hiddenLine", { count: hidden })}
               </Text>
             ) : null}
-            {computers.length > 0 ? (
+            {listed.length > 0 ? (
               <Animated.View {...fade} layout={layout}>
-                <SectionHeader title={t("taskManager.queue.computers")} count={computers.length} />
-                {computers.map((m, i) => (
+                <SectionHeader title={t("taskManager.queue.computers")} count={listed.length} />
+                {listed.map((m, i) => (
                   <Animated.View key={m.id} {...fade} layout={layout}>
                     <ComputerRow computer={m} divider={i > 0} />
                   </Animated.View>
@@ -475,9 +470,6 @@ function OneLine({ title, line, variant = "body" }: { title: string; line?: stri
   );
 }
 
-/** Causes shown at most: the ones holding the most work. */
-const CAUSES_MAX = 3;
-
 /**
  * What holds waiting work (`waitCauses`), one line with its count, as the web's strip: a plan at its limit opens IA e
  * uso, a full computer its line, one away the computers, people's oks and answers the first such task's screen.
@@ -487,31 +479,21 @@ function CauseRow({ cause, computers, divider }: { cause: WaitCause; computers: 
   const c = useColors();
   const openQueue = useOpenQueue();
   const first = cause.tasks[0] as ManagedTask;
-  const words = taskWaitWords(t, i18n.language, first);
-  const count = t("taskManager.tasks", { count: cause.tasks.length });
-  const computer = cause.kind === "computer" ? computers.find((m) => m.id === cause.machineId) : undefined;
+  const { name: title, fact: line } = causeWords(t, i18n.language, cause, computers);
   const brain = first.brain && first.brain !== "model" ? first.brain : null;
   const kind = useComputerKind(useOrgId(), cause.kind === "computer" ? cause.machineId : null);
   const row =
     cause.kind === "limit"
       ? {
-          title: words?.state ?? "",
-          line: [words?.next, count].filter(Boolean).join(" · "),
           lead: brain ? <ProviderLogo id={brain} size="xs" /> : <Icon name="clock" size={16} color={c.muted} />,
           onPress: () => router.push("/usage"),
         }
       : cause.kind === "computer"
         ? {
-            title: computer?.name ?? first.machine?.name ?? "",
-            line: cause.busy
-              ? t("taskManager.queue.full", { count: computer?.inLine || cause.tasks.length })
-              : [words?.state, count].join(" · "),
             lead: <ComputerIcon kind={kind} size={16} color={c.muted} />,
             onPress: cause.busy ? () => openQueue(cause.machineId) : () => router.push("/settings/devices"),
           }
         : {
-            title: t("taskManager.waiting", { count: cause.tasks.length }),
-            line: words?.next ?? "",
             lead: <Icon name="clock" size={16} color={c.muted} />,
             onPress: () => router.push(taskHref(first.runId)),
           };
@@ -519,12 +501,12 @@ function CauseRow({ cause, computers, divider }: { cause: WaitCause; computers: 
     <Pressable
       onPress={row.onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${row.title}, ${row.line}`}
+      accessibilityLabel={`${title}, ${line}`}
       style={({ pressed }) => [styles.task, pressed && { backgroundColor: c.sunken }]}
     >
       {divider ? <View style={[styles.divider, styles.textDivider, { backgroundColor: c.line2 }]} /> : null}
       <Tile size={LEAD}>{row.lead}</Tile>
-      <OneLine title={row.title} line={row.line} variant="subhead" />
+      <OneLine title={title} line={line} variant="subhead" />
       <Icon name="right" size={15} color={c.faint} />
     </Pressable>
   );
@@ -539,7 +521,7 @@ function ComputerRow({ computer, divider }: { computer: ComputerSummary; divider
   const c = useColors();
   const kind = useComputerKind(useOrgId(), computer.id);
   const openQueue = useOpenQueue();
-  const line = computerLine(t, computer);
+  const line = computerRoomText(t, computer);
   return (
     <Pressable
       onPress={() => openQueue(computer.id)}

@@ -7,6 +7,7 @@ import {
   BRAIN_PROTOCOL,
   type BrainTurnRequest,
   brainTopic,
+  CLI_GIT_MISSING,
   CONTEXT_LIMIT_PROTOCOL,
   CONVERSATION_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
@@ -17,6 +18,7 @@ import {
   type WireBrainEvent,
 } from "@agenteschat/adapters";
 import { type Database, schema } from "@agenteschat/db";
+import { autoContextFor } from "@agenteschat/providers/context-limits";
 import { getAgentCached } from "../agents";
 import type { CodeSetup } from "../git/machine";
 import { type MachineCaller, MachineRequestError, type MachineStatus } from "../machine-hub";
@@ -204,13 +206,18 @@ export function accountFields(
   };
 }
 
-/** The agent's context limit, sent only to a runner that knows it (`CONTEXT_LIMIT_PROTOCOL`). */
+/**
+ * The agent's context limit, or "Automático"'s for this program (`autoContextFor`), sent only to a runner that knows
+ * it (`CONTEXT_LIMIT_PROTOCOL`): an older one keeps compacting at the model's window.
+ */
 export function contextFields(
   protocol: number | undefined,
   turn: Pick<BrainTurn, "contextTokens">,
+  kind: string,
 ): Pick<BrainTurnRequest, "contextTokens"> {
-  if (!turn.contextTokens || (protocol !== undefined && protocol < CONTEXT_LIMIT_PROTOCOL)) return {};
-  return { contextTokens: turn.contextTokens };
+  const tokens = turn.contextTokens || autoContextFor(kind);
+  if (!tokens || (protocol !== undefined && protocol < CONTEXT_LIMIT_PROTOCOL)) return {};
+  return { contextTokens: tokens };
 }
 
 /** The turn's speed, sent only to a runner that knows it (`SPEED_PROTOCOL`). */
@@ -220,6 +227,19 @@ export function speedFields(
 ): Pick<BrainTurnRequest, "speed"> {
   if (!turn.speed || (protocol !== undefined && protocol < SPEED_PROTOCOL)) return {};
   return { speed: turn.speed };
+}
+
+/** A CLI the computer doesn't list: not installed, or there and failing to start (`executors.broken`) with its error. */
+export function cliMissingMessage(
+  program: string,
+  status: Pick<MachineStatus, "name" | "executors">,
+  cli: keyof NonNullable<NonNullable<MachineStatus["executors"]>["broken"]>,
+) {
+  const said = status.executors?.broken?.[cli];
+  if (!said) return `${program} is not installed on ${status.name}.`;
+  return said === CLI_GIT_MISSING
+    ? `${program} is on ${status.name} but can't start: Git for Windows isn't installed there.`
+    : `${program} is on ${status.name} but can't start: ${said}`;
 }
 
 /** Why the turn can't go to this machine now (null: it can). With an account, the account decides the sign-in. */
@@ -241,7 +261,7 @@ export function claudeCodeAvailability(status: MachineStatus | null, account?: B
     );
   }
   const ex = status.executors ?? {};
-  if (ex.detectedAt && !ex.claude) return err("cli_missing", `Claude Code is not installed on ${status.name}.`, true);
+  if (ex.detectedAt && !ex.claude) return err("cli_missing", cliMissingMessage("Claude Code", status, "claude"), true);
   if (account) {
     const e = accountUnavailable(status, account, "claude_code");
     return e ? err(e.code, e.message, true) : null;
@@ -428,7 +448,7 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           personalMcp: personalMcp && !chat,
           ...(permissions ? { permissions } : {}),
           ...accountFields(status?.protocol, turn),
-          ...contextFields(status?.protocol, turn),
+          ...contextFields(status?.protocol, turn, "claude_code"),
           ...(turn.personWaiting ? { personWaiting: true } : {}),
         };
         deps.hub

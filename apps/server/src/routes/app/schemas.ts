@@ -915,6 +915,7 @@ export const BrainUnavailable = z.enum([
   "outdated",
   "not_reported",
   "system",
+  "cant_start",
 ]);
 
 export const BrainOption = z

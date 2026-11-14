@@ -1646,6 +1646,8 @@
         "offlineCloudM": "{{name}}のコンピューターは今応答しません。",
         "stuckF": "{{name}}のブラウザを開けませんでした。",
         "stuckM": "{{name}}のブラウザを開けませんでした。",
+        "noAnswerF": "{{name}}のブラウザが応答しませんでした。",
+        "noAnswerM": "{{name}}のブラウザが応答しませんでした。",
         "tooManyF": "同時に開いているブラウザが多すぎます。ほかのブラウザが閉じると、これが表示されます。",
         "tooManyM": "同時に開いているブラウザが多すぎます。ほかのブラウザが閉じると、これが表示されます。"
       }
@@ -1898,7 +1900,6 @@
         "openXcode": "Xcodeを開く",
         "opened": "{{host}}でXcodeが開きました。設定をもう一度確認し、あとでそのMacのXcodeを閉じてください。",
         "unlock": "オンにして再起動しましたか？「オンにする」の通知は、このiPhoneのロックを解除すると表示されます。",
-        "checkAgain": "もう一度確認",
         "outdated": "{{host}}のagentes.chatアプリが古くなっています。そのMacでアップデートしてください。"
       }
     },
@@ -1912,6 +1913,7 @@
       "waiting": "{{names}}が{{device}}を待っています",
       "waitingFor": "{{names}}が{{person}}の依頼で{{device}}を待っています",
       "tool_request": "{{names}} があなたの {{device}} で{{tool}}をオンにするよう頼んでいます",
+      "cli_request": "{{names}} が {{device}} に {{tool}} をインストールするよう求めています",
       "allowOnce": "今回のみ許可",
       "always": "{{name}}を常に許可",
       "no": "許可しない",

@@ -1743,6 +1743,8 @@
         "offlineCloudM": "De computer van {{name}} reageert nu niet.",
         "stuckF": "De browser van {{name}} kon niet worden geopend.",
         "stuckM": "De browser van {{name}} kon niet worden geopend.",
+        "noAnswerF": "De browser van {{name}} reageerde niet.",
+        "noAnswerM": "De browser van {{name}} reageerde niet.",
         "tooManyF": "Te veel browsers tegelijk open. Deze verschijnt zodra er een andere sluit.",
         "tooManyM": "Te veel browsers tegelijk open. Deze verschijnt zodra er een andere sluit."
       }
@@ -1996,7 +1998,6 @@
         "openXcode": "Xcode openen",
         "opened": "Xcode is geopend op {{host}}. Kijk opnieuw in Instellingen en sluit Xcode daar daarna.",
         "unlock": "Aangezet en herstart? De melding met Zet aan verschijnt zodra deze iPhone ontgrendeld is.",
-        "checkAgain": "Opnieuw controleren",
         "outdated": "De agentes.chat-app op {{host}} is verouderd. Werk hem bij op die Mac."
       }
     },
@@ -2010,6 +2011,7 @@
       "waiting": "{{names}} wacht op {{device}}",
       "waitingFor": "{{names}} wacht op {{device}} voor {{person}}",
       "tool_request": "{{names}} vraagt je {{tool}} aan te zetten op je {{device}}",
+      "cli_request": "{{names}} vraagt je {{tool}} te installeren op je {{device}}",
       "allowOnce": "Eén keer toestaan",
       "always": "{{name}} altijd toestaan",
       "no": "Nee",

@@ -1835,6 +1835,8 @@
         "offlineCloudM": "La computadora de {{name}} no responde ahora.",
         "stuckF": "No se pudo abrir el navegador de {{name}}.",
         "stuckM": "No se pudo abrir el navegador de {{name}}.",
+        "noAnswerF": "El navegador de {{name}} no respondió.",
+        "noAnswerM": "El navegador de {{name}} no respondió.",
         "tooManyF": "Hay demasiados navegadores abiertos a la vez. Este aparece cuando se cierre otro.",
         "tooManyM": "Hay demasiados navegadores abiertos a la vez. Este aparece cuando se cierre otro."
       }
@@ -2089,7 +2091,6 @@
         "openXcode": "Abrir Xcode",
         "opened": "Xcode se abrió en {{host}}. Vuelve a mirar en Ajustes y cierra Xcode allí después.",
         "unlock": "¿Lo activaste y se reinició? El aviso con Activar aparece cuando este iPhone está desbloqueado.",
-        "checkAgain": "Comprobar de nuevo",
         "outdated": "La app agentes.chat en {{host}} está desactualizada. Actualízala en ese Mac."
       }
     },
@@ -2103,6 +2104,7 @@
       "waiting": "{{names}} está esperando {{device}}",
       "waitingFor": "{{names}} está esperando {{device}} para {{person}}",
       "tool_request": "{{names}} te pide activar {{tool}} en tu {{device}}",
+      "cli_request": "{{names}} te pide instalar {{tool}} en tu {{device}}",
       "allowOnce": "Permitir una vez",
       "always": "Permitir siempre a {{name}}",
       "no": "No",

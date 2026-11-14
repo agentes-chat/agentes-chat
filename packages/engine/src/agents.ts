@@ -38,7 +38,7 @@ import {
   grantScopes,
   PERSONAL_AGENT_SCOPES,
 } from "./tools/scopes";
-import { resyncBudgetCounter } from "./usage";
+import { orgDefaultAgentBudget, resyncBudgetCounter } from "./usage";
 import { resumeBudgetWaits } from "./usage-pause";
 import { isPersonalWorkspace } from "./workspace-mode";
 
@@ -242,6 +242,15 @@ export async function createAgent(
   // How much it asks (ADR 0173) is for who edits any agent, at its creation too.
   if (input.approvalsLevel !== undefined && !can(membership, "manage_agents")) {
     throw new ForbiddenError("Only who manages agents can set how much an agent asks");
+  }
+  // What one agent may spend beyond the workspace's default is for who edits any agent: a member's new agent takes
+  // at most the default.
+  if (
+    input.monthlyBudgetNanoUsd != null &&
+    !can(membership, "manage_agents") &&
+    input.monthlyBudgetNanoUsd > (await orgDefaultAgentBudget(db, orgId))
+  ) {
+    throw new ForbiddenError("Only an admin can give an agent more than the workspace's default budget");
   }
   const values = await endpointModel(db, orgId, {
     ...fields,

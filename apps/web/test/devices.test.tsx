@@ -804,11 +804,12 @@ describe("an iPhone at Developer Mode", () => {
     await click(within(step()).getByRole("button", { name: "Don't see the option?" }));
     expect(causes()).toEqual([
       "The iPhone hides the option until Xcode asks to show it.Open Xcode",
-      "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.Check again",
+      "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.",
     ]);
-    // Each cause and its action make one action line.
-    expect(step().querySelectorAll(".dv-slow__list .ac-actline")).toHaveLength(2);
-    await click(within(step()).getByRole("button", { name: "Check again" }));
+    // The cause with an action makes one action line; the unlock cause is checked by the step's one check button.
+    expect(step().querySelectorAll(".dv-slow__list .ac-actline")).toHaveLength(1);
+    expect(step().querySelectorAll(".dv-slow__list button")).toHaveLength(1);
+    await click(within(step()).getByRole("button", { name: "I turned it on, check again" }));
     expect(calls(app.state, "devices.lookForPhones")).toHaveLength(1);
 
     // A Mac whose app is too old: open Xcode there by hand, and update the app (or the Terminal way).

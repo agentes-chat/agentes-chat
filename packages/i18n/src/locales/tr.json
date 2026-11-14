@@ -3085,6 +3085,21 @@
       "zen": "OpenCode'u bağlayın",
       "api_key": "API anahtarı ekleyin"
     },
+    "cli": {
+      "missing": "{{program}} henüz {{computer}} üzerinde yok.",
+      "claudeApp": "Claude uygulaması yetmez: ajanlar bilgisayarda çalışan Claude Code'u kullanır.",
+      "install": "{{program}} benim için kur",
+      "check": "Kurdum, yeniden kontrol et",
+      "checked": "Az önce kontrol edildi: {{program}} hâlâ {{computer}} üzerinde yok.",
+      "installing": "{{program}}, {{computer}} üzerine kuruluyor. Yaklaşık bir dakika sürer.",
+      "failed": "{{computer}} üzerine kurulamadı: {{message}}",
+      "stillMissing": "Kurulum programı bitti, ama {{computer}} hâlâ {{program}} bulamıyor.",
+      "gitMissing": "{{program}}, {{computer}} üzerinde Git for Windows gerektirir.",
+      "getGit": "Git for Windows'u indir",
+      "cantStart": "{{program}}, {{computer}} üzerinde var ama açılmıyor: {{message}}",
+      "outdated": "Buradan kurmak için {{computer}} üzerindeki agentes.chat uygulamasını güncelleyin.",
+      "asked": "İstek gönderildi. {{name}} kurmak için bir düğme alır."
+    },
     "titleFor": "{{name}} için bir yapay zeka bağlayın",
     "have": {
       "title": "Zaten bağlı",
@@ -5435,7 +5450,8 @@
           "200000": "Daha ucuz ve daha hızlı. Uzun sohbetlerde erkenden özetler.",
           "400000": "Çok şey hatırlar ve her yanıt 1M ile olduğundan daha ucuzdur.",
           "1000000": "En çok hatırlayan. Her yanıtta her şeyi yeniden okur: daha yavaş ve daha pahalı.",
-          "auto": "Modelin aldığı kadar."
+          "auto": "Modelin aldığı kadar.",
+          "autoSummarizes": "Claude Code ve Codex'te sohbeti {{size}} noktasında özetler."
         },
         "advanced": {
           "title": "Gelişmiş ayarlar",
@@ -6736,6 +6752,8 @@
     "budget": "Aylık bütçe (US$)",
     "budgetHelp": "Sınıra gelince {{name}} durur ve bunu söyler.",
     "budgetInvalid": "Sıfırdan büyük bir değer girin.",
+    "budgetCapped": "Çalışma alanı varsayılanını kullanır. Yalnızca bir yönetici artırabilir.",
+    "budgetCappedAmount": "Çalışma alanı varsayılanını ({{amount}}) kullanır. Yalnızca bir yönetici artırabilir.",
     "warnsOwner": "%80'de {{name}} kişisini uyarırız.",
     "warnsAdmins": "%80'de yöneticileri uyarırız.",
     "upTo": "ayda en fazla {{amount}}",
@@ -11349,6 +11367,7 @@
       "runner_old": "Kullanmak için bilgisayardaki agentes.chat programını güncelleyin.",
       "tool_offOne": "{{program}}, {{computer}} üzerinde kapalı.",
       "not_installed": "{{program}}, {{computer}} üzerinde yüklü değil.",
+      "cant_start": "{{program}}, {{computer}} üzerinde var ama açılmıyor.",
       "not_reported": "{{computer}} hangi programların olduğunu hâlâ kontrol ediyor. Bittiğinde bu kendiliğinden değişir.",
       "outdated": "{{computer}} üzerindeki sürüm eski. Kullanmak için Codex'i güncelleyin.",
       "system": "{{program}} henüz {{computer}} sisteminde çalışmıyor.",
@@ -14671,7 +14690,6 @@
         "openXcode": "Xcode'u aç",
         "opened": "Xcode {{mac}} üzerinde açıldı. iPhone'un Ayarlar'ına yeniden bakın, sonra Xcode'u kapatın.",
         "unlock": "Açtınız ve iPhone yeniden başladı mı? Kilidini açın. Aç düğmeli uyarı ancak bundan sonra çıkar.",
-        "check": "Yeniden kontrol et",
         "outdated": "{{mac}} üzerindeki agentes.chat uygulaması eski. Uygulamayı güncelleyin ya da oradan kurduysanız bunu Terminal'de çalıştırın."
       },
       "uiAutomationText": "Yeniden başladıktan sonra Ayarlar › Geliştirici bölümünde.",
@@ -14758,6 +14776,7 @@
       "access": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazını kullanmak istiyor",
       "waiting": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazını bekliyor",
       "toolRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınızda {{tool}} açmanızı istiyor",
+      "cliRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınıza {{tool}} kurmanızı istiyor",
       "once": "Bir kez izin ver",
       "always": "Her zaman",
       "no": "Hayır",
@@ -17180,6 +17199,7 @@
       "openingLong": "{{name}} ajanının tarayıcısı açılıyor…",
       "openingHelp": "Bu bilgisayarda ilk seferde bir dakika sürebilir.",
       "stuck": "{{name}} ajanının tarayıcısı açılamadı.",
+      "noAnswer": "{{name}} tarayıcısı yanıt vermedi.",
       "stuckHelp": "Tekrar dene tarayıcıyı yeniden başlatır. Oturumlar kayıtlı kalır.",
       "subWorking": "{{name}} · {{now}}",
       "subStarting": "{{name}} tarayıcıyı açıyor",

@@ -17,7 +17,7 @@ import {
   updateMyProfile,
   ValidationError,
 } from "../src";
-import { addMember as addPerson, addUser, type Fixture, setup } from "./fixtures";
+import { addMember as addPerson, addUser, everyoneWithout, type Fixture, setup } from "./fixtures";
 
 let f: Fixture;
 afterEach(async () => {
@@ -448,9 +448,10 @@ describe("planning and applying an import", () => {
     }
   });
 
-  test("admins only; one apply takes at most 200 writes (a dry run any size)", async () => {
+  test("who may create agents only; one apply takes at most 200 writes (a dry run any size)", async () => {
     f = await setup();
     const member = await addPerson(f.db, f.org.id, "member");
+    await everyoneWithout(f.db, f.org.id, "create_agents");
     await expect(run({ bundle: bundle(), dryRun: true }, member.id)).rejects.toThrow(ForbiddenError);
     await expect(run({ bundle: bundle() }, member.id)).rejects.toThrow(ForbiddenError);
 

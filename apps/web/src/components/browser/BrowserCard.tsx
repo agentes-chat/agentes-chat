@@ -46,7 +46,7 @@ import {
 } from "@agenteschat/client";
 import { formatTime, lowerFirst } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { browserOffMessage, profileRefusalLine } from "@agenteschat/client/lib/machines";
+import { browserNoAnswerMessage, browserOffMessage, profileRefusalLine } from "@agenteschat/client/lib/machines";
 import { MAX_MESSAGE_LENGTH } from "@agenteschat/client/lib/message-length";
 import { can as canDo } from "@agenteschat/client/lib/permissions";
 import { useSeat } from "@agenteschat/client/lib/seat-context";
@@ -101,6 +101,7 @@ import { useOrg } from "../org-context";
 import { colorOf } from "../Sky";
 import { useComputerEdition } from "../WorkspaceComputer";
 import { AddressBar } from "./AddressBar";
+import { AgentCursor } from "./AgentCursor";
 import { Cover } from "./Cover";
 import { LivePicture } from "./LivePicture";
 import { requestBrowserCard, useBrowserCardRequest } from "./open";
@@ -864,6 +865,7 @@ export function BrowserCard({
   // (the switch when the browser is off there). An agent's own browser retries by itself, as before.
   const refusedHere = unavailable?.reason === "unavailable" && Boolean(profile);
   const offHere = refusedHere && browserOffMessage(unavailable?.message);
+  const noAnswer = refusedHere && browserNoAnswerMessage(unavailable?.message);
   // What can't change by waiting is said plainly; everything else is "opening" while it retries.
   const blocker = shows
     ? null
@@ -876,7 +878,11 @@ export function BrowserCard({
           : live.error === "too_many_browsers"
             ? t("browser.inCard.tooMany")
             : refusedHere
-              ? t(offHere ? "browser.profiles.toolOff" : "browser.live.unavailable")
+              ? offHere
+                ? t("browser.profiles.toolOff")
+                : noAnswer
+                  ? t("browser.inCard.noAnswer", g)
+                  : t("browser.live.unavailable")
               : null;
   const starting = !shows && !frame && !blocker && !reconnecting && !closed && !opening && !hidden;
   // Opening or reconnecting for too long says so, with Try again: who may drive it restarts the browser, the
@@ -1165,6 +1171,7 @@ export function BrowserCard({
         color={color}
         icon="alert"
         text={blocker}
+        help={noAnswer && mayDrive ? t("browser.inCard.stuckHelp") : undefined}
         action={
           profile?.machine && offHere ? (
             <MachineToolButton machine={profile.machine} tool="browser" onAllowed={retry} />
@@ -1401,6 +1408,8 @@ export function BrowserCard({
             >
               {inControl && <textarea ref={pasteRef} className="brw-paste" tabIndex={-1} aria-hidden="true" />}
               <LivePicture frame={frame} alt={t("browser.live.page", g)} imgRef={imgRef} />
+              {/* Nobody in control: the agent works, and its cursor shows where (ADR 0040 §7.2). */}
+              {!controller && <AgentCursor agentId={agentId} name={name} color={color} pointer={live.pointer} />}
               {mark && <span key={mark.key} className="brw-mark" style={{ left: mark.x, top: mark.y }} />}
               {(sliding || scrolling) && (
                 <span className="brw-ac__capture" role="status" data-esc-layer="">

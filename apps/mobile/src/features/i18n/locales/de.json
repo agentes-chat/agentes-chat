@@ -1743,6 +1743,8 @@
         "offlineCloudM": "Der Computer von {{name}} antwortet gerade nicht.",
         "stuckF": "Der Browser von {{name}} ließ sich nicht öffnen.",
         "stuckM": "Der Browser von {{name}} ließ sich nicht öffnen.",
+        "noAnswerF": "Der Browser von {{name}} hat nicht geantwortet.",
+        "noAnswerM": "Der Browser von {{name}} hat nicht geantwortet.",
         "tooManyF": "Zu viele Browser gleichzeitig offen. Dieser erscheint, sobald ein anderer schließt.",
         "tooManyM": "Zu viele Browser gleichzeitig offen. Dieser erscheint, sobald ein anderer schließt."
       }
@@ -1996,7 +1998,6 @@
         "openXcode": "Xcode öffnen",
         "opened": "Xcode ist auf {{host}} offen. Schau noch einmal in den Einstellungen und schließ Xcode dort danach.",
         "unlock": "Eingeschaltet und neu gestartet? Die Abfrage mit Aktivieren erscheint, sobald dieses iPhone entsperrt ist.",
-        "checkAgain": "Erneut prüfen",
         "outdated": "Die agentes.chat-App auf {{host}} ist veraltet. Aktualisiere sie auf diesem Mac."
       }
     },
@@ -2010,6 +2011,7 @@
       "waiting": "{{names}} wartet auf {{device}}",
       "waitingFor": "{{names}} wartet für {{person}} auf {{device}}",
       "tool_request": "{{names}} bittet dich, {{tool}} auf deinem {{device}} einzuschalten",
+      "cli_request": "{{names}} bittet dich, {{tool}} auf deinem {{device}} zu installieren",
       "allowOnce": "Einmal erlauben",
       "always": "{{name}} immer erlauben",
       "no": "Nein",

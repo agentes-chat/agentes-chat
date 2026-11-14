@@ -756,6 +756,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     uids: () => (own === null ? null : { runner: 0, agents: new Map([[o.agentId, own]]) }),
     secrets: (agent) => agentSecrets(secretsDir, agent),
     browserPid: (agentId) => browser.chromePid(agentId),
+    pointer: (agentId, to) => void live?.send({ type: "desktop.pointer", agentId, ...to }),
     log,
     ...o.desktop,
   });

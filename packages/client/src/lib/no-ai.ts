@@ -563,6 +563,7 @@ const CLOUD_REASON = {
   not_reported: "stuck",
   // The Cloud's computers run Linux, where every CLI runs: never said there.
   system: "stuck",
+  cant_start: "stuck",
 } as const satisfies Record<BrainUnavailable | "keys", string>;
 
 /**

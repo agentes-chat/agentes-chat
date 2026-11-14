@@ -4292,6 +4292,12 @@
   "browser.live.unavailable.stuckM": {
     "value": "Couldn't open {{name}}'s browser."
   },
+  "browser.live.unavailable.noAnswerF": {
+    "value": "{{name}}'s browser didn't answer."
+  },
+  "browser.live.unavailable.noAnswerM": {
+    "value": "{{name}}'s browser didn't answer."
+  },
   "browser.live.unavailable.tooManyF": {
     "value": "Too many browsers open at once. This one shows when another one closes."
   },
@@ -4919,9 +4925,6 @@
   "devices.iphone.devMode.unlock": {
     "value": "Turned it on and it restarted? The alert with Turn On shows once this iPhone is unlocked."
   },
-  "devices.iphone.devMode.checkAgain": {
-    "value": "Check again"
-  },
   "devices.iphone.devMode.outdated": {
     "value": "The agentes.chat app on {{host}} is out of date. Update it on that Mac."
   },
@@ -4951,6 +4954,9 @@
   },
   "devices.notice.tool_request": {
     "value": "{{names}} asks you to turn on {{tool}} on your {{device}}"
+  },
+  "devices.notice.cli_request": {
+    "value": "{{names}} asks you to install {{tool}} on your {{device}}"
   },
   "devices.notice.allowOnce": {
     "value": "Allow once"

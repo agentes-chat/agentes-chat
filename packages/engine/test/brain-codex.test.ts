@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
   CODEX_FOLDER_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
+  CONTEXT_LIMIT_PROTOCOL,
   MACHINE_PROTOCOL_VERSION,
   OPENCODE_ACP_PROTOCOL,
 } from "@agenteschat/adapters";
@@ -278,6 +279,17 @@ test("accounts (ADR 0041): account and effort go to a runner that knows them; a 
   expect(refused).toMatchObject([{ type: "error", code: "not_logged_in", retryable: true }]);
   expect((refused[0] as { message: string }).message).toContain('"Pessoal"');
   expect(out.sent).toHaveLength(0);
+});
+
+test("context: Automático sends Codex 200K, a chosen limit wins, an older runner gets none", async () => {
+  const sent = async (protocol: number, t: BrainTurn) => {
+    const l = link({ protocol, events: [{ type: "done", text: "ok" }] });
+    await collect(new CodexBrain({ link: l, mcp: async () => ({ token: "t" }) }).run(t, io()));
+    return l.sent[0] as { contextTokens?: number };
+  };
+  expect((await sent(CONTEXT_LIMIT_PROTOCOL, turn())).contextTokens).toBe(200_000);
+  expect((await sent(CONTEXT_LIMIT_PROTOCOL, turn({ contextTokens: 400_000 }))).contextTokens).toBe(400_000);
+  expect("contextTokens" in (await sent(CONTEXT_LIMIT_PROTOCOL - 1, turn()))).toBe(false);
 });
 
 test("live steering (protocol 15): the turn on its way takes messages through brain.steer; steer_read passes; null at the end", async () => {

@@ -185,8 +185,18 @@ describe("the page box with no page to show", () => {
     expect(skyBehind(pageNoteOf(null, false, false, true))).toBe(false);
   });
 
+  test("a profile's browser that didn't answer says so at once, with Try again; a hidden page keeps its words", () => {
+    expect(pageNoteOf("unavailable", false, true, false, true)).toEqual({
+      say: "noAnswer",
+      spin: false,
+      help: "stuckHelp",
+    });
+    expect(pageNoteOf("unavailable", false, true, true, true).say).toBe("noAnswer");
+    expect(pageNoteOf("unavailable", true, false, false, true).say).toBe("unavailable");
+  });
+
   test("every reason has its words in both languages (the key is built from the reason)", () => {
-    const reasons: (PageGap | "stuck")[] = [
+    const reasons: (PageGap | "stuck" | "noAnswer")[] = [
       "reconnecting",
       "offline",
       "no_computer",
@@ -196,6 +206,7 @@ describe("the page box with no page to show", () => {
       "ended",
       "tooMany",
       "stuck",
+      "noAnswer",
     ];
     for (const keys of [featureKeysPtBR, featureKeysEn]) {
       const words = keys.browser.live.unavailable as Record<string, string>;

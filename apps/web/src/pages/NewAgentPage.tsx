@@ -1665,18 +1665,29 @@ function NewAgentFlow({
             </div>
           </div>
           <Card as="div" className="newag__card">
-            <BudgetField
-              id="ag-budget"
-              value={budget}
-              onChange={setBudget}
-              defaultBudget={defaultBudget}
-              error={errorOf("budget") ? errorText(errorOf("budget") as DraftError) : undefined}
-            />
-            {!errorOf("budget") && (
+            {managesAgents ? (
+              <>
+                <BudgetField
+                  id="ag-budget"
+                  value={budget}
+                  onChange={setBudget}
+                  defaultBudget={defaultBudget}
+                  error={errorOf("budget") ? errorText(errorOf("budget") as DraftError) : undefined}
+                />
+                {!errorOf("budget") && (
+                  <span className="small muted">
+                    {defaultBudget === undefined
+                      ? t("agent.budgetDefaultHelp")
+                      : t("agent.budgetDefaultHelpAmount", { amount: usd(t, locale, defaultBudget) })}
+                  </span>
+                )}
+              </>
+            ) : (
+              // More than the workspace's default is an admin's to give (the server's rule): no field to raise it.
               <span className="small muted">
                 {defaultBudget === undefined
-                  ? t("agent.budgetDefaultHelp")
-                  : t("agent.budgetDefaultHelpAmount", { amount: usd(t, locale, defaultBudget) })}
+                  ? t("newAgent.budgetCapped")
+                  : t("newAgent.budgetCappedAmount", { amount: usd(t, locale, defaultBudget) })}
               </span>
             )}
           </Card>

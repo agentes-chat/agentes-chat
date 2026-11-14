@@ -3345,6 +3345,27 @@ export const en = {
       zen: "Connect OpenCode",
       api_key: "Add an API key",
     },
+    /**
+     * A coding CLI that isn't on a computer someone connected (`program`: "Claude Code" or "Codex"), and installing it
+     * from here. `claudeApp` sits behind an ⓘ on Windows and macOS, where a Claude chat app is likely.
+     */
+    cli: {
+      missing: "{{program}} isn't on {{computer}} yet.",
+      claudeApp: "The Claude app isn't enough: agents use Claude Code, which runs on the computer.",
+      install: "Install {{program}} for me",
+      check: "I installed it, check again",
+      checked: "Checked just now: {{program}} still isn't on {{computer}}.",
+      installing: "Installing {{program}} on {{computer}}. It takes about a minute.",
+      failed: "Couldn't install on {{computer}}: {{message}}",
+      stillMissing: "The installer finished, but {{computer}} still doesn't find {{program}}.",
+      /** Claude Code on Windows can't start without Git for Windows. */
+      gitMissing: "{{program}} needs Git for Windows on {{computer}}.",
+      getGit: "Download Git for Windows",
+      /** It is there and its own check of its version fails: `message` is its error. */
+      cantStart: "{{program}} is on {{computer}}, but it won't start: {{message}}",
+      outdated: "Update the agentes.chat app on {{computer}} to install from here.",
+      asked: "Request sent. {{name}} gets a button to install it.",
+    },
     titleFor: "Connect an AI for {{name}}",
     /** What the person already has, before the new sign-ins: accounts on the agent's computer, the workspace's keys. */
     have: {
@@ -5820,6 +5841,7 @@ export const en = {
         context: "Context window",
         contextText: {
           auto: "What the model takes.",
+          autoSummarizes: "On Claude Code and Codex, summarizes the conversation at {{size}}.",
           "200000": "Cheaper and faster. Summarizes early in long conversations.",
           "400000": "Remembers a lot, and each answer costs less than with 1M.",
           "1000000": "Remembers the most. Each answer rereads everything: slower and pricier.",
@@ -7177,6 +7199,8 @@ export const en = {
     budget: "Monthly budget (US$)",
     budgetHelp: "At the limit, {{name}} stops and says so.",
     budgetInvalid: "Use a value greater than zero.",
+    budgetCapped: "Uses the workspace default. Only an admin can raise it.",
+    budgetCappedAmount: "Uses the workspace default ({{amount}}). Only an admin can raise it.",
     warnsOwner: "We alert {{name}} at 80%.",
     warnsAdmins: "We alert the admins at 80%.",
     upTo: "up to {{amount}}/month",
@@ -11713,6 +11737,7 @@ export const en = {
       /** The button that turns it on follows. */
       tool_offOne: "{{program}} is turned off on {{computer}}.",
       not_installed: "{{program}} isn't installed on {{computer}}.",
+      cant_start: "{{program}} is on {{computer}}, but it won't start.",
       /** Its runner hasn't said which CLIs it has yet: nobody knows whether this one is there. */
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
       outdated: "The version on {{computer}} is old. Update Codex to use it.",
@@ -14936,7 +14961,6 @@ export const en = {
         openXcode: "Open Xcode",
         opened: "Xcode opened on {{mac}}. Look in the iPhone's Settings again, then close Xcode.",
         unlock: "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.",
-        check: "Check again",
         /** A Terminal command (`agentes-runner update`) shows under it. */
         outdated:
           "The agentes.chat app on {{mac}} is out of date. Update the app, or run this in Terminal if you installed it there.",
@@ -15047,6 +15071,7 @@ export const en = {
       access: "<b>{{who}}</b> asks to use <b>{{deviceName}}</b>",
       waiting: "<b>{{who}}</b> is waiting for <b>{{deviceName}}</b>",
       toolRequest: "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>",
+      cliRequest: "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>",
       once: "Allow once",
       always: "Always",
       no: "No",
@@ -17594,6 +17619,7 @@ export const en = {
       openingLong: "Opening {{name}}'s browser…",
       openingHelp: "The first time on this computer it may take a minute.",
       stuck: "Couldn't open {{name}}'s browser.",
+      noAnswer: "{{name}}'s browser didn't answer.",
       stuckHelp: "Try again restarts the browser. Logins stay saved.",
       subWorking: "{{name}} · {{now}}",
       subStarting: "{{name}} is opening the browser",

@@ -417,7 +417,7 @@ export class CodexBrain implements Brain {
       mcp: { ...mcp, tools: toolNames.join(" ") },
       ...(agent ? { agent } : {}),
       ...accountFields(status.protocol, turn),
-      ...contextFields(status.protocol, turn),
+      ...contextFields(status.protocol, turn, this.kind),
       ...speedFields(status.protocol, turn),
       ...(permissions ? { permissions } : {}),
       ...(this.deps.keepAlive === false ? { keepAlive: false } : {}),

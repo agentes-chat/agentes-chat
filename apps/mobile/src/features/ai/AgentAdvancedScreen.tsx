@@ -11,7 +11,13 @@ import {
   viewSpeedFits,
 } from "@agenteschat/client/lib/brain-advanced";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
-import { type ContextLimit, contextChoices, contextSize, isContextLimit } from "@agenteschat/client/lib/context-limits";
+import {
+  autoContextLine,
+  type ContextLimit,
+  contextChoices,
+  contextSize,
+  isContextLimit,
+} from "@agenteschat/client/lib/context-limits";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { planOf } from "@agenteschat/client/lib/plans";
 import { isAuto } from "@agenteschat/client/lib/providers";
@@ -193,7 +199,8 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
             <GroupedList>
               <GroupedRow
                 label={t("brain.auto.label")}
-                sub={t("agentPage.work.brain.contextText.auto")}
+                sub={autoContextLine(t, view.brain)}
+                subLines={2}
                 checked={now.contextTokens === null}
                 disabled={!may}
                 onPress={() => now.contextTokens !== null && void save({ contextTokens: null })}
