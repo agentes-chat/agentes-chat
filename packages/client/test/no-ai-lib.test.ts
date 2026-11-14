@@ -813,7 +813,7 @@ describe("why a plan can't sign in yet, in plain words (`gateLine`)", () => {
   const pt = instance.t.bind(instance) as TFunction;
   const computer = "Computador da Acme";
   const line = (gate: PlanGate, edition: "cloud" | "selfhost", kind: "claude_code" | "codex" = "codex") =>
-    gateLine(pt, { gate, edition, kind, computer, machine: { os: "linux", mode: "single" } });
+    gateLine(pt, { gate, edition, kind, computer });
   const off = (reason: Extract<PlanGate, { state: "unsupported" }>["reason"]) =>
     ({ state: "unsupported", reason }) as const;
 
@@ -897,12 +897,22 @@ describe("why a plan can't sign in yet, in plain words (`gateLine`)", () => {
       text: "O Codex não está instalado no Computador da Acme.",
       rechecks: false,
     });
-    expect(line(off("tool_off"), "selfhost")?.text).toContain("agentes-runner tools enable codex");
+    // The cause alone: its way out is the button beside it, never a path to a settings screen in the sentence.
+    expect(line(off("tool_off"), "selfhost")?.text).toBe("O Codex está desligado no Computador da Acme.");
     expect(line(off("keys"), "selfhost")?.text).toBe(pt("aiAccounts.connect.needs.keys"));
     expect(line({ state: "offline" }, "selfhost")).toEqual({
       text: pt("brain.offline", { computer }),
       rechecks: true,
     });
+  });
+
+  test('a computer a person connected to the Cloud is theirs: its words are self-host\'s, never "on our side"', () => {
+    const say = (gate: PlanGate, kind: "connected" | "managed") =>
+      gateLine(pt, { gate, edition: "cloud", kind: "codex", computer, machine: { kind } })?.text;
+    expect(say(off("tool_off"), "connected")).toBe("O Codex está desligado no Computador da Acme.");
+    expect(say(off("not_installed"), "connected")).toBe("O Codex não está instalado no Computador da Acme.");
+    expect(say({ state: "offline" }, "connected")).toBe(pt("brain.offline", { computer }));
+    expect(say(off("tool_off"), "managed")).toContain("Isso é do nosso lado");
   });
 
   test("any other gate has no line", () => {

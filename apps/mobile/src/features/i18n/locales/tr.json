@@ -2071,7 +2071,8 @@
     "everyoneFailed": "Herkesin erişimi değiştirilemedi. Tekrar deneyin.",
     "disconnectFailed": "{{name}} bağlantısı kesilemedi. Tekrar deneyin.",
     "needsReconnect": "{{name}} hesabı çalışmayı bıraktı. Biri yeniden bağlayana kadar ajanlar onu kullanamaz.",
-    "noTools": "{{name}} araçları okunamadı. Araçlar bölümünde yeniden okunana kadar ajanlar bunları kullanamaz.",
+    "noTools": "{{name}} araçları okunamadı. Yeniden okunana kadar ajanlar bunları kullanamaz.",
+    "readAgain": "Yeniden oku",
     "accountTitle": "Hesap",
     "renameFailed": "Yeniden adlandırılamadı. Tekrar deneyin.",
     "whoTitle": "Kim kullanıyor",
@@ -2471,7 +2472,7 @@
     },
     "import": {
       "title": "Bir bilgisayardan içe aktar",
-      "text": "Bir tarayıcıdan ya da şifre yöneticisinden şifre getirmek için web'de Ayarlar, Vault'u açın ve İçe aktar'ı seçin."
+      "text": "Bir tarayıcıdan ya da şifre yöneticisinden şifre getirmek için web'den içe aktarın."
     },
     "connections": {
       "text": "Bir şifre yöneticisi bağlayın, ajanlarınız orada saklanan giriş bilgilerini kullansın. Hiçbir şey kopyalanmaz: şifre yalnızca kullanıldığı anda okunur.",

@@ -12,7 +12,7 @@ import type {
   Model,
 } from "../api/types";
 import { agentGrammar } from "./grammar";
-import { modelOnKey, providerLabel } from "./providers";
+import { keyName, keyThinks, modelOnKey, providerLabel, savedKeyReach } from "./providers";
 import { answerAfter } from "./team-plan";
 
 /** The workspace's right hand (ADR 0137): every surface that treats it apart asks here. */
@@ -109,6 +109,58 @@ export async function rightHandOnKey(
   await api.agents.setBrain(orgId, agent.id, { scope: "workspace", brain: "model" });
   await api.agents.update(orgId, agent.id, { credentialId: key.id, ...modelOnKey(key, agent.model, models) });
   await api.agents.setBrain(orgId, agent.id, { brain: "model" });
+}
+
+/**
+ * One agent onto a workspace key, web and phone: the model brain, the key, and the agent's model where the key runs it,
+ * else one the key does (`modelOnKey`: an endpoint's own for an endpoint key, Automático for a catalog one).
+ */
+export async function agentOnKey(
+  api: ApiClient,
+  orgId: string,
+  agent: { id: string; model?: string | undefined; brain?: string | undefined },
+  key: Pick<Credential, "id" | "provider"> & Partial<Pick<Credential, "endpoint">>,
+  models: readonly Model[],
+) {
+  if (agent.brain !== "model") await api.agents.setBrain(orgId, agent.id, { brain: "model" });
+  await api.agents.update(orgId, agent.id, { credentialId: key.id, ...modelOnKey(key, agent.model, models) });
+}
+
+/**
+ * What saving a key came to. `agent`: it was put on the one agent the flow was for. `all`: the agents without an AI of
+ * their own think with it. `made`: it became the workspace's default instead of `other`, which couldn't think. `other`:
+ * they still think with `other` (a button may make this one the default).
+ */
+export type SavedKey = { kind: "agent"; agent: string } | { kind: "all" } | { kind: "made" | "other"; other: string };
+
+/**
+ * After a key is saved in a connect flow, web and phone: for one agent, the key goes on it; for every agent, it becomes
+ * the default by itself only where the default can't think and it can (`savedKeyReach`).
+ */
+export async function settleSavedKey(
+  api: ApiClient,
+  orgId: string,
+  key: Credential,
+  agent: { id: string; name: string; model?: string | undefined; brain?: string | undefined } | undefined,
+  models: readonly Model[],
+): Promise<SavedKey> {
+  if (agent) {
+    await agentOnKey(api, orgId, agent, key, models);
+    return { kind: "agent", agent: agent.name };
+  }
+  const [keys, settings] = await Promise.all([api.agents.credentials(orgId), api.orgs.settings(orgId)]);
+  const reach = savedKeyReach(key, keys, settings.defaultCredentialId);
+  if (reach.kind !== "make") return reach;
+  await api.agents.makeDefaultCredential(orgId, key.id);
+  return { kind: "made", other: reach.other };
+}
+
+/** The line a saved key's panel shows: whom it thinks for, or that none of an endpoint's models passed a test yet. */
+export function savedKeyLine(t: TFunction, saved: SavedKey, key: Credential) {
+  if (!keyThinks(key)) return t("connectAi.key.untested", { name: keyName(key) });
+  if (saved.kind === "agent") return t("connectAi.key.savedFor", { agent: saved.agent, label: key.label });
+  if (saved.kind === "all") return t("connectAi.key.savedAll");
+  return t(saved.kind === "made" ? "connectAi.key.savedMade" : "connectAi.key.savedOther", { other: saved.other });
 }
 
 /** Its one-time "Novo" is per person and workspace (`seenList` entries), gone once its DM opened. */

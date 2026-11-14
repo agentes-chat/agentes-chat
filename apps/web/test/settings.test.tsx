@@ -126,8 +126,42 @@ describe("Configurações do workspace", () => {
     );
     expect(desktop.textContent).not.toContain("TELEMETRY=off");
     cleanup();
+    // In that app, on that very computer: the line says so and the button opens its Preferences › Servers.
+    const win = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
+    const asked: Record<string, unknown>[] = [];
+    win.__agentesDesktop = { version: "0.8.6" };
+    win.__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: { request?: Record<string, unknown> }) => {
+        if (cmd !== "this_mac" || !args.request) return {};
+        asked.push(args.request);
+        return args.request.kind === "status" ? { orgs: [], agentsHere: true, local: true } : {};
+      },
+    };
+    try {
+      await go(seedState({ telemetry: { enabled: true, envOff: true, report: { report: 1, install: "desktop" } } }));
+      const here = screen().getByRole("region", { name: "Estatísticas de uso" });
+      expect(here.querySelector(".settings-row__status")?.textContent).toBe(
+        "Desligado no app do agentes.chat deste computador.Abrir Servidores",
+      );
+      await click(within(here).getByRole("button", { name: "Abrir Servidores" }));
+      expect(asked).toContainEqual({ kind: "prefs", tab: "servers" });
+    } finally {
+      delete win.__agentesDesktop;
+      delete win.__TAURI_INTERNALS__;
+    }
+    cleanup();
     await go();
     expect(screen().queryByRole("region", { name: "Estatísticas de uso" })).toBeNull();
+  });
+
+  test("Notificações: no phone gets them yet, so the row opens the phone app with a code", async () => {
+    await go(seedState(), "settings/notifications");
+    const row = document.getElementById("notice-phone-status")?.closest(".settings-row") as HTMLElement;
+    expect(row.textContent).toContain("Ative no app do celular");
+    expect(row.textContent).not.toContain("›");
+    await click(within(row).getByRole("button", { name: "Abrir no celular" }));
+    await settle(4);
+    expect(screen().getByRole("dialog", { name: "Abrir no celular" })).toBeTruthy();
   });
 
   test("connected connectors are listed; disconnect asks first", async () => {
