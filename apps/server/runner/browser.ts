@@ -3086,8 +3086,8 @@ export class BrowserManager {
    * True when a Chrome was stopped.
    */
   private async clearStaleLock(profile: string): Promise<boolean> {
-    const listed = await this.killLeftovers(profile);
     const locked = await this.killLockHolder(profile);
+    const listed = await this.killLeftovers(profile);
     await Promise.all(
       ["SingletonLock", "SingletonCookie", "SingletonSocket"].map((f) => rm(path.join(profile, f), { force: true })),
     );
@@ -3099,7 +3099,10 @@ export class BrowserManager {
     const target = await readlink(path.join(profile, "SingletonLock")).catch(() => "");
     const pid = Number(/-(\d+)$/.exec(target)?.[1]);
     if (!Number.isInteger(pid) || pid <= 0 || this.livePids().has(pid)) return false;
-    if (!(await this.isOurChrome({ pid, profile }).catch(() => false))) return false;
+    // A pid chromes.json lists is judged by its record (its start time, on Windows); one it doesn't list has no start
+    // time, so on Windows it is left alone.
+    const entry = (await this.readPids()).find((e) => e.pid === pid) ?? { pid, profile };
+    if (!(await this.isOurChrome(entry).catch(() => false))) return false;
     await stopPid(pid);
     return true;
   }
