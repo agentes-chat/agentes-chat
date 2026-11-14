@@ -8094,6 +8094,17 @@
     },
     "assigneeFilter": "Przypisana osoba",
     "priorityFilter": "Priorytet",
+    "labelFilter": "Etykieta",
+    "table": {
+      "task": "Zadanie",
+      "github": "GitHub",
+      "sortBy": "Sortuj według: {{column}}"
+    },
+    "fold": {
+      "open": "Otwórz: {{name}}",
+      "close": "Zwiń: {{name}}",
+      "column": "Zwiń kolumnę"
+    },
     "title": "Zadania",
     "summary": "Otwarte: {{open}} · z agentami: {{agents}}",
     "search": "Szukaj zadań",
@@ -8138,8 +8149,16 @@
       "order": {
         "manual": "Ręcznie",
         "priority": "Priorytet",
-        "due": "Termin"
+        "due": "Termin",
+        "updated": "Ostatnie"
       },
+      "done": "Ukończone",
+      "doneIs": {
+        "all": "Wszystkie",
+        "recent": "Ostatnie {{days}} dni",
+        "hidden": "Żadne"
+      },
+      "hideEmpty": "Ukryj puste grupy",
       "field": {
         "project": "Projekt",
         "assignee": "Przypisana osoba",

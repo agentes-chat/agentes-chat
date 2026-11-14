@@ -7856,6 +7856,17 @@
     },
     "assigneeFilter": "Assegnatario",
     "priorityFilter": "Priorità",
+    "labelFilter": "Etichetta",
+    "table": {
+      "task": "Attività",
+      "github": "GitHub",
+      "sortBy": "Ordina per {{column}}"
+    },
+    "fold": {
+      "open": "Apri {{name}}",
+      "close": "Comprimi {{name}}",
+      "column": "Comprimi colonna"
+    },
     "title": "Attività",
     "summary": "{{open}} aperte · {{agents}} con agenti",
     "search": "Cerca attività",
@@ -7899,8 +7910,16 @@
       "order": {
         "manual": "Manuale",
         "priority": "Priorità",
-        "due": "Scadenza"
+        "due": "Scadenza",
+        "updated": "Recenti"
       },
+      "done": "Completate",
+      "doneIs": {
+        "all": "Tutte",
+        "recent": "Ultimi {{days}} giorni",
+        "hidden": "Nessuna"
+      },
+      "hideEmpty": "Nascondi gruppi vuoti",
       "field": {
         "project": "Progetto",
         "assignee": "Assegnatario",

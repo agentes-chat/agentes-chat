@@ -5,6 +5,7 @@ import {
   createOrganization,
   ForbiddenError,
   ISSUES_VIEW_DEFAULT,
+  ISSUES_VIEW_LABEL_MAX,
   ISSUES_VIEW_MAX_ASSIGNEES,
   issuesViewOf,
   myIssuesView,
@@ -33,7 +34,11 @@ const full = {
   },
   assignees: ["agent:3f0c2a9e-1b7d-4c55-9e0a-2d4b6f8a1c3e", "person:u_ana", "none"],
   priorities: ["high", "low"],
+  labels: ["bug", "produto"],
+  done: "recent",
   showCanceled: true,
+  hideEmpty: true,
+  collapsed: ["3f0c2a9e-1b7d-4c55-9e0a-2d4b6f8a1c3e", "person:u_ana", "low"],
 };
 
 test("a view from what a row holds: nothing stored, or not an object, is the default", () => {
@@ -58,6 +63,21 @@ test("only known keys and values stay; each unknown one is its default, filters 
     assignees: ["agent:a1", "person:u1", "none"],
     // Most urgent first, whatever order they came in.
     priorities: ["high", "low"],
+  });
+  // The label filter, the finished tasks shown, the empty groups and the folded groups: the same care.
+  expect(
+    issuesViewOf({
+      labels: [" bug ", "bug", "", 3, "x".repeat(ISSUES_VIEW_LABEL_MAX + 1), "produto"],
+      done: "last-week",
+      hideEmpty: "yes",
+      collapsed: ["high", "high", "agent:a1", "a b", 7, ""],
+    }),
+  ).toEqual({ ...ISSUES_VIEW_DEFAULT, labels: ["bug", "produto"], collapsed: ["high", "agent:a1"] });
+  expect(issuesViewOf({ sort: "updated", done: "hidden", hideEmpty: true })).toEqual({
+    ...ISSUES_VIEW_DEFAULT,
+    sort: "updated",
+    done: "hidden",
+    hideEmpty: true,
   });
   // The search is never part of a view.
   expect(Object.keys(view)).not.toContain("search");

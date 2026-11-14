@@ -8052,6 +8052,17 @@
     },
     "assigneeFilter": "Исполнитель",
     "priorityFilter": "Приоритет",
+    "labelFilter": "Метка",
+    "table": {
+      "task": "Задача",
+      "github": "GitHub",
+      "sortBy": "Сортировать: {{column}}"
+    },
+    "fold": {
+      "open": "Открыть: {{name}}",
+      "close": "Свернуть: {{name}}",
+      "column": "Свернуть столбец"
+    },
     "title": "Задачи",
     "summary": "Открыто: {{open}} · у агентов: {{agents}}",
     "search": "Поиск задач",
@@ -8096,8 +8107,16 @@
       "order": {
         "manual": "Вручную",
         "priority": "Приоритет",
-        "due": "Срок"
+        "due": "Срок",
+        "updated": "Недавние"
       },
+      "done": "Завершённые",
+      "doneIs": {
+        "all": "Все",
+        "recent": "Последние {{days}} дн.",
+        "hidden": "Никакие"
+      },
+      "hideEmpty": "Скрывать пустые группы",
       "field": {
         "project": "Проект",
         "assignee": "Исполнитель",

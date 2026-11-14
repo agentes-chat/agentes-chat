@@ -7345,6 +7345,17 @@
     },
     "assigneeFilter": "Penanggung jawab",
     "priorityFilter": "Prioritas",
+    "labelFilter": "Label",
+    "table": {
+      "task": "Tugas",
+      "github": "GitHub",
+      "sortBy": "Urutkan menurut {{column}}"
+    },
+    "fold": {
+      "open": "Buka {{name}}",
+      "close": "Ciutkan {{name}}",
+      "column": "Ciutkan kolom"
+    },
     "title": "Tugas",
     "summary": "{{open}} terbuka · {{agents}} dengan agen",
     "search": "Cari tugas",
@@ -7386,8 +7397,16 @@
       "order": {
         "manual": "Manual",
         "priority": "Prioritas",
-        "due": "Tenggat"
+        "due": "Tenggat",
+        "updated": "Terbaru"
       },
+      "done": "Selesai",
+      "doneIs": {
+        "all": "Semua",
+        "recent": "{{days}} hari terakhir",
+        "hidden": "Tidak ada"
+      },
+      "hideEmpty": "Sembunyikan grup kosong",
       "field": {
         "project": "Proyek",
         "assignee": "Penanggung jawab",

@@ -7356,6 +7356,17 @@
     },
     "assigneeFilter": "负责人",
     "priorityFilter": "优先级",
+    "labelFilter": "标签",
+    "table": {
+      "task": "任务",
+      "github": "GitHub",
+      "sortBy": "按{{column}}排序"
+    },
+    "fold": {
+      "open": "打开{{name}}",
+      "close": "折叠{{name}}",
+      "column": "折叠列"
+    },
     "title": "任务",
     "summary": "{{open}} 个未完成 · {{agents}} 个由智能体负责",
     "search": "搜索任务",
@@ -7397,8 +7408,16 @@
       "order": {
         "manual": "手动",
         "priority": "优先级",
-        "due": "截止日期"
+        "due": "截止日期",
+        "updated": "最近"
       },
+      "done": "已完成",
+      "doneIs": {
+        "all": "全部",
+        "recent": "最近 {{days}} 天",
+        "hidden": "无"
+      },
+      "hideEmpty": "隐藏空分组",
       "field": {
         "project": "项目",
         "assignee": "负责人",
