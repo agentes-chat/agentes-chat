@@ -78,3 +78,31 @@ test("the engine and computer portraits hold still with the skies, and move agai
   // The last portrait gone: its pending frame is cancelled, not left to fire later.
   expect(cleared.mock.calls.map(([id]) => id)).toEqual(timers.mock.results.slice(before).map((r) => r.value));
 });
+
+test("a portrait that replaces the last one while its frame is pending keeps a single loop", () => {
+  const page = canvasPage({ width: 40, height: 40 });
+  const due: (() => void)[] = [];
+  const timers = spyOn(globalThis, "setTimeout").mockImplementation(((cb: () => void) =>
+    due.push(cb)) as unknown as typeof setTimeout);
+  const cleared = spyOn(globalThis, "clearTimeout").mockImplementation(() => {});
+  close = () => {
+    timers.mockRestore();
+    cleared.mockRestore();
+    page.close();
+  };
+  for (const add of [addLiveBrain, addLiveComputer] as ((x: {
+    canvas: HTMLCanvasElement;
+    look: () => never;
+  }) => () => void)[]) {
+    due.length = 0;
+    const look = () => ({ kind: "mac", state: "idle" }) as never;
+    const stop = add({ canvas: blank(), look });
+    due.shift()?.();
+    // Its frame is requested, not drawn yet, when it goes and another takes its place.
+    stop();
+    const stopNext = add({ canvas: blank(), look });
+    page.frames(50);
+    expect(due.length).toBe(1);
+    stopNext();
+  }
+});
