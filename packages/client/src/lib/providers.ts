@@ -1,4 +1,4 @@
-import { customModelId, parseCustomModel } from "@agenteschat/providers/catalog";
+import { customModelId, endpointModelId, parseCustomModel } from "@agenteschat/providers/catalog";
 import type { TFunction } from "i18next";
 import type { AiStatus, Credential, Model } from "../api/types";
 
@@ -214,21 +214,23 @@ type KeyWithEndpoint = Pick<Credential, "id" | "provider"> & Partial<Pick<Creden
  * What a connect flow saves as the agent's model with this key: nothing while the key runs the model it had, Automático
  * for a catalog key, and for a workspace endpoint one of its own models — an endpoint has no tiers (ADR 0146), and
  * Automático on its key fails every run as no AI. A pinned model stays when the endpoint being connected offers it too,
- * so switching between endpoints doesn't lose it; otherwise the first model the admin checked `ok`, else its first.
+ * so switching between endpoints doesn't lose it; otherwise the server's own pick (`endpointModelId`).
  */
 export function modelOnKey(key: KeyWithEndpoint, model: string | undefined, models: readonly Model[]) {
   if (keyRuns(key, model, models)) return {};
   if (key.provider !== "custom") return { model: AUTO };
-  const own = key.endpoint
-    ? key.endpoint.models.map((m) => ({ id: m.id, ok: m.check === "ok" }))
-    : models
-        .filter((m) => m.endpoint?.credentialId === key.id)
-        .map((m) => ({ id: parseCustomModel(m.id)?.model ?? m.id, ok: false }));
+  const own =
+    key.endpoint?.models ??
+    models
+      .filter((m) => m.endpoint?.credentialId === key.id)
+      .flatMap((m) => {
+        const id = parseCustomModel(m.id)?.model;
+        return id ? [{ id }] : [];
+      });
   const pinned = model ? parseCustomModel(model)?.model : undefined;
-  // Nothing known of the endpoint's models: the model it had (the server pins one when it is Automático).
-  const id =
-    (pinned && own.some((m) => m.id === pinned) ? pinned : undefined) ?? own.find((m) => m.ok)?.id ?? own[0]?.id;
-  return id ? { model: customModelId(key.id, id) } : {};
+  if (pinned && own.some((m) => m.id === pinned)) return { model: customModelId(key.id, pinned) };
+  // Nothing known of the endpoint's models: Automático, which the server pins to one of them on save.
+  return { model: endpointModelId(key.id, own) ?? AUTO };
 }
 
 /**

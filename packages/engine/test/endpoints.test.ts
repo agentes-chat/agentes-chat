@@ -184,6 +184,19 @@ describe("calls", () => {
     expect(automatic.model).toBe(customModelId(cred.id, "first"));
   });
 
+  test("an endpoint key on Automatic pins the model whose test called a tool, not the first one listed", async () => {
+    f = await setup({
+      reply: (request) =>
+        request.model.endsWith(":tools")
+          ? { chunks: [], toolUses: [{ name: "report_status", input: { ok: true } }] }
+          : { chunks: ["I can't call tools."] },
+    });
+    const cred = await addEndpoint(f, [{ id: "chat" }, { id: "tools" }]);
+    await checkEndpoint(f.db, f.gateway, f.owner.id, f.org.id, cred.id);
+    const agent = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: "auto", credentialId: cred.id });
+    expect(agent.model).toBe(customModelId(cred.id, "tools"));
+  });
+
   test("new agents with an endpoint key use its model, while catalog keys keep Automatic", async () => {
     f = await setup();
     const cred = await addEndpoint(f);

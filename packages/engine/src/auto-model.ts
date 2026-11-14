@@ -1,6 +1,6 @@
 import { and, type Database, desc, type Executor, eq, isNull, schema } from "@agenteschat/db";
 import {
-  customModelId,
+  endpointModelId,
   isAutoModel,
   MODEL_TIERS,
   type ModelTier,
@@ -238,16 +238,6 @@ export interface AutoEndpoint {
 }
 
 /**
- * The endpoint's model for a tier, as the `custom:<credentialId>:<model>` id the gateway resolves a key by. An endpoint
- * declares no catalog tiers: the first model the admin checked `ok` answers for every tier (a model that never called a
- * tool can't do an agent's work), else the first it offers, in the order the admin kept them.
- */
-export function endpointAutoModel(endpoint: AutoEndpoint): string | null {
-  const model = endpoint.models.find((m) => m.check === "ok") ?? endpoint.models[0];
-  return model ? customModelId(endpoint.credentialId, model.id) : null;
-}
-
-/**
  * The API model for a tier on `provider`'s key: the workspace's own (`tiers`) while it is still on that line, else its
  * line's. A workspace endpoint has no line in the catalog (ADR 0146): one of its own models stands for the tier, since
  * only its key can call them and the Anthropic fallback below would be refused as no AI. Null for a `custom` provider
@@ -268,7 +258,8 @@ export function autoModelFor(
       : modelInfo(own)?.provider === provider
     : false;
   if (own && ownHere) return own;
-  if (provider === "custom") return endpoint ? endpointAutoModel(endpoint) : null;
+  // An endpoint declares no catalog tiers: its one best model answers for every tier.
+  if (provider === "custom") return endpoint ? endpointModelId(endpoint.credentialId, endpoint.models) : null;
   return modelForTier(provider, tier) ?? (provider === "openrouter" ? null : modelForTier("anthropic", tier));
 }
 
