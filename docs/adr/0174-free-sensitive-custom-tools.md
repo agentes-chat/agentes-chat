@@ -1,6 +1,6 @@
 # 0174. A person may free a tool its server marks sensitive
 
-- Status: Accepted
+- Status: Accepted, amended by ADR 0175 (a whole server trusted at once)
 - Date: 2026-11-12
 - Amends: ADR 0016's addendum of 2026-10-16 ("sensitive tools only ask or stay off")
 - Code: `packages/db/src/schema/connectors.ts` (`custom_tools.freed_at`, migration `0255_custom_tool_freed`),
@@ -54,6 +54,6 @@ writes still ask (ADR 0053), and an agent set to always ask still does (ADR 0173
   keep it asking so that the gateway's own approval reaches a person through our card.
 - A person who frees a tool takes on its risk for every agent that holds its scope. The warning and the audit row are
   where that shows.
-- Not done here, each its own decision if wanted: trusting a whole connection at once, a workspace-wide risk
+- Not done here, each its own decision if wanted: trusting a whole connection at once (done in ADR 0175), a workspace-wide risk
   tolerance by category, and showing a gateway's model-mode approval (`approval-required` in a tool result) as a
   native card answered through the server's `resume`.

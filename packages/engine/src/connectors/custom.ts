@@ -150,8 +150,13 @@ export interface CustomToolView {
   suggestionReason: ReasonCode | null;
   /** Deletes, sends, pays…: asks for approval unless a person freed it (`freed`). */
   sensitive: boolean;
-  /** A person set this sensitive tool to `write` anyway (ADR 0174): it runs without asking. */
+  /**
+   * A person set this sensitive tool to `write` anyway (ADR 0174), or it is at `write` on a trusted connection
+   * (ADR 0175): it runs without asking.
+   */
   freed: boolean;
+  /** Freed only because the connection is trusted: distrusting it puts the tool back to asking (ADR 0175). */
+  freedByTrust: boolean;
   /** Whether a person may free it, if sensitive: not a Composio tool (its own rules ask on every call). */
   mayFree: boolean;
   /** The name couldn't decide it and no one confirmed the suggestion yet ("Precisam da sua decisão"). */
@@ -186,6 +191,13 @@ export interface CustomServerView {
   /** What routines can wait on from it (ADR 0130): MillionSend's received email. */
   events: ConnectorEventId[];
   reviewedAt: string | null;
+  /**
+   * A person said this server enforces its own approvals (ADR 0175): its sensitive tools at `write` run without asking
+   * here, and Muda is what it suggests for them.
+   */
+  trusted: boolean;
+  /** Whether it may be trusted: not through Composio, whose own rules ask on every call. */
+  mayTrust: boolean;
   createdAt: string;
 }
 
@@ -229,16 +241,36 @@ const AMBIGUOUS: readonly string[] = ["judge", "judge_failed"];
 const isPending = (t: ToolRow) => AMBIGUOUS.includes(t.suggestionSource ?? "") && t.confirmedAt === null;
 const isFree = (access: string | null): access is "read" | "write" => access === "read" || access === "write";
 
-/**
- * A sensitive tool a person set to `write` through the API (ADR 0174): it runs without asking. Never `read`: a read
- * runs in routines and goes to every agent that may read, and this one changes things. A free level written any
- * other way (old data, the database by hand) still asks.
- */
-export const freedByPerson = (t: Pick<ToolRow, "sensitive" | "access" | "freedAt">) =>
-  t.sensitive && t.freedAt !== null && t.access === "write";
+/** Whether a person said this connection enforces its own approvals (ADR 0175). */
+const trusts = (c: Pick<ConnectorConnection, "trustedAt"> | undefined) => Boolean(c?.trustedAt);
 
-function toolView(t: ToolRow, prefix: string | null, mayFree: boolean): CustomToolView {
+/**
+ * A sensitive tool a person set to `write` through the API (ADR 0174), or one at `write` on a connection a person
+ * trusts (ADR 0175): it runs without asking. Never `read`: a read runs in routines and goes to every agent that may
+ * read, and this one changes things. A free level written any other way (old data, the database by hand) still asks.
+ */
+export const freedByPerson = (
+  t: Pick<ToolRow, "sensitive" | "access" | "freedAt">,
+  connection?: Pick<ConnectorConnection, "trustedAt">,
+) => t.sensitive && t.access === "write" && (t.freedAt !== null || trusts(connection));
+
+/**
+ * What a tool nobody decided yet gets on accepting the suggestion: the suggestion, except that a sensitive tool on a
+ * trusted connection is Muda (ADR 0175), never Consulta.
+ */
+function suggestedLevel(t: ToolRow, trusted: boolean): ToolAccess {
+  const suggested = ACCESS.includes(t.suggestedAccess as ToolAccess)
+    ? (t.suggestedAccess as ToolAccess)
+    : suggestAccess(t);
+  return t.sensitive && trusted ? "write" : suggested;
+}
+
+/** Composio's own rules ask on every call whatever is stored: none of its tools is freed, nor its server trusted. */
+const ownRules = (c: Pick<ConnectorConnection, "serverUrl">) => !composioToolkitOf(c.serverUrl);
+
+function toolView(t: ToolRow, prefix: string | null, c: ConnectorConnection): CustomToolView {
   const suggestedAccess = ACCESS.includes(t.suggestedAccess as ToolAccess) ? (t.suggestedAccess as ToolAccess) : null;
+  const freed = freedByPerson(t, c);
   const access = DECISIONS.includes(t.access as ToolDecision) ? (t.access as ToolDecision) : null;
   const { subject, ...nameParts } = describeToolName(t.name, prefix);
   return {
@@ -247,12 +279,13 @@ function toolView(t: ToolRow, prefix: string | null, mayFree: boolean): CustomTo
     readOnlyHint: t.readOnlyHint,
     suggestedAccess,
     access,
-    level: access ?? suggestedAccess ?? suggestAccess(t),
+    level: access ?? suggestedLevel(t, trusts(c)),
     suggestionSource: (t.suggestionSource as SuggestionSource | null) ?? null,
     suggestionReason: (t.suggestionReason as ReasonCode | null) ?? null,
     sensitive: t.sensitive,
-    freed: freedByPerson(t),
-    mayFree,
+    freed,
+    freedByTrust: freed && t.freedAt === null,
+    mayFree: ownRules(c),
     pending: isPending(t),
     off: access === "off",
     nameParts,
@@ -276,9 +309,11 @@ function view(c: ConnectorConnection, tools: ToolRow[], whole = true): CustomSer
     ...(composioToolkitOf(c.serverUrl) ? { via: "composio" as const } : {}),
     status: c.status === "needs_reconnect" ? "needs_reconnect" : "active",
     toolsError: c.status === "needs_reconnect" ? null : c.lastError,
-    tools: mine.map((t) => toolView(t, prefix, !composioToolkitOf(c.serverUrl))),
+    tools: mine.map((t) => toolView(t, prefix, c)),
     events: connectorEventsOf(c.serverUrl),
     reviewedAt: c.reviewedAt ? c.reviewedAt.toISOString() : null,
+    trusted: trusts(c),
+    mayTrust: ownRules(c),
     createdAt: c.createdAt.toISOString(),
   };
 }
@@ -625,7 +660,8 @@ export class ToolsUnreadable extends Error {}
  * gets a suggestion (annotations, the verb, else the judge: its answers are
  * kept per tool name and asked again only when its description changed). A tool
  * that turns out sensitive can't stay free, unless a person freed it knowing it
- * was (ADR 0174): its read/write decision becomes approval. A level nobody set
+ * was (ADR 0174): its read/write decision becomes approval, or on a connection a
+ * person trusts a write, never a read (ADR 0175). A level nobody set
  * by hand follows a stricter suggestion (a read that became a write); no level
  * ever gets looser here.
  */
@@ -702,7 +738,7 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
     if (old) {
       const free = isFree(old.access) ? old.access : null;
       // Freed while it was sensitive: a person chose that level for this risk, and it stays while the risk does.
-      const freed = freedByPerson(old) && cls.sensitive;
+      const freed = freedByPerson(old, c) && cls.sensitive;
       const stricter = free && !freed && old.confirmedAt === null && ACCESS.indexOf(cls.level) > ACCESS.indexOf(free);
       await deps.db
         .update(customTools)
@@ -711,7 +747,11 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
           readOnlyHint: tool.readOnlyHint ?? null,
           destructiveHint: tool.destructiveHint ?? null,
           ...suggestion,
-          ...(free && cls.sensitive && !freed ? { access: "approval" } : stricter ? { access: cls.level } : {}),
+          ...(free && cls.sensitive && !freed
+            ? { access: trusts(c) ? "write" : "approval" }
+            : stricter
+              ? { access: cls.level }
+              : {}),
           freedAt: freed ? old.freedAt : null,
           removedAt: null,
         })
@@ -903,19 +943,41 @@ export interface ToolDecisionInput {
  * `write` is freed (ADR 0174): it runs without asking, and the audit row names
  * it. A sensitive tool is never `read`, and Composio's may only ask or be off:
  * its own rules ask on every call whatever is stored.
+ *
+ * `trusted` says whether the server enforces its own approvals (ADR 0175; not
+ * through Composio). Turning it on sets every sensitive tool still asking to
+ * `write`, and turning it off sets back to `approval` the ones only the trust
+ * freed, unless this save names them.
  */
 export async function saveCustomTools(
   deps: CustomDeps,
   actorId: string,
   orgId: string,
   id: string,
-  input: { label: string; tools: ToolDecisionInput[] },
+  input: { label: string; tools: ToolDecisionInput[]; trusted?: boolean },
 ) {
   await requirePermission(deps.db, actorId, orgId, "manage_connectors");
   const c = await loadCustom(deps.db, orgId, id);
   const known = new Map((await toolRows(deps.db, [c.id])).map((t) => [t.name, t]));
   const composio = composioToolkitOf(c.serverUrl) !== null;
-  for (const t of input.tools) {
+  const trusted = input.trusted ?? trusts(c);
+  const trustChanged = trusted !== trusts(c);
+  if (trusted && composio) {
+    throw new ValidationError(
+      "A service through Composio can't be trusted: its own rules ask on every call",
+      "connector.trust_refused",
+    );
+  }
+  // What the trust changing does to the tools this save doesn't name.
+  const named = new Set(input.tools.map((t) => t.name));
+  const implied: ToolDecisionInput[] = !trustChanged
+    ? []
+    : [...known.values()]
+        .filter((row) => row.sensitive && !named.has(row.name))
+        .filter((row) => (trusted ? row.access === "approval" : row.access === "write" && row.freedAt === null))
+        .map((row) => ({ name: row.name, access: trusted ? "write" : "approval", label: row.label, confirmed: false }));
+  const tools = [...input.tools, ...implied];
+  for (const t of tools) {
     if (!DECISIONS.includes(t.access)) throw new ValidationError(`Invalid access for ${t.name}`);
     const row = known.get(t.name);
     if (!row) throw new ValidationError(`Unknown tool ${t.name}`);
@@ -929,14 +991,15 @@ export async function saveCustomTools(
   }
   const now = new Date();
   const freesNow = (t: ToolDecisionInput) => known.get(t.name)?.sensitive === true && t.access === "write";
-  const freed = input.tools.filter((t) => {
+  // Newly running unasked, or newly freed on its own (stamped below: distrusting won't take it back).
+  const freed = tools.filter((t) => {
     const row = known.get(t.name);
-    return row?.sensitive === true && t.access === "write" && !freedByPerson(row);
+    return row?.sensitive === true && t.access === "write" && (!freedByPerson(row, c) || (!row.freedAt && !trusted));
   });
   await deps.db.transaction(async (tx) => {
     const asked = input.label.trim();
     const label = asked && asked !== c.label ? await checkLabel(tx, orgId, asked, c.id) : c.label;
-    for (const t of input.tools) {
+    for (const t of tools) {
       const row = known.get(t.name);
       if (!row) continue;
       await tx
@@ -945,13 +1008,14 @@ export async function saveCustomTools(
           access: t.access,
           label: t.label.trim().slice(0, 120) || row.label,
           ...(t.confirmed === false ? {} : { confirmedAt: row.confirmedAt ?? now }),
-          freedAt: freesNow(t) ? (row.freedAt ?? now) : null,
+          // On a trusted connection the trust frees it: distrusting puts it back to asking (ADR 0175).
+          freedAt: freesNow(t) ? (row.freedAt ?? (trusted ? null : now)) : null,
         })
         .where(eq(customTools.id, row.id));
     }
     await tx
       .update(connectorConnections)
-      .set({ label, reviewedAt: now, updatedAt: now })
+      .set({ label, reviewedAt: now, updatedAt: now, ...(trustChanged ? { trustedAt: trusted ? now : null } : {}) })
       .where(eq(connectorConnections.id, c.id));
     await recordAudit(tx, {
       orgId,
@@ -959,9 +1023,11 @@ export async function saveCustomTools(
       action: "connector.custom_tools_classified",
       target: { type: "connector_connection", id: c.id },
       details: {
-        tools: input.tools.map((t) => ({ name: t.name, access: t.access })),
+        tools: tools.map((t) => ({ name: t.name, access: t.access })),
         // Sensitive tools this save lets run without asking (ADR 0174).
         ...(freed.length > 0 ? { freed: freed.map((t) => t.name) } : {}),
+        // Whether the server enforces its own approvals, when this save changed it (ADR 0175).
+        ...(trustChanged ? { trusted } : {}),
       },
     });
   });
@@ -987,14 +1053,10 @@ export async function acceptCustomSuggestion(deps: CustomDeps, actorId: string, 
   const rows = await toolRows(deps.db, [c.id]);
   const tools = rows.map((t): ToolDecisionInput => {
     let access = (
-      DECISIONS.includes(t.access as ToolDecision)
-        ? t.access
-        : ACCESS.includes(t.suggestedAccess as ToolAccess)
-          ? t.suggestedAccess
-          : suggestAccess(t)
+      DECISIONS.includes(t.access as ToolDecision) ? t.access : suggestedLevel(t, trusts(c))
     ) as ToolDecision;
-    // A level a person freed stays; the suggestion never frees one.
-    if (t.sensitive && isFree(access) && !freedByPerson(t)) access = "approval";
+    // A level a person freed stays; the suggestion frees one only on a connection a person trusts (ADR 0175).
+    if (t.sensitive && isFree(access) && !freedByPerson({ ...t, access }, c)) access = "approval";
     // Accepting applies the suggestion; ambiguous tools still wait for a person's decision.
     return { name: t.name, access, label: t.label, confirmed: false };
   });

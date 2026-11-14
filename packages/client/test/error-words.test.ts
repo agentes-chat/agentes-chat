@@ -427,6 +427,7 @@ const PLAIN_LINE = new Set([
   "connector.key_too_short",
   "connector.oauth_only",
   "connector.sensitive_tool",
+  "connector.trust_refused",
   "context.changes_permissions",
   "database.action",
   "database.daily_cap",

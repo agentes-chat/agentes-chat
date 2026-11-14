@@ -480,6 +480,14 @@ describe("tools through Composio", () => {
         tools: [{ name: "create_permission", access: "write", label: "Create permission" }],
       }),
     ).rejects.toMatchObject({ code: "connector.sensitive_tool" });
+    // Nor trusted whole (ADR 0175), for the same reason.
+    await expect(
+      saveCustomTools(w.deps, f.owner.id, f.org.id, connection.id, {
+        label: connection.label,
+        tools: [],
+        trusted: true,
+      }),
+    ).rejects.toMatchObject({ code: "connector.trust_refused" });
 
     // An admin made a write ask: that one may be approved for good too, by its own name.
     const saved = await saveCustomTools(w.deps, f.owner.id, f.org.id, connection.id, {
@@ -487,6 +495,7 @@ describe("tools through Composio", () => {
       tools: [{ name: "create_folder", access: "approval", label: "Create folder" }],
     });
     expect(saved.tools.find((t) => t.name === "create_permission")).toMatchObject({ sensitive: true, mayFree: false });
+    expect(saved).toMatchObject({ trusted: false, mayTrust: false });
     const asked = await call(gateway, ctx, "google_drive_create_folder", { folder: "Notas", why: WHY });
     if (asked.type !== "approval") throw new Error(`expected an approval, got ${asked.type}`);
     expect(asked.approval.approveAlways).toEqual({ tool: "create_folder", actions: [] });

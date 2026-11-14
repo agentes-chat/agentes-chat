@@ -492,3 +492,193 @@ describe("the person's choices", () => {
     expect(again.tools.find((t) => t.name === "campaign_delete")?.access).toBe("approval");
   });
 });
+
+describe("a connection that enforces its own approvals (ADR 0175)", () => {
+  /** Every tool decided as suggested, then the agent given the server's writes. */
+  async function trustedAds(fx: Fixture, deps: CustomDeps) {
+    const server = await connectAds(fx, deps);
+    await acceptCustomSuggestion(deps, fx.owner.id, fx.org.id, server.id);
+    await setAgentScopes(
+      fx.db,
+      fx.owner.id,
+      fx.org.id,
+      fx.agent.id,
+      [{ connectionId: server.id, scope: `custom:${server.id}:write` }],
+      connectorGrantValidator,
+    );
+    const saved = await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
+      label: "Ads",
+      tools: [],
+      trusted: true,
+    });
+    return { server, saved };
+  }
+  const levels = (s: { tools: { name: string; access: string | null; freed: boolean }[] }, ...names: string[]) =>
+    Object.fromEntries(
+      s.tools.filter((t) => names.includes(t.name)).map((t) => [t.name, `${t.access}${t.freed ? " freed" : ""}`]),
+    );
+
+  test("trusting frees every sensitive tool at once: they run unasked, each call audited, and the save says so", async () => {
+    f = await setup();
+    const fx = f;
+    const mcp = adsMcp();
+    const deps = depsOf(fx, { connect: mcp.connect, judge: adsJudge() });
+    const { saved } = await trustedAds(fx, deps);
+    expect(saved.trusted).toBe(true);
+    expect(saved.mayTrust).toBe(true);
+    expect(levels(saved, "campaign_delete", "campaign_status_toggle", "campaign_list")).toEqual({
+      campaign_delete: "write freed",
+      campaign_status_toggle: "write freed",
+      campaign_list: "read",
+    });
+    const [classified] = (await fx.db.select().from(schema.auditLog)).filter(
+      (a) =>
+        a.action === "connector.custom_tools_classified" && (a.details as { trusted?: boolean }).trusted !== undefined,
+    );
+    expect(classified?.details).toMatchObject({
+      trusted: true,
+      freed: ["campaign_delete", "campaign_status_toggle"],
+    });
+
+    const gateway = createToolGateway({ sources: [createConnectorToolSource(deps)] });
+    const ctx = await runContext(fx);
+    const deleted = await gateway.invoke(ctx, { toolUseId: "t1", name: "ads_campaign_delete", input: { id: 1 } });
+    expect(deleted.type).toBe("result");
+    expect(mcp.state.calls).toEqual(["campaign_delete"]);
+    const changed = (await fx.db.select().from(schema.auditLog)).filter((a) => a.action === "connector.tool_changed");
+    expect(changed.map((a) => (a.details as { tool: string }).tool)).toEqual(["campaign_delete"]);
+  });
+
+  test("one tool set back to asking asks, and stays so through a listing", async () => {
+    f = await setup();
+    const fx = f;
+    const mcp = adsMcp();
+    const deps = depsOf(fx, { connect: mcp.connect, judge: adsJudge() });
+    const { server } = await trustedAds(fx, deps);
+    await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
+      label: "Ads",
+      tools: [{ name: "campaign_delete", access: "approval", label: "Apagar campanha" }],
+    });
+    const listed = await refreshCustomServer(deps, fx.owner.id, fx.org.id, server.id);
+    expect(listed.trusted).toBe(true);
+    expect(levels(listed, "campaign_delete", "campaign_status_toggle")).toEqual({
+      campaign_delete: "approval",
+      campaign_status_toggle: "write freed",
+    });
+    const tools = await createConnectorToolSource(deps).tools(await runContext(fx));
+    expect(tools.find((t) => t.name === "ads_campaign_delete")?.sensitive).toBe(true);
+    expect(tools.find((t) => t.name === "ads_campaign_status_toggle")?.sensitive).toBe(false);
+  });
+
+  test("a listing keeps its sensitive tools free, never as a read; a new one comes in at Muda", async () => {
+    f = await setup();
+    const fx = f;
+    const mcp = adsMcp();
+    const deps = depsOf(fx, { connect: mcp.connect, judge: adsJudge() });
+    const { server } = await trustedAds(fx, deps);
+    // A read, then the server starts marking it destructive: it changes things now, so a write, still unasked.
+    await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
+      label: "Ads",
+      tools: [{ name: "campaign_budget_update", access: "read", label: "Orçamento" }],
+    });
+    mcp.state.destructive = ["campaign_budget_update"];
+    const listed = await refreshCustomServer(deps, fx.owner.id, fx.org.id, server.id);
+    expect(levels(listed, "campaign_budget_update", "campaign_delete")).toEqual({
+      campaign_budget_update: "write freed",
+      campaign_delete: "write freed",
+    });
+    // Its suggestion for a sensitive tool nobody decided yet is Muda, and accepting it frees the tool.
+    await fx.db.update(schema.customTools).set({ access: null }).where(eq(schema.customTools.name, "campaign_delete"));
+    const undecided = await refreshCustomServer(deps, fx.owner.id, fx.org.id, server.id);
+    expect(undecided.tools.find((t) => t.name === "campaign_delete")).toMatchObject({ access: null, level: "write" });
+    const accepted = await acceptCustomSuggestion(deps, fx.owner.id, fx.org.id, server.id);
+    expect(levels(accepted.server, "campaign_delete")).toEqual({ campaign_delete: "write freed" });
+  });
+
+  test("distrusting puts what only the trust freed back to asking; a tool freed on its own stays", async () => {
+    f = await setup();
+    const fx = f;
+    const mcp = adsMcp();
+    const deps = depsOf(fx, { connect: mcp.connect, judge: adsJudge() });
+    const server = await connectAds(fx, deps);
+    await acceptCustomSuggestion(deps, fx.owner.id, fx.org.id, server.id);
+    await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
+      label: "Ads",
+      tools: [{ name: "campaign_status_toggle", access: "write", label: "Ligar campanha" }],
+    });
+    await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, { label: "Ads", tools: [], trusted: true });
+    const off = await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
+      label: "Ads",
+      tools: [],
+      trusted: false,
+    });
+    expect(off.trusted).toBe(false);
+    expect(levels(off, "campaign_delete", "campaign_status_toggle")).toEqual({
+      campaign_delete: "approval",
+      campaign_status_toggle: "write freed",
+    });
+    const audits = (await fx.db.select().from(schema.auditLog)).filter(
+      (a) => (a.details as { trusted?: boolean }).trusted === false,
+    );
+    expect(audits).toHaveLength(1);
+
+    // Kept at Muda while distrusting: now freed on its own, and the save's row names it.
+    await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, { label: "Ads", tools: [], trusted: true });
+    const kept = await saveCustomTools(deps, fx.owner.id, fx.org.id, server.id, {
+      label: "Ads",
+      tools: [{ name: "campaign_delete", access: "write", label: "Apagar campanha" }],
+      trusted: false,
+    });
+    expect(levels(kept, "campaign_delete")).toEqual({ campaign_delete: "write freed" });
+    expect(kept.tools.find((t) => t.name === "campaign_delete")?.freedByTrust).toBe(false);
+    const distrusts = (await fx.db.select().from(schema.auditLog))
+      .map((a) => a.details as { trusted?: boolean; freed?: string[] })
+      .filter((d) => d.trusted === false);
+    expect(distrusts.map((d) => d.freed ?? [])).toContainEqual(["campaign_delete"]);
+  });
+
+  test("a routine's writes still ask, and so does an agent set to always ask", async () => {
+    f = await setup();
+    const fx = f;
+    const mcp = adsMcp();
+    const deps = depsOf(fx, { connect: mcp.connect, judge: adsJudge() });
+    await trustedAds(fx, deps);
+    const gateway = createToolGateway({ sources: [createConnectorToolSource(deps)] });
+    const routine = await runContext(fx);
+    await fx.db.update(schema.agentRuns).set({ background: true }).where(eq(schema.agentRuns.id, routine.runId));
+    await fx.db
+      .update(schema.messages)
+      .set({
+        meta: {
+          background: true,
+          routineBrief: {
+            routineId: crypto.randomUUID(),
+            routineRunId: crypto.randomUUID(),
+            name: "Limpar campanhas",
+            creatorUserId: fx.owner.id,
+            deliverTo: { channelId: fx.general.id, threadId: null },
+            access: "act",
+            report: "when_new",
+            trigger: "schedule",
+            dueAt: new Date().toISOString(),
+          },
+        },
+      })
+      .where(eq(schema.messages.id, routine.triggerMessageId));
+    const fromRoutine = await gateway.invoke(routine, {
+      toolUseId: "t1",
+      name: "ads_campaign_delete",
+      input: { id: 1, why: WHY },
+    });
+    expect(fromRoutine.type).toBe("approval");
+
+    await fx.db.update(schema.agents).set({ approvalsLevel: "always" }).where(eq(schema.agents.id, fx.agent.id));
+    const asked = await gateway.invoke(await runContext(fx), {
+      toolUseId: "t2",
+      name: "ads_campaign_delete",
+      input: { id: 1, why: WHY },
+    });
+    expect(asked.type).toBe("approval");
+    expect(mcp.state.calls).toEqual([]);
+  });
+});

@@ -1,0 +1,1 @@
+ALTER TABLE "connector_connections" ADD COLUMN "trusted_at" timestamp with time zone;

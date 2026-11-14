@@ -65,6 +65,11 @@ export const connectorConnections = pgTable(
     toolPrefix: text().notNull(),
     /** Custom servers: when an admin last saved the tool classification (null = nothing exposed yet). */
     reviewedAt: timestamp({ withTimezone: true }),
+    /**
+     * Custom servers: since when a person said this server enforces its own approvals (ADR 0175). Its sensitive tools
+     * at `write` then run without asking here, as if each were freed (`custom_tools.freed_at`). Null: not trusted.
+     */
+    trustedAt: timestamp({ withTimezone: true }),
     /** MCP-native OAuth: the client registered with the server's authorization server (`oauth_clients`). */
     oauthClientId: uuid(),
     /** MCP-native OAuth: the protected resource it was authorized for (RFC 8707), sent again with every refresh. */

@@ -335,8 +335,9 @@ export function createConnectorToolSource(
   /**
    * A custom server's tools that an admin classified (hidden until then; `off`
    * never shows). `approval` and sensitive tools ask a person for every call,
-   * except a sensitive tool a person freed to `write` (ADR 0174); `write` tools
-   * run on their own and each call goes to the audit log.
+   * except a sensitive tool a person freed to `write` (ADR 0174), or at `write`
+   * on a connection a person trusts (ADR 0175); `write` tools run on their own
+   * and each call goes to the audit log.
    * Composio's executor says which actions each call runs: reads go as the
    * server's reads, and "Aprovar sempre" covers its other actions one by one;
    * its workbench, bash and proxy ask whatever their stored level, and like
@@ -364,7 +365,7 @@ export function createConnectorToolSource(
       const tool = byName.get(row.name);
       const access = row.access as ToolAccess;
       if (!tool) return [];
-      const freed = freedByPerson(row);
+      const freed = freedByPerson(row, connection);
       const executor = tool.name === COMPOSIO_EXECUTOR;
       const sqlArg = composio ? null : sqlArgOf(tool, preset);
       // Our rules for a Composio action as they are now (its entry's `ask`, its tags at the pinned version), not only

@@ -87,11 +87,14 @@ const CustomServer = z
           .openapi({ description: "Deletes, sends, pays…: asks for approval unless a person freed it (`freed`)." }),
         freed: z.boolean().openapi({
           description:
-            "A person set this sensitive tool to `read` or `write` anyway (ADR 0174): it runs without asking, and a listing keeps that level.",
+            "A person set this sensitive tool to `write` anyway (ADR 0174), or it is at `write` on a trusted server (ADR 0175): it runs without asking, and a listing keeps that level.",
+        }),
+        freedByTrust: z.boolean().openapi({
+          description: "Freed only because the server is trusted: distrusting it makes the tool ask again (ADR 0175).",
         }),
         mayFree: z.boolean().openapi({
           description:
-            "Whether a sensitive tool may be set to `read` or `write`: not through Composio, whose own rules ask on every call.",
+            "Whether a sensitive tool may be set to `write`: not through Composio, whose own rules ask on every call.",
         }),
         pending: z
           .boolean()
@@ -106,6 +109,11 @@ const CustomServer = z
       }),
     ),
     reviewedAt: z.string().nullable(),
+    trusted: z.boolean().openapi({
+      description:
+        "A person said this server enforces its own approvals (ADR 0175): its sensitive tools at `write` run without asking here.",
+    }),
+    mayTrust: z.boolean().openapi({ description: "Whether it may be trusted: not through Composio." }),
     createdAt: z.string(),
   })
   .openapi("CustomServer");
@@ -317,6 +325,10 @@ export function customConnectorRoutes(deps: AppDeps) {
         body: body(
           z.object({
             label: z.string().max(80),
+            trusted: z.boolean().optional().openapi({
+              description:
+                "Whether the server enforces its own approvals (ADR 0175): on, its sensitive tools still asking become `write` and run without asking here; off, the ones only the trust freed ask again. Refused through Composio (`connector.trust_refused`). Left out: unchanged.",
+            }),
             tools: z
               .array(
                 z.object({

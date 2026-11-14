@@ -501,6 +501,25 @@ test("connector tools API: classified on listing (judge for ambiguous names), se
   expect((await save("read")).status).toBe(400);
   const freed = (await (await save("write")).json()) as { tools: { name: string; freed: boolean }[] };
   expect(freed.tools.find((x) => x.name === "campaign_delete")?.freed).toBe(true);
+  // Trusting the whole server (ADR 0175): what still asks runs without asking; distrusting asks again.
+  type Server = { trusted: boolean; mayTrust: boolean; tools: { name: string; access: string; freed: boolean }[] };
+  const trust = async (trusted: boolean) =>
+    (await (
+      await owner(`/api/app/organizations/${orgId}/connectors/custom/${started.server.id}/tools`, {
+        method: "PUT",
+        json: { label: "Ads", tools: [], trusted },
+      })
+    ).json()) as Server;
+  expect((await save("approval")).status).toBe(200);
+  const trusted = await trust(true);
+  expect(trusted).toMatchObject({ trusted: true, mayTrust: true });
+  expect(trusted.tools.find((x) => x.name === "campaign_delete")).toMatchObject({ access: "write", freed: true });
+  const distrusted = await trust(false);
+  expect(distrusted.trusted).toBe(false);
+  expect(distrusted.tools.find((x) => x.name === "campaign_delete")).toMatchObject({
+    access: "approval",
+    freed: false,
+  });
   expect((await save("off")).status).toBe(200);
   const ok = (await (await save("approval", "pixel_track")).json()) as { tools: { name: string; pending: boolean }[] };
   expect(ok.tools.find((x) => x.name === "pixel_track")?.pending).toBe(false);
