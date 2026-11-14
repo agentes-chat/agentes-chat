@@ -30,6 +30,10 @@ describe("one-click MCP connectors", () => {
     expect(mcpPreset("hubspot")?.serverUrl).toBe("https://backend.composio.dev/api/v3.1/toolkits/hubspot");
     expect(mcpPreset("linear")?.serverUrl).toBe("https://mcp.linear.app/mcp");
     expect(presetForServer("https://mcp.linear.app/mcp/")?.id).toBe("linear");
+    expect(mcpPreset("radarscout")).toMatchObject({
+      category: "sales",
+      serverUrl: "https://mcp.radarscout.com.br/mcp",
+    });
     expect(presetForServer("https://example.com/mcp")).toBeNull();
   });
 

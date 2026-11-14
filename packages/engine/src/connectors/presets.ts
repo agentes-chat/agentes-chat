@@ -891,6 +891,14 @@ export const MCP_PRESETS: readonly McpPreset[] = [
     serverUrl: "https://mcp.close.com/mcp",
   },
   {
+    id: "radarscout",
+    category: "sales",
+    label: "Radar Scout",
+    description: "Marketplace sales, profit, settlements, catalog, inventory and ads.",
+    icon: "radarscout",
+    serverUrl: "https://mcp.radarscout.com.br/mcp",
+  },
+  {
     id: "calendly",
     category: "sales",
     label: "Calendly",
