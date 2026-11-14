@@ -14673,7 +14673,6 @@
         "openXcode": "Xcode'u aç",
         "opened": "Xcode {{mac}} üzerinde açıldı. iPhone'un Ayarlar'ına yeniden bakın, sonra Xcode'u kapatın.",
         "unlock": "Açtınız ve iPhone yeniden başladı mı? Kilidini açın. Aç düğmeli uyarı ancak bundan sonra çıkar.",
-        "check": "Yeniden kontrol et",
         "outdated": "{{mac}} üzerindeki agentes.chat uygulaması eski. Uygulamayı güncelleyin ya da oradan kurduysanız bunu Terminal'de çalıştırın."
       },
       "uiAutomationText": "Yeniden başladıktan sonra Ayarlar › Geliştirici bölümünde.",

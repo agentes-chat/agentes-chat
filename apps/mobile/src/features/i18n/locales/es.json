@@ -2089,7 +2089,6 @@
         "openXcode": "Abrir Xcode",
         "opened": "Xcode se abrió en {{host}}. Vuelve a mirar en Ajustes y cierra Xcode allí después.",
         "unlock": "¿Lo activaste y se reinició? El aviso con Activar aparece cuando este iPhone está desbloqueado.",
-        "checkAgain": "Comprobar de nuevo",
         "outdated": "La app agentes.chat en {{host}} está desactualizada. Actualízala en ese Mac."
       }
     },

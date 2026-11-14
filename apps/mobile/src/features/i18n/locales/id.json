@@ -1898,7 +1898,6 @@
         "openXcode": "Buka Xcode",
         "opened": "Xcode terbuka di {{host}}. Lihat lagi di Pengaturan, lalu tutup Xcode di sana.",
         "unlock": "Sudah dinyalakan dan dimulai ulang? Peringatan dengan Nyalakan muncul saat kunci iPhone ini terbuka.",
-        "checkAgain": "Periksa lagi",
         "outdated": "Aplikasi agentes.chat di {{host}} sudah usang. Perbarui di Mac itu."
       }
     },

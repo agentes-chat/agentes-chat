@@ -15245,7 +15245,6 @@
         "openXcode": "Apri Xcode",
         "opened": "Xcode si è aperto su {{mac}}. Guarda di nuovo nelle Impostazioni dell'iPhone, poi chiudi Xcode.",
         "unlock": "L'hai attivata e l'iPhone si è riavviato? Sbloccalo. L'avviso con Attiva compare solo dopo.",
-        "check": "Controlla di nuovo",
         "outdated": "L'app agentes.chat su {{mac}} non è aggiornata. Aggiorna l'app, oppure esegui questo nel Terminale se l'hai installata da lì."
       },
       "uiAutomationText": "In Impostazioni › Sviluppatore, dopo il riavvio.",

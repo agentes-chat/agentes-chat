@@ -2096,7 +2096,6 @@ export const featureKeysEn = {
         openXcode: "Open Xcode",
         opened: "Xcode opened on {{host}}. Look in Settings again, then close Xcode there.",
         unlock: "Turned it on and it restarted? The alert with Turn On shows once this iPhone is unlocked.",
-        checkAgain: "Check again",
         outdated: "The agentes.chat app on {{host}} is out of date. Update it on that Mac.",
       },
     },

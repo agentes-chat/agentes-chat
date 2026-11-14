@@ -15737,7 +15737,6 @@
         "openXcode": "Otwórz Xcode",
         "opened": "Xcode otworzył się na {{mac}}. Zajrzyj jeszcze raz do Ustawień iPhone'a, a potem zamknij Xcode.",
         "unlock": "Włączone, a iPhone uruchomił się ponownie? Odblokuj go. Alert z Włącz pojawia się dopiero potem.",
-        "check": "Sprawdź ponownie",
         "outdated": "Aplikacja agentes.chat na {{mac}} jest nieaktualna. Zaktualizuj aplikację albo uruchom to w Terminalu, jeśli była instalowana stamtąd."
       },
       "uiAutomationText": "W Ustawienia › Deweloper, po ponownym uruchomieniu.",

@@ -15162,7 +15162,6 @@
         "openXcode": "Abrir Xcode",
         "opened": "Xcode se abrió en {{mac}}. Vuelve a mirar en los Ajustes del iPhone y cierra Xcode después.",
         "unlock": "¿Lo activaste y el iPhone se reinició? Desbloquéalo. El aviso con Activar solo aparece después.",
-        "check": "Comprobar de nuevo",
         "outdated": "La app agentes.chat en {{mac}} está desactualizada. Actualiza la app, o ejecuta esto en Terminal si la instalaste ahí."
       },
       "uiAutomationText": "En Configuración › Desarrollador, después del reinicio.",

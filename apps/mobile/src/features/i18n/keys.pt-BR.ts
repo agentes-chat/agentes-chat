@@ -2033,7 +2033,6 @@ export const featureKeysPtBR = {
         openXcode: "Abrir o Xcode",
         opened: "O Xcode abriu no {{host}}. Veja de novo nos Ajustes e feche o Xcode lá depois.",
         unlock: "Já ativou e ele reiniciou? O aviso com Ativar aparece quando este iPhone está desbloqueado.",
-        checkAgain: "Verificar de novo",
         outdated: "O app agentes.chat no {{host}} está desatualizado. Atualize nesse Mac.",
       },
     },

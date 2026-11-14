@@ -35874,9 +35874,6 @@
   "devices.iphone.devModeMissing.unlock": {
     "value": "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that."
   },
-  "devices.iphone.devModeMissing.check": {
-    "value": "Check again"
-  },
   "devices.iphone.devModeMissing.outdated": {
     "value": "The agentes.chat app on {{mac}} is out of date. Update the app, or run this in Terminal if you installed it there."
   },

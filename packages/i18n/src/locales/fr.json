@@ -15233,7 +15233,6 @@
         "openXcode": "Ouvrir Xcode",
         "opened": "Xcode s'est ouvert sur {{mac}}. Regardez à nouveau dans les Réglages de l'iPhone, puis fermez Xcode.",
         "unlock": "Vous l'avez activé et l'iPhone a redémarré ? Déverrouillez-le. L'alerte avec Activer n'apparaît qu'après.",
-        "check": "Vérifier à nouveau",
         "outdated": "L'app agentes.chat sur {{mac}} n'est pas à jour. Mettez l'app à jour, ou lancez ceci dans le Terminal si vous l'avez installée par là."
       },
       "uiAutomationText": "Dans Réglages › Développeur, après le redémarrage.",

@@ -14943,7 +14943,6 @@ export const en = {
         openXcode: "Open Xcode",
         opened: "Xcode opened on {{mac}}. Look in the iPhone's Settings again, then close Xcode.",
         unlock: "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.",
-        check: "Check again",
         /** A Terminal command (`agentes-runner update`) shows under it. */
         outdated:
           "The agentes.chat app on {{mac}} is out of date. Update the app, or run this in Terminal if you installed it there.",

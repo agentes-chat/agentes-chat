@@ -1898,7 +1898,6 @@
         "openXcode": "Xcode 열기",
         "opened": "{{host}}에서 Xcode가 열렸어요. 설정을 다시 확인하고 나중에 그 Mac의 Xcode를 닫으세요.",
         "unlock": "켰고 재시동됐나요? 켜기 알림은 이 iPhone의 잠금을 해제하면 나타나요.",
-        "checkAgain": "다시 확인",
         "outdated": "{{host}}의 agentes.chat 앱이 오래됐어요. 그 Mac에서 업데이트하세요."
       }
     },

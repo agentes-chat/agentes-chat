@@ -1996,7 +1996,6 @@
         "openXcode": "Xcode öffnen",
         "opened": "Xcode ist auf {{host}} offen. Schau noch einmal in den Einstellungen und schließ Xcode dort danach.",
         "unlock": "Eingeschaltet und neu gestartet? Die Abfrage mit Aktivieren erscheint, sobald dieses iPhone entsperrt ist.",
-        "checkAgain": "Erneut prüfen",
         "outdated": "Die agentes.chat-App auf {{host}} ist veraltet. Aktualisiere sie auf diesem Mac."
       }
     },

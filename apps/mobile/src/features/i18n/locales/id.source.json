@@ -4919,9 +4919,6 @@
   "devices.iphone.devMode.unlock": {
     "value": "Turned it on and it restarted? The alert with Turn On shows once this iPhone is unlocked."
   },
-  "devices.iphone.devMode.checkAgain": {
-    "value": "Check again"
-  },
   "devices.iphone.devMode.outdated": {
     "value": "The agentes.chat app on {{host}} is out of date. Update it on that Mac."
   },
