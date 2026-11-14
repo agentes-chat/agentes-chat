@@ -1,5 +1,13 @@
 import type { TFunction } from "i18next";
-import type { EndedTask, HiddenTasks, ManagedTask, TaskNow, TaskWait } from "../api/types";
+import type {
+  CanceledReturn,
+  EndedTask,
+  HiddenTasks,
+  ManagedTask,
+  PendingReturn,
+  TaskNow,
+  TaskWait,
+} from "../api/types";
 import { type Activity, toolActivity } from "./activity";
 import { durationText, etaMinutes } from "./computer-queue";
 import { agentGrammar } from "./grammar";
@@ -362,6 +370,30 @@ export function taskPlace(
 ) {
   const where = taskWhere(t, task);
   return where === taskTitle(t, task) ? null : where;
+}
+
+/** Where a return lands, as a row says it: "#vendas", "Conversa direta"; null for a task's conversation. */
+export const returnPlace = (t: TFunction, r: Pick<PendingReturn, "channelKind" | "channelName">) =>
+  r.channelKind === "channel" && r.channelName
+    ? `#${r.channelName}`
+    : r.channelKind === "dm"
+      ? t("taskManager.where.dm")
+      : null;
+
+/**
+ * How a canceled return ended, as "Terminadas hoje" says it: by its time, when the agent or the person left
+ * ("Retorno cancelado"), by the reader, by someone else or the agent itself ("Retorno cancelado por Ana").
+ */
+export function returnCanceledText(
+  t: TFunction,
+  r: Pick<CanceledReturn, "canceledBy">,
+  meId: string | null,
+  agentName: string,
+) {
+  const by = r.canceledBy;
+  if (!by) return t("taskManager.ended.returnCanceled");
+  if (by.kind === "person" && by.userId === meId) return t("taskManager.ended.returnCanceledYou");
+  return t("taskManager.ended.returnCanceledBy", { name: by.kind === "person" ? by.name : agentName });
 }
 
 export interface AgentTasks {

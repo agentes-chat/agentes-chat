@@ -905,7 +905,8 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
   // How its work stands, as the web's chip says it (ADR 0084 addendum): one state, and how long in place of the time.
   const state = thread.state === "open" ? threadWorkState(thread) : null;
   const tone = state ? threadWorkTone(state) : null;
-  const held = state ? workTime(i18n.language, thread.since, now) : null;
+  // A return says when it comes ("Retorno às 00:32"), never for how long.
+  const held = state && state !== "later" ? workTime(i18n.language, thread.since, now) : null;
   return (
     <Pressable
       onPress={() => router.push(chatHref(thread.channelId, thread.id))}
@@ -948,7 +949,7 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
             numberOfLines={1}
             style={[styles.bold, { color: tone === "working" ? c.agent : tone === "you" ? c.amberInk : c.muted }]}
           >
-            {threadWorkWord(t, state)}
+            {threadWorkWord(t, state, { at: thread.laterAt, locale: i18n.language, now })}
           </Text>
         </View>
       ) : null}

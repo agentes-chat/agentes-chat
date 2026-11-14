@@ -98,10 +98,12 @@ import { credentialOut } from "./credential-view";
 import {
   AgentAppearance,
   AgentAudience,
+  CanceledReturn,
   ChatPrefs,
   Credential,
   Model,
   ModelTier,
+  PendingReturn,
   ProviderId,
   Role,
   StartChoice,
@@ -524,6 +526,12 @@ const TaskManagerView = z
     activity: z
       .record(z.string(), z.array(z.number().int()))
       .openapi({ description: "Per agent: tool calls per minute over the last 60 minutes, oldest first." }),
+    followUps: z
+      .array(PendingReturn)
+      .openapi({ description: '"Retornos": returns agents set, still to come, where you read; the soonest first.' }),
+    canceledFollowUps: z
+      .array(CanceledReturn)
+      .openapi({ description: "Returns canceled since `since`, the latest first." }),
   })
   .openapi("TaskManagerView");
 

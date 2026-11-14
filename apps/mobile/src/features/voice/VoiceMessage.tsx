@@ -11,7 +11,7 @@ import { appHeaders, authedFetch, lastCookie } from "@/lib/auth";
 import { serverUrl } from "@/lib/server";
 import { Icon, PressScale, Text } from "@/ui";
 import { useColors, useOrgId } from "../shared/hooks";
-import { hasWords, nextSpeed } from "./logic";
+import { hasWords, nextSpeed, waveAt } from "./logic";
 import { playingId, seekPlayback, setPlaybackSpeed, startPlayback, stopPlayback, subscribePlayback } from "./playback";
 import { PixelWave, wavePaths } from "./VoiceBars";
 
@@ -128,7 +128,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
     failOffsetY: [-12, 12],
     onUpdate: (e) => {
       "worklet";
-      if (width > 0) progress.value = Math.max(0, Math.min(0.999, e.x / width));
+      if (width > 0) progress.value = waveAt(e.x, width);
     },
     onDeactivate: () => {
       "worklet";
@@ -139,7 +139,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
     enabled: canPlay,
     onDeactivate: (e) => {
       "worklet";
-      if (width > 0) scheduleOnRN(seek, Math.max(0, Math.min(0.999, e.x / width)));
+      if (width > 0) scheduleOnRN(seek, waveAt(e.x, width));
     },
   });
   const scrub = useExclusiveGestures(pan, tap);

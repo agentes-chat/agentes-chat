@@ -2,6 +2,7 @@ import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, eq, inArray, isNull, schema, sql } from "@agenteschat/db";
 import { type AgentWork, agentWorkFor, bareWork } from "./agent-work";
 import { publishOrgEvent } from "./events";
+import { type PendingReturn, pendingReturns } from "./follow-through";
 import { cutText } from "./format";
 import type { Judge } from "./judge";
 import { requirePermission } from "./organizations";
@@ -129,19 +130,49 @@ export async function agentStatuses(
   options: Pick<OutOfOfficeOptions, "hasModel"> = {},
 ): Promise<(AgentStatusView & { work: AgentWork | null })[]> {
   await requirePermission(db, actorId, orgId, "read");
-  const [list, sees, work, rightHand] = await Promise.all([
+  const [list, sees, work, rightHand, returns] = await Promise.all([
     loadAgentStatuses(db, orgId, now, undefined, options),
     routineSeer(db, orgId, actorId),
     agentWorkFor(db, actorId, orgId, new Date(now.getTime() - AGENT_HEARTBEAT_FRESH_MS)),
     rightHandId(db, orgId),
+    pendingReturns(db, actorId, orgId),
   ]);
+  const later = laterWork(returns);
   return list.map((s) => {
-    const w = work.get(s.agentId) ?? null;
+    const w = work.get(s.agentId) ?? later.get(s.agentId) ?? null;
     const seen = s.agentId === rightHand ? rightHandFor(s, w) : s;
     return sees({ agentId: s.agentId, createdByUserId: null })
       ? { ...seen, work: w }
       : { ...seen, status: null, work: w && bareWork(w) };
   });
+}
+
+/**
+ * An agent with nothing on and a return still ahead where the viewer reads (`pendingReturns`, soonest first): its work
+ * is `later`, the lists' "retorno às 00:32". A held one (past its time, waiting on an answer) says nothing there: the
+ * conversation's bar says it.
+ */
+function laterWork(returns: PendingReturn[]): Map<string, AgentWork> {
+  const out = new Map<string, AgentWork>();
+  for (const r of returns) {
+    if (r.held || out.has(r.agentId)) continue;
+    out.set(r.agentId, {
+      state: "later",
+      ask: null,
+      since: r.at,
+      runId: r.runId,
+      channelId: r.channelId,
+      channelKind: r.channelKind,
+      channelName: r.channelName,
+      threadId: r.threadId,
+      messageId: r.replyMessageId,
+      forAgentId: null,
+      routine: false,
+      count: 0,
+      at: r.at,
+    });
+  }
+  return out;
 }
 
 /**

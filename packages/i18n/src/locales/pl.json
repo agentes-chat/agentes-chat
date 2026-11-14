@@ -520,6 +520,7 @@
       "noPassword": "To konto loguje się z aplikacji agentes.chat.",
       "noPasswordLead": "Na komputerze, na którym działa ten serwer, otwórz aplikację i wybierz Dodaj hasło w Ustawienia › Twoje konto.",
       "backToSignIn": "Wróć do logowania",
+      "backToAccount": "Wróć do {{name}}",
       "toAuthorizeApp": "Żeby połączyć aplikację z agentes.chat."
     },
     "desktop": {
@@ -1563,22 +1564,6 @@
     "moveDown": "Przenieś niżej",
     "restoreOrder": "Przywróć domyślną kolejność"
   },
-  "appIcon": {
-    "title": "Ikona aplikacji",
-    "hintWeb": "Ikona na kartach tej przeglądarki.",
-    "hintMac": "Ikona w Docku, gdy aplikacja jest otwarta. Finder i Launchpad zachowują domyślną.",
-    "hintDesktop": "Ikona na pasku zadań, gdy aplikacja jest otwarta.",
-    "hintAndroid": "Niektóre ekrany główne potrzebują kilku sekund, by pokazać nową ikonę.",
-    "failed": "Nie udało się zmienić ikony. Spróbuj ponownie.",
-    "agentsOf": "Agenci w {{org}}",
-    "names": {
-      "night": "Noc",
-      "moon": "Księżyc",
-      "sky": "Niebo",
-      "peekNight": "Zerkanie nocą",
-      "peekSky": "Zerkanie w niebie"
-    }
-  },
   "install": {
     "frames": "Jak zainstalować na {{system}}",
     "step": "Krok {{n}}",
@@ -1686,6 +1671,22 @@
       "activities": "Podgląd",
       "readingLists": "Czytanie list pakietów... Gotowe",
       "settingUp": "Konfigurowanie pakietu agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "Ikona aplikacji",
+    "hintWeb": "Ikona na kartach tej przeglądarki.",
+    "hintMac": "Ikona w Docku, gdy aplikacja jest otwarta. Finder i Launchpad zachowują domyślną.",
+    "hintDesktop": "Ikona na pasku zadań, gdy aplikacja jest otwarta.",
+    "hintAndroid": "Niektóre ekrany główne potrzebują kilku sekund, by pokazać nową ikonę.",
+    "failed": "Nie udało się zmienić ikony. Spróbuj ponownie.",
+    "agentsOf": "Agenci w {{org}}",
+    "names": {
+      "night": "Noc",
+      "moon": "Księżyc",
+      "sky": "Niebo",
+      "peekNight": "Zerkanie nocą",
+      "peekSky": "Zerkanie w niebie"
     }
   },
   "legal": {
@@ -1911,6 +1912,8 @@
     "newWorkspace": "Nowa przestrzeń robocza",
     "addWorkspace": "Dodaj przestrzeń roboczą",
     "addWorkspaceHint": "Dołącz do istniejącego, utwórz nowy albo użyj serwera swojego zespołu",
+    "addAccount": "Dodaj konto",
+    "addAccountHint": "Zaloguj się na inne konto bez wylogowywania z tego",
     "yourServer": "Twój serwer",
     "serverHere": "agentes.chat na tym urządzeniu ({{device}})",
     "serverStopped": "zatrzymany",
@@ -2467,8 +2470,7 @@
       "fileName": "wiadomosc.txt"
     },
     "long": {
-      "more": "Pokaż więcej",
-      "title": "Wiadomość od: {{name}}"
+      "more": "Pokaż więcej"
     },
     "retrySend": "Spróbuj ponownie",
     "thinking": "{{name}} myśli…",
@@ -4087,7 +4089,32 @@
     "here": "tutaj",
     "routine": "w rutynie",
     "yourApproval": "twoje zatwierdzenie",
-    "yourAnswer": "twoja odpowiedź"
+    "yourAnswer": "twoja odpowiedź",
+    "later": "follow-up {{when}}",
+    "laterShort": "follow-up"
+  },
+  "followUps": {
+    "when": {
+      "at": "o {{time}}",
+      "today": "dzisiaj o {{time}}",
+      "tomorrow": "jutro o {{time}}"
+    },
+    "whenLabel": {
+      "at": "O {{time}}",
+      "today": "Dzisiaj o {{time}}",
+      "tomorrow": "Jutro o {{time}}"
+    },
+    "bar": {
+      "at": "{{name}} sprawdzi ponownie {{when}}",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}} sprawdzi ponownie, gdy odpowiesz",
+      "held": "{{name}} sprawdzi ponownie po odpowiedzi"
+    },
+    "title": "Follow-upy",
+    "see": "Zobacz wiadomość",
+    "cancel": "Anuluj follow-up",
+    "cancelOf": "Anuluj follow-up od: {{name}} {{when}}",
+    "inTime": "za {{time}}"
   },
   "mentions": {
     "list": "Osoby i agenci",
@@ -4149,7 +4176,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Pokaż więcej",
     "less": "Pokaż mniej"
   },
   "secret": {
@@ -4780,8 +4806,6 @@
       "noSubject": "(bez tematu)",
       "toSender": "Do nadawcy wiadomości",
       "toList": "Do {{to}}",
-      "more": "Czytaj całość",
-      "less": "Pokaż mniej",
       "answers": "Odpowiedź na <b>„{{subject}}”</b>",
       "answersFrom": "Odpowiedź na <b>„{{subject}}”</b>, od {{from}}",
       "forwards": "Przekazanie <b>„{{subject}}”</b>",
@@ -5440,8 +5464,6 @@
       "values": "Co zostanie zrobione",
       "valuesDone": "Co zostało zrobione",
       "valuesNot": "Co zostałoby zrobione",
-      "more": "Pokaż całość",
-      "less": "Pokaż mniej",
       "trail": "Jak do tego doszło",
       "showSteps": "Zobacz każdy krok",
       "hideSteps": "Ukryj kroki",
@@ -9308,8 +9330,7 @@
       "releasePaused": "Misja jest wstrzymana: wznów ją, żeby sesja ruszyła dalej.",
       "releaseClosed": "Misja jest zamknięta: sesja nie ruszy dalej.",
       "onlyDeciders": "Na polecenia zezwalają tylko osoby, które decydują w tej misji.",
-      "pick": "Zezwól na {{command}}",
-      "showAll": "Pokaż wszystko"
+      "pick": "Zezwól na {{command}}"
     },
     "decision": {
       "approveAll_one": "Zatwierdź {{count}} tymczasową",
@@ -9757,6 +9778,7 @@
       "input": "Czeka na odpowiedź",
       "computer": "Czeka na komputer",
       "queued": "W kolejce",
+      "later": "Follow-up {{when}}",
       "open": "Otwarty",
       "closed": "Zamknięty",
       "archived": "Zarchiwizowany"
@@ -12463,8 +12485,6 @@
     "thousand": "tys.",
     "building": "Składanie w całość…",
     "openBig": "Otwórz w dużym widoku",
-    "showAll": "Pokaż wszystko",
-    "showLess": "Pokaż mniej",
     "keep": "Zachowaj na Drive",
     "kept": "Zachowano na Drive",
     "inDrive": "Na Drive",
@@ -14634,6 +14654,9 @@
       "titleTooLong": "Tytuł może mieć maksymalnie {{max}} znaków.",
       "noContext": "Ten wątek nie powstał z zakresu rozmowy.",
       "notUndoable": "Cofnąć można tylko wątek utworzony z zakresu."
+    },
+    "followUp": {
+      "notYours": "Ten follow-up może anulować tylko osoba, której dotyczy, właściciel agenta albo administrator."
     },
     "routine": {
       "tooFrequent": "Rutyna uruchamia się najczęściej co 15 minut. Wybierz dłuższy odstęp.",
@@ -16981,13 +17004,6 @@
       "someAnswered": "odpowiedziało {{done}} z {{total}}",
       "labelMany": "Rozmowy {{from}} z {{to}}"
     },
-    "talk": {
-      "readAll": "Czytaj całość",
-      "more_one": "jeszcze {{count}} wiersz",
-      "more_few": "jeszcze {{count}} wiersze",
-      "more_many": "jeszcze {{count}} wierszy",
-      "more_other": "jeszcze {{count}} wiersza"
-    },
     "consultPanel": {
       "label": "Rozmowa między {{from}} a {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -17021,14 +17037,6 @@
       "agentNote": "Notatka od: {{from}}",
       "agentNoteAnon": "Notatka od innego agenta",
       "waitResult": "Dotarło to, na co czeka {{name}}",
-      "followUp": "{{name}} wróci o {{time}} w sprawie «{{about}}»",
-      "followUpOn": "{{name}} wróci {{day}} o {{time}} w sprawie «{{about}}»",
-      "followUpDone": "{{name}}: powrót o {{time}} w sprawie «{{about}}»",
-      "followUpDoneOn": "{{name}}: powrót {{day}} o {{time}} w sprawie «{{about}}»",
-      "followUpCanceled": "{{name}} nie wróci o {{time}} w sprawie «{{about}}»",
-      "followUpCanceledOn": "{{name}} nie wróci {{day}} o {{time}} w sprawie «{{about}}»",
-      "followUpWake": "{{name}} wraca w sprawie «{{about}}»",
-      "followUpCancel": "Anuluj",
       "other": "Powiadomienie dla: {{name}}",
       "wakeSkipped": "Wzmianka od {{name}} nie dotarła do: {{agents}}",
       "wakeSkippedAnon": "Wzmianka {{name}} nie dotarła do innego agenta",
@@ -17221,6 +17229,7 @@
         "usingTool": "Użyto narzędzia {{tool}}",
         "thinking": "Myślenie",
         "typing": "Pisanie",
+        "recordingVoice": "Nagrywanie dźwięku",
         "writing": "Pisanie"
       }
     },
@@ -17230,6 +17239,7 @@
       "updatingRoutine": "zmiana rutyny",
       "thinking": "praca",
       "typing": "pisanie",
+      "recordingVoice": "nagrywanie dźwięku",
       "writing": "pisanie",
       "consulting": "sprawdzanie {{app}}",
       "creatingIssue": "tworzenie zadania",
@@ -18879,7 +18889,8 @@
     "sections": {
       "asked": "Zlecone przez osoby",
       "delegated": "Zlecone przez agentów",
-      "background": "Rutyny w tle"
+      "background": "Rutyny w tle",
+      "returns": "Follow-upy"
     },
     "state": {
       "working": "Pracuje",
@@ -18979,6 +18990,9 @@
       "stopped": "Zatrzymane przez ciebie",
       "stoppedBy": "Zatrzymane przez: {{name}}",
       "failed": "Nie udało się skończyć",
+      "returnCanceled": "Follow-up anulowany",
+      "returnCanceledYou": "Anulowano follow-up",
+      "returnCanceledBy": "Follow-up anulowany przez: {{name}}",
       "none": "Dzisiaj nic się jeszcze nie zakończyło."
     },
     "empty": {

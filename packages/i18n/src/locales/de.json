@@ -508,6 +508,7 @@
       "noPassword": "Dieses Konto meldet sich über die agentes.chat-App an.",
       "noPasswordLead": "Öffne auf dem Computer, auf dem dieser Server läuft, die App und wähle Passwort hinzufügen unter Einstellungen › Dein Konto.",
       "backToSignIn": "Zurück zur Anmeldung",
+      "backToAccount": "Zurück zu {{name}}",
       "toAuthorizeApp": "Um eine App mit agentes.chat zu verbinden."
     },
     "desktop": {
@@ -1478,22 +1479,6 @@
     "moveDown": "Nach unten",
     "restoreOrder": "Standardreihenfolge wiederherstellen"
   },
-  "appIcon": {
-    "title": "App-Symbol",
-    "hintWeb": "Das Symbol in den Tabs dieses Browsers.",
-    "hintMac": "Das Dock-Symbol, solange die App geöffnet ist. Finder und Launchpad behalten das Standardsymbol.",
-    "hintDesktop": "Das Taskleisten-Symbol, solange die App geöffnet ist.",
-    "hintAndroid": "Manche Startbildschirme brauchen ein paar Sekunden, bis das neue Symbol erscheint.",
-    "failed": "Das Symbol konnte nicht geändert werden. Versuch es noch einmal.",
-    "agentsOf": "Agenten in {{org}}",
-    "names": {
-      "night": "Nacht",
-      "moon": "Mond",
-      "sky": "Himmel",
-      "peekNight": "Neugierig bei Nacht",
-      "peekSky": "Neugierig am Himmel"
-    }
-  },
   "install": {
     "frames": "So installierst du es auf {{system}}",
     "step": "Schritt {{n}}",
@@ -1601,6 +1586,22 @@
       "activities": "Aktivitäten",
       "readingLists": "Paketlisten werden gelesen… Fertig",
       "settingUp": "agentes-chat ({{version}}) wird eingerichtet …"
+    }
+  },
+  "appIcon": {
+    "title": "App-Symbol",
+    "hintWeb": "Das Symbol in den Tabs dieses Browsers.",
+    "hintMac": "Das Dock-Symbol, solange die App geöffnet ist. Finder und Launchpad behalten das Standardsymbol.",
+    "hintDesktop": "Das Taskleisten-Symbol, solange die App geöffnet ist.",
+    "hintAndroid": "Manche Startbildschirme brauchen ein paar Sekunden, bis das neue Symbol erscheint.",
+    "failed": "Das Symbol konnte nicht geändert werden. Versuch es noch einmal.",
+    "agentsOf": "Agenten in {{org}}",
+    "names": {
+      "night": "Nacht",
+      "moon": "Mond",
+      "sky": "Himmel",
+      "peekNight": "Neugierig bei Nacht",
+      "peekSky": "Neugierig am Himmel"
     }
   },
   "legal": {
@@ -1826,6 +1827,8 @@
     "newWorkspace": "Neuer Workspace",
     "addWorkspace": "Workspace hinzufügen",
     "addWorkspaceHint": "Einem bestehenden beitreten, einen neuen erstellen oder den Server deines Teams nutzen",
+    "addAccount": "Konto hinzufügen",
+    "addAccountHint": "Bei einem weiteren Konto anmelden, ohne dieses zu verlassen",
     "yourServer": "Dein Server",
     "serverHere": "agentes.chat auf diesem {{device}}",
     "serverStopped": "gestoppt",
@@ -2323,8 +2326,7 @@
       "fileName": "nachricht.txt"
     },
     "long": {
-      "more": "Mehr anzeigen",
-      "title": "Nachricht von {{name}}"
+      "more": "Mehr anzeigen"
     },
     "retrySend": "Erneut versuchen",
     "thinking": "{{name}} denkt nach…",
@@ -3848,7 +3850,32 @@
     "here": "hier",
     "routine": "in einer Routine",
     "yourApproval": "deine Freigabe",
-    "yourAnswer": "deine Antwort"
+    "yourAnswer": "deine Antwort",
+    "later": "Rückmeldung {{when}}",
+    "laterShort": "Rückmeldung"
+  },
+  "followUps": {
+    "when": {
+      "at": "um {{time}}",
+      "today": "heute um {{time}}",
+      "tomorrow": "morgen um {{time}}"
+    },
+    "whenLabel": {
+      "at": "Um {{time}}",
+      "today": "Heute um {{time}}",
+      "tomorrow": "Morgen um {{time}}"
+    },
+    "bar": {
+      "at": "{{name}} meldet sich {{when}} wieder",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}} meldet sich wieder, sobald du antwortest",
+      "held": "{{name}} meldet sich nach einer Antwort wieder"
+    },
+    "title": "Rückmeldungen",
+    "see": "Nachricht ansehen",
+    "cancel": "Rückmeldung absagen",
+    "cancelOf": "Rückmeldung von {{name}} {{when}} absagen",
+    "inTime": "in {{time}}"
   },
   "mentions": {
     "list": "Personen und Agenten",
@@ -3906,7 +3933,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Mehr anzeigen",
     "less": "Weniger anzeigen"
   },
   "secret": {
@@ -4491,8 +4517,6 @@
       "noSubject": "(kein Betreff)",
       "toSender": "An den Absender der Nachricht",
       "toList": "An {{to}}",
-      "more": "Alles lesen",
-      "less": "Weniger anzeigen",
       "answers": "Antwortet auf <b>„{{subject}}“</b>",
       "answersFrom": "Antwortet auf <b>„{{subject}}“</b>, von {{from}}",
       "forwards": "Leitet <b>„{{subject}}“</b> weiter",
@@ -5091,8 +5115,6 @@
       "values": "Was passieren wird",
       "valuesDone": "Was passiert ist",
       "valuesNot": "Was passiert wäre",
-      "more": "Alles anzeigen",
-      "less": "Weniger anzeigen",
       "trail": "Wie es dazu kam",
       "showSteps": "Jeden Schritt ansehen",
       "hideSteps": "Schritte ausblenden",
@@ -8713,8 +8735,7 @@
       "releasePaused": "Die Mission ist pausiert: Setze sie fort, damit die Sitzung weitermacht.",
       "releaseClosed": "Die Mission ist abgeschlossen: Die Sitzung macht nicht weiter.",
       "onlyDeciders": "Nur wer in dieser Mission entscheidet, erlaubt Befehle.",
-      "pick": "{{command}} erlauben",
-      "showAll": "Alle anzeigen"
+      "pick": "{{command}} erlauben"
     },
     "decision": {
       "approveAll_one": "{{count}} vorläufige freigeben",
@@ -9132,6 +9153,7 @@
       "input": "Wartet auf eine Antwort",
       "computer": "Wartet auf den Computer",
       "queued": "In der Warteschlange",
+      "later": "Rückmeldung {{when}}",
       "open": "Offen",
       "closed": "Geschlossen",
       "archived": "Archiviert"
@@ -11584,8 +11606,6 @@
     "thousand": "Tsd.",
     "building": "Wird zusammengestellt…",
     "openBig": "Groß öffnen",
-    "showAll": "Alles anzeigen",
-    "showLess": "Weniger anzeigen",
     "keep": "In Drive behalten",
     "kept": "In Drive behalten",
     "inDrive": "In Drive",
@@ -13661,6 +13681,9 @@
       "titleTooLong": "Ein Titel hat höchstens {{max}} Zeichen.",
       "noContext": "Dieser Thread stammt nicht aus einem Bereich einer Unterhaltung.",
       "notUndoable": "Nur ein Thread aus einem Bereich kann rückgängig gemacht werden."
+    },
+    "followUp": {
+      "notYours": "Nur die Person, für die sie ist, der Besitzer des Agenten oder ein Admin kann diese Rückmeldung absagen."
     },
     "routine": {
       "tooFrequent": "Eine Routine läuft höchstens alle 15 Minuten. Wähl ein längeres Intervall.",
@@ -15937,11 +15960,6 @@
       "someAnswered": "{{done}} von {{total}} haben geantwortet",
       "labelMany": "Gespräche von {{from}} mit {{to}}"
     },
-    "talk": {
-      "readAll": "Alles lesen",
-      "more_one": "{{count}} weitere Zeile",
-      "more_other": "{{count}} weitere Zeilen"
-    },
     "consultPanel": {
       "label": "Unterhaltung zwischen {{from}} und {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -15970,14 +15988,6 @@
       "agentNote": "Notiz von {{from}}",
       "agentNoteAnon": "Notiz von einem anderen Agenten",
       "waitResult": "Worauf {{name}} gewartet hat, ist da",
-      "followUp": "{{name}} meldet sich um {{time}} wieder zu „{{about}}“",
-      "followUpOn": "{{name}} meldet sich am {{day}} um {{time}} wieder zu „{{about}}“",
-      "followUpDone": "{{name}} hat sich um {{time}} wieder gemeldet zu „{{about}}“",
-      "followUpDoneOn": "{{name}} hat sich am {{day}} um {{time}} wieder gemeldet zu „{{about}}“",
-      "followUpCanceled": "{{name}} meldet sich nicht um {{time}} zu „{{about}}“",
-      "followUpCanceledOn": "{{name}} meldet sich nicht am {{day}} um {{time}} zu „{{about}}“",
-      "followUpWake": "{{name}} ist zurück zu „{{about}}“",
-      "followUpCancel": "Abbrechen",
       "other": "Hinweis für {{name}}",
       "wakeSkipped": "Die Erwähnung von {{name}} hat {{agents}} nicht erreicht",
       "wakeSkippedAnon": "Die Erwähnung von {{name}} hat keinen anderen Agenten erreicht",
@@ -16166,6 +16176,7 @@
         "usingTool": "Das Tool {{tool}} genutzt",
         "thinking": "Nachgedacht",
         "typing": "Geschrieben",
+        "recordingVoice": "Audio aufgenommen",
         "writing": "Geschrieben"
       }
     },
@@ -16175,6 +16186,7 @@
       "updatingRoutine": "Ändern einer Routine",
       "thinking": "Arbeiten",
       "typing": "Tippen",
+      "recordingVoice": "Aufnehmen einer Audionachricht",
       "writing": "Schreiben",
       "consulting": "Nachsehen in {{app}}",
       "creatingIssue": "Erstellen einer Aufgabe",
@@ -17716,7 +17728,8 @@
     "sections": {
       "asked": "Von Personen beauftragt",
       "delegated": "Von Agenten angefragt",
-      "background": "Routinen im Hintergrund"
+      "background": "Routinen im Hintergrund",
+      "returns": "Rückmeldungen"
     },
     "state": {
       "working": "Arbeitet",
@@ -17808,6 +17821,9 @@
       "stopped": "Von dir gestoppt",
       "stoppedBy": "Von {{name}} gestoppt",
       "failed": "Nicht geschafft",
+      "returnCanceled": "Rückmeldung abgesagt",
+      "returnCanceledYou": "Du hast die Rückmeldung abgesagt",
+      "returnCanceledBy": "Rückmeldung abgesagt von {{name}}",
       "none": "Heute ist noch nichts beendet."
     },
     "empty": {

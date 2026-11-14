@@ -508,6 +508,7 @@
       "noPassword": "Dit account logt in via de agentes.chat-app.",
       "noPasswordLead": "Open op de computer waarop deze server draait de app en kies Wachtwoord toevoegen in Instellingen › Je account.",
       "backToSignIn": "Terug naar inloggen",
+      "backToAccount": "Terug naar {{name}}",
       "toAuthorizeApp": "Om een app aan agentes.chat te koppelen."
     },
     "desktop": {
@@ -1478,22 +1479,6 @@
     "moveDown": "Omlaag",
     "restoreOrder": "Standaardvolgorde herstellen"
   },
-  "appIcon": {
-    "title": "App-icoon",
-    "hintWeb": "Het icoon op de tabbladen van deze browser.",
-    "hintMac": "Het Dock-icoon zolang de app open is. Finder en Launchpad houden het standaardicoon.",
-    "hintDesktop": "Het taakbalkicoon zolang de app open is.",
-    "hintAndroid": "Sommige startschermen doen er een paar seconden over om het nieuwe icoon te tonen.",
-    "failed": "Kon het icoon niet wijzigen. Probeer het opnieuw.",
-    "agentsOf": "Agents van {{org}}",
-    "names": {
-      "night": "Nacht",
-      "moon": "Maan",
-      "sky": "Lucht",
-      "peekNight": "Gluren in de nacht",
-      "peekSky": "Gluren in de lucht"
-    }
-  },
   "install": {
     "frames": "Zo installeer je het op {{system}}",
     "step": "Stap {{n}}",
@@ -1601,6 +1586,22 @@
       "activities": "Activiteiten",
       "readingLists": "Pakketlijsten worden ingelezen... Klaar",
       "settingUp": "agentes-chat ({{version}}) wordt ingesteld ..."
+    }
+  },
+  "appIcon": {
+    "title": "App-icoon",
+    "hintWeb": "Het icoon op de tabbladen van deze browser.",
+    "hintMac": "Het Dock-icoon zolang de app open is. Finder en Launchpad houden het standaardicoon.",
+    "hintDesktop": "Het taakbalkicoon zolang de app open is.",
+    "hintAndroid": "Sommige startschermen doen er een paar seconden over om het nieuwe icoon te tonen.",
+    "failed": "Kon het icoon niet wijzigen. Probeer het opnieuw.",
+    "agentsOf": "Agents van {{org}}",
+    "names": {
+      "night": "Nacht",
+      "moon": "Maan",
+      "sky": "Lucht",
+      "peekNight": "Gluren in de nacht",
+      "peekSky": "Gluren in de lucht"
     }
   },
   "legal": {
@@ -1826,6 +1827,8 @@
     "newWorkspace": "Nieuwe werkruimte",
     "addWorkspace": "Werkruimte toevoegen",
     "addWorkspaceHint": "Doe mee met een bestaande, maak een nieuwe of gebruik de server van je team",
+    "addAccount": "Account toevoegen",
+    "addAccountHint": "Log in bij een ander account zonder dit te verlaten",
     "yourServer": "Je server",
     "serverHere": "agentes.chat op deze {{device}}",
     "serverStopped": "gestopt",
@@ -2326,8 +2329,7 @@
       "fileName": "bericht.txt"
     },
     "long": {
-      "more": "Meer tonen",
-      "title": "Bericht van {{name}}"
+      "more": "Meer tonen"
     },
     "retrySend": "Opnieuw proberen",
     "thinking": "{{name}} denkt na…",
@@ -3849,7 +3851,32 @@
     "here": "hier",
     "routine": "bij een routine",
     "yourApproval": "je goedkeuring",
-    "yourAnswer": "je antwoord"
+    "yourAnswer": "je antwoord",
+    "later": "opvolging {{when}}",
+    "laterShort": "opvolging"
+  },
+  "followUps": {
+    "when": {
+      "at": "om {{time}}",
+      "today": "vandaag om {{time}}",
+      "tomorrow": "morgen om {{time}}"
+    },
+    "whenLabel": {
+      "at": "Om {{time}}",
+      "today": "Vandaag om {{time}}",
+      "tomorrow": "Morgen om {{time}}"
+    },
+    "bar": {
+      "at": "{{name}} volgt {{when}} op",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}} volgt op zodra je antwoordt",
+      "held": "{{name}} volgt op na een antwoord"
+    },
+    "title": "Opvolgingen",
+    "see": "Bericht bekijken",
+    "cancel": "Opvolging annuleren",
+    "cancelOf": "Opvolging van {{name}} {{when}} annuleren",
+    "inTime": "over {{time}}"
   },
   "mentions": {
     "list": "Mensen en agents",
@@ -3907,7 +3934,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Meer tonen",
     "less": "Minder tonen"
   },
   "secret": {
@@ -4492,8 +4518,6 @@
       "noSubject": "(geen onderwerp)",
       "toSender": "Aan de afzender van het bericht",
       "toList": "Aan {{to}}",
-      "more": "Alles lezen",
-      "less": "Minder tonen",
       "answers": "Beantwoordt <b>“{{subject}}”</b>",
       "answersFrom": "Beantwoordt <b>“{{subject}}”</b>, van {{from}}",
       "forwards": "Stuurt <b>“{{subject}}”</b> door",
@@ -5098,8 +5122,6 @@
       "values": "Wat er gaat gebeuren",
       "valuesDone": "Wat er gebeurd is",
       "valuesNot": "Wat er zou zijn gebeurd",
-      "more": "Alles tonen",
-      "less": "Minder tonen",
       "trail": "Hoe het zover kwam",
       "showSteps": "Elke stap bekijken",
       "hideSteps": "Stappen verbergen",
@@ -8759,8 +8781,7 @@
       "releasePaused": "De missie is gepauzeerd: hervat hem zodat de sessie verder kan.",
       "releaseClosed": "De missie is gesloten: de sessie gaat niet verder.",
       "onlyDeciders": "Alleen wie in deze missie beslist kan opdrachten toestaan.",
-      "pick": "{{command}} toestaan",
-      "showAll": "Alles tonen"
+      "pick": "{{command}} toestaan"
     },
     "decision": {
       "approveAll_one": "{{count}} voorlopig besluit goedkeuren",
@@ -9178,6 +9199,7 @@
       "input": "Wacht op een antwoord",
       "computer": "Wacht op de computer",
       "queued": "In de rij",
+      "later": "Opvolging {{when}}",
       "open": "Open",
       "closed": "Gesloten",
       "archived": "Gearchiveerd"
@@ -11650,8 +11672,6 @@
     "thousand": "k",
     "building": "Even in elkaar zetten…",
     "openBig": "Groot openen",
-    "showAll": "Alles tonen",
-    "showLess": "Minder tonen",
     "keep": "Bewaren in Drive",
     "kept": "Bewaard in Drive",
     "inDrive": "In Drive",
@@ -13723,6 +13743,9 @@
       "titleTooLong": "Een titel heeft maximaal {{max}} tekens.",
       "noContext": "Deze thread komt niet uit een reeks van een gesprek.",
       "notUndoable": "Alleen een thread die van een reeks is gemaakt, kan ongedaan worden gemaakt."
+    },
+    "followUp": {
+      "notYours": "Alleen de persoon voor wie het is, de eigenaar van de agent of een beheerder kan deze opvolging annuleren."
     },
     "routine": {
       "tooFrequent": "Een routine draait hooguit elke 15 minuten. Kies een langere tussentijd.",
@@ -16001,11 +16024,6 @@
       "someAnswered": "{{done}} van {{total}} gaven antwoord",
       "labelMany": "Gesprekken van {{from}} met {{to}}"
     },
-    "talk": {
-      "readAll": "Alles lezen",
-      "more_one": "nog {{count}} regel",
-      "more_other": "nog {{count}} regels"
-    },
     "consultPanel": {
       "label": "Gesprek tussen {{from}} en {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -16037,14 +16055,6 @@
       "agentNote": "Notitie van {{from}}",
       "agentNoteAnon": "Notitie van een andere agent",
       "waitResult": "Waar {{name}} op wachtte, is binnen",
-      "followUp": "{{name}} komt om {{time}} terug voor «{{about}}»",
-      "followUpOn": "{{name}} komt {{day}} om {{time}} terug voor «{{about}}»",
-      "followUpDone": "{{name}} kwam om {{time}} terug voor «{{about}}»",
-      "followUpDoneOn": "{{name}} kwam {{day}} om {{time}} terug voor «{{about}}»",
-      "followUpCanceled": "{{name}} komt niet om {{time}} terug voor «{{about}}»",
-      "followUpCanceledOn": "{{name}} komt niet {{day}} om {{time}} terug voor «{{about}}»",
-      "followUpWake": "{{name}} is terug voor «{{about}}»",
-      "followUpCancel": "Annuleren",
       "other": "Melding voor {{name}}",
       "wakeSkipped": "De vermelding van {{name}} bereikte {{agents}} niet",
       "wakeSkippedAnon": "De vermelding van {{name}} bereikte geen andere agent",
@@ -16233,6 +16243,7 @@
         "usingTool": "De tool {{tool}} gebruikt",
         "thinking": "Nagedacht",
         "typing": "Geschreven",
+        "recordingVoice": "Audio opgenomen",
         "writing": "Geschreven"
       }
     },
@@ -16242,6 +16253,7 @@
       "updatingRoutine": "een routine aan het wijzigen",
       "thinking": "aan het werk",
       "typing": "aan het typen",
+      "recordingVoice": "audio aan het opnemen",
       "writing": "aan het schrijven",
       "consulting": "{{app}} aan het raadplegen",
       "creatingIssue": "een taak aan het maken",
@@ -17892,7 +17904,8 @@
     "sections": {
       "asked": "Gevraagd door mensen",
       "delegated": "Gevraagd door agents",
-      "background": "Routines op de achtergrond"
+      "background": "Routines op de achtergrond",
+      "returns": "Opvolgingen"
     },
     "state": {
       "working": "Bezig",
@@ -17984,6 +17997,9 @@
       "stopped": "Door jou gestopt",
       "stoppedBy": "Door {{name}} gestopt",
       "failed": "Niet afgemaakt",
+      "returnCanceled": "Opvolging geannuleerd",
+      "returnCanceledYou": "Je hebt de opvolging geannuleerd",
+      "returnCanceledBy": "Opvolging geannuleerd door {{name}}",
       "none": "Vandaag is er nog niets afgelopen."
     },
     "empty": {
