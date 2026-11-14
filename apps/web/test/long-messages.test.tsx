@@ -47,7 +47,10 @@ const said = (id: string, who: string, body: string, minutes: number, extra: Par
   }) as Message;
 
 const open = async (state = seedState()) => {
-  const r = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(comfortable(state)) });
+  const prefs = state.me?.organizations[0]?.chatPrefs;
+  comfortable(state);
+  withChatPrefs(state, { ...state.me?.organizations[0]?.chatPrefs, ...prefs });
+  const r = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
   await settle(10);
   return { ...r, state };
 };
