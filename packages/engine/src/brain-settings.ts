@@ -10,6 +10,7 @@ import {
   GROK_PROTOCOL,
   isBrainEffort,
   isBrainSpeed,
+  MUSE_PROTOCOL,
   OPENCODE_ACP_PROTOCOL,
   OPENCODE_PROTOCOL,
   type OwnPlanUsage,
@@ -121,6 +122,7 @@ export const BRAIN_KINDS: readonly BrainKind[] = [
   "opencode",
   "grok",
   "antigravity",
+  "muse",
 ];
 export const isBrainKind = (v: unknown): v is BrainKind =>
   typeof v === "string" && (BRAIN_KINDS as readonly string[]).includes(v);
@@ -207,6 +209,31 @@ export const antigravityModels = (listed: readonly { id: string; label?: string 
     return { value: m.id, label: m.label || m.id, ...(catalogModelOf(base) ? { modelId: base } : {}) };
   });
 
+/**
+ * Muse Code's models (ADR 0174): what its MSP host's `model/list` returned for the agent's computer, else the ids
+ * Meta documents, newest first as the other CLIs list theirs. The id is free text on the wire — `session/start` takes
+ * any `modelId` — so a catalog with no rows still leaves a picker worth opening.
+ * ponytail: hand-copied list, the host's own catalog replaces it wherever the runner reports one.
+ */
+export const MUSE_MODELS: readonly { id: string; label: string }[] = [
+  { id: "muse-wonder-1.0", label: "Muse Wonder 1.0" },
+  { id: "muse-wonder-full-1.0", label: "Muse Wonder Full 1.0" },
+  { id: "muse-ember-1.0", label: "Muse Ember 1.0" },
+  { id: "muse-spark-1.3", label: "Muse Spark 1.3" },
+  { id: "muse-spark-1.2", label: "Muse Spark 1.2" },
+];
+
+/**
+ * What Muse Code runs when nobody chose a model: `muse-wonder-1.0`, which is what the host itself marks `isDefault` in
+ * its own catalog. `muse-spark-1.2` is answered 503 on every attempt on a signed-in account, so it is not the fallback
+ * any more. The five ids are what the host's `model/list` returns with a signed-in account, in its own order (newest
+ * release first), and it is only a fallback: a computer that reports a catalog replaces every one of them.
+ */
+export const MUSE_DEFAULT_MODEL = "muse-wonder-1.0";
+
+export const museModels = (listed: readonly { id: string; label?: string }[] = []): BrainModelOption[] =>
+  (listed.length ? listed : MUSE_MODELS).map((m) => ({ value: m.id, label: m.label || m.id }));
+
 /** Claude Code's aliases (`--model opus|sonnet|haiku`), mapped to today's ids in the catalog. */
 export const CLAUDE_CODE_MODELS: readonly BrainModelOption[] = [
   { value: "opus", label: "Opus", modelId: "claude-opus-5-5" },
@@ -240,11 +267,16 @@ function modelChoices(kind: BrainKind, machine?: { executors?: schema.MachineExe
   if (kind === "opencode") return opencodeModels(machine?.executors?.opencode?.models);
   if (kind === "grok") return grokModels(machine?.executors?.grok?.models);
   if (kind === "antigravity") return antigravityModels(machine?.executors?.antigravity?.models);
+  if (kind === "muse") return museModels(machine?.executors?.muse?.models);
   return [];
 }
 
-/** What a computer brain runs with when nobody chose a model (Cursor, OpenCode, Grok, Antigravity: its CLI's own default, null). */
+/**
+ * What a computer brain runs with when nobody chose a model: Cursor, OpenCode, Grok and Antigravity leave it to the
+ * CLI's own default (null); Muse Code names the id it documents, which `session/start` takes as `modelId`.
+ */
 export function defaultBrainModel(kind: BrainKind): string | null {
+  if (kind === "muse") return MUSE_DEFAULT_MODEL;
   if (kind === "model" || kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity")
     return null;
   const options = brainModelOptions(kind);
@@ -330,6 +362,7 @@ type MachineLike = Parameters<typeof machineExecutors>[0] & {
       opencode?: boolean;
       grok?: boolean;
       antigravity?: boolean;
+      muse?: boolean;
     };
   } | null;
 } & Parameters<typeof machineOnline>[0];
@@ -375,14 +408,19 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
     cliOption(machine, "opencode"),
     cliOption(machine, "grok"),
     cliOption(machine, "antigravity"),
+    cliOption(machine, "muse"),
   ];
 }
 
 /**
- * Cursor (ADR 0114, runner protocol 36) or OpenCode (ADR 0132, protocol 39): the runner's protocol, its switch (or
- * Codex's on a runner before it) and its CLI found there.
+ * Cursor (ADR 0114, runner protocol 36), OpenCode (ADR 0132, protocol 39), Grok Build (ADR 0142), the Antigravity CLI
+ * (ADR 0143) or Muse Code (ADR 0174, protocol 59): the runner's protocol, its switch (or Codex's on a runner before
+ * it) and its CLI found there, with the models the CLI listed and — Muse only — the id it runs when none is chosen.
  */
-function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "grok" | "antigravity"): BrainOption {
+function cliOption(
+  machine: MachineLike | null,
+  kind: "cursor" | "opencode" | "grok" | "antigravity" | "muse",
+): BrainOption {
   const tools = machine?.access?.tools;
   let reason: BrainUnavailable | undefined;
   if (!machine) reason = "no_computer";
@@ -394,6 +432,7 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
       opencode: OPENCODE_PROTOCOL,
       grok: GROK_PROTOCOL,
       antigravity: ANTIGRAVITY_PROTOCOL,
+      muse: MUSE_PROTOCOL,
     }[kind]
   )
     reason = "runner_old";
@@ -408,7 +447,7 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
     available: !reason,
     ...(reason ? { reason } : {}),
     models: brainModelOptions(kind, machine),
-    defaultModel: null,
+    defaultModel: defaultBrainModel(kind),
   };
 }
 
@@ -1933,6 +1972,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           opencode: sharesSignIns(m, "opencode"),
           grok: sharesSignIns(m, "grok"),
           antigravity: sharesSignIns(m, "antigravity"),
+          muse: sharesSignIns(m, "muse"),
           key: sharesSignIns(m, "key"),
         },
         off: Object.fromEntries(options.flatMap((o) => (o.reason ? [[o.kind, o.reason]] : []))),
@@ -1943,6 +1983,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           opencode: can("opencode"),
           grok: can("grok"),
           antigravity: can("antigravity"),
+          muse: can("muse"),
         },
         own: m.pairedByUserId === userId ? ownSignIns(m.executors, can) : {},
       };

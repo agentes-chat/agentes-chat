@@ -2768,6 +2768,8 @@
       "cursor_female": "Cursor belum masuk di komputer ini. Hubungkan akun Cursor di halaman {{name}}.",
       "grok": "Grok belum masuk di komputer ini. Hubungkan akun Grok di halaman {{name}}.",
       "grok_female": "Grok belum masuk di komputer ini. Hubungkan akun Grok di halaman {{name}}.",
+      "muse": "Muse belum masuk di komputer ini. Hubungkan akun Muse di halaman {{name}}.",
+      "muse_female": "Muse belum masuk di komputer ini. Hubungkan akun Muse di halaman {{name}}.",
       "antigravity": "Gemini belum masuk di komputer ini. Hubungkan akun Gemini di halaman {{name}}.",
       "antigravity_female": "Gemini belum masuk di komputer ini. Hubungkan akun Gemini di halaman {{name}}.",
       "opencode": "OpenCode tidak bisa berpikir di komputer ini. Hubungkan kunci OpenCode di halaman {{name}}.",
@@ -2828,6 +2830,7 @@
       "chatgpt": "Hubungkan paket ChatGPT-mu",
       "cursor": "Hubungkan paket Cursor-mu",
       "grok": "Hubungkan paket Grok-mu",
+      "muse": "Hubungkan paket Meta-mu",
       "gemini": "Hubungkan paket Gemini-mu",
       "zen": "Hubungkan OpenCode",
       "api_key": "Tambahkan kunci API"
@@ -2941,6 +2944,10 @@
         "title": "Paket Grok-mu",
         "tiers": "SuperGrok, SuperGrok Heavy, atau X Premium+"
       },
+      "muse": {
+        "title": "Paket Meta-mu",
+        "tiers": "Langganan Meta dengan Muse Code"
+      },
       "gemini": {
         "title": "Paket Gemini-mu",
         "tiers": "Google AI Pro, Google AI Ultra, atau Gemini Enterprise",
@@ -3037,6 +3044,7 @@
       "codex": "ChatGPT masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman ChatGPT lalu coba lagi.",
       "cursor": "Cursor masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Cursor lalu coba lagi.",
       "grok": "Grok masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Grok lalu coba lagi.",
+      "muse": "Muse masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Muse lalu coba lagi.",
       "antigravity": "Gemini masuk sebagai {{email}}, bukan {{account}}. Keluar di halaman Google lalu coba lagi.",
       "opencode": "OpenCode masuk sebagai {{email}}, bukan {{account}}. Coba lagi dengan kunci yang benar."
     },
@@ -5184,6 +5192,7 @@
             "codex": "Tambah akun ChatGPT",
             "cursor": "Tambah akun Cursor",
             "grok": "Tambah akun Grok",
+            "muse": "Tambah akun Muse Code",
             "antigravity": "Tambah akun Gemini",
             "opencode": "Tambah kunci OpenCode"
           },
@@ -5192,6 +5201,7 @@
             "codex": "Akun dengan paketmu",
             "cursor": "Akun dengan paketmu",
             "grok": "Akun dengan paketmu",
+            "muse": "Akun dengan paketmu",
             "antigravity": "Akun Google dengan paketmu",
             "antigravityEnterprise": "Akun Gemini Enterprise-mu"
           },
@@ -5201,11 +5211,13 @@
             "codex": "Masuk dengan ChatGPT",
             "cursor": "Masuk dengan Cursor",
             "grok": "Masuk dengan Grok",
+            "muse": "Masuk dengan Muse Code",
             "antigravity": "Masuk dengan Google"
           },
           "opencodeFree": "Model gratis OpenCode tidak perlu kunci. Kunci dari konsol OpenCode menambahkan model berbayarnya.",
           "cursorFinish": "Masuk di halaman Cursor, dan proses masuk selesai sendiri di {{computer}}.",
           "grokFinish": "Masuk di halaman Grok, dan proses masuk selesai sendiri di {{computer}}.",
+          "museFinish": "Konfirmasi kode di halaman Muse, dan proses masuk selesai sendiri di {{computer}}.",
           "geminiEnterprise": "Pakai Gemini Enterprise saja",
           "geminiPersonal": "Pakai akun Google pribadi saja",
           "cursorKey": "Pakai kunci API Cursor saja",
@@ -5224,6 +5236,7 @@
           "local": "Sedang di {{computer}} itu sendiri? Jika browsernya terbuka sendiri, cukup beri izin di sana.",
           "deviceCode": "Kode untuk ChatGPT",
           "grokCode": "Kode untuk Grok",
+          "museCode": "Kode untuk Muse",
           "deviceCodeText": "Ketik kode ini di halaman yang terbuka.",
           "starting": "Menghubungi {{computer}}…",
           "waiting": "Menunggu",
@@ -5247,6 +5260,7 @@
             "codex": "ChatGPT masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman ChatGPT lalu coba lagi.",
             "cursor": "Cursor masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Cursor lalu coba lagi.",
             "grok": "Grok masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Grok lalu coba lagi.",
+            "muse": "Muse masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Muse lalu coba lagi.",
             "antigravity": "Gemini masuk sebagai {{account}}, akun yang sudah kamu hubungkan. Untuk memakai akun lain, keluar di halaman Google lalu coba lagi.",
             "opencode": "Kunci OpenCode itu sudah terhubung sebagai {{account}}."
           },
@@ -9596,6 +9610,7 @@
       "cursor": "Cursor",
       "grok": "Grok",
       "antigravity": "Gemini",
+      "muse": "Muse Code",
       "opencode": "OpenCode",
       "needs": {
         "keys": "Perbarui agentes di komputer untuk memakai kunci paket"
@@ -10793,6 +10808,7 @@
       "cursor": "{{model}} dengan paket Cursor",
       "grok": "{{model}} dengan paket Grok",
       "gemini": "{{model}} dengan paket Gemini",
+      "muse": "{{model}} dengan paket Muse",
       "zen": "{{model}} lewat OpenCode",
       "coding": "{{model}} dengan {{plan}}",
       "claudeOf": "{{model}} dengan paket Claude milik {{owner}}",
@@ -10800,6 +10816,7 @@
       "cursorOf": "{{model}} dengan paket Cursor milik {{owner}}",
       "grokOf": "{{model}} dengan paket Grok milik {{owner}}",
       "geminiOf": "{{model}} dengan paket Gemini milik {{owner}}",
+      "museOf": "{{model}} dengan paket Muse milik {{owner}}",
       "zenOf": "{{model}} lewat OpenCode milik {{owner}}",
       "codingOf": "{{model}} dengan {{plan}} milik {{owner}}",
       "claudeAuto": "Paket Claude",
@@ -10807,6 +10824,7 @@
       "cursorAuto": "Paket Cursor",
       "grokAuto": "Paket Grok",
       "geminiAuto": "Paket Gemini",
+      "museAuto": "Paket Muse",
       "zenAuto": "OpenCode",
       "codingAuto": "{{plan}}",
       "claudeAutoOf": "Paket Claude milik {{owner}}",
@@ -10814,6 +10832,7 @@
       "cursorAutoOf": "Paket Cursor milik {{owner}}",
       "grokAutoOf": "Paket Grok milik {{owner}}",
       "geminiAutoOf": "Paket Gemini milik {{owner}}",
+      "museAutoOf": "Paket Muse milik {{owner}}",
       "zenAutoOf": "OpenCode milik {{owner}}",
       "codingAutoOf": "{{plan}} milik {{owner}}",
       "on": "{{line}} di {{computer}}"
@@ -10827,7 +10846,8 @@
       "cursor": "Cursor",
       "opencode": "OpenCode",
       "grok": "Grok Build",
-      "antigravity": "Antigravity CLI"
+      "antigravity": "Antigravity CLI",
+      "muse": "Muse Code"
     },
     "foot": {
       "api": "Lewat API",
@@ -10840,6 +10860,7 @@
     "cursorText": "Memakai paket Cursor milik orang yang menghubungkan komputer.",
     "grokText": "Memakai paket Grok milik orang yang menghubungkan komputer.",
     "antigravityText": "Memakai paket Gemini milik orang yang menghubungkan komputer.",
+    "museText": "Memakai paket Meta milik orang yang menghubungkan komputer.",
     "opencodeText": "Model gratis OpenCode, atau kunci OpenCode milik orang yang menghubungkan komputer.",
     "cursorModel": {
       "inPlan": "Termasuk dalam paket Cursor-mu",
@@ -13586,6 +13607,7 @@
         "cursor": "Cursor",
         "grok": "Grok Build",
         "antigravity": "Antigravity CLI",
+        "muse": "Muse Code",
         "opencode": "OpenCode",
         "commands": "Perintah",
         "browser": "Browser"
@@ -13596,6 +13618,7 @@
         "cursor": "Seperti Claude Code, dengan akun Cursor. Hanya di folder yang diizinkan.",
         "grok": "Seperti Claude Code, dengan akun Grok. Hanya di folder yang diizinkan.",
         "antigravity": "Seperti Claude Code, dengan akun Gemini. Hanya di folder yang diizinkan.",
+        "muse": "Seperti Claude Code, dengan akun Meta. Hanya di folder yang diizinkan.",
         "opencode": "Seperti Claude Code, dengan model gratis OpenCode atau kunci OpenCode. Hanya di folder yang diizinkan.",
         "commands": "Menjalankan perintah Terminal, seperti tes dan build."
       },

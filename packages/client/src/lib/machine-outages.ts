@@ -12,7 +12,7 @@ import type { MachineTool } from "../api/types";
  */
 
 /** The brains a computer runs. */
-export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity";
+export type ComputerBrain = "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse";
 
 export interface OutageAgentLike {
   agentId: string;

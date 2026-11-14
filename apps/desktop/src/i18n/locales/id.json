@@ -466,6 +466,8 @@
     "grokDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Grok-mu.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Gemini-mu.",
+    "museName": "Muse Code",
+    "museDesc": "Menulis dan mengubah kode di folder yang diizinkan, dengan akun Meta-mu.",
     "found": "Ditemukan",
     "notFound": "Tidak ditemukan",
     "loggedOut": "Belum masuk",

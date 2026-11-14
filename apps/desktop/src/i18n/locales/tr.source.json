@@ -1283,6 +1283,12 @@
   "tools.antigravityDesc": {
     "value": "Writes and changes code in the allowed folders, with your Gemini account."
   },
+  "tools.museName": {
+    "value": "Muse Code"
+  },
+  "tools.museDesc": {
+    "value": "Writes and changes code in the allowed folders, with your Meta account."
+  },
   "tools.found": {
     "value": "Found"
   },

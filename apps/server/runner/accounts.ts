@@ -21,6 +21,7 @@ import {
   isLoginEmail,
   MAX_MACHINE_ACCOUNTS,
   type MachineReplies,
+  MUSE_KEY_PROVIDER,
   OPENCODE_KEY_PROVIDER,
   OWN_USAGE_ID,
   type OwnPlanUsage,
@@ -66,6 +67,7 @@ import {
   cliSpawn,
   GROK_BIN,
   isExecutable,
+  MUSE_BIN,
   OPENCODE_BIN,
   resolveCommand,
 } from "./executors";
@@ -160,6 +162,7 @@ const LABEL: Record<AccountKind, string> = {
   opencode: "OpenCode",
   grok: "Grok Build",
   antigravity: "The Antigravity CLI",
+  muse: "Muse Code",
 };
 /** Cursor's CLI keeps its config in `CURSOR_CONFIG_DIR` (cursor.com/docs/cli/reference/configuration). */
 const ENV_VAR: Record<AccountKind, string> = {
@@ -172,6 +175,10 @@ const ENV_VAR: Record<AccountKind, string> = {
   grok: "GROK_HOME",
   // `agy` documents no config folder of its own (ADR 0143): the account's folder is its whole home.
   antigravity: "HOME",
+  // Muse keeps `settings.json` and its sessions in `$XDG_CONFIG_HOME/muse`; where the credential rests is
+  // undocumented, so the whole config folder is the account (ADR 0174). Login, status and sign-out run it with
+  // `<folder>/config` as its `XDG_CONFIG_HOME` (`cliHome`), the same one a brain turn gives it.
+  muse: "XDG_CONFIG_HOME",
 };
 const LOGIN_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "login"],
@@ -183,6 +190,9 @@ const LOGIN_ARGS: Record<AccountKind, string[]> = {
   grok: ["login", "--device-auth"],
   // Google's sign-in by a pasted code, then it exits (antigravity.google/docs/ide/extensions/acp).
   antigravity: ["acp", "--login"],
+  // The sign-in a subscription is: `muse login` prints a code for Meta's page and saves the credential in the
+  // account's own folder. A key is still accepted (`muse auth set`), and is the only way into a Meta Managed Account.
+  muse: ["login"],
 };
 const STATUS_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "status", "--json"],
@@ -193,6 +203,8 @@ const STATUS_ARGS: Record<AccountKind, string[]> = {
   grok: ["models"],
   // No status command either: `agy models` lists the account's models once it is signed in.
   antigravity: ["models"],
+  // `muse usage` answers without spending a turn, and says "not logged in" when the key is gone.
+  muse: ["usage"],
 };
 const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   claude_code: ["auth", "logout"],
@@ -202,6 +214,7 @@ const LOGOUT_ARGS: Record<AccountKind, string[]> = {
   grok: ["logout"],
   // `/logout`, answered by the CLI itself in print mode; deleting the folder ends the sign-in anyway.
   antigravity: ["-p", "/logout"],
+  muse: ["logout"],
 };
 /** Each CLI's executable (Cursor's was `cursor-agent` before it was renamed). */
 const COMMAND: Record<AccountKind, string> = {
@@ -211,6 +224,7 @@ const COMMAND: Record<AccountKind, string> = {
   opencode: OPENCODE_BIN,
   grok: GROK_BIN,
   antigravity: AGY_BIN,
+  muse: MUSE_BIN,
 };
 
 /** What a brain turn says when its account folder is gone (people read it). */
@@ -226,16 +240,20 @@ export const ACCOUNT_MISSING_MESSAGE: Record<AccountKind, string> = {
   grok: "The Grok account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
   antigravity:
     "The Gemini account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
+  muse: "The Meta account chosen for this agent isn't on this computer anymore. Choose another account in the agent's settings, or add it again.",
 };
 
 /**
  * What would make a CLI think with anything but its folder's sign-in: a key, a token, another endpoint or cloud. Every
  * `GROK_` switch too (folder trust, memory, managed config, sandbox…): Grok Build gets only `GROK_QUIET_ENV`'s. And a
  * Gemini or Google AI key, another Gemini endpoint, the Antigravity CLI's enterprise gateway (`AGY_LLM_GATEWAY_*`) and
- * every other `AGY_` switch (it gets only `AGY_QUIET_ENV`'s).
+ * every other `AGY_` switch (it gets only `AGY_QUIET_ENV`'s). And Muse Code's key, `META_API_KEY` — `muse login --help`
+ * says "META_API_KEY always takes priority over the account login", so a key left in the environment would answer for
+ * the person and an account would read as signed in while its own sign-in never happened — plus every `MUSE_` switch
+ * (it gets only `MUSE_QUIET_ENV`'s).
  */
 const STRAY_SIGN_IN =
-  /^(ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(OAUTH_TOKEN|USE_\w+|\w+_FILE_DESCRIPTOR)|OPENAI_API_KEY|CODEX_API_KEY|CURSOR_API_KEY|OPENCODE_API_KEY|OPENCODE_AUTH_CONTENT|XAI_API_KEY|GROK_\w+|GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GEMINI_BASE_URL|GOOGLE_GENAI_\w+|AGY_\w+)$/;
+  /^(ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(OAUTH_TOKEN|USE_\w+|\w+_FILE_DESCRIPTOR)|OPENAI_API_KEY|CODEX_API_KEY|CURSOR_API_KEY|OPENCODE_API_KEY|OPENCODE_AUTH_CONTENT|XAI_API_KEY|GROK_\w+|META_API_KEY|MUSE_\w+|GEMINI_API_KEY|GOOGLE_API_KEY|GOOGLE_GEMINI_BASE_URL|GOOGLE_GENAI_\w+|AGY_\w+)$/;
 /**
  * Google Cloud's own sign-ins (Application Default Credentials, gcloud's config, Vertex's project): kept out of the
  * Antigravity CLI only, since an agent on another CLI may deploy to Google Cloud with them.
@@ -258,6 +276,16 @@ export function withoutContainers(base: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return env;
 }
 
+/**
+ * Where a CLI keeps what it writes for an account folder. The folder itself, except for Muse Code: it reads only
+ * `$XDG_CONFIG_HOME`, and a brain turn gives it `<folder>/config` there (`museConfigDir` in `brain-muse.ts`, where its
+ * `settings.json` and its sessions are written). Login, status and sign-out have to look in that same place, or a
+ * sign-in lands where no turn ever reads it.
+ */
+function cliHome(kind: AccountKind, dir: string): string {
+  return kind === "muse" ? path.join(dir, "config") : dir;
+}
+
 /** The env a CLI runs with for an account folder: `base` without any other sign-in, the folder as its home. */
 export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   const env = withoutSignIns(base);
@@ -274,6 +302,13 @@ export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessE
     env.XDG_CONFIG_HOME = dir;
     env.XDG_CACHE_HOME = dir;
     env.XDG_STATE_HOME = dir;
+  }
+  if (kind === "muse") {
+    // Its settings document, its sessions and its own sign-in stay in the account's folder.
+    env.XDG_CONFIG_HOME = dir;
+    env.XDG_CACHE_HOME = dir;
+    env.XDG_STATE_HOME = dir;
+    Object.assign(env, MUSE_QUIET_ENV);
   }
   if (kind === "grok") Object.assign(env, GROK_QUIET_ENV);
   if (kind === "antigravity") {
@@ -329,6 +364,19 @@ export const AGY_QUIET_ENV: Readonly<Record<string, string>> = {
   AGY_CLI_OSC7501: "off",
 };
 
+/**
+ * What every Muse Code process gets (ADR 0174): no update of its own (the computer's image pins the version) and no
+ * contributor mode (a subscription's workspace code would otherwise train Meta; `brain-muse.ts`'s host forces the same
+ * one). Never `META_API_KEY`: `muse login --help` says "META_API_KEY always takes priority over the account login",
+ * and measured on 1.4.18 a key makes `muse usage` answer "No subscription allowance (api_key)" with exit 0 — an
+ * account that reads as signed in without ever having signed in. The key is kept out of every CLI's environment
+ * (`STRAY_SIGN_IN`) instead, and a key account hands its own key to its turn.
+ */
+export const MUSE_QUIET_ENV: Readonly<Record<string, string>> = {
+  MUSE_NO_AUTO_UPDATE: "1",
+  MUSE_CONTRIBUTOR_MODE: "0",
+};
+
 /** A Cursor account made with an API key keeps it here (600). */
 const CURSOR_KEY_FILE = "cursor-key.json";
 /** Cursor's API keys (`key_…`, a few dozen characters): loose, only to catch a paste that isn't one. */
@@ -347,6 +395,14 @@ export async function opencodeKeyOf(dir: string): Promise<string | null> {
   return keyIn(dir, OPENCODE_KEY_FILE);
 }
 
+/** A Muse Code account keeps its Meta key here (600): a Meta account is its key alone (ADR 0174). */
+const MUSE_KEY_FILE = "muse-key.json";
+
+/** A Muse Code account's key (`muse-key.json`); null when it has none. */
+export async function museKeyOf(dir: string): Promise<string | null> {
+  return keyIn(dir, MUSE_KEY_FILE);
+}
+
 function keyIn(dir: string, file: string): string | null {
   const o = readSmallJson(path.join(dir, file), 1000) as Record<string, unknown> | null;
   return typeof o?.key === "string" && CURSOR_KEY.test(o.key) ? o.key : null;
@@ -356,6 +412,7 @@ function keyIn(dir: string, file: string): string | null {
 const CLI_KEYS = {
   [CURSOR_KEY_PROVIDER]: { file: CURSOR_KEY_FILE, label: "a Cursor API key" },
   [OPENCODE_KEY_PROVIDER]: { file: OPENCODE_KEY_FILE, label: "an OpenCode API key" },
+  [MUSE_KEY_PROVIDER]: { file: MUSE_KEY_FILE, label: "a Meta API key" },
 } as const;
 type CliKeyProvider = keyof typeof CLI_KEYS;
 
@@ -1048,13 +1105,68 @@ export function parseGrokLogin(output: string, final = false): { url: string; us
   return final || /[?&](?:user_)?code=/i.test(first.url) ? { url: first.url } : null;
 }
 
+/** Muse Code's one-time code: `DSVV-LHWG` (letters and digits, 4 then 4 to 6), in either case. */
+const MUSE_CODE = /(?:^|[^A-Z0-9-])([A-Z0-9]{4}-[A-Z0-9]{4,6})(?=\s)/i;
+const MUSE_CODE_AT_END = /(?:^|[^A-Z0-9-])([A-Z0-9]{4}-[A-Z0-9]{4,6})(?![A-Z0-9-])/i;
+/** The sign-in as JSON, which some builds and the SDK's login frames print: `verificationUrl`/`userCode` (or snake_case). */
+const MUSE_JSON_URL = /"verification_?url"\s*:\s*"(https:[^"]+)"/i;
+const MUSE_JSON_CODE = /"user_?code"\s*:\s*"([^"]+)"/i;
+
+/**
+ * Muse Code's device sign-in (`muse login`), measured on 1.4.18:
+ *
+ *     Open this page to sign in:
+ *       https://auth.meta.com/oauth/device/?code=DSVV-LHWG
+ *     confirm this code matches:
+ *       DSVV-LHWG
+ *
+ * The page is the first https URL on meta.com and the code is the one it prints after it; a build that prints the
+ * sign-in as JSON (`"verificationUrl": "…", "userCode": "…"`, the names OpenBot reads) is taken too, and a code only
+ * in the page's own query (`?code=`) counts. Both are printed in either case, so the code is matched without regard
+ * to it. A URL whose code hasn't arrived yet waits, like the other CLIs' links; without a code at all this is null,
+ * since a Muse sign-in is the code (`begin` then fails with its own words).
+ */
+export function parseMuseLogin(output: string, final = false): { url: string; userCode?: string } | null {
+  const text = stripAnsi(output);
+  const jsonUrl = MUSE_JSON_URL.exec(text)?.[1]?.replaceAll("\\/", "/");
+  const first = jsonUrl ? { url: jsonUrl, end: 0 } : urlsIn(text, (h) => hostIs(h, "meta.com"), final)[0];
+  if (!first) return null;
+  const url = first.url.replace(/[.,;:)\]}>]+$/, "");
+  const jsonCode = MUSE_JSON_CODE.exec(text)?.[1]?.trim();
+  if (jsonCode) return { url, userCode: jsonCode };
+  const m = (final ? MUSE_CODE_AT_END : MUSE_CODE).exec(text.slice(jsonUrl ? 0 : first.end));
+  if (m?.[1]) return { url, userCode: m[1] };
+  // The page's own query carries the code too (`?code=DSVV-LHWG` in 1.4.18).
+  const inUrl = /[?&](?:user_)?code=([A-Z0-9-]{4,})/i.exec(url)?.[1];
+  return inUrl ? { url, userCode: inUrl } : null;
+}
+
+/** What a status command says when there is no sign-in: `not logged in`, `not authenticated`, `not signed in`. */
+const SIGNED_OUT_WORDS = /not (?:authenticated|logged in|signed in)/i;
+
+/** A CLI whose status command only ever says it is signed out, having printed nothing about a sign-in otherwise. */
+function signInStatus(status: number | null, output: string, hasAuth: boolean) {
+  return { loggedIn: hasAuth && status === 0 && !SIGNED_OUT_WORDS.test(stripAnsi(output)) };
+}
+
 /** `grok models`: signed in unless it says it isn't, with a sign-in file in the folder. */
 export function parseGrokStatus(
   status: number | null,
   output: string,
   hasAuth: boolean,
 ): Omit<RunnerAccountInfo, "id" | "kind"> {
-  return { loggedIn: hasAuth && status === 0 && !/not (?:authenticated|logged in|signed in)/i.test(stripAnsi(output)) };
+  return signInStatus(status, output, hasAuth);
+}
+
+/**
+ * `muse usage`: measured on 1.4.18, signed out it answers `muse usage: not logged in: run \`muse login\` first` on
+ * stderr and exits 1; signed in it prints the allowance and exits 0. An answer from a key — `No subscription
+ * allowance (api_key)`, exit 0 — isn't the account's sign-in: `META_API_KEY` is kept out of the environment, so a key
+ * can only be one `muse auth set` left in the folder, and that is what `muse-key.json` accounts are for.
+ */
+export function parseMuseStatus(status: number | null, output: string): Omit<RunnerAccountInfo, "id" | "kind"> {
+  const text = stripAnsi(output);
+  return { loggedIn: status === 0 && !SIGNED_OUT_WORDS.test(text) && !/\bapi_key\b/i.test(text) };
 }
 
 /**
@@ -1350,7 +1462,7 @@ export class AccountManager {
   }
 
   private env(kind: AccountKind, dir: string): NodeJS.ProcessEnv {
-    return accountEnv(kind, dir);
+    return accountEnv(kind, cliHome(kind, dir));
   }
 
   /**
@@ -1645,11 +1757,13 @@ export class AccountManager {
           ? parseCodexLogin(login.output, final)
           : kind === "grok"
             ? parseGrokLogin(login.output, final)
-            : kind === "antigravity"
-              ? toUrl(parseAgyLoginUrl(login.output, final))
-              : kind === "cursor"
-                ? toUrl(parseCursorLoginUrl(login.output, final))
-                : toUrl(parseClaudeLoginUrl(this.shown(login), final));
+            : kind === "muse"
+              ? parseMuseLogin(login.output, final)
+              : kind === "antigravity"
+                ? toUrl(parseAgyLoginUrl(login.output, final))
+                : kind === "cursor"
+                  ? toUrl(parseCursorLoginUrl(login.output, final))
+                  : toUrl(parseClaudeLoginUrl(this.shown(login), final));
       let done = false;
       const finish = (v: { url: string; userCode?: string } | null) => {
         if (done) return;
@@ -1838,7 +1952,10 @@ export class AccountManager {
   /** The code the person pasted (Claude Code) or a plan's key, sealed to this sign-in's key: written to the CLI, or kept. */
   async code(loginId: string, aad: string, box: WireSecretBox): Promise<void> {
     const login = this.waiting(loginId);
-    const cliKey = login.provider === CURSOR_KEY_PROVIDER || login.provider === OPENCODE_KEY_PROVIDER;
+    const cliKey =
+      login.provider === CURSOR_KEY_PROVIDER ||
+      login.provider === OPENCODE_KEY_PROVIDER ||
+      login.provider === MUSE_KEY_PROVIDER;
     if ((login.kind !== "claude_code" && login.kind !== "antigravity" && !cliKey) || !login.privateKey) {
       throw new RunnerError("bad_request", "This sign-in doesn't take a code");
     }
@@ -1855,7 +1972,11 @@ export class AccountManager {
     } catch {
       throw new RunnerError("bad_request", "The code couldn't be opened (wrong key or altered on the way)");
     }
-    if (login.provider === CURSOR_KEY_PROVIDER || login.provider === OPENCODE_KEY_PROVIDER) {
+    if (
+      login.provider === CURSOR_KEY_PROVIDER ||
+      login.provider === OPENCODE_KEY_PROVIDER ||
+      login.provider === MUSE_KEY_PROVIDER
+    ) {
       return this.keepCliKey(login, login.provider, code);
     }
     if (login.provider) return this.keepKey(login, login.provider, code);
@@ -2290,9 +2411,11 @@ export class AccountManager {
           ? parseCursorStatus(r.status, `${r.stdout}\n${r.stderr}`)
           : kind === "grok"
             ? parseGrokStatus(r.status, `${r.stdout}\n${r.stderr}`, existsSync(path.join(dir, "auth.json")))
-            : kind === "antigravity"
-              ? parseAgyStatus(r.status, `${r.stdout}\n${r.stderr}`, agyAuthOf(dir))
-              : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
+            : kind === "muse"
+              ? parseMuseStatus(r.status, `${r.stdout}\n${r.stderr}`)
+              : kind === "antigravity"
+                ? parseAgyStatus(r.status, `${r.stdout}\n${r.stderr}`, agyAuthOf(dir))
+                : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
     // Timed out, or didn't start.
     const unknown = r.status === null ? { statusUnknown: true as const } : {};
     return { id, kind, ...status, ...unknown, ...shared };

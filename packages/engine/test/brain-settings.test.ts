@@ -5,6 +5,7 @@ import {
   CODEX_WINDOWS_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
   MISSION_PROTOCOL,
+  MUSE_PROTOCOL,
   OPENCODE_ACP_PROTOCOL,
   SPEED_PROTOCOL,
 } from "@agenteschat/adapters";
@@ -32,6 +33,8 @@ import {
   brainOptions,
   defaultBrainModel,
   executorBrain,
+  MUSE_DEFAULT_MODEL,
+  museModels,
   normalizeBrainModel,
 } from "../src/brain-settings";
 import { contextFields, recordPlanUsage, speedFields } from "../src/brains/claude-code";
@@ -108,6 +111,65 @@ describe("brain settings", () => {
     expect(brainModelId("codex", "gpt-6.1-codex")).toBe("gpt-6.1-codex");
   });
 
+  test("Muse Code's models: the host's `model/list`, else the documented ids, and the id it runs by default", () => {
+    // What its CLI listed on the computer (`model/list`, ADR 0174) is the list; with none, the ids Meta documents.
+    expect(brainModelOptions("muse")).toEqual(museModels());
+    expect(brainModelOptions("muse").map((o) => o.value)).toEqual([
+      "muse-wonder-1.0",
+      "muse-wonder-full-1.0",
+      "muse-ember-1.0",
+      "muse-spark-1.3",
+      "muse-spark-1.2",
+    ]);
+    expect(brainModelOptions("muse").map((o) => o.label)).toEqual([
+      "Muse Wonder 1.0",
+      "Muse Wonder Full 1.0",
+      "Muse Ember 1.0",
+      "Muse Spark 1.3",
+      "Muse Spark 1.2",
+    ]);
+    const listed = { executors: { muse: { version: "Muse Code 1.4.18", models: [{ id: "muse-spark-9" }] } } };
+    expect(brainModelOptions("muse", listed).map((o) => [o.value, o.label])).toEqual([
+      ["muse-spark-9", "muse-spark-9"],
+    ]);
+    // The id it runs when nobody chose one, which is what the picker shows and the turn may name as `modelId`.
+    expect(defaultBrainModel("muse")).toBe(MUSE_DEFAULT_MODEL);
+    expect(brainModelId("muse", null)).toBe("muse-wonder-1.0");
+    expect(brainModelLabel("muse", null)).toBe("Muse Wonder 1.0");
+    // A model the catalog has never heard of is accepted as typed (its ids are free text on the wire).
+    expect(normalizeBrainModel("muse", "muse-spark-1.3-contributor")).toBe("muse-spark-1.3-contributor");
+    expect(normalizeBrainModel("muse", "muse-spark-1.3")).toBe("muse-spark-1.3");
+    expect(() => normalizeBrainModel("muse", "rm -rf /")).toThrow();
+    expect(brainModelLabel("muse", "muse-spark-9")).toBe("muse-spark-9");
+    // On a computer that has it (protocol 59): the models it listed, and the default named.
+    const machine = mac({
+      protocol: MUSE_PROTOCOL,
+      executors: { muse: { version: "Muse Code 1.4.18" }, detectedAt: "x" },
+    });
+    const muse = brainOptions(machine).find((o) => o.kind === "muse");
+    expect(muse).toMatchObject({ available: true, defaultModel: "muse-wonder-1.0" });
+    expect(muse?.models.map((o) => o.value)).toEqual([
+      "muse-wonder-1.0",
+      "muse-wonder-full-1.0",
+      "muse-ember-1.0",
+      "muse-spark-1.3",
+      "muse-spark-1.2",
+    ]);
+    const withList = mac({
+      protocol: MUSE_PROTOCOL,
+      executors: {
+        muse: {
+          version: "Muse Code 1.4.18",
+          models: [{ id: "muse-spark-1.3", label: "Muse Spark 1.3" }],
+        },
+        detectedAt: "x",
+      },
+    });
+    expect(brainOptions(withList).find((o) => o.kind === "muse")?.models).toEqual([
+      { value: "muse-spark-1.3", label: "Muse Spark 1.3" },
+    ]);
+  });
+
   test("options: on Windows, Codex needs a runner that runs its turns there", () => {
     const reasons = (m: ReturnType<typeof mac>) =>
       brainOptions(m)
@@ -152,6 +214,7 @@ describe("brain settings", () => {
       opencode: "runner_old",
       grok: "system",
       antigravity: "system",
+      muse: "runner_old",
     });
     expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL, executors })).opencode).toBeNull();
     expect(reasons(mac({ os: "darwin", protocol: OPENCODE_ACP_PROTOCOL - 1, executors }))).toEqual({
@@ -159,12 +222,14 @@ describe("brain settings", () => {
       opencode: null,
       grok: null,
       antigravity: "system",
+      muse: "runner_old",
     });
     expect(reasons(mac({ os: "linux", protocol: OPENCODE_ACP_PROTOCOL, executors }))).toEqual({
       cursor: null,
       opencode: null,
       grok: null,
       antigravity: null,
+      muse: "runner_old",
     });
   });
 
@@ -179,6 +244,7 @@ describe("brain settings", () => {
       ["opencode", false, "no_computer"],
       ["grok", false, "no_computer"],
       ["antigravity", false, "no_computer"],
+      ["muse", false, "no_computer"],
     ]);
     expect(reasons(mac())).toEqual([
       ["model", true, null],
@@ -192,6 +258,8 @@ describe("brain settings", () => {
       ["grok", false, "runner_old"],
       // The Antigravity CLI needs runner protocol 44 (`ANTIGRAVITY_PROTOCOL`).
       ["antigravity", false, "runner_old"],
+      // Muse Code needs runner protocol 59 (`MUSE_PROTOCOL`).
+      ["muse", false, "runner_old"],
     ]);
     expect(reasons(mac({ execAllowed: false }))[1]).toEqual(["claude_code", false, "exec_off"]);
     expect(reasons(mac({ protocol: MISSION_PROTOCOL - 1 }))[1]).toEqual(["claude_code", false, "runner_old"]);
@@ -214,7 +282,9 @@ describe("brain settings", () => {
     ]);
     const both = mac({ executors: { claude: { version: "2" }, codex: { version: "0.170.0" }, detectedAt: "x" } });
     expect(
-      brainOptions(both).every((o) => o.available || ["cursor", "opencode", "grok", "antigravity"].includes(o.kind)),
+      brainOptions(both).every((o) =>
+        ["cursor", "opencode", "grok", "antigravity", "muse"].includes(o.kind) ? !o.available : o.available,
+      ),
     ).toBe(true);
     // Installed but turned off in the app's Tools: says so (not "not installed"); turned on, available.
     const off = mac({ ...both, access: { tools: { claude: false, codex: true } } });

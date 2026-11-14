@@ -474,6 +474,8 @@
     "grokDesc": "Scrive e modifica il codice nelle cartelle consentite, con il tuo account Grok.",
     "antigravityName": "Antigravity CLI",
     "antigravityDesc": "Scrive e modifica il codice nelle cartelle consentite, con il tuo account Gemini.",
+    "museName": "Muse Code",
+    "museDesc": "Scrive e modifica il codice nelle cartelle consentite, con il tuo account Meta.",
     "found": "Trovato",
     "notFound": "Non trovato",
     "loggedOut": "Accesso non eseguito",
