@@ -41,7 +41,7 @@ import {
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { type ReactNode, useDeferredValue, useEffect, useId, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useDeferredValue, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { ActorAvatar, ActorWho, AgentAvatar } from "@/components/AgentAvatar";
@@ -986,6 +986,29 @@ function CardFacts({ issue: i, fields }: { issue: Issue; fields: IssuesView["fie
 }
 
 /**
+ * The list's columns of facts, one for each fact some task shown has (and its view toggle allows), in the facts'
+ * order: every row stands its facts in the same columns, so labels, priorities, dates and criteria line up down the
+ * list instead of each row packing what it has against its end. Each column is as wide as its fact reads at most;
+ * only the ones holding a name (a project, a label, a repository) give way when the row is narrow.
+ */
+function listFactColumns(issues: Issue[], fields: IssuesView["fields"]) {
+  const any = (has: (i: Issue) => unknown) => issues.some((i) => Boolean(has(i)));
+  return [
+    fields.project && any((i) => i.project) && "[project] minmax(0, 128px)",
+    fields.label && any((i) => i.labels.length > 0) && "[label] minmax(0, 104px)",
+    fields.label && any((i) => i.labels.length > 1) && "[labels] 24px",
+    fields.priority && any((i) => i.priority !== "normal") && "[priority] 60px",
+    fields.due && any((i) => i.dueDate && isOpen(i)) && "[due] 80px",
+    fields.criteria && any((i) => i.criteria.length > 0) && "[criteria] 52px",
+    fields.pullRequest && any((i) => i.pullRequests.length > 0) && "[pr] 72px",
+    fields.pullRequest && any((i) => i.githubUrl) && "[github] minmax(0, 112px)",
+    any((i) => (i.conversation?.count ?? 0) > 0) && "[talk] 48px",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/**
  * What a card and a row say of a task: its one state (from its agent's work or a live turn), their link's name, and
  * who has it as the link's description (`who`, rendered inside it; `describedBy` adds the drag help).
  */
@@ -1144,6 +1167,13 @@ function IssueList({
   const title = useColumnTitle();
   const custom = isCustomBoard(columns);
   const byId = new Map(groups.map((g) => [g.id, g]));
+  // One set of fact columns for the whole list, whatever its groups: read by every row (issues.css).
+  const factColumns = {
+    "--issue-facts": listFactColumns(
+      groups.flatMap((g) => g.items),
+      fields,
+    ),
+  } as CSSProperties;
   const zone = (g: IssueGroup, heading?: ReactNode) => (
     <div key={g.id} className={cx("issues-group__col", dnd.over === g.id && "is-over")} data-col>
       {heading}
@@ -1152,7 +1182,7 @@ function IssueList({
   );
   if (stages)
     return (
-      <div className="ac-groups">
+      <div className="ac-groups" style={factColumns}>
         {stages.map(({ stage, columns: cols }) => {
           const count = cols.reduce((n, c) => n + dnd.count(c.id), 0);
           if (count === 0 && !dnd.active) return null;
@@ -1195,7 +1225,7 @@ function IssueList({
       </div>
     );
   return (
-    <div className="ac-groups">
+    <div className="ac-groups" style={factColumns}>
       {groups.map((g) => {
         const count = dnd.count(g.id);
         if (count === 0 && !dnd.active) return null;

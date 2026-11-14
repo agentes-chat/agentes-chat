@@ -668,6 +668,55 @@ html:not([data-pointer]) .issue-list__row:focus-visible {
   grid-area: facts;
   justify-content: flex-end;
 }
+/* Wide, the facts stand in columns the whole list shares (`--issue-facts`, one for each fact some task shown has):
+   labels under labels, priorities under priorities, down every group. A row leaves empty the column of a fact it
+   doesn't have; a fact longer than its column is cut there, never pushing the next one. */
+@media (min-width: 721px) {
+  .issue-list__row > .issue-card__facts {
+    display: grid;
+    grid-template-columns: var(--issue-facts, none);
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    column-gap: var(--space-3);
+  }
+  .issue-list__row > .issue-card__facts > .ac-factline__fact {
+    grid-row: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .issue-list__row > .issue-card__facts > [data-fact="label"] {
+    justify-self: start;
+    text-overflow: ellipsis;
+  }
+  .issue-list__row > .issue-card__facts > [data-fact="project"] {
+    grid-column: project;
+  }
+  .issue-list__row > .issue-card__facts > [data-fact="label"] {
+    grid-column: label;
+  }
+  .issue-list__row > .issue-card__facts > [data-fact="labels"] {
+    grid-column: labels;
+  }
+  .issue-list__row > .issue-card__facts > [data-fact="priority"] {
+    grid-column: priority;
+  }
+  .issue-list__row > .issue-card__facts > [data-fact="due"] {
+    grid-column: due;
+  }
+  .issue-list__row > .issue-card__facts > [data-fact="criteria"] {
+    grid-column: criteria;
+  }
+  .issue-list__row > .issue-card__facts > [data-fact="pr"] {
+    grid-column: pr;
+  }
+  .issue-list__row > .issue-card__facts > [data-fact="github"] {
+    grid-column: github;
+  }
+  .issue-list__row > .issue-card__facts > [data-fact="talk"] {
+    grid-column: talk;
+  }
+}
 /* Wide, the number has its own column. */
 .issue-list__row > .issue-card__facts > :first-child {
   display: none;
