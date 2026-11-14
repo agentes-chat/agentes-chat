@@ -856,8 +856,8 @@ export const PLAN_LIMIT_GRACE_MS = 2 * 60_000;
 export const MAX_COMPUTER_DROPS = 3;
 /**
  * Drops before the turn said or did anything don't count toward `MAX_COMPUTER_DROPS` (a computer restarting or out of
- * memory cuts every turn it is sent, and nothing would be redone): after this many of them the run ends anyway, so a
- * computer that keeps falling over can't keep a run going forever.
+ * memory cuts every turn it is sent, and nothing would be redone): after this many of them the model brain stands in
+ * where it may, or the run ends (`brainUnavailable`), so a computer that keeps falling over can't keep a run going forever.
  */
 export const MAX_EARLY_COMPUTER_DROPS = 10;
 /**
@@ -3308,6 +3308,11 @@ async function executeRunInner(
       });
       return "waited";
     }
+    // Past its early drops' limit, a wait for that computer would send the turn again on every reconnect, forever.
+    if (u.code === "machine_offline" && (t.interruptedTurn?.early ?? 0) >= MAX_EARLY_COMPUTER_DROPS) {
+      await fail(`brain_unavailable: ${u.message}`, { code: u.code, detail: u.message });
+      return "failed";
+    }
     if (!machineId || !UNAVAILABLE_CODES.has(u.code)) return "no";
     const busy = u.code === "busy";
     // Still no room since an earlier refusal: the same wait goes on (no new step, the same deadline).
@@ -4697,7 +4702,6 @@ async function executeRunInner(
               const labels = executed.map((c) => c.label);
               return waitForDroppedComputer(turnPlan.kind, machineId, prompt, labels, error.serverStop, early);
             }
-            if (early) return fail(`brain_unavailable: ${error.message}`, { code: error.code, detail: error.message });
           }
           // The folder its session works in isn't on the computer anymore: every later turn would be refused the
           // same way. A fresh session takes the turn in the agent's own folder, told the one before was lost. A

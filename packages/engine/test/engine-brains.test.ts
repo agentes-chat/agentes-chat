@@ -2387,6 +2387,8 @@ test("drops after the turn ran something still count: past the limit the run end
 test("a computer that keeps dropping every turn before it starts: the run ends after the early drops' limit", async () => {
   f = await setup();
   await computerAgent(f);
+  // No key the API could answer with: nothing can stand in.
+  await f.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
   const { brain, seen } = scriptedComputerBrain(() => [offline]);
   const handlers = createJobHandlers({
     ...f.jobDeps,
@@ -2399,6 +2401,24 @@ test("a computer that keeps dropping every turn before it starts: the run ends a
   expect(run?.status).toBe("failed");
   expect(run?.error).toStartWith("brain_unavailable:");
   expect(seen.length).toBe(MAX_EARLY_COMPUTER_DROPS + 1);
+});
+
+test("past the early drops' limit, the model brain stands in where it may", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Respondi pela API."] }) });
+  await computerAgent(f);
+  const { brain, seen } = scriptedComputerBrain(() => [offline]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  expect((await f.db.select().from(schema.agentRuns))[0]?.status).toBe("done");
+  expect(seen.length).toBe(MAX_EARLY_COMPUTER_DROPS + 1);
+  const reply = (await timeline(f)).at(-1);
+  expect(reply?.body).toBe("Respondi pela API.");
+  expect(reply?.meta.brainFallback).toMatchObject({ from: "claude_code", code: "machine_offline" });
 });
 
 test("a message to a run parked for its computer: looked at again now; resumes with it, or parks again quietly", async () => {
