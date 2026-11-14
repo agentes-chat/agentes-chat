@@ -1,4 +1,4 @@
-import { type Message, useChannels, useMe, useMembers, useOverview } from "@agenteschat/client";
+import { type Message, useChannels, useMe, useMembers, useOverview, useSidebarView } from "@agenteschat/client";
 import { joinNames, namesText, whenAt } from "@agenteschat/client/lib/format";
 import { agentActivitySince, dayPart, isNewDay, welcomeClock } from "@agenteschat/client/lib/welcome";
 import { useEffect, useRef, useState } from "react";
@@ -12,7 +12,6 @@ import { useOrg } from "@/providers/org";
 import { WorkspaceSky } from "@/sky/Sky";
 import { Button, haptics, IconButton, Text, useReducedMotion } from "@/ui";
 import { router } from "@/ui/navigation";
-import { usePins } from "../chats/pins";
 import { useOpenDm } from "../new/useOpenDm";
 import { AgentFace, Face } from "../shared/Face";
 import { useDirectory, useOrgId } from "../shared/hooks";
@@ -25,6 +24,7 @@ const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 const ARRIVING_MS = 86_400_000;
 /** Faces on the card. */
 const CREW = 3;
+const NO_PINS: string[] = [];
 /** A swipe up this far, or a flick, puts it away. */
 const DISMISS_Y = -36;
 const FLICK = 500;
@@ -103,7 +103,8 @@ export function ChannelWelcome({
   const me = useMe().data;
   const dir = useDirectory();
   const overview = useOverview(orgId);
-  const pins = usePins();
+  // The agents an invitation pinned for them (ADR 0184), in its order.
+  const pinned = useSidebarView(orgId).pins?.agents ?? NO_PINS;
   const openDm = useOpenDm();
   const members = useMembers(orgId).data ?? [];
   const channels = useChannels(orgId).data ?? [];
@@ -202,7 +203,7 @@ export function ChannelWelcome({
   let people: string[] = [];
   let host: string | null = null;
   if (arriving) {
-    const arrival = arrivalOf({ agents: dir.agents, pinned: pins.pins.agents, people: members, meId, channels });
+    const arrival = arrivalOf({ agents: dir.agents, pinned, people: members, meId, channels });
     title = t("members.arrival.title", { org: org?.name ?? "", name });
     lead = arrival.alsoIn.length
       ? t("members.arrival.alsoIn", { channels: namesText(t, arrival.alsoIn, 3) })
