@@ -4298,6 +4298,10 @@
   "approval": {
     "expiredChip": "已过期 · {{when}}",
     "canceledChip": "已取消 · {{when}}",
+    "line": {
+      "after": "在“{{title}}”之后执行",
+      "notRun": "未执行：前一个请求没有获批"
+    },
     "waitingFor": "等待 {{name}}",
     "waitingAdmin": "等待管理员",
     "reasonLine": "原因：{{reason}}",
@@ -4851,8 +4855,15 @@
       "canceled": "已取消",
       "failed": "失败",
       "running": "执行中",
-      "scheduled": "已计划"
+      "scheduled": "已计划",
+      "queued": "排队中",
+      "notRun": "未执行"
     },
+    "queuedLine": "已批准。会在先前请求的“{{title}}”之后执行。",
+    "notRunRefused": "先前请求的“{{title}}”在这一项获批后被拒绝，所以这一项没有执行。",
+    "notRunExpired": "先前请求的“{{title}}”在这一项获批后无人决定而过期，所以这一项没有执行。",
+    "notRunEarlier": "在这一项获批后，先前的请求被拒绝或已过期，所以这一项没有执行。",
+    "position": "第 {{n}} 个，共 {{total}} 个",
     "expiredLine": "24 小时内没有人决定，所以什么都没做。",
     "canceledLine": "运行在做出决定前就停止了。",
     "supersededLine": "智能体用更新的版本重新请求了，这一版没有执行。",
@@ -4921,8 +4932,10 @@
       "email": "邮件",
       "text": "将要发布的内容",
       "textDone": "已发布的内容",
+      "textNot": "本将发布的内容",
       "values": "将要做的事",
       "valuesDone": "已做的事",
+      "valuesNot": "本将要做的事",
       "trail": "来龙去脉",
       "showSteps": "查看每一步",
       "hideSteps": "隐藏步骤",

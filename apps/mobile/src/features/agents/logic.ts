@@ -42,7 +42,7 @@ export interface TeamLine {
   agent: Agent;
   /** What it is on now; null when free, or at work where you don't read (its line says the bare state). */
   work: WorkItem | null;
-  /** Waiting on you: the request closest to expiring (the exact item), and how many there are. */
+  /** Waiting on you: the request asked first (the exact item), and how many there are. */
   approval: Pick<Approval, "id" | "title" | "createdAt"> | null;
   waitingCount: number;
   /** Waiting: since it asked. Working: since when. Free: its DM's last message. */
@@ -58,8 +58,8 @@ export interface TeamLine {
 }
 
 /**
- * Agentes: "Esperando você" (agents with a request you may decide, the one closest to
- * expiring first; `waiting` as `waitingApprovals` gives it), "Trabalhando agora" (in `workByAgent` order:
+ * Agentes: "Esperando você" (agents with a request you may decide, the one asked
+ * first; `waiting` as `waitingApprovals` gives it), "Trabalhando agora" (in `workByAgent` order:
  * missions, then the newest runs, then those at work where you don't read, `atWork`) and "Livres" (the latest
  * conversation first, then by name), each agent once.
  */

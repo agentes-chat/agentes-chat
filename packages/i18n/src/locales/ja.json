@@ -4298,6 +4298,10 @@
   "approval": {
     "expiredChip": "期限切れ · {{when}}",
     "canceledChip": "キャンセル済み · {{when}}",
+    "line": {
+      "after": "「{{title}}」の後に実行",
+      "notRun": "未実行：前の依頼が承認されませんでした"
+    },
     "waitingFor": "{{name}}の対応待ち",
     "waitingAdmin": "管理者の対応待ち",
     "reasonLine": "理由: {{reason}}",
@@ -4846,8 +4850,15 @@
       "canceled": "キャンセル済み",
       "failed": "失敗",
       "running": "実行中",
-      "scheduled": "予定済み"
+      "scheduled": "予定済み",
+      "queued": "順番待ち",
+      "notRun": "未実行"
     },
+    "queuedLine": "承認済み。先に依頼された「{{title}}」の後に実行されます。",
+    "notRunRefused": "先に依頼された「{{title}}」が、これを承認した後に却下されたため、これは実行されませんでした。",
+    "notRunExpired": "先に依頼された「{{title}}」が、これを承認した後に判断のないまま期限切れになったため、これは実行されませんでした。",
+    "notRunEarlier": "これを承認した後に前の依頼が却下されたか期限切れになったため、これは実行されませんでした。",
+    "position": "{{n}} / {{total}}",
     "expiredLine": "24時間以内に誰も判断しなかったため、何も行われていません。",
     "canceledLine": "判断の前に実行が停止しました。",
     "supersededLine": "エージェントが新しい版で依頼し直したため、これは実行されませんでした。",
@@ -4914,8 +4925,10 @@
       "email": "メール",
       "text": "公開される内容",
       "textDone": "公開した内容",
+      "textNot": "公開されるはずだった内容",
       "values": "実行する内容",
       "valuesDone": "実行した内容",
+      "valuesNot": "実行するはずだった内容",
       "trail": "ここまでの流れ",
       "showSteps": "各ステップを見る",
       "hideSteps": "ステップを隠す",

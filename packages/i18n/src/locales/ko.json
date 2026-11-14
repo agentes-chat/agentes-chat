@@ -4296,6 +4296,10 @@
   "approval": {
     "expiredChip": "만료됨 · {{when}}",
     "canceledChip": "취소됨 · {{when}}",
+    "line": {
+      "after": "“{{title}}” 다음에 실행",
+      "notRun": "실행 안 됨: 앞의 요청이 승인되지 않았어요"
+    },
     "waitingFor": "{{name}}님 대기 중",
     "waitingAdmin": "관리자 대기 중",
     "reasonLine": "이유: {{reason}}",
@@ -4844,8 +4848,15 @@
       "canceled": "취소됨",
       "failed": "실패",
       "running": "실행 중",
-      "scheduled": "예약됨"
+      "scheduled": "예약됨",
+      "queued": "순서 대기 중",
+      "notRun": "실행 안 됨"
     },
+    "queuedLine": "승인됨. 먼저 요청된 “{{title}}” 다음에 실행돼요.",
+    "notRunRefused": "먼저 요청된 “{{title}}”이(가) 이 요청이 승인된 뒤에 거절되어 이 요청은 실행되지 않았어요.",
+    "notRunExpired": "먼저 요청된 “{{title}}”이(가) 이 요청이 승인된 뒤에 결정 없이 만료되어 이 요청은 실행되지 않았어요.",
+    "notRunEarlier": "이 요청이 승인된 뒤에 앞의 요청이 거절되거나 만료되어 이 요청은 실행되지 않았어요.",
+    "position": "{{total}}개 중 {{n}}번째",
     "expiredLine": "24시간 안에 아무도 결정하지 않아 아무것도 하지 않았어요.",
     "canceledLine": "결정 전에 실행이 중지됐어요.",
     "supersededLine": "에이전트가 더 새로운 버전으로 다시 요청해서 이 요청은 실행되지 않았어요.",
@@ -4912,8 +4923,10 @@
       "email": "이메일",
       "text": "게시될 내용",
       "textDone": "게시한 내용",
+      "textNot": "게시될 뻔한 내용",
       "values": "할 일",
       "valuesDone": "한 일",
+      "valuesNot": "하려던 일",
       "trail": "여기까지 온 과정",
       "showSteps": "단계별로 보기",
       "hideSteps": "단계 숨기기",
