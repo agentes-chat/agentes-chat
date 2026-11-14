@@ -5028,8 +5028,8 @@ export const en = {
       open: "Open",
       /** On a routine's card: lets that kind of action run in this routine from now on, and nowhere else. */
       routine: "Always in this routine",
-      /** The routine in `noteRoutine`, when its name isn't known. */
-      thisRoutine: "this routine",
+      /** The routine in `noteRoutine` and `doneRoutine`, when its name isn't known: it starts their sentence. */
+      thisRoutine: "This routine",
       /** `routine`: its name. `actions`: what it will do. */
       noteRoutine:
         "{{routine}} does {{actions}} on its own from now on, with any values. Outside this routine it still asks. To undo: the routine's settings.",

@@ -4925,7 +4925,7 @@ export const ptBR = {
       undoHere_female: "Para desfazer, vá em Ferramentas e acesso, na página da {{name}}.",
       open: "Abrir",
       routine: "Sempre nesta rotina",
-      thisRoutine: "esta rotina",
+      thisRoutine: "Esta rotina",
       noteRoutine:
         "{{routine}} faz {{actions}} sozinha de agora em diante, com qualquer valor. Fora desta rotina continua pedindo. Para desfazer: configurações da rotina.",
       doneRoutine: "Aprovado. {{routine}} não pede mais para isso.",
