@@ -1188,6 +1188,8 @@
         "paperclip": "Sleep de pakketmap (die met COMPANY.md), sleep er een .zip van hierheen of plak de GitHub-link.",
         "agenteschat": "In de andere werkruimte: Instellingen → Importeren en exporteren → Het bestand downloaden. Sleep daarna de .json hierheen."
       },
+      "whereOther": "Download het bestand uit de andere workspace en zet de .json hier neer.",
+      "whereOtherLink": "Downloaden uit {{org}}",
       "request": {
         "grok-bot": {
           "title": "Vraag je bot om te exporteren",
@@ -1827,11 +1829,10 @@
     "browser": "Deze browser",
     "phone": "Telefoon",
     "phoneOn": "In de telefoonapp, ook als je telefoon vergrendeld is",
-    "phoneOff": "Zet ze aan in de telefoonapp, onder Jij › Meldingen",
+    "phoneOff": "Zet ze aan in de telefoonapp",
     "mac": "Mac-app",
     "macHelp": "Zolang de app open is, ook op de achtergrond",
     "on": "Aan",
-    "off": "Uit",
     "failed": "Kon dat niet opslaan. Probeer het opnieuw.",
     "loadFailed": "Kon je keuzes nu niet laden.",
     "category": {
@@ -1882,7 +1883,7 @@
     },
     "inline": {
       "title": "Wil je meteen weten wanneer {{name}} antwoordt?",
-      "why": "Ook met het tabblad dicht. Pas het aan wanneer je wilt via Instellingen › Meldingen."
+      "why": "Ook met het tabblad dicht. Pas het aan wanneer je wilt via <link>Meldingen</link>."
     }
   },
   "shell": {
@@ -2140,7 +2141,8 @@
     "private": "Wie deze code scant, logt in als jou.",
     "failed": "Wie deze code scant, logt in als jij.",
     "localOnly": "Deze server opent alleen op de computer waarop hij draait, dus je telefoon kan hem niet bereiken.",
-    "localOnlyHow": "Zet in de agentes.chat-app op die computer Bereik het vanaf je telefoon en je teamgenoten aan bij Voorkeuren › Servers. Kom daarna hier terug."
+    "localOnlyHow": "Zet in de agentes.chat-app op die computer Bereik het vanaf je telefoon en je teamgenoten aan bij Voorkeuren › Servers. Kom daarna hier terug.",
+    "localOnlyHere": "Zet Bereik het vanaf je telefoon en je teamgenoten aan. Kom daarna hier terug."
   },
   "team": {
     "title": "Team",
@@ -2691,7 +2693,8 @@
     "computerYours": "Je eigen plek op de computer van de workspace. Alleen jij kunt meekijken of de besturing overnemen.",
     "sharedName": "{{name}} (gedeeld)",
     "sharedPlace": "Wordt gebruikt in kanalen en bij werk dat vanzelf draait. De hele workspace deelt deze plek. Bewaar hier niets privés.",
-    "computerNoHome": "Nog geen computer. Die komt er zodra deze workspace een eigen computer heeft, toegevoegd in Instellingen, Computers.",
+    "computerNoHome": "Nog geen computer. Die komt er zodra deze workspace een eigen computer heeft.",
+    "addComputer": "Computer toevoegen",
     "computerOneUser": "Hier geen computer. De computer van de workspace draait alle agents als één gebruiker en kan de plek van elke persoon dus niet gescheiden houden. Een Linux-server die met de optie --system van het installatieprogramma is ingericht, kan dat wel.",
     "powers": {
       "title": "Bevoegdheden in de workspace",
@@ -8076,8 +8079,8 @@
         "repoPlaceholder": "eigenaar/naam",
         "oneClick": "Webhook maken",
         "added": "Webhook gemaakt in {{repo}}.",
-        "byHand": "Of met de hand: in de repository, Settings › Webhooks › Add webhook.",
-        "open": "Open in de repository Settings › Webhooks › Add webhook.",
+        "byHand": "Of maak hem met de hand op GitHub.",
+        "open": "Maak de webhook in de repository, op GitHub.",
         "openLink": "Openen op GitHub",
         "url": "Payload URL",
         "type": "Content type: application/json",
@@ -9142,7 +9145,6 @@
       "homeHint": "De missie krijgt een thread: daar praat {{name}}, vraagt om besluiten en laat zijn werk zien.",
       "homeHint_female": "De missie krijgt een thread: daar praat {{name}}, vraagt om besluiten en laat haar werk zien.",
       "offline": "{{name}} is offline. Het plan start zodra hij terug is.",
-      "needsMachine": "Missies draaien op een gekoppelde computer. Koppel er een aan {{name}} in Instellingen › Apparaten.",
       "commandHint": "Je kunt er ook een starten door te typen in het invoerveld van elk gesprek:",
       "approvals": "Standaard vragen merge, deploy en rollback om goedkeuring",
       "start": "Missie starten",
@@ -11629,8 +11631,9 @@
   },
   "access": {
     "matrixTitle": "Toegang van agents",
-    "matrixHint": "Standaard vragen gevoelige acties (merge, deploy, delen, betalen) om goedkeuring. Wil je het per tool instellen? Open dan Tools bij de connector.",
+    "matrixHint": "Standaard vragen gevoelige acties (merge, deploy, delen, betalen) om goedkeuring. Wil je het per tool instellen? Open dan de connector.",
     "matrixHow": "Klik op een cel om het te wijzigen:",
+    "openConnectors": "Connectors openen",
     "kindLabel": "Toon",
     "kind": {
       "connectors": "Connectors",
@@ -14187,6 +14190,7 @@
       },
       "grantHere": "Het is deze {{device}}: sta mappen toe in de Voorkeuren van de app.",
       "openFolders": "Mappen openen",
+      "openServers": "Servers openen",
       "openTools": "Tools openen",
       "reconnect": "Opnieuw verbinden",
       "reconnecting": "Deze {{device}} maakt opnieuw verbinding…",
@@ -14705,6 +14709,7 @@
       "pairingCode": "Wifi-koppelingscode",
       "pair": "Koppelen",
       "tryAgain": "Opnieuw proberen",
+      "openLocalNetwork": "Lokaal netwerk openen",
       "qrLabel": "QR-code voor Draadloze foutopsporing op de telefoon",
       "qrLine": "Niet met de camera",
       "qrCaption": "Die biedt een wifinetwerk aan met de naam agentes-…, dat niet bestaat. Houd de telefoon op de wifi van de computer.",
@@ -15632,6 +15637,7 @@
       "help": "Aantallen zoals mensen, agents, machinegroottes, gebruikte AI-tokens en hoeveel data de browsers van de agents versturen en ontvangen. Nooit berichten, bestanden, namen of sites.",
       "envOff": "Uitgezet in de instellingen van deze server (TELEMETRY=off).",
       "envOffDesktop": "Uitgezet in de agentes.chat-app op de computer van deze server (Voorkeuren › Servers).",
+      "envOffHere": "Uitgezet in de agentes.chat-app op deze computer.",
       "see": "Bekijk wat er wordt verstuurd",
       "dialogTitle": "Wat er wordt verstuurd",
       "dialogText": "Eén keer per dag. Dit is precies het volgende rapport."
@@ -17664,8 +17670,9 @@
       "meter": "Je hebt {{used}} van {{limit}} gebruikt.",
       "near": "Je hebt {{used}} van {{limit}} gebruikt. Bij de limiet pauzeren uploads, en er wordt niets verwijderd.",
       "full": "Uploads gepauzeerd bij {{limit}}. Er is niets verwijderd.",
-      "fullAdmin": "Wijzig het agentes.chat-abonnement, verwijder bestanden die je niet meer gebruikt of koppel je eigen bucket in Instellingen › Opslag.",
-      "dailyFull": "De uploads van vandaag hebben {{limit}} bereikt. Over een paar uur kun je weer uploaden."
+      "fullAdmin": "Wijzig het agentes.chat-abonnement, verwijder bestanden die je niet meer gebruikt of koppel je eigen bucket.",
+      "dailyFull": "De uploads van vandaag hebben {{limit}} bereikt. Over een paar uur kun je weer uploaden.",
+      "connectBucket": "Bucket koppelen"
     }
   },
   "computerSetup": {
@@ -18056,8 +18063,7 @@
       "touchHint": "Tik om te klikken · Sleep om te scrollen · Houd vast om te slepen · Twee vingers om het beeld te verschuiven",
       "turn": "Draai liggend",
       "upright": "Draai rechtop",
-      "message": "Bericht aan {{name}}",
-      "chooseOnWeb": "Kies hem op agentes.chat, in Instellingen › Apparaten."
+      "message": "Bericht aan {{name}}"
     }
   },
   "agora": {
