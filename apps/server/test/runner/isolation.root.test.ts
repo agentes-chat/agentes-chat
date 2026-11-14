@@ -759,19 +759,21 @@ describe.if(ROOT)("the agents' isolation on this computer, as root", () => {
     expect(sh(false, `${seen}; echo disk > /tmp/marker`)).toEqual([disk, "root 1777", "none"]);
     expect(sh(true, seen)).toEqual([disk, "root 1777", "disk"]);
     expect(readFileSync(path.join(own, "marker"), "utf8")).toBe("disk\n");
+    // A socket its program left behind, as a desktop's X server can at a shutdown.
+    sh(false, `${PYTHON} -c "import socket; socket.socket(socket.AF_UNIX).bind('/tmp/left.sock')"`);
+    expect(existsSync(path.join(own, "left.sock"))).toBe(true);
 
     // systemd-tmpfiles empties the agents' /tmp on disk only at boot: a later --remove leaves it.
     const conf = path.join(HOME, "agentes-runner-boot.conf");
     writeFileSync(conf, AGENT_TMP_CLEANUP);
     expect(runSync("systemd-tmpfiles", ["--remove", conf]).code).toBe(0);
     expect(existsSync(path.join(own, "marker"))).toBe(true);
-    // A boot: every agent's tmpfs gone, then the boot's run, before any agent starts.
+    // A boot: every agent's tmpfs gone, then the boot's run, before any agent starts. systemd 257 warns of each socket
+    // it can't open to lock, and removes it anyway.
     for (const u of [A, B, C, D]) if (u) runSync("umount", ["-l", path.join(AGENT_RAM_ROOT, String(u.uid))]);
-    const booted = runSync("systemd-tmpfiles", ["--create", "--remove", "--boot", conf]);
-    expect(booted.output).not.toMatch(/fail|invalid|unknown/i);
-    expect(booted.code).toBe(0);
-    // Its folder is gone with all it held. systemd 257 keeps a socket a process still listens on, as one of an earlier
-    // case does in A's here; at a real boot nothing runs.
+    expect(runSync("systemd-tmpfiles", ["--create", "--remove", "--boot", conf]).code).toBe(0);
+    // Its folder is gone with all it held, the socket left behind too. systemd 257 keeps one a process still listens
+    // on, as an earlier case's server does in A's here; at a real boot nothing runs.
     expect(existsSync(own)).toBe(false);
     expect(must("stat", ["-c", "%U %a", AGENT_DISK_TMP_ROOT])).toBe("root 700");
     expect(sh(false, seen)).toEqual([disk, "root 1777", "none"]);
