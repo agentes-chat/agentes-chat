@@ -507,6 +507,15 @@ describe("a run of an agent on Automático", () => {
     expect(judge.calls.some((c) => c.kind === "auto_model")).toBe(false);
   });
 
+  test("Automático on a key with a level kept from before thinks at the judge's effort, not the kept one", async () => {
+    f = await setup({ judge: judgeAnswers({ current: "large" }), reply: () => ({ chunks: ["ok"] }) });
+    await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: AUTO_MODEL });
+    await f.db.update(schema.agents).set({ brainEffort: "low" }).where(eq(schema.agents.id, f.agent.id));
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev oi" });
+    await drainOutbox(f.db, f.handlers);
+    expect(f.provider.calls[0]?.request).toMatchObject({ model: "claude-opus-5-5", effort: "high" });
+  });
+
   test("the agent's model takes auto, and still refuses a model outside the catalog", async () => {
     f = await setup();
     const saved = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: AUTO_MODEL });
