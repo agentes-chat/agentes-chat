@@ -28,6 +28,8 @@ People also asked for more providers than Anthropic and OpenAI (DeepSeek, Kimi, 
 
 *Amended 2026-10-30 (ADR 0088):* a deleted workspace's accounts leave its computers before it goes. At its purge every account on them becomes a tombstone, and the purge waits up to 60 seconds for its online computers whose runner removes accounts to sign them out. An offline computer keeps them, and its token dies with the workspace. A deleted account's tombstones are announced to the computers of every workspace it was in, those that close with it included. A person who leaves also takes the computers they connected there, unless in system mode (ADR 0088 §11).
 
+*Amended 2026-11-14:* who adds is a switch on each computer, "Let workspace members connect AI plans" (`machines.ai_accounts_shared`), because a self-hosted server's own computer records the server owner as its pairer, so no other member could bring a plan to it. Its pairer always adds accounts there. Every member adds them on the Cloud's managed computer whatever the switch says, and where the switch is on. It starts on for a server's own computer and for a computer nobody connected, a leaver's kept computer included, and off for the rest. On a computer someone connected (a system-mode server or one marked the workspace's included) only that person turns it on (`device.ai_accounts_owner_only`): their consent is the reason above. An admin may turn it off anywhere, and on for a server's own computer or one nobody connected. Turning it off removes no account already there.
+
 ### 2. One account thinks for one agent
 
 - An account serves at most one agent (a unique index). Picking an account another agent uses offers to move it here.

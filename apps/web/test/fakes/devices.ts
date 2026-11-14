@@ -53,6 +53,7 @@ const deviceOf = (m: Machine): ComputerDevice => ({
   memoryGb: null,
   ownerUserId: m.pairedBy?.id ?? null,
   belongsToWorkspace: m.kind === "managed" || m.kind === "host",
+  aiAccountsShared: m.kind === "managed" || m.kind === "host",
   spill: { own: true, others: false },
   systemMode: m.mode === "system",
   audience: { mode: "owner", userIds: [], roleIds: [] },

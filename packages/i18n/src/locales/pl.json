@@ -14707,6 +14707,7 @@
       "notLinkMaker": "Tylko osoba, która utworzyła link, może wpuścić ten komputer.",
       "widenForbidden": "Administratorzy mogą tylko zawęzić, kto korzysta z czyjegoś własnego urządzenia.",
       "spillOwnerOnly": "Tylko osoba, która podłączyła ten komputer, może pozwolić odpowiedziom myśleć na nim. Ty możesz to wyłączyć.",
+      "aiAccountsOwnerOnly": "Tylko osoba, która podłączyła ten komputer, może pozwolić członkom podłączać na nim plany AI. Poproś ją o włączenie.",
       "notHome": "Agenci działają na komputerze workspace i używają tego, gdy podadzą jego nazwę."
     },
     "machine": {
@@ -15121,6 +15122,8 @@
     "notFound": "Tego urządzenia już tu nie ma",
     "notFoundText": "Zostało usunięte albo ten link jest błędny.",
     "sharing": "Udostępnianie",
+    "aiAccountsShared": "Pozwól członkom workspace'u podłączać plany AI",
+    "aiAccountsSharedHint": "Każdy loguje się własnym planem. To nie zmienia, kto może używać komputera ani jego plików.",
     "phonesHere": "Telefony na tym komputerze",
     "maxTasks": "Zadania naraz",
     "maxTasksHint": "Ile zadań w tle agenci wykonują tu jednocześnie. Pozostałe czekają na swoją kolej.",

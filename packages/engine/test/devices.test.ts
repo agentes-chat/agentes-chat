@@ -9,7 +9,7 @@ import {
   STREAM_CLOSE,
   XCODE_FIX_PROTOCOL,
 } from "@agenteschat/adapters";
-import { eq, schema } from "@agenteschat/db";
+import { and, eq, schema } from "@agenteschat/db";
 import {
   authorizePhoneStream,
   cancelWifiPairing,
@@ -22,6 +22,7 @@ import {
   MachineOfflineError,
   type MachinePhoneRow,
   MachineRequestError,
+  mayAddAccounts,
   phoneStoppedBy,
   pickIphoneOverWifi,
   recheckPhoneStream,
@@ -275,6 +276,75 @@ test("spill-over: on for its owner's replies by default; only the owner turns it
   ).toEqual({ own: false, others: false });
 });
 
+test("members' AI plans: only who connected a computer lets members add them; an admin turns it off, and on for the server's own", async () => {
+  f = await setup();
+  const sam = await addMember(f.db, f.org.id, "admin", "sam");
+  const rui = await addMember(f.db, f.org.id, "member", "rui");
+  const lia = await addMember(f.db, f.org.id, "member", "lia");
+  const laptop = await pair(rui.id, "Rui's laptop");
+  const events: Record<string, unknown>[] = [];
+  f.pubsub.subscribe(orgTopic(f.org.id), (e) => {
+    const event = (e as { event?: Record<string, unknown> }).event;
+    if (event?.type === "machine.updated" && event.accounts) events.push(event);
+  });
+  expect((await updateComputerDevice(deps(), rui.id, f.org.id, laptop, {})).aiAccountsShared).toBe(false);
+  expect(mayAddAccounts(await machineRow(laptop), lia.id)).toBe(false);
+
+  await expect(
+    updateComputerDevice(deps(), sam.id, f.org.id, laptop, { aiAccountsShared: true }),
+  ).rejects.toMatchObject({ code: "device.ai_accounts_owner_only" });
+  // Marked the workspace's, it is still on the hardware of the person who connected it.
+  await updateComputerDevice(deps(), sam.id, f.org.id, laptop, { belongsToWorkspace: true });
+  await expect(
+    updateComputerDevice(deps(), sam.id, f.org.id, laptop, { aiAccountsShared: true }),
+  ).rejects.toMatchObject({ code: "device.ai_accounts_owner_only" });
+  // So is a server in system mode its owner connected.
+  await f.db
+    .update(schema.machines)
+    .set({ belongsToWorkspace: false, executors: { mode: "system" } })
+    .where(eq(schema.machines.id, laptop));
+  await expect(
+    updateComputerDevice(deps(), sam.id, f.org.id, laptop, { aiAccountsShared: true }),
+  ).rejects.toMatchObject({ code: "device.ai_accounts_owner_only" });
+  expect(events).toEqual([]);
+
+  expect(
+    (await updateComputerDevice(deps(), rui.id, f.org.id, laptop, { aiAccountsShared: true })).aiAccountsShared,
+  ).toBe(true);
+  expect(mayAddAccounts(await machineRow(laptop), lia.id)).toBe(true);
+  expect(events).toEqual([{ type: "machine.updated", machineId: laptop, accounts: true }]);
+  const audit = await f.db
+    .select()
+    .from(schema.auditLog)
+    .where(and(eq(schema.auditLog.action, "device.updated"), eq(schema.auditLog.targetId, laptop)));
+  expect(audit.at(-1)?.details).toMatchObject({ aiAccountsShared: true });
+
+  expect(
+    (await updateComputerDevice(deps(), sam.id, f.org.id, laptop, { aiAccountsShared: false })).aiAccountsShared,
+  ).toBe(false);
+  expect(mayAddAccounts(await machineRow(laptop), lia.id)).toBe(false);
+  expect(mayAddAccounts(await machineRow(laptop), rui.id)).toBe(true);
+
+  // The server's own computer records its owner as the pairer: an admin opens it to everyone.
+  const host = await pair(f.owner.id, "Server");
+  await f.db.update(schema.machines).set({ kind: "host" }).where(eq(schema.machines.id, host));
+  expect(
+    (await updateComputerDevice(deps(), sam.id, f.org.id, host, { aiAccountsShared: true })).aiAccountsShared,
+  ).toBe(true);
+  expect(mayAddAccounts(await machineRow(host), lia.id)).toBe(true);
+});
+
+test("the workspace's own computer takes every member's plans, whatever its column says", async () => {
+  f = await setup();
+  const lia = await addMember(f.db, f.org.id, "member", "lia");
+  const managed = await issueManagedMachine({ db: f.db }, f.org.id);
+  const id = managed?.machineId ?? "";
+  await f.db.update(schema.machines).set({ aiAccountsShared: false }).where(eq(schema.machines.id, id));
+  expect(mayAddAccounts(await machineRow(id), lia.id)).toBe(true);
+  const seen = await listDevices(f.db, f.org.id, lia.id);
+  expect(seen.devices.find((d) => d.id === id)).toMatchObject({ aiAccountsShared: true });
+});
+
 test("where workspaces have their own computer, a brought one is a target, never an agent's home", async () => {
   f = await setup();
   setWorkspaceComputers(true);
@@ -311,7 +381,10 @@ test("someone leaving: their own devices go with them; one marked the workspace'
     ["Galaxy S24", lab, null, false],
   ]);
   const seen = await listDevices(f.db, f.org.id, lia.id);
-  expect(seen.devices.map((d) => [d.name, d.ownerUserId, d.mayUse])).toEqual([["Lab box", null, true]]);
+  expect(seen.devices.map((d) => [d.name, d.ownerUserId, d.mayUse, d.aiAccountsShared])).toEqual([
+    ["Lab box", null, true, true],
+  ]);
+  expect(mayAddAccounts(await machineRow(lab), lia.id)).toBe(true);
   expect(seen.devices[0]?.phones.map((p) => p.mayUse)).toEqual([true]);
 });
 

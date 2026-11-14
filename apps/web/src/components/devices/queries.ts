@@ -25,7 +25,10 @@ function useDevicesMutation<I, O>(orgId: string, run: (input: I) => Promise<O>) 
   return useMutation({
     mutationFn: run,
     meta: { silent: true },
-    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.machines(orgId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.machines(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.aiAccounts(orgId) });
+    },
   });
 }
 

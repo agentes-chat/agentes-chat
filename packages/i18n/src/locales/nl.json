@@ -13796,6 +13796,7 @@
       "notLinkMaker": "Alleen wie de link heeft gemaakt, kan deze computer laten deelnemen.",
       "widenForbidden": "Admins kunnen alleen beperken wie iemands eigen apparaat mag gebruiken.",
       "spillOwnerOnly": "Alleen wie deze computer heeft gekoppeld, kan antwoorden hier laten denken. Uitzetten kan wel.",
+      "aiAccountsOwnerOnly": "Alleen wie deze computer heeft gekoppeld, kan leden er AI-abonnementen op laten koppelen. Vraag diegene om het aan te zetten.",
       "notHome": "Agents wonen op de computer van de workspace en gebruiken deze als ze hem bij naam noemen."
     },
     "machine": {
@@ -14206,6 +14207,8 @@
     "notFound": "Dit apparaat is er niet meer",
     "notFoundText": "Het is verwijderd, of deze link klopt niet.",
     "sharing": "Delen",
+    "aiAccountsShared": "Leden van de workspace AI-abonnementen laten koppelen",
+    "aiAccountsSharedHint": "Iedereen logt in met een eigen abonnement. Dit verandert niet wie de computer of de bestanden kan gebruiken.",
     "phonesHere": "Telefoons op deze computer",
     "maxTasks": "Taken tegelijk",
     "maxTasksHint": "Hoeveel achtergrondtaken agents hier tegelijk uitvoeren. De rest wacht op zijn beurt.",

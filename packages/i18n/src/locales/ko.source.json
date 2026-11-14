@@ -33301,6 +33301,9 @@
   "errors.device.spillOwnerOnly": {
     "value": "Only the person who connected this computer can let replies think on it. You can turn it off."
   },
+  "errors.device.aiAccountsOwnerOnly": {
+    "value": "Only the person who connected this computer can let members connect AI plans to it. Ask them to turn it on."
+  },
   "errors.device.notHome": {
     "value": "Agents live on the workspace computer and use this one when they name it."
   },
@@ -34325,6 +34328,12 @@
   },
   "devices.sharing": {
     "value": "Sharing"
+  },
+  "devices.aiAccountsShared": {
+    "value": "Let workspace members connect AI plans"
+  },
+  "devices.aiAccountsSharedHint": {
+    "value": "Each person signs in with their own plan. This does not change who can use the computer or its files."
   },
   "devices.phonesHere": {
     "value": "Phones on this computer"

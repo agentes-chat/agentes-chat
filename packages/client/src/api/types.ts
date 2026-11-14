@@ -7958,6 +7958,7 @@ export interface ComputerDevice {
   memoryGb: number | null;
   ownerUserId: string | null;
   belongsToWorkspace: boolean;
+  aiAccountsShared: boolean;
   /** While an agent's own computer is full, replies people wait on may think here: to its owner, to anyone else. */
   spill: { own: boolean; others: boolean };
   systemMode: boolean;
@@ -8070,6 +8071,7 @@ export interface ComputerDeviceInput {
   name?: string;
   audience?: DeviceAudience;
   belongsToWorkspace?: boolean;
+  aiAccountsShared?: boolean;
   maxTasks?: number;
   spill?: { own?: boolean; others?: boolean };
 }

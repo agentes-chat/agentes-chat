@@ -13269,6 +13269,7 @@
       "notLinkMaker": "Hanya orang yang membuat tautan ini yang bisa mengizinkan komputer ini bergabung.",
       "widenForbidden": "Admin hanya bisa mempersempit siapa yang boleh memakai perangkat milik seseorang.",
       "spillOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa membiarkan balasan berpikir di sini. Kamu bisa mematikannya.",
+      "aiAccountsOwnerOnly": "Hanya orang yang menghubungkan komputer ini yang bisa mengizinkan anggota menghubungkan paket AI di sini. Minta dia menyalakannya.",
       "notHome": "Agen tinggal di komputer workspace dan memakai komputer ini saat menyebut namanya."
     },
     "machine": {
@@ -13677,6 +13678,8 @@
     "notFound": "Perangkat ini sudah tidak ada di sini",
     "notFoundText": "Perangkat ini sudah dihapus, atau tautannya salah.",
     "sharing": "Berbagi",
+    "aiAccountsShared": "Izinkan anggota workspace menghubungkan paket AI",
+    "aiAccountsSharedHint": "Setiap orang masuk dengan paketnya sendiri. Ini tidak mengubah siapa yang bisa memakai komputer atau filenya.",
     "phonesHere": "Ponsel di komputer ini",
     "maxTasks": "Tugas sekaligus",
     "maxTasksHint": "Berapa banyak tugas latar belakang yang dijalankan agen di sini secara bersamaan. Sisanya menunggu giliran.",

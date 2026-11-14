@@ -77,6 +77,7 @@ const computer = (c: Partial<ComputerDevice>): ComputerDevice => ({
   memoryGb: 36,
   ownerUserId: "u-sam",
   belongsToWorkspace: false,
+  aiAccountsShared: false,
   spill: { own: true, others: false },
   systemMode: false,
   audience: owner,

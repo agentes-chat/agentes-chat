@@ -1438,6 +1438,24 @@ export async function deleteAccount(
       await offPlansNotOwners(tx, computer.orgId, freed);
       removed.push({ computer, freed });
     }
+    // The ones an admin marked the workspace's stay and turn nobody's with the user row: every member adds plans there,
+    // as when someone leaves (`releaseLeaverDevices`).
+    if (plan.leaves.length) {
+      await tx
+        .update(schema.machines)
+        .set({ aiAccountsShared: true, updatedAt: new Date() })
+        .where(
+          and(
+            inArray(
+              schema.machines.orgId,
+              plan.leaves.map((o) => o.id),
+            ),
+            eq(schema.machines.pairedByUserId, userId),
+            eq(schema.machines.belongsToWorkspace, true),
+            isNull(schema.machines.deletedAt),
+          ),
+        );
+    }
     // Their agents are left with no owner, and a plan thinks only for its owner's (`planIsOwners`): whatever computer
     // brain they had, they go back to the API.
     const ownerless = plan.leaves.length

@@ -13669,6 +13669,7 @@
       "notLinkMaker": "Bu bilgisayarı yalnızca bağlantıyı oluşturan kişi katılmaya izin verebilir.",
       "widenForbidden": "Yöneticiler birinin kendi cihazını kimin kullanabileceğini yalnızca daraltabilir.",
       "spillOwnerOnly": "Yanıtların bu bilgisayarda düşünmesine yalnızca onu bağlayan kişi izin verebilir. Kapatmak senin elinde.",
+      "aiAccountsOwnerOnly": "Yalnızca bu bilgisayarı bağlayan kişi, üyelerin buna yapay zekâ planı bağlamasına izin verebilir. Ondan açmasını isteyin.",
       "notHome": "Ajanlar workspace bilgisayarında yaşar ve adını söylediklerinde bunu kullanır."
     },
     "machine": {
@@ -14079,6 +14080,8 @@
     "notFound": "Bu cihaz artık burada değil",
     "notFoundText": "Kaldırıldı ya da bu bağlantı yanlış.",
     "sharing": "Paylaşım",
+    "aiAccountsShared": "Çalışma alanı üyelerinin yapay zekâ planı bağlamasına izin ver",
+    "aiAccountsSharedHint": "Herkes kendi planıyla giriş yapar. Bu, bilgisayarı veya dosyalarını kimin kullanabileceğini değiştirmez.",
     "phonesHere": "Bu bilgisayardaki telefonlar",
     "maxTasks": "Aynı anda görev",
     "maxTasksHint": "Ajanların burada aynı anda kaç arka plan görevi çalıştırdığı. Diğerleri sırasını bekler.",

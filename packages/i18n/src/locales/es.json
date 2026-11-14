@@ -14147,6 +14147,7 @@
       "notLinkMaker": "Solo quien creó el enlace puede dejar entrar a esta computadora.",
       "widenForbidden": "Los admins solo pueden restringir quién usa el dispositivo propio de alguien.",
       "spillOwnerOnly": "Solo quien conectó esta computadora puede dejar que las respuestas piensen en ella. Tú puedes apagarlo.",
+      "aiAccountsOwnerOnly": "Solo quien conectó esta computadora puede dejar que los miembros conecten planes de IA en ella. Pídeselo para que lo active.",
       "notHome": "Los agentes viven en la computadora del workspace y usan esta cuando la nombran."
     },
     "machine": {
@@ -14559,6 +14560,8 @@
     "notFound": "Este dispositivo ya no está aquí",
     "notFoundText": "Se quitó, o este enlace es incorrecto.",
     "sharing": "Uso compartido",
+    "aiAccountsShared": "Permitir que los miembros conecten planes de IA",
+    "aiAccountsSharedHint": "Cada persona inicia sesión con su propio plan. Esto no cambia quién puede usar la computadora ni sus archivos.",
     "phonesHere": "Teléfonos en esta computadora",
     "maxTasks": "Tareas a la vez",
     "maxTasksHint": "Cuántas tareas en segundo plano ejecutan aquí los agentes al mismo tiempo. Las demás esperan su turno.",

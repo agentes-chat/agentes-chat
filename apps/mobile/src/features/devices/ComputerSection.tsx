@@ -13,9 +13,10 @@ import { DevicePortrait, StatusLine, useAudienceText } from "./parts";
 import { useDeviceMutation } from "./queries";
 
 /**
- * On a computer's page, what bringing devices adds: who can use it (its owner changes it, an admin narrows it), the
- * workspace's mark for admins, the line about whose computer it is, the phones plugged into it, and on a Mac the
- * iPhones on its Wi-Fi that trust it, each with Use over Wi-Fi (for who may manage it).
+ * On a computer's page, what bringing devices adds: who can use it (its owner changes it, an admin narrows it), whether
+ * every member may add their AI plans there, the workspace's mark for admins, the line about whose computer it is, the
+ * phones plugged into it, and on a Mac the iPhones on its Wi-Fi that trust it, each with Use over Wi-Fi (for who may
+ * manage it).
  */
 export function ComputerSection({ device: d, name }: { device: ComputerDevice; name: string }) {
   const { t } = useTranslation();
@@ -25,6 +26,9 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
   const audienceText = useAudienceText();
   const mark = useDeviceMutation((api, orgId, on: boolean) =>
     api.devices.updateComputer(orgId, d.id, { belongsToWorkspace: on }),
+  );
+  const share = useDeviceMutation((api, orgId, on: boolean) =>
+    api.devices.updateComputer(orgId, d.id, { aiAccountsShared: on }),
   );
   const spill = useDeviceMutation((api, orgId, input: { own?: boolean; others?: boolean }) =>
     api.devices.updateComputer(orgId, d.id, { spill: input }),
@@ -52,6 +56,27 @@ export function ComputerSection({ device: d, name }: { device: ComputerDevice; n
                   }
                 : {})}
             />
+            {/* On a computer someone connected, its owner turns this on; an admin may only turn it off. */}
+            {d.mayManage ? (
+              <GroupedRow
+                label={t("devices.aiAccountsShared")}
+                labelLines={2}
+                hint={{
+                  name: t("common.about", { label: t("devices.aiAccountsShared") }),
+                  text: t("devices.aiAccountsSharedHint"),
+                }}
+                toggle={d.aiAccountsShared}
+                disabled={
+                  share.isPending ||
+                  (brought && d.ownerUserId !== null && d.ownerUserId !== meId && !d.aiAccountsShared)
+                }
+                onPress={() =>
+                  share.mutate(!d.aiAccountsShared, {
+                    onError: (err) => toast({ title: errorText(t, err), icon: "x" }),
+                  })
+                }
+              />
+            ) : null}
             {/* Spill-over: its owner turns these on; an admin may only turn them off. */}
             {brought && d.mayManage && !d.systemMode
               ? (["own", "others"] as const).map((key) => {

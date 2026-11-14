@@ -13863,6 +13863,8 @@ export const ptBR = {
       notLinkMaker: "Só quem gerou o link pode deixar este computador entrar.",
       widenForbidden: "Admins só podem restringir quem usa o dispositivo de outra pessoa.",
       spillOwnerOnly: "Só quem conectou este computador pode deixar respostas pensarem nele. Você pode desligar.",
+      aiAccountsOwnerOnly:
+        "Só quem conectou este computador pode deixar membros conectarem planos de IA nele. Peça a essa pessoa para ligar.",
       notHome: "Os agentes moram no computador do workspace e usam este quando o citam pelo nome.",
     },
     machine: {
@@ -14265,6 +14267,9 @@ export const ptBR = {
     notFound: "Este dispositivo não está mais aqui",
     notFoundText: "Ele foi removido, ou este link está errado.",
     sharing: "Compartilhamento",
+    aiAccountsShared: "Permitir que membros conectem planos de IA",
+    aiAccountsSharedHint:
+      "Cada pessoa conecta o próprio plano. Isso não altera quem pode usar o computador ou acessar os arquivos.",
     phonesHere: "Celulares neste computador",
     maxTasks: "Tarefas ao mesmo tempo",
     maxTasksHint: "Quantas tarefas em segundo plano os agentes rodam aqui ao mesmo tempo. As outras esperam a vez.",

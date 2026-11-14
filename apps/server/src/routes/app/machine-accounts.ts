@@ -84,7 +84,8 @@ const offline = {
  * Accounts of the computer brains on a connected computer (ADR 0041, ADR
  * 0059): an account is the person's who started its sign-in (through the
  * provider's own CLI on the computer). The person who connected the computer
- * adds accounts there, or anyone on a computer nobody connected; only an
+ * adds accounts there, or any member where its plans are shared (the
+ * workspace's own computer always, others by their switch); only an
  * account's owner sees its email, renames it, continues its sign-in or
  * signs in to it again; its owner or whoever connected the computer removes it.
  * Session + CSRF like the rest of `/api/app`.
@@ -107,7 +108,7 @@ export function machineAccountRoutes(deps: AppDeps) {
       tags,
       security,
       summary:
-        "The computer's Claude, ChatGPT and coding plan accounts (the person who connected it, an admin, or anyone where nobody did)",
+        "The computer's Claude, ChatGPT and coding plan accounts (the person who connected it, an admin, or anyone where its plans are shared)",
       description:
         "Emails only of the caller's own accounts. Changes come as `machine.updated` org events with `accounts: true`.",
       request: { params: MachineParams },
@@ -117,7 +118,7 @@ export function machineAccountRoutes(deps: AppDeps) {
             accounts: z.array(MachineAccount),
             canManage: z.boolean().openapi({
               description:
-                "The caller adds accounts there (they connected it, or nobody did) and its runner knows accounts (protocol 13).",
+                "The caller adds accounts there (they connected it, or its plans are shared) and its runner knows accounts (protocol 13).",
             }),
             supported: z.boolean().openapi({ description: "Its runner knows accounts (protocol 13)." }),
           }),
@@ -139,7 +140,7 @@ export function machineAccountRoutes(deps: AppDeps) {
       security,
       summary: "Start signing in an account on the computer, through the provider's own CLI there",
       description:
-        "The account is the caller's from now on. The person who connected the computer adds accounts there, or anyone on a computer nobody connected.",
+        "The account is the caller's from now on. The person who connected the computer adds accounts there, or anyone where its plans are shared.",
       request: {
         params: MachineParams,
         body: body(

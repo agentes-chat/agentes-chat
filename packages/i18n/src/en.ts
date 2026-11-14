@@ -13839,6 +13839,8 @@ export const en = {
       notLinkMaker: "Only the person who made the link can let this computer join.",
       widenForbidden: "Admins can only narrow who can use someone's own device.",
       spillOwnerOnly: "Only the person who connected this computer can let replies think on it. You can turn it off.",
+      aiAccountsOwnerOnly:
+        "Only the person who connected this computer can let members connect AI plans to it. Ask them to turn it on.",
       notHome: "Agents live on the workspace computer and use this one when they name it.",
     },
     machine: {
@@ -14249,6 +14251,9 @@ export const en = {
     notFound: "This device isn't here anymore",
     notFoundText: "It was removed, or this link is wrong.",
     sharing: "Sharing",
+    aiAccountsShared: "Let workspace members connect AI plans",
+    aiAccountsSharedHint:
+      "Each person signs in with their own plan. This does not change who can use the computer or its files.",
     phonesHere: "Phones on this computer",
     maxTasks: "Tasks at once",
     maxTasksHint: "How many background tasks agents run here at the same time. The rest wait their turn.",

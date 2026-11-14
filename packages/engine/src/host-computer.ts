@@ -139,6 +139,7 @@ export async function syncHostComputer(deps: HostDeps, input: HostSyncInput): Pr
       served.map((o) => ({
         orgId: o.id,
         kind: "host" as const,
+        aiAccountsShared: true,
         name,
         audienceMode: "everyone" as const,
         pairedByUserId: ownerId,
@@ -278,7 +279,15 @@ export async function addHostComputer(db: Database, orgId: string) {
     .limit(1);
   await db
     .insert(machines)
-    .values({ orgId, kind: "host", name: "", ...same, pairedByUserId: ownerId, audienceMode: "everyone" })
+    .values({
+      orgId,
+      kind: "host",
+      aiAccountsShared: true,
+      name: "",
+      ...same,
+      pairedByUserId: ownerId,
+      audienceMode: "everyone",
+    })
     .onConflictDoNothing();
 }
 

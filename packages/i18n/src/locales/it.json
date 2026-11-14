@@ -14228,6 +14228,7 @@
       "notLinkMaker": "Solo chi ha creato il link può far entrare questo computer.",
       "widenForbidden": "Gli admin possono solo restringere chi usa il dispositivo personale di qualcuno.",
       "spillOwnerOnly": "Solo chi ha collegato questo computer può lasciare che le risposte pensino qui. Tu puoi disattivarlo.",
+      "aiAccountsOwnerOnly": "Solo chi ha collegato questo computer può permettere ai membri di collegarci piani di IA. Chiedigli di attivarlo.",
       "notHome": "Gli agenti vivono sul computer del workspace e usano questo quando lo nominano."
     },
     "machine": {
@@ -14640,6 +14641,8 @@
     "notFound": "Questo dispositivo non c'è più",
     "notFoundText": "È stato rimosso, oppure questo link è sbagliato.",
     "sharing": "Condivisione",
+    "aiAccountsShared": "Consenti ai membri di collegare piani di IA",
+    "aiAccountsSharedHint": "Ognuno accede con il proprio piano. Questo non cambia chi può usare il computer o i suoi file.",
     "phonesHere": "Telefoni su questo computer",
     "maxTasks": "Attività in contemporanea",
     "maxTasksHint": "Quante attività in background gli agenti eseguono qui allo stesso tempo. Le altre aspettano il loro turno.",

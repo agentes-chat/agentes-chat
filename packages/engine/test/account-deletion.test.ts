@@ -277,6 +277,8 @@ describe("deleting an account", () => {
       ["Bia's laptop", true],
       ["Team server", false],
     ]);
+    const [kept] = await f.db.select().from(schema.machines).where(eq(schema.machines.id, server));
+    expect(kept).toMatchObject({ pairedByUserId: null, aiAccountsShared: true });
     expect(signals).toContainEqual({ type: "machine.revoke", machineId: laptop });
     expect(signals).not.toContainEqual({ type: "machine.revoke", machineId: server });
     expect(await agentComputer()).toBeNull();

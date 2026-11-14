@@ -23,3 +23,5 @@ apps/mobile/.expo
 **/*.jks
 **/*.keystore
 **/credentials.json
+
+host-computer-token

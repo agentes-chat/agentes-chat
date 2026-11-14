@@ -85,7 +85,12 @@ test("one computer per organization of the first account, its own token each; no
   expect(acme).toMatchObject({ orgId, orgName: "Acme", machineId: before.machines[0]?.id });
   expect(acme?.token).toStartWith("agm_");
   const row = await authenticateMachine(t.db, acme?.token ?? "");
-  expect(row).toMatchObject({ kind: "host", orgId, pairedByUserId: await userId("owner@example.com") });
+  expect(row).toMatchObject({
+    kind: "host",
+    orgId,
+    pairedByUserId: await userId("owner@example.com"),
+    aiAccountsShared: true,
+  });
   // The agent with no computer uses it now.
   const list = (await (await api("/machines")).json()) as { machines: { kind: string; agents: { id: string }[] }[] };
   expect(list.machines).toEqual([

@@ -104,7 +104,10 @@ async function ownedMachine(protocol = ACCOUNTS_PROTOCOL) {
 /** A computer nobody connected (the Cloud's, a server's own): every member adds accounts there. */
 async function sharedMachine() {
   const paired = await ownedMachine();
-  await f.db.update(schema.machines).set({ pairedByUserId: null }).where(eq(schema.machines.id, paired.machineId));
+  await f.db
+    .update(schema.machines)
+    .set({ pairedByUserId: null, aiAccountsShared: true })
+    .where(eq(schema.machines.id, paired.machineId));
   return paired;
 }
 

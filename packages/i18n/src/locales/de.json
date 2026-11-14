@@ -13734,6 +13734,7 @@
       "notLinkMaker": "Nur die Person, die den Link erstellt hat, kann diesen Computer beitreten lassen.",
       "widenForbidden": "Admins können nur einschränken, wer das eigene Gerät einer Person nutzen darf.",
       "spillOwnerOnly": "Nur wer diesen Computer verbunden hat, kann Antworten hier denken lassen. Ausschalten kannst du es.",
+      "aiAccountsOwnerOnly": "Nur die Person, die diesen Computer verbunden hat, kann Mitgliedern erlauben, KI-Pläne darauf zu verbinden. Bitte diese Person, es einzuschalten.",
       "notHome": "Agenten leben auf dem Computer des Workspace und nutzen diesen, wenn sie ihn beim Namen nennen."
     },
     "machine": {
@@ -14144,6 +14145,8 @@
     "notFound": "Dieses Gerät ist nicht mehr da",
     "notFoundText": "Es wurde entfernt, oder dieser Link ist falsch.",
     "sharing": "Freigabe",
+    "aiAccountsShared": "Mitglieder des Workspace dürfen KI-Pläne verbinden",
+    "aiAccountsSharedHint": "Jede Person meldet sich mit ihrem eigenen Plan an. Das ändert nicht, wer den Computer oder seine Dateien nutzen kann.",
     "phonesHere": "Handys an diesem Computer",
     "maxTasks": "Aufgaben gleichzeitig",
     "maxTasksHint": "Wie viele Hintergrundaufgaben Agenten hier gleichzeitig ausführen. Die übrigen warten, bis sie dran sind.",

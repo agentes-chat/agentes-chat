@@ -14218,6 +14218,7 @@
       "notLinkMaker": "Seule la personne qui a créé le lien peut laisser cet ordinateur rejoindre.",
       "widenForbidden": "Les admins peuvent seulement restreindre qui utilise l'appareil personnel de quelqu'un.",
       "spillOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut y laisser penser les réponses. Toi, tu peux le désactiver.",
+      "aiAccountsOwnerOnly": "Seule la personne qui a connecté cet ordinateur peut laisser les membres y connecter des forfaits IA. Demandez-lui de l'activer.",
       "notHome": "Les agents vivent sur l'ordinateur du workspace et utilisent celui-ci quand ils le nomment."
     },
     "machine": {
@@ -14630,6 +14631,8 @@
     "notFound": "Cet appareil n'est plus là",
     "notFoundText": "Il a été retiré, ou ce lien est incorrect.",
     "sharing": "Partage",
+    "aiAccountsShared": "Laisser les membres connecter des forfaits IA",
+    "aiAccountsSharedHint": "Chacun se connecte avec son propre forfait. Cela ne change pas qui peut utiliser l'ordinateur ni ses fichiers.",
     "phonesHere": "Téléphones sur cet ordinateur",
     "maxTasks": "Tâches simultanées",
     "maxTasksHint": "Combien de tâches en arrière-plan les agents exécutent ici en même temps. Les autres attendent leur tour.",

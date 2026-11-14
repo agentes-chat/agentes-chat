@@ -173,6 +173,8 @@ export const machines = pgTable(
     name: text().notNull(),
     kind: text().$type<MachineKind>().notNull().default("connected"),
     pairedByUserId: text().references(() => users.id, { onDelete: "set null" }),
+    /** Workspace members may add their own AI plan sign-ins on this computer. */
+    aiAccountsShared: boolean().notNull().default(false),
     /** SHA-256 (hex) of `agm_…`; null once deleted. */
     tokenHash: text().unique(),
     /**
