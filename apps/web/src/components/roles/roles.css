@@ -683,21 +683,26 @@ html:not([data-pointer]) .roles-names__more:focus-visible {
 /* Nome, cor e ícone: the live preview, the mark on the name's capitals' middle (`.ac-iconline`, in the line's own font
    and line, so its `lh` and `ex` are the name's). */
 .roles-preview {
-  gap: var(--space-3);
   margin: 0;
   padding: var(--space-3);
   border-radius: 12px;
   background: var(--surface-sunken);
   font-size: 14.5px;
-  /* The name's line as tall as the 32px mark: the box stays even around both. */
-  line-height: 32px;
+  /* Its words' own line fits inside the 32px mark's, so the name's line is the mark's height and the box keeps 12 above
+     and below both; a long name's next lines are 28. */
+  line-height: 28px;
 }
-.roles-preview__line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: var(--space-2);
-  min-width: 0;
+/* The mark is a word of the name's line, never a column beside it: a long name wraps under it at the box's full width.
+   Its middle on the line's capitals' middle by `.ac-icon--inline`'s rule, which holds for a box whose baseline is its
+   bottom edge: an inline-block that clips (else the mark's icon gives it a baseline 6px higher). */
+.roles-preview__mark {
+  display: inline-block;
+  overflow: hidden;
+  margin-inline-end: var(--space-3);
+  vertical-align: calc(var(--cap-top) - var(--cap-mid) - 16px);
+}
+.roles-preview__mark > .ac-rolemark {
+  display: grid;
 }
 /* The chat's own step toward the ink (`.ac-msg__bubble-head .ac-msg__author`): the name as the cargo paints it. */
 .roles-preview__name {

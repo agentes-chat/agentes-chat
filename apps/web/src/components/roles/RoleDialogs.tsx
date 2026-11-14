@@ -140,18 +140,15 @@ export function LookDialog({
     >
       <Locked when={update.isPending}>
         <DialogBody>
-          {/* The mark on the name's capitals' middle (`.ac-iconline`), as a face beside one line. */}
-          <p className="roles-preview ac-iconline">
-            <RoleMark color={draft.color} icon={base ? role.icon : draft.icon} size={32} />
-            <span className="roles-preview__line">
-              <b
-                className="roles-preview__name"
-                style={{ "--msg-name": deep, "--msg-name-dark": top } as CSSProperties}
-              >
-                {sample}
-              </b>
-              <span className="roles-preview__where">{t("rolesPage.previewWhere")}</span>
+          {/* The mark is a word of the name's line, on its capitals' middle; a long name wraps under it. */}
+          <p className="roles-preview">
+            <span className="roles-preview__mark">
+              <RoleMark color={draft.color} icon={base ? role.icon : draft.icon} size={32} />
             </span>
+            <b className="roles-preview__name" style={{ "--msg-name": deep, "--msg-name-dark": top } as CSSProperties}>
+              {sample}
+            </b>{" "}
+            <span className="roles-preview__where">{t("rolesPage.previewWhere")}</span>
           </p>
           {base ? (
             <p className="roles-look__status">{t("rolesPage.locked.everyone")}</p>

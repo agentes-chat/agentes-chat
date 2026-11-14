@@ -698,9 +698,10 @@ describe("look, create and the members' menu (W12, W13, W15)", () => {
     const state = await open(`roles/${SUPORTE}`);
     await click(screen().getByRole("button", { name: "Mudar nome, cor e ícone" }));
     const dialog = screen().getByRole("dialog", { name: "Nome, cor e ícone" });
-    // The mark on the name's line, by the kit's capitals'-middle rule.
-    expect(dialog.querySelector(".roles-preview")?.className).toContain("ac-iconline");
-    expect(dialog.querySelector(".roles-preview > .ac-rolemark")).toBeTruthy();
+    // The mark is a word of the name's line (its own box, on the capitals' middle), not a column beside the words.
+    expect(dialog.querySelector(".roles-preview")?.className).not.toContain("ac-iconline");
+    expect(dialog.querySelector(".roles-preview > .roles-preview__mark > .ac-rolemark")).toBeTruthy();
+    expect(dialog.querySelector(".roles-preview > .roles-preview__mark + .roles-preview__name")).toBeTruthy();
     await click(within(dialog).getByRole("radio", { name: "Cor rose" }));
     await click(within(dialog).getByRole("button", { name: "Salvar" }));
     expect(last(state, "roles.update")?.slice(1)).toEqual([SUPORTE, { color: "rose" }]);

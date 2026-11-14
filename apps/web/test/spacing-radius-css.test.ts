@@ -243,3 +243,14 @@ test("where nothing drags, a cargo's row ends in its ⋯ instead of a grip and a
     ]);
   }
 });
+
+test("Nome, cor e ícone's preview: its mark a word of the name's line on the capitals' middle, never a column", async () => {
+  const roles = topLevel(await read(join(SRC, "components/roles/roles.css")));
+  expect(last(roles, ".roles-preview", "display")).toBeUndefined();
+  expect(last(roles, ".roles-preview", "line-height")).toBe("28px");
+  // `.ac-icon--inline`'s rule for a 32 box whose baseline is its bottom edge (an inline-block that clips).
+  expect(last(roles, ".roles-preview__mark", "display")).toBe("inline-block");
+  expect(last(roles, ".roles-preview__mark", "overflow")).toBe("hidden");
+  expect(last(roles, ".roles-preview__mark", "vertical-align")).toBe("calc(var(--cap-top) - var(--cap-mid) - 16px)");
+  expect(last(roles, ".roles-preview__mark > .ac-rolemark", "display")).toBe("grid");
+});
