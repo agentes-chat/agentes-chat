@@ -12,6 +12,7 @@ import {
   useRun,
 } from "@agenteschat/client";
 import {
+  APPROVAL_REASON_MAX,
   approvalCards,
   approvalRuns,
   approveAllScope,
@@ -57,7 +58,9 @@ import {
   Icon,
   type IconName,
   Kbd,
+  LimitLine,
   Locked,
+  overLimit,
   PageHeader,
   SearchInput,
   Segmented,
@@ -109,6 +112,7 @@ import { TaskStepsBlock, useCallLogo } from "@/components/ToolCalls";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useReveal } from "@/hooks/useReveal";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { TYPED_VALUES } from "@/i18n";
 import { inlineWords, Markdown } from "@/lib/markdown";
 import { useOpenParam } from "@/lib/open-param";
@@ -886,8 +890,11 @@ export function RefuseBox({ approval, agent, onCancel }: { approval: Approval; a
   const g = agentGrammar(agent?.name ?? "");
   const id = `ap-reason-${approval.id}`;
   const ref = useRef<HTMLTextAreaElement>(null);
+  const limit = useTextLimit(APPROVAL_REASON_MAX);
+  const tooLong = overLimit(reason, limit);
   useEffect(() => ref.current?.focus(), []);
   const send = () =>
+    !tooLong &&
     decide.mutate(
       { id: approval.id, decision: "refuse", reason: reason.trim() || undefined },
       { onSuccess: () => toast.show(t("approvals.refused", { name: g.name }), "info") },
@@ -902,12 +909,15 @@ export function RefuseBox({ approval, agent, onCancel }: { approval: Approval; a
           rows={2}
           value={reason}
           placeholder={t("approvals.refusePlaceholder")}
+          aria-invalid={tooLong || undefined}
+          aria-describedby={`${id}-limit`}
           onChange={(e) => setReason(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send();
             if (e.key === "Escape") onCancel();
           }}
         />
+        <LimitLine id={`${id}-limit`} value={reason} limit={limit} />
         <div className="ap-refuse__suggest">
           {SUGGESTIONS.map((s) => (
             <button key={s} type="button" onClick={() => setReason(t(`approvals.suggest.${s}`))}>
@@ -921,7 +931,14 @@ export function RefuseBox({ approval, agent, onCancel }: { approval: Approval; a
             <Button variant="ghost" size="sm" onClick={onCancel}>
               {t("approvals.back")}
             </Button>
-            <Button variant="danger" size="sm" kbd={["⌘", "↵"]} loading={decide.isPending} onClick={send}>
+            <Button
+              variant="danger"
+              size="sm"
+              kbd={["⌘", "↵"]}
+              disabled={tooLong}
+              loading={decide.isPending}
+              onClick={send}
+            >
               {t("approvals.refuseConfirm")}
             </Button>
           </span>

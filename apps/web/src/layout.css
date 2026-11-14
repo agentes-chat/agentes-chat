@@ -14516,7 +14516,8 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .settings-row.rh-guidance {
   gap: 10px;
 }
-.rh-guidance > .ac-actrow__text + * {
+.rh-guidance > .ac-actrow__text + *,
+.rh-guidance > .ac-limit {
   flex-basis: 100%;
 }
 /* Configurações › Sua conta: a line that opens something is a button, its chevron at the end. Its hover stays inside

@@ -12,6 +12,7 @@ import {
 } from "@agenteschat/client";
 import { type Level, saveLevels } from "@agenteschat/client/lib/access-levels";
 import { errorText as failureText } from "@agenteschat/client/lib/errors";
+import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
 import { addsAgentsTo, can } from "@agenteschat/client/lib/permissions";
@@ -26,7 +27,9 @@ import {
   DialogBody,
   DialogFooter,
   Icon,
+  LimitLine,
   OptionList,
+  overLimit,
   PixelSky,
   pixelBurst,
   playAgentReaction,
@@ -64,6 +67,7 @@ import { ConnectorIcon } from "@/components/ConnectorCatalog";
 import { useMediaQuery } from "@/components/NavDrawer";
 import { useOrg } from "@/components/org-context";
 import { agentCoverOptions, facePool } from "@/components/Sky";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import {
   BLANK_LOOK,
   type CardLevel,
@@ -570,7 +574,9 @@ function NewAgentDialog({
   useScrollEdges(list, [picks.length, step, steps]);
   useScrollEdges(body, [sel, lookOpen, draft, step, steps]);
 
-  const ready = name !== "" && handle !== "" && (sel !== "zero" || draft.what.trim() !== "");
+  const instructionsLimit = useTextLimit(FIELD_LIMITS.instructions);
+  const tooLong = overLimit(draft.instructions, instructionsLimit);
+  const ready = name !== "" && handle !== "" && (sel !== "zero" || draft.what.trim() !== "") && !tooLong;
   const react = () => playAgentReaction(REACTION, "up");
   const hopFrom = useRef<DOMRect | null>(null);
   // While words are typed into its bubble it looks at them.
@@ -1151,13 +1157,15 @@ function NewAgentDialog({
                             className="nac__instr"
                             rows={3}
                             value={draft.instructions}
-                            maxLength={50_000}
                             placeholder={t("newAgentCard.instructionsPlaceholder")}
                             aria-label={t("newAgent.instructions")}
+                            aria-invalid={tooLong || undefined}
+                            aria-describedby="nac-instr-limit"
                             onChange={(e) => update({ instructions: e.target.value })}
                           />
                           <Icon name="edit" size={14} className="nac__pen" />
                         </span>
+                        <LimitLine id="nac-instr-limit" value={draft.instructions} limit={instructionsLimit} />
                         <span className="nac__tips">
                           {TIPS.map((tip) => (
                             <Button key={tip} size="sm" variant="ghost" icon="plus" onClick={() => addTip(tip)}>
