@@ -1218,7 +1218,10 @@ export interface Model {
   outputUsdPerMTok: number;
   /** The workspace can use it (has a key for the provider). Expected from the backend; derived until then. */
   available?: boolean;
-  /** In a long list (OpenRouter's): `true` is a good pick, shown first. Absent: a catalog model. */
+  /**
+   * `false`: offered only to a workspace with its provider's key (OpenRouter's long list, Command Code's).
+   * `true`: a long list's good pick, greyed without a key. Absent: a catalog model.
+   */
   pick?: boolean;
   /** The size Automático uses it for on its provider's key, by default. */
   tier?: ModelTier;

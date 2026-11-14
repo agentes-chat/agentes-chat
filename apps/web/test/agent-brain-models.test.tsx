@@ -720,6 +720,37 @@ describe("Quem pensa: Automático", () => {
     ]);
     expect(groupsOf(d)).not.toContain("OpenRouter");
   });
+
+  test("Command Code's models show only with its key: choosable, with their prices", async () => {
+    const cc = { provider: "commandcode", pick: false };
+    const models = [
+      {
+        ...cc,
+        id: "commandcode:claude-sonnet-5-5",
+        label: "Claude Sonnet 5.5",
+        inputUsdPerMTok: 2,
+        outputUsdPerMTok: 10,
+      },
+      { ...cc, id: "commandcode:zai-org/GLM-5.3", label: "GLM-5.3", inputUsdPerMTok: 0.6, outputUsdPerMTok: 2.2 },
+    ];
+    await open(seedState({ extraModels: models }));
+    const without = await brainDialog();
+    await toScreen(without, "Modelo");
+    expect(groupsOf(without)).not.toContain("Command Code");
+    cleanup();
+
+    const seeded = seedState({ extraModels: models });
+    seeded.credentials.push({ ...OPENROUTER_KEY, id: "cred-cc", provider: "commandcode", label: "Command Code" });
+    await open(seeded);
+    const d = await brainDialog();
+    await toScreen(d, "Modelo");
+    const rows = brainRows(d).filter((r) => r.group === "Command Code");
+    expect(rows.map((r) => [r.title, r.off])).toEqual([
+      ["Claude Sonnet 5.5", false],
+      ["GLM-5.3", false],
+    ]);
+    expect(rows[0]?.lines.join(" ")).toContain("US$");
+  });
 });
 
 describe("Velocidade (ADR 0149)", () => {

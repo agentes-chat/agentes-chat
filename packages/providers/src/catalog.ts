@@ -119,7 +119,10 @@ export interface ModelInfo {
   efforts?: readonly string[];
   /** It can't follow an `outputSchema`: never a pick for routing, the judge or summaries. */
   structuredOutput?: false;
-  /** In a long list (OpenRouter's): `true` is a good pick, shown first. Absent: a catalog model. */
+  /**
+   * `false`: the pickers offer it only to a workspace with its provider's key (OpenRouter's long list, Command Code's).
+   * `true`: a long list's good pick, shown first, greyed without a key. Absent: a catalog model.
+   */
   pick?: boolean;
   /** No prices known (a workspace's own endpoint, ADR 0146): its calls cost 0 and count tokens only. */
   unpriced?: true;
@@ -377,6 +380,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   // Claude's and GPT's rows keep their makers' long-context prices.
   "commandcode:claude-opus-5-5": {
     provider: "commandcode",
+    pick: false,
     label: "Claude Opus 5.5",
     prices: { input: 4000, output: 20000, cacheRead: 200, cacheWrite: 5000 },
     contextWindow: 1_000_000,
@@ -384,6 +388,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:claude-sonnet-5-5": {
     provider: "commandcode",
+    pick: false,
     label: "Claude Sonnet 5.5",
     prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
     contextWindow: 1_000_000,
@@ -392,6 +397,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:claude-haiku-5-5": {
     provider: "commandcode",
+    pick: false,
     label: "Claude Haiku 5.5",
     prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
     longContext: { aboveInputTokens: 100_000, prices: { input: 500, output: 2500, cacheRead: 50, cacheWrite: 625 } },
@@ -402,6 +408,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:gpt-6.1-sol": {
     provider: "commandcode",
+    pick: false,
     label: "GPT-6.1 Sol",
     prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
     longContext: {
@@ -413,6 +420,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:gpt-6-luna": {
     provider: "commandcode",
+    pick: false,
     label: "GPT-6 Luna",
     prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
     longContext: { aboveInputTokens: 272_000, prices: { input: 200, output: 750, cacheRead: 20, cacheWrite: 250 } },
@@ -421,6 +429,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:zai-org/GLM-5.3": {
     provider: "commandcode",
+    pick: false,
     label: "GLM-5.3",
     prices: { input: 1400, output: 4400, cacheRead: 260, cacheWrite: 1400 },
     contextWindow: 1_000_000,
@@ -430,6 +439,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:moonshotai/Kimi-K3.1-Pro": {
     provider: "commandcode",
+    pick: false,
     label: "Kimi K3.1 Pro",
     prices: { input: 2000, output: 10000, cacheRead: 200, cacheWrite: 2000 },
     contextWindow: 1_048_576,
@@ -437,6 +447,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:deepseek/deepseek-v4-pro": {
     provider: "commandcode",
+    pick: false,
     label: "DeepSeek V4 Pro",
     prices: { input: 1320, output: 3960, cacheRead: 44, cacheWrite: 1320 },
     offPeak: {
@@ -448,6 +459,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:deepseek/deepseek-v4.1-flash": {
     provider: "commandcode",
+    pick: false,
     label: "DeepSeek V4.1 Flash",
     prices: { input: 300, output: 1200, cacheRead: 6, cacheWrite: 300 },
     offPeak: {
@@ -461,6 +473,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:google/gemini-3.8-flash": {
     provider: "commandcode",
+    pick: false,
     label: "Gemini 3.8 Flash",
     prices: { input: 1500, output: 7500, cacheRead: 150, cacheWrite: 1500 },
     contextWindow: 1_000_000,
@@ -468,6 +481,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:deepseek/deepseek-v4.1-flash-fast": {
     provider: "commandcode",
+    pick: false,
     label: "DeepSeek V4.1 Flash Fast",
     prices: { input: 320, output: 1160, cacheRead: 32, cacheWrite: 320 },
     offPeak: {
@@ -479,6 +493,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:deepseek/deepseek-v4.1-flash-ultrafast": {
     provider: "commandcode",
+    pick: false,
     label: "DeepSeek V4.1 Flash Ultrafast",
     prices: { input: 2400, output: 9600, cacheRead: 48, cacheWrite: 2400 },
     contextWindow: 1_048_576,
@@ -486,6 +501,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:z-ai/glm-5.3-flash": {
     provider: "commandcode",
+    pick: false,
     label: "GLM-5.3 Flash",
     prices: { input: 150, output: 500, cacheRead: 30, cacheWrite: 150 },
     contextWindow: 1_048_576,
@@ -493,6 +509,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:z-ai/glm-5.3-flashx": {
     provider: "commandcode",
+    pick: false,
     label: "GLM-5.3 FlashX",
     prices: { input: 370, output: 1250, cacheRead: 75, cacheWrite: 370 },
     contextWindow: 1_000_000,
@@ -501,6 +518,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:moonshotai/Kimi-K2.7-Code": {
     provider: "commandcode",
+    pick: false,
     label: "Kimi K2.7 Code",
     prices: { input: 950, output: 4000, cacheRead: 190, cacheWrite: 950 },
     contextWindow: 256_000,
@@ -508,6 +526,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:moonshotai/Kimi-K2.7-Code-Highspeed": {
     provider: "commandcode",
+    pick: false,
     label: "Kimi K2.7 Code HighSpeed",
     prices: { input: 1900, output: 8000, cacheRead: 380, cacheWrite: 1900 },
     contextWindow: 262_000,
@@ -515,6 +534,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:minimax/minimax-m3.1-flash": {
     provider: "commandcode",
+    pick: false,
     label: "MiniMax M3.1 Flash",
     prices: { input: 150, output: 600, cacheRead: 15, cacheWrite: 150 },
     contextWindow: 1_000_000,
@@ -523,6 +543,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:xiaomi/mimo-v2.6-pro": {
     provider: "commandcode",
+    pick: false,
     label: "MiMo V2.6 Pro",
     prices: { input: 435, output: 870, cacheRead: 4, cacheWrite: 435 },
     contextWindow: 1_048_576,
@@ -531,6 +552,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:xiaomi/mimo-v2.6-pro-ultraspeed": {
     provider: "commandcode",
+    pick: false,
     label: "MiMo V2.6 Pro UltraSpeed",
     prices: { input: 4350, output: 8700, cacheRead: 36, cacheWrite: 4350 },
     contextWindow: 1_048_576,
@@ -539,6 +561,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:xiaomi/mimo-v2.6-flash": {
     provider: "commandcode",
+    pick: false,
     label: "MiMo V2.6 Flash",
     prices: { input: 140, output: 280, cacheRead: 3, cacheWrite: 140 },
     contextWindow: 1_048_576,
@@ -547,6 +570,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:meta/muse-spark-1.3": {
     provider: "commandcode",
+    pick: false,
     label: "Muse Spark 1.3",
     prices: { input: 1250, output: 4250, cacheRead: 150, cacheWrite: 1250 },
     contextWindow: 1_048_576,
@@ -554,6 +578,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:meta/muse-spark-1.3-contributor": {
     provider: "commandcode",
+    pick: false,
     label: "Muse Spark 1.3 Contributor",
     prices: { input: 100, output: 200, cacheRead: 2, cacheWrite: 100 },
     contextWindow: 1_048_576,
@@ -561,6 +586,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:meta/muse-spark-open": {
     provider: "commandcode",
+    pick: false,
     label: "Muse Spark Open",
     prices: { input: 1250, output: 4250, cacheRead: 150, cacheWrite: 1250 },
     contextWindow: 1_048_576,
@@ -568,6 +594,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   },
   "commandcode:meta/muse-ember": {
     provider: "commandcode",
+    pick: false,
     label: "Muse Ember",
     prices: { input: 100, output: 500, cacheRead: 4, cacheWrite: 100 },
     contextWindow: 1_048_576,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { PROVIDER_IDS } from "@agenteschat/providers";
+import { MODEL_CATALOG, PROVIDER_IDS } from "@agenteschat/providers";
 import type { TFunction } from "i18next";
 import {
   apiModelName,
@@ -7,6 +7,7 @@ import {
   keyLine,
   keyLooksValid,
   keyStepHint,
+  modelChoices,
   PROVIDERS,
   providerGuess,
   providerOf,
@@ -65,6 +66,34 @@ describe("whose key is it", () => {
     expect(hint("openai")).toBeUndefined();
     // OpenRouter passes what is sent on to other providers: its own privacy settings say who may keep it.
     expect(hint("openrouter")).toBe("connectAi.key.privacy");
+  });
+});
+
+describe("Command Code", () => {
+  // Joined at run time: a literal key shape reads as a real key to the secret scan.
+  const key = (n: number) => ["user", "x".repeat(n)].join("_");
+  test("a key is user_ and at least 16 characters", () => {
+    expect(keyLooksValid("commandcode", key(16))).toBe(true);
+    expect(keyLooksValid("commandcode", key(15))).toBe(false);
+    expect(ids(key(16))).toContain("commandcode");
+  });
+
+  test("its models show only to a workspace with its key, all 24 and choosable", () => {
+    const models = Object.entries(MODEL_CATALOG).map(([id, m]) => ({
+      id,
+      label: m.label,
+      provider: m.provider,
+      inputUsdPerMTok: 0,
+      outputUsdPerMTok: 0,
+      ...(m.pick !== undefined ? { pick: m.pick } : {}),
+    }));
+    const group = (credentials: { id: string; provider: string }[]) =>
+      modelChoices(models, credentials, true).find(([g]) => g === "commandcode")?.[1];
+    expect(group([])).toBeUndefined();
+    expect(group([{ id: "k0", provider: "anthropic" }])).toBeUndefined();
+    const withKey = group([{ id: "k1", provider: "commandcode" }]);
+    expect(withKey).toHaveLength(24);
+    expect(withKey?.every((c) => c.available)).toBe(true);
   });
 });
 
