@@ -1,4 +1,3 @@
-import { planState } from "@agenteschat/ui/plan-state";
 import type { TFunction } from "i18next";
 import type {
   Agent,
@@ -193,12 +192,19 @@ export function planMeterText(
   };
 }
 
-/** The plan's state in a few words, for a line that has no room for the meter; null when it is fine. */
-export function planWord(t: TFunction, locale: string, usage: PlanUsage | null | undefined, now = new Date()) {
-  if (!usage) return null;
-  const { state, until } = planState(usage, now.getTime());
+/**
+ * The plan's state (the UI kit's `planState`) in a few words, for a line that has no room for the meter; null when it
+ * is fine.
+ */
+export function planWord(
+  t: TFunction,
+  locale: string,
+  plan: { state: "ok" | "almost" | "limited"; until: string | null } | null,
+  now = new Date(),
+) {
+  if (!plan || plan.state === "ok") return null;
   const text = planMeterText(t, locale, now);
-  return state === "limited" ? text.limited(until) : state === "almost" ? text.almost : null;
+  return plan.state === "limited" ? text.limited(plan.until) : text.almost;
 }
 
 /** A plan's limits are worth a line once a window is known or the plan refused a request: unknown is nothing. */

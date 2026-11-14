@@ -42,6 +42,7 @@ import {
 import { planWord } from "@agenteschat/client/lib/plan-usage";
 import { brainPlan } from "@agenteschat/client/lib/plans";
 import { AUTO, isAuto, keyLine } from "@agenteschat/client/lib/providers";
+import { planState } from "@agenteschat/ui/plan-state";
 import type { TFunction } from "i18next";
 
 /*
@@ -188,7 +189,8 @@ export function accountSaved(
  * its plan is on a line of its own (as the web's rows), its mark.
  */
 export const accountRow = (t: TFunction, choice: AccountChoice<MachineAccount>, agentName: string, locale: string) => {
-  const word = planWord(t, locale, choice.login.usage);
+  const usage = choice.login.usage;
+  const word = planWord(t, locale, usage ? planState(usage, Date.now()) : null);
   return {
     label: accountTitle(choice.login),
     sub: accountAbout(t, choice, agentName),
