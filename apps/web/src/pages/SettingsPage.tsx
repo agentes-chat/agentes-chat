@@ -23,6 +23,7 @@ import { computerEdition } from "@agenteschat/client/lib/computer";
 import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, keyRefusal } from "@agenteschat/client/lib/errors";
+import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { formatShortDate, formatUsd, relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey, settingsSectionTextKey } from "@agenteschat/client/lib/personal-view";
@@ -54,6 +55,7 @@ import {
   Input,
   List,
   Locked,
+  overLimit,
   PageHeader,
   ProviderLogo,
   SettingNote,
@@ -102,6 +104,7 @@ import { ZoneSelect } from "@/components/ZoneSelect";
 import { useCentreCurrent } from "@/hooks/useCentreCurrent";
 import { usePersonalView } from "@/hooks/usePersonalView";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { MembersPage } from "./MembersPage";
@@ -401,6 +404,7 @@ function GeneralSection() {
   const contextTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const savedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const contextRef = useRef<HTMLTextAreaElement>(null);
+  const contextLimit = useTextLimit(FIELD_LIMITS.workspaceContext);
   // Filled once per org: a refetch after a save must not undo what is being typed.
   useEffect(() => {
     if (!settings.data || loaded.current === org.id) return;
@@ -438,11 +442,12 @@ function GeneralSection() {
   const changeContext = (value: string) => {
     setContext(value);
     clearTimeout(contextTimer.current);
+    if (overLimit(value, contextLimit)) return;
     contextTimer.current = setTimeout(() => save({ context: value }), 800);
   };
   const flushContext = () => {
     clearTimeout(contextTimer.current);
-    if (settings.data && context !== settings.data.context) save({ context });
+    if (settings.data && context !== settings.data.context && !overLimit(context, contextLimit)) save({ context });
   };
   const addIdea = (label: string) => {
     const value = `${context.replace(/\s*$/, "")}${context.trim() ? "\n\n" : ""}${label}: `;
@@ -592,7 +597,7 @@ function GeneralSection() {
       <Textarea
         ref={contextRef}
         rows={7}
-        maxLength={20_000}
+        limit={contextLimit}
         value={context}
         onChange={(e) => changeContext(e.target.value)}
         onBlur={flushContext}
@@ -971,10 +976,14 @@ export function KeyDialog({
     setTouched(false);
     setRefused(null);
   }, [mode, cred]);
-  const valid = keyLooksValid(provider, apiKey);
+  // An endpoint's key (ADR 0146) has no published format: the server's 8-character floor is the whole check.
+  const endpointKey = cred?.provider === CUSTOM_PROVIDER;
+  const valid = endpointKey ? apiKey.trim().length >= 8 : keyLooksValid(provider, apiKey);
   const error =
     !touched || valid ? undefined : mode === "add" ? (
       <KeyMismatch provider={provider} apiKey={apiKey} onPick={setProvider} />
+    ) : endpointKey ? (
+      t("settings.keyInvalid")
     ) : (
       t(`onboarding.keyInvalid.${provider}`)
     );
@@ -1069,12 +1078,12 @@ export function KeyDialog({
                 label={t("settings.keyValue")}
                 id="key-value-set"
                 error={error}
-                example={<KeySite provider={provider} />}
+                example={endpointKey ? undefined : <KeySite provider={provider} />}
               >
                 <Input
                   type="password"
                   autoComplete="off"
-                  placeholder={providerOf(provider)?.placeholder}
+                  placeholder={endpointKey ? undefined : providerOf(provider)?.placeholder}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                 />

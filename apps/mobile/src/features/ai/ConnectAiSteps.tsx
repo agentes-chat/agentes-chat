@@ -268,7 +268,7 @@ export interface ConnectAiFlowProps {
  * already has (`existingRows`): an account used or moved in one tap, signed in once more on its plan's page, a key.
  */
 export function ConnectAiFlow(props: ConnectAiFlowProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors: c } = useTheme();
   const { orgId, org } = useAiOrg();
   const api = useApi();
@@ -296,7 +296,7 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
       agentRows.data?.find((a) => a.id === forAgent.id),
       !hasAi(forAgent.id),
     )
-      ? existingRows(t, gates.view, credentials.data ?? [], forAgent.name)
+      ? existingRows(t, gates.view, credentials.data ?? [], forAgent.name, i18n.language)
       : [];
   const shownGate = gates.gateOf(view.page === "plan" ? view.choice : "claude");
   const shown = shownGate.state;
@@ -346,6 +346,8 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
     const brain = gates.view.brain;
     if (row.kind === "key") {
       const k = row.key;
+      // The workspace's model on that key: the agent's model where the key runs it, else one the key does (an endpoint's
+      // own for an endpoint key, Automático for a catalog one, which follows it).
       // Tried first: a key kept earlier may have run out of credit, and "now thinks with it" has to be true. An
       // endpoint's key has no call of its own to try: its models' last tests say whether it thinks (`keyThinks`).
       const agentRow = agentRows.data?.find((a) => a.id === forAgent.id);

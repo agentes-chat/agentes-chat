@@ -105,6 +105,26 @@ export const waitSinceIn = (r: string) =>
     end,
     ${r}.updated_at)`);
 
+/**
+ * Whether a run waits on `viewerId`, over the run alias `r`: an approval they may decide (`decidableBySql`), or the
+ * question or secret asked of them. An agent's line and the task manager's rows read the same rule.
+ */
+export const waitsOnViewerIn = (r: string, viewerId: string) => {
+  const run = sql.raw(r);
+  const viewer = sql`${viewerId}::text`;
+  return sql`case ${run}.status
+    when 'waiting_approval' then exists (select 1 from ${approvals}
+      where ${approvals.orgId} = ${run}.org_id and ${approvals.runId} = ${run}.id and ${approvals.status} = 'pending'
+        and ${decidableBySql(viewerId)})
+    when 'waiting_input' then exists (select 1 from agent_questions q
+        where q.org_id = ${run}.org_id and q.run_id = ${run}.id and q.status = 'open' and q.expires_at > now()
+          and q.requested_for_user_id = ${viewer})
+      or exists (select 1 from secret_requests s
+        where s.org_id = ${run}.org_id and s.run_id = ${run}.id and s.status = 'pending'
+          and s.requested_for_user_id = ${viewer})
+    else false end`;
+};
+
 type Row = {
   run_id: string;
   agent_id: string;
@@ -189,17 +209,7 @@ export async function agentWorkFor(
         c.id as channel_id, c.kind as channel_kind, c.name as channel_name, a.thread_root_id, a.trigger_message_id,
         a.reply_message_id,
         (c.archived_at is null and not ${agentsOnlyIn("c")} and ${channelReaderSql(sql`c.id`, viewer)}) as readable,
-        case r.status
-          when 'waiting_approval' then exists (select 1 from ${approvals}
-            where ${approvals.orgId} = r.org_id and ${approvals.runId} = r.id and ${approvals.status} = 'pending'
-              and ${decidableBySql(viewerId)})
-          when 'waiting_input' then exists (select 1 from agent_questions q
-              where q.org_id = r.org_id and q.run_id = r.id and q.status = 'open' and q.expires_at > now()
-                and q.requested_for_user_id = ${viewer})
-            or exists (select 1 from secret_requests s
-              where s.org_id = r.org_id and s.run_id = r.id and s.status = 'pending'
-                and s.requested_for_user_id = ${viewer})
-          else false end as you,
+        ${waitsOnViewerIn("r", viewerId)} as you,
         g.builtin = 'right_hand' as right_hand
       from anchors t
       join agent_runs r on r.id = t.run_id

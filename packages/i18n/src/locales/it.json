@@ -24,6 +24,7 @@
     "retry": "Riprova",
     "soon": "In arrivo",
     "unknownError": "Qualcosa è andato storto. Riprova.",
+    "overLimit": "Il testo ha {{length}} caratteri e il limite è {{max}}. Accorcialo.",
     "ourSide": "Qualcosa è andato storto da parte nostra. Riprova tra poco.",
     "signedOut": "La sessione è scaduta. Accedi di nuovo per continuare.",
     "newVersion": "È disponibile una nuova versione di agentes.chat.",
@@ -3988,7 +3989,10 @@
     "yourApproval": "la tua approvazione",
     "yourAnswer": "la tua risposta",
     "later": "follow-up {{when}}",
-    "laterShort": "follow-up"
+    "laterShort": "follow-up",
+    "plan": "aspetta il piano",
+    "budget": "aspetta il budget",
+    "stopping": "arresto in corso…"
   },
   "followUps": {
     "when": {
@@ -5450,6 +5454,7 @@
         "effort": "Impegno",
         "efforts": {
           "auto": "Automatico",
+          "none": "Predefinito del modello",
           "low": "Basso",
           "medium": "Medio",
           "high": "Alto",
@@ -5466,6 +5471,8 @@
           "auto": "Il modello Automatico sceglie l'impegno di ogni attività. Scegli un modello per fissare l'impegno.",
           "low": "Risponde in fretta. Adatto alle domande semplici.",
           "medium": "Il predefinito. Ragiona abbastanza quasi sempre.",
+          "mediumKey": "Ragiona abbastanza quasi sempre.",
+          "none": "Il modello ragiona quanto fa di solito. Scegli un livello per fissare l'impegno.",
           "high": "Ragiona di più sulle attività difficili. Più lento e costa di più.",
           "max": "Ragiona il più possibile. Molto più lento e più caro."
         },
@@ -5493,6 +5500,7 @@
           "defaults": "Ripristina i predefiniti",
           "contents": {
             "model": "Finestra di contesto",
+            "modelFixed": "Impegno e finestra di contesto",
             "auto": "Finestra di contesto e a chi risponde",
             "fixed": "Impegno, finestra di contesto e a chi risponde",
             "autoSpeed": "Velocità, finestra di contesto e a chi risponde",
@@ -5611,7 +5619,8 @@
             "not_signed_in_after_login": "{{brand}} ha accettato l'accesso, ma questo account non si può usare qui, forse il piano non lo include. Prova un altro account o una chiave API.",
             "status_unknown": "{{brand}} non ha indicato se l'account ha effettuato l'accesso. Riprova.",
             "no_token": "{{brand}} ha finito senza mostrare il token dell'account. Riprova.",
-            "not_kept": "L'account ha effettuato l'accesso, ma {{computer}} non è riuscito a conservarlo. Riprova."
+            "not_kept": "L'account ha effettuato l'accesso, ma {{computer}} non è riuscito a conservarlo. Riprova.",
+            "sandbox": "{{brand}} ha effettuato l'accesso, ma la sua sandbox non si avvia su {{computer}}, quindi nessun agente potrebbe usarlo. Usa invece una chiave API."
           },
           "geminiNotShared": "Gemini ha effettuato l'accesso, ma su {{computer}} questo accesso non si può condividere con tutti gli agenti. Usa invece una chiave API di Gemini.",
           "duplicate": {
@@ -5647,6 +5656,8 @@
           "limitBack": "{{account}} torna {{when}}",
           "limitSoon": "{{account}} torna quando il piano si rinnova",
           "limitHelp": "Nel frattempo {{name}} può pensare con un altro account già collegato.",
+          "fullWait": "Con questo account {{name}} aspetta che il piano si rinnovi.",
+          "seeUsage": "Vedi utilizzo",
           "wait": "Aspetta",
           "modelTitle": "Modello di {{name}}",
           "moreTitle": "Altre opzioni per {{name}}",
@@ -6052,6 +6063,7 @@
         "cli_failed": "Il programma {{brain}} si è fermato con un errore: {{detail}}",
         "cli_stopped": "Il programma {{brain}} si è fermato con un errore.",
         "cli_closed": "Il programma {{brain}} si è chiuso all'improvviso.",
+        "cli_sandbox": "Il programma {{brain}} non riesce ad avviare la sua sandbox su questo computer. Scegli un'altra IA nelle impostazioni dell'agente.",
         "account_missing": "L'account scelto per questo agente non è più sul suo computer. Scegline un altro nelle impostazioni dell'agente o aggiungilo di nuovo.",
         "windows_sandbox": "Questo computer Windows non riesce a isolare i comandi di Codex: serve Windows 11 24H2 o più recente.",
         "our_error": "Qualcosa è andato storto da parte nostra e l'attività si è fermata. Richiedilo tra poco.",
@@ -10105,7 +10117,11 @@
     "forAgent_many": "Attivale per {{agent}}",
     "forAgent_other": "Attivale per {{agent}}",
     "installedMany": "{{count}} skill installate.",
-    "zipHelp": "Un .zip con SKILL.md nella cartella principale.",
+    "zipHelp": "Un .zip della cartella della skill, fino a {{max}} MB.",
+    "zipAbout": "SKILL.md sta in cima al .zip, o nella sua unica cartella. Una skill conserva fino a {{text}} MB di testo e {{assets}} MB di immagini e altri file.",
+    "zipTooLarge": "{{name}} pesa {{size}}. Lo .zip di una skill può arrivare a {{max}} MB.",
+    "zipUseLink": "Usa un link GitHub",
+    "zipSending": "Caricamento del file… {{percent}}",
     "zipPick": "Scegli .zip",
     "zipNone": "Nessun file scelto",
     "zipMissing": "Scegli un file .zip.",
@@ -12093,7 +12109,8 @@
     "closed": "{{title}} · chiuso",
     "reopen": "Mostra di nuovo",
     "answeredBy": "{{name}} ha scelto",
-    "failed": "La tua scelta non è stata inviata. Riprova."
+    "failed": "La tua scelta non è stata inviata. Riprova.",
+    "tooLongFix": "Accorcia la risposta."
   },
   "drive": {
     "title": "Drive",
@@ -13963,6 +13980,8 @@
     }
   },
   "errors": {
+    "tooLarge": "È più grande di quanto il server accetti.",
+    "tooLargeMax": "È più grande di quanto il server accetti: fino a {{max}} MB.",
     "passwordLink": {
       "email": "Questo server invia email: la persona chiede il proprio link in Password dimenticata.",
       "serverOwner": "Chi ha installato questo server accede dal computer dove gira, senza link.",
@@ -14102,6 +14121,8 @@
     },
     "join": {
       "linkClosed": "Questo link non funziona più. Chiedine uno nuovo a chi te l'ha inviato.",
+      "linkFull": "Questo link ha già accolto tutte le persone previste. Chiedine uno nuovo a chi te l'ha inviato.",
+      "linkFullApproval": "Il link di questa richiesta ha già accolto tutte le persone previste. Per approvarla, aumenta il massimo del link.",
       "full": "Questo spazio di lavoro ha molte richieste in attesa. Riprova più tardi, oppure chiedi a qualcuno lì di invitarti.",
       "rateLimited": "Troppe richieste da qui. Riprova tra un'ora.",
       "linkBusy": "Molte persone hanno fatto richiesta con questo link nell'ultima ora. Riprova più tardi.",
@@ -15061,6 +15082,20 @@
       "trustText": "Tocca Autorizza sull'iPhone e inserisci il suo codice.",
       "devModeDone": "Attiva",
       "devModeText": "Attivala e tocca Riavvia. Dopo il riavvio, tocca Attiva e inserisci il codice.",
+      "devModeRestarting": "L'iPhone si sta riavviando. Quando torna, sbloccalo e tocca Attiva.",
+      "devModeBack": "L'iPhone è tornato. Sbloccalo, tocca Attiva e inserisci il codice.",
+      "devModeCheck": "L'ho attivata, controlla di nuovo",
+      "devModeStillOff": "L'iPhone dice ancora che la modalità sviluppatore è disattivata.",
+      "devModeMissing": {
+        "title": "Non vedi l'opzione?",
+        "hidden": "L'iPhone nasconde l'opzione finché Xcode non chiede di mostrarla.",
+        "hiddenOpen": "L'iPhone nasconde l'opzione finché Xcode non chiede di mostrarla. Apri Xcode su {{mac}} con l'iPhone collegato.",
+        "openXcode": "Apri Xcode",
+        "opened": "Xcode si è aperto su {{mac}}. Guarda di nuovo nelle Impostazioni dell'iPhone, poi chiudi Xcode.",
+        "unlock": "L'hai attivata e l'iPhone si è riavviato? Sbloccalo. L'avviso con Attiva compare solo dopo.",
+        "check": "Controlla di nuovo",
+        "outdated": "L'app agentes.chat su {{mac}} non è aggiornata. Aggiorna l'app, oppure esegui questo nel Terminale se l'hai installata da lì."
+      },
       "uiAutomationText": "In Impostazioni › Sviluppatore, dopo il riavvio.",
       "helperText": "Creata e rinnovata dal Mac ogni 7 giorni. Basta un Apple Account gratuito in Xcode.",
       "helperUntrustedText": "Tocca il nome dello sviluppatore, poi Autorizza.",
@@ -15077,7 +15112,6 @@
         "account": "Accesso già fatto? In Xcode crea un'app iOS qualsiasi, scegli il tuo team in Signing & Capabilities ed eseguila una volta sull'iPhone.",
         "connected": "{{mac}} non vede ancora un iPhone. Usa un cavo che trasmette dati, non solo ricarica, sblocca l'iPhone e tocca Autorizza se lo chiede.",
         "trust": "Nessuna richiesta Autorizza? Scollega l'iPhone, sbloccalo e ricollegalo, poi tocca Autorizza e inserisci il suo codice.",
-        "developerMode": "La Modalità sviluppatore si attiva solo dopo il riavvio dell'iPhone. Tocca Riavvia, poi Attiva quando si riaccende. Nessun interruttore? Scollega l'iPhone e ricollegalo.",
         "uiAutomation": "L'interruttore compare quando la Modalità sviluppatore è attiva e l'iPhone si è riavviato. Tienilo sbloccato mentre cerchi.",
         "helper": "{{mac}} crea l'app di test e la avvia sull'iPhone, il che richiede qualche minuto la prima volta. Tieni l'iPhone sbloccato e collegato."
       },
@@ -16264,6 +16298,13 @@
     "logins_other": "{{count}} accessi",
     "noWindows": "Il limite compare dopo che questo account viene usato di nuovo.",
     "unused": "Nessun agente usa questo account.",
+    "models": {
+      "exhausted": "Quota esaurita · si azzera {{when}}",
+      "exhaustedUnknown": "Quota esaurita",
+      "off": "Disattivato",
+      "region": "Serve la regione Global",
+      "inactive": "Nessun abbonamento attivo"
+    },
     "usesNow": "lo usa ora",
     "monthTokens": "{{tokens}} token questo mese",
     "tokens": "{{tokens}} token",
@@ -16324,6 +16365,7 @@
   },
   "format": {
     "list": "{{names, list}}",
+    "andMore": "e altri {{count}}",
     "usd": "{{value}} US$",
     "tokensMillions": "{{value}} Mln",
     "tokensThousands": "{{value}}k",
@@ -18363,6 +18405,25 @@
       "message": "Scrivi a {{name}}",
       "chooseOnWeb": "Sceglilo su agentes.chat, in Impostazioni › Dispositivi."
     }
+  },
+  "agora": {
+    "label": "Ora",
+    "working_one": "{{count}} agente al lavoro",
+    "working_many": "{{count}} agenti al lavoro",
+    "working_other": "{{count}} agenti al lavoro",
+    "waiting_one": "{{count}} cosa ti aspetta",
+    "waiting_many": "{{count}} cose ti aspettano",
+    "waiting_other": "{{count}} cose ti aspettano",
+    "sections": {
+      "you": "Ti aspetta",
+      "working": "Al lavoro",
+      "waiting": "In attesa"
+    },
+    "allWaiting_one": "{{count}} cosa ti aspetta",
+    "allWaiting_many": "Le {{count}} cose che ti aspettano",
+    "allWaiting_other": "Le {{count}} cose che ti aspettano",
+    "actions": "Altre azioni",
+    "openManager": "Apri Gestione attività"
   },
   "taskManager": {
     "title": "Gestione attività",

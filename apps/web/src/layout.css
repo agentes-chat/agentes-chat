@@ -454,6 +454,10 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   font-weight: 600;
   color: var(--ink2);
 }
+/* What the question is about, after the names: quieter than them, on hover too (the row's ink turns --ink2). */
+.consult-pair__subject {
+  color: var(--muted);
+}
 .consult-pair__swap,
 .consult-pair__chev {
   flex: none;
@@ -6274,15 +6278,16 @@ html:not([data-pointer]) .sidebar__jump:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
-/* ⌘K and, beside it, the button that shrinks the sidebar to its icon rail (desktop). */
+/* ⌘K and, beside it, Agora and the button that shrinks the sidebar to its icon rail (desktop), their plates 8 apart. */
 .sidebar__jump-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   margin-top: -8px;
 }
-/* The same 32px box as the field beside it, a bare icon until hovered. */
-.sidebar__collapse.ac-btn {
+/* The same 32px box as the field beside it, a bare icon until hovered (Agora's too, beside the bell in a personal
+   workspace). */
+:is(.sidebar__collapse, .sidebar__agora).ac-btn {
   flex: none;
   width: var(--control-h-sm);
   height: var(--control-h-sm);
@@ -6291,7 +6296,7 @@ html:not([data-pointer]) .sidebar__jump:focus-visible {
   box-shadow: none;
   color: var(--muted);
 }
-.sidebar__collapse.ac-btn:hover {
+:is(.sidebar__collapse, .sidebar__agora).ac-btn:hover {
   background: var(--plate);
   box-shadow: none;
   color: var(--ink);
@@ -7543,9 +7548,9 @@ html:not([data-pointer]) .run-continue:focus-visible {
 .sidebar[data-rail="true"] .sidebar__jump {
   flex: none;
 }
-/* ⌘K and its toggle are the rail's 40px tiles, like its items. */
+/* ⌘K, Agora and the toggle are the rail's 40px tiles, like its items. */
 .sidebar[data-rail="true"] .sidebar__jump,
-.sidebar[data-rail="true"] .sidebar__collapse.ac-btn {
+.sidebar[data-rail="true"] :is(.sidebar__collapse, .sidebar__agora).ac-btn {
   height: var(--control-h-md);
   width: var(--control-h-md);
   border-radius: var(--control-r-md);
@@ -13285,7 +13290,7 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
 .sidebar[data-rail="true"] .sidebar__org--person {
   gap: 2px;
 }
-.sidebar[data-rail="true"] .sidebar__head-collapse.ac-btn {
+.sidebar[data-rail="true"] :is(.sidebar__head-collapse, .sidebar__agora).ac-btn {
   width: var(--control-h-md);
   height: var(--control-h-md);
   border-radius: var(--control-r-md);
@@ -13433,11 +13438,11 @@ html:not([data-pointer]) .sidebar__bell:focus-visible {
   .sidebar__block[data-section="tools"] > .sidebar__grip {
     height: 36px;
   }
-  .sidebar:not([data-rail="true"]) :is(.sidebar__jump, .sidebar__collapse.ac-btn) {
+  .sidebar:not([data-rail="true"]) :is(.sidebar__jump, .sidebar__collapse.ac-btn, .sidebar__agora.ac-btn) {
     height: var(--control-h-md);
     border-radius: var(--control-r-md);
   }
-  .sidebar:not([data-rail="true"]) .sidebar__collapse.ac-btn {
+  .sidebar:not([data-rail="true"]) :is(.sidebar__collapse, .sidebar__agora).ac-btn {
     width: var(--control-h-md);
   }
   .sidebar:not([data-rail="true"]) :is(.sidebar__head-collapse.ac-btn, .sidebar__org--person .sidebar__bell) {
@@ -14463,7 +14468,8 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .settings-row.rh-guidance {
   gap: 10px;
 }
-.rh-guidance > .ac-actrow__text + * {
+.rh-guidance > .ac-actrow__text + *,
+.rh-guidance > .ac-limit {
   flex-basis: 100%;
 }
 /* Configurações › Sua conta: a line that opens something is a button, its chevron at the end. Its hover stays inside

@@ -1,6 +1,15 @@
 import { and, type Database, eq, inArray, rowsOf, schema, sql } from "@agenteschat/db";
 import { planOf as codingPlan, PLAN_IDS, planModel } from "@agenteschat/providers/plans";
-import { agentsOnlyIn, anchorsSql } from "./agent-work";
+import { CONSULT_SUBJECT_CHARS, consultSubject } from "@agenteschat/ui/agent-talk";
+import {
+  type AgentWorkState,
+  agentsOnlyIn,
+  anchorsSql,
+  outageIn,
+  waitSinceIn,
+  waitsOnViewerIn,
+  workStateOf,
+} from "./agent-work";
 import { runAuthorityById } from "./authority";
 import type { ModelScope } from "./brains/select";
 import { TtlCache } from "./cache";
@@ -128,6 +137,11 @@ export interface ManagedTask {
   requester: { userId: string; name: string } | null;
   /** Another agent asked it, in their private conversation. */
   delegation: TaskDelegation | null;
+  /**
+   * What the latest agent to ask it asked, one line (`consultSubject`): what its row is called by. Null unless the caller
+   * reads where it was handed off (`delegation.from`): the question's words come from a conversation they may not read.
+   */
+  subject: string | null;
   /** What it asked of other agents and is still on or not started, all the way down: they stop with it in one action. */
   helpers: number;
   /** The brain it thinks with (`model`, `claude_code`, `codex`, `cursor`); null before its first turn. */
@@ -161,6 +175,18 @@ export interface ManagedTask {
   } | null;
   /** Why a `waiting_input` run waits on no person's answer yet; null for any other run. */
   wait: TaskWait | null;
+  /**
+   * How it stands for the caller, as an agent's line says it (`workStateOf`, ADR 0084 addendum): waiting on them, at
+   * work, a wait on someone or something else, or in line, and since when by the lists' clock (work another agent
+   * handed it from the hand-off, a wait from its own start, a card's when it waits on a person). Null: it waits on its
+   * plan or budget (`held` says which).
+   */
+  work: {
+    state: AgentWorkState;
+    since: string;
+    /** The card it waits on, when it waits on a person (the oldest): its message, where its row opens. */
+    card: string | null;
+  } | null;
 }
 
 /** A computer with work on it or a line for its room: the task manager's computers row and "Ver fila". */
@@ -239,6 +265,7 @@ type Row = {
   requester_id: string | null;
   requester_name: string | null;
   asker_agent_id: string | null;
+  question: string | null;
   routine_id: string | null;
   routine_name: string | null;
   work_title: string | null;
@@ -251,6 +278,13 @@ type Row = {
   wait_pause: { used?: number; window?: string } | string | null;
   routine_creator: string | null;
   waiting_machine_id: string | null;
+  /** Still on only: it waits on the caller, on its AI provider's outage, and since when it waits. */
+  you: boolean | string;
+  outage: boolean | string;
+  wait_since: string | Date | null;
+  card_id: string | null;
+  /** Still on only: when another agent handed it this work (`HANDED_AT`). */
+  handed_at: string | Date | null;
 };
 
 /** The fields of `waitingForBrain` (the executor's `Transcript`) the task manager says. */
@@ -280,6 +314,24 @@ const RUN_COLUMNS = {
   ownerUserId: sql`a.owner_user_id`,
 };
 
+/** The oldest card a run waiting on a person waits on (an approval, a question, a secret): its message. */
+const CARD_OF_RUN = sql`(case when r.status in ('waiting_approval', 'waiting_input') then (
+    select x.message_id from (
+      select pa.message_id, pa.created_at from approvals pa
+        where pa.org_id = r.org_id and pa.run_id = r.id and pa.status = 'pending'
+      union all select q.message_id, q.created_at from agent_questions q
+        where q.org_id = r.org_id and q.run_id = r.id and q.status = 'open'
+      union all select s.message_id, s.created_at from secret_requests s
+        where s.org_id = r.org_id and s.run_id = r.id and s.status = 'pending'
+    ) x where x.message_id is not null order by x.created_at limit 1) end)`;
+
+/**
+ * When another agent handed a run its work: the latest ask it answers, for a run of two agents' DM (not a routine's
+ * room, not a background run), as `anchorsSql`'s `handed_at`. An agent's line counts that work from there.
+ */
+const HANDED_AT = sql`(case when not r.background and ${agentsOnlyIn("c")} and c.dm_key not like 'routine|%' then (
+    select max(ac.created_at) from ${agentConsultations} ac where ac.org_id = r.org_id and ac.target_run_id = r.id) end)`;
+
 /** The runs the caller sees, by status (`active`: still on; else ended since `since`). */
 async function visibleRuns(
   db: Database,
@@ -304,13 +356,19 @@ async function visibleRuns(
         array_to_json(r.pending_message_ids) as pending, r.background, r.brain,
         a.owner_user_id, a.machine_id, mc.name as machine_name,
         trig.author_user_id as requester_id, ru.name as requester_name, trig.author_agent_id as asker_agent_id,
+        ${which.active ? sql`consult.question` : sql`null`} as question,
         rt.id as routine_id, rt.name as routine_name, w.title as work_title, w.plan as work_plan,
         last.data as last_data, last.created_at as last_at,
         (select count(*) from ${agentRunSteps} s where s.run_id = r.id and s.kind = 'tool_call') as steps,
         su.name as stopper_name,
         coalesce(r.transcript->'waitingForBrain', case when r.status = 'running' and r.waiting_machine_id is not null
           then '{"code":"busy"}'::jsonb end) as wait, pause.data as wait_pause, r.waiting_machine_id,
-        rt.created_by_user_id as routine_creator
+        rt.created_by_user_id as routine_creator,
+        ${which.active ? waitsOnViewerIn("r", userId) : sql`false`} as you,
+        ${which.active ? outageIn("r") : sql`false`} as outage,
+        ${which.active ? waitSinceIn("r") : sql`null`} as wait_since,
+        ${which.active ? CARD_OF_RUN : sql`null`} as card_id,
+        ${which.active ? HANDED_AT : sql`null`} as handed_at
       from ${agentRuns} r
       join ${channels} c on c.id = r.channel_id and c.org_id = ${orgId}::uuid
         and c.archived_at is null and c.kind in ('channel', 'dm')
@@ -323,6 +381,15 @@ async function visibleRuns(
         where m.org_id = ${orgId}::uuid and m.id = r.trigger_message_id
         limit 1
       ) trig on true
+      ${
+        which.active
+          ? sql`left join lateral (
+        select left(ac.question, ${CONSULT_SUBJECT_CHARS * 8}::int) as question from ${agentConsultations} ac
+        where ac.org_id = ${orgId}::uuid and ac.target_run_id = r.id
+        order by ac.created_at desc limit 1
+      ) consult on true`
+          : sql``
+      }
       left join ${users} ru on ru.id = trig.author_user_id
       left join ${users} su on r.error like 'canceled_by:%' and su.id = substring(r.error from 13)
       left join ${routineRuns} rr on rr.org_id = ${orgId}::uuid and rr.agent_run_id = r.id
@@ -491,6 +558,20 @@ function heldOf(r: Row): ManagedTask["held"] {
   return "computer_offline";
 }
 
+/** How a run still on stands for the caller, by an agent's line's rule and clock (`workStateOf`, `waitSinceIn`). */
+function workOf(r: Row): ManagedTask["work"] {
+  const state = workStateOf({
+    status: r.status,
+    onMachine: r.waiting_machine_id !== null,
+    outage: truthy(r.outage),
+    waitCode: parsed(r.wait)?.code ?? null,
+    you: truthy(r.you),
+  });
+  if (!state) return null;
+  const since = state === "working" ? (r.handed_at ?? r.started_at ?? r.created_at) : (r.wait_since ?? r.created_at);
+  return { state, since: iso(since) as string, card: r.card_id };
+}
+
 /** The model of a wait on a model's own limit, by the name its plan gives it. */
 export function waitModel(wait: Pick<StoredWait, "scope" | "plan" | "model">) {
   if (!wait.scope) return null;
@@ -587,6 +668,7 @@ export async function taskManager(
     plan: planOf(r.work_plan),
     requester: r.requester_id ? { userId: r.requester_id, name: r.requester_name ?? "" } : null,
     delegation: delegations.get(r.id) ?? null,
+    subject: delegations.get(r.id)?.from ? consultSubject(r.question) || null : null,
     helpers: [...runsBelow(edges, r.id)].filter((id) => on.has(id)).length,
     brain: r.brain,
     machine: r.machine_id ? { id: r.machine_id, name: r.machine_name ?? "" } : null,
@@ -597,6 +679,7 @@ export async function taskManager(
     held: heldOf(r),
     line: null,
     wait: waitOf(r),
+    work: workOf(r),
   }));
   await Promise.all(
     active.map(async (r, i) => {

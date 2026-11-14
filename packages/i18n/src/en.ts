@@ -31,6 +31,8 @@ export const en = {
     /** A mark on something offered but not out yet (an app for a system, a store): it can't be pressed. */
     soon: "Soon",
     unknownError: "Something went wrong. Try again.",
+    /** Under a field whose text is past its limit: its size, the limit, then the way out. */
+    overLimit: "The text has {{length}} characters and the limit is {{max}}. Shorten it.",
     /** A server error (a 5xx of its own): nothing the person did, and nothing they can fix. */
     ourSide: "Something went wrong on our side. Try again in a little while.",
     signedOut: "Your session ended. Sign in again to continue.",
@@ -4168,6 +4170,10 @@ export const en = {
     /** A return it set comes then (`followUps.when`): "follow-up at 12:32 AM". */
     later: "follow-up {{when}}",
     laterShort: "follow-up",
+    /** A run that waits on its plan's or its budget's limit (Agora's rows; the lists leave it to out of office). */
+    plan: "waiting for its plan",
+    budget: "waiting for its budget",
+    stopping: "stopping…",
   },
   /** An agent comes back to a conversation by itself (its `follow_up`, ADR 0037): a follow-up. */
   followUps: {
@@ -5636,12 +5642,23 @@ export const en = {
         fallbackHint:
           "It answers through the API and counts against {{name}}'s budget. Otherwise {{name}} tells whoever asked and waits for the computer to come back.",
         effort: "Effort",
-        efforts: { auto: "Automatic", low: "Low", medium: "Medium", high: "High", max: "Maximum" },
+        /** `none`: an API key with no effort chosen, which thinks as its provider does by default. */
+        efforts: {
+          auto: "Automatic",
+          none: "Model default",
+          low: "Low",
+          medium: "Medium",
+          high: "High",
+          max: "Maximum",
+        },
         effortsLower: { auto: "automatic", low: "low", medium: "medium", high: "high", max: "maximum" },
         effortText: {
           auto: "The Automatic model picks each task's effort. Pick a model to set the effort yourself.",
           low: "Answers fast. Good for simple questions.",
           medium: "The default. Thinks enough most of the time.",
+          /** On an API key, where medium is not the default. */
+          mediumKey: "Thinks enough most of the time.",
+          none: "The model thinks as much as it usually does. Pick a level to set the effort.",
           high: "Thinks more on hard tasks. Slower and costs more.",
           max: "Thinks as much as possible. Much slower and pricier.",
         },
@@ -5667,6 +5684,8 @@ export const en = {
           defaults: "Back to defaults",
           contents: {
             model: "Context window",
+            /** An API key with a fixed model: its effort too. */
+            modelFixed: "Effort and context window",
             auto: "Context window and who it answers",
             fixed: "Effort, context window and who it answers",
             autoSpeed: "Speed, context window and who it answers",
@@ -5788,6 +5807,12 @@ export const en = {
             status_unknown: "{{brand}} didn't say whether the account signed in. Try again.",
             no_token: "{{brand}} finished without showing the account's token. Try again.",
             not_kept: "The account signed in, but {{computer}} couldn't keep the sign-in. Try again.",
+            /**
+             * Grok Build signed in, but its sandbox doesn't start on the computer for an agent (runner `sandbox`). No
+             * "update the computer": on Cloud nobody in the workspace can.
+             */
+            sandbox:
+              "{{brand}} signed in, but its sandbox can't start on {{computer}}, so no agent could use it. Use an API key instead.",
           },
           /** Gemini signed in for all agents, but a copy of it doesn't work for each one: signing in again won't help. */
           geminiNotShared:
@@ -5838,6 +5863,10 @@ export const en = {
           /** When the time it's back isn't known. */
           limitSoon: "{{account}} is back when the plan renews",
           limitHelp: "Meanwhile {{name}} can think with another account that's already connected.",
+          /** Under the list, with an account at its limit picked: the row above says until when. */
+          fullWait: "On this account {{name}} waits until the plan renews.",
+          /** A link to the usage page, after `fullWait`. */
+          seeUsage: "See usage",
           wait: "Wait",
           modelTitle: "{{name}}'s model",
           moreTitle: "More options for {{name}}",
@@ -6234,6 +6263,12 @@ export const en = {
         cli_stopped: "The {{brain}} program stopped with an error.",
         /** The agent's CLI ended without its answer and without a word (it crashed or was killed). */
         cli_closed: "The {{brain}} program closed unexpectedly.",
+        /**
+         * The agent's CLI couldn't start its sandbox on its computer (bubblewrap refused), before the model was asked.
+         * No "update the computer": on Cloud nobody in the workspace can.
+         */
+        cli_sandbox:
+          "The {{brain}} program can't start its sandbox on this computer. Choose another AI in the agent's settings.",
         account_missing:
           "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */
@@ -10013,7 +10048,16 @@ export const en = {
     forAgent_one: "Turn it on for {{agent}}",
     forAgent_other: "Turn them on for {{agent}}",
     installedMany: "{{count}} skills installed.",
-    zipHelp: "A .zip with SKILL.md at its root.",
+    zipHelp: "A .zip of the skill's folder, up to {{max}} MB.",
+    /** Behind the ⓘ beside `zipHelp`. */
+    zipAbout:
+      "SKILL.md goes at the top of the .zip, or in its one folder. A skill keeps up to {{text}} MB of text and {{assets}} MB of images and other files.",
+    /** A .zip refused the moment it's picked, before anything is sent. */
+    zipTooLarge: "{{name}} is {{size}}. A skill's .zip can be up to {{max}} MB.",
+    /** The way out of `zipTooLarge`: the GitHub tab, which reads only the skill's folder. */
+    zipUseLink: "Use a GitHub link",
+    /** While the .zip goes to the server: how much of it has gone. */
+    zipSending: "Uploading the file… {{percent}}",
     zipPick: "Choose .zip",
     zipNone: "No file chosen",
     zipMissing: "Choose a .zip file.",
@@ -11933,6 +11977,8 @@ export const en = {
     reopen: "Show again",
     answeredBy: "{{name}} picked",
     failed: "Your pick didn't go through. Try again.",
+    /** After the message's size and limit, when a written answer makes the reply too long. */
+    tooLongFix: "Shorten the answer.",
   },
   drive: {
     title: "Drive",
@@ -13555,6 +13601,10 @@ export const en = {
     },
   },
   errors: {
+    /** A request the server, or a proxy in front of it, refused for its size. */
+    tooLarge: "This is bigger than the server takes.",
+    /** The same, from a screen that knows the most it may send. */
+    tooLargeMax: "This is bigger than the server takes: up to {{max}} MB.",
     /** A new-password link an owner can't make (ADR 0158). */
     passwordLink: {
       email: "This server sends email: they ask for their own link in Forgot password.",
@@ -13708,6 +13758,9 @@ export const en = {
     },
     join: {
       linkClosed: "This link no longer works. Ask whoever sent it for a new one.",
+      linkFull: "This link already took everyone it could. Ask whoever sent it for a new one.",
+      /** Approving a request whose link took all its people (ADR 0184): the way out is the link's maximum. */
+      linkFullApproval: "This request's link already took everyone it could. To approve it, raise the link's maximum.",
       full: "This workspace has many requests waiting. Try again later, or ask someone there to invite you.",
       rateLimited: "Too many requests from here. Try again in an hour.",
       linkBusy: "Many people asked through this link in the last hour. Try again later.",
@@ -14722,6 +14775,28 @@ export const en = {
       trustText: "Tap Trust on the iPhone and enter its passcode.",
       devModeDone: "On",
       devModeText: "Turn it on and tap Restart. After the restart, tap Turn On and enter your passcode.",
+      /** The iPhone left the Mac's list while on Developer Mode: it restarts to turn it on. */
+      devModeRestarting: "The iPhone is restarting. When it's back, unlock it and tap Turn On.",
+      /** It came back from the restart and Developer Mode is still off: iOS asks only once it's unlocked. */
+      devModeBack: "The iPhone is back. Unlock it, tap Turn On and enter your passcode.",
+      /** A button: the Mac looks at the iPhone again now. */
+      devModeCheck: "I turned it on, check again",
+      devModeStillOff: "The iPhone still says Developer Mode is off.",
+      /** Opens under Developer Mode: each reason the switch may be missing, with its one way out. */
+      devModeMissing: {
+        title: "Don't see the option?",
+        hidden: "The iPhone hides the option until Xcode asks to show it.",
+        /** For who can't open Xcode from here: someone who doesn't manage the Mac, or a Mac whose app is too old. */
+        hiddenOpen:
+          "The iPhone hides the option until Xcode asks to show it. Open Xcode on {{mac}} with the iPhone plugged in.",
+        openXcode: "Open Xcode",
+        opened: "Xcode opened on {{mac}}. Look in the iPhone's Settings again, then close Xcode.",
+        unlock: "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.",
+        check: "Check again",
+        /** A Terminal command (`agentes-runner update`) shows under it. */
+        outdated:
+          "The agentes.chat app on {{mac}} is out of date. Update the app, or run this in Terminal if you installed it there.",
+      },
       uiAutomationText: "In Settings\u00a0›\u00a0Developer, after the restart.",
       helperText: "Built and renewed by the Mac every 7 days. A free Apple Account in Xcode is enough.",
       helperUntrustedText: "Tap the developer's name, then Trust.",
@@ -14751,8 +14826,6 @@ export const en = {
           "{{mac}} doesn't see an iPhone yet. Use a cable that carries data, not only power, unlock the iPhone and tap Trust if it asks.",
         trust:
           "No Trust prompt? Unplug the iPhone, unlock it and plug it in again, then tap Trust and enter its passcode.",
-        developerMode:
-          "Developer Mode turns on only after the iPhone restarts. Tap Restart, then Turn On once it's back. No switch there? Unplug the iPhone and plug it in again.",
         uiAutomation:
           "The switch shows once Developer Mode is on and the iPhone restarted. Keep it unlocked while you look.",
         helper:
@@ -15933,6 +16006,16 @@ export const en = {
     logins_other: "{{count}} logins",
     noWindows: "The limit shows up after this account is used again.",
     unused: "No agent uses this account.",
+    /** The quota per model (OpenCode Go's caps): one line each, under the account's windows. */
+    models: {
+      /** A model out of quota: `when` is when it resets (`usageWhen`). */
+      exhausted: "No quota left · resets {{when}}",
+      exhaustedUnknown: "No quota left",
+      /** The plan refused the model for this key: it or the account is switched off there. */
+      off: "Turned off",
+      region: "Needs the Global region",
+      inactive: "No active subscription",
+    },
     usesNow: "uses it now",
     monthTokens: "{{tokens}} tokens this month",
     tokens: "{{tokens}} tokens",
@@ -15999,6 +16082,8 @@ export const en = {
   format: {
     // i18next's `list` format: Intl.ListFormat in the language ("Ada, Atlas, and Theo", "Ada、Atlas、Theo"). Keep as is.
     list: "{{names, list}}",
+    /** After the names a list shows, one per line: how many more it holds. */
+    andMore: "and {{count}} more",
     usd: "US$ {{value}}",
     tokensMillions: "{{value}}M",
     tokensThousands: "{{value}}k",
@@ -18095,6 +18180,21 @@ export const en = {
       message: "Message {{name}}",
       chooseOnWeb: "Choose it on agentes.chat, in Settings\u00a0›\u00a0Devices.",
     },
+  },
+  /** Agora (ADR 0128 addendum): the whole workspace's work in one place, a button beside "Go to…" and its list. */
+  agora: {
+    label: "Now",
+    /** Its tip, one line each. */
+    working_one: "{{count}} agent working",
+    working_other: "{{count}} agents working",
+    waiting_one: "{{count}} thing waiting for you",
+    waiting_other: "{{count}} things waiting for you",
+    sections: { you: "Waiting for you", working: "Working", waiting: "On hold" },
+    /** Under "Waiting for you", or alone: the sidebar's count of everything that waits on you, a link to that page. */
+    allWaiting_one: "{{count}} thing waiting for you",
+    allWaiting_other: "All {{count}} things waiting for you",
+    actions: "More actions",
+    openManager: "Open the task manager",
   },
   taskManager: {
     title: "Task manager",

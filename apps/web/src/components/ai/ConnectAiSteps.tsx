@@ -363,6 +363,8 @@ export function useExistingAi({
         ...(next.scope ? { scope: next.scope } : {}),
       };
     });
+  // The workspace's model on that key: the agent's model where the key runs it, else one the key does (an endpoint's
+  // own for an endpoint key, Automático for a catalog one, which follows it).
   // Tried first: a key kept earlier may have run out of credit, and "now thinks with it" has to be true. An endpoint's
   // key has no call of its own to try: its models' last tests say whether it thinks (`keyThinks`).
   const pickKey = (key: Credential) =>
@@ -906,7 +908,7 @@ export function PlanPanel(props: PlanPanelProps) {
   );
 }
 
-/** "For [All agents ▾]": every agent of "All agents" first, with their faces and names, then each agent. */
+/** "For [All agents ▾]": "All agents" first, with their faces, then each agent. Every option one line tall. */
 function ForSelect({ agents, all, target, onTarget }: Pick<PlanPanelProps, "agents" | "all" | "target" | "onTarget">) {
   const { t } = useTranslation();
   const face = (a: PlanAgent, size: "xs" | "sm" = "xs") => (
@@ -927,11 +929,6 @@ function ForSelect({ agents, all, target, onTarget }: Pick<PlanPanelProps, "agen
                 {
                   value: ALL_AGENTS,
                   label: t("connectAi.all"),
-                  description: namesText(
-                    t,
-                    all.map((a) => a.name),
-                    NAMES_SHOWN,
-                  ),
                   leading: <AvatarStack>{all.slice(0, 3).map((a) => face(a))}</AvatarStack>,
                 },
               ]

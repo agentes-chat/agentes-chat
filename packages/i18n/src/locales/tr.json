@@ -24,6 +24,7 @@
     "retry": "Tekrar dene",
     "soon": "Yakında",
     "unknownError": "Bir şeyler ters gitti. Tekrar deneyin.",
+    "overLimit": "Metin {{length}} karakter, sınır ise {{max}}. Kısalt.",
     "ourSide": "Bizim tarafımızda bir şeyler ters gitti. Birazdan tekrar deneyin.",
     "signedOut": "Oturumunuz sona erdi. Devam etmek için tekrar giriş yapın.",
     "newVersion": "agentes.chat'in yeni bir sürümü çıktı.",
@@ -3851,7 +3852,10 @@
     "yourApproval": "onayınız",
     "yourAnswer": "yanıtınız",
     "later": "takip {{when}}",
-    "laterShort": "takip"
+    "laterShort": "takip",
+    "plan": "plan limitini bekliyor",
+    "budget": "bütçeyi bekliyor",
+    "stopping": "durduruluyor…"
   },
   "followUps": {
     "when": {
@@ -5251,6 +5255,7 @@
         "effort": "Çaba",
         "efforts": {
           "auto": "Otomatik",
+          "none": "Modelin varsayılanı",
           "low": "Düşük",
           "medium": "Orta",
           "high": "Yüksek",
@@ -5267,6 +5272,8 @@
           "auto": "Otomatik model her görevin çabasını seçer. Çabayı sabitlemek için bir model seçin.",
           "low": "Hızlı yanıt verir. Basit sorular için iyidir.",
           "medium": "Varsayılan. Çoğu zaman yeterince düşünür.",
+          "mediumKey": "Çoğu zaman yeterince düşünür.",
+          "none": "Model her zamanki kadar düşünür. Çabayı sabitlemek için bir seviye seçin.",
           "high": "Zor görevlerde daha çok düşünür. Daha yavaş ve daha pahalıdır.",
           "max": "Olabildiğince çok düşünür. Çok daha yavaş ve daha pahalıdır."
         },
@@ -5294,6 +5301,7 @@
           "defaults": "Varsayılanlara dön",
           "contents": {
             "model": "Bağlam penceresi",
+            "modelFixed": "Çaba ve bağlam penceresi",
             "auto": "Bağlam penceresi ve kime yanıt verdiği",
             "fixed": "Çaba, bağlam penceresi ve kime yanıt verdiği",
             "autoSpeed": "Hız, bağlam penceresi ve kime yanıt verdiği",
@@ -5407,7 +5415,8 @@
             "not_signed_in_after_login": "{{brand}} girişi kabul etti ama bu hesap burada kullanılamıyor, planı bunu kapsamıyor olabilir. Başka bir hesap veya bir API anahtarı deneyin.",
             "status_unknown": "{{brand}}, hesabın giriş yapıp yapmadığını bildirmedi. Tekrar deneyin.",
             "no_token": "{{brand}}, hesabın belirtecini göstermeden bitti. Tekrar deneyin.",
-            "not_kept": "Hesap giriş yaptı ama {{computer}} girişi saklayamadı. Tekrar deneyin."
+            "not_kept": "Hesap giriş yaptı ama {{computer}} girişi saklayamadı. Tekrar deneyin.",
+            "sandbox": "{{brand}} giriş yaptı ama sandbox'ı {{computer}} üzerinde başlamıyor, bu yüzden hiçbir ajan onu kullanamaz. Bunun yerine bir API anahtarı kullanın."
           },
           "geminiNotShared": "Gemini'ye giriş yapıldı, ancak {{computer}} bu girişi tüm ajanlarla paylaşamıyor. Bunun yerine bir Gemini API anahtarı kullanın.",
           "duplicate": {
@@ -5442,6 +5451,8 @@
           "limitBack": "{{account}} {{when}} geri dönüyor",
           "limitSoon": "{{account}} plan yenilenince geri dönüyor",
           "limitHelp": "Bu arada {{name}}, zaten bağlı olan başka bir hesapla düşünebilir.",
+          "fullWait": "Bu hesapta {{name}}, plan yenilenene kadar bekler.",
+          "seeUsage": "Kullanımı gör",
           "wait": "Bekle",
           "modelTitle": "{{name}} için model",
           "moreTitle": "{{name}} için diğer seçenekler",
@@ -5817,6 +5828,7 @@
         "cli_failed": "Bir hata {{brain}} programını durdurdu: {{detail}}",
         "cli_stopped": "Bir hata {{brain}} programını durdurdu.",
         "cli_closed": "Beklenmedik şekilde {{brain}} programı kapandı.",
+        "cli_sandbox": "{{brain}} programı bu bilgisayarda sandbox'ını başlatamıyor. Ajanın ayarlarından başka bir yapay zekâ seçin.",
         "account_missing": "Bu ajan için seçilen hesap artık bilgisayarında değil. Ajanın ayarlarından başka bir hesap seçin ya da yeniden ekleyin.",
         "windows_sandbox": "Bu Windows bilgisayar Codex'in komutlarını yalıtamıyor: Windows 11 24H2 veya daha yenisi gerekiyor.",
         "our_error": "Bizim tarafımızda bir şeyler ters gitti ve görev durdu. Birazdan yeniden isteyin.",
@@ -9675,7 +9687,11 @@
     "forAgent_one": "{{agent}} için aç",
     "forAgent_other": "{{agent}} için aç",
     "installedMany": "{{count}} beceri yüklendi.",
-    "zipHelp": "Kökünde SKILL.md bulunan bir .zip.",
+    "zipHelp": "Beceri klasörünün .zip dosyası, en fazla {{max}} MB.",
+    "zipAbout": "SKILL.md, .zip dosyasının en üstünde ya da içindeki tek klasörde durur. Bir beceri en fazla {{text}} MB metin ve {{assets}} MB görsel ile diğer dosyaları saklar.",
+    "zipTooLarge": "{{name}} {{size}} boyutunda. Bir becerinin .zip dosyası en fazla {{max}} MB olabilir.",
+    "zipUseLink": "GitHub bağlantısı kullan",
+    "zipSending": "Dosya yükleniyor… {{percent}}",
     "zipPick": ".zip seç",
     "zipNone": "Dosya seçilmedi",
     "zipMissing": "Bir .zip dosyası seçin.",
@@ -11582,7 +11598,8 @@
     "closed": "{{title}} · kapandı",
     "reopen": "Yeniden göster",
     "answeredBy": "{{name}} seçti",
-    "failed": "Seçiminiz gönderilemedi. Tekrar deneyin."
+    "failed": "Seçiminiz gönderilemedi. Tekrar deneyin.",
+    "tooLongFix": "Cevabı kısalt."
   },
   "drive": {
     "title": "Drive",
@@ -13404,6 +13421,8 @@
     }
   },
   "errors": {
+    "tooLarge": "Bu, sunucunun kabul ettiğinden büyük.",
+    "tooLargeMax": "Bu, sunucunun kabul ettiğinden büyük: en fazla {{max}} MB.",
     "passwordLink": {
       "email": "Bu sunucu e-posta gönderiyor: kişi kendi bağlantısını Şifremi unuttum bölümünden ister.",
       "serverOwner": "Bu sunucuyu kuran kişi, sunucunun çalıştığı bilgisayardan bağlantısız girer.",
@@ -13543,6 +13562,8 @@
     },
     "join": {
       "linkClosed": "Bu bağlantı artık çalışmıyor. Gönderen kişiden yenisini isteyin.",
+      "linkFull": "Bu bağlantı alabileceği herkesi zaten aldı. Gönderen kişiden yenisini isteyin.",
+      "linkFullApproval": "Bu isteğin bağlantısı alabileceği herkesi zaten aldı. Onaylamak için bağlantının kişi sınırını artırın.",
       "full": "Bu çalışma alanında bekleyen çok sayıda istek var. Daha sonra tekrar deneyin ya da oradan birinin sizi davet etmesini isteyin.",
       "rateLimited": "Buradan çok fazla istek geldi. Bir saat sonra tekrar deneyin.",
       "linkBusy": "Son bir saatte bu bağlantı üzerinden çok kişi istekte bulundu. Daha sonra tekrar deneyin.",
@@ -14497,6 +14518,20 @@
       "trustText": "iPhone'da Güven'e dokunun ve parolasını girin.",
       "devModeDone": "Açık",
       "devModeText": "Açın ve Yeniden Başlat'a dokunun. Yeniden başladıktan sonra Aç'a dokunun ve parolanızı girin.",
+      "devModeRestarting": "iPhone yeniden başlıyor. Geri geldiğinde kilidini açın ve Aç'a dokunun.",
+      "devModeBack": "iPhone geri geldi. Kilidini açın, Aç'a dokunun ve parolanızı girin.",
+      "devModeCheck": "Açtım, yeniden kontrol et",
+      "devModeStillOff": "iPhone hâlâ Geliştirici Modu'nun kapalı olduğunu söylüyor.",
+      "devModeMissing": {
+        "title": "Seçenek görünmüyor mu?",
+        "hidden": "iPhone, Xcode göstermesini isteyene kadar bu seçeneği gizler.",
+        "hiddenOpen": "iPhone, Xcode göstermesini isteyene kadar bu seçeneği gizler. iPhone bağlıyken {{mac}} üzerinde Xcode'u açın.",
+        "openXcode": "Xcode'u aç",
+        "opened": "Xcode {{mac}} üzerinde açıldı. iPhone'un Ayarlar'ına yeniden bakın, sonra Xcode'u kapatın.",
+        "unlock": "Açtınız ve iPhone yeniden başladı mı? Kilidini açın. Aç düğmeli uyarı ancak bundan sonra çıkar.",
+        "check": "Yeniden kontrol et",
+        "outdated": "{{mac}} üzerindeki agentes.chat uygulaması eski. Uygulamayı güncelleyin ya da oradan kurduysanız bunu Terminal'de çalıştırın."
+      },
       "uiAutomationText": "Yeniden başladıktan sonra Ayarlar › Geliştirici bölümünde.",
       "helperText": "Mac onu her 7 günde bir oluşturur ve yeniler. Xcode'da ücretsiz bir Apple Account yeterlidir.",
       "helperUntrustedText": "Geliştiricinin adına, ardından Güven'e dokunun.",
@@ -14513,7 +14548,6 @@
         "account": "Zaten oturum açtınız mı? Xcode'da herhangi bir iOS uygulaması oluşturun, Signing & Capabilities altında ekibinizi seçin ve uygulamayı iPhone'da bir kez çalıştırın.",
         "connected": "{{mac}} henüz bir iPhone görmüyor. Sadece şarj değil veri de taşıyan bir kablo kullanın, iPhone'un kilidini açın ve isterse Güven'e dokunun.",
         "trust": "Güven sorusu çıkmadı mı? iPhone'u çıkarın, kilidini açıp yeniden takın, ardından Güven'e dokunup parolasını girin.",
-        "developerMode": "Geliştirici Modu yalnızca iPhone yeniden başladıktan sonra açılır. Yeniden Başlat'a, açıldıktan sonra da Aç'a dokunun. Anahtar yok mu? iPhone'u çıkarıp yeniden takın.",
         "uiAutomation": "Anahtar, Geliştirici Modu açık olduğunda ve iPhone yeniden başladıktan sonra görünür. Ararken kilidini açık tutun.",
         "helper": "{{mac}} test yardımcısını oluşturup iPhone'da başlatır, ilk seferde bu birkaç dakika sürer. iPhone'un kilidini açık ve takılı tutun."
       },
@@ -15677,6 +15711,13 @@
     "logins_other": "{{count}} oturum",
     "noWindows": "Sınır, bu hesap yeniden kullanıldıktan sonra görünür.",
     "unused": "Bu hesabı kullanan ajan yok.",
+    "models": {
+      "exhausted": "Kota kalmadı · {{when}} sıfırlanır",
+      "exhaustedUnknown": "Kota kalmadı",
+      "off": "Kapalı",
+      "region": "Global bölgesi gerekiyor",
+      "inactive": "Etkin abonelik yok"
+    },
     "usesNow": "şu anda kullanıyor",
     "monthTokens": "Bu ay {{tokens}} token",
     "tokens": "{{tokens}} token",
@@ -15736,6 +15777,7 @@
   },
   "format": {
     "list": "{{names, list}}",
+    "andMore": "ve {{count}} daha",
     "usd": "{{value}} ABD$",
     "tokensMillions": "{{value}} Mn",
     "tokensThousands": "{{value}} B",
@@ -17633,6 +17675,22 @@
       "message": "{{name}} ajanına mesaj gönder",
       "chooseOnWeb": "agentes.chat üzerinde, Ayarlar › Cihazlar bölümünden seçin."
     }
+  },
+  "agora": {
+    "label": "Şimdi",
+    "working_one": "{{count}} ajan çalışıyor",
+    "working_other": "{{count}} ajan çalışıyor",
+    "waiting_one": "{{count}} şey sizi bekliyor",
+    "waiting_other": "{{count}} şey sizi bekliyor",
+    "sections": {
+      "you": "Sizi bekliyor",
+      "working": "Çalışıyor",
+      "waiting": "Beklemede"
+    },
+    "allWaiting_one": "{{count}} şey sizi bekliyor",
+    "allWaiting_other": "Sizi bekleyen {{count}} şeyin hepsi",
+    "actions": "Diğer işlemler",
+    "openManager": "Görev yöneticisini aç"
   },
   "taskManager": {
     "title": "Görev yöneticisi",
