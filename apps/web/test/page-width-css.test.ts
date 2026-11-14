@@ -54,6 +54,7 @@ test("the wiki graph's box has a set height, so its drawing can take the box's s
 const panes = await builtCss(
   "src/components/threads/threads.css",
   "src/components/agents/agent-sidebar.css",
+  "src/components/channel-board/channel-board.css",
   "src/components/audit.css",
   "src/components/tasks/tasks.css",
   "src/pages/approvals.css",
@@ -63,10 +64,12 @@ const own = (selector: string) => Object.fromEntries(declarations(panes, selecto
 test("what opens in a side panel is the panel's width: its view takes back the room the scrollbar keeps", () => {
   // The panel's width (100cqw) less the scroller's content box and side padding is the scrollbar's room, 0 where a
   // scrollbar takes none: it comes back out of the view's end, which runs under the scrollbar without scrolling sideways.
-  const view = own(":is(.thread-panel, .members-side) > :is(.thread-panel__page, .dm-side__scroll) > *");
+  const view = own(
+    ":is(.thread-panel, .members-side) > :is(.thread-panel__page, .dm-side__scroll, .channel-board__scroll) > *",
+  );
   expect(view["margin-inline-end"]?.replace(/\s+/g, "")).toBe("calc(100%+2*var(--pane-x,0px)-100cqw)");
   // The build writes `overflow-x: hidden; overflow-y: auto` as one `overflow`.
-  for (const scroller of [".thread-panel__page", ".dm-side__scroll"])
+  for (const scroller of [".thread-panel__page", ".dm-side__scroll", ".channel-board__scroll"])
     expect(own(scroller).overflow ?? `${own(scroller)["overflow-x"]} ${own(scroller)["overflow-y"]}`).toBe(
       "hidden auto",
     );
@@ -74,6 +77,8 @@ test("what opens in a side panel is the panel's width: its view takes back the r
   expect(own(".audit-panel__body")).toMatchObject({ "--pane-x": "24px", padding: "18px var(--pane-x) 28px" });
   expect(own(".tm-panel__body")).toMatchObject({ "--pane-x": "18px", padding: "14px var(--pane-x) 18px" });
   expect(own(".members-side.dm-side")).toMatchObject({ overflow: "hidden", "container-type": "inline-size" });
+  expect(own(".members-side.channel-board")).toMatchObject({ overflow: "hidden", "container-type": "inline-size" });
+  expect(own(".channel-board__scroll")).toMatchObject({ "--pane-x": "var(--space-4)" });
 });
 
 test("an approval's request takes its column's width, its decision bar too", () => {

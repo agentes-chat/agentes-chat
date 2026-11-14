@@ -334,6 +334,7 @@ describe("columns that scroll on their own", () => {
     ".issues-col>.issues-col__cards",
     ".members-side",
     ".dm-side__scroll",
+    ".channel-board__scroll",
     ".thread-panel__page",
     ".wiki-nav",
     ".wiki__center",
