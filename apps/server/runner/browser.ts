@@ -225,6 +225,24 @@ const DOWNLOAD_TIMEOUT_MS = 5 * 60_000;
 const QUICK_TIMEOUT_MS = 15_000;
 /** One input command on the relay: a click or a key answers in milliseconds. */
 const INPUT_TIMEOUT_MS = 5_000;
+/**
+ * How long the daemon may still be busy with the agent's command a person's taking control cut off. The daemon runs
+ * one command at a time behind one lock, the relay's too, and runs a command to its end even when its client is gone
+ * (checked in 0.39.1's source): an element it waits for gives up after 25 s (its default timeout, below its CLI's
+ * 30 s read timeout). A person's input waits that long for it instead of failing at `INPUT_TIMEOUT_MS`: the daemon
+ * would still run it afterwards, while the person had been told it never reached the page.
+ */
+const DAEMON_HOLD_MS = 30_000;
+/**
+ * A person's input goes to the page straight from the runner, on its own DevTools socket to the tab (`PageLink`): the
+ * daemon's one lock, which its relay waits on too, is also held by its own upkeep (each cross-origin frame that
+ * attaches, a page that loads: measured 0.4 to 1.4 s per load of a Cloudflare check on a desktop, against 0 to 2 ms
+ * on the tab's own socket) and by any command of its own that waits on Chrome (up to 30 s). That socket opens within
+ * this, or the input goes on the relay as before.
+ */
+const PAGE_OPEN_MS = 1000;
+/** A tab whose socket didn't open is tried again after this; the relay carries the input meanwhile. */
+const PAGE_RETRY_MS = 10_000;
 /** After a failed download or install, wait this long before trying again. */
 const RETRY_FAILURE_MS = 10 * 60_000;
 const STREAM_OPEN_MS = 5000;
@@ -1025,6 +1043,8 @@ export interface InputState {
 
 /** Agent commands the runner does with a pointer path, a held button and typed keys (`humanSteps`). */
 const HUMAN_COMMANDS = new Set(["click", "dblclick", "hover", "fill", "type"]);
+/** Agent commands that may leave a mouse button down when a person's taking control cuts them off. */
+const POINTER_COMMANDS = new Set([...HUMAN_COMMANDS, "mouse", "drag"]);
 /** What `agent-browser` answers to each when the runner did it itself. */
 const HUMAN_DONE: Record<string, string> = { click: "clicked", hover: "hovered", fill: "filled" };
 /** The answer to a command a person's taking control cut short (`stopInput`). */
@@ -1034,6 +1054,17 @@ const TOOK_OVER: BrowserAnswer = {
   error:
     "A person took control of your browser, so this stopped where it was. What it typed so far stays in the field: don't type it again, read the page before going on.",
 };
+/**
+ * The answer to a command that came while a person drives the browser (its live view in control): it never reached
+ * the browser, whose one-at-a-time queue the person's clicks and keys go through too.
+ */
+const PERSON_DRIVING: BrowserAnswer = {
+  success: false,
+  data: null,
+  code: "person_in_control",
+  error:
+    "A person has control of your browser now, so this didn't run. Nothing of yours runs in it until they hand it back: read the page again then.",
+};
 /** What one command of a batch costs on its own (measured on a loaded Linux VPS): taken off each pointer step's wait. */
 const BATCH_STEP_MS = 8;
 /**
@@ -1041,7 +1072,20 @@ const BATCH_STEP_MS = 8;
  * own `click` watches for the dialog, `mouse up` doesn't): the batch outlasts that, to hear why.
  */
 const HELD_PRESS_MS = 33_000;
+/** How long a tab found showing is taken to still be: the commands of one batch share one look. */
+const SHOWN_MS = 1_000;
+/** How long before a tab that couldn't be told, or brought to the front, is looked at again. */
+const SHOWN_RETRY_MS = 30_000;
+/** Commands that need no page showing: they change which tab it is, or only wait. */
+const NO_PAGE = new Set(["tab", "wait", "dialog", "agentes:viewport"]);
 const VIEWPORT = "[window.innerWidth, window.innerHeight]";
+
+/** A page's size in its own pixels, or null when what was read isn't one. */
+function pageSize(width: unknown, height: unknown): { width: number; height: number } | null {
+  const w = Math.round(Number(width));
+  const h = Math.round(Number(height));
+  return Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0 ? { width: w, height: h } : null;
+}
 
 /**
  * Run before every `snapshot`: a button or link with no words of its own (an icon, or an icon font's ligature such as
@@ -1331,6 +1375,166 @@ function releaseHeld(state: InputState, mask = ~0): Record<string, unknown>[] {
     .flatMap((button) => relayCommands({ kind: "mouse", type: "mouseReleased", x: at.x, y: at.y, button }, state));
 }
 
+/** One DevTools call on a tab's own socket (`PageLink`). */
+export interface PageCall {
+  method: string;
+  params: Record<string, unknown>;
+}
+
+/** Virtual key codes of the keys `press` names (`agent-browser`'s `named_key_info`, 0.39.1). */
+const NAMED_KEYS: Record<string, [key: string, code: string, keyCode: number]> = {
+  enter: ["Enter", "Enter", 13],
+  return: ["Enter", "Enter", 13],
+  tab: ["Tab", "Tab", 9],
+  escape: ["Escape", "Escape", 27],
+  esc: ["Escape", "Escape", 27],
+  backspace: ["Backspace", "Backspace", 8],
+  delete: ["Delete", "Delete", 46],
+  arrowup: ["ArrowUp", "ArrowUp", 38],
+  arrowdown: ["ArrowDown", "ArrowDown", 40],
+  arrowleft: ["ArrowLeft", "ArrowLeft", 37],
+  arrowright: ["ArrowRight", "ArrowRight", 39],
+  home: ["Home", "Home", 36],
+  end: ["End", "End", 35],
+  pageup: ["PageUp", "PageUp", 33],
+  pagedown: ["PageDown", "PageDown", 34],
+  space: [" ", "Space", 32],
+  " ": [" ", "Space", 32],
+};
+/** A US layout's punctuation keys: their `code` and virtual key code (as `agent-browser` and Playwright have them). */
+const PUNCTUATION: [chars: string, code: string, keyCode: number][] = [
+  [";:", "Semicolon", 186],
+  ["=+", "Equal", 187],
+  [",<", "Comma", 188],
+  ["-_", "Minus", 189],
+  [".>", "Period", 190],
+  ["/?", "Slash", 191],
+  ["`~", "Backquote", 192],
+  ["[{", "BracketLeft", 219],
+  ["\\|", "Backslash", 220],
+  ["]}", "BracketRight", 221],
+  ["'\"", "Quote", 222],
+];
+/** The modifier keys' own codes, for a modifier held down or let go on its own. */
+const MODIFIER_CODES: Record<string, number> = { Shift: 16, Control: 17, Alt: 18, Meta: 91 };
+/** The text a named key types (one character types itself). */
+const KEY_TEXT: Record<string, string> = { Enter: "\r", Tab: "\t" };
+const CHORD_BITS: Record<string, number> = { alt: 1, control: 2, ctrl: 2, meta: 4, cmd: 4, command: 4, shift: 8 };
+
+/** A key `press` names, as DevTools takes it: key, code, virtual key code. */
+function keyInfo(name: string): [key: string, code: string, keyCode: number] {
+  const named = NAMED_KEYS[name.toLowerCase()];
+  if (named) return named;
+  const chars = [...name];
+  if (chars.length !== 1) return [name, name, 0];
+  const ch = name;
+  if (/^[a-z]$/i.test(ch)) return [ch, `Key${ch.toUpperCase()}`, ch.toUpperCase().charCodeAt(0)];
+  if (/^[0-9]$/.test(ch)) return [ch, `Digit${ch}`, ch.charCodeAt(0)];
+  const p = PUNCTUATION.find(([set]) => set.includes(ch));
+  return [ch, p?.[1] ?? "", p?.[2] ?? 0];
+}
+
+/**
+ * The DevTools calls that do on the page what one relay command (`relayCommands`) asks `agent-browser` to do, the
+ * way its 0.39.1 does it (`input_mouse`, `input_keyboard`, `keyboard insertText`, `press` with a chord, `evaluate`),
+ * or null for anything else (it goes on the relay).
+ */
+export function pageCalls(command: Record<string, unknown>): PageCall[] | null {
+  const num = (v: unknown, d = 0) => (typeof v === "number" && Number.isFinite(v) ? v : d);
+  switch (command.action) {
+    case "input_mouse":
+      return [
+        {
+          method: "Input.dispatchMouseEvent",
+          params: {
+            type: command.type,
+            x: num(command.x),
+            y: num(command.y),
+            button: command.button,
+            buttons: num(command.buttons),
+            clickCount: num(command.clickCount),
+            deltaX: num(command.deltaX),
+            deltaY: num(command.deltaY),
+            modifiers: num(command.modifiers),
+          },
+        },
+      ];
+    case "keyboard":
+      if (command.subaction !== "insertText" || typeof command.text !== "string") return null;
+      return [{ method: "Input.insertText", params: { text: command.text } }];
+    case "input_keyboard": {
+      if (typeof command.key !== "string") return null;
+      const keyCode = MODIFIER_CODES[command.key];
+      return [
+        {
+          method: "Input.dispatchKeyEvent",
+          params: {
+            type: command.type,
+            key: command.key,
+            ...(typeof command.code === "string" ? { code: command.code } : {}),
+            ...(keyCode ? { windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode } : {}),
+          },
+        },
+      ];
+    }
+    case "press": {
+      if (typeof command.key !== "string" || !command.key) return null;
+      // "Control+a", "Shift+Enter": the modifiers, then what is left is the key ("+" alone is a key).
+      const parts = command.key.split("+");
+      let modifiers = 0;
+      const rest: string[] = [];
+      for (const part of parts) {
+        const bit = parts.length > 1 ? CHORD_BITS[part.toLowerCase()] : undefined;
+        if (bit) modifiers |= bit;
+        else rest.push(part);
+      }
+      const name = modifiers === 0 || rest.length === 0 ? command.key : rest.join("+");
+      const [key, code, keyCode] = keyInfo(name);
+      // Control or Meta make it a command (select all, copy), not text.
+      const typed = KEY_TEXT[key] ?? ([...key].length === 1 ? key : undefined);
+      const text = modifiers & 6 ? undefined : typed;
+      const base = {
+        key,
+        code,
+        windowsVirtualKeyCode: keyCode,
+        nativeVirtualKeyCode: keyCode,
+        ...(modifiers ? { modifiers } : {}),
+      };
+      return [
+        {
+          method: "Input.dispatchKeyEvent",
+          params: { type: "keyDown", ...base, ...(text ? { text, unmodifiedText: text } : {}) },
+        },
+        { method: "Input.dispatchKeyEvent", params: { type: "keyUp", ...base } },
+      ];
+    }
+    case "evaluate":
+      if (typeof command.script !== "string") return null;
+      return [{ method: "Runtime.evaluate", params: { expression: command.script, returnByValue: true } }];
+    default:
+      return null;
+  }
+}
+
+/**
+ * A tab's own DevTools socket while a person drives it (`ws://127.0.0.1:<port>/devtools/page/<target>`): their input
+ * goes there, beside `agent-browser`'s connection, never through its daemon (`PAGE_OPEN_MS`).
+ */
+interface PageLink {
+  targetId: string;
+  socket: StreamSocket;
+  /** True once open; false when it couldn't open or closed. */
+  ready: Promise<boolean>;
+  open: boolean;
+  /** When it failed to open (or closed): tried again only after `PAGE_RETRY_MS`. */
+  failedAt?: number;
+  nextId: number;
+  waiting: Map<number, (answer: Record<string, unknown> | null) => void>;
+}
+
+/** A DevTools target id as Chrome makes them: anything else never goes into a socket's address. */
+const TARGET_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
 /** The subset of a WebSocket the stream relay uses (a fake in tests). */
 export interface StreamSocket {
   send(data: string): void;
@@ -1383,6 +1587,8 @@ export interface BrowserManagerOptions {
   now?: () => number;
   /** Tests: opens the session's stream socket. */
   connectStream?: (url: string) => StreamSocket;
+  /** Tests: opens a tab's own DevTools socket, where a person's input goes (`PageLink`). */
+  connectPage?: (url: string) => StreamSocket;
   /** Tests: opens a Chrome's browser endpoint (its traffic and its pages that die). */
   connectDevtools?: (url: string) => StreamSocket;
   /**
@@ -1400,6 +1606,8 @@ export interface BrowserManagerOptions {
    * newest, `pacing=ack`), so Chrome's pictures nobody would see are never relayed and parsed. Absent: always.
    */
   frameRoom?: (agentId: string) => boolean;
+  /** Tests: how long one input command waits for the relay (`INPUT_TIMEOUT_MS`). */
+  inputTimeoutMs?: number;
   /** Tests: how long a frame waits for `room` at most (`SOURCE_ACK_MS`). */
   sourceAckMs?: number;
   /** Tests: starts the agent's Chrome (default: `launchChrome`). */
@@ -1426,8 +1634,19 @@ interface Stream {
   url?: string;
   /** The active tab's title, from the stream's tab list (cleared when the URL moves on). */
   title?: string;
+  /** The active tab's DevTools target, from the stream's tab list: a person's input goes there (`page`). */
+  targetId?: string;
+  /** That tab's own DevTools socket, opened at the person's first input (`pageLink`). */
+  page?: PageLink;
   /** The page's size in CSS pixels, from the stream's status. */
   viewport?: { width: number; height: number };
+  /**
+   * The size of the page its frames show, read from the tab itself while a person drives it (`measureShown`), for the
+   * tab and picture size of `key`.
+   */
+  shown?: { key: string; width: number; height: number };
+  /** The `key` being read now. */
+  measuring?: string;
   /** A frame went out on this stream. */
   framed?: boolean;
   /** Closed by us (stop, mode off): no `ended` frame for an expected close. */
@@ -1497,10 +1716,23 @@ interface Session {
   link?: string;
   /** Where the agent's pointer was left on the page (`humanly`). */
   pointer?: Point;
+  /** Until when the agent's tab needs no look at whether it shows (`foreground`). */
+  shownUntil?: number;
+  /** Its tab was brought to the front and hasn't been seen showing since. */
+  broughtUp?: boolean;
   /** Where its `hover` left it. While that is still `pointer` (the same object), a menu it opened is taken to be open. */
   hovered?: Point;
-  /** Ends the agent's command under way when a person takes control (`stopInput`). */
-  acting?: AbortController;
+  /**
+   * The agent's `act` and `batch` calls queued or running, each ended when a person takes control (`stopInput`):
+   * one under way stops, and one still waiting in the queue never runs.
+   */
+  calls: Set<AbortController>;
+  /** Until when the daemon may still run an agent command that taking control cut off (`DAEMON_HOLD_MS`). */
+  daemonBusyUntil?: number;
+  /** How many agent (or server) commands are being performed now: only those make taking control wait (`takeOver`). */
+  agentRunning?: number;
+  /** How many `agent-browser` commands of this session are running now. */
+  running?: number;
   /** When its `mouse down` went, while no `mouse up` followed. */
   pressedAt?: number;
   /** When its desktop last failed to start for it (`desktopFor`). */
@@ -1887,28 +2119,72 @@ export class BrowserManager {
   ): Promise<BrowserAnswer & { setup?: BrowserSetup }> {
     const allowed = allowedDomainsOf(req.allowedDomains);
     const prepared = this.checkCommand(req.command, req.args, req.timeoutSeconds, folder, allowed);
+    // A person drives the browser: only their own commands reach it (`whileDriving`), before and after the queue.
+    const person = req.person === true;
+    const driven = this.sessions.get(String(agent.id ?? ""));
+    if (!person && driven && this.driving(driven)) return this.whileDriving(driven, prepared);
     const setup: BrowserSetup = {};
     const session = await this.timedSession(agent, folder, setup);
     const desktop = req.desktop === true;
     const queuedAt = this.now();
     const acts = actsOnPage(prepared);
+    // The person's own command isn't the agent's: their taking control doesn't stop it.
+    const call = person ? new AbortController() : this.agentCall(session);
     const answer = await this.enqueue(session, async () => {
       this.mark(setup, "queued", queuedAt);
+      if (!person && this.driving(session)) return this.whileDriving(session, prepared);
       // A page that died since the agent last heard, or while this ran, is an action's answer: it changed under it.
       const before = acts ? this.takeCrash(session, false) : null;
       if (before) return before;
       const opening = this.vaultOpening(actor, session);
+      if (!person) session.agentRunning = (session.agentRunning ?? 0) + 1;
       try {
-        const done = await this.perform(agent, session, prepared, allowed, req.link, desktop, signal, setup, {
-          actor,
-          opening,
-        });
+        const done = await this.perform(
+          agent,
+          session,
+          prepared,
+          allowed,
+          req.link,
+          desktop,
+          signal,
+          setup,
+          { actor, opening },
+          call.signal,
+        );
         return (acts ? (this.takeCrash(session, true) ?? this.takeBlocked(session)) : null) ?? done;
       } finally {
+        if (!person) session.agentRunning = Math.max(0, (session.agentRunning ?? 1) - 1);
         opening.close();
       }
-    });
+    }).finally(() => session.calls.delete(call));
     return { ...answer, ...withSetup(setup), ...(session.viewport ? { emulated: session.viewport } : {}) };
+  }
+
+  /** A person drives this session's browser now: its live view is in control. */
+  private driving(session: Session): boolean {
+    return session.stream?.mode === "control";
+  }
+
+  /**
+   * A command that isn't the person's, while they drive: it never reaches the daemon, whose one queue their input goes
+   * through too (one read there held their clicks for seconds). The address or title is what the live view last
+   * showed (the stream's tab list, else the agent's last command), which also counts as use; anything else is
+   * refused as the person's (`PERSON_DRIVING`).
+   */
+  private whileDriving(session: Session, p: Prepared): BrowserAnswer {
+    if (p.command === "get" && p.args.length === 1) {
+      const url = session.stream?.url ?? session.url;
+      const title = session.stream?.title;
+      if (p.args[0] === "url" && url) {
+        session.lastUsed = this.now();
+        return { success: true, data: { url } };
+      }
+      if (p.args[0] === "title" && title !== undefined) {
+        session.lastUsed = this.now();
+        return { success: true, data: { title } };
+      }
+    }
+    return PERSON_DRIVING;
   }
 
   /**
@@ -1928,12 +2204,17 @@ export class BrowserManager {
       ...this.checkCommand(c?.command, c?.args, c?.timeoutSeconds, folder, allowed),
       tolerate: c?.tolerate === true,
     }));
+    // Only the agent sends batches: none reaches the browser while a person drives it (`whileDriving`).
+    const driven = this.sessions.get(String(agent.id ?? ""));
+    if (driven && this.driving(driven)) return { answers: [PERSON_DRIVING] };
     const setup: BrowserSetup = {};
     const session = await this.timedSession(agent, folder, setup);
     const desktop = req.desktop === true;
     const queuedAt = this.now();
+    const call = this.agentCall(session);
     return this.enqueue(session, async (): Promise<MachineReplies["browser.batch"]> => {
       this.mark(setup, "queued", queuedAt);
+      if (this.driving(session)) return { answers: [PERSON_DRIVING], ...withSetup(setup) };
       const answers: BrowserAnswer[] = [];
       /** Where this batch's last action answered. */
       let acted = -1;
@@ -1960,6 +2241,7 @@ export class BrowserManager {
         return true;
       };
       const opening = this.vaultOpening(actor, session);
+      session.agentRunning = (session.agentRunning ?? 0) + 1;
       try {
         for (const p of prepared) {
           if (signal?.aborted) break;
@@ -1968,10 +2250,18 @@ export class BrowserManager {
           if (acts) acted = answers.length;
           let answer: BrowserAnswer;
           try {
-            answer = await this.perform(agent, session, p, allowed, req.link, desktop, signal, setup, {
-              actor,
-              opening,
-            });
+            answer = await this.perform(
+              agent,
+              session,
+              p,
+              allowed,
+              req.link,
+              desktop,
+              signal,
+              setup,
+              { actor, opening },
+              call.signal,
+            );
           } catch (err) {
             // Nothing ran yet: refused as a whole (its error code reaches the server).
             if (answers.length === 0) throw err;
@@ -1985,14 +2275,24 @@ export class BrowserManager {
             break;
           }
           answers.push(answer);
+          // A person took control: nothing more of it runs, a step that tolerates failing either.
+          if (call.signal.aborted && !answer.success) break;
           if ((acted >= 0 && (died() || blocked())) || (!answer.success && !p.tolerate)) break;
         }
       } finally {
+        session.agentRunning = Math.max(0, (session.agentRunning ?? 1) - 1);
         // Each Vault value this batch opened goes with it (ADR 0144).
         opening.close();
       }
       return { answers, ...withSetup(setup), ...(session.viewport ? { emulated: session.viewport } : {}) };
-    });
+    }).finally(() => session.calls.delete(call));
+  }
+
+  /** An agent's `act` or `batch` as it is queued: a person taking control ends it (`stopInput`). */
+  private agentCall(session: Session): AbortController {
+    const call = new AbortController();
+    session.calls.add(call);
+    return call;
   }
 
   /**
@@ -2050,8 +2350,12 @@ export class BrowserManager {
     signal?: AbortSignal,
   ): Promise<MachineReplies["browser.capture"]> {
     const allowed = allowedDomainsOf(allowedDomains);
+    const driven = this.sessions.get(String(agent.id ?? ""));
+    if (driven && this.driving(driven)) throw new RunnerError("bad_request", PERSON_DRIVING.error ?? "");
     const session = await this.session(agent, folder);
     return this.enqueue(session, async () => {
+      // A person drives it now: the picture isn't taken through the queue their input goes through (`whileDriving`).
+      if (this.driving(session)) throw new RunnerError("bad_request", PERSON_DRIVING.error ?? "");
       if (!(await this.browserOpen(session, signal))) {
         throw new RunnerError("bad_request", "The browser isn't open: open a page first");
       }
@@ -2147,7 +2451,9 @@ export class BrowserManager {
 
   /**
    * Runs one prepared command in the session's queue (the caller holds it). `desktop`: where its Chrome belongs;
-   * `setup`: where starting its desktop and its Chrome go.
+   * `setup`: where starting its desktop and its Chrome go. `taken`: a person took control (`stopInput`): a command
+   * that hadn't started never runs, and one under way stops, whatever it is (a read or a wait holds the daemon, and
+   * the person's input waits behind it there), told as `TOOK_OVER`.
    */
   private async perform(
     agent: AgentScope,
@@ -2159,19 +2465,22 @@ export class BrowserManager {
     signal?: AbortSignal,
     setup?: BrowserSetup,
     vault?: { actor: AgentScope; opening: VaultOpening },
+    taken?: AbortSignal,
   ): Promise<BrowserAnswer> {
     const { command, args, timeoutMs } = p;
+    if (taken?.aborted) return TOOK_OVER;
     session.allowed = allowed;
     const actor = vault?.actor ?? agent;
+    const stops = signal && taken ? AbortSignal.any([signal, taken]) : (signal ?? taken);
     if (command === "agentes:type_secret") {
-      const answer = await this.typeSecret(agent, session, args, timeoutMs, signal, actor);
+      const answer = await this.typeSecret(agent, session, args, timeoutMs, stops, actor);
       this.noteAct(session, command, [], answer, link);
       return answer;
     }
     if (command === "agentes:type_vault") {
       const opening = vault?.opening ?? this.vaultOpening(actor, session);
       try {
-        const answer = await this.typeVault(actor, session, args, timeoutMs, opening, signal);
+        const answer = await this.typeVault(actor, session, args, timeoutMs, opening, stops);
         this.noteAct(session, command, [], answer, link);
         return answer;
       } finally {
@@ -2197,6 +2506,7 @@ export class BrowserManager {
       return answer;
     }
     if (!READS.has(command)) await this.ensureOwnChrome(agent, session, desktop, allowed, false, setup);
+    if (!NO_PAGE.has(command)) await this.foreground(session, stops);
     if (command === "agentes:viewport") {
       const answer = this.setViewport(session, browserViewportOf(args) ?? null);
       this.noteAct(session, command, args, answer, link);
@@ -2219,27 +2529,26 @@ export class BrowserManager {
         });
       }
     }
-    const acting = new AbortController();
-    session.acting = acting;
-    const stops = signal ? AbortSignal.any([signal, acting.signal]) : acting.signal;
     const human =
       (HUMAN_COMMANDS.has(command) ? await this.humanly(session, command, args, timeoutMs, stops) : null) ??
       (await this.humanAtPoint(session, command, args, timeoutMs, stops));
-    const taken = acting.signal.aborted && !human?.success;
-    // Cut off during a press, the button would stay down under the person's pointer.
-    if (taken) await this.run(session, ["mouse", "up"], { timeoutMs: QUICK_TIMEOUT_MS });
-    const answer = taken
-      ? TOOK_OVER
-      : (human ??
-        // `--human`: its drag goes along an eased curve from where the pointer is, slower than a script's.
-        (await this.run(
-          session,
-          [command, ...args, ...(command === "drag" && !args.includes("--human") ? ["--human"] : [])],
-          {
-            timeoutMs,
-            signal,
-          },
-        )));
+    if (taken?.aborted && !human?.success) {
+      // Cut off during a press, the button would stay down under the person's pointer.
+      if (POINTER_COMMANDS.has(command)) await this.run(session, ["mouse", "up"], { timeoutMs: QUICK_TIMEOUT_MS });
+      return TOOK_OVER;
+    }
+    const plain =
+      human ??
+      // `--human`: its drag goes along an eased curve from where the pointer is, slower than a script's.
+      (await this.run(
+        session,
+        [command, ...args, ...(command === "drag" && !args.includes("--human") ? ["--human"] : [])],
+        {
+          timeoutMs,
+          ...(stops ? { signal: stops } : {}),
+        },
+      ));
+    const answer = taken?.aborted && !plain.success ? TOOK_OVER : plain;
     // agent-browser sizes the page for a full-page shot and leaves it at the window's pixel ratio after (measured on
     // Chrome for Testing 156): the emulated size goes back.
     if (session.viewport && command === "screenshot" && (args.includes("--full") || args.includes("-f"))) {
@@ -2254,6 +2563,44 @@ export class BrowserManager {
       if (left) return { success: false, data: null, error: left };
     }
     return answer;
+  }
+
+  /**
+   * The tab `agent-browser` works in, brought to the front when it doesn't show. Chrome starts with the tabs it had
+   * (the agent's sign-ins on session cookies come back with them) in front of which it puts the page it was started
+   * on, and `agent-browser` attaches to the first tab it finds: one in the background. A page that doesn't show
+   * draws nothing and answers no pointer event. Measured on Chrome 156 with `agent-browser` 0.39.1: each
+   * `mouse move` there waited out 5 s, so a click's path ran into the 33 s of its batch (17% of the clicks and 41%
+   * of the fills of a day on one computer), a page's timers ran once a second, and a live view got no picture.
+   * `agent-browser`'s own tab switch brings a tab to the front, so it is told to switch to the tab it holds.
+   * Never an answer of its own: a look that fails, or a tab still hidden after it was brought up (a window someone
+   * minimized on the agent's desktop comes back up; one that can't is left), is tried again later and the command
+   * goes on.
+   */
+  private async foreground(session: Session, signal?: AbortSignal): Promise<void> {
+    if (!session.chrome || (session.shownUntil !== undefined && this.now() < session.shownUntil)) return;
+    const opts = { timeoutMs: QUICK_TIMEOUT_MS, ...(signal ? { signal } : {}) };
+    const later = () => {
+      session.shownUntil = this.now() + SHOWN_RETRY_MS;
+    };
+    const seen = await this.run(session, ["eval", "document.visibilityState"], opts);
+    const state = isRecord(seen.data) ? seen.data.result : null;
+    if (state !== "hidden") {
+      if (state !== "visible") return later();
+      session.shownUntil = this.now() + SHOWN_MS;
+      session.broughtUp = false;
+      return;
+    }
+    // Brought to the front the last time, and still hidden: it can't show now.
+    if (session.broughtUp) return later();
+    const tabs = await this.run(session, ["tab"], opts);
+    const list = isRecord(tabs.data) && Array.isArray(tabs.data.tabs) ? tabs.data.tabs : [];
+    const held = list.find((t) => isRecord(t) && t.active === true);
+    const id = isRecord(held) && typeof held.tabId === "string" ? held.tabId : null;
+    if (!id || !(await this.run(session, ["tab", id], opts)).success) return later();
+    session.shownUntil = this.now() + SHOWN_MS;
+    session.broughtUp = true;
+    this.opts.log(`the browser of ${session.agent.handle} brought its tab to the front`);
   }
 
   /**
@@ -2498,6 +2845,7 @@ export class BrowserManager {
       lastUsed: this.now(),
       aliveAt: null,
       crashes: new Map(),
+      calls: new Set(),
     };
     this.sessions.set(agentId, session);
     this.sweepTimer ??= setInterval(() => void this.sweep(), SWEEP_MS);
@@ -2636,6 +2984,8 @@ export class BrowserManager {
       session.outdatedAt = undefined;
       session.headed = chrome.display !== undefined;
       session.aliveAt = null;
+      session.shownUntil = undefined;
+      session.broughtUp = false;
       session.memory = this.memoryCounters();
       await this.rememberChrome(chrome.pid, profile, chrome.display);
       void chrome.exited.then(() => {
@@ -3092,11 +3442,14 @@ export class BrowserManager {
     const chrome = session.chrome;
     if (!chrome) return { success: false, data: null, error: "The browser isn't open: open a page first" };
     session.commandAt = this.now();
+    session.running = (session.running ?? 0) + 1;
     const out = await this.spawn(command, [...this.sessionFlags(session, chrome), ...args], {
       timeoutMs: opts.timeoutMs,
       cwd: session.folder,
       ...(opts.signal ? { signal: opts.signal } : {}),
       ...(opts.stdin !== undefined ? { stdin: opts.stdin } : {}),
+    }).finally(() => {
+      session.running = (session.running ?? 1) - 1;
     });
     if (out.timedOut) {
       return {
@@ -3618,12 +3971,25 @@ export class BrowserManager {
   }
 
   /**
-   * A person took control: the agent's pointer path or typing under way stops at its next step. `agent-browser` sends
-   * a batch's commands one by one from its own process, so killing that (`acting`) leaves only the one in flight, and
-   * what it typed isn't known: the agent reads the page before it acts again (`requirePageRead`).
+   * A person took control: the agent's command under way stops (its pointer path or typing at the next step, a read
+   * or a wait at once), and the ones it queued never run (`calls`). `agent-browser` sends a batch's commands one by
+   * one from its own process, so killing that leaves only the one in flight in the daemon, which the daemon still
+   * runs to its end (`DAEMON_HOLD_MS`: the person's input waits for it there). What it typed isn't known: the agent
+   * reads the page before it acts again (`requirePageRead`).
    */
   stopInput(agentId: string) {
-    this.sessions.get(agentId)?.acting?.abort();
+    const session = this.sessions.get(agentId);
+    if (session) this.takeOver(session);
+  }
+
+  private takeOver(session: Session) {
+    for (const call of session.calls) call.abort();
+    session.calls.clear();
+    // Only an agent's (or the server's) command cut off mid-way holds the daemon on: a screenshot for the live view,
+    // or taking control again (each `browser.handoff` while active says so), never makes the person's input wait.
+    if ((session.agentRunning ?? 0) > 0 && (session.running ?? 0) > 0) {
+      session.daemonBusyUntil = this.now() + DAEMON_HOLD_MS;
+    }
   }
 
   /** A person's turn is open on the agent's browser, or was when the server connection dropped. */
@@ -3721,12 +4087,12 @@ export class BrowserManager {
     if (!session) throw new RunnerError("browser_closed", "The agent's browser isn't open");
     session.lastUsed = this.now();
     // Before the wait: opening a stream queues behind the very command this stops.
-    if (mode === "control") session.acting?.abort();
+    if (mode === "control") this.takeOver(session);
     // One socket per session: a start while another opens waits for it, then only changes the mode.
     while (session.streamOpening) await session.streamOpening.catch(() => undefined);
     if (session.stream) {
       if (session.stream.mode !== mode) {
-        if (mode === "watch") this.letGo(session.stream);
+        if (mode === "watch") this.letGo(session, session.stream);
         session.stream.mode = mode;
         // Pacing again too: a config that leaves it out may put the stream back on its default.
         session.stream.socket.send(JSON.stringify({ type: "config", pacing: "ack", maxFps: STREAM_FPS[mode] }));
@@ -3767,13 +4133,17 @@ export class BrowserManager {
       }
       if (!session.chrome) return null;
       const disconnected = (a: BrowserAnswer) => isRecord(a.data) && a.data.connected !== true;
-      let status = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS });
+      // Behind an agent command taking control cut off, which the daemon still finishes (`DAEMON_HOLD_MS`).
+      const behind = Math.max(0, (session.daemonBusyUntil ?? 0) - this.now());
+      let status = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS + behind });
       if (disconnected(status)) {
         if (!held || reopened) return null;
         await reopen();
         status = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS });
         if (disconnected(status)) return null;
       }
+      // A tab in the background sends no picture: the person would watch a still page.
+      await this.foreground(session);
       if (!isRecord(status.data) || status.data.enabled !== true) {
         await this.run(session, ["stream", "enable"], { timeoutMs: QUICK_TIMEOUT_MS });
         status = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS });
@@ -3819,6 +4189,7 @@ export class BrowserManager {
     if (old) {
       old.closing = true;
       this.settleSource(old);
+      this.closePage(old);
       try {
         old.socket.close();
       } catch {
@@ -3832,6 +4203,7 @@ export class BrowserManager {
     socket.onerror = () => undefined;
     socket.onclose = () => {
       this.settleSource(stream);
+      this.closePageAfterInput(stream);
       if (session.stream !== stream) return;
       session.stream = undefined;
       this.changed();
@@ -3891,6 +4263,9 @@ export class BrowserManager {
     // Sent on connect and after every command: the active tab's address and title.
     if (msg.type === "tabs" && Array.isArray(msg.tabs)) {
       const active = msg.tabs.find((t) => isRecord(t) && t.active === true);
+      if (isRecord(active) && typeof active.targetId === "string" && TARGET_ID.test(active.targetId)) {
+        stream.targetId = active.targetId;
+      }
       if (isRecord(active) && typeof active.url === "string") {
         setUrl(active.url);
         if (typeof active.title === "string" && active.title) {
@@ -3931,6 +4306,7 @@ export class BrowserManager {
       return;
     }
     const scale = Number(m.pageScaleFactor);
+    const shown = this.shownSize(session, stream, msg.data) ?? { width, height };
     session.lastUsed = this.now();
     stream.framed = true;
     // Newest wins: the live view's window (`BrowserViews`) holds only the newest while the link is busy.
@@ -3940,8 +4316,8 @@ export class BrowserManager {
       seq,
       data: msg.data,
       metadata: {
-        deviceWidth: width,
-        deviceHeight: height,
+        deviceWidth: shown.width,
+        deviceHeight: shown.height,
         ...(Number.isFinite(scale) ? { pageScaleFactor: scale } : {}),
         capturedAt: captureTime(m.timestamp) ?? this.now(),
         ...pageMeta(session, stream),
@@ -3953,6 +4329,40 @@ export class BrowserManager {
     if (stream.owedTimer) return;
     stream.owedTimer = setTimeout(() => this.ackSource(stream), this.opts.sourceAckMs ?? SOURCE_ACK_MS);
     (stream.owedTimer as { unref?: () => void }).unref?.();
+  }
+
+  /**
+   * The size of the page a frame shows, which is where a person's click on it lands. `agent-browser` labels every
+   * frame 1280×720 whatever the page's size (a 500 pixel wide sign-in window, a 1264 pixel wide tab), so a click
+   * mapped with its label lands somewhere else on the page. The picture's own pixels are the page's on a screen of
+   * density 1 that fits the stream (headless and the agents' desktops); while a person drives, the tab says its
+   * size itself, read once per tab and picture size. Null when the picture can't be read: the label stays.
+   */
+  private shownSize(session: Session, stream: Stream, data: string): { width: number; height: number } | null {
+    // The start of the file holds its size: 64 KiB of it at most.
+    const picture = jpegSize(Buffer.from(data.slice(0, 87_380), "base64"));
+    if (!picture) return null;
+    const key = `${stream.targetId ?? ""}:${picture.width}x${picture.height}`;
+    if (stream.shown?.key === key) return stream.shown;
+    if (this.driving(session) && stream.measuring !== key) void this.measureShown(session, stream, key);
+    return picture;
+  }
+
+  private async measureShown(session: Session, stream: Stream, key: string) {
+    stream.measuring = key;
+    try {
+      const link = await this.pageLink(session, stream);
+      const metrics = link
+        ? await this.pageCall(link, { method: "Page.getLayoutMetrics", params: {} }, QUICK_TIMEOUT_MS)
+        : null;
+      const layout = metrics && isRecord(metrics.result) ? metrics.result.cssLayoutViewport : null;
+      const size = isRecord(layout) ? pageSize(layout.clientWidth, layout.clientHeight) : null;
+      if (size && session.stream === stream) stream.shown = { key, ...size };
+    } catch {
+      // not read: the picture's own size stays
+    } finally {
+      if (stream.measuring === key) stream.measuring = undefined;
+    }
   }
 
   /**
@@ -4000,6 +4410,43 @@ export class BrowserManager {
     });
     const waiting = () => session.stream === stream && !stream.framed && !this.closed && !!stream.viewport;
     if (!waiting()) return;
+    // The picture is of the page as it is, so its size is the page's own: the stream's `status` says 1280×720 for a
+    // page of any size (a 500 pixel wide sign-in window among them), and a click on a picture labelled with a width
+    // the page doesn't have lands somewhere else on it.
+    const sendShot = (data: string, page: { width: number; height: number } | null) => {
+      const size = page ?? stream.viewport;
+      if (!data || data.length > BROWSER_LIMITS.frameBytes || !size || !waiting()) return;
+      stream.framed = true;
+      this.opts.send({
+        type: "browser.frame",
+        agentId: session.agentId,
+        seq: 0,
+        data,
+        metadata: {
+          deviceWidth: size.width,
+          deviceHeight: size.height,
+          capturedAt: this.now(),
+          ...pageMeta(session, stream),
+        },
+      });
+    };
+    // A person drives it: the picture comes from the tab's own socket (`PageLink`), never held in the daemon's queue
+    // in front of their input, nor holding that queue while they type.
+    const link = this.driving(session) ? await this.pageLink(session, stream) : null;
+    if (link) {
+      const [shot, metrics] = await Promise.all([
+        this.pageCall(
+          link,
+          { method: "Page.captureScreenshot", params: { format: "jpeg", quality: 70 } },
+          QUICK_TIMEOUT_MS,
+        ),
+        this.pageCall(link, { method: "Page.getLayoutMetrics", params: {} }, QUICK_TIMEOUT_MS),
+      ]);
+      const data = shot && isRecord(shot.result) && typeof shot.result.data === "string" ? shot.result.data : "";
+      const layout = metrics && isRecord(metrics.result) ? metrics.result.cssLayoutViewport : null;
+      if (data) return sendShot(data, isRecord(layout) ? pageSize(layout.clientWidth, layout.clientHeight) : null);
+      if (!waiting()) return;
+    }
     const file = path.join(this.opts.home, "browser", `${session.name}-frame.jpg`);
     await this.enqueue(session, async () => {
       if (!waiting()) return;
@@ -4009,22 +4456,11 @@ export class BrowserManager {
           ["screenshot", file, "--screenshot-format", "jpeg", "--screenshot-quality", "70"],
           { timeoutMs: QUICK_TIMEOUT_MS },
         );
-        const data = shot.success ? (await readFile(file)).toString("base64") : "";
-        const size = stream.viewport;
-        if (!data || data.length > BROWSER_LIMITS.frameBytes || !size || !waiting()) return;
-        stream.framed = true;
-        this.opts.send({
-          type: "browser.frame",
-          agentId: session.agentId,
-          seq: 0,
-          data,
-          metadata: {
-            deviceWidth: size.width,
-            deviceHeight: size.height,
-            capturedAt: this.now(),
-            ...pageMeta(session, stream),
-          },
-        });
+        if (!shot.success) return;
+        const seen = await this.run(session, ["eval", VIEWPORT], { timeoutMs: QUICK_TIMEOUT_MS });
+        const read = seen.success && isRecord(seen.data) ? seen.data.result : null;
+        const [width, height] = Array.isArray(read) ? read : [];
+        sendShot((await readFile(file)).toString("base64"), pageSize(width, height));
       } finally {
         await rm(file, { force: true }).catch(() => undefined);
       }
@@ -4036,7 +4472,7 @@ export class BrowserManager {
     const session = this.sessions.get(String(agent.id ?? ""));
     while (session?.streamOpening) await session.streamOpening.catch(() => undefined);
     if (!session?.stream) return { stopped: false };
-    this.letGo(session.stream);
+    this.letGo(session, session.stream);
     this.endStream(session, "stopped");
     return { stopped: true };
   }
@@ -4047,6 +4483,7 @@ export class BrowserManager {
       if (!s.stream) continue;
       s.stream.closing = true;
       this.settleSource(s.stream);
+      this.closePageAfterInput(s.stream);
       s.stream.socket.close();
       s.stream = undefined;
     }
@@ -4058,6 +4495,7 @@ export class BrowserManager {
     if (!stream) return;
     stream.closing = true;
     this.settleSource(stream);
+    this.closePageAfterInput(stream);
     session.stream = undefined;
     try {
       stream.socket.close();
@@ -4069,9 +4507,9 @@ export class BrowserManager {
   }
 
   /**
-   * `browser.input`: a person's input during a take over, in order, through
-   * the daemon's command relay (the active tab, each one confirmed before the
-   * next), a drag with the gaps the person made (`dragDelay`), never more
+   * `browser.input`: a person's input during a take over, in order, on the
+   * active tab's own DevTools socket (`toPage`; the daemon's command relay
+   * when that can't open), each one confirmed before the next, a drag with the gaps the person made (`dragDelay`), never more
    * than `DRAG_LAG_MAX_MS` behind. The stream socket only carries frames. Text with nothing on the page to take it
    * is said (`nowhere`), and the picture taken again: an idle page may be showing what was there before.
    */
@@ -4102,11 +4540,11 @@ export class BrowserManager {
         }
         let ok = true;
         for (const command of relayCommands(e, stream.input)) {
-          if (!(await this.relay(stream.port, command))) ok = false;
+          if (!(await this.toPage(session, stream, command))) ok = false;
         }
         if (e.kind === "text" && !asked) {
           asked = true;
-          const seen = await this.relayAnswer(stream.port, { action: "evaluate", script: TAKES_TEXT });
+          const seen = await this.toPage(session, stream, { action: "evaluate", script: TAKES_TEXT });
           nowhere = isRecord(seen?.data) && seen.data.result === false;
         }
         if (stream.input.pointer) session.pointer = stream.input.pointer;
@@ -4127,30 +4565,185 @@ export class BrowserManager {
    * The person's control ended (back to watching, or nobody watches): a button they still hold lets go where their
    * pointer was, after the input queued before, so the agent doesn't go on with it held.
    */
-  private letGo(stream: Stream) {
+  private letGo(session: Session, stream: Stream) {
     stream.inputQueue = stream.inputQueue.then(async () => {
-      for (const command of releaseHeld(stream.input)) await this.relay(stream.port, command);
+      for (const command of releaseHeld(stream.input)) await this.toPage(session, stream, command);
     });
   }
 
-  /** One command on the daemon's relay; true when it ran. */
-  private async relay(port: number, command: Record<string, unknown>): Promise<boolean> {
-    return (await this.relayAnswer(port, command)) !== null;
+  /**
+   * One of the person's commands on the page, and its answer (null: it didn't run). On the tab's own DevTools socket
+   * when it opens (`PageLink`), so nothing that holds `agent-browser`'s daemon holds it; on the daemon's relay
+   * otherwise. A command the socket took and that failed or timed out there isn't sent again on the relay: it may have
+   * reached the page.
+   */
+  private async toPage(
+    session: Session,
+    stream: Stream,
+    command: Record<string, unknown>,
+  ): Promise<Record<string, unknown> | null> {
+    const calls = pageCalls(command);
+    const link = calls ? await this.pageLink(session, stream) : null;
+    if (!calls || !link) return this.relayAnswer(stream.port, command, session);
+    let last: Record<string, unknown> = {};
+    for (const call of calls) {
+      const answer = await this.pageCall(link, call, this.opts.inputTimeoutMs ?? INPUT_TIMEOUT_MS);
+      if (!answer || answer.error !== undefined) return null;
+      last = isRecord(answer.result) ? answer.result : {};
+    }
+    if (command.action !== "evaluate") return { success: true };
+    // As the relay answers an `evaluate`: its value under `data.result`.
+    if (last.exceptionDetails !== undefined) return null;
+    return { success: true, data: { result: isRecord(last.result) ? last.result.value : undefined } };
   }
 
-  /** One command on the daemon's relay (`POST /api/command` on the stream port): its answer, null if it didn't run. */
-  private async relayAnswer(port: number, command: Record<string, unknown>): Promise<Record<string, unknown> | null> {
+  /**
+   * The active tab's own DevTools socket (`PageLink`), opened (or opened again for another tab) as needed; null while
+   * there is none to open (no target known yet, no Chrome of ours) or one failed less than `PAGE_RETRY_MS` ago.
+   */
+  private async pageLink(session: Session, stream: Stream): Promise<PageLink | null> {
+    const targetId = stream.targetId;
+    const port = session.chrome?.port;
+    if (!targetId || !port || stream.closing || session.stream !== stream) return null;
+    let link = stream.page;
+    if (link && link.targetId !== targetId) link = this.closePage(stream);
+    if (link && link.failedAt !== undefined) {
+      if (this.now() - link.failedAt < PAGE_RETRY_MS) return null;
+      link = this.closePage(stream);
+    }
+    link ??= this.openPage(stream, port, targetId);
+    return (await link.ready) ? link : null;
+  }
+
+  private openPage(stream: Stream, port: number, targetId: string): PageLink {
+    const link: PageLink = {
+      targetId,
+      socket: null as unknown as StreamSocket,
+      ready: Promise.resolve(false),
+      open: false,
+      nextId: 1,
+      waiting: new Map(),
+    };
+    stream.page = link;
+    link.ready = new Promise<boolean>((resolve) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const fail = () => {
+        clearTimeout(timer);
+        link.open = false;
+        link.failedAt ??= this.now();
+        for (const done of [...link.waiting.values()]) done(null);
+        link.waiting.clear();
+        resolve(false);
+      };
+      try {
+        const url = `ws://127.0.0.1:${port}/devtools/page/${targetId}`;
+        link.socket = (this.opts.connectPage ?? ((u: string) => new WebSocket(u) as unknown as StreamSocket))(url);
+      } catch {
+        fail();
+        return;
+      }
+      const socket = link.socket;
+      timer = setTimeout(() => {
+        fail();
+        try {
+          socket.close();
+        } catch {
+          // already closed
+        }
+      }, PAGE_OPEN_MS);
+      (timer as { unref?: () => void }).unref?.();
+      socket.onopen = () => {
+        clearTimeout(timer);
+        if (link.failedAt !== undefined) return;
+        link.open = true;
+        resolve(true);
+      };
+      socket.onerror = fail;
+      socket.onclose = fail;
+      socket.onmessage = (event) => {
+        let msg: unknown;
+        try {
+          const raw = event.data;
+          msg = JSON.parse(typeof raw === "string" ? raw : Buffer.from(raw as ArrayBuffer).toString("utf8"));
+        } catch {
+          return;
+        }
+        // Answers carry the id they were asked under; events (none asked for) carry none.
+        if (isRecord(msg) && typeof msg.id === "number") link.waiting.get(msg.id)?.(msg);
+      };
+    });
+    return link;
+  }
+
+  /** One DevTools call on the tab's socket: Chrome's answer (`result` or `error`), null if none came in `timeoutMs`. */
+  private pageCall(link: PageLink, call: PageCall, timeoutMs: number): Promise<Record<string, unknown> | null> {
+    if (!link.open) return Promise.resolve(null);
+    const id = link.nextId++;
+    return new Promise((resolve) => {
+      const done = (answer: Record<string, unknown> | null) => {
+        clearTimeout(timer);
+        link.waiting.delete(id);
+        resolve(answer);
+      };
+      const timer = setTimeout(() => done(null), timeoutMs);
+      (timer as { unref?: () => void }).unref?.();
+      link.waiting.set(id, done);
+      try {
+        link.socket.send(JSON.stringify({ id, method: call.method, params: call.params }));
+      } catch {
+        done(null);
+      }
+    });
+  }
+
+  /** The tab's socket closes (the stream ended, or another tab is active): undefined, for `pageLink`. */
+  private closePage(stream: Stream): undefined {
+    const link = stream.page;
+    if (!link) return undefined;
+    stream.page = undefined;
+    link.failedAt ??= this.now();
+    link.open = false;
+    for (const done of [...link.waiting.values()]) done(null);
+    link.waiting.clear();
+    try {
+      link.socket.onclose = null;
+      link.socket.onerror = null;
+      link.socket.close();
+    } catch {
+      // already closed
+    }
+    return undefined;
+  }
+
+  /** Once the input queued on a stream that ended has run, its tab's socket closes. */
+  private closePageAfterInput(stream: Stream) {
+    void stream.inputQueue.then(() => this.closePage(stream));
+  }
+
+  /**
+   * One command on the daemon's relay (`POST /api/command` on the stream port): its answer, null if it didn't run.
+   * While the daemon may still be running an agent command that taking control cut off (`daemonBusyUntil`), it waits
+   * that long: the daemon runs it after that command, and failing it sooner would say it never reached the page.
+   */
+  private async relayAnswer(
+    port: number,
+    command: Record<string, unknown>,
+    session?: Session,
+  ): Promise<Record<string, unknown> | null> {
     const origin = `http://127.0.0.1:${port}`;
+    const busy = (session?.daemonBusyUntil ?? 0) - this.now();
     try {
       const res = await (this.opts.fetch ?? fetch)(`${origin}/api/command`, {
         method: "POST",
         redirect: "error",
-        signal: AbortSignal.timeout(INPUT_TIMEOUT_MS),
+        signal: AbortSignal.timeout(Math.max(this.opts.inputTimeoutMs ?? INPUT_TIMEOUT_MS, busy)),
         // The relay only takes a same-origin request.
         headers: { "Content-Type": "application/json", Origin: origin },
         body: JSON.stringify({ id: randomUUID(), ...command }),
       });
       const body = (await res.json().catch(() => null)) as unknown;
+      // The daemon answered: nothing of the agent's holds it any longer.
+      if (session) session.daemonBusyUntil = undefined;
       return res.ok && isRecord(body) && body.success !== false && !body.error ? body : null;
     } catch {
       // Timed out (the command may still be queued in the daemon) or the port closed.

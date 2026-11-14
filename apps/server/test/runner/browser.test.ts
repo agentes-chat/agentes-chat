@@ -214,7 +214,7 @@ function setup(over: Partial<BrowserManagerOptions> = {}, secrets: Record<string
       ...(extra.allowedDomains ? { allowedDomains: extra.allowedDomains } : {}),
     });
   // The fake appends one line per call: a line still being written (no newline yet) is left for the next read.
-  const logged = (): Logged[] =>
+  const everyCall = (): Logged[] =>
     existsSync(log)
       ? readFileSync(log, "utf8")
           .split("\n")
@@ -222,11 +222,13 @@ function setup(over: Partial<BrowserManagerOptions> = {}, secrets: Record<string
           .filter(Boolean)
           .map((l) => JSON.parse(l) as Logged)
       : [];
+  // Without the runner's own look at whether the agent's tab shows (`foreground`), which goes before any command.
+  const logged = (): Logged[] => everyCall().filter((l) => l.args.at(-1) !== "document.visibilityState");
   const page = (patch: Record<string, unknown>) => {
     const cur = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, "utf8")) : {};
     writeFileSync(stateFile, JSON.stringify({ ...cur, ...patch }));
   };
-  return { ws, home, manager, frames, sockets, folder, act, logged, page, chromes: chromes.started };
+  return { ws, home, manager, frames, sockets, folder, act, logged, everyCall, page, chromes: chromes.started };
 }
 
 class FakeSocket implements StreamSocket {
@@ -656,6 +658,57 @@ test("a click goes as a person's: the box, then a pointer path into it, a check 
   expect(t.logged().at(-1)?.args.slice(-4)).toEqual(["drag", "@e1", "@e2", "--human"]);
 });
 
+test("a tab in the background comes to the front before a command; one that shows is left alone", async () => {
+  let now = 1_000_000;
+  const logs: string[] = [];
+  const t = setup({ now: () => now, log: (l) => logs.push(l) });
+  const calls = () => t.everyCall().map((l) => l.args.slice(l.args.indexOf("--screenshot-dir") + 2).join(" "));
+  const LOOK = "eval document.visibilityState";
+  // Chrome came up with the tabs it had: the one `agent-browser` holds is behind the page Chrome started on.
+  t.page({ hidden: true });
+  expect(await t.act("open", ["https://a.example/"])).toMatchObject({ success: true });
+  // Looked at, found hidden, switched to again (which brings it to the front), then the command.
+  expect(calls()).toEqual([LOOK, "tab", "tab t1", "open https://a.example/"]);
+  expect(logs).toContain("the browser of dev brought its tab to the front");
+
+  // The commands of one batch share that look; a second later it is looked at again, and shows.
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(
+    calls()
+      .slice(4)
+      .filter((c) => c === LOOK),
+  ).toEqual([]);
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === LOOK)).toHaveLength(2);
+  expect(calls().filter((c) => c === "tab t1")).toHaveLength(1);
+
+  // A tab that stays hidden (a window that can't come up) doesn't fail the command, and isn't tried at each one.
+  t.page({ hidden: true, staysHidden: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === "tab t1")).toHaveLength(2);
+  // Once it shows again, the next time it hides it is brought up as before.
+  t.page({ hidden: false, staysHidden: false });
+  now += 30_000;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  t.page({ hidden: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === "tab t1")).toHaveLength(3);
+
+  // Switching tabs and waiting need no page in front.
+  const before = calls().filter((c) => c === LOOK).length;
+  now += 31_000;
+  expect(await t.act("tab", ["2"])).toMatchObject({ success: true });
+  expect(await t.act("wait", ["10"])).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === LOOK)).toHaveLength(before);
+});
+
 test("an action on a point of the page: the pointer goes along a path, text as keys when a field has the focus", async () => {
   const t = setup();
   await t.act("open", ["https://shop.example.com"]);
@@ -785,7 +838,339 @@ describe("a person takes control while the agent's pointer and keys are going", 
     expect((await going).error).toContain("A person took control");
     await control;
   });
+
+  test("a read hung on the page stops, what the agent queued never runs, and the person's input reaches the page", async () => {
+    const t = setup({ inputTimeoutMs: 200, ...(posix ? {} : { startPageDirectory: tempDir() }) });
+    // The daemon runs one command at a time, the relay's too, and finishes one whose client is gone: while the
+    // agent's read holds it, the person's input waits there.
+    let held: Promise<void> | null = null;
+    const relay = fakeRelay();
+    const daemon = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      async fetch(req) {
+        if (held) await held;
+        return fetch(`http://127.0.0.1:${relay.port}${new URL(req.url).pathname}`, {
+          method: "POST",
+          headers: req.headers,
+          body: await req.text(),
+        });
+      },
+    });
+    try {
+      await t.act("open", ["https://shop.example.com"]);
+      t.page({ port: daemon.port, hang: { command: "get", ms: 20_000 } });
+      await t.manager.streamStart(dev, "watch");
+      const before = t.logged().length;
+      const startedAt = performance.now();
+      // A batch: the read, then a look that tolerates failing.
+      const reading = t.manager.batch(dev, await t.folder(), {
+        op: "browser.batch",
+        commands: [
+          { command: "get", args: ["text", "@e3"], timeoutSeconds: 30 },
+          { command: "snapshot", args: [], timeoutSeconds: 30, tolerate: true },
+        ],
+      });
+      await waitFor(() =>
+        t
+          .logged()
+          .slice(before)
+          .some((c) => c.args.includes("get")),
+      );
+      // The daemon finishes the cut-off read later than the relay's own timeout.
+      let release = () => {};
+      held = new Promise<void>((r) => {
+        release = () => {
+          held = null;
+          r();
+        };
+      });
+      setTimeout(() => release(), 600);
+      await t.manager.streamStart(dev, "control");
+      const { answers } = await reading;
+      expect(answers).toHaveLength(1);
+      expect(answers[0]?.error).toContain("A person took control");
+      expect(performance.now() - startedAt).toBeLessThan(5_000);
+      // The look after it never reached the browser.
+      expect(
+        t
+          .logged()
+          .slice(before)
+          .some((c) => c.args.includes("snapshot")),
+      ).toBe(false);
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mousePressed", x: 5, y: 6, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 5, y: 6, button: "left", clickCount: 1 },
+      ]);
+      expect(res).toEqual({ accepted: 2 });
+      expect(relay.received.map((r) => r.body.type)).toEqual(["mousePressed", "mouseReleased"]);
+      // Once the daemon answered, an input that gets no answer fails at the relay's own timeout again.
+      held = new Promise<void>(() => {});
+      const waited = performance.now();
+      expect(await t.manager.input(dev, [{ kind: "key", type: "keyDown", key: "Enter" }])).toEqual({
+        accepted: 0,
+        failed: 1,
+      });
+      expect(performance.now() - waited).toBeLessThan(2_000);
+      held = null;
+    } finally {
+      daemon.stop(true);
+      relay.server.stop(true);
+    }
+  });
+
+  test("while a person drives, nothing but their own commands reaches the browser, and their input goes at once", async () => {
+    const t = setup({ inputTimeoutMs: 200, ...(posix ? {} : { startPageDirectory: tempDir() }) });
+    const relay = fakeRelay();
+    try {
+      await t.act("open", ["https://shop.example.com"]);
+      // Any read that reached the daemon would hold it (and the person's clicks behind it) for 20 s.
+      t.page({ port: relay.port, hang: { command: "get", ms: 20_000 } });
+      await t.manager.streamStart(dev, "control");
+      const before = t.logged().length;
+      const startedAt = performance.now();
+      const folder = await t.folder();
+      // The server's read of the address (the handoff's keep-alive, the page a person took control on): the live view's.
+      const url = await t.manager.act(dev, folder, {
+        op: "browser.act",
+        command: "get",
+        args: ["url"],
+        timeoutSeconds: 10,
+      });
+      expect(url).toMatchObject({ success: true, data: { url: expect.stringContaining("shop.example.com") } });
+      // Anything else, an agent's command or batch included: refused before the queue.
+      for (const [command, args] of [
+        ["get", ["text", "@e3"]],
+        ["click", ["@e2"]],
+        ["wait", ["#late"]],
+      ] as const) {
+        const answer = await t.manager.act(dev, folder, {
+          op: "browser.act",
+          command,
+          args: [...args],
+          timeoutSeconds: 30,
+        });
+        expect(answer).toMatchObject({ success: false, code: "person_in_control" });
+        expect(answer.error).toContain("A person has control of your browser");
+      }
+      const { answers } = await t.manager.batch(dev, folder, {
+        op: "browser.batch",
+        commands: [{ command: "snapshot", args: [], timeoutSeconds: 30 }],
+      });
+      expect(answers).toEqual([expect.objectContaining({ code: "person_in_control" })]);
+      expect(performance.now() - startedAt).toBeLessThan(1_000);
+      // Taking control again (each `browser.handoff` while active says so) doesn't make their input wait either.
+      t.manager.setHandoff(dev.id, { status: "active", controller: "Maria" });
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mousePressed", x: 5, y: 6, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 5, y: 6, button: "left", clickCount: 1 },
+      ]);
+      expect(res).toEqual({ accepted: 2 });
+      expect(performance.now() - startedAt).toBeLessThan(1_500);
+      const reached = t
+        .logged()
+        .slice(before)
+        .filter((c) => !c.args.includes("screenshot"));
+      expect(reached.some((c) => ["get", "click", "wait", "snapshot"].some((a) => c.args.includes(a)))).toBe(false);
+      // The person's own move (the live view's address field) still runs while they drive.
+      const moved = await t.manager.act(dev, folder, {
+        op: "browser.act",
+        command: "open",
+        args: ["https://shop.example.com/cart"],
+        timeoutSeconds: 30,
+        person: true,
+      });
+      expect(moved.success).toBe(true);
+      expect(
+        t
+          .logged()
+          .slice(before)
+          .some((c) => c.args.includes("open")),
+      ).toBe(true);
+      // Back to watching: the agent's commands run again.
+      await t.manager.streamStart(dev, "watch");
+      t.page({ hang: null });
+      expect((await t.act("get", ["url"])).code).toBeUndefined();
+    } finally {
+      relay.server.stop(true);
+    }
+  });
+
+  test("with the daemon held (its own upkeep, a picture, a call hung on Chrome), the person's input still reaches the page at once", async () => {
+    // The daemon's one lock, which its relay waits on too, held for good: in production each input waited there 5 s
+    // and failed ("this didn't reach the page") on a Cloudflare check.
+    let relayed = 0;
+    const daemon = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      async fetch() {
+        relayed++;
+        await new Promise(() => {});
+        return new Response(null);
+      },
+    });
+    const pages: FakePage[] = [];
+    const t = setup({
+      inputTimeoutMs: 2_000,
+      firstFrameMs: 30,
+      connectPage: (url) => {
+        const p = new FakePage(url);
+        pages.push(p);
+        queueMicrotask(() => p.onopen?.());
+        return p;
+      },
+      ...(posix ? {} : { startPageDirectory: tempDir() }),
+    });
+    try {
+      await t.act("open", ["https://dash.example.com/login"]);
+      t.page({ port: daemon.port, viewport: [1280, 800] });
+      await t.manager.streamStart(dev, "control");
+      const stream = t.sockets.at(-1) as FakeSocket;
+      stream.push({ type: "status", viewportWidth: 1280, viewportHeight: 800 });
+      stream.push({
+        type: "tabs",
+        tabs: [
+          { targetId: "START0", url: "file:///start.html", active: false },
+          { targetId: "AB12CD34", url: "https://dash.example.com/login", active: true },
+        ],
+      });
+      // An idle page sends no frame: its first picture comes from the tab's socket too, not the held daemon.
+      await waitFor(() => t.frames.some((f) => f.type === "browser.frame" && f.seq === 0));
+      // It says the size the tab itself has (a narrow sign-in window), not the 1280 the stream's status says for
+      // any page: a click mapped with the wrong width lands elsewhere on the page.
+      expect(t.frames.find((f) => f.type === "browser.frame" && f.seq === 0)).toMatchObject({
+        metadata: { deviceWidth: 500, deviceHeight: 487 },
+      });
+      // So does a frame of the stream, which `agent-browser` labels 1280×720 whatever its picture shows.
+      const labelled = { deviceWidth: 1280, deviceHeight: 720 };
+      stream.push({ type: "frame", seq: 4, data: jpegOf(500, 487), metadata: labelled });
+      expect(t.frames.at(-1)).toMatchObject({ seq: 4, metadata: { deviceWidth: 500, deviceHeight: 487 } });
+      const startedAt = performance.now();
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mouseMoved", x: 40, y: 50 },
+        { kind: "mouse", type: "mousePressed", x: 40, y: 50, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 40, y: 50, button: "left", clickCount: 1 },
+        { kind: "text", text: "maria@example.com" },
+        { kind: "key", type: "keyDown", key: "Enter" },
+        { kind: "key", type: "keyDown", key: "a", modifiers: 2 },
+      ]);
+      const took = performance.now() - startedAt;
+      expect(res).toEqual({ accepted: 6 });
+      expect(took).toBeLessThan(300);
+      expect(relayed).toBe(0);
+      expect(pages.map((p) => p.url)).toEqual([`ws://127.0.0.1:${t.chromes[0]?.port}/devtools/page/AB12CD34`]);
+      const calls = (pages[0] as FakePage).calls.filter(
+        (c) => c.method !== "Page.captureScreenshot" && c.method !== "Page.getLayoutMetrics",
+      );
+      expect(calls).toEqual([
+        {
+          method: "Input.dispatchMouseEvent",
+          params: expect.objectContaining({ type: "mouseMoved", x: 40, y: 50, button: "none", buttons: 0 }),
+        },
+        {
+          method: "Input.dispatchMouseEvent",
+          params: expect.objectContaining({ type: "mousePressed", button: "left", buttons: 1, clickCount: 1 }),
+        },
+        {
+          method: "Input.dispatchMouseEvent",
+          params: expect.objectContaining({ type: "mouseReleased", button: "left", buttons: 0, clickCount: 1 }),
+        },
+        { method: "Input.insertText", params: { text: "maria@example.com" } },
+        // Whether a field took the text: asked on the tab, too.
+        { method: "Runtime.evaluate", params: expect.objectContaining({ returnByValue: true }) },
+        {
+          method: "Input.dispatchKeyEvent",
+          params: expect.objectContaining({ type: "keyDown", key: "Enter", windowsVirtualKeyCode: 13, text: "\r" }),
+        },
+        { method: "Input.dispatchKeyEvent", params: expect.objectContaining({ type: "keyUp", key: "Enter" }) },
+        {
+          method: "Input.dispatchKeyEvent",
+          params: {
+            type: "keyDown",
+            key: "a",
+            code: "KeyA",
+            windowsVirtualKeyCode: 65,
+            nativeVirtualKeyCode: 65,
+            modifiers: 2,
+          },
+        },
+        {
+          method: "Input.dispatchKeyEvent",
+          params: {
+            type: "keyUp",
+            key: "a",
+            code: "KeyA",
+            windowsVirtualKeyCode: 65,
+            nativeVirtualKeyCode: 65,
+            modifiers: 2,
+          },
+        },
+      ]);
+      // Another tab becomes the active one (a popup the click opened): the input follows it there.
+      stream.push({ type: "tabs", tabs: [{ targetId: "EF56", url: "https://appleid.example.com/", active: true }] });
+      expect(await t.manager.input(dev, [{ kind: "mouse", type: "mouseMoved", x: 1, y: 2 }])).toEqual({ accepted: 1 });
+      expect(pages.map((p) => p.url.split("/").at(-1))).toEqual(["AB12CD34", "EF56"]);
+      expect((pages[0] as FakePage).closed).toBe(true);
+      // The stream ends: so does the tab's socket.
+      await t.manager.streamStop(dev);
+      await waitFor(() => (pages[1] as FakePage).closed);
+    } finally {
+      daemon.stop(true);
+    }
+  });
+
+  test.if(posix)("a tab whose socket can't open: the input goes on the daemon's relay as before", async () => {
+    const relay = fakeRelay();
+    const t = setup({
+      connectPage: (url) => {
+        const p = new FakePage(url);
+        queueMicrotask(() => p.onerror?.());
+        return p;
+      },
+    });
+    try {
+      await t.act("open", ["https://shop.example.com"]);
+      t.page({ port: relay.port });
+      await t.manager.streamStart(dev, "control");
+      (t.sockets.at(-1) as FakeSocket).push({
+        type: "tabs",
+        tabs: [{ targetId: "AB12CD34", url: "https://shop.example.com/", active: true }],
+      });
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mousePressed", x: 5, y: 6, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 5, y: 6, button: "left", clickCount: 1 },
+      ]);
+      expect(res).toEqual({ accepted: 2 });
+      expect(relay.received.map((r) => r.body.type)).toEqual(["mousePressed", "mouseReleased"]);
+    } finally {
+      relay.server.stop(true);
+    }
+  });
 });
+
+/** The start of a JPEG of that size, in base64: all a frame's size is read from. */
+function jpegOf(width: number, height: number): string {
+  const head = [0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03];
+  return Buffer.from([...head, ...new Array(12).fill(0)]).toString("base64");
+}
+
+/** A tab's own DevTools socket (`connectPage`): records each call and answers it as Chrome does. */
+class FakePage extends FakeSocket {
+  calls: { method: string; params: Record<string, unknown> }[] = [];
+  override send(data: string) {
+    const msg = JSON.parse(data) as { id: number; method: string; params: Record<string, unknown> };
+    this.calls.push({ method: msg.method, params: msg.params });
+    const result =
+      msg.method === "Runtime.evaluate"
+        ? { result: { type: "boolean", value: true } }
+        : msg.method === "Page.captureScreenshot"
+          ? { data: Buffer.from("jpeg").toString("base64") }
+          : msg.method === "Page.getLayoutMetrics"
+            ? { cssLayoutViewport: { pageX: 0, pageY: 0, clientWidth: 500, clientHeight: 487 } }
+            : {};
+    queueMicrotask(() => this.push({ id: msg.id, result }));
+  }
+}
 
 test("after a hover the pointer goes straight to the next element, and curves again once it left", async () => {
   const t = setup();
@@ -1013,14 +1398,17 @@ function fakeDevtools(down: number[], answer: (reply: () => void) => void = (rep
         const event = (method: string, params: object, sessionId?: string) =>
           ws.send(JSON.stringify({ method, params, ...(sessionId ? { sessionId } : {}) }));
         const result = (r: object) => ws.send(JSON.stringify({ id: msg.id, result: r }));
-        if (msg.method === "Target.setAutoAttach" && !msg.sessionId) {
+        if (msg.method === "Target.setDiscoverTargets") {
           answer(() => {
+            event("Target.targetCreated", { targetInfo: { type: "page", targetId: `tab-${n}` } });
             result({});
-            event("Target.attachedToTarget", {
-              sessionId: `page-${n}`,
-              targetInfo: { type: "page", targetId: `tab-${n}` },
-            });
           });
+        } else if (msg.method === "Target.attachToTarget") {
+          event("Target.attachedToTarget", {
+            sessionId: `page-${n}`,
+            targetInfo: { type: "page", targetId: `tab-${n}` },
+          });
+          result({});
         } else if (msg.method === "Network.enable") {
           event(
             "Network.requestWillBeSentExtraInfo",
@@ -1067,7 +1455,7 @@ test.if(posix)("a new Chrome's first command waits for its traffic counter to at
   try {
     const t = setup({ startChrome: chromesAt(held).start });
     const opened = t.act("open", ["https://a.example/"]);
-    await waitFor(() => held.asked.includes("Target.setAutoAttach"));
+    await waitFor(() => held.asked.includes("Target.setDiscoverTargets"));
     await Bun.sleep(300);
     expect(t.logged()).toEqual([]);
     reply();
@@ -2461,8 +2849,9 @@ test.if(posix)(
       seq: 0,
       data: expect.stringMatching(/^\/9j\//), // the JPEG the fake writes for a .jpg
       metadata: {
+        // The page's own size (what it answers), not the 1280×720 the stream's status says.
         deviceWidth: 1280,
-        deviceHeight: 720,
+        deviceHeight: 800,
         capturedAt: expect.any(Number),
         url: "https://shop.example.com/",
         title: "Loja",

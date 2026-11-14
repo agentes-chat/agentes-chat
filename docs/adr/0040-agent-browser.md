@@ -226,6 +226,40 @@ A beta customer, the only owner of his agents, could not paste into a sign-in pa
 
 Where the agent's Chrome runs on its desktop (ADR 0058 §7), the browser's open handoff also holds the screen. Someone who may drive the computer (`computerDriving`) and holds that handoff (a request they took, or a take over of the browser) now drives the whole screen: the desktop's control stream is allowed for them (`streamAccess`), their watching stream switches to control in place when they take it and back when they hand it back (`createDesktopControl`), and leaving keeps control for the grace as on the screen's own handoff. The apps open the computer dialog on the screen for them (`drivesOnDesktop`), with the request's banner on top and Pronto / Não consegui as before; the chat card's Abrir aqui opens that dialog instead of the page. Everyone else (who may drive only the browser) gets the page as before, and so does a computer without screens. Someone other than the owner who gets the screen this way is audited and the owner told, as for a take over of the screen (`desktop.control_taken`, ADR 0059 §8). The agent hears the same browser hand back (`done`, `failed`), and reads the page again.
 
+### 17. A person's input on the tab's own socket (2026-11-13)
+
+A person in control saw "this didn't reach the page" on a Cloudflare check: each input waited the relay's 5 s and failed, with nothing of the agent running (its commands are refused while a person drives). The relay (`POST /api/command` on the stream port) runs inside `agent-browser`'s daemon, behind the one lock its commands take, and the daemon holds that lock for its own upkeep too: every 100 ms it applies what Chrome reported, and each cross-origin frame that attaches (a challenge's iframe) is set up there one DevTools call after another, any of which may wait up to its 30 s timeout (checked in 0.39.1's source, `daemon.rs` and `apply_drained_events`). Measured on a desktop with the same build: each load of a Cloudflare check held the relay 0.4 to 1.4 s, while `Input.dispatchMouseEvent` on the tab's own DevTools socket answered in 0 to 2 ms; with the daemon held by a command of its own, input on the relay failed at 5 s and on the tab's socket took 36 ms at most.
+
+- While a person drives, the runner opens the active tab's own DevTools socket (`ws://127.0.0.1:<port>/devtools/page/<target>`, the target from the stream's tab list, which follows a new active tab) and sends their input there as the same DevTools calls `agent-browser` makes for its relay commands (`pageCalls`: mouse, `insertText`, modifier keys, `press` chords with their key codes, the check that a field took the text). The live view's first picture while they drive comes from there too (`Page.captureScreenshot`), out of the daemon's queue.
+- The relay stays the fallback: no target known, or a socket that doesn't open within 1 s (tried again after 10 s). A call the tab's socket took isn't sent again on the relay.
+- The socket closes with the stream, once the input queued on it has run. Nothing else changes: the agent's commands, frames and pacing stay on `agent-browser`.
+
+### 18. A frame says the size of the page it shows (2026-11-13)
+
+A person in control could type but not click: the page looked enlarged and every click landed elsewhere on it. `agent-browser` labels every frame of its stream 1280×720, and says the same in the stream's status, whatever the page's size: a sign-in window 500 pixels wide went out as 1280 wide, and the apps map a click on the picture with that width, so each landed 2.5 times too far right and down (measured with 0.39.1: a 1264×726 tab's frames say 1280×720).
+
+- A frame goes out with the size of its own picture, which is the page's on a screen of density 1 that fits the stream (headless, and the agents' desktops). While a person drives, the tab says its size itself (`Page.getLayoutMetrics` on its own socket, section 17), read once per tab and picture size, for screens where the picture is scaled.
+- The first picture of an idle page (a screenshot) says the size the page answers (`Page.getLayoutMetrics` on the tab's socket, else `window.innerWidth`/`innerHeight`), not the stream's status.
+- A picture that can't be read keeps the stream's label.
+
+### 19. The agent's tab is in front before a command (2026-11-14)
+
+On one computer over a day, 17% of the agents' clicks and 41% of their fills answered "The browser didn't answer within 33 s" (53 of the 61 that took over 30 s), each exactly at the limit of the batch that presses as a person does (`HELD_PRESS_MS`), in headless Chrome and on the agents' desktops alike. Chrome starts with the tabs it had (`--restore-last-session`, section 13) and shows the page it was started on, while `agent-browser` attaches to the first tab it finds: one in the background. A page that doesn't show draws nothing and answers no pointer event. Measured on Chrome 156 with `agent-browser` 0.39.1: each `mouse move` on such a tab waits out 5 s, so a pointer path of twenty moves never ends; its timers run once a second (the settle waits); and a live view gets no picture. Brought to the front, the same move takes 12 ms and the same click 0.7 s.
+
+- Before a command that needs the page, the runner asks the tab whether it shows (`document.visibilityState`), at most once a second, so the commands of one batch share one look. A hidden one is brought to the front by `agent-browser`'s own tab switch, to the tab it already holds (`foreground`).
+- A live view that opens does the same first.
+- It never fails a command. A look that can't be read, or a tab still hidden after it was brought up, is left for 30 s: on an agent's desktop a minimized window comes back up, and one that can't show is not asked at every command.
+- `tab`, `wait`, `dialog` and the page size are not preceded by it.
+
+### 20. A press that opens a window hears of its release (2026-11-14)
+
+A click on something that opens a new window (`window.open`: a "Continue with Google" button) answered "CDP command timed out: Input.dispatchMouseEvent" 30 s later, though it had landed (5 of the 61 slow ones of section 19, by their time). The runner's own connection to each Chrome (its traffic counter, which also tells of a page that died and guards a typed password, ADR 0144) asked for `Target.setAutoAttach` at the browser's level. Measured on Chrome 156 with `agent-browser` 0.39.1: while any client auto-attaches there, even one that leaves pages out and pauses nothing, the release of a press that opens a window is never answered; with none, or with one that only asks to be told of targets, it is answered in 0.1 s.
+
+- At the browser's level the runner asks to be told of targets (`Target.setDiscoverTargets`, Chrome's own UI and the tabs' wrappers left out) and attaches to each page, extension page, service worker and shared worker itself (`Target.attachToTarget`, flat). Frames and dedicated workers are still auto-attached under their page, as before: that does not hold a release.
+- What each session gets is unchanged (network events, the password guard's pause, the page size, the auto-attach under it), and so is what the guard waits for: a page that opens while a password is guarded is paused once it is attached, which neither way does before its first request.
+- The counter is attached once Chrome told of the targets it has and answered for each: a first command still waits for that.
+- The same click now takes 0.8 s.
+
 ## Order
 
 First version: stages 0–7. Difficulty: **easy** (known pattern, little risk), **medium** (new pieces on known patterns).

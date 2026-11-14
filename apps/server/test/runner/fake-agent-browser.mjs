@@ -10,6 +10,7 @@
 // `get box <sel>` answers `boxes[sel]`; a script sees `viewport` as `window.innerWidth`/`innerHeight` and
 // `hit` (`{ tag, type, box: [left, top, right, bottom], ref }`) at any `document.elementFromPoint`; a
 // `mouse down` focuses that `ref`; `frames` (`[[width, height]]`) are the page's iframes.
+// `hang`: `{ command, ms }` makes that command take that long.
 // `typingMs`: a batch that presses keys or moves the pointer takes that long (a person can step in meanwhile).
 import { appendFileSync, existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 
@@ -130,6 +131,8 @@ const markedField = (selector) => {
 
 // `delayMs`: every command takes that long (a page busy under it).
 if (state.delayMs) await new Promise((resolve) => setTimeout(resolve, state.delayMs));
+// `hang`: `{ command, ms }`: that command takes that long (an element the daemon waits for).
+if (state.hang && rest[0] === state.hang.command) await new Promise((resolve) => setTimeout(resolve, state.hang.ms));
 
 const [command, ...args] = rest;
 switch (command) {
@@ -167,7 +170,9 @@ switch (command) {
   case "tab":
     // `tab <n>`: switch to a tab that is on `tabTo` (a link that opened a new tab).
     if (/^\d+$/.test(args[0] ?? "") && state.tabTo) state.url = state.tabTo;
-    out({ success: true, data: {} });
+    // `tab t1`: the tab it holds comes to the front. `tab`: its tabs.
+    if (args[0] === "t1" && !state.staysHidden) state.hidden = false;
+    out({ success: true, data: args.length === 0 ? { tabs: [{ tabId: "t1", active: true }] } : {} });
     break;
   case "batch": {
     const list = JSON.parse(stdin || "[]");
@@ -247,10 +252,19 @@ switch (command) {
     break;
   }
   case "eval":
-    // The page's size, or a settle check (true).
+    // The page's size, whether its tab shows, or a settle check (true).
     out({
       success: true,
-      data: { result: args.join(" ").includes("innerWidth") ? [1280, 800] : true, origin: state.url },
+      data: {
+        result: args.join(" ").includes("innerWidth")
+          ? [1280, 800]
+          : args.at(-1) === "document.visibilityState"
+            ? state.hidden
+              ? "hidden"
+              : "visible"
+            : true,
+        origin: state.url,
+      },
     });
     break;
   case "upload":

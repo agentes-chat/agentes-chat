@@ -1213,6 +1213,8 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
                 ...(agent.browserAllowedDomains ? { allowedDomains: agent.browserAllowedDomains } : {}),
                 link: agentBrowserLink(orgId, agentId),
                 ...desktop,
+                // The person's restart: it runs even if their live view is back in control meanwhile.
+                person: true,
               },
               { timeoutMs: 90_000 },
             );
@@ -1355,9 +1357,14 @@ export function createBrowserLive(deps: BrowserLiveDeps) {
         .where(and(eq(browserHandoffs.screen, "browser"), inArray(browserHandoffs.status, ["pending", "active"])));
       const ids = new Set(open.map((h) => h.id));
       for (const id of touched.keys()) if (!ids.has(id)) touched.delete(id);
-      // Only computers held here (each replica pings its own), a few at a time.
+      // Only computers held here (each replica pings its own), a few at a time. Not a browser a person drives from
+      // here: the runner never closes one with a stream open, and a read there would queue in front of their clicks
+      // (the runner answers it from the live view while they drive, but nothing need be asked at all).
       const due = open.filter(
-        (h) => deps.hub.isLocal(h.machineId) && now - (touched.get(h.id) ?? 0) >= HANDOFF_KEEPALIVE_MS,
+        (h) =>
+          deps.hub.isLocal(h.machineId) &&
+          now - (touched.get(h.id) ?? 0) >= HANDOFF_KEEPALIVE_MS &&
+          live.get(h.agentId)?.mode !== "control",
       );
       for (const h of due) touched.set(h.id, now);
       for (let i = 0; i < due.length; i += KEEPALIVE_PARALLEL) {
