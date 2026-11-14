@@ -404,6 +404,12 @@ test.skipIf(!posix)("sign-in on the computer: Grok's device link and code, then 
   await waitFor(() => m.status(id).state === "done", 5000);
   expect(m.status(id).account).toMatchObject({ kind: "grok", loggedIn: true });
   expect(m.accountDir("grok", id)).toBe(path.join(home, "accounts", "grok", id));
+  // The models it lists signed in, which the computer's own `grok models` (signed out) doesn't: kept for a restart.
+  const listed = [{ id: "grok-4.7" }, { id: "grok-4.6" }, { id: "grok-4.5" }];
+  expect(m.grokModels()).toEqual(listed);
+  const again = new AccountManager({ root: path.join(home, "accounts") });
+  managers.push(again);
+  expect(again.grokModels()).toEqual(listed);
 });
 
 /** A system-mode manager with Grok Build's folders apart (`grokRoot`), and the sandbox check as given. */

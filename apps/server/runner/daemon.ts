@@ -516,7 +516,12 @@ export class RunnerDaemon implements RequestObserver {
         ...(opts.executorRun ? { run: opts.executorRun } : {}),
         onChange: () => this.executorsChanged(),
       });
-    this.executors = () => exec() ?? {};
+    // Grok Build's models as an account signed in here lists them: the computer's own `grok models` is signed out.
+    this.executors = () => {
+      const found = exec() ?? {};
+      const models = this.accounts?.grokModels();
+      return found.grok && models ? { ...found, grok: { ...found.grok, models } } : found;
+    };
     this.executorsKnown = () => !("known" in exec) || exec.known === true;
     this.executorsFresh = (exec as { fresh?: () => Promise<unknown> }).fresh ?? (async () => this.executors());
     // System mode is set at install and kept through pairings: account folders are lent to agents' users.
@@ -561,6 +566,8 @@ export class RunnerDaemon implements RequestObserver {
         // The server learns at once (a sign-in or removal from the desktop app, a status or usage that changed).
         const accounts = this.accounts.snapshot();
         if (accounts) this.send({ type: "accounts.changed", accounts, ...this.ownUsage() });
+        // Grok Build's models come from its accounts' looks.
+        this.executorsChanged();
         // One removed: its agents' workers close what still runs with it.
         this.session?.supervisor?.stateChanged();
       },

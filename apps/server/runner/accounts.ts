@@ -25,6 +25,7 @@ import {
   type AuthMethod,
   accountCodeAad,
   CURSOR_KEY_PROVIDER,
+  type CursorModelInfo,
   isAccountId,
   isAccountKind,
   isAuthMethod,
@@ -78,6 +79,7 @@ import {
   GROK_BIN,
   isExecutable,
   OPENCODE_BIN,
+  parseGrokModels,
   resolveCommand,
 } from "./executors";
 import { readSmallJson, writeJson } from "./json-file";
@@ -539,6 +541,9 @@ export function watchCodexAuth(home: string, granted: string, send: (auth: strin
     },
   };
 }
+
+/** Beside the account folders: the models Grok Build lists to a signed-in account (`AccountManager.grokModels`). */
+const GROK_MODELS_FILE = "grok-models.json";
 
 /** System mode: the account folders, outside root's home (its parents 711) so an agent's user reaches the one lent to it. */
 export const SYSTEM_ACCOUNTS_ROOT = path.join(AGENT_WORKER_HOMES, "accounts");
@@ -2387,9 +2392,39 @@ export class AccountManager {
             : kind === "antigravity"
               ? parseAgyStatus(r.status, `${r.stdout}\n${r.stderr}`, agyAuthOf(dir))
               : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
+    if (kind === "grok" && status.loggedIn) this.keepGrokModels(parseGrokModels(r.stdout));
     // Timed out, or didn't start.
     const unknown = r.status === null ? { statusUnknown: true as const } : {};
     return { id, kind, ...status, ...unknown, ...shared };
+  }
+
+  private grokList: CursorModelInfo[] | undefined;
+  private get grokModelsFile() {
+    return path.join(this.opts.root, GROK_MODELS_FILE);
+  }
+
+  /**
+   * The models Grok Build last listed for an account signed in here (its status look runs `grok models` in that
+   * account's folder), kept across restarts: a folder lent to an agent is never looked at again. Undefined before one.
+   */
+  grokModels(): CursorModelInfo[] | undefined {
+    if (this.grokList === undefined) {
+      const kept = readSmallJson(this.grokModelsFile, 64 * 1024);
+      const list = Array.isArray(kept) ? kept.filter((m): m is CursorModelInfo => typeof m?.id === "string") : [];
+      this.grokList = list.length > 0 ? list : undefined;
+    }
+    return this.grokList;
+  }
+
+  private keepGrokModels(list: CursorModelInfo[]) {
+    if (list.length === 0 || JSON.stringify(list) === JSON.stringify(this.grokModels())) return;
+    this.grokList = list;
+    try {
+      writeJson(this.grokModelsFile, list);
+    } catch {
+      // kept in memory until the next look
+    }
+    this.changed();
   }
 
   private async lookAll(): Promise<RunnerAccountInfo[]> {
