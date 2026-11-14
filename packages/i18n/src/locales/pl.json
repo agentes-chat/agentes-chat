@@ -16767,6 +16767,13 @@
     "logins_other": "{{count}} logowania",
     "noWindows": "Limit pojawi się, gdy to konto zostanie znowu użyte.",
     "unused": "Żaden agent nie używa tego konta.",
+    "models": {
+      "exhausted": "Limit wyczerpany · odnowi się {{when}}",
+      "exhaustedUnknown": "Limit wyczerpany",
+      "off": "Wyłączony",
+      "region": "Wymaga regionu Global",
+      "inactive": "Brak aktywnej subskrypcji"
+    },
     "usesNow": "używa go teraz",
     "monthTokens": "{{tokens}} tokenów w tym miesiącu",
     "tokens": "{{tokens}} tokenów",

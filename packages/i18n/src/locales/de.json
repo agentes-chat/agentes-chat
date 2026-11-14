@@ -15735,6 +15735,13 @@
     "logins_other": "{{count}} Anmeldungen",
     "noWindows": "Das Limit erscheint, sobald dieses Konto wieder genutzt wird.",
     "unused": "Kein Agent nutzt dieses Konto.",
+    "models": {
+      "exhausted": "Kein Kontingent mehr · setzt sich {{when}} zurück",
+      "exhaustedUnknown": "Kein Kontingent mehr",
+      "off": "Ausgeschaltet",
+      "region": "Braucht die Global-Region",
+      "inactive": "Kein aktives Abo"
+    },
     "usesNow": "nutzt es gerade",
     "monthTokens": "{{tokens}} Tokens diesen Monat",
     "tokens": "{{tokens}} Tokens",

@@ -15672,6 +15672,13 @@
     "logins_other": "{{count}} oturum",
     "noWindows": "Sınır, bu hesap yeniden kullanıldıktan sonra görünür.",
     "unused": "Bu hesabı kullanan ajan yok.",
+    "models": {
+      "exhausted": "Kota kalmadı · {{when}} sıfırlanır",
+      "exhaustedUnknown": "Kota kalmadı",
+      "off": "Kapalı",
+      "region": "Global bölgesi gerekiyor",
+      "inactive": "Etkin abonelik yok"
+    },
     "usesNow": "şu anda kullanıyor",
     "monthTokens": "Bu ay {{tokens}} token",
     "tokens": "{{tokens}} token",

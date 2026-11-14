@@ -15799,6 +15799,13 @@
     "logins_other": "{{count}} aanmeldingen",
     "noWindows": "De limiet verschijnt zodra dit account weer wordt gebruikt.",
     "unused": "Geen agent gebruikt dit account.",
+    "models": {
+      "exhausted": "Geen quota meer · reset {{when}}",
+      "exhaustedUnknown": "Geen quota meer",
+      "off": "Uitgezet",
+      "region": "Vereist de regio Global",
+      "inactive": "Geen actief abonnement"
+    },
     "usesNow": "gebruikt het nu",
     "monthTokens": "{{tokens}} tokens deze maand",
     "tokens": "{{tokens}} tokens",

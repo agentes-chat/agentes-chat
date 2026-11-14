@@ -15884,6 +15884,16 @@ export const ptBR = {
     logins_other: "{{count}} logins",
     noWindows: "O limite aparece depois do próximo uso desta conta.",
     unused: "Nenhum agente usa esta conta.",
+    /** The quota per model (OpenCode Go's caps): one line each, under the account's windows. */
+    models: {
+      /** A model out of quota: `when` is when it resets (`usageWhen`). */
+      exhausted: "Sem cota · renova {{when}}",
+      exhaustedUnknown: "Sem cota",
+      /** The plan refused the model for this key: it or the account is switched off there. */
+      off: "Desligado",
+      region: "Precisa da região Global",
+      inactive: "Sem assinatura ativa",
+    },
     usesNow: "usa agora",
     monthTokens: "{{tokens}} tokens este mês",
     tokens: "{{tokens}} tokens",

@@ -1143,7 +1143,10 @@ export interface PlanUsage {
   limited?: boolean;
   source: "turn" | "probe";
   at: string;
-  /** Server side only: the models at a limit of their own (`PlanModelLimit`), by model id. */
+  /**
+   * The models at a limit of their own (`PlanModelLimit`), by model id: the usage views show it to people, and the
+   * engine uses it so "Automático" and its own turns don't pick an exhausted model (never a switch on its own).
+   */
   models?: Record<string, PlanModelLimit>;
   /** Server side only, on a plan whose models have their own limits: the model that last answered with this key. */
   answered?: string;

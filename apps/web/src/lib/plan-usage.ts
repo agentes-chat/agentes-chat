@@ -12,6 +12,7 @@ export {
   groupUsageAccounts,
   loginsText,
   modelLimitText,
+  notSharedText,
   noWindowsText,
   ownPlanLines,
   partedUsage,

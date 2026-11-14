@@ -268,6 +268,29 @@ describe("agent page: its usage (ADR 0063)", () => {
     expect(sources.textContent).toContain("US$\u00a00,80 pagos");
   });
 
+  test("Agora lists the plan's models at a limit of their own under the account's windows", async () => {
+    const api = createFakeApi(seedState());
+    const seeded = api.agents.planUsage;
+    const at = new Date().toISOString();
+    api.agents.planUsage = async (...args) => {
+      const view = await seeded(...args);
+      const current = view.current?.usage && {
+        ...view.current,
+        provider: "opencode",
+        usage: {
+          ...view.current.usage,
+          models: { "glm-5.3": { at, until: "2099-01-01T15:40:00.000Z" }, "minimax-m3": { at, off: true as const } },
+        },
+      };
+      return { ...view, current: current ?? null };
+    };
+    await renderApp(`/org/${ORG_ID}/agents/${ADA_ID}?tab=usage`, { api });
+    await settle(8);
+    const now = screen().getByRole("region", { name: "Agora" });
+    const rows = [...now.querySelectorAll(".plan-model")].map((r) => r.textContent);
+    expect(rows).toEqual(["MiniMax M3Desligado", expect.stringMatching(/^GLM-5\.3Sem cota · renova /)]);
+  });
+
   test("a member sees the tokens and the percentages, never money", async () => {
     await go("?tab=usage", asMember());
     const month = screen().getByRole("region", { name: "Uso da Ada" });

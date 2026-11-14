@@ -191,6 +191,56 @@ describe("Quem pensa: a coding plan's models", () => {
     expect(d.textContent).toContain("Os outros modelos do plano seguem funcionando.");
   });
 
+  test("the plan's models at a limit of their own: one line each with what remains, an exhausted one said so", async () => {
+    const at = new Date().toISOString();
+    const until = new Date(Date.now() + 2 * 86_400_000).toISOString();
+    await onPlan(
+      "opencode",
+      { effectiveModel: "deepseek-v4.1-flash" },
+      {
+        usage: {
+          windows: [{ kind: "five_hour", usedPercent: 10 }],
+          source: "probe",
+          at,
+          models: {
+            "glm-5.3": { at, until },
+            "minimax-m3": { at, off: true },
+            // Its reset already passed: no line, never a stale "no quota".
+            "deepseek-v4.1-pro": { at, until: new Date(Date.now() - 60_000).toISOString() },
+          },
+        },
+      },
+    );
+    const d = await brainDialog();
+    const rows = [...d.querySelectorAll(".plan-model")].map((r) => [
+      r.querySelector(".plan-model__name")?.textContent,
+      r.querySelector(".plan-model__text")?.textContent,
+    ]);
+    // In the plan's order, with the remaining quota in words: no number nobody read.
+    expect(rows.map((r) => r[0])).toEqual(["MiniMax M3", "GLM-5.3"]);
+    expect(rows[0]?.[1]).toBe("Desligado");
+    expect(rows[1]?.[1]).toMatch(/^Sem cota · renova /);
+    expect(rows.map((r) => r[1]).join(" ")).not.toContain("%");
+  });
+
+  test("a plan whose maker shares no usage names the maker, instead of a number", async () => {
+    await onPlan("minimax");
+    const d = await brainDialog();
+    expect(d.querySelector(".plan-models__none")?.textContent).toBe("MiniMax não mostra o uso por aqui.");
+    expect(d.querySelector(".plan-model")).toBeNull();
+  });
+
+  test("an API key shows no quota line under its account: its use is spend against a budget", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    pairMac(api, true);
+    api.agents.brain = async () => fakeAgentBrain(ADA_ID, { brain: "model", effectiveModel: null });
+    await open(state, api);
+    const d = await brainDialog();
+    expect(d.querySelector(".plan-models__none")).toBeNull();
+    expect(d.querySelector(".plan-model")).toBeNull();
+  });
+
   test("every model of the plan as a row, by maker, each with what it's sold as and needs; saved by its id", async () => {
     const { state } = await onPlan("opencode");
     const d = await brainDialog();

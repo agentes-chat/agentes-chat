@@ -15188,6 +15188,13 @@
     "logins_other": "{{count}}件のログイン",
     "noWindows": "このアカウントが再び使われると、上限が表示されます。",
     "unused": "このアカウントを使っているエージェントはいません。",
+    "models": {
+      "exhausted": "クォータなし · {{when}}にリセット",
+      "exhaustedUnknown": "クォータなし",
+      "off": "オフ",
+      "region": "Globalリージョンが必要",
+      "inactive": "有効なサブスクリプションなし"
+    },
     "usesNow": "使用中",
     "monthTokens": "今月{{tokens}}トークン",
     "tokens": "{{tokens}}トークン",
