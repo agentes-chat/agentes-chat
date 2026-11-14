@@ -11466,15 +11466,6 @@ export const ptBR = {
       nowYours: "Parou para ler seu recado",
       nowOf: "Parou para ler o recado de {{name}}",
     },
-    choice: {
-      label: "Como mandar enquanto o {{name}} trabalha",
-      label_female: "Como mandar enquanto a {{name}} trabalha",
-      join: "Juntar ao que o {{name}} faz",
-      join_female: "Juntar ao que a {{name}} faz",
-      interrupt: "Parar e mandar",
-      joins: "junta",
-      interrupts: "para e manda",
-    },
     strip: {
       see: "Ver",
       toStop: "para parar",

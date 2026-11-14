@@ -11150,15 +11150,6 @@
       "nowYours": "Hat angehalten, um deine Notiz zu lesen",
       "nowOf": "Hat angehalten, um die Notiz von {{name}} zu lesen"
     },
-    "choice": {
-      "label": "Wie senden, während {{name}} arbeitet",
-      "label_female": "Wie senden, während {{name}} arbeitet",
-      "join": "Zu dem hinzufügen, was {{name}} gerade tut",
-      "join_female": "Zu dem hinzufügen, was {{name}} gerade tut",
-      "interrupt": "Stoppen und senden",
-      "joins": "fügt hinzu",
-      "interrupts": "stoppt und sendet"
-    },
     "strip": {
       "see": "Ansehen",
       "toStop": "zum Stoppen"
