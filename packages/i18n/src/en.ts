@@ -3489,7 +3489,21 @@ export const en = {
       create: "Create your {{provider}} API key",
       paste: "Paste it here",
       forAll: "Every agent without a plan thinks with it.",
+      /** Before saving, opened for one agent: the key goes on that agent. */
+      forAgent: "{{agent}} will think with it.",
       saved: "Saved. Every agent without a plan thinks with it.",
+      /** Saved and put on the one agent the dialog was opened for. */
+      savedFor: "Saved. {{agent}} now thinks with {{label}}.",
+      /** Saved for everyone, and it is the key agents without their own AI use. */
+      savedAll: "Saved. Agents without their own AI think with it.",
+      /** Saved for everyone, and it became the workspace's key by itself: the old one ({{other}}) couldn't think. */
+      savedMade: "Saved. Your agents now think with it instead of {{other}}.",
+      /** Saved for everyone, but another key ({{other}}) is the workspace's: a button under it switches. */
+      savedOther: "Saved. Your agents still think with {{other}}.",
+      useForAll: "Use this key for everyone",
+      /** A workspace endpoint ({{name}}, its own name) none of whose models has answered a test call. */
+      untested: "None of {{name}}'s models has passed a test yet.",
+      testModels: "Test models",
       /** Saved, though the provider gave no answer about the key: it may still fail. */
       savedUnchecked:
         "Saved, but {{provider}} didn't answer, so the key couldn't be checked. If it fails, the chat says why.",
@@ -9895,6 +9909,9 @@ export const en = {
     fetch: "Fetch models",
     listFailed: "The server listed no models ({{error}}). Type each model's id below.",
     choose: "Choose the models agents may use",
+    /** Over a long list of an endpoint's models. */
+    search: "Search models",
+    noMatch: "No model has “{{query}}”.",
     addModel: "Add a model",
     add: "Add",
     modelPlaceholder: "Model id, like llama-4",

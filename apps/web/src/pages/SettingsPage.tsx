@@ -29,6 +29,7 @@ import { can } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey, settingsSectionTextKey } from "@agenteschat/client/lib/personal-view";
 import {
   keyLooksValid,
+  keyName,
   keyNamedAfterProvider,
   type ProviderId,
   providerGuess,
@@ -965,7 +966,7 @@ export function KeyDialog({
   };
   const unchecked = (saved: Credential) => {
     if (saved.check === "unchecked")
-      toast.show(t("connectAi.key.savedUnchecked", { provider: providerLabel(saved.provider) }), "info");
+      toast.show(t("connectAi.key.savedUnchecked", { provider: keyName(saved) }), "info");
   };
   const [label, setLabel] = useState("");
   const [apiKey, setApiKey] = useState("");

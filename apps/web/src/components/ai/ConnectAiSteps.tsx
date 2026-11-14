@@ -70,19 +70,21 @@ import {
 import {
   keyLine,
   keyLooksValid,
+  keyName,
   keyStepHint,
-  modelOnKey,
+  keyThinks,
   type ProviderId,
   providerLabel,
   providerOf,
 } from "@agenteschat/client/lib/providers";
-import { rightHandOnKey, thinksWithLine } from "@agenteschat/client/lib/right-hand";
+import { agentOnKey, rightHandOnKey, thinksWithLine } from "@agenteschat/client/lib/right-hand";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
   type AgentAppearance,
   AvatarStack,
   Button,
   Card,
+  Dialog,
   Icon,
   InfoHint,
   Input,
@@ -109,6 +111,7 @@ import { useDirectory } from "@/hooks/useDirectory";
 import { planWord } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
 import { AddAccount, OpenPage, Step, StepTitle } from "./AddAccountFlow";
+import { EndpointForm } from "./EndpointForm";
 import { PlanReplies, usePlanRepliesShown } from "./PlanReplies";
 import { ToolOffSteps } from "./ToolOffSteps";
 
@@ -286,6 +289,8 @@ export interface ExistingUsed {
   personal?: boolean;
   /** Which of the team's right hand's AIs moved: the words say whose it is. */
   scope?: BrainScope;
+  /** A workspace endpoint's key none of whose models has passed a test yet: said, with the way to test them. */
+  untested?: Credential;
 }
 
 /**
@@ -360,24 +365,28 @@ export function useExistingAi({
     });
   // The workspace's model on that key: the agent's model where the key runs it, else one the key does (an endpoint's
   // own for an endpoint key, Automático for a catalog one, which follows it).
-  // Tried first: a key kept earlier may have run out of credit, and "now thinks with it" has to be true.
+  // Tried first: a key kept earlier may have run out of credit, and "now thinks with it" has to be true. An endpoint's
+  // key has no call of its own to try: its models' last tests say whether it thinks (`keyThinks`).
   const pickKey = (key: Credential) =>
     save(async () => {
       const { check } = await api.agents.checkCredential(org.id, key.id);
-      if (check === "unchecked")
-        toast.show(t("connectAi.key.savedUnchecked", { provider: providerLabel(key.provider) }), "info");
+      if (check === "unchecked" && key.provider !== CUSTOM_PROVIDER)
+        toast.show(t("connectAi.key.savedUnchecked", { provider: keyName(key) }), "info");
+      const untested = keyThinks(key) ? {} : { untested: key };
       const row = dir.agentById.get(agent.id);
       // The team's right hand: a key is the workspace's AI, so everyone without their own thinks with it.
       if (view?.scope === "mine" && row) {
         await rightHandOnKey(api, org.id, row, key, models.data?.models ?? []);
-        return { label: key.label, choice: "key", onlyOwner: false, scope: "workspace" };
+        return { label: key.label, choice: "key", onlyOwner: false, scope: "workspace", ...untested };
       }
-      if (view?.brain !== "model") await api.agents.setBrain(org.id, agent.id, { brain: "model" });
-      await api.agents.update(org.id, agent.id, {
-        credentialId: key.id,
-        ...modelOnKey(key, row?.model, models.data?.models ?? []),
-      });
-      return { label: key.label, choice: "key", onlyOwner: false };
+      await agentOnKey(
+        api,
+        org.id,
+        { id: agent.id, model: row?.model, brain: view?.brain },
+        key,
+        models.data?.models ?? [],
+      );
+      return { label: key.label, choice: "key", onlyOwner: false, ...untested };
     });
   return { rows, busy, refused, pickAccount, pickKey };
 }
@@ -534,6 +543,46 @@ export function ExistingRows({
   );
 }
 
+/**
+ * A workspace endpoint's key none of whose models has passed a test yet: the real cause, and "Testar modelos", which
+ * opens its models and tests them again where they are. `onTested`: the key with those tests.
+ */
+export function KeyUntested({ cred, onTested }: { cred: Credential; onTested: (cred: Credential) => void }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <SettingNote
+        icon="alert"
+        live
+        action={<Button onClick={() => setOpen(true)}>{t("connectAi.key.testModels")}</Button>}
+      >
+        {t("connectAi.key.untested", { name: keyName(cred) })}
+      </SettingNote>
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t("endpoint.modelsTitle", { name: cred.label })}
+        closeLabel={t("common.close")}
+        width={520}
+      >
+        {open && (
+          <EndpointForm
+            orgId={org.id}
+            credential={cred}
+            onCancel={() => setOpen(false)}
+            onDone={(tested) => {
+              setOpen(false);
+              onTested(tested);
+            }}
+          />
+        )}
+      </Dialog>
+    </>
+  );
+}
+
 /** After a row of what the person already had: what the agent thinks with now, and on a plan whom it answers. */
 export function ExistingThinks({ agent, used }: { agent: PlanAgent; used: ExistingUsed }) {
   const { t } = useTranslation();
@@ -543,6 +592,7 @@ export function ExistingThinks({ agent, used }: { agent: PlanAgent; used: Existi
   const toast = useToast();
   const [on, setOn] = useState(!used.onlyOwner);
   const [busy, setBusy] = useState(false);
+  const [untested, setUntested] = useState(used.untested);
   const repliesShown = usePlanRepliesShown(on);
   const a = used.account;
   const reply = async (next: boolean) => {
@@ -564,9 +614,13 @@ export function ExistingThinks({ agent, used }: { agent: PlanAgent; used: Existi
   };
   return (
     <Card as="section" className="ai-panel ai-panel--plan" aria-label={used.label}>
-      <SettingNote icon="check" live>
-        {thinksWithLine(t, used.scope, agent.name, used.label)}
-      </SettingNote>
+      {untested && !keyThinks(untested) ? (
+        <KeyUntested cred={untested} onTested={setUntested} />
+      ) : (
+        <SettingNote icon="check" live>
+          {thinksWithLine(t, used.scope, agent.name, used.label)}
+        </SettingNote>
+      )}
       {a?.kind === "antigravity" && geminiPersonal(a) && (
         <SettingNote icon="alert">{t("connectAi.plan.gemini.warning")}</SettingNote>
       )}
@@ -1733,6 +1787,7 @@ export function KeyPanel({
   locked,
   saved,
   savedNote,
+  forLine,
   refused,
   saving,
   onSave,
@@ -1745,8 +1800,10 @@ export function KeyPanel({
   /** Only an admin adds an API key. */
   locked?: boolean;
   saved?: boolean;
-  /** Says what the save came to, in place of the usual line (a check that got no answer, the right hand's words). */
-  savedNote?: string;
+  /** What the save came to, as its own line, in place of the usual one (whom it thinks for, a check that got no answer). */
+  savedNote?: ReactNode;
+  /** Before saving, whom the key will think for, in place of the usual line (the one agent it goes on). */
+  forLine?: string;
   /** The provider refused the key on its test call: nothing was kept. */
   refused?: ReturnType<typeof keyRefusal>;
   saving?: boolean;
@@ -1773,9 +1830,11 @@ export function KeyPanel({
       {locked ? (
         <SettingNote icon="lock">{t("connectAi.keyLocked")}</SettingNote>
       ) : saved ? (
-        <SettingNote icon="check" live>
-          {savedNote ?? t("connectAi.key.saved")}
-        </SettingNote>
+        (savedNote ?? (
+          <SettingNote icon="check" live>
+            {t("connectAi.key.saved")}
+          </SettingNote>
+        ))
       ) : provider === CUSTOM_PROVIDER ? (
         <>
           <p className="small muted" style={{ margin: 0 }}>
@@ -1832,7 +1891,7 @@ export function KeyPanel({
             )}
             {refused && <KeyRefused refusal={refused} />}
           </Step>
-          <SettingNote icon="agent">{t("connectAi.key.forAll")}</SettingNote>
+          <SettingNote icon="agent">{forLine ?? t("connectAi.key.forAll")}</SettingNote>
         </>
       ) : null}
     </Card>

@@ -1233,7 +1233,9 @@ describe("Conectar uma IA: one picker, plans first", () => {
     await click(within(panel).getByRole("button", { name: "Salvar chave" }));
     await settle(4);
     expect(calls(state, "agents.addCredential")).toHaveLength(1);
-    expect(panel.textContent).toContain("Salva. Todo agente sem plano pensa com ela.");
+    // The workspace already thinks with another key: said, with the way to switch.
+    expect(panel.textContent).toContain("Salva. Os agentes ainda pensam com Claude da Acme.");
+    expect(within(panel).getByRole("button", { name: "Usar esta chave para todos" })).toBeTruthy();
   });
 
   test("while a key saves, nothing that belongs to it moves: the way to pay, its maker, the field", async () => {
