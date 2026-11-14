@@ -99,7 +99,7 @@ export const PROVIDERS = [
     id: "commandcode",
     label: "Command Code",
     placeholder: "user_…",
-    pattern: /^user_[A-Za-z0-9_-]{32,}$/,
+    pattern: /^user_[A-Za-z0-9_-]{16,}$/,
     site: "commandcode.ai/settings/keys",
   },
 ] as const satisfies readonly ProviderEntry[];
