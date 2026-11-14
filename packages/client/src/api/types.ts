@@ -1256,6 +1256,11 @@ export interface Channel {
   /** Order inside its category, from 0. */
   position?: number;
   /**
+   * The dashboard beside the conversation, the same for every member (ADR 0135 §21); null or absent: none. Only its
+   * id: reading the board says whether it shows to you (`dashboard.not_found` when it doesn't).
+   */
+  dashboardId?: string | null;
+  /**
    * Channel list only (`chat.channels`): messages since you last read it
    * (since you joined, if never), not yours; a thread reply counts only in a
    * thread you follow. At most 100 (show "99+"); 0 when not a member.

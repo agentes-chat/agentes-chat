@@ -561,6 +561,10 @@ export const Channel = z
       .optional()
       .openapi({ description: "Its sidebar category; null: on top, with none." }),
     position: z.number().int().optional().openapi({ description: "Order inside its category, from 0." }),
+    dashboardId: z.uuid().nullable().optional().openapi({
+      description:
+        "The dashboard beside the conversation, the same for every member (ADR 0135 §21); null: none. Only its id: reading the board answers 404 to whoever it doesn't show to.",
+    }),
     unreadCount: z.number().int().optional().openapi({
       description:
         "Channel list only: messages since you last read it (since you joined, if never), not yours; a thread reply counts only in a thread you follow; an agent's sticker or GIF after its own reply never (ADR 0091). At most 100; 0 when you're not a member.",

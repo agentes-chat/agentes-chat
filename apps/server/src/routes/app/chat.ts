@@ -111,6 +111,7 @@ export function chatRoutes(deps: AppDeps) {
             createdAt: r.createdAt.toISOString(),
             categoryId: r.categoryId,
             position: r.position,
+            dashboardId: r.dashboardId,
             unreadCount: r.unreadCount,
             mentionCount: r.mentionCount,
             lastReadAt: iso(r.lastReadAt),
