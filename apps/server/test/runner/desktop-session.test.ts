@@ -22,6 +22,8 @@ import {
   type DesktopSpawnOptions,
   type DesktopSystem,
   type DesktopUser,
+  desktopSocketPath,
+  LONG_SOCKET_PATH,
   memAvailableBytes,
   PARK_AFTER_MS,
   type ProcessStat,
@@ -1624,4 +1626,23 @@ test("requests: starting needs the desktop switch and an unpaused computer; stop
   expect(await run({ op: "desktop.session.stop", agent: dev })).toEqual({ stopped: true });
   expect(await run({ op: "desktop.session.stop", agent: dev })).toEqual({ stopped: false });
   expect(await run({ op: "desktop.session.status", agent: dev })).toEqual({ running: false, streams: 0 });
+});
+
+/**
+ * A `sun_path` holds 107 bytes: a desktop whose folder is deeper than that (a home with a long user name, in system
+ * mode) would never start. Its socket moves to the temp folder, named after the path, and its other files stay.
+ */
+test.skipIf(!posix)("a desktop's socket goes to the temp folder when its own path is too long", () => {
+  const short = "/home/dev/.agentes/desktop";
+  expect(desktopSocketPath(short, "/tmp")).toBe(path.join(short, "vnc.sock"));
+
+  const long = `/home/${"u".repeat(90)}/.agentes/desktop`;
+  const socket = desktopSocketPath(long, "/tmp");
+  expect(Buffer.byteLength(socket)).toBeLessThanOrEqual(LONG_SOCKET_PATH);
+  expect(path.dirname(socket)).toBe("/tmp");
+  expect(socket).toMatch(/^\/tmp\/agentes-desktop-[0-9a-f]{16}\.vnc\.sock$/);
+  // The same desktop always gets the same socket, so a restart reuses it instead of leaking one per start.
+  expect(desktopSocketPath(long, "/tmp")).toBe(socket);
+  // Two different desktops never share one.
+  expect(desktopSocketPath(`${long}/other`, "/tmp")).not.toBe(socket);
 });

@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { createCipheriv, randomBytes, randomInt } from "node:crypto";
+import { createCipheriv, createHash, randomBytes, randomInt } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import {
   chmodSync,
@@ -342,6 +342,21 @@ export function runnerEnv(home: string): Record<string, string> {
 export function runnerUser(runnerHome: string, agentFolder: string, agent: AgentScope): DesktopUser {
   const home = path.join(agentFolder, ".agentes", "home");
   return { prefix: [], env: runnerEnv(home), home, dir: path.join(runnerHome, "desktop", id8(agent)) };
+}
+
+/**
+ * `sun_path` fits 107 bytes here (108 with its terminator). A desktop's socket is `dir`'s `vnc.sock`; when that path
+ * is too long for one — a home with a long user name, an agent's folder below it — it goes to the temp folder
+ * instead, named after the path so the same desktop always gets the same one, as the bridge's `mcpSocketPath` does.
+ * The desktop's other files (its cookie, its log, its record) stay where they are.
+ */
+export const LONG_SOCKET_PATH = 107;
+
+export function desktopSocketPath(dir: string, tmp = os.tmpdir()) {
+  const inDir = path.join(dir, "vnc.sock");
+  if (Buffer.byteLength(inDir) <= LONG_SOCKET_PATH) return inDir;
+  const id = createHash("sha256").update(inDir).digest("hex").slice(0, 16);
+  return path.join(tmp, `agentes-desktop-${id}.vnc.sock`);
 }
 
 /**
@@ -1167,7 +1182,7 @@ export class DesktopSessions {
       const passwords = { full: newPassword(), view: newPassword() };
       while (passwords.view === passwords.full) passwords.view = newPassword();
       const files = {
-        socket: path.join(user.dir, "vnc.sock"),
+        socket: desktopSocketPath(user.dir),
         xauthority: path.join(user.dir, "Xauthority"),
         passwd: user.ids
           ? path.join(this.opts.runDir ?? SYSTEM_RUN_DIR, String(user.ids.uid), "passwd")
