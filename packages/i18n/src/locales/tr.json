@@ -2984,6 +2984,24 @@
       "text": "Hiç sormaz, merge, deploy, ödemeler ve rutinler dahil."
     }
   },
+  "riskTolerance": {
+    "title": "Şunlardan önce sor",
+    "help": "Yalnızca riskli olanı soran bir ajan bunlardan önce bir kişiye sorar. Birini kapatırsan ajanlar sormadan yapar, her çağrı denetim kaydında olur. Bir aracın belirtmediği işler ve bir rutinin değişiklikleri sormaya devam eder.",
+    "lead": "Bir ajan bunları yapmadan önce bir kişi onaylar.",
+    "all": "Riskli olan her şey",
+    "none": "Hiçbiri",
+    "some": "{{total}} içinden {{asks}}",
+    "change": "Değiştir",
+    "follow": "Çalışma alanıyla aynı",
+    "classes": {
+      "deletes": "Silme",
+      "spends_money": "Para harcama",
+      "reaches_people": "İnsanlara ulaşma",
+      "shares_outside": "Dışarıyla paylaşma",
+      "replaces_data": "Verileri değiştirme",
+      "deploys": "Deploy ve merge"
+    }
+  },
   "brakes": {
     "title": "Kimsenin istemediği iş",
     "subtitle": "Bir rutin, bir uyarı veya başka bir ajan üzerine kendi başına başlattığı şeyler. Bir kişinin istediği hiçbir zaman bekletilmez.",
@@ -14671,6 +14689,7 @@
       "via": "Üzerinden",
       "approval": "Onay",
       "unasked": "Sorulmadı ({{level}})",
+      "unaskedRisks": "Sorulmadı (izin verilen: {{risks}})",
       "approvalWaiting": "Henüz kimse yanıt vermedi",
       "approvalApproved": "{{name}} onayladı",
       "approvalRefused": "{{name}} reddetti",

@@ -26,6 +26,7 @@ import {
 } from "@agenteschat/client/lib/audit";
 import { humanize } from "@agenteschat/client/lib/custom-tools";
 import { dayLabel, formatTime, whenAt } from "@agenteschat/client/lib/format";
+import { auditUnaskedRisksText } from "@agenteschat/client/lib/risk-tolerance";
 import {
   Button,
   Chip,
@@ -249,6 +250,7 @@ function AuditPanel({ row, onClose }: { row: AuditRow; onClose: () => void }) {
   const isCall = row.action === TOOL_CALL;
   const where = auditWhere(t, row);
   const connector = auditStr(row.details.connector);
+  const unaskedRisks = auditUnaskedRisksText(t, row);
   const look = auditOutcome(t, row);
 
   const facts: [string, ReactNode][] = [];
@@ -289,6 +291,7 @@ function AuditPanel({ row, onClose }: { row: AuditRow; onClose: () => void }) {
   if (row.approval) facts.push([t("audit.panel.approval"), auditApprovalText(t, row.approval)]);
   else if (auditUnasked(row))
     facts.push([t("audit.panel.approval"), t("audit.panel.unasked", { level: t("approvalsLevel.never.title") })]);
+  else if (unaskedRisks) facts.push([t("audit.panel.approval"), unaskedRisks]);
   if (row.secret) facts.push([t("audit.panel.secret"), auditSecretText(t, row.secret)]);
   facts.push([t("audit.panel.when"), whenAt(t, i18n.language, row.at)]);
 

@@ -2887,6 +2887,24 @@
       "text": "머지, 배포, 결제, 루틴을 포함해 아무것도 묻지 않습니다."
     }
   },
+  "riskTolerance": {
+    "title": "승인이 필요한 작업",
+    "help": "위험한 일만 묻는 에이전트는 이 작업 전에 사람에게 묻습니다. 하나를 끄면 에이전트가 묻지 않고 실행하며, 모든 호출은 감사 로그에 남습니다. 도구가 밝히지 않는 작업과 루틴의 변경은 계속 묻습니다.",
+    "lead": "에이전트가 실행하기 전에 사람이 승인합니다.",
+    "all": "위험한 모든 작업",
+    "none": "없음",
+    "some": "{{total}}개 중 {{asks}}개",
+    "change": "변경",
+    "follow": "워크스페이스와 동일",
+    "classes": {
+      "deletes": "삭제",
+      "spends_money": "비용 지출",
+      "reaches_people": "사람에게 연락",
+      "shares_outside": "외부 공유",
+      "replaces_data": "데이터 교체",
+      "deploys": "배포와 병합"
+    }
+  },
   "brakes": {
     "title": "아무도 요청하지 않은 작업",
     "subtitle": "루틴, 알림, 다른 에이전트에서 시작해 스스로 하는 작업입니다. 사람이 요청한 일은 절대 멈추지 않습니다.",
@@ -14217,6 +14235,7 @@
       "via": "경유",
       "approval": "승인",
       "unasked": "묻지 않음 ({{level}})",
+      "unaskedRisks": "묻지 않음 (허용: {{risks}})",
       "approvalWaiting": "아직 아무도 응답하지 않았어요",
       "approvalApproved": "{{name}}님이 승인함",
       "approvalRefused": "{{name}}님이 거절함",

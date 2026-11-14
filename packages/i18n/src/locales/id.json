@@ -2899,6 +2899,24 @@
       "text": "Tidak pernah bertanya, termasuk untuk merge, deploy, pembayaran, dan rutinitas."
     }
   },
+  "riskTolerance": {
+    "title": "Minta persetujuan untuk",
+    "help": "Agen yang hanya bertanya untuk hal berisiko akan bertanya ke seseorang sebelum ini. Matikan salah satu dan agen melakukannya tanpa bertanya, setiap panggilan tercatat di log audit. Yang tidak disebut alat, dan perubahan rutinitas, tetap bertanya.",
+    "lead": "Seseorang menyetujui ini sebelum agen melakukannya.",
+    "all": "Semua yang berisiko",
+    "none": "Tidak ada",
+    "some": "{{asks}} dari {{total}}",
+    "change": "Ubah",
+    "follow": "Sama seperti workspace",
+    "classes": {
+      "deletes": "Menghapus",
+      "spends_money": "Mengeluarkan uang",
+      "reaches_people": "Menghubungi orang",
+      "shares_outside": "Berbagi ke luar",
+      "replaces_data": "Mengganti data",
+      "deploys": "Deploy dan merge"
+    }
+  },
   "brakes": {
     "title": "Pekerjaan yang tidak diminta siapa pun",
     "subtitle": "Apa yang dimulainya sendiri, dari rutinitas, peringatan, atau agen lain. Yang diminta seseorang tidak pernah ditahan.",
@@ -14279,6 +14297,7 @@
       "via": "Lewat",
       "approval": "Persetujuan",
       "unasked": "Tidak ditanyakan ({{level}})",
+      "unaskedRisks": "Tidak ditanyakan (diizinkan: {{risks}})",
       "approvalWaiting": "Belum ada yang menjawab",
       "approvalApproved": "Disetujui oleh {{name}}",
       "approvalRefused": "Ditolak oleh {{name}}",

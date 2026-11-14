@@ -2998,6 +2998,24 @@
       "text": "Vraagt nooit, ook niet bij merge, deploy, betalingen en routines."
     }
   },
+  "riskTolerance": {
+    "title": "Vragen vóór",
+    "help": "Een agent die alleen bij risico vraagt, vraagt hiervoor eerst een persoon. Zet er een uit en agents doen het zonder te vragen, elke aanroep in het auditlog. Wat een tool niet benoemt, en de wijzigingen van een routine, vragen nog steeds.",
+    "lead": "Een persoon keurt dit goed voordat een agent het doet.",
+    "all": "Alles wat riskant is",
+    "none": "Niets",
+    "some": "{{asks}} van {{total}}",
+    "change": "Wijzigen",
+    "follow": "Zoals de workspace",
+    "classes": {
+      "deletes": "Verwijderen",
+      "spends_money": "Geld uitgeven",
+      "reaches_people": "Mensen bereiken",
+      "shares_outside": "Extern delen",
+      "replaces_data": "Gegevens vervangen",
+      "deploys": "Deploy en merge"
+    }
+  },
   "brakes": {
     "title": "Werk waar niemand om vroeg",
     "subtitle": "Wat hij zelf begint, na een routine, een melding of een andere agent. Waar een persoon om vraagt, wordt nooit tegengehouden.",
@@ -14798,6 +14816,7 @@
       "via": "Via",
       "approval": "Goedkeuring",
       "unasked": "Niet gevraagd ({{level}})",
+      "unaskedRisks": "Niet gevraagd (toegestaan: {{risks}})",
       "approvalWaiting": "Nog niemand heeft geantwoord",
       "approvalApproved": "Goedgekeurd door {{name}}",
       "approvalRefused": "Geweigerd door {{name}}",

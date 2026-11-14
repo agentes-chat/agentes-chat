@@ -28,6 +28,7 @@ import {
 import { humanize } from "@agenteschat/client/lib/custom-tools";
 import { formatTime, whenAt } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
+import { auditUnaskedRisksText } from "@agenteschat/client/lib/risk-tolerance";
 import type { TFunction } from "i18next";
 import { Fragment, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -295,6 +296,7 @@ export function AuditRowScreen({ id }: { id: string }) {
   const isCall = row.action === TOOL_CALL;
   const where = auditWhere(t, row);
   const connector = auditStr(row.details.connector);
+  const unaskedRisks = auditUnaskedRisksText(t, row);
   const asked = isCall ? askedOf(t, row) : null;
   const input = isCall ? (row.details.input as Record<string, unknown> | undefined) : undefined;
   const sent = input ? Object.entries(input) : [];
@@ -346,6 +348,8 @@ export function AuditRowScreen({ id }: { id: string }) {
             label={t("audit.panel.approval")}
             value={t("audit.panel.unasked", { level: t("approvalsLevel.never.title") })}
           />
+        ) : unaskedRisks ? (
+          <GroupedRow label={t("audit.panel.approval")} value={unaskedRisks} />
         ) : null}
         {row.secret ? <GroupedRow label={t("audit.panel.secret")} value={auditSecretText(t, row.secret)} /> : null}
         <GroupedRow label={t("audit.panel.when")} value={whenAt(t, i18n.language, row.at)} />

@@ -30,6 +30,7 @@ import { recordOperatorEvent } from "./operator-events";
 import { can, getMembership, type Membership, requirePermission } from "./organizations";
 import { isRightHand, RIGHT_HAND_EDITABLE, refuseRightHand, rightHandPermanent } from "./right-hand";
 import { newSetup, type SetupExtras, setupOf } from "./setup-checklist";
+import { type RiskClass, riskClassesFrom, riskClassesStored } from "./tools/risk";
 import { APPROVALS_LEVELS, type ApprovalsLevel } from "./tools/run-policy";
 import {
   CONNECTOR_ALL,
@@ -98,6 +99,8 @@ export interface AgentInput {
   autonomyBrakes?: Partial<AutonomySettings>;
   /** How much it asks before acting (ADR 0173). */
   approvalsLevel?: ApprovalsLevel;
+  /** At `risky`, the risk classes it runs without asking (ADR 0180); null follows the workspace's. */
+  unaskedRisks?: RiskClass[] | null;
 }
 
 /** An agent's fields as the API takes them: its handle, model, key (of the model's provider), budget and owner. */
@@ -122,6 +125,7 @@ export async function validateAgentFields(db: Database, orgId: string, input: Pa
   if (input.approvalsLevel !== undefined && !APPROVALS_LEVELS.includes(input.approvalsLevel)) {
     throw new ValidationError(`approvalsLevel must be one of: ${APPROVALS_LEVELS.join(", ")}`);
   }
+  if (input.unaskedRisks != null) riskClassesFrom(input.unaskedRisks);
   if (input.credentialId) {
     const [cred] = await db
       .select({ id: providerCredentials.id, provider: providerCredentials.provider })
@@ -212,7 +216,7 @@ export async function createAgent(
     throw new ForbiddenError("Only an admin can create an agent for someone else or with no owner");
   }
   // How much it asks (ADR 0173) is for who edits any agent, at its creation too.
-  if (input.approvalsLevel !== undefined && !can(membership, "manage_agents")) {
+  if ((input.approvalsLevel !== undefined || input.unaskedRisks !== undefined) && !can(membership, "manage_agents")) {
     throw new ForbiddenError("Only who manages agents can set how much an agent asks");
   }
   const values = { ...fields, handle: fields.handle.toLowerCase(), model: fields.model ?? defaults.model };
@@ -394,8 +398,10 @@ export async function updateAgent(
 ): Promise<Agent> {
   const membership = await requirePermission(db, actorId, orgId, "manage_agents");
   await refuseRightHandFields(db, orgId, agentId, patch);
-  const cleaned =
+  const named =
     patch.handle === undefined ? patch : { ...patch, handle: patch.handle.trim().replace(/^@/, "").toLowerCase() };
+  // Each class once, in the canonical order; an unknown one is refused.
+  const cleaned = named.unaskedRisks ? { ...named, unaskedRisks: riskClassesFrom(named.unaskedRisks) } : named;
   // Only what people set is stored (normalized): the rest follows the defaults (`chosenAutonomy`).
   const input =
     cleaned.autonomyBrakes === undefined
@@ -639,6 +645,8 @@ export const agentView = (a: Agent) => ({
   brakes: autonomySettings(a.autonomyBrakes),
   /** How much it asks before acting (ADR 0173). */
   approvalsLevel: a.approvalsLevel,
+  /** The risk classes it runs without asking at `risky` (ADR 0180); null follows the workspace's. */
+  unaskedRisks: a.unaskedRisks == null ? null : riskClassesStored(a.unaskedRisks),
   createdAt: a.createdAt,
 });
 

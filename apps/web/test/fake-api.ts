@@ -326,6 +326,8 @@ export interface FakeState {
   audit?: AuditRow[];
   /** The workspace switch "Agentes conferem o que o time já fez" (on when unset). */
   actionCheck?: boolean;
+  /** The workspace's risk tolerance (ADR 0180): the classes agents run without asking; none when unset. */
+  unaskedRisks?: OrgSettings["unaskedRisks"];
   /** Automático's models per provider and tier (Settings › Chaves); none when unset. */
   autoModels?: OrgSettings["autoModels"];
   /**
@@ -1863,6 +1865,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         summaryModel: null,
         timezone: "America/Sao_Paulo",
         actionCheck: state.actionCheck ?? true,
+        unaskedRisks: state.unaskedRisks ?? [],
         autoModels: state.autoModels ?? {},
         ...mediaSettings(state),
         mode: personalOrg(orgId) ? "personal" : "team",
@@ -1884,6 +1887,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (input.defaultCredentialId !== undefined) state.defaultCredentialId = input.defaultCredentialId;
         if (input.defaultAgentBudgetUsd !== undefined) state.defaultAgentBudgetUsd = input.defaultAgentBudgetUsd;
         if (input.actionCheck !== undefined) state.actionCheck = input.actionCheck;
+        if (input.unaskedRisks !== undefined) state.unaskedRisks = input.unaskedRisks;
         const { gifs, gifRating, agentStickers, agentMedia } = input;
         state.media = {
           ...state.media,
@@ -1908,6 +1912,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           summaryModel: null,
           timezone: input.timezone ?? "America/Sao_Paulo",
           actionCheck: state.actionCheck ?? true,
+          unaskedRisks: state.unaskedRisks ?? [],
           autoModels: state.autoModels ?? {},
           ...mediaSettings(state),
           mode: personalOrg(orgId) ? "personal" : "team",

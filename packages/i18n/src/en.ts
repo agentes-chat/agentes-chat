@@ -3187,6 +3187,25 @@ export const en = {
       text: "Never asks, merge, deploy, payments and routines included.",
     },
   },
+  /** Which kinds of risk ask a person before an agent at "Only what is risky" acts (ADR 0180). */
+  riskTolerance: {
+    title: "Ask before",
+    help: "An agent that asks only for what is risky asks a person before these. Turn one off and agents do it without asking, each call in the audit log. What a tool doesn't name, and a routine's changes, still ask.",
+    lead: "A person approves these before an agent does them.",
+    all: "Everything risky",
+    none: "Nothing",
+    some: "{{asks}} of {{total}}",
+    change: "Change",
+    follow: "Same as the workspace",
+    classes: {
+      deletes: "Deleting",
+      spends_money: "Spending money",
+      reaches_people: "Reaching people",
+      shares_outside: "Sharing outside",
+      replaces_data: "Replacing data",
+      deploys: "Deploying and merging",
+    },
+  },
   /** Agent settings: what it may start that nobody asked for directly, and which agents it may call (ADR 0131). */
   brakes: {
     title: "Work nobody asked for",
@@ -14807,6 +14826,7 @@ export const en = {
       approval: "Approval",
       /** In place of an approval: it ran without one because its agent never asks. `level`: that choice's name. */
       unasked: "Not asked ({{level}})",
+      unaskedRisks: "Not asked (allowed: {{risks}})",
       approvalWaiting: "Nobody has answered yet",
       approvalApproved: "Approved by {{name}}",
       approvalRefused: "Refused by {{name}}",

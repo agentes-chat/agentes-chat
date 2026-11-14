@@ -52,6 +52,7 @@ import { SheetHostProvider, useSheet } from "../shared/SheetHost";
 import { TextArea } from "../shared/TextArea";
 import { missingIdeas, nameOnLeave, withIdea, zoneLabel } from "./logic";
 import { chooseAction, Gap, SettingsPage } from "./parts";
+import { WorkspaceRiskTolerance } from "./RiskTolerance";
 
 /** How long "Salvo" stays under the title after a change saved by itself. */
 const SAVED_MS = 1800;
@@ -442,6 +443,7 @@ export function GeneralScreen() {
         </>
       )}
 
+      <WorkspaceRiskTolerance settings={settings.data} editable={editable} onSave={save} />
       <TeamMemory />
       <UsageStatistics />
     </SettingsPage>

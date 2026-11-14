@@ -3191,6 +3191,24 @@
       "text": "Nigdy nie pyta, także przy merge, deploy, płatnościach i rutynach."
     }
   },
+  "riskTolerance": {
+    "title": "Pytaj przed",
+    "help": "Agent, który pyta tylko o ryzykowne rzeczy, pyta osobę przed tymi działaniami. Wyłącz jedno, a agenci zrobią to bez pytania, każde wywołanie w dzienniku audytu. To, czego narzędzie nie nazywa, i zmiany rutyny nadal wymagają pytania.",
+    "lead": "Osoba zatwierdza to, zanim agent to zrobi.",
+    "all": "Wszystko, co ryzykowne",
+    "none": "Nic",
+    "some": "{{asks}} z {{total}}",
+    "change": "Zmień",
+    "follow": "Jak w workspace",
+    "classes": {
+      "deletes": "Usuwanie",
+      "spends_money": "Wydawanie pieniędzy",
+      "reaches_people": "Kontakt z ludźmi",
+      "shares_outside": "Udostępnianie na zewnątrz",
+      "replaces_data": "Zastępowanie danych",
+      "deploys": "Deploy i merge"
+    }
+  },
   "brakes": {
     "title": "Praca, o którą nikt nie prosił",
     "subtitle": "To, co zaczyna sam, po rutynie, alercie lub innym agencie. To, o co prosi osoba, nigdy nie jest wstrzymywane.",
@@ -15694,6 +15712,7 @@
       "via": "Przez co",
       "approval": "Zatwierdzenie",
       "unasked": "Bez pytania ({{level}})",
+      "unaskedRisks": "Bez pytania (dozwolone: {{risks}})",
       "approvalWaiting": "Nikt jeszcze nie odpowiedział",
       "approvalApproved": "Zatwierdził(a) {{name}}",
       "approvalRefused": "Odrzucił(a) {{name}}",

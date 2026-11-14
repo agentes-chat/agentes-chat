@@ -3090,6 +3090,24 @@
       "text": "No pregunta nada, tampoco en merge, deploy, pagos y rutinas."
     }
   },
+  "riskTolerance": {
+    "title": "Pedir aprobación para",
+    "help": "Un agente que solo pregunta lo arriesgado le pregunta a una persona antes de esto. Desactiva uno y los agentes lo hacen sin preguntar, cada llamada en el registro de auditoría. Lo que una herramienta no nombra, y los cambios de una rutina, siguen preguntando.",
+    "lead": "Una persona aprueba esto antes de que un agente lo haga.",
+    "all": "Todo lo arriesgado",
+    "none": "Nada",
+    "some": "{{asks}} de {{total}}",
+    "change": "Cambiar",
+    "follow": "Igual que el workspace",
+    "classes": {
+      "deletes": "Borrar",
+      "spends_money": "Gastar dinero",
+      "reaches_people": "Llegar a personas",
+      "shares_outside": "Compartir fuera",
+      "replaces_data": "Reemplazar datos",
+      "deploys": "Deploy y merge"
+    }
+  },
   "brakes": {
     "title": "Trabajo que nadie pidió",
     "subtitle": "Lo que empieza por su cuenta, a partir de una rutina, una alerta u otro agente. Lo que pide una persona nunca se detiene.",
@@ -15141,6 +15159,7 @@
       "via": "A través de",
       "approval": "Aprobación",
       "unasked": "No preguntó ({{level}})",
+      "unaskedRisks": "No preguntó (permitido: {{risks}})",
       "approvalWaiting": "Nadie respondió todavía",
       "approvalApproved": "Aprobado por {{name}}",
       "approvalRefused": "Rechazado por {{name}}",

@@ -719,6 +719,8 @@ export interface Agent {
   brakes?: AgentBrakes;
   /** How much it asks before acting (ADR 0173); absent from an older server (`risky`). */
   approvalsLevel?: ApprovalsLevel;
+  /** At `risky`, the risk classes it runs without asking (ADR 0180); null or absent follows the workspace's. */
+  unaskedRisks?: RiskClass[] | null;
   /**
    * Its setup checklist at the top of its chat (ADR 0155 §2): the ready-made role it started from and the steps a
    * person confirmed. Null or absent: an agent made before it (none shows).
@@ -756,6 +758,8 @@ export type CostKind = "pr" | "install" | "long";
  * sensitive, the default) or `never` (only merge, deploy, rollback and the like).
  */
 export type ApprovalsLevel = "always" | "risky" | "never";
+/** A kind of risk a call carries (ADR 0180). */
+export type RiskClass = "deletes" | "spends_money" | "reaches_people" | "shares_outside" | "replaces_data" | "deploys";
 
 /** What an agent may start that nobody asked for directly, and which agents it may call (ADR 0131). */
 export interface AgentBrakes {
@@ -914,6 +918,8 @@ export interface AgentInput {
   brakes?: Partial<AgentBrakes>;
   /** How much it asks before acting (ADR 0173); same permission as editing the agent. */
   approvalsLevel?: ApprovalsLevel;
+  /** At `risky`, the risk classes it runs without asking (ADR 0180); null follows the workspace's. */
+  unaskedRisks?: RiskClass[] | null;
   /**
    * Creating only: the ready-made role it starts from, for its setup checklist (ADR 0155 §2), and what its card said
    * (ADR 0164): how it introduced itself, the personal starter it began as, the apps it will use at their levels.
@@ -2315,6 +2321,11 @@ export interface OrgSettings {
   defaultAgentBudgetUsd?: number;
   /** Agents check what the team already did before acting outside (ADR 0064). On by default. */
   actionCheck: boolean;
+  /**
+   * The risk classes an agent at `risky` runs without asking, unless it has its own (ADR 0180). Absent from an older
+   * server: every class asks.
+   */
+  unaskedRisks?: RiskClass[];
   /** Per provider, the models Automático picks per tier where the workspace chose its own (ADR 0087). */
   autoModels: Partial<Record<string, Partial<Record<ModelTier, string>>>>;
   /** People can send GIFs in chat (ADR 0091); only with `gifsAvailable` too. On by default. */

@@ -2892,6 +2892,24 @@
       "text": "从不询问，包括合并、部署、付款和例程。"
     }
   },
+  "riskTolerance": {
+    "title": "需要审批的操作",
+    "help": "只询问有风险操作的智能体会在这些操作前询问一个人。关闭其中一项，智能体就会直接执行，每次调用都记录在审计日志中。工具没有说明的操作以及例行任务的更改仍会询问。",
+    "lead": "在智能体执行之前，由一个人审批这些操作。",
+    "all": "所有有风险的操作",
+    "none": "无",
+    "some": "{{total}} 项中的 {{asks}} 项",
+    "change": "更改",
+    "follow": "与工作区相同",
+    "classes": {
+      "deletes": "删除",
+      "spends_money": "花钱",
+      "reaches_people": "联系他人",
+      "shares_outside": "对外共享",
+      "replaces_data": "替换数据",
+      "deploys": "部署和合并"
+    }
+  },
   "brakes": {
     "title": "没人要求的工作",
     "subtitle": "它因为例程、警报或其他智能体而自己开始的工作。人要求的事从不会被拦下。",
@@ -14287,6 +14305,7 @@
       "via": "途径",
       "approval": "审批",
       "unasked": "未询问（{{level}}）",
+      "unaskedRisks": "未询问（已允许：{{risks}}）",
       "approvalWaiting": "还没有人回应",
       "approvalApproved": "由 {{name}} 批准",
       "approvalRefused": "由 {{name}} 拒绝",

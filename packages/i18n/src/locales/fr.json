@@ -3095,6 +3095,24 @@
       "text": "Ne demande rien, même pour un merge, un deploy, un paiement ou dans une routine."
     }
   },
+  "riskTolerance": {
+    "title": "Demander avant",
+    "help": "Un agent qui ne demande que pour ce qui est risqué demande à une personne avant ces actions. Désactivez-en une et les agents la font sans demander, chaque appel dans le journal d'audit. Ce qu'un outil ne nomme pas, et les changements d'une routine, demandent toujours.",
+    "lead": "Une personne approuve ces actions avant qu'un agent les fasse.",
+    "all": "Tout ce qui est risqué",
+    "none": "Rien",
+    "some": "{{asks}} sur {{total}}",
+    "change": "Modifier",
+    "follow": "Comme l'espace de travail",
+    "classes": {
+      "deletes": "Supprimer",
+      "spends_money": "Dépenser de l'argent",
+      "reaches_people": "Contacter des personnes",
+      "shares_outside": "Partager à l'extérieur",
+      "replaces_data": "Remplacer des données",
+      "deploys": "Déploiement et merge"
+    }
+  },
   "brakes": {
     "title": "Travail que personne n'a demandé",
     "subtitle": "Ce qu'il commence seul, à partir d'une routine, d'une alerte ou d'un autre agent. Ce qu'une personne demande n'est jamais retenu.",
@@ -15212,6 +15230,7 @@
       "via": "Via",
       "approval": "Approbation",
       "unasked": "Pas demandé ({{level}})",
+      "unaskedRisks": "Pas demandé (autorisé : {{risks}})",
       "approvalWaiting": "Personne n'a encore répondu",
       "approvalApproved": "Approuvé par {{name}}",
       "approvalRefused": "Refusé par {{name}}",

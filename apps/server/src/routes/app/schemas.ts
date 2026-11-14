@@ -7,6 +7,7 @@ import {
   CHAT_TEXT_SIZES,
   CHAT_TONES,
   ONBOARDING_STEPS,
+  RISK_CLASSES,
   STANDING_STATES,
   START_PAGES,
   WORKSPACE_MODES,
@@ -270,6 +271,13 @@ export const AgentAudience = z
   .openapi("AgentAudience");
 
 /** How much an agent asks before acting (ADR 0173). */
+export const RiskClass = z.enum(RISK_CLASSES).openapi("RiskClass", {
+  description:
+    "A kind of risk a call carries (ADR 0180): it deletes, spends money, reaches people, shares outside, replaces data, or deploys and merges.",
+});
+/** A list of classes as the API takes it: each class at most once. */
+export const RiskClasses = z.array(RiskClass).max(RISK_CLASSES.length);
+
 export const ApprovalsLevel = z.enum(["always", "risky", "never"]).openapi("ApprovalsLevel", {
   description:
     "`always`: every write to a connected app asks a person. `risky` (the default): what is marked sensitive asks. `never`: only merge, deploy, rollback and the like ask. A routine's run, and one a routine's reading feeds, ask for every write to a connected app at any level. Scopes, connector access and the budget bind at every level.",
@@ -434,6 +442,10 @@ export const Agent = z
         "It may send a sticker or a GIF (ADR 0091): when someone asks for one, and after a light reply as often as the workspace's `agentMedia` allows.",
     }),
     approvalsLevel: ApprovalsLevel,
+    unaskedRisks: z.array(RiskClass).nullable().openapi({
+      description:
+        "At `risky`, the risk classes it runs without asking (ADR 0180); null follows the workspace's `unaskedRisks`.",
+    }),
     builtin: z.enum(["right_hand"]).nullable().openapi({
       description:
         "A built-in agent the product ships (ADR 0137): `right_hand`, the team's right hand, one per workspace, never archived, deleted or exported. Null for the agents people make.",

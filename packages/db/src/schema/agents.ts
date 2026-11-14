@@ -196,6 +196,12 @@ export const agents = pgTable(
      */
     approvalsLevel: text().$type<"always" | "risky" | "never">().notNull().default("risky"),
     /**
+     * At `risky`, the risk classes whose calls run without a card for this agent (ADR 0180): `deletes`,
+     * `spends_money`, `reaches_people`, `shares_outside`, `replaces_data`, `deploys`. Null: the workspace's
+     * (`organization_settings.unasked_risks`). Validated in code (`RISK_CLASSES`).
+     */
+    unaskedRisks: jsonb().$type<string[]>(),
+    /**
      * Who thinks for it (ADR 0032): `model` (the API, default), `claude_code`
      * or `codex` on its computer; validated in code (`brain-settings.ts`).
      */
@@ -363,6 +369,11 @@ export const organizationSettings = pgTable("organization_settings", {
   personLimits: jsonb().$type<Record<string, unknown>>().notNull().default({}),
   /** Agents check what the team already did before an outside action (ADR 0064). On unless an admin turns it off. */
   actionCheck: boolean().notNull().default(true),
+  /**
+   * The risk classes whose calls run without a card for an agent at `risky` that has none of its own (ADR 0180).
+   * Empty, the default: every class asks, as before.
+   */
+  unaskedRisks: jsonb().$type<string[]>().notNull().default([]),
   /**
    * The models "Automático" picks per tier on a provider's key where the workspace chose its own
    * (`{ openrouter: { small, medium, large } }`); a tier left out is the provider's default (ADR 0087).

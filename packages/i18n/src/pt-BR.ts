@@ -3114,6 +3114,25 @@ export const ptBR = {
       text: "Não pergunta nada, nem em merge, deploy, pagamentos e rotinas.",
     },
   },
+  /** Quais tipos de risco pedem uma pessoa antes de um agente em "Só o arriscado" agir (ADR 0180). */
+  riskTolerance: {
+    title: "Pedir aprovação para",
+    help: "Um agente que pergunta só o arriscado pede a uma pessoa antes destes. Desligue um e os agentes fazem sem perguntar, cada chamada no log de auditoria. O que uma ferramenta não diz, e as mudanças de uma rotina, continuam pedindo.",
+    lead: "Uma pessoa aprova estes antes de um agente fazer.",
+    all: "Tudo que é arriscado",
+    none: "Nada",
+    some: "{{asks}} de {{total}}",
+    change: "Mudar",
+    follow: "Igual ao workspace",
+    classes: {
+      deletes: "Apagar",
+      spends_money: "Gastar dinheiro",
+      reaches_people: "Falar com pessoas",
+      shares_outside: "Compartilhar para fora",
+      replaces_data: "Substituir dados",
+      deploys: "Deploy e merge",
+    },
+  },
   /** Configurações do agente: o que ele pode começar sem ninguém pedir diretamente, e quais agentes pode chamar (ADR 0131). */
   brakes: {
     title: "Trabalho que ninguém pediu",
@@ -14801,6 +14820,7 @@ export const ptBR = {
       approval: "Aprovação",
       /** In place of an approval: it ran without one because its agent never asks. `level`: that choice's name. */
       unasked: "Não perguntou ({{level}})",
+      unaskedRisks: "Não perguntou (permitido: {{risks}})",
       approvalWaiting: "Ainda ninguém respondeu",
       approvalApproved: "Aprovado por {{name}}",
       approvalRefused: "Recusado por {{name}}",

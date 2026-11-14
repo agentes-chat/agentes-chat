@@ -128,10 +128,15 @@ export interface ToolDefinition {
   /** Needs a person's approval for every call. Merge, deploy and rollback do by their name too. */
   sensitive?: boolean;
   /**
-   * Set by the gateway's listing, never by a source: this agent never asks (ADR 0173), so a call of this tool opens
-   * no card whatever its name or marks say.
+   * Set by the gateway's listing, never by a source: this agent never asks (ADR 0173), or its workspace tolerates the
+   * tool's risk (ADR 0180), so a call of this tool opens no card whatever its name or marks say.
    */
   unasked?: boolean;
+  /**
+   * It is sensitive for the risk its classification found (a server's `destructiveHint`, a verb that deletes, sends
+   * or pays), not because a person set it to ask: the workspace's risk tolerance may let it run (ADR 0180).
+   */
+  asksByRisk?: boolean;
   /**
    * Set by the gateway for one call, never by a source: every action this call runs opens a pull request, so it is
    * judged as a connected app's own tool for that (`opensPullRequest`).

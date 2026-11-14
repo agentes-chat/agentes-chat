@@ -186,6 +186,7 @@ export const RIGHT_HAND_EDITABLE: ReadonlySet<string> = new Set([
   "credentialId",
   "monthlyBudgetNanoUsd",
   "approvalsLevel",
+  "unaskedRisks",
 ]);
 
 /** Whether `agentId` is the workspace's right hand, for a caller that holds only its id. */

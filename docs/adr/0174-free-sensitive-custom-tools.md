@@ -1,6 +1,7 @@
 # 0174. A person may free a tool its server marks sensitive
 
-- Status: Accepted, amended by ADR 0175 (a whole server trusted at once)
+- Status: Accepted, amended by ADR 0175 (a whole server trusted at once), extended by ADR 0181 (a risk tolerance per class,
+  gateway paths)
 - Date: 2026-11-12
 - Amends: ADR 0016's addendum of 2026-10-16 ("sensitive tools only ask or stay off")
 - Code: `packages/db/src/schema/connectors.ts` (`custom_tools.freed_at`, migration `0255_custom_tool_freed`),

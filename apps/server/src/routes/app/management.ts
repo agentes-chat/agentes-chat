@@ -103,6 +103,7 @@ import {
   Model,
   ModelTier,
   ProviderId,
+  RiskClasses,
   Role,
   StartChoice,
 } from "./schemas";
@@ -170,6 +171,10 @@ const Settings = z
     }),
     actionCheck: z.boolean().openapi({
       description: "Agents check what the team already did before acting outside (ADR 0064). On by default.",
+    }),
+    unaskedRisks: RiskClasses.openapi({
+      description:
+        "The risk classes an agent at `risky` runs without asking, unless it has its own (ADR 0180). Empty by default: every class asks.",
     }),
     autoModels: z.record(z.string(), z.partialRecord(ModelTier, z.string())).openapi({
       description:
@@ -565,6 +570,9 @@ export function managementRoutes(deps: AppDeps) {
               .optional()
               .openapi({ description: "Monthly budget of every agent without its own." }),
             actionCheck: z.boolean().optional(),
+            unaskedRisks: RiskClasses.optional().openapi({
+              description: "The risk classes agents at `risky` run without asking (ADR 0180). Admins only.",
+            }),
             autoModels: z.partialRecord(ProviderId, z.partialRecord(ModelTier, ModelId.nullable())).optional().openapi({
               description:
                 "Per provider and tier, one of that provider's models; null puts the tier back on its default.",

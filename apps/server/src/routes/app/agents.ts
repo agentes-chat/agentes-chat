@@ -120,6 +120,7 @@ import {
   NewAgentSetup,
   PlanModelOut,
   ProviderId,
+  RiskClasses,
   SetupStep,
   Usage,
 } from "./schemas";
@@ -202,6 +203,10 @@ const AgentFields = z.object({
   approvalsLevel: ApprovalsLevel.optional().openapi({
     description:
       "How much it asks before acting (ADR 0173). Needs `manage_agents`. A new agent starts at `risky`. It never widens what the agent may use.",
+  }),
+  unaskedRisks: RiskClasses.nullable().optional().openapi({
+    description:
+      "At `risky`, the risk classes it runs without asking (ADR 0180); null follows the workspace's. Needs `manage_agents`.",
   }),
 });
 

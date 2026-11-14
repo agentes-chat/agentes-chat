@@ -34,7 +34,9 @@ import {
   composioActions,
   customScope,
   freedByPerson,
+  gatewayCallPaths,
   isCustom,
+  isGatewayCallTool,
   syncCustomTools,
   type ToolAccess,
 } from "./custom";
@@ -374,6 +376,8 @@ export function createConnectorToolSource(
       if (!tool) return [];
       const freed = freedByPerson(row, connection);
       const executor = tool.name === COMPOSIO_EXECUTOR;
+      // A gateway's `call` (Executor) runs other tools by path: judged and kept one path at a time (ADR 0180).
+      const gateway = !composio && isGatewayCallTool(tool);
       const sqlArg = composio ? null : sqlArgOf(tool, preset);
       // Our rules for a Composio action as they are now (its entry's `ask`, its tags at the pinned version), not only
       // as the row stored them at the last sync: an action they make ask asks on every connection at once.
@@ -398,6 +402,8 @@ export function createConnectorToolSource(
           toolPrefix: prefix,
           // A sensitive tool runs without approval only when a person freed it through the API, never by what is stored.
           sensitive: access === "approval" || (row.sensitive && !freed) || asks || COMPOSIO_ANY_ACTION.has(tool.name),
+          // Sensitive for what its classification found, not because a person set it to ask (ADR 0180).
+          asksByRisk: (row.sensitive || asks) && !COMPOSIO_ANY_ACTION.has(tool.name),
           // Its exact call may be approved ahead, except a tool that runs whatever its input says.
           ahead: !COMPOSIO_ANY_ACTION.has(tool.name),
           external: true, // whatever the server returns is third-party text
@@ -406,9 +412,10 @@ export function createConnectorToolSource(
           rememberAs: tool.name,
           ...(executor ? { actions: composioActions, readScope: customScope(connection.id, "read") } : {}),
           ...(resumeWith ? { resumeWith } : {}),
+          ...(gateway ? { actions: gatewayCallPaths } : {}),
           ...(sqlArg ? { sqlReads: { tool: tool.name, arg: sqlArg } } : {}),
           describe: (input) => {
-            const actions = executor ? composioActions(input) : null;
+            const actions = executor ? composioActions(input) : gateway ? gatewayCallPaths(input) : null;
             return {
               title: `${connection.label}: ${actions ? actions.join(", ") : row.label}`,
               detail: `${tool.name} · ${Object.entries(input)
@@ -495,6 +502,7 @@ export function createConnectorToolSource(
             service: def.id,
             toolPrefix: prefix,
             sensitive: mapped.sensitive === true,
+            asksByRisk: mapped.sensitive === true,
             ahead: true,
             external: true, // whatever the server returns is third-party text
             describe: (input) => ({

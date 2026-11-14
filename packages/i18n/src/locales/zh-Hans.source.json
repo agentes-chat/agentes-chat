@@ -7315,6 +7315,48 @@
   "approvalsLevel.never.text": {
     "value": "Never asks, merge, deploy, payments and routines included."
   },
+  "riskTolerance.title": {
+    "value": "Ask before"
+  },
+  "riskTolerance.help": {
+    "value": "An agent that asks only for what is risky asks a person before these. Turn one off and agents do it without asking, each call in the audit log. What a tool doesn't name, and a routine's changes, still ask."
+  },
+  "riskTolerance.lead": {
+    "value": "A person approves these before an agent does them."
+  },
+  "riskTolerance.all": {
+    "value": "Everything risky"
+  },
+  "riskTolerance.none": {
+    "value": "Nothing"
+  },
+  "riskTolerance.some": {
+    "value": "{{asks}} of {{total}}"
+  },
+  "riskTolerance.change": {
+    "value": "Change"
+  },
+  "riskTolerance.follow": {
+    "value": "Same as the workspace"
+  },
+  "riskTolerance.classes.deletes": {
+    "value": "Deleting"
+  },
+  "riskTolerance.classes.spends_money": {
+    "value": "Spending money"
+  },
+  "riskTolerance.classes.reaches_people": {
+    "value": "Reaching people"
+  },
+  "riskTolerance.classes.shares_outside": {
+    "value": "Sharing outside"
+  },
+  "riskTolerance.classes.replaces_data": {
+    "value": "Replacing data"
+  },
+  "riskTolerance.classes.deploys": {
+    "value": "Deploying and merging"
+  },
   "brakes.title": {
     "value": "Work nobody asked for"
   },
@@ -35732,6 +35774,9 @@
   },
   "audit.panel.unasked": {
     "value": "Not asked ({{level}})"
+  },
+  "audit.panel.unaskedRisks": {
+    "value": "Not asked (allowed: {{risks}})"
   },
   "audit.panel.approvalWaiting": {
     "value": "Nobody has answered yet"

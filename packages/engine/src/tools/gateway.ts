@@ -58,6 +58,7 @@ import { connectorFirst } from "./connector-first";
 import { type BlockedTool, compactSchema, presentTools, resolveCall } from "./directory";
 import { canonicalJson, validateJson } from "./json-schema";
 import { missingPermissions, REQUEST_PERMISSION_TOOL } from "./permission";
+import { askingOf, type RiskClass, toleratedRisks } from "./risk";
 import {
   type ApprovalsLevel,
   approvalOrigin,
@@ -202,6 +203,32 @@ const asksByChoice = (tool: Pick<ToolDefinition, "name" | "scope" | "connectionI
  */
 export function unaskedAtNever(level: ApprovalsLevel, tool: ToolDefinition, authority: RunAuthority | null): boolean {
   return level === "never" && authority !== null && !asksByChoice(tool);
+}
+
+/**
+ * The workspace's risk tolerance (ADR 0180): the classes this call carries when it runs without a card because every
+ * one of them is tolerated, else null. Only at `risky`, on a run, for a call that asks only for its risk: the tool is
+ * marked sensitive by its classification or its name (`asksByRisk`, `sensitiveByName`), not by a person who set it to
+ * ask, and the run policy didn't send it to approval (a routine's write, ADR 0053). Never a mailbox's tool (its own
+ * setting decides), our asking tools, or a call whose actions or risk can't be read (`riskClassesOf`).
+ */
+export function toleratedCall(
+  tool: ToolDefinition,
+  input: Record<string, unknown> | null,
+  ctx: { level: ApprovalsLevel; authority: RunAuthority | null; decision: PolicyDecision; unasked: RiskClass[] },
+): RiskClass[] | null {
+  if (ctx.unasked.length === 0 || ctx.level !== "risky" || !ctx.authority || ctx.decision.action === "approve") {
+    return null;
+  }
+  if (asksByChoice(tool) || tool.scope.startsWith("mail:") || !isSensitive(tool)) return null;
+  const byRisk = tool.asksByRisk === true || (tool.sensitive !== true && sensitiveByName(tool.name, tool.scope));
+  if (!byRisk) return null;
+  // A tool that runs others is judged by what this call runs; listed, before any call, it isn't judged at all.
+  if (tool.actions) {
+    const actions = input ? tool.actions(input) : null;
+    return actions?.length ? toleratedRisks(ctx.unasked, [...actions, tool.scope]) : null;
+  }
+  return toleratedRisks(ctx.unasked, [tool.rememberAs ?? tool.name, tool.scope]);
 }
 
 /**
@@ -541,16 +568,21 @@ export function createToolGateway(deps: {
     known?: Map<string, ToolDefinition>,
     heldBack?: string[],
   ): Promise<ToolDefinition[]> {
-    const [keys, all, level] = await Promise.all([
+    const [keys, all, { level, unaskedRisks: unasked }] = await Promise.all([
       grantedScopeKeys(ctx.db, ctx.orgId, ctx.agentId),
       known ?? allTools(ctx),
-      approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
+      askingOf(ctx.db, ctx.orgId, ctx.agentId),
     ]);
     return [...all.values()]
       .filter((t) => isAllowed(accessWithNeeds(keys, t).state))
       .flatMap((t) => {
         const decision = policyFor(authority, t, level);
-        if (decision.action !== "refuse") return [asListed(t, decision, unaskedAtNever(level, t, authority))];
+        if (decision.action !== "refuse") {
+          const free =
+            unaskedAtNever(level, t, authority) ||
+            toleratedCall(t, null, { level, authority, decision, unasked }) !== null;
+          return [asListed(t, decision, free)];
+        }
         heldBack?.push(t.name);
         return [];
       })
@@ -1188,10 +1220,10 @@ export function createToolGateway(deps: {
       // The model's arguments land in jsonb and text columns (steps, approvals, the audit): a NUL would fail them.
       const requested = { ...raw, input: pgSafeJson(raw.input) };
       // Who is behind the run decides what it may do: listing already hid refused tools, this is the call.
-      const [all, authority, level] = await Promise.all([
+      const [all, authority, { level, unaskedRisks }] = await Promise.all([
         allTools(ctx),
         authorityOf(ctx),
-        approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
+        askingOf(ctx.db, ctx.orgId, ctx.agentId),
       ]);
       // A directory (tools/directory.ts): `use_tool` runs the tool it names by that tool's own name, so everything
       // below (steps, policy, scope, schema, checks, approval) is that tool's; `find_tools` runs as is. Any tool goes
@@ -1255,6 +1287,8 @@ export function createToolGateway(deps: {
       let autoApproved: { by: string | null; reads: boolean } | null = null;
       /** It ran without the card it would have opened, because its agent never asks (`unaskedAtNever`). */
       let unasked = false;
+      /** It ran without its card because the workspace tolerates every risk class it carries (`toleratedCall`). */
+      let tolerated: RiskClass[] | null = null;
       // The audit (agent-audit.ts): every call that matters, with how it ended. A routine's belongs where it
       // delivers, never to its room.
       const actionChannel =
@@ -1286,6 +1320,7 @@ export function createToolGateway(deps: {
           outcome,
           approvalRules: approvedBy,
           unasked: unasked && outcome !== "refused",
+          ...(tolerated && outcome !== "refused" ? { unaskedRisks: tolerated } : {}),
           ...extra,
         });
       };
@@ -1365,7 +1400,16 @@ export function createToolGateway(deps: {
       const never = unaskedAtNever(level, tool, authority);
       const wouldAsk = needsApproval(tool, decision) || asksWithWhy(tool, call.input);
       unasked = never && wouldAsk;
-      let approves = wouldAsk && !never;
+      tolerated =
+        wouldAsk && !never && !asksWithWhy(tool, call.input)
+          ? toleratedCall(tool, takeWhy(tool.inputSchema, call.input).input, {
+              level,
+              authority,
+              decision,
+              unasked: unaskedRisks,
+            })
+          : null;
+      let approves = wouldAsk && !never && !tolerated;
       // Only its `why` makes it ask: a command the computer holds, or (a merge this agent does alone) doesn't.
       const askedByWhy = approves && decision.action !== "approve" && !isSensitive(tool);
       let why = "";
@@ -1373,7 +1417,7 @@ export function createToolGateway(deps: {
       if (asksPerson(tool, decision) || asksWithWhy(tool, call.input)) {
         const taken = takeWhy(tool.inputSchema, call.input);
         why = taken.why ?? "";
-        whyMissing = !taken.why && !unasked;
+        whyMissing = !taken.why && !unasked && !tolerated;
         call = { ...call, input: taken.input };
       }
       // Team actions (ADR 0064): an outside call repeated after the agent was told the team already did it
@@ -1454,7 +1498,7 @@ export function createToolGateway(deps: {
       // that never asks merges anywhere it may, and leaves the same receipt.
       const mergeAlone: MergeDone | null = approves
         ? await connectorMerge(ctx, tool, call.input)
-        : unasked
+        : unasked || tolerated
           ? mergeOfCall(tool, call.input)
           : null;
       if (mergeAlone) approves = false;

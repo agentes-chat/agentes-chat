@@ -81,6 +81,25 @@ describe("Configurações do workspace", () => {
     expect(state.calls.findLast((c) => c.method === "orgs.updateSettings")?.args[1]).toEqual({ actionCheck: false });
   });
 
+  test("which kinds of risk ask: all on by default, one switch per kind lets agents do it without asking", async () => {
+    const { state } = await go();
+    const card = screen().getByRole("region", { name: "Pedir aprovação para" });
+    const kinds = ["Apagar", "Gastar dinheiro", "Falar com pessoas", "Compartilhar para fora", "Substituir dados"];
+    const switches = [...kinds, "Deploy e merge"].map((name) => within(card).getByRole("switch", { name }));
+    expect(switches.map((s) => s.getAttribute("aria-checked"))).toEqual(Array(6).fill("true"));
+    expect(hintOf("Pedir aprovação para", card).text).toContain("Desligue um e os agentes fazem sem perguntar");
+    await click(switches[5] as HTMLElement);
+    await settle(4);
+    expect(state.calls.findLast((c) => c.method === "orgs.updateSettings")?.args[1]).toEqual({
+      unaskedRisks: ["deploys"],
+    });
+    await click(within(card).getByRole("switch", { name: "Apagar" }));
+    await settle(4);
+    expect(state.calls.findLast((c) => c.method === "orgs.updateSettings")?.args[1]).toEqual({
+      unaskedRisks: ["deletes", "deploys"],
+    });
+  });
+
   test("usage statistics: the installation's owner gets the switch and sees exactly what is sent", async () => {
     const { state } = await go(
       seedState({ telemetry: { enabled: true, envOff: false, report: { report: 1, people: { total: 3 } } } }),

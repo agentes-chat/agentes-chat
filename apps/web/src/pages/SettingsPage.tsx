@@ -90,6 +90,7 @@ import { UsageTabs } from "@/components/PeopleUsage";
 import { ApiCard, PlanUsageCards } from "@/components/PlanUsage";
 import { MyFace, OrgLogoDialog, OrgMark } from "@/components/ProfilePhoto";
 import { KeyMismatch, KeyRefused, KeySite, ProviderKeySelect } from "@/components/ProviderKey";
+import { RiskToleranceCard } from "@/components/RiskTolerance";
 import { RolesSection } from "@/components/roles/RolesSection";
 import { SkillsSection } from "@/components/Skills";
 import { StorageSection } from "@/components/StorageSettings";
@@ -633,6 +634,8 @@ function GeneralSection() {
 
       {personal ? contextCard : workspaceCard}
       {personal ? workspaceCard : contextCard}
+
+      <RiskToleranceCard settings={settings.data} editable={editable} onSave={save} />
 
       <TeamMemoryCard />
 

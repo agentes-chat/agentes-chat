@@ -31,6 +31,7 @@ import {
 } from "./media";
 import { can, lockOrgMembers, requireActiveMembership, requirePermission } from "./organizations";
 import { isRightHand, rightHandPermanent } from "./right-hand";
+import { type RiskClass, riskClassesFrom, riskClassesStored } from "./tools/risk";
 import {
   agentBudgetsThisMonth,
   budgetPercent,
@@ -79,6 +80,11 @@ export interface OrgSettings extends MediaSettings {
   defaultAgentBudgetNanoUsd: number;
   /** Agents check what the team already did before an outside action (ADR 0064). On by default. */
   actionCheck: boolean;
+  /**
+   * The risk classes an agent at "Só o que é arriscado" runs without asking, unless it has its own (ADR 0180).
+   * Empty by default: every class asks.
+   */
+  unaskedRisks: RiskClass[];
   /** People can send voice messages (ADR 0100); they also need `voiceAvailable`. On by default. */
   voiceMessages: boolean;
   /** Per provider, the models "Automático" picks per tier where the workspace chose its own (ADR 0087). */
@@ -106,6 +112,7 @@ export async function getOrgSettings(db: Database, actorId: string, orgId: strin
     teamSize: TEAM_SIZES.includes(s?.teamSize as TeamSize) ? (s?.teamSize as TeamSize) : null,
     defaultAgentBudgetNanoUsd: s?.defaultAgentBudgetNanoUsd ?? DEFAULT_AGENT_BUDGET_NANO_USD,
     actionCheck: s?.actionCheck ?? true,
+    unaskedRisks: riskClassesStored(s?.unaskedRisks),
     voiceMessages: s?.voiceMessages ?? true,
     autoModels: (s?.autoModels ?? {}) as AutoModels,
     mode: isWorkspaceMode(s?.mode) ? s.mode : "team",
@@ -151,6 +158,7 @@ export async function updateOrgSettings(
     }
   }
   if (input.teamSize && !TEAM_SIZES.includes(input.teamSize)) throw new ValidationError("invalid teamSize");
+  const unaskedRisks = input.unaskedRisks === undefined ? undefined : riskClassesFrom(input.unaskedRisks);
   if (input.mode !== undefined && !isWorkspaceMode(input.mode))
     throw new ValidationError(`mode must be one of ${WORKSPACE_MODES.join(", ")}`);
   if (input.defaultAgentBudgetNanoUsd !== undefined && !(input.defaultAgentBudgetNanoUsd > 0)) {
@@ -202,6 +210,18 @@ export async function updateOrgSettings(
               .from(organizationSettings)
               .where(eq(organizationSettings.orgId, orgId))
           )[0]?.mode ?? "team");
+    // The tolerance before this change, read in the transaction: a change is audited with where it came from.
+    const risksBefore =
+      unaskedRisks === undefined
+        ? undefined
+        : riskClassesStored(
+            (
+              await tx
+                .select({ unaskedRisks: organizationSettings.unaskedRisks })
+                .from(organizationSettings)
+                .where(eq(organizationSettings.orgId, orgId))
+            )[0]?.unaskedRisks,
+          );
     const storedAutoModels = async () => {
       const [row] = await tx
         .select({ autoModels: organizationSettings.autoModels })
@@ -235,6 +255,7 @@ export async function updateOrgSettings(
         ? { defaultAgentBudgetNanoUsd: Math.round(input.defaultAgentBudgetNanoUsd) }
         : {}),
       ...(input.actionCheck !== undefined ? { actionCheck: input.actionCheck } : {}),
+      ...(unaskedRisks !== undefined ? { unaskedRisks } : {}),
       ...(input.voiceMessages !== undefined ? { voiceMessages: input.voiceMessages } : {}),
       ...(input.gifs !== undefined ? { gifs: input.gifs } : {}),
       ...(input.gifRating !== undefined ? { gifRating: input.gifRating } : {}),
@@ -250,6 +271,15 @@ export async function updateOrgSettings(
         .insert(organizationSettings)
         .values({ orgId, ...settings })
         .onConflictDoUpdate({ target: organizationSettings.orgId, set: { ...settings, updatedAt: new Date() } });
+    }
+    if (unaskedRisks !== undefined && risksBefore?.join() !== unaskedRisks.join()) {
+      await recordAudit(tx, {
+        orgId,
+        actor: { type: "person", id: actorId },
+        action: "organization.risk_tolerance_changed",
+        target: { type: "organization", id: orgId },
+        details: { from: risksBefore, to: unaskedRisks },
+      });
     }
     if (input.mode !== undefined && modeBefore !== input.mode) {
       await recordAudit(tx, {

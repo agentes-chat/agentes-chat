@@ -134,6 +134,33 @@ export function composioActions(input: Record<string, unknown>): string[] | null
   return [...new Set(slugs)];
 }
 
+/**
+ * A gateway server's tool that runs other tools by path, in Executor's shape (executor.sh: `call` takes `calls`, one
+ * `{ path, input }` or a list of them). ADR 0180: its calls are judged and kept by "Aprovar sempre" one path at a
+ * time, as Composio's executor is by slug.
+ */
+export const isGatewayCallTool = (tool: { name: string; inputSchema?: { properties?: unknown } }) =>
+  tool.name === "call" && isPlainObject(tool.inputSchema?.properties) && "calls" in tool.inputSchema.properties;
+
+const GATEWAY_PATH = /^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}$/;
+
+/**
+ * The paths one call of a gateway's `call` runs (each once, `tools.google.api.calendar.calendars.calendarEventsPatch`),
+ * or null when its input isn't that shape: then nothing is guessed, and "Aprovar sempre" keeps the tool itself.
+ */
+export function gatewayCallPaths(input: Record<string, unknown>): string[] | null {
+  const { calls, ...rest } = input;
+  if (Object.keys(rest).length > 0) return null;
+  const items = Array.isArray(calls) ? calls : [calls];
+  if (items.length === 0 || items.length > 50) return null;
+  const paths: string[] = [];
+  for (const item of items) {
+    if (!isPlainObject(item) || typeof item.path !== "string" || !GATEWAY_PATH.test(item.path)) return null;
+    paths.push(item.path);
+  }
+  return [...new Set(paths)];
+}
+
 export interface CustomToolView {
   name: string;
   description: string;

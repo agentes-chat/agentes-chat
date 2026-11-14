@@ -3097,6 +3097,24 @@
       "text": "Non chiede mai, nemmeno per merge, deploy, pagamenti e routine."
     }
   },
+  "riskTolerance": {
+    "title": "Chiedi prima di",
+    "help": "Un agente che chiede solo per ciò che è rischioso chiede a una persona prima di queste azioni. Disattivane una e gli agenti la fanno senza chiedere, ogni chiamata nel registro di controllo. Ciò che uno strumento non nomina, e le modifiche di una routine, chiedono ancora.",
+    "lead": "Una persona approva queste azioni prima che un agente le faccia.",
+    "all": "Tutto ciò che è rischioso",
+    "none": "Niente",
+    "some": "{{asks}} di {{total}}",
+    "change": "Cambia",
+    "follow": "Come il workspace",
+    "classes": {
+      "deletes": "Eliminare",
+      "spends_money": "Spendere denaro",
+      "reaches_people": "Raggiungere persone",
+      "shares_outside": "Condividere all'esterno",
+      "replaces_data": "Sostituire dati",
+      "deploys": "Deploy e merge"
+    }
+  },
   "brakes": {
     "title": "Lavoro che nessuno ha chiesto",
     "subtitle": "Ciò che inizia da solo, da una routine, un avviso o un altro agente. Ciò che chiede una persona non viene mai fermato.",
@@ -15222,6 +15240,7 @@
       "via": "Tramite",
       "approval": "Approvazione",
       "unasked": "Non chiesto ({{level}})",
+      "unaskedRisks": "Non chiesto (consentito: {{risks}})",
       "approvalWaiting": "Nessuno ha ancora risposto",
       "approvalApproved": "Approvata da {{name}}",
       "approvalRefused": "Rifiutata da {{name}}",

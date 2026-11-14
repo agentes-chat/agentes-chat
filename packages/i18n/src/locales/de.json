@@ -2995,6 +2995,24 @@
       "text": "Fragt nie, auch nicht bei Merge, Deploy, Zahlungen und Routinen."
     }
   },
+  "riskTolerance": {
+    "title": "Fragen vor",
+    "help": "Ein Agent, der nur bei Riskantem fragt, fragt vor diesen Aktionen eine Person. Schalte eine aus, und Agenten tun es, ohne zu fragen, jeder Aufruf im Prüfprotokoll. Was ein Tool nicht benennt und die Änderungen einer Routine fragen weiter.",
+    "lead": "Eine Person gibt diese frei, bevor ein Agent sie ausführt.",
+    "all": "Alles Riskante",
+    "none": "Nichts",
+    "some": "{{asks}} von {{total}}",
+    "change": "Ändern",
+    "follow": "Wie im Workspace",
+    "classes": {
+      "deletes": "Löschen",
+      "spends_money": "Geld ausgeben",
+      "reaches_people": "Menschen erreichen",
+      "shares_outside": "Nach außen teilen",
+      "replaces_data": "Daten ersetzen",
+      "deploys": "Deploy und Merge"
+    }
+  },
   "brakes": {
     "title": "Arbeit, um die niemand gebeten hat",
     "subtitle": "Was der Agent selbst beginnt, nach einer Routine, einem Alarm oder einem anderen Agenten. Was eine Person verlangt, wird nie aufgehalten.",
@@ -14736,6 +14754,7 @@
       "via": "Über",
       "approval": "Freigabe",
       "unasked": "Nicht gefragt ({{level}})",
+      "unaskedRisks": "Nicht gefragt (erlaubt: {{risks}})",
       "approvalWaiting": "Noch hat niemand geantwortet",
       "approvalApproved": "Freigegeben von {{name}}",
       "approvalRefused": "Abgelehnt von {{name}}",

@@ -50,6 +50,38 @@ describe("Aprovações on an agent's page", () => {
     expect(screen().queryByRole("region", { name: "Alterações não salvas" })).toBeNull();
   });
 
+  test("at Só o arriscado the dialog stays open on which kinds ask: the workspace's, or a list of the agent's own", async () => {
+    const state = seedState();
+    state.unaskedRisks = ["deletes"];
+    const ada = state.agents.find((a) => a.id === ADA_ID);
+    if (ada) ada.approvalsLevel = "always";
+    await go(state);
+    await click(within(section()).getByRole("button", { name: /Aprovações/ }));
+    let dialog = screen().getByRole("dialog", { name: "Aprovações" });
+    expect(within(dialog).queryByRole("switch", { name: "Igual ao workspace" })).toBeNull();
+    await click(within(dialog).getByRole("radio", { name: /Só o arriscado/ }));
+    // Picking it keeps the dialog: the kinds are the next question.
+    dialog = screen().getByRole("dialog", { name: "Aprovações" });
+    const follow = within(dialog).getByRole("switch", { name: "Igual ao workspace" });
+    expect(follow.getAttribute("aria-checked")).toBe("true");
+    const deletes = within(dialog).getByRole("switch", { name: "Apagar" });
+    // The workspace's: deletes run without asking, and following it the kinds can't change here.
+    expect(deletes.getAttribute("aria-checked")).toBe("false");
+    expect(deletes.hasAttribute("disabled")).toBe(true);
+    await click(follow);
+    expect(updates(state).at(-1)).toEqual({ unaskedRisks: ["deletes"] });
+    await click(within(screen().getByRole("dialog")).getByRole("switch", { name: "Gastar dinheiro" }));
+    expect(updates(state).at(-1)).toEqual({ unaskedRisks: ["deletes", "spends_money"] });
+    await click(within(screen().getByRole("dialog")).getByRole("switch", { name: "Igual ao workspace" }));
+    expect(updates(state).at(-1)).toEqual({ unaskedRisks: null });
+    // The line says how much of the risky asks once something runs without asking.
+    await act(async () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }));
+    await settle(4);
+    expect(within(section()).getByRole("button", { name: /Aprovações/ }).textContent).toBe(
+      "AprovaçõesSó o arriscado · 5 de 6",
+    );
+  });
+
   test("the saved level shows on the line and is the one chosen in the dialog", async () => {
     const state = seedState();
     const ada = state.agents.find((a) => a.id === ADA_ID);
