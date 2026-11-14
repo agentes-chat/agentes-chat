@@ -4267,6 +4267,8 @@ export class BrowserManager {
       events.on("close", (code: number | null) => finish(code));
       child.stdin.on("error", () => undefined);
       child.stdin.end(opts.stdin ?? "");
+      // An abort listener added after the abort never fires.
+      if (opts.signal?.aborted) onAbort();
     });
   }
 }
