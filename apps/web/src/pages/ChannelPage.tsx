@@ -194,6 +194,7 @@ import {
   Field,
   FORMAT_KINDS,
   type FormatKind,
+  focusAtEnd,
   Icon,
   type IconName,
   Input,
@@ -208,6 +209,8 @@ import {
   Message,
   MessageLookContext,
   MessageText,
+  mayTakeFocus,
+  OPEN_LAYER,
   PixelSpinner,
   SavedNote,
   Skeleton,
@@ -410,7 +413,7 @@ import { onChannelDetails, takeChannelDetails } from "@/lib/channel-details";
 import { selectingIn } from "@/lib/context-menu";
 import { desktopPlatform, thisMac, useDocumentTitle } from "@/lib/desktop";
 import { holdOnScreen } from "@/lib/island";
-import { typingInField } from "@/lib/keys";
+import { composes, typingInField } from "@/lib/keys";
 import { lookOf } from "@/lib/look";
 import { threadSearch, useThreadPanel } from "@/lib/open-param";
 import { reportPainted } from "@/lib/perf";
@@ -888,7 +891,7 @@ function ChannelView({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented || draftRef.current.trim()) return;
-      if (document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')) return;
+      if (document.querySelector(OPEN_LAYER)) return;
       // An Esc in another field (the search, a card's answer) is that field's: the composer stops agents on its own.
       if (typingInField(e.target)) return;
       // An Esc from a panel is that panel's, and one from the conversation beside a thread isn't the thread's.
@@ -916,7 +919,7 @@ function ChannelView({
     if (!quote) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
-      if (document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')) return;
+      if (document.querySelector(OPEN_LAYER)) return;
       // The composer's Esc lets go of the reply first; another field's (the search, a card's answer) is that field's.
       if (typingInField(e.target) && !(e.target as Element).closest('[id^="composer-"]')) return;
       e.preventDefault();
@@ -1018,16 +1021,34 @@ function ChannelView({
   // `/mission` with several agents and none named: "Nova missão" with the goal filled in.
   const [missionDraft, setMissionDraft] = useState<string | null>(null);
   draftRef.current = draft;
+  // Once per conversation (each one mounts its own view): the cursor waits in the box, at the end of a draft.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only on opening; a thread opened with it takes the focus
   useEffect(() => {
-    if (!draftKey) return;
-    // Text left here is for the person to finish: the caret waits at its end.
     const box = composer.current;
-    if (peekDraft(draftKey) && box) {
-      box.focus();
-      box.setSelectionRange(box.value.length, box.value.length);
+    if (draftKey && peekDraft(draftKey)) {
+      // Text handed here is for the person to finish, whatever else holds the focus.
+      if (box) focusAtEnd(box);
+    } else if (box && !panel && mayTakeFocus()) {
+      focusAtEnd(box);
     }
-    clearDraft(draftKey);
+    if (draftKey) clearDraft(draftKey);
   }, [draftKey]);
+  // A printable key typed on the conversation, outside any field, goes into its box. Space, Enter, the arrows and the
+  // page keys stay the list's, and a key with ⌘, Ctrl or Alt is a shortcut.
+  const root = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const box = composer.current;
+      if (!box || box.disabled || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || composes(e)) return;
+      if (!/^\S$/u.test(e.key) || typingInField(e.target) || box.closest("[data-voice]")) return;
+      // The innermost conversation the key landed in (a thread's panel sits inside its channel); none: the page's.
+      const at = e.target instanceof Element ? e.target.closest(".shell__main--chat") : null;
+      if (at ? at !== root.current : chrome?.panel || e.target !== document.body) return;
+      if (mayTakeFocus()) focusAtEnd(box);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [chrome?.panel]);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const membersColumn = useMembersColumn();
   const dmSidebar = useDmSidebar();
@@ -2272,7 +2293,7 @@ function ChannelView({
     if (!adjusting) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
-      if (document.querySelector('[role="dialog"], [role="menu"], [role="listbox"]')) return;
+      if (document.querySelector(OPEN_LAYER)) return;
       adjust.cancel();
     };
     window.addEventListener("keydown", onKey);
@@ -2421,6 +2442,7 @@ function ChannelView({
               {/* A DM with an agent reads as one centered column; channels, threads and DMs between people
             are a left-aligned team chat. */}
               <Tag
+                ref={root}
                 className={cx("shell__main shell__main--chat", chrome?.panel && "thread-panel__chat")}
                 data-continues={continues || undefined}
               >
