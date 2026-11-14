@@ -128,7 +128,7 @@ export async function recordToolCall(
     approvalRules?: string[] | null;
     /** A call that ran without the card its tool would open, because its agent never asks (ADR 0173). */
     unasked?: boolean;
-    /** A call that ran without its card because the workspace tolerates every risk class it carries (ADR 0180). */
+    /** A call that ran without its card because the workspace tolerates every risk class it carries (ADR 0181). */
     unaskedRisks?: readonly string[];
     about?: ToolCallSubject | null;
   },

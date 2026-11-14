@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { browser, createTestServer, joinByInvitation, seedOrg, signUp, type TestServer } from "./harness";
 
-/** A workspace's risk tolerance over the API (ADR 0180): on its settings, and an agent's own on the agent. */
+/** A workspace's risk tolerance over the API (ADR 0181): on its settings, and an agent's own on the agent. */
 
 let t: TestServer;
 afterEach(() => t.close());

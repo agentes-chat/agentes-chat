@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow } from "@/ui";
 
 /**
- * The six kinds of risk (ADR 0180) as toggle rows, on while that kind asks a person first. A press sends the whole
+ * The six kinds of risk (ADR 0181) as toggle rows, on while that kind asks a person first. A press sends the whole
  * list of what runs without asking. The web's `RiskRows`.
  */
 export function RiskRows({

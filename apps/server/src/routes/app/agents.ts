@@ -206,7 +206,7 @@ const AgentFields = z.object({
   }),
   unaskedRisks: RiskClasses.nullable().optional().openapi({
     description:
-      "At `risky`, the risk classes it runs without asking (ADR 0180); null follows the workspace's. Needs `manage_agents`.",
+      "At `risky`, the risk classes it runs without asking (ADR 0181); null follows the workspace's. Needs `manage_agents`.",
   }),
 });
 

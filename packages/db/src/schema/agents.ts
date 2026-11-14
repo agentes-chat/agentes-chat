@@ -196,7 +196,7 @@ export const agents = pgTable(
      */
     approvalsLevel: text().$type<"always" | "risky" | "never">().notNull().default("risky"),
     /**
-     * At `risky`, the risk classes whose calls run without a card for this agent (ADR 0180): `deletes`,
+     * At `risky`, the risk classes whose calls run without a card for this agent (ADR 0181): `deletes`,
      * `spends_money`, `reaches_people`, `shares_outside`, `replaces_data`, `deploys`. Null: the workspace's
      * (`organization_settings.unasked_risks`). Validated in code (`RISK_CLASSES`).
      */
@@ -370,7 +370,7 @@ export const organizationSettings = pgTable("organization_settings", {
   /** Agents check what the team already did before an outside action (ADR 0064). On unless an admin turns it off. */
   actionCheck: boolean().notNull().default(true),
   /**
-   * The risk classes whose calls run without a card for an agent at `risky` that has none of its own (ADR 0180).
+   * The risk classes whose calls run without a card for an agent at `risky` that has none of its own (ADR 0181).
    * Empty, the default: every class asks, as before.
    */
   unaskedRisks: jsonb().$type<string[]>().notNull().default([]),

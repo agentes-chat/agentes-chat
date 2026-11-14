@@ -3187,7 +3187,7 @@ export const en = {
       text: "Never asks, merge, deploy, payments and routines included.",
     },
   },
-  /** Which kinds of risk ask a person before an agent at "Only what is risky" acts (ADR 0180). */
+  /** Which kinds of risk ask a person before an agent at "Only what is risky" acts (ADR 0181). */
   riskTolerance: {
     title: "Ask before",
     help: "Turn one off and agents that ask only for what is risky do it without asking, each call in the audit log.",

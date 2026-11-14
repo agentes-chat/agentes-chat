@@ -136,7 +136,7 @@ export function composioActions(input: Record<string, unknown>): string[] | null
 
 /**
  * A gateway server's tool that runs other tools by path, in Executor's shape (executor.sh: `call` takes `calls`, one
- * `{ path, input }` or a list of them). ADR 0180: its calls are judged and kept by "Aprovar sempre" one path at a
+ * `{ path, input }` or a list of them). ADR 0181: its calls are judged and kept by "Aprovar sempre" one path at a
  * time, as Composio's executor is by slug.
  */
 export const isGatewayCallTool = (tool: { name: string; inputSchema?: { properties?: unknown } }) =>

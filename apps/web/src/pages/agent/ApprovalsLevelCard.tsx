@@ -13,7 +13,7 @@ import { useAgentEdit } from "./context";
 /**
  * Ferramentas e acesso → Aprovações (ADR 0173): how much the agent asks before acting, as one line with the choice
  * in sight. Whoever manages agents opens the three choices from it. A choice saves at once, outside the page's save
- * bar. Always and never close the dialog. "Só o arriscado" keeps it open on which kinds of risk ask (ADR 0180): the
+ * bar. Always and never close the dialog. "Só o arriscado" keeps it open on which kinds of risk ask (ADR 0181): the
  * workspace's, or a list of the agent's own. Anyone else reads the line.
  */
 export function ApprovalsLevelCard() {

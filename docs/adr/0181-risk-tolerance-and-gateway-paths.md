@@ -3,10 +3,11 @@
 - Status: Accepted
 - Date: 2026-11-13
 - Extends: ADR 0173 (approvals level per agent, "Aprovar sempre" on every card), ADR 0174 (freeing a sensitive
-  custom tool), ADR 0015 (Tool Gateway and approvals)
+  custom tool), ADR 0015 (Tool Gateway and approvals). Beside ADR 0175 (a whole server trusted) and ADR 0180 (a
+  server's own approval request as our card)
 - Code: `packages/engine/src/tools/risk.ts` (`RISK_CLASSES`, `riskClassesOf`, `askingOf`, `toleratedRisks`),
   `packages/engine/src/tools/gateway.ts` (`toleratedCall`, the listing and the call), `packages/db/src/schema/agents.ts`
-  (`organization_settings.unasked_risks`, `agents.unasked_risks`, migration `0256_unasked_risks`),
+  (`organization_settings.unasked_risks`, `agents.unasked_risks`, migration `0267_unasked_risks`),
   `packages/engine/src/management.ts`, `packages/engine/src/agents.ts`, `packages/engine/src/connectors/custom.ts`
   (`isGatewayCallTool`, `gatewayCallPaths`), `packages/engine/src/connectors/mcp.ts` (`asksByRisk`, the gateway's
   `actions`), `packages/client/src/lib/risk-tolerance.ts`, web `components/RiskTolerance.tsx` and
@@ -105,5 +106,7 @@ agent a list of its own when turned off. The phone has both as grouped rows.
   names paths: each path asks once more, then is kept on its own.
 - Lines that say merge, deploy and rollback ask "unless the agent never asks" (the agent's tools page) are untrue for
   an agent whose tolerance lets deploys run. The Approvals row beside them says so ("Só o arriscado · 5 de 6").
-- Not done here: showing a gateway's model-mode approval (`approval-required` in a tool result) as a native card, and
-  trusting a whole connection at once. Each has its own change in the same issue.
+- How it combines with the rest of the issue: a tool of a server trusted whole (ADR 0175) or freed one by one (ADR
+  0174) isn't sensitive any more, so the tolerance has nothing to lift there. A gateway's own approval request shown
+  as our card (ADR 0180) is the gateway's question, not a risk this tolerance reads: it keeps its card whatever the
+  list says.

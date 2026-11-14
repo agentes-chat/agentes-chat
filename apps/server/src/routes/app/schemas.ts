@@ -270,10 +270,10 @@ export const AgentAudience = z
   })
   .openapi("AgentAudience");
 
-/** A kind of risk a call carries (ADR 0180). */
+/** A kind of risk a call carries (ADR 0181). */
 export const RiskClass = z.enum(RISK_CLASSES).openapi("RiskClass", {
   description:
-    "A kind of risk a call carries (ADR 0180): it deletes, spends money, reaches people, shares outside, replaces data, or deploys and merges.",
+    "A kind of risk a call carries (ADR 0181): it deletes, spends money, reaches people, shares outside, replaces data, or deploys and merges.",
 });
 /** A list of classes as the API takes it: each class at most once. */
 export const RiskClasses = z.array(RiskClass).max(RISK_CLASSES.length);
@@ -445,7 +445,7 @@ export const Agent = z
     approvalsLevel: ApprovalsLevel,
     unaskedRisks: z.array(RiskClass).nullable().openapi({
       description:
-        "At `risky`, the risk classes it runs without asking (ADR 0180); null follows the workspace's `unaskedRisks`.",
+        "At `risky`, the risk classes it runs without asking (ADR 0181); null follows the workspace's `unaskedRisks`.",
     }),
     builtin: z.enum(["right_hand"]).nullable().openapi({
       description:

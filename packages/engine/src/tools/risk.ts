@@ -4,7 +4,7 @@ import { ValidationError } from "../errors";
 import { type ApprovalsLevel, DEFAULT_APPROVALS_LEVEL } from "./run-policy";
 
 /**
- * A workspace's risk tolerance (ADR 0180): which kinds of risk a call may carry and still run without a card, for an
+ * A workspace's risk tolerance (ADR 0181): which kinds of risk a call may carry and still run without a card, for an
  * agent at "Só o que é arriscado" (`risky`, ADR 0173). The classes are the judge's reasons for a tool that needs a
  * person (`JUDGE_REASONS` in `connectors/classify.ts`) and the words that make a name sensitive there and in the
  * gateway, grouped the way people say them.

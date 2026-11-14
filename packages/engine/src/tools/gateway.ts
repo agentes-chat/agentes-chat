@@ -206,7 +206,7 @@ export function unaskedAtNever(level: ApprovalsLevel, tool: ToolDefinition, auth
 }
 
 /**
- * The workspace's risk tolerance (ADR 0180): the classes this call carries when it runs without a card because every
+ * The workspace's risk tolerance (ADR 0181): the classes this call carries when it runs without a card because every
  * one of them is tolerated, else null. Only at `risky`, on a run, for a call that asks only for its risk: the tool is
  * marked sensitive by its classification or its name (`asksByRisk`, `sensitiveByName`), not by a person who set it to
  * ask, and the run policy didn't send it to approval (a routine's write, ADR 0053). Never a mailbox's tool (its own

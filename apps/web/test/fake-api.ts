@@ -326,7 +326,7 @@ export interface FakeState {
   audit?: AuditRow[];
   /** The workspace switch "Agentes conferem o que o time já fez" (on when unset). */
   actionCheck?: boolean;
-  /** The workspace's risk tolerance (ADR 0180): the classes agents run without asking; none when unset. */
+  /** The workspace's risk tolerance (ADR 0181): the classes agents run without asking; none when unset. */
   unaskedRisks?: OrgSettings["unaskedRisks"];
   /** Automático's models per provider and tier (Settings › Chaves); none when unset. */
   autoModels?: OrgSettings["autoModels"];

@@ -99,7 +99,7 @@ export interface AgentInput {
   autonomyBrakes?: Partial<AutonomySettings>;
   /** How much it asks before acting (ADR 0173). */
   approvalsLevel?: ApprovalsLevel;
-  /** At `risky`, the risk classes it runs without asking (ADR 0180); null follows the workspace's. */
+  /** At `risky`, the risk classes it runs without asking (ADR 0181); null follows the workspace's. */
   unaskedRisks?: RiskClass[] | null;
 }
 
@@ -645,7 +645,7 @@ export const agentView = (a: Agent) => ({
   brakes: autonomySettings(a.autonomyBrakes),
   /** How much it asks before acting (ADR 0173). */
   approvalsLevel: a.approvalsLevel,
-  /** The risk classes it runs without asking at `risky` (ADR 0180); null follows the workspace's. */
+  /** The risk classes it runs without asking at `risky` (ADR 0181); null follows the workspace's. */
   unaskedRisks: a.unaskedRisks == null ? null : riskClassesStored(a.unaskedRisks),
   createdAt: a.createdAt,
 });

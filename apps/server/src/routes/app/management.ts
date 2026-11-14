@@ -174,7 +174,7 @@ const Settings = z
     }),
     unaskedRisks: RiskClasses.openapi({
       description:
-        "The risk classes an agent at `risky` runs without asking, unless it has its own (ADR 0180). Empty by default: every class asks.",
+        "The risk classes an agent at `risky` runs without asking, unless it has its own (ADR 0181). Empty by default: every class asks.",
     }),
     autoModels: z.record(z.string(), z.partialRecord(ModelTier, z.string())).openapi({
       description:
@@ -571,7 +571,7 @@ export function managementRoutes(deps: AppDeps) {
               .openapi({ description: "Monthly budget of every agent without its own." }),
             actionCheck: z.boolean().optional(),
             unaskedRisks: RiskClasses.optional().openapi({
-              description: "The risk classes agents at `risky` run without asking (ADR 0180). Admins only.",
+              description: "The risk classes agents at `risky` run without asking (ADR 0181). Admins only.",
             }),
             autoModels: z.partialRecord(ProviderId, z.partialRecord(ModelTier, ModelId.nullable())).optional().openapi({
               description:

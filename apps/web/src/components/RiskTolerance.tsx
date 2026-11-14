@@ -24,7 +24,7 @@ export const riskSummary = (t: TFunction, unasked: readonly RiskClass[]) =>
       : t("riskTolerance.some", { asks: RISK_CLASSES.length - unasked.length, total: RISK_CLASSES.length });
 
 /**
- * The six kinds of risk (ADR 0180), one switch each, on while that kind asks a person first. A change goes out at
+ * The six kinds of risk (ADR 0181), one switch each, on while that kind asks a person first. A change goes out at
  * once through `onChange`, with the whole list of what runs without asking.
  */
 export function RiskRows({

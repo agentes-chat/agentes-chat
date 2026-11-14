@@ -129,12 +129,12 @@ export interface ToolDefinition {
   sensitive?: boolean;
   /**
    * Set by the gateway's listing, never by a source: this agent never asks (ADR 0173), or its workspace tolerates the
-   * tool's risk (ADR 0180), so a call of this tool opens no card whatever its name or marks say.
+   * tool's risk (ADR 0181), so a call of this tool opens no card whatever its name or marks say.
    */
   unasked?: boolean;
   /**
    * It is sensitive for the risk its classification found (a server's `destructiveHint`, a verb that deletes, sends
-   * or pays), not because a person set it to ask: the workspace's risk tolerance may let it run (ADR 0180).
+   * or pays), not because a person set it to ask: the workspace's risk tolerance may let it run (ADR 0181).
    */
   asksByRisk?: boolean;
   /**

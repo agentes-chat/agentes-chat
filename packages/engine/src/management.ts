@@ -81,7 +81,7 @@ export interface OrgSettings extends MediaSettings {
   /** Agents check what the team already did before an outside action (ADR 0064). On by default. */
   actionCheck: boolean;
   /**
-   * The risk classes an agent at "Só o que é arriscado" runs without asking, unless it has its own (ADR 0180).
+   * The risk classes an agent at "Só o que é arriscado" runs without asking, unless it has its own (ADR 0181).
    * Empty by default: every class asks.
    */
   unaskedRisks: RiskClass[];

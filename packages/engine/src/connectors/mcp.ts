@@ -376,7 +376,7 @@ export function createConnectorToolSource(
       if (!tool) return [];
       const freed = freedByPerson(row, connection);
       const executor = tool.name === COMPOSIO_EXECUTOR;
-      // A gateway's `call` (Executor) runs other tools by path: judged and kept one path at a time (ADR 0180).
+      // A gateway's `call` (Executor) runs other tools by path: judged and kept one path at a time (ADR 0181).
       const pathCall = !composio && isGatewayCallTool(tool);
       const sqlArg = composio ? null : sqlArgOf(tool, preset);
       // Our rules for a Composio action as they are now (its entry's `ask`, its tags at the pinned version), not only
@@ -402,7 +402,7 @@ export function createConnectorToolSource(
           toolPrefix: prefix,
           // A sensitive tool runs without approval only when a person freed it through the API, never by what is stored.
           sensitive: access === "approval" || (row.sensitive && !freed) || asks || COMPOSIO_ANY_ACTION.has(tool.name),
-          // Sensitive for what its classification found, not because a person set it to ask (ADR 0180).
+          // Sensitive for what its classification found, not because a person set it to ask (ADR 0181).
           asksByRisk: (row.sensitive || asks) && !COMPOSIO_ANY_ACTION.has(tool.name),
           // Its exact call may be approved ahead, except a tool that runs whatever its input says.
           ahead: !COMPOSIO_ANY_ACTION.has(tool.name),

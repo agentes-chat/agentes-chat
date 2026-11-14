@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 import type { Agent, AuditRow, OrgSettings, RiskClass } from "../api/types";
 
 /**
- * A workspace's risk tolerance (ADR 0180): the kinds of risk an agent at "Só o que é arriscado" runs without asking.
+ * A workspace's risk tolerance (ADR 0181): the kinds of risk an agent at "Só o que é arriscado" runs without asking.
  * The order the screens list them, the server's own.
  */
 export const RISK_CLASSES: readonly RiskClass[] = [

@@ -3114,7 +3114,7 @@ export const ptBR = {
       text: "Não pergunta nada, nem em merge, deploy, pagamentos e rotinas.",
     },
   },
-  /** Quais tipos de risco pedem uma pessoa antes de um agente em "Só o arriscado" agir (ADR 0180). */
+  /** Quais tipos de risco pedem uma pessoa antes de um agente em "Só o arriscado" agir (ADR 0181). */
   riskTolerance: {
     title: "Pedir aprovação para",
     help: "Desligue um e os agentes que perguntam só o arriscado fazem sem perguntar, cada chamada no log de auditoria.",

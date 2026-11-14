@@ -13,7 +13,7 @@ import { pickOne } from "../shared/PickerSheet";
 /**
  * The web's Aprovações (ADR 0173) on the phone: how much the agent asks before acting, one row with the choice in
  * sight. Whoever manages agents opens the three choices in a sheet, and a pick saves at once. At "Só o arriscado" the
- * kinds of risk that ask follow (ADR 0180): the workspace's, or the agent's own. Anyone else reads the rows.
+ * kinds of risk that ask follow (ADR 0181): the workspace's, or the agent's own. Anyone else reads the rows.
  */
 export function ApprovalsLevelRow({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
