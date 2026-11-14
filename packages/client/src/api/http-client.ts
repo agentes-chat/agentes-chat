@@ -128,6 +128,8 @@ import type {
   InvitationState,
   InvitationWithStatus,
   InviteLink,
+  InviteLinkChanged,
+  InviteLinkMade,
   Issue,
   IssueActivity,
   IssueColumn,
@@ -734,8 +736,14 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         (await request<{ results: BatchInviteResult[] }>(`${org(orgId)}/invitations/batch`, { json: input })).results,
       resendInvitation: (orgId, id) =>
         request<{ url: string; expiresAt: string }>(`${org(orgId)}/invitations/${enc(id)}/resend`, { json: {} }),
-      setInvitationRoles: (orgId, id, roleIds) =>
-        request<{ roleIds: string[] }>(`${org(orgId)}/invitations/${enc(id)}`, { method: "PATCH", json: { roleIds } }),
+      updateInvitation: (orgId, id, change) =>
+        request<{ roleIds: string[]; channelIds: string[]; agentIds: string[] }>(
+          `${org(orgId)}/invitations/${enc(id)}`,
+          {
+            method: "PATCH",
+            json: change,
+          },
+        ),
       usageReport: (orgId, since) => request<UsageReport>(`${org(orgId)}/usage/report`, { query: { since } }),
       planUsage: (orgId) => request<OrgPlanUsage>(`${org(orgId)}/usage/plans`),
       peopleUsage: (orgId, period = {}) => request<PeopleUsage>(`${org(orgId)}/usage/people`, { query: period }),
@@ -1425,8 +1433,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<AgentAccess>(`${org(orgId)}/agents/${enc(agentId)}/access`, { method: "PUT", json: input }),
     },
     invites: {
-      createLink: (orgId) =>
-        request<{ id: string; url: string; expiresAt: string }>(`${org(orgId)}/invite-links`, { json: {} }),
+      createLink: (orgId, choices) => request<InviteLinkMade>(`${org(orgId)}/invite-links`, { json: choices ?? {} }),
+      editLink: (orgId, linkId, choices) =>
+        request<InviteLinkChanged>(`${org(orgId)}/invite-links/${enc(linkId)}`, { method: "PATCH", json: choices }),
       links: async (orgId) => (await request<{ links: InviteLink[] }>(`${org(orgId)}/invite-links`)).links,
       turnOff: (orgId, linkId) => request<void>(`${org(orgId)}/invite-links/${enc(linkId)}`, { method: "DELETE" }),
       renewLink: (orgId, linkId) =>
@@ -1445,8 +1454,10 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     joinRequests: {
       list: async (orgId) => (await request<{ requests: JoinRequest[] }>(`${org(orgId)}/join-requests`)).requests,
-      approve: (orgId, id, roleIds) =>
-        request<JoinApproval>(`${org(orgId)}/join-requests/${enc(id)}/approve`, { json: { roleIds: roleIds ?? [] } }),
+      approve: (orgId, id, roleIds, start) =>
+        request<JoinApproval>(`${org(orgId)}/join-requests/${enc(id)}/approve`, {
+          json: { roleIds: roleIds ?? [], ...start },
+        }),
       deny: (orgId, id, reason) =>
         request<void>(`${org(orgId)}/join-requests/${enc(id)}/deny`, { json: reason ? { reason } : {} }),
       suggest: (orgId, input) => request<{ id: string }>(`${org(orgId)}/join-requests/suggest`, { json: input }),

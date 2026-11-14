@@ -1,6 +1,6 @@
 {
-  "id": "6fa1f45b-e51a-4ec3-a94d-7c61839a15ec",
-  "prevId": "76ddc7a5-ff0e-41cf-bc9e-7e1264ee7d2d",
+  "id": "19ea2f6c-4551-4717-b2d5-472a0986880f",
+  "prevId": "e2b71f03-6bae-4777-8df3-27742c92dd73",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -22003,6 +22003,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "agent_ids": {
+          "name": "agent_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::uuid[]"
+        },
         "expires_at": {
           "name": "expires_at",
           "type": "timestamp with time zone",
@@ -22152,6 +22159,40 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "role_ids": {
+          "name": "role_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::uuid[]"
+        },
+        "channel_ids": {
+          "name": "channel_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::uuid[]"
+        },
+        "agent_ids": {
+          "name": "agent_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::uuid[]"
+        },
+        "max_uses": {
+          "name": "max_uses",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "plain": {
+          "name": "plain",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         },
         "created_at": {
           "name": "created_at",

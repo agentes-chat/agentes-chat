@@ -3766,7 +3766,8 @@
       "devices.os.ios",
       "devices.cpus",
       "devices.memory",
-      "devices.connect.windows"
+      "devices.connect.windows",
+      "roles.icons.pullRequest"
     ],
     "es": [
       "devices.os.android",
@@ -3874,7 +3875,11 @@
       "approval.sheet.service",
       "plus.media",
       "find.filterWord.date",
-      "invite.ask.step.code"
+      "invite.ask.step.code",
+      "roles.reach.permissions",
+      "roles.reach.agents",
+      "roles.tabs.permissions",
+      "roles.tabs.agents"
     ],
     "de": [
       "devices.status.offline",
@@ -3950,7 +3955,8 @@
       "issues.viewBoard",
       "invite.ask.step.code",
       "settings.group.org",
-      "threads.title"
+      "threads.title",
+      "roles.icons.person"
     ],
     "it": [
       "devices.status.offline",
@@ -4003,7 +4009,8 @@
       "time.short.hours",
       "agents.teamSection",
       "find.filterWord.in",
-      "connectors.accountTitle"
+      "connectors.accountTitle",
+      "roles.icons.mail"
     ],
     "nl": [
       "devices.status.offline",
@@ -4084,7 +4091,9 @@
       "invite.ask.step.code",
       "settings.section.connectors",
       "threads.title",
-      "connectors.accountTitle"
+      "connectors.accountTitle",
+      "roles.reach.agents",
+      "roles.tabs.agents"
     ],
     "ja": [
       "devices.os.android",
@@ -4156,7 +4165,8 @@
       "vault.field.websitePlaceholder",
       "vault.kind.login",
       "files.type.video",
-      "me.status"
+      "me.status",
+      "roles.icons.mail"
     ],
     "tr": [
       "devices.os.android",
@@ -4206,7 +4216,8 @@
       "vault.kind.login",
       "time.short.minutes",
       "time.short.days",
-      "me.status"
+      "me.status",
+      "roles.reach.agents"
     ],
     "ru": [
       "devices.os.android",

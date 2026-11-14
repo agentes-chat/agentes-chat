@@ -3980,7 +3980,10 @@
     "yourApproval": "la tua approvazione",
     "yourAnswer": "la tua risposta",
     "later": "follow-up {{when}}",
-    "laterShort": "follow-up"
+    "laterShort": "follow-up",
+    "plan": "aspetta il piano",
+    "budget": "aspetta il budget",
+    "stopping": "arresto in corso…"
   },
   "followUps": {
     "when": {
@@ -14092,6 +14095,8 @@
     },
     "join": {
       "linkClosed": "Questo link non funziona più. Chiedine uno nuovo a chi te l'ha inviato.",
+      "linkFull": "Questo link ha già accolto tutte le persone previste. Chiedine uno nuovo a chi te l'ha inviato.",
+      "linkFullApproval": "Il link di questa richiesta ha già accolto tutte le persone previste. Per approvarla, aumenta il massimo del link.",
       "full": "Questo spazio di lavoro ha molte richieste in attesa. Riprova più tardi, oppure chiedi a qualcuno lì di invitarti.",
       "rateLimited": "Troppe richieste da qui. Riprova tra un'ora.",
       "linkBusy": "Molte persone hanno fatto richiesta con questo link nell'ultima ora. Riprova più tardi.",
@@ -18366,6 +18371,25 @@
       "message": "Scrivi a {{name}}",
       "chooseOnWeb": "Sceglilo su agentes.chat, in Impostazioni › Dispositivi."
     }
+  },
+  "agora": {
+    "label": "Ora",
+    "working_one": "{{count}} agente al lavoro",
+    "working_many": "{{count}} agenti al lavoro",
+    "working_other": "{{count}} agenti al lavoro",
+    "waiting_one": "{{count}} cosa ti aspetta",
+    "waiting_many": "{{count}} cose ti aspettano",
+    "waiting_other": "{{count}} cose ti aspettano",
+    "sections": {
+      "you": "Ti aspetta",
+      "working": "Al lavoro",
+      "waiting": "In attesa"
+    },
+    "allWaiting_one": "{{count}} cosa ti aspetta",
+    "allWaiting_many": "Le {{count}} cose che ti aspettano",
+    "allWaiting_other": "Le {{count}} cose che ti aspettano",
+    "actions": "Altre azioni",
+    "openManager": "Apri Gestione attività"
   },
   "taskManager": {
     "title": "Gestione attività",

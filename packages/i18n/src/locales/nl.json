@@ -3858,7 +3858,10 @@
     "yourApproval": "je goedkeuring",
     "yourAnswer": "je antwoord",
     "later": "opvolging {{when}}",
-    "laterShort": "opvolging"
+    "laterShort": "opvolging",
+    "plan": "wacht op het abonnement",
+    "budget": "wacht op het budget",
+    "stopping": "stoppen…"
   },
   "followUps": {
     "when": {
@@ -13660,6 +13663,8 @@
     },
     "join": {
       "linkClosed": "Deze link werkt niet meer. Vraag wie hem stuurde om een nieuwe.",
+      "linkFull": "Via deze link zijn al alle mensen binnengekomen die hij toeliet. Vraag wie hem stuurde om een nieuwe.",
+      "linkFullApproval": "Via de link van dit verzoek zijn al alle mensen binnengekomen die hij toeliet. Verhoog het maximum van de link om het goed te keuren.",
       "full": "Er wachten veel verzoeken bij deze werkruimte. Probeer het later opnieuw, of vraag iemand daar om je uit te nodigen.",
       "rateLimited": "Te veel verzoeken vanaf hier. Probeer het over een uur opnieuw.",
       "linkBusy": "Veel mensen hebben het afgelopen uur via deze link gevraagd. Probeer het later opnieuw.",
@@ -17883,6 +17888,22 @@
       "message": "Bericht aan {{name}}",
       "chooseOnWeb": "Kies hem op agentes.chat, in Instellingen › Apparaten."
     }
+  },
+  "agora": {
+    "label": "Nu",
+    "working_one": "{{count}} agent bezig",
+    "working_other": "{{count}} agents bezig",
+    "waiting_one": "{{count}} ding wacht op jou",
+    "waiting_other": "{{count}} dingen wachten op jou",
+    "sections": {
+      "you": "Wacht op jou",
+      "working": "Bezig",
+      "waiting": "In afwachting"
+    },
+    "allWaiting_one": "{{count}} ding wacht op jou",
+    "allWaiting_other": "Alle {{count}} dingen wachten op jou",
+    "actions": "Meer acties",
+    "openManager": "Taakbeheer openen"
   },
   "taskManager": {
     "title": "Taakbeheer",

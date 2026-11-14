@@ -3979,7 +3979,10 @@
     "yourApproval": "votre approbation",
     "yourAnswer": "votre réponse",
     "later": "suivi {{when}}",
-    "laterShort": "suivi"
+    "laterShort": "suivi",
+    "plan": "attend l'abonnement",
+    "budget": "attend le budget",
+    "stopping": "arrêt en cours…"
   },
   "followUps": {
     "when": {
@@ -14080,6 +14083,8 @@
     },
     "join": {
       "linkClosed": "Ce lien ne fonctionne plus. Demandez-en un nouveau à la personne qui l'a envoyé.",
+      "linkFull": "Ce lien a déjà accueilli toutes les personnes prévues. Demandez-en un nouveau à la personne qui l'a envoyé.",
+      "linkFullApproval": "Le lien de cette demande a déjà accueilli toutes les personnes prévues. Pour l'approuver, augmentez le maximum du lien.",
       "full": "Cet espace de travail a beaucoup de demandes en attente. Réessayez plus tard, ou demandez à quelqu'un sur place de vous inviter.",
       "rateLimited": "Trop de demandes d'ici. Réessayez dans une heure.",
       "linkBusy": "Beaucoup de personnes ont fait une demande via ce lien au cours de la dernière heure. Réessayez plus tard.",
@@ -18360,6 +18365,25 @@
       "message": "Écrire à {{name}}",
       "chooseOnWeb": "Choisissez-le sur agentes.chat, dans Paramètres › Appareils."
     }
+  },
+  "agora": {
+    "label": "Maintenant",
+    "working_one": "{{count}} agent au travail",
+    "working_many": "{{count}} agents au travail",
+    "working_other": "{{count}} agents au travail",
+    "waiting_one": "{{count}} chose vous attend",
+    "waiting_many": "{{count}} choses vous attendent",
+    "waiting_other": "{{count}} choses vous attendent",
+    "sections": {
+      "you": "Vous attend",
+      "working": "Au travail",
+      "waiting": "En attente"
+    },
+    "allWaiting_one": "{{count}} chose vous attend",
+    "allWaiting_many": "Vos {{count}} choses en attente",
+    "allWaiting_other": "Vos {{count}} choses en attente",
+    "actions": "Plus d'actions",
+    "openManager": "Ouvrir le gestionnaire des tâches"
   },
   "taskManager": {
     "title": "Gestionnaire des tâches",
