@@ -39,7 +39,7 @@ const column = () => screen().queryByRole("complementary", { name: "Painel de #e
 const eng = (state: FakeState) => state.channels.find((c) => c.id === ENG_ID) as Channel;
 
 /** #eng with the board "Vendas" (one widget) linked, unless `prepare` changes it. */
-async function open(prepare?: (state: FakeState, fake: FakeDashboards) => void) {
+async function open(prepare?: (state: FakeState, fake: FakeDashboards) => void, search = "") {
   const state = seedState();
   const api = createFakeApi(state);
   const fake = fakeDashboardsOf.get(api) as FakeDashboards;
@@ -47,7 +47,7 @@ async function open(prepare?: (state: FakeState, fake: FakeDashboards) => void) 
   fake.addWidget("dash-v", { agentId: ATLAS_ID, title: "Receita hoje", layout: { position: 0, w: 1, h: 1 } });
   eng(state).dashboardId = "dash-v";
   prepare?.(state, fake);
-  const view = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
+  const view = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}${search}`, { api });
   await settle(8);
   await act(async () => view.sockets.last().open());
   return { state, fake, ...view };
@@ -206,5 +206,39 @@ describe("a channel's dashboard (ADR 0135 §21)", () => {
     await click(within(dialog).getAllByRole("button", { name: "Fechar" })[0] as HTMLElement);
     await settle(6);
     expect(column()?.classList.contains("channel-board--float")).toBe(true);
+  });
+
+  test("one panel beside the channel: an agent's page takes the widget's place, and an address with both shows the page", async () => {
+    widthIs(CHANNEL_BOARD_WIDE_QUERY);
+    const searchOf = (r: { state: { location: { search: unknown } } }) =>
+      r.state.location.search as Record<string, unknown>;
+    const profile = () => screen().queryByRole("complementary", { name: /^Perfil d. Atlas$/ });
+    localStorage.setItem(`${STORAGE_KEYS.membersColumn}.u-walter.${ORG_ID}`, "1");
+    const { router, fake } = await open();
+    const widgetId = fake.boards.find((b) => b.id === "dash-v")?.widgets[0]?.id as string;
+    await click(within(column() as HTMLElement).getByText("Receita hoje"));
+    await settle(6);
+    expect(searchOf(router).widget).toBe(widgetId);
+    // "Ver perfil" on Atlas in the members column, as the app opens any agent's page.
+    const row = within(document.querySelector(".members-side:not(.channel-board)") as HTMLElement).getByText("Atlas");
+    await act(async () => fireEvent.contextMenu(row, { clientX: 40, clientY: 60 }));
+    await settle(2);
+    await click(screen().getByRole("menuitem", { name: "Ver perfil" }));
+    await settle(6);
+    expect(searchOf(router)).toMatchObject({ agent: ATLAS_ID });
+    expect(searchOf(router).widget).toBeUndefined();
+    expect(profile()).toBeTruthy();
+    expect(document.querySelectorAll(".thread-panel").length).toBe(1);
+    // The board's column stays under the page, as the members' does.
+    expect(column()).toBeTruthy();
+    // Back closes the page; the widget it replaced does not come back with it.
+    await act(async () => router.history.back());
+    await settle(6);
+    expect(profile()).toBeNull();
+    cleanup();
+    // An address holding both (written by hand): the agent's page, never two panels.
+    await open(undefined, `?agent=${ATLAS_ID}&widget=${widgetId}`);
+    expect(profile()).toBeTruthy();
+    expect(document.querySelectorAll(".thread-panel").length).toBe(1);
   });
 });
