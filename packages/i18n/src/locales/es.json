@@ -11657,15 +11657,6 @@
       "nowYours": "Se detuvo para leer tu nota",
       "nowOf": "Se detuvo para leer la nota de {{name}}"
     },
-    "choice": {
-      "label": "Cómo enviar mientras {{name}} trabaja",
-      "label_female": "Cómo enviar mientras {{name}} trabaja",
-      "join": "Sumar a lo que hace {{name}}",
-      "join_female": "Sumar a lo que hace {{name}}",
-      "interrupt": "Detener y enviar",
-      "joins": "suma",
-      "interrupts": "detiene y envía"
-    },
     "strip": {
       "see": "Ver",
       "toStop": "para detener"

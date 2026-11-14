@@ -10842,15 +10842,6 @@
       "nowYours": "手を止めてあなたのメモを読みました",
       "nowOf": "手を止めて{{name}}のメモを読みました"
     },
-    "choice": {
-      "label": "{{name}}の作業中の送信方法",
-      "label_female": "{{name}}の作業中の送信方法",
-      "join": "{{name}}の作業に追加",
-      "join_female": "{{name}}の作業に追加",
-      "interrupt": "止めて送信",
-      "joins": "追加",
-      "interrupts": "止めて送信"
-    },
     "strip": {
       "see": "表示",
       "toStop": "で停止"

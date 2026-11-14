@@ -128,7 +128,6 @@ export { ColorPicker, type ColorPickerLabels } from "./components/ColorPicker";
 export { CommandPalette, filterPalette, type PaletteItem } from "./components/CommandPalette";
 export {
   Composer,
-  type ComposerChoice,
   type ComposerCommand,
   type ComposerCommands,
   ComposerFile,
@@ -140,8 +139,6 @@ export {
   type ComposerWorking,
   linkQuery,
   mentionQuery,
-  type SendChoice,
-  sendChoice,
 } from "./components/Composer";
 export {
   ComputerIcon,

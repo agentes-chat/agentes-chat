@@ -11241,13 +11241,6 @@
       "nowYours": "Notunuzu okumak için durdu",
       "nowOf": "{{name}} notunu okumak için durdu"
     },
-    "choice": {
-      "label": "{{name}} çalışırken nasıl gönderilsin",
-      "join": "{{name}} ne yapıyorsa ona ekle",
-      "interrupt": "Durdur ve gönder",
-      "joins": "ekler",
-      "interrupts": "durdurur ve gönderir"
-    },
     "strip": {
       "see": "Gör",
       "toStop": "durdurmak için"
