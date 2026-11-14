@@ -11552,15 +11552,6 @@
       "nowYours": "S'est arrêté pour lire votre note",
       "nowOf": "S'est arrêté pour lire la note de {{name}}"
     },
-    "choice": {
-      "label": "Comment envoyer pendant que {{name}} travaille",
-      "label_female": "Comment envoyer pendant que {{name}} travaille",
-      "join": "Ajouter à ce que fait {{name}}",
-      "join_female": "Ajouter à ce que fait {{name}}",
-      "interrupt": "Arrêter et envoyer",
-      "joins": "ajoute",
-      "interrupts": "arrête et envoie"
-    },
     "strip": {
       "see": "Voir",
       "toStop": "pour arrêter"

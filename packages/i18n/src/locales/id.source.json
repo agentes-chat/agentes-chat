@@ -27154,21 +27154,6 @@
   "run.well.nowOf": {
     "value": "Stopped to read {{name}}'s note"
   },
-  "run.choice.label": {
-    "value": "How to send while {{name}} works"
-  },
-  "run.choice.join": {
-    "value": "Add to what {{name}} is doing"
-  },
-  "run.choice.interrupt": {
-    "value": "Stop and send"
-  },
-  "run.choice.joins": {
-    "value": "adds"
-  },
-  "run.choice.interrupts": {
-    "value": "stops and sends"
-  },
   "run.strip.see": {
     "value": "View"
   },
