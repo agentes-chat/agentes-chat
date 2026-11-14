@@ -56,6 +56,7 @@ import {
   Button,
   Chip,
   FilterToggle,
+  focusIdle,
   Icon,
   type IconName,
   isApple,
@@ -707,7 +708,7 @@ export function BrowserCard({
   }, [pointing, fingers]);
   // The button that opened the page leaves with the focus: keys typed at once, at a field the page shows, go there.
   useEffect(() => {
-    if (pointing && document.activeElement === document.body) pageRef.current?.focus({ preventScroll: true });
+    if (pointing && focusIdle()) pageRef.current?.focus({ preventScroll: true });
   }, [pointing]);
   // The screen's last picture, when the dialog switches from it to this page (or back), shows dimmed until the page's
   // first frame: the layout effects of the view going and of the one coming run before anything paints
@@ -1235,6 +1236,7 @@ export function BrowserCard({
       style={framed ? frameStyle : undefined}
       role="group"
       data-esc-layer={full ? "" : undefined}
+      data-control={inControl || undefined}
       aria-label={t("browser.inCard.group", g)}
     >
       {!surface && !framed && <SkyStrip color={color} muted={inControl} moving={live_} />}

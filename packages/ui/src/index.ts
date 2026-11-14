@@ -410,7 +410,18 @@ export { Reaction, Reactions, type WorkStep, WorkSummary } from "./components/Wo
 export { WorkLine, WorkLineAction, type WorkLineTone, WorkPlan } from "./components/WorkLine";
 export { COMPUTER_GRID, COMPUTER_KINDS, COMPUTER_STATES, drawComputer, PHONE_KINDS } from "./computer/portrait.js";
 export { cx } from "./cx";
-export { hoverPointer, movesByKeys, onScreenKeyboard, onScreenNow, trackInput } from "./device";
+export {
+  focusAtEnd,
+  focusIdle,
+  hoverPointer,
+  mayTakeFocus,
+  movesByKeys,
+  OPEN_LAYER,
+  onScreenKeyboard,
+  onScreenNow,
+  trackInput,
+  typingInField,
+} from "./device";
 export {
   EMOJI_CATEGORIES,
   EMOJIS,
