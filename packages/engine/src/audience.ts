@@ -405,6 +405,7 @@ export const PLAN_OPENED_JOB = "agent.plan_opened";
 /**
  * Who may talk to the agent changed from `from` to `to`, saved as `after`. Audited, naming whose plan it is when it
  * thinks with its owner's (ADR 0059 §5), and told to that owner (`planOpened`, from `planFrom`: who its plan answered).
+ * `via`: what made the change other than a save of it (`invitation`, ADR 0184).
  */
 export async function audienceChanged(
   db: Executor,
@@ -414,6 +415,7 @@ export async function audienceChanged(
   from: AgentAudience,
   to: AgentAudience,
   planFrom = from,
+  via?: string,
 ): Promise<boolean> {
   const planOwner = await planOwnerOf(db, orgId, after);
   await recordAudit(db, {
@@ -421,7 +423,7 @@ export async function audienceChanged(
     actor: { type: "person", id: actorId },
     action: "agent.audience_changed",
     target: { type: "agent", id: after.id },
-    details: { from, to, ...(planOwner ? { planOwner } : {}) },
+    details: { from, to, ...(planOwner ? { planOwner } : {}), ...(via ? { via } : {}) },
   });
   return planOpened(db, orgId, actorId, after, planFrom, to);
 }
