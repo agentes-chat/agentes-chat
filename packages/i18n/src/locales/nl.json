@@ -14798,7 +14798,6 @@
         "openXcode": "Xcode openen",
         "opened": "Xcode is geopend op {{mac}}. Kijk opnieuw in de Instellingen van de iPhone en sluit Xcode daarna.",
         "unlock": "Aangezet en de iPhone herstartte? Ontgrendel hem. De melding met Zet aan verschijnt pas daarna.",
-        "check": "Opnieuw controleren",
         "outdated": "De agentes.chat-app op {{mac}} is verouderd. Werk de app bij, of voer dit uit in Terminal als je hem daar hebt geïnstalleerd."
       },
       "uiAutomationText": "In Instellingen › Ontwikkelaar, na het herstarten.",

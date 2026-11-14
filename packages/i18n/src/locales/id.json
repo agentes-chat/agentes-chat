@@ -14256,7 +14256,6 @@
         "openXcode": "Buka Xcode",
         "opened": "Xcode terbuka di {{mac}}. Lihat lagi di Pengaturan iPhone, lalu tutup Xcode.",
         "unlock": "Sudah dinyalakan dan iPhone dimulai ulang? Buka kuncinya. Peringatan dengan Nyalakan baru muncul setelah itu.",
-        "check": "Periksa lagi",
         "outdated": "Aplikasi agentes.chat di {{mac}} sudah usang. Perbarui aplikasinya, atau jalankan ini di Terminal jika kamu memasangnya dari sana."
       },
       "uiAutomationText": "Di Pengaturan › Pengembang, setelah dimulai ulang.",

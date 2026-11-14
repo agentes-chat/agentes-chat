@@ -14194,7 +14194,6 @@
         "openXcode": "Xcode 열기",
         "opened": "{{mac}}에서 Xcode가 열렸어요. iPhone의 설정을 다시 확인하고 나중에 Xcode를 닫으세요.",
         "unlock": "켰고 iPhone이 재시동됐나요? 잠금을 해제하세요. 켜기 알림은 그다음에 나타나요.",
-        "check": "다시 확인",
         "outdated": "{{mac}}의 agentes.chat 앱이 오래됐어요. 앱을 업데이트하거나, 터미널로 설치했다면 거기서 이것을 실행하세요."
       },
       "uiAutomationText": "재시동 후 설정 › 개발자에서 켜세요.",

@@ -14734,7 +14734,6 @@
         "openXcode": "Xcode öffnen",
         "opened": "Xcode ist auf {{mac}} offen. Schau noch einmal in den Einstellungen des iPhones und schließ Xcode danach.",
         "unlock": "Eingeschaltet und das iPhone hat neu gestartet? Entsperre es. Die Abfrage mit Aktivieren erscheint erst danach.",
-        "check": "Erneut prüfen",
         "outdated": "Die agentes.chat-App auf {{mac}} ist veraltet. Aktualisiere die App, oder führe das hier im Terminal aus, wenn du sie dort installiert hast."
       },
       "uiAutomationText": "Unter Einstellungen › Entwickler, nach dem Neustart.",

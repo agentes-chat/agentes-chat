@@ -883,20 +883,19 @@ function DevModeHelp({ mac, open }: { mac: ComputerDevice; open: boolean }) {
   const [asked, setAsked] = useState(false);
   const outdated = mac.opensXcode === false;
   const mayOpen = mac.mayManage && !outdated && openXcode.data?.opened !== false;
-  const check = (label: string) => (
-    <Button
-      size="sm"
-      icon="refresh"
-      loading={look.isPending}
-      disabled={look.isPending}
-      onClick={() => look.mutate(undefined, { onError: (err) => toast.show(errorText(t, err), "error") })}
-    >
-      {label}
-    </Button>
-  );
   return (
     <>
-      <span className="dv-step__acts">{check(t("devices.iphone.devModeCheck"))}</span>
+      <span className="dv-step__acts">
+        <Button
+          size="sm"
+          icon="refresh"
+          loading={look.isPending}
+          disabled={look.isPending}
+          onClick={() => look.mutate(undefined, { onError: (err) => toast.show(errorText(t, err), "error") })}
+        >
+          {t("devices.iphone.devModeCheck")}
+        </Button>
+      </span>
       {look.isSuccess && (
         <span className="ac-iconline small" role="status">
           <Icon name="info" size={14} />
@@ -933,12 +932,7 @@ function DevModeHelp({ mac, open }: { mac: ComputerDevice; open: boolean }) {
                 )}
               </span>
             </li>
-            <li>
-              <span className="ac-actline">
-                <span>{t("devices.iphone.devModeMissing.unlock")}</span>
-                {check(t("devices.iphone.devModeMissing.check"))}
-              </span>
-            </li>
+            <li>{t("devices.iphone.devModeMissing.unlock")}</li>
             {outdated && (
               <li>
                 <span className="ac-actline">

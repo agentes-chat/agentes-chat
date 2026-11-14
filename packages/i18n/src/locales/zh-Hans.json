@@ -14266,7 +14266,6 @@
         "openXcode": "打开 Xcode",
         "opened": "Xcode 已在 {{mac}} 上打开。请再看看 iPhone 的设置，之后关闭 Xcode。",
         "unlock": "已经打开并且 iPhone 重新启动了？请解锁。带有“打开”的提示只在那之后出现。",
-        "check": "再检查一次",
         "outdated": "{{mac}} 上的 agentes.chat 应用已过时。请更新应用，如果你是从终端安装的，就在那里运行下面的命令。"
       },
       "uiAutomationText": "重启后，在 设置 › 开发者 中。",

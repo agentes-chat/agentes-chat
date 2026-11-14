@@ -257,7 +257,7 @@ describe("the iPhone setup window", () => {
       const causes = () => [...(step()?.querySelectorAll(".dk-ip__causes li") ?? [])].map((li) => li.textContent);
       expect(causes()).toEqual([
         "The iPhone hides the option until Xcode asks to show it.Open Xcode",
-        "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.Check again",
+        "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.",
       ]);
       await act(async () => button(step() ?? undefined, "Open Xcode")?.click());
       await until(() => causes()[0]?.startsWith("Xcode opened on"));

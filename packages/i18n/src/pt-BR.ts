@@ -14907,7 +14907,6 @@ export const ptBR = {
         openXcode: "Abrir o Xcode",
         opened: "O Xcode abriu em {{mac}}. Veja de novo nos Ajustes do iPhone e feche o Xcode depois.",
         unlock: "Já ativou e o iPhone reiniciou? Desbloqueie. O aviso com Ativar só aparece depois disso.",
-        check: "Verificar de novo",
         outdated:
           "O app agentes.chat em {{mac}} está desatualizado. Atualize o app, ou rode isto no Terminal se instalou por lá.",
       },

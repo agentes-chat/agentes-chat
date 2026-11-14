@@ -1996,7 +1996,6 @@
         "openXcode": "Xcode openen",
         "opened": "Xcode is geopend op {{host}}. Kijk opnieuw in Instellingen en sluit Xcode daar daarna.",
         "unlock": "Aangezet en herstart? De melding met Zet aan verschijnt zodra deze iPhone ontgrendeld is.",
-        "checkAgain": "Opnieuw controleren",
         "outdated": "De agentes.chat-app op {{host}} is verouderd. Werk hem bij op die Mac."
       }
     },
