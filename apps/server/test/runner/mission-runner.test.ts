@@ -160,7 +160,7 @@ test("detection: a CLI that is there and won't start is broken with its error, n
       type: "hello",
       token: "agm_x",
       version: "0.7.0",
-      protocol: 65,
+      protocol: 66,
       executors: { codex: { version: "codex-cli 0.80.0" }, broken: { claude: "boom", codex: "x", other: "y" } },
     }),
   );

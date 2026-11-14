@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 65;
+export const MACHINE_PROTOCOL_VERSION = 66;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -670,7 +670,7 @@ export const ACCESS_ALLOW_PROTOCOL = 62;
  * official installer, run as that person. The server sends a program id from `INSTALLABLE_CLIS`, never a command: the
  * runner holds the installers. Older runners answer `bad_request`: the server asks none of them.
  */
-export const CLI_INSTALL_PROTOCOL = 65;
+export const CLI_INSTALL_PROTOCOL = 66;
 /** The coding CLIs `cli.install` installs: Claude Code and Codex. */
 export const INSTALLABLE_CLIS = ["claude", "codex"] as const;
 export type InstallableCli = (typeof INSTALLABLE_CLIS)[number];
