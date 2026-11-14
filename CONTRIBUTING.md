@@ -92,13 +92,18 @@ app, a package or the Docker files also boots the image with `docker-compose.yml
 - agentes.chat is AGPL-3.0-only ([LICENSE](LICENSE)). A package published under MIT says so in
   its own LICENSE, and contributions to it are MIT: today that is the setup CLI, `packages/setup`
   (`@agenteschat/setup`).
-- Inbound = outbound: your contribution is licensed under the license of the code it goes into.
-  Here that is AGPL-3.0-only together with the additional permission under section 7 for app
-  stores (at the top of [NOTICE](NOTICE)), so your code ships in the phone and desktop apps
-  like the rest. [GitHub's Terms of Service](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service)
-  (section D.6) already license contributions under the repository's license.
-- There is no contributor license agreement to sign and no DCO sign-off. You keep the copyright in
-  your contribution.
+- Contributions require accepting our [Contributor License Agreement](CLA.md) (CLA). The CLA bot
+  asks in a comment on your first pull request, and you accept by commenting with the sentence it
+  gives; after that it covers your later contributions too. There is no DCO sign-off. The bot goes
+  by each commit's author, so commit with an email linked to your GitHub account.
+- You keep the copyright in your contribution. It is licensed to everyone under the license of the
+  code it goes into: here AGPL-3.0-only together with the additional permission under section 7
+  for app stores (at the top of [NOTICE](NOTICE)), so your code ships in the phone and desktop
+  apps like the rest. Through the CLA you also grant Codari Global, LLC, which maintains
+  agentes.chat, the right to license it on other terms, commercial ones included
+  ([COMMERCIAL.md](COMMERCIAL.md), [ADR 0180](docs/adr/0180-dual-licensing-and-cla.md)).
+- Contributing for your employer: make sure it allows you to. If you accept the CLA on behalf of a
+  company, you need to be able to bind it, and it then covers the company's contributions.
 - Submit only your own code, or code under MIT, BSD, ISC, Apache-2.0 or MPL-2.0 (whole files, with
   their notices). Never GPL, AGPL, unlicensed or proprietary code.
 - AI-assisted code is fine. You answer for its origin.

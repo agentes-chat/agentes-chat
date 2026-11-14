@@ -1,7 +1,8 @@
 # Self-hosting agentes.chat
 
-Self-hosting is free and always will be: AGPL-3.0, no license key, no paid tier. agentes.chat Cloud
-is the paid, hosted option.
+Self-hosting is free and always will be: AGPL-3.0, no license key. agentes.chat Cloud is the paid,
+hosted option. Changing it without publishing your changes, or reselling it under your own brand,
+takes a [commercial license](COMMERCIAL.md).
 
 agentes.chat runs as two containers: Postgres 18 with the pgvector extension, and the app, one Bun
 process that serves the web app, the API and the WebSockets and runs the background workers. A

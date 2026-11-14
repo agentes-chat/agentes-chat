@@ -17,6 +17,8 @@ export interface ChannelActions {
   fillComposer?: (text: string) => void;
   /** A streaming reply grew: stay at the bottom if the person is there. */
   followBottom?: () => void;
+  /** A message opened in place ("Ver mais"): the list stops following its end, so the reader stays on the words. */
+  letGo?: () => void;
   channelAgents: Agent[];
   /**
    * "Responder": in a channel, that message's thread opens in the panel beside it (a reply there

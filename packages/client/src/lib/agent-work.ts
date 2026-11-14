@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
-import type { AgentStatus, AgentWork, AgentWorkState, ThreadInfo, ThreadWait } from "../api/types";
-import { formatLineTime } from "./format";
+import type { AgentStatus, AgentWork, AgentWorkState, PendingReturn, ThreadInfo, ThreadWait } from "../api/types";
+import { daysBetween, formatLineTime, formatTime } from "./format";
 import { agentGrammar } from "./grammar";
 
 /**
@@ -86,7 +86,7 @@ const WAIT_WORDS = {
   answer: "chat.consultPair.waitingInput",
   computer: "chat.consultPair.waitingComputer",
   outage: "chat.consultPair.waitingProvider",
-} as const satisfies Record<Exclude<AgentWorkState, "you" | "working" | "queued">, string>;
+} as const satisfies Record<Exclude<AgentWorkState, "you" | "working" | "queued" | "later">, string>;
 
 /** Where its work is, in a list's line: "ajudando a Ada", "#vendas", "aqui", "numa rotina", "trabalhando". */
 function workPlace(t: TFunction, work: AgentWork, names: WorkPlaceNames): string {
@@ -122,6 +122,14 @@ export function workLine(
       return { text: workPlace(t, work, names), short: t("agentWork.working"), time, tone };
     case "queued":
       return { text: t("agentWork.queued"), short: t("agentWork.queued"), time, tone };
+    // A return says when, never for how long.
+    case "later":
+      return {
+        text: t("agentWork.later", { when: returnWhen(t, locale, work.at ?? work.since, now) }),
+        short: t("agentWork.laterShort"),
+        time: null,
+        tone,
+      };
     default:
       return { text: t(WAIT_WORDS[work.state]), short: t("agentWork.waiting"), time, tone };
   }
@@ -132,11 +140,18 @@ export const workLineText = (line: WorkLine) => (line.time ? `${line.text} · ${
 
 /**
  * The second part of an agent's "Presença" on its profile card: whom it helps or where it works ("ajudando a Ada"),
- * what it waits on you for ("sua aprovação"), or null.
+ * what it waits on you for ("sua aprovação"), when it comes back ("retorno às 00:32"), or null.
  */
-export function workDetail(t: TFunction, work: AgentWork | null | undefined, names: WorkPlaceNames): string | null {
+export function workDetail(
+  t: TFunction,
+  work: AgentWork | null | undefined,
+  names: WorkPlaceNames,
+  locale = "en",
+  now = Date.now(),
+): string | null {
   if (!work) return null;
   if (work.state === "you") return t(work.ask === "approval" ? "agentWork.yourApproval" : "agentWork.yourAnswer");
+  if (work.state === "later") return t("agentWork.later", { when: returnWhen(t, locale, work.at ?? work.since, now) });
   if (work.state !== "working") return null;
   const place = workPlace(t, work, names);
   return place === t("agentWork.working") ? null : place;
@@ -144,24 +159,85 @@ export function workDetail(t: TFunction, work: AgentWork | null | undefined, nam
 
 // ── A thread's chip ────────────────────────────────────────────────────────────
 
-/** What a thread's chip says, one state at a time: waiting on you, at work, a neutral wait, in line. */
-export type ThreadWorkState = "needsYou" | "working" | ThreadWait;
+/** What a thread's chip says, one state at a time: waiting on you, at work, a neutral wait, in line, a return to come. */
+export type ThreadWorkState = "needsYou" | "working" | ThreadWait | "later";
 
 /**
  * The chip's state from the list and this app's live runs (`live`: one of its runs works here now, before the list
- * says so): what waits on you, then work, then what the work waits on. Null: nothing to say.
+ * says so): what waits on you, then work, then what the work waits on, then a return still to come. Null: nothing.
  */
 export function threadWorkState(
-  t: Pick<ThreadInfo, "needsYou" | "working" | "wait">,
+  t: Pick<ThreadInfo, "needsYou" | "working" | "wait" | "laterAt">,
   live = false,
 ): ThreadWorkState | null {
   if (t.needsYou) return "needsYou";
   if (live || (t.working && !t.wait)) return "working";
-  return t.wait ?? (t.working ? "working" : null);
+  return t.wait ?? (t.working ? "working" : t.laterAt ? "later" : null);
 }
 
-/** The chip's words for a state: "Esperando você", "Trabalhando", "Esperando aprovação", "Na fila". */
-export const threadWorkWord = (t: TFunction, state: ThreadWorkState) => t(`threads.status.${state}`);
+/**
+ * The chip's words for a state: "Esperando você", "Trabalhando", "Esperando aprovação", "Na fila", and a return's
+ * "Retorno às 00:32" (`later`: its time and the reader's locale).
+ */
+export const threadWorkWord = (
+  t: TFunction,
+  state: ThreadWorkState,
+  later?: { at: string | null | undefined; locale: string; now?: number },
+) =>
+  state === "later"
+    ? t("threads.status.later", { when: returnWhen(t, later?.locale ?? "en", later?.at ?? "", later?.now) })
+    : t(`threads.status.${state}`);
+
+// ── A return (an agent's `follow_up`, ADR 0037) ───────────────────────────────
+
+/** More than this far ahead, a return's words say its day ("amanhã às 09:00"): they never turn at midnight. */
+export const RETURN_DAY_AFTER_MS = 12 * 3600_000;
+
+/**
+ * When a return comes, as its words say it, in the reader's zone: "às 00:32", and more than 12 h away with its day,
+ * "amanhã às 09:00" (or "hoje às 21:00"). `label`: the form that opens a label ("Às 00:32").
+ */
+export function returnWhen(t: TFunction, locale: string, at: string, now = Date.now(), label = false): string {
+  const time = formatTime(locale, at);
+  const key = label ? "followUps.whenLabel" : "followUps.when";
+  if (!(Date.parse(at) - now > RETURN_DAY_AFTER_MS)) return t(`${key}.at`, { time });
+  return t(daysBetween(at, new Date(now)) === 0 ? `${key}.today` : `${key}.tomorrow`, { time });
+}
+
+/** A return's time where room is short (a list's end): "00:32", or "amanhã 09:00" more than 12 h away. */
+export function returnClock(t: TFunction, locale: string, at: string, now = Date.now()): string {
+  const time = formatTime(locale, at);
+  if (!(Date.parse(at) - now > RETURN_DAY_AFTER_MS)) return time;
+  return t(daysBetween(at, new Date(now)) === 0 ? "format.todayAt" : "format.tomorrowAt", { time });
+}
+
+/**
+ * The returns a conversation's bar holds, the soonest first: a thread's own, or the main timeline's (`threadId` null)
+ * in a channel or a DM.
+ */
+export const returnsHere = (all: readonly PendingReturn[] | undefined, threadId: string | null) =>
+  (all ?? []).filter((r) => r.threadId === threadId);
+
+/** The faces the bar opens with: one per agent, the soonest return's first, three at most. */
+export const returnFaces = (returns: readonly PendingReturn[]) =>
+  [...new Set(returns.map((r) => r.agentId))].slice(0, 3);
+
+/**
+ * The bar's sentence for the soonest return (names marked by `mark`): "Ada retorna às 00:32", or held on an answer,
+ * "Ada retorna quando você responder" (`canAnswer`: the reader can post here) or "…depois de uma resposta". `short`:
+ * the name and the time alone ("Ada 00:32"), where even the sentence doesn't fit.
+ */
+export function returnSentence(
+  t: TFunction,
+  locale: string,
+  r: Pick<PendingReturn, "at" | "held">,
+  name: string,
+  opts: { canAnswer: boolean; short?: boolean; now?: number },
+): string {
+  if (r.held) return t(opts.canAnswer ? "followUps.bar.heldYou" : "followUps.bar.held", { name });
+  if (opts.short) return t("followUps.bar.short", { name, time: returnClock(t, locale, r.at, opts.now) });
+  return t("followUps.bar.at", { name, when: returnWhen(t, locale, r.at, opts.now) });
+}
 
 /** The chip's tone. */
 export const threadWorkTone = (state: ThreadWorkState): WorkTone =>

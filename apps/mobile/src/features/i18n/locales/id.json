@@ -1061,6 +1061,9 @@
     "addWorkspaceTeamShort": "Masuk ke server timmu",
     "addWorkspaceTeamSubShort": "Alamat atau kode QR komputer",
     "addWorkspaceFoot": "Kamu tidak keluar dari ruang kerja mana pun.",
+    "addAccount": "Masuk ke akun lain",
+    "addAccountSub": "Di {{host}}, tanpa keluar dari akun ini",
+    "accountNoWorkspace": "Belum ada ruang kerja",
     "teamServerLeadShort": "Yang dibuka timmu di browser.",
     "teamServerQuestion": "Apa alamat timmu?",
     "account": {

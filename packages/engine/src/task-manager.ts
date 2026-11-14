@@ -7,6 +7,7 @@ import { TtlCache } from "./cache";
 import { computerQueue as lineOfComputer, seesRunSql } from "./computer-queue";
 import { isAgentOnlyDm } from "./dms";
 import { NotFoundError } from "./errors";
+import { type CanceledReturn, canceledReturns, type PendingReturn, pendingReturns } from "./follow-through";
 import { replyExcerpt } from "./messages";
 import { can, requireActiveMembership } from "./organizations";
 import { pendingIds } from "./recovery";
@@ -208,6 +209,10 @@ export interface TaskManagerView {
   computers: ComputerSummary[];
   /** Per agent with work in the last hour: tool calls per minute, `ACTIVITY_MINUTES` points, oldest first. */
   activity: Record<string, number[]>;
+  /** "Retornos": the returns agents set that are still to come, where the caller reads (`pendingReturns`). */
+  followUps: PendingReturn[];
+  /** The returns canceled since `since` ("Terminadas hoje"), the latest first. */
+  canceledFollowUps: CanceledReturn[];
 }
 
 type Row = {
@@ -550,11 +555,13 @@ export async function taskManager(
   const manages = can(membership, "manage_agents");
   const now = options.now ?? new Date();
   const since = options.since ?? new Date(now.getTime() - 24 * 3600_000);
-  const [active, ended, hidden, asks] = await Promise.all([
+  const [active, ended, hidden, asks, followUps, canceledFollowUps] = await Promise.all([
     visibleRuns(db, userId, orgId, manages, { active: true }),
     visibleRuns(db, userId, orgId, manages, { active: false, since }),
     hiddenTasks(db, userId, orgId, manages),
     openAsks(db, orgId),
+    pendingReturns(db, userId, orgId, { managesAgents: manages }),
+    canceledReturns(db, userId, orgId, since),
   ]);
   const delegations = await delegationsOf(db, userId, orgId, active);
   const { edges, waking } = asks;
@@ -632,7 +639,15 @@ export async function taskManager(
       stoppedBy: by ? { userId: by, name: r.stopper_name ?? "" } : null,
     };
   });
-  return { tasks, ended: endedTasks, hidden, computers, activity: await agentActivity(db, orgId, now) };
+  return {
+    tasks,
+    ended: endedTasks,
+    hidden,
+    computers,
+    activity: await agentActivity(db, orgId, now),
+    followUps,
+    canceledFollowUps,
+  };
 }
 
 const IN_LINE = sql`r.waiting_machine_id is not null and (r.status = 'running'

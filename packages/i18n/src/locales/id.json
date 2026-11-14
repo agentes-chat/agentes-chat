@@ -502,6 +502,7 @@
       "noPassword": "Akun ini masuk dari aplikasi agentes.chat.",
       "noPasswordLead": "Di komputer yang menjalankan server ini, buka aplikasinya lalu pilih Tambah kata sandi di Pengaturan › Akunmu.",
       "backToSignIn": "Kembali ke halaman masuk",
+      "backToAccount": "Kembali ke {{name}}",
       "toAuthorizeApp": "Untuk menghubungkan aplikasi ke agentes.chat."
     },
     "desktop": {
@@ -1438,22 +1439,6 @@
     "moveDown": "Pindah ke bawah",
     "restoreOrder": "Kembalikan urutan bawaan"
   },
-  "appIcon": {
-    "title": "Ikon aplikasi",
-    "hintWeb": "Ikon di tab browser ini.",
-    "hintMac": "Ikon Dock selama aplikasi terbuka. Finder dan Launchpad tetap memakai ikon bawaan.",
-    "hintDesktop": "Ikon taskbar selama aplikasi terbuka.",
-    "hintAndroid": "Beberapa layar utama butuh beberapa detik untuk menampilkan ikon baru.",
-    "failed": "Ikon tidak bisa diganti. Coba lagi.",
-    "agentsOf": "Agen di {{org}}",
-    "names": {
-      "night": "Malam",
-      "moon": "Bulan",
-      "sky": "Langit",
-      "peekNight": "Mengintip di malam hari",
-      "peekSky": "Mengintip di langit"
-    }
-  },
   "install": {
     "frames": "Cara memasang di {{system}}",
     "step": "Langkah {{n}}",
@@ -1561,6 +1546,22 @@
       "activities": "Aktivitas",
       "readingLists": "Membaca daftar paket... Selesai",
       "settingUp": "Menyiapkan agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "Ikon aplikasi",
+    "hintWeb": "Ikon di tab browser ini.",
+    "hintMac": "Ikon Dock selama aplikasi terbuka. Finder dan Launchpad tetap memakai ikon bawaan.",
+    "hintDesktop": "Ikon taskbar selama aplikasi terbuka.",
+    "hintAndroid": "Beberapa layar utama butuh beberapa detik untuk menampilkan ikon baru.",
+    "failed": "Ikon tidak bisa diganti. Coba lagi.",
+    "agentsOf": "Agen di {{org}}",
+    "names": {
+      "night": "Malam",
+      "moon": "Bulan",
+      "sky": "Langit",
+      "peekNight": "Mengintip di malam hari",
+      "peekSky": "Mengintip di langit"
     }
   },
   "legal": {
@@ -1786,6 +1787,8 @@
     "newWorkspace": "Ruang kerja baru",
     "addWorkspace": "Tambah ruang kerja",
     "addWorkspaceHint": "Masuk ke yang sudah ada, buat yang baru, atau pakai server tim kamu",
+    "addAccount": "Tambah akun",
+    "addAccountHint": "Masuk ke akun lain tanpa keluar dari akun ini",
     "yourServer": "Servermu",
     "serverHere": "agentes.chat di {{device}} ini",
     "serverStopped": "berhenti",
@@ -2256,8 +2259,7 @@
       "fileName": "pesan.txt"
     },
     "long": {
-      "more": "Lihat selengkapnya",
-      "title": "Pesan dari {{name}}"
+      "more": "Lihat selengkapnya"
     },
     "retrySend": "Coba lagi",
     "thinking": "{{name}} sedang berpikir…",
@@ -3730,7 +3732,32 @@
     "here": "di sini",
     "routine": "dalam rutinitas",
     "yourApproval": "persetujuanmu",
-    "yourAnswer": "jawabanmu"
+    "yourAnswer": "jawabanmu",
+    "later": "tindak lanjut {{when}}",
+    "laterShort": "tindak lanjut"
+  },
+  "followUps": {
+    "when": {
+      "at": "pukul {{time}}",
+      "today": "hari ini pukul {{time}}",
+      "tomorrow": "besok pukul {{time}}"
+    },
+    "whenLabel": {
+      "at": "Pukul {{time}}",
+      "today": "Hari ini pukul {{time}}",
+      "tomorrow": "Besok pukul {{time}}"
+    },
+    "bar": {
+      "at": "{{name}} menindaklanjuti {{when}}",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}} menindaklanjuti setelah kamu menjawab",
+      "held": "{{name}} menindaklanjuti setelah ada jawaban"
+    },
+    "title": "Tindak lanjut",
+    "see": "Lihat pesan",
+    "cancel": "Batalkan tindak lanjut",
+    "cancelOf": "Batalkan tindak lanjut {{name}} {{when}}",
+    "inTime": "dalam {{time}}"
   },
   "mentions": {
     "list": "Orang dan agen",
@@ -3786,7 +3813,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Tampilkan lebih banyak",
     "less": "Tampilkan lebih sedikit"
   },
   "secret": {
@@ -4344,8 +4370,6 @@
       "noSubject": "(tanpa subjek)",
       "toSender": "Ke pengirim pesan",
       "toList": "Ke {{to}}",
-      "more": "Baca semua",
-      "less": "Tampilkan lebih sedikit",
       "answers": "Membalas <b>“{{subject}}”</b>",
       "answersFrom": "Membalas <b>“{{subject}}”</b>, dari {{from}}",
       "forwards": "Meneruskan <b>“{{subject}}”</b>",
@@ -4908,8 +4932,6 @@
       "textDone": "Yang sudah diterbitkan",
       "values": "Yang akan dilakukan",
       "valuesDone": "Yang dilakukan",
-      "more": "Tampilkan semua",
-      "less": "Tampilkan lebih sedikit",
       "trail": "Bagaimana sampai di sini",
       "showSteps": "Lihat setiap langkah",
       "hideSteps": "Sembunyikan langkah",
@@ -8420,8 +8442,7 @@
       "releasePaused": "Misi sedang dijeda: lanjutkan agar sesi bisa berjalan.",
       "releaseClosed": "Misi sudah ditutup: sesi tidak akan berlanjut.",
       "onlyDeciders": "Hanya pengambil keputusan di misi ini yang bisa mengizinkan perintah.",
-      "pick": "Izinkan {{command}}",
-      "showAll": "Tampilkan semua"
+      "pick": "Izinkan {{command}}"
     },
     "decision": {
       "approveAll_other": "Setujui {{count}} keputusan sementara",
@@ -8820,6 +8841,7 @@
       "input": "Menunggu jawaban",
       "computer": "Menunggu komputernya",
       "queued": "Dalam antrean",
+      "later": "Tindak lanjut {{when}}",
       "open": "Terbuka",
       "closed": "Ditutup",
       "archived": "Diarsipkan"
@@ -11156,8 +11178,6 @@
     "thousand": "rb",
     "building": "Menyusun…",
     "openBig": "Buka besar",
-    "showAll": "Tampilkan semua",
-    "showLess": "Tampilkan lebih sedikit",
     "keep": "Simpan di Drive",
     "kept": "Tersimpan di Drive",
     "inDrive": "Di Drive",
@@ -13184,6 +13204,9 @@
       "titleTooLong": "Judul maksimal {{max}} karakter.",
       "noContext": "Utas ini tidak berasal dari rentang percakapan.",
       "notUndoable": "Hanya utas yang dibuat dari rentang yang bisa dibatalkan."
+    },
+    "followUp": {
+      "notYours": "Hanya orang yang dituju, pemilik agen, atau Admin yang bisa membatalkan tindak lanjut ini."
     },
     "routine": {
       "tooFrequent": "Rutinitas berjalan paling sering setiap 15 menit. Pilih interval yang lebih panjang.",
@@ -15426,10 +15449,6 @@
       "someAnswered": "{{done}} dari {{total}} menjawab",
       "labelMany": "Percakapan {{from}} dengan {{to}}"
     },
-    "talk": {
-      "readAll": "Baca semua",
-      "more_other": "{{count}} baris lagi"
-    },
     "consultPanel": {
       "label": "Percakapan antara {{from}} dan {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -15457,14 +15476,6 @@
       "agentNote": "Catatan dari {{from}}",
       "agentNoteAnon": "Catatan dari agen lain",
       "waitResult": "Yang ditunggu {{name}} sudah masuk",
-      "followUp": "{{name}} akan kembali pukul {{time}} untuk «{{about}}»",
-      "followUpOn": "{{name}} akan kembali pada {{day}} pukul {{time}} untuk «{{about}}»",
-      "followUpDone": "{{name}} kembali pukul {{time}} untuk «{{about}}»",
-      "followUpDoneOn": "{{name}} kembali pada {{day}} pukul {{time}} untuk «{{about}}»",
-      "followUpCanceled": "{{name}} tidak akan kembali pukul {{time}} untuk «{{about}}»",
-      "followUpCanceledOn": "{{name}} tidak akan kembali pada {{day}} pukul {{time}} untuk «{{about}}»",
-      "followUpWake": "{{name}} kembali untuk «{{about}}»",
-      "followUpCancel": "Batalkan",
       "other": "Pemberitahuan untuk {{name}}",
       "wakeSkipped": "Sebutan dari {{name}} tidak sampai ke {{agents}}",
       "wakeSkippedAnon": "Sebutan dari {{name}} tidak sampai ke agen lain",
@@ -15651,6 +15662,7 @@
         "usingTool": "Memakai alat {{tool}}",
         "thinking": "Berpikir",
         "typing": "Menulis",
+        "recordingVoice": "Merekam audio",
         "writing": "Menulis"
       }
     },
@@ -15660,6 +15672,7 @@
       "updatingRoutine": "mengubah rutinitas",
       "thinking": "bekerja",
       "typing": "mengetik",
+      "recordingVoice": "merekam audio",
       "writing": "menulis",
       "consulting": "memeriksa {{app}}",
       "creatingIssue": "membuat tugas",
@@ -17229,7 +17242,8 @@
     "sections": {
       "asked": "Diminta oleh orang",
       "delegated": "Diminta agen",
-      "background": "Rutinitas di latar belakang"
+      "background": "Rutinitas di latar belakang",
+      "returns": "Tindak lanjut"
     },
     "state": {
       "working": "Bekerja",
@@ -17317,6 +17331,9 @@
       "stopped": "Kamu menghentikannya",
       "stoppedBy": "Dihentikan oleh {{name}}",
       "failed": "Tidak bisa selesai",
+      "returnCanceled": "Tindak lanjut dibatalkan",
+      "returnCanceledYou": "Kamu membatalkan tindak lanjut",
+      "returnCanceledBy": "Tindak lanjut dibatalkan oleh {{name}}",
       "none": "Belum ada yang selesai hari ini."
     },
     "empty": {

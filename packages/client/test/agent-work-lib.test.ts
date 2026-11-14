@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { resources } from "@agenteschat/i18n";
 import i18next, { type TFunction } from "i18next";
-import type { AgentStatus, AgentWork, RunConsultation } from "../src/api/types";
+import type { AgentStatus, AgentWork, PendingReturn, RunConsultation } from "../src/api/types";
 import {
   activitySentence,
   barConsultTime,
@@ -10,8 +10,22 @@ import {
   consultDetails,
   lineStep,
 } from "../src/lib/activity";
-import { agentWork, handoffAsk, threadWorkState, workDetail, workLine, workTime } from "../src/lib/agent-work";
+import {
+  agentWork,
+  handoffAsk,
+  returnClock,
+  returnFaces,
+  returnSentence,
+  returnsHere,
+  returnWhen,
+  threadWorkState,
+  threadWorkWord,
+  workDetail,
+  workLine,
+  workTime,
+} from "../src/lib/agent-work";
 import { consultPair, pairItemOf } from "../src/lib/consult-group";
+import { formatTime } from "../src/lib/format";
 import { agentFaceWord, agentPresenceShown } from "../src/lib/presence";
 import { applyConsultEvent, type ConsultsState } from "../src/realtime/consults";
 
@@ -138,6 +152,88 @@ describe("a thread's chip", () => {
     expect(threadWorkState({ needsYou: false, working: false, wait: "approval" })).toBe("approval");
     expect(threadWorkState({ needsYou: false, working: false, wait: "approval" }, true)).toBe("working");
     expect(threadWorkState({ needsYou: false, working: false, wait: null })).toBeNull();
+  });
+});
+
+describe("a return (ADR 0037 addendum of 2026-11-13)", () => {
+  const at = (min: number) => new Date(NOW + min * 60_000).toISOString();
+  const soon = at(33);
+  const late = at(23 * 60);
+  const hm = (iso: string, locale = "pt-BR") => formatTime(locale, iso);
+  const ret = (over: Partial<PendingReturn> = {}): PendingReturn => ({
+    messageId: "l1",
+    agentId: "ada",
+    channelId: "c-vendas",
+    channelKind: "channel",
+    channelName: "vendas",
+    threadId: "t-1",
+    at: soon,
+    about: "rever o deploy de hoje",
+    runId: "r1",
+    replyMessageId: "m1",
+    held: false,
+    canCancel: true,
+    ...over,
+  });
+
+  test("when: its time, its day only more than 12 h away (so it never turns at midnight), 12-hour English", () => {
+    expect(returnWhen(t, "pt-BR", soon, NOW)).toBe(`às ${hm(soon)}`);
+    expect(returnWhen(en, "en", soon, NOW)).toBe(`at ${hm(soon, "en")}`);
+    expect(hm(soon, "en")).toMatch(/[AP]M$/);
+    expect(returnWhen(t, "pt-BR", late, NOW)).toBe(`amanhã às ${hm(late)}`);
+    expect(returnWhen(en, "en", late, NOW)).toBe(`tomorrow at ${hm(late, "en")}`);
+    expect(returnWhen(t, "pt-BR", late, NOW, true)).toBe(`Amanhã às ${hm(late)}`);
+    expect(returnWhen(t, "pt-BR", soon, NOW, true)).toBe(`Às ${hm(soon)}`);
+    // 12 h before it, the day leaves its words: the same time.
+    expect(returnWhen(t, "pt-BR", late, Date.parse(late) - 12 * 3600_000)).toBe(`às ${hm(late)}`);
+    expect(returnClock(t, "pt-BR", soon, NOW)).toBe(hm(soon));
+    expect(returnClock(t, "pt-BR", late, NOW)).toBe(`amanhã ${hm(late)}`);
+  });
+
+  test("the bar's sentence: the soonest, held on an answer, the name and the time where nothing more fits", () => {
+    const say = (r: PendingReturn, canAnswer = true, short = false) =>
+      returnSentence(t, "pt-BR", r, "Ada", { canAnswer, short, now: NOW });
+    expect(say(ret())).toBe(`Ada retorna às ${hm(soon)}`);
+    expect(say(ret({ at: late }))).toBe(`Ada retorna amanhã às ${hm(late)}`);
+    expect(say(ret(), true, true)).toBe(`Ada ${hm(soon)}`);
+    expect(say(ret({ held: true }))).toBe("Ada retorna quando você responder");
+    expect(say(ret({ held: true }), false)).toBe("Ada retorna depois de uma resposta");
+    expect(returnSentence(en, "en", ret(), "Ada", { canAnswer: true, now: NOW })).toBe(
+      `Ada follows up at ${hm(soon, "en")}`,
+    );
+  });
+
+  test("the bar holds a thread's own returns, or the main timeline's; one face per agent, three at most", () => {
+    const list = [
+      ret({ messageId: "a" }),
+      ret({ messageId: "b", threadId: null }),
+      ret({ messageId: "c", agentId: "nina" }),
+    ];
+    expect(returnsHere(list, "t-1").map((r) => r.messageId)).toEqual(["a", "c"]);
+    expect(returnsHere(list, null).map((r) => r.messageId)).toEqual(["b"]);
+    expect(returnsHere(undefined, null)).toEqual([]);
+    const agents = ["ada", "ada", "nina", "theo", "ivo"].map((agentId, i) => ret({ messageId: `${i}`, agentId }));
+    expect(returnFaces(agents)).toEqual(["ada", "nina", "theo"]);
+  });
+
+  test("the lists, the profile card and the chip: neutral, when it comes, never for how long", () => {
+    const later = work({ state: "later", at: soon, since: soon, count: 0 });
+    expect(workLine(t, "pt-BR", later, names, NOW)).toEqual({
+      text: `retorno às ${hm(soon)}`,
+      short: "retorno",
+      time: null,
+      tone: "neutral",
+    });
+    expect(workLine(en, "en", later, names, NOW)?.text).toBe(`follow-up at ${hm(soon, "en")}`);
+    expect(workDetail(t, later, names, "pt-BR", NOW)).toBe(`retorno às ${hm(soon)}`);
+    expect(threadWorkState({ needsYou: false, working: false, wait: null, laterAt: soon })).toBe("later");
+    // Anything else on the thread comes first.
+    expect(threadWorkState({ needsYou: false, working: true, wait: null, laterAt: soon })).toBe("working");
+    expect(threadWorkState({ needsYou: false, working: true, wait: "queued", laterAt: soon })).toBe("queued");
+    expect(threadWorkWord(t, "later", { at: soon, locale: "pt-BR", now: NOW })).toBe(`Retorno às ${hm(soon)}`);
+    expect(threadWorkWord(en, "later", { at: late, locale: "en", now: NOW })).toBe(
+      `Follow-up tomorrow at ${hm(late, "en")}`,
+    );
   });
 });
 

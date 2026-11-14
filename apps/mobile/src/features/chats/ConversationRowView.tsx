@@ -163,9 +163,10 @@ export const ConversationRowView = memo(function ConversationRowView({
   let line: ReactNode;
   let label: string;
   if (r.kind === "thread" && threadState) {
-    const word = threadWorkWord(t, threadState);
+    const word = threadWorkWord(t, threadState, { at: r.laterAt, locale: i18n.language, now });
     const tone = threadWorkTone(threadState);
-    const held = workTime(i18n.language, r.since, now);
+    // A return says when it comes, never for how long.
+    const held = threadState === "later" ? null : workTime(i18n.language, r.since, now);
     label = [word, held].filter(Boolean).join(" · ");
     line = (
       <View style={styles.work}>
