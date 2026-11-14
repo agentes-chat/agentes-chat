@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import {
   copyFileSync,
@@ -433,8 +433,13 @@ test("parser: a failed turn says why the provider failed it, from Claude Code's 
     cause: "auth_rejected",
     httpStatus: 401,
   });
-  // A 403 alone is a refused sign-in, not a disabled account.
-  expect(fail(retry("authentication_failed", 403), failed)).toMatchObject({ cause: "auth_rejected", httpStatus: 403 });
+  // A 403 the provider never answered (no API JSON, no sign-in words) is the network, not a refused sign-in (#358).
+  expect(fail(retry("authentication_failed", 403), failed)).toMatchObject({
+    code: "claude_failed",
+    cause: "network",
+    retryable: true,
+    httpStatus: 403,
+  });
   expect(
     fail(errorFrame("unknown", 'API Error: 403 {"error":{"message":"Request not allowed"}}'), {
       type: "result",
@@ -493,6 +498,220 @@ test("parser: a failed turn says why the provider failed it, from Claude Code's 
     type: "error",
     code: "claude_failed",
     cause: "unknown",
+  });
+});
+
+// ── Cloudflare's 403 challenge in front of Anthropic is the network, never a refused sign-in ──
+
+describe("parser: a Cloudflare 403 challenge fails the turn as network, never signed out (#358)", () => {
+  const CF = "Failed to authenticate. API Error: 403 Attention Required! | Cloudflare";
+  const NETWORK_403 = { type: "error", code: "claude_failed", cause: "network", retryable: true, httpStatus: 403 };
+  const fail = (...lines: Record<string, unknown>[]) => {
+    const p = new ClaudeStreamParser();
+    p.beginTurn();
+    for (const l of lines.slice(0, -1)) p.push(line(l));
+    return p.push(line(lines.at(-1) as Record<string, unknown>)).final;
+  };
+  const errorFrame = (error: string, text: string) => ({
+    type: "assistant",
+    parent_tool_use_id: null,
+    error,
+    message: { id: "m1", content: [{ type: "text", text }] },
+  });
+  const result = (text: string, extra: Record<string, unknown> = {}) => ({
+    type: "result",
+    subtype: "success",
+    is_error: true,
+    result: text,
+    ...extra,
+  });
+  const retry = (error: string, status: number | null) => ({
+    type: "system",
+    subtype: "api_retry",
+    attempt: 1,
+    max_retries: 10,
+    error_status: status,
+    error,
+  });
+
+  test("an authentication_failed frame with Cloudflare's page is claude_failed, network, retryable, 403", () => {
+    expect(fail(errorFrame("authentication_failed", CF), result(CF))).toMatchObject(NETWORK_403);
+    // As the CLI says it on a datacenter IP: a 403 retry first, then the page.
+    expect(
+      fail(retry("authentication_failed", 403), errorFrame("authentication_failed", CF), result(CF)),
+    ).toMatchObject(NETWORK_403);
+  });
+
+  test.each(["network_edge_blocked", "unknown"])(
+    "an error frame %p with Cloudflare's page is the same network failure",
+    (error) => {
+      expect(fail(errorFrame(error, CF), result(CF))).toMatchObject(NETWORK_403);
+    },
+  );
+
+  test("only the result's Cloudflare text, no frame: neither not_logged_in nor auth_rejected", () => {
+    const final = fail(result(CF));
+    expect(final).not.toMatchObject({ code: "not_logged_in" });
+    expect(final).not.toMatchObject({ cause: "auth_rejected" });
+    expect(final).toMatchObject(NETWORK_403);
+  });
+
+  test("a Cloudflare text that also says /login is not not_logged_in", () => {
+    const text = `${CF} · Please run /login`;
+    expect(fail(result(text))).not.toMatchObject({ code: "not_logged_in" });
+    expect(fail(errorFrame("authentication_failed", text), result(text))).toMatchObject(NETWORK_403);
+  });
+
+  test("an api_retry authentication_failed 403 asks no auth retry (the turn waits for the body); a 401 still does", () => {
+    const p = new ClaudeStreamParser();
+    p.beginTurn();
+    expect(p.push(line(retry("authentication_failed", 403))).authRetry).toBeUndefined();
+    p.beginTurn();
+    expect(p.push(line(retry("authentication_failed", 401))).authRetry).toBe(true);
+    p.beginTurn();
+    expect(p.push(line(retry("unknown", 401))).authRetry).toBe(true);
+  });
+
+  test("a refused retry the challenge then let through never signs out a turn that fails later for another reason", () => {
+    const reply = { type: "assistant", parent_tool_use_id: null, message: { id: "m2", content: [] } };
+    const boom = { type: "result", subtype: "error_during_execution", is_error: true, errors: ["boom"] };
+    for (const status of [403, 401]) {
+      const final = fail(retry("authentication_failed", status), reply, boom);
+      expect(final).not.toMatchObject({ code: "not_logged_in" });
+      expect(final).toMatchObject({ code: "claude_failed", cause: "unknown", retryable: false });
+      expect(final).not.toHaveProperty("httpStatus");
+    }
+  });
+
+  test.each([
+    ["a bare 403 Forbidden", "API Error: 403 Forbidden"],
+    ["another CDN's Access Denied", "API Error: 403 Access Denied. Fastly error: request blocked"],
+    ["no body at all", "API Error: 403"],
+  ])("a 403 with %p and neither the API's JSON nor its sign-in words is network", (_case, text) => {
+    expect(fail(errorFrame("authentication_failed", text), result(text))).toMatchObject(NETWORK_403);
+    expect(fail(errorFrame("unknown", text), result(text))).toMatchObject(NETWORK_403);
+    expect(fail(result(text))).toMatchObject(NETWORK_403);
+  });
+
+  test("a 403 with only its status on the result, no body, is network", () => {
+    expect(fail(result("", { api_error_status: 403 }))).toMatchObject(NETWORK_403);
+    expect(fail(retry("authentication_failed", 403), result("", { api_error_status: 403 }))).toMatchObject(NETWORK_403);
+  });
+
+  test("a 403 with the API's JSON or real sign-in words stays a refused sign-in", () => {
+    const notAllowed = 'API Error: 403 {"error":{"message":"Request not allowed"}}';
+    expect(fail(errorFrame("unknown", notAllowed), result(notAllowed))).toMatchObject({
+      code: "claude_failed",
+      cause: "auth_rejected",
+      httpStatus: 403,
+    });
+    const permission =
+      'API Error: 403 {"type":"error","error":{"type":"permission_error","message":"Not allowed"},"request_id":"req_011CAbc"}';
+    expect(fail(errorFrame("authentication_failed", permission), result(permission))).toMatchObject({
+      code: "not_logged_in",
+      cause: "auth_rejected",
+      httpStatus: 403,
+    });
+    // A retry's bare 403 first does not hide the API's own answer that came after it.
+    expect(
+      fail(retry("authentication_failed", 403), errorFrame("authentication_failed", permission), result(permission)),
+    ).toMatchObject({ code: "not_logged_in", cause: "auth_rejected", httpStatus: 403 });
+    for (const words of ["OAuth token revoked", "OAuth token has expired", "Invalid API key · Please run /login"]) {
+      const text = `API Error: 403 ${words}`;
+      expect(fail(errorFrame("authentication_failed", text), result(text))).toMatchObject({
+        code: "not_logged_in",
+        cause: "auth_rejected",
+        httpStatus: 403,
+      });
+      expect(fail(result(text))).toMatchObject({ code: "not_logged_in", cause: "auth_rejected", httpStatus: 403 });
+    }
+  });
+
+  test("Claude Code's network_edge_blocked with a neutral text is network, in the frame or in the result", () => {
+    const neutral = "Request failed";
+    // The frame's own word, or the wrapper's `api_error` beside another word.
+    expect(fail(errorFrame("network_edge_blocked", neutral), result(neutral, { api_error_status: 403 }))).toMatchObject(
+      NETWORK_403,
+    );
+    const wrapped = { ...errorFrame("authentication_failed", neutral), api_error: "network_edge_blocked" };
+    const final = fail(wrapped, result(neutral));
+    expect(final).toMatchObject({ type: "error", code: "claude_failed", cause: "network", retryable: true });
+    expect(final).not.toMatchObject({ code: "not_logged_in" });
+    // Only the result says it.
+    expect(fail(result(neutral, { api_error: "network_edge_blocked", api_error_status: 403 }))).toMatchObject(
+      NETWORK_403,
+    );
+    expect(fail(result(neutral, { api_error: "network_edge_blocked" }))).toMatchObject({
+      code: "claude_failed",
+      cause: "network",
+      retryable: true,
+    });
+  });
+
+  test.each([
+    ["Attention Required! | Cloudflare", "API Error: 403 Attention Required! | Cloudflare"],
+    ["Just a moment", "API Error: 403 Just a moment..."],
+    ["cf-ray", "API Error: 403 Forbidden (cf-ray: 8f1c2a3b4d5e6f70-GRU)"],
+    ["<!doctype html", 'API Error: 403 <!DOCTYPE html><html lang="en-US"><head><title>Forbidden</title>'],
+    ["<html", "API Error: 403 <html><body>403 Forbidden</body></html>"],
+  ])("border: a 403 with %p and no API JSON is network", (_marker, text) => {
+    expect(fail(errorFrame("unknown", text), result(text))).toMatchObject(NETWORK_403);
+    expect(fail(result(text, { api_error_status: 403 }))).toMatchObject(NETWORK_403);
+  });
+
+  test("border: a 403 whose body is the API's own JSON stays auth_rejected, even naming Cloudflare", () => {
+    const json =
+      'API Error: 403 {"type":"error","error":{"type":"permission_error","message":"Blocked: see cloudflare <html> notes"},"request_id":"req_011CXyz"}';
+    const final = fail(errorFrame("unknown", json), result(json));
+    expect(final).toMatchObject({ cause: "auth_rejected", httpStatus: 403 });
+    expect(final).not.toMatchObject({ cause: "network" });
+    // An edge frame first, then a result with the API's JSON: the API's answer prevails.
+    expect(fail(errorFrame("authentication_failed", CF), result(json))).toMatchObject({
+      code: "not_logged_in",
+      cause: "auth_rejected",
+      httpStatus: 403,
+    });
+    // The provider's own words that the organization is off still win on a 403.
+    const disabled = 'API Error: 403 {"type":"error","error":{"message":"This organization has been disabled."}}';
+    expect(fail(errorFrame("unknown", disabled), result(disabled))).toMatchObject({
+      cause: "account_disabled",
+      httpStatus: 403,
+    });
+  });
+
+  test.each(["API Error: 403 This organization has been disabled.", "API Error: 403 Your account has been disabled."])(
+    "a 403 whose plain text says %p is account_disabled, never network",
+    (text) => {
+      for (const final of [fail(errorFrame("unknown", text), result(text)), fail(result(text))]) {
+        expect(final).toMatchObject({ code: "claude_failed", cause: "account_disabled", httpStatus: 403 });
+        expect(final).not.toMatchObject({ cause: "network" });
+      }
+    },
+  );
+
+  test("a 403 whose JSON is not the API's error shape (a proxy's) is network", () => {
+    const proxy = 'API Error: 403 {"error":{"code":403,"message":"Forbidden by proxy policy"}}';
+    expect(fail(errorFrame("unknown", proxy), result(proxy))).toMatchObject(NETWORK_403);
+    expect(fail(result(proxy))).toMatchObject(NETWORK_403);
+  });
+
+  test("a 401 retry after a bare 403 retry clears the edge: a shared login's turn is not a network failure", () => {
+    // A shared login has no refused callback, so the turn goes on past the 401's authRetry to its result.
+    const final = fail(
+      retry("authentication_failed", 403),
+      retry("authentication_failed", 401),
+      result("Request failed"),
+    );
+    expect(final).not.toMatchObject({ cause: "network" });
+    expect(final).toMatchObject({ code: "not_logged_in", cause: "auth_rejected", httpStatus: 401 });
+  });
+
+  test("border: Cloudflare's words on another status are not this rule (a 503 page stays provider_transient)", () => {
+    const text = "API Error: 503 <html><title>Just a moment...</title></html>";
+    expect(fail(errorFrame("unknown", text), result(text))).toMatchObject({
+      cause: "provider_transient",
+      httpStatus: 503,
+    });
   });
 });
 
@@ -1897,6 +2116,36 @@ test.if(posix)(
       delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
       delete process.env.CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR;
     }
+  },
+);
+
+test.if(posix)(
+  "a token turn that meets Cloudflare's 403 is not cut as refused: its process lives, the turn is a network failure (#358)",
+  async () => {
+    const TOKEN = "sk-ant-oat01-fake-token-for-tests-only";
+    const own = tempDir("agent-account-");
+    dirs.push(own);
+    const { spawns, turn } = setup({
+      accounts: {
+        accountDir: () => null,
+        agentHome: (kind, id) => (kind === "claude_code" && id === ACCOUNT ? own : null),
+      },
+    });
+    const grant = { grant: { kind: "token" as const, token: TOKEN } };
+    const cf = await turn(1, "CF403", { account: ACCOUNT }, undefined, grant);
+    expect(cf.final).toMatchObject({
+      type: "error",
+      code: "claude_failed",
+      cause: "network",
+      retryable: true,
+      httpStatus: 403,
+    });
+    expect(cf.final).not.toMatchObject({ message: TOKEN_REFUSED });
+    expect(JSON.stringify(cf.final)).toContain("Cloudflare");
+    // Not killed: the next turn on the same token runs on the same process.
+    const next = await turn(2, "hi", { account: ACCOUNT }, undefined, grant);
+    expect(next.final).toMatchObject({ type: "done" });
+    expect(spawns()).toHaveLength(1);
   },
 );
 

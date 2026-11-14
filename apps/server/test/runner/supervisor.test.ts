@@ -4344,6 +4344,78 @@ test.if(posix)("the network waits for a hosted turn, and goes on once it ended",
   h.brains.brains.close();
 });
 
+// Cloudflare's 403 challenge on a shared login is one turn's network failure; the account is never marked refused
+// (`accounts.refused()` is what writes `<accountId>.invalid`), so no agent signs out.
+test.if(posix)(
+  "a shared login's turn that meets Cloudflare's 403 fails as network and never marks the account refused (#358)",
+  async () => {
+    const t = setup();
+    const h = hosted(t);
+    t.sup.boot();
+    t.sup.attach();
+    const run = handleRequest(h.ctx, hostedTurn({ prompt: "CF403" }), scope().scope);
+    await waitFor(() => t.workers.length === 1);
+    const ana = t.last(ANA.id);
+    ana.hello();
+    const stop = answersAsWorker(ana, "/home/ag-a1b2c3d4/ana-a1b2c3d4");
+    const out = (await run) as { final: unknown };
+    stop();
+    // `signedOut` runs detached: give it the time a refusal takes elsewhere in this file before saying none came.
+    await sleep(100);
+    h.brains.brains.close();
+    expect(h.refused).toEqual([]);
+    expect(out.final).toMatchObject({
+      type: "error",
+      code: "claude_failed",
+      cause: "network",
+      retryable: true,
+      httpStatus: 403,
+    });
+  },
+);
+
+test("a claude_failed/network final from a worker never marks the account refused (#358)", async () => {
+  const refused: string[] = [];
+  const t = setup({ lend: async () => {} });
+  t.ctx.accounts = {
+    refused: async (_kind: string, id: string) => void refused.push(id),
+    invalidate: () => {},
+    refresh: async () => [],
+  } as unknown as AccountManager;
+  t.sup.boot();
+  t.sup.attach();
+  const ACCOUNT = "0193ffff-0000-7000-8000-000000000358";
+  const run = handleRequest(
+    t.ctx,
+    {
+      op: "brain.turn",
+      kind: "claude_code",
+      runId: "run-00000358",
+      session: { id: "0193aaaa-0000-7000-8000-000000000358", resume: false },
+      prompt: "hi",
+      account: ACCOUNT,
+      agent: BIA,
+    } as MachineRequest,
+    scope().scope,
+  );
+  await waitFor(() => t.workers.length === 1);
+  const bia = t.last(BIA.id);
+  bia.hello();
+  const q = await requestOn(bia);
+  const final = {
+    type: "error",
+    code: "claude_failed",
+    message: "Failed to authenticate. API Error: 403 Attention Required! | Cloudflare",
+    retryable: true,
+    cause: "network",
+    httpStatus: 403,
+  };
+  bia.send({ type: "result", id: q.id, ok: true, data: { runId: "run-00000358", final } });
+  expect(await run).toEqual({ runId: "run-00000358", final });
+  await sleep(100);
+  expect(refused).toEqual([]);
+});
+
 test.if(posix)("a hosted turn that can't run says why, with no CLI and no worker", async () => {
   const t = setup();
   const h = hosted(t);

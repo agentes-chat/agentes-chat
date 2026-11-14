@@ -254,6 +254,34 @@ const NETWORK_TEXT =
 /** How Claude Code words a provider's answer in an error text: "API Error: 403 {…}". */
 const API_ERROR_STATUS = /\bAPI Error: (\d{3})\b/;
 
+/** The HTTP status Claude Code said: its own field, else the "API Error: 403" of its text (NaN when neither). */
+const statusOf = (status: unknown, text: string) =>
+  typeof status === "number" ? status : Number(API_ERROR_STATUS.exec(text)?.[1]);
+
+/** A challenge or block page from the edge in front of the API (Cloudflare's HTML), never the API's own answer (#358). */
+const EDGE_TEXT = /cloudflare|attention required|just a moment|cf-ray|<!doctype html|<html/i;
+/** The API's own JSON error body (`{"type":"error","error":{…},"request_id":"req_…"}`): the provider answered. */
+const API_JSON_TEXT = /"type"\s*:\s*"error"|"error"\s*:\s*\{\s*"(?:type|message)"|request_id|\breq_[A-Za-z0-9]/;
+
+/**
+ * The provider itself refused the sign-in (#358): its JSON, its words that the account is disabled, or Claude Code's
+ * sign-in words with no edge page around them. A text with both an edge page and the API's JSON is the API's refusal,
+ * on purpose: the API's answer prevails.
+ */
+const providerRefused = (text: string) =>
+  DISABLED_TEXT.test(text) || API_JSON_TEXT.test(text) || (AUTH_TEXT.test(text) && !EDGE_TEXT.test(text));
+
+/**
+ * Something between us and the API blocked the call (#358): Claude Code said `network_edge_blocked`, or a 403 the
+ * provider never answered (an edge page, a bare "403 Forbidden", another CDN's "Access Denied"). The network refused
+ * it, not the sign-in: never `auth_rejected`.
+ */
+function edgeBlocked(f: { apiError?: unknown; status?: unknown; text?: string }): boolean {
+  if (f.apiError === "network_edge_blocked") return true;
+  const text = f.text ?? "";
+  return statusOf(f.status, text) === 403 && !providerRefused(text);
+}
+
 /** Why the provider refused or failed a call (protocol 50), and its HTTP status when the CLI said one. */
 export interface ProviderFailure {
   cause?: ProviderFailureCause;
@@ -262,8 +290,8 @@ export interface ProviderFailure {
 
 /**
  * A provider failure from what Claude Code said of it: its `error` word (`api_retry`, an `assistant` error frame),
- * the HTTP status, and the error's own text (never the model's prose). A 403 alone is a refused sign-in: only the
- * provider's words say an account is disabled. `noResponse`: no HTTP answer came at all.
+ * the HTTP status, and the error's own text (never the model's prose). A 403 is a refused sign-in only with the
+ * provider's own answer (#358), and only the provider's words say an account is disabled. `noResponse`: no HTTP answer came at all.
  */
 export function providerFailure(f: {
   error?: unknown;
@@ -272,11 +300,13 @@ export function providerFailure(f: {
   noResponse?: boolean;
 }): ProviderFailure {
   const text = f.text ?? "";
-  const status = typeof f.status === "number" ? f.status : Number(API_ERROR_STATUS.exec(text)?.[1]);
+  const status = statusOf(f.status, text);
   const httpStatus = Number.isInteger(status) && status >= 100 && status <= 599 ? status : undefined;
   const http = httpStatus ? { httpStatus } : {};
   const error = typeof f.error === "string" ? f.error : "";
   if (DISABLED_TEXT.test(text)) return { cause: "account_disabled", ...http };
+  // #358: an edge block is the network, whatever word the CLI put on it.
+  if (edgeBlocked({ apiError: f.error, status: httpStatus, text })) return { cause: "network", ...http };
   if (error === "authentication_failed" || error === "oauth_org_not_allowed" || status === 401 || status === 403)
     return { cause: "auth_rejected", ...http };
   if (error === "billing_error" || BILLING_TEXT.test(text)) return { cause: "billing", ...http };
@@ -389,6 +419,8 @@ export class ClaudeStreamParser {
   private worked = false;
   private resetsAt?: string;
   private authFailed = false;
+  /** A retry or an error frame said the edge in front of the API blocked the turn (#358): not a refused sign-in. */
+  private edge = false;
   /** What the turn's provider errors said last (`api_retry`, an error frame, a refused plan): `cause` on its error. */
   failure: ProviderFailure = {};
   /** Uncached input of each API call of the turn, by message id (Claude Code repeats a message per content block). */
@@ -405,6 +437,7 @@ export class ClaudeStreamParser {
     this.worked = false;
     this.resetsAt = undefined;
     this.authFailed = false;
+    this.edge = false;
     this.failure = {};
   }
 
@@ -436,6 +469,13 @@ export class ClaudeStreamParser {
           (ev.error === "authentication_failed" || ev.error_status === 401)
         ) {
           this.authFailed = true;
+          // #358: a 403 with no body yet may be the edge's challenge, not the key: the turn's last frame says which, so
+          // only a 401 cuts the turn as refused now.
+          if (ev.error_status === 403) {
+            this.edge = edgeBlocked({ status: ev.error_status });
+            return { events: [] };
+          }
+          this.edge = false;
           return { events: [], authRetry: true };
         }
         if (ev.subtype === "api_retry" && ev.error === "rate_limit") this.limited = true;
@@ -466,17 +506,23 @@ export class ClaudeStreamParser {
       }
       case "assistant": {
         if (!main) return { events: [] };
-        if (ev.error === "authentication_failed") this.authFailed = true;
         if (ev.error === "rate_limit") this.limited = true;
         const content = isObj(ev.message) && Array.isArray(ev.message.content) ? ev.message.content : [];
         // Claude Code's own frame for a provider's error (its `error` word set): its text is the provider's answer.
         if (typeof ev.error === "string") {
           const said = content.map((b) => (isObj(b) && b.type === "text" ? str(b.text) : "")).join("\n");
-          const failure = providerFailure({ error: ev.error, text: said });
+          // #358: the wrapper's `api_error` (or the frame's own word) may name the edge block outright.
+          const apiError = str(ev.api_error) || ev.error;
+          this.edge = edgeBlocked({ apiError, text: said });
+          if (ev.error === "authentication_failed") this.authFailed = true;
+          const failure = providerFailure({ error: this.edge ? apiError : ev.error, text: said });
           if (failure.cause || failure.httpStatus) this.failure = failure;
         } else {
-          // A reply came through: an earlier retry's cause is not why the turn may fail later.
+          // A reply came through: an earlier retry's cause (a refused sign-in, an edge block) is not why the turn may
+          // fail later.
           this.failure = {};
+          this.authFailed = false;
+          this.edge = false;
         }
         const messageId = isObj(ev.message) ? str(ev.message.id) : "";
         if (messageId && isObj(ev.message) && isObj(ev.message.usage))
@@ -588,6 +634,11 @@ export class ClaudeStreamParser {
     const text = str(ev.result) || (Array.isArray(ev.errors) ? ev.errors.map(str).join("\n") : "");
     if (ev.is_error === true || (typeof ev.subtype === "string" && ev.subtype !== "success")) {
       const said = providerFailure({ status: ev.api_error_status, text });
+      // #358: the edge blocked the turn (its result says so, or a retry or frame did and the result shows no answer
+      // of the provider's own): the network, never signed out.
+      const edge =
+        edgeBlocked({ apiError: ev.api_error, status: ev.api_error_status, text }) ||
+        (this.edge && !providerRefused(text));
       const httpStatus = said.httpStatus ?? this.failure.httpStatus;
       const http = httpStatus ? { httpStatus } : {};
       if (this.rejected || ((this.limited || LIMIT_TEXT.test(text)) && !NOT_LIMIT_TEXT.test(text))) {
@@ -611,7 +662,7 @@ export class ClaudeStreamParser {
         };
       }
       const planRefusal = this.planKey && (PLAN_FORBIDDEN_TEXT.test(text) || PLAN_INACTIVE_TEXT.test(text));
-      if ((this.authFailed || AUTH_TEXT.test(text)) && !planRefusal) {
+      if ((this.authFailed || AUTH_TEXT.test(text)) && !planRefusal && !edge) {
         return {
           events,
           final: {
@@ -624,7 +675,7 @@ export class ClaudeStreamParser {
           },
         };
       }
-      const cause = said.cause ?? this.failure.cause ?? "unknown";
+      const cause = edge ? "network" : (said.cause ?? this.failure.cause ?? "unknown");
       return {
         events,
         final: {
