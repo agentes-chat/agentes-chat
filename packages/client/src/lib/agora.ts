@@ -102,6 +102,12 @@ export function agoraContext(t: TFunction, item: AgoraItem): string {
   return title === where || title === item.task.routine?.name ? where : `${where} › ${title}`;
 }
 
+/**
+ * A name of this many letters or fewer stays whole on a short line, and the words after it give way first (Agora's
+ * rows on the web, the work-along line on the phone). Past it a name is wider than 2.5em in any face.
+ */
+export const SHORT_NAME = 5;
+
 /** How long a row's state has held, as lists say it; none in its first minute, none for a return (it says when). */
 export const agoraTime = (locale: string, item: AgoraItem, now = Date.now()) =>
   item.kind === "return" ? null : workTime(locale, item.since, now);

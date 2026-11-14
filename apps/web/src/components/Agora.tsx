@@ -16,6 +16,7 @@ import {
   agoraSections,
   agoraTime,
   helpsWhom,
+  SHORT_NAME,
   waitsOnSomeone,
 } from "@agenteschat/client/lib/agora";
 import { errorText } from "@agenteschat/client/lib/errors";
@@ -58,9 +59,6 @@ import "./agora.css";
  */
 
 const SECTIONS: AgoraSection[] = ["you", "working", "waiting"];
-
-/** Past this many letters a name is wider than 2.5em in any face: on a short line it keeps that much (agora.css). */
-const LONG_NAME = 5;
 
 /**
  * `below`: its list opens under it (the Mac app's title bar, a phone's drawer), else on its right, clear of the
@@ -119,7 +117,7 @@ export function AgoraButton({ below = false, size, className }: { below?: boolea
             data-mark={glyph.mark}
             aria-label={t("agora.label")}
             // Its state for screen readers off the keys' focus too (the tip says it on hover and focus).
-            aria-description={tip.replace("\n", ". ")}
+            aria-description={tip.replaceAll("\n", ". ")}
             title={tip}
           >
             {glyph.mark === "you" ? (
@@ -153,7 +151,10 @@ export function AgoraButton({ below = false, size, className }: { below?: boolea
   );
 }
 
-/** The popover's list: its sections, then the work the reader may not see, then the task manager. */
+/**
+ * The popover's list: its sections (the first closes with what else waits on the reader), then the work the reader
+ * may not see, then the task manager.
+ */
 function AgoraList({ onLeave, onQueue }: { onLeave: () => void; onQueue: (machineId: string) => void }) {
   const { t } = useTranslation();
   const { org } = useOrg();
@@ -177,7 +178,11 @@ function AgoraList({ onLeave, onQueue }: { onLeave: () => void; onQueue: (machin
       return next;
     });
   const hidden = view.data?.hidden?.total ?? 0;
-  const empty = SECTIONS.every((s) => sections[s].length === 0);
+  // The sidebar's "Esperando você" count: join requests, proposals… too. Past this list's rows, a line leads there.
+  const waitingOnMe = useNotificationCount(org.id).data?.waiting ?? 0;
+  const allWaiting = waitingOnMe > sections.you.length ? waitingOnMe : 0;
+  // Nothing on only when nothing is hidden from the reader either: the button orbits for work they can't list.
+  const empty = SECTIONS.every((s) => sections[s].length === 0) && hidden === 0 && allWaiting === 0;
 
   const open = (item: AgoraItem) => {
     if (item.kind === "return") {
@@ -263,9 +268,11 @@ function AgoraList({ onLeave, onQueue }: { onLeave: () => void; onQueue: (machin
           <p className="agora__none">{t("home.working.none")}</p>
         ) : (
           SECTIONS.map((s) =>
-            sections[s].length > 0 ? (
+            sections[s].length > 0 || (s === "you" && allWaiting > 0) ? (
               <section key={s} className="agora__section" aria-label={t(`agora.sections.${s}`)}>
-                <GroupHeading level={3} title={t(`agora.sections.${s}`)} count={sections[s].length} />
+                {sections[s].length > 0 && (
+                  <GroupHeading level={3} title={t(`agora.sections.${s}`)} count={sections[s].length} />
+                )}
                 <ul className="agora__rows">
                   {sections[s].map((item) =>
                     confirming === item.key && item.kind === "task" ? (
@@ -290,6 +297,15 @@ function AgoraList({ onLeave, onQueue }: { onLeave: () => void; onQueue: (machin
                         onOpen={() => open(item)}
                       />
                     ),
+                  )}
+                  {s === "you" && allWaiting > 0 && (
+                    <li className="agora-row agora-row--all">
+                      <WaitMark still />
+                      <Link to="/org/$orgId/waiting" params={{ orgId: org.id }} onClick={onLeave}>
+                        {t("agora.allWaiting", { count: allWaiting })}
+                      </Link>
+                      <Icon name="chevronRight" size={16} />
+                    </li>
                   )}
                 </ul>
               </section>
@@ -380,7 +396,8 @@ function AgoraRow({
         onClick={onOpen}
       >
         <span className="agora-row__who">
-          <b data-long={name.length > LONG_NAME || undefined}>{name}</b>{" "}
+          {/* A long name keeps 2.5em on a short line, a short one stays whole (agora.css). */}
+          <b data-long={name.length > SHORT_NAME || undefined}>{name}</b>{" "}
           <span className="agora-row__phrase">
             {forName ? withAgentFace(phrase, forName, forId ?? undefined) : phrase}
           </span>

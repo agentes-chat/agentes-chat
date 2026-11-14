@@ -18787,6 +18787,10 @@
       "working": "В работе",
       "waiting": "Ожидают"
     },
+    "allWaiting_one": "{{count}} дело ждёт вас",
+    "allWaiting_few": "Все {{count}} дела ждут вас",
+    "allWaiting_many": "Все {{count}} дел ждут вас",
+    "allWaiting_other": "Все {{count}} дела ждут вас",
     "actions": "Другие действия",
     "openManager": "Открыть диспетчер задач"
   },

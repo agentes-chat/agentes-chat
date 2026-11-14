@@ -17892,6 +17892,8 @@
       "working": "Bezig",
       "waiting": "In afwachting"
     },
+    "allWaiting_one": "{{count}} ding wacht op jou",
+    "allWaiting_other": "Alle {{count}} dingen wachten op jou",
     "actions": "Meer acties",
     "openManager": "Taakbeheer openen"
   },

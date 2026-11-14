@@ -17645,6 +17645,8 @@
       "working": "Çalışıyor",
       "waiting": "Beklemede"
     },
+    "allWaiting_one": "{{count}} şey sizi bekliyor",
+    "allWaiting_other": "Sizi bekleyen {{count}} şeyin hepsi",
     "actions": "Diğer işlemler",
     "openManager": "Görev yöneticisini aç"
   },

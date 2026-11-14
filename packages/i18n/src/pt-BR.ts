@@ -18174,6 +18174,9 @@ export const ptBR = {
     waiting_one: "{{count}} coisa espera você",
     waiting_other: "{{count}} coisas esperam você",
     sections: { you: "Esperando você", working: "Trabalhando", waiting: "Em espera" },
+    /** Under "Esperando você", or alone: the sidebar's count of everything that waits on you, a link to that page. */
+    allWaiting_one: "{{count}} coisa espera você",
+    allWaiting_other: "As {{count}} coisas que esperam você",
     actions: "Mais ações",
     openManager: "Abrir o gerenciador",
   },

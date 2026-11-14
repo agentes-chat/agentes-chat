@@ -42982,6 +42982,12 @@
   "agora.sections.waiting": {
     "value": "On hold"
   },
+  "agora.allWaiting": {
+    "value": {
+      "one": "{{count}} thing waiting for you",
+      "other": "All {{count}} things waiting for you"
+    }
+  },
   "agora.actions": {
     "value": "More actions"
   },

@@ -18869,6 +18869,10 @@
       "working": "W pracy",
       "waiting": "Oczekuje"
     },
+    "allWaiting_one": "{{count}} rzecz czeka na ciebie",
+    "allWaiting_few": "{{count}} rzeczy czekają na ciebie",
+    "allWaiting_many": "{{count}} rzeczy czeka na ciebie",
+    "allWaiting_other": "{{count}} rzeczy czeka na ciebie",
     "actions": "Więcej akcji",
     "openManager": "Otwórz menedżer zadań"
   },

@@ -17716,6 +17716,8 @@
       "working": "In Arbeit",
       "waiting": "Wartet"
     },
+    "allWaiting_one": "{{count}} Sache wartet auf dich",
+    "allWaiting_other": "Alle {{count}} Sachen warten auf dich",
     "actions": "Weitere Aktionen",
     "openManager": "Task-Manager öffnen"
   },

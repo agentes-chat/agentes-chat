@@ -18230,6 +18230,9 @@
       "working": "Trabajando",
       "waiting": "En espera"
     },
+    "allWaiting_one": "{{count}} cosa te espera",
+    "allWaiting_many": "Las {{count}} cosas que te esperan",
+    "allWaiting_other": "Las {{count}} cosas que te esperan",
     "actions": "Más acciones",
     "openManager": "Abrir el gestor de tareas"
   },

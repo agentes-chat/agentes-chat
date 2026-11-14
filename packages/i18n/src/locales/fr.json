@@ -18373,6 +18373,9 @@
       "working": "Au travail",
       "waiting": "En attente"
     },
+    "allWaiting_one": "{{count}} chose vous attend",
+    "allWaiting_many": "Vos {{count}} choses en attente",
+    "allWaiting_other": "Vos {{count}} choses en attente",
     "actions": "Plus d'actions",
     "openManager": "Ouvrir le gestionnaire des tâches"
   },

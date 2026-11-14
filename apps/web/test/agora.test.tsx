@@ -10,6 +10,7 @@ import { formatTime } from "@agenteschat/client/lib/format";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { colorOf } from "@/components/Sky";
 import { ADA_ID, ATLAS_ID, createFakeApi, ENG_ID, type FakeState, GENERAL_ID, ORG_ID, seedState } from "./fake-api";
+import { notification } from "./fakes/notifications";
 import { renderApp, screen, settle, showIn } from "./render";
 
 /**
@@ -334,6 +335,66 @@ describe("the list", () => {
     expect(within(list()).queryAllByRole("heading")).toEqual([]);
   });
 
+  test("work only where the reader can't list it: never 'nobody works' under an orbiting button", async () => {
+    const state = seedState({
+      taskManager: {
+        tasks: [],
+        ended: [],
+        hidden: { total: 1, working: 1, byAgent: { [ATLAS_ID]: 1 } },
+        computers: [],
+        activity: {},
+      },
+    });
+    // At work in a teammate's DM with it: everyone sees the bare state.
+    state.agentStatuses = [status(ATLAS_ID, { working: true, work: work({ channelId: null, channelName: null }) })];
+    await go(state);
+    expect(agora().dataset.mark).toBe("working");
+    await click(agora());
+    expect(within(list()).queryByText("Nenhum agente trabalhando agora.")).toBeNull();
+    expect(within(list()).getByText("Mais 1 tarefa em conversas que você não vê.")).toBeTruthy();
+  });
+
+  test("what else waits on you leads to Esperando você, with the sidebar's count", async () => {
+    // A request to join and nothing of the agents': the button is amber, and the list says why.
+    const state = seedState({
+      taskManager: { tasks: [], ended: [], hidden: { total: 0, working: 0, byAgent: {} }, computers: [], activity: {} },
+    });
+    state.notifications = [notification({ id: "n-join", kind: "join_request", waiting: true })];
+    const { router } = await go(state);
+    expect(agora().dataset.mark).toBe("you");
+    await click(agora());
+    expect(within(list()).queryByText("Nenhum agente trabalhando agora.")).toBeNull();
+    const line = within(list()).getByRole("link", { name: "1 coisa espera você" });
+    expect(line.getAttribute("href")).toBe(`/org/${ORG_ID}/waiting`);
+    expect(line.closest(".agora-row")?.querySelector(".rq-wait--still")).not.toBeNull();
+    await click(line);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/waiting`);
+    expect(screen().queryByRole("dialog", { name: "Agora" })).toBeNull();
+    cleanup();
+
+    // Ada's approval waits on me among three things: under her row, the line counts them all, as the sidebar does.
+    const more = seedState({ taskManager: busy() });
+    more.notifications = ["n-approval", "n-join", "n-proposal"].map((id) =>
+      notification({ id, kind: id === "n-join" ? "join_request" : "approval", waiting: true }),
+    );
+    await go(more);
+    await click(agora());
+    const you = within(list()).getByRole("region", { name: "Esperando você" });
+    expect(
+      within(you)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual([expect.stringContaining("Ada"), "As 3 coisas que esperam você"]);
+    cleanup();
+
+    // As many as its rows: nothing more to lead to.
+    const one = seedState({ taskManager: busy() });
+    one.notifications = [notification({ id: "n-approval", kind: "approval", waiting: true })];
+    await go(one);
+    await click(agora());
+    expect(within(list()).queryByRole("link", { name: /esperam? você/ })).toBeNull();
+  });
+
   test("worst case: long names, long titles, many rows, in English with 12-hour times", async () => {
     const state = seedState({ taskManager: busy() });
     const long = "Bartolomeu Constantino de Albuquerque e Vasconcelos";
@@ -376,6 +437,10 @@ describe("the list", () => {
     await click(agora());
     expect(rowOf(`${long} ajudando a Ada`)).toBeTruthy();
     expect(rowOf(`Ada ajudando o ${long}`)).toBeTruthy();
+    // A short name stays whole beside a long phrase: the phrase ends in "…" first ("Ada ajudando o Bartolomeu Co…").
+    const css = readFileSync(join(import.meta.dir, "../src/components/agora.css"), "utf8");
+    expect(css).toContain(".agora-row__who > b:not([data-long]) {\n  flex: none;\n}");
+    expect(css).toContain(".agora-row__who:has(> b:not([data-long])) > .agora-row__phrase {\n  flex: 0 1 auto;");
     await showIn(r.services, "en");
     await settle(4);
     expect(within(list("Now")).getAllByRole("heading")[0]?.textContent).toBe("Waiting for you1");

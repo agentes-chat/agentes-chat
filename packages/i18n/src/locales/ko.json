@@ -17136,6 +17136,7 @@
       "working": "작업 중",
       "waiting": "대기 중"
     },
+    "allWaiting_other": "내 확인 대기 {{count}}개 보기",
     "actions": "더 보기",
     "openManager": "작업 관리자 열기"
   },

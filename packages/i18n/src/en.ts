@@ -18099,6 +18099,9 @@ export const en = {
     waiting_one: "{{count}} thing waiting for you",
     waiting_other: "{{count}} things waiting for you",
     sections: { you: "Waiting for you", working: "Working", waiting: "On hold" },
+    /** Under "Waiting for you", or alone: the sidebar's count of everything that waits on you, a link to that page. */
+    allWaiting_one: "{{count}} thing waiting for you",
+    allWaiting_other: "All {{count}} things waiting for you",
     actions: "More actions",
     openManager: "Open the task manager",
   },

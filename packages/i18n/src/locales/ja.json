@@ -17144,6 +17144,7 @@
       "working": "作業中",
       "waiting": "待機中"
     },
+    "allWaiting_other": "対応待ちの{{count}}件を見る",
     "actions": "その他の操作",
     "openManager": "タスクマネージャーを開く"
   },
