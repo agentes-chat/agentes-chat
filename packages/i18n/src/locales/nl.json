@@ -3827,6 +3827,32 @@
     "selected_other": "{{count}} geselecteerd",
     "create": "#{{name}} maken"
   },
+  "channelBoard": {
+    "label": "Dashboard van #{{channel}}",
+    "button": "Kanaaldashboard",
+    "show": "Dashboard tonen",
+    "hide": "Dashboard verbergen",
+    "empty": {
+      "title": "Hier nog geen dashboard",
+      "manager": "Kies een dashboard om naast #{{channel}} te houden, hetzelfde voor iedereen in het kanaal.",
+      "member": "Wie #{{channel}} beheert, kan hier een dashboard plaatsen."
+    },
+    "chooseLabel": "Dashboard",
+    "choose": "Kies een dashboard",
+    "audienceNote": "Elk lid ziet het alleen als het dashboard met hem of haar gedeeld is.",
+    "none": "Nog geen dashboards om te kiezen.",
+    "create": "Nieuw dashboard",
+    "hidden": {
+      "title": "Niet met jou gedeeld",
+      "text": "Dit kanaal heeft een dashboard dat niet met jou gedeeld is."
+    },
+    "menu": "Dashboardopties",
+    "open": "Dashboard openen",
+    "change": "Ander dashboard kiezen",
+    "remove": "Uit het kanaal halen",
+    "linked": "‘{{title}}’ staat nu naast #{{channel}}",
+    "removed": "Dashboard uit #{{channel}} gehaald"
+  },
   "channelCategories": {
     "newCategory": "Nieuwe categorie",
     "newCategoryHelp": "Komt onderaan de lijst. Je kunt hem later verslepen.",

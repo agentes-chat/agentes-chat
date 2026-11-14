@@ -3691,6 +3691,32 @@
     "selected_other": "已选 {{count}} 个",
     "create": "创建 #{{name}}"
   },
+  "channelBoard": {
+    "label": "#{{channel}} 的仪表盘",
+    "button": "频道仪表盘",
+    "show": "显示仪表盘",
+    "hide": "隐藏仪表盘",
+    "empty": {
+      "title": "这里还没有仪表盘",
+      "manager": "选择一个仪表盘放在 #{{channel}} 旁边，频道里的每个人看到的都一样。",
+      "member": "管理 #{{channel}} 的人可以在这里放一个仪表盘。"
+    },
+    "chooseLabel": "仪表盘",
+    "choose": "选择仪表盘",
+    "audienceNote": "每位成员只有在仪表盘与其共享时才能看到。",
+    "none": "还没有可选的仪表盘。",
+    "create": "新建仪表盘",
+    "hidden": {
+      "title": "未与你共享",
+      "text": "这个频道有一个未与你共享的仪表盘。"
+    },
+    "menu": "仪表盘选项",
+    "open": "打开仪表盘",
+    "change": "更换仪表盘",
+    "remove": "从频道移除",
+    "linked": "“{{title}}”现在在 #{{channel}} 旁边",
+    "removed": "已从 #{{channel}} 移除仪表盘"
+  },
   "channelCategories": {
     "newCategory": "新建分类",
     "newCategoryHelp": "会放在列表末尾，之后可以拖动调整。",

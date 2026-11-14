@@ -3701,6 +3701,32 @@
     "selected_other": "{{count}} dipilih",
     "create": "Buat #{{name}}"
   },
+  "channelBoard": {
+    "label": "Dasbor #{{channel}}",
+    "button": "Dasbor kanal",
+    "show": "Tampilkan dasbor",
+    "hide": "Sembunyikan dasbor",
+    "empty": {
+      "title": "Belum ada dasbor di sini",
+      "manager": "Pilih dasbor untuk ditampilkan di samping #{{channel}}, sama untuk semua orang di kanal.",
+      "member": "Orang yang mengelola #{{channel}} bisa memasang dasbor di sini."
+    },
+    "chooseLabel": "Dasbor",
+    "choose": "Pilih dasbor",
+    "audienceNote": "Setiap anggota hanya melihatnya jika dasbor dibagikan kepadanya.",
+    "none": "Belum ada dasbor untuk dipilih.",
+    "create": "Dasbor baru",
+    "hidden": {
+      "title": "Tidak dibagikan kepada Anda",
+      "text": "Kanal ini punya dasbor yang tidak dibagikan kepada Anda."
+    },
+    "menu": "Opsi dasbor",
+    "open": "Buka dasbor",
+    "change": "Ganti dasbor",
+    "remove": "Lepas dari kanal",
+    "linked": "“{{title}}” sekarang ada di samping #{{channel}}",
+    "removed": "Dasbor dilepas dari #{{channel}}"
+  },
   "channelCategories": {
     "newCategory": "Kategori baru",
     "newCategoryHelp": "Masuk ke akhir daftar. Kamu bisa menyeretnya nanti.",

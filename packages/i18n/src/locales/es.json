@@ -3949,6 +3949,32 @@
     "selected_other": "{{count}} seleccionados",
     "create": "Crear #{{name}}"
   },
+  "channelBoard": {
+    "label": "Panel de #{{channel}}",
+    "button": "Panel del canal",
+    "show": "Mostrar panel",
+    "hide": "Ocultar panel",
+    "empty": {
+      "title": "Aún no hay ningún panel aquí",
+      "manager": "Elige un panel para tenerlo junto a #{{channel}}, el mismo para todos en el canal.",
+      "member": "Quien gestiona #{{channel}} puede poner un panel aquí."
+    },
+    "chooseLabel": "Panel",
+    "choose": "Elegir un panel",
+    "audienceNote": "Cada miembro solo lo ve si el panel está compartido con esa persona.",
+    "none": "Aún no hay paneles para elegir.",
+    "create": "Nuevo panel",
+    "hidden": {
+      "title": "No compartido contigo",
+      "text": "Este canal tiene un panel que no está compartido contigo."
+    },
+    "menu": "Opciones del panel",
+    "open": "Abrir panel",
+    "change": "Cambiar panel",
+    "remove": "Quitar del canal",
+    "linked": "“{{title}}” ahora está junto a #{{channel}}",
+    "removed": "Panel quitado de #{{channel}}"
+  },
   "channelCategories": {
     "newCategory": "Nueva categoría",
     "newCategoryHelp": "Va al final de la lista. Puedes arrastrarla después.",

@@ -4025,6 +4025,33 @@ export const ptBR = {
     selected_other: "{{count}} selecionados",
     create: "Criar #{{name}}",
   },
+  // O painel do canal (ADR 0135 §21): a coluna ao lado da conversa, o mesmo painel para todos do canal.
+  channelBoard: {
+    label: "Painel de #{{channel}}",
+    button: "Painel do canal",
+    show: "Mostrar painel",
+    hide: "Esconder painel",
+    empty: {
+      title: "Nenhum painel aqui ainda",
+      manager: "Escolha um painel para ficar ao lado de #{{channel}}, o mesmo para todos do canal.",
+      member: "Quem gerencia #{{channel}} pode pôr um painel aqui.",
+    },
+    chooseLabel: "Painel",
+    choose: "Escolher um painel",
+    audienceNote: "Cada membro só vê o painel se ele estiver compartilhado com essa pessoa.",
+    none: "Ainda não há painéis para escolher.",
+    create: "Novo painel",
+    hidden: {
+      title: "Não compartilhado com você",
+      text: "Este canal tem um painel que não está compartilhado com você.",
+    },
+    menu: "Opções do painel",
+    open: "Abrir painel",
+    change: "Trocar painel",
+    remove: "Tirar do canal",
+    linked: "“{{title}}” agora fica ao lado de #{{channel}}",
+    removed: "Painel tirado de #{{channel}}",
+  },
   channelCategories: {
     newCategory: "Nova categoria",
     newCategoryHelp: "Entra no fim da lista. Dá para arrastar depois.",
