@@ -1214,6 +1214,8 @@
         "paperclip": "Arrastra la carpeta del paquete (la que tiene COMPANY.md), suelta un .zip de ella o pega su enlace de GitHub.",
         "agenteschat": "En el otro espacio de trabajo: Configuración → Importar y exportar → Descargar el archivo. Luego suelta aquí el .json."
       },
+      "whereOther": "Descarga el archivo del otro workspace y suelta el .json aquí.",
+      "whereOtherLink": "Descargar de {{org}}",
       "request": {
         "grok-bot": {
           "title": "Pídele a tu bot que exporte",
@@ -1877,11 +1879,10 @@
     "browser": "Este navegador",
     "phone": "Teléfono",
     "phoneOn": "En la app del teléfono, incluso con el teléfono bloqueado",
-    "phoneOff": "Actívalas en la app del teléfono, en Tú › Notificaciones",
+    "phoneOff": "Actívalas en la app del teléfono",
     "mac": "App de Mac",
     "macHelp": "Mientras la app está abierta, incluso en segundo plano",
     "on": "Activado",
-    "off": "Desactivado",
     "failed": "No se pudo guardar. Inténtalo de nuevo.",
     "loadFailed": "No se pudieron cargar tus opciones ahora.",
     "category": {
@@ -1932,7 +1933,7 @@
     },
     "inline": {
       "title": "¿Quieres saber al momento cuando {{name}} responda?",
-      "why": "Incluso con la pestaña cerrada. Cámbialo cuando quieras en Configuración › Notificaciones."
+      "why": "Incluso con la pestaña cerrada. Cámbialo cuando quieras en <link>Notificaciones</link>."
     }
   },
   "shell": {
@@ -2202,7 +2203,8 @@
     "private": "Quien escanee este código inicia sesión como tú.",
     "failed": "No se pudo generar el código.",
     "localOnly": "Este servidor solo se abre en la computadora donde se ejecuta, así que tu teléfono no llega a él.",
-    "localOnlyHow": "En la app de agentes.chat de esa computadora, activa Accede desde tu teléfono y tu equipo en Preferencias › Servidores. Luego vuelve aquí."
+    "localOnlyHow": "En la app de agentes.chat de esa computadora, activa Accede desde tu teléfono y tu equipo en Preferencias › Servidores. Luego vuelve aquí.",
+    "localOnlyHere": "Activa Accede desde tu teléfono y tu equipo. Luego vuelve aquí."
   },
   "team": {
     "title": "Equipo",
@@ -2784,7 +2786,8 @@
     "computerYours": "Tu propio espacio en la computadora del workspace. Solo tú puedes verlo o controlarlo.",
     "sharedName": "{{name}} (compartido)",
     "sharedPlace": "Se usa en canales y en trabajos que se ejecutan solos. Todo el workspace comparte este espacio. No guardes nada privado aquí.",
-    "computerNoHome": "Aún sin computadora. Tendrá una cuando este workspace tenga una computadora propia, agregada en Configuración, Computadoras.",
+    "computerNoHome": "Aún sin computadora. Tendrá una cuando este workspace tenga una computadora propia.",
+    "addComputer": "Agregar una computadora",
     "computerOneUser": "Aquí no hay computadora. La computadora del workspace ejecuta todos los agentes como un solo usuario, así que no puede separar el espacio de cada persona. Un servidor Linux instalado con la opción --system del instalador sí puede.",
     "powers": {
       "title": "Poderes del workspace",
@@ -3215,19 +3218,6 @@
       "outdated": "Actualiza la app de agentes.chat en {{computer}} para instalar desde aquí.",
       "asked": "Pedido enviado. {{name}} recibe un botón para instalarlo."
     },
-    "toolOff": {
-      "text": "{{computer}} está conectado, pero {{program}} está desactivado en él. Solo quien conectó el ordenador lo activa.",
-      "where": "En {{computer}}",
-      "one": "Haz clic en el ícono de agentes.chat <mark/> junto al reloj",
-      "oneWindows": "En Windows, puede estar detrás de la flecha ^ de la barra de tareas.",
-      "two": "Abre <b>Preferencias</b>",
-      "three": "En <b>Herramientas</b>, enciende <b>{{program}}</b>",
-      "terminal": "En la terminal de la computadora, ejecuta:",
-      "here": "Enciende <b>{{program}}</b> en <b>Herramientas</b>.",
-      "oneClick": "<b>{{program}}</b> está desactivado en este ordenador.",
-      "oneClickOther": "<b>{{program}}</b> está desactivado en el ordenador de {{name}}.",
-      "waiting": "Esperando a que lo enciendas. Esta pantalla cambia sola."
-    },
     "titleFor": "Conecta una IA para {{name}}",
     "titleFor_female": "Conecta una IA para {{name}}",
     "have": {
@@ -3359,7 +3349,15 @@
       "create": "Crea tu clave de API de {{provider}}",
       "paste": "Pégala aquí",
       "forAll": "Todos los agentes sin plan piensan con ella.",
+      "forAgent": "{{agent}} pensará con ella.",
       "saved": "Guardada. Todos los agentes sin plan piensan con ella.",
+      "savedFor": "Guardada. {{agent}} ahora piensa con {{label}}.",
+      "savedAll": "Guardada. Los agentes sin una IA propia piensan con ella.",
+      "savedMade": "Guardada. Tus agentes ahora piensan con ella en lugar de {{other}}.",
+      "savedOther": "Guardada. Tus agentes aún piensan con {{other}}.",
+      "useForAll": "Usar esta clave para todos",
+      "untested": "Ningún modelo de {{name}} ha pasado una prueba todavía.",
+      "testModels": "Probar modelos",
       "savedUnchecked": "Guardada, pero {{provider}} no respondió y la clave no se pudo comprobar. Si falla, la conversación dice por qué.",
       "closed": "Las claves de API se abren con el plan de agentes.chat del workspace.",
       "notPlan": "La clave de un plan de programación va en su propia opción, arriba.",
@@ -8277,8 +8275,8 @@
         "repoPlaceholder": "dueño/nombre",
         "oneClick": "Crear el webhook",
         "added": "Webhook creado en {{repo}}.",
-        "byHand": "O a mano: en el repositorio, Settings › Webhooks › Add webhook.",
-        "open": "En el repositorio, abre Settings › Webhooks › Add webhook.",
+        "byHand": "O créalo a mano en GitHub.",
+        "open": "Crea el webhook en el repositorio, en GitHub.",
         "openLink": "Abrir en GitHub",
         "url": "Payload URL",
         "type": "Content type: application/json",
@@ -9396,7 +9394,6 @@
       "homeHint": "La misión tiene un hilo: ahí {{name}} habla, pide decisiones y muestra su trabajo.",
       "homeHint_female": "La misión tiene un hilo: ahí {{name}} habla, pide decisiones y muestra su trabajo.",
       "offline": "{{name}} está sin conexión. El plan empieza cuando vuelva.",
-      "needsMachine": "Las misiones corren en una computadora conectada. Conecta una a {{name}} en Configuración › Dispositivos.",
       "commandHint": "También puedes empezar una escribiendo en el campo de mensaje de cualquier conversación:",
       "approvals": "Por defecto, merge, deploy y rollback piden aprobación",
       "start": "Empezar misión",
@@ -9843,6 +9840,8 @@
     "fetch": "Buscar modelos",
     "listFailed": "El servidor no listó modelos ({{error}}). Escribe abajo el id de cada modelo.",
     "choose": "Elige los modelos que los agentes pueden usar",
+    "search": "Buscar modelos",
+    "noMatch": "Ningún modelo contiene “{{query}}”.",
     "addModel": "Añadir un modelo",
     "add": "Añadir",
     "modelPlaceholder": "Id del modelo, como llama-4",
@@ -11779,8 +11778,6 @@
       "no_computer": "Elige una computadora conectada en Computadora para usarlo.",
       "exec_off": "La computadora se conectó sin permiso para ejecutar programas.",
       "runner_old": "Actualiza el programa de agentes.chat en la computadora para usarlo.",
-      "tool_off": "{{program}} está desactivado en {{computer}}. Actívalo allí, en la app de agentes.chat: Preferencias → Herramientas.",
-      "tool_offLinux": "{{program}} está desactivado en {{computer}}. Actívalo allí, en la app de agentes.chat o con {{command}}.",
       "tool_offOne": "{{program}} está desactivado en {{computer}}.",
       "not_installed": "{{program}} no está instalado en {{computer}}.",
       "cant_start": "{{program}} está en {{computer}}, pero no abre.",
@@ -11945,8 +11942,9 @@
   },
   "access": {
     "matrixTitle": "Acceso de los agentes",
-    "matrixHint": "Por defecto, las acciones sensibles (merge, deploy, compartir, pagar) piden aprobación. Para ajustarlo herramienta por herramienta, abre Herramientas en el conector.",
+    "matrixHint": "Por defecto, las acciones sensibles (merge, deploy, compartir, pagar) piden aprobación. Para ajustarlo herramienta por herramienta, abre el conector.",
     "matrixHow": "Haz clic en una celda para cambiarla:",
+    "openConnectors": "Abrir Conectores",
     "kindLabel": "Mostrar",
     "kind": {
       "connectors": "Conectores",
@@ -14507,7 +14505,8 @@
       "ask": "Pedir a {{name}}",
       "asked": "Pedido enviado. {{name}} recibe un botón para activarlo.",
       "done": "Activado en {{machine}}.",
-      "outdated": "Actualiza la app de agentes.chat en {{machine}} para activarlo desde aquí."
+      "outdated": "Actualiza la app de agentes.chat en {{machine}} para activarlo desde aquí.",
+      "offline": "{{machine}} está sin conexión. En cuanto vuelva, el botón activa {{tool}}."
     },
     "remotePause": {
       "button": "Pausar",
@@ -14565,7 +14564,7 @@
       },
       "grantHere": "Es esta {{device}}: permite carpetas en las Preferencias de la app.",
       "openFolders": "Abrir Carpetas",
-      "toolsHere": "Es esta {{device}}: activa el navegador en las Preferencias de la app, en Herramientas.",
+      "openServers": "Abrir Servidores",
       "openTools": "Abrir Herramientas",
       "reconnect": "Reconectar",
       "reconnecting": "Reconectando esta {{device}}…",
@@ -14573,8 +14572,6 @@
       "offline": "Esta {{device}} está sin conexión ahora.",
       "outageTitle": "Esta {{device}} perdió la conexión {{ago}}",
       "toolsOff": "Desactivado en esta {{device}}. Actívalo en las Preferencias de la app, en Herramientas.",
-      "browserTitle": "Activa el navegador en esta {{device}}",
-      "browserText": "Un clic en las Preferencias de la app, en Herramientas. Esta página lo nota sola.",
       "noReport": "Esta {{device}} aún no informó qué permite. Actualiza la app.",
       "update": "Actualizar la app"
     },
@@ -15090,6 +15087,7 @@
       "pairingCode": "Código de vinculación de Wi-Fi",
       "pair": "Vincular",
       "tryAgain": "Intentar de nuevo",
+      "openLocalNetwork": "Abrir Red local",
       "qrLabel": "Código QR para la Depuración inalámbrica en el teléfono",
       "qrLine": "No con la cámara",
       "qrCaption": "Ofrece una red Wi-Fi llamada agentes-…, que no existe. Deja el teléfono en la red Wi-Fi de la computadora.",
@@ -16032,6 +16030,7 @@
       "help": "Conteos como personas, agentes, tamaños de máquina, tokens de IA usados y cuántos datos envían y reciben los navegadores de los agentes. Nunca mensajes, archivos, nombres ni sitios.",
       "envOff": "Desactivado en la configuración de este servidor (TELEMETRY=off).",
       "envOffDesktop": "Desactivado en la app agentes.chat de la computadora de este servidor (Preferencias › Servidores).",
+      "envOffHere": "Desactivado en la app agentes.chat de esta computadora.",
       "see": "Ver lo que se envía",
       "dialogTitle": "Lo que se envía",
       "dialogText": "Una vez al día. Este es el próximo informe, tal cual."
@@ -18042,8 +18041,9 @@
       "meter": "Usaste {{used}} de {{limit}}.",
       "near": "Usaste {{used}} de {{limit}}. Al llegar al límite se pausan las subidas, y no se borra nada.",
       "full": "Subidas pausadas al llegar a {{limit}}. No se borró nada.",
-      "fullAdmin": "Cambia el plan de agentes.chat, borra archivos que ya no usas o conecta tu propio bucket en Configuración › Almacenamiento.",
-      "dailyFull": "Las subidas de hoy llegaron a {{limit}}. Podrás subir de nuevo en unas horas."
+      "fullAdmin": "Cambia el plan de agentes.chat, borra archivos que ya no usas o conecta tu propio bucket.",
+      "dailyFull": "Las subidas de hoy llegaron a {{limit}}. Podrás subir de nuevo en unas horas.",
+      "connectBucket": "Conectar un bucket"
     }
   },
   "computerSetup": {
@@ -18422,8 +18422,7 @@
       "touchHint": "Toca para hacer clic · Arrastra para desplazarte · Mantén presionado para arrastrar · Dos dedos para mover la vista",
       "turn": "Gira el teléfono",
       "upright": "Ponlo vertical",
-      "message": "Escribirle a {{name}}",
-      "chooseOnWeb": "Elígela en agentes.chat, en Configuración › Dispositivos."
+      "message": "Escribirle a {{name}}"
     }
   },
   "agora": {
@@ -18621,6 +18620,14 @@
       "full_other": "Llena · {{count}} en la fila",
       "room": "Tiene espacio",
       "computers": "Computadoras"
+    },
+    "capacity": {
+      "label": "Qué frena las tareas",
+      "today_one": "Hoy: {{count}} tarea terminada · {{waiting}} esperando",
+      "today_many": "Hoy: {{count}} tareas terminadas · {{waiting}} esperando",
+      "today_other": "Hoy: {{count}} tareas terminadas · {{waiting}} esperando",
+      "usage": "Ver uso",
+      "computers": "Ver computadoras"
     },
     "cards": {
       "label": "Agentes",

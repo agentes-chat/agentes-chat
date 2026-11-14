@@ -525,11 +525,7 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
             session there to read it with. */}
         <PrefRow
           title={t("desktop.server.jev")}
-          hint={hintFor(
-            t,
-            t("desktop.server.jev"),
-            t("common.joinSentences", { a: t("desktop.server.jevText"), b: t("desktop.server.jevWhere") }),
-          )}
+          hint={hintFor(t, t("desktop.server.jev"), t("desktop.server.jevText"))}
           end={
             <Button
               size="sm"

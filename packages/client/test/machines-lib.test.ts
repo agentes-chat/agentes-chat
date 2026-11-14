@@ -9,6 +9,7 @@ import {
   allowFolderCommand,
   allowsInApp,
   beginLogin,
+  brainTool,
   browserOffMessage,
   cliInstallFailure,
   cliOneClick,
@@ -45,7 +46,6 @@ import {
   sharedFolderFacts,
   sharedFolderOf,
   shellQuote,
-  toolOffReason,
   toolOnCommand,
   toolOneClick,
 } from "../src/lib/machines";
@@ -180,7 +180,7 @@ describe("connected computers helpers (ADR 0036)", () => {
     expect([android, iphone, linux, mac].map(isHandheld)).toEqual([true, true, false, false]);
   });
 
-  test("a tool turned off: the app's Preferences on a Mac or a PC, the command too elsewhere (sudo in system mode)", () => {
+  test("a tool turned off: its command (sudo in system mode), the app only on a Mac or a PC, a brain's switch by name", () => {
     expect(toolOnCommand({ mode: "single" }, "browser")).toBe("agentes-runner tools enable browser");
     expect(toolOnCommand({ mode: "system" }, "desktop")).toBe("sudo agentes-runner tools enable desktop");
     expect([allowsInApp("darwin"), allowsInApp("windows"), allowsInApp("linux"), allowsInApp("other")]).toEqual([
@@ -189,18 +189,8 @@ describe("connected computers helpers (ADR 0036)", () => {
       false,
       false,
     ]);
-    expect(toolOffReason({ os: "darwin", mode: "single" }, "claude_code")).toEqual({
-      key: "brain.reasons.tool_off",
-      command: "",
-    });
-    expect(toolOffReason({ os: "windows", mode: "single" }, "codex").key).toBe("brain.reasons.tool_off");
-    expect(toolOffReason({ os: "linux", mode: "system" }, "claude_code")).toEqual({
-      key: "brain.reasons.tool_offLinux",
-      command: "sudo agentes-runner tools enable claude",
-    });
-    expect(toolOffReason({ os: "linux", mode: "single" }, "codex").command).toBe("agentes-runner tools enable codex");
-    // Not known yet: the app's line, as before.
-    expect(toolOffReason(undefined, "codex").key).toBe("brain.reasons.tool_off");
+    expect(brainTool("claude_code")).toBe("claude");
+    expect(brainTool("opencode")).toBe("opencode");
   });
 
   test("portraits: the kind from the machine's os, the state with pause over online", () => {

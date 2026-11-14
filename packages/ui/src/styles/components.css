@@ -11123,6 +11123,18 @@ html:not([data-pointer]) .ac-effort:focus-visible .ac-effort__ramp {
 .ac-setnote + .ac-setnote {
   margin-top: 8px;
 }
+/*
+ * A note with its way out (`SettingNote`'s `action`): the line, not the note, takes the note's room above. Beside its
+ * one line of words the button centres on them, under them it starts at their edge.
+ */
+.ac-setnote-line {
+  margin-top: 12px;
+  align-items: center;
+}
+.ac-setnote-line > .ac-setnote,
+:is(.ac-form, .ac-field, .ac-dialog__body, .ac-card) > .ac-setnote-line {
+  margin: 0;
+}
 /* In a stack (a form, a field, a dialog's body, a card) the stack's gap is the room above it, as for any paragraph there. */
 :is(.ac-form, .ac-field, .ac-dialog__body, .ac-card) > .ac-setnote {
   margin: 0;

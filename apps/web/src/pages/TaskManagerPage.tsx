@@ -1,5 +1,5 @@
 import type { CanceledReturn, ComputerSummary, EndedTask, ManagedTask, PendingReturn } from "@agenteschat/client";
-import { useCancelFollowUp, useTaskManager } from "@agenteschat/client";
+import { useAiAccounts, useCancelFollowUp, useTaskManager } from "@agenteschat/client";
 import { returnClock, returnWhen } from "@agenteschat/client/lib/agent-work";
 import { listsAgent } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
@@ -23,8 +23,11 @@ import {
   tasksOf,
   taskTime,
   taskTitle,
+  taskWaitWords,
   taskWhere,
   todayStart,
+  type WaitCause,
+  waitCauses,
 } from "@agenteschat/client/lib/task-manager";
 import { formatDuration } from "@agenteschat/client/lib/work";
 import {
@@ -42,9 +45,12 @@ import {
   PageHeader,
   PixelSpinner,
   PixelStop,
+  ProviderLogo,
+  planState,
   SearchField,
   Tip,
 } from "@agenteschat/ui";
+import { useNavigate } from "@tanstack/react-router";
 import { type CSSProperties, Fragment, type ReactNode, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -78,6 +84,7 @@ import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useNow } from "@/hooks/useNow";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
+import { ownPlanLines, planNearLimit, planWord } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
 import "./task-manager.css";
 
@@ -407,6 +414,15 @@ export function TaskManagerPage({
         }
       />
 
+      {view.data && (
+        <CapacityStrip
+          tasks={all}
+          done={view.data.doneToday ?? view.data.ended.filter((e) => e.status === "done").length}
+          computers={computers}
+          onQueue={setQueueOf}
+        />
+      )}
+
       {view.isLoading && <LoadingList count={4} avatar={false} />}
       {view.isError && !view.data && <ErrorState error={view.error} onRetry={() => void view.refetch()} />}
 
@@ -655,6 +671,114 @@ export function TaskManagerPage({
         />
       )}
     </div>
+  );
+}
+
+/** Causes shown at most: the ones holding the most work. */
+const CAUSES_MAX = 3;
+
+/**
+ * Over the cards, while work waits: what got done today and how much waits, then what holds it, one row a cause
+ * (`waitCauses`) with its count and its one way out. A plan at its limit is named as the profile menu names it
+ * (`planNearLimit`) when the sign-in it waits on is one of the viewer's. Hidden when nothing waits.
+ */
+function CapacityStrip({
+  tasks,
+  done,
+  computers,
+  onQueue,
+}: {
+  tasks: ManagedTask[];
+  done: number;
+  computers: ComputerSummary[];
+  onQueue: (machineId: string) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const { org, me } = useOrg();
+  const dir = useDirectory(org.id);
+  const accounts = useAiAccounts(org.id).data;
+  const navigate = useNavigate();
+  const openTask = useOpenTask();
+  const causes = waitCauses(tasks);
+  if (causes.length === 0) return null;
+  const waiting = tasks.filter((task) => taskState(task) === "waiting").length;
+  const own = ownPlanLines(t, accounts, dir.agents, me.user.id);
+  // The wait's key ends in the sign-in it waits on (`usageWaitKey`): an account's id, or `own` for a computer's own.
+  const planOf = (key: string | null | undefined) =>
+    key ? planNearLimit(own.filter((p) => key === `plan:${p.key}:own` || key.endsWith(`:${p.key}`))) : null;
+  const usage = () =>
+    void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "usage" } });
+  const row = (cause: WaitCause) => {
+    const first = cause.tasks[0] as ManagedTask;
+    const words = taskWaitWords(t, i18n.language, first);
+    const count = t("taskManager.tasks", { count: cause.tasks.length });
+    if (cause.kind === "limit") {
+      const brain = first.brain && first.brain !== "model" ? first.brain : null;
+      const found = planOf(first.wait?.key);
+      const plan = found && planState(found.usage).state === "limited" ? found : null;
+      return {
+        lead: brain ? <ProviderLogo id={brain} size="xs" /> : <Icon name="clock" size={18} />,
+        name: plan?.name ?? words?.state ?? "",
+        fact: [(plan && planWord(t, i18n.language, plan.usage)) ?? words?.next, count].filter(Boolean).join(" · "),
+        act: t("taskManager.capacity.usage"),
+        onAct: usage,
+      };
+    }
+    if (cause.kind === "computer") {
+      const computer = computers.find((c) => c.id === cause.machineId);
+      return {
+        lead: <Icon name="computer" size={18} />,
+        name: computer?.name ?? first.machine?.name ?? "",
+        fact: cause.busy
+          ? t("taskManager.queue.full", { count: computer?.inLine || cause.tasks.length })
+          : [words?.state, count].join(" · "),
+        act: cause.busy ? t("queue.see") : t("taskManager.capacity.computers"),
+        onAct: cause.busy
+          ? () => onQueue(cause.machineId)
+          : () =>
+              void navigate({
+                to: "/org/$orgId/settings/$section",
+                params: { orgId: org.id, section: "computers" },
+              }),
+      };
+    }
+    return {
+      lead: <WaitMark />,
+      name: t("taskManager.waiting", { count: cause.tasks.length }),
+      fact: words?.next ?? "",
+      act: t("taskManager.actions.open"),
+      onAct: () => openTask(first),
+    };
+  };
+  return (
+    <section className="tm-causes" aria-label={t("taskManager.capacity.label")}>
+      <p className="tm-causes__today">{t("taskManager.capacity.today", { count: done, waiting })}</p>
+      <ul className="tm-computers__list ac-card">
+        {causes.slice(0, CAUSES_MAX).map((cause) => {
+          const r = row(cause);
+          return (
+            <li key={cause.key} className="tm-computer tm-cause">
+              <span className="tm-computer__icon" aria-hidden="true">
+                {r.lead}
+              </span>
+              <Tip
+                className="tm-computer__text tm-cause__text"
+                tip={rowTip(r.name, [r.fact])}
+                look="ac-msg__tip tm-tip"
+              >
+                <b>{r.name}</b>
+                <small>{r.fact}</small>
+              </Tip>
+              <Tip button look="ac-msg__tip tm-tip" tip={rowTip(r.name, [r.fact])}>
+                <Button variant="link" aria-label={`${r.act}: ${r.name}`} onClick={r.onAct}>
+                  {r.act}
+                </Button>
+              </Tip>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

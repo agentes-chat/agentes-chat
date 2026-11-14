@@ -235,7 +235,7 @@
       "start": "이 {{device}}에서 agentes.chat이 시작되지 않았어요.",
       "database": "데이터베이스가 준비되지 않았어요.",
       "account": "계정이 만들어지지 않았어요.",
-      "retry": "환경설정 › 서버에서 다시 시도해 주세요."
+      "retry": "환경설정에서 다시 시도"
     },
     "reason": {
       "https": "Tailscale 네트워크에서 HTTPS가 꺼져 있어요",
@@ -328,7 +328,6 @@
     "usageRestart": "바꾸면 agentes.chat이 잠깐 다시 시작돼요.",
     "jev": "Jev",
     "jevText": "TypeSafe의 빠른 모델이에요. 누가 답할지 고르고, 메모리를 정리하고, 에이전트가 화면을 볼 수 있게 해요. 선택 사항이며 내 키로 사용해요.",
-    "jevWhere": "agentes.chat › 설정 › AI와 사용량에 있어요.",
     "reachFailed": "내 기기에서 접속이 켜지지 않았어요: {{reason}}.",
     "backup": "지금 백업",
     "backedUp": "백업 완료: {{file}}",
@@ -425,7 +424,9 @@
     "linkBody": "요청한 적이 없다면 나중에를 선택하세요.",
     "waiting": "{{by}}님이 들여보내 주기를 기다리는 중…",
     "done": "{{org}}에 연결됨",
-    "expired": "이 링크는 만료됐어요. 설정 › 기기에서 새로 만드세요.",
+    "addFolders": "폴더 추가",
+    "expired": "이 링크는 만료됐어요. 기기에서 새로 만드세요.",
+    "openDevices": "기기 열기",
     "denied": "{{by}}님이 들여보내 주지 않았어요. 바뀐 것은 없어요.",
     "letOrg": "{{org}}의 에이전트가 이 {{device}}를 사용하게 하기",
     "canUse": "에이전트가 사용할 수 있어요",

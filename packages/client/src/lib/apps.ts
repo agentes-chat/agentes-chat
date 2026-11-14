@@ -12,6 +12,7 @@ import type {
 } from "../api/types";
 import { billingHoldOf, standingActive } from "./billing";
 import { formatShortDate, joinNames, relativeTime } from "./format";
+import { webSettingsUrl } from "./server";
 
 /*
  * AI apps (ADR 0119) in words and marks, for the web and the phone alike: which mark stands for an app, how long a
@@ -42,8 +43,7 @@ export function appMark(app: {
 }
 
 /** Where "Conectar um app" opens from the phone: Settings → AI apps on the web. */
-export const appsSettingsUrl = (serverUrl: string, orgId: string) =>
-  `${serverUrl.replace(/\/+$/, "")}/org/${encodeURIComponent(orgId)}/settings/apps`;
+export const appsSettingsUrl = (serverUrl: string, orgId: string) => webSettingsUrl(serverUrl, orgId, "apps");
 
 /** The longest name shown whole; past it the name is cut, with the whole of it in a tooltip. */
 export const APP_NAME_CHARS = 40;

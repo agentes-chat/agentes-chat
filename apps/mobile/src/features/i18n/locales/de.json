@@ -2072,7 +2072,8 @@
     "everyoneFailed": "Der Zugriff für alle ließ sich nicht ändern. Versuch es noch einmal.",
     "disconnectFailed": "{{name}} ließ sich nicht trennen. Versuch es noch einmal.",
     "needsReconnect": "Das Konto bei {{name}} funktioniert nicht mehr. Agenten können es erst nutzen, wenn jemand es neu verbindet.",
-    "noTools": "Die Tools von {{name}} ließen sich nicht lesen. Die Agenten haben sie erst wieder, wenn sie unter Tools neu gelesen werden.",
+    "noTools": "Die Tools von {{name}} ließen sich nicht lesen. Die Agenten haben sie erst wieder, wenn sie neu gelesen werden.",
+    "readAgain": "Erneut lesen",
     "accountTitle": "Konto",
     "renameFailed": "Umbenennen hat nicht geklappt. Versuch es noch einmal.",
     "whoTitle": "Wer es nutzt",
@@ -2472,7 +2473,7 @@
     },
     "import": {
       "title": "Von einem Computer importieren",
-      "text": "Um Passwörter aus einem Browser oder Passwort-Manager zu übernehmen, öffne im Web Einstellungen, Vault und wähle Importieren."
+      "text": "Um Passwörter aus einem Browser oder Passwort-Manager zu übernehmen, importiere sie im Web."
     },
     "connections": {
       "text": "Verbinde einen Passwort-Manager, und deine Agenten verwenden die Logins, die dort liegen. Nichts wird kopiert: Ein Passwort wird erst gelesen, wenn es gebraucht wird.",

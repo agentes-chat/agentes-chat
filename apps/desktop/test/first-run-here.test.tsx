@@ -532,7 +532,7 @@ describe("Setting it up here", () => {
           expect(words).toContain("Give that permission once, in the terminal:");
           // The step first, then where to try again: under the command, last.
           expect(words.indexOf("sudo tailscale set --operator=$USER")).toBeGreaterThan(words.indexOf("terminal:"));
-          expect(words.endsWith("Copy Try again in Preferences\u00a0›\u00a0Servers.")).toBe(true);
+          expect(words.endsWith("Copy Try again in Preferences")).toBe(true);
           expect(setup.querySelector(".dk-fr__cmd + .dk-fr__retry")).not.toBeNull();
           // Tailscale's words and their command, 60 px more than the window shows: the room above gives those 60.
           rest = 512;
@@ -574,10 +574,14 @@ describe("Setting it up here", () => {
           const problem = el.querySelector(".dk-fr__problem") as HTMLElement;
           expect({ reason, words: problem.textContent }).toEqual({
             reason,
-            words: expect.stringContaining(`${fix} Try again in Preferences › Servers.`),
+            words: expect.stringContaining(`${fix} Try again in Preferences`),
           });
           // Last: nothing follows it in the problem's words.
-          expect(problem.querySelector(".dk-fr__retry")?.nextSibling).toBeNull();
+          const retry = problem.querySelector(".dk-fr__retry") as HTMLButtonElement;
+          expect(retry.nextSibling).toBeNull();
+          // It opens Preferences on Servers, where reach is turned on again.
+          await act(async () => retry.click());
+          expect(localStorage.getItem("agentes.desktop.prefsTab")).toBe('"servers"');
         },
         { here: { fail: "reach", reason, pace: 10 } },
       );

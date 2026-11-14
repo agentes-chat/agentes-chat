@@ -2608,8 +2608,11 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         log("agents.addCredential", orgId, { ...input, apiKey: "[redacted]" });
         if (state.keyRefusal)
           throw new ApiError(400, state.keyRefusal, "The provider didn't accept this key.", state.keyRefusalParams);
+        // The counter starts again with each fake: never the id of a key the seed already has.
+        let credId = id("cred");
+        while (state.credentials.some((c) => c.id === credId)) credId = id("cred");
         const cred: Credential = {
-          id: id("cred"),
+          id: credId,
           provider: input.provider,
           label: input.label,
           keyHint: input.apiKey.slice(-4),
@@ -2641,6 +2644,13 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       removeCredential: async (orgId, credentialId, purge, release) => {
         log("agents.removeCredential", orgId, credentialId, purge, release);
         state.credentials = state.credentials.filter((c) => c.id !== credentialId);
+      },
+      makeDefaultCredential: async (orgId, credentialId) => {
+        log("agents.makeDefaultCredential", orgId, credentialId);
+        const cred = state.credentials.find((c) => c.id === credentialId);
+        if (!cred) throw new ApiError(404, "not_found", "Credential not found");
+        state.defaultCredentialId = credentialId;
+        return { ...cred };
       },
       checkCredential: async (orgId, credentialId) => {
         log("agents.checkCredential", orgId, credentialId);
