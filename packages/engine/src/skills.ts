@@ -1,5 +1,6 @@
 import type { BlobStoreResolver, PubSub } from "@agenteschat/adapters";
 import { and, asc, type Database, eq, gt, inArray, isNull, lte, schema, sql } from "@agenteschat/db";
+import { SKILL_ASSET_BYTES, SKILL_TEXT_BYTES } from "@agenteschat/tokens/skills";
 import { getAgent } from "./agents";
 import { recordAudit } from "./audit";
 import { mapInBatches } from "./batches";
@@ -27,8 +28,8 @@ export type SkillRow = typeof skills.$inferSelect;
  */
 export const SKILL_LIMITS = {
   maxFiles: 3000,
-  maxBytes: 16 * 1024 * 1024,
-  assetBytes: 40 * 1024 * 1024,
+  maxBytes: SKILL_TEXT_BYTES,
+  assetBytes: SKILL_ASSET_BYTES,
   imageBytes: 3_750_000,
   bodyChars: 200_000,
   fileReadChars: 40_000,
