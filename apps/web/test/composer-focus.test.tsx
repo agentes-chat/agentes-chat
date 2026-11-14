@@ -131,6 +131,18 @@ test("a letter typed on the conversation goes into the box; Space, arrows and sh
   await key(document.body, { key: "é" });
   expect(document.activeElement).toBe(el);
 
+  // A side panel over the conversation (an agent's page) keeps its keys.
+  const side = document.createElement("aside");
+  side.className = "thread-panel";
+  const tab = document.createElement("button");
+  side.append(tab);
+  list.append(side);
+  await away();
+  tab.focus();
+  await key(tab, { key: "m" });
+  expect(document.activeElement).toBe(tab);
+  side.remove();
+
   // Another field keeps its keys.
   const search = document.createElement("input");
   document.body.append(search);

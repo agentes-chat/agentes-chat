@@ -1044,6 +1044,9 @@ function ChannelView({
       // The innermost conversation the key landed in (a thread's panel sits inside its channel); none: the page's.
       const at = e.target instanceof Element ? e.target.closest(".shell__main--chat") : null;
       if (at ? at !== root.current : chrome?.panel || e.target !== document.body) return;
+      // A side panel over it (an agent's page, the search's results, its tasks) is not the conversation.
+      const side = at && (e.target as Element).closest(".thread-panel");
+      if (side && at.contains(side)) return;
       if (mayTakeFocus()) focusAtEnd(box);
     };
     window.addEventListener("keydown", onKey);
