@@ -248,9 +248,12 @@ export async function resumeRunsWaitingForMachine(
         eq(agentRuns.status, "waiting_input"),
         // The computer coming back says nothing about a plan's limit or a budget.
         sql`coalesce(${agentRuns.transcript}->'waitingForBrain'->>'code', '') not in ('plan_limit', 'budget', 'usage_pause')`,
+        // `last_used_at` too: only a turn that answered sets it, and older rows of other CLIs than Claude Code have
+        // no `last_success_at`.
         sql`not (${agentRuns.transcript} ? 'outage' and exists (select 1 from agents a join machine_accounts ma
           on ma.org_id = a.org_id and ma.id = a.brain_account_id
-          where a.org_id = ${agentRuns.orgId} and a.id = ${agentRuns.agentId} and ma.last_success_at is null))`,
+          where a.org_id = ${agentRuns.orgId} and a.id = ${agentRuns.agentId}
+          and coalesce(ma.last_success_at, ma.last_used_at) is null))`,
       ),
     )
     .limit(200);

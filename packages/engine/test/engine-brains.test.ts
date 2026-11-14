@@ -3040,10 +3040,11 @@ test("woken before its resume, a run parked on its CLI's failure keeps one resum
   await f.db.update(schema.agents).set({ brainAccountId: account }).where(eq(schema.agents.id, f.agent.id));
   expect(await resumeRunsWaitingForMachine(f.db, machineId)).toEqual([]);
 
-  // One that answered before: woken, it fails again and parks with one resume, the earlier one replaced.
+  // One that answered before (a row from before every CLI kept `lastSuccessAt`: `lastUsedAt` alone): woken, it fails
+  // again and parks with one resume, the earlier one replaced.
   await f.db
     .update(schema.machineAccounts)
-    .set({ lastSuccessAt: new Date() })
+    .set({ lastUsedAt: new Date() })
     .where(eq(schema.machineAccounts.id, account));
   expect(await resumeRunsWaitingForMachine(f.db, machineId)).toEqual([run?.id ?? ""]);
   await f.db.update(schema.agents).set({ brainAccountId: null }).where(eq(schema.agents.id, f.agent.id));
