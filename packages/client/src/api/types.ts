@@ -543,8 +543,15 @@ export interface InvitationPreview {
    * being deleted).
    */
   logo?: string;
-  /** The organization's first agents ("Theo, Ada, Lia e Atlas já trabalham lá"). */
+  /**
+   * The organization's first agents ("Theo, Ada, Lia e Atlas já trabalham lá"), an email invitation's own first
+   * (ADR 0184).
+   */
   agents?: { id: string; name: string; appearance: { color: string; eyes: string; accessory: string } | null }[];
+  /** An email invitation: how many of `agents`, from the first, it starts the person with ("Max vai trabalhar com você"). */
+  yours?: number;
+  /** An email invitation: the cargos it gives (ADR 0184); empty, a member. Absent from an older server. */
+  roles?: { name: string; color: string; icon: string }[];
   /** How many more agents work there than `agents` names ("… e mais 2 já trabalham lá"). */
   moreAgents?: number;
   /**
@@ -558,7 +565,10 @@ export interface InvitationPreview {
   expiresAt?: string;
   /** An email invitation: how its address signs in, so the page asks only what is missing (ADR 0090). */
   account?: { exists: boolean; password: boolean; providers: ("google" | "github" | "apple")[] };
-  /** An email invitation to a workspace with no seat left, said before anyone makes an account (ADR 0090). */
+  /**
+   * An email invitation to a workspace with no seat left, said before anyone makes an account (ADR 0090); a link that
+   * took all the people it may, said before anyone asks (ADR 0184).
+   */
   full?: true;
 }
 
@@ -624,12 +634,52 @@ export interface InviteLink {
   /** Null for a link made before links could be shown again: it can only be turned off. */
   url: string | null;
   expiresAt: string;
+  /** "Não expira" (ADR 0184): `expiresAt` is a date far away. */
+  neverExpires?: true;
   createdAt: string;
   /** Who made it (their name). */
   createdBy: string | null;
+  createdByUserId?: string | null;
   /** Requests made through it, still waiting. */
   waiting: number;
+  /** The workspace's own link, made with no choices (ADR 0184). Absent from an older server: it is. */
+  plain?: boolean;
+  /** What an approval starts on (ADR 0184): its cargos, channels and agents. */
+  roleIds?: string[];
+  channelIds?: string[];
+  agentIds?: string[];
+  /** The people it takes; null: no limit. */
+  maxUses?: number | null;
+  /** People approved through it so far. */
+  uses?: number;
 }
+
+/** What a link gives and how long it works (ADR 0184); an omitted part stays as it is. */
+export interface InviteLinkChoices {
+  roleIds?: string[];
+  channelIds?: string[];
+  agentIds?: string[];
+  /** 1, 5, 10, 25, 50 or 100; null: no limit. */
+  maxUses?: number | null;
+  expiresIn?: InviteLinkTtl;
+}
+
+export type InviteLinkTtl = "30m" | "1h" | "1d" | "7d" | "30d" | "never";
+
+/** A link as made or changed: its address and what it gives. */
+export interface InviteLinkMade {
+  id: string;
+  url: string;
+  expiresAt: string;
+  neverExpires?: true;
+  roleIds?: string[];
+  channelIds?: string[];
+  agentIds?: string[];
+  maxUses?: number | null;
+}
+
+/** A link as changed: `url` is null for one made before links could be shown again. */
+export type InviteLinkChanged = Omit<InviteLinkMade, "url"> & { url: string | null };
 
 /** Someone who asked to join through a link, waiting for an admin (ADR 0068). */
 export interface JoinRequest {
@@ -647,6 +697,18 @@ export interface JoinRequest {
   confirmed: boolean;
   /** The member who suggested this person (their name, ADR 0090): it came through no link. */
   suggestedBy?: string | null;
+  /**
+   * The link it came through (ADR 0184): who made it, and the cargos, channels and agents an approval starts on.
+   * `full`: it took all its people, so approving is refused (`join.link_full_approval`) until its maximum grows.
+   */
+  link?: {
+    id: string;
+    createdBy: string | null;
+    roleIds: string[];
+    channelIds: string[];
+    agentIds: string[];
+    full: boolean;
+  } | null;
   createdAt: string;
   /** Closes unanswered after this. */
   expiresAt: string;
@@ -2669,6 +2731,8 @@ export interface InvitationWithStatus {
   roleIds?: string[];
   /** Channels it adds them to, besides #general (ADR 0090). */
   channelIds?: string[];
+  /** Agents they start with (ADR 0184). */
+  agentIds?: string[];
   status: "pending" | "expired";
   expiresAt: string;
   createdAt: string;
@@ -2678,12 +2742,13 @@ export interface InvitationWithStatus {
   url?: string | null;
 }
 
-/** What the invite dialog sends (ADR 0090): each address with its roles, the channels and the note for all. */
+/** What the invite dialog sends (ADR 0090, 0184): the addresses, and the cargos, channels, agents and note for all. */
 export interface InviteBatch {
   emails?: string[];
   invites?: { email: string; roleIds?: string[] }[];
   roleIds?: string[];
   channelIds?: string[];
+  agentIds?: string[];
   note?: string;
 }
 
@@ -7124,6 +7189,16 @@ export interface ManagedTask {
   } | null;
   /** Why a `waiting_input` run waits (absent on an older server). */
   wait?: TaskWait | null;
+  /**
+   * How it stands for you, as an agent's line says it (ADR 0084 addendum), and since when by the lists' clock. Null:
+   * it waits on its plan or budget (`held`). Absent on an older server.
+   */
+  work?: {
+    state: AgentWorkState;
+    since: string;
+    /** The card it waits on, when it waits on a person: its message, where its row opens. */
+    card: string | null;
+  } | null;
 }
 
 /** What a task waits on, in the words the apps need to say why. */

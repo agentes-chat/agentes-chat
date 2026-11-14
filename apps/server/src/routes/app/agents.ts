@@ -123,6 +123,7 @@ import {
   ProviderId,
   SetupStep,
   Usage,
+  WorkState,
 } from "./schemas";
 
 const tags = ["Agents"];
@@ -825,12 +826,10 @@ export function agentRoutes(deps: AppDeps) {
                 }),
                 work: z
                   .object({
-                    state: z
-                      .enum(["you", "working", "approval", "answer", "computer", "outage", "queued", "later"])
-                      .openapi({
-                        description:
-                          "`you`: it waits on your decision (you may decide its approval) or your answer; `working`; waiting on someone else's approval or answer, on its computer or its AI provider; `queued`: in line; `later`: nothing on, and a return it set comes at `at` where you read.",
-                      }),
+                    state: WorkState.openapi({
+                      description:
+                        "`you`: it waits on your decision (you may decide its approval) or your answer; `working`; waiting on someone else's approval or answer, on its computer or its AI provider; `queued`: in line; `later`: nothing on, and a return it set comes at `at` where you read.",
+                    }),
                     ask: z.enum(["approval", "answer"]).nullable().openapi({ description: "With `you`: on what." }),
                     since: z.string().openapi({
                       description:

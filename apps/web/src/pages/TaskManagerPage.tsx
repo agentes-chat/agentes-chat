@@ -45,15 +45,7 @@ import {
   SearchField,
   Tip,
 } from "@agenteschat/ui";
-import {
-  type ButtonHTMLAttributes,
-  type CSSProperties,
-  Fragment,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type CSSProperties, Fragment, type ReactNode, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -67,6 +59,8 @@ import { colorOf } from "@/components/Sky";
 import {
   heatOf,
   ProgramStack,
+  RowName,
+  rowTip,
   StopAllConfirm,
   StopTaskButton,
   TaskMark,
@@ -98,16 +92,6 @@ import "./task-manager.css";
 
 /** Points on a card's line: the last half hour, one per minute. */
 const LINE_POINTS = 30;
-
-/** A row's tip: its words whole, the title first, one fact a line. */
-const rowTip = (title: string, lines: string[]) => (
-  <>
-    <b>{title}</b>
-    {lines.map((line) => (
-      <span key={line}>{line}</span>
-    ))}
-  </>
-);
 
 /** A row's stop that asks first: the square alone, its words on hover and for screen readers (`what`: whose). */
 const stopSquare = (words: string, what?: string) => (
@@ -711,27 +695,6 @@ function TaskSection({
       <TaskWaitLines tasks={tasks} />
       <ul className="tm-list">{children}</ul>
     </section>
-  );
-}
-
-/**
- * A row's words and its press: the title, then what it is about in quiet type, on one line that ends in "…" when it
- * doesn't fit. Whole in its tip (a resting pointer, the keys' focus, a long press) and, for screen readers, in the
- * button's description: `tip` is what the row leaves out or cuts.
- */
-function RowName({
-  title,
-  sub,
-  tip,
-  ...button
-}: { title: string; sub?: string | null; tip: string[] } & ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <Tip button look="ac-msg__tip tm-tip" tip={rowTip(title, tip)}>
-      <button type="button" className="tm-hit" aria-label={title} aria-description={tip.join(". ")} {...button}>
-        {title}
-        {sub && <small>{sub}</small>}
-      </button>
-    </Tip>
   );
 }
 

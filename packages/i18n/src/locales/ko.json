@@ -3740,7 +3740,10 @@
     "yourApproval": "내 승인",
     "yourAnswer": "내 답변",
     "later": "후속 확인 {{when}}",
-    "laterShort": "후속 확인"
+    "laterShort": "후속 확인",
+    "plan": "요금제 초기화 대기 중",
+    "budget": "예산 초기화 대기 중",
+    "stopping": "중지하는 중…"
   },
   "followUps": {
     "when": {
@@ -13087,6 +13090,8 @@
     },
     "join": {
       "linkClosed": "이 링크는 더 이상 작동하지 않아요. 보낸 사람에게 새 링크를 요청하세요.",
+      "linkFull": "이 링크로 들어올 수 있는 인원이 이미 다 찼어요. 보낸 사람에게 새 링크를 요청하세요.",
+      "linkFullApproval": "이 요청의 링크로 들어올 수 있는 인원이 이미 다 찼어요. 승인하려면 링크의 최대 인원을 늘리세요.",
       "full": "이 워크스페이스에 대기 중인 요청이 많아요. 나중에 다시 시도하거나 그곳 사람에게 초대를 요청하세요.",
       "rateLimited": "이곳에서 보낸 요청이 너무 많아요. 1시간 후에 다시 시도하세요.",
       "linkBusy": "지난 1시간 동안 이 링크로 요청한 사람이 많아요. 나중에 다시 시도하세요.",
@@ -17131,6 +17136,19 @@
       "message": "{{name}}에게 메시지 보내기",
       "chooseOnWeb": "agentes.chat의 설정 › 기기에서 선택하세요."
     }
+  },
+  "agora": {
+    "label": "지금",
+    "working_other": "에이전트 {{count}}개 작업 중",
+    "waiting_other": "{{count}}개 내 확인 대기",
+    "sections": {
+      "you": "내 확인 대기",
+      "working": "작업 중",
+      "waiting": "대기 중"
+    },
+    "allWaiting_other": "내 확인 대기 {{count}}개 보기",
+    "actions": "더 보기",
+    "openManager": "작업 관리자 열기"
   },
   "taskManager": {
     "title": "작업 관리자",
