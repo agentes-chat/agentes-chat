@@ -33,6 +33,7 @@ import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, holdText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { NAMES_SHOWN, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { brainTool } from "@agenteschat/client/lib/machines";
 import {
   type AiChoice,
   ALL_AGENTS,
@@ -103,6 +104,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
+import { ToolOffWayOut } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
 import { KeyMismatch, KeyRefused, ProviderSelect } from "@/components/ProviderKey";
 import { managedOf, SetupProgress, useSetupWait, useWaitReader } from "@/components/WorkspaceComputer";
@@ -111,7 +113,6 @@ import { planWord } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
 import { AddAccount, OpenPage, Step, StepTitle } from "./AddAccountFlow";
 import { PlanReplies, usePlanRepliesShown } from "./PlanReplies";
-import { ToolOffSteps } from "./ToolOffSteps";
 
 /*
  * One picker wherever an AI is connected (the setup's AI step, Connect an AI, Settings › AI accounts): for one agent
@@ -419,6 +420,7 @@ export function ExistingRows({
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
+  const machines = useMachines(org.id, gates.edition !== null);
   const {
     rows: found,
     busy,
@@ -443,13 +445,20 @@ export function ExistingRows({
     const gate = gates.gateOf(planOfAccount(r.choice.login));
     return gateDims(gate) ? [{ gate, kind: r.choice.login.kind }] : [];
   })[0];
+  const dimmedOn = machines.data?.find((m) => m.id === view.computer?.machineId);
   const dimmedWhy =
     dimmed &&
     dimmedLine(t, dimmed.gate, {
       ...dimmed,
       edition: gates.edition,
       computer: computerName(t, org.name, managedNamed(view.computer), isPersonal(org)),
+      machine: dimmedOn,
     });
+  // A program off there: its way out under the line, as in its plan's panel.
+  const dimmedOff =
+    dimmed?.gate.state === "unsupported" && dimmed.gate.reason === "tool_off" && dimmedOn?.kind !== "managed"
+      ? dimmedOn
+      : undefined;
   const items = rows.map((r) => {
     if (r.kind === "key") {
       const k = r.key;
@@ -517,7 +526,8 @@ export function ExistingRows({
     <>
       <p className="ai-picker__or">{named ? t("connectAi.have.titleFor", g) : t("connectAi.have.title")}</p>
       {items}
-      {dimmedWhy && <SettingNote icon="alert">{dimmedWhy}</SettingNote>}
+      {dimmedWhy && <SettingNote icon={dimmedOff ? "computer" : "alert"}>{dimmedWhy}</SettingNote>}
+      {dimmed && dimmedOff && <ToolOffWayOut machine={dimmedOff} tool={brainTool(dimmed.kind)} />}
       {refused && <KeyRefused refusal={refused} />}
       {lends && <p className="ai-picker__or ai-picker__or--note">{t("agentPage.work.brain.accountOthers")}</p>}
       {onManageKeys && rows.some((r) => r.kind === "key") && (
@@ -1592,13 +1602,12 @@ function GateWait({
   const machines = useMachines(org.id, edition !== null);
   const preparing = gate.state === "preparing" ? gate.view : null;
   const { eta, email } = useSetupWait(preparing, reader.held);
-  const useKey = (
-    <span>
-      <Button size="sm" onClick={onKey}>
-        {t("connectAi.wait.useKey")}
-      </Button>
-    </span>
+  const keyButton = (
+    <Button size="sm" onClick={onKey}>
+      {t("connectAi.wait.useKey")}
+    </Button>
   );
+  const useKey = <span>{keyButton}</span>;
   const line = (lead: ReactNode, text: string) => (
     <p className="setup-line ac-iconline" role="status">
       {lead}
@@ -1606,15 +1615,9 @@ function GateWait({
     </p>
   );
   const hold = holdText(t, org.standing);
+  const row = machines.data?.find((m) => m.id === machineId);
   // Offline or unsupported: what's going on there and what comes next (on the Cloud, by itself as events arrive).
-  const why = gateLine(t, {
-    gate,
-    edition,
-    kind,
-    computer,
-    hold,
-    machine: machines.data?.find((m) => m.id === machineId),
-  });
+  const why = gateLine(t, { gate, edition, kind, computer, hold, machine: row });
   let wait: ReactNode = null;
   if (gate.state === "loading") wait = <Spinner />;
   else if (gate.state === "billing") {
@@ -1663,20 +1666,21 @@ function GateWait({
     );
   } else if (gate.state === "offline" && hostConnecting && !signingIn) {
     wait = line(<Spinner size={14} />, t("connectAi.wait.connecting"));
-  } else if (gate.state === "unsupported" && gate.reason === "tool_off" && edition !== "cloud" && !hold) {
-    // The computer is connected and its program is there, switched off: said as that, then the way to its switch
-    // (`ToolOffSteps`).
-    const program = t(`brain.card.${kind}`);
+  } else if (
+    why &&
+    gate.state === "unsupported" &&
+    gate.reason === "tool_off" &&
+    row &&
+    row.kind !== "managed" &&
+    !hold
+  ) {
+    // Switched off on a computer a person connected: said as that, then its way out beside the key.
     wait = (
       <>
-        <p className="setup-line">{t("connectAi.toolOff.text", { computer, program })}</p>
-        <ToolOffSteps
-          computer={computer}
-          machineId={machineId}
-          kind={kind === "claude_code" ? "claude" : kind}
-          program={program}
-        />
-        {useKey}
+        <SettingNote icon="computer">{why.text}</SettingNote>
+        <ToolOffWayOut machine={row} tool={brainTool(kind)}>
+          {keyButton}
+        </ToolOffWayOut>
       </>
     );
   } else if (why && !(gate.state === "offline" && signingIn)) {
@@ -1706,7 +1710,7 @@ function GateWait({
       </>
     );
   } else if (gate.state === "locked") {
-    const pairer = machines.data?.find((m) => m.id === machineId)?.pairedBy?.name.split(" ")[0];
+    const pairer = row?.pairedBy?.name.split(" ")[0];
     wait = (
       <SettingNote icon="lock">
         {gate.who === "computer"

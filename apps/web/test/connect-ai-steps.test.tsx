@@ -119,6 +119,7 @@ async function connect({
   role,
   ada: adaRow,
   accounts = [],
+  paired = false,
 }: {
   computers?: AiComputer[];
   setup?: Partial<ComputerSetup>;
@@ -136,6 +137,8 @@ async function connect({
   ada?: Partial<Agent>;
   /** Walter's accounts on the computers (`/ai-accounts`). */
   accounts?: AiAccounts["accounts"];
+  /** With `setup` (the Cloud): a computer a person connected too, as without it. */
+  paired?: boolean;
 } = {}) {
   const state = seedState();
   const workspace = state.me?.organizations[0];
@@ -152,7 +155,7 @@ async function connect({
   const api = createFakeApi(state);
   const machines = fakeMachinesOf.get(api);
   if (setup) machines?.setSetup(setup);
-  else
+  if (!setup || paired)
     machines?.pair({
       id: "machine_1",
       name: "MacBook",
@@ -913,33 +916,41 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(payWith(dialog, "Com chave de API").getAttribute("aria-checked")).toBe("true");
   });
 
-  test("a plan whose tool is off on its computer: what it means, then three plain steps, or the command on Linux", async () => {
-    const reason = async (os: string, name: string) => {
+  test("a plan whose program is off on its computer: the cause alone, then one way out by whose computer it is", async () => {
+    const panel = async (machine: Partial<Machine>, name = "MacBook") => {
       cleanup();
       const options = fakeAgentBrain(ADA_ID).options.map((o) =>
         o.kind === "codex" ? { ...o, available: false, reason: "tool_off" as const } : o,
       );
-      const { dialog, choose } = await connect({
-        machine: { os, name, mode: "system" },
+      const { dialog, choose, state } = await connect({
+        machine: { os: "darwin", name, ...machine },
         brain: { computer: { machineId: "machine_1", name, online: true }, options },
       });
       await choose("ChatGPT");
-      return dialog.textContent;
+      return { dialog, state, button: (label: string) => within(dialog).queryByRole("button", { name: label }) };
     };
-    const server = await reason("linux", "Servidor");
-    expect(server).toContain("O Servidor está conectado, mas o Codex está desligado nele.");
-    expect(server).toContain("No Servidor");
-    expect(server).toContain("No terminal do computador, rode:");
-    expect(server).toContain("sudo agentes-runner tools enable codex");
-    const mac = await reason("darwin", "MacBook");
-    expect(mac).toContain("O MacBook está conectado, mas o Codex está desligado nele.");
-    expect(mac).toContain("Clique no ícone do agentes.chat");
-    expect(mac).toContain("Abra Preferências");
-    expect(mac).toContain("Em Ferramentas, ligue Codex");
-    // The arrow of hidden icons is a PC's.
-    expect(mac).not.toContain("No Windows");
-    expect(mac).toContain("Esperando você ligar. Esta tela muda sozinha.");
-    expect(mac).toContain("Usar uma chave de API agora");
+    // Whoever connected it turns it on from here, beside the key. Never a path to a settings screen.
+    let p = await panel({ accessAllow: true });
+    expect(p.dialog.textContent).toContain("O Codex está desligado no MacBook.");
+    expect(p.dialog.textContent).not.toMatch(/Preferências|Ferramentas|Ligue lá/);
+    expect(p.button("Usar uma chave de API agora")).toBeTruthy();
+    await click(p.button("Ligar o Codex") as HTMLElement);
+    expect(calls(p.state, "machines.allowTool").map((c) => c.args[2])).toEqual(["codex"]);
+    // Offline: the button waits for it, and one line says so.
+    p = await panel({ accessAllow: true, online: false });
+    expect(p.dialog.textContent).toContain("O MacBook está offline. Assim que ele voltar, o botão liga o Codex.");
+    expect((p.button("Ligar o Codex") as HTMLButtonElement).disabled).toBe(true);
+    // Someone else's computer: they ask whoever connected it.
+    p = await panel({ accessAllow: true, pairedBy: { id: "u-rui", name: "Rui Prado" } });
+    expect(p.button("Ligar o Codex")).toBeNull();
+    await click(p.button("Pedir a Rui") as HTMLElement);
+    expect(calls(p.state, "machines.askTool")).toHaveLength(1);
+    // An app too old to switch from afar: update it there. On a server, the command too, behind "Prefiro no Terminal".
+    p = await panel({ os: "linux", mode: "system" }, "Servidor");
+    expect(p.dialog.textContent).toContain("Atualize o app do agentes.chat no Servidor para ligar daqui.");
+    expect(p.dialog.textContent).toContain("Prefiro no Terminal");
+    expect(p.dialog.textContent).toContain("sudo agentes-runner tools enable codex");
+    expect(p.button("Ligar o Codex")).toBeNull();
   });
 
   test("self-host with no computer for the agent: plans dim, the key comes first, and a plan's panel says to connect one", async () => {
@@ -1117,6 +1128,22 @@ describe("Conectar uma IA: one picker, plans first", () => {
       "O Codex ainda não está liberado no Computador da Acme. Isso é do nosso lado: tente de novo mais tarde.",
     );
     expect(within(dialog).getByRole("button", { name: "Usar uma chave de API agora" })).toBeTruthy();
+  });
+
+  test("on the Cloud, a program off on a computer a person connected: theirs to turn on, never on our side", async () => {
+    const options = fakeAgentBrain(ADA_ID).options.map((o) =>
+      o.kind === "codex" ? { ...o, available: false, reason: "tool_off" as const } : o,
+    );
+    const { dialog, choose } = await connect({
+      setup: { state: "ready", machineId: "managed_1" },
+      paired: true,
+      machine: { os: "darwin", kind: "connected", accessAllow: true },
+      brain: { computer: { machineId: "machine_1", name: "MacBook", online: true }, options },
+    });
+    await choose("ChatGPT");
+    expect(dialog.textContent).toContain("O Codex está desligado no");
+    expect(dialog.textContent).not.toContain("nosso lado");
+    expect(within(dialog).getByRole("button", { name: "Ligar o Codex" })).toBeTruthy();
   });
 
   test("the email's link on a cold load: once the agents arrive, Claude's sign-in for the viewer's agent", async () => {

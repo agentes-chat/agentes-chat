@@ -2938,19 +2938,6 @@
       "zen": "Koppel OpenCode",
       "api_key": "Een API-sleutel toevoegen"
     },
-    "toolOff": {
-      "text": "{{computer}} is gekoppeld, maar {{program}} staat er uit. Alleen wie de computer heeft gekoppeld zet het aan.",
-      "where": "Op {{computer}}",
-      "one": "Klik op het agentes.chat-icoon <mark/> bij de klok",
-      "oneWindows": "In Windows kan het achter de pijl ^ van de taakbalk zitten.",
-      "two": "Open <b>Voorkeuren</b>",
-      "three": "Zet onder <b>Tools</b> <b>{{program}}</b> aan",
-      "terminal": "Voer in de terminal van de computer uit:",
-      "here": "Zet <b>{{program}}</b> aan onder <b>Tools</b>.",
-      "oneClick": "<b>{{program}}</b> staat uit op deze computer.",
-      "oneClickOther": "<b>{{program}}</b> staat uit op de computer van {{name}}.",
-      "waiting": "Wachten tot je het aanzet. Dit scherm verandert vanzelf."
-    },
     "titleFor": "Een AI koppelen voor {{name}}",
     "titleFor_female": "Een AI koppelen voor {{name}}",
     "have": {
@@ -11311,8 +11298,6 @@
       "no_computer": "Kies een gekoppelde computer bij Computer om dit te gebruiken.",
       "exec_off": "De computer is gekoppeld zonder toestemming om programma's uit te voeren.",
       "runner_old": "Werk het agentes.chat-programma op de computer bij om dit te gebruiken.",
-      "tool_off": "{{program}} staat uit op {{computer}}. Zet het daar aan, in de agentes.chat-app: Voorkeuren → Tools.",
-      "tool_offLinux": "{{program}} staat uit op {{computer}}. Zet het daar aan, in de agentes.chat-app of met {{command}}.",
       "tool_offOne": "{{program}} staat uit op {{computer}}.",
       "not_installed": "{{program}} is niet geïnstalleerd op {{computer}}.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
@@ -13965,7 +13950,8 @@
       "ask": "{{name}} vragen",
       "asked": "Gevraagd. {{name}} krijgt een knop om het aan te zetten.",
       "done": "Aan op {{machine}}.",
-      "outdated": "Werk de agentes.chat-app op {{machine}} bij om het hier aan te zetten."
+      "outdated": "Werk de agentes.chat-app op {{machine}} bij om het hier aan te zetten.",
+      "offline": "{{machine}} is offline. Zodra het terug is, zet de knop {{tool}} aan."
     },
     "remotePause": {
       "button": "Pauzeren",
@@ -14023,7 +14009,6 @@
       },
       "grantHere": "Het is deze {{device}}: sta mappen toe in de Voorkeuren van de app.",
       "openFolders": "Mappen openen",
-      "toolsHere": "Het is deze {{device}}: zet de browser aan in de Voorkeuren van de app, onder Tools.",
       "openTools": "Tools openen",
       "reconnect": "Opnieuw verbinden",
       "reconnecting": "Deze {{device}} maakt opnieuw verbinding…",
@@ -14031,8 +14016,6 @@
       "offline": "Deze {{device}} is nu offline.",
       "outageTitle": "Deze {{device}} heeft {{ago}} de verbinding verloren",
       "toolsOff": "Uit op deze {{device}}. Zet het aan in de Voorkeuren van de app, onder Tools.",
-      "browserTitle": "Zet de browser aan op deze {{device}}",
-      "browserText": "Eén klik in de Voorkeuren van de app, onder Tools. Deze pagina merkt het vanzelf.",
       "noReport": "Deze {{device}} heeft nog niet doorgegeven wat hij toestaat. Werk de app bij.",
       "update": "App bijwerken"
     },

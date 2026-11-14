@@ -3175,28 +3175,6 @@ export const en = {
       zen: "Connect OpenCode",
       api_key: "Add an API key",
     },
-    /**
-     * A plan whose program is switched off on a computer the person connected. `program`: "Claude Code" or "Codex"
-     * (`brain.card`), as its switch is named in that computer's own settings.
-     */
-    toolOff: {
-      text: "{{computer}} is connected, but {{program}} is switched off on it. Only whoever connected the computer turns it on.",
-      where: "On {{computer}}",
-      /** `<mark/>`: the app's icon, drawn. */
-      one: "Click the agentes.chat icon <mark/> by the clock",
-      oneWindows: "On Windows, it may be behind the taskbar's ^ arrow.",
-      two: "Open <b>Preferences</b>",
-      three: "Under <b>Tools</b>, turn on <b>{{program}}</b>",
-      /** On a computer that may have no app: its command follows. */
-      terminal: "In the computer's terminal, run:",
-      /** In the app on that very computer: Open Tools follows. */
-      here: "Turn on <b>{{program}}</b> under <b>Tools</b>.",
-      /** The person who connected the computer turns it on from here: the button follows. */
-      oneClick: "<b>{{program}}</b> is off on this computer.",
-      /** Someone else: they ask whoever connected it (the button follows). */
-      oneClickOther: "<b>{{program}}</b> is off on {{name}}'s computer.",
-      waiting: "Waiting for you to turn it on. This screen changes by itself.",
-    },
     titleFor: "Connect an AI for {{name}}",
     /** What the person already has, before the new sign-ins: accounts on the agent's computer, the workspace's keys. */
     have: {
@@ -11509,11 +11487,6 @@ export const en = {
       no_computer: "Choose a connected computer under Computer to use it.",
       exec_off: "The computer was connected without permission to run programs.",
       runner_old: "Update the agentes.chat program on the computer to use it.",
-      /** `program`: "Claude Code" or "Codex" (`brain.card`). */
-      tool_off:
-        "{{program}} is turned off on {{computer}}. Turn it on there, in the agentes.chat app: Preferences → Tools.",
-      tool_offLinux:
-        "{{program}} is turned off on {{computer}}. Turn it on there, in the agentes.chat app or with {{command}}.",
       /** The button that turns it on follows. */
       tool_offOne: "{{program}} is turned off on {{computer}}.",
       not_installed: "{{program}} isn't installed on {{computer}}.",
@@ -14024,6 +13997,8 @@ export const en = {
       asked: "Asked. {{name}} gets a button to turn it on.",
       done: "On at {{machine}}.",
       outdated: "Update the agentes.chat app on {{machine}} to turn it on from here.",
+      /** Its computer is offline: the button turns it on once the computer is back, and waits until then. */
+      offline: "{{machine}} is offline. Once it's back, the button turns on {{tool}}.",
     },
     remotePause: {
       button: "Pause",
@@ -14074,7 +14049,6 @@ export const en = {
       device: { mac: "Mac", windows: "PC", linux: "computer" },
       grantHere: "It's this {{device}}: allow folders in the app's Preferences.",
       openFolders: "Open Folders",
-      toolsHere: "It's this {{device}}: turn the browser on in the app's Preferences, under Tools.",
       openTools: "Open Tools",
       reconnect: "Reconnect",
       reconnecting: "Reconnecting this {{device}}…",
@@ -14082,8 +14056,6 @@ export const en = {
       offline: "This {{device}} is offline right now.",
       outageTitle: "This {{device}} lost its connection {{ago}}",
       toolsOff: "Off on this {{device}}. Turn it on in the app's Preferences, under Tools.",
-      browserTitle: "Turn the browser on on this {{device}}",
-      browserText: "One click in the app's Preferences, under Tools. This page notices by itself.",
       noReport: "This {{device}} hasn't reported what it allows yet. Update the app.",
       update: "Update the app",
     },

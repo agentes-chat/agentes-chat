@@ -3039,19 +3039,6 @@
       "zen": "Conectar OpenCode",
       "api_key": "Agrega una clave de API"
     },
-    "toolOff": {
-      "text": "{{computer}} está conectado, pero {{program}} está desactivado en él. Solo quien conectó el ordenador lo activa.",
-      "where": "En {{computer}}",
-      "one": "Haz clic en el ícono de agentes.chat <mark/> junto al reloj",
-      "oneWindows": "En Windows, puede estar detrás de la flecha ^ de la barra de tareas.",
-      "two": "Abre <b>Preferencias</b>",
-      "three": "En <b>Herramientas</b>, enciende <b>{{program}}</b>",
-      "terminal": "En la terminal de la computadora, ejecuta:",
-      "here": "Enciende <b>{{program}}</b> en <b>Herramientas</b>.",
-      "oneClick": "<b>{{program}}</b> está desactivado en este ordenador.",
-      "oneClickOther": "<b>{{program}}</b> está desactivado en el ordenador de {{name}}.",
-      "waiting": "Esperando a que lo enciendas. Esta pantalla cambia sola."
-    },
     "titleFor": "Conecta una IA para {{name}}",
     "titleFor_female": "Conecta una IA para {{name}}",
     "have": {
@@ -11595,8 +11582,6 @@
       "no_computer": "Elige una computadora conectada en Computadora para usarlo.",
       "exec_off": "La computadora se conectó sin permiso para ejecutar programas.",
       "runner_old": "Actualiza el programa de agentes.chat en la computadora para usarlo.",
-      "tool_off": "{{program}} está desactivado en {{computer}}. Actívalo allí, en la app de agentes.chat: Preferencias → Herramientas.",
-      "tool_offLinux": "{{program}} está desactivado en {{computer}}. Actívalo allí, en la app de agentes.chat o con {{command}}.",
       "tool_offOne": "{{program}} está desactivado en {{computer}}.",
       "not_installed": "{{program}} no está instalado en {{computer}}.",
       "not_reported": "{{computer}} todavía está comprobando qué programas tiene. Esto cambia solo cuando termine.",
@@ -14317,7 +14302,8 @@
       "ask": "Pedir a {{name}}",
       "asked": "Pedido enviado. {{name}} recibe un botón para activarlo.",
       "done": "Activado en {{machine}}.",
-      "outdated": "Actualiza la app de agentes.chat en {{machine}} para activarlo desde aquí."
+      "outdated": "Actualiza la app de agentes.chat en {{machine}} para activarlo desde aquí.",
+      "offline": "{{machine}} está sin conexión. En cuanto vuelva, el botón activa {{tool}}."
     },
     "remotePause": {
       "button": "Pausar",
@@ -14375,7 +14361,6 @@
       },
       "grantHere": "Es esta {{device}}: permite carpetas en las Preferencias de la app.",
       "openFolders": "Abrir Carpetas",
-      "toolsHere": "Es esta {{device}}: activa el navegador en las Preferencias de la app, en Herramientas.",
       "openTools": "Abrir Herramientas",
       "reconnect": "Reconectar",
       "reconnecting": "Reconectando esta {{device}}…",
@@ -14383,8 +14368,6 @@
       "offline": "Esta {{device}} está sin conexión ahora.",
       "outageTitle": "Esta {{device}} perdió la conexión {{ago}}",
       "toolsOff": "Desactivado en esta {{device}}. Actívalo en las Preferencias de la app, en Herramientas.",
-      "browserTitle": "Activa el navegador en esta {{device}}",
-      "browserText": "Un clic en las Preferencias de la app, en Herramientas. Esta página lo nota sola.",
       "noReport": "Esta {{device}} aún no informó qué permite. Actualiza la app.",
       "update": "Actualizar la app"
     },

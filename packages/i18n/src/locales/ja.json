@@ -2826,19 +2826,6 @@
       "zen": "OpenCodeを接続",
       "api_key": "APIキーを追加"
     },
-    "toolOff": {
-      "text": "{{computer}} は接続されていますが、{{program}} がオフです。オンにできるのはコンピューターを接続した人だけです。",
-      "where": "{{computer}}で",
-      "one": "時計の横にあるagentes.chatのアイコン<mark/>をクリック",
-      "oneWindows": "Windowsでは、タスクバーの矢印 ^ の中にあることがあります。",
-      "two": "<b>環境設定</b>を開く",
-      "three": "<b>ツール</b>で<b>{{program}}</b>をオンにする",
-      "terminal": "コンピューターのターミナルで実行:",
-      "here": "<b>ツール</b>で<b>{{program}}</b>をオンにしてください。",
-      "oneClick": "このコンピューターでは <b>{{program}}</b> がオフです。",
-      "oneClickOther": "{{name}} のコンピューターでは <b>{{program}}</b> がオフです。",
-      "waiting": "オンになるのを待っています。この画面は自動で切り替わります。"
-    },
     "titleFor": "{{name}}のAIを接続",
     "have": {
       "title": "接続済み",
@@ -10796,8 +10783,6 @@
       "no_computer": "使うには「コンピューター」で接続済みのコンピューターを選んでください。",
       "exec_off": "このコンピューターは、プログラムの実行を許可せずに接続されています。",
       "runner_old": "使うには、コンピューターのagentes.chatプログラムをアップデートしてください。",
-      "tool_off": "{{computer}}で{{program}}がオフになっています。そのコンピューターのagentes.chatアプリの「環境設定 → ツール」でオンにしてください。",
-      "tool_offLinux": "{{computer}}で{{program}}がオフになっています。そのコンピューターのagentes.chatアプリか、{{command}}でオンにしてください。",
       "tool_offOne": "{{computer}} では {{program}} がオフです。",
       "not_installed": "{{computer}}に{{program}}がインストールされていません。",
       "not_reported": "{{computer}}は、入っているプログラムをまだ確認しています。終わりしだい自動で切り替わります。",
@@ -13383,7 +13368,8 @@
       "ask": "{{name}} に頼む",
       "asked": "頼みました。{{name}} にオンにするボタンが届きます。",
       "done": "{{machine}} でオンになりました。",
-      "outdated": "ここからオンにするには、{{machine}} の agentes.chat アプリを更新してください。"
+      "outdated": "ここからオンにするには、{{machine}} の agentes.chat アプリを更新してください。",
+      "offline": "{{machine}} はオフラインです。戻りしだい、ボタンで{{tool}}をオンにできます。"
     },
     "remotePause": {
       "button": "一時停止",
@@ -13441,7 +13427,6 @@
       },
       "grantHere": "この{{device}}です。アプリの環境設定でフォルダを許可してください。",
       "openFolders": "フォルダを開く",
-      "toolsHere": "この{{device}}です。アプリの環境設定の「ツール」でブラウザをオンにしてください。",
       "openTools": "ツールを開く",
       "reconnect": "再接続",
       "reconnecting": "この{{device}}を再接続しています…",
@@ -13449,8 +13434,6 @@
       "offline": "この{{device}}は現在オフラインです。",
       "outageTitle": "この{{device}}は{{ago}}に接続が切れました",
       "toolsOff": "この{{device}}ではオフです。アプリの環境設定の「ツール」でオンにしてください。",
-      "browserTitle": "この{{device}}でブラウザをオンにする",
-      "browserText": "アプリの環境設定の「ツール」でワンクリックするだけです。このページは自動で検知します。",
       "noReport": "この{{device}}は、許可している内容をまだ報告していません。アプリをアップデートしてください。",
       "update": "アプリをアップデート"
     },

@@ -2939,19 +2939,6 @@
       "zen": "OpenCode verbinden",
       "api_key": "API-Schlüssel hinzufügen"
     },
-    "toolOff": {
-      "text": "{{computer}} ist verbunden, aber {{program}} ist dort ausgeschaltet. Nur wer den Computer verbunden hat, schaltet es ein.",
-      "where": "Auf {{computer}}",
-      "one": "Klicke auf das agentes.chat-Symbol <mark/> neben der Uhr",
-      "oneWindows": "Unter Windows kann es hinter dem Pfeil ^ der Taskleiste liegen.",
-      "two": "Öffne <b>Einstellungen</b>",
-      "three": "Schalte unter <b>Tools</b> <b>{{program}}</b> ein",
-      "terminal": "Führe im Terminal des Computers aus:",
-      "here": "Schalte <b>{{program}}</b> unter <b>Tools</b> ein.",
-      "oneClick": "<b>{{program}}</b> ist auf diesem Computer ausgeschaltet.",
-      "oneClickOther": "<b>{{program}}</b> ist auf dem Computer von {{name}} ausgeschaltet.",
-      "waiting": "Warte darauf, dass du es einschaltest. Diese Ansicht ändert sich von selbst."
-    },
     "titleFor": "Eine KI für {{name}} verbinden",
     "have": {
       "title": "Bereits verbunden",
@@ -11246,8 +11233,6 @@
       "no_computer": "Wähle unter Computer einen verbundenen Computer, um es zu nutzen.",
       "exec_off": "Der Computer wurde ohne die Berechtigung verbunden, Programme auszuführen.",
       "runner_old": "Aktualisiere das agentes.chat-Programm auf dem Computer, um es zu nutzen.",
-      "tool_off": "{{program}} ist auf {{computer}} ausgeschaltet. Schalte es dort in der agentes.chat-App ein: Einstellungen → Tools.",
-      "tool_offLinux": "{{program}} ist auf {{computer}} ausgeschaltet. Schalte es dort in der agentes.chat-App oder mit {{command}} ein.",
       "tool_offOne": "{{program}} ist auf {{computer}} ausgeschaltet.",
       "not_installed": "{{program}} ist auf {{computer}} nicht installiert.",
       "not_reported": "{{computer}} prüft noch, welche Programme vorhanden sind. Das ändert sich von selbst, wenn es so weit ist.",
@@ -13903,7 +13888,8 @@
       "ask": "{{name}} fragen",
       "asked": "Gefragt. {{name}} bekommt einen Button zum Einschalten.",
       "done": "Eingeschaltet auf {{machine}}.",
-      "outdated": "Aktualisiere die agentes.chat-App auf {{machine}}, um es von hier einzuschalten."
+      "outdated": "Aktualisiere die agentes.chat-App auf {{machine}}, um es von hier einzuschalten.",
+      "offline": "{{machine}} ist offline. Sobald es zurück ist, schaltet der Button {{tool}} ein."
     },
     "remotePause": {
       "button": "Pausieren",
@@ -13961,7 +13947,6 @@
       },
       "grantHere": "Es ist dieser {{device}}: Erlaube Ordner in den Einstellungen der App.",
       "openFolders": "Ordner öffnen",
-      "toolsHere": "Es ist dieser {{device}}: Schalte den Browser in den Einstellungen der App unter Tools ein.",
       "openTools": "Tools öffnen",
       "reconnect": "Neu verbinden",
       "reconnecting": "Dieser {{device}} wird neu verbunden…",
@@ -13969,8 +13954,6 @@
       "offline": "Dieser {{device}} ist gerade offline.",
       "outageTitle": "Dieser {{device}} hat {{ago}} die Verbindung verloren",
       "toolsOff": "Auf diesem {{device}} aus. Schalte es in den Einstellungen der App unter Tools ein.",
-      "browserTitle": "Browser auf diesem {{device}} einschalten",
-      "browserText": "Ein Klick in den Einstellungen der App, unter Tools. Diese Seite merkt es von selbst.",
       "noReport": "Dieser {{device}} hat noch nicht gemeldet, was er erlaubt. Aktualisiere die App.",
       "update": "App aktualisieren"
     },
