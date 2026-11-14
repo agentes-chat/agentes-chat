@@ -673,7 +673,7 @@ describe("who an agent may call (§8)", () => {
     const member = await addMember(f.db, f.org.id, "member", "Caio");
     const makers = await createRole(f.db, f.owner.id, f.org.id, { name: "Makers", permissions: ["create_agents"] });
     await setMemberRoles(f.db, f.owner.id, f.org.id, member.id, [makers.id]);
-    // Creating one's own agent is open to members; choosing whom it may call is not.
+    // Who may create agents may not, by that alone, choose whom they may call.
     await expect(
       createAgent(
         f.db,
