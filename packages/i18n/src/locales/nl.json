@@ -3094,6 +3094,21 @@
       "zen": "Koppel OpenCode",
       "api_key": "Een API-sleutel toevoegen"
     },
+    "cli": {
+      "missing": "{{program}} staat nog niet op {{computer}}.",
+      "claudeApp": "De Claude-app is niet genoeg: agents gebruiken Claude Code, dat op de computer draait.",
+      "install": "{{program}} voor mij installeren",
+      "check": "Al geïnstalleerd, opnieuw controleren",
+      "checked": "Net gecontroleerd: {{program}} staat nog steeds niet op {{computer}}.",
+      "installing": "{{program}} wordt geïnstalleerd op {{computer}}. Dat duurt ongeveer een minuut.",
+      "failed": "Installeren op {{computer}} lukte niet: {{message}}",
+      "stillMissing": "Het installatieprogramma is klaar, maar {{computer}} vindt {{program}} nog niet.",
+      "gitMissing": "{{program}} heeft Git for Windows nodig op {{computer}}.",
+      "getGit": "Git for Windows downloaden",
+      "cantStart": "{{program}} staat op {{computer}}, maar start niet: {{message}}",
+      "outdated": "Werk de agentes.chat-app op {{computer}} bij om hiervandaan te installeren.",
+      "asked": "Verzoek verstuurd. {{name}} krijgt een knop om het te installeren."
+    },
     "titleFor": "Een AI koppelen voor {{name}}",
     "titleFor_female": "Een AI koppelen voor {{name}}",
     "have": {
@@ -11478,6 +11493,7 @@
       "runner_old": "Werk het agentes.chat-programma op de computer bij om dit te gebruiken.",
       "tool_offOne": "{{program}} staat uit op {{computer}}.",
       "not_installed": "{{program}} is niet geïnstalleerd op {{computer}}.",
+      "cant_start": "{{program}} staat op {{computer}}, maar start niet.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
       "outdated": "De versie op {{computer}} is oud. Werk Codex bij om het te gebruiken.",
       "system": "{{program}} werkt nog niet op het systeem van {{computer}}.",
@@ -14887,6 +14903,7 @@
       "access": "<b>{{who}}</b> vraagt om <b>{{deviceName}}</b> te gebruiken",
       "waiting": "<b>{{who}}</b> wacht op <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> vraagt je {{tool}} aan te zetten op je <b>{{deviceName}}</b>",
+      "cliRequest": "<b>{{who}}</b> vraagt je {{tool}} te installeren op je <b>{{deviceName}}</b>",
       "once": "Eén keer toestaan",
       "always": "Altijd",
       "no": "Nee",

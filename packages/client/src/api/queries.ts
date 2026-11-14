@@ -29,7 +29,7 @@ import {
 } from "../lib/devices";
 import { answerWithin, noAnswer, sendFailureOf, sendWaits } from "../lib/errors";
 import { ISSUES_VIEW_DEFAULT, type IssuesViewChange, withIssuesView } from "../lib/issues-view";
-import { LoginReadError, loginReadPasses } from "../lib/machines";
+import { CLI_INSTALL_POLL_MS, LoginReadError, loginReadPasses } from "../lib/machines";
 import { GIF_PAGE, isMediaAfterReply, messageMediaOf, postedMedia } from "../lib/media";
 import {
   allItems,
@@ -121,6 +121,7 @@ import type {
   ForeignMailbox,
   GifCategory,
   GifKey,
+  InstallableCli,
   InviteBatch,
   InviteLinkChoices,
   Issue,
@@ -5121,6 +5122,61 @@ export function useAllowMachineTool(orgId: string) {
       void qc.invalidateQueries({ queryKey: keys.devices(orgId) });
     },
   });
+}
+
+/** What a computer's coding CLIs decide: its row, every agent's "Quem pensa" and the plans' panels. */
+function invalidateClis(qc: ReturnType<typeof useQueryClient>, orgId: string) {
+  void qc.invalidateQueries({ queryKey: keys.machines(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.agentPages(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.aiAccounts(orgId) });
+}
+
+/** "Já instalei, verificar de novo": the computer reads its PATH again and looks for its coding CLIs now. */
+export function useCheckMachineClis(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (machineId: string) => api.machines.checkClis(orgId, machineId),
+    meta: { silent: true },
+    onSettled: () => invalidateClis(qc, orgId),
+  });
+}
+
+/**
+ * Installing a coding CLI on a computer, for the person who paired it (`on`): where it stands, asked every 1.5 s while
+ * it runs; once it ends, what thinks for the agents is asked again (the computer has already looked again).
+ */
+export function useCliInstall(orgId: string, machineId: string | null, tool: InstallableCli, on: boolean) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const key = keys.cliInstall(orgId, machineId ?? "", tool);
+  const state = useQuery({
+    queryKey: key,
+    queryFn: () => api.machines.cliInstall(orgId, machineId ?? "", tool, "status"),
+    enabled: on && machineId !== null,
+    retry: false,
+    refetchInterval: (q) => (q.state.data?.install?.state === "running" ? CLI_INSTALL_POLL_MS : false),
+    meta: { quiet: true },
+  });
+  const ended = state.data?.install && state.data.install.state !== "running" ? state.data.install.state : null;
+  useEffect(() => {
+    if (ended) invalidateClis(qc, orgId);
+  }, [ended, qc, orgId]);
+  const start = useMutation({
+    mutationFn: () => api.machines.cliInstall(orgId, machineId ?? "", tool, "start"),
+    meta: { silent: true },
+    onSuccess: (data) => qc.setQueryData(key, data),
+  });
+  const cancel = useMutation({
+    mutationFn: () => api.machines.cliInstall(orgId, machineId ?? "", tool, "cancel"),
+    meta: { silent: true },
+    onSuccess: (data) => qc.setQueryData(key, data),
+  });
+  const ask = useMutation({
+    mutationFn: () => api.machines.askCliInstall(orgId, machineId ?? "", tool),
+    meta: { silent: true },
+  });
+  return { install: on ? (state.data?.install ?? null) : null, start, cancel, ask };
 }
 
 export function useMachineAction(orgId: string) {

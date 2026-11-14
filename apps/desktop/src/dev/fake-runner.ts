@@ -535,6 +535,9 @@ export class FakeRunner {
             ? { ...this.iphone, ...(this.iphone.fix ? { fix: { ...this.iphone.fix, state: "canceled" } } : {}) }
             : { ...this.iphone, fix: { kind: msg.kind, state: msg.kind === "select" ? "asking" : "running", step: 0 } };
         return reply(this.iphone);
+      case "cli.install":
+        // Its CLIs are all here already: there is nothing to install.
+        return reply({ install: msg.action === "start" ? { tool: msg.tool, state: "done" } : null });
       case "iphone.look":
         this.looks++;
         return reply({ looking: true });

@@ -1913,6 +1913,7 @@
       "waiting": "{{names}}が{{device}}を待っています",
       "waitingFor": "{{names}}が{{person}}の依頼で{{device}}を待っています",
       "tool_request": "{{names}} があなたの {{device}} で{{tool}}をオンにするよう頼んでいます",
+      "cli_request": "{{names}} が {{device}} に {{tool}} をインストールするよう求めています",
       "allowOnce": "今回のみ許可",
       "always": "{{name}}を常に許可",
       "no": "許可しない",

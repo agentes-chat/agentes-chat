@@ -2207,6 +2207,7 @@
       "waiting": "{{names}} czeka na urządzenie {{device}}",
       "waitingFor": "{{names}} czeka na urządzenie {{device}} dla {{person}}",
       "tool_request": "{{names}} prosi Cię o włączenie: {{tool}} na {{device}}",
+      "cli_request": "{{names}} prosi o zainstalowanie {{tool}} na Twoim {{device}}",
       "allowOnce": "Zezwól raz",
       "always": "Zawsze zezwalaj: {{name}}",
       "no": "Nie",

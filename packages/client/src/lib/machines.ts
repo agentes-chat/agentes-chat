@@ -2,7 +2,9 @@ import type { TFunction } from "i18next";
 import type {
   AccountLoginFailure,
   AccountLoginStatus,
+  CliInstall,
   DeviceLocation,
+  InstallableCli,
   Machine,
   MachineAccess,
   MachineAccount,
@@ -107,6 +109,49 @@ export function toolOneClick(
   if (!m || m.kind === "managed" || !m.pairedBy) return null;
   if (m.pairedBy.id === meId) return m.accessAllow ? { kind: "allow" } : { kind: "outdated" };
   return { kind: "ask", ownerId: m.pairedBy.id, ownerName: m.pairedBy.name };
+}
+
+/** How often a screen asks where an install of a coding CLI stands while it runs. */
+export const CLI_INSTALL_POLL_MS = 1500;
+
+/** `Machine.cliErrors`' word for Claude Code on Windows without Git for Windows (mirror of `CLI_GIT_MISSING`). */
+export const CLI_GIT_MISSING = "git_missing";
+
+/** Where Git for Windows is downloaded, which Claude Code needs on Windows. */
+export const GIT_FOR_WINDOWS_URL = "https://git-scm.com/downloads/win";
+
+/** The coding CLI a brain runs, when the computer installs it from the apps (`INSTALLABLE_CLIS`); null otherwise. */
+export const installableCli = (kind: string): InstallableCli | null =>
+  kind === "claude_code" || kind === "claude" ? "claude" : kind === "codex" ? "codex" : null;
+
+/** Why an install of a coding CLI failed, in words, with the installer's own line; null when it didn't fail. */
+export function cliInstallFailure(
+  t: TFunction,
+  install: CliInstall | null | undefined,
+  words: { program: string; computer: string },
+): string | null {
+  if (install?.state !== "failed") return null;
+  if (install.cause === "git_missing") return t("connectAi.cli.gitMissing", words);
+  if (install.cause === "still_missing") return t("connectAi.cli.stillMissing", words);
+  return t("connectAi.cli.failed", { computer: words.computer, message: install.message ?? "" });
+}
+
+/**
+ * What one click does where a coding CLI isn't on `m`, for the person `meId`, as `toolOneClick` for a switch: `allow`
+ * installs it there (they paired it), `ask` sends whoever paired it the same button, `outdated` means its app must
+ * update first. Null where nobody installs from here (the workspace's own computer installs its own, or nobody is
+ * behind it), and `allow` only where an installer exists there: never Codex on Windows, nor a computer whose agents
+ * are users of their own (its setup installs for them).
+ */
+export function cliOneClick(
+  m: Pick<Machine, "kind" | "pairedBy" | "cliInstall" | "os" | "mode"> | null | undefined,
+  meId: string | null | undefined,
+  cli: InstallableCli,
+): ToolOneClick | null {
+  if (!m || m.kind === "managed" || !m.pairedBy) return null;
+  if (m.mode === "system" || (cli === "codex" && m.os === "windows")) return null;
+  if (m.pairedBy.id !== meId) return { kind: "ask", ownerId: m.pairedBy.id, ownerName: m.pairedBy.name };
+  return m.cliInstall ? { kind: "allow" } : { kind: "outdated" };
 }
 
 /**

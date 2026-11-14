@@ -3085,6 +3085,21 @@
       "zen": "OpenCode'u bağlayın",
       "api_key": "API anahtarı ekleyin"
     },
+    "cli": {
+      "missing": "{{program}} henüz {{computer}} üzerinde yok.",
+      "claudeApp": "Claude uygulaması yetmez: ajanlar bilgisayarda çalışan Claude Code'u kullanır.",
+      "install": "{{program}} benim için kur",
+      "check": "Kurdum, yeniden kontrol et",
+      "checked": "Az önce kontrol edildi: {{program}} hâlâ {{computer}} üzerinde yok.",
+      "installing": "{{program}}, {{computer}} üzerine kuruluyor. Yaklaşık bir dakika sürer.",
+      "failed": "{{computer}} üzerine kurulamadı: {{message}}",
+      "stillMissing": "Kurulum programı bitti, ama {{computer}} hâlâ {{program}} bulamıyor.",
+      "gitMissing": "{{program}}, {{computer}} üzerinde Git for Windows gerektirir.",
+      "getGit": "Git for Windows'u indir",
+      "cantStart": "{{program}}, {{computer}} üzerinde var ama açılmıyor: {{message}}",
+      "outdated": "Buradan kurmak için {{computer}} üzerindeki agentes.chat uygulamasını güncelleyin.",
+      "asked": "İstek gönderildi. {{name}} kurmak için bir düğme alır."
+    },
     "titleFor": "{{name}} için bir yapay zeka bağlayın",
     "have": {
       "title": "Zaten bağlı",
@@ -11352,6 +11367,7 @@
       "runner_old": "Kullanmak için bilgisayardaki agentes.chat programını güncelleyin.",
       "tool_offOne": "{{program}}, {{computer}} üzerinde kapalı.",
       "not_installed": "{{program}}, {{computer}} üzerinde yüklü değil.",
+      "cant_start": "{{program}}, {{computer}} üzerinde var ama açılmıyor.",
       "not_reported": "{{computer}} hangi programların olduğunu hâlâ kontrol ediyor. Bittiğinde bu kendiliğinden değişir.",
       "outdated": "{{computer}} üzerindeki sürüm eski. Kullanmak için Codex'i güncelleyin.",
       "system": "{{program}} henüz {{computer}} sisteminde çalışmıyor.",
@@ -14760,6 +14776,7 @@
       "access": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazını kullanmak istiyor",
       "waiting": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazını bekliyor",
       "toolRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınızda {{tool}} açmanızı istiyor",
+      "cliRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınıza {{tool}} kurmanızı istiyor",
       "once": "Bir kez izin ver",
       "always": "Her zaman",
       "no": "Hayır",

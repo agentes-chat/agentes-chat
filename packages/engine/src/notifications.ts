@@ -269,6 +269,12 @@ export const NOTIFICATION_KINDS = [
    */
   "device.tool_request",
   /**
+   * Someone needs a coding CLI installed on this person's computer (`POST …/machines/{id}/cli-install/ask`): as
+   * `device.tool_request`, one row per computer and program (`device-cli:<machineId>:<tool>`), the program in
+   * `latest.reason`. The row installs it in one click; done once the computer has it.
+   */
+  "device.cli_request",
+  /**
    * "Pedir a um admin" (`POST …/admin-asks`, `admin-asks.ts`): to whoever may do it, the asker as actor, what in
    * `latest.reason` (`channel_agent`, `create_agents`, `webhook` with the service in `latest.title`). `channel_agent`
    * names `source.channelId` (its name in `label`) and `agentId`, waits, and is done once the agent is added.

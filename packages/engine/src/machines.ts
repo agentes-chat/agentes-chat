@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import {
   ACCESS_ALLOW_PROTOCOL,
   BROWSER_PROFILE_PROTOCOL,
+  CLI_INSTALL_PROTOCOL,
   DESKTOP_PROTOCOL,
   HEARTBEAT_MS,
   MACHINE_TOKEN_PREFIX,
@@ -538,6 +539,13 @@ async function machineViews(db: Database, actorId: string, orgId: string, only?:
       remotePause: !managed && m.protocol >= REMOTE_PAUSE_PROTOCOL,
       /** Its tools can be turned on from here by the person who paired it (`ACCESS_ALLOW_PROTOCOL`, ADR 0036 §8). */
       accessAllow: !managed && m.protocol >= ACCESS_ALLOW_PROTOCOL,
+      /**
+       * Its coding CLIs can be looked for again from here and installed by the person who paired it
+       * (`CLI_INSTALL_PROTOCOL`); never the workspace's own computer, which installs them itself.
+       */
+      cliInstall: !managed && m.protocol >= CLI_INSTALL_PROTOCOL,
+      /** The coding CLIs there that can't start, with their own error line; admins and the pairer only. */
+      cliErrors: (admin || mine) && !managed ? (m.executors?.broken ?? null) : null,
       pairedBy: m.pairedByUserId ? { id: m.pairedByUserId, name: pairedByName ?? "" } : null,
       agents: using.filter((a) => a.machineId === m.id).map((a) => ({ id: a.id, name: a.name, handle: a.handle })),
       /**

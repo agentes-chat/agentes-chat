@@ -3323,6 +3323,21 @@
       "zen": "Połącz OpenCode",
       "api_key": "Dodaj klucz API"
     },
+    "cli": {
+      "missing": "{{program}} nie ma jeszcze na {{computer}}.",
+      "claudeApp": "Sama aplikacja Claude nie wystarczy: agenci używają Claude Code, który działa na komputerze.",
+      "install": "Zainstaluj {{program}} za mnie",
+      "check": "Zainstalowałem, sprawdź ponownie",
+      "checked": "Sprawdzone przed chwilą: {{program}} nadal nie ma na {{computer}}.",
+      "installing": "Instalowanie {{program}} na {{computer}}. Potrwa to około minuty.",
+      "failed": "Nie udało się zainstalować na {{computer}}: {{message}}",
+      "stillMissing": "Instalator skończył, ale {{computer}} nadal nie znajduje {{program}}.",
+      "gitMissing": "{{program}} potrzebuje Git for Windows na {{computer}}.",
+      "getGit": "Pobierz Git for Windows",
+      "cantStart": "{{program}} jest na {{computer}}, ale się nie uruchamia: {{message}}",
+      "outdated": "Zaktualizuj aplikację agentes.chat na {{computer}}, żeby instalować stąd.",
+      "asked": "Prośba wysłana. {{name}} dostanie przycisk do instalacji."
+    },
     "titleFor": "Połącz AI dla: {{name}}",
     "have": {
       "title": "Już połączone",
@@ -12268,6 +12283,7 @@
       "runner_old": "Zaktualizuj program agentes.chat na komputerze, żeby z tego korzystać.",
       "tool_offOne": "{{program}} jest wyłączony na {{computer}}.",
       "not_installed": "{{program}} nie jest zainstalowany na komputerze {{computer}}.",
+      "cant_start": "{{program}} jest na {{computer}}, ale się nie uruchamia.",
       "not_reported": "{{computer}} wciąż sprawdza, jakie ma programy. To zmieni się samo, gdy skończy.",
       "outdated": "Wersja na komputerze {{computer}} jest stara. Zaktualizuj Codex, żeby z niego korzystać.",
       "system": "{{program}} nie działa jeszcze w systemie komputera {{computer}}.",
@@ -15824,6 +15840,7 @@
       "access": "<b>{{who}}</b> prosi o dostęp do <b>{{deviceName}}</b>",
       "waiting": "<b>{{who}}</b> czeka na <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> prosi Cię o włączenie: {{tool}} na <b>{{deviceName}}</b>",
+      "cliRequest": "<b>{{who}}</b> prosi o zainstalowanie {{tool}} na Twoim <b>{{deviceName}}</b>",
       "once": "Zezwól raz",
       "always": "Zawsze",
       "no": "Nie",

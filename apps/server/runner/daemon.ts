@@ -86,6 +86,7 @@ import { CodexAppServers } from "./brain-codex-app";
 import { BrowserManager } from "./browser";
 import { ensureBrowserBindPolicy, prepareAgents } from "./browser-bind-policy";
 import { BrowserViews } from "./browser-views";
+import { CliInstaller, type CliInstallerOptions, gitBashPath } from "./cli-install";
 import {
   accessToStore,
   configPath,
@@ -115,6 +116,7 @@ import { Holds } from "./holds";
 import { IphoneSetup, type IphoneSetupOptions } from "./iphone-setup";
 import { currentProcess, isCompiled, selfCommand } from "./launch";
 import { tailLines } from "./logfile";
+import { adoptLoginPath } from "./login-path";
 import { LoopbackGuard, loopbackEndpoints, runnerEndpoints } from "./loopback-guard";
 import { McpBridge, type McpTaskInfo, mcpSocketPath } from "./mcp";
 import {
@@ -400,6 +402,8 @@ export interface DaemonOptions {
   iphone?: Partial<IphoneSetupOptions>;
   /** Tests: the Xcode fix's tools and timings. */
   xcodeFix?: Partial<XcodeFixOptions>;
+  /** Tests: how `cli.install` installs. */
+  cliInstall?: Partial<CliInstallerOptions>;
 }
 
 /** What a task is in its activity words: a shell task's command, or the CLI that works it (the app names it). */
@@ -501,6 +505,13 @@ export class RunnerDaemon implements RequestObserver {
   private standbyAsk: string | null = null;
   /** A fix of the Mac's own Xcode (`xcode.fix`, the desktop app's iPhone window), made on its first request. */
   private fixer: XcodeFixer | null = null;
+  /** An install of a coding CLI (`cli.install`), made on its first request. */
+  private installer: CliInstaller | null = null;
+  /**
+   * The PATH read again (app mode's `refreshPath`). On Windows before every look too: an app keeps the PATH it started
+   * with, so a CLI installed since is found only through the registry.
+   */
+  private readonly refreshPath: (() => void) | undefined;
 
   constructor(private readonly opts: DaemonOptions) {
     this.uidNetworks = new AgentNetworks({}, readNetworkPins(opts.home));
@@ -510,12 +521,16 @@ export class RunnerDaemon implements RequestObserver {
     this.requests = new AccessRequests(opts.home, this.now);
     const proc = currentProcess();
     this.self = opts.self ?? { command: selfCommand(proc), compiled: isCompiled(proc) };
+    this.refreshPath = opts.refreshPath ?? (process.platform === "win32" ? () => adoptLoginPath() : undefined);
     const exec =
       opts.executors ??
       cachedExecutors({
         file: path.join(opts.home, "executors.json"),
         ...(opts.executorRun ? { run: opts.executorRun } : {}),
         onChange: () => this.executorsChanged(),
+        ...(process.platform === "win32"
+          ? { before: () => this.refreshPath?.(), gitMissing: () => gitBashPath() === null }
+          : {}),
       });
     // Grok Build's models as an account signed in here lists them: the computer's own `grok models` is signed out.
     this.executors = () => {
@@ -854,6 +869,7 @@ export class RunnerDaemon implements RequestObserver {
     await this.phones?.stop();
     this.iphone?.stop();
     this.fixer?.stop();
+    this.installer?.stop();
     this.toolchains?.stop();
     await this.accounts.close().catch(() => undefined);
     await this.chain.catch(() => undefined);
@@ -1518,6 +1534,11 @@ export class RunnerDaemon implements RequestObserver {
       ...(this.phones ? { phones: this.phones } : {}),
       ...(this.holds && agentUser ? { keep: this.keepOps(this.holds, agentUser) } : {}),
       xcodeFix: (req) => this.xcodeFixer().handle(req),
+      clisCheck: async () => {
+        await this.clisLook();
+        return { executors: this.executors() };
+      },
+      cliInstall: (req) => this.cliInstaller().handle(req),
       xcodeOpen: () => this.iphoneSetup().open("xcode"),
     };
     // `hello` lists the accounts it already knows; a fresh look (each runs its CLI) never delays connecting:
@@ -2138,9 +2159,27 @@ export class RunnerDaemon implements RequestObserver {
 
   /** The app's "Check again": the PATH and the coding CLIs looked up now, then the status with what was found. */
   async executorsCheck(): Promise<ControlStatus> {
-    this.opts.refreshPath?.();
-    await this.executorsFresh();
+    await this.clisLook();
     return this.status();
+  }
+
+  /** The PATH read again and the coding CLIs looked up now; a change reaches the server (`executors.changed`). */
+  private async clisLook() {
+    this.refreshPath?.();
+    await this.executorsFresh();
+  }
+
+  /** Installing a coding CLI from the apps; once installed, looked up again at once, so the apps move on by themselves. */
+  cliInstaller(): CliInstaller {
+    this.installer ??= new CliInstaller({
+      log: this.opts.log,
+      onDone: async (tool) => {
+        await this.clisLook();
+        return Boolean(this.executors()[tool]);
+      },
+      ...this.opts.cliInstall,
+    });
+    return this.installer;
   }
 
   status(): ControlStatus {

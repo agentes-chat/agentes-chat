@@ -30,7 +30,7 @@ import { missionTurnFor } from "../missions-engine";
 import { isRightHand, rightHandPerson, rightHandPlanRefusal, thinkingAgent } from "../right-hand";
 import { runnerUpdateWay } from "../runner-update";
 import type { AgentRun } from "../runs";
-import { accountUnavailable, brainSessionId, claudeCodeAvailability, toolOff } from "./claude-code";
+import { accountUnavailable, brainSessionId, claudeCodeAvailability, cliMissingMessage, toolOff } from "./claude-code";
 import { codexVersionOk } from "./codex";
 import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainAccount, type BrainKind, type BrainSession } from "./types";
 
@@ -435,7 +435,7 @@ export function computerBrainUnavailable(
       };
     }
     if (status.executors?.detectedAt && !status.executors[kind]) {
-      return { code: `${kind}_missing`, message: `${name}'s CLI is not installed on ${status.name}.` };
+      return { code: `${kind}_missing`, message: cliMissingMessage(`${name}'s CLI`, status, kind) };
     }
     return accountUnavailable(status, account, kind);
   }
@@ -451,7 +451,7 @@ export function computerBrainUnavailable(
   }
   const codex = status.executors?.codex;
   if (status.executors?.detectedAt && !codex) {
-    return { code: "codex_missing", message: `Codex is not installed on ${status.name}.` };
+    return { code: "codex_missing", message: cliMissingMessage("Codex", status, "codex") };
   }
   if (codex && !codexVersionOk(codex.version)) {
     return { code: "codex_too_old", message: `Codex on ${status.name} is too old. Update it there.` };

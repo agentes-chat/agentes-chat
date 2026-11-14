@@ -3257,6 +3257,27 @@ export const ptBR = {
       zen: "Conectar o OpenCode",
       api_key: "Adicionar uma chave de API",
     },
+    /**
+     * A coding CLI that isn't on a computer someone connected (`program`: "Claude Code" or "Codex"), and installing it
+     * from here. `claudeApp` sits behind an ⓘ on Windows and macOS, where a Claude chat app is likely.
+     */
+    cli: {
+      missing: "O {{program}} ainda não está no {{computer}}.",
+      claudeApp: "O app do Claude não basta: os agentes usam o Claude Code, que roda no computador.",
+      install: "Instalar o {{program}} para mim",
+      check: "Já instalei, verificar de novo",
+      checked: "Verifiquei agora: o {{program}} ainda não está no {{computer}}.",
+      installing: "Instalando o {{program}} no {{computer}}. Leva cerca de um minuto.",
+      failed: "Não deu para instalar no {{computer}}: {{message}}",
+      stillMissing: "O instalador terminou, mas o {{computer}} ainda não acha o {{program}}.",
+      /** Claude Code on Windows can't start without Git for Windows. */
+      gitMissing: "O {{program}} precisa do Git for Windows no {{computer}}.",
+      getGit: "Baixar o Git for Windows",
+      /** It is there and its own check of its version fails: `message` is its error. */
+      cantStart: "O {{program}} está no {{computer}}, mas não abre: {{message}}",
+      outdated: "Atualize o app do agentes.chat no {{computer}} para instalar daqui.",
+      asked: "Pedido enviado. {{name}} recebe um botão para instalar.",
+    },
     titleFor: "Conectar uma IA para o {{name}}",
     titleFor_female: "Conectar uma IA para a {{name}}",
     /** What the person already has, before the new sign-ins: accounts on the agent's computer, the workspace's keys. */
@@ -11756,6 +11777,7 @@ export const ptBR = {
       /** The button that turns it on follows. */
       tool_offOne: "O {{program}} está desligado no {{computer}}.",
       not_installed: "O {{program}} não está instalado no {{computer}}.",
+      cant_start: "O {{program}} está no {{computer}}, mas não abre.",
       not_reported: "O {{computer}} ainda está vendo quais programas tem. Isto muda sozinho quando terminar.",
       outdated: "A versão no {{computer}} é antiga. Atualize o Codex para usar.",
       system: "O {{program}} ainda não roda no sistema do {{computer}}.",
@@ -15009,6 +15031,7 @@ export const ptBR = {
       access: "<b>{{who}}</b> pede para usar <b>{{deviceName}}</b>",
       waiting: "<b>{{who}}</b> está esperando <b>{{deviceName}}</b>",
       toolRequest: "<b>{{who}}</b> pede para ligar {{tool}} no seu <b>{{deviceName}}</b>",
+      cliRequest: "<b>{{who}}</b> pede para instalar {{tool}} no seu <b>{{deviceName}}</b>",
       once: "Permitir uma vez",
       always: "Sempre",
       no: "Não",

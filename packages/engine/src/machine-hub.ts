@@ -402,6 +402,9 @@ export function isNewWork(request: MachineRequest) {
     // Its owner fixing the Mac's Xcode for an iPhone's setup, or opening it there.
     case "xcode.fix":
     case "xcode.open":
+    // Its owner looking for, or installing, a coding CLI there.
+    case "clis.check":
+    case "cli.install":
       return false;
     case "secret":
       return request.action !== "discard" && request.action !== "remove" && request.action !== "activate";

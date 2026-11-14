@@ -12,6 +12,8 @@ import {
   brainTool,
   browserNoAnswerMessage,
   browserOffMessage,
+  cliInstallFailure,
+  cliOneClick,
   commandInReason,
   computerKind,
   computerState,
@@ -22,6 +24,7 @@ import {
   formatUserCode,
   freeDuplicate,
   geminiNotShared,
+  installableCli,
   installCommand,
   isHandheld,
   isPaused,
@@ -560,6 +563,33 @@ describe("one click where a tool is off (ADR 0036 §8)", () => {
     expect(toolOneClick({ ...mac, kind: "managed" }, "u-bia")).toBeNull();
     expect(toolOneClick({ ...mac, pairedBy: null }, "u-caio")).toBeNull();
     expect(toolOneClick(null, "u-bia")).toBeNull();
+  });
+
+  test("a coding CLI: whoever connected it installs it, anyone else asks, never where no installer runs", () => {
+    const pc = { kind: "connected", pairedBy: bia, cliInstall: true, os: "windows", mode: "single" } as Pick<
+      Machine,
+      "kind" | "pairedBy" | "cliInstall" | "os" | "mode"
+    >;
+    expect(cliOneClick(pc, "u-bia", "claude")).toEqual({ kind: "allow" });
+    expect(cliOneClick({ ...pc, cliInstall: false }, "u-bia", "claude")).toEqual({ kind: "outdated" });
+    expect(cliOneClick(pc, "u-caio", "claude")).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    // OpenAI's Windows build has no installer of its own; root's agents get theirs from the computer's setup.
+    expect(cliOneClick(pc, "u-bia", "codex")).toBeNull();
+    expect(cliOneClick({ ...pc, os: "darwin" }, "u-bia", "codex")).toEqual({ kind: "allow" });
+    expect(cliOneClick({ ...pc, os: "linux", mode: "system" }, "u-bia", "claude")).toBeNull();
+    expect(cliOneClick({ ...pc, kind: "managed" }, "u-bia", "claude")).toBeNull();
+    expect(installableCli("claude_code")).toBe("claude");
+    const words = { program: "Claude Code", computer: "PC" };
+    const said = (k: string, v?: Record<string, unknown>) => `${k} ${JSON.stringify(v)}`;
+    const t = said as unknown as Parameters<typeof cliInstallFailure>[0];
+    expect(cliInstallFailure(t, { tool: "claude", state: "running" }, words)).toBeNull();
+    expect(cliInstallFailure(t, { tool: "claude", state: "failed", cause: "git_missing" }, words)).toContain(
+      "connectAi.cli.gitMissing",
+    );
+    expect(cliInstallFailure(t, { tool: "claude", state: "failed", message: "curl: (6)" }, words)).toBe(
+      'connectAi.cli.failed {"computer":"PC","message":"curl: (6)"}',
+    );
+    expect(installableCli("cursor")).toBeNull();
   });
 
   test("Prefiro no Terminal: the same switches as one command, only for who turns them on, where there may be no app", () => {

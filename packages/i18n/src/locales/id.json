@@ -2980,6 +2980,21 @@
       "zen": "Hubungkan OpenCode",
       "api_key": "Tambahkan kunci API"
     },
+    "cli": {
+      "missing": "{{program}} belum ada di {{computer}}.",
+      "claudeApp": "Aplikasi Claude saja tidak cukup: agen memakai Claude Code, yang berjalan di komputer.",
+      "install": "Pasangkan {{program}} untuk saya",
+      "check": "Sudah saya pasang, periksa lagi",
+      "checked": "Baru diperiksa: {{program}} masih belum ada di {{computer}}.",
+      "installing": "Memasang {{program}} di {{computer}}. Butuh sekitar satu menit.",
+      "failed": "Tidak bisa memasang di {{computer}}: {{message}}",
+      "stillMissing": "Pemasang sudah selesai, tetapi {{computer}} masih belum menemukan {{program}}.",
+      "gitMissing": "{{program}} butuh Git for Windows di {{computer}}.",
+      "getGit": "Unduh Git for Windows",
+      "cantStart": "{{program}} ada di {{computer}}, tetapi tidak mau berjalan: {{message}}",
+      "outdated": "Perbarui aplikasi agentes.chat di {{computer}} untuk memasang dari sini.",
+      "asked": "Permintaan terkirim. {{name}} mendapat tombol untuk memasangnya."
+    },
     "titleFor": "Hubungkan AI untuk {{name}}",
     "titleFor_female": "Hubungkan AI untuk {{name}}",
     "have": {
@@ -11006,6 +11021,7 @@
       "runner_old": "Perbarui program agentes.chat di komputer untuk memakainya.",
       "tool_offOne": "{{program}} mati di {{computer}}.",
       "not_installed": "{{program}} belum terpasang di {{computer}}.",
+      "cant_start": "{{program}} ada di {{computer}}, tetapi tidak mau berjalan.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
       "outdated": "Versi di {{computer}} sudah lama. Perbarui Codex untuk memakainya.",
       "system": "{{program}} belum berjalan di sistem {{computer}}.",
@@ -14345,6 +14361,7 @@
       "access": "<b>{{who}}</b> minta izin memakai <b>{{deviceName}}</b>",
       "waiting": "<b>{{who}}</b> sedang menunggu <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> memintamu menyalakan {{tool}} di <b>{{deviceName}}</b> milikmu",
+      "cliRequest": "<b>{{who}}</b> meminta kamu memasang {{tool}} di <b>{{deviceName}}</b> kamu",
       "once": "Izinkan sekali",
       "always": "Selalu",
       "no": "Tidak",
