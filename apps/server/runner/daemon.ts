@@ -248,7 +248,7 @@ export function configFromGrant(
     ...(prev?.networkRevision !== undefined ? { networkRevision: prev.networkRevision } : {}),
     ...(prev?.networkAuthRoute ? { networkAuthRoute: prev.networkAuthRoute } : {}),
     ...(prev?.claudeSharedLogin ? { claudeSharedLogin: prev.claudeSharedLogin } : {}),
-    ...(prev?.agentTmpInRam ? { agentTmpInRam: prev.agentTmpInRam } : {}),
+    ...(prev?.agentTmpOnDisk ? { agentTmpOnDisk: prev.agentTmpOnDisk } : {}),
     ...(prev?.maxConcurrentTasks ? { maxConcurrentTasks: prev.maxConcurrentTasks } : {}),
     ...(prev?.taskMaxSeconds ? { taskMaxSeconds: prev.taskMaxSeconds } : {}),
     ...(prev?.brainIdleMinutes ? { brainIdleMinutes: prev.brainIdleMinutes } : {}),

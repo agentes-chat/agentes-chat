@@ -12,7 +12,7 @@ import {
 import path from "node:path";
 import { AGENT_WORKER_HOMES } from "@agenteschat/adapters/command-policy";
 import { type AgentScope, isAccountId } from "@agenteschat/adapters/machine-protocol";
-import { agentTmpInRam, isAgentUid } from "./config";
+import { agentTmpOnDisk, isAgentUid } from "./config";
 import { RunnerError } from "./errors";
 import { readJson, writeJson } from "./json-file";
 import { validateNetworkMark } from "./network-mark";
@@ -67,11 +67,29 @@ export interface Launcher {
 const TMPFS = 'mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"';
 
 /**
+ * Root, under the lock, at an agent's first launch after a boot with its /tmp on disk (`$1` its tmpfs, `$2`
+ * `AGENT_DISK_TMP_ROOT`, `$3` its uid). The agents' /tmp is a filesystem of their own, `fs` there, made anew at the
+ * boot's first such launch from a sparse `image` of half what the disk has free: agents can't take the system's
+ * inodes or more than half its room, and each boot starts empty. A new file, never the old one rewritten: an agent
+ * still bound into an earlier one keeps it. No journal, since nothing in it outlives the boot.
+ */
+const DISK_TMP = [
+  'mountpoint -q "$1" && exit',
+  'mkdir -p "$2/fs"',
+  'chmod 0700 "$2"',
+  'mountpoint -q "$2/fs" || { rm -f "$2/image"; truncate -s $(($(findmnt -bno AVAIL -T "$2") / 2)) "$2/image"; /usr/sbin/mkfs.ext4 -q -F -m 0 -i 4096 -O ^has_journal "$2/image"; mount -o loop,discard,nosuid,nodev "$2/image" "$2/fs"; }',
+  'mkdir -p "$2/fs/$3"',
+  TMPFS,
+  'mkdir "$1/tmp"',
+  'mount --bind "$2/fs/$3" "$1/tmp"',
+].join("; ");
+
+/**
  * Runs as root on the computer, before the agent's own mount namespace (`$1` its uid): the agent's tmpfs, so its
- * /dev/shm and /run/lock are in memory as the computer's are, each with its own room, and its /tmp: a folder of its own
- * on the system disk (`AGENT_DISK_TMP_ROOT`) bound into that tmpfs, or (`tmpOnDisk` false) in the tmpfs too. Made at
- * its first launch after the computer starts, under a lock (two first launches at once would stack two mounts), and
- * kept until the next boot: whatever a later launch says, all of the agent's processes see one /tmp.
+ * /tmp, /dev/shm and /run/lock are in memory as the computer's are, each with its own room, or (`tmpOnDisk`) its /tmp
+ * on the system disk, bound into that tmpfs (`DISK_TMP`). Made at its first launch after the computer starts, under a
+ * lock (two first launches at once would stack two mounts), and kept until the next boot: whatever a later launch
+ * says, all of the agent's processes see one /tmp.
  */
 const agentRam = (tmpOnDisk: boolean) =>
   [
@@ -80,11 +98,11 @@ const agentRam = (tmpOnDisk: boolean) =>
     'mkdir -p "$r"',
     'chmod 0700 "$r"',
     'd="$r/$1"',
-    ...(tmpOnDisk ? [`t=${AGENT_DISK_TMP_ROOT}`, 'mkdir -p "$t"', 'chmod 0700 "$t"', 't="$t/$1"'] : []),
+    ...(tmpOnDisk ? ['u="$1"'] : []),
     "shift",
     'mkdir -p "$d"',
     tmpOnDisk
-      ? `flock "$r/.lock" sh -ec 'mountpoint -q "$1" && exit; mkdir -p "$2"; ${TMPFS}; mkdir "$1/tmp"; mount --bind "$2" "$1/tmp"' sh "$d" "$t"`
+      ? `flock "$r/.lock" sh -ec '${DISK_TMP}' sh "$d" ${AGENT_DISK_TMP_ROOT} "$u"`
       : `flock "$r/.lock" sh -c 'mountpoint -q "$1" || ${TMPFS}' sh "$d"`,
     'exec "$@"',
   ].join("\n");
@@ -482,8 +500,8 @@ export function ensureSubids(user: Pick<AgentUser, "user" | "uid">, etc = "/etc"
 
 /**
  * Runs a command as the agent's user inside its slice (whose limits then
- * hold), with its own temporary folders (`agentRam`, its /tmp in memory with
- * `tmpInRam`, and `PRIVATE_TMP`), or with
+ * hold), with its own temporary folders (`agentRam`, its /tmp on disk with
+ * `tmpOnDisk`, and `PRIVATE_TMP`), or with
  * runuser alone where systemd isn't PID 1 (a container). Absolute paths: root
  * never looks these up on a PATH. `--collect`: a scope the OOM killer ended
  * doesn't stay behind as a failed unit. `OOMPolicy=continue` (`oomPolicy`): a
@@ -500,7 +518,7 @@ export function systemLauncher(
   systemd = systemdBooted(),
   oomPolicy = systemd && scopeOomPolicy(),
   containers = systemd && rootlessContainers(),
-  tmpInRam = systemd && agentTmpInRam(),
+  tmpOnDisk = systemd && agentTmpOnDisk(),
 ): Launcher {
   const home = agentHome(u.user);
   const runuser = ["/usr/sbin/runuser", "-u", u.user, "--"];
@@ -522,7 +540,7 @@ export function systemLauncher(
       "--",
       "/bin/sh",
       "-c",
-      agentRam(!tmpInRam),
+      agentRam(tmpOnDisk),
       "sh",
       String(u.uid),
       "/usr/bin/unshare",
@@ -590,14 +608,14 @@ function agentView(u: AgentUser, more: string[]) {
 export function containersCommand(
   u: AgentUser,
   literal = installedSystemd() >= 254,
-  tmpInRam = agentTmpInRam(),
+  tmpOnDisk = agentTmpOnDisk(),
 ): string[] {
   const env = Object.entries(agentEnv(u, true)).map(([name, value]) => `${name}=${value}`);
   const hook = networkPrefix(u);
   const command = [
     "/bin/sh",
     "-c",
-    agentRam(!tmpInRam),
+    agentRam(tmpOnDisk),
     "sh",
     String(u.uid),
     "/usr/bin/unshare",

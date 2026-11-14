@@ -340,27 +340,8 @@ test("the launcher: the agent's slice, its own temporary folders, its user, abso
   expect(p.join("\n")).not.toContain("hidepid=");
   expect(p.slice(19)).toEqual(["sh", "21003", "/usr/sbin/runuser", "-u", "ag-a1b2c3d4", "--"]);
   expect(launcher).toMatchObject({ env, home: "/home/ag-a1b2c3d4", tmp: "/run/agentes-runner-tmp/21003/tmp" });
-  // Root on the computer: the agent's own tmpfs, mounted once after each boot (a lock, so two first launches don't
-  // stack two), with its /tmp then bound into it from a folder of its own on the system disk, under a root-only one.
-  // A later launch finds the tmpfs and changes nothing, so the agent keeps that /tmp until the next boot.
+  // Root on the computer: the agent's own tmpfs, mounted once (a lock, so two first launches don't stack two).
   expect((p[8] ?? "").split("\n")).toEqual([
-    "set -e",
-    "r=/run/agentes-runner-tmp",
-    'mkdir -p "$r"',
-    'chmod 0700 "$r"',
-    'd="$r/$1"',
-    "t=/var/cache/agentes-runner-tmp",
-    'mkdir -p "$t"',
-    'chmod 0700 "$t"',
-    't="$t/$1"',
-    "shift",
-    'mkdir -p "$d"',
-    `flock "$r/.lock" sh -ec 'mountpoint -q "$1" && exit; mkdir -p "$2"; mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"; mkdir "$1/tmp"; mount --bind "$2" "$1/tmp"' sh "$d" "$t"`,
-    'exec "$@"',
-  ]);
-  // Its /tmp kept in memory (`agentTmpInRam`): the tmpfs alone, as before the disk; nothing else of the launch changes.
-  const inRam = systemLauncher(user, true, false, false, true).prefix;
-  expect((inRam[8] ?? "").split("\n")).toEqual([
     "set -e",
     "r=/run/agentes-runner-tmp",
     'mkdir -p "$r"',
@@ -371,7 +352,34 @@ test("the launcher: the agent's slice, its own temporary folders, its user, abso
     `flock "$r/.lock" sh -c 'mountpoint -q "$1" || mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"' sh "$d"`,
     'exec "$@"',
   ]);
-  expect(inRam.filter((_, i) => i !== 8)).toEqual(p.filter((_, i) => i !== 8));
+  // Its /tmp on disk (`agentTmpOnDisk`), at its first launch after a boot, under the same lock: the agents' own
+  // filesystem, made anew if this boot has none yet (half of what the disk has free, under a root-only folder), its
+  // folder there bound into its tmpfs. A later launch finds the tmpfs and changes nothing, so the agent keeps that /tmp
+  // until the next boot. Nothing else of the launch changes.
+  const onDisk = systemLauncher(user, true, false, false, true).prefix;
+  const diskStep = [
+    'mountpoint -q "$1" && exit',
+    'mkdir -p "$2/fs"',
+    'chmod 0700 "$2"',
+    'mountpoint -q "$2/fs" || { rm -f "$2/image"; truncate -s $(($(findmnt -bno AVAIL -T "$2") / 2)) "$2/image"; /usr/sbin/mkfs.ext4 -q -F -m 0 -i 4096 -O ^has_journal "$2/image"; mount -o loop,discard,nosuid,nodev "$2/image" "$2/fs"; }',
+    'mkdir -p "$2/fs/$3"',
+    'mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"',
+    'mkdir "$1/tmp"',
+    'mount --bind "$2/fs/$3" "$1/tmp"',
+  ].join("; ");
+  expect((onDisk[8] ?? "").split("\n")).toEqual([
+    "set -e",
+    "r=/run/agentes-runner-tmp",
+    'mkdir -p "$r"',
+    'chmod 0700 "$r"',
+    'd="$r/$1"',
+    'u="$1"',
+    "shift",
+    'mkdir -p "$d"',
+    `flock "$r/.lock" sh -ec '${diskStep}' sh "$d" /var/cache/agentes-runner-tmp "$u"`,
+    'exec "$@"',
+  ]);
+  expect(onDisk.filter((_, i) => i !== 8)).toEqual(p.filter((_, i) => i !== 8));
   // Root, in the agent's own mount namespace, before it becomes the agent: its folders under root-only ones, bound
   // over the shared ones (/tmp, /dev/shm and /run/lock from its tmpfs, /var/tmp from the disk); in its own /tmp only
   // mkdir, never a chmod an agent's link could aim.
@@ -408,7 +416,7 @@ test("the launcher: the agent's slice, its own temporary folders, its user, abso
   });
 });
 
-test("where an agent's /tmp goes is the runner's config: on disk unless `agentTmpInRam`, for every launch and its containers service", () => {
+test("where an agent's /tmp goes is the runner's config: in memory unless `agentTmpOnDisk`, for every launch and its containers service", () => {
   const home = tempDir("tmp-switch-");
   dirs.push(home);
   const user = { id: ANA.id, user: "ag-a1b2c3d4", uid: 21003 };
@@ -417,15 +425,17 @@ test("where an agent's /tmp goes is the runner's config: on disk unless `agentTm
   const before = process.env.AGENTES_RUNNER_HOME;
   process.env.AGENTES_RUNNER_HOME = home;
   try {
+    // Without the switch, the step as before: an upgrade moves no agent's /tmp and restarts no containers service.
     expect(step()).toBe(systemLauncher(user, true, false, false, false).prefix[8] ?? "");
-    expect(service()).toContain(step());
-    writeConfig({ mode: "system", agentTmpInRam: true }, home);
-    expect(step()).toBe(systemLauncher(user, true, false, false, true).prefix[8] ?? "");
     expect(step()).not.toContain(AGENT_DISK_TMP_ROOT);
     expect(service()).toContain(step());
-    // A config it can't read leaves /tmp on disk, never a launch that fails.
-    writeFileSync(path.join(home, "config.json"), "{");
+    writeConfig({ mode: "system", agentTmpOnDisk: true }, home);
+    expect(step()).toBe(systemLauncher(user, true, false, false, true).prefix[8] ?? "");
     expect(step()).toContain(AGENT_DISK_TMP_ROOT);
+    expect(service()).toContain(step());
+    // A config it can't read keeps /tmp in memory, never a launch that fails.
+    writeFileSync(path.join(home, "config.json"), "{");
+    expect(step()).not.toContain(AGENT_DISK_TMP_ROOT);
   } finally {
     if (before === undefined) delete process.env.AGENTES_RUNNER_HOME;
     else process.env.AGENTES_RUNNER_HOME = before;

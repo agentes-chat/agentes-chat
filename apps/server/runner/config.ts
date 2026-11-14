@@ -1,6 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, statSync, watch, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { SYSTEM_RUNNER_HOME } from "@agenteschat/adapters/command-policy";
 import { parseAccess, type RunnerAccess, type RunnerPause } from "@agenteschat/adapters/machine-protocol";
 import { validateNetworkMark } from "./network-mark";
 
@@ -74,10 +75,10 @@ export interface RunnerConfig {
    */
   services?: string[];
   /**
-   * System mode: each agent's /tmp in memory, in its own tmpfs, instead of on the system disk (`AGENT_DISK_TMP_ROOT`).
-   * An agent takes it at its first launch after the computer starts, so a change reaches it at the next boot.
+   * System mode: each agent's /tmp on the system disk (`AGENT_DISK_TMP_ROOT`) instead of in its own tmpfs. An agent
+   * takes it at its first launch after the computer starts, so a change reaches it at the next boot.
    */
-  agentTmpInRam?: true;
+  agentTmpOnDisk?: true;
   /**
    * After "leave" (unpair): the token `machineId` had, never used to connect,
    * only sent as proof when pairing again with the same server reconnects
@@ -238,18 +239,24 @@ export function normalizeStored(raw: Record<string, unknown>): StoredConfig {
       : {}),
     ...(claudeSharedLogin ? { claudeSharedLogin } : {}),
     ...(services.length ? { services } : {}),
-    ...(raw.agentTmpInRam === true ? { agentTmpInRam: true as const } : {}),
+    ...(raw.agentTmpOnDisk === true ? { agentTmpOnDisk: true as const } : {}),
     ...(text(raw.previousToken, 4000) ? { previousToken: text(raw.previousToken, 4000) } : {}),
   };
 }
 
-/** The config's `agentTmpInRam`; a config that can't be read keeps /tmp on disk rather than fail the launch. */
-export function agentTmpInRam(home = runnerHome()): boolean {
-  try {
-    return readStoredConfig(home)?.agentTmpInRam === true;
-  } catch {
-    return false;
-  }
+/**
+ * `agentTmpOnDisk` in this home's config or the computer's (`system`): each organization's runner on the server's own
+ * computer has a home of its own, while its operator writes the computer's. A config that can't be read keeps /tmp in
+ * memory rather than fail the launch.
+ */
+export function agentTmpOnDisk(home = runnerHome(), system = SYSTEM_RUNNER_HOME): boolean {
+  return [home, system].some((h) => {
+    try {
+      return readStoredConfig(h)?.agentTmpOnDisk === true;
+    } catch {
+      return false;
+    }
+  });
 }
 
 /**

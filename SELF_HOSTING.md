@@ -1358,9 +1358,8 @@ proxies the runner itself runs behind, and ports Docker publishes on the compute
 computer (`tailscale serve`, an nginx or a Caddy outside Docker) takes
 `sudo agentes-runner services allow tcp/443` too, or agents can't push to its git. Container and VM
 networks on the computer are closed to agents, except ports published on an address other than
-loopback. Each agent also has its own `/dev/shm` and `/run/lock`, in memory as the computer's are (a
-tmpfs of its own, which counts in the agents' memory), its own `/tmp` on the system disk (in
-`/var/cache/agentes-runner-tmp`, emptied at every boot as a tmpfs is) and its own `/var/tmp` on disk (in
+loopback. Each agent also has its own `/tmp`, `/dev/shm` and `/run/lock`, in memory as the computer's
+are (a tmpfs of its own, which counts in the agents' memory), and its own `/var/tmp` on disk (in
 `/var/lib/agentes-runner-tmp`), cleared of what is 10 days old (30 in `/var/tmp`), so a socket or file
 another agent leaves there is out of its reach, and its own adb server port
 (`ANDROID_ADB_SERVER_PORT`). Agents can't schedule cron or at jobs, which would run outside their own
@@ -1388,9 +1387,13 @@ computer), plus swap for a third of that, which keeps the rest for the system, t
 the server. At that limit the kernel stops one process, usually the biggest (Chrome's pages first), and
 only that process: the command it belonged to fails, and the agent is told it was most likely memory
 (with systemd 253 or newer; a desktop or a task already running when you update gets this when it next
-starts). Each agent's `/tmp` is on disk, so what agents leave there doesn't hold RAM; to keep it in memory
-as before, add `"agentTmpInRam": true` to `/var/lib/agentes-runner/config.json` as root: each agent takes
-it at its first launch after the next boot (until then it keeps the `/tmp` it has).
+starts). What agents leave in `/tmp` holds RAM until they delete it or the computer restarts. To keep
+it on disk instead, add `"agentTmpOnDisk": true` to `/var/lib/agentes-runner/config.json` as root (on
+this server's own computer too, for all its organizations): each agent takes it at its first launch
+after the next boot (until then it keeps the `/tmp` it has). The agents' `/tmp` is then a filesystem of
+their own, made anew at every boot in `/var/cache/agentes-runner-tmp` with half of what the system disk
+has free, so they can't fill that disk or take its inodes. It needs loop devices and `mkfs.ext4`
+(e2fsprogs), which an unprivileged container doesn't have.
 `agentes-runner computer`, which any agent (or you) can run, prints what the computer has, what is free
 for new work and which agents use the most; agents are told to run it before something heavy, to tell
 the person when another agent's work leaves no room, and to stop what a finished build left running.
