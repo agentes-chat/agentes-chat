@@ -679,6 +679,8 @@ export const ptBR = {
       noPasswordLead:
         "No computador onde este servidor roda, abra o app e escolha Adicionar uma senha em Configurações\u00a0›\u00a0Sua conta.",
       backToSignIn: "Voltar para entrar",
+      /** Under the sign-in opened by "Add account": back to the account still signed in. */
+      backToAccount: "Voltar para {{name}}",
       toAuthorizeApp: "Para conectar um app ao agentes.chat.",
     },
     desktop: {
@@ -2027,6 +2029,9 @@ export const ptBR = {
     newWorkspace: "Novo workspace",
     addWorkspace: "Adicionar workspace",
     addWorkspaceHint: "Entrar em um que já existe, criar um novo ou usar o servidor da equipe",
+    /** Another account on this server, signed in beside the one open (ADR 0183). */
+    addAccount: "Adicionar conta",
+    addAccountHint: "Entrar com outra conta sem sair desta",
     yourServer: "Seu servidor",
     /** A server's line in "Your workspaces" in the desktop app: the one on this computer, and its state (ADR 0158). */
     serverHere: "O agentes.chat neste {{device}}",
@@ -4837,6 +4842,11 @@ export const ptBR = {
   approval: {
     expiredChip: "Expirou · {{when}}",
     canceledChip: "Cancelado · {{when}}",
+    /** After an approved request's outcome on a shared card: it runs in the order asked. */
+    line: {
+      after: "roda depois de “{{title}}”",
+      notRun: "não rodou: o pedido anterior não foi aprovado",
+    },
     waitingFor: "Aguardando {{name}}",
     waitingAdmin: "Aguardando um admin",
     reasonLine: "Motivo: {{reason}}",
@@ -5444,7 +5454,18 @@ export const ptBR = {
       failed: "Falhou",
       running: "Executando",
       scheduled: "Agendado",
+      queued: "Na fila",
+      notRun: "Não rodou",
     },
+    /** Approved, waiting for a request the agent asked before it on the same card to be decided and done. */
+    queuedLine: "Aprovado. Roda depois de “{{title}}”, pedido antes.",
+    /** Approved before a request asked ahead of it was refused or expired: it didn't run. */
+    notRunRefused: "“{{title}}”, pedido antes, foi recusado depois que este foi aprovado. Por isso este não rodou.",
+    notRunExpired:
+      "“{{title}}”, pedido antes, expirou sem decisão depois que este foi aprovado. Por isso este não rodou.",
+    notRunEarlier: "Um pedido anterior foi recusado ou expirou depois que este foi aprovado. Por isso este não rodou.",
+    /** Its place among the requests on its card, in the order the agent asked. */
+    position: "{{n}} de {{total}}",
     expiredLine: "Ninguém decidiu em 24 h, então nada foi feito.",
     canceledLine: "A execução parou antes da decisão.",
     /** Replaced by the agent's newer request for the same action (`supersededById`). */
@@ -5515,8 +5536,10 @@ export const ptBR = {
       email: "O e-mail",
       text: "O que vai ser publicado",
       textDone: "O que foi publicado",
+      textNot: "O que seria publicado",
       values: "O que vai fazer",
       valuesDone: "O que fez",
+      valuesNot: "O que ia fazer",
       trail: "Como chegou aqui",
       showSteps: "Ver cada passo",
       hideSteps: "Esconder os passos",

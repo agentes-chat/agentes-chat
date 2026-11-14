@@ -673,6 +673,7 @@
       "noPassword": "Esta cuenta inicia sesión desde la app de agentes.chat.",
       "noPasswordLead": "En la computadora que ejecuta este servidor, abre la app y elige Agregar una contraseña en Configuración › Tu cuenta.",
       "backToSignIn": "Volver a iniciar sesión",
+      "backToAccount": "Volver a {{name}}",
       "toAuthorizeApp": "Para conectar una app a agentes.chat."
     },
     "desktop": {
@@ -2027,6 +2028,8 @@
     "newWorkspace": "Nuevo espacio de trabajo",
     "addWorkspace": "Añadir espacio de trabajo",
     "addWorkspaceHint": "Entrar en uno que ya tienes, crear uno nuevo o usar el servidor de tu equipo",
+    "addAccount": "Añadir cuenta",
+    "addAccountHint": "Inicia sesión con otra cuenta sin salir de esta",
     "yourServer": "Tu servidor",
     "serverHere": "El agentes.chat de esta {{device}}",
     "serverStopped": "detenido",
@@ -4730,6 +4733,10 @@
   "approval": {
     "expiredChip": "Vencida · {{when}}",
     "canceledChip": "Cancelada · {{when}}",
+    "line": {
+      "after": "se ejecuta después de “{{title}}”",
+      "notRun": "no se ejecutó: la solicitud anterior no fue aprobada"
+    },
     "waitingFor": "Esperando a {{name}}",
     "waitingAdmin": "Esperando a un admin",
     "reasonLine": "Motivo: {{reason}}",
@@ -5346,8 +5353,15 @@
       "canceled": "Cancelada",
       "failed": "Falló",
       "running": "En ejecución",
-      "scheduled": "Programada"
+      "scheduled": "Programada",
+      "queued": "En cola",
+      "notRun": "No se ejecutó"
     },
+    "queuedLine": "Aprobada. Se ejecuta después de “{{title}}”, solicitada antes.",
+    "notRunRefused": "“{{title}}”, solicitada antes, fue rechazada después de aprobar esta. Por eso esta no se ejecutó.",
+    "notRunExpired": "“{{title}}”, solicitada antes, venció sin decisión después de aprobar esta. Por eso esta no se ejecutó.",
+    "notRunEarlier": "Una solicitud anterior fue rechazada o venció después de aprobar esta. Por eso esta no se ejecutó.",
+    "position": "{{n}} de {{total}}",
     "expiredLine": "Nadie decidió en 24 h, así que no se hizo nada.",
     "canceledLine": "La ejecución se detuvo antes de una decisión.",
     "supersededLine": "El agente volvió a pedirlo con una versión más nueva. Esta no se hizo.",
@@ -5414,8 +5428,10 @@
       "email": "El correo",
       "text": "Lo que va a publicar",
       "textDone": "Lo que publicó",
+      "textNot": "Lo que iba a publicar",
       "values": "Lo que va a hacer",
       "valuesDone": "Lo que hizo",
+      "valuesNot": "Lo que iba a hacer",
       "trail": "Cómo llegó aquí",
       "showSteps": "Ver cada paso",
       "hideSteps": "Ocultar los pasos",

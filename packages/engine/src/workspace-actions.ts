@@ -499,7 +499,12 @@ async function rowNow(db: Database, orgId: string, row: string): Promise<RowLeve
 
 /** The roles a "who may" card names, with their levels, as its input keeps them. */
 const levelsOf = (v: unknown) =>
-  (Array.isArray(v) ? v : []).map(obj).map((r) => ({ id: str(r.id), name: str(r.name), level: Number(r.level) }));
+  (Array.isArray(v) ? v : []).map(obj).map((r) => ({
+    id: str(r.id),
+    name: str(r.name),
+    level: Number(r.level),
+    ...(r.admin === true ? { admin: true } : {}),
+  }));
 
 /** The words of a "who may" card and its receipt: the row, and the computers' own sentence (`_computers`). */
 const rowWords = (row: string) => ({ permission: row, ...(row === COMPUTERS_ROW ? { variant: "computers" } : {}) });
@@ -571,7 +576,7 @@ const permissionHoldersAction: WorkspaceAction = {
         ),
       )
       .orderBy(asc(orgRoles.position));
-    const kept = Number(input.everyone) < top ? admins.map((a) => ({ ...a, level: top })) : [];
+    const kept = Number(input.everyone) < top ? admins.map((a) => ({ ...a, level: top, admin: true })) : [];
     const others = roles.filter((r) => !admins.some((a) => a.id === r.id));
     return { input: { row, everyone: Number(input.everyone), roles: [...kept, ...others] }, words: rowWords(row) };
   },
@@ -587,6 +592,23 @@ const permissionHoldersAction: WorkspaceAction = {
     if (roles.some((r) => names.get(r.id) !== r.name)) {
       const now = roles.filter((r) => names.has(r.id)).map((r) => ({ ...r, name: names.get(r.id) ?? r.name }));
       throw new CardChangedError({ ...input, roles: now }, rowWords(row));
+    }
+    // A role it names for holding administrator that no longer does would get the row from this click: read again.
+    const lapsed = roles.filter((r) => "admin" in r);
+    if (lapsed.length > 0) {
+      const still = new Set(
+        (
+          await deps.db
+            .select({ id: orgRoles.id })
+            .from(orgRoles)
+            .where(and(eq(orgRoles.orgId, orgId), sql`'administrator' = any(${orgRoles.permissions})`))
+        ).map((r) => r.id),
+      );
+      if (lapsed.some((r) => !still.has(r.id)))
+        throw new CardChangedError(
+          { ...input, roles: roles.filter((r) => !("admin" in r) || still.has(r.id)) },
+          rowWords(row),
+        );
     }
     const { before, after } = await setRowHolders(
       deps.db,

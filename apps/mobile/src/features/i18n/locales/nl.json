@@ -1138,6 +1138,9 @@
     "addWorkspaceTeamShort": "Naar de server van je team",
     "addWorkspaceTeamSubShort": "Adres of QR-code van de computer",
     "addWorkspaceFoot": "Je verlaat geen enkele werkruimte.",
+    "addAccount": "Inloggen bij een ander account",
+    "addAccountSub": "Op {{host}}, zonder dit te verlaten",
+    "accountNoWorkspace": "Nog geen werkruimte",
     "teamServerLeadShort": "Wat je team in de browser opent.",
     "teamServerQuestion": "Wat is het adres van je team?",
     "account": {

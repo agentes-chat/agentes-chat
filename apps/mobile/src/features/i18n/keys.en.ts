@@ -1209,6 +1209,11 @@ export const featureKeysEn = {
     addWorkspaceTeamShort: "Join your team's server",
     addWorkspaceTeamSubShort: "Address or the computer's QR code",
     addWorkspaceFoot: "You don't leave any workspace.",
+    /** Another account on the server the app is on, signed in beside this one (ADR 0183). */
+    addAccount: "Sign in to another account",
+    addAccountSub: "On {{host}}, without leaving this one",
+    /** In Workspaces, under an account of this phone that has no workspace. */
+    accountNoWorkspace: "No workspace yet",
     teamServerLeadShort: "What your team opens in the browser.",
     /** The team server's screen: the question is the title, in two lines on the sign-in's ruler. */
     teamServerQuestion: "What's your team's address?",

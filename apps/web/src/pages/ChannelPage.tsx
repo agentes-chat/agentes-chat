@@ -1581,7 +1581,19 @@ function ChannelView({
       const shift = anchorShift(resized, el.scrollTop);
       if (shift !== 0) el.scrollTop += shift;
     };
+    // What stands above the list folding away (the day's greeting, a bar) moves its top edge up: read further up, the
+    // words on screen stay where they are. Only up: what appears above it as the conversation opens is where the
+    // opening lands it. Pinned to the end, `pin` keeps the newest message in place.
+    // In the page's own terms: the window moving (Safari pushing the page up for the keyboard) folds nothing.
+    const edge = () => el.getBoundingClientRect().top + window.scrollY;
+    let top = edge();
+    const keep = () => {
+      const now = edge();
+      if (now < top && !stick.current && Date.now() >= autoScrollUntil.current) el.scrollTop -= top - now;
+      top = now;
+    };
     const ro = new ResizeObserver((entries) => {
+      keep();
       hold(entries);
       pin();
     });
@@ -5053,6 +5065,8 @@ function ChannelDetails({
       },
     );
   const archiveIt = () => archive.run(channel, () => onOpenChange(false));
+  // While one of them runs, none of them can be pressed.
+  const busy = leaving.pending || archive.pending;
   // Deleting is for owners and admins, never #general; archiving is also for whoever made the channel.
   const deletable = can(org, "manage_channels") && channel.name !== "general";
   const [deleting, setDeleting] = useState(false);
@@ -5264,42 +5278,45 @@ function ChannelDetails({
                   </li>
                 ))}
               </ul>
+              {/* Rows of the nav, as wide as it, the pressed one's spinner in its icon's place. */}
               {channel.name !== "general" && (
                 <div className="channel-settings__danger">
                   {channel.isMember && (
-                    <Button
-                      variant="ghost"
-                      icon="arrowRight"
-                      className="channel-details__archive"
-                      loading={leaving.pending}
+                    <button
+                      type="button"
+                      className="settings__link channel-settings__act"
+                      disabled={busy}
+                      aria-busy={leaving.pending || undefined}
                       onClick={() => leaving.run(channel, () => onOpenChange(false))}
                     >
+                      <Icon name={leaving.pending ? "spinner" : "arrowRight"} size={18} />
                       {t("channel.leave")}
-                    </Button>
+                    </button>
                   )}
-                  <Button
-                    variant="ghost"
-                    icon="archive"
-                    className="channel-details__archive"
-                    loading={archive.pending}
+                  <button
+                    type="button"
+                    className="settings__link channel-settings__act"
+                    disabled={busy}
+                    aria-busy={archive.pending || undefined}
                     onClick={archiveIt}
                   >
+                    <Icon name={archive.pending ? "spinner" : "archive"} size={18} />
                     {t("channel.archive")}
-                  </Button>
+                  </button>
                   {deletable && (
-                    <Button
-                      variant="ghost"
-                      icon="trash"
-                      className="channel-details__archive"
-                      disabled={archive.pending}
+                    <button
+                      type="button"
+                      className="settings__link channel-settings__act"
+                      disabled={busy}
                       onClick={() => {
                         saveTopic();
                         saveName();
                         setDeleting(true);
                       }}
                     >
+                      <Icon name="trash" size={18} />
                       {t("channel.delete")}
-                    </Button>
+                    </button>
                   )}
                 </div>
               )}

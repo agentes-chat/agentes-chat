@@ -12704,9 +12704,6 @@ html:not([data-pointer]) .sidebar__section-toggle:focus-visible {
 .channel-category__add {
   margin-top: 4px;
 }
-.channel-details__archive {
-  color: var(--danger);
-}
 /* Channel settings (ADR 0134): a nav on the left as in Settings, one section in the pane; stacked on a phone. The
    nav is a column of its own (a soft ground and a hairline to the pane, down to the dialog's cut corner): without it
    the sections floated in the dialog's empty left side and the current one read as a stray key. */
@@ -12735,18 +12732,31 @@ html:not([data-pointer]) .sidebar__section-toggle:focus-visible {
   flex-direction: column;
   gap: 2px;
 }
+/* No background of its own here: the nav's hover plate and its current section's key are the links' own. */
 .channel-settings__nav .settings__link {
   width: 100%;
   border: 0;
-  background: none;
   font: inherit;
   font-size: 14px;
   cursor: pointer;
 }
+/* Leave, archive and delete: rows of the nav like its sections (each as wide as it, its hover plate across), in red. */
 .channel-settings__danger {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: 2px;
+}
+.channel-settings__nav .channel-settings__act,
+.channel-settings__nav .channel-settings__act > .ac-icon {
+  color: var(--danger);
+}
+.channel-settings__act:disabled {
+  background: none;
+  cursor: progress;
+}
+/* The spinner is 16 where the icon is 18: the words stay where they were. */
+.channel-settings__act > .ac-pixspin {
+  margin-inline: 1px;
 }
 .channel-settings__pane {
   flex: 1 1 auto;

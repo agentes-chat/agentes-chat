@@ -659,6 +659,7 @@
       "noPassword": "Dit account logt in via de agentes.chat-app.",
       "noPasswordLead": "Open op de computer waarop deze server draait de app en kies Wachtwoord toevoegen in Instellingen › Je account.",
       "backToSignIn": "Terug naar inloggen",
+      "backToAccount": "Terug naar {{name}}",
       "toAuthorizeApp": "Om een app aan agentes.chat te koppelen."
     },
     "desktop": {
@@ -1977,6 +1978,8 @@
     "newWorkspace": "Nieuwe werkruimte",
     "addWorkspace": "Werkruimte toevoegen",
     "addWorkspaceHint": "Doe mee met een bestaande, maak een nieuwe of gebruik de server van je team",
+    "addAccount": "Account toevoegen",
+    "addAccountHint": "Log in bij een ander account zonder dit te verlaten",
     "yourServer": "Je server",
     "serverHere": "agentes.chat op deze {{device}}",
     "serverStopped": "gestopt",
@@ -4602,6 +4605,10 @@
   "approval": {
     "expiredChip": "Verlopen · {{when}}",
     "canceledChip": "Geannuleerd · {{when}}",
+    "line": {
+      "after": "wordt uitgevoerd na ‘{{title}}’",
+      "notRun": "niet uitgevoerd: het verzoek ervoor is niet goedgekeurd"
+    },
     "waitingFor": "Wacht op {{name}}",
     "waitingAdmin": "Wacht op een beheerder",
     "reasonLine": "Reden: {{reason}}",
@@ -5190,8 +5197,15 @@
       "canceled": "Geannuleerd",
       "failed": "Mislukt",
       "running": "Wordt uitgevoerd",
-      "scheduled": "Gepland"
+      "scheduled": "Gepland",
+      "queued": "In de wachtrij",
+      "notRun": "Niet uitgevoerd"
     },
+    "queuedLine": "Goedgekeurd. Wordt uitgevoerd na ‘{{title}}’, dat eerder is gevraagd.",
+    "notRunRefused": "‘{{title}}’, eerder gevraagd, is geweigerd nadat dit verzoek was goedgekeurd. Daarom is dit niet uitgevoerd.",
+    "notRunExpired": "‘{{title}}’, eerder gevraagd, is zonder beslissing verlopen nadat dit verzoek was goedgekeurd. Daarom is dit niet uitgevoerd.",
+    "notRunEarlier": "Een eerder verzoek is geweigerd of verlopen nadat dit was goedgekeurd. Daarom is dit niet uitgevoerd.",
+    "position": "{{n}} van {{total}}",
     "expiredLine": "Niemand besliste binnen 24 u, dus er is niets gedaan.",
     "canceledLine": "De run stopte vóór een besluit.",
     "supersededLine": "De agent vroeg het opnieuw met een nieuwere versie. Deze is niet uitgevoerd.",
@@ -5260,8 +5274,10 @@
       "email": "De e-mail",
       "text": "Wat er gepubliceerd wordt",
       "textDone": "Wat er gepubliceerd is",
+      "textNot": "Wat er gepubliceerd zou zijn",
       "values": "Wat er gaat gebeuren",
       "valuesDone": "Wat er gebeurd is",
+      "valuesNot": "Wat er zou zijn gebeurd",
       "trail": "Hoe het zover kwam",
       "showSteps": "Elke stap bekijken",
       "hideSteps": "Stappen verbergen",

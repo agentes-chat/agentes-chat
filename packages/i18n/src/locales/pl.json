@@ -687,6 +687,7 @@
       "noPassword": "To konto loguje się z aplikacji agentes.chat.",
       "noPasswordLead": "Na komputerze, na którym działa ten serwer, otwórz aplikację i wybierz Dodaj hasło w Ustawienia › Twoje konto.",
       "backToSignIn": "Wróć do logowania",
+      "backToAccount": "Wróć do {{name}}",
       "toAuthorizeApp": "Żeby połączyć aplikację z agentes.chat."
     },
     "desktop": {
@@ -2078,6 +2079,8 @@
     "newWorkspace": "Nowa przestrzeń robocza",
     "addWorkspace": "Dodaj przestrzeń roboczą",
     "addWorkspaceHint": "Dołącz do istniejącego, utwórz nowy albo użyj serwera swojego zespołu",
+    "addAccount": "Dodaj konto",
+    "addAccountHint": "Zaloguj się na inne konto bez wylogowywania z tego",
     "yourServer": "Twój serwer",
     "serverHere": "agentes.chat na tym urządzeniu ({{device}})",
     "serverStopped": "zatrzymany",
@@ -4898,6 +4901,10 @@
   "approval": {
     "expiredChip": "Wygasło · {{when}}",
     "canceledChip": "Anulowano · {{when}}",
+    "line": {
+      "after": "wykona się po „{{title}}”",
+      "notRun": "niewykonane: poprzednia prośba nie została zatwierdzona"
+    },
     "waitingFor": "Czeka na: {{name}}",
     "waitingAdmin": "Czeka na administratora",
     "reasonLine": "Powód: {{reason}}",
@@ -5548,8 +5555,15 @@
       "canceled": "Anulowane",
       "failed": "Błąd",
       "running": "W toku",
-      "scheduled": "Zaplanowane"
+      "scheduled": "Zaplanowane",
+      "queued": "W kolejce",
+      "notRun": "Niewykonane"
     },
+    "queuedLine": "Zatwierdzone. Wykona się po „{{title}}”, o które poproszono wcześniej.",
+    "notRunRefused": "„{{title}}”, o które poproszono wcześniej, zostało odrzucone po zatwierdzeniu tej prośby. Dlatego ta nie została wykonana.",
+    "notRunExpired": "„{{title}}”, o które poproszono wcześniej, wygasło bez decyzji po zatwierdzeniu tej prośby. Dlatego ta nie została wykonana.",
+    "notRunEarlier": "Wcześniejsza prośba została odrzucona lub wygasła po zatwierdzeniu tej. Dlatego ta nie została wykonana.",
+    "position": "{{n}} z {{total}}",
     "expiredLine": "Nikt nie zdecydował w ciągu 24 h, więc nic nie zrobiono.",
     "canceledLine": "Uruchomienie zatrzymało się przed decyzją.",
     "supersededLine": "Agent poprosił ponownie o nowszą wersję. Ta nie została wykonana.",
@@ -5618,8 +5632,10 @@
       "email": "E-mail",
       "text": "Co zostanie opublikowane",
       "textDone": "Co zostało opublikowane",
+      "textNot": "Co zostałoby opublikowane",
       "values": "Co zostanie zrobione",
       "valuesDone": "Co zostało zrobione",
+      "valuesNot": "Co zostałoby zrobione",
       "trail": "Jak do tego doszło",
       "showSteps": "Zobacz każdy krok",
       "hideSteps": "Ukryj kroki",

@@ -902,8 +902,10 @@ describe("returns agents set (Retornos)", () => {
     const view = busy();
     // More than 12 h away and on the next day at any hour the suite runs: at 00:44, 23 h ahead is still today.
     const tomorrow = new Date(Math.max(Date.now() + 13 * 3600_000, new Date().setHours(24, 30, 0, 0))).toISOString();
+    // Its own time, read back: one taken again later can fall in the next minute.
+    const soon = ret({ messageId: "f-1" });
     view.followUps = [
-      ret({ messageId: "f-1" }),
+      soon,
       ret({
         messageId: "f-2",
         agentId: ADA_ID,
@@ -920,9 +922,7 @@ describe("returns agents set (Retornos)", () => {
     expect(sections.at(-1)).toBe("Retornos");
     const row = rowOf("rever o deploy de hoje");
     expect(row.querySelector(".tm-hit small")?.textContent).toBe("Atlas · #eng");
-    expect(row.querySelector(".tm-cell--state")?.textContent).toBe(
-      `Às ${formatTime("pt-BR", ret({ messageId: "x" }).at)}`,
-    );
+    expect(row.querySelector(".tm-cell--state")?.textContent).toBe(`Às ${formatTime("pt-BR", soon.at)}`);
     expect(row.querySelector(".tm-cell--time")?.textContent).toBe("em 33 min");
     expect(row.querySelector(".tm-cell--use")?.textContent).toBe("—");
     // One line: what it leaves out is in its tip.

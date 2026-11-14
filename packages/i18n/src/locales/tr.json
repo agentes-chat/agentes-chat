@@ -659,6 +659,7 @@
       "noPassword": "Bu hesap agentes.chat uygulamasından giriş yapar.",
       "noPasswordLead": "Bu sunucuyu çalıştıran bilgisayarda uygulamayı açın ve Ayarlar › Hesabınız bölümünde Şifre ekle'yi seçin.",
       "backToSignIn": "Girişe dön",
+      "backToAccount": "{{name}} hesabına dön",
       "toAuthorizeApp": "agentes.chat'e bir uygulama bağlamak için."
     },
     "desktop": {
@@ -1977,6 +1978,8 @@
     "newWorkspace": "Yeni çalışma alanı",
     "addWorkspace": "Çalışma alanı ekle",
     "addWorkspaceHint": "Var olana katıl, yenisini oluştur ya da ekibinin sunucusunu kullan",
+    "addAccount": "Hesap ekle",
+    "addAccountHint": "Bu hesaptan çıkmadan başka bir hesapla giriş yapın",
     "yourServer": "Sunucunuz",
     "serverHere": "Bu {{device}} üzerindeki agentes.chat",
     "serverStopped": "durduruldu",
@@ -4587,6 +4590,10 @@
   "approval": {
     "expiredChip": "Süresi doldu · {{when}}",
     "canceledChip": "İptal edildi · {{when}}",
+    "line": {
+      "after": "“{{title}}” sonrasında çalışır",
+      "notRun": "çalışmadı: önceki istek onaylanmadı"
+    },
     "waitingFor": "{{name}} bekleniyor",
     "waitingAdmin": "Bir yönetici bekleniyor",
     "reasonLine": "Gerekçe: {{reason}}",
@@ -5168,8 +5175,15 @@
       "canceled": "İptal edildi",
       "failed": "Başarısız",
       "running": "Çalışıyor",
-      "scheduled": "Planlandı"
+      "scheduled": "Planlandı",
+      "queued": "Sırada",
+      "notRun": "Çalışmadı"
     },
+    "queuedLine": "Onaylandı. Daha önce istenen “{{title}}” sonrasında çalışır.",
+    "notRunRefused": "Daha önce istenen “{{title}}”, bu istek onaylandıktan sonra reddedildi. Bu yüzden bu istek çalışmadı.",
+    "notRunExpired": "Daha önce istenen “{{title}}”, bu istek onaylandıktan sonra karar verilmeden süresi doldu. Bu yüzden bu istek çalışmadı.",
+    "notRunEarlier": "Önceki bir istek, bu onaylandıktan sonra reddedildi veya süresi doldu. Bu yüzden bu istek çalışmadı.",
+    "position": "{{n}}/{{total}}",
     "expiredLine": "24 saat içinde kimse karar vermedi, bu yüzden hiçbir şey yapılmadı.",
     "canceledLine": "Çalıştırma karardan önce durdu.",
     "supersededLine": "Ajan daha yeni bir sürümle yeniden istedi. Bu yapılmadı.",
@@ -5236,8 +5250,10 @@
       "email": "E-posta",
       "text": "Yayımlanacak olan",
       "textDone": "Yayımlanan",
+      "textNot": "Yayımlanması istenen",
       "values": "Yapacağı şey",
       "valuesDone": "Yaptığı şey",
+      "valuesNot": "Yapacak olduğu şey",
       "trail": "Buraya nasıl gelindi",
       "showSteps": "Her adımı gör",
       "hideSteps": "Adımları gizle",

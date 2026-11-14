@@ -1595,6 +1595,9 @@
   "auth.flow.backToSignIn": {
     "value": "Back to sign in"
   },
+  "auth.flow.backToAccount": {
+    "value": "Back to {{name}}"
+  },
   "auth.flow.toAuthorizeApp": {
     "value": "To connect an app to agentes.chat."
   },
@@ -4861,6 +4864,12 @@
   },
   "shell.addWorkspaceHint": {
     "value": "Join one you already have, create one, or use your team's server"
+  },
+  "shell.addAccount": {
+    "value": "Add account"
+  },
+  "shell.addAccountHint": {
+    "value": "Sign in to another account without leaving this one"
   },
   "shell.yourServer": {
     "value": "Your server"
@@ -11250,6 +11259,12 @@
   "approval.canceledChip": {
     "value": "Canceled · {{when}}"
   },
+  "approval.line.after": {
+    "value": "runs after “{{title}}”"
+  },
+  "approval.line.notRun": {
+    "value": "not run: the request before it wasn't approved"
+  },
   "approval.waitingFor": {
     "value": "Waiting for {{name}}"
   },
@@ -12699,6 +12714,27 @@
   "approvals.status.scheduled": {
     "value": "Scheduled"
   },
+  "approvals.status.queued": {
+    "value": "In line"
+  },
+  "approvals.status.notRun": {
+    "value": "Not run"
+  },
+  "approvals.queuedLine": {
+    "value": "Approved. Runs after “{{title}}”, asked before it."
+  },
+  "approvals.notRunRefused": {
+    "value": "“{{title}}”, asked before this, was refused after this was approved, so this didn't run."
+  },
+  "approvals.notRunExpired": {
+    "value": "“{{title}}”, asked before this, expired undecided after this was approved, so this didn't run."
+  },
+  "approvals.notRunEarlier": {
+    "value": "A request asked before this was refused or expired after this was approved, so this didn't run."
+  },
+  "approvals.position": {
+    "value": "{{n}} of {{total}}"
+  },
   "approvals.expiredLine": {
     "value": "Nobody decided within 24 h, so nothing was done."
   },
@@ -12876,11 +12912,17 @@
   "approvals.review.textDone": {
     "value": "What it published"
   },
+  "approvals.review.textNot": {
+    "value": "What it would have published"
+  },
   "approvals.review.values": {
     "value": "What it will do"
   },
   "approvals.review.valuesDone": {
     "value": "What it did"
+  },
+  "approvals.review.valuesNot": {
+    "value": "What it would have done"
   },
   "approvals.review.trail": {
     "value": "How it got here"
