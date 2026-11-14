@@ -6,6 +6,8 @@ import { can, type RolePermission } from "@agenteschat/client/lib/permissions";
 import {
   everyoneOf,
   isEveryone,
+  keepsFixedOnTop,
+  movedOrder,
   peopleWith,
   ROLES_MAX,
   ROLES_SEARCH_FROM,
@@ -51,7 +53,7 @@ import { LoadingList } from "@/components/Loading";
 import { useOrg } from "@/components/org-context";
 import { openContextMenu } from "@/lib/context-menu";
 import { useToast } from "@/lib/toast";
-import { roleRef, useNames, useRoleNav } from "./parts";
+import { type Names, PersonRow, roleRef, useNames, useRoleNav } from "./parts";
 import { RoleAgents } from "./RoleAgents";
 import { RoleChannels } from "./RoleChannels";
 import { DeleteRoleDialog, LookDialog, NewRoleDialog, useDuplicate } from "./RoleDialogs";
@@ -134,8 +136,9 @@ function RoleGone({ deleted }: { deleted: boolean }) {
   );
 }
 
-/** Who holds a cargo, as faces and a count; the faces go at phone width, the count stays. */
+/** Who holds a cargo, as faces and a count; at phone width the faces go and the count says what it counts. */
 function PeopleStack({ people }: { people: Person[] }) {
+  const { t } = useTranslation();
   return (
     <span className="roles-row__people">
       <span className="roles-stack" aria-hidden="true">
@@ -143,7 +146,10 @@ function PeopleStack({ people }: { people: Person[] }) {
           <Avatar key={p.userId} size="xs" name={p.name} imageUrl={p.avatarUrl ?? p.image} />
         ))}
       </span>
-      <span className="tabular">{people.length}</span>
+      <span className="roles-row__count tabular" aria-hidden="true">
+        {people.length}
+      </span>
+      <span className="roles-row__words">{t("rolesPage.people", { count: people.length })}</span>
     </span>
   );
 }
@@ -155,17 +161,19 @@ function PeopleStack({ people }: { people: Person[] }) {
 function Reach({
   role,
   data,
+  named,
   onTab,
   people,
 }: {
   role: OrgRole;
   data: OrgRoles;
+  /** Channels' and agents' names, read once by the list or the page. */
+  named: Names;
   onTab?: (tab: RoleTab) => void;
   /** The glance line's first item: how many hold it. */
   people?: number;
 }) {
   const { t } = useTranslation();
-  const named = useNames();
   const everyone = everyoneOf(data.roles);
   const reach = reachOf(role, everyone, data.areas);
   const base = isEveryone(role);
@@ -239,14 +247,30 @@ function Reach({
   );
 }
 
+/** Saves the cargos' order; a refusal puts the rows back and offers to read them again. */
+function useReorder(custom: readonly OrgRole[], onSaved?: () => void) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const reorder = useReorderRoles(org.id);
+  const roles = useRoles(org.id);
+  const put = (ids: string[]) => {
+    if (ids.join() === custom.map((r) => r.id).join()) return;
+    reorder.mutate(ids, {
+      onSuccess: () => onSaved?.(),
+      onError: (e) =>
+        toast.show(errorText(t, e), "error", { label: t("common.reload"), run: () => void roles.refetch() }),
+    });
+  };
+  return Object.assign(put, { pending: reorder.isPending });
+}
+
 /** Settings › Cargos: Base (Todos), then Dono and the cargos in their order, each opening its page. */
 function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; create?: boolean }) {
   const { t } = useTranslation();
   const { org } = useOrg();
-  const toast = useToast();
   const nav = useRoleNav();
-  const reorder = useReorderRoles(org.id);
-  const roles = useRoles(org.id);
+  const named = useNames();
   const hintId = useId();
   const [creating, setCreating] = useState(Boolean(create));
   const [query, setQuery] = useState("");
@@ -275,27 +299,11 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
   const ownerShown = matches(t("roles.owner"));
   const baseShown = everyone !== undefined && matches(t("rolesPage.everyoneName"));
   // Nobody moves a cargo above one they can't change: those stay on top, in their order.
-  const fixed = (ids: readonly string[]) => {
-    const last = ids.reduce((at, id, i) => (byId.get(id)?.editable === false ? i : at), -1);
-    return ids.every((id, i) => i > last || byId.get(id)?.editable === false);
-  };
+  const editable = (id: string) => byId.get(id)?.editable !== false;
+  const fixed = (ids: readonly string[]) => keepsFixedOnTop(ids, editable);
   const movable = (r: OrgRole) => manages && r.editable && !q;
-  const moved = (ids: readonly string[], id: string, by: -1 | 1) => {
-    const i = ids.indexOf(id);
-    const j = i + by;
-    if (i < 0 || j < 0 || j >= ids.length) return null;
-    const next = [...ids];
-    [next[i], next[j]] = [next[j] as string, next[i] as string];
-    return fixed(next) ? next : null;
-  };
-  const put = (ids: string[]) => {
-    if (ids.join() === custom.map((r) => r.id).join()) return;
-    reorder.mutate(ids, {
-      onSuccess: () => setSaved(true),
-      onError: (e) =>
-        toast.show(errorText(t, e), "error", { label: t("common.reload"), run: () => void roles.refetch() }),
-    });
-  };
+  const moved = (ids: readonly string[], id: string, by: -1 | 1) => movedOrder(ids, editable, id, by);
+  const put = useReorder(custom, () => setSaved(true));
   const grip = (r: OrgRole) => {
     const name = r.name;
     const up = moved(order, r.id, -1);
@@ -414,7 +422,7 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
           <PeopleStack people={peopleWith(r, people)} />
           <Icon name="chevronRight" size={18} />
         </span>
-        <Reach role={r} data={data} />
+        <Reach role={r} data={data} named={named} />
       </button>
     </div>
   );
@@ -467,7 +475,7 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
           </Button>
         </p>
       ) : (
-        <Locked when={reorder.isPending}>
+        <Locked when={put.pending}>
           <div className="ac-groups">
             {baseShown && everyone && (
               <section className="section section--tight">
@@ -491,7 +499,7 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
                         <span className="roles-row__people">{t("rolesPage.people", { count: people.length })}</span>
                         <Icon name="chevronRight" size={18} />
                       </span>
-                      <Reach role={everyone} data={data} />
+                      <Reach role={everyone} data={data} named={named} />
                     </button>
                   </div>
                 </List>
@@ -573,6 +581,7 @@ function RoleHead({
   const nav = useRoleNav();
   const invite = useInviteDialog();
   const duplicate = useDuplicate();
+  const named = useNames();
   const list = sortRoles(data.roles);
   const owners = people.filter((p) => p.role === "owner");
   const name = role ? roleName(t, role) : t("roles.owner");
@@ -581,6 +590,13 @@ function RoleHead({
   const invites = custom && role.givable && can(org, "invite_people") && invite !== null;
   const copies = custom && !lock && duplicate.allowed(role);
   const deletes = custom && !lock;
+  // The order from here too: the list's grip goes at phone width and under a finger.
+  const order = list.filter((r) => !isEveryone(r));
+  const put = useReorder(order);
+  const editable = (id: string) => order.find((r) => r.id === id)?.editable !== false;
+  const ids = order.map((r) => r.id);
+  const up = custom && !lock ? movedOrder(ids, editable, role.id, -1) : null;
+  const down = custom && !lock ? movedOrder(ids, editable, role.id, 1) : null;
   const item = (r: OrgRole | null) => (
     <MenuItem
       key={r?.id ?? "owner"}
@@ -604,75 +620,91 @@ function RoleHead({
         <RoleMark color="violet" icon="audienceOwner" size={64} />
       )}
       <div className="roles-head__text">
-        <Menu
-          label={t("rolesPage.switchTo")}
-          trigger={
-            <button type="button" className="roles-head__name" aria-label={`${name}, ${t("rolesPage.switchTo")}`}>
-              <h2 className="roles-head__title">{name}</h2>
-              <Icon name="chevronDown" size={20} />
-            </button>
-          }
-        >
-          {item(null)}
-          {list.filter((r) => !isEveryone(r)).map(item)}
-          {list.filter(isEveryone).map(item)}
-        </Menu>
+        {/* The name is a heading holding the switcher to the other cargos (a button in a heading, never the reverse). */}
+        <h2 className="roles-head__title ac-captop">
+          <Menu
+            label={t("rolesPage.switchTo")}
+            trigger={
+              <button type="button" className="roles-head__name" title={t("rolesPage.switchTo")}>
+                <span className="roles-head__words">{name}</span>
+                <Icon name="chevronDown" size={20} inline />
+              </button>
+            }
+          >
+            {item(null)}
+            {list.filter((r) => !isEveryone(r)).map(item)}
+            {list.filter(isEveryone).map(item)}
+          </Menu>
+        </h2>
         {role ? (
-          <Reach role={role} data={data} onTab={onTab} people={peopleWith(role, people).length} />
+          <Reach role={role} data={data} named={named} onTab={onTab} people={peopleWith(role, people).length} />
         ) : (
           <span className="roles-glance">
             <span className="roles-reach__item">{t("rolesPage.people", { count: owners.length })}</span>
             <span className="roles-reach__item">{t("rolesPage.reach.owner")}</span>
           </span>
         )}
+        <span className="roles-head__acts">
+          {role && !lock && onLook && (
+            <Button
+              size="sm"
+              variant="ghost"
+              iconOnly
+              icon="edit"
+              aria-label={isEveryone(role) ? t("rolesPage.lookColor") : t("rolesPage.look")}
+              title={isEveryone(role) ? t("rolesPage.lookColor") : t("rolesPage.look")}
+              onClick={onLook}
+            />
+          )}
+          {(invites || copies || up || down || deletes) && role && (
+            <Menu
+              align="end"
+              label={t("rolesPage.more")}
+              trigger={
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  iconOnly
+                  icon="more"
+                  aria-label={t("rolesPage.more")}
+                  title={t("rolesPage.more")}
+                />
+              }
+            >
+              {invites && (
+                <MenuItem
+                  icon="personAdd"
+                  onSelect={() => invite?.open({ roleId: role.id, channelIds: role.channelIds ?? [] })}
+                >
+                  {t("rolesPage.inviteWith")}
+                </MenuItem>
+              )}
+              {copies && (
+                <MenuItem icon="copy" onSelect={() => duplicate.run(role)}>
+                  {t("rolesPage.duplicate")}
+                </MenuItem>
+              )}
+              {(up || down) && (invites || copies) && <MenuSeparator />}
+              {(up || down) && (
+                <MenuItem icon="arrowUp" disabled={!up} onSelect={() => up && put(up)}>
+                  {t("contextMenu.moveUp")}
+                </MenuItem>
+              )}
+              {(up || down) && (
+                <MenuItem icon="arrowDown" disabled={!down} onSelect={() => down && put(down)}>
+                  {t("contextMenu.moveDown")}
+                </MenuItem>
+              )}
+              {deletes && (invites || copies || up || down) && <MenuSeparator />}
+              {deletes && (
+                <MenuItem icon="trash" danger onSelect={onDelete}>
+                  {t("rolesPage.delete")}
+                </MenuItem>
+              )}
+            </Menu>
+          )}
+        </span>
       </div>
-      <span className="roles-head__acts">
-        {role && !lock && onLook && (
-          <Button
-            variant="ghost"
-            iconOnly
-            icon="edit"
-            aria-label={isEveryone(role) ? t("rolesPage.lookColor") : t("rolesPage.look")}
-            title={isEveryone(role) ? t("rolesPage.lookColor") : t("rolesPage.look")}
-            onClick={onLook}
-          />
-        )}
-        {(invites || copies || deletes) && role && (
-          <Menu
-            align="end"
-            label={t("rolesPage.more")}
-            trigger={
-              <Button
-                variant="ghost"
-                iconOnly
-                icon="more"
-                aria-label={t("rolesPage.more")}
-                title={t("rolesPage.more")}
-              />
-            }
-          >
-            {invites && (
-              <MenuItem
-                icon="personAdd"
-                onSelect={() => invite?.open({ roleId: role.id, channelIds: role.channelIds ?? [] })}
-              >
-                {t("rolesPage.inviteWith")}
-              </MenuItem>
-            )}
-            {copies && (
-              <MenuItem icon="copy" onSelect={() => duplicate.run(role)}>
-                {t("rolesPage.duplicate")}
-              </MenuItem>
-            )}
-            {deletes && (invites || copies) && <MenuSeparator />}
-            {deletes && (
-              <MenuItem icon="trash" danger onSelect={onDelete}>
-                {t("rolesPage.delete")}
-              </MenuItem>
-            )}
-          </Menu>
-        )}
-      </span>
     </header>
   );
 }
@@ -801,15 +833,7 @@ function OwnerPage({ data, people }: { data: OrgRoles; people: Person[] }) {
         />
         <div className="settings-rows">
           {owners.map((p) => (
-            <div key={p.userId} className="settings-row roles-person">
-              <Avatar size="sm" name={p.name} imageUrl={p.avatarUrl ?? p.image} />
-              <span className="roles-person__who">
-                <b>
-                  {p.name}
-                  {p.userId === me.user.id ? t("common.youSuffix") : ""}
-                </b>
-                <span>{p.email}</span>
-              </span>
+            <PersonRow key={p.userId} person={p} you={p.userId === me.user.id} className="settings-row">
               {mine && (
                 <Button
                   size="sm"
@@ -821,7 +845,7 @@ function OwnerPage({ data, people }: { data: OrgRoles; people: Person[] }) {
                   {t("rolesPage.remove")}
                 </Button>
               )}
-            </div>
+            </PersonRow>
           ))}
         </div>
         {sole && mine && <p className="ac-card__foot">{t("rolesPage.soleOwner")}</p>}

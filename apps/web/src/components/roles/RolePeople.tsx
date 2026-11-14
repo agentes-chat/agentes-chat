@@ -25,6 +25,7 @@ import { useTranslation } from "react-i18next";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useToast } from "@/lib/toast";
+import { PersonRow } from "./parts";
 
 /**
  * Gives a cargo to people, asking first when that takes a mailbox from an agent (`…/members/preview`): `ask` gets the
@@ -196,15 +197,7 @@ export function RolePeople({
               const mine = p.userId === me.user.id;
               const above = !below(p);
               return (
-                <div key={p.userId} className="ac-list__row roles-person">
-                  <Avatar size="sm" name={p.name} imageUrl={p.avatarUrl ?? p.image} />
-                  <span className="roles-person__who">
-                    <b>
-                      {p.name}
-                      {mine ? t("common.youSuffix") : ""}
-                    </b>
-                    <span>{p.email}</span>
-                  </span>
+                <PersonRow key={p.userId} person={p} you={mine} className="ac-list__row">
                   {above ? (
                     <Chip icon="lock">{t("rolesPage.aboveYou")}</Chip>
                   ) : (
@@ -220,7 +213,7 @@ export function RolePeople({
                       </Button>
                     )
                   )}
-                </div>
+                </PersonRow>
               );
             })}
           </List>

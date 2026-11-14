@@ -257,7 +257,7 @@ function AgentRow({
     );
   const id = `role-${role.id}-agent-${agent.id}`;
   const box = (
-    <label htmlFor={id} className="roles-check" data-off={why || lock ? "" : undefined}>
+    <label htmlFor={id} className="roles-check ac-actrow__text" data-off={why || lock ? "" : undefined}>
       <Checkbox id={id} checked={on} disabled={Boolean(why) || lock || widen.busy} onCheckedChange={change} />
       <AgentAvatar agentId={agent.id} name={agent.name} size="sm" />
       <span className="roles-check__name">
@@ -267,9 +267,9 @@ function AgentRow({
     </label>
   );
   return (
-    <div className="ac-list__row roles-checkrow">
+    <div className="ac-list__row ac-actrow roles-checkrow">
       {why ? (
-        <Tip tip={why} look="ac-msg__note-tip ac-glass">
+        <Tip tip={why} look="ac-msg__note-tip ac-glass" className="ac-actrow__text">
           {box}
         </Tip>
       ) : (

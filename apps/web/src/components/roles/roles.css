@@ -1,5 +1,6 @@
 /* Settings › Cargos (ADR 0085): the list, a cargo's page and its tabs, the "Quem…" dialogs. */
 .roles {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -29,7 +30,7 @@
 .roles-row__slot {
   flex: none;
   display: flex;
-  width: var(--space-4);
+  width: 20px;
   height: 20px;
   margin: var(--space-3) 0 0 var(--space-2);
 }
@@ -37,7 +38,7 @@
   all: unset;
   display: grid;
   place-items: center;
-  width: var(--space-4);
+  width: 20px;
   height: 20px;
   border-radius: var(--radius-xs);
   color: var(--faint);
@@ -166,13 +167,56 @@ html:not([data-pointer]) .roles-row__open:focus-visible {
 .roles-stack > .ac-avatar + .ac-avatar {
   margin-left: -6px;
 }
-/* At phone width the faces go, the count stays. */
+/* Beside the faces the count is a bare number, its words only for a screen reader. */
+.roles-row__words {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/* At phone width the faces go and the count says what it counts, and the grip gives way to the cargo's ⋯ (Mover para
+   cima, para baixo), as it does under a finger, where nothing drags. At 360 the chevron goes too (the whole row opens
+   the cargo) and the count goes to the reach line's end, so the name keeps the row's width. */
 @container (max-width: 520px) {
-  .roles-row .roles-stack {
+  .roles-row .roles-stack,
+  .roles-row__count {
     display: none;
+  }
+  .roles-row__words {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
   }
   .roles-row__people {
     min-width: 0;
+  }
+  .roles-row__slot {
+    display: none;
+  }
+  .roles-row__open {
+    padding-inline-start: var(--space-4);
+  }
+}
+@container (max-width: 360px) {
+  .roles-row__end > .ac-icon {
+    display: none;
+  }
+  .roles-row__open {
+    grid-template-areas:
+      "mark name name"
+      "reach reach end";
+  }
+}
+@media (pointer: coarse) {
+  .roles-row__slot {
+    display: none;
+  }
+  .roles-row__open {
+    padding-inline-start: var(--space-4);
   }
 }
 
@@ -234,40 +278,58 @@ html:not([data-pointer]) .roles-glance button:focus-visible {
 html:not([data-pointer]) .roles-back:focus-visible {
   box-shadow: var(--focus-ring);
 }
+/* The head: the 64 mark, the name (a heading holding the switcher to the other cargos), and under it the glance line
+   with ✎ and ⋯ at its end. Beside the mark while the name and that line fit on one line each, so the mark never stands
+   beside three lines; a longer name takes the line under the mark, at the page's width. The name's capitals start at
+   the mark's top (`.ac-captop` on the heading), or 16 under it. */
 .roles-head {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) auto;
-  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   column-gap: 18px;
+  row-gap: var(--space-4);
 }
+.roles-head > .ac-rolemark {
+  flex: none;
+}
+/* Its basis is its words on one line each (max-content): beside the mark when that fits, on a line of its own if not. */
 .roles-head__text {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  justify-items: start;
-}
-.roles-head__name {
-  all: unset;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  flex: 1 1 auto;
+  width: max-content;
   max-width: 100%;
-  padding-right: 6px;
-  border-radius: 10px;
-  color: var(--ink);
-  cursor: pointer;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name name"
+    "glance acts";
+  align-items: center;
+  column-gap: var(--space-3);
 }
 .roles-head__title {
-  margin: 0;
+  grid-area: name;
   min-width: 0;
-  font-size: 32px;
-  line-height: 40px;
+  margin-inline: 0;
+  margin-block-end: 0;
+  font-size: 28px;
+  line-height: 36px;
   font-weight: 650;
   letter-spacing: -0.02em;
+}
+.roles-head__text > .roles-glance {
+  grid-area: glance;
+}
+/* A button laid out inline: a long name wraps whole words, the chevron after its last one, on that line's capitals. */
+.roles-head__name {
+  all: unset;
+  max-width: 100%;
+  border-radius: 10px;
+  color: var(--ink);
   overflow-wrap: anywhere;
+  cursor: pointer;
 }
 .roles-head__name > .ac-icon {
-  flex: none;
+  margin-inline-start: 6px;
   color: var(--faint);
 }
 .roles-head__name:is(:hover, [data-state="open"]) > .ac-icon {
@@ -277,8 +339,32 @@ html:not([data-pointer]) .roles-head__name:focus-visible {
   box-shadow: var(--focus-ring);
 }
 .roles-head__acts {
+  grid-area: acts;
   display: flex;
   gap: var(--space-2);
+}
+/* A phone: ✎ and ⋯ end the mark's line, the name and the glance line go under them at the full width. */
+@container (max-width: 479px) {
+  .roles-head {
+    position: relative;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .roles-head > .ac-rolemark {
+    align-self: flex-start;
+  }
+  .roles-head__text {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+    width: auto;
+  }
+  .roles-head__acts {
+    position: absolute;
+    top: calc((64px - var(--control-h-sm)) / 2);
+    right: 0;
+  }
 }
 /* .ac-iconline lays out the lock and the words. */
 .roles-note {
@@ -294,13 +380,18 @@ html:not([data-pointer]) .roles-head__name:focus-visible {
   color: var(--faint);
 }
 
+/* "Salvo" keeps its room before it shows, so nothing beside it moves when it does. */
+.roles .ac-saved {
+  min-width: 56px;
+  justify-content: flex-end;
+}
+
 /* A tab's content: its line, its toolbar, its groups, 16 apart. */
 .roles-tab {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
-  padding-top: var(--space-4);
 }
 .roles-tabline {
   margin: 0;
@@ -353,29 +444,25 @@ html:not([data-pointer]) .roles-head__name:focus-visible {
 /* Who has something: "Todos", or marks and faces before "Só Suporte e Ana". */
 .roles-who {
   flex: none;
+  max-width: 100%;
 }
-.roles-who .ac-avatar {
+/* Its marks and faces overlap by 4 (the chip's 6 of gap undone, and 4 more), each ringed in the chip's plate. */
+.roles-who > :is(.ac-rolemark, .ac-avatar) + :is(.ac-rolemark, .ac-avatar) {
+  margin-left: -10px;
   box-shadow: 0 0 0 2px var(--surface-sunken);
 }
-.roles-marks {
-  display: inline-flex;
-  align-items: center;
-}
-.roles-marks > * + * {
-  margin-left: calc(-1 * var(--space-1));
-  box-shadow: 0 0 0 2px var(--surface-sunken);
-}
-.roles-who:has(.roles-marks) {
+/* A round mark first sits concentric with the chip's round end. */
+.roles-who:has(> :is(.ac-rolemark, .ac-avatar):first-child) {
   padding-left: 3px;
 }
 
-/* Canais and Agentes: a checklist row each, its box, icon or face, name and who has it now at the end. */
+/* Canais and Agentes: a checklist row each, its box, icon or face, name and who has it now at the end; when the name
+   and the chip don't fit on one line, the chip goes under them at the row's end (`.ac-actrow`). */
 .roles-checkrow {
-  flex-wrap: nowrap;
+  row-gap: var(--space-2);
   padding-block: var(--space-3);
 }
-.roles-checkrow > :first-child {
-  flex: 1;
+.roles-checkrow > .ac-actrow__text > .roles-check {
   min-width: 0;
 }
 .roles-check {
@@ -416,10 +503,40 @@ html:not([data-pointer]) .roles-head__name:focus-visible {
   color: var(--muted);
 }
 
-/* Pessoas: a face, the name over the address, Tirar or "Acima do seu cargo" at the end. */
-.roles-person {
-  flex-wrap: nowrap;
+/* Pessoas: the kit's MediaRow (a face, the name and the address, Tirar or "Acima do seu cargo" at the end). At phone
+   width the address goes under the face at the row's full width, so the face never owns a column of lines. */
+.roles-people {
+  container-type: inline-size;
+}
+/* Mixed with a settings card's row, the MediaRow's grid still lays it out. */
+.roles-person.ac-mediarow {
+  display: grid;
+  align-items: start;
+  gap: var(--space-2);
   padding-block: var(--space-3);
+}
+/* Tirar ends the name's line: that line is as tall as the button, so the row keeps the same room above it as under
+   the address. */
+.roles-person:has(> .ac-mediarow__end .ac-btn) {
+  --mediarow-axis: max(var(--mediarow-face), var(--control-h-sm));
+}
+@container (max-width: 520px) {
+  .roles-person > .ac-mediarow__head {
+    display: contents;
+  }
+  .roles-person > .ac-mediarow__head > b {
+    grid-area: 1 / 2;
+    align-self: center;
+    font-size: 14px;
+    line-height: 20px;
+    overflow-wrap: anywhere;
+  }
+  .roles-person > .ac-mediarow__head > .ac-mediarow__meta {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    line-height: 18px;
+    overflow-wrap: anywhere;
+  }
 }
 .roles-person__who {
   flex: 1;
@@ -537,11 +654,12 @@ html:not([data-pointer]) .roles-names__more:focus-visible {
 .roles-preview {
   gap: var(--space-3);
   margin: 0;
-  padding: var(--space-4) var(--space-3);
+  padding: var(--space-3);
   border-radius: 12px;
   background: var(--surface-sunken);
   font-size: 14.5px;
-  line-height: 20px;
+  /* The name's line as tall as the 32px mark: the box stays even around both. */
+  line-height: 32px;
 }
 .roles-preview__line {
   display: flex;
@@ -567,12 +685,6 @@ html:not([data-pointer]) .roles-names__more:focus-visible {
   margin: 0;
   font-size: 13px;
   color: var(--muted);
-}
-.roles-look__hoist {
-  margin-inline: calc(-1 * var(--space-2));
-  padding-inline: var(--space-2);
-  border-top: 0;
-  border-radius: 10px;
 }
 .roles-colors {
   display: flex;
@@ -647,34 +759,6 @@ html:not([data-pointer]) .roles-iconpick:focus-visible {
 }
 
 @media (max-width: 640px) {
-  .roles-head {
-    grid-template-areas:
-      "mark name acts"
-      "mark glance glance";
-    column-gap: 14px;
-    align-items: start;
-  }
-  .roles-head > .ac-rolemark {
-    grid-area: mark;
-  }
-  .roles-head__text {
-    display: contents;
-  }
-  .roles-head__name {
-    grid-area: name;
-    align-self: center;
-  }
-  .roles-head__title {
-    font-size: 26px;
-    line-height: 32px;
-  }
-  .roles-head__text > .roles-glance {
-    grid-area: glance;
-  }
-  .roles-head__acts {
-    grid-area: acts;
-    align-self: center;
-  }
   .roles-icons {
     grid-template-columns: repeat(6, 32px);
   }

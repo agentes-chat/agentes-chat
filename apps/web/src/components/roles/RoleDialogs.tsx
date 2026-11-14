@@ -30,11 +30,11 @@ import {
   Field,
   Icon,
   type IconName,
-  InfoHint,
   Input,
   Locked,
   RoleMark,
   Select,
+  SettingRow,
   Switch,
 } from "@agenteschat/ui";
 import { useQueries } from "@tanstack/react-query";
@@ -215,23 +215,17 @@ export function LookDialog({
             </Field>
           )}
           {!base && (
-            <div className="settings-row ac-actrow settings-row--toggle roles-look__hoist">
-              <span className="settings-row__text ac-actrow__text">
-                <span className="ac-hintline">
-                  <label htmlFor="role-hoist" className="settings-row__label settings-row__hit">
-                    {t("rolesPage.hoist")}
-                  </label>
-                  <InfoHintText label={t("rolesPage.hoist")} text={t("rolesPage.hoistDesc")} />
-                </span>
-              </span>
-              <div className="settings-row__end">
-                <Switch
-                  id="role-hoist"
-                  checked={draft.hoist}
-                  onCheckedChange={(hoist) => setDraft((d) => ({ ...d, hoist }))}
-                />
-              </div>
-            </div>
+            <SettingRow
+              title={t("rolesPage.hoist")}
+              hint={{ name: t("common.about", { label: t("rolesPage.hoist") }), text: t("rolesPage.hoistDesc") }}
+              htmlFor="role-hoist"
+            >
+              <Switch
+                id="role-hoist"
+                checked={draft.hoist}
+                onCheckedChange={(hoist) => setDraft((d) => ({ ...d, hoist }))}
+              />
+            </SettingRow>
           )}
           {update.isError && <Alert>{errorText(t, update.error)}</Alert>}
         </DialogBody>
@@ -246,12 +240,6 @@ export function LookDialog({
       </DialogFooter>
     </Dialog>
   );
-}
-
-/** An ⓘ beside a label, its words behind it. */
-function InfoHintText({ label, text }: { label: string; text: string }) {
-  const { t } = useTranslation();
-  return <InfoHint name={t("common.about", { label })}>{text}</InfoHint>;
 }
 
 /**

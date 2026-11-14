@@ -25,6 +25,12 @@ const click = async (el: Element) => {
   await settle(4);
 };
 const last = (state: FakeState, method: string) => state.calls.findLast((c) => c.method === method)?.args;
+/** The permissions the last call to `method` sent: the test fails here if none was made. */
+const sentPermissions = (state: FakeState, method: string) => {
+  const args = last(state, method);
+  if (!args) throw new Error(`no ${method} call`);
+  return (args[2] as { permissions: string[] }).permissions;
+};
 const pick = async (combobox: HTMLElement, option: string | RegExp) => {
   combobox.focus();
   await act(async () => fireEvent.keyDown(combobox, { key: "Enter" }));
@@ -45,8 +51,24 @@ function acme(extra: (state: FakeState) => void = () => {}) {
   const custom = { ...admin, hoist: false };
   state.roles = [
     admin,
-    { ...custom, id: SUPORTE, name: "Suporte", icon: "message", color: "teal", position: 1, permissions: ["approve_actions", "invite_people"] },
-    { ...custom, id: FIN, name: "Financeiro", icon: "wallet", color: "amber", position: 2, permissions: ["view_usage"] },
+    {
+      ...custom,
+      id: SUPORTE,
+      name: "Suporte",
+      icon: "message",
+      color: "teal",
+      position: 1,
+      permissions: ["approve_actions", "invite_people"],
+    },
+    {
+      ...custom,
+      id: FIN,
+      name: "Financeiro",
+      icon: "wallet",
+      color: "amber",
+      position: 2,
+      permissions: ["view_usage"],
+    },
     { ...everyone, position: 3 },
   ];
   const person = (userId: string, name: string, roleIds: string[]) => ({
@@ -101,12 +123,160 @@ const row = (name: string) =>
   [...document.querySelectorAll<HTMLElement>(".roles-row")].find(
     (r) => r.querySelector(".roles-row__name")?.textContent === name,
   ) as HTMLElement;
-const reach = (name: string) =>
-  [...row(name).querySelectorAll(".roles-reach__item")].map((i) => i.textContent?.trim());
+const reach = (name: string) => [...row(name).querySelectorAll(".roles-reach__item")].map((i) => i.textContent?.trim());
 const permRow = (title: string) =>
   [...document.querySelectorAll<HTMLElement>(".roles-perm")].find(
     (r) => r.querySelector(".settings-row__label")?.textContent === title,
   ) as HTMLElement;
+
+/**
+ * The worst realistic data, first in this file so CI's geometry check measures these screens (it keeps the first of
+ * each shape): 40-letter cargo names next to a two-letter one, a dozen cargos (the searches show), a channel limited
+ * to five cargos, an agent with a long função answering three cargos and two people, people with long names and
+ * addresses, and a mailbox question with a long address.
+ */
+const LONG = "Coordenação Regional de Suporte Técnico";
+const ALEKSANDRA = "Aleksandra Wiśniewska-Kowalczyk";
+function worst(state: FakeState) {
+  const [admin, everyone] = seedRoles() as [OrgRole, OrgRole];
+  const names = [LONG, "Jo", "Financeiro e Controladoria Corporativa", "Vendas", "Marketing de Produto", "Jurídico"];
+  const extra = Array.from({ length: 10 }, (_, i) => ({
+    ...admin,
+    id: `role-w${i}`,
+    name: names[i] ?? `Equipe de Operações Logísticas ${i}`,
+    icon: ["message", "wallet", "chart", "flag", "book", "globe", "code", "bolt", "eye", "plug"][i] ?? "shield",
+    color: ["teal", "amber", "rose", "green", "violet", "indigo", "graphite"][i % 7] ?? "teal",
+    permissions: i === 0 ? ["approve_actions", "invite_people", "view_usage", "manage_routines", "review_memory"] : [],
+    position: 1 + i,
+    hoist: false,
+  }));
+  state.roles = [admin, ...extra, { ...everyone, position: 20 }];
+  const person = (userId: string, name: string, email: string, roleIds: string[]) => ({
+    userId,
+    name,
+    email,
+    image: null,
+    role: "member" as const,
+    roleIds,
+    joinedAt: "2026-11-01T12:00:00.000Z",
+    handle: userId,
+    timezone: "Europe/Warsaw",
+  });
+  state.members.push(
+    person("u-ola", ALEKSANDRA, "aleksandra.wisniewska-kowalczyk@northwind-industries-holdings.example.com", [
+      "role-w0",
+    ]),
+    person("u-jo", "Jo", "jo@example.com", ["role-w0", "role-w1"]),
+    person("u-bart", "Bartholomew Fitzgerald", "bartholomew.fitzgerald@northwind-industries-holdings.example.com", [
+      "role-w0",
+    ]),
+    ...Array.from({ length: 9 }, (_, i) =>
+      person(`u-p${i}`, `Pessoa de Atendimento ${i + 1}`, `atendimento${i + 1}@example.com`, i < 6 ? ["role-w0"] : []),
+    ),
+  );
+  state.channels.push({
+    id: "chan-long",
+    name: "atendimento-clientes-corporativos-regiao-sudeste",
+    topic: "",
+    visibility: "private",
+    audienceRoleIds: ["role-w0", "role-w1", "role-w2", "role-w3", "role-w4"],
+    isMember: true,
+    createdAt: "2026-11-01T12:00:00.000Z",
+  });
+  state.channelMembers["chan-long"] = [
+    { type: "person", id: "u-walter" },
+    { type: "person", id: "u-ola" },
+    { type: "person", id: "u-jo" },
+  ];
+  const ada = state.agents.find((a) => a.id === ADA_ID) as Agent;
+  ada.name = "Bartholomew";
+  ada.role = "Especialista em atendimento ao cliente corporativo";
+  ada.audience = { mode: "people", userIds: ["u-ola", "u-bart"], roleIds: ["role-w0", "role-w1", "role-w2"] };
+  state.roleMailLoss = {
+    "role-w0": [
+      {
+        agentId: ADA_ID,
+        agentName: "Bartholomew",
+        accountId: "acc-long",
+        address: "bartholomew.fitzgerald@northwind-industries-holdings.example.com",
+        ownerUserId: "u-bart",
+        ownerName: "Bartholomew Fitzgerald",
+      },
+    ],
+  };
+  return state;
+}
+
+describe("the worst case, as the geometry check measures it", () => {
+  test("the list: a dozen cargos, a 40-letter name beside a two-letter one, 15 people", async () => {
+    await open("roles", worst(seedState()));
+    expect(screen().getByRole("searchbox", { name: "Buscar cargo" })).toBeTruthy();
+    expect(row(LONG).querySelector(".roles-row__name")?.textContent).toBe(LONG);
+    expect(row("Jo")).toBeTruthy();
+  });
+
+  test("a long cargo's page, each tab, and its dialogs", async () => {
+    await open("roles/role-w0", worst(seedState()));
+    expect(screen().getByRole("heading", { level: 2, name: LONG })).toBeTruthy();
+    // Quem pode with a dozen cargos: the checklist gets its search.
+    await click(within(permRow("Criar canais")).getByRole("switch"));
+    const who = screen().getByRole("dialog", { name: "Quem pode criar canais" });
+    expect(within(who).getByRole("searchbox", { name: "Buscar cargo" })).toBeTruthy();
+    await click(within(who).getByRole("button", { name: "Cancelar" }));
+    await settle(4);
+    await click(screen().getByRole("button", { name: "Mudar nome, cor e ícone" }));
+    const look = screen().getByRole("dialog", { name: "Nome, cor e ícone" });
+    expect(look.querySelector(".roles-preview__name")?.textContent).toBe(ALEKSANDRA);
+    await click(within(look).getByRole("button", { name: "Cancelar" }));
+    await settle(4);
+  });
+
+  test("its channels, agents and people with the longest names", async () => {
+    const state = worst(seedState());
+    await open("roles/role-w0?tab=channels", state);
+    expect(
+      screen()
+        .getByRole("checkbox", { name: /#atendimento-clientes-corporativos-regiao-sudeste$/ })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    cleanup();
+    await open("roles/role-w0?tab=agents", worst(seedState()));
+    expect(
+      screen()
+        .getByRole("checkbox", { name: /^Bartholomew/ })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    cleanup();
+    await open("roles/role-w0?tab=people", worst(seedState()));
+    expect(screen().getByRole("searchbox", { name: "Procurar pessoa" })).toBeTruthy();
+    await click(screen().getAllByRole("button", { name: "Adicionar pessoas" })[0] as HTMLElement);
+    const add = screen().getByRole("dialog", { name: /^Adicionar a / });
+    await click(within(add).getByRole("checkbox", { name: /^Pessoa de Atendimento 7/ }));
+    await click(within(add).getByRole("button", { name: "Adicionar 1" }));
+    await settle(4);
+    expect(
+      screen().getByRole("dialog", { name: "Bartholomew perde a caixa de e-mail de Bartholomew Fitzgerald" }),
+    ).toBeTruthy();
+  });
+
+  test("Dono's page: two owners, one with the longest name and address, each with Tirar", async () => {
+    const state = worst(seedState());
+    const ola = state.members.find((m) => m.userId === "u-ola");
+    if (ola) ola.role = "owner";
+    await open("roles/owner", state);
+    expect(screen().getByRole("heading", { level: 2, name: "Dono" })).toBeTruthy();
+    expect(screen().getByRole("button", { name: `Tirar ${ALEKSANDRA} de Dono` })).toBeTruthy();
+    expect(screen().getByText("aleksandra.wisniewska-kowalczyk@northwind-industries-holdings.example.com")).toBeTruthy();
+  });
+
+  test("no cargo yet: an inline row, no dashed box", async () => {
+    const state = seedState();
+    const [, everyone] = seedRoles() as [OrgRole, OrgRole];
+    state.roles = [{ ...everyone, position: 0 }];
+    await open("roles", state);
+    expect(screen().getByText("Nenhum cargo ainda. Crie um para dar mais a algumas pessoas.")).toBeTruthy();
+  });
+});
 
 describe("Settings › Cargos, the list (W1)", () => {
   test("its own entry: Todos pinned under Base, then Dono and the cargos, each saying what it adds", async () => {
@@ -115,9 +285,13 @@ describe("Settings › Cargos, the list (W1)", () => {
     expect(within(nav).getByRole("link", { name: "Cargos" }).getAttribute("aria-current")).toBe("page");
     expect(screen().queryByRole("tab", { name: "Cargos" })).toBeNull();
     expect(screen().getByRole("heading", { level: 2, name: "Cargos" })).toBeTruthy();
-    expect(
-      [...document.querySelectorAll(".roles-row__name")].map((n) => n.textContent),
-    ).toEqual(["Todos", "Dono", "Admin", "Suporte", "Financeiro"]);
+    expect([...document.querySelectorAll(".roles-row__name")].map((n) => n.textContent)).toEqual([
+      "Todos",
+      "Dono",
+      "Admin",
+      "Suporte",
+      "Financeiro",
+    ]);
     // Todos says what everyone has; a cargo what it adds, its channels and agents counted.
     expect(reach("Todos")).toEqual(["8 permissões", "2 canais", "1 agente"]);
     expect(reach("Dono")).toEqual(["Pode tudo, sempre"]);
@@ -186,13 +360,19 @@ describe("Settings › Cargos, the list (W1)", () => {
 describe("a cargo's page (W2, W3, W4)", () => {
   test("its head and tabs; a row everyone has carries the Todos chip and stays live", async () => {
     await open(`roles/${SUPORTE}`);
-    expect(screen().getByRole("button", { name: /^Suporte, Ir para outro cargo/ })).toBeTruthy();
+    expect(
+      screen().getByRole("heading", { level: 2, name: "Suporte" }).querySelector("button[aria-haspopup]"),
+    ).toBeTruthy();
     expect([...document.querySelectorAll(".roles-glance .roles-reach__item")].map((i) => i.textContent)).toEqual([
       "2 pessoas",
       "+2 permissões",
       "+1 canal",
     ]);
-    expect(screen().getAllByRole("tab").map((t) => t.textContent)).toEqual(["Permissões", "Canais", "Agentes", "Pessoas 2"]);
+    expect(
+      screen()
+        .getAllByRole("tab")
+        .map((t) => t.textContent),
+    ).toEqual(["Permissões", "Canais", "Agentes", "Pessoas 2"]);
     const create = permRow("Criar canais");
     expect(within(create).getByRole("button", { name: "Todos" })).toBeTruthy();
     const toggle = within(create).getByRole("switch");
@@ -205,7 +385,11 @@ describe("a cargo's page (W2, W3, W4)", () => {
     const state = await open(`roles/${SUPORTE}`);
     await click(within(permRow("Criar canais")).getByRole("switch"));
     const dialog = screen().getByRole("dialog", { name: "Quem pode criar canais" });
-    expect(within(dialog).getByRole("radio", { name: /Só alguns cargos/ }).getAttribute("aria-checked")).toBe("true");
+    expect(
+      within(dialog)
+        .getByRole("radio", { name: /Só alguns cargos/ })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
     const box = (name: string) => within(dialog).getByRole("checkbox", { name: new RegExp(`^${name}`) });
     // Administrador may everything: ticked and fixed. This cargo starts unticked, the others ticked.
     expect([box("Admin").getAttribute("aria-checked"), (box("Admin") as HTMLButtonElement).disabled]).toEqual([
@@ -219,7 +403,13 @@ describe("a cargo's page (W2, W3, W4)", () => {
     await click(within(dialog).getByRole("button", { name: "Salvar" }));
     expect(last(state, "roles.setRow")?.slice(1)).toEqual([
       "create_channels",
-      { everyone: 0, roles: [{ id: SUPORTE, level: 0 }, { id: FIN, level: 1 }] },
+      {
+        everyone: 0,
+        roles: [
+          { id: SUPORTE, level: 0 },
+          { id: FIN, level: 1 },
+        ],
+      },
     ]);
   });
 
@@ -228,7 +418,7 @@ describe("a cargo's page (W2, W3, W4)", () => {
     await click(within(permRow("Ver a auditoria")).getByRole("switch"));
     const saved = last(state, "roles.update");
     expect(saved?.[1]).toBe(SUPORTE);
-    expect((saved?.[2] as { permissions: string[] }).permissions.sort()).toEqual(
+    expect(sentPermissions(state, "roles.update").sort()).toEqual(
       ["approve_actions", "invite_people", "view_audit"].sort(),
     );
   });
@@ -243,7 +433,7 @@ describe("a cargo's page (W2, W3, W4)", () => {
     const computers = screen().getAllByRole("option", { name: "Computador" });
     expect(computers).toHaveLength(2);
     await click(computers[1] as HTMLElement);
-    expect((last(state, "roles.update")?.[2] as { permissions: string[] }).permissions).toContain("control_computers");
+    expect(sentPermissions(state, "roles.update")).toContain("control_computers");
     cleanup();
     const again = await open(`roles/${SUPORTE}`);
     await pick(within(permRow("Computadores dos agentes")).getByRole("combobox"), "Não usa");
@@ -252,7 +442,13 @@ describe("a cargo's page (W2, W3, W4)", () => {
     await click(within(dialog).getByRole("button", { name: "Salvar" }));
     expect(last(again, "roles.setRow")?.slice(1)).toEqual([
       "computers",
-      { everyone: 0, roles: [{ id: SUPORTE, level: 0 }, { id: FIN, level: 2 }] },
+      {
+        everyone: 0,
+        roles: [
+          { id: SUPORTE, level: 0 },
+          { id: FIN, level: 2 },
+        ],
+      },
     ]);
   });
 
@@ -262,7 +458,7 @@ describe("a cargo's page (W2, W3, W4)", () => {
     const ask = screen().getByRole("dialog", { name: "Ligar Administrador em Suporte?" });
     expect(ask.textContent).toContain("São 2 pessoas.");
     await click(within(ask).getByRole("button", { name: "Ligar Administrador" }));
-    expect((last(state, "roles.update")?.[2] as { permissions: string[] }).permissions).toContain("administrator");
+    expect(sentPermissions(state, "roles.update")).toContain("administrator");
     await settle(4);
     expect(screen().getByText("Com Administrador, Suporte pode tudo, menos o que é só do dono.")).toBeTruthy();
     expect(permRow("Criar canais")).toBeUndefined();
@@ -270,7 +466,11 @@ describe("a cargo's page (W2, W3, W4)", () => {
 
   test("Todos' own rows: one only some cargos have shows their marks and opens who may", async () => {
     await open("roles/everyone");
-    expect(screen().getAllByRole("tab").map((t) => t.textContent)).toEqual(["Permissões", "Canais", "Agentes"]);
+    expect(
+      screen()
+        .getAllByRole("tab")
+        .map((t) => t.textContent),
+    ).toEqual(["Permissões", "Canais", "Agentes"]);
     const approve = permRow("Aprovar ações dos agentes");
     const chip = within(approve).getByRole("button", { name: /^Só Admin e Suporte/ });
     await click(chip);
@@ -298,11 +498,11 @@ describe("a cargo's Canais and Agentes (W5–W8)", () => {
     await open(`roles/${SUPORTE}?tab=channels`);
     await click(screen().getByRole("checkbox", { name: /#eng$/ }));
     const dialog = screen().getByRole("dialog", { name: "Quem vê #eng" });
-    expect(within(dialog).getAllByRole("radio").map((r) => r.querySelector(".ac-optrow__title")?.textContent)).toEqual([
-      "Todos",
-      "Só alguns cargos",
-      "Só quem for adicionado",
-    ]);
+    expect(
+      within(dialog)
+        .getAllByRole("radio")
+        .map((r) => r.querySelector(".ac-optrow__title")?.textContent),
+    ).toEqual(["Todos", "Só alguns cargos", "Só quem for adicionado"]);
   });
 
   test("its agents; one only its owner talks to opens who talks to it, the cargo ticked", async () => {
@@ -312,10 +512,16 @@ describe("a cargo's Canais and Agentes (W5–W8)", () => {
     expect(box("Atlas").getAttribute("aria-checked")).toBe("false");
     await click(box("Atlas"));
     const dialog = screen().getByRole("dialog", { name: "Quem fala com Atlas" });
-    expect(within(dialog).getByRole("radio", { name: /Só alguns cargos e pessoas/ }).getAttribute("aria-checked")).toBe(
-      "true",
-    );
-    expect(within(dialog).getByRole("checkbox", { name: /^Suporte/ }).getAttribute("aria-checked")).toBe("true");
+    expect(
+      within(dialog)
+        .getByRole("radio", { name: /Só alguns cargos e pessoas/ })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(
+      within(dialog)
+        .getByRole("checkbox", { name: /^Suporte/ })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
   });
 });
 
@@ -379,7 +585,10 @@ describe("look, create and the members' menu (W12, W13, W15)", () => {
       r.textContent?.includes("Carla"),
     ) as HTMLElement;
     await act(async () =>
-      fireEvent.pointerDown(within(carla).getByRole("button", { name: "Mais de Carla" }), { button: 0, ctrlKey: false }),
+      fireEvent.pointerDown(within(carla).getByRole("button", { name: "Mais de Carla" }), {
+        button: 0,
+        ctrlKey: false,
+      }),
     );
     await settle(2);
     const sub = screen().getByRole("menuitem", { name: "Cargos" });
@@ -388,7 +597,10 @@ describe("look, create and the members' menu (W12, W13, W15)", () => {
     const fin = screen().getByRole("menuitemcheckbox", { name: "Financeiro" });
     expect(fin.querySelector(".ac-check.ac-menu__box")?.getAttribute("data-state")).toBe("unchecked");
     expect(
-      screen().getByRole("menuitemcheckbox", { name: "Suporte" }).querySelector(".ac-menu__box")?.getAttribute("data-state"),
+      screen()
+        .getByRole("menuitemcheckbox", { name: "Suporte" })
+        .querySelector(".ac-menu__box")
+        ?.getAttribute("data-state"),
     ).toBe("checked");
     await click(fin);
     await settle(4);

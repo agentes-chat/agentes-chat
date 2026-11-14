@@ -299,6 +299,25 @@ export function deleteLeavers<P extends Pick<Person, "userId" | "roleIds">>(
   return [...out];
 }
 
+/**
+ * The cargos' order once `id` moves one place up (`-1`) or down, or null when it can't: the viewer never moves a cargo
+ * above one they can't change, so those stay on top in their order. `order` is every custom cargo's id, top first.
+ */
+export function movedOrder(order: readonly string[], editable: (id: string) => boolean, id: string, by: -1 | 1) {
+  const i = order.indexOf(id);
+  const j = i + by;
+  if (i < 0 || j < 0 || j >= order.length) return null;
+  const next = [...order];
+  [next[i], next[j]] = [next[j] as string, next[i] as string];
+  return keepsFixedOnTop(next, editable) ? next : null;
+}
+
+/** Whether every cargo the viewer can't change still stands above every one they can. */
+export function keepsFixedOnTop(order: readonly string[], editable: (id: string) => boolean) {
+  const last = order.reduce((at, id, i) => (editable(id) ? at : i), -1);
+  return order.every((id, i) => i > last || !editable(id));
+}
+
 /** The cargo page's tabs, in order (`?tab=`): `everyone` has no people of its own. */
 export type RoleTab = "permissions" | "channels" | "agents" | "people";
 export const roleTabs = (role: Pick<OrgRole, "kind">): RoleTab[] =>

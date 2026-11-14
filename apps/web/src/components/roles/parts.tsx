@@ -1,4 +1,4 @@
-import type { OrgRole } from "@agenteschat/client";
+import type { OrgRole, Person } from "@agenteschat/client";
 import { useChannels } from "@agenteschat/client";
 import { joinNames, namesText } from "@agenteschat/client/lib/format";
 import type { RoleTab } from "@agenteschat/client/lib/roles";
@@ -76,15 +76,16 @@ export function WhoChip({
     : icon === "lock"
       ? t("channel.visibilityPrivate")
       : t("rolesPage.only", { names: namesText(t, names, 2) });
+  // Straight in the chip, no wrapper: a leading mark keeps the chip's round end.
   const lead = everyone ? undefined : icon ? undefined : (
-    <span className="roles-marks" aria-hidden="true">
+    <>
       {roles.slice(0, 3).map((r) => (
         <RoleMark key={r.id} color={r.color} icon={r.icon} size={18} />
       ))}
       {people.slice(0, Math.max(0, 3 - roles.length)).map((p) => (
         <Avatar key={p.userId} size="xs" name={p.name} imageUrl={p.image ?? null} />
       ))}
-    </span>
+    </>
   );
   const iconName = everyone ? "audienceEveryone" : icon;
   if (onClick)
@@ -115,6 +116,39 @@ export function WhoChip({
 }
 
 /** Opens a cargo's page (its id, `everyone` or `owner`) on a tab, or the list. */
+/**
+ * A person in a cargo's list: the face, the name and the address on the name's line (under it, at the row's full width,
+ * at phone width), what ends the row at its end. `className` is the list's own row (`ac-list__row`, `settings-row`).
+ */
+export function PersonRow({
+  person,
+  you,
+  className,
+  children,
+}: {
+  person: Person;
+  you: boolean;
+  className: string;
+  children?: ReactNode;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className={`${className} ac-mediarow ac-mediarow--row roles-person`}>
+      <span className="ac-mediarow__face">
+        <Avatar size="sm" name={person.name} imageUrl={person.avatarUrl ?? person.image} />
+      </span>
+      <span className="ac-mediarow__head">
+        <b>
+          {person.name}
+          {you ? t("common.youSuffix") : ""}
+        </b>
+        <span className="ac-mediarow__meta">{person.email}</span>
+      </span>
+      {children && <span className="ac-mediarow__end">{children}</span>}
+    </div>
+  );
+}
+
 export function useRoleNav() {
   const { org } = useOrg();
   const navigate = useNavigate();
@@ -133,6 +167,7 @@ export function useRoleNav() {
 export const roleRef = (r: Pick<OrgRole, "id" | "kind">) => (r.kind === "everyone" ? "everyone" : r.id);
 
 /** Channels' and agents' names by id, for the tips that name what a cargo reaches. */
+export type Names = ReturnType<typeof useNames>;
 export function useNames() {
   const { org } = useOrg();
   const channels = useChannels(org.id).data ?? [];
