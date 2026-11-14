@@ -3,9 +3,10 @@ import type { ModelUsage } from "./types";
 /**
  * Prices in nano-USD per token (1e-9 USD), i.e. USD per million tokens × 1000,
  * so every cost is an exact integer. First-party Anthropic API list prices,
- * checked on Anthropic's pricing page (2026-10-20, Fable 5.1 2026-11-09); cache
- * reads are listed per model (Fable 5.1: $0.25/MTok, Opus 5.5: $0.20/MTok,
- * Sonnet 5.5: $0.10/MTok), cache writes use the 5-minute rate (1.25 × input);
+ * checked on Anthropic's pricing page (2026-10-20, Fable 5.1 2026-11-09, Fable
+ * 5.2 2026-11-13); cache reads are listed per model (Fable 5.1: $0.25/MTok,
+ * Fable 5.2 and Opus 5.5: $0.20/MTok, Sonnet 5.5: $0.10/MTok), cache writes use
+ * the 5-minute rate (1.25 × input);
  * 1-hour writes cost `LONG_CACHE_WRITE` × input.
  * Update this table when prices change: usage records store the computed cost,
  * so history is never repriced.
@@ -135,8 +136,16 @@ export const isAutoModel = (model: string | null | undefined) => model === AUTO_
 export const DEFAULT_CONTEXT_WINDOW = 200_000;
 
 export const MODEL_CATALOG: Record<string, ModelInfo> = {
-  // Its 1M-token window from platform.claude.com/docs/en/about-claude/models/overview, all of it at these prices
-  // (2026-11-09). No tier and no pick for routing or system tasks: "Automático" never chooses it, people do.
+  // Fable's 1M-token window from platform.claude.com/docs/en/about-claude/models/overview, all of it at these prices
+  // (5.1: 2026-11-09; 5.2: platform.claude.com/docs/en/about-claude/pricing, 2026-11-13). No tier and no pick for
+  // routing or system tasks: "Automático" never chooses it, people do.
+  "claude-fable-5-2": {
+    provider: "anthropic",
+    label: "Claude Fable 5.2",
+    prices: { input: 8000, output: 40000, cacheRead: 200, cacheWrite: 10000 },
+    contextWindow: 1_000_000,
+    serverSideFallback: true,
+  },
   "claude-fable-5-1": {
     provider: "anthropic",
     label: "Claude Fable 5.1",

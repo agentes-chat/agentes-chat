@@ -5553,6 +5553,7 @@ export const ptBR = {
         /** The model picker's line under each Claude Code model (other models show their name only). */
         modelLine: {
           opus: "O mais capaz. Gasta o plano mais rápido.",
+          fable: "O mais forte. Gasta o plano bem mais rápido.",
           sonnet: "Equilibrado. Bom para quase tudo.",
           haiku: "Rápido e leve. Para tarefas simples.",
         },
