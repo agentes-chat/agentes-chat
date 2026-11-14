@@ -1,5 +1,5 @@
 import { Children, isValidElement, type ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { type AccessibilityActionEvent, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
 import { haptics } from "./haptics";
 import { Icon, type IconName } from "./Icon";
@@ -227,6 +227,11 @@ export interface GroupedRowProps {
   /** An × at the row's end that takes it off the list; VoiceOver merges it into the row, so it is the row's action too. */
   remove?: { label: string; onPress: () => void };
   /**
+   * Buttons at the row's end in place of its value (a cargo's ▲ ▼ while the order changes), each a finger's 44 points;
+   * VoiceOver merges them into the row too, as its actions.
+   */
+  buttons?: readonly RowButton[];
+  /**
    * The web's MediaRow: the lead, the label and what ends it on one line, `sub` and `below` under them at the row's
    * full width. For a row whose lead would otherwise sit beside three lines or more.
    */
@@ -236,6 +241,13 @@ export interface GroupedRowProps {
    * `mid` and `end` move in and branch off it (`end` closes the trunk).
    */
   tree?: "host" | "mid" | "end";
+}
+
+export interface RowButton {
+  icon: IconName;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
 }
 
 /** One row of a group: icon tile, label, the value in faint, a chevron, a check or a switch. */
@@ -278,6 +290,7 @@ function Row({
   disabled = false,
   onPress,
   remove,
+  buttons,
   media = false,
   tree,
   said,
@@ -428,18 +441,45 @@ function Row({
           <Icon name="x" size={16} color={c.faint} />
         </Pressable>
       ) : null}
+      {buttons?.length ? (
+        <View style={styles.buttons}>
+          {buttons.map((b) => (
+            <Pressable
+              key={b.label}
+              onPress={b.onPress}
+              disabled={b.disabled}
+              accessibilityRole="button"
+              accessibilityLabel={b.label}
+              accessibilityState={{ disabled: Boolean(b.disabled) }}
+              style={({ pressed }) => [
+                styles.button,
+                b.disabled ? styles.buttonOff : pressed ? { backgroundColor: c.sunken } : null,
+              ]}
+            >
+              <Icon name={b.icon} size={18} color={c.ink2} />
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
     </>
   );
+  // VoiceOver reads the row as one: its × and its buttons are its actions.
+  const actions = [
+    ...(remove ? [{ name: "delete", label: remove.label, run: remove.onPress }] : []),
+    ...(buttons ?? []).filter((b) => !b.disabled).map((b) => ({ name: b.label, label: b.label, run: b.onPress })),
+  ];
   return (
     <Pressable
       onPress={press}
-      disabled={disabled || !onPress}
+      // A row of buttons stays enabled with nothing to press itself: VoiceOver still offers its actions.
+      disabled={disabled || (!onPress && !actions.length)}
       accessibilityRole={toggle !== undefined ? "switch" : "button"}
       accessibilityLabel={[label, belowText, said, value, valueNote].filter(Boolean).join(", ")}
-      {...(remove
+      {...(actions.length
         ? {
-            accessibilityActions: [{ name: "delete", label: remove.label }],
-            onAccessibilityAction: remove.onPress,
+            accessibilityActions: actions.map(({ name, label }) => ({ name, label })),
+            onAccessibilityAction: (e: AccessibilityActionEvent) =>
+              actions.find((a) => a.name === e.nativeEvent.actionName)?.run(),
           }
         : {})}
       accessibilityState={{
@@ -641,6 +681,10 @@ const styles = StyleSheet.create({
   key: { width: 96 },
   keyLine: { flexDirection: "row", alignItems: "flex-start", gap: 4 },
   shrink: { flexShrink: 1, minWidth: 0 },
+  // The row's own 16 at the end stays: a button's 44 overhangs its glyph by 13 on each side, 2 apart.
+  buttons: { flexDirection: "row", gap: 2, marginVertical: -GROUPED_ROW.padY + 4, marginRight: -13 },
+  button: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  buttonOff: { opacity: 0.3 },
   hint: { paddingHorizontal: GROUPED_ROW.padX },
   hintOpen: { paddingBottom: 12 },
 });

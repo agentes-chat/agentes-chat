@@ -77,7 +77,10 @@ describe("MediaRow", () => {
       ["features/routines/RoutineScreen.tsx", 1],
       ["features/members/MembersPage.tsx", 3],
       ["features/members/InviteLinkRows.tsx", 1],
-      ["features/settings/RolesScreen.tsx", 7],
+      ["features/roles/RolesScreen.tsx", 2],
+      ["features/roles/PermissionsScreen.tsx", 1],
+      ["features/roles/ChannelsScreen.tsx", 2],
+      ["features/roles/AgentsScreen.tsx", 2],
       ["features/vault/VaultScreen.tsx", 3],
       ["features/vault/parts.tsx", 3],
     ];
