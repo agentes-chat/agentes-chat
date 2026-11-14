@@ -3,6 +3,7 @@ import { and, eq, schema } from "@agenteschat/db";
 import {
   AREA_PERMISSIONS,
   acceptInvitation,
+  CHANNEL_OVERRIDES_MAX,
   can,
   createAgent,
   createChannel,
@@ -17,6 +18,7 @@ import {
   PERMISSION_ROWS,
   reorderRoles,
   requirePermission,
+  setChannelOverride,
   setMemberRoles,
   setRowHolders,
   updateRole,
@@ -526,6 +528,61 @@ describe("Duplicar copies the role's reach", () => {
     // What the body says wins over the source.
     const other = await createRole(f.db, f.owner.id, f.org.id, { name: "Outro", color: "rose", copyFrom: support.id });
     expect(other).toMatchObject({ color: "rose", icon: "flag" });
+  });
+
+  test("the copy keeps the source's channel exceptions, and stays out of a channel with no room for one more", async () => {
+    const leads = await createRole(f.db, f.owner.id, f.org.id, {
+      name: "Leads",
+      permissions: ["manage_roles", "manage_members"],
+    });
+    const support = await createRole(f.db, f.owner.id, f.org.id, { name: "Suporte" });
+    const lead = await addMember(f.db, f.org.id, "member", "lead");
+    const mia = await addMember(f.db, f.org.id, "member", "mia");
+    const pia = await addMember(f.db, f.org.id, "member", "pia");
+    await setMemberRoles(f.db, f.owner.id, f.org.id, lead.id, [leads.id]);
+    await setMemberRoles(f.db, f.owner.id, f.org.id, mia.id, [support.id]);
+    const limited = (name: string) =>
+      createChannel(f.db, f.owner.id, f.org.id, { name, visibility: "private", audienceRoleIds: [support.id] });
+    const avisos = await limited("avisos");
+    const cheio = await limited("cheio");
+    // Suporte reads both and never writes there.
+    for (const c of [avisos, cheio])
+      await setChannelOverride(f.db, f.owner.id, f.org.id, c.id, {
+        target: { type: "role", id: support.id },
+        allow: [],
+        deny: ["post"],
+      });
+    // #cheio holds as many exceptions as a channel may.
+    const extra = Array.from({ length: CHANNEL_OVERRIDES_MAX - 1 }, (_, i) => ({
+      id: `user_extra_${i}`,
+      name: `Extra ${i}`,
+      email: `extra-${i}@example.com`,
+      locale: "pt-BR",
+    }));
+    await f.db.insert(schema.users).values(extra);
+    await f.db
+      .insert(schema.organizationMembers)
+      .values(extra.map((p) => ({ orgId: f.org.id, userId: p.id, role: "member" as const })));
+    await f.db
+      .insert(schema.channelPermissionOverrides)
+      .values(extra.map((p) => ({ orgId: f.org.id, channelId: cheio.id, userId: p.id, deny: ["post"] })));
+    // A lead who doesn't manage these channels duplicates Suporte and gives the copy to Pia.
+    const copy = await createRole(f.db, lead.id, f.org.id, { name: "Suporte 2", copyFrom: support.id });
+    await setMemberRoles(f.db, lead.id, f.org.id, pia.id, [copy.id]);
+    const seen = async (userId: string, channelId: string) =>
+      (await listChannels(f.db, userId, f.org.id)).find((c) => c.id === channelId);
+    expect((await seen(mia.id, avisos.id))?.can.post).toBe(false);
+    expect((await seen(pia.id, avisos.id))?.can.post).toBe(false);
+    expect(await seen(mia.id, cheio.id)).toBeDefined();
+    expect(await seen(pia.id, cheio.id)).toBeUndefined();
+    const [created] = await f.db
+      .select()
+      .from(schema.auditLog)
+      .where(and(eq(schema.auditLog.action, "role.created"), eq(schema.auditLog.targetId, copy.id)));
+    expect(created?.details).toMatchObject({
+      channelIds: [avisos.id],
+      exceptions: [{ channelId: avisos.id, allow: [], deny: ["post"] }],
+    });
   });
 
   test("only a role below the actor whose keys they all hold", async () => {

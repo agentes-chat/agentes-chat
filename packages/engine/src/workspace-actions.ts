@@ -557,7 +557,23 @@ const permissionHoldersAction: WorkspaceAction = {
     }
     if (row !== COMPUTERS_ROW && [Number(input.everyone), ...roles.map((r) => r.level)].some((l) => l > 1))
       return "Only computers has steps: any other permission is 1 (may) or 0.";
-    return { input: { row, everyone: Number(input.everyone), roles }, words: rowWords(row) };
+    // Roles with administrator keep it whatever the card says (`setRowHolders`): the card names them among who may,
+    // at the top step, so it never reads "only owners" while an Admin role still can.
+    const top = row === COMPUTERS_ROW ? COMPUTER_STEPS.length : 1;
+    const admins = await ctx.db
+      .select({ id: orgRoles.id, name: orgRoles.name })
+      .from(orgRoles)
+      .where(
+        and(
+          eq(orgRoles.orgId, ctx.orgId),
+          eq(orgRoles.kind, "custom"),
+          sql`'administrator' = any(${orgRoles.permissions})`,
+        ),
+      )
+      .orderBy(asc(orgRoles.position));
+    const kept = Number(input.everyone) < top ? admins.map((a) => ({ ...a, level: top })) : [];
+    const others = roles.filter((r) => !admins.some((a) => a.id === r.id));
+    return { input: { row, everyone: Number(input.everyone), roles: [...kept, ...others] }, words: rowWords(row) };
   },
   async run(deps, actorId, orgId, input) {
     const row = str(input.row);

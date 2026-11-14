@@ -1,9 +1,22 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { and, asc, type Database, type Executor, eq, inArray, isNull, or, schema, sql } from "@agenteschat/db";
+import {
+  and,
+  asc,
+  type Database,
+  type Executor,
+  eq,
+  inArray,
+  isNull,
+  notInArray,
+  or,
+  schema,
+  sql,
+} from "@agenteschat/db";
 import type { AgentMailLoss } from "./audience";
 import { recordAudit } from "./audit";
 import { caches } from "./cache";
 import { memberCardVia } from "./card-via";
+import { CHANNEL_OVERRIDES_MAX } from "./channel-permissions";
 import { announceChannelLeavers, type ChannelLeaver, dropRoleLeavers } from "./channels";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishAgentsChanged, publishChannelsChanged } from "./events";
@@ -39,7 +52,15 @@ import {
  * never gives a key they don't hold themselves.
  */
 
-const { agents, channelMembers, channels, orgRoles, organizationMemberRoles, organizationMembers } = schema;
+const {
+  agents,
+  channelMembers,
+  channelPermissionOverrides: overrides,
+  channels,
+  orgRoles,
+  organizationMemberRoles,
+  organizationMembers,
+} = schema;
 
 export const ROLE_NAME_MAX = 40;
 /** A workspace's roles at most, `everyone` aside. */
@@ -245,8 +266,8 @@ const announceRoles = async (pubsub: PubSub | undefined, orgId: string) => {
 /**
  * Creates a role at the bottom of the others (just above `everyone`). Needs `manage_roles`. `copyFrom` (Duplicar): a
  * role below the actor whose keys they all hold, whose keys, look and switches fill what `input` leaves out, and
- * whose channels and agents the new role joins (their `audience_role_ids`) in the same transaction. It has nobody
- * yet, so nobody reaches anything new until someone is given it.
+ * whose channels and agents the new role joins (their `audience_role_ids`), with its channel exceptions, in the same
+ * transaction. It has nobody yet, so nobody reaches anything new until someone is given it.
  */
 export async function createRole(
   db: Database,
@@ -267,7 +288,11 @@ export async function createRole(
   const name = cleanName(input.name);
   const source = input.copyFrom ? await copySource(db, actor, orgId, input.copyFrom) : null;
   const permissions = settableKeys(actor, input.permissions ?? source?.permissions ?? []);
-  const reach = { channelIds: [] as string[], agentIds: [] as string[] };
+  const reach = {
+    channelIds: [] as string[],
+    agentIds: [] as string[],
+    exceptions: [] as { channelId: string; allow: string[]; deny: string[] }[],
+  };
   const role = await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`org-roles:${orgId}`}))`);
     const [count] = await tx
@@ -290,11 +315,42 @@ export async function createRole(
       .returning();
     if (!row) throw new Error("role insert returned nothing");
     if (source) {
+      // The copy carries the source's channel exceptions (ADR 0134), or its people would escape a deny there. A
+      // channel with no room for one more exception is left out of the copy's reach instead.
+      const exceptions = await tx
+        .select({ channelId: overrides.channelId, allow: overrides.allow, deny: overrides.deny })
+        .from(overrides)
+        .where(and(eq(overrides.orgId, orgId), eq(overrides.roleId, source.id)));
+      const full =
+        exceptions.length === 0
+          ? []
+          : (
+              await tx
+                .select({ channelId: overrides.channelId })
+                .from(overrides)
+                .where(
+                  inArray(
+                    overrides.channelId,
+                    exceptions.map((e) => e.channelId),
+                  ),
+                )
+                .groupBy(overrides.channelId)
+                .having(sql`count(*) >= ${CHANNEL_OVERRIDES_MAX}`)
+            ).map((c) => c.channelId);
+      reach.exceptions = exceptions.filter((e) => !full.includes(e.channelId));
+      if (reach.exceptions.length > 0)
+        await tx.insert(overrides).values(reach.exceptions.map((e) => ({ orgId, roleId: row.id, ...e })));
       reach.channelIds = (
         await tx
           .update(channels)
           .set({ audienceRoleIds: sql`array_append(${channels.audienceRoleIds}, ${row.id}::uuid)` })
-          .where(and(eq(channels.orgId, orgId), sql`${source.id}::uuid = any(${channels.audienceRoleIds})`))
+          .where(
+            and(
+              eq(channels.orgId, orgId),
+              sql`${source.id}::uuid = any(${channels.audienceRoleIds})`,
+              full.length > 0 ? notInArray(channels.id, full) : undefined,
+            ),
+          )
           .returning({ id: channels.id })
       ).map((c) => c.id);
       reach.agentIds = (
@@ -715,6 +771,9 @@ export async function setMemberRoles(
       if (lost.some((m) => !seen.includes(m.accountId)))
         throw new ConflictError("An agent holds a mailbox you weren't asked about", "agent.mail_loss_changed");
     }
+    // Added before the others go: the mailboxes drop by the roles held before, as the check above and the preview
+    // count them, so swapping one role for another that opens the same agent takes nothing.
+    await addMemberRolesInTx(tx, orgId, targetUserId, added, actorId);
     if (removed.length > 0)
       await tx
         .delete(organizationMemberRoles)
@@ -725,7 +784,6 @@ export async function setMemberRoles(
             inArray(organizationMemberRoles.roleId, removed),
           ),
         );
-    await addMemberRolesInTx(tx, orgId, targetUserId, added, actorId);
     // Channels limited to the roles taken away (ADR 0125) let them go, unless another of theirs still opens them.
     const left = await dropRoleLeavers(tx, orgId, { people: [targetUserId], roleIds: removed });
     const names = await tx

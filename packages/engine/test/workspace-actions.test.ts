@@ -34,6 +34,7 @@ import {
   RIGHT_HAND,
   setMemberRoles,
   setMyStatus,
+  setRowHolders,
   suggestPerson,
   type ToolContext,
   type ToolSource,
@@ -324,8 +325,12 @@ describe("roles through the right hand", () => {
 
   test("who may create channels, everyone and the roles at once: a card that must be read, applied with Undo", async () => {
     f = await setup({ rightHand: true });
-    await createRole(f.db, f.owner.id, f.org.id, { name: "Suporte", permissions: ["create_channels", "post"] });
+    const support = await createRole(f.db, f.owner.id, f.org.id, {
+      name: "Suporte",
+      permissions: ["create_channels", "post"],
+    });
     const finance = await createRole(f.db, f.owner.id, f.org.id, { name: "Financeiro" });
+    const admin = await roleNamed(f, "Admin");
     const base = async () =>
       (
         await f.db
@@ -357,10 +362,18 @@ describe("roles through the right hand", () => {
     expect(await base()).toContain("create_channels");
     const posted = await lastCard(f);
     if (!posted) throw new Error("no card");
+    // The Admin role keeps it whatever the card says: the card names it among who may.
     expect(posted.card.params).toMatchObject({
       action: "set_permission_holders",
       needs: "manage_roles",
-      input: { row: "create_channels", everyone: 0, roles: [{ id: finance.id, name: "Financeiro", level: 1 }] },
+      input: {
+        row: "create_channels",
+        everyone: 0,
+        roles: [
+          { id: admin?.id, name: "Admin", level: 1 },
+          { id: finance.id, name: "Financeiro", level: 1 },
+        ],
+      },
       words: { permission: "create_channels" },
     });
     const deps = { db: f.db, pubsub: f.pubsub };
@@ -377,11 +390,36 @@ describe("roles through the right hand", () => {
       kind: "workspace.changed",
       params: { action: "set_permission_holders", permission: "create_channels" },
     });
-    // Undo puts every role back as it was.
+    // Changed again since, Undo refuses and leaves the row as it is.
+    const holders = (ids: string[]) =>
+      setRowHolders(f.db, f.owner.id, f.org.id, "create_channels", {
+        everyone: 0,
+        roles: ids.map((id) => ({ id, level: 1 })),
+      });
+    await holders([finance.id, support.id]);
+    await expect(undoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "")).rejects.toMatchObject({
+      code: "action.changed_since",
+    });
+    expect(await base()).not.toContain("create_channels");
+    expect((await roleNamed(f, "Suporte"))?.permissions.sort()).toEqual(["create_channels", "post"]);
+    // As the card left it again, Undo puts every role back as it was.
+    await holders([finance.id]);
     await undoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "");
     expect(await base()).toContain("create_channels");
     expect((await roleNamed(f, "Financeiro"))?.permissions).toEqual([]);
     expect((await roleNamed(f, "Suporte"))?.permissions.sort()).toEqual(["create_channels", "post"]);
+
+    // On the computers' ladder the Admin role stands at the top step.
+    await act(f, ctx, {
+      action: "set_permission_holders",
+      input: { permission: "computers", everyone: 1 },
+      why: "Todos usam o navegador dos seus agentes",
+    });
+    expect((await lastCard(f))?.card.params.input).toMatchObject({
+      row: "computers",
+      everyone: 1,
+      roles: [{ id: admin?.id, name: "Admin", level: 4 }],
+    });
   });
 
   test("wrong or unknown input says why and changes nothing", async () => {
