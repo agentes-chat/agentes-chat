@@ -13,6 +13,7 @@ import {
 } from "@agenteschat/client";
 import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { formatInt } from "@agenteschat/client/lib/format";
 import { linkStanding } from "@agenteschat/client/lib/invite-start";
 import { can } from "@agenteschat/client/lib/permissions";
 import { everyoneOf, sortRoles } from "@agenteschat/client/lib/roles";
@@ -34,7 +35,7 @@ import {
 import { router } from "@/ui/navigation";
 import { CargoMark, RowBones } from "../roles/parts";
 import { Gap, SettingsPage } from "../settings/parts";
-import { useColors, useDirectory, useMeId } from "../shared/hooks";
+import { useDirectory, useMeId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { type ActionItem, ActionList, copyText, Loaded, successHaptic } from "../shared/parts";
 import { SheetHostProvider, useSheet } from "../shared/SheetHost";
@@ -127,19 +128,24 @@ function Invites() {
       />,
       { solid: true },
     );
-  const request = (r: JoinRequest) => (
-    <GroupedRow
-      key={r.id}
-      leading={<PersonAvatar name={r.name} size={30} />}
-      label={r.name}
-      labelLines={2}
-      sub={requestLine(t, i18n.language, r, r.link ? givesLine(t, known, r.link) : [])}
-      subLines={2}
-      media
-      chevron
-      onPress={() => router.push({ pathname: "/join-requests", params: { request: r.id } })}
-    />
-  );
+  // How it came on one line, what its link gives on the next: each wraps whole, nothing cut.
+  const request = (r: JoinRequest) => {
+    const gives = r.link ? givesLine(t, known, r.link) : [];
+    return (
+      <GroupedRow
+        key={r.id}
+        leading={<PersonAvatar name={r.name} size={30} />}
+        label={r.name}
+        labelLines={2}
+        sub={requestLine(t, i18n.language, r, [])}
+        subLines={0}
+        {...(gives.length > 0 ? { belowText: gives.join(" · ") } : {})}
+        media
+        chevron
+        onPress={() => router.push({ pathname: "/join-requests", params: { request: r.id } })}
+      />
+    );
+  };
 
   return (
     <SettingsPage title={title} right={<IconButton icon="plus" label={t("members.inviteTitle")} onPress={invite} />}>
@@ -186,13 +192,13 @@ function Invites() {
           <Locked when={frozen} readable>
             {waiting.length > 0 ? (
               <>
-                <GroupedHeader>{`${t("members.waitingTitle")} · ${waiting.length}`}</GroupedHeader>
+                <GroupedHeader>{`${t("members.waitingTitle")} · ${formatInt(i18n.language, waiting.length)}`}</GroupedHeader>
                 <GroupedList>{waiting.map(request)}</GroupedList>
               </>
             ) : null}
             {linkList.length > 0 ? (
               <>
-                <GroupedHeader>{`${t("invites.tab.links")} · ${linkList.length}`}</GroupedHeader>
+                <GroupedHeader>{`${t("invites.tab.links")} · ${formatInt(i18n.language, linkList.length)}`}</GroupedHeader>
                 <GroupedList>
                   {linkList.map((l) => (
                     <LinkRow key={l.id} link={l} onPress={() => sheet.open(<LinkSheet link={l} />, { solid: true })} />
@@ -202,16 +208,16 @@ function Invites() {
             ) : null}
             {sent.length > 0 ? (
               <>
-                <GroupedHeader>{`${t("invites.tab.emails")} · ${sent.length}`}</GroupedHeader>
+                <GroupedHeader>{`${t("invites.tab.emails")} · ${formatInt(i18n.language, sent.length)}`}</GroupedHeader>
                 <GroupedList>
                   {sent.map((inv) => (
                     <GroupedRow
                       key={inv.id}
                       leading={<PersonAvatar name={inv.email} size={30} />}
                       label={inv.email}
-                      labelLines={2}
+                      labelLines={3}
                       sub={invitationLine(t, i18n.language, inv, roles, { resentUntil: resent[inv.id] })}
-                      subLines={2}
+                      subLines={0}
                       media
                       chevron
                       onPress={() => openInvitation(inv)}
@@ -234,7 +240,6 @@ function Invites() {
 function LinkRow({ link, onPress }: { link: InviteLink; onPress: () => void }) {
   const { t, i18n } = useTranslation();
   const { orgId } = useOrg();
-  const c = useColors();
   const meId = useMeId();
   const roles = useRoles(orgId).data?.roles ?? [];
   const first = sortRoles(roles.filter((r) => (link.roleIds ?? []).includes(r.id)))[0] ?? everyoneOf(roles);
@@ -244,13 +249,11 @@ function LinkRow({ link, onPress }: { link: InviteLink; onPress: () => void }) {
     <GroupedRow
       {...(first ? { leading: <CargoMark role={first} size={30} /> } : {})}
       label={linkTitle(t, roles, link)}
-      labelLines={2}
+      labelLines={0}
+      sub={line}
+      subLines={0}
+      subTone={full || soon ? "amber" : "faint"}
       media
-      below={
-        <Text variant="footnote" numberOfLines={2} style={{ color: full || soon ? c.amberInk : c.faint }}>
-          {line}
-        </Text>
-      }
       chevron
       onPress={onPress}
     />

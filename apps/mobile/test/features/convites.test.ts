@@ -488,3 +488,81 @@ describe("the arrival card (#general for a newcomer's first day)", () => {
     expect(src("features/agents/AgentsScreen.tsx")).toContain("freeSections(free, groups, pins.pins.agents)");
   });
 });
+
+describe("the worst case (break-ui): long names, one of each, a thousand of them", () => {
+  // The server's limits: a cargo's name 40 letters, a channel's 80, an agent's 32, an address 320 (64 is the classic).
+  const LONG_CARGO = role({ id: "long", name: "Desenvolvimento de Produto e Engenharia!", position: 4 });
+  const VIET = role({ id: "viet", name: "Đặng Thị Ngọc Hân", position: 5 });
+  const LONG_EMAIL = "bartholomew.fitzgerald@northwind-industries-holdings.example.com";
+
+  test("exactly one of everything is said in the singular, a thousand with its separator", async () => {
+    const pt = await translator("pt-BR");
+    const one = { uses: 1, maxUses: 1, expiresAt: later(1 / 48), createdBy: null, createdByUserId: null };
+    expect(linkLine(pt, "pt-BR", one, "u-me", NOW)).toBe("1 de 1 pessoa · expira em 30 min");
+    expect(linkLine(pt, "pt-BR", { ...one, maxUses: null }, "u-me", NOW)).toBe("1 entrou · expira em 30 min");
+    expect(maxWord(pt, 1)).toBe("1 pessoa");
+    expect(areaValues(pt, "pt-BR", { waiting: 1284 }).invites).toBe("1.284");
+    const convites = src("features/members/InvitesScreen.tsx");
+    expect(convites).toContain("formatInt(i18n.language, waiting.length)");
+    expect(convites).toContain("formatInt(i18n.language, sent.length)");
+  });
+
+  test("long cargo, channel and agent names: a link's name and a request's line wrap whole, never cut", async () => {
+    const pt = await translator("pt-BR");
+    const roles = [...ROLES, LONG_CARGO, VIET];
+    // Every cargo is named on the link's row; it wraps as far as it needs.
+    expect(linkTitle(pt, roles, { roleIds: ["long", "viet", "fin"] })).toBe(
+      "Financeiro, Desenvolvimento de Produto e Engenharia! e Đặng Thị Ngọc Hân",
+    );
+    // What a link gives names two of each and counts the rest, so its line stays short.
+    const channels = Array.from({ length: 12 }, (_, i) => ({
+      id: `c${i}`,
+      name: `atendimento-ao-cliente-regiao-${i}`,
+    }));
+    const gives = givesLine(
+      pt,
+      { roles, channels, agents: AGENTS },
+      {
+        roleIds: ["long", "viet", "fin"],
+        channelIds: channels.map((c) => c.id),
+        agentIds: ["max", "ada", "fin", "rex"],
+      },
+    );
+    expect(gives).toEqual([
+      "Financeiro, Desenvolvimento de Produto e Engenharia! e mais 1",
+      "#atendimento-ao-cliente-regiao-0, #atendimento-ao-cliente-regiao-1 e mais 10",
+      "Max, Ada e mais 2",
+    ]);
+    const convites = src("features/members/InvitesScreen.tsx");
+    expect(convites).toMatch(/label=\{linkTitle\(t, roles, link\)\}\s*labelLines=\{0\}/);
+    // How it came, then what it gives on a line of its own, neither cut.
+    expect(convites).toMatch(/sub=\{requestLine\(t, i18n\.language, r, \[\]\)\}\s*subLines=\{0\}/);
+    expect(convites).toContain('belowText: gives.join(" · ")');
+    // A channel's 80 letters wrap in Canais.
+    expect(src("features/members/InvitePickers.tsx")).toMatch(/label=\{p\.channel\.name\}\s*labelLines=\{0\}/);
+  });
+
+  test("the classic long address: three lines on Convites, whole on Editar convite, cut only inside its token", async () => {
+    const pt = await translator("pt-BR");
+    expect(LONG_EMAIL.length).toBe(64);
+    const convites = src("features/members/InvitesScreen.tsx");
+    expect(convites).toMatch(/label=\{inv\.email\}\s*labelLines=\{3\}/);
+    expect(src("features/members/InviteEdit.tsx")).toContain('t("members.invitations.label", { email: inv.email })');
+    expect(pt("members.invitations.label", { email: LONG_EMAIL })).toBe(`Convite para ${LONG_EMAIL}`);
+    // In its token the address ends in "…" while its note and its × stay whole (the plan's choice).
+    const token = src("ui/Token.tsx");
+    expect(token).toMatch(/\{note \? \(\s*<RNText numberOfLines=\{1\}/);
+    expect(token).toContain("label: { flexShrink: 1, minWidth: 0 },");
+  });
+
+  test("empty and loading: Convites' rows of the final shape, then the empty line with its two ways in", () => {
+    const convites = src("features/members/InvitesScreen.tsx");
+    expect(convites).toContain("<RowBones />");
+    expect(convites).toContain('<GroupedFooter>{t("members.invitations.empty")}</GroupedFooter>');
+    expect(convites).toContain('label={t("members.copyInviteLink")}');
+    // A request's card waits for the cargos, so it opens on its link's choices.
+    expect(src("features/members/JoinRequestsSheet.tsx")).toContain("else if (!list.data || !roles.data)");
+    // Convidar opens on its cargo in the first frame.
+    expect(src("features/members/InvitePeople.tsx")).toContain("const draft = useInviteDraft(KEY) ?? opening;");
+  });
+});

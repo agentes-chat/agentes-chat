@@ -91,7 +91,8 @@ describe("MediaRow", () => {
     for (const [file, count] of uses)
       expect([file, src(file).match(/^\s*media(: true,)?$/gm)?.length ?? 0]).toEqual([file, count]);
     // An invitation's or a suggestion's address wraps instead of ending in "…".
-    expect(src("features/members/InvitesScreen.tsx")).toMatch(/label=\{inv\.email\}\s*labelLines=\{2\}/);
+    // A 64-letter address takes three lines in a row's label column.
+    expect(src("features/members/InvitesScreen.tsx")).toMatch(/label=\{inv\.email\}\s*labelLines=\{3\}/);
     expect(src("features/members/MembersPage.tsx")).toMatch(/label=\{s\.email\}\s*labelLines=\{2\}/);
   });
 

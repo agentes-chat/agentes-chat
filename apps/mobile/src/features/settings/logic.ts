@@ -14,7 +14,7 @@ import type {
 } from "@agenteschat/client";
 import { type AccessResource, resourcesOf } from "@agenteschat/client/lib/access-levels";
 import { type NoComputer, noComputerChoice, type SetupView, setupPending } from "@agenteschat/client/lib/computer";
-import { clockAt, formatPercent, relativeTime } from "@agenteschat/client/lib/format";
+import { clockAt, formatInt, formatPercent, relativeTime } from "@agenteschat/client/lib/format";
 import { folderName, hostDescKey, isPaused } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
 import { type ModeSwitchLine, personalSettingsHost, personalSettingsNav } from "@agenteschat/client/lib/personal-view";
@@ -197,7 +197,7 @@ export function areaValues(t: TFunction, locale: string, f: TileFacts): Partial<
     out.access = String(f.overview.agents);
     if (f.usesApi) out.usage = formatPercent(locale, f.overview.budgetUsedPercent);
   }
-  if (f.waiting) out.invites = String(f.waiting);
+  if (f.waiting) out.invites = formatInt(locale, f.waiting);
   if (f.connectors && f.connectors.length > 0) out.connectors = String(f.connectors.length);
   if (f.skills !== undefined && f.skills > 0) out.skills = String(f.skills);
   if (f.computers && f.computers.count > 0)

@@ -48,7 +48,7 @@ import { MembersFullNote } from "./MembersFullNote";
  * can be approved, as on the web.
  */
 export function JoinRequestsSheet({ focus, onClose }: { focus?: string | undefined; onClose: () => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
   const c = useColors();
   const allowed = can(org, "invite_people");
@@ -63,8 +63,14 @@ export function JoinRequestsSheet({ focus, onClose }: { focus?: string | undefin
 
   let body: ReactNode;
   if (!allowed) body = <Text tone="muted">{t("common.notAllowed")}</Text>;
-  else if (!list.data)
-    body = list.isError ? <Text tone="muted">{t("mobile.app.failed")}</Text> : <ActivityIndicator color={c.muted} />;
+  // The cargos too before any card: each card starts on its link's choices from its first frame.
+  else if (!list.data || !roles.data)
+    body =
+      list.isError || roles.isError ? (
+        <Text tone="muted">{errorText(t, list.error ?? roles.error, i18n.language)}</Text>
+      ) : (
+        <ActivityIndicator color={c.muted} />
+      );
   else if (list.data.length === 0)
     body = (
       <>
@@ -151,8 +157,7 @@ function RequestCard({
   const key = `request:${r.id}`;
   // The link's cargos, those still offered to this approver; its channels and agents as the link gives them.
   const given = (r.link?.roleIds ?? []).filter((id) => roles.some((x) => x.id === id && x.givable));
-  useDraftStart(
-    key,
+  const opening =
     roles.length > 0
       ? () => ({
           ...EMPTY_INVITE,
@@ -162,9 +167,10 @@ function RequestCard({
             agentIds: r.link?.agentIds ?? [],
           }),
         })
-      : null,
-  );
-  const draft = useInviteDraft(key);
+      : null;
+  useDraftStart(key, opening);
+  // The link's choices from the first frame, before the draft is in place: nothing jumps.
+  const draft = useInviteDraft(key) ?? opening?.() ?? null;
   const [refused, setRefused] = useState<InviteRefusal | null>(null);
   const start = useStartFields(key, draft, { refused });
   const [denying, setDenying] = useState(false);

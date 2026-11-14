@@ -280,10 +280,11 @@ export function EditInvitationScreen() {
   return (
     <SettingsPage
       title={title}
-      subtitle={inv.email}
       action={{ label: t("common.save"), onPress: () => void save(), disabled: !changed || expired }}
       busy={busy}
     >
+      {/* Whose it is, whole: a long address wraps here, where the bar would cut it. */}
+      <GroupedFooter>{t("members.invitations.label", { email: inv.email })}</GroupedFooter>
       {expired ? (
         <>
           <View style={styles.note}>

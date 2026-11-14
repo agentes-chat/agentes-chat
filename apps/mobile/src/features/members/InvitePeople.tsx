@@ -28,7 +28,7 @@ import { can } from "@agenteschat/client/lib/permissions";
 import { playSound } from "@agenteschat/client/lib/sounds";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useLocalSearchParams, usePreventRemove } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Share, StyleSheet, TextInput, type TextInputInstance, View } from "react-native";
 import { paysHere } from "@/lib/store";
@@ -131,16 +131,21 @@ function InviteForm() {
   // An agent's invite card opens it with its addresses (`?emails=a@x,b@y`), a channel's add sheet with that channel, a
   // cargo's "Convidar com este cargo" with that cargo, which brings its channels and agents.
   const { emails, channel, role } = useLocalSearchParams<{ emails?: string; channel?: string; role?: string }>();
-  useEffect(() => {
-    setInviteDraft(KEY, {
+  const opening = useMemo<InviteDraft>(
+    () => ({
       ...EMPTY_INVITE,
       roleIds: role ? [role] : [],
       addresses: emails ? withAddresses([], emails) : [],
       added: { channelIds: channel ? [channel] : [], agentIds: [] },
-    });
+    }),
+    [emails, channel, role],
+  );
+  useEffect(() => {
+    setInviteDraft(KEY, opening);
     return () => setInviteDraft(KEY, null);
-  }, [emails, channel, role]);
-  const draft = useInviteDraft(KEY) ?? EMPTY_INVITE;
+  }, [opening]);
+  // The form as it opens until its draft is in place: the first frame already shows the cargo, nothing jumps.
+  const draft = useInviteDraft(KEY) ?? opening;
   const start = useStartFields(KEY, draft, { refused });
   const sending = inviteMany.isPending || make.isPending;
   // While it sends, nothing goes back from under it.

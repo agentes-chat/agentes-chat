@@ -1,5 +1,5 @@
 import { Children, type ReactElement, type ReactNode, useState } from "react";
-import { Pressable, Text as RNText, StyleSheet, View } from "react-native";
+import { type AccessibilityActionEvent, Pressable, Text as RNText, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { Icon } from "./Icon";
 import { withAlpha } from "./palette";
@@ -72,11 +72,22 @@ export function Token({ label, leading, note, tone = "neutral", onPress, onRemov
       ) : null}
     </View>
   );
+  // Pressable itself (an address to fix): a finger's 44 around its 32, and to VoiceOver one button whose × is its
+  // action, since a button inside a button can't be reached.
   const body = onPress ? (
     <Pressable
       onPress={onPress}
+      hitSlop={{ top: (TOUCH - TOKEN_H) / 2, bottom: (TOUCH - TOKEN_H) / 2 }}
       accessibilityRole="button"
       accessibilityLabel={said}
+      {...(onRemove
+        ? {
+            accessibilityActions: [{ name: "delete", label: removeLabel ?? label }],
+            onAccessibilityAction: (e: AccessibilityActionEvent) => {
+              if (e.nativeEvent.actionName === "delete") onRemove();
+            },
+          }
+        : {})}
       style={({ pressed }) => [styles.shrink, pressed ? { opacity: 0.6 } : null]}
     >
       {pill}

@@ -126,7 +126,7 @@ function ChannelsPick({ draft, change }: PickProps) {
                 key={p.channel.id}
                 icon={p.channel.visibility === "private" ? "lock" : "hash"}
                 label={p.channel.name}
-                labelLines={2}
+                labelLines={0}
                 {...(p.sub ? { sub: p.sub } : {})}
                 checked={p.on}
                 disabled={p.fixed}

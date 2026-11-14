@@ -190,6 +190,8 @@ export interface GroupedRowProps {
   sub?: string;
   /** Lines the small line may take (default 1). 0: as many as it needs. */
   subLines?: number;
+  /** `amber`: the small line says what waits or ends soon (a link that is full, or with less than a day left). */
+  subTone?: "faint" | "amber";
   /** Under the small line, in the text column (a second line of facts). */
   below?: ReactNode;
   /** A line of facts under the small line, in faint, read out with the label (a `below` node is not). */
@@ -274,6 +276,7 @@ function Row({
   labelLines = 1,
   sub,
   subLines = 1,
+  subTone = "faint",
   below,
   belowText,
   icon,
@@ -371,7 +374,12 @@ function Row({
   const under = (
     <>
       {sub ? (
-        <Text variant="footnote" tone="faint" numberOfLines={subLines}>
+        <Text
+          variant="footnote"
+          tone="faint"
+          numberOfLines={subLines}
+          style={subTone === "amber" ? { color: c.amberInk } : null}
+        >
           {sub}
         </Text>
       ) : null}
@@ -476,7 +484,8 @@ function Row({
       // A row of buttons stays enabled with nothing to press itself: VoiceOver still offers its actions.
       disabled={disabled || (!onPress && !actions.length)}
       accessibilityRole={toggle !== undefined ? "switch" : "button"}
-      accessibilityLabel={[label, belowText, said, value, valueNote].filter(Boolean).join(", ")}
+      // The row is one element to VoiceOver: its own label stands for every word inside, its small line too.
+      accessibilityLabel={[label, sub, belowText, said, value, valueNote].filter(Boolean).join(", ")}
       {...(actions.length
         ? {
             accessibilityActions: actions.map(({ name, label }) => ({ name, label })),

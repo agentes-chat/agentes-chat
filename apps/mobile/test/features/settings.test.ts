@@ -603,7 +603,7 @@ describe("Armazenamento", () => {
   test("VoiceOver reads the line with its option: it is part of the row's label", () => {
     const src = (path: string) => readFileSync(join(import.meta.dir, "..", "..", "src", path), "utf8");
     expect(src("ui/Grouped.tsx")).toContain(
-      'accessibilityLabel={[label, belowText, said, value, valueNote].filter(Boolean).join(", ")}',
+      'accessibilityLabel={[label, sub, belowText, said, value, valueNote].filter(Boolean).join(", ")}',
     );
     expect(src("features/settings/StorageScreen.tsx")).toContain("belowText: usage ?? undefined");
   });
