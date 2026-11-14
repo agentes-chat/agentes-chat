@@ -5,7 +5,7 @@ import {
   useResendInvitation,
   useRevokeInvitation,
   useRoles,
-  useSetInvitationRoles,
+  useUpdateInvitation,
 } from "@agenteschat/client";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { formatShortDate } from "@agenteschat/client/lib/format";
@@ -17,7 +17,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Share } from "react-native";
 import { useOrg } from "@/providers/org";
-import { Button, Icon, Locked, Text, useToast } from "@/ui";
+import { Button, Icon, Locked, RoleMark, Text, useToast } from "@/ui";
 import { useColors } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { type ActionItem, ActionList, copyText, successHaptic } from "../shared/parts";
@@ -33,6 +33,7 @@ function useRoleRows(roles: readonly OrgRole[]) {
   const everyone = everyoneOf(roles);
   return givableOf(roles).map((r) => ({
     key: r.id,
+    leading: <RoleMark color={r.color} icon={r.icon} size={24} />,
     label: r.name,
     hint: roleSummary(t, i18n.language, r, everyone),
   }));
@@ -255,7 +256,7 @@ function InvitationRolesSheet({ invitation: inv }: { invitation: InvitationWithS
   const rows = useRoleRows(roles);
   // A personal workspace's note ties its roles to the invitation's plain words (ADR 0159 §4).
   const helper = isPersonal(org) ? personalHelperRole(roles) : null;
-  const save = useSetInvitationRoles(orgId);
+  const save = useUpdateInvitation(orgId);
   const [value, setValue] = useState<string[]>(inv.roleIds ?? []);
   const flip = (id: string) => setValue((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
   const saveIt = async () => {

@@ -1387,7 +1387,13 @@ computer), plus swap for a third of that, which keeps the rest for the system, t
 the server. At that limit the kernel stops one process, usually the biggest (Chrome's pages first), and
 only that process: the command it belonged to fails, and the agent is told it was most likely memory
 (with systemd 253 or newer; a desktop or a task already running when you update gets this when it next
-starts).
+starts). What agents leave in `/tmp` holds RAM until they delete it or the computer restarts. To keep
+it on disk instead, add `"agentTmpOnDisk": true` to `/var/lib/agentes-runner/config.json` as root (on
+this server's own computer too, for all its organizations): each agent takes it at its first launch
+after the next boot (until then it keeps the `/tmp` it has). The agents' `/tmp` is then a filesystem of
+their own, made anew at every boot in `/var/cache/agentes-runner-tmp` with half of what the system disk
+has free, so they can't fill that disk or take its inodes. It needs loop devices and `mkfs.ext4`
+(e2fsprogs), which an unprivileged container doesn't have.
 `agentes-runner computer`, which any agent (or you) can run, prints what the computer has, what is free
 for new work and which agents use the most; agents are told to run it before something heavy, to tell
 the person when another agent's work leaves no room, and to stop what a finished build left running.

@@ -1,4 +1,5 @@
 import {
+  APPROVAL_REASON_MAX,
   COVER_MODES,
   cancelAheadApproval,
   decideApproval,
@@ -86,7 +87,14 @@ export const Approval = z
     ownerUserId: z.string().nullable().openapi({ description: "The agent's owner (they and admins may decide)." }),
     executedAt: z.string().nullable().openapi({ description: "When the approved action ran." }),
     result: z
-      .object({ ok: z.boolean(), text: z.string() })
+      .object({
+        ok: z.boolean(),
+        text: z.string(),
+        notRunAfter: z.string().optional().openapi({
+          description:
+            "Not run: approved before this request, asked ahead of it on its card, was refused or expired (its id).",
+        }),
+      })
       .nullable()
       .openapi({ description: "What the action returned once it ran (raw, short)." }),
     connector: z.string().nullable().openapi({ example: "github" }),
@@ -197,7 +205,7 @@ const ApprovalParams = OrgParams.extend({ approvalId: z.uuid() });
 const AgentParams = OrgParams.extend({ agentId: z.uuid() });
 /** The card it was decided from, for the audit's "via" (ADR 0137 §4): ignored unless that card lists it. */
 const Via = z.uuid().optional().openapi({ description: "The right hand's approvals card it was decided from." });
-const Decision = z.object({ reason: z.string().max(1000).optional(), via: Via });
+const Decision = z.object({ reason: z.string().max(APPROVAL_REASON_MAX).optional(), via: Via });
 const Approve = Decision.extend({
   always: z.boolean().optional().openapi({
     description:
@@ -268,7 +276,7 @@ export function approvalRoutes(deps: AppDeps) {
           z.object({
             ids: z.array(z.uuid()).min(1).max(50),
             decision: z.enum(["approve", "refuse"]),
-            reason: z.string().max(1000).optional(),
+            reason: z.string().max(APPROVAL_REASON_MAX).optional(),
             via: Via,
             only: z.literal("routine").optional().openapi({
               description:

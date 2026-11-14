@@ -474,6 +474,15 @@ export interface OrgRole {
   editable: boolean;
   /** Whether you may give it to people: it is below your own. */
   givable: boolean;
+  /**
+   * The channels it opens that you see: those limited to it (ADR 0125); for `everyone`, every public channel.
+   * Older servers leave the reach out.
+   */
+  channelIds?: string[];
+  /** Channels limited to it that you don't see: counted, never named. */
+  hiddenChannels?: number;
+  /** The agents it lets people talk to: those whose audience lists it; for `everyone`, those that answer everyone. */
+  agentIds?: string[];
 }
 
 /** A permission area: its "use" keys and every key (its "manage" level). */
@@ -497,6 +506,23 @@ export interface RoleInput {
   permissions?: string[];
   mentionable?: boolean;
   hoist?: boolean;
+  /** Duplicar: a role below yours whose keys you hold; what's left out comes from it, and the copy joins its channels and agents. */
+  copyFrom?: string;
+}
+
+/**
+ * Who holds one permission row (`PUT …/permissions/{row}`): `everyone`'s level and each listed role's; every other
+ * role the sender may change goes to 0. A level is 0 or 1, or a step of the agents' computers (0 to 4).
+ */
+export interface RowHolders {
+  everyone: number;
+  roles: { id: string; level: number }[];
+}
+
+/** A mailbox an agent would lose when someone gets a role (`…/roles/{roleId}/members/preview`). */
+export interface RoleMailLoss extends ForeignMailbox {
+  agentId: string;
+  agentName: string;
 }
 
 export interface InvitationPreview {
@@ -517,8 +543,15 @@ export interface InvitationPreview {
    * being deleted).
    */
   logo?: string;
-  /** The organization's first agents ("Theo, Ada, Lia e Atlas já trabalham lá"). */
+  /**
+   * The organization's first agents ("Theo, Ada, Lia e Atlas já trabalham lá"), an email invitation's own first
+   * (ADR 0184).
+   */
   agents?: { id: string; name: string; appearance: { color: string; eyes: string; accessory: string } | null }[];
+  /** An email invitation: how many of `agents`, from the first, it starts the person with ("Max vai trabalhar com você"). */
+  yours?: number;
+  /** An email invitation: the cargos it gives (ADR 0184); empty, a member. Absent from an older server. */
+  roles?: { name: string; color: string; icon: string }[];
   /** How many more agents work there than `agents` names ("… e mais 2 já trabalham lá"). */
   moreAgents?: number;
   /**
@@ -532,7 +565,10 @@ export interface InvitationPreview {
   expiresAt?: string;
   /** An email invitation: how its address signs in, so the page asks only what is missing (ADR 0090). */
   account?: { exists: boolean; password: boolean; providers: ("google" | "github" | "apple")[] };
-  /** An email invitation to a workspace with no seat left, said before anyone makes an account (ADR 0090). */
+  /**
+   * An email invitation to a workspace with no seat left, said before anyone makes an account (ADR 0090); a link that
+   * took all the people it may, said before anyone asks (ADR 0184).
+   */
   full?: true;
 }
 
@@ -598,12 +634,52 @@ export interface InviteLink {
   /** Null for a link made before links could be shown again: it can only be turned off. */
   url: string | null;
   expiresAt: string;
+  /** "Não expira" (ADR 0184): `expiresAt` is a date far away. */
+  neverExpires?: true;
   createdAt: string;
   /** Who made it (their name). */
   createdBy: string | null;
+  createdByUserId?: string | null;
   /** Requests made through it, still waiting. */
   waiting: number;
+  /** The workspace's own link, made with no choices (ADR 0184). Absent from an older server: it is. */
+  plain?: boolean;
+  /** What an approval starts on (ADR 0184): its cargos, channels and agents. */
+  roleIds?: string[];
+  channelIds?: string[];
+  agentIds?: string[];
+  /** The people it takes; null: no limit. */
+  maxUses?: number | null;
+  /** People approved through it so far. */
+  uses?: number;
 }
+
+/** What a link gives and how long it works (ADR 0184); an omitted part stays as it is. */
+export interface InviteLinkChoices {
+  roleIds?: string[];
+  channelIds?: string[];
+  agentIds?: string[];
+  /** 1, 5, 10, 25, 50 or 100; null: no limit. */
+  maxUses?: number | null;
+  expiresIn?: InviteLinkTtl;
+}
+
+export type InviteLinkTtl = "30m" | "1h" | "1d" | "7d" | "30d" | "never";
+
+/** A link as made or changed: its address and what it gives. */
+export interface InviteLinkMade {
+  id: string;
+  url: string;
+  expiresAt: string;
+  neverExpires?: true;
+  roleIds?: string[];
+  channelIds?: string[];
+  agentIds?: string[];
+  maxUses?: number | null;
+}
+
+/** A link as changed: `url` is null for one made before links could be shown again. */
+export type InviteLinkChanged = Omit<InviteLinkMade, "url"> & { url: string | null };
 
 /** Someone who asked to join through a link, waiting for an admin (ADR 0068). */
 export interface JoinRequest {
@@ -621,6 +697,18 @@ export interface JoinRequest {
   confirmed: boolean;
   /** The member who suggested this person (their name, ADR 0090): it came through no link. */
   suggestedBy?: string | null;
+  /**
+   * The link it came through (ADR 0184): who made it, and the cargos, channels and agents an approval starts on.
+   * `full`: it took all its people, so approving is refused (`join.link_full_approval`) until its maximum grows.
+   */
+  link?: {
+    id: string;
+    createdBy: string | null;
+    roleIds: string[];
+    channelIds: string[];
+    agentIds: string[];
+    full: boolean;
+  } | null;
   createdAt: string;
   /** Closes unanswered after this. */
   expiresAt: string;
@@ -1993,8 +2081,11 @@ export interface Approval {
   ownerUserId?: string | null;
   /** When the approved action ran; null while it runs (or if it never did). */
   executedAt?: string | null;
-  /** What the action returned once it ran (raw tool output, short). */
-  result?: { ok: boolean; text: string } | null;
+  /**
+   * What the action returned once it ran (raw tool output, short). `notRunAfter`: it didn't run, because the request
+   * asked before it on its card (that id) was refused or expired after it was approved.
+   */
+  result?: { ok: boolean; text: string; notRunAfter?: string } | null;
   /** The connector it goes through ("github") and its account. */
   connector?: string | null;
   connectorAccount?: string | null;
@@ -2640,6 +2731,8 @@ export interface InvitationWithStatus {
   roleIds?: string[];
   /** Channels it adds them to, besides #general (ADR 0090). */
   channelIds?: string[];
+  /** Agents they start with (ADR 0184). */
+  agentIds?: string[];
   status: "pending" | "expired";
   expiresAt: string;
   createdAt: string;
@@ -2649,12 +2742,13 @@ export interface InvitationWithStatus {
   url?: string | null;
 }
 
-/** What the invite dialog sends (ADR 0090): each address with its roles, the channels and the note for all. */
+/** What the invite dialog sends (ADR 0090, 0184): the addresses, and the cargos, channels, agents and note for all. */
 export interface InviteBatch {
   emails?: string[];
   invites?: { email: string; roleIds?: string[] }[];
   roleIds?: string[];
   channelIds?: string[];
+  agentIds?: string[];
   note?: string;
 }
 
@@ -3085,6 +3179,7 @@ export const WORKSPACE_ACTION_IDS = [
   "update_role",
   "delete_role",
   "move_role",
+  "set_permission_holders",
   "set_member_roles",
   "set_channel_permissions",
   "set_my_status",
@@ -5946,7 +6041,7 @@ export interface PlanUsage {
   at: string;
   /**
    * Models at a limit of their own, by model id: until `until` (absent: unknown), `region` the model needs, or `off`
-   * the plan refused it for the key.
+   * the plan refused it for the key. The usage views list them, one line each, as the quota per model.
    */
   models?: Record<string, { at: string; until?: string; region?: true; off?: true; inactive?: true }>;
   /** On a plan whose models have their own limits: the model that last answered with this key. */
@@ -6069,6 +6164,7 @@ export type AccountLoginFailure =
   | "status_unknown"
   | "no_token"
   | "not_kept"
+  | "sandbox"
   | "timeout"
   | "canceled";
 
@@ -7055,6 +7151,11 @@ export interface ManagedTask {
   requester: { userId: string; name: string } | null;
   /** Another agent asked it, in their private conversation (absent on an older server). */
   delegation?: TaskDelegation | null;
+  /**
+   * What the latest agent to ask it asked, one line: what its row is called by. Null unless you read the conversation
+   * it was handed off from (`delegation.from`); absent on an older server.
+   */
+  subject?: string | null;
   /** What it asked of other agents and is still on or not started, all the way down. */
   helpers?: number;
   /** `model`, `claude_code`, `codex`, `cursor`; null before its first turn. */
@@ -7080,6 +7181,16 @@ export interface ManagedTask {
   } | null;
   /** Why a `waiting_input` run waits (absent on an older server). */
   wait?: TaskWait | null;
+  /**
+   * How it stands for you, as an agent's line says it (ADR 0084 addendum), and since when by the lists' clock. Null:
+   * it waits on its plan or budget (`held`). Absent on an older server.
+   */
+  work?: {
+    state: AgentWorkState;
+    since: string;
+    /** The card it waits on, when it waits on a person: its message, where its row opens. */
+    card: string | null;
+  } | null;
 }
 
 /** What a task waits on, in the words the apps need to say why. */
@@ -7935,6 +8046,8 @@ export interface ComputerDevice {
   status: DeviceStatus;
   maxTasks: number | null;
   toolchains: Record<string, string>;
+  /** A Mac whose app opens Xcode and looks at its iPhone again for the iPhone guide; absent from an older server. */
+  opensXcode?: boolean;
   lastSeenAt: string | null;
   mayUse: boolean;
   mayManage: boolean;

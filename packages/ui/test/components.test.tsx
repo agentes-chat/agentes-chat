@@ -711,11 +711,13 @@ describe("Menu", () => {
     const menu = body().getByRole("menu");
     const box = within(menu).getByRole("menuitemcheckbox");
     expect(box.getAttribute("aria-checked")).toBe("false");
+    // A box that stays open is a multi-pick: the kit's checkbox at its end, ticked or not.
     expect([...box.children].map((c) => c.getAttribute("class"))).toEqual([
       "ac-menu__label",
       "ac-menu__hint",
-      "ac-menu__check",
+      "ac-check ac-menu__box",
     ]);
+    expect(box.querySelector(".ac-menu__box")?.getAttribute("data-state")).toBe("unchecked");
     const radios = within(menu).getAllByRole("menuitemradio");
     expect(radios.map((r) => r.getAttribute("aria-checked"))).toEqual(["true", "false"]);
     expect(radios.map((r) => [...r.children].map((c) => c.getAttribute("class")))).toEqual([
@@ -741,8 +743,9 @@ describe("Menu", () => {
     expect([...box.children].map((c) => c.getAttribute("class")?.split(" ")[0])).toEqual([
       "ac-icon",
       "ac-menu__label",
-      "ac-menu__check",
+      "ac-check",
     ]);
+    expect(box.querySelector(".ac-menu__box")?.getAttribute("data-state")).toBe("checked");
   });
 
   test("quick reactions end with a cell that opens every emoji", async () => {
@@ -1042,8 +1045,11 @@ describe("Diff", () => {
       ["ac-diff__block ac-diff__block--add", "Adicionado: novo"],
     ]);
     const css = await Bun.file(new URL("../src/styles/components.css", import.meta.url).pathname).text();
-    expect(css).toContain("box-shadow: inset 3px 0 0 var(--ok);");
-    expect(css).toContain("box-shadow: inset 3px 0 0 var(--danger);");
+    // The tint alone says which: no bar on a block's edge.
+    const rule = (name: string) => css.slice(css.indexOf(`.ac-diff__block--${name} {`)).split("}")[0] ?? "";
+    expect(rule("add")).toContain("var(--ok) 12%");
+    expect(rule("del")).toContain("var(--danger) 10%");
+    expect(rule("add") + rule("del")).not.toContain("box-shadow");
   });
 
   test("renders lines with screen-reader labels", async () => {

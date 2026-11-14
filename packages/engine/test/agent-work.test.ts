@@ -127,6 +127,28 @@ describe("work one agent handed another (ADR 0084 addendum)", () => {
     });
   });
 
+  test("works since the hand-off, not its run's start: its agent's line and the task manager read one clock", async () => {
+    f = await setup();
+    const { infra, helper } = await delegated();
+    // Handed off 10 minutes ago, its run started 2 minutes ago (it waited for room).
+    const handedAt = new Date(Date.now() - 600_000);
+    await f.db
+      .update(schema.agentConsultations)
+      .set({ createdAt: handedAt })
+      .where(eq(schema.agentConsultations.targetRunId, helper.id));
+    await f.db
+      .update(schema.agentRuns)
+      .set({ startedAt: new Date(Date.now() - 120_000) })
+      .where(eq(schema.agentRuns.id, helper.id));
+
+    expect((await workOf(f.owner.id, infra.id))?.since).toBe(handedAt.toISOString());
+    const view = await taskManager(f.db, f.owner.id, f.org.id);
+    expect(view.tasks.find((t) => t.runId === helper.id)?.work).toMatchObject({
+      state: "working",
+      since: handedAt.toISOString(),
+    });
+  });
+
   test("waits on who may decide its approval, on someone else for everyone else", async () => {
     f = await setup();
     const { infra, helper } = await delegated();

@@ -25,6 +25,7 @@ import {
   InfoHint,
   Locked,
   PersonAvatar,
+  RoleMark,
   SheetScreen,
   Text,
   useReducedMotion,
@@ -33,10 +34,11 @@ import {
 import { useColors } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { errorHaptic, successHaptic, useSurface } from "../shared/parts";
-import { TextArea } from "../shared/TextArea";
+import { overLimit, TextArea } from "../shared/TextArea";
 import { focusedFirst, requestChips } from "./logic";
 import { MembersFullNote } from "./MembersFullNote";
 
+const REASON_LIMIT = { max: JOIN_REASON_MAX };
 /**
  * Requests to join through the invitation link (ADR 0068), as a native form sheet: the web's Members › Requests on
  * the phone, opened by the push, Atividade's card and `agenteschat://join-requests`. Each is approved, with any of
@@ -175,6 +177,7 @@ function RequestCard({
     }
   };
   const denyIt = async () => {
+    if (overLimit(reason, REASON_LIMIT)) return;
     try {
       await deny.mutateAsync({ id: r.id, ...(reason.trim() ? { reason: reason.trim() } : {}) });
       toast({ title: t("members.requests.denied") });
@@ -219,7 +222,7 @@ function RequestCard({
               onChangeText={setReason}
               placeholder={t("members.requests.reason")}
               accessibilityLabel={t("members.requests.denyTitle", { name: r.name })}
-              maxLength={JOIN_REASON_MAX}
+              limit={REASON_LIMIT}
               autoFocus
             />
             <Text variant="caption" tone="faint">
@@ -233,7 +236,7 @@ function RequestCard({
                 wide
                 label={t("members.requests.deny")}
                 loading={deny.isPending}
-                disabled={busy}
+                disabled={busy || overLimit(reason, REASON_LIMIT)}
                 onPress={() => void denyIt()}
               />
             </View>
@@ -267,6 +270,7 @@ function RequestCard({
                   <Fragment key={role.id}>
                     {i > 0 ? <View style={[styles.divider, { backgroundColor: c.line2 }]} /> : null}
                     <GroupedRow
+                      leading={<RoleMark color={role.color} icon={role.icon} size={30} />}
                       label={role.name}
                       toggle={roleIds.includes(role.id)}
                       disabled={busy}
@@ -331,6 +335,7 @@ const styles = StyleSheet.create({
   field: { gap: 6 },
   // A grouped row pads its text 14: pulled out by as much, the text meets the card's 16.
   rows: { marginHorizontal: -14 },
-  divider: { height: StyleSheet.hairlineWidth, marginHorizontal: 14 },
+  // From the rows' text, after the mark's column (16 + 36 + 12), as GroupedList's.
+  divider: { height: StyleSheet.hairlineWidth, marginLeft: 64, marginRight: 14 },
   acts: { flexDirection: "row", gap: 8 },
 });

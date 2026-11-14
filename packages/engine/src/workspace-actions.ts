@@ -46,12 +46,15 @@ import {
   requirePermission,
   resendInvitation,
   revokeInvitation,
-  setInvitationRoles,
+  updateInvitation,
   updateMyProfile,
 } from "./organizations";
 import {
   CHANNEL_KEYS,
+  COMPUTER_STEPS,
+  COMPUTERS_ROW,
   maySql,
+  PERMISSION_ROWS,
   type Permission,
   ROLE_COLORS,
   ROLE_ICONS,
@@ -65,8 +68,11 @@ import {
   deleteRole,
   memberRoleIds,
   ROLE_NAME_MAX,
+  type RowLevels,
   reorderRoles,
+  rowLevel,
   setMemberRoles,
+  setRowHolders,
   updateRole,
 } from "./roles";
 import { bodyCode } from "./run-tools";
@@ -473,6 +479,160 @@ const moveRoleAction: WorkspaceAction = {
     const [from, to] = direction === "undo" ? [obj(a.after), obj(a.before)] : [obj(a.before), obj(a.after)];
     if (!same(await roleOrder(deps.db, a.orgId), from.order)) throw changedSince();
     await reorderRoles(deps.db, actorId, a.orgId, to.order as string[], deps);
+    return undefined;
+  },
+};
+
+/** A row's levels on `everyone` and every custom role now, as Undo compares and puts them back (`setRowHolders`). */
+async function rowNow(db: Database, orgId: string, row: string): Promise<RowLevels> {
+  const rows = await db
+    .select({ id: orgRoles.id, kind: orgRoles.kind, permissions: orgRoles.permissions })
+    .from(orgRoles)
+    .where(eq(orgRoles.orgId, orgId));
+  const out: RowLevels = { everyone: 0, roles: {} };
+  for (const r of rows) {
+    if (r.kind === "everyone") out.everyone = rowLevel(r.permissions, row);
+    else out.roles[r.id] = rowLevel(r.permissions, row);
+  }
+  return out;
+}
+
+/** The roles a "who may" card names, with their levels, as its input keeps them. */
+const levelsOf = (v: unknown) =>
+  (Array.isArray(v) ? v : []).map(obj).map((r) => ({
+    id: str(r.id),
+    name: str(r.name),
+    level: Number(r.level),
+    ...(r.admin === true ? { admin: true } : {}),
+  }));
+
+/** The words of a "who may" card and its receipt: the row, and the computers' own sentence (`_computers`). */
+const rowWords = (row: string) => ({ permission: row, ...(row === COMPUTERS_ROW ? { variant: "computers" } : {}) });
+
+const STEPS =
+  "computers is a ladder: 0 none, 1 their own agents' browser, 2 their own agents' whole computer, 3 any agent's browser, 4 any agent's whole computer";
+
+const permissionHoldersAction: WorkspaceAction = {
+  id: "set_permission_holders",
+  does: "Change who may do one thing, everyone and the roles at once: whether everyone (Todos) may, and which roles may; every other role loses it. To take something from everyone but some roles, or to give it to everyone.",
+  input: {
+    type: "object",
+    properties: {
+      permission: {
+        enum: [...PERMISSION_ROWS],
+        description: `The permission. ${KEY_WORDS} computers: the agents' computers, one choice.`,
+      },
+      everyone: {
+        type: "integer",
+        minimum: 0,
+        maximum: COMPUTER_STEPS.length,
+        description: `Whether everyone may: 1 yes, 0 no; ${STEPS}.`,
+      },
+      roles: {
+        type: "array",
+        maxItems: 100,
+        items: {
+          type: "object",
+          properties: {
+            role: { type: "string", minLength: 1, maxLength: 80 },
+            level: { type: "integer", minimum: 0, maximum: COMPUTER_STEPS.length },
+          },
+          required: ["role", "level"],
+          additionalProperties: false,
+        },
+        description:
+          "The roles that may (level 1, or their step of computers). Every other role loses it, except one above the person or with administrator.",
+      },
+    },
+    required: ["permission", "everyone"],
+    additionalProperties: false,
+  },
+  // It changes what everyone may at once: always a card someone who manages roles reads and applies.
+  mode: "card",
+  needs: "manage_roles",
+  mustBeRead: true,
+  async resolve(ctx, _person, input) {
+    const row = str(input.permission);
+    const roles: { id: string; name: string; level: number }[] = [];
+    for (const r of (Array.isArray(input.roles) ? input.roles : []).map(obj)) {
+      const role = await roleNamed(ctx, str(r.role));
+      if (typeof role === "string") return role;
+      if (role.kind === "everyone") return "Everyone's level goes in `everyone`, not among the roles.";
+      roles.push({ id: role.id, name: role.name, level: Number(r.level) });
+    }
+    if (row !== COMPUTERS_ROW && [Number(input.everyone), ...roles.map((r) => r.level)].some((l) => l > 1))
+      return "Only computers has steps: any other permission is 1 (may) or 0.";
+    // Roles with administrator keep it whatever the card says (`setRowHolders`): the card names them among who may,
+    // at the top step, so it never reads "only owners" while an Admin role still can.
+    const top = row === COMPUTERS_ROW ? COMPUTER_STEPS.length : 1;
+    const admins = await ctx.db
+      .select({ id: orgRoles.id, name: orgRoles.name })
+      .from(orgRoles)
+      .where(
+        and(
+          eq(orgRoles.orgId, ctx.orgId),
+          eq(orgRoles.kind, "custom"),
+          sql`'administrator' = any(${orgRoles.permissions})`,
+        ),
+      )
+      .orderBy(asc(orgRoles.position));
+    const kept = Number(input.everyone) < top ? admins.map((a) => ({ ...a, level: top, admin: true })) : [];
+    const others = roles.filter((r) => !admins.some((a) => a.id === r.id));
+    return { input: { row, everyone: Number(input.everyone), roles: [...kept, ...others] }, words: rowWords(row) };
+  },
+  async run(deps, actorId, orgId, input) {
+    const row = str(input.row);
+    const roles = levelsOf(input.roles);
+    // The card is what was read: a role renamed or deleted since is not the role it names.
+    const names = await roleNames(
+      deps.db,
+      orgId,
+      roles.map((r) => r.id),
+    );
+    if (roles.some((r) => names.get(r.id) !== r.name)) {
+      const now = roles.filter((r) => names.has(r.id)).map((r) => ({ ...r, name: names.get(r.id) ?? r.name }));
+      throw new CardChangedError({ ...input, roles: now }, rowWords(row));
+    }
+    // A role it names for holding administrator that no longer does would get the row from this click: read again.
+    const lapsed = roles.filter((r) => "admin" in r);
+    if (lapsed.length > 0) {
+      const still = new Set(
+        (
+          await deps.db
+            .select({ id: orgRoles.id })
+            .from(orgRoles)
+            .where(and(eq(orgRoles.orgId, orgId), sql`'administrator' = any(${orgRoles.permissions})`))
+        ).map((r) => r.id),
+      );
+      if (lapsed.some((r) => !still.has(r.id)))
+        throw new CardChangedError(
+          { ...input, roles: roles.filter((r) => !("admin" in r) || still.has(r.id)) },
+          rowWords(row),
+        );
+    }
+    const { before, after } = await setRowHolders(
+      deps.db,
+      actorId,
+      orgId,
+      row,
+      { everyone: Number(input.everyone), roles: roles.map(({ id, level }) => ({ id, level })) },
+      deps,
+    );
+    if (same(before, after)) throw new ValidationError("It already is like that");
+    return {
+      target: { type: "workspace", id: orgId },
+      words: rowWords(row),
+      before: { row, ...before },
+      after: { row, ...after },
+    };
+  },
+  async revert(deps, actorId, a, direction, changedSince) {
+    const [from, to] = direction === "undo" ? [obj(a.after), obj(a.before)] : [obj(a.before), obj(a.after)];
+    const row = str(from.row);
+    if (!same(await rowNow(deps.db, a.orgId, row), { everyone: from.everyone, roles: from.roles }))
+      throw changedSince();
+    const roles = Object.entries(obj(to.roles)).map(([id, level]) => ({ id, level: Number(level) }));
+    await setRowHolders(deps.db, actorId, a.orgId, row, { everyone: Number(to.everyone), roles }, deps);
     return undefined;
   },
 };
@@ -1191,7 +1351,7 @@ const invitationRolesAction: WorkspaceAction = {
     const before = await invitationRoles(deps.db, row.id);
     const next = [...new Set([...before, ...add])].filter((id) => !take.includes(id));
     if (sameSet(before, next)) throw new ValidationError(`The invitation of ${row.email} already gives those roles`);
-    await setInvitationRoles(deps.db, actorId, orgId, row.id, next);
+    await updateInvitation(deps.db, actorId, orgId, row.id, { roleIds: next });
     const names = await roleNames(deps.db, orgId, [...add, ...take]);
     const pick = (ids: string[]) => ids.map((id) => ({ name: names.get(id) ?? "" }));
     return {
@@ -1204,7 +1364,7 @@ const invitationRolesAction: WorkspaceAction = {
   async revert(deps, actorId, a, direction, changedSince) {
     const [from, to] = direction === "undo" ? [obj(a.after), obj(a.before)] : [obj(a.before), obj(a.after)];
     if (!sameSet(await invitationRoles(deps.db, a.targetId), list(from.roleIds))) throw changedSince();
-    await setInvitationRoles(deps.db, actorId, a.orgId, a.targetId, list(to.roleIds));
+    await updateInvitation(deps.db, actorId, a.orgId, a.targetId, { roleIds: list(to.roleIds) });
     return undefined;
   },
 };
@@ -1752,6 +1912,7 @@ export const WORKSPACE_ACTIONS: readonly WorkspaceAction[] = [
   updateRoleAction,
   deleteRoleAction,
   moveRoleAction,
+  permissionHoldersAction,
   setMemberRolesAction,
   channelPermissionsAction,
   setStatusAction,
