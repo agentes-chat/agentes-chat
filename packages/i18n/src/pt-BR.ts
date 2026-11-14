@@ -13561,6 +13561,10 @@ export const ptBR = {
     },
   },
   errors: {
+    /** A request the server, or a proxy in front of it, refused for its size. */
+    tooLarge: "Isto é maior do que o servidor aceita.",
+    /** The same, from a screen that knows the most it may send. */
+    tooLargeMax: "Isto é maior do que o servidor aceita: até {{max}} MB.",
     /** A new-password link an owner can't make (ADR 0158). */
     passwordLink: {
       email: "Este servidor manda e-mail: a pessoa pede o link dela mesma em Esqueci a senha.",
