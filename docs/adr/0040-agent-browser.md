@@ -251,7 +251,14 @@ On one computer over a day, 17% of the agents' clicks and 41% of their fills ans
 - It never fails a command. A look that can't be read, or a tab still hidden after it was brought up, is left for 30 s: on an agent's desktop a minimized window comes back up, and one that can't show is not asked at every command.
 - `tab`, `wait`, `dialog` and the page size are not preceded by it.
 
-Not covered here: a click that opens a new window answers after 30 s ("CDP command timed out: Input.dispatchMouseEvent") while the runner's traffic counter is attached with `Target.setAutoAttach` on the browser (5 of the same 61). Measured: with target discovery and `Target.attachToTarget` in its place the same press takes 0.1 s. That connection also guards typed passwords (ADR 0144), so it changes on its own.
+### 20. A press that opens a window hears of its release (2026-11-14)
+
+A click on something that opens a new window (`window.open`: a "Continue with Google" button) answered "CDP command timed out: Input.dispatchMouseEvent" 30 s later, though it had landed (5 of the 61 slow ones of section 19, by their time). The runner's own connection to each Chrome (its traffic counter, which also tells of a page that died and guards a typed password, ADR 0144) asked for `Target.setAutoAttach` at the browser's level. Measured on Chrome 156 with `agent-browser` 0.39.1: while any client auto-attaches there, even one that leaves pages out and pauses nothing, the release of a press that opens a window is never answered; with none, or with one that only asks to be told of targets, it is answered in 0.1 s.
+
+- At the browser's level the runner asks to be told of targets (`Target.setDiscoverTargets`, Chrome's own UI and the tabs' wrappers left out) and attaches to each page, extension page, service worker and shared worker itself (`Target.attachToTarget`, flat). Frames and dedicated workers are still auto-attached under their page, as before: that does not hold a release.
+- What each session gets is unchanged (network events, the password guard's pause, the page size, the auto-attach under it), and so is what the guard waits for: a page that opens while a password is guarded is paused once it is attached, which neither way does before its first request.
+- The counter is attached once Chrome told of the targets it has and answered for each: a first command still waits for that.
+- The same click now takes 0.8 s.
 
 ## Order
 

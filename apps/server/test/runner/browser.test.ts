@@ -1398,14 +1398,17 @@ function fakeDevtools(down: number[], answer: (reply: () => void) => void = (rep
         const event = (method: string, params: object, sessionId?: string) =>
           ws.send(JSON.stringify({ method, params, ...(sessionId ? { sessionId } : {}) }));
         const result = (r: object) => ws.send(JSON.stringify({ id: msg.id, result: r }));
-        if (msg.method === "Target.setAutoAttach" && !msg.sessionId) {
+        if (msg.method === "Target.setDiscoverTargets") {
           answer(() => {
+            event("Target.targetCreated", { targetInfo: { type: "page", targetId: `tab-${n}` } });
             result({});
-            event("Target.attachedToTarget", {
-              sessionId: `page-${n}`,
-              targetInfo: { type: "page", targetId: `tab-${n}` },
-            });
           });
+        } else if (msg.method === "Target.attachToTarget") {
+          event("Target.attachedToTarget", {
+            sessionId: `page-${n}`,
+            targetInfo: { type: "page", targetId: `tab-${n}` },
+          });
+          result({});
         } else if (msg.method === "Network.enable") {
           event(
             "Network.requestWillBeSentExtraInfo",
@@ -1452,7 +1455,7 @@ test.if(posix)("a new Chrome's first command waits for its traffic counter to at
   try {
     const t = setup({ startChrome: chromesAt(held).start });
     const opened = t.act("open", ["https://a.example/"]);
-    await waitFor(() => held.asked.includes("Target.setAutoAttach"));
+    await waitFor(() => held.asked.includes("Target.setDiscoverTargets"));
     await Bun.sleep(300);
     expect(t.logged()).toEqual([]);
     reply();
