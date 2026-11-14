@@ -1,4 +1,4 @@
-import type { ComputerSummary, EndedTask, ManagedTask } from "@agenteschat/client";
+import type { EndedTask, ManagedTask } from "@agenteschat/client";
 import {
   type AgentTasks,
   delegationText,
@@ -71,13 +71,6 @@ export function taskStateWords(
   if (state === "queued") return { state: t("taskManager.state.queued"), next: null };
   if (state === "stopping") return { state: t("taskManager.state.stopping"), next: null };
   return taskWaitWords(t, locale, task, now) ?? { state: t("taskManager.state.answer"), next: null };
-}
-
-/** A computer on the task manager: "Cheio · 2 na fila · 3 trabalhando", "Tem espaço · 1 trabalhando". */
-export function computerLine(t: TFunction, computer: Pick<ComputerSummary, "working" | "inLine">): string {
-  const room =
-    computer.inLine > 0 ? t("taskManager.queue.full", { count: computer.inLine }) : t("taskManager.queue.room");
-  return computer.working > 0 ? `${room} · ${t("taskManager.working", { count: computer.working })}` : room;
 }
 
 /**

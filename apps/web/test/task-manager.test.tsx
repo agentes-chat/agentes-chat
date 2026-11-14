@@ -1135,6 +1135,8 @@ describe("a computer's line", () => {
 
   test("Computadores: room or a line for each; Ver fila opens the computer's line in its dialog", async () => {
     const { view, queue } = withLine();
+    // Others' work fills it: nothing of mine waits there, so the strip doesn't show it.
+    view.tasks = view.tasks.filter((x) => x.runId !== "r-checkout" && x.runId !== "r-report");
     await open(seedState({ taskManager: view }), "task-manager", queue);
     const list = screen().getByRole("region", { name: "Computadores" });
     const rows = [...list.querySelectorAll(".tm-computer__text")].map((r) => r.textContent);
@@ -1167,7 +1169,7 @@ describe("a computer's line", () => {
     expect(text).not.toMatch(/US\$|GB/i);
   });
 
-  test("a task's row says nothing of where it runs: its computer's line opens from Computadores", async () => {
+  test("a task's row says nothing of where it runs: its computer's line opens from the strip", async () => {
     const { view, queue } = withLine();
     await open(seedState({ taskManager: view }), "task-manager", queue);
     await openAgent("Ada");
@@ -1175,7 +1177,9 @@ describe("a computer's line", () => {
     expect(within(link).queryByRole("button", { name: /^Ver fila/ })).toBeNull();
     expect(link.textContent).not.toContain("MacBook");
     expect(
-      within(screen().getByRole("region", { name: "Computadores" })).getByRole("button", { name: "Ver fila: MacBook" }),
+      within(screen().getByRole("region", { name: "O que segura as tarefas" })).getByRole("button", {
+        name: "Ver fila: MacBook",
+      }),
     ).toBeTruthy();
   });
 
@@ -1278,8 +1282,7 @@ describe("work agents asked of each other", () => {
 
 describe("the line's dialog", () => {
   const seeLine = async () => {
-    const list = screen().getByRole("region", { name: "Computadores" });
-    await click(within(list).getByRole("button", { name: "Ver fila: MacBook" }));
+    await click(screen().getByRole("button", { name: "Ver fila: MacBook" }));
     await settle(4);
   };
   const line = () => {
@@ -1413,13 +1416,44 @@ describe("what holds the waiting work", () => {
     expect(strip()?.querySelector(".tm-causes__today")?.textContent).toBe("Hoje: 142 tarefas concluídas · 5 esperando");
     const rows = causes();
     expect(rows).toHaveLength(3);
-    expect(rows[0]?.[0]).toBe("Claude Team");
-    expect(rows[0]?.[1]).toMatch(/^No limite até .+ · 2 tarefas$/);
+    // My own full plan in its tasks' words, as their rows and the phone say it: never the usage meter's.
+    expect(rows[0]?.[0]).toBe("Plano do Claude no limite");
+    expect(rows[0]?.[1]).toMatch(/^Volta .+ · 2 tarefas$/);
     expect(rows[0]?.[2]).toBe("Ver uso");
-    expect(rows[1]).toEqual(["MacBook", "Cheio · 3 na fila", "Ver fila"]);
+    // A full computer with Computadores' whole facts, and not again under Computadores.
+    expect(rows[1]).toEqual(["MacBook", "Cheio · 3 na fila · 1 trabalhando", "Ver fila"]);
     expect(rows[2]).toEqual(["Servidor", "Cheio · 1 na fila", "Ver fila"]);
+    expect(screen().queryByRole("region", { name: "Computadores" })).toBeNull();
     // The plan's official mark, never a generic icon.
     expect(strip()?.querySelector(".tm-cause .ac-brand")).not.toBeNull();
+  });
+
+  test("a plan's return is its wait's, when the work goes on, even where my usage meter reads another time", async () => {
+    const later: typeof TEAM_FULL = {
+      ...TEAM_FULL,
+      usage: { source: "turn", at: ago(1), windows: [{ kind: "seven_day", usedPercent: 100, resetsAt: in_(2000) }] },
+    };
+    await openStrip(full(), [later]);
+    await openAgent("Atlas");
+    const [, back] = stateOf(rowOf("Roteiro do vídeo 1"));
+    expect(causes()[0]?.[1]).toBe(`${back} · 2 tarefas`);
+  });
+
+  test("two computers, one full in the strip: the other still lists under Computadores, alone", async () => {
+    const view = full();
+    view.tasks = view.tasks.filter((x) => x.runId !== "r-report");
+    view.computers = [
+      { id: "machine_1", name: "MacBook", working: 1, inLine: 3 },
+      { id: "machine_2", name: "Servidor", working: 1, inLine: 0 },
+    ];
+    await openStrip(view);
+    expect(causes().map((r) => r[0])).toEqual(["Plano do Claude no limite", "MacBook", "1 espera você"]);
+    const list = screen().getByRole("region", { name: "Computadores" });
+    expect(list.querySelector(".ac-grouphead__count")?.textContent).toBe("1");
+    expect([...list.querySelectorAll(".tm-computer__text")].map((r) => r.textContent)).toEqual([
+      "ServidorTem espaço · 1 trabalhando",
+    ]);
+    expect(screen().getAllByRole("button", { name: "Ver fila: MacBook" })).toHaveLength(1);
   });
 
   test("Ver uso opens Uso; Ver fila opens the computer's line in place", async () => {
@@ -1430,19 +1464,15 @@ describe("what holds the waiting work", () => {
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/task-manager`);
     await act(async () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }));
     await settle(3);
-    await click(within(region).getByRole("button", { name: "Ver uso: Claude Team" }));
+    await click(within(region).getByRole("button", { name: "Ver uso: Plano do Claude no limite" }));
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/usage`);
   });
 
-  test("a plan that isn't mine says the wait's own words; a person's ok opens its conversation", async () => {
+  test("a plan that isn't mine says the same words; a person's ok opens its conversation", async () => {
     await openStrip(full(), []);
     const rows = causes();
     expect(rows[0]?.[0]).toBe("Plano do Claude no limite");
     expect(rows[0]?.[1]).toMatch(/^Volta .+ · 2 tarefas$/);
-    cleanup();
-    // My own full plan on the same maker is not the one these tasks wait on: never named for them.
-    await openStrip(full(), [{ ...TEAM_FULL, id: "acct_mine" }]);
-    expect(causes()[0]?.[0]).toBe("Plano do Claude no limite");
     cleanup();
     const { router } = await openStrip(busy());
     expect(strip()?.querySelector(".tm-causes__today")?.textContent).toBe("Hoje: 1 tarefa concluída · 1 esperando");

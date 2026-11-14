@@ -1,5 +1,5 @@
 import type { CanceledReturn, ComputerSummary, EndedTask, ManagedTask, PendingReturn } from "@agenteschat/client";
-import { useAiAccounts, useCancelFollowUp, useTaskManager } from "@agenteschat/client";
+import { useCancelFollowUp, useTaskManager } from "@agenteschat/client";
 import { returnClock, returnWhen } from "@agenteschat/client/lib/agent-work";
 import { listsAgent } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
@@ -9,6 +9,9 @@ import {
   activityLine,
   agentCardLine,
   agentSummary,
+  causeWords,
+  computerRoomText,
+  computersBesides,
   delegationText,
   endedState,
   groupLead,
@@ -17,17 +20,16 @@ import {
   hiddenCount,
   returnCanceledText,
   returnPlace,
+  shownCauses,
   taskHelping,
   taskPlace,
   taskState,
   tasksOf,
   taskTime,
   taskTitle,
-  taskWaitWords,
   taskWhere,
   todayStart,
   type WaitCause,
-  waitCauses,
 } from "@agenteschat/client/lib/task-manager";
 import { formatDuration } from "@agenteschat/client/lib/work";
 import {
@@ -46,7 +48,6 @@ import {
   PixelSpinner,
   PixelStop,
   ProviderLogo,
-  planState,
   SearchField,
   Tip,
 } from "@agenteschat/ui";
@@ -84,7 +85,6 @@ import { TaskPanel } from "@/components/tasks/TaskPanel";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useNow } from "@/hooks/useNow";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
-import { ownPlanLines, planNearLimit, planWord } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
 import "./task-manager.css";
 
@@ -165,11 +165,8 @@ export function TaskManagerPage({
   const activity = view.data?.activity;
   // The computers with turns running or waiting for room (ADR 0128).
   const computers = view.data?.computers ?? [];
-  // "Cheio · 3 na fila" or "Tem espaço", and "1 trabalhando": a computer as the page lists it.
-  const computerText = (c: ComputerSummary) => {
-    const room = c.inLine > 0 ? t("taskManager.queue.full", { count: c.inLine }) : t("taskManager.queue.room");
-    return c.working > 0 ? `${room} · ${t("taskManager.working", { count: c.working })}` : room;
-  };
+  const causes = shownCauses(all);
+  const listed = computersBesides(computers, causes);
   const nameOf = (id: string) => dir.anyAgent(id)?.name ?? t("channel.unknownAgent");
   const query = q.trim().toLocaleLowerCase();
   const matches = (task: ManagedTask) => {
@@ -418,6 +415,7 @@ export function TaskManagerPage({
         <CapacityStrip
           tasks={all}
           done={view.data.doneToday ?? view.data.ended.filter((e) => e.status === "done").length}
+          causes={causes}
           computers={computers}
           onQueue={setQueueOf}
         />
@@ -469,22 +467,26 @@ export function TaskManagerPage({
         </Carousel>
       )}
 
-      {computers.length > 0 && (
+      {listed.length > 0 && (
         <section className="tm-computers" aria-label={t("taskManager.queue.computers")}>
-          <GroupHeading title={t("taskManager.queue.computers")} count={computers.length} />
+          <GroupHeading title={t("taskManager.queue.computers")} count={listed.length} />
           <ul className="tm-computers__list ac-card">
-            {computers.map((c) => (
+            {listed.map((c) => (
               <li key={c.id} className="tm-computer">
                 <span className="tm-computer__icon" aria-hidden="true">
                   <Icon name="computer" size={18} />
                 </span>
-                <Tip className="tm-computer__text" tip={rowTip(c.name, [computerText(c)])} look="ac-msg__tip tm-tip">
+                <Tip
+                  className="tm-computer__text"
+                  tip={rowTip(c.name, [computerRoomText(t, c)])}
+                  look="ac-msg__tip tm-tip"
+                >
                   <b>{c.name}</b>
-                  <small>{computerText(c)}</small>
+                  <small>{computerRoomText(t, c)}</small>
                 </Tip>
                 {/* The keys' focus and a long press open the words' tip from here: the words take no focus. */}
                 {(c.inLine > 0 || c.working > 0) && (
-                  <Tip button look="ac-msg__tip tm-tip" tip={rowTip(c.name, [computerText(c)])}>
+                  <Tip button look="ac-msg__tip tm-tip" tip={rowTip(c.name, [computerRoomText(t, c)])}>
                     <Button variant="link" aria-label={`${t("queue.see")}: ${c.name}`} onClick={() => setQueueOf(c.id)}>
                       {t("queue.see")}
                     </Button>
@@ -674,64 +676,46 @@ export function TaskManagerPage({
   );
 }
 
-/** Causes shown at most: the ones holding the most work. */
-const CAUSES_MAX = 3;
-
 /**
  * Over the cards, while work waits: what got done today and how much waits, then what holds it, one row a cause
- * (`waitCauses`) with its count and its one way out. A plan at its limit is named as the profile menu names it
- * (`planNearLimit`) when the sign-in it waits on is one of the viewer's. Hidden when nothing waits.
+ * (`causeWords`) with its count and its one way out. Hidden when nothing waits.
  */
 function CapacityStrip({
   tasks,
   done,
+  causes,
   computers,
   onQueue,
 }: {
   tasks: ManagedTask[];
   done: number;
+  causes: WaitCause[];
   computers: ComputerSummary[];
   onQueue: (machineId: string) => void;
 }) {
   const { t, i18n } = useTranslation();
-  const { org, me } = useOrg();
-  const dir = useDirectory(org.id);
-  const accounts = useAiAccounts(org.id).data;
+  const { org } = useOrg();
   const navigate = useNavigate();
   const openTask = useOpenTask();
-  const causes = waitCauses(tasks);
   if (causes.length === 0) return null;
   const waiting = tasks.filter((task) => taskState(task) === "waiting").length;
-  const own = ownPlanLines(t, accounts, dir.agents, me.user.id);
-  // The wait's key ends in the sign-in it waits on (`usageWaitKey`): an account's id, or `own` for a computer's own.
-  const planOf = (key: string | null | undefined) =>
-    key ? planNearLimit(own.filter((p) => key === `plan:${p.key}:own` || key.endsWith(`:${p.key}`))) : null;
-  const usage = () =>
-    void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "usage" } });
   const row = (cause: WaitCause) => {
     const first = cause.tasks[0] as ManagedTask;
-    const words = taskWaitWords(t, i18n.language, first);
-    const count = t("taskManager.tasks", { count: cause.tasks.length });
+    const words = causeWords(t, i18n.language, cause, computers);
     if (cause.kind === "limit") {
       const brain = first.brain && first.brain !== "model" ? first.brain : null;
-      const found = planOf(first.wait?.key);
-      const plan = found && planState(found.usage).state === "limited" ? found : null;
       return {
+        ...words,
         lead: brain ? <ProviderLogo id={brain} size="xs" /> : <Icon name="clock" size={18} />,
-        name: plan?.name ?? words?.state ?? "",
-        fact: [(plan && planWord(t, i18n.language, plan.usage)) ?? words?.next, count].filter(Boolean).join(" · "),
         act: t("taskManager.capacity.usage"),
-        onAct: usage,
+        onAct: () =>
+          void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "usage" } }),
       };
     }
-    if (cause.kind === "computer") {
-      const computer = computers.find((c) => c.id === cause.machineId);
+    if (cause.kind === "computer")
       return {
+        ...words,
         lead: <Icon name="computer" size={18} />,
-        name: computer?.name ?? first.machine?.name ?? "",
-        fact: cause.busy
-          ? t("taskManager.queue.full", { count: computer?.inLine || cause.tasks.length })
-          : [words?.state, count].join(" · "),
         act: cause.busy ? t("queue.see") : t("taskManager.capacity.computers"),
         onAct: cause.busy
           ? () => onQueue(cause.machineId)
@@ -741,31 +725,20 @@ function CapacityStrip({
                 params: { orgId: org.id, section: "computers" },
               }),
       };
-    }
-    return {
-      lead: <WaitMark />,
-      name: t("taskManager.waiting", { count: cause.tasks.length }),
-      fact: words?.next ?? "",
-      act: t("taskManager.actions.open"),
-      onAct: () => openTask(first),
-    };
+    return { ...words, lead: <WaitMark />, act: t("taskManager.actions.open"), onAct: () => openTask(first) };
   };
   return (
     <section className="tm-causes" aria-label={t("taskManager.capacity.label")}>
       <p className="tm-causes__today">{t("taskManager.capacity.today", { count: done, waiting })}</p>
       <ul className="tm-computers__list ac-card">
-        {causes.slice(0, CAUSES_MAX).map((cause) => {
+        {causes.map((cause) => {
           const r = row(cause);
           return (
             <li key={cause.key} className="tm-computer tm-cause">
               <span className="tm-computer__icon" aria-hidden="true">
                 {r.lead}
               </span>
-              <Tip
-                className="tm-computer__text tm-cause__text"
-                tip={rowTip(r.name, [r.fact])}
-                look="ac-msg__tip tm-tip"
-              >
+              <Tip className="tm-computer__text" tip={rowTip(r.name, [r.fact])} look="ac-msg__tip tm-tip">
                 <b>{r.name}</b>
                 <small>{r.fact}</small>
               </Tip>
