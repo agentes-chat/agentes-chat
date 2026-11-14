@@ -100,6 +100,21 @@ export function createOpenAIProvider(
           } else if (event.type === "response.function_call_arguments.delta") {
             partial.outputChars += event.delta.length;
           }
+          if (
+            (event.type === "response.completed" ||
+              event.type === "response.incomplete" ||
+              event.type === "response.failed") &&
+            event.response.usage
+          ) {
+            const usage = event.response.usage;
+            const cached = usage.input_tokens_details?.cached_tokens ?? 0;
+            const written =
+              (usage.input_tokens_details as { cache_write_tokens?: number } | undefined)?.cache_write_tokens ?? 0;
+            partial.inputTokens = Math.max(0, usage.input_tokens - cached - written);
+            partial.cacheReadTokens = cached;
+            partial.cacheWriteTokens = written;
+            partial.outputTokens = usage.output_tokens;
+          }
         });
         const response = await stream.finalResponse();
         // A failed response ends its stream cleanly: read as a reply, it would be an empty one that "worked".
@@ -109,7 +124,8 @@ export function createOpenAIProvider(
         return fromResponse(response as unknown as Response);
       } catch (error) {
         const mapped = openAIError(error);
-        if (partial.outputChars > 0) mapped.partial = partial;
+        if (partial.outputChars > 0 || partial.inputTokens !== null || partial.outputTokens !== null)
+          mapped.partial = partial;
         throw mapped;
       }
     },
