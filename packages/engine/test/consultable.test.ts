@@ -162,7 +162,9 @@ describe("other agents can consult it", () => {
     await drainOutbox(f.db, f.handlers);
     expect((await consultationsIn(f.db, f.org.id, f.general.id))[0]?.answer).toBe("Paga.");
     expect(agentsDmPrompt()).toContain("Still missing: ask ana with `ask_user`");
-    expect(agentsDmPrompt()).toContain("When ana should hear something from you directly, `send_dm` reaches them.");
+    expect(agentsDmPrompt()).toContain(
+      "When ana should hear something from you directly, `send_dm` reaches them, even unasked.",
+    );
   });
 
   test("off: refused with the line that says why and how to open it", async () => {

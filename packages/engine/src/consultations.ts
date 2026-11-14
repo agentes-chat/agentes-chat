@@ -312,18 +312,15 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
   return {
     name: TELL_AGENT_TOOL,
     description:
-      "Hand another agent of the organization work to do, or news it should act on, e.g. @sales to hand its client notes to @support, or @infra that a deploy finished so it watches the metrics. It works on it privately, with its own tools and permissions, for the same person you are helping, and the people here see that it's on it. The call returns at once and you carry on. What comes of it reaches you here by itself, even after your turn ends, together with everything else you handed off this turn: don't check on it, send it again or set a follow_up for it. Give the whole job to the agent that owns it, with everything it needs, and let it bring in the others; don't send heads-ups to agents that only have to wait. Write the note so it stands alone: the other agent doesn't see this conversation. For an answer you need for the task, use ask_agent.",
+      "Hand another agent of the organization work to do, or news it should act on, e.g. @sales to hand its client notes to @support, or @infra that a deploy finished so it watches the metrics. It works on it privately, with its own tools and permissions, for the same person you are helping, and the people here see it's on it. It returns at once; carry on. What comes of it reaches you here by itself, even after your turn ends, with everything else you handed off this turn: don't check on it, send it again or set a follow_up for it. Give the whole job to the agent that owns it, with everything it needs, and let it bring in the others; don't send heads-ups to agents that only have to wait. Write the note so it stands alone: the agent doesn't see this conversation. For an answer you need for the task, use ask_agent.",
     scope: "",
     inputSchema: {
       type: "object",
       properties: {
         agent: { type: "string", minLength: 2, maxLength: 33, description: "The agent's handle, e.g. @infra." },
         message: { type: "string", minLength: 1, maxLength: 4000 },
-        heads_up: {
-          type: "boolean",
-          description:
-            "Only when you are answering another agent: true for news this agent should know, which your answer doesn't need. Your answer then goes back without waiting for it or carrying its reply.",
-        },
+        // What it means is told only where it counts: the agents' DM's "Where you are" (`buildRunContext`).
+        heads_up: { type: "boolean" },
       },
       required: ["agent", "message"],
       additionalProperties: false,
