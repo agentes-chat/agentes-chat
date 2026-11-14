@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { schema } from "@agenteschat/db";
+import { eq, schema } from "@agenteschat/db";
 import { z } from "@hono/zod-openapi";
 import { issueParams } from "../src/http/errors";
 import { browser, createTestServer, seedOrg, signUp, type TestServer } from "./harness";
@@ -165,21 +165,31 @@ describe("organizations, agents and credentials", () => {
     expect(JSON.stringify(rows)).not.toContain("sk-ant-api-secret");
   });
 
-  test("members can chat but can't manage agents or credentials", async () => {
+  test("a member creates an agent of their own on the default budget, but can't manage others' agents or credentials", async () => {
     await t.close();
     t = await createTestServer({ env: { ALLOW_SIGNUP: "true" } });
     const owner = browser(t);
     await signUp(owner, "owner@example.com");
-    const { orgId } = await seedOrg(owner);
+    const { orgId, agentId: devId } = await seedOrg(owner);
     const ana = browser(t);
     await signUp(ana, "ana@example.com");
     const { url } = (await (
       await owner(`/api/app/organizations/${orgId}/invitations`, { json: { email: "ana@example.com", role: "member" } })
     ).json()) as { url: string };
     await ana(`/api/app/invitations/${url.split("/invite/")[1]}/accept`, { json: {} });
-    expect((await ana(`/api/app/organizations/${orgId}/agents`, { json: { name: "X", handle: "xx" } })).status).toBe(
-      403,
-    );
+    const agents = `/api/app/organizations/${orgId}/agents`;
+    const created = await ana(agents, { json: { name: "X", handle: "xx" } });
+    expect(created.status).toBe(201);
+    const [anaUser] = await t.db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(schema.users.email, "ana@example.com"));
+    const [mine] = await t.db.select().from(schema.agents).where(eq(schema.agents.handle, "xx"));
+    expect(mine).toMatchObject({ ownerUserId: anaUser?.id, monthlyBudgetNanoUsd: null });
+    // Above the workspace's default ($50) is an admin's call.
+    expect((await ana(agents, { json: { name: "Y", handle: "yy", monthlyBudgetUsd: 51 } })).status).toBe(403);
+    expect((await ana(`${agents}/${devId}`, { method: "PATCH", json: { name: "Mine" } })).status).toBe(403);
+    expect((await ana(`${agents}/${devId}`, { method: "DELETE" })).status).toBe(403);
     expect((await ana(`/api/app/organizations/${orgId}/credentials`)).status).toBe(403);
     expect((await ana(`/api/app/organizations/${orgId}/usage`)).status).toBe(403);
     expect((await ana(`/api/app/organizations/${orgId}/agents`)).status).toBe(200);
