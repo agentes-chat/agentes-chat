@@ -344,6 +344,54 @@ export const en = {
       ],
     },
   },
+  emailChange: {
+    code: {
+      subject: (code: string) => `${code} is your code to change your email`,
+      preheader: "Type it in agentes.chat to confirm. It works for 10 minutes.",
+      headline: "Your code",
+      body: (email: string, newEmail: string): Text => [
+        "Type this code to change the email of the account ",
+        { b: email },
+        " to ",
+        { b: newEmail },
+        ".",
+      ],
+      support: (address: string): Text => [
+        "It works for 10 minutes, and your email stays the same without it. If it wasn't you, don't share it and write to ",
+        { mail: address },
+        ".",
+      ],
+      noSupport:
+        "It works for 10 minutes, and your email stays the same without it. If it wasn't you, don't share it and tell the people who run this server." as Text,
+      why: "You got this email because your account asked to change its email on agentes.chat.",
+    },
+    link: {
+      subject: "Confirm your new email for agentes.chat",
+      preheader: "One click to sign in with this address from now on. The link works for an hour.",
+      headline: "Confirm your new email",
+      body: "One step left: confirm that this address is yours. Your account signs in with it from then on.",
+      button: "Confirm new email",
+      small: "The link works for an hour. If you didn't ask for this, you can ignore this email.",
+      why: "You got this email because someone asked to use this address for an agentes.chat account.",
+    },
+    changed: {
+      subject: "Your agentes.chat email changed",
+      preheader: "If it wasn't you, you can put this address back for 7 days.",
+      headline: "Your email changed",
+      body: (email: string, newEmail: string): Text => [
+        "The account ",
+        { b: email },
+        " now signs in with ",
+        { b: newEmail },
+        ".",
+      ],
+      notYou:
+        "Wasn't you? Press the button within 7 days. This address comes back, every session is signed out, the AI apps are disconnected and ways to sign in added since then stop working. The password is cleared too, and “Forgot my password” sets the next one." as Text,
+      button: "This wasn't me",
+      small: "If it was you, there's nothing to do.",
+      why: "You got this email because this address was the email of an agentes.chat account.",
+    },
+  },
   deleting: {
     subject: (day: string) => `A workspace you're in will be deleted on ${day}`,
     preheader: "It's read-only now. An owner can still restore it until then.",

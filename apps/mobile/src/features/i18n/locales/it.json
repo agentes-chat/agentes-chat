@@ -311,7 +311,7 @@
   },
   "along": {
     "agent": "Un agente",
-    "waits": "{{name}} aspetta il tuo ok",
+    "waits": "{{name}} · ti aspetta",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} è al lavoro",
     "more": "+{{count}}"
@@ -815,7 +815,7 @@
     "teamSectionPersonal": "I tuoi agenti",
     "managerQuiet": "Niente in corso",
     "state": {
-      "waitsYou": "aspetta il tuo ok",
+      "waitsYou": "ti aspetta",
       "noAi": "Nessuna IA collegata",
       "connect": "Collega",
       "archived": "Archiviato",
@@ -1212,6 +1212,9 @@
     "addWorkspaceTeamShort": "Entra nel server del tuo team",
     "addWorkspaceTeamSubShort": "Indirizzo o codice QR del computer",
     "addWorkspaceFoot": "Non esci da nessuno spazio di lavoro.",
+    "addAccount": "Accedi a un altro account",
+    "addAccountSub": "Su {{host}}, senza uscire da questo",
+    "accountNoWorkspace": "Ancora nessuno spazio di lavoro",
     "teamServerLeadShort": "Quello che il tuo team apre nel browser.",
     "teamServerQuestion": "Qual è l'indirizzo del tuo team?",
     "account": {
@@ -1229,6 +1232,8 @@
       "name": "Nome",
       "namePlaceholder": "Il tuo nome",
       "email": "Email",
+      "emailWebLead": "Accedi di nuovo sul sito e cambiala lì, senza il codice.",
+      "emailWeb": "Accedi di nuovo sul sito",
       "inWorkspace": "In questo spazio di lavoro · {{org}}",
       "handle": "Il tuo @",
       "timezone": "Fuso orario",
@@ -1520,7 +1525,7 @@
       "plain": "ha finito un'attività"
     },
     "rowWait": {
-      "approval": "aspetta il tuo ok",
+      "approval": "ti aspetta",
       "question": "aspetta la tua risposta",
       "mission": "aspetta la tua revisione"
     },
@@ -1558,14 +1563,14 @@
   },
   "intentAgents": {
     "waitingSection": "Ti aspetta",
-    "waitingLine": "{{title}} · ha bisogno del tuo ok",
+    "waitingLine": "{{title}} · ti aspetta",
     "waitingMore_one": "{{title}} · e altri {{count}} ti aspettano",
     "waitingMore_many": "{{title}} · e altri {{count}} ti aspettano",
     "waitingMore_other": "{{title}} · e altri {{count}} ti aspettano",
-    "waitingLabel": "{{name}}, ha bisogno del tuo ok",
+    "waitingLabel": "{{name}}, ti aspetta",
     "owner": "Proprietario: {{name}}",
     "ownerYou": "Proprietario: tu",
-    "nowWaiting": "Ha bisogno del tuo ok: {{title}}",
+    "nowWaiting": "Ti aspetta: {{title}}",
     "did": {
       "title": "Cosa ha fatto per te",
       "title_female": "Cosa ha fatto per te",
@@ -1585,7 +1590,7 @@
         "image": "Immagine",
         "file": "File"
       },
-      "waitingOnYou": "Ha bisogno del tuo ok",
+      "waitingOnYou": "Ti aspetta",
       "youApproved": "Hai approvato",
       "youRefused": "Hai rifiutato",
       "action": {

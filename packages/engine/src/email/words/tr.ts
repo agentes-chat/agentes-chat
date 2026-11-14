@@ -330,6 +330,47 @@ export const words: EmailWords = {
       ],
     },
   },
+  emailChange: {
+    code: {
+      subject: (code) => `E-posta adresinizi değiştirme kodunuz: ${code}`,
+      preheader: "Onaylamak için agentes.chat'e yazın. 10 dakika geçerli.",
+      headline: "Kodunuz",
+      body: (email, newEmail) => [
+        { b: email },
+        " hesabının e-posta adresini ",
+        { b: newEmail },
+        " olarak değiştirmek için bu kodu yazın.",
+      ],
+      support: (address) => [
+        "10 dakika geçerli ve bu kod olmadan e-posta adresiniz değişmez. Bu siz değilseniz kodu kimseyle paylaşmayın ve ",
+        { mail: address },
+        " adresine yazın.",
+      ],
+      noSupport:
+        "10 dakika geçerli ve bu kod olmadan e-posta adresiniz değişmez. Bu siz değilseniz kodu kimseyle paylaşmayın ve bu sunucuyu yönetenlere haber verin.",
+      why: "Bu e-postayı, hesabınızdan agentes.chat'te e-posta adresinin değiştirilmesi istendiği için aldınız.",
+    },
+    link: {
+      subject: "agentes.chat için yeni e-postanızı onaylayın",
+      preheader: "Tek tıkla bundan sonra bu adresle giriş yaparsınız. Bağlantı bir saat geçerli.",
+      headline: "Yeni e-postanızı onaylayın",
+      body: "Bir adım kaldı: bu adresin size ait olduğunu onaylayın. Bundan sonra hesabınız bu adresle giriş yapar.",
+      button: "Yeni e-postayı onayla",
+      small: "Bağlantı bir saat geçerli. Bunu siz istemediyseniz bu e-postayı yok sayabilirsiniz.",
+      why: "Bu e-postayı, biri bu adresi bir agentes.chat hesabında kullanmak istediği için aldınız.",
+    },
+    changed: {
+      subject: "agentes.chat hesabınızın e-posta adresi değişti",
+      preheader: "Bu siz değilseniz bu adresi 7 gün içinde geri alabilirsiniz.",
+      headline: "E-posta adresiniz değişti",
+      body: (email, newEmail) => [{ b: email }, " hesabı artık ", { b: newEmail }, " ile giriş yapıyor."],
+      notYou:
+        "Siz değil miydiniz? 7 gün içinde düğmeye basın. Bu adres geri gelir, tüm oturumlar kapatılır, yapay zekâ uygulamalarının bağlantısı kesilir ve o zamandan beri eklenen giriş yolları artık çalışmaz. Şifre de silinir, sonrakini “Şifremi unuttum” ile belirlersiniz.",
+      button: "Bu ben değildim",
+      small: "Bunu siz yaptıysanız bir şey yapmanıza gerek yok.",
+      why: "Bu e-postayı, bu adres bir agentes.chat hesabının e-posta adresi olduğu için aldınız.",
+    },
+  },
   deleting: {
     subject: (day) => `Bulunduğunuz bir çalışma alanı ${day} tarihinde silinecek`,
     preheader: "Şu anda salt okunur. Bir sahip o zamana kadar geri yükleyebilir.",

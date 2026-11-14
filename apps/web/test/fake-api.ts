@@ -32,7 +32,9 @@ import type {
   ConnectorDef,
   ConsultationConversation,
   Credential,
+  DeviceAccount,
   Edition,
+  EmailChange,
   EndpointCheck,
   FeedbackOffer,
   ForeignMailbox,
@@ -69,6 +71,7 @@ import type {
   OrgRole,
   OrgSettings,
   OrgStanding,
+  PendingReturn,
   PeopleUsage,
   Person,
   PersonLimits,
@@ -109,9 +112,9 @@ import { ISSUES_VIEW_DEFAULT } from "@agenteschat/client/lib/issues-view";
 import { freeHandle, takenHandles } from "@agenteschat/client/lib/new-agent";
 import { stepIndex } from "@agenteschat/client/lib/onboarding";
 import type { PlanModel } from "@agenteschat/client/lib/plans";
+import { type LodiPrefs, lodiPrefsOf } from "@agenteschat/client/lib/right-hand-prefs";
 import { grants, SUMMARY_ORDER } from "@agenteschat/client/lib/roles";
 import { sidebarItemOrder, sidebarSections } from "@agenteschat/client/lib/sidebar-items";
-import type { TeamWeekPrefs } from "@agenteschat/client/lib/team-week";
 import { driveFolder, isSecretFile } from "@agenteschat/ui/names";
 import { createFakeAccess } from "./fakes/access";
 import { createFakeApps, type FakeApps } from "./fakes/apps";
@@ -209,6 +212,8 @@ export interface FakeState {
   answeredElsewhere?: Set<string>;
   /** Answers to questions wait for this before the server replies (a slow network). */
   answerHold?: Promise<void>;
+  /** The accounts signed in on this browser (`account.deviceAccounts`, ADR 0183); unset: the server names none. */
+  deviceAccounts?: DeviceAccount[];
   /** Threads I follow with an unread reply (`reads.unreadThreads`). */
   unreadThreads?: number;
   /** Tasks whose conversation has a reply I haven't read (`reads.unreadTasks`). */
@@ -296,8 +301,10 @@ export interface FakeState {
   /** A person's month by id; unset: an empty month. */
   personUsage?: Record<string, PersonUsage>;
   personLimits?: PersonLimits;
-  /** Lodi's weekly card for the signed-in person. */
-  teamWeek?: TeamWeekPrefs;
+  /** What Lodi does by itself for the signed-in person; unset: both cards on, no other switch. */
+  teamWeek?: Partial<LodiPrefs>;
+  /** The workspace's own switches of Lodi; unset: on. */
+  lodiSwitches?: { teamWatch?: boolean; welcomePeople?: boolean };
   memories: Memory[];
   proposals: Proposal[];
   reactions: Record<string, ReactionCount[]>;
@@ -437,6 +444,14 @@ export interface FakeState {
   deletionError?: ApiError;
   /** Make `orgs.deletionCode` and `account.deletionCode` fail with this error (`reauth.code_wait`…). */
   codeError?: ApiError;
+  /** What `account.changeEmail` answers without a code; unset: a code goes to my address first (`code`). */
+  emailChange?: EmailChange;
+  /** Make `account.changeEmail` fail with this error (`email.held`, `reauth.code_wrong`…). */
+  emailChangeError?: ApiError;
+  /** Make `account.undoEmailChange` fail with this error (`email.undo_gone`…). */
+  undoError?: ApiError;
+  /** The address `account.undoEmailChange` brings back; unset: walter@example.com. */
+  undoBack?: string;
   /** The workspace's roles (ADR 0085, `roles.*`); unset: a new workspace's (`seedRoles`). */
   roles?: OrgRole[];
   /** Where I put the sidebar's tools (`orgs.sidebarItems`); unset = none moved. */
@@ -460,6 +475,12 @@ export interface FakeState {
   taskManager?: TaskManagerView;
   /** A task's steps by run (`working.taskSteps`, the task manager's panel); a run not here has none yet. */
   taskSteps?: Record<string, TaskSteps>;
+  /**
+   * The returns agents set, still to come (`chat.followUps`, a conversation's by its channel); canceling one
+   * (`chat.cancelFollowUp`) takes it out. `followUpCancelError` makes the cancel fail.
+   */
+  followUps?: PendingReturn[];
+  followUpCancelError?: Error;
 }
 
 /** A new workspace's "Admin" role (ADR 0085); João holds it. */
@@ -647,6 +668,10 @@ export const FAKE_GIFS: Gif[] = [
   { id: "gif-thanks", title: "thank you", width: 480, height: 480 },
   { id: "gif-coffee", title: "coffee time", width: 360, height: 480 },
 ];
+
+/** What Lodi does by itself for the signed-in person, as the server sends it (defaults: both cards on). */
+const lodiPrefs = (state: FakeState): LodiPrefs =>
+  lodiPrefsOf({ weekOff: false, dayOff: false, timezone: "America/Sao_Paulo", ...state.teamWeek });
 
 /** The GIFs and stickers settings as the server sends them (defaults: everything on and available). */
 function mediaSettings(state: FakeState): Pick<OrgSettings, MediaSetting> {
@@ -1491,10 +1516,29 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (state.deletionError) throw state.deletionError;
         state.me = null;
       },
+      changeEmail: async (input) => {
+        log("account.changeEmail", input);
+        if (state.emailChangeError) throw state.emailChangeError;
+        if (input.code) return { status: "sent", email: input.newEmail };
+        return state.emailChange ?? { status: "code", email: requireMe().user.email, resendIn: 60 };
+      },
+      undoEmailChange: async (token) => {
+        log("account.undoEmailChange", token);
+        if (state.undoError) throw state.undoError;
+        return { email: state.undoBack ?? "walter@example.com" };
+      },
       unread: async () =>
         state.me
           ? { organizations: state.me.organizations.map((o) => ({ orgId: o.id, unread: 0, waiting: 0 })) }
           : null,
+      deviceAccounts: async () => state.deviceAccounts ?? [],
+      switchDeviceAccount: async (userId) => {
+        state.calls.push({ method: "account.switchDeviceAccount", args: [userId] });
+      },
+      signOutDeviceAccount: async (userId) => {
+        state.calls.push({ method: "account.signOutDeviceAccount", args: [userId] });
+        return { signedIn: false };
+      },
       phoneSignIn: async () => {
         log("account.phoneSignIn");
         return {
@@ -1863,6 +1907,8 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         timezone: "America/Sao_Paulo",
         actionCheck: state.actionCheck ?? true,
         autoModels: state.autoModels ?? {},
+        teamWatch: state.lodiSwitches?.teamWatch ?? true,
+        welcomePeople: state.lodiSwitches?.welcomePeople ?? true,
         ...mediaSettings(state),
         mode: personalOrg(orgId) ? "personal" : "team",
         // Money: admins only, like the backend.
@@ -1883,6 +1929,12 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (input.defaultCredentialId !== undefined) state.defaultCredentialId = input.defaultCredentialId;
         if (input.defaultAgentBudgetUsd !== undefined) state.defaultAgentBudgetUsd = input.defaultAgentBudgetUsd;
         if (input.actionCheck !== undefined) state.actionCheck = input.actionCheck;
+        if (input.teamWatch !== undefined || input.welcomePeople !== undefined)
+          state.lodiSwitches = {
+            ...state.lodiSwitches,
+            ...(input.teamWatch !== undefined ? { teamWatch: input.teamWatch } : {}),
+            ...(input.welcomePeople !== undefined ? { welcomePeople: input.welcomePeople } : {}),
+          };
         const { gifs, gifRating, agentStickers, agentMedia } = input;
         state.media = {
           ...state.media,
@@ -1908,6 +1960,8 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           timezone: input.timezone ?? "America/Sao_Paulo",
           actionCheck: state.actionCheck ?? true,
           autoModels: state.autoModels ?? {},
+          teamWatch: state.lodiSwitches?.teamWatch ?? true,
+          welcomePeople: state.lodiSwitches?.welcomePeople ?? true,
           ...mediaSettings(state),
           mode: personalOrg(orgId) ? "personal" : "team",
           // As the server's answer: the same settings a read gives, money included for who sees it.
@@ -2013,14 +2067,11 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       refuseMoreUsage: async (orgId, userId) => {
         log("orgs.refuseMoreUsage", orgId, userId);
       },
-      teamWeek: async () => state.teamWeek ?? { off: false, day: 5, hour: 17, timezone: "America/Sao_Paulo" },
+      teamWeek: async () => lodiPrefs(state),
       setTeamWeek: async (orgId, patch) => {
         log("orgs.setTeamWeek", orgId, patch);
-        state.teamWeek = {
-          ...(state.teamWeek ?? { off: false, day: 5, hour: 17, timezone: "America/Sao_Paulo" }),
-          ...patch,
-        };
-        return state.teamWeek;
+        state.teamWeek = { ...state.teamWeek, ...patch };
+        return lodiPrefs(state);
       },
       actOnTeamWeek: async (orgId, messageId, act) => {
         log("orgs.actOnTeamWeek", orgId, messageId, act);
@@ -3086,8 +3137,14 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (state.answerNowError) throw state.answerNowError;
         return { runs: state.answerNowRuns ?? [] };
       },
+      followUps: async (orgId, channelId) => {
+        log("chat.followUps", orgId, channelId);
+        return (state.followUps ?? []).filter((r) => r.channelId === channelId);
+      },
       cancelFollowUp: async (orgId, messageId) => {
         log("chat.cancelFollowUp", orgId, messageId);
+        if (state.followUpCancelError) throw state.followUpCancelError;
+        state.followUps = state.followUps?.filter((r) => r.messageId !== messageId);
         const line = state.messages.find((m) => m.id === messageId);
         const notice = line?.meta?.notice as { refs?: Record<string, string> } | undefined;
         if (notice?.refs) notice.refs = { ...notice.refs, state: "canceled" };
@@ -3300,12 +3357,14 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         return { ...a };
       },
       decideMany: async (orgId, input) => {
-        log("approvals.decideMany", orgId, input.ids, input.decision);
+        log("approvals.decideMany", orgId, input.ids, input.decision, ...(input.only ? [input.only] : []));
+        if (input.via) log("via", input.via);
         const out: Approval[] = [];
         const skipped: string[] = [];
         for (const approvalId of input.ids) {
           const a = state.approvals.find((x) => x.id === approvalId);
-          if (a?.status !== "pending" || !a.canDecide) skipped.push(approvalId);
+          if (a?.status !== "pending" || !a.canDecide || (input.only === "routine" && !a.routine))
+            skipped.push(approvalId);
           else {
             Object.assign(a, {
               status: input.decision === "approve" ? "approved" : "refused",
