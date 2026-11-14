@@ -707,10 +707,7 @@ export interface CliInstall {
   message?: string;
   cause?: (typeof CLI_INSTALL_CAUSES)[number];
 }
- * From this protocol on (ADR 0174): the Muse Code brain. `brain.turn` takes `kind: "muse"` (Meta's `muse exec --json`,
- * one process per turn, refused in `chat` because the CLI has no tool allow/deny list), `account` takes `kind:
- * "muse"` (a Meta API key in the account's own config folder), `hello.executors.muse` reports the CLI, and
- * `access.tools.muse` turns it on or off.
+/**
  * From this protocol on (ADR 0174): the Muse Code brain. `brain.turn` takes `kind: "muse"` (a `muse serve` host
  * driven over its session protocol; a `chat` turn is read-only with `denyUnmatched`, so only the bridge's tools run), `account` takes
  * `kind: "muse"` (a device-code sign-in in the account's own config folder, `META_API_KEY` kept out of the host's
@@ -3426,7 +3423,6 @@ export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerIn
   const out: NonNullable<RunnerInfo["executors"]> = {};
   const word = (x: unknown) => (isString(x) && /^[\w.-]{1,40}$/.test(x) ? x : undefined);
   for (const name of CLI_NAMES) {
-  for (const name of ["claude", "codex", "cursor", "opencode", "grok", "antigravity", "muse"] as const) {
     const e = v[name];
     if (!isObject(e) || !isString(e.version)) continue;
     const authMethod = word(e.authMethod);

@@ -174,7 +174,7 @@ describe("detection: the Muse CLI and the catalog it serves", () => {
 
   test("with a catalog: the version and the models model/list returned", async () => {
     const catalog = async () => [{ id: "muse-spark-1.3", label: "Muse Spark 1.3" }];
-    expect((await detectExecutors(run, {}, {}, catalog)).found.muse).toEqual({
+    expect((await detectExecutors(run, {}, {}, () => false, catalog)).found.muse).toEqual({
       version: "Muse Code 1.4.18 (1.4.18-R8587.1)",
       models: [{ id: "muse-spark-1.3", label: "Muse Spark 1.3" }],
     });
@@ -186,7 +186,7 @@ describe("detection: the Muse CLI and the catalog it serves", () => {
       throw new Error("the host died");
     };
     for (const catalog of [empty, broke]) {
-      const look = await detectExecutors(run, {}, {}, catalog);
+      const look = await detectExecutors(run, {}, {}, () => false, catalog);
       expect(look.found.muse).toEqual({ version: "Muse Code 1.4.18 (1.4.18-R8587.1)" });
       // A catalog is a bonus on a version line that was read: an `unsure` look would retry the whole thing (a host
       // each time) every 30 s, and the other CLIs have nothing to do with the Muse host.
@@ -201,7 +201,13 @@ describe("detection: the Muse CLI and the catalog it serves", () => {
       asked = true;
       return [];
     };
-    const { found } = await detectExecutors(() => ({ status: 127, stdout: "" }), {}, {}, catalog);
+    const { found } = await detectExecutors(
+      () => ({ status: 127, stdout: "" }),
+      {},
+      {},
+      () => false,
+      catalog,
+    );
     expect(found.muse).toBeUndefined();
     expect(asked).toBe(false);
   });

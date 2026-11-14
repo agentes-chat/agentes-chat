@@ -695,6 +695,12 @@ test("the account's key, when it has one, rides in its own variable", async () =
 test("executor detection reads the version and nothing else", async () => {
   const run = async () =>
     ({ stdout: "Muse Code 1.4.18 (1.4.18-R8587.1)\n", stderr: "", status: 0, error: null }) as never;
-  const { found } = await detectExecutors(run as never, {}, {}, async () => []);
+  const { found } = await detectExecutors(
+    run as never,
+    {},
+    {},
+    () => false,
+    async () => [],
+  );
   expect(found.muse?.version).toContain("1.4.18-R8587.1");
 });
