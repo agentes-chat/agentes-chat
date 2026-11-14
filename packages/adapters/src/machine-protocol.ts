@@ -3048,6 +3048,8 @@ export type RunnerFrame =
    * arrive before the page changes (ADR 0040 §7.2). An older server drops it: nothing asks for it.
    */
   | ({ type: "browser.pointer"; agentId: string } & AgentPointer)
+  /** The same on the agent's desktop (ADR 0062), in the screen's pixels: desktop use, and its browser's window there. */
+  | ({ type: "desktop.pointer"; agentId: string } & AgentPointer)
   /** `KEEP_RUNNING_PROTOCOL`: a hold ended on the computer by itself (the next `hello` says so again). */
   | { type: "keep.ended"; holdId: string; reason: HoldEnd };
 
@@ -3571,11 +3573,10 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         ...(message !== undefined ? { message } : {}),
       };
     }
-    case "browser.pointer": {
+    case "browser.pointer":
+    case "desktop.pointer": {
       const pointer = parseAgentPointer(f);
-      return isString(f.agentId) && pointer
-        ? { type: "browser.pointer", agentId: f.agentId.slice(0, 64), ...pointer }
-        : null;
+      return isString(f.agentId) && pointer ? { type: f.type, agentId: f.agentId.slice(0, 64), ...pointer } : null;
     }
     case "runner.state": {
       const paused = parsePause(f.paused);

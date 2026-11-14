@@ -1374,6 +1374,7 @@ export class Supervisor {
         return;
       }
       case "browser.pointer":
+      case "desktop.pointer":
         // Its own agent's pointer only.
         if (f.agentId === w.user.id) this.opts.send(f);
         return;
