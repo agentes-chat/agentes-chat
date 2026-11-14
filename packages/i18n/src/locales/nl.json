@@ -5477,7 +5477,8 @@
           "200000": "Goedkoper en sneller. Vat lange gesprekken eerder samen.",
           "400000": "Onthoudt veel, en elk antwoord kost minder dan met 1M.",
           "1000000": "Onthoudt het meest. Elk antwoord leest alles opnieuw: trager en duurder.",
-          "auto": "Wat het model aankan."
+          "auto": "Wat het model aankan.",
+          "autoSummarizes": "Bij Claude Code en Codex vat het het gesprek samen bij {{size}}."
         },
         "advanced": {
           "title": "Geavanceerde instellingen",

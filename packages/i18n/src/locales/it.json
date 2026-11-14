@@ -5644,7 +5644,8 @@
           "200000": "Più economica e veloce. Riassume presto nelle conversazioni lunghe.",
           "400000": "Ricorda molto, e ogni risposta costa meno che con 1M.",
           "1000000": "Ricorda il massimo. Ogni risposta rilegge tutto: più lenta e più cara.",
-          "auto": "Quella che il modello supporta."
+          "auto": "Quella che il modello supporta.",
+          "autoSummarizes": "Su Claude Code e Codex, riassume la conversazione a {{size}}."
         },
         "advanced": {
           "title": "Impostazioni avanzate",

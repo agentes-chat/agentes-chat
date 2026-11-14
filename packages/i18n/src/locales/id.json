@@ -5274,7 +5274,8 @@
           "200000": "Lebih murah dan lebih cepat. Meringkas lebih awal di percakapan panjang.",
           "400000": "Mengingat banyak, dan setiap jawaban lebih murah daripada dengan 1M.",
           "1000000": "Mengingat paling banyak. Setiap jawaban membaca ulang semuanya: lebih lambat dan lebih mahal.",
-          "auto": "Sesuai kapasitas model."
+          "auto": "Sesuai kapasitas model.",
+          "autoSummarizes": "Di Claude Code dan Codex, meringkas percakapan di {{size}}."
         },
         "advanced": {
           "title": "Pengaturan lanjutan",

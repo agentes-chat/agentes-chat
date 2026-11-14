@@ -13392,6 +13392,9 @@
   "agentPage.work.brain.contextText.auto": {
     "value": "What the model takes."
   },
+  "agentPage.work.brain.contextText.autoSummarizes": {
+    "value": "On Claude Code and Codex, summarizes the conversation at {{size}}."
+  },
   "agentPage.work.brain.advanced.title": {
     "value": "Advanced settings"
   },

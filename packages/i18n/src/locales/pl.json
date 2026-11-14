@@ -5837,7 +5837,8 @@
           "200000": "Taniej i szybciej. W długich rozmowach wcześniej robi podsumowania.",
           "400000": "Pamięta dużo, a każda odpowiedź kosztuje mniej niż przy 1M.",
           "1000000": "Pamięta najwięcej. Przy każdej odpowiedzi czyta wszystko od nowa: wolniej i drożej.",
-          "auto": "Tyle, ile obsługuje model."
+          "auto": "Tyle, ile obsługuje model.",
+          "autoSummarizes": "W Claude Code i Codex streszcza rozmowę przy {{size}}."
         },
         "advanced": {
           "title": "Ustawienia zaawansowane",

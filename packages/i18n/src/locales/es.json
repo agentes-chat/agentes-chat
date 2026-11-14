@@ -5616,7 +5616,8 @@
           "200000": "Más barato y rápido. Resume antes en las conversaciones largas.",
           "400000": "Recuerda mucho, y cada respuesta cuesta menos que con 1M.",
           "1000000": "Recuerda lo máximo. Cada respuesta vuelve a leer todo: más lento y más caro.",
-          "auto": "Lo que admite el modelo."
+          "auto": "Lo que admite el modelo.",
+          "autoSummarizes": "En Claude Code y Codex, resume la conversación al llegar a {{size}}."
         },
         "advanced": {
           "title": "Configuración avanzada",

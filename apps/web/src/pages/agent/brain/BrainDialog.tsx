@@ -963,6 +963,7 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
             <ContextField
               value={m.contextTokens}
               options={s.contextOptions}
+              kind={s.kind}
               onChange={(n) => setMore({ ...m, contextTokens: n })}
             />,
           )}
