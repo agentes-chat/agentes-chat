@@ -62,6 +62,8 @@ export function VaultNewDialog({
   const [kind, setKind] = useState<VaultItemKind>("login");
   const [draft, setDraft] = useState<ItemDraft>(EMPTY);
   const [secret, setSecret] = useState("");
+  const [shown, setShown] = useState(false);
+  const secretLabel = t(kind === "login" ? "vault.field.password" : "vault.field.value");
   const [scope, setScope] = useState<VaultScope>(canManageTeam ? startScope : "personal");
   const [access, setAccess] = useState<VaultAccess>(() => defaultAccess(canManageTeam ? startScope : "personal"));
   const [tried, setTried] = useState(false);
@@ -167,18 +169,33 @@ export function VaultNewDialog({
               errors={errors}
               secret={
                 kind === "contact" ? null : (
-                  <Field
-                    label={t(kind === "login" ? "vault.field.password" : "vault.field.value")}
-                    error={errors.secret}
-                  >
-                    <Input
-                      type="password"
-                      value={secret}
-                      autoComplete="new-password"
-                      spellCheck={false}
-                      onChange={(e) => setSecret(e.target.value)}
-                      data-1p-ignore
-                    />
+                  <Field label={secretLabel} error={errors.secret}>
+                    <span className="vlt-secret__reveal">
+                      {" "}
+                      <Input
+                        type={shown ? "text" : "password"}
+                        value={secret}
+                        autoComplete="new-password"
+                        spellCheck={false}
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        onChange={(e) => setSecret(e.target.value)}
+                        data-1p-ignore
+                      />
+                      {/* A value is typed once and never comes back (ADR 0144 §2): the eye is for what is on screen,
+                          before Salvar, as the sign-in field already has. */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        icon={shown ? "eyeOff" : "eye"}
+                        aria-label={t(shown ? "vault.env.hide" : "vault.env.show", { name: secretLabel })}
+                        aria-pressed={shown}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => setShown((s) => !s)}
+                      />
+                    </span>
                   </Field>
                 )
               }
