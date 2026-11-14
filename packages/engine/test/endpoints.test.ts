@@ -16,6 +16,7 @@ import {
   listEndpoint,
   modelInfoFor,
   pickerModels,
+  rotateCredential,
   updateAgent,
   updateEndpointModels,
 } from "../src";
@@ -340,5 +341,17 @@ describe("the test call", () => {
     ]);
     const member = await addMember(f.db, f.org.id, "member");
     await expect(checkEndpoint(f.db, f.gateway, member.id, f.org.id, cred.id)).rejects.toThrow();
+  });
+
+  test("a new key for an endpoint clears its models' tests: the old key's answers don't vouch for it", async () => {
+    f = await setup({ reply: () => ({ chunks: [], toolUses: [{ name: "report_status", input: { ok: true } }] }) });
+    const cred = await addEndpoint(f, [{ id: "tools" }]);
+    await checkEndpoint(f.db, f.gateway, f.owner.id, f.org.id, cred.id);
+    expect(await checkCredential(f.db, f.gateway, f.owner.id, f.org.id, cred.id)).toBe("ok");
+    await rotateCredential(f.db, f.keyWrapper, f.owner.id, f.org.id, cred.id, { apiKey: "gw-key-7654321" });
+    const [saved] = (await listCredentials(f.db, f.owner.id, f.org.id)).filter((c) => c.id === cred.id);
+    expect(saved?.endpoint).toMatchObject({ baseURL: "https://gw.example/v1", models: [{ id: "tools" }] });
+    expect(saved?.endpoint?.models[0]?.check).toBeUndefined();
+    expect(await checkCredential(f.db, f.gateway, f.owner.id, f.org.id, cred.id)).toBe("unchecked");
   });
 });
