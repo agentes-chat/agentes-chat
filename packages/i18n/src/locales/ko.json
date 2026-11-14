@@ -15257,6 +15257,7 @@
   },
   "format": {
     "list": "{{names, list}}",
+    "andMore": "외 {{count}}",
     "usd": "US$ {{value}}",
     "tokensMillions": "{{value}}M",
     "tokensThousands": "{{value}}k",

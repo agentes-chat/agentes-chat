@@ -15323,6 +15323,7 @@
   },
   "format": {
     "list": "{{names, list}}",
+    "andMore": "另外 {{count}} 个",
     "usd": "US$ {{value}}",
     "tokensMillions": "{{value}}M",
     "tokensThousands": "{{value}}K",

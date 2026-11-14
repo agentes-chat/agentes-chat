@@ -16255,6 +16255,7 @@
   },
   "format": {
     "list": "{{names, list}}",
+    "andMore": "y {{count}} más",
     "usd": "US$ {{value}}",
     "tokensMillions": "{{value}} M",
     "tokensThousands": "{{value}} mil",

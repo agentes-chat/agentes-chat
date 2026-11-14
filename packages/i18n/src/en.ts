@@ -16016,6 +16016,8 @@ export const en = {
   format: {
     // i18next's `list` format: Intl.ListFormat in the language ("Ada, Atlas, and Theo", "Ada、Atlas、Theo"). Keep as is.
     list: "{{names, list}}",
+    /** After the names a list shows, one per line: how many more it holds. */
+    andMore: "and {{count}} more",
     usd: "US$ {{value}}",
     tokensMillions: "{{value}}M",
     tokensThousands: "{{value}}k",
