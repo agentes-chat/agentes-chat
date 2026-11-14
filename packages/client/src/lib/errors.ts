@@ -509,6 +509,7 @@ const KNOWN = {
   "wiki.body_too_long": "errors.said.tooLong",
   "account.runner_old": "errors.said.updateComputerApp",
   "machine.access_outdated": "errors.said.updateComputerApp",
+  "machine.cli_outdated": "errors.said.updateComputerApp",
   "machine.outdated": "errors.said.updateComputerApp",
   "machine.updates_itself": "errors.said.computerUpdatesItself",
   "database.disabled": "errors.said.offHere",
