@@ -22,6 +22,7 @@ import {
   AGENT_BROWSER_SHA256,
   AGENT_BROWSER_VERSION,
   type AgentBrowserTarget,
+  type AgentPointerAct,
   type AgentScope,
   agentBrowserUrl,
   BROWSER_LIMITS,
@@ -1025,6 +1026,13 @@ export interface InputState {
 
 /** Agent commands the runner does with a pointer path, a held button and typed keys (`humanSteps`). */
 const HUMAN_COMMANDS = new Set(["click", "dblclick", "hover", "fill", "type"]);
+/** What the pointer does where each of them takes it, for whoever watches (`browser.pointer`). */
+const POINTER_ACTS: Record<string, AgentPointerAct> = {
+  click: "click",
+  dblclick: "double",
+  fill: "type",
+  type: "type",
+};
 /** What `agent-browser` answers to each when the runner did it itself. */
 const HUMAN_DONE: Record<string, string> = { click: "clicked", hover: "hovered", fill: "filled" };
 /** The answer to a command a person's taking control cut short (`stopInput`). */
@@ -1497,6 +1505,8 @@ interface Session {
   link?: string;
   /** Where the agent's pointer was left on the page (`humanly`). */
   pointer?: Point;
+  /** The viewport `pointer` was last said in (`pointerGoes`): a press on a point is said in it too. */
+  pointerView?: { width: number; height: number };
   /** Where its `hover` left it. While that is still `pointer` (the same object), a menu it opened is taken to be open. */
   hovered?: Point;
   /** Ends the agent's command under way when a person takes control (`stopInput`). */
@@ -2263,6 +2273,19 @@ export class BrowserManager {
    * the page would jump under every click. Null when it goes the plain way: other arguments (a flag, `--new-tab`), or
    * an element with no box.
    */
+  /** Says where the agent's pointer goes, as the gesture starts: whoever watches sees it arrive (ADR 0040 §7.2). */
+  private pointerGoes(session: Session, to: Point, view: { width: number; height: number }, act: AgentPointerAct) {
+    session.pointerView = { width: view.width, height: view.height };
+    this.opts.send({
+      type: "browser.pointer",
+      agentId: session.agentId,
+      x: to.x,
+      y: to.y,
+      ...session.pointerView,
+      act,
+    });
+  }
+
   private async humanly(
     session: Session,
     command: string,
@@ -2302,6 +2325,7 @@ export class BrowserManager {
         ? [...steps.moves, [command, ...args]]
         : [...steps.moves, ...(steps.check ? [steps.check] : []), ...steps.act];
     session.pointer = steps.to;
+    this.pointerGoes(session, steps.to, seen.view, POINTER_ACTS[command] ?? "move");
     if (command === "hover") session.hovered = steps.to;
     let out = await this.run(session, ["batch", "--bail"], {
       ...opts,
@@ -2352,7 +2376,11 @@ export class BrowserManager {
   ): Promise<BrowserAnswer | null> {
     const opts = { timeoutMs, ...(signal ? { signal } : {}) };
     const [what, a = "", b = ""] = args;
-    if (command === "mouse" && what === "down") session.pressedAt = this.now();
+    if (command === "mouse" && what === "down") {
+      session.pressedAt = this.now();
+      if (session.pointer && session.pointerView)
+        this.pointerGoes(session, session.pointer, session.pointerView, "click");
+    }
     if (command === "mouse" && what === "up" && session.pressedAt !== undefined) {
       const left = session.pressedAt + holdMs(randomSource()) - this.now();
       session.pressedAt = undefined;
@@ -2368,6 +2396,7 @@ export class BrowserManager {
       const from = session.pointer ?? startPoint(to, view, rng);
       const path = moveCommands(pointerPath(from, to, rng, { bounds: view, straight: stayed(session) }));
       session.pointer = to;
+      this.pointerGoes(session, to, view, "move");
       const out = await this.run(session, ["batch", "--bail"], { ...opts, stdin: JSON.stringify(path) });
       const results = batchResults(out);
       return results && !results.some(failedStep) ? { success: true, data: { moved: true, ...to } } : out;
