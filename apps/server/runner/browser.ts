@@ -3038,12 +3038,15 @@ export class BrowserManager {
         } catch {
           // gone
         }
-        await new Promise((r) => setTimeout(r, 500));
-        try {
-          process.kill(pid, 0);
-          process.kill(pid, "SIGKILL");
-        } catch {
-          // gone
+        // On Windows SIGTERM already ends it outright, and 500 ms later its pid may be someone else's.
+        if (process.platform !== "win32") {
+          await new Promise((r) => setTimeout(r, 500));
+          try {
+            process.kill(pid, 0);
+            process.kill(pid, "SIGKILL");
+          } catch {
+            // gone
+          }
         }
       }
       await this.forgetChrome(pid);
