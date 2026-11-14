@@ -104,6 +104,22 @@ describe("a channel's dashboard (ADR 0135 §21)", () => {
     expect(within(side).queryByRole("button", { name: "Trocar painel" })).toBeNull();
   });
 
+  test("a board deleted while the column is open leaves it, never reading as hidden", async () => {
+    widthIs(CHANNEL_BOARD_WIDE_QUERY);
+    const { state, fake, sockets } = await open((s) => {
+      eng(s).can = { post: true, callAgents: true, manage: false };
+    });
+    expect(column()?.textContent).toContain("Receita hoje");
+    // As the server does: the board is gone and the channel list no longer gives its id.
+    fake.boards = fake.boards.filter((b) => b.id !== "dash-v");
+    eng(state).dashboardId = null;
+    const event = { type: "dashboard.changed", orgId: ORG_ID, dashboardId: "dash-v", deleted: true };
+    await act(async () => sockets.last().push({ type: "event", scope: "org", event }));
+    await settle(8);
+    expect(column()).toBeNull();
+    expect(screen().queryByText("Não compartilhado com você")).toBeNull();
+  });
+
   test("no board: the button only for whoever manages the channel, which opens the picker; picking links it", async () => {
     widthIs(CHANNEL_BOARD_WIDE_QUERY);
     const { state } = await open((s) => {

@@ -1,7 +1,8 @@
 import type { Channel, Dashboard } from "@agenteschat/client";
-import { frozenBoard, useDashboard, useDashboards } from "@agenteschat/client";
+import { frozenBoard, keys, useDashboard, useDashboards } from "@agenteschat/client";
 import { errorCode, errorText } from "@agenteschat/client/lib/errors";
 import { Button, EmptyState, Field, Menu, MenuItem, MenuSeparator, Select } from "@agenteschat/ui";
+import { useIsFetching } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -77,6 +78,10 @@ function Body({ channel, onLinked }: { channel: Channel; onLinked?: () => void }
   const { dashboardId: linked, manages } = useChannelDashboard(channel);
   const [changing, setChanging] = useState(false);
   const query = useDashboard(org.id, linked);
+  // A 404 is a board not shown to the reader, or one just deleted: its event asks the channel list again, which drops
+  // a deleted board's id (and says nothing about one the reader can't see). Until it comes, nothing is said.
+  const missing = !query.data && errorCode(query.error) === "dashboard.not_found";
+  const listing = useIsFetching({ queryKey: keys.channels(org.id) }) > 0;
   const picked = () => {
     setChanging(false);
     onLinked?.();
@@ -90,10 +95,9 @@ function Body({ channel, onLinked }: { channel: Channel; onLinked?: () => void }
         onPicked={picked}
       />
     );
-  if (query.isLoading) return <LoadingCards count={2} />;
+  if (query.isLoading || (missing && listing)) return <LoadingCards count={2} />;
   if (!query.data) {
-    const hidden = ["dashboard.not_found", "dashboard.forbidden"].includes(errorCode(query.error) ?? "");
-    return hidden ? (
+    return missing ? (
       <NotShown channel={channel} manages={manages} onChange={() => setChanging(true)} />
     ) : (
       <ErrorState error={query.error} onRetry={() => void query.refetch()} />

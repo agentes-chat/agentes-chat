@@ -226,7 +226,7 @@ people than asked.
     with `dashboardId` (null takes it away), only to a board of the workspace they see and never a home board
     (`dashboard.not_found`, `dashboard.home_fixed`); the column also makes a new board already linked. The link changes
     nothing about who sees or edits the board (§8, §12): the channel list carries its id alone (none once the board is
-    deleted), the column reads the board as any screen does, and a member it isn't shown to reads only that it isn't
+    deleted, which the apps read again on the board's `dashboard.changed`), the column reads the board as any screen does, and a member it isn't shown to reads only that it isn't
     shared with them, never its title or widgets. Where the manager picks, a hint says each member sees it only if it is
     shared with them; a private board may be linked and shows to its owner alone. Where it shows, it is the board's own
     grid, with Organize and "+" for whoever edits it, and a widget opens in its panel (`?widget=`). That panel is the one beside the channel, as a thread's or an agent's page
