@@ -36,7 +36,7 @@ is what the product needs: it can **park an approval and answer it**, which is t
 still has (`REFUSED_ELICITATION`, ADR-adjacent fix in flight), and it lists models, reads history and interrupts a
 turn. A one-shot process cannot.
 
-### Protocol 59
+### Protocol 67
 
 `brain.turn` takes `kind: "muse"`; `account` takes `kind: "muse"`; `hello.executors.muse` reports the CLI, its
 version and the models `model/list` returns; `access.tools.muse` turns it on or off. A `chat` turn is checked on a
