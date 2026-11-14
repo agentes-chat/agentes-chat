@@ -503,6 +503,8 @@ export interface MachineBrowserHooks {
   streamEnded?(machineId: string, frame: Extract<RunnerFrame, { type: "browser.stream.ended" }>): void;
   /** Where the agent's pointer goes on the page (ADR 0040 §7.2): to whoever watches, never stored. */
   pointer?(machineId: string, frame: Extract<RunnerFrame, { type: "browser.pointer" }>): void;
+  /** The same on its desktop (ADR 0062): to whoever has that screen open. */
+  desktopPointer?(machineId: string, frame: Extract<RunnerFrame, { type: "desktop.pointer" }>): void;
   closed?(machineId: string): void;
   /** A runner on protocol 12+ said hello here: what it should know again (open handoffs). */
   connected?(machineId: string): void;
@@ -1487,6 +1489,7 @@ export function createMachineHub(deps: MachineHubDeps) {
       else if (frame.type === "browser.frame") browserHooks.frame?.(conn.machineId, frame);
       else if (frame.type === "browser.stream.ended") browserHooks.streamEnded?.(conn.machineId, frame);
       else if (frame.type === "browser.pointer") browserHooks.pointer?.(conn.machineId, frame);
+      else if (frame.type === "desktop.pointer") browserHooks.desktopPointer?.(conn.machineId, frame);
       else if (frame.type === "pong") await touch(conn, frame);
       else if (frame.type === "task.event") {
         await applyTaskEvent({ db, pubsub }, conn.machineId, frame).catch(() => undefined);
