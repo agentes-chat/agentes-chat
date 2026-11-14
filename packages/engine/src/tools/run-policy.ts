@@ -15,7 +15,8 @@ import type { ToolDefinition } from "./types";
  *   refuses on its own when nobody is behind the run.
  * - `unattended` that a routine's report or work woke (`fedByRoutine`): what the routine read (inbound mail, a
  *   webhook) feeds it, so it keeps the routine's bounds (below), plus the reply where it is (`here`), never
- *   `hand_off` nor a mission's tools; every write to a connected app asks a person.
+ *   `hand_off` nor a mission's tools; every write to a connected app asks a person, except, on the run its report
+ *   woke while the report is all it read, the routine's own actions (`ownJobCovers`, ADR 0053 addendum 2026-11-13).
  * - `routine`: nothing that speaks for someone (reactions, GIFs and stickers, questions, reminders,
  *   routines, events, channels, secrets, permissions). It reports through `hand_off`, whose message may carry a GIF
  *   (its `gif`, as `post_message`'s, ADR 0091 addendum 2026-11-09). Otherwise it
