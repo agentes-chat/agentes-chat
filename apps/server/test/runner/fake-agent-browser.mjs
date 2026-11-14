@@ -62,9 +62,13 @@ const out = (o) => {
   save();
 };
 
-// Like the Windows daemon: the CLI exits after its answer, but a background process keeps its pipes open.
+// Like the Windows daemon: the CLI exits after its answer, but a background process keeps its pipes open
+// (`daemonLogs`: and keeps writing to them).
 if (process.env.FAKE_AB_HOLD_STDIO) {
-  const daemon = spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"], {
+  const script = state.daemonLogs
+    ? "setInterval(() => process.stdout.write('daemon log\\n'), 100); setTimeout(() => process.exit(), 30000)"
+    : "setTimeout(() => {}, 30000)";
+  const daemon = spawn(process.execPath, ["-e", script], {
     stdio: ["ignore", "inherit", "inherit"],
     detached: true,
     windowsHide: true,
@@ -142,6 +146,8 @@ const markedField = (selector) => {
 
 // `delayMs`: every command takes that long (a page busy under it).
 if (state.delayMs) await new Promise((resolve) => setTimeout(resolve, state.delayMs));
+// `silent`: the CLI exits without an answer.
+if (state.silent) process.exit(0);
 
 const [command, ...args] = rest;
 switch (command) {
