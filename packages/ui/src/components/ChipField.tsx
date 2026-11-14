@@ -14,7 +14,7 @@ import { cx } from "../cx";
 import { EDGE_ROOM } from "../floating";
 import { Icon } from "../icons/Icon";
 import { matchesWords } from "../search";
-import { useFieldControl } from "./Field";
+import { useFieldControl, useLocked } from "./Field";
 import { Token, type TokenProps } from "./Token";
 
 /** A token in the field: what `Token` shows, by its key. */
@@ -128,6 +128,9 @@ export function ChipField({
     "aria-invalid": rest["aria-invalid"],
   });
   const listId = useId();
+  // Inside a `Locked` that runs it's off too: the fieldset reaches its input and ✕, not its box or its floating list.
+  const locked = useLocked();
+  const off = disabled || locked;
   const [own, setOwn] = useState("");
   const draft = given ?? own;
   const setDraft = (value: string) => {
@@ -141,7 +144,7 @@ export function ChipField({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const listed = options !== undefined;
-  const shown = listed && open && !disabled;
+  const shown = listed && open && !off;
   const query = onCommit ? "" : draft.trim();
   const rows = useMemo(
     () => (options ?? []).filter((o) => !query || matchesWords(`${o.label} ${o.words ?? ""} ${o.group ?? ""}`, query)),
@@ -157,8 +160,8 @@ export function ChipField({
     if (shown) document.getElementById(optionId(active))?.scrollIntoView?.({ block: "nearest" });
   });
   useEffect(() => {
-    if (disabled) setOpen(false);
-  }, [disabled]);
+    if (off) setOpen(false);
+  }, [off]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: told when it changes, not when the callback does
   useEffect(() => {
     onOpenChange?.(shown);
@@ -221,9 +224,9 @@ export function ChipField({
           className={cx("ac-chipfield", className)}
           data-focus={focused || undefined}
           aria-invalid={wiring["aria-invalid"]}
-          aria-disabled={disabled || undefined}
+          aria-disabled={off || undefined}
           onMouseDown={(e) => {
-            if (disabled || (e.target instanceof Element && e.target.closest("button"))) return;
+            if (off || (e.target instanceof Element && e.target.closest("button"))) return;
             if (e.target !== input.current) e.preventDefault();
             input.current?.focus();
             if (listed) setOpen(true);
@@ -242,7 +245,7 @@ export function ChipField({
             inputMode={inputMode}
             autoComplete="off"
             spellCheck={false}
-            disabled={disabled}
+            disabled={off}
             value={draft}
             placeholder={tokens.length && morePlaceholder ? morePlaceholder : placeholder}
             aria-describedby={wiring["aria-describedby"]}

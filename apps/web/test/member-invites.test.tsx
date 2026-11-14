@@ -434,6 +434,10 @@ describe("the invite dialog, one screen", () => {
     await settle(2);
     expect(off(within(dialog()).getByRole("radio", { name: "E-mail" }))).toBe(true);
     expect(off(within(dialog()).getByRole("button", { name: "Concluir" }))).toBe(true);
+    // The chip fields look it too, and their lists don't open.
+    expect(
+      dialog().querySelector("#invite-link-channels")?.closest(".ac-chipfield")?.getAttribute("aria-disabled"),
+    ).toBe("true");
     await key(dialog(), "Escape");
     expect(screen().queryByRole("dialog", { name: "Convidar para a Acme" })).not.toBeNull();
     await make.release();

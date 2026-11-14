@@ -5,7 +5,7 @@ setupDom();
 
 import { act, cleanup, fireEvent, render, within } from "@testing-library/react";
 import { useState } from "react";
-import { ChipField, type ChipFieldOption, type ChipFieldToken, Field, Token } from "../src";
+import { ChipField, type ChipFieldOption, type ChipFieldToken, Field, Locked, Token } from "../src";
 
 afterEach(cleanup);
 
@@ -159,6 +159,32 @@ describe("ChipField: a list under it", () => {
     await act(async () => fireEvent.change(input, { target: { value: "zzz" } }));
     expect(body().getByRole("listbox").textContent).toBe("Nenhum canal com “zzz”.");
   });
+});
+
+test("inside a Locked that runs it's off too: its box says so, and a press on it opens no list to pick from", async () => {
+  const picks: string[] = [];
+  render(
+    <Locked when>
+      <Field label="Canais">
+        <ChipField
+          tokens={[]}
+          placeholder="Adicionar canal…"
+          onRemove={() => {}}
+          options={[{ value: "eng", label: "#eng" }]}
+          onPick={(o) => {
+            picks.push(o.value);
+          }}
+          listLabel="Canais"
+        />
+      </Field>
+    </Locked>,
+  );
+  const box = document.querySelector(".ac-chipfield") as HTMLElement;
+  expect(box.getAttribute("aria-disabled")).toBe("true");
+  expect((body().getByLabelText("Canais") as HTMLInputElement).disabled).toBe(true);
+  await act(async () => fireEvent.mouseDown(box));
+  expect(body().queryByRole("listbox")).toBeNull();
+  expect(picks).toEqual([]);
 });
 
 test("on a phone or a touch screen its words are 16px, as every field's there: iOS zooms into a smaller one", async () => {
