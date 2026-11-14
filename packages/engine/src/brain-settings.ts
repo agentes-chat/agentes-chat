@@ -1853,8 +1853,8 @@ export interface AiComputer {
   /** Its runner takes coding plans' keys (protocol 20). */
   keys: boolean;
   /**
-   * A new sign-in there thinks for all of the caller's agents on it (protocol 29): Claude's, ChatGPT's and a
-   * coding plan's key.
+   * A new sign-in there thinks for all of the caller's agents on it (protocol 29): Claude's, ChatGPT's, Gemini's,
+   * Grok Build's (protocol 65) and a coding plan's key.
    */
   shares: {
     claude_code: boolean;

@@ -152,6 +152,16 @@ export function unusedCopies<A extends MachineAccount>({ logins }: Pick<PlanAcco
 }
 
 /**
+ * The logins a batch removal takes: the viewer's own of one kind, on every computer ("Remove all Grok logins", where
+ * connecting one for every agent left one per agent). Never another person's — the server refuses those anyway — and
+ * never another program's or another kind's. Whoever it thinks for keeps nothing: removing a login is what disconnects
+ * it from its agent too.
+ */
+export function removableLogins<A extends MachineAccount>(accounts: readonly A[], kind: MachineAccountKind): A[] {
+  return accounts.filter((a) => a.mine && a.kind === kind);
+}
+
+/**
  * "Use for…" an account that thinks for all of its owner's agents there (`shared`): the viewer's agents on its
  * computer that don't think with it yet. Never one on the workspace's API key: a plan makes an agent answer only
  * its owner, so that one moves on its own page.

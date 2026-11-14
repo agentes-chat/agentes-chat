@@ -10498,6 +10498,12 @@ export const ptBR = {
       removeCopies: "Remover",
       copiesRemoved_one: "{{count}} login sem uso removido.",
       copiesRemoved_other: "{{count}} logins sem uso removidos.",
+      /** Every Grok login the viewer owns at once (issue #319): one sign-in per agent, removed together. */
+      removeAllGrok: "Remover todos os logins do Grok",
+      removeAllTitle: "Remover todos os {{n}} logins do Grok?",
+      removeAllText:
+        "Eles deixam de pensar nos agentes deles em {{computers}}. Os logins de outras pessoas não são tocados.",
+      removeAllDone: "{{n}} logins do Grok removidos.",
       disconnect: "Desconectar",
       renameTitle: "Renomear {{label}}",
       nameLabel: "Nome",

@@ -447,6 +447,11 @@ export class WorkerLink {
     this.write(JSON.stringify({ type: "codex.auth", account, auth } satisfies WorkerLinkFrame));
   }
 
+  /** A Grok Build sign-in root keeps, refreshed by this agent's Grok: root takes it only for a turn it sent here. */
+  grokAuth(account: string, auth: string) {
+    this.write(JSON.stringify({ type: "grok.auth", account, auth } satisfies WorkerLinkFrame));
+  }
+
   /** What its agent's Chrome sent and received since the last time (protocol 23); nothing when it moved nothing. */
   traffic({ up, down }: { up: number; down: number }) {
     if (up > 0 || down > 0) this.write(JSON.stringify({ type: "browser.traffic", up, down } satisfies WorkerLinkFrame));
@@ -566,6 +571,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     agentHome: (kind: AccountKind, id: string) => agentAccountHome(home, kind, id),
     noteRateLimit: (account: string, info: unknown) => link.usage("claude_code", account, info),
     codexAuth: (account: string, auth: string) => link.codexAuth(account, auth),
+    grokAuth: (account: string, auth: string) => link.grokAuth(account, auth),
   };
   const tasks = new TaskManager({
     mcp: mcpCommand,

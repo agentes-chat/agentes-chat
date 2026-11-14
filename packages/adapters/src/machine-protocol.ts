@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 65;
+export const MACHINE_PROTOCOL_VERSION = 66;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -669,6 +669,14 @@ export const ACCESS_ALLOW_PROTOCOL = 62;
  * switch on a plugged iPhone that hides it. Older runners answer `phone.look` at once and `xcode.open` `bad_request`.
  */
 export const IPHONE_DEV_MODE_PROTOCOL = 65;
+/**
+ * From this protocol on, in system mode a Grok Build sign-in is made for all of its owner's agents there too
+ * (`begin`'s `shared` for `grok`): root's `GROK_HOME` keeps the sign-in (`auth.json`, never lent) and each agent's
+ * turn gets a copy in its own folder for the account (`grok_auth` grant), a copy its Grok refreshed going back to
+ * root (`grok.auth`). An older runner lends the account's folder to one agent, so the server reads it as one login
+ * per agent, as before.
+ */
+export const SHARED_GROK_PROTOCOL = 66;
 
 export type PhonePlatform = "android" | "ios";
 export type PhoneKind = "device" | "emulator" | "simulator";
