@@ -9,6 +9,13 @@ export const DM_SIDE_NARROW_QUERY = "(max-width: 1099px)";
 export const DM_SIDE_WIDE_QUERY = "(min-width: 1100px)";
 
 /**
+ * Under this, a channel's dashboard leaves the chat too little room beside it (and beside the members): it floats over
+ * the chat (ADR 0135 §21).
+ */
+export const CHANNEL_BOARD_NARROW_QUERY = "(max-width: 1499px)";
+export const CHANNEL_BOARD_WIDE_QUERY = "(min-width: 1500px)";
+
+/**
  * A column on the right of a conversation: open by default at `openQuery`, closed below it, the person's last choice
  * in this workspace wins. A personal workspace starts it closed at every width (ADR 0159 §3): only a choice never
  * saved follows the mode, so a saved one (from either mode) still wins. At `sheetQuery` it isn't a column: it opens
@@ -40,3 +47,7 @@ export const useMembersColumn = () => useSideColumn(STORAGE_KEYS.membersColumn, 
 
 /** The sidebar of a DM with an agent: a column on a wide window, else floating over the chat. */
 export const useDmSidebar = () => useSideColumn(STORAGE_KEYS.dmSidebar, DM_SIDE_NARROW_QUERY, DM_SIDE_WIDE_QUERY);
+
+/** A channel's dashboard (ADR 0135 §21): a column on a wide window, else floating over the chat. */
+export const useChannelBoardColumn = () =>
+  useSideColumn(STORAGE_KEYS.channelBoard, CHANNEL_BOARD_NARROW_QUERY, CHANNEL_BOARD_WIDE_QUERY);

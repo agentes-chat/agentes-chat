@@ -63,6 +63,30 @@ export function boardSearch(search: Record<string, unknown>): ReturnType<typeof 
   return { ...taskSearch(search), ...(project ? { project } : {}) };
 }
 
+/** `validateSearch` for a page with a board: `widget`, the widget open in its side panel (ADR 0135 §14). */
+export function widgetSearch(search: Record<string, unknown>): { widget?: string } {
+  const v = search.widget;
+  return typeof v === "string" && v ? { widget: v } : {};
+}
+
+/** A thread or an agent's page opening beside a channel takes the place of its dashboard's widget (ADR 0135 §21). */
+function withoutWidget(search: Record<string, unknown>) {
+  const { widget: _widget, ...rest } = search;
+  return rest;
+}
+
+/**
+ * `validateSearch` for a channel: the one panel beside it, a thread (`threadSearch`), an agent's page
+ * (`agentPanelSearch`) or a widget of its dashboard (`widgetSearch`). An address with a widget and another panel
+ * shows the other: opening either takes the widget out, so only a hand-written address holds both.
+ */
+export function channelPanelSearch(
+  search: Record<string, unknown>,
+): ReturnType<typeof threadSearch> & ReturnType<typeof agentPanelSearch> & ReturnType<typeof widgetSearch> {
+  const held = { ...threadSearch(search), ...agentPanelSearch(search) };
+  return held.thread || held.agent ? held : { ...held, ...widgetSearch(search) };
+}
+
 /** The thread open in the panel beside a conversation: `reply` puts the focus in its composer, `focus` opens at a message. */
 export interface ThreadPanel {
   id: string;
@@ -83,7 +107,8 @@ export function threadSearch(search: Record<string, unknown>): { thread?: string
 /**
  * The thread in a conversation's panel, kept in the URL (`?thread=…`) so a reload, a shared link and Back and Forward
  * keep it. Unlike `useOpenParam` each change is a history entry, so Back closes what was just opened; `replace` is for
- * a thread found gone, which leaves nothing to come back to. One panel at a time: a thread takes the agent's page out.
+ * a thread found gone, which leaves nothing to come back to. One panel at a time: a thread takes the agent's page (or a
+ * dashboard's widget) out.
  * `enabled` false (a thread view, which holds no panel of its own but shares the URL with the conversation beside it):
  * always empty.
  */
@@ -108,7 +133,7 @@ export function useThreadPanel(
           const { thread: _thread, reply: _reply, tm: _tm, ...rest } = prev;
           if (!next) return rest;
           return {
-            ...withoutAgentPanel(rest),
+            ...withoutWidget(withoutAgentPanel(rest)),
             thread: next.id,
             ...(next.reply ? { reply: true } : {}),
             ...(next.focus ? { tm: next.focus } : {}),
@@ -141,7 +166,7 @@ function withoutAgentPanel(search: Record<string, unknown>) {
 /**
  * The agent's page in a conversation's panel, kept in the URL (`?agent=…&agentTab=…`) as `useThreadPanel` keeps a
  * thread: opening and closing it are history entries, so Back closes it and Back after another page brings it back;
- * `replace` is for a tab picked inside it. Opening it takes the thread out. `enabled` false (a conversation inside a
+ * `replace` is for a tab picked inside it. Opening it takes the thread (or a dashboard's widget) out. `enabled` false (a conversation inside a
  * panel, sharing the URL with the one beside it): always empty.
  */
 export function useAgentPanel(
@@ -164,7 +189,7 @@ export function useAgentPanel(
         search: ((prev: Record<string, unknown>) => {
           const rest = withoutAgentPanel(prev);
           if (!next) return rest;
-          const { thread: _thread, reply: _reply, tm: _tm, ...others } = rest;
+          const { thread: _thread, reply: _reply, tm: _tm, ...others } = withoutWidget(rest);
           return {
             ...others,
             agent: next.agentId,

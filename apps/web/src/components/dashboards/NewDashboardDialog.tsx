@@ -1,4 +1,4 @@
-import { editorsInput, useCreateDashboard } from "@agenteschat/client";
+import { type Dashboard, editorsInput, useCreateDashboard } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { Button, Dialog, DialogBody, DialogFooter, Field, Input, Locked } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
@@ -11,9 +11,18 @@ import "@/pages/dashboards.css";
 
 /**
  * New dashboard (ADR 0135 §8, §10): its name (with a line saying an agent builds one when asked in a chat), who sees
- * it and who edits it, with the note on what whoever sees it sees. Creating opens the new, empty board.
+ * it and who edits it, with the note on what whoever sees it sees. Creating opens the new, empty board, or hands it to
+ * `onCreated` (a channel's column links it there and stays, ADR 0135 §21).
  */
-export function NewDashboardDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function NewDashboardDialog({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated?: (board: Dashboard) => void;
+}) {
   const { t } = useTranslation();
   const nameRef = useRef<HTMLInputElement>(null);
   return (
@@ -27,12 +36,20 @@ export function NewDashboardDialog({ open, onClose }: { open: boolean; onClose: 
       className="db-dialog"
       initialFocus={nameRef}
     >
-      {open && <NewDashboardBody nameRef={nameRef} onClose={onClose} />}
+      {open && <NewDashboardBody nameRef={nameRef} onClose={onClose} onCreated={onCreated} />}
     </Dialog>
   );
 }
 
-function NewDashboardBody({ nameRef, onClose }: { nameRef: RefObject<HTMLInputElement | null>; onClose: () => void }) {
+function NewDashboardBody({
+  nameRef,
+  onClose,
+  onCreated,
+}: {
+  nameRef: RefObject<HTMLInputElement | null>;
+  onClose: () => void;
+  onCreated?: (board: Dashboard) => void;
+}) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const navigate = useNavigate();
@@ -59,8 +76,9 @@ function NewDashboardBody({ nameRef, onClose }: { nameRef: RefObject<HTMLInputEl
       },
       {
         onSuccess: (board) => {
-          toast.show(t("dashboards.create.created", { title: board.title }), "success");
           onClose();
+          if (onCreated) return onCreated(board);
+          toast.show(t("dashboards.create.created", { title: board.title }), "success");
           void navigate({
             to: "/org/$orgId/dashboards/$dashboardId",
             params: { orgId: org.id, dashboardId: board.id },
