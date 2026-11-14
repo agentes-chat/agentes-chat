@@ -799,6 +799,16 @@ tools. A model without prices costs nothing in budgets (its tokens are still cou
 `http://` are allowed on a self-hosted server, unless `ALLOW_SIGNUP=true` lets anyone in; set
 `MODEL_ENDPOINTS_PRIVATE` to choose (`false` allows only public https ones, what agentes.chat Cloud does).
 
+GPT-5/6 family IDs on these Chat Completions endpoints use `max_completion_tokens`, including reasoning tokens,
+as [Azure's reasoning API requires](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/reasoning).
+Other custom models and OpenRouter keep `max_tokens`. The deployment ID is sent unchanged; an arbitrary
+deployment alias does not identify its underlying model family.
+
+On Azure's `/openai/v1` endpoints (`*.openai.azure.com` and `*.cognitiveservices.azure.com`), GPT-6.1 Sol uses
+the existing Responses adapter for every turn, including tool-result follow-ups. Its Chat Completions API
+rejects reasoning with tools, while the model rejects `reasoning_effort: none`. Responses preserves reasoning
+and tools together, with `max_output_tokens` and `store: false`. Other models and endpoints keep their existing API.
+
 **Sign-up.** The first account is allowed unless an owner link or the desktop app's owner key holds
 it (below). After it, with `ALLOW_SIGNUP=false` (the default), only invited people get in: invited by
 email from **Settings → Members and invitations**. A workspace's invitation link lets nobody in by
