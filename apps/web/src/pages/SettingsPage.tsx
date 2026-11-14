@@ -720,8 +720,8 @@ function UsageStatisticsCard() {
               </InfoHint>
             </span>
             {inApp ? (
-              <span className="settings-row__status ac-actline" id="set-telemetry-help">
-                <span>{t("settings.telemetry.envOffHere")}</span>
+              <span className="settings-row__status ac-actline">
+                <span id="set-telemetry-help">{t("settings.telemetry.envOffHere")}</span>
                 <OpenPrefsButton tab="servers">{t("machines.thisMac.openServers")}</OpenPrefsButton>
               </span>
             ) : (
