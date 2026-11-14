@@ -67,7 +67,7 @@
     "create": "역할 만들기",
     "base": "기본",
     "everyoneName": "모든 사람",
-    "orderHint": "순서가 중요해요. 위에 있는 사람이 아래 역할과 사람을 관리해요.",
+    "orderHint": "위에 있는 사람이 아래의 역할과 사람을 관리해요. 각 사람의 이름 색은 그 사람의 가장 높은 역할에서 와요. 끌어서 순서를 바꾸세요.",
     "reorder": "순서 변경",
     "reorderDone": "완료",
     "moveUp": "{{name}} 위로 이동",
@@ -108,6 +108,26 @@
         "none": "아무도 에이전트의 컴퓨터나 브라우저, 로그인 요청을 보거나 쓸 수 없어요",
         "browser": "자기 에이전트의 브라우저와 자신에게 온 로그인 요청, 전체 화면은 안 돼요",
         "full": "자기 에이전트와 자신이 연결한 컴퓨터의 전체 화면과 터미널"
+      },
+      "steps": {
+        "off": "사용 안 함",
+        "ownBrowser": "자기 에이전트의 브라우저",
+        "ownComputer": "자기 에이전트의 컴퓨터",
+        "anyBrowser": "모든 에이전트의 브라우저",
+        "anyComputer": "모든 에이전트의 컴퓨터"
+      },
+      "short": {
+        "browser": "브라우저",
+        "computer": "컴퓨터"
+      },
+      "groupOwn": "자기 에이전트",
+      "groupAny": "모든 에이전트",
+      "hint": "브라우저: 브라우저와 로그인 요청. 컴퓨터: 전체 화면과 터미널까지. 자기 에이전트: 그 사람이 책임지는 에이전트와 그 사람이 연결한 컴퓨터.",
+      "with": {
+        "ownBrowser": "자기 에이전트의 브라우저",
+        "ownComputer": "자기 에이전트의 컴퓨터",
+        "anyBrowser": "모든 에이전트의 브라우저",
+        "anyComputer": "모든 에이전트의 컴퓨터"
       }
     },
     "everyoneNote": "워크스페이스의 모든 사람에게 적용돼요. 다른 역할은 여기에 권한을 더하기만 해요.",
@@ -143,10 +163,10 @@
     "name": "이름",
     "nameDesc": "모두에게 보이는 이름이에요.",
     "color": "색상",
-    "colorDesc": "역할 표시의 색이에요.",
+    "colorDesc": "역할 배지와, 이 역할이 가장 높은 사람의 이름에 색을 입혀요.",
     "colorOf": "{{color}} 색상",
     "hoist": "멤버 목록에 따로 표시",
-    "hoistDesc": "이 역할이 있는 사람은 멤버 열에서 별도 그룹으로 표시돼요.",
+    "hoistDesc": "이 역할이 있는 사람은 멤버 열에서 따로 묶여 보여요. 에이전트는 자기 그룹에 남아요.",
     "icon": "아이콘",
     "iconDesc": "이름 옆에 표시돼요.",
     "more": "옵션 더 보기",
@@ -165,7 +185,7 @@
     },
     "newTitle": "역할 만들기",
     "newSub": "모든 내용은 나중에 바꿀 수 있어요.",
-    "namePlaceholder": "예: 모더레이터",
+    "namePlaceholder": "예: 지원",
     "startFrom": "시작 템플릿",
     "templates": {
       "blank": "없음",
@@ -187,7 +207,131 @@
     "added_other": "{{name}} 역할을 가진 사람 {{count}}명",
     "rolesOf": "{{name}}의 역할",
     "rolesCta": "역할",
-    "aboveYou": "내 역할보다 위"
+    "aboveYou": "내 역할보다 위",
+    "search": "역할 검색",
+    "noneYet": "아직 역할이 없어요. 일부 사람에게 더 많은 권한을 주려면 역할을 만드세요.",
+    "noMatch": "“{{q}}”와 일치하는 역할이 없어요.",
+    "full": "이 워크스페이스에는 이미 역할이 {{max}}개 있어요. 새로 만들려면 하나를 삭제하세요.",
+    "loadError": "역할을 불러오지 못했어요. {{cause}}",
+    "move": "{{name}} 이동",
+    "moveHint": "끌어서 옮기거나 스페이스와 화살표 키를 사용하세요.",
+    "reach": {
+      "permissions_other": "권한 +{{count}}개",
+      "channels_other": "채널 +{{count}}개",
+      "agents_other": "에이전트 +{{count}}개",
+      "basePermissions_other": "권한 {{count}}개",
+      "baseChannels_other": "채널 {{count}}개",
+      "baseAgents_other": "에이전트 {{count}}개",
+      "owner": "언제나 모든 것을 할 수 있음",
+      "admin": "모든 것을 할 수 있음",
+      "none": "모든 사람이 할 수 있는 것만",
+      "hidden_other": "내게 보이지 않는 {{count}}개"
+    },
+    "switchTo": "다른 역할로 이동",
+    "look": "이름, 색상, 아이콘 변경",
+    "lookColor": "색상 변경",
+    "inviteWith": "이 역할로 초대",
+    "tabs": {
+      "permissions": "권한",
+      "channels": "채널",
+      "agents": "에이전트",
+      "people": "사람"
+    },
+    "gone": "누군가 이 역할을 삭제했어요.",
+    "backToList": "역할로 돌아가기",
+    "searchPermission": "권한 검색",
+    "noPermissionMatch": "“{{q}}”와 일치하는 권한이 없어요.",
+    "everyoneTip": "모든 사람이 할 수 있어요. 클릭해서 할 수 있는 사람을 고르세요.",
+    "only": "{{names}}만",
+    "notHeld": "이 권한이 없어요.",
+    "nowAbove": "이 역할은 이제 내 역할보다 위에 있어요. 더 위에 있는 사람만 바꿀 수 있어요.",
+    "agentsNote": "역할은 사람에게 적용돼요. 각 에이전트의 권한은 해당 에이전트 페이지에 있어요.",
+    "adminHint": "소유자만 할 수 있는 일을 빼고 모든 것을 할 수 있어요. 워크스페이스를 관리하는 사람에게만 주세요.",
+    "adminOn": "관리자 권한으로 {{name}}은(는) 소유자만 할 수 있는 일을 빼고 모든 것을 할 수 있어요.",
+    "adminAsk": {
+      "title": "{{name}}에서 관리자를 켤까요?",
+      "text_other": "{{name}}이(가) 있는 사람은 소유자만 할 수 있는 일을 빼고 모든 것을 할 수 있게 돼요. {{count}}명이에요.",
+      "confirm": "관리자 켜기"
+    },
+    "who": {
+      "title": "{{short}} 권한을 가진 사람",
+      "everyoneDesc": "워크스페이스의 모든 사람",
+      "some": "일부 역할만",
+      "owners": "소유자는 언제나 할 수 있어요.",
+      "losing": "더 이상 할 수 없게 되는 사람:",
+      "gaining": "할 수 있게 되는 사람:",
+      "everyoneGains": "모든 사람이 할 수 있게 돼요.",
+      "nobody": "잃는 사람이 없어요.",
+      "noRoles": "아직 다른 역할이 없어요.",
+      "computersTitle": "{{what}}을(를) 계속 쓰는 사람",
+      "computersLow": "모든 사람이 {{what}}을(를) 쓰게 돼요.",
+      "computersNone": "모든 사람이 에이전트의 컴퓨터를 쓰지 않게 돼요."
+    },
+    "channels": {
+      "line": "{{name}}이(가) 있는 사람은 체크한 채널을 보고 참여할 수 있어요.",
+      "lineBase": "모든 사람이 체크한 채널을 보고 참여할 수 있어요.",
+      "hint": "사람에게 적용돼요. 에이전트는 누군가 추가할 때 채널에 들어가요.",
+      "search": "채널 검색",
+      "general": "모든 사람이 #general에 남아요.",
+      "notYours": "볼 수 있는 사람은 #{{channel}}을(를) 만든 사람이나 채널을 정리하는 사람만 바꿀 수 있어요.",
+      "removeTitle": "{{name}}에서 #{{channel}}을(를) 뺄까요?",
+      "leave": "채널에서 나가는 사람:",
+      "openTitle": "#{{channel}}을(를) {{name}}에 열까요?",
+      "openText": "{{name}}이(가) 있는 사람은 채널과 모든 기록을 보고 참여할 수 있어요.",
+      "open": "열기",
+      "openAllTitle": "#{{channel}}을(를) 모든 사람에게 열까요?",
+      "openAllText": "모든 기록이 워크스페이스에 공개돼요.",
+      "admin": "관리자 권한으로 {{name}}이(가) 있는 사람은 모든 채널을 봐요.",
+      "onlyGeneral": "지금은 #general만 있어요.",
+      "noMatch": "“{{q}}”와 일치하는 채널이 없어요."
+    },
+    "sees": {
+      "title": "#{{channel}}을(를) 보는 사람",
+      "private": "추가된 사람만",
+      "privateDesc": "새로운 사람은 볼 수 없어요. 있던 사람은 남아요.",
+      "unsee": "있던 사람은 남아요. 더 이상 볼 수 없게 되는 사람:"
+    },
+    "agents": {
+      "line": "{{name}}이(가) 있는 사람은 체크한 에이전트와 대화해요.",
+      "lineBase": "모든 사람이 체크한 에이전트와 대화해요.",
+      "hint": "사람에 관한 설정이에요. 각 에이전트가 하는 일은 해당 페이지에 있어요.",
+      "noTalk": "{{name}}만 있는 사람은 에이전트와 대화하지 않아요.",
+      "turnOnTalk": "에이전트와 대화 켜기",
+      "search": "에이전트 검색",
+      "notYours": "{{name}}의 담당자인 {{owner}}이나 모든 에이전트를 편집하는 사람만 바꿀 수 있어요.",
+      "notYoursNoOwner": "모든 에이전트를 편집하는 사람만 바꿀 수 있어요.",
+      "none": "아직 에이전트가 없어요.",
+      "noMatch": "“{{q}}”와 일치하는 에이전트가 없어요."
+    },
+    "talks": {
+      "title": "{{name}}와(과) 대화하는 사람",
+      "some": "일부 역할과 사람만",
+      "ownerDesc": "{{name}}의 담당자",
+      "losing": "더 이상 {{agent}}와(과) 대화하지 않는 사람:"
+    },
+    "holders": {
+      "agent": "{{name}}은(는) 에이전트예요. 에이전트에는 역할이 없어요.",
+      "seeAgents": "에이전트 보기",
+      "removed": "{{person}}에게서 {{name}}을(를) 뺐어요",
+      "undo": "실행 취소",
+      "selfTitle": "나를 {{name}}에서 뺄까요?",
+      "selfText": "{{name}}만 주는 권한을 잃어요. 내 위에 있는 사람만 되돌려 줄 수 있어요.",
+      "noMatch": "“{{q}}”와 일치하는 사람이 없어요."
+    },
+    "mail": {
+      "title": "{{agent}}이(가) {{owner}}의 메일함을 잃어요",
+      "titleMany": "에이전트가 메일함을 잃어요",
+      "lead": "대화하는 사람이 늘면 에이전트는 이 메일함을 더 이상 읽지 않아요.",
+      "of": "{{owner}}의 메일함 · {{agent}}",
+      "again": "메일함은 그것을 준 사람만 다시 줄 수 있어요.",
+      "addAnyway": "그래도 추가",
+      "giveAnyway": "그래도 주기"
+    },
+    "previewWhere": "채팅에서",
+    "sameAs": "같게",
+    "deleteLeave": "{{name}}을(를) 통해서만 보던 채널에서 나가는 사람:",
+    "deleteReading": "채널에서 나가는 사람을 확인하는 중…",
+    "ownerAdd": "소유자 추가"
   },
   "permissions": {
     "areas": {
@@ -6655,6 +6799,7 @@
     "everyoneNote": "모두는 워크스페이스의 모든 사람에게 적용돼요.",
     "everyoneNotePersonal": "역할이 없으면 에이전트를 사용해요. {{role}} 역할이 있으면 관리를 도와줘요.",
     "noRolesToGive": "부여할 수 있는 하위 역할이 없어요.",
+    "rolesAbove": "내 역할보다 위의 역할은 보이지 않아요.",
     "roleFilter": "역할",
     "rolesCount_other": "역할 {{count}}개",
     "title": "멤버",
@@ -9919,6 +10064,7 @@
     "someone": "누군가"
   },
   "palette": {
+    "roleKeywords": "역할 만들기 새 권한",
     "newWikiKeywords": "Wiki 새 페이지 만들기 생성 문서",
     "actions": "작업",
     "inviteSub": "이메일 또는 링크로",
@@ -13067,7 +13213,7 @@
       "aboveYou": "이 역할보다 위에 있는 사람만 변경할 수 있어요.",
       "base": "모든 워크스페이스에는 ‘모두’ 역할이 항상 있어요.",
       "unknown": "그 역할은 더 이상 없어요.",
-      "orderIncomplete": "역할이 바뀌었어요. 새로고침하고 다시 시도하세요."
+      "orderIncomplete": "옮기는 동안 역할이 바뀌었어요. 새로고침하고 다시 시도하세요."
     },
     "teamProposal": {
       "undoExpired": "이 팀을 만든 지 하루가 넘어서 여기서는 되돌릴 수 없어요. 각 에이전트 페이지에서 보관하세요."
@@ -14717,7 +14863,7 @@
       "general": "일반",
       "right_hand": "오른팔",
       "members": "멤버와 초대",
-      "roles": "역할과 권한",
+      "roles": "역할",
       "vault": "Vault",
       "access": "에이전트와 접근 권한",
       "connectors": "커넥터와 MCP",
@@ -14748,7 +14894,7 @@
       "general": "이름, 시간대, 모든 에이전트가 워크스페이스에 대해 아는 내용이에요.",
       "right_hand": "각 사람과 DM에서 팀을 꾸리는 어시스턴트예요.",
       "members": "워크스페이스에 있는 사람과 초대예요.",
-      "roles": "각 사람이 할 수 있는 일이에요. 역할은 합산돼요.",
+      "roles": "각 역할은 권한, 채널, 에이전트를 더해요.",
       "vault": "에이전트의 비밀번호, 키, 연락처예요. 비밀번호는 절대 보지 않아요.",
       "access": "각 에이전트가 사용할 수 있는 것이에요. 커넥터마다 하나의 수준이 있어요.",
       "connectors": "워크스페이스 전체에 한 번 연결하는 서비스와 MCP 서버예요.",
