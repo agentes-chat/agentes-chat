@@ -1022,10 +1022,16 @@ const REPOSITORY_PAGE: GithubFetchOptions = { maxBytes: 0, tooLarge: "", redirec
  */
 export async function hiddenRepository(deps: GithubReadDeps, orgId: string, target: GithubTarget) {
   const page = `https://github.com/${encodePath(`${target.owner}/${target.repo}`)}`;
-  const { res } = await githubGet(deps, page, "text/html", REPOSITORY_PAGE);
-  await res.body?.cancel();
-  if (res.ok) return null;
-  return workspaceRepository(deps, orgId, target, null);
+  let limited: TooManyError | null = null;
+  try {
+    const { res } = await githubGet(deps, page, "text/html", REPOSITORY_PAGE);
+    await res.body?.cancel();
+    if (res.ok) return null;
+  } catch (err) {
+    if (!(err instanceof TooManyError) || err.code !== "github.limited") throw err;
+    limited = err;
+  }
+  return workspaceRepository(deps, orgId, target, null, limited);
 }
 
 /**
