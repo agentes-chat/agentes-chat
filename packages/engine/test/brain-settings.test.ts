@@ -166,7 +166,7 @@ describe("brain settings", () => {
       opencode: "runner_old",
       grok: "system",
       antigravity: "system",
-      muse: "not_installed",
+      muse: "runner_old",
     });
     expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL, executors })).opencode).toBeNull();
     expect(reasons(mac({ os: "darwin", protocol: OPENCODE_ACP_PROTOCOL - 1, executors }))).toEqual({
@@ -174,14 +174,14 @@ describe("brain settings", () => {
       opencode: null,
       grok: null,
       antigravity: "system",
-      muse: "not_installed",
+      muse: "runner_old",
     });
     expect(reasons(mac({ os: "linux", protocol: OPENCODE_ACP_PROTOCOL, executors }))).toEqual({
       cursor: null,
       opencode: null,
       grok: null,
       antigravity: null,
-      muse: "not_installed",
+      muse: "runner_old",
     });
   });
 
