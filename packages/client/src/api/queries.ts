@@ -118,6 +118,7 @@ import type {
   DmRead,
   DmTarget,
   EndpointModel,
+  EndpointStyle,
   ForeignMailbox,
   GifCategory,
   GifKey,
@@ -1052,8 +1053,11 @@ export function useSetEndpointModels(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { credentialId: string; models: EndpointModel[] }) =>
-      api.agents.setEndpointModels(orgId, input.credentialId, input.models),
+    mutationFn: (input: {
+      credentialId: string;
+      models: EndpointModel[];
+      where?: { style?: EndpointStyle; baseURL?: string };
+    }) => api.agents.setEndpointModels(orgId, input.credentialId, input.models, input.where),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.models });
       return qc.invalidateQueries({ queryKey: keys.credentials(orgId) });

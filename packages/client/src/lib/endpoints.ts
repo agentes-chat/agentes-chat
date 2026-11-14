@@ -36,6 +36,42 @@ export const emptyEndpointDraft = (): EndpointDraft => ({
 export const endpointBaseExample = (style: EndpointStyle) =>
   style === "anthropic" ? "https://api.example.com/anthropic" : "https://api.example.com/v1";
 
+/**
+ * A server a person may start from, so the common ones aren't typed from memory (and misspelled): the products the
+ * ADR names, at the address each answers on when run on the same computer, plus the gateways people bring. Only a
+ * starting point — every field stays editable, and the address is checked like a typed one.
+ */
+export interface EndpointPreset {
+  /** Its name, also the suggested key name; a product's own, so never translated. */
+  label: string;
+  style: EndpointStyle;
+  baseURL: string;
+  /** It runs on this computer: a server that refuses private addresses (`MODEL_ENDPOINTS_PRIVATE`) can't reach it. */
+  local?: boolean;
+}
+
+export const ENDPOINT_PRESETS: readonly EndpointPreset[] = [
+  { label: "OpenGateway", style: "openai", baseURL: "https://apis.opengateway.ai/v1" },
+  { label: "TokenRouter", style: "openai", baseURL: "https://api.tokenrouter.com/v1" },
+  { label: "Refuseless", style: "openai", baseURL: "https://api.refuseless.com/v1" },
+  { label: "Vercel AI Gateway", style: "openai", baseURL: "https://ai-gateway.vercel.sh/v1" },
+  { label: "Venice", style: "openai", baseURL: "https://api.venice.ai/api/v1" },
+  { label: "Ollama", style: "openai", baseURL: "http://localhost:11434/v1", local: true },
+  { label: "LM Studio", style: "openai", baseURL: "http://localhost:1234/v1", local: true },
+  { label: "vLLM", style: "openai", baseURL: "http://localhost:8000/v1", local: true },
+  { label: "LiteLLM", style: "openai", baseURL: "http://localhost:4000/v1", local: true },
+];
+
+/** The form with a preset taken: the address and its API, and its name where none was typed yet. */
+export function withPreset(draft: EndpointDraft, preset: EndpointPreset): EndpointDraft {
+  return {
+    ...draft,
+    name: draft.name.trim() ? draft.name : preset.label,
+    style: preset.style,
+    baseURL: preset.baseURL,
+  };
+}
+
 const MODEL_ID = /^[\w.:/@+-]{1,200}$/;
 export const MAX_ENDPOINT_MODELS = 30;
 

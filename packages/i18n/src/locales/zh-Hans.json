@@ -9174,6 +9174,7 @@
     "option": "其他提供方",
     "optionSub": "兼容 OpenAI 或 Claude：网关、Ollama、vLLM、LM Studio、LiteLLM",
     "name": "名称",
+    "preset": "从…开始",
     "namePlaceholder": "我的网关",
     "style": "API",
     "styles": {

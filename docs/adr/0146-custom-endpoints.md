@@ -45,3 +45,21 @@ On agentes.chat Cloud the address must be https and every address its host resol
 
 - A workspace with only an endpoint has no model for routing, the judge or summaries: those need a provider that follows a JSON schema.
 - Telemetry counts endpoint models as `other`; their names never leave the server.
+
+## Addendum 2026-11-12: the address and the API are editable, and a preset fills them
+
+§1 said the saved address and key stay: changing its models was the only thing `PUT …/credentials/{id}/models`
+could do. A gateway that moved, or an address typed wrong, could therefore never be fixed — the row had to be
+deleted and made again, which loses the credential its agents point at. The key is the part that must be retyped to
+be replaced (it is sealed and never read back); the address is not.
+
+`PUT …/credentials/{id}/models` now takes `style` and `baseURL` beside `models`, and `updateEndpointModels` judges a
+new address exactly as `createCredential` does (`endpointAddress` with the same `EndpointNet`, so the Cloud's https and
+public rules apply). It keeps the credential, its key and the agents using it, and audits
+`credential.endpoint_changed` with both addresses. The models of the old address mean nothing at a new one: the form
+re-lists them, and their prices are kept only for ids that come back. `EndpointForm` shows the API and the address in
+its editing state for that.
+
+`ENDPOINT_PRESETS` (`packages/client/src/lib/endpoints.ts`) fills the name, the API and the address from a short list
+of known servers — the gateways people bring and the local ones §5 names — so the common ones aren't typed from
+memory. It is only a start: every field stays editable, and the address is checked like a typed one.

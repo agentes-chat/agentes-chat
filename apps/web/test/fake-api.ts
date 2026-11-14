@@ -2630,8 +2630,10 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         log("agents.endpointModels", orgId, { ...input, apiKey: "[redacted]" });
         return state.endpointList ?? { baseURL: input.baseURL, models: [] };
       },
-      setEndpointModels: async (orgId, credentialId, models) => {
-        log("agents.setEndpointModels", orgId, credentialId, models);
+      setEndpointModels: async (orgId, credentialId, models, where) => {
+        log("agents.setEndpointModels", orgId, credentialId, { models, ...(where ?? {}) });
+        const cred = state.credentials.find((c) => c.id === credentialId);
+        if (cred?.endpoint && where) cred.endpoint = { ...cred.endpoint, ...where };
         return { models, checks: models.map((m) => ({ model: m.id, check: "ok" as const })) };
       },
       rotateCredential: async (orgId, credentialId, input) => {

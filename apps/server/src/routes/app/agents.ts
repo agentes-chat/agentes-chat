@@ -549,17 +549,30 @@ export function agentRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/credentials/{credentialId}/models",
       tags,
       security,
-      summary: "Change an endpoint's models and prices, then test each again (admins, ADR 0146)",
+      summary: "Change an endpoint's address, API, models and prices, then test each again (admins, ADR 0146)",
+      description:
+        "Omit `baseURL` and `style` to keep them. A new address is checked like a saved one (https and public on the Cloud, `MODEL_ENDPOINTS_PRIVATE` here) and keeps the credential, its key and its agents.",
       request: {
         params: OrgParams.extend({ credentialId: z.uuid() }),
-        body: body(z.object({ models: z.array(EndpointModel) })),
+        body: body(
+          z.object({
+            models: z.array(EndpointModel),
+            style: EndpointStyle.optional(),
+            baseURL: z.string().min(1).max(500).optional(),
+          }),
+        ),
       },
       responses: { 200: json(z.object({ models: z.array(EndpointModel), checks: z.array(EndpointCheck) })), ...errors },
     }),
     async (c) => {
       const { orgId, credentialId } = c.req.valid("param");
       const userId = c.get("user").id;
-      await updateEndpointModels(db, userId, orgId, credentialId, c.req.valid("json").models.map(modelIn));
+      const { models, style, baseURL } = c.req.valid("json");
+      await updateEndpointModels(db, userId, orgId, credentialId, models.map(modelIn), {
+        ...(style ? { style } : {}),
+        ...(baseURL !== undefined ? { baseURL } : {}),
+        net: endpointNet(deps),
+      });
       const checks = await endpointChecks(deps, userId, orgId, credentialId);
       const saved = (await listCredentials(db, userId, orgId)).find((r) => r.id === credentialId);
       return c.json({ models: (saved?.endpoint?.models ?? []).map(modelOut), checks }, 200);

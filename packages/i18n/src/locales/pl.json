@@ -10196,6 +10196,7 @@
     "option": "Inny dostawca",
     "optionSub": "Zgodny z OpenAI lub Claude: bramka, Ollama, vLLM, LM Studio, LiteLLM",
     "name": "Nazwa",
+    "preset": "Zacznij od",
     "namePlaceholder": "Moja bramka",
     "style": "API",
     "styles": {

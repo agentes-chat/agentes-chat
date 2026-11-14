@@ -9123,6 +9123,7 @@
     "option": "다른 제공자",
     "optionSub": "OpenAI 또는 Claude 호환: 게이트웨이, Ollama, vLLM, LM Studio, LiteLLM",
     "name": "이름",
+    "preset": "다음에서 시작",
     "namePlaceholder": "내 게이트웨이",
     "style": "API",
     "styles": {

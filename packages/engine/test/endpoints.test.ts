@@ -355,3 +355,47 @@ describe("the test call", () => {
     expect(await checkCredential(f.db, f.gateway, f.owner.id, f.org.id, cred.id)).toBe("unchecked");
   });
 });
+
+/**
+ * An address typed wrong, or a gateway that moved, is fixable where it is (ADR 0146 §1): the credential and its key
+ * stay, so the agents using it keep working, and the new address is judged like a saved one.
+ */
+describe("changing an endpoint's address", () => {
+  test("takes the new address and API, keeping the credential, its key and its models", async () => {
+    f = await setup();
+    const cred = await addEndpoint(f);
+    const next = await updateEndpointModels(f.db, f.owner.id, f.org.id, cred.id, [{ id: "llama-4" }], {
+      style: "anthropic",
+      baseURL: "https://other.example/anthropic/v1/messages",
+      net: cloud,
+    });
+    // The SDK's own path suffix is left out, as on the way in.
+    expect(next.baseURL).toBe("https://other.example/anthropic");
+    expect(next.style).toBe("anthropic");
+    const [saved] = (await listCredentials(f.db, f.owner.id, f.org.id)).filter((c) => c.id === cred.id);
+    expect(saved?.endpoint).toMatchObject({ style: "anthropic", baseURL: "https://other.example/anthropic" });
+    expect(saved?.id).toBe(cred.id);
+    expect(saved?.keyHint).toBe(cred.keyHint);
+    const [audited] = await f.db
+      .select({ action: schema.auditLog.action, details: schema.auditLog.details })
+      .from(schema.auditLog)
+      .where(eq(schema.auditLog.action, "credential.endpoint_changed"));
+    expect(audited?.details).toMatchObject({ from: "https://gw.example/v1", to: "https://other.example/anthropic" });
+  });
+
+  test("omitting them keeps the address; a refused one changes nothing", async () => {
+    f = await setup();
+    const cred = await addEndpoint(f);
+    const kept = await updateEndpointModels(f.db, f.owner.id, f.org.id, cred.id, [{ id: "llama-4" }]);
+    expect(kept.baseURL).toBe("https://gw.example/v1");
+    // The Cloud refuses a private host: the row is untouched.
+    await expect(
+      updateEndpointModels(f.db, f.owner.id, f.org.id, cred.id, [{ id: "llama-4" }], {
+        baseURL: "https://inside.example/v1",
+        net: cloud,
+      }),
+    ).rejects.toThrow();
+    const [saved] = (await listCredentials(f.db, f.owner.id, f.org.id)).filter((c) => c.id === cred.id);
+    expect(saved?.endpoint?.baseURL).toBe("https://gw.example/v1");
+  });
+});

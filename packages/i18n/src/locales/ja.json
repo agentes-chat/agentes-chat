@@ -9129,6 +9129,7 @@
     "option": "その他のプロバイダー",
     "optionSub": "OpenAI または Claude 互換: ゲートウェイ、Ollama、vLLM、LM Studio、LiteLLM",
     "name": "名前",
+    "preset": "から始める",
     "namePlaceholder": "自分のゲートウェイ",
     "style": "API",
     "styles": {

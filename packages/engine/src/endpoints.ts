@@ -237,28 +237,45 @@ export async function updateEndpointModels(
   orgId: string,
   credentialId: string,
   models: EndpointModel[],
+  /**
+   * A new address and API with them (ADR 0146 §1). A gateway that moved, or an address typed wrong, could otherwise
+   * never be fixed: the credential's key and the agents using it stay, only where the calls go changes. `net` is
+   * what `createCredential` gets, so the new address is judged like a saved one.
+   */
+  where: { style?: EndpointStyle; baseURL?: string; net?: EndpointNet } = {},
 ) {
   await requirePermission(db, actorId, orgId, "manage_credentials");
-  const where = and(
+  const byId = and(
     eq(schema.providerCredentials.id, credentialId),
     eq(schema.providerCredentials.orgId, orgId),
     eq(schema.providerCredentials.provider, "custom"),
     isNull(schema.providerCredentials.revokedAt),
   );
-  const [row] = await db.select().from(schema.providerCredentials).where(where);
+  const [row] = await db.select().from(schema.providerCredentials).where(byId);
   const endpoint = row?.options.endpoint;
   if (!row || !endpoint) throw new NotFoundError("Credential not found");
-  const next = { ...endpoint, models: cleanEndpointModels(models, endpoint.models) };
+  const style = where.style ?? endpoint.style;
+  const baseURL =
+    where.baseURL === undefined
+      ? endpoint.baseURL
+      : await endpointAddress(where.baseURL, style, where.net ?? { allowPrivate: false });
+  const moved = baseURL !== endpoint.baseURL || style !== endpoint.style;
+  const next = { ...endpoint, style, baseURL, models: cleanEndpointModels(models, endpoint.models) };
   await db
     .update(schema.providerCredentials)
     .set({ options: { ...row.options, endpoint: next } })
-    .where(where);
+    .where(byId);
   await recordAudit(db, {
     orgId,
     actor: { type: "person", id: actorId },
-    action: "credential.models_changed",
+    action: moved ? "credential.endpoint_changed" : "credential.models_changed",
     target: { type: "credential", id: credentialId },
-    details: { provider: "custom", label: row.label, models: next.models.map((m) => m.id) },
+    details: {
+      provider: "custom",
+      label: row.label,
+      models: next.models.map((m) => m.id),
+      ...(moved ? { from: endpoint.baseURL, to: baseURL, style } : {}),
+    },
   });
   caches.credentials.delete(`${orgId}:${credentialId}`);
   caches.credentials.delete(`${orgId}:endpoints`);

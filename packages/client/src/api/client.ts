@@ -816,6 +816,8 @@ export interface ApiClient {
       orgId: string,
       credentialId: string,
       models: EndpointModel[],
+      /** A new address and API with them; omitted, they stay. */
+      where?: { style?: EndpointStyle; baseURL?: string },
     ): Promise<{ models: EndpointModel[]; checks: EndpointCheck[] }>;
     /** Replaces the key, keeping the id (agents keep using it). */
     rotateCredential(
