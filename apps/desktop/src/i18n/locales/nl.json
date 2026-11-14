@@ -238,7 +238,7 @@
       "start": "agentes.chat is niet gestart op deze {{device}}.",
       "database": "De database is niet voorbereid.",
       "account": "Je account is niet aangemaakt.",
-      "retry": "Probeer het opnieuw via Voorkeuren › Servers."
+      "retry": "Opnieuw proberen in Voorkeuren"
     },
     "reason": {
       "https": "HTTPS staat uit op je Tailscale-netwerk",
@@ -332,7 +332,6 @@
     "usageRestart": "Wijzigen herstart agentes.chat heel even.",
     "jev": "Jev",
     "jevText": "Een snel model van TypeSafe dat kiest wie antwoordt, het geheugen netjes houdt en agents het scherm laat zien. Optioneel, met je eigen sleutel.",
-    "jevWhere": "In agentes.chat › Instellingen › AI en gebruik.",
     "reachFailed": "Toegang vanaf je apparaten is niet aangezet: {{reason}}.",
     "backup": "Nu een back-up maken",
     "backedUp": "Back-up gemaakt: {{file}}",
@@ -429,7 +428,9 @@
     "linkBody": "Heb je hier niet om gevraagd, kies dan Niet nu.",
     "waiting": "Wachten tot {{by}} hem binnenlaat…",
     "done": "Verbonden met {{org}}",
-    "expired": "Deze link is verlopen. Maak een nieuwe via Instellingen › Apparaten.",
+    "addFolders": "Mappen toevoegen",
+    "expired": "Deze link is verlopen. Maak een nieuwe via Apparaten.",
+    "openDevices": "Apparaten openen",
     "denied": "{{by}} heeft hem niet binnengelaten. Er is niets veranderd.",
     "letOrg": "Agents van {{org}} deze {{device}} laten gebruiken",
     "canUse": "Agents kunnen hem gebruiken",
@@ -487,6 +488,15 @@
     "lookPath": "agentes.chat zoekt in de PATH van je login-shell.",
     "lookPathWindows": "agentes.chat zoekt in de PATH.",
     "stillMissing": "{{tool}} is nog steeds niet gevonden. Voer de opdracht hierboven uit en controleer dan opnieuw.",
+    "install": "Voor mij installeren",
+    "installing": "{{tool}} wordt geïnstalleerd. Dat duurt ongeveer een minuut.",
+    "installFailed": "Installeren lukte niet: {{message}}",
+    "gitMissing": "{{tool}} heeft Git for Windows nodig op deze computer.",
+    "getGit": "Git for Windows downloaden",
+    "cantStart": "Staat hier, maar start niet: {{message}}",
+    "cantStartChip": "Start niet",
+    "installedNotFound": "Het installatieprogramma is klaar, maar {{tool}} wordt nog niet gevonden.",
+    "notFoundYet": "{{tool}} wordt nog niet gevonden.",
     "browserName": "Browser",
     "browserDesc": "Opent websites voor de agents in een eigen browser, zonder jouw logins.",
     "browserLogins": "Logins van een agent blijven op deze {{device}}, in zijn map. Gebruik alleen testaccounts of het eigen account van de agent."

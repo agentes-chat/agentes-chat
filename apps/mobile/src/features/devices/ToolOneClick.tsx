@@ -5,7 +5,7 @@ import { firstName } from "@agenteschat/client/lib/format";
 import { messageToolOff } from "@agenteschat/client/lib/machine-outages";
 import { type ToolOneClick, toolOneClick, toolWords } from "@agenteschat/client/lib/machines";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, View } from "react-native";
+import { type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import { Button, Text, useToast } from "@/ui";
 import { useMeId, useOrgId } from "../shared/hooks";
 
@@ -20,6 +20,7 @@ export function ToolOneClickButton({
   tool,
   label,
   onAllowed,
+  disabled = false,
 }: {
   machineId: string;
   machineName: string;
@@ -27,6 +28,8 @@ export function ToolOneClickButton({
   tool: MachineTool | readonly MachineTool[];
   label?: string;
   onAllowed?: () => void;
+  /** Turning on waits (its computer offline): the caller says why beside it. Asking never waits. */
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -63,6 +66,7 @@ export function ToolOneClickButton({
       size="sm"
       label={label ?? t("machines.oneClick.allow", { tool: toolWords(t, tools[0] as MachineTool) })}
       loading={allow.isPending}
+      disabled={disabled}
       onPress={() =>
         allow.mutate(
           { machineId, tool: tools[0] as MachineTool },
@@ -99,7 +103,48 @@ export function WaitToolOffAction({ message }: { message: Pick<Message, "meta"> 
   );
 }
 
-const styles = StyleSheet.create({ wait: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 } });
+/**
+ * The way out where a program is off on a computer, under the line that says so, as the web's `ToolOffWayOut`:
+ * whoever connected it turns it on here, or waits for it to come online, anyone else asks them, an app too old says to
+ * update it there. Nothing on the Cloud's own computer, or one with nobody behind it.
+ */
+export function ToolOffWayOut({
+  machine,
+  tool,
+  style,
+}: {
+  machine: Machine;
+  tool: MachineTool;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const { t } = useTranslation();
+  const oneClick = toolOneClick(machine, useMeId());
+  if (!oneClick) return null;
+  if (oneClick.kind === "outdated")
+    return (
+      <View style={style}>
+        <Text variant="caption" tone="muted">
+          {t("machines.oneClick.outdated", { machine: machine.name })}
+        </Text>
+      </View>
+    );
+  const offline = oneClick.kind === "allow" && !machine.online;
+  return (
+    <View style={[styles.way, style]}>
+      {offline ? (
+        <Text variant="caption" tone="muted">
+          {t("machines.oneClick.offline", { machine: machine.name, tool: toolWords(t, tool) })}
+        </Text>
+      ) : null}
+      <MachineToolButton machine={machine} tool={tool} disabled={offline} />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wait: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 },
+  way: { gap: 8, alignItems: "flex-start" },
+});
 
 /** The same for a computer the screen already has. */
 export function MachineToolButton({
@@ -107,11 +152,13 @@ export function MachineToolButton({
   tool,
   label,
   onAllowed,
+  disabled,
 }: {
   machine: Machine;
   tool: MachineTool | readonly MachineTool[];
   label?: string;
   onAllowed?: () => void;
+  disabled?: boolean;
 }) {
   const meId = useMeId();
   return (
@@ -120,6 +167,7 @@ export function MachineToolButton({
       machineName={machine.name}
       oneClick={toolOneClick(machine, meId)}
       tool={tool}
+      disabled={disabled}
       {...(label ? { label } : {})}
       {...(onAllowed ? { onAllowed } : {})}
     />

@@ -1,6 +1,6 @@
 import type { BrainSpeed, PlanUsage } from "@agenteschat/client";
 import { SPEEDS } from "@agenteschat/client/lib/brain-advanced";
-import { type ContextLimit, contextSize } from "@agenteschat/client/lib/context-limits";
+import { autoContextLine, type ContextLimit, contextSize } from "@agenteschat/client/lib/context-limits";
 import { planMeterText } from "@agenteschat/client/lib/plan-usage";
 import { AUTO } from "@agenteschat/client/lib/providers";
 import {
@@ -195,10 +195,13 @@ export function SpeedField({ value, onChange }: { value: BrainSpeed; onChange: (
 export function ContextField({
   value,
   options,
+  kind,
   onChange,
 }: {
   value: ContextLimit | null;
   options: readonly ContextLimit[];
+  /** The agent's program: "Automático" says where it summarises. */
+  kind: string;
   onChange: (value: ContextLimit | null) => void;
 }) {
   const { t } = useTranslation();
@@ -215,7 +218,9 @@ export function ContextField({
           ...options.map((n) => ({ value: String(n), label: contextSize(n) })),
         ]}
       />
-      <p className="bd-fold__hint">{t(`agentPage.work.brain.contextText.${shown ?? "auto"}`)}</p>
+      <p className="bd-fold__hint">
+        {shown === null ? autoContextLine(t, kind) : t(`agentPage.work.brain.contextText.${shown}`)}
+      </p>
     </>
   );
 }

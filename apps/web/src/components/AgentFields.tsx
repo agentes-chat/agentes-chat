@@ -1,6 +1,6 @@
 import type { Credential, Member } from "@agenteschat/client";
 import { apiPickOptions, type BrainPickOption, brainPickText } from "@agenteschat/client/lib/brain-picker";
-import { keyLine, type ModelChoice, providerLabel } from "@agenteschat/client/lib/providers";
+import { keyLine, keySource, type ModelChoice } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
   AffixInput,
@@ -191,9 +191,7 @@ export function keyOptions(
     {
       value: DEFAULT_KEY,
       label: t("newAgent.defaultKey"),
-      description: def
-        ? t("newAgent.defaultKeyDesc", { provider: providerLabel(def.provider), hint: def.keyHint })
-        : undefined,
+      description: def ? t("newAgent.defaultKeyDesc", { provider: keySource(def), hint: def.keyHint }) : undefined,
       leading:
         def || provider ? (
           <ProviderLogo id={def?.provider ?? provider ?? ""} size="sm" />

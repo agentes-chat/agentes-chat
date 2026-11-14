@@ -87,9 +87,11 @@ async function open(
 }
 
 describe("Settings › Devices", () => {
-  test("old Computers links land on Devices", async () => {
+  test("old Computers links land on Devices, and so does the desktop app's ?open=devices", async () => {
     const { router } = await open(`/org/${ORG_ID}/settings/computers`);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices`);
+    const asked = await open("/?open=devices");
+    expect(asked.router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices`);
     const old = await open(`/org/${ORG_ID}/settings/computers/${MAC}`);
     expect(old.router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices/${MAC}`);
   });
@@ -504,6 +506,45 @@ describe("Connect a device", () => {
     expect(screen().getByRole("dialog", { name: "Galaxy S24 is connected" })).toBeTruthy();
   });
 
+  test("over Wi-Fi in the app on that very Mac: a Local Network failure opens that setting", async () => {
+    const win = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
+    const asked: Record<string, unknown>[] = [];
+    win.__agentesDesktop = { version: "0.8.6", platform: "mac" };
+    win.__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: { request?: Record<string, unknown> }) => {
+        if (cmd !== "this_mac" || !args.request) return {};
+        asked.push(args.request);
+        return args.request.kind === "status"
+          ? { orgs: [{ orgId: ORG_ID, machineId: MAC, connection: "online" }], agentsHere: true }
+          : {};
+      },
+    };
+    try {
+      const { devices, services } = await open(`/org/${ORG_ID}/settings/devices`);
+      await click(screen().getByRole("button", { name: "Connect a device" }));
+      await click(screen().getByRole("button", { name: /Android phone/ }));
+      const dialog = screen().getByRole("dialog", { name: "Connect an Android phone" });
+      await click(within(dialog).getByRole("radio", { name: "Over Wi-Fi" }));
+      devices.setPairing({ state: "failed", reason: "same_wifi" });
+      await act(async () => {
+        await services.queryClient.invalidateQueries({ queryKey: ["wifi-pair-state"] });
+      });
+      await refetch(services);
+      await click(within(dialog).getByRole("button", { name: "Open Local Network" }));
+      expect(asked).toContainEqual({ kind: "privacy", pane: "network" });
+      // A cause that setting has nothing to do with gets no such button.
+      devices.setPairing({ state: "failed", reason: "refused" });
+      await act(async () => {
+        await services.queryClient.invalidateQueries({ queryKey: ["wifi-pair-state"] });
+      });
+      await refetch(services);
+      expect(within(dialog).queryByRole("button", { name: "Open Local Network" })).toBeNull();
+    } finally {
+      delete win.__agentesDesktop;
+      delete win.__TAURI_INTERNALS__;
+    }
+  });
+
   test("the Android steps in Portuguese: Android's own prompt, where to scan, the code way", async () => {
     const app = await open(`/org/${ORG_ID}/settings/devices/android-setup?computer=${MAC}`);
     await showIn(app.services, "pt-BR");
@@ -763,11 +804,12 @@ describe("an iPhone at Developer Mode", () => {
     await click(within(step()).getByRole("button", { name: "Don't see the option?" }));
     expect(causes()).toEqual([
       "The iPhone hides the option until Xcode asks to show it.Open Xcode",
-      "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.Check again",
+      "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.",
     ]);
-    // Each cause and its action make one action line.
-    expect(step().querySelectorAll(".dv-slow__list .ac-actline")).toHaveLength(2);
-    await click(within(step()).getByRole("button", { name: "Check again" }));
+    // The cause with an action makes one action line; the unlock cause is checked by the step's one check button.
+    expect(step().querySelectorAll(".dv-slow__list .ac-actline")).toHaveLength(1);
+    expect(step().querySelectorAll(".dv-slow__list button")).toHaveLength(1);
+    await click(within(step()).getByRole("button", { name: "I turned it on, check again" }));
     expect(calls(app.state, "devices.lookForPhones")).toHaveLength(1);
 
     // A Mac whose app is too old: open Xcode there by hand, and update the app (or the Terminal way).

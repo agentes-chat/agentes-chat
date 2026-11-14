@@ -238,7 +238,7 @@
       "start": "agentes.chat bu {{device}} üzerinde başlamadı.",
       "database": "Veritabanı hazırlanamadı.",
       "account": "Hesabınız oluşturulamadı.",
-      "retry": "Tercihler › Sunucular bölümünden tekrar deneyin."
+      "retry": "Tercihler'de tekrar dene"
     },
     "reason": {
       "https": "Tailscale ağınızda HTTPS kapalı",
@@ -332,7 +332,6 @@
     "usageRestart": "Değiştirmek agentes.chat'i kısa bir süre yeniden başlatır.",
     "jev": "Jev",
     "jevText": "TypeSafe'in hızlı bir modeli: kimin yanıt vereceğini seçer, belleği düzenli tutar ve ajanların ekranı görmesini sağlar. İsteğe bağlı, kendi anahtarınızla.",
-    "jevWhere": "agentes.chat › Ayarlar › Yapay zeka ve kullanım bölümünde.",
     "reachFailed": "Cihazlarınızdan erişim açılmadı: {{reason}}.",
     "backup": "Şimdi yedekle",
     "backedUp": "Yedeklendi: {{file}}",
@@ -429,7 +428,9 @@
     "linkBody": "Bunu sen istemediysen Şimdi değil seçeneğini seç.",
     "waiting": "{{by}} kişisinin içeri almasını bekliyor…",
     "done": "{{org}} ile bağlandı",
-    "expired": "Bu bağlantının süresi doldu. Ayarlar › Cihazlar bölümünde yenisini oluştur.",
+    "addFolders": "Klasör ekle",
+    "expired": "Bu bağlantının süresi doldu. Cihazlar bölümünde yenisini oluştur.",
+    "openDevices": "Cihazları aç",
     "denied": "{{by}} içeri almadı. Hiçbir şey değişmedi.",
     "letOrg": "{{org}} ajanları bu {{device}} cihazını kullanabilsin",
     "canUse": "Ajanlar kullanabilir",
@@ -487,6 +488,15 @@
     "lookPath": "agentes.chat, oturum açma kabuğunuzun PATH'ine bakar.",
     "lookPathWindows": "agentes.chat, PATH'e bakar.",
     "stillMissing": "{{tool}} hâlâ bulunamadı. Yukarıdaki komutu çalıştırın, sonra tekrar kontrol edin.",
+    "install": "Benim için kur",
+    "installing": "{{tool}} kuruluyor. Yaklaşık bir dakika sürer.",
+    "installFailed": "Kurulamadı: {{message}}",
+    "gitMissing": "{{tool}}, bu bilgisayarda Git for Windows gerektirir.",
+    "getGit": "Git for Windows'u indir",
+    "cantStart": "Burada ama açılmıyor: {{message}}",
+    "cantStartChip": "Açılmıyor",
+    "installedNotFound": "Kurulum programı bitti, ama {{tool}} hâlâ bulunamıyor.",
+    "notFoundYet": "{{tool}} hâlâ bulunamıyor.",
     "browserName": "Tarayıcı",
     "browserDesc": "Ajanlar için, sizin girişleriniz olmadan, onlara ait bir tarayıcıda web sitelerini açar.",
     "browserLogins": "Bir ajanın yaptığı girişler bu {{device}} üzerinde, ajanın klasöründe kalır. Yalnızca test hesaplarını ya da ajanın kendi hesaplarını kullanın."

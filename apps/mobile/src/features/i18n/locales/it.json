@@ -1835,6 +1835,8 @@
         "offlineCloudM": "Il computer di {{name}} non risponde in questo momento.",
         "stuckF": "Non è stato possibile aprire il browser di {{name}}.",
         "stuckM": "Non è stato possibile aprire il browser di {{name}}.",
+        "noAnswerF": "Il browser di {{name}} non ha risposto.",
+        "noAnswerM": "Il browser di {{name}} non ha risposto.",
         "tooManyF": "Troppi browser aperti insieme. Questo compare quando se ne chiude un altro.",
         "tooManyM": "Troppi browser aperti insieme. Questo compare quando se ne chiude un altro."
       }
@@ -2089,7 +2091,6 @@
         "openXcode": "Apri Xcode",
         "opened": "Xcode si è aperto su {{host}}. Guarda di nuovo in Impostazioni, poi chiudi Xcode lì.",
         "unlock": "L'hai attivata e si è riavviato? L'avviso con Attiva compare quando questo iPhone è sbloccato.",
-        "checkAgain": "Controlla di nuovo",
         "outdated": "L'app agentes.chat su {{host}} non è aggiornata. Aggiornala su quel Mac."
       }
     },
@@ -2103,6 +2104,7 @@
       "waiting": "{{names}} sta aspettando {{device}}",
       "waitingFor": "{{names}} sta aspettando {{device}} per {{person}}",
       "tool_request": "{{names}} ti chiede di attivare {{tool}} sul tuo {{device}}",
+      "cli_request": "{{names}} ti chiede di installare {{tool}} sul tuo {{device}}",
       "allowOnce": "Consenti una volta",
       "always": "Consenti sempre a {{name}}",
       "no": "No",
@@ -2164,7 +2166,8 @@
     "everyoneFailed": "Non è stato possibile cambiare l'accesso di tutti. Riprova.",
     "disconnectFailed": "Impossibile scollegare {{name}}. Riprova.",
     "needsReconnect": "L'account {{name}} ha smesso di funzionare. Gli agenti non possono usarlo finché qualcuno non lo ricollega.",
-    "noTools": "Non è stato possibile leggere gli strumenti di {{name}}. Gli agenti ne restano senza finché non vengono letti di nuovo, in Strumenti.",
+    "noTools": "Non è stato possibile leggere gli strumenti di {{name}}. Gli agenti ne restano senza finché non vengono letti di nuovo.",
+    "readAgain": "Leggi di nuovo",
     "accountTitle": "Account",
     "renameFailed": "Non è stato possibile rinominarlo. Riprova.",
     "whoTitle": "Chi lo usa",
@@ -2574,7 +2577,7 @@
     },
     "import": {
       "title": "Importa da un computer",
-      "text": "Per portare le password da un browser o da un gestore di password, apri Impostazioni, Vault sul web e scegli Importa."
+      "text": "Per portare le password da un browser o da un gestore di password, importale dal web."
     },
     "connections": {
       "text": "Collega un gestore di password e i tuoi agenti usano i login conservati lì. Non viene copiato niente: una password viene letta solo quando serve.",

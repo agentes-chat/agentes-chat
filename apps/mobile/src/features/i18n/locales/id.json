@@ -1646,6 +1646,8 @@
         "offlineCloudM": "Komputer {{name}} sedang tidak merespons.",
         "stuckF": "Tidak bisa membuka browser {{name}}.",
         "stuckM": "Tidak bisa membuka browser {{name}}.",
+        "noAnswerF": "Browser {{name}} tidak merespons.",
+        "noAnswerM": "Browser {{name}} tidak merespons.",
         "tooManyF": "Terlalu banyak browser terbuka sekaligus. Yang ini muncul saat browser lain ditutup.",
         "tooManyM": "Terlalu banyak browser terbuka sekaligus. Yang ini muncul saat browser lain ditutup."
       }
@@ -1898,7 +1900,6 @@
         "openXcode": "Buka Xcode",
         "opened": "Xcode terbuka di {{host}}. Lihat lagi di Pengaturan, lalu tutup Xcode di sana.",
         "unlock": "Sudah dinyalakan dan dimulai ulang? Peringatan dengan Nyalakan muncul saat kunci iPhone ini terbuka.",
-        "checkAgain": "Periksa lagi",
         "outdated": "Aplikasi agentes.chat di {{host}} sudah usang. Perbarui di Mac itu."
       }
     },
@@ -1912,6 +1913,7 @@
       "waiting": "{{names}} sedang menunggu {{device}}",
       "waitingFor": "{{names}} sedang menunggu {{device}} untuk {{person}}",
       "tool_request": "{{names}} memintamu menyalakan {{tool}} di {{device}} milikmu",
+      "cli_request": "{{names}} meminta kamu memasang {{tool}} di {{device}} kamu",
       "allowOnce": "Izinkan sekali",
       "always": "Selalu izinkan {{name}}",
       "no": "Tidak",
@@ -1971,7 +1973,8 @@
     "everyoneFailed": "Tidak bisa mengubah akses semua orang. Coba lagi.",
     "disconnectFailed": "Tidak bisa memutus {{name}}. Coba lagi.",
     "needsReconnect": "Akun {{name}} berhenti berfungsi. Agen tidak bisa memakainya sampai ada yang menghubungkannya lagi.",
-    "noTools": "Alat dari {{name}} tidak bisa dibaca. Agen tidak bisa memakainya sampai dibaca lagi, di Alat.",
+    "noTools": "Alat dari {{name}} tidak bisa dibaca. Agen tidak bisa memakainya sampai dibaca lagi.",
+    "readAgain": "Baca lagi",
     "accountTitle": "Akun",
     "renameFailed": "Tidak bisa mengganti nama. Coba lagi.",
     "whoTitle": "Siapa yang memakainya",
@@ -2361,7 +2364,7 @@
     },
     "import": {
       "title": "Impor dari komputer",
-      "text": "Untuk membawa kata sandi dari browser atau pengelola kata sandi, buka Pengaturan, Vault di web lalu pilih Impor."
+      "text": "Untuk membawa kata sandi dari browser atau pengelola kata sandi, impor lewat web."
     },
     "connections": {
       "text": "Hubungkan pengelola kata sandi, dan agenmu menggunakan login yang disimpan di sana. Tidak ada yang disalin: kata sandi hanya dibaca saat digunakan.",

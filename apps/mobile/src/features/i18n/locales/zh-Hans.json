@@ -1646,6 +1646,8 @@
         "offlineCloudM": "{{name}} 的电脑目前无响应。",
         "stuckF": "无法打开 {{name}} 的浏览器。",
         "stuckM": "无法打开 {{name}} 的浏览器。",
+        "noAnswerF": "{{name}} 的浏览器没有响应。",
+        "noAnswerM": "{{name}} 的浏览器没有响应。",
         "tooManyF": "同时打开的浏览器太多。等其他浏览器关闭后，这个会显示出来。",
         "tooManyM": "同时打开的浏览器太多。等其他浏览器关闭后，这个会显示出来。"
       }
@@ -1898,7 +1900,6 @@
         "openXcode": "打开 Xcode",
         "opened": "Xcode 已在 {{host}} 上打开。请再看看设置，之后关闭那台 Mac 上的 Xcode。",
         "unlock": "已经打开并且重新启动了？解锁这台 iPhone 后，带有“打开”的提示就会出现。",
-        "checkAgain": "再检查一次",
         "outdated": "{{host}} 上的 agentes.chat 应用已过时。请在那台 Mac 上更新。"
       }
     },
@@ -1912,6 +1913,7 @@
       "waiting": "{{names}} 正在等待 {{device}}",
       "waitingFor": "{{names}} 正在为 {{person}} 等待 {{device}}",
       "tool_request": "{{names}} 请你在你的 {{device}} 上打开{{tool}}",
+      "cli_request": "{{names}} 请你在 {{device}} 上安装 {{tool}}",
       "allowOnce": "允许一次",
       "always": "始终允许 {{name}}",
       "no": "不允许",
@@ -1971,7 +1973,8 @@
     "everyoneFailed": "无法更改所有人的访问权限，请重试。",
     "disconnectFailed": "无法断开 {{name}}，请重试。",
     "needsReconnect": "{{name}} 账号已失效。在有人重新连接之前，智能体无法使用它。",
-    "noTools": "无法读取{{name}}的工具。在工具中重新读取之前，智能体用不了它们。",
+    "noTools": "无法读取{{name}}的工具。重新读取之前，智能体用不了它们。",
+    "readAgain": "重新读取",
     "accountTitle": "账号",
     "renameFailed": "无法重命名，请重试。",
     "whoTitle": "谁在使用",
@@ -2361,7 +2364,7 @@
     },
     "import": {
       "title": "从电脑导入",
-      "text": "要从浏览器或密码管理器导入密码，请在网页版打开“设置”、“Vault”，然后选择“导入”。"
+      "text": "要从浏览器或密码管理器导入密码，请在网页版中导入。"
     },
     "connections": {
       "text": "连接密码管理器后，你的智能体会使用其中保存的登录信息。不会复制任何内容：密码只在使用时读取。",

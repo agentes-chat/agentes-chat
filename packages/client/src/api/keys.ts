@@ -136,6 +136,8 @@ export const keys = {
   /** Under `devices`: a phone picked over Wi-Fi leaves the offer when the list refetches. */
   wifiIphones: (orgId: string, machineId: string) => ["org", orgId, "machines", "devices", "wifi", machineId] as const,
   xcodeFix: (orgId: string, machineId: string) => ["org", orgId, "machines", "devices", "xcode", machineId] as const,
+  cliInstall: (orgId: string, machineId: string, tool: string) =>
+    ["org", orgId, "machines", "cli-install", machineId, tool] as const,
   connectLink: (orgId: string, linkId: string) => ["org", orgId, "machines", "devices", "link", linkId] as const,
   /** Under `machines`: a computer that changes refreshes what a new agent could think with. */
   brainMachines: (orgId: string) => ["org", orgId, "machines", "brains"] as const,

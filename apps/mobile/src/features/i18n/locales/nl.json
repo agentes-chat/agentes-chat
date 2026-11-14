@@ -1743,6 +1743,8 @@
         "offlineCloudM": "De computer van {{name}} reageert nu niet.",
         "stuckF": "De browser van {{name}} kon niet worden geopend.",
         "stuckM": "De browser van {{name}} kon niet worden geopend.",
+        "noAnswerF": "De browser van {{name}} reageerde niet.",
+        "noAnswerM": "De browser van {{name}} reageerde niet.",
         "tooManyF": "Te veel browsers tegelijk open. Deze verschijnt zodra er een andere sluit.",
         "tooManyM": "Te veel browsers tegelijk open. Deze verschijnt zodra er een andere sluit."
       }
@@ -1996,7 +1998,6 @@
         "openXcode": "Xcode openen",
         "opened": "Xcode is geopend op {{host}}. Kijk opnieuw in Instellingen en sluit Xcode daar daarna.",
         "unlock": "Aangezet en herstart? De melding met Zet aan verschijnt zodra deze iPhone ontgrendeld is.",
-        "checkAgain": "Opnieuw controleren",
         "outdated": "De agentes.chat-app op {{host}} is verouderd. Werk hem bij op die Mac."
       }
     },
@@ -2010,6 +2011,7 @@
       "waiting": "{{names}} wacht op {{device}}",
       "waitingFor": "{{names}} wacht op {{device}} voor {{person}}",
       "tool_request": "{{names}} vraagt je {{tool}} aan te zetten op je {{device}}",
+      "cli_request": "{{names}} vraagt je {{tool}} te installeren op je {{device}}",
       "allowOnce": "Eén keer toestaan",
       "always": "{{name}} altijd toestaan",
       "no": "Nee",
@@ -2071,7 +2073,8 @@
     "everyoneFailed": "De toegang van iedereen kon niet worden gewijzigd. Probeer het opnieuw.",
     "disconnectFailed": "{{name}} kon niet worden losgekoppeld. Probeer het opnieuw.",
     "needsReconnect": "Het account van {{name}} werkt niet meer. Agents kunnen het niet gebruiken tot iemand het opnieuw verbindt.",
-    "noTools": "De tools van {{name}} konden niet worden gelezen. Agents hebben ze pas weer als ze opnieuw worden gelezen, in Tools.",
+    "noTools": "De tools van {{name}} konden niet worden gelezen. Agents hebben ze pas weer als ze opnieuw worden gelezen.",
+    "readAgain": "Opnieuw lezen",
     "accountTitle": "Account",
     "renameFailed": "Naam wijzigen lukte niet. Probeer het opnieuw.",
     "whoTitle": "Wie het gebruikt",
@@ -2471,7 +2474,7 @@
     },
     "import": {
       "title": "Importeren vanaf een computer",
-      "text": "Om wachtwoorden uit een browser of wachtwoordmanager over te zetten, open je op het web Instellingen, Vault en kies je Importeren."
+      "text": "Om wachtwoorden uit een browser of wachtwoordmanager over te zetten, importeer je ze op het web."
     },
     "connections": {
       "text": "Koppel een wachtwoordmanager en je agenten gebruiken de logins die daar staan. Er wordt niets gekopieerd: een wachtwoord wordt pas gelezen als het nodig is.",

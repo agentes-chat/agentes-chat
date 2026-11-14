@@ -624,6 +624,7 @@ async function claudeCodeTurns(fx: Fixture, loadIssues: () => void) {
             cacheRead: 8000,
             calls: 3,
             maxUncached: 700,
+            maxContext: 8200,
           };
           yield { type: "done", text: "ok" };
         },
@@ -765,10 +766,11 @@ test("Claude Code: the system text is the same in every conversation; what holds
   expect(followUp.turn.session?.resume).toBe(true);
   expect(followUp.prompt).not.toContain("## Your team\n");
   expect(followUp.prompt.length).toBeLessThan(1200);
-  // The turn's calls and its largest uncached one stay on its step, to tell more calls from bigger ones.
+  // The turn's calls, its largest uncached one and its biggest step stay on its step, to tell more calls from bigger ones.
   const steps = await f.db.select().from(schema.agentRunSteps).where(eq(schema.agentRunSteps.kind, "model_call"));
   expect(steps).toHaveLength(3);
-  for (const step of steps) expect(step.data).toMatchObject({ calls: 3, maxUncached: 700, toolSearches: 1 });
+  for (const step of steps)
+    expect(step.data).toMatchObject({ calls: 3, maxUncached: 700, maxContext: 8200, toolSearches: 1 });
 }, 20_000);
 
 test("Claude Code: no rule is lost moving what holds for one conversation out of the system text", async () => {

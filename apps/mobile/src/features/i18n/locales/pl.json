@@ -1937,6 +1937,8 @@
         "offlineCloudM": "Komputer agenta {{name}} teraz nie odpowiada.",
         "stuckF": "Nie udało się otworzyć przeglądarki agenta {{name}}.",
         "stuckM": "Nie udało się otworzyć przeglądarki agenta {{name}}.",
+        "noAnswerF": "Przeglądarka {{name}} nie odpowiedziała.",
+        "noAnswerM": "Przeglądarka {{name}} nie odpowiedziała.",
         "tooManyF": "Za dużo przeglądarek otwartych naraz. Ta pojawi się, gdy inna się zamknie.",
         "tooManyM": "Za dużo przeglądarek otwartych naraz. Ta pojawi się, gdy inna się zamknie."
       }
@@ -2192,7 +2194,6 @@
         "openXcode": "Otwórz Xcode",
         "opened": "Xcode otworzył się na {{host}}. Zajrzyj jeszcze raz do Ustawień, a potem zamknij tam Xcode.",
         "unlock": "Włączone i uruchomił się ponownie? Alert z Włącz pojawia się, gdy ten iPhone jest odblokowany.",
-        "checkAgain": "Sprawdź ponownie",
         "outdated": "Aplikacja agentes.chat na {{host}} jest nieaktualna. Zaktualizuj ją na tym Macu."
       }
     },
@@ -2206,6 +2207,7 @@
       "waiting": "{{names}} czeka na urządzenie {{device}}",
       "waitingFor": "{{names}} czeka na urządzenie {{device}} dla {{person}}",
       "tool_request": "{{names}} prosi Cię o włączenie: {{tool}} na {{device}}",
+      "cli_request": "{{names}} prosi o zainstalowanie {{tool}} na Twoim {{device}}",
       "allowOnce": "Zezwól raz",
       "always": "Zawsze zezwalaj: {{name}}",
       "no": "Nie",
@@ -2271,7 +2273,8 @@
     "everyoneFailed": "Nie udało się zmienić dostępu dla wszystkich. Spróbuj ponownie.",
     "disconnectFailed": "Nie udało się odłączyć {{name}}. Spróbuj ponownie.",
     "needsReconnect": "Konto {{name}} przestało działać. Agenci nie mogą z niego korzystać, dopóki ktoś go nie połączy ponownie.",
-    "noTools": "Nie udało się odczytać narzędzi {{name}}. Agenci są bez nich, dopóki nie zostaną odczytane ponownie, w Narzędziach.",
+    "noTools": "Nie udało się odczytać narzędzi {{name}}. Agenci są bez nich, dopóki nie zostaną odczytane ponownie.",
+    "readAgain": "Odczytaj ponownie",
     "accountTitle": "Konto",
     "renameFailed": "Nie udało się zmienić nazwy. Spróbuj ponownie.",
     "whoTitle": "Kto z tego korzysta",
@@ -2691,7 +2694,7 @@
     },
     "import": {
       "title": "Import z komputera",
-      "text": "Aby przenieść hasła z przeglądarki lub menedżera haseł, otwórz w wersji webowej Ustawienia, Vault i wybierz Importuj."
+      "text": "Aby przenieść hasła z przeglądarki lub menedżera haseł, zaimportuj je w wersji webowej."
     },
     "connections": {
       "text": "Połącz menedżer haseł, a twoi agenci będą używać przechowywanych w nim loginów. Nic nie jest kopiowane: hasło jest odczytywane dopiero wtedy, gdy jest potrzebne.",

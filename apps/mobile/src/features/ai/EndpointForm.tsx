@@ -1,8 +1,9 @@
-import { type EndpointCheck, keys, useApi } from "@agenteschat/client";
+import { type Credential, type EndpointCheck, keys, useApi } from "@agenteschat/client";
 import {
   CHECK_VIEW,
   CUSTOM_PROVIDER,
   checksInOrder,
+  ENDPOINT_SEARCH_FROM,
   ENDPOINT_STYLES,
   type EndpointDraft,
   emptyEndpointDraft,
@@ -10,7 +11,9 @@ import {
   endpointBaseExample,
   endpointModelsOf,
   endpointReady,
+  modelsShown,
   pricesProblem,
+  withChecks,
   withListedModels,
   withoutModel,
   withTypedModel,
@@ -29,6 +32,7 @@ import {
   GroupedRow,
   IconButton,
   Locked,
+  SearchField,
   Segmented,
   Text,
   useTheme,
@@ -38,8 +42,15 @@ import { Note } from "./parts";
 /**
  * "Outro provedor" on the phone (ADR 0146), the web's `EndpointForm`: a workspace's own OpenAI- or
  * Anthropic-compatible endpoint, its models fetched or typed, their prices, then saved with one test per model.
+ * `onDone` gets the key with its models' tests just run; Concluir stays busy while what it returns runs.
  */
-export function EndpointForm({ orgId, onDone }: { orgId: string; onDone: () => void }) {
+export function EndpointForm({
+  orgId,
+  onDone,
+}: {
+  orgId: string;
+  onDone: (saved: Credential) => void | Promise<void>;
+}) {
   const { t } = useTranslation();
   const { colors: c } = useTheme();
   const api = useApi();
@@ -51,7 +62,16 @@ export function EndpointForm({ orgId, onDone }: { orgId: string; onDone: () => v
   const [listError, setListError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [checks, setChecks] = useState<EndpointCheck[] | null>(null);
+  const [saved, setSaved] = useState<{ key: Credential; checks: EndpointCheck[] } | null>(null);
+  const [closing, setClosing] = useState(false);
+  const [query, setQuery] = useState("");
+  const [pinned, setPinned] = useState<ReadonlySet<string>>(new Set());
+  const search = (next: string) => {
+    setPinned(new Set(draft.models.filter((m) => m.on).map((m) => m.id)));
+    setQuery(next);
+  };
+  const searching = draft.models.length > ENDPOINT_SEARCH_FROM;
+  const shown = searching ? modelsShown(draft.models, query, pinned) : draft.models;
   const set = (patch: Partial<EndpointDraft>) => setDraft((d) => ({ ...d, ...patch }));
   const setModel = (id: string, patch: Partial<EndpointDraft["models"][number]>) =>
     setDraft((d) => ({ ...d, models: d.models.map((m) => (m.id === id ? { ...m, ...patch } : m)) }));
@@ -88,13 +108,13 @@ export function EndpointForm({ orgId, onDone }: { orgId: string; onDone: () => v
     setSaving(true);
     setFailed(false);
     try {
-      const saved = await api.agents.addCredential(orgId, {
+      const { checks, ...key } = await api.agents.addCredential(orgId, {
         provider: CUSTOM_PROVIDER,
         label: draft.name.trim(),
         apiKey: draft.apiKey.trim(),
         endpoint: { style: draft.style, baseURL: draft.baseURL.trim(), models },
       });
-      setChecks(saved.checks ?? []);
+      setSaved({ key, checks: checks ?? [] });
       await qc.invalidateQueries({ queryKey: keys.credentials(orgId) });
       void qc.invalidateQueries({ queryKey: keys.models });
     } catch {
@@ -104,12 +124,12 @@ export function EndpointForm({ orgId, onDone }: { orgId: string; onDone: () => v
     }
   };
 
-  if (checks) {
+  if (saved) {
     return (
       <View style={styles.gap}>
         <GroupedHeader>{t("endpoint.results")}</GroupedHeader>
         <GroupedList>
-          {checksInOrder(draft, checks).map((r) => (
+          {checksInOrder(draft, saved.checks).map((r) => (
             <GroupedRow
               key={r.model}
               icon={CHECK_VIEW[r.check].tone === "ok" ? "check" : CHECK_VIEW[r.check].tone === "warn" ? "info" : "x"}
@@ -119,7 +139,21 @@ export function EndpointForm({ orgId, onDone }: { orgId: string; onDone: () => v
             />
           ))}
         </GroupedList>
-        <Button variant="primary" wide label={t("endpoint.done")} onPress={onDone} />
+        <Button
+          variant="primary"
+          wide
+          label={t("endpoint.done")}
+          loading={closing}
+          disabled={closing}
+          onPress={async () => {
+            setClosing(true);
+            try {
+              await onDone(withChecks(saved.key, saved.checks));
+            } finally {
+              setClosing(false);
+            }
+          }}
+        />
       </View>
     );
   }
@@ -229,20 +263,35 @@ export function EndpointForm({ orgId, onDone }: { orgId: string; onDone: () => v
         {draft.models.length > 0 ? (
           <>
             <GroupedHeader>{t("endpoint.choose")}</GroupedHeader>
-            <GroupedList>
-              {draft.models.map((m) => (
-                <GroupedRow
-                  key={m.id}
-                  label={m.id}
-                  checked={m.on}
-                  onPress={() => setModel(m.id, { on: !m.on })}
-                  remove={{
-                    label: t("common.removeName", { name: m.id }),
-                    onPress: () => setDraft((d) => withoutModel(d, m.id)),
-                  }}
-                />
-              ))}
-            </GroupedList>
+            {searching ? (
+              <SearchField
+                value={query}
+                onChangeText={search}
+                placeholder={t("endpoint.search")}
+                accessibilityLabel={t("endpoint.search")}
+                raised
+              />
+            ) : null}
+            {shown.length === 0 ? (
+              <Text variant="small" tone="muted">
+                {t("endpoint.noMatch", { query: query.trim() })}
+              </Text>
+            ) : (
+              <GroupedList>
+                {shown.map((m) => (
+                  <GroupedRow
+                    key={m.id}
+                    label={m.id}
+                    checked={m.on}
+                    onPress={() => setModel(m.id, { on: !m.on })}
+                    remove={{
+                      label: t("common.removeName", { name: m.id }),
+                      onPress: () => setDraft((d) => withoutModel(d, m.id)),
+                    }}
+                  />
+                ))}
+              </GroupedList>
+            )}
             {draft.models
               .filter((m) => m.on)
               .map((m) => {

@@ -254,7 +254,7 @@ export const desktopEn = {
       start: "agentes.chat didn't start on this {{device}}.",
       database: "The database wasn't prepared.",
       account: "Your account wasn't created.",
-      retry: "Try again in Preferences\u00a0›\u00a0Servers.",
+      retry: "Try again in Preferences",
     },
     reason: {
       https: "HTTPS is off on your Tailscale network",
@@ -359,7 +359,6 @@ export const desktopEn = {
     jev: "Jev",
     jevText:
       "A fast model by TypeSafe that picks who answers, keeps memory tidy and lets agents see the screen. Optional, with your own key.",
-    jevWhere: "In agentes.chat\u00a0›\u00a0Settings\u00a0›\u00a0AI and usage.",
     reachFailed: "Access from your devices didn't turn on: {{reason}}.",
     backup: "Back up now",
     backedUp: "Backed up: {{file}}",
@@ -472,7 +471,9 @@ export const desktopEn = {
     linkBody: "If you didn't ask for this, choose Not now.",
     waiting: "Waiting for {{by}} to let it in…",
     done: "Connected to {{org}}",
-    expired: "This link expired. Make a new one under Settings\u00a0›\u00a0Devices.",
+    addFolders: "Add folders",
+    expired: "This link expired. Make a new one in Devices.",
+    openDevices: "Open Devices",
     denied: "{{by}} didn't let it in. Nothing changed.",
     /** Preferences › General › This Mac: one switch per workspace. */
     letOrg: "Let {{org}}'s agents use this {{device}}",
@@ -545,6 +546,15 @@ export const desktopEn = {
     lookPath: "agentes.chat looks in your login shell's PATH.",
     lookPathWindows: "agentes.chat looks in PATH.",
     stillMissing: "{{tool}} still isn't found. Run the command above, then check again.",
+    install: "Install for me",
+    installing: "Installing {{tool}}. It takes about a minute.",
+    installFailed: "Couldn't install: {{message}}",
+    gitMissing: "{{tool}} needs Git for Windows on this computer.",
+    getGit: "Download Git for Windows",
+    cantStart: "It's here, but it won't start: {{message}}",
+    cantStartChip: "Won't start",
+    installedNotFound: "The installer finished, but {{tool}} still isn't found.",
+    notFoundYet: "{{tool}} still isn't found.",
     browserName: "Browser",
     browserDesc: "Opens websites for the agents in a browser of their own, without your logins.",
     browserLogins:

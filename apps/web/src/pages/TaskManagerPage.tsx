@@ -9,6 +9,9 @@ import {
   activityLine,
   agentCardLine,
   agentSummary,
+  causeWords,
+  computerRoomText,
+  computersBesides,
   delegationText,
   endedState,
   groupLead,
@@ -17,6 +20,7 @@ import {
   hiddenCount,
   returnCanceledText,
   returnPlace,
+  shownCauses,
   taskHelping,
   taskPlace,
   taskState,
@@ -25,6 +29,7 @@ import {
   taskTitle,
   taskWhere,
   todayStart,
+  type WaitCause,
 } from "@agenteschat/client/lib/task-manager";
 import { formatDuration } from "@agenteschat/client/lib/work";
 import {
@@ -42,9 +47,11 @@ import {
   PageHeader,
   PixelSpinner,
   PixelStop,
+  ProviderLogo,
   SearchField,
   Tip,
 } from "@agenteschat/ui";
+import { useNavigate } from "@tanstack/react-router";
 import { type CSSProperties, Fragment, type ReactNode, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -158,11 +165,8 @@ export function TaskManagerPage({
   const activity = view.data?.activity;
   // The computers with turns running or waiting for room (ADR 0128).
   const computers = view.data?.computers ?? [];
-  // "Cheio · 3 na fila" or "Tem espaço", and "1 trabalhando": a computer as the page lists it.
-  const computerText = (c: ComputerSummary) => {
-    const room = c.inLine > 0 ? t("taskManager.queue.full", { count: c.inLine }) : t("taskManager.queue.room");
-    return c.working > 0 ? `${room} · ${t("taskManager.working", { count: c.working })}` : room;
-  };
+  const causes = shownCauses(all);
+  const listed = computersBesides(computers, causes);
   const nameOf = (id: string) => dir.anyAgent(id)?.name ?? t("channel.unknownAgent");
   const query = q.trim().toLocaleLowerCase();
   const matches = (task: ManagedTask) => {
@@ -407,6 +411,16 @@ export function TaskManagerPage({
         }
       />
 
+      {view.data && (
+        <CapacityStrip
+          tasks={all}
+          done={view.data.doneToday ?? view.data.ended.filter((e) => e.status === "done").length}
+          causes={causes}
+          computers={computers}
+          onQueue={setQueueOf}
+        />
+      )}
+
       {view.isLoading && <LoadingList count={4} avatar={false} />}
       {view.isError && !view.data && <ErrorState error={view.error} onRetry={() => void view.refetch()} />}
 
@@ -453,22 +467,26 @@ export function TaskManagerPage({
         </Carousel>
       )}
 
-      {computers.length > 0 && (
+      {listed.length > 0 && (
         <section className="tm-computers" aria-label={t("taskManager.queue.computers")}>
-          <GroupHeading title={t("taskManager.queue.computers")} count={computers.length} />
+          <GroupHeading title={t("taskManager.queue.computers")} count={listed.length} />
           <ul className="tm-computers__list ac-card">
-            {computers.map((c) => (
+            {listed.map((c) => (
               <li key={c.id} className="tm-computer">
                 <span className="tm-computer__icon" aria-hidden="true">
                   <Icon name="computer" size={18} />
                 </span>
-                <Tip className="tm-computer__text" tip={rowTip(c.name, [computerText(c)])} look="ac-msg__tip tm-tip">
+                <Tip
+                  className="tm-computer__text"
+                  tip={rowTip(c.name, [computerRoomText(t, c)])}
+                  look="ac-msg__tip tm-tip"
+                >
                   <b>{c.name}</b>
-                  <small>{computerText(c)}</small>
+                  <small>{computerRoomText(t, c)}</small>
                 </Tip>
                 {/* The keys' focus and a long press open the words' tip from here: the words take no focus. */}
                 {(c.inLine > 0 || c.working > 0) && (
-                  <Tip button look="ac-msg__tip tm-tip" tip={rowTip(c.name, [computerText(c)])}>
+                  <Tip button look="ac-msg__tip tm-tip" tip={rowTip(c.name, [computerRoomText(t, c)])}>
                     <Button variant="link" aria-label={`${t("queue.see")}: ${c.name}`} onClick={() => setQueueOf(c.id)}>
                       {t("queue.see")}
                     </Button>
@@ -655,6 +673,85 @@ export function TaskManagerPage({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Over the cards, while work waits: what got done today and how much waits, then what holds it, one row a cause
+ * (`causeWords`) with its count and its one way out. Hidden when nothing waits.
+ */
+function CapacityStrip({
+  tasks,
+  done,
+  causes,
+  computers,
+  onQueue,
+}: {
+  tasks: ManagedTask[];
+  done: number;
+  causes: WaitCause[];
+  computers: ComputerSummary[];
+  onQueue: (machineId: string) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const navigate = useNavigate();
+  const openTask = useOpenTask();
+  if (causes.length === 0) return null;
+  const waiting = tasks.filter((task) => taskState(task) === "waiting").length;
+  const row = (cause: WaitCause) => {
+    const first = cause.tasks[0] as ManagedTask;
+    const words = causeWords(t, i18n.language, cause, computers);
+    if (cause.kind === "limit") {
+      const brain = first.brain && first.brain !== "model" ? first.brain : null;
+      return {
+        ...words,
+        lead: brain ? <ProviderLogo id={brain} size="xs" /> : <Icon name="clock" size={18} />,
+        act: t("taskManager.capacity.usage"),
+        onAct: () =>
+          void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "usage" } }),
+      };
+    }
+    if (cause.kind === "computer")
+      return {
+        ...words,
+        lead: <Icon name="computer" size={18} />,
+        act: cause.busy ? t("queue.see") : t("taskManager.capacity.computers"),
+        onAct: cause.busy
+          ? () => onQueue(cause.machineId)
+          : () =>
+              void navigate({
+                to: "/org/$orgId/settings/$section",
+                params: { orgId: org.id, section: "computers" },
+              }),
+      };
+    return { ...words, lead: <WaitMark />, act: t("taskManager.actions.open"), onAct: () => openTask(first) };
+  };
+  return (
+    <section className="tm-causes" aria-label={t("taskManager.capacity.label")}>
+      <p className="tm-causes__today">{t("taskManager.capacity.today", { count: done, waiting })}</p>
+      <ul className="tm-computers__list ac-card">
+        {causes.map((cause) => {
+          const r = row(cause);
+          return (
+            <li key={cause.key} className="tm-computer tm-cause">
+              <span className="tm-computer__icon" aria-hidden="true">
+                {r.lead}
+              </span>
+              <Tip className="tm-computer__text" tip={rowTip(r.name, [r.fact])} look="ac-msg__tip tm-tip">
+                <b>{r.name}</b>
+                <small>{r.fact}</small>
+              </Tip>
+              <Tip button look="ac-msg__tip tm-tip" tip={rowTip(r.name, [r.fact])}>
+                <Button variant="link" aria-label={`${r.act}: ${r.name}`} onClick={r.onAct}>
+                  {r.act}
+                </Button>
+              </Tip>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

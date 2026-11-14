@@ -1233,6 +1233,8 @@ export const ptBR = {
         agenteschat:
           "No outro workspace: Configurações → Importar e exportar → Baixar o arquivo. Depois é só soltar o .json aqui.",
       },
+      whereOther: "Baixe o arquivo do outro workspace e solte o .json aqui.",
+      whereOtherLink: "Baixar de {{org}}",
       request: {
         "grok-bot": {
           title: "Peça para o seu bot exportar",
@@ -1896,11 +1898,10 @@ export const ptBR = {
     browser: "Este navegador",
     phone: "Celular",
     phoneOn: "No app do celular, com o aparelho bloqueado também",
-    phoneOff: "Ative no app do celular, em Você\u00a0›\u00a0Notificações",
+    phoneOff: "Ative no app do celular",
     mac: "App do Mac",
     macHelp: "Enquanto o app estiver aberto, mesmo em segundo plano",
     on: "Ligado",
-    off: "Desligado",
     failed: "Não deu para salvar. Tente de novo.",
     loadFailed: "Não deu para carregar suas escolhas agora.",
     category: {
@@ -1929,7 +1930,7 @@ export const ptBR = {
     inline: {
       title: "Quer saber na hora quando o {{name}} responder?",
       title_female: "Quer saber na hora quando a {{name}} responder?",
-      why: "Mesmo com a aba fechada. Você muda quando quiser em Configurações\u00a0›\u00a0Notificações.",
+      why: "Mesmo com a aba fechada. Você muda quando quiser em <link>Notificações</link>.",
     },
   },
   shell: {
@@ -2196,6 +2197,7 @@ export const ptBR = {
     localOnly: "Este servidor só abre no computador onde ele roda, então o celular não chega a ele.",
     localOnlyHow:
       "No app do agentes.chat desse computador, ligue Acessar pelo celular e pela equipe em Preferências › Servidores. Depois volte aqui.",
+    localOnlyHere: "Ligue Acessar pelo celular e pela equipe. Depois volte aqui.",
   },
   team: {
     title: "Equipe",
@@ -2802,8 +2804,8 @@ export const ptBR = {
     sharedPlace:
       "Usado em canais e em trabalhos que rodam sozinhos. Todo o workspace compartilha este espaço. Não guarde nada privado aqui.",
     /** The row where it has none for anyone: the workspace has no computer of its own. */
-    computerNoHome:
-      "Ainda sem computador. Passa a ter um quando este workspace tiver um computador próprio, adicionado em Configurações, Computadores.",
+    computerNoHome: "Ainda sem computador. Passa a ter um quando este workspace tiver um computador próprio.",
+    addComputer: "Adicionar um computador",
     /** The row where the workspace's computer runs every agent as one OS user. */
     computerOneUser:
       "Sem computador aqui. O computador do workspace roda todos os agentes como um só usuário, então não separa o espaço de cada pessoa. Um servidor Linux instalado com a opção --system do instalador separa.",
@@ -3256,26 +3258,25 @@ export const ptBR = {
       api_key: "Adicionar uma chave de API",
     },
     /**
-     * A plan whose program is switched off on a computer the person connected. `program`: "Claude Code" or "Codex"
-     * (`brain.card`), as its switch is named in that computer's own settings.
+     * A coding CLI that isn't on a computer someone connected (`program`: "Claude Code" or "Codex"), and installing it
+     * from here. `claudeApp` sits behind an ⓘ on Windows and macOS, where a Claude chat app is likely.
      */
-    toolOff: {
-      text: "O {{computer}} está conectado, mas o {{program}} está desligado nele. Só quem conectou o computador liga.",
-      where: "No {{computer}}",
-      /** `<mark/>`: the app's icon, drawn. */
-      one: "Clique no ícone do agentes.chat <mark/> perto do relógio",
-      oneWindows: "No Windows, ele pode estar atrás da seta ^ da barra de tarefas.",
-      two: "Abra <b>Preferências</b>",
-      three: "Em <b>Ferramentas</b>, ligue <b>{{program}}</b>",
-      /** On a computer that may have no app: its command follows. */
-      terminal: "No terminal do computador, rode:",
-      /** In the app on that very computer: Open Tools follows. */
-      here: "Ligue <b>{{program}}</b> em <b>Ferramentas</b>.",
-      /** The person who connected the computer turns it on from here: the button follows. */
-      oneClick: "<b>{{program}}</b> está desligado nesse computador.",
-      /** Someone else: they ask whoever connected it (the button follows). */
-      oneClickOther: "<b>{{program}}</b> está desligado no computador de {{name}}.",
-      waiting: "Esperando você ligar. Esta tela muda sozinha.",
+    cli: {
+      missing: "O {{program}} ainda não está no {{computer}}.",
+      claudeApp: "O app do Claude não basta: os agentes usam o Claude Code, que roda no computador.",
+      install: "Instalar o {{program}} para mim",
+      check: "Já instalei, verificar de novo",
+      checked: "Verifiquei agora: o {{program}} ainda não está no {{computer}}.",
+      installing: "Instalando o {{program}} no {{computer}}. Leva cerca de um minuto.",
+      failed: "Não deu para instalar no {{computer}}: {{message}}",
+      stillMissing: "O instalador terminou, mas o {{computer}} ainda não acha o {{program}}.",
+      /** Claude Code on Windows can't start without Git for Windows. */
+      gitMissing: "O {{program}} precisa do Git for Windows no {{computer}}.",
+      getGit: "Baixar o Git for Windows",
+      /** It is there and its own check of its version fails: `message` is its error. */
+      cantStart: "O {{program}} está no {{computer}}, mas não abre: {{message}}",
+      outdated: "Atualize o app do agentes.chat no {{computer}} para instalar daqui.",
+      asked: "Pedido enviado. {{name}} recebe um botão para instalar.",
     },
     titleFor: "Conectar uma IA para o {{name}}",
     titleFor_female: "Conectar uma IA para a {{name}}",
@@ -3407,7 +3408,15 @@ export const ptBR = {
       create: "Crie a sua chave de API {{provider}}",
       paste: "Cole aqui",
       forAll: "Todo agente sem plano pensa com ela.",
+      forAgent: "{{agent}} vai pensar com ela.",
       saved: "Salva. Todo agente sem plano pensa com ela.",
+      savedFor: "Salva. {{agent}} agora pensa com {{label}}.",
+      savedAll: "Salva. Os agentes sem uma IA própria pensam com ela.",
+      savedMade: "Salva. Os agentes agora pensam com ela, no lugar de {{other}}.",
+      savedOther: "Salva. Os agentes ainda pensam com {{other}}.",
+      useForAll: "Usar esta chave para todos",
+      untested: "Nenhum modelo do {{name}} passou no teste ainda.",
+      testModels: "Testar modelos",
       savedUnchecked:
         "Salva, mas {{provider}} não respondeu e a chave não pôde ser testada. Se ela falhar, a conversa diz o motivo.",
       closed: "As chaves de API abrem com o plano do agentes.chat do workspace.",
@@ -5744,6 +5753,8 @@ export const ptBR = {
         context: "Janela de contexto",
         contextText: {
           auto: "O que o modelo aguenta.",
+          /** "Automático" for an agent on Claude Code or Codex: they summarise at a fixed size (`autoContextFor`). */
+          autoSummarizes: "No Claude Code e no Codex, resume a conversa em {{size}}.",
           "200000": "Mais barato e rápido. Resume cedo em conversas longas.",
           "400000": "Lembra bastante, e cada resposta custa menos que com 1M.",
           "1000000": "Lembra o máximo. Cada resposta relê tudo: mais lenta e cara.",
@@ -7173,6 +7184,8 @@ export const ptBR = {
     budgetHelp: "Ao atingir o limite, o {{name}} para e avisa.",
     budgetHelp_female: "Ao atingir o limite, a {{name}} para e avisa.",
     budgetInvalid: "Use um valor maior que zero.",
+    budgetCapped: "Usa o padrão do workspace. Só um admin aumenta.",
+    budgetCappedAmount: "Usa o padrão do workspace ({{amount}}). Só um admin aumenta.",
     warnsOwner: "Avisamos {{name}} aos 80%.",
     warnsAdmins: "Avisamos os admins aos 80%.",
     upTo: "até {{amount}}/mês",
@@ -8430,8 +8443,8 @@ export const ptBR = {
         oneClick: "Criar o webhook",
         /** After the one-click add: `repo` is owner/name. */
         added: "Webhook criado no {{repo}}.",
-        byHand: "Ou à mão: no repositório, Settings\u00a0›\u00a0Webhooks\u00a0›\u00a0Add webhook.",
-        open: "No repositório, abra Settings\u00a0›\u00a0Webhooks\u00a0›\u00a0Add webhook.",
+        byHand: "Ou crie à mão no GitHub.",
+        open: "Crie o webhook no repositório, no GitHub.",
         openLink: "Abrir no GitHub",
         url: "Payload URL",
         type: "Content type: application/json",
@@ -9488,8 +9501,6 @@ export const ptBR = {
       dmWith: "DM com {{name}}",
       homeHint: "A missão ganha uma thread: é lá que {{name}} conversa, pede decisões e mostra o que fez.",
       offline: "{{name}} está offline. O plano começa quando ele voltar.",
-      needsMachine:
-        "Missões rodam num computador conectado. Conecte um ao {{name}} em Configurações\u00a0›\u00a0Dispositivos.",
       commandHint: "Também dá para começar escrevendo no composer de qualquer conversa:",
       approvals: "Por padrão, merge, deploy e rollback pedem aprovação",
       start: "Começar missão",
@@ -9906,6 +9917,8 @@ export const ptBR = {
     fetch: "Buscar modelos",
     listFailed: "O servidor não listou modelos ({{error}}). Digite o id de cada modelo abaixo.",
     choose: "Escolha os modelos que os agentes podem usar",
+    search: "Buscar modelo",
+    noMatch: "Nenhum modelo com “{{query}}”.",
     addModel: "Adicionar um modelo",
     add: "Adicionar",
     modelPlaceholder: "Id do modelo, como llama-4",
@@ -11761,14 +11774,10 @@ export const ptBR = {
       no_computer: "Escolha um computador conectado em Computador para usar.",
       exec_off: "O computador foi conectado sem permissão para rodar programas.",
       runner_old: "Atualize o programa do agentes.chat no computador para usar.",
-      /** `program`: "Claude Code" or "Codex" (`brain.card`). */
-      tool_off:
-        "O {{program}} está desligado no {{computer}}. Ligue lá, no app do agentes.chat: Preferências → Ferramentas.",
-      tool_offLinux:
-        "O {{program}} está desligado no {{computer}}. Ligue lá, no app do agentes.chat ou com {{command}}.",
       /** The button that turns it on follows. */
       tool_offOne: "O {{program}} está desligado no {{computer}}.",
       not_installed: "O {{program}} não está instalado no {{computer}}.",
+      cant_start: "O {{program}} está no {{computer}}, mas não abre.",
       not_reported: "O {{computer}} ainda está vendo quais programas tem. Isto muda sozinho quando terminar.",
       outdated: "A versão no {{computer}} é antiga. Atualize o Codex para usar.",
       system: "O {{program}} ainda não roda no sistema do {{computer}}.",
@@ -11945,8 +11954,9 @@ export const ptBR = {
   access: {
     matrixTitle: "Acesso dos agentes",
     matrixHint:
-      "Por padrão, ações sensíveis (merge, deploy, compartilhar, pagar) pedem aprovação. Para ajustar ferramenta por ferramenta, abra Ferramentas no conector.",
+      "Por padrão, ações sensíveis (merge, deploy, compartilhar, pagar) pedem aprovação. Para ajustar ferramenta por ferramenta, abra o conector.",
     matrixHow: "Clique numa célula para trocar:",
+    openConnectors: "Abrir Conectores",
     kindLabel: "Mostrar",
     kind: { connectors: "Conectores", builtin: "Nativos" },
     agentCol: "Agente",
@@ -14258,6 +14268,8 @@ export const ptBR = {
       asked: "Pedido enviado. {{name}} recebe um botão para ligar.",
       done: "Ligado no {{machine}}.",
       outdated: "Atualize o app do agentes.chat no {{machine}} para ligar daqui.",
+      /** Its computer is offline: the button turns it on once the computer is back, and waits until then. */
+      offline: "O {{machine}} está offline. Assim que ele voltar, o botão liga {{tool}}.",
     },
     remotePause: {
       button: "Pausar",
@@ -14309,7 +14321,7 @@ export const ptBR = {
       device: { mac: "Mac", windows: "PC", linux: "computador" },
       grantHere: "É este {{device}}: libere pastas nas Preferências do app.",
       openFolders: "Abrir Pastas",
-      toolsHere: "É este {{device}}: ligue o navegador nas Preferências do app, em Ferramentas.",
+      openServers: "Abrir Servidores",
       openTools: "Abrir Ferramentas",
       reconnect: "Reconectar",
       reconnecting: "Reconectando este {{device}}…",
@@ -14317,8 +14329,6 @@ export const ptBR = {
       offline: "Este {{device}} está sem conexão agora.",
       outageTitle: "Este {{device}} perdeu a conexão {{ago}}",
       toolsOff: "Desligado neste {{device}}. Ligue nas Preferências do app, em Ferramentas.",
-      browserTitle: "Ligue o navegador neste {{device}}",
-      browserText: "Um clique nas Preferências do app, em Ferramentas. A página percebe sozinha.",
       noReport: "Este {{device}} ainda não informou o que libera. Atualize o app.",
       update: "Atualizar o app",
     },
@@ -14826,6 +14836,7 @@ export const ptBR = {
       pairingCode: "Código de pareamento por Wi-Fi",
       pair: "Parear",
       tryAgain: "Tentar de novo",
+      openLocalNetwork: "Abrir Rede Local",
       qrLabel: "Código QR para a depuração por Wi-Fi no celular",
       qrLine: "Não pela câmera",
       qrCaption:
@@ -14930,7 +14941,6 @@ export const ptBR = {
         openXcode: "Abrir o Xcode",
         opened: "O Xcode abriu em {{mac}}. Veja de novo nos Ajustes do iPhone e feche o Xcode depois.",
         unlock: "Já ativou e o iPhone reiniciou? Desbloqueie. O aviso com Ativar só aparece depois disso.",
-        check: "Verificar de novo",
         outdated:
           "O app agentes.chat em {{mac}} está desatualizado. Atualize o app, ou rode isto no Terminal se instalou por lá.",
       },
@@ -15029,6 +15039,7 @@ export const ptBR = {
       access: "<b>{{who}}</b> pede para usar <b>{{deviceName}}</b>",
       waiting: "<b>{{who}}</b> está esperando <b>{{deviceName}}</b>",
       toolRequest: "<b>{{who}}</b> pede para ligar {{tool}} no seu <b>{{deviceName}}</b>",
+      cliRequest: "<b>{{who}}</b> pede para instalar {{tool}} no seu <b>{{deviceName}}</b>",
       once: "Permitir uma vez",
       always: "Sempre",
       no: "Não",
@@ -15800,6 +15811,7 @@ export const ptBR = {
       envOff: "Desligado nas configurações deste servidor (TELEMETRY=off).",
       envOffDesktop:
         "Desligado no app do agentes.chat no computador deste servidor (Preferências\u00a0›\u00a0Servidores).",
+      envOffHere: "Desligado no app do agentes.chat deste computador.",
       see: "Ver o que é enviado",
       dialogTitle: "O que é enviado",
       dialogText: "Uma vez por dia. Este é o próximo envio, exatamente.",
@@ -17598,6 +17610,8 @@ export const ptBR = {
       openingHelp: "Na primeira vez neste computador pode levar um minuto.",
       stuck: "Não deu para abrir o navegador do {{name}}.",
       stuck_female: "Não deu para abrir o navegador da {{name}}.",
+      noAnswer: "O navegador do {{name}} não respondeu.",
+      noAnswer_female: "O navegador da {{name}} não respondeu.",
       stuckHelp: "Tentar de novo reinicia o navegador. Os logins continuam salvos.",
       subWorking: "{{name}} · {{now}}",
       subStarting: "{{name}} está abrindo o navegador",
@@ -17979,9 +17993,9 @@ export const ptBR = {
       meter: "Vocês usaram {{used}} de {{limit}}.",
       near: "Vocês usaram {{used}} de {{limit}}. Os envios pausam no limite, e nada é apagado.",
       full: "Os envios pausaram em {{limit}}. Nada foi apagado.",
-      fullAdmin:
-        "Mude o plano do agentes.chat, apague arquivos que não usam mais ou conecte o seu próprio bucket em Configurações\u00a0›\u00a0Armazenamento.",
+      fullAdmin: "Mude o plano do agentes.chat, apague arquivos que não usam mais ou conecte o seu próprio bucket.",
       dailyFull: "Os envios de hoje chegaram a {{limit}}. Dá para enviar de novo em algumas horas.",
+      connectBucket: "Conectar um bucket",
     },
   },
   computerSetup: {
@@ -18399,7 +18413,6 @@ export const ptBR = {
       turn: "Deitar a tela",
       upright: "Voltar a tela para em pé",
       message: "Mensagem para {{name}}",
-      chooseOnWeb: "Escolha no agentes.chat, em Configurações\u00a0›\u00a0Dispositivos.",
     },
   },
   /** Agora (ADR 0128 addendum): the whole workspace's work in one place, a button beside "Ir para…" and its list. */
@@ -18589,6 +18602,14 @@ export const ptBR = {
       full_other: "Cheio · {{count}} na fila",
       room: "Tem espaço",
       computers: "Computadores",
+    },
+    /** Above the cards: what holds the waiting tasks now, each cause with its way out. Hidden when nothing waits. */
+    capacity: {
+      label: "O que segura as tarefas",
+      today_one: "Hoje: {{count}} tarefa concluída · {{waiting}} esperando",
+      today_other: "Hoje: {{count}} tarefas concluídas · {{waiting}} esperando",
+      usage: "Ver uso",
+      computers: "Ver computadores",
     },
     cards: { label: "Agentes", previous: "Agentes anteriores", next: "Mais agentes" },
     table: "Tarefas",

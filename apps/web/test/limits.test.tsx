@@ -27,10 +27,10 @@ async function go(path: string, over: Partial<WorkspaceLimits>, billing = true) 
   const api = createFakeApi(state);
   const left: string[] = [];
   setNavigateAway((url) => left.push(url));
-  const { sockets } = await renderApp(`/org/${ORG_ID}/${path}`, { api });
+  const { sockets, router } = await renderApp(`/org/${ORG_ID}/${path}`, { api });
   await settle(6);
   const billingLinks = () => state.calls.filter((c) => c.method === "orgs.billingLink").map((c) => c.args[1]);
-  return { api, state, left, billingLinks, sockets };
+  return { api, state, left, billingLinks, sockets, router };
 }
 /**
  * Members' "Convidar pessoas" opens the invite dialog (ADR 0090); an address goes in, so the only thing that can keep
@@ -196,7 +196,7 @@ describe("a workspace's limits (ADR 0079)", () => {
   });
 
   test("an upload refused at a limit says so; at the storage limit owners get the plan's options", async () => {
-    const { api, billingLinks } = await go("drive", {});
+    const { api, billingLinks, router } = await go("drive", {});
     let refusal = new ApiError(409, "storage.full", "The workspace's file storage is full", {
       usedBytes: 50 * GB,
       limitBytes: 50 * GB,
@@ -223,6 +223,17 @@ describe("a workspace's limits (ADR 0079)", () => {
     expect(document.body.textContent).toContain(
       "Os envios de hoje chegaram a 10 GB. Dá para enviar de novo em algumas horas.",
     );
+    // Its own bucket is the other way to room: the toast's second button opens where it is connected.
+    refusal = new ApiError(409, "storage.full", "The workspace's file storage is full", {
+      usedBytes: 50 * GB,
+      limitBytes: 50 * GB,
+    });
+    await send();
+    const again = screen().getAllByRole("alert").at(-1) as HTMLElement;
+    expect(again.textContent).not.toContain("Configurações");
+    await click(within(again).getByRole("button", { name: "Conectar um bucket" }));
+    await settle(4);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/storage`);
   });
 
   test("an invitation to a full workspace: the person invited reads whom to tell", async () => {

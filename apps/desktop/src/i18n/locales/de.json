@@ -238,7 +238,7 @@
       "start": "agentes.chat ist auf diesem {{device}} nicht gestartet.",
       "database": "Die Datenbank wurde nicht vorbereitet.",
       "account": "Dein Konto wurde nicht erstellt.",
-      "retry": "Versuch es noch einmal unter Einstellungen › Server."
+      "retry": "In den Einstellungen erneut versuchen"
     },
     "reason": {
       "https": "HTTPS ist in deinem Tailscale-Netzwerk aus",
@@ -332,7 +332,6 @@
     "usageRestart": "Eine Änderung startet agentes.chat kurz neu.",
     "jev": "Jev",
     "jevText": "Ein schnelles Modell von TypeSafe, das entscheidet, wer antwortet, das Gedächtnis ordentlich hält und Agenten den Bildschirm sehen lässt. Optional, mit deinem eigenen Schlüssel.",
-    "jevWhere": "In agentes.chat › Einstellungen › KI und Verbrauch.",
     "reachFailed": "Der Zugriff von deinen Geräten wurde nicht eingeschaltet: {{reason}}.",
     "backup": "Jetzt sichern",
     "backedUp": "Gesichert: {{file}}",
@@ -429,7 +428,9 @@
     "linkBody": "Wenn du das nicht angefragt hast, wähle Nicht jetzt.",
     "waiting": "Warte, bis {{by}} ihn hereinlässt…",
     "done": "Mit {{org}} verbunden",
-    "expired": "Dieser Link ist abgelaufen. Erstelle unter Einstellungen › Geräte einen neuen.",
+    "addFolders": "Ordner hinzufügen",
+    "expired": "Dieser Link ist abgelaufen. Erstelle unter Geräte einen neuen.",
+    "openDevices": "Geräte öffnen",
     "denied": "{{by}} hat ihn nicht hereingelassen. Nichts hat sich geändert.",
     "letOrg": "Agenten von {{org}} diesen {{device}} nutzen lassen",
     "canUse": "Agenten können ihn nutzen",
@@ -487,6 +488,15 @@
     "lookPath": "agentes.chat sucht im PATH deiner Login-Shell.",
     "lookPathWindows": "agentes.chat sucht im PATH.",
     "stillMissing": "{{tool}} wurde immer noch nicht gefunden. Führe den Befehl oben aus und prüfe dann erneut.",
+    "install": "Für mich installieren",
+    "installing": "{{tool}} wird installiert. Das dauert etwa eine Minute.",
+    "installFailed": "Installation fehlgeschlagen: {{message}}",
+    "gitMissing": "{{tool}} braucht Git for Windows auf diesem Computer.",
+    "getGit": "Git for Windows herunterladen",
+    "cantStart": "Ist da, startet aber nicht: {{message}}",
+    "cantStartChip": "Startet nicht",
+    "installedNotFound": "Das Installationsprogramm ist fertig, aber {{tool}} wird noch nicht gefunden.",
+    "notFoundYet": "{{tool}} wird noch nicht gefunden.",
     "browserName": "Browser",
     "browserDesc": "Öffnet Websites für die Agenten in einem eigenen Browser, ohne deine Anmeldungen.",
     "browserLogins": "Anmeldungen eines Agenten bleiben auf diesem {{device}}, in seinem Ordner. Nutze nur Testkonten oder die eigenen Konten des Agenten."

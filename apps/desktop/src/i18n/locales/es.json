@@ -241,7 +241,7 @@
       "start": "agentes.chat no se inició en esta {{device}}.",
       "database": "La base de datos no se preparó.",
       "account": "Tu cuenta no se creó.",
-      "retry": "Inténtalo de nuevo en Preferencias › Servidores."
+      "retry": "Reintentar en Preferencias"
     },
     "reason": {
       "https": "HTTPS está desactivado en tu red de Tailscale",
@@ -336,7 +336,6 @@
     "usageRestart": "Cambiarlo reinicia agentes.chat por un momento.",
     "jev": "Jev",
     "jevText": "Un modelo rápido de TypeSafe que elige quién responde, mantiene la memoria ordenada y permite que los agentes vean la pantalla. Opcional, con tu propia clave.",
-    "jevWhere": "En agentes.chat › Configuración › IA y uso.",
     "reachFailed": "El acceso desde tus dispositivos no se activó: {{reason}}.",
     "backup": "Hacer una copia ahora",
     "backedUp": "Copia de seguridad hecha: {{file}}",
@@ -433,7 +432,9 @@
     "linkBody": "Si no lo pediste, elige Ahora no.",
     "waiting": "Esperando a que {{by}} la deje entrar…",
     "done": "Conectada a {{org}}",
-    "expired": "Este enlace caducó. Crea uno nuevo en Configuración › Dispositivos.",
+    "addFolders": "Agregar carpetas",
+    "expired": "Este enlace caducó. Crea uno nuevo en Dispositivos.",
+    "openDevices": "Abrir Dispositivos",
     "denied": "{{by}} no la dejó entrar. No cambió nada.",
     "letOrg": "Dejar que los agentes de {{org}} usen esta {{device}}",
     "canUse": "Los agentes pueden usarla",
@@ -491,6 +492,15 @@
     "lookPath": "agentes.chat busca en el PATH de tu shell de inicio de sesión.",
     "lookPathWindows": "agentes.chat busca en el PATH.",
     "stillMissing": "{{tool}} sigue sin encontrarse. Ejecuta el comando de arriba y vuelve a comprobar.",
+    "install": "Instalar por mí",
+    "installing": "Instalando {{tool}}. Tarda alrededor de un minuto.",
+    "installFailed": "No se pudo instalar: {{message}}",
+    "gitMissing": "{{tool}} necesita Git for Windows en este computador.",
+    "getGit": "Descargar Git for Windows",
+    "cantStart": "Está aquí, pero no abre: {{message}}",
+    "cantStartChip": "No abre",
+    "installedNotFound": "El instalador terminó, pero todavía no se encuentra {{tool}}.",
+    "notFoundYet": "Todavía no se encuentra {{tool}}.",
     "browserName": "Navegador",
     "browserDesc": "Abre sitios web para los agentes en un navegador propio, sin tus inicios de sesión.",
     "browserLogins": "Los inicios de sesión que hace un agente quedan en esta {{device}}, en su carpeta. Usa solo cuentas de prueba o las del propio agente."

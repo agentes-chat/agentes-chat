@@ -1835,6 +1835,8 @@
         "offlineCloudM": "La computadora de {{name}} no responde ahora.",
         "stuckF": "No se pudo abrir el navegador de {{name}}.",
         "stuckM": "No se pudo abrir el navegador de {{name}}.",
+        "noAnswerF": "El navegador de {{name}} no respondió.",
+        "noAnswerM": "El navegador de {{name}} no respondió.",
         "tooManyF": "Hay demasiados navegadores abiertos a la vez. Este aparece cuando se cierre otro.",
         "tooManyM": "Hay demasiados navegadores abiertos a la vez. Este aparece cuando se cierre otro."
       }
@@ -2089,7 +2091,6 @@
         "openXcode": "Abrir Xcode",
         "opened": "Xcode se abrió en {{host}}. Vuelve a mirar en Ajustes y cierra Xcode allí después.",
         "unlock": "¿Lo activaste y se reinició? El aviso con Activar aparece cuando este iPhone está desbloqueado.",
-        "checkAgain": "Comprobar de nuevo",
         "outdated": "La app agentes.chat en {{host}} está desactualizada. Actualízala en ese Mac."
       }
     },
@@ -2103,6 +2104,7 @@
       "waiting": "{{names}} está esperando {{device}}",
       "waitingFor": "{{names}} está esperando {{device}} para {{person}}",
       "tool_request": "{{names}} te pide activar {{tool}} en tu {{device}}",
+      "cli_request": "{{names}} te pide instalar {{tool}} en tu {{device}}",
       "allowOnce": "Permitir una vez",
       "always": "Permitir siempre a {{name}}",
       "no": "No",
@@ -2164,7 +2166,8 @@
     "everyoneFailed": "No se pudo cambiar el acceso de todos. Inténtalo de nuevo.",
     "disconnectFailed": "No se pudo desconectar {{name}}. Inténtalo de nuevo.",
     "needsReconnect": "La cuenta de {{name}} dejó de funcionar. Los agentes no pueden usarla hasta que alguien la reconecte.",
-    "noTools": "No se pudieron leer las herramientas de {{name}}. Los agentes no las tienen hasta que se lean de nuevo, en Herramientas.",
+    "noTools": "No se pudieron leer las herramientas de {{name}}. Los agentes no las tienen hasta que se lean de nuevo.",
+    "readAgain": "Leer de nuevo",
     "accountTitle": "Cuenta",
     "renameFailed": "No se pudo cambiar el nombre. Inténtalo de nuevo.",
     "whoTitle": "Quién lo usa",
@@ -2574,7 +2577,7 @@
     },
     "import": {
       "title": "Importar desde una computadora",
-      "text": "Para traer contraseñas de un navegador o de un gestor de contraseñas, abre Configuración, Vault en la web y elige Importar."
+      "text": "Para traer contraseñas de un navegador o de un gestor de contraseñas, impórtalas en la web."
     },
     "connections": {
       "text": "Conecta un gestor de contraseñas y tus agentes usan los inicios de sesión guardados allí. No se copia nada: una contraseña solo se lee cuando se usa.",

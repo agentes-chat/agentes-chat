@@ -3,8 +3,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { EndedTask, ManagedTask } from "@agenteschat/client";
 import {
+  causeWords,
+  computerRoomText,
+  computersBesides,
   returnCanceledText,
   returnPlace,
+  shownCauses,
   taskTitle,
   taskWaitGroups,
   taskWaitGroupText,
@@ -12,7 +16,6 @@ import {
 import {
   agentTasksHref,
   agentTasksOf,
-  computerLine,
   doneTodayOf,
   endedLatestFirst,
   endedText,
@@ -151,6 +154,25 @@ describe("one line a row", () => {
     expect(screen).not.toContain("end={stop}");
     expect(screen).toContain('<Icon name="right" size={15} color={c.faint} />');
     for (const row of ["computer.name", "title"]) expect(screen).toContain(`<OneLine title={${row}}`);
+  });
+
+  test("what holds the waiting work: today's line, then up to three causes, each one line that opens its way out", () => {
+    const screen = read("TaskManagerScreen.tsx");
+    expect(screen).toContain("const causes = shownCauses(all);");
+    // A computer in the strip is not listed again under Computadores.
+    expect(screen).toContain("const listed = computersBesides(computers, causes);");
+    expect(screen).toContain("{listed.map((m, i) => (");
+    expect(screen).toContain('t("taskManager.capacity.today", {');
+    expect(screen).toContain('<OneLine title={title} line={line} variant="subhead" />');
+    for (const way of [
+      'router.push("/usage")',
+      "openQueue(cause.machineId)",
+      'router.push("/settings/devices")',
+      "router.push(taskHref(first.runId))",
+    ])
+      expect(screen).toContain(way);
+    // Nothing waits, nothing shows.
+    expect(screen).toContain("{causes.length > 0 ? (");
   });
 
   test("its screen says it whole: the title and what it is about with no limit of lines, the state's words", () => {
@@ -330,9 +352,44 @@ describe("a computer's line (ADR 0128)", () => {
 
   test("a computer on the task manager: full with how many wait, or room, and how many run", async () => {
     const t = await translator("pt-BR");
-    expect(computerLine(t, { working: 3, inLine: 2 })).toBe("Cheio · 2 na fila · 3 trabalhando");
-    expect(computerLine(t, { working: 1, inLine: 0 })).toBe("Tem espaço · 1 trabalhando");
-    expect(computerLine(t, { working: 0, inLine: 0 })).toBe("Tem espaço");
+    expect(computerRoomText(t, { working: 3, inLine: 2 })).toBe("Cheio · 2 na fila · 3 trabalhando");
+    expect(computerRoomText(t, { working: 1, inLine: 0 })).toBe("Tem espaço · 1 trabalhando");
+    expect(computerRoomText(t, { working: 0, inLine: 0 })).toBe("Tem espaço");
+  });
+
+  test("what holds the work, in the rows' words: a plan by its wait's return, a full computer once, with its facts", async () => {
+    const t = await translator("pt-BR");
+    const onPlan = (runId: string) =>
+      task({
+        runId,
+        status: "waiting_input",
+        held: "plan",
+        brain: "claude_code",
+        wait: {
+          code: "plan_limit",
+          key: "plan:m1:claude_code:a1",
+          plan: "Claude",
+          model: null,
+          scope: null,
+          percent: null,
+          window: null,
+          resetsAt: new Date(Date.now() + 3 * 3600_000).toISOString(),
+          canContinue: false,
+        },
+      });
+    const inLine = (runId: string) =>
+      task({ runId, status: "waiting_input", held: "computer_busy", line: { ...full, machineId: "m1" } });
+    const computers = [
+      { id: "m1", name: "Computador da equipe", working: 2, inLine: 4 },
+      { id: "m2", name: "Servidor", working: 1, inLine: 0 },
+    ];
+    const causes = shownCauses([onPlan("a"), onPlan("b"), inLine("c")]);
+    const [plan, computer] = causes.map((c) => causeWords(t, "pt-BR", c, computers));
+    expect(plan?.name).toBe("Plano do Claude no limite");
+    expect(plan?.fact).toMatch(/^Volta (às|amanhã|\S+ às) .+ · 2 tarefas$/);
+    expect(computer).toEqual({ name: "Computador da equipe", fact: "Cheio · 4 na fila · 2 trabalhando" });
+    // The other computer still lists under Computadores; the one in the strip does not.
+    expect(computersBesides(computers, causes).map((c) => c.id)).toEqual(["m2"]);
   });
 
   test("under its place, when it should start, in the computer line's words; no made-up time without an estimate", async () => {

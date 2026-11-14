@@ -235,7 +235,7 @@
       "start": "この{{device}}でagentes.chatが起動しませんでした。",
       "database": "データベースを準備できませんでした。",
       "account": "アカウントを作成できませんでした。",
-      "retry": "環境設定 › サーバー から、もう一度お試しください。"
+      "retry": "環境設定でもう一度試す"
     },
     "reason": {
       "https": "TailscaleネットワークでHTTPSがオフになっています",
@@ -328,7 +328,6 @@
     "usageRestart": "変更すると、agentes.chatが少しの間再起動します。",
     "jev": "Jev",
     "jevText": "TypeSafeの高速モデルで、誰が答えるかを選び、メモリを整理し、エージェントが画面を見られるようにします。任意で、あなた自身のキーを使います。",
-    "jevWhere": "agentes.chat › 設定 › AIと使用量 で設定します。",
     "reachFailed": "あなたのデバイスからのアクセスがオンになりませんでした: {{reason}}。",
     "backup": "今すぐバックアップ",
     "backedUp": "バックアップしました: {{file}}",
@@ -425,7 +424,9 @@
     "linkBody": "心当たりがなければ「今はしない」を選んでください。",
     "waiting": "{{by}}が参加を許可するのを待っています…",
     "done": "{{org}}に接続しました",
-    "expired": "このリンクは期限切れです。設定 › デバイスで新しいリンクを作成してください。",
+    "addFolders": "フォルダを追加",
+    "expired": "このリンクは期限切れです。デバイスで新しいリンクを作成してください。",
+    "openDevices": "デバイスを開く",
     "denied": "{{by}}は参加を許可しませんでした。何も変わっていません。",
     "letOrg": "{{org}}のエージェントにこの{{device}}を使わせる",
     "canUse": "エージェントが使えます",
@@ -483,6 +484,15 @@
     "lookPath": "agentes.chatはログインシェルのPATHを探します。",
     "lookPathWindows": "agentes.chatはPATHを探します。",
     "stillMissing": "{{tool}}はまだ見つかりません。上のコマンドを実行してから、もう一度確認してください。",
+    "install": "インストールする",
+    "installing": "{{tool}} をインストールしています。1 分ほどかかります。",
+    "installFailed": "インストールできませんでした: {{message}}",
+    "gitMissing": "{{tool}} にはこのコンピューターの Git for Windows が必要です。",
+    "getGit": "Git for Windows をダウンロード",
+    "cantStart": "ありますが、起動しません: {{message}}",
+    "cantStartChip": "起動しない",
+    "installedNotFound": "インストーラーは終わりましたが、{{tool}} がまだ見つかりません。",
+    "notFoundYet": "{{tool}} がまだ見つかりません。",
     "browserName": "ブラウザ",
     "browserDesc": "エージェント専用のブラウザでウェブサイトを開きます。あなたのログイン情報は使いません。",
     "browserLogins": "エージェントのログイン情報はこの{{device}}のエージェントのフォルダに残ります。テスト用のアカウントか、エージェント自身のアカウントだけを使ってください。"

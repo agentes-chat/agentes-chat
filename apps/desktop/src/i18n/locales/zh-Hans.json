@@ -235,7 +235,7 @@
       "start": "agentes.chat 没有在这台 {{device}} 上启动。",
       "database": "数据库没有准备好。",
       "account": "你的账号没有创建成功。",
-      "retry": "请在“偏好设置 › 服务器”中重试。"
+      "retry": "在偏好设置中重试"
     },
     "reason": {
       "https": "你的 Tailscale 网络未开启 HTTPS",
@@ -328,7 +328,6 @@
     "usageRestart": "更改此项会让 agentes.chat 短暂重启。",
     "jev": "Jev",
     "jevText": "TypeSafe 推出的快速模型，负责决定由谁回答、整理记忆，并让智能体看到屏幕。可选，需使用你自己的密钥。",
-    "jevWhere": "在 agentes.chat › 设置 › AI 和用量中。",
     "reachFailed": "从你的设备访问未能开启：{{reason}}。",
     "backup": "立即备份",
     "backedUp": "已备份：{{file}}",
@@ -425,7 +424,9 @@
     "linkBody": "如果不是你发起的请求，请选择“以后再说”。",
     "waiting": "正在等待 {{by}} 允许加入…",
     "done": "已连接到 {{org}}",
-    "expired": "此链接已过期。请在“设置 › 设备”中新建一个。",
+    "addFolders": "添加文件夹",
+    "expired": "此链接已过期。请在“设备”中新建一个。",
+    "openDevices": "打开设备",
     "denied": "{{by}} 没有允许加入。什么都没有改变。",
     "letOrg": "允许 {{org}} 的智能体使用这台 {{device}}",
     "canUse": "智能体可以使用",
@@ -483,6 +484,15 @@
     "lookPath": "agentes.chat 会在你的登录 shell 的 PATH 中查找。",
     "lookPathWindows": "agentes.chat 会在 PATH 中查找。",
     "stillMissing": "仍未找到 {{tool}}。运行上面的命令，然后重新检查。",
+    "install": "帮我安装",
+    "installing": "正在安装 {{tool}}。大约需要一分钟。",
+    "installFailed": "无法安装：{{message}}",
+    "gitMissing": "{{tool}} 需要这台电脑上的 Git for Windows。",
+    "getGit": "下载 Git for Windows",
+    "cantStart": "已在这里，但无法启动：{{message}}",
+    "cantStartChip": "无法启动",
+    "installedNotFound": "安装程序已完成，但仍找不到 {{tool}}。",
+    "notFoundYet": "仍找不到 {{tool}}。",
     "browserName": "浏览器",
     "browserDesc": "在智能体自己的浏览器中为它们打开网站，不使用你的登录信息。",
     "browserLogins": "智能体的登录信息会保存在这台 {{device}} 上它的文件夹中。请只使用测试账号或智能体自己的账号。"

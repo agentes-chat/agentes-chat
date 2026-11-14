@@ -75,6 +75,9 @@ export interface PushStrings {
   /** `device.tool_request`: someone needs a tool on the person's computer (`a` who, `d` the computer). */
   deviceToolTitle: (a: string, d: string) => string;
   deviceToolBody: string;
+  /** `device.cli_request`: someone needs a coding CLI installed on the person's computer. */
+  deviceCliTitle: (a: string, d: string) => string;
+  deviceCliBody: string;
   /** `admin_ask`: `a` asks who may do it (`what`: channel_agent, create_agents, webhook; `l` the channel or service). */
   adminAskTitle: (a: string, what: string, l: string) => string;
   deviceWaitingTitle: (person: string, device: string) => string;
@@ -180,6 +183,8 @@ export const en: PushStrings = {
   deviceAccessBody: "Tap to allow once, always, or say no.",
   deviceToolTitle: (a, d) => `${a} asks you to turn on a tool on your ${d}`,
   deviceToolBody: "Tap to turn it on in one click.",
+  deviceCliTitle: (a, d) => `${a} asks you to install a program on your ${d}`,
+  deviceCliBody: "Tap to install it in one click.",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} asks you to add an agent to #${l}`

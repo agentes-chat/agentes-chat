@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import type {
   CanceledReturn,
+  ComputerSummary,
   EndedTask,
   HiddenTasks,
   ManagedTask,
@@ -214,6 +215,94 @@ export function taskWaitGroupText(t: TFunction, locale: string, group: TaskWaitG
   if (w.code === "budget") return s("taskManager.waitGroup.budgetOut", { ...values, when });
   if (w.scope === "model") return s("taskManager.waitGroup.modelLimit", { ...values, when });
   return s("taskManager.waitGroup.planLimit", { ...values, when });
+}
+
+/**
+ * What holds the waiting work now, one entry per cause: a plan's sign-in or a budget at its limit (`limit`, by its
+ * wait key), a computer full or away (`computer`), people asked for an ok or an answer (`person`). The cause holding
+ * the most first. An agent's own line of work holds nothing here: it waits on its other work.
+ */
+export type WaitCause =
+  | { kind: "limit"; key: string; tasks: ManagedTask[] }
+  | { kind: "computer"; key: string; machineId: string; busy: boolean; tasks: ManagedTask[] }
+  | { kind: "person"; key: string; tasks: ManagedTask[] };
+
+export function waitCauses(tasks: ManagedTask[]): WaitCause[] {
+  const causes = new Map<string, WaitCause>();
+  for (const task of tasks) {
+    const why = waitsFor(task);
+    const machineId = task.line?.machineId ?? task.machine?.id;
+    const cause: WaitCause | null =
+      why === "ok" || why === "answer"
+        ? { kind: "person", key: "person", tasks: [] }
+        : why === "plan" || why === "budget"
+          ? { kind: "limit", key: `limit:${task.wait?.key ?? task.wait?.plan ?? why}`, tasks: [] }
+          : (why === "computer_busy" || why === "computer_offline") && machineId && task.wait?.code !== "work_queue"
+            ? { kind: "computer", key: `${why}:${machineId}`, machineId, busy: why === "computer_busy", tasks: [] }
+            : null;
+    if (!cause) continue;
+    const found = causes.get(cause.key) ?? cause;
+    found.tasks.push(task);
+    causes.set(cause.key, found);
+  }
+  return [...causes.values()].sort(
+    (a, b) => b.tasks.length - a.tasks.length || CAUSE_ORDER[a.kind] - CAUSE_ORDER[b.kind],
+  );
+}
+
+const CAUSE_ORDER: Record<WaitCause["kind"], number> = { limit: 0, computer: 1, person: 2 };
+
+/** Causes shown at most: the ones holding the most work. "N esperando" still counts every waiting task. */
+export const CAUSES_SHOWN = 3;
+
+/** What holds the waiting work, as the task manager shows it over its sections (`waitCauses`, the first few). */
+export const shownCauses = (tasks: ManagedTask[]) => waitCauses(tasks).slice(0, CAUSES_SHOWN);
+
+/** A computer on the task manager: "Cheio · 2 na fila · 3 trabalhando", "Tem espaço · 1 trabalhando". */
+export function computerRoomText(t: TFunction, computer: Pick<ComputerSummary, "working" | "inLine">): string {
+  const s = say(t);
+  const room =
+    computer.inLine > 0 ? s("taskManager.queue.full", { count: computer.inLine }) : s("taskManager.queue.room");
+  return computer.working > 0 ? `${room} · ${s("taskManager.working", { count: computer.working })}` : room;
+}
+
+/** Computadores' computers: the ones no shown cause already names, so a full or away computer shows once. */
+export function computersBesides(computers: ComputerSummary[], causes: WaitCause[]): ComputerSummary[] {
+  const shown = new Set(causes.flatMap((c) => (c.kind === "computer" ? [c.machineId] : [])));
+  return computers.filter((c) => !shown.has(c.id));
+}
+
+/**
+ * A cause's row, the same on web and phone: a limit in its tasks' own wait words ("Plano do Claude no limite", "Volta
+ * às 16:59 · 2 tarefas"), its time the wait's own, when the work goes on (a usage meter's can differ: a refusal's
+ * reset outranks the windows); a computer with Computadores' facts.
+ */
+export function causeWords(
+  t: TFunction,
+  locale: string,
+  cause: WaitCause,
+  computers: ComputerSummary[],
+  now = Date.now(),
+): { name: string; fact: string } {
+  const s = say(t);
+  const first = cause.tasks[0] as ManagedTask;
+  const words = taskWaitWords(t, locale, first, now);
+  const count = s("taskManager.tasks", { count: cause.tasks.length });
+  if (cause.kind === "limit")
+    return { name: words?.state ?? "", fact: [words?.next, count].filter(Boolean).join(" · ") };
+  if (cause.kind === "computer") {
+    const computer = computers.find((c) => c.id === cause.machineId);
+    const name = computer?.name ?? first.machine?.name ?? "";
+    // Full, it has a line: its own tasks in it at least, while the workspace's count lags behind them.
+    if (cause.busy)
+      return {
+        name,
+        fact: computerRoomText(t, { working: computer?.working ?? 0, inLine: computer?.inLine || cause.tasks.length }),
+      };
+    const working = computer?.working ? s("taskManager.working", { count: computer.working }) : null;
+    return { name, fact: [words?.state, count, working].filter(Boolean).join(" · ") };
+  }
+  return { name: s("taskManager.waiting", { count: cause.tasks.length }), fact: words?.next ?? "" };
 }
 
 /** Since when it counts (a long work's start, else the run's), in ms. */

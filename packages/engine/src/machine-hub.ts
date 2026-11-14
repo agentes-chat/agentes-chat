@@ -402,6 +402,9 @@ export function isNewWork(request: MachineRequest) {
     // Its owner fixing the Mac's Xcode for an iPhone's setup, or opening it there.
     case "xcode.fix":
     case "xcode.open":
+    // Its owner looking for, or installing, a coding CLI there.
+    case "clis.check":
+    case "cli.install":
       return false;
     case "secret":
       return request.action !== "discard" && request.action !== "remove" && request.action !== "activate";
@@ -502,6 +505,10 @@ export interface MachineMissionHooks {
 export interface MachineBrowserHooks {
   frame?(machineId: string, frame: Extract<RunnerFrame, { type: "browser.frame" }>): void;
   streamEnded?(machineId: string, frame: Extract<RunnerFrame, { type: "browser.stream.ended" }>): void;
+  /** Where the agent's pointer goes on the page (ADR 0040 §7.2): to whoever watches, never stored. */
+  pointer?(machineId: string, frame: Extract<RunnerFrame, { type: "browser.pointer" }>): void;
+  /** The same on its desktop (ADR 0062): to whoever has that screen open. */
+  desktopPointer?(machineId: string, frame: Extract<RunnerFrame, { type: "desktop.pointer" }>): void;
   closed?(machineId: string): void;
   /** A runner on protocol 12+ said hello here: what it should know again (open handoffs). */
   connected?(machineId: string): void;
@@ -1485,6 +1492,8 @@ export function createMachineHub(deps: MachineHubDeps) {
       // The agent browser's live view (ADR 0040): straight to the viewers in memory.
       else if (frame.type === "browser.frame") browserHooks.frame?.(conn.machineId, frame);
       else if (frame.type === "browser.stream.ended") browserHooks.streamEnded?.(conn.machineId, frame);
+      else if (frame.type === "browser.pointer") browserHooks.pointer?.(conn.machineId, frame);
+      else if (frame.type === "desktop.pointer") browserHooks.desktopPointer?.(conn.machineId, frame);
       else if (frame.type === "pong") await touch(conn, frame);
       else if (frame.type === "task.event") {
         await applyTaskEvent({ db, pubsub }, conn.machineId, frame).catch(() => undefined);

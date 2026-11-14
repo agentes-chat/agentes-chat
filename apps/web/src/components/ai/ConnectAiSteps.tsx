@@ -33,6 +33,7 @@ import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, holdText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { NAMES_SHOWN, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { brainTool, installableCli } from "@agenteschat/client/lib/machines";
 import {
   type AiChoice,
   ALL_AGENTS,
@@ -70,19 +71,21 @@ import {
 import {
   keyLine,
   keyLooksValid,
+  keyName,
   keyStepHint,
-  modelOnKey,
+  keyThinks,
   type ProviderId,
   providerLabel,
   providerOf,
 } from "@agenteschat/client/lib/providers";
-import { rightHandOnKey, thinksWithLine } from "@agenteschat/client/lib/right-hand";
+import { agentOnKey, rightHandOnKey, thinksWithLine } from "@agenteschat/client/lib/right-hand";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
   type AgentAppearance,
   AvatarStack,
   Button,
   Card,
+  Dialog,
   Icon,
   InfoHint,
   Input,
@@ -102,6 +105,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
+import { ToolOffWayOut } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
 import { KeyMismatch, KeyRefused, ProviderSelect } from "@/components/ProviderKey";
 import { managedOf, SetupProgress, useSetupWait, useWaitReader } from "@/components/WorkspaceComputer";
@@ -109,8 +113,9 @@ import { useDirectory } from "@/hooks/useDirectory";
 import { planWord } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
 import { AddAccount, OpenPage, Step, StepTitle } from "./AddAccountFlow";
+import { CliMissing } from "./CliMissing";
+import { EndpointForm } from "./EndpointForm";
 import { PlanReplies, usePlanRepliesShown } from "./PlanReplies";
-import { ToolOffSteps } from "./ToolOffSteps";
 
 /*
  * One picker wherever an AI is connected (the setup's AI step, Connect an AI, Settings › AI accounts): for one agent
@@ -286,6 +291,8 @@ export interface ExistingUsed {
   personal?: boolean;
   /** Which of the team's right hand's AIs moved: the words say whose it is. */
   scope?: BrainScope;
+  /** A workspace endpoint's key none of whose models has passed a test yet: said, with the way to test them. */
+  untested?: Credential;
 }
 
 /**
@@ -360,24 +367,28 @@ export function useExistingAi({
     });
   // The workspace's model on that key: the agent's model where the key runs it, else one the key does (an endpoint's
   // own for an endpoint key, Automático for a catalog one, which follows it).
-  // Tried first: a key kept earlier may have run out of credit, and "now thinks with it" has to be true.
+  // Tried first: a key kept earlier may have run out of credit, and "now thinks with it" has to be true. An endpoint's
+  // key has no call of its own to try: its models' last tests say whether it thinks (`keyThinks`).
   const pickKey = (key: Credential) =>
     save(async () => {
       const { check } = await api.agents.checkCredential(org.id, key.id);
-      if (check === "unchecked")
-        toast.show(t("connectAi.key.savedUnchecked", { provider: providerLabel(key.provider) }), "info");
+      if (check === "unchecked" && key.provider !== CUSTOM_PROVIDER)
+        toast.show(t("connectAi.key.savedUnchecked", { provider: keyName(key) }), "info");
+      const untested = keyThinks(key) ? {} : { untested: key };
       const row = dir.agentById.get(agent.id);
       // The team's right hand: a key is the workspace's AI, so everyone without their own thinks with it.
       if (view?.scope === "mine" && row) {
         await rightHandOnKey(api, org.id, row, key, models.data?.models ?? []);
-        return { label: key.label, choice: "key", onlyOwner: false, scope: "workspace" };
+        return { label: key.label, choice: "key", onlyOwner: false, scope: "workspace", ...untested };
       }
-      if (view?.brain !== "model") await api.agents.setBrain(org.id, agent.id, { brain: "model" });
-      await api.agents.update(org.id, agent.id, {
-        credentialId: key.id,
-        ...modelOnKey(key, row?.model, models.data?.models ?? []),
-      });
-      return { label: key.label, choice: "key", onlyOwner: false };
+      await agentOnKey(
+        api,
+        org.id,
+        { id: agent.id, model: row?.model, brain: view?.brain },
+        key,
+        models.data?.models ?? [],
+      );
+      return { label: key.label, choice: "key", onlyOwner: false, ...untested };
     });
   return { rows, busy, refused, pickAccount, pickKey };
 }
@@ -421,6 +432,7 @@ export function ExistingRows({
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
+  const machines = useMachines(org.id, gates.edition !== null);
   const {
     rows: found,
     busy,
@@ -445,13 +457,20 @@ export function ExistingRows({
     const gate = gates.gateOf(planOfAccount(r.choice.login));
     return gateDims(gate) ? [{ gate, kind: r.choice.login.kind }] : [];
   })[0];
+  const dimmedOn = machines.data?.find((m) => m.id === view.computer?.machineId);
   const dimmedWhy =
     dimmed &&
     dimmedLine(t, dimmed.gate, {
       ...dimmed,
       edition: gates.edition,
       computer: computerName(t, org.name, managedNamed(view.computer), isPersonal(org)),
+      machine: dimmedOn,
     });
+  // A program off there: its way out under the line, as in its plan's panel.
+  const dimmedOff =
+    dimmed?.gate.state === "unsupported" && dimmed.gate.reason === "tool_off" && dimmedOn?.kind !== "managed"
+      ? dimmedOn
+      : undefined;
   const items = rows.map((r) => {
     if (r.kind === "key") {
       const k = r.key;
@@ -519,7 +538,8 @@ export function ExistingRows({
     <>
       <p className="ai-picker__or">{named ? t("connectAi.have.titleFor", g) : t("connectAi.have.title")}</p>
       {items}
-      {dimmedWhy && <SettingNote icon="alert">{dimmedWhy}</SettingNote>}
+      {dimmedWhy && <SettingNote icon={dimmedOff ? "computer" : "alert"}>{dimmedWhy}</SettingNote>}
+      {dimmed && dimmedOff && <ToolOffWayOut machine={dimmedOff} tool={brainTool(dimmed.kind)} />}
       {refused && <KeyRefused refusal={refused} />}
       {lends && <p className="ai-picker__or ai-picker__or--note">{t("agentPage.work.brain.accountOthers")}</p>}
       {onManageKeys && rows.some((r) => r.kind === "key") && (
@@ -534,6 +554,46 @@ export function ExistingRows({
   );
 }
 
+/**
+ * A workspace endpoint's key none of whose models has passed a test yet: the real cause, and "Testar modelos", which
+ * opens its models and tests them again where they are. `onTested`: the key with those tests.
+ */
+export function KeyUntested({ cred, onTested }: { cred: Credential; onTested: (cred: Credential) => void }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <SettingNote
+        icon="alert"
+        live
+        action={<Button onClick={() => setOpen(true)}>{t("connectAi.key.testModels")}</Button>}
+      >
+        {t("connectAi.key.untested", { name: keyName(cred) })}
+      </SettingNote>
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t("endpoint.modelsTitle", { name: cred.label })}
+        closeLabel={t("common.close")}
+        width={520}
+      >
+        {open && (
+          <EndpointForm
+            orgId={org.id}
+            credential={cred}
+            onCancel={() => setOpen(false)}
+            onDone={(tested) => {
+              setOpen(false);
+              onTested(tested);
+            }}
+          />
+        )}
+      </Dialog>
+    </>
+  );
+}
+
 /** After a row of what the person already had: what the agent thinks with now, and on a plan whom it answers. */
 export function ExistingThinks({ agent, used }: { agent: PlanAgent; used: ExistingUsed }) {
   const { t } = useTranslation();
@@ -543,6 +603,7 @@ export function ExistingThinks({ agent, used }: { agent: PlanAgent; used: Existi
   const toast = useToast();
   const [on, setOn] = useState(!used.onlyOwner);
   const [busy, setBusy] = useState(false);
+  const [untested, setUntested] = useState(used.untested);
   const repliesShown = usePlanRepliesShown(on);
   const a = used.account;
   const reply = async (next: boolean) => {
@@ -564,9 +625,13 @@ export function ExistingThinks({ agent, used }: { agent: PlanAgent; used: Existi
   };
   return (
     <Card as="section" className="ai-panel ai-panel--plan" aria-label={used.label}>
-      <SettingNote icon="check" live>
-        {thinksWithLine(t, used.scope, agent.name, used.label)}
-      </SettingNote>
+      {untested && !keyThinks(untested) ? (
+        <KeyUntested cred={untested} onTested={setUntested} />
+      ) : (
+        <SettingNote icon="check" live>
+          {thinksWithLine(t, used.scope, agent.name, used.label)}
+        </SettingNote>
+      )}
       {a?.kind === "antigravity" && geminiPersonal(a) && (
         <SettingNote icon="alert">{t("connectAi.plan.gemini.warning")}</SettingNote>
       )}
@@ -1589,13 +1654,12 @@ function GateWait({
   const machines = useMachines(org.id, edition !== null);
   const preparing = gate.state === "preparing" ? gate.view : null;
   const { eta, email } = useSetupWait(preparing, reader.held);
-  const useKey = (
-    <span>
-      <Button size="sm" onClick={onKey}>
-        {t("connectAi.wait.useKey")}
-      </Button>
-    </span>
+  const keyButton = (
+    <Button size="sm" onClick={onKey}>
+      {t("connectAi.wait.useKey")}
+    </Button>
   );
+  const useKey = <span>{keyButton}</span>;
   const line = (lead: ReactNode, text: string) => (
     <p className="setup-line ac-iconline" role="status">
       {lead}
@@ -1603,15 +1667,9 @@ function GateWait({
     </p>
   );
   const hold = holdText(t, org.standing);
+  const row = machines.data?.find((m) => m.id === machineId);
   // Offline or unsupported: what's going on there and what comes next (on the Cloud, by itself as events arrive).
-  const why = gateLine(t, {
-    gate,
-    edition,
-    kind,
-    computer,
-    hold,
-    machine: machines.data?.find((m) => m.id === machineId),
-  });
+  const why = gateLine(t, { gate, edition, kind, computer, hold, machine: row });
   let wait: ReactNode = null;
   if (gate.state === "loading") wait = <Spinner />;
   else if (gate.state === "billing") {
@@ -1660,22 +1718,33 @@ function GateWait({
     );
   } else if (gate.state === "offline" && hostConnecting && !signingIn) {
     wait = line(<Spinner size={14} />, t("connectAi.wait.connecting"));
-  } else if (gate.state === "unsupported" && gate.reason === "tool_off" && edition !== "cloud" && !hold) {
-    // The computer is connected and its program is there, switched off: said as that, then the way to its switch
-    // (`ToolOffSteps`).
-    const program = t(`brain.card.${kind}`);
+  } else if (
+    why &&
+    gate.state === "unsupported" &&
+    gate.reason === "tool_off" &&
+    row &&
+    row.kind !== "managed" &&
+    !hold
+  ) {
+    // Switched off on a computer a person connected: said as that, then its way out beside the key.
     wait = (
       <>
-        <p className="setup-line">{t("connectAi.toolOff.text", { computer, program })}</p>
-        <ToolOffSteps
-          computer={computer}
-          machineId={machineId}
-          kind={kind === "claude_code" ? "claude" : kind}
-          program={program}
-        />
-        {useKey}
+        <SettingNote icon="computer">{why.text}</SettingNote>
+        <ToolOffWayOut machine={row} tool={brainTool(kind)}>
+          {keyButton}
+        </ToolOffWayOut>
       </>
     );
+  } else if (
+    gate.state === "unsupported" &&
+    (gate.reason === "not_installed" || gate.reason === "cant_start") &&
+    !hold &&
+    installableCli(kind) &&
+    row &&
+    row.kind !== "managed"
+  ) {
+    // A computer someone connected that hasn't the program, or has it and it won't start: install it from here.
+    wait = <CliMissing machine={row} kind={kind} computer={computer} reason={gate.reason} useKey={keyButton} />;
   } else if (why && !(gate.state === "offline" && signingIn)) {
     wait = (
       <>
@@ -1703,7 +1772,7 @@ function GateWait({
       </>
     );
   } else if (gate.state === "locked") {
-    const pairer = machines.data?.find((m) => m.id === machineId)?.pairedBy?.name.split(" ")[0];
+    const pairer = row?.pairedBy?.name.split(" ")[0];
     wait = (
       <SettingNote icon="lock">
         {gate.who === "computer"
@@ -1733,6 +1802,7 @@ export function KeyPanel({
   locked,
   saved,
   savedNote,
+  forLine,
   refused,
   saving,
   onSave,
@@ -1745,8 +1815,10 @@ export function KeyPanel({
   /** Only an admin adds an API key. */
   locked?: boolean;
   saved?: boolean;
-  /** Says what the save came to, in place of the usual line (a check that got no answer, the right hand's words). */
-  savedNote?: string;
+  /** What the save came to, as its own line, in place of the usual one (whom it thinks for, a check that got no answer). */
+  savedNote?: ReactNode;
+  /** Before saving, whom the key will think for, in place of the usual line (the one agent it goes on). */
+  forLine?: string;
   /** The provider refused the key on its test call: nothing was kept. */
   refused?: ReturnType<typeof keyRefusal>;
   saving?: boolean;
@@ -1773,9 +1845,11 @@ export function KeyPanel({
       {locked ? (
         <SettingNote icon="lock">{t("connectAi.keyLocked")}</SettingNote>
       ) : saved ? (
-        <SettingNote icon="check" live>
-          {savedNote ?? t("connectAi.key.saved")}
-        </SettingNote>
+        (savedNote ?? (
+          <SettingNote icon="check" live>
+            {t("connectAi.key.saved")}
+          </SettingNote>
+        ))
       ) : provider === CUSTOM_PROVIDER ? (
         <>
           <p className="small muted" style={{ margin: 0 }}>
@@ -1832,7 +1906,7 @@ export function KeyPanel({
             )}
             {refused && <KeyRefused refusal={refused} />}
           </Step>
-          <SettingNote icon="agent">{t("connectAi.key.forAll")}</SettingNote>
+          <SettingNote icon="agent">{forLine ?? t("connectAi.key.forAll")}</SettingNote>
         </>
       ) : null}
     </Card>

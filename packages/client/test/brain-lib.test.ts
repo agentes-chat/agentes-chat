@@ -13,6 +13,7 @@ import {
   isAdvancedDefault,
   viewSpeedFits,
 } from "../src/lib/brain-advanced";
+import { autoContextLine } from "../src/lib/context-limits";
 
 describe("the engine an agent thinks with", () => {
   test("agents.brain maps to its engine; the API and anything unknown is the agent itself", () => {
@@ -188,5 +189,17 @@ describe("Velocidade (ADR 0149)", () => {
       "high",
     ]);
     expect(effortTextOf("codex", "medium")).toBe("medium");
+  });
+});
+
+describe("the line under Automático for the context", () => {
+  const t = ((key: string, o: Record<string, string> = {}) =>
+    o.size ? `${key} ${o.size}` : key) as unknown as TFunction;
+
+  test("Claude Code and Codex say they summarise at 200K; other programs and a key, the model's window", () => {
+    expect(autoContextLine(t, "claude_code")).toBe("agentPage.work.brain.contextText.autoSummarizes 200K");
+    expect(autoContextLine(t, "codex")).toBe("agentPage.work.brain.contextText.autoSummarizes 200K");
+    for (const kind of ["model", "cursor", "opencode", "antigravity", null])
+      expect(autoContextLine(t, kind)).toBe("agentPage.work.brain.contextText.auto");
   });
 });

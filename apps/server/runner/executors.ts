@@ -3,6 +3,8 @@ import { accessSync, constants, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join, win32 } from "node:path";
 import {
+  CLI_ERROR_MAX,
+  CLI_GIT_MISSING,
   type CursorModelInfo,
   parseExecutors,
   type RunnerExecutorInfo,
@@ -488,10 +490,19 @@ function detectAntigravity(run: Run): Promise<Probe> {
  * One CLI's look: what it found, and whether it couldn't tell (then the last good look stands). `exited`: unsure
  * because `--version` failed with an exit code, counted toward `EXECUTORS_EXIT_STRIKES`.
  */
-type Probe = { entry?: RunnerExecutorInfo; unsure?: boolean; exited?: boolean };
+type Probe = { entry?: RunnerExecutorInfo; unsure?: boolean; exited?: boolean; said?: string };
+
+/** The last line a failing CLI wrote (its error), else its exit code. */
+const errorLine = (r: RunResult) =>
+  `${r.stderr ?? ""}\n${r.stdout}`
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .at(-1)
+    ?.slice(0, CLI_ERROR_MAX) || `exit code ${r.status}`;
 
 const versionFailed = (r: RunResult): Probe =>
-  missing(r) ? {} : r.error ? { unsure: true } : { unsure: true, exited: true };
+  missing(r) ? {} : r.error ? { unsure: true } : { unsure: true, exited: true, said: errorLine(r) };
 
 const firstLine = (r: RunResult) => r.stdout.trim().split("\n")[0]?.trim().slice(0, 80) ?? "";
 
@@ -528,12 +539,15 @@ async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe>
 /**
  * Every CLI looked up at once. One that couldn't tell keeps its entry from `prev` (the last good look), and the
  * whole look is `unsure`, so it is retried soon instead of cached. `strikes` counts each CLI's failing exits in a
- * row across looks (the caller keeps it).
+ * row across looks (the caller keeps it). A CLI whose `--version` fails with no good look to keep, or past its
+ * strikes, is `broken` with its error line: it is there and can't start, which is not missing. Claude Code on Windows
+ * says why only through `gitMissing`: without Git for Windows it can't start at all.
  */
 export async function detectExecutors(
   run: Run = defaultRun,
   prev: Executors = {},
   strikes: Partial<Record<string, number>> = {},
+  gitMissing: () => boolean = () => false,
 ): Promise<{ found: Executors; unsure: boolean }> {
   const safe = (p: () => Promise<Probe>) => p().catch((): Probe => ({ unsure: true }));
   const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
@@ -546,15 +560,19 @@ export async function detectExecutors(
     safe(() => detectAntigravity(run)),
   ]);
   const found: Executors = {};
+  const broken: NonNullable<Executors["broken"]> = {};
   let unsure = false;
   names.forEach((name, i) => {
     let p = probes[i] ?? {};
     strikes[name] = p.exited ? (strikes[name] ?? 0) + 1 : 0;
-    if ((strikes[name] ?? 0) >= EXECUTORS_EXIT_STRIKES) p = {};
+    const struck = (strikes[name] ?? 0) >= EXECUTORS_EXIT_STRIKES;
+    if (p.said && (struck || !prev[name])) broken[name] = name === "claude" && gitMissing() ? CLI_GIT_MISSING : p.said;
+    if (struck) p = {};
     const entry = p.unsure ? (prev[name] ?? p.entry) : p.entry;
     if (entry) found[name] = entry;
     if (p.unsure) unsure = true;
   });
+  if (Object.keys(broken).length) found.broken = broken;
   return { found, unsure };
 }
 
@@ -583,7 +601,15 @@ export interface ExecutorsCache {
  * that changed.
  */
 export function cachedExecutors(
-  opts: { now?: () => number; run?: Run; file?: string; onChange?: (found: Executors) => void } = {},
+  opts: {
+    now?: () => number;
+    run?: Run;
+    file?: string;
+    onChange?: (found: Executors) => void;
+    /** Before each look (Windows: the PATH read again, so a CLI installed since is found). */
+    before?: () => void;
+    gitMissing?: () => boolean;
+  } = {},
 ): ExecutorsCache {
   const now = opts.now ?? Date.now;
   const kept = opts.file ? keptExecutors(opts.file) : null;
@@ -595,7 +621,10 @@ export function cachedExecutors(
   let running: Promise<Executors> | null = null;
   const strikes: Partial<Record<string, number>> = {};
   const look = (): Promise<Executors> =>
-    (running ??= detectExecutors(opts.run, value, strikes)
+    (running ??= Promise.resolve()
+      .then(() => opts.before?.())
+      .catch(() => undefined)
+      .then(() => detectExecutors(opts.run, value, strikes, opts.gitMissing))
       .then(({ found, unsure }) => {
         at = now();
         retry = unsure ? Math.min(retry ? retry * 2 : EXECUTORS_RETRY_MS, EXECUTORS_TTL_MS) : 0;

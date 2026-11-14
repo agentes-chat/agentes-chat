@@ -1310,6 +1310,8 @@ export const en = {
         agenteschat:
           "In the other workspace: Settings → Import and export → Download the file. Then drop the .json here.",
       },
+      whereOther: "Download the file from the other workspace and drop the .json here.",
+      whereOtherLink: "Download from {{org}}",
       request: {
         "grok-bot": {
           title: "Ask your bot to export",
@@ -1977,11 +1979,10 @@ export const en = {
     browser: "This browser",
     phone: "Phone",
     phoneOn: "In the phone app, even with the phone locked",
-    phoneOff: "Turn them on in the phone app, under You\u00a0›\u00a0Notifications",
+    phoneOff: "Turn them on in the phone app",
     mac: "Mac app",
     macHelp: "While the app is open, even in the background",
     on: "On",
-    off: "Off",
     failed: "Couldn't save that. Try again.",
     loadFailed: "Couldn't load your choices right now.",
     category: {
@@ -2009,7 +2010,7 @@ export const en = {
     /** Under an agent's first answer to the person (ADR 0071): never on arrival. */
     inline: {
       title: "Want to know the moment {{name}} answers?",
-      why: "Even with the tab closed. Change it anytime in Settings\u00a0›\u00a0Notifications.",
+      why: "Even with the tab closed. Change it anytime in <link>Notifications</link>.",
     },
   },
   shell: {
@@ -2286,6 +2287,7 @@ export const en = {
     localOnly: "This server only opens on the computer it runs on, so your phone can't reach it.",
     localOnlyHow:
       "In the agentes.chat app on that computer, turn on Reach it from your phone and teammates in Preferences › Servers. Then come back here.",
+    localOnlyHere: "Turn on Reach it from your phone and teammates. Then come back here.",
   },
   team: {
     title: "Team",
@@ -2889,8 +2891,8 @@ export const en = {
     sharedPlace:
       "Used in channels and in work that runs on its own. The whole workspace shares this place. Keep nothing private here.",
     /** The row where it has none for anyone: the workspace has no computer of its own. */
-    computerNoHome:
-      "No computer yet. It gets one when this workspace has a computer of its own, added in Settings, Computers.",
+    computerNoHome: "No computer yet. It gets one when this workspace has a computer of its own.",
+    addComputer: "Add a computer",
     /** The row where the workspace's computer runs every agent as one OS user. */
     computerOneUser:
       "No computer here. The workspace's computer runs every agent as one user, so it can't keep each person's place apart. A Linux server set up with the installer's --system option can.",
@@ -3344,26 +3346,25 @@ export const en = {
       api_key: "Add an API key",
     },
     /**
-     * A plan whose program is switched off on a computer the person connected. `program`: "Claude Code" or "Codex"
-     * (`brain.card`), as its switch is named in that computer's own settings.
+     * A coding CLI that isn't on a computer someone connected (`program`: "Claude Code" or "Codex"), and installing it
+     * from here. `claudeApp` sits behind an ⓘ on Windows and macOS, where a Claude chat app is likely.
      */
-    toolOff: {
-      text: "{{computer}} is connected, but {{program}} is switched off on it. Only whoever connected the computer turns it on.",
-      where: "On {{computer}}",
-      /** `<mark/>`: the app's icon, drawn. */
-      one: "Click the agentes.chat icon <mark/> by the clock",
-      oneWindows: "On Windows, it may be behind the taskbar's ^ arrow.",
-      two: "Open <b>Preferences</b>",
-      three: "Under <b>Tools</b>, turn on <b>{{program}}</b>",
-      /** On a computer that may have no app: its command follows. */
-      terminal: "In the computer's terminal, run:",
-      /** In the app on that very computer: Open Tools follows. */
-      here: "Turn on <b>{{program}}</b> under <b>Tools</b>.",
-      /** The person who connected the computer turns it on from here: the button follows. */
-      oneClick: "<b>{{program}}</b> is off on this computer.",
-      /** Someone else: they ask whoever connected it (the button follows). */
-      oneClickOther: "<b>{{program}}</b> is off on {{name}}'s computer.",
-      waiting: "Waiting for you to turn it on. This screen changes by itself.",
+    cli: {
+      missing: "{{program}} isn't on {{computer}} yet.",
+      claudeApp: "The Claude app isn't enough: agents use Claude Code, which runs on the computer.",
+      install: "Install {{program}} for me",
+      check: "I installed it, check again",
+      checked: "Checked just now: {{program}} still isn't on {{computer}}.",
+      installing: "Installing {{program}} on {{computer}}. It takes about a minute.",
+      failed: "Couldn't install on {{computer}}: {{message}}",
+      stillMissing: "The installer finished, but {{computer}} still doesn't find {{program}}.",
+      /** Claude Code on Windows can't start without Git for Windows. */
+      gitMissing: "{{program}} needs Git for Windows on {{computer}}.",
+      getGit: "Download Git for Windows",
+      /** It is there and its own check of its version fails: `message` is its error. */
+      cantStart: "{{program}} is on {{computer}}, but it won't start: {{message}}",
+      outdated: "Update the agentes.chat app on {{computer}} to install from here.",
+      asked: "Request sent. {{name}} gets a button to install it.",
     },
     titleFor: "Connect an AI for {{name}}",
     /** What the person already has, before the new sign-ins: accounts on the agent's computer, the workspace's keys. */
@@ -3489,7 +3490,21 @@ export const en = {
       create: "Create your {{provider}} API key",
       paste: "Paste it here",
       forAll: "Every agent without a plan thinks with it.",
+      /** Before saving, opened for one agent: the key goes on that agent. */
+      forAgent: "{{agent}} will think with it.",
       saved: "Saved. Every agent without a plan thinks with it.",
+      /** Saved and put on the one agent the dialog was opened for. */
+      savedFor: "Saved. {{agent}} now thinks with {{label}}.",
+      /** Saved for everyone, and it is the key agents without their own AI use. */
+      savedAll: "Saved. Agents without their own AI think with it.",
+      /** Saved for everyone, and it became the workspace's key by itself: the old one ({{other}}) couldn't think. */
+      savedMade: "Saved. Your agents now think with it instead of {{other}}.",
+      /** Saved for everyone, but another key ({{other}}) is the workspace's: a button under it switches. */
+      savedOther: "Saved. Your agents still think with {{other}}.",
+      useForAll: "Use this key for everyone",
+      /** A workspace endpoint ({{name}}, its own name) none of whose models has answered a test call. */
+      untested: "None of {{name}}'s models has passed a test yet.",
+      testModels: "Test models",
       /** Saved, though the provider gave no answer about the key: it may still fail. */
       savedUnchecked:
         "Saved, but {{provider}} didn't answer, so the key couldn't be checked. If it fails, the chat says why.",
@@ -5826,6 +5841,7 @@ export const en = {
         context: "Context window",
         contextText: {
           auto: "What the model takes.",
+          autoSummarizes: "On Claude Code and Codex, summarizes the conversation at {{size}}.",
           "200000": "Cheaper and faster. Summarizes early in long conversations.",
           "400000": "Remembers a lot, and each answer costs less than with 1M.",
           "1000000": "Remembers the most. Each answer rereads everything: slower and pricier.",
@@ -7183,6 +7199,8 @@ export const en = {
     budget: "Monthly budget (US$)",
     budgetHelp: "At the limit, {{name}} stops and says so.",
     budgetInvalid: "Use a value greater than zero.",
+    budgetCapped: "Uses the workspace default. Only an admin can raise it.",
+    budgetCappedAmount: "Uses the workspace default ({{amount}}). Only an admin can raise it.",
     warnsOwner: "We alert {{name}} at 80%.",
     warnsAdmins: "We alert the admins at 80%.",
     upTo: "up to {{amount}}/month",
@@ -8438,8 +8456,8 @@ export const en = {
         oneClick: "Create the webhook",
         /** After the one-click add: `repo` is owner/name. */
         added: "Webhook created in {{repo}}.",
-        byHand: "Or by hand: in the repository, Settings\u00a0›\u00a0Webhooks\u00a0›\u00a0Add webhook.",
-        open: "In the repository, open Settings\u00a0›\u00a0Webhooks\u00a0›\u00a0Add webhook.",
+        byHand: "Or create it by hand on GitHub.",
+        open: "Create the webhook in the repository, on GitHub.",
         openLink: "Open on GitHub",
         url: "Payload URL",
         type: "Content type: application/json",
@@ -9484,7 +9502,6 @@ export const en = {
       homeHint: "The mission gets a thread: that's where {{name}} talks, asks for decisions and shows his work.",
       homeHint_female: "The mission gets a thread: that's where {{name}} talks, asks for decisions and shows her work.",
       offline: "{{name}} is offline. The plan starts when it's back.",
-      needsMachine: "Missions run on a connected computer. Connect one to {{name}} in Settings\u00a0›\u00a0Devices.",
       commandHint: "You can also start one by typing in any conversation's composer:",
       approvals: "By default, merge, deploy and rollback ask for approval",
       start: "Start mission",
@@ -9895,6 +9912,9 @@ export const en = {
     fetch: "Fetch models",
     listFailed: "The server listed no models ({{error}}). Type each model's id below.",
     choose: "Choose the models agents may use",
+    /** Over a long list of an endpoint's models. */
+    search: "Search models",
+    noMatch: "No model has “{{query}}”.",
     addModel: "Add a model",
     add: "Add",
     modelPlaceholder: "Model id, like llama-4",
@@ -11714,14 +11734,10 @@ export const en = {
       no_computer: "Choose a connected computer under Computer to use it.",
       exec_off: "The computer was connected without permission to run programs.",
       runner_old: "Update the agentes.chat program on the computer to use it.",
-      /** `program`: "Claude Code" or "Codex" (`brain.card`). */
-      tool_off:
-        "{{program}} is turned off on {{computer}}. Turn it on there, in the agentes.chat app: Preferences → Tools.",
-      tool_offLinux:
-        "{{program}} is turned off on {{computer}}. Turn it on there, in the agentes.chat app or with {{command}}.",
       /** The button that turns it on follows. */
       tool_offOne: "{{program}} is turned off on {{computer}}.",
       not_installed: "{{program}} isn't installed on {{computer}}.",
+      cant_start: "{{program}} is on {{computer}}, but it won't start.",
       /** Its runner hasn't said which CLIs it has yet: nobody knows whether this one is there. */
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
       outdated: "The version on {{computer}} is old. Update Codex to use it.",
@@ -11910,8 +11926,9 @@ export const en = {
   access: {
     matrixTitle: "Agent access",
     matrixHint:
-      "By default, sensitive actions (merge, deploy, share, pay) ask for approval. To set it tool by tool, open the connector's Tools.",
+      "By default, sensitive actions (merge, deploy, share, pay) ask for approval. To set it tool by tool, open the connector.",
     matrixHow: "Click a cell to change it:",
+    openConnectors: "Open Connectors",
     kindLabel: "Show",
     kind: { connectors: "Connectors", builtin: "Built-in" },
     agentCol: "Agent",
@@ -14246,6 +14263,8 @@ export const en = {
       asked: "Asked. {{name}} gets a button to turn it on.",
       done: "On at {{machine}}.",
       outdated: "Update the agentes.chat app on {{machine}} to turn it on from here.",
+      /** Its computer is offline: the button turns it on once the computer is back, and waits until then. */
+      offline: "{{machine}} is offline. Once it's back, the button turns on {{tool}}.",
     },
     remotePause: {
       button: "Pause",
@@ -14296,7 +14315,7 @@ export const en = {
       device: { mac: "Mac", windows: "PC", linux: "computer" },
       grantHere: "It's this {{device}}: allow folders in the app's Preferences.",
       openFolders: "Open Folders",
-      toolsHere: "It's this {{device}}: turn the browser on in the app's Preferences, under Tools.",
+      openServers: "Open Servers",
       openTools: "Open Tools",
       reconnect: "Reconnect",
       reconnecting: "Reconnecting this {{device}}…",
@@ -14304,8 +14323,6 @@ export const en = {
       offline: "This {{device}} is offline right now.",
       outageTitle: "This {{device}} lost its connection {{ago}}",
       toolsOff: "Off on this {{device}}. Turn it on in the app's Preferences, under Tools.",
-      browserTitle: "Turn the browser on on this {{device}}",
-      browserText: "One click in the app's Preferences, under Tools. This page notices by itself.",
       noReport: "This {{device}} hasn't reported what it allows yet. Update the app.",
       update: "Update the app",
     },
@@ -14826,6 +14843,7 @@ export const en = {
       pairingCode: "Wi-Fi pairing code",
       pair: "Pair",
       tryAgain: "Try again",
+      openLocalNetwork: "Open Local Network",
       qrLabel: "QR code for Wireless debugging on the phone",
       qrLine: "Not with the camera",
       /** "agentes-…" is how the camera names the Wi-Fi network it reads in the QR: keep it as written. */
@@ -14951,7 +14969,6 @@ export const en = {
         openXcode: "Open Xcode",
         opened: "Xcode opened on {{mac}}. Look in the iPhone's Settings again, then close Xcode.",
         unlock: "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.",
-        check: "Check again",
         /** A Terminal command (`agentes-runner update`) shows under it. */
         outdated:
           "The agentes.chat app on {{mac}} is out of date. Update the app, or run this in Terminal if you installed it there.",
@@ -15062,6 +15079,7 @@ export const en = {
       access: "<b>{{who}}</b> asks to use <b>{{deviceName}}</b>",
       waiting: "<b>{{who}}</b> is waiting for <b>{{deviceName}}</b>",
       toolRequest: "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>",
+      cliRequest: "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>",
       once: "Allow once",
       always: "Always",
       no: "No",
@@ -15850,6 +15868,7 @@ export const en = {
       help: "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites.",
       envOff: "Turned off in this server's settings (TELEMETRY=off).",
       envOffDesktop: "Turned off in the agentes.chat app on this server's computer (Preferences\u00a0›\u00a0Servers).",
+      envOffHere: "Turned off in the agentes.chat app on this computer.",
       see: "See what is sent",
       dialogTitle: "What is sent",
       dialogText: "Once a day. This is the next report, exactly.",
@@ -17608,6 +17627,7 @@ export const en = {
       openingLong: "Opening {{name}}'s browser…",
       openingHelp: "The first time on this computer it may take a minute.",
       stuck: "Couldn't open {{name}}'s browser.",
+      noAnswer: "{{name}}'s browser didn't answer.",
       stuckHelp: "Try again restarts the browser. Logins stay saved.",
       subWorking: "{{name}} · {{now}}",
       subStarting: "{{name}} is opening the browser",
@@ -17977,9 +17997,9 @@ export const en = {
       meter: "You've used {{used}} of {{limit}}.",
       near: "You've used {{used}} of {{limit}}. Uploads pause at the limit, and nothing is deleted.",
       full: "Uploads paused at {{limit}}. Nothing was deleted.",
-      fullAdmin:
-        "Change the agentes.chat plan, delete files you no longer use, or connect your own bucket in Settings\u00a0›\u00a0Storage.",
+      fullAdmin: "Change the agentes.chat plan, delete files you no longer use, or connect your own bucket.",
       dailyFull: "Today's uploads reached {{limit}}. You can upload again in a few hours.",
+      connectBucket: "Connect a bucket",
     },
   },
   computerSetup: {
@@ -18337,7 +18357,6 @@ export const en = {
       turn: "Turn sideways",
       upright: "Turn upright",
       message: "Message {{name}}",
-      chooseOnWeb: "Choose it on agentes.chat, in Settings\u00a0›\u00a0Devices.",
     },
   },
   /** Agora (ADR 0128 addendum): the whole workspace's work in one place, a button beside "Go to…" and its list. */
@@ -18526,6 +18545,14 @@ export const en = {
       full_other: "Full · {{count}} in line",
       room: "Has room",
       computers: "Computers",
+    },
+    /** Above the cards: what holds the waiting tasks now, each cause with its way out. Hidden when nothing waits. */
+    capacity: {
+      label: "What holds the tasks",
+      today_one: "Today: {{count}} task done · {{waiting}} waiting",
+      today_other: "Today: {{count}} tasks done · {{waiting}} waiting",
+      usage: "See usage",
+      computers: "See computers",
     },
     cards: { label: "Agents", previous: "Previous agents", next: "More agents" },
     table: "Tasks",

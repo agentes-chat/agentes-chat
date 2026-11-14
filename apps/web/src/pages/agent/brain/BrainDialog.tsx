@@ -17,6 +17,7 @@ import { brainModelLine, brainPickText } from "@agenteschat/client/lib/brain-pic
 import { contextSize } from "@agenteschat/client/lib/context-limits";
 import { keyRefusal } from "@agenteschat/client/lib/errors";
 import { namesText, rosterText } from "@agenteschat/client/lib/format";
+import { brainTool, installableCli } from "@agenteschat/client/lib/machines";
 import { type AiChoice, planMark } from "@agenteschat/client/lib/no-ai";
 import { usageWhen } from "@agenteschat/client/lib/plan-usage";
 import { geminiPersonal, isPlanId, planFreeHint, signInProviderOf } from "@agenteschat/client/lib/plans";
@@ -45,13 +46,14 @@ import { AgentAvatar } from "@/components/AgentAvatar";
 import { NO_COMPUTER } from "@/components/AgentComputer";
 import { DEFAULT_KEY } from "@/components/AgentFields";
 import { AddAccount, OpenPage } from "@/components/ai/AddAccountFlow";
+import { CliMissing } from "@/components/ai/CliMissing";
 import { PlanHold } from "@/components/ai/ConnectAiSteps";
 import { PlanReplies } from "@/components/ai/PlanReplies";
 import { AudienceCard } from "@/components/arrival/AudienceCard";
 import { HaveList, HaveRow, sortHave } from "@/components/arrival/ConnectHave";
 import { TeamScene, useDawn } from "@/components/arrival/TeamScene";
 import { useConnectAi } from "@/components/ConnectAi";
-import { ToolOffNote, useToolOneClick } from "@/components/devices/ToolOneClick";
+import { ToolOffWayOut } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
 import { useWidenAsk } from "@/components/ReachLines";
 import { ToolsOffHereNote, useIsThisMac } from "@/components/ThisMac";
@@ -637,14 +639,23 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
       : s.homeOf(s.savedCard)
         ? s.side(s.savedCard)
         : { icon: "block" as IconName, text: s.reason(s.savedCard) ?? s.side(s.savedCard)?.text ?? "" };
-  // Its CLI off on its computer: whoever connected it turns it on here (ADR 0036 §8); this Mac's Preferences otherwise.
+  // Its CLI off on its computer: the row in use says so, its way out goes under it (ADR 0036 §8).
   const offBrain =
     view.brain !== "model" && view.options.find((o) => o.kind === view.brain)?.reason === "tool_off"
       ? view.brain
       : null;
   const offOn = work.machines.data?.find((x) => x.id === view.computer?.machineId) ?? null;
-  const offOneClick = useToolOneClick(offOn);
-  const offTool = offBrain && offOn && offOneClick && offOneClick.kind !== "outdated" ? offBrain : null;
+  const offTool = offBrain && offOn && offOn.kind !== "managed" ? brainTool(offBrain) : null;
+  // Its CLI not on its computer, or there and failing to start: installed from here, or looked for again.
+  const missingReason = view.brain !== "model" ? view.options.find((o) => o.kind === view.brain)?.reason : undefined;
+  const missingCli =
+    view.brain !== "model" &&
+    (missingReason === "not_installed" || missingReason === "cant_start") &&
+    installableCli(view.brain) &&
+    offOn &&
+    offOn.kind !== "managed"
+      ? { kind: view.brain, reason: missingReason, machine: offOn }
+      : null;
   const lendsAny = view.canUseOthersPlans === true && s.listed.some((a) => !a.mine && a.ownerId !== agent.ownerUserId);
   const pairer = work.machines.data?.find((x) => x.id === view.computer?.machineId)?.pairedBy?.name.split(" ")[0];
   // On someone else's computer only whoever connected it adds a sign-in: with nothing of the owner's there, it says so.
@@ -720,7 +731,16 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
           {s.kind !== "model" && !view.canUsePlans && ownerFirst && (
             <SettingNote icon="info">{t("agentPage.work.brain.accountWho", { ...g, owner: ownerFirst })}</SettingNote>
           )}
-          {savedSide?.text && <SettingNote icon={savedSide.icon}>{savedSide.text}</SettingNote>}
+          {missingCli ? (
+            <CliMissing
+              machine={missingCli.machine}
+              kind={missingCli.kind}
+              computer={missingCli.machine.name}
+              reason={missingCli.reason}
+            />
+          ) : (
+            savedSide?.text && <SettingNote icon={savedSide.icon}>{savedSide.text}</SettingNote>
+          )}
           {modelLimit && (
             <SettingNote icon="alert" live>
               {modelLimit}
@@ -729,13 +749,7 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
           {s.savedCard === "gemini" && geminiPersonal(s.currentAccount) && (
             <SettingNote icon="alert">{t("connectAi.plan.gemini.warning")}</SettingNote>
           )}
-          {offTool && offOn ? (
-            <ToolOffNote machine={offOn} tool={offTool === "claude_code" ? "claude" : offTool}>
-              {t("brain.reasons.tool_offOne", { program: t(`brain.card.${offTool}`), computer: offOn.name })}
-            </ToolOffNote>
-          ) : (
-            toolOffHere && <ToolsOffHereNote />
-          )}
+          {offTool && offOn ? <ToolOffWayOut machine={offOn} tool={offTool} /> : toolOffHere && <ToolsOffHereNote />}
           <div className="bd-lines">
             <BrainLine
               label={t("agentPage.work.brain.planModel")}
@@ -963,6 +977,7 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
             <ContextField
               value={m.contextTokens}
               options={s.contextOptions}
+              kind={s.kind}
               onChange={(n) => setMore({ ...m, contextTokens: n })}
             />,
           )}

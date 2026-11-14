@@ -61,6 +61,8 @@ export function agentFolders(access: RunnerAccess | null | undefined, agentId: s
 }
 
 const toolRequestKey = (machineId: string, tool: string) => `device-tool:${machineId}:${tool}`;
+/** One inbox row per computer and program for its owner (`device.cli_request`, `askMachineCliInstall`). */
+export const cliRequestKey = (machineId: string, tool: string) => `device-cli:${machineId}:${tool}`;
 
 /** The runner's report, stored as is (the machine is the source of truth), and told to the org. */
 export async function storeMachineAccess(deps: AccessDeps, machineId: string, access: RunnerAccess) {
@@ -83,12 +85,12 @@ export async function storeMachineAccess(deps: AccessDeps, machineId: string, ac
   }
 }
 
-/** What `machines.executors` keeps of the coding CLIs: each one found and when they were looked up. */
+/** What `machines.executors` keeps of the coding CLIs: each one found, those that can't start, and when they were looked up. */
 export function storedExecutors(stored: schema.MachineExecutors | null | undefined): schema.MachineExecutors {
   if (!stored) return {};
-  const { claude, codex, cursor, opencode, grok, antigravity, detectedAt } = stored;
+  const { claude, codex, cursor, opencode, grok, antigravity, broken, detectedAt } = stored;
   return Object.fromEntries(
-    Object.entries({ claude, codex, cursor, opencode, grok, antigravity, detectedAt }).filter(
+    Object.entries({ claude, codex, cursor, opencode, grok, antigravity, broken, detectedAt }).filter(
       ([, v]) => v !== undefined,
     ),
   );
@@ -107,12 +109,21 @@ export async function storeMachineExecutors(
   const [row] = await deps.db
     .update(machines)
     .set({
-      executors: sql`(coalesce(${machines.executors}, '{}'::jsonb) - 'claude' - 'codex' - 'cursor' - 'opencode' - 'grok' - 'antigravity') || ${next}::jsonb`,
+      executors: sql`(coalesce(${machines.executors}, '{}'::jsonb) - 'claude' - 'codex' - 'cursor' - 'opencode' - 'grok' - 'antigravity' - 'broken') || ${next}::jsonb`,
       updatedAt: new Date(),
     })
     .where(eq(machines.id, machineId))
     .returning({ orgId: machines.orgId });
-  if (row) await publishMachineUpdated(deps.pubsub, row.orgId, machineId, { executors: true });
+  if (!row) return;
+  await publishMachineUpdated(deps.pubsub, row.orgId, machineId, { executors: true });
+  // A program installed, from the apps or by hand, answers whoever asked for it.
+  for (const tool of ["claude", "codex"] as const) {
+    if (!executors[tool]) continue;
+    await resolveNotifications(deps, row.orgId, {
+      groupKey: cliRequestKey(machineId, tool),
+      kind: "device.cli_request",
+    }).catch(() => 0);
+  }
 }
 
 /** `toolchains.changed`: what `hello.toolchains` said, replaced whole; the rest of `executors` stays. */

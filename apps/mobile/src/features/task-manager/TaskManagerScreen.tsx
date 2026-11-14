@@ -12,17 +12,22 @@ import { formatLineTime } from "@agenteschat/client/lib/format";
 import {
   type AgentTasks,
   agentSummary,
+  causeWords,
+  computerRoomText,
+  computersBesides,
   endedState,
   groupLead,
   groupTasks,
   hiddenCount,
   returnCanceledText,
   returnPlace,
+  shownCauses,
   taskPlace,
   taskState,
   taskTime,
   taskTitle,
   taskWaitWords,
+  type WaitCause,
 } from "@agenteschat/client/lib/task-manager";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -44,6 +49,7 @@ import {
   PixelDone,
   PixelFail,
   PixelStopped,
+  ProviderLogo,
   SCREEN_X,
   SectionHeader,
   SkeletonList,
@@ -66,16 +72,7 @@ import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { type ActionItem, ActionList, Tile } from "../shared/parts";
 import { SheetHostProvider, useSheet } from "../shared/SheetHost";
 import { useStopper, useTasksToday } from "./hooks";
-import {
-  computerLine,
-  endedLatestFirst,
-  endedText,
-  groupLine,
-  type RowState,
-  rowState,
-  taskStateWords,
-  taskSubline,
-} from "./logic";
+import { endedLatestFirst, endedText, groupLine, type RowState, rowState, taskStateWords, taskSubline } from "./logic";
 import { TaskMark, useAgentColor, WaitLines } from "./parts";
 
 /** Rows whose agent moves (a long list stays light). */
@@ -170,6 +167,9 @@ function TaskManager() {
   const askedCount = groups.reduce((n, g) => n + g.tasks.length, 0);
   const delegatedCount = delegated.reduce((n, g) => n + g.tasks.length, 0);
   const computers = view?.computers ?? [];
+  const causes = shownCauses(all);
+  const listed = computersBesides(computers, causes);
+  const done = view?.doneToday ?? ended.filter((e) => e.status === "done").length;
   return (
     <PushedLargeTitle
       title={t("taskManager.title")}
@@ -192,6 +192,19 @@ function TaskManager() {
             <Text variant="subhead" tone="muted" style={styles.summary}>
               {summary}
             </Text>
+            {causes.length > 0 ? (
+              <Animated.View {...fade} layout={layout}>
+                <Text variant="footnote" tone="muted" style={styles.today}>
+                  {t("taskManager.capacity.today", {
+                    count: done,
+                    waiting: all.filter((x) => taskState(x) === "waiting").length,
+                  })}
+                </Text>
+                {causes.map((cause, i) => (
+                  <CauseRow key={cause.key} cause={cause} computers={computers} divider={i > 0} />
+                ))}
+              </Animated.View>
+            ) : null}
             {sum.tasks + hidden > 0 ? null : (
               <EmptyState
                 size="panel"
@@ -206,10 +219,10 @@ function TaskManager() {
                 {t("taskManager.hiddenLine", { count: hidden })}
               </Text>
             ) : null}
-            {computers.length > 0 ? (
+            {listed.length > 0 ? (
               <Animated.View {...fade} layout={layout}>
-                <SectionHeader title={t("taskManager.queue.computers")} count={computers.length} />
-                {computers.map((m, i) => (
+                <SectionHeader title={t("taskManager.queue.computers")} count={listed.length} />
+                {listed.map((m, i) => (
                   <Animated.View key={m.id} {...fade} layout={layout}>
                     <ComputerRow computer={m} divider={i > 0} />
                   </Animated.View>
@@ -458,6 +471,48 @@ function OneLine({ title, line, variant = "body" }: { title: string; line?: stri
 }
 
 /**
+ * What holds waiting work (`waitCauses`), one line with its count, as the web's strip: a plan at its limit opens IA e
+ * uso, a full computer its line, one away the computers, people's oks and answers the first such task's screen.
+ */
+function CauseRow({ cause, computers, divider }: { cause: WaitCause; computers: ComputerSummary[]; divider: boolean }) {
+  const { t, i18n } = useTranslation();
+  const c = useColors();
+  const openQueue = useOpenQueue();
+  const first = cause.tasks[0] as ManagedTask;
+  const { name: title, fact: line } = causeWords(t, i18n.language, cause, computers);
+  const brain = first.brain && first.brain !== "model" ? first.brain : null;
+  const kind = useComputerKind(useOrgId(), cause.kind === "computer" ? cause.machineId : null);
+  const row =
+    cause.kind === "limit"
+      ? {
+          lead: brain ? <ProviderLogo id={brain} size="xs" /> : <Icon name="clock" size={16} color={c.muted} />,
+          onPress: () => router.push("/usage"),
+        }
+      : cause.kind === "computer"
+        ? {
+            lead: <ComputerIcon kind={kind} size={16} color={c.muted} />,
+            onPress: cause.busy ? () => openQueue(cause.machineId) : () => router.push("/settings/devices"),
+          }
+        : {
+            lead: <Icon name="clock" size={16} color={c.muted} />,
+            onPress: () => router.push(taskHref(first.runId)),
+          };
+  return (
+    <Pressable
+      onPress={row.onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}, ${line}`}
+      style={({ pressed }) => [styles.task, pressed && { backgroundColor: c.sunken }]}
+    >
+      {divider ? <View style={[styles.divider, styles.textDivider, { backgroundColor: c.line2 }]} /> : null}
+      <Tile size={LEAD}>{row.lead}</Tile>
+      <OneLine title={title} line={line} variant="subhead" />
+      <Icon name="right" size={15} color={c.faint} />
+    </Pressable>
+  );
+}
+
+/**
  * A computer with work (ADR 0128): its name, whether it has room or how many wait for it, how many run there now. It
  * opens its line (`QueueSheet`).
  */
@@ -466,7 +521,7 @@ function ComputerRow({ computer, divider }: { computer: ComputerSummary; divider
   const c = useColors();
   const kind = useComputerKind(useOrgId(), computer.id);
   const openQueue = useOpenQueue();
-  const line = computerLine(t, computer);
+  const line = computerRoomText(t, computer);
   return (
     <Pressable
       onPress={() => openQueue(computer.id)}
@@ -693,6 +748,7 @@ const styles = StyleSheet.create({
   centerText: { textAlign: "center" },
   // Under the large title's words, as Equipe's line.
   summary: { paddingHorizontal: SCREEN_X, marginTop: -4, paddingBottom: 4 },
+  today: { paddingHorizontal: SCREEN_X, paddingTop: 8 },
   // One line each: the touch rows' 12 above and below it, the lead (28) at most as tall as that.
   agent: {
     flexDirection: "row",

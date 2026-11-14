@@ -22,6 +22,7 @@ import {
   AGENT_BROWSER_SHA256,
   AGENT_BROWSER_VERSION,
   type AgentBrowserTarget,
+  type AgentPointerAct,
   type AgentScope,
   agentBrowserUrl,
   BROWSER_LIMITS,
@@ -38,6 +39,7 @@ import {
   browserViewportOf,
   CHROME_FAILURES,
   CHROMIUM_LINUX,
+  DESKTOP_SIZE,
   type MachineReplies,
   type MachineRequest,
   parseBrowserInputEvent,
@@ -55,6 +57,7 @@ import { type CrashedPage, countChromeTraffic, emulationCommands, type TrafficCo
 import { BROWSER_WM_CLASS } from "./desktop-look";
 import type { DesktopSessions } from "./desktop-session";
 import { RunnerError } from "./errors";
+import { processStartedAt } from "./exec";
 import {
   type Box,
   HUMAN,
@@ -802,6 +805,8 @@ async function stopPid(pid: number) {
   } catch {
     return;
   }
+  // On Windows SIGTERM already ends it outright, and 500 ms later its pid may be someone else's.
+  if (process.platform === "win32") return;
   await new Promise((r) => setTimeout(r, 500));
   try {
     process.kill(pid, 0);
@@ -1048,8 +1053,17 @@ export interface InputState {
 
 /** Agent commands the runner does with a pointer path, a held button and typed keys (`humanSteps`). */
 const HUMAN_COMMANDS = new Set(["click", "dblclick", "hover", "fill", "type"]);
+/** What the pointer does where each of them takes it, for whoever watches (`browser.pointer`). */
+const POINTER_ACTS: Record<string, AgentPointerAct> = {
+  click: "click",
+  dblclick: "double",
+  fill: "type",
+  type: "type",
+};
 /** What `agent-browser` answers to each when the runner did it itself. */
 const HUMAN_DONE: Record<string, string> = { click: "clicked", hover: "hovered", fill: "filled" };
+/** A command that timed out. The apps match these words (`browserNoAnswerMessage`): keep them. */
+const NO_ANSWER = "The browser didn't answer";
 /** The answer to a command a person's taking control cut short (`stopInput`). */
 const TOOK_OVER: BrowserAnswer = {
   success: false,
@@ -1065,6 +1079,15 @@ const BATCH_STEP_MS = 8;
  */
 const HELD_PRESS_MS = 33_000;
 const VIEWPORT = "[window.innerWidth, window.innerHeight]";
+/**
+ * The same, then where the page's top left corner is on the screen: a window on the agent's desktop has its bars
+ * above the page and a frame as thick on each side as the widths differ. For `desktop.pointer` only.
+ */
+const VIEWPORT_ON_SCREEN =
+  "[innerWidth, innerHeight, screenX + (outerWidth - innerWidth) / 2, screenY + outerHeight - innerHeight - (outerWidth - innerWidth) / 2]";
+/** The page's corner on the screen out of `VIEWPORT_ON_SCREEN`'s answer, when it is there. */
+const screenCorner = (seen: unknown[]): Point | undefined =>
+  typeof seen[2] === "number" && typeof seen[3] === "number" ? { x: seen[2], y: seen[3] } : undefined;
 
 /**
  * Run before every `snapshot`: a button or link with no words of its own (an icon, or an icon font's ligature such as
@@ -1434,6 +1457,8 @@ export interface BrowserManagerOptions {
   desktops?: Pick<DesktopSessions, "ensure" | "status"> & { session(agentId: string): ChromeDisplay | null };
   /** Tests: whether a pid left in `chromes.json` is still that Chrome (default: asks the system). */
   isOurChrome?: (pid: number, profile: string) => Promise<boolean>;
+  /** Tests: when a process started (default: `processStartedAt`, Windows only). */
+  startedAt?: (pid: number) => Promise<number | null>;
   /** What `states()` returns may have changed (the desktop app's tray shows it). */
   onChange?: () => void;
 }
@@ -1520,6 +1545,10 @@ interface Session {
   link?: string;
   /** Where the agent's pointer was left on the page (`humanly`). */
   pointer?: Point;
+  /** The viewport `pointer` was last said in (`pointerGoes`): a press on a point is said in it too. */
+  pointerView?: { width: number; height: number };
+  /** Where the page's corner was on the agent's desktop then, while its window is there. */
+  pointerCorner?: Point;
   /** Where its `hover` left it. While that is still `pointer` (the same object), a menu it opened is taken to be open. */
   hovered?: Point;
   /** Ends the agent's command under way when a person takes control (`stopInput`). */
@@ -1560,6 +1589,8 @@ interface ChromeEntry {
   profile: string;
   /** Headed: the display of the agent's desktop it is on. */
   display?: number;
+  /** When it started (`processStartedAt`, Windows only): with the pid, which process it is. */
+  started?: number;
 }
 
 /** What a command is, as the desktop app words it ("lendo a página", "preenchendo"). */
@@ -2305,6 +2336,25 @@ export class BrowserManager {
   }
 
   /**
+   * Says where the agent's pointer goes, as the gesture starts: whoever watches sees it arrive (ADR 0040 §7.2).
+   * With its window on the agent's desktop (`corner`: the page's corner there), the same point on that screen too.
+   */
+  private pointerGoes(
+    session: Session,
+    to: Point,
+    view: { width: number; height: number },
+    act: AgentPointerAct,
+    corner?: Point,
+  ) {
+    session.pointerView = { width: view.width, height: view.height };
+    session.pointerCorner = corner;
+    const { agentId } = session;
+    this.opts.send({ type: "browser.pointer", agentId, x: to.x, y: to.y, ...session.pointerView, act });
+    if (!corner) return;
+    this.opts.send({ type: "desktop.pointer", agentId, x: corner.x + to.x, y: corner.y + to.y, ...DESKTOP_SIZE, act });
+  }
+
+  /**
    * A `click`, `dblclick`, `hover`, `fill` or `type` on one element as a person does it (`humanSteps`), in two
    * batches: the element's box and the viewport, then the pointer path and the press or the keys. Only an element
    * not all in view is scrolled first, and looked at again: `scrollintoview` centers it even when it is in view, and
@@ -2326,15 +2376,21 @@ export class BrowserManager {
       const seen = batchResults(
         await this.run(session, ["batch", "--bail"], {
           ...opts,
-          stdin: JSON.stringify([...first, ["get", "box", selector], ["eval", VIEWPORT]]),
+          stdin: JSON.stringify([
+            ...first,
+            ["get", "box", selector],
+            ["eval", session.headed ? VIEWPORT_ON_SCREEN : VIEWPORT],
+          ]),
         }),
       );
       const boxOf = (r: unknown) => (isRecord(r) && isRecord(r.result) ? r.result : null);
       const { x, y, width, height } = boxOf(seen?.[first.length]) ?? {};
-      const [vw, vh] = (boxOf(seen?.[first.length + 1])?.result ?? []) as unknown[];
+      const viewed = (boxOf(seen?.[first.length + 1])?.result ?? []) as unknown[];
+      const [vw, vh] = viewed;
       const sizes = [width, height, vw, vh] as number[];
       if (typeof x !== "number" || typeof y !== "number" || !sizes.every((n) => n >= 1)) return null;
-      return { box: { x, y, width, height } as Box, view: { width: vw, height: vh } as Box };
+      const view = { width: vw, height: vh } as Box;
+      return { box: { x, y, width, height } as Box, view, corner: screenCorner(viewed) };
     };
     let seen = await look([]);
     if (!seen) return null;
@@ -2350,6 +2406,7 @@ export class BrowserManager {
         ? [...steps.moves, [command, ...args]]
         : [...steps.moves, ...(steps.check ? [steps.check] : []), ...steps.act];
     session.pointer = steps.to;
+    this.pointerGoes(session, steps.to, seen.view, POINTER_ACTS[command] ?? "move", seen.corner);
     if (command === "hover") session.hovered = steps.to;
     let out = await this.run(session, ["batch", "--bail"], {
       ...opts,
@@ -2400,7 +2457,12 @@ export class BrowserManager {
   ): Promise<BrowserAnswer | null> {
     const opts = { timeoutMs, ...(signal ? { signal } : {}) };
     const [what, a = "", b = ""] = args;
-    if (command === "mouse" && what === "down") session.pressedAt = this.now();
+    if (command === "mouse" && what === "down") {
+      session.pressedAt = this.now();
+      if (session.pointer && session.pointerView) {
+        this.pointerGoes(session, session.pointer, session.pointerView, "click", session.pointerCorner);
+      }
+    }
     if (command === "mouse" && what === "up" && session.pressedAt !== undefined) {
       const left = session.pressedAt + holdMs(randomSource()) - this.now();
       session.pressedAt = undefined;
@@ -2408,14 +2470,16 @@ export class BrowserManager {
     }
     if (command === "mouse" && what === "move" && args.length === 3) {
       const to = { x: Number(a), y: Number(b) };
-      const seen = await this.run(session, ["eval", VIEWPORT], opts);
-      const [width = 0, height = 0] = (isRecord(seen.data) && seen.data.result) as number[];
+      const seen = await this.run(session, ["eval", session.headed ? VIEWPORT_ON_SCREEN : VIEWPORT], opts);
+      const viewed = ((isRecord(seen.data) && seen.data.result) || []) as number[];
+      const [width = 0, height = 0] = viewed;
       if (!Number.isFinite(to.x) || !Number.isFinite(to.y) || width < 1 || height < 1) return null;
       const view = { width, height };
       const rng = randomSource();
       const from = session.pointer ?? startPoint(to, view, rng);
       const path = moveCommands(pointerPath(from, to, rng, { bounds: view, straight: stayed(session) }));
       session.pointer = to;
+      this.pointerGoes(session, to, view, "move", screenCorner(viewed));
       const out = await this.run(session, ["batch", "--bail"], { ...opts, stdin: JSON.stringify(path) });
       const results = batchResults(out);
       return results && !results.some(failedStep) ? { success: true, data: { moved: true, ...to } } : out;
@@ -3036,10 +3100,11 @@ export class BrowserManager {
     return write.catch(() => undefined);
   }
 
-  private rememberChrome(pid: number, profile: string, display?: number) {
+  private async rememberChrome(pid: number, profile: string, display?: number) {
+    const started = await (this.opts.startedAt ?? processStartedAt)(pid);
     return this.writePids((list) => [
       ...list.filter((e) => e.pid !== pid),
-      { pid, profile, ...(display !== undefined ? { display } : {}) },
+      { pid, profile, ...(display !== undefined ? { display } : {}), ...(started !== null ? { started } : {}) },
     ]);
   }
 
@@ -3048,19 +3113,17 @@ export class BrowserManager {
   }
 
   /** Whether a pid from `chromes.json` is still a Chrome on that profile (a pid can be reused). */
-  private async isOurChrome(pid: number, profile: string): Promise<boolean> {
+  private async isOurChrome({ pid, profile, started }: ChromeEntry): Promise<boolean> {
     if (this.opts.isOurChrome) return this.opts.isOurChrome(pid, profile);
     try {
       process.kill(pid, 0);
     } catch {
       return false;
     }
-    if (process.platform === "win32") {
-      const out = await this.spawn(["tasklist"], ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], {
-        timeoutMs: QUICK_TIMEOUT_MS,
-        cwd: this.opts.home,
-      });
-      return /chrome\.exe/i.test(out.stdout);
+    // Windows reuses pids at once and shows no command line cheaply: only the start time recorded with the pid tells
+    // our Chrome from the person's own. A pid recorded without one is left alone.
+    if (process.platform === "win32" || started !== undefined) {
+      return started !== undefined && (await (this.opts.startedAt ?? processStartedAt)(pid)) === started;
     }
     const out = await this.spawn(["ps"], ["-p", String(pid), "-o", "command="], {
       timeoutMs: QUICK_TIMEOUT_MS,
@@ -3078,8 +3141,8 @@ export class BrowserManager {
    * True when a Chrome was stopped.
    */
   private async clearStaleLock(profile: string): Promise<boolean> {
-    const listed = await this.killLeftovers(profile);
     const locked = await this.killLockHolder(profile);
+    const listed = await this.killLeftovers(profile);
     await Promise.all(
       ["SingletonLock", "SingletonCookie", "SingletonSocket"].map((f) => rm(path.join(profile, f), { force: true })),
     );
@@ -3091,7 +3154,10 @@ export class BrowserManager {
     const target = await readlink(path.join(profile, "SingletonLock")).catch(() => "");
     const pid = Number(/-(\d+)$/.exec(target)?.[1]);
     if (!Number.isInteger(pid) || pid <= 0 || this.livePids().has(pid)) return false;
-    if (!(await this.isOurChrome(pid, profile).catch(() => false))) return false;
+    // A pid chromes.json lists is judged by its record (its start time, on Windows); one it doesn't list has no start
+    // time, so on Windows it is left alone.
+    const entry = (await this.readPids()).find((e) => e.pid === pid) ?? { pid, profile };
+    if (!(await this.isOurChrome(entry).catch(() => false))) return false;
     await stopPid(pid);
     return true;
   }
@@ -3116,9 +3182,10 @@ export class BrowserManager {
   private async killLeftovers(on?: string): Promise<boolean> {
     const live = this.livePids();
     let stopped = false;
-    for (const { pid, profile } of await this.readPids()) {
+    for (const entry of await this.readPids()) {
+      const { pid, profile } = entry;
       if (live.has(pid) || (on !== undefined && profile !== on)) continue;
-      if (await this.isOurChrome(pid, profile).catch(() => false)) {
+      if (await this.isOurChrome(entry).catch(() => false)) {
         await stopPid(pid);
         stopped = true;
       }
@@ -3186,7 +3253,7 @@ export class BrowserManager {
       return {
         success: false,
         data: null,
-        error: `The browser didn't answer within ${Math.round(opts.timeoutMs / 1000)} s`,
+        error: `${NO_ANSWER} within ${Math.round(opts.timeoutMs / 1000)} s`,
       };
     }
     return parseAnswer(out.stdout, out.stderr, out.exitCode);
@@ -3925,16 +3992,22 @@ export class BrowserManager {
       }
       if (!session.chrome) return null;
       const disconnected = (a: BrowserAnswer) => isRecord(a.data) && a.data.connected !== true;
-      let status = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS });
+      // A browser that didn't answer isn't closed: the viewers are told so, in its words.
+      const streamStatus = async () => {
+        const a = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS });
+        if (a.error?.startsWith(NO_ANSWER)) throw new RunnerError("browser_unavailable", a.error);
+        return a;
+      };
+      let status = await streamStatus();
       if (disconnected(status)) {
         if (!held || reopened) return null;
         await reopen();
-        status = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS });
+        status = await streamStatus();
         if (disconnected(status)) return null;
       }
       if (!isRecord(status.data) || status.data.enabled !== true) {
         await this.run(session, ["stream", "enable"], { timeoutMs: QUICK_TIMEOUT_MS });
-        status = await this.run(session, ["stream", "status"], { timeoutMs: QUICK_TIMEOUT_MS });
+        status = await streamStatus();
       }
       const reported = isRecord(status.data) && typeof status.data.port === "number" ? status.data.port : null;
       if (this.opts.fixedPorts && reported !== this.opts.fixedPorts.stream) {

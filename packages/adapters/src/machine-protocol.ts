@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 65;
+export const MACHINE_PROTOCOL_VERSION = 66;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -669,6 +669,34 @@ export const ACCESS_ALLOW_PROTOCOL = 62;
  * switch on a plugged iPhone that hides it. Older runners answer `phone.look` at once and `xcode.open` `bad_request`.
  */
 export const IPHONE_DEV_MODE_PROTOCOL = 65;
+
+/**
+ * `clis.check`: the coding CLIs looked up again now, the PATH read again first (the apps' "I installed it, check again").
+ * `cli.install`: the person who paired the computer installs a coding CLI there from the apps, through its vendor's
+ * official installer, run as that person. The server sends a program id from `INSTALLABLE_CLIS`, never a command: the
+ * runner holds the installers. Older runners answer `bad_request`: the server asks none of them.
+ */
+export const CLI_INSTALL_PROTOCOL = 66;
+/** The coding CLIs `cli.install` installs: Claude Code and Codex. */
+export const INSTALLABLE_CLIS = ["claude", "codex"] as const;
+export type InstallableCli = (typeof INSTALLABLE_CLIS)[number];
+export const isInstallableCli = (v: unknown): v is InstallableCli =>
+  (INSTALLABLE_CLIS as readonly unknown[]).includes(v);
+export const CLI_INSTALL_STATES = ["running", "done", "failed", "canceled", "unsupported"] as const;
+/** Why an install failed before or after its installer ran, as a code the apps word (`message` has the rest). */
+export const CLI_INSTALL_CAUSES = ["git_missing", "still_missing"] as const;
+/**
+ * Where an install stands: `running`, `done` (the look after it found the CLI), `failed` (`message`: the installer's
+ * own last line; `cause`: `git_missing`, Claude Code on Windows without Git for Windows, so nothing was installed, or
+ * `still_missing`, the installer ended well and the look after it still doesn't find the CLI), `canceled`,
+ * `unsupported` (this runner can't: system mode, a system it has no installer for).
+ */
+export interface CliInstall {
+  tool: InstallableCli;
+  state: (typeof CLI_INSTALL_STATES)[number];
+  message?: string;
+  cause?: (typeof CLI_INSTALL_CAUSES)[number];
+}
 
 export type PhonePlatform = "android" | "ios";
 export type PhoneKind = "device" | "emulator" | "simulator";
@@ -1637,6 +1665,31 @@ export type BrowserInputEvent =
   /** Whole text into the focused field (CDP `Input.insertText`): accents, paste, the app's own text field. */
   | { kind: "text"; text: string };
 
+/** What the agent's pointer does where it arrives: `type` stays there while the keys go in. */
+export const AGENT_POINTER_ACTS = ["move", "click", "double", "type"] as const;
+export type AgentPointerAct = (typeof AGENT_POINTER_ACTS)[number];
+
+/** A point the agent's pointer goes to, in the pixels of a surface `width`×`height` (the page's viewport). */
+export interface AgentPointer {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  act: AgentPointerAct;
+}
+
+/** An `AgentPointer` out of a frame: a point inside a surface of a sane size, or null. */
+export function parseAgentPointer(f: Record<string, unknown>): AgentPointer | null {
+  const [x, y, width, height] = [f.x, f.y, f.width, f.height].map((n) =>
+    typeof n === "number" && Number.isFinite(n) ? n : undefined,
+  );
+  const act = AGENT_POINTER_ACTS.find((a) => a === f.act);
+  if (x === undefined || y === undefined || width === undefined || height === undefined || !act) return null;
+  if (width < 1 || height < 1 || width > 16_384 || height > 16_384) return null;
+  const within = (n: number, max: number) => Math.round(Math.min(Math.max(n, 0), max));
+  return { x: within(x, width), y: within(y, height), width: Math.round(width), height: Math.round(height), act };
+}
+
 /** What a frame shows. */
 export interface BrowserFrameMetadata {
   deviceWidth: number;
@@ -1897,6 +1950,10 @@ export interface TaskStart {
   model?: string;
 }
 
+/** The coding CLIs `hello.executors` reports. */
+export const CLI_NAMES = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+export type CliName = (typeof CLI_NAMES)[number];
+
 /** A coding CLI on the machine, as `hello` reports it (protocol 7). */
 export interface RunnerExecutorInfo {
   /** The first line of `<cli> --version`. */
@@ -1960,9 +2017,14 @@ export type WireBrainEvent =
       model?: string;
       cacheRead?: number;
       cacheWrite?: number;
-      /** Claude Code: the API calls the turn made (`num_turns`), and the most uncached input one of them read. */
+      /**
+       * The API calls the turn made (Claude Code's `num_turns`, Codex's model requests), the most uncached input one of
+       * them read (Claude Code), and the most input one read, cache included: its context at that step. An older
+       * runner sends none.
+       */
       calls?: number;
       maxUncached?: number;
+      maxContext?: number;
     }
   | { type: "limit"; resetsAt?: string }
   | { type: "done"; text: string; session?: { id: string }; timings?: BrainTurnTimings }
@@ -2333,6 +2395,11 @@ export interface RunnerInfo {
     opencode?: RunnerExecutorInfo;
     grok?: RunnerExecutorInfo;
     antigravity?: RunnerExecutorInfo;
+    /**
+     * `CLI_INSTALL_PROTOCOL`: a CLI that is there and whose `--version` keeps failing, with its own last line of
+     * error. It is not listed above: it can't run turns, and it isn't missing either.
+     */
+    broken?: Partial<Record<CliName, string>>;
   };
   /** Protocol 9: whether the owner paused this computer. */
   paused?: RunnerPause;
@@ -2607,6 +2674,10 @@ export type MachineRequest = (
   | { op: "keep.end"; holdId: string; stop?: boolean }
   /** `XCODE_FIX_PROTOCOL`: start a fix (`kind`), or say where the last one stands, or stop it. One at a time. */
   | { op: "xcode.fix"; action: "start" | "status" | "cancel"; kind?: XcodeFixKind }
+  /** `CLI_INSTALL_PROTOCOL`: the PATH and the coding CLIs looked up now; `executors.changed` follows a change. */
+  | { op: "clis.check" }
+  /** `CLI_INSTALL_PROTOCOL`: start an install of `tool`, or say where the last one stands, or stop it. One at a time. */
+  | { op: "cli.install"; action: "start" | "status" | "cancel"; tool?: InstallableCli }
   /** `IPHONE_DEV_MODE_PROTOCOL`: open Xcode on this Mac (it shows Developer Mode on a plugged iPhone). */
   | { op: "xcode.open" }
 ) & {
@@ -2686,6 +2757,8 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "keep.start",
   "keep.end",
   "xcode.fix",
+  "clis.check",
+  "cli.install",
   "xcode.open",
 ];
 
@@ -2855,6 +2928,8 @@ export interface MachineReplies {
   /** `false`: no such hold lived here. */
   "keep.end": { ended: boolean };
   "xcode.fix": { fix: XcodeFix | null };
+  "clis.check": { executors: NonNullable<RunnerInfo["executors"]> };
+  "cli.install": { install: CliInstall | null };
   "xcode.open": { opened: boolean };
 }
 
@@ -3072,6 +3147,13 @@ export type RunnerFrame =
   | { type: "browser.frame"; agentId: string; seq: number; data: string; metadata: BrowserFrameMetadata }
   /** Protocol 12: an agent's stream stopped on the machine (asked, session closed, error). */
   | { type: "browser.stream.ended"; agentId: string; reason: "stopped" | "closed" | "error"; message?: string }
+  /**
+   * Where the agent's pointer goes on its browser's page, said as the gesture starts so whoever watches sees it
+   * arrive before the page changes (ADR 0040 §7.2). An older server drops it: nothing asks for it.
+   */
+  | ({ type: "browser.pointer"; agentId: string } & AgentPointer)
+  /** The same on the agent's desktop (ADR 0062), in the screen's pixels: desktop use, and its browser's window there. */
+  | ({ type: "desktop.pointer"; agentId: string } & AgentPointer)
   /** `KEEP_RUNNING_PROTOCOL`: a hold ended on the computer by itself (the next `hello` says so again). */
   | { type: "keep.ended"; holdId: string; reason: HoldEnd };
 
@@ -3271,11 +3353,14 @@ export function parseCursorModels(v: unknown): CursorModelInfo[] {
   return out;
 }
 
-/** `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok` and `antigravity`, each with a short version line (and Claude Code's login). */
+/**
+ * `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok` and `antigravity`, each with a short version
+ * line (and Claude Code's login), and `broken`: the error line of each of them that is there and can't start.
+ */
 export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerInfo["executors"]> {
   const out: NonNullable<RunnerInfo["executors"]> = {};
   const word = (x: unknown) => (isString(x) && /^[\w.-]{1,40}$/.test(x) ? x : undefined);
-  for (const name of ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const) {
+  for (const name of CLI_NAMES) {
     const e = v[name];
     if (!isObject(e) || !isString(e.version)) continue;
     const authMethod = word(e.authMethod);
@@ -3289,8 +3374,21 @@ export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerIn
     const models = name === "claude" || name === "codex" ? [] : parseCursorModels(e.models);
     if (models.length) out[name] = { ...out[name], models } as RunnerExecutorInfo;
   }
+  if (isObject(v.broken)) {
+    const broken: Partial<Record<CliName, string>> = {};
+    for (const name of CLI_NAMES) {
+      const said = v.broken[name];
+      if (!out[name] && isString(said)) broken[name] = said.replace(/\s+/g, " ").trim().slice(0, CLI_ERROR_MAX);
+    }
+    if (Object.keys(broken).length) out.broken = broken;
+  }
   return out;
 }
+
+/** The longest error line `executors.broken` keeps for a CLI. */
+export const CLI_ERROR_MAX = 300;
+/** `executors.broken.claude` on Windows when Git for Windows, which Claude Code needs there, isn't on the computer. */
+export const CLI_GIT_MISSING = "git_missing";
 
 /** `hello.accounts` (protocol 13): at most `MAX_MACHINE_ACCOUNTS`, ids and kinds checked, short words only. */
 export function parseAccounts(v: unknown[]): RunnerAccountInfo[] {
@@ -3415,6 +3513,7 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         ...(num(v.cacheWrite) > 0 ? { cacheWrite: num(v.cacheWrite) } : {}),
         ...(num(v.calls) > 0 ? { calls: num(v.calls) } : {}),
         ...(num(v.maxUncached) > 0 ? { maxUncached: num(v.maxUncached) } : {}),
+        ...(num(v.maxContext) > 0 ? { maxContext: num(v.maxContext) } : {}),
       };
     case "limit":
       return { type: "limit", ...(isString(v.resetsAt) ? { resetsAt: v.resetsAt.slice(0, 40) } : {}) };
@@ -3594,6 +3693,11 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         reason,
         ...(message !== undefined ? { message } : {}),
       };
+    }
+    case "browser.pointer":
+    case "desktop.pointer": {
+      const pointer = parseAgentPointer(f);
+      return isString(f.agentId) && pointer ? { type: f.type, agentId: f.agentId.slice(0, 64), ...pointer } : null;
     }
     case "runner.state": {
       const paused = parsePause(f.paused);

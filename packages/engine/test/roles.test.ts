@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { and, eq, schema } from "@agenteschat/db";
+import { and, eq, schema, sql } from "@agenteschat/db";
 import {
   AREA_PERMISSIONS,
   acceptInvitation,
@@ -23,7 +23,7 @@ import {
   setRowHolders,
   updateRole,
 } from "../src";
-import { addMember, adminRoleId, type Fixture, makeAdmin, setup } from "./fixtures";
+import { addMember, adminRoleId, everyoneWithout, type Fixture, makeAdmin, setup } from "./fixtures";
 
 let f: Fixture;
 beforeEach(async () => {
@@ -601,5 +601,47 @@ describe("Duplicar copies the role's reach", () => {
     for (const id of [base.id, crypto.randomUUID()])
       await expect(copy(id)).rejects.toMatchObject({ code: "role.unknown" });
     expect((await copy(helpers.id)).permissions).toEqual(["post"]);
+  });
+});
+
+describe("every member creates agents", () => {
+  const migration = async () =>
+    f.db.execute(
+      sql.raw(await Bun.file(new URL("../../db/migrations/0272_everyone_creates_agents.sql", import.meta.url)).text()),
+    );
+
+  test("a new workspace's base role holds it: a member makes an agent of their own", async () => {
+    expect((await everyoneOf()).permissions).toContain("create_agents");
+    const ana = await addMember(f.db, f.org.id, "member", "ana");
+    expect(can(await getMembership(f.db, ana.id, f.org.id), "create_agents")).toBe(true);
+    expect(can(await getMembership(f.db, ana.id, f.org.id), "manage_agents")).toBe(false);
+    const made = await createAgent(
+      f.db,
+      ana.id,
+      f.org.id,
+      { name: "Iris", handle: "iris" },
+      { model: "claude-haiku-5-5" },
+    );
+    expect(made.ownerUserId).toBe(ana.id);
+  });
+
+  test("the migration gives it to a workspace's base role that lacks it, once", async () => {
+    await everyoneWithout(f.db, f.org.id, "create_agents");
+    await migration();
+    await migration();
+    expect((await everyoneOf()).permissions.filter((k) => k === "create_agents")).toEqual(["create_agents"]);
+  });
+
+  test("the migration leaves a workspace where a custom role already holds it as it was", async () => {
+    await everyoneWithout(f.db, f.org.id, "create_agents");
+    const before = (await everyoneOf()).permissions;
+    const makers = await createRole(f.db, f.owner.id, f.org.id, { name: "Makers", permissions: ["create_agents"] });
+    await migration();
+    await migration();
+    expect((await everyoneOf()).permissions).toEqual(before);
+    const { roles } = await listRoles(f.db, f.owner.id, f.org.id);
+    expect(roles.find((r) => r.id === makers.id)?.permissions).toEqual(["create_agents"]);
+    const ana = await addMember(f.db, f.org.id, "member", "ana");
+    expect(can(await getMembership(f.db, ana.id, f.org.id), "create_agents")).toBe(false);
   });
 });

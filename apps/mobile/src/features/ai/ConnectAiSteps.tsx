@@ -1,10 +1,12 @@
-import type { BrainScope, Edition, MachineAccount, MachineAccountKind } from "@agenteschat/client";
+import type { BrainScope, Credential, Edition, Machine, MachineAccount, MachineAccountKind } from "@agenteschat/client";
 import {
   keys,
   useAgentBrain,
   useAgents,
   useAiAccounts,
   useApi,
+  useCheckMachineClis,
+  useCliInstall,
   useComputerSetup,
   useCredentials,
   useMachines,
@@ -21,8 +23,16 @@ import {
 import { computerEdition, computerName, managedNamed, setupView } from "@agenteschat/client/lib/computer";
 import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, holdText, keyRefusal } from "@agenteschat/client/lib/errors";
-import { joinNames } from "@agenteschat/client/lib/format";
+import { firstName, joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import {
+  brainTool,
+  CLI_GIT_MISSING,
+  cliInstallFailure,
+  cliOneClick,
+  GIT_FOR_WINDOWS_URL,
+  installableCli,
+} from "@agenteschat/client/lib/machines";
 import {
   type AiChoice,
   behindComputer,
@@ -51,14 +61,15 @@ import { can } from "@agenteschat/client/lib/permissions";
 import { geminiPersonal, isPlanId, planOf, providerFitsChoice, signInProviderOf } from "@agenteschat/client/lib/plans";
 import {
   keyLooksValid,
+  keyName,
   keyStepHint,
-  modelOnKey,
+  keyThinks,
   PROVIDERS,
   providerLabel,
   providerOf,
   providersForKey,
 } from "@agenteschat/client/lib/providers";
-import { rightHandOnKey, thinksWithLine } from "@agenteschat/client/lib/right-hand";
+import { agentOnKey, rightHandOnKey, savedKeyLine, thinksWithLine } from "@agenteschat/client/lib/right-hand";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
@@ -73,6 +84,7 @@ import {
   GroupedRow,
   Icon,
   type IconName,
+  InfoHint,
   Locked,
   ProviderLogo,
   Text,
@@ -81,8 +93,10 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { SetupWait } from "../computer/SetupWait";
+import { ToolOffWayOut } from "../devices/ToolOneClick";
 import { SheetHeader } from "../new/parts";
 import { AgentFace } from "../shared/Face";
+import { useMeId } from "../shared/hooks";
 import { pickOne } from "../shared/PickerSheet";
 import { PickList } from "../shared/PickList";
 import { AddAccount } from "./AddAccount";
@@ -241,6 +255,10 @@ export interface ConnectAiFlowProps {
   keyButton?: boolean;
   keySaved?: boolean;
   onSaveKey?: () => void;
+  /** An endpoint ("Outro provedor") was saved on the key page, with its models' tests. */
+  onEndpointSaved?: (key: Credential) => Promise<void>;
+  /** Before saving, whom the key will think for, in place of the usual line. */
+  keyForLine?: string;
   /** The person came because the computer just got ready: said first, once it is. */
   justReady?: boolean;
   /** Self-host with no computer for the agent: where one is connected. */
@@ -277,6 +295,12 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
   const [polls, setPolls] = useState(false);
   const gates = usePlanGates(orgId, forAgent?.id, polls ? PLAN_POLL_MS : false);
   const bareGates = useGatesWithoutAgent(orgId, props.bare === true);
+  const machines = useMachines(orgId);
+  const gateAt = (choice: PlanChoice) => (agentId !== undefined ? gates.gateOf(choice) : bareGates.at(choice).gate);
+  const machineAt = (choice: PlanChoice) => {
+    const id = (gates.view?.computer ?? bareGates.at(choice).computer)?.machineId;
+    return machines.data?.find((m) => m.id === id);
+  };
   // The workspace's keys are offered in Connect an AI (a sheet) only, as on the web: in the first run (inline) the key
   // saved there already serves every agent with no plan.
   const credentials = useCredentials(orgId, mayAddKey && forAgent !== undefined && sheetTitle !== undefined);
@@ -343,7 +367,8 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
       const k = row.key;
       // The workspace's model on that key: the agent's model where the key runs it, else one the key does (an endpoint's
       // own for an endpoint key, Automático for a catalog one, which follows it).
-      // Tried first: a key kept earlier may have run out of credit, and "now thinks with it" has to be true.
+      // Tried first: a key kept earlier may have run out of credit, and "now thinks with it" has to be true. An
+      // endpoint's key has no call of its own to try: its models' last tests say whether it thinks (`keyThinks`).
       const agentRow = agentRows.data?.find((a) => a.id === forAgent.id);
       const rightHand = gates.view?.scope === "mine" && agentRow;
       return void save(
@@ -351,15 +376,18 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
         k.label,
         async () => {
           const { check } = await api.agents.checkCredential(orgId, k.id);
-          if (check === "unchecked")
-            toast({ title: t("connectAi.key.savedUnchecked", { provider: providerLabel(k.provider) }), icon: "check" });
+          if (!keyThinks(k)) toast({ title: t("connectAi.key.untested", { name: keyName(k) }), icon: "info" });
+          else if (check === "unchecked" && k.provider !== CUSTOM_PROVIDER)
+            toast({ title: t("connectAi.key.savedUnchecked", { provider: keyName(k) }), icon: "check" });
           // The team's right hand: a key is the workspace's AI, so everyone without their own thinks with it.
           if (rightHand) return rightHandOnKey(api, orgId, rightHand, k, models.data?.models ?? []);
-          if (brain !== "model") await api.agents.setBrain(orgId, forAgent.id, { brain: "model" });
-          await api.agents.update(orgId, forAgent.id, {
-            credentialId: k.id,
-            ...modelOnKey(k, agentRow?.model, models.data?.models ?? []),
-          });
+          await agentOnKey(
+            api,
+            orgId,
+            { id: forAgent.id, model: agentRow?.model, brain },
+            k,
+            models.data?.models ?? [],
+          );
         },
         rightHand ? "workspace" : undefined,
       );
@@ -443,7 +471,7 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
           }}
           dims={dims}
           dimmedWhy={(choice) =>
-            dimmedLine(t, agentId !== undefined ? gates.gateOf(choice) : bareGates.at(choice).gate, {
+            dimmedLine(t, gateAt(choice), {
               edition: gates.edition ?? bareGates.edition,
               kind: kindOf(choice),
               computer: computerName(
@@ -452,8 +480,16 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
                 managedNamed(gates.view?.computer ?? bareGates.at(choice).computer),
                 isPersonal(org),
               ),
+              machine: machineAt(choice),
             })
           }
+          dimmedOut={(choice) => {
+            const gate = gateAt(choice);
+            const m = machineAt(choice);
+            return gate.state === "unsupported" && gate.reason === "tool_off" && m && m.kind !== "managed" ? (
+              <ToolOffWayOut machine={m} tool={brainTool(kindOf(choice))} style={styles.footerOut} />
+            ) : null;
+          }}
           have={have}
           haveFor={startAgentId || theirs ? undefined : forAgent?.name}
           busy={busy}
@@ -491,6 +527,7 @@ function Home({
   onView,
   dims,
   dimmedWhy,
+  dimmedOut,
   have,
   haveFor,
   busy,
@@ -500,6 +537,8 @@ function Home({
   dims: (choice: PlanChoice) => boolean;
   /** Why a plan is dimmed, said once under the rows it dims. */
   dimmedWhy: (choice: PlanChoice) => string;
+  /** Its way out where there is one (a program off there), under that line. */
+  dimmedOut: (choice: PlanChoice) => ReactNode;
   have: ReturnType<typeof existingRows>;
   /** The agent they are for, where the screen's title doesn't say it. */
   haveFor?: string;
@@ -545,6 +584,7 @@ function Home({
             ) : null}
           </GroupedList>
           {dimmed && !noPlan ? <GroupedFooter>{dimmedWhy(dimmed)}</GroupedFooter> : null}
+          {dimmed && !noPlan ? dimmedOut(dimmed) : null}
           <GroupedHeader>{t("connectAi.have.other")}</GroupedHeader>
         </>
       ) : null}
@@ -566,6 +606,7 @@ function Home({
         />
       </GroupedList>
       {noPlan ? <GroupedFooter>{dimmedWhy("claude")}</GroupedFooter> : null}
+      {noPlan ? dimmedOut("claude") : null}
     </View>
   );
 }
@@ -637,6 +678,129 @@ function Hero({ mark, title, sub }: { mark: ReactNode; title: string; sub: strin
         {sub}
       </Text>
     </View>
+  );
+}
+
+/**
+ * The web's `CliMissing` on the phone: Claude Code or Codex isn't on a computer someone connected, or won't start
+ * there. Whoever connected it installs it from here (it runs on the computer), anyone else asks them, anyone looks
+ * again. The page's own "Use an API key now" stays under it.
+ */
+function CliMissingCard({
+  machine,
+  kind,
+  computer,
+  reason,
+}: {
+  machine: Machine;
+  kind: MachineAccountKind;
+  computer: string;
+  reason: "not_installed" | "cant_start";
+}) {
+  const { t } = useTranslation();
+  const { orgId } = useAiOrg();
+  const toast = useToast();
+  const meId = useMeId();
+  const cli = installableCli(kind) ?? "claude";
+  const oneClick = cliOneClick(machine, meId, cli);
+  const run = useCliInstall(orgId, machine.id, cli, oneClick?.kind === "allow");
+  const check = useCheckMachineClis(orgId);
+  const [checked, setChecked] = useState(false);
+  const program = t(`brain.card.${kind}`);
+  const words = { program, computer };
+  const install = run.install;
+  const running = install?.state === "running";
+  const pending = run.start.isPending || run.cancel.isPending || run.ask.isPending || check.isPending;
+  const broken = reason === "cant_start" ? (machine.cliErrors?.[cli] ?? "") : null;
+  const gitMissing =
+    (install?.state === "failed" && install.cause === "git_missing") ||
+    (broken === CLI_GIT_MISSING && install?.state !== "failed");
+  const fail = (err: unknown) => toast({ title: errorText(t, err), icon: "x" });
+  const text = running
+    ? t("connectAi.cli.installing", words)
+    : gitMissing
+      ? t("connectAi.cli.gitMissing", words)
+      : (cliInstallFailure(t, install, words) ??
+        (broken !== null
+          ? broken
+            ? t("connectAi.cli.cantStart", { ...words, message: broken })
+            : t("brain.reasons.cant_start", words)
+          : checked
+            ? t("connectAi.cli.checked", words)
+            : oneClick?.kind === "outdated"
+              ? t("common.joinSentences", {
+                  a: t("connectAi.cli.missing", words),
+                  b: t("connectAi.cli.outdated", { computer }),
+                })
+              : t("connectAi.cli.missing", words)));
+  const failedBefore = install?.state === "failed" || install?.state === "canceled";
+  const actions = running ? (
+    <Button
+      size="sm"
+      variant="secondary"
+      label={t("common.cancel")}
+      disabled={pending}
+      onPress={() => run.cancel.mutate()}
+    />
+  ) : (
+    <View style={styles.gap}>
+      {gitMissing ? <OpenPage href={GIT_FOR_WINDOWS_URL} label={t("connectAi.cli.getGit")} primary /> : null}
+      {oneClick?.kind === "allow" && broken === null ? (
+        <Button
+          size="sm"
+          variant={gitMissing ? "secondary" : "primary"}
+          label={failedBefore ? t("common.retry") : t("connectAi.cli.install", { program })}
+          disabled={pending}
+          loading={run.start.isPending}
+          onPress={() => run.start.mutate(undefined, { onError: fail })}
+        />
+      ) : null}
+      {oneClick?.kind === "ask" && broken === null ? (
+        <Button
+          size="sm"
+          variant="secondary"
+          label={t("machines.oneClick.ask", { name: firstName(oneClick.ownerName) })}
+          disabled={pending}
+          loading={run.ask.isPending}
+          onPress={() =>
+            run.ask.mutate(undefined, {
+              onSuccess: () => toast({ title: t("connectAi.cli.asked", { name: firstName(oneClick.ownerName) }) }),
+              onError: fail,
+            })
+          }
+        />
+      ) : null}
+      {machine.cliInstall ? (
+        <Button
+          size="sm"
+          variant="secondary"
+          label={t("connectAi.cli.check")}
+          disabled={pending || !machine.online}
+          loading={check.isPending}
+          onPress={() => check.mutate(machine.id, { onSuccess: () => setChecked(true), onError: fail })}
+        />
+      ) : null}
+    </View>
+  );
+  // The Claude chat app is likely on a Mac or a PC, and isn't Claude Code: said once, behind the ⓘ.
+  const plain =
+    !running &&
+    !gitMissing &&
+    install?.state !== "failed" &&
+    broken === null &&
+    !checked &&
+    oneClick?.kind !== "outdated";
+  const why = plain && cli === "claude" && (machine.os === "windows" || machine.os === "darwin");
+  return (
+    <InfoCard icon={running ? "clock" : "laptop"} action={actions} live>
+      {why ? (
+        <InfoHint name={t("common.about", { label: program })} text={t("connectAi.cli.claudeApp")} variant="subhead">
+          {text}
+        </InfoHint>
+      ) : (
+        text
+      )}
+    </InfoCard>
   );
 }
 
@@ -1151,15 +1315,9 @@ function GateWait({
   const { colors: c } = useTheme();
   const machines = useMachines(orgId, edition !== null);
   const hold = holdText(t, org?.standing);
+  const row = machines.data?.find((m) => m.id === machineId);
   // Offline or unsupported: what's going on there and what comes next (on the Cloud, by itself: the page asks again).
-  const why = gateLine(t, {
-    gate,
-    edition,
-    kind,
-    computer,
-    hold,
-    machine: machines.data?.find((m) => m.id === machineId),
-  });
+  const why = gateLine(t, { gate, edition, kind, computer, hold, machine: row });
   let wait: ReactNode = null;
   if (gate.state === "loading") wait = <ActivityIndicator color={c.muted} style={styles.loading} />;
   else if (gate.state === "billing") {
@@ -1177,6 +1335,29 @@ function GateWait({
         <InfoCard icon="clock">{t(coding ? "connectAi.wait.key" : "connectAi.wait.signIn")}</InfoCard>
       </View>
     );
+  } else if (
+    why &&
+    gate.state === "unsupported" &&
+    gate.reason === "tool_off" &&
+    row &&
+    row.kind !== "managed" &&
+    !hold
+  ) {
+    // Switched off on a computer a person connected: said as that, with its way out.
+    wait = (
+      <InfoCard icon="laptop" action={<ToolOffWayOut machine={row} tool={brainTool(kind)} />}>
+        {why.text}
+      </InfoCard>
+    );
+  } else if (
+    gate.state === "unsupported" &&
+    (gate.reason === "not_installed" || gate.reason === "cant_start") &&
+    !hold &&
+    installableCli(kind) &&
+    row &&
+    row.kind !== "managed"
+  ) {
+    wait = <CliMissingCard machine={row} kind={kind} computer={computer} reason={gate.reason} />;
   } else if (why && !(gate.state === "offline" && signingIn)) {
     wait = <InfoCard icon={why.rechecks ? "clock" : "laptop"}>{why.text}</InfoCard>;
   } else if (gate.state === "missing") {
@@ -1194,7 +1375,7 @@ function GateWait({
       </>
     );
   } else if (gate.state === "locked") {
-    const pairer = machines.data?.find((m) => m.id === machineId)?.pairedBy?.name.split(" ")[0];
+    const pairer = row?.pairedBy?.name.split(" ")[0];
     wait = (
       <InfoCard icon="lock">
         {gate.who === "computer"
@@ -1217,6 +1398,8 @@ function KeyPage({
   keyButton = true,
   keySaved,
   onSaveKey,
+  onEndpointSaved,
+  keyForLine,
   onMakers,
 }: ConnectAiFlowProps & { onMakers: () => void }) {
   const { t } = useTranslation();
@@ -1235,12 +1418,24 @@ function KeyPage({
   if (hold) return <PlanHoldNote org={org} keys />;
   if (!mayAddKey) return <InfoCard icon="lock">{t("connectAi.keyLocked")}</InfoCard>;
   if (keySaved || endpointSaved) {
+    const { settled } = form;
     return (
       <View style={styles.done}>
-        <ProviderLogo id={endpointSaved ? CUSTOM_PROVIDER : form.provider} size="hero" />
+        <ProviderLogo id={custom ? CUSTOM_PROVIDER : form.provider} size="hero" />
         <Text variant="title2" tone="ink" style={styles.center}>
-          {(!endpointSaved && form.savedNote) || t("connectAi.key.saved")}
+          {settled
+            ? (keyThinks(settled.key) && form.savedNote) || savedKeyLine(t, settled.outcome, settled.key)
+            : form.savedNote || t("connectAi.key.saved")}
         </Text>
+        {settled?.outcome.kind === "other" && keyThinks(settled.key) ? (
+          <Button
+            variant="secondary"
+            label={t("connectAi.key.useForAll")}
+            loading={form.makingDefault}
+            disabled={form.makingDefault}
+            onPress={() => void form.forAll()}
+          />
+        ) : null}
       </View>
     );
   }
@@ -1261,7 +1456,14 @@ function KeyPage({
       <GroupedFooter>{t("connectAi.key.sub")}</GroupedFooter>
       {custom ? (
         <View style={styles.keySteps}>
-          <EndpointForm orgId={orgId} onDone={() => setEndpointSaved(true)} />
+          <EndpointForm
+            orgId={orgId}
+            onDone={async (key) => {
+              // The done view opens on what the save came to, never on the line it replaces.
+              await onEndpointSaved?.(key);
+              setEndpointSaved(true);
+            }}
+          />
         </View>
       ) : maker && site ? (
         <View style={styles.keySteps}>
@@ -1335,7 +1537,7 @@ function KeyPage({
               {t("mobile.ai.failed")}
             </Note>
           ) : (
-            <Note icon="info">{t("connectAi.key.forAll")}</Note>
+            <Note icon="info">{keyForLine ?? t("connectAi.key.forAll")}</Note>
           )}
           {keyButton ? (
             <View style={styles.save}>
@@ -1359,6 +1561,8 @@ const styles = StyleSheet.create({
   bold: { fontWeight: "600" },
   center: { textAlign: "center" },
   start: { alignSelf: "flex-start" },
+  // Under a grouped list's footer, on its edge.
+  footerOut: { paddingTop: 8, paddingHorizontal: 16 },
   gap: { gap: 10 },
   loading: { marginTop: 16 },
   backRow: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", marginBottom: 4 },

@@ -126,7 +126,6 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "members.requests.copyText",
     "missions.new.connect",
     "missions.new.connectComputer",
-    "missions.new.needsMachine",
     "missions.new.noEligibleText",
     "missions.new.reason.no_computer",
     "missions.pinned.noComputers",

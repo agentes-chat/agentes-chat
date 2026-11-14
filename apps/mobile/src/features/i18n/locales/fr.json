@@ -1835,6 +1835,8 @@
         "offlineCloudM": "L'ordinateur de {{name}} ne répond pas pour le moment.",
         "stuckF": "Impossible d'ouvrir le navigateur de {{name}}.",
         "stuckM": "Impossible d'ouvrir le navigateur de {{name}}.",
+        "noAnswerF": "Le navigateur de {{name}} n'a pas répondu.",
+        "noAnswerM": "Le navigateur de {{name}} n'a pas répondu.",
         "tooManyF": "Trop de navigateurs ouverts en même temps. Celui-ci s'affichera quand un autre se fermera.",
         "tooManyM": "Trop de navigateurs ouverts en même temps. Celui-ci s'affichera quand un autre se fermera."
       }
@@ -2089,7 +2091,6 @@
         "openXcode": "Ouvrir Xcode",
         "opened": "Xcode s'est ouvert sur {{host}}. Regardez à nouveau dans Réglages, puis fermez Xcode là-bas.",
         "unlock": "Vous l'avez activé et il a redémarré ? L'alerte avec Activer apparaît une fois cet iPhone déverrouillé.",
-        "checkAgain": "Vérifier à nouveau",
         "outdated": "L'app agentes.chat sur {{host}} n'est pas à jour. Mettez-la à jour sur ce Mac."
       }
     },
@@ -2103,6 +2104,7 @@
       "waiting": "{{names}} attend {{device}}",
       "waitingFor": "{{names}} attend {{device}} pour {{person}}",
       "tool_request": "{{names}} vous demande d'activer {{tool}} sur votre {{device}}",
+      "cli_request": "{{names}} vous demande d'installer {{tool}} sur votre {{device}}",
       "allowOnce": "Autoriser une fois",
       "always": "Toujours autoriser {{name}}",
       "no": "Non",
@@ -2164,7 +2166,8 @@
     "everyoneFailed": "Impossible de modifier l'accès de tout le monde. Réessayez.",
     "disconnectFailed": "Impossible de déconnecter {{name}}. Réessayez.",
     "needsReconnect": "Le compte {{name}} ne fonctionne plus. Les agents ne peuvent pas l'utiliser tant que quelqu'un ne l'a pas reconnecté.",
-    "noTools": "Les outils de {{name}} n’ont pas pu être lus. Les agents s’en passent jusqu’à une nouvelle lecture, dans Outils.",
+    "noTools": "Les outils de {{name}} n’ont pas pu être lus. Les agents s’en passent jusqu’à une nouvelle lecture.",
+    "readAgain": "Lire à nouveau",
     "accountTitle": "Compte",
     "renameFailed": "Impossible de le renommer. Réessayez.",
     "whoTitle": "Qui l'utilise",
@@ -2574,7 +2577,7 @@
     },
     "import": {
       "title": "Importer depuis un ordinateur",
-      "text": "Pour importer des mots de passe d'un navigateur ou d'un gestionnaire de mots de passe, ouvrez Paramètres, Vault sur le web et choisissez Importer."
+      "text": "Pour importer des mots de passe d'un navigateur ou d'un gestionnaire de mots de passe, passez par le web."
     },
     "connections": {
       "text": "Connectez un gestionnaire de mots de passe et vos agents utilisent les identifiants qui y sont gardés. Rien n'est copié : un mot de passe n'est lu qu'au moment où il sert.",
