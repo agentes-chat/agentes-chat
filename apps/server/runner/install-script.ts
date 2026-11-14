@@ -725,9 +725,8 @@ install_claude() {
   return 1
 }
 
-# Codex for every user: the latest release's static build for this processor, into $CODEX_EXE (on a Mac, its build
-# for macOS, for this user).
-install_codex() {
+# Codex's build name for this processor (on a Mac, its build for macOS), in $BUILD.
+codex_build() {
   case "$(uname -m)" in
     x86_64 | amd64) CPU=x86_64 ;;
     aarch64 | arm64) CPU=aarch64 ;;
@@ -735,21 +734,49 @@ install_codex() {
   esac
   BUILD=$CPU-unknown-linux-musl
   if [ "$(uname -s)" = Darwin ]; then BUILD=$CPU-apple-darwin; fi
+}
+
+# Codex for every user: the latest release's static build for this processor, into $CODEX_EXE (on a Mac, its build
+# for macOS, for this user), with its code-mode host beside it.
+install_codex() {
+  codex_build || return 1
   CX=$(mktemp -d) || return 1
   mkdir -p "\${CODEX_EXE%/*}" || return 1
   if download "$CODEX_RELEASES/codex-$BUILD.tar.gz" "$CX/codex.tar.gz" &&
     tar -xzf "$CX/codex.tar.gz" -C "$CX" && cp "$CX/codex-$BUILD" "$CODEX_EXE.new" &&
     chmod 755 "$CODEX_EXE.new" && mv -f "$CODEX_EXE.new" "$CODEX_EXE"; then
     rm -rf "$CX"
-    return 0
+    install_codex_host
+    return
   fi
   rm -rf "$CX" "$CODEX_EXE.new"
   return 1
 }
 
+# Codex's code-mode host, a release asset of its own that the standalone build leaves out: Codex starts it from its
+# own folder for a code-mode turn, and fails that turn without it (issue #144). Into $CODEX_HOST_EXE.
+install_codex_host() {
+  codex_build || return 1
+  CH=$(mktemp -d) || return 1
+  if download "$CODEX_RELEASES/codex-code-mode-host-$BUILD.tar.gz" "$CH/host.tar.gz" &&
+    tar -xzf "$CH/host.tar.gz" -C "$CH" && cp "$CH/codex-code-mode-host-$BUILD" "$CODEX_HOST_EXE.new" &&
+    chmod 755 "$CODEX_HOST_EXE.new" && mv -f "$CODEX_HOST_EXE.new" "$CODEX_HOST_EXE"; then
+    rm -rf "$CH"
+    return 0
+  fi
+  rm -rf "$CH" "$CODEX_HOST_EXE.new"
+  return 1
+}
+
 # $1 (claude or codex) at $2, named $3: kept when it is there (it updates itself), else installed with install_$1.
+# Codex kept without its code-mode host gets the host alone.
 get_cli() {
+  CODEX_HOST_EXE="\${CODEX_EXE%/*}/codex-code-mode-host"
   if [ -x "$2" ]; then
+    if [ "$1" = codex ] && [ ! -x "$CODEX_HOST_EXE" ] && ! t_run "Installing Codex's code-mode host" install_codex_host; then
+      t_tail "$T_LOG"
+      t_warn "Installing Codex's code-mode host failed: run this again, or install it yourself"
+    fi
     t_step "$3 $("$2" --version 2>/dev/null | head -n 1 | sed 's/^[^0-9]*//; s/ .*//')"
     return 0
   fi
