@@ -261,6 +261,7 @@ export function findTextPart(structure: MessageStructureObject | undefined): Mes
   let html: MessageStructureObject | null = null;
   const walk = (node: MessageStructureObject): MessageStructureObject | null => {
     const type = node.type.toLowerCase();
+    if (node.disposition?.toLowerCase() === "attachment") return null;
     if (node.childNodes?.length) {
       if (type === "message/rfc822") return null;
       for (const child of node.childNodes) {
@@ -269,7 +270,6 @@ export function findTextPart(structure: MessageStructureObject | undefined): Mes
       }
       return null;
     }
-    if (node.disposition?.toLowerCase() === "attachment") return null;
     if (type === "text/plain") return node;
     if (type === "text/html" && !html) html = node;
     return null;
