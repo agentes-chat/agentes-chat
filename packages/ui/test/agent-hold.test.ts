@@ -76,7 +76,7 @@ test("the engine and computer portraits hold still with the skies, and move agai
   stopBrain();
   stopComputer();
   // The last portrait gone: its pending frame is cancelled, not left to fire later.
-  expect(cleared.mock.calls.map(([id]) => id)).toEqual(timers.mock.results.slice(before).map((r) => r.value));
+  expect(timers.mock.results.slice(before).map((r) => r.value)).toEqual(cleared.mock.calls.map(([id]) => id));
 });
 
 test("a portrait that replaces the last one while its frame is pending keeps a single loop", () => {
