@@ -255,6 +255,21 @@ export function planMeterText(
   };
 }
 
+/**
+ * The plan's state (the UI kit's `planState`) in a few words, for a line that has no room for the meter; null when it
+ * is fine.
+ */
+export function planWord(
+  t: TFunction,
+  locale: string,
+  plan: { state: "ok" | "almost" | "limited"; until: string | null } | null,
+  now = new Date(),
+) {
+  if (!plan || plan.state === "ok") return null;
+  const text = planMeterText(t, locale, now);
+  return plan.state === "limited" ? text.limited(plan.until) : text.almost;
+}
+
 /** A plan's limits are worth a line once a window is known or the plan refused a request: unknown is nothing. */
 const knownLimits = (usage: PlanUsage | null | undefined): usage is PlanUsage =>
   usage != null && (usage.windows.length > 0 || usage.limited === true);

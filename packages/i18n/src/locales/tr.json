@@ -5442,6 +5442,8 @@
           "limitBack": "{{account}} {{when}} geri dönüyor",
           "limitSoon": "{{account}} plan yenilenince geri dönüyor",
           "limitHelp": "Bu arada {{name}}, zaten bağlı olan başka bir hesapla düşünebilir.",
+          "fullWait": "Bu hesapta {{name}}, plan yenilenene kadar bekler.",
+          "seeUsage": "Kullanımı gör",
           "wait": "Bekle",
           "modelTitle": "{{name}} için model",
           "moreTitle": "{{name}} için diğer seçenekler",

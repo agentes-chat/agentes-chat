@@ -5774,6 +5774,11 @@ export const ptBR = {
           limitSoon: "{{account}} volta quando o plano renovar",
           limitHelp: "Enquanto isso o {{name}} pode pensar com outra conta que já está conectada.",
           limitHelp_female: "Enquanto isso a {{name}} pode pensar com outra conta que já está conectada.",
+          /** Under the list, with an account at its limit picked: the row above says until when. */
+          fullWait: "Nesta conta o {{name}} espera até o plano renovar.",
+          fullWait_female: "Nesta conta a {{name}} espera até o plano renovar.",
+          /** A link to the usage page, after `fullWait`. */
+          seeUsage: "Ver uso",
           wait: "Esperar",
           modelTitle: "Modelo do {{name}}",
           modelTitle_female: "Modelo da {{name}}",

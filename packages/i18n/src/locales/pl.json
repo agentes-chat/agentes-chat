@@ -5838,6 +5838,8 @@
           "limitBack": "{{account}} wraca {{when}}",
           "limitSoon": "{{account}} wraca, gdy plan się odnowi",
           "limitHelp": "W międzyczasie {{name}} może myśleć z innym kontem, które jest już połączone.",
+          "fullWait": "Na tym koncie {{name}} czeka, aż plan się odnowi.",
+          "seeUsage": "Zobacz użycie",
           "wait": "Poczekaj",
           "modelTitle": "Model agenta {{name}}",
           "moreTitle": "Więcej opcji agenta {{name}}",

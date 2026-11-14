@@ -39,8 +39,10 @@ import {
   planOfAccount,
   planOfKind,
 } from "@agenteschat/client/lib/no-ai";
+import { planWord } from "@agenteschat/client/lib/plan-usage";
 import { brainPlan } from "@agenteschat/client/lib/plans";
 import { AUTO, isAuto, keyLine } from "@agenteschat/client/lib/providers";
+import { planState } from "@agenteschat/ui/plan-state";
 import type { TFunction } from "i18next";
 
 /*
@@ -182,13 +184,21 @@ export function accountSaved(
     : t("aiAccounts.done.savedAgent", { agent: agentName, label: ownSignInLower(t, saved.brain) });
 }
 
-/** An account as the agent's AI lists it (its page and Connect an AI): its name and plan, the line under it, its mark. */
-export const accountRow = (t: TFunction, choice: AccountChoice<MachineAccount>, agentName: string) => ({
-  label: accountTitle(choice.login),
-  sub: accountAbout(t, choice, agentName),
-  mark: choice.login.provider ?? choice.login.kind,
-  off: signInOf(choice.login) === "signed_out",
-});
+/**
+ * An account as the agent's AI lists it (its page and Connect an AI): its name and plan, the line under it, how full
+ * its plan is on a line of its own (as the web's rows), its mark.
+ */
+export const accountRow = (t: TFunction, choice: AccountChoice<MachineAccount>, agentName: string, locale: string) => {
+  const usage = choice.login.usage;
+  const word = planWord(t, locale, usage ? planState(usage, Date.now()) : null);
+  return {
+    label: accountTitle(choice.login),
+    sub: accountAbout(t, choice, agentName),
+    ...(word ? { below: word } : {}),
+    mark: choice.login.provider ?? choice.login.kind,
+    off: signInOf(choice.login) === "signed_out",
+  };
+};
 
 /**
  * Connect an AI's first group: what the person already has for the agent (`existingAi`), each row as it reads, the
@@ -199,6 +209,7 @@ export function existingRows(
   view: Pick<AgentBrain, "accounts" | "account" | "canUseOthersPlans">,
   keys: readonly Credential[],
   agentName: string,
+  locale: string,
 ) {
   return existingAi(view, keys).map((row: ExistingAi) =>
     row.kind === "key"
@@ -211,7 +222,7 @@ export function existingRows(
           mark: row.key.provider,
           off: false,
         }
-      : { key: row.choice.login.id, row, ...accountRow(t, row.choice, agentName) },
+      : { key: row.choice.login.id, row, ...accountRow(t, row.choice, agentName, locale) },
   );
 }
 

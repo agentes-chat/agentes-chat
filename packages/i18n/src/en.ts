@@ -5843,6 +5843,10 @@ export const en = {
           /** When the time it's back isn't known. */
           limitSoon: "{{account}} is back when the plan renews",
           limitHelp: "Meanwhile {{name}} can think with another account that's already connected.",
+          /** Under the list, with an account at its limit picked: the row above says until when. */
+          fullWait: "On this account {{name}} waits until the plan renews.",
+          /** A link to the usage page, after `fullWait`. */
+          seeUsage: "See usage",
           wait: "Wait",
           modelTitle: "{{name}}'s model",
           moreTitle: "More options for {{name}}",

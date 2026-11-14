@@ -5459,6 +5459,8 @@
           "limitBack": "{{account}} ist {{when}} zurück",
           "limitSoon": "{{account}} ist zurück, wenn sich das Abo erneuert",
           "limitHelp": "Bis dahin kann {{name}} mit einem anderen Konto denken, das schon verbunden ist.",
+          "fullWait": "Mit diesem Konto wartet {{name}}, bis sich der Plan erneuert.",
+          "seeUsage": "Nutzung ansehen",
           "wait": "Warten",
           "modelTitle": "Modell von {{name}}",
           "moreTitle": "Weitere Optionen für {{name}}",
