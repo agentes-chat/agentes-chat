@@ -207,10 +207,14 @@ export const antigravityModels = (listed: readonly { id: string; label?: string 
     return { value: m.id, label: m.label || m.id, ...(catalogModelOf(base) ? { modelId: base } : {}) };
   });
 
-/** Claude Code's aliases (`--model opus|sonnet|haiku`), mapped to today's ids in the catalog. */
+/**
+ * Claude Code's aliases (`--model opus|sonnet|haiku`), mapped to today's ids in the catalog, and Fable pinned by its
+ * id: `claudeCodeModel` passes only those three aliases and full `claude-` ids through, anything else runs Sonnet.
+ */
 export const CLAUDE_CODE_MODELS: readonly BrainModelOption[] = [
-  { value: "opus", label: "Opus", modelId: "claude-opus-5-5" },
   { value: "sonnet", label: "Sonnet", modelId: "claude-sonnet-5-5", recommended: true },
+  { value: "opus", label: "Opus", modelId: "claude-opus-5-5" },
+  { value: "claude-fable-5-2", label: "Fable", modelId: "claude-fable-5-2" },
   { value: "haiku", label: "Haiku", modelId: "claude-haiku-5-5" },
 ];
 
@@ -281,7 +285,7 @@ export function normalizeBrainModel(kind: BrainKind, value: unknown, stored?: st
     const alias = CLAUDE_CODE_MODELS.find((o) => o.value === v.toLowerCase() || o.modelId === v);
     if (alias) return alias.value;
     if (/^claude-[a-z0-9.-]{1,60}$/.test(v) || isPlanModelId(v)) return v;
-    throw new ValidationError("Choose Opus, Sonnet, Haiku or one of the plan's models", "brain.invalid_model", {
+    throw new ValidationError("Choose a Claude model or one of the plan's models", "brain.invalid_model", {
       brain: kind,
     });
   }

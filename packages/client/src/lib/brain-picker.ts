@@ -103,7 +103,8 @@ export function brainModelLine(
   /** Cursor's CLI said which models the plan includes (ADR 0114). */
   cursorPlanSays = false,
 ): string | undefined {
-  if (!plan && kind === "claude_code" && isClaudeAlias(m.value)) return t(`agentPage.work.brain.modelLine.${m.value}`);
+  const claude = /^claude-fable-/.test(m.value) ? "fable" : isClaudeAlias(m.value) ? m.value : undefined;
+  if (!plan && kind === "claude_code" && claude) return t(`agentPage.work.brain.modelLine.${claude}`);
   if (cursorPlanSays) return t(m.inPlan ? "brain.cursorModel.inPlan" : "brain.cursorModel.apiPrice");
   const parts = [m.free ? t("brain.free") : undefined, m.tag ? t(`brain.modelTag.${m.tag}`) : undefined];
   return parts.filter(Boolean).join(" · ") || undefined;

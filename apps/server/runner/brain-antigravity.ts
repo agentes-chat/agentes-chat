@@ -6,6 +6,7 @@ import { createInterface } from "node:readline";
 import type { CommandProfile } from "@agenteschat/adapters/command-policy";
 import type { AgentScope, BrainEffort } from "@agenteschat/adapters/machine-protocol";
 import { isAccountId } from "@agenteschat/adapters/machine-protocol";
+import { antigravityBaseModel } from "@agenteschat/providers/plans";
 import {
   ACCOUNT_MISSING_MESSAGE,
   ACCOUNT_SIGNED_OUT,
@@ -94,7 +95,7 @@ export const isOurAgyTool = (name: unknown) => typeof name === "string" && OURS.
 
 /** `--effort`: low, medium or high (`xhigh` and `max` as high); a slug that names its level (`…-high`) takes none. */
 const agyEffort = (effort?: BrainEffort, model?: string) =>
-  model && /-(?:low|medium|high)$/.test(model) ? undefined : effort === "xhigh" || effort === "max" ? "high" : effort;
+  model && antigravityBaseModel(model) !== model ? undefined : effort === "xhigh" || effort === "max" ? "high" : effort;
 
 /** The `agy` arguments for one turn. */
 export function antigravityTurnArgs(input: {

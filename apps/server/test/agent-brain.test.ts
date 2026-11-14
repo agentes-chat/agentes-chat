@@ -119,8 +119,9 @@ test("agent brain: defaults, who may, letting others talk to a plan, what the co
     ["antigravity", false, "no_computer"],
   ]);
   expect(fresh.options.find((o) => o.kind === "claude_code")?.models.map((m) => m.value)).toEqual([
-    "opus",
     "sonnet",
+    "opus",
+    "claude-fable-5-2",
     "haiku",
   ]);
   const noComputer = await api(`/agents/${agentId}/brain`, { method: "PUT", json: { brain: "claude_code" } });

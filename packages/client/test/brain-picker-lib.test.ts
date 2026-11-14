@@ -20,7 +20,7 @@ import {
   newPlanAccountOption,
   pickGroups,
 } from "../src/lib/brain-picker";
-import { brainModelChoices, CODING_PLANS, planFreeHint } from "../src/lib/plans";
+import { brainModelChoice, brainModelChoices, CODING_PLANS, planFreeHint } from "../src/lib/plans";
 import { AUTO, modelChoices } from "../src/lib/providers";
 
 const t = ((key: string, o?: Record<string, unknown>) => (o ? `${key}${JSON.stringify(o)}` : key)) as TFunction;
@@ -220,6 +220,11 @@ describe("Quem pensa as one list (the new agent's step)", () => {
     expect(brainModelLine(t, "claude_code", undefined, { value: "opus", label: "Opus" })).toBe(
       "agentPage.work.brain.modelLine.opus",
     );
+    // Fable is picked by its id: its line is Fable's, and the picker ticks that id, the model that runs.
+    expect(brainModelLine(t, "claude_code", undefined, { value: "claude-fable-5-2", label: "Fable" })).toBe(
+      "agentPage.work.brain.modelLine.fable",
+    );
+    expect(brainModelChoice("claude_code", undefined, "claude-fable-5-2")).toBe("claude-fable-5-2");
     expect(brainModelLine(t, "codex", undefined, { value: "gpt", label: "GPT" })).toBeUndefined();
   });
 

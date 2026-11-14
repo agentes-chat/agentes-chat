@@ -77,6 +77,9 @@ test("command line: headless stream-json in the sandbox; work takes edits, plan 
   expect(work.join(" ")).toContain("--model gemini-4-argon-high");
   // A slug names its thinking level: no `--effort` beside it.
   expect(work).not.toContain("--effort");
+  expect(antigravityTurnArgs({ prompt: "oi", model: "gemini-4-hydrogen-xhigh", effort: "high" })).not.toContain(
+    "--effort",
+  );
   expect(work.join(" ")).toContain(`--conversation ${FIRST}`);
   expect(antigravityTurnArgs({ prompt: "oi", effort: "xhigh" }).join(" ")).toContain("--effort high");
   const plan = antigravityTurnArgs({ prompt: "oi", profile: "plan" }).join(" ");
