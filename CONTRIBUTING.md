@@ -95,7 +95,8 @@ app, a package or the Docker files also boots the image with `docker-compose.yml
 - Contributions require accepting our [Contributor License Agreement](CLA.md) (CLA). The CLA bot
   asks in a comment on your first pull request, and you accept by commenting with the sentence it
   gives; after that it covers your later contributions too. There is no DCO sign-off. The bot goes
-  by each commit's author, so commit with an email linked to your GitHub account.
+  by each commit's author, so commit with an email linked to your GitHub account. A commit that a bot or
+  an AI tool authored under its own account has nobody to accept for it: make yourself its author.
 - You keep the copyright in your contribution. It is licensed to everyone under the license of the
   code it goes into: here AGPL-3.0-only together with the additional permission under section 7
   for app stores (at the top of [NOTICE](NOTICE)), so your code ships in the phone and desktop
