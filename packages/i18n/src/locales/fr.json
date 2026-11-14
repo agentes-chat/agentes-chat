@@ -2770,6 +2770,9 @@
       "update_role": "Modifier le rôle <b>{{name}}</b>",
       "delete_role": "Supprimer définitivement le rôle <b>{{name}}</b>",
       "move_role": "Déplacer le rôle <b>{{name}}</b>",
+      "set_permission_holders": "Modifier qui peut <b>{{short}}</b>",
+      "set_permission_holders_computers": "Modifier qui utilise <b>les ordinateurs des agents</b>",
+      "holdersOwnersOnly": "Seulement les propriétaires",
       "set_member_roles": "Modifier les rôles de <b>{{name}}</b> : {{change}}",
       "set_channel_permissions": "Modifier ce que {{who}} peut faire dans <b>#{{channel}}</b>",
       "set_my_status": "Mettre votre statut : <b>{{what}}</b>",
@@ -3594,6 +3597,8 @@
       "changed_update_role": "J'ai modifié le rôle <b>{{name}}</b>",
       "changed_delete_role": "J'ai supprimé le rôle <b>{{name}}</b>",
       "changed_move_role": "J'ai déplacé le rôle <b>{{name}}</b>",
+      "changed_set_permission_holders": "J'ai modifié qui peut <b>{{short}}</b>",
+      "changed_set_permission_holders_computers": "J'ai modifié qui utilise <b>les ordinateurs des agents</b>",
       "changed_set_member_roles": "J'ai modifié les rôles de <b>{{name}}</b> : {{change}}",
       "changed_set_channel_permissions": "J'ai modifié ce que {{who}} peut faire dans <b>#{{channel}}</b>",
       "changed_set_my_status": "J'ai mis votre statut : <b>{{what}}</b>",
@@ -15586,6 +15591,10 @@
         "left": "A quitté l'espace de travail",
         "role_changed": "A changé le rôle d'un membre",
         "password_link": "A créé un lien de nouveau mot de passe pour un membre"
+      },
+      "role": {
+        "permission_set": "A modifié qui peut {{short}}",
+        "permission_set_computers": "A modifié qui utilise les ordinateurs des agents"
       },
       "apps": {
         "connected": "A connecté {{app}}",

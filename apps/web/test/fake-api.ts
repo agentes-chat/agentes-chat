@@ -81,6 +81,7 @@ import type {
   ReactionCount,
   RightHandApprovals,
   Role,
+  RoleMailLoss,
   Run,
   RunConsultation,
   RunStep,
@@ -113,7 +114,7 @@ import { freeHandle, takenHandles } from "@agenteschat/client/lib/new-agent";
 import { stepIndex } from "@agenteschat/client/lib/onboarding";
 import type { PlanModel } from "@agenteschat/client/lib/plans";
 import { type LodiPrefs, lodiPrefsOf } from "@agenteschat/client/lib/right-hand-prefs";
-import { grants, SUMMARY_ORDER } from "@agenteschat/client/lib/roles";
+import { grants, SUMMARY_ORDER, withRowHolders } from "@agenteschat/client/lib/roles";
 import { sidebarItemOrder, sidebarSections } from "@agenteschat/client/lib/sidebar-items";
 import { driveFolder, isSecretFile } from "@agenteschat/ui/names";
 import { createFakeAccess } from "./fakes/access";
@@ -202,6 +203,8 @@ export interface FakeState {
   proposalAi?: "account" | "model" | "none";
   /** By agent: the mailboxes others gave it, which a wider audience would take (`agents.mailLoss`; default none). */
   mailLoss?: Record<string, ForeignMailbox[]>;
+  /** By role: the mailboxes agents would lose if someone got it (`roles.mailLoss`; default none). */
+  roleMailLoss?: Record<string, RoleMailLoss[]>;
   /** Overrides `account.authConfig` (default: GitHub only, sign-up open). */
   authConfig?: Partial<AuthConfig>;
   /** Overrides `account.signInOptions` (default: no account, sign-up allowed). */
@@ -1290,6 +1293,17 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
     state.roles ??= seedRoles();
     return state.roles;
   };
+  /** `GET …/roles`: the roles with how many hold each, and the areas. */
+  const rolesPayload = () => ({
+    roles: roles().map((r) => ({
+      ...r,
+      people:
+        r.kind === "everyone" ? state.members.length : state.members.filter((m) => m.roleIds?.includes(r.id)).length,
+    })),
+    areas: structuredClone(PERMISSION_AREAS),
+    colors: ["indigo", "violet", "rose", "amber", "green", "teal", "graphite"],
+    icons: ["shield", "code", "wallet", "mail", "bolt", "flag", "book", "chart", "bulb", "globe", "person"],
+  });
   // What each membership may do, as the server resolves it (ADR 0085): an owner everything, a member what their
   // roles and `everyone` give. A test may set `permissions` itself.
   const withPermissions = (me: Me): Me => ({
@@ -1564,18 +1578,16 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
     roles: {
       list: async (orgId) => {
         log("roles.list", orgId);
-        return {
-          roles: roles().map((r) => ({
-            ...r,
-            people:
-              r.kind === "everyone"
-                ? state.members.length
-                : state.members.filter((m) => m.roleIds?.includes(r.id)).length,
-          })),
-          areas: structuredClone(PERMISSION_AREAS),
-          colors: ["indigo", "violet", "rose", "amber", "green", "teal", "graphite"],
-          icons: ["shield", "code", "wallet", "mail", "bolt", "flag", "book", "chart", "bulb", "globe", "person"],
-        };
+        return rolesPayload();
+      },
+      setRow: async (orgId, row, holders) => {
+        log("roles.setRow", orgId, row, holders);
+        state.roles = withRowHolders(roles(), row, holders);
+        return rolesPayload();
+      },
+      mailLoss: async (orgId, roleId, userIds) => {
+        log("roles.mailLoss", orgId, roleId, userIds);
+        return state.roleMailLoss?.[roleId] ?? [];
       },
       create: async (orgId, input) => {
         log("roles.create", orgId, input);
@@ -1609,9 +1621,12 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         log("roles.reorder", orgId, ids);
         state.roles = roles().map((r) => (ids.includes(r.id) ? { ...r, position: ids.indexOf(r.id) } : r));
       },
-      setFor: async (orgId, userId, roleIds, via) => {
+      setFor: async (orgId, userId, roleIds, via, mailLossSeen) => {
         log("roles.setFor", orgId, userId, roleIds);
         if (via) log("via", via);
+        const lost = roleIds.flatMap((id) => state.roleMailLoss?.[id] ?? []);
+        if (mailLossSeen && lost.some((m) => !mailLossSeen.includes(m.accountId)))
+          throw new ApiError(409, "agent.mail_loss_changed", "An agent holds a mailbox you weren't asked about");
         const m = state.members.find((x) => x.userId === userId);
         if (m) m.roleIds = [...roleIds];
         return { roleIds: [...roleIds] };

@@ -2868,6 +2868,11 @@ export const en = {
       update_role: "Change the role <b>{{name}}</b>",
       delete_role: "Delete the role <b>{{name}}</b> for good",
       move_role: "Move the role <b>{{name}}</b>",
+      /** "Who can…": who may do one thing, Everyone and the roles at once. `short`: the permission (`permissions.*.short`). */
+      set_permission_holders: "Change who can <b>{{short}}</b>",
+      set_permission_holders_computers: "Change who uses <b>the agents' computers</b>",
+      /** Under it, when nobody but the owners would have it. */
+      holdersOwnersOnly: "Only owners",
       set_member_roles: "Change the roles of <b>{{name}}</b>: {{change}}",
       set_channel_permissions: "Change what {{who}} may do in <b>#{{channel}}</b>",
       set_my_status: "Set your status: <b>{{what}}</b>",
@@ -3749,6 +3754,8 @@ export const en = {
       changed_update_role: "Changed the role <b>{{name}}</b>",
       changed_delete_role: "Deleted the role <b>{{name}}</b>",
       changed_move_role: "Moved the role <b>{{name}}</b>",
+      changed_set_permission_holders: "Changed who can <b>{{short}}</b>",
+      changed_set_permission_holders_computers: "Changed who uses <b>the agents' computers</b>",
       changed_set_member_roles: "Changed the roles of <b>{{name}}</b>: {{change}}",
       changed_set_channel_permissions: "Changed what {{who}} may do in <b>#{{channel}}</b>",
       changed_set_my_status: "Set your status: <b>{{what}}</b>",
@@ -15268,6 +15275,11 @@ export const en = {
         left: "Left the workspace",
         role_changed: "Changed a member's role",
         password_link: "Made a new-password link for a member",
+      },
+      role: {
+        /** Everyone and the roles at once ("Who can…"). `short`: the permission (`permissions.*.short`). */
+        permission_set: "Changed who can {{short}}",
+        permission_set_computers: "Changed who uses the agents' computers",
       },
       apps: {
         connected: "Connected {{app}}",

@@ -2580,6 +2580,9 @@
       "update_role": "Ubah peran <b>{{name}}</b>",
       "delete_role": "Hapus peran <b>{{name}}</b> selamanya",
       "move_role": "Pindahkan peran <b>{{name}}</b>",
+      "set_permission_holders": "Ubah siapa yang boleh <b>{{short}}</b>",
+      "set_permission_holders_computers": "Ubah siapa yang memakai <b>komputer agen</b>",
+      "holdersOwnersOnly": "Hanya pemilik",
       "set_member_roles": "Ubah peran yang dimiliki <b>{{name}}</b>: {{change}}",
       "set_channel_permissions": "Ubah apa yang boleh dilakukan {{who}} di <b>#{{channel}}</b>",
       "set_my_status": "Atur statusmu: <b>{{what}}</b>",
@@ -3363,6 +3366,8 @@
       "changed_update_role": "Mengubah peran <b>{{name}}</b>",
       "changed_delete_role": "Menghapus peran <b>{{name}}</b>",
       "changed_move_role": "Memindahkan peran <b>{{name}}</b>",
+      "changed_set_permission_holders": "Mengubah siapa yang boleh <b>{{short}}</b>",
+      "changed_set_permission_holders_computers": "Mengubah siapa yang memakai <b>komputer agen</b>",
       "changed_set_member_roles": "Mengubah peran yang dimiliki <b>{{name}}</b>: {{change}}",
       "changed_set_channel_permissions": "Mengubah apa yang boleh dilakukan {{who}} di <b>#{{channel}}</b>",
       "changed_set_my_status": "Mengatur statusmu: <b>{{what}}</b>",
@@ -14599,6 +14604,10 @@
         "left": "Keluar dari ruang kerja",
         "role_changed": "Mengubah peran anggota",
         "password_link": "Membuat tautan kata sandi baru untuk anggota"
+      },
+      "role": {
+        "permission_set": "Mengubah siapa yang boleh {{short}}",
+        "permission_set_computers": "Mengubah siapa yang memakai komputer agen"
       },
       "apps": {
         "connected": "Menghubungkan {{app}}",
