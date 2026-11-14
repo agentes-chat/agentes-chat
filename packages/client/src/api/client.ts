@@ -943,7 +943,12 @@ export interface ApiClient {
     messageCard(orgId: string, messageId: string): Promise<MessageCard>;
     /** What an internal id in a text names, as its pill; 404 for anything I can't see or that isn't ours. */
     idRef(orgId: string, id: string): Promise<IdRef>;
-    update(orgId: string, channelId: string, input: ChannelInput & { name?: string }): Promise<Channel>;
+    /** Name, topic, who may join, and its dashboard (`dashboardId`, ADR 0135 §21; null takes it away). */
+    update(
+      orgId: string,
+      channelId: string,
+      input: ChannelInput & { name?: string; dashboardId?: string | null },
+    ): Promise<Channel>;
     /** Creator or admin: the channel leaves everyone's list (its messages are kept). */
     archive(orgId: string, channelId: string): Promise<void>;
     /** An archived channel back as it was (its creator or who manages channels). */

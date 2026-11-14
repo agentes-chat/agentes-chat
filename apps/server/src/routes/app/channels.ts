@@ -254,7 +254,7 @@ export function channelRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/channels/{channelId}",
       tags,
       security,
-      summary: "Rename, change topic or who may join (creator or admin)",
+      summary: "Rename, change topic, who may join or its dashboard (creator or admin)",
       request: {
         params: ChannelParams,
         body: body(
@@ -265,6 +265,10 @@ export function channelRoutes(deps: AppDeps) {
             audienceRoleIds: z.array(z.uuid()).max(100).optional().openapi({
               description:
                 "Private only: people holding one of these roles (departments) also see it and may join (ADR 0125); empty: invite only.",
+            }),
+            dashboardId: z.uuid().nullable().optional().openapi({
+              description:
+                "The dashboard beside the conversation for every member (ADR 0135 §21): a board of the workspace you see, never a home board (404 `dashboard.not_found`, 400 `dashboard.home_fixed`); null takes it away.",
             }),
           }),
         ),
@@ -286,6 +290,7 @@ export function channelRoutes(deps: AppDeps) {
           createdAt: r.createdAt.toISOString(),
           categoryId: r.categoryId,
           position: r.position,
+          dashboardId: r.dashboardId,
         },
         200,
       );

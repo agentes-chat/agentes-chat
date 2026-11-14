@@ -1027,7 +1027,7 @@ html:not([data-pointer]) .thread-line:focus-visible {
  * content box (100%) and its side padding (`--pane-x`), so it is 0 wherever a scrollbar takes none (a touch screen,
  * overlay scrollbars, the geometry check's Chromium) and follows the scrollbar as it comes and goes.
  */
-:is(.thread-panel, .members-side) > :is(.thread-panel__page, .dm-side__scroll) > * {
+:is(.thread-panel, .members-side) > :is(.thread-panel__page, .dm-side__scroll, .channel-board__scroll) > * {
   margin-inline-end: calc(100% + 2 * var(--pane-x, 0px) - 100cqw);
 }
 /* The agent's page needs more room than a thread: wider, and its narrow rules follow this width. */

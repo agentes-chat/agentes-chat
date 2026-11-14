@@ -3342,6 +3342,29 @@ export function useUpdateChannel(orgId: string, channelId: string) {
   });
 }
 
+/**
+ * Links a dashboard to the channel for every member, or takes it away with null (whoever manages it, ADR 0135 §21).
+ * Optimistic in the channel list; the other members' lists follow `channels.changed`.
+ */
+export function useSetChannelDashboard(orgId: string, channelId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const key = keys.channels(orgId);
+  return useMutation({
+    mutationFn: (dashboardId: string | null) => api.chat.update(orgId, channelId, { dashboardId }),
+    onMutate: async (dashboardId) => {
+      await qc.cancelQueries({ queryKey: key });
+      const before = qc.getQueryData<Channel[]>(key);
+      qc.setQueryData<Channel[]>(key, (list) => list?.map((c) => (c.id === channelId ? { ...c, dashboardId } : c)));
+      return { before };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.before) qc.setQueryData(key, ctx.before);
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: key }),
+  });
+}
+
 /** Archives a channel (creator or admin): it leaves the list. */
 export function useArchiveChannel(orgId: string) {
   const api = useApi();

@@ -73,6 +73,8 @@ export const STORAGE_KEYS = {
   sidebarSections: "agentes.sidebar.sections",
   /** Prefix (`.<user id>.<org id>`): "1" or "0", the person opened or closed a channel's members column there. */
   membersColumn: "agentes.members.column",
+  /** Prefix (`.<user id>.<org id>`): "1" or "0", the person opened or closed the channels' dashboard column there. */
+  channelBoard: "agentes.channel.board",
   /** Prefix (`.<user id>.<org id>`): "1" or "0", the person opened or closed the sidebar of a DM with an agent there. */
   dmSidebar: "agentes.dm.sidebar",
   /** Offline-computer notices the person closed (`machineId@offlineSince`), until that computer comes back. */

@@ -1403,7 +1403,8 @@
       "invites.link",
       "invites.types.links",
       "invites.links",
-      "invites.linkLabel"
+      "invites.linkLabel",
+      "channelBoard.chooseLabel"
     ],
     "it": [
       "shell.email.label",
@@ -1767,7 +1768,8 @@
       "invites.byEmail",
       "invites.byLink",
       "invites.link",
-      "invites.linkLabel"
+      "invites.linkLabel",
+      "channelBoard.chooseLabel"
     ],
     "nl": [
       "calendar.moreRuns",
@@ -2359,7 +2361,8 @@
       "invites.link",
       "invites.types.links",
       "invites.links",
-      "invites.linkLabel"
+      "invites.linkLabel",
+      "channelBoard.chooseLabel"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -3609,7 +3612,8 @@
       "rolesPage.reach.baseAgents",
       "invites.byLink",
       "invites.link",
-      "invites.linkLabel"
+      "invites.linkLabel",
+      "channelBoard.chooseLabel"
     ],
     "ru": [
       "channel.tooLong.fileName",

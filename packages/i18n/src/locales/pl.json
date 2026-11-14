@@ -4077,6 +4077,32 @@
     "selected_other": "Wybrano {{count}}",
     "create": "Utwórz #{{name}}"
   },
+  "channelBoard": {
+    "label": "Dashboard kanału #{{channel}}",
+    "button": "Dashboard kanału",
+    "show": "Pokaż dashboard",
+    "hide": "Ukryj dashboard",
+    "empty": {
+      "title": "Nie ma tu jeszcze dashboardu",
+      "manager": "Wybierz dashboard, który będzie obok #{{channel}}, taki sam dla wszystkich na kanale.",
+      "member": "Osoby zarządzające #{{channel}} mogą tu dodać dashboard."
+    },
+    "chooseLabel": "Dashboard",
+    "choose": "Wybierz dashboard",
+    "audienceNote": "Każdy członek widzi go tylko wtedy, gdy dashboard jest mu udostępniony.",
+    "none": "Nie ma jeszcze dashboardów do wyboru.",
+    "create": "Nowy dashboard",
+    "hidden": {
+      "title": "Nieudostępniony tobie",
+      "text": "Ten kanał ma dashboard, który nie jest ci udostępniony."
+    },
+    "menu": "Opcje dashboardu",
+    "open": "Otwórz dashboard",
+    "change": "Zmień dashboard",
+    "remove": "Usuń z kanału",
+    "linked": "„{{title}}” jest teraz obok #{{channel}}",
+    "removed": "Dashboard usunięty z #{{channel}}"
+  },
   "channelCategories": {
     "newCategory": "Nowa kategoria",
     "newCategoryHelp": "Trafi na koniec listy. Możesz ją potem przeciągnąć.",

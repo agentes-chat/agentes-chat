@@ -447,8 +447,11 @@ describe("dashboard events", () => {
     expect(qc.getQueryState(keys.dashboard("o1", "d1"))?.isInvalidated).toBe(true);
     expect(qc.getQueryData(keys.widget("o1", "w1"))).toBeUndefined();
     const deleted = { type: "dashboard.changed", dashboardId: "d1", deleted: true } as { type: string };
+    qc.setQueryData(keys.channels("o1"), []);
     expect(applyDashboardEvent(qc, "o1", deleted)).toBe(true);
     expect(qc.getQueryData(keys.dashboard("o1", "d1"))).toBeUndefined();
+    // A channel it was beside drops it (ADR 0135 §21).
+    expect(qc.getQueryState(keys.channels("o1"))?.isInvalidated).toBe(true);
   });
 });
 

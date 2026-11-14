@@ -3688,6 +3688,32 @@
     "selected_other": "{{count}}명 선택됨",
     "create": "#{{name}} 만들기"
   },
+  "channelBoard": {
+    "label": "#{{channel}} 대시보드",
+    "button": "채널 대시보드",
+    "show": "대시보드 보기",
+    "hide": "대시보드 숨기기",
+    "empty": {
+      "title": "아직 여기에 대시보드가 없어요",
+      "manager": "#{{channel}} 옆에 둘 대시보드를 고르세요. 채널의 모든 사람에게 같은 대시보드가 보여요.",
+      "member": "#{{channel}}을 관리하는 사람이 여기에 대시보드를 둘 수 있어요."
+    },
+    "chooseLabel": "대시보드",
+    "choose": "대시보드 고르기",
+    "audienceNote": "대시보드가 공유된 멤버에게만 보여요.",
+    "none": "아직 고를 대시보드가 없어요.",
+    "create": "새 대시보드",
+    "hidden": {
+      "title": "나에게 공유되지 않음",
+      "text": "이 채널에는 나에게 공유되지 않은 대시보드가 있어요."
+    },
+    "menu": "대시보드 옵션",
+    "open": "대시보드 열기",
+    "change": "대시보드 바꾸기",
+    "remove": "채널에서 빼기",
+    "linked": "“{{title}}”이(가) 이제 #{{channel}} 옆에 있어요",
+    "removed": "#{{channel}}에서 대시보드를 뺐어요"
+  },
   "channelCategories": {
     "newCategory": "새 카테고리",
     "newCategoryHelp": "목록 맨 끝에 추가돼요. 나중에 드래그해서 옮길 수 있어요.",

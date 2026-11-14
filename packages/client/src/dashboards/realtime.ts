@@ -29,8 +29,11 @@ export function applyDashboardEvent(qc: QueryClient, orgId: string, event: { typ
   void qc.invalidateQueries({ queryKey: keys.dashboardList(orgId) });
   void qc.invalidateQueries({ queryKey: keys.dashboardHome(orgId) });
   if (isString(e.dashboardId)) {
-    if (e.deleted === true) qc.removeQueries({ queryKey: keys.dashboard(orgId, e.dashboardId) });
-    else void qc.invalidateQueries({ queryKey: keys.dashboard(orgId, e.dashboardId) });
+    if (e.deleted === true) {
+      qc.removeQueries({ queryKey: keys.dashboard(orgId, e.dashboardId) });
+      // A channel it was beside drops it (ADR 0135 §21): the list no longer gives a deleted board's id.
+      void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
+    } else void qc.invalidateQueries({ queryKey: keys.dashboard(orgId, e.dashboardId) });
   }
   if (event.type === DASHBOARD_WIDGET && isString(e.widgetId)) {
     if (e.status === "removed") qc.removeQueries({ queryKey: keys.widget(orgId, e.widgetId) });

@@ -4129,6 +4129,37 @@ export const en = {
     selected_other: "{{count}} selected",
     create: "Create #{{name}}",
   },
+  /** A channel's dashboard (ADR 0135 §21): the column beside the conversation, the same board for every member. */
+  channelBoard: {
+    /** The column's name for screen readers. */
+    label: "Dashboard of #{{channel}}",
+    /** The header's button. */
+    button: "Channel dashboard",
+    show: "Show dashboard",
+    hide: "Hide dashboard",
+    empty: {
+      title: "No dashboard here yet",
+      manager: "Pick a dashboard to keep beside #{{channel}}, the same for everyone in it.",
+      member: "Whoever manages #{{channel}} can put a dashboard here.",
+    },
+    /** The picker's label and its placeholder. */
+    chooseLabel: "Dashboard",
+    choose: "Choose a dashboard",
+    /** Under the picker: who sees the board doesn't change by being here (ADR 0135 §8). */
+    audienceNote: "Each member sees it only if the dashboard is shared with them.",
+    none: "No dashboards to choose yet.",
+    create: "New dashboard",
+    hidden: {
+      title: "Not shared with you",
+      text: "This channel has a dashboard that isn't shared with you.",
+    },
+    menu: "Dashboard options",
+    open: "Open dashboard",
+    change: "Change dashboard",
+    remove: "Remove from channel",
+    linked: "“{{title}}” is now beside #{{channel}}",
+    removed: "Dashboard removed from #{{channel}}",
+  },
   channelCategories: {
     newCategory: "New category",
     newCategoryHelp: "Goes to the end of the list. You can drag it later.",

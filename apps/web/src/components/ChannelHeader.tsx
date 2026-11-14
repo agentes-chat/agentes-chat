@@ -12,7 +12,7 @@ import "./channel-header.css";
 
 /**
  * A channel's header, as Discord's: `#` and the name, the topic beside it while it fits whole, then icon buttons
- * (threads with their count, pins, the channel's settings, members) and the workspace search.
+ * (threads with their count, pins, the channel's settings, its dashboard, members) and the workspace search.
  */
 export function ChannelHeader({
   channel,
@@ -24,6 +24,8 @@ export function ChannelHeader({
   onSearch,
   membersOpen,
   onMembers,
+  boardOpen,
+  onBoard,
 }: {
   channel: Channel;
   isMember: boolean;
@@ -38,6 +40,9 @@ export function ChannelHeader({
   /** The members column (a sheet on a phone) is showing. */
   membersOpen: boolean;
   onMembers: () => void;
+  /** The channel's dashboard (ADR 0135 §21) is showing; absent `onBoard`: no button (no board, nobody to pick one). */
+  boardOpen?: boolean;
+  onBoard?: () => void;
 }) {
   const { t } = useTranslation();
   const channelEntries = useChannelMenu();
@@ -71,6 +76,18 @@ export function ChannelHeader({
           >
             <Icon name="cog" />
           </button>
+          {onBoard && (
+            <button
+              type="button"
+              className="ac-btn ac-btn--ghost ac-btn--icon channel__icon channel__board-toggle"
+              aria-label={t("channelBoard.button")}
+              aria-pressed={Boolean(boardOpen)}
+              title={t(boardOpen ? "channelBoard.hide" : "channelBoard.show")}
+              onClick={onBoard}
+            >
+              <Icon name="grid" />
+            </button>
+          )}
           {total > 0 && (
             <button
               type="button"

@@ -3954,6 +3954,32 @@
     "selected_other": "{{count}} sélectionnés",
     "create": "Créer #{{name}}"
   },
+  "channelBoard": {
+    "label": "Tableau de bord de #{{channel}}",
+    "button": "Tableau de bord du canal",
+    "show": "Afficher le tableau de bord",
+    "hide": "Masquer le tableau de bord",
+    "empty": {
+      "title": "Pas encore de tableau de bord ici",
+      "manager": "Choisissez un tableau de bord à garder à côté de #{{channel}}, le même pour tous les membres.",
+      "member": "Les personnes qui gèrent #{{channel}} peuvent mettre un tableau de bord ici."
+    },
+    "chooseLabel": "Tableau de bord",
+    "choose": "Choisir un tableau de bord",
+    "audienceNote": "Chaque membre ne le voit que si le tableau de bord est partagé avec lui.",
+    "none": "Aucun tableau de bord à choisir pour l’instant.",
+    "create": "Nouveau tableau de bord",
+    "hidden": {
+      "title": "Non partagé avec vous",
+      "text": "Ce canal a un tableau de bord qui n’est pas partagé avec vous."
+    },
+    "menu": "Options du tableau de bord",
+    "open": "Ouvrir le tableau de bord",
+    "change": "Changer de tableau de bord",
+    "remove": "Retirer du canal",
+    "linked": "« {{title}} » est maintenant à côté de #{{channel}}",
+    "removed": "Tableau de bord retiré de #{{channel}}"
+  },
   "channelCategories": {
     "newCategory": "Nouvelle catégorie",
     "newCategoryHelp": "Va à la fin de la liste. Vous pourrez la déplacer plus tard.",

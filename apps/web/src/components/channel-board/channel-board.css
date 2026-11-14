@@ -1,0 +1,97 @@
+/* A channel's dashboard (ChannelBoard.tsx, ADR 0135 §21). Docked: a column between the conversation and the members,
+   on the members column's surface and line, a quarter of the window between 360 and 520px. Floating (under 1500px):
+   the panels' sheet. Either way it scrolls in `.channel-board__scroll`, and its grid has two columns (a 2-wide widget
+   across the row, as on the phone), one when it is narrower than two cards. */
+.members-side.channel-board {
+  flex-basis: clamp(360px, 26vw, 520px);
+  width: clamp(360px, 26vw, 520px);
+  overflow: hidden;
+  padding: 0;
+  container-type: inline-size;
+}
+/* Under this a panel is the whole screen, as a thread's is. */
+@media (min-width: 861px) {
+  .thread-panel.channel-board--float {
+    width: min(480px, calc(100vw - 20px));
+  }
+}
+.channel-board__scroll {
+  --pane-x: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--space-3) var(--pane-x) var(--space-6);
+}
+.channel-board__close.ac-btn {
+  position: absolute;
+  z-index: 1;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+/* The head: the board's title (its page, wrapping, never cut), Organize and "+", its menu; room on the right for a
+   floating panel's ×. */
+.channel-board__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-sm);
+}
+.channel-board--float .channel-board__head {
+  padding-right: calc(var(--control-h-sm) + var(--space-2));
+}
+/* Anything else on top (the picker, "not shared", loading) starts under the ×. */
+.channel-board--float .channel-board__scroll > :first-child:not(.channel-board__head) {
+  margin-top: calc(var(--control-h-sm) + var(--space-2));
+}
+.channel-board__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 650;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.channel-board__title > a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.channel-board__title > a:hover {
+  text-decoration: underline;
+}
+
+/* No board, or changing it: the empty state, then the picker. */
+.channel-board__pick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.channel-board__note {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 18px;
+  color: var(--muted);
+}
+
+/* The board's grid in two columns whatever the window (`.wgrid` follows the window, not this column). */
+.channel-board .wgrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.channel-board .wgrid > :is(.wb-cell, .wb-spot)[data-w="2"] {
+  grid-column: span 2;
+}
+@container (max-width: 439px) {
+  .channel-board .wgrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .channel-board .wgrid > :is(.wb-cell, .wb-spot)[data-w="2"] {
+    grid-column: auto;
+  }
+}

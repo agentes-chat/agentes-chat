@@ -3812,6 +3812,32 @@
     "selected_other": "{{count}} seçildi",
     "create": "#{{name}} oluştur"
   },
+  "channelBoard": {
+    "label": "#{{channel}} panosu",
+    "button": "Kanal panosu",
+    "show": "Panoyu göster",
+    "hide": "Panoyu gizle",
+    "empty": {
+      "title": "Burada henüz pano yok",
+      "manager": "#{{channel}} yanında duracak bir pano seç, kanaldaki herkes için aynı.",
+      "member": "#{{channel}} kanalını yöneten kişiler buraya pano koyabilir."
+    },
+    "chooseLabel": "Pano",
+    "choose": "Pano seç",
+    "audienceNote": "Her üye panoyu yalnızca kendisiyle paylaşıldıysa görür.",
+    "none": "Henüz seçilecek pano yok.",
+    "create": "Yeni pano",
+    "hidden": {
+      "title": "Seninle paylaşılmadı",
+      "text": "Bu kanalın seninle paylaşılmamış bir panosu var."
+    },
+    "menu": "Pano seçenekleri",
+    "open": "Panoyu aç",
+    "change": "Panoyu değiştir",
+    "remove": "Kanaldan kaldır",
+    "linked": "“{{title}}” artık #{{channel}} yanında",
+    "removed": "Pano #{{channel}} kanalından kaldırıldı"
+  },
   "channelCategories": {
     "newCategory": "Yeni kategori",
     "newCategoryHelp": "Listenin sonuna eklenir. Sonra sürükleyebilirsiniz.",

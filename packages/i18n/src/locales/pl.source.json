@@ -9334,6 +9334,66 @@
   "newChannel.create": {
     "value": "Create #{{name}}"
   },
+  "channelBoard.label": {
+    "value": "Dashboard of #{{channel}}"
+  },
+  "channelBoard.button": {
+    "value": "Channel dashboard"
+  },
+  "channelBoard.show": {
+    "value": "Show dashboard"
+  },
+  "channelBoard.hide": {
+    "value": "Hide dashboard"
+  },
+  "channelBoard.empty.title": {
+    "value": "No dashboard here yet"
+  },
+  "channelBoard.empty.manager": {
+    "value": "Pick a dashboard to keep beside #{{channel}}, the same for everyone in it."
+  },
+  "channelBoard.empty.member": {
+    "value": "Whoever manages #{{channel}} can put a dashboard here."
+  },
+  "channelBoard.chooseLabel": {
+    "value": "Dashboard"
+  },
+  "channelBoard.choose": {
+    "value": "Choose a dashboard"
+  },
+  "channelBoard.audienceNote": {
+    "value": "Each member sees it only if the dashboard is shared with them."
+  },
+  "channelBoard.none": {
+    "value": "No dashboards to choose yet."
+  },
+  "channelBoard.create": {
+    "value": "New dashboard"
+  },
+  "channelBoard.hidden.title": {
+    "value": "Not shared with you"
+  },
+  "channelBoard.hidden.text": {
+    "value": "This channel has a dashboard that isn't shared with you."
+  },
+  "channelBoard.menu": {
+    "value": "Dashboard options"
+  },
+  "channelBoard.open": {
+    "value": "Open dashboard"
+  },
+  "channelBoard.change": {
+    "value": "Change dashboard"
+  },
+  "channelBoard.remove": {
+    "value": "Remove from channel"
+  },
+  "channelBoard.linked": {
+    "value": "“{{title}}” is now beside #{{channel}}"
+  },
+  "channelBoard.removed": {
+    "value": "Dashboard removed from #{{channel}}"
+  },
   "channelCategories.newCategory": {
     "value": "New category"
   },

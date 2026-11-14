@@ -3826,6 +3826,32 @@
     "selected_other": "{{count}} ausgewählt",
     "create": "#{{name}} erstellen"
   },
+  "channelBoard": {
+    "label": "Dashboard von #{{channel}}",
+    "button": "Kanal-Dashboard",
+    "show": "Dashboard zeigen",
+    "hide": "Dashboard ausblenden",
+    "empty": {
+      "title": "Hier gibt es noch kein Dashboard",
+      "manager": "Wähle ein Dashboard, das neben #{{channel}} bleibt, für alle im Kanal dasselbe.",
+      "member": "Wer #{{channel}} verwaltet, kann hier ein Dashboard anzeigen."
+    },
+    "chooseLabel": "Dashboard",
+    "choose": "Dashboard wählen",
+    "audienceNote": "Jedes Mitglied sieht es nur, wenn das Dashboard mit ihm geteilt ist.",
+    "none": "Noch keine Dashboards zur Auswahl.",
+    "create": "Neues Dashboard",
+    "hidden": {
+      "title": "Nicht mit dir geteilt",
+      "text": "Dieser Kanal hat ein Dashboard, das nicht mit dir geteilt ist."
+    },
+    "menu": "Dashboard-Optionen",
+    "open": "Dashboard öffnen",
+    "change": "Dashboard wechseln",
+    "remove": "Aus dem Kanal entfernen",
+    "linked": "„{{title}}“ steht jetzt neben #{{channel}}",
+    "removed": "Dashboard aus #{{channel}} entfernt"
+  },
   "channelCategories": {
     "newCategory": "Neue Kategorie",
     "newCategoryHelp": "Kommt ans Ende der Liste. Du kannst sie später verschieben.",
