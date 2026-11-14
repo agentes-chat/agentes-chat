@@ -1841,7 +1841,7 @@ test("a computer without the feature stays as it was: no shared login option, no
   expect(hello.claudeLoginBlocked).toHaveLength(300);
 });
 
-// ── Grok Build: one sign-in for all agents (protocol 65) ────────────────────
+// ── Grok Build: one sign-in for all agents (protocol 66) ────────────────────
 
 const grokAuth = (refresh: string, expires: number, user = "grok-user-fake") =>
   JSON.stringify({

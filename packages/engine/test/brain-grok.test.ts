@@ -136,7 +136,7 @@ test("Quem pensa: Grok where its runner and CLI are, its models as the CLI liste
   ]);
 });
 
-test("a Grok sign-in is one per agent too, and for all agents where each is its own OS user from protocol 65", () => {
+test("a Grok sign-in is one per agent too, and for all agents where each is its own OS user from protocol 66", () => {
   expect(loginPerAgent("grok")).toBe(true);
   expect(sharedSignIn("grok")).toBe(true);
   const system = (protocol: number) => ({ protocol, executors: { mode: "system" as const } });
