@@ -1933,6 +1933,7 @@ export interface AiComputer {
     opencode: boolean;
     grok: boolean;
     antigravity: boolean;
+    muse: boolean;
     key: boolean;
   };
   /** Why a CLI of `brains` can't think there, as `brainOptions` says it. */
@@ -1946,6 +1947,7 @@ export interface AiComputer {
     opencode: boolean;
     grok: boolean;
     antigravity: boolean;
+    muse: boolean;
   };
   /**
    * "Conta deste computador": each CLI's own sign-in there, on a computer the caller connected (it is theirs, and

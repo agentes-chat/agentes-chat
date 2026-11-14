@@ -15363,6 +15363,7 @@ export const en = {
         opencode: "OpenCode",
         grok: "Grok Build",
         antigravity: "Antigravity CLI",
+        muse: "Muse Code",
         commands: "commands",
         browser: "the browser",
         desktop: "the screen",

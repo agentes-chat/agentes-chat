@@ -1,6 +1,7 @@
 {
   "app": {
     "pt-BR": [
+      "machines.oneClick.tools.muse",
       "usageViews.logins",
       "chat.wait.said",
       "access.area.skills",
@@ -304,6 +305,7 @@
       "storage.connect.awsRegion.il-central-1"
     ],
     "es": [
+      "machines.oneClick.tools.muse",
       "devices.iphone.path.general",
       "devices.cpus",
       "devices.memory",
@@ -562,6 +564,7 @@
     ],
     "fr": [
       "usage.kinds.routines",
+      "machines.oneClick.tools.muse",
       "channel.tooLong.fileName",
       "calendar.moreRuns",
       "devices.cpus",
@@ -999,6 +1002,7 @@
       "storage.connect.awsRegion.eu-north-1"
     ],
     "de": [
+      "machines.oneClick.tools.muse",
       "devices.iphone.steps.account",
       "devices.workspace",
       "devices.cpus",
@@ -1462,6 +1466,7 @@
       "storage.connect.awsRegion.il-central-1"
     ],
     "it": [
+      "machines.oneClick.tools.muse",
       "shell.email.label",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
@@ -1838,6 +1843,7 @@
     ],
     "nl": [
       "usage.kinds.routines",
+      "machines.oneClick.tools.muse",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
       "devices.filter.computers",
@@ -2449,6 +2455,7 @@
       "storage.connect.theirName.b2Secret"
     ],
     "ja": [
+      "machines.oneClick.tools.muse",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
@@ -2624,6 +2631,7 @@
       "storage.connect.provider.b2"
     ],
     "ko": [
+      "machines.oneClick.tools.muse",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
@@ -2793,6 +2801,7 @@
       "storage.connect.provider.b2"
     ],
     "zh-Hans": [
+      "machines.oneClick.tools.muse",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
@@ -2953,6 +2962,7 @@
       "storage.connect.provider.b2"
     ],
     "id": [
+      "machines.oneClick.tools.muse",
       "shell.email.label",
       "devices.cpus",
       "devices.memory",
@@ -3266,6 +3276,7 @@
       "storage.connect.awsRegion.il-central-1"
     ],
     "tr": [
+      "machines.oneClick.tools.muse",
       "devices.cpus",
       "devices.memory",
       "devices.system.android",
@@ -3460,6 +3471,7 @@
       "storage.connect.provider.b2"
     ],
     "pl": [
+      "machines.oneClick.tools.muse",
       "devices.cpus",
       "devices.memory",
       "devices.system.android",
@@ -3764,6 +3776,7 @@
       "storage.connect.region"
     ],
     "ru": [
+      "machines.oneClick.tools.muse",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
