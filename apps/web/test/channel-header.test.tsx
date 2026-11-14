@@ -18,7 +18,7 @@ const open = async () => {
 };
 
 describe("the channel header, as Discord's", () => {
-  test("the name and topic, then threads, pins, settings, members and the search, with no faces", async () => {
+  test("the name and topic, then threads, pins, settings, the dashboard, members and the search, with no faces", async () => {
     const header = await open();
     expect(within(header).getByRole("heading", { level: 1, name: "eng" })).toBeTruthy();
     expect(within(header).getByText("Código, erros e deploys")).toBeTruthy();
@@ -33,6 +33,8 @@ describe("the channel header, as Discord's", () => {
       expect.stringMatching(/^Threads: \d+ neste canal$/),
       "Mensagens fixadas",
       "Configurações do canal",
+      // No board yet: there for whoever manages the channel, to pick one (ADR 0135 §21).
+      "Painel do canal",
       "Membros do canal (4)",
     ] as never);
     expect(within(header).getByRole("combobox", { name: "Buscar" })).toBeTruthy();
