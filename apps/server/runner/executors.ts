@@ -1,6 +1,6 @@
 import { type ChildProcess, execFile, spawn } from "node:child_process";
 import type { EventEmitter } from "node:events";
-import { accessSync, constants, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { accessSync, constants, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join, win32 } from "node:path";
 import {

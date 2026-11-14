@@ -4804,15 +4804,7 @@ export interface MachinePause {
 }
 
 /** A tool the person turns on or off on the machine. */
-export type MachineToolName =
-  | "claude"
-  | "codex"
-  | "cursor"
-  | "opencode"
-  | "grok"
-  | "antigravity"
-  | "muse"
-  | "commands";
+export type MachineToolName = "claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity" | "muse" | "commands";
 
 /** A folder allowed on the machine and the agents (ids) that may use it; empty: allowed, no agent yet. */
 export interface MachineFolderGrant {

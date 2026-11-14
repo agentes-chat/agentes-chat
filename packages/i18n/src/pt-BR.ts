@@ -14242,6 +14242,7 @@ export const ptBR = {
         opencode: "o OpenCode",
         grok: "o Grok Build",
         antigravity: "o Antigravity CLI",
+        muse: "o Muse Code",
         commands: "os comandos",
         browser: "o navegador",
         desktop: "a tela",

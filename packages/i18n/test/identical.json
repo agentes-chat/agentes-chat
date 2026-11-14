@@ -1,6 +1,7 @@
 {
   "app": {
     "pt-BR": [
+      "machines.oneClick.tools.muse",
       "usageViews.logins",
       "chat.wait.said",
       "access.area.skills",
@@ -291,6 +292,7 @@
       "devices.iphone.xcodeFix.ok"
     ],
     "es": [
+      "machines.oneClick.tools.muse",
       "devices.iphone.path.general",
       "devices.cpus",
       "devices.memory",
@@ -540,6 +542,7 @@
       "settings.section.roles"
     ],
     "fr": [
+      "machines.oneClick.tools.muse",
       "channel.tooLong.fileName",
       "calendar.moreRuns",
       "devices.cpus",
@@ -959,6 +962,7 @@
       "rolesPage.reach.baseAgents"
     ],
     "de": [
+      "machines.oneClick.tools.muse",
       "devices.iphone.steps.account",
       "devices.workspace",
       "devices.cpus",
@@ -1401,6 +1405,7 @@
       "rolesPage.computer.short.computer"
     ],
     "it": [
+      "machines.oneClick.tools.muse",
       "shell.email.label",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
@@ -1764,6 +1769,7 @@
       "rolesPage.computer.short.computer"
     ],
     "nl": [
+      "machines.oneClick.tools.muse",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
       "devices.filter.computers",
@@ -2352,6 +2358,7 @@
       "rolesPage.reach.baseAgents"
     ],
     "ja": [
+      "machines.oneClick.tools.muse",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
@@ -2520,6 +2527,7 @@
       "machines.oneClick.tools.antigravity"
     ],
     "ko": [
+      "machines.oneClick.tools.muse",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
@@ -2682,6 +2690,7 @@
       "machines.oneClick.tools.antigravity"
     ],
     "zh-Hans": [
+      "machines.oneClick.tools.muse",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
@@ -2835,6 +2844,7 @@
       "machines.oneClick.tools.antigravity"
     ],
     "id": [
+      "machines.oneClick.tools.muse",
       "shell.email.label",
       "devices.cpus",
       "devices.memory",
@@ -3135,6 +3145,7 @@
       "machines.oneClick.tools.terminal"
     ],
     "tr": [
+      "machines.oneClick.tools.muse",
       "devices.cpus",
       "devices.memory",
       "devices.system.android",
@@ -3322,6 +3333,7 @@
       "machines.oneClick.tools.antigravity"
     ],
     "pl": [
+      "machines.oneClick.tools.muse",
       "devices.cpus",
       "devices.memory",
       "devices.system.android",
@@ -3615,6 +3627,7 @@
       "rolesPage.reach.baseAgents"
     ],
     "ru": [
+      "machines.oneClick.tools.muse",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
