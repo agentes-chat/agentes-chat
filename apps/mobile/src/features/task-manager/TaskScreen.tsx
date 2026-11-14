@@ -20,7 +20,6 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { RunSteps } from "../chat/ToolCalls";
-import { chatHref } from "../links/logic";
 import { useOpenQueue } from "../queue/QueueSheet";
 import { AgentFace, Face, OpensAgent } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useNow } from "../shared/hooks";
@@ -28,7 +27,7 @@ import { agentLook } from "../shared/logic";
 import { PushedHeader } from "../shared/parts";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { useStopper, useTasksToday } from "./hooks";
-import { endedText, rowState, taskSubline } from "./logic";
+import { endedText, rowState, taskHref, taskSubline } from "./logic";
 import { StateLine } from "./parts";
 
 /**
@@ -164,6 +163,7 @@ function Page({
 }: {
   task: Pick<ManagedTask, "runId" | "agentId" | "channelId" | "threadId" | "background" | "betweenAgents"> & {
     requester?: ManagedTask["requester"];
+    delegation?: ManagedTask["delegation"];
   };
   title: string;
   /** How it stands, under the agent's name. */
@@ -186,7 +186,7 @@ function Page({
   const openQueue = useOpenQueue();
   const agent = dir.anyAgent(task.agentId);
   const requester = task.requester ?? null;
-  const opens = !(task.background || task.betweenAgents);
+  const opens = taskHref(task);
   return (
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
       <PushedHeader title={title} solid={false} grouped />
@@ -219,7 +219,7 @@ function Page({
             label={title}
             labelLines={0}
             {...(request ? { sub: request, subLines: 0 } : {})}
-            {...(opens ? { chevron: true, onPress: () => router.push(chatHref(task.channelId, task.threadId)) } : {})}
+            {...(opens ? { chevron: true, onPress: () => router.push(opens) } : {})}
           />
         </GroupedList>
         <Section title={t("taskManager.panel.steps")}>

@@ -1,7 +1,8 @@
 import { createTurnstileCheck, type HumanAction, type HumanCheck, type HumanCheckRefusal } from "@agenteschat/adapters";
 import { type Config, ConfigError } from "@agenteschat/config";
 import type { Logger } from "../logger";
-import { requestIp } from "./client-ip";
+import { requestIp, requestLimitIp } from "./client-ip";
+import { HUMAN_PASS_PREFIX, type HumanPasses } from "./human-pass";
 
 /** Where pages send the bot check's token: Better Auth's captcha plugin reads the same header. */
 export const HUMAN_CHECK_HEADER = "x-captcha-response";
@@ -29,15 +30,26 @@ const REFUSALS: Record<HumanCheckRefusal, string> = {
   human_check_blocked: "The bot check didn't load. Try another browser or network.",
 };
 
-/** A public form's bot check (ADR 0075): the refusal to answer with a 403, or null when it passes or there is none. */
+/**
+ * A public form's bot check (ADR 0075): the refusal to answer with a 403, or null when it passes or there is none.
+ * `pass`: where the form follows the e-mail's lookup, the address it is for; a pass that lookup gave stands for the
+ * check then (`human-pass.ts`), and one that doesn't count is refused like a refused token, so the page sends its own.
+ */
 export async function humanCheckRefusal(
   check: HumanCheck | null | undefined,
   headers: { get(name: string): string | null | undefined },
   action: HumanAction,
   trustedProxies: readonly string[] | undefined,
+  pass?: { passes: HumanPasses; email: string },
 ): Promise<{ code: HumanCheckRefusal; message: string } | null> {
   if (!check) return null;
-  const code = await check.verify(headers.get(HUMAN_CHECK_HEADER), action, requestIp(headers, trustedProxies));
+  const sent = headers.get(HUMAN_CHECK_HEADER);
+  if (sent?.startsWith(HUMAN_PASS_PREFIX)) {
+    const network = requestLimitIp(headers, trustedProxies);
+    if (pass?.passes.accepts(sent, { action, email: pass.email, network })) return null;
+    return { code: "human_check", message: REFUSALS.human_check };
+  }
+  const code = await check.verify(sent, action, requestIp(headers, trustedProxies));
   return code ? { code, message: REFUSALS[code] } : null;
 }
 

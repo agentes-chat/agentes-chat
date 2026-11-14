@@ -34,6 +34,7 @@ import {
   RIGHT_HAND,
   setMemberRoles,
   setMyStatus,
+  setRowHolders,
   suggestPerson,
   type ToolContext,
   type ToolSource,
@@ -320,6 +321,128 @@ describe("roles through the right hand", () => {
     const refused = await act(f, hers, { action: "update_role", input: { role: "Operações", name: "Ops" } });
     expect(refused.content).toContain("They can't make this change");
     expect(await roleNamed(f, "Operações")).not.toBeNull();
+  });
+
+  test("who may create channels, everyone and the roles at once: a card that must be read, applied with Undo", async () => {
+    f = await setup({ rightHand: true });
+    const support = await createRole(f.db, f.owner.id, f.org.id, {
+      name: "Suporte",
+      permissions: ["create_channels", "post"],
+    });
+    const finance = await createRole(f.db, f.owner.id, f.org.id, { name: "Financeiro" });
+    const admin = await roleNamed(f, "Admin");
+    const base = async () =>
+      (
+        await f.db
+          .select()
+          .from(schema.orgRoles)
+          .where(and(eq(schema.orgRoles.orgId, f.org.id), eq(schema.orgRoles.kind, "everyone")))
+      )[0]?.permissions ?? [];
+    const ctx = await lodiRun(f, f.owner.id, "só o financeiro cria canais");
+    // A step on a key, or a role that isn't there: why, and no card.
+    const wrong = await act(f, ctx, {
+      action: "set_permission_holders",
+      input: { permission: "create_channels", everyone: 2 },
+    });
+    expect(wrong).toMatchObject({ isError: true, content: expect.stringContaining("Only computers has steps") });
+    const gone = await act(f, ctx, {
+      action: "set_permission_holders",
+      input: { permission: "create_channels", everyone: 0, roles: [{ role: "Vendas", level: 1 }] },
+    });
+    expect(gone).toMatchObject({ isError: true, content: expect.stringContaining('No role "Vendas"') });
+    expect(await lastCard(f)).toBeNull();
+
+    // Even the owner's own words make a card: it changes what everyone may.
+    const out = await act(f, ctx, {
+      action: "set_permission_holders",
+      input: { permission: "create_channels", everyone: 0, roles: [{ role: "financeiro", level: 1 }] },
+      why: "Só o Financeiro cria canais",
+    });
+    expect(out.content).toContain("Posted a card to set_permission_holders");
+    expect(await base()).toContain("create_channels");
+    const posted = await lastCard(f);
+    if (!posted) throw new Error("no card");
+    // The Admin role keeps it whatever the card says: the card names it among who may.
+    expect(posted.card.params).toMatchObject({
+      action: "set_permission_holders",
+      needs: "manage_roles",
+      input: {
+        row: "create_channels",
+        everyone: 0,
+        roles: [
+          { id: admin?.id, name: "Admin", level: 1 },
+          { id: finance.id, name: "Financeiro", level: 1 },
+        ],
+      },
+      words: { permission: "create_channels" },
+    });
+    const deps = { db: f.db, pubsub: f.pubsub };
+    // An app that would read it as "a change in the workspace" may not apply it.
+    await expect(decideWorkspaceAction(deps, f.owner.id, f.org.id, posted.id, "apply")).rejects.toMatchObject({
+      code: "action_card.update_app",
+    });
+    await decideWorkspaceAction(deps, f.owner.id, f.org.id, posted.id, "apply", "set_permission_holders");
+    expect(await base()).not.toContain("create_channels");
+    expect((await roleNamed(f, "Financeiro"))?.permissions).toEqual(["create_channels"]);
+    expect((await roleNamed(f, "Suporte"))?.permissions).toEqual(["post"]);
+    const [receipt] = (await actionsFor(f.db, f.org.id, [posted.id])).get(posted.id) ?? [];
+    expect(receipt).toMatchObject({
+      kind: "workspace.changed",
+      params: { action: "set_permission_holders", permission: "create_channels" },
+    });
+    // Changed again since, Undo refuses and leaves the row as it is.
+    const holders = (ids: string[]) =>
+      setRowHolders(f.db, f.owner.id, f.org.id, "create_channels", {
+        everyone: 0,
+        roles: ids.map((id) => ({ id, level: 1 })),
+      });
+    await holders([finance.id, support.id]);
+    await expect(undoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "")).rejects.toMatchObject({
+      code: "action.changed_since",
+    });
+    expect(await base()).not.toContain("create_channels");
+    expect((await roleNamed(f, "Suporte"))?.permissions.sort()).toEqual(["create_channels", "post"]);
+    // As the card left it again, Undo puts every role back as it was.
+    await holders([finance.id]);
+    await undoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "");
+    expect(await base()).toContain("create_channels");
+    expect((await roleNamed(f, "Financeiro"))?.permissions).toEqual([]);
+    expect((await roleNamed(f, "Suporte"))?.permissions.sort()).toEqual(["create_channels", "post"]);
+
+    // On the computers' ladder the Admin role stands at the top step.
+    await act(f, ctx, {
+      action: "set_permission_holders",
+      input: { permission: "computers", everyone: 1 },
+      why: "Todos usam o navegador dos seus agentes",
+    });
+    expect((await lastCard(f))?.card.params.input).toMatchObject({
+      row: "computers",
+      everyone: 1,
+      roles: [{ id: admin?.id, name: "Admin", level: 4 }],
+    });
+  });
+
+  test("a role the card names for holding administrator that no longer does gets nothing from it: the card is read again", async () => {
+    f = await setup({ rightHand: true });
+    const ctx = await lodiRun(f, f.owner.id, "todos usam o navegador dos seus agentes");
+    await act(f, ctx, {
+      action: "set_permission_holders",
+      input: { permission: "computers", everyone: 1 },
+      why: "Todos usam o navegador dos seus agentes",
+    });
+    const posted = await lastCard(f);
+    if (!posted) throw new Error("no card");
+    const admin = await roleNamed(f, "Admin");
+    await updateRole(f.db, f.owner.id, f.org.id, admin?.id ?? "", { permissions: [] });
+    const deps = { db: f.db, pubsub: f.pubsub };
+    await expect(
+      decideWorkspaceAction(deps, f.owner.id, f.org.id, posted.id, "apply", "set_permission_holders"),
+    ).rejects.toMatchObject({ code: "action_card.changed" });
+    expect((await roleNamed(f, "Admin"))?.permissions).toEqual([]);
+    expect((await lastCard(f))?.card.params.input).toMatchObject({ roles: [] });
+    // Applied as it reads now, Admin still gets nothing.
+    await decideWorkspaceAction(deps, f.owner.id, f.org.id, posted.id, "apply", "set_permission_holders");
+    expect((await roleNamed(f, "Admin"))?.permissions).toEqual([]);
   });
 
   test("wrong or unknown input says why and changes nothing", async () => {
@@ -726,7 +849,7 @@ describe("what Desfazer, the card and the people card keep to", () => {
   test("a new role's Desfazer waits while a channel's exception holds it; Desfazer tudo takes both back", async () => {
     f = await setup({ rightHand: true });
     const deps = { db: f.db, pubsub: f.pubsub };
-    const ctx = await lodiRun(f, f.owner.id, "cria o papel Site, que só lê o general");
+    const ctx = await lodiRun(f, f.owner.id, "cria o cargo Site, que só lê o general");
     expect((await act(f, ctx, { action: "create_role", input: { name: "Site" } })).content).toContain("Done at once");
     const exception = await act(f, ctx, {
       action: "set_channel_permissions",
@@ -816,7 +939,7 @@ describe("what Desfazer, the card and the people card keep to", () => {
       permissions: ["manage_roles", "manage_members"],
     });
     await setMemberRoles(f.db, f.owner.id, f.org.id, lia.id, [managers.id]);
-    const out = await act(f, await lodiRun(f, lia.id, "apaga o papel Diretoria"), {
+    const out = await act(f, await lodiRun(f, lia.id, "apaga o cargo Diretoria"), {
       action: "delete_role",
       input: { role: "Diretoria" },
     });

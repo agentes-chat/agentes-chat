@@ -97,10 +97,12 @@ import type {
   DesktopPictureView,
   DesktopRelease,
   DesktopStatus,
+  DeviceAccount,
   DeviceRequest,
   DevicesList,
   DirectMessage,
   DmRead,
+  EmailChange,
   EndpointCheck,
   EndpointModel,
   FeedbackFile,
@@ -183,6 +185,7 @@ import type {
   OrgRoles,
   OrgSettings,
   PageTarget,
+  PendingReturn,
   PeopleUsage,
   Person,
   PersonLimits,
@@ -196,6 +199,7 @@ import type {
   Reminder,
   RemovalPreview,
   RightHandApprovals,
+  RoleMailLoss,
   RosterMember,
   Routine,
   RoutineHook,
@@ -601,6 +605,15 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         nullOn(401, () =>
           request<{ organizations: { orgId: string; unread: number; waiting: number }[] }>("/api/app/me/unread"),
         ),
+      deviceAccounts: async () =>
+        (await nullOn(404, () => request<{ accounts: DeviceAccount[] }>("/api/app/device-accounts")))?.accounts ?? [],
+      switchDeviceAccount: (userId) =>
+        request<void>("/api/app/device-accounts/switch", { method: "POST", json: { userId } }),
+      signOutDeviceAccount: (userId) =>
+        request<{ signedIn: boolean }>("/api/app/device-accounts/sign-out", {
+          method: "POST",
+          json: userId ? { userId } : {},
+        }),
       updateMe: (input) => request<void>("/api/app/me", { method: "PATCH", json: input }),
       setWorkArea: (area) => request<void>("/api/app/me/work-area", { method: "PUT", json: { area } }),
       phoneSignIn: () => request<PhoneSignIn>("/api/app/phone-sign-in", { json: {} }),
@@ -609,6 +622,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       deletionCode: () => request<CodeSent>("/api/app/account/deletion/code", { json: {} }),
       delete: (input = {}) => request<void>("/api/app/account", { method: "DELETE", json: input }),
       restore: () => request<void>("/api/app/account/deletion", { method: "DELETE" }),
+      changeEmail: (input) => request<EmailChange>("/api/app/account/email", { json: input }),
+      undoEmailChange: (token) => request<{ email: string }>("/api/app/email-undo", { json: { token } }),
     },
     push: {
       webKey: async () =>
@@ -764,12 +779,20 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<void>(`${org(orgId)}/roles/${enc(roleId)}`, { method: "PATCH", json: patch }),
       remove: (orgId, roleId) => request<void>(`${org(orgId)}/roles/${enc(roleId)}`, { method: "DELETE" }),
       reorder: (orgId, ids) => request<void>(`${org(orgId)}/roles/order`, { method: "PUT", json: { ids } }),
-      setFor: (orgId, userId, roleIds, via) =>
+      setFor: (orgId, userId, roleIds, via, mailLossSeen) =>
         request<{ roleIds: string[] }>(`${org(orgId)}/members/${enc(userId)}/roles`, {
           method: "PUT",
-          json: { roleIds },
+          json: { roleIds, ...(mailLossSeen ? { mailLossSeen } : {}) },
           query: via ? { via } : {},
         }),
+      setRow: (orgId, row, holders) =>
+        request<OrgRoles>(`${org(orgId)}/permissions/${enc(row)}`, { method: "PUT", json: holders }),
+      mailLoss: async (orgId, roleId, userIds) =>
+        (
+          await request<{ mailboxes: RoleMailLoss[] }>(`${org(orgId)}/roles/${enc(roleId)}/members/preview`, {
+            json: { userIds },
+          })
+        ).mailboxes,
     },
     agentGroups: {
       list: async (orgId) => (await request<{ groups: AgentGroup[] }>(`${org(orgId)}/agent-groups`)).groups,
@@ -1044,6 +1067,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<{ runs: { agentId: string; runId: string }[] }>(`${org(orgId)}/messages/${enc(messageId)}/answer-now`, {
           json: {},
         }),
+      followUps: async (orgId, channelId) =>
+        (
+          (await nullOn(404, () =>
+            request<{ followUps: PendingReturn[] }>(`${org(orgId)}/channels/${enc(channelId)}/follow-ups`),
+          )) ?? { followUps: [] }
+        ).followUps,
       cancelFollowUp: (orgId, messageId) =>
         request<void>(`${org(orgId)}/messages/${enc(messageId)}/cancel-follow-up`, { json: {} }),
       answerGitHub: (orgId, messageId) =>

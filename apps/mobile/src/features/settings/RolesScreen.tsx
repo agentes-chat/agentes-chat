@@ -68,7 +68,7 @@ import {
 import { chooseAction, confirmAction, SettingsPage } from "./parts";
 
 /*
- * Configurações › Papéis e permissões (ADR 0085), as the web's (`apps/web/src/components/roles/RolesSection.tsx`) on
+ * Configurações › Cargos (ADR 0085), as the web's (`apps/web/src/components/roles/RolesSection.tsx`) on
  * the phone's settings screens: the roles, each opening its screen (what it can do per area, its people, its name and
  * color); an area opens its levels and its items one by one. Same routes and checks as the web: the server says what
  * this person may change (`editable`, `givable`), and a role above them reads only. A role's icon and the roles' order
@@ -111,7 +111,7 @@ function Waiting({ title, failed }: { title: string; failed: boolean }) {
   );
 }
 
-/** The roles: Criar papel, the owners on top, the roles in order, then Todos under Base. */
+/** The roles: Criar cargo, the owners on top, the roles in order, then Todos under Base. */
 export function RolesScreen() {
   const { t, i18n } = useTranslation();
   const { org, data, people, failed } = useRolesData();
@@ -668,7 +668,7 @@ export function AddToRoleScreen({ roleId }: { roleId: string }) {
   );
 }
 
-/** Criar papel: its name and what it starts from (a template, or the same keys as a role this person holds all of). */
+/** Criar cargo: its name and what it starts from (a template, or the same keys as a role this person holds all of). */
 export function NewRoleScreen() {
   const { t } = useTranslation();
   const fail = useFail();
