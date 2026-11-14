@@ -14487,6 +14487,20 @@
       "trustText": "iPhone'da Güven'e dokunun ve parolasını girin.",
       "devModeDone": "Açık",
       "devModeText": "Açın ve Yeniden Başlat'a dokunun. Yeniden başladıktan sonra Aç'a dokunun ve parolanızı girin.",
+      "devModeRestarting": "iPhone yeniden başlıyor. Geri geldiğinde kilidini açın ve Aç'a dokunun.",
+      "devModeBack": "iPhone geri geldi. Kilidini açın, Aç'a dokunun ve parolanızı girin.",
+      "devModeCheck": "Açtım, yeniden kontrol et",
+      "devModeStillOff": "iPhone hâlâ Geliştirici Modu'nun kapalı olduğunu söylüyor.",
+      "devModeMissing": {
+        "title": "Seçenek görünmüyor mu?",
+        "hidden": "iPhone, Xcode göstermesini isteyene kadar bu seçeneği gizler.",
+        "hiddenOpen": "iPhone, Xcode göstermesini isteyene kadar bu seçeneği gizler. iPhone bağlıyken {{mac}} üzerinde Xcode'u açın.",
+        "openXcode": "Xcode'u aç",
+        "opened": "Xcode {{mac}} üzerinde açıldı. iPhone'un Ayarlar'ına yeniden bakın, sonra Xcode'u kapatın.",
+        "unlock": "Açtınız ve iPhone yeniden başladı mı? Kilidini açın. Aç düğmeli uyarı ancak bundan sonra çıkar.",
+        "check": "Yeniden kontrol et",
+        "outdated": "{{mac}} üzerindeki agentes.chat uygulaması eski. Uygulamayı güncelleyin ya da oradan kurduysanız bunu Terminal'de çalıştırın."
+      },
       "uiAutomationText": "Yeniden başladıktan sonra Ayarlar › Geliştirici bölümünde.",
       "helperText": "Mac onu her 7 günde bir oluşturur ve yeniler. Xcode'da ücretsiz bir Apple Account yeterlidir.",
       "helperUntrustedText": "Geliştiricinin adına, ardından Güven'e dokunun.",
@@ -14503,7 +14517,6 @@
         "account": "Zaten oturum açtınız mı? Xcode'da herhangi bir iOS uygulaması oluşturun, Signing & Capabilities altında ekibinizi seçin ve uygulamayı iPhone'da bir kez çalıştırın.",
         "connected": "{{mac}} henüz bir iPhone görmüyor. Sadece şarj değil veri de taşıyan bir kablo kullanın, iPhone'un kilidini açın ve isterse Güven'e dokunun.",
         "trust": "Güven sorusu çıkmadı mı? iPhone'u çıkarın, kilidini açıp yeniden takın, ardından Güven'e dokunup parolasını girin.",
-        "developerMode": "Geliştirici Modu yalnızca iPhone yeniden başladıktan sonra açılır. Yeniden Başlat'a, açıldıktan sonra da Aç'a dokunun. Anahtar yok mu? iPhone'u çıkarıp yeniden takın.",
         "uiAutomation": "Anahtar, Geliştirici Modu açık olduğunda ve iPhone yeniden başladıktan sonra görünür. Ararken kilidini açık tutun.",
         "helper": "{{mac}} test yardımcısını oluşturup iPhone'da başlatır, ilk seferde bu birkaç dakika sürer. iPhone'un kilidini açık ve takılı tutun."
       },

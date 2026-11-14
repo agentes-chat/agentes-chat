@@ -14705,6 +14705,28 @@ export const en = {
       trustText: "Tap Trust on the iPhone and enter its passcode.",
       devModeDone: "On",
       devModeText: "Turn it on and tap Restart. After the restart, tap Turn On and enter your passcode.",
+      /** The iPhone left the Mac's list while on Developer Mode: it restarts to turn it on. */
+      devModeRestarting: "The iPhone is restarting. When it's back, unlock it and tap Turn On.",
+      /** It came back from the restart and Developer Mode is still off: iOS asks only once it's unlocked. */
+      devModeBack: "The iPhone is back. Unlock it, tap Turn On and enter your passcode.",
+      /** A button: the Mac looks at the iPhone again now. */
+      devModeCheck: "I turned it on, check again",
+      devModeStillOff: "The iPhone still says Developer Mode is off.",
+      /** Opens under Developer Mode: each reason the switch may be missing, with its one way out. */
+      devModeMissing: {
+        title: "Don't see the option?",
+        hidden: "The iPhone hides the option until Xcode asks to show it.",
+        /** For who can't open Xcode from here: someone who doesn't manage the Mac, or a Mac whose app is too old. */
+        hiddenOpen:
+          "The iPhone hides the option until Xcode asks to show it. Open Xcode on {{mac}} with the iPhone plugged in.",
+        openXcode: "Open Xcode",
+        opened: "Xcode opened on {{mac}}. Look in the iPhone's Settings again, then close Xcode.",
+        unlock: "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.",
+        check: "Check again",
+        /** A Terminal command (`agentes-runner update`) shows under it. */
+        outdated:
+          "The agentes.chat app on {{mac}} is out of date. Update the app, or run this in Terminal if you installed it there.",
+      },
       uiAutomationText: "In Settings\u00a0›\u00a0Developer, after the restart.",
       helperText: "Built and renewed by the Mac every 7 days. A free Apple Account in Xcode is enough.",
       helperUntrustedText: "Tap the developer's name, then Trust.",
@@ -14734,8 +14756,6 @@ export const en = {
           "{{mac}} doesn't see an iPhone yet. Use a cable that carries data, not only power, unlock the iPhone and tap Trust if it asks.",
         trust:
           "No Trust prompt? Unplug the iPhone, unlock it and plug it in again, then tap Trust and enter its passcode.",
-        developerMode:
-          "Developer Mode turns on only after the iPhone restarts. Tap Restart, then Turn On once it's back. No switch there? Unplug the iPhone and plug it in again.",
         uiAutomation:
           "The switch shows once Developer Mode is on and the iPhone restarted. Keep it unlocked while you look.",
         helper:

@@ -14968,6 +14968,20 @@
       "trustText": "Toca Confiar en el iPhone y escribe su código.",
       "devModeDone": "Activado",
       "devModeText": "Actívalo y toca Reiniciar. Después del reinicio, toca Activar y escribe tu código.",
+      "devModeRestarting": "El iPhone se está reiniciando. Cuando vuelva, desbloquéalo y toca Activar.",
+      "devModeBack": "El iPhone volvió. Desbloquéalo, toca Activar y escribe tu código.",
+      "devModeCheck": "Ya lo activé, comprobar de nuevo",
+      "devModeStillOff": "El iPhone todavía indica que el modo de desarrollador está desactivado.",
+      "devModeMissing": {
+        "title": "¿No aparece la opción?",
+        "hidden": "El iPhone oculta la opción hasta que Xcode pide mostrarla.",
+        "hiddenOpen": "El iPhone oculta la opción hasta que Xcode pide mostrarla. Abre Xcode en {{mac}} con el iPhone conectado.",
+        "openXcode": "Abrir Xcode",
+        "opened": "Xcode se abrió en {{mac}}. Vuelve a mirar en los Ajustes del iPhone y cierra Xcode después.",
+        "unlock": "¿Lo activaste y el iPhone se reinició? Desbloquéalo. El aviso con Activar solo aparece después.",
+        "check": "Comprobar de nuevo",
+        "outdated": "La app agentes.chat en {{mac}} está desactualizada. Actualiza la app, o ejecuta esto en Terminal si la instalaste ahí."
+      },
       "uiAutomationText": "En Configuración › Desarrollador, después del reinicio.",
       "helperText": "La Mac la crea y la renueva cada 7 días. Basta con una Apple Account gratuita en Xcode.",
       "helperUntrustedText": "Toca el nombre del desarrollador y luego Confiar.",
@@ -14984,7 +14998,6 @@
         "account": "¿Ya iniciaste sesión? En Xcode, crea cualquier app de iOS, elige tu equipo en Signing & Capabilities y ejecútala una vez en el iPhone.",
         "connected": "{{mac}} aún no ve ningún iPhone. Usa un cable que transmita datos, no solo carga, desbloquea el iPhone y toca Confiar si lo pide.",
         "trust": "¿No aparece Confiar? Desconecta el iPhone, desbloquéalo y vuelve a conectarlo, luego toca Confiar y escribe su código.",
-        "developerMode": "El Modo de desarrollador solo se activa después de reiniciar el iPhone. Toca Reiniciar y luego Activar cuando vuelva. ¿No ves el interruptor? Desconecta el iPhone y vuelve a conectarlo.",
         "uiAutomation": "El interruptor aparece cuando el Modo de desarrollador está activado y el iPhone se reinició. Mantenlo desbloqueado mientras lo buscas.",
         "helper": "{{mac}} crea la app de pruebas y la abre en el iPhone, lo que tarda unos minutos la primera vez. Mantén el iPhone desbloqueado y conectado."
       },

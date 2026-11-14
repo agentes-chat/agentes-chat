@@ -35397,6 +35397,42 @@
   "devices.iphone.devModeText": {
     "value": "Turn it on and tap Restart. After the restart, tap Turn On and enter your passcode."
   },
+  "devices.iphone.devModeRestarting": {
+    "value": "The iPhone is restarting. When it's back, unlock it and tap Turn On."
+  },
+  "devices.iphone.devModeBack": {
+    "value": "The iPhone is back. Unlock it, tap Turn On and enter your passcode."
+  },
+  "devices.iphone.devModeCheck": {
+    "value": "I turned it on, check again"
+  },
+  "devices.iphone.devModeStillOff": {
+    "value": "The iPhone still says Developer Mode is off."
+  },
+  "devices.iphone.devModeMissing.title": {
+    "value": "Don't see the option?"
+  },
+  "devices.iphone.devModeMissing.hidden": {
+    "value": "The iPhone hides the option until Xcode asks to show it."
+  },
+  "devices.iphone.devModeMissing.hiddenOpen": {
+    "value": "The iPhone hides the option until Xcode asks to show it. Open Xcode on {{mac}} with the iPhone plugged in."
+  },
+  "devices.iphone.devModeMissing.openXcode": {
+    "value": "Open Xcode"
+  },
+  "devices.iphone.devModeMissing.opened": {
+    "value": "Xcode opened on {{mac}}. Look in the iPhone's Settings again, then close Xcode."
+  },
+  "devices.iphone.devModeMissing.unlock": {
+    "value": "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that."
+  },
+  "devices.iphone.devModeMissing.check": {
+    "value": "Check again"
+  },
+  "devices.iphone.devModeMissing.outdated": {
+    "value": "The agentes.chat app on {{mac}} is out of date. Update the app, or run this in Terminal if you installed it there."
+  },
   "devices.iphone.uiAutomationText": {
     "value": "In Settings › Developer, after the restart."
   },
@@ -35441,9 +35477,6 @@
   },
   "devices.iphone.stall.trust": {
     "value": "No Trust prompt? Unplug the iPhone, unlock it and plug it in again, then tap Trust and enter its passcode."
-  },
-  "devices.iphone.stall.developerMode": {
-    "value": "Developer Mode turns on only after the iPhone restarts. Tap Restart, then Turn On once it's back. No switch there? Unplug the iPhone and plug it in again."
   },
   "devices.iphone.stall.uiAutomation": {
     "value": "The switch shows once Developer Mode is on and the iPhone restarted. Keep it unlocked while you look."

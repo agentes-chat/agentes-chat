@@ -14694,6 +14694,22 @@ export const ptBR = {
       trustText: "Toque em Confiar no iPhone e digite o código dele.",
       devModeDone: "Ativado",
       devModeText: "Ative e toque em Reiniciar. Depois que reiniciar, toque em Ativar e digite seu código.",
+      devModeRestarting: "O iPhone está reiniciando. Quando ele voltar, desbloqueie e toque em Ativar.",
+      devModeBack: "O iPhone voltou. Desbloqueie, toque em Ativar e digite seu código.",
+      devModeCheck: "Já ativei, verificar de novo",
+      devModeStillOff: "O iPhone ainda diz que o Modo de Desenvolvedor está desligado.",
+      devModeMissing: {
+        title: "Não aparece essa opção?",
+        hidden: "O iPhone esconde a opção até o Xcode pedir para mostrar.",
+        hiddenOpen:
+          "O iPhone esconde a opção até o Xcode pedir para mostrar. Abra o Xcode em {{mac}} com o iPhone conectado.",
+        openXcode: "Abrir o Xcode",
+        opened: "O Xcode abriu em {{mac}}. Veja de novo nos Ajustes do iPhone e feche o Xcode depois.",
+        unlock: "Já ativou e o iPhone reiniciou? Desbloqueie. O aviso com Ativar só aparece depois disso.",
+        check: "Verificar de novo",
+        outdated:
+          "O app agentes.chat em {{mac}} está desatualizado. Atualize o app, ou rode isto no Terminal se instalou por lá.",
+      },
       uiAutomationText: "Em Ajustes\u00a0›\u00a0Desenvolvedor, depois de reiniciar.",
       helperText: "Criado e renovado pelo Mac a cada 7 dias. Uma Conta Apple gratuita no Xcode basta.",
       helperUntrustedText: "Toque no nome do desenvolvedor e em Confiar.",
@@ -14718,8 +14734,6 @@ export const ptBR = {
           "{{mac}} ainda não vê um iPhone. Use um cabo que passe dados, não só carga, desbloqueie o iPhone e toque em Confiar se ele pedir.",
         trust:
           "Não apareceu Confiar? Desconecte o iPhone, desbloqueie e conecte de novo, depois toque em Confiar e digite o código.",
-        developerMode:
-          "O Modo de Desenvolvedor só liga depois que o iPhone reinicia. Toque em Reiniciar e em Ativar quando ele voltar. Não tem a opção? Desconecte o iPhone e conecte de novo.",
         uiAutomation:
           "A opção aparece quando o Modo de Desenvolvedor está ativo e o iPhone reiniciou. Deixe desbloqueado enquanto procura.",
         helper:

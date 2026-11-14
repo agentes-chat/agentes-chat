@@ -15039,6 +15039,20 @@
       "trustText": "Touchez Se fier sur l'iPhone et saisissez son code.",
       "devModeDone": "Activé",
       "devModeText": "Activez-le et touchez Redémarrer. Après le redémarrage, touchez Activer et saisissez votre code.",
+      "devModeRestarting": "L'iPhone redémarre. Quand il revient, déverrouillez-le et touchez Activer.",
+      "devModeBack": "L'iPhone est revenu. Déverrouillez-le, touchez Activer et saisissez votre code.",
+      "devModeCheck": "C'est activé, vérifier à nouveau",
+      "devModeStillOff": "L'iPhone indique toujours que le mode développeur est désactivé.",
+      "devModeMissing": {
+        "title": "L'option n'apparaît pas ?",
+        "hidden": "L'iPhone cache l'option jusqu'à ce que Xcode demande de l'afficher.",
+        "hiddenOpen": "L'iPhone cache l'option jusqu'à ce que Xcode demande de l'afficher. Ouvrez Xcode sur {{mac}} avec l'iPhone branché.",
+        "openXcode": "Ouvrir Xcode",
+        "opened": "Xcode s'est ouvert sur {{mac}}. Regardez à nouveau dans les Réglages de l'iPhone, puis fermez Xcode.",
+        "unlock": "Vous l'avez activé et l'iPhone a redémarré ? Déverrouillez-le. L'alerte avec Activer n'apparaît qu'après.",
+        "check": "Vérifier à nouveau",
+        "outdated": "L'app agentes.chat sur {{mac}} n'est pas à jour. Mettez l'app à jour, ou lancez ceci dans le Terminal si vous l'avez installée par là."
+      },
       "uiAutomationText": "Dans Réglages › Développeur, après le redémarrage.",
       "helperText": "Créée et renouvelée par le Mac tous les 7 jours. Un Apple Account gratuit dans Xcode suffit.",
       "helperUntrustedText": "Touchez le nom du développeur, puis Se fier.",
@@ -15055,7 +15069,6 @@
         "account": "Déjà connecté ? Dans Xcode, créez n'importe quelle app iOS, choisissez votre équipe dans Signing & Capabilities et lancez-la une fois sur l'iPhone.",
         "connected": "{{mac}} ne voit pas encore d'iPhone. Utilisez un câble qui transmet les données, pas seulement la charge, déverrouillez l'iPhone et touchez Se fier s'il le demande.",
         "trust": "Pas de demande Se fier ? Débranchez l'iPhone, déverrouillez-le et rebranchez-le, puis touchez Se fier et saisissez son code.",
-        "developerMode": "Le Mode développeur ne s'active qu'après le redémarrage de l'iPhone. Touchez Redémarrer, puis Activer une fois qu'il a redémarré. Pas d'interrupteur ? Débranchez l'iPhone et rebranchez-le.",
         "uiAutomation": "L'interrupteur apparaît une fois le Mode développeur activé et l'iPhone redémarré. Gardez-le déverrouillé pendant que vous cherchez.",
         "helper": "{{mac}} crée l'app de test et la lance sur l'iPhone, ce qui prend quelques minutes la première fois. Gardez l'iPhone déverrouillé et branché."
       },
