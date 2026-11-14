@@ -1236,9 +1236,10 @@ export async function editInviteLink(
         eq(organizationInviteLinks.orgId, orgId),
         eq(organizationInviteLinks.id, linkId),
         isNull(organizationInviteLinks.revokedAt),
-        gt(organizationInviteLinks.expiresAt, now),
       ),
     );
+  // An expired link can still change: a full one's maximum grows so its waiting requests can be approved. It stays
+  // expired unless `expiresIn` is sent, as renewing it would.
   if (!current) throw new NotFoundError("Invitation link not found");
   const checked = await checkedChoices(db, actor, actorId, orgId, choices, current, now);
   const [link] = await db

@@ -273,7 +273,9 @@ export function inviteRoutes(deps: AppDeps) {
       summary: "Change what a link gives (admins, ADR 0184): the same address",
       description:
         "Each choice sent is checked as when making a link; one left out stays. `expiresIn` counts from now. A " +
-        "workspace's own link changed this way becomes a link of its own. 404 for a link turned off or expired.",
+        "workspace's own link changed this way becomes a link of its own. 404 for a link turned off. An expired one " +
+        "can still change, so its maximum can grow for the requests still waiting; it stays expired unless " +
+        "`expiresIn` is sent.",
       request: {
         params: LinkParams,
         body: body(

@@ -777,6 +777,33 @@ describe("links with choices (ADR 0184)", () => {
     expect((await linkRow(link.id))?.uses).toBe(2);
   });
 
+  test("an expired full link's maximum can still grow, so its waiting requests can be approved", async () => {
+    await start();
+    const { token, link } = await createInviteLink(
+      f.db,
+      SECRET,
+      f.owner.id,
+      f.org.id,
+      { maxUses: 1, expiresIn: "1h" },
+      NOW,
+    );
+    const erin = await person("erin@example.com", { verified: true });
+    const fay = await person("fay@example.com", { verified: true });
+    await ask({ user: erin }, token);
+    await ask({ user: fay }, token);
+    const twoHours = new Date(NOW.getTime() + 2 * 3_600_000);
+    const requestOf = async (email: string) => (await rows()).find((r) => r.email === email);
+    const approve = async (email: string) =>
+      approveJoinRequest(deps(), PUBLIC, f.owner.id, f.org.id, (await requestOf(email))?.id ?? "", [], twoHours);
+    expect(await approve(erin.email)).toEqual({ outcome: "joined" });
+    expect(await refusal(approve(fay.email))).toEqual({ code: "join.link_full_approval" });
+    // The refusal's way out works after the link expired, and the link stays expired.
+    await editInviteLink(f.db, f.owner.id, f.org.id, link.id, { maxUses: 5 }, twoHours);
+    expect(await approve(fay.email)).toEqual({ outcome: "joined" });
+    const gus = await person("gus@example.com", { verified: true });
+    await expect(ask({ user: gus }, token, twoHours)).rejects.toMatchObject({ code: "join.link_closed" });
+  });
+
   test("a deleted cargo leaves the links and invitations that gave it", async () => {
     await start();
     const suporte = await cargo("Suporte");

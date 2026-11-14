@@ -59,7 +59,8 @@ can say what comes with it.
    through it is refused too (409 `join.link_full_approval`, with the approver's way out: a bigger maximum). A
    request filed before it filled waits until it is turned down or the link's maximum grows, and the waiting list
    marks its link `full`. Approvals in a workspace take turns, under the lock asks are filed under, so two at once
-   never pass the maximum.
+   never pass the maximum. An expired link's maximum can still grow (its own change stays allowed while it is turned
+   on), so the requests that wait on a full, expired link can be approved; the link stays expired.
 8. **Approving.** The approver gives the cargos they pick (the apps start on the link's), and the link's channels and
    agents as far as the approver may give them at that moment, the rest left out, so approving stays one click. The
    approval may carry `channelIds` and `agentIds` instead, checked as an invitation's. Joined at once, the person
