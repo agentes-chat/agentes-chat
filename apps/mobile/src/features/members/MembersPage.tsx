@@ -17,7 +17,7 @@ import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { namesText } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { removalLines } from "@agenteschat/client/lib/removal";
-import { leaves, removes } from "@agenteschat/client/lib/roles";
+import { isBelow, leaves, removes } from "@agenteschat/client/lib/roles";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -29,6 +29,7 @@ import { router } from "@/ui/navigation";
 import { openAgentAi } from "../ai/AgentAiScreen";
 import { Page } from "../me/parts";
 import { useOpenDm } from "../new/useOpenDm";
+import { rolesHref } from "../roles/parts";
 import { chooseAction } from "../settings/parts";
 import { Face } from "../shared/Face";
 import { useColors, useMeId } from "../shared/hooks";
@@ -78,6 +79,9 @@ function Members() {
   // Remover do workspace for whoever may, Sair on one's own row (not the last owner); the server checks it again.
   const removable = (m: Person) =>
     m.userId === meId ? leaves(viewer, list ?? []) : !frozen && removes(viewer, m, roles);
+  // Their cargos (P11): who manages people, for someone below them (or themselves), with a cargo to give.
+  const givesCargos = (m: Person) =>
+    !frozen && can(org, "manage_members") && isBelow(viewer, m, roles) && roles.some((r) => r.givable);
 
   return (
     <Page
@@ -109,8 +113,12 @@ function Members() {
         <Loaded>
           <GroupedList>
             {membersByName(list, i18n.language).map((m) => {
-              const acts = memberActions(m.userId === meId, Boolean(removable(m)));
-              const run = { dm: () => void openDm({ userId: m.userId }), remove: () => void remove(m) };
+              const acts = memberActions(m.userId === meId, Boolean(removable(m)), givesCargos(m));
+              const run = {
+                dm: () => void openDm({ userId: m.userId }),
+                roles: () => router.push(rolesHref.person(m.userId)),
+                remove: () => void remove(m),
+              };
               return (
                 <GroupedRow
                   key={m.userId}
@@ -129,12 +137,14 @@ function Members() {
                               label: t(
                                 a === "dm"
                                   ? "profile.dm"
-                                  : a === "leave"
-                                    ? "members.remove.leave"
-                                    : "members.remove.item",
+                                  : a === "roles"
+                                    ? "rolesPage.rolesCta"
+                                    : a === "leave"
+                                      ? "members.remove.leave"
+                                      : "members.remove.item",
                               ),
-                              destructive: a !== "dm",
-                              onPress: run[a === "dm" ? "dm" : "remove"],
+                              destructive: a === "remove" || a === "leave",
+                              onPress: run[a === "leave" ? "remove" : a],
                             })),
                             t("common.cancel"),
                           ),

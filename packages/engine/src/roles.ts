@@ -575,6 +575,13 @@ export async function deleteRole(
       .update(schema.channels)
       .set({ audienceRoleIds: sql`array_remove(${schema.channels.audienceRoleIds}, ${role.id}::uuid)` })
       .where(and(eq(schema.channels.orgId, orgId), sql`${role.id}::uuid = any(${schema.channels.audienceRoleIds})`));
+    // Invitations and links forget it too, or an app starting an approval or a change on their cargos sends one gone.
+    for (const t of [schema.organizationInvitations, schema.organizationInviteLinks]) {
+      await tx
+        .update(t)
+        .set({ roleIds: sql`array_remove(${t.roleIds}, ${role.id}::uuid)` })
+        .where(and(eq(t.orgId, orgId), sql`${role.id}::uuid = any(${t.roleIds})`));
+    }
     // Boards forget it too: a `roles` board with no role left is its owner's (and admins') alone (ADR 0135 §8).
     await tx
       .update(schema.dashboards)
