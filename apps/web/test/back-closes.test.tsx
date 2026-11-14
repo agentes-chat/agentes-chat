@@ -125,5 +125,8 @@ test("an overlay with no use for Esc doesn't trap the person: the Back goes thro
   );
   const { press, backs } = fakeHistory();
   expect(await press()).toBe(true);
-  expect(backs).toEqual([{ ignoreBlocker: true }]);
+  expect(backs).toHaveLength(1);
+  // The Back it sends again passes this hold, and only this hold: the router still asks the page's own blockers.
+  expect(await press()).toBe(false);
+  expect(await press()).toBe(true);
 });

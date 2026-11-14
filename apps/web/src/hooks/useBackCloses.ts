@@ -35,10 +35,16 @@ export function escapeOverlay(top: Element): boolean {
  * Returns the undo.
  */
 export function holdBackForOverlays(history: RouterHistory): () => void {
+  // A Back let through after the Esc found no taker skips this hold only: other blockers (unsaved edits) still ask.
+  let passing = false;
   return history.block({
     enableBeforeUnload: false,
     blockerFn: ({ action }) => {
       if (action !== "BACK") return false;
+      if (passing) {
+        passing = false;
+        return false;
+      }
       const top = topOverlay();
       if (!top || top.matches("[data-in-address]")) return false;
       // The browser is on the entry before until the router steps forward again: a close that writes the URL (a
@@ -46,7 +52,9 @@ export function holdBackForOverlays(history: RouterHistory): () => void {
       window.addEventListener(
         "popstate",
         () => {
-          if (top.isConnected && !escapeOverlay(top)) history.back({ ignoreBlocker: true });
+          if (!top.isConnected || escapeOverlay(top)) return;
+          passing = true;
+          history.back();
         },
         { once: true },
       );
