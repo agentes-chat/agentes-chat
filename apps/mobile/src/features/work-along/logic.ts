@@ -1,3 +1,5 @@
+import type { ManagedTask } from "@agenteschat/client";
+import { SHORT_NAME } from "@agenteschat/client/lib/agora";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import type { WorkItem } from "@agenteschat/client/lib/working";
 import type { TFunction } from "i18next";
@@ -58,12 +60,23 @@ export function alongWords(
     : t("mobile.along.working", { name: mark(name) });
 }
 
+/** Whether a piece of the line's words gives way ("…") on a short line: a marked name or title, never a short name. */
+export const givesWay = (piece: { text: string; bold: boolean }) => piece.bold && [...piece.text].length > SHORT_NAME;
+
 /** A tap: one piece of work opens its place (work handed off, at the reply that handed it); several, the task manager. */
 export const alongHref = (lead: WorkItem, others: number): AppHref | "/task-manager" =>
   others > 0 ? "/task-manager" : chatHref(lead.channelId, lead.threadId, lead.messageId);
 
 /** The run behind the line, what its long press stops or opens the steps of; a mission has none. */
 export const alongRunId = (lead: Pick<WorkItem, "key">) => (lead.key.startsWith("r:") ? lead.key.slice(2) : null);
+
+/**
+ * A long press's items, by the task manager's list: "Ver passos" for a run it lists, "Parar" for who may stop it. A run
+ * it doesn't list (two agents' work for someone who only reads where it was handed off) has no steps to show: none,
+ * and the press opens the work's place.
+ */
+export const runMenuItems = (task: Pick<ManagedTask, "canStop"> | undefined): ("steps" | "stop")[] =>
+  task ? (task.canStop ? ["steps", "stop"] : ["steps"]) : [];
 
 /** iOS 26 holds the line in the tab bar's own accessory; Android and older iOS get a strip over the tab bar. */
 export const alongInAccessory = (os: string, version: string | number) => os === "ios" && !needsHeaderBlur(os, version);

@@ -10,6 +10,8 @@ import {
   alongRunId,
   alongStripBottom,
   alongWords,
+  givesWay,
+  runMenuItems,
   workAlong,
 } from "../../src/features/work-along/logic";
 import { translator } from "./fixtures";
@@ -48,6 +50,12 @@ describe("the work-along line, the phone's Agora (ADR 0128 addendum)", () => {
       { text: " · ajudando a ", bold: false },
       { text: "Ada", bold: true },
     ]);
+    // A short name stays whole beside a long one: "Ada · ajudando o Bartolomeu…".
+    expect(markedPieces(alongWords(t, item({ forAgentId: "atlas" }), "Ada", long, markInk)).map(givesWay)).toEqual([
+      false,
+      false,
+      true,
+    ]);
     expect(markedPieces(alongWords(t, item({ what: "Corrigir o link" }), "Atlas", undefined, markInk))).toEqual([
       { text: "Atlas", bold: true },
       { text: " · ", bold: false },
@@ -62,6 +70,17 @@ describe("the work-along line, the phone's Agora (ADR 0128 addendum)", () => {
     // Its long press acts on a run; a mission has none.
     expect(alongRunId(handed)).toBe("r-1");
     expect(alongRunId(item({ key: "m:mission-1", kind: "mission" }))).toBeNull();
+  });
+
+  test("a long press: Ver passos for a run the task manager lists, Parar for who may; a run it hides opens its place", () => {
+    expect(runMenuItems({ canStop: true })).toEqual(["steps", "stop"]);
+    expect(runMenuItems({ canStop: false })).toEqual(["steps"]);
+    // Two agents' work, for someone who reads only where it was handed off: no steps to show, never an empty sheet.
+    expect(runMenuItems(undefined)).toEqual([]);
+    const line = readFileSync(join(import.meta.dir, "../../src/features/work-along/WorkAlong.tsx"), "utf8");
+    expect(line.replace(/\s+/g, " ")).toContain(
+      "if (items.length === 0 || !task) { router.push(alongHref(lead, 0)); return; }",
+    );
   });
 
   test("what waits on you leads, then the newest long work; a quick reply never shows", () => {

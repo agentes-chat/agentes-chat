@@ -16,7 +16,17 @@ import { useDirectory, useNow, useOrgId } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { useActiveWork } from "../shared/queries";
 import { askToStop, useStopper } from "../task-manager/hooks";
-import { ALONG_STRIP, alongHref, alongRunId, alongStripBottom, alongWords, alongWork, workAlong } from "./logic";
+import {
+  ALONG_STRIP,
+  alongHref,
+  alongRunId,
+  alongStripBottom,
+  alongWords,
+  alongWork,
+  givesWay,
+  runMenuItems,
+  workAlong,
+} from "./logic";
 
 /** The work the line carries across the tabs, or null: the layout's accessory and the tab roots' strip read it. */
 export function useWorkAlong() {
@@ -28,8 +38,8 @@ export function useWorkAlong() {
 /**
  * The line that goes with you, the phone's Agora: who works and on what ("Atlas · ajudando a Ada"), with the orbit in
  * their tones, or "Theo · esperando você" in amber; "+2" when more are at it. A tap opens that work's place, or the
- * task manager when there are several. A long press offers "Ver passos" and "Parar". `inline`: the short copy beside
- * iOS 26's folded tab bar.
+ * task manager when there are several. A long press offers "Ver passos" and "Parar" for a run the task manager shows
+ * the reader, else opens its place. `inline`: the short copy beside iOS 26's folded tab bar.
  */
 export function WorkAlongLine({ lead, others, inline = false }: { lead: WorkItem; others: number; inline?: boolean }) {
   const { t } = useTranslation();
@@ -41,13 +51,14 @@ export function WorkAlongLine({ lead, others, inline = false }: { lead: WorkItem
   const name = agent?.name ?? t("mobile.along.agent");
   const forName = lead.forAgentId ? dir.anyAgent(lead.forAgentId)?.name : undefined;
   const words = alongWords(t, lead, name, forName);
-  // A long name or title gives way ("…"), the words between them stay whole: "Bartolomeu… · ajudando a Ada".
+  // A long name or title gives way ("…"), the words between them and a short name stay whole: "Ada · ajudando o
+  // Bartolomeu…".
   const pieces = markedPieces(alongWords(t, lead, name, forName, markInk));
   const runId = alongRunId(lead);
   return (
     <Pressable
       onPress={() => router.push(alongHref(lead, others))}
-      onLongPress={runId ? () => void runMenu(runId, words) : undefined}
+      onLongPress={runId ? () => void runMenu(lead, runId, words) : undefined}
       accessibilityRole="button"
       accessibilityLabel={others > 0 ? `${words}, ${t("mobile.along.more", { count: others })}` : words}
       style={({ pressed }) => [styles.row, inline && styles.inline, pressed && styles.pressed]}
@@ -61,7 +72,7 @@ export function WorkAlongLine({ lead, others, inline = false }: { lead: WorkItem
             variant="subhead"
             numberOfLines={1}
             style={[
-              p.bold ? styles.give : styles.keep,
+              givesWay(p) ? styles.give : styles.keep,
               lead.waiting ? { color: colors.amber, fontWeight: "600" } : null,
             ]}
           >
@@ -112,7 +123,8 @@ export function AlongStrip({ lead, others }: { lead: WorkItem; others: number })
 
 /**
  * A long press on the line: "Ver passos" (the task's screen) and, for who may, "Parar" with the system's confirm, from
- * the task manager's list (asked again unless it was read in the last half minute).
+ * the task manager's list (asked again unless it was read in the last half minute). A run that list doesn't show the
+ * reader opens its place instead (`runMenuItems`).
  */
 function useRunMenu() {
   const { t } = useTranslation();
@@ -120,24 +132,30 @@ function useRunMenu() {
   const dir = useDirectory();
   const tasks = useTaskManager(orgId, { since: todayStart(), enabled: false, pollMs: false });
   const { stop } = useStopper();
-  return async (runId: string, words: string) => {
+  return async (lead: WorkItem, runId: string, words: string) => {
     haptics.selection();
     const fresh = Date.now() - tasks.dataUpdatedAt < 30_000;
     const view = fresh ? tasks.data : (await tasks.refetch()).data;
     const task = view?.tasks.find((x) => x.runId === runId);
-    const name = (task && dir.anyAgent(task.agentId)?.name) || t("mobile.along.agent");
-    showMenu(t, words, [
-      { label: t("taskManager.actions.steps"), run: () => router.push(`/task-manager/${runId}`) },
-      ...(task?.canStop
-        ? [
-            {
+    const items = runMenuItems(task);
+    if (items.length === 0 || !task) {
+      router.push(alongHref(lead, 0));
+      return;
+    }
+    const name = dir.anyAgent(task.agentId)?.name || t("mobile.along.agent");
+    showMenu(
+      t,
+      words,
+      items.map((item) =>
+        item === "steps"
+          ? { label: t("taskManager.actions.steps"), run: () => router.push(`/task-manager/${runId}`) }
+          : {
               label: t("taskManager.actions.stop"),
               danger: true,
               run: () => askToStop(t, task, taskTitle(t, task), name, stop),
             },
-          ]
-        : []),
-    ]);
+      ),
+    );
   };
 }
 
