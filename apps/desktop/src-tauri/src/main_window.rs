@@ -302,6 +302,19 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         // The buttons are placed by `place_lights` (on every fit), not with `traffic_light_position`.
         .hidden_title(true);
     let built = builder.build().map_err(|e| e.to_string())?;
+    // Linux's side of lib.rs `on_web_content_process_terminate` (macOS only in Tauri): a web process that died
+    // leaves the window blank, so the page loads again.
+    #[cfg(target_os = "linux")]
+    {
+        let app = app.clone();
+        let _ = built.with_webview(move |view| {
+            use webkit2gtk::WebViewExt;
+            view.inner().connect_web_process_terminated(move |view, _| {
+                crate::cover::show(&app, Duration::ZERO);
+                view.reload();
+            });
+        });
+    }
     // A new window starts with the bundle's icon on Windows and Linux: the person's pick (ADR 0179).
     crate::app_icon::show(app);
     let window = built.as_ref().window();
