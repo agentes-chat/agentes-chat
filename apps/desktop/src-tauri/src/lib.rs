@@ -14,6 +14,8 @@ mod discover;
 mod dock;
 mod graphics;
 mod host_sync;
+#[cfg(target_os = "linux")]
+pub mod linux_webkit;
 mod local_server;
 mod main_window;
 mod menus;
