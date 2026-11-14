@@ -192,8 +192,7 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
   const nameOf = (id: string) => dir.agentById.get(id)?.name ?? t("channel.unknownAgent");
   const from = nameOf(askerId);
   const names = pair.faces.map((f) => nameOf(f.agentId));
-  // What the question a click opens is about, between the names and how it went ("· Investigate duplicate
-  // notifications · 2 min"); an old answer with no question keeps the generic label as its tooltip.
+  // The subject comes from the question a click opens, so a folded row of several is called by the one it shows.
   const opened = items.find((c) => c.id === pair.opens) ?? items[0];
   const subject = consultSubject(opened?.question);
   const title =

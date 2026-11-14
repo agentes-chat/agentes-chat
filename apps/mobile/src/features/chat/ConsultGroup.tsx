@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   name: { fontWeight: "600", flexShrink: 1 },
-  subject: { flexShrink: 1, maxWidth: "72%" },
+  subject: { flexShrink: 1 },
   faces: { flexDirection: "row", alignItems: "center" },
   stacked: { marginLeft: -6, borderLeftWidth: 1.5, borderRadius: 6 },
   off: { opacity: 0.45 },

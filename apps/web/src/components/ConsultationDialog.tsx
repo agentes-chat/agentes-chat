@@ -63,7 +63,6 @@ export function ConsultationDialog({
     from: from.name,
     to: to.name,
   });
-  // What the exchange is about, ahead of where it is and how many messages it has: the header keeps the subject.
   const subject = consultSubject(c?.question);
   const state = c ? consultLineState(c, now) : null;
   // The cards keep their buttons (a question answers in its own field); nothing else acts
@@ -115,23 +114,20 @@ export function ConsultationDialog({
           </span>
         }
         subtitle={
-          <span className="thread-head__meta">
-            {subject && (
-              <>
-                <span className="thread-head__subject">{subject}</span>
-                <span aria-hidden="true">·</span>
-              </>
-            )}
-            <span className="thread-head__where">
-              {channelName ? t("chat.consultPanel.where", { channel: channelName }) : t("chat.consultPanel.whereDm")}
+          <>
+            {subject && <span className="thread-head__subject">{subject}</span>}
+            <span className="thread-head__meta">
+              <span className="thread-head__where">
+                {channelName ? t("chat.consultPanel.where", { channel: channelName }) : t("chat.consultPanel.whereDm")}
+              </span>
+              {list && list.length > 0 && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>{t("chat.consultPanel.messages", { count: list.length })}</span>
+                </>
+              )}
             </span>
-            {list && list.length > 0 && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>{t("chat.consultPanel.messages", { count: list.length })}</span>
-              </>
-            )}
-          </span>
+          </>
         }
         leading={
           c && (

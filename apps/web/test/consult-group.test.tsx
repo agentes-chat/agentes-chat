@@ -150,7 +150,7 @@ const push = (socket: { push: (f: unknown) => void }, event: Record<string, unkn
 const asking = { type: "agent.consulting", runId: RUN, agentId: ADA_ID, consultedAgentId: ATLAS_ID };
 
 describe("the pair row before the reply that asked (ConsultPairRow)", () => {
-  test("still out: the two faces, ⇄ and 'perguntando' with its clock, right before the reply, never the words", async () => {
+  test("still out: the two faces, ⇄ and 'perguntando' with its clock, right before the reply, its subject, never the answer", async () => {
     await open(withAsk([consultation({})]));
     const r = row() as HTMLElement;
     expect(r).not.toBeNull();
@@ -160,7 +160,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(r.querySelector(".consult-pair__word")?.textContent).toBe("perguntando");
     expect(r.querySelector(".consult-pair__time")?.textContent).toMatch(/^\d+ s$/);
     expect(r.querySelector(".consult-pair__row--live")).not.toBeNull();
-    // Its subject, never the question whole.
+    // A one-sentence question is its own subject.
     expect(r.querySelector(".consult-pair__subject")?.textContent).toBe(QUESTION);
     expect(r.textContent).not.toContain(ANSWER);
     // The reply under it shows its face and name again (not grouped under the message above).
@@ -183,6 +183,8 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     await settle(3);
     const side = panel() as HTMLElement;
     expect(side.querySelector(".thread-head__subject")?.textContent).toBe(subject);
+    // Its own line, which wraps: the meta under it never does.
+    expect(side.querySelector(".thread-head__meta .thread-head__subject")).toBeNull();
     // The participants and the kind stay, after it.
     expect(side.querySelector(".consult-title")?.textContent).toContain("Ada");
     expect(side.textContent).toContain("entre agentes");
