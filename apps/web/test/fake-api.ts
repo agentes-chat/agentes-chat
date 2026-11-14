@@ -2017,11 +2017,11 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         }
         return { url: inv?.url ?? `http://localhost:3000/invite/tok-${invitationId}`, expiresAt: inv?.expiresAt ?? "" };
       },
-      setInvitationRoles: async (orgId, invitationId, roleIds) => {
-        log("orgs.setInvitationRoles", orgId, invitationId, roleIds);
+      updateInvitation: async (orgId, invitationId, change) => {
+        log("orgs.updateInvitation", orgId, invitationId, change);
         const inv = state.invitations.find((i) => i.id === invitationId);
-        if (inv) inv.roleIds = roleIds;
-        return { roleIds };
+        if (inv) Object.assign(inv, change);
+        return { roleIds: inv?.roleIds ?? [], channelIds: inv?.channelIds ?? [], agentIds: inv?.agentIds ?? [] };
       },
       peopleUsage: async () =>
         state.peopleUsage ?? {
@@ -4052,6 +4052,13 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
           state.inviteLinks.unshift(link);
         }
         return { id: link.id, url: link.url ?? "", expiresAt: link.expiresAt };
+      },
+      editLink: async (orgId, linkId, choices) => {
+        state.calls.push({ method: "invites.editLink", args: [orgId, linkId, choices] });
+        const link = state.inviteLinks?.find((l) => l.id === linkId);
+        if (!link) throw new ApiError(404, "not_found", "Invitation link not found");
+        Object.assign(link, choices, { plain: false });
+        return { id: link.id, url: link.url ?? "", expiresAt: link.expiresAt, ...choices };
       },
       links: async (orgId) => {
         state.calls.push({ method: "invites.links", args: [orgId] });

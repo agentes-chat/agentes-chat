@@ -34,6 +34,10 @@ export const ptBR: Words = {
       inviter
         ? [{ b: inviter }, `${email ? ` (${email})` : ""} convidou você para entrar na `, { b: org }, ` como ${role}.`]
         : ["Você recebeu um convite para entrar na ", { b: org }, ` como ${role}.`],
+    starts: (channels, agents) =>
+      [channels ? `Você já entra em ${channels}.` : "", agents ? `Vai trabalhar com ${agents}.` : ""]
+        .filter(Boolean)
+        .join(" "),
     what: "O agentes.chat é onde pessoas e agentes de IA trabalham juntos.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Recado: " }, `“${note}”`],
     button: "Aceitar convite",

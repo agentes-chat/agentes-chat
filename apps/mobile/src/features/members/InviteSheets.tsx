@@ -5,7 +5,7 @@ import {
   useResendInvitation,
   useRevokeInvitation,
   useRoles,
-  useSetInvitationRoles,
+  useUpdateInvitation,
 } from "@agenteschat/client";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { formatShortDate } from "@agenteschat/client/lib/format";
@@ -255,7 +255,7 @@ function InvitationRolesSheet({ invitation: inv }: { invitation: InvitationWithS
   const rows = useRoleRows(roles);
   // A personal workspace's note ties its roles to the invitation's plain words (ADR 0159 §4).
   const helper = isPersonal(org) ? personalHelperRole(roles) : null;
-  const save = useSetInvitationRoles(orgId);
+  const save = useUpdateInvitation(orgId);
   const [value, setValue] = useState<string[]>(inv.roleIds ?? []);
   const flip = (id: string) => setValue((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
   const saveIt = async () => {

@@ -56,6 +56,15 @@ export const en = {
       inviter
         ? [{ b: inviter }, `${email ? ` (${email})` : ""} invited you to join `, { b: org }, ` as ${role}.`]
         : ["You're invited to join ", { b: org }, ` as ${role}.`],
+    /**
+     * What the person starts with besides #general and the right hand (ADR 0184): the channels they join and the
+     * agents they work with, each list already joined in the language ("#support and #billing"), or null. `count`:
+     * how many of each, for languages whose words change with it.
+     */
+    starts: (channels: string | null, agents: string | null, _count: { channels: number; agents: number }): Text =>
+      [channels ? `You'll start in ${channels}.` : "", agents ? `You'll work with ${agents}.` : ""]
+        .filter(Boolean)
+        .join(" "),
     what: "agentes.chat is where people and AI agents work together.",
     noteFrom: (inviter: string, note: string): Text => [{ b: inviter ? `${inviter}: ` : "Their note: " }, `“${note}”`],
     button: "Accept invitation",

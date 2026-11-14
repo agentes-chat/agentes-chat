@@ -13524,6 +13524,7 @@
     },
     "join": {
       "linkClosed": "Bu bağlantı artık çalışmıyor. Gönderen kişiden yenisini isteyin.",
+      "linkFull": "Bu bağlantı alabileceği herkesi zaten aldı. Gönderen kişiden yenisini isteyin.",
       "full": "Bu çalışma alanında bekleyen çok sayıda istek var. Daha sonra tekrar deneyin ya da oradan birinin sizi davet etmesini isteyin.",
       "rateLimited": "Buradan çok fazla istek geldi. Bir saat sonra tekrar deneyin.",
       "linkBusy": "Son bir saatte bu bağlantı üzerinden çok kişi istekte bulundu. Daha sonra tekrar deneyin.",

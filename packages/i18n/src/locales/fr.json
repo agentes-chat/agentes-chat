@@ -14073,6 +14073,7 @@
     },
     "join": {
       "linkClosed": "Ce lien ne fonctionne plus. Demandez-en un nouveau à la personne qui l'a envoyé.",
+      "linkFull": "Ce lien a déjà accueilli toutes les personnes prévues. Demandez-en un nouveau à la personne qui l'a envoyé.",
       "full": "Cet espace de travail a beaucoup de demandes en attente. Réessayez plus tard, ou demandez à quelqu'un sur place de vous inviter.",
       "rateLimited": "Trop de demandes d'ici. Réessayez dans une heure.",
       "linkBusy": "Beaucoup de personnes ont fait une demande via ce lien au cours de la dernière heure. Réessayez plus tard.",

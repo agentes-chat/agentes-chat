@@ -46,7 +46,7 @@ import {
   requirePermission,
   resendInvitation,
   revokeInvitation,
-  setInvitationRoles,
+  updateInvitation,
   updateMyProfile,
 } from "./organizations";
 import {
@@ -1329,7 +1329,7 @@ const invitationRolesAction: WorkspaceAction = {
     const before = await invitationRoles(deps.db, row.id);
     const next = [...new Set([...before, ...add])].filter((id) => !take.includes(id));
     if (sameSet(before, next)) throw new ValidationError(`The invitation of ${row.email} already gives those roles`);
-    await setInvitationRoles(deps.db, actorId, orgId, row.id, next);
+    await updateInvitation(deps.db, actorId, orgId, row.id, { roleIds: next });
     const names = await roleNames(deps.db, orgId, [...add, ...take]);
     const pick = (ids: string[]) => ids.map((id) => ({ name: names.get(id) ?? "" }));
     return {
@@ -1342,7 +1342,7 @@ const invitationRolesAction: WorkspaceAction = {
   async revert(deps, actorId, a, direction, changedSince) {
     const [from, to] = direction === "undo" ? [obj(a.after), obj(a.before)] : [obj(a.before), obj(a.after)];
     if (!sameSet(await invitationRoles(deps.db, a.targetId), list(from.roleIds))) throw changedSince();
-    await setInvitationRoles(deps.db, actorId, a.orgId, a.targetId, list(to.roleIds));
+    await updateInvitation(deps.db, actorId, a.orgId, a.targetId, { roleIds: list(to.roleIds) });
     return undefined;
   },
 };

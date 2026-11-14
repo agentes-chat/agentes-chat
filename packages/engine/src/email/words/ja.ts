@@ -41,6 +41,8 @@ export const words: EmailWords = {
       inviter
         ? [{ b: inviter }, `${email ? ` (${email})` : ""} から、`, { b: org }, ` に${role}として招待されました。`]
         : [{ b: org }, ` に${role}として招待されました。`],
+    starts: (channels, agents) =>
+      [channels ? `最初から ${channels} に参加します。` : "", agents ? `${agents} と一緒に働きます。` : ""].join(""),
     what: "agentes.chat は、人と AI エージェントが一緒に働く場所です。",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "メッセージ: " }, `「${note}」`],
     button: "招待を承諾",

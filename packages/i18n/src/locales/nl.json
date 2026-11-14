@@ -13651,6 +13651,7 @@
     },
     "join": {
       "linkClosed": "Deze link werkt niet meer. Vraag wie hem stuurde om een nieuwe.",
+      "linkFull": "Via deze link zijn al alle mensen binnengekomen die hij toeliet. Vraag wie hem stuurde om een nieuwe.",
       "full": "Er wachten veel verzoeken bij deze werkruimte. Probeer het later opnieuw, of vraag iemand daar om je uit te nodigen.",
       "rateLimited": "Te veel verzoeken vanaf hier. Probeer het over een uur opnieuw.",
       "linkBusy": "Veel mensen hebben het afgelopen uur via deze link gevraagd. Probeer het later opnieuw.",

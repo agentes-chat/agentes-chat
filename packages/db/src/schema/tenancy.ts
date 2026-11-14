@@ -268,6 +268,11 @@ export const organizationInvitations = pgTable(
     channelIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     /** The inviter's words, in the invitation email (ADR 0090). */
     note: text(),
+    /**
+     * The agents the person starts with (ADR 0184): pinned on joining, and a restricted one starts answering them while
+     * whoever sent it may still open it. Ids no longer there are skipped.
+     */
+    agentIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     acceptedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -276,11 +281,12 @@ export const organizationInvitations = pgTable(
 );
 
 /**
- * An organization-wide invite link (ADR 0068): whoever opens it can only ask to join
- * (`organization_join_requests`), until it expires (30 days) or is turned off. Its token is an HMAC of
- * its id (`inviteLinkToken`), so it can be shown again; only the token's hash is stored. Links made
- * before that carry a random token and can't be shown again. `uses` counts the people approved
- * through it; `role` is unused (the role is picked at approval).
+ * An invite link (ADR 0068, 0184): whoever opens it can only ask to join (`organization_join_requests`), until it
+ * expires or is turned off. A workspace has many; the `plain` one is the workspace's link.
+ * Its token is an HMAC of its id (`inviteLinkToken`), so it can be shown again; only the token's hash is stored. Links
+ * made before that carry a random token and can't be shown again. `uses` counts the people approved through it;
+ * `role` is unused (the role is picked at approval). "Não expira" is a far-future `expires_at`
+ * (`INVITE_LINK_NEVER`), so every `expires_at > now` check holds.
  */
 export const organizationInviteLinks = pgTable(
   "organization_invite_links",
@@ -295,6 +301,19 @@ export const organizationInviteLinks = pgTable(
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     revokedAt: timestamp({ withTimezone: true }),
     uses: integer().notNull().default(0),
+    /** Cargos an approval starts on (ADR 0184); ids no longer there are skipped. */
+    roleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    /** Channels an approval adds, besides `general`, as far as the approver may give them. */
+    channelIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    /** Agents an approval starts the person with, as an invitation's. */
+    agentIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    /** Approvals it takes before asking through it is refused (`join.link_full`); null: no limit. */
+    maxUses: integer(),
+    /**
+     * The workspace's own link (`inviteLink`): made with no choice of cargo, channel, agent, expiry or maximum. One made
+     * or edited with any is a link of its own, which the dialog's defaults never pick up nor renew.
+     */
+    plain: boolean().notNull().default(true),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index().on(t.orgId)],

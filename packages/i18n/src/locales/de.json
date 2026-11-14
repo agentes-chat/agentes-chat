@@ -13589,6 +13589,7 @@
     },
     "join": {
       "linkClosed": "Dieser Link funktioniert nicht mehr. Bitte die Person, die ihn geschickt hat, um einen neuen.",
+      "linkFull": "Über diesen Link sind schon alle Personen gekommen, die er aufnehmen konnte. Bitte die Person, die ihn geschickt hat, um einen neuen.",
       "full": "Bei diesem Workspace warten viele Anfragen. Versuch es später noch einmal oder bitte jemanden dort, dich einzuladen.",
       "rateLimited": "Zu viele Anfragen von hier. Versuch es in einer Stunde noch einmal.",
       "linkBusy": "In der letzten Stunde haben viele über diesen Link angefragt. Versuch es später noch einmal.",

@@ -511,6 +511,7 @@ describe("the picture over the headline", () => {
   test("the welcome emails show the workspace's agents in a row, with no computer; the others show none", () => {
     const withCrew: Record<string, string[]> = {
       "invitation.en": faces("sky", "violet", "teal"),
+      "invitation-starts.en": faces("amber", "sky"),
       "invitation.pt-BR": ONBOARDING,
       "early_access.en": ONBOARDING,
       "early_access_allowed.en": ONBOARDING,

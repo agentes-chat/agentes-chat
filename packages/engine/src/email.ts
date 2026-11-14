@@ -48,7 +48,7 @@ import { isPersonalWorkspace } from "./workspace-mode";
 
 export { EMAIL_DARK_HEAD, EMAIL_PICTURES, type EmailArt, type EmailLocale } from "./email/layout";
 
-const { users, organizations, organizationInvitations, agents, approvals } = schema;
+const { users, organizations, organizationInvitations, agents, approvals, channels, orgRoles } = schema;
 
 /**
  * The sender's name when `EMAIL_FROM` is unset: the name on the logo and in the subjects. The self-host setup
@@ -84,6 +84,12 @@ export type EmailTemplate =
       role: string;
       /** The inviter's words (ADR 0090), made inert in the body. */
       note?: string | null;
+      /** The cargos it gives (ADR 0184), by name: "as Support". None: "as a member". */
+      roles?: string[];
+      /** The channels the person starts in besides #general, by name without the #. */
+      channels?: string[];
+      /** The agents they start with, by name; pictured first in `crew`. */
+      agents?: string[];
       /** A personal workspace's email (ADR 0159), stamped when queued (`modeStamp`); absent: a team's. */
       personal?: true;
     }
@@ -395,17 +401,30 @@ async function readPictures(dir: string) {
 const CREW = 4;
 
 /**
- * The workspace's agents its emails picture: the `CREW` oldest, each with its look. The team's own, not its right hand
- * (ADR 0137), which every workspace has and which works on no computer.
+ * The workspace's agents its emails picture: the `CREW` oldest, each with its look, after `first` (the ones an
+ * invitation starts someone with, ADR 0184). The team's own, not its right hand (ADR 0137), which every workspace has
+ * and which works on no computer.
  */
-export async function emailCrew(db: Executor, orgId: string): Promise<Look[]> {
-  const rows = await db
-    .select({ appearance: agents.appearance })
+export async function emailCrew(db: Executor, orgId: string, first: readonly string[] = []): Promise<Look[]> {
+  const live = and(eq(agents.orgId, orgId), isNull(agents.archivedAt), isNull(agents.builtin));
+  const look = { id: agents.id, appearance: agents.appearance };
+  const theirs = first.length
+    ? await db
+        .select(look)
+        .from(agents)
+        .where(and(live, inArray(agents.id, [...first])))
+    : [];
+  const oldest = await db
+    .select(look)
     .from(agents)
-    .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt), isNull(agents.builtin)))
+    .where(live)
     .orderBy(asc(agents.createdAt), asc(agents.id))
     .limit(CREW);
-  return rows.map(({ appearance: a }) => ({ color: a?.color, eyes: a?.eyes, accessory: a?.accessory }));
+  const rows = [
+    ...first.flatMap((id) => theirs.filter((r) => r.id === id)),
+    ...oldest.filter((r) => !first.includes(r.id)),
+  ];
+  return rows.slice(0, CREW).map(({ appearance: a }) => ({ color: a?.color, eyes: a?.eyes, accessory: a?.accessory }));
 }
 
 /** A picture's agents: a job's own (cut to `CREW`), or the onboarding's when it has none. */
@@ -481,13 +500,22 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
     case "invitation": {
       const c = inMode(w.invitation, t.personal);
       const org = inertText(t.orgName);
-      const role = w.role[t.role] ?? inertText(t.role);
+      const list = (items: string[]) => new Intl.ListFormat(lang, { type: "conjunction" }).format(items);
+      // An owner's invitation reads "as an owner", whatever cargos come with it: an owner may everything.
+      const role =
+        t.roles?.length && t.role !== "owner"
+          ? list(t.roles.map((r) => inertText(r)))
+          : (w.role[t.role] ?? inertText(t.role));
+      const rooms = t.channels?.length ? list(t.channels.map((name) => `#${inertText(name)}`)) : null;
+      const crew = t.agents?.length ? list(t.agents.map((name) => inertText(name))) : null;
+      const counts = { channels: t.channels?.length ?? 0, agents: t.agents?.length ?? 0 };
       return doc(
         c.subject,
         c.preheader,
         c.headline,
         [
           { p: c.body(inertText(t.inviterName), t.inviterEmail ? inertText(t.inviterEmail) : null, org, role) },
+          ...(rooms || crew ? [{ p: c.starts(rooms, crew, counts) }] : []),
           ...(t.note?.trim()
             ? [{ note: c.noteFrom(inertText(t.inviterName), inertText(t.note, INVITE_NOTE_SHOWN)) }]
             : []),
@@ -1488,7 +1516,13 @@ export async function queueInvitationEmail(
   },
 ) {
   const [invitation] = await db
-    .select({ note: organizationInvitations.note, expiresAt: organizationInvitations.expiresAt })
+    .select({
+      note: organizationInvitations.note,
+      expiresAt: organizationInvitations.expiresAt,
+      roleIds: organizationInvitations.roleIds,
+      channelIds: organizationInvitations.channelIds,
+      agentIds: organizationInvitations.agentIds,
+    })
     .from(organizationInvitations)
     .where(eq(organizationInvitations.id, input.invitationId));
   const [inviter] = await db
@@ -1514,11 +1548,65 @@ export async function queueInvitationEmail(
       orgName: org?.name ?? "",
       inviterName: inviter?.name ?? "",
       inviterEmail: inviter?.email,
-      crew: await emailCrew(db, input.orgId),
+      crew: await emailCrew(db, input.orgId, invitation?.agentIds),
       url: input.secret ? invitationMailLink(input.secret, input.invitationId, input.url) : input.url,
       role: input.role,
       note: invitation?.note ?? null,
+      ...(invitation ? await invitationGives(db, input.orgId, invitation) : {}),
       ...(await modeStamp(db, input.orgId)),
     },
   });
+}
+
+/**
+ * What an invitation's email says it gives (ADR 0184), by name, in its own order: its cargos, and the channels and
+ * agents still there (#general and the right hand, which everyone has, are never among them).
+ */
+async function invitationGives(
+  db: Executor,
+  orgId: string,
+  i: { roleIds: string[]; channelIds: string[]; agentIds: string[] },
+) {
+  const named = <T extends { id: string; name: string }>(order: string[], rows: T[]) =>
+    order.flatMap((id) => rows.filter((r) => r.id === id).map((r) => r.name));
+  const [roles, rooms, crew] = await Promise.all([
+    i.roleIds.length
+      ? db
+          .select({ id: orgRoles.id, name: orgRoles.name })
+          .from(orgRoles)
+          .where(and(eq(orgRoles.orgId, orgId), eq(orgRoles.kind, "custom"), inArray(orgRoles.id, i.roleIds)))
+      : [],
+    i.channelIds.length
+      ? db
+          .select({ id: channels.id, name: channels.name })
+          .from(channels)
+          .where(
+            and(
+              eq(channels.orgId, orgId),
+              inArray(channels.id, i.channelIds),
+              isNull(channels.archivedAt),
+              eq(channels.kind, "channel"),
+            ),
+          )
+      : [],
+    i.agentIds.length
+      ? db
+          .select({ id: agents.id, name: agents.name })
+          .from(agents)
+          .where(
+            and(
+              eq(agents.orgId, orgId),
+              inArray(agents.id, i.agentIds),
+              isNull(agents.archivedAt),
+              isNull(agents.builtin),
+            ),
+          )
+      : [],
+  ]);
+  const out = {
+    roles: named(i.roleIds, roles),
+    channels: named(i.channelIds, rooms),
+    agents: named(i.agentIds, crew),
+  };
+  return Object.fromEntries(Object.entries(out).filter(([, names]) => names.length > 0));
 }

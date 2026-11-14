@@ -47,6 +47,13 @@ export const words: EmailWords = {
             ` çalışma alanına ${role} olarak davet etti.`,
           ]
         : [{ b: org }, ` çalışma alanına ${role} olarak davet edildiniz.`],
+    starts: (channels, agents, count) =>
+      [
+        channels ? `Doğrudan ${channels} ${count.channels === 1 ? "kanalına" : "kanallarına"} katılacaksınız.` : "",
+        agents ? `${agents} ile birlikte çalışacaksınız.` : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
     what: "agentes.chat, kişilerin ve yapay zeka ajanlarının birlikte çalıştığı yer.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Davet notu: " }, `“${note}”`],
     button: "Daveti kabul et",

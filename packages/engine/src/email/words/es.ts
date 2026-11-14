@@ -40,6 +40,10 @@ export const words: EmailWords = {
       inviter
         ? [{ b: inviter }, `${email ? ` (${email})` : ""} te invitó a unirte a `, { b: org }, ` como ${role}.`]
         : ["Te invitaron a unirte a ", { b: org }, ` como ${role}.`],
+    starts: (channels, agents) =>
+      [channels ? `Entras directamente en ${channels}.` : "", agents ? `Vas a trabajar con ${agents}.` : ""]
+        .filter(Boolean)
+        .join(" "),
     what: "agentes.chat es donde personas y agentes de IA trabajan juntos.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Su nota: " }, `“${note}”`],
     button: "Aceptar invitación",

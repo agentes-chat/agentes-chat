@@ -20,6 +20,7 @@ import {
   deriveSecret,
   getOrganization,
   hasPassword,
+  INVITE_CHOICES_MAX,
   invitationLogoFile,
   invitationState,
   isAgentesCloud,
@@ -515,7 +516,28 @@ export function accountRoutes(deps: AppDeps) {
                   appearance: z.object({ color: z.string(), eyes: z.string(), accessory: z.string() }).nullable(),
                 }),
               )
-              .openapi({ description: "The organization's first agents (name and look)." }),
+              .openapi({
+                description:
+                  "The organization's first agents (name and look), the ones an invitation starts the person with first.",
+              }),
+            yours: z
+              .number()
+              .int()
+              .positive()
+              .optional()
+              .openapi({
+                description:
+                  "An email invitation (ADR 0184): how many of `agents`, from the first, it starts the person with. The " +
+                  "page's host is the first.",
+              }),
+            roles: z
+              .array(z.object({ name: z.string(), color: z.string(), icon: z.string() }))
+              .optional()
+              .openapi({
+                description:
+                  "An email invitation: the cargos it gives (ADR 0184), the ones whoever sent it may still give. Empty: " +
+                  "a member.",
+              }),
             moreAgents: z
               .number()
               .int()
@@ -542,9 +564,14 @@ export function accountRoutes(deps: AppDeps) {
                 description:
                   "An email invitation: how its address signs in (ADR 0090), so the page asks only what is missing.",
               }),
-            full: z.literal(true).optional().openapi({
-              description: "An email invitation to a workspace with no seat left: said before anyone makes an account.",
-            }),
+            full: z
+              .literal(true)
+              .optional()
+              .openapi({
+                description:
+                  "An email invitation to a workspace with no seat left, or a link that took all the people it may " +
+                  "(ADR 0184, asking answers `join.link_full`): said before anyone makes an account or asks.",
+              }),
             you: z
               .object({
                 member: z.boolean(),
@@ -1622,6 +1649,16 @@ export function accountRoutes(deps: AppDeps) {
               .max(50)
               .optional()
               .openapi({ description: "Roles they get on accepting, below your own (ADR 0085)." }),
+            channelIds: z
+              .array(z.string().uuid())
+              .max(INVITE_CHOICES_MAX)
+              .optional()
+              .openapi({ description: "Channels they join on accepting, as the batch's (ADR 0184)." }),
+            agentIds: z
+              .array(z.string().uuid())
+              .max(INVITE_CHOICES_MAX)
+              .optional()
+              .openapi({ description: "Agents they start with, as the batch's (ADR 0184)." }),
           }),
         ),
       },
@@ -1703,7 +1740,7 @@ export function accountRoutes(deps: AppDeps) {
       const user = c.get("user");
       const mail = { secret: config.AGENTES_SECRET, proof: c.req.valid("query").mail };
       const joined = await acceptInvitation(db, user, c.req.valid("param").token, new Date(), mail);
-      await announceMembers(deps.adapters.pubsub, joined.orgId);
+      await announceMembers(deps.adapters.pubsub, joined.orgId, joined.agents);
       // A request to join they had waiting closed as they joined: the admins' notice goes with the last one.
       await settleJoinRequests({ db, pubsub: deps.adapters.pubsub }, joined.orgId);
       await noticeInvitationAccepted(
