@@ -72,6 +72,7 @@ import {
 } from "./human-input";
 import { GOOGLE_CHROME_LINUX, SYSTEM_BROWSER_DIR } from "./install-script";
 import { readJson, writeJson } from "./json-file";
+import { CRASH_WORDS, pageLocale } from "./page-words";
 import { agentFolderName, isInside, ownedSafely } from "./paths";
 import type { Spawn } from "./scope-gate";
 import { prepareStartPage, type StartPageData } from "./start-page";
@@ -437,15 +438,14 @@ const CRASH_STYLE = [
   "h1{margin:0;font-size:17px;font-weight:600}p{margin:4px 0 0;color:#5c5c58}p+h1{margin-top:16px}",
 ].join("");
 
-/** The page a tab that died again shows to the people watching: both languages, since the runner can't tell whose. */
-export function crashPage(memory: boolean): string {
-  const [pt, en] = memory
-    ? ["A página ficou sem memória", "The page ran out of memory"]
-    : ["A página parou de funcionar", "The page stopped working"];
+/** The page a tab that died again shows to the people watching, in the language of the agent's person. */
+export function crashPage(memory: boolean, tag?: string | null): string {
+  const locale = pageLocale(tag);
+  const words = CRASH_WORDS[locale];
+  const title = memory ? words.memory : words.stopped;
   const html =
-    `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${pt}</title><style>${CRASH_STYLE}</style>` +
-    `</head><body><main><h1>${pt}</h1><p>O agente será avisado.</p>` +
-    `<h1 lang="en">${en}</h1><p lang="en">The agent will be told.</p></main></body></html>`;
+    `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><title>${title}</title>` +
+    `<style>${CRASH_STYLE}</style></head><body><main><h1>${title}</h1><p>${words.told}</p></main></body></html>`;
   return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }
 
@@ -1402,6 +1402,8 @@ export interface BrowserManagerOptions {
   /** Root-owned extension in system mode; absent uses the single-user runner home. */
   startPageDirectory?: string;
   startPageData?: (agent: AgentScope) => StartPageData;
+  /** The language of the agent's person (`MachineAgent.locale`), for the pages people see in its browser. */
+  locale?: (agent: AgentScope) => string | undefined;
   /** Restrict WebRTC to the configured network path, without Chrome managed policies. */
   privateNetwork?: () => boolean;
   /** Tests: how to start `agent-browser` (default: the sidecar or the downloaded binary). */
@@ -2845,7 +2847,7 @@ export class BrowserManager {
       session.updatedTo = disk;
       void this.enqueue(session, () => this.restartOnUpdate(session, disk, true)).catch(() => undefined);
     } else if (times === 1) page.reopen();
-    else if (times === 2) page.show(crashPage(memory));
+    else if (times === 2) page.show(crashPage(memory, this.opts.locale?.(session.agent)));
     session.crash = { memory, again: times > 1 };
     const left = updated
       ? "restarting on the new Chrome"

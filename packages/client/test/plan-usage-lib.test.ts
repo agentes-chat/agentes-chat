@@ -62,12 +62,15 @@ describe("what an agent's usage shows where its budget did (ADR 0063 §5)", () =
   });
 });
 
-test("the compact line names a window short; a provider's own window by its name", () => {
+test("the compact line names a window short; a known label in the app's words, another by its name", () => {
   const t = ((key: string) => key) as unknown as TFunction;
   const text = planMeterText(t, "en");
   expect(text.short({ kind: "five_hour" })).toBe("aiAccounts.usage.short.five_hour");
   expect(text.short({ kind: "seven_day_opus" })).toBe("aiAccounts.usage.short.seven_day_opus");
-  expect(text.short({ kind: "other", label: "Extra usage" })).toBe("Extra usage");
+  expect(text.short({ kind: "other", label: "Extra usage" })).toBe("aiAccounts.usage.short.extraUsage");
+  expect(text.window({ kind: "other", label: "OAuth apps" })).toBe("aiAccounts.usage.window.oauthApps");
+  expect(text.window({ kind: "other", label: "Fable" })).toBe("Fable");
+  expect(text.window({ kind: "other", label: "constructor" })).toBe("constructor");
   expect(text.short({ kind: "other" })).toBe("aiAccounts.usage.short.other");
   expect(text.window({ kind: "seven_day" })).toBe("aiAccounts.usage.window.seven_day");
 });

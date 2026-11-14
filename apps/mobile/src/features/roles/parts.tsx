@@ -209,7 +209,7 @@ export function Waiting({
 }
 
 /** A cargo row's shape while it loads: the mark's circle, the name and the reach line, pulsing. */
-function RowBones({ name = 44 }: { name?: number }) {
+export function RowBones({ name = 44 }: { name?: number }) {
   const { colors } = useTheme();
   const pulse = usePulse();
   const bone = { backgroundColor: colors.sunken };

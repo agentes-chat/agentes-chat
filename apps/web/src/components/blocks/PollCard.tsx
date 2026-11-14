@@ -18,7 +18,7 @@ const FACES = 5;
  * page in a frame could cast one the moment it showed. Everyone sees the marks arrive (`poll.updated`).
  */
 export function PollCard({ id, version }: { id: string; version?: number }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
   const toast = useToast();
@@ -41,7 +41,7 @@ export function PollCard({ id, version }: { id: string; version?: number }) {
   const tally = pollTally(options, poll);
   const top = Math.max(...tally.map((o) => o.voters.length));
   const nameOf = (userId: string) => dir.memberById.get(userId)?.name ?? t("blocks.someone");
-  const closes = new Date(poll.closesAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" });
+  const closes = new Date(poll.closesAt).toLocaleString(i18n.language, { dateStyle: "short", timeStyle: "short" });
   return (
     <section className="live-block" aria-label={question}>
       <CardSky color={colorOf(dir.anyAgent(a.createdBy.id))} />

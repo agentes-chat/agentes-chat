@@ -14,6 +14,7 @@ import { type ReactNode, StrictMode } from "react";
 import { AppProviders, type AppServices } from "@/app/providers";
 import { createQueryClient } from "@/app/query-client";
 import type { RouterContext } from "@/app/router-context";
+import { backToSignIn } from "@/app/unauthorized";
 import type { AuthClient } from "@/auth/client";
 import { OrgProvider } from "@/components/org-context";
 import { forgetComposerDrafts } from "@/hooks/useComposerDraft";
@@ -33,11 +34,12 @@ export function makeServices(
   api: ApiClient,
   auth: AuthClient = createFakeAuth().auth,
   createSocket: SocketFactory = fakeSockets().factory,
+  onUnauthorized: () => void = () => {},
 ): AppServices {
   const toasts = createToastStore();
   const i18n = createI18n("pt-BR");
   const queryClient = createQueryClient({
-    onUnauthorized: () => {},
+    onUnauthorized,
     onMutationError: (m) => toasts.show(m, "error"),
     describeError: (error) => errorText(i18n.t, error, i18n.language),
   });
@@ -186,7 +188,10 @@ export async function renderApp(
   document.documentElement.lang = "";
   forgetExits();
   const sockets = fakeSockets();
-  const services = makeServices(options.api, options.auth, options.createSocket ?? sockets.factory);
+  // An ended session is answered as the app answers it (`main.tsx`).
+  const services: AppServices = makeServices(options.api, options.auth, options.createSocket ?? sockets.factory, () =>
+    backToSignIn({ router, ...services }),
+  );
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: [path] }),

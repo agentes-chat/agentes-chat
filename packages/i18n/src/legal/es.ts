@@ -172,7 +172,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
     summary:
       "Qué recopilamos, qué envían los agentes y adónde, quién puede ver su espacio de trabajo y qué derechos tiene usted.",
     courtesy: "Esta es una traducción de cortesía. Si difiere de la versión en inglés, prevalece la versión en inglés.",
-    updated: "2026-11-13",
+    updated: "2026-11-14",
     sections: [
       {
         id: "overview",
@@ -228,7 +228,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
           {
             list: [
               "**Entre los dispositivos y nuestros servidores.** Todo lo que se envía entre nuestros servidores y los navegadores, aplicaciones y computadoras que se conectan a ellos, incluido el Contenido del Espacio de Trabajo, pasa por nuestro proveedor de red, que protege el Servicio frente a ataques. Para ello, el proveedor de red descifra este tráfico en su centro de datos más cercano a cada dispositivo y lo gestiona por nuestra cuenta.",
-              "**Respuestas.** Cuando un agente trabaja, envía el contexto que necesita (el contexto del espacio de trabajo, las instrucciones del agente, la conversación, la memoria pertinente y los resultados de sus herramientas) al proveedor de modelos elegido para ese agente. Con una clave de API que haya añadido el espacio de trabajo, la llamada se realiza bajo la propia cuenta del espacio de trabajo y su acuerdo con ese proveedor. Con un plan de IA, como Claude o ChatGPT, conectado a un agente, el agente trabaja bajo la cuenta de la persona que conectó el plan y conforme a los términos del proveedor.",
+              "**Respuestas.** Cuando un agente trabaja, envía el contexto que necesita (el contexto del espacio de trabajo, las instrucciones del agente, la conversación, la memoria pertinente y los resultados de sus herramientas) al proveedor de modelos elegido para ese agente. Con una clave de API que haya añadido el espacio de trabajo, la llamada se realiza bajo la propia cuenta del espacio de trabajo y su acuerdo con ese proveedor. Algunos proveedores transmiten la llamada a la empresa que desarrolla o aloja el modelo, que también la trata conforme a los términos de ese proveedor. Con un plan de IA, como Claude o ChatGPT, conectado a un agente, el agente trabaja bajo la cuenta de la persona que conectó el plan y conforme a los términos del proveedor.",
               "**Decidir quién responde.** Un modelo de enrutamiento lee un mensaje nuevo, los nombres y roles de los agentes del espacio de trabajo y la conversación reciente para decidir qué agente debe responder, si alguno. Se ejecuta en TypeSafe o, como alternativa, en el proveedor de modelos del espacio de trabajo. El enrutamiento nunca concede ningún permiso a un agente.",
               "**Memoria.** Los agentes conservan memoria de las conversaciones (resúmenes, hechos y lecciones) para mejorar con el tiempo. Algunas evaluaciones sobre la memoria (si algo merece conservarse o si contradice lo que un agente ya sabe) las realiza TypeSafe. La memoria puede verse y eliminarse en la página del agente, y se elimina junto con el espacio de trabajo.",
               "**Búsqueda.** Para encontrar mensajes y documentos relacionados, el texto puede convertirse en vectores (embeddings) mediante Voyage AI.",
@@ -283,14 +283,14 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Transferencias internacionales",
         blocks: [
-          "Nuestra aplicación y su base de datos funcionan en los Estados Unidos, y los proveedores mencionados en esta política tratan los datos en los Estados Unidos. Las computadoras de los espacios de trabajo funcionan en la Unión Europea o en los Estados Unidos, y nuestro proveedor de red gestiona el tráfico en su centro de datos más cercano a cada dispositivo, en los Estados Unidos o en otro lugar. Cuando se transfieren datos personales sujetos al RGPD o al RGPD del Reino Unido a un tercer país, nos basamos en las Cláusulas Contractuales Tipo de la Comisión Europea y en el Anexo del Reino Unido (UK Addendum). Para los datos sujetos a la LGPD, nos basamos en las garantías contractuales del artículo 33.",
+          "Nuestra aplicación y su base de datos funcionan en los Estados Unidos, y los proveedores mencionados en esta política tratan los datos en los Estados Unidos, excepto los proveedores de modelos y los servicios conectados que elige un espacio de trabajo, y las empresas a las que estos transmiten las llamadas, que pueden tratar datos en otros países conforme a sus propios términos. Las computadoras de los espacios de trabajo funcionan en la Unión Europea o en los Estados Unidos, y nuestro proveedor de red gestiona el tráfico en su centro de datos más cercano a cada dispositivo, en los Estados Unidos o en otro lugar. Cuando se transfieren datos personales sujetos al RGPD o al RGPD del Reino Unido a un tercer país, nos basamos en las Cláusulas Contractuales Tipo de la Comisión Europea y en el Anexo del Reino Unido (UK Addendum). Para los datos sujetos a la LGPD, nos basamos en las garantías contractuales del artículo 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. Aplicaciones para teléfono y Mac",
         blocks: [
-          "La aplicación para teléfono envía notificaciones a través de Expo, Apple y Google. Una notificación puede mostrar el nombre de quien escribió y el comienzo del mensaje, y usted elige qué notificaciones recibe. La aplicación para Mac y las computadoras conectadas mantienen la sesión iniciada en el dispositivo. Al eliminar su cuenta (opción también disponible en las aplicaciones) se cierra la sesión en todos los dispositivos.",
+          "La aplicación para teléfono envía notificaciones a través de Apple y Google. Una notificación puede mostrar el nombre de quien escribió y el comienzo del mensaje, y usted elige qué notificaciones recibe. La aplicación para Mac y las computadoras conectadas mantienen la sesión iniciada en el dispositivo. Al eliminar su cuenta (opción también disponible en las aplicaciones) se cierra la sesión en todos los dispositivos.",
         ],
       },
       {

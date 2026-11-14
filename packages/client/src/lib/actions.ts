@@ -150,6 +150,8 @@ export function actionTextValues(
     case "thread.closed":
       return { title };
     case "skill.created":
+      // Made when a person asked (`create_skill`), not from its how-tos.
+      return p.asked === true ? { name: str(p.name) || title, context: "asked" } : { name: str(p.name) || title };
     case "skill.updated":
       return { name: str(p.name) || title };
     case "agent.settings_changed": {
@@ -261,7 +263,7 @@ const BLENDS: Partial<Record<AgentActionKind, Blend>> = {
   "wiki.page_created": { ref: named("title") },
   "wiki.page_edited": { ref: named("title") },
   "thread.closed": { ref: named("title") },
-  "skill.created": { ref: named("name") },
+  "skill.created": { ref: named("name"), contexts: ["asked"] },
   "skill.updated": { ref: named("name") },
   "agent.settings_changed": { ref: named("agentName") },
   "pr.merged": { ref: hashed("number"), same: (_a, v) => v.repo },

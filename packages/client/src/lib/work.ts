@@ -19,9 +19,9 @@ export const showsActivity = (org: Pick<OrgSummary, "showActivity"> | null | und
 export const toolLabel = (name: string) => name.replace(/[_-]+/g, " ").trim();
 
 /** A tool in "Usou a ferramenta …": the catalog's words, else its own name in words, without the app it starts with. */
-function toolWords(t: TFunction, tool: string) {
+function toolWords(t: TFunction, tool: string, locale?: string) {
   const worded = catalogLabel(t, tool);
-  return worded ? lowerFirst(worded) : toolLabel(toolKey(tool).key || tool);
+  return worded ? lowerFirst(worded, locale) : toolLabel(toolKey(tool).key || tool);
 }
 
 /** One thing the agent did (a tool call), for the work summary: what it did, in which service. */
@@ -341,8 +341,8 @@ export function workHeader(t: TFunction, w: { steps: number; connectors: string[
 }
 
 /** "Consultou o Himetrica", "Atualizou o plano", and for a tool with no words of its own "Usou a ferramenta enviar e-mail". */
-export function stepLabel(t: TFunction, s: Pick<WorkItem, "kind" | "app" | "tool">) {
-  return t(`chat.work.step.${s.kind}`, { app: appLabel(s), tool: toolWords(t, s.tool) });
+export function stepLabel(t: TFunction, s: Pick<WorkItem, "kind" | "app" | "tool">, locale?: string) {
+  return t(`chat.work.step.${s.kind}`, { app: appLabel(s), tool: toolWords(t, s.tool, locale) });
 }
 
 /**
@@ -362,10 +362,11 @@ export const shownSteps = <T extends { tool: string }>(steps: readonly T[]): T[]
 export function stepPhrase(
   t: TFunction,
   step: { tool: string; detail?: string | null; outcome?: "refused" | "waiting" },
+  locale?: string,
 ) {
   const a = toolActivity(step.tool, null, step.detail);
   const state = step.outcome === "refused" ? "fail" : step.outcome === "waiting" ? "stop" : "done";
-  const label = toolPhrase(t, { ...a, tool: step.tool, state });
+  const label = toolPhrase(t, { ...a, tool: step.tool, state }, locale);
   const detail = step.detail?.trim();
   return detail && detail !== a.app ? `${label} · ${detail}` : label;
 }
@@ -746,14 +747,14 @@ export const toolNow = (items: ToolItem[]) => linesOf(items).at(-1) ?? null;
  * consultando o GitHub" when it failed, "Consultando o GitHub" (no dots) when the run stopped during it.
  * A command the permission check refused says so: "Recusado: Rerun the tests".
  */
-export function toolPhrase(t: TFunction, l: Pick<ToolLine, "kind" | "app" | "tool" | "state">) {
+export function toolPhrase(t: TFunction, l: Pick<ToolLine, "kind" | "app" | "tool" | "state">, locale?: string) {
   const verb = activityVerb(t, { kind: l.kind, app: l.app });
   if (l.state === "run") return `${capitalize(verb)}…`;
   if (l.state === "stop") return capitalize(verb);
   if (l.state === "fail" && l.kind === "runningCommand") return t("chat.work.refused", { app: appLabel(l) });
   if (l.state === "fail" && l.kind === "runningCommandAny") return t("chat.work.refusedAny");
   if (l.state === "fail") return t("chat.work.erred", { activity: verb });
-  return t(`chat.work.step.${l.kind}`, { app: appLabel(l), tool: toolWords(t, l.tool) });
+  return t(`chat.work.step.${l.kind}`, { app: appLabel(l), tool: toolWords(t, l.tool, locale) });
 }
 
 /** A turn quicker than this shows nothing new: its step line says the agent's own words only past it. */

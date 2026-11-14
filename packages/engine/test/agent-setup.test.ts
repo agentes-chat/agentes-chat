@@ -139,7 +139,7 @@ describe("Usar em outros agentes", () => {
       { agentId: w.theo, status: "applied" },
       { agentId: w.lia, status: "skipped", reason: "other_computer", params: { computer: "PC" } },
       // Zoe keeps Bia's GLM Coding plan, which has no Opus.
-      { agentId: w.zoe, status: "skipped", reason: "model_missing", params: { plan: "GLM Coding", model: "Opus" } },
+      { agentId: w.zoe, status: "skipped", reason: "model_missing", params: { plan: "GLM Coding", model: "Opus 5.5" } },
     ];
     const preview = await applyAgentSetup(deps, fx.owner.id, fx.org.id, {
       setup: ANA_CLAUDE(w.mac),
@@ -449,7 +449,7 @@ describe("the Autonomia goes with the setup", () => {
         agentId: w.zoe,
         status: "skipped",
         reason: "model_missing",
-        params: { plan: "GLM Coding", model: "Opus" },
+        params: { plan: "GLM Coding", model: "Opus 5.5" },
         autonomy: { from: "low_risk_auto", to: "never" },
       },
     ];

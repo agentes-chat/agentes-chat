@@ -399,6 +399,7 @@ export const RARE_TOOLS: ReadonlySet<string> = new Set([
   "cancel_follow_up",
   "offer_install_skill",
   "update_skill_from_source",
+  "create_skill",
   "read_conversation",
   "send_feedback",
   "offer_feedback",

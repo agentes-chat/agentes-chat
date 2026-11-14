@@ -1026,15 +1026,16 @@ describe("Conectar uma IA: one picker, plans first", () => {
   });
 
   test("self-host with no computer for the agent: plans dim, the key comes first, and a plan's panel says to connect one", async () => {
-    const { dialog, router } = await connect({ computers: [], brain: { computer: null, machines: [] } });
+    const { dialog } = await connect({ computers: [], brain: { computer: null, machines: [] } });
     expect(payWith(dialog, "Com chave de API").getAttribute("aria-checked")).toBe("true");
     await click(payWith(dialog, "Com um plano"));
     expect(aiSelect(dialog).querySelector(".ac-brand--off")).not.toBeNull();
     expect(dialog.textContent).toContain("As contas ficam num computador conectado. Conecte um seu primeiro.");
     await click(within(dialog).getByRole("button", { name: "Conectar um computador" }));
     await settle(4);
-    expect(screen().queryByRole("dialog")).toBeNull();
-    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices`);
+    // In place, over the plan's panel, which signs in there once the computer pairs.
+    expect(screen().getByRole("dialog", { name: "Conectar um dispositivo" })).toBeTruthy();
+    expect(dialog.isConnected).toBe(true);
   });
 
   test("before the server says which edition this is: a wait, never a computer to connect", async () => {
@@ -1289,13 +1290,19 @@ describe("Conectar uma IA: one picker, plans first", () => {
       "Kimi",
       "Z.ai",
       "MiniMax",
+      "Command Code",
       expect.stringContaining("Outro provedor"),
     ]);
     await closeAiSelect();
-    // OpenRouter passes what is sent on to other providers: its privacy settings say who may keep it, in the ⓘ.
+    // A provider that passes what is sent on to the model's maker or host says so by name, in the ⓘ.
+    await chooseAi(dialog, "Command Code", true);
+    expect(hintOf("Crie a sua chave de API Command Code", panel)).toMatchObject({
+      text: "O que seus agentes enviam é repassado por Command Code à empresa que faz ou hospeda o modelo, sob os termos e as configurações de privacidade de Command Code.",
+      hidden: true,
+    });
     await chooseAi(dialog, "OpenRouter", true);
     expect(hintOf("Crie a sua chave de API OpenRouter", panel)).toMatchObject({
-      text: "As configurações de privacidade da OpenRouter decidem quais provedores podem guardar o que seus agentes enviam.",
+      text: "O que seus agentes enviam é repassado por OpenRouter à empresa que faz ou hospeda o modelo, sob os termos e as configurações de privacidade de OpenRouter.",
       hidden: true,
     });
     expect(within(panel).getByRole("link", { name: "Abrir openrouter.ai" }).getAttribute("href")).toBe(

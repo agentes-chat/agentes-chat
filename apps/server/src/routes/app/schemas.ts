@@ -293,6 +293,18 @@ export const Credential = z
       .enum(["ok", "unchecked"])
       .optional()
       .openapi({ description: "On a key just saved: `ok` a real call passed, `unchecked` the provider didn't say." }),
+    reused: z.boolean().optional().openapi({
+      description: "On a key just saved: the workspace already had it, so that key was updated, not copied.",
+    }),
+    copies: z
+      .number()
+      .int()
+      .optional()
+      .openapi({ description: "In a list of keys: how many other saved keys are this same key (`remove-copies`)." }),
+    copyOf: z
+      .uuid()
+      .optional()
+      .openapi({ description: "In a list of keys: the key this one is a copy of, the row to show for both." }),
     createdAt: z.string(),
     revokedAt: z.string().nullable(),
   })

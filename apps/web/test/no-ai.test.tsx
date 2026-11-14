@@ -14,6 +14,7 @@ import {
   createFakeApi,
   ENG_ID,
   fakeMachinesOf,
+  meWithRole,
   NOW,
   ORG_ID,
   seedState,
@@ -292,9 +293,13 @@ describe("no AI connected: above the composer", () => {
 
   /** Settings › AI accounts, with no agent at all, and these computers and accounts. */
   type Machines = NonNullable<ReturnType<typeof fakeMachinesOf.get>>;
-  const bareDialog = async (ai: (machines: Machines) => Parameters<Machines["setAiAccounts"]>[0]) => {
+  const bareDialog = async (
+    ai: (machines: Machines) => Parameters<Machines["setAiAccounts"]>[0],
+    seed?: (state: ReturnType<typeof seedState>) => void,
+  ) => {
     const state = seedState({ aiStatus: { any: false, agents: [] } });
     state.agents = [];
+    seed?.(state);
     const api = createFakeApi(state);
     const machines = fakeMachinesOf.get(api) as Machines;
     machines.setAiAccounts(ai(machines));
@@ -303,6 +308,24 @@ describe("no AI connected: above the composer", () => {
     await click(screen().getByRole("button", { name: "Conectar uma IA" }), 6);
     return { state, machines, box: dialog("Conectar uma IA") as HTMLElement };
   };
+  const CLAUDE_OF_MINE: Parameters<Machines["setAiAccounts"]>[0]["accounts"][number] = {
+    id: "acct_1",
+    kind: "claude_code",
+    label: "Claude",
+    email: "walter@example.com",
+    plan: "max",
+    status: "active",
+    ownerId: "u-walter",
+    ownerName: "Walter",
+    mine: true,
+    usedBy: [],
+    usage: null,
+    provider: null,
+    keyHint: null,
+    machineId: "machine_1",
+    computer: "Servidor",
+  };
+  const CLAUDE_CODE = { kind: "claude_code" as const, available: true, models: [], defaultModel: null };
   const SERVER = {
     machineId: "machine_1",
     name: "Servidor",
@@ -344,6 +367,38 @@ describe("no AI connected: above the composer", () => {
     expect(calls(state, "machines.beginAccountLogin")).toEqual([]);
   });
 
+  test("no agent, a plan connected: its next step is an agent made with it, over the workspace's last setup", async () => {
+    const { state, box } = await bareDialog(
+      () => ({ accounts: [CLAUDE_OF_MINE], computers: [SERVER] }),
+      (s) => {
+        s.brainMachines = [{ machineId: "machine_1", name: "Servidor", online: true, options: [CLAUDE_CODE] }];
+        s.newAgentSetup = { brain: "model", model: "claude-opus-5-5", key: null, contextTokens: null };
+      },
+    );
+    await chooseAi(box, "Claude");
+    await settle(4);
+    await click(within(box).getByRole("button", { name: "Criar um agente com este plano" }), 8);
+    expect(dialog("Conectar uma IA")).toBeNull();
+    const card = screen().getByRole("dialog", { name: "Novo agente" });
+    await click(within(card).getByRole("button", { name: /^Criar / }), 8);
+    const agentId = state.agents[0]?.id;
+    expect(calls(state, "sandbox.setTarget").map((c) => c.args)).toEqual([[ORG_ID, agentId, "machine_1"]]);
+    expect(calls(state, "agents.setBrain").map((c) => c.args)).toEqual([
+      [ORG_ID, agentId, { brain: "claude_code", account: "acct_1" }],
+    ]);
+  });
+
+  test("no agent, a plan connected, and no way to make agents: only Pronto", async () => {
+    const { box } = await bareDialog(
+      () => ({ accounts: [CLAUDE_OF_MINE], computers: [SERVER] }),
+      (s) => meWithRole(s, ["manage_credentials"]),
+    );
+    await chooseAi(box, "Claude");
+    await settle(4);
+    expect(within(box).queryByRole("button", { name: "Criar um agente com este plano" })).toBeNull();
+    expect(within(box).getByRole("button", { name: "Pronto" })).toBeTruthy();
+  });
+
   test("no agent, and only someone else's computer: a computer of their own is the way on, or the key", async () => {
     const { box } = await bareDialog((machines) => {
       const mac = machines.pair({ name: "MacBook da Ana", pairedBy: { id: "u-ana", name: "Ana Souza" } });
@@ -353,9 +408,31 @@ describe("no AI connected: above the composer", () => {
     await settle(4);
     const panel = within(box).getByRole("region", { name: "Seu plano do Claude" });
     expect(panel.textContent).toContain("Só Ana conecta um plano no MacBook da Ana.");
-    expect(within(panel).getByRole("button", { name: "Conectar um computador" })).toBeTruthy();
+    // Their own computer connects in place, over the plan's panel.
+    await click(within(panel).getByRole("button", { name: "Conectar meu computador" }), 4);
+    const pairing = screen().getByRole("dialog", { name: "Conectar um dispositivo" });
+    await click(within(pairing).getByRole("button", { name: "Fechar" }), 4);
+    expect(dialog("Conectar uma IA")).toBe(box);
     await click(within(panel).getByRole("button", { name: "Usar uma chave de API agora" }));
     expect(within(box).getByRole("region", { name: "Chave de API" })).toBeTruthy();
+  });
+
+  test("no agent, only someone else's computer, and no way to connect one: no Conectar meu computador", async () => {
+    const { box } = await bareDialog(
+      (machines) => {
+        const mac = machines.pair({ name: "MacBook da Ana", pairedBy: { id: "u-ana", name: "Ana Souza" } });
+        return { accounts: [], computers: [{ ...SERVER, machineId: mac.id, name: "MacBook da Ana", canAdd: false }] };
+      },
+      (s) => {
+        meWithRole(s, ["create_agents"]);
+        for (const role of s.roles ?? []) role.permissions = role.permissions.filter((p) => p !== "pair_computers");
+      },
+    );
+    await chooseAi(box, "Claude");
+    await settle(4);
+    const panel = within(box).getByRole("region", { name: "Seu plano do Claude" });
+    expect(panel.textContent).toContain("Só Ana conecta um plano no MacBook da Ana.");
+    expect(within(panel).queryByRole("button", { name: "Conectar meu computador" })).toBeNull();
   });
 
   test("a DM with an agent that has none says so for that agent; an organization with AI shows nothing in channels", async () => {

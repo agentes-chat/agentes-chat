@@ -664,9 +664,9 @@ describe("the agent's AI", () => {
       available: true,
 
       models: [
-        { value: "opus", label: "Opus" },
-        { value: "sonnet", label: "Sonnet", recommended: true },
-        { value: "haiku", label: "Haiku" },
+        { value: "opus", label: "Opus 5.5" },
+        { value: "sonnet", label: "Sonnet 5.5", recommended: true },
+        { value: "haiku", label: "Haiku 5.5" },
       ],
       defaultModel: "sonnet",
     };
@@ -728,8 +728,8 @@ describe("the agent's AI", () => {
     expect(modelSections(modelRows(t, view("k3-256k"), planOf("kimi")))).toHaveLength(1);
     // On Claude's sign-in: its aliases; a plan's model kept from before runs Sonnet there.
     const own = modelRows(t, view("deepseek-v4.1-flash"), undefined);
-    expect(own.map((r) => r.label)).toEqual(["Automático", "Opus", "Sonnet", "Haiku"]);
-    expect(own.find((r) => r.checked)?.label).toBe("Sonnet");
+    expect(own.map((r) => r.label)).toEqual(["Automático", "Opus 5.5", "Sonnet 5.5", "Haiku 5.5"]);
+    expect(own.find((r) => r.checked)?.label).toBe("Sonnet 5.5");
     // An alias the plan leaves out runs its main model.
     expect(modelRows(t, view("opus"), planOf("zai")).find((r) => r.checked)?.label).toBe("GLM-5.3");
     // OpenCode (ADR 0132): the models its CLI listed, the free ones marked Grátis.
@@ -1135,6 +1135,26 @@ describe("the agent's AI", () => {
     // No last setup: a plan account of mine (one connected before I had an agent) thinks for it, as on the web.
     expect(screen).toContain("(proposed || start ? null : (ownPlan ?? null))");
     expect(screen).toContain("const ownPlan = planAccountOption(brainOptions);");
+  });
+
+  test("a plan connected with no agent yet: Criar um agente com este plano opens Criar agente thinking with it", async () => {
+    const read = (path: string) => Bun.file(new URL(`../../${path}`, import.meta.url).pathname).text();
+    const [sheet, route, screen, steps] = await Promise.all([
+      read("src/features/ai/ConnectAi.tsx"),
+      read("app/(app)/new-agent.tsx"),
+      read("src/features/agents/NewAgentScreen.tsx"),
+      read("src/features/ai/ConnectAiSteps.tsx"),
+    ]);
+    // For whoever may make agents, never over one being made.
+    expect(sheet).toContain('params.forNew !== "1" && makesAgents(org) ? planAccount');
+    expect(sheet).toContain("/new-agent?account=");
+    expect(sheet).toContain("encodeURIComponent(makeWith.id)");
+    expect(route).toContain('accountId={typeof account === "string" && account ? account : null}');
+    // That account wins over the workspace's last setup; a pick made on the screen still wins over it.
+    expect(screen).toContain("connectedHere ?? picked ?? askedPlan ??");
+    // Someone else's computer: a computer of their own is the way on, for whoever may connect one.
+    expect(steps).toContain('elsewhere && can(org, "pair_computers") ?');
+    expect(steps).toContain('label={t("connectAi.connectMine")} onPress={onComputer}');
   });
 });
 

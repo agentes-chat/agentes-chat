@@ -19,6 +19,7 @@ import {
   needsOwnSignIn,
   newPlanAccountOption,
   pickGroups,
+  planAccountOptionOf,
 } from "../src/lib/brain-picker";
 import { brainModelChoices, CODING_PLANS, planFreeHint } from "../src/lib/plans";
 import { AUTO, modelChoices } from "../src/lib/providers";
@@ -340,6 +341,15 @@ test("the plan account just connected: one not among the options when Conectar u
   expect(newPlanAccountOption(after, new Set(before.map((o: { value: string }) => o.value)))?.value).toBe(
     "claude@m1#new/auto",
   );
+});
+
+test("a plan account by its id: its Automático option, never another account's or a disabled one", () => {
+  const row = (value: string, accountId: string, disabled = false) =>
+    ({ value, disabled, pick: { kind: "claude_code", machineId: "m1", model: AUTO, accountId } }) as never;
+  const options = [row("claude@m1#a/auto", "a"), row("claude@m1#b/auto", "b"), row("claude@m1#c/auto", "c", true)];
+  expect(planAccountOptionOf(options, "b")?.value).toBe("claude@m1#b/auto");
+  expect(planAccountOptionOf(options, "c")).toBeUndefined();
+  expect(planAccountOptionOf(options, "missing")).toBeUndefined();
 });
 
 test("a key's models for every agent: the one that answered, the refused ones and why, the rest not tried", () => {

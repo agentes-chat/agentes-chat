@@ -67,7 +67,7 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
   if (cut && typeof cut === "object" && typeof cut.text === "string") {
     const brain = brainName(typeof cut.brain === "string" ? cut.brain : null);
     const names = Array.isArray(cut.tools) ? cut.tools.filter((x): x is string => typeof x === "string") : [];
-    const done = names.map((tool) => lowerFirst(stepLabel(t, { ...toolActivity(tool), tool }), locale));
+    const done = names.map((tool) => lowerFirst(stepLabel(t, { ...toolActivity(tool), tool }, locale), locale));
     const tools = joinNames([...new Set(done)], t);
     const note = `_${t("chat.body.brain_interrupted", {
       brain,

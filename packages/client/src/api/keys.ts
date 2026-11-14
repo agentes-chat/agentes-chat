@@ -1,3 +1,4 @@
+import { hashKey } from "@tanstack/react-query";
 import type { ScreenKind } from "./types";
 
 /** React Query keys. Everything under ["org", orgId] is dropped when switching organizations. */
@@ -292,3 +293,6 @@ export const keys = {
   widgetSuggestions: (orgId: string, agentId: string) => ["org", orgId, "dashboards", "suggestions", agentId] as const,
   widgetPinnable: (orgId: string) => ["org", orgId, "dashboards", "pinnable"] as const,
 };
+
+/** `keys.me` as the query cache names it, for telling its events apart. */
+export const ME_HASH = hashKey(keys.me);

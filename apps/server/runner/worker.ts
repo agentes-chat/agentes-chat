@@ -107,6 +107,7 @@ function parseWorkerState(f: Record<string, unknown>): WorkerState | null {
   const accounts = Array.isArray(f.accounts) ? { accounts: f.accounts.filter(isAccountId) } : {};
   const host = typeof f.commitHost === "string" && /^[a-z0-9.-]{1,253}$/i.test(f.commitHost) ? f.commitHost : null;
   const commitHost = host ? { commitHost: host } : {};
+  const locale = typeof f.locale === "string" && f.locale.length <= 32 ? { locale: f.locale } : {};
   return access && paused
     ? {
         access,
@@ -118,6 +119,7 @@ function parseWorkerState(f: Record<string, unknown>): WorkerState | null {
         ...account,
         ...accounts,
         ...commitHost,
+        ...locale,
       }
     : null;
 }
@@ -701,6 +703,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     },
     onChange: () => queueMicrotask(lease),
     kept: () => state.browserKept === true,
+    locale: () => state.locale,
     ...(chrome ? { startChrome: (exe, args, profile, env) => launchChrome(exe, args, profile, env, chrome) } : {}),
     // The agents share their memory (`agentLimits`): the limit a page dies at is all of theirs.
     memoryEvents: {

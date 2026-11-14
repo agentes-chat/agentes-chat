@@ -1164,7 +1164,7 @@ test.if(posix)(
     const devtools = fakeDevtools([]);
     try {
       const logs: string[] = [];
-      const t = setup({ startChrome: chromesAt(devtools).start, log: (l) => logs.push(l) });
+      const t = setup({ startChrome: chromesAt(devtools).start, log: (l) => logs.push(l), locale: () => "de" });
       await t.act("open", ["https://heavy.example/"]);
       await waitFor(() => devtools.asked.includes("Network.enable page-0"));
       devtools.crash(0);
@@ -1189,7 +1189,8 @@ test.if(posix)(
       await waitFor(() => devtools.navigated.length === 2);
       devtools.crash(0);
       await waitFor(() => devtools.navigated.length === 3);
-      expect(devtools.navigated[2]).toBe(crashPage(false));
+      // Our notice is in the language of the agent's person.
+      expect(devtools.navigated[2]).toBe(crashPage(false, "de"));
       expect(devtools.asked.filter((a) => a === "Page.getNavigationHistory page-0")).toHaveLength(2);
       // Our notice died too (a page that can't start there at all): Chrome's own page stays, nothing opens again.
       devtools.crash(0);
@@ -1203,12 +1204,20 @@ test.if(posix)(
       expect(await t.act("click", ["@e1"])).toMatchObject({ success: true });
       expect(devtools.navigated).toHaveLength(3);
       expect(devtools.asked.filter((a) => a === "Page.getNavigationHistory page-0")).toHaveLength(2);
-      // Our notice, in both languages, in the app's look.
-      const notice = decodeURIComponent(crashPage(true).slice("data:text/html;charset=utf-8,".length));
-      expect(notice).toContain("<title>A página ficou sem memória</title>");
-      expect(notice).toContain("The page ran out of memory");
-      expect(notice).toContain("background:#fbfbfa");
-      expect(decodeURIComponent(crashPage(false))).toContain("The page stopped working");
+      // Our notice, in the app's look and in one language only: the person's, English when it isn't one of the app's.
+      const notice = (memory: boolean, tag?: string) =>
+        decodeURIComponent(crashPage(memory, tag).slice("data:text/html;charset=utf-8,".length));
+      expect(notice(true, "pt-BR")).toContain('<html lang="pt-BR">');
+      expect(notice(true, "pt-BR")).toContain("<title>A página ficou sem memória</title>");
+      expect(notice(true, "pt-BR")).not.toContain("The page");
+      expect(notice(false, "de")).toContain(
+        "<h1>Die Seite funktioniert nicht mehr</h1><p>Der Agent wird benachrichtigt.</p>",
+      );
+      expect(notice(false, "de")).not.toContain("The page");
+      expect(notice(true, "xx")).toContain('<html lang="en">');
+      expect(notice(true)).toContain("<title>The page ran out of memory</title>");
+      expect(notice(true)).not.toContain("página");
+      expect(notice(true)).toContain("background:#fbfbfa");
     } finally {
       devtools.stop();
     }

@@ -109,6 +109,38 @@ test("clearing the cache (sign-out, sign-in, 401) drops the snapshot", async () 
   stop();
 });
 
+test("an account waiting for its deletion is never kept: its screen is the server's to say, and what was saved goes", async () => {
+  const qc = new QueryClient();
+  const store = memory();
+  qc.setQueryData(keys.me, me("u1"));
+  const snapshot = createSnapshot(qc, store);
+  await snapshot.flush();
+  expect(store.value()).not.toBeNull();
+  const waiting = me("u1");
+  waiting.user.deletion = { dueAt: "2026-11-18T10:00:00.000Z", requestedAt: "2026-11-11T10:00:00.000Z" };
+  qc.setQueryData(keys.me, waiting);
+  await snapshot.flush();
+  expect(store.value()).toBeNull();
+});
+
+test("a saved account that waits for its deletion isn't put back: the snapshot goes", async () => {
+  const qc = new QueryClient();
+  const store = memory();
+  qc.setQueryData(keys.me, me("u1"));
+  await createSnapshot(qc, store).flush();
+  const saved = JSON.parse(store.value() ?? "");
+  saved.state.queries[0].state.data.user.deletion = {
+    dueAt: "2026-11-18T10:00:00.000Z",
+    requestedAt: "2026-11-11T10:00:00.000Z",
+  };
+  await store.write(JSON.stringify(saved));
+
+  const next = new QueryClient();
+  expect(await createSnapshot(next, store).restore()).toBe(false);
+  expect(next.getQueryData(keys.me)).toBeUndefined();
+  expect(store.value()).toBeNull();
+});
+
 test("someone else on this device: the snapshot and the previous person's workspace data go", async () => {
   const qc = new QueryClient();
   const store = memory();

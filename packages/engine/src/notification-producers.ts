@@ -1522,7 +1522,7 @@ const skillWaitingGroup = (skillId: string) => `skill_update:waiting:${skillId}:
  */
 export async function notifySkillUpdate(
   deps: NotificationDeps,
-  skill: { id: string; orgId: string; name: string },
+  skill: { id: string; orgId: string; name: string; ownerUserId?: string | null },
   what:
     | { state: "updated"; version: number }
     | { state: "waiting"; hash: string; scripts: string[]; edited?: boolean }
@@ -1540,8 +1540,10 @@ export async function notifySkillUpdate(
   await notify(deps, {
     orgId: skill.orgId,
     ...(what.state === "edited" ? { actor: { type: "agent" as const, id: what.agentId } } : {}),
-    userIds:
-      to && (what.state === "updated" || what.state === "edited")
+    // A personal skill's notices are its person's alone: nobody else may read or decide it.
+    userIds: skill.ownerUserId
+      ? [skill.ownerUserId]
+      : to && (what.state === "updated" || what.state === "edited")
         ? [to]
         : [...(await adminsOf(deps, skill.orgId, "manage_agents")), ...(to && what.state === "failed" ? [to] : [])],
     kind: "skill_update",

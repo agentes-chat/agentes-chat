@@ -84,6 +84,7 @@ describe("finding the settings", () => {
     expect(within(menu).getAllByRole("menuitem").map(itemName)).toEqual([
       "Membros",
       "Conectores e MCPs",
+      "Skills",
       "Configurações do workspace",
     ]);
   });
@@ -99,7 +100,8 @@ describe("finding the settings", () => {
     const sections: [string, string, string][] = [
       ["account", "Sua conta", "account"],
       ["general", "Geral", "general"],
-      ["members", "Membros e convites", "members"],
+      ["members", "Membros", "members"],
+      ["invites", "Convites", "members"],
       ["access", "Agentes e acesso", "connectors"],
       ["connectors", "Conectores e MCPs", "connectors"],
       ["skills", "Skills", "connectors"],
@@ -177,9 +179,9 @@ describe("finding the settings", () => {
   test("a section the person's role doesn't open says so where it lands, never silently on Sua conta", async () => {
     const state = seedState();
     if (state.me?.organizations[0]) state.me.organizations[0].role = "member";
-    await go("settings/skills", state);
+    await go("settings/access", state);
     expect(screen().getByText(/não abre com o seu cargo/).textContent).toBe(
-      "Skills não abre com o seu cargo neste workspace. Quem gerencia os cargos pode liberar para você.",
+      "Agentes e acesso não abre com o seu cargo neste workspace. Quem gerencia os cargos pode liberar para você.",
     );
     cleanup();
     // Opened from its own nav, the section says nothing more.

@@ -214,7 +214,6 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "help.any.computers.sections.1.blocks.1.list.0",
     // The moving steps' command is the Mac's, said so in the step above it.
     "help.selfhost.run-on-your-computer.sections.11.blocks.1.code",
-    "desktop.prefs.general.dockDesc",
     "desktop.prefs.general.menuBarTitle",
     // The app icon's hint shows only in the Mac's desktop app (AppIconPicker.tsx): its Dock and Finder.
     "appIcon.hintMac",
@@ -270,7 +269,9 @@ export const ANYWHERE: readonly string[] = [
   "mobile.auth.server.",
   "mobile.auth.connect.",
   "desktop.first.",
-  "desktop.own.",
+  // The desktop app's first screen and its install: the Cloud, this computer and one always on, side by side.
+  "desktop.place.",
+  "desktop.install.",
   "desktop.connect.",
   "desktop.link.",
   "desktop.servers.",

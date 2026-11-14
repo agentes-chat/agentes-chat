@@ -1310,8 +1310,8 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
     ...lines.map((l) => ({
       key: l.key,
       icon: logo(l),
-      label: toolPhrase(t, l),
-      title: [toolPhrase(t, l), l.hint].filter(Boolean).join(" · "),
+      label: toolPhrase(t, l, i18n.language),
+      title: [toolPhrase(t, l, i18n.language), l.hint].filter(Boolean).join(" · "),
       state: l.state === "fail" ? ("failed" as const) : ("done" as const),
     })),
     {
@@ -1335,8 +1335,8 @@ function ReviewBody({ approval: a, channel }: { approval: Approval; channel: str
     ...afterLines.map((l) => ({
       key: `after-${l.key}`,
       icon: logo(l),
-      label: toolPhrase(t, l),
-      title: [toolPhrase(t, l), l.hint].filter(Boolean).join(" · "),
+      label: toolPhrase(t, l, i18n.language),
+      title: [toolPhrase(t, l, i18n.language), l.hint].filter(Boolean).join(" · "),
       state: l.state === "fail" ? ("failed" as const) : ("after" as const),
     })),
   ];

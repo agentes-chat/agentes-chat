@@ -6,7 +6,9 @@
 
 /** The section whose page shows each of these as a tab (billing: as a part under AI and usage's own tabs). */
 export const SETTINGS_PARTS: Readonly<Record<string, string>> = {
+  invites: "members",
   notifications: "account",
+  download: "account",
   approvals: "account",
   apps: "account",
   media: "general",

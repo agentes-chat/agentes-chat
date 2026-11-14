@@ -6,8 +6,10 @@ import {
   useComposioUsage,
   useComputerSetup,
   useCredentials,
+  useJoinRequests,
   usePlatformKey,
   useRemoveCredential,
+  useRemoveCredentialCopies,
   useRotateCredential,
   useServerTelemetry,
   useSetServerTelemetry,
@@ -28,6 +30,7 @@ import { formatShortDate, formatUsd, relativeTime } from "@agenteschat/client/li
 import { can } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey, settingsSectionTextKey } from "@agenteschat/client/lib/personal-view";
 import {
+  keyCopiesLine,
   keyLooksValid,
   keyName,
   keyNamedAfterProvider,
@@ -35,6 +38,7 @@ import {
   providerGuess,
   providerLabel,
   providerOf,
+  shownKeys,
 } from "@agenteschat/client/lib/providers";
 import type { RoleTab } from "@agenteschat/client/lib/roles";
 import { settingsNav, settingsTabs } from "@agenteschat/client/lib/settings-nav";
@@ -56,6 +60,8 @@ import {
   Input,
   List,
   Locked,
+  Menu,
+  MenuItem,
   overLimit,
   PageHeader,
   ProviderLogo,
@@ -73,6 +79,7 @@ import { AccessMatrixSection } from "@/components/AccessLevels";
 import { AccountSection } from "@/components/AccountSettings";
 import { AiAppsSection } from "@/components/AiApps";
 import { ApprovalsSection } from "@/components/ApprovalCover";
+import { AppsDownloadSection } from "@/components/AppsDownload";
 import { AuditSection } from "@/components/Audit";
 import { AutoModelsRow } from "@/components/AutoModels";
 import { usePlanHold } from "@/components/ai/ConnectAiSteps";
@@ -109,6 +116,7 @@ import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { useTextLimit } from "@/hooks/useTextLimit";
 import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
+import { InvitesPage } from "./InvitesPage";
 import { MembersPage } from "./MembersPage";
 import {
   isSettingsSection,
@@ -198,6 +206,7 @@ function Settings({
   const open = visible.map((s) => s.id);
   const marked = settingsNavEntry(current, open, short);
   const tabs = settingsTabs(marked, open, short).filter(isSettingsSection);
+  const waiting = useJoinRequests(org.id, tabs.includes("invites")).data?.length ?? 0;
   const inAdvanced = nav.advanced.some((s) => s.id === marked);
   const [opened, setOpened] = useState(inAdvanced);
   // A section of Advanced opened by its address (⌘K, a card, a notice) shows in the list in that same render (the
@@ -235,28 +244,34 @@ function Settings({
 
   const sections = (
     <>
-      {current !== "members" && current !== "general" && current !== "roles" && current !== "vault" && (
-        <PageHeader
-          level={2}
-          title={sectionName(current)}
-          meta={
-            current !== "devices" ? (
-              t(settingsSectionTextKey(org, current))
-            ) : edition ? (
-              t(edition === "cloud" ? "devices.leadCloud" : "devices.lead")
-            ) : setup.isError ? null : (
-              // Never one edition's words before the server says which this is (the section says if it couldn't).
-              <LoadingLine width={320} />
-            )
-          }
-        />
-      )}
+      {current !== "members" &&
+        current !== "invites" &&
+        current !== "general" &&
+        current !== "roles" &&
+        current !== "vault" && (
+          <PageHeader
+            level={2}
+            title={sectionName(current)}
+            meta={
+              current !== "devices" ? (
+                t(settingsSectionTextKey(org, current))
+              ) : edition ? (
+                t(edition === "cloud" ? "devices.leadCloud" : "devices.lead")
+              ) : setup.isError ? null : (
+                // Never one edition's words before the server says which this is (the section says if it couldn't).
+                <LoadingLine width={320} />
+              )
+            }
+          />
+        )}
       {current === "account" && <AccountSection />}
       {current === "notifications" && <NoticePrefsSection />}
+      {current === "download" && <AppsDownloadSection />}
       {current === "approvals" && <ApprovalsSection />}
       {current === "apps" && <AiAppsSection />}
       {current === "general" && <GeneralSection />}
       {current === "members" && <MembersPage embedded />}
+      {current === "invites" && <InvitesPage />}
       {current === "roles" && <RolesSection roleId={role} tab={tab} create={create} />}
       {current === "vault" && <VaultSection />}
       {current === "audit" && <AuditSection agent={agent} />}
@@ -343,6 +358,8 @@ function Settings({
             items={tabs.map((id) => ({
               value: id,
               label: id === "account" ? t("settings.tab.account") : sectionName(id),
+              // Convites says how many wait on the person (ADR 0184).
+              count: id === "invites" && waiting > 0 ? waiting : undefined,
             }))}
           >
             <TabPanel value={current}>{body}</TabPanel>
@@ -789,18 +806,22 @@ function KeysSection() {
   const platform = usePlatformKey(org.id);
   const updateSettings = useUpdateSettings(org.id);
   const remove = useRemoveCredential(org.id);
+  const removeCopies = useRemoveCredentialCopies(org.id);
+  const toast = useToast();
   const [dialog, setDialog] = useState<
     | null
     | { type: "add" }
     | { type: "rotate"; cred: Credential }
     | { type: "remove"; cred: Credential }
+    | { type: "copies"; cred: Credential }
     | { type: "models"; cred: Credential }
   >(null);
   const look = useRightHandLook();
   const hold = usePlanHold();
   const plans = useAiAccounts(org.id).data?.accounts.length ?? 0;
   if (!allowed) return null;
-  const live = (credentials.data ?? []).filter((c) => !c.revokedAt);
+  const all = (credentials.data ?? []).filter((c) => !c.revokedAt);
+  const live = shownKeys(credentials.data ?? []);
   const noKeys = credentials.isSuccess && live.length === 0;
   // On plans alone the screen is the accounts: the first key is added from "Conectar uma IA", and this card comes
   // with it.
@@ -858,6 +879,12 @@ function KeysSection() {
                     <span style={{ whiteSpace: "nowrap" }}>
                       {t("settings.keyAdded", { when: relativeTime(t, i18n.language, c.createdAt) })}
                     </span>
+                    {c.copies ? (
+                      <>
+                        {" · "}
+                        <span style={{ whiteSpace: "nowrap" }}>{keyCopiesLine(t, c)}</span>
+                      </>
+                    ) : null}
                   </span>
                 </span>
                 <span className="key-row__tail ac-mediarow__end ac-mediarow__end--wrap">
@@ -877,20 +904,33 @@ function KeysSection() {
                       {t("settings.makeDefault")}
                     </Button>
                   )}
-                  <div className="ac-acts">
+                  <Menu
+                    align="end"
+                    label={t("settings.keyMore", { label: c.label })}
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        icon="more"
+                        aria-label={t("settings.keyMore", { label: c.label })}
+                      />
+                    }
+                  >
                     {!hold && (
-                      <Button variant="link" onClick={() => setDialog({ type: "rotate", cred: c })}>
+                      <MenuItem icon="key" onSelect={() => setDialog({ type: "rotate", cred: c })}>
                         {t("settings.rotate")}
-                      </Button>
+                      </MenuItem>
                     )}
-                    <Button
-                      variant="link"
-                      className="ac-link--danger"
-                      onClick={() => setDialog({ type: "remove", cred: c })}
-                    >
+                    {c.copies ? (
+                      <MenuItem icon="repeat" onSelect={() => setDialog({ type: "copies", cred: c })}>
+                        {t("settings.removeCopies")}
+                      </MenuItem>
+                    ) : null}
+                    <MenuItem icon="trash" danger onSelect={() => setDialog({ type: "remove", cred: c })}>
                       {t("settings.remove")}
-                    </Button>
-                  </div>
+                    </MenuItem>
+                  </Menu>
                 </span>
               </div>
             );
@@ -923,7 +963,7 @@ function KeysSection() {
         open={dialog?.type === "remove"}
         onOpenChange={(o) => !o && setDialog(null)}
         title={t("settings.removeTitle", { label: dialog?.type === "remove" ? dialog.cred.label : "" })}
-        description={dialog?.type === "remove" ? keyRemovalText(t, dialog.cred, live, platform.data === true) : ""}
+        description={dialog?.type === "remove" ? keyRemovalText(t, dialog.cred, all, platform.data === true) : ""}
         closeLabel={t("common.close")}
         width={440}
       >
@@ -939,6 +979,36 @@ function KeysSection() {
             }}
           >
             {t("settings.remove")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+      <Dialog
+        open={dialog?.type === "copies"}
+        onOpenChange={(o) => !o && setDialog(null)}
+        title={t("settings.removeCopiesTitle", { label: dialog?.type === "copies" ? dialog.cred.label : "" })}
+        description={t("settings.removeCopiesText")}
+        closeLabel={t("common.close")}
+        width={440}
+      >
+        <DialogFooter>
+          <Button disabled={removeCopies.isPending} onClick={() => setDialog(null)}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={removeCopies.isPending}
+            loading={removeCopies.isPending}
+            onClick={() => {
+              if (dialog?.type !== "copies") return;
+              removeCopies.mutate(dialog.cred.id, {
+                onSuccess: ({ removed }) => {
+                  toast.show(t("settings.copiesRemoved", { count: removed }));
+                  setDialog(null);
+                },
+              });
+            }}
+          >
+            {t("settings.removeCopies")}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -1075,6 +1145,7 @@ export function KeyDialog({
                 {
                   onError: failed,
                   onSuccess: (saved) => {
+                    if (saved.reused) toast.show(t("settings.keyResaved"));
                     unchecked(saved);
                     onAdded?.(saved);
                     onClose();

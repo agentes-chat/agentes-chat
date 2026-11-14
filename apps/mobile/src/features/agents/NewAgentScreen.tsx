@@ -26,6 +26,7 @@ import {
   brainPickOptions,
   newPlanAccountOption,
   planAccountOption,
+  planAccountOptionOf,
 } from "@agenteschat/client/lib/brain-picker";
 import { connectedItems, itemName } from "@agenteschat/client/lib/connected";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
@@ -126,6 +127,7 @@ export function NewAgentScreen({
   proposalId = null,
   channelId = null,
   startImport = false,
+  accountId = null,
 }: {
   initialWhat?: string;
   proposalId?: string | null;
@@ -133,6 +135,8 @@ export function NewAgentScreen({
   channelId?: string | null;
   /** Opens on bringing agents from another app (Configurações › Importar e exportar). */
   startImport?: boolean;
+  /** A plan account of mine just connected (Connect AI's "Criar um agente com este plano"): it thinks with that one. */
+  accountId?: string | null;
 }) {
   const { t } = useTranslation();
   const c = useColors();
@@ -166,6 +170,7 @@ export function NewAgentScreen({
       from={opened.current ?? undefined}
       channelId={channelId}
       startImport={startImport}
+      accountId={accountId}
     />
   );
 }
@@ -175,11 +180,13 @@ function NewAgentForm({
   from,
   channelId,
   startImport,
+  accountId,
 }: {
   initialWhat: string;
   from?: AgentProposal;
   channelId: string | null;
   startImport: boolean;
+  accountId: string | null;
 }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
@@ -259,9 +266,10 @@ function NewAgentForm({
   // among the choices when it opened is what the agent thinks with, over a pick made before; nothing new keeps the pick.
   const [optionsBefore, setOptionsBefore] = useState<ReadonlySet<string> | null>(null);
   const ownPlan = planAccountOption(brainOptions);
+  const askedPlan = accountId ? planAccountOptionOf(brainOptions, accountId) : undefined;
   const connectedHere = optionsBefore ? newPlanAccountOption(brainOptions, optionsBefore) : undefined;
   // No last setup to start from: a plan account of mine that can think for it (one connected before I had an agent).
-  const chosen = connectedHere ?? picked ?? (proposed || start ? null : (ownPlan ?? null));
+  const chosen = connectedHere ?? picked ?? askedPlan ?? (proposed || start ? null : (ownPlan ?? null));
   const thinks = chosen
     ? pickedAi(chosen.pick, aiAccounts.data?.computers)
     : newAgentAi(start && useLast ? start : null);

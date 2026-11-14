@@ -3,12 +3,21 @@ import { domWindow, setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import { ApiError, keys, type OrgDeletion, type OrgSummary, type Role } from "@agenteschat/client";
+import {
+  ApiError,
+  keys,
+  type OrgDeletion,
+  type OrgSummary,
+  type Role,
+  useMe,
+  useRestoreAccount,
+} from "@agenteschat/client";
 import { CLOUD_SERVER } from "@agenteschat/client/lib/server";
 import type { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { createFakeApi, ENG_ID, meAsAdmin, ORG_ID, seedState } from "./fake-api";
-import { renderApp, screen, settle } from "./render";
+import { createFakeAuth } from "./fake-auth";
+import { renderApp, renderPage, screen, settle } from "./render";
 
 afterEach(() => cleanup());
 
@@ -772,6 +781,14 @@ describe("an account waiting for its deletion", () => {
     state.me.organizations = [];
     return state;
   };
+  /** The waiting screen is up. */
+  const waits = () => screen().queryByRole("heading", { name: "Sua conta está sendo apagada" }) !== null;
+  const toasts = () => [...document.querySelectorAll(".ac-toast")].map((t) => t.textContent);
+  /** Signing out ends the session, as the server does: `GET /me` answers nobody after. */
+  const endingSession = (state: ReturnType<typeof seedState>) =>
+    createFakeAuth({ onSignOut: () => (state.me = null) }).auth;
+  // Sair marks this browser as signed out by hand: the next app starts without it.
+  afterEach(() => localStorage.removeItem("agentes.signedOut"));
 
   test("signing in shows one screen in place of the app: when it goes, Restaurar and Sair", async () => {
     const state = waiting(soon(6));
@@ -796,6 +813,145 @@ describe("an account waiting for its deletion", () => {
     expect(screen().getByRole("heading", { name: "Sua conta está sendo apagada" })).toBeTruthy();
     expect(screen().queryByRole("button", { name: "Restaurar conta" })).toBeNull();
     expect(screen().getByRole("button", { name: "Sair" })).toBeTruthy();
+  });
+
+  // The cache is cleared at every sign-in, sign-out and ended session, which tells nobody who reads `me`.
+  test("the screen follows the account in the cache: cleared, it goes, with no page change", async () => {
+    const state = waiting(soon(6));
+    const { router, services } = await renderApp("/", { api: createFakeApi(state) });
+    await settle(8);
+    expect(waits()).toBe(true);
+    const path = router.state.location.pathname;
+    // Restored from another device meanwhile.
+    if (state.me) {
+      const { deletion: _gone, ...user } = state.me.user;
+      state.me = { ...state.me, user };
+    }
+    await act(async () => services.queryClient.clear());
+    await settle(8);
+    expect(waits()).toBe(false);
+    expect(router.state.location.pathname).toBe(path);
+  });
+
+  test("Sair, from a page outside any workspace, ends on the sign-in with the screen gone", async () => {
+    const state = waiting(soon(6));
+    const { router } = await renderApp("/", { api: createFakeApi(state), auth: endingSession(state) });
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/onboarding");
+    await click(screen().getByRole("button", { name: "Sair" }));
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/login");
+    expect(waits()).toBe(false);
+    expect(screen().getByLabelText("E-mail")).toBeTruthy();
+    // By hand: the desktop app's own server waits for its owner's click.
+    expect(localStorage.getItem("agentes.signedOut")).toBe("1");
+  });
+
+  test("an auth client whose sign-out fails leaves all the same", async () => {
+    const state = waiting(soon(6));
+    const { auth } = createFakeAuth();
+    auth.signOut = async () => {
+      state.me = null;
+      throw new TypeError("Load failed");
+    };
+    const { router } = await renderApp("/", { api: createFakeApi(state), auth });
+    await settle(8);
+    await click(screen().getByRole("button", { name: "Sair" }));
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/login");
+    expect(waits()).toBe(false);
+    expect(screen().getByLabelText("E-mail")).toBeTruthy();
+  });
+
+  test("while Sair runs it shows as working, and neither button can be pressed", async () => {
+    const state = waiting(soon(6));
+    const { auth } = createFakeAuth();
+    let answer = () => {};
+    auth.signOut = () =>
+      new Promise<void>((done) => {
+        answer = done;
+      });
+    await renderApp("/", { api: createFakeApi(state), auth });
+    await settle(8);
+    const out = screen().getByRole("button", { name: "Sair" });
+    await click(out);
+    expect(out.getAttribute("aria-busy")).toBe("true");
+    expect(out.hasAttribute("disabled")).toBe(true);
+    expect(screen().getByRole("button", { name: "Restaurar conta" }).hasAttribute("disabled")).toBe(true);
+    state.me = null;
+    await act(async () => answer());
+    await settle(8);
+    expect(waits()).toBe(false);
+  });
+
+  // Deleting the account ended its sessions: the screen can be up after the one it was drawn with.
+  test("Restaurar after the session ended goes to the sign-in and says why once, in the app's words", async () => {
+    const state = waiting(soon(6));
+    const { router } = await renderApp("/", { api: createFakeApi(state) });
+    await settle(8);
+    state.me = null;
+    await click(screen().getByRole("button", { name: "Restaurar conta" }));
+    await settle(8);
+    expect(state.calls.some((c) => c.method === "account.restore")).toBe(true);
+    expect(router.state.location.pathname).toBe("/login");
+    expect(waits()).toBe(false);
+    expect(screen().getByLabelText("E-mail")).toBeTruthy();
+    expect(toasts()).toEqual(["Sua sessão terminou. Entre de novo para continuar."]);
+    // The sign-in leads back to where the screen was.
+    expect(router.state.location.search).toEqual({ redirect: "/onboarding" });
+    // Nobody signed out by hand.
+    expect(localStorage.getItem("agentes.signedOut")).toBeNull();
+  });
+
+  // Adding an account beside one that waits: the app's own answer to an ended session does nothing at this address.
+  test("Restaurar after the session ended, at the sign-in's address: the sign-in shows, with the same words once", async () => {
+    const state = waiting(soon(6));
+    const { router } = await renderApp("/login?add=1", { api: createFakeApi(state) });
+    await settle(8);
+    expect(waits()).toBe(true);
+    state.me = null;
+    await click(screen().getByRole("button", { name: "Restaurar conta" }));
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/login");
+    expect(waits()).toBe(false);
+    expect(screen().getByLabelText("E-mail")).toBeTruthy();
+    expect(toasts()).toEqual(["Sua sessão terminou. Entre de novo para continuar."]);
+  });
+
+  test("a restore the server refuses for no session leaves nobody signed in, for every screen that reads it", async () => {
+    const state = waiting(soon(6));
+    function Probe() {
+      const restore = useRestoreAccount();
+      return (
+        <button type="button" onClick={() => restore.mutate()}>
+          {useMe().data ? "signed in" : "nobody"}
+        </button>
+      );
+    }
+    const { services } = await renderPage(<Probe />, { api: createFakeApi(state) });
+    await settle(4);
+    const probe = screen().getByRole("button", { name: "signed in" });
+    state.me = null;
+    await click(probe);
+    await settle(4);
+    expect(services.queryClient.getQueryData(keys.me)).toBeNull();
+    expect(probe.textContent).toBe("nobody");
+  });
+
+  test("signing in on the sign-in page as an account that waits shows the screen, not the onboarding", async () => {
+    const state = seedState({ me: null });
+    const { auth } = createFakeAuth({ onSignIn: () => (state.me = waiting(soon(6)).me) });
+    const api = createFakeApi(state);
+    api.account.signInOptions = async () => ({ account: true, password: true, providers: [], canSignUp: false });
+    const { router } = await renderApp("/login", { api, auth });
+    await type(screen().getByLabelText("E-mail"), "ana@example.com");
+    await click(screen().getByRole("button", { name: /^Continuar(?! com)/ }));
+    await settle(4);
+    await type(screen().getByLabelText("Senha"), "correct horse");
+    await click(screen().getByRole("button", { name: /^Entrar/ }));
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/onboarding");
+    expect(waits()).toBe(true);
   });
 });
 

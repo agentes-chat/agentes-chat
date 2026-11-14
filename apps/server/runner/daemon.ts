@@ -1263,6 +1263,7 @@ export class RunnerDaemon implements RequestObserver {
         locale: this.agents.find((a) => a.id === agent.id)?.locale,
         egress: this.egress.current,
       }),
+      locale: (agent) => this.agents.find((a) => a.id === agent.id)?.locale,
     });
     // Browsers a previous run of this runner left open (a crash, a kill) close now.
     void browser.closeAll();
@@ -1413,6 +1414,7 @@ export class RunnerDaemon implements RequestObserver {
         browserKept: (agentId) => this.holds?.kept(agentId) ?? false,
         account: (agentId) => this.agentAccount(agentId),
         accounts: (agentId) => this.agentAccounts(agentId),
+        locale: (agentId) => this.agents.find((a) => a.id === agentId)?.locale,
         ...(this.opts.workers ? { start: this.opts.workers.start } : { gitCache: rootGitCache() }),
         ...(guard ? { guard } : {}),
         token: config.token,

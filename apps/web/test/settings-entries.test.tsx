@@ -64,7 +64,7 @@ describe("the list", () => {
     if (state.me?.organizations[0]) state.me.organizations[0].role = "member";
     await go("settings/connectors", state);
     expect(rows()).toEqual(["Sua conta", "Pessoas", "IA e uso", "Conectores", "Dispositivos"]);
-    expect(tabs()).toEqual(["Conectores e MCPs", "Cofre"]);
+    expect(tabs()).toEqual(["Conectores e MCPs", "Skills", "Cofre"]);
   });
 
   test("the tile grid is gone from Geral", async () => {
@@ -83,7 +83,8 @@ describe("every old address opens its new home", () => {
     ["general", "Workspace", "Geral"],
     ["media", "Workspace", "GIFs e figurinhas"],
     ["voice", "Workspace", "Voz"],
-    ["members", "Pessoas", undefined],
+    ["members", "Pessoas", "Membros"],
+    ["invites", "Pessoas", "Convites"],
     ["roles", "Cargos", undefined],
     ["usage", "IA e uso", undefined],
     ["connectors", "Conectores", "Conectores e MCPs"],
@@ -106,7 +107,7 @@ describe("every old address opens its new home", () => {
 
   test("the tabs of an entry are its sections, and a tab opens that section's address", async () => {
     const { router } = await go("settings/account");
-    expect(tabs()).toEqual(["Perfil", "Notificações", "Aprovações", "Apps de IA"]);
+    expect(tabs()).toEqual(["Perfil", "Notificações", "Apps do agentes.chat", "Aprovações", "Apps de IA"]);
     await act(async () => fireEvent.mouseDown(screen().getByRole("tab", { name: "Notificações" }), { button: 0 }));
     await settle(6);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/notifications`);

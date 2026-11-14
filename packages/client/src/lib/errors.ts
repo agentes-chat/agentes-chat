@@ -832,6 +832,9 @@ const FIELD_ISSUES = {
 /** The app has its own line for this server code. */
 export const hasWordsFor = (code: string) => Object.hasOwn(KNOWN, code);
 
+/** The server knows no session for this request (401): only signing in again helps. */
+export const sessionEnded = (error: unknown) => error instanceof ApiError && error.status === 401;
+
 /** What the request named isn't there anymore (deleted, archived, or never this person's to see): trying again won't help. */
 export const isGone = (error: unknown) => error instanceof ApiError && (error.status === 404 || error.status === 410);
 

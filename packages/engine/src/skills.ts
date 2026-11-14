@@ -1,5 +1,5 @@
 import type { BlobStoreResolver, PubSub } from "@agenteschat/adapters";
-import { and, asc, type Database, eq, gt, inArray, isNull, lte, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, eq, gt, inArray, isNull, lte, or, type SQL, schema, sql } from "@agenteschat/db";
 import { SKILL_ASSET_BYTES, SKILL_TEXT_BYTES } from "@agenteschat/tokens/skills";
 import { getAgent } from "./agents";
 import { recordAudit } from "./audit";
@@ -12,7 +12,8 @@ import { connectionToken } from "./git/branches";
 import { appTokenForRepo, boundInstallations, type GitHubAppConfig, type GitHubHttp } from "./git/github-app";
 import { assertStorageRoom } from "./limits";
 import { assertPublicHttpsUrl, type ResolveHost } from "./net-guard";
-import { can, requirePermission } from "./organizations";
+import { can, type Membership, requirePermission } from "./organizations";
+import { vaultPersonOfRun } from "./vault/access";
 import { inflateZipEntry, listZip, type ZipListing } from "./zip";
 
 const { skills, skillFiles, agentSkills } = schema;
@@ -262,6 +263,8 @@ export interface SkillView {
   /** `person` or `agent` (promoted from an agent's how-tos, ADR 0120). */
   origin: "person" | "agent";
   ownerAgentId: string | null;
+  /** A personal skill's person; null: the team's. */
+  ownerUserId: string | null;
   locked: boolean;
   useCount: number;
   lastUsedAt: string | null;
@@ -335,6 +338,7 @@ const view = (s: SkillRow): SkillView => ({
   metadata: s.metadata,
   origin: s.origin === "agent" ? "agent" : "person",
   ownerAgentId: s.ownerAgentId,
+  ownerUserId: s.ownerUserId,
   locked: s.locked,
   useCount: s.useCount,
   lastUsedAt: s.lastUsedAt?.toISOString() ?? null,
@@ -440,6 +444,51 @@ export async function loadSkill(db: Database, orgId: string, id: string) {
   return s;
 }
 
+/** The skills of one owner: the team's (`null`), or one person's. Names are unique within each. */
+export const skillsOf = (owner: string | null): SQL =>
+  owner ? eq(skills.ownerUserId, owner) : isNull(skills.ownerUserId);
+
+/**
+ * Who may do what with a skill (the Vault's split, ADR 0144). A personal skill is its person's alone: only they read
+ * or change it. Who manages agents may remove it without reading it, and turn it off for an agent (`setAgentSkills`).
+ * A team skill: every member reads it, who manages agents changes and removes it.
+ */
+export function maySkill(s: Pick<SkillRow, "ownerUserId">, actorId: string, membership: Membership, act: SkillAct) {
+  if (s.ownerUserId) return s.ownerUserId === actorId || (act === "remove" && can(membership, "manage_agents"));
+  return act === "read" || can(membership, "manage_agents");
+}
+
+export type SkillAct = "read" | "change" | "remove";
+
+/** The skill, refused as `maySkill` says: someone else's personal skill reads as missing, so its name isn't told. */
+export async function skillFor(db: Database, actorId: string, orgId: string, id: string, act: SkillAct) {
+  const membership = await requirePermission(db, actorId, orgId, "read");
+  const s = await loadSkill(db, orgId, id);
+  if (maySkill(s, actorId, membership, act)) return s;
+  if (s.ownerUserId && s.ownerUserId !== actorId && act !== "remove") throw new NotFoundError("Skill not found");
+  throw new ForbiddenError("Only people who manage agents can change the team's skills");
+}
+
+/**
+ * Whether skills split into the team's and each person's here: a workspace of one person keeps one library, as
+ * before (its agents' skills stay the team's).
+ */
+export async function personalSkillsOn(db: Database, orgId: string) {
+  const rows = await db
+    .select({ userId: schema.organizationMembers.userId })
+    .from(schema.organizationMembers)
+    .where(eq(schema.organizationMembers.orgId, orgId))
+    .limit(2);
+  return rows.length > 1;
+}
+
+/**
+ * GitHub through the workspace's connections only for who manages agents: a personal install by anyone else reads
+ * public repositories alone, so a member can't copy a private repository of the workspace into a skill of their own.
+ */
+export const githubFor = (deps: SkillDeps, membership: Membership): SkillDeps =>
+  can(membership, "manage_agents") ? deps : { ...deps, github: undefined };
+
 const MB = 1024 * 1024;
 
 /**
@@ -531,8 +580,9 @@ async function storeFiles(
 }
 
 /**
- * Installs or updates a skill from parsed content (admins, `manage_agents`).
- * The same name again is a new version of that skill; every change is audited.
+ * Installs or updates a skill from parsed content: a team skill (`owner` null) by who manages agents, a personal one
+ * by its person. The same name again, among the same owner's, is a new version of that skill; every change is audited.
+ * A new personal skill goes on for its person's own agents (the Vault's "any agent I ask, for me").
  */
 export async function saveSkill(
   deps: SkillDeps,
@@ -546,15 +596,19 @@ export async function saveSkill(
     sourceHash?: string;
     files?: SkillFileInput[];
     defaultForNewAgents?: boolean;
+    /** A personal skill's person (only that person saves it); null or absent: the team's. */
+    owner?: string | null;
   },
 ): Promise<SkillDetail> {
-  await requirePermission(deps.db, actorId, orgId, "manage_agents");
+  const owner = input.owner ?? null;
+  if (owner && owner !== actorId) throw new ForbiddenError("Only its person changes a personal skill");
+  await requirePermission(deps.db, actorId, orgId, owner ? "read" : "manage_agents");
   validateSkill(input);
   const files = await planFiles(deps, orgId, input.files ?? []);
   const [existing] = await deps.db
     .select()
     .from(skills)
-    .where(and(eq(skills.orgId, orgId), eq(skills.slug, input.name)));
+    .where(and(eq(skills.orgId, orgId), eq(skills.slug, input.name), skillsOf(owner)));
   let row: SkillRow;
   if (existing) {
     // Same name: a new version of that skill. A deleted one comes back with its agents' assignments, except from a link
@@ -572,7 +626,9 @@ export async function saveSkill(
         ...(input.sourceHash ? { sourceHash: input.sourceHash } : {}),
         // Incremented in SQL (not from the value read above) so two concurrent saves take distinct versions.
         version: sql`${skills.version} + 1`,
-        ...(input.defaultForNewAgents !== undefined ? { defaultForNewAgents: input.defaultForNewAgents } : {}),
+        ...(input.defaultForNewAgents !== undefined && !owner
+          ? { defaultForNewAgents: input.defaultForNewAgents }
+          : {}),
         deletedAt: null,
         editedSinceSource: false,
         linkBase: null,
@@ -598,12 +654,31 @@ export async function saveSkill(
         sourceUrl: input.sourceUrl ?? null,
         sourceVia: input.sourceVia ?? null,
         sourceHash: input.sourceHash ?? null,
-        defaultForNewAgents: input.defaultForNewAgents ?? false,
+        defaultForNewAgents: owner ? false : (input.defaultForNewAgents ?? false),
         createdByUserId: actorId,
+        ownerUserId: owner,
       })
       .returning();
     if (!created) throw new Error("skill insert returned nothing");
     row = created;
+    if (owner) {
+      const own = await deps.db
+        .select({ id: schema.agents.id })
+        .from(schema.agents)
+        .where(
+          and(
+            eq(schema.agents.orgId, orgId),
+            eq(schema.agents.ownerUserId, owner),
+            isNull(schema.agents.archivedAt),
+            isNull(schema.agents.deletedAt),
+          ),
+        );
+      if (own.length > 0)
+        await deps.db
+          .insert(agentSkills)
+          .values(own.map((a) => ({ orgId, agentId: a.id, skillId: created.id, enabled: true })))
+          .onConflictDoNothing();
+    }
   }
   await storeFiles(deps, row, row.version, files);
   await recordAudit(deps.db, {
@@ -617,14 +692,21 @@ export async function saveSkill(
       source: row.source,
       sourceUrl: row.sourceUrl,
       ...(row.sourceVia ? { sourceVia: row.sourceVia } : {}),
+      ...(owner ? { personal: true } : {}),
     },
   });
   return skillDetail(deps.db, row);
 }
 
-/** Import from a zip of the skill folder (`SKILL.md` + files). */
-export async function importSkillZip(deps: SkillDeps, actorId: string, orgId: string, zip: Uint8Array) {
-  await requirePermission(deps.db, actorId, orgId, "manage_agents");
+/** Import from a zip of the skill folder (`SKILL.md` + files); `personal`: the actor's own skill. */
+export async function importSkillZip(
+  deps: SkillDeps,
+  actorId: string,
+  orgId: string,
+  zip: Uint8Array,
+  options: { personal?: boolean } = {},
+) {
+  await requirePermission(deps.db, actorId, orgId, options.personal ? "read" : "manage_agents");
   const entries = listZip(zip).filter((e) => !e.symlink);
   return saveSkill(deps, actorId, orgId, {
     ...repositorySkill(
@@ -633,6 +715,7 @@ export async function importSkillZip(deps: SkillDeps, actorId: string, orgId: st
       entries.map((e) => [e.path, e]),
     ),
     source: "upload",
+    owner: options.personal ? actorId : null,
   });
 }
 
@@ -1167,20 +1250,22 @@ export interface SkillPick {
  * name is already installed makes a new version. A private repository is read through the workspace's GitHub (the
  * GitHub App, else the connection): installing skills (`manage_agents`) is what lets a person read through it.
  * `through`: that connection first, with no read without credentials (a skill updated from the link it came from).
- * `forAgentId`: the agent whose card opened the install (`turnOnFor`).
+ * `forAgentId`: the agent whose card opened the install (`turnOnFor`). `personal`: the actor's own skill, which any
+ * member installs, from a public repository unless they manage agents (`githubFor`).
  */
 export async function importSkillFromUrl(
   deps: SkillDeps,
   actorId: string,
   orgId: string,
   url: string,
-  options: { list?: boolean; through?: SkillVia | null; forAgentId?: string } = {},
+  options: { list?: boolean; through?: SkillVia | null; forAgentId?: string; personal?: boolean } = {},
 ): Promise<SkillDetail | SkillPick> {
-  await requirePermission(deps.db, actorId, orgId, "manage_agents");
-  const link = await readGithubLink(deps, orgId, url, options.through);
+  const membership = await requirePermission(deps.db, actorId, orgId, options.personal ? "read" : "manage_agents");
+  const owner = options.personal ? actorId : null;
+  const link = await readGithubLink(githubFor(deps, membership), orgId, url, options.through);
   const [only, ...more] = link.found.keys();
   if (!options.list && only !== undefined && more.length === 0) {
-    const skill = await saveSkill(deps, actorId, orgId, link.skillAt(only));
+    const skill = await saveSkill(deps, actorId, orgId, { ...link.skillAt(only), owner });
     await turnOnFor(deps, actorId, orgId, options.forAgentId, [skill.id]);
     return skill;
   }
@@ -1204,6 +1289,7 @@ export async function importSkillFromUrl(
     .where(
       and(
         eq(skills.orgId, orgId),
+        skillsOf(owner),
         inArray(
           skills.slug,
           choices.map((c) => c.name),
@@ -1249,10 +1335,10 @@ export async function importPickedSkills(
   orgId: string,
   url: string,
   paths: string[],
-  options: { forAgentId?: string } = {},
+  options: { forAgentId?: string; personal?: boolean } = {},
 ) {
-  await requirePermission(deps.db, actorId, orgId, "manage_agents");
-  const link = await readGithubLink(deps, orgId, url);
+  const membership = await requirePermission(deps.db, actorId, orgId, options.personal ? "read" : "manage_agents");
+  const link = await readGithubLink(githubFor(deps, membership), orgId, url);
   /** A refusal names the skill's folder. */
   const named = <T>(dir: string, read: () => T) => {
     try {
@@ -1274,12 +1360,10 @@ export async function importPickedSkills(
   const installed: SkillDetail[] = [];
   for (const dir of dirs) {
     installed.push(
-      await saveSkill(
-        deps,
-        actorId,
-        orgId,
-        named(dir, () => link.skillAt(dir)),
-      ),
+      await saveSkill(deps, actorId, orgId, {
+        ...named(dir, () => link.skillAt(dir)),
+        owner: options.personal ? actorId : null,
+      }),
     );
   }
   await turnOnFor(
@@ -1341,22 +1425,36 @@ export async function readSkillSource(deps: SkillDeps, s: SkillRow) {
  * workspace no longer has the first and the other can't read it).
  */
 export async function reimportSkill(deps: SkillDeps, actorId: string, orgId: string, id: string) {
-  const s = await loadSkill(deps.db, orgId, id);
+  const s = await skillFor(deps.db, actorId, orgId, id, "change");
   if (!s.sourceUrl) throw new ValidationError("This skill wasn't imported from a URL");
   const through = s.sourceVia as SkillVia | null;
-  const again = await importSkillFromUrl(deps, actorId, orgId, s.sourceUrl, { through });
+  const again = await importSkillFromUrl(deps, actorId, orgId, s.sourceUrl, {
+    through,
+    personal: s.ownerUserId !== null,
+  });
   if ("choices" in again) {
     throw new ValidationError("Its link holds several skills now. Install this one again from its own folder.");
   }
   return again;
 }
 
-export async function listSkills(db: Database, actorId: string, orgId: string) {
-  await requirePermission(db, actorId, orgId, "read");
+/**
+ * The team's skills and the actor's own personal ones. `others`: also everyone else's personal skills, for who manages
+ * agents (Skills' "Pessoais de outras pessoas"), with only their name, person and agents (`othersView`).
+ */
+export async function listSkills(db: Database, actorId: string, orgId: string, options: { others?: boolean } = {}) {
+  const membership = await requirePermission(db, actorId, orgId, "read");
+  const others = options.others === true && can(membership, "manage_agents");
   const rows = await db
     .select()
     .from(skills)
-    .where(and(eq(skills.orgId, orgId), isNull(skills.deletedAt)))
+    .where(
+      and(
+        eq(skills.orgId, orgId),
+        isNull(skills.deletedAt),
+        others ? undefined : or(isNull(skills.ownerUserId), eq(skills.ownerUserId, actorId)),
+      ),
+    )
     .orderBy(asc(skills.name));
   const counts = await db
     .select({ skillId: agentSkills.skillId, n: sql<number>`count(*)::int` })
@@ -1366,12 +1464,18 @@ export async function listSkills(db: Database, actorId: string, orgId: string) {
     .groupBy(agentSkills.skillId);
   const byId = new Map(counts.map((c) => [c.skillId, Number(c.n)]));
   /** How many active agents have each skill on. */
-  return rows.map((r) => ({ ...view(r), agentsCount: byId.get(r.id) ?? 0 }));
+  return rows.map((r) => ({ ...othersView(r, actorId), agentsCount: byId.get(r.id) ?? 0 }));
+}
+
+/** A skill as `actorId` may see it: someone else's personal skill shows its name and person only, never its text. */
+function othersView(s: SkillRow, actorId: string): SkillView {
+  const v = view(s);
+  if (!s.ownerUserId || s.ownerUserId === actorId) return v;
+  return { ...v, description: "", sourceUrl: null, sourceVia: null, metadata: {}, pendingUpdate: null };
 }
 
 export async function getSkill(db: Database, actorId: string, orgId: string, id: string): Promise<SkillDetail> {
-  await requirePermission(db, actorId, orgId, "read");
-  return skillDetail(db, await loadSkill(db, orgId, id));
+  return skillDetail(db, await skillFor(db, actorId, orgId, id, "read"));
 }
 
 /** Edits by hand (a new version); renaming isn't allowed (the name is the skill's identity). */
@@ -1382,9 +1486,9 @@ export async function updateSkill(
   id: string,
   input: { description?: string; body?: string; defaultForNewAgents?: boolean },
 ) {
-  const s = await loadSkill(deps.db, orgId, id);
+  const s = await skillFor(deps.db, actorId, orgId, id, "change");
   if (input.description === undefined && input.body === undefined && input.defaultForNewAgents !== undefined) {
-    await requirePermission(deps.db, actorId, orgId, "manage_agents");
+    if (s.ownerUserId) throw new ValidationError("A personal skill goes on for its person's agents only");
     await deps.db
       .update(skills)
       .set({ defaultForNewAgents: input.defaultForNewAgents, updatedAt: new Date() })
@@ -1399,12 +1503,12 @@ export async function updateSkill(
     source: "manual",
     sourceUrl: s.sourceUrl,
     defaultForNewAgents: input.defaultForNewAgents,
+    owner: s.ownerUserId,
   });
 }
 
 export async function deleteSkill(db: Database, actorId: string, orgId: string, id: string) {
-  await requirePermission(db, actorId, orgId, "manage_agents");
-  const s = await loadSkill(db, orgId, id);
+  const s = await skillFor(db, actorId, orgId, id, "remove");
   // Soft delete: agents stop seeing it at once. Their assignments come back when it is restored or saved again under
   // its name, except by an install from a link (`saveSkill`).
   await db.update(skills).set({ deletedAt: new Date() }).where(eq(skills.id, s.id));
@@ -1534,8 +1638,7 @@ export async function setSkillAgentsImprove(
   id: string,
   on: boolean | null,
 ) {
-  await requirePermission(db, actorId, orgId, "manage_agents");
-  const s = await loadSkill(db, orgId, id);
+  const s = await skillFor(db, actorId, orgId, id, "change");
   const [row] = await db.update(skills).set({ agentsImprove: on }).where(eq(skills.id, s.id)).returning();
   await recordAudit(db, {
     orgId,
@@ -1556,7 +1659,10 @@ async function mayChangeAgentSkill(db: Database, actorId: string, orgId: string,
 }
 
 export async function requireAgentSkillChange(db: Database, actorId: string, orgId: string, s: SkillRow) {
-  if (s.origin !== "agent") await requirePermission(db, actorId, orgId, "manage_agents");
+  if (s.ownerUserId) {
+    await requirePermission(db, actorId, orgId, "read");
+    if (s.ownerUserId !== actorId) throw new NotFoundError("Skill not found");
+  } else if (s.origin !== "agent") await requirePermission(db, actorId, orgId, "manage_agents");
   else if (!(await mayChangeAgentSkill(db, actorId, orgId, s.ownerAgentId)))
     throw new ForbiddenError("Only the agent's owner or an admin can change this");
 }
@@ -1612,7 +1718,14 @@ export async function agentMadeSkills(db: Database, actorId: string, orgId: stri
   const rows = await db
     .select()
     .from(skills)
-    .where(and(eq(skills.orgId, orgId), eq(skills.origin, "agent"), eq(skills.ownerAgentId, agentId)))
+    .where(
+      and(
+        eq(skills.orgId, orgId),
+        eq(skills.origin, "agent"),
+        eq(skills.ownerAgentId, agentId),
+        or(isNull(skills.ownerUserId), eq(skills.ownerUserId, actorId)),
+      ),
+    )
     .orderBy(sql`${skills.createdAt} desc`);
   // Each skill's latest change of its own not undone: Desfazer only while the body is still what it left.
   const changes = rows.length
@@ -1656,19 +1769,24 @@ export async function agentMadeSkills(db: Database, actorId: string, orgId: stri
   }));
 }
 
-/** The org's skills with whether this agent has each one on. */
+/**
+ * The skills the actor sees with whether this agent has each one on, and someone else's personal skill while it is on
+ * for this agent (name and person only), so who manages agents can turn it off.
+ */
 export async function agentSkillList(db: Database, actorId: string, orgId: string, agentId: string) {
   await requirePermission(db, actorId, orgId, "read");
   if (!(await getAgent(db, orgId, agentId))) throw new NotFoundError("Agent not found");
   const [all, mine] = await Promise.all([
-    listSkills(db, actorId, orgId),
+    listSkills(db, actorId, orgId, { others: true }),
     db
       .select()
       .from(agentSkills)
       .where(and(eq(agentSkills.orgId, orgId), eq(agentSkills.agentId, agentId))),
   ]);
   const on = new Map(mine.map((m) => [m.skillId, m.enabled]));
-  return all.map((s) => ({ ...s, enabled: on.get(s.id) ?? false }));
+  return all
+    .map((s) => ({ ...s, enabled: on.get(s.id) ?? false }))
+    .filter((s) => !s.ownerUserId || s.ownerUserId === actorId || s.enabled);
 }
 
 /** Turns skills on or off for an agent (admins or its owner). */
@@ -1688,10 +1806,15 @@ export async function setAgentSkills(
   const ids = [...new Set(input.map((i) => i.skillId))];
   if (ids.length > 0) {
     const found = await db
-      .select({ id: skills.id })
+      .select({ id: skills.id, ownerUserId: skills.ownerUserId, enabled: agentSkills.enabled })
       .from(skills)
+      .leftJoin(agentSkills, and(eq(agentSkills.skillId, skills.id), eq(agentSkills.agentId, agentId)))
       .where(and(eq(skills.orgId, orgId), inArray(skills.id, ids), isNull(skills.deletedAt)));
     if (found.length !== ids.length) throw new ValidationError("Every skill must belong to this organization");
+    // Someone else's personal skill may be turned off here, never on: only its person gives it to an agent.
+    const others = new Map(found.filter((f) => f.ownerUserId && f.ownerUserId !== actorId).map((f) => [f.id, f]));
+    if (input.some((i) => i.enabled && others.has(i.skillId) && others.get(i.skillId)?.enabled !== true))
+      throw new ForbiddenError("Only its person turns a personal skill on for an agent");
   }
   for (const i of input) {
     await db
@@ -1709,10 +1832,35 @@ export async function setAgentSkills(
   return agentSkillList(db, actorId, orgId, agentId);
 }
 
-/** The agent's enabled skills (name and description only: the body loads on demand). */
-export async function enabledSkills(db: Database, orgId: string, agentId: string) {
-  return db
-    .select({ id: skills.id, name: skills.name, description: skills.description, version: skills.version })
+/**
+ * Of skills on for an agent, those a run may use: the team's, and the personal skills of the person behind it (the
+ * Vault's person of a run, ADR 0144), whose own wins over a team skill of the same name. The person is looked up only
+ * when a personal skill is among them. No run (`runId` absent): the team's alone.
+ */
+async function usableInRun<T extends { name: string; ownerUserId: string | null }>(
+  db: Database,
+  run: { orgId: string; agentId: string; runId?: string | null },
+  rows: T[],
+): Promise<T[]> {
+  if (!rows.some((r) => r.ownerUserId)) return rows;
+  const person = run.runId
+    ? (await vaultPersonOfRun(db, { orgId: run.orgId, agentId: run.agentId, runId: run.runId })).personId
+    : null;
+  const usable = rows.filter((r) => !r.ownerUserId || r.ownerUserId === person);
+  const personal = new Set(usable.filter((r) => r.ownerUserId).map((r) => r.name));
+  return usable.filter((r) => r.ownerUserId || !personal.has(r.name));
+}
+
+/** The agent's enabled skills a run may use (name and description only: the body loads on demand). */
+export async function enabledSkills(db: Database, orgId: string, agentId: string, runId?: string | null) {
+  const rows = await db
+    .select({
+      id: skills.id,
+      name: skills.name,
+      description: skills.description,
+      version: skills.version,
+      ownerUserId: skills.ownerUserId,
+    })
     .from(agentSkills)
     .innerJoin(skills, eq(skills.id, agentSkills.skillId))
     .where(
@@ -1725,11 +1873,18 @@ export async function enabledSkills(db: Database, orgId: string, agentId: string
       ),
     )
     .orderBy(asc(skills.name));
+  return (await usableInRun(db, { orgId, agentId, runId }, rows)).map(({ ownerUserId: _o, ...s }) => s);
 }
 
-/** A skill this agent has on, by name, with its files (for `load_skill` / `read_skill_file`). */
-export async function agentSkillByName(db: Database, orgId: string, agentId: string, name: string) {
-  const [row] = await db
+/** A skill this agent has on and the run may use (`usableInRun`), by name (for `load_skill` / `read_skill_file`). */
+export async function agentSkillByName(
+  db: Database,
+  orgId: string,
+  agentId: string,
+  name: string,
+  runId?: string | null,
+) {
+  const rows = await db
     .select({ skill: skills })
     .from(agentSkills)
     .innerJoin(skills, eq(skills.id, agentSkills.skillId))
@@ -1743,7 +1898,12 @@ export async function agentSkillByName(db: Database, orgId: string, agentId: str
         isNull(skills.deletedAt),
       ),
     );
-  return row?.skill ?? null;
+  const [usable] = await usableInRun(
+    db,
+    { orgId, agentId, runId },
+    rows.map((r) => r.skill),
+  );
+  return usable ?? null;
 }
 
 /**
@@ -1804,8 +1964,7 @@ export async function getSkillFile(
   path: string,
   version?: number,
 ) {
-  await requirePermission(deps.db, actorId, orgId, "read");
-  const s = await loadSkill(deps.db, orgId, skillId);
+  const s = await skillFor(deps.db, actorId, orgId, skillId, "read");
   const text = await skillFileText(deps, s, path, version ?? s.version);
   const { mime } = classifyFile(path);
   return { path, version: version ?? s.version, mime, content: text };

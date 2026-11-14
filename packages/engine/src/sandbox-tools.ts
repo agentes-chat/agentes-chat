@@ -1271,7 +1271,7 @@ export function createSandboxToolSource(
       }),
       async execute(input, ctx) {
         try {
-          const skill = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, str(input.skill));
+          const skill = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, str(input.skill), ctx.runId);
           if (!skill) return { content: `No skill named ${str(input.skill)} is enabled for you.`, isError: true };
           const listed = await skillFilesOf(ctx.db, skill);
           const target = listed.find((f) => f.path === toolPath(str(input.path), computerInfo));

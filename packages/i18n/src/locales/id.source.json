@@ -2,6 +2,9 @@
   "app.name": {
     "value": "agentes"
   },
+  "app.tabTitle": {
+    "value": "agentes.chat · Your team and your agents, in the same conversation"
+  },
   "common.close": {
     "value": "Close"
   },
@@ -1823,11 +1826,23 @@
       "other": "{{names}} work there"
     }
   },
+  "invite.crewYours": {
+    "value": {
+      "one": "{{names}} will work with you",
+      "other": "{{names}} will work with you"
+    }
+  },
   "invite.hello": {
     "value": "Hi. {{name}} invited you to {{org}}."
   },
   "invite.helloNoName": {
     "value": "Hi. {{org}} invited you."
+  },
+  "invite.helloAs": {
+    "value": "Hi. {{name}} invited you to {{org}}, as {{roles}}."
+  },
+  "invite.helloAsNoName": {
+    "value": "Hi. {{org}} invited you, as {{roles}}."
   },
   "invite.nameLead": {
     "value": "First: what does the team call you?"
@@ -1843,6 +1858,12 @@
   },
   "invite.calledYouNoName": {
     "value": "{{org}} invited you."
+  },
+  "invite.calledYouAs": {
+    "value": "{{name}} invited you to {{org}}, as {{roles}}."
+  },
+  "invite.calledYouAsNoName": {
+    "value": "{{org}} invited you, as {{roles}}."
   },
   "invite.signedInLead": {
     "value": "You're signed in as {{email}}. Just join."
@@ -2071,6 +2092,15 @@
   },
   "invite.ask.closedText": {
     "value": "Ask whoever sent it for a new one."
+  },
+  "invite.ask.fullTitle": {
+    "value": "This link already took everyone it could."
+  },
+  "invite.ask.fullLead": {
+    "value": "Ask {{name}} for a new link."
+  },
+  "invite.ask.fullLeadNoName": {
+    "value": "Ask whoever sent it for a new link."
   },
   "invite.ask.hello": {
     "value": "Hi. This is {{org}}'s invitation."
@@ -3584,6 +3614,9 @@
   "onboarding.keyInvalid.openrouter": {
     "value": "OpenRouter keys start with sk-or-v1-. Check it and paste it again."
   },
+  "onboarding.keyInvalid.commandcode": {
+    "value": "Paste the whole Command Code key, with no spaces. Check it and paste it again."
+  },
   "onboarding.keyFromOther": {
     "value": "Is it from another provider?"
   },
@@ -4333,6 +4366,45 @@
   },
   "appIcon.agentsOf": {
     "value": "Agents in {{org}}"
+  },
+  "appIcon.yours": {
+    "value": "Your icon"
+  },
+  "appIcon.readyOne": {
+    "value": "Ready-made"
+  },
+  "appIcon.use": {
+    "value": "Use this icon"
+  },
+  "appIcon.inUse": {
+    "value": "In use"
+  },
+  "appIcon.sky": {
+    "value": "Background"
+  },
+  "appIcon.expression": {
+    "value": "Expression"
+  },
+  "appIcon.ready": {
+    "value": "Ready-made"
+  },
+  "appIcon.oneOrOther": {
+    "value": "With an accessory, the expression stays the plain one."
+  },
+  "appIcon.faces.wink": {
+    "value": "Winking"
+  },
+  "appIcon.faces.heart": {
+    "value": "Hearts"
+  },
+  "appIcon.faces.star": {
+    "value": "Stars"
+  },
+  "appIcon.faces.surprised": {
+    "value": "Surprised"
+  },
+  "appIcon.faces.angry": {
+    "value": "Angry"
   },
   "appIcon.names.night": {
     "value": "Night"
@@ -5284,6 +5356,30 @@
   },
   "sidebarPins.full.people": {
     "value": "You already pinned 5 people. Unpin one to pin this one."
+  },
+  "appsDownload.computer": {
+    "value": "Computer"
+  },
+  "appsDownload.computerText": {
+    "value": "Your workspace in a window of its own, with the system's notifications."
+  },
+  "appsDownload.inApp": {
+    "value": "You're already in the computer app."
+  },
+  "appsDownload.howTo": {
+    "value": "How to install"
+  },
+  "appsDownload.phone": {
+    "value": "Phone"
+  },
+  "appsDownload.phoneText": {
+    "value": "Notifications in your pocket, to answer from anywhere."
+  },
+  "appsDownload.appStore": {
+    "value": "App Store"
+  },
+  "appsDownload.googlePlay": {
+    "value": "Google Play"
   },
   "openOnPhone.qr": {
     "value": "QR code to sign in to the agentes app"
@@ -7988,7 +8084,7 @@
     "value": "Turn on billing for the key's project. Without billing, Google may use what your agents send."
   },
   "connectAi.key.privacy": {
-    "value": "Your OpenRouter privacy settings decide which providers may keep what your agents send."
+    "value": "{{provider}} passes what your agents send to the company that makes or hosts the model, under {{provider}}'s privacy terms and settings."
   },
   "connectAi.wait.signIn": {
     "value": "You sign in here as soon as the computer is ready."
@@ -8148,6 +8244,12 @@
   },
   "connectAi.accountsLocked": {
     "value": "Only {{name}} connects a plan on {{computer}}."
+  },
+  "connectAi.connectMine": {
+    "value": "Connect my computer"
+  },
+  "connectAi.makeAgent": {
+    "value": "Create an agent with this plan"
   },
   "connectAi.later": {
     "value": "Connect later"
@@ -8854,6 +8956,9 @@
   "agentActions.skill.created": {
     "value": "Turned what I learned into the skill <b>{{name}}</b>"
   },
+  "agentActions.skill.created_asked": {
+    "value": "Created the skill <b>{{name}}</b>"
+  },
   "agentActions.skill.updated": {
     "value": "Fixed the skill <b>{{name}}</b>"
   },
@@ -9096,6 +9201,9 @@
   },
   "agentActions.several.skill.created": {
     "value": "Turned what I learned into the skills {{refs}}"
+  },
+  "agentActions.several.skill.created_asked": {
+    "value": "Created the skills {{refs}}"
   },
   "agentActions.several.skill.updated": {
     "value": "Fixed the skills {{refs}}"
@@ -11443,7 +11551,7 @@
     "value": "Always in this routine"
   },
   "approval.always.thisRoutine": {
-    "value": "this routine"
+    "value": "This routine"
   },
   "approval.always.noteRoutine": {
     "value": "{{routine}} does {{actions}} on its own from now on, with any values. Outside this routine it still asks. To undo: the routine's settings."
@@ -17388,7 +17496,7 @@
     "value": "You're no longer part of {{org}}"
   },
   "members.remove.goneText": {
-    "value": "Your access to this workspace ended. To come back, ask someone there for a new invite."
+    "value": "Your access ended. To come back, ask for a new invitation."
   },
   "members.chips.check": {
     "value": "check"
@@ -17413,21 +17521,6 @@
   },
   "members.dialog.titlePersonal": {
     "value": "Invite someone to your workspace"
-  },
-  "members.dialog.stepOf": {
-    "value": "Step {{n}} of {{total}} · {{step}}"
-  },
-  "members.dialog.steps.who": {
-    "value": "Who"
-  },
-  "members.dialog.steps.role": {
-    "value": "Role"
-  },
-  "members.dialog.steps.where": {
-    "value": "Where they start"
-  },
-  "members.dialog.steps.note": {
-    "value": "Note"
   },
   "members.dialog.emails": {
     "value": "Emails"
@@ -17468,9 +17561,6 @@
   "members.dialog.or": {
     "value": "or send the link"
   },
-  "members.dialog.continueWith": {
-    "value": "Continue with {{count}}"
-  },
   "members.dialog.send": {
     "value": {
       "one": "Invite {{count}} person",
@@ -17486,12 +17576,6 @@
   "members.dialog.alsoIn": {
     "value": "They also join {{channels}}."
   },
-  "members.dialog.who.title": {
-    "value": "Who do you want to bring in?"
-  },
-  "members.dialog.who.lead": {
-    "value": "Give me their emails. Each person gets an invitation and joins directly."
-  },
   "members.dialog.orLink.title": {
     "value": "Rather send a link?"
   },
@@ -17501,35 +17585,11 @@
   "members.dialog.orLink.open": {
     "value": "See the link"
   },
-  "members.dialog.role.titleOne": {
-    "value": "What role does {{name}} join with?"
-  },
-  "members.dialog.role.titleMany": {
-    "value": "What role do these people join with?"
-  },
-  "members.dialog.role.lead": {
-    "value": "The role says what each person can do. You can change it later."
-  },
-  "members.dialog.role.each": {
-    "value": "A role for each person"
-  },
-  "members.dialog.role.same": {
-    "value": "The same role for everyone"
-  },
   "members.dialog.role.titleOnePersonal": {
     "value": "What can {{name}} do here?"
   },
-  "members.dialog.role.titleManyPersonal": {
-    "value": "What can they do here?"
-  },
   "members.dialog.role.leadPersonal": {
     "value": "You can change it later."
-  },
-  "members.dialog.role.eachPersonal": {
-    "value": "A choice for each person"
-  },
-  "members.dialog.role.samePersonal": {
-    "value": "The same for everyone"
   },
   "members.dialog.role.uses": {
     "value": "Uses the agents"
@@ -17543,36 +17603,6 @@
   "members.dialog.role.helpsText": {
     "value": "Can change agents, settings and who's here, as you can. Sees everything shared here, except your direct messages."
   },
-  "members.dialog.reach.line": {
-    "value": {
-      "one": "<agents/> will answer whoever joins.",
-      "other": "<agents/> will answer whoever joins."
-    }
-  },
-  "members.dialog.where.titleOne": {
-    "value": "Which channels does {{name}} join right away?"
-  },
-  "members.dialog.where.titleMany": {
-    "value": "Which channels do these people join right away?"
-  },
-  "members.dialog.where.titleOnePersonal": {
-    "value": "Which group conversations does {{name}} join right away?"
-  },
-  "members.dialog.where.titleManyPersonal": {
-    "value": "Which group conversations do these people join right away?"
-  },
-  "members.dialog.where.lead": {
-    "value": "Everyone starts in #{{channel}}. You pick the others."
-  },
-  "members.dialog.where.label": {
-    "value": "Channels"
-  },
-  "members.dialog.where.labelPersonal": {
-    "value": "Group conversations"
-  },
-  "members.dialog.where.everyone": {
-    "value": "Everyone joins"
-  },
   "members.dialog.where.private": {
     "value": "Private · you're in it"
   },
@@ -17581,75 +17611,6 @@
       "one": "{{count}} person",
       "other": "{{count}} people"
     }
-  },
-  "members.dialog.where.fromChannel": {
-    "value": "#{{channel}} comes checked: you invited from there."
-  },
-  "members.dialog.noteStep.title": {
-    "value": "Want me to say something in the invitation?"
-  },
-  "members.dialog.noteStep.lead": {
-    "value": "It goes in the email. If not, I'll send it as it is."
-  },
-  "members.dialog.mailFor": {
-    "value": "This is how it reaches {{names}}"
-  },
-  "members.dialog.mail.from": {
-    "value": "agentes.chat · to {{to}}"
-  },
-  "members.dialog.mail.toMany": {
-    "value": "{{email}} and {{count}} more"
-  },
-  "members.dialog.mail.subject": {
-    "value": "You're invited to a workspace on agentes.chat"
-  },
-  "members.dialog.mail.headline": {
-    "value": "You're invited to a workspace"
-  },
-  "members.dialog.mail.body": {
-    "value": "<b>{{name}}</b> ({{email}}) invited you to join <b>{{org}}</b> as a member."
-  },
-  "members.dialog.mail.noteFrom": {
-    "value": "<b>{{name}}:</b> “{{note}}”"
-  },
-  "members.dialog.mail.what": {
-    "value": "agentes.chat is where people and AI agents work together."
-  },
-  "members.dialog.mail.button": {
-    "value": "Accept invitation"
-  },
-  "members.dialog.mail.small": {
-    "value": "The invitation works for 7 days. Accept it with this email address."
-  },
-  "members.dialog.done.title": {
-    "value": "Done, I sent the invitation to {{names}}."
-  },
-  "members.dialog.done.leadOne": {
-    "value": "When {{name}} joins, I'll greet them in {{channels}} and let you know."
-  },
-  "members.dialog.done.leadMany": {
-    "value": "When each person joins, I'll greet them in {{channels}} and let you know."
-  },
-  "members.dialog.done.none": {
-    "value": "No invitation went out this time."
-  },
-  "members.dialog.done.noneLead": {
-    "value": "Each address's reason is below."
-  },
-  "members.dialog.result.invited": {
-    "value": "Sent"
-  },
-  "members.dialog.result.already_member": {
-    "value": "already in {{org}}"
-  },
-  "members.dialog.result.already_memberPersonal": {
-    "value": "already here"
-  },
-  "members.dialog.result.already_invited": {
-    "value": "already had an invitation"
-  },
-  "members.dialog.result.invalid_email": {
-    "value": "invalid email"
   },
   "members.dialog.again": {
     "value": "Invite more people"
@@ -17809,12 +17770,12 @@
   },
   "members.suggest.sent": {
     "value": {
-      "one": "Suggestion sent. {{names}} sees it in Members and invitations.",
-      "other": "Suggestion sent. {{names}} see it in Members and invitations."
+      "one": "Suggestion sent. {{names}} sees it in Invitations.",
+      "other": "Suggestion sent. {{names}} see it in Invitations."
     }
   },
   "members.suggest.sentNoNames": {
-    "value": "Suggestion sent. Whoever invites sees it in Members and invitations."
+    "value": "Suggestion sent. Whoever invites sees it in Invitations."
   },
   "members.suggest.refused.invalid": {
     "value": "Check the email: something like name@company.com."
@@ -17851,6 +17812,9 @@
   },
   "members.arrival.lead": {
     "value": "Here the team and the agents work together: write in #{{channel}} or call an agent by name."
+  },
+  "members.arrival.alsoIn": {
+    "value": "You're also in {{channels}}."
   },
   "members.arrival.sayHi": {
     "value": "Say hi in #{{channel}}"
@@ -18012,6 +17976,313 @@
   "members.noAgents": {
     "value": "No agents yet."
   },
+  "invites.how": {
+    "value": "How to invite"
+  },
+  "invites.byEmail": {
+    "value": "Email"
+  },
+  "invites.byLink": {
+    "value": "Link"
+  },
+  "invites.to": {
+    "value": "To"
+  },
+  "invites.role": {
+    "value": "Role"
+  },
+  "invites.roleHint": {
+    "value": "What the person can do. Roles add to what Everyone can. Only for people."
+  },
+  "invites.rolePersonal": {
+    "value": "Can"
+  },
+  "invites.rolesFoot": {
+    "value": "Roles add to what Everyone can. The role's channels and agents come ticked."
+  },
+  "invites.channels": {
+    "value": "Channels"
+  },
+  "invites.channelsPersonal": {
+    "value": "Conversations"
+  },
+  "invites.channelsHint": {
+    "value": "Where the person starts. The role's channels come ticked."
+  },
+  "invites.channelsHintPersonal": {
+    "value": "Where the person starts."
+  },
+  "invites.agents": {
+    "value": "Agents"
+  },
+  "invites.agentsHint": {
+    "value": "Who the person works with. They sit at the top of their list. A restricted agent starts answering them."
+  },
+  "invites.addChannel": {
+    "value": "Add a channel…"
+  },
+  "invites.addChannelPersonal": {
+    "value": "Add a conversation…"
+  },
+  "invites.addAgent": {
+    "value": "Add an agent…"
+  },
+  "invites.noChannel": {
+    "value": "No channel matches “{{query}}”."
+  },
+  "invites.noChannels": {
+    "value": "No other channels yet."
+  },
+  "invites.noAgent": {
+    "value": "No agent matches “{{query}}”."
+  },
+  "invites.noAgents": {
+    "value": "No other agents yet."
+  },
+  "invites.general": {
+    "value": "Everyone joins #{{channel}}."
+  },
+  "invites.rightHand": {
+    "value": "Everyone has {{name}}."
+  },
+  "invites.fromRole": {
+    "value": "Comes with the {{role}} role."
+  },
+  "invites.fromChannel": {
+    "value": "You invited from here."
+  },
+  "invites.groupRole": {
+    "value": {
+      "one": "From the {{roles}} role",
+      "other": "From the {{roles}} roles"
+    }
+  },
+  "invites.agent.byRole": {
+    "value": "Through the {{role}} role"
+  },
+  "invites.agent.opens": {
+    "value": "Restricted · you let them in"
+  },
+  "invites.agent.locked": {
+    "value": "Restricted · only {{name}} lets people in"
+  },
+  "invites.agent.lockedNoOwner": {
+    "value": "Restricted · only admins let people in"
+  },
+  "invites.agent.mailbox": {
+    "value": "Reads {{names}}'s email"
+  },
+  "invites.agent.mailboxHint": {
+    "value": "Opening it to more people takes that access away. Decide on the agent's page."
+  },
+  "invites.agent.plan": {
+    "value": "Only answers {{name}}"
+  },
+  "invites.agent.planMine": {
+    "value": "Only answers you"
+  },
+  "invites.agent.rightHand": {
+    "value": "Everyone has {{name}}"
+  },
+  "invites.opens": {
+    "value": {
+      "one": "{{names}} starts answering whoever joins through this invitation.",
+      "other": "{{names}} start answering whoever joins through this invitation."
+    }
+  },
+  "invites.noTalk": {
+    "value": "With this role, the person doesn't talk to agents."
+  },
+  "invites.admin": {
+    "value": "With {{role}}, the person sees every agent."
+  },
+  "invites.offline": {
+    "value": "Couldn't reach the server. Nothing was sent."
+  },
+  "invites.refused.channelArchived": {
+    "value": "#{{channel}} was archived. Remove the channel to send."
+  },
+  "invites.refused.channelLeft": {
+    "value": "You're no longer in #{{channel}}. Remove the channel to send."
+  },
+  "invites.refused.channelGone": {
+    "value": "One of the channels no longer exists. Remove the marked one to send."
+  },
+  "invites.refused.agentGone": {
+    "value": "{{name}} left the team. Remove them from the invitation to send."
+  },
+  "invites.refused.agentLocked": {
+    "value": "You can no longer let people talk to {{name}}. Remove them from the invitation to send."
+  },
+  "invites.refused.agentUnnamed": {
+    "value": "One of the agents left the team. Take out the marked one to send."
+  },
+  "invites.refused.role": {
+    "value": "You can no longer give the {{role}} role. Pick another."
+  },
+  "invites.refused.roleMany": {
+    "value": "You can no longer give one of these roles. Pick others."
+  },
+  "invites.link": {
+    "value": "Link"
+  },
+  "invites.linkEmpty": {
+    "value": "Make the link to copy it"
+  },
+  "invites.linkFailed": {
+    "value": "Couldn't make the link. {{cause}}"
+  },
+  "invites.never": {
+    "value": "Never expires"
+  },
+  "invites.untilDate": {
+    "value": "Until {{date}}"
+  },
+  "invites.validFor": {
+    "value": "Works for {{ttl}} once made."
+  },
+  "invites.expiresIn": {
+    "value": "Expires after"
+  },
+  "invites.maxUses": {
+    "value": "Most people"
+  },
+  "invites.onJoin": {
+    "value": "On joining"
+  },
+  "invites.theLink": {
+    "value": "The link"
+  },
+  "invites.ttl.30m": {
+    "value": "30 minutes"
+  },
+  "invites.ttl.1h": {
+    "value": "1 hour"
+  },
+  "invites.ttl.1d": {
+    "value": "1 day"
+  },
+  "invites.ttl.7d": {
+    "value": "7 days"
+  },
+  "invites.ttl.30d": {
+    "value": "30 days"
+  },
+  "invites.ttl.never": {
+    "value": "Never expires"
+  },
+  "invites.people": {
+    "value": {
+      "one": "{{count}} person",
+      "other": "{{count}} people"
+    }
+  },
+  "invites.noLimit": {
+    "value": "No limit"
+  },
+  "invites.usedSoFar": {
+    "value": {
+      "one": "{{count}} already joined",
+      "other": "{{count}} already joined"
+    }
+  },
+  "invites.linkSaved": {
+    "value": "Link saved. The address stays the same."
+  },
+  "invites.invitationTitle": {
+    "value": "Invitation for {{email}}"
+  },
+  "invites.invitationSaved": {
+    "value": "Invitation for {{email}} updated."
+  },
+  "invites.invitationExpired": {
+    "value": "This invitation expired. Renew it to change what it gives."
+  },
+  "invites.editInvitation": {
+    "value": "Edit invite"
+  },
+  "invites.search": {
+    "value": "Search email or role"
+  },
+  "invites.type": {
+    "value": "Type"
+  },
+  "invites.types.requests": {
+    "value": "Requests"
+  },
+  "invites.types.links": {
+    "value": "Links"
+  },
+  "invites.types.emails": {
+    "value": "Emails"
+  },
+  "invites.typesCount": {
+    "value": {
+      "one": "{{count}} type",
+      "other": "{{count}} types"
+    }
+  },
+  "invites.noMatch": {
+    "value": "No invitation matches “{{query}}”."
+  },
+  "invites.links": {
+    "value": "Links"
+  },
+  "invites.emails": {
+    "value": "Email invitations"
+  },
+  "invites.viaLinkOf": {
+    "value": "Asked through {{name}}'s link {{when}}"
+  },
+  "invites.withLink": {
+    "value": "With the link: {{gives}}."
+  },
+  "invites.roleLeftOut": {
+    "value": {
+      "one": "{{roles}} is left out: it's above your role.",
+      "other": "{{roles}} are left out: they're above your role."
+    }
+  },
+  "invites.linkLabel": {
+    "value": "Link {{name}}"
+  },
+  "invites.linkMore": {
+    "value": "More actions for the {{name}} link"
+  },
+  "invites.usesOf": {
+    "value": {
+      "one": "{{uses}} of {{count}} person",
+      "other": "{{uses}} of {{count}} people"
+    }
+  },
+  "invites.joined": {
+    "value": {
+      "zero": "Nobody joined yet",
+      "one": "{{count}} person joined",
+      "other": "{{count}} people joined"
+    }
+  },
+  "invites.expiresLeft": {
+    "value": "expires in {{left}}"
+  },
+  "invites.neverEnds": {
+    "value": "never expires"
+  },
+  "invites.by": {
+    "value": "by {{name}}"
+  },
+  "invites.edit": {
+    "value": "Edit"
+  },
+  "invites.turnOff": {
+    "value": "Turn off link"
+  },
+  "invites.editLink": {
+    "value": "Edit link"
+  },
+  "invites.linkTurnedOff": {
+    "value": "Link turned off."
+  },
   "empty.thread.title": {
     "value": "Threads"
   },
@@ -18058,7 +18329,10 @@
     "value": "You're not part of this workspace"
   },
   "empty.noOrgText": {
-    "value": "Ask someone in the workspace for an invitation, or go back to yours."
+    "value": "Ask someone there for an invitation."
+  },
+  "empty.noOrgBack": {
+    "value": "Back to your workspaces"
   },
   "empty.crashTitle": {
     "value": "Something went wrong"
@@ -19995,16 +20269,16 @@
     "value": "Does on its own"
   },
   "routines.ownActions.hint": {
-    "value": "Every run does these in your connected apps without asking. Any other action there asks a person first, unless the agent never asks."
+    "value": "Every run does these in your connected apps without asking, and other ordinary changes too. Other sends, deletes, payments and invites ask a person first. If the agent always asks, everything asks. If it never asks, nothing does."
   },
   "routines.ownActions.none": {
-    "value": "In connected apps it asks a person before each action. To let it do its job on its own, tell the agent in the chat which actions it may do."
+    "value": "In connected apps it makes ordinary changes without asking, as in a chat. Deleting, sending, paying, inviting and what an admin set to ask need a person's approval first. To let it send on its own, tell the agent in the chat which actions it may do. If the agent always asks, everything asks."
   },
   "routines.ownActions.hintShort": {
     "value": "Every run does these without asking."
   },
   "routines.ownActions.noneShort": {
-    "value": "It asks a person before each action."
+    "value": "It asks a person only before deleting, sending or paying."
   },
   "routines.ownActions.remove": {
     "value": "Ask again before: {{action}}"
@@ -24160,6 +24434,27 @@
   "skills.agentsImproveThis": {
     "value": "Agents improve this skill by themselves"
   },
+  "skills.personal.note": {
+    "value": "Only you see these skills. Your agents use them when you ask."
+  },
+  "skills.personal.emptyTitle": {
+    "value": "Keep your own skills"
+  },
+  "skills.personal.emptyText": {
+    "value": "Only you see them, and your agents use them when you ask."
+  },
+  "skills.personal.others": {
+    "value": "Others' personal skills"
+  },
+  "skills.personal.of": {
+    "value": "{{name}}'s personal"
+  },
+  "skills.personal.forWhom": {
+    "value": "Who it's for"
+  },
+  "skills.personal.teamLocked": {
+    "value": "Only people who manage agents add team skills."
+  },
   "skills.agentChange": {
     "value": "{{agent}} changed it {{when}}"
   },
@@ -24831,6 +25126,12 @@
   "aiAccounts.usage.window.other": {
     "value": "Other limit"
   },
+  "aiAccounts.usage.window.extraUsage": {
+    "value": "Extra usage"
+  },
+  "aiAccounts.usage.window.oauthApps": {
+    "value": "OAuth apps"
+  },
   "aiAccounts.usage.short.five_hour": {
     "value": "5h"
   },
@@ -24848,6 +25149,12 @@
   },
   "aiAccounts.usage.short.other": {
     "value": "other"
+  },
+  "aiAccounts.usage.short.extraUsage": {
+    "value": "extra usage"
+  },
+  "aiAccounts.usage.short.oauthApps": {
+    "value": "OAuth apps"
   },
   "aiAccounts.usage.resetsAt": {
     "value": "resets at {{time}}"
@@ -25575,6 +25882,48 @@
   },
   "palette.askLabel": {
     "value": "{{name}}, {{text}}"
+  },
+  "palette.agents": {
+    "value": "Agents"
+  },
+  "palette.settingsGroup": {
+    "value": "Settings"
+  },
+  "palette.agentOption": {
+    "value": "{{name}} · {{what}}"
+  },
+  "palette.agentPage": {
+    "value": "Agent page"
+  },
+  "palette.changeModel": {
+    "value": "Change AI model"
+  },
+  "palette.changeModelKeywords": {
+    "value": "model ai intelligence who thinks brain plan claude codex chatgpt api effort"
+  },
+  "palette.agentKeywords": {
+    "value": "agent options settings"
+  },
+  "palette.settingsKeywords": {
+    "value": "settings preferences options"
+  },
+  "palette.keysKeywords": {
+    "value": "model ai api key plan claude codex chatgpt provider"
+  },
+  "palette.themeOption": {
+    "value": "Theme: {{theme}}"
+  },
+  "palette.themeKeywords": {
+    "value": "theme appearance light dark night mode"
+  },
+  "palette.accountKeywords": {
+    "value": "theme appearance light dark night mode language idioma"
+  },
+  "palette.newChannel": {
+    "value": "New channel"
+  },
+  "palette.createKeywords": {
+    "value": "create new add"
   },
   "palette.empty": {
     "value": "Nothing for “{{q}}”."
@@ -30819,9 +31168,6 @@
   "toolNames.order": {
     "value": "modifiers-first"
   },
-  "toolNames.catalog": {
-    "value": "en"
-  },
   "toolNames.verb.get": {
     "value": "Get"
   },
@@ -31310,6 +31656,1944 @@
   },
   "toolNames.noun.ruleset": {
     "value": "ruleset|rulesets"
+  },
+  "toolNames.label.git_clone": {
+    "value": "Clone repository"
+  },
+  "toolNames.label.create_repository": {
+    "value": "Create repository"
+  },
+  "toolNames.label.delete_repository": {
+    "value": "Delete repository"
+  },
+  "toolNames.label.fork_repository": {
+    "value": "Fork repository"
+  },
+  "toolNames.label.repository_ruleset_read": {
+    "value": "Read rulesets"
+  },
+  "toolNames.label.create_repository_ruleset": {
+    "value": "Create ruleset"
+  },
+  "toolNames.label.search_repositories": {
+    "value": "Search repositories"
+  },
+  "toolNames.label.get_file_contents": {
+    "value": "Read file"
+  },
+  "toolNames.label.create_or_update_file": {
+    "value": "Create or change a file"
+  },
+  "toolNames.label.push_files": {
+    "value": "Push files"
+  },
+  "toolNames.label.delete_file": {
+    "value": "Delete file"
+  },
+  "toolNames.label.search_code": {
+    "value": "Search the code"
+  },
+  "toolNames.label.list_commits": {
+    "value": "List commits"
+  },
+  "toolNames.label.get_commit": {
+    "value": "See commit"
+  },
+  "toolNames.label.search_commits": {
+    "value": "Search commits"
+  },
+  "toolNames.label.list_branches": {
+    "value": "List branches"
+  },
+  "toolNames.label.create_branch": {
+    "value": "Create branch"
+  },
+  "toolNames.label.delete_branches": {
+    "value": "Delete branches"
+  },
+  "toolNames.label.request_branch_push": {
+    "value": "Push to a branch"
+  },
+  "toolNames.label.list_tags": {
+    "value": "List tags"
+  },
+  "toolNames.label.list_releases": {
+    "value": "List releases"
+  },
+  "toolNames.label.get_latest_release": {
+    "value": "See the latest release"
+  },
+  "toolNames.label.create_release": {
+    "value": "Create release"
+  },
+  "toolNames.label.create_gist": {
+    "value": "Create gist"
+  },
+  "toolNames.label.get_me": {
+    "value": "See the signed-in account"
+  },
+  "toolNames.label.search_users": {
+    "value": "Search people"
+  },
+  "toolNames.label.list_notifications": {
+    "value": "List notifications"
+  },
+  "toolNames.label.list_code_scanning_alerts": {
+    "value": "List code alerts"
+  },
+  "toolNames.label.get_code_scanning_alert": {
+    "value": "See code alert"
+  },
+  "toolNames.label.list_secret_scanning_alerts": {
+    "value": "List leaked secret alerts"
+  },
+  "toolNames.label.get_secret_scanning_alert": {
+    "value": "See leaked secret alert"
+  },
+  "toolNames.label.list_dependabot_alerts": {
+    "value": "List dependency alerts"
+  },
+  "toolNames.label.get_dependabot_alert": {
+    "value": "See dependency alert"
+  },
+  "toolNames.label.list_repository_security_advisories": {
+    "value": "List the security advisories of a repository"
+  },
+  "toolNames.label.list_org_repository_security_advisories": {
+    "value": "List the security advisories of an organization"
+  },
+  "toolNames.label.open_pull_request": {
+    "value": "Open pull request"
+  },
+  "toolNames.label.create_pull_request": {
+    "value": "Open pull request"
+  },
+  "toolNames.label.pull_request_read": {
+    "value": "Read pull request"
+  },
+  "toolNames.label.get_pull_request": {
+    "value": "See pull request"
+  },
+  "toolNames.label.list_pull_requests": {
+    "value": "List pull requests"
+  },
+  "toolNames.label.search_pull_requests": {
+    "value": "Search pull requests"
+  },
+  "toolNames.label.update_pull_request": {
+    "value": "Change pull request"
+  },
+  "toolNames.label.update_pull_request_branch": {
+    "value": "Update the branch of a pull request"
+  },
+  "toolNames.label.get_pull_request_files": {
+    "value": "See the files of a pull request"
+  },
+  "toolNames.label.get_pull_request_diff": {
+    "value": "See the changes of a pull request"
+  },
+  "toolNames.label.get_pull_request_status": {
+    "value": "See the checks of a pull request"
+  },
+  "toolNames.label.get_pull_request_comments": {
+    "value": "Read the comments of a pull request"
+  },
+  "toolNames.label.get_pull_request_reviews": {
+    "value": "Read the reviews of a pull request"
+  },
+  "toolNames.label.pull_request_review_write": {
+    "value": "Review pull request"
+  },
+  "toolNames.label.create_pull_request_review": {
+    "value": "Review pull request"
+  },
+  "toolNames.label.add_comment_to_pending_review": {
+    "value": "Comment on a review"
+  },
+  "toolNames.label.add_reply_to_pull_request_comment": {
+    "value": "Reply to a review comment"
+  },
+  "toolNames.label.request_copilot_review": {
+    "value": "Ask Copilot for a review"
+  },
+  "toolNames.label.merge_pull_request": {
+    "value": "Merge a pull request"
+  },
+  "toolNames.label.create_merge_request": {
+    "value": "Open merge request"
+  },
+  "toolNames.label.get_merge_request": {
+    "value": "See merge request"
+  },
+  "toolNames.label.list_merge_requests": {
+    "value": "List merge requests"
+  },
+  "toolNames.label.update_merge_request": {
+    "value": "Change merge request"
+  },
+  "toolNames.label.get_merge_request_diffs": {
+    "value": "See the changes of a merge request"
+  },
+  "toolNames.label.create_merge_request_note": {
+    "value": "Comment on a merge request"
+  },
+  "toolNames.label.merge_merge_request": {
+    "value": "Merge merge request"
+  },
+  "toolNames.label.create_issue": {
+    "value": "Create issue"
+  },
+  "toolNames.label.get_issue": {
+    "value": "See issue"
+  },
+  "toolNames.label.issue_read": {
+    "value": "Read issue"
+  },
+  "toolNames.label.list_issues": {
+    "value": "List issues"
+  },
+  "toolNames.label.search_issues": {
+    "value": "Search issues"
+  },
+  "toolNames.label.update_issue": {
+    "value": "Change issue"
+  },
+  "toolNames.label.issue_write": {
+    "value": "Create or change an issue"
+  },
+  "toolNames.label.sub_issue_write": {
+    "value": "Change sub-issues"
+  },
+  "toolNames.label.add_sub_issue": {
+    "value": "Add sub-issue"
+  },
+  "toolNames.label.list_issue_types": {
+    "value": "List issue types"
+  },
+  "toolNames.label.list_issue_statuses": {
+    "value": "List statuses"
+  },
+  "toolNames.label.get_issue_details": {
+    "value": "See the details of an issue"
+  },
+  "toolNames.label.add_issue_comment": {
+    "value": "Comment on an issue"
+  },
+  "toolNames.label.create_issue_comment": {
+    "value": "Comment on an issue"
+  },
+  "toolNames.label.create_issue_note": {
+    "value": "Comment on an issue"
+  },
+  "toolNames.label.update_issue_comment": {
+    "value": "Edit issue comment"
+  },
+  "toolNames.label.comment_issue": {
+    "value": "Comment on a task"
+  },
+  "toolNames.label.create_comment": {
+    "value": "Write comment"
+  },
+  "toolNames.label.list_comments": {
+    "value": "List comments"
+  },
+  "toolNames.label.get_comments": {
+    "value": "Read comments"
+  },
+  "toolNames.label.delete_comment": {
+    "value": "Delete comment"
+  },
+  "toolNames.label.get_label": {
+    "value": "See label"
+  },
+  "toolNames.label.list_labels": {
+    "value": "List labels"
+  },
+  "toolNames.label.list_label": {
+    "value": "List labels"
+  },
+  "toolNames.label.list_issue_labels": {
+    "value": "List labels"
+  },
+  "toolNames.label.create_label": {
+    "value": "Create label"
+  },
+  "toolNames.label.label_write": {
+    "value": "Create or change a label"
+  },
+  "toolNames.label.list_discussions": {
+    "value": "List discussions"
+  },
+  "toolNames.label.get_discussion": {
+    "value": "See discussion"
+  },
+  "toolNames.label.get_discussion_comments": {
+    "value": "Read the comments of a discussion"
+  },
+  "toolNames.label.list_discussion_categories": {
+    "value": "List discussion categories"
+  },
+  "toolNames.label.discussion_comment_write": {
+    "value": "Comment on a discussion"
+  },
+  "toolNames.label.list_milestones": {
+    "value": "List milestones"
+  },
+  "toolNames.label.list_cycles": {
+    "value": "List cycles"
+  },
+  "toolNames.label.list_projects": {
+    "value": "List projects"
+  },
+  "toolNames.label.get_project": {
+    "value": "See project"
+  },
+  "toolNames.label.create_project": {
+    "value": "Create project"
+  },
+  "toolNames.label.update_project": {
+    "value": "Change project"
+  },
+  "toolNames.label.projects_list": {
+    "value": "List projects"
+  },
+  "toolNames.label.projects_get": {
+    "value": "See project"
+  },
+  "toolNames.label.projects_write": {
+    "value": "Change project"
+  },
+  "toolNames.label.find_projects": {
+    "value": "Find projects"
+  },
+  "toolNames.label.list_teams": {
+    "value": "List teams"
+  },
+  "toolNames.label.get_teams": {
+    "value": "List teams"
+  },
+  "toolNames.label.get_team_members": {
+    "value": "List team members"
+  },
+  "toolNames.label.find_teams": {
+    "value": "Find teams"
+  },
+  "toolNames.label.create_team": {
+    "value": "Create team"
+  },
+  "toolNames.label.find_organizations": {
+    "value": "Find organizations"
+  },
+  "toolNames.label.get_jira_issue": {
+    "value": "See Jira issue"
+  },
+  "toolNames.label.create_jira_issue": {
+    "value": "Create Jira issue"
+  },
+  "toolNames.label.edit_jira_issue": {
+    "value": "Edit Jira issue"
+  },
+  "toolNames.label.search_jira_issues_using_jql": {
+    "value": "Search Jira issues"
+  },
+  "toolNames.label.transition_jira_issue": {
+    "value": "Change the status of a Jira issue"
+  },
+  "toolNames.label.transition_issue": {
+    "value": "Change the status of an issue"
+  },
+  "toolNames.label.get_transitions_for_jira_issue": {
+    "value": "See where a Jira issue can move"
+  },
+  "toolNames.label.add_comment_to_jira_issue": {
+    "value": "Comment on a Jira issue"
+  },
+  "toolNames.label.get_visible_jira_projects": {
+    "value": "List Jira projects"
+  },
+  "toolNames.label.lookup_jira_account_id": {
+    "value": "Find Jira account"
+  },
+  "toolNames.label.get_confluence_page": {
+    "value": "See Confluence page"
+  },
+  "toolNames.label.create_confluence_page": {
+    "value": "Create Confluence page"
+  },
+  "toolNames.label.update_confluence_page": {
+    "value": "Change Confluence page"
+  },
+  "toolNames.label.search_confluence_using_cql": {
+    "value": "Search Confluence"
+  },
+  "toolNames.label.get_confluence_spaces": {
+    "value": "List Confluence spaces"
+  },
+  "toolNames.label.get_pages_in_confluence_space": {
+    "value": "List the pages of a space"
+  },
+  "toolNames.label.get_accessible_atlassian_resources": {
+    "value": "List Atlassian sites"
+  },
+  "toolNames.label.user_info": {
+    "value": "See the signed-in account"
+  },
+  "toolNames.label.actions_list": {
+    "value": "List workflow runs"
+  },
+  "toolNames.label.actions_get": {
+    "value": "See workflow run"
+  },
+  "toolNames.label.actions_run_trigger": {
+    "value": "Run workflow"
+  },
+  "toolNames.label.list_workflows": {
+    "value": "List workflows"
+  },
+  "toolNames.label.list_workflow_runs": {
+    "value": "List workflow runs"
+  },
+  "toolNames.label.run_workflow": {
+    "value": "Run workflow"
+  },
+  "toolNames.label.rerun_workflow_run": {
+    "value": "Run workflow again"
+  },
+  "toolNames.label.cancel_workflow_run": {
+    "value": "Cancel workflow run"
+  },
+  "toolNames.label.get_job_logs": {
+    "value": "Read job logs"
+  },
+  "toolNames.label.get_workflow_run_logs": {
+    "value": "Read workflow logs"
+  },
+  "toolNames.label.list_pipelines": {
+    "value": "List pipelines"
+  },
+  "toolNames.label.get_pipeline": {
+    "value": "See pipeline"
+  },
+  "toolNames.label.create_pipeline": {
+    "value": "Run pipeline"
+  },
+  "toolNames.label.retry_pipeline": {
+    "value": "Run pipeline again"
+  },
+  "toolNames.label.cancel_pipeline": {
+    "value": "Cancel pipeline"
+  },
+  "toolNames.label.list_deployments": {
+    "value": "List deployments"
+  },
+  "toolNames.label.get_deployment": {
+    "value": "See deployment"
+  },
+  "toolNames.label.get_deployment_build_logs": {
+    "value": "Read build logs"
+  },
+  "toolNames.label.create_deployment": {
+    "value": "Create deployment"
+  },
+  "toolNames.label.deploy_to_vercel": {
+    "value": "Deploy to Vercel"
+  },
+  "toolNames.label.promote_deployment": {
+    "value": "Promote deployment"
+  },
+  "toolNames.label.rollback_deployment": {
+    "value": "Roll back a deployment"
+  },
+  "toolNames.label.search_vercel_documentation": {
+    "value": "Search the Vercel docs"
+  },
+  "toolNames.label.get_access_to_vercel_url": {
+    "value": "Open protected link"
+  },
+  "toolNames.label.web_fetch_vercel_url": {
+    "value": "Read Vercel page"
+  },
+  "toolNames.label.check_domain_availability_and_price": {
+    "value": "Check domain"
+  },
+  "toolNames.label.buy_domain": {
+    "value": "Buy domain"
+  },
+  "toolNames.label.search_events": {
+    "value": "Search events"
+  },
+  "toolNames.label.find_releases": {
+    "value": "Find releases"
+  },
+  "toolNames.label.get_event_attachment": {
+    "value": "Read event attachment"
+  },
+  "toolNames.label.analyze_issue_with_seer": {
+    "value": "Analyze issue with Seer"
+  },
+  "toolNames.label.get_trace_details": {
+    "value": "See trace"
+  },
+  "toolNames.label.find_dsns": {
+    "value": "Find DSNs"
+  },
+  "toolNames.label.whoami": {
+    "value": "See the signed-in account"
+  },
+  "toolNames.label.search_docs": {
+    "value": "Search the docs"
+  },
+  "toolNames.label.search_documentation": {
+    "value": "Search the docs"
+  },
+  "toolNames.label.get_doc": {
+    "value": "Read doc page"
+  },
+  "toolNames.label.list_users": {
+    "value": "List people"
+  },
+  "toolNames.label.get_user": {
+    "value": "See person"
+  },
+  "toolNames.label.get_users": {
+    "value": "List people"
+  },
+  "toolNames.label.list_documents": {
+    "value": "List documents"
+  },
+  "toolNames.label.send_message": {
+    "value": "Send message"
+  },
+  "toolNames.label.post_message": {
+    "value": "Post message"
+  },
+  "toolNames.label.schedule_message": {
+    "value": "Schedule message"
+  },
+  "toolNames.label.updates_slack_message": {
+    "value": "Edit message"
+  },
+  "toolNames.label.update_message": {
+    "value": "Edit message"
+  },
+  "toolNames.label.deletes_message_from_chat": {
+    "value": "Delete message"
+  },
+  "toolNames.label.delete_message": {
+    "value": "Delete message"
+  },
+  "toolNames.label.search_messages": {
+    "value": "Search messages"
+  },
+  "toolNames.label.find_channels": {
+    "value": "Find channels"
+  },
+  "toolNames.label.list_channels": {
+    "value": "List channels"
+  },
+  "toolNames.label.create_channel": {
+    "value": "Create channel"
+  },
+  "toolNames.label.invite_user_to_channel": {
+    "value": "Add someone to a channel"
+  },
+  "toolNames.label.fetch_conversation_history": {
+    "value": "Read conversation"
+  },
+  "toolNames.label.get_channel_history": {
+    "value": "Read channel"
+  },
+  "toolNames.label.fetch_message_thread_from_conversation": {
+    "value": "Read thread"
+  },
+  "toolNames.label.get_thread_replies": {
+    "value": "Read thread"
+  },
+  "toolNames.label.reply_to_thread": {
+    "value": "Reply in a conversation"
+  },
+  "toolNames.label.find_users": {
+    "value": "Find people"
+  },
+  "toolNames.label.find_user_by_email_address": {
+    "value": "Find someone by email"
+  },
+  "toolNames.label.get_user_profile": {
+    "value": "See profile"
+  },
+  "toolNames.label.download_slack_file": {
+    "value": "Download file"
+  },
+  "toolNames.label.add_reaction_to_item": {
+    "value": "React to a message"
+  },
+  "toolNames.label.add_reaction": {
+    "value": "React to a message"
+  },
+  "toolNames.label.create_reminder": {
+    "value": "Create reminder"
+  },
+  "toolNames.label.teams_list": {
+    "value": "List teams"
+  },
+  "toolNames.label.teams_list_channels": {
+    "value": "List channels"
+  },
+  "toolNames.label.teams_list_channel_messages": {
+    "value": "Read channel"
+  },
+  "toolNames.label.list_message_replies": {
+    "value": "Read replies"
+  },
+  "toolNames.label.chats_get_all_chats": {
+    "value": "List chats"
+  },
+  "toolNames.label.list_user_chat_messages": {
+    "value": "Read chat"
+  },
+  "toolNames.label.teams_post_channel_message": {
+    "value": "Post in a channel"
+  },
+  "toolNames.label.teams_post_chat_message": {
+    "value": "Send chat message"
+  },
+  "toolNames.label.post_message_reply": {
+    "value": "Reply to a message"
+  },
+  "toolNames.label.create_meeting": {
+    "value": "Create meeting"
+  },
+  "toolNames.label.send_email": {
+    "value": "Send email"
+  },
+  "toolNames.label.create_email_draft": {
+    "value": "Draft email"
+  },
+  "toolNames.label.send_draft": {
+    "value": "Send draft"
+  },
+  "toolNames.label.list_drafts": {
+    "value": "List drafts"
+  },
+  "toolNames.label.fetch_emails": {
+    "value": "Read emails"
+  },
+  "toolNames.label.search_emails": {
+    "value": "Search emails"
+  },
+  "toolNames.label.read_email": {
+    "value": "Read email"
+  },
+  "toolNames.label.fetch_message_by_message_id": {
+    "value": "Read email"
+  },
+  "toolNames.label.fetch_message_by_thread_id": {
+    "value": "Read conversation"
+  },
+  "toolNames.label.list_threads": {
+    "value": "List conversations"
+  },
+  "toolNames.label.forward_message": {
+    "value": "Forward email"
+  },
+  "toolNames.label.add_label_to_email": {
+    "value": "Label email"
+  },
+  "toolNames.label.move_to_trash": {
+    "value": "Move to the trash"
+  },
+  "toolNames.label.get_profile": {
+    "value": "See the signed-in account"
+  },
+  "toolNames.label.find_file": {
+    "value": "Find file"
+  },
+  "toolNames.label.find_folder": {
+    "value": "Find folder"
+  },
+  "toolNames.label.get_file_metadata": {
+    "value": "See the details of a file"
+  },
+  "toolNames.label.get_metadata": {
+    "value": "See the details"
+  },
+  "toolNames.label.download_file": {
+    "value": "Download file"
+  },
+  "toolNames.label.export_google_workspace_file": {
+    "value": "Export file"
+  },
+  "toolNames.label.create_file_from_text": {
+    "value": "Create file"
+  },
+  "toolNames.label.create_text_file": {
+    "value": "Create file"
+  },
+  "toolNames.label.create_folder": {
+    "value": "Create folder"
+  },
+  "toolNames.label.list_folders": {
+    "value": "List folders"
+  },
+  "toolNames.label.move_file": {
+    "value": "Move file"
+  },
+  "toolNames.label.move_item": {
+    "value": "Move file"
+  },
+  "toolNames.label.move_file_or_folder": {
+    "value": "Move file"
+  },
+  "toolNames.label.copy_item": {
+    "value": "Copy file"
+  },
+  "toolNames.label.copy_file_or_folder": {
+    "value": "Copy file"
+  },
+  "toolNames.label.create_permission": {
+    "value": "Share file"
+  },
+  "toolNames.label.invite_user_to_item": {
+    "value": "Share file"
+  },
+  "toolNames.label.create_link": {
+    "value": "Create share link"
+  },
+  "toolNames.label.create_shared_link": {
+    "value": "Create share link"
+  },
+  "toolNames.label.list_shared_links": {
+    "value": "List share links"
+  },
+  "toolNames.label.search_items": {
+    "value": "Search files"
+  },
+  "toolNames.label.list_items": {
+    "value": "List files"
+  },
+  "toolNames.label.get_item": {
+    "value": "See file"
+  },
+  "toolNames.label.delete_item": {
+    "value": "Delete file"
+  },
+  "toolNames.label.list_files_in_folder": {
+    "value": "List the files of a folder"
+  },
+  "toolNames.label.search_file_or_folder": {
+    "value": "Search files"
+  },
+  "toolNames.label.search_documents": {
+    "value": "Search documents"
+  },
+  "toolNames.label.get_document": {
+    "value": "Read document"
+  },
+  "toolNames.label.get_document_plaintext": {
+    "value": "Read document"
+  },
+  "toolNames.label.get_document_by_id": {
+    "value": "Read document"
+  },
+  "toolNames.label.create_document": {
+    "value": "Create document"
+  },
+  "toolNames.label.create_document_markdown": {
+    "value": "Create document"
+  },
+  "toolNames.label.update_document": {
+    "value": "Change document"
+  },
+  "toolNames.label.update_document_markdown": {
+    "value": "Rewrite document"
+  },
+  "toolNames.label.update_document_section_markdown": {
+    "value": "Change part of a document"
+  },
+  "toolNames.label.insert_text_action": {
+    "value": "Add text to a document"
+  },
+  "toolNames.label.replace_all_text": {
+    "value": "Replace text in a document"
+  },
+  "toolNames.label.copy_document": {
+    "value": "Copy document"
+  },
+  "toolNames.label.export_document_as_pdf": {
+    "value": "Export document as PDF"
+  },
+  "toolNames.label.search_spreadsheets": {
+    "value": "Search spreadsheets"
+  },
+  "toolNames.label.get_spreadsheet_info": {
+    "value": "See spreadsheet"
+  },
+  "toolNames.label.get_sheet_names": {
+    "value": "List the tabs of a spreadsheet"
+  },
+  "toolNames.label.values_get": {
+    "value": "Read cells"
+  },
+  "toolNames.label.batch_get": {
+    "value": "Read cells"
+  },
+  "toolNames.label.lookup_spreadsheet_row": {
+    "value": "Find row"
+  },
+  "toolNames.label.create_google_sheet1": {
+    "value": "Create spreadsheet"
+  },
+  "toolNames.label.create_spreadsheet": {
+    "value": "Create spreadsheet"
+  },
+  "toolNames.label.add_sheet": {
+    "value": "Add tab"
+  },
+  "toolNames.label.values_update": {
+    "value": "Write cells"
+  },
+  "toolNames.label.update_values_batch": {
+    "value": "Write cells"
+  },
+  "toolNames.label.spreadsheets_values_append": {
+    "value": "Add rows"
+  },
+  "toolNames.label.clear_values": {
+    "value": "Clear cells"
+  },
+  "toolNames.label.delete_sheet": {
+    "value": "Delete tab"
+  },
+  "toolNames.label.create_page": {
+    "value": "Create page"
+  },
+  "toolNames.label.create_pages": {
+    "value": "Create pages"
+  },
+  "toolNames.label.get_page": {
+    "value": "Read page"
+  },
+  "toolNames.label.retrieve_page": {
+    "value": "Read page"
+  },
+  "toolNames.label.update_page": {
+    "value": "Change page"
+  },
+  "toolNames.label.move_pages": {
+    "value": "Move pages"
+  },
+  "toolNames.label.duplicate_page": {
+    "value": "Duplicate page"
+  },
+  "toolNames.label.delete_page": {
+    "value": "Delete page"
+  },
+  "toolNames.label.search_pages": {
+    "value": "Search pages"
+  },
+  "toolNames.label.append_block_children": {
+    "value": "Add content to a page"
+  },
+  "toolNames.label.create_database": {
+    "value": "Create database"
+  },
+  "toolNames.label.update_database": {
+    "value": "Change database"
+  },
+  "toolNames.label.query_database": {
+    "value": "Query database"
+  },
+  "toolNames.label.get_self": {
+    "value": "See the signed-in account"
+  },
+  "toolNames.label.list_calendars": {
+    "value": "List calendars"
+  },
+  "toolNames.label.events_list": {
+    "value": "List events"
+  },
+  "toolNames.label.list_events": {
+    "value": "List events"
+  },
+  "toolNames.label.find_event": {
+    "value": "Find event"
+  },
+  "toolNames.label.events_get": {
+    "value": "See event"
+  },
+  "toolNames.label.find_free_slots": {
+    "value": "Find free time"
+  },
+  "toolNames.label.find_free_time": {
+    "value": "Find free time"
+  },
+  "toolNames.label.create_event": {
+    "value": "Create event"
+  },
+  "toolNames.label.quick_add": {
+    "value": "Add event"
+  },
+  "toolNames.label.update_event": {
+    "value": "Change event"
+  },
+  "toolNames.label.patch_event": {
+    "value": "Change event"
+  },
+  "toolNames.label.delete_event": {
+    "value": "Delete event"
+  },
+  "toolNames.label.propose_event": {
+    "value": "Propose meeting"
+  },
+  "toolNames.label.get_projects_in_team": {
+    "value": "List the projects of a team"
+  },
+  "toolNames.label.get_files_in_project": {
+    "value": "List the files of a project"
+  },
+  "toolNames.label.get_file_nodes": {
+    "value": "Read parts of a file"
+  },
+  "toolNames.label.get_file_components": {
+    "value": "List components"
+  },
+  "toolNames.label.get_file_styles": {
+    "value": "List styles"
+  },
+  "toolNames.label.get_local_variables": {
+    "value": "List variables"
+  },
+  "toolNames.label.get_variable_defs": {
+    "value": "List variables"
+  },
+  "toolNames.label.render_images_of_file_nodes": {
+    "value": "Export images"
+  },
+  "toolNames.label.get_comments_in_file": {
+    "value": "Read comments"
+  },
+  "toolNames.label.add_comment_to_file": {
+    "value": "Comment on a file"
+  },
+  "toolNames.label.get_design_context": {
+    "value": "Read design"
+  },
+  "toolNames.label.get_screenshot": {
+    "value": "Take a screenshot of a design"
+  },
+  "toolNames.label.create_customer": {
+    "value": "Create customer"
+  },
+  "toolNames.label.list_customers": {
+    "value": "List customers"
+  },
+  "toolNames.label.search_customers": {
+    "value": "Search customers"
+  },
+  "toolNames.label.retrieve_customer": {
+    "value": "See customer"
+  },
+  "toolNames.label.update_customer": {
+    "value": "Change customer"
+  },
+  "toolNames.label.create_product": {
+    "value": "Create product"
+  },
+  "toolNames.label.list_products": {
+    "value": "List products"
+  },
+  "toolNames.label.create_price": {
+    "value": "Create price"
+  },
+  "toolNames.label.list_prices": {
+    "value": "List prices"
+  },
+  "toolNames.label.create_payment_link": {
+    "value": "Create payment link"
+  },
+  "toolNames.label.create_invoice": {
+    "value": "Create invoice"
+  },
+  "toolNames.label.create_invoice_item": {
+    "value": "Add invoice item"
+  },
+  "toolNames.label.finalize_invoice": {
+    "value": "Finalize invoice"
+  },
+  "toolNames.label.list_invoices": {
+    "value": "List invoices"
+  },
+  "toolNames.label.get_invoice": {
+    "value": "See invoice"
+  },
+  "toolNames.label.retrieve_balance": {
+    "value": "See the balance"
+  },
+  "toolNames.label.get_balance": {
+    "value": "See the balance"
+  },
+  "toolNames.label.create_refund": {
+    "value": "Refund payment"
+  },
+  "toolNames.label.list_payment_intents": {
+    "value": "List payments"
+  },
+  "toolNames.label.list_payments": {
+    "value": "List payments"
+  },
+  "toolNames.label.cancel_payment": {
+    "value": "Cancel payment"
+  },
+  "toolNames.label.list_subscriptions": {
+    "value": "List subscriptions"
+  },
+  "toolNames.label.update_subscription": {
+    "value": "Change subscription"
+  },
+  "toolNames.label.cancel_subscription": {
+    "value": "Cancel subscription"
+  },
+  "toolNames.label.list_coupons": {
+    "value": "List coupons"
+  },
+  "toolNames.label.create_coupon": {
+    "value": "Create coupon"
+  },
+  "toolNames.label.list_disputes": {
+    "value": "List disputes"
+  },
+  "toolNames.label.update_dispute": {
+    "value": "Answer dispute"
+  },
+  "toolNames.label.search_stripe_resources": {
+    "value": "Search Stripe"
+  },
+  "toolNames.label.fetch_stripe_resources": {
+    "value": "Read from Stripe"
+  },
+  "toolNames.label.search_stripe_documentation": {
+    "value": "Search the Stripe docs"
+  },
+  "toolNames.label.get_stripe_account_info": {
+    "value": "See the Stripe account"
+  },
+  "toolNames.label.list_locations": {
+    "value": "List locations"
+  },
+  "toolNames.label.search_orders": {
+    "value": "Search orders"
+  },
+  "toolNames.label.retrieve_order": {
+    "value": "See order"
+  },
+  "toolNames.label.search_catalog_objects": {
+    "value": "Search the catalog"
+  },
+  "toolNames.label.upsert_catalog_object": {
+    "value": "Create or change a catalog item"
+  },
+  "toolNames.label.get_multiple_workspaces": {
+    "value": "List workspaces"
+  },
+  "toolNames.label.get_workspace_projects": {
+    "value": "List projects"
+  },
+  "toolNames.label.get_sections_in_project": {
+    "value": "List sections"
+  },
+  "toolNames.label.get_tasks_from_project": {
+    "value": "List tasks"
+  },
+  "toolNames.label.search_tasks_in_workspace": {
+    "value": "Search tasks"
+  },
+  "toolNames.label.get_task": {
+    "value": "See task"
+  },
+  "toolNames.label.list_tasks": {
+    "value": "List tasks"
+  },
+  "toolNames.label.get_stories_for_task": {
+    "value": "Read the activity of a task"
+  },
+  "toolNames.label.create_task": {
+    "value": "Create task"
+  },
+  "toolNames.label.update_task": {
+    "value": "Change task"
+  },
+  "toolNames.label.create_subtask": {
+    "value": "Create subtask"
+  },
+  "toolNames.label.create_task_comment": {
+    "value": "Comment on a task"
+  },
+  "toolNames.label.add_task_to_section": {
+    "value": "Move task to a section"
+  },
+  "toolNames.label.delete_task": {
+    "value": "Delete task"
+  },
+  "toolNames.label.search_contacts_by_criteria": {
+    "value": "Search contacts"
+  },
+  "toolNames.label.search_contacts": {
+    "value": "Search contacts"
+  },
+  "toolNames.label.list_contacts": {
+    "value": "List contacts"
+  },
+  "toolNames.label.read_contact": {
+    "value": "See contact"
+  },
+  "toolNames.label.get_contact": {
+    "value": "See contact"
+  },
+  "toolNames.label.create_contact": {
+    "value": "Create contact"
+  },
+  "toolNames.label.update_contact": {
+    "value": "Change contact"
+  },
+  "toolNames.label.archive_contact": {
+    "value": "Archive contact"
+  },
+  "toolNames.label.search_companies": {
+    "value": "Search companies"
+  },
+  "toolNames.label.get_company": {
+    "value": "See company"
+  },
+  "toolNames.label.list_all_companies": {
+    "value": "List companies"
+  },
+  "toolNames.label.create_company": {
+    "value": "Create company"
+  },
+  "toolNames.label.update_company": {
+    "value": "Change company"
+  },
+  "toolNames.label.search_deals": {
+    "value": "Search deals"
+  },
+  "toolNames.label.get_deal": {
+    "value": "See deal"
+  },
+  "toolNames.label.create_deal": {
+    "value": "Create deal"
+  },
+  "toolNames.label.update_deal": {
+    "value": "Change deal"
+  },
+  "toolNames.label.create_note": {
+    "value": "Write note"
+  },
+  "toolNames.label.search_accounts": {
+    "value": "Search accounts"
+  },
+  "toolNames.label.get_account": {
+    "value": "See account"
+  },
+  "toolNames.label.create_account": {
+    "value": "Create account"
+  },
+  "toolNames.label.update_account": {
+    "value": "Change account"
+  },
+  "toolNames.label.search_leads": {
+    "value": "Search leads"
+  },
+  "toolNames.label.get_lead": {
+    "value": "See lead"
+  },
+  "toolNames.label.create_lead": {
+    "value": "Create lead"
+  },
+  "toolNames.label.update_lead": {
+    "value": "Change lead"
+  },
+  "toolNames.label.search_opportunities": {
+    "value": "Search opportunities"
+  },
+  "toolNames.label.get_opportunity": {
+    "value": "See opportunity"
+  },
+  "toolNames.label.create_opportunity": {
+    "value": "Create opportunity"
+  },
+  "toolNames.label.update_opportunity": {
+    "value": "Change opportunity"
+  },
+  "toolNames.label.list_conversations": {
+    "value": "List conversations"
+  },
+  "toolNames.label.search_conversations": {
+    "value": "Search conversations"
+  },
+  "toolNames.label.get_conversation": {
+    "value": "Read conversation"
+  },
+  "toolNames.label.assign_conversation": {
+    "value": "Assign conversation"
+  },
+  "toolNames.label.attach_tag_to_conversation": {
+    "value": "Tag conversation"
+  },
+  "toolNames.label.close_conversation": {
+    "value": "Close conversation"
+  },
+  "toolNames.label.reply_to_conversation": {
+    "value": "Reply to a conversation"
+  },
+  "toolNames.label.list_all_admins": {
+    "value": "List admins"
+  },
+  "toolNames.label.search_zendesk": {
+    "value": "Search Zendesk"
+  },
+  "toolNames.label.list_zendesk_tickets": {
+    "value": "List tickets"
+  },
+  "toolNames.label.get_zendesk_ticket_by_id": {
+    "value": "See ticket"
+  },
+  "toolNames.label.get_ticket_comments": {
+    "value": "Read the comments of a ticket"
+  },
+  "toolNames.label.search_zendesk_users": {
+    "value": "Search people"
+  },
+  "toolNames.label.search_zendesk_organizations": {
+    "value": "Search organizations"
+  },
+  "toolNames.label.create_zendesk_ticket": {
+    "value": "Create ticket"
+  },
+  "toolNames.label.update_zendesk_ticket": {
+    "value": "Change ticket"
+  },
+  "toolNames.label.reply_zendesk_ticket": {
+    "value": "Reply to a ticket"
+  },
+  "toolNames.label.get_user_info": {
+    "value": "See the profile"
+  },
+  "toolNames.label.get_user_insights": {
+    "value": "See the insights of the account"
+  },
+  "toolNames.label.get_ig_user_media": {
+    "value": "List posts"
+  },
+  "toolNames.label.get_ig_media": {
+    "value": "See post"
+  },
+  "toolNames.label.get_ig_media_insights": {
+    "value": "See the insights of a post"
+  },
+  "toolNames.label.get_ig_user_stories": {
+    "value": "List stories"
+  },
+  "toolNames.label.list_all_conversations": {
+    "value": "List conversations"
+  },
+  "toolNames.label.list_all_messages": {
+    "value": "Read conversation"
+  },
+  "toolNames.label.post_ig_user_media": {
+    "value": "Prepare post"
+  },
+  "toolNames.label.create_carousel_container": {
+    "value": "Prepare carousel"
+  },
+  "toolNames.label.post_ig_user_media_publish": {
+    "value": "Publish post"
+  },
+  "toolNames.label.send_text_message": {
+    "value": "Send message"
+  },
+  "toolNames.label.list_managed_pages": {
+    "value": "List pages"
+  },
+  "toolNames.label.get_page_details": {
+    "value": "See page"
+  },
+  "toolNames.label.get_page_posts": {
+    "value": "List posts"
+  },
+  "toolNames.label.get_post": {
+    "value": "See post"
+  },
+  "toolNames.label.get_scheduled_posts": {
+    "value": "List scheduled posts"
+  },
+  "toolNames.label.get_page_insights": {
+    "value": "See the insights of a page"
+  },
+  "toolNames.label.get_post_insights": {
+    "value": "See the insights of a post"
+  },
+  "toolNames.label.get_page_photos": {
+    "value": "List photos"
+  },
+  "toolNames.label.get_page_videos": {
+    "value": "List videos"
+  },
+  "toolNames.label.create_post": {
+    "value": "Create post"
+  },
+  "toolNames.label.create_photo_post": {
+    "value": "Post photo"
+  },
+  "toolNames.label.create_multi_photo_post": {
+    "value": "Post photos"
+  },
+  "toolNames.label.create_video_post": {
+    "value": "Post video"
+  },
+  "toolNames.label.update_post": {
+    "value": "Change post"
+  },
+  "toolNames.label.delete_post": {
+    "value": "Delete post"
+  },
+  "toolNames.label.get_my_info": {
+    "value": "See the signed-in account"
+  },
+  "toolNames.label.create_linked_in_post": {
+    "value": "Create post"
+  },
+  "toolNames.label.create_article_or_url_share": {
+    "value": "Share link"
+  },
+  "toolNames.label.upload_video": {
+    "value": "Upload video"
+  },
+  "toolNames.label.get_videos": {
+    "value": "See videos"
+  },
+  "toolNames.label.create_comment_on_post": {
+    "value": "Comment on a post"
+  },
+  "toolNames.label.list_channel_videos": {
+    "value": "List the videos of a channel"
+  },
+  "toolNames.label.get_video_details_batch": {
+    "value": "See videos"
+  },
+  "toolNames.label.query_analytics": {
+    "value": "See analytics"
+  },
+  "toolNames.label.list_comment_threads2": {
+    "value": "List comments"
+  },
+  "toolNames.label.list_user_playlists": {
+    "value": "List playlists"
+  },
+  "toolNames.label.list_playlist_items": {
+    "value": "List the videos of a playlist"
+  },
+  "toolNames.label.update_video": {
+    "value": "Change video"
+  },
+  "toolNames.label.update_thumbnail": {
+    "value": "Change thumbnail"
+  },
+  "toolNames.label.post_comment": {
+    "value": "Write comment"
+  },
+  "toolNames.label.create_comment_reply": {
+    "value": "Reply to a comment"
+  },
+  "toolNames.label.set_comment_moderation_status": {
+    "value": "Moderate comments"
+  },
+  "toolNames.label.create_playlist": {
+    "value": "Create playlist"
+  },
+  "toolNames.label.add_video_to_playlist": {
+    "value": "Add video to a playlist"
+  },
+  "toolNames.label.list_boards": {
+    "value": "List boards"
+  },
+  "toolNames.label.get_board": {
+    "value": "See board"
+  },
+  "toolNames.label.list_board_sections": {
+    "value": "List the sections of a board"
+  },
+  "toolNames.label.list_pins": {
+    "value": "List pins"
+  },
+  "toolNames.label.get_pin": {
+    "value": "See pin"
+  },
+  "toolNames.label.search_own_content": {
+    "value": "Search pins and boards"
+  },
+  "toolNames.label.get_account_analytics": {
+    "value": "See the analytics of the account"
+  },
+  "toolNames.label.get_pin_analytics": {
+    "value": "See the analytics of a pin"
+  },
+  "toolNames.label.get_top_pins": {
+    "value": "See the top pins"
+  },
+  "toolNames.label.get_keyword_trends": {
+    "value": "See search trends"
+  },
+  "toolNames.label.create_pin": {
+    "value": "Create pin"
+  },
+  "toolNames.label.update_pin": {
+    "value": "Change pin"
+  },
+  "toolNames.label.save_pin": {
+    "value": "Save pin"
+  },
+  "toolNames.label.create_board": {
+    "value": "Create board"
+  },
+  "toolNames.label.update_board": {
+    "value": "Change board"
+  },
+  "toolNames.label.create_board_section": {
+    "value": "Create section"
+  },
+  "toolNames.label.delete_pin": {
+    "value": "Delete pin"
+  },
+  "toolNames.label.delete_board": {
+    "value": "Delete board"
+  },
+  "toolNames.label.search_across_subreddits": {
+    "value": "Search posts"
+  },
+  "toolNames.label.retrieve_reddit_post": {
+    "value": "List the posts of a community"
+  },
+  "toolNames.label.retrieve_post_comments": {
+    "value": "Read the comments of a post"
+  },
+  "toolNames.label.retrieve_specific_comment": {
+    "value": "See comment"
+  },
+  "toolNames.label.get_subreddits_search": {
+    "value": "Search communities"
+  },
+  "toolNames.label.get_subreddit_metadata": {
+    "value": "See community"
+  },
+  "toolNames.label.get_subreddit_rules": {
+    "value": "Read the rules of a community"
+  },
+  "toolNames.label.list_subreddit_post_flairs": {
+    "value": "List flairs"
+  },
+  "toolNames.label.get_reddit_user_about": {
+    "value": "See profile"
+  },
+  "toolNames.label.create_reddit_post": {
+    "value": "Create post"
+  },
+  "toolNames.label.post_reddit_comment": {
+    "value": "Write comment"
+  },
+  "toolNames.label.edit_reddit_comment_or_post": {
+    "value": "Edit post or comment"
+  },
+  "toolNames.label.delete_reddit_post": {
+    "value": "Delete post"
+  },
+  "toolNames.label.delete_reddit_comment": {
+    "value": "Delete comment"
+  },
+  "toolNames.label.get_phone_numbers": {
+    "value": "List phone numbers"
+  },
+  "toolNames.label.get_business_profile": {
+    "value": "See the business profile"
+  },
+  "toolNames.label.get_message_templates": {
+    "value": "List message templates"
+  },
+  "toolNames.label.get_template_status": {
+    "value": "See template"
+  },
+  "toolNames.label.get_message_history": {
+    "value": "See the delivery history"
+  },
+  "toolNames.label.create_message_template": {
+    "value": "Create message template"
+  },
+  "toolNames.label.send_template_message": {
+    "value": "Send template"
+  },
+  "toolNames.label.send_media": {
+    "value": "Send media"
+  },
+  "toolNames.label.send_interactive_buttons": {
+    "value": "Send buttons"
+  },
+  "toolNames.label.send_interactive_list": {
+    "value": "Send list"
+  },
+  "toolNames.label.send_location": {
+    "value": "Send location"
+  },
+  "toolNames.label.generate_image": {
+    "value": "Generate image"
+  },
+  "toolNames.label.generate_video": {
+    "value": "Generate video"
+  },
+  "toolNames.label.image_to_video": {
+    "value": "Turn image into a video"
+  },
+  "toolNames.label.text_to_image": {
+    "value": "Generate image"
+  },
+  "toolNames.label.text_to_video": {
+    "value": "Generate video"
+  },
+  "toolNames.label.text_to_speech": {
+    "value": "Turn text into speech"
+  },
+  "toolNames.label.edit_image": {
+    "value": "Edit image"
+  },
+  "toolNames.label.upscale_image": {
+    "value": "Raise the resolution of an image"
+  },
+  "toolNames.label.upload_image": {
+    "value": "Upload image"
+  },
+  "toolNames.label.get_upload_url": {
+    "value": "Get upload link"
+  },
+  "toolNames.label.create_upload_url": {
+    "value": "Get upload link"
+  },
+  "toolNames.label.get_generation": {
+    "value": "See generation"
+  },
+  "toolNames.label.get_generation_status": {
+    "value": "Check generation"
+  },
+  "toolNames.label.list_generations": {
+    "value": "List generations"
+  },
+  "toolNames.label.list_models": {
+    "value": "List models"
+  },
+  "toolNames.label.list_styles": {
+    "value": "List styles"
+  },
+  "toolNames.label.get_credits": {
+    "value": "See the credits"
+  },
+  "toolNames.label.execute_sql": {
+    "value": "Run SQL"
+  },
+  "toolNames.label.run_sql": {
+    "value": "Run SQL"
+  },
+  "toolNames.label.list_tables": {
+    "value": "List tables"
+  },
+  "toolNames.label.apply_migration": {
+    "value": "Apply migration"
+  },
+  "toolNames.label.list_migrations": {
+    "value": "List migrations"
+  },
+  "toolNames.label.get_logs": {
+    "value": "Read logs"
+  },
+  "toolNames.label.deploy_edge_function": {
+    "value": "Deploy edge function"
+  },
+  "toolNames.label.generate_typescript_types": {
+    "value": "Generate TypeScript types"
+  },
+  "toolNames.label.search_tools": {
+    "value": "Find tools"
+  },
+  "toolNames.label.multi_execute_tool": {
+    "value": "Run actions in connected apps"
+  },
+  "toolNames.label.manage_connections": {
+    "value": "Manage connections"
+  },
+  "toolNames.label.get_tool_schemas": {
+    "value": "Read tool details"
+  },
+  "toolNames.label.remote_workbench": {
+    "value": "Run code in the workbench"
+  },
+  "toolNames.label.remote_bash_tool": {
+    "value": "Run command"
+  },
+  "toolNames.label.browser_open": {
+    "value": "Open page"
+  },
+  "toolNames.label.browser_navigate": {
+    "value": "Open page"
+  },
+  "toolNames.label.browser_navigate_back": {
+    "value": "Go back"
+  },
+  "toolNames.label.browser_back": {
+    "value": "Go back"
+  },
+  "toolNames.label.browser_click": {
+    "value": "Click on the page"
+  },
+  "toolNames.label.browser_hover": {
+    "value": "Hover over the page"
+  },
+  "toolNames.label.browser_drag": {
+    "value": "Drag on the page"
+  },
+  "toolNames.label.browser_fill": {
+    "value": "Fill in a field"
+  },
+  "toolNames.label.browser_type": {
+    "value": "Type on the page"
+  },
+  "toolNames.label.browser_type_secret": {
+    "value": "Type password"
+  },
+  "toolNames.label.browser_press": {
+    "value": "Press key"
+  },
+  "toolNames.label.browser_press_key": {
+    "value": "Press key"
+  },
+  "toolNames.label.browser_select": {
+    "value": "Pick option"
+  },
+  "toolNames.label.browser_select_option": {
+    "value": "Pick option"
+  },
+  "toolNames.label.browser_scroll": {
+    "value": "Scroll the page"
+  },
+  "toolNames.label.browser_read": {
+    "value": "Read the page"
+  },
+  "toolNames.label.browser_snapshot": {
+    "value": "Read the page"
+  },
+  "toolNames.label.browser_screenshot": {
+    "value": "Take a screenshot"
+  },
+  "toolNames.label.browser_take_screenshot": {
+    "value": "Take a screenshot"
+  },
+  "toolNames.label.browser_wait": {
+    "value": "Wait for the page"
+  },
+  "toolNames.label.browser_wait_for": {
+    "value": "Wait for the page"
+  },
+  "toolNames.label.browser_tabs": {
+    "value": "Switch tabs"
+  },
+  "toolNames.label.browser_close": {
+    "value": "Close the browser"
+  },
+  "toolNames.label.browser_upload": {
+    "value": "Upload file"
+  },
+  "toolNames.label.browser_file_upload": {
+    "value": "Upload file"
+  },
+  "toolNames.label.browser_handle_dialog": {
+    "value": "Answer page dialog"
+  },
+  "toolNames.label.browser_console_messages": {
+    "value": "Read the console"
+  },
+  "toolNames.label.browser_network_requests": {
+    "value": "Read network requests"
+  },
+  "toolNames.label.browser_evaluate": {
+    "value": "Run script on the page"
+  },
+  "toolNames.label.browser_do": {
+    "value": "Use the browser"
+  },
+  "toolNames.label.browser_ask_person": {
+    "value": "Ask someone to take over the browser"
+  },
+  "toolNames.label.browser_make_password": {
+    "value": "Make a password"
+  },
+  "toolNames.label.desktop_do": {
+    "value": "Use the computer"
+  },
+  "toolNames.label.desktop_read": {
+    "value": "Read the screen"
+  },
+  "toolNames.label.desktop_screenshot": {
+    "value": "Take a screenshot"
+  },
+  "toolNames.label.desktop_ask_person": {
+    "value": "Ask someone to take over the computer"
+  },
+  "toolNames.label.computer_use": {
+    "value": "Use the computer"
+  },
+  "toolNames.label.computer_status": {
+    "value": "Check the computer"
+  },
+  "toolNames.label.left_click": {
+    "value": "Click"
+  },
+  "toolNames.label.mouse_move": {
+    "value": "Move the mouse"
+  },
+  "toolNames.label.screenshot": {
+    "value": "Take a screenshot"
+  },
+  "toolNames.label.send_dm": {
+    "value": "Send direct message"
+  },
+  "toolNames.label.read_conversation": {
+    "value": "Read conversation"
+  },
+  "toolNames.label.add_agent_to_channel": {
+    "value": "Add agent to a channel"
+  },
+  "toolNames.label.ask_agent": {
+    "value": "Ask another agent"
+  },
+  "toolNames.label.tell_agent": {
+    "value": "Tell another agent"
+  },
+  "toolNames.label.find_agent": {
+    "value": "Find agent"
+  },
+  "toolNames.label.ask_user": {
+    "value": "Ask a question"
+  },
+  "toolNames.label.ask_choices": {
+    "value": "Offer choices"
+  },
+  "toolNames.label.request_approval": {
+    "value": "Ask for approval"
+  },
+  "toolNames.label.request_permission": {
+    "value": "Ask for access"
+  },
+  "toolNames.label.request_secret": {
+    "value": "Ask for a key"
+  },
+  "toolNames.label.request_review": {
+    "value": "Ask for a review"
+  },
+  "toolNames.label.request_folder_access": {
+    "value": "Ask for a folder"
+  },
+  "toolNames.label.create_artifact": {
+    "value": "Create file in Drive"
+  },
+  "toolNames.label.update_artifact": {
+    "value": "Change file in Drive"
+  },
+  "toolNames.label.read_artifact": {
+    "value": "Read file in Drive"
+  },
+  "toolNames.label.list_artifacts": {
+    "value": "List Drive files"
+  },
+  "toolNames.label.share_artifact": {
+    "value": "Share file"
+  },
+  "toolNames.label.upload_file": {
+    "value": "Upload file"
+  },
+  "toolNames.label.import_file": {
+    "value": "Import file"
+  },
+  "toolNames.label.export_file": {
+    "value": "Export file"
+  },
+  "toolNames.label.read_file": {
+    "value": "Read file"
+  },
+  "toolNames.label.write_file": {
+    "value": "Write file"
+  },
+  "toolNames.label.list_files": {
+    "value": "List files"
+  },
+  "toolNames.label.run_code": {
+    "value": "Run code"
+  },
+  "toolNames.label.run_skill_script": {
+    "value": "Run skill script"
+  },
+  "toolNames.label.start_task": {
+    "value": "Start task on the computer"
+  },
+  "toolNames.label.keep_running": {
+    "value": "Keep running on the computer"
+  },
+  "toolNames.label.commit_co_author": {
+    "value": "Turn the agents' line on commits on or off"
+  },
+  "toolNames.label.web_search": {
+    "value": "Search the web"
+  },
+  "toolNames.label.web_fetch": {
+    "value": "Read web page"
+  },
+  "toolNames.label.create_routine": {
+    "value": "Create routine"
+  },
+  "toolNames.label.update_routine": {
+    "value": "Change routine"
+  },
+  "toolNames.label.delete_routine": {
+    "value": "Delete routine"
+  },
+  "toolNames.label.run_routine_now": {
+    "value": "Run routine now"
+  },
+  "toolNames.label.list_routines": {
+    "value": "List routines"
+  },
+  "toolNames.label.schedule_action": {
+    "value": "Schedule action"
+  },
+  "toolNames.label.schedule_reminder": {
+    "value": "Set reminder"
+  },
+  "toolNames.label.cancel_reminder": {
+    "value": "Cancel reminder"
+  },
+  "toolNames.label.list_reminders": {
+    "value": "List reminders"
+  },
+  "toolNames.label.follow_up": {
+    "value": "Follow up later"
+  },
+  "toolNames.label.cancel_follow_up": {
+    "value": "Cancel follow-up"
+  },
+  "toolNames.label.create_wiki_page": {
+    "value": "Create wiki page"
+  },
+  "toolNames.label.update_wiki_page": {
+    "value": "Change wiki page"
+  },
+  "toolNames.label.read_wiki_page": {
+    "value": "Read wiki page"
+  },
+  "toolNames.label.search_wiki": {
+    "value": "Search the wiki"
+  },
+  "toolNames.label.search_context": {
+    "value": "Search what the team knows"
+  },
+  "toolNames.label.remember": {
+    "value": "Remember something"
+  },
+  "toolNames.label.forget": {
+    "value": "Forget something"
+  },
+  "toolNames.label.update_memory": {
+    "value": "Change memory"
+  },
+  "toolNames.label.create_dashboard": {
+    "value": "Create dashboard"
+  },
+  "toolNames.label.list_dashboards": {
+    "value": "List dashboards"
+  },
+  "toolNames.label.share_dashboard": {
+    "value": "Share dashboard"
+  },
+  "toolNames.label.create_widget": {
+    "value": "Create widget"
+  },
+  "toolNames.label.update_widget": {
+    "value": "Change widget"
+  },
+  "toolNames.label.load_skill": {
+    "value": "Open skill"
+  },
+  "toolNames.label.read_skill_file": {
+    "value": "Read skill file"
+  },
+  "toolNames.label.update_skill": {
+    "value": "Change skill"
+  },
+  "toolNames.label.set_status": {
+    "value": "Set status"
+  },
+  "toolNames.label.react": {
+    "value": "React to a message"
+  },
+  "toolNames.label.send_gif": {
+    "value": "Send GIF"
+  },
+  "toolNames.label.send_sticker": {
+    "value": "Send sticker"
+  },
+  "toolNames.label.start_poll": {
+    "value": "Start poll"
+  },
+  "toolNames.label.show_block": {
+    "value": "Show card"
+  },
+  "toolNames.label.hand_off": {
+    "value": "Hand off the work"
+  },
+  "toolNames.label.work_in_background": {
+    "value": "Work in the background"
+  },
+  "toolNames.label.post_update": {
+    "value": "Post update"
+  },
+  "toolNames.label.steer_work": {
+    "value": "Steer the work"
+  },
+  "toolNames.label.stop_work": {
+    "value": "Stop the work"
+  },
+  "toolNames.label.propose_agent": {
+    "value": "Propose agent"
+  },
+  "toolNames.label.propose_mission": {
+    "value": "Propose mission"
+  },
+  "toolNames.label.complete_mission": {
+    "value": "Finish mission"
+  },
+  "toolNames.label.vault_save": {
+    "value": "Save password"
+  },
+  "toolNames.label.vault_list": {
+    "value": "List passwords"
+  },
+  "toolNames.label.vault_delete": {
+    "value": "Delete password"
+  },
+  "toolNames.label.vault_make_password": {
+    "value": "Make a password"
+  },
+  "toolNames.label.get_my_usage": {
+    "value": "See my usage"
+  },
+  "toolNames.label.send_feedback": {
+    "value": "Send feedback"
+  },
+  "toolNames.label.offer_feedback": {
+    "value": "Offer to report a problem"
   },
   "toolReview.title": {
     "value": "Review what the agent can do on its own"
@@ -37578,6 +39862,9 @@
   "settings.section.notifications": {
     "value": "Notifications"
   },
+  "settings.section.download": {
+    "value": "agentes.chat apps"
+  },
   "settings.section.general": {
     "value": "General"
   },
@@ -37585,7 +39872,10 @@
     "value": "Right hand"
   },
   "settings.section.members": {
-    "value": "Members and invitations"
+    "value": "Members"
+  },
+  "settings.section.invites": {
+    "value": "Invitations"
   },
   "settings.section.roles": {
     "value": "Roles"
@@ -37659,6 +39949,9 @@
   "settings.sectionText.notifications": {
     "value": "What reaches you as an alert here. The inbox keeps everything."
   },
+  "settings.sectionText.download": {
+    "value": "The same workspace on your computer and your phone, with your account."
+  },
   "settings.sectionText.general": {
     "value": "Name, time zone and what every agent knows about the workspace."
   },
@@ -37666,7 +39959,10 @@
     "value": "The assistant that builds the team with each person, in their DM."
   },
   "settings.sectionText.members": {
-    "value": "Who is in the workspace, and invitations."
+    "value": "Who is in the workspace."
+  },
+  "settings.sectionText.invites": {
+    "value": "Who can come in and what they get."
   },
   "settings.sectionText.roles": {
     "value": "Each role adds permissions, channels and agents."
@@ -37723,7 +40019,7 @@
     "value": "Your apps and MCP servers, connected once for your agents."
   },
   "settings.sectionText.membersPersonal": {
-    "value": "Who's here with you, and invitations."
+    "value": "Who's here with you."
   },
   "settings.sectionText.rolesPersonal": {
     "value": "What each person here can do. The owner can do everything."
@@ -38108,6 +40404,33 @@
   },
   "settings.keyManagement": {
     "value": "This is a management key. Create a regular API key."
+  },
+  "settings.keyResaved": {
+    "value": "This key was already saved. I updated its details."
+  },
+  "settings.keyCopies": {
+    "value": {
+      "one": "{{count}} identical copy",
+      "other": "{{count}} identical copies"
+    }
+  },
+  "settings.keyMore": {
+    "value": "Actions for {{label}}"
+  },
+  "settings.removeCopies": {
+    "value": "Remove copies"
+  },
+  "settings.removeCopiesTitle": {
+    "value": "Remove the copies of {{label}}?"
+  },
+  "settings.removeCopiesText": {
+    "value": "One key stays. Agents, the default and past spend on the copies move to it."
+  },
+  "settings.copiesRemoved": {
+    "value": {
+      "one": "{{count}} copy removed.",
+      "other": "{{count}} copies removed."
+    }
   },
   "settings.autoModels.title": {
     "value": "Models for Automatic"
@@ -38831,6 +41154,21 @@
   },
   "usageViews.unused": {
     "value": "No agent uses this account."
+  },
+  "usageViews.models.exhausted": {
+    "value": "No quota left · resets {{when}}"
+  },
+  "usageViews.models.exhaustedUnknown": {
+    "value": "No quota left"
+  },
+  "usageViews.models.off": {
+    "value": "Turned off"
+  },
+  "usageViews.models.region": {
+    "value": "Needs the Global region"
+  },
+  "usageViews.models.inactive": {
+    "value": "No active subscription"
   },
   "usageViews.usesNow": {
     "value": "uses it now"
@@ -39833,6 +42171,9 @@
   "chat.work.step.updatingSkills": {
     "value": "Updated skills"
   },
+  "chat.work.step.creatingSkill": {
+    "value": "Created a skill"
+  },
   "chat.work.step.offeringInvites": {
     "value": "Offered to invite people"
   },
@@ -40180,6 +42521,9 @@
   },
   "chat.activity.updatingSkills": {
     "value": "updating skills"
+  },
+  "chat.activity.creatingSkill": {
+    "value": "creating a skill"
   },
   "chat.activity.offeringInvites": {
     "value": "getting invitations ready"
@@ -40999,6 +43343,12 @@
   },
   "builtinTools.update_skill.description": {
     "value": "Fixes a skill it loaded. A person's skill becomes a proposal."
+  },
+  "builtinTools.create_skill.label": {
+    "value": "Create skill"
+  },
+  "builtinTools.create_skill.description": {
+    "value": "Turns what it did into a skill of its own when a person asks. Shows in Skills, with Undo."
   },
   "builtinTools.schedule_reminder.label": {
     "value": "Create reminder"
@@ -46215,20 +48565,5 @@
   },
   "feedback.offer.askFirst": {
     "value": "Ask before sending"
-  },
-  "usageViews.models.exhausted": {
-    "value": "No quota left · resets {{when}}"
-  },
-  "usageViews.models.exhaustedUnknown": {
-    "value": "No quota left"
-  },
-  "usageViews.models.off": {
-    "value": "Turned off"
-  },
-  "usageViews.models.region": {
-    "value": "Needs the Global region"
-  },
-  "usageViews.models.inactive": {
-    "value": "No active subscription"
   }
 }

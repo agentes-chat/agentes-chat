@@ -2208,7 +2208,9 @@ async function executeRunInner(
       ? await pendingConnectors(db, run.orgId, new Set(granted.map((t) => t.name))).catch(() => [])
       : [];
     // Skills: only names and descriptions here; the body loads with `load_skill` (progressive disclosure).
-    const skillList = tools.some((t) => t.name === "load_skill") ? await enabledSkills(db, run.orgId, agent.id) : [];
+    const skillList = tools.some((t) => t.name === "load_skill")
+      ? await enabledSkills(db, run.orgId, agent.id, run.id)
+      : [];
     const readsWiki = tools.some((t) => t.name === "read_wiki_page");
     const personBehind = () => runAuthority(db, run).then((a) => a.personId);
     // Limited to some GitHub repositories: which ones, and where to start.

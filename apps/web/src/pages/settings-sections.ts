@@ -12,10 +12,12 @@ import type { IconName } from "@agenteschat/ui";
 export type SettingsSection =
   | "account"
   | "notifications"
+  | "download"
   | "approvals"
   | "apps"
   | "general"
   | "members"
+  | "invites"
   | "roles"
   | "vault"
   | "audit"
@@ -44,6 +46,8 @@ export const SETTINGS_SECTIONS: {
   { id: "account", icon: "person", allowed: () => true },
   // What reaches my devices as a notification here (ADR 0071 §8).
   { id: "notifications", icon: "bell", allowed: () => true },
+  // The desktop app for this computer and the phone apps, for everyone: a tab of Your account.
+  { id: "download", icon: "download", allowed: () => true },
   // Who approves for me, and whom I approve for (ADR 0139).
   { id: "approvals", icon: "approve", allowed: () => true },
   // AI apps (ADR 0119): each person connects their own, in this workspace.
@@ -57,6 +61,8 @@ export const SETTINGS_SECTIONS: {
   // own speech engine, so the section has nothing to offer there (product decision).
   { id: "voice", icon: "mic", allowed: (o, server) => selfHosted(server) && can(o, "configure") },
   { id: "members", icon: "members", allowed: () => true },
+  // Convites (ADR 0184): People's second tab, for who may invite: the requests waiting, the links and the e-mails.
+  { id: "invites", icon: "mail", allowed: (o) => can(o, "invite_people") },
   // Cargos (ADR 0085): an entry of its own, for who manages them.
   { id: "roles", icon: "shield", allowed: (o) => can(o, "manage_roles") },
   // "IA e uso", for everyone (ADR 0063): the workspace's AI accounts with their meters, what each person does with
@@ -66,7 +72,8 @@ export const SETTINGS_SECTIONS: {
   // Only where a billing service runs (ADR 0079), for who may open it.
   { id: "billing", icon: "coin", allowed: (o, server) => !!server?.billingUrl && can(o, "manage_billing") },
   { id: "connectors", icon: "plug", allowed: () => true },
-  { id: "skills", icon: "bulb", allowed: (o) => can(o, "manage_agents") },
+  // Every member keeps skills of their own there; the team's library is changed by who manages agents.
+  { id: "skills", icon: "bulb", allowed: () => true },
   // Every member keeps their own logins, keys and contacts there; team items show to who they're shared with (ADR 0144).
   { id: "vault", icon: "lock", allowed: () => true },
   { id: "access", icon: "agent", allowed: (o) => can(o, "manage_agents") },

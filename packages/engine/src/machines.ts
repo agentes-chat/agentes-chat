@@ -24,6 +24,7 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
+import { appLocale } from "@agenteschat/i18n/locale";
 import { getAgent, workspaceHomeId } from "./agents";
 import { type AuditEntry, recordAudit } from "./audit";
 import { isSandboxedBrain } from "./brains/types";
@@ -748,7 +749,7 @@ export async function machineAgents(db: Database, orgId: string, machineId: stri
 
 type RightHandRow = NonNullable<Awaited<ReturnType<typeof rightHandRow>>>;
 
-const agentLocale = (locale: string | null) => (/^pt(?:-|$)/i.test(locale ?? "") ? "pt-BR" : "en");
+const agentLocale = (locale: string | null) => appLocale([locale], true) ?? "en";
 
 async function rightHandRow(db: Database, orgId: string) {
   const [row] = await db

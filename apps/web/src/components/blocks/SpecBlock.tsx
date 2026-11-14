@@ -1,5 +1,6 @@
 import { type BlockChange, useBlockReply, useBlockValues } from "@agenteschat/client";
 import type { ChartSpec } from "@agenteschat/client/lib/chart";
+import { formatTime } from "@agenteschat/client/lib/format";
 import { Button, Field, Input, Segmented, Switch, Textarea } from "@agenteschat/ui";
 import {
   type BlockViewPart,
@@ -149,7 +150,7 @@ export function SpecBlock({
           <div className="live-block__foot">
             <span className="live-block__sent">
               <span className="live-block__mark" aria-hidden="true" />
-              {t("blocks.sentAt", { time: new Date(sent.at).toLocaleTimeString([], { timeStyle: "short" }) })}
+              {t("blocks.sentAt", { time: formatTime(i18n.language, sent.at) })}
             </span>
           </div>
         ) : (

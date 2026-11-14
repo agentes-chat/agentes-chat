@@ -453,6 +453,9 @@ export function whoSeesLines(
   return lines.length ? lines : [t("mobile.roles.nobodyLoses")];
 }
 
+/** Whether a channel's name has every word of a search, typed with its "#" or not. */
+export const channelMatches = (name: string, query: string) => matchesWords(name, query.trim().replace(/^#/, ""));
+
 /** The channels a cargo's Canais lists, in the sidebar's groups and order: no category first, then each one. */
 export function channelGroups<C extends Pick<Channel, "id" | "name" | "categoryId" | "position">>(
   channels: readonly C[],
@@ -460,7 +463,7 @@ export function channelGroups<C extends Pick<Channel, "id" | "name" | "categoryI
   query = "",
 ) {
   const known = new Set(categories.map((c) => c.id));
-  const hits = channels.filter((c) => matchesWords(c.name, query.trim().replace(/^#/, "")));
+  const hits = channels.filter((c) => channelMatches(c.name, query));
   const order = (a: C, b: C) =>
     (isGeneral(b) ? 1 : 0) - (isGeneral(a) ? 1 : 0) ||
     (a.position ?? 0) - (b.position ?? 0) ||

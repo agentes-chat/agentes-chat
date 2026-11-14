@@ -19,7 +19,8 @@ export type DmTarget = { userId: string } | { agentId: string };
 
 const keyOf = (participants: string[]) => [...new Set(participants)].sort().join("|");
 
-const namedPeople = (dmKey: string | null) =>
+/** The people a DM's key names (`u:` participants), none in a DM between agents. */
+export const dmPeople = (dmKey: string | null) =>
   (dmKey ?? "").split("|").flatMap((p) => (p.startsWith("u:") ? [p.slice(2)] : []));
 
 /** Of these people, the ones who are members of the workspace and not blocked. */
@@ -54,7 +55,7 @@ async function reopenDm(
   dm: { id: string; dmKey: string | null; archivedAt: Date | null },
 ) {
   if (dm.archivedAt) await db.update(channels).set({ archivedAt: null }).where(eq(channels.id, dm.id));
-  await readmit(db, orgId, dm.id, await presentPeople(db, orgId, namedPeople(dm.dmKey)));
+  await readmit(db, orgId, dm.id, await presentPeople(db, orgId, dmPeople(dm.dmKey)));
 }
 
 /**
@@ -86,7 +87,7 @@ export async function restoreDms(db: Executor, orgId: string, userId: string) {
     .from(channels)
     .where(and(eq(channels.orgId, orgId), eq(channels.kind, "dm"), sql`${channels.dmKey} like ${`%u:${userId}%`}`));
   for (const dm of dms) {
-    const named = namedPeople(dm.dmKey);
+    const named = dmPeople(dm.dmKey);
     if (!named.includes(userId)) continue;
     const present = await presentPeople(db, orgId, named);
     if (present.length === named.length) await readmit(db, orgId, dm.id, named);

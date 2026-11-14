@@ -7,6 +7,7 @@ import type { SignInOptions } from "@agenteschat/client";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import type { ThisMacStatus } from "@/lib/desktop";
 import { createFakeApi, ORG_ID, seedState } from "./fake-api";
+import { createFakeAuth } from "./fake-auth";
 import { renderApp, screen, settle } from "./render";
 
 /**
@@ -160,6 +161,44 @@ describe("Entrar no servidor que o app roda neste computador", () => {
     expect(asked.filter((r) => r.kind === "signIn")).toEqual([{ kind: "signIn" }]);
     expect(sessionStorage.getItem("agentes.newPasswordAsk")).toBe("1");
     sessionStorage.removeItem("agentes.newPasswordAsk");
+  });
+
+  describe("from the screen of an account that waits for its deletion", () => {
+    const waiting = () => {
+      const state = seedState();
+      if (!state.me) throw new Error("signed in");
+      const dueAt = new Date(Date.now() + 6 * 86_400_000).toISOString();
+      state.me.user.deletion = { dueAt, requestedAt: new Date().toISOString() };
+      state.me.organizations = [];
+      return state;
+    };
+    const press = async (name: string) => {
+      await act(async () => fireEvent.click(screen().getByRole("button", { name })));
+      await settle(8);
+    };
+
+    test("Sair is by hand: the sign-in waits for Continue on this Mac, the app is never asked", async () => {
+      const asked = inTheApp({ orgs: [], agentsHere: false, local: true });
+      const state = waiting();
+      const { auth } = createFakeAuth({ onSignOut: () => (state.me = null) });
+      const { router } = await renderApp("/", { api: createFakeApi(state), auth });
+      await settle(8);
+      await press("Sair");
+      expect(router.state.location.pathname).toBe("/login");
+      expect(continueHere()).toBeTruthy();
+      expect(asked.filter((r) => r.kind === "signIn")).toEqual([]);
+    });
+
+    test("Restaurar after the session ended: nobody signed out by hand, so the app signs its owner in again", async () => {
+      const asked = inTheApp({ orgs: [], agentsHere: false, local: true });
+      const state = waiting();
+      const { router } = await renderApp("/", { api: createFakeApi(state) });
+      await settle(8);
+      state.me = null;
+      await press("Restaurar conta");
+      expect(router.state.location.pathname).toBe("/login");
+      expect(asked.filter((r) => r.kind === "signIn")).toEqual([{ kind: "signIn" }]);
+    });
   });
 
   test("another server in the app, or a browser: the ordinary sign-in", async () => {

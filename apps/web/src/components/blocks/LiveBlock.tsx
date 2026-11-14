@@ -6,6 +6,7 @@ import {
   blockPage,
   DRAFT_SETTLE_MS,
 } from "@agenteschat/client/lib/blocks";
+import { formatTime } from "@agenteschat/client/lib/format";
 import { PAGE_SANDBOX } from "@agenteschat/client/lib/isolated-page";
 import { Button, Menu, MenuItem, Spinner } from "@agenteschat/ui";
 import { chartRamp } from "@agenteschat/ui/sky/chart";
@@ -202,7 +203,7 @@ export function LiveBlock({
   agentId: string;
   big?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const agent = dir.anyAgent(agentId);
@@ -327,7 +328,7 @@ export function LiveBlock({
         <div className="live-block__foot">
           <span className="live-block__sent">
             <span className="live-block__mark" aria-hidden="true" />
-            {t("blocks.sentAt", { time: new Date(sent.at).toLocaleTimeString([], { timeStyle: "short" }) })}
+            {t("blocks.sentAt", { time: formatTime(i18n.language, sent.at) })}
           </span>
         </div>
       ) : draft ? (

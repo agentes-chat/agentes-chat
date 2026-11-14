@@ -817,6 +817,7 @@ export function PlanWithoutAgent({
   const steps = gate.state === "ready" || gate.state === "preparing" || (gate.state === "offline" && signingIn);
   // Only whoever connected the computers there signs a plan in on them: a computer of their own is the way on.
   const elsewhere = gate.state === "locked" && !cloud;
+  const pairsOwn = elsewhere && can(org, "pair_computers");
   return (
     <Card as="section" className="ai-panel ai-panel--plan" aria-label={title}>
       <PanelHead
@@ -847,10 +848,10 @@ export function PlanWithoutAgent({
             onKey={onKey}
             onComputer={onComputer}
           />
-          {elsewhere && onComputer && (
+          {pairsOwn && onComputer && (
             <span>
               <Button size="sm" variant="primary" onClick={onComputer}>
-                {t("aiAccounts.connect.addComputer")}
+                {t("connectAi.connectMine")}
               </Button>
             </span>
           )}
@@ -1867,7 +1868,10 @@ export function KeyPanel({
               </OpenPage>
             }
           >
-            <StepTitle title={t("connectAi.key.create", { provider: providerLabel(keyOf) })} hint={hint && t(hint)} />
+            <StepTitle
+              title={t("connectAi.key.create", { provider: providerLabel(keyOf) })}
+              hint={hint && t(hint, { provider: maker.label })}
+            />
           </Step>
           <Step n={2}>
             <label htmlFor={fieldId}>

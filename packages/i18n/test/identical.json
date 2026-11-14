@@ -285,7 +285,14 @@
       "install.scene.finder",
       "install.scene.downloads",
       "devices.armBuild",
-      "devices.iphone.xcodeFix.ok"
+      "devices.iphone.xcodeFix.ok",
+      "invites.byLink",
+      "invites.link",
+      "invites.types.links",
+      "invites.links",
+      "invites.linkLabel",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -531,7 +538,9 @@
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
-      "settings.section.roles"
+      "settings.section.roles",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay"
     ],
     "fr": [
       "channel.tooLong.fileName",
@@ -780,6 +789,7 @@
       "palette.agent",
       "palette.agentRole",
       "palette.page",
+      "palette.agents",
       "permissions.areas.agents",
       "permissions.areas.chat",
       "photo.label",
@@ -947,7 +957,15 @@
       "machines.oneClick.tools.antigravity",
       "rolesPage.tabs.agents",
       "rolesPage.reach.agents",
-      "rolesPage.reach.baseAgents"
+      "rolesPage.reach.baseAgents",
+      "settings.section.invites",
+      "invites.channelsPersonal",
+      "invites.agents",
+      "invites.ttl.30m",
+      "invites.type",
+      "invites.typesCount",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1386,7 +1404,14 @@
       "machines.oneClick.tools.antigravity",
       "followUps.inTime",
       "rolesPage.computer.short.browser",
-      "rolesPage.computer.short.computer"
+      "rolesPage.computer.short.computer",
+      "invites.byLink",
+      "invites.link",
+      "invites.types.links",
+      "invites.links",
+      "invites.linkLabel",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay"
     ],
     "it": [
       "shell.email.label",
@@ -1746,7 +1771,14 @@
       "agentWork.laterShort",
       "threads.status.later",
       "rolesPage.computer.short.browser",
-      "rolesPage.computer.short.computer"
+      "rolesPage.computer.short.computer",
+      "invites.byEmail",
+      "invites.byLink",
+      "invites.link",
+      "invites.linkLabel",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay",
+      "appsDownload.computer"
     ],
     "nl": [
       "calendar.moreRuns",
@@ -2076,6 +2108,7 @@
       "outage.region",
       "palette.agent",
       "palette.agentRole",
+      "palette.agents",
       "permissions.areas.agents",
       "presence.agent.routine",
       "presence.lower.offline",
@@ -2331,7 +2364,16 @@
       "rolesPage.computer.short.computer",
       "rolesPage.tabs.agents",
       "rolesPage.reach.agents",
-      "rolesPage.reach.baseAgents"
+      "rolesPage.reach.baseAgents",
+      "invites.byLink",
+      "invites.agents",
+      "invites.link",
+      "invites.types.links",
+      "invites.links",
+      "invites.linkLabel",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay",
+      "appsDownload.computer"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -2496,7 +2538,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay"
     ],
     "ko": [
       "channel.tooLong.fileName",
@@ -2655,7 +2699,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -2805,7 +2851,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay"
     ],
     "id": [
       "shell.email.label",
@@ -3020,6 +3068,8 @@
       "taskManager.program.browser",
       "taskManager.program.terminal",
       "timezone.group.Asia",
+      "toolNames.label.deploy_edge_function",
+      "toolNames.label.merge_merge_request",
       "toolNames.verb.deploy",
       "toolNames.verb.merge",
       "toolNames.verb.transfer",
@@ -3102,7 +3152,11 @@
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
       "machines.oneClick.tools.browser",
-      "machines.oneClick.tools.terminal"
+      "machines.oneClick.tools.terminal",
+      "invites.byEmail",
+      "invites.edit",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay"
     ],
     "tr": [
       "devices.cpus",
@@ -3286,7 +3340,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay"
     ],
     "pl": [
       "devices.cpus",
@@ -3576,7 +3632,12 @@
       "agentWork.laterShort",
       "threads.status.later",
       "rolesPage.reach.agents",
-      "rolesPage.reach.baseAgents"
+      "rolesPage.reach.baseAgents",
+      "invites.byLink",
+      "invites.link",
+      "invites.linkLabel",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay"
     ],
     "ru": [
       "channel.tooLong.fileName",
@@ -3726,7 +3787,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "appsDownload.appStore",
+      "appsDownload.googlePlay"
     ]
   },
   "mobile-base": {
@@ -3800,7 +3863,6 @@
       "files.type.pdf",
       "find.conversations",
       "invitePeople.ok",
-      "joinRequests.roles",
       "me.account.save",
       "mission.minutes",
       "mission.plan.section",

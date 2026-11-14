@@ -74,6 +74,7 @@ export type ActivityKind =
   | "offeringConnectApp"
   | "offeringSkill"
   | "updatingSkills"
+  | "creatingSkill"
   | "offeringInvites"
   | "proposingAgent"
   | "askingAgent"
@@ -223,6 +224,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   offer_invites: "offeringInvites",
   offer_install_skill: "offeringSkill",
   update_skill_from_source: "updatingSkills",
+  create_skill: "creatingSkill",
   propose_agent: "proposingAgent",
   // Another agent of the team (the consultation card says who and what it answered).
   ask_agent: "askingAgent",

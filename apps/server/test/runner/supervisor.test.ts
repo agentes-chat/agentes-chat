@@ -610,10 +610,11 @@ test("protocol 31: a Claude Code or Codex task's account goes to its agent's use
   expect(lends).toHaveLength(2);
 });
 
-test("each worker hears which account its own agent thinks with, and again when that changes", async () => {
+test("each worker hears which account its own agent thinks with and its person's language, again when they change", async () => {
   const ACCOUNT = "0193ffff-0000-7000-8000-000000000001";
   const accounts: Record<string, string> = {};
-  const t = setup({ account: (agentId) => accounts[agentId] ?? null });
+  const locales: Record<string, string> = {};
+  const t = setup({ account: (agentId) => accounts[agentId] ?? null, locale: (agentId) => locales[agentId] });
   t.sup.boot();
   t.sup.attach();
   const run = handleRequest(t.ctx, exec(ANA), scope().scope);
@@ -626,11 +627,16 @@ test("each worker hears which account its own agent thinks with, and again when 
   t.sup.stateChanged();
   await waitFor(() => ana.of("worker.state").length === 2);
   expect(ana.of("worker.state")[1]).toEqual({ type: "worker.state", ...STATE, account: ACCOUNT });
-  // Another agent's account is none of its business.
+  locales[ANA.id] = "ja";
+  t.sup.stateChanged();
+  await waitFor(() => ana.of("worker.state").length === 3);
+  expect(ana.of("worker.state")[2]).toEqual({ type: "worker.state", ...STATE, account: ACCOUNT, locale: "ja" });
+  // Another agent's account and language are none of its business.
   accounts[BIA.id] = "0193ffff-0000-7000-8000-000000000002";
+  locales[BIA.id] = "de";
   t.sup.stateChanged();
   await new Promise((r) => setTimeout(r, 50));
-  expect(ana.of("worker.state")).toHaveLength(2);
+  expect(ana.of("worker.state")).toHaveLength(3);
   ana.crash();
   expect(await errorCode(() => run)).toBe("dropped");
 });

@@ -149,21 +149,37 @@
     "addLead": "Ceux que vous avez déjà restent ici, chacun avec sa propre connexion.",
     "addCloud": "Créer un espace de travail sur agentes.chat",
     "addNew": "Vous voulez un nouveau workspace ?",
-    "addNewLink": "En créer un",
-    "addOwn": "Utiliser le serveur de votre équipe"
+    "addNewLink": "En créer un"
   },
-  "own": {
-    "title": "Votre propre serveur",
-    "lead": "agentes.chat tourne sur vos ordinateurs, et vos données y restent.",
-    "back": "agentes.chat",
-    "connect": "Se connecter à mon serveur",
-    "connectText": "Il tourne sur un autre ordinateur : un Mac mini, un portable inutilisé ou un serveur en ligne.",
-    "here": "Faire tourner agentes.chat sur ce {{device}}",
-    "hereText": "Ce {{device}} devient le serveur, tant qu'il est allumé.",
-    "which": "Lequel choisir ?"
+  "place": {
+    "title": "Où votre workspace va-t-il vivre ?",
+    "lead": "Vos agents travaillent là où il est. Vous pourrez changer plus tard.",
+    "recommended": "Recommandé",
+    "cloud": "Dans le cloud agentes.chat",
+    "cloudText": "Toujours allumé. On s'occupe de tout, vous n'avez qu'à l'utiliser.",
+    "here": "Sur ce {{device}}",
+    "hereText": "Vos agents travaillent tant que l'app est ouverte.",
+    "box": "Sur un ordinateur toujours allumé",
+    "boxText": "Un Mac mini ou un ordinateur du bureau, installé une fois.",
+    "goCloud": "Continuer dans le cloud",
+    "goHere": "Préparer ce {{device}}",
+    "goBox": "Voir comment l'installer",
+    "haveOne": "Vous en avez déjà un ?",
+    "haveOneLink": "Se connecter par son adresse"
+  },
+  "install": {
+    "title": "Installer sur un ordinateur toujours allumé",
+    "lead": "Ça se fait une fois. Ensuite il tourne tout seul, même avec cette app fermée.",
+    "step1": "Sur l'ordinateur qui reste allumé, ouvrez le Terminal et collez ceci",
+    "step2": "À la fin, un lien s'affiche. Ouvrez-le ici, c'est tout.",
+    "noLink": "Pas de lien ?",
+    "someoneElse": "Quelqu'un d'autre l'installe ?",
+    "copy": "Copier les instructions",
+    "copied": "Instructions copiées",
+    "text": "Pour installer agentes.chat sur un ordinateur qui reste allumé (un Mac mini, un ordinateur du bureau ou un serveur) :\n\n1. Sur cet ordinateur, ouvrez le Terminal et collez ceci :\n{{command}}\n\n2. À la fin, un lien s'affiche. Envoyez-le-moi : il ouvre le workspace dans l'app."
   },
   "connect": {
-    "title": "Se connecter à mon serveur",
+    "title": "Se connecter à un workspace qui existe déjà",
     "lead": "Son adresse, la même que celle que vous ouvrez dans le navigateur.",
     "label": "Adresse du serveur",
     "placeholder": "agentes.votreequipe.ts.net",
@@ -171,7 +187,7 @@
     "checking": "Vérification…",
     "found": "Trouvé",
     "looking": "Recherche de votre serveur…",
-    "foundTailnet": "Sur votre réseau Tailscale",
+    "foundTailnet": "Sur le réseau de votre équipe",
     "foundHere": "agentes.chat tourne ici",
     "foundNoOwner": "En attente de son compte propriétaire",
     "use": "Utiliser",
@@ -181,8 +197,7 @@
     "tailnetOff": "Tailscale est désactivé sur ce {{device}}, donc les serveurs de votre réseau Tailscale n'apparaissent pas ici.",
     "addressHint": "Une adresse en https, ou son adresse Tailscale, qui se termine par .ts.net.",
     "checkUpdates": "Rechercher des mises à jour",
-    "none": "Vous n'en avez pas encore ? Lancez ceci dessus",
-    "noneText": "Dans le terminal d'un serveur ou d'un Mac mini. À la fin, un lien s'affiche pour y connecter cette app.",
+    "noneYet": "Vous n'en avez pas encore ?",
     "invalid": "Vérifiez l'adresse, du type agentes.votreequipe.ts.net.",
     "httpRefused": "{{host}} n'utilise pas de connexion sécurisée (https), et seuls les serveurs sur ce {{device}} peuvent s'en passer. Utilisez son adresse https ou son adresse Tailscale.",
     "noOwner": "{{host}} n'a pas encore de propriétaire. La personne qui a installé le serveur a reçu un lien pour créer le compte propriétaire : ouvrez ce lien sur ce {{device}} ou sur votre téléphone.",
@@ -195,8 +210,8 @@
     "appTooOld": "Mettez l'app à jour pour utiliser {{host}}."
   },
   "here": {
-    "title": "Faire tourner agentes.chat sur ce {{device}}",
-    "how": "Il tourne dans cette app, avec sa propre base de données intégrée, et garde tout dans un seul dossier sur ce {{device}}.",
+    "title": "Préparons ce {{device}}",
+    "how": "Ça prend une minute. Tout reste ici, rien qu'avec vous.",
     "again": "Il a déjà tourné ici, et ses données sont toujours dans {{path}}.",
     "name": "Votre nom",
     "nameNeeded": "Écrivez votre nom.",
@@ -221,15 +236,16 @@
     "getTailscale": "Obtenir Tailscale",
     "usage": "Envoyer des statistiques d'utilisation anonymes à agentes.chat",
     "usageText": "Des comptages comme le nombre de personnes, d'agents, la taille des machines, les jetons d'IA utilisés et le volume de données envoyées et reçues par les navigateurs des agents. Jamais de messages, fichiers, noms ou sites.",
-    "start": "Démarrer agentes.chat",
-    "setting": "Installation d'agentes.chat sur ce {{device}}",
+    "start": "Commencer",
+    "setting": "Tout se prépare",
+    "rest": "Quand vous fermez l'app, vos agents se reposent. Ils reviennent dès que vous la rouvrez.",
     "step": {
-      "database": "Préparation de la base de données",
+      "database": "On fait de la place pour vos données",
       "databaseNote": "la première fois seulement",
-      "start": "Démarrage",
+      "start": "On allume agentes.chat",
       "account": "Création de votre compte",
-      "computer": "Préparation de ce {{device}} pour vos agents",
-      "reach": "Activation de l'accès depuis vos appareils"
+      "computer": "On appelle vos agents",
+      "reach": "On active l'accès depuis le téléphone"
     },
     "stepState": {
       "active": "en cours",
@@ -271,11 +287,13 @@
     "openIt": "L'ouvrir"
   },
   "link": {
-    "question": "Connecter l'app à ce serveur ?",
+    "question": "Ouvrir ce workspace dans l'app ?",
     "questionSignIn": "Se connecter à ce serveur avec votre compte de l'autre appareil ?",
-    "questionClaim": "Configurez ce serveur : créez son compte propriétaire.",
+    "questionClaim": "Ouvrir le workspace que vous avez installé ?",
+    "claimLead": "Vous créez son compte propriétaire maintenant.",
     "leave": "Vous quittez {{current}} dans cette app. Votre compte là-bas est conservé.",
     "connect": "Connecter",
+    "open": "Ouvrir",
     "continue": "Continuer",
     "checking": "Vérification du serveur…",
     "notALink": "Ce lien ne vient pas d'un serveur agentes.chat.",
@@ -557,8 +575,6 @@
       "notifyTitle": "Me prévenir quand un agent demande un dossier",
       "notifyBrowserTitle": "Me prévenir quand un agent a besoin de moi dans son navigateur",
       "notifyBrowserDesc": "La demande arrive déjà sur votre téléphone et sur le site. Ceci vous prévient aussi ici.",
-      "dockTitle": "Afficher dans le Dock",
-      "dockDesc": "Avec le nombre de ce qui vous attend. Désactivé, l'app ne reste dans la barre des menus que quand aucune fenêtre n'est ouverte.",
       "menuBarTitle": "Afficher dans la barre des menus",
       "notchTitle": "Afficher les agents dans l'encoche",
       "notchDesc": "Sur les MacBook avec encoche : qui travaille s'affiche autour de la caméra."

@@ -42,6 +42,7 @@ export function deletedByText(t: TFunction, locale: string, deletion: OrgDeletio
 export const SETTINGS_OPEN_WHILE_DELETING: ReadonlySet<string> = new Set([
   "account",
   "notifications",
+  "download",
   "approvals",
   "usage",
   "audit",

@@ -175,7 +175,7 @@ export const legalDe: Partial<Record<LegalKind, LegalDocument>> = {
       "Welche Daten wir erheben, was Agenten wohin senden, wer Ihren Workspace sehen kann und welche Rechte Sie haben.",
     courtesy:
       "Dies ist eine unverbindliche Übersetzung. Weicht sie von der englischen Fassung ab, ist die englische Fassung maßgeblich.",
-    updated: "2026-11-13",
+    updated: "2026-11-14",
     sections: [
       {
         id: "overview",
@@ -231,7 +231,7 @@ export const legalDe: Partial<Record<LegalKind, LegalDocument>> = {
           {
             list: [
               "**Zwischen Geräten und unseren Servern.** Alles, was zwischen unseren Servern und den Browsern, Apps und Computern übertragen wird, die sich mit ihnen verbinden, einschließlich der Workspace-Inhalte, läuft über unseren Netzwerkanbieter, der den Dienst vor Angriffen schützt. Dazu entschlüsselt der Netzwerkanbieter diesen Datenverkehr in seinem dem jeweiligen Gerät nächstgelegenen Rechenzentrum und verarbeitet ihn in unserem Auftrag.",
-              "**Antworten.** Wenn ein Agent arbeitet, sendet er den benötigten Kontext (den Kontext des Workspace, die Anweisungen des Agenten, die Unterhaltung, relevante Erinnerungen und die Ergebnisse seiner Werkzeuge) an den für diesen Agenten gewählten Modellanbieter. Mit einem API-Schlüssel, den der Workspace hinterlegt hat, erfolgt der Aufruf über das eigene Konto des Workspace und auf Grundlage seiner eigenen Vereinbarung mit diesem Anbieter. Ist mit einem Agenten ein KI-Abonnement wie Claude oder ChatGPT verbunden, arbeitet der Agent über das Konto der Person, die das Abonnement verbunden hat, und zu den Bedingungen des Anbieters.",
+              "**Antworten.** Wenn ein Agent arbeitet, sendet er den benötigten Kontext (den Kontext des Workspace, die Anweisungen des Agenten, die Unterhaltung, relevante Erinnerungen und die Ergebnisse seiner Werkzeuge) an den für diesen Agenten gewählten Modellanbieter. Mit einem API-Schlüssel, den der Workspace hinterlegt hat, erfolgt der Aufruf über das eigene Konto des Workspace und auf Grundlage seiner eigenen Vereinbarung mit diesem Anbieter. Einige Anbieter leiten den Aufruf an das Unternehmen weiter, das das Modell entwickelt oder hostet, und dieses verarbeitet ihn dann ebenfalls zu den Bedingungen dieses Anbieters. Ist mit einem Agenten ein KI-Abonnement wie Claude oder ChatGPT verbunden, arbeitet der Agent über das Konto der Person, die das Abonnement verbunden hat, und zu den Bedingungen des Anbieters.",
               "**Entscheidung, wer antwortet.** Ein Routing-Modell liest eine neue Nachricht, die Namen und Rollen der Agenten des Workspace und die jüngste Unterhaltung, um zu entscheiden, welcher Agent gegebenenfalls antworten soll. Es läuft bei TypeSafe oder, ersatzweise, beim Modellanbieter des Workspace. Das Routing gewährt einem Agenten niemals eine Berechtigung.",
               "**Erinnerungen.** Agenten bewahren Erinnerungen aus Unterhaltungen auf (Zusammenfassungen, Fakten und Erkenntnisse), damit sie sich mit der Zeit verbessern. Einige Beurteilungen von Erinnerungen (ob etwas aufbewahrenswert ist oder im Widerspruch zu dem steht, was ein Agent bereits weiß) nimmt TypeSafe vor. Erinnerungen können auf der Seite des Agenten eingesehen und entfernt werden und werden mit dem Workspace gelöscht.",
               "**Suche.** Um verwandte Nachrichten und Dokumente zu finden, kann Text von Voyage AI in Vektoren (Embeddings) umgewandelt werden.",
@@ -286,14 +286,14 @@ export const legalDe: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Internationale Übermittlungen",
         blocks: [
-          "Unsere Anwendung und ihre Datenbank laufen in den Vereinigten Staaten, und die in dieser Erklärung genannten Anbieter verarbeiten Daten in den Vereinigten Staaten. Die Computer der Workspaces laufen in der Europäischen Union oder in den Vereinigten Staaten, und unser Netzwerkanbieter verarbeitet den Datenverkehr in seinem dem jeweiligen Gerät nächstgelegenen Rechenzentrum, in den Vereinigten Staaten oder anderswo. Werden personenbezogene Daten, die der DSGVO oder der UK GDPR unterliegen, in ein Drittland übermittelt, stützen wir uns auf die Standardvertragsklauseln der Europäischen Kommission und das UK Addendum. Für Daten, die dem LGPD unterliegen, stützen wir uns auf die vertraglichen Garantien nach Artikel 33.",
+          "Unsere Anwendung und ihre Datenbank laufen in den Vereinigten Staaten, und die in dieser Erklärung genannten Anbieter verarbeiten Daten in den Vereinigten Staaten, ausgenommen die Modellanbieter und angebundenen Dienste, die ein Workspace wählt, sowie die Unternehmen, an die diese Aufrufe weiterleiten, die Daten zu ihren eigenen Bedingungen in anderen Ländern verarbeiten können. Die Computer der Workspaces laufen in der Europäischen Union oder in den Vereinigten Staaten, und unser Netzwerkanbieter verarbeitet den Datenverkehr in seinem dem jeweiligen Gerät nächstgelegenen Rechenzentrum, in den Vereinigten Staaten oder anderswo. Werden personenbezogene Daten, die der DSGVO oder der UK GDPR unterliegen, in ein Drittland übermittelt, stützen wir uns auf die Standardvertragsklauseln der Europäischen Kommission und das UK Addendum. Für Daten, die dem LGPD unterliegen, stützen wir uns auf die vertraglichen Garantien nach Artikel 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. Smartphone- und Mac-Apps",
         blocks: [
-          "Die Smartphone-App sendet Benachrichtigungen über Expo, Apple und Google. Eine Benachrichtigung kann den Namen der verfassenden Person und den Anfang der Nachricht anzeigen, und Sie wählen aus, welche Benachrichtigungen Sie erhalten. Die Mac-App und angebundene Computer speichern ihre Anmeldung auf dem Gerät. Das Löschen Ihres Kontos (auch in den Apps möglich) meldet alle Geräte ab.",
+          "Die Smartphone-App sendet Benachrichtigungen über Apple und Google. Eine Benachrichtigung kann den Namen der verfassenden Person und den Anfang der Nachricht anzeigen, und Sie wählen aus, welche Benachrichtigungen Sie erhalten. Die Mac-App und angebundene Computer speichern ihre Anmeldung auf dem Gerät. Das Löschen Ihres Kontos (auch in den Apps möglich) meldet alle Geräte ab.",
         ],
       },
       {

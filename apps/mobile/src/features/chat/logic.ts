@@ -1,4 +1,5 @@
 import type {
+  Agent,
   AgentQuestion,
   LiveConsult,
   LiveRun,
@@ -950,3 +951,33 @@ export const messageRefWords = (t: TFunction, card: MessageCard) =>
 
 /** Two taps this close on a message are its double tap (the thumbs up), on its words or on a receipt under them. */
 export const DOUBLE_TAP_MS = 300;
+
+/** The arrival card's faces: a few agents first, then a few people. */
+const ARRIVAL_AGENTS = 3;
+const ARRIVAL_PEOPLE = 2;
+
+/**
+ * A newcomer's first #general (ADR 0090, 0184): the agents they talk to first, the ones pinned for them first (an
+ * invitation's agents, in its order), then a few people; the agent "Conversar com" opens, the first of those; and the
+ * channels they're in besides #general ("Você também está em #suporte").
+ */
+export function arrivalOf(args: {
+  agents: readonly Pick<Agent, "id" | "canTalk">[];
+  pinned: readonly string[];
+  people: readonly { userId: string }[];
+  meId: string;
+  channels: readonly { name: string; isMember: boolean }[];
+}) {
+  const talks = args.agents.filter((a) => a.canTalk !== false);
+  const first = args.pinned.flatMap((id) => talks.filter((a) => a.id === id));
+  const order = [...first, ...talks.filter((a) => !args.pinned.includes(a.id))];
+  return {
+    agents: order.slice(0, ARRIVAL_AGENTS).map((a) => a.id),
+    people: args.people
+      .filter((p) => p.userId !== args.meId)
+      .slice(0, ARRIVAL_PEOPLE)
+      .map((p) => p.userId),
+    host: order[0]?.id ?? null,
+    alsoIn: args.channels.filter((c) => c.isMember && c.name !== "general").map((c) => `#${c.name}`),
+  };
+}

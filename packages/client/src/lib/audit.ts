@@ -59,7 +59,7 @@ export function auditActorName(t: TFunction, row: AuditRow): string | null {
 }
 
 /** "Usou o Gmail", "Criou uma tarefa", "Aprovou um pedido", "Criou uma rotina". */
-export function auditPhrase(t: TFunction, row: AuditRow): string {
+export function auditPhrase(t: TFunction, row: AuditRow, locale?: string): string {
   if (row.action === TOOL_CALL) {
     const kind = auditStr(row.details.kind);
     const connector = auditStr(row.details.connector);
@@ -72,7 +72,7 @@ export function auditPhrase(t: TFunction, row: AuditRow): string {
       (guessed.kind === "consulting" || guessed.kind === "readingDrive") && kind !== "read"
         ? { kind: "usingTool" as const }
         : guessed;
-    return stepLabel(t, { ...activity, tool: row.target.id ?? "" });
+    return stepLabel(t, { ...activity, tool: row.target.id ?? "" }, locale);
   }
   if (row.action === "agent.merged_without_asking") {
     return t("audit.change.mergedWithoutAsking", { repo: row.target.id ?? "" });
@@ -118,7 +118,7 @@ export function auditPhrase(t: TFunction, row: AuditRow): string {
 /** The sentence in two parts, so the name can be drawn bold: `name` null for the system. */
 export function auditSentence(t: TFunction, row: AuditRow, locale: string): { name: string | null; text: string } {
   const name = auditActorName(t, row);
-  const text = auditPhrase(t, row);
+  const text = auditPhrase(t, row, locale);
   return { name, text: name ? lowerFirst(text, locale) : text };
 }
 

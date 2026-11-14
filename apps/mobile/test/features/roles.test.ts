@@ -652,20 +652,19 @@ describe("The order (P2's Ordenar), people and new cargos", () => {
     });
   });
 
-  test("Membros: a person's sheet offers Cargos; Convidar com este cargo gives new addresses the cargo", () => {
+  test("Membros: a person's sheet offers Cargos; Convidar com este cargo gives every address the cargo", () => {
     expect(memberActions(false, true, true)).toEqual(["dm", "roles", "remove"]);
     expect(memberActions(true, true, true)).toEqual(["roles", "leave"]);
     expect(memberActions(false, false)).toEqual(["dm"]);
-    expect(withAddresses([], "ana@example.com", "suporte")).toEqual([
-      { email: "ana@example.com", valid: true, roleId: "suporte" },
-    ]);
+    expect(withAddresses([], "ana@example.com")).toEqual([{ email: "ana@example.com", valid: true }]);
     expect(read("features/members/MembersPage.tsx")).toContain("roles: () => router.push(rolesHref.person(m.userId))");
     expect(read("features/roles/RoleScreen.tsx")).toContain("params: { role: role.id }");
     const invite = read("features/members/InvitePeople.tsx");
-    expect(invite).toContain("withAddresses(d.addresses, text, d.roleId ?? null)");
-    // The docked button sends what is still in the field (the keyboard up): it gets the cargo too.
-    expect(invite).toContain("const all = withAddresses(draft.addresses, typed, draft.roleId ?? null);");
-    expect(invite).not.toMatch(/withAddresses\(draft\.addresses, typed\)/);
+    // The form starts on the cargo, which brings its channels and agents; every address in the send gets it, the one
+    // still in the field (the docked button is pressed with the keyboard up) too.
+    expect(invite).toContain("roleIds: role ? [role] : [],");
+    expect(invite).toContain("const all = withAddresses(draft.addresses, typed);");
+    expect(invite).toContain("emails: ready.map((a) => a.email),");
   });
 
   test("giving a cargo asks about mailboxes first and sends what was asked; taking one has Desfazer", () => {
@@ -726,7 +725,7 @@ describe("RoleMark: the web's mark on the phone", () => {
       "features/files/ShareSheet.tsx",
       "features/devices/AudienceScreen.tsx",
       "features/agents/setup/SetupStepScreen.tsx",
-      "features/members/JoinRequestsSheet.tsx",
+      "features/roles/parts.tsx",
     ])
       expect({ file, icon: /RoleMark color=\{\w+\.color\} icon=\{\w+\.icon\}/.test(read(file)) }).toEqual({
         file,

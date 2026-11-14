@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types";
 export const privacyPtBR: LegalDocument = {
   title: "Política de privacidade",
   summary: "O que coletamos, o que os agentes enviam e para onde, quem pode ver o seu workspace e os seus direitos.",
-  updated: "2026-11-13",
+  updated: "2026-11-14",
   sections: [
     {
       id: "overview",
@@ -59,7 +59,7 @@ export const privacyPtBR: LegalDocument = {
         {
           list: [
             "**Entre os aparelhos e os nossos servidores.** Tudo o que trafega entre os nossos servidores e os navegadores, apps e computadores que se conectam a eles, inclusive o Conteúdo do Workspace, passa pelo nosso provedor de rede, que protege o Serviço contra ataques. Para isso, o provedor de rede decifra esse tráfego no data center dele mais próximo de cada aparelho, e o trata em nosso nome.",
-            "**Para responder.** Quando um agente trabalha, ele envia o contexto de que precisa (o contexto do workspace, as instruções do agente, a conversa, a memória relevante e os resultados das ferramentas) ao provedor de modelo escolhido para esse agente. Com uma chave de API que o workspace adicionou, a chamada é feita na conta do próprio workspace e sob o contrato dele com esse provedor. Com um plano de IA, como o do Claude ou o do ChatGPT, conectado a um agente, o agente trabalha na conta da pessoa que conectou o plano e sob os termos do provedor.",
+            "**Para responder.** Quando um agente trabalha, ele envia o contexto de que precisa (o contexto do workspace, as instruções do agente, a conversa, a memória relevante e os resultados das ferramentas) ao provedor de modelo escolhido para esse agente. Com uma chave de API que o workspace adicionou, a chamada é feita na conta do próprio workspace e sob o contrato dele com esse provedor. Alguns provedores repassam a chamada à empresa que faz ou hospeda o modelo, que também a trata sob os termos desse provedor. Com um plano de IA, como o do Claude ou o do ChatGPT, conectado a um agente, o agente trabalha na conta da pessoa que conectou o plano e sob os termos do provedor.",
             "**Para decidir quem responde.** Um modelo de roteamento lê a mensagem nova, os nomes e funções dos agentes do workspace e a conversa recente para decidir qual agente deve responder, se algum. Ele roda na TypeSafe ou, como alternativa, no provedor de modelo do workspace. O roteamento nunca dá permissão nenhuma a um agente.",
             "**Memória.** Os agentes guardam memória das conversas (resumos, fatos e lições) para melhorar com o tempo. Algumas avaliações sobre a memória (se algo vale ser guardado, ou se contradiz o que o agente já sabe) são feitas pela TypeSafe. A memória pode ser vista e apagada na página do agente, e é apagada junto com o workspace.",
             "**Busca.** Para encontrar mensagens e documentos relacionados, o texto pode ser transformado em vetores (embeddings) pela Voyage AI.",
@@ -114,14 +114,14 @@ export const privacyPtBR: LegalDocument = {
       id: "transfers",
       heading: "9. Transferências internacionais",
       blocks: [
-        "A nossa aplicação e o banco de dados rodam nos Estados Unidos, e os provedores citados nesta política tratam dados nos Estados Unidos. Os computadores dos workspaces rodam na União Europeia ou nos Estados Unidos, e o nosso provedor de rede trata o tráfego no data center dele mais próximo de cada aparelho, nos Estados Unidos ou em outro país. Para dados sujeitos à LGPD, usamos as garantias contratuais do artigo 33. Quando dados pessoais sujeitos ao GDPR ou ao UK GDPR são transferidos para um terceiro país, usamos as Cláusulas Contratuais Padrão da Comissão Europeia e o Adendo do Reino Unido.",
+        "A nossa aplicação e o banco de dados rodam nos Estados Unidos, e os provedores citados nesta política tratam dados nos Estados Unidos, exceto os provedores de modelo e os serviços conectados que um workspace escolhe, e as empresas para as quais eles repassam chamadas, que podem tratar dados em outros países sob os seus próprios termos. Os computadores dos workspaces rodam na União Europeia ou nos Estados Unidos, e o nosso provedor de rede trata o tráfego no data center dele mais próximo de cada aparelho, nos Estados Unidos ou em outro país. Para dados sujeitos à LGPD, usamos as garantias contratuais do artigo 33. Quando dados pessoais sujeitos ao GDPR ou ao UK GDPR são transferidos para um terceiro país, usamos as Cláusulas Contratuais Padrão da Comissão Europeia e o Adendo do Reino Unido.",
       ],
     },
     {
       id: "apps",
       heading: "10. Apps de celular e de Mac",
       blocks: [
-        "O app de celular envia notificações pela Expo, pela Apple e pelo Google. Uma notificação pode mostrar o nome de quem escreveu e o começo da mensagem, e você escolhe quais notificações recebe. O app de Mac e os computadores conectados guardam o login no próprio aparelho. Excluir a sua conta (o que também dá para fazer nos apps) desconecta todos os aparelhos.",
+        "O app de celular envia notificações pela Apple e pelo Google. Uma notificação pode mostrar o nome de quem escreveu e o começo da mensagem, e você escolhe quais notificações recebe. O app de Mac e os computadores conectados guardam o login no próprio aparelho. Excluir a sua conta (o que também dá para fazer nos apps) desconecta todos os aparelhos.",
       ],
     },
     {

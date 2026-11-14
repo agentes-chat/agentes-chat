@@ -111,6 +111,19 @@ describe("Button", () => {
     const link = body().getByRole("link", { name: "Entrar" });
     expect(link.className).toContain("ac-btn--primary");
   });
+
+  test("asChild and disabled: the link takes no click and no Tab stop, as a button that is off", () => {
+    render(
+      <Button asChild disabled>
+        <a href="/x">Entrar</a>
+      </Button>,
+    );
+    const link = body().getByRole("link", { name: "Entrar" });
+    expect(link.getAttribute("aria-disabled")).toBe("true");
+    expect(link.tabIndex).toBe(-1);
+    // False: the click's own effect (following the link) was called off.
+    expect(fireEvent.click(link)).toBe(false);
+  });
 });
 
 describe("Avatar", () => {

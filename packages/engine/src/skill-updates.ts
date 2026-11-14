@@ -6,7 +6,7 @@ import { notifySkillUpdate, resolveSkillWaiting } from "./notification-producers
 import { requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
 import {
-  loadSkill,
+  githubFor,
   readSkillSource,
   runsCode,
   type SkillDeps,
@@ -17,6 +17,7 @@ import {
   skillDetail,
   skillFilesOf,
   skillFolderFiles,
+  skillFor,
   writeSkillVersion,
 } from "./skills";
 import { closedRefusal, orgStanding } from "./standing";
@@ -119,9 +120,9 @@ export async function updateSkillFromSource(
   id: string,
   options: { approved?: string } = {},
 ): Promise<SkillSourceUpdate> {
-  await requirePermission(deps.db, actorId, orgId, "manage_agents");
-  const s = await loadSkill(deps.db, orgId, id);
-  const incoming = await readSkillSource(deps, s);
+  const s = await skillFor(deps.db, actorId, orgId, id, "change");
+  const membership = await requirePermission(deps.db, actorId, orgId, "read");
+  const incoming = await readSkillSource(githubFor(deps, membership), s);
   const hash = incoming.sourceHash;
   const checkedAt = new Date();
   const mark = async (fields: Partial<typeof skills.$inferInsert>) => {
@@ -158,7 +159,7 @@ export async function updateSkillFromSource(
     return { status: "waiting", skill, scripts, edited, fresh };
   }
   const before = snapshot(s);
-  const saved = await saveSkill(deps, actorId, orgId, incoming);
+  const saved = await saveSkill(deps, actorId, orgId, { ...incoming, owner: s.ownerUserId });
   const waiting = s.pendingUpdate && !s.pendingUpdate.dismissed ? s.pendingUpdate : null;
   if (waiting) await resolveSkillWaiting(deps, orgId, s.id);
   // A person chose the waiting update: Desfazer gives the choice back.
@@ -175,16 +176,14 @@ export async function updateSkillFromSource(
 
 /** The waiting update, applied as it was shown: if its link changed since, it waits again with what it holds now. */
 export async function approveSkillUpdate(deps: SkillDeps, actorId: string, orgId: string, id: string) {
-  await requirePermission(deps.db, actorId, orgId, "manage_agents");
-  const s = await loadSkill(deps.db, orgId, id);
+  const s = await skillFor(deps.db, actorId, orgId, id, "change");
   if (!s.pendingUpdate) throw new ValidationError("No update of this skill waits", "skill.no_pending_update");
   return updateSkillFromSource(deps, actorId, orgId, id, { approved: s.pendingUpdate.hash });
 }
 
 /** No to the waiting update: kept as refused, so the same content isn't raised again (new content is). */
 export async function dismissSkillUpdate(deps: SkillDeps, actorId: string, orgId: string, id: string) {
-  await requirePermission(deps.db, actorId, orgId, "manage_agents");
-  const s = await loadSkill(deps.db, orgId, id);
+  const s = await skillFor(deps.db, actorId, orgId, id, "change");
   if (!s.pendingUpdate) throw new ValidationError("No update of this skill waits", "skill.no_pending_update");
   const [row] = await deps.db
     .update(skills)
@@ -204,8 +203,7 @@ export async function dismissSkillUpdate(deps: SkillDeps, actorId: string, orgId
 
 /** Desfazer of `dismissSkillUpdate`: the update it kept out waits again, until a newer one from its link replaces it. */
 export async function reopenSkillUpdate(deps: SkillDeps, actorId: string, orgId: string, id: string) {
-  await requirePermission(deps.db, actorId, orgId, "manage_agents");
-  const s = await loadSkill(deps.db, orgId, id);
+  const s = await skillFor(deps.db, actorId, orgId, id, "change");
   if (!s.pendingUpdate?.dismissed)
     throw new ValidationError("No update of this skill was kept out", "skill.no_dismissed_update");
   const { dismissed: _d, dismissedAt: _at, ...pending } = s.pendingUpdate;
@@ -230,8 +228,7 @@ export const restoreSkillSnapshot = (db: Database, s: SkillRow, to: SkillSnapsho
  * An update a person chose while it waited (`waited`) waits again, as it was.
  */
 export async function undoSkillUpdate(deps: SkillDeps, actorId: string, orgId: string, id: string) {
-  await requirePermission(deps.db, actorId, orgId, "manage_agents");
-  const s = await loadSkill(deps.db, orgId, id);
+  const s = await skillFor(deps.db, actorId, orgId, id, "change");
   if (!s.lastUpdate || s.lastUpdate.version !== s.version)
     throw new ValidationError("There is no update from its link to undo", "skill.nothing_to_undo");
   const row = await restoreSkillSnapshot(deps.db, s, s.lastUpdate.from);
@@ -274,8 +271,7 @@ export async function undoSkillUpdate(deps: SkillDeps, actorId: string, orgId: s
 
 /** "Atualizar sozinha" on or off (who manages skills): on, the daily update reads with the rights of who turned it on. */
 export async function setSkillAutoUpdate(db: Database, actorId: string, orgId: string, id: string, on: boolean) {
-  await requirePermission(db, actorId, orgId, "manage_agents");
-  const s = await loadSkill(db, orgId, id);
+  const s = await skillFor(db, actorId, orgId, id, "change");
   if (on && (s.source !== "url" || !s.sourceUrl))
     throw new ValidationError("Only a skill installed from a link can update by itself", "skill.no_link");
   const [row] = await db

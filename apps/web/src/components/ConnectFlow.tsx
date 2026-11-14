@@ -571,7 +571,8 @@ function GithubOrgs() {
           <Button
             asChild
             size="sm"
-            onClick={() => {
+            // In a dialog, the desktop app's link routing (lib/desktop.ts) takes the click before React's `onClick`.
+            onClickCapture={() => {
               if (orgs) setOpened(orgs);
             }}
           >

@@ -1590,7 +1590,7 @@ async function wantedLines(ctx: ToolContext, change: SettingsChangeInput): Promi
     const installed = await ctx.db
       .select({ id: skills.id, name: skills.name })
       .from(skills)
-      .where(and(eq(skills.orgId, ctx.orgId), isNull(skills.deletedAt)))
+      .where(and(eq(skills.orgId, ctx.orgId), isNull(skills.deletedAt), isNull(skills.ownerUserId)))
       .orderBy(skills.name);
     // Exactly as written first: the slug drops hyphens, so "pdftools" would also match "pdf-tools".
     const skillOf = (n: string) =>
