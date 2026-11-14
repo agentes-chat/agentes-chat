@@ -5,6 +5,7 @@ setupDom();
 
 import type { Message } from "@agenteschat/client";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
+import { requestAgentPanel } from "@/lib/agent-panel-ask";
 import { ADA_ID, createFakeApi, ENG_ID, GENERAL_ID, NOW, ORG_ID, seedDm, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
@@ -159,16 +160,16 @@ test("a letter typed on the conversation goes into the box; Space, arrows and sh
   expect(document.activeElement).toBe(el);
 
   // A side panel over the conversation (an agent's page) keeps its keys.
-  const side = document.createElement("aside");
-  side.className = "thread-panel";
-  const tab = document.createElement("button");
-  side.append(tab);
-  list.append(side);
-  await away();
+  await act(async () => requestAgentPanel(ADA_ID, "overview"));
+  await settle(6);
+  const side = screen().getByRole("complementary", { name: "Perfil da Ada" });
+  const tab = within(side).getAllByRole("button")[0] as HTMLElement;
   tab.focus();
   await key(tab, { key: "m" });
   expect(document.activeElement).toBe(tab);
-  side.remove();
+  await act(async () => fireEvent.click(side.previousElementSibling as HTMLElement));
+  await settle(4);
+  expect(screen().queryByRole("complementary", { name: "Perfil da Ada" })).toBeNull();
 
   // Another field keeps its keys.
   const search = document.createElement("input");
