@@ -21,7 +21,7 @@ import {
   signInOf,
 } from "@agenteschat/client/lib/ai-accounts";
 import { thinksWith } from "@agenteschat/client/lib/brain";
-import { ADVANCED_DEFAULTS, type Advanced, advancedParts } from "@agenteschat/client/lib/brain-advanced";
+import { type Advanced, advancedDefaults, advancedParts } from "@agenteschat/client/lib/brain-advanced";
 import {
   type BrainPick,
   brainPickInput,
@@ -231,10 +231,35 @@ export function setupWords(
     autoModel: isAuto(view.effectiveModel),
     apiKey: o.apiKey,
     // The workspace's setup for a key carries no effort yet (ADR 0041, amended 2026-11-12): its words name none.
-    now: view.brain === "model" ? { ...o.now, effort: ADVANCED_DEFAULTS.effort } : o.now,
+    now: view.brain === "model" ? { ...o.now, effort: null } : o.now,
   });
   const autonomy = view.autonomy ? autonomyWords(t, view.autonomy) : null;
   return [thinksNow(t, view), ...parts, autonomy].filter(Boolean).join(" · ");
+}
+
+/**
+ * What "Voltar ao padrão" saves (`advancedDefaults`). On a key a chosen effort goes back to none (`auto`, the
+ * provider's default), "Automático" too; on a computer "Automático" keeps picking its own.
+ */
+export function advancedResetInput(
+  view: Pick<AgentBrain, "brain" | "onlyOwner">,
+  now: Advanced,
+  autoModel: boolean,
+): AgentBrainInput {
+  const to = advancedDefaults(view.brain, now);
+  return {
+    contextTokens: to.contextTokens,
+    ...(view.brain === "model"
+      ? now.effort === null
+        ? {}
+        : { effort: AUTO }
+      : {
+          ...(autoModel ? {} : { effort: to.effort }),
+          ...(to.speed !== now.speed ? { speed: to.speed } : {}),
+          ...(to.onlyOwner !== view.onlyOwner ? { onlyOwner: to.onlyOwner } : {}),
+          fallback: to.fallback,
+        }),
+  };
 }
 
 /**

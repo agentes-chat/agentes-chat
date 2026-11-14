@@ -5422,6 +5422,7 @@
         "effort": "Effort",
         "efforts": {
           "auto": "Automatique",
+          "none": "Par défaut du modèle",
           "low": "Faible",
           "medium": "Moyen",
           "high": "Élevé",
@@ -5438,6 +5439,8 @@
           "auto": "Le modèle Automatique choisit l'effort de chaque tâche. Choisissez un modèle pour fixer l'effort.",
           "low": "Répond vite. Idéal pour les questions simples.",
           "medium": "Par défaut. Réfléchit assez la plupart du temps.",
+          "mediumKey": "Réfléchit assez la plupart du temps.",
+          "none": "Le modèle réfléchit autant que d'habitude. Choisissez un niveau pour fixer l'effort.",
           "high": "Réfléchit davantage sur les tâches difficiles. Plus lent et plus cher.",
           "max": "Réfléchit autant que possible. Bien plus lent et plus cher."
         },

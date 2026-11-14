@@ -5511,12 +5511,21 @@ export const ptBR = {
         fallbackHint_female:
           "Responde pela API e conta no orçamento da {{name}}. Se não, a {{name}} avisa quem chamou e espera o computador voltar.",
         effort: "Esforço",
-        efforts: { auto: "Automático", low: "Baixo", medium: "Médio", high: "Alto", max: "Máximo" },
+        efforts: {
+          auto: "Automático",
+          none: "Padrão do modelo",
+          low: "Baixo",
+          medium: "Médio",
+          high: "Alto",
+          max: "Máximo",
+        },
         effortsLower: { auto: "automático", low: "baixo", medium: "médio", high: "alto", max: "máximo" },
         effortText: {
           auto: "O modelo Automático escolhe o esforço de cada tarefa. Escolha um modelo para fixar o esforço.",
           low: "Responde rápido. Bom para perguntas simples.",
           medium: "O padrão. Pensa o suficiente na maioria das vezes.",
+          mediumKey: "Pensa o suficiente na maioria das vezes.",
+          none: "O modelo pensa o quanto costuma. Escolha um nível para fixar o esforço.",
           high: "Pensa mais em tarefas difíceis. Demora e gasta mais.",
           max: "Pensa o máximo que puder. Bem mais lento e caro.",
         },
@@ -5544,7 +5553,7 @@ export const ptBR = {
           title: "Configuração avançada",
           answers: "Quem atende",
           defaults: "Voltar ao padrão",
-          /** The row's line: what the dialog holds. The effort shows only with a fixed model on a plan. */
+          /** The row's line: what the dialog holds. The effort shows only with a fixed model, on a plan or a key. */
           contents: {
             model: "Janela de contexto",
             modelFixed: "Esforço e janela de contexto",

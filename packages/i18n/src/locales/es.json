@@ -5396,6 +5396,7 @@
         "effort": "Esfuerzo",
         "efforts": {
           "auto": "Automático",
+          "none": "Predeterminado del modelo",
           "low": "Bajo",
           "medium": "Medio",
           "high": "Alto",
@@ -5412,6 +5413,8 @@
           "auto": "El modelo Automático elige el esfuerzo de cada tarea. Elige un modelo para fijar el esfuerzo.",
           "low": "Responde rápido. Bueno para preguntas simples.",
           "medium": "El predeterminado. Piensa lo suficiente casi siempre.",
+          "mediumKey": "Piensa lo suficiente casi siempre.",
+          "none": "El modelo piensa lo que suele pensar. Elige un nivel para fijar el esfuerzo.",
           "high": "Piensa más en las tareas difíciles. Más lento y más caro.",
           "max": "Piensa todo lo posible. Mucho más lento y caro."
         },

@@ -12867,6 +12867,9 @@
   "agentPage.work.brain.efforts.auto": {
     "value": "Automatic"
   },
+  "agentPage.work.brain.efforts.none": {
+    "value": "Model default"
+  },
   "agentPage.work.brain.efforts.low": {
     "value": "Low"
   },
@@ -12902,6 +12905,12 @@
   },
   "agentPage.work.brain.effortText.medium": {
     "value": "The default. Thinks enough most of the time."
+  },
+  "agentPage.work.brain.effortText.mediumKey": {
+    "value": "Thinks enough most of the time."
+  },
+  "agentPage.work.brain.effortText.none": {
+    "value": "The model thinks as much as it usually does. Pick a level to set the effort."
   },
   "agentPage.work.brain.effortText.high": {
     "value": "Thinks more on hard tasks. Slower and costs more."

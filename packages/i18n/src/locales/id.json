@@ -5070,6 +5070,7 @@
         "effort": "Upaya",
         "efforts": {
           "auto": "Otomatis",
+          "none": "Default model",
           "low": "Rendah",
           "medium": "Sedang",
           "high": "Tinggi",
@@ -5086,6 +5087,8 @@
           "auto": "Model Otomatis memilih upaya tiap tugas. Pilih model untuk menetapkan upayanya.",
           "low": "Menjawab cepat. Cocok untuk pertanyaan sederhana.",
           "medium": "Default. Berpikir cukup hampir setiap saat.",
+          "mediumKey": "Berpikir cukup hampir setiap saat.",
+          "none": "Model berpikir seperti biasanya. Pilih tingkat untuk menetapkan upaya.",
           "high": "Berpikir lebih banyak untuk tugas sulit. Lebih lambat dan lebih mahal.",
           "max": "Berpikir semaksimal mungkin. Jauh lebih lambat dan lebih mahal."
         },

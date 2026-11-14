@@ -5609,6 +5609,7 @@
         "effort": "Wysiłek",
         "efforts": {
           "auto": "Automatycznie",
+          "none": "Domyślny modelu",
           "low": "Niski",
           "medium": "Średni",
           "high": "Wysoki",
@@ -5625,6 +5626,8 @@
           "auto": "Model Automatyczny wybiera wysiłek dla każdego zadania. Wybierz model, aby ustawić wysiłek.",
           "low": "Odpowiada szybko. Dobre do prostych pytań.",
           "medium": "Domyślny. Zwykle myśli wystarczająco.",
+          "mediumKey": "Zwykle myśli wystarczająco.",
+          "none": "Model myśli tyle, ile zwykle. Wybierz poziom, aby ustalić wysiłek.",
           "high": "Myśli więcej przy trudnych zadaniach. Wolniej i drożej.",
           "max": "Myśli tyle, ile się da. Dużo wolniej i drożej."
         },

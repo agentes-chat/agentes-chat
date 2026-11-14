@@ -5225,6 +5225,7 @@
         "effort": "Çaba",
         "efforts": {
           "auto": "Otomatik",
+          "none": "Modelin varsayılanı",
           "low": "Düşük",
           "medium": "Orta",
           "high": "Yüksek",
@@ -5241,6 +5242,8 @@
           "auto": "Otomatik model her görevin çabasını seçer. Çabayı sabitlemek için bir model seçin.",
           "low": "Hızlı yanıt verir. Basit sorular için iyidir.",
           "medium": "Varsayılan. Çoğu zaman yeterince düşünür.",
+          "mediumKey": "Çoğu zaman yeterince düşünür.",
+          "none": "Model her zamanki kadar düşünür. Çabayı sabitlemek için bir seviye seçin.",
           "high": "Zor görevlerde daha çok düşünür. Daha yavaş ve daha pahalıdır.",
           "max": "Olabildiğince çok düşünür. Çok daha yavaş ve daha pahalıdır."
         },

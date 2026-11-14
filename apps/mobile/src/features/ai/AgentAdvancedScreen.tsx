@@ -4,9 +4,8 @@ import { signInPlan } from "@agenteschat/client/lib/ai-accounts";
 import { EVERYONE_AUDIENCE } from "@agenteschat/client/lib/audience";
 import {
   type Advanced,
-  advancedDefaults,
   advancedSummary,
-  effortLevel,
+  effortOf,
   isAdvancedDefault,
   SPEEDS,
   viewSpeedFits,
@@ -30,7 +29,7 @@ import { useColors, useDirectory } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { PushedHeader } from "../shared/parts";
 import { EffortRamp, useBrainChoice, useEffortChoice } from "./EffortRamp";
-import { accountKindOf, agentAccounts } from "./logic";
+import { accountKindOf, advancedResetInput, agentAccounts } from "./logic";
 import { Note, PlanReplies } from "./parts";
 
 /*
@@ -49,7 +48,7 @@ export const openAgentAdvanced = (agentId: string) => router.push(`/agent-advanc
 export const advancedOf = (view: AgentBrain, options?: readonly ContextLimit[]): Advanced => {
   const tokens = isContextLimit(view.contextTokens) ? view.contextTokens : null;
   return {
-    effort: effortLevel(view.effort),
+    effort: effortOf(view.brain, view.effort),
     speed: viewSpeedFits(view) ? view.speed : "standard",
     contextTokens: tokens !== null && (!options || options.includes(tokens)) ? tokens : null,
     onlyOwner: view.onlyOwner,
@@ -125,21 +124,7 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
   };
   const putBack = () => {
     if (!view || !now) return;
-    const to = advancedDefaults(view.brain, now);
-    void save({
-      contextTokens: to.contextTokens,
-      ...(view.brain === "model"
-        ? // A key's `auto` or none shows as the default: only a level that differs is saved.
-          autoModel || to.effort === now.effort
-          ? {}
-          : { effort: to.effort }
-        : {
-            ...(autoModel ? {} : { effort: to.effort }),
-            ...(to.speed !== now.speed ? { speed: to.speed } : {}),
-            ...(to.onlyOwner !== view.onlyOwner ? { onlyOwner: to.onlyOwner } : {}),
-            fallback: to.fallback,
-          }),
-    });
+    void save(advancedResetInput(view, now, autoModel));
   };
 
   return (
@@ -173,6 +158,7 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
                         value={effort.value}
                         onChange={effort.change}
                         color={agentLook(agent).color}
+                        kind={view.brain}
                         disabled={!view.canEdit}
                       />
                     </View>

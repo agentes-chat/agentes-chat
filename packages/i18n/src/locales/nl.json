@@ -5265,6 +5265,7 @@
         "effort": "Inspanning",
         "efforts": {
           "auto": "Automatisch",
+          "none": "Standaard van het model",
           "low": "Laag",
           "medium": "Gemiddeld",
           "high": "Hoog",
@@ -5281,6 +5282,8 @@
           "auto": "Het automatische model kiest de inspanning per taak. Kies een model om de inspanning vast te zetten.",
           "low": "Antwoordt snel. Goed voor simpele vragen.",
           "medium": "De standaard. Denkt meestal genoeg na.",
+          "mediumKey": "Denkt meestal genoeg na.",
+          "none": "Het model denkt zoveel als het gewoonlijk doet. Kies een niveau om de inspanning vast te zetten.",
           "high": "Denkt meer na bij moeilijke taken. Trager en duurder.",
           "max": "Denkt zoveel mogelijk na. Veel trager en duurder."
         },
