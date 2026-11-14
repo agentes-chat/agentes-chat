@@ -49,6 +49,7 @@ import {
   useChannelMembers,
   useChannels,
   useChannelThreads,
+  useConsultations,
   useCreateMission,
   useDmReads,
   useDms,
@@ -77,7 +78,16 @@ import {
   type WaitingItem,
 } from "@agenteschat/client";
 import { actionCardOf } from "@agenteschat/client/lib/action-cards";
-import { barElapsed, barEntries, entriesOffScreen, runElapsed, waitsForWords } from "@agenteschat/client/lib/activity";
+import {
+  barConsultTime,
+  barElapsed,
+  barEntries,
+  consultDetails,
+  entriesOffScreen,
+  lineStep,
+  runElapsed,
+  waitsForWords,
+} from "@agenteschat/client/lib/activity";
 import type { AgentTab } from "@agenteschat/client/lib/agent-edit";
 import { foldTalk, TALK_LINE_CHARS, talksToAgent } from "@agenteschat/client/lib/agent-talk";
 import { looksLikeApiKey } from "@agenteschat/client/lib/api-key-text";
@@ -347,11 +357,13 @@ import { MessageReactions, useEmojiLabels } from "@/components/Reactions";
 import {
   type AskRegistry,
   AskRegistryProvider,
+  askOf,
   createAskRegistry,
   type PendingAsk,
   sameAsk,
   showRequest,
   useExpired,
+  usePendingAsks,
   WaitMark,
 } from "@/components/RequestCard";
 import { SidePanel } from "@/components/SidePanel";
@@ -384,6 +396,7 @@ import { useDirectory } from "@/hooks/useDirectory";
 import { useDmSidebar, useMembersColumn } from "@/hooks/useMembersColumn";
 import { useMentionSearch } from "@/hooks/useMentionSearch";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
+import { useAgentLines } from "@/hooks/usePresence";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
 import { useHeaderSearch } from "@/hooks/useWorkspaceSearch";
 import { TYPED_VALUES } from "@/i18n";
@@ -1659,6 +1672,8 @@ function ChannelView({
   // Their cards register with this view's scroller (`RowsProvider` around it, not around the panels).
   const [askRegistry] = useState(createAskRegistry);
   const asksOut = useAsksOutOfView(scroller, askRegistry, isMember);
+  // …and all of them, in view or not: the bar says a hand-off waits on me from them.
+  const pendingAsks = usePendingAsks(askRegistry);
   const seeAsk = (id: string) => showRequest(scroller.current, id, !reducedMotion);
   // …and what waits on me here with its card not loaded (older, or in a thread): the line counts it and goes to the
   // oldest (ADR 0172).
@@ -2298,6 +2313,7 @@ function ChannelView({
       setPanel({ id, reply: false, focus });
     },
     openConsultation: (id) => setConsultId(id),
+    seeRequest: (id) => seeAsk(id),
     requestCorrection: (message, text) => {
       const handle = message.author.type === "agent" ? dir.agentById.get(message.author.id ?? "")?.handle : undefined;
       toBottom(true);
@@ -2333,6 +2349,7 @@ function ChannelView({
       // A thread view has no panel: its links go to the thread's page.
       openThread: inThread ? undefined : (id, focus) => now().openThread(id, focus),
       openConsultation: (id) => now().openConsultation(id),
+      seeRequest: (id) => now().seeRequest(id),
       requestCorrection: (message, text) => now().requestCorrection(message, text),
       jumpTo: (messageId) => now().jumpTo(messageId),
       replyToMission: (missionId, label) => now().replyToMission(missionId, label),
@@ -2664,6 +2681,7 @@ function ChannelView({
                             outOfView={outOfView}
                             onSee={seeRun}
                             asks={asksOut}
+                            pendingAsks={pendingAsks}
                             onSeeAsk={seeAsk}
                             waiting={waitingHere}
                             onSeeWaiting={seeWaiting}
@@ -3845,6 +3863,7 @@ function ActivityBar({
   outOfView,
   onSee,
   asks,
+  pendingAsks,
   onSeeAsk,
   waiting,
   onSeeWaiting,
@@ -3862,6 +3881,8 @@ function ActivityBar({
   onSee: (runId: string) => void;
   /** Requests waiting for the viewer out of view: the bar says the first one instead of who works. */
   asks: PendingAsk[];
+  /** Every request waiting for the viewer here, in view or not: a hand-off whose agent asks them says so. */
+  pendingAsks: readonly PendingAsk[];
   /** "Ver" on a request: scrolls to it and lights it up. */
   onSeeAsk: (id: string) => void;
   /** What waits on the viewer here with no card loaded, oldest first: counted when no request above speaks. */
@@ -3887,8 +3908,25 @@ function ActivityBar({
     (s) => consultsIn(s.consults, channelId, now).filter((c) => visible?.current(c) ?? true),
     sameList,
   );
-  // A reply near the end shows its questions with where each is and its clock: the asker's own work stays here.
-  const consults = consultsForLine(heard, consultBlocks);
+  // A reply near the end shows its questions with where each is and its clock: the asker's own work stays here. Work
+  // handed off (ADR 0095 addendum) stays for as long as it is out, wherever its divider is: the bar never toggles.
+  const consultList = useConsultations(org.id, channelId).data;
+  const agentLines = useAgentLines();
+  const consults = [
+    ...consultsForLine(
+      heard.filter((c) => c.kind !== "note"),
+      consultBlocks,
+    ),
+    ...heard.filter((c) => c.kind === "note"),
+  ].map((c) => ({
+    ...c,
+    ...consultDetails(
+      c,
+      consultList ?? [],
+      (id, run) => askOf(pendingAsks, id, run)?.on ?? null,
+      (id) => lineStep(t, agentLines.get(id)),
+    ),
+  }));
   asking.current = consults.length > 0;
   const ids = typingIn({ [channelId]: typing ?? {} }, channelId, now, me.user.id, threadId);
   // At work, its row shows only what it has to show meanwhile (its browser card): the bar says what it does, for how
@@ -3931,6 +3969,26 @@ function ActivityBar({
   const away = ask ? undefined : waiting[0];
   const awayAgent = away?.asker?.type === "agent" ? dir.anyAgent(away.asker.id) : undefined;
   const pill = !ask && !away && active;
+  // One agent's question or hand-off still out (ADR 0095 addendum): the consulted agent's state, its sky, its time, and
+  // "Ver", which opens their talk (or, when its card waits on me, goes to the card). No stop: that is theirs.
+  const consult = agents.length === 1 && firstAgent?.consult?.status === "asking" ? firstAgent.consult : undefined;
+  const consultAsk = consult?.yours ? askOf(pendingAsks, consult.to, consult.toRun) : null;
+  const consultTime = barConsultTime(i18n.language, consult, now);
+  const openTalk = useChannelActions()?.openConsultation;
+  const seeConsult = consultAsk
+    ? () => onSeeAsk(consultAsk.ask.id)
+    : consult?.id && openTalk
+      ? () => openTalk(consult.id as string)
+      : undefined;
+  const skyOf = consult ? consult.to : firstAgent?.id;
+  const consultTip =
+    consult?.kind === "note" && firstAgent
+      ? t("chat.consult.handedOff", {
+          to: consult.toName,
+          from: firstAgent.name,
+          context: agentGrammar(firstAgent.name).context,
+        })
+      : undefined;
   return (
     <>
       {coding.map((r) =>
@@ -3950,6 +4008,7 @@ function ActivityBar({
         aria-live="polite"
         data-active={active || Boolean(ask) || Boolean(away)}
         data-ask={ask || away ? true : undefined}
+        data-consult={pill && consult ? (consult.yours ? "you" : consult.wait ? "wait" : "work") : undefined}
         data-browser={pill && openBrowser ? true : undefined}
         onClick={
           pill && openBrowser
@@ -4014,7 +4073,7 @@ function ActivityBar({
         )}
         {pill && (
           <>
-            {firstAgent && <ActivitySky color={colorOf(dir.agentById.get(firstAgent.id))} />}
+            {skyOf && !consult?.yours && <ActivitySky color={colorOf(dir.agentById.get(skyOf))} />}
             {/* Agents at work: their faces open the pill (their rows are out of view); people only typing: the dots
                 first. */}
             {!firstAgent && (
@@ -4026,7 +4085,7 @@ function ActivityBar({
             )}
             <WorkingStack entries={entries} />
             {/* The phrase turns: the old one leaves upward, the new one comes from below. Names in ink. */}
-            <span className="ac-typing__text">
+            <span className="ac-typing__text" title={consultTip}>
               {step !== null && firstAgent ? (
                 <BarStep name={firstAgent.name} step={step} />
               ) : (
@@ -4035,6 +4094,7 @@ function ActivityBar({
             </span>
             <ConsultClock entries={entries} now={now} />
             {took && <span className="ac-typing__elapsed ac-num">{took}</span>}
+            {consultTime && <span className="ac-typing__elapsed ac-num">{consultTime}</span>}
             {step !== null && <BarAlsoTyping entries={entries} />}
             {openBrowser && (
               <Button
@@ -4048,8 +4108,16 @@ function ActivityBar({
                 onClick={openBrowser}
               />
             )}
+            {seeConsult && (
+              <>
+                <span className="ac-typing__sep" aria-hidden="true" />
+                <button type="button" className="ac-typing__see" onClick={seeConsult}>
+                  {t("run.strip.see")}
+                </button>
+              </>
+            )}
             {/* "Ver" once its row is in the conversation (before that, there is nothing to go back to). */}
-            {soloAway && rowShows(soloAway, now) && (
+            {!seeConsult && soloAway && rowShows(soloAway, now) && (
               <>
                 <span className="ac-typing__sep" aria-hidden="true" />
                 <button type="button" className="ac-typing__see" onClick={() => onSee(soloAway.runId)}>
@@ -4745,7 +4813,7 @@ export const TimelineMessage = memo(function TimelineMessage({
               usageWait && !usageWait.canceled && !usageWait.ended && <UsageWaitCancel message={m} wait={usageWait} />
             )}
             {question && <QuestionCard question={question} />}
-            {secretRequest && <SecretCard request={secretRequest} />}
+            {secretRequest && <SecretCard request={secretRequest} runId={m.agentRunId} />}
             {browserHandoff && <BrowserHandoffCard handoff={browserHandoff} />}
             {missionDecision && <MissionDecisionCard message={missionDecision} />}
             {missionDelivery && <MissionDeliveryCard message={missionDelivery} />}

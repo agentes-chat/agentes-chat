@@ -240,11 +240,13 @@ function cacheSecret(qc: QueryClient, orgId: string, channelId: string, secretRe
 /** What each event changes in the caches (the run rows are the reducer's). */
 function applyToCache(qc: QueryClient, orgId: string, channelId: string, event: ChannelEvent) {
   switch (event.type) {
-    // A question to another agent went out, came back or waits on a person: the reply that asked redraws it.
+    // A question to another agent went out, came back or waits on a person: the reply that asked redraws it, and its
+    // thread's link says how the work stands.
     case "agent.consulting":
     case "agent.consulted":
     case "agent.consultation":
       void qc.invalidateQueries({ queryKey: keys.consultations(orgId, channelId) });
+      void qc.invalidateQueries({ queryKey: keys.channelThreads(orgId, channelId, "all") });
       break;
     case "message.created": {
       if (event.message) cacheMessage(qc, orgId, event.message);

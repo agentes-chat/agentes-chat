@@ -155,6 +155,13 @@ export function routineHookToken(masterSecret: string, keyId: string): string {
   return createHmac("sha256", deriveKey(masterSecret, "routine-hooks")).update(keyId).digest("base64url");
 }
 
+/** A compact JWS (RFC 7515) of `claims` as a JWT, signed HS256 with the secret's UTF-8 bytes. */
+export function signJwtHs256(claims: Record<string, unknown>, secret: string): string {
+  const part = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const signed = `${part({ alg: "HS256", typ: "JWT" })}.${part(claims)}`;
+  return `${signed}.${createHmac("sha256", secret).update(signed).digest("base64url")}`;
+}
+
 /** URL-safe random token, e.g. for invitation links. */
 export function randomToken(bytes = 24): string {
   return randomBytes(bytes).toString("base64url");

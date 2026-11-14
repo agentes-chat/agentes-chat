@@ -1,7 +1,9 @@
 import type { TFunction } from "i18next";
+import type { AgentStatusLine, ConsultationWait, RunConsultation } from "../api/types";
 import type { LiveConsult, LiveConsultStatus } from "../realtime/consults";
 import type { LiveRun } from "../realtime/streams";
-import { joinNames } from "./format";
+import { formatLineTime, joinNames } from "./format";
+import { agentGrammar } from "./grammar";
 import { MAIL_BRANDS } from "./mail";
 
 /**
@@ -414,7 +416,75 @@ export interface EntryConsult {
   status: LiveConsultStatus;
   /** When the question went out (the clock). */
   since: number;
+  /** A question, or work handed off (none: a question). */
+  kind?: "question" | "note";
+  /** The conversation's question or hand-off it stands for (its id opens the two agents' talk). */
+  id?: string;
+  /** What the consulted agent waits on now, as the conversation's list says (none: it works). */
+  wait?: ConsultationWait | null;
+  /** Since when it waits (ms). */
+  waitSince?: number | null;
+  /** It waits on the person reading: their card from it is here (it wins over the list). */
+  yours?: "approval" | "answer" | null;
+  /** The consulted agent's run, as the list says: the cards it posts here carry it. */
+  toRun?: string | null;
+  /** The consulted agent's step in the bar's words, from its line ("lendo o Drive"), while it works. */
+  step?: string | null;
 }
+
+/**
+ * Lines that name an activity, as the bar's own verbs say them (each language's words, never a line's case changed,
+ * ADR 0122): the consulted agent's step ("Atlas lendo o Drive").
+ */
+const STEP_VERBS: Partial<Record<NonNullable<AgentStatusLine["kind"]>, ActivityKind>> = {
+  files: "readingDrive",
+  coding: "runningCode",
+  browsing: "browsing",
+  wiki: "writingWiki",
+  data: "queryingDatabase",
+  connector: "consulting",
+  computer: "usingScreen",
+};
+
+/** An agent's step from its line (ADR 0084), in the bar's words, when the line names an activity; else null. */
+export function lineStep(t: TFunction, line: AgentStatusLine | null | undefined): string | null {
+  const kind = line?.kind && !line.text ? STEP_VERBS[line.kind] : undefined;
+  if (!kind) return null;
+  return activityVerb(t, kind === "consulting" ? { kind, app: line?.subject ?? "" } : { kind });
+}
+
+/**
+ * What the bar adds to a question or hand-off out from here (ADR 0095 addendum of 2026-11-13): its id and where it
+ * stands in the conversation's list, whether the consulted agent's card here waits on the person reading (`yours`, by
+ * the agent and the run the list names for it, unknown before the list has it), and its step while it works.
+ */
+export function consultDetails(
+  c: Pick<LiveConsult, "runId" | "consultedAgentId" | "kind">,
+  list: readonly Pick<
+    RunConsultation,
+    "id" | "runId" | "consultedAgentId" | "consultedRunId" | "status" | "waiting" | "waitingSince"
+  >[],
+  yours: (agentId: string, runId: string | null) => "approval" | "answer" | null,
+  step: (agentId: string) => string | null,
+): Pick<EntryConsult, "kind" | "id" | "wait" | "waitSince" | "yours" | "toRun" | "step"> {
+  const row = list.find((r) => r.runId === c.runId && r.consultedAgentId === c.consultedAgentId && r.status === "open");
+  const since = row?.waitingSince ? Date.parse(row.waitingSince) : Number.NaN;
+  const toRun = row?.consultedRunId ?? null;
+  const mine = yours(c.consultedAgentId, toRun);
+  return {
+    kind: c.kind ?? "question",
+    ...(row ? { id: row.id } : {}),
+    wait: row?.waiting ?? null,
+    waitSince: Number.isNaN(since) ? null : since,
+    yours: mine,
+    toRun,
+    step: mine || row?.waiting ? null : step(c.consultedAgentId),
+  };
+}
+
+/** The question or hand-off one entry tells, with what the list and the cards here add (`consultDetails`). */
+export type ConsultWithDetails = LiveConsult &
+  Partial<Pick<EntryConsult, "id" | "wait" | "waitSince" | "yours" | "toRun" | "step">>;
 
 /** Live statuses the working bar shows (the ones "Parar" can stop; a provisional row is about to be one). */
 const BAR_STATUSES: ReadonlySet<string> = new Set(["thinking", "queued", "running"]);
@@ -436,7 +506,7 @@ export function barEntries(
   typingUserIds: string[],
   agentName: (id: string) => string,
   personName: (id: string) => string | undefined,
-  consults: LiveConsult[] = [],
+  consults: ConsultWithDetails[] = [],
 ): ActivityEntry[] {
   const out: ActivityEntry[] = [];
   const seen = new Set<string>();
@@ -450,7 +520,19 @@ export function barEntries(
       type: "agent",
       name: agentName(c.agentId),
       activity: { kind: "thinking" },
-      consult: { to: c.consultedAgentId, toName: agentName(c.consultedAgentId), status: c.status, since: c.since },
+      consult: {
+        to: c.consultedAgentId,
+        toName: agentName(c.consultedAgentId),
+        status: c.status,
+        since: c.since,
+        kind: c.kind ?? "question",
+        ...(c.id ? { id: c.id } : {}),
+        wait: c.wait ?? null,
+        waitSince: c.waitSince ?? null,
+        yours: c.yours ?? null,
+        toRun: c.toRun ?? null,
+        step: c.step ?? null,
+      },
     });
   }
   for (const r of runs) {
@@ -609,11 +691,57 @@ export function listNames(t: TFunction, names: string[], mark: MarkName = plain)
   return t("chat.namesMore", { first: mark(names[0] ?? ""), count: names.length - 1 });
 }
 
-/** One consultation's phrase: "Dev está perguntando ao Infra", "Infra respondeu. Dev está escrevendo". */
+/** What the consulted agent waits on, said about it ("O Atlas espera uma aprovação"), by the list's word. */
+const WAIT_PHRASE = {
+  approval: "chat.consultGroup.waitingApproval",
+  input: "chat.consultGroup.waitingInput",
+  computer: "chat.consultGroup.waitingComputer",
+  outage: "chat.consultGroup.waitingProvider",
+  agents: "chat.consultGroup.waitingAgents",
+  queued: "chat.consultGroup.queued",
+} as const satisfies Record<ConsultationWait, string>;
+
+/**
+ * One consultation's phrase: "Dev está perguntando ao Infra", "Infra respondeu. Dev está escrevendo". Work handed off
+ * says the other agent's state: "Atlas lendo o Drive", "Atlas está trabalhando", "Atlas terminou. Ada está
+ * escrevendo". Either way, what waits on the person reading ("Atlas espera sua aprovação") or on someone else ("O Atlas
+ * espera uma aprovação") takes the phrase.
+ */
 function consultPhrase(t: TFunction, from: string, c: EntryConsult, mark: MarkName) {
-  if (c.status === "asking") return t("chat.consult.asking", { from: mark(from), to: mark(c.toName) });
-  if (c.status === "answered") return t("chat.consult.answered", { from: mark(from), to: mark(c.toName) });
+  const note = c.kind === "note";
+  if (c.status === "asking") {
+    if (c.yours)
+      return t(c.yours === "approval" ? "chat.consult.yourApproval" : "chat.consult.yourAnswer", {
+        name: mark(c.toName),
+      });
+    if (c.wait) return t(WAIT_PHRASE[c.wait], { name: mark(c.toName), context: agentGrammar(c.toName).context });
+    if (!note) return t("chat.consult.asking", { from: mark(from), to: mark(c.toName) });
+    return c.step
+      ? t("chat.consult.doing", { name: mark(c.toName), doing: c.step })
+      : t("chat.consultGroup.working", { name: mark(c.toName) });
+  }
+  if (c.status === "answered") {
+    return t(note ? "chat.consult.done" : "chat.consult.answered", { from: mark(from), to: mark(c.toName) });
+  }
+  if (note) return t("chat.consult.notDone", { from: mark(from), to: mark(c.toName) });
   return t("chat.consult.writing", { from: mark(from) });
+}
+
+/**
+ * The time a hand-off or a wait tells beside its phrase (lists' clock: "22 min", "3 min"): work handed off, since the
+ * hand-off; someone's approval or answer, since the wait began. None for a question at work (its clock is
+ * `ConsultClock`'s), what waits on the person reading, or a wait with no clock of its own.
+ */
+export function barConsultTime(locale: string, c: EntryConsult | undefined, now: number): string | null {
+  if (c?.status !== "asking" || c.yours) return null;
+  const from = c.wait
+    ? c.wait === "approval" || c.wait === "input"
+      ? c.waitSince
+      : null
+    : c.kind === "note"
+      ? c.since
+      : null;
+  return from ? formatLineTime(locale, Math.max(1000, now - from)) : null;
 }
 
 /** "Theo e Iris estão trabalhando", "Marina está digitando". */

@@ -420,9 +420,23 @@ const ManagedTask = z
           z.object({ kind: z.literal("routine"), name: z.string() }),
           z.object({ kind: z.literal("agent") }),
         ]),
+        from: z
+          .object({
+            channelId: z.uuid(),
+            channelKind: z.enum(["channel", "dm", "task"]),
+            channelName: z.string().nullable(),
+            threadId: z.uuid().nullable(),
+            messageId: z.uuid().nullable(),
+            label: z.string().nullable().openapi({ description: "The thread's title; null without one." }),
+          })
+          .nullable()
+          .openapi({
+            description:
+              "Where it was handed off, when you read that conversation: its thread and the reply that handed it (once posted).",
+          }),
       })
       .nullable()
-      .openapi({ description: "Another agent asked it: who, and what started the chain." }),
+      .openapi({ description: "Another agent asked it: who, what started the chain and where." }),
     helpers: z
       .number()
       .int()

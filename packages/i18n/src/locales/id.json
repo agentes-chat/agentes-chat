@@ -3630,6 +3630,9 @@
     "hidden": "Tak terlihat",
     "offline": "Offline",
     "out": "Di luar kantor",
+    "available": "Tersedia",
+    "working": "Sedang bekerja",
+    "waiting": "Menunggumu",
     "lower": {
       "online": "online",
       "away": "sedang pergi",
@@ -3717,6 +3720,16 @@
     },
     "bySelf": "Ditulis oleh {{name}} · hilang setelah selesai",
     "byAuto": "Yang sedang dilakukannya"
+  },
+  "agentWork": {
+    "working": "sedang bekerja",
+    "you": "menunggumu",
+    "waiting": "menunggu",
+    "queued": "dalam antrean",
+    "here": "di sini",
+    "routine": "dalam rutinitas",
+    "yourApproval": "persetujuanmu",
+    "yourAnswer": "jawabanmu"
   },
   "mentions": {
     "list": "Orang dan agen",
@@ -8802,6 +8815,10 @@
     "status": {
       "needsYou": "Menunggumu",
       "working": "Sedang bekerja",
+      "approval": "Menunggu persetujuan",
+      "input": "Menunggu jawaban",
+      "computer": "Menunggu komputernya",
+      "queued": "Dalam antrean",
       "open": "Terbuka",
       "closed": "Ditutup",
       "archived": "Diarsipkan"
@@ -15363,7 +15380,13 @@
       "asking": "{{from}} sedang bertanya ke {{to}}",
       "answered": "{{to}} sudah menjawab. {{from}} sedang menulis",
       "writing": "{{from}} sedang menulis",
-      "clock": "Menunggu sampai {{time}}"
+      "clock": "Menunggu sampai {{time}}",
+      "doing": "{{name}} {{doing}}",
+      "yourApproval": "{{name}} menunggu persetujuanmu",
+      "yourAnswer": "{{name}} menunggu jawabanmu",
+      "done": "{{to}} sudah selesai. {{from}} sedang menulis",
+      "notDone": "{{to}} tidak selesai. {{from}} sedang menulis",
+      "handedOff": "{{to}} mengerjakan yang diserahkan {{from}}"
     },
     "consultation": {
       "answered": "{{name}} sudah menjawab",
@@ -15382,7 +15405,8 @@
       "waitingInput": "{{name}} sedang menunggu jawaban",
       "waitingComputer": "{{name}} sedang menunggu komputernya",
       "waitingProvider": "{{name}}: penyedia AI sedang down · mencoba lagi sendiri",
-      "waitingAgents": "{{name}} menyerahkan sebagian dan sedang menunggu kabar"
+      "waitingAgents": "{{name}} menyerahkan sebagian dan sedang menunggu kabar",
+      "queued": "{{name}} dalam antrean"
     },
     "consultPair": {
       "took": "butuh {{time}}",
@@ -15392,6 +15416,9 @@
       "waitingInput": "menunggu jawaban",
       "waitingComputer": "menunggu komputernya",
       "waitingProvider": "penyedia AI sedang gangguan",
+      "waitingYourApproval": "menunggu persetujuanmu",
+      "waitingYourAnswer": "menunggu jawabanmu",
+      "queued": "dalam antrean",
       "handedOn": "menunggu agen lain",
       "noAnswer": "tidak menjawab",
       "notFinished": "tidak selesai",
@@ -17205,7 +17232,7 @@
     },
     "state": {
       "working": "Bekerja",
-      "ok": "Menunggu persetujuanmu",
+      "ok": "Menunggumu",
       "answer": "Menunggu jawaban",
       "computerBusy": "Menunggu tempat di komputer",
       "inLine": "Antre · ke-{{position}}",

@@ -437,7 +437,7 @@ describe("the task manager page", () => {
     expect(tipOf(link)).toBe("Conversa direta · Você pediu. Trabalhando. Claude Code · Navegador · página de cancelar");
     expect(link.textContent).not.toContain("MacBook");
     expect(link.querySelector(".tm-cell--time")?.textContent).toMatch(/^6:0\d$/);
-    expect(rowOf("Revisar o PR #231").textContent).toContain("Espera seu ok");
+    expect(rowOf("Revisar o PR #231").textContent).toContain("Esperando você");
     expect(rowOf("Revisar o PR #231").textContent).toContain("#eng · João pediu");
     // A wait says how long it has waited, as people say it: no clock.
     expect(rowOf("Revisar o PR #231").querySelector(".tm-cell--time")?.textContent).toBe("18 min");
@@ -891,7 +891,7 @@ describe("an agent's tasks beside its DM", () => {
     // A wait on a person is its mark's job: the line under the title stays quiet (where, the program, how long).
     const sub = (i: number) => cards[i]?.querySelector(".tm-taskcard__label small")?.textContent ?? "";
     expect(sub(0)).toMatch(/^#eng · /);
-    expect(sub(0)).not.toContain("Espera seu ok");
+    expect(sub(0)).not.toContain("Esperando você");
     expect(cards[0]?.querySelector(".tm-taskcard__label small[data-wait]")).toBeNull();
     // This conversation's says so on its line, with no chip beside the title.
     expect(cards[1]?.querySelector(".tm-here")).toBeNull();
@@ -1291,7 +1291,7 @@ describe("why a task waits", () => {
     ]);
     expect(stateOf(rowOf("Computador longe"))).toEqual(["Computador desligado", "Volta quando ele ligar"]);
     expect(stateOf(rowOf("Sem login"))).toEqual(["Esperando o computador", "Volta quando ele estiver pronto"]);
-    expect(stateOf(rowOf("Falta o ok"))).toEqual(["Espera seu ok", "Segue quando alguém aprovar"]);
+    expect(stateOf(rowOf("Falta o ok"))).toEqual(["Esperando você", "Segue quando alguém aprovar"]);
     expect(stateOf(rowOf("Falta a resposta"))).toEqual(["Espera resposta", "Segue quando alguém responder"]);
   });
 

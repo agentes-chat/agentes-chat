@@ -427,9 +427,22 @@ export function StopTaskButton({
 export function useOpenTask() {
   const { org } = useOrg();
   const navigate = useNavigate();
-  return (task: Pick<ManagedTask, "agentId" | "channelId" | "channelKind" | "threadId" | "background" | "routine">) => {
+  return (
+    task: Pick<ManagedTask, "agentId" | "channelId" | "channelKind" | "threadId" | "background" | "routine"> & {
+      delegation?: ManagedTask["delegation"];
+    },
+  ) => {
     const orgId = org.id;
-    if (task.background && task.routine)
+    // Work another agent handed it: where that was, at the reply that handed it (ADR 0084 addendum).
+    const from = task.delegation?.from;
+    const at = from?.messageId ? { m: from.messageId } : {};
+    if (from?.threadId)
+      void navigate({ to: "/org/$orgId/threads/$threadId", params: { orgId, threadId: from.threadId }, search: at });
+    else if (from && from.channelKind === "dm" && task.delegation)
+      void navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId, agentId: task.delegation.agentId } });
+    else if (from)
+      void navigate({ to: "/org/$orgId/c/$channelId", params: { orgId, channelId: from.channelId }, search: at });
+    else if (task.background && task.routine)
       void navigate({ to: "/org/$orgId/routines", params: { orgId }, search: { open: task.routine.id } });
     else if (task.threadId)
       void navigate({ to: "/org/$orgId/threads/$threadId", params: { orgId, threadId: task.threadId } });

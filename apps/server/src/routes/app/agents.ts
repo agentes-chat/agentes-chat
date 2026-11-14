@@ -823,6 +823,38 @@ export function agentRoutes(deps: AppDeps) {
                   description:
                     "Something of its own thinks now (a run, or long work at work): drawn at work whatever its AI reads as for the viewer.",
                 }),
+                work: z
+                  .object({
+                    state: z.enum(["you", "working", "approval", "answer", "computer", "outage", "queued"]).openapi({
+                      description:
+                        "`you`: it waits on your decision (you may decide its approval) or your answer; `working`; waiting on someone else's approval or answer, on its computer or its AI provider; `queued`: in line.",
+                    }),
+                    ask: z.enum(["approval", "answer"]).nullable().openapi({ description: "With `you`: on what." }),
+                    since: z.string().openapi({
+                      description:
+                        "Working: since the hand-off (work another agent handed it), else since the run started. Waiting or in line: since the wait began.",
+                    }),
+                    runId: z.uuid(),
+                    channelId: z.uuid().nullable().openapi({
+                      description:
+                        "Where it shows when you read it: its conversation, or for work another agent handed it, where that agent handed it off. Null otherwise.",
+                    }),
+                    channelKind: z.enum(["channel", "dm", "task"]).nullable(),
+                    channelName: z.string().nullable(),
+                    threadId: z.uuid().nullable(),
+                    messageId: z
+                      .uuid()
+                      .nullable()
+                      .openapi({ description: "The reply that handed it off, once posted." }),
+                    forAgentId: z.uuid().nullable().openapi({ description: "The agent that handed it off." }),
+                    routine: z.boolean().openapi({ description: "A routine's work: no conversation holds it." }),
+                    count: z.number().int().openapi({ description: "How many runs it has on." }),
+                  })
+                  .nullable()
+                  .openapi({
+                    description:
+                      "Its most important work for you (waiting on you, working, waiting on someone else, in line; then the oldest), with where it shows if you read that conversation (ADR 0084). Null: none.",
+                  }),
               }),
             ),
           }),

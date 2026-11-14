@@ -3735,6 +3735,9 @@
     "hidden": "Görünmez",
     "offline": "Çevrimdışı",
     "out": "Ofis dışında",
+    "available": "Müsait",
+    "working": "Çalışıyor",
+    "waiting": "Sizi bekliyor",
     "lower": {
       "online": "çevrimiçi",
       "away": "uzakta",
@@ -3822,6 +3825,16 @@
     },
     "bySelf": "{{name}} yazdı · iş bitince temizlenir",
     "byAuto": "Şu anda ne yapıyor"
+  },
+  "agentWork": {
+    "working": "çalışıyor",
+    "you": "sizi bekliyor",
+    "waiting": "bekliyor",
+    "queued": "sırada",
+    "here": "burada",
+    "routine": "bir rutinde",
+    "yourApproval": "onayınız",
+    "yourAnswer": "yanıtınız"
   },
   "mentions": {
     "list": "Kişiler ve ajanlar",
@@ -9047,6 +9060,10 @@
     "status": {
       "needsYou": "Sizi bekliyor",
       "working": "Çalışıyor",
+      "approval": "Onay bekliyor",
+      "input": "Yanıt bekliyor",
+      "computer": "Bilgisayarını bekliyor",
+      "queued": "Sırada",
       "open": "Açık",
       "closed": "Kapalı",
       "archived": "Arşivlendi"
@@ -15791,7 +15808,13 @@
       "asking": "{{from}}, {{to}} ajanına soruyor",
       "answered": "{{to}} yanıtladı. {{from}} yazıyor",
       "writing": "{{from}} yazıyor",
-      "clock": "Bekleniyor: {{time}}"
+      "clock": "Bekleniyor: {{time}}",
+      "doing": "{{name}} {{doing}}",
+      "yourApproval": "{{name}} onayınızı bekliyor",
+      "yourAnswer": "{{name}} yanıtınızı bekliyor",
+      "done": "{{to}} bitirdi. {{from}} yazıyor",
+      "notDone": "{{to}} bitiremedi. {{from}} yazıyor",
+      "handedOff": "{{to}}, {{from}} ajanının devrettiği iş üzerinde çalışıyor"
     },
     "consultation": {
       "answered": "{{name}} yanıtladı",
@@ -15810,7 +15833,8 @@
       "waitingInput": "{{name}} bir yanıt bekliyor",
       "waitingComputer": "{{name}} bilgisayarı bekliyor",
       "waitingProvider": "{{name}}: yapay zeka sağlayıcısı çalışmıyor · kendiliğinden yeniden dener",
-      "waitingAgents": "{{name}} işin bir kısmını devretti ve yanıt bekliyor"
+      "waitingAgents": "{{name}} işin bir kısmını devretti ve yanıt bekliyor",
+      "queued": "{{name}} sırada"
     },
     "consultPair": {
       "took": "{{time}} sürdü",
@@ -15820,6 +15844,9 @@
       "waitingInput": "yanıt bekliyor",
       "waitingComputer": "bilgisayarını bekliyor",
       "waitingProvider": "yapay zekâ sağlayıcısı çalışmıyor",
+      "waitingYourApproval": "onayınızı bekliyor",
+      "waitingYourAnswer": "yanıtınızı bekliyor",
+      "queued": "sırada",
       "handedOn": "diğer ajanları bekliyor",
       "noAnswer": "yanıt vermedi",
       "notFinished": "bitiremedi",
@@ -17609,7 +17636,7 @@
     },
     "state": {
       "working": "Çalışıyor",
-      "ok": "Onayınızı bekliyor",
+      "ok": "Sizi bekliyor",
       "answer": "Yanıt bekliyor",
       "computerBusy": "Bilgisayarda yer bekliyor",
       "inLine": "Sırada · {{position}}.",

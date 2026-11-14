@@ -9156,6 +9156,15 @@
   "presence.out": {
     "value": "Out of office"
   },
+  "presence.available": {
+    "value": "Available"
+  },
+  "presence.working": {
+    "value": "Working"
+  },
+  "presence.waiting": {
+    "value": "Waiting for you"
+  },
   "presence.lower.online": {
     "value": "online"
   },
@@ -9380,6 +9389,30 @@
   },
   "presence.byAuto": {
     "value": "What it's doing now"
+  },
+  "agentWork.working": {
+    "value": "working"
+  },
+  "agentWork.you": {
+    "value": "waiting for you"
+  },
+  "agentWork.waiting": {
+    "value": "waiting"
+  },
+  "agentWork.queued": {
+    "value": "in line"
+  },
+  "agentWork.here": {
+    "value": "here"
+  },
+  "agentWork.routine": {
+    "value": "on a routine"
+  },
+  "agentWork.yourApproval": {
+    "value": "your approval"
+  },
+  "agentWork.yourAnswer": {
+    "value": "your answer"
   },
   "mentions.list": {
     "value": "People and agents"
@@ -22064,6 +22097,18 @@
   },
   "threads.status.working": {
     "value": "Working"
+  },
+  "threads.status.approval": {
+    "value": "Waiting for approval"
+  },
+  "threads.status.input": {
+    "value": "Waiting for an answer"
+  },
+  "threads.status.computer": {
+    "value": "Waiting for its computer"
+  },
+  "threads.status.queued": {
+    "value": "In line"
   },
   "threads.status.open": {
     "value": "Open"
@@ -38610,6 +38655,24 @@
   "chat.consult.clock": {
     "value": "Waiting for {{time}}"
   },
+  "chat.consult.doing": {
+    "value": "{{name}} {{doing}}"
+  },
+  "chat.consult.yourApproval": {
+    "value": "{{name}} is waiting for your approval"
+  },
+  "chat.consult.yourAnswer": {
+    "value": "{{name}} is waiting for your answer"
+  },
+  "chat.consult.done": {
+    "value": "{{to}} is done. {{from}} is writing"
+  },
+  "chat.consult.notDone": {
+    "value": "{{to}} didn't finish. {{from}} is writing"
+  },
+  "chat.consult.handedOff": {
+    "value": "{{to}} is working on what {{from}} handed off"
+  },
   "chat.consultation.answered": {
     "value": "{{name}} answered"
   },
@@ -38655,6 +38718,9 @@
   "chat.consultGroup.waitingAgents": {
     "value": "{{name}} handed part of it on and is waiting to hear back"
   },
+  "chat.consultGroup.queued": {
+    "value": "{{name}} is in line"
+  },
   "chat.consultPair.took": {
     "value": "took {{time}}"
   },
@@ -38675,6 +38741,15 @@
   },
   "chat.consultPair.waitingProvider": {
     "value": "AI provider down"
+  },
+  "chat.consultPair.waitingYourApproval": {
+    "value": "waiting for your approval"
+  },
+  "chat.consultPair.waitingYourAnswer": {
+    "value": "waiting for your answer"
+  },
+  "chat.consultPair.queued": {
+    "value": "in line"
   },
   "chat.consultPair.handedOn": {
     "value": "waiting on other agents"
@@ -42902,7 +42977,7 @@
     "value": "Working"
   },
   "taskManager.state.ok": {
-    "value": "Waits for your ok"
+    "value": "Waiting for you"
   },
   "taskManager.state.answer": {
     "value": "Waits for an answer"

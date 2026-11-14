@@ -62,6 +62,29 @@ describe("Agentes: esperando você, trabalhando, livres", () => {
     expect(free.map((l) => l.agent.id)).toEqual(["iris"]);
   });
 
+  test("at work where you don't read: under Trabalhando by its work for you, once, never over what waits on you", () => {
+    const atWork = new Map([
+      ["iris", ago(0.3)],
+      ["nina", ago(2)],
+      ["theo", ago(0.2)],
+    ]);
+    const { waiting, working, free } = teamLines(
+      agents,
+      [work("nina", ago(1))],
+      [],
+      [{ id: "a1", agentId: "theo", title: "Merge PR #128", createdAt: ago(0.1) }],
+      new Map(),
+      atWork,
+    );
+    expect(waiting.map((l) => l.agent.id)).toEqual(["theo"]);
+    // Nina's own item first, as Início lists it; Iris by its work for you alone, with since when.
+    expect(working.map((l) => [l.agent.id, l.work?.what ?? null, l.at])).toEqual([
+      ["nina", "pesquisando os preços", ago(1)],
+      ["iris", null, ago(0.3)],
+    ]);
+    expect(free).toEqual([]);
+  });
+
   test("without requests it is the old split (nothing waiting)", () => {
     const { waiting, working, free } = teamLines(agents, [work("nina", ago(1))], []);
     expect(waiting).toEqual([]);
@@ -97,7 +120,7 @@ describe("Agentes: esperando você, trabalhando, livres", () => {
   });
 });
 
-describe("Perfil: o papel numa frase", () => {
+describe("Perfil: a função numa frase", () => {
   test("skips the prompt's self-introduction and keeps what follows the comma", () => {
     expect(plainRole("Você é o Theo, desenvolvedor do Time Lumen. Cuida do repositório.")).toBe(
       "Desenvolvedor do Time Lumen",

@@ -12,6 +12,7 @@ import {
   groupTasks,
   helpersOf,
   hiddenCount,
+  taskHelping,
   taskPlace,
   taskState,
   tasksOf,
@@ -244,6 +245,7 @@ export function TaskManagerPage({
       meId={me.user.id}
       agentName={nameOf(task.agentId)}
       chain={delegationText(t, task, (id) => dir.anyAgent(id)?.name, me.user.id)}
+      helping={task.delegation?.from ? taskHelping(t, task, (id) => dir.anyAgent(id)?.name) : null}
       stopAll={
         task.helpers && !stopping.has(task.runId)
           ? stopChain(task, stopSquare(t("taskManager.actions.stopAll"), taskTitle(t, task)))
@@ -668,6 +670,7 @@ function TaskRow({
   meId,
   agentName,
   chain,
+  helping,
   stopAll,
   selected,
   stopping,
@@ -682,6 +685,8 @@ function TaskRow({
   agentName: string;
   /** Who asked it among agents, and what started the chain. */
   chain: string | null;
+  /** Work another agent handed it, where the reader sees where: "ajudando a Ada". */
+  helping: string | null;
   /** A task that asked other agents stops with them: this stop, in place of its own. */
   stopAll: ReactNode;
   selected: boolean;
@@ -701,9 +706,10 @@ function TaskRow({
       : t("taskManager.askedBy", { name: task.requester.name })
     : null;
   const helpers = task.helpers ? t("taskManager.helpers", { count: task.helpers }) : null;
+  // Work another agent handed it, where its reader can see it: "ajudando a Ada · #vendas" (ADR 0084 addendum).
   const sub = [
     look === "flat"
-      ? [agentName, chain ?? where].filter(Boolean).join(" · ")
+      ? [agentName, helping ?? chain ?? where, helping ? where : null].filter(Boolean).join(" · ")
       : taskSub(t, task, [where, task.background ? null : (chain ?? asked)].filter(Boolean).join(" · ")),
     helpers,
   ]

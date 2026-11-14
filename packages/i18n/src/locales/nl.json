@@ -3750,6 +3750,9 @@
     "hidden": "Onzichtbaar",
     "offline": "Offline",
     "out": "Afwezig",
+    "available": "Beschikbaar",
+    "working": "Bezig",
+    "waiting": "Wacht op jou",
     "lower": {
       "online": "online",
       "away": "afwezig",
@@ -3837,6 +3840,16 @@
     },
     "bySelf": "Geschreven door {{name}} · verdwijnt als het klaar is",
     "byAuto": "Waar hij nu mee bezig is"
+  },
+  "agentWork": {
+    "working": "bezig",
+    "you": "wacht op jou",
+    "waiting": "wacht",
+    "queued": "in de rij",
+    "here": "hier",
+    "routine": "bij een routine",
+    "yourApproval": "je goedkeuring",
+    "yourAnswer": "je antwoord"
   },
   "mentions": {
     "list": "Mensen en agents",
@@ -9148,6 +9161,10 @@
     "status": {
       "needsYou": "Wacht op jou",
       "working": "Bezig",
+      "approval": "Wacht op goedkeuring",
+      "input": "Wacht op een antwoord",
+      "computer": "Wacht op de computer",
+      "queued": "In de rij",
       "open": "Open",
       "closed": "Gesloten",
       "archived": "Gearchiveerd"
@@ -15918,7 +15935,13 @@
       "asking": "{{from}} vraagt {{to}} iets",
       "answered": "{{to}} heeft geantwoord. {{from}} schrijft",
       "writing": "{{from}} schrijft",
-      "clock": "Wacht tot {{time}}"
+      "clock": "Wacht tot {{time}}",
+      "doing": "{{name}} {{doing}}",
+      "yourApproval": "{{name}} wacht op je goedkeuring",
+      "yourAnswer": "{{name}} wacht op je antwoord",
+      "done": "{{to}} is klaar. {{from}} schrijft",
+      "notDone": "{{to}} is niet klaar gekomen. {{from}} schrijft",
+      "handedOff": "{{to}} werkt aan wat {{from}} heeft doorgegeven"
     },
     "consultation": {
       "answered": "{{name}} heeft geantwoord",
@@ -15945,7 +15968,8 @@
       "waitingComputer_female": "{{name}} wacht op de computer",
       "waitingProvider": "{{name}}: de AI-aanbieder ligt eruit · probeert het vanzelf opnieuw",
       "waitingAgents": "{{name}} heeft een deel doorgegeven en wacht op antwoord",
-      "waitingAgents_female": "{{name}} heeft een deel doorgegeven en wacht op antwoord"
+      "waitingAgents_female": "{{name}} heeft een deel doorgegeven en wacht op antwoord",
+      "queued": "{{name}} staat in de rij"
     },
     "consultPair": {
       "took": "duurde {{time}}",
@@ -15955,6 +15979,9 @@
       "waitingInput": "wacht op een antwoord",
       "waitingComputer": "wacht op de computer",
       "waitingProvider": "AI-provider ligt eruit",
+      "waitingYourApproval": "wacht op je goedkeuring",
+      "waitingYourAnswer": "wacht op je antwoord",
+      "queued": "in de rij",
       "handedOn": "wacht op andere agents",
       "noAnswer": "gaf geen antwoord",
       "notFinished": "niet afgemaakt",
@@ -17856,7 +17883,7 @@
     },
     "state": {
       "working": "Bezig",
-      "ok": "Wacht op je akkoord",
+      "ok": "Wacht op jou",
       "answer": "Wacht op een antwoord",
       "computerBusy": "Wacht op ruimte op de computer",
       "inLine": "In de rij · {{position}}e",

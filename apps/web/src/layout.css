@@ -493,6 +493,23 @@ html:not([data-pointer]) .consult-pair__row:focus-visible {
   color: var(--warn);
   font-weight: 550;
 }
+/* It waits on the person reading (ADR 0095 addendum): amber words, the pulsing wait mark in the arrows' 15px slot, with
+   their margins, so the names don't move. Waiting on someone else: quiet words, the arrows still. */
+.consult-pair__row--you .consult-pair__word {
+  color: var(--warn);
+  font-weight: 550;
+}
+.consult-pair__wait {
+  display: inline-grid;
+  place-items: center;
+}
+.consult-pair__wait > .rq-wait {
+  vertical-align: top;
+}
+.consult-pair__row--wait .consult-pair__word {
+  color: var(--muted);
+  font-weight: 550;
+}
 /* The chevron says it opens: on hover, keyboard focus, and while it is open. */
 .consult-pair__chev {
   position: absolute;
@@ -1184,6 +1201,63 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
 .sidebar__item[data-status="active"] .sidebar__item-role.ac-tag {
   background: var(--plate);
   color: var(--ink2);
+}
+/* An agent's work in a list's line (`AgentWorkLine`, ADR 0084 addendum): plain text, no plate, the words in --muted,
+   " · " and the time in --faint and tabular, "esperando você" in amber. One line: short of room it drops its time,
+   then says its short form; only a short form that still doesn't fit ends in "…". In the role's box, so the row keeps
+   its height (`span.` outranks the members column's own line box). */
+span.work-line {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--muted);
+}
+.work-line__words {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.work-line__dot {
+  flex: none;
+  white-space: pre;
+}
+.work-line__time {
+  flex: none;
+}
+/* In the role tag's place, at its height (its 1px above included): the row doesn't move when work starts or ends. */
+.sidebar__item-role.work-line,
+.members-side__line.work-line {
+  margin-top: 1px;
+}
+.work-line[data-tone="you"] .work-line__words {
+  color: var(--warn);
+  font-weight: 600;
+}
+.work-line__dot,
+.work-line__time {
+  color: var(--faint);
+}
+.work-line__time {
+  font-variant-numeric: tabular-nums;
+}
+.sidebar__item[data-status="active"] .work-line:not([data-tone="you"]) {
+  color: var(--ink2);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .work-line__words {
+    animation: work-line-in var(--dur-base) var(--out) both;
+  }
+}
+@keyframes work-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
 }
 /* An agent at work: its pixel orbit beside its name, inside the name's line (what it is on is the orbit's label and
    the row's title), so the row keeps its height. On the name's capitals' middle by the kit's own rule (`.ac-pixspin`). */
@@ -4450,7 +4524,7 @@ html:not([data-pointer]) .settings__link:focus-visible {
 .settings-row:first-child {
   border-top: 0;
 }
-/* A group's heading among a card's rows (Limites' Por papel): on the rows' words, the hairline above it. */
+/* A group's heading among a card's rows (Limites' Por cargo): on the rows' words, the hairline above it. */
 .settings-rows > .ac-grouphead {
   margin: 0;
   padding: var(--space-4) var(--card-pad) var(--space-2);
@@ -7690,6 +7764,10 @@ html:not([data-pointer]) .sky-welcome__close:focus-visible {
 [data-theme="dark"] .ac-typing__sky {
   opacity: 0.45;
 }
+/* A hand-off that waits on someone else (ADR 0095 addendum): its sky quieter still. */
+.ac-typing[data-consult="wait"] .ac-typing__sky {
+  opacity: 0.22;
+}
 
 /* The workspace opening */
 .sky-boot {
@@ -9293,7 +9371,7 @@ html:not([data-pointer]) .onb__step:focus-visible {
   width: var(--option-face);
   height: var(--option-face);
 }
-/* The role step: "Do zero" first (its Cargo field right under it, one card's gap apart), then the groups of presets
+/* The role step: "Do zero" first (its Função field right under it, one card's gap apart), then the groups of presets
    under small headings. */
 .newag__role-groups {
   display: flex;

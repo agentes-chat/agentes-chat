@@ -708,7 +708,7 @@
     "value": "An agent"
   },
   "along.waits": {
-    "value": "{{name}} is waiting for your ok"
+    "value": "{{name}} · waiting for you"
   },
   "along.on": {
     "value": "{{name}} · {{what}}"
@@ -1875,7 +1875,7 @@
     "value": "Nothing in progress"
   },
   "agents.state.waitsYou": {
-    "value": "waits for your OK"
+    "value": "waiting for you"
   },
   "agents.state.noAi": {
     "value": "No AI connected"
@@ -3550,7 +3550,7 @@
     "value": "finished a task"
   },
   "homeNow.rowWait.approval": {
-    "value": "waits for your ok"
+    "value": "waiting for you"
   },
   "homeNow.rowWait.question": {
     "value": "waits for your answer"
@@ -3625,7 +3625,7 @@
     "value": "Waiting on you"
   },
   "intentAgents.waitingLine": {
-    "value": "{{title}} · needs your ok"
+    "value": "{{title}} · waiting for you"
   },
   "intentAgents.waitingMore": {
     "value": {
@@ -3634,7 +3634,7 @@
     }
   },
   "intentAgents.waitingLabel": {
-    "value": "{{name}}, needs your ok"
+    "value": "{{name}}, waiting for you"
   },
   "intentAgents.owner": {
     "value": "Owner: {{name}}"
@@ -3643,7 +3643,7 @@
     "value": "Owner: you"
   },
   "intentAgents.nowWaiting": {
-    "value": "Needs your ok: {{title}}"
+    "value": "Waiting for you: {{title}}"
   },
   "intentAgents.did.title": {
     "value": "What he did for you",
@@ -3689,7 +3689,7 @@
     "value": "File"
   },
   "intentAgents.did.waitingOnYou": {
-    "value": "Needs your ok"
+    "value": "Waiting for you"
   },
   "intentAgents.did.youApproved": {
     "value": "You approved"

@@ -3988,6 +3988,9 @@
     "hidden": "Tryb niewidoczny",
     "offline": "Offline",
     "out": "Poza biurem",
+    "available": "Dostępny",
+    "working": "W pracy",
+    "waiting": "Czeka na ciebie",
     "lower": {
       "online": "online",
       "away": "zaraz wracam",
@@ -4075,6 +4078,16 @@
     },
     "bySelf": "Napisane przez {{name}} · zniknie, gdy skończy",
     "byAuto": "Co teraz robi"
+  },
+  "agentWork": {
+    "working": "pracuje",
+    "you": "czeka na ciebie",
+    "waiting": "czeka",
+    "queued": "w kolejce",
+    "here": "tutaj",
+    "routine": "w rutynie",
+    "yourApproval": "twoje zatwierdzenie",
+    "yourAnswer": "twoja odpowiedź"
   },
   "mentions": {
     "list": "Osoby i agenci",
@@ -9727,6 +9740,10 @@
     "status": {
       "needsYou": "Czeka na ciebie",
       "working": "W pracy",
+      "approval": "Czeka na zgodę",
+      "input": "Czeka na odpowiedź",
+      "computer": "Czeka na komputer",
+      "queued": "W kolejce",
       "open": "Otwarty",
       "closed": "Zamknięty",
       "archived": "Zarchiwizowany"
@@ -16898,7 +16915,13 @@
       "asking": "{{from}} pyta: {{to}}",
       "answered": "Jest odpowiedź od: {{to}}. {{from}} pisze",
       "writing": "{{from}} pisze",
-      "clock": "Czeka od {{time}}"
+      "clock": "Czeka od {{time}}",
+      "doing": "{{name}} {{doing}}",
+      "yourApproval": "{{name}} czeka na twoje zatwierdzenie",
+      "yourAnswer": "{{name}} czeka na twoją odpowiedź",
+      "done": "{{to}} skończył. {{from}} pisze",
+      "notDone": "{{to}} nie skończył. {{from}} pisze",
+      "handedOff": "{{to}} pracuje nad tym, co przekazał {{from}}"
     },
     "consultation": {
       "answered": "Odpowiedź od: {{name}}",
@@ -16925,7 +16948,8 @@
       "waitingComputer_female": "{{name}} czeka na komputer",
       "waitingProvider": "{{name}}: dostawca AI nie działa · ponowi próbę sam",
       "waitingAgents": "{{name}} przekazał część dalej i czeka na odpowiedź",
-      "waitingAgents_female": "{{name}} przekazała część dalej i czeka na odpowiedź"
+      "waitingAgents_female": "{{name}} przekazała część dalej i czeka na odpowiedź",
+      "queued": "{{name}} jest w kolejce"
     },
     "consultPair": {
       "took": "zajęło {{time}}",
@@ -16935,6 +16959,9 @@
       "waitingInput": "czeka na odpowiedź",
       "waitingComputer": "czeka na komputer",
       "waitingProvider": "dostawca AI nie działa",
+      "waitingYourApproval": "czeka na twoje zatwierdzenie",
+      "waitingYourAnswer": "czeka na twoją odpowiedź",
+      "queued": "w kolejce",
       "handedOn": "czeka na innych agentów",
       "noAnswer": "nie odpowiedział",
       "notFinished": "nie skończył",
@@ -18843,7 +18870,7 @@
     },
     "state": {
       "working": "Pracuje",
-      "ok": "Czeka na twoją zgodę",
+      "ok": "Czeka na ciebie",
       "answer": "Czeka na odpowiedź",
       "computerBusy": "Czeka na miejsce na komputerze",
       "inLine": "W kolejce · {{position}}.",

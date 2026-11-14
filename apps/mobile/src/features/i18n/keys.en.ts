@@ -317,7 +317,7 @@ export const featureKeysEn = {
   /** The line over the tab bar that goes with you while an agent does long work or waits on you. */
   along: {
     agent: "An agent",
-    waits: "{{name}} is waiting for your ok",
+    waits: "{{name}} · waiting for you",
     on: "{{name}} · {{what}}",
     working: "{{name}} is working",
     more: "+{{count}}",
@@ -833,7 +833,7 @@ export const featureKeysEn = {
     managerQuiet: "Nothing in progress",
     /** A row's state, as text in the state's color (amber only for what waits on the person). */
     state: {
-      waitsYou: "waits for your OK",
+      waitsYou: "waiting for you",
       noAi: "No AI connected",
       connect: "Connect",
       archived: "Archived",
@@ -1520,7 +1520,7 @@ export const featureKeysEn = {
       plain: "finished a task",
     },
     rowWait: {
-      approval: "waits for your ok",
+      approval: "waiting for you",
       question: "waits for your answer",
       mission: "waits for your review",
     },
@@ -1560,13 +1560,13 @@ export const featureKeysEn = {
   // intentional: agents
   intentAgents: {
     waitingSection: "Waiting on you",
-    waitingLine: "{{title}} · needs your ok",
+    waitingLine: "{{title}} · waiting for you",
     waitingMore_one: "{{title}} · and {{count}} more waiting on you",
     waitingMore_other: "{{title}} · and {{count}} more waiting on you",
-    waitingLabel: "{{name}}, needs your ok",
+    waitingLabel: "{{name}}, waiting for you",
     owner: "Owner: {{name}}",
     ownerYou: "Owner: you",
-    nowWaiting: "Needs your ok: {{title}}",
+    nowWaiting: "Waiting for you: {{title}}",
     did: {
       title: "What he did for you",
       title_female: "What she did for you",
@@ -1585,7 +1585,7 @@ export const featureKeysEn = {
         image: "Image",
         file: "File",
       },
-      waitingOnYou: "Needs your ok",
+      waitingOnYou: "Waiting for you",
       youApproved: "You approved",
       youRefused: "You declined",
       action: {

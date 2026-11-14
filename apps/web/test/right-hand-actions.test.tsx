@@ -188,7 +188,7 @@ describe("opening a screen", () => {
     const state = withLodiCard(seedState(), {
       kind: "open_page",
       forUserId: "u-walter",
-      params: { page: "roles", why: "Os papéis." },
+      params: { page: "roles", why: "Os cargos." },
     });
     meWithRole(state, []);
     await go(state);
@@ -254,7 +254,7 @@ describe("a change in the workspace that names all it does", () => {
       "Convidar ana@example.com, bia@example.com para o workspace.",
     );
     // Its role is said in words, and the card says it proposes a change while it still does.
-    expect(c.querySelector(".rq__wt small")?.textContent).toBe("Com o papel Vendas.");
+    expect(c.querySelector(".rq__wt small")?.textContent).toBe("Com o cargo Vendas.");
     expect(c.querySelector(".rq__kind")?.textContent).toBe("Propõe uma mudança");
     // Nothing is sent before the tap, and the tap says which action this app showed.
     expect(state.calls.some((x) => x.method === "actionCards.decide")).toBe(false);
@@ -270,7 +270,7 @@ describe("a change in the workspace that names all it does", () => {
     // Applied, the card says what happened, and the address left out is a line of its own that points to no button.
     expect(over.querySelector(".rq__wt b")?.textContent).toBe("Convite enviado para ana@example.com.");
     expect(over.querySelector(".rq__wt small")?.textContent).toBe(
-      "Com o papel Vendas.\nbia@example.com já tinha um convite pendente.",
+      "Com o cargo Vendas.\nbia@example.com já tinha um convite pendente.",
     );
     expect(within(over).queryByRole("button", { name: "Aplicar" })).toBeNull();
     // Its sentence says what was done: nothing over it still says it proposes a change.
@@ -312,7 +312,7 @@ describe("a change in the workspace that names all it does", () => {
     await settle(2);
     expect(cardGroup().textContent).toContain("Aplicado por você");
     expect(cardGroup().querySelector(".rq__wt small")?.textContent).toBe(
-      "Com o papel Vendas.\nbia@example.com já tinha um convite pendente.",
+      "Com o cargo Vendas.\nbia@example.com já tinha um convite pendente.",
     );
   });
 
@@ -386,10 +386,10 @@ describe("a change in the workspace that names all it does", () => {
     await renderApp(`/org/${ORG_ID}/notifications`, { api });
     await settle(8);
     const row = () => document.querySelector('[data-n="n-invite"]') as HTMLElement;
-    expect(row().querySelector(".rq__wt small")?.textContent).toBe("Com o papel Vendas.");
+    expect(row().querySelector(".rq__wt small")?.textContent).toBe("Com o cargo Vendas.");
     await click(within(row()).getByRole("button", { name: "Aplicar" }));
     // Refused, and the card is read again from the server: it names the role it would now give.
-    expect(row().querySelector(".rq__wt small")?.textContent).toBe("Com o papel Diretoria.");
+    expect(row().querySelector(".rq__wt small")?.textContent).toBe("Com o cargo Diretoria.");
     expect(state.calls.filter((x) => x.method.startsWith("actionCards.")).map((x) => x.method)).toEqual([
       "actionCards.get",
       "actionCards.decide",
@@ -413,6 +413,6 @@ describe("a change in the workspace that names all it does", () => {
     await goWith(state, worst);
     const c = cardGroup();
     expect(c.querySelector(".rq__wt b")?.textContent).toContain(emails[19] ?? "");
-    expect(c.querySelector(".rq__wt small")?.textContent).toBe(`Com os papéis ${roleNames.join(" e ")}.`);
+    expect(c.querySelector(".rq__wt small")?.textContent).toBe(`Com os cargos ${roleNames.join(" e ")}.`);
   });
 });

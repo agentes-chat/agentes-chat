@@ -57,10 +57,14 @@ const Consultation = z.object({
     .nullable()
     .openapi({ description: "The consulted agent's run: the cards it posts here carry it (`agentRunId`)." }),
   status: z.enum(["open", "answered", "expired", "failed"]),
-  waiting: z.enum(["approval", "input", "computer", "agents", "outage"]).nullable().openapi({
+  waiting: z.enum(["approval", "input", "computer", "agents", "outage", "queued"]).nullable().openapi({
     description:
-      "Open, and the consulted agent waits: on a person (`approval`; `input`: an answer or a secret), for its computer to come back online (`computer`), for its AI provider to come back (`outage`: it retries by itself), or, its part done, on agents it handed some to (`agents`).",
+      "Open, and the consulted agent waits: on a person (`approval`; `input`: an answer or a secret), for its computer to come back online (`computer`), for its AI provider to come back (`outage`: it retries by itself), for a worker to take its run (`queued`), or, its part done, on agents it handed some to (`agents`).",
   }),
+  waitingSince: z
+    .string()
+    .nullable()
+    .openapi({ description: "Since when it waits (`waiting`), for the row's clock; null while it works." }),
   question: z.string(),
   answer: z.string().nullable().openapi({ description: "The answer once answered; why it couldn't once failed." }),
   progress: z.object({ posts: z.number().int(), latest: z.string(), at: z.string() }).nullable().openapi({
@@ -126,7 +130,7 @@ export function chatRoutes(deps: AppDeps) {
       security,
       summary: "Agents working now in the conversations you are in (any member)",
       description:
-        "Agent runs queued, running or waiting (approval or an answer) in the channels and DMs you are a member of, newest first (at most 100). Never another person's DM or a private channel you're not in. No cost.",
+        "Agent runs queued, running or waiting (approval or an answer) in the channels and DMs you are a member of, newest first (at most 100), and work agents handed each other from there (listed where it was handed off, with `forAgentId`). Never another person's DM or a private channel you're not in. No cost.",
       request: { params: OrgParams },
       responses: {
         200: json(
@@ -162,6 +166,14 @@ export function chatRoutes(deps: AppDeps) {
                     })
                     .nullable()
                     .openapi({ description: "Long work in the background (ADR 0121): its title, plan and start." }),
+                  forAgentId: z.uuid().nullable().openapi({
+                    description:
+                      "Work another agent handed it: that agent. It is listed where it was handed off (`channelId`, `threadId`), never in the two agents' DM.",
+                  }),
+                  anchorMessageId: z
+                    .uuid()
+                    .nullable()
+                    .openapi({ description: "The reply that handed it off, once posted." }),
                 })
                 .openapi("WorkingRun"),
             ),
@@ -441,11 +453,14 @@ export function chatRoutes(deps: AppDeps) {
                   channelId: z.uuid(),
                   threadId: z.uuid().nullable(),
                   since: z.string(),
+                  kind: z
+                    .enum(["question", "note"])
+                    .openapi({ description: "A question (`ask_agent`) or work handed off (`tell_agent`)." }),
                 }),
               )
               .openapi({
                 description:
-                  "Questions agents asked from here (`ask_agent`) still without an answer: the working line says one agent is asking another until `agent.consulted`.",
+                  "Questions agents asked from here (`ask_agent`) and work they handed off (`tell_agent`) still open: the working line says it until `agent.consulted`.",
               }),
           }),
         ),
@@ -499,6 +514,7 @@ export function chatRoutes(deps: AppDeps) {
           consultations: list.map((q) => ({
             ...q,
             progress: q.progress ? { ...q.progress, at: q.progress.at.toISOString() } : null,
+            waitingSince: q.waitingSince?.toISOString() ?? null,
             createdAt: q.createdAt.toISOString(),
             answeredAt: q.answeredAt?.toISOString() ?? null,
             expiresAt: q.expiresAt.toISOString(),
@@ -532,6 +548,7 @@ export function chatRoutes(deps: AppDeps) {
           consultation: {
             ...q,
             progress: q.progress ? { ...q.progress, at: q.progress.at.toISOString() } : null,
+            waitingSince: q.waitingSince?.toISOString() ?? null,
             createdAt: q.createdAt.toISOString(),
             answeredAt: q.answeredAt?.toISOString() ?? null,
             expiresAt: q.expiresAt.toISOString(),

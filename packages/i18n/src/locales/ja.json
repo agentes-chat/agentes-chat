@@ -3619,6 +3619,9 @@
     "hidden": "非表示",
     "offline": "オフライン",
     "out": "不在",
+    "available": "対応可能",
+    "working": "作業中",
+    "waiting": "あなたの対応待ち",
     "lower": {
       "online": "オンライン",
       "away": "離席中",
@@ -3706,6 +3709,16 @@
     },
     "bySelf": "{{name}}が設定 · 完了するとクリアされます",
     "byAuto": "今やっていること"
+  },
+  "agentWork": {
+    "working": "作業中",
+    "you": "あなたの対応待ち",
+    "waiting": "待機中",
+    "queued": "順番待ち",
+    "here": "ここ",
+    "routine": "ルーティン中",
+    "yourApproval": "あなたの承認",
+    "yourAnswer": "あなたの回答"
   },
   "mentions": {
     "list": "人とエージェント",
@@ -8753,6 +8766,10 @@
     "status": {
       "needsYou": "あなたの対応待ち",
       "working": "作業中",
+      "approval": "承認待ち",
+      "input": "回答待ち",
+      "computer": "コンピューター待ち",
+      "queued": "順番待ち",
       "open": "オープン",
       "closed": "終了",
       "archived": "アーカイブ済み"
@@ -15309,7 +15326,13 @@
       "asking": "{{from}}が{{to}}に質問しています",
       "answered": "{{to}}が回答しました。{{from}}が書いています",
       "writing": "{{from}}が書いています",
-      "clock": "{{time}}まで待機中"
+      "clock": "{{time}}まで待機中",
+      "doing": "{{name}} {{doing}}",
+      "yourApproval": "{{name}}があなたの承認を待っています",
+      "yourAnswer": "{{name}}があなたの回答を待っています",
+      "done": "{{to}}が完了しました。{{from}}が書いています",
+      "notDone": "{{to}}は完了できませんでした。{{from}}が書いています",
+      "handedOff": "{{to}}は{{from}}から任された作業をしています"
     },
     "consultation": {
       "answered": "{{name}}が回答しました",
@@ -15328,7 +15351,8 @@
       "waitingInput": "{{name}}は回答を待っています",
       "waitingComputer": "{{name}}はコンピューターを待っています",
       "waitingProvider": "{{name}}: AIプロバイダーが停止中 · 自動で再試行します",
-      "waitingAgents": "{{name}}は一部を引き継ぎ、返事を待っています"
+      "waitingAgents": "{{name}}は一部を引き継ぎ、返事を待っています",
+      "queued": "{{name}}は順番待ちです"
     },
     "consultPair": {
       "took": "{{time}}かかりました",
@@ -15338,6 +15362,9 @@
       "waitingInput": "回答待ち",
       "waitingComputer": "コンピューター待ち",
       "waitingProvider": "AIプロバイダー停止中",
+      "waitingYourApproval": "あなたの承認待ち",
+      "waitingYourAnswer": "あなたの回答待ち",
+      "queued": "順番待ち",
       "handedOn": "ほかのエージェント待ち",
       "noAnswer": "回答なし",
       "notFinished": "完了せず",
@@ -17103,7 +17130,7 @@
     },
     "state": {
       "working": "作業中",
-      "ok": "あなたの承認待ち",
+      "ok": "あなたの対応待ち",
       "answer": "回答待ち",
       "computerBusy": "コンピューターの空き待ち",
       "inLine": "順番待ち · {{position}}番目",

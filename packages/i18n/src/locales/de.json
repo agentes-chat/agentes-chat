@@ -3749,6 +3749,9 @@
     "hidden": "Unsichtbar",
     "offline": "Offline",
     "out": "Nicht im Büro",
+    "available": "Verfügbar",
+    "working": "Arbeitet",
+    "waiting": "Wartet auf dich",
     "lower": {
       "online": "online",
       "away": "abwesend",
@@ -3836,6 +3839,16 @@
     },
     "bySelf": "Von {{name}} geschrieben · wird gelöscht, wenn es erledigt ist",
     "byAuto": "Was er gerade tut"
+  },
+  "agentWork": {
+    "working": "arbeitet",
+    "you": "wartet auf dich",
+    "waiting": "wartet",
+    "queued": "in der Warteschlange",
+    "here": "hier",
+    "routine": "in einer Routine",
+    "yourApproval": "deine Freigabe",
+    "yourAnswer": "deine Antwort"
   },
   "mentions": {
     "list": "Personen und Agenten",
@@ -9102,6 +9115,10 @@
     "status": {
       "needsYou": "Wartet auf dich",
       "working": "Arbeitet",
+      "approval": "Wartet auf Freigabe",
+      "input": "Wartet auf eine Antwort",
+      "computer": "Wartet auf den Computer",
+      "queued": "In der Warteschlange",
       "open": "Offen",
       "closed": "Geschlossen",
       "archived": "Archiviert"
@@ -15862,7 +15879,13 @@
       "asking": "{{from}} fragt {{to}}",
       "answered": "{{to}} hat geantwortet. {{from}} schreibt",
       "writing": "{{from}} schreibt",
-      "clock": "Wartet bis {{time}}"
+      "clock": "Wartet bis {{time}}",
+      "doing": "{{name}} {{doing}}",
+      "yourApproval": "{{name}} wartet auf deine Freigabe",
+      "yourAnswer": "{{name}} wartet auf deine Antwort",
+      "done": "{{to}} ist fertig. {{from}} schreibt",
+      "notDone": "{{to}} ist nicht fertig geworden. {{from}} schreibt",
+      "handedOff": "{{to}} arbeitet an dem, was {{from}} übergeben hat"
     },
     "consultation": {
       "answered": "{{name}} hat geantwortet",
@@ -15881,7 +15904,8 @@
       "waitingInput": "{{name}} wartet auf eine Antwort",
       "waitingComputer": "{{name}} wartet auf den Computer",
       "waitingProvider": "{{name}}: Der KI-Anbieter ist ausgefallen · versucht es von selbst erneut",
-      "waitingAgents": "{{name}} hat einen Teil weitergegeben und wartet auf Rückmeldung"
+      "waitingAgents": "{{name}} hat einen Teil weitergegeben und wartet auf Rückmeldung",
+      "queued": "{{name}} ist in der Warteschlange"
     },
     "consultPair": {
       "took": "dauerte {{time}}",
@@ -15891,6 +15915,9 @@
       "waitingInput": "wartet auf eine Antwort",
       "waitingComputer": "wartet auf den Computer",
       "waitingProvider": "KI-Anbieter gestört",
+      "waitingYourApproval": "wartet auf deine Freigabe",
+      "waitingYourAnswer": "wartet auf deine Antwort",
+      "queued": "in der Warteschlange",
       "handedOn": "wartet auf andere Agenten",
       "noAnswer": "hat nicht geantwortet",
       "notFinished": "nicht fertig geworden",
@@ -17680,7 +17707,7 @@
     },
     "state": {
       "working": "Arbeitet",
-      "ok": "Wartet auf dein Okay",
+      "ok": "Wartet auf dich",
       "answer": "Wartet auf eine Antwort",
       "computerBusy": "Wartet auf Platz am Computer",
       "inLine": "Warteschlange · Platz {{position}}",

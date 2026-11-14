@@ -293,7 +293,7 @@
   },
   "along": {
     "agent": "一个智能体",
-    "waits": "{{name}} 在等你确认",
+    "waits": "{{name}} · 等你处理",
     "on": "{{name}} · {{what}}",
     "working": "{{name}} 正在工作",
     "more": "+{{count}}"
@@ -769,7 +769,7 @@
     "teamSectionPersonal": "你的智能体",
     "managerQuiet": "没有进行中的事项",
     "state": {
-      "waitsYou": "等你确认",
+      "waitsYou": "等你处理",
       "noAi": "未连接 AI",
       "connect": "连接",
       "archived": "已归档",
@@ -1355,7 +1355,7 @@
       "plain": "完成了一项任务"
     },
     "rowWait": {
-      "approval": "等你确认",
+      "approval": "等你处理",
       "question": "等你回答",
       "mission": "等你审阅"
     },
@@ -1393,12 +1393,12 @@
   },
   "intentAgents": {
     "waitingSection": "等你处理",
-    "waitingLine": "{{title}} · 需要你确认",
+    "waitingLine": "{{title}} · 等你处理",
     "waitingMore_other": "{{title}} · 还有 {{count}} 项等你处理",
-    "waitingLabel": "{{name}}，需要你确认",
+    "waitingLabel": "{{name}}，等你处理",
     "owner": "所有者：{{name}}",
     "ownerYou": "所有者：你",
-    "nowWaiting": "需要你确认：{{title}}",
+    "nowWaiting": "等你处理：{{title}}",
     "did": {
       "title": "他为你做了什么",
       "title_female": "她为你做了什么",
@@ -1416,7 +1416,7 @@
         "image": "图片",
         "file": "文件"
       },
-      "waitingOnYou": "需要你确认",
+      "waitingOnYou": "等你处理",
       "youApproved": "你已批准",
       "youRefused": "你已拒绝",
       "action": {

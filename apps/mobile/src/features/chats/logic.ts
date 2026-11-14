@@ -74,6 +74,10 @@ export type ConversationRow =
       closed: boolean;
       working: boolean;
       needsYou: boolean;
+      /** What its work waits on with none of it running, since when, and who works longest (ADR 0084 addendum). */
+      wait: ThreadInfo["wait"];
+      since: string | null;
+      worker: string | null;
       /** Whose face the row shows: the last reply's author, else who started it. */
       face: ThreadActor;
       last: LastLine | null;
@@ -133,6 +137,9 @@ export function buildConversations(input: {
       closed: t.state === "closed",
       working: t.working,
       needsYou: t.needsYou,
+      wait: t.wait ?? null,
+      since: t.since ?? null,
+      worker: t.worker ?? null,
       face: t.lastMessage?.author ?? t.rootAuthor,
       last: t.lastMessage
         ? {

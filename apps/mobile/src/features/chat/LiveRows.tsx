@@ -1,12 +1,14 @@
-import { elapsedClock, type LiveConsult, type LiveRun, usesBrowser } from "@agenteschat/client";
+import { elapsedClock, type LiveRun, usesBrowser } from "@agenteschat/client";
 import {
   type ActivityEntry,
   activitySentence,
   activityVerb,
   barAsking,
+  barConsultTime,
   barElapsed,
   barFaces,
   barWords,
+  type ConsultWithDetails,
   listNames,
 } from "@agenteschat/client/lib/activity";
 import { barStep } from "@agenteschat/client/lib/work";
@@ -52,6 +54,7 @@ import {
   turnPhrase,
   workingEntries,
 } from "./logic";
+import { WaitMark } from "./WaitMark";
 
 /** The runs at work in their browser, one per agent: each gets its browser card. */
 export function browsingRuns(runs: LiveRun[]): LiveRun[] {
@@ -80,10 +83,13 @@ export function WorkingLine({
   consults,
   typing,
   onOpenBrowser,
+  onSeeConsult,
   stop,
 }: {
   runs: LiveRun[];
-  consults: LiveConsult[];
+  consults: ConsultWithDetails[];
+  /** "Ver" on a question or hand-off out from here: the two agents' talk (ADR 0095 addendum). */
+  onSeeConsult?: (consultationId: string) => void;
   /** The people typing here (never me). */
   typing: string[];
   /** An agent in its browser: tapping the line opens its card in the conversation. */
@@ -151,7 +157,11 @@ export function WorkingLine({
       )}
     </Text>
   );
-  const clock = asking ? elapsedClock(now - asking.since) : null;
+  // A question at work keeps its clock; work handed off and a wait carry the lists' time ("22 min").
+  const clock =
+    asking && asking.kind !== "note" && !asking.wait && !asking.yours ? elapsedClock(now - asking.since) : null;
+  const consultTime = barConsultTime(i18n.language, asking, now);
+  const seeConsult = asking?.id && onSeeConsult ? () => onSeeConsult(asking.id as string) : undefined;
   const pop = reduced ? undefined : ZoomIn.springify().damping(11).stiffness(320).mass(0.6);
   const plate = [styles.tok, { backgroundColor: c.glassSolid }];
   // The agents at work open the pill with their faces.
@@ -188,9 +198,16 @@ export function WorkingLine({
                   <View style={plate}>
                     <AgentFace agentId={e.id} size={18} mode="idle" />
                   </View>
-                  <Icon name="right" size={12} color={c.faint} />
+                  {/* What waits on me takes the arrow's place; a wait on someone else, the quiet clock. */}
+                  {asking.yours ? (
+                    <WaitMark size={8} />
+                  ) : asking.wait ? (
+                    <Icon name="clock" size={12} color={c.faint} />
+                  ) : (
+                    <Icon name="right" size={12} color={c.faint} />
+                  )}
                   <View style={plate}>
-                    <AgentFace agentId={asking.to} size={18} mode="think" />
+                    <AgentFace agentId={asking.to} size={18} mode={asking.yours || asking.wait ? "idle" : "think"} />
                   </View>
                 </Animated.View>
               );
@@ -242,6 +259,23 @@ export function WorkingLine({
           >
             {clock}
           </Text>
+        ) : null}
+        {consultTime ? (
+          <Text variant="caption" tone="faint" maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.took}>
+            · {consultTime}
+          </Text>
+        ) : null}
+        {seeConsult ? (
+          <Pressable
+            onPress={seeConsult}
+            accessibilityRole="button"
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            style={({ pressed }) => [styles.see, pressed && styles.pressed]}
+          >
+            <Text variant="caption" tone="ink2" maxFontSizeMultiplier={CHROME_MAX_SCALE} style={styles.seeText}>
+              {t("run.strip.see")}
+            </Text>
+          </Pressable>
         ) : null}
         {/* "Parar" as a word, last: the one stop on screen while the rows are out of view (the row's tail has its own
             while it shows; the composer keeps only its send). */}
@@ -539,6 +573,9 @@ const styles = StyleSheet.create({
   },
   ink: { fontWeight: "600" },
   took: { fontVariant: ["tabular-nums"] },
+  // "Ver" after a hand-off's time: the two agents' talk.
+  see: { marginLeft: 8, justifyContent: "center" },
+  seeText: { fontWeight: "600" },
   clock: { fontWeight: "600", fontVariant: ["tabular-nums"] },
   pressed: { opacity: 0.6 },
   sep: { width: StyleSheet.hairlineWidth * 2, height: 16, marginLeft: 4, marginRight: 2 },

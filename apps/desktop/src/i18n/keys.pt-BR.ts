@@ -599,7 +599,7 @@ export const desktopPtBR = {
       whoIn: "Quem pode usar em {{org}}",
       owner: "Só eu",
       everyone: "Todos em {{org}}",
-      people: "Pessoas ou papéis específicos",
+      people: "Pessoas ou cargos específicos",
       edit: "Editar",
       pickTitle: "Quem pode usar este {{device}}",
       search: "Buscar pessoas",

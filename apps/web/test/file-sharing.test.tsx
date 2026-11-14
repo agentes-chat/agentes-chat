@@ -119,9 +119,9 @@ describe("Compartilhar (ADR 0157)", () => {
     await click(within(dialog).getByRole("button", { name: "Escolher pessoas" }));
     await settle(2);
     // Chosen, not saved yet: nobody is on the list.
-    expect(pressed(dialog)).toEqual(["Pessoas e papéis que você escolher"]);
+    expect(pressed(dialog)).toEqual(["Pessoas e cargos que você escolher"]);
     expect(state.calls.some((c) => c.method === "artifacts.setSharing")).toBe(false);
-    const add = within(dialog).getByRole("combobox", { name: "Adicionar pessoa ou papel" });
+    const add = within(dialog).getByRole("combobox", { name: "Adicionar pessoa ou cargo" });
     add.focus();
     await act(async () => {
       fireEvent.keyDown(add, { key: "Enter" });

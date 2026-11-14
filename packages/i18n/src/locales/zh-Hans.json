@@ -3620,6 +3620,9 @@
     "hidden": "隐身",
     "offline": "离线",
     "out": "不在办公室",
+    "available": "空闲",
+    "working": "工作中",
+    "waiting": "等你处理",
     "lower": {
       "online": "在线",
       "away": "离开",
@@ -3707,6 +3710,16 @@
     },
     "bySelf": "由 {{name}} 设置 · 完成后自动清除",
     "byAuto": "它现在正在做的事"
+  },
+  "agentWork": {
+    "working": "工作中",
+    "you": "等你处理",
+    "waiting": "等待中",
+    "queued": "排队中",
+    "here": "这里",
+    "routine": "在执行例行任务",
+    "yourApproval": "你的批准",
+    "yourAnswer": "你的回答"
   },
   "mentions": {
     "list": "成员和智能体",
@@ -8798,6 +8811,10 @@
     "status": {
       "needsYou": "等你处理",
       "working": "工作中",
+      "approval": "等待批准",
+      "input": "等待回答",
+      "computer": "等待电脑",
+      "queued": "排队中",
       "open": "进行中",
       "closed": "已关闭",
       "archived": "已归档"
@@ -15365,7 +15382,13 @@
       "asking": "{{from}} 正在询问 {{to}}",
       "answered": "{{to}} 已回答。{{from}} 正在撰写",
       "writing": "{{from}} 正在撰写",
-      "clock": "等待 {{time}}"
+      "clock": "等待 {{time}}",
+      "doing": "{{name}} {{doing}}",
+      "yourApproval": "{{name}} 正在等你批准",
+      "yourAnswer": "{{name}} 正在等你回答",
+      "done": "{{to}} 已完成。{{from}} 正在撰写",
+      "notDone": "{{to}} 没有完成。{{from}} 正在撰写",
+      "handedOff": "{{to}} 正在处理 {{from}} 交给它的工作"
     },
     "consultation": {
       "answered": "{{name}} 已回答",
@@ -15392,7 +15415,8 @@
       "waitingComputer_female": "{{name}} 正在等待电脑",
       "waitingProvider": "{{name}}：AI 服务商暂时不可用 · 会自动重试",
       "waitingAgents": "{{name}} 把部分工作交了出去，正在等待回复",
-      "waitingAgents_female": "{{name}} 把部分工作交了出去，正在等待回复"
+      "waitingAgents_female": "{{name}} 把部分工作交了出去，正在等待回复",
+      "queued": "{{name}} 正在排队"
     },
     "consultPair": {
       "took": "用了 {{time}}",
@@ -15402,6 +15426,9 @@
       "waitingInput": "等待回答",
       "waitingComputer": "等待电脑",
       "waitingProvider": "AI 提供方故障",
+      "waitingYourApproval": "等你批准",
+      "waitingYourAnswer": "等你回答",
+      "queued": "排队中",
       "handedOn": "等待其他智能体",
       "noAnswer": "未回答",
       "notFinished": "未完成",
@@ -17279,7 +17306,7 @@
     },
     "state": {
       "working": "工作中",
-      "ok": "等待你审批",
+      "ok": "等你处理",
       "answer": "等待回答",
       "computerBusy": "等待电脑空位",
       "inLine": "排队中 · 第 {{position}} 位",

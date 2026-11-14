@@ -1091,6 +1091,14 @@ textarea.ac-input {
 .ac-presence[data-presence="out"] {
   --presence: var(--info);
 }
+/* An agent at work, and one waiting on the person reading (ADR 0084 addendum): the agents' accent (on its face only,
+   agent identity) and the amber of everything that waits on them. */
+.ac-avatar .ac-presence[data-presence="working"] {
+  --presence: var(--agent);
+}
+.ac-presence[data-presence="waiting"] {
+  --presence: var(--warn);
+}
 .ac-presence__base {
   fill: var(--presence);
 }

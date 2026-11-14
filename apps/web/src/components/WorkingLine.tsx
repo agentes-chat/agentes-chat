@@ -15,6 +15,7 @@ import { Fragment, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar, AgentWho } from "@/components/AgentAvatar";
 import { useOrg } from "@/components/org-context";
+import { WaitMark } from "@/components/RequestCard";
 import { useDirectory } from "@/hooks/useDirectory";
 
 /**
@@ -135,7 +136,9 @@ function TurnText({ text }: { text: string }) {
 
 /**
  * The stacked mini bodies, a few at most (`barFaces`): each on a plate so overlaps stay readable. An agent
- * on its own asking another shows both, with an arrow (the one asked is thinking).
+ * on its own asking another, or handing it work, shows both, with an arrow (the one asked is thinking). When the one
+ * asked waits on the person reading, the pulsing wait mark takes the arrow's place and it looks up; when it waits on
+ * someone else, a quiet clock does and it rests.
  */
 export function WorkingStack({ entries }: { entries: ActivityEntry[] }) {
   const { org } = useOrg();
@@ -156,11 +159,22 @@ export function WorkingStack({ entries }: { entries: ActivityEntry[] }) {
             <Fragment key={`c:${e.id}`}>
               {tok(`a:${e.id}`, <AgentAvatar agentId={e.id} size="xs" name={e.name} state="idle" />)}
               <span className="ac-typing__to">
-                <Icon name="arrowRight" size={14} />
+                {asking.yours ? (
+                  <WaitMark />
+                ) : asking.wait ? (
+                  <Icon name="clock" size={14} />
+                ) : (
+                  <Icon name="arrowRight" size={14} />
+                )}
               </span>
               {tok(
                 `t:${asking.to}`,
-                <AgentAvatar agentId={asking.to} size="xs" name={asking.toName} state="thinking" />,
+                <AgentAvatar
+                  agentId={asking.to}
+                  size="xs"
+                  name={asking.toName}
+                  state={asking.yours ? "waiting" : asking.wait ? "idle" : "thinking"}
+                />,
               )}
             </Fragment>
           );
@@ -170,11 +184,14 @@ export function WorkingStack({ entries }: { entries: ActivityEntry[] }) {
   );
 }
 
-/** "0:41" next to the question the line tells (tabular figures); null when it tells none (`barAsking`). */
+/**
+ * "0:41" next to the question the line tells while its colleague is at it (tabular figures); null when it tells none
+ * (`barAsking`), or tells work handed off or a wait (they carry their own time, `barConsultTime`).
+ */
 export function ConsultClock({ entries, now }: { entries: ActivityEntry[]; now: number }) {
   const { t } = useTranslation();
   const asking = barAsking(entries);
-  if (!asking) return null;
+  if (!asking || asking.kind === "note" || asking.wait || asking.yours) return null;
   const time = elapsedClock(now - asking.since);
   return (
     <span className="ac-typing__clock ac-num" role="timer" aria-label={t("chat.consult.clock", { time })}>

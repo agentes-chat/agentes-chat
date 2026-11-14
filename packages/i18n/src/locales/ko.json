@@ -3617,6 +3617,9 @@
     "hidden": "숨김",
     "offline": "오프라인",
     "out": "부재 중",
+    "available": "응답 가능",
+    "working": "작업 중",
+    "waiting": "내 확인 대기",
     "lower": {
       "online": "온라인",
       "away": "자리 비움",
@@ -3704,6 +3707,16 @@
     },
     "bySelf": "{{name}}이(가) 작성 · 끝나면 지워져요",
     "byAuto": "지금 하고 있는 일"
+  },
+  "agentWork": {
+    "working": "작업 중",
+    "you": "내 확인 대기",
+    "waiting": "대기 중",
+    "queued": "차례 대기 중",
+    "here": "여기",
+    "routine": "루틴 진행 중",
+    "yourApproval": "내 승인",
+    "yourAnswer": "내 답변"
   },
   "mentions": {
     "list": "사람과 에이전트",
@@ -8747,6 +8760,10 @@
     "status": {
       "needsYou": "내 확인 대기",
       "working": "작업 중",
+      "approval": "승인 대기 중",
+      "input": "답변 대기 중",
+      "computer": "컴퓨터 대기 중",
+      "queued": "차례 대기 중",
       "open": "열림",
       "closed": "닫힘",
       "archived": "보관됨"
@@ -15301,7 +15318,13 @@
       "asking": "{{from}}이(가) {{to}}에게 묻는 중",
       "answered": "{{to}}이(가) 답했어요. {{from}}이(가) 작성 중",
       "writing": "{{from}}이(가) 작성 중",
-      "clock": "{{time}} 대기 중"
+      "clock": "{{time}} 대기 중",
+      "doing": "{{name}} {{doing}}",
+      "yourApproval": "{{name}}이(가) 내 승인을 기다려요",
+      "yourAnswer": "{{name}}이(가) 내 답변을 기다려요",
+      "done": "{{to}}이(가) 끝냈어요. {{from}}이(가) 작성 중",
+      "notDone": "{{to}}이(가) 끝내지 못했어요. {{from}}이(가) 작성 중",
+      "handedOff": "{{to}}이(가) {{from}}이(가) 넘긴 일을 하는 중"
     },
     "consultation": {
       "answered": "{{name}}이(가) 답했어요",
@@ -15320,7 +15343,8 @@
       "waitingInput": "{{name}}이(가) 답을 기다리는 중",
       "waitingComputer": "{{name}}이(가) 컴퓨터를 기다리는 중",
       "waitingProvider": "{{name}}: AI 제공업체 장애 · 자동으로 다시 시도해요",
-      "waitingAgents": "{{name}}이(가) 일부를 넘기고 결과를 기다리는 중"
+      "waitingAgents": "{{name}}이(가) 일부를 넘기고 결과를 기다리는 중",
+      "queued": "{{name}}이(가) 차례를 기다리는 중"
     },
     "consultPair": {
       "took": "{{time}} 걸렸어요",
@@ -15330,6 +15354,9 @@
       "waitingInput": "답변 대기 중",
       "waitingComputer": "컴퓨터 대기 중",
       "waitingProvider": "AI 제공업체 장애",
+      "waitingYourApproval": "내 승인 대기 중",
+      "waitingYourAnswer": "내 답변 대기 중",
+      "queued": "차례 대기 중",
       "handedOn": "다른 에이전트 대기 중",
       "noAnswer": "답하지 않음",
       "notFinished": "끝내지 못함",
@@ -17095,7 +17122,7 @@
     },
     "state": {
       "working": "작업 중",
-      "ok": "내 승인 대기 중",
+      "ok": "내 확인 대기",
       "answer": "답변 대기 중",
       "computerBusy": "컴퓨터 자리 대기 중",
       "inLine": "차례 대기 · {{position}}번째",

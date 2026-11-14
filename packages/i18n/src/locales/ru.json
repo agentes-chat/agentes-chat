@@ -3988,6 +3988,9 @@
     "hidden": "Невидимка",
     "offline": "Не в сети",
     "out": "Не на месте",
+    "available": "Свободен",
+    "working": "Работает",
+    "waiting": "Ждёт вас",
     "lower": {
       "online": "в сети",
       "away": "отошёл",
@@ -4075,6 +4078,16 @@
     },
     "bySelf": "Написал(а) {{name}} · исчезнет, когда всё будет готово",
     "byAuto": "Что он делает сейчас"
+  },
+  "agentWork": {
+    "working": "работает",
+    "you": "ждёт вас",
+    "waiting": "ждёт",
+    "queued": "в очереди",
+    "here": "здесь",
+    "routine": "в рутине",
+    "yourApproval": "ваше одобрение",
+    "yourAnswer": "ваш ответ"
   },
   "mentions": {
     "list": "Люди и агенты",
@@ -9694,6 +9707,10 @@
     "status": {
       "needsYou": "Ждёт вас",
       "working": "Идёт работа",
+      "approval": "Ждёт одобрения",
+      "input": "Ждёт ответа",
+      "computer": "Ждёт компьютер",
+      "queued": "В очереди",
       "open": "Открыта",
       "closed": "Закрыта",
       "archived": "В архиве"
@@ -16847,7 +16864,13 @@
       "asking": "{{from}} спрашивает {{to}}",
       "answered": "{{to}} ответил. {{from}} пишет",
       "writing": "{{from}} пишет",
-      "clock": "Ждёт уже {{time}}"
+      "clock": "Ждёт уже {{time}}",
+      "doing": "{{name}} {{doing}}",
+      "yourApproval": "{{name}} ждёт вашего одобрения",
+      "yourAnswer": "{{name}} ждёт вашего ответа",
+      "done": "{{to}} закончил. {{from}} пишет",
+      "notDone": "{{to}} не закончил. {{from}} пишет",
+      "handedOff": "{{to}} работает над тем, что передал {{from}}"
     },
     "consultation": {
       "answered": "{{name}} ответил",
@@ -16866,7 +16889,8 @@
       "waitingInput": "{{name}} ждёт ответа",
       "waitingComputer": "{{name}} ждёт компьютер",
       "waitingProvider": "{{name}}: провайдер ИИ недоступен · повторит сам",
-      "waitingAgents": "{{name}} передал часть работы и ждёт ответа"
+      "waitingAgents": "{{name}} передал часть работы и ждёт ответа",
+      "queued": "{{name}} в очереди"
     },
     "consultPair": {
       "took": "заняло {{time}}",
@@ -16876,6 +16900,9 @@
       "waitingInput": "ждёт ответа",
       "waitingComputer": "ждёт компьютер",
       "waitingProvider": "ИИ-провайдер недоступен",
+      "waitingYourApproval": "ждёт вашего одобрения",
+      "waitingYourAnswer": "ждёт вашего ответа",
+      "queued": "в очереди",
       "handedOn": "ждёт других агентов",
       "noAnswer": "не ответил",
       "notFinished": "не закончил",
@@ -18761,7 +18788,7 @@
     },
     "state": {
       "working": "Работает",
-      "ok": "Ждёт вашего одобрения",
+      "ok": "Ждёт вас",
       "answer": "Ждёт ответа",
       "computerBusy": "Ждёт места на компьютере",
       "inLine": "В очереди · {{position}}-й",

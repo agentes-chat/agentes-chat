@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type { EndedTask, HiddenTasks, ManagedTask, TaskNow, TaskWait } from "../api/types";
 import { type Activity, toolActivity } from "./activity";
 import { durationText, etaMinutes } from "./computer-queue";
+import { agentGrammar } from "./grammar";
 import { usageWhenShort } from "./plan-usage";
 import { usageWindowText } from "./usage-pause";
 
@@ -300,29 +301,55 @@ export function programKey(p: TaskProgram): string | null {
   }
 }
 
-/** What a task is about, for its row: its label, else where it is ("Conversa com Ana", "#produto"). */
+/**
+ * What a task is about, for its row: its label, else its routine's name, else the thread work handed off from (ADR
+ * 0084 addendum), else where it is ("Conversa com Ana", "#produto").
+ */
 export function taskTitle(
   t: TFunction,
-  task: Pick<ManagedTask, "label" | "routine" | "channelKind" | "channelName" | "betweenAgents">,
+  task: Pick<ManagedTask, "label" | "routine" | "channelKind" | "channelName" | "betweenAgents"> & {
+    delegation?: ManagedTask["delegation"];
+  },
 ) {
   if (task.label?.trim()) return task.label.trim();
   if (task.routine?.name) return task.routine.name;
+  if (task.delegation?.from?.label) return task.delegation.from.label;
   return taskWhere(t, task);
 }
 
-/** Where it is: "#produto", "Conversa direta", "Conversa entre agentes", "Rotina «Backups»". */
+/**
+ * Where it is: "#produto", "Conversa direta", "Rotina «Backups»". Work one agent handed another says where it was handed
+ * off, for who reads that conversation, else "Conversa entre agentes".
+ */
 export function taskWhere(
   t: TFunction,
-  task: Pick<ManagedTask, "routine" | "channelKind" | "channelName" | "betweenAgents"> & { background?: boolean },
+  task: Pick<ManagedTask, "routine" | "channelKind" | "channelName" | "betweenAgents"> & {
+    background?: boolean;
+    delegation?: ManagedTask["delegation"];
+  },
 ) {
   if (task.background) {
     return task.routine?.name
       ? t("taskManager.where.routine", { name: task.routine.name })
       : t("taskManager.where.background");
   }
+  const from = task.delegation?.from;
+  if (task.betweenAgents && from) {
+    return from.channelKind === "channel" && from.channelName ? `#${from.channelName}` : t("taskManager.where.dm");
+  }
   if (task.betweenAgents) return t("chat.consultPanel.whereDm");
   if (task.channelKind === "dm") return t("taskManager.where.dm");
   return `#${task.channelName ?? ""}`;
+}
+
+/** "ajudando a Ada": work another agent handed it, by that agent's name. */
+export function taskHelping(
+  t: TFunction,
+  task: Pick<ManagedTask, "delegation">,
+  agentName: (id: string) => string | undefined,
+) {
+  const name = task.delegation ? agentName(task.delegation.agentId) : undefined;
+  return name ? t("chat.consultPanel.helping", agentGrammar(name)) : null;
 }
 
 /** Where it is, unless its title already says it (a task with no title of its own is called by its place). */
@@ -330,6 +357,7 @@ export function taskPlace(
   t: TFunction,
   task: Pick<ManagedTask, "label" | "routine" | "channelKind" | "channelName" | "betweenAgents"> & {
     background?: boolean;
+    delegation?: ManagedTask["delegation"];
   },
 ) {
   const where = taskWhere(t, task);
