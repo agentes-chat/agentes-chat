@@ -108,13 +108,26 @@ export const OPEN_LAYER = '[role="dialog"], [role="menu"], [role="listbox"]';
 export const typingInField = (el: EventTarget | null) =>
   el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
 
+/** A page or computer a person is controlling (`data-control` on it): its keys are the person's, never the app's. */
+const IN_CONTROL = "[data-control]";
+
+/**
+ * Whether the focus rests where no one chose: on the page itself, or in a conversation's box, where the app puts it
+ * as the conversation opens. Something taking the keys (a page coming under control) may take it from there.
+ */
+export const focusIdle = () => {
+  const held = document.activeElement;
+  return held === null || held === document.body || held.closest(".ac-composer") !== null;
+};
+
 /**
  * Whether the app may put the focus in a conversation's box by itself (the conversation opening, a key typed on it):
- * never on a touch screen, whose keyboard would open over the page, nor while a dialog, menu or list is open, a field
- * other than a conversation's box holds the focus, or the person has text selected (to copy it).
+ * never on a touch screen, whose keyboard would open over the page, nor while a dialog, menu or list is open, a page
+ * or computer is under a person's control, a field other than a conversation's box holds the focus, or the person
+ * has text selected (to copy it).
  */
 export const mayTakeFocus = () => {
-  if (onScreenKeyboard() || document.querySelector(OPEN_LAYER)) return false;
+  if (onScreenKeyboard() || document.querySelector(`${OPEN_LAYER}, ${IN_CONTROL}`)) return false;
   const held = document.activeElement;
   if (typingInField(held) && !(held as HTMLElement).closest(".ac-composer")) return false;
   return !window.getSelection()?.toString();

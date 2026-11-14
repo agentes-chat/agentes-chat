@@ -408,6 +408,7 @@ export { COMPUTER_GRID, COMPUTER_KINDS, COMPUTER_STATES, drawComputer, PHONE_KIN
 export { cx } from "./cx";
 export {
   focusAtEnd,
+  focusIdle,
   hoverPointer,
   mayTakeFocus,
   movesByKeys,

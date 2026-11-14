@@ -42,11 +42,15 @@ test("a channel, a DM with an agent and switching between them: the cursor waits
   await settle(8);
   expect(document.activeElement).toBe(box("Mensagem para #eng"));
 
-  await act(async () => r.router.navigate({ to: `/org/${ORG_ID}/dm/agent/${ADA_ID}` }));
+  await act(async () =>
+    r.router.navigate({ to: "/org/$orgId/dm/agent/$agentId", params: { orgId: ORG_ID, agentId: ADA_ID } }),
+  );
   await settle(8);
   expect(document.activeElement).toBe(box("Mensagem para Ada"));
 
-  await act(async () => r.router.navigate({ to: `/org/${ORG_ID}/c/${GENERAL_ID}` }));
+  await act(async () =>
+    r.router.navigate({ to: "/org/$orgId/c/$channelId", params: { orgId: ORG_ID, channelId: GENERAL_ID } }),
+  );
   await settle(8);
   expect(document.activeElement).toBe(box("Mensagem para #general"));
 });
@@ -74,11 +78,34 @@ test("with a dialog open, the next conversation leaves the focus alone", async (
   over.tabIndex = -1;
   document.body.append(over);
   over.focus();
-  await act(async () => r.router.navigate({ to: `/org/${ORG_ID}/c/${GENERAL_ID}` }));
+  await act(async () =>
+    r.router.navigate({ to: "/org/$orgId/c/$channelId", params: { orgId: ORG_ID, channelId: GENERAL_ID } }),
+  );
   await settle(8);
   expect(document.activeElement).toBe(over);
   await key(over, { key: "a" });
   expect(document.activeElement).toBe(over);
+});
+
+test("with a person controlling an agent's page or computer, neither opening nor typing takes its keys", async () => {
+  const r = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(seedState()) });
+  await settle(8);
+  const page = document.createElement("div");
+  page.id = "over";
+  page.dataset.control = "true";
+  page.tabIndex = -1;
+  document.body.append(page);
+  page.focus();
+  await act(async () =>
+    r.router.navigate({ to: "/org/$orgId/c/$channelId", params: { orgId: ORG_ID, channelId: GENERAL_ID } }),
+  );
+  await settle(8);
+  expect(document.activeElement).toBe(page);
+  await key(page, { key: "a" });
+  expect(document.activeElement).toBe(page);
+  page.blur();
+  await key(document.body, { key: "a" });
+  expect(document.activeElement).toBe(document.body);
 });
 
 test("on a touch screen nothing takes the focus: its keyboard would open over the page", async () => {
