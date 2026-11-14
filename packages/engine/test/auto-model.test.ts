@@ -600,6 +600,33 @@ describe("a run of an agent on Automático", () => {
     expect(f.provider.calls.at(-1)?.apiKey).toBe("gw-key-1234567");
   });
 
+  test("with no default key, the workspace's newest key being an endpoint's: one of that endpoint's models", async () => {
+    f = await setup({ judge: judgeAnswers({ current: "small" }), reply: () => ({ chunks: ["ok"] }) });
+    // The fixture's catalog key is older, and neither is the default.
+    await f.db
+      .update(schema.providerCredentials)
+      .set({ createdAt: new Date("2026-01-01T00:00:00Z") })
+      .where(eq(schema.providerCredentials.id, f.credential.id));
+    const key = await createCredential(
+      f.db,
+      f.keyWrapper,
+      f.owner.id,
+      f.org.id,
+      {
+        provider: "custom",
+        label: "GW",
+        apiKey: "gw-key-1234567",
+        endpoint: { style: "openai", baseURL: "https://gw.example/v1", models: [{ id: "llama-4" }] },
+      },
+      { net: { allowPrivate: true } },
+    );
+    await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: AUTO_MODEL, credentialId: null });
+    await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev oi" });
+    await drainOutbox(f.db, f.handlers);
+    expect(f.provider.calls.at(-1)?.request.model).toBe(customModelId(key.id, "llama-4"));
+    expect(f.provider.calls.at(-1)?.apiKey).toBe("gw-key-1234567");
+  });
+
   test("an agent without auto never asks the judge about its model", async () => {
     f = await setup({ judge: judgeAnswers({ current: "large" }), reply: () => ({ chunks: ["ok"] }) });
     await postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body: "@dev oi" });
