@@ -10797,6 +10797,10 @@
       "not_installed": "{{computer}}に{{program}}がインストールされていません。",
       "not_reported": "{{computer}}は、入っているプログラムをまだ確認しています。終わりしだい自動で切り替わります。",
       "outdated": "{{computer}}のバージョンが古くなっています。使うにはCodexをアップデートしてください。",
+      "outdatedCodex": "{{computer}} で Codex CLI {{detected}} が見つかりました。{{minimum}} 以降に更新してください。",
+      "codexUpdateGuide": "Codex CLI の更新方法",
+      "codexRecheckHere": "更新後、環境設定 › ツールの Codex の行で「もう一度確認」を選びます。",
+      "codexRecheckThere": "{{computer}} で Codex CLI を更新してください。デスクトップアプリがある場合は、環境設定 › ツールの Codex の行で「もう一度確認」を選びます。",
       "system": "{{program}}は{{computer}}のシステムではまだ動きません。",
       "no_computerCloud": "{{computer}}の準備ができ次第使えます。"
     },

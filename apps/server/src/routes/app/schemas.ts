@@ -914,11 +914,16 @@ export const BrainUnavailable = z.enum([
   "system",
 ]);
 
+export const CodexVersionRequirement = z
+  .object({ detected: z.string(), minimum: z.string() })
+  .openapi("CodexVersionRequirement");
+
 export const BrainOption = z
   .object({
     kind: BrainKind,
     available: z.boolean(),
     reason: BrainUnavailable.optional().openapi({ description: "Why it can't be chosen now (computer brains)." }),
+    codexVersion: CodexVersionRequirement.optional(),
     models: z.array(
       z.object({
         value: z.string().openapi({ description: "What is stored and passed to the CLI (`opus`, `gpt-…`)." }),

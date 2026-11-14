@@ -148,16 +148,16 @@ export function Tools() {
           />
         }
         under={
-          !info && (
+          (!info || cli === "codex") && (
             <>
-              {install && <CommandCopy command={install} />}
+              {!info && install && <CommandCopy command={install} />}
               <div className="dk-ver__acts">
                 <Button
                   variant="ghost"
                   size="sm"
                   icon="refresh"
                   loading={pending === `check:${cli}`}
-                  disabled={pending !== null}
+                  disabled={homes.length === 0 || pending !== null}
                   onClick={() => void checkAgain(cli, name)}
                 >
                   {checkLabel}

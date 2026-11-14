@@ -12086,6 +12086,10 @@
       "not_installed": "{{program}} nie jest zainstalowany na komputerze {{computer}}.",
       "not_reported": "{{computer}} wciąż sprawdza, jakie ma programy. To zmieni się samo, gdy skończy.",
       "outdated": "Wersja na komputerze {{computer}} jest stara. Zaktualizuj Codex, żeby z niego korzystać.",
+      "outdatedCodex": "Na komputerze {{computer}} wykryto Codex CLI {{detected}}. Zaktualizuj do wersji {{minimum}} lub nowszej.",
+      "codexUpdateGuide": "Jak zaktualizować Codex CLI",
+      "codexRecheckHere": "Po aktualizacji wybierz Sprawdź ponownie w wierszu Codex w Preferencjach › Narzędzia.",
+      "codexRecheckThere": "Zaktualizuj Codex CLI na komputerze {{computer}}. Jeśli działa na nim aplikacja komputerowa, wybierz Sprawdź ponownie w wierszu Codex w Preferencjach › Narzędzia.",
       "system": "{{program}} nie działa jeszcze w systemie komputera {{computer}}.",
       "no_computerCloud": "Gotowe, gdy tylko {{computer}} będzie gotowy."
     },

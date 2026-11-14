@@ -678,6 +678,53 @@ describe("the agent's no-AI card", () => {
     expect(within(plan).getByRole("button", { name: "Entrar com ChatGPT" })).toBeTruthy();
   });
 
+  test("the open ChatGPT panel unlocks when the runner reports an upgraded Codex", async () => {
+    const state = walters(withCard({ intent: "chatgpt" }), ADA_ID);
+    const api = createFakeApi(state);
+    const brain = api.agents.brain;
+    let version = "0.149.0";
+    api.agents.brain = async (orgId, agentId) => {
+      const view = await brain(orgId, agentId);
+      return {
+        ...view,
+        ownSignIn: false,
+        options: view.options.map((option) =>
+          option.kind === "codex" && version === "0.149.0"
+            ? {
+                ...option,
+                available: false,
+                reason: "outdated",
+                codexVersion: { detected: version, minimum: "0.163.0" },
+              }
+            : option,
+        ),
+      };
+    };
+    const { sockets } = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
+    await settle(5);
+    const socket = sockets.last();
+    await act(async () => socket.open());
+    await click(within(cardRow()).getByRole("button", { name: "Conectar" }), 8);
+    const box = dialog("Conectar uma IA para a Ada") as HTMLElement;
+    await toPlan(box, "ChatGPT");
+    const panel = () => within(box).getByRole("region", { name: "Seu plano do ChatGPT" });
+    expect(panel().textContent).toContain("Codex CLI 0.149.0");
+    expect(panel().textContent).toContain("0.163.0");
+    expect(within(panel()).queryByRole("region", { name: "Adicionar conta do ChatGPT" })).toBeNull();
+    expect(within(panel()).getByRole("link", { name: "Como atualizar o Codex CLI" })).toBeTruthy();
+    version = "0.169.0";
+    await act(async () =>
+      socket.push({
+        type: "event",
+        scope: "org",
+        event: { type: "machine.updated", machineId: "machine_1", executors: true },
+      }),
+    );
+    await settle(8);
+    expect(within(panel()).getByRole("region", { name: "Adicionar conta do ChatGPT" })).toBeTruthy();
+    expect(panel().textContent).not.toContain("0.149.0");
+  });
+
   test("Conectar asks the computers for their own sign-ins again: ChatGPT's is known by the usage read with it", async () => {
     const { state } = await open(walters(withCard({ intent: "chatgpt" }), ADA_ID));
     expect(calls(state, "machines.refreshAccountUsage")).toEqual([]);

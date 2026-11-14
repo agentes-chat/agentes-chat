@@ -11667,6 +11667,10 @@
       "not_installed": "{{program}} n'est pas installé sur {{computer}}.",
       "not_reported": "{{computer}} vérifie encore quels programmes il a. Ceci change tout seul une fois terminé.",
       "outdated": "La version sur {{computer}} est ancienne. Mettez à jour Codex pour l'utiliser.",
+      "outdatedCodex": "Codex CLI {{detected}} a été détecté sur {{computer}}. Installez la version {{minimum}} ou une version ultérieure.",
+      "codexUpdateGuide": "Mettre à jour Codex CLI",
+      "codexRecheckHere": "Après la mise à jour, cliquez sur Vérifier à nouveau dans la ligne Codex des préférences, sous Outils.",
+      "codexRecheckThere": "Mettez à jour Codex CLI sur {{computer}}. Si l’application de bureau y est installée, cliquez sur Vérifier à nouveau dans la ligne Codex des préférences, sous Outils.",
       "system": "{{program}} ne fonctionne pas encore sur le système de {{computer}}.",
       "no_computerCloud": "Prêt dès que {{computer}} l'est."
     },

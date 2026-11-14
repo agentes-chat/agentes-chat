@@ -6,6 +6,7 @@ import type {
   AiComputer,
   AiStatus,
   BrainUnavailable,
+  CodexVersionRequirement,
   ConnectIntent,
   Edition,
   Machine,
@@ -389,7 +390,12 @@ export type PlanGate =
   /** No computer for the agent: none connected (self-host), or the Cloud's said ready and still gave it none. */
   | { state: "missing" }
   /** `overdue`: on the Cloud, it should have passed by itself by now and didn't. */
-  | { state: "unsupported"; reason: BrainUnavailable | "keys"; overdue?: boolean }
+  | {
+      state: "unsupported";
+      reason: BrainUnavailable | "keys";
+      overdue?: boolean;
+      codexVersion?: CodexVersionRequirement;
+    }
   /** `owner`: the viewer doesn't own the agent; `computer`: only whoever connected it adds a sign-in there. */
   | { state: "locked"; who: "owner" | "computer" }
   /** The Cloud's workspace is on a billing hold: it has no computer to sign in on until its agentes.chat plan is active. */
@@ -415,9 +421,11 @@ export const unsupportedGate = (
   edition: Edition | null,
   setup: SetupView | null,
   now = Date.now(),
+  codexVersion?: CodexVersionRequirement,
 ): PlanGate => ({
   state: "unsupported",
   reason,
+  ...(reason === "outdated" && codexVersion ? { codexVersion } : {}),
   ...(edition === "cloud" && reason !== "tool_off" && installOverdue(setup, now) ? { overdue: true } : {}),
 });
 
@@ -455,7 +463,8 @@ export function planGate({
     return edition === "cloud" && !caughtUp ? { state: "preparing", view: null } : { state: "missing" };
   if (!brain.computer.online) return { state: "offline" };
   const option = brain.options.find((o) => o.kind === kindOf(choice));
-  if (!option?.available) return unsupportedGate(option?.reason ?? "not_reported", edition, setup, now);
+  if (!option?.available)
+    return unsupportedGate(option?.reason ?? "not_reported", edition, setup, now, option?.codexVersion);
   if (!brain.accountsSupported) return unsupportedGate("runner_old", edition, setup, now);
   if (isPlanId(choice) && !computer?.keys) return unsupportedGate("keys", edition, setup, now);
   if (!brain.canManageAccounts) return { state: "locked", who: "computer" };
@@ -508,7 +517,10 @@ export function planGateWithoutAgent({
   }
   if (!computer.online) return { gate: { state: "offline" }, computer };
   if (computer.brains[kind] !== true)
-    return { gate: unsupportedGate(computer.off?.[kind] ?? "not_reported", edition, setup, now), computer };
+    return {
+      gate: unsupportedGate(computer.off?.[kind] ?? "not_reported", edition, setup, now, computer.codexVersion),
+      computer,
+    };
   if (isPlanId(choice) && !computer.keys) return { gate: unsupportedGate("keys", edition, setup, now), computer };
   return { gate: { state: "ready" }, computer };
 }
@@ -628,6 +640,8 @@ export function gateLine(
     const off = toolOffReason(machine, kind);
     return { text: t(off.key, { computer, command: off.command, program }), rechecks };
   }
+  if (gate.reason === "outdated" && gate.codexVersion)
+    return { text: t("brain.reasons.outdatedCodex", { computer, ...gate.codexVersion }), rechecks };
   return { text: t(`brain.reasons.${gate.reason}`, { computer, program }), rechecks };
 }
 
