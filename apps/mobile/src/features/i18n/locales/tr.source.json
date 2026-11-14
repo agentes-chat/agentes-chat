@@ -4916,6 +4916,9 @@
   "devices.notice.tool_request": {
     "value": "{{names}} asks you to turn on {{tool}} on your {{device}}"
   },
+  "devices.notice.cli_request": {
+    "value": "{{names}} asks you to install {{tool}} on your {{device}}"
+  },
   "devices.notice.allowOnce": {
     "value": "Allow once"
   },

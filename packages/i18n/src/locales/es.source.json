@@ -7252,6 +7252,45 @@
   "connectAi.title.api_key": {
     "value": "Add an API key"
   },
+  "connectAi.cli.missing": {
+    "value": "{{program}} isn't on {{computer}} yet."
+  },
+  "connectAi.cli.claudeApp": {
+    "value": "The Claude app isn't enough: agents use Claude Code, which runs on the computer."
+  },
+  "connectAi.cli.install": {
+    "value": "Install {{program}} for me"
+  },
+  "connectAi.cli.check": {
+    "value": "I installed it, check again"
+  },
+  "connectAi.cli.checked": {
+    "value": "Checked just now: {{program}} still isn't on {{computer}}."
+  },
+  "connectAi.cli.installing": {
+    "value": "Installing {{program}} on {{computer}}. It takes about a minute."
+  },
+  "connectAi.cli.failed": {
+    "value": "Couldn't install on {{computer}}: {{message}}"
+  },
+  "connectAi.cli.stillMissing": {
+    "value": "The installer finished, but {{computer}} still doesn't find {{program}}."
+  },
+  "connectAi.cli.gitMissing": {
+    "value": "{{program}} needs Git for Windows on {{computer}}."
+  },
+  "connectAi.cli.getGit": {
+    "value": "Download Git for Windows"
+  },
+  "connectAi.cli.cantStart": {
+    "value": "{{program}} is on {{computer}}, but it won't start: {{message}}"
+  },
+  "connectAi.cli.outdated": {
+    "value": "Update the agentes.chat app on {{computer}} to install from here."
+  },
+  "connectAi.cli.asked": {
+    "value": "Request sent. {{name}} gets a button to install it."
+  },
   "connectAi.toolOff.text": {
     "value": "{{computer}} is connected, but {{program}} is switched off on it. Only whoever connected the computer turns it on."
   },
@@ -27418,6 +27457,9 @@
   "brain.reasons.not_installed": {
     "value": "{{program}} isn't installed on {{computer}}."
   },
+  "brain.reasons.cant_start": {
+    "value": "{{program}} is on {{computer}}, but it won't start."
+  },
   "brain.reasons.not_reported": {
     "value": "{{computer}} is still checking which programs it has. This changes by itself when it's done."
   },
@@ -35609,6 +35651,9 @@
   },
   "devices.notice.toolRequest": {
     "value": "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>"
+  },
+  "devices.notice.cliRequest": {
+    "value": "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>"
   },
   "devices.notice.once": {
     "value": "Allow once"

@@ -1898,6 +1898,7 @@
       "waiting": "{{names}} sedang menunggu {{device}}",
       "waitingFor": "{{names}} sedang menunggu {{device}} untuk {{person}}",
       "tool_request": "{{names}} memintamu menyalakan {{tool}} di {{device}} milikmu",
+      "cli_request": "{{names}} meminta kamu memasang {{tool}} di {{device}} kamu",
       "allowOnce": "Izinkan sekali",
       "always": "Selalu izinkan {{name}}",
       "no": "Tidak",

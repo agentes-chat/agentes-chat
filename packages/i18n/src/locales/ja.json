@@ -2826,6 +2826,21 @@
       "zen": "OpenCodeを接続",
       "api_key": "APIキーを追加"
     },
+    "cli": {
+      "missing": "{{program}} はまだ {{computer}} にありません。",
+      "claudeApp": "Claude アプリだけでは足りません。エージェントはコンピューターで動く Claude Code を使います。",
+      "install": "{{program}} をインストールする",
+      "check": "インストールした。もう一度確認",
+      "checked": "確認しました。{{program}} はまだ {{computer}} にありません。",
+      "installing": "{{computer}} に {{program}} をインストールしています。1 分ほどかかります。",
+      "failed": "{{computer}} にインストールできませんでした: {{message}}",
+      "stillMissing": "インストーラーは終わりましたが、{{computer}} はまだ {{program}} を見つけられません。",
+      "gitMissing": "{{program}} には {{computer}} の Git for Windows が必要です。",
+      "getGit": "Git for Windows をダウンロード",
+      "cantStart": "{{program}} は {{computer}} にありますが、起動しません: {{message}}",
+      "outdated": "ここからインストールするには、{{computer}} の agentes.chat アプリを更新してください。",
+      "asked": "依頼を送りました。{{name}} さんにインストールのボタンが届きます。"
+    },
     "toolOff": {
       "text": "{{computer}} は接続されていますが、{{program}} がオフです。オンにできるのはコンピューターを接続した人だけです。",
       "where": "{{computer}}で",
@@ -10791,6 +10806,7 @@
       "tool_offLinux": "{{computer}}で{{program}}がオフになっています。そのコンピューターのagentes.chatアプリか、{{command}}でオンにしてください。",
       "tool_offOne": "{{computer}} では {{program}} がオフです。",
       "not_installed": "{{computer}}に{{program}}がインストールされていません。",
+      "cant_start": "{{program}} は {{computer}} にありますが、起動しません。",
       "not_reported": "{{computer}}は、入っているプログラムをまだ確認しています。終わりしだい自動で切り替わります。",
       "outdated": "{{computer}}のバージョンが古くなっています。使うにはCodexをアップデートしてください。",
       "system": "{{program}}は{{computer}}のシステムではまだ動きません。",
@@ -14111,6 +14127,7 @@
       "access": "<b>{{who}}</b>が<b>{{deviceName}}</b>の使用を求めています",
       "waiting": "<b>{{who}}</b>が<b>{{deviceName}}</b>を待っています",
       "toolRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> で{{tool}}をオンにするよう頼んでいます",
+      "cliRequest": "<b>{{who}}</b> が <b>{{deviceName}}</b> に {{tool}} をインストールするよう求めています",
       "once": "今回のみ許可",
       "always": "常に許可",
       "no": "許可しない",

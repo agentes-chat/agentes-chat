@@ -33,6 +33,7 @@ import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, holdText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { NAMES_SHOWN, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { installableCli } from "@agenteschat/client/lib/machines";
 import {
   type AiChoice,
   ALL_AGENTS,
@@ -110,6 +111,7 @@ import { useDirectory } from "@/hooks/useDirectory";
 import { planWord } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
 import { AddAccount, OpenPage, Step, StepTitle } from "./AddAccountFlow";
+import { CliMissing } from "./CliMissing";
 import { PlanReplies, usePlanRepliesShown } from "./PlanReplies";
 import { ToolOffSteps } from "./ToolOffSteps";
 
@@ -1606,15 +1608,9 @@ function GateWait({
     </p>
   );
   const hold = holdText(t, org.standing);
+  const machine = machines.data?.find((m) => m.id === machineId);
   // Offline or unsupported: what's going on there and what comes next (on the Cloud, by itself as events arrive).
-  const why = gateLine(t, {
-    gate,
-    edition,
-    kind,
-    computer,
-    hold,
-    machine: machines.data?.find((m) => m.id === machineId),
-  });
+  const why = gateLine(t, { gate, edition, kind, computer, hold, machine });
   let wait: ReactNode = null;
   if (gate.state === "loading") wait = <Spinner />;
   else if (gate.state === "billing") {
@@ -1678,6 +1674,28 @@ function GateWait({
         />
         {useKey}
       </>
+    );
+  } else if (
+    gate.state === "unsupported" &&
+    (gate.reason === "not_installed" || gate.reason === "cant_start") &&
+    !hold &&
+    installableCli(kind) &&
+    machine &&
+    machine.kind !== "managed"
+  ) {
+    // A computer someone connected that hasn't the program, or has it and it won't start: install it from here.
+    wait = (
+      <CliMissing
+        machine={machine}
+        kind={kind}
+        computer={computer}
+        reason={gate.reason}
+        useKey={
+          <Button size="sm" onClick={onKey}>
+            {t("connectAi.wait.useKey")}
+          </Button>
+        }
+      />
     );
   } else if (why && !(gate.state === "offline" && signingIn)) {
     wait = (

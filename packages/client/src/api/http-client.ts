@@ -74,6 +74,7 @@ import type {
   ChannelMember,
   ChannelOverride,
   Choices,
+  CliInstall,
   CodeSent,
   CommandApproval,
   ComposioUsage,
@@ -1314,6 +1315,19 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         ).access,
       askTool: async (orgId, machineId, tool) => {
         await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/access/ask`, { json: { tool } });
+      },
+      checkClis: async (orgId, machineId) => {
+        await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/clis/check`, { json: {} });
+      },
+      cliInstall: (orgId, machineId, tool, action) => {
+        const path = `${org(orgId)}/machines/${enc(machineId)}/cli-install`;
+        if (action === "start") return request<{ install: CliInstall | null }>(path, { json: { tool } });
+        return request<{ install: CliInstall | null }>(`${path}?tool=${enc(tool)}`, {
+          ...(action === "cancel" ? { method: "DELETE" } : {}),
+        });
+      },
+      askCliInstall: async (orgId, machineId, tool) => {
+        await request<unknown>(`${org(orgId)}/machines/${enc(machineId)}/cli-install/ask`, { json: { tool } });
       },
       setPause: async (orgId, machineId, input) =>
         (

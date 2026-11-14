@@ -2824,6 +2824,21 @@
       "zen": "OpenCode 연결",
       "api_key": "API 키 추가"
     },
+    "cli": {
+      "missing": "{{program}}이(가) 아직 {{computer}}에 없습니다.",
+      "claudeApp": "Claude 앱만으로는 부족합니다. 에이전트는 컴퓨터에서 실행되는 Claude Code를 사용합니다.",
+      "install": "{{program}} 설치해 주기",
+      "check": "설치했어요, 다시 확인",
+      "checked": "방금 확인했습니다. {{program}}이(가) 아직 {{computer}}에 없습니다.",
+      "installing": "{{computer}}에 {{program}}을(를) 설치하는 중입니다. 1분 정도 걸립니다.",
+      "failed": "{{computer}}에 설치하지 못했습니다: {{message}}",
+      "stillMissing": "설치 프로그램은 끝났지만 {{computer}}이(가) 아직 {{program}}을(를) 찾지 못합니다.",
+      "gitMissing": "{{program}}에는 {{computer}}의 Git for Windows가 필요합니다.",
+      "getGit": "Git for Windows 다운로드",
+      "cantStart": "{{program}}이(가) {{computer}}에 있지만 실행되지 않습니다: {{message}}",
+      "outdated": "여기서 설치하려면 {{computer}}의 agentes.chat 앱을 업데이트하세요.",
+      "asked": "요청을 보냈습니다. {{name}} 님이 설치 버튼을 받습니다."
+    },
     "toolOff": {
       "text": "{{computer}}은(는) 연결되어 있지만 {{program}}이(가) 꺼져 있습니다. 컴퓨터를 연결한 사람만 켤 수 있습니다.",
       "where": "{{computer}}에서",
@@ -10785,6 +10800,7 @@
       "tool_offLinux": "{{computer}}에서 {{program}}이(가) 꺼져 있어요. 그 컴퓨터의 agentes.chat 앱이나 {{command}}(으)로 켜세요.",
       "tool_offOne": "{{computer}}에서 {{program}}이(가) 꺼져 있습니다.",
       "not_installed": "{{computer}}에 {{program}}이(가) 설치되어 있지 않아요.",
+      "cant_start": "{{program}}이(가) {{computer}}에 있지만 실행되지 않습니다.",
       "not_reported": "{{computer}}에 어떤 프로그램이 있는지 아직 확인하는 중이에요. 끝나면 저절로 바뀌어요.",
       "outdated": "{{computer}}의 버전이 오래됐어요. 사용하려면 Codex를 업데이트하세요.",
       "system": "{{program}}은(는) 아직 {{computer}}의 시스템에서 실행되지 않아요.",
@@ -14103,6 +14119,7 @@
       "access": "<b>{{who}}</b>이(가) <b>{{deviceName}}</b> 사용을 요청해요",
       "waiting": "<b>{{who}}</b>이(가) <b>{{deviceName}}</b>을(를) 기다리고 있어요",
       "toolRequest": "<b>{{who}}</b>님이 회원님의 <b>{{deviceName}}</b>에서 {{tool}}을(를) 켜 달라고 요청합니다",
+      "cliRequest": "<b>{{who}}</b> 님이 <b>{{deviceName}}</b>에 {{tool}}을(를) 설치해 달라고 요청합니다",
       "once": "한 번 허용",
       "always": "항상",
       "no": "아니요",

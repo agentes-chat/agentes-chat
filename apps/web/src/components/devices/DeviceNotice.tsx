@@ -2,12 +2,13 @@ import type { AppNotification } from "@agenteschat/client";
 import { type DeviceNotice, deviceNoticeOf, joinFacts } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { firstName } from "@agenteschat/client/lib/format";
-import { toolWords } from "@agenteschat/client/lib/machines";
+import { installableCli, toolWords } from "@agenteschat/client/lib/machines";
 import { Button, cx, ProviderLogo } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { CliInstallButton } from "@/components/ai/CliMissing";
 import type { Dir } from "@/components/NotificationParts";
 import { useOrg } from "@/components/org-context";
 import { TYPED_VALUES } from "@/i18n";
@@ -34,7 +35,7 @@ export function DeviceHeadline({ n, dir }: { n: AppNotification; dir: Dir }) {
   const values =
     d.kind === "device.join_request"
       ? { name: d.join?.name ?? d.device, org: org.name }
-      : d.kind === "device.tool_request"
+      : d.kind === "device.tool_request" || d.kind === "device.cli_request"
         ? {
             who: (d.askerId ? dir.memberById.get(d.askerId)?.name : undefined) ?? t("channel.unknownPerson"),
             tool: d.tool ? toolWords(t, d.tool) : "",
@@ -47,6 +48,7 @@ export function DeviceHeadline({ n, dir }: { n: AppNotification; dir: Dir }) {
     "device.access_request": "devices.notice.access",
     "device.waiting": "devices.notice.waiting",
     "device.tool_request": "devices.notice.toolRequest",
+    "device.cli_request": "devices.notice.cliRequest",
   }[d.kind];
   return <Trans i18nKey={key as never} values={values} components={{ b: <b /> }} {...TYPED_VALUES} />;
 }
@@ -178,6 +180,12 @@ export function DeviceNoticeActions({ n, inline = false }: { n: AppNotification;
     return (
       <Wrap inline={inline} onClick={keep}>
         <ToolOneClickButton machineId={d.machineId} machineName={d.device} oneClick={{ kind: "allow" }} tool={d.tool} />
+      </Wrap>
+    );
+  if (d.kind === "device.cli_request" && d.machineId && installableCli(d.tool ?? ""))
+    return (
+      <Wrap inline={inline} onClick={keep}>
+        <CliInstallButton machineId={d.machineId} cli={installableCli(d.tool ?? "") ?? "claude"} />
       </Wrap>
     );
   if (d.kind === "device.access_request" && d.requestId)

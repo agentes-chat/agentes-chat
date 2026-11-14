@@ -103,6 +103,7 @@ import type {
   ChannelMember,
   ChannelOverride,
   Choices,
+  CliInstall,
   CodeSent,
   CommandApproval,
   ComposioUsage,
@@ -162,6 +163,7 @@ import type {
   ImportFileInput,
   ImportInput,
   ImportPlan,
+  InstallableCli,
   Instance,
   Invitation,
   InvitationPreview,
@@ -1164,6 +1166,17 @@ export interface ApiClient {
     allowTool(orgId: string, machineId: string, tool: MachineTool): Promise<MachineAccess>;
     /** Anyone else: asks whoever paired it to turn `tool` on (an inbox row with the same button). */
     askTool(orgId: string, machineId: string, tool: MachineTool): Promise<void>;
+    /** Its PATH read again and its coding CLIs looked for now ("Já instalei, verificar de novo"). */
+    checkClis(orgId: string, machineId: string): Promise<void>;
+    /** Only the person who paired it: installs `tool` there, or where that install stands, or stops it. */
+    cliInstall(
+      orgId: string,
+      machineId: string,
+      tool: InstallableCli,
+      action: "start" | "status" | "cancel",
+    ): Promise<{ install: CliInstall | null }>;
+    /** Anyone else: asks whoever paired it to install `tool` (an inbox row with the install button). */
+    askCliInstall(orgId: string, machineId: string, tool: InstallableCli): Promise<void>;
     /** Pauses it (`until` null: until resumed) or resumes it (`resume`); the pause as it stands then. */
     setPause(
       orgId: string,

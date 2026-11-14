@@ -906,11 +906,83 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(dimmed("Kimi Code")).toBe(true);
     await closeAiSelect();
     await choose("ChatGPT");
-    expect(dialog.textContent).toContain("O Codex não está instalado no MacBook.");
+    expect(dialog.textContent).toContain("O Codex ainda não está no MacBook.");
     await choose("Kimi Code");
     expect(dialog.textContent).toContain("Atualize o agentes no computador para usar a chave de um plano");
     await click(within(dialog).getByRole("button", { name: "Usar uma chave de API agora" }));
     expect(payWith(dialog, "Com chave de API").getAttribute("aria-checked")).toBe("true");
+  });
+
+  test("a program not on the computer: one line, the Claude app told apart behind an ⓘ, installed or looked for from here", async () => {
+    const options = fakeAgentBrain(ADA_ID).options.map((o) =>
+      o.kind === "claude_code" ? { ...o, available: false, reason: "not_installed" as const } : o,
+    );
+    const name = "Estudio-PC";
+    const { dialog, choose, state, machines } = await connect({
+      machine: { os: "windows", name, cliInstall: true },
+      brain: { computer: { machineId: "machine_1", name, online: true }, options },
+    });
+    await choose("Claude");
+    const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
+    expect(panel.textContent).toContain("O Claude Code ainda não está no Estudio-PC.");
+    expect(panel.textContent).not.toContain("não está instalado");
+    expect(within(panel).getByRole("button", { name: "Sobre Claude Code" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "Já instalei, verificar de novo" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "Usar uma chave de API agora" })).toBeTruthy();
+
+    // Installed by hand: looked for again, and the line says it's still not there.
+    await click(within(panel).getByRole("button", { name: "Já instalei, verificar de novo" }));
+    await settle(4);
+    expect(calls(state, "machines.checkClis")).toHaveLength(1);
+    expect(panel.textContent).toContain("Verifiquei agora: o Claude Code ainda não está no Estudio-PC.");
+
+    await click(within(panel).getByRole("button", { name: "Instalar o Claude Code para mim" }));
+    await settle(4);
+    expect(calls(state, "machines.cliInstall").map((c) => c.args.at(-1))).toContain("start");
+    expect(panel.textContent).toContain("Instalando o Claude Code no Estudio-PC. Leva cerca de um minuto.");
+    expect(within(panel).getByRole("button", { name: "Cancelar" })).toBeTruthy();
+    expect(within(panel).queryByRole("button", { name: "Instalar o Claude Code para mim" })).toBeNull();
+
+    // The installer's own words when it fails, and Try again.
+    machines?.setCliInstall("machine_1", { tool: "claude", state: "failed", message: "irm: 404 Not Found" });
+    await click(within(panel).getByRole("button", { name: "Cancelar" }));
+    await settle(4);
+    expect(panel.textContent).toContain("Não deu para instalar no Estudio-PC: irm: 404 Not Found");
+    await click(within(panel).getByRole("button", { name: "Tentar de novo" }));
+    await settle(4);
+    expect(calls(state, "machines.cliInstall").filter((c) => c.args.at(-1) === "start")).toHaveLength(2);
+  });
+
+  test("a program not on someone else's computer: they are asked; one there that won't start says why", async () => {
+    const options = fakeAgentBrain(ADA_ID).options.map((o) =>
+      o.kind === "claude_code" ? { ...o, available: false, reason: "not_installed" as const } : o,
+    );
+    const { dialog, choose, state } = await connect({
+      machine: { os: "darwin", name: "MacBook", cliInstall: true, pairedBy: { id: "u-bia", name: "Bia Lima" } },
+      brain: { computer: { machineId: "machine_1", name: "MacBook", online: true }, options },
+    });
+    await choose("Claude");
+    const panel = within(dialog).getByRole("region", { name: "Seu plano do Claude" });
+    expect(within(panel).queryByRole("button", { name: "Instalar o Claude Code para mim" })).toBeNull();
+    await click(within(panel).getByRole("button", { name: "Pedir a Bia" }));
+    await settle(2);
+    expect(calls(state, "machines.askCliInstall")).toHaveLength(1);
+
+    cleanup();
+    const broken = fakeAgentBrain(ADA_ID).options.map((o) =>
+      o.kind === "claude_code" ? { ...o, available: false, reason: "cant_start" as const } : o,
+    );
+    const again = await connect({
+      machine: { os: "windows", name: "PC", cliInstall: true, cliErrors: { claude: "git_missing" } },
+      brain: { computer: { machineId: "machine_1", name: "PC", online: true }, options: broken },
+    });
+    await again.choose("Claude");
+    const there = within(again.dialog).getByRole("region", { name: "Seu plano do Claude" });
+    expect(there.textContent).toContain("O Claude Code precisa do Git for Windows no PC.");
+    expect(within(there).getByRole("link", { name: "Baixar o Git for Windows" }).getAttribute("href")).toBe(
+      "https://git-scm.com/downloads/win",
+    );
+    expect(within(there).queryByRole("button", { name: "Instalar o Claude Code para mim" })).toBeNull();
   });
 
   test("a plan whose tool is off on its computer: what it means, then three plain steps, or the command on Linux", async () => {

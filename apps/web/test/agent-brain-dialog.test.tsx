@@ -336,7 +336,7 @@ describe("Quem pensa (its dialog)", () => {
       cleanup();
       const state = seedState();
       const api = createFakeApi(state);
-      fakeMachinesOf.get(api)?.pair({ id: "machine_1", name: "MacBook", os: "darwin" });
+      fakeMachinesOf.get(api)?.pair({ id: "machine_1", name: "MacBook", os: "darwin", cliInstall: true });
       const computer = { machineId: "machine_1", name: "MacBook", online: true };
       // The computer's own sign-in thinks for it (the default): the row in use is that sign-in, not the plan.
       const base = fakeAgentBrain(ADA_ID, {
@@ -353,7 +353,10 @@ describe("Quem pensa (its dialog)", () => {
     };
     // Why it can't think there and what to do, never only that no computer has it.
     let text = await onIt("codex", "not_installed");
-    expect(text).toContain("O Codex não está instalado no MacBook.");
+    // Not there: installed from here by whoever connected it, or looked for again.
+    expect(text).toContain("O Codex ainda não está no MacBook.");
+    expect(text).toContain("Instalar o Codex para mim");
+    expect(text).toContain("Já instalei, verificar de novo");
     expect(text).not.toContain("Nenhum computador tem");
     text = await onIt("claude_code", "tool_off");
     expect(text).toContain(

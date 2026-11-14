@@ -2089,6 +2089,7 @@
       "waiting": "{{names}} sta aspettando {{device}}",
       "waitingFor": "{{names}} sta aspettando {{device}} per {{person}}",
       "tool_request": "{{names}} ti chiede di attivare {{tool}} sul tuo {{device}}",
+      "cli_request": "{{names}} ti chiede di installare {{tool}} sul tuo {{device}}",
       "allowOnce": "Consenti una volta",
       "always": "Consenti sempre a {{name}}",
       "no": "No",

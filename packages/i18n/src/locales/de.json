@@ -2939,6 +2939,21 @@
       "zen": "OpenCode verbinden",
       "api_key": "API-Schlüssel hinzufügen"
     },
+    "cli": {
+      "missing": "{{program}} ist noch nicht auf {{computer}}.",
+      "claudeApp": "Die Claude-App reicht nicht: Agenten nutzen Claude Code, das auf dem Computer läuft.",
+      "install": "{{program}} für mich installieren",
+      "check": "Schon installiert, erneut prüfen",
+      "checked": "Gerade geprüft: {{program}} ist noch immer nicht auf {{computer}}.",
+      "installing": "{{program}} wird auf {{computer}} installiert. Das dauert etwa eine Minute.",
+      "failed": "Installation auf {{computer}} fehlgeschlagen: {{message}}",
+      "stillMissing": "Das Installationsprogramm ist fertig, aber {{computer}} findet {{program}} noch nicht.",
+      "gitMissing": "{{program}} braucht Git for Windows auf {{computer}}.",
+      "getGit": "Git for Windows herunterladen",
+      "cantStart": "{{program}} ist auf {{computer}}, startet aber nicht: {{message}}",
+      "outdated": "Aktualisiere die agentes.chat-App auf {{computer}}, um von hier zu installieren.",
+      "asked": "Anfrage gesendet. {{name}} bekommt einen Button zum Installieren."
+    },
     "toolOff": {
       "text": "{{computer}} ist verbunden, aber {{program}} ist dort ausgeschaltet. Nur wer den Computer verbunden hat, schaltet es ein.",
       "where": "Auf {{computer}}",
@@ -11241,6 +11256,7 @@
       "tool_offLinux": "{{program}} ist auf {{computer}} ausgeschaltet. Schalte es dort in der agentes.chat-App oder mit {{command}} ein.",
       "tool_offOne": "{{program}} ist auf {{computer}} ausgeschaltet.",
       "not_installed": "{{program}} ist auf {{computer}} nicht installiert.",
+      "cant_start": "{{program}} ist auf {{computer}}, startet aber nicht.",
       "not_reported": "{{computer}} prüft noch, welche Programme vorhanden sind. Das ändert sich von selbst, wenn es so weit ist.",
       "outdated": "Die Version auf {{computer}} ist veraltet. Aktualisiere Codex, um es zu nutzen.",
       "system": "{{program}} läuft noch nicht auf dem System von {{computer}}.",
@@ -14635,6 +14651,7 @@
       "access": "<b>{{who}}</b> möchte <b>{{deviceName}}</b> nutzen",
       "waiting": "<b>{{who}}</b> wartet auf <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> bittet dich, {{tool}} auf deinem <b>{{deviceName}}</b> einzuschalten",
+      "cliRequest": "<b>{{who}}</b> bittet dich, {{tool}} auf deinem <b>{{deviceName}}</b> zu installieren",
       "once": "Einmal erlauben",
       "always": "Immer",
       "no": "Nein",

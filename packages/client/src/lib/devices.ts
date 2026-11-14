@@ -1041,13 +1041,15 @@ export type DeviceNoticeKind =
   | "device.in_use"
   | "device.access_request"
   | "device.waiting"
-  | "device.tool_request";
+  | "device.tool_request"
+  | "device.cli_request";
 const NOTICE_KINDS = new Set<string>([
   "device.join_request",
   "device.in_use",
   "device.access_request",
   "device.waiting",
   "device.tool_request",
+  "device.cli_request",
 ]);
 
 /**
@@ -1070,7 +1072,10 @@ export interface DeviceNotice {
   forName: string | null;
   text: string | null;
   join: { name: string; os: string; ip: string; location: string | null } | null;
-  /** `device.tool_request`: the tool to turn on (`latest.reason`) and who asked (the person actor). */
+  /**
+   * `device.tool_request`: the tool to turn on (`latest.reason`) and who asked (the person actor);
+   * `device.cli_request`: the coding CLI to install, the same way.
+   */
   tool: MachineTool | null;
   askerId: string | null;
 }
@@ -1084,7 +1089,8 @@ export function deviceNoticeOf(
   const l = n.latest as Record<string, unknown>;
   const join = kind === "device.join_request";
   const actor = n.actors?.find((a) => a.type === "agent");
-  const tool = kind === "device.tool_request" ? (str(l.reason) as MachineTool | null) : null;
+  const tool =
+    kind === "device.tool_request" || kind === "device.cli_request" ? (str(l.reason) as MachineTool | null) : null;
   return {
     kind: kind as DeviceNoticeKind,
     requestId: str(s.requestId),

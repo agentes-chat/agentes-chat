@@ -3147,6 +3147,21 @@
       "zen": "Подключите OpenCode",
       "api_key": "Добавить API-ключ"
     },
+    "cli": {
+      "missing": "{{program}} пока нет на {{computer}}.",
+      "claudeApp": "Приложения Claude недостаточно: агенты используют Claude Code, который работает на компьютере.",
+      "install": "Установить {{program}} за меня",
+      "check": "Я установил, проверить снова",
+      "checked": "Только что проверили: {{program}} всё ещё нет на {{computer}}.",
+      "installing": "Устанавливаем {{program}} на {{computer}}. Это займёт около минуты.",
+      "failed": "Не удалось установить на {{computer}}: {{message}}",
+      "stillMissing": "Установщик завершил работу, но {{computer}} всё ещё не находит {{program}}.",
+      "gitMissing": "{{program}} нужен Git for Windows на {{computer}}.",
+      "getGit": "Скачать Git for Windows",
+      "cantStart": "{{program}} есть на {{computer}}, но не запускается: {{message}}",
+      "outdated": "Обновите приложение agentes.chat на {{computer}}, чтобы устанавливать отсюда.",
+      "asked": "Запрос отправлен. {{name}} получит кнопку для установки."
+    },
     "toolOff": {
       "text": "{{computer}} подключён, но {{program}} на нём выключен. Включает только тот, кто подключил компьютер.",
       "where": "На {{computer}}",
@@ -12031,6 +12046,7 @@
       "tool_offLinux": "{{program}} выключен на {{computer}}. Включите его там, в приложении agentes.chat или командой {{command}}.",
       "tool_offOne": "{{program}} выключен на {{computer}}.",
       "not_installed": "{{program}} не установлен на {{computer}}.",
+      "cant_start": "{{program}} есть на {{computer}}, но не запускается.",
       "not_reported": "{{computer}} ещё проверяет, какие программы на нём есть. Это изменится само, когда он закончит.",
       "outdated": "Версия на {{computer}} устарела. Обновите Codex, чтобы им пользоваться.",
       "system": "{{program}} пока не работает в системе компьютера {{computer}}.",
@@ -15570,6 +15586,7 @@
       "access": "<b>{{who}}</b> просит доступ к <b>{{deviceName}}</b>",
       "waiting": "<b>{{who}}</b> ждёт <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> просит вас включить {{tool}} на вашем <b>{{deviceName}}</b>",
+      "cliRequest": "<b>{{who}}</b> просит установить {{tool}} на вашем <b>{{deviceName}}</b>",
       "once": "Разрешить один раз",
       "always": "Всегда",
       "no": "Нет",

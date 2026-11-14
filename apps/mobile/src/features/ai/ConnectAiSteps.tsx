@@ -1,10 +1,12 @@
-import type { BrainScope, Edition, MachineAccount, MachineAccountKind } from "@agenteschat/client";
+import type { BrainScope, Edition, Machine, MachineAccount, MachineAccountKind } from "@agenteschat/client";
 import {
   keys,
   useAgentBrain,
   useAgents,
   useAiAccounts,
   useApi,
+  useCheckMachineClis,
+  useCliInstall,
   useComputerSetup,
   useCredentials,
   useMachines,
@@ -21,8 +23,9 @@ import {
 import { computerEdition, computerName, managedNamed, setupView } from "@agenteschat/client/lib/computer";
 import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, holdText, keyRefusal } from "@agenteschat/client/lib/errors";
-import { joinNames } from "@agenteschat/client/lib/format";
+import { firstName, joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { CLI_GIT_MISSING, cliOneClick, GIT_FOR_WINDOWS_URL, installableCli } from "@agenteschat/client/lib/machines";
 import {
   type AiChoice,
   behindComputer,
@@ -74,6 +77,7 @@ import {
   GroupedRow,
   Icon,
   type IconName,
+  InfoHint,
   Locked,
   ProviderLogo,
   Text,
@@ -84,6 +88,7 @@ import { router } from "@/ui/navigation";
 import { SetupWait } from "../computer/SetupWait";
 import { SheetHeader } from "../new/parts";
 import { AgentFace } from "../shared/Face";
+import { useMeId } from "../shared/hooks";
 import { pickOne } from "../shared/PickerSheet";
 import { PickList } from "../shared/PickList";
 import { AddAccount } from "./AddAccount";
@@ -638,6 +643,132 @@ function Hero({ mark, title, sub }: { mark: ReactNode; title: string; sub: strin
   );
 }
 
+/**
+ * The web's `CliMissing` on the phone: Claude Code or Codex isn't on a computer someone connected, or won't start
+ * there. Whoever connected it installs it from here (it runs on the computer), anyone else asks them, anyone looks
+ * again. The page's own "Use an API key now" stays under it.
+ */
+function CliMissingCard({
+  machine,
+  kind,
+  computer,
+  reason,
+}: {
+  machine: Machine;
+  kind: MachineAccountKind;
+  computer: string;
+  reason: "not_installed" | "cant_start";
+}) {
+  const { t } = useTranslation();
+  const { orgId } = useAiOrg();
+  const toast = useToast();
+  const meId = useMeId();
+  const cli = installableCli(kind) ?? "claude";
+  const oneClick = cliOneClick(machine, meId, cli);
+  const run = useCliInstall(orgId, machine.id, cli, oneClick?.kind === "allow");
+  const check = useCheckMachineClis(orgId);
+  const [checked, setChecked] = useState(false);
+  const program = t(`brain.card.${kind}`);
+  const words = { program, computer };
+  const install = run.install;
+  const running = install?.state === "running";
+  const pending = run.start.isPending || run.cancel.isPending || run.ask.isPending || check.isPending;
+  const broken = reason === "cant_start" ? (machine.cliErrors?.[cli] ?? "") : null;
+  const gitMissing =
+    (install?.state === "failed" && install.cause === "git_missing") ||
+    (broken === CLI_GIT_MISSING && install?.state !== "failed");
+  const fail = (err: unknown) => toast({ title: errorText(t, err), icon: "x" });
+  const text = running
+    ? t("connectAi.cli.installing", words)
+    : gitMissing
+      ? t("connectAi.cli.gitMissing", words)
+      : install?.state === "failed"
+        ? install.cause === "still_missing"
+          ? t("connectAi.cli.stillMissing", words)
+          : t("connectAi.cli.failed", { computer, message: install.message ?? "" })
+        : broken !== null
+          ? broken
+            ? t("connectAi.cli.cantStart", { ...words, message: broken })
+            : t("brain.reasons.cant_start", words)
+          : checked
+            ? t("connectAi.cli.checked", words)
+            : oneClick?.kind === "outdated"
+              ? t("common.joinSentences", {
+                  a: t("connectAi.cli.missing", words),
+                  b: t("connectAi.cli.outdated", { computer }),
+                })
+              : t("connectAi.cli.missing", words);
+  const failedBefore = install?.state === "failed" || install?.state === "canceled";
+  const actions = running ? (
+    <Button
+      size="sm"
+      variant="secondary"
+      label={t("common.cancel")}
+      disabled={pending}
+      onPress={() => run.cancel.mutate()}
+    />
+  ) : (
+    <View style={styles.gap}>
+      {gitMissing ? <OpenPage href={GIT_FOR_WINDOWS_URL} label={t("connectAi.cli.getGit")} primary /> : null}
+      {oneClick?.kind === "allow" && broken === null ? (
+        <Button
+          size="sm"
+          variant={gitMissing ? "secondary" : "primary"}
+          label={failedBefore ? t("common.retry") : t("connectAi.cli.install", { program })}
+          disabled={pending}
+          loading={run.start.isPending}
+          onPress={() => run.start.mutate(undefined, { onError: fail })}
+        />
+      ) : null}
+      {oneClick?.kind === "ask" && broken === null ? (
+        <Button
+          size="sm"
+          variant="secondary"
+          label={t("machines.oneClick.ask", { name: firstName(oneClick.ownerName) })}
+          disabled={pending}
+          loading={run.ask.isPending}
+          onPress={() =>
+            run.ask.mutate(undefined, {
+              onSuccess: () => toast({ title: t("connectAi.cli.asked", { name: firstName(oneClick.ownerName) }) }),
+              onError: fail,
+            })
+          }
+        />
+      ) : null}
+      {machine.cliInstall ? (
+        <Button
+          size="sm"
+          variant="secondary"
+          label={t("connectAi.cli.check")}
+          disabled={pending || !machine.online}
+          loading={check.isPending}
+          onPress={() => check.mutate(machine.id, { onSuccess: () => setChecked(true), onError: fail })}
+        />
+      ) : null}
+    </View>
+  );
+  // The Claude chat app is likely on a Mac or a PC, and isn't Claude Code: said once, behind the ⓘ.
+  const plain =
+    !running &&
+    !gitMissing &&
+    install?.state !== "failed" &&
+    broken === null &&
+    !checked &&
+    oneClick?.kind !== "outdated";
+  const why = plain && cli === "claude" && (machine.os === "windows" || machine.os === "darwin");
+  return (
+    <InfoCard icon={running ? "clock" : "laptop"} action={actions} live>
+      {why ? (
+        <InfoHint name={t("common.about", { label: program })} text={t("connectAi.cli.claudeApp")} variant="subhead">
+          {text}
+        </InfoHint>
+      ) : (
+        text
+      )}
+    </InfoCard>
+  );
+}
+
 /** A line in a white card (why the steps wait), with its action. `live`: announced when it comes. */
 function InfoCard({
   icon,
@@ -1149,15 +1280,9 @@ function GateWait({
   const { colors: c } = useTheme();
   const machines = useMachines(orgId, edition !== null);
   const hold = holdText(t, org?.standing);
+  const machine = machines.data?.find((m) => m.id === machineId);
   // Offline or unsupported: what's going on there and what comes next (on the Cloud, by itself: the page asks again).
-  const why = gateLine(t, {
-    gate,
-    edition,
-    kind,
-    computer,
-    hold,
-    machine: machines.data?.find((m) => m.id === machineId),
-  });
+  const why = gateLine(t, { gate, edition, kind, computer, hold, machine });
   let wait: ReactNode = null;
   if (gate.state === "loading") wait = <ActivityIndicator color={c.muted} style={styles.loading} />;
   else if (gate.state === "billing") {
@@ -1175,6 +1300,15 @@ function GateWait({
         <InfoCard icon="clock">{t(coding ? "connectAi.wait.key" : "connectAi.wait.signIn")}</InfoCard>
       </View>
     );
+  } else if (
+    gate.state === "unsupported" &&
+    (gate.reason === "not_installed" || gate.reason === "cant_start") &&
+    !hold &&
+    installableCli(kind) &&
+    machine &&
+    machine.kind !== "managed"
+  ) {
+    wait = <CliMissingCard machine={machine} kind={kind} computer={computer} reason={gate.reason} />;
   } else if (why && !(gate.state === "offline" && signingIn)) {
     wait = <InfoCard icon={why.rechecks ? "clock" : "laptop"}>{why.text}</InfoCard>;
   } else if (gate.state === "missing") {

@@ -3176,6 +3176,27 @@ export const en = {
       api_key: "Add an API key",
     },
     /**
+     * A coding CLI that isn't on a computer someone connected (`program`: "Claude Code" or "Codex"), and installing it
+     * from here. `claudeApp` sits behind an ⓘ on Windows and macOS, where a Claude chat app is likely.
+     */
+    cli: {
+      missing: "{{program}} isn't on {{computer}} yet.",
+      claudeApp: "The Claude app isn't enough: agents use Claude Code, which runs on the computer.",
+      install: "Install {{program}} for me",
+      check: "I installed it, check again",
+      checked: "Checked just now: {{program}} still isn't on {{computer}}.",
+      installing: "Installing {{program}} on {{computer}}. It takes about a minute.",
+      failed: "Couldn't install on {{computer}}: {{message}}",
+      stillMissing: "The installer finished, but {{computer}} still doesn't find {{program}}.",
+      /** Claude Code on Windows can't start without Git for Windows. */
+      gitMissing: "{{program}} needs Git for Windows on {{computer}}.",
+      getGit: "Download Git for Windows",
+      /** It is there and its own check of its version fails: `message` is its error. */
+      cantStart: "{{program}} is on {{computer}}, but it won't start: {{message}}",
+      outdated: "Update the agentes.chat app on {{computer}} to install from here.",
+      asked: "Request sent. {{name}} gets a button to install it.",
+    },
+    /**
      * A plan whose program is switched off on a computer the person connected. `program`: "Claude Code" or "Codex"
      * (`brain.card`), as its switch is named in that computer's own settings.
      */
@@ -11510,6 +11531,7 @@ export const en = {
       /** The button that turns it on follows. */
       tool_offOne: "{{program}} is turned off on {{computer}}.",
       not_installed: "{{program}} isn't installed on {{computer}}.",
+      cant_start: "{{program}} is on {{computer}}, but it won't start.",
       /** Its runner hasn't said which CLIs it has yet: nobody knows whether this one is there. */
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
       outdated: "The version on {{computer}} is old. Update Codex to use it.",
@@ -14813,6 +14835,7 @@ export const en = {
       access: "<b>{{who}}</b> asks to use <b>{{deviceName}}</b>",
       waiting: "<b>{{who}}</b> is waiting for <b>{{deviceName}}</b>",
       toolRequest: "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>",
+      cliRequest: "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>",
       once: "Allow once",
       always: "Always",
       no: "No",

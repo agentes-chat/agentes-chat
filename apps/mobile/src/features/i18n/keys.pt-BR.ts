@@ -2032,6 +2032,7 @@ export const featureKeysPtBR = {
       waiting: "{{names}} está esperando o {{device}}",
       waitingFor: "{{names}} está esperando o {{device}} para {{person}}",
       tool_request: "{{names}} pede para ligar {{tool}} no seu {{device}}",
+      cli_request: "{{names}} pede para instalar {{tool}} no seu {{device}}",
       allowOnce: "Permitir uma vez",
       always: "Sempre permitir {{name}}",
       no: "Não",

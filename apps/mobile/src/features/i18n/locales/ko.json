@@ -1898,6 +1898,7 @@
       "waiting": "{{names}}이(가) {{device}}을(를) 기다리고 있어요",
       "waitingFor": "{{names}}이(가) {{person}} 님을 위해 {{device}}을(를) 기다리고 있어요",
       "tool_request": "{{names}}님이 회원님의 {{device}}에서 {{tool}}을(를) 켜 달라고 요청합니다",
+      "cli_request": "{{names}} 님이 {{device}}에 {{tool}}을(를) 설치해 달라고 요청합니다",
       "allowOnce": "한 번 허용",
       "always": "{{name}} 항상 허용",
       "no": "아니요",
