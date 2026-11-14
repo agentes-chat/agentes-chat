@@ -502,6 +502,7 @@
       "noPassword": "이 계정은 agentes.chat 앱에서 로그인해요.",
       "noPasswordLead": "이 서버를 실행하는 컴퓨터에서 앱을 열고 설정 › 내 계정에서 비밀번호 추가를 선택하세요.",
       "backToSignIn": "로그인으로 돌아가기",
+      "backToAccount": "{{name}}(으)로 돌아가기",
       "toAuthorizeApp": "agentes.chat에 앱을 연결하려면."
     },
     "desktop": {
@@ -1437,22 +1438,6 @@
     "moveDown": "아래로 이동",
     "restoreOrder": "기본 순서로 되돌리기"
   },
-  "appIcon": {
-    "title": "앱 아이콘",
-    "hintWeb": "이 브라우저 탭에 표시되는 아이콘이에요.",
-    "hintMac": "앱이 열려 있는 동안 Dock에 표시되는 아이콘이에요. Finder와 Launchpad에는 기본 아이콘이 유지돼요.",
-    "hintDesktop": "앱이 열려 있는 동안 작업 표시줄에 표시되는 아이콘이에요.",
-    "hintAndroid": "일부 홈 화면은 새 아이콘을 표시하는 데 몇 초가 걸려요.",
-    "failed": "아이콘을 바꾸지 못했어요. 다시 시도해 주세요.",
-    "agentsOf": "{{org}}의 에이전트",
-    "names": {
-      "night": "밤",
-      "moon": "달",
-      "sky": "하늘",
-      "peekNight": "밤에 빼꼼",
-      "peekSky": "하늘에서 빼꼼"
-    }
-  },
   "install": {
     "frames": "{{system}}에 설치하는 방법",
     "step": "{{n}}단계",
@@ -1560,6 +1545,22 @@
       "activities": "현재 활동",
       "readingLists": "패키지 목록을 읽는 중입니다... 완료",
       "settingUp": "agentes-chat ({{version}}) 설정하는 중입니다 ..."
+    }
+  },
+  "appIcon": {
+    "title": "앱 아이콘",
+    "hintWeb": "이 브라우저 탭에 표시되는 아이콘이에요.",
+    "hintMac": "앱이 열려 있는 동안 Dock에 표시되는 아이콘이에요. Finder와 Launchpad에는 기본 아이콘이 유지돼요.",
+    "hintDesktop": "앱이 열려 있는 동안 작업 표시줄에 표시되는 아이콘이에요.",
+    "hintAndroid": "일부 홈 화면은 새 아이콘을 표시하는 데 몇 초가 걸려요.",
+    "failed": "아이콘을 바꾸지 못했어요. 다시 시도해 주세요.",
+    "agentsOf": "{{org}}의 에이전트",
+    "names": {
+      "night": "밤",
+      "moon": "달",
+      "sky": "하늘",
+      "peekNight": "밤에 빼꼼",
+      "peekSky": "하늘에서 빼꼼"
     }
   },
   "legal": {
@@ -1785,6 +1786,8 @@
     "newWorkspace": "새 워크스페이스",
     "addWorkspace": "워크스페이스 추가",
     "addWorkspaceHint": "기존 워크스페이스에 들어가거나, 새로 만들거나, 팀 서버를 사용하세요",
+    "addAccount": "계정 추가",
+    "addAccountHint": "이 계정을 유지한 채 다른 계정으로 로그인",
     "yourServer": "내 서버",
     "serverHere": "이 {{device}}의 agentes.chat",
     "serverStopped": "중지됨",
@@ -4298,6 +4301,10 @@
   "approval": {
     "expiredChip": "만료됨 · {{when}}",
     "canceledChip": "취소됨 · {{when}}",
+    "line": {
+      "after": "“{{title}}” 다음에 실행",
+      "notRun": "실행 안 됨: 앞의 요청이 승인되지 않았어요"
+    },
     "waitingFor": "{{name}}님 대기 중",
     "waitingAdmin": "관리자 대기 중",
     "reasonLine": "이유: {{reason}}",
@@ -4846,8 +4853,15 @@
       "canceled": "취소됨",
       "failed": "실패",
       "running": "실행 중",
-      "scheduled": "예약됨"
+      "scheduled": "예약됨",
+      "queued": "순서 대기 중",
+      "notRun": "실행 안 됨"
     },
+    "queuedLine": "승인됨. 먼저 요청된 “{{title}}” 다음에 실행돼요.",
+    "notRunRefused": "먼저 요청된 “{{title}}”이(가) 이 요청이 승인된 뒤에 거절되어 이 요청은 실행되지 않았어요.",
+    "notRunExpired": "먼저 요청된 “{{title}}”이(가) 이 요청이 승인된 뒤에 결정 없이 만료되어 이 요청은 실행되지 않았어요.",
+    "notRunEarlier": "이 요청이 승인된 뒤에 앞의 요청이 거절되거나 만료되어 이 요청은 실행되지 않았어요.",
+    "position": "{{total}}개 중 {{n}}번째",
     "expiredLine": "24시간 안에 아무도 결정하지 않아 아무것도 하지 않았어요.",
     "canceledLine": "결정 전에 실행이 중지됐어요.",
     "supersededLine": "에이전트가 더 새로운 버전으로 다시 요청해서 이 요청은 실행되지 않았어요.",
@@ -4914,8 +4928,10 @@
       "email": "이메일",
       "text": "게시될 내용",
       "textDone": "게시한 내용",
+      "textNot": "게시될 뻔한 내용",
       "values": "할 일",
       "valuesDone": "한 일",
+      "valuesNot": "하려던 일",
       "trail": "여기까지 온 과정",
       "showSteps": "단계별로 보기",
       "hideSteps": "단계 숨기기",

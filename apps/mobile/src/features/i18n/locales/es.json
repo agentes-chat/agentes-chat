@@ -1212,6 +1212,9 @@
     "addWorkspaceTeamShort": "Entrar en el servidor de tu equipo",
     "addWorkspaceTeamSubShort": "Dirección o código QR de la computadora",
     "addWorkspaceFoot": "No sales de ningún espacio de trabajo.",
+    "addAccount": "Iniciar sesión con otra cuenta",
+    "addAccountSub": "En {{host}}, sin salir de esta",
+    "accountNoWorkspace": "Aún sin espacio de trabajo",
     "teamServerLeadShort": "Lo que tu equipo abre en el navegador.",
     "teamServerQuestion": "¿Cuál es la dirección de tu equipo?",
     "account": {

@@ -130,6 +130,7 @@ import type {
   DesktopPictureView,
   DesktopRelease,
   DesktopStatus,
+  DeviceAccount,
   DeviceAudience,
   DeviceRequest,
   DevicesList,
@@ -436,6 +437,18 @@ export interface ApiClient {
     me(): Promise<Me | null>;
     /** Unread and waiting in each workspace, in one call (`GET /me/unread`, ADR 0154); null signed out. */
     unread(): Promise<{ organizations: { orgId: string; unread: number; waiting: number }[] } | null>;
+    /**
+     * The accounts signed in on this browser, the current one first (`GET /device-accounts`, ADR 0183); empty on a
+     * server from before it and with nobody signed in.
+     */
+    deviceAccounts(): Promise<DeviceAccount[]>;
+    /** Moves this browser to another account signed in on it; every account stays signed in. */
+    switchDeviceAccount(userId: string): Promise<void>;
+    /**
+     * Signs one account out of this browser, the current one without `userId`; the others stay. `signedIn`: the
+     * browser still has an account, the next one when the current one left.
+     */
+    signOutDeviceAccount(userId?: string): Promise<{ signedIn: boolean }>;
     /** My app language (emails and pushes are written in it). */
     updateMe(input: { locale: AppLocale; auto?: boolean }): Promise<void>;
     /** My own area, asked once during the onboarding, or `skipped` (`PUT /me/work-area`). */

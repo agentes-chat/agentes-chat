@@ -1,6 +1,6 @@
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { stopVoicePlayback } from "./VoicePlayer";
-import { drawVoiceWave, useWaveRepaint } from "./voice-wave";
+import { drawVoiceWave, useWaveRepaint, waveAt } from "./voice-wave";
 
 /** A finished recording. */
 export interface VoiceTake {
@@ -423,12 +423,8 @@ export function useVoiceRecorder(options: VoiceRecorderOptions | undefined, wave
       if (!rec?.paused) return;
       e.preventDefault();
       const el = e.currentTarget;
-      const at = (x: number) => {
-        const r = el.getBoundingClientRect();
-        rec.scrub((x - r.left) / r.width, ended);
-      };
-      at(e.clientX);
-      const move = (ev: PointerEvent) => at(ev.clientX);
+      rec.scrub(waveAt(el, e.clientX), ended);
+      const move = (ev: PointerEvent) => rec.scrub(waveAt(el, ev.clientX), ended);
       const up = () => {
         window.removeEventListener("pointermove", move);
         window.removeEventListener("pointerup", up);

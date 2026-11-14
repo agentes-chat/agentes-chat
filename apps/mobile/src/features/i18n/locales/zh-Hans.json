@@ -1061,6 +1061,9 @@
     "addWorkspaceTeamShort": "加入团队的服务器",
     "addWorkspaceTeamSubShort": "地址或电脑上的二维码",
     "addWorkspaceFoot": "你不会退出任何工作区。",
+    "addAccount": "登录其他账号",
+    "addAccountSub": "在 {{host}} 上，无需退出当前账号",
+    "accountNoWorkspace": "还没有工作区",
     "teamServerLeadShort": "你的团队在浏览器中打开的地址。",
     "teamServerQuestion": "你团队的地址是什么？",
     "account": {

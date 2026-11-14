@@ -502,6 +502,7 @@
       "noPassword": "这个账号通过 agentes.chat 应用登录。",
       "noPasswordLead": "在运行这个服务器的电脑上，打开应用，在 设置 › 你的账号 中选择“添加密码”。",
       "backToSignIn": "返回登录",
+      "backToAccount": "返回 {{name}}",
       "toAuthorizeApp": "用于把应用连接到 agentes.chat。"
     },
     "desktop": {
@@ -1437,22 +1438,6 @@
     "moveDown": "下移",
     "restoreOrder": "恢复默认顺序"
   },
-  "appIcon": {
-    "title": "应用图标",
-    "hintWeb": "此浏览器标签页上的图标。",
-    "hintMac": "应用打开时 Dock 中的图标。访达和启动台仍显示默认图标。",
-    "hintDesktop": "应用打开时任务栏中的图标。",
-    "hintAndroid": "部分主屏幕需要几秒钟才会显示新图标。",
-    "failed": "无法更换图标，请重试。",
-    "agentsOf": "{{org}} 的智能体",
-    "names": {
-      "night": "夜晚",
-      "moon": "月亮",
-      "sky": "天空",
-      "peekNight": "夜里探头",
-      "peekSky": "天空探头"
-    }
-  },
   "install": {
     "frames": "如何在 {{system}} 上安装",
     "step": "第 {{n}} 步",
@@ -1560,6 +1545,22 @@
       "activities": "活动",
       "readingLists": "正在读取软件包列表... 完成",
       "settingUp": "正在设置 agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "应用图标",
+    "hintWeb": "此浏览器标签页上的图标。",
+    "hintMac": "应用打开时 Dock 中的图标。访达和启动台仍显示默认图标。",
+    "hintDesktop": "应用打开时任务栏中的图标。",
+    "hintAndroid": "部分主屏幕需要几秒钟才会显示新图标。",
+    "failed": "无法更换图标，请重试。",
+    "agentsOf": "{{org}} 的智能体",
+    "names": {
+      "night": "夜晚",
+      "moon": "月亮",
+      "sky": "天空",
+      "peekNight": "夜里探头",
+      "peekSky": "天空探头"
     }
   },
   "legal": {
@@ -1785,6 +1786,8 @@
     "newWorkspace": "新建工作区",
     "addWorkspace": "添加工作区",
     "addWorkspaceHint": "加入已有的工作区、创建新的，或使用团队的服务器",
+    "addAccount": "添加账号",
+    "addAccountHint": "登录其他账号，无需退出当前账号",
     "yourServer": "你的服务器",
     "serverHere": "这台 {{device}} 上的 agentes.chat",
     "serverStopped": "已停止",
@@ -4300,6 +4303,10 @@
   "approval": {
     "expiredChip": "已过期 · {{when}}",
     "canceledChip": "已取消 · {{when}}",
+    "line": {
+      "after": "在“{{title}}”之后执行",
+      "notRun": "未执行：前一个请求没有获批"
+    },
     "waitingFor": "等待 {{name}}",
     "waitingAdmin": "等待管理员",
     "reasonLine": "原因：{{reason}}",
@@ -4853,8 +4860,15 @@
       "canceled": "已取消",
       "failed": "失败",
       "running": "执行中",
-      "scheduled": "已计划"
+      "scheduled": "已计划",
+      "queued": "排队中",
+      "notRun": "未执行"
     },
+    "queuedLine": "已批准。会在先前请求的“{{title}}”之后执行。",
+    "notRunRefused": "先前请求的“{{title}}”在这一项获批后被拒绝，所以这一项没有执行。",
+    "notRunExpired": "先前请求的“{{title}}”在这一项获批后无人决定而过期，所以这一项没有执行。",
+    "notRunEarlier": "在这一项获批后，先前的请求被拒绝或已过期，所以这一项没有执行。",
+    "position": "第 {{n}} 个，共 {{total}} 个",
     "expiredLine": "24 小时内没有人决定，所以什么都没做。",
     "canceledLine": "运行在做出决定前就停止了。",
     "supersededLine": "智能体用更新的版本重新请求了，这一版没有执行。",
@@ -4923,8 +4937,10 @@
       "email": "邮件",
       "text": "将要发布的内容",
       "textDone": "已发布的内容",
+      "textNot": "本将发布的内容",
       "values": "将要做的事",
       "valuesDone": "已做的事",
+      "valuesNot": "本将要做的事",
       "trail": "来龙去脉",
       "showSteps": "查看每一步",
       "hideSteps": "隐藏步骤",

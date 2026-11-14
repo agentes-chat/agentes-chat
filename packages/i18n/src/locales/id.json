@@ -502,6 +502,7 @@
       "noPassword": "Akun ini masuk dari aplikasi agentes.chat.",
       "noPasswordLead": "Di komputer yang menjalankan server ini, buka aplikasinya lalu pilih Tambah kata sandi di Pengaturan › Akunmu.",
       "backToSignIn": "Kembali ke halaman masuk",
+      "backToAccount": "Kembali ke {{name}}",
       "toAuthorizeApp": "Untuk menghubungkan aplikasi ke agentes.chat."
     },
     "desktop": {
@@ -1437,22 +1438,6 @@
     "moveDown": "Pindah ke bawah",
     "restoreOrder": "Kembalikan urutan bawaan"
   },
-  "appIcon": {
-    "title": "Ikon aplikasi",
-    "hintWeb": "Ikon di tab browser ini.",
-    "hintMac": "Ikon Dock selama aplikasi terbuka. Finder dan Launchpad tetap memakai ikon bawaan.",
-    "hintDesktop": "Ikon taskbar selama aplikasi terbuka.",
-    "hintAndroid": "Beberapa layar utama butuh beberapa detik untuk menampilkan ikon baru.",
-    "failed": "Ikon tidak bisa diganti. Coba lagi.",
-    "agentsOf": "Agen di {{org}}",
-    "names": {
-      "night": "Malam",
-      "moon": "Bulan",
-      "sky": "Langit",
-      "peekNight": "Mengintip di malam hari",
-      "peekSky": "Mengintip di langit"
-    }
-  },
   "install": {
     "frames": "Cara memasang di {{system}}",
     "step": "Langkah {{n}}",
@@ -1560,6 +1545,22 @@
       "activities": "Aktivitas",
       "readingLists": "Membaca daftar paket... Selesai",
       "settingUp": "Menyiapkan agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "Ikon aplikasi",
+    "hintWeb": "Ikon di tab browser ini.",
+    "hintMac": "Ikon Dock selama aplikasi terbuka. Finder dan Launchpad tetap memakai ikon bawaan.",
+    "hintDesktop": "Ikon taskbar selama aplikasi terbuka.",
+    "hintAndroid": "Beberapa layar utama butuh beberapa detik untuk menampilkan ikon baru.",
+    "failed": "Ikon tidak bisa diganti. Coba lagi.",
+    "agentsOf": "Agen di {{org}}",
+    "names": {
+      "night": "Malam",
+      "moon": "Bulan",
+      "sky": "Langit",
+      "peekNight": "Mengintip di malam hari",
+      "peekSky": "Mengintip di langit"
     }
   },
   "legal": {
@@ -1785,6 +1786,8 @@
     "newWorkspace": "Ruang kerja baru",
     "addWorkspace": "Tambah ruang kerja",
     "addWorkspaceHint": "Masuk ke yang sudah ada, buat yang baru, atau pakai server tim kamu",
+    "addAccount": "Tambah akun",
+    "addAccountHint": "Masuk ke akun lain tanpa keluar dari akun ini",
     "yourServer": "Servermu",
     "serverHere": "agentes.chat di {{device}} ini",
     "serverStopped": "berhenti",
@@ -4311,6 +4314,10 @@
   "approval": {
     "expiredChip": "Kedaluwarsa · {{when}}",
     "canceledChip": "Dibatalkan · {{when}}",
+    "line": {
+      "after": "berjalan setelah “{{title}}”",
+      "notRun": "tidak dijalankan: permintaan sebelumnya tidak disetujui"
+    },
     "waitingFor": "Menunggu {{name}}",
     "waitingAdmin": "Menunggu admin",
     "reasonLine": "Alasan: {{reason}}",
@@ -4863,8 +4870,15 @@
       "canceled": "Dibatalkan",
       "failed": "Gagal",
       "running": "Berjalan",
-      "scheduled": "Dijadwalkan"
+      "scheduled": "Dijadwalkan",
+      "queued": "Dalam antrean",
+      "notRun": "Tidak dijalankan"
     },
+    "queuedLine": "Disetujui. Berjalan setelah “{{title}}”, yang diminta lebih dulu.",
+    "notRunRefused": "“{{title}}”, yang diminta lebih dulu, ditolak setelah permintaan ini disetujui. Karena itu yang ini tidak dijalankan.",
+    "notRunExpired": "“{{title}}”, yang diminta lebih dulu, kedaluwarsa tanpa keputusan setelah permintaan ini disetujui. Karena itu yang ini tidak dijalankan.",
+    "notRunEarlier": "Permintaan sebelumnya ditolak atau kedaluwarsa setelah yang ini disetujui. Karena itu yang ini tidak dijalankan.",
+    "position": "{{n}} dari {{total}}",
     "expiredLine": "Tidak ada yang memutuskan dalam 24 jam, jadi tidak ada yang dilakukan.",
     "canceledLine": "Proses berhenti sebelum ada keputusan.",
     "supersededLine": "Agen meminta lagi dengan versi yang lebih baru. Yang ini tidak dijalankan.",
@@ -4931,8 +4945,10 @@
       "email": "Email-nya",
       "text": "Yang akan diterbitkan",
       "textDone": "Yang sudah diterbitkan",
+      "textNot": "Yang tadinya akan diterbitkan",
       "values": "Yang akan dilakukan",
       "valuesDone": "Yang dilakukan",
+      "valuesNot": "Yang tadinya akan dilakukan",
       "trail": "Bagaimana sampai di sini",
       "showSteps": "Lihat setiap langkah",
       "hideSteps": "Sembunyikan langkah",

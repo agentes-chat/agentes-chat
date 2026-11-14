@@ -398,6 +398,17 @@ export interface Me {
   organizations: OrgSummary[];
 }
 
+/**
+ * An account signed in on this browser (`GET /device-accounts`, ADR 0183): the person, their workspaces and each
+ * one's unread count. `current`: the one the browser is on now.
+ */
+export interface DeviceAccount {
+  current: boolean;
+  user: { id: string; name: string; email: string; image: string | null };
+  organizations: OrgSummary[];
+  unread: { orgId: string; unread: number; waiting: number }[];
+}
+
 export interface Organization extends OrgSummary {
   context?: string;
 }
@@ -2057,8 +2068,11 @@ export interface Approval {
   ownerUserId?: string | null;
   /** When the approved action ran; null while it runs (or if it never did). */
   executedAt?: string | null;
-  /** What the action returned once it ran (raw tool output, short). */
-  result?: { ok: boolean; text: string } | null;
+  /**
+   * What the action returned once it ran (raw tool output, short). `notRunAfter`: it didn't run, because the request
+   * asked before it on its card (that id) was refused or expired after it was approved.
+   */
+  result?: { ok: boolean; text: string; notRunAfter?: string } | null;
   /** The connector it goes through ("github") and its account. */
   connector?: string | null;
   connectorAccount?: string | null;
