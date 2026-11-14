@@ -3670,9 +3670,10 @@ html:not([data-pointer]) .channel-ref:focus-visible {
 }
 /*
  * A tall message in a conversation (ClippedBody): whole up to `LONG_MESSAGE.over`, past it only its first
- * `LONG_MESSAGE.shows`, fading out, with "Ver mais" under it. The limits sit on the words' own root, so the bubble
- * still reads them as its direct child. `clip`, not `hidden`: the browser's find must not scroll the words inside
- * their box. Only a cut message is clipped: one that shows whole keeps whatever reaches past its lines.
+ * `LONG_MESSAGE.shows`, fading out, with "Ver mais" under it, which opens it in place. The limits sit on the words'
+ * own root, so the bubble still reads them as its direct child. `clip`, not `hidden`: the browser's find must not
+ * scroll the words inside their box. Only a cut message is clipped: one that shows whole keeps whatever reaches past
+ * its lines.
  */
 .msg-clip--cut {
   max-height: 360px;
@@ -3685,13 +3686,6 @@ html:not([data-pointer]) .channel-ref:focus-visible {
   margin-top: var(--space-1);
   font-size: var(--text-sm);
   color: inherit;
-}
-/* The same message whole, in its dialog: the conversation's reading size, room under the last line. */
-.msg-clip__whole {
-  padding-bottom: var(--dialog-pad);
-  font-size: var(--msg-text, 14px);
-  line-height: var(--msg-line, 24px);
-  overflow-wrap: anywhere;
 }
 .channel-card__head {
   display: flex;
@@ -7458,9 +7452,35 @@ html:not([data-pointer]) .run-continue:focus-visible {
   text-overflow: ellipsis;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .ac-typing__people {
+  .ac-typing__people,
+  .ac-typing__group {
     animation: ac-fade-in 160ms ease-out both;
   }
+}
+/* Who records a voice message comes last, as a group: their mark and their faces, then their words, keeping their
+   width as who types does (the agents' words give way first), the names alone ending in "…". While both are at it,
+   who types is a group too, and the second goes on a line of its own when one is short of room: every verb stays
+   whole, and each line starts with its own mark. */
+.ac-typing__group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+.ac-typing__group > .ac-typing__people {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+/* After words, a mark keeps the room a mark has before words, inside each piece's own width. */
+.ac-typing__agents + .ac-typing__group {
+  padding-left: var(--space-1);
+}
+.ac-typing__group:has(+ .ac-typing__group) {
+  padding-right: var(--space-1);
+}
+.ac-typing[data-active="true"] .ac-typing__text:has(> .ac-typing__group + .ac-typing__group) {
+  flex-wrap: wrap;
 }
 
 /* ── Calendário: pages/calendar.css ── */
@@ -13648,6 +13668,10 @@ html:not([data-pointer]) .channel__latest-btn.ac-btn:focus-visible {
 .ac-typing__also {
   flex: 0 1 auto;
   margin-right: auto;
+}
+/* Who types, then who records: what is left over goes after the last. */
+.ac-typing__also:has(+ .ac-typing__also) {
+  margin-right: 0;
 }
 .ac-typing__also::before {
   content: "· ";

@@ -2255,8 +2255,7 @@
       "fileName": "message.txt"
     },
     "long": {
-      "more": "더 보기",
-      "title": "{{name}}의 메시지"
+      "more": "더 보기"
     },
     "retrySend": "다시 시도",
     "thinking": "{{name}}이(가) 생각 중…",
@@ -3800,7 +3799,6 @@
     "issue": "이슈"
   },
   "folded": {
-    "more": "더 보기",
     "less": "간단히 보기"
   },
   "secret": {
@@ -4358,8 +4356,6 @@
       "noSubject": "(제목 없음)",
       "toSender": "메시지를 보낸 사람에게",
       "toList": "받는 사람: {{to}}",
-      "more": "전체 읽기",
-      "less": "간단히 보기",
       "answers": "<b>“{{subject}}”</b>에 답장",
       "answersFrom": "{{from}}의 <b>“{{subject}}”</b>에 답장",
       "forwards": "<b>“{{subject}}”</b> 전달",
@@ -4918,8 +4914,6 @@
       "textDone": "게시한 내용",
       "values": "할 일",
       "valuesDone": "한 일",
-      "more": "모두 보기",
-      "less": "간단히 보기",
       "trail": "여기까지 온 과정",
       "showSteps": "단계별로 보기",
       "hideSteps": "단계 숨기기",
@@ -8402,8 +8396,7 @@
       "releasePaused": "미션이 일시 중지 상태예요. 세션을 계속하려면 미션을 재개하세요.",
       "releaseClosed": "미션이 종료됐어요. 세션은 계속되지 않아요.",
       "onlyDeciders": "이 미션의 결정권자만 명령을 허용할 수 있어요.",
-      "pick": "{{command}} 허용",
-      "showAll": "모두 보기"
+      "pick": "{{command}} 허용"
     },
     "decision": {
       "approveAll_other": "임시 결정 {{count}}개 승인",
@@ -11124,8 +11117,6 @@
     "thousand": "천",
     "building": "정리하는 중…",
     "openBig": "크게 열기",
-    "showAll": "모두 보기",
-    "showLess": "간단히 보기",
     "keep": "Drive에 보관",
     "kept": "Drive에 보관됨",
     "inDrive": "Drive에 있음",
@@ -15395,10 +15386,6 @@
       "someAnswered": "{{total}}명 중 {{done}}명 답함",
       "labelMany": "{{from}}와 {{to}}의 대화"
     },
-    "talk": {
-      "readAll": "전체 읽기",
-      "more_other": "{{count}}줄 더"
-    },
     "consultPanel": {
       "label": "{{from}}과(와) {{to}}의 대화",
       "title": "{{from}} ⇄ {{to}}",
@@ -15612,6 +15599,7 @@
         "usingTool": "{{tool}} 도구를 사용했어요",
         "thinking": "생각했어요",
         "typing": "작성했어요",
+        "recordingVoice": "오디오를 녹음했어요",
         "writing": "작성했어요"
       }
     },
@@ -15621,6 +15609,7 @@
       "updatingRoutine": "루틴을 변경하는 중",
       "thinking": "작업 중",
       "typing": "입력 중",
+      "recordingVoice": "오디오 녹음 중",
       "writing": "작성 중",
       "consulting": "{{app}} 확인 중",
       "creatingIssue": "작업을 만드는 중",

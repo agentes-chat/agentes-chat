@@ -2463,8 +2463,7 @@
       "fileName": "message.txt"
     },
     "long": {
-      "more": "Показать ещё",
-      "title": "Сообщение от {{name}}"
+      "more": "Показать ещё"
     },
     "retrySend": "Попробовать снова",
     "thinking": "{{name}} думает…",
@@ -4177,7 +4176,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Показать ещё",
     "less": "Свернуть"
   },
   "secret": {
@@ -4803,8 +4801,6 @@
       "noSubject": "(без темы)",
       "toSender": "Отправителю сообщения",
       "toList": "Кому: {{to}}",
-      "more": "Читать полностью",
-      "less": "Свернуть",
       "answers": "Ответ на <b>«{{subject}}»</b>",
       "answersFrom": "Ответ на <b>«{{subject}}»</b> от {{from}}",
       "forwards": "Пересылка <b>«{{subject}}»</b>",
@@ -5452,8 +5448,6 @@
       "textDone": "Что опубликовано",
       "values": "Что будет сделано",
       "valuesDone": "Что было сделано",
-      "more": "Показать всё",
-      "less": "Показать меньше",
       "trail": "Как до этого дошло",
       "showSteps": "Посмотреть каждый шаг",
       "hideSteps": "Скрыть шаги",
@@ -9290,8 +9284,7 @@
       "releasePaused": "Миссия на паузе: продолжите её, чтобы сеанс пошёл дальше.",
       "releaseClosed": "Миссия закрыта: сеанс не продолжится.",
       "onlyDeciders": "Команды разрешают только те, кто принимает решения в этой миссии.",
-      "pick": "Разрешить {{command}}",
-      "showAll": "Показать все"
+      "pick": "Разрешить {{command}}"
     },
     "decision": {
       "approveAll_one": "Одобрить {{count}} предварительное",
@@ -12429,8 +12422,6 @@
     "thousand": "тыс.",
     "building": "Собираем…",
     "openBig": "Открыть крупно",
-    "showAll": "Показать всё",
-    "showLess": "Свернуть",
     "keep": "Сохранить в Drive",
     "kept": "Сохранено в Drive",
     "inDrive": "В Drive",
@@ -16941,13 +16932,6 @@
       "someAnswered": "ответили {{done}} из {{total}}",
       "labelMany": "Разговоры {{from}} с {{to}}"
     },
-    "talk": {
-      "readAll": "Читать полностью",
-      "more_one": "ещё {{count}} строка",
-      "more_few": "ещё {{count}} строки",
-      "more_many": "ещё {{count}} строк",
-      "more_other": "ещё {{count}} строки"
-    },
     "consultPanel": {
       "label": "Разговор между {{from}} и {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -17170,6 +17154,7 @@
         "usingTool": "Использовал инструмент {{tool}}",
         "thinking": "Подумал",
         "typing": "Написал",
+        "recordingVoice": "Записал аудио",
         "writing": "Написал"
       }
     },
@@ -17179,6 +17164,7 @@
       "updatingRoutine": "меняет регулярную задачу",
       "thinking": "работает",
       "typing": "печатает",
+      "recordingVoice": "записывает аудио",
       "writing": "пишет",
       "consulting": "заглядывает в {{app}}",
       "creatingIssue": "создаёт задачу",

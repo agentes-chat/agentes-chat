@@ -2467,8 +2467,7 @@
       "fileName": "wiadomosc.txt"
     },
     "long": {
-      "more": "Pokaż więcej",
-      "title": "Wiadomość od: {{name}}"
+      "more": "Pokaż więcej"
     },
     "retrySend": "Spróbuj ponownie",
     "thinking": "{{name}} myśli…",
@@ -4177,7 +4176,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Pokaż więcej",
     "less": "Pokaż mniej"
   },
   "secret": {
@@ -4804,8 +4802,6 @@
       "noSubject": "(bez tematu)",
       "toSender": "Do nadawcy wiadomości",
       "toList": "Do {{to}}",
-      "more": "Czytaj całość",
-      "less": "Pokaż mniej",
       "answers": "Odpowiedź na <b>„{{subject}}”</b>",
       "answersFrom": "Odpowiedź na <b>„{{subject}}”</b>, od {{from}}",
       "forwards": "Przekazanie <b>„{{subject}}”</b>",
@@ -5455,8 +5451,6 @@
       "textDone": "Co zostało opublikowane",
       "values": "Co zostanie zrobione",
       "valuesDone": "Co zostało zrobione",
-      "more": "Pokaż całość",
-      "less": "Pokaż mniej",
       "trail": "Jak do tego doszło",
       "showSteps": "Zobacz każdy krok",
       "hideSteps": "Ukryj kroki",
@@ -9323,8 +9317,7 @@
       "releasePaused": "Misja jest wstrzymana: wznów ją, żeby sesja ruszyła dalej.",
       "releaseClosed": "Misja jest zamknięta: sesja nie ruszy dalej.",
       "onlyDeciders": "Na polecenia zezwalają tylko osoby, które decydują w tej misji.",
-      "pick": "Zezwól na {{command}}",
-      "showAll": "Pokaż wszystko"
+      "pick": "Zezwól na {{command}}"
     },
     "decision": {
       "approveAll_one": "Zatwierdź {{count}} tymczasową",
@@ -12479,8 +12472,6 @@
     "thousand": "tys.",
     "building": "Składanie w całość…",
     "openBig": "Otwórz w dużym widoku",
-    "showAll": "Pokaż wszystko",
-    "showLess": "Pokaż mniej",
     "keep": "Zachowaj na Drive",
     "kept": "Zachowano na Drive",
     "inDrive": "Na Drive",
@@ -17000,13 +16991,6 @@
       "someAnswered": "odpowiedziało {{done}} z {{total}}",
       "labelMany": "Rozmowy {{from}} z {{to}}"
     },
-    "talk": {
-      "readAll": "Czytaj całość",
-      "more_one": "jeszcze {{count}} wiersz",
-      "more_few": "jeszcze {{count}} wiersze",
-      "more_many": "jeszcze {{count}} wierszy",
-      "more_other": "jeszcze {{count}} wiersza"
-    },
     "consultPanel": {
       "label": "Rozmowa między {{from}} a {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -17232,6 +17216,7 @@
         "usingTool": "Użyto narzędzia {{tool}}",
         "thinking": "Myślenie",
         "typing": "Pisanie",
+        "recordingVoice": "Nagrywanie dźwięku",
         "writing": "Pisanie"
       }
     },
@@ -17241,6 +17226,7 @@
       "updatingRoutine": "zmiana rutyny",
       "thinking": "praca",
       "typing": "pisanie",
+      "recordingVoice": "nagrywanie dźwięku",
       "writing": "pisanie",
       "consulting": "sprawdzanie {{app}}",
       "creatingIssue": "tworzenie zadania",

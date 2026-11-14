@@ -2396,8 +2396,7 @@
       "fileName": "messaggio.txt"
     },
     "long": {
-      "more": "Mostra altro",
-      "title": "Messaggio di {{name}}"
+      "more": "Mostra altro"
     },
     "retrySend": "Riprova",
     "thinking": "{{name}} sta pensando…",
@@ -4059,7 +4058,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Mostra altro",
     "less": "Mostra meno"
   },
   "secret": {
@@ -4645,8 +4643,6 @@
       "noSubject": "(nessun oggetto)",
       "toSender": "A chi ha inviato il messaggio",
       "toList": "A {{to}}",
-      "more": "Leggi tutto",
-      "less": "Mostra meno",
       "answers": "Risponde a <b>“{{subject}}”</b>",
       "answersFrom": "Risponde a <b>“{{subject}}”</b>, da {{from}}",
       "forwards": "Inoltra <b>“{{subject}}”</b>",
@@ -5271,8 +5267,6 @@
       "textDone": "Cosa è stato pubblicato",
       "values": "Cosa farà",
       "valuesDone": "Cosa ha fatto",
-      "more": "Mostra tutto",
-      "less": "Mostra meno",
       "trail": "Come ci è arrivato",
       "showSteps": "Vedi ogni passo",
       "hideSteps": "Nascondi i passi",
@@ -9049,8 +9043,7 @@
       "releasePaused": "La missione è in pausa: riprendila perché la sessione vada avanti.",
       "releaseClosed": "La missione è chiusa: la sessione non andrà avanti.",
       "onlyDeciders": "Solo chi decide in questa missione consente i comandi.",
-      "pick": "Consenti {{command}}",
-      "showAll": "Mostra tutti"
+      "pick": "Consenti {{command}}"
     },
     "decision": {
       "approveAll_one": "Approva {{count}} provvisoria",
@@ -12049,8 +12042,6 @@
     "thousand": "k",
     "building": "Lo sto preparando…",
     "openBig": "Apri in grande",
-    "showAll": "Mostra tutto",
-    "showLess": "Mostra meno",
     "keep": "Conserva in Drive",
     "kept": "Conservato in Drive",
     "inDrive": "Su Drive",
@@ -16486,12 +16477,6 @@
       "someAnswered": "{{done}} su {{total}} hanno risposto",
       "labelMany": "Conversazioni di {{from}} con {{to}}"
     },
-    "talk": {
-      "readAll": "Leggi tutto",
-      "more_one": "{{count}} riga in più",
-      "more_many": "{{count}} righe in più",
-      "more_other": "{{count}} righe in più"
-    },
     "consultPanel": {
       "label": "Conversazione tra {{from}} e {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -16714,6 +16699,7 @@
         "usingTool": "Ha usato lo strumento {{tool}}",
         "thinking": "Ha pensato",
         "typing": "Ha scritto",
+        "recordingVoice": "Ha registrato un audio",
         "writing": "Ha scritto"
       }
     },
@@ -16723,6 +16709,7 @@
       "updatingRoutine": "cambiando una routine",
       "thinking": "lavorando",
       "typing": "digitando",
+      "recordingVoice": "registrando un audio",
       "writing": "scrivendo",
       "consulting": "consultando {{app}}",
       "creatingIssue": "creando un'attività",

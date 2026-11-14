@@ -2323,8 +2323,7 @@
       "fileName": "mesaj.txt"
     },
     "long": {
-      "more": "Devamını gör",
-      "title": "{{name}} adlı kişinin mesajı"
+      "more": "Devamını gör"
     },
     "retrySend": "Tekrar dene",
     "thinking": "{{name}} düşünüyor…",
@@ -3920,7 +3919,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Daha fazla göster",
     "less": "Daha az göster"
   },
   "secret": {
@@ -4500,8 +4498,6 @@
       "noSubject": "(konu yok)",
       "toSender": "Mesajı gönderen kişiye",
       "toList": "Alıcı: {{to}}",
-      "more": "Tümünü oku",
-      "less": "Daha az göster",
       "answers": "<b>“{{subject}}”</b> e-postasını yanıtlar",
       "answersFrom": "{{from}} kişisinden gelen <b>“{{subject}}”</b> e-postasını yanıtlar",
       "forwards": "<b>“{{subject}}”</b> e-postasını iletir",
@@ -5089,8 +5085,6 @@
       "textDone": "Yayımlanan",
       "values": "Yapacağı şey",
       "valuesDone": "Yaptığı şey",
-      "more": "Tümünü göster",
-      "less": "Daha az göster",
       "trail": "Buraya nasıl gelindi",
       "showSteps": "Her adımı gör",
       "hideSteps": "Adımları gizle",
@@ -8681,8 +8675,7 @@
       "releasePaused": "Misyon duraklatıldı: oturumun devam etmesi için misyonu devam ettirin.",
       "releaseClosed": "Misyon kapatıldı: oturum devam etmeyecek.",
       "onlyDeciders": "Komutlara yalnızca bu misyonda karar verenler izin verir.",
-      "pick": "{{command}} için izin ver",
-      "showAll": "Tümünü göster"
+      "pick": "{{command}} için izin ver"
     },
     "decision": {
       "approveAll_one": "{{count}} geçici kararı onayla",
@@ -11539,8 +11532,6 @@
     "thousand": "B",
     "building": "Hazırlanıyor…",
     "openBig": "Büyük aç",
-    "showAll": "Tümünü göster",
-    "showLess": "Daha az göster",
     "keep": "Drive'da sakla",
     "kept": "Drive'da saklandı",
     "inDrive": "Drive'da",
@@ -15885,11 +15876,6 @@
       "someAnswered": "{{total}} ajandan {{done}} tanesi yanıt verdi",
       "labelMany": "{{from}} ile {{to}} arasındaki konuşmalar"
     },
-    "talk": {
-      "readAll": "Tümünü oku",
-      "more_one": "{{count}} satır daha",
-      "more_other": "{{count}} satır daha"
-    },
     "consultPanel": {
       "label": "{{from}} ile {{to}} arasındaki konuşma",
       "title": "{{from}} ⇄ {{to}}",
@@ -16106,6 +16092,7 @@
         "usingTool": "{{tool}} aracını kullandı",
         "thinking": "Düşündü",
         "typing": "Yazdı",
+        "recordingVoice": "Ses kaydetti",
         "writing": "Yazdı"
       }
     },
@@ -16115,6 +16102,7 @@
       "updatingRoutine": "rutini değiştiriyor",
       "thinking": "çalışıyor",
       "typing": "yazıyor",
+      "recordingVoice": "ses kaydediyor",
       "writing": "yazıyor",
       "consulting": "{{app}} kontrol ediyor",
       "creatingIssue": "görev oluşturuyor",

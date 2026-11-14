@@ -2326,8 +2326,7 @@
       "fileName": "bericht.txt"
     },
     "long": {
-      "more": "Meer tonen",
-      "title": "Bericht van {{name}}"
+      "more": "Meer tonen"
     },
     "retrySend": "Opnieuw proberen",
     "thinking": "{{name}} denkt na…",
@@ -3935,7 +3934,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Meer tonen",
     "less": "Minder tonen"
   },
   "secret": {
@@ -4516,8 +4514,6 @@
       "noSubject": "(geen onderwerp)",
       "toSender": "Aan de afzender van het bericht",
       "toList": "Aan {{to}}",
-      "more": "Alles lezen",
-      "less": "Minder tonen",
       "answers": "Beantwoordt <b>“{{subject}}”</b>",
       "answersFrom": "Beantwoordt <b>“{{subject}}”</b>, van {{from}}",
       "forwards": "Stuurt <b>“{{subject}}”</b> door",
@@ -5113,8 +5109,6 @@
       "textDone": "Wat er gepubliceerd is",
       "values": "Wat er gaat gebeuren",
       "valuesDone": "Wat er gebeurd is",
-      "more": "Alles tonen",
-      "less": "Minder tonen",
       "trail": "Hoe het zover kwam",
       "showSteps": "Elke stap bekijken",
       "hideSteps": "Stappen verbergen",
@@ -8774,8 +8768,7 @@
       "releasePaused": "De missie is gepauzeerd: hervat hem zodat de sessie verder kan.",
       "releaseClosed": "De missie is gesloten: de sessie gaat niet verder.",
       "onlyDeciders": "Alleen wie in deze missie beslist kan opdrachten toestaan.",
-      "pick": "{{command}} toestaan",
-      "showAll": "Alles tonen"
+      "pick": "{{command}} toestaan"
     },
     "decision": {
       "approveAll_one": "{{count}} voorlopig besluit goedkeuren",
@@ -11666,8 +11659,6 @@
     "thousand": "k",
     "building": "Even in elkaar zetten…",
     "openBig": "Groot openen",
-    "showAll": "Alles tonen",
-    "showLess": "Minder tonen",
     "keep": "Bewaren in Drive",
     "kept": "Bewaard in Drive",
     "inDrive": "In Drive",
@@ -16020,11 +16011,6 @@
       "someAnswered": "{{done}} van {{total}} gaven antwoord",
       "labelMany": "Gesprekken van {{from}} met {{to}}"
     },
-    "talk": {
-      "readAll": "Alles lezen",
-      "more_one": "nog {{count}} regel",
-      "more_other": "nog {{count}} regels"
-    },
     "consultPanel": {
       "label": "Gesprek tussen {{from}} en {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -16244,6 +16230,7 @@
         "usingTool": "De tool {{tool}} gebruikt",
         "thinking": "Nagedacht",
         "typing": "Geschreven",
+        "recordingVoice": "Audio opgenomen",
         "writing": "Geschreven"
       }
     },
@@ -16253,6 +16240,7 @@
       "updatingRoutine": "een routine aan het wijzigen",
       "thinking": "aan het werk",
       "typing": "aan het typen",
+      "recordingVoice": "audio aan het opnemen",
       "writing": "aan het schrijven",
       "consulting": "{{app}} aan het raadplegen",
       "creatingIssue": "een taak aan het maken",

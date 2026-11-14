@@ -5774,9 +5774,6 @@
   "channel.long.more": {
     "value": "See more"
   },
-  "channel.long.title": {
-    "value": "Message from {{name}}"
-  },
   "channel.retrySend": {
     "value": "Try again"
   },
@@ -9609,9 +9606,6 @@
   "linkPills.issue": {
     "value": "Issue"
   },
-  "folded.more": {
-    "value": "Show more"
-  },
   "folded.less": {
     "value": "Show less"
   },
@@ -11033,12 +11027,6 @@
   },
   "approval.email.toList": {
     "value": "To {{to}}"
-  },
-  "approval.email.more": {
-    "value": "Read all"
-  },
-  "approval.email.less": {
-    "value": "Show less"
   },
   "approval.email.answers": {
     "value": "Answers <b>“{{subject}}”</b>"
@@ -12512,12 +12500,6 @@
   },
   "approvals.review.valuesDone": {
     "value": "What it did"
-  },
-  "approvals.review.more": {
-    "value": "Show all"
-  },
-  "approvals.review.less": {
-    "value": "Show less"
   },
   "approvals.review.trail": {
     "value": "How it got here"
@@ -21142,9 +21124,6 @@
   "missions.command.pick": {
     "value": "Allow {{command}}"
   },
-  "missions.command.showAll": {
-    "value": "Show all"
-  },
   "missions.decision.approveAll": {
     "value": {
       "one": "Approve {{count}} provisional",
@@ -28255,12 +28234,6 @@
   },
   "blocks.openBig": {
     "value": "Open large"
-  },
-  "blocks.showAll": {
-    "value": "Show all"
-  },
-  "blocks.showLess": {
-    "value": "Show less"
   },
   "blocks.keep": {
     "value": "Keep in Drive"
@@ -38832,15 +38805,6 @@
   "chat.consultPair.labelMany": {
     "value": "{{from}}'s talks with {{to}}"
   },
-  "chat.talk.readAll": {
-    "value": "Read all"
-  },
-  "chat.talk.more": {
-    "value": {
-      "one": "{{count}} more line",
-      "other": "{{count}} more lines"
-    }
-  },
   "chat.consultPanel.label": {
     "value": "Conversation between {{from}} and {{to}}"
   },
@@ -39449,6 +39413,9 @@
   "chat.work.step.typing": {
     "value": "Wrote"
   },
+  "chat.work.step.recordingVoice": {
+    "value": "Recorded audio"
+  },
   "chat.work.step.writing": {
     "value": "Wrote"
   },
@@ -39466,6 +39433,9 @@
   },
   "chat.activity.typing": {
     "value": "typing"
+  },
+  "chat.activity.recordingVoice": {
+    "value": "recording audio"
   },
   "chat.activity.writing": {
     "value": "writing"

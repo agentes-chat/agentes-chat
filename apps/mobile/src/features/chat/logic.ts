@@ -7,6 +7,7 @@ import type {
   MessageConsultation,
   MessagePin,
   ReactionCount,
+  TypingWho,
 } from "@agenteschat/client";
 import { agentProposalOf, costlyProposalOf, stretchCardOf } from "@agenteschat/client/lib/action-cards";
 import { type ActivityEntry, barEntries, type barWords, markedPieces, markInk } from "@agenteschat/client/lib/activity";
@@ -401,13 +402,13 @@ export const hidesBody = (m: Message) =>
  * Who shows in the working line, as on the web's bar (`barEntries`): agents
  * asking another agent, then agents at work, one entry per agent even when it
  * has two runs (a provisional "thinking" row and the real run, or two tasks at
- * once), then the people typing.
+ * once), then the people typing or recording a voice message.
  */
 export function workingEntries(
   runs: LiveRun[],
   consults: LiveConsult[],
   agentName: (id: string) => string,
-  typing: string[] = [],
+  typing: TypingWho[] = [],
   personName: (id: string) => string | undefined = () => undefined,
 ): ActivityEntry[] {
   return barEntries(runs, typing, agentName, personName, consults);
@@ -474,6 +475,7 @@ export const markedParts = markedPieces;
 export interface LineDrawn {
   agents?: number;
   typers?: number;
+  recorders?: number;
 }
 
 /** A piece only narrows: kept to what it drew, it can't draw wider, and a narrower room cuts it again. */
@@ -484,16 +486,23 @@ export const narrowDrawn = (drawn: LineDrawn, part: keyof LineDrawn, width: numb
 export const AGENT_WORDS_MIN = 40;
 
 /**
- * The widths the working line's pieces keep (whole points) while someone types: iOS keeps a cut text's whole box,
- * a gap before what follows, so each keeps to what it drew and the next piece comes right after its "…".
+ * The widths the working line's pieces keep (whole points) while someone types or records: iOS keeps a cut text's
+ * whole box, a gap before what follows, so each keeps to what it drew and the next piece comes right after its "…".
  * `agents: null` drops the agents' words, their " · " with them, when they'd be a sliver: who types keeps the room,
  * as on the web. Alone, the agents' words keep the line as it is (nothing follows them).
  */
-export function lineFit(drawn: LineDrawn, someoneTypes: boolean): { agents?: number | null; typers?: number } {
+export function lineFit(
+  drawn: LineDrawn,
+  someoneTypes: boolean,
+): { agents?: number | null; typers?: number; recorders?: number } {
   if (!someoneTypes) return {};
   const whole = (width?: number) => (width === undefined ? undefined : Math.ceil(width));
   const sliver = drawn.agents !== undefined && drawn.agents < AGENT_WORDS_MIN;
-  return { agents: sliver ? null : whole(drawn.agents), typers: whole(drawn.typers) };
+  return {
+    agents: sliver ? null : whole(drawn.agents),
+    typers: whole(drawn.typers),
+    recorders: whole(drawn.recorders),
+  };
 }
 
 /** The working line's words in the pieces that give way in turn (`barWords`). */

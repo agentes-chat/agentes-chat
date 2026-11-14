@@ -2258,8 +2258,7 @@
       "fileName": "message.txt"
     },
     "long": {
-      "more": "查看更多",
-      "title": "{{name}} 的消息"
+      "more": "查看更多"
     },
     "retrySend": "重试",
     "thinking": "{{name}} 正在思考…",
@@ -3803,7 +3802,6 @@
     "issue": "议题"
   },
   "folded": {
-    "more": "显示更多",
     "less": "收起"
   },
   "secret": {
@@ -4361,8 +4359,6 @@
       "noSubject": "（无主题）",
       "toSender": "发给消息的发件人",
       "toList": "收件人：{{to}}",
-      "more": "阅读全文",
-      "less": "收起",
       "answers": "回复 <b>“{{subject}}”</b>",
       "answersFrom": "回复 <b>“{{subject}}”</b>，来自 {{from}}",
       "forwards": "转发 <b>“{{subject}}”</b>",
@@ -4927,8 +4923,6 @@
       "textDone": "已发布的内容",
       "values": "将要做的事",
       "valuesDone": "已做的事",
-      "more": "显示全部",
-      "less": "收起",
       "trail": "来龙去脉",
       "showSteps": "查看每一步",
       "hideSteps": "隐藏步骤",
@@ -8451,8 +8445,7 @@
       "releasePaused": "专项任务已暂停：恢复后会话才会继续。",
       "releaseClosed": "专项任务已关闭：会话不会继续。",
       "onlyDeciders": "只有此专项任务的决策者可以允许命令。",
-      "pick": "允许 {{command}}",
-      "showAll": "显示全部"
+      "pick": "允许 {{command}}"
     },
     "decision": {
       "approveAll_other": "批准 {{count}} 个临时决定",
@@ -11196,8 +11189,6 @@
     "thousand": "千",
     "building": "正在整理…",
     "openBig": "放大打开",
-    "showAll": "显示全部",
-    "showLess": "收起",
     "keep": "保存到 Drive",
     "kept": "已保存到 Drive",
     "inDrive": "在 Drive 中",
@@ -15467,10 +15458,6 @@
       "someAnswered": "{{total}} 个中 {{done}} 个已回答",
       "labelMany": "{{from}} 与 {{to}} 的对话"
     },
-    "talk": {
-      "readAll": "阅读全部",
-      "more_other": "还有 {{count}} 行"
-    },
     "consultPanel": {
       "label": "{{from}} 和 {{to}} 之间的对话",
       "title": "{{from}} ⇄ {{to}}",
@@ -15687,6 +15674,7 @@
         "usingTool": "使用了 {{tool}} 工具",
         "thinking": "思考了",
         "typing": "撰写了",
+        "recordingVoice": "录制了语音",
         "writing": "撰写了"
       }
     },
@@ -15696,6 +15684,7 @@
       "updatingRoutine": "修改例行工作",
       "thinking": "工作",
       "typing": "输入",
+      "recordingVoice": "录音",
       "writing": "撰写",
       "consulting": "查看 {{app}}",
       "creatingIssue": "创建任务",

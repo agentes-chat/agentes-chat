@@ -7,7 +7,7 @@ import {
   applyConversationEvent,
   applyMembershipEvent,
   applyReceiptEvent,
-  applyTyping,
+  applyTypingEvent,
   type BlockState,
   type ChannelEvent,
   type ConsultsState,
@@ -53,7 +53,7 @@ import {
   seedReceipts,
   staleProvisional,
   startThreadCache,
-  stopTyping,
+  type TypingKind,
   type TypingState,
   typingThrottle,
   unmarkStopping,
@@ -115,12 +115,7 @@ function reduce(state: LiveState, action: Action): LiveState {
       const seeded =
         event.type === "message.created" && event.message ? seedReceipt(state.receipts, event.message) : state.receipts;
       const receipts = applyReceiptEvent(seeded, event);
-      const typing =
-        event.type === "user.typing"
-          ? applyTyping(state.typing, event.channelId, event.userId, action.at, event.ttlMs, event.threadId)
-          : event.type === "message.created" && event.message?.author?.type === "person" && event.message.author.id
-            ? stopTyping(state.typing, event.channelId, event.message.author.id)
-            : state.typing;
+      const typing = applyTypingEvent(state.typing, event, action.at);
       // An event that changes none of them doesn't re-render.
       return streams === state.streams &&
         consults === state.consults &&
@@ -388,10 +383,13 @@ export interface ChatLive {
   picking: (messageId: string) => void;
   /** "Parar" (as on the web): "Parando…" until the run's event; a run that already ended just leaves. */
   stop: (runId: string, byUserId: string) => void;
-  /** Who is typing now (`typingIn` reads it for the conversation or one of its threads). */
+  /** Who is typing or recording now (`typingIn` reads it for the conversation or one of its threads). */
   typing: TypingState;
-  /** "I'm typing" here or in a thread, throttled (at most one frame every 3 s). */
-  sendTyping: (threadId: string | null, text?: string) => void;
+  /**
+   * "I'm typing" (or `voice`: recording, with `keepAlive` while it uploads) here or in a thread, throttled (at most one
+   * frame every 3 s, `typingThrottle`).
+   */
+  sendTyping: (threadId: string | null, text?: string, kind?: TypingKind, keepAlive?: boolean) => void;
   /** Agents I named here that won't answer me, newest last (`agent.unavailable`). */
   notices: AgentUnavailableEvent[];
 }
@@ -515,8 +513,8 @@ export function useChatLive(orgId: string, channelId: string, enabled: boolean):
   }, [typingEnds]);
   const throttle = useMemo(() => typingThrottle(), []);
   const sendTyping = useCallback(
-    (threadId: string | null, text?: string) => {
-      if (connection && throttle(Date.now(), text)) connection.sendTyping(channelId, threadId);
+    (threadId: string | null, text?: string, kind?: TypingKind, keepAlive?: boolean) => {
+      if (connection && throttle(Date.now(), text, kind, keepAlive)) connection.sendTyping(channelId, threadId, kind);
     },
     [connection, channelId, throttle],
   );

@@ -17,6 +17,7 @@ import {
   createInvitation,
   createOrganization,
   type DeletionDeps,
+  deriveSecret,
   getOrganization,
   hasPassword,
   invitationLogoFile,
@@ -91,6 +92,7 @@ import {
 import { requestLimitIp } from "../../http/client-ip";
 import { apiError, errorResponse } from "../../http/errors";
 import { humanCheckRefusal } from "../../http/human-check";
+import { humanPassesFor } from "../../http/human-pass";
 import { imageFile } from "../../http/image-file";
 import { releaseOf } from "../../version";
 import {
@@ -442,6 +444,10 @@ export function accountRoutes(deps: AppDeps) {
             accessExpired: z.literal(true).optional().openapi({
               description: "`access` is the link of an invitation to this same address, and it expired.",
             }),
+            pass: z.string().optional().openapi({
+              description:
+                "Only with the bot check on: sent as `x-captcha-response` in place of a token, it stands for the check at this address's sign-in, sign-up or password reset, from the same network, for ten minutes and a few calls (ADR 0075).",
+            }),
           }),
         ),
         429: errorResponse("Too many attempts (`rate_limited`)"),
@@ -460,7 +466,11 @@ export function accountRoutes(deps: AppDeps) {
       );
       if (refused) return apiError(c, 403, refused.code, refused.message);
       const { email, access } = c.req.valid("json");
-      return c.json(await signInOptions(db, email, signupPolicy(config), access), 200);
+      const found = await signInOptions(db, email, signupPolicy(config), access);
+      // Checked once: the step after this one, for this address, goes with the pass and no second check.
+      if (!deps.adapters.humanCheck) return c.json(found, 200);
+      const pass = humanPassesFor(deriveSecret(config.AGENTES_SECRET, "human-pass")).issue(email, ip);
+      return c.json({ ...found, pass }, 200);
     },
   );
 

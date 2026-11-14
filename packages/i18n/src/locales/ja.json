@@ -2255,8 +2255,7 @@
       "fileName": "message.txt"
     },
     "long": {
-      "more": "もっと見る",
-      "title": "{{name}}のメッセージ"
+      "more": "もっと見る"
     },
     "retrySend": "もう一度試す",
     "thinking": "{{name}}が考えています…",
@@ -3802,7 +3801,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "さらに表示",
     "less": "表示を減らす"
   },
   "secret": {
@@ -4360,8 +4358,6 @@
       "noSubject": "（件名なし）",
       "toSender": "メッセージの送信者へ",
       "toList": "宛先: {{to}}",
-      "more": "すべて読む",
-      "less": "表示を減らす",
       "answers": "<b>「{{subject}}」</b>に返信",
       "answersFrom": "{{from}}からの<b>「{{subject}}」</b>に返信",
       "forwards": "<b>「{{subject}}」</b>を転送",
@@ -4920,8 +4916,6 @@
       "textDone": "公開した内容",
       "values": "実行する内容",
       "valuesDone": "実行した内容",
-      "more": "すべて表示",
-      "less": "表示を減らす",
       "trail": "ここまでの流れ",
       "showSteps": "各ステップを見る",
       "hideSteps": "ステップを隠す",
@@ -8406,8 +8400,7 @@
       "releasePaused": "ミッションは一時停止中です。セッションを続けるには再開してください。",
       "releaseClosed": "ミッションは終了しています。セッションは続行しません。",
       "onlyDeciders": "コマンドを許可できるのは、このミッションで判断する人だけです。",
-      "pick": "{{command}}を許可",
-      "showAll": "すべて表示"
+      "pick": "{{command}}を許可"
     },
     "decision": {
       "approveAll_other": "暫定の{{count}}件を承認",
@@ -11130,8 +11123,6 @@
     "thousand": "K",
     "building": "まとめています…",
     "openBig": "大きく開く",
-    "showAll": "すべて表示",
-    "showLess": "表示を減らす",
     "keep": "Driveに保存",
     "kept": "Driveに保存済み",
     "inDrive": "Drive内",
@@ -15403,10 +15394,6 @@
       "someAnswered": "{{total}}件中{{done}}件回答",
       "labelMany": "{{from}}と{{to}}の会話"
     },
-    "talk": {
-      "readAll": "すべて読む",
-      "more_other": "あと{{count}}行"
-    },
     "consultPanel": {
       "label": "{{from}}と{{to}}の会話",
       "title": "{{from}} ⇄ {{to}}",
@@ -15620,6 +15607,7 @@
         "usingTool": "ツール{{tool}}を使いました",
         "thinking": "考えました",
         "typing": "書きました",
+        "recordingVoice": "音声を録音しました",
         "writing": "書きました"
       }
     },
@@ -15629,6 +15617,7 @@
       "updatingRoutine": "ルーティンを変更中",
       "thinking": "作業中",
       "typing": "入力中",
+      "recordingVoice": "音声を録音中",
       "writing": "書いています",
       "consulting": "{{app}}を確認中",
       "creatingIssue": "タスクを作成中",
