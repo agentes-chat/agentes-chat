@@ -738,11 +738,7 @@ function CapacityStrip({
               <span className="tm-computer__icon" aria-hidden="true">
                 {r.lead}
               </span>
-              <Tip
-                className="tm-computer__text tm-cause__text"
-                tip={rowTip(r.name, [r.fact])}
-                look="ac-msg__tip tm-tip"
-              >
+              <Tip className="tm-computer__text" tip={rowTip(r.name, [r.fact])} look="ac-msg__tip tm-tip">
                 <b>{r.name}</b>
                 <small>{r.fact}</small>
               </Tip>
