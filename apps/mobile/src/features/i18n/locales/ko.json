@@ -52,7 +52,8 @@
     "closed": "{{title}} · 닫힘",
     "reopen": "다시 보기",
     "answeredBy": "{{name}}이(가) 선택함",
-    "failed": "선택이 전송되지 않았어요. 다시 시도해 주세요."
+    "failed": "선택이 전송되지 않았어요. 다시 시도해 주세요.",
+    "tooLongFix": "답변을 줄여 주세요."
   },
   "chart": {
     "table": "표",

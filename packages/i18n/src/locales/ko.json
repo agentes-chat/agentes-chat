@@ -24,6 +24,7 @@
     "retry": "다시 시도",
     "soon": "곧 출시",
     "unknownError": "문제가 생겼어요. 다시 시도해 주세요.",
+    "overLimit": "텍스트가 {{length}}자이고 한도는 {{max}}자입니다. 줄여 주세요.",
     "ourSide": "저희 쪽에서 문제가 생겼어요. 잠시 후 다시 시도해 주세요.",
     "signedOut": "세션이 끝났어요. 계속하려면 다시 로그인하세요.",
     "newVersion": "agentes.chat의 새 버전이 나왔어요.",
@@ -11161,7 +11162,8 @@
     "closed": "{{title}} · 닫힘",
     "reopen": "다시 보기",
     "answeredBy": "{{name}}이(가) 선택함",
-    "failed": "선택이 전송되지 않았어요. 다시 시도해 주세요."
+    "failed": "선택이 전송되지 않았어요. 다시 시도해 주세요.",
+    "tooLongFix": "답변을 줄여 주세요."
   },
   "drive": {
     "title": "Drive",

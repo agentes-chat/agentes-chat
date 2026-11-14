@@ -24,6 +24,7 @@
     "retry": "Riprova",
     "soon": "In arrivo",
     "unknownError": "Qualcosa è andato storto. Riprova.",
+    "overLimit": "Il testo ha {{length}} caratteri e il limite è {{max}}. Accorcialo.",
     "ourSide": "Qualcosa è andato storto da parte nostra. Riprova tra poco.",
     "signedOut": "La sessione è scaduta. Accedi di nuovo per continuare.",
     "newVersion": "È disponibile una nuova versione di agentes.chat.",
@@ -12090,7 +12091,8 @@
     "closed": "{{title}} · chiuso",
     "reopen": "Mostra di nuovo",
     "answeredBy": "{{name}} ha scelto",
-    "failed": "La tua scelta non è stata inviata. Riprova."
+    "failed": "La tua scelta non è stata inviata. Riprova.",
+    "tooLongFix": "Accorcia la risposta."
   },
   "drive": {
     "title": "Drive",

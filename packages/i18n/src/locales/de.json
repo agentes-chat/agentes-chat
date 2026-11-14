@@ -24,6 +24,7 @@
     "retry": "Erneut versuchen",
     "soon": "Bald",
     "unknownError": "Etwas ist schiefgelaufen. Versuch es noch einmal.",
+    "overLimit": "Der Text hat {{length}} Zeichen, das Limit liegt bei {{max}}. Kürze ihn.",
     "ourSide": "Bei uns ist etwas schiefgelaufen. Versuch es gleich noch einmal.",
     "signedOut": "Deine Sitzung ist abgelaufen. Melde dich erneut an, um weiterzumachen.",
     "newVersion": "Eine neue Version von agentes.chat ist da.",
@@ -11638,7 +11639,8 @@
     "closed": "{{title}} · geschlossen",
     "reopen": "Wieder anzeigen",
     "answeredBy": "{{name}} hat gewählt",
-    "failed": "Deine Auswahl wurde nicht gesendet. Versuch es noch einmal."
+    "failed": "Deine Auswahl wurde nicht gesendet. Versuch es noch einmal.",
+    "tooLongFix": "Kürze die Antwort."
   },
   "drive": {
     "title": "Drive",

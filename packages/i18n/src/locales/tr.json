@@ -24,6 +24,7 @@
     "retry": "Tekrar dene",
     "soon": "Yakında",
     "unknownError": "Bir şeyler ters gitti. Tekrar deneyin.",
+    "overLimit": "Metin {{length}} karakter, sınır ise {{max}}. Kısalt.",
     "ourSide": "Bizim tarafımızda bir şeyler ters gitti. Birazdan tekrar deneyin.",
     "signedOut": "Oturumunuz sona erdi. Devam etmek için tekrar giriş yapın.",
     "newVersion": "agentes.chat'in yeni bir sürümü çıktı.",
@@ -11579,7 +11580,8 @@
     "closed": "{{title}} · kapandı",
     "reopen": "Yeniden göster",
     "answeredBy": "{{name}} seçti",
-    "failed": "Seçiminiz gönderilemedi. Tekrar deneyin."
+    "failed": "Seçiminiz gönderilemedi. Tekrar deneyin.",
+    "tooLongFix": "Cevabı kısalt."
   },
   "drive": {
     "title": "Drive",

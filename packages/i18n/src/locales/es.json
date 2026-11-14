@@ -24,6 +24,7 @@
     "retry": "Intentar de nuevo",
     "soon": "Pronto",
     "unknownError": "Algo salió mal. Intenta de nuevo.",
+    "overLimit": "El texto tiene {{length}} caracteres y el límite es {{max}}. Acórtalo.",
     "ourSide": "Algo salió mal de nuestro lado. Intenta de nuevo en un rato.",
     "signedOut": "Tu sesión terminó. Inicia sesión de nuevo para continuar.",
     "newVersion": "Hay una nueva versión de agentes.chat.",
@@ -12003,7 +12004,8 @@
     "closed": "{{title}} · cerrado",
     "reopen": "Mostrar de nuevo",
     "answeredBy": "{{name}} eligió",
-    "failed": "Tu elección no se envió. Inténtalo de nuevo."
+    "failed": "Tu elección no se envió. Inténtalo de nuevo.",
+    "tooLongFix": "Acorta la respuesta."
   },
   "drive": {
     "title": "Drive",

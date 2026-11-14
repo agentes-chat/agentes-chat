@@ -24,6 +24,7 @@
     "retry": "Coba lagi",
     "soon": "Segera",
     "unknownError": "Ada yang salah. Coba lagi.",
+    "overLimit": "Teks ini {{length}} karakter dan batasnya {{max}}. Persingkat teksnya.",
     "ourSide": "Ada yang salah di pihak kami. Coba lagi sebentar lagi.",
     "signedOut": "Sesimu berakhir. Masuk lagi untuk melanjutkan.",
     "newVersion": "Versi baru agentes.chat sudah tersedia.",
@@ -11221,7 +11222,8 @@
     "closed": "{{title}} · ditutup",
     "reopen": "Tampilkan lagi",
     "answeredBy": "{{name}} memilih",
-    "failed": "Pilihanmu tidak terkirim. Coba lagi."
+    "failed": "Pilihanmu tidak terkirim. Coba lagi.",
+    "tooLongFix": "Persingkat jawabannya."
   },
   "drive": {
     "title": "Drive",

@@ -32,6 +32,8 @@ export const ptBR = {
     retry: "Tentar de novo",
     soon: "Em breve",
     unknownError: "Algo deu errado. Tente de novo.",
+    /** Under a field whose text is past its limit: its size, the limit, then the way out. */
+    overLimit: "O texto tem {{length}} caracteres e o limite é {{max}}. Encurte o texto.",
     /** A server error (a 5xx of its own): nothing the person did, and nothing they can fix. */
     ourSide: "Algo deu errado do nosso lado. Tente de novo daqui a pouco.",
     signedOut: "Sua sessão terminou. Entre de novo para continuar.",
@@ -11963,6 +11965,8 @@ export const ptBR = {
     reopen: "Mostrar de novo",
     answeredBy: "{{name}} escolheu",
     failed: "Não deu para mandar sua escolha. Tente de novo.",
+    /** After the message's size and limit, when a written answer makes the reply too long. */
+    tooLongFix: "Encurte a resposta.",
   },
   drive: {
     title: "Drive",

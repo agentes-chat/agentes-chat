@@ -54,7 +54,8 @@
     "closed": "{{title}} · gesloten",
     "reopen": "Opnieuw tonen",
     "answeredBy": "{{name}} koos",
-    "failed": "Je keuze is niet verstuurd. Probeer het opnieuw."
+    "failed": "Je keuze is niet verstuurd. Probeer het opnieuw.",
+    "tooLongFix": "Maak het antwoord korter."
   },
   "chart": {
     "table": "Tabel",

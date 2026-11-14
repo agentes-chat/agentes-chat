@@ -24,6 +24,7 @@
     "retry": "Spróbuj ponownie",
     "soon": "Wkrótce",
     "unknownError": "Coś poszło nie tak. Spróbuj ponownie.",
+    "overLimit": "Tekst ma {{length}} znaków, a limit to {{max}}. Skróć go.",
     "ourSide": "Coś poszło nie tak po naszej stronie. Spróbuj ponownie za chwilę.",
     "signedOut": "Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować.",
     "newVersion": "Jest nowa wersja agentes.chat.",
@@ -12521,7 +12522,8 @@
     "closed": "{{title}} · zamknięte",
     "reopen": "Pokaż ponownie",
     "answeredBy": "Wybór: {{name}}",
-    "failed": "Twój wybór nie został wysłany. Spróbuj ponownie."
+    "failed": "Twój wybór nie został wysłany. Spróbuj ponownie.",
+    "tooLongFix": "Skróć odpowiedź."
   },
   "drive": {
     "title": "Drive",

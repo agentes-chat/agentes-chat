@@ -24,6 +24,7 @@
     "retry": "Opnieuw proberen",
     "soon": "Binnenkort",
     "unknownError": "Er ging iets mis. Probeer het opnieuw.",
+    "overLimit": "De tekst heeft {{length}} tekens en de limiet is {{max}}. Maak hem korter.",
     "ourSide": "Er ging iets mis aan onze kant. Probeer het over een poosje opnieuw.",
     "signedOut": "Je sessie is verlopen. Log opnieuw in om verder te gaan.",
     "newVersion": "Er is een nieuwe versie van agentes.chat.",
@@ -11706,7 +11707,8 @@
     "closed": "{{title}} · gesloten",
     "reopen": "Opnieuw tonen",
     "answeredBy": "{{name}} koos",
-    "failed": "Je keuze is niet verstuurd. Probeer het opnieuw."
+    "failed": "Je keuze is niet verstuurd. Probeer het opnieuw.",
+    "tooLongFix": "Maak het antwoord korter."
   },
   "drive": {
     "title": "Drive",
