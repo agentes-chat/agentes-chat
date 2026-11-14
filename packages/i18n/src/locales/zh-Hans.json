@@ -2579,6 +2579,9 @@
       "update_role": "更改角色 <b>{{name}}</b>",
       "delete_role": "永久删除角色 <b>{{name}}</b>",
       "move_role": "调整角色 <b>{{name}}</b> 的顺序",
+      "set_permission_holders": "更改谁可以<b>{{short}}</b>",
+      "set_permission_holders_computers": "更改谁可以使用<b>智能体的电脑</b>",
+      "holdersOwnersOnly": "仅所有者",
       "set_member_roles": "更改 <b>{{name}}</b> 的角色：{{change}}",
       "set_channel_permissions": "更改 {{who}} 在 <b>#{{channel}}</b> 中能做的事",
       "set_my_status": "设置你的状态：<b>{{what}}</b>",
@@ -3353,6 +3356,8 @@
       "changed_update_role": "更改了角色 <b>{{name}}</b>",
       "changed_delete_role": "删除了角色 <b>{{name}}</b>",
       "changed_move_role": "调整了角色 <b>{{name}}</b> 的顺序",
+      "changed_set_permission_holders": "更改了谁可以<b>{{short}}</b>",
+      "changed_set_permission_holders_computers": "更改了谁可以使用<b>智能体的电脑</b>",
       "changed_set_member_roles": "更改了 <b>{{name}}</b> 的角色：{{change}}",
       "changed_set_channel_permissions": "更改了 {{who}} 在 <b>#{{channel}}</b> 中能做的事",
       "changed_set_my_status": "设置了你的状态：<b>{{what}}</b>",
@@ -4298,6 +4303,10 @@
   "approval": {
     "expiredChip": "已过期 · {{when}}",
     "canceledChip": "已取消 · {{when}}",
+    "line": {
+      "after": "在“{{title}}”之后执行",
+      "notRun": "未执行：前一个请求没有获批"
+    },
     "waitingFor": "等待 {{name}}",
     "waitingAdmin": "等待管理员",
     "reasonLine": "原因：{{reason}}",
@@ -4851,8 +4860,15 @@
       "canceled": "已取消",
       "failed": "失败",
       "running": "执行中",
-      "scheduled": "已计划"
+      "scheduled": "已计划",
+      "queued": "排队中",
+      "notRun": "未执行"
     },
+    "queuedLine": "已批准。会在先前请求的“{{title}}”之后执行。",
+    "notRunRefused": "先前请求的“{{title}}”在这一项获批后被拒绝，所以这一项没有执行。",
+    "notRunExpired": "先前请求的“{{title}}”在这一项获批后无人决定而过期，所以这一项没有执行。",
+    "notRunEarlier": "在这一项获批后，先前的请求被拒绝或已过期，所以这一项没有执行。",
+    "position": "第 {{n}} 个，共 {{total}} 个",
     "expiredLine": "24 小时内没有人决定，所以什么都没做。",
     "canceledLine": "运行在做出决定前就停止了。",
     "supersededLine": "智能体用更新的版本重新请求了，这一版没有执行。",
@@ -4921,8 +4937,10 @@
       "email": "邮件",
       "text": "将要发布的内容",
       "textDone": "已发布的内容",
+      "textNot": "本将发布的内容",
       "values": "将要做的事",
       "valuesDone": "已做的事",
+      "valuesNot": "本将要做的事",
       "trail": "来龙去脉",
       "showSteps": "查看每一步",
       "hideSteps": "隐藏步骤",
@@ -10746,13 +10764,6 @@
       "nowYours": "停下来阅读你的留言",
       "nowOf": "停下来阅读 {{name}} 的留言"
     },
-    "choice": {
-      "label": "{{name}} 工作时如何发送",
-      "join": "补充到 {{name}} 正在做的事中",
-      "interrupt": "停止并发送",
-      "joins": "补充",
-      "interrupts": "停止并发送"
-    },
     "strip": {
       "see": "查看",
       "toStop": "以停止"
@@ -14596,6 +14607,10 @@
         "left": "离开了工作区",
         "role_changed": "更改了一位成员的角色",
         "password_link": "为成员生成了新密码链接"
+      },
+      "role": {
+        "permission_set": "更改了谁可以{{short}}",
+        "permission_set_computers": "更改了谁可以使用智能体的电脑"
       },
       "apps": {
         "connected": "连接了 {{app}}",
