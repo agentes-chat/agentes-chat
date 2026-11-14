@@ -23,6 +23,7 @@ import {
   type AgentColor,
   agentTones,
   Button,
+  ChipButton,
   Dialog,
   DialogBody,
   DialogFooter,
@@ -1073,11 +1074,10 @@ function NewAgentDialog({
                         <span className="nac__chips">
                           {appIds.length === 0 && <span className="nac__none">{t("newAgentCard.usesNone")}</span>}
                           {appIds.map((id) => (
-                            <button key={id} type="button" className="ac-chip nac__app" onClick={() => setAppOpen(id)}>
-                              {appIcon(id)}
-                              <span className="ac-chip__text">{appName(id)}</span>
+                            <ChipButton key={id} className="nac__app" lead={appIcon(id)} onClick={() => setAppOpen(id)}>
+                              {appName(id)}
                               <span className="nac__level">{tt(`newAgentCard.level.${draft.apps[id] ?? "read"}`)}</span>
-                            </button>
+                            </ChipButton>
                           ))}
                         </span>
                       </section>
