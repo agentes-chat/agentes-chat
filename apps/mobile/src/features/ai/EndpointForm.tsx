@@ -42,9 +42,15 @@ import { Note } from "./parts";
 /**
  * "Outro provedor" on the phone (ADR 0146), the web's `EndpointForm`: a workspace's own OpenAI- or
  * Anthropic-compatible endpoint, its models fetched or typed, their prices, then saved with one test per model.
- * `onDone` gets the key with its models' tests just run.
+ * `onDone` gets the key with its models' tests just run; Concluir stays busy while what it returns runs.
  */
-export function EndpointForm({ orgId, onDone }: { orgId: string; onDone: (saved: Credential) => void }) {
+export function EndpointForm({
+  orgId,
+  onDone,
+}: {
+  orgId: string;
+  onDone: (saved: Credential) => void | Promise<void>;
+}) {
   const { t } = useTranslation();
   const { colors: c } = useTheme();
   const api = useApi();
@@ -57,6 +63,7 @@ export function EndpointForm({ orgId, onDone }: { orgId: string; onDone: (saved:
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   const [saved, setSaved] = useState<{ key: Credential; checks: EndpointCheck[] } | null>(null);
+  const [closing, setClosing] = useState(false);
   const [query, setQuery] = useState("");
   const [pinned, setPinned] = useState<ReadonlySet<string>>(new Set());
   const search = (next: string) => {
@@ -136,7 +143,16 @@ export function EndpointForm({ orgId, onDone }: { orgId: string; onDone: (saved:
           variant="primary"
           wide
           label={t("endpoint.done")}
-          onPress={() => onDone(withChecks(saved.key, saved.checks))}
+          loading={closing}
+          disabled={closing}
+          onPress={async () => {
+            setClosing(true);
+            try {
+              await onDone(withChecks(saved.key, saved.checks));
+            } finally {
+              setClosing(false);
+            }
+          }}
         />
       </View>
     );

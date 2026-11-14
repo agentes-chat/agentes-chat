@@ -1284,9 +1284,10 @@ function KeyPage({
         <View style={styles.keySteps}>
           <EndpointForm
             orgId={orgId}
-            onDone={(key) => {
+            onDone={async (key) => {
+              // The done view opens on what the save came to, never on the line it replaces.
+              await onEndpointSaved?.(key);
               setEndpointSaved(true);
-              void onEndpointSaved?.(key);
             }}
           />
         </View>
