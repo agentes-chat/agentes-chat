@@ -266,6 +266,30 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
       },
     ));
 
+  test("Tools: the installed Codex can be checked again", () =>
+    pane(
+      "selfhost",
+      <Tools />,
+      (el) => el.querySelector('#tool-claude[aria-checked="true"]'),
+      async (el, host) => {
+        const codex = el.querySelector("#tool-codex")?.closest(".dk-crow");
+        const button = [...(codex?.querySelectorAll("button") ?? [])].find(
+          (button) => button.textContent === "Check again",
+        );
+        expect(button?.disabled).toBe(false);
+        const checks = new Set<string>();
+        for (const [id, runner] of host.runners) {
+          const handle = runner.handle.bind(runner);
+          runner.handle = (line) => {
+            if (JSON.parse(line).type === "executors.check") checks.add(id);
+            handle(line);
+          };
+        }
+        await act(async () => button?.click());
+        await until(() => checks.size === host.runners.size);
+      },
+    ));
+
   test("Tools: every coding program has a switch of its own, on or off whether or not it is installed", () =>
     pane(
       "selfhost",

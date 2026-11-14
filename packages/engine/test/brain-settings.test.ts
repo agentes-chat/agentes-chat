@@ -212,6 +212,10 @@ describe("brain settings", () => {
       ["claude_code", false, "not_installed"],
       ["codex", false, "outdated"],
     ]);
+    expect(brainOptions(oldCodex).find((o) => o.kind === "codex")?.codexVersion).toEqual({
+      detected: "0.100.0",
+      minimum: "0.163.0",
+    });
     const both = mac({ executors: { claude: { version: "2" }, codex: { version: "0.170.0" }, detectedAt: "x" } });
     expect(
       brainOptions(both).every((o) => o.available || ["cursor", "opencode", "grok", "antigravity"].includes(o.kind)),

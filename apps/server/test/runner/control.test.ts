@@ -156,6 +156,29 @@ const sharedGrant = () => ({ path: expect.stringMatching(/[\\/]shared$/), agents
 
 const stored = (home: string) => JSON.parse(readFileSync(configPath(home), "utf8")) as Record<string, unknown>;
 
+test("checking again publishes the upgraded Codex version on the same connection", async () => {
+  const { home } = pairedHome();
+  let version = "0.149.0";
+  const c = control(home, {
+    executors: undefined,
+    executorRun: async (bin) =>
+      bin === "codex" ? { status: 0, stdout: `codex-cli ${version}` } : { status: 127, stdout: "" },
+  });
+  const socket = await c.connect();
+  expect(await c.data({ type: "executors.check" })).toMatchObject({
+    executors: { codex: { version: "codex-cli 0.149.0" } },
+  });
+  version = "0.169.0";
+  expect(await c.data({ type: "executors.check" })).toMatchObject({
+    connection: "online",
+    executors: { codex: { version: "codex-cli 0.169.0" } },
+  });
+  await waitFor(() =>
+    socket.of("executors.changed").some((frame) => JSON.stringify(frame).includes("codex-cli 0.169.0")),
+  );
+  expect(c.sockets).toHaveLength(1);
+});
+
 test("hello carries what this computer builds with and the phones it reaches; a phone found after it goes out", async () => {
   const { home } = pairedHome();
   const root = tempDir("phones-");
