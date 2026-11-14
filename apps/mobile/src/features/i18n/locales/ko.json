@@ -1061,6 +1061,9 @@
     "addWorkspaceTeamShort": "팀 서버에 들어가기",
     "addWorkspaceTeamSubShort": "주소 또는 컴퓨터의 QR 코드",
     "addWorkspaceFoot": "어떤 워크스페이스에서도 나가지 않아요.",
+    "addAccount": "다른 계정으로 로그인",
+    "addAccountSub": "{{host}}에서, 이 계정을 유지한 채",
+    "accountNoWorkspace": "아직 워크스페이스가 없습니다",
     "teamServerLeadShort": "팀이 브라우저에서 여는 주소예요.",
     "teamServerQuestion": "팀 주소가 어떻게 되세요?",
     "account": {

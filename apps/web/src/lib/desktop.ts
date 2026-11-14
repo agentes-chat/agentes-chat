@@ -259,8 +259,12 @@ export const thisMac = {
   revealFiles: () => invoke<unknown>({ kind: "files" }),
   /** The other servers' workspaces, as the app read them with each one's session (ADR 0154). */
   workspaces: () => invoke<{ servers: DesktopServerWorkspaces[] }>({ kind: "workspaces" }).then((r) => r.servers),
-  /** The window goes to a workspace of another server of the app's list, already signed in there. */
-  openWorkspace: (server: string, orgId: string) => invoke<unknown>({ kind: "openWorkspace", server, orgId }),
+  /**
+   * The window goes to a workspace of another server of the app's list, already signed in there. `account`: which of
+   * that server's accounts it belongs to, when the app read several (ADR 0183).
+   */
+  openWorkspace: (server: string, orgId: string, account?: string) =>
+    invoke<unknown>({ kind: "openWorkspace", server, orgId, ...(account ? { account } : {}) }),
   /** The app's own window to add a workspace: a new one on agentes.chat, or the team's server. */
   addWorkspace: () => invoke<unknown>({ kind: "addWorkspace" }),
   /**

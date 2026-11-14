@@ -508,6 +508,7 @@
       "noPassword": "Dieses Konto meldet sich über die agentes.chat-App an.",
       "noPasswordLead": "Öffne auf dem Computer, auf dem dieser Server läuft, die App und wähle Passwort hinzufügen unter Einstellungen › Dein Konto.",
       "backToSignIn": "Zurück zur Anmeldung",
+      "backToAccount": "Zurück zu {{name}}",
       "toAuthorizeApp": "Um eine App mit agentes.chat zu verbinden."
     },
     "desktop": {
@@ -1478,22 +1479,6 @@
     "moveDown": "Nach unten",
     "restoreOrder": "Standardreihenfolge wiederherstellen"
   },
-  "appIcon": {
-    "title": "App-Symbol",
-    "hintWeb": "Das Symbol in den Tabs dieses Browsers.",
-    "hintMac": "Das Dock-Symbol, solange die App geöffnet ist. Finder und Launchpad behalten das Standardsymbol.",
-    "hintDesktop": "Das Taskleisten-Symbol, solange die App geöffnet ist.",
-    "hintAndroid": "Manche Startbildschirme brauchen ein paar Sekunden, bis das neue Symbol erscheint.",
-    "failed": "Das Symbol konnte nicht geändert werden. Versuch es noch einmal.",
-    "agentsOf": "Agenten in {{org}}",
-    "names": {
-      "night": "Nacht",
-      "moon": "Mond",
-      "sky": "Himmel",
-      "peekNight": "Neugierig bei Nacht",
-      "peekSky": "Neugierig am Himmel"
-    }
-  },
   "install": {
     "frames": "So installierst du es auf {{system}}",
     "step": "Schritt {{n}}",
@@ -1601,6 +1586,22 @@
       "activities": "Aktivitäten",
       "readingLists": "Paketlisten werden gelesen… Fertig",
       "settingUp": "agentes-chat ({{version}}) wird eingerichtet …"
+    }
+  },
+  "appIcon": {
+    "title": "App-Symbol",
+    "hintWeb": "Das Symbol in den Tabs dieses Browsers.",
+    "hintMac": "Das Dock-Symbol, solange die App geöffnet ist. Finder und Launchpad behalten das Standardsymbol.",
+    "hintDesktop": "Das Taskleisten-Symbol, solange die App geöffnet ist.",
+    "hintAndroid": "Manche Startbildschirme brauchen ein paar Sekunden, bis das neue Symbol erscheint.",
+    "failed": "Das Symbol konnte nicht geändert werden. Versuch es noch einmal.",
+    "agentsOf": "Agenten in {{org}}",
+    "names": {
+      "night": "Nacht",
+      "moon": "Mond",
+      "sky": "Himmel",
+      "peekNight": "Neugierig bei Nacht",
+      "peekSky": "Neugierig am Himmel"
     }
   },
   "legal": {
@@ -1826,6 +1827,8 @@
     "newWorkspace": "Neuer Workspace",
     "addWorkspace": "Workspace hinzufügen",
     "addWorkspaceHint": "Einem bestehenden beitreten, einen neuen erstellen oder den Server deines Teams nutzen",
+    "addAccount": "Konto hinzufügen",
+    "addAccountHint": "Bei einem weiteren Konto anmelden, ohne dieses zu verlassen",
     "yourServer": "Dein Server",
     "serverHere": "agentes.chat auf diesem {{device}}",
     "serverStopped": "gestoppt",
@@ -4451,6 +4454,10 @@
   "approval": {
     "expiredChip": "Abgelaufen · {{when}}",
     "canceledChip": "Abgebrochen · {{when}}",
+    "line": {
+      "after": "läuft nach „{{title}}“",
+      "notRun": "nicht ausgeführt: die Anfrage davor wurde nicht freigegeben"
+    },
     "waitingFor": "Wartet auf {{name}}",
     "waitingAdmin": "Wartet auf einen Admin",
     "reasonLine": "Grund: {{reason}}",
@@ -5034,8 +5041,15 @@
       "canceled": "Abgebrochen",
       "failed": "Fehlgeschlagen",
       "running": "Läuft",
-      "scheduled": "Geplant"
+      "scheduled": "Geplant",
+      "queued": "In der Warteschlange",
+      "notRun": "Nicht ausgeführt"
     },
+    "queuedLine": "Freigegeben. Läuft nach „{{title}}“, das vorher angefragt wurde.",
+    "notRunRefused": "„{{title}}“, vorher angefragt, wurde abgelehnt, nachdem diese Anfrage freigegeben war. Deshalb wurde sie nicht ausgeführt.",
+    "notRunExpired": "„{{title}}“, vorher angefragt, ist ohne Entscheidung abgelaufen, nachdem diese Anfrage freigegeben war. Deshalb wurde sie nicht ausgeführt.",
+    "notRunEarlier": "Eine vorherige Anfrage wurde abgelehnt oder ist abgelaufen, nachdem diese freigegeben war. Deshalb wurde sie nicht ausgeführt.",
+    "position": "{{n}} von {{total}}",
     "expiredLine": "Niemand hat innerhalb von 24 Std. entschieden, also ist nichts passiert.",
     "canceledLine": "Die Ausführung hat vor einer Entscheidung aufgehört.",
     "supersededLine": "Der Agent hat mit einer neueren Version erneut gefragt. Diese wurde nicht ausgeführt.",
@@ -5102,8 +5116,10 @@
       "email": "Die E-Mail",
       "text": "Was veröffentlicht wird",
       "textDone": "Was veröffentlicht wurde",
+      "textNot": "Was veröffentlicht worden wäre",
       "values": "Was passieren wird",
       "valuesDone": "Was passiert ist",
+      "valuesNot": "Was passiert wäre",
       "trail": "Wie es dazu kam",
       "showSteps": "Jeden Schritt ansehen",
       "hideSteps": "Schritte ausblenden",

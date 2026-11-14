@@ -514,6 +514,7 @@
       "noPassword": "Ce compte se connecte depuis l'app agentes.chat.",
       "noPasswordLead": "Sur l'ordinateur qui fait tourner ce serveur, ouvrez l'app et choisissez Ajouter un mot de passe dans Paramètres › Votre compte.",
       "backToSignIn": "Retour à la connexion",
+      "backToAccount": "Revenir à {{name}}",
       "toAuthorizeApp": "Pour connecter une app à agentes.chat."
     },
     "desktop": {
@@ -1521,22 +1522,6 @@
     "moveDown": "Descendre",
     "restoreOrder": "Rétablir l'ordre par défaut"
   },
-  "appIcon": {
-    "title": "Icône de l'app",
-    "hintWeb": "L'icône dans les onglets de ce navigateur.",
-    "hintMac": "L'icône du Dock tant que l'app est ouverte. Le Finder et le Launchpad gardent celle par défaut.",
-    "hintDesktop": "L'icône de la barre des tâches tant que l'app est ouverte.",
-    "hintAndroid": "Certains écrans d'accueil mettent quelques secondes à afficher la nouvelle icône.",
-    "failed": "Impossible de changer l'icône. Réessayez.",
-    "agentsOf": "Agents de {{org}}",
-    "names": {
-      "night": "Nuit",
-      "moon": "Lune",
-      "sky": "Ciel",
-      "peekNight": "Coup d'œil nocturne",
-      "peekSky": "Coup d'œil dans le ciel"
-    }
-  },
   "install": {
     "frames": "Comment installer sur {{system}}",
     "step": "Étape {{n}}",
@@ -1644,6 +1629,22 @@
       "activities": "Activités",
       "readingLists": "Lecture des listes de paquets... Fait",
       "settingUp": "Paramétrage de agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "Icône de l'app",
+    "hintWeb": "L'icône dans les onglets de ce navigateur.",
+    "hintMac": "L'icône du Dock tant que l'app est ouverte. Le Finder et le Launchpad gardent celle par défaut.",
+    "hintDesktop": "L'icône de la barre des tâches tant que l'app est ouverte.",
+    "hintAndroid": "Certains écrans d'accueil mettent quelques secondes à afficher la nouvelle icône.",
+    "failed": "Impossible de changer l'icône. Réessayez.",
+    "agentsOf": "Agents de {{org}}",
+    "names": {
+      "night": "Nuit",
+      "moon": "Lune",
+      "sky": "Ciel",
+      "peekNight": "Coup d'œil nocturne",
+      "peekSky": "Coup d'œil dans le ciel"
     }
   },
   "legal": {
@@ -1869,6 +1870,8 @@
     "newWorkspace": "Nouvel espace de travail",
     "addWorkspace": "Ajouter un espace de travail",
     "addWorkspaceHint": "Rejoindre un workspace existant, en créer un ou utiliser le serveur de votre équipe",
+    "addAccount": "Ajouter un compte",
+    "addAccountHint": "Connectez-vous à un autre compte sans quitter celui-ci",
     "yourServer": "Votre serveur",
     "serverHere": "L’agentes.chat de ce {{device}}",
     "serverStopped": "arrêté",
@@ -4576,6 +4579,10 @@
   "approval": {
     "expiredChip": "Expirée · {{when}}",
     "canceledChip": "Annulée · {{when}}",
+    "line": {
+      "after": "s'exécute après « {{title}} »",
+      "notRun": "pas exécutée : la demande précédente n'a pas été approuvée"
+    },
     "waitingFor": "En attente de {{name}}",
     "waitingAdmin": "En attente d'un admin",
     "reasonLine": "Raison : {{reason}}",
@@ -5195,8 +5202,15 @@
       "canceled": "Annulée",
       "failed": "Échec",
       "running": "En cours",
-      "scheduled": "Prévue"
+      "scheduled": "Prévue",
+      "queued": "En file d'attente",
+      "notRun": "Pas exécutée"
     },
+    "queuedLine": "Approuvée. S'exécute après « {{title}} », demandée avant.",
+    "notRunRefused": "« {{title}} », demandée avant, a été refusée après l'approbation de celle-ci. Celle-ci n'a donc pas été exécutée.",
+    "notRunExpired": "« {{title}} », demandée avant, a expiré sans décision après l'approbation de celle-ci. Celle-ci n'a donc pas été exécutée.",
+    "notRunEarlier": "Une demande précédente a été refusée ou a expiré après l'approbation de celle-ci. Celle-ci n'a donc pas été exécutée.",
+    "position": "{{n}} sur {{total}}",
     "expiredLine": "Personne n'a décidé dans les 24 h, donc rien n'a été fait.",
     "canceledLine": "L'exécution s'est arrêtée avant une décision.",
     "supersededLine": "L'agent a redemandé avec une version plus récente. Celle-ci n'a pas été faite.",
@@ -5265,8 +5279,10 @@
       "email": "L'e-mail",
       "text": "Ce qui sera publié",
       "textDone": "Ce qui a été publié",
+      "textNot": "Ce qui aurait été publié",
       "values": "Ce qui sera fait",
       "valuesDone": "Ce qui a été fait",
+      "valuesNot": "Ce qui aurait été fait",
       "trail": "Comment on en est arrivé là",
       "showSteps": "Voir chaque étape",
       "hideSteps": "Masquer les étapes",

@@ -768,7 +768,15 @@ fn checked(request: &Value) -> Result<Value, String> {
             if servers::origin_of(server).as_deref() != Some(server) {
                 return Err("bad server".into());
             }
-            Ok(json!({ "kind": "openWorkspace", "server": server, "orgId": org()? }))
+            let mut out = json!({ "kind": "openWorkspace", "server": server, "orgId": org()? });
+            // Which of that server's accounts it belongs to (ADR 0183): an id, like the workspace's.
+            if let Some(account) = text("account") {
+                if !crate::workspaces::good_id(account) {
+                    return Err("bad account id".into());
+                }
+                out["account"] = json!(account);
+            }
+            Ok(out)
         }
         // The folder is the app's to know: the page names none.
         Some("files") => Ok(json!({ "kind": "files" })),
@@ -1140,7 +1148,9 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
             if !servers::get(&app).servers.iter().any(|s| s == server) {
                 return Err("not a server of this app".into());
             }
-            let url: Url = format!("{server}/org/{}", request["orgId"].as_str().unwrap_or_default())
+            // The page there moves the window to that account before it opens (`?as=`, ADR 0183).
+            let account = request["account"].as_str().map(|id| format!("?as={id}")).unwrap_or_default();
+            let url: Url = format!("{server}/org/{}{account}", request["orgId"].as_str().unwrap_or_default())
                 .parse()
                 .map_err(|_| "not a URL")?;
             show_url(&app, url)?;
@@ -1417,6 +1427,7 @@ mod tests {
             json!({ "kind": "openWorkspace", "server": "http://evil.example", "orgId": "o-1" }),
             json!({ "kind": "openWorkspace", "server": "https://agentes.exemplo.com.br", "orgId": "../x" }),
             json!({ "kind": "openWorkspace", "orgId": "o-1" }),
+            json!({ "kind": "openWorkspace", "server": "https://agentes.exemplo.com.br", "orgId": "o-1", "account": "../x" }),
         ] {
             assert!(checked(&bad).is_err(), "{bad}");
         }

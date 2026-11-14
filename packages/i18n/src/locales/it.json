@@ -514,6 +514,7 @@
       "noPassword": "Questo account accede dall'app agentes.chat.",
       "noPasswordLead": "Sul computer che fa girare questo server, apri l'app e scegli Aggiungi una password in Impostazioni › Il tuo account.",
       "backToSignIn": "Torna all'accesso",
+      "backToAccount": "Torna a {{name}}",
       "toAuthorizeApp": "Per collegare un'app ad agentes.chat."
     },
     "desktop": {
@@ -1521,22 +1522,6 @@
     "moveDown": "Sposta giù",
     "restoreOrder": "Ripristina ordine predefinito"
   },
-  "appIcon": {
-    "title": "Icona dell'app",
-    "hintWeb": "L'icona nelle schede di questo browser.",
-    "hintMac": "L'icona nel Dock mentre l'app è aperta. Finder e Launchpad mantengono quella predefinita.",
-    "hintDesktop": "L'icona nella barra delle applicazioni mentre l'app è aperta.",
-    "hintAndroid": "Alcune schermate Home impiegano qualche secondo a mostrare la nuova icona.",
-    "failed": "Impossibile cambiare l'icona. Riprova.",
-    "agentsOf": "Agenti di {{org}}",
-    "names": {
-      "night": "Notte",
-      "moon": "Luna",
-      "sky": "Cielo",
-      "peekNight": "Sbirciando di notte",
-      "peekSky": "Sbirciando nel cielo"
-    }
-  },
   "install": {
     "frames": "Come installare su {{system}}",
     "step": "Passo {{n}}",
@@ -1644,6 +1629,22 @@
       "activities": "Attività",
       "readingLists": "Lettura elenco dei pacchetti... Fatto",
       "settingUp": "Configurazione di agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "Icona dell'app",
+    "hintWeb": "L'icona nelle schede di questo browser.",
+    "hintMac": "L'icona nel Dock mentre l'app è aperta. Finder e Launchpad mantengono quella predefinita.",
+    "hintDesktop": "L'icona nella barra delle applicazioni mentre l'app è aperta.",
+    "hintAndroid": "Alcune schermate Home impiegano qualche secondo a mostrare la nuova icona.",
+    "failed": "Impossibile cambiare l'icona. Riprova.",
+    "agentsOf": "Agenti di {{org}}",
+    "names": {
+      "night": "Notte",
+      "moon": "Luna",
+      "sky": "Cielo",
+      "peekNight": "Sbirciando di notte",
+      "peekSky": "Sbirciando nel cielo"
     }
   },
   "legal": {
@@ -1869,6 +1870,8 @@
     "newWorkspace": "Nuovo spazio di lavoro",
     "addWorkspace": "Aggiungi spazio di lavoro",
     "addWorkspaceHint": "Entra in uno che hai già, creane uno nuovo o usa il server del tuo team",
+    "addAccount": "Aggiungi account",
+    "addAccountHint": "Accedi a un altro account senza uscire da questo",
     "yourServer": "Il tuo server",
     "serverHere": "L’agentes.chat di questo {{device}}",
     "serverStopped": "fermo",
@@ -4576,6 +4579,10 @@
   "approval": {
     "expiredChip": "Scaduta · {{when}}",
     "canceledChip": "Annullata · {{when}}",
+    "line": {
+      "after": "viene eseguita dopo “{{title}}”",
+      "notRun": "non eseguita: la richiesta precedente non è stata approvata"
+    },
     "waitingFor": "In attesa di {{name}}",
     "waitingAdmin": "In attesa di un admin",
     "reasonLine": "Motivo: {{reason}}",
@@ -5197,8 +5204,15 @@
       "canceled": "Annullata",
       "failed": "Non riuscita",
       "running": "In esecuzione",
-      "scheduled": "Programmata"
+      "scheduled": "Programmata",
+      "queued": "In coda",
+      "notRun": "Non eseguita"
     },
+    "queuedLine": "Approvata. Viene eseguita dopo “{{title}}”, chiesta prima.",
+    "notRunRefused": "“{{title}}”, chiesta prima, è stata rifiutata dopo l'approvazione di questa. Per questo questa non è stata eseguita.",
+    "notRunExpired": "“{{title}}”, chiesta prima, è scaduta senza decisione dopo l'approvazione di questa. Per questo questa non è stata eseguita.",
+    "notRunEarlier": "Una richiesta precedente è stata rifiutata o è scaduta dopo l'approvazione di questa. Per questo questa non è stata eseguita.",
+    "position": "{{n}} di {{total}}",
     "expiredLine": "Nessuno ha deciso entro 24 h, quindi non è stato fatto nulla.",
     "canceledLine": "L'esecuzione si è fermata prima di una decisione.",
     "supersededLine": "L'agente ha chiesto di nuovo con una versione più recente. Questa non è stata eseguita.",
@@ -5267,8 +5281,10 @@
       "email": "L'email",
       "text": "Cosa verrà pubblicato",
       "textDone": "Cosa è stato pubblicato",
+      "textNot": "Cosa sarebbe stato pubblicato",
       "values": "Cosa farà",
       "valuesDone": "Cosa ha fatto",
+      "valuesNot": "Cosa avrebbe fatto",
       "trail": "Come ci è arrivato",
       "showSteps": "Vedi ogni passo",
       "hideSteps": "Nascondi i passi",

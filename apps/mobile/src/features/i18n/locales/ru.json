@@ -1292,6 +1292,9 @@
     "addWorkspaceTeamShort": "Войти на сервер команды",
     "addWorkspaceTeamSubShort": "Адрес или QR-код на компьютере",
     "addWorkspaceFoot": "Вы не выходите ни из одного пространства.",
+    "addAccount": "Войти в другой аккаунт",
+    "addAccountSub": "На {{host}}, не выходя из этого",
+    "accountNoWorkspace": "Пока нет рабочего пространства",
     "teamServerLeadShort": "Тот, что ваша команда открывает в браузере.",
     "teamServerQuestion": "Какой адрес у вашей команды?",
     "account": {
