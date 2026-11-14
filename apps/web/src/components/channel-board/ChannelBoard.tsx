@@ -1,7 +1,6 @@
 import type { Channel, Dashboard } from "@agenteschat/client";
-import { frozenBoard, useDashboard, useDashboards, useSetChannelDashboard } from "@agenteschat/client";
+import { frozenBoard, useDashboard, useDashboards } from "@agenteschat/client";
 import { errorCode, errorText } from "@agenteschat/client/lib/errors";
-import { managesChannel } from "@agenteschat/client/lib/permissions";
 import { Button, EmptyState, Field, Menu, MenuItem, MenuSeparator, Select } from "@agenteschat/ui";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
@@ -17,6 +16,7 @@ import { WidgetPanel } from "@/components/widgets/WidgetPanel";
 import { useEscClose } from "@/hooks/useEscClose";
 import { channelPanelSearch, useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
+import { useChannelDashboard } from "./link";
 import "./channel-board.css";
 
 /**
@@ -73,11 +73,9 @@ function Floating({ label, onClose, children }: { label: string; onClose: () => 
 }
 
 function Body({ channel, onLinked }: { channel: Channel; onLinked?: () => void }) {
-  const { org, me } = useOrg();
-  // The channel's own rule for its name and topic; nothing changes while the workspace is being deleted.
-  const manages = managesChannel(channel, me.user.id, org) && !org.deletion;
+  const { org } = useOrg();
+  const { dashboardId: linked, manages } = useChannelDashboard(channel);
   const [changing, setChanging] = useState(false);
-  const linked = channel.dashboardId ?? null;
   const query = useDashboard(org.id, linked);
   const picked = () => {
     setChanging(false);
@@ -114,9 +112,8 @@ function Body({ channel, onLinked }: { channel: Channel; onLinked?: () => void }
 /** Links a board, or takes it away (null), saying so. */
 function useLink(channel: Channel) {
   const { t, i18n } = useTranslation();
-  const { org } = useOrg();
   const toast = useToast();
-  const set = useSetChannelDashboard(org.id, channel.id);
+  const { set } = useChannelDashboard(channel);
   const link = (board: Pick<Dashboard, "id" | "title"> | null, done?: () => void) =>
     set.mutate(board?.id ?? null, {
       onSuccess: () => {
@@ -152,6 +149,7 @@ function Picker({
   const { org } = useOrg();
   const list = useDashboards(org.id, manages);
   const { link, pending } = useLink(channel);
+  const { dashboardId } = useChannelDashboard(channel);
   const [creating, setCreating] = useState(false);
   if (!manages)
     return (
@@ -188,13 +186,13 @@ function Picker({
           }}
         >
           <Select
-            value={channel.dashboardId ?? undefined}
+            value={dashboardId ?? undefined}
             placeholder={t("channelBoard.choose")}
             disabled={pending}
             options={boards.map((d) => ({ value: d.id, label: d.title }))}
             onValueChange={(id) => {
               const board = boards.find((d) => d.id === id);
-              if (board && id !== channel.dashboardId) link(board, onPicked);
+              if (board && id !== dashboardId) link(board, onPicked);
               else onCancel?.();
             }}
           />

@@ -309,6 +309,7 @@ import {
 import { CorrectionAsk } from "@/components/CorrectionAsk";
 import { type ChannelActions, ChannelActionsContext, useChannelActions } from "@/components/channel-actions";
 import { ChannelBoard } from "@/components/channel-board/ChannelBoard";
+import { useChannelDashboard } from "@/components/channel-board/link";
 import { DatePill, type DatePillHandle } from "@/components/DatePill";
 import { DeleteChannelDialog } from "@/components/DeleteChannelDialog";
 import { MenuEntries } from "@/components/DesktopMenus";
@@ -1076,6 +1077,7 @@ function ChannelView({
   const membersColumn = useMembersColumn();
   const dmSidebar = useDmSidebar();
   const boardColumn = useChannelBoardColumn();
+  const channelBoard = useChannelDashboard(channel);
   // A channel with no dashboard: the one whose picker floats over the chat (whoever may link one asked for it).
   const [choosingBoard, setChoosingBoard] = useState<string | null>(null);
   // Opened from a sidebar row's "Adicionar pessoas ou agentes": straight to adding, and closing that closes it all.
@@ -2438,8 +2440,8 @@ function ChannelView({
       : null;
   // The channel's dashboard (ADR 0135 §21): a column, or a panel on a narrow window, once one is linked. With none,
   // the button is only for whoever may link one: it opens the picker over the chat, and linking shows the column.
-  const hasBoard = Boolean(channel.dashboardId);
-  const boardButton = !chrome && (hasBoard || (managesChannel(channel, me.user.id, org) && !org.deletion));
+  const hasBoard = channelBoard.dashboardId !== null;
+  const boardButton = !chrome && (hasBoard || channelBoard.manages);
   const picking = !hasBoard && choosingBoard === channel.id;
   const boardLinked = () => {
     setChoosingBoard(null);
