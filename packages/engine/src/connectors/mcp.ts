@@ -377,7 +377,7 @@ export function createConnectorToolSource(
       const freed = freedByPerson(row, connection);
       const executor = tool.name === COMPOSIO_EXECUTOR;
       // A gateway's `call` (Executor) runs other tools by path: judged and kept one path at a time (ADR 0180).
-      const gateway = !composio && isGatewayCallTool(tool);
+      const pathCall = !composio && isGatewayCallTool(tool);
       const sqlArg = composio ? null : sqlArgOf(tool, preset);
       // Our rules for a Composio action as they are now (its entry's `ask`, its tags at the pinned version), not only
       // as the row stored them at the last sync: an action they make ask asks on every connection at once.
@@ -412,10 +412,10 @@ export function createConnectorToolSource(
           rememberAs: tool.name,
           ...(executor ? { actions: composioActions, readScope: customScope(connection.id, "read") } : {}),
           ...(resumeWith ? { resumeWith } : {}),
-          ...(gateway ? { actions: gatewayCallPaths } : {}),
+          ...(pathCall ? { actions: gatewayCallPaths } : {}),
           ...(sqlArg ? { sqlReads: { tool: tool.name, arg: sqlArg } } : {}),
           describe: (input) => {
-            const actions = executor ? composioActions(input) : gateway ? gatewayCallPaths(input) : null;
+            const actions = executor ? composioActions(input) : pathCall ? gatewayCallPaths(input) : null;
             return {
               title: `${connection.label}: ${actions ? actions.join(", ") : row.label}`,
               detail: `${tool.name} · ${Object.entries(input)

@@ -270,7 +270,7 @@ export const AgentAudience = z
   })
   .openapi("AgentAudience");
 
-/** How much an agent asks before acting (ADR 0173). */
+/** A kind of risk a call carries (ADR 0180). */
 export const RiskClass = z.enum(RISK_CLASSES).openapi("RiskClass", {
   description:
     "A kind of risk a call carries (ADR 0180): it deletes, spends money, reaches people, shares outside, replaces data, or deploys and merges.",
@@ -278,6 +278,7 @@ export const RiskClass = z.enum(RISK_CLASSES).openapi("RiskClass", {
 /** A list of classes as the API takes it: each class at most once. */
 export const RiskClasses = z.array(RiskClass).max(RISK_CLASSES.length);
 
+/** How much an agent asks before acting (ADR 0173). */
 export const ApprovalsLevel = z.enum(["always", "risky", "never"]).openapi("ApprovalsLevel", {
   description:
     "`always`: every write to a connected app asks a person. `risky` (the default): what is marked sensitive asks. `never`: only merge, deploy, rollback and the like ask. A routine's run, and one a routine's reading feeds, ask for every write to a connected app at any level. Scopes, connector access and the budget bind at every level.",

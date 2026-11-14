@@ -87,7 +87,9 @@ describe("Configurações do workspace", () => {
     const kinds = ["Apagar", "Gastar dinheiro", "Falar com pessoas", "Compartilhar para fora", "Substituir dados"];
     const switches = [...kinds, "Deploy e merge"].map((name) => within(card).getByRole("switch", { name }));
     expect(switches.map((s) => s.getAttribute("aria-checked"))).toEqual(Array(6).fill("true"));
-    expect(hintOf("Pedir aprovação para", card).text).toContain("Desligue um e os agentes fazem sem perguntar");
+    expect(hintOf("Pedir aprovação para", card).text).toContain(
+      "Desligue um e os agentes que perguntam só o arriscado fazem sem perguntar",
+    );
     await click(switches[5] as HTMLElement);
     await settle(4);
     expect(state.calls.findLast((c) => c.method === "orgs.updateSettings")?.args[1]).toEqual({

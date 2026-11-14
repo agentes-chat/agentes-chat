@@ -2997,12 +2997,11 @@
   },
   "riskTolerance": {
     "title": "Fragen vor",
-    "help": "Ein Agent, der nur bei Riskantem fragt, fragt vor diesen Aktionen eine Person. Schalte eine aus, und Agenten tun es, ohne zu fragen, jeder Aufruf im Prüfprotokoll. Was ein Tool nicht benennt und die Änderungen einer Routine fragen weiter.",
+    "help": "Schalte eine aus, und Agenten, die nur bei Riskantem fragen, tun es ohne zu fragen, jeder Aufruf im Prüfprotokoll.",
     "lead": "Eine Person gibt diese frei, bevor ein Agent sie ausführt.",
     "all": "Alles Riskante",
     "none": "Nichts",
     "some": "{{asks}} von {{total}}",
-    "change": "Ändern",
     "follow": "Wie im Workspace",
     "classes": {
       "deletes": "Löschen",

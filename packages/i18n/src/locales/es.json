@@ -3092,12 +3092,11 @@
   },
   "riskTolerance": {
     "title": "Pedir aprobación para",
-    "help": "Un agente que solo pregunta lo arriesgado le pregunta a una persona antes de esto. Desactiva uno y los agentes lo hacen sin preguntar, cada llamada en el registro de auditoría. Lo que una herramienta no nombra, y los cambios de una rutina, siguen preguntando.",
+    "help": "Desactiva uno y los agentes que solo preguntan lo arriesgado lo hacen sin preguntar, cada llamada en el registro de auditoría.",
     "lead": "Una persona aprueba esto antes de que un agente lo haga.",
     "all": "Todo lo arriesgado",
     "none": "Nada",
     "some": "{{asks}} de {{total}}",
-    "change": "Cambiar",
     "follow": "Igual que el workspace",
     "classes": {
       "deletes": "Borrar",

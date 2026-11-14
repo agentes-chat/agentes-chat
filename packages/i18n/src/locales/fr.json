@@ -3097,12 +3097,11 @@
   },
   "riskTolerance": {
     "title": "Demander avant",
-    "help": "Un agent qui ne demande que pour ce qui est risqué demande à une personne avant ces actions. Désactivez-en une et les agents la font sans demander, chaque appel dans le journal d'audit. Ce qu'un outil ne nomme pas, et les changements d'une routine, demandent toujours.",
+    "help": "Désactivez-en une et les agents qui ne demandent que pour ce qui est risqué la font sans demander, chaque appel dans le journal d'audit.",
     "lead": "Une personne approuve ces actions avant qu'un agent les fasse.",
     "all": "Tout ce qui est risqué",
     "none": "Rien",
     "some": "{{asks}} sur {{total}}",
-    "change": "Modifier",
     "follow": "Comme l'espace de travail",
     "classes": {
       "deletes": "Supprimer",

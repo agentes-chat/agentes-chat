@@ -4,6 +4,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+  askingOf,
   type CustomDeps,
   connectCustomServer,
   connectorGrantValidator,
@@ -25,7 +26,6 @@ import {
   type ToolContext,
   type ToolDefinition,
   type ToolSource,
-  unaskedRisksOf,
   updateAgent,
   updateOrgSettings,
   ValidationError,
@@ -65,6 +65,8 @@ describe("the risk classes a call carries", () => {
       [["SHOPIFY_GRAPH_QL_QUERY"], null],
       [["COMPOSIO_PROXY_EXECUTE"], null],
       [["VERCEL_EXECUTE_SANDBOX_COMMAND", "VERCEL_DELETE_PROJECT"], null],
+      // An Executor path that runs whatever it is told, wherever its verb sits.
+      [["tools.vercel.runDeleteScript"], null],
     ];
     expect(cases.map(([names]) => [names, riskClassesOf(names)])).toEqual(cases);
   });
@@ -249,6 +251,8 @@ describe("a workspace's risk tolerance", () => {
     const ctx = await runAs("person");
     expect(await call(ctx, EXECUTOR, { slugs: ["GMAIL_SEND_EMAIL"] })).toBe("result");
     expect(await call(ctx, EXECUTOR, { slugs: ["GMAIL_SEND_EMAIL", "GMAIL_DELETE_DRAFT"] })).toBe("approval");
+    // An action whose risk nothing names asks, even beside a tolerated one.
+    expect(await call(ctx, EXECUTOR, { slugs: ["GMAIL_SEND_EMAIL", "BANK_WIRE_FUNDS"] })).toBe("approval");
     expect(await call(ctx, EXECUTOR, { slugs: [{ slug: "GMAIL_SEND_EMAIL" }] })).toBe("approval");
   });
 
@@ -257,11 +261,11 @@ describe("a workspace's risk tolerance", () => {
     await updateOrgSettings(f.db, f.owner.id, f.org.id, { unaskedRisks: ["deletes"] });
     await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { unaskedRisks: [] });
     expect((await getAgent(f.db, f.org.id, f.agent.id))?.unaskedRisks).toEqual([]);
-    expect(await unaskedRisksOf(f.db, f.org.id, f.agent.id)).toEqual([]);
+    expect((await askingOf(f.db, f.org.id, f.agent.id)).unaskedRisks).toEqual([]);
     const ctx = await runAs("person");
     expect(await call(ctx, DELETE)).toBe("approval");
     await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { unaskedRisks: ["spends_money", "spends_money"] });
-    expect(await unaskedRisksOf(f.db, f.org.id, f.agent.id)).toEqual(["spends_money"]);
+    expect((await askingOf(f.db, f.org.id, f.agent.id)).unaskedRisks).toEqual(["spends_money"]);
     expect(await call(ctx, REFUND)).toBe("result");
     expect(await call(ctx, DELETE)).toBe("approval");
     await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { unaskedRisks: null });

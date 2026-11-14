@@ -3193,12 +3193,11 @@
   },
   "riskTolerance": {
     "title": "Pytaj przed",
-    "help": "Agent, który pyta tylko o ryzykowne rzeczy, pyta osobę przed tymi działaniami. Wyłącz jedno, a agenci zrobią to bez pytania, każde wywołanie w dzienniku audytu. To, czego narzędzie nie nazywa, i zmiany rutyny nadal wymagają pytania.",
+    "help": "Wyłącz jedno, a agenci pytający tylko o ryzykowne rzeczy zrobią to bez pytania, każde wywołanie w dzienniku audytu.",
     "lead": "Osoba zatwierdza to, zanim agent to zrobi.",
     "all": "Wszystko, co ryzykowne",
     "none": "Nic",
     "some": "{{asks}} z {{total}}",
-    "change": "Zmień",
     "follow": "Jak w workspace",
     "classes": {
       "deletes": "Usuwanie",

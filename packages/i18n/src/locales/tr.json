@@ -2986,12 +2986,11 @@
   },
   "riskTolerance": {
     "title": "Şunlardan önce sor",
-    "help": "Yalnızca riskli olanı soran bir ajan bunlardan önce bir kişiye sorar. Birini kapatırsan ajanlar sormadan yapar, her çağrı denetim kaydında olur. Bir aracın belirtmediği işler ve bir rutinin değişiklikleri sormaya devam eder.",
+    "help": "Birini kapatırsan yalnızca riskli olanı soran ajanlar bunu sormadan yapar, her çağrı denetim kaydında olur.",
     "lead": "Bir ajan bunları yapmadan önce bir kişi onaylar.",
     "all": "Riskli olan her şey",
     "none": "Hiçbiri",
     "some": "{{total}} içinden {{asks}}",
-    "change": "Değiştir",
     "follow": "Çalışma alanıyla aynı",
     "classes": {
       "deletes": "Silme",

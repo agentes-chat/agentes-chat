@@ -19,12 +19,12 @@ export const RISK_CLASSES = [
 ] as const;
 export type RiskClass = (typeof RISK_CLASSES)[number];
 
-export const isRiskClass = (value: unknown): value is RiskClass => RISK_CLASSES.includes(value as RiskClass);
+const isRiskClass = (value: unknown): value is RiskClass => RISK_CLASSES.includes(value as RiskClass);
 
 /** A list of classes from the API: known ones only, each once, in the canonical order. */
-export function riskClassesFrom(value: unknown, field = "unaskedRisks"): RiskClass[] {
+export function riskClassesFrom(value: unknown): RiskClass[] {
   if (!Array.isArray(value) || !value.every(isRiskClass)) {
-    throw new ValidationError(`${field} must list some of: ${RISK_CLASSES.join(", ")}`);
+    throw new ValidationError(`unaskedRisks must list some of: ${RISK_CLASSES.join(", ")}`);
   }
   return RISK_CLASSES.filter((c) => value.includes(c));
 }
@@ -47,28 +47,31 @@ const WORDS: Record<RiskClass, RegExp> = {
 };
 
 /**
- * Verbs right after the app that start what then runs on its own or run whatever their arguments say
- * (`VERCEL_EXECUTE_SANDBOX_COMMAND`): the gateway's `alwaysAsks` reads them the same way. Such a call has no class
- * we can name.
+ * Verbs that start what then runs on its own or run whatever their arguments say (`VERCEL_EXECUTE_SANDBOX_COMMAND`,
+ * `tools.vercel.runDeleteScript`): anywhere in a name, since an Executor path puts its verb after the app's segments.
+ * Such a call has no class we can name.
  */
 const RUNS_ANYTHING = new Set(["commit", "trigger", "run", "execute", "invoke"]);
 
+/** A name that runs whatever its arguments say: GraphQL, SQL, a raw request, one of `RUNS_ANYTHING`. */
+const runsAnything = (name: string) => openEnded(name) || nameWords(name).some((w) => RUNS_ANYTHING.has(w));
+
+/** The classes the words of one name carry (none for a name that says nothing of its risk). */
+const classesOfName = (name: string): RiskClass[] =>
+  RISK_CLASSES.filter((c) => nameWords(name).some((word) => WORDS[c].test(word)));
+
 /**
- * The risk classes of a call, from the names that say what it does: the server's name for the tool, its scope and,
- * for a tool that runs others, each action (`calls[].path` through Executor, a Composio slug). Null when one of
- * them runs whatever its arguments say (GraphQL, SQL, a raw request, `execute_*`), or when no word names a class:
- * the call's risk is then unknown and it asks as before.
+ * The risk classes of a call, or null when its risk is unknown and it asks as before. `actions`: what a tool that runs
+ * others runs on this call (Composio slugs, Executor paths), each of which must name a class of its own, so a batch
+ * can't carry an action nobody classed beside one that is tolerated. Without actions, the server's name for the tool
+ * and its scope together. Any name that runs whatever it is told makes the risk unknown.
  */
-export function riskClassesOf(names: readonly string[]): RiskClass[] | null {
-  const found = new Set<RiskClass>();
-  for (const name of names) {
-    if (!name) continue;
-    const words = nameWords(name);
-    if (openEnded(name) || RUNS_ANYTHING.has(words[1] ?? "")) return null;
-    for (const word of words) {
-      for (const c of RISK_CLASSES) if (WORDS[c].test(word)) found.add(c);
-    }
-  }
+export function riskClassesOf(names: readonly string[], actions?: readonly string[]): RiskClass[] | null {
+  const read = actions ?? names.filter(Boolean);
+  if (read.length === 0 || read.some(runsAnything)) return null;
+  const each = read.map(classesOfName);
+  if (actions && each.some((classes) => classes.length === 0)) return null;
+  const found = new Set(each.flat());
   return found.size > 0 ? RISK_CLASSES.filter((c) => found.has(c)) : null;
 }
 
@@ -96,16 +99,16 @@ export async function askingOf(
   };
 }
 
-/** The classes an agent runs without a card (`askingOf`). */
-export const unaskedRisksOf = async (db: Executor, orgId: string, agentId: string) =>
-  (await askingOf(db, orgId, agentId)).unaskedRisks;
-
 /**
  * Whether a call that asks only for its risk runs without a card under this tolerance: the classes it carries, when
  * every one of them is tolerated; else null. `names` are what `riskClassesOf` reads.
  */
-export function toleratedRisks(unasked: readonly RiskClass[], names: readonly string[]): RiskClass[] | null {
+export function toleratedRisks(
+  unasked: readonly RiskClass[],
+  names: readonly string[],
+  actions?: readonly string[],
+): RiskClass[] | null {
   if (unasked.length === 0) return null;
-  const classes = riskClassesOf(names);
+  const classes = riskClassesOf(names, actions);
   return classes?.every((c) => unasked.includes(c)) ? classes : null;
 }

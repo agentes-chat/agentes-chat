@@ -3190,12 +3190,11 @@ export const en = {
   /** Which kinds of risk ask a person before an agent at "Only what is risky" acts (ADR 0180). */
   riskTolerance: {
     title: "Ask before",
-    help: "An agent that asks only for what is risky asks a person before these. Turn one off and agents do it without asking, each call in the audit log. What a tool doesn't name, and a routine's changes, still ask.",
+    help: "Turn one off and agents that ask only for what is risky do it without asking, each call in the audit log.",
     lead: "A person approves these before an agent does them.",
     all: "Everything risky",
     none: "Nothing",
     some: "{{asks}} of {{total}}",
-    change: "Change",
     follow: "Same as the workspace",
     classes: {
       deletes: "Deleting",

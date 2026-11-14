@@ -7319,7 +7319,7 @@
     "value": "Ask before"
   },
   "riskTolerance.help": {
-    "value": "An agent that asks only for what is risky asks a person before these. Turn one off and agents do it without asking, each call in the audit log. What a tool doesn't name, and a routine's changes, still ask."
+    "value": "Turn one off and agents that ask only for what is risky do it without asking, each call in the audit log."
   },
   "riskTolerance.lead": {
     "value": "A person approves these before an agent does them."
@@ -7332,9 +7332,6 @@
   },
   "riskTolerance.some": {
     "value": "{{asks}} of {{total}}"
-  },
-  "riskTolerance.change": {
-    "value": "Change"
   },
   "riskTolerance.follow": {
     "value": "Same as the workspace"

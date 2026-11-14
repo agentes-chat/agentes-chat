@@ -3099,12 +3099,11 @@
   },
   "riskTolerance": {
     "title": "Chiedi prima di",
-    "help": "Un agente che chiede solo per ciò che è rischioso chiede a una persona prima di queste azioni. Disattivane una e gli agenti la fanno senza chiedere, ogni chiamata nel registro di controllo. Ciò che uno strumento non nomina, e le modifiche di una routine, chiedono ancora.",
+    "help": "Disattivane una e gli agenti che chiedono solo per ciò che è rischioso la fanno senza chiedere, ogni chiamata nel registro di controllo.",
     "lead": "Una persona approva queste azioni prima che un agente le faccia.",
     "all": "Tutto ciò che è rischioso",
     "none": "Niente",
     "some": "{{asks}} di {{total}}",
-    "change": "Cambia",
     "follow": "Come il workspace",
     "classes": {
       "deletes": "Eliminare",

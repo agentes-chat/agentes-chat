@@ -2901,12 +2901,11 @@
   },
   "riskTolerance": {
     "title": "Minta persetujuan untuk",
-    "help": "Agen yang hanya bertanya untuk hal berisiko akan bertanya ke seseorang sebelum ini. Matikan salah satu dan agen melakukannya tanpa bertanya, setiap panggilan tercatat di log audit. Yang tidak disebut alat, dan perubahan rutinitas, tetap bertanya.",
+    "help": "Matikan salah satu dan agen yang hanya bertanya untuk hal berisiko melakukannya tanpa bertanya, setiap panggilan tercatat di log audit.",
     "lead": "Seseorang menyetujui ini sebelum agen melakukannya.",
     "all": "Semua yang berisiko",
     "none": "Tidak ada",
     "some": "{{asks}} dari {{total}}",
-    "change": "Ubah",
     "follow": "Sama seperti workspace",
     "classes": {
       "deletes": "Menghapus",

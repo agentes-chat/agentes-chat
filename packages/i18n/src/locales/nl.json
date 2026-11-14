@@ -3000,12 +3000,11 @@
   },
   "riskTolerance": {
     "title": "Vragen vóór",
-    "help": "Een agent die alleen bij risico vraagt, vraagt hiervoor eerst een persoon. Zet er een uit en agents doen het zonder te vragen, elke aanroep in het auditlog. Wat een tool niet benoemt, en de wijzigingen van een routine, vragen nog steeds.",
+    "help": "Zet er een uit en agents die alleen bij risico vragen doen het zonder te vragen, elke aanroep in het auditlog.",
     "lead": "Een persoon keurt dit goed voordat een agent het doet.",
     "all": "Alles wat riskant is",
     "none": "Niets",
     "some": "{{asks}} van {{total}}",
-    "change": "Wijzigen",
     "follow": "Zoals de workspace",
     "classes": {
       "deletes": "Verwijderen",

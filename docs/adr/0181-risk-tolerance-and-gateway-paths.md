@@ -4,7 +4,7 @@
 - Date: 2026-11-13
 - Extends: ADR 0173 (approvals level per agent, "Aprovar sempre" on every card), ADR 0174 (freeing a sensitive
   custom tool), ADR 0015 (Tool Gateway and approvals)
-- Code: `packages/engine/src/tools/risk.ts` (`RISK_CLASSES`, `riskClassesOf`, `unaskedRisksOf`, `toleratedRisks`),
+- Code: `packages/engine/src/tools/risk.ts` (`RISK_CLASSES`, `riskClassesOf`, `askingOf`, `toleratedRisks`),
   `packages/engine/src/tools/gateway.ts` (`toleratedCall`, the listing and the call), `packages/db/src/schema/agents.ts`
   (`organization_settings.unasked_risks`, `agents.unasked_risks`, migration `0256_unasked_risks`),
   `packages/engine/src/management.ts`, `packages/engine/src/agents.ts`, `packages/engine/src/connectors/custom.ts`
@@ -39,10 +39,12 @@ time.
    (`JUDGE_REASONS`) and the words that make a name sensitive (`SENSITIVE_VERBS`, the gateway's `RISKY_WORDS` and
    never-for-good list), grouped the way people say them.
 2. **A call's classes come from its names** (`riskClassesOf`): the server's name for the tool and its scope, or, for a
-   tool that runs others, each action this call runs (a Composio slug, an Executor path). A call has no class, and
-   its risk is unknown, when nothing names one (a server's `destructiveHint` on `call` or `toggle`) or when a name
-   runs whatever its arguments say (GraphQL, SQL, a raw request, `execute_*`, `run_*`). A call whose actions can't be
-   read has no class either.
+   tool that runs others, each action this call runs (a Composio slug, an Executor path). There every action must
+   name a class of its own: a batch with one action nobody classed (`[deleteFile, wireFunds]`) is unknown, never
+   "deletes". A call has no class, and its risk is unknown, when nothing names one (a server's `destructiveHint` on
+   `call` or `toggle`) or when any name runs whatever its arguments say (GraphQL, SQL, a raw request, and `execute`,
+   `run`, `invoke`, `trigger` or `commit` anywhere in it, since an Executor path puts its verb after the app). A call
+   whose actions can't be read has no class either.
 3. **The tolerance lists the classes that run without a card** (`unasked_risks`). The workspace's is on
    `organization_settings`, empty by default, so every class asks as before. An agent may have its own list
    (`agents.unasked_risks`), which replaces the workspace's; null follows it. Storing what runs unasked, rather than
@@ -91,6 +93,16 @@ agent a list of its own when turned off. The phone has both as grouped rows.
 - A judge's reason stored for an ambiguous tool (`spends_money` on a tool at `approval`) is not read: that tool is at
   `approval` by a person's confirmation, not by its classification, so it keeps asking.
 - An agent's own list can be wider than the workspace's: whoever manages agents could already set `never`.
+- A sensitive custom tool sits at `approval` whether a person chose it or the classification forced it (ADR 0174
+  allows only `approval`, `off` or a freed `write`), so the tolerance lifts both. Who wants one such tool to keep
+  asking narrows the tolerance, or turns that agent's own list down.
+- A mail send through Composio (`GMAIL_SEND_EMAIL`) is a connected app's action, not a mailbox of ADR 0038: it runs
+  without a card when `reaches_people` is tolerated. A mailbox connected for an agent (`mail:` scopes) keeps its own
+  setting.
+- Item 4 asked for "Aprovar sempre" on gateway tools "when the owner has opted in". The offer on the card is the
+  opt-in: ADR 0173 already offers a whole-tool rule on every card, and a per-path rule is narrower than that.
+- A whole-tool rule someone kept on Executor's `call` before this change (action `''`) no longer covers a call that
+  names paths: each path asks once more, then is kept on its own.
 - Lines that say merge, deploy and rollback ask "unless the agent never asks" (the agent's tools page) are untrue for
   an agent whose tolerance lets deploys run. The Approvals row beside them says so ("Só o arriscado · 5 de 6").
 - Not done here: showing a gateway's model-mode approval (`approval-required` in a tool result) as a native card, and

@@ -226,7 +226,7 @@ export function toleratedCall(
   // A tool that runs others is judged by what this call runs; listed, before any call, it isn't judged at all.
   if (tool.actions) {
     const actions = input ? tool.actions(input) : null;
-    return actions?.length ? toleratedRisks(ctx.unasked, [...actions, tool.scope]) : null;
+    return actions ? toleratedRisks(ctx.unasked, [], actions) : null;
   }
   return toleratedRisks(ctx.unasked, [tool.rememberAs ?? tool.name, tool.scope]);
 }

@@ -3117,12 +3117,11 @@ export const ptBR = {
   /** Quais tipos de risco pedem uma pessoa antes de um agente em "Só o arriscado" agir (ADR 0180). */
   riskTolerance: {
     title: "Pedir aprovação para",
-    help: "Um agente que pergunta só o arriscado pede a uma pessoa antes destes. Desligue um e os agentes fazem sem perguntar, cada chamada no log de auditoria. O que uma ferramenta não diz, e as mudanças de uma rotina, continuam pedindo.",
+    help: "Desligue um e os agentes que perguntam só o arriscado fazem sem perguntar, cada chamada no log de auditoria.",
     lead: "Uma pessoa aprova estes antes de um agente fazer.",
     all: "Tudo que é arriscado",
     none: "Nada",
     some: "{{asks}} de {{total}}",
-    change: "Mudar",
     follow: "Igual ao workspace",
     classes: {
       deletes: "Apagar",
