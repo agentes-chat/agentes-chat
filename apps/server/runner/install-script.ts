@@ -725,9 +725,8 @@ install_claude() {
   return 1
 }
 
-# Codex for every user: the latest release's static build for this processor, into $CODEX_EXE (on a Mac, its build
-# for macOS, for this user).
-install_codex() {
+# The build of Codex for this processor (on a Mac, its build for macOS), in $BUILD.
+codex_build() {
   case "$(uname -m)" in
     x86_64 | amd64) CPU=x86_64 ;;
     aarch64 | arm64) CPU=aarch64 ;;
@@ -735,6 +734,12 @@ install_codex() {
   esac
   BUILD=$CPU-unknown-linux-musl
   if [ "$(uname -s)" = Darwin ]; then BUILD=$CPU-apple-darwin; fi
+}
+
+# Codex for every user: the latest release's static build for this processor, into $CODEX_EXE (on a Mac, its build
+# for macOS, for this user).
+install_codex() {
+  codex_build || return 1
   CX=$(mktemp -d) || return 1
   mkdir -p "\${CODEX_EXE%/*}" || return 1
   if download "$CODEX_RELEASES/codex-$BUILD.tar.gz" "$CX/codex.tar.gz" &&
@@ -745,6 +750,37 @@ install_codex() {
   fi
   rm -rf "$CX" "$CODEX_EXE.new"
   return 1
+}
+
+# Codex runs tool calls in code mode, through a binary of its own next to $CODEX_EXE: codex-code-mode-host, a separate
+# asset of the release (codex's archive doesn't carry it). Without it every tool call fails. Taken from the release of
+# the codex that is there, so the two speak the same version.
+install_codex_host() {
+  codex_build || return 1
+  V=$("$CODEX_EXE" --version 2>/dev/null | head -n 1 | sed 's/^[^0-9]*//; s/ .*//')
+  [ -n "$V" ] || return 1
+  HOST=codex-code-mode-host-$BUILD
+  CX=$(mktemp -d) || return 1
+  if download "\${CODEX_RELEASES%/latest/download}/download/rust-v$V/$HOST.tar.gz" "$CX/host.tar.gz" &&
+    tar -xzf "$CX/host.tar.gz" -C "$CX" && cp "$CX/$HOST" "$CODEX_HOST_EXE.new" &&
+    chmod 755 "$CODEX_HOST_EXE.new" && mv -f "$CODEX_HOST_EXE.new" "$CODEX_HOST_EXE"; then
+    rm -rf "$CX"
+    return 0
+  fi
+  rm -rf "$CX" "$CODEX_HOST_EXE.new"
+  return 1
+}
+
+# Codex's code mode host, when Codex is there without it (a codex installed before the host was needed, too).
+get_codex_host() {
+  CODEX_HOST_EXE=\${CODEX_EXE%/*}/codex-code-mode-host
+  if [ ! -x "$CODEX_EXE" ] || [ -x "$CODEX_HOST_EXE" ]; then return 0; fi
+  if ! t_run "Installing Codex's code mode host" install_codex_host; then
+    t_tail "$T_LOG"
+    t_warn "Installing Codex's code mode host failed, and Codex's tools don't run without it: run this again"
+    return 0
+  fi
+  t_step "Codex's code mode host, in $CODEX_HOST_EXE"
 }
 
 # $1 (claude or codex) at $2, named $3: kept when it is there (it updates itself), else installed with install_$1.
@@ -794,7 +830,10 @@ install_requirements() {
       browser) get_chrome ;;
       desktop) desktop_packages ;;
       claude) get_cli claude "$CLAUDE_EXE" "Claude Code" ;;
-      codex) get_cli codex "$CODEX_EXE" Codex ;;
+      codex)
+        get_cli codex "$CODEX_EXE" Codex
+        get_codex_host
+        ;;
     esac
   done
   t_gap
