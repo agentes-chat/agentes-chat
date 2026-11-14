@@ -3659,7 +3659,7 @@ html:not([data-pointer]) .ac-back:focus-visible {
   border-radius: var(--radius-cut);
 }
 
-/* Before and after, as GitHub shows a change: added on green with a green bar, removed on red, struck through. */
+/* Before and after: added on green, removed on red, struck through. The tint alone says which, no bar on the edge. */
 .ac-diff {
   display: flex;
   flex-direction: column;
@@ -3667,7 +3667,7 @@ html:not([data-pointer]) .ac-back:focus-visible {
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
-/* The rows on its rounded corners take its radius less its border, so a row's tint and bar follow the corner. */
+/* The rows on its rounded corners take its radius less its border, so a row's tint follows the corner. */
 .ac-diff > :first-child {
   border-top-left-radius: calc(var(--radius-sm) - 1px);
   border-top-right-radius: calc(var(--radius-sm) - 1px);
@@ -3696,12 +3696,10 @@ html:not([data-pointer]) .ac-back:focus-visible {
 .ac-diff__line--add,
 .ac-diff__block--add {
   background: color-mix(in srgb, var(--ok) 12%, transparent);
-  box-shadow: inset 3px 0 0 var(--ok);
 }
 .ac-diff__line--del,
 .ac-diff__block--del {
   background: color-mix(in srgb, var(--danger) 10%, transparent);
-  box-shadow: inset 3px 0 0 var(--danger);
 }
 .ac-diff__line--add .ac-diff__mark {
   color: var(--ok);
