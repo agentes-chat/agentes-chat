@@ -274,6 +274,14 @@ describe("Tarefas at their worst", () => {
     expect(row.classList.contains("issue-list__row")).toBe(true);
     expect(row.querySelector(".issue-list__title")?.textContent).toBe(URL_TITLE);
     expect(facts(row)[0]).toBe("#12873");
+    // Each fact says which it is, for the list's columns; with every fact at once there are more columns than a list
+    // has room for, so these rows keep packing their facts.
+    const kinds = [...row.querySelectorAll(".issue-card__facts > .ac-factline__fact")].map((f) =>
+      f.getAttribute("data-fact"),
+    );
+    expect(kinds[0]).toBe("number");
+    expect(kinds).toContain("label");
+    expect((row.closest(".ac-groups") as HTMLElement).hasAttribute("data-fact-columns")).toBe(false);
     expect(cardOf(136).querySelector(".issue-list__title > code.ac-inlinecode")?.textContent).toBe("bun test");
   });
 

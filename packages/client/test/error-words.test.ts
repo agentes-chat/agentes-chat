@@ -486,6 +486,9 @@ const PLAIN_LINE = new Set([
   "request_used",
   "right_hand.missing",
   "right_hand_approvals.budget",
+  // "Quem pode" sends only the rows and steps the cargo page draws (`areaRows`, `rowMax`): another is a client fault.
+  "role.level_invalid",
+  "role.row_unknown",
   "routine.action_always_asks",
   "routine.action_invalid",
   "routine.connector_hook",

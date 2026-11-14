@@ -1,11 +1,13 @@
 import { type Agent, type Approval, type Member, useApprovalsDeciding } from "@agenteschat/client";
 import {
+  approvalLine,
   approvalRuns,
   approveAllScope,
   approveAlwaysAlso,
   approveAlwaysOn,
   cardDeadline,
   itemOwnWords,
+  type LinePlace,
   runKeys,
 } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
@@ -275,6 +277,7 @@ export function ApprovalGroupAsk({
   const partial = approveAllPartial(t, items, waits);
   const runs = approvalRuns(items);
   const keys = runKeys(runs);
+  const line = approvalLine(items);
   const [only] = runs;
   const one = runs.length === 1 && only && only.length > 1 ? only : null;
   const isOpen = (key = "") => opened.has(key);
@@ -292,6 +295,7 @@ export function ApprovalGroupAsk({
       lead={leadItem}
       always={!inRun && always.has(a.id)}
       also={approveAlwaysAlso(items, a)}
+      place={line.get(a.id)}
       agent={agent}
       members={members}
     />
@@ -437,6 +441,7 @@ function GroupItem({
   lead,
   always,
   also,
+  place,
   agent,
   members,
 }: {
@@ -444,6 +449,8 @@ function GroupItem({
   lead: Approval;
   always: boolean;
   also: string[];
+  /** Where it stands on the card: an approved one runs after what the agent asked before it (`approvalLine`). */
+  place: LinePlace | undefined;
   agent: Agent | undefined;
   members: Map<string, Member>;
 }) {
@@ -530,6 +537,14 @@ function GroupItem({
       ) : (
         <p className="rq__item-outcome">
           {decisionOutcome(t, approval, me.user.id, (id) => members.get(id)?.name)}
+          {place?.waitsOn
+            ? ` · ${t("approval.line.after", {
+                // With its place on the card: two requests of one kind ("Criar issue") tell apart by it.
+                title: `${approvalTitle(t, place.waitsOn)} (${t("approvals.position", { n: place.waitsOnAt, total: place.count })})`,
+              })}`
+            : approval.result?.notRunAfter
+              ? ` · ${t("approval.line.notRun")}`
+              : null}
           {ahead === "scheduled" && approval.canCancel && <CancelAhead id={approval.id} />}
         </p>
       )}
