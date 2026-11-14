@@ -103,7 +103,7 @@ export const isRolePermission = (v: unknown): v is RolePermission =>
 
 /**
  * What the `everyone` role ("Todos") holds in a new workspace: what any member could do before roles, now as
- * keys (the same list as migration 0130, with `own_computers` from migration 0211 and `create_agents` from 0270).
+ * keys (the same list as migration 0130, with `own_computers` from migration 0211 and `create_agents` from 0272).
  */
 export const EVERYONE_DEFAULTS: readonly RolePermission[] = [
   "post",

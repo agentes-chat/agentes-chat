@@ -1,6 +1,6 @@
 {
   "id": "19e27f85-4bcc-4756-8a26-1f8342802ebf",
-  "prevId": "19ea2f6c-4551-4717-b2d5-472a0986880f",
+  "prevId": "b34cede3-a316-442b-bd12-4fe32692395b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -15814,6 +15814,28 @@
           ],
           "isUnique": false,
           "where": "\"agent_runs\".\"waiting_machine_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "agent_runs_done_finished_idx": {
+          "name": "agent_runs_done_finished_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "finished_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"agent_runs\".\"status\" = 'done'",
           "concurrently": false,
           "method": "btree",
           "with": {}

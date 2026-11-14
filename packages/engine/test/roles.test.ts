@@ -607,7 +607,7 @@ describe("Duplicar copies the role's reach", () => {
 describe("every member creates agents", () => {
   const migration = async () =>
     f.db.execute(
-      sql.raw(await Bun.file(new URL("../../db/migrations/0270_everyone_creates_agents.sql", import.meta.url)).text()),
+      sql.raw(await Bun.file(new URL("../../db/migrations/0272_everyone_creates_agents.sql", import.meta.url)).text()),
     );
 
   test("a new workspace's base role holds it: a member makes an agent of their own", async () => {
