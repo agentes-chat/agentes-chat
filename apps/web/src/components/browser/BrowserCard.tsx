@@ -97,6 +97,7 @@ import { useOrg } from "../org-context";
 import { colorOf } from "../Sky";
 import { useComputerEdition } from "../WorkspaceComputer";
 import { AddressBar } from "./AddressBar";
+import { AgentCursor } from "./AgentCursor";
 import { Cover } from "./Cover";
 import { LivePicture } from "./LivePicture";
 import { requestBrowserCard, useBrowserCardRequest } from "./open";
@@ -1395,6 +1396,8 @@ export function BrowserCard({
             >
               {inControl && <textarea ref={pasteRef} className="brw-paste" tabIndex={-1} aria-hidden="true" />}
               <LivePicture frame={frame} alt={t("browser.live.page", g)} imgRef={imgRef} />
+              {/* Nobody in control: the agent works, and its cursor shows where (ADR 0040 §7.2). */}
+              {!controller && <AgentCursor agentId={agentId} name={name} color={color} pointer={live.pointer} />}
               {mark && <span key={mark.key} className="brw-mark" style={{ left: mark.x, top: mark.y }} />}
               {(sliding || scrolling) && (
                 <span className="brw-ac__capture" role="status" data-esc-layer="">
