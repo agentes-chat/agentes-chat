@@ -5445,6 +5445,7 @@
         "effort": "Impegno",
         "efforts": {
           "auto": "Automatico",
+          "none": "Predefinito del modello",
           "low": "Basso",
           "medium": "Medio",
           "high": "Alto",
@@ -5461,6 +5462,8 @@
           "auto": "Il modello Automatico sceglie l'impegno di ogni attività. Scegli un modello per fissare l'impegno.",
           "low": "Risponde in fretta. Adatto alle domande semplici.",
           "medium": "Il predefinito. Ragiona abbastanza quasi sempre.",
+          "mediumKey": "Ragiona abbastanza quasi sempre.",
+          "none": "Il modello ragiona quanto fa di solito. Scegli un livello per fissare l'impegno.",
           "high": "Ragiona di più sulle attività difficili. Più lento e costa di più.",
           "max": "Ragiona il più possibile. Molto più lento e più caro."
         },
@@ -5488,6 +5491,7 @@
           "defaults": "Ripristina i predefiniti",
           "contents": {
             "model": "Finestra di contesto",
+            "modelFixed": "Impegno e finestra di contesto",
             "auto": "Finestra di contesto e a chi risponde",
             "fixed": "Impegno, finestra di contesto e a chi risponde",
             "autoSpeed": "Velocità, finestra di contesto e a chi risponde",

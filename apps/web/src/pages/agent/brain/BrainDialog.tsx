@@ -9,8 +9,8 @@ import {
   type Advanced,
   advancedDefaults,
   advancedParts,
-  EFFORT_LEVELS,
-  type EffortLevel,
+  effortLevelsOf,
+  effortTextOf,
   isAdvancedDefault,
 } from "@agenteschat/client/lib/brain-advanced";
 import { brainModelLine, brainPickText } from "@agenteschat/client/lib/brain-picker";
@@ -111,9 +111,6 @@ interface Switched {
 interface MoreDraft extends Advanced {
   extraUsage: boolean;
 }
-
-/** The effort's ramp: Automático is the model's choice, not a level (an automatic model picks the effort too). */
-const EFFORTS: readonly EffortLevel[] = EFFORT_LEVELS;
 
 /**
  * `at`: a screen to open on, past the first one, which "back" leads to (a link's, e.g. the notification "Escolher
@@ -493,9 +490,11 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
   };
   const saveMore = async () => {
     const input: AgentBrainInput = {};
+    // A fixed model takes the ramp's level, on a key too; "Automático" picks its own. On a key none is the provider's
+    // default, saved as `auto` ("Voltar ao padrão", which clears a level kept under "Automático" too).
+    const was = s.kind !== "model" && isAuto(view.effort) ? AUTO : s.effort;
+    if ((!isAuto(s.modelNow) || m.effort === null) && m.effort !== was) input.effort = m.effort ?? AUTO;
     if (s.kind !== "model") {
-      const was = isAuto(view.effort) ? AUTO : s.effort;
-      if (!isAuto(s.modelNow) && m.effort !== was) input.effort = m.effort;
       if (s.speedOn && m.speed !== view.speed) input.speed = m.speed;
       if (m.fallback !== view.fallback) input.fallback = m.fallback;
       if (m.onlyOwner !== view.onlyOwner) input.onlyOwner = m.onlyOwner;
@@ -583,7 +582,8 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
       autoModel: isAuto(s.modelNow),
       apiKey: s.apiKey,
       now: {
-        effort: s.effort,
+        // The workspace's setup for a key carries no effort yet (ADR 0041, amended 2026-11-12): its line names none.
+        effort: s.kind === "model" ? null : s.effort,
         speed: s.speedOn ? view.speed : "standard",
         contextTokens: s.shownContext,
         onlyOwner: view.onlyOwner,
@@ -918,25 +918,25 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
       );
       return (
         <div className="bd-lines">
-          {s.kind !== "model" &&
-            line(
-              "effort",
-              t("agentPage.work.brain.effort"),
-              autoModel ? t("brain.auto.label") : t(`agentPage.work.brain.efforts.${m.effort}`),
-              autoModel ? (
-                // "Automático" picks the effort too: said where the ramp would be.
-                <p className="bd-fold__hint">{t("agentPage.work.brain.effortText.auto")}</p>
-              ) : (
-                <EffortPixels
-                  label={t("agentPage.work.brain.effort")}
-                  value={m.effort}
-                  onValueChange={(e) => setMore({ ...m, effort: e })}
-                  color={draft.look.color}
-                  steps={EFFORTS.map((e) => ({ value: e, label: t(`agentPage.work.brain.efforts.${e}`) }))}
-                  hint={(e) => t(`agentPage.work.brain.effortText.${e}`)}
-                />
-              ),
-            )}
+          {line(
+            "effort",
+            t("agentPage.work.brain.effort"),
+            autoModel ? t("brain.auto.label") : t(`agentPage.work.brain.efforts.${m.effort ?? "none"}`),
+            autoModel ? (
+              // "Automático" picks the effort too: said where the ramp would be.
+              <p className="bd-fold__hint">{t("agentPage.work.brain.effortText.auto")}</p>
+            ) : (
+              <EffortPixels
+                label={t("agentPage.work.brain.effort")}
+                value={m.effort}
+                onValueChange={(e) => setMore({ ...m, effort: e })}
+                color={draft.look.color}
+                steps={effortLevelsOf(s.kind).map((e) => ({ value: e, label: t(`agentPage.work.brain.efforts.${e}`) }))}
+                hint={(e) => t(`agentPage.work.brain.effortText.${effortTextOf(s.kind, e)}`)}
+                unset={t("agentPage.work.brain.efforts.none")}
+              />
+            ),
+          )}
           {s.speedOn &&
             line(
               "speed",

@@ -13,6 +13,7 @@ import {
   accountKindOf,
   accountRow,
   accountSaved,
+  advancedResetInput,
   agentAccounts,
   existingRows,
   flowBack,
@@ -975,6 +976,28 @@ describe("the agent's AI", () => {
     expect(screen).toContain("onPress={() => openAgentSetup(agentId)}");
     const route = await Bun.file(new URL("../../app/(app)/agent-setup/[id].tsx", import.meta.url).pathname).text();
     expect(route).toContain("<AgentSetupScreen agentId={id");
+  });
+
+  test("Voltar ao padrão on an API key gives the effort back to the model, Automático too; nothing chosen saves none", () => {
+    const base = { effort: null, speed: "standard" as const, contextTokens: null, onlyOwner: true, fallback: true };
+    const key = { brain: "model" as const, onlyOwner: true };
+    expect(advancedResetInput(key, { ...base, effort: "high", contextTokens: 400_000 }, false)).toEqual({
+      contextTokens: null,
+      effort: "auto",
+    });
+    expect(advancedResetInput(key, { ...base, effort: "high" }, true)).toEqual({ contextTokens: null, effort: "auto" });
+    expect(advancedResetInput(key, base, false)).toEqual({ contextTokens: null });
+    // On a computer, Medium, its default; "Automático" keeps picking its own.
+    const plan = { brain: "claude_code" as const, onlyOwner: true };
+    expect(advancedResetInput(plan, { ...base, effort: "high" }, false)).toEqual({
+      contextTokens: null,
+      effort: "medium",
+      fallback: true,
+    });
+    expect(advancedResetInput(plan, { ...base, effort: "high" }, true)).toEqual({
+      contextTokens: null,
+      fallback: true,
+    });
   });
 
   test("Usar em outros agentes on other people's plans asks once before saving, naming every owner", async () => {

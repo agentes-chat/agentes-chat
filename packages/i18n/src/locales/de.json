@@ -5263,6 +5263,7 @@
         "effort": "Aufwand",
         "efforts": {
           "auto": "Automatisch",
+          "none": "Standard des Modells",
           "low": "Niedrig",
           "medium": "Mittel",
           "high": "Hoch",
@@ -5279,6 +5280,8 @@
           "auto": "Das automatische Modell wählt den Aufwand jeder Aufgabe. Wähle ein Modell, um den Aufwand festzulegen.",
           "low": "Antwortet schnell. Gut für einfache Fragen.",
           "medium": "Der Standard. Denkt meistens genug nach.",
+          "mediumKey": "Denkt meistens genug nach.",
+          "none": "Das Modell denkt so viel wie üblich. Wähle eine Stufe, um den Aufwand festzulegen.",
           "high": "Denkt bei schweren Aufgaben mehr nach. Langsamer und teurer.",
           "max": "Denkt so viel wie möglich nach. Viel langsamer und teurer."
         },
@@ -5306,6 +5309,7 @@
           "defaults": "Auf Standard zurücksetzen",
           "contents": {
             "model": "Kontextfenster",
+            "modelFixed": "Aufwand und Kontextfenster",
             "auto": "Kontextfenster und wem er antwortet",
             "fixed": "Aufwand, Kontextfenster und wem er antwortet",
             "autoSpeed": "Geschwindigkeit, Kontextfenster und wem er antwortet",

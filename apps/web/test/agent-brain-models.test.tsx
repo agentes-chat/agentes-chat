@@ -573,6 +573,66 @@ describe("Quem pensa: Automático", () => {
     expect(within(d).getByRole("slider", { name: "Esforço" }).getAttribute("aria-valuetext")).toBe("Médio");
   });
 
+  test("an API key with a fixed model: the effort is under Mais opções, none chosen until the ramp moves", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    // New agents are created with the effort on auto: on a key that leaves it to the provider.
+    follow(api, fakeAgentBrain(ADA_ID, { effort: "auto" }));
+    await open(state, api);
+    const d = await brainDialog();
+    expect(lineOf(d, "Mais opções")).toBe("Esforço e janela de contexto");
+    await toScreen(d, "Mais opções");
+    expect(lineOf(d, "Esforço")).toBe("Padrão do modelo");
+    await toScreen(d, "Esforço");
+    const ramp = within(d).getByRole("slider", { name: "Esforço" });
+    // The API takes three levels: Máximo would go as Alto, so it isn't offered.
+    expect(ramp.getAttribute("aria-valuemax")).toBe("3");
+    expect(ramp.getAttribute("aria-valuetext")).toBe("Padrão do modelo");
+    expect(ramp.textContent).not.toContain("Máximo");
+    expect(d.textContent).toContain("O modelo pensa o quanto costuma.");
+    await act(async () => fireEvent.keyDown(ramp, { key: "ArrowRight" }));
+    expect(ramp.getAttribute("aria-valuetext")).toBe("Baixo");
+    await act(async () => fireEvent.keyDown(ramp, { key: "ArrowRight" }));
+    // Médio is a level here, not the default.
+    expect(ramp.getAttribute("aria-valuetext")).toBe("Médio");
+    expect(d.textContent).not.toContain("O padrão.");
+    await act(async () => fireEvent.keyDown(ramp, { key: "ArrowRight" }));
+    expect(ramp.getAttribute("aria-valuetext")).toBe("Alto");
+    await done(d);
+    await settle(6);
+    expect(brainCalls(state)).toEqual([{ brain: "model", effort: "high" }]);
+  });
+
+  test("an API key: a stored Máximo shows as Alto, and Voltar ao padrão gives it back to the model", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    follow(api, fakeAgentBrain(ADA_ID, { effort: "max" }));
+    await open(state, api);
+    expect(brainCell().value).toContain("esforço alto");
+    const d = await brainDialog();
+    await toScreen(d, "Mais opções");
+    expect(lineOf(d, "Esforço")).toBe("Alto");
+    await act(async () => fireEvent.click(within(d).getByRole("button", { name: "Voltar ao padrão" })));
+    expect(lineOf(d, "Esforço")).toBe("Padrão do modelo");
+    await done(d);
+    await settle(6);
+    expect(brainCalls(state)).toEqual([{ brain: "model", effort: "auto" }]);
+  });
+
+  test("an API key on Automático: no ramp, the model picks the effort", async () => {
+    const state = seedState();
+    const api = createFakeApi(state);
+    await api.agents.update(ORG_ID, ADA_ID, { model: "auto" });
+    follow(api, fakeAgentBrain(ADA_ID, { effort: "auto" }));
+    await open(state, api);
+    const d = await brainDialog();
+    expect(lineOf(d, "Mais opções")).toBe("Janela de contexto");
+    await toScreen(d, "Mais opções");
+    expect(lineOf(d, "Esforço")).toBe("Automático");
+    await toScreen(d, "Esforço");
+    expect(within(d).queryByRole("slider", { name: "Esforço" })).toBeNull();
+  });
+
   test("a new agent (Automático on every brain) switching to Claude Code starts there on Automático", async () => {
     const state = seedState();
     const api = createFakeApi(state);

@@ -1599,6 +1599,13 @@ test("the agent's account and effort apply to its own brain; signed out or an ol
   // Another brain (a mission's choice): neither applies; an account of another kind is no account.
   expect(brainEffortFor(agent, "codex")).toBeUndefined();
   expect(brainEffortFor(agent, "claude_code")).toBe("low");
+  // On a key the effort holds too; a computer brain's fallback to the API sends none.
+  expect(brainEffortFor({ brain: "model", brainEffort: "high" }, "model")).toBe("high");
+  expect(brainEffortFor(agent, "model")).toBeUndefined();
+  expect(await resolveBrain({ db: f.db }, { ...agent, brain: "model" }, run, question.id)).toEqual({
+    kind: "model",
+    effort: "low",
+  });
   const codex = await resolveBrain({ db: f.db }, { ...agent, brain: "codex" }, run, question.id);
   expect(codex.account).toBeUndefined();
   // Signed out: the plan says so before the computer is asked.

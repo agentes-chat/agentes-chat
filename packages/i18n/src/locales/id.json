@@ -5091,6 +5091,7 @@
         "effort": "Upaya",
         "efforts": {
           "auto": "Otomatis",
+          "none": "Default model",
           "low": "Rendah",
           "medium": "Sedang",
           "high": "Tinggi",
@@ -5107,6 +5108,8 @@
           "auto": "Model Otomatis memilih upaya tiap tugas. Pilih model untuk menetapkan upayanya.",
           "low": "Menjawab cepat. Cocok untuk pertanyaan sederhana.",
           "medium": "Default. Berpikir cukup hampir setiap saat.",
+          "mediumKey": "Berpikir cukup hampir setiap saat.",
+          "none": "Model berpikir seperti biasanya. Pilih tingkat untuk menetapkan upaya.",
           "high": "Berpikir lebih banyak untuk tugas sulit. Lebih lambat dan lebih mahal.",
           "max": "Berpikir semaksimal mungkin. Jauh lebih lambat dan lebih mahal."
         },
@@ -5134,6 +5137,7 @@
           "defaults": "Kembali ke default",
           "contents": {
             "model": "Jendela konteks",
+            "modelFixed": "Upaya dan jendela konteks",
             "auto": "Jendela konteks dan siapa yang dijawabnya",
             "fixed": "Upaya, jendela konteks, dan siapa yang dijawabnya",
             "autoSpeed": "Kecepatan, jendela konteks, dan siapa yang dijawabnya",

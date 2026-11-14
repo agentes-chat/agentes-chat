@@ -325,7 +325,7 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
                   label={t("agentPage.work.brain.advanced.title")}
                   sub={advancedContents(t, {
                     kind: view.brain,
-                    autoModel: isAuto(view.effectiveModel),
+                    autoModel: isAuto(view.brain === "model" ? agent?.model : view.effectiveModel),
                     speed: viewSpeedFits(view),
                   })}
                   chevron
