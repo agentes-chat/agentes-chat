@@ -524,11 +524,12 @@ test("a system-mode runner (root) without workers does no agent work; machine-le
     "keep.end",
     // Fixing the Mac's own Xcode is the computer's; root answers it can't (no person's screen to ask on).
     "xcode.fix",
-    "xcode.open",
     // Looking again for the coding CLIs only reads the computer's PATH: root answers it.
     "clis.check",
     // Root installs nothing for the agents' users (the computer's setup does): it answers unsupported.
     "cli.install",
+    // Opening Xcode on the Mac, beside its fix (listed in `MACHINE_OPS` order).
+    "xcode.open",
   ]);
   const install = { op: "cli.install", action: "start", tool: "claude" } as unknown as MachineRequest;
   const installer = { ...ctx, cliInstall: () => ({ install: { tool: "claude" as const, state: "running" as const } }) };
