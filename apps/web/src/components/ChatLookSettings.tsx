@@ -188,7 +188,7 @@ export function ChatLookSettings() {
         <div className="settings-row ac-actrow">
           <span className="settings-row__text ac-actrow__text">
             <span className="settings-row__label">{t("settings.account.chat.fullMessages")}</span>
-            <span className="settings-row__hint">{t("settings.account.chat.fullMessagesHelp")}</span>
+            <span className="settings-row__status">{t("settings.account.chat.fullMessagesHelp")}</span>
           </span>
           <Switch
             checked={prefs?.fullMessages === true}
