@@ -117,23 +117,32 @@ export async function readZip(file: Blob): Promise<ZipEntry[]> {
     let at = p + 46 + nameLen;
     const extraEnd = at + extraLen;
     if (extraEnd + commentLen > buf.length) throw new ZipError("corrupt");
+    const needsZip64 = size === MAX32 || compressed === MAX32 || local === MAX32;
+    let hasZip64 = false;
     while (at + 4 <= extraEnd) {
       const id = view.getUint16(at, true);
       const len = view.getUint16(at + 2, true);
       if (id === 0x0001) {
+        hasZip64 = true;
         let q = at + 4;
-        if (size === MAX32) {
-          size = Number(view.getBigUint64(q, true));
+        const wide = () => {
+          if (q + 8 > at + 4 + len || q + 8 > extraEnd || q + 8 > buf.length) throw new ZipError("corrupt");
+          const value = Number(view.getBigUint64(q, true));
+          if (!Number.isSafeInteger(value)) throw new ZipError("corrupt");
           q += 8;
+          return value;
+        };
+        if (size === MAX32) {
+          size = wide();
         }
         if (compressed === MAX32) {
-          compressed = Number(view.getBigUint64(q, true));
-          q += 8;
+          compressed = wide();
         }
-        if (local === MAX32) local = Number(view.getBigUint64(q, true));
+        if (local === MAX32) local = wide();
       }
       at += 4 + len;
     }
+    if (needsZip64 && !hasZip64) throw new ZipError("corrupt");
     next = extraEnd + commentLen;
     if (name.endsWith("/")) continue;
     const encrypted = (flags & 1) === 1;
@@ -150,9 +159,14 @@ export async function readZip(file: Blob): Promise<ZipEntry[]> {
         if (from + packed > file.size) throw new ZipError("corrupt");
         if (method === 0) {
           if (packed > size) throw new ZipError("too_large");
+          if (packed !== size) throw new ZipError("corrupt");
           return (await slice(from, from + packed)).bytes;
         }
-        if (method === 8) return inflate(file.slice(from, from + packed), size);
+        if (method === 8) {
+          const inflated = await inflate(file.slice(from, from + packed), size);
+          if (inflated.length !== size) throw new ZipError("corrupt");
+          return inflated;
+        }
         throw new ZipError("method");
       },
     });
