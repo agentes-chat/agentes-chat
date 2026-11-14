@@ -218,14 +218,18 @@ export function createS3BlobStore(
       const { origin, host, path } = locate(settings, key);
       const { amzDate, date } = amzDates(now());
       const expires = Math.max(1, Math.min(604_800, Math.round(expiresInSeconds)));
-      const safeName = filename?.replace(/["\\\r\n]/g, "_");
+      const safeName = filename?.replace(/[^\x20-\x7e]|["\\;]/g, "_");
       const query: Record<string, string> = {
         "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
         "X-Amz-Credential": `${settings.accessKeyId}/${date}/${settings.region}/s3/aws4_request`,
         "X-Amz-Date": amzDate,
         "X-Amz-Expires": String(expires),
         "X-Amz-SignedHeaders": "host",
-        ...(safeName ? { "response-content-disposition": `attachment; filename="${safeName}"` } : {}),
+        ...(safeName
+          ? {
+              "response-content-disposition": `attachment; filename="${safeName}"; filename*=UTF-8''${enc(filename ?? "")}`,
+            }
+          : {}),
       };
       const qs = canonicalQuery(query);
       const canonicalRequest = ["GET", path, qs, `host:${host}\n`, "host", "UNSIGNED-PAYLOAD"].join("\n");

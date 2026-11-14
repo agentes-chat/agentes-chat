@@ -2638,9 +2638,7 @@ export async function artifactDownload(
   const v = await versionRow(deps.db, a, version);
   const store = await deps.blobs.forConfig(orgId, v.storageConfigId);
   const filename =
-    a.kind === "file"
-      ? asciiName(v.fileName ?? fileName(a, v.version, "bin"))
-      : fileName(a, v.version, EXTENSIONS[a.kind]);
+    a.kind === "file" ? (v.fileName ?? fileName(a, v.version, "bin")) : fileName(a, v.version, EXTENSIONS[a.kind]);
   const signed = await store.signedUrl(v.blobKey, { expiresInSeconds: DOWNLOAD_URL_TTL_SECONDS, filename });
   const expiresAt = new Date(Date.now() + DOWNLOAD_URL_TTL_SECONDS * 1000).toISOString();
   const url = signed ?? `/api/app/organizations/${orgId}/artifacts/${artifactId}/file?version=${v.version}`;
