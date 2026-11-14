@@ -205,15 +205,19 @@
   gap: var(--space-1) var(--space-3);
   min-width: 0;
   line-height: 20px;
+  white-space: normal;
+  overflow: visible;
 }
-.invite-role__item {
+/* Not the select value's centred icon: `.ac-iconline` puts the mark on the name's capitals. */
+.invite-role__value > .invite-role__item {
+  align-items: flex-start;
   min-width: 0;
   overflow-wrap: anywhere;
 }
-/* The cargos' menu at the trigger's width, as a select's list is. */
+/* The cargos' menu at least the trigger's width, as a select's list is. */
 .invite-rolemenu.ac-menu {
   min-width: var(--radix-dropdown-menu-trigger-width);
-  max-width: min(var(--radix-dropdown-menu-trigger-width), calc(100vw - 2 * var(--space-3)));
+  max-width: calc(100vw - 2 * var(--space-3));
 }
 /* A line under a field: its icon on the words' capitals, a note muted, what to fix in the danger tone. */
 .invite-line {

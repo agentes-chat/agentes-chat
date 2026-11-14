@@ -582,6 +582,13 @@ describe("an invitation link asks to join", () => {
     expect(button("Abrir Acme")).toBeTruthy();
   });
 
+  test("a link that took all its people says so before anyone asks, and whom to ask for a new one", async () => {
+    await openLink({ ...LINK, full: true });
+    expect(heading()).toBe("Este link já recebeu todas as pessoas que podia.");
+    expect(lead()).toBe("Peça um link novo a Marina.");
+    expect(screen().queryByLabelText("Seu e-mail")).toBeNull();
+  });
+
   test("whoever works there is counted: the first four by name, then how many more", async () => {
     const agents = ["Ada", "Atlas", "Lia", "Theo"].map((name, i) => ({ id: `a${i}`, name, appearance: null }));
     await openLink({ ...LINK, agents, moreAgents: 2 });

@@ -659,7 +659,7 @@ export function LinkLimits({
       <Field
         label={t("invites.maxUses")}
         id="invite-link-max"
-        example={used !== undefined ? t("invites.usedSoFar", { count: used }) : undefined}
+        example={used ? t("invites.usedSoFar", { count: used }) : undefined}
       >
         <Select
           value={maxUses === null ? NO_LIMIT : String(maxUses)}

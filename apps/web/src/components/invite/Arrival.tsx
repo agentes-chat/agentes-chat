@@ -1,7 +1,7 @@
 import type { Channel } from "@agenteschat/client";
 import { useChannels, useSidebarView } from "@agenteschat/client";
 import { canTalk, listsAgent } from "@agenteschat/client/lib/audience";
-import { joinNames } from "@agenteschat/client/lib/format";
+import { heldWhole, namesText } from "@agenteschat/client/lib/format";
 import { Avatar, Button } from "@agenteschat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -17,6 +17,8 @@ const ARRIVING_MS = 86_400_000;
 /** The faces on the card: a few people, then the agents. */
 const PEOPLE_SHOWN = 3;
 const AGENTS_SHOWN = 4;
+/** The other channels the lead names before "e mais N". */
+const CHANNELS_SAID = 3;
 
 const closedKey = (userId: string, orgId: string) => `${STORAGE_KEYS.arrivalClosed}.${userId}.${orgId}`;
 const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
@@ -83,9 +85,10 @@ export function ArrivalCard({
           ? t("common.joinSentences", {
               a: lead,
               b: t("members.arrival.alsoIn", {
-                channels: joinNames(
-                  joined.map((c) => `#${c.name}`),
+                channels: namesText(
                   t,
+                  joined.map((c) => heldWhole(`#${c.name}`)),
+                  CHANNELS_SAID,
                 ),
               }),
             })

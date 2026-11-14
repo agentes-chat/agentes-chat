@@ -1,5 +1,5 @@
 import type { Channel, OrgRole } from "@agenteschat/client";
-import { daysBetween, formatShortDate, joinNames, relativeTime } from "@agenteschat/client/lib/format";
+import { daysBetween, formatShortDate, heldWhole, joinNames, relativeTime } from "@agenteschat/client/lib/format";
 import { sortRoles } from "@agenteschat/client/lib/roles";
 import { Icon, type IconName } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
@@ -82,7 +82,7 @@ export function givesText(
     ...(general ? [`#${general.name}`] : []),
     ...gives.channelIds.flatMap((id) => {
       const c = look.channels.find((x) => x.id === id);
-      return c && c.id !== general?.id ? [`#${c.name}`] : [];
+      return c && c.id !== general?.id ? [heldWhole(`#${c.name}`)] : [];
     }),
   ];
   const agents = gives.agentIds.flatMap((id) => look.agentName(id) ?? []);

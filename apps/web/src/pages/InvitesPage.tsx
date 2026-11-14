@@ -554,7 +554,7 @@ function InviteLinks({ links, look }: { links: readonly InviteLink[]; look: Look
               // biome-ignore lint/a11y/useSemanticElements: a row of the list, named for the link
               <div key={l.id} className="ac-list__row members-row ac-mediarow" role="group" aria-label={title}>
                 <Who
-                  face={<MarkOf roles={look.roles} ids={l.roleIds ?? []} size={36} />}
+                  face={<MarkOf roles={look.roles} ids={l.roleIds ?? []} size={32} />}
                   name={title}
                   sub={
                     l.createdBy
@@ -585,7 +585,7 @@ function InviteLinks({ links, look }: { links: readonly InviteLink[]; look: Look
               aria-label={t("invites.linkLabel", { name: title })}
             >
               <Who
-                face={<MarkOf roles={look.roles} ids={l.roleIds ?? []} size={36} />}
+                face={<MarkOf roles={look.roles} ids={l.roleIds ?? []} size={32} />}
                 name={title}
                 sub={givesText(t, { channelIds: l.channelIds ?? [], agentIds: l.agentIds ?? [] }, look)}
               >
