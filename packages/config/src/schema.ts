@@ -44,6 +44,11 @@ export interface EnvVarDefinition {
 const DSN = /^https?:\/\/[^@/\s]+@[^/\s]+\/(?:[^\s]*\/)?\d+$/;
 const DSN_MESSAGE = "must be a DSN such as https://<key>@errors.example.com/1";
 
+/** `host=secret` pairs: a bare lower-case host name, and a secret of 32 characters or more with no comma or space. */
+const HOST_NAME = "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*";
+const HOST_SECRET = `${HOST_NAME}=[^\\s,]{32,}`;
+const HOST_SECRETS = new RegExp(`^${HOST_SECRET}(?:,${HOST_SECRET})*$`);
+
 /** Claude model ids accepted as defaults. Prices live in `@agenteschat/providers` (`MODEL_CATALOG`). */
 const modelId = z.string().regex(/^[a-z0-9][a-z0-9.-]*$/, "must be a model id such as claude-sonnet-5-5");
 
@@ -705,6 +710,24 @@ export const envVars = {
     schema: z.string().optional(),
     description: "Client secret of the Linear OAuth app for the Linear connector.",
     section: "Connectors",
+    secret: true,
+  },
+  MCP_CALLER_IDENTITY: {
+    schema: z
+      .string()
+      .regex(HOST_SECRETS, {
+        error:
+          "must be host=secret pairs separated by commas, with no spaces: a lower-case host name, and a secret of at least 32 characters",
+      })
+      .refine((value) => {
+        const hosts = value.split(",").map((pair) => pair.slice(0, pair.indexOf("=")));
+        return new Set(hosts).size === hosts.length;
+      }, "names a host more than once")
+      .optional(),
+    description:
+      "MCP servers of your own that are told, verifiably, who is calling (ADR 0181), as `host=secret` pairs separated by commas: the host name of a server connected by address in Settings › Connectors (lower case, with no scheme, port or path) and a secret of at least 32 characters that the server holds too (`openssl rand -base64 48`). Every tool call an agent makes to that server carries, in the request's `params._meta[\"chat.agentes/caller\"]`, a statement signed with the secret (a JWT, HS256): this instance, the workspace, the agent, the run, the connection and the person the run acts for, good for 60 seconds. With it the server can refuse a call that doesn't come from the workspaces and agents it expects, even one that carries its key. Only over https on the default port; a host that isn't listed gets nothing. Unset (default): no call carries it.",
+    section: "Connectors",
+    example: "tools.example.com=<output of openssl rand -base64 48>",
     secret: true,
   },
   MILLIONSEND_API_KEY: {

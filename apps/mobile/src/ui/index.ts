@@ -98,7 +98,7 @@ export { Segmented, type SegmentedProps } from "./Segmented";
 export { Sheet, type SheetProps } from "./Sheet";
 export { SheetScreen, type SheetScreenProps } from "./SheetScreen";
 export { SheetSurface } from "./SheetSurface";
-export { SkeletonList, SkeletonRow } from "./Skeleton";
+export { SkeletonList, SkeletonRow, usePulse } from "./Skeleton";
 export { type SwipeAction, SwipeRow } from "./SwipeRow";
 export { searchCancelVisible, searchShowsResults } from "./searchMode";
 export {

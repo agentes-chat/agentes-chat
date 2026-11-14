@@ -590,7 +590,7 @@ html:not([data-pointer]) .rq__choice:focus-visible {
   box-shadow: inset 0 0 0 2px var(--warn);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .rq-wait > span {
+  .rq-wait:not(.rq-wait--still) > span {
     animation: rq-pulse 1.4s ease-in-out infinite;
   }
   /* "Ver" in the bar: the request lights up for a moment where it landed. */

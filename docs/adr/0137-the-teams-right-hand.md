@@ -313,7 +313,7 @@ The right hand is nobody's supervisor and reports to nobody (ADR 0148's addendum
 
 ### Context
 
-Asked to create a role for a marketing person who may not merge or deploy, the right hand said it could only assign one afterwards and opened Papéis e permissões for the owner to do it by hand. It was following the amendment of 2026-11-04 (§3 there), which kept roles' permissions, a channel's settings and more as screens it only opens. The standing decision says otherwise: it does almost everything the person can do in the app, as them, with the app's own confirmations.
+Asked to create a role for a marketing person who may not merge or deploy, the right hand said it could only assign one afterwards and opened Cargos for the owner to do it by hand. It was following the amendment of 2026-11-04 (§3 there), which kept roles' permissions, a channel's settings and more as screens it only opens. The standing decision says otherwise: it does almost everything the person can do in the app, as them, with the app's own confirmations.
 
 ### Decision
 
@@ -326,7 +326,7 @@ Asked to create a role for a marketing person who may not merge or deploy, the r
 ### Consequences
 
 - Lodi's own prompt grew by about 50 characters. The tool's schema loads only with the setup group and only for it, so a DM "oi" with any other agent is unchanged.
-- The phone draws the card and its inbox entry as the web does. Its Abrir for roles now opens the phone's own roles screen (Configurações › Papéis), which `APP_PAGES` had left out.
+- The phone draws the card and its inbox entry as the web does. Its Abrir for roles now opens the phone's own roles screen (Configurações › Cargos), which `APP_PAGES` had left out.
 - The catalog's invitations and requests to join send email through the server's address and secret, passed to the setup tools and the card's route.
 - Left for later, in the audit's order: a task's or a page's audience, approval covers, deleting tasks and board columns, the language and the rest of their own settings, pins and channel categories, invitation links, the task manager's paused runs, routines' stop, duplicate and take over, models and per-person limits, the Drive, the calendar, skills, agents' extras, proposals waiting on them, apps, AI keys and computers housekeeping, knowledge and memories by hand, dashboards' extras and missions. Also not in the catalog yet: undoing another agent's change from its receipt, correcting an agent's reply (a lesson), Responder agora, an agent's request to show a board to more people, a new agent's setup checklist, and one agent's Quem pensa and Autonomia for others. Posting as the right hand elsewhere waits on the owner's call.
 - Desfazer of taking a role away gives the role back, not the seats in the channels the person left with it (they may join again through it), nor the notifications those channels cleared. Leaving a private channel through `channel_people` is undone only by someone who manages it.
