@@ -14338,6 +14338,20 @@ export const en = {
     },
   },
   machines: {
+    folderRequests: {
+      title: "Folder requests",
+      empty: "No folder requests you can view.",
+      pending: "Waiting for access",
+      granted: "Access granted",
+      denied: "Access denied",
+      expired: "Request expired",
+      failed: "Request failed",
+      how: "How to allow access",
+      local: "Run this on {{computer}}, not on the chat server. Only that computer can grant access.",
+      warning: "This allows use of the folder. It is not a read-only permission.",
+      expires: "Expires {{time}}",
+      desktop: "You can also answer in the desktop app on that computer.",
+    },
     /** Why a computer can't run the agent browser or desktop use yet, by the runner's code; a command may follow. */
     reasons: {
       browser_unsupported: "The agent browser doesn't run on this computer's system.",

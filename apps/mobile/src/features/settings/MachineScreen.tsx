@@ -83,6 +83,7 @@ import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { goBack, MONO, successHaptic } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
+import { FolderRequestsSection } from "./FolderRequests";
 import { DESKTOP_TURN_ON, grantCommand, osOf, pauseText, type Reduce, reduceTexts, seenText } from "./logic";
 import { CommandBlock, chooseAction, confirmAction, Gap, SettingsPage, TerminalFallback } from "./parts";
 
@@ -378,6 +379,7 @@ export function MachineScreen({ machineId }: { machineId: string }) {
         </>
       ) : (
         <>
+          <FolderRequestsSection machine={m} />
           <FoldersSection machine={m} />
           <ToolsSection machine={m} onReduce={askReduce} />
           <BrowserSection machine={m} onTurnOff={() => askReduce({ kind: "tool", tool: "browser" })} />

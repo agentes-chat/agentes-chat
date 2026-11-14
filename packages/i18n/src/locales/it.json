@@ -14674,6 +14674,20 @@
     }
   },
   "machines": {
+    "folderRequests": {
+      "title": "Richieste di cartelle",
+      "empty": "Nessuna richiesta di cartella che puoi visualizzare.",
+      "pending": "In attesa di accesso",
+      "granted": "Accesso concesso",
+      "denied": "Accesso negato",
+      "expired": "Richiesta scaduta",
+      "failed": "Richiesta non riuscita",
+      "how": "Come consentire l’accesso",
+      "local": "Esegui questo su {{computer}}, non sul server della chat. Solo quel computer può concedere l’accesso.",
+      "warning": "Questo consente di usare la cartella. Non è un permesso di sola lettura.",
+      "expires": "Scade {{time}}",
+      "desktop": "Puoi anche rispondere dall’app desktop su quel computer."
+    },
     "reasons": {
       "browser_unsupported": "Il browser degli agenti non funziona sul sistema di questo computer.",
       "browser_download": "Non è stato possibile scaricare il browser degli agenti. Controlla la connessione di questo computer e riproverà al prossimo uso.",

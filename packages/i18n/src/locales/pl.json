@@ -15170,6 +15170,20 @@
     }
   },
   "machines": {
+    "folderRequests": {
+      "title": "Prośby o dostęp do folderów",
+      "empty": "Brak próśb o dostęp do folderów, które możesz wyświetlić.",
+      "pending": "Oczekiwanie na dostęp",
+      "granted": "Dostęp przyznany",
+      "denied": "Odmowa dostępu",
+      "expired": "Prośba wygasła",
+      "failed": "Prośba nie powiodła się",
+      "how": "Jak zezwolić na dostęp",
+      "local": "Uruchom to na {{computer}}, nie na serwerze czatu. Tylko ten komputer może przyznać dostęp.",
+      "warning": "To pozwala korzystać z folderu. Nie jest to uprawnienie tylko do odczytu.",
+      "expires": "Wygasa {{time}}",
+      "desktop": "Możesz też odpowiedzieć w aplikacji komputerowej na tym komputerze."
+    },
     "reasons": {
       "browser_unsupported": "Przeglądarka agentów nie działa w systemie tego komputera.",
       "browser_download": "Nie udało się pobrać przeglądarki agentów. Sprawdź połączenie tego komputera, a przy następnym użyciu spróbuje ponownie.",

@@ -14225,6 +14225,20 @@
     }
   },
   "machines": {
+    "folderRequests": {
+      "title": "Mapverzoeken",
+      "empty": "Geen mapverzoeken die je kunt bekijken.",
+      "pending": "Wachten op toegang",
+      "granted": "Toegang verleend",
+      "denied": "Toegang geweigerd",
+      "expired": "Verzoek verlopen",
+      "failed": "Verzoek mislukt",
+      "how": "Toegang toestaan",
+      "local": "Voer dit uit op {{computer}}, niet op de chatserver. Alleen die computer kan toegang verlenen.",
+      "warning": "Hiermee mag de map worden gebruikt. Dit is geen alleen-lezenmachtiging.",
+      "expires": "Verloopt {{time}}",
+      "desktop": "Je kunt ook antwoorden in de desktopapp op die computer."
+    },
     "reasons": {
       "browser_unsupported": "De browser van de agents werkt niet op het systeem van deze computer.",
       "browser_download": "De browser van de agents kon niet worden gedownload. Controleer de verbinding van deze computer, dan probeert hij het bij het volgende gebruik opnieuw.",

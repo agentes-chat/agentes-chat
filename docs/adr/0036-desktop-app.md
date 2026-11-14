@@ -149,3 +149,29 @@ The machine-side access model, built in the runner and shown in the app and on t
 - Two install modes coexist (desktop-managed and service-managed), kept apart by `managedBy` and the lock.
 - Unsigned builds add a one-time OS warning and possible repeated permission prompts on macOS until we sign.
 - A Rust toolchain enters CI (macOS runner minutes cost more than Linux).
+
+## Addendum: folder requests stay visible without the desktop app
+
+A service-managed runner stores folder requests and prints their local grant command to its log. Without the desktop
+app there is no tray notification. Opening Computers cannot grant the folder, so a person must not be sent there as
+if it were an approval.
+
+- The conversation's request card and the computer's page read `machine_access_requests` through
+  `GET …/machines/{id}/access/requests`. The list is for the computer's managers, at most 200 rows, pending first.
+  An exact `requestId` lookup is available to readers of its source conversation, including old cards outside that list.
+  Every read is scoped to the organization, computer and the conversations the person may read. Managing a computer
+  does not give access to someone else's DMs or a task they cannot see.
+- When a colleague asks from an agents-only DM, the existing `consultationOrigin` chain places the request card in
+  the human conversation that started the work. Readers of that origin may read the request, including ones stored
+  before this change. Its stored run and channel remain unchanged so the existing decision still wakes the colleague.
+- Both web and phone show the folder, agent, reason, expiry and current state. Duplicate pending requests for the same
+  agent and path share one list row, without merging their stored requests. Pending views refetch every 30 seconds,
+  and `machine.updated` invalidates them when a request or decision arrives. An offline runner's overdue pending
+  request reads as expired without changing its stored decision or waking work on a GET.
+- Granting still happens locally. The same-computer desktop bridge opens its requests. Otherwise a folded guide names
+  the computer where the copied command must run, adds `sudo` for system mode, and says explicitly that a folder grant
+  is not a read-only permission. The browser has no folder-grant endpoint or approval button.
+- The tool's pending result explains these two local paths and tells the agent not to invent a web approval. The
+  runner's existing decision delivery and agent wake-up are unchanged.
+
+No migration, new runner protocol or change to filesystem isolation is needed.

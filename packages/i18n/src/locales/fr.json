@@ -14662,6 +14662,20 @@
     }
   },
   "machines": {
+    "folderRequests": {
+      "title": "Demandes de dossiers",
+      "empty": "Aucune demande de dossier que vous pouvez consulter.",
+      "pending": "En attente d’accès",
+      "granted": "Accès accordé",
+      "denied": "Accès refusé",
+      "expired": "Demande expirée",
+      "failed": "Échec de la demande",
+      "how": "Comment autoriser l’accès",
+      "local": "Exécutez ceci sur {{computer}}, pas sur le serveur de discussion. Seul cet ordinateur peut accorder l’accès.",
+      "warning": "Cela autorise l’utilisation du dossier. Ce n’est pas une permission en lecture seule.",
+      "expires": "Expire {{time}}",
+      "desktop": "Vous pouvez aussi répondre dans l’application de bureau sur cet ordinateur."
+    },
     "reasons": {
       "browser_unsupported": "Le navigateur des agents ne fonctionne pas sur le système de cet ordinateur.",
       "browser_download": "Impossible de télécharger le navigateur des agents. Vérifiez la connexion de cet ordinateur et il réessaiera à la prochaine utilisation.",

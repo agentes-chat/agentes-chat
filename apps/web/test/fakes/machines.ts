@@ -37,6 +37,7 @@ import type {
   ComputerSetup,
   DesktopRelease,
   DeviceRequest,
+  FolderAccessRequest,
   HostComputer,
   Machine,
   MachineAccountKind,
@@ -59,6 +60,7 @@ export interface FakeMachines {
   /** What the machine reports (pause, access) changes. */
   patch(id: string, patch: Partial<Machine>): void;
   all(): Machine[];
+  setFolderRequests(machineId: string, requests: FolderAccessRequest[]): void;
   /** A computer asked for a code (`POST /api/machines/device`). */
   addDevice(userCode: string, input?: Partial<DeviceRequest>): DeviceRequest;
   /** The newest desktop build; `null` = none (404). With `targets`, only those systems have it (`darwin`, `windows`, `linux`). */
@@ -97,6 +99,7 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
   let releaseTargets: string[] | undefined;
   let outages: MachineOutages = { outages: [], targets: [] };
   const queues = new Map<string, ComputerQueue>();
+  const folderRequests = new Map<string, FolderAccessRequest[]>();
   let moveResult: MoveAgentsResult | null = null;
   let host: HostComputer | null = null;
   const PAIR: ComputerSetup = {
@@ -157,6 +160,10 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
   return {
     client: {
       list: async () => clone(machines),
+      folderRequests: async (orgId, machineId, requestId) => {
+        log("machines.folderRequests", orgId, machineId, requestId);
+        return clone((folderRequests.get(machineId) ?? []).filter((r) => !requestId || r.id === requestId));
+      },
       rename: async (orgId, machineId, name) => {
         log("machines.rename", orgId, machineId, name);
         const m = find(machineId);
@@ -361,6 +368,9 @@ export function createFakeMachines(ctx: MockContext, log: (method: string, ...ar
       if (m) Object.assign(m, patch);
     },
     all: () => clone(machines),
+    setFolderRequests: (machineId, requests) => {
+      folderRequests.set(machineId, clone(requests));
+    },
     setOutages: (next) => {
       outages = clone(next);
     },

@@ -17,6 +17,7 @@ import {
   getDeviceCode,
   hostComputerState,
   hostKey,
+  listFolderAccessRequests,
   listMachineOutages,
   listMachines,
   machineCliInstall,
@@ -573,6 +574,55 @@ export function machineAppRoutes(deps: AppDeps) {
       });
       if (!denied) return tooManyCodes(c);
       return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/machines/{machineId}/access/requests",
+      tags,
+      security,
+      summary: "Folder requests visible to this person; read-only, never grants access",
+      description:
+        "Listing requires the computer's manager. A conversation reader may look up a single request by id. Private conversations remain private. Returns at most 200 requests, pending first.",
+      request: { params: MachineParams, query: z.object({ requestId: z.uuid().optional() }) },
+      responses: {
+        200: json(
+          z.object({
+            requests: z.array(
+              z.object({
+                id: z.string(),
+                machineId: z.string(),
+                agent: z.object({ id: z.string(), name: z.string(), handle: z.string() }),
+                path: z.string(),
+                reason: z.string(),
+                status: z.string(),
+                createdAt: z.string(),
+                expiresAt: z.string(),
+                decidedAt: z.string().nullable(),
+                command: z.string().nullable(),
+              }),
+            ),
+          }),
+        ),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      return c.json(
+        {
+          requests: await listFolderAccessRequests(
+            db,
+            c.get("user").id,
+            orgId,
+            machineId,
+            c.req.valid("query").requestId,
+          ),
+        },
+        200,
+      );
     },
   );
 

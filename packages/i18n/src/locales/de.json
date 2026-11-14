@@ -14161,6 +14161,20 @@
     }
   },
   "machines": {
+    "folderRequests": {
+      "title": "Ordneranfragen",
+      "empty": "Keine für dich sichtbaren Ordneranfragen.",
+      "pending": "Warten auf Zugriff",
+      "granted": "Zugriff gewährt",
+      "denied": "Zugriff verweigert",
+      "expired": "Anfrage abgelaufen",
+      "failed": "Anfrage fehlgeschlagen",
+      "how": "Zugriff erlauben",
+      "local": "Führe dies auf {{computer}} aus, nicht auf dem Chatserver. Nur dieser Computer kann Zugriff gewähren.",
+      "warning": "Dies erlaubt die Nutzung des Ordners. Es ist keine reine Leseberechtigung.",
+      "expires": "Läuft ab: {{time}}",
+      "desktop": "Du kannst auch in der Desktop-App auf diesem Computer antworten."
+    },
     "reasons": {
       "browser_unsupported": "Der Browser der Agenten läuft nicht auf dem System dieses Computers.",
       "browser_download": "Der Browser der Agenten konnte nicht heruntergeladen werden. Prüfe die Verbindung dieses Computers, beim nächsten Mal versucht er es erneut.",

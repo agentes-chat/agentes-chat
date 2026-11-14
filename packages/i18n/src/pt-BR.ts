@@ -14346,6 +14346,20 @@ export const ptBR = {
     },
   },
   machines: {
+    folderRequests: {
+      title: "Pedidos de acesso a pastas",
+      empty: "Nenhum pedido de pasta que você possa ver.",
+      pending: "Aguardando acesso",
+      granted: "Acesso liberado",
+      denied: "Acesso recusado",
+      expired: "Pedido expirado",
+      failed: "Pedido falhou",
+      how: "Como liberar acesso",
+      local: "Execute em {{computer}}, não no servidor do chat. Só esse computador pode liberar o acesso.",
+      warning: "Isso permite usar a pasta. Não é uma permissão de somente leitura.",
+      expires: "Expira em {{time}}",
+      desktop: "Você também pode responder pelo app desktop nesse computador.",
+    },
     reasons: {
       browser_unsupported: "O navegador dos agentes não roda no sistema deste computador.",
       browser_download:

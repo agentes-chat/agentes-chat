@@ -409,13 +409,15 @@ export async function requestFolderAccess(
     details: { requestId: row.id, path, runId: ctx.runId ?? null },
   }).catch(() => undefined);
   await postRequestedNote(deps, row, machine.name, agent?.handle ?? "agent").catch(() => undefined);
+  await publishMachineUpdated(deps.pubsub, row.orgId, machine.id, { access: true });
   return { status: "pending", requestId: row.id, path };
 }
 
 /** The terminal command that allows the folder on a machine without the app (ADR 0036 §8). */
-export function allowFolderCommand(path: string, handle: string) {
+export function allowFolderCommand(path: string, handle: string, system = false) {
   const quoted = /^[\w./~:-]+$/.test(path) ? path : `'${path.replace(/'/g, `'\\''`)}'`;
-  return `agentes-runner folders allow ${quoted} --agent ${handle}`;
+  const agent = /^[a-z0-9][a-z0-9_-]*$/.test(handle) ? handle : `'${handle.replace(/'/g, `'\\''`)}'`;
+  return `${system ? "sudo " : ""}agentes-runner folders allow ${quoted} --agent ${agent}`;
 }
 
 /**
@@ -424,10 +426,15 @@ export function allowFolderCommand(path: string, handle: string) {
  */
 async function postRequestedNote(deps: AccessDeps, row: AccessRequestRow, computer: string, handle: string) {
   const command = allowFolderCommand(row.path, handle);
+  // Consultations also use the machine gateways. Resolve their origin at call time, not during module registration.
+  const { consultationOrigin } = await import("./consultations");
+  // A colleague's request must reach the person who asked, not stay invisible in the agents' private DM.
+  // Keep the stored run/channel for its existing wake-up path.
+  const origin = row.runId ? await consultationOrigin(deps.db, row.orgId, row.runId) : null;
   const message = await insertMessage(deps.db, {
     orgId: row.orgId,
-    channelId: row.channelId,
-    threadId: row.threadRootId,
+    channelId: origin?.channelId ?? row.channelId,
+    threadId: origin ? origin.threadId : row.threadRootId,
     author: { type: "agent", agentId: row.agentId, runId: null, hop: 0, stretchId: null },
     body: `Asked the owner of ${computer} for ${row.path}${row.reason ? ` (${row.reason})` : ""}. Without the app there, they can run: ${command}`,
     meta: {
@@ -448,7 +455,7 @@ export async function applyAccessDecided(
   machineId: string,
   frame: Extract<RunnerFrame, { type: "access.decided" }>,
 ) {
-  return deps.db.transaction(async (tx) => {
+  const decided = await deps.db.transaction(async (tx) => {
     const [row] = await tx
       .update(machineAccessRequests)
       .set({
@@ -474,6 +481,8 @@ export async function applyAccessDecided(
     });
     return row;
   });
+  if (decided) await publishMachineUpdated(deps.pubsub, decided.orgId, machineId, { access: true });
+  return decided;
 }
 
 /** The note in the thread (English; the app shows `bodyCode` in the person's language). */

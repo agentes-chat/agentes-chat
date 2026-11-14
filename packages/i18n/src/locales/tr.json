@@ -14098,6 +14098,20 @@
     }
   },
   "machines": {
+    "folderRequests": {
+      "title": "Klasör istekleri",
+      "empty": "Görüntüleyebileceğiniz klasör isteği yok.",
+      "pending": "Erişim bekleniyor",
+      "granted": "Erişim verildi",
+      "denied": "Erişim reddedildi",
+      "expired": "İsteğin süresi doldu",
+      "failed": "İstek başarısız oldu",
+      "how": "Erişime nasıl izin verilir",
+      "local": "Bunu sohbet sunucusunda değil, {{computer}} üzerinde çalıştırın. Erişimi yalnızca o bilgisayar verebilir.",
+      "warning": "Bu, klasörün kullanılmasına izin verir. Salt okunur bir izin değildir.",
+      "expires": "Sona erme: {{time}}",
+      "desktop": "O bilgisayardaki masaüstü uygulamasından da yanıtlayabilirsiniz."
+    },
     "reasons": {
       "browser_unsupported": "Ajanların tarayıcısı bu bilgisayarın sisteminde çalışmıyor.",
       "browser_download": "Ajanların tarayıcısı indirilemedi. Bu bilgisayarın bağlantısını kontrol edin, bir sonraki kullanımda yeniden denenir.",

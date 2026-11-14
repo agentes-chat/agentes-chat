@@ -4983,6 +4983,19 @@ export function useSetComputerTarget(orgId: string) {
 
 // ── Connected computers ─────────────────────────────────────────────────────
 
+/** Pending requests poll for expiry and missed events, including while the computer is offline. */
+export function useFolderAccessRequests(orgId: string, machineId: string, requestId?: string, enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.folderRequests(orgId, machineId, requestId),
+    queryFn: () => api.machines.folderRequests(orgId, machineId, requestId),
+    enabled: enabled && Boolean(machineId),
+    retry: false,
+    refetchInterval: (q) => (q.state.data?.some((r) => r.status === "pending") ? 30_000 : false),
+    meta: { quiet: true },
+  });
+}
+
 /** `pollMs`: also refetch this often (while waiting for a new machine to pair); events keep it live otherwise. */
 export const useMachines = (orgId: string, enabled = true, pollMs: number | false = false) => {
   const api = useApi();

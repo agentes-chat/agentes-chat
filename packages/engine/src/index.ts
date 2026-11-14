@@ -172,6 +172,7 @@ export * from "./machine-access";
 export * from "./machine-accounts";
 export * from "./machine-clis";
 export * from "./machine-device";
+export * from "./machine-folder-requests";
 export * from "./machine-holds";
 export * from "./machine-hub";
 export * from "./machine-outages";

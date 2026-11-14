@@ -34427,6 +34427,42 @@
   "errors.feedback.filesPending": {
     "value": "Too many files are waiting to be sent. Send or remove some, then try again."
   },
+  "machines.folderRequests.title": {
+    "value": "Folder requests"
+  },
+  "machines.folderRequests.empty": {
+    "value": "No folder requests you can view."
+  },
+  "machines.folderRequests.pending": {
+    "value": "Waiting for access"
+  },
+  "machines.folderRequests.granted": {
+    "value": "Access granted"
+  },
+  "machines.folderRequests.denied": {
+    "value": "Access denied"
+  },
+  "machines.folderRequests.expired": {
+    "value": "Request expired"
+  },
+  "machines.folderRequests.failed": {
+    "value": "Request failed"
+  },
+  "machines.folderRequests.how": {
+    "value": "How to allow access"
+  },
+  "machines.folderRequests.local": {
+    "value": "Run this on {{computer}}, not on the chat server. Only that computer can grant access."
+  },
+  "machines.folderRequests.warning": {
+    "value": "This allows use of the folder. It is not a read-only permission."
+  },
+  "machines.folderRequests.expires": {
+    "value": "Expires {{time}}"
+  },
+  "machines.folderRequests.desktop": {
+    "value": "You can also answer in the desktop app on that computer."
+  },
   "machines.reasons.browser_unsupported": {
     "value": "The agent browser doesn't run on this computer's system."
   },

@@ -13679,6 +13679,20 @@
     }
   },
   "machines": {
+    "folderRequests": {
+      "title": "Permintaan folder",
+      "empty": "Tidak ada permintaan folder yang dapat Anda lihat.",
+      "pending": "Menunggu akses",
+      "granted": "Akses diberikan",
+      "denied": "Akses ditolak",
+      "expired": "Permintaan kedaluwarsa",
+      "failed": "Permintaan gagal",
+      "how": "Cara mengizinkan akses",
+      "local": "Jalankan ini di {{computer}}, bukan di server obrolan. Hanya komputer tersebut yang dapat memberikan akses.",
+      "warning": "Ini mengizinkan penggunaan folder. Ini bukan izin hanya baca.",
+      "expires": "Kedaluwarsa {{time}}",
+      "desktop": "Anda juga dapat menjawab melalui aplikasi desktop di komputer tersebut."
+    },
     "reasons": {
       "browser_unsupported": "Browser agen tidak berjalan di sistem komputer ini.",
       "browser_download": "Browser agen tidak bisa diunduh. Periksa koneksi komputer ini, dan akan dicoba lagi saat dipakai berikutnya.",

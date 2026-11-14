@@ -13689,6 +13689,20 @@
     }
   },
   "machines": {
+    "folderRequests": {
+      "title": "文件夹访问请求",
+      "empty": "没有你可以查看的文件夹访问请求。",
+      "pending": "等待访问权限",
+      "granted": "已授予访问权限",
+      "denied": "已拒绝访问",
+      "expired": "请求已过期",
+      "failed": "请求失败",
+      "how": "如何允许访问",
+      "local": "请在{{computer}}上执行，而不是聊天服务器上。只有该计算机才能授予访问权限。",
+      "warning": "这允许使用该文件夹，并非只读权限。",
+      "expires": "到期时间：{{time}}",
+      "desktop": "你也可以在该计算机的桌面应用中回应。"
+    },
     "reasons": {
       "browser_unsupported": "智能体浏览器无法在这台电脑的系统上运行。",
       "browser_download": "无法下载智能体浏览器。请检查这台电脑的网络连接，下次使用时会再试一次。",

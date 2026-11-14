@@ -106,6 +106,31 @@ test("connecting over HTTP: code, confirm page, confirm, the token once; errors 
   expect((await runnerPost("/api/machines/pair", { code: "AAAA-BBBB" })).status).toBe(404);
 });
 
+test("folder request views require a session, scope lookups, and never accept a grant from the web", async () => {
+  const { api, pair, orgId, channelId, agentId } = await start();
+  const machine = await pair();
+  const id = Bun.randomUUIDv7();
+  await t.db.insert(schema.machineAccessRequests).values({
+    id,
+    orgId,
+    agentId,
+    channelId,
+    machineId: machine.machineId,
+    path: "/home/test/Documents",
+    reason: "Read the documents",
+    expiresAt: new Date(Date.now() + 3_600_000),
+  });
+  const path = `/machines/${machine.machineId}/access/requests`;
+  expect((await runnerCall(`/api/app/organizations/${orgId}${path}`)).status).toBe(401);
+  const reply = await api(path);
+  expect(reply.status).toBe(200);
+  expect(await reply.json()).toMatchObject({ requests: [{ id, status: "pending", path: "/home/test/Documents" }] });
+  expect((await api(`${path}?requestId=not-a-uuid`)).status).toBe(400);
+  expect(await (await api(`${path}?requestId=${Bun.randomUUIDv7()}`)).json()).toEqual({ requests: [] });
+  expect((await api(path, { json: { decision: "granted" } })).status).toBe(404);
+  expect((await t.db.select().from(schema.machineAccessRequests))[0]?.status).toBe("pending");
+});
+
 test("where each workspace gets its own computer the agents read so, and one with none waits for it", async () => {
   const asked: ModelRequest[] = [];
   t = await createTestServer({

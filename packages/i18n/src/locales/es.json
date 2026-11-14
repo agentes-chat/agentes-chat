@@ -14591,6 +14591,20 @@
     }
   },
   "machines": {
+    "folderRequests": {
+      "title": "Solicitudes de carpetas",
+      "empty": "No hay solicitudes de carpetas que puedas ver.",
+      "pending": "Esperando acceso",
+      "granted": "Acceso concedido",
+      "denied": "Acceso denegado",
+      "expired": "Solicitud caducada",
+      "failed": "La solicitud falló",
+      "how": "Cómo permitir el acceso",
+      "local": "Ejecuta esto en {{computer}}, no en el servidor del chat. Solo ese equipo puede conceder acceso.",
+      "warning": "Esto permite usar la carpeta. No es un permiso de solo lectura.",
+      "expires": "Caduca {{time}}",
+      "desktop": "También puedes responder desde la aplicación de escritorio en ese equipo."
+    },
     "reasons": {
       "browser_unsupported": "El navegador de los agentes no funciona en el sistema de esta computadora.",
       "browser_download": "No se pudo descargar el navegador de los agentes. Revisa la conexión de esta computadora y lo intentará de nuevo en el próximo uso.",
