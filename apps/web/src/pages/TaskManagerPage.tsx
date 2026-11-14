@@ -696,7 +696,7 @@ const CAUSES_MAX = 3;
 /**
  * Over the cards, while work waits: what got done today and how much waits, then what holds it, one row a cause
  * (`waitCauses`) with its count and its one way out. A plan at its limit is named as the profile menu names it
- * (`planNearLimit`) when it is the viewer's. Hidden when nothing waits.
+ * (`planNearLimit`) when the sign-in it waits on is one of the viewer's. Hidden when nothing waits.
  */
 function CapacityStrip({
   tasks,
@@ -718,7 +718,10 @@ function CapacityStrip({
   const causes = waitCauses(tasks);
   if (causes.length === 0) return null;
   const waiting = tasks.filter((task) => taskState(task) === "waiting").length;
-  const own = planNearLimit(ownPlanLines(t, accounts, dir.agents, me.user.id));
+  const own = ownPlanLines(t, accounts, dir.agents, me.user.id);
+  // The wait's key ends in the sign-in it waits on (`usageWaitKey`): an account's id, or `own` for a computer's own.
+  const planOf = (key: string | undefined) =>
+    key ? planNearLimit(own.filter((p) => key === `plan:${p.key}:own` || key.endsWith(`:${p.key}`))) : null;
   const usage = () =>
     void navigate({ to: "/org/$orgId/settings/$section", params: { orgId: org.id, section: "usage" } });
   const row = (cause: WaitCause) => {
@@ -727,7 +730,8 @@ function CapacityStrip({
     const count = t("taskManager.tasks", { count: cause.tasks.length });
     if (cause.kind === "limit") {
       const brain = first.brain && first.brain !== "model" ? first.brain : null;
-      const plan = brain && own?.logo === brain && planState(own.usage).state === "limited" ? own : null;
+      const found = planOf(first.wait?.key);
+      const plan = found && planState(found.usage).state === "limited" ? found : null;
       return {
         lead: brain ? <ProviderLogo id={brain} size="xs" /> : <Icon name="clock" size={18} />,
         name: plan?.name ?? words?.state ?? "",

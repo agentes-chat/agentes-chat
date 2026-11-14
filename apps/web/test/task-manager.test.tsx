@@ -1437,6 +1437,10 @@ describe("what holds the waiting work", () => {
     expect(rows[0]?.[0]).toBe("Plano do Claude no limite");
     expect(rows[0]?.[1]).toMatch(/^Volta .+ · 2 tarefas$/);
     cleanup();
+    // My own full plan on the same maker is not the one these tasks wait on: never named for them.
+    await openStrip(full(), [{ ...TEAM_FULL, id: "acct_mine" }]);
+    expect(causes()[0]?.[0]).toBe("Plano do Claude no limite");
+    cleanup();
     const { router } = await openStrip(busy());
     expect(strip()?.querySelector(".tm-causes__today")?.textContent).toBe("Hoje: 1 tarefa concluída · 1 esperando");
     expect(causes()).toEqual([["1 espera você", "Segue quando alguém aprovar", "Abrir na conversa"]]);
