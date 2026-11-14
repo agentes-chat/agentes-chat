@@ -22,7 +22,7 @@ import { AgentFace } from "../shared/Face";
 import { useDirectory, useMeId } from "../shared/hooks";
 import { goBack } from "../shared/parts";
 import { TextArea } from "../shared/TextArea";
-import { type InviteDraft, updateInviteDraft, useInviteDraft } from "./draft";
+import { INVITE_NOTE_LIMIT, type InviteDraft, updateInviteDraft, useInviteDraft } from "./draft";
 import type { InvitePick } from "./InviteFields";
 import {
   agentPicks,
@@ -299,7 +299,7 @@ function NotePick({ draft, change }: PickProps) {
         onChangeText={(note) => change((d) => ({ ...d, note }))}
         placeholder={t(modeKey(org, "members.dialog.notePlaceholder"), { org: org?.name ?? "" })}
         accessibilityLabel={t("members.dialog.note")}
-        maxLength={INVITE_NOTE_MAX}
+        limit={INVITE_NOTE_LIMIT}
         autoFocus
       />
       <GroupedFooter>{t("mobile.invitePeople.noteHelp", { max: INVITE_NOTE_MAX })}</GroupedFooter>

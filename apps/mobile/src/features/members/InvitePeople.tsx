@@ -23,6 +23,7 @@ import {
 } from "@agenteschat/client/lib/invite-start";
 import { sendsEmail } from "@agenteschat/client/lib/join-requests";
 import { membersFull } from "@agenteschat/client/lib/limits";
+import { overLimitText } from "@agenteschat/client/lib/message-length";
 import { aiStateOf, onlyOwnerReplies } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { playSound } from "@agenteschat/client/lib/sounds";
@@ -56,7 +57,15 @@ import { Page } from "../me/parts";
 import { Gap } from "../settings/parts";
 import { useColors, useMeId } from "../shared/hooks";
 import { copyText, errorHaptic, goBack, successHaptic } from "../shared/parts";
-import { EMPTY_INVITE, type InviteDraft, setInviteDraft, updateInviteDraft, useInviteDraft } from "./draft";
+import { overLimit } from "../shared/TextArea";
+import {
+  EMPTY_INVITE,
+  INVITE_NOTE_LIMIT,
+  type InviteDraft,
+  setInviteDraft,
+  updateInviteDraft,
+  useInviteDraft,
+} from "./draft";
 import { openPick, type StartFields, useStartFields } from "./InviteFields";
 import {
   addressesLeft,
@@ -167,6 +176,8 @@ function InviteForm() {
   const bad = draft.addresses.some((a) => !a.valid);
   const leftOut = draft.addresses.some((a) => stateOf(a) === "member" || stateOf(a) === "invited");
   const note = draft.note.trim();
+  // A note past its size is never cut: Convidar waits, and the line under the form says why.
+  const longNote = overLimit(note, INVITE_NOTE_LIMIT);
   const refusedHere =
     refused && (refused.kind === "channel" ? start.send.channelIds : start.send.agentIds).includes(refused.id)
       ? refused
@@ -200,7 +211,7 @@ function InviteForm() {
   };
 
   const send = async () => {
-    if (ready.length === 0 || full || inviteMany.isPending) return;
+    if (ready.length === 0 || full || longNote || inviteMany.isPending) return;
     const { roleIds, channelIds, agentIds } = start.send;
     try {
       const results = await inviteMany.mutateAsync({
@@ -252,6 +263,9 @@ function InviteForm() {
   const lines = [
     ...(mode === "email" && bad ? [{ text: t("members.dialog.checkMarked"), danger: true }] : []),
     ...(mode === "email" && !bad && leftOut ? [{ text: t("members.dialog.leftOut"), danger: false }] : []),
+    ...(mode === "email" && longNote
+      ? [{ text: overLimitText(t, i18n.language, note.length, INVITE_NOTE_LIMIT.max), danger: true }]
+      : []),
     ...(refusedHere ? [{ text: inviteRefusalText(t, refusedHere), danger: true }] : []),
     ...start.lines.map((text) => ({ text, danger: false })),
   ];
@@ -266,7 +280,7 @@ function InviteForm() {
                 variant="primary"
                 wide
                 label={ready.length > 0 ? t("members.dialog.send", { count: ready.length }) : t("members.invite")}
-                disabled={ready.length === 0 || full}
+                disabled={ready.length === 0 || full || longNote}
                 loading={inviteMany.isPending}
                 onPress={() => void send()}
               />

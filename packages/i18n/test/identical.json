@@ -532,7 +532,8 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "settings.section.roles"
     ],
     "fr": [
       "channel.tooLong.fileName",
@@ -946,7 +947,10 @@
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
-      "invites.ttl.30m"
+      "invites.ttl.30m",
+      "rolesPage.tabs.agents",
+      "rolesPage.reach.agents",
+      "rolesPage.reach.baseAgents"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1385,7 +1389,9 @@
       "machines.oneClick.tools.antigravity",
       "followUps.inTime",
       "invites.how.link",
-      "invites.tab.links"
+      "invites.tab.links",
+      "rolesPage.computer.short.browser",
+      "rolesPage.computer.short.computer"
     ],
     "it": [
       "shell.email.label",
@@ -1744,7 +1750,9 @@
       "agentWork.later",
       "agentWork.laterShort",
       "threads.status.later",
-      "invites.how.link"
+      "invites.how.link",
+      "rolesPage.computer.short.browser",
+      "rolesPage.computer.short.computer"
     ],
     "nl": [
       "calendar.moreRuns",
@@ -2326,7 +2334,12 @@
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
       "invites.how.link",
-      "invites.tab.links"
+      "invites.tab.links",
+      "rolesPage.computer.short.browser",
+      "rolesPage.computer.short.computer",
+      "rolesPage.tabs.agents",
+      "rolesPage.reach.agents",
+      "rolesPage.reach.baseAgents"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -3572,7 +3585,9 @@
       "agentWork.later",
       "agentWork.laterShort",
       "threads.status.later",
-      "invites.how.link"
+      "invites.how.link",
+      "rolesPage.reach.agents",
+      "rolesPage.reach.baseAgents"
     ],
     "ru": [
       "channel.tooLong.fileName",

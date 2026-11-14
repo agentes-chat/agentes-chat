@@ -1,5 +1,6 @@
 import type { InviteLinkTtl } from "@agenteschat/client";
 import type { InviteStart } from "@agenteschat/client/lib/invite-start";
+import { INVITE_NOTE_MAX } from "@agenteschat/client/lib/join-requests";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { InviteAddress } from "./logic";
 
@@ -25,6 +26,9 @@ export interface InviteDraft {
 }
 
 const NONE: InviteStart = { channelIds: [], agentIds: [] };
+
+/** Recado no e-mail's size: past it nothing is cut, and Convidar waits (`overLimit`). */
+export const INVITE_NOTE_LIMIT = { max: INVITE_NOTE_MAX };
 
 export const EMPTY_INVITE: InviteDraft = {
   addresses: [],
