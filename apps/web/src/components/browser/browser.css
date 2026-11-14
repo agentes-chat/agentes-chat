@@ -724,17 +724,16 @@ html:not([data-pointer]) .brw-ac__page.is-control:focus-visible {
 .brw-dim__box {
   flex-direction: column;
 }
-/* Its spinner or icon on the first line's capitals, however many lines the words take (`.ac-iconline`). */
+/*
+ * Words that wrap stay centred with their spinner or icon: a glyph on the first line, centred on its capitals by the
+ * kit's inline rules (`Icon inline`, `.ac-pixspin`), not a column beside them.
+ */
 .brw-dim__row {
-  justify-content: center;
-}
-/* Words that wrap stay centred with their icon: the icon is a glyph on the first line, not a column beside them. */
-.brw-dim__row--words {
-  display: block;
   text-align: center;
   text-wrap: balance;
 }
-.brw-dim__row--words > .ac-icon {
+.brw-dim__row > .ac-icon,
+.brw-dim__row > .ac-pixspin {
   margin-inline-end: var(--space-2);
 }
 .brw-dim__box small {
