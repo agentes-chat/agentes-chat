@@ -509,10 +509,18 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
         items.length > INVITE_NAMES_SHOWN
           ? [...items.slice(0, INVITE_NAMES_SHOWN - 1), c.more(items.length - INVITE_NAMES_SHOWN + 1)]
           : items;
+      // A held name keeps the comma after it, so a name as wide as the line never leaves its comma alone below it.
       const listOf = (items: string[], hold = false): Inline[] =>
-        names
-          .formatToParts(cut(items))
-          .map((part): Inline => (hold && part.type === "element" ? { nobr: part.value } : part.value));
+        names.formatToParts(cut(items)).reduce<Inline[]>((out, part) => {
+          const prev = out.at(-1);
+          const mark = /^[,、，]+/.exec(part.value)?.[0];
+          if (hold && part.type === "element") out.push({ nobr: part.value });
+          else if (mark && typeof prev === "object" && "nobr" in prev) {
+            out[out.length - 1] = { nobr: prev.nobr + mark };
+            if (part.value.length > mark.length) out.push(part.value.slice(mark.length));
+          } else out.push(part.value);
+          return out;
+        }, []);
       // An owner's invitation reads "as an owner", whatever cargos come with it: an owner may everything.
       const role =
         t.roles?.length && t.role !== "owner"
