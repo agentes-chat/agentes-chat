@@ -3,9 +3,10 @@ import type { ModelUsage } from "./types";
 /**
  * Prices in nano-USD per token (1e-9 USD), i.e. USD per million tokens × 1000,
  * so every cost is an exact integer. First-party Anthropic API list prices,
- * checked on Anthropic's pricing page (2026-10-20, Fable 5.1 2026-11-09); cache
- * reads are listed per model (Fable 5.1: $0.25/MTok, Opus 5.5: $0.20/MTok,
- * Sonnet 5.5: $0.10/MTok), cache writes use the 5-minute rate (1.25 × input);
+ * checked on Anthropic's pricing page (2026-10-20, Fable 5.1 2026-11-09, Fable
+ * 5.2 2026-11-13); cache reads are listed per model (Fable 5.1: $0.25/MTok,
+ * Fable 5.2 and Opus 5.5: $0.20/MTok, Sonnet 5.5: $0.10/MTok), cache writes use
+ * the 5-minute rate (1.25 × input);
  * 1-hour writes cost `LONG_CACHE_WRITE` × input.
  * Update this table when prices change: usage records store the computed cost,
  * so history is never repriced.

@@ -605,7 +605,7 @@ export const GROK_BUILD_MODELS: readonly { id: string; label: string }[] = [
  * ponytail: hand-copied list, the CLI's own listing replaces it wherever the runner reports one.
  */
 export const ANTIGRAVITY_MODELS: readonly { id: string; label: string }[] = [
-  { id: "gemini-4-hydrogen-xhigh", label: "Gemini 4 Hydrogen (XHigh)" },
+  { id: "gemini-4-hydrogen-xhigh", label: "Gemini 4 Hydrogen (Extra)" },
   { id: "gemini-4-hydrogen-high", label: "Gemini 4 Hydrogen (High)" },
   { id: "gemini-4-hydrogen-medium", label: "Gemini 4 Hydrogen (Medium)" },
   { id: "gemini-4-hydrogen-low", label: "Gemini 4 Hydrogen (Low)" },
