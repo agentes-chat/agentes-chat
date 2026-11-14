@@ -1372,9 +1372,11 @@
      * Rounded inside rounded: a plate or a face near a corner of the box it sits on, with room between them, has that
      * box's corner less the room (`outer - gap`). In a fully round pill that makes what sits at its ends fully round. A
      * thing flush with the edge is `corner`'s. Percent corners resolve against the box, every corner clamps to half the
-     * shorter side, as the browser draws them.
+     * shorter side, as the browser draws them. Only on the surfaces built to it (the notice island, toasts, the banners
+     * over the composer and the computer's stage): elsewhere a card's buttons keep the kit's own corner.
      */
     nest(out) {
+      const NESTED = ".ni,.ac-toast,.noai-banner,.cmp-banner";
       const CORNERS = [
         ["TopLeft", "Top", "Left"],
         ["TopRight", "Top", "Right"],
@@ -1398,7 +1400,7 @@
           const ps = style(box);
           if (ps.overflowX !== "visible" && parseFloat(ps.borderTopLeftRadius) > 0) clipped = true;
         }
-        if (clipped || !box || box === document.body) continue;
+        if (clipped || !box || box === document.body || !box.matches(NESTED)) continue;
         const bs = style(box);
         const a = el.getBoundingClientRect();
         const b = box.getBoundingClientRect();
