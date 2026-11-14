@@ -10,6 +10,7 @@ import {
   approvalView,
   COMPOSIO_EXECUTOR,
   type CustomDeps,
+  composioMcpTool,
   connectCustomServer,
   consultationNotice,
   createAgent,
@@ -23,6 +24,7 @@ import {
   deliverNoticeToRun,
   type InvokeResult,
   insertMessage,
+  MCP_PRESETS,
   type McpConnect,
   mcpSessionOver,
   type RoutineBrief,
@@ -43,8 +45,32 @@ const EXEC = `composio_${COMPOSIO_EXECUTOR}`;
 const WORKBENCH = "COMPOSIO_REMOTE_WORKBENCH";
 const WHY = "The weekly summary goes to the team channel every Monday, as the person asked for.";
 
-/** A Composio-shaped server in process: its executor and its code workbench, each call kept. */
-function composioMcp() {
+/** Real actions the code's own rules call ordinary writes: a routine's own run does them with no card. */
+const WRITES = [
+  "GOOGLESHEETS_VALUES_UPDATE",
+  "HUBSPOT_UPDATE_DEAL",
+  "SALESFORCE_UPDATE_OPPORTUNITY",
+  "ASANA_UPDATE_A_TASK",
+  "GOOGLEDRIVE_CREATE_FILE_FROM_TEXT",
+];
+/** A send, a delete, a payment, an invite and one its app's entry always asks for: each still asks. */
+const RISKY = [
+  "SLACK_SEND_MESSAGE",
+  "GOOGLESHEETS_DELETE_SHEET",
+  "SQUARE_CREATE_REFUND",
+  "SLACK_INVITE_USER_TO_CHANNEL",
+  "GOOGLESHEETS_CLEAR_VALUES",
+];
+
+/** A Composio action as its connection lists it: the warning our rules for its app's entry give it. */
+function composioAction(slug: string) {
+  const way = MCP_PRESETS.find((p) => p.composio?.actions.includes(slug))?.composio;
+  if (!way) throw new Error(`no app entry lists ${slug}`);
+  return composioMcpTool(way, { slug, description: slug, inputSchema: { type: "object" }, tags: [] });
+}
+
+/** A Composio-shaped server in process: its executor, its code workbench and `actions`, each call kept. */
+function composioMcp(actions: readonly string[] = []) {
   const calls: { tool: string; args: Record<string, unknown> }[] = [];
   const text = (t: string) => ({ content: [{ type: "text" as const, text: t }] });
   const build = () => {
@@ -64,6 +90,21 @@ function composioMcp() {
         return text(`ran ${args.tools.map((t) => t.tool_slug).join(", ")}`);
       },
     );
+    for (const slug of actions) {
+      const listed = composioAction(slug);
+      server.registerTool(
+        slug,
+        {
+          description: slug,
+          inputSchema: { text: z.string().optional() },
+          annotations: { destructiveHint: listed.destructiveHint ?? false },
+        },
+        async (args) => {
+          calls.push({ tool: slug, args });
+          return text("done");
+        },
+      );
+    }
     server.registerTool(
       WORKBENCH,
       { description: "Runs Python in a sandbox", inputSchema: { code_to_execute: z.string() } },
@@ -82,8 +123,8 @@ function composioMcp() {
   return { connect, calls };
 }
 
-async function world(fx: Fixture) {
-  const mcp = composioMcp();
+async function world(fx: Fixture, actions: readonly string[] = []) {
+  const mcp = composioMcp(actions);
   const deps: CustomDeps = {
     db: fx.db,
     keyWrappers: [fx.keyWrapper],
@@ -704,12 +745,65 @@ describe("a routine's own job (routines.own_actions)", () => {
     expect(mcp.calls).toEqual([]);
   });
 
-  test("a routine with no own actions asks for every write, as before", async () => {
+  test("a routine with no own actions asks for a send", async () => {
     f = await setup();
     const { mcp, gateway } = await world(f);
     const { out, id } = await created(gateway, []);
-    expect(out.content).toContain("Every action in a connected app asks a person first.");
+    expect(out.content).toContain(
+      "Its changes in connected apps run without asking, except a send, a delete, a payment or an invite, which ask a person first.",
+    );
     asked(await invoke(gateway, await routineRun(f, id), EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }));
+    expect(mcp.calls).toEqual([]);
+  });
+});
+
+describe("a routine's writes at Só o arriscado", () => {
+  const app = (slug: string) => `composio_${slug}`;
+  const write = { text: "Total de ontem", why: WHY };
+
+  test("its own run does ordinary writes with no card, and its sends, deletes, payments and invites ask", async () => {
+    f = await setup();
+    const { mcp, gateway } = await world(f, [...WRITES, ...RISKY]);
+    const { id } = await created(gateway, []);
+    const run = await routineRun(f, id);
+    for (const slug of WRITES)
+      expect(answered(await invoke(gateway, run, app(slug), { text: "1" })).isError).toBeFalsy();
+    expect(mcp.calls.map((c) => c.tool)).toEqual(WRITES);
+    expect(await f.db.select().from(schema.approvals)).toEqual([]);
+    for (const slug of RISKY) asked(await invoke(gateway, run, app(slug), write));
+    expect(mcp.calls).toHaveLength(WRITES.length);
+  });
+
+  test("at Sempre perguntar every write asks", async () => {
+    f = await setup();
+    const { mcp, gateway } = await world(f, [...WRITES, ...RISKY]);
+    const { id } = await created(gateway, []);
+    await f.db.update(schema.agents).set({ approvalsLevel: "always" }).where(eq(schema.agents.id, f.agent.id));
+    const run = await routineRun(f, id);
+    for (const slug of [...WRITES, ...RISKY]) asked(await invoke(gateway, run, app(slug), write));
+    expect(mcp.calls).toEqual([]);
+  });
+
+  test("a routine whose creator no longer decides the agent's approvals, or has none, asks for a write", async () => {
+    f = await setup();
+    const { mcp, gateway } = await world(f, WRITES);
+    const { id } = await created(gateway, []);
+    const cora = await addMember(f.db, f.org.id, "member", "cora");
+    await f.db.update(schema.routines).set({ createdByUserId: cora.id }).where(eq(schema.routines.id, id));
+    asked(await invoke(gateway, await routineRun(f, id, cora.id), app("HUBSPOT_UPDATE_DEAL"), write));
+    await f.db.update(schema.routines).set({ createdByUserId: null }).where(eq(schema.routines.id, id));
+    asked(await invoke(gateway, await routineRun(f, id), app("HUBSPOT_UPDATE_DEAL"), write));
+    expect(mcp.calls).toEqual([]);
+  });
+
+  test("a run its report or a teammate's answer woke asks for a write that is not on its list", async () => {
+    f = await setup();
+    const qa = await teammate(f);
+    const { mcp, gateway } = await world(f, WRITES);
+    const { id } = await created(gateway, ["SLACK_SEND_MESSAGE"]);
+    const routine = await routineRun(f, id);
+    asked(await invoke(gateway, await reportRun(f, routine.runId), app("HUBSPOT_UPDATE_DEAL"), write));
+    asked(await invoke(gateway, await answerRun(f, routine.runId, qa.id), app("HUBSPOT_UPDATE_DEAL"), write));
     expect(mcp.calls).toEqual([]);
   });
 });

@@ -492,8 +492,12 @@ const authorityOf = (ctx: ToolContext): Promise<RunAuthority | null> =>
   ctx.runId ? runAuthorityById(ctx.db, ctx.orgId, ctx.runId) : Promise.resolve(null);
 
 const ALLOWED: PolicyDecision = { action: "allow" };
-const policyFor = (authority: RunAuthority | null, tool: ToolDefinition, level = DEFAULT_APPROVALS_LEVEL) =>
-  authority ? toolPolicy(authority, tool, level) : ALLOWED;
+const policyFor = (
+  authority: RunAuthority | null,
+  tool: ToolDefinition,
+  level = DEFAULT_APPROVALS_LEVEL,
+  creatorDecides = false,
+) => (authority ? toolPolicy(authority, tool, level, creatorDecides) : ALLOWED);
 
 /**
  * A tool as a run sees it: one the policy says asks a person becomes sensitive (its card, and the
@@ -599,15 +603,16 @@ export function createToolGateway(deps: {
     known?: Map<string, ToolDefinition>,
     heldBack?: string[],
   ): Promise<ToolDefinition[]> {
-    const [keys, all, level] = await Promise.all([
+    const [keys, all, level, decides] = await Promise.all([
       grantedScopeKeys(ctx.db, ctx.orgId, ctx.agentId),
       known ?? allTools(ctx),
       approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
+      creatorDecides(ctx, authority),
     ]);
     return [...all.values()]
       .filter((t) => isAllowed(accessWithNeeds(keys, t).state))
       .flatMap((t) => {
-        const decision = policyFor(authority, t, level);
+        const decision = policyFor(authority, t, level, decides);
         if (decision.action !== "refuse") return [asListed(t, decision, unaskedAtNever(level, t, authority))];
         heldBack?.push(t.name);
         return [];
@@ -863,6 +868,13 @@ export function createToolGateway(deps: {
         ),
       );
     return row ?? null;
+  }
+
+  /** Whether a routine's own run has a creator who still decides its agent's approvals (`toolPolicy`). Read fresh. */
+  async function creatorDecides(ctx: ToolContext, authority: RunAuthority | null) {
+    if (authority?.kind !== "routine" || !authority.brief || !UUID.test(authority.brief.routineId)) return false;
+    const row = await routineOf(ctx, authority.brief);
+    return row?.creator ? decidesAgentApprovals(ctx.db, ctx.orgId, row.creator, row.owner) : false;
   }
 
   /** The messages a run read after its trigger, as they joined it (between steps or live: `steeredMessageIds`). */
@@ -1314,7 +1326,12 @@ export function createToolGateway(deps: {
       if (tool.sensitive && tool.asksNobody?.(call.input)) tool = { ...tool, sensitive: false };
       const builtIn = isBuiltIn(tool);
       // A call that only looks is judged as at the default level: an agent that always asks asks for changes.
-      const decision = policyFor(authority, tool, tool.looksOnly?.(call.input) ? DEFAULT_APPROVALS_LEVEL : level);
+      const decision = policyFor(
+        authority,
+        tool,
+        tool.looksOnly?.(call.input) ? DEFAULT_APPROVALS_LEVEL : level,
+        level === "risky" && (await creatorDecides(ctx, authority)),
+      );
       if (decision.action === "refuse") {
         return finish(
           { content: decision.reason, isError: true, data: { code: "tool.not_allowed", refusal: "policy" } },
