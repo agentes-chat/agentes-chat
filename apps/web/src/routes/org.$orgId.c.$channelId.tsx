@@ -4,6 +4,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { agentPanelSearch, threadSearch } from "@/lib/open-param";
 import { ChannelPage } from "@/pages/ChannelPage";
 
+type PanelSearch = ReturnType<typeof threadSearch> & ReturnType<typeof agentPanelSearch>;
+
 /**
  * A channel; `?m={messageId}` (from "Copiar link") opens it at that message;
  * `?adjust={threadId}` opens "Ajustar trecho" for that thread's range; `?thread=` is the one in its panel, `?agent=`
@@ -11,10 +13,7 @@ import { ChannelPage } from "@/pages/ChannelPage";
  * banner says the payment is being confirmed).
  */
 export const Route = createFileRoute("/org/$orgId/c/$channelId")({
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { m?: string; adjust?: string; paid?: true } & ReturnType<typeof threadSearch> &
-    ReturnType<typeof agentPanelSearch> => ({
+  validateSearch: (search: Record<string, unknown>): { m?: string; adjust?: string; paid?: true } & PanelSearch => ({
     ...threadSearch(search),
     ...agentPanelSearch(search),
     ...(typeof search.m === "string" && search.m ? { m: search.m } : {}),
