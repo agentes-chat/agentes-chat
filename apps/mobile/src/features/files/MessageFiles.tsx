@@ -1,5 +1,5 @@
 import type { ArtifactDetail } from "@agenteschat/client";
-import { formatBytes } from "@agenteschat/client/lib/files";
+import { formatBytes, pictureRatio } from "@agenteschat/client/lib/files";
 import { keepWhole } from "@agenteschat/client/lib/format";
 import { Image } from "expo-image";
 import { useMemo, useState } from "react";
@@ -20,7 +20,7 @@ import {
   type FileInfo,
   fileInfo,
   IMAGE_EXT,
-  singleImageHeight,
+  singleImageBox,
   VIDEO_EXT,
   videoHeight,
 } from "./logic";
@@ -40,6 +40,9 @@ export interface MessageFile {
   version?: number;
   title: string;
   deleted: boolean;
+  /** A picture's size, from its ref on the message (`artifactsOf`). */
+  width?: number;
+  height?: number;
 }
 
 /** Widest a picture block gets in a message. */
@@ -90,6 +93,13 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
   const halfWidth = Math.floor((blockWidth - GAP) / 2);
 
   const [only] = pictures;
+  // A lone picture of known size: its own shape from the first frame (its file's details, else its ref).
+  const onlyBox = only
+    ? singleImageBox(
+        blockWidth,
+        pictureRatio(only.detail?.content.kind === "file" ? only.detail.content : null) ?? pictureRatio(only.file),
+      )
+    : null;
   // Opening a file or a picture is plain navigation: the press shows it, with no haptic.
   const openOnly = () => {
     if (!only) return;
@@ -105,12 +115,12 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
   return (
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={[styles.wrap, align === "end" && styles.end]}>
       {pictures.length > 1 ? <ImageStack images={pictures} width={blockWidth} /> : null}
-      {only && pictures.length === 1 ? (
-        <View style={{ width: blockWidth }}>
+      {only && onlyBox && pictures.length === 1 ? (
+        <View style={{ width: onlyBox.width }}>
           <InlineImage
             file={only.file}
             detail={only.detail}
-            width={blockWidth}
+            box={onlyBox}
             label={only.detail?.title || only.file.title}
             onPress={openOnly}
           />
@@ -153,13 +163,13 @@ export function MessageFiles({ files, align = "start" }: { files: MessageFile[];
 function InlineImage({
   file,
   detail,
-  width,
+  box: { width, height },
   label,
   onPress,
 }: {
   file: MessageFile;
   detail: ArtifactDetail | undefined;
-  width: number;
+  box: { width: number; height: number };
   label: string;
   onPress: () => void;
 }) {
@@ -169,7 +179,6 @@ function InlineImage({
   const version = detail?.shownVersion ?? file.version;
   const link = useRemoteFile(orgId, file.id, version);
   const [failed, setFailed] = useState(false);
-  const height = singleImageHeight(width);
   return (
     <Pressable
       onPress={onPress}

@@ -416,7 +416,7 @@ describe("single-line controls", () => {
       ".ac-palette__q input",
       ".ac-seg__item",
       ".ac-filtertoggle",
-      ".ac-composer__pill,\n.ac-composer__agent",
+      ".ac-composer__pill",
       ".ac-recur__day",
       ".ac-react",
     ]) {
@@ -1067,7 +1067,7 @@ describe("Diff", () => {
 });
 
 describe("Message aside and foot", () => {
-  test("the aside ends the first line, the header's or a grouped message's text's; the foot is a line under both", () => {
+  test("the aside ends the header's line, or stands in a grouped message's gutter; the foot is a line under both", () => {
     const { container } = render(
       <>
         <Message author="João" time="10:42" aside={<span>✓</span>} foot={<span>Ninguém vai responder</span>}>
@@ -1080,9 +1080,14 @@ describe("Message aside and foot", () => {
     );
     const [first, second] = Array.from(container.querySelectorAll("article"));
     expect(first?.querySelector(".ac-msg__head .ac-msg__aside")?.textContent).toBe("✓");
-    // Floated before the text, so the text's first line wraps before it.
-    expect(second?.querySelector(".ac-msg__aside--floating + .ac-msg__text")?.textContent).toBe("de novo");
-    expect(second?.querySelector(".ac-msg__aside--floating")?.textContent).toBe("✓✓");
+    // In the gutter, after its hover time, out of the text's line: the row's bar at the right end never covers it.
+    const gutter = second?.querySelector(".ac-msg__gutter.ac-msg__gutter--aside");
+    expect(gutter?.lastElementChild?.className).toBe("ac-msg__aside");
+    expect(gutter?.querySelector(".ac-msg__aside")?.textContent).toBe("✓✓");
+    // Its button stays reachable: only the time is hidden from screen readers (the hidden header says it).
+    expect(gutter?.getAttribute("aria-hidden")).toBeNull();
+    expect(gutter?.querySelector(".ac-msg__gutter-time")?.getAttribute("aria-hidden")).toBe("true");
+    expect(second?.querySelector(".ac-msg__body .ac-msg__aside")).toBeNull();
     // The same line under the text on both: the text follows the name, and words that come and go never move it.
     for (const row of [first, second]) {
       expect(row?.querySelector(".ac-msg__body > :last-child")?.className).toBe("ac-msg__foot");
@@ -1108,8 +1113,7 @@ describe("Message aside and foot", () => {
     expect(end?.querySelector(".ac-msg__own-foot > .ac-msg__aside")?.getAttribute("aria-hidden")).toBeNull();
     // A run's earlier row: no time, in the left column or under it.
     expect(start?.querySelector(".ac-msg__own-foot, .ac-msg__own-time")).toBeNull();
-    for (const row of [start, end])
-      expect(row?.querySelector(".ac-msg__gutter, .ac-msg__avatar, .ac-msg__aside--floating")).toBeNull();
+    for (const row of [start, end]) expect(row?.querySelector(".ac-msg__gutter, .ac-msg__avatar")).toBeNull();
   });
 
   test("every menu's rows share one dense height and side padding, as dense as the message's bar", async () => {
@@ -1211,18 +1215,12 @@ describe("Message aside and foot", () => {
         /(^|;)\s*(right|left|top|inset)\s*:/.test(body),
     );
     expect(byContent.map(([, selector = ""]) => selector.trim())).toEqual([]);
-    // So a grouped row's check at its line's end, under the bar, steps out of sight while the bar shows, keeping its
-    // room: nothing overlaps and nothing moves. On a touch screen only while the bar is open.
-    const hover = [...css.matchAll(/@media not \(hover: none\) \{([\s\S]*?)\n\}/g)].map((m) => m[1] ?? "").join("\n");
-    expect(
-      value(
-        ".ac-msg:hover:has(> .ac-msg__body > .ac-msg__actions) > .ac-msg__body > .ac-msg__aside--floating",
-        "visibility",
-        hover,
-      ),
-    ).toBe("hidden");
-    expect(css.replace(/\s+/g, " ")).toContain(
-      'html:not([data-pointer]) .ac-msg:focus-within:has(> .ac-msg__body > .ac-msg__actions) > .ac-msg__body > .ac-msg__aside--floating, .ac-msg:has(> .ac-msg__body > .ac-msg__actions:is([data-open="true"], :has([aria-expanded="true"]))) > .ac-msg__body > .ac-msg__aside--floating { visibility: hidden; }',
+    // A grouped row's check lives in the left gutter, never under the bar: nothing hides it while the bar shows.
+    expect(css).not.toContain("ac-msg__aside--floating");
+    expect(value(".ac-msg__gutter--aside", "justify-content")).toBe("flex-end");
+    expect(value(".ac-msg__gutter--aside > .ac-msg__aside", "visibility")).toBeUndefined();
+    expect(value(".ac-msg__gutter--aside > .ac-msg__gutter-time", "font-size")).toBe(
+      "min(12px, max(11px, calc(var(--msg-text) - 3px)))",
     );
     expect(value(".ac-msg--grouped > .ac-msg__body > .ac-msg__actions", "top")).toBe(value(bar, "top"));
     expect(value(".ac-receipt__check", "padding")).toBe("0 2px");
@@ -1481,9 +1479,9 @@ describe("FilterChip", () => {
   test("each option starts with its face and name; the check sits at its end, kept empty when off", async () => {
     render(
       <FilterChip
-        label="Papel"
+        label="Cargo"
         icon="person"
-        clearLabel="Limpar Papel"
+        clearLabel="Limpar Cargo"
         multiple
         value={["admin"]}
         onChange={() => {}}
@@ -1493,8 +1491,8 @@ describe("FilterChip", () => {
         ]}
       />,
     );
-    await act(async () => fireEvent.click(body().getByRole("button", { name: "Papel: Admin" })));
-    const options = within(body().getByRole("listbox", { name: "Papel" })).getAllByRole("option");
+    await act(async () => fireEvent.click(body().getByRole("button", { name: "Cargo: Admin" })));
+    const options = within(body().getByRole("listbox", { name: "Cargo" })).getAllByRole("option");
     expect(options.map((o) => o.getAttribute("aria-selected"))).toEqual(["true", "false"]);
     expect(options.map((o) => [...o.children].map((c) => c.getAttribute("class")))).toEqual([
       ["face", "ac-filter__label", "ac-tz__check"],

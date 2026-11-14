@@ -100,7 +100,7 @@ export const SETTINGS_SECTIONS: readonly SettingsEntry[] = [
   { id: "media", group: "org", icon: "sticker", href: "/settings/media", allowed: (o) => can(o, "configure") },
   // Everyone, as on the web: who invites finds the requests there, a member who may not suggests someone (ADR 0090).
   { id: "members", group: "people", icon: "members", href: "/me/members", allowed: (o) => can(o, "read") },
-  // Papéis e permissões (ADR 0085): who manages roles, as on the web.
+  // Cargos (ADR 0085): who manages roles, as on the web.
   { id: "roles", group: "people", icon: "lock", href: "/settings/roles", allowed: (o) => can(o, "manage_roles") },
   // "IA e uso", for everyone (ADR 0063): the workspace's AI accounts with their meters and the agents whose details
   // they see, in tokens and percentages; money only for who has `view_usage`. It leads to the AI accounts screen.
@@ -509,7 +509,7 @@ export function s3Missing(f: S3Form, keysSaved: boolean) {
 /** The export's file name, as the web saves it: `agentes-chat-2026-10-28.json`. */
 export const exportFileName = (now: Date) => `agentes-chat-${now.toISOString().slice(0, 10)}.json`;
 
-// ── Papéis e permissões ─────────────────────────────────────────────────────
+// ── Cargos ──────────────────────────────────────────────────────────────────
 
 /** The owners' page in the roles' routes (owner isn't a role on the server: `organization_members.role`). */
 export const OWNER_ROLE = "owner";

@@ -2,9 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { eq, schema } from "@agenteschat/db";
 import { customModelId, ProviderError } from "@agenteschat/providers";
 import {
+  agentAiState,
   allowsPrivateEndpoints,
   BudgetExceededError,
   checkEndpoint,
+  createAgent,
   createCredential,
   type EndpointModel,
   endpointAddress,
@@ -166,6 +168,57 @@ describe("the credential", () => {
 });
 
 describe("calls", () => {
+  test("an endpoint key alone repairs an Automatic agent; explicit models are preserved", async () => {
+    f = await setup();
+    const cred = await addEndpoint(f, [{ id: "first" }, { id: "chosen" }]);
+    await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: "auto" });
+    const connected = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { credentialId: cred.id });
+    expect(connected.model).toBe(customModelId(cred.id, "first"));
+    const explicit = customModelId(cred.id, "chosen");
+    const selected = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: explicit });
+    expect(selected.model).toBe(explicit);
+    const reconnected = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { credentialId: cred.id });
+    expect(reconnected.model).toBe(explicit);
+    const automatic = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: "auto" });
+    expect(automatic.model).toBe(customModelId(cred.id, "first"));
+  });
+
+  test("new agents with an endpoint key use its model, while catalog keys keep Automatic", async () => {
+    f = await setup();
+    const cred = await addEndpoint(f);
+    const agent = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      { name: "Endpoint", handle: "endpoint-agent", credentialId: cred.id },
+      { model: "auto" },
+    );
+    expect(agent.model).toBe(customModelId(cred.id, "llama-4"));
+    const catalog = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: "auto" });
+    expect(catalog.model).toBe("auto");
+  });
+
+  test("connecting an endpoint on Automatic selects its own model and can answer", async () => {
+    f = await setup();
+    const cred = await addEndpoint(f);
+    const agent = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, {
+      model: "auto",
+      credentialId: cred.id,
+    });
+    expect(agent.model).toBe(customModelId(cred.id, "llama-4"));
+    expect(await agentAiState({ db: f.db, gateway: f.gateway }, agent)).toMatchObject({ state: "ready" });
+    await f.gateway.stream({
+      orgId: f.org.id,
+      agentId: agent.id,
+      system: "s",
+      messages: [{ role: "user", content: "hi" }],
+      maxTokens: 100,
+      onDelta() {},
+    });
+    expect(f.provider.calls.at(-1)?.request.model).toBe(agent.model);
+    expect(f.provider.calls.at(-1)?.endpoint).toEqual({ style: "openai", baseURL: "https://gw.example/v1" });
+  });
+
   test("an agent on an endpoint model: its key and address, the admin's prices, tokens and cost recorded", async () => {
     f = await setup({ reply: () => ({ chunks: ["ok"], usage: { inputTokens: 1000, outputTokens: 100 } }) });
     const cred = await addEndpoint(f);

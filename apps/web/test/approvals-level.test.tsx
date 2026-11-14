@@ -35,9 +35,9 @@ describe("Aprovações on an agent's page", () => {
     expect(dialog.textContent).toContain("Quando Ada pergunta a uma pessoa antes de agir.");
     const options = within(dialog).getAllByRole("radio");
     expect(options.map((o) => o.textContent)).toEqual([
-      "Sempre perguntarPergunta antes de mudar algo em um app.",
+      "Sempre perguntarPergunta antes de mudar qualquer coisa, aqui, no computador ou em um app.",
       "Só o arriscadoPergunta antes de apagar, enviar ou pagar.",
-      "Nunca perguntarAinda pergunta em merge, deploy e rollback.",
+      "Nunca perguntarNão pergunta nada, nem em merge, deploy, pagamentos e rotinas.",
     ]);
     expect(options.map((o) => o.getAttribute("aria-checked"))).toEqual(["false", "true", "false"]);
     // Nothing to confirm with: no footer, only the choices and the way out.

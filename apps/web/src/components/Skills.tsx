@@ -25,7 +25,6 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { SKILL_ASSET_MB } from "@agenteschat/client/lib/files";
 import { relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
-import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import {
   changedByText,
   changesSinceLink,
@@ -33,6 +32,7 @@ import {
   hiddenRepoOf,
   hiddenRepoText,
   pickSkills,
+  relightsSkillUpdate,
   SKILL_FILES_SHOWN,
   SKILL_UPDATE_TOAST,
   type SkillPendingView,
@@ -419,9 +419,8 @@ export function InstallSkillDialog({
   const catalog = useCatalog();
   const connections = useConnections(org.id, open && connected);
   const dir = useDirectory(org.id);
-  // Only a live agent the server would turn it on for: not one archived or gone since its card, nor the right hand.
-  const forAgent = forAgentId ? dir.agentById.get(forAgentId) : undefined;
-  const forName = forAgent && !isRightHand(forAgent) ? forAgent.name : undefined;
+  // Only a live agent the server would turn it on for: not one archived or gone since its card.
+  const forName = forAgentId ? dir.agentById.get(forAgentId)?.name : undefined;
   /** "Fica ligada para Ada": on by default, shown (and sent) only while the link is the card's own. */
   const [turnOn, setTurnOn] = useState(true);
   const installStep = useStepText(action.isPending, [
@@ -1026,7 +1025,23 @@ function SourceUpdate({ skill: s }: { skill: SkillDetail }) {
           </Button>
         </p>
       )}
-      {s.updateError && <Alert>{skillUpdateErrorText(t, s.updateError)}</Alert>}
+      {s.updateError &&
+        (relightsSkillUpdate(s.updateError) ? (
+          <div className="skill-line">
+            <Alert>{skillUpdateErrorText(t, s.updateError)}</Alert>
+            <Button
+              size="sm"
+              icon="refresh"
+              disabled={action.isPending}
+              loading={action.isPending && action.variables?.type === "update"}
+              onClick={() => action.mutate({ type: "update", id: s.id, patch: { autoUpdate: true } })}
+            >
+              {t("skills.updateFailed.relight")}
+            </Button>
+          </div>
+        ) : (
+          <Alert>{skillUpdateErrorText(t, s.updateError)}</Alert>
+        ))}
       {words.last && (
         <p className="small muted skill-line">
           <span>{words.last.line}</span>

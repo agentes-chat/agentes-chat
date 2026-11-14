@@ -5,9 +5,11 @@ import {
   accountOwner,
   accountShares,
   groupUsageAccounts,
+  loginsText,
   ownPlanLines,
   planMeterText,
   SHARES_SHOWN,
+  servesText,
   shareFacts,
   splitUsage,
   usageShown,
@@ -435,5 +437,37 @@ describe("the viewer's own logins of one account are one row (IA e uso › Conta
     const list = [row("a"), row("b")];
     expect(groupUsageAccounts(list, { accounts: [login("a"), login("b", { keyHint: "9z9z" })] })).toHaveLength(2);
     expect(groupUsageAccounts(list, undefined)).toEqual(list);
+  });
+
+  test("one seat connected by two people is one row led by the viewer's own login, with how many logins it stands for", () => {
+    const t = ((key: string, o?: Record<string, unknown>) =>
+      o ? `${key} ${JSON.stringify(o)}` : key) as unknown as TFunction;
+    const rows = groupUsageAccounts(
+      [
+        row("a", { provider: null, ownerName: "Bia", mine: false, seat: "s1", serves: "everyone" }),
+        row("b", { provider: null, ownerName: "Caio", mine: true, seat: "s1", serves: "everyone" }),
+        row("c", { provider: null, ownerName: "Caio", mine: true, seat: "s2", serves: "owner" }),
+      ],
+      undefined,
+    );
+    // Where Bia's login stood, but Caio's own leads, so he keeps "Quem usa" on it.
+    expect(rows.map((r) => [r.accountId, r.mine, r.logins ?? 1])).toEqual([
+      ["b", true, 2],
+      ["c", true, 1],
+    ]);
+    expect(rows.map((r) => loginsText(t, r))).toEqual(['usageViews.logins {"count":2}', null]);
+  });
+
+  test("who uses a plan, in a few words: everyone, only you, only its owner; nothing for a computer's own sign-in", () => {
+    const t = ((key: string, o?: Record<string, unknown>) =>
+      o ? `${key} ${JSON.stringify(o)}` : key) as unknown as TFunction;
+    expect(servesText(t, { serves: "everyone", ownerName: "Bia Lima", mine: false })).toBe(
+      "usageViews.serves.everyone",
+    );
+    expect(servesText(t, { serves: "owner", ownerName: "Bia Lima", mine: true })).toBe("usageViews.serves.onlyYou");
+    expect(servesText(t, { serves: "owner", ownerName: "Bia Lima", mine: false })).toBe(
+      'usageViews.serves.only {"name":"Bia"}',
+    );
+    expect(servesText(t, { serves: null, ownerName: "Bia", mine: false })).toBeNull();
   });
 });

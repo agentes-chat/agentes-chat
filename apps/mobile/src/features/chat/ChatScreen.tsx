@@ -44,10 +44,11 @@ import {
   useThreadMission,
   useWaitingOnMe,
 } from "@agenteschat/client";
-import { activityVerb, listNames } from "@agenteschat/client/lib/activity";
+import { activityVerb, consultDetails, lineStep, listNames } from "@agenteschat/client/lib/activity";
+import { handoffAsk } from "@agenteschat/client/lib/agent-work";
 import { canTalk } from "@agenteschat/client/lib/audience";
 import { runPosition, screenAboveEnd } from "@agenteschat/client/lib/chat";
-import { CHAT_RHYTHM, firstUnreadId, opensAtLastRead } from "@agenteschat/client/lib/chat-look";
+import { CHAT_RHYTHM, firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
 import { type ConversationWait, conversationWaits } from "@agenteschat/client/lib/computer-queue";
 import {
   asExchanges,
@@ -74,10 +75,12 @@ import { pinsIn } from "@agenteschat/client/lib/pins";
 import { localMeta } from "@agenteschat/client/lib/reply";
 import { retryAnswer } from "@agenteschat/client/lib/retry-answer";
 import { isRightHand, rightHandSeenKey } from "@agenteschat/client/lib/right-hand";
+import { ConversationSeat } from "@agenteschat/client/lib/seat-context";
 import { seenMessageId } from "@agenteschat/client/lib/seen";
 import { lastPostedId } from "@agenteschat/client/lib/timeline";
 import { voiceOf } from "@agenteschat/client/lib/voice";
 import { waitingAway, waitingNotification } from "@agenteschat/client/lib/waiting";
+import { makingImage, stopsMovedOn } from "@agenteschat/client/lib/work";
 import { isIdHandle } from "@agenteschat/ui/names";
 import { KeyboardAwareLegendList, useKeyboardChatComposerInset } from "@legendapp/list/keyboard";
 import type { LegendListRef, OnViewableItemsChanged } from "@legendapp/list/react-native";
@@ -88,10 +91,16 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useIsFocused, useIsPreview } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
-import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ComponentRef, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Keyboard, type LayoutChangeEvent, Platform, ScrollView, StyleSheet, View } from "react-native";
-import { KeyboardController, KeyboardGestureArea, KeyboardStickyView } from "react-native-keyboard-controller";
+import { Keyboard, type LayoutChangeEvent, Linking, Platform, ScrollView, StyleSheet, View } from "react-native";
+import {
+  KeyboardController,
+  KeyboardGestureArea,
+  KeyboardStickyView,
+  useKeyboardHandler,
+  useReanimatedKeyboardAnimation,
+} from "react-native-keyboard-controller";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -113,6 +122,7 @@ import { useRealtime } from "@/providers/realtime";
 import {
   Button,
   Composer,
+  type ComposerProps,
   type ComposerWorking,
   Count,
   Icon,
@@ -132,7 +142,8 @@ import { usePlanHold } from "../ai/parts";
 import { BrowserCard, BrowserRunCard } from "../browser/BrowserCard";
 import { OpenHandoffProvider } from "../browser/open";
 import { threadTitle } from "../chats/logic";
-import { chatHref, notificationHref } from "../links/logic";
+import { ImageMaking } from "../files/ImageMaking";
+import { chatHref, consultationHref, notificationHref } from "../links/logic";
 import { MissionCardView } from "../missions/cards";
 import { isOpenMission } from "../missions/logic";
 import { PushOfferLine } from "../push/PushOfferLine";
@@ -149,21 +160,23 @@ import { useColors, useDirectory, useMeId, useMyHandle, useOrgId, useWhen } from
 import { agentLook, previewOf } from "../shared/logic";
 import { FocusLive, PushedHeader, Tile } from "../shared/parts";
 import { SheetHostProvider, useSheet } from "../shared/SheetHost";
-import { useDmStatusLine, usePresenceWord } from "../status/hooks";
+import { useDmStatusLine, usePresenceOf, usePresenceWord } from "../status/hooks";
 import { PersonStatusCard } from "../status/StatusCard";
 import { AgentTasksButton, useDmAgentTasks } from "../task-manager/AgentTasksButton";
 import { agentTasksHref, tasksBadge } from "../task-manager/logic";
 import { retryVoice, type VoiceRefusal } from "../voice/outbox";
 import { useVoiceComposer } from "../voice/useVoiceComposer";
-import { AgentReceiptLine } from "./AgentReceipts";
+import { AgentReceiptLine, EveryoneLine } from "./AgentReceipts";
 import { AttachmentStrip, MAX_PENDING, type PendingFile } from "./AttachmentStrip";
-import { receiptMessageId, turnHeadId } from "./agent-receipts";
+import { markRowId, receiptMessageId } from "./agent-receipts";
 import { AskStore } from "./ask-store";
 import { AskBar, AskProbes, AskStoreProvider, useAskWatch, useAwayAsk, WaitingHereBar } from "./asks";
 import { ChannelHello } from "./ChannelHello";
 import { ChannelMembersSheet } from "./ChannelMembers";
 import { ChannelPicker } from "./ChannelPicker";
 import { ChannelWelcome } from "./ChannelWelcome";
+import { ChatSkeleton } from "./ChatSkeleton";
+import { type OpenedMessages, OpenedMessagesContext } from "./ClippedMessage";
 import { ConversationSwitcher } from "./ConversationSwitcher";
 import { takeComposerRequest, useComposerRequest } from "./composer-request";
 import { DATE_PILL_IDLE_MS, DatePill } from "./DatePill";
@@ -200,6 +213,7 @@ import { endsOnNoAiCard, noAiBanner } from "./no-ai-banner";
 import { PinnedLines, PinsSheet } from "./PinsSheet";
 import { QuoteBar } from "./QuoteLine";
 import { AgentLocked, UnavailableLines } from "./ReachLines";
+import { ReturnLine, ReturnsSheet, useReturnsHere } from "./Returns";
 import { SwipeReply } from "./SwipeReply";
 import {
   appendedKeys,
@@ -221,7 +235,7 @@ import {
   type PlusPick,
   ThreadOptions,
 } from "./sheets";
-import { StoppedRunsContext, stoppedRunsKey, stoppedRunsOf } from "./stopped-runs";
+import { movedOnKey, StoppedRunsContext, StopsMovedOnContext, stoppedRunsKey, stoppedRunsOf } from "./stopped-runs";
 import { rememberTurn, turnItems, turnRuns, turnSignature, withOpacity } from "./turn";
 import { JumpToMessageContext } from "./WorkLine";
 
@@ -241,6 +255,8 @@ type Row =
   /** An agent's browser card: its live run in the browser, or (no run row) a take over held here. */
   | { kind: "browser"; key: string; run: LiveRun; handoff?: undefined }
   | { kind: "browser"; key: string; run: null; handoff: BrowserHandoff }
+  /** Where the picture an agent is making will show (`makingImage`), until its reply takes its place. */
+  | { kind: "image"; key: string; run: LiveRun }
   | { kind: "unseen"; key: string; fading: boolean };
 
 const rowKey = (r: Row) => r.key;
@@ -375,6 +391,7 @@ function Chat({
   const mission = missionQ.data ?? null;
   const dmAgentId = dm?.with.type === "agent" ? dm.with.id : null;
   const dmAgent = dmAgentId ? dir.agentById.get(dmAgentId) : undefined;
+  const rightHandId = useMemo(() => dir.agents.find(isRightHand)?.id, [dir.agents]);
   const rowLook = useConversationLook(
     Boolean(dm) || thread.data?.channelKind === "dm",
     dmAgent ? agentLook(dmAgent).color : undefined,
@@ -497,7 +514,9 @@ function Chat({
   // while it shows): the composer keeps only its send, the one ink circle.
   const busyRuns = useMemo(() => stoppableInLine(runs).filter((r) => !r.stopping), [runs]);
   const stoppable = useMemo(() => stoppableInLine(runs).filter((r) => canStop(r)), [runs, canStop]);
-  const working = useMemo<ComposerWorking | null>(() => (busyRuns.length === 0 ? null : {}), [busyRuns]);
+  // The same object while someone works: the field isn't redrawn by each step of that work.
+  const busy = busyRuns.length > 0;
+  const working = useMemo<ComposerWorking | null>(() => (busy ? {} : null), [busy]);
   const lineStop = useMemo(
     () => (stoppable.length > 0 ? { runs: stoppable, onStop: stopRun } : undefined),
     [stoppable, stopRun],
@@ -508,6 +527,8 @@ function Chat({
   // ── Agents' blocks ──
   // An agent at work in its browser: its card in the conversation, open on demand.
   const browsing = useMemo(() => browsingRuns(runs), [runs]);
+  // An agent making a picture: its place in the conversation, as the web's live row.
+  const making = useMemo(() => runs.filter((r) => r.status !== "failed" && makingImage(r)), [runs]);
   // A take over held here after its run's live row went (the run paused for the person, or ended): the
   // same card stays, at the end, until the browser is handed back. Its runs: recent ones of this
   // conversation, the ones taken over here (or heard of in its events), and the live ones.
@@ -569,9 +590,6 @@ function Chat({
   // ── Rows ──
   // One waiting card per agent and computer: an older "my computer is away" gives way to the newer one.
   const superseded = useMemo(() => supersededBrainNotices(list), [list]);
-  const workingKey = runs.map((r) => r.agentId).join(" ");
-  // biome-ignore lint/correctness/useExhaustiveDependencies: new only when who is at work changes
-  const agentsAtWork = useMemo(() => new Set(runs.map((r) => r.agentId)), [workingKey]);
   const waitsNow = conversationWaits(isThread ? list : list.filter((m) => !m.threadId), live.receipts, (id) =>
     live.runs.some((r) => r.runId === id),
   );
@@ -617,21 +635,23 @@ function Chat({
           : [];
       return [
         ...head,
-        ...buildRows(replies, (m) => superseded.has(m.id), agentsAtWork),
+        ...buildRows(replies, (m) => superseded.has(m.id)),
         ...browsing.map((run) => ({ kind: "browser" as const, key: `browser-${run.agentId}`, run })),
         ...held.map((h) => ({ kind: "browser" as const, key: `browser-${h.agentId}`, run: null, handoff: h })),
+        ...making.map((run) => ({ kind: "image" as const, key: `image-${run.runId}`, run })),
         ...waitRows,
       ];
     }
     // A thread's replies live in the thread; the channel shows its link.
     const hidden = (m: Message) => superseded.has(m.id) || Boolean(m.threadId);
     return [
-      ...buildRows(list, hidden, agentsAtWork),
+      ...buildRows(list, hidden),
       ...browsing.map((run) => ({ kind: "browser" as const, key: `browser-${run.agentId}`, run })),
       ...held.map((h) => ({ kind: "browser" as const, key: `browser-${h.agentId}`, run: null, handoff: h })),
+      ...making.map((run) => ({ kind: "image" as const, key: `image-${run.runId}`, run })),
       ...waitRows,
     ];
-  }, [isThread, threadId, list, thread.data, channel?.name, dm, browsing, held, superseded, agentsAtWork, t, waits]);
+  }, [isThread, threadId, list, thread.data, channel?.name, dm, browsing, held, making, superseded, t, waits]);
   const shownMessages = useMemo(() => rows.flatMap((r) => (r.kind === "message" ? [r.message] : [])), [rows]);
   // Questions agents asked other agents, in the pair row before the replies that asked (`ConsultGroup`): how each
   // answer's notice draws (hidden under a reply close by, one line to one farther up, and while its asker still works
@@ -658,9 +678,41 @@ function Chat({
   const stoppedKey = stoppedRunsKey(stoppedNow);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `stoppedKey` stands for the stops
   const stoppedRuns = useMemo(() => stoppedNow, [stoppedKey]);
+  // A stop whose agent works here again, or wrote after it, is over: its pill offers no "Continue".
+  const movedNow = useMemo(
+    () =>
+      stopsMovedOn(
+        shownMessages,
+        // At work for real, not a guess at who will answer.
+        runs.filter((r) => !r.provisional).map((r) => r.agentId),
+      ),
+    [shownMessages, runs],
+  );
+  const movedKey = movedOnKey(movedNow);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `movedKey` stands for the set
+  const stopsMoved = useMemo(() => movedNow, [movedKey]);
+  // Work handed off from here stays on the line for as long as it is out (ADR 0095 addendum), with the other agent's
+  // state: its step, what it waits on, or what waits on me (its work for me, when that work is the hand-off's run, says
+  // so before the list does).
+  const presence = usePresenceOf();
   const lineConsults = useMemo(
-    () => consultsForLine(consults, consultBlocksNearEnd(shownMessages, consultList, undefined, "first")),
-    [consults, shownMessages, consultList],
+    () =>
+      [
+        ...consultsForLine(
+          consults.filter((x) => x.kind !== "note"),
+          consultBlocksNearEnd(shownMessages, consultList, undefined, "first"),
+        ),
+        ...consults.filter((x) => x.kind === "note"),
+      ].map((x) => ({
+        ...x,
+        ...consultDetails(
+          x,
+          consultData ?? [],
+          (id, run) => handoffAsk(presence.agent(id)?.work, run),
+          (id) => lineStep(t, presence.agent(id)?.status?.status),
+        ),
+      })),
+    [consults, shownMessages, consultList, consultData, presence, t],
   );
 
   // ── Following the end ──
@@ -696,9 +748,23 @@ function Chat({
   const [atEnd, setAtEnd] = useState(true);
   const atEndRef = useRef(atEnd);
   atEndRef.current = atEnd;
-  // Held at the start of a long message someone else wrote (see "Reading from the top"): the list doesn't follow
-  // the end until the person gets there, sends, or takes the pill.
+  // Held at the start of a long message someone else wrote (see "Reading from the top"), or where "Ver mais" opened
+  // one: the list doesn't follow the end until the person gets there, sends, or takes the pill.
   const [readHold, setReadHold] = useState(false);
+  // The person's first touch here, anywhere (a scroll, the box, a message): the day's greeting closes a while after.
+  const [touched, setTouched] = useState(false);
+  // The messages "Ver mais" opened in place: they stay open while the screen lives (rows unmount off screen).
+  const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
+  const openedMessages = useMemo<OpenedMessages>(
+    () => ({
+      has: (id) => opened.has(id),
+      open: (id) => {
+        setOpened((s) => new Set(s).add(id));
+        if (atEndRef.current) setReadHold(true);
+      },
+    }),
+    [opened],
+  );
   const [seenKey, setSeenKey] = useState<string | null>(null);
   // The message posted last when the person was last at the end: one posted since in a place above the last row they
   // saw (`PLACE_KEPT_MS`) is new to them too.
@@ -1032,19 +1098,31 @@ function Chat({
   // mine. The list is aimed at the end before the sheet closes: the place it held under the sheet doesn't come back.
   const settings = useSettings(orgId).data;
   const mediaTabs = mediaTabsOf(settings, dir.agents.length, Boolean(api.gifs));
-  const voice = useVoiceComposer({
-    orgId,
-    channelId,
-    threadId,
-    agentId: dmAgentId,
-    replyTo: quote?.id ?? null,
-    authorId: meId ?? "",
-    enabled: Boolean(meId && settings?.voiceAvailable && settings.voiceMessages),
-    afterSend: () => {
-      setQuote(null);
-      toEnd();
-    },
-  });
+  const voiceOn = Boolean(meId && settings?.voiceAvailable && settings.voiceMessages);
+  const afterVoice = useCallback(() => {
+    setQuote(null);
+    toEnd();
+  }, [toEnd]);
+  const onRecording = useCallback(() => sendTyping(threadId, undefined, "voice"), [sendTyping, threadId]);
+  // "gravando áudio…" goes on for the others while my recording uploads here; the server keeps it from then until the
+  // message comes.
+  const uploading = useMemo(
+    () =>
+      list.some(
+        (m) =>
+          m.local === "pending" &&
+          m.author.id === meId &&
+          voiceOf(m.meta) &&
+          !m.meta?.voiceAccepted &&
+          (m.threadId ?? null) === (threadId ?? null),
+      ),
+    [list, meId, threadId],
+  );
+  useEffect(() => {
+    if (!uploading) return;
+    const timer = setInterval(() => sendTyping(threadId, undefined, "voice", true), 1000);
+    return () => clearInterval(timer);
+  }, [uploading, sendTyping, threadId]);
   const sendMedia = (media: MessageMedia) => {
     send("", threadId, { ...takeQuote(), media });
     toEnd();
@@ -1151,7 +1229,11 @@ function Chat({
       case "camera": {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
         if (!perm.granted) {
-          toast({ title: t("mobile.plus.noCamera"), icon: "camera" });
+          toast({
+            title: t("mobile.plus.noCamera"),
+            icon: "camera",
+            action: { label: t("mobile.common.openSettings"), onPress: () => void Linking.openSettings() },
+          });
           return;
         }
         const res = await ImagePicker.launchCameraAsync({ quality: 0.8 });
@@ -1283,6 +1365,15 @@ function Chat({
     setSeek(target.messageId);
   };
   const openPins = () => sheet.open(<PinsSheet channelId={channelId} threadId={threadId} onPick={goToPin} />);
+  // The returns agents set here (ADR 0037 addendum): the dock's line at rest, the sheet behind it; a row goes to the
+  // reply that said it.
+  const returns = useReturnsHere(channelId, threadId);
+  const goToReturn = (messageId: string) => {
+    sheet.close();
+    seekPages.current = 0;
+    setSeek(messageId);
+  };
+  const openReturns = () => sheet.open(<ReturnsSheet channelId={channelId} threadId={threadId} onPick={goToReturn} />);
   // "Buscar nesta conversa" (as the web's header search): on the timeline, not in a thread.
   const searchPlace = isThread
     ? null
@@ -1651,6 +1742,7 @@ function Chat({
             }}
           />
         ) : null}
+        {/* Its AI and model are changed on its profile ("Pensa com"), not from the bar. */}
         {queueShown && barQueue && queueMachineId ? (
           dmComputer ? (
             <DmQueueButton
@@ -1709,8 +1801,13 @@ function Chat({
   // Someone else's message sent into a task at work says nothing here (mine wears it: `ReceiptMark`).
   const receiptSteered = useSteerState(orgId, channelId, receiptId && !receiptMine ? receiptId : "") !== null;
   const markAt = useMemo(
-    () => (!receiptId || receiptSteered ? null : receiptMine ? receiptId : turnHeadId(rows, receiptId)),
-    [receiptId, receiptSteered, receiptMine, rows],
+    () =>
+      !receiptId || receiptSteered
+        ? null
+        : receiptMine
+          ? receiptId
+          : markRowId(rows, receiptId, { faces: rowLook.faces, bubbles: rowLook.style === "bubbles" }),
+    [receiptId, receiptSteered, receiptMine, rows, rowLook.faces, rowLook.style],
   );
   // The line redraws when what it shows changes, not on every event that touches the receipt (typing).
   const receiptNow = receiptId ? live.receipts[receiptId] : undefined;
@@ -1729,9 +1826,10 @@ function Chat({
     : "";
   // biome-ignore lint/correctness/useExhaustiveDependencies: `receiptKey` stands for the receipt
   const receipt = useMemo(() => receiptNow, [receiptKey]);
-  // Agents' messages that called several agents: their strip (`FanStrip`). Only their receipts redraw the list.
+  // Agents' messages that called several agents (their strip, `FanStrip`) and a person's mention of everyone one agent
+  // answered for all (`EveryoneLine`). Only their receipts redraw the list.
   const fanNow = shownMessages
-    .filter((m) => m.author.type === "agent" && m.mentionedAgentIds.length > 1)
+    .filter((m) => (m.author.type === "agent" && m.mentionedAgentIds.length > 1) || m.meta?.everyoneShape)
     .map((m) => [m.id, live.receipts[m.id]] as const);
   const fanKey = JSON.stringify(fanNow);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `fanKey` stands for the receipts
@@ -1842,6 +1940,15 @@ function Chat({
             </Animated.View>
           );
         }
+        case "image":
+          return (
+            <Animated.View
+              entering={isFresh(item.key) ? ENTER : undefined}
+              style={[styles.browserRow, { paddingLeft: quiet, marginTop: rhythm.turn }]}
+            >
+              <ImageMaking color={agentLook(dir.agentById.get(item.run.agentId)).color} />
+            </Animated.View>
+          );
         case "message":
           // What reached an agent's conversation (a routine's report, another agent's answer) and a routine
           // that ran in the background: quiet lines, never a person's or the agent's own voice.
@@ -1879,6 +1986,13 @@ function Chat({
               </SwipeReply>
               {item.message.author.type === "agent" && item.message.mentionedAgentIds.length > 1 ? (
                 <FanStrip message={item.message} receipt={receipts[item.message.id]} />
+              ) : null}
+              {item.message.meta?.everyoneShape ? (
+                <EveryoneLine
+                  message={item.message}
+                  receipt={receipts[item.message.id]}
+                  mine={item.message.author.id === meId}
+                />
               ) : null}
               {item.message.id === receiptId ? (
                 <AgentReceiptLine
@@ -1938,11 +2052,64 @@ function Chat({
   }, [prefill]);
 
   // ── Composer and keyboard ──
+  // The field is its own piece (`ChatComposer`), handed things that stay the same from one render of the conversation
+  // to the next: an agent's work arrives here many times a second, and none of it redraws the field under the
+  // person's typing. What it calls reads the conversation as it is at that moment (`useLatest`).
+  const sendFromField = useLatest(onSend);
+  const plusFromField = useLatest(openPlus);
+  const longFromField = useLatest(longAsFile);
+  const removeFromStrip = useLatest(removePending);
+  const cancelQuote = useCallback(() => setQuote(null), []);
+  const quoteName = quote ? dir.nameOf(quote.author) : null;
+  const canAttach = pending.length < MAX_PENDING;
+  // Photos and files waiting to go (their caption is the field), then whom it answers.
+  const composerBanner = useMemo(
+    () =>
+      pending.length > 0 || quoteName !== null ? (
+        <>
+          <AttachmentStrip files={pending} onRemove={removeFromStrip} onAdd={canAttach ? plusFromField : undefined} />
+          {quoteName !== null ? <QuoteBar name={quoteName} onCancel={cancelQuote} /> : null}
+        </>
+      ) : undefined,
+    [pending, quoteName, canAttach, removeFromStrip, plusFromField, cancelQuote],
+  );
+  const everyoneOffered = offersEveryone(org, Boolean(dm));
+  const mentionCard = useCallback<NonNullable<ComposerProps["mention"]>>(
+    ({ query, sigil, pick }) =>
+      sigil === "#" ? (
+        <ChannelPicker query={query} pick={pick} />
+      ) : (
+        <MentionPicker
+          query={query}
+          pick={pick}
+          channelId={channelId}
+          members={mentionMembers}
+          everyone={everyoneOffered}
+        />
+      ),
+    [channelId, mentionMembers, everyoneOffered],
+  );
+  const onType = useCallback((text: string) => sendTyping(threadId, text), [sendTyping, threadId]);
   // The composer floats over the list's bottom and rides the keyboard (KeyboardStickyView); the list's end
   // inset is the composer's height plus the keyboard, moved on the UI thread frame by frame (also while the
   // keyboard is dragged down interactively).
   const composerRef = useRef<ComponentRef<typeof View>>(null);
   const { contentInsetEndAdjustment, onComposerLayout } = useKeyboardChatComposerInset(listRef, composerRef);
+  // On iOS the keyboard library moves what rides the keyboard (the composer's dock) when a move starts and while
+  // the keyboard is dragged, and never when the move ends, while the list takes its room from the start and the
+  // end. A last event that wasn't the final state left the box up at the keyboard's height over a list that had
+  // gone back down. The end of every move has the last word for both.
+  const keyboardAt = useReanimatedKeyboardAnimation();
+  useKeyboardHandler(
+    {
+      onEnd: (e) => {
+        "worklet";
+        keyboardAt.height.value = -e.height;
+        keyboardAt.progress.value = e.progress;
+      },
+    },
+    [],
+  );
   const [composerHeight, setComposerHeight] = useState(0);
   const onComposerBoxLayout = (e: LayoutChangeEvent) => {
     onComposerLayout(e);
@@ -1995,9 +2162,12 @@ function Chat({
   // a little opacity, not none, so the glass inside rows keeps drawing.
   const listShown = useSharedValue(0.05);
   const listFade = useAnimatedStyle(() => ({ opacity: listShown.value }));
+  // Until then the conversation's skeleton stands where the messages will (`ChatSkeleton`), and leaves as they fade in.
+  const [placed, setPlaced] = useState(false);
   const revealList = useCallback(() => {
     listShown.value = withTiming(1, { duration: 160 });
     listPlaced.current = true;
+    setPlaced(true);
     watchList();
   }, [listShown, watchList]);
   useEffect(() => {
@@ -2041,6 +2211,45 @@ function Chat({
     holdAt(id ?? undefined, 0, false);
   }, [showList, top.data, top.isFetching, rows, list, meId, holdAt]);
 
+  // Opened with something unread that isn't at its end: a reply in a thread, one link under its root, maybe far
+  // above. That root comes into view, flashed, instead of an end with nothing new (as on the web). Once, with what
+  // was unread on opening; never over a message the screen was asked to open at.
+  const openedUnread = useRef<{ count: number; at: string | null | undefined } | undefined>(undefined);
+  if (openedUnread.current === undefined && (channel || dm))
+    openedUnread.current = {
+      count: isThread || focusId ? 0 : (channel?.unreadCount ?? dm?.unread ?? 0),
+      at: channel?.lastReadAt ?? dm?.lastReadAt,
+    };
+  const threadLanded = useRef(false);
+  useEffect(() => {
+    const opened = openedUnread.current;
+    // The messages and the threads as the server has them now: lists kept from an earlier visit know nothing new.
+    if (threadLanded.current || !opened || !showList || !top.isSuccess || top.isFetching) return;
+    if (opened.count > 0 && (!channelThreads.isSuccess || channelThreads.isFetching)) return;
+    threadLanded.current = true;
+    if (opened.count === 0) return;
+    const root = unreadThreadRootId(
+      list.filter((m) => !m.threadId),
+      // A thread made from a range has no root in the conversation (its marker stands there).
+      (channelThreads.data?.threads ?? []).filter((x) => !x.context),
+      opened.at,
+      meId,
+    );
+    if (!root) return;
+    seekPages.current = 0;
+    seekPressed.current = true;
+    setSeek(root);
+  }, [
+    showList,
+    top.isSuccess,
+    top.isFetching,
+    channelThreads.isSuccess,
+    channelThreads.isFetching,
+    channelThreads.data,
+    list,
+    meId,
+  ]);
+
   // ── Reading from the top ──
   // A message someone else wrote (an agent's reply, also while it streams, or a teammate's) taller than the room
   // between the bar and the box lands once with its first line under the bar, as on the web (`readingLanding`),
@@ -2077,6 +2286,16 @@ function Chat({
       void listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0, viewOffset: readRoom });
     });
   }, [readRoom, composerHeight]);
+  // The box growing while the person is at the end (the working line coming in, a banner, an attachment) keeps the
+  // last message above it: the list's end inset moves with the box, but the list follows only its content, so the
+  // line would sit over the message's last lines.
+  const boxHeightRef = useRef(0);
+  useEffect(() => {
+    const before = boxHeightRef.current;
+    boxHeightRef.current = composerHeight;
+    if (before === 0 || composerHeight <= before || !atEndRef.current || readHold) return;
+    requestAnimationFrame(() => void listRef.current?.scrollToEnd({ animated: true }));
+  }, [composerHeight, readHold]);
   useEffect(() => {
     if (!showList) return;
     const state = listRef.current?.getState();
@@ -2099,7 +2318,10 @@ function Chat({
   return (
     <AskStoreProvider store={asks}>
       <AskProbes messages={shownMessages} />
-      <View style={[styles.screen, { backgroundColor: c.bg }]}>
+      <View
+        style={[styles.screen, { backgroundColor: c.bg }]}
+        onTouchStart={touched ? undefined : () => setTouched(true)}
+      >
         {/* A clear bar on every conversation (DM, channel, thread): the band behind it is ours, below, so the
             system's scroll edge never makes one look different from another. */}
         <PushedHeader title={pill ?? title} plate solid={false} right={right} />
@@ -2114,109 +2336,118 @@ function Chat({
             ) : null}
           </View>
         ) : null}
-        {/* No `textInputNativeID`: with it the composer could stay down while the keyboard was up (iOS 26; Bluesky
-            drops it too). The offset is whole points: a fractional one made the overscroll glitch. */}
+        {/* No `textInputNativeID`: with it the composer could stay down while the keyboard was up (iOS 26). Without it
+            iOS takes no offset (the keyboard starts following the finger at its own top edge); Android does. The
+            offset is whole points: a fractional one made the overscroll glitch. */}
         <KeyboardGestureArea
           style={styles.grow}
           interpolator="ios"
           offset={Math.round(Math.max(0, composerHeight - lift))}
         >
-          {loading ? (
-            <View style={[styles.center, { paddingBottom: composerHeight }]}>
-              <Text tone="faint">{t("mobile.common.loading")}</Text>
-            </View>
-          ) : (
+          {loading ? null : (
             <>
               {/* Mounted before the first message too: a list that appears while the keyboard is already up never
                   hears it open, and its first message landed under it. */}
               <Animated.View style={[styles.grow, listFade]}>
                 {/* The list's frame, where the waiting requests' cards are measured from (never flattened away). */}
                 <View ref={listFrame} collapsable={false} style={styles.grow} onLayout={watchList}>
-                  <StickerStageContext.Provider value={stickers}>
-                    <JumpToMessageContext.Provider value={jumpToMessage}>
-                      <RowLookContext.Provider value={rowLook}>
-                        <StoppedRunsContext.Provider value={stoppedRuns}>
-                          <KeyboardAwareLegendList
-                            ref={listRef}
-                            style={styles.grow}
-                            data={shownRows}
-                            keyExtractor={rowKey}
-                            getItemType={rowType}
-                            renderItem={renderItem}
-                            // The list redraws mounted rows only when this changes: what a row shows beyond its
-                            // message (the thread link that loads after it, a held state) lives in `renderItem`'s
-                            // dependencies.
-                            extraData={renderItem}
-                            estimatedItemSize={72}
-                            // Opens at the latest message, short conversations sit at the bottom like any chat.
-                            initialScrollAtEnd
-                            alignItemsAtEnd
-                            // New messages, a reply growing word by word and the working line keep the end in view,
-                            // but only while the person is near it.
-                            maintainScrollAtEnd={!readHold}
-                            maintainScrollAtEndThreshold={STICK_TO_END_THRESHOLD}
-                            // Older pages above and rows changing size keep what is on screen still.
-                            maintainVisibleContentPosition
-                            // Our own insets, never the system's (the keyboard library's advice for chat lists): the
-                            // bar's room is the content's top padding, the indicator kept below the bar.
-                            contentInsetAdjustmentBehavior="never"
-                            automaticallyAdjustContentInsets={false}
-                            scrollIndicatorInsets={{ top: headerHeight }}
-                            // Still while a sheet or the agent's computer covers the conversation.
-                            freeze={freeze}
-                            onReady={revealList}
-                            onStartReached={loadOlder}
-                            // A look at the waiting requests' cards and the live rows, once a frame and only while
-                            // there is one.
-                            onScroll={onListScroll}
-                            onViewableItemsChanged={onViewable}
-                            viewabilityConfig={STICKER_VIEW}
-                            onScrollBeginDrag={() => {
-                              dragging.current = true;
-                              showDay();
-                            }}
-                            onScrollEndDrag={() => {
-                              releaseAtEnd();
-                              hideDay();
-                            }}
-                            onMomentumScrollBegin={showDay}
-                            onMomentumScrollEnd={() => {
-                              releaseAtEnd();
-                              hideDay();
-                            }}
-                            onStartReachedThreshold={0.5}
-                            keyboardDismissMode="interactive"
-                            keyboardShouldPersistTaps="handled"
-                            keyboardOffset={lift}
-                            contentInsetEndAdjustment={contentInsetEndAdjustment}
-                            contentContainerStyle={listPad}
-                            // At the conversation's start, once it is loaded: the pinned messages (pulling down past
-                            // the first message reveals them), then the right hand's greeting or a new agent's
-                            // checklist.
-                            ListHeaderComponent={
-                              atStart && (hasPins || (dmAgent && (rightHand || setupIntro))) ? (
-                                <>
-                                  {hasPins ? (
-                                    <PinnedLines
-                                      channelId={channelId}
-                                      threadId={threadId}
-                                      onOpen={openPins}
-                                      onPick={goToPin}
-                                    />
-                                  ) : null}
-                                  {dmAgent && rightHand ? (
-                                    <RightHandIntro agent={dmAgent} channelId={channelId} waveFrom={waveFrom} />
-                                  ) : dmAgent && setupIntro ? (
-                                    <AgentSetupIntro agent={dmAgent} channelId={channelId} />
-                                  ) : null}
-                                </>
-                              ) : undefined
-                            }
-                          />
-                        </StoppedRunsContext.Provider>
-                      </RowLookContext.Provider>
-                    </JumpToMessageContext.Provider>
-                  </StickerStageContext.Provider>
+                  {/* The right hand's cards here show the place its work in this conversation is on. */}
+                  <ConversationSeat
+                    orgId={orgId}
+                    channelId={channelId}
+                    rightHandId={rightHandId}
+                    dm={Boolean(dm) || thread.data?.channelKind === "dm"}
+                  >
+                    <StickerStageContext.Provider value={stickers}>
+                      <JumpToMessageContext.Provider value={jumpToMessage}>
+                        <RowLookContext.Provider value={rowLook}>
+                          <StoppedRunsContext.Provider value={stoppedRuns}>
+                            <StopsMovedOnContext.Provider value={stopsMoved}>
+                              <OpenedMessagesContext.Provider value={openedMessages}>
+                                <KeyboardAwareLegendList
+                                  ref={listRef}
+                                  style={styles.grow}
+                                  data={shownRows}
+                                  keyExtractor={rowKey}
+                                  getItemType={rowType}
+                                  renderItem={renderItem}
+                                  // The list redraws mounted rows only when this changes: what a row shows beyond its
+                                  // message (the thread link that loads after it, a held state) lives in `renderItem`'s
+                                  // dependencies.
+                                  extraData={renderItem}
+                                  estimatedItemSize={72}
+                                  // Opens at the latest message, short conversations sit at the bottom like any chat.
+                                  initialScrollAtEnd
+                                  alignItemsAtEnd
+                                  // New messages, a reply growing word by word and the working line keep the end in view,
+                                  // but only while the person is near it.
+                                  maintainScrollAtEnd={!readHold}
+                                  maintainScrollAtEndThreshold={STICK_TO_END_THRESHOLD}
+                                  // Older pages above and rows changing size keep what is on screen still.
+                                  maintainVisibleContentPosition
+                                  // Our own insets, never the system's (the keyboard library's advice for chat lists): the
+                                  // bar's room is the content's top padding, the indicator kept below the bar.
+                                  contentInsetAdjustmentBehavior="never"
+                                  automaticallyAdjustContentInsets={false}
+                                  scrollIndicatorInsets={{ top: headerHeight }}
+                                  // Still while a sheet or the agent's computer covers the conversation.
+                                  freeze={freeze}
+                                  onReady={revealList}
+                                  onStartReached={loadOlder}
+                                  // A look at the waiting requests' cards and the live rows, once a frame and only while
+                                  // there is one.
+                                  onScroll={onListScroll}
+                                  onViewableItemsChanged={onViewable}
+                                  viewabilityConfig={STICKER_VIEW}
+                                  onScrollBeginDrag={() => {
+                                    dragging.current = true;
+                                    showDay();
+                                  }}
+                                  onScrollEndDrag={() => {
+                                    releaseAtEnd();
+                                    hideDay();
+                                  }}
+                                  onMomentumScrollBegin={showDay}
+                                  onMomentumScrollEnd={() => {
+                                    releaseAtEnd();
+                                    hideDay();
+                                  }}
+                                  onStartReachedThreshold={0.5}
+                                  keyboardDismissMode="interactive"
+                                  keyboardShouldPersistTaps="handled"
+                                  keyboardOffset={lift}
+                                  contentInsetEndAdjustment={contentInsetEndAdjustment}
+                                  contentContainerStyle={listPad}
+                                  // At the conversation's start, once it is loaded: the pinned messages (pulling down past
+                                  // the first message reveals them), then the right hand's greeting or a new agent's
+                                  // checklist.
+                                  ListHeaderComponent={
+                                    atStart && (hasPins || (dmAgent && (rightHand || setupIntro))) ? (
+                                      <>
+                                        {hasPins ? (
+                                          <PinnedLines
+                                            channelId={channelId}
+                                            threadId={threadId}
+                                            onOpen={openPins}
+                                            onPick={goToPin}
+                                          />
+                                        ) : null}
+                                        {dmAgent && rightHand ? (
+                                          <RightHandIntro agent={dmAgent} channelId={channelId} waveFrom={waveFrom} />
+                                        ) : dmAgent && setupIntro ? (
+                                          <AgentSetupIntro agent={dmAgent} channelId={channelId} />
+                                        ) : null}
+                                      </>
+                                    ) : undefined
+                                  }
+                                />
+                              </OpenedMessagesContext.Provider>
+                            </StopsMovedOnContext.Provider>
+                          </StoppedRunsContext.Provider>
+                        </RowLookContext.Provider>
+                      </JumpToMessageContext.Provider>
+                    </StickerStageContext.Provider>
+                  </ConversationSeat>
                   <DatePill day={topDay} shown={dayShown} top={hasPin ? 8 : headerHeight + 8} />
                 </View>
               </Animated.View>
@@ -2254,6 +2485,10 @@ function Chat({
               )}
             </>
           )}
+          {/* The messages on their way, or the list still placing itself at its end: their shape, never a blank screen. */}
+          {loading || (showList && !placed) ? (
+            <ChatSkeleton look={rowLook} top={hasPin ? 0 : headerHeight} bottom={composerHeight} />
+          ) : null}
           {!hasPin ? (
             // The conversation fades under the floating header, as it does under the box. Not under a pinned bar
             // or card: the list already starts below them, and a header-tall fade there was a dark band over the
@@ -2273,20 +2508,19 @@ function Chat({
               messages={top.data}
               agentIds={channelAgents}
               top={headerHeight + 8}
+              touched={touched}
             />
           ) : null}
-          {/* Above the composer and its working line, riding the keyboard with them. */}
-          <KeyboardStickyView
-            offset={{ opened: lift }}
-            style={[styles.jumpAt, { bottom: composerHeight + 10 }]}
-            pointerEvents="box-none"
-          >
-            {showList && (readHold || (!atEnd && (far || unseen.messages > 0 || unseen.working.length > 0))) ? (
-              <ToLatest unseen={unseen} onPress={toEnd} />
-            ) : null}
-          </KeyboardStickyView>
           {peeking ? null : (
-            <KeyboardStickyView offset={{ opened: lift }} style={styles.composerDock}>
+            <KeyboardStickyView offset={{ opened: lift }} style={styles.composerDock} pointerEvents="box-none">
+              {/* Right above the composer and its working line, in the same dock: it rides the keyboard with them and
+                  moves with the box in the same frame when the field grows a line (placed from the box's measured
+                  height it came a render later). */}
+              {showList && (readHold || (!atEnd && (far || unseen.messages > 0 || unseen.working.length > 0))) ? (
+                <View style={styles.jumpAt} pointerEvents="box-none">
+                  <ToLatest unseen={unseen} onPress={toEnd} />
+                </View>
+              ) : null}
               <View
                 ref={composerRef}
                 onLayout={onComposerBoxLayout}
@@ -2326,12 +2560,14 @@ function Chat({
                     runs={runs}
                     consults={lineConsults}
                     typing={typing}
+                    onSeeConsult={(id) => router.push(consultationHref(id, channelId))}
                     onOpenBrowser={(agentId) => {
                       // The agent's browser card opens in the conversation (at the end), not another screen.
                       toggleBrowser(agentId, true);
                       toEnd();
                     }}
                     stop={lineStop}
+                    rest={returns.length > 0 ? <ReturnLine returns={returns} onOpen={openReturns} /> : null}
                   />
                 ) : null}
                 {org?.deletion ? (
@@ -2347,51 +2583,34 @@ function Chat({
                     {t("channel.perms.readOnlyComposer")}
                   </Text>
                 ) : member ? (
-                  <Composer
+                  <ChatComposer
                     placeholder={placeholder}
-                    onSend={onSend}
+                    onSend={sendFromField}
                     working={working}
                     // GIFs and stickers live in the "+", with the photos: the field only sends.
-                    onPlus={openPlus}
+                    onPlus={plusFromField}
                     media={null}
                     draftKey={threadId ? `${channelId}:${threadId}` : channelId}
                     inputNativeID={COMPOSER_INPUT_ID}
                     {...(suggestions.length > 0 ? { suggestions } : {})}
-                    {...(dmAgentId && !isThread ? { face: <AgentFace agentId={dmAgentId} size={22} /> } : {})}
                     mentionAt={refQuery}
                     insertMention={insertRef}
                     prefill={prefill ?? captionBack}
                     focusAt={replyAt}
-                    // Photos and files waiting to go (their caption is the field), then whom it answers.
-                    banner={
-                      pending.length > 0 || quote ? (
-                        <>
-                          <AttachmentStrip
-                            files={pending}
-                            onRemove={removePending}
-                            onAdd={pending.length < MAX_PENDING ? openPlus : undefined}
-                          />
-                          {quote ? <QuoteBar name={dir.nameOf(quote.author)} onCancel={() => setQuote(null)} /> : null}
-                        </>
-                      ) : undefined
-                    }
+                    banner={composerBanner}
                     sendEmpty={pending.length > 0}
-                    {...(pending.length < MAX_PENDING ? { onLongAsFile: longAsFile } : {})}
-                    mention={({ query, sigil, pick }) =>
-                      sigil === "#" ? (
-                        <ChannelPicker query={query} pick={pick} />
-                      ) : (
-                        <MentionPicker
-                          query={query}
-                          pick={pick}
-                          channelId={channelId}
-                          members={mentionMembers}
-                          everyone={offersEveryone(org, Boolean(dm))}
-                        />
-                      )
-                    }
-                    onType={(text) => sendTyping(threadId, text)}
-                    voice={voice}
+                    {...(canAttach ? { onLongAsFile: longFromField } : {})}
+                    mention={mentionCard}
+                    onType={onType}
+                    orgId={orgId}
+                    channelId={channelId}
+                    threadId={threadId}
+                    agentId={dmAgentId}
+                    replyTo={quote?.id ?? null}
+                    authorId={meId ?? ""}
+                    voiceOn={voiceOn}
+                    onVoiceSent={afterVoice}
+                    onRecording={onRecording}
                   />
                 ) : (
                   <>
@@ -2417,6 +2636,57 @@ function Chat({
     </AskStoreProvider>
   );
 }
+
+/** The latest of a function behind one that never changes: what it is handed to isn't redrawn when the function is. */
+function useLatest<A extends unknown[], R>(fn: (...args: A) => R) {
+  const ref = useRef(fn);
+  ref.current = fn;
+  return useCallback((...args: A) => ref.current(...args), []);
+}
+
+/**
+ * The conversation's field with its voice messages. On its own so that it redraws for what it shows (the words, a
+ * take's clock and wave) and never for the conversation above it: everything it is handed keeps its identity between
+ * the conversation's renders.
+ */
+const ChatComposer = memo(function ChatComposer({
+  orgId,
+  channelId,
+  threadId,
+  agentId,
+  replyTo,
+  authorId,
+  voiceOn,
+  onVoiceSent,
+  onRecording,
+  ...composer
+}: Omit<ComposerProps, "voice"> & {
+  orgId: string;
+  channelId: string;
+  threadId: string | null;
+  /** The agent this conversation is with, if one (its face listens in the field). */
+  agentId: string | null;
+  /** The message a voice take answers. */
+  replyTo: string | null;
+  authorId: string;
+  voiceOn: boolean;
+  onVoiceSent: () => void;
+  /** While a take records: the others see "gravando áudio…" (throttled by the caller). */
+  onRecording: () => void;
+}) {
+  const voice = useVoiceComposer({
+    orgId,
+    channelId,
+    threadId,
+    agentId,
+    replyTo,
+    authorId,
+    enabled: voiceOn,
+    afterSend: onVoiceSent,
+    onRecording,
+  });
+  return <Composer {...composer} voice={voice} />;
+});
 
 /**
  * Back to the latest messages: a round button at the bottom right, right above the composer, as on the web.
@@ -2548,7 +2818,8 @@ const styles = StyleSheet.create({
   composer: { paddingHorizontal: 10, paddingTop: 6 },
   readOnly: { textAlign: "center", paddingHorizontal: 16, paddingVertical: 12 },
   composerDock: { position: "absolute", left: 0, right: 0, bottom: 0 },
-  jumpAt: { position: "absolute", right: 14 },
+  // Over the list, at the dock's top right; the list under the rest of its row still takes the touches.
+  jumpAt: { alignSelf: "flex-end", marginRight: 14, marginBottom: 10 },
   jump: { width: 40, height: 40, borderRadius: 20 },
   jumpIcon: { flex: 1, alignItems: "center", justifyContent: "center" },
   jumpCount: { position: "absolute", top: -6, right: -6, borderWidth: 2, borderRadius: 999 },

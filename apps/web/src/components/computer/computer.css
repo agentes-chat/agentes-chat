@@ -298,6 +298,13 @@
   height: auto;
   margin-top: calc((24px - var(--cmp-button)) / 2 - var(--title-cap-mid, var(--cap-mid)));
 }
+/* The window's head sets its own row (the arrows reach into the close's box): the close keeps its drawn air here. */
+.cmp-dialog .ac-actline:has(> .ac-dialog__acts) + .ac-dialog__close {
+  margin-inline-start: 0;
+}
+.cmp-dialog .ac-actline:has(> .ac-dialog__acts) + .ac-dialog__close > .ac-btn--glyph {
+  --glyph-air: calc(var(--control-icon-sm) * 5.2 / 20);
+}
 .cmp-dialog.is-screen-only :is(.ac-dialog__acts, .ac-dialog__close) {
   margin-top: calc((24px + 18px - var(--cmp-button)) / 2);
 }
@@ -789,4 +796,43 @@
 /* The DM header's button: its dot in the agent's color while it works, amber while a request waits. */
 .brw-dm[data-state="live"]::after {
   background: var(--dot, var(--ok));
+}
+
+/* ---------- what the agent keeps running (keep_running, ADR 0176) ---------- */
+
+/* A fact row whose value is the holds: each one's line, then its ⋯ for who may stop it. */
+.cmp-kept__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cmp-kept__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+/* What is kept, in the value's ink, and who kept it since when until when under it: both wrap whole, never cut. */
+.cmp-kept__t {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cmp-kept__t b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.cmp-kept__t > span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+/* In the dialog's menu: the menu's own note, its first line in the ink. */
+.ac-menu__note .cmp-kept__t > span {
+  color: var(--faint);
+  font-size: inherit;
 }

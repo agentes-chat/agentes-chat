@@ -50,6 +50,7 @@ import { PlanReplies } from "@/components/ai/PlanReplies";
 import { HaveList, HaveRow, sortHave } from "@/components/arrival/ConnectHave";
 import { TeamScene, useDawn } from "@/components/arrival/TeamScene";
 import { useConnectAi } from "@/components/ConnectAi";
+import { ToolOffNote, useToolOneClick } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
 import { useWidenAsk } from "@/components/ReachLines";
 import { ToolsOffHereNote, useIsThisMac } from "@/components/ThisMac";
@@ -324,7 +325,7 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
       setDir("fwd");
       setTrail(["glance", "done"]);
       // Off the plan it still answers only its owner: one click lets back in whoever it answered before. "Só algumas
-      // pessoas ou papéis" with nobody picked has no one to let back in: no action.
+      // pessoas ou cargos" with nobody picked has no one to let back in: no action.
       if (row.kind === "key" && view.brain !== "model" && view.onlyOwner) {
         const people = (agent.audience?.userIds?.length ?? 0) + (agent.audience?.roleIds?.length ?? 0);
         toast.show(
@@ -630,6 +631,14 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
       : s.homeOf(s.savedCard)
         ? s.side(s.savedCard)
         : { icon: "block" as IconName, text: s.reason(s.savedCard) ?? s.side(s.savedCard)?.text ?? "" };
+  // Its CLI off on its computer: whoever connected it turns it on here (ADR 0036 §8); this Mac's Preferences otherwise.
+  const offBrain =
+    view.brain !== "model" && view.options.find((o) => o.kind === view.brain)?.reason === "tool_off"
+      ? view.brain
+      : null;
+  const offOn = work.machines.data?.find((x) => x.id === view.computer?.machineId) ?? null;
+  const offOneClick = useToolOneClick(offOn);
+  const offTool = offBrain && offOn && offOneClick && offOneClick.kind !== "outdated" ? offBrain : null;
   const lendsAny = view.canUseOthersPlans === true && s.listed.some((a) => !a.mine && a.ownerId !== agent.ownerUserId);
   const pairer = work.machines.data?.find((x) => x.id === view.computer?.machineId)?.pairedBy?.name.split(" ")[0];
   // On someone else's computer only whoever connected it adds a sign-in: with nothing of the owner's there, it says so.
@@ -710,7 +719,13 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
           {s.savedCard === "gemini" && geminiPersonal(s.currentAccount) && (
             <SettingNote icon="alert">{t("connectAi.plan.gemini.warning")}</SettingNote>
           )}
-          {toolOffHere && <ToolsOffHereNote />}
+          {offTool && offOn ? (
+            <ToolOffNote machine={offOn} tool={offTool === "claude_code" ? "claude" : offTool}>
+              {t("brain.reasons.tool_offOne", { program: t(`brain.card.${offTool}`), computer: offOn.name })}
+            </ToolOffNote>
+          ) : (
+            toolOffHere && <ToolsOffHereNote />
+          )}
           <div className="bd-lines">
             <BrainLine
               label={t("agentPage.work.brain.planModel")}
@@ -749,6 +764,7 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
             disabled={busy}
             pinned={{ label: t("agentPage.work.brain.v2.inUse"), items: s.currentRow ? [s.currentRow] : [] }}
             label={title}
+            byAi
           />
           {lockedHere && (
             <SettingNote icon="lock">

@@ -21,7 +21,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../app";
-import { saidText } from "../control/activity";
+import { saidText, toolWords } from "../control/activity";
 import {
   BROWSER_NOTIFY_PREF,
   browserRowState,
@@ -271,7 +271,18 @@ export function Popover() {
           })
           .catch(() => {});
       };
-      answerThisMac({ store, openPrefs: openPrefsOn, showRequests, localDir, revealFolder, onPaired }, request)
+      answerThisMac(
+        {
+          store,
+          openPrefs: openPrefsOn,
+          showRequests,
+          localDir,
+          revealFolder,
+          onPaired,
+          openPrivacy: (pane) => host.openPrivacy(pane),
+        },
+        request,
+      )
         .then(
           (data) => host.thisMacReply(id, true, data ?? null),
           (err: unknown) => host.thisMacReply(id, false, err instanceof Error ? err.message : String(err)),
@@ -711,6 +722,8 @@ export function Popover() {
               }
             />
           )}
+
+          {homes.map((h) => h.allowed && <AllowedBanner key={h.homeId} home={h} />)}
 
           {requests.length > 0 && (
             <section className="dk-psec">
@@ -1166,6 +1179,46 @@ function JobRow({ home, job, now }: { home: Home; job: ControlJob; now: number }
       </span>
       <span className="dk-job__end">{since(job.startedAt, t, now)}</span>
     </div>
+  );
+}
+
+/** Its owner turned a tool on from the apps: said here until seen, with Undo (it goes off again on this computer). */
+function AllowedBanner({ home }: { home: Home }) {
+  const { t } = useTranslation();
+  const store = useStore();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const allowed = home.allowed;
+  if (!allowed) return null;
+  const tool = toolWords(t, allowed.tool);
+  const undo = async () => {
+    setBusy(true);
+    try {
+      await store.request(home.homeId, { type: "tools.set", tool: allowed.tool, on: false });
+      store.dismissAllowed(home.homeId);
+      toast(t("desktop.tray.allowedUndone", { tool }), "check");
+    } catch {
+      toast(t("desktop.common.error"), "alert");
+      setBusy(false);
+    }
+  };
+  return (
+    <Banner
+      icon="check"
+      title={t("desktop.tray.allowedTitle", { name: allowed.byName || orgName(home), tool })}
+      actions={
+        <>
+          <Button size="sm" disabled={busy} onClick={() => void undo()}>
+            {t("desktop.tray.allowedUndo")}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => store.dismissAllowed(home.homeId)}>
+            {t("desktop.tray.allowedOk")}
+          </Button>
+        </>
+      }
+    >
+      {t("desktop.tray.allowedBody")}
+    </Banner>
   );
 }
 

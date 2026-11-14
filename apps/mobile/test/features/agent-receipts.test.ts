@@ -15,13 +15,13 @@ import {
   keptLine,
   markLabel,
   markOf,
+  markRowId,
   phaseKey,
   type ReceiptMarkView,
   receiptLine,
   receiptMessageId,
   receiptRows,
   receiptShows,
-  turnHeadId,
 } from "../../src/features/chat/agent-receipts";
 import { endsOnNoAiCard, noAiBanner } from "../../src/features/chat/no-ai-banner";
 import { message, translator } from "./fixtures";
@@ -422,7 +422,7 @@ describe("the agents' receipt line under a person's message", () => {
     expect(markLabel(pt, plan, names)).toBe("Escolhendo quem responde");
   });
 
-  test("someone else's mark goes at the end of their turn's name line: a grouped row has none", () => {
+  test("someone else's mark stays on its own row, a grouped one too; with no faces and no bubbles, on its turn's name line", () => {
     const rows = [
       { kind: "day" },
       { kind: "message", message: message({ id: "a" }), grouped: false },
@@ -430,10 +430,17 @@ describe("the agents' receipt line under a person's message", () => {
       { kind: "message", message: message({ id: "c" }), grouped: true },
       { kind: "message", message: message({ id: "d", author: { type: "person", id: "u2" } }), grouped: false },
     ];
-    expect(turnHeadId(rows, "c")).toBe("a");
-    expect(turnHeadId(rows, "a")).toBe("a");
-    expect(turnHeadId(rows, "d")).toBe("d");
-    expect(turnHeadId(rows, "x")).toBeNull();
+    const faces = { faces: true, bubbles: false };
+    expect(markRowId(rows, "c", faces)).toBe("c");
+    expect(markRowId(rows, "c", { faces: false, bubbles: true })).toBe("c");
+    // A bubble look's grouped row with no words has no bubble to wear it: its turn's name line does.
+    const wordless = rows.map((r) => (r.message?.id === "c" ? { ...r, message: message({ id: "c", body: "" }) } : r));
+    expect(markRowId(wordless, "c", { faces: false, bubbles: true })).toBe("a");
+    expect(markRowId(rows, "a", faces)).toBe("a");
+    const bare = { faces: false, bubbles: false };
+    expect(markRowId(rows, "c", bare)).toBe("a");
+    expect(markRowId(rows, "d", bare)).toBe("d");
+    expect(markRowId(rows, "x", faces)).toBeNull();
   });
 
   test("the sheet: each agent with its phase; one the message only names says so", () => {

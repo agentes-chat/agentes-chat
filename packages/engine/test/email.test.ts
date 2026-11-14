@@ -43,6 +43,7 @@ const TYPED = [
   "inviterName",
   "inviterEmail",
   "email",
+  "newEmail",
   "title",
   "agentName",
   "name",
@@ -58,7 +59,7 @@ const headline = (html: string) =>
   (html.match(/<h1[^>]*>(.*?)<\/h1>/)?.[1] ?? "?").replace(/<[^>]+>/g, "").replaceAll("&#39;", "'");
 const buttons = (t: EmailTemplate) =>
   [...renderEmail(t, art).html.matchAll(/<a class="btn" href="([^"]*)"[^>]*>.*?<span[^>]*>([^<]*)<\/span>/g)].map(
-    (m) => ({ url: (m[1] ?? "").replaceAll("&amp;", "&"), label: m[2] ?? "" }),
+    (m) => ({ url: (m[1] ?? "").replaceAll("&amp;", "&"), label: (m[2] ?? "").replaceAll("&#39;", "'") }),
   );
 
 function poisoned(t: EmailTemplate, value = SENTINEL): EmailTemplate {
@@ -129,6 +130,9 @@ describe("every email, in both languages", () => {
       join_answer: true,
       join_code: true,
       deletion_code: true,
+      email_change_code: true,
+      email_change_link: true,
+      email_changed: true,
       workspace_deleting: true,
       workspace_restored: true,
       account_deleted: true,

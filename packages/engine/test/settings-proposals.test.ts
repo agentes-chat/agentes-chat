@@ -471,7 +471,7 @@ describe("an agent's skills on the card, as on its page", () => {
     expect(await skillsOf(f)).toEqual(["excel"]);
   });
 
-  test("clear refusals: a skill not installed, one it already has, the right hand's own, one removed since", async () => {
+  test("clear refusals: a skill not installed, one it already has, one removed since", async () => {
     f = await setup({ rightHand: true });
     const ctx = await lodiRun(f, f.owner.id, "dá a skill excel pro dev");
     const none = await call(f, ctx, { changes: [{ agent: "@dev", add_skills: ["excel"] }], reason: "pediu" });
@@ -485,8 +485,6 @@ describe("an agent's skills on the card, as on its page", () => {
     const taken = await call(f, ctx, { changes: [{ agent: "@dev", remove_skills: ["excel"] }], reason: "pediu" });
     expect(taken).toMatchObject({ isError: true });
     expect(taken.content).toContain("@dev doesn't have the skill excel.");
-    const own = await call(f, ctx, { changes: [{ agent: "@lodi", add_skills: ["excel"] }], reason: "pediu" });
-    expect(own.content).toContain("You can't change your own skill");
 
     // Outside content read: it waits on the card, and goes out of date once the skill is removed.
     await call(f, ctx, { changes: [{ agent: "@dev", add_skills: ["excel"] }], reason: "pediu" });
@@ -495,6 +493,20 @@ describe("an agent's skills on the card, as on its page", () => {
     await deleteSkill(f.db, f.owner.id, f.org.id, excel.id);
     await expect(decideProposal(f.db, f.owner.id, f.org.id, row?.id ?? "", "accept")).rejects.toThrow(/changed since/);
     expect(await skillsOf(f)).toEqual([]);
+  });
+
+  test("the right hand's own skill is a row like any agent's own: it waits for a person's click", async () => {
+    f = await setup({ rightHand: true });
+    const pdf = await install(f, "pdf");
+    const ctx = await lodiRun(f, f.owner.id, "liga a skill pdf pra você");
+    const own = await call(f, ctx, { changes: [{ agent: "@lodi", add_skills: ["pdf"] }], reason: "pediu" });
+    expect(own.isError).toBeFalsy();
+    expect(own.content).toContain("Your own settings wait for that click");
+    const [row] = (await cardRows(f, f.owner.id)).rows;
+    expect(row).toMatchObject({ status: "pending", agentId: ctx.agentId });
+    expect(await enabledSkills(f.db, f.org.id, ctx.agentId)).toEqual([]);
+    await decideProposal(f.db, f.owner.id, f.org.id, row?.id ?? "", "accept", { pubsub: f.pubsub });
+    expect((await enabledSkills(f.db, f.org.id, ctx.agentId)).map((k) => k.id)).toEqual([pdf.id]);
   });
 
   test("a name finds its own skill before one that differs only by a hyphen", async () => {

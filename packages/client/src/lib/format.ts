@@ -97,6 +97,9 @@ export const capitalize = (s: string, locale?: string) => s.charAt(0).toLocaleUp
  */
 export const keepWhole = (fact: string) => fact.replace(/ /g, "\u00a0");
 
+/** A row's id as the server writes it (a UUID): a value that means nothing to a person. */
+export const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
 /** Words written with `<code>` tags, as plain text where the tags can't be drawn. */
 export const stripCodeTags = (words: string) => words.replace(/<\/?code>/g, "");
 
@@ -174,6 +177,21 @@ export function relativeTime(t: TFunction, locale: string, iso: string, now = ne
   return formatShortDate(locale, iso);
 }
 
+/** When an agent stopped working on a task: "Stopped 2 h ago", "Stopped yesterday", "Stopped on Nov 11". */
+export function stoppedLine(t: TFunction, locale: string, iso: string, now = new Date()) {
+  const diff = now.getTime() - new Date(iso).getTime();
+  if (diff < 60_000) return t("issues.now.stoppedNow");
+  if (diff < 3_600_000)
+    return t("issues.now.stoppedAgo", { ago: t("format.minutesAgo", { count: Math.floor(diff / 60_000) }) });
+  const days = daysBetween(iso, now);
+  if (days === 0)
+    return t("issues.now.stoppedAgo", { ago: t("format.hoursAgo", { count: Math.floor(diff / 3_600_000) }) });
+  if (days === 1) return t("issues.now.stoppedYesterday");
+  return t("issues.now.stoppedOn", {
+    date: formatShortDate(locale, iso, new Date(iso).getFullYear() !== now.getFullYear()),
+  });
+}
+
 /** How long since: "há 12 min", "há 3 h", "há 2 dias"; "agora" under a minute (a computer offline, a task stopped). */
 export function timeAgo(t: TFunction, iso: string, now = Date.now()): string {
   const diff = now - Date.parse(iso);
@@ -190,6 +208,18 @@ export function whenAt(t: TFunction, locale: string, iso: string, now = new Date
   if (days === 0) return t("format.todayAt", { time: formatTime(locale, iso) });
   if (days === 1) return t("format.yesterdayAt", { time: formatTime(locale, iso) });
   return formatShortDate(locale, iso);
+}
+
+/** "Enviada hoje às 15:06", "Enviada ontem às 9:12", "Enviada em 12 out às 18:40" (a receipt's last line). */
+export function sentAtLine(t: TFunction, locale: string, iso: string, now = new Date()) {
+  const days = daysBetween(iso, now);
+  const time = formatTime(locale, iso);
+  if (days === 0) return t("receipts.sentToday", { time });
+  if (days === 1) return t("receipts.sentYesterday", { time });
+  return t("receipts.sentOn", {
+    date: formatShortDate(locale, iso, new Date(iso).getFullYear() !== now.getFullYear()),
+    time,
+  });
 }
 
 /** A time ahead, weekday and time on this device's clock: "seg 20 out, 09:00". */
@@ -315,4 +345,12 @@ export function shortTarget(text: string, max = 40) {
   const cut = out.slice(0, max);
   const space = cut.lastIndexOf(" ");
   return space > max / 2 ? cut.slice(0, space) : cut;
+}
+
+/** "1,2 s", "760 ms", "22 min", "1,5 h": a line's time, finer than the block's (and the work states' one clock). */
+export function formatLineTime(locale: string, ms: number) {
+  if (ms < 1000) return `${Math.max(1, Math.round(ms))} ms`;
+  if (ms < 60_000) return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(ms / 1000)} s`;
+  if (ms < 3600_000) return `${Math.round(ms / 60_000)} min`;
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: ms < 10 * 3600_000 ? 1 : 0 }).format(ms / 3600_000)} h`;
 }

@@ -9,6 +9,7 @@ import {
   allowFolderCommand,
   allowsInApp,
   beginLogin,
+  browserOffMessage,
   commandInReason,
   computerKind,
   computerState,
@@ -31,15 +32,19 @@ import {
   loginReadPasses,
   machineReasonText,
   normalizeUserCode,
+  oneClickTerminal,
   otherThanHint,
   pausedByText,
   pauseUntil,
   platformOf,
+  profileRefusalLine,
+  profileToolOff,
   sharedFolderFacts,
   sharedFolderOf,
   shellQuote,
   toolOffReason,
   toolOnCommand,
+  toolOneClick,
 } from "../src/lib/machines";
 import { openTarget, workspaceHeadline } from "../src/lib/notifications";
 import { accessOf, applyComputerEvent, applyMachineEvent, pauseOf } from "../src/realtime/machines";
@@ -546,5 +551,76 @@ describe("pausing from the apps", () => {
     expect(pausedByText(t, "en", { until: null, by: { id: "u2", name: "Bia" } }, "u1")).toBe(
       'machines.remotePause.byName{"name":"Bia"}',
     );
+  });
+});
+
+describe("one click where a tool is off (ADR 0036 §8)", () => {
+  const bia = { id: "u-bia", name: "Bia Rocha" };
+  const mac = { kind: "connected", pairedBy: bia, accessAllow: true } as Pick<
+    Machine,
+    "kind" | "pairedBy" | "accessAllow"
+  >;
+
+  test("whoever connected it turns it on; anyone else asks them; an old app updates first; the Cloud's never", () => {
+    expect(toolOneClick(mac, "u-bia")).toEqual({ kind: "allow" });
+    expect(toolOneClick({ ...mac, accessAllow: false }, "u-bia")).toEqual({ kind: "outdated" });
+    expect(toolOneClick(mac, "u-caio")).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(toolOneClick({ ...mac, kind: "managed" }, "u-bia")).toBeNull();
+    expect(toolOneClick({ ...mac, pairedBy: null }, "u-caio")).toBeNull();
+    expect(toolOneClick(null, "u-bia")).toBeNull();
+  });
+
+  test("Prefiro no Terminal: the same switches as one command, only for who turns them on, where there may be no app", () => {
+    const linux: Pick<Machine, "mode" | "os"> = { mode: "single", os: "linux" };
+    expect(oneClickTerminal(linux, { kind: "allow" }, ["desktop", "commands"])).toBe(
+      "agentes-runner tools enable desktop && agentes-runner tools enable commands",
+    );
+    expect(oneClickTerminal({ ...linux, mode: "system" }, { kind: "allow" }, ["browser"])).toBe(
+      "sudo agentes-runner tools enable browser",
+    );
+    expect(oneClickTerminal({ ...linux, os: "darwin" }, { kind: "allow" }, ["browser"])).toBeNull();
+    expect(oneClickTerminal(linux, { kind: "ask", ownerId: "u-bia", ownerName: "Bia" }, ["browser"])).toBeNull();
+    expect(oneClickTerminal(linux, { kind: "allow" }, [])).toBeNull();
+  });
+
+  test("a refused Fazer login reads its cause and what this person can do", () => {
+    const t = ((key: string, o?: Record<string, unknown>) => `${key}${o ? JSON.stringify(o) : ""}`) as never;
+    const off = (params: Record<string, unknown>) =>
+      new ApiError(400, "browser_profile.tool_off", "The browser is turned off on Mac", {
+        machineId: "m1",
+        machineName: "Bia's Mac",
+        tool: "browser",
+        ...params,
+      });
+    expect(profileToolOff(off({ mayAllow: true }))).toEqual({
+      machineId: "m1",
+      machineName: "Bia's Mac",
+      tool: "browser",
+      oneClick: { kind: "allow" },
+    });
+    expect(profileToolOff(off({ outdated: true }))?.oneClick).toEqual({ kind: "outdated" });
+    const ask = off({ ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(profileToolOff(ask)?.oneClick).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(profileRefusalLine(t, ask)).toBe('browser.profiles.toolOffOther{"name":"Bia"}');
+    expect(profileRefusalLine(t, off({ mayAllow: true }))).toBe("browser.profiles.toolOff");
+    const other = new ApiError(400, "browser_profile.unavailable", "Chrome isn't installed", { machineName: "Mac" });
+    expect(profileToolOff(other)).toBeNull();
+    expect(profileRefusalLine(t, other)).toBe('browser.profiles.notOpened{"machine":"Mac"}');
+    expect(profileRefusalLine(t, new ApiError(409, "browser_profile.busy", "busy"))).toBe("browser.profiles.busy");
+    expect(profileToolOff(new Error("boom"))).toBeNull();
+  });
+
+  test("the runner's refusal of a browser that is off is read in every runner version's words", () => {
+    expect(
+      browserOffMessage("Browser is turned off on this computer (its owner can turn it on from agentes.chat)"),
+    ).toBe(true);
+    expect(
+      browserOffMessage(
+        "Browser is turned off on this computer (its owner can turn it on in the agentes app (Preferences > Tools))",
+      ),
+    ).toBe(true);
+    expect(browserOffMessage("The browser is turned off on this computer")).toBe(true);
+    expect(browserOffMessage("Too many browsers are open")).toBe(false);
+    expect(browserOffMessage(undefined)).toBe(false);
   });
 });

@@ -4,6 +4,7 @@ import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { createDiskBlobStore } from "@agenteschat/adapters";
 import {
+  ACCESS_ALLOW_PROTOCOL,
   MACHINE_PROTOCOL_VERSION,
   type MachineRequest,
   type RunnerPause,
@@ -587,4 +588,100 @@ test("pause from the apps: whoever connected it and admins, through the hub; any
   expect(resumed.status).toBe(200);
   expect(await resumed.json()).toEqual({ paused: null });
   expect(sent.at(-1)).toMatchObject({ op: "pause.set", paused: false, by: await me(owner) });
+}, 30_000);
+
+test("a tool turned on from the apps: only whoever connected it; anyone else asks them, and their row goes once it's on", async () => {
+  const { owner, orgId } = await start();
+  const orgApi = (b: typeof owner) => (path: string, init?: Parameters<typeof owner>[1]) =>
+    b(`/api/app/organizations/${orgId}${path}`, init);
+  const bia = await joinByInvitation(t, owner, orgId, "bia@example.com");
+  const caio = await joinByInvitation(t, owner, orgId, "caio@example.com");
+  const runner = { ...RUNNER, os: "darwin", protocol: MACHINE_PROTOCOL_VERSION };
+  const paired = await pairComputer(t, orgApi(bia), { ...runner, exec: true }, { name: "Bia's Mac" });
+  const hub = t.engine.machineHub;
+  const sent: Extract<MachineRequest, { op: "access.allow" }>[] = [];
+  const tools = { claude: false, codex: false, commands: true, browser: false };
+  const conn = hub.open({
+    send(text: string) {
+      const frame = JSON.parse(text) as ServerFrame;
+      if (frame.type !== "request" || frame.op !== "access.allow") return;
+      sent.push(frame);
+      tools[frame.tool as "browser"] = true;
+      const data = { access: { folders: [], tools: { ...tools } } };
+      setTimeout(() => void hub.message(conn, JSON.stringify({ type: "result", id: frame.id, ok: true, data })), 1);
+    },
+    close() {},
+  });
+  await hub.message(
+    conn,
+    JSON.stringify({
+      type: "hello",
+      token: paired.token,
+      ...runner,
+      exec: true,
+      access: { folders: [], tools: { ...tools } },
+    }),
+  );
+  const path = `/machines/${paired.machineId}/access`;
+  const listed = (await (await orgApi(bia)("/machines")).json()) as { machines: { accessAllow: boolean }[] };
+  expect(listed.machines[0]?.accessAllow).toBe(true);
+
+  // Not their computer: an admin and a member alike are refused, and nothing reaches it.
+  for (const who of [owner, caio]) {
+    const refused = await orgApi(who)(`${path}/allow`, { json: { tool: "browser" } });
+    expect(refused.status).toBe(403);
+    expect(((await refused.json()) as { error: { code: string } }).error.code).toBe("machine.not_owner");
+  }
+  expect(sent).toHaveLength(0);
+
+  // Caio asks: Bia gets one waiting row with the computer and the tool.
+  expect((await orgApi(caio)(`${path}/ask`, { json: { tool: "browser" } })).status).toBe(200);
+  expect((await orgApi(caio)(`${path}/ask`, { json: { tool: "browser" } })).status).toBe(200);
+  type Inbox = { items: { kind: string; waiting: boolean; doneAt: string | null; latest: { reason?: string } }[] };
+  const inbox = async () => ((await (await orgApi(bia)("/notifications")).json()) as Inbox).items;
+  const asks = (await inbox()).filter((n) => n.kind === "device.tool_request");
+  expect(asks).toEqual([
+    expect.objectContaining({ waiting: true, latest: expect.objectContaining({ reason: "browser" }) }),
+  ]);
+  // Her own computer: she turns it on herself.
+  expect((await orgApi(bia)(`${path}/ask`, { json: { tool: "browser" } })).status).toBe(409);
+
+  // Bia turns it on: the computer gets her name to tell whoever is at it, the copy is stored, her row is done.
+  const allowed = await orgApi(bia)(`${path}/allow`, { json: { tool: "browser" } });
+  expect(allowed.status).toBe(200);
+  expect(((await allowed.json()) as { access: { tools: { browser: boolean } } }).access.tools.browser).toBe(true);
+  expect(sent[0]).toMatchObject({ op: "access.allow", tool: "browser", byName: expect.any(String) });
+  const stored = (await (await orgApi(bia)("/machines")).json()) as {
+    machines: { access: { tools: { browser?: boolean } } | null }[];
+  };
+  expect(stored.machines[0]?.access?.tools.browser).toBe(true);
+  expect((await inbox()).filter((n) => n.kind === "device.tool_request")).toHaveLength(0);
+
+  // Turned on at the computer itself: the ask is answered all the same.
+  expect((await orgApi(caio)(`${path}/ask`, { json: { tool: "codex" } })).status).toBe(200);
+  expect((await inbox()).filter((n) => n.kind === "device.tool_request")).toHaveLength(1);
+  tools.codex = true;
+  await hub.message(conn, JSON.stringify({ type: "access.changed", access: { folders: [], tools: { ...tools } } }));
+  expect((await inbox()).filter((n) => n.kind === "device.tool_request")).toHaveLength(0);
+
+  // A tool the API doesn't know is refused before anything is sent.
+  expect((await orgApi(bia)(`${path}/allow`, { json: { tool: "everything" } })).status).toBe(400);
+
+  // An app too old for it says to update it; one that is off says so.
+  const old = await pairComputer(
+    t,
+    orgApi(bia),
+    { ...runner, protocol: ACCESS_ALLOW_PROTOCOL - 1, exec: true },
+    {
+      name: "Bia's old Mac",
+    },
+  );
+  const outdated = await orgApi(bia)(`/machines/${old.machineId}/access/allow`, { json: { tool: "browser" } });
+  expect(outdated.status).toBe(400);
+  expect(((await outdated.json()) as { error: { code: string } }).error.code).toBe("machine.access_outdated");
+  const away = await pairComputer(t, orgApi(bia), { ...runner, exec: true }, { name: "Bia's laptop" });
+  const offline = await orgApi(bia)(`/machines/${away.machineId}/access/allow`, { json: { tool: "browser" } });
+  expect(offline.status).toBe(409);
+  expect(((await offline.json()) as { error: { code: string } }).error.code).toBe("machine.offline");
+  expect(sent).toHaveLength(1);
 }, 30_000);

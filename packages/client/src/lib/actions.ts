@@ -120,6 +120,7 @@ export function actionTextValues(
       return v;
     }
     case "memory.saved":
+      if (p.team === true) return { text: str(p.text), context: p.rule === true ? "team_rule" : "team" };
       return p.rule === true ? { text: str(p.text), context: "rule" } : { text: str(p.text) };
     case "memory.updated":
     case "memory.forgotten":
@@ -186,6 +187,8 @@ export const workspaceActionContext = (action: string, words: Record<string, str
  * notification) said here, so "Mudei seu status: ausente" never reads "away".
  */
 export function workspaceActionWords(action: string, words: Record<string, string>, t: TFunction) {
+  if (action === "set_permission_holders" && words.permission)
+    return { ...words, short: t(`permissions.${words.permission}.short` as never, { defaultValue: words.permission }) };
   if (action === "set_my_status" && !words.what && words.availability) {
     const key = words.availability === "auto" ? "online" : words.availability;
     return { ...words, what: t(`presence.lower.${key}` as never, { defaultValue: words.availability }) as string };
@@ -241,7 +244,13 @@ const BLENDS: Partial<Record<AgentActionKind, Blend>> = {
     same: (a) => [a.params.assigneeType ?? null, a.params.assigneeId ?? null],
     contexts: ["self", "you", "none"],
   },
-  "memory.saved": { ref: named("text"), contexts: ["rule"], slot: "text" },
+  "memory.saved": {
+    ref: named("text"),
+    // The team's memory and the agent's own never share a sentence.
+    same: (a) => a.params.team === true,
+    contexts: ["rule", "team_rule", "team"],
+    slot: "text",
+  },
   "memory.updated": { ref: named("text"), slot: "text" },
   "memory.forgotten": { ref: named("text"), slot: "text" },
   "routine.created": { ref: named("name") },

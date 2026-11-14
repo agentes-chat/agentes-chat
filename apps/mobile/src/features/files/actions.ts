@@ -2,7 +2,7 @@ import { type ArtifactDetail, useApi } from "@agenteschat/client";
 import { relativeDay } from "@agenteschat/client/lib/format";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActionSheetIOS, Alert, Platform } from "react-native";
+import { ActionSheetIOS, Alert, Linking, Platform } from "react-native";
 import { useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { useOrgId, useWhen } from "../shared/hooks";
@@ -40,7 +40,13 @@ export function useFileActions(detail: ArtifactDetail | undefined) {
       if (await saveToPhotos(api, orgId, detail)) {
         successHaptic();
         toast({ title: t("mobile.files.saved"), icon: "photos" });
-      } else toast({ title: t("mobile.files.photosDenied"), subtitle: t("mobile.files.photosDeniedSub"), icon: "x" });
+      } else
+        toast({
+          title: t("mobile.files.photosDenied"),
+          subtitle: t("mobile.files.photosDeniedSub"),
+          icon: "x",
+          action: { label: t("mobile.common.openSettings"), onPress: () => void Linking.openSettings() },
+        });
     } catch {
       toast({ title: t("mobile.files.saveFailed"), icon: "x" });
     } finally {

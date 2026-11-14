@@ -389,6 +389,9 @@ const PLAIN_LINE = new Set([
   "feedback.file_too_large",
   "feedback.file_type",
   "feedback.files_many",
+  // Only the landing page's partner form meets these, and it words them itself.
+  "invalid_name",
+  "invalid_whatsapp",
   // A phone that follows its computer's rule shows the computer's, with no control of its own; only the installer
   // meets a bad connect code.
   "device.follows_host",
@@ -397,6 +400,8 @@ const PLAIN_LINE = new Set([
   "account.invalid_kind",
   "account.invalid_label",
   "account.invalid_plan",
+  // "Quem usa" offers only Todos and Só eu: another value is a client fault.
+  "account.invalid_serves",
   // A workspace change's card offers Apply, Dismiss and Send on only to whom may (`mayApplyCard`).
   "action_card.not_allowed",
   "action_card.not_requester",
@@ -481,6 +486,9 @@ const PLAIN_LINE = new Set([
   "request_used",
   "right_hand.missing",
   "right_hand_approvals.budget",
+  // "Quem pode" sends only the rows and steps the cargo page draws (`areaRows`, `rowMax`): another is a client fault.
+  "role.level_invalid",
+  "role.row_unknown",
   "routine.action_always_asks",
   "routine.action_invalid",
   "routine.connector_hook",
@@ -506,6 +514,7 @@ const PLAIN_LINE = new Set([
   "storage.daily_full",
   "storage.full",
   "storage.invalid_bucket",
+  "team_week.no_skip",
   "team_week.own_path",
   "timeout",
   "tls",

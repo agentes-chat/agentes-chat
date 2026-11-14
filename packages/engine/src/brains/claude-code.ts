@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import {
   ACCOUNTS_PROTOCOL,
   type AgentScope,
+  ASKS_PROTOCOL,
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
   type BrainTurnRequest,
@@ -25,6 +26,7 @@ import { apiNano } from "../plan-usage";
 import { runnerUpdateWay } from "../runner-update";
 import { computerPrompt, systemWithConversation } from "./prompt";
 import {
+  askingPermissions,
   BRAIN_NAMES,
   BRAIN_PLAN_NAMES,
   type Brain,
@@ -386,7 +388,7 @@ export function createClaudeCodeBrain(deps: ClaudeCodeBrainDeps): Brain {
           deps.agentScope(turn),
           Promise.resolve(deps.personalMcp?.(turn) ?? false),
         ]);
-        const permissions = await deps.permissions?.(turn);
+        const permissions = askingPermissions(await deps.permissions?.(turn), (status?.protocol ?? 0) >= ASKS_PROTOCOL);
         // The team's right hand on a plan (ADR 0137 §4): only a runner that locks the CLI down to our tools gets it,
         // in its own empty folder, with no checkout and none of the owner's servers.
         const chat = permissions?.mode === "chat";

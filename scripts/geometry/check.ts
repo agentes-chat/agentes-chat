@@ -311,6 +311,7 @@ export const SELF_TESTED = [
   "bleed",
   "stampout",
   "stampover",
+  "msgaside",
 ];
 
 /** Rules about a desktop layout only (panes floating beside the conversation, a toolbar's one row): a phone has none. */

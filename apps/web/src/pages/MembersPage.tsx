@@ -969,7 +969,7 @@ function SentInvitations() {
   );
 }
 
-/** "Mudar o papel": the roles a pending invitation gives, changed without sending it (the same link, ADR 0090). */
+/** "Mudar o cargo": the roles a pending invitation gives, changed without sending it (the same link, ADR 0090). */
 function InvitationRoles({
   invitation,
   open,

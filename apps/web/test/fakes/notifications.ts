@@ -143,5 +143,9 @@ export function createFakeNotifications(
       inbox.prefs.categories = inbox.prefs.categories.map((c) => (c.id === category ? { ...c, on } : c));
       return structuredClone(inbox.prefs);
     },
+    askAdmins: async (orgId, ask) => {
+      log("notifications.askAdmins", orgId, ask);
+      return { sent: 1 };
+    },
   };
 }

@@ -131,6 +131,8 @@ describe("endpoint models in the pickers", () => {
 
   test("an endpoint's model runs on its own key only; the budget's note for an unpriced one", () => {
     expect(keyRuns(cred("c1"), "custom:c1:llama", models)).toBe(true);
+    expect(keyRuns(cred("c1"), "auto", models)).toBe(false);
+    expect(keyRuns(cred("k", "anthropic"), "auto", models)).toBe(true);
     expect(keyRuns(cred("c2"), "custom:c1:llama", models)).toBe(false);
     expect(modelUnpriced(models, "custom:c1:llama")).toBe(true);
     expect(modelUnpriced(models, "custom:c2:other")).toBe(false);

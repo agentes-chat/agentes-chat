@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { and, eq, schema } from "@agenteschat/db";
-import { ARTIFACT_LIMITS, setOrgLimits } from "@agenteschat/engine";
+import { ARTIFACT_LIMITS, setOrgLimits, zip } from "@agenteschat/engine";
 import {
   type Browser,
   browser,
@@ -195,6 +195,63 @@ describe("reading a GitHub link for an import", () => {
       json: { url: "https://github.com/acme/time/blob/main/sales.openmaus.json" },
     });
     expect(res.status).toBe(401);
+  });
+
+  test("a private repository is read through the workspace's GitHub, by who edits any agent; its token never answered", async () => {
+    const token = "ghp_fake_connection_token";
+    const archive = zip([
+      ["acme-brain-abc/COMPANY.md", "# Acme"],
+      ["acme-brain-abc/agents/scout/AGENTS.md", "# Scout"],
+      ["acme-brain-abc/memory/2026-10-20.md", "# day"],
+      ["acme-brain-abc/.env", "KEY=1"],
+      ["acme-brain-abc/src/run.sh", "echo"],
+    ]);
+    const sent: { url: string; auth: string | null }[] = [];
+    // github.com hides acme/brain; the API's zipball answers only the connection's token.
+    const http = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      const auth = new Headers(init?.headers).get("authorization");
+      sent.push({ url, auth });
+      if (url === "https://github.com/acme/open") return new Response("<html>");
+      if (url.startsWith("https://api.github.com/repos/acme/brain/zipball") && auth === `Bearer ${token}`) {
+        return new Response(null, {
+          status: 302,
+          headers: { location: "https://codeload.github.com/acme/brain/z?t=1" },
+        });
+      }
+      if (url === "https://codeload.github.com/acme/brain/z?t=1") return new Response(archive);
+      return new Response("404: Not Found", { status: 404 });
+    }) as typeof fetch;
+    const { b, orgId, read } = await owner({ http, resolveHost: async () => ["140.82.112.3"] });
+
+    const hidden = await read("https://github.com/acme/brain");
+    expect(hidden.status).toBe(400);
+    expect(await hidden.json()).toMatchObject({
+      error: { code: "github.repo_missing", params: { repo: "acme/brain", connection: "none", app: false } },
+    });
+    // A public repository that lacks the file stays the plain refusal: no token is asked for.
+    const absent = await read("https://github.com/acme/open/blob/main/team.json");
+    expect(absent.status).toBe(400);
+    expect(((await absent.json()) as { error: { code: string } }).error.code).not.toBe("github.repo_missing");
+
+    const connected = await b(`/api/app/organizations/${orgId}/connectors`, {
+      json: { connector: "github", apiKey: token },
+    });
+    expect(connected.status).toBe(201);
+    const folder = await read("https://github.com/acme/brain");
+    expect(folder.status).toBe(200);
+    const body = await folder.text();
+    expect((JSON.parse(body) as Files).files).toEqual([
+      { path: "COMPANY.md", text: "# Acme" },
+      { path: "agents/scout/AGENTS.md", text: "# Scout" },
+      { path: "memory/2026-10-20.md", text: "# day" },
+    ]);
+    expect(body).not.toContain("ghp_");
+    const file = await read("https://github.com/acme/brain/blob/main/agents/scout/AGENTS.md");
+    expect(await file.json()).toEqual({ files: [{ path: "AGENTS.md", text: "# Scout" }] });
+    expect((await read("https://github.com/acme/brain/blob/main/agents/none.md")).status).toBe(400);
+    // The token goes to api.github.com alone.
+    expect(sent.filter((s) => s.auth && !s.url.startsWith("https://api.github.com/"))).toEqual([]);
   });
 });
 

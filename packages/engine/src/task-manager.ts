@@ -1,15 +1,18 @@
 import { and, type Database, eq, inArray, rowsOf, schema, sql } from "@agenteschat/db";
 import { planOf as codingPlan, PLAN_IDS, planModel } from "@agenteschat/providers/plans";
+import { agentsOnlyIn, anchorsSql } from "./agent-work";
 import { runAuthorityById } from "./authority";
 import type { ModelScope } from "./brains/select";
 import { TtlCache } from "./cache";
 import { computerQueue as lineOfComputer, seesRunSql } from "./computer-queue";
 import { isAgentOnlyDm } from "./dms";
 import { NotFoundError } from "./errors";
+import { type CanceledReturn, canceledReturns, type PendingReturn, pendingReturns } from "./follow-through";
 import { replyExcerpt } from "./messages";
 import { can, requireActiveMembership } from "./organizations";
 import { pendingIds } from "./recovery";
 import { shownStatusSql } from "./runs";
+import { channelReaderSql } from "./task-access";
 import { mayContinuePause } from "./usage-pause";
 
 /**
@@ -84,6 +87,19 @@ export interface TaskDelegation {
   agentId: string;
   /** What started the chain: a person, a routine, or an agent on its own. */
   origin: { kind: "person"; userId: string; name: string } | { kind: "routine"; name: string } | { kind: "agent" };
+  /**
+   * Where it was handed off (`anchorsSql`), when the caller reads that conversation: its thread and the reply that
+   * handed it, once posted. Null: they don't, or nobody does (a routine's room).
+   */
+  from: {
+    channelId: string;
+    channelKind: "channel" | "dm" | "task";
+    channelName: string | null;
+    threadId: string | null;
+    messageId: string | null;
+    /** The thread's title (≤ 80, plain text), never a message's words (`labelOf`); null without one. */
+    label: string | null;
+  } | null;
 }
 
 export interface ManagedTask {
@@ -193,6 +209,10 @@ export interface TaskManagerView {
   computers: ComputerSummary[];
   /** Per agent with work in the last hour: tool calls per minute, `ACTIVITY_MINUTES` points, oldest first. */
   activity: Record<string, number[]>;
+  /** "Retornos": the returns agents set that are still to come, where the caller reads (`pendingReturns`). */
+  followUps: PendingReturn[];
+  /** The returns canceled since `since` ("Terminadas hoje"), the latest first. */
+  canceledFollowUps: CanceledReturn[];
 }
 
 type Row = {
@@ -270,7 +290,13 @@ async function visibleRuns(
 ): Promise<Row[]> {
   const status = which.active
     ? sql`r.status in ('queued', 'running', 'waiting_approval', 'waiting_input')`
-    : sql`r.status in ('done', 'failed', 'canceled') and r.finished_at >= ${which.since.toISOString()}::timestamptz`;
+    : // Stopped to read a message a person sent it (`stoppedToSend`): the task goes on in the run that message
+      // started, so this half of it is no task that ended.
+      sql`r.status in ('done', 'failed', 'canceled') and r.finished_at >= ${which.since.toISOString()}::timestamptz
+        and not (r.status = 'canceled' and exists (
+          select 1 from ${messages} sm
+          where sm.org_id = r.org_id and sm.channel_id = r.channel_id and sm.created_at >= r.created_at
+            and sm.meta->'stoppedRunIds' @> to_jsonb(r.id::text)))`;
   const limit = which.active ? TASK_MANAGER_MAX : TASK_MANAGER_ENDED_MAX;
   return rowsOf<Row>(
     await db.execute(sql`select r.id, r.agent_id, r.channel_id, ${shownStatusSql} as status, r.thread_root_id, r.trigger_message_id,
@@ -350,14 +376,64 @@ const originOf = (db: Database, orgId: string, runId: string) =>
     return a.brief ? { kind: "routine", name: a.brief.name } : { kind: "agent" };
   });
 
-/** Who asked each run of agents' private conversations and what started its chain, by run id. */
-async function delegationsOf(db: Database, orgId: string, rows: Row[]) {
+/** Who asked each run of agents' private conversations, what started its chain and where, by run id. */
+async function delegationsOf(db: Database, userId: string, orgId: string, rows: Row[]) {
   const asked = rows.filter((r) => betweenAgents(r) && r.asker_agent_id);
-  const origins = await Promise.all(asked.map((r) => originOf(db, orgId, r.id)));
+  const [origins, places] = await Promise.all([
+    Promise.all(asked.map((r) => originOf(db, orgId, r.id))),
+    handedFrom(
+      db,
+      userId,
+      orgId,
+      asked.map((r) => r.id),
+    ),
+  ]);
   return new Map(
     asked.map((r, i): [string, TaskDelegation] => [
       r.id,
-      { agentId: r.asker_agent_id as string, origin: origins[i] as TaskDelegation["origin"] },
+      {
+        agentId: r.asker_agent_id as string,
+        origin: origins[i] as TaskDelegation["origin"],
+        from: places.get(r.id) ?? null,
+      },
+    ]),
+  );
+}
+
+/** Where each of these runs was handed off, for runs whose place `userId` reads (`channelReaderSql`), by run id. */
+async function handedFrom(db: Database, userId: string, orgId: string, runIds: string[]) {
+  if (runIds.length === 0) return new Map<string, NonNullable<TaskDelegation["from"]>>();
+  const rows = rowsOf<{
+    run_id: string;
+    channel_id: string;
+    kind: "channel" | "dm" | "task";
+    name: string;
+    thread_root_id: string;
+    trigger_message_id: string;
+    reply_message_id: string | null;
+    title: string | null;
+  }>(
+    await db.execute(sql`with ${anchorsSql(orgId, runIds)}
+      select an.run_id, c.id as channel_id, c.kind, c.name, a.thread_root_id, a.trigger_message_id, a.reply_message_id,
+        t.title
+      from anchors an
+      join ${agentRuns} a on a.id = an.anchor_id
+      join ${channels} c on c.id = a.channel_id
+      left join ${threads} t on t.org_id = ${orgId}::uuid and t.root_message_id = a.thread_root_id
+      where a.id <> an.run_id and not a.background and c.archived_at is null and not ${agentsOnlyIn("c")}
+        and ${channelReaderSql(sql`c.id`, sql`${userId}::text`)}`),
+  );
+  return new Map(
+    rows.map((r) => [
+      r.run_id,
+      {
+        channelId: r.channel_id,
+        channelKind: r.kind,
+        channelName: r.kind === "channel" ? r.name : null,
+        threadId: r.thread_root_id === r.trigger_message_id ? null : r.thread_root_id,
+        messageId: r.reply_message_id,
+        label: replyExcerpt(r.title?.trim() ?? "", 80) || null,
+      },
     ]),
   );
 }
@@ -479,13 +555,15 @@ export async function taskManager(
   const manages = can(membership, "manage_agents");
   const now = options.now ?? new Date();
   const since = options.since ?? new Date(now.getTime() - 24 * 3600_000);
-  const [active, ended, hidden, asks] = await Promise.all([
+  const [active, ended, hidden, asks, followUps, canceledFollowUps] = await Promise.all([
     visibleRuns(db, userId, orgId, manages, { active: true }),
     visibleRuns(db, userId, orgId, manages, { active: false, since }),
     hiddenTasks(db, userId, orgId, manages),
     openAsks(db, orgId),
+    pendingReturns(db, userId, orgId, { managesAgents: manages }),
+    canceledReturns(db, userId, orgId, since),
   ]);
-  const delegations = await delegationsOf(db, orgId, active);
+  const delegations = await delegationsOf(db, userId, orgId, active);
   const { edges, waking } = asks;
   const on = new Set([...(await runsStillOn(db, orgId, [...edges.values()].flat())), ...waking]);
   const where = (r: Row) => ({
@@ -561,7 +639,15 @@ export async function taskManager(
       stoppedBy: by ? { userId: by, name: r.stopper_name ?? "" } : null,
     };
   });
-  return { tasks, ended: endedTasks, hidden, computers, activity: await agentActivity(db, orgId, now) };
+  return {
+    tasks,
+    ended: endedTasks,
+    hidden,
+    computers,
+    activity: await agentActivity(db, orgId, now),
+    followUps,
+    canceledFollowUps,
+  };
 }
 
 const IN_LINE = sql`r.waiting_machine_id is not null and (r.status = 'running'

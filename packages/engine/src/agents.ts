@@ -13,7 +13,7 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
-import { AUTO_MODEL, isAutoModel, MODEL_CATALOG, parseCustomModel } from "@agenteschat/providers";
+import { AUTO_MODEL, customModelId, isAutoModel, MODEL_CATALOG, parseCustomModel } from "@agenteschat/providers";
 import { isIdHandle } from "@agenteschat/ui/names";
 import type { AgentAppearance } from "./appearance";
 import { dropAgentRules } from "./approval-rules";
@@ -22,12 +22,12 @@ import { recordAudit } from "./audit";
 import { type AutonomySettings, autonomySettings, chosenAutonomy } from "./autonomy-settings";
 import { isComputerBrain } from "./brains/types";
 import { caches } from "./cache";
-import { modelInfoFor } from "./credentials";
+import { modelInfoFor, usableCredentialRow } from "./credentials";
 import { ConflictError, ForbiddenError, isUniqueViolation, NotFoundError, ValidationError } from "./errors";
 import { publishAgentsChanged } from "./events";
 import type { CommandApproval } from "./missions";
 import { recordOperatorEvent } from "./operator-events";
-import { can, getMembership, type Membership, requirePermission } from "./organizations";
+import { can, getMembership, type Membership, requireActiveMembership, requirePermission } from "./organizations";
 import { isRightHand, RIGHT_HAND_EDITABLE, refuseRightHand, rightHandPermanent } from "./right-hand";
 import { newSetup, type SetupExtras, setupOf } from "./setup-checklist";
 import { APPROVALS_LEVELS, type ApprovalsLevel } from "./tools/run-policy";
@@ -98,6 +98,16 @@ export interface AgentInput {
   autonomyBrakes?: Partial<AutonomySettings>;
   /** How much it asks before acting (ADR 0173). */
   approvalsLevel?: ApprovalsLevel;
+}
+
+/** Endpoints have no catalog tiers: connecting their key on Automatic pins one of their own models (ADR 0146). */
+async function endpointModel<T extends Partial<AgentInput>>(db: Database, orgId: string, input: T): Promise<T> {
+  if (!isAutoModel(input.model) || !input.credentialId) return input;
+  const credential = await usableCredentialRow(db, orgId, input.credentialId);
+  if (credential?.provider !== "custom") return input;
+  const model = credential.options?.endpoint?.models[0];
+  if (!model) throw new ValidationError("An endpoint needs at least one model");
+  return { ...input, model: customModelId(credential.id, model.id) };
 }
 
 /** An agent's fields as the API takes them: its handle, model, key (of the model's provider), budget and owner. */
@@ -171,6 +181,24 @@ export function setupOfAgent(a: Agent): schema.AgentSetup {
   };
 }
 
+/** The workspace's own computer (managed, else the server's own) once it has connected (ADR 0056 §10), else null. */
+export async function workspaceHomeId(db: Executor, orgId: string): Promise<string | null> {
+  const [home] = await db
+    .select({ id: machines.id })
+    .from(machines)
+    .where(
+      and(
+        eq(machines.orgId, orgId),
+        inArray(machines.kind, ["managed", "host"]),
+        isNotNull(machines.tokenHash),
+        isNull(machines.deletedAt),
+      ),
+    )
+    .orderBy(sql`${machines.kind} = 'managed' desc`, asc(machines.createdAt))
+    .limit(1);
+  return home?.id ?? null;
+}
+
 /**
  * What the workspace's new agents start with from now on: the "Quem pensa" someone just saved or used on others.
  * Only whoever creates agents sets it (they start from it), and one on the API only an admin: only admins change an
@@ -215,7 +243,11 @@ export async function createAgent(
   if (input.approvalsLevel !== undefined && !can(membership, "manage_agents")) {
     throw new ForbiddenError("Only who manages agents can set how much an agent asks");
   }
-  const values = { ...fields, handle: fields.handle.toLowerCase(), model: fields.model ?? defaults.model };
+  const values = await endpointModel(db, orgId, {
+    ...fields,
+    handle: fields.handle.toLowerCase(),
+    model: fields.model ?? defaults.model,
+  });
   await validateAgentFields(db, orgId, values);
   const ownerUserId = input.ownerUserId === undefined ? actorId : input.ownerUserId;
   // A personal workspace's new agent answers only its owner until someone says otherwise (ADR 0159): who joins later
@@ -233,28 +265,15 @@ export async function createAgent(
   // An agent born on "Automático" is automatic on every brain: switched to Claude Code or Codex later, it
   // starts with the model and effort picked per run (written here, so agents made before Automático keep theirs).
   const brainAuto = isAutoModel(values.model) ? { brainModel: AUTO_MODEL, brainEffort: AUTO_MODEL } : {};
-  // The workspace's own computer (managed, else the server's own) once it has connected (ADR 0056 §10); one
-  // still being prepared gives itself to the agents with none when it is ready.
-  const [home] = await db
-    .select({ id: machines.id })
-    .from(machines)
-    .where(
-      and(
-        eq(machines.orgId, orgId),
-        inArray(machines.kind, ["managed", "host"]),
-        isNotNull(machines.tokenHash),
-        isNull(machines.deletedAt),
-      ),
-    )
-    .orderBy(sql`${machines.kind} = 'managed' desc`, asc(machines.createdAt))
-    .limit(1);
+  // One still being prepared gives itself to the agents with none when it is ready.
+  const home = await workspaceHomeId(db, orgId);
   try {
     const [agent] = await db
       .insert(agents)
       .values({
         ...values,
         ...brainAuto,
-        machineId: home?.id ?? null,
+        machineId: home,
         orgId,
         ownerUserId,
         // Every new agent starts with its setup checklist, whichever way it was made (ADR 0155 §2).
@@ -384,6 +403,34 @@ async function refuseRightHandFields(db: Database, orgId: string, agentId: strin
     throw rightHandPermanent(`changed this way (${fixed.join(", ")})`);
 }
 
+/** What an agent's owner may change besides admins: its API model, among the keys the workspace connected. */
+const OWNER_MODEL_FIELDS: ReadonlySet<string> = new Set(["model", "credentialId"]);
+
+/**
+ * Who may make this change: admins anything; the agent's owner only its API model and which of the workspace's keys
+ * it uses (`OWNER_MODEL_FIELDS`), as they choose its plan's model. Connecting keys and budgets stay admins'.
+ */
+async function updateAgentMembership(
+  db: Database,
+  actorId: string,
+  orgId: string,
+  agentId: string,
+  patch: Partial<AgentInput>,
+) {
+  const membership = await requireActiveMembership(db, actorId, orgId);
+  if (can(membership, "manage_agents")) return membership;
+  const fields = Object.entries(patch).filter(([, v]) => v !== undefined);
+  const modelOnly = fields.length > 0 && fields.every(([k]) => OWNER_MODEL_FIELDS.has(k));
+  const [row] = modelOnly
+    ? await db
+        .select({ ownerUserId: agents.ownerUserId })
+        .from(agents)
+        .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId), isNull(agents.deletedAt)))
+    : [];
+  if (row?.ownerUserId !== actorId) throw new ForbiddenError();
+  return membership;
+}
+
 export async function updateAgent(
   db: Database,
   actorId: string,
@@ -392,8 +439,30 @@ export async function updateAgent(
   patch: Partial<AgentInput>,
   options: { remember?: boolean; pubsub?: PubSub } = {},
 ): Promise<Agent> {
-  const membership = await requirePermission(db, actorId, orgId, "manage_agents");
+  const membership = await updateAgentMembership(db, actorId, orgId, agentId, patch);
   await refuseRightHandFields(db, orgId, agentId, patch);
+  // A model of another provider than the agent's own key (the model picker sends only the model): the key would refuse
+  // every turn, so the agent goes on the workspace's default key for the new provider.
+  if (patch.credentialId === undefined && patch.model && !isAutoModel(patch.model) && !parseCustomModel(patch.model)) {
+    const current = await getAgent(db, orgId, agentId);
+    if (current?.credentialId) {
+      const [key, model] = await Promise.all([
+        usableCredentialRow(db, orgId, current.credentialId),
+        modelInfoFor(db, patch.model, orgId),
+      ]);
+      if (key && model && key.provider !== model.provider) patch = { ...patch, credentialId: null };
+    }
+  }
+  // The connect flow may send only the key when the agent is already on Automatic.
+  if (patch.credentialId !== undefined || isAutoModel(patch.model)) {
+    const current = await getAgent(db, orgId, agentId);
+    const selected = await endpointModel(db, orgId, {
+      model: patch.model ?? current?.model,
+      credentialId: patch.credentialId === undefined ? current?.credentialId : patch.credentialId,
+    });
+    if (selected.model && selected.model !== (patch.model ?? current?.model))
+      patch = { ...patch, model: selected.model };
+  }
   const cleaned =
     patch.handle === undefined ? patch : { ...patch, handle: patch.handle.trim().replace(/^@/, "").toLowerCase() };
   // Only what people set is stored (normalized): the rest follows the defaults (`chosenAutonomy`).

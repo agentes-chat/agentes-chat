@@ -27,6 +27,7 @@ import {
   mailReviewTools,
   normalizePolicy,
   notIcloudMail,
+  onlyForOwner,
   setMailLevel,
   splitEmails,
 } from "@agenteschat/client/lib/mail";
@@ -785,7 +786,14 @@ function WhoStep({
                   <li key={a.id} className="cflow-agent">
                     <AgentAvatar agentId={a.id} name={a.name} size="sm" />
                     <span className="cflow-agent__name">
-                      <span>{a.name}</span>
+                      <span className="ac-hintline">
+                        <span>{a.name}</span>
+                        {onlyForOwner(account, a, me.user.id) && (
+                          <InfoHint name={t("common.about", { label: a.name })}>
+                            {t("mail.agent.onlyYou", { name: a.name })}
+                          </InfoHint>
+                        )}
+                      </span>
                       {a.role && <span className="small muted">{a.role}</span>}
                     </span>
                     <Segmented

@@ -40,6 +40,7 @@ import {
   snoozeTimes,
   sortWaiting,
   stepCells,
+  teamWatchOf,
   WIDGET_NOTICES,
   widgetNoticeOf,
   workspaceHeadline,
@@ -82,6 +83,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { AdminAskActions } from "@/components/AdminAsk";
 import { ApprovalAsk, ApprovalGroupAsk } from "@/components/ApprovalAsk";
 import { useConnectAi } from "@/components/ConnectAi";
 import { DeviceNoticeActions, deviceNoticeLine } from "@/components/devices/DeviceNotice";
@@ -191,7 +193,14 @@ function sourceOf(t: TFunction, n: AppNotification, channelName: (id: string) =>
     (n.kind === "browser_handoff" && s.screen === "desktop")
   )
     [icon, label] = ["computer", t("notifications.source.machine")];
-  else if (n.kind === "plan_lent") [icon, label] = ["bulb", t("settings.section.usage")];
+  else if (n.kind === "team_watch") {
+    // Where it is fixed: the plans, the agent's budget, the computers, the connections.
+    const cause = teamWatchOf(n)?.cause;
+    if (cause === "sign_in" || cause === "budget_out" || cause === "budget_low")
+      [icon, label] = ["bulb", t("settings.section.usage")];
+    else if (cause === "computer") [icon, label] = ["computer", t("notifications.source.machine")];
+    else if (cause) [icon, label] = ["plug", t("settings.section.connectors")];
+  } else if (n.kind === "plan_lent" || n.kind === "plan_serves") [icon, label] = ["bulb", t("settings.section.usage")];
   else if (n.kind === "plan_model_dropped") [icon, label] = ["bulb", t("brain.title")];
   else if (n.kind === "browser_handoff") [icon, label] = ["globe", t("notifications.source.browser")];
   else if (s.issueNumber != null)
@@ -603,6 +612,38 @@ function UnreachedAllow({ agentId, userId }: { agentId: string; userId: string }
   );
 }
 
+/** "Mudar para Só eu" on `plan_serves`: the person's plan serves only them again (ADR 0059 §3). */
+function PlanOnlyMe({ n }: { n: AppNotification }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const api = useApi();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const accountId = n.source.accountId;
+  if (!accountId || n.doneAt) return null;
+  const onlyMe = async () => {
+    setBusy(true);
+    try {
+      await api.machines.setAccountServes(org.id, accountId, "owner");
+      toast.show(t("notifications.planServes.done"), "success");
+      for (const key of [keys.aiAccounts(org.id), keys.planUsage(org.id), keys.agents(org.id), keys.aiStatus(org.id)])
+        void qc.invalidateQueries({ queryKey: key });
+    } catch (error) {
+      toast.show(errorText(t, error), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="nt-steprow">
+      <Button size="sm" loading={busy} onClick={() => void onlyMe()}>
+        {t("notifications.planServes.onlyMe")}
+      </Button>
+    </div>
+  );
+}
+
 /** "Tirar de volta" on `plan_lent`: the person's plan leaves that agent, or every agent someone else gave it to. */
 function PlanTakeBack({ n }: { n: AppNotification }) {
   const { t } = useTranslation();
@@ -715,11 +756,14 @@ function Row({
       ? usageLimitLine(t, n)
       : widgetLine
         ? widgetLine
-        : why
-          ? sayWords(t, why, l.text ?? "")
-          : media === "voice"
-            ? mediaWord(t, media)
-            : latestText(t, l) || (media ? mediaWord(t, media) : l.text);
+        : // What the right hand found is the headline itself: nothing under it says it again.
+          n.kind === "team_watch"
+          ? null
+          : why
+            ? sayWords(t, why, l.text ?? "")
+            : media === "voice"
+              ? mediaWord(t, media)
+              : latestText(t, l) || (media ? mediaWord(t, media) : l.text);
   const stopStep = steps ? (steps.failedAt ?? steps.done + 1) : 0;
   const stepWords = steps
     ? failed
@@ -822,10 +866,12 @@ function Row({
             )}
             {n.kind === "usage_limit" && <UsageLimitActions n={n} />}
             <DeviceNoticeActions n={n} />
+            <AdminAskActions n={n} />
             {n.kind === "agent_unreached" && n.source.agentId && n.source.userId && (
               <UnreachedAllow agentId={n.source.agentId} userId={n.source.userId} />
             )}
             {n.kind === "plan_lent" && <PlanTakeBack n={n} />}
+            {n.kind === "plan_serves" && <PlanOnlyMe n={n} />}
             {n.kind === "plan_model_dropped" && n.source.agentId && !n.doneAt && (
               <div className="nt-steprow">
                 <Button size="sm" onClick={() => h.onOpen(n)}>
@@ -1029,7 +1075,7 @@ function WaitCard({
               </p>
             )}
             {resolving ? (
-              <div className="nt-resolved">
+              <div className="nt-resolved ac-iconline">
                 <Spinner size={14} />
                 {t("notifications.wait.resolved", { context: g.context, name })}
               </div>
@@ -1207,10 +1253,11 @@ function WaitRow({
 }) {
   const { t, i18n } = useTranslation();
   const unread = n.readAt === null;
-  // A request to join says it all in its headline; an agent's hand and an approval add what they are about, a
-  // secret its name and what it is for.
+  // A request to join and what the right hand found say it all in their headline; an agent's hand and an approval
+  // add what they are about, a secret its name and what it is for.
+  const found = teamWatchOf(n);
   const sub =
-    n.kind === "join_request"
+    n.kind === "join_request" || found
       ? null
       : n.kind === "secret_request"
         ? secretNoticeLine(n)
@@ -1269,8 +1316,10 @@ function WaitRow({
           {/* A board's notice is decided or resolved right here (ADR 0135). */}
           <WidgetNoticeActions n={n} onOpen={() => h.onOpen(n)} open={false} />
           <DeviceNoticeActions n={n} inline />
+          <AdminAskActions n={n} inline />
+          {/* What the right hand found names its way out on the button; anything else only opens. */}
           <Button size="sm" className="nt-wr__open" title={t("notifications.openTip")} onClick={() => h.onOpen(n)}>
-            {t("notifications.open")}
+            {found?.act ? (t as unknown as (key: string) => string)(found.act) : t("notifications.open")}
           </Button>
           <span className="rq__end">{tail}</span>
         </div>

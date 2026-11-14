@@ -451,7 +451,7 @@ export async function learnRun(deps: ContextDeps, input: { orgId: string; runId:
   if (busy) return { ...out, skipped: "busy" };
   const [agent] = await db.select().from(agents).where(eq(agents.id, run.agentId));
   if (!agent || agent.archivedAt) return { ...out, skipped: "missing" };
-  // Its runs keep no memory (ADR 0137).
+  // Nothing is learned from its runs for the team (ADR 0137): it keeps only what it saves for the person it answers.
   if (isRightHand(agent)) return { ...out, skipped: "right_hand" };
   if (agent.monthlyBudgetNanoUsd !== null) {
     const spent = await agentBudgetState(db, run.orgId, agent.id);

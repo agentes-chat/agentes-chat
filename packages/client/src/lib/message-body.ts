@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import { toolActivity } from "./activity";
 import { previewOf } from "./consultations";
-import { joinNames, lowerFirst } from "./format";
+import { firstName, joinNames, lowerFirst } from "./format";
 import { autoUpdateText, talkerStatusText, workEndBody } from "./long-work";
 import { mediaKindOf, mediaWord } from "./media";
 import { RIGHT_HAND_PLAN_LINES } from "./no-ai";
@@ -96,7 +96,9 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
   const busy = waitNote?.code === "busy";
   const noAi =
     code === "no_ai"
-      ? (m.noAi as { reason?: unknown; own?: unknown; model?: unknown; why?: unknown } | undefined)
+      ? (m.noAi as
+          | { reason?: unknown; own?: unknown; model?: unknown; why?: unknown; owner?: unknown; plan?: unknown }
+          | undefined)
       : undefined;
   const signedOut = noAi?.reason === "not_signed_in";
   // The team's right hand on a plan (ADR 0137 §7): why its plan can't think now (`RIGHT_HAND_PLAN_LINES`); any agent's
@@ -203,10 +205,15 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
           : code;
   const key = `chat.body.${shown}`;
   const model = typeof noAi?.model === "string" ? { model: noAi.model } : {};
+  const notYours =
+    noAi?.reason === "plans_not_yours" && typeof noAi.owner === "string"
+      ? { owner: firstName(noAi.owner), plan: typeof noAi.plan === "string" ? noAi.plan : "Claude" }
+      : {};
   // i18next takes the first key that exists: a body with no `…NoComputer` words keeps its own.
   return t(params.computer && !namesComputer ? [`${key}NoComputer`, key] : key, {
     ...params,
     ...model,
+    ...notYours,
     ...(cliSaid ? { why: cliSaid } : {}),
     defaultValue: body,
   });

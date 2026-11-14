@@ -30,6 +30,8 @@ export interface PlanMeterUsage {
   /** The plan refused a request for its limit. */
   limited?: boolean;
   at: string;
+  /** Stuck at its limit: when the server last asked its computer to read it again. */
+  checkedAt?: string;
 }
 
 /** What the meter says, in the viewer's language. */
@@ -123,6 +125,15 @@ export function planAttention(
   return { word: state === "limited" ? text.limited(null) : text.almost, level: level === "ok" ? "almost" : level };
 }
 
+/**
+ * When a plan was last read or asked about: its reading's time, or the last time the server asked its computer to read
+ * it again while it was stuck at its limit (`checkedAt`), whichever is later. Null with neither.
+ */
+export function planCheckedAt(usage: { at?: string; checkedAt?: string } | null | undefined): string | null {
+  const at = Math.max(Date.parse(usage?.at ?? "") || 0, Date.parse(usage?.checkedAt ?? "") || 0);
+  return at > 0 ? new Date(at).toISOString() : null;
+}
+
 /** From this age the compact line says how old its numbers are. */
 export const PLAN_AGE_SHOWN_MS = 10 * 60_000;
 /** Numbers older than this read as out of date. */
@@ -133,7 +144,8 @@ export const PLAN_STALE_MS = 6 * 3_600_000;
  * with its reset for the title, the tightest (`top`) for its one bar, and only near or at the limit what matters then
  * ("Quase no limite · renova às 14:00", "No limite até 14:00"). Null while no window is known: nothing, never 0%.
  * A plan that refused a request before any window was known is still at the limit: no windows, no bar, only the alert.
- * `age`: how old the numbers are, from `PLAN_AGE_SHOWN_MS` (out of date past `PLAN_STALE_MS`, `stale`); null before.
+ * `age`: how old the numbers are, from `PLAN_AGE_SHOWN_MS` and always at the limit (out of date past `PLAN_STALE_MS`,
+ * `stale`); null before.
  */
 export function planLine(usage: PlanMeterUsage, text: PlanMeterText, now = Date.now()) {
   const rows = planWindows(usage, now);
@@ -142,13 +154,15 @@ export function planLine(usage: PlanMeterUsage, text: PlanMeterText, now = Date.
   if (!top && state !== "limited") return null;
   const reset = (w?: PlanMeterWindow) => (w?.resetsAt && !passed(w.resetsAt, now) ? text.resets(w.resetsAt) : null);
   const join = (parts: (string | null)[]) => parts.filter(Boolean).join(" · ");
-  const old = now - Date.parse(usage.at);
+  // At the limit the plan is asked again every few minutes (`planCheckedAt`): how long ago that was always shows then.
+  const at = planCheckedAt(usage) ?? usage.at;
+  const old = now - Date.parse(at);
   const stale = old > PLAN_STALE_MS;
   return {
     state,
     top,
     stale,
-    age: stale ? text.stale(usage.at) : old >= PLAN_AGE_SHOWN_MS ? text.ago(usage.at) : null,
+    age: stale ? text.stale(at) : old >= PLAN_AGE_SHOWN_MS || state === "limited" ? text.ago(at) : null,
     line: rows
       .slice(0, LINE_WINDOWS)
       .map((w) => `${text.short(w)} ${w.used}%`)

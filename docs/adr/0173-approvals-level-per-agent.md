@@ -1,6 +1,7 @@
 # 0173. An approvals level per agent: always ask, only what is risky, never ask
 
-- Status: Accepted
+- Status: Accepted (amended 2026-11-12: `always` and `never` are absolute, see the last section, which replaces
+  items 2 to 5 and the Consequences where they differ)
 - Date: 2026-11-11
 - Extends: ADR 0015 (Tool Gateway and approvals, "Aprovar sempre"), ADR 0053 (who is behind a run, a routine's
   bounds), ADR 0131 (autonomy brakes)
@@ -73,3 +74,118 @@ for. A choice saves at once.
   its own switch (sandbox settings), which the level leaves alone.
 - An approval card doesn't yet say that its agent always asks. The level is on the agent's page, one tap from the
   card's agent.
+
+## Amended 2026-11-12: always and never are absolute
+
+People read "Sempre perguntar" and "Nunca perguntar" as always and never, and the exceptions above made both
+untrue: an agent set to never ask still asked for merge, deploy, rollback, tools that run whatever their arguments
+say, someone's mailbox and everything a routine wrote, and one set to always ask changed issues, files, messages
+and its computer without a word. The levels now mean what they say. This replaces items 2, 3, 4 and the last
+sentence of 5 above, and the Consequences where they differ.
+
+1. **`never`: no approval card for anything the agent may already use**, on every run that has one (a person's,
+   the agent's own, a routine's, one a routine's reading or outside text feeds). That covers merge, deploy and
+   rollback, what starts them under another name or runs whatever its arguments say (`alwaysAsks`), a call
+   whose actions can't be read, a tool with its own approvers (someone's mailbox), a connected app's write from a
+   routine, our own sensitive tools (`run_code`, `run_skill_script` and `start_task` where every command asks,
+   `desktop_do`), and a command the computer held: the computer ran nothing when it held it, so the gateway runs
+   the same call again the approved way instead of asking. "Pode fazer merge sem perguntar" is not needed: the
+   agent merges in any repository it may use, with the same audit line and receipt, through the connector or by
+   command (the runner names the merge of an approved command, protocol 59). The autonomy brakes' go-ahead card
+   for costly work the agent started is skipped too. `schedule_action` posts no card either: the action is stored
+   as already approved and its run does it at its time, while the agent still never asks. Narrowed before then,
+   its run asks.
+2. **What `never` does not lift.** It lifts asking and nothing else. The policy's refusals (what a routine may
+   not use), scopes, a tool turned off, the budget, a mailbox's recipients and From address, the git proxy's
+   never-allowed operations, a secret read, an action a person refused ahead, a cost a person said never to and
+   the hourly cap on pull requests all hold: they are limits, not questions. A mission task's call has no run and
+   follows the mission's own setting, as before.
+3. **What still shows a card at `never`**: only the tools whose job is asking a person, because the agent chose
+   to ask: `request_approval`, `request_permission`, `send_feedback`, `request_branch_push`, and the question
+   and proposal cards (`ask_user`, `ask_choices`, `propose_*`, `offer_*`, `request_secret`).
+4. **One place decides it.** `unaskedAtNever(level, tool, authority)` is read by the call, the listing (the tool
+   lists without its `why` and is marked `unasked`, so no directory or prompt line says it asks), the held
+   command and the brakes. The policy table still answers `approve` for a routine's write, and the gateway lifts
+   the card, so a refusal in the table is never lifted with it.
+5. **`always`: every call that changes something asks first, on every kind of run.** `toolPolicy` answers
+   `approve` for the kinds `external`, `internal`, `elsewhere` and `unknown` (`asksAtAlways`), on a person's run,
+   the agent's own, a routine's and a fed one: issues, memory, Drive, wiki, Vault, dashboards, code on its
+   computer, posts and messages elsewhere, routines and reminders, tools the table doesn't know, and a click,
+   typing or `browser_do` in its browser (`desktop_do` on its desktop). A routine's own actions
+   (`routines.own_actions`) ask too, and its card offers no "Sempre nesta rotina". A computer brain's own tools
+   only read (item 10).
+6. **What `always` leaves alone**, because asking there would be asking about asking, or would keep the run from
+   ending: `pass`, `hand_off`, the run's own bookkeeping (`set_status`, `withdraw_request`, long work's tools,
+   `request_approval`), what speaks in the run's own conversation (`ask_user`, `ask_choices`, the `propose_*` and
+   `offer_*` cards, reactions, polls), the tools whose own card is the question (`request_secret`,
+   `request_permission`, `request_settings_change`, `request_folder_access`, `send_feedback`, `propose_event`,
+   `schedule_action`, `propose_member_changes`, `propose_instruction_change`), a mission's tools, `update_widget` on a widget's refresh, a directory's search and
+   `run_approved_action` (the tool behind them is judged), and every read: a connected app's, ours, a call of `workspace_action` that only searches (`looksOnly`), and
+   looking at a page in the browser (`browser_open`, `browser_read`, `browser_screenshot` and the like), `git_clone`
+   included. `update_skill` and `update_skill_from_source` were filed as reads by their scope and are changes now.
+   `run_code`, `run_skill_script` and `start_task` list their reason as required, as every call of them asks.
+7. **Opening a pull request never asks at `risky`**, on any run. Our `open_pull_request` already didn't. The
+   GitHub connector's `create_pull_request` (the same tool when the GitHub App answers for the workspace, ADR
+   0156) and a connected server's tool whose name ends in `create_pull_request` or `open_pull_request` are filed
+   as the agent's own code work (`opensPullRequest`), so a routine's run and a fed one no longer get the card
+   that read "vai abrir PR". GitLab's `create_merge_request` counts too, not sensitive by the word "merge", and a
+   tool that runs other actions (Composio's executor) is judged by them when every one opens a pull request. A
+   tool an admin set to ask still asks. A merge is another tool and follows the level: it asks at `risky` and `always`, not
+   at `never`. At `always` opening a pull request asks like any other change.
+8. **The audit** marks a call with `details.approvalsLevel = "never"` only when it would have asked: the policy
+   said `approve`, the tool is marked sensitive, the call said why, or the computer held its command.
+9. **What the agent is told** follows the level: the prompt's line on approvals, a routine's brief and what a
+   routine's own actions cover say that nothing waits (`never`) or that every change does (`always`). At `never`
+   the rules every agent reads no longer say to ask before a merge or a deploy, and the level's line says not to
+   ask for a go in words or with `ask_user` either, unless the decision is the person's.
+10. **A computer brain's own tools know the level.** The turn carries it (`BrainTurnRequest.permissions.asks`,
+    runner protocol 59; an older runner ignores the field).
+    - `always`, Claude Code: the turn starts without accepted edits and with only reads allowed by rule, and the
+      runner's prompt lets nothing but a plain read through, a push to the agent's own branch included. Every
+      edit and every other command reaches the server, which refuses it with how to ask: the same command through
+      `run_code`, or the same change through `write_file`, with its reason. That call opens the card. A delegated
+      Claude Code turn does the same in the worker (`allowedHere`).
+    - `always`, every other brain (Codex, Cursor, OpenCode, Grok Build, Antigravity) and Claude Code on an older
+      runner: no prompt sees each call of their own tools, so the server sends the turn as `plan`
+      (`askingPermissions`). Their own tools only read, and every change goes through our tools, which ask.
+    - `never`: a command the computer holds (a merge, a deploy, a push to the default branch) is refused by the
+      brain's own shell with what it is and where it runs (`run_code`, which runs it without asking), never with a
+      wait for a person. A push the git proxy never allows and a secret read keep their own refusals. Codex's
+      approvals read the same. Claude Code's own deny rules still refuse a merge or a deploy in its shell with the
+      CLI's words, so the level's prompt line says to run the same command with `run_code` then. A background
+      task's executor has no `run_code`: there the refusal stays "stop and say so".
+11. **"Aprovar sempre" is absolute too** (`rememberKinds`). At `risky` every approval card offers it: merge,
+    deploy, rollback, a tool that runs whatever its input says, a call on a routine's run, a call the run policy
+    sends to approval, a tool an admin set to ask. A kept rule is the agent's and holds on every kind of run: a
+    person's, the agent's own, a routine's and one a routine's reading feeds. What is kept: the tool by the
+    server's own name, and each action for a tool that runs others. A command on the computer is kept by its kind
+    (`gh pr merge`, a held one too), and one with no kind (a script, a pipeline) by the tool itself, which then
+    covers only commands with no kind of their own: a merge or a deploy needs its own rule. SQL proven read-only
+    is kept as that project's reads, anything else as the tool. A held command of a kept kind runs again the
+    approved way, with the merge receipt when it is one. Not offered: on a mailbox's tools (whether a send asks is
+    the mailbox's setting, and a card that names who decides is kept for good by them alone), on the agent's own
+    asking tools (`request_approval`, `request_permission`, `send_feedback`; `request_branch_push` keeps its
+    one-branch rule, which the git proxy stops reading while the agent always asks), at `always` (no rule is
+    offered or read), and where a routine's card offers the narrower "Sempre nesta rotina", which still leaves out
+    merge, deploy, payments and deletions. A rule only skips the question: scopes, the run policy's refusals, the
+    credential refusal on a fed run and the arguments' checks still come first.
+
+Consequences of the amendment:
+
+- At `never` a routine acts on text nobody checked (inbound mail, a webhook, the web) without a person. That is
+  the choice the level's line states: "Never asks, merge, deploy, payments and routines included."
+- At `always` an agent that works on its computer opens a card per command that changes something. Plain reads
+  run. A workspace's "every command asks" switch (sandbox settings) is no longer the only way to get that.
+- Still unasked at `always`, each stated because it is not closed: a mission's turns and tasks, which follow the
+  mission's own command setting. A Claude Code turn that loads the computer owner's own settings and MCP servers
+  (`personalMcp`), where a rule in the owner's settings can allow a command before our prompt sees it. A
+  background task started with `start_task` runs under its own rules once its start was approved. What speaks in
+  the run's own conversation and the run's own bookkeeping (item 6).
+- A kept "Aprovar sempre" rule now covers runs that outside text feeds (a routine reading mail, a webhook, and
+  the run its report wakes). Text nobody checked can then trigger an action of a kept kind with values of its
+  choosing, with no person in between. Before, such runs always asked.
+- A rule kept for a whole tool that runs anything (`run_code` for a script, an executor call of unknown shape) is
+  as wide as the tool, short of a command with a kind of its own. The card's line says what it covers.
+- Screens that named merge, deploy and rollback as always asking now say "by default" or "unless the agent never
+  asks". Lines about other sensitive actions (a send, a share, a delete "always asks for approval") are unchanged
+  and are untrue for an agent set to never ask.

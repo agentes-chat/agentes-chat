@@ -77,6 +77,7 @@ import {
   devicePair,
   formatUserCode,
   LINK_CODE,
+  movedFrom,
   PairingError,
   redeemIssuedCode,
   takeEnrollCode,
@@ -84,7 +85,8 @@ import {
 } from "./pairing";
 import { agentWorkspace } from "./paths";
 import { connectVnc, type VncConnection, vncInit } from "./rfb";
-import { installService, installSystemService, serviceStatus, uninstallService } from "./service";
+import { installService, installSystemService, removeOwnService, serviceStatus, uninstallService } from "./service";
+import { askStandby, STANDBY_DEFAULT_MINUTES, STANDBY_MAX_MINUTES, standbyAcked } from "./standby";
 import type { DataListener, DataSocket } from "./streams";
 import { runTaskWrapper } from "./tasks";
 import { runnerTerminalUser, systemTerminalUser, Terminals, type TerminalsOptions } from "./terminal";
@@ -130,6 +132,12 @@ Usage:
       Runs host as this computer's service: the root unit from boot on Linux, at login on macOS.
   agentes-runner update
       Downloads the latest runner from the server and restarts the service (keeps the pairing).
+  agentes-runner standby [--minutes <n>]
+      For whoever pauses this computer: the running runner drops its link to the server and keeps
+      everything else running (tasks, the agents' browsers and desktops, their programs). It ends after
+      n minutes the computer is running (default 5), or with resume; ask again to keep it.
+  agentes-runner resume
+      Ends standby: the runner connects again at once.
   agentes-runner status
       The connection, the service, and whether the agents' desktops and the terminal can run here.
   agentes-runner doctor [--wait | --no-wait] [--json]
@@ -165,7 +173,7 @@ Usage:
 Every command takes --home <dir> (default $AGENTES_RUNNER_HOME or ~/.agentes-runner).
 Config: <home>/config.json, mode 600. For background tasks, optional "maxConcurrentTasks" (default 3)
 and "taskMaxSeconds" (default 14400). For agents thinking with Claude Code, optional "brainIdleMinutes"
-(default 3) and "brainMaxProcesses" (default 1). Changes apply while it runs.
+(default 20 on Linux, 3 elsewhere) and "brainMaxProcesses" (default 2 on Linux, 1 elsewhere). Changes apply while it runs.
 Background tasks keep running when the runner restarts. Their logs are in tasks/.
 Commands run as the user that runs the runner. Consider a dedicated OS user.`;
 
@@ -195,6 +203,7 @@ const VALUE_FLAGS = new Set([
   "enroll-file",
   "rotate",
   "link",
+  "minutes",
 ]);
 const LIST_FLAGS = new Set(["agent", "rotate"]);
 
@@ -383,6 +392,9 @@ async function pair(p: Parsed): Promise<number> {
   const details = [`Workspace: ${workspaceReal}${exec ? "" : " (commands off)"}`, `Config: ${configPath(home)}`];
   if (wait) wait.done(connected, ...details);
   else term.step(connected, ...details);
+  // One home holds one connection: it left the workspace it worked for, which nothing else says.
+  const left = movedFrom(prev, grant.org);
+  if (left) term.warn(left);
   // An issued code is a provisioner's (the workspace computer): its rule is the workspace's, not a person's choice.
   const who = enrollCode ? null : whoCanUse(grant, next.name ?? grant.name);
   if (who && grant.url) {
@@ -437,6 +449,15 @@ async function start(): Promise<number> {
       case "outdated":
         log("This runner is too old for the server. Update it: agentes-runner update");
         return serviceSafe(3);
+      case "revoked": {
+        const removed = removeOwnService({ manager: process.env.AGENTES_RUNNER_SERVICE });
+        log(
+          removed
+            ? `This computer was removed from the workspace, so its login service is gone too (${removed}). To connect it again: agentes-runner pair --server <url>`
+            : "This computer was removed from the workspace. To connect it again: agentes-runner pair --server <url>",
+        );
+        return serviceSafe(TOKEN_REFUSED_EXIT);
+      }
       default:
         log("Connect this computer again: agentes-runner pair --server <url>");
         return serviceSafe(TOKEN_REFUSED_EXIT);
@@ -738,6 +759,41 @@ function printed(
     }
   }
   return code;
+}
+
+/** How long `standby` and `resume` wait for the running runner to answer. */
+const STANDBY_ANSWER_MS = 20_000;
+
+/**
+ * `agentes-runner standby` / `resume` (ADR 0176): the ask goes in the runner's home, and the running runner answers
+ * once it applied it. Exits 0 once nothing here links to the server (in standby, or no runner running), or the
+ * runner took the resume.
+ */
+async function standby(p: Parsed, on: boolean): Promise<number> {
+  const home = runnerHome();
+  const given = flagString(p, "minutes");
+  const minutes = on ? (given === undefined ? STANDBY_DEFAULT_MINUTES : Number(given)) : 0;
+  if (on && (!Number.isInteger(minutes) || minutes < 1 || minutes > STANDBY_MAX_MINUTES)) {
+    console.error(`--minutes takes a whole number from 1 to ${STANDBY_MAX_MINUTES}`);
+    return 1;
+  }
+  const ask = askStandby(home, minutes);
+  const holder = readLock(home);
+  if (!holder || !pidAlive(holder.pid)) {
+    console.log(on ? "No runner is running here: one that starts now stays in standby." : "No runner is running here.");
+    return 0;
+  }
+  for (const until = Date.now() + STANDBY_ANSWER_MS; Date.now() < until; await sleep(100)) {
+    if (!standbyAcked(home, ask.id)) continue;
+    console.log(
+      on
+        ? `In standby for ${minutes} min of running time: no link to the server, everything else runs.`
+        : "Standby is over: connecting to the server.",
+    );
+    return 0;
+  }
+  console.error("The runner didn't answer in time.");
+  return 1;
 }
 
 /** Replaces this script with the server's latest bundle; the pairing and the workspace stay. */
@@ -1380,6 +1436,9 @@ async function main(argv: string[]): Promise<number> {
     }
     case "update":
       return update();
+    case "standby":
+    case "resume":
+      return standby(p, command === "standby");
     case "service": {
       const stored = storedOrNull();
       const hostService = p.flags.has("host");

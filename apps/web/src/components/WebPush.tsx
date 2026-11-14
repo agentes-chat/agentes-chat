@@ -203,7 +203,8 @@ export function PushAskInline({
         // Chrome's quieter prompts may keep it as a crossed-out bell by the address, with no answer.
         else if (state === "default") toast.show(t("shell.browserNoticesUnanswered"));
       })
-      .catch(() => toast.show(t("webPushAsk.failed"), "error"))
+      // Its way out right there: the toast's button asks again, from that click.
+      .catch(() => toast.show(t("webPushAsk.failed"), "error", { label: t("common.retry"), run: turnOn }))
       .finally(() => {
         setAsking(false);
         onClose();

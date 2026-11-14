@@ -16,6 +16,7 @@ import {
 } from "@agenteschat/client/lib/notices";
 import type { RoutineReply } from "@agenteschat/client/lib/routines";
 import type { AppVia } from "@agenteschat/client/lib/via";
+import { stopsMovedOn } from "@agenteschat/client/lib/work";
 import {
   cx,
   EventPill,
@@ -45,7 +46,6 @@ const NOTICE_ICON: Record<string, IconName> = {
   consult_reply: "agent",
   agent_note: "message",
   wait_result: "check",
-  follow_up: "clock",
   wake_skipped: "alert",
 };
 
@@ -67,7 +67,7 @@ function EventLine({
   /** What "Ver" opens (`noticeView`): never the words written for the agent. */
   detail: NoticeView["detail"];
   labels: { show: string; hide: string };
-  /** What a person can still do about it ("Cancelar" on a follow-up): an `EventPillAction`. */
+  /** What a person can still do about it ("Pedir resposta" on GitHub): an `EventPillAction`. */
   action?: ReactNode;
 }) {
   const { t, i18n } = useTranslation();
@@ -129,7 +129,7 @@ export function UnshownLine({ part = false }: { part?: boolean }) {
  * The agent's own reply (if it has something to say) follows as a normal message.
  */
 export function NoticeLine({ message }: { message: Message }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const notice = noticeOf(message.meta);
@@ -147,14 +147,10 @@ export function NoticeLine({ message }: { message: Message }) {
         <ConsultPairRow askerId={consulted.askerId} items={[pairItemOf(consulted.consultation)]} />
       </div>
     );
-  const view = noticeView(
-    message,
-    {
-      author: dir.authorName(message.author),
-      agentByHandle: (handle) => dir.agentByHandle.get(handle.toLowerCase())?.name ?? null,
-    },
-    { time: (iso) => formatTime(i18n.language, iso), locale: i18n.language },
-  );
+  const view = noticeView(message, {
+    author: dir.authorName(message.author),
+    agentByHandle: (handle) => dir.agentByHandle.get(handle.toLowerCase())?.name ?? null,
+  });
   if (!view) return null;
   return (
     <EventLine
@@ -169,13 +165,7 @@ export function NoticeLine({ message }: { message: Message }) {
       label={t(view.key as "chat.notice.other", view.values as { name: string })}
       detail={view.detail}
       labels={{ show: t("chat.notice.show"), hide: t("chat.notice.hide") }}
-      action={
-        view.pending ? (
-          <CancelFollowUp messageId={message.id} />
-        ) : view.answer ? (
-          <AnswerGitHub messageId={message.id} />
-        ) : undefined
-      }
+      action={view.answer ? <AnswerGitHub messageId={message.id} /> : undefined}
     />
   );
 }
@@ -288,28 +278,43 @@ export function StopPill({
   );
 }
 
-/** The stopped tasks of a conversation: each notice by run, and the runs whose stopped reply is drawn here. */
+/**
+ * The stopped tasks of a conversation: each notice by run, the runs whose stopped reply is drawn here, and the
+ * stopped runs with nothing left to continue (`stopsMovedOn`).
+ */
 export interface StopsHere {
   notices: ReadonlyMap<string, { notice: StoppedNotice; at: string }>;
   replied: ReadonlySet<string>;
+  movedOn: ReadonlySet<string>;
 }
 
-const StopsContext = createContext<StopsHere>({ notices: new Map(), replied: new Set() });
+const StopsContext = createContext<StopsHere>({ notices: new Map(), replied: new Set(), movedOn: new Set() });
 export const StopsProvider = StopsContext.Provider;
 
 /**
  * One stop, one pill: a notice whose stopped reply is here (a saved reply that says it was canceled, or the run's live
  * block) is drawn in that reply's pill, never as a line of its own.
  */
-export function stopsOf(messages: readonly Message[], liveRunIds: Iterable<string>): StopsHere {
+export function stopsOf(
+  messages: readonly Message[],
+  live: readonly { runId: string; agentId: string; provisional?: boolean; goneAt?: number | null }[],
+): StopsHere {
   const notices = new Map<string, { notice: StoppedNotice; at: string }>();
-  const replied = new Set<string>(liveRunIds);
+  const replied = new Set<string>(live.map((r) => r.runId));
   for (const m of messages) {
     const notice = stoppedNoticeOf(m.meta);
     if (notice) notices.set(notice.runId, { notice, at: m.createdAt });
     else if (m.author.type === "agent" && m.agentRunId && m.meta?.canceled) replied.add(m.agentRunId);
   }
-  return { notices, replied };
+  return {
+    notices,
+    replied,
+    // At work for real: not a guess at who will answer, nor a block that ended and waits for its message.
+    movedOn: stopsMovedOn(
+      messages,
+      live.filter((r) => !r.provisional && !r.goneAt).map((r) => r.agentId),
+    ),
+  };
 }
 
 /** The notice of the run a stopped reply belongs to, when the conversation has it. */
@@ -317,6 +322,9 @@ export const useStopNotice = (runId: string | null | undefined) => {
   const stops = useContext(StopsContext);
   return runId ? stops.notices.get(runId) : undefined;
 };
+
+/** Whether a stopped run's agent went on here (it works now, or wrote again): nothing left for "Continuar". */
+export const useStopMovedOn = (runId: string | null | undefined) => useContext(StopsContext).movedOn.has(runId ?? "");
 
 /** Whether a stopped task's notice has its reply's pill here, so draws nothing. */
 export const useStopShownInReply = (runId: string) => useContext(StopsContext).replied.has(runId);
@@ -337,28 +345,6 @@ function StoppedLine({ message, notice }: { message: Message; notice: StoppedNot
         className="cn-stopped"
       />
     </div>
-  );
-}
-
-/** "Cancelar" on a follow-up still to come: the line changes in place once the server has it. */
-function CancelFollowUp({ messageId }: { messageId: string }) {
-  const { t } = useTranslation();
-  const api = useApi();
-  const { org } = useOrg();
-  const [busy, setBusy] = useState(false);
-  return (
-    <EventPillAction
-      disabled={busy}
-      onClick={() => {
-        setBusy(true);
-        void api.chat
-          .cancelFollowUp(org.id, messageId)
-          .catch(() => {})
-          .finally(() => setBusy(false));
-      }}
-    >
-      {t("chat.notice.followUpCancel")}
-    </EventPillAction>
   );
 }
 

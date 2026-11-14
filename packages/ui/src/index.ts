@@ -203,6 +203,7 @@ export {
 } from "./components/FilterChip";
 export { FoldRow } from "./components/FoldRow";
 export { GroupHeading } from "./components/GroupHeading";
+export { type Hosting, HostingScene } from "./components/HostingScene";
 export { HintLine, type HintLineProps, InfoHint, type InfoHintProps } from "./components/InfoHint";
 export { isApple, Kbd, modKey, shortcut } from "./components/Kbd";
 export { Logo, LogoMark, type LogoProps } from "./components/Logo";
@@ -431,6 +432,7 @@ export {
   wrapSelection,
 } from "./format";
 export { useDarkTheme } from "./hooks/useDarkTheme";
+export { DAWN_MS, useDawn } from "./hooks/useDawn";
 export { useDragScroll } from "./hooks/useDragScroll";
 export {
   HOVER_CLOSE_MS,
@@ -488,9 +490,12 @@ export {
   type SkyFrame,
   type SkyOptions,
   SPRITE,
+  skiesHeld,
   startSky,
 } from "./sky/engine";
+export { FORMING_LOOP_S, formingField } from "./sky/forming";
 export { selectionSkyUrl } from "./sky/selection";
+export { teamSky } from "./sky/team";
 export {
   agentTones,
   EYE,

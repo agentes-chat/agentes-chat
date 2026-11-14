@@ -237,7 +237,7 @@ export function accountAbout(
 }
 
 /**
- * Someone else's plan that a person who may use other people's plans (`use_others_plans`, ADR 0059 §3) can give the
+ * Someone else's plan that a person who may use other people's plans (`canUseOthersPlans`, ADR 0059 §3) can give the
  * agent named `agentName`: signed in, and thinking for nobody else or for all of its owner's agents there. It is
  * never taken from an agent that has it.
  */

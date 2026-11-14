@@ -1,5 +1,19 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { and, asc, type Database, type Executor, eq, gt, inArray, isNull, ne, or, schema, sql } from "@agenteschat/db";
+import {
+  and,
+  asc,
+  type Database,
+  type Executor,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNull,
+  ne,
+  or,
+  schema,
+  sql,
+} from "@agenteschat/db";
 import { scalarParams } from "./approvals";
 import { runAuthorityById } from "./authority";
 import { mayJoin, type RunTrigger, startOrJoinRun } from "./dispatch";
@@ -30,6 +44,31 @@ export const ACTIVE_RUN_STATUSES = ["queued", "running", "waiting_approval", "wa
  * something a message can't move (an approval, a secret, a mission's decision: `holdsMessages`).
  */
 export type ReleaseReason = "done" | "failed" | "canceled" | "interrupted" | "swept" | "held";
+
+/**
+ * The message a person stopped this run to send ("Parar e mandar" to a computer brain, whose turn can't be cut
+ * halfway), or null when the run was stopped for itself (the stop button, a plain "stop"). Such a stop is no stop
+ * to the person: they sent a message and the agent goes on with it, so nothing in the conversation says "stopped".
+ * One message may stop several runs (every agent at work it was sent into): it lists them all.
+ */
+export async function stoppedToSend(
+  db: Executor,
+  run: Pick<AgentRun, "id" | "orgId" | "channelId" | "createdAt">,
+): Promise<{ id: string; createdAt: Date } | null> {
+  const [sent] = await db
+    .select({ id: messages.id, createdAt: messages.createdAt })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.orgId, run.orgId),
+        eq(messages.channelId, run.channelId),
+        gte(messages.createdAt, run.createdAt),
+        sql`${messages.meta}->'stoppedRunIds' @> to_jsonb(${run.id}::text)`,
+      ),
+    )
+    .limit(1);
+  return sent ?? null;
+}
 
 /**
  * Queues a message on a run, only while the run is still active (status-guarded: a run that ended
@@ -178,7 +217,7 @@ export async function heldHere(
   run: Pick<AgentRun, "id" | "orgId" | "agentId" | "channelId" | "threadRootId" | "triggerMessageId">,
 ): Promise<string | null> {
   const rows = await db
-    .select({ title: approvals.title, params: approvals.params })
+    .select({ title: approvals.title, params: approvals.params, status: approvals.status })
     .from(approvals)
     .innerJoin(agentRuns, eq(agentRuns.id, approvals.runId))
     .where(
@@ -186,9 +225,13 @@ export async function heldHere(
         eq(approvals.orgId, run.orgId),
         eq(approvals.agentId, run.agentId),
         eq(approvals.channelId, run.channelId),
-        eq(approvals.status, "pending"),
+        // Waiting for a person, or approved and waiting its turn behind a request asked before it (ADR 0182).
+        or(
+          eq(approvals.status, "pending"),
+          and(eq(approvals.status, "approved"), isNull(approvals.result), isNull(approvals.runAt)),
+        ),
         ne(agentRuns.id, run.id),
-        eq(agentRuns.status, "waiting_approval"),
+        inArray(agentRuns.status, ["waiting_approval", "waiting_input"]),
         or(
           eq(agentRuns.threadRootId, run.threadRootId),
           replyThreadOf(run) ? undefined : inChannelRun(sql`${agentRuns}`),
@@ -202,7 +245,8 @@ export async function heldHere(
     const params = Object.entries(scalarParams(r.params))
       .map(([k, v]) => `${k}=${v}`)
       .join(", ");
-    return `- ${r.title}${params ? ` (${params})` : ""}`;
+    const turn = r.status === "approved" ? " [approved, runs once what was asked before it is done]" : "";
+    return `- ${r.title}${params ? ` (${params})` : ""}${turn}`;
   });
   return [
     "# Already waiting for approval here",

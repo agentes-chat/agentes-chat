@@ -1,11 +1,13 @@
 import { type Agent, type Approval, type Member, useApprovalsDeciding } from "@agenteschat/client";
 import {
+  approvalLine,
   approvalRuns,
   approveAllScope,
   approveAlwaysAlso,
   approveAlwaysOn,
   cardDeadline,
   itemOwnWords,
+  type LinePlace,
   runKeys,
 } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
@@ -15,12 +17,14 @@ import {
   approvalAskLine,
   approvalDetail,
   approvalGroupWaitsFor,
+  approvalLetter,
+  approvalLetterTo,
   approvalTitle,
   approvalWaitsFor,
   decisionOutcome,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
-import { nextLabel, whenAt } from "@agenteschat/client/lib/format";
+import { formatTime, nextLabel, whenAt } from "@agenteschat/client/lib/format";
 import { Button } from "@agenteschat/ui";
 import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
@@ -56,6 +60,7 @@ export function ApprovalAsk({
   members,
   who,
   tail,
+  summary = false,
 }: {
   approval: Approval;
   agent: Agent | undefined;
@@ -64,6 +69,8 @@ export function ApprovalAsk({
   who?: ReactNode;
   /** After the fuse at the footer's end (the notifications' Remind me later and Done). */
   tail?: ReactNode;
+  /** One of a summary's cards: the line over them says what they are, so it has no header and no asking line. */
+  summary?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
@@ -83,7 +90,7 @@ export function ApprovalAsk({
   const requester = requesterDecidesLine(t, approval);
   const title = approvalTitle(t, approval);
   const email = approval.email;
-  const previewed = Boolean(email);
+  const previewed = Boolean(email || approvalLetter(approval));
   // What the preview already shows isn't said again on the action's line. A connector's detail is its raw call
   // (`tool · key=value`): its values in words instead, the call under "Ver detalhes".
   const detail = previewed ? undefined : approvalDetail(approval, i18n.language) || undefined;
@@ -92,6 +99,7 @@ export function ApprovalAsk({
       id={approval.id}
       kind="approval"
       agent={agent}
+      runId={approval.runId}
       who={who}
       label={t(
         pending
@@ -107,7 +115,8 @@ export function ApprovalAsk({
       mine={approval.canDecide}
       waitingFor={waits ? t("ask.waitingFor", { name: waits }) : t("approval.waitingAdmin")}
       answer={pending ? undefined : approvalAnswer(t, i18n.language, approval, me.user.id, members)}
-      lead={why ?? approvalAskLine(t, pending && approval.canDecide)}
+      lead={why ?? (summary ? undefined : approvalAskLine(t, pending && approval.canDecide))}
+      headless={summary}
       preview={previewed ? <ApprovalPreview approval={approval} /> : undefined}
       object={{
         logo: <ConnectorMark approval={approval} />,
@@ -194,6 +203,16 @@ function approvalAnswer(
 function ApprovalPreview({ approval }: { approval: Approval }) {
   const { t } = useTranslation();
   const email = approval.email;
+  const letter = approvalLetter(approval);
+  if (letter) {
+    return (
+      <div className="rq-mail">
+        {letter.subject && <b className="rq-mail__subject">{letter.subject}</b>}
+        {approvalLetterTo(t, letter) && <span className="rq-mail__to">{approvalLetterTo(t, letter)}</span>}
+        <p className="rq-mail__body">{letter.body}</p>
+      </div>
+    );
+  }
   if (!email) return null;
   return (
     <div className="rq-mail">
@@ -258,6 +277,7 @@ export function ApprovalGroupAsk({
   const partial = approveAllPartial(t, items, waits);
   const runs = approvalRuns(items);
   const keys = runKeys(runs);
+  const line = approvalLine(items);
   const [only] = runs;
   const one = runs.length === 1 && only && only.length > 1 ? only : null;
   const isOpen = (key = "") => opened.has(key);
@@ -275,6 +295,7 @@ export function ApprovalGroupAsk({
       lead={leadItem}
       always={!inRun && always.has(a.id)}
       also={approveAlwaysAlso(items, a)}
+      place={line.get(a.id)}
       agent={agent}
       members={members}
     />
@@ -284,6 +305,7 @@ export function ApprovalGroupAsk({
       id={first.id}
       kind="approval"
       agent={agent}
+      runId={first.runId}
       who={who}
       label={t("approval.group")}
       mine={mine}
@@ -419,6 +441,7 @@ function GroupItem({
   lead,
   always,
   also,
+  place,
   agent,
   members,
 }: {
@@ -426,6 +449,8 @@ function GroupItem({
   lead: Approval;
   always: boolean;
   also: string[];
+  /** Where it stands on the card: an approved one runs after what the agent asked before it (`approvalLine`). */
+  place: LinePlace | undefined;
   agent: Agent | undefined;
   members: Map<string, Member>;
 }) {
@@ -442,6 +467,30 @@ function GroupItem({
   const ahead = aheadPhase(approval);
   const runAt = approval.runAt ? nextLabel(i18n.language, approval.runAt) : "";
   const tt = t as unknown as (key: string, options?: Record<string, unknown>) => string;
+  const letter = approvalLetter(approval);
+  // Replaced by the agent's newer request for the same action, on the card under it: one quiet line.
+  if (approval.status === "canceled" && approval.supersededById) {
+    return (
+      <li className="rq__item rq__item--done rq__item--replaced ac-actline" data-status={approval.status}>
+        <div className="rq__well">
+          <span className="rq__logo">
+            <ConnectorMark approval={approval} />
+          </span>
+          <span className="rq__wt">
+            <b>{approvalTitle(t, approval)}</b>
+            <small>
+              {[
+                decisionOutcome(t, approval, me.user.id, (id) => members.get(id)?.name),
+                approval.decidedAt && formatTime(i18n.language, approval.decidedAt),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </small>
+          </span>
+        </div>
+      </li>
+    );
+  }
   return (
     <li
       className={pending ? "rq__item ac-actline" : "rq__item rq__item--done ac-actline"}
@@ -454,6 +503,13 @@ function GroupItem({
         <span className="rq__wt">
           <b>{approvalTitle(t, approval)}</b>
           {detail && <small>{inlineWords(detail, "it-d")}</small>}
+          {letter && (
+            <span className="rq-letter">
+              {letter.subject && <b className="rq-letter__subject">{letter.subject}</b>}
+              {approvalLetterTo(t, letter) && <small className="rq-letter__to">{approvalLetterTo(t, letter)}</small>}
+              <span className="rq-letter__body">{letter.body}</span>
+            </span>
+          )}
           {own.why && <small className="rq__item-why">{inlineWords(own.why, "it-w")}</small>}
           {own.origin && <small className="rq__item-why">{tt(own.origin.key, own.origin.values)}</small>}
           {runAt && (ahead === "asking" || ahead === "scheduled") && (
@@ -481,6 +537,14 @@ function GroupItem({
       ) : (
         <p className="rq__item-outcome">
           {decisionOutcome(t, approval, me.user.id, (id) => members.get(id)?.name)}
+          {place?.waitsOn
+            ? ` · ${t("approval.line.after", {
+                // With its place on the card: two requests of one kind ("Criar issue") tell apart by it.
+                title: `${approvalTitle(t, place.waitsOn)} (${t("approvals.position", { n: place.waitsOnAt, total: place.count })})`,
+              })}`
+            : approval.result?.notRunAfter
+              ? ` · ${t("approval.line.notRun")}`
+              : null}
           {ahead === "scheduled" && approval.canCancel && <CancelAhead id={approval.id} />}
         </p>
       )}

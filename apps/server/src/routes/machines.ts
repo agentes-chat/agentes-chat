@@ -2,6 +2,8 @@ import { isIP } from "node:net";
 import { limitIp } from "@agenteschat/adapters";
 import {
   ARTIFACT_LIMITS,
+  allowMachineTool,
+  askMachineTool,
   authenticateMachine,
   computerQueue,
   computerSetup,
@@ -65,6 +67,20 @@ const MachinePause = z
       .openapi({ description: "Who paused it from the apps; null: paused on the computer itself." }),
   })
   .openapi("MachinePause");
+
+/** A tool a computer turns on or off (`RunnerTools`' keys). */
+const MachineTool = z.enum([
+  "claude",
+  "codex",
+  "cursor",
+  "opencode",
+  "grok",
+  "antigravity",
+  "commands",
+  "browser",
+  "desktop",
+  "terminal",
+]);
 
 export const MachineAccess = z
   .object({
@@ -141,12 +157,20 @@ export const Machine = z
     paused: MachinePause.nullable().openapi({
       description: "The owner paused it (no new work); `until` null: until resumed (`machine.updated`).",
     }),
+    accessAllow: z.boolean().openapi({
+      description:
+        "The person who paired it can turn its tools on from here (`POST …/access/allow`); `false`: its app is too old, or it is the workspace's own computer.",
+    }),
     remotePause: z.boolean().openapi({
       description:
         "Its app takes a pause from here (`POST …/pause`); `false`: update the app on it. Never the workspace's own computer.",
     }),
     pairedBy: z.object({ id: z.string(), name: z.string() }).nullable(),
     agents: z.array(z.object({ id: z.uuid(), name: z.string(), handle: z.string() })),
+    sharedSeatOf: z.uuid().nullable().optional().openapi({
+      description:
+        "The built-in agent's id where this computer holds its shared place (the one it uses in channels, widgets and routines that report outside a person's own conversation) and this person may open it, as they may any agent's computer here. Opened with `seat=shared` on that agent's desktop routes.",
+    }),
     workspace: z
       .string()
       .nullable()
@@ -555,20 +579,7 @@ export function machineAppRoutes(deps: AppDeps) {
           z
             .object({
               removeFolder: z.object({ path: z.string().min(1).max(1024), agentId: z.uuid().optional() }).optional(),
-              disableTool: z
-                .enum([
-                  "claude",
-                  "codex",
-                  "cursor",
-                  "opencode",
-                  "grok",
-                  "antigravity",
-                  "commands",
-                  "browser",
-                  "desktop",
-                  "terminal",
-                ])
-                .optional(),
+              disableTool: MachineTool.optional(),
             })
             .strict(),
         ),
@@ -589,6 +600,54 @@ export function machineAppRoutes(deps: AppDeps) {
         c.req.valid("json"),
       );
       return c.json({ access }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/access/allow",
+      tags,
+      security,
+      summary: "Turn a tool on (only the person who paired it); the computer tells whoever is at it, with Undo",
+      description:
+        "403 `machine.not_owner` for anyone else (they ask with `…/access/ask`) and `machine.managed_access` on the workspace's own computer; 400 `machine.access_outdated` when its app is too old; 409 `machine.offline`.",
+      request: { params: MachineParams, body: body(z.object({ tool: MachineTool }).strict()) },
+      responses: {
+        200: json(z.object({ access: MachineAccess })),
+        ...errors,
+        409: errorResponse("The computer is offline (`machine.offline`)"),
+      },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      const access = await allowMachineTool(
+        { db, pubsub, hub: hub() },
+        c.get("user").id,
+        orgId,
+        machineId,
+        c.req.valid("json").tool,
+      );
+      return c.json({ access }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/access/ask",
+      tags,
+      security,
+      summary: "Ask the person who paired it to turn a tool on: an inbox row with the same one-click button",
+      request: { params: MachineParams, body: body(z.object({ tool: MachineTool }).strict()) },
+      responses: { 200: json(z.object({ ownerId: z.string() })), ...errors },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      return c.json(
+        await askMachineTool({ db, pubsub }, c.get("user").id, orgId, machineId, c.req.valid("json").tool),
+        200,
+      );
     },
   );
 

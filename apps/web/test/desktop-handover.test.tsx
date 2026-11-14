@@ -91,7 +91,21 @@ describe("the desktop app's notifications", () => {
       ...over,
     }) as AppNotification;
 
-  test("what a phone would get pushed, new and unread, opening the inbox", () => {
+  test("its click opens the message itself, where the inbox would open it", () => {
+    const fromAgent = { actors: [{ type: "agent" as const, id: "ag_lodi" }] };
+    expect(
+      desktopNotice(t, "o1", n({ kind: "agent_reply", ...fromAgent, source: { dmId: "d1", messageId: "m9" } }))?.path,
+    ).toBe("/org/o1/dm/agent/ag_lodi?m=m9");
+    expect(desktopNotice(t, "o1", n({ source: { channelId: "c1", threadId: "t1", messageId: "m9" } }))?.path).toBe(
+      "/org/o1/threads/t1?m=m9",
+    );
+    expect(desktopNotice(t, "o1", n({ source: { channelId: "c1", messageId: "m9" } }))?.path).toBe("/org/o1/c/c1?m=m9");
+    expect(desktopNotice(t, "o1", n({ kind: "approval", source: { approvalId: "ap1" } }))?.path).toBe(
+      "/org/o1/approvals?open=ap1",
+    );
+  });
+
+  test("what a phone would get pushed, new and unread; with no page of its own, the inbox", () => {
     expect(desktopNotice(t, "o1", n({}))).toEqual({
       title: "You were mentioned",
       body: "Can you look at the report?",

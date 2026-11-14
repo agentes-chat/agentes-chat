@@ -9,6 +9,13 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
       "Die agentes.chat-App kann agentes.chat auch selbst ausführen, auf einem Mac, einem PC oder einem Linux-Computer, für dich oder ein kleines Team.",
     sections: [
       {
+        id: "download",
+        heading: "Lade die App herunter",
+        blocks: [
+          "[Lade die agentes.chat-App herunter](/download), für deinen Mac, PC oder Linux-Computer, und öffne sie. Wähle **Auf deinem eigenen Server**, drück **Weiter mit meinem Server** und dann **agentes.chat auf diesem Computer ausführen**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Wie es läuft",
         blocks: [
@@ -217,6 +224,15 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
           "Melde dich in derselben App bei jedem Workspace an und drück für jeden **Erlauben**. Workspaces auf agentes.chat Cloud und auf deinen eigenen Servern können sich einen Computer teilen (ab App-Version 0.6.1). Jeder hat dort eigene Agenten und Ordner, und wenn du einen trennst, bleiben die anderen unberührt.",
           "Ein Server, den die App auf diesem Computer ausführt, ist schon verbunden und braucht nichts. Um den Computer auch einem Workspace an anderer Stelle zu leihen, sieh dir [Auch einem anderen Workspace leihen](/help/run-on-your-computer#another-workspace) an.",
           "Nutzt du die App auf einem Laptop nur als Fenster zu deinem Workspace? Wenn sie fragt, ob Agenten den Laptop nutzen dürfen, bleibt sie mit **Nicht jetzt** ein einfaches Fenster.",
+          "Ein Server, der mit der Terminal-Zeile verbunden wurde, arbeitet für einen Workspace. Wird er von einem anderen Workspace aus verbunden, wechselt der Server zu diesem, und der erste erreicht ihn nicht mehr. Für mehrere Workspaces auf einem Computer nutze die App.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Wenn Agenten in der Warteschlange stehen",
+        blocks: [
+          "Jede Arbeit eines Agenten braucht Arbeitsspeicher des Computers. Wird der freie Speicher knapp, wartet die nächste in der Warteschlange, bis eine andere endet. Menschen kommen zuerst dran. Die Zahl der CPUs ändert daran nichts.",
+          "Ein Computer mit 4 GB Arbeitsspeicher führt zwei oder drei Arbeiten gleichzeitig aus, einer mit 8 GB etwa neun. Ein Mac oder PC führt bis zu acht aus. Browser und Desktops, die Agenten offen lassen, brauchen ebenfalls Speicher. Für eine kürzere Warteschlange nutze einen Computer mit mehr Arbeitsspeicher oder verbinde einen weiteren und verteile die Agenten auf beide. Workspaces, die sich einen Computer teilen, teilen sich seinen Speicher.",
         ],
       },
       {
@@ -375,7 +391,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "Das Gedächtnis gibt keine Berechtigungen",
         blocks: [
-          "Nichts im Gedächtnis erlaubt einem Agenten mehr. Was er darf, steht weiter unter **Tools und Zugriff**, und heikle Aktionen fragen immer nach einer Freigabe.",
+          "Nichts im Gedächtnis erlaubt einem Agenten mehr. Was er darf, steht weiter unter **Tools und Zugriff**.",
         ],
       },
       {
@@ -395,7 +411,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Was vorher fragt",
         blocks: [
-          "Wenn ein Agent mergen, deployen, zurückrollen, etwas nach außen senden oder Daten löschen will, fragt er vorher, egal welchen Zugriff er hat. Die Anfrage erscheint unter **Freigaben** und in der Unterhaltung, mit der genauen Aktion und dem Grund.",
+          "Wenn ein Agent mergen, deployen, zurückrollen, etwas nach außen senden oder Daten löschen will, fragt er vorher. Das ist die Stufe **Nur Riskantes**, mit der jeder Agent startet. Auf der Seite des Agenten, unter **Freigaben**, lässt **Immer fragen** ihn vor jeder Änderung fragen, und mit **Nie fragen** fragt er gar nicht, auch nicht bei Merge, Deploy, Zahlungen und Routinen. Die Anfrage erscheint unter **Freigaben** und in der Unterhaltung, mit der genauen Aktion und dem Grund.",
         ],
       },
       {
@@ -403,7 +419,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Einmal oder immer",
         blocks: [
           "Eine Freigabe gilt für genau eine Aktion, mit ihren Werten. Ändert der Agent irgendetwas, fragt er erneut.",
-          "**Immer freigeben** lässt den Agenten diese Art von Aktion ab jetzt mit beliebigen Werten tun, ohne zu fragen. Bei der Anfrage einer Routine macht **Immer in dieser Routine** dasselbe nur für diese Routine. Beides gibt es nie für Merge, Deploy, Rollback und Ähnliches. Rückgängig machen kannst du es unter **Tools und Zugriff** auf der Seite des Agenten oder in den Einstellungen der Routine.",
+          "**Immer freigeben** lässt den Agenten diese Art von Aktion ab jetzt mit beliebigen Werten tun, ohne zu fragen. Bei der Anfrage einer Routine macht **Immer in dieser Routine** dasselbe nur für diese Routine. **Immer freigeben** gibt es für jede Art von Aktion, auch für Merge und Deploy, solange der Agent auf der Stufe **Nur Riskantes** steht. **Immer in dieser Routine** gibt es nicht für Merge, Deploy, Rollback und Ähnliches. Rückgängig machen kannst du es unter **Tools und Zugriff** auf der Seite des Agenten oder in den Einstellungen der Routine.",
         ],
       },
       {
@@ -747,7 +763,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "E-Mail",
         blocks: [
-          "Ohne E-Mail schreibt agentes.chat jede E-Mail in sein Log, statt sie zu senden, also lässt sich ein Einladungslink dort kopieren. Passwort zurücksetzen bleibt aus.",
+          "Ohne E-Mail schreibt agentes.chat jede E-Mail in sein Log, statt sie zu senden, also lässt sich ein Einladungslink dort kopieren. Passwort zurücksetzen bleibt aus, und eine neue E-Mail-Adresse für ein Konto gilt sofort, ohne Code und ohne Link.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

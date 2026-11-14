@@ -309,6 +309,48 @@ export const words: EmailWords = {
       ],
     },
   },
+  emailChange: {
+    code: {
+      subject: (code) => `${code} adalah kodemu untuk mengganti emailmu`,
+      preheader: "Ketik di agentes.chat untuk mengonfirmasi. Kodenya berlaku 10 menit.",
+      headline: "Kodemu",
+      body: (email, newEmail) => [
+        "Ketik kode ini untuk mengganti email akun ",
+        { b: email },
+        " menjadi ",
+        { b: newEmail },
+        ".",
+      ],
+      support: (address) => [
+        "Berlaku 10 menit, dan emailmu tidak berubah tanpa kode ini. Kalau ini bukan kamu, jangan bagikan kodenya dan kirim email ke ",
+        { mail: address },
+        ".",
+      ],
+      noSupport:
+        "Berlaku 10 menit, dan emailmu tidak berubah tanpa kode ini. Kalau ini bukan kamu, jangan bagikan kodenya dan beri tahu pengelola server ini.",
+      why: "Kamu menerima email ini karena akunmu meminta untuk mengganti email di agentes.chat.",
+    },
+    link: {
+      subject: "Konfirmasi email barumu untuk agentes.chat",
+      preheader: "Sekali klik, mulai sekarang kamu masuk dengan alamat ini. Tautannya berlaku satu jam.",
+      headline: "Konfirmasi email barumu",
+      body: "Tinggal satu langkah: konfirmasi bahwa alamat ini milikmu. Setelah itu akunmu masuk dengan alamat ini.",
+      button: "Konfirmasi email baru",
+      small: "Tautannya berlaku satu jam. Kalau kamu tidak memintanya, abaikan saja email ini.",
+      why: "Kamu menerima email ini karena seseorang meminta alamat ini dipakai untuk akun agentes.chat.",
+    },
+    changed: {
+      subject: "Email akun agentes.chat kamu sudah berubah",
+      preheader: "Kalau bukan kamu, alamat ini bisa dikembalikan selama 7 hari.",
+      headline: "Emailmu sudah berubah",
+      body: (email, newEmail) => ["Akun ", { b: email }, " sekarang masuk dengan ", { b: newEmail }, "."],
+      notYou:
+        "Bukan kamu? Tekan tombolnya dalam 7 hari. Alamat ini kembali, semua sesi dikeluarkan, aplikasi AI diputuskan, dan cara masuk yang ditambahkan sejak itu tidak berlaku lagi. Kata sandi juga dihapus, dan “Lupa kata sandi” membuat yang berikutnya.",
+      button: "Ini bukan saya",
+      small: "Kalau ini kamu, tidak perlu melakukan apa-apa.",
+      why: "Kamu menerima email ini karena alamat ini adalah email sebuah akun agentes.chat.",
+    },
+  },
   deleting: {
     subject: (day) => `Ruang kerja yang kamu ikuti akan dihapus pada ${day}`,
     preheader: "Sekarang hanya bisa dibaca. Pemilik masih bisa memulihkannya sampai saat itu.",

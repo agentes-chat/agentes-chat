@@ -9,6 +9,13 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
       "Aplikasi agentes.chat juga bisa menjalankan agentes.chat sendiri, di Mac, PC, atau komputer Linux, untukmu atau tim kecil.",
     sections: [
       {
+        id: "download",
+        heading: "Unduh aplikasinya",
+        blocks: [
+          "[Unduh aplikasi agentes.chat](/download) untuk Mac, PC, atau komputer Linux-mu, lalu buka. Pilih **Di server sendiri**, tekan **Lanjut di server saya**, lalu **Jalankan agentes.chat di komputer ini**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Cara kerjanya",
         blocks: [
@@ -177,6 +184,15 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
           "Masuk ke tiap ruang kerja di aplikasi yang sama lalu tekan **Izinkan** untuk masing-masing. Ruang kerja di agentes.chat Cloud dan di server milikmu sendiri bisa berbagi satu komputer (aplikasi 0.6.1 ke atas). Masing-masing punya agen dan foldernya sendiri di sana, dan memutuskan satu ruang kerja tidak memengaruhi yang lain.",
           "Server yang dijalankan aplikasi di komputer ini sudah terhubung dan tidak perlu apa-apa. Untuk meminjamkan komputer itu juga ke ruang kerja di tempat lain, lihat [Pinjamkan juga ke ruang kerja lain](/help/run-on-your-computer#another-workspace).",
           "Memakai aplikasi di laptop hanya sebagai jendela ke ruang kerjamu? Saat aplikasi meminta izin agar agen memakai laptop itu, **Nanti saja** membuatnya tetap jadi jendela biasa.",
+          "Server yang dihubungkan dengan baris terminal bekerja untuk satu workspace. Menghubungkannya dari workspace lain memindahkan server ke workspace itu, dan workspace pertama tidak lagi menjangkaunya. Untuk beberapa workspace di satu komputer, gunakan aplikasi.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Saat agen menunggu dalam antrean",
+        blocks: [
+          "Setiap pekerjaan agen memakai memori komputer. Saat memori kosong menipis, pekerjaan berikutnya menunggu dalam antrean sampai yang lain selesai. Orang didahulukan. Jumlah CPU tidak mengubah hal ini.",
+          "Komputer dengan memori 4 GB menjalankan dua atau tiga pekerjaan sekaligus, yang 8 GB sekitar sembilan. Mac atau PC menjalankan hingga delapan. Browser dan desktop yang dibiarkan terbuka oleh agen juga memakai memori. Agar antrean lebih pendek, gunakan komputer dengan memori lebih besar, atau hubungkan satu lagi dan bagi agen di antara keduanya. Workspace yang berbagi satu komputer berbagi memorinya.",
         ],
       },
       {
@@ -373,7 +389,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "permissions",
         heading: "Memori tidak memberi izin",
         blocks: [
-          "Tidak ada isi memori yang membuat agen bisa berbuat lebih. Apa yang bisa dilakukannya tetap diatur di **Alat dan akses**, dan tindakan sensitif selalu meminta persetujuan.",
+          "Tidak ada isi memori yang membuat agen bisa berbuat lebih. Apa yang bisa dilakukannya tetap diatur di **Alat dan akses**.",
         ],
       },
       {
@@ -393,7 +409,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "what",
         heading: "Apa yang meminta izin dulu",
         blocks: [
-          "Saat agen ingin melakukan merge, deploy, rollback, mengirim sesuatu ke luar, atau menghapus data, agen meminta izin dulu, apa pun akses yang dimilikinya. Permintaannya muncul di **Persetujuan** dan di percakapan, dengan tindakan persisnya dan alasannya.",
+          "Saat agen ingin melakukan merge, deploy, rollback, mengirim sesuatu ke luar, atau menghapus data, agen meminta izin dulu. Itulah tingkat **Hanya yang berisiko**, tingkat awal setiap agen. Di halaman agen, pada **Persetujuan**, **Selalu tanya** membuat agen bertanya sebelum mengubah apa pun, dan **Jangan pernah tanya** membuatnya tidak bertanya sama sekali, termasuk untuk merge, deploy, pembayaran, dan rutinitas. Permintaannya muncul di **Persetujuan** dan di percakapan, dengan tindakan persisnya dan alasannya.",
         ],
       },
       {
@@ -401,7 +417,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Sekali, atau selalu",
         blocks: [
           "Menyetujui berlaku untuk satu tindakan persis, dengan nilai-nilainya. Kalau agen mengubah apa pun, agen meminta lagi.",
-          "**Selalu setujui** membuat agen boleh melakukan jenis tindakan itu mulai sekarang, dengan nilai apa pun, tanpa meminta. Pada permintaan rutinitas, **Selalu di rutinitas ini** melakukan hal yang sama hanya untuk rutinitas itu. Keduanya tidak pernah ditawarkan untuk merge, deploy, rollback, dan sejenisnya. Untuk membatalkannya, buka **Alat dan akses** di halaman agen, atau pengaturan rutinitas.",
+          "**Selalu setujui** membuat agen boleh melakukan jenis tindakan itu mulai sekarang, dengan nilai apa pun, tanpa meminta. Pada permintaan rutinitas, **Selalu di rutinitas ini** melakukan hal yang sama hanya untuk rutinitas itu. **Selalu setujui** ditawarkan untuk jenis tindakan apa pun, termasuk merge dan deploy, selama agen berada di tingkat **Hanya yang berisiko**. **Selalu di rutinitas ini** tidak ditawarkan untuk merge, deploy, rollback, dan sejenisnya. Untuk membatalkannya, buka **Alat dan akses** di halaman agen, atau pengaturan rutinitas.",
         ],
       },
       {
@@ -743,7 +759,7 @@ export const helpId: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "Email",
         blocks: [
-          "Tanpa email, agentes.chat menulis setiap email ke log-nya alih-alih mengirimnya, jadi tautan undangan tetap bisa disalin dari sana. Atur ulang kata sandi tetap mati.",
+          "Tanpa email, agentes.chat menulis setiap email ke log-nya alih-alih mengirimnya, jadi tautan undangan tetap bisa disalin dari sana. Atur ulang kata sandi tetap mati, dan email baru untuk sebuah akun langsung berlaku, tanpa kode atau tautan.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

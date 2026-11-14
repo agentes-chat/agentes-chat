@@ -22,6 +22,7 @@ import type {
   PhoneDevice,
   WifiIphone,
   WifiPairing,
+  XcodeFixView,
 } from "@agenteschat/client";
 import { ApiError } from "@agenteschat/client";
 import { clone } from "./context";
@@ -35,6 +36,8 @@ export interface FakeDevices {
   setPairing(state: Partial<WifiPairing>): void;
   /** The iPhones on `machineId`'s Wi-Fi that trust it, on offer. */
   setWifi(machineId: string, available: WifiIphone[]): void;
+  /** What `GET …/xcode-fix` answers next (a start answers `asking`, or `running` for `update`). */
+  setXcodeFix(view: XcodeFixView): void;
   list(): DevicesList;
 }
 
@@ -50,6 +53,7 @@ const deviceOf = (m: Machine): ComputerDevice => ({
   memoryGb: null,
   ownerUserId: m.pairedBy?.id ?? null,
   belongsToWorkspace: m.kind === "managed" || m.kind === "host",
+  spill: { own: true, others: false },
   systemMode: m.mode === "system",
   audience: { mode: "owner", userIds: [], roleIds: [] },
   status: m.online ? { kind: "ready" } : { kind: "offline", lastSeenAt: m.lastSeenAt },
@@ -78,6 +82,7 @@ export function createFakeDevices(
   let pairing: WifiPairing | null = null;
   let pairings = 0;
   const wifi = new Map<string, WifiIphone[]>();
+  let xcode: XcodeFixView = { fix: null };
   const computer = (id: string): ComputerDevice => {
     own ??= current();
     const found = own.devices.find((d) => d.id === id);
@@ -99,8 +104,10 @@ export function createFakeDevices(
     },
     updateComputer: async (orgId, id, input) => {
       record("devices.updateComputer", orgId, id, input);
-      Object.assign(computer(id), input);
-      return clone(computer(id));
+      const { spill, ...rest } = input;
+      const c = computer(id);
+      Object.assign(c, rest, spill ? { spill: { ...c.spill, ...spill } } : {});
+      return clone(c);
     },
     removeComputer: async (orgId, id) => {
       record("devices.removeComputer", orgId, id);
@@ -189,6 +196,20 @@ export function createFakeDevices(
       record("devices.wifiIphones", orgId, machineId);
       return { available: clone(wifi.get(machineId) ?? []) };
     },
+    startXcodeFix: async (orgId, machineId, kind) => {
+      record("devices.startXcodeFix", orgId, machineId, kind);
+      if (!xcode.update) xcode = { fix: { kind, state: kind === "select" ? "asking" : "running", step: 0 } };
+      return clone(xcode);
+    },
+    xcodeFix: async (orgId, machineId) => {
+      record("devices.xcodeFix", orgId, machineId);
+      return clone(xcode);
+    },
+    cancelXcodeFix: async (orgId, machineId) => {
+      record("devices.cancelXcodeFix", orgId, machineId);
+      if (xcode.fix) xcode = { fix: { ...xcode.fix, state: "canceled" } };
+      return clone(xcode);
+    },
     pickIphoneOverWifi: async (orgId, machineId, serial) => {
       record("devices.pickIphoneOverWifi", orgId, machineId, serial);
       const offered = wifi.get(machineId) ?? [];
@@ -231,6 +252,9 @@ export function createFakeDevices(
     },
     setWifi: (machineId, available) => {
       wifi.set(machineId, clone(available));
+    },
+    setXcodeFix: (view) => {
+      xcode = clone(view);
     },
     list: () => clone(current()),
   };
