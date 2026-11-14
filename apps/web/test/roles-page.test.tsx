@@ -774,3 +774,44 @@ describe("look, create and the members' menu (W12, W13, W15)", () => {
 });
 
 void GENERAL_ID;
+
+describe("REVIEW P1 P2", () => {
+  test("P1: Suporte ticked again in Quem pode keeps it; the line and the save say so", async () => {
+    const state = await open(`roles/${SUPORTE}`);
+    await click(within(permRow("Criar canais")).getByRole("switch"));
+    const dialog = screen().getByRole("dialog", { name: "Quem pode criar canais" });
+    await click(within(dialog).getByRole("checkbox", { name: /^Suporte/ }));
+    expect(
+      within(dialog)
+        .getByRole("checkbox", { name: /^Suporte/ })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(dialog.querySelector(".roles-line--live")?.textContent).toBe("Ninguém perde.");
+    await click(within(dialog).getByRole("button", { name: "Salvar" }));
+    expect(last(state, "roles.setRow")?.slice(1)).toEqual([
+      "create_channels",
+      {
+        everyone: 0,
+        roles: [
+          { id: SUPORTE, level: 1 },
+          { id: FIN, level: 1 },
+        ],
+      },
+    ]);
+  });
+
+  test("P2: Todos' tick keeps the agent's saved consultable", async () => {
+    const state = acme((s) => {
+      const atlas = s.agents.find((a) => a.id === ATLAS_ID) as Agent;
+      atlas.audience = { mode: "owner", userIds: [], roleIds: [], consultable: false };
+    });
+    await open("roles/everyone?tab=agents", state);
+    await click(screen().getByRole("checkbox", { name: /^Atlas/ }));
+    const ask = screen().queryByRole("button", { name: "Continuar" });
+    if (ask) await click(ask);
+    await settle(4);
+    const sent = last(state, "agents.update")?.[2] as { audience: { mode: string; consultable?: boolean } };
+    expect(sent.audience.mode).toBe("everyone");
+    expect(sent.audience.consultable).toBe(false);
+  });
+});

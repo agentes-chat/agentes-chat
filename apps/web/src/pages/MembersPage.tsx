@@ -38,6 +38,7 @@ import {
   MenuItem,
   MenuSeparator,
   MenuSub,
+  overLimit,
   PageHeader,
   PlanMeter,
   planAttention,
@@ -63,6 +64,7 @@ import { MailLoss, mailTitle } from "@/components/roles/RolePeople";
 import { RoleChoices } from "@/components/roles/RolesPicker";
 import { RoleChip } from "@/components/roles/RolesSection";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import type { MenuEntry } from "@/lib/context-menu";
 import { entityMenu } from "@/lib/entity-menu";
 import { planMeterText, usageShown } from "@/lib/plan-usage";
@@ -564,8 +566,10 @@ function SuggestDialog({ open, onClose, inviters }: { open: boolean; onClose: ()
   const emails = sendsEmail(useAuthConfig().data);
   const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
+  const noteLimit = useTextLimit(JOIN_NOTE_MAX);
   const [error, setError] = useState<string | null>(null);
   const submit = () => {
+    if (overLimit(note, noteLimit)) return;
     const address = email.trim().toLowerCase();
     if (!isEmail(address)) return setError(t("members.suggest.refused.invalid"));
     setError(null);
@@ -627,7 +631,7 @@ function SuggestDialog({ open, onClose, inviters }: { open: boolean; onClose: ()
           >
             <Textarea
               rows={2}
-              maxLength={JOIN_NOTE_MAX}
+              limit={noteLimit}
               value={note}
               placeholder={t("members.suggest.whoPlaceholder")}
               onChange={(e) => setNote(e.target.value)}
@@ -637,7 +641,7 @@ function SuggestDialog({ open, onClose, inviters }: { open: boolean; onClose: ()
       </Locked>
       <DialogFooter>
         <Button onClick={onClose}>{t("common.cancel")}</Button>
-        <Button variant="primary" loading={suggest.isPending} onClick={submit}>
+        <Button variant="primary" disabled={overLimit(note, noteLimit)} loading={suggest.isPending} onClick={submit}>
           {t("members.suggest.send")}
         </Button>
       </DialogFooter>

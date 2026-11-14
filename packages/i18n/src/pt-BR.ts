@@ -32,6 +32,8 @@ export const ptBR = {
     retry: "Tentar de novo",
     soon: "Em breve",
     unknownError: "Algo deu errado. Tente de novo.",
+    /** Under a field whose text is past its limit: its size, the limit, then the way out. */
+    overLimit: "O texto tem {{length}} caracteres e o limite é {{max}}. Encurte o texto.",
     /** A server error (a 5xx of its own): nothing the person did, and nothing they can fix. */
     ourSide: "Algo deu errado do nosso lado. Tente de novo daqui a pouco.",
     signedOut: "Sua sessão terminou. Entre de novo para continuar.",
@@ -5721,12 +5723,21 @@ export const ptBR = {
         fallbackHint_female:
           "Responde pela API e conta no orçamento da {{name}}. Se não, a {{name}} avisa quem chamou e espera o computador voltar.",
         effort: "Esforço",
-        efforts: { auto: "Automático", low: "Baixo", medium: "Médio", high: "Alto", max: "Máximo" },
+        efforts: {
+          auto: "Automático",
+          none: "Padrão do modelo",
+          low: "Baixo",
+          medium: "Médio",
+          high: "Alto",
+          max: "Máximo",
+        },
         effortsLower: { auto: "automático", low: "baixo", medium: "médio", high: "alto", max: "máximo" },
         effortText: {
           auto: "O modelo Automático escolhe o esforço de cada tarefa. Escolha um modelo para fixar o esforço.",
           low: "Responde rápido. Bom para perguntas simples.",
           medium: "O padrão. Pensa o suficiente na maioria das vezes.",
+          mediumKey: "Pensa o suficiente na maioria das vezes.",
+          none: "O modelo pensa o quanto costuma. Escolha um nível para fixar o esforço.",
           high: "Pensa mais em tarefas difíceis. Demora e gasta mais.",
           max: "Pensa o máximo que puder. Bem mais lento e caro.",
         },
@@ -5754,9 +5765,10 @@ export const ptBR = {
           title: "Configuração avançada",
           answers: "Quem atende",
           defaults: "Voltar ao padrão",
-          /** The row's line: what the dialog holds. The effort shows only with a fixed model on a plan. */
+          /** The row's line: what the dialog holds. The effort shows only with a fixed model, on a plan or a key. */
           contents: {
             model: "Janela de contexto",
+            modelFixed: "Esforço e janela de contexto",
             auto: "Janela de contexto e quem atende",
             fixed: "Esforço, janela de contexto e quem atende",
             autoSpeed: "Velocidade, janela de contexto e quem atende",
@@ -5875,7 +5887,7 @@ export const ptBR = {
           expired: "O tempo para entrar acabou. Tente de novo.",
           /**
            * Why a sign-in ended on the computer, by its code (`loginFailureLine`). `brand`: the provider or the plan.
-           * `cli_exit` and `not_signed_in_after_login` show the CLI's own words under them.
+           * `cli_exit`, `not_signed_in_after_login` and `sandbox` show the CLI's own words under them.
            */
           why: {
             not_installed: "O {{brand}} não está instalado no {{computer}}. Tente de novo.",
@@ -5888,6 +5900,9 @@ export const ptBR = {
             status_unknown: "O {{brand}} não respondeu se a conta entrou. Tente de novo.",
             no_token: "O {{brand}} terminou sem mostrar o token da conta. Tente de novo.",
             not_kept: "A conta entrou, mas o {{computer}} não conseguiu guardar o login. Tente de novo.",
+            /** Grok Build signed in, but its sandbox doesn't start on the computer for an agent (runner `sandbox`). */
+            sandbox:
+              "O {{brand}} entrou, mas a sandbox dele não abre no {{computer}}, então nenhum agente conseguiria usá-lo. Use uma chave de API.",
           },
           geminiNotShared:
             "O Gemini entrou, mas o {{computer}} não consegue compartilhar esse login com todos os agentes. Use uma chave de API do Gemini.",
@@ -5943,6 +5958,11 @@ export const ptBR = {
           limitSoon: "{{account}} volta quando o plano renovar",
           limitHelp: "Enquanto isso o {{name}} pode pensar com outra conta que já está conectada.",
           limitHelp_female: "Enquanto isso a {{name}} pode pensar com outra conta que já está conectada.",
+          /** Under the list, with an account at its limit picked: the row above says until when. */
+          fullWait: "Nesta conta o {{name}} espera até o plano renovar.",
+          fullWait_female: "Nesta conta a {{name}} espera até o plano renovar.",
+          /** A link to the usage page, after `fullWait`. */
+          seeUsage: "Ver uso",
           wait: "Esperar",
           modelTitle: "Modelo do {{name}}",
           modelTitle_female: "Modelo da {{name}}",
@@ -6351,6 +6371,9 @@ export const ptBR = {
         cli_stopped: "O {{brain}} parou com um erro.",
         /** The agent's CLI ended without its answer and without a word (it crashed or was killed). */
         cli_closed: "O {{brain}} fechou de repente.",
+        /** The agent's CLI couldn't start its sandbox on its computer (bubblewrap refused), before the model was asked. */
+        cli_sandbox:
+          "O {{brain}} não consegue abrir a sandbox dele neste computador. Escolha outra IA nas configurações do agente.",
         account_missing:
           "A conta escolhida para este agente não está mais no computador dele. Escolha outra nas configurações do agente ou adicione de novo.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */
@@ -10245,7 +10268,16 @@ export const ptBR = {
     forAgent_one: "Fica ligada para {{agent}}",
     forAgent_other: "Ficam ligadas para {{agent}}",
     installedMany: "{{count}} skills instaladas.",
-    zipHelp: "Um .zip com o SKILL.md na raiz.",
+    zipHelp: "Um .zip da pasta da skill, até {{max}} MB.",
+    /** Behind the ⓘ beside `zipHelp`. */
+    zipAbout:
+      "O SKILL.md fica no topo do .zip, ou na única pasta dele. Uma skill guarda até {{text}} MB de texto e {{assets}} MB de imagens e outros arquivos.",
+    /** A .zip refused the moment it's picked, before anything is sent. */
+    zipTooLarge: "{{name}} tem {{size}}. O .zip de uma skill pode ter até {{max}} MB.",
+    /** The way out of `zipTooLarge`: the GitHub tab, which reads only the skill's folder. */
+    zipUseLink: "Usar um link do GitHub",
+    /** While the .zip goes to the server: how much of it has gone. */
+    zipSending: "Enviando o arquivo… {{percent}}",
     zipPick: "Escolher .zip",
     zipNone: "Nenhum arquivo escolhido",
     zipMissing: "Escolha um arquivo .zip.",
@@ -12189,6 +12221,8 @@ export const ptBR = {
     reopen: "Mostrar de novo",
     answeredBy: "{{name}} escolheu",
     failed: "Não deu para mandar sua escolha. Tente de novo.",
+    /** After the message's size and limit, when a written answer makes the reply too long. */
+    tooLongFix: "Encurte a resposta.",
   },
   drive: {
     title: "Drive",
@@ -13801,6 +13835,10 @@ export const ptBR = {
     },
   },
   errors: {
+    /** A request the server, or a proxy in front of it, refused for its size. */
+    tooLarge: "Isto é maior do que o servidor aceita.",
+    /** The same, from a screen that knows the most it may send. */
+    tooLargeMax: "Isto é maior do que o servidor aceita: até {{max}} MB.",
     /** A new-password link an owner can't make (ADR 0158). */
     passwordLink: {
       email: "Este servidor manda e-mail: a pessoa pede o link dela mesma em Esqueci a senha.",
@@ -14937,6 +14975,22 @@ export const ptBR = {
       trustText: "Toque em Confiar no iPhone e digite o código dele.",
       devModeDone: "Ativado",
       devModeText: "Ative e toque em Reiniciar. Depois que reiniciar, toque em Ativar e digite seu código.",
+      devModeRestarting: "O iPhone está reiniciando. Quando ele voltar, desbloqueie e toque em Ativar.",
+      devModeBack: "O iPhone voltou. Desbloqueie, toque em Ativar e digite seu código.",
+      devModeCheck: "Já ativei, verificar de novo",
+      devModeStillOff: "O iPhone ainda diz que o Modo de Desenvolvedor está desligado.",
+      devModeMissing: {
+        title: "Não aparece essa opção?",
+        hidden: "O iPhone esconde a opção até o Xcode pedir para mostrar.",
+        hiddenOpen:
+          "O iPhone esconde a opção até o Xcode pedir para mostrar. Abra o Xcode em {{mac}} com o iPhone conectado.",
+        openXcode: "Abrir o Xcode",
+        opened: "O Xcode abriu em {{mac}}. Veja de novo nos Ajustes do iPhone e feche o Xcode depois.",
+        unlock: "Já ativou e o iPhone reiniciou? Desbloqueie. O aviso com Ativar só aparece depois disso.",
+        check: "Verificar de novo",
+        outdated:
+          "O app agentes.chat em {{mac}} está desatualizado. Atualize o app, ou rode isto no Terminal se instalou por lá.",
+      },
       uiAutomationText: "Em Ajustes\u00a0›\u00a0Desenvolvedor, depois de reiniciar.",
       helperText: "Criado e renovado pelo Mac a cada 7 dias. Uma Conta Apple gratuita no Xcode basta.",
       helperUntrustedText: "Toque no nome do desenvolvedor e em Confiar.",
@@ -14961,8 +15015,6 @@ export const ptBR = {
           "{{mac}} ainda não vê um iPhone. Use um cabo que passe dados, não só carga, desbloqueie o iPhone e toque em Confiar se ele pedir.",
         trust:
           "Não apareceu Confiar? Desconecte o iPhone, desbloqueie e conecte de novo, depois toque em Confiar e digite o código.",
-        developerMode:
-          "O Modo de Desenvolvedor só liga depois que o iPhone reinicia. Toque em Reiniciar e em Ativar quando ele voltar. Não tem a opção? Desconecte o iPhone e conecte de novo.",
         uiAutomation:
           "A opção aparece quando o Modo de Desenvolvedor está ativo e o iPhone reiniciou. Deixe desbloqueado enquanto procura.",
         helper:
@@ -16122,6 +16174,16 @@ export const ptBR = {
     logins_other: "{{count}} logins",
     noWindows: "O limite aparece depois do próximo uso desta conta.",
     unused: "Nenhum agente usa esta conta.",
+    /** The quota per model (OpenCode Go's caps): one line each, under the account's windows. */
+    models: {
+      /** A model out of quota: `when` is when it resets (`usageWhen`). */
+      exhausted: "Sem cota · renova {{when}}",
+      exhaustedUnknown: "Sem cota",
+      /** The plan refused the model for this key: it or the account is switched off there. */
+      off: "Desligado",
+      region: "Precisa da região Global",
+      inactive: "Sem assinatura ativa",
+    },
     usesNow: "usa agora",
     monthTokens: "{{tokens}} tokens este mês",
     tokens: "{{tokens}} tokens",
@@ -16193,6 +16255,8 @@ export const ptBR = {
   },
   format: {
     list: "{{names, list}}",
+    /** After the names a list shows, one per line: how many more it holds. */
+    andMore: "e mais {{count}}",
     usd: "US$ {{value}}",
     tokensMillions: "{{value}} mi",
     tokensThousands: "{{value}} mil",

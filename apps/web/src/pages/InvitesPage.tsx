@@ -38,6 +38,7 @@ import {
   Menu,
   MenuItem,
   MenuNote,
+  overLimit,
   PageHeader,
   SearchField,
   SwapLabel,
@@ -58,6 +59,7 @@ import { MembersFull } from "@/components/Limits";
 import { useOrg } from "@/components/org-context";
 import { RolesPicker } from "@/components/roles/RolesPicker";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { copyText } from "@/lib/context-menu";
 import { TOAST_MS, useToast } from "@/lib/toast";
 import "./members.css";
@@ -293,6 +295,7 @@ function WaitingRequests({
   const [roles, setRoles] = useState<Record<string, string[]>>({});
   const [denying, setDenying] = useState<JoinRequest | null>(null);
   const [reason, setReason] = useState("");
+  const reasonLimit = useTextLimit(JOIN_REASON_MAX);
   const [handOff, setHandOff] = useState<{ name: string; url: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [gone, setGone] = useState(false);
@@ -330,7 +333,7 @@ function WaitingRequests({
       },
     );
   const denyOne = () => {
-    if (!denying) return;
+    if (!denying || overLimit(reason, reasonLimit)) return;
     deny.mutate(
       { id: denying.id, reason: reason.trim() || undefined },
       {
@@ -461,18 +464,13 @@ function WaitingRequests({
                 text: t("members.requests.reasonHelp"),
               }}
             >
-              <Textarea
-                rows={3}
-                maxLength={JOIN_REASON_MAX}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              />
+              <Textarea rows={3} limit={reasonLimit} value={reason} onChange={(e) => setReason(e.target.value)} />
             </Field>
           </DialogBody>
         </Locked>
         <DialogFooter>
           <Button onClick={() => setDenying(null)}>{t("common.cancel")}</Button>
-          <Button variant="danger" loading={deny.isPending} onClick={denyOne}>
+          <Button variant="danger" disabled={overLimit(reason, reasonLimit)} loading={deny.isPending} onClick={denyOne}>
             {t("members.requests.deny")}
           </Button>
         </DialogFooter>

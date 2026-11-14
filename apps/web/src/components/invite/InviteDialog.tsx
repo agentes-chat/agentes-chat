@@ -38,6 +38,7 @@ import {
   type IconName,
   Input,
   Locked,
+  overLimit,
   Segmented,
   Select,
   Textarea,
@@ -64,6 +65,7 @@ import { useOrg } from "@/components/org-context";
 import { InviteModeQuestion } from "@/components/WorkspaceModeDialog";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useEdited } from "@/hooks/useEdited";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { useToast } from "@/lib/toast";
 import { useCopied } from "./copied";
 import { type ChipAddress, chipsFrom } from "./EmailChips";
@@ -214,6 +216,8 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
   const [draft, setDraft] = useState("");
   // Null: no note yet, only its button.
   const [note, setNote] = useState<string | null>(null);
+  const noteLimit = useTextLimit(INVITE_NOTE_MAX);
+  const noteTooLong = overLimit(note ?? "", noteLimit);
   const [failure, setFailure] = useState<Failure | null>(null);
   const emails = useRef<HTMLInputElement>(null);
   const noteField = useRef<HTMLTextAreaElement>(null);
@@ -252,7 +256,7 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
       setChips(all);
       setDraft("");
     }
-    if (ready.length === 0 || full || send.isPending) return;
+    if (ready.length === 0 || full || noteTooLong || send.isPending) return;
     setFailure(null);
     const sending = {
       roleIds: rolesToSend(choices),
@@ -446,7 +450,7 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
                       autoGrow
                       rows={2}
                       className="invite-note"
-                      maxLength={INVITE_NOTE_MAX}
+                      limit={noteLimit}
                       value={note}
                       placeholder={t(modeKey(org, "members.dialog.notePlaceholder"), { org: org.name })}
                       onChange={(e) => setNote(e.target.value)}
@@ -467,7 +471,7 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
               <Button
                 variant="primary"
                 icon={failure?.kind === "offline" ? "refresh" : "send"}
-                disabled={ready.length === 0 || full}
+                disabled={ready.length === 0 || full || noteTooLong}
                 loading={pending}
                 onClick={() => void sendNow()}
               >
