@@ -17274,6 +17274,12 @@
       "room": "空きあり",
       "computers": "コンピューター"
     },
+    "capacity": {
+      "label": "タスクを止めているもの",
+      "today_other": "今日: {{count}} 件完了 · {{waiting}} 件待機中",
+      "usage": "使用量を見る",
+      "computers": "コンピューターを見る"
+    },
     "cards": {
       "label": "エージェント",
       "previous": "前のエージェント",

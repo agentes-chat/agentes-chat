@@ -17857,6 +17857,13 @@
       "room": "Hat Platz",
       "computers": "Computer"
     },
+    "capacity": {
+      "label": "Was die Aufgaben aufhält",
+      "today_one": "Heute: {{count}} Aufgabe erledigt · {{waiting}} warten",
+      "today_other": "Heute: {{count}} Aufgaben erledigt · {{waiting}} warten",
+      "usage": "Nutzung ansehen",
+      "computers": "Computer ansehen"
+    },
     "cards": {
       "label": "Agenten",
       "previous": "Vorherige Agenten",

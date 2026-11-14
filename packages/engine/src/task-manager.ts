@@ -213,6 +213,8 @@ export interface TaskManagerView {
   followUps: PendingReturn[];
   /** The returns canceled since `since` ("Terminadas hoje"), the latest first. */
   canceledFollowUps: CanceledReturn[];
+  /** The caller's tasks done since `since`, all of them (`ended` stops at `TASK_MANAGER_ENDED_MAX`). */
+  doneToday: number;
 }
 
 type Row = {
@@ -341,6 +343,20 @@ async function visibleRuns(
       order by ${which.active ? sql`r.created_at desc` : sql`r.finished_at desc`}, r.id desc
       limit ${limit}`),
   );
+}
+
+/** How many of the runs the caller sees ended done since `since`. */
+async function doneSince(db: Database, userId: string, orgId: string, manages: boolean, since: Date) {
+  const [row] = rowsOf<{ n: number | string }>(
+    await db.execute(sql`select count(*) as n
+      from ${agentRuns} r
+      join ${channels} c on c.id = r.channel_id and c.org_id = ${orgId}::uuid
+        and c.archived_at is null and c.kind in ('channel', 'dm')
+      join ${agents} a on a.id = r.agent_id and a.org_id = ${orgId}::uuid
+      where r.org_id = ${orgId}::uuid and r.status = 'done' and r.finished_at >= ${since.toISOString()}::timestamptz
+        and ${seesRunSql(RUN_COLUMNS, userId, orgId, manages)}`),
+  );
+  return Number(row?.n ?? 0);
 }
 
 /** The tasks still on that `visibleRuns` leaves out, as counts: the computers' rows count them all. */
@@ -555,13 +571,14 @@ export async function taskManager(
   const manages = can(membership, "manage_agents");
   const now = options.now ?? new Date();
   const since = options.since ?? new Date(now.getTime() - 24 * 3600_000);
-  const [active, ended, hidden, asks, followUps, canceledFollowUps] = await Promise.all([
+  const [active, ended, hidden, asks, followUps, canceledFollowUps, doneToday] = await Promise.all([
     visibleRuns(db, userId, orgId, manages, { active: true }),
     visibleRuns(db, userId, orgId, manages, { active: false, since }),
     hiddenTasks(db, userId, orgId, manages),
     openAsks(db, orgId),
     pendingReturns(db, userId, orgId, { managesAgents: manages }),
     canceledReturns(db, userId, orgId, since),
+    doneSince(db, userId, orgId, manages, since),
   ]);
   const delegations = await delegationsOf(db, userId, orgId, active);
   const { edges, waking } = asks;
@@ -647,6 +664,7 @@ export async function taskManager(
     activity: await agentActivity(db, orgId, now),
     followUps,
     canceledFollowUps,
+    doneToday,
   };
 }
 

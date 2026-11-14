@@ -17788,6 +17788,13 @@
       "room": "Yer var",
       "computers": "Bilgisayarlar"
     },
+    "capacity": {
+      "label": "Görevleri bekleten",
+      "today_one": "Bugün: {{count}} görev bitti · {{waiting}} bekliyor",
+      "today_other": "Bugün: {{count}} görev bitti · {{waiting}} bekliyor",
+      "usage": "Kullanımı gör",
+      "computers": "Bilgisayarları gör"
+    },
     "cards": {
       "label": "Ajanlar",
       "previous": "Önceki ajanlar",

@@ -43333,6 +43333,21 @@
   "taskManager.queue.computers": {
     "value": "Computers"
   },
+  "taskManager.capacity.label": {
+    "value": "What holds the tasks"
+  },
+  "taskManager.capacity.today": {
+    "value": {
+      "one": "Today: {{count}} task done · {{waiting}} waiting",
+      "other": "Today: {{count}} tasks done · {{waiting}} waiting"
+    }
+  },
+  "taskManager.capacity.usage": {
+    "value": "See usage"
+  },
+  "taskManager.capacity.computers": {
+    "value": "See computers"
+  },
   "taskManager.cards.label": {
     "value": "Agents"
   },

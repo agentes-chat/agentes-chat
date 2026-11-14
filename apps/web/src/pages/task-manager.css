@@ -522,3 +522,15 @@ html:not([data-pointer]) .tm-more:focus-visible {
 .tm-computer > .ac-btn {
   flex: none;
 }
+
+/* Over the cards while work waits: today's line, then what holds the work in the Computadores rows' look. */
+.tm-causes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.tm-causes__today {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}

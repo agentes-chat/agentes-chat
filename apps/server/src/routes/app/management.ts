@@ -532,6 +532,10 @@ const TaskManagerView = z
     canceledFollowUps: z
       .array(CanceledReturn)
       .openapi({ description: "Returns canceled since `since`, the latest first." }),
+    doneToday: z
+      .number()
+      .int()
+      .openapi({ description: "Your tasks done since `since`, all of them (`ended` is cut at 50)." }),
   })
   .openapi("TaskManagerView");
 

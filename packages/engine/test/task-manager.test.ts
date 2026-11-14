@@ -401,6 +401,23 @@ describe("the task manager", () => {
     const outsider = await addMember(f.db, f.org.id, "member", "caio");
     const view = await taskManager(f.db, outsider.id, f.org.id);
     expect(view.tasks).toHaveLength(0);
+    expect(view.doneToday).toBe(0);
+  });
+
+  test("done today counts every task done, past the ended list's cut; not the failed, nor what others can't see", async () => {
+    f = await setup();
+    for (let i = 0; i < 52; i++) {
+      await ask(`@dev resumo ${i}`);
+      await f.db.execute(
+        sql`update ${schema.agentRuns} set status = ${i === 0 ? "failed" : "done"}, finished_at = now()
+          where status not in ('done', 'failed')`,
+      );
+    }
+    const view = await taskManager(f.db, f.owner.id, f.org.id);
+    expect(view.ended).toHaveLength(50);
+    expect(view.doneToday).toBe(51);
+    const outsider = await addMember(f.db, f.org.id, "member", "caio");
+    expect((await taskManager(f.db, outsider.id, f.org.id)).doneToday).toBe(0);
   });
 
   test("a task's steps: what each call was, never its input; only for who sees the task", async () => {
