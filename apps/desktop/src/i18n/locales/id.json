@@ -235,7 +235,7 @@
       "start": "agentes.chat tidak berjalan di {{device}} ini.",
       "database": "Database tidak berhasil disiapkan.",
       "account": "Akunmu tidak berhasil dibuat.",
-      "retry": "Coba lagi di Preferensi › Server."
+      "retry": "Coba lagi di Preferensi"
     },
     "reason": {
       "https": "HTTPS mati di jaringan Tailscale-mu",
@@ -303,6 +303,7 @@
     "offline": "Offline sejak {{time}}",
     "signIn": "Masuk",
     "signOut": "Keluar dari server ini",
+    "addAccount": "Tambah akun",
     "signedOutDone": "Kamu keluar dari {{host}}",
     "removeFromApp": "Hapus dari aplikasi ini",
     "newsOne": "1 notifikasi baru",
@@ -327,7 +328,6 @@
     "usageRestart": "Mengubahnya akan memulai ulang agentes.chat sebentar.",
     "jev": "Jev",
     "jevText": "Model cepat buatan TypeSafe yang memilih siapa yang menjawab, merapikan memori, dan membuat agen bisa melihat layar. Opsional, dengan kuncimu sendiri.",
-    "jevWhere": "Di agentes.chat › Pengaturan › AI dan pemakaian.",
     "reachFailed": "Akses dari perangkatmu tidak aktif: {{reason}}.",
     "backup": "Cadangkan sekarang",
     "backedUp": "Dicadangkan: {{file}}",
@@ -424,7 +424,9 @@
     "linkBody": "Kalau kamu tidak memintanya, pilih Nanti saja.",
     "waiting": "Menunggu {{by}} mengizinkannya masuk…",
     "done": "Terhubung ke {{org}}",
-    "expired": "Link ini sudah kedaluwarsa. Buat yang baru di Pengaturan › Perangkat.",
+    "addFolders": "Tambahkan folder",
+    "expired": "Link ini sudah kedaluwarsa. Buat yang baru di Perangkat.",
+    "openDevices": "Buka Perangkat",
     "denied": "{{by}} tidak mengizinkannya masuk. Tidak ada yang berubah.",
     "letOrg": "Izinkan agen {{org}} memakai {{device}} ini",
     "canUse": "Agen bisa memakainya",
@@ -664,7 +666,8 @@
       "step3": "Buka file yang diunduh lalu seret agentes.chat yang baru ke Aplikasi.",
       "installerNote": "Buka file yang diunduh: file itu memasang versi baru di atas yang lama.",
       "keepNote": "Server dan pengaturanmu tetap ada.",
-      "whatsNew": "Yang baru di {{version}}"
+      "whatsNew": "Yang baru di {{version}}",
+      "systemDetails": "Detail sistem"
     },
     "activity": {
       "title": "Aktivitas",

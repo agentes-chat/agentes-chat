@@ -177,6 +177,21 @@ export function relativeTime(t: TFunction, locale: string, iso: string, now = ne
   return formatShortDate(locale, iso);
 }
 
+/** When an agent stopped working on a task: "Stopped 2 h ago", "Stopped yesterday", "Stopped on Nov 11". */
+export function stoppedLine(t: TFunction, locale: string, iso: string, now = new Date()) {
+  const diff = now.getTime() - new Date(iso).getTime();
+  if (diff < 60_000) return t("issues.now.stoppedNow");
+  if (diff < 3_600_000)
+    return t("issues.now.stoppedAgo", { ago: t("format.minutesAgo", { count: Math.floor(diff / 60_000) }) });
+  const days = daysBetween(iso, now);
+  if (days === 0)
+    return t("issues.now.stoppedAgo", { ago: t("format.hoursAgo", { count: Math.floor(diff / 3_600_000) }) });
+  if (days === 1) return t("issues.now.stoppedYesterday");
+  return t("issues.now.stoppedOn", {
+    date: formatShortDate(locale, iso, new Date(iso).getFullYear() !== now.getFullYear()),
+  });
+}
+
 /** How long since: "há 12 min", "há 3 h", "há 2 dias"; "agora" under a minute (a computer offline, a task stopped). */
 export function timeAgo(t: TFunction, iso: string, now = Date.now()): string {
   const diff = now - Date.parse(iso);
@@ -261,6 +276,23 @@ export function namesText(t: TFunction, names: string[], max = 2, total = names.
   return joinNames([...shown, t("notifications.namesMore", { count: total - shown.length })], t);
 }
 
+/** How many agents a roster (`rosterText`) names, one per line, before "and N more". */
+export const ROSTER_SHOWN = 8;
+
+/** "Ana · Designer" per line, the first `max` of them, then "e mais 3": a team to read in a tip. */
+export function rosterText(
+  t: TFunction,
+  agents: readonly { name: string; role?: string | null }[],
+  max = ROSTER_SHOWN,
+) {
+  // A name often carries its role already ("Lumen · Tradutora"): it isn't said twice.
+  const lines = agents
+    .slice(0, max)
+    .map((a) => (a.role && !a.name.includes(a.role) ? `${a.name} · ${a.role}` : a.name));
+  if (agents.length > max) lines.push(t("format.andMore", { count: agents.length - max }));
+  return lines.join("\n");
+}
+
 /** Short model label for message meta: "Claude Sonnet 5.5" → "sonnet 5.5". */
 export const shortModel = (label: string) => label.replace(/^Claude\s+/i, "").toLowerCase();
 
@@ -330,4 +362,12 @@ export function shortTarget(text: string, max = 40) {
   const cut = out.slice(0, max);
   const space = cut.lastIndexOf(" ");
   return space > max / 2 ? cut.slice(0, space) : cut;
+}
+
+/** "1,2 s", "760 ms", "22 min", "1,5 h": a line's time, finer than the block's (and the work states' one clock). */
+export function formatLineTime(locale: string, ms: number) {
+  if (ms < 1000) return `${Math.max(1, Math.round(ms))} ms`;
+  if (ms < 60_000) return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(ms / 1000)} s`;
+  if (ms < 3600_000) return `${Math.round(ms / 60_000)} min`;
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: ms < 10 * 3600_000 ? 1 : 0 }).format(ms / 3600_000)} h`;
 }

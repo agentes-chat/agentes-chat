@@ -100,7 +100,7 @@ import {
 import { planLentGroup, planModelDroppedGroup } from "./notification-producers";
 import { resolveNotifications } from "./notifications";
 import { can, getMembership, requirePermission } from "./organizations";
-import { isRightHand, personalBrain } from "./right-hand";
+import { isRightHand, personalBrain, personalModel } from "./right-hand";
 import { orgModelProvider } from "./router";
 import { readRefusal } from "./standing";
 import { wakeAgentUsageWaits } from "./usage-pause";
@@ -668,7 +668,7 @@ async function personalAgent(db: Database, agent: Agent, userId: string, account
   const mine: Agent = {
     ...agent,
     brain: own?.brain ?? "model",
-    brainModel: own?.brainModel ?? null,
+    brainModel: own ? personalModel(own, agent) : null,
     brainEffort: own?.brainEffort ?? null,
     brainAccountId: own?.brainAccountId ?? null,
     brainAccountLentBy: own?.brainAccountLentBy ?? null,
@@ -985,7 +985,7 @@ function nextAudience(agent: Agent, ontoPlan: boolean, onlyOwner: boolean | unde
   if (onlyOwner) return narrow(base);
   if (answersOthers(base, agent.ownerUserId)) return base;
   // Its "who can talk" list decides who comes back: it stays while the agent is its owner's only. One a person
-  // restricted ("Só algumas pessoas ou papéis", even with nobody picked yet) stays restricted: never everyone.
+  // restricted ("Só algumas pessoas ou cargos", even with nobody picked yet) stays restricted: never everyone.
   const kept = agent.audienceUserIds.length > 0 || agent.audienceRoleIds.length > 0 || agent.audienceMode === "people";
   return kept ? { mode: "people", userIds: agent.audienceUserIds, roleIds: agent.audienceRoleIds } : EVERYONE;
 }

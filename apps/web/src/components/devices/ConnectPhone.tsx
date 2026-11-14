@@ -2,6 +2,7 @@ import {
   type ComputerDevice,
   type DeviceAudience,
   type PhoneDevice,
+  useIphoneDevMode,
   useLookForPhones,
   useWifiIphones,
   useXcodeFix,
@@ -19,6 +20,7 @@ import {
   androidSteps,
   computerLine,
   DDIS_UPDATE,
+  failedOnLocalNetwork,
   IPHONE_STEPS,
   type IphoneStep,
   iosMajor,
@@ -29,9 +31,11 @@ import {
   isIphoneWifiReason,
   PHONE_APP_IN_STORE,
   phoneLine,
+  RUNNER_UPDATE_COMMAND,
   reasonText,
   type StepState,
   tooOldVersion,
+  useIphoneRestart,
   useStalled,
   wifiHosts,
   wifiPairLive,
@@ -43,6 +47,7 @@ import {
 } from "@agenteschat/client/lib/devices";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { computerKind } from "@agenteschat/client/lib/machines";
+import { DOWNLOAD_URL } from "@agenteschat/i18n/docs";
 import {
   Button,
   Card,
@@ -65,6 +70,8 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CommandBlock } from "@/components/machine-bits";
 import { useOrg } from "@/components/org-context";
+import { useIsThisMac } from "@/components/ThisMac";
+import { thisMac } from "@/lib/desktop";
 import { useToast } from "@/lib/toast";
 import { FlowFooter, type FlowProps } from "./flow";
 import { DevicePortrait } from "./parts";
@@ -370,9 +377,14 @@ type WifiPair = ReturnType<typeof useWifiPairing>;
  * computer shows beside the steps, or the six-digit code typed here. The last step's line follows the computer:
  * waiting for the scan, found and pairing, connecting, or why it failed with Try again.
  */
-function WifiSteps({ pair, computer, mac }: { pair: WifiPair; computer: string; mac: boolean }) {
+function WifiSteps({ pair, host, mac }: { pair: WifiPair; host: ComputerDevice; mac: boolean }) {
   const { t } = useTranslation();
+  const { org } = useOrg();
+  const computer = host.name;
+  // In the app on that very Mac, System Settings opens on the Local Network list from here.
+  const here = useIsThisMac(org.id, host.id);
   const p = pair.pairing;
+  const localNetwork = mac && here && failedOnLocalNetwork(p);
   const found = p !== undefined && (p.state === "pairing" || p.state === "connecting" || p.state === "connected");
   const failed = Boolean(pair.error) || p?.state === "failed";
   const line = pair.error
@@ -421,11 +433,18 @@ function WifiSteps({ pair, computer, mac }: { pair: WifiPair; computer: string; 
         ) : (
           <p className="dv-step__text dv-narrow">{t("devices.wifiPair.narrow")}</p>
         )}
-        {failed && !code && (
+        {failed && (!code || localNetwork) && (
           <span className="dv-step__acts">
-            <Button size="sm" onClick={pair.retry}>
-              {t("devices.wifiPair.tryAgain")}
-            </Button>
+            {localNetwork && (
+              <Button size="sm" onClick={() => void thisMac.openLocalNetworkSettings().catch(() => {})}>
+                {t("devices.wifiPair.openLocalNetwork")}
+              </Button>
+            )}
+            {!code && (
+              <Button size="sm" onClick={pair.retry}>
+                {t("devices.wifiPair.tryAgain")}
+              </Button>
+            )}
           </span>
         )}
         <button type="button" className="ac-link small" onClick={() => pair.switchWay(code ? "qr" : "code")}>
@@ -611,7 +630,7 @@ export function AndroidFlow({
   const steps =
     way === "cable"
       ? host && <CableSteps key={host.id} host={host} stage={stage} />
-      : host && <WifiSteps pair={wifi} computer={host.name} mac={computerKind(host.os) === "mac"} />;
+      : host && <WifiSteps pair={wifi} host={host} mac={computerKind(host.os) === "mac"} />;
   return (
     <>
       <DialogBody className="dv-android">
@@ -852,6 +871,99 @@ function XcodeFixActs({
 }
 
 /**
+ * Under Developer Mode: "check again" (the Mac reads the iPhone now), and why the switch may be missing, each with its
+ * one way out: hidden until Xcode asks (Xcode opened on the Mac by who manages it), never unlocked after the restart
+ * (check again), or a Mac whose app can't do either (update it). Open once the step sits unchanged (`open`), or asked.
+ */
+function DevModeHelp({ mac, open }: { mac: ComputerDevice; open: boolean }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const toast = useToast();
+  const { look, openXcode } = useIphoneDevMode(org.id, mac.id);
+  const [asked, setAsked] = useState(false);
+  const outdated = mac.opensXcode === false;
+  const mayOpen = mac.mayManage && !outdated && openXcode.data?.opened !== false;
+  const check = (label: string) => (
+    <Button
+      size="sm"
+      icon="refresh"
+      loading={look.isPending}
+      disabled={look.isPending}
+      onClick={() => look.mutate(undefined, { onError: (err) => toast.show(errorText(t, err), "error") })}
+    >
+      {label}
+    </Button>
+  );
+  return (
+    <>
+      <span className="dv-step__acts">{check(t("devices.iphone.devModeCheck"))}</span>
+      {look.isSuccess && (
+        <span className="ac-iconline small" role="status">
+          <Icon name="info" size={14} />
+          <span>{t("devices.iphone.devModeStillOff")}</span>
+        </span>
+      )}
+      {open || asked ? (
+        <section className="dv-slow" aria-labelledby="dv-devmode-title">
+          <p className="dv-slow__title" id="dv-devmode-title">
+            {t("devices.iphone.devModeMissing.title")}
+          </p>
+          {/* biome-ignore lint/a11y/noRedundantRoles: Safari drops list semantics under list-style: none */}
+          <ul className="dv-slow__list" role="list">
+            <li>
+              <span className="ac-actline">
+                <span>
+                  {openXcode.data?.opened
+                    ? t("devices.iphone.devModeMissing.opened", { mac: mac.name })
+                    : mayOpen
+                      ? t("devices.iphone.devModeMissing.hidden")
+                      : t("devices.iphone.devModeMissing.hiddenOpen", { mac: mac.name })}
+                </span>
+                {mayOpen && !openXcode.data?.opened && (
+                  <Button
+                    size="sm"
+                    loading={openXcode.isPending}
+                    disabled={openXcode.isPending}
+                    onClick={() =>
+                      openXcode.mutate(undefined, { onError: (err) => toast.show(errorText(t, err), "error") })
+                    }
+                  >
+                    {t("devices.iphone.devModeMissing.openXcode")}
+                  </Button>
+                )}
+              </span>
+            </li>
+            <li>
+              <span className="ac-actline">
+                <span>{t("devices.iphone.devModeMissing.unlock")}</span>
+                {check(t("devices.iphone.devModeMissing.check"))}
+              </span>
+            </li>
+            {outdated && (
+              <li>
+                <span className="ac-actline">
+                  <span>{t("devices.iphone.devModeMissing.outdated", { mac: mac.name })}</span>
+                  <Button asChild size="sm" icon="external">
+                    <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
+                      {t("hosting.get.download")}
+                    </a>
+                  </Button>
+                </span>
+                <CommandBlock command={RUNNER_UPDATE_COMMAND} />
+              </li>
+            )}
+          </ul>
+        </section>
+      ) : (
+        <button type="button" className="ac-link small" aria-expanded="false" onClick={() => setAsked(true)}>
+          {t("devices.iphone.devModeMissing.title")}
+        </button>
+      )}
+    </>
+  );
+}
+
+/**
  * An iPhone through a Mac: pick the Mac, then the checklist mirrored from what the Mac reports. Steps on the iPhone
  * show their Settings path: no app or page can open those screens.
  */
@@ -871,9 +983,10 @@ export function IphoneFlow({
   const [picked, setPicked] = useState<string | null>(hostId);
   const mac = pickHost(macs, picked, me.user.id);
   const phone = iphoneOf(mac);
-  const states = iphoneSteps(mac, phone);
-  const ready = IPHONE_STEPS.every((s) => states[s] === "done");
   const reason = phone && "reason" in phone.status ? phone.status.reason : null;
+  const restart = useIphoneRestart(phone ? { key: phone.id, reason } : null);
+  const states = iphoneSteps(mac, phone, restart === "restarting");
+  const ready = IPHONE_STEPS.every((s) => states[s] === "done");
   const tooOld = phone?.status.kind === "unsupported";
   const blocked = xcodeBlockedOf(mac);
   const at = IPHONE_STEPS.find((s) => states[s] === "current" || states[s] === "needs") ?? null;
@@ -973,20 +1086,29 @@ export function IphoneFlow({
           ? t("devices.iphone.teamMissingText")
           : t("devices.iphone.accountText", { mac: macName }),
     connected:
-      tooOld && phone
-        ? t("devices.iphone.tooOld", { name: phone.name, version: tooOldVersion(t, phone.osVersion) })
-        : phone && isIphoneWifiReason(reason) && reason !== "wifi_untrusted"
-          ? t(`devices.iphone.wifiState.${reason}`, { name: phone.name })
-          : states.connected === "done" && phone
-            ? t("devices.iphone.connectedDone", { name: phone.name, version: phone.osVersion })
-            : t("devices.iphone.connectedText", { mac: macName }),
+      restart === "restarting"
+        ? null
+        : tooOld && phone
+          ? t("devices.iphone.tooOld", { name: phone.name, version: tooOldVersion(t, phone.osVersion) })
+          : phone && isIphoneWifiReason(reason) && reason !== "wifi_untrusted"
+            ? t(`devices.iphone.wifiState.${reason}`, { name: phone.name })
+            : states.connected === "done" && phone
+              ? t("devices.iphone.connectedDone", { name: phone.name, version: phone.osVersion })
+              : t("devices.iphone.connectedText", { mac: macName }),
     trust:
       states.trust === "done"
         ? t("devices.iphone.trustDone")
         : phone && reason === "wifi_untrusted"
           ? t("devices.iphone.wifiState.wifi_untrusted", { name: phone.name })
           : t("devices.iphone.trustText"),
-    developerMode: states.developerMode === "done" ? t("devices.iphone.devModeDone") : t("devices.iphone.devModeText"),
+    developerMode:
+      states.developerMode === "done"
+        ? t("devices.iphone.devModeDone")
+        : restart === "restarting"
+          ? t("devices.iphone.devModeRestarting")
+          : restart === "back"
+            ? t("devices.iphone.devModeBack")
+            : t("devices.iphone.devModeText"),
     uiAutomation:
       reason === "ui_not_authorized" ? t("devices.iphone.uiRefusedText") : t("devices.iphone.uiAutomationText"),
     helper:
@@ -1047,16 +1169,22 @@ export function IphoneFlow({
           ),
         }
       : {}),
-    developerMode: (
-      <SettingsPath
-        label={t("devices.onTheIphone")}
-        segments={[
-          t("devices.iphone.path.settings"),
-          t("devices.iphone.path.privacy"),
-          t("devices.iphone.path.devMode"),
-        ]}
-      />
-    ),
+    developerMode:
+      restart === "restarting" || !mac ? null : (
+        <>
+          {restart !== "back" && (
+            <SettingsPath
+              label={t("devices.onTheIphone")}
+              segments={[
+                t("devices.iphone.path.settings"),
+                t("devices.iphone.path.privacy"),
+                t("devices.iphone.path.devMode"),
+              ]}
+            />
+          )}
+          <DevModeHelp mac={mac} open={stalled} />
+        </>
+      ),
     uiAutomation: (
       <SettingsPath
         label={t("devices.onTheIphone")}
@@ -1118,7 +1246,7 @@ export function IphoneFlow({
                     {s === at && (more[s] || stalled || (looking && plugged)) ? (
                       <>
                         {more[s]}
-                        {(stalled || (looking && plugged)) && (
+                        {(stalled || (looking && plugged)) && s !== "developerMode" && (
                           <p className="dv-step__stall ac-iconline small" role="status">
                             <Icon name="info" size={14} />
                             <span>{t(`devices.iphone.stall.${s}`, { mac: macName })}</span>

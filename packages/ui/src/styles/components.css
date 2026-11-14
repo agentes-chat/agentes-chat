@@ -696,6 +696,26 @@ textarea.ac-input {
   line-height: 22px;
   resize: vertical;
 }
+/* Grows with its text up to here, then scrolls inside: a long paste never pushes the field's buttons out of view. */
+textarea.ac-input--grow {
+  max-height: min(50vh, 360px);
+  overflow-y: auto;
+}
+/* Its thumb shows on hover or while typing, as a scrolling column's (through the token: see the columns' rule). */
+textarea.ac-input:not(:hover, :focus-visible) {
+  --scroll-thumb: transparent;
+}
+/* Under a field with a limit (`LimitLine`): its own line in any parent, the counter quiet at the field's end. */
+.ac-limit {
+  display: block;
+}
+.ac-limit--count {
+  text-align: end;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
 /* Prefixed input, e.g. "agentes.chat/" + slug */
 .ac-input-affix {
   display: flex;
@@ -1090,6 +1110,14 @@ textarea.ac-input {
 /* An agent out of office (§12): its plan or budget ran out until a reset. */
 .ac-presence[data-presence="out"] {
   --presence: var(--info);
+}
+/* An agent at work, and one waiting on the person reading (ADR 0084 addendum): the agents' accent (on its face only,
+   agent identity) and the amber of everything that waits on them. */
+.ac-avatar .ac-presence[data-presence="working"] {
+  --presence: var(--agent);
+}
+.ac-presence[data-presence="waiting"] {
+  --presence: var(--warn);
 }
 .ac-presence__base {
   fill: var(--presence);
@@ -2103,6 +2131,27 @@ html:not([data-pointer]) .ac-eventpill__action:focus-visible {
 /* Words with no `.ac-chip__text` have nothing to shrink into: the chip keeps their width, or they'd eat its padding. */
 .ac-chip:not(:has(> .ac-chip__text)) {
   flex: none;
+}
+/* A chip that is a button (ChipButton): a plate on hover, the focus ring, never the browser's button look. */
+.ac-chip--button {
+  border: 0;
+  font-family: inherit;
+  color: var(--ink2);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) ease,
+    color var(--dur-fast) ease;
+}
+.ac-chip--button .ac-icon {
+  color: var(--muted);
+}
+.ac-chip--button:hover {
+  background: color-mix(in srgb, var(--ink) 10%, var(--surface-sunken));
+  color: var(--ink);
+}
+html:not([data-pointer]) .ac-chip--button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 /* Tag: a short fixed label in small type on a soft plate, square-cornered so it never reads as a state pill (an
    agent's role under its name). A state stays plain words. */
@@ -3651,7 +3700,7 @@ html:not([data-pointer]) .ac-back:focus-visible {
   border-radius: var(--radius-cut);
 }
 
-/* Before and after, as GitHub shows a change: added on green with a green bar, removed on red, struck through. */
+/* Before and after: added on green, removed on red, struck through. The tint alone says which, no bar on the edge. */
 .ac-diff {
   display: flex;
   flex-direction: column;
@@ -3659,7 +3708,7 @@ html:not([data-pointer]) .ac-back:focus-visible {
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
-/* The rows on its rounded corners take its radius less its border, so a row's tint and bar follow the corner. */
+/* The rows on its rounded corners take its radius less its border, so a row's tint follows the corner. */
 .ac-diff > :first-child {
   border-top-left-radius: calc(var(--radius-sm) - 1px);
   border-top-right-radius: calc(var(--radius-sm) - 1px);
@@ -3688,12 +3737,10 @@ html:not([data-pointer]) .ac-back:focus-visible {
 .ac-diff__line--add,
 .ac-diff__block--add {
   background: color-mix(in srgb, var(--ok) 12%, transparent);
-  box-shadow: inset 3px 0 0 var(--ok);
 }
 .ac-diff__line--del,
 .ac-diff__block--del {
   background: color-mix(in srgb, var(--danger) 10%, transparent);
-  box-shadow: inset 3px 0 0 var(--danger);
 }
 .ac-diff__line--add .ac-diff__mark {
   color: var(--ok);
@@ -4341,6 +4388,52 @@ html:not([data-pointer]) .ac-color__hue:focus-visible {
     animation-delay: 0.3s;
   }
 }
+/* Someone recording a voice message: three bars in the voice wave's look rising and falling in turn, where the dots
+   are for typing. Ink, never red: it isn't an alarm. Still with reduced motion. */
+.ac-typing__bars {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+  align-items: center;
+  height: 12px;
+}
+.ac-typing__bars span {
+  width: 3px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  background: var(--ink-muted);
+  opacity: 0.7;
+  transform: scaleY(0.34);
+}
+.ac-typing__bars span:nth-child(2) {
+  transform: scaleY(0.75);
+}
+.ac-typing__bars span:nth-child(3) {
+  transform: scaleY(0.5);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ac-typing__bars span {
+    animation: ac-typing-bar 1.2s ease-in-out infinite;
+  }
+  .ac-typing__bars span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  .ac-typing__bars span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+}
+@keyframes ac-typing-bar {
+  0%,
+  100% {
+    transform: scaleY(0.34);
+  }
+  40% {
+    transform: scaleY(1);
+  }
+  70% {
+    transform: scaleY(0.58);
+  }
+}
 /* The bar's phrase turns: the old one leaves upward, the new one comes
    from below, in the same cell. Reduced motion: a plain swap. */
 .ac-turn {
@@ -4890,11 +4983,13 @@ html:not([data-pointer]) .ac-switch:focus-visible {
 }
 /*
  * In a line of text the pixel marks centre on the capitals, as an `.ac-iconline` lead does (a flex or grid item
- * ignores vertical-align): their box's bottom is their baseline (the spinner is a canvas, the others draw in an
- * absolute child), raised by half the capitals' height less half their size (`--mark-size`, set by each).
+ * ignores vertical-align): their box's bottom is their baseline (the spinner is a canvas, the others draw in absolute
+ * children: an in-flow one would set the baseline at its own foot), raised by half the capitals' height less half
+ * their size (`--mark-size`, set by each).
  */
 .ac-pixspin,
 .ac-pixdone,
+.ac-pixfail,
 .ac-pixstop {
   vertical-align: calc(var(--cap-top) - var(--cap-mid) - var(--mark-size, 14px) / 2);
 }
@@ -5894,9 +5989,12 @@ html:not([data-pointer]) .ac-seg__item:focus-visible {
 .ac-toast {
   --toast-button: var(--control-h-sm);
   --toast-line-pad: calc((var(--toast-button) - 20px) / 2);
+  --toast-pad: var(--space-3);
   align-items: flex-start;
   gap: var(--icon-gap);
-  padding: 12px;
+  padding: var(--toast-pad);
+  /* Concentric: its buttons' corner plus the room around them. */
+  border-radius: calc(var(--control-r-sm) + var(--toast-pad));
 }
 /* The words and their actions in an `.ac-actline`: actions that don't fit beside the words go under them, from their
    edge. The × stays beside the first line. */
@@ -5906,9 +6004,13 @@ html:not([data-pointer]) .ac-seg__item:focus-visible {
 .ac-toast__close {
   flex: none;
 }
-/* The close's × stands as far from the right edge as the tone's icon from the left: it reaches out by its air. */
+/* The close's × stands as far from the right edge as the tone's icon from the left: it reaches out by its air. So its
+   box is 4 from the side and 12 from the top, where no plate can follow the corner: a hover only darkens the ×. */
 .ac-toast > .ac-toast__close {
   margin-inline-end: calc((var(--control-icon-sm) - var(--toast-button)) / 2);
+}
+.ac-toast > .ac-toast__close:hover {
+  background: transparent;
 }
 .ac-toast > .ac-icon,
 .ac-toast > .ac-actline > .ac-toast__text {
@@ -7239,42 +7341,6 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
 .ac-composer__send[data-mode="stop"] .ac-composer__glyph--stop {
   transform: none;
   opacity: 1;
-}
-/* While an agent works and there is text: "Juntar ao que ele faz" / "Parar e mandar" above the box. */
-.ac-composer-choice {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 0 4px 6px;
-  font-size: 12.5px;
-  color: var(--muted);
-}
-.ac-composer-choice .ac-seg__item[data-on] {
-  background: var(--raised);
-  box-shadow: var(--seg-plate-ring), var(--top);
-}
-.ac-composer-choice__hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--faint);
-}
-@media (max-width: 760px), (hover: none), (pointer: coarse) {
-  .ac-composer-choice__hint {
-    display: none;
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .ac-composer-choice {
-    animation: ac-composer-choice-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-}
-@keyframes ac-composer-choice-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
 }
 .ac-composer__send-text {
   display: inline-flex;
@@ -8945,25 +9011,29 @@ html:not([data-pointer]) button.ac-tools__row:focus-visible {
     background-position: -100% 0;
   }
 }
-/* Failed: an exclamation of two pixels (PixelFail). */
+/* Failed: an exclamation of two pixels (PixelFail): the tall one, the gap and the short one centred in the box as
+   one. */
 .ac-pixfail {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--px-gap, 1px);
+  display: inline-block;
+  position: relative;
   flex: none;
-  vertical-align: middle;
 }
 .ac-pixfail::before,
 .ac-pixfail::after {
   content: "";
+  position: absolute;
+  inset-inline: 0;
+  margin-inline: auto;
   width: var(--px, 4px);
   height: var(--px, 4px);
   background: var(--danger);
 }
 .ac-pixfail::before {
+  top: calc(50% - (3 * var(--px, 4px) + var(--px-gap, 1px)) / 2);
   height: calc(var(--px, 4px) * 2);
+}
+.ac-pixfail::after {
+  top: calc(50% + (var(--px, 4px) + var(--px-gap, 1px)) / 2);
 }
 .ac-tick--pending {
   background: transparent;
@@ -10669,6 +10739,24 @@ html:not([data-pointer]) .ac-filter__option:focus-visible {
 .ac-menu__hint + .ac-menu__check {
   margin-left: 0;
 }
+/* A multi-pick item's box (MenuCheckboxItem): the kit's checkbox at the row's end, ticked or not, on the name's line;
+   the item is what's pressed, so the box only shows. */
+.ac-menu__box {
+  margin: 0 0 0 auto;
+  align-self: center;
+  cursor: inherit;
+  pointer-events: none;
+}
+.ac-menu__item:has(> .ac-menu__label > .ac-menu__desc) > .ac-menu__box {
+  align-self: flex-start;
+  margin-top: 1px;
+}
+.ac-menu__hint + .ac-menu__box {
+  margin-left: var(--space-2);
+}
+.ac-menu__item[data-disabled] > .ac-menu__box {
+  opacity: 0.55;
+}
 /* A chip there ("Em breve") sets the hint's height, not a text line under it, and reaches 1px into the row's padding
    on each side, so the row keeps its kind's height. */
 .ac-menu__hint:has(> .ac-chip) {
@@ -11034,6 +11122,18 @@ html:not([data-pointer]) .ac-effort:focus-visible .ac-effort__ramp {
 }
 .ac-setnote + .ac-setnote {
   margin-top: 8px;
+}
+/*
+ * A note with its way out (`SettingNote`'s `action`): the line, not the note, takes the note's room above. Beside its
+ * one line of words the button centres on them, under them it starts at their edge.
+ */
+.ac-setnote-line {
+  margin-top: 12px;
+  align-items: center;
+}
+.ac-setnote-line > .ac-setnote,
+:is(.ac-form, .ac-field, .ac-dialog__body, .ac-card) > .ac-setnote-line {
+  margin: 0;
 }
 /* In a stack (a form, a field, a dialog's body, a card) the stack's gap is the room above it, as for any paragraph there. */
 :is(.ac-form, .ac-field, .ac-dialog__body, .ac-card) > .ac-setnote {

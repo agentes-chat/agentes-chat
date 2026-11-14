@@ -256,7 +256,7 @@ export const desktopPtBR = {
       start: "O agentes.chat não iniciou neste {{device}}.",
       database: "O banco de dados não foi preparado.",
       account: "A sua conta não foi criada.",
-      retry: "Tente de novo em Preferências\u00a0›\u00a0Servidores.",
+      retry: "Tentar de novo nas Preferências",
     },
     reason: {
       https: "o HTTPS está desligado na sua rede do Tailscale",
@@ -330,6 +330,8 @@ export const desktopPtBR = {
     offline: "Fora do ar desde {{time}}",
     signIn: "Entrar",
     signOut: "Sair deste servidor",
+    /** A server with several accounts signed in (ADR 0183): one more beside them, from its menu. */
+    addAccount: "Adicionar conta",
     signedOutDone: "Você saiu de {{host}}",
     removeFromApp: "Remover deste app",
     newsOne: "1 notificação nova",
@@ -356,7 +358,6 @@ export const desktopPtBR = {
     jev: "Jev",
     jevText:
       "Um modelo rápido da TypeSafe que escolhe quem responde, organiza a memória e deixa os agentes enxergarem a tela. Opcional, com uma chave sua.",
-    jevWhere: "No agentes.chat\u00a0›\u00a0Configurações\u00a0›\u00a0IA e uso.",
     reachFailed: "O acesso pelos aparelhos não ligou: {{reason}}.",
     backup: "Fazer backup agora",
     backedUp: "Backup feito: {{file}}",
@@ -463,7 +464,9 @@ export const desktopPtBR = {
     linkBody: "Se não foi você que pediu, escolha Agora não.",
     waiting: "Esperando {{by}} deixar entrar…",
     done: "Conectado a {{org}}",
-    expired: "Este link expirou. Crie outro em Configurações\u00a0›\u00a0Dispositivos.",
+    addFolders: "Adicionar pastas",
+    expired: "Este link expirou. Crie outro em Dispositivos.",
+    openDevices: "Abrir Dispositivos",
     denied: "{{by}} não deixou entrar. Nada mudou.",
     letOrg: "Deixar os agentes de {{org}} usarem este {{device}}",
     canUse: "Os agentes podem usá-lo",
@@ -599,7 +602,7 @@ export const desktopPtBR = {
       whoIn: "Quem pode usar em {{org}}",
       owner: "Só eu",
       everyone: "Todos em {{org}}",
-      people: "Pessoas ou papéis específicos",
+      people: "Pessoas ou cargos específicos",
       edit: "Editar",
       pickTitle: "Quem pode usar este {{device}}",
       search: "Buscar pessoas",
@@ -718,6 +721,7 @@ export const desktopPtBR = {
       installerNote: "Abra o arquivo baixado: ele instala a versão nova no lugar da antiga.",
       keepNote: "Seus servidores e configurações continuam guardados.",
       whatsNew: "O que mudou na {{version}}",
+      systemDetails: "Detalhes do sistema",
     },
     activity: {
       title: "Atividade",

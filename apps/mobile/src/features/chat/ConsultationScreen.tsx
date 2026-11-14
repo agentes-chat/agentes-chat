@@ -1,5 +1,6 @@
 import { useChannels, useExchangeConversation } from "@agenteschat/client";
 import { consultLineState, consultOriginKey } from "@agenteschat/client/lib/consult-group";
+import { consultSubject } from "@agenteschat/client/lib/consultations";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { groupsWith } from "@agenteschat/client/lib/timeline";
 import { useTranslation } from "react-i18next";
@@ -72,9 +73,13 @@ function Consultation({ consultationId, channelId }: { consultationId: string; c
         <SheetTitle
           title={q ? t("chat.consultPanel.title", { from: from.name, to: to.name }) : ""}
           subtitle={[
+            // What the exchange is about, ahead of where it is and how many messages it has.
+            consultSubject(q?.question),
             channelName ? t("chat.consultPanel.where", { channel: channelName }) : t("chat.consultPanel.whereDm"),
             ...(list.length > 0 ? [t("chat.consultPanel.messages", { count: list.length })] : []),
-          ].join(" · ")}
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         />
       </View>
       <ScrollView contentContainerStyle={styles.list}>
@@ -119,7 +124,7 @@ function Consultation({ consultationId, channelId }: { consultationId: string; c
         {q && state && state !== "answered" ? (
           <View style={[styles.line, styles.pad]} accessibilityLiveRegion="polite">
             {state === "working" ? (
-              <LineIcon variant="caption" size={12}>
+              <LineIcon variant="caption" size={12} mark>
                 <PixelOrbit color={agentLook(consulted).color} size={12} />
               </LineIcon>
             ) : (

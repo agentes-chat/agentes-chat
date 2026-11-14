@@ -5,6 +5,7 @@ import {
   OPERATOR_USAGE_DAYS,
   OPERATOR_USAGE_GROUPS,
   OPERATOR_USAGE_MAX_DAYS,
+  operatorEmailJobs,
   operatorJobSummary,
   operatorJobs,
   operatorUsage,
@@ -13,7 +14,7 @@ import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
 import { apiError, errorResponse } from "../http/errors";
 import { iso, json } from "../routes/app/context";
 import type { OperatorDeps } from "./app";
-import { Next, paging } from "./lookups";
+import { Next, paging, word } from "./lookups";
 import { Count, Instant, Job, jobJson, Spent, Time } from "./runs";
 
 const tags = ["Operator"];
@@ -68,6 +69,28 @@ const JobSummary = z
   })
   .openapi("OperatorJobSummary");
 
+const EmailJobQuery = z.object({
+  to: word().openapi({ description: "The whole address; any case. Never returned." }),
+  ...paging,
+});
+
+const EmailJobPage = z
+  .object({
+    jobs: z.array(
+      Job.extend({
+        template: z.string().nullable().openapi({
+          description: "Which email it sends, as the server names it: `invitation`, `verify_email`, `password_reset`…",
+        }),
+        errorCode: z.string().nullable().openapi({
+          description:
+            "A provider's refusal in `lastError`, as its own code: the name it gave (`validation_error`…), else the status (`422`, `429`). Null: no error, or one worded another way.",
+        }),
+      }),
+    ),
+    next: Next,
+  })
+  .openapi("OperatorEmailJobPage");
+
 const UsageQuery = z.object({
   orgId: z.uuid().optional().openapi({ description: "One workspace's. Absent: the whole instance's." }),
   agentId: z.uuid().optional(),
@@ -108,7 +131,7 @@ const Usage = z
   })
   .openapi("OperatorUsage");
 
-const dated = <T extends { from?: string; to?: string }>({ from, to, ...query }: T) => ({
+export const dated = <T extends { from?: string; to?: string }>({ from, to, ...query }: T) => ({
   ...query,
   from: from ? new Date(from) : undefined,
   to: to ? new Date(to) : undefined,
@@ -146,6 +169,24 @@ export function registerOperatorJobs(api: OpenAPIHono, { db }: OperatorDeps) {
       }
       const page = await operatorJobs(db, { ...filters, limit, cursor });
       return c.json({ jobs: page.jobs.map(jobJson), next: page.next }, 200);
+    },
+  );
+
+  api.openapi(
+    createRoute({
+      method: "get",
+      path: "/email-jobs",
+      tags,
+      summary: "The emails queued to one address, newest first: which template, its state and its attempts",
+      description:
+        "The address is compared inside the server with the ones each `email.send` job is to, and never returned; nor is a subject, a body, a link or a code. An email is sent once its job is `done` (`completedAt`). A finished job keeps its addresses for 30 days and is not found after that; the job of a code to type in is deleted once it is sent or given up.",
+      request: { query: EmailJobQuery },
+      responses: { 200: json(EmailJobPage), 400: errors[400], 401: errors[401] },
+    }),
+    async (c) => {
+      const page = await operatorEmailJobs(db, c.req.valid("query"));
+      const jobs = page.jobs.map(({ template, errorCode, ...job }) => ({ ...jobJson(job), template, errorCode }));
+      return c.json({ jobs, next: page.next }, 200);
     },
   );
 

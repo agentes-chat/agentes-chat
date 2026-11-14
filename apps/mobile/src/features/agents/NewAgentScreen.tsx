@@ -28,6 +28,7 @@ import {
   planAccountOption,
 } from "@agenteschat/client/lib/brain-picker";
 import { connectedItems, itemName } from "@agenteschat/client/lib/connected";
+import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { defaultPolicy, toMailLevel } from "@agenteschat/client/lib/mail";
 import {
@@ -89,7 +90,7 @@ import { proposedRoutineWhen } from "../routines/rule";
 import { chooseAction } from "../settings/parts";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { goBack, PushedHeader, successHaptic, Tile, tapHaptic, useSurface } from "../shared/parts";
-import { TextArea } from "../shared/TextArea";
+import { overLimit, TextArea } from "../shared/TextArea";
 import { markArrived } from "./arrival";
 import { BrainPickSheet } from "./BrainPickSheet";
 import { type FullLook, fullLook } from "./edit";
@@ -109,8 +110,10 @@ import {
 import { RoleInput } from "./RoleInput";
 import { useAgentImport } from "./useAgentImport";
 
+const INSTRUCTIONS_LIMIT = { max: FIELD_LIMITS.instructions };
+
 /**
- * "Criar agente" on the phone, the web's steps for a thumb: Papel (the presets, grouped), Quem é
+ * "Criar agente" on the phone, the web's steps for a thumb: Função (the presets, grouped), Quem é
  * (name, @ and look), O que faz (the instructions, prefilled by the role) and Revisar (what it can use
  * and the channels it joins, from the role, and who thinks: the workspace's last setup or Automático,
  * ADR 0094). Budget and who it answers start at the workspace's defaults and change on its page.
@@ -559,6 +562,10 @@ function NewAgentForm({
   };
   const next = () => {
     if (busy) return;
+    if (overLimit(instructions, INSTRUCTIONS_LIMIT)) {
+      goTo(NEW_AGENT_PHONE_STEPS.indexOf("instructions"));
+      return;
+    }
     if (stepBlocked(step, draft)) {
       setTried(true);
       return;
@@ -766,7 +773,7 @@ function NewAgentForm({
         <GroupedList>
           <TextArea
             value={instructions}
-            maxLength={50_000}
+            limit={INSTRUCTIONS_LIMIT}
             onChangeText={setInstructions}
             placeholder={t("newAgent.instructionsPlaceholder")}
             accessibilityLabel={t("newAgent.instructions")}

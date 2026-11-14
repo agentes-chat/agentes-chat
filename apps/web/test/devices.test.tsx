@@ -3,8 +3,13 @@ import { domWindow, setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import type { PhoneDevice } from "@agenteschat/client";
-import { ANDROID_SLOW_MS, ANDROID_USB_DRIVERS } from "@agenteschat/client/lib/devices";
+import type { ComputerDevice, PhoneDevice } from "@agenteschat/client";
+import {
+  ANDROID_SLOW_MS,
+  ANDROID_USB_DRIVERS,
+  IPHONE_RESTART_MS,
+  SETUP_STALL_MS,
+} from "@agenteschat/client/lib/devices";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { createFakeApi, ENG_ID, fakeDevicesOf, fakeMachinesOf } from "./fake-api";
 import { notification } from "./fakes/notifications";
@@ -82,9 +87,11 @@ async function open(
 }
 
 describe("Settings › Devices", () => {
-  test("old Computers links land on Devices", async () => {
+  test("old Computers links land on Devices, and so does the desktop app's ?open=devices", async () => {
     const { router } = await open(`/org/${ORG_ID}/settings/computers`);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices`);
+    const asked = await open("/?open=devices");
+    expect(asked.router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices`);
     const old = await open(`/org/${ORG_ID}/settings/computers/${MAC}`);
     expect(old.router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/devices/${MAC}`);
   });
@@ -499,6 +506,45 @@ describe("Connect a device", () => {
     expect(screen().getByRole("dialog", { name: "Galaxy S24 is connected" })).toBeTruthy();
   });
 
+  test("over Wi-Fi in the app on that very Mac: a Local Network failure opens that setting", async () => {
+    const win = window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
+    const asked: Record<string, unknown>[] = [];
+    win.__agentesDesktop = { version: "0.8.6", platform: "mac" };
+    win.__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: { request?: Record<string, unknown> }) => {
+        if (cmd !== "this_mac" || !args.request) return {};
+        asked.push(args.request);
+        return args.request.kind === "status"
+          ? { orgs: [{ orgId: ORG_ID, machineId: MAC, connection: "online" }], agentsHere: true }
+          : {};
+      },
+    };
+    try {
+      const { devices, services } = await open(`/org/${ORG_ID}/settings/devices`);
+      await click(screen().getByRole("button", { name: "Connect a device" }));
+      await click(screen().getByRole("button", { name: /Android phone/ }));
+      const dialog = screen().getByRole("dialog", { name: "Connect an Android phone" });
+      await click(within(dialog).getByRole("radio", { name: "Over Wi-Fi" }));
+      devices.setPairing({ state: "failed", reason: "same_wifi" });
+      await act(async () => {
+        await services.queryClient.invalidateQueries({ queryKey: ["wifi-pair-state"] });
+      });
+      await refetch(services);
+      await click(within(dialog).getByRole("button", { name: "Open Local Network" }));
+      expect(asked).toContainEqual({ kind: "privacy", pane: "network" });
+      // A cause that setting has nothing to do with gets no such button.
+      devices.setPairing({ state: "failed", reason: "refused" });
+      await act(async () => {
+        await services.queryClient.invalidateQueries({ queryKey: ["wifi-pair-state"] });
+      });
+      await refetch(services);
+      expect(within(dialog).queryByRole("button", { name: "Open Local Network" })).toBeNull();
+    } finally {
+      delete win.__agentesDesktop;
+      delete win.__TAURI_INTERNALS__;
+    }
+  });
+
   test("the Android steps in Portuguese: Android's own prompt, where to scan, the code way", async () => {
     const app = await open(`/org/${ORG_ID}/settings/devices/android-setup?computer=${MAC}`);
     await showIn(app.services, "pt-BR");
@@ -695,6 +741,104 @@ describe("Connect a device", () => {
       expect(step()?.querySelector(".dv-step__stall")?.textContent).toContain(
         "Sam's MacBook Pro builds the test helper and starts it on the iPhone",
       );
+    } finally {
+      setSystemTime();
+    }
+  });
+});
+
+describe("an iPhone at Developer Mode", () => {
+  /** The fixture with Sam's iPhone at Developer Mode (gone: unplugged or restarting), and the Mac's app as given. */
+  const devMode = (gone = false, mac: Partial<ComputerDevice> = {}) => {
+    const list = acmeDevices();
+    const host = list.devices.find((d) => d.id === MAC);
+    if (!host) throw new Error("fixture");
+    Object.assign(host, mac);
+    Object.assign(host.toolchains, { appleTeam: "Sam Rivera (Personal Team)" });
+    if (gone) host.phones = host.phones.filter((p) => p.id !== IPHONE);
+    return list;
+  };
+
+  test("restarting stays on the step and says what to do once it's back; check again asks the Mac", async () => {
+    const app = await open(`/org/${ORG_ID}/settings/devices/iphone-setup?computer=${MAC}`, (d) => d.set(devMode()));
+    const dialog = () => screen().getByRole("dialog", { name: "Connect an iPhone" });
+    const step = () => dialog().querySelector('.dv-step[data-state="current"], .dv-step[data-state="needs"]');
+    const show = async (list: ReturnType<typeof acmeDevices>) => {
+      app.devices.set(list);
+      await refetch(app.services);
+    };
+    expect(step()?.querySelector(".dv-step__title")?.textContent).toBe("Turn on Developer Mode");
+    // Check again: the Mac looks now, and the button waits for its answer.
+    await click(within(step() as HTMLElement).getByRole("button", { name: "I turned it on, check again" }));
+    expect(calls(app.state, "devices.lookForPhones").at(-1)?.args).toEqual([ORG_ID, MAC]);
+    expect(step()?.textContent).toContain("The iPhone still says Developer Mode is off.");
+
+    // The iPhone restarts and leaves the Mac's list: the step stays, under way, and nothing asks for the cable.
+    await show(devMode(true));
+    expect(stepsOf(dialog())).toEqual(["done", "done", "done", "done", "done", "current", "waiting", "waiting"]);
+    expect(step()?.textContent).toContain("The iPhone is restarting. When it's back, unlock it and tap Turn On.");
+    expect(dialog().textContent).not.toContain("Plug the iPhone into");
+    // Back, and the mode still off: unlock it and tap Turn On.
+    await show(devMode());
+    expect(step()?.getAttribute("data-state")).toBe("needs");
+    expect(step()?.textContent).toContain("The iPhone is back. Unlock it, tap Turn On and enter your passcode.");
+    // Gone for longer than a restart takes: unplugged, and the guide asks for the cable again.
+    await show(devMode(true));
+    try {
+      setSystemTime(new Date(Date.now() + IPHONE_RESTART_MS + 1000));
+      await act(() => new Promise((r) => setTimeout(r, 150)));
+      await refetch(app.services);
+      expect(step()?.querySelector(".dv-step__title")?.textContent).toBe("iPhone connected");
+    } finally {
+      setSystemTime();
+    }
+  });
+
+  test("no switch there: why, each with its one way out, on its own or when asked", async () => {
+    const app = await open(`/org/${ORG_ID}/settings/devices/iphone-setup?computer=${MAC}`, (d) => d.set(devMode()));
+    const dialog = () => screen().getByRole("dialog", { name: "Connect an iPhone" });
+    const step = () => dialog().querySelector('.dv-step[data-state="needs"]') as HTMLElement;
+    const causes = () => [...step().querySelectorAll(".dv-slow__list > li")].map((li) => li.textContent);
+    expect(step().querySelector(".dv-step__stall")).toBeNull();
+    expect(causes()).toEqual([]);
+    await click(within(step()).getByRole("button", { name: "Don't see the option?" }));
+    expect(causes()).toEqual([
+      "The iPhone hides the option until Xcode asks to show it.Open Xcode",
+      "Turned it on and the iPhone restarted? Unlock it. The alert with Turn On shows only after that.Check again",
+    ]);
+    // Each cause and its action make one action line.
+    expect(step().querySelectorAll(".dv-slow__list .ac-actline")).toHaveLength(2);
+    await click(within(step()).getByRole("button", { name: "Check again" }));
+    expect(calls(app.state, "devices.lookForPhones")).toHaveLength(1);
+
+    // A Mac whose app is too old: open Xcode there by hand, and update the app (or the Terminal way).
+    app.devices.set(devMode(false, { opensXcode: false }));
+    await refetch(app.services);
+    expect(causes()[0]).toBe(
+      "The iPhone hides the option until Xcode asks to show it. Open Xcode on Sam's MacBook Pro with the iPhone plugged in.",
+    );
+    expect(causes()[2]).toContain("The agentes.chat app on Sam's MacBook Pro is out of date.");
+    expect(within(step()).getByRole("link", { name: "Download the app" }).getAttribute("href")).toContain("/download");
+    expect(step().querySelector(".dv-slow__list .machine-command__code")?.textContent).toBe("agentes-runner update");
+
+    app.devices.set(devMode());
+    await refetch(app.services);
+    await click(within(step()).getByRole("button", { name: "Open Xcode" }));
+    expect(calls(app.state, "devices.openXcode").at(-1)?.args).toEqual([ORG_ID, MAC]);
+    expect(causes()[0]).toBe(
+      "Xcode opened on Sam's MacBook Pro. Look in the iPhone's Settings again, then close Xcode.",
+    );
+  });
+
+  test("the causes open by themselves once the step sits unchanged", async () => {
+    const app = await open(`/org/${ORG_ID}/settings/devices/iphone-setup?computer=${MAC}`, (d) => d.set(devMode()));
+    const step = () =>
+      screen().getByRole("dialog", { name: "Connect an iPhone" }).querySelector('.dv-step[data-state="needs"]');
+    try {
+      setSystemTime(new Date(Date.now() + SETUP_STALL_MS + 1000));
+      await refetch(app.services);
+      expect(step()?.querySelector(".dv-slow__title")?.textContent).toBe("Don't see the option?");
+      expect(step()?.querySelector(".dv-step__stall")).toBeNull();
     } finally {
       setSystemTime();
     }

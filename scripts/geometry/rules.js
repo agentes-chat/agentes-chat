@@ -225,6 +225,15 @@
     for (let p = svgs[0].parentElement; p && p !== el; p = p.parentElement) if (hasSurface(style(p))) return null;
     return svgs[0];
   };
+  /** The kit's marks drawn without an svg: the working orbit (a canvas), the done, failed and stop squares, the wait. */
+  const MARKS = "canvas.ac-pixspin,.ac-pixdone,.ac-pixfail,.ac-pixstop,.rq-wait";
+  /** The mark a flow child is: one of `MARKS`, or a wordless box around one and nothing else that shows. */
+  const markOf = (el) => {
+    if (el.matches(MARKS)) return el;
+    if (el.matches("button,a,[role=button]") || visibleText(el) || hasSurface(style(el))) return null;
+    const marks = [...el.querySelectorAll(`svg,${MARKS}`)].filter(seen);
+    return marks.length === 1 && marks[0].matches(MARKS) ? marks[0] : null;
+  };
   /** Where what shows of a flow child starts and ends: its glyph, its plate, or its words. */
   const inkOf = (el) => {
     const glyph = glyphOf(el);
@@ -529,7 +538,7 @@
         if (!hasSurface(s) || s.display === "inline") continue;
         const b = el.getBoundingClientRect();
         if (b.width > 320 || el.scrollWidth > el.clientWidth + 1) continue;
-        // A face at the start of a pill sits concentric with its round end, tighter than the words at the other.
+        // A face at the start of a pill sits tighter than the words at the other end (`nest` checks its corner).
         if (el.firstElementChild?.matches(".ac-avatar,.ac-rolemark,canvas,[class*='face']")) continue;
         // A frame split into segments (an event pill's actions, each after a hairline) pads each one, not the whole.
         if (el.querySelector(":scope > [class*='__actions']")) continue;
@@ -645,7 +654,9 @@
           const clips = (v) => v === "hidden" || v === "clip";
           if (clips(s.overflowX) && wide > 1 && s.textOverflow !== "ellipsis")
             out.push({ rule: "clipped", node: el, el: sig(el), px: wide, text: words(el) });
-          if (clips(s.overflowY) && tall > 2 && s.webkitLineClamp === "none" && s.textOverflow !== "ellipsis")
+          // A fold ends its words under a fade (a mask) with "Ver mais" under them: on purpose, not at a hard edge.
+          const fold = (s.maskImage || s.webkitMaskImage || "none") !== "none";
+          if (clips(s.overflowY) && tall > 2 && s.webkitLineClamp === "none" && s.textOverflow !== "ellipsis" && !fold)
             out.push({ rule: "clipped", node: el, el: sig(el), px: tall, text: words(el) });
           // Cut by a box around it instead: that box's "…" reaches only words on its own lines, not a block inside it
           // (a picker's two lines, a flex column), so they stop mid-word at its edge.
@@ -1202,7 +1213,8 @@
      * A glyph's middle on its line's capitals' middle, within 1px, where the eye centres a sign beside words: a row's
      * lead (a glyph, or a face no taller than 1.25 lines) on its first line, and a glyph inside or after words (an svg, or
      * a wordless box around one: a hint's ⓘ, a mark) on those words, in a line of text or in a row, and a face that is a
-     * word of its line (`.ac-who`) on that line. A person's initials sit within 0.5px of their tile's middle.
+     * word of its line (`.ac-who`) on that line. The kit's marks that draw no svg (`MARKS`: the working orbit, the done,
+     * failed and stop squares, the wait) are glyphs here too. A person's initials sit within 0.5px of their tile's middle.
      */
     iconmid(out) {
       const push = (node, part, px, row) =>
@@ -1220,7 +1232,7 @@
         const nodes = flowNodes(row);
         const lead = nodes[0];
         if (lead?.nodeType !== 1) continue;
-        const mark = glyphOf(lead) ?? (lead.matches(FACE) ? lead : null);
+        const mark = glyphOf(lead) ?? markOf(lead) ?? (lead.matches(FACE) ? lead : null);
         if (!mark) continue;
         const text = nodes.slice(1).map(wordsOf).find(Boolean);
         if (!text) continue;
@@ -1241,13 +1253,14 @@
         const px = (box.top + box.bottom) / 2 - caps.mid;
         if (Math.abs(px) > 1) push(lead, "lead", px, row);
       }
-      for (const svg of document.body.querySelectorAll("svg")) {
+      const glyphs = `svg,${MARKS}`;
+      for (const svg of document.body.querySelectorAll(glyphs)) {
         if (!seen(svg) || leads.has(svg) || svg.parentElement?.closest("svg,.ac-avatar,.ac-rolemark")) continue;
         let glyph = svg;
         for (let p = svg.parentElement; p && p !== document.body; p = p.parentElement) {
           const ps = style(p);
           if (ps.display === "contents") continue;
-          if (visibleText(p) || hasSurface(ps) || [...p.querySelectorAll("svg")].filter(seen).length !== 1) break;
+          if (visibleText(p) || hasSurface(ps) || [...p.querySelectorAll(glyphs)].filter(seen).length !== 1) break;
           if (p.matches("button,a,[role=button]") && !p.matches(".ac-hint")) break;
           if (style(glyph).display.startsWith("inline") && !ps.display.startsWith("inline")) break;
           glyph = p;
@@ -1352,6 +1365,70 @@
           const tall = control.matches("textarea") || control.querySelector("textarea") || c.height > 2 * usual;
           if (!tall && Math.abs(c.height - usual) > 0.5)
             out.push({ ...base, side: "height", px: +(c.height - usual).toFixed(1) });
+        }
+      }
+    },
+    /**
+     * Rounded inside rounded: a plate or a face near a corner of the box it sits on, with room between them, has that
+     * box's corner less the room (`outer - gap`). In a fully round pill that makes what sits at its ends fully round. A
+     * thing flush with the edge is `corner`'s. Percent corners resolve against the box, every corner clamps to half the
+     * shorter side, as the browser draws them. Only on the surfaces built to it (the notice island, toasts, the banners
+     * over the composer and the computer's stage): elsewhere a card's buttons keep the kit's own corner.
+     */
+    nest(out) {
+      const NESTED = ".ni,.ac-toast,.noai-banner,.cmp-banner";
+      const CORNERS = [
+        ["TopLeft", "Top", "Left"],
+        ["TopRight", "Top", "Right"],
+        ["BottomLeft", "Bottom", "Left"],
+        ["BottomRight", "Bottom", "Right"],
+      ];
+      const REACH = 24;
+      const radius = (s, name, r) => {
+        const v = s[`border${name}Radius`].split(" ")[0];
+        const px = v.endsWith("%") ? (parseFloat(v) / 100) * r.width : parseFloat(v);
+        return Math.min(px || 0, r.width / 2, r.height / 2);
+      };
+      for (const el of document.body.querySelectorAll("*")) {
+        if (!seen(el) || el.closest("svg")) continue;
+        const s = style(el);
+        if (!hasSurface(s) && !el.matches(FACE)) continue;
+        // What a rounded box between them clips (a face's canvas, a tile's picture) takes that box's corner, not its own.
+        let box = el.parentElement;
+        let clipped = false;
+        for (; box && box !== document.body && !hasSurface(style(box)); box = box.parentElement) {
+          const ps = style(box);
+          if (ps.overflowX !== "visible" && parseFloat(ps.borderTopLeftRadius) > 0) clipped = true;
+        }
+        if (clipped || !box || box === document.body || !box.matches(NESTED)) continue;
+        const bs = style(box);
+        const a = el.getBoundingClientRect();
+        const b = box.getBoundingClientRect();
+        const gap = {
+          Top: a.top - b.top - parseFloat(bs.borderTopWidth),
+          Bottom: b.bottom - parseFloat(bs.borderBottomWidth) - a.bottom,
+          Left: a.left - b.left - parseFloat(bs.borderLeftWidth),
+          Right: b.right - parseFloat(bs.borderRightWidth) - a.right,
+        };
+        // An agent's cut corner (`--radius-agent`) is its mark, not a curve to follow.
+        const cut = el.matches(".ac-avatar--agent:not(.ac-avatar--framed)") ? "BottomLeft" : null;
+        for (const [name, v, h] of CORNERS) {
+          if (name === cut || gap[v] > REACH || gap[h] > REACH) continue;
+          const g = Math.min(gap[v], gap[h]);
+          if (g < 1) continue;
+          const want = radius(bs, name, b) - g;
+          if (!(want > 2)) continue;
+          const own = radius(s, name, a);
+          if (Math.abs(own - want) > 1.5)
+            out.push({
+              rule: "nest",
+              node: el,
+              el: sig(el),
+              box: sig(box),
+              side: name,
+              px: +own.toFixed(1),
+              want: +want.toFixed(1),
+            });
         }
       }
     },

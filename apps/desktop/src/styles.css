@@ -1450,6 +1450,37 @@ body[data-window="popover"] {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+/* A server's accounts under its row (ADR 0183), when the window is signed in there with several: who each is and the
+   way to it on one line, its workspaces under it. */
+.dk-accts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dk-accts > li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.dk-accts[data-dim] {
+  opacity: 0.5;
+}
+.dk-acct {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.dk-acct__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 /* A server that doesn't answer: its last workspaces dimmed, its state in the waiting color (ADR 0158). */
 .dk-ws-rows[data-dim] {
   opacity: 0.5;
@@ -2182,4 +2213,24 @@ body[data-window="notch"] {
 .dk-ip__stall {
   gap: var(--space-2);
   color: var(--ink2);
+}
+/* Why Developer Mode may be missing: one cause a row, its action beside it while the words fit (`.ac-actline`). */
+.dk-ip__causes {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--ink2);
+}
+.dk-ip__causes > b {
+  color: var(--ink);
+}
+.dk-ip__causes > ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
 }

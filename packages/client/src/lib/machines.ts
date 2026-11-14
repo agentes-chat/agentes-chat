@@ -88,20 +88,8 @@ export const toolOnCommand = (m: Pick<Machine, "mode">, tool: keyof MachineAcces
 /** A Mac or a PC: folders and tools are allowed in the agentes.chat app there. Any other may be a server without it. */
 export const allowsInApp = (os: string | null | undefined) => os === "darwin" || os === "windows";
 
-/**
- * `brain.reasons.tool_off`'s line for a brain whose tool is off on `m`: the app's Preferences on a Mac or a PC, and on
- * any other computer the command too.
- */
-export function toolOffReason(
-  m: Pick<Machine, "os" | "mode"> | null | undefined,
-  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity",
-) {
-  if (!m || allowsInApp(m.os)) return { key: "brain.reasons.tool_off" as const, command: "" };
-  return {
-    key: "brain.reasons.tool_offLinux" as const,
-    command: toolOnCommand(m, kind === "claude_code" ? "claude" : kind),
-  };
-}
+/** The switch of the program a brain runs on its computer: Claude Code's is "claude". */
+export const brainTool = (kind: MachineAccountKind): MachineToolName => (kind === "claude_code" ? "claude" : kind);
 
 /**
  * What one click does where a tool is off on `m`, for the person `meId`: `allow` turns it on there (they paired it),
@@ -421,6 +409,7 @@ const WORDED_LOGIN_FAILURES = [
   "status_unknown",
   "no_token",
   "not_kept",
+  "sandbox",
 ] as const satisfies readonly AccountLoginFailure[];
 
 /**
@@ -434,7 +423,7 @@ export function loginFailureLine(code: string | null | undefined) {
   const worded = WORDED_LOGIN_FAILURES.find((c) => c === code);
   return {
     key: worded ? (`agentPage.work.brain.add.why.${worded}` as const) : ("agentPage.work.brain.add.failed" as const),
-    detail: worded === "cli_exit" || worded === "not_signed_in_after_login",
+    detail: worded === "cli_exit" || worded === "not_signed_in_after_login" || worded === "sandbox",
   };
 }
 

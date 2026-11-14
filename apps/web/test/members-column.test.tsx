@@ -506,17 +506,21 @@ describe("answering without a mention, as true for my own messages as who picks 
   });
 });
 
-describe("Settings › Papéis: listed apart", () => {
+describe("Settings › Cargos: listed apart", () => {
   test("a role's switch sets whether its people get their own group in the members column", async () => {
     const state = seedState();
     await renderApp(`/org/${ORG_ID}/settings/roles`, { api: createFakeApi(state) });
     await settle(6);
     await act(async () => fireEvent.click(screen().getByRole("button", { name: /^Admin/ })));
-    await settle(4);
+    await settle(6);
+    // Behind ✎: Nome, cor e ícone, saved once.
+    await act(async () => fireEvent.click(screen().getByRole("button", { name: "Mudar nome, cor e ícone" })));
+    await settle(2);
     const hoist = screen().getByRole("switch", { name: /Mostrar separado na lista de membros/ });
     expect(hoist.getAttribute("aria-checked")).toBe("true");
     await act(async () => fireEvent.click(hoist));
-    await settle(2);
+    await act(async () => fireEvent.click(screen().getByRole("button", { name: "Salvar" })));
+    await settle(4);
     expect(state.calls.find((c) => c.method === "roles.update")?.args[2]).toEqual({ hoist: false });
   });
 });

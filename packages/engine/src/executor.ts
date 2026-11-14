@@ -43,14 +43,16 @@ import { announceAgentStatus, askRunStatus, startRunStatus, statusCandidates } f
 import { type Agent, getAgentCached } from "./agents";
 import { agentsDmReads, readerOfRun } from "./agents-dm-reads";
 import { type AgentAi, agentAiState, noAiReasonOf, ownNotSignedIn } from "./ai-status";
+import { heldBehind, markNotRun, notRunAfter, notRunText, wakeLine } from "./approval-order";
 import { deciderName, publishApproval } from "./approvals";
 import { accountablePerson, fedByRoutine, personOfMessage, runAuthority } from "./authority";
 import {
   type AutoChoice,
+  type AutoLine,
   type AutoModelRecord,
   type AutoModels,
   autoApplied,
-  autoProvider,
+  autoLine,
   autoWanted,
   chooseAutoModel,
   fallbackChoice,
@@ -272,6 +274,7 @@ import {
   scrubRightHandReply,
   withPersonalBrain,
 } from "./right-hand";
+import { seatState } from "./right-hand-seats";
 import { routineBriefOf } from "./routine-brief";
 import { missStaleRoutineRun, routineRunWaitingForComputer, routineRunWaitingForPlan } from "./routine-firing";
 import { closeRoutineRun, type RoutineRunEnd, recordRoutineReportMessage, routineFailureEnd } from "./routine-ledger";
@@ -308,6 +311,7 @@ import {
   cliRefusedStart,
   cliWords,
   isTerminal,
+  keyRefused,
   NO_AI,
   OUR_ERROR,
   PERSON_LIMIT,
@@ -630,6 +634,11 @@ export interface Transcript {
   request?: string;
   /** The computer brain couldn't answer and the model brain did (ADR 0032 §5): the reply carries a quiet note. */
   fallback?: { from: BrainKind; code: string; message: string; resetsAt?: string };
+  /**
+   * The key that stood in for the computer brain was refused (no credit, a wrong key) before it answered a turn: the
+   * run went back to its own brain, and no key stands in for it again.
+   */
+  standInRefused?: true;
   /** Fast was refused on a turn of this run, which went on at standard speed (`meta.speedFallback`). */
   speedFallback?: boolean;
   /**
@@ -726,11 +735,18 @@ export interface Transcript {
   /**
    * The computer dropped in the middle of a computer brain's turn: the turn is sent again to the same
    * computer once it is back (its session resumes), told which tools already ran so none is repeated.
-   * `prompt`: what the interrupted turn was asked; `drops`: how many times this run was cut off;
-   * `cause`: `restart` when our server stopped in the middle of the turn, not the computer; `plan_limit` when the
+   * `prompt`: what the interrupted turn was asked; `drops`: how many times this run was cut off after its turn said or
+   * did something; `early`: cut before that, with nothing to redo (`MAX_EARLY_COMPUTER_DROPS`); `cause`: `restart`
+   * when our server stopped in the middle of the turn, not the computer; `plan_limit` when the
    * plan refused the rest of the turn (never one of the computer's drops).
    */
-  interruptedTurn?: { prompt: string; executed: string[]; drops: number; cause?: "restart" | "plan_limit" };
+  interruptedTurn?: {
+    prompt: string;
+    executed: string[];
+    drops: number;
+    early?: number;
+    cause?: "restart" | "plan_limit";
+  };
   /** What the computer brain's turn under way was asked: a turn cut by a crash is sent again with it. */
   turnPrompt?: string;
   /**
@@ -839,6 +855,12 @@ export const COMPUTER_DROP_GRACE_MS = 2 * 60_000;
 export const PLAN_LIMIT_GRACE_MS = 2 * 60_000;
 /** A run resumes on its computer after this many drops at most; then it ends like any failed turn. */
 export const MAX_COMPUTER_DROPS = 3;
+/**
+ * Drops before the turn said or did anything don't count toward `MAX_COMPUTER_DROPS` (a computer restarting or out of
+ * memory cuts every turn it is sent, and nothing would be redone): after this many of them the model brain stands in
+ * where it may, or the run ends (`brainUnavailable`), so a computer that keeps falling over can't keep a run going forever.
+ */
+export const MAX_EARLY_COMPUTER_DROPS = 10;
 /**
  * How often a run whose computer had no room for its turn asks again (the runner admits turns by room). It asks
  * until it runs: long work (ADR 0121) wakes through agent turns, and a dropped turn could end it halfway.
@@ -1009,6 +1031,9 @@ const toolResultFor = (approval: Approval | undefined, by?: string | null): { co
  * failed tries in a row park it (as many as each of its jobs' attempts, `maxAttempts: 4`).
  */
 export const OUTAGE_PARK = { ladderMinutes: [2, 15, 30, 60], maxMs: 24 * 60 * 60_000, tries: 4 } as const;
+
+/** The job that resumes a run parked on an outage, once per park (`parkOutage`). */
+export const outageJobKey = (runId: string, waitId: string) => `agent_run.execute:${runId}:outage:${waitId}`;
 
 type RunJobOptions = {
   finalAttempt: boolean;
@@ -1252,6 +1277,9 @@ async function executeRunInner(
       // Decided while the computer turn that asked still runs: its job resumes the run when that turn ends
       // (`suspendedByBridge`), so the brain's session never takes two turns at once.
       if (stored?.pending?.calls.some((c) => c.inTurn) && (await runJobElsewhere(db, run.id, options.jobId))) return;
+      // Its approved actions go in the order they were asked on their card: behind another run's request still
+      // waiting or not done yet, it keeps waiting, and that request settling wakes it (`approval-order.ts`).
+      if (await heldBehind(db, run.id)) return;
       const resumed = await transitionRun(
         db,
         run.id,
@@ -2208,8 +2236,13 @@ async function executeRunInner(
         ...(deps.blockSpec ? { blockSpec: deps.blockSpec } : {}),
         choices: choicesApply && tools.some((t) => t.name === ASK_CHOICES_TOOL),
         // "What you can do" names the loaded groups: it waits for the judge.
-        capabilities: Promise.resolve(judging).then(() =>
-          [describeCapabilities(tools, pending, isRightHand(agent)), browsers, repositories]
+        capabilities: Promise.resolve(judging).then(async () =>
+          [
+            // The right hand has a computer only as a seat on the workspace's own (ADR 0175).
+            describeCapabilities(tools, pending, isRightHand(agent) && (await seatState(db, run)) === "none"),
+            browsers,
+            repositories,
+          ]
             .filter(Boolean)
             .join("\n\n"),
         ),
@@ -2425,6 +2458,13 @@ async function executeRunInner(
     const minutes = line && people ? Math.min(step, KEY_LINE_PERSON_MINUTES) : step;
     const at = Date.now() + minutes * 60_000;
     const noteId = t.outage?.noteId;
+    // Woken before its resume (its computer back, a person's message): that resume is replaced, never one more.
+    const before = t.outage?.waitId;
+    if (before) {
+      await db
+        .delete(outbox)
+        .where(and(eq(outbox.dedupeKey, outageJobKey(run.id, before)), eq(outbox.status, "pending")));
+    }
     t.outage = { since, n: n + 1, waitId, at, ...(noteId ? { noteId } : {}), ...(line ? { line, people } : {}) };
     // The computer failing on its own waits on the same ladder as a wait for that computer: the apps say it waits for
     // its computer, and the computer coming back resumes it (`resumeRunsWaitingForMachine`).
@@ -2466,7 +2506,7 @@ async function executeRunInner(
       orgId: run.orgId,
       kind: "agent_run.execute",
       payload: { runId: run.id, wait: waitId },
-      dedupeKey: `agent_run.execute:${run.id}:outage:${waitId}`,
+      dedupeKey: outageJobKey(run.id, waitId),
       runAt: new Date(at),
       maxAttempts: 4,
     });
@@ -2503,6 +2543,8 @@ async function executeRunInner(
     const moot = transcript.mootRequests ?? {};
     /** Calls nobody decided: withdrawn as moot. Only those leave it free to stay quiet. */
     let mootCalls = 0;
+    /** Its requests settled here: the agent's runs waiting behind them on their card go next (`wakeLine`). */
+    const settled: Approval[] = [];
     for (const call of transcript.pending.calls) {
       let result = call.result;
       const mootText = moot[call.questionId ?? call.secretRequestId ?? call.waitId ?? call.approvalId ?? ""];
@@ -2550,7 +2592,14 @@ async function executeRunInner(
           byPerson = true;
           deciders.add(decider);
         }
-        if (approval?.status === "approved" && deps.tools) {
+        if (approval) settled.push(approval);
+        // Approved before a request asked ahead of it on its card was refused or expired: it doesn't run.
+        const before = approval?.status === "approved" && !approval.executedAt ? await notRunAfter(db, approval) : null;
+        if (approval && before) {
+          result = { content: notRunText(before), isError: true };
+          const kept = await markNotRun(db, approval.id, before);
+          if (kept) await publishApproval({ db, pubsub: deps.pubsub }, kept, "approval.decided").catch(() => {});
+        } else if (approval?.status === "approved" && deps.tools) {
           const output = await deps.tools.executeApproved(ctx, approval);
           result = { content: output.content, isError: output.isError === true };
           // The approvals screen shows it ran (and what came back).
@@ -2581,6 +2630,7 @@ async function executeRunInner(
       });
     }
     if (blocks.length > 0) transcript.messages.push({ role: "user", content: blocks });
+    await wakeLine(db, settled).catch(() => {});
     if (bridgedLines.length > 0) {
       resumeText = `What a person decided on your waiting call${bridgedLines.length > 1 ? "s" : ""}:\n${bridgedLines.join("\n")}`;
     }
@@ -2887,16 +2937,17 @@ async function executeRunInner(
     const kept = t.autoModel;
     const choice: AutoModelRecord =
       kept ?? (await (autoAsked ?? (needsContext ? askAuto() : Promise.resolve(fallbackChoice("kept")))));
-    const provider =
+    const line: AutoLine =
       isAutoModel(agent.model) && !choice.apiModel
-        ? await autoProvider(db, agent).catch(() => "anthropic")
-        : "anthropic";
+        ? await autoLine(db, agent).catch((): AutoLine => ({ provider: "anthropic" }))
+        : { provider: "anthropic" };
+    const { provider, endpoint } = line;
     // OpenRouter's line is its list: in place before a tier maps onto it.
     if (provider === "openrouter") await ensureOpenRouterModels();
     const tiers = (await orgAutoModels(db, run.orgId).catch((): AutoModels => ({})))[provider];
-    const applied = autoApplied(agent, brainPlan, choice, provider, tiers);
-    // No model for the tier: OpenRouter's list couldn't be read. Waited out like a provider outage, with the
-    // choice kept for the next attempt.
+    const applied = autoApplied(agent, brainPlan, choice, provider, tiers, endpoint);
+    // No model for the tier: OpenRouter's list couldn't be read, or an endpoint offers none (never a call on the
+    // wrong provider's line). Waited out like a provider outage, with the choice kept for the next attempt.
     if (brainPlan.kind === "model" && isAutoModel(agent.model) && !applied.apiModel) {
       const outage = new ProviderError("could not reach provider", true);
       outage.provider = PROVIDERS[provider as keyof typeof PROVIDERS]?.label;
@@ -2956,6 +3007,16 @@ async function executeRunInner(
     return { evidence, gather };
   };
   let brain = createBrain(deps, thinker, run, plan.kind, turnToken, () => transcript as Transcript);
+  /**
+   * What the model brain stands in for since this claim's fallback, until it answers a turn: the computer brain's plan
+   * and the tools it listed, taken back if the key is refused first (`backToOwnBrain`).
+   */
+  let standIn: {
+    plan: BrainPlan;
+    brain: typeof brain;
+    toolGroups: Transcript["toolGroups"];
+    loadedGroups: ToolContext["loadedGroups"];
+  } | null = null;
   let triggerText = trigger?.body ?? topTrigger?.body ?? "";
   if (plan.kind !== "model" && !triggerText) {
     triggerText = (await getMessage(db, run.orgId, run.triggerMessageId))?.body ?? "";
@@ -3220,10 +3281,13 @@ async function executeRunInner(
     if (
       !onlyThisComputer &&
       !u.queued &&
+      // A key refused in this run already (`backToOwnBrain`) would be refused again.
+      !t.standInRefused &&
       mayFallBack(agent, run) &&
       (await deps.gateway.hasModelCredential(thinker).catch(() => false))
     ) {
       await leaveLine();
+      standIn = { plan, brain, toolGroups: t.toolGroups, loadedGroups: ctx.loadedGroups };
       t.fallback = { from, code: u.code, message: u.message, ...(u.resetsAt ? { resetsAt: u.resetsAt } : {}) };
       // On "Automático" the API answers with the model and effort chosen for this run.
       const autoEffort = isAutoModel(agent.model) ? t.autoModel?.effort : undefined;
@@ -3255,6 +3319,11 @@ async function executeRunInner(
         ...(u.scope ? { scope: u.scope } : {}),
       });
       return "waited";
+    }
+    // Past its early drops' limit, a wait for that computer would send the turn again on every reconnect, forever.
+    if (u.code === "machine_offline" && (t.interruptedTurn?.early ?? 0) >= MAX_EARLY_COMPUTER_DROPS) {
+      await fail(`brain_unavailable: ${u.message}`, { code: u.code, detail: u.message });
+      return "failed";
     }
     if (!machineId || !UNAVAILABLE_CODES.has(u.code)) return "no";
     const busy = u.code === "busy";
@@ -3389,6 +3458,36 @@ async function executeRunInner(
     await publishChannelEvent(deps.pubsub, event("waiting_input", undefined, undefined, computer));
     await finished("waiting_input", undefined, undefined, computer);
     return "waited";
+  };
+
+  /**
+   * The key standing in for the computer brain was refused (no credit, a wrong key) before it answered a turn: the
+   * run is its own brain's again and waits for it, as when no key can stand in. The person never reads the error of
+   * a key their agent doesn't think with, and a broken key never fails a run its own brain would answer. Null when
+   * the model brain isn't standing in since this claim, or answered a turn already (its transcript is the model's).
+   */
+  const backToOwnBrain = async (error: ProviderError) => {
+    const t = transcript as Transcript;
+    const was = t.fallback;
+    if (!standIn || !was) return null;
+    ({ plan, brain } = standIn);
+    ctx.loadedGroups = standIn.loadedGroups;
+    if (standIn.toolGroups) t.toolGroups = standIn.toolGroups;
+    else delete t.toolGroups;
+    tools = presentTools(granted, isSensitive, ctx.loadedGroups);
+    standIn = null;
+    delete t.fallback;
+    t.standInRefused = true;
+    await recordRunBrain(db, run.id, plan.kind);
+    run = { ...run, brain: plan.kind };
+    const { cause, provider } = providerFailureOf(error);
+    await addRunStep(db, run, "context", { standInRefused: { cause, provider } });
+    const handled = await brainUnavailable({
+      code: was.code,
+      message: was.message,
+      ...(was.resetsAt ? { resetsAt: was.resetsAt } : {}),
+    });
+    return { handled, was };
   };
 
   /** The first question a computer brain asked through the bridge in this pause: when, and when its card was posted. */
@@ -3528,7 +3627,8 @@ async function executeRunInner(
    * back (`resumeRunsWaitingForMachine`, or right away when it already is). Still away after the grace:
    * the next attempt finds it unavailable and says so ("I'll answer when it's back"). A drop caused by
    * our own server stopping (`serverStop`) isn't one of the computer's: it never counts toward the limit,
-   * and the turn sent again reads that the server restarted.
+   * and the turn sent again reads that the server restarted. One before the turn said or did anything (`early`)
+   * counts toward its own, larger limit only.
    */
   const waitForDroppedComputer = async (
     from: BrainKind,
@@ -3536,14 +3636,17 @@ async function executeRunInner(
     prompt: string,
     executed: string[],
     serverStop: boolean,
+    early: boolean,
   ) => {
     await deferred;
     const t = transcript as Transcript;
     const prev = t.interruptedTurn;
+    const earlyDrops = (prev?.early ?? 0) + (early && !serverStop ? 1 : 0);
     t.interruptedTurn = {
       prompt: prev?.prompt ?? prompt,
       executed: [...new Set([...(prev?.executed ?? []), ...executed])],
-      drops: (prev?.drops ?? 0) + (serverStop ? 0 : 1),
+      drops: (prev?.drops ?? 0) + (serverStop || early ? 0 : 1),
+      ...(earlyDrops > 0 ? { early: earlyDrops } : {}),
       ...(serverStop ? { cause: "restart" as const } : {}),
     };
     const waitId = Bun.randomUUIDv7();
@@ -4513,11 +4616,10 @@ async function executeRunInner(
           computerTurns++;
           nextPrompt = null;
           carried = null;
-          // The account it ran with (ADR 0041): when it was last used, after the turn.
+          // The account it ran with (ADR 0041): when it was last used and last answered, after the turn.
           const account = turnPlan.account;
           if (account && computerTurns === 1) {
-            const succeeded = turnPlan.kind === "claude_code";
-            later(() => touchMachineAccount(db, run.orgId, account.id, { succeeded }));
+            later(() => touchMachineAccount(db, run.orgId, account.id));
           }
           // A turn cut off by its computer is finished now, and one that found room ends that wait.
           delete transcript.interruptedTurn;
@@ -4601,14 +4703,16 @@ async function executeRunInner(
           const executed = await executedSince(db, run.id, turnStepSeq, executedNow);
           // The computer dropped mid-turn: the turn resumes there when it is back (its session keeps what it did).
           const machineId = turnPlan.session?.machineId;
-          if (
-            machineId &&
-            error instanceof BrainFailure &&
-            error.code === "machine_offline" &&
-            (error.serverStop || (transcript.interruptedTurn?.drops ?? 0) < MAX_COMPUTER_DROPS)
-          ) {
-            const labels = executed.map((c) => c.label);
-            return waitForDroppedComputer(turnPlan.kind, machineId, prompt, labels, error.serverStop);
+          if (machineId && error instanceof BrainFailure && error.code === "machine_offline") {
+            const early = executed.length === 0 && !deltas.text();
+            const cut = transcript.interruptedTurn;
+            if (
+              error.serverStop ||
+              (early ? (cut?.early ?? 0) < MAX_EARLY_COMPUTER_DROPS : (cut?.drops ?? 0) < MAX_COMPUTER_DROPS)
+            ) {
+              const labels = executed.map((c) => c.label);
+              return waitForDroppedComputer(turnPlan.kind, machineId, prompt, labels, error.serverStop, early);
+            }
           }
           // The folder its session works in isn't on the computer anymore: every later turn would be refused the
           // same way. A fresh session takes the turn in the agent's own folder, told the one before was lost. A
@@ -4637,6 +4741,7 @@ async function executeRunInner(
               prompt: prev?.prompt ?? prompt,
               executed: [...new Set([...(prev?.executed ?? []), ...executed.map((c) => c.label)])],
               drops: prev?.drops ?? 0,
+              ...(prev?.early ? { early: prev.early } : {}),
               cause: "plan_limit",
             };
             return waitForUsage({ code: "plan_limit", message: error.message, ...(await refusalOf(machineId, error)) });
@@ -4705,6 +4810,16 @@ async function executeRunInner(
         // Held or suspended meanwhile: that is why, whatever the brain made of the refusal.
         const paused = await standingRefusal(db, run.orgId, run.agentId);
         if (paused) return fail(paused.message);
+        // The key standing in for the computer brain was refused before it answered: back to waiting for that brain.
+        if (turnPlan.kind === "model" && error instanceof ProviderError && keyRefused(error)) {
+          const back = await backToOwnBrain(error);
+          if (back?.handled === "waited" || back?.handled === "failed") return;
+          // Nothing to wait for either: the run ends on why its own brain couldn't answer, never on the key's error.
+          if (back) {
+            const { code, message } = back.was;
+            return fail(`brain_unavailable: ${message}`, { code, detail: message });
+          }
+        }
         // A CLI's failure says who failed it and what it said; the computer only ran it. One that refused to start
         // would fail every retry the same way: it ends here too.
         // A code the apps don't word (a runner's `unsupported`) reads as that brain's program's error, never bare.
@@ -4749,6 +4864,8 @@ async function executeRunInner(
         }
       }
       await deltas.flush();
+      // The model brain answered a turn: from here the transcript is its own, and the run stays with it.
+      if (turnPlan.kind === "model") standIn = null;
       if (transcript.outage?.noteId) await outageOver(transcript.outage.noteId).catch(() => {});
       const passedLine = transcript.outage?.line;
       delete transcript.outage;

@@ -61,6 +61,17 @@ export const outbox = pgTable(
   (t) => [
     index("outbox_due_idx").on(t.nextAttemptAt).where(sql`${t.status} = 'pending'`),
     index("outbox_leased_idx").on(t.lockedUntil).where(sql`${t.status} = 'processing'`),
+    // The operator's job list, newest first. With the id: a transaction's jobs share one time, and a page's cursor
+    // has to land among them. Built concurrently, as any index of this table has to be: every job the server queues
+    // is a row, and a plain build keeps them all waiting until it ends.
+    index("outbox_created_idx").on(t.createdAt, t.id).concurrently(),
+    // A run's jobs, by how their name starts (only those rows are indexed). `text_pattern_ops` compares bytes, so a
+    // prefix is a range of this index whatever the database's collation; of the unique index on the name it is one
+    // only in the C collation.
+    index("outbox_run_jobs_idx")
+      .on(t.dedupeKey.op("text_pattern_ops"))
+      .where(sql`${t.kind} = 'agent_run.execute'`)
+      .concurrently(),
   ],
 );
 
@@ -193,6 +204,9 @@ export const agentRuns = pgTable(
     index().on(t.orgId, t.stretchId).where(sql`${t.stretchId} is not null`),
     // Runs waiting for a computer, found when it reconnects (only those rows are indexed).
     index("agent_runs_waiting_machine_idx").on(t.waitingMachineId).where(sql`${t.waitingMachineId} is not null`),
+    // The task manager's count of today's finished tasks, asked at every poll: only today's rows read, not every run
+    // the workspace ever finished. Built CONCURRENTLY (its migration), as agent_runs is large.
+    index("agent_runs_done_finished_idx").on(t.orgId, t.finishedAt).where(sql`${t.status} = 'done'`),
   ],
 );
 
@@ -312,6 +326,9 @@ export const agentRunSteps = pgTable(
     unique().on(t.runId, t.seq),
     // The operator's work analytics look up a run's waits for room among all its steps.
     index().on(t.runId).where(sql`${t.kind} = 'error' and ${t.data}->>'reason' = 'brain_unavailable'`),
+    // A workspace's tool calls in a range of dates, for the operator API (only those steps are indexed). Built
+    // concurrently: every step of every run is a row here, and a plain build keeps them all waiting until it ends.
+    index("agent_run_steps_tool_calls_idx").on(t.orgId, t.createdAt).where(sql`${t.kind} = 'tool_call'`).concurrently(),
   ],
 );
 
@@ -879,6 +896,8 @@ export const agentQuestions = pgTable(
     unique().on(t.runId, t.toolUseId),
     index().on(t.channelId, t.status),
     index().on(t.expiresAt).where(sql`${t.status} = 'open'`),
+    // What a workspace's agents asked, in a range of dates (the operator API).
+    index().on(t.orgId, t.createdAt),
   ],
 );
 
@@ -937,6 +956,8 @@ export const agentConsultations = pgTable(
     index().on(t.expiresAt).where(sql`${t.status} = 'open'`),
     index().on(t.targetRunId),
     index().on(t.orgId, t.askerAgentId, t.createdAt),
+    // The hand-over of a task, found by the task's conversation.
+    index().on(t.orgId, t.channelId),
   ],
 );
 
@@ -1016,6 +1037,8 @@ export const secretRequests = pgTable(
     unique().on(t.runId, t.toolUseId),
     index().on(t.agentId, t.status),
     index().on(t.expiresAt).where(sql`${t.status} = 'pending'`),
+    // What a workspace's agents asked, in a range of dates (the operator API).
+    index().on(t.orgId, t.createdAt),
   ],
 );
 
@@ -1044,6 +1067,8 @@ export const machineTasks = pgTable(
       .$defaultFn(() => Bun.randomUUIDv7()),
     orgId: uuid().notNull(),
     agentId: uuid().notNull(),
+    /** The id its computer knows the agent by when it isn't the agent's own: a seat of the right hand (ADR 0175). */
+    scopeId: uuid(),
     machineId: uuid()
       .notNull()
       .references(() => machines.id, { onDelete: "cascade" }),

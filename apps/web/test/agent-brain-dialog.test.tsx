@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, setSystemTime, test } from "bun:test";
-import type { AgentBrain, AiComputer, MachineAccount } from "@agenteschat/client";
+import type { AgentBrain, AiComputer, Machine, MachineAccount } from "@agenteschat/client";
 import { ApiError } from "@agenteschat/client";
 import { setupDom } from "@agenteschat/ui/testing/dom";
 
@@ -356,9 +356,8 @@ describe("Quem pensa (its dialog)", () => {
     expect(text).toContain("O Codex não está instalado no MacBook.");
     expect(text).not.toContain("Nenhum computador tem");
     text = await onIt("claude_code", "tool_off");
-    expect(text).toContain(
-      "O Claude Code está desligado no MacBook. Ligue lá, no app do agentes.chat: Preferências → Ferramentas.",
-    );
+    expect(text).toContain("O Claude Code está desligado no MacBook.");
+    expect(text).not.toContain("Preferências");
     expect(text).not.toContain("Nenhum computador tem");
   });
 
@@ -368,7 +367,14 @@ describe("Quem pensa (its dialog)", () => {
       const state = seedState();
       const api = createFakeApi(state);
       const machines = fakeMachinesOf.get(api);
-      machines?.pair({ id: "machine_1", name: "MacBook", os: "linux", mode: "system" });
+      machines?.pair({
+        id: "machine_1",
+        name: "MacBook",
+        os: "linux",
+        mode: "system",
+        kind: "managed",
+        pairedBy: null,
+      });
       machines?.setSetup({ state: "ready", machineId: "machine_1", since: new Date().toISOString() });
       // The workspace's computer: nobody signs in at its terminal, so the row in use is the plan itself.
       const base = fakeAgentBrain(ADA_ID, {
@@ -400,13 +406,13 @@ describe("Quem pensa (its dialog)", () => {
     );
   });
 
-  test("a tool turned off says where it turns on: the app on a Mac, the app or the command on Linux", async () => {
-    const reason = async (os: string, name: string) => {
+  test("a tool turned off: the row says it once, its way out goes under it, by whose computer it is", async () => {
+    const reason = async (machine: Partial<Machine> & { name: string }) => {
       cleanup();
       const state = seedState();
       const api = createFakeApi(state);
-      fakeMachinesOf.get(api)?.pair({ id: "machine_1", name, os, mode: "system" });
-      const computer = { machineId: "machine_1", name, online: true };
+      fakeMachinesOf.get(api)?.pair({ id: "machine_1", os: "darwin", mode: "system", ...machine });
+      const computer = { machineId: "machine_1", name: machine.name, online: true };
       // No sign-in of Claude there yet: the row in use is the plan itself.
       const base = fakeAgentBrain(ADA_ID, {
         brain: "claude_code",
@@ -419,15 +425,25 @@ describe("Quem pensa (its dialog)", () => {
       );
       api.agents.brain = async () => ({ ...base, options, machines: [{ ...computer, options }] });
       await open(state, api);
-      return shownText(await brainDialog());
+      const d = await brainDialog();
+      return { d, text: shownText(d), state };
     };
-    // The row names the plan; its line names the program on the computer.
-    expect(await reason("darwin", "MacBook")).toContain(
-      "O Claude Code está desligado no MacBook. Ligue lá, no app do agentes.chat: Preferências → Ferramentas.",
-    );
-    expect(await reason("linux", "Servidor")).toContain(
-      "O Claude Code está desligado no Servidor. Ligue lá, no app do agentes.chat ou com sudo agentes-runner tools enable claude.",
-    );
+    // Whoever connected it: the cause once, in the row, and the one click under it.
+    let r = await reason({ name: "MacBook", accessAllow: true });
+    expect(inUse(r.d)).toMatchObject({ lines: ["O Claude Code está desligado no MacBook."] });
+    expect(r.text.split("está desligado")).toHaveLength(2);
+    expect(r.text).not.toMatch(/Preferências|Ligue lá/);
+    await click(within(r.d).getByRole("button", { name: "Ligar o Claude Code" }));
+    expect(r.state.calls.filter((c) => c.method === "machines.allowTool")).toHaveLength(1);
+    // Someone else's computer: an admin asks whoever connected it, never turns it on.
+    r = await reason({ name: "MacBook", accessAllow: true, pairedBy: { id: "u-rui", name: "Rui Prado" } });
+    expect(within(r.d).queryByRole("button", { name: "Ligar o Claude Code" })).toBeNull();
+    expect(within(r.d).getByRole("button", { name: "Pedir a Rui" })).toBeTruthy();
+    // An app too old on a server: update it there, the command behind "Prefiro no Terminal".
+    r = await reason({ name: "Servidor", os: "linux" });
+    expect(r.text).toContain("Atualize o app do agentes.chat no Servidor para ligar daqui.");
+    expect(r.text).toContain("Prefiro no Terminal");
+    expect(r.d.textContent).toContain("sudo agentes-runner tools enable claude");
   });
 });
 
@@ -1005,5 +1021,45 @@ describe("Quem pensa: the account on the computer and the effort (ADR 0041)", ()
     await settle(6);
     expect(brainCalls(state)).toEqual([{ brain: "claude_code", account: "acct_d" }]);
     expect(brainScreen(d)).toBe("Pronto");
+  });
+
+  test("an account at its limit says until when in the list; picked, one line says the agent waits, with Ver uso, and the switch still goes", async () => {
+    const until = new Date(Date.now() + 25 * 86_400_000).toISOString();
+    const at = new Date().toISOString();
+    const { state } = await onMac({
+      accounts: [
+        work,
+        {
+          ...work,
+          id: "acct_full",
+          label: "Cheia",
+          email: "cheia@example.com",
+          usage: { windows: [{ kind: "seven_day", usedPercent: 100, resetsAt: until }], source: "probe", at },
+        },
+        {
+          ...work,
+          id: "acct_free",
+          label: "Folga",
+          email: "folga@example.com",
+          usage: { windows: [{ kind: "seven_day", usedPercent: 5 }], source: "probe", at },
+        },
+      ],
+      account: "acct_work",
+    });
+    const d = await brainDialog();
+    await toScreen(d, "Trocar de conta");
+    const full = within(d).getByRole("radio", { name: /Cheia/ }).closest("label") as HTMLElement;
+    expect(full.textContent).toContain("No limite até");
+    // The one with room comes picked: nothing waits, nothing to say.
+    expect(within(d).queryByText(/espera até o plano renovar/)).toBeNull();
+    await pickRow(d, notInUse("Cheia"));
+    const line = within(d).getByText(/Nesta conta a Ada espera até o plano renovar\./);
+    const link = within(line.closest("p") as HTMLElement).getByRole("link", { name: "Ver uso" });
+    expect(link.getAttribute("href")).toBe(`/org/${ORG_ID}/settings/usage`);
+    expect(mainButton(d)?.textContent).toBe("Trocar para Cheia · Team");
+    expect((mainButton(d) as HTMLButtonElement).disabled).toBe(false);
+    await confirmScreen(d);
+    await settle(6);
+    expect(brainCalls(state)).toEqual([{ brain: "claude_code", account: "acct_full" }]);
   });
 });

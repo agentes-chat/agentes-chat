@@ -1,5 +1,8 @@
+import { customModelId, endpointModelId, parseCustomModel } from "@agenteschat/providers/catalog";
 import type { TFunction } from "i18next";
 import type { AiStatus, Credential, Model } from "../api/types";
+import { CUSTOM_PROVIDER } from "./endpoints";
+import { serverHost } from "./server";
 
 interface ProviderEntry {
   id: string;
@@ -105,14 +108,51 @@ export type ProviderId = (typeof PROVIDERS)[number]["id"];
 export const providerOf = (id: string): ProviderEntry | undefined =>
   PROVIDERS.find((p) => p.id === id || p.label === id);
 export const providerLabel = (id: string) => providerOf(id)?.label ?? id;
+
+type NamedKey = Pick<Credential, "label" | "provider"> & Partial<Pick<Credential, "endpoint">>;
+
+/** A saved key in a sentence: a workspace endpoint by its own name ("Gateway Sul"), any other by its provider's. */
+export const keyName = (key: NamedKey) => (key.provider === CUSTOM_PROVIDER ? key.label : providerLabel(key.provider));
+
+/** Where a saved key's calls go, in its line: an endpoint's host ("api.example.com"), else its provider's name. */
+export const keySource = (key: NamedKey) =>
+  key.endpoint ? serverHost(key.endpoint.baseURL) : providerLabel(key.provider);
+
 /**
- * A saved key's line under its name: "Claude · termina em 1a2b", or only "termina em 1a2b" when its name is already the
- * provider's (a key named after nothing else, as most are), never "Claude" over "Claude · …".
+ * A saved key's line under its name: "Claude · termina em 1a2b", "api.example.com · termina em 1a2b" for an endpoint,
+ * or only "termina em 1a2b" when its name is already the provider's (a key named after nothing else, as most are),
+ * never "Claude" over "Claude · …". A key-less endpoint (a local server) says only where it is.
  */
-export const keyLine = (t: TFunction, key: Pick<Credential, "label" | "provider" | "keyHint">) =>
-  keyNamedAfterProvider(key)
-    ? t("vault.item.endsIn", { hint: key.keyHint })
-    : t("newAgent.otherKeyDesc", { provider: providerLabel(key.provider), hint: key.keyHint });
+export const keyLine = (t: TFunction, key: NamedKey & Pick<Credential, "keyHint">) =>
+  !key.keyHint && key.endpoint
+    ? keySource(key)
+    : keyNamedAfterProvider(key)
+      ? t("vault.item.endsIn", { hint: key.keyHint })
+      : t("newAgent.otherKeyDesc", { provider: keySource(key), hint: key.keyHint });
+
+/**
+ * A saved key can think: a provider's once saved (the save tried it), an endpoint's once one of its models answered a
+ * test, with tools or without (ADR 0146).
+ */
+export const keyThinks = (key: Pick<Credential, "provider"> & Partial<Pick<Credential, "endpoint">>) =>
+  key.provider !== CUSTOM_PROVIDER ||
+  (key.endpoint?.models ?? []).some((m) => m.check === "ok" || m.check === "no_tools");
+
+/**
+ * Whom a key just saved for every agent reaches. Agents without an AI of their own think with the workspace's default
+ * key, or with the newest key while there is none. `all`: this one is that key now. `make`: the default can't think and
+ * this one can, so it should become the default. `other`: they still think with the default, named.
+ */
+export function savedKeyReach(
+  saved: Credential,
+  keys: readonly Credential[],
+  defaultId: string | null | undefined,
+): { kind: "all" } | { kind: "make"; other: string } | { kind: "other"; other: string } {
+  const current = keys.find((k) => k.id === defaultId && !k.revokedAt);
+  if (!current || current.id === saved.id) return { kind: "all" };
+  if (!keyThinks(current) && keyThinks(saved)) return { kind: "make", other: current.label };
+  return { kind: "other", other: current.label };
+}
 /** A key whose name is only its provider's ("Claude"): a line under it needn't say the provider again. */
 export const keyNamedAfterProvider = (key: Pick<Credential, "label" | "provider">) =>
   key.label.trim().toLocaleLowerCase() === providerLabel(key.provider).toLocaleLowerCase();
@@ -205,6 +245,32 @@ export const keyRuns = (
   models.some(
     (m) => m.id === model && m.provider === key.provider && (!m.endpoint || m.endpoint.credentialId === key.id),
   );
+
+/** A key as the connect flows hold it: its endpoint's models, each with the last test of it (`custom` only). */
+type KeyWithEndpoint = Pick<Credential, "id" | "provider"> & Partial<Pick<Credential, "endpoint">>;
+
+/**
+ * What a connect flow saves as the agent's model with this key: nothing while the key runs the model it had, Automático
+ * for a catalog key, and for a workspace endpoint one of its own models — an endpoint has no tiers (ADR 0146), and
+ * Automático on its key fails every run as no AI. A pinned model stays when the endpoint being connected offers it too,
+ * so switching between endpoints doesn't lose it; otherwise the server's own pick (`endpointModelId`).
+ */
+export function modelOnKey(key: KeyWithEndpoint, model: string | undefined, models: readonly Model[]) {
+  if (keyRuns(key, model, models)) return {};
+  if (key.provider !== "custom") return { model: AUTO };
+  const own =
+    key.endpoint?.models ??
+    models
+      .filter((m) => m.endpoint?.credentialId === key.id)
+      .flatMap((m) => {
+        const id = parseCustomModel(m.id)?.model;
+        return id ? [{ id }] : [];
+      });
+  const pinned = model ? parseCustomModel(model)?.model : undefined;
+  if (pinned && own.some((m) => m.id === pinned)) return { model: customModelId(key.id, pinned) };
+  // Nothing known of the endpoint's models: Automático, which the server pins to one of them on save.
+  return { model: endpointModelId(key.id, own) ?? AUTO };
+}
 
 /**
  * Whose API an agent's model runs on: the model's provider; for Automático, the one provider the workspace can use

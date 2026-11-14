@@ -10,7 +10,14 @@ import type { Config } from "@agenteschat/config";
 /** The config a server's own phone credentials come from. */
 type PushConfig = Pick<
   Config,
-  "FIREBASE_SERVICE_ACCOUNT" | "APNS_KEY" | "APNS_KEY_ID" | "APNS_TEAM_ID" | "APNS_APP_IDS" | "PUSH_SENDER"
+  | "FIREBASE_SERVICE_ACCOUNT"
+  | "APNS_KEY"
+  | "APNS_KEY_ID"
+  | "APNS_TEAM_ID"
+  | "APNS_APP_IDS"
+  | "PUSH_SENDER"
+  | "PUSH_RELAY_URL"
+  | "PUBLIC_URL"
 >;
 
 /** This server's APNs key (ADR 0178): only with the key, its id and the team together. */
@@ -41,8 +48,22 @@ export function relayServeSender(direct: { android: PushSender | null; ios: Push
   return direct.android || direct.ios ? createPhonePushSender(direct) : null;
 }
 
-/** How this server sends one platform's pushes: `PUSH_SENDER`, with `auto` resolved by its own credentials. */
+/** Whether the push relay this server would send through (`PUSH_RELAY_URL`) is this server itself (`PUBLIC_URL`). */
+export function relayIsThisServer(config: Pick<PushConfig, "PUSH_RELAY_URL" | "PUBLIC_URL">): boolean {
+  try {
+    return new URL(config.PUSH_RELAY_URL).host === new URL(config.PUBLIC_URL).host;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * How this server sends one platform's pushes: `PUSH_SENDER`, with `auto` resolved by its own credentials. The
+ * server that is the relay has nowhere to pass on a platform it holds no credentials for: `auto` sends none there
+ * rather than calling itself for each push to hear that it sends none (ADR 0178).
+ */
 export function phonePushMode(config: PushConfig, own: PushSender | null): "direct" | "relay" | "off" {
   if (config.PUSH_SENDER !== "auto") return config.PUSH_SENDER;
-  return own ? "direct" : "relay";
+  if (own) return "direct";
+  return relayIsThisServer(config) ? "off" : "relay";
 }

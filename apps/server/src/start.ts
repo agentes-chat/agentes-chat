@@ -27,7 +27,6 @@ import {
   createRelayPushSender,
   createS3BlobStore,
   createSmtpEmailSender,
-  createTurnstileCheck,
   createWebPushSender,
   type EmailSender,
   type ErrorReporter,
@@ -92,7 +91,7 @@ import { createApp } from "./app";
 import { createAuth } from "./auth";
 import { buildEngine } from "./engine";
 import { startFreezeWatch } from "./freeze-watch";
-import { checkHumanCheckAtBoot } from "./http/human-check";
+import { checkHumanCheckAtBoot, createHumanCheck } from "./http/human-check";
 import { createLogger, type Logger } from "./logger";
 import { OPERATOR_API_PREFIX, serveOperatorApi } from "./operator/app";
 import { apnsKeyGaps, directPushSenders, phonePushMode, relayServeSender } from "./push-senders";
@@ -270,16 +269,7 @@ async function boot(
     ),
     // People's Postgres databases for agents (ADR 0039): always on; every connection is checked and read-only.
     databases: createPostgresDatabaseDriver(),
-    // agentes.chat Cloud's bot check (ADR 0075), only with both keys: without them nothing reaches Cloudflare.
-    humanCheck:
-      config.TURNSTILE_SITE_KEY && config.TURNSTILE_SECRET_KEY
-        ? createTurnstileCheck({
-            siteKey: config.TURNSTILE_SITE_KEY,
-            secretKey: config.TURNSTILE_SECRET_KEY,
-            hostnames: [new URL(config.PUBLIC_URL).hostname],
-            log,
-          })
-        : null,
+    humanCheck: createHumanCheck(config, { log }),
     // GIFs in chat (ADR 0091), only with a key: without one nothing reaches GIPHY and the app shows no GIFs.
     gifs: gifProvider(config, () => gifKey?.key() ?? null),
     // The Vault's external sources (ADR 0144): nothing reaches them until a person connects one. A self-hosted
@@ -308,6 +298,14 @@ async function boot(
         platforms: (["android", "ios"] as const).filter((platform) => pushModes[platform] === "relay"),
       },
     );
+  }
+  const unsent = (["android", "ios"] as const).filter((platform) => pushModes[platform] === "off");
+  if (config.PUSH_SENDER === "auto" && unsent.length > 0) {
+    // This server is the push relay and holds no credentials for these: there is nowhere to send them (ADR 0178).
+    log.info("phone push: none sent where this server, the push relay itself, has no credentials", {
+      platforms: unsent,
+      needs: unsent.map((platform) => (platform === "ios" ? "APNS_KEY" : "FIREBASE_SERVICE_ACCOUNT")),
+    });
   }
   const apnsGaps = apnsKeyGaps(config);
   if (apnsGaps.length > 0) {
@@ -505,6 +503,7 @@ async function boot(
       : {}),
     outbox,
     builtInDatabase: !database.client,
+    errors,
     log,
   });
   const telemetry = worker ? null : startTelemetry({ db: database.db, config, log });

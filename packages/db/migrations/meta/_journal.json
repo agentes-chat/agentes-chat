@@ -1832,8 +1832,57 @@
     {
       "idx": 263,
       "version": "7",
-      "when": 1794755400000,
-      "tag": "0263_push_apns",
+      "when": 1794745500000,
+      "tag": "0263_right_hand_seats",
+      "breakpoints": true
+    },
+    {
+      "idx": 264,
+      "version": "7",
+      "when": 1794745600000,
+      "tag": "0264_partner_waitlist",
+      "breakpoints": true
+    },
+    {
+      "idx": 265,
+      "version": "7",
+      "when": 1794755500000,
+      "tag": "0265_right_hand_proactive",
+      "breakpoints": true
+    },
+    {
+      "idx": 266,
+      "version": "7",
+      "when": 1794755600000,
+      "tag": "0266_operator_read_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 267,
+      "version": "7",
+      "when": 1794755700000,
+      "tag": "0268_invite_choices",
+      "breakpoints": true
+    },
+    {
+      "idx": 268,
+      "version": "7",
+      "when": 1794755800000,
+      "tag": "0269_phone_state_since",
+      "breakpoints": true
+    },
+    {
+      "idx": 269,
+      "version": "7",
+      "when": 1794756000000,
+      "tag": "0271_agent_runs_done_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 270,
+      "version": "7",
+      "when": 1794756600000,
+      "tag": "0272_push_apns",
       "breakpoints": true
     }
   ]

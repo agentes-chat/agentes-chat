@@ -56,6 +56,21 @@ describe("push payload", () => {
     expect(
       deviceBody({ token: "t", platform: "android", locale: "en", appId: "chat.agentes.app", sandbox: true }),
     ).toEqual({ token: "t", platform: "android", locale: "en" });
+    // The phone's other accounts on that server keep the token too (ADR 0183), on either platform.
+    expect(deviceBody({ token: "t", platform: "android", locale: "en", sharedWith: ["u2"] })).toEqual({
+      token: "t",
+      platform: "android",
+      locale: "en",
+      sharedWith: ["u2"],
+    });
+    expect(deviceBody({ token: apns, platform: "ios", locale: "en", sharedWith: [] })).toEqual({
+      token: apns,
+      platform: "ios",
+      locale: "en",
+    });
+    expect(
+      deviceBody({ token: apns, platform: "ios", locale: "en", appId: "chat.agentes.app", sharedWith: ["u2", "u3"] }),
+    ).toEqual({ token: apns, platform: "ios", locale: "en", appId: "chat.agentes.app", sharedWith: ["u2", "u3"] });
     expect(devicePath("fcm:APA91b a")).toBe("/api/app/push/devices/fcm%3AAPA91b%20a");
   });
   test("the iPhone build's profile says its app and Apple's push environment", () => {

@@ -14,12 +14,19 @@ import {
   deviceRows,
   deviceWaitEventOf,
   deviceWaitOf,
+  failedOnLocalNetwork,
   fixText,
+  IPHONE_RESTART_MS,
+  type IphoneRestartMemo,
+  type IphoneSeen,
   iosOf,
   iphoneNoTeam,
+  iphoneRestartNext,
+  iphoneRestartOf,
   iphoneSteps,
   linkPhase,
   mayTakePhone,
+  NO_IPHONE_RESTART,
   narrowsAudience,
   newComputerOf,
   phoneCloseState,
@@ -284,6 +291,51 @@ describe("connecting a phone", () => {
     });
   });
 
+  test("iPhone: restarting for Developer Mode stays on that step, then waits on the person once back", () => {
+    const mac = computer({ toolchains: { xcode: "27.0", appleTeam: "Sam Rivera (Personal Team)" } });
+    // Gone from the Mac while restarting: the step stays, under way, instead of asking for the cable.
+    expect(Object.values(iphoneSteps(mac, null, true))).toEqual([
+      "done",
+      "done",
+      "done",
+      "done",
+      "done",
+      "current",
+      "waiting",
+      "waiting",
+    ]);
+    let memo: IphoneRestartMemo = NO_IPHONE_RESTART;
+    let now = 0;
+    const see = (phone: IphoneSeen) => {
+      memo = iphoneRestartNext(memo, phone, now);
+      return iphoneRestartOf(memo, phone, now);
+    };
+    const off = { key: "p-1", reason: "developer_mode_off" };
+    expect(see(off)).toBeNull();
+    now = 1000;
+    expect(see(null)).toBe("restarting");
+    now += IPHONE_RESTART_MS - 2000;
+    expect(see(null)).toBe("restarting");
+    // Back, the mode still off: it waits on the person to unlock it and tap Turn On.
+    expect(see(off)).toBe("back");
+    expect(see(off)).toBe("back");
+    // On: done with it.
+    expect(see({ key: "p-1", reason: null })).toBeNull();
+    expect(see(null)).toBeNull();
+    // Gone too long: plugged out, not restarting.
+    expect(see(off)).toBeNull();
+    now += 10;
+    expect(see(null)).toBe("restarting");
+    now += IPHONE_RESTART_MS;
+    expect(see(null)).toBeNull();
+    // Another iPhone shows up instead: its own step, nothing remembered.
+    expect(see({ key: "p-2", reason: "developer_mode_off" })).toBeNull();
+    // A phone gone from any other step was unplugged.
+    memo = NO_IPHONE_RESTART;
+    see({ key: "p-1", reason: "untrusted" });
+    expect(see(null)).toBeNull();
+  });
+
   test("iPhone: a team found without its name, an account with no team, refused taps, an iOS too old", () => {
     // A runner that tells the account apart from its team: a team is enough, an account alone is the person's step.
     expect(iphoneSteps(computer({ toolchains: { xcode: "27.0", appleAccount: "team" } }), null).account).toBe("done");
@@ -421,6 +473,13 @@ describe("pairing over Wi-Fi", () => {
       "On that Mac, also turn on agentes.chat in System Settings › Privacy & Security › Local Network.",
     );
     expect(onMac("refused")).toBe("The phone didn't take that code. Check the code and the address, then pair again.");
+    // Those same causes, and only they, get the button to that setting in the app on that Mac.
+    expect(
+      (["same_wifi", "mdns_off", "timed_out", "refused", "outdated"] as const).map((reason) =>
+        failedOnLocalNetwork({ state: "failed", reason }),
+      ),
+    ).toEqual([true, true, true, false, false]);
+    expect(failedOnLocalNetwork({ state: "pairing" })).toBe(false);
     expect([
       wifiPairLive({ state: "connecting" }),
       wifiPairLive({ state: "connected" }),

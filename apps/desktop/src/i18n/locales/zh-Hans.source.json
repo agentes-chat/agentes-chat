@@ -633,7 +633,7 @@
     "value": "Your account wasn't created."
   },
   "here.fail.retry": {
-    "value": "Try again in Preferences › Servers."
+    "value": "Try again in Preferences"
   },
   "here.reason.https": {
     "value": "HTTPS is off on your Tailscale network"
@@ -818,6 +818,9 @@
   "servers.signOut": {
     "value": "Sign out of this server"
   },
+  "servers.addAccount": {
+    "value": "Add account"
+  },
   "servers.signedOutDone": {
     "value": "You signed out of {{host}}"
   },
@@ -883,9 +886,6 @@
   },
   "server.jevText": {
     "value": "A fast model by TypeSafe that picks who answers, keeps memory tidy and lets agents see the screen. Optional, with your own key."
-  },
-  "server.jevWhere": {
-    "value": "In agentes.chat › Settings › AI and usage."
   },
   "server.reachFailed": {
     "value": "Access from your devices didn't turn on: {{reason}}."
@@ -1169,8 +1169,14 @@
   "pair.done": {
     "value": "Connected to {{org}}"
   },
+  "pair.addFolders": {
+    "value": "Add folders"
+  },
   "pair.expired": {
-    "value": "This link expired. Make a new one under Settings › Devices."
+    "value": "This link expired. Make a new one in Devices."
+  },
+  "pair.openDevices": {
+    "value": "Open Devices"
   },
   "pair.denied": {
     "value": "{{by}} didn't let it in. Nothing changed."
@@ -1831,6 +1837,9 @@
   },
   "prefs.updates.whatsNew": {
     "value": "What's new in {{version}}"
+  },
+  "prefs.updates.systemDetails": {
+    "value": "System details"
   },
   "prefs.activity.title": {
     "value": "Activity"

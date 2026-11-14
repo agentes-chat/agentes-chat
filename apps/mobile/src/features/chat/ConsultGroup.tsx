@@ -6,6 +6,7 @@ import {
   useConsultationConversation,
   useConsultations,
 } from "@agenteschat/client";
+import { handoffAsk } from "@agenteschat/client/lib/agent-work";
 import {
   asExchanges,
   type ConsultLineState,
@@ -17,7 +18,7 @@ import {
   openableConsultation,
   pairItemOf,
 } from "@agenteschat/client/lib/consult-group";
-import { consultTimeText } from "@agenteschat/client/lib/consultations";
+import { consultSubject, consultTimeText } from "@agenteschat/client/lib/consultations";
 import { namesText } from "@agenteschat/client/lib/format";
 import type { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useQueryClient } from "@tanstack/react-query";
@@ -30,8 +31,10 @@ import { router } from "@/ui/navigation";
 import { consultationHref } from "../links/logic";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
+import { usePresenceOf } from "../status/hooks";
 import { rowBodyInset } from "./logic";
 import { useRhythm, useRowLook } from "./look";
+import { WaitMark } from "./WaitMark";
 
 /** A question's state in words, on the conversation's screen ("A Iris espera uma aprovação"). */
 export const consultLineLabel = (
@@ -139,12 +142,23 @@ export function ConsultPairRow({
   const c = useColors();
   const live = items.some((x) => x.status === "open");
   const now = useTick(live);
-  const pair = consultPair(items, now, askerId);
+  // The hand-off's run waits on me (its agent's work for me, ADR 0084 addendum): the row says so in amber, as on
+  // the web.
+  const presence = usePresenceOf();
+  const only = items.length === 1 && items[0]?.status === "open" ? items[0] : undefined;
+  const mine = only ? handoffAsk(presence.agent(only.consultedAgentId)?.work, only.consultedRunId) : null;
+  const pair = consultPair(items, now, askerId, mine);
   if (!pair) return null;
+  // Blue at work, amber when it waits on me, quiet when it waits on someone else, the warning for what went unanswered.
+  const tone =
+    pair.tone === "live" ? c.agent : pair.tone === "bad" ? c.warn : pair.tone === "you" ? c.amberInk : c.muted;
   const nameOf = (id: string) => dir.agentById.get(id)?.name ?? t("mobile.chat.someone");
   const from = nameOf(askerId);
   const names = pair.faces.map((f) => nameOf(f.agentId));
   const to = names.length === 1 ? (names[0] ?? "") : namesText(t, names, 1);
+  // What the question a tap opens is about, between the names and how it went, as on the web.
+  const opened = items.find((x) => x.id === pair.opens) ?? items[0];
+  const subject = consultSubject(opened?.question);
   // An old reply's question with no id of its own has no conversation to open.
   const opens = openableConsultation(pair.opens);
   return (
@@ -177,24 +191,45 @@ export function ConsultPairRow({
         <Text variant="footnote" tone="ink2" style={styles.name}>
           {from}
         </Text>
-        <Icon name="swap" size={13} color={pair.tone === "live" ? c.agent : c.faint} />
+        {pair.tone === "you" ? (
+          <View style={styles.mark}>
+            <WaitMark size={8} />
+          </View>
+        ) : (
+          <Icon name="swap" size={13} color={pair.tone === "live" ? c.agent : c.faint} />
+        )}
         <View style={styles.faces}>
           {pair.faces.slice(0, 3).map((f, i) => (
             <View key={f.agentId} style={[i > 0 && [styles.stacked, { borderColor: c.bg }], f.off && styles.off]}>
-              <AgentFace agentId={f.agentId} size={FACE} live={false} />
+              <AgentFace
+                agentId={f.agentId}
+                size={FACE}
+                live={false}
+                mode={pair.tone === "live" && !f.off ? "think" : "idle"}
+              />
             </View>
           ))}
         </View>
         <Text variant="footnote" tone="ink2" style={styles.name}>
           {to}
         </Text>
-        {pair.word || pair.seconds !== null ? (
+        {subject || pair.word || pair.seconds !== null ? (
+          <Text variant="footnote" tone="faint">
+            ·
+          </Text>
+        ) : null}
+        {subject ? (
+          <Text variant="footnote" tone="faint" style={styles.subject}>
+            {subject}
+          </Text>
+        ) : null}
+        {subject && (pair.word || pair.seconds !== null) ? (
           <Text variant="footnote" tone="faint">
             ·
           </Text>
         ) : null}
         {pair.word ? (
-          <Text variant="footnote" style={[styles.word, { color: pair.tone === "bad" ? c.warn : c.agent }]}>
+          <Text variant="footnote" style={[styles.word, { color: tone }]}>
             {t(pair.word.key, pair.word.values)}
           </Text>
         ) : null}
@@ -234,9 +269,12 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   name: { fontWeight: "600", flexShrink: 1 },
+  subject: { flexShrink: 1 },
   faces: { flexDirection: "row", alignItems: "center" },
   stacked: { marginLeft: -6, borderLeftWidth: 1.5, borderRadius: 6 },
   off: { opacity: 0.45 },
   word: { fontWeight: "600", flexShrink: 1 },
+  // The wait mark in the arrows' 13-point place, so the names don't move.
+  mark: { width: 13, height: 13, alignItems: "center", justifyContent: "center" },
   time: { fontVariant: ["tabular-nums"] },
 });

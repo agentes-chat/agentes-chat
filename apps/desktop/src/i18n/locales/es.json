@@ -241,7 +241,7 @@
       "start": "agentes.chat no se inició en esta {{device}}.",
       "database": "La base de datos no se preparó.",
       "account": "Tu cuenta no se creó.",
-      "retry": "Inténtalo de nuevo en Preferencias › Servidores."
+      "retry": "Reintentar en Preferencias"
     },
     "reason": {
       "https": "HTTPS está desactivado en tu red de Tailscale",
@@ -311,6 +311,7 @@
     "offline": "Sin conexión desde las {{time}}",
     "signIn": "Entrar",
     "signOut": "Cerrar sesión en este servidor",
+    "addAccount": "Añadir cuenta",
     "signedOutDone": "Cerraste sesión en {{host}}",
     "removeFromApp": "Quitar de esta app",
     "newsOne": "1 notificación nueva",
@@ -335,7 +336,6 @@
     "usageRestart": "Cambiarlo reinicia agentes.chat por un momento.",
     "jev": "Jev",
     "jevText": "Un modelo rápido de TypeSafe que elige quién responde, mantiene la memoria ordenada y permite que los agentes vean la pantalla. Opcional, con tu propia clave.",
-    "jevWhere": "En agentes.chat › Configuración › IA y uso.",
     "reachFailed": "El acceso desde tus dispositivos no se activó: {{reason}}.",
     "backup": "Hacer una copia ahora",
     "backedUp": "Copia de seguridad hecha: {{file}}",
@@ -432,7 +432,9 @@
     "linkBody": "Si no lo pediste, elige Ahora no.",
     "waiting": "Esperando a que {{by}} la deje entrar…",
     "done": "Conectada a {{org}}",
-    "expired": "Este enlace caducó. Crea uno nuevo en Configuración › Dispositivos.",
+    "addFolders": "Agregar carpetas",
+    "expired": "Este enlace caducó. Crea uno nuevo en Dispositivos.",
+    "openDevices": "Abrir Dispositivos",
     "denied": "{{by}} no la dejó entrar. No cambió nada.",
     "letOrg": "Dejar que los agentes de {{org}} usen esta {{device}}",
     "canUse": "Los agentes pueden usarla",
@@ -674,7 +676,8 @@
       "step3": "Abre el archivo descargado y arrastra el nuevo agentes.chat a Aplicaciones.",
       "installerNote": "Abre el archivo descargado: instala la versión nueva sobre la anterior.",
       "keepNote": "Tus servidores y tu configuración se mantienen.",
-      "whatsNew": "Novedades de la {{version}}"
+      "whatsNew": "Novedades de la {{version}}",
+      "systemDetails": "Detalles del sistema"
     },
     "activity": {
       "title": "Actividad",

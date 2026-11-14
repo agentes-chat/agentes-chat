@@ -254,7 +254,7 @@ export const desktopEn = {
       start: "agentes.chat didn't start on this {{device}}.",
       database: "The database wasn't prepared.",
       account: "Your account wasn't created.",
-      retry: "Try again in Preferences\u00a0›\u00a0Servers.",
+      retry: "Try again in Preferences",
     },
     reason: {
       https: "HTTPS is off on your Tailscale network",
@@ -331,6 +331,8 @@ export const desktopEn = {
     offline: "Offline since {{time}}",
     signIn: "Sign in",
     signOut: "Sign out of this server",
+    /** A server with several accounts signed in (ADR 0183): one more beside them, from its menu. */
+    addAccount: "Add account",
     signedOutDone: "You signed out of {{host}}",
     removeFromApp: "Remove from this app",
     /** The system's notification for a server not open in the window: "Oficina · agentes.exemplo.com.br". */
@@ -357,7 +359,6 @@ export const desktopEn = {
     jev: "Jev",
     jevText:
       "A fast model by TypeSafe that picks who answers, keeps memory tidy and lets agents see the screen. Optional, with your own key.",
-    jevWhere: "In agentes.chat\u00a0›\u00a0Settings\u00a0›\u00a0AI and usage.",
     reachFailed: "Access from your devices didn't turn on: {{reason}}.",
     backup: "Back up now",
     backedUp: "Backed up: {{file}}",
@@ -470,7 +471,9 @@ export const desktopEn = {
     linkBody: "If you didn't ask for this, choose Not now.",
     waiting: "Waiting for {{by}} to let it in…",
     done: "Connected to {{org}}",
-    expired: "This link expired. Make a new one under Settings\u00a0›\u00a0Devices.",
+    addFolders: "Add folders",
+    expired: "This link expired. Make a new one in Devices.",
+    openDevices: "Open Devices",
     denied: "{{by}} didn't let it in. Nothing changed.",
     /** Preferences › General › This Mac: one switch per workspace. */
     letOrg: "Let {{org}}'s agents use this {{device}}",
@@ -734,6 +737,8 @@ export const desktopEn = {
       installerNote: "Open the downloaded file: it installs the new version over the old one.",
       keepNote: "Your servers and settings stay.",
       whatsNew: "What's new in {{version}}",
+      /** Linux: how this computer draws the app (system, graphics card, renderer), one line to copy. */
+      systemDetails: "System details",
     },
     activity: {
       title: "Activity",

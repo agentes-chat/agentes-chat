@@ -238,7 +238,7 @@
       "start": "agentes.chat ist auf diesem {{device}} nicht gestartet.",
       "database": "Die Datenbank wurde nicht vorbereitet.",
       "account": "Dein Konto wurde nicht erstellt.",
-      "retry": "Versuch es noch einmal unter Einstellungen › Server."
+      "retry": "In den Einstellungen erneut versuchen"
     },
     "reason": {
       "https": "HTTPS ist in deinem Tailscale-Netzwerk aus",
@@ -307,6 +307,7 @@
     "offline": "Offline seit {{time}}",
     "signIn": "Anmelden",
     "signOut": "Von diesem Server abmelden",
+    "addAccount": "Konto hinzufügen",
     "signedOutDone": "Du hast dich von {{host}} abgemeldet",
     "removeFromApp": "Aus dieser App entfernen",
     "newsOne": "1 neue Benachrichtigung",
@@ -331,7 +332,6 @@
     "usageRestart": "Eine Änderung startet agentes.chat kurz neu.",
     "jev": "Jev",
     "jevText": "Ein schnelles Modell von TypeSafe, das entscheidet, wer antwortet, das Gedächtnis ordentlich hält und Agenten den Bildschirm sehen lässt. Optional, mit deinem eigenen Schlüssel.",
-    "jevWhere": "In agentes.chat › Einstellungen › KI und Verbrauch.",
     "reachFailed": "Der Zugriff von deinen Geräten wurde nicht eingeschaltet: {{reason}}.",
     "backup": "Jetzt sichern",
     "backedUp": "Gesichert: {{file}}",
@@ -428,7 +428,9 @@
     "linkBody": "Wenn du das nicht angefragt hast, wähle Nicht jetzt.",
     "waiting": "Warte, bis {{by}} ihn hereinlässt…",
     "done": "Mit {{org}} verbunden",
-    "expired": "Dieser Link ist abgelaufen. Erstelle unter Einstellungen › Geräte einen neuen.",
+    "addFolders": "Ordner hinzufügen",
+    "expired": "Dieser Link ist abgelaufen. Erstelle unter Geräte einen neuen.",
+    "openDevices": "Geräte öffnen",
     "denied": "{{by}} hat ihn nicht hereingelassen. Nichts hat sich geändert.",
     "letOrg": "Agenten von {{org}} diesen {{device}} nutzen lassen",
     "canUse": "Agenten können ihn nutzen",
@@ -669,7 +671,8 @@
       "step3": "Öffne die heruntergeladene Datei und zieh das neue agentes.chat in Programme.",
       "installerNote": "Öffne die heruntergeladene Datei: Sie installiert die neue Version über die alte.",
       "keepNote": "Deine Server und Einstellungen bleiben.",
-      "whatsNew": "Neu in {{version}}"
+      "whatsNew": "Neu in {{version}}",
+      "systemDetails": "Systemdetails"
     },
     "activity": {
       "title": "Aktivität",

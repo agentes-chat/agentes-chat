@@ -235,7 +235,7 @@
       "start": "agentes.chat 没有在这台 {{device}} 上启动。",
       "database": "数据库没有准备好。",
       "account": "你的账号没有创建成功。",
-      "retry": "请在“偏好设置 › 服务器”中重试。"
+      "retry": "在偏好设置中重试"
     },
     "reason": {
       "https": "你的 Tailscale 网络未开启 HTTPS",
@@ -303,6 +303,7 @@
     "offline": "自 {{time}} 起离线",
     "signIn": "登录",
     "signOut": "退出此服务器",
+    "addAccount": "添加账号",
     "signedOutDone": "你已退出 {{host}}",
     "removeFromApp": "从此应用中移除",
     "newsOne": "1 条新通知",
@@ -327,7 +328,6 @@
     "usageRestart": "更改此项会让 agentes.chat 短暂重启。",
     "jev": "Jev",
     "jevText": "TypeSafe 推出的快速模型，负责决定由谁回答、整理记忆，并让智能体看到屏幕。可选，需使用你自己的密钥。",
-    "jevWhere": "在 agentes.chat › 设置 › AI 和用量中。",
     "reachFailed": "从你的设备访问未能开启：{{reason}}。",
     "backup": "立即备份",
     "backedUp": "已备份：{{file}}",
@@ -424,7 +424,9 @@
     "linkBody": "如果不是你发起的请求，请选择“以后再说”。",
     "waiting": "正在等待 {{by}} 允许加入…",
     "done": "已连接到 {{org}}",
-    "expired": "此链接已过期。请在“设置 › 设备”中新建一个。",
+    "addFolders": "添加文件夹",
+    "expired": "此链接已过期。请在“设备”中新建一个。",
+    "openDevices": "打开设备",
     "denied": "{{by}} 没有允许加入。什么都没有改变。",
     "letOrg": "允许 {{org}} 的智能体使用这台 {{device}}",
     "canUse": "智能体可以使用",
@@ -664,7 +666,8 @@
       "step3": "打开下载的文件，把新的 agentes.chat 拖到“应用程序”中。",
       "installerNote": "打开下载的文件：它会用新版本覆盖旧版本。",
       "keepNote": "你的服务器和设置都会保留。",
-      "whatsNew": "{{version}} 的新功能"
+      "whatsNew": "{{version}} 的新功能",
+      "systemDetails": "系统详情"
     },
     "activity": {
       "title": "动态",

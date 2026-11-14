@@ -238,7 +238,7 @@
       "start": "agentes.chat bu {{device}} üzerinde başlamadı.",
       "database": "Veritabanı hazırlanamadı.",
       "account": "Hesabınız oluşturulamadı.",
-      "retry": "Tercihler › Sunucular bölümünden tekrar deneyin."
+      "retry": "Tercihler'de tekrar dene"
     },
     "reason": {
       "https": "Tailscale ağınızda HTTPS kapalı",
@@ -307,6 +307,7 @@
     "offline": "{{time}} saatinden beri çevrim dışı",
     "signIn": "Giriş yap",
     "signOut": "Bu sunucudan çıkış yap",
+    "addAccount": "Hesap ekle",
     "signedOutDone": "{{host}} sunucusundan çıkış yaptın",
     "removeFromApp": "Bu uygulamadan kaldır",
     "newsOne": "1 yeni bildirim",
@@ -331,7 +332,6 @@
     "usageRestart": "Değiştirmek agentes.chat'i kısa bir süre yeniden başlatır.",
     "jev": "Jev",
     "jevText": "TypeSafe'in hızlı bir modeli: kimin yanıt vereceğini seçer, belleği düzenli tutar ve ajanların ekranı görmesini sağlar. İsteğe bağlı, kendi anahtarınızla.",
-    "jevWhere": "agentes.chat › Ayarlar › Yapay zeka ve kullanım bölümünde.",
     "reachFailed": "Cihazlarınızdan erişim açılmadı: {{reason}}.",
     "backup": "Şimdi yedekle",
     "backedUp": "Yedeklendi: {{file}}",
@@ -428,7 +428,9 @@
     "linkBody": "Bunu sen istemediysen Şimdi değil seçeneğini seç.",
     "waiting": "{{by}} kişisinin içeri almasını bekliyor…",
     "done": "{{org}} ile bağlandı",
-    "expired": "Bu bağlantının süresi doldu. Ayarlar › Cihazlar bölümünde yenisini oluştur.",
+    "addFolders": "Klasör ekle",
+    "expired": "Bu bağlantının süresi doldu. Cihazlar bölümünde yenisini oluştur.",
+    "openDevices": "Cihazları aç",
     "denied": "{{by}} içeri almadı. Hiçbir şey değişmedi.",
     "letOrg": "{{org}} ajanları bu {{device}} cihazını kullanabilsin",
     "canUse": "Ajanlar kullanabilir",
@@ -669,7 +671,8 @@
       "step3": "İndirilen dosyayı açın ve yeni agentes.chat'i Uygulamalar'a sürükleyin.",
       "installerNote": "İndirilen dosyayı açın: yeni sürümü eskisinin yerine yükler.",
       "keepNote": "Sunucularınız ve ayarlarınız korunur.",
-      "whatsNew": "{{version}} sürümündeki yenilikler"
+      "whatsNew": "{{version}} sürümündeki yenilikler",
+      "systemDetails": "Sistem ayrıntıları"
     },
     "activity": {
       "title": "Etkinlik",

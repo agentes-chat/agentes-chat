@@ -7,7 +7,7 @@
   `push-relay.ts` (iPhone messages), `push.ts` (`PushMessage.apns`); `packages/config/src/schema.ts` (`APNS_KEY`,
   `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_APP_IDS`, `PUSH_SENDER`); `packages/engine/src/push.ts` (`APNS_PUSH_TOKEN`,
   `PushDeviceInput.appId` and `sandbox`), `push-relay.ts` (`relayMessage`); `packages/db/src/schema/push.ts`
-  (`push_devices.app_id`, `apns_sandbox`, migration 0263); `apps/server/src/push-senders.ts`, `start.ts`, `app.ts`,
+  (`push_devices.app_id`, `apns_sandbox`, migration 0272); `apps/server/src/push-senders.ts`, `start.ts`, `app.ts`,
   `routes/app/push.ts`; `apps/mobile/src/lib/push.ts` (`getDevicePushTokenAsync` on both platforms,
   `provisioningProfile`), `push-payload.ts` (`pushTarget`, `readProfile`)
 
@@ -64,7 +64,9 @@ server must not need that key for its people to get pushes.
    their shape, and its APNs sender refuses a bundle id that isn't one of its own. A server that runs the relay
    (`PUSH_RELAY_SERVE`) serves the platforms it has credentials for, and answers the others' messages as skipped, so
    the calling server keeps those devices. One relay sender serves both platforms on the calling server, so it
-   registers there once.
+   registers there once. The server whose own address is the relay's (`PUBLIC_URL` and `PUSH_RELAY_URL` on one host)
+   sends nothing for a platform it has no credentials for, instead of calling itself: it runs without the Apple key,
+   keeps the iPhones that register, and pushes them once the key is set.
 8. **Nothing goes to Expo.** The app stops asking for an Expo push token and turns off expo-notifications' own
    upload of the device token to Expo's servers. An Expo token registered by an older build answers as gone on its
    next push and is deleted; the route takes an APNs device token for `ios` and refuses anything else.

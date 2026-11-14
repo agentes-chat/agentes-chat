@@ -380,6 +380,12 @@ describe("no AI connected: above the composer", () => {
         .getAttribute("aria-pressed"),
     ).toBe("true");
     expect(within(whom).getByRole("button", { name: /^Ada/ }).getAttribute("aria-pressed")).toBe("false");
+    // Each card is its title and an ⓘ, no line under it: whom it covers is the card's description, one per line.
+    expect(whom.querySelectorAll(".ac-option__desc")).toHaveLength(0);
+    expect(whom.querySelectorAll(".ac-hint")).toHaveLength(2);
+    const [all, ada] = within(whom).getAllByRole("button");
+    expect(all?.getAttribute("aria-description")).toBe("Ada · Dev\nAtlas · Ops");
+    expect(ada?.getAttribute("aria-description")).toBe("Dev");
     for (const name of ["Claude", "ChatGPT", "Outro plano", "Começar grátis"])
       expect(within(team).getByRole("button", { name: new RegExp(`^${name}`) })).toBeTruthy();
     cleanup();
@@ -419,7 +425,11 @@ describe("no AI connected: above the composer", () => {
     const box = screen().getByRole("dialog");
     const whom = within(box).getByRole("group", { name: "Agentes que usam este plano" });
     // The conversation's agent leads, the right hand isn't one of them.
-    expect(within(whom).getByRole("button", { name: /^Todos os agentes/ }).textContent).toContain("Atlas e Ada");
+    expect(
+      within(whom)
+        .getByRole("button", { name: /^Todos os agentes/ })
+        .getAttribute("aria-description"),
+    ).toBe("Atlas · Ops\nAda · Dev");
     await click(within(box).getByRole("button", { name: /^Claude/ }), 8);
     // The plan's panel signs in for both, one at a time, the conversation's agent first: whose turn in words, their
     // faces in order, and the sign-in as the dialog's own action.
@@ -520,7 +530,13 @@ describe("the agent's no-AI card", () => {
       apiKey: "[redacted]",
     });
     expect(calls(state, "chat.answerNow").map((c) => c.args)).toEqual([[ORG_ID, "m-noai"]]);
-    expect(add.textContent).toContain("Salva. Todo agente sem plano pensa com ela.");
+    // Opened for Ada: the key goes on her, and the line says so.
+    expect(calls(state, "agents.update").at(-1)?.args).toEqual([
+      ORG_ID,
+      ADA_ID,
+      { credentialId: state.credentials.at(-1)?.id, model: "auto" },
+    ]);
+    expect(add.textContent).toContain("Salva. Ada agora pensa com OpenAI.");
     await click(within(add).getByRole("button", { name: "Pronto" }));
     expect(cardRow().textContent).toContain("Ada está respondendo…");
   });
@@ -986,6 +1002,42 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     expect(calls(state, "agents.update").map((c) => c.args)).toEqual([[ORG_ID, ADA_ID, { credentialId: "cred-1" }]]);
     expect(box.textContent).toContain("Ada agora pensa com Claude da Acme.");
     expect(within(box).queryByRole("switch", { name: "Atende outras pessoas" })).toBeNull();
+  });
+
+  test("an endpoint's key whose models never passed: the real cause and Testar modelos, never a toast that something didn't answer", async () => {
+    const state = onClaudeCode(walters(withCard(), ADA_ID));
+    state.credentials = [
+      {
+        id: "cred-cc",
+        provider: "custom",
+        label: "Gateway Sul",
+        keyHint: "x7Qp",
+        endpoint: { style: "openai", baseURL: "https://api.example.com/v1", models: [{ id: "deep-flash" }] },
+        createdAt: NOW.toISOString(),
+        revokedAt: null,
+      },
+    ];
+    const { api, box } = await connectAda(state, { brain: "claude_code" });
+    // The list names the endpoint's host, never the raw id "custom".
+    expect(shownText(haveRow(box, "Gateway Sul"))).toBe("Gateway Sulapi.example.com · termina em x7Qp");
+    api.agents.checkCredential = async () => ({ check: "unchecked" });
+    await useHave(box, "Gateway Sul");
+    expect(calls(state, "agents.update").map((c) => c.args)).toEqual([
+      [ORG_ID, ADA_ID, { credentialId: "cred-cc", model: "custom:cred-cc:deep-flash" }],
+    ]);
+    expect(document.querySelector(".ac-toast")).toBeNull();
+    expect(box.textContent).toContain("Nenhum modelo do Gateway Sul passou no teste ainda.");
+    expect(box.textContent).not.toContain("agora pensa com");
+    await click(within(box).getByRole("button", { name: "Testar modelos" }));
+    const models = dialog("Modelos de Gateway Sul") as HTMLElement;
+    await click(within(models).getByRole("button", { name: "Salvar e testar de novo" }), 6);
+    expect(calls(state, "agents.setEndpointModels").map((c) => c.args)).toEqual([
+      [ORG_ID, "cred-cc", [{ id: "deep-flash" }]],
+    ]);
+    await click(within(models).getByRole("button", { name: "Concluir" }), 6);
+    // The model answered its test: she thinks with the key, said plainly.
+    expect(box.textContent).toContain("Ada agora pensa com Gateway Sul.");
+    expect(box.textContent).not.toContain("Nenhum modelo");
   });
 
   test("a stored key out of credit: the provider's reason and the page that fixes it, and she doesn't move to it", async () => {

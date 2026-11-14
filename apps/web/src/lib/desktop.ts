@@ -10,7 +10,8 @@ import type { DesktopServerWorkspaces } from "./workspaces";
 
 /**
  * The site inside the agentes.chat desktop app (ADR 0036, ADR 0066): the app's main window loads it and
- * sets `window.__agentesDesktop` before it starts. The site gets nothing of the computer; it draws its own
+ * sets `window.__agentesDesktop` before it starts. The site gets nothing of the computer but how it draws
+ * (`renderer`, and on Linux `system`: distribution, session, WebKitGTK, graphics card). It draws its own
  * title bar and sends Google/Apple sign-in to the browser (`apps/desktop/src-tauri/src/main_window.rs`).
  */
 export const inDesktopApp = () =>
@@ -23,6 +24,30 @@ export function desktopPlatform(): DesktopPlatform | null {
   if (!inDesktopApp()) return null;
   const platform = (window as { __agentesDesktop?: { platform?: unknown } }).__agentesDesktop?.platform;
   return platform === "windows" || platform === "linux" ? platform : "mac";
+}
+
+/**
+ * How the app's window paints: "cpu" when every frame is drawn in software (Linux's WebKitGTK without its graphics
+ * card path). Apps from before say nothing, and on Linux they always painted on the CPU.
+ */
+export function desktopRenderer(): "gpu" | "cpu" | null {
+  const platform = desktopPlatform();
+  if (!platform) return null;
+  const renderer = (window as { __agentesDesktop?: { renderer?: unknown } }).__agentesDesktop?.renderer;
+  if (renderer === "gpu" || renderer === "cpu") return renderer;
+  return platform === "linux" ? "cpu" : "gpu";
+}
+
+/** How the desktop app draws on this computer, for the error reports' tags (`desktop_*`); nothing outside the app. */
+export function desktopReportTags(): Record<string, string> {
+  const renderer = desktopRenderer();
+  if (!renderer) return {};
+  const system = (window as { __agentesDesktop?: { system?: unknown } }).__agentesDesktop?.system;
+  const tags: Record<string, string> = { desktop_renderer: renderer };
+  if (system && typeof system === "object")
+    for (const [key, value] of Object.entries(system))
+      if (typeof value === "string" && value) tags[`desktop_${key}`] = value;
+  return tags;
 }
 
 /**
@@ -162,7 +187,7 @@ export const browserSignInUrl = (provider: SignInProvider, requestId: string, ac
  * What the site may ask of this computer (ADR 0036, `this_mac` in main_window.rs): which of this server's
  * organizations it works for, pairing it with one (the app asks the person in its own dialog first; the site
  * then confirms the runner's code with its own session), reconnecting it, the app's Preferences on a tab, its
- * access requests, the badge and notifications. Nothing else reaches the computer.
+ * access requests, the badge, notifications and the app's icon (ADR 0179). Nothing else reaches the computer.
  */
 export interface ThisMacStatus {
   orgs: { orgId: string; machineId: string | null; connection: string }[];
@@ -214,6 +239,9 @@ export function routeNewWindowLinks(root: HTMLElement): () => void {
   return () => root.removeEventListener("click", onClick);
 }
 
+/** The app's Preferences tabs a page may open (`answerThisMac` in apps/desktop control/this-mac.ts). */
+export type PrefsTab = "folders" | "tools" | "updates" | "servers";
+
 export const thisMac = {
   status: () => invoke<ThisMacStatus>({ kind: "status" }),
   /**
@@ -224,11 +252,22 @@ export const thisMac = {
     invoke<{ userCode: string | null }>({ kind: "connect", orgId, ...(orgName ? { orgName } : {}) }),
   /** The socket again (this Mac went offline for `orgId`). */
   reconnect: (orgId: string) => invoke<unknown>({ kind: "reconnect", orgId }),
-  openPrefs: (tab: "folders" | "tools" | "updates") => invoke<unknown>({ kind: "prefs", tab }),
+  openPrefs: (tab: PrefsTab) => invoke<unknown>({ kind: "prefs", tab }),
   /** The menu bar's popover, where access requests are answered. */
   showRequests: () => invoke<unknown>({ kind: "requests" }),
   /** System Settings on the microphone's list (a voice message macOS refused); an older app refuses it. */
   openMicrophoneSettings: () => invoke<unknown>({ kind: "privacy", pane: "microphone" }),
+  /** System Settings on the Local Network list (Wi-Fi pairing found no phone); an older app refuses it. */
+  openLocalNetworkSettings: () => invoke<unknown>({ kind: "privacy", pane: "network" }),
+  /**
+   * The app icon on this computer (ADR 0179): one of the app's ids, or an agent with the Dock's and the windows'
+   * pictures drawn here (PNG in base64); the app keeps and shows it, and answers the one kept (nothing asked: reads it).
+   */
+  appIcon: (
+    pick?:
+      | { icon: string }
+      | { agent: { orgId: string; id: string; name: string; look: object; dock: string; window: string } },
+  ) => invoke<{ icon?: string; agent?: unknown }>({ kind: "appIcon", ...pick }),
   /** The Dock's badge: how many wait on the person, and unread (a dot when nothing waits). */
   badge: (waiting: number, unread: number) => invoke<unknown>({ kind: "badge", waiting, unread }),
   /** The Mac's Go menu: the person's organizations (⌘⌥1–9). */
@@ -250,8 +289,12 @@ export const thisMac = {
   revealFiles: () => invoke<unknown>({ kind: "files" }),
   /** The other servers' workspaces, as the app read them with each one's session (ADR 0154). */
   workspaces: () => invoke<{ servers: DesktopServerWorkspaces[] }>({ kind: "workspaces" }).then((r) => r.servers),
-  /** The window goes to a workspace of another server of the app's list, already signed in there. */
-  openWorkspace: (server: string, orgId: string) => invoke<unknown>({ kind: "openWorkspace", server, orgId }),
+  /**
+   * The window goes to a workspace of another server of the app's list, already signed in there. `account`: which of
+   * that server's accounts it belongs to, when the app read several (ADR 0183).
+   */
+  openWorkspace: (server: string, orgId: string, account?: string) =>
+    invoke<unknown>({ kind: "openWorkspace", server, orgId, ...(account ? { account } : {}) }),
   /** The app's own window to add a workspace: a new one on agentes.chat, or the team's server. */
   addWorkspace: () => invoke<unknown>({ kind: "addWorkspace" }),
   /**
@@ -268,6 +311,10 @@ export const desktopListsWorkspaces = () =>
 /** The app takes `otherServer` (`servers` in `window.__agentesDesktop`); older apps refuse it. */
 export const desktopPicksServer = () =>
   inDesktopApp() && (window as { __agentesDesktop?: { servers?: unknown } }).__agentesDesktop?.servers === true;
+
+/** The app keeps the person's app icon (`appIcon` in `window.__agentesDesktop`, ADR 0179); older apps refuse it. */
+export const desktopPicksAppIcon = () =>
+  inDesktopApp() && (window as { __agentesDesktop?: { appIcon?: unknown } }).__agentesDesktop?.appIcon === true;
 
 /** The app takes `revealFiles` (`files` in `window.__agentesDesktop`); older apps refuse it. */
 export const desktopRevealsFiles = () =>

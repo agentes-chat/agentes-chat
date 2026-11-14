@@ -23,17 +23,20 @@ import { computerEdition } from "@agenteschat/client/lib/computer";
 import { settingsFrozen } from "@agenteschat/client/lib/deletion";
 import { CUSTOM_PROVIDER } from "@agenteschat/client/lib/endpoints";
 import { errorText, keyRefusal } from "@agenteschat/client/lib/errors";
+import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { formatShortDate, formatUsd, relativeTime } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey, settingsSectionTextKey } from "@agenteschat/client/lib/personal-view";
 import {
   keyLooksValid,
+  keyName,
   keyNamedAfterProvider,
   type ProviderId,
   providerGuess,
   providerLabel,
   providerOf,
 } from "@agenteschat/client/lib/providers";
+import type { RoleTab } from "@agenteschat/client/lib/roles";
 import { settingsNav, settingsTabs } from "@agenteschat/client/lib/settings-nav";
 import { parseAmount } from "@agenteschat/client/lib/text";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -53,6 +56,7 @@ import {
   Input,
   List,
   Locked,
+  overLimit,
   PageHeader,
   ProviderLogo,
   SettingNote,
@@ -94,6 +98,7 @@ import { RolesSection } from "@/components/roles/RolesSection";
 import { SkillsSection } from "@/components/Skills";
 import { StorageSection } from "@/components/StorageSettings";
 import { TeamMemoryCard } from "@/components/TeamMemory";
+import { OpenPrefsButton, useLocalServerHere } from "@/components/ThisMac";
 import { VoiceSettingsSection } from "@/components/VoiceSettings";
 import { VaultSection } from "@/components/vault/VaultSection";
 import { WorkspaceModeDialog } from "@/components/WorkspaceModeDialog";
@@ -101,6 +106,7 @@ import { ZoneSelect } from "@/components/ZoneSelect";
 import { useCentreCurrent } from "@/hooks/useCentreCurrent";
 import { usePersonalView } from "@/hooks/usePersonalView";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { MembersPage } from "./MembersPage";
@@ -134,6 +140,9 @@ function Settings({
   skill,
   agent,
   person,
+  role,
+  tab,
+  create,
 }: {
   /** The section a link names; none (`/settings`): Geral for who opens it, else their first one. */
   section?: SettingsSection;
@@ -156,6 +165,11 @@ function Settings({
   agent?: string;
   /** Orçamento e uso › Pessoas: the person whose month opens (a limit's notice). */
   person?: string;
+  /** Cargos › one cargo (its id, `everyone` or `owner`) and its tab (`/settings/roles/{role}?tab=`). */
+  role?: string;
+  tab?: RoleTab;
+  /** Cargos, with Criar cargo open (⌘K's "Criar cargo"). */
+  create?: boolean;
 }) {
   const { t } = useTranslation();
   const { org } = useOrg();
@@ -243,7 +257,7 @@ function Settings({
       {current === "apps" && <AiAppsSection />}
       {current === "general" && <GeneralSection />}
       {current === "members" && <MembersPage embedded />}
-      {current === "roles" && <RolesSection />}
+      {current === "roles" && <RolesSection roleId={role} tab={tab} create={create} />}
       {current === "vault" && <VaultSection />}
       {current === "audit" && <AuditSection agent={agent} />}
       {current === "media" && <MediaSettingsSection />}
@@ -400,6 +414,7 @@ function GeneralSection() {
   const contextTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const savedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const contextRef = useRef<HTMLTextAreaElement>(null);
+  const contextLimit = useTextLimit(FIELD_LIMITS.workspaceContext);
   // Filled once per org: a refetch after a save must not undo what is being typed.
   useEffect(() => {
     if (!settings.data || loaded.current === org.id) return;
@@ -437,11 +452,12 @@ function GeneralSection() {
   const changeContext = (value: string) => {
     setContext(value);
     clearTimeout(contextTimer.current);
+    if (overLimit(value, contextLimit)) return;
     contextTimer.current = setTimeout(() => save({ context: value }), 800);
   };
   const flushContext = () => {
     clearTimeout(contextTimer.current);
-    if (settings.data && context !== settings.data.context) save({ context });
+    if (settings.data && context !== settings.data.context && !overLimit(context, contextLimit)) save({ context });
   };
   const addIdea = (label: string) => {
     const value = `${context.replace(/\s*$/, "")}${context.trim() ? "\n\n" : ""}${label}: `;
@@ -591,7 +607,7 @@ function GeneralSection() {
       <Textarea
         ref={contextRef}
         rows={7}
-        maxLength={20_000}
+        limit={contextLimit}
         value={context}
         onChange={(e) => changeContext(e.target.value)}
         onBlur={flushContext}
@@ -684,8 +700,11 @@ function UsageStatisticsCard() {
   const telemetry = useServerTelemetry();
   const set = useSetServerTelemetry();
   const [open, setOpen] = useState(false);
+  const here = useLocalServerHere();
   const data = telemetry.data;
   if (!data) return null;
+  // Switched off in the app that runs this server: on that very computer, its Preferences › Servers one click away.
+  const inApp = data.envOff && data.report.install === "desktop" && here;
   return (
     <Card aria-labelledby="sec-telemetry">
       <CardHeader
@@ -715,12 +734,21 @@ function UsageStatisticsCard() {
                 {t("settings.telemetry.help")}
               </InfoHint>
             </span>
-            {data.envOff && (
-              <span className="settings-row__status" id="set-telemetry-help">
-                {t(
-                  data.report.install === "desktop" ? "settings.telemetry.envOffDesktop" : "settings.telemetry.envOff",
-                )}
+            {inApp ? (
+              <span className="settings-row__status ac-actline">
+                <span id="set-telemetry-help">{t("settings.telemetry.envOffHere")}</span>
+                <OpenPrefsButton tab="servers">{t("machines.thisMac.openServers")}</OpenPrefsButton>
               </span>
+            ) : (
+              data.envOff && (
+                <span className="settings-row__status" id="set-telemetry-help">
+                  {t(
+                    data.report.install === "desktop"
+                      ? "settings.telemetry.envOffDesktop"
+                      : "settings.telemetry.envOff",
+                  )}
+                </span>
+              )
             )}
           </div>
           <div className="settings-row__control">
@@ -951,7 +979,7 @@ export function KeyDialog({
   };
   const unchecked = (saved: Credential) => {
     if (saved.check === "unchecked")
-      toast.show(t("connectAi.key.savedUnchecked", { provider: providerLabel(saved.provider) }), "info");
+      toast.show(t("connectAi.key.savedUnchecked", { provider: keyName(saved) }), "info");
   };
   const [label, setLabel] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -970,10 +998,14 @@ export function KeyDialog({
     setTouched(false);
     setRefused(null);
   }, [mode, cred]);
-  const valid = keyLooksValid(provider, apiKey);
+  // An endpoint's key (ADR 0146) has no published format: the server's 8-character floor is the whole check.
+  const endpointKey = cred?.provider === CUSTOM_PROVIDER;
+  const valid = endpointKey ? apiKey.trim().length >= 8 : keyLooksValid(provider, apiKey);
   const error =
     !touched || valid ? undefined : mode === "add" ? (
       <KeyMismatch provider={provider} apiKey={apiKey} onPick={setProvider} />
+    ) : endpointKey ? (
+      t("settings.keyInvalid")
     ) : (
       t(`onboarding.keyInvalid.${provider}`)
     );
@@ -1068,12 +1100,12 @@ export function KeyDialog({
                 label={t("settings.keyValue")}
                 id="key-value-set"
                 error={error}
-                example={<KeySite provider={provider} />}
+                example={endpointKey ? undefined : <KeySite provider={provider} />}
               >
                 <Input
                   type="password"
                   autoComplete="off"
-                  placeholder={providerOf(provider)?.placeholder}
+                  placeholder={endpointKey ? undefined : providerOf(provider)?.placeholder}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                 />

@@ -8,6 +8,8 @@ export type PushData = Partial<Record<(typeof FIELDS)[number], string>>;
 const FIELDS = [
   // The server it came from (ADR 0154): a phone signed in to several opens it there.
   "server",
+  // Whose it is (ADR 0183): a phone signed in to that server with several accounts opens it as theirs.
+  "user",
   "orgId",
   "kind",
   "notificationId",
@@ -67,13 +69,18 @@ export function createHolder<T extends object>() {
   };
 }
 
-/** What a phone registers for pushes: its token, and on an iPhone its app and Apple's environment (ADR 0178). */
+/**
+ * What a phone registers for pushes: its token, and on an iPhone its app and Apple's environment (ADR 0178).
+ * `sharedWith`: the other accounts this phone is signed in to on that server, by id (ADR 0183): they keep hearing
+ * pushes on this token too.
+ */
 export interface DeviceRegistration {
   token: string;
   platform: string;
   locale: string;
   appId?: string | null;
   sandbox?: boolean;
+  sharedWith?: readonly string[];
 }
 
 /** The body of `POST /api/app/push/devices`. */
@@ -83,14 +90,17 @@ export function deviceBody(r: DeviceRegistration): {
   locale: string;
   appId?: string;
   sandbox?: true;
+  sharedWith?: string[];
 } {
-  if (r.platform !== "ios") return { token: r.token, platform: "android", locale: r.locale };
+  const shared = r.sharedWith?.length ? { sharedWith: r.sharedWith.slice(0, 8) } : {};
+  if (r.platform !== "ios") return { token: r.token, platform: "android", locale: r.locale, ...shared };
   return {
     token: r.token,
     platform: "ios",
     locale: r.locale,
     ...(r.appId ? { appId: r.appId } : {}),
     ...(r.sandbox ? { sandbox: true as const } : {}),
+    ...shared,
   };
 }
 

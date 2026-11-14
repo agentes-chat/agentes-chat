@@ -58,7 +58,8 @@ import {
 import { linePrompt } from "./reporting";
 import { wikiPersonOf } from "./requester";
 import { isRightHand } from "./right-hand";
-import { RIGHT_HAND_TOOLS, rightHandPrompt } from "./right-hand-prompt";
+import { rightHandPrompt, rightHandTools } from "./right-hand-prompt";
+import { seatState } from "./right-hand-seats";
 import { isRoutineRoomKey, type RoutineBrief, routineAccessOf, routineBriefOf, routineReportOf } from "./routine-brief";
 import { WEBHOOK_EVENT, webhookEventText } from "./routine-hooks";
 import { heldHere } from "./run-inbox";
@@ -1011,7 +1012,13 @@ export async function buildRunContext(
     isRightHand(agent) && requester
       ? await rightHandPrompt(
           { db, ai: options.ai, workspaceComputer: options.workspaceComputer },
-          { orgId: run.orgId, agent, personId: requester, inDm: channel.kind === "dm" },
+          {
+            orgId: run.orgId,
+            agent,
+            personId: requester,
+            inDm: channel.kind === "dm",
+            computer: await seatState(db, run),
+          },
         )
       : null;
   // Most stable first, so prompt-cache prefixes are shared: the rules are the same for every agent with the same
@@ -1092,7 +1099,7 @@ export async function buildRunContext(
           `You are ${agent.name} (@${agent.handle})${agent.role ? `, ${agent.role}` : ""}, ${personal ? "one of this person's AI agents" : "an AI agent of this organization"}.`,
           agent.instructions.trim() ? `# Your instructions\n${agent.instructions.trim()}` : "",
           // The right hand with nobody behind the run (another agent's message) still keeps to its tools.
-          isRightHand(agent) ? RIGHT_HAND_TOOLS : "",
+          isRightHand(agent) ? rightHandTools(await seatState(db, run)) : "",
         ]
           .filter(Boolean)
           .join("\n\n"),
@@ -1223,10 +1230,10 @@ export async function buildRunContext(
         : agentsDm
           ? [
               "# Where you are",
-              `A private conversation between agents: ${memberList}. Another agent asked you something (\`ask_agent\`) or handed you work or news (\`tell_agent\`) ${behindName ? `for ${behindName}` : "on its own, for no person"}. Your last message is your answer: it goes back to that agent, which tells the people, and no person reads this conversation. Never also answer the people yourself where they asked. You see only the exchanges here made for ${behindName ?? "no person"}.`,
+              `A private conversation between agents: ${memberList}. Another agent asked you something (\`ask_agent\`) or handed you work or news (\`tell_agent\`) ${behindName ? `for ${behindName}` : "on its own, for no person"}. Your last message is your answer: it goes back up to that agent, and on to ${behindName ?? "the people"}. No person reads this conversation. Don't also answer where ${behindName ?? "they"} asked, and never ask another agent to pass something on to a person.${asksBehind ? ` When ${behindName} should hear something from you directly, \`send_dm\` reaches them, even unasked.` : ""} You see only the exchanges here made for ${behindName ?? "no person"}.`,
               "- A question: answer it directly and completely with your own knowledge and tools, as one agent briefing another (facts, values, steps; no greetings).",
               "- Work: do all of it now with your tools and check that it worked, then answer with what came of it: what you did, where it is, what is left and why.",
-              "- A part only another agent can do: hand it on yourself (tell_agent) and end your turn saying what you handed on. What comes of it goes back with your answer.",
+              "- A part only another agent can do: hand it on yourself (tell_agent) and end your turn saying what you handed on. What comes of it goes back with your answer. News for an agent outside this request goes with `heads_up: true`: your answer then neither waits for it nor carries its reply.",
               "- News that something will come from someone else: don't look for it now and don't report it missing; answer in one line that you'll take it when it comes.",
               behindName
                 ? `- Before saying something is missing (a destination, an approval), check your rules and your conversations with ${behindName} (\`search_context\`). Still missing: ${asksBehind ? `ask ${behindName} with \`ask_user\`, saying` : "say in your answer"} exactly what; never ask the other agent back or blame it.`
