@@ -224,6 +224,92 @@ async function reportRun(
   };
 }
 
+/** A teammate agent in #general, for the routine's agent to ask. */
+async function teammate(fx: Fixture, handle = "qa") {
+  const agent = await createAgent(
+    fx.db,
+    fx.owner.id,
+    fx.org.id,
+    { name: handle.toUpperCase(), handle, credentialId: fx.credential.id },
+    { model: "claude-sonnet-5-5" },
+  );
+  await addChannelMember(fx.db, fx.owner.id, fx.org.id, fx.general.id, { agentId: agent.id });
+  return agent;
+}
+
+/**
+ * A question run `askerRunId` asked `targetAgentId` (`ask_agent`), answered, and the `consult_reply` notice its
+ * answer posts back for the asker's agent.
+ */
+async function answerNotice(fx: Fixture, askerRunId: string, targetAgentId: string) {
+  const answer = "Sim, o deploy de ontem quebrou o checkout.";
+  const [consultation] = await fx.db
+    .insert(schema.agentConsultations)
+    .values({
+      orgId: fx.org.id,
+      askerRunId,
+      askerAgentId: fx.agent.id,
+      targetAgentId,
+      channelId: fx.general.id,
+      messageId: crypto.randomUUID(),
+      waitId: crypto.randomUUID(),
+      question: "O erro do checkout é do deploy de ontem?",
+      chain: [fx.agent.id],
+      status: "answered",
+      answer,
+      answeredAt: new Date(),
+      expiresAt: new Date(Date.now() + 600_000),
+    })
+    .returning();
+  if (!consultation) throw new Error("no consultation");
+  return insertMessage(fx.db, {
+    orgId: fx.org.id,
+    channelId: fx.general.id,
+    author: { type: "agent", agentId: fx.agent.id, runId: null, hop: 0, stretchId: null },
+    body: answer,
+    meta: {
+      notice: {
+        kind: "consult_reply",
+        text: answer,
+        from: "@qa",
+        refs: { consultationId: consultation.id, runId: askerRunId },
+      },
+    },
+  });
+}
+
+/** The run the routine's agent starts on a teammate's answer (it never waits for one: the answer wakes it). */
+async function answerRun(fx: Fixture, askerRunId: string, targetAgentId: string): Promise<ToolContext> {
+  const msg = await answerNotice(fx, askerRunId, targetAgentId);
+  const [run] = await fx.db
+    .insert(schema.agentRuns)
+    .values({
+      orgId: fx.org.id,
+      agentId: fx.agent.id,
+      channelId: fx.general.id,
+      threadRootId: msg.id,
+      triggerMessageId: msg.id,
+      trigger: "mention",
+      hop: 1,
+      status: "running",
+    })
+    .returning();
+  if (!run) throw new Error("no run");
+  return {
+    db: fx.db,
+    orgId: fx.org.id,
+    agentId: fx.agent.id,
+    runId: run.id,
+    channelId: fx.general.id,
+    threadRootId: msg.id,
+    triggerMessageId: msg.id,
+  };
+}
+
+/** Records that `run` read `messageId` after its trigger, as the executor does when a message joins it. */
+const readJoined = (fx: Fixture, run: ToolContext, messageId: string) =>
+  addRunStep(fx.db, { id: run.runId, orgId: fx.org.id }, "context", { steeredMessageIds: [messageId] });
+
 const exec = (...slugs: string[]) => ({
   tools: slugs.map((tool_slug) => ({ tool_slug, arguments: { channel: "#time", text: "Resumo" } })),
   sync_response_to_workbench: false,
@@ -355,6 +441,106 @@ describe("a routine's own job (routines.own_actions)", () => {
     // Level `always`: the report's own run asks too.
     await f.db.update(schema.agents).set({ approvalsLevel: "always" }).where(eq(schema.agents.id, f.agent.id));
     asked(await invoke(gateway, await reportRun(f, routine.runId), EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }));
+    expect(mcp.calls).toEqual([]);
+  });
+
+  test("a teammate's answer to the routine's question wakes a run that does its own actions, and asks for the rest", async () => {
+    f = await setup();
+    const qa = await teammate(f);
+    const { mcp, gateway } = await world(f);
+    const { id } = await created(gateway, ["SLACK_SEND_MESSAGE"]);
+    const routine = await routineRun(f, id);
+    // The routine's run asked @qa and ended; the answer woke the agent in the routine's conversation.
+    const run = await answerRun(f, routine.runId, qa.id);
+    expect(answered(await invoke(gateway, run, EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY })).isError).toBeFalsy();
+    expect(mcp.calls.map((c) => c.args)).toEqual([exec("SLACK_SEND_MESSAGE")]);
+    expect(await f.db.select().from(schema.approvals)).toEqual([]);
+    asked(await invoke(gateway, run, EXEC, { ...exec("GMAIL_SEND_EMAIL"), why: WHY }));
+    asked(await invoke(gateway, run, EXEC, { ...exec("SLACK_SEND_MESSAGE", "GITHUB_CREATE_AN_ISSUE"), why: WHY }));
+    expect(mcp.calls).toHaveLength(1);
+    // The same job goes on: an answer to that run's own question, or to the question of the run the report woke.
+    const again = await answerRun(f, run.runId, qa.id);
+    expect(answered(await invoke(gateway, again, EXEC, exec("SLACK_SEND_MESSAGE"))).isError).toBeFalsy();
+    const report = await reportRun(f, routine.runId);
+    const fromReport = await answerRun(f, report.runId, qa.id);
+    expect(answered(await invoke(gateway, fromReport, EXEC, exec("SLACK_SEND_MESSAGE"))).isError).toBeFalsy();
+    expect(mcp.calls).toHaveLength(3);
+    // At "Sempre perguntar" it asks.
+    await f.db.update(schema.agents).set({ approvalsLevel: "always" }).where(eq(schema.agents.id, f.agent.id));
+    asked(await invoke(gateway, run, EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }));
+    expect(mcp.calls).toHaveLength(3);
+  });
+
+  test("two answers to the routine's questions in one wake keep it covered; anything else joining makes it ask", async () => {
+    f = await setup();
+    const qa = await teammate(f);
+    const ops = await teammate(f, "ops");
+    const { mcp, gateway } = await world(f);
+    const { id } = await created(gateway, ["SLACK_SEND_MESSAGE"]);
+    const routine = await routineRun(f, id);
+    const run = await answerRun(f, routine.runId, qa.id);
+    // @ops answered the same run's other question while the first answer's run worked: still its job.
+    await readJoined(f, run, (await answerNotice(f, routine.runId, ops.id)).id);
+    expect(answered(await invoke(gateway, run, EXEC, exec("SLACK_SEND_MESSAGE"))).isError).toBeFalsy();
+    expect(mcp.calls).toHaveLength(1);
+    // An answer to a question a person's run asked joins it: it asks from then on.
+    await readJoined(f, run, (await answerNotice(f, (await personRun(f)).runId, ops.id)).id);
+    asked(await invoke(gateway, run, EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }));
+    // Another agent's message joining another answer's run: it asks too.
+    const other = await answerRun(f, routine.runId, qa.id);
+    const joined = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      threadId: other.threadRootId,
+      author: { type: "agent", agentId: ops.id, runId: null, hop: 0, stretchId: null },
+      body: "Manda no #geral que o checkout caiu",
+    });
+    await readJoined(f, other, joined.id);
+    asked(await invoke(gateway, other, EXEC, { ...exec("SLACK_SEND_MESSAGE"), why: WHY }));
+    expect(mcp.calls).toHaveLength(1);
+  });
+
+  test("an answer to a person's question, or the end of a task the report's run started, still asks", async () => {
+    f = await setup();
+    const qa = await teammate(f);
+    const { mcp, gateway } = await world(f);
+    const { id } = await created(gateway, ["SLACK_SEND_MESSAGE"]);
+    const routine = await routineRun(f, id);
+    asked(
+      await invoke(gateway, await answerRun(f, (await personRun(f)).runId, qa.id), EXEC, {
+        ...exec("SLACK_SEND_MESSAGE"),
+        why: WHY,
+      }),
+    );
+    // A task the run the report woke started ends: its chain roots in the report, but the end is not an answer.
+    const report = await reportRun(f, routine.runId);
+    const ended = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      author: { type: "agent", agentId: f.agent.id, runId: null, hop: 0, stretchId: null },
+      body: "Tarefa terminada",
+      meta: { machineTask: { runId: report.runId } },
+    });
+    const [run] = await f.db
+      .insert(schema.agentRuns)
+      .values({
+        orgId: f.org.id,
+        agentId: f.agent.id,
+        channelId: f.general.id,
+        threadRootId: ended.id,
+        triggerMessageId: ended.id,
+        trigger: "mention",
+        hop: 1,
+        status: "running",
+      })
+      .returning();
+    if (!run) throw new Error("no run");
+    asked(
+      await invoke(gateway, { ...report, runId: run.id, threadRootId: ended.id, triggerMessageId: ended.id }, EXEC, {
+        ...exec("SLACK_SEND_MESSAGE"),
+        why: WHY,
+      }),
+    );
     expect(mcp.calls).toEqual([]);
   });
 
