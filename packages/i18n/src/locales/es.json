@@ -24,6 +24,7 @@
     "retry": "Intentar de nuevo",
     "soon": "Pronto",
     "unknownError": "Algo salió mal. Intenta de nuevo.",
+    "overLimit": "El texto tiene {{length}} caracteres y el límite es {{max}}. Acórtalo.",
     "ourSide": "Algo salió mal de nuestro lado. Intenta de nuevo en un rato.",
     "signedOut": "Tu sesión terminó. Inicia sesión de nuevo para continuar.",
     "newVersion": "Hay una nueva versión de agentes.chat.",
@@ -5404,6 +5405,7 @@
         "effort": "Esfuerzo",
         "efforts": {
           "auto": "Automático",
+          "none": "Predeterminado del modelo",
           "low": "Bajo",
           "medium": "Medio",
           "high": "Alto",
@@ -5420,6 +5422,8 @@
           "auto": "El modelo Automático elige el esfuerzo de cada tarea. Elige un modelo para fijar el esfuerzo.",
           "low": "Responde rápido. Bueno para preguntas simples.",
           "medium": "El predeterminado. Piensa lo suficiente casi siempre.",
+          "mediumKey": "Piensa lo suficiente casi siempre.",
+          "none": "El modelo piensa lo que suele pensar. Elige un nivel para fijar el esfuerzo.",
           "high": "Piensa más en las tareas difíciles. Más lento y más caro.",
           "max": "Piensa todo lo posible. Mucho más lento y caro."
         },
@@ -5447,6 +5451,7 @@
           "defaults": "Volver a los valores predeterminados",
           "contents": {
             "model": "Ventana de contexto",
+            "modelFixed": "Esfuerzo y ventana de contexto",
             "auto": "Ventana de contexto y a quién responde",
             "fixed": "Esfuerzo, ventana de contexto y a quién responde",
             "autoSpeed": "Velocidad, ventana de contexto y a quién responde",
@@ -5565,7 +5570,8 @@
             "not_signed_in_after_login": "{{brand}} aceptó el inicio de sesión, pero esta cuenta no se puede usar aquí, quizá su plan no lo incluye. Prueba con otra cuenta o una clave de API.",
             "status_unknown": "{{brand}} no indicó si la cuenta inició sesión. Inténtalo de nuevo.",
             "no_token": "{{brand}} terminó sin mostrar el token de la cuenta. Inténtalo de nuevo.",
-            "not_kept": "La cuenta inició sesión, pero {{computer}} no pudo guardarla. Inténtalo de nuevo."
+            "not_kept": "La cuenta inició sesión, pero {{computer}} no pudo guardarla. Inténtalo de nuevo.",
+            "sandbox": "{{brand}} inició sesión, pero su sandbox no arranca en {{computer}}, así que ningún agente podría usarlo. Usa una clave de API."
           },
           "geminiNotShared": "Gemini inició sesión, pero {{computer}} no puede compartir ese inicio de sesión con todos los agentes. Usa una clave de API de Gemini.",
           "duplicate": {
@@ -5601,6 +5607,8 @@
           "limitBack": "{{account}} vuelve {{when}}",
           "limitSoon": "{{account}} vuelve cuando se renueve el plan",
           "limitHelp": "Mientras tanto, {{name}} puede pensar con otra cuenta que ya está conectada.",
+          "fullWait": "En esta cuenta, {{name}} espera hasta que el plan se renueve.",
+          "seeUsage": "Ver uso",
           "wait": "Esperar",
           "modelTitle": "Modelo de {{name}}",
           "moreTitle": "Más opciones de {{name}}",
@@ -5994,6 +6002,7 @@
         "cli_failed": "El programa {{brain}} se detuvo con un error: {{detail}}",
         "cli_stopped": "El programa {{brain}} se detuvo con un error.",
         "cli_closed": "El programa {{brain}} se cerró de repente.",
+        "cli_sandbox": "El programa {{brain}} no puede iniciar su sandbox en esta computadora. Elige otra IA en la configuración del agente.",
         "account_missing": "La cuenta elegida para este agente ya no está en su computadora. Elige otra en la configuración del agente o agrégala de nuevo.",
         "windows_sandbox": "Esta computadora con Windows no puede aislar los comandos de Codex: necesita Windows 11 24H2 o una versión más reciente.",
         "our_error": "Algo salió mal de nuestro lado y la tarea se detuvo. Pide de nuevo en un rato.",
@@ -10017,7 +10026,11 @@
     "forAgent_many": "Activarlas para {{agent}}",
     "forAgent_other": "Activarlas para {{agent}}",
     "installedMany": "{{count}} habilidades instaladas.",
-    "zipHelp": "Un .zip con SKILL.md en la raíz.",
+    "zipHelp": "Un .zip de la carpeta de la habilidad, de hasta {{max}} MB.",
+    "zipAbout": "SKILL.md va en la raíz del .zip o en su única carpeta. Una habilidad guarda hasta {{text}} MB de texto y {{assets}} MB de imágenes y otros archivos.",
+    "zipTooLarge": "{{name}} pesa {{size}}. El .zip de una habilidad puede tener hasta {{max}} MB.",
+    "zipUseLink": "Usar un enlace de GitHub",
+    "zipSending": "Subiendo el archivo… {{percent}}",
     "zipPick": "Elegir .zip",
     "zipNone": "Ningún archivo elegido",
     "zipMissing": "Elige un archivo .zip.",
@@ -11984,7 +11997,8 @@
     "closed": "{{title}} · cerrado",
     "reopen": "Mostrar de nuevo",
     "answeredBy": "{{name}} eligió",
-    "failed": "Tu elección no se envió. Inténtalo de nuevo."
+    "failed": "Tu elección no se envió. Inténtalo de nuevo.",
+    "tooLongFix": "Acorta la respuesta."
   },
   "drive": {
     "title": "Drive",
@@ -13858,6 +13872,8 @@
     }
   },
   "errors": {
+    "tooLarge": "Esto es más grande de lo que acepta el servidor.",
+    "tooLargeMax": "Esto es más grande de lo que acepta el servidor: hasta {{max}} MB.",
     "passwordLink": {
       "email": "Este servidor envía correos: la persona pide su propio enlace en Olvidé la contraseña.",
       "serverOwner": "Quien instaló este servidor entra desde el ordenador donde funciona, sin enlace.",
@@ -14956,6 +14972,20 @@
       "trustText": "Toca Confiar en el iPhone y escribe su código.",
       "devModeDone": "Activado",
       "devModeText": "Actívalo y toca Reiniciar. Después del reinicio, toca Activar y escribe tu código.",
+      "devModeRestarting": "El iPhone se está reiniciando. Cuando vuelva, desbloquéalo y toca Activar.",
+      "devModeBack": "El iPhone volvió. Desbloquéalo, toca Activar y escribe tu código.",
+      "devModeCheck": "Ya lo activé, comprobar de nuevo",
+      "devModeStillOff": "El iPhone todavía indica que el modo de desarrollador está desactivado.",
+      "devModeMissing": {
+        "title": "¿No aparece la opción?",
+        "hidden": "El iPhone oculta la opción hasta que Xcode pide mostrarla.",
+        "hiddenOpen": "El iPhone oculta la opción hasta que Xcode pide mostrarla. Abre Xcode en {{mac}} con el iPhone conectado.",
+        "openXcode": "Abrir Xcode",
+        "opened": "Xcode se abrió en {{mac}}. Vuelve a mirar en los Ajustes del iPhone y cierra Xcode después.",
+        "unlock": "¿Lo activaste y el iPhone se reinició? Desbloquéalo. El aviso con Activar solo aparece después.",
+        "check": "Comprobar de nuevo",
+        "outdated": "La app agentes.chat en {{mac}} está desactualizada. Actualiza la app, o ejecuta esto en Terminal si la instalaste ahí."
+      },
       "uiAutomationText": "En Configuración › Desarrollador, después del reinicio.",
       "helperText": "La Mac la crea y la renueva cada 7 días. Basta con una Apple Account gratuita en Xcode.",
       "helperUntrustedText": "Toca el nombre del desarrollador y luego Confiar.",
@@ -14972,7 +15002,6 @@
         "account": "¿Ya iniciaste sesión? En Xcode, crea cualquier app de iOS, elige tu equipo en Signing & Capabilities y ejecútala una vez en el iPhone.",
         "connected": "{{mac}} aún no ve ningún iPhone. Usa un cable que transmita datos, no solo carga, desbloquea el iPhone y toca Confiar si lo pide.",
         "trust": "¿No aparece Confiar? Desconecta el iPhone, desbloquéalo y vuelve a conectarlo, luego toca Confiar y escribe su código.",
-        "developerMode": "El Modo de desarrollador solo se activa después de reiniciar el iPhone. Toca Reiniciar y luego Activar cuando vuelva. ¿No ves el interruptor? Desconecta el iPhone y vuelve a conectarlo.",
         "uiAutomation": "El interruptor aparece cuando el Modo de desarrollador está activado y el iPhone se reinició. Mantenlo desbloqueado mientras lo buscas.",
         "helper": "{{mac}} crea la app de pruebas y la abre en el iPhone, lo que tarda unos minutos la primera vez. Mantén el iPhone desbloqueado y conectado."
       },
@@ -16159,6 +16188,13 @@
     "logins_other": "{{count}} inicios de sesión",
     "noWindows": "El límite aparece cuando esta cuenta se vuelva a usar.",
     "unused": "Ningún agente usa esta cuenta.",
+    "models": {
+      "exhausted": "Sin cuota · se renueva {{when}}",
+      "exhaustedUnknown": "Sin cuota",
+      "off": "Desactivado",
+      "region": "Necesita la región Global",
+      "inactive": "Sin suscripción activa"
+    },
     "usesNow": "la usa ahora",
     "monthTokens": "{{tokens}} tokens este mes",
     "tokens": "{{tokens}} tokens",
@@ -16225,6 +16261,7 @@
   },
   "format": {
     "list": "{{names, list}}",
+    "andMore": "y {{count}} más",
     "usd": "US$ {{value}}",
     "tokensMillions": "{{value}} M",
     "tokensThousands": "{{value}} mil",
