@@ -34,6 +34,7 @@ import {
   Locked,
   LogoMark,
   OptionCard,
+  overLimit,
   pixelConfetti,
   RoleMark,
   Textarea,
@@ -63,6 +64,7 @@ import { useOrg } from "@/components/org-context";
 import { InviteModeQuestion } from "@/components/WorkspaceModeDialog";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useEdited } from "@/hooks/useEdited";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { TYPED_VALUES } from "@/i18n";
 import { lookOf } from "@/lib/look";
 import { useToast } from "@/lib/toast";
@@ -196,6 +198,8 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
   const [roles, setRoles] = useState<Record<string, string>>({});
   const [chosen, setChosen] = useState<Set<string>>(() => new Set(request.channelId ? [request.channelId] : []));
   const [note, setNote] = useState("");
+  const noteLimit = useTextLimit(INVITE_NOTE_MAX);
+  const noteTooLong = overLimit(note, noteLimit);
   const [outcome, setOutcome] = useState<Outcome[]>([]);
   // Each send's own number: the last screen celebrates once per send, never on a re-render.
   const [sends, setSends] = useState(0);
@@ -316,7 +320,7 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
   };
 
   const send = async () => {
-    if (ready.length === 0 || full || inviteMany.isPending) return;
+    if (ready.length === 0 || full || noteTooLong || inviteMany.isPending) return;
     let results: BatchInviteResult[];
     try {
       results = await inviteMany.mutateAsync({
@@ -628,7 +632,7 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
           ref={noteField}
           className="invite-note"
           rows={3}
-          maxLength={INVITE_NOTE_MAX}
+          limit={noteLimit}
           value={note}
           aria-label={t("members.dialog.note")}
           placeholder={t(modeKey(org, "members.dialog.notePlaceholder"), { org: org.name })}
@@ -739,7 +743,7 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
             ref={primary}
             variant="primary"
             icon="send"
-            disabled={ready.length === 0 || full}
+            disabled={ready.length === 0 || full || noteTooLong}
             loading={inviteMany.isPending}
             onClick={() => void send()}
           >

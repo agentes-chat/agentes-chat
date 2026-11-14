@@ -227,7 +227,9 @@ describe("the button", () => {
 
 describe("the list", () => {
   test("what waits on you, who works, what's on hold: one line a row, its words whole in its tip", async () => {
-    const state = seedState({ taskManager: busy() });
+    // Its return's own time, read back: one taken again later can fall in the next minute.
+    const view = busy();
+    const state = seedState({ taskManager: view });
     await go(state);
     await click(agora());
     const heads = within(list())
@@ -247,7 +249,7 @@ describe("the list", () => {
     expect(yours.querySelector(".agora-row__time")?.textContent).toBe("3 min");
 
     expect(rowOf("Ada esperando o plano").querySelector(".tm-hit small")?.textContent).toBe("Rotina «Backups»");
-    const back = rowOf(`Ada retorno às ${formatTime("pt-BR", followUp().at)}`);
+    const back = rowOf(`Ada retorno às ${formatTime("pt-BR", view.followUps?.[0]?.at ?? "")}`);
     expect(back.querySelector(".tm-hit small")?.textContent).toBe("#general › rever o deploy de hoje");
     // A return says when it comes, not for how long.
     expect(back.querySelector(".agora-row__time")?.textContent).toBe("");
@@ -280,7 +282,9 @@ describe("the list", () => {
   });
 
   test("⋯: Ver passos, Continuar agora, Cancelar retorno; Parar asks in the row, then reads parando… and does nothing", async () => {
-    const state = seedState({ taskManager: busy() });
+    // Its return's own time, read back: one taken again later can fall in the next minute.
+    const view = busy();
+    const state = seedState({ taskManager: view });
     const { router } = await go(state);
     await click(agora());
 
@@ -294,7 +298,9 @@ describe("the list", () => {
     await click(within(screen().getByRole("menu")).getByRole("menuitem", { name: "Continuar agora" }));
     expect(state.calls.some((c) => c.method === "working.continueTasks")).toBe(true);
 
-    expect(await menuOf(rowOf(`Ada retorno às ${formatTime("pt-BR", followUp().at)}`))).toEqual(["Cancelar retorno"]);
+    expect(await menuOf(rowOf(`Ada retorno às ${formatTime("pt-BR", view.followUps?.[0]?.at ?? "")}`))).toEqual([
+      "Cancelar retorno",
+    ]);
     await click(within(screen().getByRole("menu")).getByRole("menuitem", { name: "Cancelar retorno" }));
     expect(state.calls.some((c) => c.method === "chat.cancelFollowUp" && c.args[1] === "m-return")).toBe(true);
 
@@ -483,7 +489,7 @@ describe("the list", () => {
     await showIn(r.services, "en");
     await settle(4);
     expect(within(list("Now")).getAllByRole("heading")[0]?.textContent).toBe("Waiting for you1");
-    expect(rowOf(`Ada follow-up at ${formatTime("en", followUp().at)}`, "Now")).toBeTruthy();
+    expect(rowOf(`Ada follow-up at ${formatTime("en", view.followUps?.[0]?.at ?? "")}`, "Now")).toBeTruthy();
   });
 });
 

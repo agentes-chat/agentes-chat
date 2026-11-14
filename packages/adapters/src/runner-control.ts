@@ -289,6 +289,8 @@ export type ControlRequest =
    * where the install stands, or stops it. The machine op `cli.install`, for the app on this computer.
    */
   | { type: "cli.install"; action: "start" | "status" | "cancel"; tool: InstallableCli }
+  /** Reads the plugged iPhone again now; answers once the status carries what it found. */
+  | { type: "iphone.look" }
   /** Finish what's running briefly, then exit 0 (the app quits). */
   | { type: "shutdown" };
 
@@ -331,6 +333,7 @@ export interface ControlReplies {
   "iphone.open": { opened: boolean };
   "iphone.fixXcode": ControlIphoneSetup;
   "cli.install": { install: CliInstall | null };
+  "iphone.look": { looking: boolean };
   shutdown: { stopping: true };
 }
 

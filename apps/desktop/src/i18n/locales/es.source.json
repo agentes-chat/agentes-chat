@@ -1862,6 +1862,9 @@
   "prefs.updates.whatsNew": {
     "value": "What's new in {{version}}"
   },
+  "prefs.updates.systemDetails": {
+    "value": "System details"
+  },
   "prefs.activity.title": {
     "value": "Activity"
   },

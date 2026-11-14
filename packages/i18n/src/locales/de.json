@@ -24,6 +24,7 @@
     "retry": "Erneut versuchen",
     "soon": "Bald",
     "unknownError": "Etwas ist schiefgelaufen. Versuch es noch einmal.",
+    "overLimit": "Der Text hat {{length}} Zeichen, das Limit liegt bei {{max}}. Kürze ihn.",
     "ourSide": "Bei uns ist etwas schiefgelaufen. Versuch es gleich noch einmal.",
     "signedOut": "Deine Sitzung ist abgelaufen. Melde dich erneut an, um weiterzumachen.",
     "newVersion": "Eine neue Version von agentes.chat ist da.",
@@ -5278,6 +5279,7 @@
         "effort": "Aufwand",
         "efforts": {
           "auto": "Automatisch",
+          "none": "Standard des Modells",
           "low": "Niedrig",
           "medium": "Mittel",
           "high": "Hoch",
@@ -5294,6 +5296,8 @@
           "auto": "Das automatische Modell wählt den Aufwand jeder Aufgabe. Wähle ein Modell, um den Aufwand festzulegen.",
           "low": "Antwortet schnell. Gut für einfache Fragen.",
           "medium": "Der Standard. Denkt meistens genug nach.",
+          "mediumKey": "Denkt meistens genug nach.",
+          "none": "Das Modell denkt so viel wie üblich. Wähle eine Stufe, um den Aufwand festzulegen.",
           "high": "Denkt bei schweren Aufgaben mehr nach. Langsamer und teurer.",
           "max": "Denkt so viel wie möglich nach. Viel langsamer und teurer."
         },
@@ -5321,6 +5325,7 @@
           "defaults": "Auf Standard zurücksetzen",
           "contents": {
             "model": "Kontextfenster",
+            "modelFixed": "Aufwand und Kontextfenster",
             "auto": "Kontextfenster und wem er antwortet",
             "fixed": "Aufwand, Kontextfenster und wem er antwortet",
             "autoSpeed": "Geschwindigkeit, Kontextfenster und wem er antwortet",
@@ -5434,7 +5439,8 @@
             "not_signed_in_after_login": "{{brand}} hat die Anmeldung angenommen, aber dieses Konto lässt sich hier nicht nutzen, vielleicht deckt der Tarif das nicht ab. Versuch ein anderes Konto oder einen API-Schlüssel.",
             "status_unknown": "{{brand}} hat nicht gemeldet, ob das Konto angemeldet ist. Versuch es noch einmal.",
             "no_token": "{{brand}} wurde fertig, ohne das Token des Kontos anzuzeigen. Versuch es noch einmal.",
-            "not_kept": "Das Konto ist angemeldet, aber {{computer}} konnte die Anmeldung nicht speichern. Versuch es noch einmal."
+            "not_kept": "Das Konto ist angemeldet, aber {{computer}} konnte die Anmeldung nicht speichern. Versuch es noch einmal.",
+            "sandbox": "{{brand}} ist angemeldet, aber seine Sandbox startet auf {{computer}} nicht, daher könnte kein Agent es nutzen. Nutze stattdessen einen API-Schlüssel."
           },
           "geminiNotShared": "Gemini hat sich angemeldet, aber auf {{computer}} lässt sich diese Anmeldung nicht mit allen Agenten teilen. Nutze stattdessen einen Gemini-API-Schlüssel.",
           "duplicate": {
@@ -5469,6 +5475,8 @@
           "limitBack": "{{account}} ist {{when}} zurück",
           "limitSoon": "{{account}} ist zurück, wenn sich das Abo erneuert",
           "limitHelp": "Bis dahin kann {{name}} mit einem anderen Konto denken, das schon verbunden ist.",
+          "fullWait": "Mit diesem Konto wartet {{name}}, bis sich der Plan erneuert.",
+          "seeUsage": "Nutzung ansehen",
           "wait": "Warten",
           "modelTitle": "Modell von {{name}}",
           "moreTitle": "Weitere Optionen für {{name}}",
@@ -5844,6 +5852,7 @@
         "cli_failed": "Das Programm {{brain}} wurde mit einem Fehler beendet: {{detail}}",
         "cli_stopped": "Das Programm {{brain}} wurde mit einem Fehler beendet.",
         "cli_closed": "Das Programm {{brain}} wurde unerwartet beendet.",
+        "cli_sandbox": "Das Programm {{brain}} kann seine Sandbox auf diesem Computer nicht starten. Wähle in den Einstellungen des Agenten eine andere KI.",
         "account_missing": "Das für diesen Agenten gewählte Konto ist nicht mehr auf seinem Computer. Wähl in den Einstellungen des Agenten ein anderes oder füg es erneut hinzu.",
         "windows_sandbox": "Dieser Windows-Computer kann die Befehle von Codex nicht isolieren: Er braucht Windows 11 24H2 oder neuer.",
         "our_error": "Bei uns ist etwas schiefgelaufen, und die Aufgabe wurde angehalten. Frag gleich noch einmal.",
@@ -9738,7 +9747,11 @@
     "forAgent_one": "Für {{agent}} einschalten",
     "forAgent_other": "Für {{agent}} einschalten",
     "installedMany": "{{count}} Skills installiert.",
-    "zipHelp": "Eine .zip mit SKILL.md im Hauptordner.",
+    "zipHelp": "Eine .zip des Skill-Ordners, bis zu {{max}} MB.",
+    "zipAbout": "SKILL.md liegt ganz oben in der .zip oder in ihrem einzigen Ordner. Ein Skill behält bis zu {{text}} MB Text und {{assets}} MB Bilder und andere Dateien.",
+    "zipTooLarge": "{{name}} ist {{size}} groß. Die .zip eines Skills darf bis zu {{max}} MB groß sein.",
+    "zipUseLink": "GitHub-Link verwenden",
+    "zipSending": "Datei wird hochgeladen… {{percent}}",
     "zipPick": ".zip auswählen",
     "zipNone": "Keine Datei ausgewählt",
     "zipMissing": "Wähle eine .zip-Datei.",
@@ -11650,7 +11663,8 @@
     "closed": "{{title}} · geschlossen",
     "reopen": "Wieder anzeigen",
     "answeredBy": "{{name}} hat gewählt",
-    "failed": "Deine Auswahl wurde nicht gesendet. Versuch es noch einmal."
+    "failed": "Deine Auswahl wurde nicht gesendet. Versuch es noch einmal.",
+    "tooLongFix": "Kürze die Antwort."
   },
   "drive": {
     "title": "Drive",
@@ -13476,6 +13490,8 @@
     }
   },
   "errors": {
+    "tooLarge": "Das ist größer, als der Server annimmt.",
+    "tooLargeMax": "Das ist größer, als der Server annimmt: bis zu {{max}} MB.",
     "passwordLink": {
       "email": "Dieser Server verschickt E-Mails: Die Person fordert ihren eigenen Link unter Passwort vergessen an.",
       "serverOwner": "Wer diesen Server installiert hat, meldet sich auf dem Computer an, auf dem er läuft, ohne Link.",
@@ -14571,6 +14587,20 @@
       "trustText": "Tippe auf dem iPhone auf Vertrauen und gib seinen Code ein.",
       "devModeDone": "An",
       "devModeText": "Schalte ihn ein und tippe auf Neustart. Tippe nach dem Neustart auf Aktivieren und gib deinen Code ein.",
+      "devModeRestarting": "Das iPhone startet neu. Wenn es wieder da ist, entsperre es und tippe auf Aktivieren.",
+      "devModeBack": "Das iPhone ist wieder da. Entsperre es, tippe auf Aktivieren und gib deinen Code ein.",
+      "devModeCheck": "Ist eingeschaltet, erneut prüfen",
+      "devModeStillOff": "Das iPhone meldet den Entwicklermodus noch als aus.",
+      "devModeMissing": {
+        "title": "Option nicht zu sehen?",
+        "hidden": "Das iPhone versteckt die Option, bis Xcode sie anzeigen lässt.",
+        "hiddenOpen": "Das iPhone versteckt die Option, bis Xcode sie anzeigen lässt. Öffne Xcode auf {{mac}}, während das iPhone angeschlossen ist.",
+        "openXcode": "Xcode öffnen",
+        "opened": "Xcode ist auf {{mac}} offen. Schau noch einmal in den Einstellungen des iPhones und schließ Xcode danach.",
+        "unlock": "Eingeschaltet und das iPhone hat neu gestartet? Entsperre es. Die Abfrage mit Aktivieren erscheint erst danach.",
+        "check": "Erneut prüfen",
+        "outdated": "Die agentes.chat-App auf {{mac}} ist veraltet. Aktualisiere die App, oder führe das hier im Terminal aus, wenn du sie dort installiert hast."
+      },
       "uiAutomationText": "Unter Einstellungen › Entwickler, nach dem Neustart.",
       "helperText": "Wird vom Mac erstellt und alle 7 Tage erneuert. Ein kostenloser Apple Account in Xcode reicht.",
       "helperUntrustedText": "Tippe auf den Namen des Entwicklers und dann auf Vertrauen.",
@@ -14587,7 +14617,6 @@
         "account": "Schon angemeldet? Erstelle in Xcode eine beliebige iOS-App, wähle unter Signing & Capabilities dein Team und führe sie einmal auf dem iPhone aus.",
         "connected": "{{mac}} sieht noch kein iPhone. Nimm ein Kabel, das Daten überträgt und nicht nur lädt, entsperre das iPhone und tippe auf Vertrauen, wenn es fragt.",
         "trust": "Keine Vertrauen-Abfrage? Zieh das iPhone ab, entsperre es und schließ es wieder an, dann tippe auf Vertrauen und gib seinen Code ein.",
-        "developerMode": "Der Entwicklermodus geht erst nach einem Neustart des iPhones an. Tippe auf Neustart und danach auf Aktivieren. Kein Schalter da? Zieh das iPhone ab und schließ es wieder an.",
         "uiAutomation": "Der Schalter erscheint, wenn der Entwicklermodus an ist und das iPhone neu gestartet hat. Lass es beim Suchen entsperrt.",
         "helper": "{{mac}} erstellt die Test-App und startet sie auf dem iPhone, das dauert beim ersten Mal ein paar Minuten. Lass das iPhone entsperrt und angeschlossen."
       },
@@ -15752,6 +15781,13 @@
     "logins_other": "{{count}} Anmeldungen",
     "noWindows": "Das Limit erscheint, sobald dieses Konto wieder genutzt wird.",
     "unused": "Kein Agent nutzt dieses Konto.",
+    "models": {
+      "exhausted": "Kein Kontingent mehr · setzt sich {{when}} zurück",
+      "exhaustedUnknown": "Kein Kontingent mehr",
+      "off": "Ausgeschaltet",
+      "region": "Braucht die Global-Region",
+      "inactive": "Kein aktives Abo"
+    },
     "usesNow": "nutzt es gerade",
     "monthTokens": "{{tokens}} Tokens diesen Monat",
     "tokens": "{{tokens}} Tokens",
@@ -15817,6 +15853,7 @@
   },
   "format": {
     "list": "{{names, list}}",
+    "andMore": "und {{count}} weitere",
     "usd": "{{value}} US$",
     "tokensMillions": "{{value}} Mio.",
     "tokensThousands": "{{value}} Tsd.",

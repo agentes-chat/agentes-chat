@@ -24,6 +24,7 @@
     "retry": "Réessayer",
     "soon": "Bientôt",
     "unknownError": "Un problème est survenu. Réessayez.",
+    "overLimit": "Le texte fait {{length}} caractères et la limite est de {{max}}. Raccourcissez-le.",
     "ourSide": "Un problème est survenu de notre côté. Réessayez dans un moment.",
     "signedOut": "Votre session a expiré. Reconnectez-vous pour continuer.",
     "newVersion": "Une nouvelle version d'agentes.chat est disponible.",
@@ -5458,6 +5459,7 @@
         "effort": "Effort",
         "efforts": {
           "auto": "Automatique",
+          "none": "Par défaut du modèle",
           "low": "Faible",
           "medium": "Moyen",
           "high": "Élevé",
@@ -5474,6 +5476,8 @@
           "auto": "Le modèle Automatique choisit l'effort de chaque tâche. Choisissez un modèle pour fixer l'effort.",
           "low": "Répond vite. Idéal pour les questions simples.",
           "medium": "Par défaut. Réfléchit assez la plupart du temps.",
+          "mediumKey": "Réfléchit assez la plupart du temps.",
+          "none": "Le modèle réfléchit autant que d'habitude. Choisissez un niveau pour fixer l'effort.",
           "high": "Réfléchit davantage sur les tâches difficiles. Plus lent et plus cher.",
           "max": "Réfléchit autant que possible. Bien plus lent et plus cher."
         },
@@ -5501,6 +5505,7 @@
           "defaults": "Revenir aux valeurs par défaut",
           "contents": {
             "model": "Fenêtre de contexte",
+            "modelFixed": "Effort et fenêtre de contexte",
             "auto": "Fenêtre de contexte et à qui il répond",
             "fixed": "Effort, fenêtre de contexte et à qui il répond",
             "autoSpeed": "Vitesse, fenêtre de contexte et à qui il répond",
@@ -5619,7 +5624,8 @@
             "not_signed_in_after_login": "{{brand}} a accepté la connexion, mais ce compte ne peut pas être utilisé ici, son forfait ne l'inclut peut-être pas. Essayez un autre compte ou une clé API.",
             "status_unknown": "{{brand}} n'a pas indiqué si le compte est connecté. Réessayez.",
             "no_token": "{{brand}} a terminé sans afficher le jeton du compte. Réessayez.",
-            "not_kept": "Le compte est connecté, mais {{computer}} n'a pas pu conserver la connexion. Réessayez."
+            "not_kept": "Le compte est connecté, mais {{computer}} n'a pas pu conserver la connexion. Réessayez.",
+            "sandbox": "{{brand}} est connecté, mais sa sandbox ne démarre pas sur {{computer}}, donc aucun agent ne pourrait l'utiliser. Utilisez plutôt une clé API."
           },
           "geminiNotShared": "Gemini s'est connecté, mais cette connexion ne peut pas être partagée avec tous les agents sur {{computer}}. Utilisez plutôt une clé API Gemini.",
           "duplicate": {
@@ -5655,6 +5661,8 @@
           "limitBack": "{{account}} revient {{when}}",
           "limitSoon": "{{account}} revient quand l'abonnement se renouvelle",
           "limitHelp": "En attendant, {{name}} peut réfléchir avec un autre compte déjà connecté.",
+          "fullWait": "Sur ce compte, {{name}} attend que le forfait se renouvelle.",
+          "seeUsage": "Voir l'utilisation",
           "wait": "Attendre",
           "modelTitle": "Modèle de {{name}}",
           "moreTitle": "Plus d'options pour {{name}}",
@@ -6060,6 +6068,7 @@
         "cli_failed": "Le programme {{brain}} s'est arrêté sur une erreur : {{detail}}",
         "cli_stopped": "Le programme {{brain}} s'est arrêté sur une erreur.",
         "cli_closed": "Le programme {{brain}} s'est fermé de façon inattendue.",
+        "cli_sandbox": "Le programme {{brain}} ne peut pas démarrer sa sandbox sur cet ordinateur. Choisissez une autre IA dans les paramètres de l'agent.",
         "account_missing": "Le compte choisi pour cet agent n'est plus sur son ordinateur. Choisissez-en un autre dans les paramètres de l'agent, ou ajoutez-le à nouveau.",
         "windows_sandbox": "Cet ordinateur Windows ne peut pas isoler les commandes de Codex : il lui faut Windows 11 24H2 ou une version plus récente.",
         "our_error": "Un problème est survenu de notre côté et la tâche s'est arrêtée. Redemandez dans un moment.",
@@ -10097,7 +10106,11 @@
     "forAgent_many": "Les activer pour {{agent}}",
     "forAgent_other": "Les activer pour {{agent}}",
     "installedMany": "{{count}} compétences installées.",
-    "zipHelp": "Un .zip avec SKILL.md à la racine.",
+    "zipHelp": "Un .zip du dossier de la compétence, jusqu'à {{max}} Mo.",
+    "zipAbout": "SKILL.md se trouve à la racine du .zip, ou dans son unique dossier. Une compétence conserve jusqu'à {{text}} Mo de texte et {{assets}} Mo d'images et d'autres fichiers.",
+    "zipTooLarge": "{{name}} fait {{size}}. Le .zip d'une compétence peut faire jusqu'à {{max}} Mo.",
+    "zipUseLink": "Utiliser un lien GitHub",
+    "zipSending": "Envoi du fichier… {{percent}}",
     "zipPick": "Choisir un .zip",
     "zipNone": "Aucun fichier choisi",
     "zipMissing": "Choisissez un fichier .zip.",
@@ -12086,7 +12099,8 @@
     "closed": "{{title}} · fermé",
     "reopen": "Afficher à nouveau",
     "answeredBy": "{{name}} a choisi",
-    "failed": "Votre choix n'a pas été envoyé. Réessayez."
+    "failed": "Votre choix n'a pas été envoyé. Réessayez.",
+    "tooLongFix": "Raccourcissez la réponse."
   },
   "drive": {
     "title": "Drive",
@@ -13960,6 +13974,8 @@
     }
   },
   "errors": {
+    "tooLarge": "C'est plus que ce que le serveur accepte.",
+    "tooLargeMax": "C'est plus que ce que le serveur accepte : jusqu'à {{max}} Mo.",
     "passwordLink": {
       "email": "Ce serveur envoie des e-mails : la personne demande son propre lien dans Mot de passe oublié.",
       "serverOwner": "La personne qui a installé ce serveur se connecte sur l’ordinateur où il tourne, sans lien.",
@@ -15060,6 +15076,20 @@
       "trustText": "Touchez Se fier sur l'iPhone et saisissez son code.",
       "devModeDone": "Activé",
       "devModeText": "Activez-le et touchez Redémarrer. Après le redémarrage, touchez Activer et saisissez votre code.",
+      "devModeRestarting": "L'iPhone redémarre. Quand il revient, déverrouillez-le et touchez Activer.",
+      "devModeBack": "L'iPhone est revenu. Déverrouillez-le, touchez Activer et saisissez votre code.",
+      "devModeCheck": "C'est activé, vérifier à nouveau",
+      "devModeStillOff": "L'iPhone indique toujours que le mode développeur est désactivé.",
+      "devModeMissing": {
+        "title": "L'option n'apparaît pas ?",
+        "hidden": "L'iPhone cache l'option jusqu'à ce que Xcode demande de l'afficher.",
+        "hiddenOpen": "L'iPhone cache l'option jusqu'à ce que Xcode demande de l'afficher. Ouvrez Xcode sur {{mac}} avec l'iPhone branché.",
+        "openXcode": "Ouvrir Xcode",
+        "opened": "Xcode s'est ouvert sur {{mac}}. Regardez à nouveau dans les Réglages de l'iPhone, puis fermez Xcode.",
+        "unlock": "Vous l'avez activé et l'iPhone a redémarré ? Déverrouillez-le. L'alerte avec Activer n'apparaît qu'après.",
+        "check": "Vérifier à nouveau",
+        "outdated": "L'app agentes.chat sur {{mac}} n'est pas à jour. Mettez l'app à jour, ou lancez ceci dans le Terminal si vous l'avez installée par là."
+      },
       "uiAutomationText": "Dans Réglages › Développeur, après le redémarrage.",
       "helperText": "Créée et renouvelée par le Mac tous les 7 jours. Un Apple Account gratuit dans Xcode suffit.",
       "helperUntrustedText": "Touchez le nom du développeur, puis Se fier.",
@@ -15076,7 +15106,6 @@
         "account": "Déjà connecté ? Dans Xcode, créez n'importe quelle app iOS, choisissez votre équipe dans Signing & Capabilities et lancez-la une fois sur l'iPhone.",
         "connected": "{{mac}} ne voit pas encore d'iPhone. Utilisez un câble qui transmet les données, pas seulement la charge, déverrouillez l'iPhone et touchez Se fier s'il le demande.",
         "trust": "Pas de demande Se fier ? Débranchez l'iPhone, déverrouillez-le et rebranchez-le, puis touchez Se fier et saisissez son code.",
-        "developerMode": "Le Mode développeur ne s'active qu'après le redémarrage de l'iPhone. Touchez Redémarrer, puis Activer une fois qu'il a redémarré. Pas d'interrupteur ? Débranchez l'iPhone et rebranchez-le.",
         "uiAutomation": "L'interrupteur apparaît une fois le Mode développeur activé et l'iPhone redémarré. Gardez-le déverrouillé pendant que vous cherchez.",
         "helper": "{{mac}} crée l'app de test et la lance sur l'iPhone, ce qui prend quelques minutes la première fois. Gardez l'iPhone déverrouillé et branché."
       },
@@ -16264,6 +16293,13 @@
     "logins_other": "{{count}} connexions",
     "noWindows": "La limite s'affiche une fois que ce compte est de nouveau utilisé.",
     "unused": "Aucun agent n'utilise ce compte.",
+    "models": {
+      "exhausted": "Quota épuisé · réinitialisé {{when}}",
+      "exhaustedUnknown": "Quota épuisé",
+      "off": "Désactivé",
+      "region": "Nécessite la région Global",
+      "inactive": "Aucun abonnement actif"
+    },
     "usesNow": "l'utilise en ce moment",
     "monthTokens": "{{tokens}} jetons ce mois-ci",
     "tokens": "{{tokens}} jetons",
@@ -16330,6 +16366,7 @@
   },
   "format": {
     "list": "{{names, list}}",
+    "andMore": "et {{count}} de plus",
     "usd": "{{value}} $ US",
     "tokensMillions": "{{value}} M",
     "tokensThousands": "{{value}} k",

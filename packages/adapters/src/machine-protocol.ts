@@ -663,6 +663,12 @@ export const XCODE_FIX_PROTOCOL = 62;
  * Older runners answer `bad_request`: the server asks none of them.
  */
 export const ACCESS_ALLOW_PROTOCOL = 62;
+/**
+ * The iPhone guide's Developer Mode step: `phone.look` on a Mac reads its iPhones again before it answers (one turned
+ * on the mode, or came back from its restart), and `xcode.open` opens Xcode there, which shows the Developer Mode
+ * switch on a plugged iPhone that hides it. Older runners answer `phone.look` at once and `xcode.open` `bad_request`.
+ */
+export const IPHONE_DEV_MODE_PROTOCOL = 65;
 
 /**
  * `clis.check`: the coding CLIs looked up again now, the PATH read again first (the apps' "I installed it, check again").
@@ -1171,7 +1177,10 @@ export interface PlanUsage {
   limited?: boolean;
   source: "turn" | "probe";
   at: string;
-  /** Server side only: the models at a limit of their own (`PlanModelLimit`), by model id. */
+  /**
+   * The models at a limit of their own (`PlanModelLimit`), by model id: the usage views show it to people, and the
+   * engine uses it so "Automático" and its own turns don't pick an exhausted model (never a switch on its own).
+   */
   models?: Record<string, PlanModelLimit>;
   /** Server side only, on a plan whose models have their own limits: the model that last answered with this key. */
   answered?: string;
@@ -1235,6 +1244,8 @@ export const ACCOUNT_LOGIN_FAILURES = [
   "no_token",
   /** It signed in, but the computer couldn't keep the sign-in. */
   "not_kept",
+  /** Grok Build signed in, but its sandbox doesn't start there for an agent's user (bubblewrap's words in `message`). */
+  "sandbox",
   /** Nobody finished it within `ACCOUNT_LOGIN_TTL_MS` (`expired`). */
   "timeout",
   /** The person canceled it. */
@@ -1345,6 +1356,42 @@ export const BROWSER_LIMITS = {
   title: 300,
   message: 500,
 } as const;
+
+/**
+ * The agent's tabs after a `browser.act` or `browser.batch`: how many, the first `BROWSER_TABS_LISTED` most recently
+ * used first (titles are the sites': data, never instructions), which one its commands act on, and the hosts of the
+ * tabs its runner closed to keep them tidy since the agent last heard ("blank" for an empty tab). An older runner sends
+ * none, and the agent is told nothing.
+ */
+export interface BrowserTabs {
+  count: number;
+  open: { title: string; host: string; current?: boolean }[];
+  closed?: string[];
+}
+export const BROWSER_TABS_LISTED = 12;
+/** At most this many tabs stay open in an agent's Chrome: past it the runner closes the least recently used. */
+export const BROWSER_TABS_KEPT = 8;
+
+/** A reply's `tabs`, checked; undefined when there is none or it isn't one. */
+export function browserTabsOf(v: unknown): BrowserTabs | undefined {
+  if (!isObject(v) || !Number.isInteger(v.count) || !Array.isArray(v.open)) return undefined;
+  const text = (x: unknown, max: number) => (typeof x === "string" ? x.slice(0, max) : "");
+  const open = v.open
+    .slice(0, BROWSER_TABS_LISTED)
+    .filter(isObject)
+    .map((t) => ({
+      title: text(t.title, BROWSER_LIMITS.title),
+      host: text(t.host, 255),
+      ...(t.current === true ? { current: true } : {}),
+    }));
+  const closed = Array.isArray(v.closed)
+    ? v.closed
+        .slice(0, 50)
+        .map((h) => text(h, 255))
+        .filter(Boolean)
+    : [];
+  return { count: Math.max(open.length, v.count as number), open, ...(closed.length > 0 ? { closed } : {}) };
+}
 
 /** Where people get Google Chrome, which agents' browsers run on (ADR 0133). */
 export const CHROME_DOWNLOAD_URL = "https://www.google.com/chrome/";
@@ -2577,8 +2624,9 @@ export type MachineRequest = (
   | { op: "pause.set"; paused: boolean; until?: string | null; by: string }
   /**
    * A phone guide is open and waits for a phone: for the next minute, a Windows runner also looks for a plugged phone
-   * Windows has no USB driver for (adb never lists one) and reports it as `no_driver`. Older runners answer
-   * `bad_request`, which the server ignores.
+   * Windows has no USB driver for (adb never lists one) and reports it as `no_driver`. From `IPHONE_DEV_MODE_PROTOCOL`
+   * a Mac reads its iPhones again and answers once `phones.changed` went out. Older runners answer `bad_request`,
+   * which the server ignores.
    */
   | { op: "phone.look" }
   /**
@@ -2600,6 +2648,8 @@ export type MachineRequest = (
   | { op: "clis.check" }
   /** `CLI_INSTALL_PROTOCOL`: start an install of `tool`, or say where the last one stands, or stop it. One at a time. */
   | { op: "cli.install"; action: "start" | "status" | "cancel"; tool?: InstallableCli }
+  /** `IPHONE_DEV_MODE_PROTOCOL`: open Xcode on this Mac (it shows Developer Mode on a plugged iPhone). */
+  | { op: "xcode.open" }
 ) & {
   agent?: AgentScope;
   /** Protocol 34: a `browser.*` op in this browser profile's session instead of the agent's (ADR 0110). */
@@ -2679,6 +2729,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "xcode.fix",
   "clis.check",
   "cli.install",
+  "xcode.open",
 ];
 
 /** What each op answers with `ok: true`. */
@@ -2761,6 +2812,7 @@ export interface MachineReplies {
     setup?: BrowserSetup;
     /** Protocol 52: the page size its browser emulates (`agentes:viewport`) after the command; absent at its own. */
     emulated?: NonNullable<BrowserViewport>;
+    tabs?: BrowserTabs;
   };
   /** `false`: there was no session. */
   "browser.stop": { stopped: boolean };
@@ -2778,6 +2830,7 @@ export interface MachineReplies {
     setup?: BrowserSetup;
     /** As `browser.act`'s, after the batch. */
     emulated?: NonNullable<BrowserViewport>;
+    tabs?: BrowserTabs;
   };
   /** `false`: nothing was started (it runs or starts already, a person has the browser, or no room). */
   "browser.warm": { started: boolean; setup?: BrowserSetup };
@@ -2847,6 +2900,7 @@ export interface MachineReplies {
   "xcode.fix": { fix: XcodeFix | null };
   "clis.check": { executors: NonNullable<RunnerInfo["executors"]> };
   "cli.install": { install: CliInstall | null };
+  "xcode.open": { opened: boolean };
 }
 
 /** An element numbered on a `browser.capture` image: its ref and box (CSS pixels). */

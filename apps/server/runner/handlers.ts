@@ -216,6 +216,7 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "keep.end": "machine",
   // The person's own session: macOS's password window opens on their screen (a system-mode runner answers unsupported).
   "xcode.fix": "machine",
+  "xcode.open": "machine",
   // Looking for the coding CLIs only reads the computer's PATH, so root answers it in system mode too.
   "clis.check": "machine",
   // Installed as the runner's own user. Root answers unsupported: the agents' users get their CLIs from the
@@ -345,6 +346,8 @@ export interface HandlerContext {
   /** `CLI_INSTALL_PROTOCOL`: the coding CLIs looked up now, and installed from the apps. */
   clisCheck?: () => Promise<MachineReplies["clis.check"]>;
   cliInstall?: (req: Extract<MachineRequest, { op: "cli.install" }>) => MachineReplies["cli.install"];
+  /** `IPHONE_DEV_MODE_PROTOCOL`: opening Xcode on this Mac; without it the op answers `opened: false`. */
+  xcodeOpen?: () => Promise<MachineReplies["xcode.open"]>;
 }
 
 export interface RequestScope {
@@ -715,7 +718,9 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
     return ctx.phones.pair(req);
   }
-  if (req.op === "phone.look") return { looking: ctx.phones?.look() ?? false } satisfies MachineReplies["phone.look"];
+  if (req.op === "phone.look")
+    return { looking: (await ctx.phones?.look()) ?? false } satisfies MachineReplies["phone.look"];
+  if (req.op === "xcode.open") return (await ctx.xcodeOpen?.()) ?? { opened: false };
   if (req.op === "phone.wifi")
     return ctx.phones ? ctx.phones.wifi(req) : ({ available: [] } satisfies MachineReplies["phone.wifi"]);
   if (req.op === "xcode.fix") {

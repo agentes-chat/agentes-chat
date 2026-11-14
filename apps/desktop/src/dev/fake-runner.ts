@@ -279,6 +279,8 @@ export class FakeRunner {
     },
   ];
   /** The Mac's side of an iPhone's setup; `iphone.download` fills the platform in about a second. */
+  /** How many times the iPhone setup asked to look at the iPhone again (`iphone.look`). */
+  looks = 0;
   iphone: ControlIphoneSetup = {
     xcode: "27.0",
     platform: { state: "missing" },
@@ -536,6 +538,9 @@ export class FakeRunner {
       case "cli.install":
         // Its CLIs are all here already: there is nothing to install.
         return reply({ install: msg.action === "start" ? { tool: msg.tool, state: "done" } : null });
+      case "iphone.look":
+        this.looks++;
+        return reply({ looking: true });
       case "shutdown":
         return reply({ stopping: true });
     }
