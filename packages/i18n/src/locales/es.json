@@ -10027,7 +10027,11 @@
     "forAgent_many": "Activarlas para {{agent}}",
     "forAgent_other": "Activarlas para {{agent}}",
     "installedMany": "{{count}} habilidades instaladas.",
-    "zipHelp": "Un .zip con SKILL.md en la raíz.",
+    "zipHelp": "Un .zip de la carpeta de la habilidad, de hasta {{max}} MB.",
+    "zipAbout": "SKILL.md va en la raíz del .zip o en su única carpeta. Una habilidad guarda hasta {{text}} MB de texto y {{assets}} MB de imágenes y otros archivos.",
+    "zipTooLarge": "{{name}} pesa {{size}}. El .zip de una habilidad puede tener hasta {{max}} MB.",
+    "zipUseLink": "Usar un enlace de GitHub",
+    "zipSending": "Subiendo el archivo… {{percent}}",
     "zipPick": "Elegir .zip",
     "zipNone": "Ningún archivo elegido",
     "zipMissing": "Elige un archivo .zip.",
@@ -13870,6 +13874,8 @@
     }
   },
   "errors": {
+    "tooLarge": "Esto es más grande de lo que acepta el servidor.",
+    "tooLargeMax": "Esto es más grande de lo que acepta el servidor: hasta {{max}} MB.",
     "passwordLink": {
       "email": "Este servidor envía correos: la persona pide su propio enlace en Olvidé la contraseña.",
       "serverOwner": "Quien instaló este servidor entra desde el ordenador donde funciona, sin enlace.",

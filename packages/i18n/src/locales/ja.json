@@ -9336,7 +9336,11 @@
     "pickReplacesRemoved": "削除されたスキル {{name}} を置き換えます",
     "forAgent_other": "{{agent}} でオンにする",
     "installedMany": "{{count}}件のスキルをインストールしました。",
-    "zipHelp": "ルートにSKILL.mdがある.zip。",
+    "zipHelp": "スキルのフォルダの.zip（最大{{max}} MB）。",
+    "zipAbout": "SKILL.mdは.zipの最上位か、その中の唯一のフォルダに置きます。スキルが保持できるのはテキスト{{text}} MBまでと、画像などのファイル{{assets}} MBまでです。",
+    "zipTooLarge": "{{name}}は{{size}}です。スキルの.zipは{{max}} MBまでです。",
+    "zipUseLink": "GitHubのリンクを使う",
+    "zipSending": "ファイルをアップロード中… {{percent}}",
     "zipPick": ".zipを選択",
     "zipNone": "ファイルが選択されていません",
     "zipMissing": ".zipファイルを選んでください。",
@@ -12938,6 +12942,8 @@
     }
   },
   "errors": {
+    "tooLarge": "サーバーが受け付けるサイズを超えています。",
+    "tooLargeMax": "サーバーが受け付けるサイズを超えています。上限は{{max}} MBです。",
     "passwordLink": {
       "email": "このサーバーはメールを送ります。本人が「パスワードを忘れた」から自分のリンクを依頼します。",
       "serverOwner": "このサーバーをインストールした人は、サーバーが動いているコンピューターからリンクなしで入ります。",

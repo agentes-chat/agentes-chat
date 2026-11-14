@@ -10415,7 +10415,11 @@
     "forAgent_many": "Włącz je dla {{agent}}",
     "forAgent_other": "Włącz je dla {{agent}}",
     "installedMany": "Zainstalowane umiejętności: {{count}}.",
-    "zipHelp": "Plik .zip z SKILL.md w katalogu głównym.",
+    "zipHelp": "Plik .zip z folderem umiejętności, do {{max}} MB.",
+    "zipAbout": "SKILL.md jest na samej górze pliku .zip albo w jego jedynym folderze. Umiejętność przechowuje do {{text}} MB tekstu i {{assets}} MB obrazów oraz innych plików.",
+    "zipTooLarge": "{{name}} ma {{size}}. Plik .zip umiejętności może mieć do {{max}} MB.",
+    "zipUseLink": "Użyj linku do GitHuba",
+    "zipSending": "Przesyłam plik… {{percent}}",
     "zipPick": "Wybierz .zip",
     "zipNone": "Nie wybrano pliku",
     "zipMissing": "Wybierz plik .zip.",
@@ -14432,6 +14436,8 @@
     }
   },
   "errors": {
+    "tooLarge": "To więcej, niż przyjmuje serwer.",
+    "tooLargeMax": "To więcej, niż przyjmuje serwer: do {{max}} MB.",
     "passwordLink": {
       "email": "Ten serwer wysyła e-maile: osoba sama prosi o link w Nie pamiętam hasła.",
       "serverOwner": "Osoba, która zainstalowała ten serwer, loguje się na komputerze, na którym działa, bez linku.",

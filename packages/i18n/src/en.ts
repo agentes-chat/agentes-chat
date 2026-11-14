@@ -9996,7 +9996,16 @@ export const en = {
     forAgent_one: "Turn it on for {{agent}}",
     forAgent_other: "Turn them on for {{agent}}",
     installedMany: "{{count}} skills installed.",
-    zipHelp: "A .zip with SKILL.md at its root.",
+    zipHelp: "A .zip of the skill's folder, up to {{max}} MB.",
+    /** Behind the ⓘ beside `zipHelp`. */
+    zipAbout:
+      "SKILL.md goes at the top of the .zip, or in its one folder. A skill keeps up to {{text}} MB of text and {{assets}} MB of images and other files.",
+    /** A .zip refused the moment it's picked, before anything is sent. */
+    zipTooLarge: "{{name}} is {{size}}. A skill's .zip can be up to {{max}} MB.",
+    /** The way out of `zipTooLarge`: the GitHub tab, which reads only the skill's folder. */
+    zipUseLink: "Use a GitHub link",
+    /** While the .zip goes to the server: how much of it has gone. */
+    zipSending: "Uploading the file… {{percent}}",
     zipPick: "Choose .zip",
     zipNone: "No file chosen",
     zipMissing: "Choose a .zip file.",

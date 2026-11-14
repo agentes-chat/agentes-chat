@@ -23576,7 +23576,19 @@
     "value": "{{count}} skills installed."
   },
   "skills.zipHelp": {
-    "value": "A .zip with SKILL.md at its root."
+    "value": "A .zip of the skill's folder, up to {{max}} MB."
+  },
+  "skills.zipAbout": {
+    "value": "SKILL.md goes at the top of the .zip, or in its one folder. A skill keeps up to {{text}} MB of text and {{assets}} MB of images and other files."
+  },
+  "skills.zipTooLarge": {
+    "value": "{{name}} is {{size}}. A skill's .zip can be up to {{max}} MB."
+  },
+  "skills.zipUseLink": {
+    "value": "Use a GitHub link"
+  },
+  "skills.zipSending": {
+    "value": "Uploading the file… {{percent}}"
   },
   "skills.zipPick": {
     "value": "Choose .zip"
@@ -32628,6 +32640,12 @@
   },
   "files.nav.place": {
     "value": "{{index}} of {{count}}"
+  },
+  "errors.tooLarge": {
+    "value": "This is bigger than the server takes."
+  },
+  "errors.tooLargeMax": {
+    "value": "This is bigger than the server takes: up to {{max}} MB."
   },
   "errors.passwordLink.email": {
     "value": "This server sends email: they ask for their own link in Forgot password."

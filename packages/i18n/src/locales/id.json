@@ -9385,7 +9385,11 @@
     "pickReplacesRemoved": "Menggantikan skill {{name}} yang sudah dihapus",
     "forAgent_other": "Aktifkan untuk {{agent}}",
     "installedMany": "{{count}} skill terpasang.",
-    "zipHelp": "File .zip dengan SKILL.md di folder utamanya.",
+    "zipHelp": "File .zip dari folder skill, maksimal {{max}} MB.",
+    "zipAbout": "SKILL.md ada di bagian teratas .zip, atau di satu-satunya folder di dalamnya. Skill menyimpan hingga {{text}} MB teks dan {{assets}} MB gambar serta file lain.",
+    "zipTooLarge": "{{name}} berukuran {{size}}. File .zip skill maksimal {{max}} MB.",
+    "zipUseLink": "Pakai tautan GitHub",
+    "zipSending": "Mengunggah file… {{percent}}",
     "zipPick": "Pilih .zip",
     "zipNone": "Belum ada file yang dipilih",
     "zipMissing": "Pilih file .zip.",
@@ -12992,6 +12996,8 @@
     }
   },
   "errors": {
+    "tooLarge": "Ini lebih besar dari yang diterima server.",
+    "tooLargeMax": "Ini lebih besar dari yang diterima server: maksimal {{max}} MB.",
     "passwordLink": {
       "email": "Server ini mengirim email: orang itu meminta tautannya sendiri di Lupa kata sandi.",
       "serverOwner": "Orang yang memasang server ini masuk dari komputer tempat server berjalan, tanpa tautan.",
