@@ -9393,7 +9393,11 @@
     "pickReplacesRemoved": "将替换已移除的技能 {{name}}",
     "forAgent_other": "为 {{agent}} 开启",
     "installedMany": "已安装 {{count}} 个技能。",
-    "zipHelp": "根目录中包含 SKILL.md 的 .zip 文件。",
+    "zipHelp": "技能文件夹的 .zip，最大 {{max}} MB。",
+    "zipAbout": "SKILL.md 位于 .zip 的最上层，或其中唯一的文件夹里。一个技能最多保留 {{text}} MB 文本和 {{assets}} MB 图片及其他文件。",
+    "zipTooLarge": "{{name}} 大小为 {{size}}。技能的 .zip 最大 {{max}} MB。",
+    "zipUseLink": "使用 GitHub 链接",
+    "zipSending": "正在上传文件… {{percent}}",
     "zipPick": "选择 .zip",
     "zipNone": "未选择文件",
     "zipMissing": "请选择 .zip 文件。",
@@ -13015,6 +13019,8 @@
     }
   },
   "errors": {
+    "tooLarge": "超出了服务器接受的大小。",
+    "tooLargeMax": "超出了服务器接受的大小：最大 {{max}} MB。",
     "passwordLink": {
       "email": "这台服务器会发送邮件：对方可以在「忘记密码」中自己申请链接。",
       "serverOwner": "安装这台服务器的人在运行它的电脑上直接登录，不需要链接。",

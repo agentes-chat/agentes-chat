@@ -10107,7 +10107,11 @@
     "forAgent_many": "Attivale per {{agent}}",
     "forAgent_other": "Attivale per {{agent}}",
     "installedMany": "{{count}} skill installate.",
-    "zipHelp": "Un .zip con SKILL.md nella cartella principale.",
+    "zipHelp": "Un .zip della cartella della skill, fino a {{max}} MB.",
+    "zipAbout": "SKILL.md sta in cima al .zip, o nella sua unica cartella. Una skill conserva fino a {{text}} MB di testo e {{assets}} MB di immagini e altri file.",
+    "zipTooLarge": "{{name}} pesa {{size}}. Lo .zip di una skill può arrivare a {{max}} MB.",
+    "zipUseLink": "Usa un link GitHub",
+    "zipSending": "Caricamento del file… {{percent}}",
     "zipPick": "Scegli .zip",
     "zipNone": "Nessun file scelto",
     "zipMissing": "Scegli un file .zip.",
@@ -13966,6 +13970,8 @@
     }
   },
   "errors": {
+    "tooLarge": "È più grande di quanto il server accetti.",
+    "tooLargeMax": "È più grande di quanto il server accetti: fino a {{max}} MB.",
     "passwordLink": {
       "email": "Questo server invia email: la persona chiede il proprio link in Password dimenticata.",
       "serverOwner": "Chi ha installato questo server accede dal computer dove gira, senza link.",

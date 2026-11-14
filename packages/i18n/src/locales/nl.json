@@ -9778,7 +9778,11 @@
     "forAgent_one": "Aanzetten voor {{agent}}",
     "forAgent_other": "Aanzetten voor {{agent}}",
     "installedMany": "{{count}} skills geïnstalleerd.",
-    "zipHelp": "Een .zip met SKILL.md in de hoofdmap.",
+    "zipHelp": "Een .zip van de map van de skill, tot {{max}} MB.",
+    "zipAbout": "SKILL.md staat bovenaan in de .zip, of in de enige map erin. Een skill bewaart tot {{text}} MB tekst en {{assets}} MB afbeeldingen en andere bestanden.",
+    "zipTooLarge": "{{name}} is {{size}}. De .zip van een skill mag tot {{max}} MB zijn.",
+    "zipUseLink": "Een GitHub-link gebruiken",
+    "zipSending": "Bestand uploaden… {{percent}}",
     "zipPick": ".zip kiezen",
     "zipNone": "Geen bestand gekozen",
     "zipMissing": "Kies een .zip-bestand.",
@@ -13534,6 +13538,8 @@
     }
   },
   "errors": {
+    "tooLarge": "Dit is groter dan de server aanneemt.",
+    "tooLargeMax": "Dit is groter dan de server aanneemt: tot {{max}} MB.",
     "passwordLink": {
       "email": "Deze server verstuurt e-mail: de persoon vraagt zelf een link aan bij Wachtwoord vergeten.",
       "serverOwner": "Wie deze server installeerde, meldt zich aan op de computer waarop hij draait, zonder link.",

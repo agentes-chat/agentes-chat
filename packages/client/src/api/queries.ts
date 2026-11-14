@@ -68,7 +68,7 @@ import type { RealtimeConnection } from "../realtime/connection";
 import { readUnknownMembers, setOrgDeletion } from "../realtime/machines";
 import type { ApiClient } from "./client";
 import { type AgentReactionEffect, useAgentReaction, useApi, useCardVia } from "./context";
-import { ApiError } from "./http";
+import { ApiError, type UploadOptions } from "./http";
 import { keys } from "./keys";
 import { keepSending, outbox } from "./outbox";
 import type {
@@ -4742,7 +4742,11 @@ export function useSkillAction(orgId: string, { silent = false } = {}) {
     ...(silent ? { meta: { silent: true } } : {}),
     mutationFn: (
       action:
-        | { type: "import"; input: { url: string; list?: boolean; forAgentId?: string } | { zipBase64: string } }
+        | {
+            type: "import";
+            input: { url: string; list?: boolean; forAgentId?: string } | { zipBase64: string };
+            upload?: UploadOptions;
+          }
         | { type: "importPicked"; url: string; paths: string[]; forAgentId?: string }
         | { type: "create"; input: SkillInput }
         | { type: "update"; id: string; patch: SkillPatch }
@@ -4756,7 +4760,7 @@ export function useSkillAction(orgId: string, { silent = false } = {}) {
     ): Promise<unknown> => {
       switch (action.type) {
         case "import":
-          return api.skills.import(orgId, action.input);
+          return api.skills.import(orgId, action.input, action.upload);
         case "importPicked":
           return api.skills.importPicked(orgId, action.url, action.paths, action.forAgentId);
         case "create":

@@ -10033,7 +10033,16 @@ export const ptBR = {
     forAgent_one: "Fica ligada para {{agent}}",
     forAgent_other: "Ficam ligadas para {{agent}}",
     installedMany: "{{count}} skills instaladas.",
-    zipHelp: "Um .zip com o SKILL.md na raiz.",
+    zipHelp: "Um .zip da pasta da skill, até {{max}} MB.",
+    /** Behind the ⓘ beside `zipHelp`. */
+    zipAbout:
+      "O SKILL.md fica no topo do .zip, ou na única pasta dele. Uma skill guarda até {{text}} MB de texto e {{assets}} MB de imagens e outros arquivos.",
+    /** A .zip refused the moment it's picked, before anything is sent. */
+    zipTooLarge: "{{name}} tem {{size}}. O .zip de uma skill pode ter até {{max}} MB.",
+    /** The way out of `zipTooLarge`: the GitHub tab, which reads only the skill's folder. */
+    zipUseLink: "Usar um link do GitHub",
+    /** While the .zip goes to the server: how much of it has gone. */
+    zipSending: "Enviando o arquivo… {{percent}}",
     zipPick: "Escolher .zip",
     zipNone: "Nenhum arquivo escolhido",
     zipMissing: "Escolha um arquivo .zip.",
@@ -13590,6 +13599,10 @@ export const ptBR = {
     },
   },
   errors: {
+    /** A request the server, or a proxy in front of it, refused for its size. */
+    tooLarge: "Isto é maior do que o servidor aceita.",
+    /** The same, from a screen that knows the most it may send. */
+    tooLargeMax: "Isto é maior do que o servidor aceita: até {{max}} MB.",
     /** A new-password link an owner can't make (ADR 0158). */
     passwordLink: {
       email: "Este servidor manda e-mail: a pessoa pede o link dela mesma em Esqueci a senha.",

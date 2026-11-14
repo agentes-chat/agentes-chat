@@ -1391,7 +1391,12 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       list: async (orgId) => (await request<{ skills: Skill[] }>(`${org(orgId)}/skills`)).skills,
       get: (orgId, id) => request<SkillDetail>(`${org(orgId)}/skills/${enc(id)}`),
       create: (orgId, input) => request<SkillDetail>(`${org(orgId)}/skills`, { json: input }),
-      import: (orgId, input) => request<SkillDetail | SkillPick>(`${org(orgId)}/skills/import`, { json: input }),
+      import: (orgId, input, upload) =>
+        request<SkillDetail | SkillPick>(`${org(orgId)}/skills/import`, {
+          json: input,
+          signal: upload?.signal,
+          onUploadProgress: upload?.onProgress,
+        }),
       importPicked: async (orgId, url, paths, forAgentId) =>
         (
           await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {

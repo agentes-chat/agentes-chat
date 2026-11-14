@@ -9677,7 +9677,11 @@
     "forAgent_one": "{{agent}} için aç",
     "forAgent_other": "{{agent}} için aç",
     "installedMany": "{{count}} beceri yüklendi.",
-    "zipHelp": "Kökünde SKILL.md bulunan bir .zip.",
+    "zipHelp": "Beceri klasörünün .zip dosyası, en fazla {{max}} MB.",
+    "zipAbout": "SKILL.md, .zip dosyasının en üstünde ya da içindeki tek klasörde durur. Bir beceri en fazla {{text}} MB metin ve {{assets}} MB görsel ile diğer dosyaları saklar.",
+    "zipTooLarge": "{{name}} {{size}} boyutunda. Bir becerinin .zip dosyası en fazla {{max}} MB olabilir.",
+    "zipUseLink": "GitHub bağlantısı kullan",
+    "zipSending": "Dosya yükleniyor… {{percent}}",
     "zipPick": ".zip seç",
     "zipNone": "Dosya seçilmedi",
     "zipMissing": "Bir .zip dosyası seçin.",
@@ -13407,6 +13411,8 @@
     }
   },
   "errors": {
+    "tooLarge": "Bu, sunucunun kabul ettiğinden büyük.",
+    "tooLargeMax": "Bu, sunucunun kabul ettiğinden büyük: en fazla {{max}} MB.",
     "passwordLink": {
       "email": "Bu sunucu e-posta gönderiyor: kişi kendi bağlantısını Şifremi unuttum bölümünden ister.",
       "serverOwner": "Bu sunucuyu kuran kişi, sunucunun çalıştığı bilgisayardan bağlantısız girer.",
