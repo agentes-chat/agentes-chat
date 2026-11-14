@@ -5621,6 +5621,8 @@
           "limitBack": "{{account}} torna {{when}}",
           "limitSoon": "{{account}} torna quando il piano si rinnova",
           "limitHelp": "Nel frattempo {{name}} può pensare con un altro account già collegato.",
+          "fullWait": "Con questo account {{name}} aspetta che il piano si rinnovi.",
+          "seeUsage": "Vedi utilizzo",
           "wait": "Aspetta",
           "modelTitle": "Modello di {{name}}",
           "moreTitle": "Altre opzioni per {{name}}",

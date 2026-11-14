@@ -5456,6 +5456,8 @@
           "limitBack": "{{account}} is {{when}} terug",
           "limitSoon": "{{account}} is terug als het abonnement vernieuwt",
           "limitHelp": "Tot die tijd kan {{name}} denken met een ander account dat al gekoppeld is.",
+          "fullWait": "Op dit account wacht {{name}} tot het abonnement vernieuwt.",
+          "seeUsage": "Gebruik bekijken",
           "wait": "Wachten",
           "modelTitle": "Model van {{name}}",
           "moreTitle": "Meer opties voor {{name}}",

@@ -5263,6 +5263,8 @@
           "limitBack": "{{account}} {{when}}恢复",
           "limitSoon": "{{account}} 会在套餐续期后恢复",
           "limitHelp": "在此期间，{{name}} 可以用另一个已连接的账号思考。",
+          "fullWait": "在这个账号上，{{name}} 会等到套餐续期。",
+          "seeUsage": "查看用量",
           "wait": "等待",
           "modelTitle": "{{name}} 的模型",
           "moreTitle": "{{name}} 的更多选项",

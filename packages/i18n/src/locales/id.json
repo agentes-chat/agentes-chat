@@ -5255,6 +5255,8 @@
           "limitBack": "{{account}} kembali {{when}}",
           "limitSoon": "{{account}} kembali saat paketnya diperbarui",
           "limitHelp": "Sementara itu {{name}} bisa berpikir dengan akun lain yang sudah terhubung.",
+          "fullWait": "Di akun ini {{name}} menunggu sampai paketnya diperbarui.",
+          "seeUsage": "Lihat penggunaan",
           "wait": "Tunggu",
           "modelTitle": "Model {{name}}",
           "moreTitle": "Opsi lainnya untuk {{name}}",

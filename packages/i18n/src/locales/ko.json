@@ -5238,6 +5238,8 @@
           "limitBack": "{{account}}은(는) {{when}}에 돌아와요",
           "limitSoon": "{{account}}은(는) 요금제가 갱신되면 돌아와요",
           "limitHelp": "그동안 {{name}}은(는) 이미 연결된 다른 계정으로 생각할 수 있어요.",
+          "fullWait": "이 계정에서는 {{name}}이(가) 플랜이 갱신될 때까지 기다려요.",
+          "seeUsage": "사용량 보기",
           "wait": "기다리기",
           "modelTitle": "{{name}}의 모델",
           "moreTitle": "{{name}}의 추가 옵션",

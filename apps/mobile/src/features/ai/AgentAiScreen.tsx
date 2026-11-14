@@ -181,11 +181,13 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
     ? t(refused ? "aiAccounts.page.keyRefused" : "agentPage.work.brain.accountSignedOut")
     : current != null && signInOf(current) === "unknown"
       ? t("aiAccounts.page.statusUnknown")
-      : lends
-        ? t("agentPage.work.brain.accountOthers")
-        : view && !view.canUsePlans && ownerFirst
-          ? t("agentPage.work.brain.accountWho", { ...g, owner: ownerFirst })
-          : null;
+      : limited
+        ? t("agentPage.work.brain.v2.fullWait", g)
+        : lends
+          ? t("agentPage.work.brain.accountOthers")
+          : view && !view.canUsePlans && ownerFirst
+            ? t("agentPage.work.brain.accountWho", { ...g, owner: ownerFirst })
+            : null;
   const ownRow = view !== undefined && kind !== null && ownSignInListed(view, row, kind);
   const choices = view ? accountChoices(accounts, [view.account]) : [];
   const adds = view?.canUsePlans === true && view.canManageAccounts;
@@ -233,7 +235,7 @@ export function AgentAiScreen({ agentId }: { agentId: string }) {
                   {choices.map((c) => (
                     <AiRow
                       key={c.login.id}
-                      row={accountRow(t, c, name)}
+                      row={accountRow(t, c, name, i18n.language)}
                       checked={c.login.id === view.account}
                       disabled={!mayPick}
                       onPress={() => (c.also ? connect(c.login, true) : choose(c.login))}

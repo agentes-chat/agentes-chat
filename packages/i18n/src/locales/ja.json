@@ -5240,6 +5240,8 @@
           "limitBack": "{{account}}は{{when}}に戻ります",
           "limitSoon": "{{account}}はプランが更新されたら戻ります",
           "limitHelp": "それまでの間、{{name}}は接続済みの別のアカウントで考えられます。",
+          "fullWait": "このアカウントでは、{{name}}はプランが更新されるまで待ちます。",
+          "seeUsage": "使用量を見る",
           "wait": "待つ",
           "modelTitle": "{{name}}のモデル",
           "moreTitle": "{{name}}のその他のオプション",

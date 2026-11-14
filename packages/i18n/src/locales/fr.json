@@ -5619,6 +5619,8 @@
           "limitBack": "{{account}} revient {{when}}",
           "limitSoon": "{{account}} revient quand l'abonnement se renouvelle",
           "limitHelp": "En attendant, {{name}} peut réfléchir avec un autre compte déjà connecté.",
+          "fullWait": "Sur ce compte, {{name}} attend que le forfait se renouvelle.",
+          "seeUsage": "Voir l'utilisation",
           "wait": "Attendre",
           "modelTitle": "Modèle de {{name}}",
           "moreTitle": "Plus d'options pour {{name}}",

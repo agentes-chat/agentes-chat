@@ -13344,6 +13344,12 @@
   "agentPage.work.brain.v2.limitHelp": {
     "value": "Meanwhile {{name}} can think with another account that's already connected."
   },
+  "agentPage.work.brain.v2.fullWait": {
+    "value": "On this account {{name}} waits until the plan renews."
+  },
+  "agentPage.work.brain.v2.seeUsage": {
+    "value": "See usage"
+  },
   "agentPage.work.brain.v2.wait": {
     "value": "Wait"
   },

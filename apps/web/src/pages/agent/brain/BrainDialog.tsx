@@ -39,6 +39,7 @@ import {
 } from "@agenteschat/ui";
 import { extraUsageOn } from "@agenteschat/ui/plan-state";
 import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -218,6 +219,8 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
   const selected = s.rows.find((r) => r.id === picked) ?? (picked === s.currentRow?.id ? s.currentRow : undefined);
   const switchSel = picked !== undefined ? selected : sortHave(selectable)[0];
   const limitSel = s.offers.find((r) => r.id === picked) ?? s.offers[0];
+  // Picking a full account is allowed: the agent then waits for its plan to renew, said under the list.
+  const switchFull = switchSel?.usage != null && !switchSel.current && planState(switchSel.usage).state === "limited";
 
   /** This agent onto `row`, in the right order: its computer, then who thinks. */
   const saveRow = async (row: BrainRow): Promise<AgentBrain | null> => {
@@ -766,6 +769,19 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
             label={title}
             byAi
           />
+          {switchFull && (
+            <SettingNote icon="clock" live>
+              {t("agentPage.work.brain.v2.fullWait", g)}{" "}
+              <Link
+                to="/org/$orgId/settings/$section"
+                params={{ orgId: org.id, section: "usage" }}
+                className="ac-link"
+                onClick={onClose}
+              >
+                {t("agentPage.work.brain.v2.seeUsage")}
+              </Link>
+            </SettingNote>
+          )}
           {lockedHere && (
             <SettingNote icon="lock">
               {t("connectAi.accountsLocked", { name: pairer ?? "", computer: s.computerName })}

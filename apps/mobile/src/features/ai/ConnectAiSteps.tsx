@@ -264,7 +264,7 @@ export interface ConnectAiFlowProps {
  * already has (`existingRows`): an account used or moved in one tap, signed in once more on its plan's page, a key.
  */
 export function ConnectAiFlow(props: ConnectAiFlowProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors: c } = useTheme();
   const { orgId, org } = useAiOrg();
   const api = useApi();
@@ -292,7 +292,7 @@ export function ConnectAiFlow(props: ConnectAiFlowProps) {
       agentRows.data?.find((a) => a.id === forAgent.id),
       !hasAi(forAgent.id),
     )
-      ? existingRows(t, gates.view, credentials.data ?? [], forAgent.name)
+      ? existingRows(t, gates.view, credentials.data ?? [], forAgent.name, i18n.language)
       : [];
   const shownGate = gates.gateOf(view.page === "plan" ? view.choice : "claude");
   const shown = shownGate.state;
