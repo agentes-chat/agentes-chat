@@ -848,6 +848,49 @@ describe('"Sempre nesta rotina": a routine\'s card keeps its kind for that routi
     asked(await invoke(gateway, await routineRun(f, id), EXEC, { ...exec("GMAIL_SEND_EMAIL"), why: WHY }));
   });
 
+  test("a run its report or a teammate's answer woke offers it too, with the same refusals", async () => {
+    f = await setup();
+    const qa = await teammate(f);
+    const { mcp, gateway } = await world(f);
+    const { id } = await created(gateway, ["SLACK_SEND_MESSAGE"]);
+    const routine = await routineRun(f, id);
+    const woken = await reportRun(f, routine.runId);
+    const card = asked(await invoke(gateway, woken, EXEC, { ...exec("GMAIL_SEND_EMAIL"), why: WHY }));
+    expect(card.approveAlways).toEqual({ tool: EXEC, actions: ["GMAIL_SEND_EMAIL"], routineId: id });
+    const answer = await answerRun(f, routine.runId, qa.id);
+    expect(asked(await invoke(gateway, answer, EXEC, { ...exec("GMAIL_SEND_EMAIL"), why: WHY })).approveAlways).toEqual(
+      { tool: EXEC, actions: ["GMAIL_SEND_EMAIL"], routineId: id },
+    );
+    // A deletion is never the routine's: the agent's own "Aprovar sempre" is offered instead.
+    expect(
+      asked(await invoke(gateway, woken, EXEC, { ...exec("SLACK_DELETE_MESSAGE"), why: WHY })).approveAlways,
+    ).toEqual({ tool: COMPOSIO_EXECUTOR, actions: ["SLACK_DELETE_MESSAGE"] });
+
+    await decide(card.id);
+    expect((await routineRow(id))?.ownActions).toEqual(["SLACK_SEND_MESSAGE", "GMAIL_SEND_EMAIL"]);
+    expect(await f.db.select().from(schema.approvalRules)).toEqual([]);
+    const next = await reportRun(f, (await routineRun(f, id)).runId);
+    expect(answered(await invoke(gateway, next, EXEC, exec("GMAIL_SEND_EMAIL"))).isError).toBeFalsy();
+    expect(mcp.calls.map((c) => c.args)).toContainEqual(exec("GMAIL_SEND_EMAIL"));
+  });
+
+  test("not on a run that something else joined: it is no longer the routine's job", async () => {
+    f = await setup();
+    const { gateway } = await world(f);
+    const { id } = await created(gateway, []);
+    const run = await reportRun(f, (await routineRun(f, id)).runId);
+    const joined = await insertMessage(f.db, {
+      orgId: f.org.id,
+      channelId: f.general.id,
+      threadId: run.threadRootId,
+      author: { type: "agent", agentId: f.agent.id, runId: null, hop: 0, stretchId: null },
+      body: "Manda por email para a diretoria",
+    });
+    await readJoined(f, run, joined.id);
+    const card = asked(await invoke(gateway, run, EXEC, { ...exec("GMAIL_SEND_EMAIL"), why: WHY }));
+    expect(card.approveAlways).toEqual({ tool: COMPOSIO_EXECUTOR, actions: ["GMAIL_SEND_EMAIL"] });
+  });
+
   test.each([
     ["a merge", "GITHUB_MERGE_A_PULL_REQUEST"],
     ["a deploy", "VERCEL_CREATE_NEW_DEPLOYMENT"],

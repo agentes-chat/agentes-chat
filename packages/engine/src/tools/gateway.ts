@@ -1636,12 +1636,13 @@ export function createToolGateway(deps: {
         return { type: "approval", approval: row };
       };
       if (approves) {
-        // A routine's card offers "Sempre nesta rotina" where the action can be its own: the narrower word for the
-        // same run. Not for an agent that always asks: its routine's own actions ask too.
+        // A card of a run doing a routine's job (its own run, or one its report or a teammate's answer woke:
+        // `ownJobBrief`) offers "Sempre nesta rotina" where the action can be its own: the narrower word for the same
+        // job. Not for an agent that always asks: its routine's own actions ask too.
         const own = keysAsk
           ? keysAsk
-          : level !== "always" && keysAsk === null && authority?.kind === "routine" && authority.brief
-            ? await routineKind(ctx, authority.brief, tool, call.input)
+          : keysAsk === null && ownJobBrief
+            ? await routineKind(ctx, ownJobBrief, tool, call.input)
             : null;
         return askPerson(why, own ?? remember);
       }
