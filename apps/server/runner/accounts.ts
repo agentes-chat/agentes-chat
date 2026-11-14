@@ -286,6 +286,8 @@ export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessE
     env.XDG_STATE_HOME = path.join(dir, ".local", "state");
     for (const k of Object.keys(env)) if (GOOGLE_CLOUD_SIGN_IN.test(k)) delete env[k];
     env.XDG_RUNTIME_DIR = agyRuntimeDir(dir);
+    // Windows: Go's home is USERPROFILE. The sign-in is the computer user's, in Credential Manager, whatever the home.
+    if (process.platform === "win32") env.USERPROFILE = dir;
     delete env.DBUS_SESSION_BUS_ADDRESS;
     // X11 is the other way a D-Bus client autolaunches (or finds) a session bus shared by the display.
     delete env.DISPLAY;
