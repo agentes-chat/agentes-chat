@@ -1557,7 +1557,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
     ),
     tool(
       "browser_tabs",
-      `${BROWSER_TOOL_INFO.browser_tabs.description} Links that open a new tab (sign-in windows) show up here: switch to it to read it. browser_open and browser_do reuse the tab you are on: open a tab only to keep two pages at once, and close it when done. Your answers list your open tabs; past ${BROWSER_TABS_KEPT}, the least recently used closes.`,
+      `${BROWSER_TOOL_INFO.browser_tabs.description} Links that open a new tab (sign-in windows) show up here: switch to it to read it. browser_open and browser_do reuse the tab you are on: add a tab only to keep two sites at once, and close it when done. Your answers list your tabs; past ${BROWSER_TABS_KEPT}, the least recently used closes.`,
       {
         type: "object",
         properties: {
