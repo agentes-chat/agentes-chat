@@ -24,7 +24,8 @@ export function AudienceCard({
   const last = parts.pop();
   return (
     <Tip tip={tip} look="ac-hint__bubble ac-glass arrival-for__tip" button>
-      <OptionCard pressed={pressed} onClick={onClick}>
+      {/* The name is the title as written: the parts' dots are CSS, which a screen reader would read run together. */}
+      <OptionCard pressed={pressed} onClick={onClick} aria-label={title}>
         {faces}
         <span className="ac-option__title arrival-for__title">
           {parts.map((part) => (
