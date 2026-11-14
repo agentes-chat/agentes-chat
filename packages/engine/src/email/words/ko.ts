@@ -1,4 +1,4 @@
-import type { Step } from "./en";
+import { type Step, sentences } from "./en";
 import type { EmailWords } from "./index";
 
 /**
@@ -44,9 +44,10 @@ export const words: EmailWords = {
         ? [{ b: inviter }, `${email ? ` (${email})` : ""} 님이 `, { b: org }, `에 ${role}로 초대했어요.`]
         : [{ b: org }, `에 ${role}로 초대받았어요.`],
     starts: (channels, agents) =>
-      [channels ? `${channels} 채널에 바로 참여해요.` : "", agents ? `함께 일할 에이전트: ${agents}.` : ""]
-        .filter(Boolean)
-        .join(" "),
+      sentences(
+        channels && [...channels, " 채널에 바로 참여해요."],
+        agents && ["함께 일할 에이전트: ", ...agents, "."],
+      ),
     more: (n) => `${n}개 더`,
     what: "agentes.chat은 사람과 AI 에이전트가 함께 일하는 곳이에요.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "보낸 메시지: " }, `“${note}”`],

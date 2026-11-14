@@ -502,20 +502,29 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
     case "invitation": {
       const c = inMode(w.invitation, t.personal);
       const org = inertText(t.orgName);
-      // Past `INVITE_NAMES_SHOWN` names, the last place says how many more: a line, never a page of names.
-      const list = (items: string[]) =>
-        new Intl.ListFormat(lang, { type: "conjunction" }).format(
-          items.length > INVITE_NAMES_SHOWN
-            ? [...items.slice(0, INVITE_NAMES_SHOWN - 1), c.more(items.length - INVITE_NAMES_SHOWN + 1)]
-            : items,
-        );
+      // Past `INVITE_NAMES_SHOWN` names, the last place says how many more: a line, never a page of names. A channel
+      // is held whole (`{ nobr }`): "#chamados-urgentes" would break at its hyphen.
+      const names = new Intl.ListFormat(lang, { type: "conjunction" });
+      const cut = (items: string[]) =>
+        items.length > INVITE_NAMES_SHOWN
+          ? [...items.slice(0, INVITE_NAMES_SHOWN - 1), c.more(items.length - INVITE_NAMES_SHOWN + 1)]
+          : items;
+      const listOf = (items: string[], hold = false): Inline[] =>
+        names
+          .formatToParts(cut(items))
+          .map((part): Inline => (hold && part.type === "element" ? { nobr: part.value } : part.value));
       // An owner's invitation reads "as an owner", whatever cargos come with it: an owner may everything.
       const role =
         t.roles?.length && t.role !== "owner"
-          ? list(t.roles.map((r) => inertText(r)))
+          ? names.format(cut(t.roles.map((r) => inertText(r))))
           : (w.role[t.role] ?? inertText(t.role));
-      const rooms = t.channels?.length ? list(t.channels.map((name) => `#${inertText(name)}`)) : null;
-      const crew = t.agents?.length ? list(t.agents.map((name) => inertText(name))) : null;
+      const rooms = t.channels?.length
+        ? listOf(
+            t.channels.map((name) => `#${inertText(name)}`),
+            true,
+          )
+        : null;
+      const crew = t.agents?.length ? listOf(t.agents.map((name) => inertText(name))) : null;
       const counts = { channels: t.channels?.length ?? 0, agents: t.agents?.length ?? 0 };
       return doc(
         c.subject,

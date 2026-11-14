@@ -18,6 +18,10 @@ export type Step = [title: string, text: string];
  * alone: with the word it may not fit a 320 px phone's line (digits run wide), and would then break inside again or
  * leave the word alone on a line of its own.
  */
+/** Sentences of inline parts, one space between them, the missing ones left out. */
+export const sentences = (...parts: (Inline[] | null)[]): Inline[] =>
+  parts.filter((p): p is Inline[] => p !== null).flatMap((p, i) => (i > 0 ? [" ", ...p] : p));
+
 export const atHost = (lead: string, word: string, host: string): Text =>
   host.length > 36 ? [`${lead} ${word} `, { nobr: `${host}.` }] : [`${lead} `, { nobr: `${word} ${host}.` }];
 
@@ -58,13 +62,11 @@ export const en = {
         : ["You're invited to join ", { b: org }, ` as ${role}.`],
     /**
      * What the person starts with besides #general and the right hand (ADR 0184): the channels they join and the
-     * agents they work with, each list already joined in the language ("#support and #billing"), or null. `count`:
-     * how many of each, for languages whose words change with it.
+     * agents they work with, each list already joined in the language ("#support and #billing", each channel held
+     * whole), or null. `count`: how many of each, for languages whose words change with it.
      */
-    starts: (channels: string | null, agents: string | null, _count: { channels: number; agents: number }): Text =>
-      [channels ? `You'll start in ${channels}.` : "", agents ? `You'll work with ${agents}.` : ""]
-        .filter(Boolean)
-        .join(" "),
+    starts: (channels: Inline[] | null, agents: Inline[] | null, _count: { channels: number; agents: number }): Text =>
+      sentences(channels && ["You'll start in ", ...channels, "."], agents && ["You'll work with ", ...agents, "."]),
     /** The last place of a list cut short: how many more it holds (always 2 or more). */
     more: (n: number) => `${n} more`,
     what: "agentes.chat is where people and AI agents work together.",

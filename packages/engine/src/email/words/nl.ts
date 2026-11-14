@@ -1,5 +1,5 @@
 import { plural } from "@agenteschat/i18n/format";
-import { atHost } from "./en";
+import { atHost, sentences } from "./en";
 import type { EmailWords } from "./index";
 
 /**
@@ -46,9 +46,7 @@ export const words: EmailWords = {
           ]
         : ["Je bent uitgenodigd om lid te worden van ", { b: org }, ` als ${role}.`],
     starts: (channels, agents) =>
-      [channels ? `Je zit meteen in ${channels}.` : "", agents ? `Je werkt samen met ${agents}.` : ""]
-        .filter(Boolean)
-        .join(" "),
+      sentences(channels && ["Je zit meteen in ", ...channels, "."], agents && ["Je werkt samen met ", ...agents, "."]),
     more: (n) => `nog ${n}`,
     what: "Op agentes.chat werken mensen en AI-agents samen.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Hun bericht: " }, `‘${note}’`],

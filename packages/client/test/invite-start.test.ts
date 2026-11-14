@@ -47,11 +47,15 @@ describe("what an invitation starts someone with (ADR 0184)", () => {
     const kept = agent({ audienceMode: "owner", audience: { mode: "owner", userIds: [], roleIds: [] }, brain: plan });
     expect(inviteAgentCase(kept, { userId: "u-bruno", managesAgents: false }, [])).toBe("plan");
     // On a plan that already answers some people, it opens like any other.
-    expect(inviteAgentCase(people({ brain: plan, audience: { mode: "people", userIds: ["u-rui"], roleIds: [] } }), admin, [])).toBe(
-      "opens",
-    );
-    expect(["everyone", "cargo", "opens", "locked", "plan", "mailbox"].filter((c) => invitePickable(c as never))).toEqual(
-      ["everyone", "cargo", "opens"],
-    );
+    expect(
+      inviteAgentCase(
+        people({ brain: plan, audience: { mode: "people", userIds: ["u-rui"], roleIds: [] } }),
+        admin,
+        [],
+      ),
+    ).toBe("opens");
+    expect(
+      ["everyone", "cargo", "opens", "locked", "plan", "mailbox"].filter((c) => invitePickable(c as never)),
+    ).toEqual(["everyone", "cargo", "opens"]);
   });
 });

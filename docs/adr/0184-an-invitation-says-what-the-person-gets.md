@@ -1,6 +1,6 @@
 # 0184. An invitation says what the person gets
 
-- Status: Accepted (built: the server and the shared client; the web and the phone app come next)
+- Status: Accepted (built: the server and the shared client. The web and the phone app come next)
 - Date: 2026-11-14
 - Revises: ADR 0090 §5 (one screen instead of steps: cargos, channels and agents for email invitations and links)
 - Amends: ADR 0068 (a link carries choices, an expiry and a maximum, and a workspace has many. A link still only asks)
@@ -10,8 +10,9 @@
   `inviteMany`, `updateInvitation`, `resendInvitation`, `inviteLink`, `previewInvitation`, `acceptInvitation`),
   `packages/engine/src/invite-requests.ts` (`createInviteLink`, `editInviteLink`, `listInviteLinks`, `askToJoin`,
   `approveJoinRequest`, `listWaitingJoinRequests`), `packages/engine/src/email.ts` (`queueInvitationEmail`,
-  `emailCrew`) and `email/words/*` (`invitation.starts`), routes `apps/server/src/routes/app/invites.ts`,
-  `management.ts`, `account.ts`, migration `0268_invite_choices`, the shared client (`packages/client/src/api`)
+  `emailCrew`) and `email/words/*` (`invitation.starts`, `invitation.more`), routes
+  `apps/server/src/routes/app/invites.ts`, `management.ts`, `account.ts`, migration `0268_invite_choices`, the shared
+  client (`packages/client/src/api`, `packages/client/src/lib/invite-start.ts`)
 
 ## Context
 
@@ -59,13 +60,14 @@ can say what comes with it.
 8. **Approving.** The approver gives the cargos they pick (the apps start on the link's), and the link's channels and
    agents as far as the approver may give them at that moment, the rest left out, so approving stays one click. The
    approval may carry `channelIds` and `agentIds` instead, checked as an invitation's. Joined at once, the person
-   joins those channels and starts with those agents; invited, the invitation carries them. Each waiting request says
+   joins those channels and starts with those agents. Invited, the invitation carries them. Each waiting request says
    the link it came through, who made it and what it gives.
 9. **What the person sees.** The invite page's preview gives the cargos (`roles`: name, color and icon, those the
    sender may still give) and puts the invitation's agents first (`yours`: how many lead the list, the first is the
-   host). The email says the cargos ("como Suporte"; an owner's stays "como dono") and, when there is more than
+   host). The email says the cargos ("como Suporte", while an owner's stays "como dono") and, when there is more than
    #general and the right hand, one line: "Você já entra em #suporte e #chamados-urgentes. Vai trabalhar com Max.",
-   in every language. Its picture puts the invitation's agents first.
+   in every language. A list stops at five places, the last saying how many more ("e mais 3"), and a channel's name
+   is held whole. Its picture puts the invitation's agents first.
 
 ## Consequences
 
