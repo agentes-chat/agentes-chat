@@ -12,12 +12,13 @@ import {
 import path from "node:path";
 import { AGENT_WORKER_HOMES } from "@agenteschat/adapters/command-policy";
 import { type AgentScope, isAccountId } from "@agenteschat/adapters/machine-protocol";
-import { isAgentUid } from "./config";
+import { agentTmpInRam, isAgentUid } from "./config";
 import { RunnerError } from "./errors";
 import { readJson, writeJson } from "./json-file";
 import { validateNetworkMark } from "./network-mark";
 import { agentId8 } from "./paths";
 import {
+  AGENT_DISK_TMP_ROOT,
   AGENT_RAM_ROOT,
   AGENT_TMP_ROOT,
   agentCategorySlice,
@@ -63,22 +64,30 @@ export interface Launcher {
   tmp?: string;
 }
 
+const TMPFS = 'mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"';
+
 /**
  * Runs as root on the computer, before the agent's own mount namespace (`$1` its uid): the agent's tmpfs, so its
- * /tmp, /dev/shm and /run/lock are in memory as the computer's are, each with its own room. Mounted at its first
- * launch after the computer starts, under a lock: two first launches at once would stack two mounts.
+ * /dev/shm and /run/lock are in memory as the computer's are, each with its own room, and its /tmp: a folder of its own
+ * on the system disk (`AGENT_DISK_TMP_ROOT`) bound into that tmpfs, or (`tmpOnDisk` false) in the tmpfs too. Made at
+ * its first launch after the computer starts, under a lock (two first launches at once would stack two mounts), and
+ * kept until the next boot: whatever a later launch says, all of the agent's processes see one /tmp.
  */
-const AGENT_RAM = [
-  "set -e",
-  `r=${AGENT_RAM_ROOT}`,
-  'mkdir -p "$r"',
-  'chmod 0700 "$r"',
-  'd="$r/$1"',
-  "shift",
-  'mkdir -p "$d"',
-  `flock "$r/.lock" sh -c 'mountpoint -q "$1" || mount -t tmpfs -o mode=0700,size=50%,nr_inodes=1m agentes-runner-tmp "$1"' sh "$d"`,
-  'exec "$@"',
-].join("\n");
+const agentRam = (tmpOnDisk: boolean) =>
+  [
+    "set -e",
+    `r=${AGENT_RAM_ROOT}`,
+    'mkdir -p "$r"',
+    'chmod 0700 "$r"',
+    'd="$r/$1"',
+    ...(tmpOnDisk ? [`t=${AGENT_DISK_TMP_ROOT}`, 'mkdir -p "$t"', 'chmod 0700 "$t"', 't="$t/$1"'] : []),
+    "shift",
+    'mkdir -p "$d"',
+    tmpOnDisk
+      ? `flock "$r/.lock" sh -ec 'mountpoint -q "$1" && exit; mkdir -p "$2"; ${TMPFS}; mkdir "$1/tmp"; mount --bind "$2" "$1/tmp"' sh "$d" "$t"`
+      : `flock "$r/.lock" sh -c 'mountpoint -q "$1" || ${TMPFS}' sh "$d"`,
+    'exec "$@"',
+  ].join("\n");
 
 /**
  * Runs as root in the agent's new mount namespace, before it becomes the agent (`$1` its uid): its own temporary
@@ -473,7 +482,8 @@ export function ensureSubids(user: Pick<AgentUser, "user" | "uid">, etc = "/etc"
 
 /**
  * Runs a command as the agent's user inside its slice (whose limits then
- * hold), with its own temporary folders (`AGENT_RAM`, `PRIVATE_TMP`), or with
+ * hold), with its own temporary folders (`agentRam`, its /tmp in memory with
+ * `tmpInRam`, and `PRIVATE_TMP`), or with
  * runuser alone where systemd isn't PID 1 (a container). Absolute paths: root
  * never looks these up on a PATH. `--collect`: a scope the OOM killer ended
  * doesn't stay behind as a failed unit. `OOMPolicy=continue` (`oomPolicy`): a
@@ -490,6 +500,7 @@ export function systemLauncher(
   systemd = systemdBooted(),
   oomPolicy = systemd && scopeOomPolicy(),
   containers = systemd && rootlessContainers(),
+  tmpInRam = systemd && agentTmpInRam(),
 ): Launcher {
   const home = agentHome(u.user);
   const runuser = ["/usr/sbin/runuser", "-u", u.user, "--"];
@@ -511,7 +522,7 @@ export function systemLauncher(
       "--",
       "/bin/sh",
       "-c",
-      AGENT_RAM,
+      agentRam(!tmpInRam),
       "sh",
       String(u.uid),
       "/usr/bin/unshare",
@@ -576,13 +587,17 @@ function agentView(u: AgentUser, more: string[]) {
  * So `--expand-environment=no` (`literal`, systemd 254 and later), which keeps it as it is in both; before 254 there is
  * no such switch, and every `$` goes doubled, which it reads as one.
  */
-export function containersCommand(u: AgentUser, literal = installedSystemd() >= 254): string[] {
+export function containersCommand(
+  u: AgentUser,
+  literal = installedSystemd() >= 254,
+  tmpInRam = agentTmpInRam(),
+): string[] {
   const env = Object.entries(agentEnv(u, true)).map(([name, value]) => `${name}=${value}`);
   const hook = networkPrefix(u);
   const command = [
     "/bin/sh",
     "-c",
-    AGENT_RAM,
+    agentRam(!tmpInRam),
     "sh",
     String(u.uid),
     "/usr/bin/unshare",

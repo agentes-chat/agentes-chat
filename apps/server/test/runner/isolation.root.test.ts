@@ -33,6 +33,7 @@ import { browserBand, browserPortsForUid } from "../../runner/browser-ports";
 import { Holds } from "../../runner/holds";
 import { LoopbackGuard, RUNNER_NFT_TABLE } from "../../runner/loopback-guard";
 import {
+  AGENT_DISK_TMP_ROOT,
   AGENT_RAM_ROOT,
   AGENT_TMP_CLEANUP,
   AGENT_TMP_ROOT,
@@ -185,6 +186,8 @@ let A: AgentUser;
 let B: AgentUser;
 /** The third agent: the in-place upgrade's. */
 let C: AgentUser | undefined;
+/** The fourth: where its /tmp goes, boot after boot. */
+let D: AgentUser | undefined;
 let guard: LoopbackGuard;
 let policy: BindPolicyOptions;
 const running: ChildProcess[] = [];
@@ -353,13 +356,14 @@ describe.if(ROOT)("the agents' isolation on this computer, as root", () => {
     runSync("ip", ["link", "del", GUEST.bridge]);
     runSync("ip", ["link", "del", GUEST.veth]);
     runSync("ip", ["netns", "del", GUEST.ns]);
-    for (const u of [A, B, C]) {
+    for (const u of [A, B, C, D]) {
       if (!u) continue;
       runSync("systemctl", ["stop", agentSlice(u.uid)]);
       runSync("userdel", ["-r", u.user]);
       runSync("umount", ["-l", path.join(AGENT_RAM_ROOT, String(u.uid))]);
       rmSync(path.join(AGENT_RAM_ROOT, String(u.uid)), { recursive: true, force: true });
       rmSync(path.join(AGENT_TMP_ROOT, String(u.uid)), { recursive: true, force: true });
+      rmSync(path.join(AGENT_DISK_TMP_ROOT, String(u.uid)), { recursive: true, force: true });
     }
     rmSync(HOME, { recursive: true, force: true });
     rmSync(OPT, { recursive: true, force: true });
@@ -580,10 +584,19 @@ describe.if(ROOT)("the agents' isolation on this computer, as root", () => {
     // Nor by the socket's own absolute path on the computer: the tmpfs root is root-owned and 0700, so another
     // agent can't traverse into it even knowing the path.
     expect(probe(B, "unix-connect", path.join(agentTmp(A.uid), "agentes-isolation-a.sock"))).toBe("EACCES");
-    // In memory as the computer's are, on a tmpfs of the agent's own; /var/tmp on disk as the computer's is.
+    // Its /tmp is a folder of its own on the system disk, root's and 1777 as the tmpfs's was, under a root-only one
+    // that another agent can't traverse either.
+    const own = path.join(AGENT_DISK_TMP_ROOT, String(A.uid));
+    expect(existsSync(path.join(own, "agentes-isolation-a.sock"))).toBe(true);
+    expect(probe(B, "unix-connect", path.join(own, "agentes-isolation-a.sock"))).toBe("EACCES");
+    expect(must("stat", ["-c", "%U %a", AGENT_DISK_TMP_ROOT])).toBe("root 700");
+    expect(runAs(A, ["/usr/bin/stat", "-c", "%U %a %d:%i", "/tmp"]).out).toBe(must("stat", ["-c", "%U %a %d:%i", own]));
+    // /dev/shm and /run/lock in memory as the computer's are, on a tmpfs of the agent's own; /tmp and /var/tmp on disk.
     expect(runSync("findmnt", ["-n", "-o", "FSTYPE", path.join(AGENT_RAM_ROOT, String(A.uid))]).output).toBe("tmpfs");
+    const disk = must("stat", ["-f", "-c", "%T", AGENT_DISK_TMP_ROOT]);
+    expect(disk).not.toBe("tmpfs");
     expect(runAs(A, ["/usr/bin/stat", "-f", "-c", "%T", "/tmp", "/dev/shm", "/run/lock"]).out.split("\n")).toEqual([
-      "tmpfs",
+      disk,
       "tmpfs",
       "tmpfs",
     ]);
@@ -715,6 +728,51 @@ describe.if(ROOT)("the agents' isolation on this computer, as root", () => {
     expect(cleaned.output).not.toMatch(/fail|invalid|unknown/i);
     expect(cleaned.code).toBe(0);
     expect(existsSync(fresh)).toBe(true);
+  });
+
+  test("an agent's /tmp, on disk or switched to memory, is taken at its first launch after a boot and emptied at the next", () => {
+    D = users.ensure({ id: "d0000000-0000-4000-8000-000000000004", handle: "d", name: "Agent D" });
+    const agent = D;
+    const disk = must("stat", ["-f", "-c", "%T", AGENT_DISK_TMP_ROOT]);
+    const own = path.join(AGENT_DISK_TMP_ROOT, String(agent.uid));
+    /** One shell line as the agent, through a launch that says its /tmp is in memory or on disk. */
+    const sh = (inRam: boolean, line: string) => {
+      const l = systemLauncher(agent, true, undefined, false, inRam);
+      const r = spawnSync(l.prefix[0] as string, [...l.prefix.slice(1), "/bin/sh", "-c", line], {
+        cwd: "/",
+        env: l.env,
+        encoding: "utf8",
+        timeout: 30_000,
+      });
+      return `${r.stdout ?? ""}${r.stderr ?? ""}`.trim().split("\n");
+    };
+    const seen = 'stat -f -c %T /tmp; stat -c "%U %a" /tmp; cat /tmp/marker 2>/dev/null || echo none';
+
+    // Switched to memory at its first launch: in its tmpfs, and nothing of it on disk.
+    expect(sh(true, `${seen}; echo memory > /tmp/marker`)).toEqual(["tmpfs", "root 1777", "none"]);
+    expect(existsSync(own)).toBe(false);
+    // A later launch that says disk changes nothing until the next boot: all its processes keep one /tmp.
+    expect(sh(false, seen)).toEqual(["tmpfs", "root 1777", "memory"]);
+
+    // Its next boot takes its tmpfs: on disk from its first launch, fresh, with the same owner and mode.
+    must("umount", ["-l", path.join(AGENT_RAM_ROOT, String(agent.uid))]);
+    expect(sh(false, `${seen}; echo disk > /tmp/marker`)).toEqual([disk, "root 1777", "none"]);
+    expect(sh(true, seen)).toEqual([disk, "root 1777", "disk"]);
+    expect(readFileSync(path.join(own, "marker"), "utf8")).toBe("disk\n");
+
+    // systemd-tmpfiles empties the agents' /tmp on disk only at boot: a later --remove leaves it.
+    const conf = path.join(HOME, "agentes-runner-boot.conf");
+    writeFileSync(conf, AGENT_TMP_CLEANUP);
+    expect(runSync("systemd-tmpfiles", ["--remove", conf]).code).toBe(0);
+    expect(existsSync(path.join(own, "marker"))).toBe(true);
+    // A boot: every agent's tmpfs gone, then the boot's run, before any agent starts.
+    for (const u of [A, B, C, D]) if (u) runSync("umount", ["-l", path.join(AGENT_RAM_ROOT, String(u.uid))]);
+    const booted = runSync("systemd-tmpfiles", ["--create", "--remove", "--boot", conf]);
+    expect(booted.output).not.toMatch(/fail|invalid|unknown/i);
+    expect(booted.code).toBe(0);
+    expect(readdirSync(AGENT_DISK_TMP_ROOT)).toEqual([]);
+    expect(must("stat", ["-c", "%U %a", AGENT_DISK_TMP_ROOT])).toBe("root 700");
+    expect(sh(false, seen)).toEqual([disk, "root 1777", "none"]);
   });
 
   test.if(has(ADB))("adb: each agent its own server, at once", () => {

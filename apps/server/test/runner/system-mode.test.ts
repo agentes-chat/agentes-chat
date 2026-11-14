@@ -162,6 +162,22 @@ test("config: the auth route is only ever the guard's true, and a new pairing ke
   expect(paired.networkAuthRoute).toBe(true);
 });
 
+test("config: each agent's /tmp in memory is only ever true, and a new pairing keeps it", () => {
+  expect(normalizeStored({ agentTmpInRam: true }).agentTmpInRam).toBe(true);
+  for (const bad of [false, "true", 1, {}]) expect(normalizeStored({ agentTmpInRam: bad })).toEqual({});
+  const paired = configFromGrant(
+    { mode: "system", agentTmpInRam: true },
+    {
+      server: "https://app.example.com",
+      grant: { machineId: "m", token: "t", name: "n", org: { id: "o", name: "O" } } as never,
+      workspace: "/w",
+      tools: { commands: true } as never,
+      desktop: false,
+    },
+  );
+  expect(paired.agentTmpInRam).toBe(true);
+});
+
 test("a system home paired again stays a system home", () => {
   const grant = { token: "agm_new", machineId: "m2", name: "box", org: { id: "o1", name: "Acme" } };
   const input = {
@@ -260,13 +276,20 @@ test.if(posix)("service install --system: a system home, and it starts only when
   // Where their counters are read (memory.events).
   expect(AGENTS_CGROUP).toBe("/sys/fs/cgroup/agents.slice");
   expect(agentCgroup(21003)).toBe("/sys/fs/cgroup/agents.slice/agents-21003.slice");
-  // Each agent's own temporary folders: /tmp, /dev/shm and /run/lock in memory, /var/tmp on disk; what it leaves
-  // goes after 10 days, 30 in /var/tmp, as in a stock system.
+  // Each agent's own temporary folders: /dev/shm and /run/lock in memory, /tmp and /var/tmp on disk; what it leaves
+  // goes after 10 days, 30 in /var/tmp, as in a stock system, and its /tmp on disk is emptied at every boot (`D!`), as
+  // a tmpfs is, in a root-only folder of the system disk that no workspace path holds.
   expect(agentTmpCleanupPath()).toBe("/etc/tmpfiles.d/agentes-runner.conf");
   expect(agentTmp(21003)).toBe("/run/agentes-runner-tmp/21003/tmp");
-  expect(readFileSync(agentTmpCleanupPath(unitPath), "utf8")).toBe(
-    "# agentes.chat runner: each agent's own temporary folders\ne /run/agentes-runner-tmp/*/* - - - 10d\nx /run/agentes-runner-tmp/*/run\ne /var/lib/agentes-runner-tmp/*/* - - - 30d\n",
-  );
+  expect(readFileSync(agentTmpCleanupPath(unitPath), "utf8").split("\n")).toEqual([
+    "# agentes.chat runner: each agent's own temporary folders",
+    "e /run/agentes-runner-tmp/*/* - - - 10d",
+    "x /run/agentes-runner-tmp/*/run",
+    "e /var/lib/agentes-runner-tmp/*/* - - - 30d",
+    "D! /var/cache/agentes-runner-tmp 0700 root root -",
+    "e /var/cache/agentes-runner-tmp/* - - - 10d",
+    "",
+  ]);
 
   // Not connected yet: an unpaired runner would only restart in a loop.
   expect(install()).toBe(0);

@@ -74,6 +74,11 @@ export interface RunnerConfig {
    */
   services?: string[];
   /**
+   * System mode: each agent's /tmp in memory, in its own tmpfs, instead of on the system disk (`AGENT_DISK_TMP_ROOT`).
+   * An agent takes it at its first launch after the computer starts, so a change reaches it at the next boot.
+   */
+  agentTmpInRam?: true;
+  /**
    * After "leave" (unpair): the token `machineId` had, never used to connect,
    * only sent as proof when pairing again with the same server reconnects
    * that machine (ADR 0036 §5). Dropped by the next pairing.
@@ -233,8 +238,18 @@ export function normalizeStored(raw: Record<string, unknown>): StoredConfig {
       : {}),
     ...(claudeSharedLogin ? { claudeSharedLogin } : {}),
     ...(services.length ? { services } : {}),
+    ...(raw.agentTmpInRam === true ? { agentTmpInRam: true as const } : {}),
     ...(text(raw.previousToken, 4000) ? { previousToken: text(raw.previousToken, 4000) } : {}),
   };
+}
+
+/** The config's `agentTmpInRam`; a config that can't be read keeps /tmp on disk rather than fail the launch. */
+export function agentTmpInRam(home = runnerHome()): boolean {
+  try {
+    return readStoredConfig(home)?.agentTmpInRam === true;
+  } catch {
+    return false;
+  }
 }
 
 /**
