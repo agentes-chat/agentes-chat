@@ -859,7 +859,7 @@ export function repoInstructions(cwd: string): string {
  * command answered on the computer by `localVerdict` (reads only, never secrets);
  * nothing is ever asked of a person.
  * `chat` (protocol 41, the team's right hand on a person's plan, ADR 0137 §4): our MCP tools and nothing else. None
- * of Claude Code's own tools (`--tools ""`, each one denied too), no settings files, skills or slash commands, no
+ * of Claude Code's own tools (`--tools=`, each one denied too), no settings files, skills or slash commands, no
  * permission prompt (`dontAsk`: whatever isn't allowed is refused), whatever `personalMcp` says.
  * `delegated`: the same `plan` and `work` for a CLI whose tools the agent's worker serves.
  * `asksFirst`: the agent always asks (ADR 0173), so a `work` turn accepts no edit by itself: each reaches the prompt.
@@ -947,8 +947,11 @@ export function claudeBrainArgs(l: ClaudeLaunch): string[] {
     ...(l.mcpConfigFile ? ["--allowedTools", "mcp__agentes"] : []),
     ...(l.promptTool && l.mcpConfigFile ? ["--permission-prompt-tool", PERMISSION_PROMPT_TOOL] : []),
     ...(l.addDirs ?? []).flatMap((d) => ["--add-dir", d]),
-    ...(l.settingSources !== undefined ? ["--setting-sources", l.settingSources] : []),
-    ...(l.builtinTools ? ["--tools", l.builtinTools.join(",")] : []),
+    // Each value rides in one token (`=`): an empty one as its own argument is lost where the launch's arguments
+    // are joined into a shell line (Windows, #204), and the next flag is read as its value. "" still loads no
+    // settings files, an empty `--tools=` still lists none of Claude Code's own.
+    ...(l.settingSources !== undefined ? [`--setting-sources=${l.settingSources}`] : []),
+    ...(l.builtinTools ? [`--tools=${l.builtinTools.join(",")}`] : []),
     ...(l.disallowedTools?.length ? ["--disallowedTools", l.disallowedTools.join(",")] : []),
     ...(l.noSlashCommands ? ["--disable-slash-commands", "--no-chrome"] : []),
     l.resume ? "--resume" : "--session-id",

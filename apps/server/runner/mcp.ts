@@ -1344,7 +1344,7 @@ export function missionFolderRules(missionFolder: string | undefined, tools: rea
 
 /**
  * A `chat` turn's deny list (protocol 41): every tool of Claude Code's own that reaches the computer, the web, other
- * agents or the plan's claude.ai account (cloud routines, artifacts), on top of `--tools ""` that lists none of them.
+ * agents or the plan's claude.ai account (cloud routines, artifacts), on top of `--tools=` that lists none of them.
  * Names a version doesn't know are ignored by it.
  */
 export const CHAT_DENIED_TOOLS = [
@@ -1397,7 +1397,7 @@ export const CHAT_DENIED_TOOLS = [
 /**
  * A `chat` turn's guard, read on Claude Code's `system` `init` (it lists every tool the model gets, and the MCP
  * servers): anything but our bridge (`mcp__agentes__…`, server `agentes`) is a breach, and so is an `init` without
- * the lists. A tool a new version adds that `--tools ""` doesn't take away stops the turn before it can run.
+ * the lists. A tool a new version adds that `--tools=` doesn't take away stops the turn before it can run.
  */
 export const chatToolsBreach = (init: Record<string, unknown>) => toolsBreach(init, []);
 

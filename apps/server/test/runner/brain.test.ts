@@ -528,9 +528,9 @@ test("command line: stream-json both ways, opus falls back to sonnet, strict MCP
   // Only the project's settings and the built-in tools agents use, when asked.
   expect(args).not.toContain("--setting-sources");
   const lean = claudeBrainArgs({ ...base, settingSources: "project", builtinTools: BRAIN_BUILTIN_TOOLS });
-  expect(lean.join(" ")).toContain("--setting-sources project");
+  expect(lean.join(" ")).toContain("--setting-sources=project");
   // Our web tools instead of Claude Code's (they mark what they read as outside content, ADR 0117).
-  expect(lean.join(" ")).toContain("--tools Bash,Read,Edit,Write,Glob,Grep,ToolSearch");
+  expect(lean.join(" ")).toContain("--tools=Bash,Read,Edit,Write,Glob,Grep,ToolSearch");
   expect(lean.join(" ")).not.toContain("WebFetch");
   expect(lean.slice(-2)).toEqual(["--session-id", SESSION(1)]);
   expect(fallbackModelFor("claude-opus-5-5")).toBe("sonnet");
@@ -541,6 +541,26 @@ test("command line: stream-json both ways, opus falls back to sonnet, strict MCP
     parent_tool_use_id: null,
     session_id: "",
   });
+});
+
+test("command line: an empty value rides as one `=` token, never a bare argument for a shell join to lose (#204)", () => {
+  const base = {
+    session: SESSION(1),
+    resume: false,
+    strictMcp: true,
+    promptTool: true,
+    permissionMode: "acceptEdits" as const,
+  };
+  // Chat's flags: no settings files, none of Claude Code's own tools, each value one token a Windows shell can't split.
+  const empty = claudeBrainArgs({ ...base, settingSources: "", builtinTools: [] });
+  expect(empty).toContain("--setting-sources=");
+  expect(empty).toContain("--tools=");
+  expect(empty).not.toContain("--setting-sources");
+  expect(empty).not.toContain("--tools");
+  // A value that is there comes whole, in one token too.
+  const named = claudeBrainArgs({ ...base, settingSources: "user", builtinTools: ["Read", "Grep"] });
+  expect(named).toContain("--setting-sources=user");
+  expect(named).toContain("--tools=Read,Grep");
 });
 
 test("profiles (ADR 0053 §3): plan has our tools only, no settings files, no edits or web, our prompt", () => {
@@ -556,17 +576,17 @@ test("profiles (ADR 0053 §3): plan has our tools only, no settings files, no ed
   const plan = claudeBrainArgs({ ...base, ...brainProfileLaunch("plan", true) });
   const at = (args: string[], flag: string) => args[args.indexOf(flag) + 1];
   expect(plan).toContain("--strict-mcp-config");
-  expect(at(plan, "--setting-sources")).toBe("");
+  expect(plan).toContain("--setting-sources=");
   expect(at(plan, "--permission-mode")).toBe("default");
   // ToolSearch loads our tools that aren't always listed (without it Claude Code lists them all).
-  expect(at(plan, "--tools")).toBe("Bash,Read,Glob,Grep,ToolSearch");
+  expect(plan).toContain("--tools=Bash,Read,Glob,Grep,ToolSearch");
   expect(at(plan, "--permission-prompt-tool")).toBe("mcp__agentes__permission_prompt");
   const work = claudeBrainArgs({ ...base, ...brainProfileLaunch("work", false) });
   expect(at(work, "--permission-mode")).toBe("acceptEdits");
   // No settings file of the checkout either (ADR 0117): the agent can edit them.
   expect(brainProfileLaunch("work", false).settingSources).toBe("");
-  expect(at(work, "--setting-sources")).toBe("");
-  expect(at(work, "--tools")).toBe(BRAIN_BUILTIN_TOOLS.join(","));
+  expect(work).toContain("--setting-sources=");
+  expect(work).toContain(`--tools=${BRAIN_BUILTIN_TOOLS.join(",")}`);
   expect(work).toContain("--permission-prompt-tool");
   // With the owner's servers (work): their settings and every tool, as before.
   const personal = claudeBrainArgs({ ...base, ...brainProfileLaunch("work", true) });
@@ -595,9 +615,9 @@ test("protocol 41: a chat turn (the team's right hand on a plan) gets our MCP to
     settingsFile: "/b/settings.json",
     ...brainProfileLaunch("chat", true),
   });
-  expect(at(chat, "--tools")).toBe("");
+  expect(chat).toContain("--tools=");
   expect(chat).toContain("--strict-mcp-config");
-  expect(at(chat, "--setting-sources")).toBe("");
+  expect(chat).toContain("--setting-sources=");
   expect(at(chat, "--permission-mode")).toBe("dontAsk");
   expect(at(chat, "--allowedTools")).toBe("mcp__agentes");
   expect(chat).toContain("--disable-slash-commands");
@@ -1239,9 +1259,9 @@ test.if(posix)(
     const args = spawns()[0]?.args ?? [];
     const at = (flag: string) => args[args.indexOf(flag) + 1];
     expect(args).toContain("--strict-mcp-config");
-    expect(at("--setting-sources")).toBe("");
+    expect(args).toContain("--setting-sources=");
     expect(at("--permission-mode")).toBe("default");
-    expect(at("--tools")).toBe("Bash,Read,Glob,Grep,ToolSearch");
+    expect(args).toContain("--tools=Bash,Read,Glob,Grep,ToolSearch");
     expect(at("--permission-prompt-tool")).toBe("mcp__agentes__permission_prompt");
     const settings = JSON.parse(readFileSync(at("--settings") as string, "utf8")) as {
       permissions: { allow: string[]; deny: string[] };
@@ -1305,7 +1325,7 @@ test.if(posix)(
     writeFileSync(path.join(folder, "AGENTS.md"), "x".repeat(30_000));
     await turn(1, "do");
     const args = spawns()[0]?.args ?? [];
-    expect(args[args.indexOf("--setting-sources") + 1]).toBe("");
+    expect(args).toContain("--setting-sources=");
     expect(args.join(" ")).not.toContain("collect.example.net");
     const system = readFileSync(args[args.indexOf("--append-system-prompt-file") + 1] as string, "utf8");
     expect(system.startsWith("You are dev.")).toBe(true);
@@ -1441,7 +1461,7 @@ test.if(posix)(
     expect(spawn.cwd).toBe(folder);
     expect(spawn.autoMemoryOff).toBe("1");
     expect(spawn.args).not.toContain("--add-dir");
-    expect(spawn.args[spawn.args.indexOf("--tools") + 1]).toBe("");
+    expect(spawn.args).toContain("--tools=");
     expect(spawn.system ?? "").not.toContain("SECRET NOTES");
     const settings = JSON.parse(readFileSync(spawn.args[spawn.args.indexOf("--settings") + 1] ?? "", "utf8"));
     expect(settings.permissions.allow).toEqual(["mcp__agentes"]);
@@ -2501,8 +2521,8 @@ test.if(posix)("delegated: argv, files and environment are root's, with no agent
     cwd: string;
     settingsEnv: Record<string, string>;
   };
-  expect(typed(spawn, "--tools")).toBe("ToolSearch");
-  expect(typed(spawn, "--setting-sources")).toBe("");
+  expect(spawn.args).toContain("--tools=ToolSearch");
+  expect(spawn.args).toContain("--setting-sources=");
   expect(typed(spawn, "--allowedTools")).toBe("mcp__agentes");
   expect(spawn.args).toEqual(
     expect.arrayContaining([
