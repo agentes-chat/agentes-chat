@@ -2669,6 +2669,9 @@
       "update_role": "<b>{{name}}</b> rolünü değiştir",
       "delete_role": "<b>{{name}}</b> rolünü kalıcı olarak sil",
       "move_role": "<b>{{name}}</b> rolünün yerini değiştir",
+      "set_permission_holders": "<b>{{short}}</b> iznine kimin sahip olduğunu değiştir",
+      "set_permission_holders_computers": "<b>Ajanların bilgisayarlarını</b> kimin kullandığını değiştir",
+      "holdersOwnersOnly": "Yalnızca sahipler",
       "set_member_roles": "<b>{{name}}</b> kişisinin rollerini değiştir: {{change}}",
       "set_channel_permissions": "{{who}} için <b>#{{channel}}</b> kanalındaki izinleri değiştir",
       "set_my_status": "Durumunu ayarla: <b>{{what}}</b>",
@@ -3463,6 +3466,8 @@
       "changed_update_role": "<b>{{name}}</b> rolünü değiştirdim",
       "changed_delete_role": "<b>{{name}}</b> rolünü sildim",
       "changed_move_role": "<b>{{name}}</b> rolünün yerini değiştirdim",
+      "changed_set_permission_holders": "<b>{{short}}</b> iznine kimin sahip olduğunu değiştirdim",
+      "changed_set_permission_holders_computers": "<b>Ajanların bilgisayarlarını</b> kimin kullandığını değiştirdim",
       "changed_set_member_roles": "<b>{{name}}</b> kişisinin rollerini değiştirdim: {{change}}",
       "changed_set_channel_permissions": "{{who}} için <b>#{{channel}}</b> kanalındaki izinleri değiştirdim",
       "changed_set_my_status": "Durumunu ayarladım: <b>{{what}}</b>",
@@ -4434,6 +4439,10 @@
   "approval": {
     "expiredChip": "Süresi doldu · {{when}}",
     "canceledChip": "İptal edildi · {{when}}",
+    "line": {
+      "after": "“{{title}}” sonrasında çalışır",
+      "notRun": "çalışmadı: önceki istek onaylanmadı"
+    },
     "waitingFor": "{{name}} bekleniyor",
     "waitingAdmin": "Bir yönetici bekleniyor",
     "reasonLine": "Gerekçe: {{reason}}",
@@ -5015,8 +5024,15 @@
       "canceled": "İptal edildi",
       "failed": "Başarısız",
       "running": "Çalışıyor",
-      "scheduled": "Planlandı"
+      "scheduled": "Planlandı",
+      "queued": "Sırada",
+      "notRun": "Çalışmadı"
     },
+    "queuedLine": "Onaylandı. Daha önce istenen “{{title}}” sonrasında çalışır.",
+    "notRunRefused": "Daha önce istenen “{{title}}”, bu istek onaylandıktan sonra reddedildi. Bu yüzden bu istek çalışmadı.",
+    "notRunExpired": "Daha önce istenen “{{title}}”, bu istek onaylandıktan sonra karar verilmeden süresi doldu. Bu yüzden bu istek çalışmadı.",
+    "notRunEarlier": "Önceki bir istek, bu onaylandıktan sonra reddedildi veya süresi doldu. Bu yüzden bu istek çalışmadı.",
+    "position": "{{n}}/{{total}}",
     "expiredLine": "24 saat içinde kimse karar vermedi, bu yüzden hiçbir şey yapılmadı.",
     "canceledLine": "Çalıştırma karardan önce durdu.",
     "supersededLine": "Ajan daha yeni bir sürümle yeniden istedi. Bu yapılmadı.",
@@ -5083,8 +5099,10 @@
       "email": "E-posta",
       "text": "Yayımlanacak olan",
       "textDone": "Yayımlanan",
+      "textNot": "Yayımlanması istenen",
       "values": "Yapacağı şey",
       "valuesDone": "Yaptığı şey",
+      "valuesNot": "Yapacak olduğu şey",
       "trail": "Buraya nasıl gelindi",
       "showSteps": "Her adımı gör",
       "hideSteps": "Adımları gizle",
@@ -11070,13 +11088,6 @@
       "nowYours": "Notunuzu okumak için durdu",
       "nowOf": "{{name}} notunu okumak için durdu"
     },
-    "choice": {
-      "label": "{{name}} çalışırken nasıl gönderilsin",
-      "join": "{{name}} ne yapıyorsa ona ekle",
-      "interrupt": "Durdur ve gönder",
-      "joins": "ekler",
-      "interrupts": "durdurur ve gönderir"
-    },
     "strip": {
       "see": "Gör",
       "toStop": "durdurmak için"
@@ -15005,6 +15016,10 @@
         "left": "Çalışma alanından ayrıldı",
         "role_changed": "Bir üyenin rolünü değiştirdi",
         "password_link": "Bir üye için yeni şifre bağlantısı oluşturdu"
+      },
+      "role": {
+        "permission_set": "{{short}} iznine kimin sahip olduğunu değiştirdi",
+        "permission_set_computers": "Ajanların bilgisayarlarını kimin kullandığını değiştirdi"
       },
       "apps": {
         "connected": "{{app}} bağladı",

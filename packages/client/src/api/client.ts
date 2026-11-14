@@ -266,12 +266,14 @@ import type {
   RightHandApprovalsInput,
   Role,
   RoleInput,
+  RoleMailLoss,
   RosterMember,
   Routine,
   RoutineHook,
   RoutineInput,
   RoutinePatch,
   RoutineRun,
+  RowHolders,
   RuleInfo,
   Run,
   RunConsultation,
@@ -665,8 +667,21 @@ export interface ApiClient {
     remove(orgId: string, roleId: string): Promise<void>;
     /** Every role but `everyone`, top first. */
     reorder(orgId: string, ids: string[]): Promise<void>;
-    /** A person's roles, exactly these. */
-    setFor(orgId: string, userId: string, roleIds: string[], via?: string): Promise<{ roleIds: string[] }>;
+    /**
+     * A person's roles, exactly these. `mailLossSeen`: the mailboxes they were told agents lose (`mailLoss`); one
+     * given since refuses it (409 `agent.mail_loss_changed`).
+     */
+    setFor(
+      orgId: string,
+      userId: string,
+      roleIds: string[],
+      via?: string,
+      mailLossSeen?: string[],
+    ): Promise<{ roleIds: string[] }>;
+    /** "Quem pode…": who holds one row (a key, or `computers`), `everyone` and the roles at once; the roles after it. */
+    setRow(orgId: string, row: string, holders: RowHolders): Promise<OrgRoles>;
+    /** The mailboxes agents would lose if `userIds` got the role, taking nothing. */
+    mailLoss(orgId: string, roleId: string, userIds: string[]): Promise<RoleMailLoss[]>;
   };
   /** Groups of agents (ADR 0083): everyone reads them, owners and admins change them; each change answers with all. */
   agentGroups: {
