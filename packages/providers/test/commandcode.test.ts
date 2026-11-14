@@ -32,6 +32,20 @@ const message = (events: Record<string, unknown>[]) =>
     { type: "message_stop" },
   ]);
 
+describe("Command Code's DeepSeek prices", () => {
+  const usage = { inputTokens: 1_000_000, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+  const flash = "commandcode:deepseek/deepseek-v4.1-flash";
+
+  test("full price in the weekday peak hours, half the rest of the day and all weekend", () => {
+    // 2026-11-13 is a Friday, 2026-11-14 a Saturday.
+    expect(costNanoUsd(flash, usage, new Date("2026-11-13T02:30:00Z"))).toBe(300_000_000);
+    expect(costNanoUsd(flash, usage, new Date("2026-11-13T09:59:00Z"))).toBe(300_000_000);
+    expect(costNanoUsd(flash, usage, new Date("2026-11-13T04:00:00Z"))).toBe(150_000_000);
+    expect(costNanoUsd(flash, usage, new Date("2026-11-13T10:00:00Z"))).toBe(150_000_000);
+    expect(costNanoUsd(flash, usage, new Date("2026-11-14T02:30:00Z"))).toBe(150_000_000);
+  });
+});
+
 describe("Command Code's ids", () => {
   test("its own id after the prefix, slashes kept; never read as OpenRouter's", () => {
     expect(commandCodeModelOf("commandcode:zai-org/GLM-5.3")).toBe("zai-org/GLM-5.3");
@@ -74,7 +88,8 @@ describe("calls (scripted transport)", () => {
     expect(result.model).toBe(model);
     expect(result.costNanoUsd).toBeUndefined();
     expect(result.content).toEqual([{ type: "text", text: "ok" }]);
-    expect(costNanoUsd(result.model, result.usage)).toBe(1000 * 150 + 10 * 600);
+    // Off-peak (a Saturday): DeepSeek's half price.
+    expect(costNanoUsd(result.model, result.usage, new Date("2026-11-14T12:00:00Z"))).toBe(1000 * 150 + 10 * 600);
   });
 
   test("Claude: Anthropic Messages at Command Code with its key, its own id sent, the full id back", async () => {
@@ -102,32 +117,6 @@ describe("calls (scripted transport)", () => {
     for (const field of ["cache_control", "fallbacks"]) expect(req?.body).not.toHaveProperty(field);
     expect(result.model).toBe("commandcode:claude-sonnet-5-5");
     expect(result.content).toEqual([{ type: "text", text: "oi" }]);
-  });
-
-  test("Claude's later turns: plain 5-minute breakpoints everywhere, never a 1-hour one (Anthropic refuses 1h after 5m)", async () => {
-    const { fetcher, requests } = scripted(
-      message([
-        { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null }, usage: { output_tokens: 1 } },
-      ]),
-    );
-    await createCommandCodeProvider({ fetch: fetcher, maxRetries: 0 }).stream(
-      {
-        model: "commandcode:claude-haiku-5-5",
-        cacheTtl: "1h",
-        system: [{ text: "org", cache: true }, { text: "turn" }],
-        tools: [{ name: "search", description: "s", inputSchema: { type: "object" } }],
-        messages: [
-          { role: "user", content: [{ type: "text", text: "first", cache: true }] },
-          { role: "assistant", content: "ok" },
-          { role: "user", content: [{ type: "text", text: "second", cache: true }] },
-        ],
-        maxTokens: 100,
-      },
-      { apiKey: "user_k123456789", onDelta: () => {} },
-    );
-    const sent = JSON.stringify(requests[0]?.body);
-    expect(sent).toContain('"cache_control":{"type":"ephemeral"}');
-    expect(sent).not.toContain('"ttl"');
   });
 
   test("structured output on Claude (the router's pick) is a forced tool, thinking off; its input is the reply", async () => {

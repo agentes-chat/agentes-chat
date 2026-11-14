@@ -84,6 +84,11 @@ export interface ModelInfo {
   prices: TokenPrices;
   /** Lower prices the provider charges until a day (UTC, exclusive): `prices` apply from then on. */
   intro?: { until: string; prices: TokenPrices };
+  /**
+   * Lower prices outside the provider's peak hours (UTC, `[from, to)`, Monday to Friday; weekends are off-peak all
+   * day): `prices` are the peak ones.
+   */
+  offPeak?: { prices: TokenPrices; peakHoursUtc: readonly (readonly [number, number])[] };
   /** Prices for the whole request when its prompt exceeds `aboveInputTokens`. */
   longContext?: { aboveInputTokens: number; prices: TokenPrices };
   /** Ask the API to retry a refused request on a fallback model (Anthropic `fallbacks: "default"`). */
@@ -135,6 +140,12 @@ export const isAutoModel = (model: string | null | undefined) => model === AUTO_
 
 /** Context window assumed for a model without one in the catalog: the smallest current one, so runs stay inside it. */
 export const DEFAULT_CONTEXT_WINDOW = 200_000;
+
+// DeepSeek's peak hours through Command Code, at full price; the other 17 hours of a weekday and all weekend cost half.
+const DEEPSEEK_PEAK = [
+  [1, 4],
+  [6, 10],
+] as const;
 
 export const MODEL_CATALOG: Record<string, ModelInfo> = {
   // Its 1M-token window from platform.claude.com/docs/en/about-claude/models/overview, all of it at these prices
@@ -420,14 +431,22 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   "commandcode:deepseek/deepseek-v4-pro": {
     provider: "commandcode",
     label: "DeepSeek V4 Pro",
-    prices: { input: 660, output: 1980, cacheRead: 22, cacheWrite: 660 },
+    prices: { input: 1320, output: 3960, cacheRead: 44, cacheWrite: 1320 },
+    offPeak: {
+      prices: { input: 660, output: 1980, cacheRead: 22, cacheWrite: 660 },
+      peakHoursUtc: DEEPSEEK_PEAK,
+    },
     contextWindow: 1_000_000,
     serverSideFallback: false,
   },
   "commandcode:deepseek/deepseek-v4.1-flash": {
     provider: "commandcode",
     label: "DeepSeek V4.1 Flash",
-    prices: { input: 150, output: 600, cacheRead: 3, cacheWrite: 150 },
+    prices: { input: 300, output: 1200, cacheRead: 6, cacheWrite: 300 },
+    offPeak: {
+      prices: { input: 150, output: 600, cacheRead: 3, cacheWrite: 150 },
+      peakHoursUtc: DEEPSEEK_PEAK,
+    },
     contextWindow: 1_000_000,
     serverSideFallback: false,
     cheap: true,
@@ -443,7 +462,11 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   "commandcode:deepseek/deepseek-v4.1-flash-fast": {
     provider: "commandcode",
     label: "DeepSeek V4.1 Flash Fast",
-    prices: { input: 160, output: 580, cacheRead: 16, cacheWrite: 160 },
+    prices: { input: 320, output: 1160, cacheRead: 32, cacheWrite: 320 },
+    offPeak: {
+      prices: { input: 160, output: 580, cacheRead: 16, cacheWrite: 160 },
+      peakHoursUtc: DEEPSEEK_PEAK,
+    },
     contextWindow: 1_000_000,
     serverSideFallback: false,
   },
@@ -457,7 +480,11 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
   "commandcode:deepseek/deepseek-v4-flash-vision-exp": {
     provider: "commandcode",
     label: "DeepSeek V4 Flash Vision (exp)",
-    prices: { input: 150, output: 600, cacheRead: 3, cacheWrite: 150 },
+    prices: { input: 300, output: 1200, cacheRead: 6, cacheWrite: 300 },
+    offPeak: {
+      prices: { input: 150, output: 600, cacheRead: 3, cacheWrite: 150 },
+      peakHoursUtc: DEEPSEEK_PEAK,
+    },
     contextWindow: 1_000_000,
     serverSideFallback: false,
   },
@@ -675,12 +702,21 @@ const tokensCost = (p: TokenPrices, u: ModelUsage) =>
   (u.cacheWriteLongTokens ?? 0) * (LONG_CACHE_WRITE * p.input - p.cacheWrite);
 
 /**
- * What a call made at `at` pays per token: the introductory prices before their day. Budget reservations
+ * What a call made at `at` pays per token: the introductory prices before their day, the off-peak ones outside
+ * the peak hours. Budget reservations
  * (`maxCostNanoUsd`, `outputTokensWithin`) keep the list prices on purpose, so they err high while a lower price
  * lasts; give them `at` too if that ever stops agents early.
  */
-export const pricesAt = (info: ModelInfo, at = new Date()) =>
-  info.intro && at.getTime() < Date.parse(info.intro.until) ? info.intro.prices : info.prices;
+export const pricesAt = (info: ModelInfo, at = new Date()) => {
+  if (info.intro && at.getTime() < Date.parse(info.intro.until)) return info.intro.prices;
+  return info.offPeak && !atPeak(info.offPeak.peakHoursUtc, at) ? info.offPeak.prices : info.prices;
+};
+
+const atPeak = (hours: readonly (readonly [number, number])[], at: Date) => {
+  const day = at.getUTCDay();
+  const hour = at.getUTCHours();
+  return day !== 0 && day !== 6 && hours.some(([from, to]) => hour >= from && hour < to);
+};
 
 /**
  * Cost in nano-USD of one call made at `at`. Throws for models outside the catalog (we never make a call we
