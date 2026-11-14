@@ -774,8 +774,6 @@ pub fn run() {
             _ => {}
         })
         .setup(|app| {
-            #[cfg(target_os = "linux")]
-            graphics::read_webkit_version();
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             let handle = app.handle().clone();

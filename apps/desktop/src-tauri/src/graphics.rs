@@ -32,20 +32,18 @@ fn renderer_for(dmabuf_off: Option<&str>, compositing_off: Option<&str>, webkit:
     }
 }
 
-#[cfg(target_os = "linux")]
-static WEBKIT: std::sync::OnceLock<(u32, u32, u32)> = std::sync::OnceLock::new();
-
-/// Read once on the main thread, from `setup`: webkit2gtk's version calls panic anywhere GTK isn't initialized, and
-/// windows open from other threads too.
-#[cfg(target_os = "linux")]
-pub fn read_webkit_version() {
-    WEBKIT.get_or_init(|| (webkit2gtk::major_version(), webkit2gtk::minor_version(), webkit2gtk::micro_version()));
-}
-
-/// Unread (never, once `setup` ran), it counts as today's WebKitGTK, where the app's default paints on the CPU.
+/// The WebKitGTK the app runs on (webkit2gtk-rs wraps no version call: the C ones return the library's own
+/// constants, from any thread).
 #[cfg(target_os = "linux")]
 fn webkit_version() -> (u32, u32, u32) {
-    WEBKIT.get().copied().unwrap_or((2, 44, 0))
+    // SAFETY: plain getters with no arguments and no state.
+    unsafe {
+        (
+            webkit2gtk::ffi::webkit_get_major_version(),
+            webkit2gtk::ffi::webkit_get_minor_version(),
+            webkit2gtk::ffi::webkit_get_micro_version(),
+        )
+    }
 }
 
 /// What a Linux computer says about how it draws.
