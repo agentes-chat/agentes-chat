@@ -7,9 +7,11 @@ import {
   endpointAddressLooksValid,
   endpointModelsOf,
   endpointReady,
+  modelsShown,
   modelUnpriced,
   parsePrice,
   pricesProblem,
+  withChecks,
   withListedModels,
   withoutModel,
   withTypedModel,
@@ -17,6 +19,26 @@ import {
 import { keyRuns, modelChoices } from "../src/lib/providers";
 
 describe("the endpoint form", () => {
+  test("a search shows the models ticked when it began first, whatever is typed, then the others that match", () => {
+    const models = ["qwen-8b", "deepseek-v4", "qwen-32b", "kimi-k2"].map((id) => ({ id }));
+    const pinned = new Set(["deepseek-v4"]);
+    expect(modelsShown(models, " QWEN ", pinned).map((m) => m.id)).toEqual(["deepseek-v4", "qwen-8b", "qwen-32b"]);
+    expect(modelsShown(models, "", pinned).map((m) => m.id)).toEqual(["deepseek-v4", "qwen-8b", "qwen-32b", "kimi-k2"]);
+    expect(modelsShown(models, "zzz", new Set())).toEqual([]);
+  });
+
+  test("a save's tests go into the key's models, as the server keeps them", () => {
+    const key = {
+      id: "k",
+      endpoint: { style: "openai" as const, baseURL: "https://api.example.com/v1", models: [{ id: "a" }, { id: "b" }] },
+    };
+    expect(withChecks(key, [{ model: "b", check: "ok" }]).endpoint?.models).toEqual([
+      { id: "a" },
+      { id: "b", check: "ok" },
+    ]);
+    expect(withChecks({ id: "k" }, [{ model: "b", check: "ok" }])).toEqual({ id: "k" });
+  });
+
   test("a model taken off leaves the others as they were", () => {
     const d = withListedModels(emptyEndpointDraft(), [{ id: "a" }, { id: "b" }]);
     expect(withoutModel(d, "a").models.map((m) => m.id)).toEqual(["b"]);
