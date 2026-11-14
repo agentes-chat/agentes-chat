@@ -5,6 +5,7 @@ import {
   useContinueTasks,
   useNotificationCount,
   useTaskManager,
+  useWaitingOnMe,
 } from "@agenteschat/client";
 import { returnWhen, WORK_TICK_MS } from "@agenteschat/client/lib/agent-work";
 import {
@@ -179,8 +180,17 @@ function AgoraList({ onLeave, onQueue }: { onLeave: () => void; onQueue: (machin
     });
   const hidden = view.data?.hidden?.total ?? 0;
   // The sidebar's "Esperando você" count: join requests, proposals… too. Past this list's rows, a line leads there.
+  // Not by count: an admin decides approvals whose inbox item only the agent's responsável gets, so the rows can
+  // outnumber the inbox while a request to join still waits. The line shows while the inbox holds anything that
+  // isn't one of these rows' cards.
   const waitingOnMe = useNotificationCount(org.id).data?.waiting ?? 0;
-  const allWaiting = waitingOnMe > sections.you.length ? waitingOnMe : 0;
+  const cards = new Set(
+    sections.you.flatMap((i) => (i.kind === "task" && i.task.work?.card ? [i.task.work.card] : [])),
+  );
+  const elsewhere = (useWaitingOnMe(org.id).data?.items ?? []).some(
+    (w) => !w.source.messageId || !cards.has(w.source.messageId),
+  );
+  const allWaiting = elsewhere ? waitingOnMe : 0;
   // Nothing on only when nothing is hidden from the reader either: the button orbits for work they can't list.
   const empty = SECTIONS.every((s) => sections[s].length === 0) && hidden === 0 && allWaiting === 0;
 

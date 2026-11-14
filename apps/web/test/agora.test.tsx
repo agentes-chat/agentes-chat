@@ -387,12 +387,51 @@ describe("the list", () => {
     ).toEqual([expect.stringContaining("Ada"), "As 3 coisas que esperam você"]);
     cleanup();
 
-    // As many as its rows: nothing more to lead to.
+    // Only its own row's card waits: nothing more to lead to.
     const one = seedState({ taskManager: busy() });
-    one.notifications = [notification({ id: "n-approval", kind: "approval", waiting: true })];
+    one.notifications = [
+      notification({ id: "n-approval", kind: "approval", waiting: true, source: { messageId: "m-card" } }),
+    ];
     await go(one);
     await click(agora());
     expect(within(list()).queryByRole("link", { name: /esperam? você/ })).toBeNull();
+    cleanup();
+
+    // An admin decides two approvals whose inbox items only the agents' responsável gets, and a request to join waits
+    // too: two rows, one inbox item, and the line still leads to it.
+    const admin = seedState({
+      taskManager: {
+        ...busy(),
+        tasks: [
+          task({
+            runId: "r-pr",
+            agentId: ADA_ID,
+            status: "waiting_approval",
+            label: "Revisar o PR #231",
+            startedAt: ago(30),
+            work: { state: "you", since: ago(3), card: "m-card" },
+          }),
+          task({
+            runId: "r-deploy",
+            agentId: ATLAS_ID,
+            status: "waiting_approval",
+            label: "Publicar a versão nova",
+            startedAt: ago(20),
+            work: { state: "you", since: ago(2), card: "m-card-2" },
+          }),
+        ],
+        hidden: { total: 0, working: 0, byAgent: {} },
+        followUps: [],
+      },
+    });
+    admin.notifications = [notification({ id: "n-join", kind: "join_request", waiting: true })];
+    await go(admin);
+    await click(agora());
+    const mine = within(list()).getByRole("region", { name: "Esperando você" });
+    expect(within(mine).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(mine).getByRole("link", { name: "1 coisa espera você" }).getAttribute("href")).toBe(
+      `/org/${ORG_ID}/waiting`,
+    );
   });
 
   test("worst case: long names, long titles, many rows, in English with 12-hour times", async () => {
