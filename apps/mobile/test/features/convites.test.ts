@@ -19,6 +19,7 @@ import {
   linkLine,
   linkTitle,
   listedInvitations,
+  listedPlainLink,
   maxWord,
   requestLine,
   startChanges,
@@ -96,6 +97,24 @@ describe("a form's cargos bring their channels and agents (ADR 0184)", () => {
     expect(startOf(ROLES, d)).toEqual({ channelIds: ["c-suporte", "c-contas"], agentIds: ["fin"] });
   });
 
+  test("ticking one a dropped cargo had taken out brings it back (Suporte, untick #suporte, Membro, tick)", () => {
+    let d: Pick<InviteDraft, "roleIds" | "added" | "removed"> = draft({ roleIds: ["suporte"] });
+    d = { ...d, ...flipStart(ROLES, d, "channelIds", "c-suporte") };
+    d = { ...d, ...flipStart(ROLES, d, "agentIds", "max") };
+    d = { ...d, roleIds: [] };
+    d = { ...d, ...flipStart(ROLES, d, "channelIds", "c-suporte") };
+    d = { ...d, ...flipStart(ROLES, d, "agentIds", "max") };
+    expect(startOf(ROLES, d)).toEqual({ channelIds: ["c-suporte"], agentIds: ["max"] });
+    // Each tap flips once: nothing piles up in `added`.
+    d = { ...d, ...flipStart(ROLES, d, "channelIds", "c-suporte") };
+    expect(startOf(ROLES, d).channelIds).toEqual([]);
+    expect(d.added.channelIds).toEqual([]);
+    // Editar link: a link that left its cargo's channel out, once that cargo is unticked.
+    let e = { ...draftFrom(ROLES, { roleIds: ["suporte"], agentIds: ["max"] }), roleIds: [] as string[] };
+    e = { ...e, ...flipStart(ROLES, e, "channelIds", "c-suporte") };
+    expect(startOf(ROLES, e).channelIds).toEqual(["c-suporte"]);
+  });
+
   test("Link mode: the workspace's own link at the defaults, a link of its own past them", () => {
     expect(sameChoices(linkChoicesOf(ROLES, draft()), PLAIN_LINK)).toBe(true);
     expect(sameChoices(linkChoicesOf(ROLES, draft({ roleIds: ["suporte"] })), PLAIN_LINK)).toBe(false);
@@ -158,6 +177,22 @@ describe("Convites' rows (ADR 0184)", () => {
     expect(linkLine(en, "en", link({ maxUses: 5, uses: 1 }), "u-me", NOW)).toBe(
       "1 of 5 people · expires in 6 days · by Ana Souza",
     );
+  });
+
+  test("Link mode shows the workspace's listed link at once: the newest plain one with its address", () => {
+    const listed = [
+      link({ id: "own", plain: false }),
+      link({ id: "unshown", plain: true, url: null }),
+      link({ id: "workspace", plain: true }),
+      link({ id: "older", plain: true }),
+    ];
+    expect(listedPlainLink(listed, NOW)?.id).toBe("workspace");
+    // A server without `plain` lists only the workspace's own.
+    expect(listedPlainLink([link()], NOW)?.id).toBe("l1");
+    expect(listedPlainLink([link({ plain: false })], NOW)).toBeUndefined();
+    // Past its date since the list was read: renewing it would make a new address.
+    expect(listedPlainLink([link({ plain: true, expiresAt: later(-0.01) })], NOW)).toBeUndefined();
+    expect(listedPlainLink(undefined, NOW)).toBeUndefined();
   });
 
   test("a request says how it came and what its link gives; a suggestion who made it", async () => {
@@ -290,18 +325,40 @@ describe("the choices pushed over a form", () => {
     // Without the cargo, its private channel isn't on offer (the viewer isn't in it).
     const none = channelPicks(pt, { channels, categories: [], roles: ROLES, draft: draft() });
     expect(none.flatMap((g) => g.picks.map((p) => p.channel.name))).not.toContain("suporte");
+    // A search keeps what it names, with its "#" or not, accents aside; a group left without any goes.
+    const found = (query: string) =>
+      channelPicks(pt, {
+        channels,
+        categories: [{ id: "k-time", name: "Time" }],
+        roles: ROLES,
+        draft: draft({ roleIds: ["suporte"] }),
+        query,
+      }).map((g) => [g.title, g.picks.map((p) => p.channel.name)]);
+    expect(found("#vend")).toEqual([["Time", ["vendas"]]]);
+    expect(found("SUP")).toEqual([["Do cargo Suporte", ["suporte"]]]);
+    expect(found("diretória")).toEqual([[null, ["diretoria"]]]);
+    expect(found("folha")).toEqual([]);
   });
 
   test("Agentes: every case the server decides, with its reason, and only the pickable ones tickable", async () => {
     const pt = await translator("pt-BR");
-    const picks = agentPicks(pt, {
+    const args: Parameters<typeof agentPicks>[1] = {
       agents: AGENTS.filter((a) => a.builtin !== "right_hand"),
       viewer: VIEWER,
       roles: ROLES,
       draft: draft({ roleIds: ["suporte"] }),
       ownerName: (id) => (id === "u-bruno" ? "Bruno" : id === "u-me" ? "Você" : null),
       mailboxOwners: (id) => (id === "nora" ? ["Bruno"] : id === "fin" ? [] : []),
-    });
+    };
+    const picks = agentPicks(pt, args);
+    // A search keeps the ones it names, by name or função, in their groups.
+    const found = (query: string) => {
+      const p = agentPicks(pt, { ...args, query });
+      return [p.fromCargo.map((x) => x.agent.name), p.others.map((x) => x.agent.name)];
+    };
+    expect(found("DEV")).toEqual([[], ["Ada"]]);
+    expect(found("max")).toEqual([["Max"], []]);
+    expect(found("ninguém")).toEqual([[], []]);
     const said = (list: typeof picks.others) =>
       list.map((p) => [p.agent.name, p.case, p.sub, p.on, p.disabled, p.opens ?? ""]);
     expect(said(picks.fromCargo)).toEqual([["Max", "cargo", "Pelo cargo Suporte", true, false, ""]]);
@@ -353,6 +410,20 @@ describe("the choices pushed over a form", () => {
     });
   });
 
+  test("Cargo, Canais and Agentes search past eight rows, as the cargo's own lists; a miss says so and clears", () => {
+    const picks = src("features/members/InvitePickers.tsx");
+    for (const key of ["rolesPage.search", "rolesPage.channels.search", "rolesPage.agents.search"])
+      expect(picks).toContain(`<PickSearch value={query} onChange={setQuery} label={t("${key}")} />`);
+    expect(picks.match(/> ROLES_SEARCH_FROM \? \(/g)?.length).toBe(3);
+    for (const key of ["rolesPage.noMatch", "rolesPage.channels.noMatch", "rolesPage.agents.noMatch"])
+      expect(picks).toContain(`<NoMatch text={t("${key}", { q: query.trim() })} clear={() => setQuery("")} />`);
+    expect(picks).toContain('<GroupedRow icon="x" label={t("filters.clearSearch")} onPress={clear} />');
+    // Canais and Agentes filter where their groups are made; the right hand goes too when the search misses it.
+    expect(picks).toContain("channelPicks(t, { channels, categories, roles, draft, query })");
+    expect(picks).toMatch(/mailboxOwners,\s*query,\s*\}\);/);
+    expect(picks).toContain("const rightShown = right && agentMatches(right, query) ? right : undefined;");
+  });
+
   test("each choice is a pushed screen writing to the form its route names", () => {
     const fields = src("features/members/InviteFields.tsx");
     expect(fields).toContain('router.push({ pathname: "/invite-pick", params: { draft, what } })');
@@ -400,6 +471,23 @@ describe("Convidar pessoas on the phone", () => {
     expect(invite).toMatch(/renew\s*\.mutateAsync\(\)\s*\.then\(setWorkspace,/);
     expect(invite).toContain("const link = await make.mutateAsync(choices);");
     expect(invite).toContain('label={t("members.link.make")}');
+  });
+
+  test("Link mode never moves as it opens: the listed address at once, else its three lines and the date's line held", () => {
+    // The list is read while E-mail shows; renewing keeps the address, only "Vale até" changes.
+    expect(invite).toContain("const links = useInviteLinks(orgId).data;");
+    expect(invite).toContain("listed={listedPlainLink(links)}");
+    expect(invite).toContain("(plain ? (workspace ?? listed ?? null) : null)");
+    // From the first frame, before the renewal starts.
+    expect(invite).toContain("const renewing = plain && !shown && (renew.isIdle || renew.isPending);");
+    expect(invite).toContain('const ADDRESS_PENDING = "…\\n\\u00a0\\n\\u00a0";');
+    // A long host wraps the address whole, never cut, here and on Editar link.
+    expect(invite).toContain("label={shown?.url ?? ADDRESS_PENDING} labelLines={0}");
+    expect(src("features/members/InviteEdit.tsx")).toContain('<GroupedRow icon="link" label={url} labelLines={0} />');
+    // Never "Crie o link para copiar." while no Criar link row is there.
+    expect(invite).toMatch(/: renewing\s*\? "\\u00a0"\s*: t\("invites\.link\.makeFirst"\)/);
+    // A listed link that fails to renew still works until its date: no failure toast then.
+    expect(invite).toContain("if (!known) toast(");
   });
 });
 

@@ -33,8 +33,9 @@ import { askedLabel } from "@agenteschat/client/lib/join-requests";
 import { personalHelperRole, personalRoleKey } from "@agenteschat/client/lib/personal-view";
 import { everyoneOf, grants, isEveryone, rolesOf, sortRoles } from "@agenteschat/client/lib/roles";
 import { addressesIn } from "@agenteschat/client/lib/text";
+import { matchesWords } from "@agenteschat/ui/search";
 import type { TFunction } from "i18next";
-import { channelGroups } from "../roles/logic";
+import { channelGroups, channelMatches } from "../roles/logic";
 import type { InviteDraft } from "./draft";
 
 /** "agora", "há 2 h", "ontem", "em 22 out": when something happened, to follow a verb. */
@@ -287,8 +288,19 @@ export function linkChoicesOf(
 }
 
 /**
+ * The workspace's own link as listed, its address known: the one renewing it gives back (the newest), at the same
+ * address, so Link mode shows it while it is renewed. One past its date since the list was read would come back as a
+ * new address, so it isn't. A link from a server without `plain` is one.
+ */
+export const listedPlainLink = (links: readonly InviteLink[] | undefined, now = new Date()) =>
+  links?.find(
+    (l): l is InviteLink & { url: string } =>
+      l.plain !== false && Boolean(l.url) && new Date(l.expiresAt).getTime() > now.getTime(),
+  );
+
+/**
  * Taking one channel or agent in or out of a form: one of its cargos' own goes to `removed` and comes back from it;
- * any other is `added` or dropped from it.
+ * any other is `added` or dropped from it, and leaves `removed` (a cargo since dropped may have put it there).
  */
 export function flipStart(
   roles: readonly Pick<OrgRole, "id" | "channelIds" | "agentIds">[],
@@ -304,7 +316,10 @@ export function flipStart(
       added: d.added,
       removed: { ...d.removed, [kind]: on ? [...d.removed[kind], id] : without(d.removed[kind]) },
     };
-  return { removed: d.removed, added: { ...d.added, [kind]: on ? without(d.added[kind]) : [...d.added[kind], id] } };
+  return {
+    removed: { ...d.removed, [kind]: without(d.removed[kind]) },
+    added: { ...d.added, [kind]: on ? without(d.added[kind]) : [...without(d.added[kind]), id] },
+  };
 }
 
 const sameIds = (a: readonly string[], b: readonly string[]) =>
@@ -433,7 +448,8 @@ export interface ChannelPick {
 /**
  * Canais' groups: what the picked cargos bring first ("Do cargo Suporte"), then the rest in the sidebar's categories
  * and order, #general on top, ticked and fixed. On offer, as the server takes them: the public channels, the private
- * ones the viewer is in, and those limited to a picked cargo.
+ * ones the viewer is in, and those limited to a picked cargo. A search keeps the ones it names, and a group left
+ * without any goes.
  */
 export function channelPicks(
   t: TFunction,
@@ -445,13 +461,16 @@ export function channelPicks(
     categories: readonly { id: string; name: string }[];
     roles: readonly OrgRole[];
     draft: Pick<InviteDraft, "roleIds" | "added" | "removed">;
+    query?: string;
   },
 ): { title: string | null; picks: ChannelPick[] }[] {
   const { roles, draft } = args;
   const picked = roles.filter((r) => draft.roleIds.includes(r.id));
   const viaCargo = (c: Pick<Channel, "audienceRoleIds">) => picked.find((r) => c.audienceRoleIds?.includes(r.id));
   const offered = args.channels.filter(
-    (c) => c.name === "general" || c.visibility === "public" || c.isMember || viaCargo(c),
+    (c) =>
+      (c.name === "general" || c.visibility === "public" || c.isMember || viaCargo(c)) &&
+      channelMatches(c.name, args.query ?? ""),
   );
   const own = inviteStart(roles, draft.roleIds, NO_START, NO_START).channelIds;
   const on = startOf(roles, draft).channelIds;
@@ -486,9 +505,13 @@ export interface AgentPick {
   opens?: "agent" | "plan";
 }
 
+/** Whether an agent's name or função has every word of a search (Agentes, as the web's cargo Agentes). */
+export const agentMatches = (a: Pick<Agent, "name" | "role">, query: string) =>
+  matchesWords(`${a.name} ${a.role}`, query);
+
 /**
  * Agentes' rows, the server's cases (`inviteAgentCase`): what the picked cargos bring first, then the team's, each
- * saying how it would go. One already in the form can always come out.
+ * saying how it would go. One already in the form can always come out. A search keeps the ones it names.
  */
 export function agentPicks(
   t: TFunction,
@@ -500,6 +523,7 @@ export function agentPicks(
     ownerName: (userId: string | null) => string | null;
     /** Whose mailboxes opening it would take; undefined while that is being asked. */
     mailboxOwners: (agentId: string) => readonly string[] | undefined;
+    query?: string;
   },
 ): { fromCargo: AgentPick[]; others: AgentPick[] } {
   const { roles, draft, viewer } = args;
@@ -535,7 +559,9 @@ export function agentPicks(
       ...(opens && !isOn ? { opens } : {}),
     };
   };
-  const listed = [...args.agents].sort((a, b) => a.name.localeCompare(b.name));
+  const listed = args.agents
+    .filter((a) => agentMatches(a, args.query ?? ""))
+    .sort((a, b) => a.name.localeCompare(b.name));
   return {
     fromCargo: listed.filter((a) => own.includes(a.id)).map(pick),
     others: listed.filter((a) => !own.includes(a.id)).map(pick),

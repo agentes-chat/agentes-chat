@@ -1,10 +1,12 @@
 import {
+  type InviteLink,
   type InviteLinkMade,
   useAgents,
   useAiStatus,
   useAllInvitations,
   useAuthConfig,
   useChannels,
+  useInviteLinks,
   useInviteMany,
   useMakeInviteLink,
   usePeople,
@@ -72,6 +74,7 @@ import {
   addressState,
   batchNews,
   type InviteAddress,
+  listedPlainLink,
   maxWord,
   pendingInvitations,
   readTyped,
@@ -84,6 +87,8 @@ import { MembersFullNote } from "./MembersFullNote";
 const KEY = "invite";
 /** How long "Copiado" stays on the copy row. */
 const COPIED_MS = 1800;
+/** The address row while the workspace's link is first made: the three lines its address takes, so nothing moves. */
+const ADDRESS_PENDING = "…\n\u00a0\n\u00a0";
 
 /**
  * Convidar pessoas (ADR 0090 §5, 0184), the web's one-screen dialog as a pushed screen: E-mail or Link on top, then
@@ -133,6 +138,8 @@ function InviteForm() {
   const full = membersFull(useWorkspaceLimits(orgId).data) !== null;
   const inviteMany = useInviteMany(orgId);
   const make = useMakeInviteLink(orgId);
+  // Read while E-mail shows, so Link has the workspace's address at once.
+  const links = useInviteLinks(orgId).data;
   const input = useRef<TextInputInstance | null>(null);
   const [typed, setTyped] = useState("");
   // A pick the server turned down (gone, or no longer the sender's to give): its token and its line until it's out.
@@ -369,7 +376,7 @@ function InviteForm() {
           </GroupedList>
         </>
       ) : (
-        <LinkMode draft={draft} start={start} make={make} onRefused={refusedBy} />
+        <LinkMode draft={draft} start={start} make={make} onRefused={refusedBy} listed={listedPlainLink(links)} />
       )}
       {lines.map((l) => (
         <GroupedFooter key={l.text}>
@@ -407,21 +414,24 @@ function InviteForm() {
 
 /**
  * Link mode: the link for these choices, then Ao entrar (Cargo, Canais, Agentes). At the defaults it is the
- * workspace's link, renewed to 30 days as the mode opens, so "Vale até" agrees; any other choice empties it to
- * "Criar link", and the link made shows until a choice changes again. A link made never changes from here, only from
- * Editar link (Convites).
+ * workspace's link, shown at once as listed and renewed to 30 days as the mode opens, so "Vale até" agrees; any other
+ * choice empties it to "Criar link", and the link made shows until a choice changes again. A link made never changes
+ * from here, only from Editar link (Convites).
  */
 function LinkMode({
   draft,
   start,
   make,
   onRefused,
+  listed,
 }: {
   draft: InviteDraft;
   start: StartFields;
   /** Making a link with these choices: the form is locked while it runs. */
   make: ReturnType<typeof useMakeInviteLink>;
   onRefused: (e: unknown) => boolean;
+  /** The workspace's link as listed (`listedPlainLink`): renewing keeps its address. */
+  listed: (InviteLink & { url: string }) | undefined;
 }) {
   const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
@@ -439,18 +449,21 @@ function LinkMode({
   useEffect(() => {
     if (!plain || asked.current) return;
     asked.current = true;
-    renew
-      .mutateAsync()
-      .then(setWorkspace, (e: unknown) =>
-        toast({ title: t("invites.link.failed", { cause: errorText(t, e, i18n.language) }), icon: "x" }),
-      );
-  }, [plain, renew, toast, t, i18n.language]);
+    // A listed link still works until its own date if renewing it fails: then there is nothing to say.
+    const known = Boolean(listed);
+    renew.mutateAsync().then(setWorkspace, (e: unknown) => {
+      if (!known) toast({ title: t("invites.link.failed", { cause: errorText(t, e, i18n.language) }), icon: "x" });
+    });
+  }, [plain, renew, toast, t, i18n.language, listed]);
   useEffect(() => {
     if (!copied) return;
     const timer = setTimeout(() => setCopied(false), COPIED_MS);
     return () => clearTimeout(timer);
   }, [copied]);
-  const shown = (made && sameChoices(made.choices, choices) ? made.link : null) ?? (plain ? workspace : null);
+  const shown =
+    (made && sameChoices(made.choices, choices) ? made.link : null) ?? (plain ? (workspace ?? listed ?? null) : null);
+  // Idle too: the first frame, before the renewal starts, already holds the address's place.
+  const renewing = plain && !shown && (renew.isIdle || renew.isPending);
   const create = async () => {
     try {
       const link = await make.mutateAsync(choices);
@@ -460,11 +473,14 @@ function LinkMode({
       if (!onRefused(e)) toast({ title: failedText(e), icon: "x" });
     }
   };
+  // While the address is first made the line stays, empty: "Crie o link" would point at a row that isn't there.
   const until = shown
     ? shown.neverExpires
       ? t("invites.ttl.never")
       : t("members.link.until", { date: formatShortDate(i18n.language, shown.expiresAt) })
-    : t("invites.link.makeFirst");
+    : renewing
+      ? "\u00a0"
+      : t("invites.link.makeFirst");
   return (
     <>
       <GroupedHeader
@@ -473,9 +489,9 @@ function LinkMode({
         {t("invites.how.link")}
       </GroupedHeader>
       <GroupedList>
-        {shown || (plain && renew.isPending)
+        {shown || renewing
           ? [
-              <GroupedRow key="url" icon="link" label={shown?.url ?? "…"} labelLines={3} faint={!shown} />,
+              <GroupedRow key="url" icon="link" label={shown?.url ?? ADDRESS_PENDING} labelLines={0} faint={!shown} />,
               <GroupedRow
                 key="copy"
                 icon={copied ? "check" : "copy"}

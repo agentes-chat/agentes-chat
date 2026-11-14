@@ -5,14 +5,16 @@ import { INVITE_LINK_MAX_USES, INVITE_LINK_TTLS, inviteStart } from "@agentescha
 import { INVITE_NOTE_MAX } from "@agenteschat/client/lib/join-requests";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
-import { everyoneOf } from "@agenteschat/client/lib/roles";
+import { everyoneOf, ROLES_SEARCH_FROM } from "@agenteschat/client/lib/roles";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
+import { matchesWords } from "@agenteschat/ui/search";
 import { useQueries } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
-import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, haptics } from "@/ui";
+import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, haptics, SearchField } from "@/ui";
 import { router } from "@/ui/navigation";
 import { openAgentAi } from "../ai/AgentAiScreen";
 import { listedAgents } from "../roles/logic";
@@ -25,6 +27,7 @@ import { TextArea } from "../shared/TextArea";
 import { INVITE_NOTE_LIMIT, type InviteDraft, updateInviteDraft, useInviteDraft } from "./draft";
 import type { InvitePick } from "./InviteFields";
 import {
+  agentMatches,
   agentPicks,
   asksMailboxes,
   cargoPicks,
@@ -64,14 +67,38 @@ interface PickProps {
   change: (next: (d: InviteDraft) => InviteDraft) => void;
 }
 
+/** Past `ROLES_SEARCH_FROM` rows a choice gets its search, as the cargo's own lists. */
+function PickSearch({ value, onChange, label }: { value: string; onChange: (q: string) => void; label: string }) {
+  return (
+    <View style={styles.search}>
+      <SearchField value={value} onChangeText={onChange} placeholder={label} accessibilityLabel={label} />
+    </View>
+  );
+}
+
+/** A search that names nothing: what was looked for, and a way to clear it. */
+function NoMatch({ text, clear }: { text: string; clear: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <GroupedFooter>{text}</GroupedFooter>
+      <GroupedList>
+        <GroupedRow icon="x" label={t("filters.clearSearch")} onPress={clear} />
+      </GroupedList>
+    </>
+  );
+}
+
 /** Cargo: "Membro" first (no cargo past Todos), then the cargos this person may give, several at once. */
 function CargoPick({ draft, change }: PickProps) {
   const { t } = useTranslation();
   const { orgId, org } = useOrg();
+  const [query, setQuery] = useState("");
   const roles = useRoles(orgId).data?.roles ?? [];
   const personal = isPersonal(org);
   const everyone = everyoneOf(roles);
   const picks = cargoPicks(t, roles, draft.roleIds, personal);
+  const shown = picks.filter((p) => matchesWords(p.label, query));
   const flip = (id: string | null) =>
     change((d) => ({
       ...d,
@@ -82,23 +109,32 @@ function CargoPick({ draft, change }: PickProps) {
       title={personal ? t("invites.can") : t("members.role")}
       action={{ label: t("mobile.invitePeople.ok"), onPress: goBack }}
     >
-      <Gap />
-      <GroupedList>
-        {picks.map((p) => {
-          const role = p.id === null ? everyone : roles.find((r) => r.id === p.id);
-          return (
-            <GroupedRow
-              key={p.id ?? "member"}
-              {...(role && !personal ? { leading: <CargoMark role={role} size={30} /> } : {})}
-              label={p.label}
-              labelLines={2}
-              checked={p.on}
-              onPress={() => flip(p.id)}
-            />
-          );
-        })}
-      </GroupedList>
-      <GroupedFooter>{picks.length === 1 ? t("members.noRolesToGive") : t("invites.rolesFoot")}</GroupedFooter>
+      {picks.length > ROLES_SEARCH_FROM ? (
+        <PickSearch value={query} onChange={setQuery} label={t("rolesPage.search")} />
+      ) : null}
+      {shown.length > 0 ? (
+        <>
+          <Gap />
+          <GroupedList>
+            {shown.map((p) => {
+              const role = p.id === null ? everyone : roles.find((r) => r.id === p.id);
+              return (
+                <GroupedRow
+                  key={p.id ?? "member"}
+                  {...(role && !personal ? { leading: <CargoMark role={role} size={30} /> } : {})}
+                  label={p.label}
+                  labelLines={2}
+                  checked={p.on}
+                  onPress={() => flip(p.id)}
+                />
+              );
+            })}
+          </GroupedList>
+          <GroupedFooter>{picks.length === 1 ? t("members.noRolesToGive") : t("invites.rolesFoot")}</GroupedFooter>
+        </>
+      ) : (
+        <NoMatch text={t("rolesPage.noMatch", { q: query.trim() })} clear={() => setQuery("")} />
+      )}
     </SettingsPage>
   );
 }
@@ -107,18 +143,27 @@ function CargoPick({ draft, change }: PickProps) {
 function ChannelsPick({ draft, change }: PickProps) {
   const { t } = useTranslation();
   const { orgId, org } = useOrg();
+  const [query, setQuery] = useState("");
   const roles = useRoles(orgId).data?.roles ?? [];
   const channels = useChannels(orgId).data ?? [];
   const categories = useChannelCategories(orgId).data ?? [];
-  const groups = channelPicks(t, { channels, categories, roles, draft });
+  const all = channelPicks(t, { channels, categories, roles, draft });
+  const groups = query ? channelPicks(t, { channels, categories, roles, draft, query }) : all;
   const flip = (id: string) => change((d) => ({ ...d, ...flipStart(roles, d, "channelIds", id) }));
   return (
     <SettingsPage
       title={isPersonal(org) ? t("shell.channelsPersonal") : t("members.dialog.where.label")}
       action={{ label: t("mobile.invitePeople.ok"), onPress: goBack }}
     >
-      {groups.map((g, i) => (
-        <View key={g.title ?? `group-${i}`}>
+      {all.flatMap((g) => g.picks).length > ROLES_SEARCH_FROM ? (
+        <PickSearch value={query} onChange={setQuery} label={t("rolesPage.channels.search")} />
+      ) : null}
+      {query && groups.length === 0 ? (
+        <NoMatch text={t("rolesPage.channels.noMatch", { q: query.trim() })} clear={() => setQuery("")} />
+      ) : null}
+      {groups.map((g) => (
+        // The one group without a title keeps its key while a search takes the cargo's group away above it.
+        <View key={g.title ?? "none"}>
           {g.title ? <GroupedHeader>{g.title}</GroupedHeader> : <Gap />}
           <GroupedList>
             {g.picks.map((p) => (
@@ -151,10 +196,12 @@ function AgentsPick({ draft, change }: PickProps) {
   const api = useApi();
   const meId = useMeId();
   const dir = useDirectory();
+  const [query, setQuery] = useState("");
   const roles = useRoles(orgId).data?.roles ?? [];
   const viewer = { userId: meId ?? "", managesAgents: can(org, "manage_agents") };
   const listed = listedAgents(dir.agents);
   const right = dir.agents.find(isRightHand);
+  const rightShown = right && agentMatches(right, query) ? right : undefined;
   const own = inviteStart(roles, draft.roleIds, NO_START, NO_START).agentIds;
   // Opening a restricted agent takes the mailboxes others gave it: asked for each one the viewer could open.
   const asked = listed.filter((a) => asksMailboxes(a, viewer, own));
@@ -180,6 +227,7 @@ function AgentsPick({ draft, change }: PickProps) {
     draft,
     ownerName: (id) => (id ? (dir.memberById.get(id)?.name ?? null) : null),
     mailboxOwners,
+    query,
   });
   const flip = (id: string) => change((d) => ({ ...d, ...flipStart(roles, d, "agentIds", id) }));
   const row = (p: (typeof others)[number]) => (
@@ -204,28 +252,38 @@ function AgentsPick({ draft, change }: PickProps) {
   );
   return (
     <SettingsPage title={t("members.agents")} action={{ label: t("mobile.invitePeople.ok"), onPress: goBack }}>
+      {listed.length + (right ? 1 : 0) > ROLES_SEARCH_FROM ? (
+        <PickSearch value={query} onChange={setQuery} label={t("rolesPage.agents.search")} />
+      ) : null}
       {fromCargo.length > 0 ? (
         <>
           <GroupedHeader>{fromCargosTitle(t, roles, draft.roleIds)}</GroupedHeader>
           <GroupedList>{fromCargo.map(row)}</GroupedList>
         </>
       ) : null}
-      <GroupedHeader>{t("members.agents")}</GroupedHeader>
-      <GroupedList>
-        {right ? (
-          <GroupedRow
-            key={right.id}
-            leading={<AgentFace agentId={right.id} size={30} live={false} />}
-            label={right.name}
-            sub={t("invites.agent.everyone", agentGrammar(right.name))}
-            checked
-            faint
-            disabled
-          />
-        ) : null}
-        {others.map(row)}
-      </GroupedList>
+      {rightShown || others.length > 0 ? (
+        <>
+          <GroupedHeader>{t("members.agents")}</GroupedHeader>
+          <GroupedList>
+            {rightShown ? (
+              <GroupedRow
+                key={rightShown.id}
+                leading={<AgentFace agentId={rightShown.id} size={30} live={false} />}
+                label={rightShown.name}
+                sub={t("invites.agent.everyone", agentGrammar(rightShown.name))}
+                checked
+                faint
+                disabled
+              />
+            ) : null}
+            {others.map(row)}
+          </GroupedList>
+        </>
+      ) : null}
       {listed.length === 0 ? <GroupedFooter>{t("invites.agentsNone")}</GroupedFooter> : null}
+      {query && !rightShown && fromCargo.length + others.length === 0 ? (
+        <NoMatch text={t("rolesPage.agents.noMatch", { q: query.trim() })} clear={() => setQuery("")} />
+      ) : null}
     </SettingsPage>
   );
 }
@@ -306,3 +364,7 @@ function NotePick({ draft, change }: PickProps) {
     </SettingsPage>
   );
 }
+
+const styles = StyleSheet.create({
+  search: { paddingTop: 10 },
+});

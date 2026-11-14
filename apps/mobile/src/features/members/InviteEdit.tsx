@@ -167,7 +167,7 @@ export function EditLinkScreen() {
         <>
           <GroupedHeader>{t("members.link.title")}</GroupedHeader>
           <GroupedList>
-            <GroupedRow icon="link" label={url} labelLines={3} />
+            <GroupedRow icon="link" label={url} labelLines={0} />
             <GroupedRow
               icon={copied ? "check" : "copy"}
               label={copied ? t("common.copied") : t("members.copyLink")}
