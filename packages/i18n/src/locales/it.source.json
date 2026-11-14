@@ -29971,6 +29971,15 @@
   "toolReview.freedWarning": {
     "value": "The service marks this as risky. At this level agents run it without asking anyone."
   },
+  "toolReview.trust.title": {
+    "value": "The service asks for its own approvals"
+  },
+  "toolReview.trust.hint": {
+    "value": "For a gateway like Executor that asks a person before its risky actions, so they run here without asking."
+  },
+  "toolReview.trust.on": {
+    "value": "Its risky tools run here without asking. Set one to Approval to keep it asking."
+  },
   "toolReview.reason.reads_only": {
     "value": "it only looks at numbers, changes nothing"
   },

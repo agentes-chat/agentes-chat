@@ -11962,6 +11962,11 @@
     "later": "Kamu bisa mengubah semua ini nanti.",
     "sensitive": "Tindakan sensitif: secara bawaan minta persetujuan.",
     "freedWarning": "Layanan menandai ini berisiko. Di tingkat ini agen menjalankannya tanpa bertanya kepada siapa pun.",
+    "trust": {
+      "title": "Layanan meminta persetujuannya sendiri",
+      "hint": "Untuk gateway seperti Executor yang bertanya kepada seseorang sebelum tindakan berisikonya, sehingga di sini tindakan itu berjalan tanpa bertanya.",
+      "on": "Alat berisikonya berjalan di sini tanpa bertanya. Atur salah satunya ke Persetujuan agar tetap bertanya."
+    },
     "reason": {
       "reads_only": "hanya melihat angka, tidak mengubah apa pun",
       "changes_undoable": "tidak menghapus apa pun dan tidak mengeluarkan uang",

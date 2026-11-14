@@ -13265,6 +13265,11 @@
     "later": "Wszystko to możesz później zmienić.",
     "sensitive": "Akcja wrażliwa: domyślnie prosi o zatwierdzenie.",
     "freedWarning": "Usługa oznacza to jako ryzykowne. Na tym poziomie agenci używają tego, nie pytając nikogo.",
+    "trust": {
+      "title": "Usługa sama prosi o zatwierdzenia",
+      "hint": "Dla bramy takiej jak Executor, która sama pyta człowieka przed ryzykownymi działaniami, więc tutaj działają bez pytania.",
+      "on": "Jej ryzykowne narzędzia działają tu bez pytania. Ustaw któreś na Zatwierdzenie, by dalej pytało."
+    },
     "reason": {
       "reads_only": "tylko patrzy na liczby, niczego nie zmienia",
       "changes_undoable": "niczego nie usuwa i nie wydaje pieniędzy",

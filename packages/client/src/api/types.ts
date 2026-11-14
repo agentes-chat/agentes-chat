@@ -2664,8 +2664,10 @@ export interface CustomTool {
   suggestionReason?: string | null;
   /** Deletes, sends, pays…: asks for approval unless a person freed it (`freed`). */
   sensitive?: boolean;
-  /** A person set this sensitive tool to read or write anyway (ADR 0174): it runs without asking. */
+  /** A person set this sensitive tool to write anyway (ADR 0174), or its server is trusted (ADR 0175): it runs unasked. */
   freed?: boolean;
+  /** Freed only because its server is trusted: distrusting it makes the tool ask again (ADR 0175). */
+  freedByTrust?: boolean;
   /** Whether a sensitive tool may be set to read or write (`false` through Composio). */
   mayFree?: boolean;
   /** The name couldn't decide it and no one confirmed the suggestion yet ("Precisam da sua decisão"). */
@@ -2701,6 +2703,10 @@ export interface CustomServer {
   events?: RoutineConnectorTrigger["event"][];
   /** Last time an admin saved the classification; null = never (nothing exposed). */
   reviewedAt: string | null;
+  /** A person said this server enforces its own approvals (ADR 0175): its sensitive tools at write run unasked. */
+  trusted?: boolean;
+  /** Whether it may be trusted (`false` through Composio, or from an older server). */
+  mayTrust?: boolean;
   createdAt: string;
 }
 

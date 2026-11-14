@@ -12831,6 +12831,11 @@
     "later": "Puoi cambiare tutto questo in seguito.",
     "sensitive": "Azione sensibile: per impostazione predefinita chiede l'approvazione.",
     "freedWarning": "Il servizio la segnala come rischiosa. A questo livello gli agenti la usano senza chiedere a nessuno.",
+    "trust": {
+      "title": "Il servizio chiede le proprie approvazioni",
+      "hint": "Per un gateway come Executor, che chiede a una persona prima delle azioni rischiose, così qui girano senza chiedere.",
+      "on": "I suoi strumenti rischiosi qui girano senza chiedere. Imposta uno su Approvazione perché continui a chiedere."
+    },
     "reason": {
       "reads_only": "guarda solo i numeri, non cambia nulla",
       "changes_undoable": "non elimina nulla e non spende denaro",

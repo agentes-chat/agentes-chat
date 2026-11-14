@@ -123,6 +123,8 @@ export function catalogReviewTools(t: TFunction, def: ConnectorDef): ReviewTool[
 export interface ReviewState {
   levels: Record<string, ToolDecision>;
   decided: Set<string>;
+  /** "O serviço pede as próprias aprovações", once the person flipped it here (ADR 0175). */
+  trusted?: boolean;
 }
 
 export const emptyReview = (): ReviewState => ({ levels: {}, decided: new Set() });
@@ -140,6 +142,7 @@ export const choicesOf = (tool: ReviewTool): ToolDecision[] => tool.levels ?? RE
 /** Picking a level; on a waiting tool it is also the decision (it leaves the group). */
 export function choose(state: ReviewState, tool: ReviewTool, level: ToolDecision): ReviewState {
   return {
+    ...state,
     levels: { ...state.levels, [tool.name]: level },
     decided: tool.pending ? new Set([...state.decided, tool.name]) : state.decided,
   };
@@ -152,11 +155,11 @@ export const confirm = (state: ReviewState, tool: ReviewTool): ReviewState =>
 /** "Aceitar as sugestões": every waiting tool keeps its suggestion. */
 export function acceptAll(state: ReviewState, tools: ReviewTool[]): ReviewState {
   const waiting = tools.filter((x) => isWaiting(state, x)).map((x) => x.name);
-  return { levels: state.levels, decided: new Set([...state.decided, ...waiting]) };
+  return { ...state, decided: new Set([...state.decided, ...waiting]) };
 }
 
 /** "Rever as sugestões": the decided ones wait again (their levels stay). */
-export const reviewAgain = (state: ReviewState): ReviewState => ({ levels: state.levels, decided: new Set() });
+export const reviewAgain = (state: ReviewState): ReviewState => ({ ...state, decided: new Set() });
 
 export interface SubjectGroup {
   subject: string;

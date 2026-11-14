@@ -1,8 +1,17 @@
 import { expect, test } from "bun:test";
 import { resources } from "@agenteschat/i18n";
 import i18next, { type TFunction } from "i18next";
-import type { CustomTool } from "../src/api/types";
-import { FREEABLE_LEVELS, reviewTool, runsUnasked, SENSITIVE_LEVELS, toolName } from "../src/lib/tool-review";
+import type { CustomServer, CustomTool } from "../src/api/types";
+import {
+  FREEABLE_LEVELS,
+  offersTrust,
+  reviewTool,
+  reviewToolsOf,
+  runsUnasked,
+  SENSITIVE_LEVELS,
+  toolName,
+  trustLevels,
+} from "../src/lib/tool-review";
 
 const tFor = (lng: string) => {
   const instance = i18next.createInstance();
@@ -44,4 +53,52 @@ test("a sensitive tool: write too when the server lets it be freed, a free level
   );
   expect(reviewTool(t, tool({ access: "approval", level: "approval" })).levels).toEqual(SENSITIVE_LEVELS);
   expect(runsUnasked(reviewTool(t, tool({ sensitive: false })), "write")).toBe(false);
+});
+
+test("trusting a server (ADR 0175): what asks becomes Muda; distrusting puts back what only the trust freed", () => {
+  const t = tFor("en");
+  const tool = (name: string, extra: Partial<CustomTool>): CustomTool => ({
+    name,
+    description: "",
+    readOnlyHint: null,
+    access: "approval",
+    level: "approval",
+    sensitive: true,
+    mayFree: true,
+    label: name,
+    firstSeenAt: "2026-11-13T00:00:00Z",
+    ...extra,
+  });
+  const server = (trusted: boolean, tools: CustomTool[]) =>
+    ({ id: "s1", trusted, mayTrust: true, tools }) as unknown as CustomServer;
+  const before = reviewToolsOf(
+    t,
+    server(false, [
+      tool("call", {}),
+      tool("resume", { access: "off", level: "off" }),
+      tool("list", { sensitive: false, access: "read", level: "read" }),
+      tool("pay", { access: null, level: "approval", mayFree: false }),
+    ]),
+  );
+  expect(trustLevels(before, {}, true)).toEqual({ call: "write" });
+  // A choice made before switching is the one lifted.
+  expect(trustLevels(before, { resume: "approval" }, true)).toEqual({ call: "write", resume: "write" });
+
+  const after = reviewToolsOf(
+    t,
+    server(true, [
+      tool("call", { access: "write", level: "write", freed: true, freedByTrust: true }),
+      tool("execute", { access: "write", level: "write", freed: true }),
+      // Nobody decided it yet: on a trusted server its suggestion is Muda.
+      tool("resume", { access: null, level: "write" }),
+    ]),
+  );
+  expect(after.map((x) => x.level)).toEqual(["write", "write", "write"]);
+  expect(trustLevels(after, {}, false)).toEqual({ call: "approval", resume: "approval" });
+
+  // Offered with a sensitive tool a person may free, or once trusted; never through Composio.
+  expect(offersTrust({ trusted: false, mayTrust: true }, before)).toBe(true);
+  expect(offersTrust({ trusted: false, mayTrust: false }, before)).toBe(false);
+  expect(offersTrust({ trusted: false, mayTrust: true }, before.slice(2))).toBe(false);
+  expect(offersTrust({ trusted: true, mayTrust: true }, [])).toBe(true);
 });

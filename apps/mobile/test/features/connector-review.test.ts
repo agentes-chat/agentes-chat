@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { ConnectorDef, CustomServer, CustomTool, ToolAccess } from "@agenteschat/client";
 import { mailActionsChanged, mailActionsFrom, mailReviewTools } from "@agenteschat/client/lib/mail";
-import { type ReviewTool, reviewDecisions, reviewToolsOf } from "@agenteschat/client/lib/tool-review";
+import {
+  flipTrust,
+  type ReviewTool,
+  reviewDecisions,
+  reviewToolsOf,
+  trustChange,
+} from "@agenteschat/client/lib/tool-review";
 import {
   ADDRESS_STEPS,
   acceptAll,
@@ -304,5 +310,27 @@ describe("a mailbox's tools", () => {
     const saved = mailReviewTools(t, chosen);
     expect([named(saved, "delete").level, named(saved, "organize").level]).toEqual(["off", "approval"]);
     expect(mailActionsChanged(chosen, mailActionsFrom(saved, {}))).toBe(false);
+  });
+});
+
+describe("a service that asks for its own approvals (ADR 0175)", () => {
+  test("the switch moves its risky tools to Muda and back, kept through picks, saved only when changed", async () => {
+    const t = await translator("pt-BR");
+    const s = server(
+      TOOLS.map((x) => (x.name === "delete_customer" ? { ...x, mayFree: true } : x)),
+      {
+        mayTrust: true,
+      },
+    );
+    const tools = reviewToolsOf(t, s);
+    const on = flipTrust(emptyReview(), tools, true);
+    expect(chosenLevel(on, named(tools, "delete_customer"))).toBe("write");
+    const picked = choose(on, named(tools, "list_tickets"), "off");
+    expect(picked.trusted).toBe(true);
+    expect(trustChange(s, picked)).toEqual({ trusted: true });
+    const off = flipTrust(picked, tools, false);
+    expect(chosenLevel(off, named(tools, "delete_customer"))).toBe("approval");
+    expect(trustChange(s, off)).toEqual({});
+    expect(t("toolReview.trust.title")).toBe("O serviço pede as próprias aprovações");
   });
 });

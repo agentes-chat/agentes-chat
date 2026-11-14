@@ -12750,6 +12750,11 @@
     "later": "Puedes cambiar todo esto después.",
     "sensitive": "Acción sensible: por defecto pide aprobación.",
     "freedWarning": "El servicio la marca como arriesgada. En este nivel los agentes la usan sin preguntar a nadie.",
+    "trust": {
+      "title": "El servicio pide sus propias aprobaciones",
+      "hint": "Para un gateway como Executor, que pregunta a una persona antes de sus acciones arriesgadas, así que aquí se ejecutan sin preguntar.",
+      "on": "Sus herramientas arriesgadas se ejecutan aquí sin preguntar. Pon una en Aprobación para que siga preguntando."
+    },
     "reason": {
       "reads_only": "solo mira números, no cambia nada",
       "changes_undoable": "no borra nada ni gasta dinero",

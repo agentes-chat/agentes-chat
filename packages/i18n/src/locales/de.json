@@ -12382,6 +12382,11 @@
     "later": "Du kannst das alles später ändern.",
     "sensitive": "Sensible Aktion: Sie fragt standardmäßig nach Freigabe.",
     "freedWarning": "Der Dienst stuft dies als riskant ein. Auf dieser Stufe nutzen Agenten es, ohne jemanden zu fragen.",
+    "trust": {
+      "title": "Der Dienst holt seine eigenen Freigaben ein",
+      "hint": "Für ein Gateway wie Executor, das vor riskanten Aktionen selbst eine Person fragt, damit sie hier ohne Nachfrage laufen.",
+      "on": "Seine riskanten Werkzeuge laufen hier ohne Nachfrage. Stell eines auf Freigabe, damit es weiter fragt."
+    },
     "reason": {
       "reads_only": "es schaut nur auf Zahlen, ändert nichts",
       "changes_undoable": "es löscht nichts und gibt kein Geld aus",

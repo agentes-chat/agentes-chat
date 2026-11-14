@@ -12317,6 +12317,11 @@
     "later": "Bunların hepsini daha sonra değiştirebilirsiniz.",
     "sensitive": "Hassas eylem: varsayılan olarak onay ister.",
     "freedWarning": "Hizmet bunu riskli olarak işaretliyor. Bu seviyede ajanlar bunu kimseye sormadan kullanır.",
+    "trust": {
+      "title": "Hizmet kendi onaylarını alır",
+      "hint": "Riskli işlemlerinden önce bir kişiye kendisi soran Executor gibi bir ağ geçidi için, bu yüzden burada sormadan çalışırlar.",
+      "on": "Riskli araçları burada sormadan çalışır. Sormaya devam etmesi için birini Onay olarak ayarla."
+    },
     "reason": {
       "reads_only": "yalnızca sayılara bakar, hiçbir şeyi değiştirmez",
       "changes_undoable": "hiçbir şey silmez ve para harcamaz",

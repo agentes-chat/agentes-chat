@@ -13,12 +13,13 @@ import {
   reviewToolsOf,
   subjectLabel,
   toolName,
+  trustChange,
 } from "@agenteschat/client/lib/tool-review";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ToolReview, type ToolReviewState } from "@/components/ToolReview";
+import { ToolReview, type ToolReviewState, TrustRow } from "@/components/ToolReview";
 import { createI18n } from "@/i18n";
 import { AgentAsksLine, agentConnectorTools } from "@/pages/agent/AgentTools";
 import { createFakeApi, seedState } from "./fake-api";
@@ -95,17 +96,15 @@ function Harness({
   const { t } = useTranslation();
   const tools = reviewToolsOf(t, server);
   const [state, setState] = useState<ToolReviewState>({ levels: {}, decided: new Set() });
+  const change = (s: ToolReviewState) => {
+    setState(s);
+    onState(s);
+  };
   return (
-    <ToolReview
-      name="Ads"
-      tools={tools}
-      state={state}
-      onChange={(s) => {
-        setState(s);
-        onState(s);
-      }}
-      onMoved={(m) => moved.push(m)}
-    />
+    <>
+      <TrustRow server={server} tools={tools} state={state} onChange={change} />
+      <ToolReview name="Ads" tools={tools} state={state} onChange={change} onMoved={(m) => moved.push(m)} />
+    </>
   );
 }
 
@@ -370,5 +369,40 @@ describe("the agent page: one line, never a paragraph of tool names", () => {
     expect(del.getAttribute("title")).toContain("campaign_delete");
     await click(within(dialog).getByRole("button", { name: "Mudar acessos" }));
     expect(changed).toBe(1);
+  });
+
+  test("a service that asks for its own approvals (ADR 0175): one switch moves its risky tools to Muda and back", async () => {
+    const freeable: CustomServer = {
+      ...SERVER,
+      mayTrust: true,
+      tools: SERVER.tools.map((x) => (x.name === "campaign_delete" ? { ...x, mayFree: true } : x)),
+    };
+    const { ref } = await mount(freeable);
+    const trust = screen().getByRole("switch", { name: "O serviço pede as próprias aprovações" });
+    expect(trust.getAttribute("aria-checked")).toBe("false");
+    await click(trust);
+    expect(ref.state).toMatchObject({ trusted: true, levels: { campaign_delete: "write" } });
+    expect(trustChange(freeable, ref.state)).toEqual({ trusted: true });
+    expect(
+      screen().getByText(
+        "As ferramentas arriscadas dele rodam aqui sem pedir. Coloque uma em Aprovação para ela continuar pedindo.",
+      ),
+    ).toBeTruthy();
+    await click(screen().getByRole("button", { name: /^Campanhas/ }));
+    expect(row("campaign_delete")?.querySelector(".tr-row__why--warn")).not.toBeNull();
+    // Deciding what waits keeps the switch.
+    await click(screen().getByRole("button", { name: /Aceitar as sugestões/ }));
+    expect(ref.state.trusted).toBe(true);
+    await click(trust);
+    expect(ref.state).toMatchObject({ trusted: false, levels: { campaign_delete: "approval" } });
+    expect(trustChange(freeable, ref.state)).toEqual({});
+
+    // Not offered through Composio, nor with no risky tool a person may free.
+    cleanup();
+    await mount({ ...freeable, mayTrust: false });
+    expect(screen().queryByRole("switch")).toBeNull();
+    cleanup();
+    await mount({ ...SERVER, mayTrust: true });
+    expect(screen().queryByRole("switch")).toBeNull();
   });
 });

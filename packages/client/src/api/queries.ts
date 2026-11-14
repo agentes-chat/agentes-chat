@@ -3560,6 +3560,7 @@ export function useCustomServerAction(orgId: string) {
         id: string;
         label: string;
         tools: { name: string; access: ToolDecision; label: string }[];
+        trusted?: boolean;
       }) => api.customConnectors.saveTools(orgId, id, input),
       onSuccess: done,
     }),

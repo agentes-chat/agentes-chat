@@ -45,6 +45,7 @@ import {
   reviewToolsOf,
   SENSITIVE_LEVELS,
   toolName,
+  trustChange,
 } from "@agenteschat/client/lib/tool-review";
 import {
   Alert,
@@ -77,7 +78,7 @@ import { oauthReturnPath } from "@/lib/desktop";
 import { forgetGithubOrgs, keepGithubOrgs, readGithubOrgs } from "@/lib/github-orgs";
 import { navigateAway } from "@/lib/navigate";
 import { useToast } from "@/lib/toast";
-import { reviewNote, ToolLevelsView, ToolReview, type ToolReviewState } from "./ToolReview";
+import { reviewNote, ToolLevelsView, ToolReview, type ToolReviewState, TrustRow } from "./ToolReview";
 
 /**
  * Connecting a service, in one dialog: connect (OAuth or an API key), then a short confirmation ("done": every agent
@@ -753,7 +754,12 @@ function ToolsStep({
       }
     }
     save.mutate(
-      { id: server.id, label: named, tools: reviewDecisions(tools, state.levels, state.decided) },
+      {
+        id: server.id,
+        label: named,
+        tools: reviewDecisions(tools, state.levels, state.decided),
+        ...trustChange(server, state),
+      },
       { onSuccess: (saved) => next(saved) },
     );
   };
@@ -804,7 +810,10 @@ function ToolsStep({
               <p className="muted">{t("toolReview.noTools")}</p>
             )
           ) : (
-            <ToolReview name={name} tools={tools} state={state} onChange={setState} onMoved={(m) => toast.show(m)} />
+            <>
+              <TrustRow server={server} tools={tools} state={state} onChange={setState} />
+              <ToolReview name={name} tools={tools} state={state} onChange={setState} onMoved={(m) => toast.show(m)} />
+            </>
           )}
         </DialogBody>
       </Locked>

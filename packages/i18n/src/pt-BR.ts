@@ -12454,6 +12454,12 @@ export const ptBR = {
     sensitive: "Ação sensível: por padrão, pede aprovação.",
     /** Under a sensitive tool set to run on its own (ADR 0174). */
     freedWarning: "O serviço marca esta ação como arriscada. Neste nível os agentes a usam sem perguntar a ninguém.",
+    /** "The service asks for its own approvals" in a server's review (ADR 0175). */
+    trust: {
+      title: "O serviço pede as próprias aprovações",
+      hint: "Para um gateway como o Executor, que pede a alguém antes das ações arriscadas, e por isso elas rodam aqui sem pedir.",
+      on: "As ferramentas arriscadas dele rodam aqui sem pedir. Coloque uma em Aprovação para ela continuar pedindo.",
+    },
     reason: {
       reads_only: "só consulta números, não muda nada",
       changes_undoable: "não apaga nada nem gasta dinheiro",

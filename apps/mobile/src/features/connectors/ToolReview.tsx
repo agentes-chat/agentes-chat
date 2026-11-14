@@ -8,7 +8,16 @@ import {
   useMailAction,
 } from "@agenteschat/client";
 import { mailActionsChanged, mailActionsFrom, mailReviewTools } from "@agenteschat/client/lib/mail";
-import { type ReviewTool, reviewDecisions, reviewToolsOf, runsUnasked } from "@agenteschat/client/lib/tool-review";
+import {
+  flipTrust,
+  offersTrust,
+  type ReviewTool,
+  reviewDecisions,
+  reviewToolsOf,
+  runsUnasked,
+  trustChange,
+  trustedIn,
+} from "@agenteschat/client/lib/tool-review";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
@@ -136,6 +145,7 @@ function ServerReview({
   const [failed, setFailed] = useState<string | null>(null);
   const tools = useMemo(() => reviewToolsOf(t, server), [t, server]);
   const left = tools.filter((x) => isWaiting(state, x)).length;
+  const trusted = trustedIn(server, state);
   const busy = save.isPending || refresh.isPending;
   const fail = (text: string) => {
     errorHaptic();
@@ -151,7 +161,12 @@ function ServerReview({
   const next = () => {
     setFailed(null);
     save.mutate(
-      { id: server.id, label: server.label, tools: reviewDecisions(tools, state.levels, state.decided) },
+      {
+        id: server.id,
+        label: server.label,
+        tools: reviewDecisions(tools, state.levels, state.decided),
+        ...trustChange(server, state),
+      },
       {
         onSuccess: () => {
           successHaptic();
@@ -178,6 +193,25 @@ function ServerReview({
   return (
     <>
       {server.toolsError ? <Problem text={t("toolReview.unreadable", { reason: server.toolsError })} /> : null}
+      {offersTrust(server, tools) ? (
+        // "O serviço pede as próprias aprovações" (ADR 0175): flipping it moves its risky tools in sight before saving.
+        <View>
+          <GroupedList>
+            <GroupedRow
+              label={t("toolReview.trust.title")}
+              labelLines={2}
+              hint={{
+                name: t("common.about", { label: t("toolReview.trust.title") }),
+                text: t("toolReview.trust.hint"),
+              }}
+              toggle={trusted}
+              disabled={busy}
+              onPress={() => setState((s) => flipTrust(s, tools, !trusted))}
+            />
+          </GroupedList>
+          {trusted ? <GroupedFooter>{t("toolReview.trust.on")}</GroupedFooter> : null}
+        </View>
+      ) : null}
       {tools.length === 0 ? (
         server.toolsError ? null : (
           <GroupedFooter>{t("toolReview.noTools")}</GroupedFooter>

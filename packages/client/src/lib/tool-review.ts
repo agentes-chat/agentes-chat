@@ -32,8 +32,10 @@ export interface ReviewTool {
   /** Why (pending tools): `toolReview.reason.*`. */
   reason: string | null;
   sensitive: boolean;
-  /** A person set this sensitive tool to write (ADR 0174): it runs without asking. */
+  /** A person set this sensitive tool to write (ADR 0174), or its server is trusted (ADR 0175): it runs unasked. */
   freed?: boolean;
+  /** Freed only because its server is trusted: distrusting puts it back to asking (ADR 0175). */
+  freedByTrust?: boolean;
   /** Waits in "Precisam da sua decisão". */
   pending: boolean;
   /** The label people had (approval cards); saved back as is. */
@@ -216,14 +218,66 @@ export function subjectLabel(t: TFunction, subject: string) {
 export const runsUnasked = (tool: Pick<ReviewTool, "sensitive">, level: ToolDecision) =>
   tool.sensitive && level === "write";
 
+/**
+ * The levels the review shows once the person switches "this server enforces its own approvals" (ADR 0175), as the
+ * server would save them: on, every sensitive tool that may be freed and asks becomes Muda; off, every sensitive tool
+ * at Muda asks again, except one freed on its own (ADR 0174). Returns `levels` with those changes.
+ */
+export function trustLevels(
+  tools: ReviewTool[],
+  levels: Record<string, ToolDecision>,
+  trusted: boolean,
+): Record<string, ToolDecision> {
+  const next = { ...levels };
+  for (const tool of tools) {
+    if (!tool.sensitive || !tool.levels?.includes("write")) continue;
+    const level = levels[tool.name] ?? tool.level;
+    // Freed on its own (ADR 0174): saving it at Muda keeps that, whatever the trust says.
+    const ownFree = tool.freed === true && tool.freedByTrust !== true;
+    if (trusted && level === "approval") next[tool.name] = "write";
+    if (!trusted && level === "write" && !ownFree) next[tool.name] = "approval";
+  }
+  return next;
+}
+
+/**
+ * Whether the review offers "this server enforces its own approvals" (ADR 0175): a server that may be trusted (not
+ * Composio's) with a sensitive tool a person may free, or one already trusted.
+ */
+export const offersTrust = (server: Pick<CustomServer, "trusted" | "mayTrust">, tools: ReviewTool[]) =>
+  server.trusted === true ||
+  (server.mayTrust === true && tools.some((x) => x.sensitive && x.levels?.includes("write") === true));
+
+/** The review's choices so far, on web and phone alike (`trusted`: the switch, once the person flipped it). */
+export interface TrustState {
+  levels: Record<string, ToolDecision>;
+  trusted?: boolean;
+}
+
+/** Whether the switch shows on: the person's flip, else what the server has. */
+export const trustedIn = (server: Pick<CustomServer, "trusted">, state: TrustState) =>
+  state.trusted ?? server.trusted === true;
+
+/** Flipping the switch: its risky tools that ask move to Muda, or back (`trustLevels`). */
+export const flipTrust = <S extends TrustState>(state: S, tools: ReviewTool[], on: boolean): S => ({
+  ...state,
+  trusted: on,
+  levels: trustLevels(tools, state.levels, on),
+});
+
+/** What saving sends for the trust: only a change from what the server has. */
+export const trustChange = (server: Pick<CustomServer, "trusted">, state: TrustState) =>
+  state.trusted !== undefined && state.trusted !== (server.trusted === true) ? { trusted: state.trusted } : {};
+
 const isAccess = (v: unknown): v is ToolAccess => v === "read" || v === "write" || v === "approval";
 
 /** A custom server's tools, ready for the review. */
 export function reviewToolsOf(t: TFunction, server: CustomServer): ReviewTool[] {
-  return server.tools.map((tool) => reviewTool(t, tool));
+  return server.tools.map((tool) => reviewTool(t, tool, server.trusted === true));
 }
 
-export function reviewTool(t: TFunction, tool: CustomTool): ReviewTool {
+/** `trusted`: its server enforces its own approvals (ADR 0175), so Muda is what a sensitive tool nobody decided gets. */
+export function reviewTool(t: TFunction, tool: CustomTool, trusted = false): ReviewTool {
   const parts = tool.nameParts ?? partsOf(tool.name);
   const suggested: ToolAccess = isAccess(tool.suggestedAccess)
     ? tool.suggestedAccess
@@ -232,8 +286,10 @@ export function reviewTool(t: TFunction, tool: CustomTool): ReviewTool {
       : "approval";
   const sensitive = tool.sensitive === true;
   let level: ToolDecision = tool.level ?? tool.access ?? suggested;
-  // A free level on a sensitive tool holds only when a person freed it to write (ADR 0174). Otherwise it asks.
-  if (sensitive && !(tool.freed && level === "write") && (level === "read" || level === "write")) level = "approval";
+  // A free level on a sensitive tool holds only when a person freed it to write (ADR 0174), or the server is trusted
+  // and nobody decided it yet (ADR 0175). Otherwise it asks.
+  const free = tool.freed === true || (trusted && tool.access == null);
+  if (sensitive && !(free && level === "write") && (level === "read" || level === "write")) level = "approval";
   return {
     name: tool.name,
     label: toolName(t, parts, tool.name),
@@ -244,6 +300,7 @@ export function reviewTool(t: TFunction, tool: CustomTool): ReviewTool {
     reason: tool.suggestionReason ?? null,
     sensitive,
     freed: tool.freed === true,
+    freedByTrust: tool.freedByTrust === true,
     pending: tool.pending === true,
     savedLabel: tool.label || humanize(tool.name),
     ...(sensitive ? { levels: tool.mayFree === true ? FREEABLE_LEVELS : SENSITIVE_LEVELS } : {}),

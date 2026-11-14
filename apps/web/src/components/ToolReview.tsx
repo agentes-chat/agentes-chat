@@ -1,13 +1,16 @@
-import type { ToolDecision } from "@agenteschat/client";
+import type { CustomServer, ToolDecision } from "@agenteschat/client";
 import {
   bySubject,
   countLevels,
+  flipTrust,
   levelSummary,
   matchTool,
+  offersTrust,
   REVIEW_LEVELS,
   type ReviewTool,
   runsUnasked,
   subjectLabel,
+  trustedIn,
 } from "@agenteschat/client/lib/tool-review";
 import {
   AskPixels,
@@ -15,7 +18,9 @@ import {
   Icon,
   SearchField,
   Segmented,
+  SettingRow,
   SuggestSpark,
+  Switch,
   ToolLevelBar,
   type ToolLevelKind,
   ToolLevelStrip,
@@ -31,7 +36,8 @@ import { Trans, useTranslation } from "react-i18next";
  * don't say what they do), then every subject with its pixel strip and a
  * short summary; expanding shows the tools with one control each (Consulta ·
  * Muda · Aprovação · Desligada). A sensitive tool set to run without asking
- * says so under its name (ADR 0174); Composio's only ask or are off.
+ * says so under its name (ADR 0174); Composio's only ask or are off. Above it,
+ * `TrustRow` says the whole service asks for its own approvals (ADR 0175).
  * One search across subjects. Read-only (the agent page) shows each level
  * instead of the control.
  */
@@ -312,6 +318,39 @@ export interface ToolReviewState {
   levels: Record<string, ToolDecision>;
   /** Pending tools the person decided here (they leave the group). */
   decided: Set<string>;
+  /** "O serviço pede as próprias aprovações", once the person flipped it here (ADR 0175). */
+  trusted?: boolean;
+}
+
+/**
+ * "O serviço pede as próprias aprovações" (ADR 0175), above a server's tools when it may be trusted: flipping it moves
+ * every risky tool that asks to Muda (or back), in sight before saving. Under it while on, what that means.
+ */
+export function TrustRow({
+  server,
+  tools,
+  state,
+  onChange,
+}: {
+  server: Pick<CustomServer, "trusted" | "mayTrust">;
+  tools: ReviewTool[];
+  state: ToolReviewState;
+  onChange: (state: ToolReviewState) => void;
+}) {
+  const { t } = useTranslation();
+  if (!offersTrust(server, tools)) return null;
+  const trusted = trustedIn(server, state);
+  const title = t("toolReview.trust.title");
+  return (
+    <SettingRow
+      title={title}
+      hint={{ name: t("common.about", { label: title }), text: t("toolReview.trust.hint") }}
+      status={trusted ? t("toolReview.trust.on") : undefined}
+      htmlFor="tr-trust"
+    >
+      <Switch id="tr-trust" checked={trusted} onCheckedChange={(on) => onChange(flipTrust(state, tools, on))} />
+    </SettingRow>
+  );
 }
 
 /**
@@ -344,6 +383,7 @@ export function ToolReview({
   const reviewable = tools.filter((x) => x.pending).length;
   const decide = (tool: ReviewTool, level: ToolDecision) => {
     onChange({
+      ...state,
       levels: { ...state.levels, [tool.name]: level },
       decided: new Set([...state.decided, tool.name]),
     });
@@ -354,7 +394,7 @@ export function ToolReview({
     onChange({ ...state, levels: { ...state.levels, [tool.name]: level } });
   };
   const acceptAll = () => {
-    onChange({ levels: state.levels, decided: new Set([...state.decided, ...pending.map((x) => x.name)]) });
+    onChange({ ...state, decided: new Set([...state.decided, ...pending.map((x) => x.name)]) });
     onMoved?.(t("toolReview.accepted", { count: pending.length }));
   };
   const hits = pending.map((tool) => ({ tool, ...matchTool(tool, query) })).filter((m) => m.ok);

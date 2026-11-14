@@ -12821,6 +12821,11 @@
     "later": "Vous pourrez tout modifier plus tard.",
     "sensitive": "Action sensible : par défaut, elle demande une approbation.",
     "freedWarning": "Le service la signale comme risquée. À ce niveau, les agents l'utilisent sans demander à personne.",
+    "trust": {
+      "title": "Le service demande ses propres approbations",
+      "hint": "Pour une passerelle comme Executor, qui demande à une personne avant ses actions risquées, donc elles s'exécutent ici sans demander.",
+      "on": "Ses outils risqués s'exécutent ici sans demander. Mets-en un sur Approbation pour qu'il continue à demander."
+    },
     "reason": {
       "reads_only": "il ne fait que regarder des chiffres, ne change rien",
       "changes_undoable": "il ne supprime rien et ne dépense pas d'argent",

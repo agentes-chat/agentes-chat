@@ -12444,6 +12444,11 @@
     "later": "Je kunt dit allemaal later wijzigen.",
     "sensitive": "Gevoelige actie: vraagt standaard om goedkeuring.",
     "freedWarning": "De dienst markeert dit als riskant. Op dit niveau gebruiken agents het zonder iemand te vragen.",
+    "trust": {
+      "title": "De dienst vraagt zelf om goedkeuring",
+      "hint": "Voor een gateway zoals Executor die zelf een persoon vraagt vóór riskante acties, zodat ze hier zonder vragen draaien.",
+      "on": "Zijn riskante tools draaien hier zonder te vragen. Zet er een op Goedkeuring om het te laten vragen."
+    },
     "reason": {
       "reads_only": "hij kijkt alleen naar cijfers en wijzigt niets",
       "changes_undoable": "hij verwijdert niets en geeft geen geld uit",

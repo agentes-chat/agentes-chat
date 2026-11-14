@@ -1248,7 +1248,12 @@ export interface ApiClient {
     saveTools(
       orgId: string,
       serverId: string,
-      input: { label: string; tools: { name: string; access: ToolDecision; label: string; confirmed?: boolean }[] },
+      input: {
+        label: string;
+        tools: { name: string; access: ToolDecision; label: string; confirmed?: boolean }[];
+        /** The server enforces its own approvals (ADR 0175); left out: unchanged. */
+        trusted?: boolean;
+      },
     ): Promise<CustomServer>;
     disconnect(orgId: string, serverId: string): Promise<void>;
   };

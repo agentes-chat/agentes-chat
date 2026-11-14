@@ -12421,6 +12421,12 @@ export const en = {
     sensitive: "Sensitive action: it asks for approval by default.",
     /** Under a sensitive tool set to run on its own (ADR 0174). */
     freedWarning: "The service marks this as risky. At this level agents run it without asking anyone.",
+    /** "The service asks for its own approvals" in a server's review (ADR 0175). */
+    trust: {
+      title: "The service asks for its own approvals",
+      hint: "For a gateway like Executor that asks a person before its risky actions, so they run here without asking.",
+      on: "Its risky tools run here without asking. Set one to Approval to keep it asking.",
+    },
     reason: {
       reads_only: "it only looks at numbers, changes nothing",
       changes_undoable: "it deletes nothing and spends no money",
