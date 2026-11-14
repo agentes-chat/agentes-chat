@@ -374,6 +374,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     tier: "small",
   },
   // Command Code at its published rates (commandcode.ai/docs/resources/pricing-limits); its model list has no prices.
+  // Claude's and GPT's rows keep their makers' long-context prices.
   "commandcode:claude-opus-5-5": {
     provider: "commandcode",
     label: "Claude Opus 5.5",
@@ -393,6 +394,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     provider: "commandcode",
     label: "Claude Haiku 5.5",
     prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
+    longContext: { aboveInputTokens: 100_000, prices: { input: 500, output: 2500, cacheRead: 50, cacheWrite: 625 } },
     contextWindow: 1_000_000,
     serverSideFallback: false,
     router: true,
@@ -402,6 +404,10 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     provider: "commandcode",
     label: "GPT-6.1 Sol",
     prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
+    longContext: {
+      aboveInputTokens: 272_000,
+      prices: { input: 4000, output: 15000, cacheRead: 200, cacheWrite: 5000 },
+    },
     contextWindow: 1_050_000,
     serverSideFallback: false,
   },
@@ -409,6 +415,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     provider: "commandcode",
     label: "GPT-6 Luna",
     prices: { input: 100, output: 500, cacheRead: 10, cacheWrite: 125 },
+    longContext: { aboveInputTokens: 272_000, prices: { input: 200, output: 750, cacheRead: 20, cacheWrite: 250 } },
     contextWindow: 1_050_000,
     serverSideFallback: false,
   },
@@ -475,17 +482,6 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     label: "DeepSeek V4.1 Flash Ultrafast",
     prices: { input: 2400, output: 9600, cacheRead: 48, cacheWrite: 2400 },
     contextWindow: 1_048_576,
-    serverSideFallback: false,
-  },
-  "commandcode:deepseek/deepseek-v4-flash-vision-exp": {
-    provider: "commandcode",
-    label: "DeepSeek V4 Flash Vision (exp)",
-    prices: { input: 300, output: 1200, cacheRead: 6, cacheWrite: 300 },
-    offPeak: {
-      prices: { input: 150, output: 600, cacheRead: 3, cacheWrite: 150 },
-      peakHoursUtc: DEEPSEEK_PEAK,
-    },
-    contextWindow: 1_000_000,
     serverSideFallback: false,
   },
   "commandcode:z-ai/glm-5.3-flash": {

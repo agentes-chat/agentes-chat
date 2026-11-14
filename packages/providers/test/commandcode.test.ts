@@ -46,6 +46,18 @@ describe("Command Code's DeepSeek prices", () => {
   });
 });
 
+describe("Command Code's Claude and GPT prices", () => {
+  test("a long prompt costs what it costs on the maker's own row", () => {
+    const at = new Date("2026-11-13T12:00:00Z");
+    for (const model of ["claude-haiku-5-5", "gpt-6.1-sol", "gpt-6-luna"]) {
+      for (const inputTokens of [50_000, 300_000]) {
+        const usage = { inputTokens, outputTokens: 1000, cacheReadTokens: 0, cacheWriteTokens: 0 };
+        expect(costNanoUsd(`commandcode:${model}`, usage, at)).toBe(costNanoUsd(model, usage, at));
+      }
+    }
+  });
+});
+
 describe("Command Code's ids", () => {
   test("its own id after the prefix, slashes kept; never read as OpenRouter's", () => {
     expect(commandCodeModelOf("commandcode:zai-org/GLM-5.3")).toBe("zai-org/GLM-5.3");
