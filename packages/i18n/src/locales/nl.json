@@ -5292,6 +5292,7 @@
         "speedText": "Antwoordt sneller in gesprekken en verbruikt het abonnement 2,5× zo snel. Routines en lange taken blijven op standaard.",
         "modelLine": {
           "opus": "De krachtigste. Verbruikt het abonnement sneller.",
+          "fable": "De sterkste. Verbruikt het abonnement veel sneller.",
           "sonnet": "Gebalanceerd. Goed voor bijna alles.",
           "haiku": "Snel en licht. Voor simpele taken."
         },

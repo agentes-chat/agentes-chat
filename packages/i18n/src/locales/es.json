@@ -5423,6 +5423,7 @@
         "speedText": "Responde más rápido en las conversaciones y consume el plan 2,5× más deprisa. Las rutinas y las tareas largas siguen en estándar.",
         "modelLine": {
           "opus": "El más capaz. Consume el plan más rápido.",
+          "fable": "El más potente. Consume el plan mucho más rápido.",
           "sonnet": "Equilibrado. Bueno para casi todo.",
           "haiku": "Rápido y ligero. Para tareas simples."
         },

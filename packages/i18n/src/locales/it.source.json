@@ -12924,6 +12924,9 @@
   "agentPage.work.brain.modelLine.opus": {
     "value": "The most capable. Uses up the plan faster."
   },
+  "agentPage.work.brain.modelLine.fable": {
+    "value": "The strongest. Uses up the plan much faster."
+  },
   "agentPage.work.brain.modelLine.sonnet": {
     "value": "Balanced. Good for almost everything."
   },
