@@ -68,11 +68,10 @@ import {
   signInProviderOf,
 } from "@agenteschat/client/lib/plans";
 import {
-  AUTO,
   keyLine,
   keyLooksValid,
-  keyRuns,
   keyStepHint,
+  modelOnKey,
   type ProviderId,
   providerLabel,
   providerOf,
@@ -372,9 +371,9 @@ export function useExistingAi({
         await rightHandOnKey(api, org.id, row, key, models.data?.models ?? []);
         return { label: key.label, choice: "key", onlyOwner: false, scope: "workspace" };
       }
-      const fits = keyRuns(key, row?.model, models.data?.models ?? []);
+      const model = modelOnKey(key, row?.model, models.data?.models ?? []);
       if (view?.brain !== "model") await api.agents.setBrain(org.id, agent.id, { brain: "model" });
-      await api.agents.update(org.id, agent.id, { credentialId: key.id, ...(fits ? {} : { model: AUTO }) });
+      await api.agents.update(org.id, agent.id, { credentialId: key.id, ...(model ? { model } : {}) });
       return { label: key.label, choice: "key", onlyOwner: false };
     });
   return { rows, busy, refused, pickAccount, pickKey };

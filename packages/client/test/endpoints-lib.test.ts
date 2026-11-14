@@ -14,7 +14,7 @@ import {
   withoutModel,
   withTypedModel,
 } from "../src/lib/endpoints";
-import { keyRuns, modelChoices } from "../src/lib/providers";
+import { keyRuns, modelChoices, modelOnKey } from "../src/lib/providers";
 
 describe("the endpoint form", () => {
   test("a model taken off leaves the others as they were", () => {
@@ -137,5 +137,16 @@ describe("endpoint models in the pickers", () => {
     expect(modelUnpriced(models, "custom:c1:llama")).toBe(true);
     expect(modelUnpriced(models, "custom:c2:other")).toBe(false);
     expect(modelUnpriced(undefined, "custom:c1:llama")).toBe(false);
+  });
+
+  test("an agent moved onto an endpoint's key gets one of its models, never Automático, which it can't run", () => {
+    expect(modelOnKey(cred("c1"), "auto", models)).toBe("custom:c1:llama");
+    expect(modelOnKey(cred("c1"), "custom:c2:other", models)).toBe("custom:c1:llama");
+    expect(modelOnKey(cred("c1"), "custom:c1:llama", models)).toBeUndefined();
+    // An endpoint with no model listed has nothing better to offer.
+    expect(modelOnKey(cred("c3"), "auto", models)).toBe("auto");
+    // A maker's key: Automático stays, and a model it can't run goes back to Automático.
+    expect(modelOnKey(cred("k", "anthropic"), "auto", models)).toBeUndefined();
+    expect(modelOnKey(cred("k", "anthropic"), "custom:c1:llama", models)).toBe("auto");
   });
 });
