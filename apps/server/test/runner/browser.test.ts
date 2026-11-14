@@ -7,6 +7,7 @@ import {
   readFileSync,
   renameSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { createServer } from "node:net";
@@ -3343,6 +3344,62 @@ test.if(posix)(
       expect(recorded.map((c) => c.pid)).not.toContain(leftover.pid);
     } finally {
       leftover.kill("SIGKILL");
+    }
+  },
+);
+
+test.if(posix)(
+  "a start stops a Chrome the profile's lock names even when chromes.json never listed it, and starts again after a handoff",
+  async () => {
+    const leftover = Bun.spawn(["sleep", "60"]);
+    const gone = () => leftover.exitCode !== null || leftover.signalCode !== null;
+    try {
+      const chromes = fakeChromes();
+      const leftoverAtStart: boolean[] = [];
+      const t = setup({
+        isOurChrome: async (pid) => pid === leftover.pid && !gone(),
+        startChrome: (exe, args, profile) => {
+          leftoverAtStart.push(!gone());
+          return chromes.start(exe, args, profile);
+        },
+      });
+      const profile = path.join(await t.folder(), ".agentes", "browser");
+      mkdirSync(profile, { recursive: true });
+      // As Chrome links it: `<host>-<pid>`. Nothing in chromes.json.
+      symlinkSync(`computer-${leftover.pid}`, path.join(profile, "SingletonLock"));
+
+      expect(await t.act("open", ["https://shop.example.com"])).toMatchObject({ success: true });
+      expect(leftoverAtStart).toEqual([false]);
+      expect(chromes.started.map((c) => c.tabs)).toEqual([[expect.stringMatching(/\/agentes-start\.html$/)]]);
+    } finally {
+      leftover.kill("SIGKILL");
+    }
+
+    // A Chrome takes the profile between the lock's removal and the start: the new process hands it its start page
+    // and exits. That Chrome stops and the start runs once more.
+    const late = Bun.spawn(["sleep", "60"]);
+    const lateGone = () => late.exitCode !== null || late.signalCode !== null;
+    try {
+      const chromes = fakeChromes();
+      const logs: string[] = [];
+      let tries = 0;
+      const t = setup({
+        log: (l) => logs.push(l),
+        isOurChrome: async (pid) => pid === late.pid && !lateGone(),
+        startChrome: async (exe, args, profile) => {
+          if (tries++ === 0) {
+            symlinkSync(`computer-${late.pid}`, path.join(profile, "SingletonLock"));
+            throw new ChromeStartError("Chrome closed while starting", "");
+          }
+          return chromes.start(exe, args, profile);
+        },
+      });
+      expect(await t.act("open", ["https://shop.example.com"])).toMatchObject({ success: true });
+      expect(tries).toBe(2);
+      await waitFor(lateGone);
+      expect(logs.some((l) => l.includes("another Chrome on its profile took its start"))).toBe(true);
+    } finally {
+      late.kill("SIGKILL");
     }
   },
 );

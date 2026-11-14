@@ -11,7 +11,7 @@ import {
   readFileSync,
   statSync,
 } from "node:fs";
-import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, readlink, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -191,6 +191,8 @@ const WINDOW_MS = 20_000;
  * after it, so the note the launcher shows meanwhile closes under Chrome's window rather than before it.
  */
 const WINDOW_DRAW_MS = 500;
+/** A Chrome whose process exits this soon after it answered was most likely a start handed to another Chrome. */
+const CHROME_HANDOFF_MS = 3000;
 /** A Chrome asked to quit that is still there after this is killed. */
 const CHROME_KILL_MS = 3000;
 /** How long a Chrome gets to close itself (`Browser.close`; it takes a tenth of a second) before it is signaled. */
@@ -786,6 +788,22 @@ export function prepareProfile(profile: string) {
  */
 export function forgetTabs(profile: string) {
   return rm(path.join(profile, "Default", "Sessions"), { recursive: true, force: true }).catch(() => undefined);
+}
+
+/** A process asked to stop, then killed when it is still there half a second later. */
+async function stopPid(pid: number) {
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch {
+    return;
+  }
+  await new Promise((r) => setTimeout(r, 500));
+  try {
+    process.kill(pid, 0);
+    process.kill(pid, "SIGKILL");
+  } catch {
+    // gone
+  }
 }
 
 /** A Chrome the runner started for one agent. */
@@ -2591,7 +2609,17 @@ export class BrowserManager {
         );
         try {
           const display = on && confinedChrome(exe) ? readableDisplay(on, session.folder) : on;
-          const started = await start(exe, args, profile, display ? chromeEnv(display) : undefined);
+          const env = display ? chromeEnv(display) : undefined;
+          const started = await start(exe, args, profile, env).catch(async (err: unknown) => {
+            // It exited at once, its start handed to a Chrome that took the profile meanwhile: that one stops, and
+            // this starts once more.
+            if (!(err instanceof ChromeStartError) || err.missing.length > 0 || !(await this.clearStaleLock(profile))) {
+              throw err;
+            }
+            this.opts.log(`the browser of ${agent.handle} started again: another Chrome on its profile took its start`);
+            await forgetTabs(profile);
+            return start(exe, args, profile, env);
+          });
           if (on) started.display = on.display;
           return started;
         } catch (err) {
@@ -2638,9 +2666,15 @@ export class BrowserManager {
       session.aliveAt = null;
       session.memory = this.memoryCounters();
       await this.rememberChrome(chrome.pid, profile, chrome.display);
+      const launchedAt = this.now();
       void chrome.exited.then(() => {
         void this.forgetChrome(chrome.pid);
         if (session.chrome !== chrome) return;
+        // With a fixed debugging port, a start handed to a Chrome already on the profile answers on that Chrome's
+        // port and its own process exits: the next start stops that Chrome first (`clearStaleLock`).
+        if (this.now() - launchedAt < CHROME_HANDOFF_MS) {
+          this.opts.log(`the browser of ${agent.handle} closed as it started: another Chrome may hold its profile`);
+        }
         // It closed under us (a crash, the person quit it): the next command starts it again.
         session.chrome = undefined;
         session.aliveAt = null;
@@ -2995,17 +3029,34 @@ export class BrowserManager {
   }
 
   /**
-   * Before a launch, nothing holds the profile. A Chrome this runner recorded on it that still runs is held by no
-   * session (an overlapping runner's, a stop still under way): a Chrome started beside it hands it the start page as
-   * one more tab and exits, so a few restarts left a pile of start pages there. It is stopped first. Chrome's
-   * `Singleton*` files name the host and pid that holds a profile; restored onto another computer they make Chrome
-   * exit with 21 (in use elsewhere), so they go too.
+   * Before a launch, nothing holds the profile. A Chrome still running on it is held by no session (an overlapping
+   * runner's, a stop still under way, one started outside the runner): a Chrome started beside it hands it the start
+   * page as one more tab and exits, so a few restarts left a pile of start pages there. It is stopped first, whether
+   * `chromes.json` lists it or only the profile's lock names it. Chrome's `Singleton*` files name the host and pid that
+   * holds a profile; restored onto another computer they make Chrome exit with 21 (in use elsewhere), so they go too.
+   * True when a Chrome was stopped.
    */
-  private async clearStaleLock(profile: string) {
-    await this.killLeftovers(profile);
+  private async clearStaleLock(profile: string): Promise<boolean> {
+    const listed = await this.killLeftovers(profile);
+    const locked = await this.killLockHolder(profile);
     await Promise.all(
       ["SingletonLock", "SingletonCookie", "SingletonSocket"].map((f) => rm(path.join(profile, f), { force: true })),
     );
+    return listed || locked;
+  }
+
+  /** The Chrome the profile's `SingletonLock` (a link to `<host>-<pid>`) names, stopped when it still runs on it. */
+  private async killLockHolder(profile: string): Promise<boolean> {
+    const target = await readlink(path.join(profile, "SingletonLock")).catch(() => "");
+    const pid = Number(/-(\d+)$/.exec(target)?.[1]);
+    if (!Number.isInteger(pid) || pid <= 0 || this.livePids().has(pid)) return false;
+    if (!(await this.isOurChrome(pid, profile).catch(() => false))) return false;
+    await stopPid(pid);
+    return true;
+  }
+
+  private livePids() {
+    return new Set([...this.sessions.values()].map((s) => s.chrome?.pid).filter((p) => p !== undefined));
   }
 
   /** A browser profile's folder: under the runner's home, outside every agent's folder. */
@@ -3021,26 +3072,18 @@ export class BrowserManager {
   }
 
   /** Chromes a previous run of this runner home left (it crashed or was killed), or only `on` that profile: stopped. */
-  private async killLeftovers(on?: string) {
-    const live = new Set([...this.sessions.values()].map((s) => s.chrome?.pid).filter((p) => p !== undefined));
+  private async killLeftovers(on?: string): Promise<boolean> {
+    const live = this.livePids();
+    let stopped = false;
     for (const { pid, profile } of await this.readPids()) {
       if (live.has(pid) || (on !== undefined && profile !== on)) continue;
       if (await this.isOurChrome(pid, profile).catch(() => false)) {
-        try {
-          process.kill(pid, "SIGTERM");
-        } catch {
-          // gone
-        }
-        await new Promise((r) => setTimeout(r, 500));
-        try {
-          process.kill(pid, 0);
-          process.kill(pid, "SIGKILL");
-        } catch {
-          // gone
-        }
+        await stopPid(pid);
+        stopped = true;
       }
       await this.forgetChrome(pid);
     }
+    return stopped;
   }
 
   private enqueue<T>(session: Session, fn: () => Promise<T>): Promise<T> {
