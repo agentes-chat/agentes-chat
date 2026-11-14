@@ -2670,6 +2670,9 @@
       "update_role": "Rol <b>{{name}}</b> wijzigen",
       "delete_role": "Rol <b>{{name}}</b> definitief verwijderen",
       "move_role": "Rol <b>{{name}}</b> verplaatsen",
+      "set_permission_holders": "Wijzigen wie <b>{{short}}</b> mag",
+      "set_permission_holders_computers": "Wijzigen wie <b>de computers van agents</b> gebruikt",
+      "holdersOwnersOnly": "Alleen de eigenaars",
       "set_member_roles": "Rollen van <b>{{name}}</b> wijzigen: {{change}}",
       "set_channel_permissions": "Wijzigen wat {{who}} mag in <b>#{{channel}}</b>",
       "set_my_status": "Je status instellen: <b>{{what}}</b>",
@@ -3476,6 +3479,8 @@
       "changed_update_role": "Rol <b>{{name}}</b> gewijzigd",
       "changed_delete_role": "Rol <b>{{name}}</b> verwijderd",
       "changed_move_role": "Rol <b>{{name}}</b> verplaatst",
+      "changed_set_permission_holders": "Gewijzigd wie <b>{{short}}</b> mag",
+      "changed_set_permission_holders_computers": "Gewijzigd wie <b>de computers van agents</b> gebruikt",
       "changed_set_member_roles": "Rollen van <b>{{name}}</b> gewijzigd: {{change}}",
       "changed_set_channel_permissions": "Gewijzigd wat {{who}} mag in <b>#{{channel}}</b>",
       "changed_set_my_status": "Je status ingesteld: <b>{{what}}</b>",
@@ -15109,6 +15114,10 @@
         "left": "De werkruimte verlaten",
         "role_changed": "De rol van een lid gewijzigd",
         "password_link": "Maakte een link voor een nieuw wachtwoord voor een lid"
+      },
+      "role": {
+        "permission_set": "Gewijzigd wie {{short}} mag",
+        "permission_set_computers": "Gewijzigd wie de computers van agents gebruikt"
       },
       "apps": {
         "connected": "{{app}} gekoppeld",

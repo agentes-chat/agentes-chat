@@ -2667,6 +2667,9 @@
       "update_role": "<b>{{name}}</b> rolünü değiştir",
       "delete_role": "<b>{{name}}</b> rolünü kalıcı olarak sil",
       "move_role": "<b>{{name}}</b> rolünün yerini değiştir",
+      "set_permission_holders": "<b>{{short}}</b> iznine kimin sahip olduğunu değiştir",
+      "set_permission_holders_computers": "<b>Ajanların bilgisayarlarını</b> kimin kullandığını değiştir",
+      "holdersOwnersOnly": "Yalnızca sahipler",
       "set_member_roles": "<b>{{name}}</b> kişisinin rollerini değiştir: {{change}}",
       "set_channel_permissions": "{{who}} için <b>#{{channel}}</b> kanalındaki izinleri değiştir",
       "set_my_status": "Durumunu ayarla: <b>{{what}}</b>",
@@ -3461,6 +3464,8 @@
       "changed_update_role": "<b>{{name}}</b> rolünü değiştirdim",
       "changed_delete_role": "<b>{{name}}</b> rolünü sildim",
       "changed_move_role": "<b>{{name}}</b> rolünün yerini değiştirdim",
+      "changed_set_permission_holders": "<b>{{short}}</b> iznine kimin sahip olduğunu değiştirdim",
+      "changed_set_permission_holders_computers": "<b>Ajanların bilgisayarlarını</b> kimin kullandığını değiştirdim",
       "changed_set_member_roles": "<b>{{name}}</b> kişisinin rollerini değiştirdim: {{change}}",
       "changed_set_channel_permissions": "{{who}} için <b>#{{channel}}</b> kanalındaki izinleri değiştirdim",
       "changed_set_my_status": "Durumunu ayarladım: <b>{{what}}</b>",
@@ -14982,6 +14987,10 @@
         "left": "Çalışma alanından ayrıldı",
         "role_changed": "Bir üyenin rolünü değiştirdi",
         "password_link": "Bir üye için yeni şifre bağlantısı oluşturdu"
+      },
+      "role": {
+        "permission_set": "{{short}} iznine kimin sahip olduğunu değiştirdi",
+        "permission_set_computers": "Ajanların bilgisayarlarını kimin kullandığını değiştirdi"
       },
       "apps": {
         "connected": "{{app}} bağladı",

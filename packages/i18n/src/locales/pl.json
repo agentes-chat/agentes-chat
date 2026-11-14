@@ -2861,6 +2861,9 @@
       "update_role": "Zmień rolę <b>{{name}}</b>",
       "delete_role": "Usuń rolę <b>{{name}}</b> na zawsze",
       "move_role": "Przesuń rolę <b>{{name}}</b>",
+      "set_permission_holders": "Zmień, kto ma uprawnienie: <b>{{short}}</b>",
+      "set_permission_holders_computers": "Zmień, kto używa <b>komputerów agentów</b>",
+      "holdersOwnersOnly": "Tylko właściciele",
       "set_member_roles": "Zmień role osoby <b>{{name}}</b>: {{change}}",
       "set_channel_permissions": "Zmień, co {{who}} może robić w <b>#{{channel}}</b>",
       "set_my_status": "Ustaw swój status: <b>{{what}}</b>",
@@ -3704,6 +3707,8 @@
       "changed_update_role": "Zmieniono rolę <b>{{name}}</b>",
       "changed_delete_role": "Usunięto rolę <b>{{name}}</b>",
       "changed_move_role": "Przesunięto rolę <b>{{name}}</b>",
+      "changed_set_permission_holders": "Zmieniono, kto ma uprawnienie: <b>{{short}}</b>",
+      "changed_set_permission_holders_computers": "Zmieniono, kto używa <b>komputerów agentów</b>",
       "changed_set_member_roles": "Zmieniono role osoby <b>{{name}}</b>: {{change}}",
       "changed_set_channel_permissions": "Zmieniono, co {{who}} może robić w <b>#{{channel}}</b>",
       "changed_set_my_status": "Ustawiono twój status: <b>{{what}}</b>",
@@ -16059,6 +16064,10 @@
         "left": "Opuszczono przestrzeń roboczą",
         "role_changed": "Zmieniono rolę członka",
         "password_link": "Utworzono link do nowego hasła dla członka"
+      },
+      "role": {
+        "permission_set": "Zmieniono, kto ma uprawnienie: {{short}}",
+        "permission_set_computers": "Zmieniono, kto używa komputerów agentów"
       },
       "apps": {
         "connected": "Połączono {{app}}",

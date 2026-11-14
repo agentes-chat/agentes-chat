@@ -2770,6 +2770,11 @@ export const ptBR = {
       update_role: "Mudar o cargo <b>{{name}}</b>",
       delete_role: "Apagar o cargo <b>{{name}}</b> de vez",
       move_role: "Mudar o cargo <b>{{name}}</b> de lugar",
+      /** "Quem pode…": who may do one thing, Todos and the roles at once. `short`: the permission (`permissions.*.short`). */
+      set_permission_holders: "Mudar quem pode <b>{{short}}</b>",
+      set_permission_holders_computers: "Mudar quem usa <b>os computadores dos agentes</b>",
+      /** Under it, when nobody but the owners would have it. */
+      holdersOwnersOnly: "Só os donos",
       set_member_roles: "Mudar os cargos de <b>{{name}}</b>: {{change}}",
       set_channel_permissions: "Mudar o que {{who}} pode fazer em <b>#{{channel}}</b>",
       set_my_status: "Mudar seu status: <b>{{what}}</b>",
@@ -3652,6 +3657,8 @@ export const ptBR = {
       changed_update_role: "Mudei o cargo <b>{{name}}</b>",
       changed_delete_role: "Apaguei o cargo <b>{{name}}</b>",
       changed_move_role: "Mudei o cargo <b>{{name}}</b> de lugar",
+      changed_set_permission_holders: "Mudei quem pode <b>{{short}}</b>",
+      changed_set_permission_holders_computers: "Mudei quem usa <b>os computadores dos agentes</b>",
       changed_set_member_roles: "Mudei os cargos de <b>{{name}}</b>: {{change}}",
       changed_set_channel_permissions: "Mudei o que {{who}} pode fazer em <b>#{{channel}}</b>",
       changed_set_my_status: "Mudei seu status: <b>{{what}}</b>",
@@ -15198,6 +15205,11 @@ export const ptBR = {
         left: "Saiu do workspace",
         role_changed: "Mudou o cargo de um membro",
         password_link: "Gerou um link de senha nova para um membro",
+      },
+      role: {
+        /** Todos and the roles at once ("Quem pode…"). `short`: the permission (`permissions.*.short`). */
+        permission_set: "Mudou quem pode {{short}}",
+        permission_set_computers: "Mudou quem usa os computadores dos agentes",
       },
       apps: {
         connected: "Conectou o {{app}}",

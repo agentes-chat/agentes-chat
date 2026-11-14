@@ -322,6 +322,68 @@ describe("roles through the right hand", () => {
     expect(await roleNamed(f, "Operações")).not.toBeNull();
   });
 
+  test("who may create channels, everyone and the roles at once: a card that must be read, applied with Undo", async () => {
+    f = await setup({ rightHand: true });
+    await createRole(f.db, f.owner.id, f.org.id, { name: "Suporte", permissions: ["create_channels", "post"] });
+    const finance = await createRole(f.db, f.owner.id, f.org.id, { name: "Financeiro" });
+    const base = async () =>
+      (
+        await f.db
+          .select()
+          .from(schema.orgRoles)
+          .where(and(eq(schema.orgRoles.orgId, f.org.id), eq(schema.orgRoles.kind, "everyone")))
+      )[0]?.permissions ?? [];
+    const ctx = await lodiRun(f, f.owner.id, "só o financeiro cria canais");
+    // A step on a key, or a role that isn't there: why, and no card.
+    const wrong = await act(f, ctx, {
+      action: "set_permission_holders",
+      input: { permission: "create_channels", everyone: 2 },
+    });
+    expect(wrong).toMatchObject({ isError: true, content: expect.stringContaining("Only computers has steps") });
+    const gone = await act(f, ctx, {
+      action: "set_permission_holders",
+      input: { permission: "create_channels", everyone: 0, roles: [{ role: "Vendas", level: 1 }] },
+    });
+    expect(gone).toMatchObject({ isError: true, content: expect.stringContaining('No role "Vendas"') });
+    expect(await lastCard(f)).toBeNull();
+
+    // Even the owner's own words make a card: it changes what everyone may.
+    const out = await act(f, ctx, {
+      action: "set_permission_holders",
+      input: { permission: "create_channels", everyone: 0, roles: [{ role: "financeiro", level: 1 }] },
+      why: "Só o Financeiro cria canais",
+    });
+    expect(out.content).toContain("Posted a card to set_permission_holders");
+    expect(await base()).toContain("create_channels");
+    const posted = await lastCard(f);
+    if (!posted) throw new Error("no card");
+    expect(posted.card.params).toMatchObject({
+      action: "set_permission_holders",
+      needs: "manage_roles",
+      input: { row: "create_channels", everyone: 0, roles: [{ id: finance.id, name: "Financeiro", level: 1 }] },
+      words: { permission: "create_channels" },
+    });
+    const deps = { db: f.db, pubsub: f.pubsub };
+    // An app that would read it as "a change in the workspace" may not apply it.
+    await expect(decideWorkspaceAction(deps, f.owner.id, f.org.id, posted.id, "apply")).rejects.toMatchObject({
+      code: "action_card.update_app",
+    });
+    await decideWorkspaceAction(deps, f.owner.id, f.org.id, posted.id, "apply", "set_permission_holders");
+    expect(await base()).not.toContain("create_channels");
+    expect((await roleNamed(f, "Financeiro"))?.permissions).toEqual(["create_channels"]);
+    expect((await roleNamed(f, "Suporte"))?.permissions).toEqual(["post"]);
+    const [receipt] = (await actionsFor(f.db, f.org.id, [posted.id])).get(posted.id) ?? [];
+    expect(receipt).toMatchObject({
+      kind: "workspace.changed",
+      params: { action: "set_permission_holders", permission: "create_channels" },
+    });
+    // Undo puts every role back as it was.
+    await undoAgentAction(deps, f.owner.id, f.org.id, receipt?.id ?? "");
+    expect(await base()).toContain("create_channels");
+    expect((await roleNamed(f, "Financeiro"))?.permissions).toEqual([]);
+    expect((await roleNamed(f, "Suporte"))?.permissions.sort()).toEqual(["create_channels", "post"]);
+  });
+
   test("wrong or unknown input says why and changes nothing", async () => {
     f = await setup({ rightHand: true });
     const ctx = await lodiRun(f, f.owner.id, "faz algo");

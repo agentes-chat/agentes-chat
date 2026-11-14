@@ -6653,6 +6653,15 @@
   "rightHand.action.move_role": {
     "value": "Move the role <b>{{name}}</b>"
   },
+  "rightHand.action.set_permission_holders": {
+    "value": "Change who can <b>{{short}}</b>"
+  },
+  "rightHand.action.set_permission_holders_computers": {
+    "value": "Change who uses <b>the agents' computers</b>"
+  },
+  "rightHand.action.holdersOwnersOnly": {
+    "value": "Only owners"
+  },
   "rightHand.action.set_member_roles": {
     "value": "Change the roles of <b>{{name}}</b>: {{change}}"
   },
@@ -8454,6 +8463,12 @@
   },
   "agentActions.workspace.changed_move_role": {
     "value": "Moved the role <b>{{name}}</b>"
+  },
+  "agentActions.workspace.changed_set_permission_holders": {
+    "value": "Changed who can <b>{{short}}</b>"
+  },
+  "agentActions.workspace.changed_set_permission_holders_computers": {
+    "value": "Changed who uses <b>the agents' computers</b>"
   },
   "agentActions.workspace.changed_set_member_roles": {
     "value": "Changed the roles of <b>{{name}}</b>: {{change}}"
@@ -36596,6 +36611,12 @@
   },
   "audit.change.member.password_link": {
     "value": "Made a new-password link for a member"
+  },
+  "audit.change.role.permission_set": {
+    "value": "Changed who can {{short}}"
+  },
+  "audit.change.role.permission_set_computers": {
+    "value": "Changed who uses the agents' computers"
   },
   "audit.change.apps.connected": {
     "value": "Connected {{app}}"

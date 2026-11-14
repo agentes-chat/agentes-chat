@@ -400,6 +400,43 @@ test("a card of a workspace change: read from the message, its sentence, what a 
   expect(mayApplyCard(refused, holds)).toBe(true);
 });
 
+test("a Quem pode card says who has it once applied, and its sentence names the permission", () => {
+  const holders = (row: string, everyone: number, roles: { name: string; level: number }[]): WorkspaceActionCard => ({
+    kind: "workspace_action",
+    forUserId: "u1",
+    params: {
+      action: "set_permission_holders",
+      input: { row, everyone, roles },
+      words: { permission: row, ...(row === "computers" ? { variant: "computers" } : {}) },
+      needs: "manage_roles",
+      why: "",
+    },
+    state: "pending",
+    decidedByUserId: null,
+    decidedAt: null,
+  });
+  const t = ((key: string, o?: Record<string, unknown>) =>
+    key === "format.list"
+      ? (o?.names as string[]).join(" e ")
+      : key.startsWith("permissions.")
+        ? key.split(".")[1]
+        : key) as unknown as TFunction;
+  const detail = (...a: Parameters<typeof holders>) => actionCardDetail(holders(...a), t);
+  expect(detail("create_channels", 0, [{ name: "Financeiro", level: 1 }, { name: "Suporte", level: 1 }])).toBe(
+    "Financeiro e Suporte",
+  );
+  expect(detail("create_channels", 1, [])).toBe("rolesPage.everyoneName");
+  // Nobody but the owners: said, never an empty line.
+  expect(detail("create_channels", 0, [{ name: "Suporte", level: 0 }])).toBe("rightHand.action.holdersOwnersOnly");
+  // The computers: a line each, with its step in the permission's own words.
+  expect(detail("computers", 1, [{ name: "Ops", level: 4 }])).toBe(
+    "rolesPage.everyoneName: own_browsers\nOps: control_computers",
+  );
+  expect(actionCardKey(holders("create_channels", 0, []))).toBe("rightHand.action.set_permission_holders");
+  expect(actionCardWords(holders("create_channels", 0, []), t)).toMatchObject({ short: "create_channels" });
+  expect(actionCardKey(holders("computers", 0, []))).toBe("rightHand.action.set_permission_holders_computers");
+});
+
 test("a card of a workspace change shows all it changes, and a card of their own status is only theirs to apply", () => {
   const card = (
     action: string,

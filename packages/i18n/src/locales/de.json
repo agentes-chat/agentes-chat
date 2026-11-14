@@ -2671,6 +2671,9 @@
       "update_role": "Rolle <b>{{name}}</b> ändern",
       "delete_role": "Rolle <b>{{name}}</b> endgültig löschen",
       "move_role": "Rolle <b>{{name}}</b> verschieben",
+      "set_permission_holders": "Ändern, wer <b>{{short}}</b> darf",
+      "set_permission_holders_computers": "Ändern, wer <b>die Computer der Agenten</b> nutzt",
+      "holdersOwnersOnly": "Nur die Inhaber",
       "set_member_roles": "Rollen von <b>{{name}}</b> ändern: {{change}}",
       "set_channel_permissions": "Ändern, was {{who}} in <b>#{{channel}}</b> darf",
       "set_my_status": "Deinen Status setzen: <b>{{what}}</b>",
@@ -3475,6 +3478,8 @@
       "changed_update_role": "Rolle <b>{{name}}</b> geändert",
       "changed_delete_role": "Rolle <b>{{name}}</b> gelöscht",
       "changed_move_role": "Rolle <b>{{name}}</b> verschoben",
+      "changed_set_permission_holders": "Geändert, wer <b>{{short}}</b> darf",
+      "changed_set_permission_holders_computers": "Geändert, wer <b>die Computer der Agenten</b> nutzt",
       "changed_set_member_roles": "Rollen von <b>{{name}}</b> geändert: {{change}}",
       "changed_set_channel_permissions": "Geändert, was {{who}} in <b>#{{channel}}</b> darf",
       "changed_set_my_status": "Deinen Status gesetzt: <b>{{what}}</b>",
@@ -15047,6 +15052,10 @@
         "left": "Hat den Workspace verlassen",
         "role_changed": "Hat die Rolle eines Mitglieds geändert",
         "password_link": "Hat einen Link für ein neues Passwort für ein Mitglied erstellt"
+      },
+      "role": {
+        "permission_set": "Hat geändert, wer {{short}} darf",
+        "permission_set_computers": "Hat geändert, wer die Computer der Agenten nutzt"
       },
       "apps": {
         "connected": "Hat {{app}} verbunden",

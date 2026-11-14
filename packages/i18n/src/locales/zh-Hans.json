@@ -2577,6 +2577,9 @@
       "update_role": "更改角色 <b>{{name}}</b>",
       "delete_role": "永久删除角色 <b>{{name}}</b>",
       "move_role": "调整角色 <b>{{name}}</b> 的顺序",
+      "set_permission_holders": "更改谁可以<b>{{short}}</b>",
+      "set_permission_holders_computers": "更改谁可以使用<b>智能体的电脑</b>",
+      "holdersOwnersOnly": "仅所有者",
       "set_member_roles": "更改 <b>{{name}}</b> 的角色：{{change}}",
       "set_channel_permissions": "更改 {{who}} 在 <b>#{{channel}}</b> 中能做的事",
       "set_my_status": "设置你的状态：<b>{{what}}</b>",
@@ -3351,6 +3354,8 @@
       "changed_update_role": "更改了角色 <b>{{name}}</b>",
       "changed_delete_role": "删除了角色 <b>{{name}}</b>",
       "changed_move_role": "调整了角色 <b>{{name}}</b> 的顺序",
+      "changed_set_permission_holders": "更改了谁可以<b>{{short}}</b>",
+      "changed_set_permission_holders_computers": "更改了谁可以使用<b>智能体的电脑</b>",
       "changed_set_member_roles": "更改了 <b>{{name}}</b> 的角色：{{change}}",
       "changed_set_channel_permissions": "更改了 {{who}} 在 <b>#{{channel}}</b> 中能做的事",
       "changed_set_my_status": "设置了你的状态：<b>{{what}}</b>",
@@ -14571,6 +14576,10 @@
         "left": "离开了工作区",
         "role_changed": "更改了一位成员的角色",
         "password_link": "为成员生成了新密码链接"
+      },
+      "role": {
+        "permission_set": "更改了谁可以{{short}}",
+        "permission_set_computers": "更改了谁可以使用智能体的电脑"
       },
       "apps": {
         "connected": "连接了 {{app}}",

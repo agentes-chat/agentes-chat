@@ -160,6 +160,7 @@ import type {
   RoutineHook,
   RoutineInput,
   RoutinePatch,
+  RowHolders,
   S3Input,
   SandboxSettingsInput,
   SearchFilterInput,
@@ -560,14 +561,31 @@ export function useReorderRoles(orgId: string) {
   });
 }
 
-/** Sets a person's roles (exactly these). */
+/**
+ * "Quem pode…": who holds one row, `everyone` and the roles in one call (`PUT …/permissions/{row}`); the roles it
+ * answers with replace the cached ones.
+ */
+export function useSetRowHolders(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ row, holders }: { row: string; holders: RowHolders }) => api.roles.setRow(orgId, row, holders),
+    onSuccess: (roles) => qc.setQueryData(keys.roles(orgId), roles),
+    onSettled: () => refreshRoles(qc, orgId),
+  });
+}
+
+/**
+ * Sets a person's roles (exactly these). `mailLossSeen`: the mailboxes they were told agents lose
+ * (`api.roles.mailLoss`); one given since refuses it with `agent.mail_loss_changed`, to ask again.
+ */
 export function useSetMemberRoles(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   const via = useCardVia();
   return useMutation({
-    mutationFn: ({ userId, roleIds }: { userId: string; roleIds: string[] }) =>
-      api.roles.setFor(orgId, userId, roleIds, via),
+    mutationFn: ({ userId, roleIds, mailLossSeen }: { userId: string; roleIds: string[]; mailLossSeen?: string[] }) =>
+      api.roles.setFor(orgId, userId, roleIds, via, mailLossSeen),
     onMutate: async ({ userId, roleIds }) => {
       await qc.cancelQueries({ queryKey: keys.people(orgId) });
       const before = qc.getQueryData<Person[]>(keys.people(orgId));
