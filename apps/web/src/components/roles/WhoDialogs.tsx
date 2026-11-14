@@ -371,7 +371,8 @@ function WhoSees({
   const members = useQuery(channelMembersQuery(api, org.id, c.id));
   const memberIds = (members.data ?? []).filter((m) => m.type === "person").map((m) => m.id);
   const roles = sortRoles(data.roles.filter((r) => !isEveryone(r)));
-  const writable = new Set(writableRoles(data.roles).map((r) => r.id));
+  // Administrador sees every channel (ADR 0151). Any other cargo is the viewer's to tick: a channel's cargos have no
+  // rank rule, as its own "Quem pode entrar" has none.
   const picked = roles.filter((r) => ticked.has(r.id) && !isAdmin(r)).map((r) => r.id);
   const next =
     mode === "everyone"
@@ -425,13 +426,7 @@ function WhoSees({
                         return n;
                       })
                     }
-                    fixed={(r) =>
-                      isAdmin(r)
-                        ? { on: true, note: t("permissions.administrator.title") }
-                        : !writable.has(r.id)
-                          ? { on: ticked.has(r.id), note: t("rolesPage.aboveYou") }
-                          : null
-                    }
+                    fixed={(r) => (isAdmin(r) ? { on: true, note: t("permissions.administrator.title") } : null)}
                   />
                 ),
               },

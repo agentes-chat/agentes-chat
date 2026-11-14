@@ -355,6 +355,7 @@
     "previewWhere": "nella chat",
     "sameAs": "Uguale a",
     "deleteLeave": "Escono dai canali che vedevano solo tramite {{name}}:",
+    "deleteReading": "Controllo chi esce dai canali…",
     "ownerAdd": "Aggiungi proprietari"
   },
   "permissions": {

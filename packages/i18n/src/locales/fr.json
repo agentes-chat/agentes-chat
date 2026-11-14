@@ -355,6 +355,7 @@
     "previewWhere": "dans le chat",
     "sameAs": "Comme",
     "deleteLeave": "Quittent les canaux qu'ils voyaient seulement grâce à {{name}} :",
+    "deleteReading": "Vérification de qui quitte les canaux…",
     "ownerAdd": "Ajouter des propriétaires"
   },
   "permissions": {

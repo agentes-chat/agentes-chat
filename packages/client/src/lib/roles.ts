@@ -217,7 +217,7 @@ export function rowHolders(
           ? step.from.level
           : choice.ticked.has(r.id)
             ? Math.max(own, step.keep)
-            : Math.min(own, step.keep - 1);
+            : Math.max(0, Math.min(own, step.keep - 1));
       return { id: r.id, level };
     }),
   };

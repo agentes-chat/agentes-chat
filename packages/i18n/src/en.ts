@@ -364,6 +364,7 @@ export const en = {
     previewWhere: "in chat",
     sameAs: "Same as",
     deleteLeave: "Leaving channels they saw only through {{name}}:",
+    deleteReading: "Checking who leaves channels…",
     ownerAdd: "Add owners",
   },
   permissions: {

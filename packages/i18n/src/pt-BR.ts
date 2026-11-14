@@ -368,6 +368,7 @@ export const ptBR = {
     previewWhere: "no chat",
     sameAs: "Igual a",
     deleteLeave: "Saem de canais que viam só por {{name}}:",
+    deleteReading: "Vendo quem sai de canais…",
     ownerAdd: "Adicionar donos",
   },
   permissions: {

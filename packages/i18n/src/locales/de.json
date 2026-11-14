@@ -342,6 +342,7 @@
     "previewWhere": "im Chat",
     "sameAs": "Wie",
     "deleteLeave": "Verlassen Kanäle, die sie nur durch {{name}} sahen:",
+    "deleteReading": "Prüfe, wer Kanäle verlässt…",
     "ownerAdd": "Inhaber hinzufügen"
   },
   "permissions": {

@@ -108,6 +108,11 @@ describe("Quem pode: Todos and the cargos in one call", () => {
       { id: "fin", level: 0 },
     ]);
   });
+
+  test("no level goes under none, whatever step the dialog keeps (the server refuses one)", () => {
+    const holders = rowHolders(roles, "approve_actions", { everyone: false, ticked: new Set() }, { keep: 0, low: 0 });
+    expect(holders.roles.map((r) => r.level)).toEqual([0, 0]);
+  });
 });
 
 describe("what a cargo reaches", () => {

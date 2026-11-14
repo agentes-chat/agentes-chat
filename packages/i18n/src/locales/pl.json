@@ -368,6 +368,7 @@
     "previewWhere": "na czacie",
     "sameAs": "Jak",
     "deleteLeave": "Opuszczają kanały, które widzieli tylko dzięki {{name}}:",
+    "deleteReading": "Sprawdzam, kto opuszcza kanały…",
     "ownerAdd": "Dodaj właścicieli"
   },
   "permissions": {

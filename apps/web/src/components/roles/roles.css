@@ -34,6 +34,16 @@
   height: 20px;
   margin: var(--space-3) 0 0 var(--space-2);
 }
+/* The ⋯ that holds the grip's menu where nothing drags: its 32 button on the row's middle, so the row keeps its 12 above
+   and below what it holds (a 32 box on the name's line would reach 6 from the top), its icon on the rows' 16 padding
+   line. */
+.roles-row > .roles-row__more {
+  flex: none;
+  display: none;
+  align-self: center;
+  width: var(--control-h-sm);
+  margin-inline-end: var(--space-2);
+}
 .roles-row__grip {
   all: unset;
   display: grid;
@@ -176,9 +186,10 @@ html:not([data-pointer]) .roles-row__open:focus-visible {
   clip-path: inset(50%);
   white-space: nowrap;
 }
-/* At phone width the faces go and the count says what it counts, and the grip gives way to the cargo's ⋯ (Mover para
-   cima, para baixo), as it does under a finger, where nothing drags. At 360 the chevron goes too (the whole row opens
-   the cargo) and the count goes to the reach line's end, so the name keeps the row's width. */
+/* At phone width the faces go and the count says what it counts, and the grip gives way to the row's ⋯ at its end
+   (Mover para cima, para baixo), as it does under a finger, where nothing drags. The ⋯ takes the chevron's place (the
+   whole row opens the cargo). At 360 the chevron goes on every row and the count goes to the reach line's end, so the
+   name keeps the row's width. */
 @container (max-width: 520px) {
   .roles-row .roles-stack,
   .roles-row__count {
@@ -200,6 +211,15 @@ html:not([data-pointer]) .roles-row__open:focus-visible {
   .roles-row__open {
     padding-inline-start: var(--space-4);
   }
+  .roles-row > .roles-row__more {
+    display: flex;
+  }
+  .roles-row:has(> .roles-row__more) > .roles-row__open {
+    padding-inline-end: var(--space-2);
+  }
+  .roles-row:has(> .roles-row__more) .roles-row__end > .ac-icon {
+    display: none;
+  }
 }
 @container (max-width: 360px) {
   .roles-row__end > .ac-icon {
@@ -217,6 +237,15 @@ html:not([data-pointer]) .roles-row__open:focus-visible {
   }
   .roles-row__open {
     padding-inline-start: var(--space-4);
+  }
+  .roles-row > .roles-row__more {
+    display: flex;
+  }
+  .roles-row:has(> .roles-row__more) > .roles-row__open {
+    padding-inline-end: var(--space-2);
+  }
+  .roles-row:has(> .roles-row__more) .roles-row__end > .ac-icon {
+    display: none;
   }
 }
 

@@ -20,7 +20,6 @@ import {
   roleName,
   sortRoles,
   withRow,
-  writableRoles,
 } from "@agenteschat/client/lib/roles";
 import {
   Button,
@@ -86,7 +85,9 @@ export function RoleAgents({
     levelOn(everyone?.permissions ?? [], "talk_to_agents") === 0;
   const roles = sortRoles(data.roles.filter((r) => !isEveryone(r)));
   const byId = new Map(roles.map((r) => [r.id, r]));
-  const others = writableRoles(data.roles).filter((r) => r.id !== role.id);
+  // Who talks to an agent has no rank rule and no Administrador pass: every other cargo starts ticked, whoever may
+  // change it, or saving as it opens would take the agent from their people.
+  const others = roles.filter((r) => r.id !== role.id);
   const q = fold(query.trim());
   const shown = agents.filter((a) => !q || fold(`${a.name} ${a.role}`).includes(q));
   return (
@@ -167,18 +168,14 @@ export function RoleAgents({
                 people={people}
                 lock={lock}
                 onSaved={() => setSaved(true)}
-                onAsk={(on) => {
-                  const start: AgentAudience = base
-                    ? {
-                        mode: "people",
-                        userIds: [],
-                        roleIds: others.length ? writableRoles(data.roles).map((r) => r.id) : [],
-                      }
-                    : on
+                onAsk={(on) =>
+                  setTalks({
+                    agent: a,
+                    start: on
                       ? audienceWithRole(a, role.id, true)
-                      : { mode: "people", userIds: [], roleIds: others.map((r) => r.id) };
-                  setTalks({ agent: a, start });
-                }}
+                      : { mode: "people", userIds: [], roleIds: others.map((r) => r.id) },
+                  })
+                }
               />
             ))}
           </List>

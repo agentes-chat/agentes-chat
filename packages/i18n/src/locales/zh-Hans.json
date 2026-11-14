@@ -329,6 +329,7 @@
     "previewWhere": "在聊天中",
     "sameAs": "与以下相同",
     "deleteLeave": "将离开仅通过{{name}}看到的频道：",
+    "deleteReading": "正在查看谁会离开频道…",
     "ownerAdd": "添加所有者"
   },
   "permissions": {

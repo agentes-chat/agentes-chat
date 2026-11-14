@@ -123,6 +123,8 @@ const row = (name: string) =>
   [...document.querySelectorAll<HTMLElement>(".roles-row")].find(
     (r) => r.querySelector(".roles-row__name")?.textContent === name,
   ) as HTMLElement;
+const names = () => [...document.querySelectorAll(".roles-row__name")].map((n) => n.textContent);
+const grip = (name: string) => row(name).querySelector<HTMLButtonElement>(".roles-row__grip") as HTMLButtonElement;
 const reach = (name: string) => [...row(name).querySelectorAll(".roles-reach__item")].map((i) => i.textContent?.trim());
 const permRow = (title: string) =>
   [...document.querySelectorAll<HTMLElement>(".roles-perm")].find(
@@ -229,6 +231,19 @@ describe("the worst case, as the geometry check measures it", () => {
     expect(look.querySelector(".roles-preview__name")?.textContent).toBe(ALEKSANDRA);
     await click(within(look).getByRole("button", { name: "Cancelar" }));
     await settle(4);
+    // Apagar: who leaves, with the longest cargo and person, on as many lines as it takes.
+    await act(async () =>
+      fireEvent.pointerDown(screen().getByRole("button", { name: "Mais opções" }), { button: 0, ctrlKey: false }),
+    );
+    await settle(2);
+    await click(screen().getByRole("menuitem", { name: "Apagar cargo" }));
+    const remove = screen().getByRole("dialog", { name: `Apagar ${LONG}?` });
+    await settle(4);
+    expect(remove.querySelector(".roles-line")?.textContent).toBe(
+      `Saem de canais que viam só por ${LONG}: ${ALEKSANDRA}.`,
+    );
+    await click(within(remove).getByRole("button", { name: "Cancelar" }));
+    await settle(4);
   });
 
   test("its channels, agents and people with the longest names", async () => {
@@ -308,32 +323,76 @@ describe("Settings › Cargos, the list (W1)", () => {
 
   test("a grip's menu moves a cargo, never above one the viewer can't change", async () => {
     const state = await open("roles");
-    const grip = within(row("Financeiro")).getByRole("button", { name: "Mover Financeiro" });
-    await click(grip);
+    expect(grip("Financeiro").getAttribute("aria-label")).toBe("Mover Financeiro");
+    await click(grip("Financeiro"));
     const up = screen().getByRole("menuitem", { name: "Mover para cima" });
     await click(up);
     expect(last(state, "roles.reorder")?.[1]).toEqual(["role-admin", FIN, SUPORTE]);
     await settle(4);
-    expect([...document.querySelectorAll(".roles-row__name")].map((n) => n.textContent)).toEqual([
-      "Todos",
-      "Dono",
-      "Admin",
-      "Financeiro",
-      "Suporte",
-    ]);
+    expect(names()).toEqual(["Todos", "Dono", "Admin", "Financeiro", "Suporte"]);
+  });
+
+  test("where nothing drags, each cargo's ⋯ at its row's end holds the grip's menu; Todos and Dono keep its room", async () => {
+    const state = await open("roles");
+    for (const name of ["Todos", "Dono"])
+      expect(row(name).querySelector(".roles-row__more")?.childElementCount).toBe(0);
+    const more = row("Financeiro").querySelector<HTMLElement>(".roles-row__more > button") as HTMLElement;
+    expect([more.getAttribute("aria-label"), more.getAttribute("aria-haspopup")]).toEqual(["Mover Financeiro", "menu"]);
+    await click(more);
+    expect(
+      (screen().getByRole("menuitem", { name: "Mover para baixo" }) as HTMLElement).getAttribute("aria-disabled"),
+    ).toBe("true");
+    await click(screen().getByRole("menuitem", { name: "Mover para cima" }));
+    expect(last(state, "roles.reorder")?.[1]).toEqual(["role-admin", FIN, SUPORTE]);
   });
 
   test("by the keys: Space lifts, an arrow moves, Space drops and saves once", async () => {
     const state = await open("roles");
-    const grip = within(row("Financeiro")).getByRole("button", { name: "Mover Financeiro" });
-    grip.focus();
-    await act(async () => fireEvent.keyDown(grip, { key: " " }));
-    expect(grip.getAttribute("aria-pressed")).toBe("true");
-    await act(async () => fireEvent.keyDown(grip, { key: "ArrowUp" }));
+    const g = grip("Financeiro");
+    g.focus();
+    await act(async () => fireEvent.keyDown(g, { key: " " }));
+    expect(g.getAttribute("aria-pressed")).toBe("true");
+    await act(async () => fireEvent.keyDown(g, { key: "ArrowUp" }));
     expect(state.calls.some((c) => c.method === "roles.reorder")).toBe(false);
-    await act(async () => fireEvent.keyDown(grip, { key: " " }));
+    await act(async () => fireEvent.keyDown(g, { key: " " }));
     await settle(4);
     expect(last(state, "roles.reorder")?.[1]).toEqual(["role-admin", FIN, SUPORTE]);
+  });
+
+  test("by the keys, down: the grip keeps the focus, and the new order stays on screen while it saves", async () => {
+    const state = await open("roles");
+    const g = grip("Suporte");
+    g.focus();
+    await act(async () => fireEvent.keyDown(g, { key: " " }));
+    // Going down moves this row's own node; React's commit puts the focus back on the grip, so the keys still reach it.
+    await act(async () => fireEvent.keyDown(g, { key: "ArrowDown" }));
+    expect(document.activeElement).toBe(g);
+    expect(names()).toEqual(["Todos", "Dono", "Admin", "Financeiro", "Suporte"]);
+    expect(g.getAttribute("aria-pressed")).toBe("true");
+    // Space drops it: before the save lands, the rows keep the new order, never the old one for a moment.
+    fireEvent.keyDown(g, { key: " " });
+    expect(names()).toEqual(["Todos", "Dono", "Admin", "Financeiro", "Suporte"]);
+    expect(g.getAttribute("aria-pressed")).toBe("false");
+    await settle(4);
+    expect(last(state, "roles.reorder")?.[1]).toEqual(["role-admin", FIN, SUPORTE]);
+    expect(names()).toEqual(["Todos", "Dono", "Admin", "Financeiro", "Suporte"]);
+  });
+
+  test("⌘K's Criar cargo opens its dialog on this list too, and again once it closed", async () => {
+    await open("roles");
+    for (let i = 0; i < 2; i++) {
+      await act(async () => fireEvent.keyDown(window, { key: "k", metaKey: true }));
+      const palette = screen().getByRole("combobox", { name: "Ir para, ou pedir a um agente" });
+      await act(async () => fireEvent.change(palette, { target: { value: "criar cargo" } }));
+      const first = within(screen().getByRole("listbox", { name: "Resultados" })).getAllByRole("option")[0];
+      expect(first?.textContent).toContain("Criar cargo");
+      await act(async () => fireEvent.keyDown(palette, { key: "Enter" }));
+      await settle(4);
+      const dialog = screen().getByRole("dialog", { name: "Criar cargo" });
+      await click(within(dialog).getByRole("button", { name: "Cancelar" }));
+      await settle(4);
+      expect(screen().queryByRole("dialog", { name: "Criar cargo" })).toBeNull();
+    }
   });
 
   test("past 8 cargos a search; at 100 Criar cargo waits, saying why", async () => {
@@ -466,17 +525,54 @@ describe("a cargo's page (W2, W3, W4)", () => {
     expect(permRow("Criar canais")).toBeUndefined();
   });
 
-  test("Todos' own rows: one only some cargos have shows their marks and opens who may", async () => {
-    await open("roles/everyone");
+  test("Todos' own rows: one only some cargos have shows their marks and opens who may, those cargos ticked", async () => {
+    const state = await open("roles/everyone");
     expect(
       screen()
         .getAllByRole("tab")
         .map((t) => t.textContent),
     ).toEqual(["Permissões", "Canais", "Agentes"]);
-    const approve = permRow("Aprovar ações dos agentes");
-    const chip = within(approve).getByRole("button", { name: /^Só Admin e Suporte/ });
-    await click(chip);
-    expect(screen().getByRole("dialog", { name: "Quem pode aprovar ações" })).toBeTruthy();
+    const chip = () =>
+      within(permRow("Aprovar ações dos agentes")).getByRole("button", { name: /^Só Admin e Suporte/ });
+    await click(chip());
+    const dialog = screen().getByRole("dialog", { name: "Quem pode aprovar ações" });
+    const box = (name: string) =>
+      within(dialog).getByRole("checkbox", { name: new RegExp(`^${name}`) }) as HTMLButtonElement;
+    // Who holds it starts ticked (Administrador fixed), who doesn't, not.
+    expect([box("Admin").getAttribute("aria-checked"), box("Admin").disabled]).toEqual(["true", true]);
+    expect(box("Suporte").getAttribute("aria-checked")).toBe("true");
+    expect(box("Financeiro").getAttribute("aria-checked")).toBe("false");
+    // Todos gets it; each cargo keeps its own.
+    await click(within(dialog).getByRole("radio", { name: /^Todos/ }));
+    await click(within(dialog).getByRole("button", { name: "Salvar" }));
+    expect(last(state, "roles.setRow")?.slice(1)).toEqual([
+      "approve_actions",
+      {
+        everyone: 1,
+        roles: [
+          { id: SUPORTE, level: 1 },
+          { id: FIN, level: 0 },
+        ],
+      },
+    ]);
+    cleanup();
+    // Only some: unticking Suporte takes it from Suporte, no level below none.
+    const again = await open("roles/everyone");
+    await click(chip());
+    const who = screen().getByRole("dialog", { name: "Quem pode aprovar ações" });
+    await click(within(who).getByRole("checkbox", { name: /^Suporte/ }));
+    expect(who.querySelector(".roles-line--live")?.textContent).toBe("Deixam de poder: Carla e Diego.");
+    await click(within(who).getByRole("button", { name: "Salvar" }));
+    expect(last(again, "roles.setRow")?.slice(1)).toEqual([
+      "approve_actions",
+      {
+        everyone: 0,
+        roles: [
+          { id: SUPORTE, level: 0 },
+          { id: FIN, level: 0 },
+        ],
+      },
+    ]);
   });
 });
 
@@ -505,6 +601,45 @@ describe("a cargo's Canais and Agentes (W5–W8)", () => {
         .getAllByRole("radio")
         .map((r) => r.querySelector(".ac-optrow__title")?.textContent),
     ).toEqual(["Todos", "Só alguns cargos", "Só quem for adicionado"]);
+  });
+
+  test("who sees it starts with every other cargo ticked, one the viewer can't change too, and saves it", async () => {
+    // A channel's cargos have no rank rule: Financeiro stays the viewer's to keep, or narrowing would cut its people.
+    const state = acme((s) => {
+      const fin = s.roles?.find((r) => r.id === FIN);
+      if (fin) fin.editable = false;
+    });
+    await open(`roles/${SUPORTE}?tab=channels`, state);
+    await click(screen().getByRole("checkbox", { name: /#eng$/ }));
+    const dialog = screen().getByRole("dialog", { name: "Quem vê #eng" });
+    const box = (name: string) =>
+      within(dialog).getByRole("checkbox", { name: new RegExp(`^${name}`) }) as HTMLButtonElement;
+    expect([box("Financeiro").getAttribute("aria-checked"), box("Financeiro").disabled]).toEqual(["true", false]);
+    expect(box("Suporte").getAttribute("aria-checked")).toBe("false");
+    expect(dialog.querySelector(".roles-line--live")?.textContent).toBe(
+      "Quem já está continua. Deixam de ver: Carla e Diego.",
+    );
+    await click(within(dialog).getByRole("button", { name: "Salvar" }));
+    expect(last(state, "chat.update")?.slice(1)).toEqual([ENG_ID, { visibility: "private", audienceRoleIds: [FIN] }]);
+  });
+
+  test("unticking an agent everyone talks to asks who talks to it: every other cargo ticked, Administrador's too", async () => {
+    // Talking to an agent has no Administrador pass: saving as it opens takes Ada from no cargo's people but Suporte's.
+    for (const page of [SUPORTE, "everyone"]) {
+      await open(`roles/${page}?tab=agents`);
+      await click(screen().getByRole("checkbox", { name: /^Ada/ }));
+      const dialog = screen().getByRole("dialog", { name: "Quem fala com Ada" });
+      const ticked = (name: string) =>
+        within(dialog)
+          .getByRole("checkbox", { name: new RegExp(`^${name}`) })
+          .getAttribute("aria-checked");
+      expect([ticked("Admin"), ticked("Suporte"), ticked("Financeiro")]).toEqual([
+        "true",
+        page === SUPORTE ? "false" : "true",
+        "true",
+      ]);
+      cleanup();
+    }
   });
 
   test("its agents; one only its owner talks to opens who talks to it, the cargo ticked", async () => {
@@ -571,6 +706,33 @@ describe("look, create and the members' menu (W12, W13, W15)", () => {
     expect(last(state, "roles.update")?.slice(1)).toEqual([SUPORTE, { color: "rose" }]);
   });
 
+  test("Apagar says who leaves before it goes: until it knows, the line holds its place and the button waits", async () => {
+    const api = createFakeApi(acme());
+    await renderApp(`/org/${ORG_ID}/settings/roles/${SUPORTE}`, { api });
+    await settle(8);
+    const members = api.chat.members;
+    let release = () => {};
+    api.chat.members = (orgId, channelId) =>
+      new Promise((done) => {
+        release = () => done(members(orgId, channelId));
+      });
+    await act(async () =>
+      fireEvent.pointerDown(screen().getByRole("button", { name: "Mais opções" }), { button: 0, ctrlKey: false }),
+    );
+    await settle(2);
+    await click(screen().getByRole("menuitem", { name: "Apagar cargo" }));
+    const dialog = screen().getByRole("dialog", { name: "Apagar Suporte?" });
+    const remove = within(dialog).getByRole("button", { name: "Apagar cargo" }) as HTMLButtonElement;
+    expect(dialog.querySelector(".roles-line")?.textContent).toBe("Vendo quem sai de canais…");
+    expect(remove.disabled).toBe(true);
+    await act(async () => release());
+    await settle(4);
+    expect(dialog.querySelector(".roles-line")?.textContent).toBe(
+      "Saem de canais que viam só por Suporte: Carla e Diego.",
+    );
+    expect(remove.disabled).toBe(false);
+  });
+
   test("Criar cargo from another one copies its channels and agents too", async () => {
     const state = await open("roles");
     await click(screen().getByRole("button", { name: "Criar cargo" }));
@@ -610,5 +772,4 @@ describe("look, create and the members' menu (W12, W13, W15)", () => {
   });
 });
 
-void ENG_ID;
 void GENERAL_ID;

@@ -387,6 +387,8 @@ export function DeleteRoleDialog({
     const i = channels.findIndex((c) => c.id === channelId);
     return (members[i]?.data ?? []).filter((m) => m.type === "person").map((m) => m.id);
   };
+  // Until its channels' members are in, the line holds its place and Apagar waits: who leaves is said before it goes.
+  const reading = open && members.some((m) => m.isPending);
   const leaving = open ? deleteLeavers(role, channels, membersOf, people) : [];
   return (
     <Dialog
@@ -397,13 +399,17 @@ export function DeleteRoleDialog({
       closeLabel={t("common.close")}
       width={440}
     >
-      {leaving.length > 0 && (
+      {(reading || leaving.length > 0) && (
         <DialogBody>
-          <p className="roles-line ac-iconline">
+          <p className="roles-line ac-iconline" aria-live="polite">
             <Icon name="members" size={16} />
-            <span>
-              {t("rolesPage.deleteLeave", { name })} <Names names={leaving.map((p) => p.name)} bold />.
-            </span>
+            {reading ? (
+              <span className="muted">{t("rolesPage.deleteReading")}</span>
+            ) : (
+              <span>
+                {t("rolesPage.deleteLeave", { name })} <Names names={leaving.map((p) => p.name)} bold />.
+              </span>
+            )}
           </p>
         </DialogBody>
       )}
@@ -418,6 +424,7 @@ export function DeleteRoleDialog({
         </Button>
         <Button
           variant="danger"
+          disabled={reading}
           loading={remove.isPending}
           onClick={() =>
             remove.mutate(role.id, {

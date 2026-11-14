@@ -342,6 +342,7 @@
     "previewWhere": "sohbette",
     "sameAs": "Aynısı",
     "deleteLeave": "Yalnızca {{name}} sayesinde gördükleri kanallardan ayrılacaklar:",
+    "deleteReading": "Kanallardan kimin ayrılacağına bakılıyor…",
     "ownerAdd": "Sahip ekle"
   },
   "permissions": {

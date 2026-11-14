@@ -115,7 +115,6 @@ export function WhoChip({
   );
 }
 
-/** Opens a cargo's page (its id, `everyone` or `owner`) on a tab, or the list. */
 /**
  * A person in a cargo's list: the face, the name and the address on the name's line (under it, at the row's full width,
  * at phone width), what ends the row at its end. `className` is the list's own row (`ac-list__row`, `settings-row`).
@@ -149,6 +148,7 @@ export function PersonRow({
   );
 }
 
+/** Opens a cargo's page (its id, `everyone` or `owner`) on a tab, or the list. */
 export function useRoleNav() {
   const { org } = useOrg();
   const navigate = useNavigate();

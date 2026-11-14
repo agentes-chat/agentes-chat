@@ -114,7 +114,7 @@ import { freeHandle, takenHandles } from "@agenteschat/client/lib/new-agent";
 import { stepIndex } from "@agenteschat/client/lib/onboarding";
 import type { PlanModel } from "@agenteschat/client/lib/plans";
 import { type LodiPrefs, lodiPrefsOf } from "@agenteschat/client/lib/right-hand-prefs";
-import { grants, SUMMARY_ORDER, withRowHolders } from "@agenteschat/client/lib/roles";
+import { grants, rowMax, SUMMARY_ORDER, withRowHolders } from "@agenteschat/client/lib/roles";
 import { sidebarItemOrder, sidebarSections } from "@agenteschat/client/lib/sidebar-items";
 import { driveFolder, isSecretFile } from "@agenteschat/ui/names";
 import { createFakeAccess } from "./fakes/access";
@@ -1602,6 +1602,12 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       },
       setRow: async (orgId, row, holders) => {
         log("roles.setRow", orgId, row, holders);
+        // The server's `Level`: each level 0 to the row's highest.
+        const max = rowMax(row);
+        if (
+          [holders.everyone, ...holders.roles.map((r) => r.level)].some((l) => !Number.isInteger(l) || l < 0 || l > max)
+        )
+          throw new ApiError(400, "role.level_invalid", `Each level is 0 to ${max}`);
         state.roles = withRowHolders(roles(), row, holders);
         return rolesPayload();
       },

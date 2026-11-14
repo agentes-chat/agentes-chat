@@ -329,6 +329,7 @@
     "previewWhere": "채팅에서",
     "sameAs": "같게",
     "deleteLeave": "{{name}}을(를) 통해서만 보던 채널에서 나가는 사람:",
+    "deleteReading": "채널에서 나가는 사람을 확인하는 중…",
     "ownerAdd": "소유자 추가"
   },
   "permissions": {

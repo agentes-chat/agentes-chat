@@ -329,6 +329,7 @@
     "previewWhere": "di chat",
     "sameAs": "Sama seperti",
     "deleteLeave": "Keluar dari kanal yang hanya mereka lihat lewat {{name}}:",
+    "deleteReading": "Memeriksa siapa yang keluar dari kanal…",
     "ownerAdd": "Tambah pemilik"
   },
   "permissions": {

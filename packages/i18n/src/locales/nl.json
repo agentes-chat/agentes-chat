@@ -342,6 +342,7 @@
     "previewWhere": "in de chat",
     "sameAs": "Zoals",
     "deleteLeave": "Verlaten kanalen die ze alleen via {{name}} zagen:",
+    "deleteReading": "Kijken wie kanalen verlaat…",
     "ownerAdd": "Eigenaren toevoegen"
   },
   "permissions": {

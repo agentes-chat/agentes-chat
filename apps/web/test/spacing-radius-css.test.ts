@@ -222,3 +222,24 @@ test("the settings sidebar's links are the ruler's compact step, the default one
   const touch = atRule(css, "@media (pointer: coarse)");
   expect(last(touch, ".settings__link", "min-height")).toBe("var(--control-h-md)");
 });
+
+test("where nothing drags, a cargo's row ends in its ⋯ instead of a grip and a chevron, on the row's middle", async () => {
+  const roles = await read(join(SRC, "components/roles/roles.css"));
+  const top = topLevel(roles);
+  expect(last(top, ".roles-row > .roles-row__more", "display")).toBe("none");
+  // A 32 box on the name's line would leave the row 6 above what it holds and 12 below.
+  expect(last(top, ".roles-row > .roles-row__more", "align-self")).toBe("center");
+  expect(last(top, ".roles-row > .roles-row__more", "margin-inline-end")).toBe("var(--space-2)");
+  // As wide as its button on every row, Todos' and Dono's too: every count ends on one edge.
+  expect(last(top, ".roles-row > .roles-row__more", "width")).toBe("var(--control-h-sm)");
+  // At phone width and under a finger, whatever the width.
+  for (const block of ["@container (max-width: 520px)", "@media (pointer: coarse)"]) {
+    const css = atRule(roles, block);
+    expect([block, last(css, ".roles-row__slot", "display")]).toEqual([block, "none"]);
+    expect([block, last(css, ".roles-row > .roles-row__more", "display")]).toEqual([block, "flex"]);
+    expect([block, last(css, ".roles-row:has(> .roles-row__more) .roles-row__end > .ac-icon", "display")]).toEqual([
+      block,
+      "none",
+    ]);
+  }
+});

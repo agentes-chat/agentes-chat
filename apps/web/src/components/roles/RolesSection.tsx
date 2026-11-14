@@ -247,19 +247,23 @@ function Reach({
   );
 }
 
-/** Saves the cargos' order; a refusal puts the rows back and offers to read them again. */
+/**
+ * Saves the cargos' order; a refusal puts the rows back and offers to read them again. `onDone`: once it has landed
+ * or failed (at once when nothing moved).
+ */
 function useReorder(custom: readonly OrgRole[], onSaved?: () => void) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const toast = useToast();
   const reorder = useReorderRoles(org.id);
   const roles = useRoles(org.id);
-  const put = (ids: string[]) => {
-    if (ids.join() === custom.map((r) => r.id).join()) return;
+  const put = (ids: string[], onDone?: () => void) => {
+    if (ids.join() === custom.map((r) => r.id).join()) return onDone?.();
     reorder.mutate(ids, {
       onSuccess: () => onSaved?.(),
       onError: (e) =>
         toast.show(errorText(t, e), "error", { label: t("common.reload"), run: () => void roles.refetch() }),
+      onSettled: () => onDone?.(),
     });
   };
   return Object.assign(put, { pending: reorder.isPending });
@@ -275,8 +279,9 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
   const [creating, setCreating] = useState(Boolean(create));
   const [query, setQuery] = useState("");
   const [saved, setSaved] = useState(false);
-  // A cargo lifted by the keys (Space), and the order it is being moved through.
-  const [lifted, setLifted] = useState<{ id: string; order: string[] } | null>(null);
+  // A cargo lifted by the keys (Space), and the order it is being moved through. `dropped`: Space put it down, and
+  // that order stays on screen until the save has landed, so the rows never jump back to the old one meanwhile.
+  const [lifted, setLifted] = useState<{ id: string; order: string[]; dropped?: boolean } | null>(null);
   const [mark, setMark] = useState<{ id: string; where: "before" | "after" } | null>(null);
   const dragging = useRef<string | null>(null);
   useEffect(() => {
@@ -284,6 +289,10 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
     const timer = setTimeout(() => setSaved(false), 2000);
     return () => clearTimeout(timer);
   }, [saved]);
+  // ⌘K's "Criar cargo" while this list is open changes only the URL.
+  useEffect(() => {
+    if (create) setCreating(true);
+  }, [create]);
   const list = sortRoles(data.roles);
   const everyone = everyoneOf(list);
   const custom = list.filter((r) => !isEveryone(r));
@@ -304,22 +313,46 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
   const movable = (r: OrgRole) => manages && r.editable && !q;
   const moved = (ids: readonly string[], id: string, by: -1 | 1) => movedOrder(ids, editable, id, by);
   const put = useReorder(custom, () => setSaved(true));
-  const grip = (r: OrgRole) => {
-    const name = r.name;
+  const held = (r: OrgRole) => (lifted?.id === r.id && !lifted.dropped ? lifted : null);
+  /** The grip's menu, and the ⋯'s where nothing drags: Mover para cima, Mover para baixo. */
+  const openMoves = (r: OrgRole, at: HTMLElement) => {
     const up = moved(order, r.id, -1);
     const down = moved(order, r.id, 1);
+    const box = at.getBoundingClientRect();
+    openContextMenu(box.left, box.bottom + 4, [
+      {
+        kind: "item",
+        id: "move-up",
+        label: t("contextMenu.moveUp"),
+        icon: "arrowUp",
+        disabled: !up,
+        run: () => up && put(up),
+      },
+      {
+        kind: "item",
+        id: "move-down",
+        label: t("contextMenu.moveDown"),
+        icon: "arrowDown",
+        disabled: !down,
+        run: () => down && put(down),
+      },
+    ]);
+  };
+  const grip = (r: OrgRole) => {
+    const name = r.name;
+    const mine = held(r);
     const keys = (e: KeyboardEvent<HTMLButtonElement>) => {
       if (e.key === " ") {
         e.preventDefault();
-        if (lifted?.id === r.id) {
-          setLifted(null);
-          put(lifted.order);
-        } else setLifted({ id: r.id, order: custom.map((x) => x.id) });
-      } else if (lifted?.id === r.id && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        if (mine) {
+          setLifted({ ...mine, dropped: true });
+          put(mine.order, () => setLifted(null));
+        } else if (!lifted) setLifted({ id: r.id, order: custom.map((x) => x.id) });
+      } else if (mine && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
         e.preventDefault();
-        const next = moved(lifted.order, r.id, e.key === "ArrowUp" ? -1 : 1);
+        const next = moved(mine.order, r.id, e.key === "ArrowUp" ? -1 : 1);
         if (next) setLifted({ id: r.id, order: next });
-      } else if (lifted?.id === r.id && e.key === "Escape") {
+      } else if (mine && e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
         setLifted(null);
@@ -332,12 +365,12 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
         draggable
         aria-label={t("rolesPage.move", { name })}
         aria-describedby={hintId}
-        aria-pressed={lifted?.id === r.id}
+        aria-pressed={mine !== null}
         title={t("rolesPage.move", { name })}
         onKeyDown={keys}
         // Space's click comes on its key-up: Space lifts and drops, it never opens the menu.
         onKeyUp={(e) => e.key === " " && e.preventDefault()}
-        onBlur={() => lifted?.id === r.id && setLifted(null)}
+        onBlur={() => mine && setLifted(null)}
         onDragStart={(e) => {
           dragging.current = r.id;
           e.dataTransfer.effectAllowed = "move";
@@ -352,27 +385,7 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
           dragging.current = null;
           setMark(null);
         }}
-        onClick={(e) => {
-          const box = e.currentTarget.getBoundingClientRect();
-          openContextMenu(box.left, box.bottom + 4, [
-            {
-              kind: "item",
-              id: "move-up",
-              label: t("contextMenu.moveUp"),
-              icon: "arrowUp",
-              disabled: !up,
-              run: () => up && put(up),
-            },
-            {
-              kind: "item",
-              id: "move-down",
-              label: t("contextMenu.moveDown"),
-              icon: "arrowDown",
-              disabled: !down,
-              run: () => down && put(down),
-            },
-          ]);
-        }}
+        onClick={(e) => openMoves(r, e.currentTarget)}
       >
         <Icon name="grip" size={14} />
       </button>
@@ -406,12 +419,31 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
       put(rest);
     },
   });
+  // Where nothing drags (phone width, under a finger) the grip's menu is a ⋯ at the row's end. Every row of a list
+  // that moves keeps its room, so the counts end on one edge.
+  const more = (r?: OrgRole) =>
+    manages && (
+      <span className="roles-row__more">
+        {r && movable(r) && (
+          <Button
+            size="sm"
+            variant="ghost"
+            iconOnly
+            icon="more"
+            aria-haspopup="menu"
+            aria-label={t("rolesPage.move", { name: r.name })}
+            title={t("rolesPage.move", { name: r.name })}
+            onClick={(e) => openMoves(r, e.currentTarget)}
+          />
+        )}
+      </span>
+    );
   const row = (r: OrgRole) => (
     <div
       key={r.id}
       className="roles-row"
       data-drop={mark?.id === r.id ? mark.where : undefined}
-      data-lifted={lifted?.id === r.id || undefined}
+      data-lifted={held(r) ? true : undefined}
       {...(movable(r) ? drop(r) : {})}
     >
       <span className="roles-row__slot">{movable(r) && grip(r)}</span>
@@ -424,6 +456,7 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
         </span>
         <Reach role={r} data={data} named={named} />
       </button>
+      {more(r)}
     </div>
   );
   const nothing = !ownerShown && !baseShown && shown.length === 0;
@@ -501,6 +534,7 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
                       </span>
                       <Reach role={everyone} data={data} named={named} />
                     </button>
+                    {more()}
                   </div>
                 </List>
               </section>
@@ -534,6 +568,7 @@ function RoleList({ data, people, create }: { data: OrgRoles; people: Person[]; 
                           <span className="roles-reach__item">{t("rolesPage.reach.owner")}</span>
                         </span>
                       </button>
+                      {more()}
                     </div>
                   )}
                   {shown.map(row)}
@@ -590,7 +625,6 @@ function RoleHead({
   const invites = custom && role.givable && can(org, "invite_people") && invite !== null;
   const copies = custom && !lock && duplicate.allowed(role);
   const deletes = custom && !lock;
-  // The order from here too: the list's grip goes at phone width and under a finger.
   const order = list.filter((r) => !isEveryone(r));
   const put = useReorder(order);
   const editable = (id: string) => order.find((r) => r.id === id)?.editable !== false;

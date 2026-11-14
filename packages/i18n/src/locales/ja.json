@@ -329,6 +329,7 @@
     "previewWhere": "チャット内",
     "sameAs": "同じ内容",
     "deleteLeave": "{{name}}を通してだけ見えていたチャンネルから外れる人:",
+    "deleteReading": "チャンネルから外れる人を確認中…",
     "ownerAdd": "オーナーを追加"
   },
   "permissions": {

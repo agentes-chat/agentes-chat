@@ -875,6 +875,9 @@
   "rolesPage.deleteLeave": {
     "value": "Leaving channels they saw only through {{name}}:"
   },
+  "rolesPage.deleteReading": {
+    "value": "Checking who leaves channels…"
+  },
   "rolesPage.ownerAdd": {
     "value": "Add owners"
   },

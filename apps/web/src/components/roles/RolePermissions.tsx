@@ -123,8 +123,9 @@ export function RolePermissions({ role, data, people }: { role: OrgRole; data: O
     const s = rowState(role, everyone, row);
     const holdersOf = (keep: number) => whoStart(data.roles, row, keep, "holders");
     if (base) {
-      // Todos: lowering its step, or turning a row off, keeps it for the cargos that hold it.
-      const keep = s.own;
+      // Todos: lowering its step, or turning a row off, keeps it for the cargos that hold it. The chip of a key Todos
+      // lacks asks about the key itself: level 1, never 0.
+      const keep = Math.max(s.own, 1);
       const low = step ?? 0;
       setWho({ row, keep, low, everyone: false, ticked: holdersOf(keep) });
       return;

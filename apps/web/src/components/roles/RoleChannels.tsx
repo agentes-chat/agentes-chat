@@ -11,7 +11,6 @@ import {
   roleName,
   roleSees,
   sortRoles,
-  writableRoles,
 } from "@agenteschat/client/lib/roles";
 import {
   Button,
@@ -92,7 +91,9 @@ export function RoleChannels({ role, data, people }: { role: OrgRole; data: OrgR
     );
   const roles = sortRoles(data.roles.filter((r) => !isEveryone(r)));
   const byId = new Map(roles.map((r) => [r.id, r]));
-  const others = writableRoles(data.roles).filter((r) => r.id !== role.id);
+  // Who sees a channel has no rank rule (`channelRoleIds`): narrowing one starts with every other cargo ticked, the
+  // viewer's own and those above it too.
+  const others = roles.filter((r) => r.id !== role.id);
   const general = (c: Channel) => c.name === "general";
   const q = fold(query.trim());
   const shown = channels.filter((c) => !q || fold(c.name).includes(q));
@@ -116,14 +117,12 @@ export function RoleChannels({ role, data, people }: { role: OrgRole; data: OrgR
 
   const change = async (c: Channel, on: boolean) => {
     const reach = channelReach(c);
-    if (base) {
-      if (!on && reach.kind === "everyone")
-        setSees({ channel: c, start: new Set(writableRoles(data.roles).map((r) => r.id)) });
-      else if (on) setAsk({ kind: "open", channel: c, next: { visibility: "public", audienceRoleIds: [] } });
-      return;
-    }
     if (!on && reach.kind === "everyone") {
       setSees({ channel: c, start: new Set(others.map((r) => r.id)) });
+      return;
+    }
+    if (base) {
+      if (on) setAsk({ kind: "open", channel: c, next: { visibility: "public", audienceRoleIds: [] } });
       return;
     }
     if (!on && reach.kind === "roles") {
