@@ -7521,9 +7521,6 @@ export const en = {
       title: "Invite to {{org}}",
       // A personal workspace's words (ADR 0159): its name ("Personal") reads oddly in a sentence.
       titlePersonal: "Invite someone to your workspace",
-      /** Under the title: the step out of four, and its name. */
-      stepOf: "Step {{n}} of {{total}} · {{step}}",
-      steps: { who: "Who", role: "Role", where: "Where they start", note: "Note" },
       emails: "Emails",
       moreEmails: "More emails…",
       checkMarked: "Check the marked emails: they won't get an invitation.",
@@ -7537,36 +7534,20 @@ export const en = {
       notePlaceholder: "Hi. Come join {{org}}: the team and the agents are all here.",
       notePlaceholderPersonal: "Hi. Come join me here: my agents can help you too.",
       or: "or send the link",
-      /** The first step's button with more than one address (with one, "Continue"). */
-      continueWith: "Continue with {{count}}",
       send_one: "Invite {{count}} person",
       send_other: "Invite {{count}} people",
       sent: "Invitation sent to {{email}}.",
       sentMany: "{{count}} invitations sent.",
       alsoIn: "They also join {{channels}}.",
-      // What the host asks on each step. `name`: the address's first word, capitalized ("Julia" from julia.m@…), so
-      // nothing here may need to know the person's gender.
-      who: {
-        title: "Who do you want to bring in?",
-        lead: "Give me their emails. Each person gets an invitation and joins directly.",
-      },
       orLink: {
         title: "Rather send a link?",
         text: "Whoever opens it asks to join, and you approve.",
         open: "See the link",
       },
       role: {
-        titleOne: "What role does {{name}} join with?",
-        titleMany: "What role do these people join with?",
-        lead: "The role says what each person can do. You can change it later.",
-        each: "A role for each person",
-        same: "The same role for everyone",
         // A personal workspace asks it plainly (ADR 0159): two choices, each one of the workspace's roles.
         titleOnePersonal: "What can {{name}} do here?",
-        titleManyPersonal: "What can they do here?",
         leadPersonal: "You can change it later.",
-        eachPersonal: "A choice for each person",
-        samePersonal: "The same for everyone",
         /** A member with no role of their own. */
         uses: "Uses the agents",
         usesText: "Talks to the agents and uses what's shared with them.",
@@ -7575,62 +7556,10 @@ export const en = {
         helpsText:
           "Can change agents, settings and who's here, as you can. Sees everything shared here, except your direct messages.",
       },
-      /**
-       * A personal workspace's role step (ADR 0159): the agents every member may talk to, which answer whoever joins.
-       * `<agents/>` is their names, joined as a list ("Leo and Bia"), each one a link.
-       */
-      reach: {
-        line_one: "<agents/> will answer whoever joins.",
-        line_other: "<agents/> will answer whoever joins.",
-      },
       where: {
-        titleOne: "Which channels does {{name}} join right away?",
-        titleMany: "Which channels do these people join right away?",
-        /** A personal workspace calls its channels group conversations. */
-        titleOnePersonal: "Which group conversations does {{name}} join right away?",
-        titleManyPersonal: "Which group conversations do these people join right away?",
-        lead: "Everyone starts in #{{channel}}. You pick the others.",
-        label: "Channels",
-        labelPersonal: "Group conversations",
-        everyone: "Everyone joins",
         private: "Private · you're in it",
         people_one: "{{count}} person",
         people_other: "{{count}} people",
-        fromChannel: "#{{channel}} comes checked: you invited from there.",
-      },
-      noteStep: {
-        title: "Want me to say something in the invitation?",
-        lead: "It goes in the email. If not, I'll send it as it is.",
-      },
-      /** Over the email as it arrives: the first names it goes to. */
-      mailFor: "This is how it reaches {{names}}",
-      // The invitation email in the words the server sends it in (packages/engine/src/email/words): keep them alike.
-      mail: {
-        from: "agentes.chat · to {{to}}",
-        toMany: "{{email}} and {{count}} more",
-        subject: "You're invited to a workspace on agentes.chat",
-        headline: "You're invited to a workspace",
-        body: "<b>{{name}}</b> ({{email}}) invited you to join <b>{{org}}</b> as a member.",
-        noteFrom: "<b>{{name}}:</b> “{{note}}”",
-        what: "agentes.chat is where people and AI agents work together.",
-        button: "Accept invitation",
-        small: "The invitation works for 7 days. Accept it with this email address.",
-      },
-      // The host's answer once the invitations went: `channels` is where they start ("#general and #eng").
-      done: {
-        title: "Done, I sent the invitation to {{names}}.",
-        leadOne: "When {{name}} joins, I'll greet them in {{channels}} and let you know.",
-        leadMany: "When each person joins, I'll greet them in {{channels}} and let you know.",
-        none: "No invitation went out this time.",
-        noneLead: "Each address's reason is below.",
-      },
-      /** Each address after the send: sent, or why not (as `members.batch` says it). */
-      result: {
-        invited: "Sent",
-        already_member: "already in {{org}}",
-        already_memberPersonal: "already here",
-        already_invited: "already had an invitation",
-        invalid_email: "invalid email",
       },
       again: "Invite more people",
       finish: "Done",
