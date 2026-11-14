@@ -511,6 +511,8 @@ export const ptBR = {
       noPasswordLead:
         "No computador onde este servidor roda, abra o app e escolha Adicionar uma senha em Configurações\u00a0›\u00a0Sua conta.",
       backToSignIn: "Voltar para entrar",
+      /** Under the sign-in opened by "Add account": back to the account still signed in. */
+      backToAccount: "Voltar para {{name}}",
       toAuthorizeApp: "Para conectar um app ao agentes.chat.",
     },
     desktop: {
@@ -1859,6 +1861,9 @@ export const ptBR = {
     newWorkspace: "Novo workspace",
     addWorkspace: "Adicionar workspace",
     addWorkspaceHint: "Entrar em um que já existe, criar um novo ou usar o servidor da equipe",
+    /** Another account on this server, signed in beside the one open (ADR 0183). */
+    addAccount: "Adicionar conta",
+    addAccountHint: "Entrar com outra conta sem sair desta",
     yourServer: "Seu servidor",
     /** A server's line in "Your workspaces" in the desktop app: the one on this computer, and its state (ADR 0158). */
     serverHere: "O agentes.chat neste {{device}}",
@@ -2366,10 +2371,9 @@ export const ptBR = {
       asFile: "Enviar como arquivo",
       fileName: "mensagem.txt",
     },
-    /** A tall message, clipped in the conversation: the button under it and the dialog that shows it whole. */
+    /** Under words folded to their start (a tall message, a long text, an email): opens them in place, for good. */
     long: {
       more: "Ver mais",
-      title: "Mensagem de {{name}}",
     },
     retrySend: "Tentar de novo",
     thinking: "{{name}} está pensando…",
@@ -4045,6 +4049,35 @@ export const ptBR = {
     /** After "Esperando você" on the profile card. */
     yourApproval: "sua aprovação",
     yourAnswer: "sua resposta",
+    /** A return it set comes then (`followUps.when`): "retorno às 00:32". */
+    later: "retorno {{when}}",
+    laterShort: "retorno",
+  },
+  /** An agent comes back to a conversation by itself (its `follow_up`, ADR 0037): a return. */
+  followUps: {
+    /** When it comes: the day only more than 12 h away, so the words never turn at midnight. */
+    when: { at: "às {{time}}", today: "hoje às {{time}}", tomorrow: "amanhã às {{time}}" },
+    /** The same, opening a label: "Às 00:32". */
+    whenLabel: { at: "Às {{time}}", today: "Hoje às {{time}}", tomorrow: "Amanhã às {{time}}" },
+    /** The bar above the composer while a return waits here. The agent's words follow after " · ", as written. */
+    bar: {
+      at: "{{name}} retorna {{when}}",
+      /** Where even the sentence doesn't fit: the name and the time. */
+      short: "{{name}} {{time}}",
+      /** Its time came while what it asked here waits on an answer: the reader may answer it. */
+      heldYou: "{{name}} retorna quando você responder",
+      held: "{{name}} retorna depois de uma resposta",
+    },
+    /** The list of the returns here (the bar's ⋯, the phone's sheet). */
+    title: "Retornos",
+    /** A row's tip: it goes to the reply that said it. */
+    see: "Ver a mensagem",
+    cancel: "Cancelar retorno",
+    /** A row's ×, for screen readers (`when`: "às 00:32"). */
+    cancelOf: "Cancelar o retorno do {{name}} {{when}}",
+    cancelOf_female: "Cancelar o retorno da {{name}} {{when}}",
+    /** The task manager's time column: how soon (`time`: "33 min"). */
+    inTime: "em {{time}}",
   },
   mentions: {
     list: "Pessoas e agentes",
@@ -4104,7 +4137,6 @@ export const ptBR = {
     issue: "Issue",
   },
   folded: {
-    more: "Mostrar mais",
     less: "Mostrar menos",
   },
   secret: {
@@ -4635,6 +4667,11 @@ export const ptBR = {
   approval: {
     expiredChip: "Expirou · {{when}}",
     canceledChip: "Cancelado · {{when}}",
+    /** After an approved request's outcome on a shared card: it runs in the order asked. */
+    line: {
+      after: "roda depois de “{{title}}”",
+      notRun: "não rodou: o pedido anterior não foi aprovado",
+    },
     waitingFor: "Aguardando {{name}}",
     waitingAdmin: "Aguardando um admin",
     reasonLine: "Motivo: {{reason}}",
@@ -4722,8 +4759,6 @@ export const ptBR = {
       /** A connector's reply: who it goes to is the message's sender, not in its call. */
       toSender: "Para quem enviou a mensagem",
       toList: "Para {{to}}",
-      more: "Ler tudo",
-      less: "Mostrar menos",
       answers: "Responde a <b>“{{subject}}”</b>",
       answersFrom: "Responde a <b>“{{subject}}”</b>, de {{from}}",
       forwards: "Encaminha <b>“{{subject}}”</b>",
@@ -5244,7 +5279,18 @@ export const ptBR = {
       failed: "Falhou",
       running: "Executando",
       scheduled: "Agendado",
+      queued: "Na fila",
+      notRun: "Não rodou",
     },
+    /** Approved, waiting for a request the agent asked before it on the same card to be decided and done. */
+    queuedLine: "Aprovado. Roda depois de “{{title}}”, pedido antes.",
+    /** Approved before a request asked ahead of it was refused or expired: it didn't run. */
+    notRunRefused: "“{{title}}”, pedido antes, foi recusado depois que este foi aprovado. Por isso este não rodou.",
+    notRunExpired:
+      "“{{title}}”, pedido antes, expirou sem decisão depois que este foi aprovado. Por isso este não rodou.",
+    notRunEarlier: "Um pedido anterior foi recusado ou expirou depois que este foi aprovado. Por isso este não rodou.",
+    /** Its place among the requests on its card, in the order the agent asked. */
+    position: "{{n}} de {{total}}",
     expiredLine: "Ninguém decidiu em 24 h, então nada foi feito.",
     canceledLine: "A execução parou antes da decisão.",
     /** Replaced by the agent's newer request for the same action (`supersededById`). */
@@ -5315,10 +5361,10 @@ export const ptBR = {
       email: "O e-mail",
       text: "O que vai ser publicado",
       textDone: "O que foi publicado",
+      textNot: "O que seria publicado",
       values: "O que vai fazer",
       valuesDone: "O que fez",
-      more: "Ver inteiro",
-      less: "Mostrar menos",
+      valuesNot: "O que ia fazer",
       trail: "Como chegou aqui",
       showSteps: "Ver cada passo",
       hideSteps: "Esconder os passos",
@@ -9043,7 +9089,6 @@ export const ptBR = {
       releaseClosed: "A missão foi fechada: a sessão não continua mais.",
       onlyDeciders: "Só quem decide nesta missão libera comandos.",
       pick: "Liberar {{command}}",
-      showAll: "Mostrar tudo",
     },
     decision: {
       approveAll_one: "Aprovar {{count}} provisória",
@@ -9457,6 +9502,8 @@ export const ptBR = {
       input: "Esperando uma resposta",
       computer: "Esperando o computador",
       queued: "Na fila",
+      /** A return an agent set here (`followUps.when`). */
+      later: "Retorno {{when}}",
       open: "Aberta",
       closed: "Fechada",
       archived: "Arquivada",
@@ -11865,8 +11912,6 @@ export const ptBR = {
     thousand: "mil",
     building: "Montando…",
     openBig: "Abrir grande",
-    showAll: "Mostrar tudo",
-    showLess: "Mostrar menos",
     keep: "Guardar no Drive",
     kept: "Guardado no Drive",
     inDrive: "No Drive",
@@ -13751,6 +13796,9 @@ export const ptBR = {
       titleTooLong: "O título tem no máximo {{max}} caracteres.",
       noContext: "Esta thread não veio de um trecho de conversa.",
       notUndoable: "Só uma thread criada a partir de um trecho pode ser desfeita.",
+    },
+    followUp: {
+      notYours: "Só a pessoa para quem é o retorno, o dono do agente ou um admin pode cancelar.",
     },
     routine: {
       tooFrequent: "Uma rotina roda no máximo a cada 15 minutos. Escolha um intervalo maior.",
@@ -16099,12 +16147,6 @@ export const ptBR = {
       labelMany: "Conversas de {{from}} com {{to}}",
     },
     /** A question opened in the panel over the conversation ("Theo ⇄ Iris"): what the two agents said, read only. */
-    /** A long message from one agent to another, folded to its first paragraph: the whole opens in its thread. */
-    talk: {
-      readAll: "Ler tudo",
-      more_one: "mais {{count}} linha",
-      more_other: "mais {{count}} linhas",
-    },
     consultPanel: {
       label: "Conversa entre {{from}} e {{to}}",
       /** The phone's bar (the web draws the arrows as an icon between the names). */
@@ -16141,14 +16183,6 @@ export const ptBR = {
       agentNote: "Nota de {{from}}",
       agentNoteAnon: "Nota de outro agente",
       waitResult: "Chegou o resultado que {{name}} esperava",
-      followUp: "{{name}} volta às {{time}} para «{{about}}»",
-      followUpOn: "{{name}} volta em {{day}} às {{time}} para «{{about}}»",
-      followUpDone: "{{name}} voltou às {{time}} para «{{about}}»",
-      followUpDoneOn: "{{name}} voltou em {{day}} às {{time}} para «{{about}}»",
-      followUpCanceled: "{{name}} não volta mais às {{time}} para «{{about}}»",
-      followUpCanceledOn: "{{name}} não volta mais em {{day}} às {{time}} para «{{about}}»",
-      followUpWake: "{{name}} voltou para «{{about}}»",
-      followUpCancel: "Cancelar",
       other: "Aviso para {{name}}",
       wakeSkipped: "A menção de {{name}} não chamou {{agents}}",
       wakeSkippedAnon: "A menção de {{name}} não chamou outro agente",
@@ -16352,6 +16386,7 @@ export const ptBR = {
         usingTool: "Usou a ferramenta {{tool}}",
         thinking: "Pensou",
         typing: "Escreveu",
+        recordingVoice: "Gravou um áudio",
         writing: "Escreveu",
       },
     },
@@ -16361,6 +16396,7 @@ export const ptBR = {
       updatingRoutine: "alterando uma rotina",
       thinking: "trabalhando",
       typing: "digitando",
+      recordingVoice: "gravando áudio",
       writing: "escrevendo",
       consulting: "consultando o {{app}}",
       creatingIssue: "criando uma tarefa",
@@ -18140,6 +18176,7 @@ export const ptBR = {
       asked: "Pedidas por pessoas",
       delegated: "Pedidas por agentes",
       background: "Rotinas em segundo plano",
+      returns: "Retornos",
     },
     state: {
       working: "Trabalhando",
@@ -18237,6 +18274,10 @@ export const ptBR = {
       stopped: "Você parou",
       stoppedBy: "{{name}} parou",
       failed: "Não conseguiu",
+      /** A return that won't come: canceled by its time (the agent or the person left), by you, by someone. */
+      returnCanceled: "Retorno cancelado",
+      returnCanceledYou: "Você cancelou o retorno",
+      returnCanceledBy: "Retorno cancelado por {{name}}",
       none: "Nada terminou hoje ainda.",
     },
     empty: {

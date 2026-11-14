@@ -398,6 +398,17 @@ export interface Me {
   organizations: OrgSummary[];
 }
 
+/**
+ * An account signed in on this browser (`GET /device-accounts`, ADR 0183): the person, their workspaces and each
+ * one's unread count. `current`: the one the browser is on now.
+ */
+export interface DeviceAccount {
+  current: boolean;
+  user: { id: string; name: string; email: string; image: string | null };
+  organizations: OrgSummary[];
+  unread: { orgId: string; unread: number; waiting: number }[];
+}
+
 export interface Organization extends OrgSummary {
   context?: string;
 }
@@ -1550,6 +1561,8 @@ export type ChannelEvent =
       message?: Message;
       threadId?: string | null;
       agentRunId?: string | null;
+      /** With `message` left out: the person who wrote it (null for an agent), so their typing line ends with it. */
+      authorUserId?: string | null;
     }
   /** Someone joined or left, or an agent's way of replying changed (agents carry `autoReply`). */
   | {
@@ -1804,8 +1817,15 @@ export type ChannelEvent =
       waitKind: string;
       outcome: WaitMessageOutcome;
     }
-  /** A person is typing; drop it after `ttlMs`. */
-  | { type: "user.typing"; channelId: string; threadId: string | null; userId: string; ttlMs: number }
+  /** A person is typing, or recording a voice message (`kind: "voice"`); drop it after `ttlMs`. */
+  | {
+      type: "user.typing";
+      channelId: string;
+      threadId: string | null;
+      userId: string;
+      ttlMs: number;
+      kind?: "voice";
+    }
   /** Who saw a message and who will answer. */
   | {
       type: "message.routed";
@@ -1973,8 +1993,11 @@ export interface Approval {
   ownerUserId?: string | null;
   /** When the approved action ran; null while it runs (or if it never did). */
   executedAt?: string | null;
-  /** What the action returned once it ran (raw tool output, short). */
-  result?: { ok: boolean; text: string } | null;
+  /**
+   * What the action returned once it ran (raw tool output, short). `notRunAfter`: it didn't run, because the request
+   * asked before it on its card (that id) was refused or expired after it was approved.
+   */
+  result?: { ok: boolean; text: string; notRunAfter?: string } | null;
   /** The connector it goes through ("github") and its account. */
   connector?: string | null;
   connectorAccount?: string | null;
@@ -2543,9 +2566,10 @@ export interface AgentStatus {
 
 /**
  * How an agent's run stands for you: it waits on your decision or answer (`you`), it works, it waits on someone else
- * (`approval`, `answer`), on its computer or its AI provider, or it is in line.
+ * (`approval`, `answer`), on its computer or its AI provider, or it is in line; `later`: nothing on, a return it set
+ * comes at `at`.
  */
-export type AgentWorkState = "you" | "working" | "approval" | "answer" | "computer" | "outage" | "queued";
+export type AgentWorkState = "you" | "working" | "approval" | "answer" | "computer" | "outage" | "queued" | "later";
 
 /** An agent's most important work for you (`AgentStatus.work`): its state, since when and where it shows. */
 export interface AgentWork {
@@ -2568,6 +2592,48 @@ export interface AgentWork {
   routine: boolean;
   /** How many runs it has on. */
   count: number;
+  /** With `later`: when it comes back to that conversation (ISO). */
+  at?: string;
+}
+
+/**
+ * A return an agent set (its `follow_up`, ADR 0037), still to come (`GET …/channels/{id}/follow-ups`, the task
+ * manager): the bar above the composer says "Ada retorna às 00:32 · rever o deploy de hoje".
+ */
+export interface PendingReturn {
+  /** Its line (`meta.notice.kind` `follow_up`), never drawn in the timeline. */
+  messageId: string;
+  agentId: string;
+  channelId: string;
+  channelKind: "channel" | "dm" | "task";
+  channelName: string | null;
+  /** Null: the conversation's main timeline. */
+  threadId: string | null;
+  at: string;
+  /** The agent's words for it, in the people's language: shown as written. */
+  about: string;
+  runId: string;
+  /** That run's reply, once posted: where "Ver a mensagem" lands. */
+  replyMessageId: string | null;
+  /** Its wake found what the agent asked there unanswered, and it waits for the answer. A late wake isn't held. */
+  held: boolean;
+  /** The person it is for, the agent's owner or an admin. */
+  canCancel: boolean;
+}
+
+/** A return canceled (the task manager's "Terminadas hoje"). */
+export interface CanceledReturn {
+  messageId: string;
+  agentId: string;
+  channelId: string;
+  channelKind: "channel" | "dm" | "task";
+  channelName: string | null;
+  threadId: string | null;
+  at: string;
+  about: string;
+  canceledAt: string;
+  /** Null: its time found it couldn't come (the agent or the person left). */
+  canceledBy: { kind: "person"; userId: string; name: string } | { kind: "agent"; agentId: string } | null;
 }
 
 export interface InvitationWithStatus {
@@ -5370,6 +5436,8 @@ export interface ThreadInfo {
   since?: string | null;
   /** The agent at it longest: the chip's orbit takes its tones. Older servers send none. */
   worker?: string | null;
+  /** The soonest return an agent set here, still ahead: "Retorno às 00:32" when nothing else is on. */
+  laterAt?: string | null;
   /** Open, and a model judged its matter done after its last message: offer one-click close. Never closes by itself. */
   /**
    * When "Responder" opened it (its first reply from the thread panel): replies from then on live in
@@ -7090,6 +7158,10 @@ export interface TaskManagerView {
   computers?: ComputerSummary[];
   /** Per agent with work in the last hour: tool calls per minute, 60 points, oldest first. */
   activity: Record<string, number[]>;
+  /** "Retornos": returns still to come where you read, the soonest first (absent on an older server). */
+  followUps?: PendingReturn[];
+  /** Returns canceled since `since`, the latest first (absent on an older server). */
+  canceledFollowUps?: CanceledReturn[];
 }
 
 /** A one-off reminder in a conversation (`reminders.*`; also a routine in Rotinas). */

@@ -162,10 +162,15 @@ export function useAgentProfileStatus(agentId: string, name: string): AgentProfi
   const key = agentWhyKey(shown.presence, shown.noAi);
   const why = key
     ? t(`presence.agentWhy.${key}`)
-    : workDetail(t, shown.work, {
-        agentName: (id) => dir.agentById.get(id)?.name,
-        channelName: (id) => channels?.find((c) => c.id === id)?.name,
-      });
+    : workDetail(
+        t,
+        shown.work,
+        {
+          agentName: (id) => dir.agentById.get(id)?.name,
+          channelName: (id) => channels?.find((c) => c.id === id)?.name,
+        },
+        i18n.language,
+      );
   const own = shown.status?.status;
   const until = own?.until ?? null;
   const note = !own

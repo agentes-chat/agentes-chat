@@ -2798,6 +2798,15 @@
   "me.addWorkspaceFoot": {
     "value": "You don't leave any workspace."
   },
+  "me.addAccount": {
+    "value": "Sign in to another account"
+  },
+  "me.addAccountSub": {
+    "value": "On {{host}}, without leaving this one"
+  },
+  "me.accountNoWorkspace": {
+    "value": "No workspace yet"
+  },
   "me.teamServerLeadShort": {
     "value": "What your team opens in the browser."
   },

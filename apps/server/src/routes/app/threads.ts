@@ -83,6 +83,10 @@ const Thread = z
     worker: z.uuid().nullable().openapi({
       description: "The agent of the run at it longest (working, else waiting): the state's orbit takes its tones.",
     }),
+    laterAt: z.string().nullable().openapi({
+      description:
+        'The soonest return an agent set here, still ahead (`GET …/channels/{channelId}/follow-ups`): "Retorno às 00:32" when nothing else is on.',
+    }),
     openedByReplyAt: z.string().nullable().openapi({
       description:
         "When someone first replied from the thread panel (`openThread` on the reply): replies from then on live in the panel and the channel shows one line. Null: the channel shows its replies in the timeline.",

@@ -1061,6 +1061,9 @@
     "addWorkspaceTeamShort": "チームのサーバーに参加",
     "addWorkspaceTeamSubShort": "アドレスかコンピューターのQRコード",
     "addWorkspaceFoot": "どのワークスペースからも抜けません。",
+    "addAccount": "別のアカウントにログイン",
+    "addAccountSub": "{{host}} で、このアカウントのまま",
+    "accountNoWorkspace": "ワークスペースはまだありません",
     "teamServerLeadShort": "チームがブラウザで開いているアドレスです。",
     "teamServerQuestion": "チームのアドレスは？",
     "account": {

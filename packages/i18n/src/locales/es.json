@@ -514,6 +514,7 @@
       "noPassword": "Esta cuenta inicia sesión desde la app de agentes.chat.",
       "noPasswordLead": "En la computadora que ejecuta este servidor, abre la app y elige Agregar una contraseña en Configuración › Tu cuenta.",
       "backToSignIn": "Volver a iniciar sesión",
+      "backToAccount": "Volver a {{name}}",
       "toAuthorizeApp": "Para conectar una app a agentes.chat."
     },
     "desktop": {
@@ -1520,22 +1521,6 @@
     "moveDown": "Bajar",
     "restoreOrder": "Restaurar el orden predeterminado"
   },
-  "appIcon": {
-    "title": "Icono de la app",
-    "hintWeb": "El icono en las pestañas de este navegador.",
-    "hintMac": "El icono del Dock mientras la app está abierta. Finder y Launchpad mantienen el predeterminado.",
-    "hintDesktop": "El icono de la barra de tareas mientras la app está abierta.",
-    "hintAndroid": "Algunas pantallas de inicio tardan unos segundos en mostrar el icono nuevo.",
-    "failed": "No se pudo cambiar el icono. Inténtalo de nuevo.",
-    "agentsOf": "Agentes de {{org}}",
-    "names": {
-      "night": "Noche",
-      "moon": "Luna",
-      "sky": "Cielo",
-      "peekNight": "Asomándose de noche",
-      "peekSky": "Asomándose en el cielo"
-    }
-  },
   "install": {
     "frames": "Cómo instalar en {{system}}",
     "step": "Paso {{n}}",
@@ -1643,6 +1628,22 @@
       "activities": "Actividades",
       "readingLists": "Leyendo lista de paquetes... Hecho",
       "settingUp": "Configurando agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "Icono de la app",
+    "hintWeb": "El icono en las pestañas de este navegador.",
+    "hintMac": "El icono del Dock mientras la app está abierta. Finder y Launchpad mantienen el predeterminado.",
+    "hintDesktop": "El icono de la barra de tareas mientras la app está abierta.",
+    "hintAndroid": "Algunas pantallas de inicio tardan unos segundos en mostrar el icono nuevo.",
+    "failed": "No se pudo cambiar el icono. Inténtalo de nuevo.",
+    "agentsOf": "Agentes de {{org}}",
+    "names": {
+      "night": "Noche",
+      "moon": "Luna",
+      "sky": "Cielo",
+      "peekNight": "Asomándose de noche",
+      "peekSky": "Asomándose en el cielo"
     }
   },
   "legal": {
@@ -1868,6 +1869,8 @@
     "newWorkspace": "Nuevo espacio de trabajo",
     "addWorkspace": "Añadir espacio de trabajo",
     "addWorkspaceHint": "Entrar en uno que ya tienes, crear uno nuevo o usar el servidor de tu equipo",
+    "addAccount": "Añadir cuenta",
+    "addAccountHint": "Inicia sesión con otra cuenta sin salir de esta",
     "yourServer": "Tu servidor",
     "serverHere": "El agentes.chat de esta {{device}}",
     "serverStopped": "detenido",
@@ -2392,8 +2395,7 @@
       "fileName": "mensaje.txt"
     },
     "long": {
-      "more": "Ver más",
-      "title": "Mensaje de {{name}}"
+      "more": "Ver más"
     },
     "retrySend": "Intentar de nuevo",
     "thinking": "{{name}} está pensando…",
@@ -3965,7 +3967,32 @@
     "here": "aquí",
     "routine": "en una rutina",
     "yourApproval": "tu aprobación",
-    "yourAnswer": "tu respuesta"
+    "yourAnswer": "tu respuesta",
+    "later": "seguimiento {{when}}",
+    "laterShort": "seguimiento"
+  },
+  "followUps": {
+    "when": {
+      "at": "a las {{time}}",
+      "today": "hoy a las {{time}}",
+      "tomorrow": "mañana a las {{time}}"
+    },
+    "whenLabel": {
+      "at": "A las {{time}}",
+      "today": "Hoy a las {{time}}",
+      "tomorrow": "Mañana a las {{time}}"
+    },
+    "bar": {
+      "at": "{{name}} hace seguimiento {{when}}",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}} hace seguimiento cuando respondas",
+      "held": "{{name}} hace seguimiento tras una respuesta"
+    },
+    "title": "Seguimientos",
+    "see": "Ver el mensaje",
+    "cancel": "Cancelar seguimiento",
+    "cancelOf": "Cancelar el seguimiento de {{name}} {{when}}",
+    "inTime": "en {{time}}"
   },
   "mentions": {
     "list": "Personas y agentes",
@@ -4025,7 +4052,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Mostrar más",
     "less": "Mostrar menos"
   },
   "secret": {
@@ -4543,6 +4569,10 @@
   "approval": {
     "expiredChip": "Vencida · {{when}}",
     "canceledChip": "Cancelada · {{when}}",
+    "line": {
+      "after": "se ejecuta después de “{{title}}”",
+      "notRun": "no se ejecutó: la solicitud anterior no fue aprobada"
+    },
     "waitingFor": "Esperando a {{name}}",
     "waitingAdmin": "Esperando a un admin",
     "reasonLine": "Motivo: {{reason}}",
@@ -4611,8 +4641,6 @@
       "noSubject": "(sin asunto)",
       "toSender": "Para quien envió el mensaje",
       "toList": "Para {{to}}",
-      "more": "Leer todo",
-      "less": "Mostrar menos",
       "answers": "Responde <b>“{{subject}}”</b>",
       "answersFrom": "Responde <b>“{{subject}}”</b>, de {{from}}",
       "forwards": "Reenvía <b>“{{subject}}”</b>",
@@ -5161,8 +5189,15 @@
       "canceled": "Cancelada",
       "failed": "Falló",
       "running": "En ejecución",
-      "scheduled": "Programada"
+      "scheduled": "Programada",
+      "queued": "En cola",
+      "notRun": "No se ejecutó"
     },
+    "queuedLine": "Aprobada. Se ejecuta después de “{{title}}”, solicitada antes.",
+    "notRunRefused": "“{{title}}”, solicitada antes, fue rechazada después de aprobar esta. Por eso esta no se ejecutó.",
+    "notRunExpired": "“{{title}}”, solicitada antes, venció sin decisión después de aprobar esta. Por eso esta no se ejecutó.",
+    "notRunEarlier": "Una solicitud anterior fue rechazada o venció después de aprobar esta. Por eso esta no se ejecutó.",
+    "position": "{{n}} de {{total}}",
     "expiredLine": "Nadie decidió en 24 h, así que no se hizo nada.",
     "canceledLine": "La ejecución se detuvo antes de una decisión.",
     "supersededLine": "El agente volvió a pedirlo con una versión más nueva. Esta no se hizo.",
@@ -5229,10 +5264,10 @@
       "email": "El correo",
       "text": "Lo que va a publicar",
       "textDone": "Lo que publicó",
+      "textNot": "Lo que iba a publicar",
       "values": "Lo que va a hacer",
       "valuesDone": "Lo que hizo",
-      "more": "Ver todo",
-      "less": "Ver menos",
+      "valuesNot": "Lo que iba a hacer",
       "trail": "Cómo llegó aquí",
       "showSteps": "Ver cada paso",
       "hideSteps": "Ocultar los pasos",
@@ -8961,8 +8996,7 @@
       "releasePaused": "La misión está en pausa: reanúdala para que la sesión siga.",
       "releaseClosed": "La misión está cerrada: la sesión no seguirá.",
       "onlyDeciders": "Solo quienes deciden en esta misión permiten comandos.",
-      "pick": "Permitir {{command}}",
-      "showAll": "Mostrar todos"
+      "pick": "Permitir {{command}}"
     },
     "decision": {
       "approveAll_one": "Aprobar {{count}} provisional",
@@ -9391,6 +9425,7 @@
       "input": "Esperando una respuesta",
       "computer": "Esperando su computadora",
       "queued": "En la fila",
+      "later": "Seguimiento {{when}}",
       "open": "Abierto",
       "closed": "Cerrado",
       "archived": "Archivado"
@@ -11926,8 +11961,6 @@
     "thousand": "k",
     "building": "Armándolo…",
     "openBig": "Abrir en grande",
-    "showAll": "Mostrar todo",
-    "showLess": "Mostrar menos",
     "keep": "Guardar en el Drive",
     "kept": "Guardado en el Drive",
     "inDrive": "En el Drive",
@@ -14052,6 +14085,9 @@
       "titleTooLong": "Un título tiene como máximo {{max}} caracteres.",
       "noContext": "Este hilo no salió de un rango de una conversación.",
       "notUndoable": "Solo se puede deshacer un hilo creado a partir de un rango."
+    },
+    "followUp": {
+      "notYours": "Solo la persona para quien es, el dueño del agente o un admin puede cancelar este seguimiento."
     },
     "routine": {
       "tooFrequent": "Una rutina se ejecuta como máximo cada 15 minutos. Elige un intervalo más largo.",
@@ -16362,12 +16398,6 @@
       "someAnswered": "respondieron {{done}} de {{total}}",
       "labelMany": "Conversaciones de {{from}} con {{to}}"
     },
-    "talk": {
-      "readAll": "Leer todo",
-      "more_one": "{{count}} línea más",
-      "more_many": "{{count}} líneas más",
-      "more_other": "{{count}} líneas más"
-    },
     "consultPanel": {
       "label": "Conversación entre {{from}} y {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -16397,14 +16427,6 @@
       "agentNote": "Nota de {{from}}",
       "agentNoteAnon": "Nota de otro agente",
       "waitResult": "Llegó lo que {{name}} estaba esperando",
-      "followUp": "{{name}} volverá a las {{time}} para «{{about}}»",
-      "followUpOn": "{{name}} volverá el {{day}} a las {{time}} para «{{about}}»",
-      "followUpDone": "{{name}} volvió a las {{time}} para «{{about}}»",
-      "followUpDoneOn": "{{name}} volvió el {{day}} a las {{time}} para «{{about}}»",
-      "followUpCanceled": "{{name}} no volverá a las {{time}} para «{{about}}»",
-      "followUpCanceledOn": "{{name}} no volverá el {{day}} a las {{time}} para «{{about}}»",
-      "followUpWake": "{{name}} volvió para «{{about}}»",
-      "followUpCancel": "Cancelar",
       "other": "Aviso para {{name}}",
       "wakeSkipped": "La mención de {{name}} no llegó a {{agents}}",
       "wakeSkippedAnon": "La mención de {{name}} no llegó a otro agente",
@@ -16595,6 +16617,7 @@
         "usingTool": "Usó la herramienta {{tool}}",
         "thinking": "Pensó",
         "typing": "Escribió",
+        "recordingVoice": "Grabó un audio",
         "writing": "Escribió"
       }
     },
@@ -16604,6 +16627,7 @@
       "updatingRoutine": "cambiando una rutina",
       "thinking": "trabajando",
       "typing": "escribiendo",
+      "recordingVoice": "grabando audio",
       "writing": "escribiendo",
       "consulting": "consultando {{app}}",
       "creatingIssue": "creando una tarea",
@@ -18213,7 +18237,8 @@
     "sections": {
       "asked": "Pedidas por personas",
       "delegated": "Pedidas por agentes",
-      "background": "Rutinas en segundo plano"
+      "background": "Rutinas en segundo plano",
+      "returns": "Seguimientos"
     },
     "state": {
       "working": "Trabajando",
@@ -18309,6 +18334,9 @@
       "stopped": "La detuviste",
       "stoppedBy": "{{name}} la detuvo",
       "failed": "No pudo terminar",
+      "returnCanceled": "Seguimiento cancelado",
+      "returnCanceledYou": "Cancelaste el seguimiento",
+      "returnCanceledBy": "Seguimiento cancelado por {{name}}",
       "none": "Todavía no terminó nada hoy."
     },
     "empty": {

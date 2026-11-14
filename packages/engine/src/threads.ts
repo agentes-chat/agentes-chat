@@ -20,6 +20,7 @@ import { caches } from "./cache";
 import { type Channel, requireChannelAccess } from "./channels";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishMessageCreated, publishUserEvent } from "./events";
+import { pendingReturns } from "./follow-through";
 import { followsThreadSql, threadReadAtSql } from "./follows";
 import { landedAfterSql } from "./message-place";
 import { type PreviewMeta, previewMeta, readableBody } from "./message-preview";
@@ -139,6 +140,11 @@ export interface ThreadInfo {
   since: string | null;
   /** The agent of the run at it longest (working, else the one waiting): the chip's orbit takes its tones. */
   worker: string | null;
+  /**
+   * The soonest return still to come here (a `follow_up` an agent set, `pendingReturns`), not yet past its time: the
+   * chip's "Retorno às 00:32" when nothing else is on. Null: none.
+   */
+  laterAt: string | null;
   /**
    * Open, and a cheap model judged its matter done after its last message
    * (`threads.assess`): the app offers to close it. Cleared by a new message,
@@ -1226,17 +1232,26 @@ async function queryThreads(
   return { rows: page, nextCursor: more && tail ? encodeCursor(tail.cursor_at, tail.id) : null };
 }
 
-/** Distinct authors and the latest reply of each thread on the page (two queries for the whole page). */
-async function threadExtras(db: Database, orgId: string, rows: ThreadSqlRow[]) {
+/**
+ * Distinct authors, the latest reply and the soonest return still to come (for `userId`) of each thread on the page:
+ * three queries for the whole page.
+ */
+async function threadExtras(db: Database, orgId: string, userId: string, rows: ThreadSqlRow[]) {
   const ids = rows.map((r) => r.id);
-  if (ids.length === 0) return { authors: new Map<string, Actor[]>(), latest: new Map<string, Message>() };
+  if (ids.length === 0)
+    return {
+      authors: new Map<string, Actor[]>(),
+      latest: new Map<string, Message>(),
+      later: new Map<string, string>(),
+    };
+  const channelIds = new Set(rows.map((r) => r.channel_id));
   const scope = and(
     eq(messages.orgId, orgId),
     inArray(messages.threadId, ids),
     isNull(messages.deletedAt),
     sql`not ${quietNoticeSql(sql`${messages.meta}`)}`,
   );
-  const [authorRows, latestRows] = await Promise.all([
+  const [authorRows, latestRows, returns] = await Promise.all([
     db
       .selectDistinct({
         threadId: messages.threadId,
@@ -1252,7 +1267,11 @@ async function threadExtras(db: Database, orgId: string, rows: ThreadSqlRow[]) {
       // The reply, not the agent's sticker or GIF after it (ADR 0091).
       .where(and(scope, sql`${messages.meta}->>'mediaAfter' is null`))
       .orderBy(messages.threadId, desc(messages.createdAt), desc(messages.id)),
+    pendingReturns(db, userId, orgId, channelIds.size === 1 ? { channelId: [...channelIds][0] } : {}),
   ]);
+  // Soonest first: each thread keeps its first one still ahead (a held one says its wait in the thread's bar).
+  const later = new Map<string, string>();
+  for (const r of returns) if (r.threadId && !r.held && !later.has(r.threadId)) later.set(r.threadId, r.at);
   const authors = new Map<string, Actor[]>();
   const push = (threadId: string, a: Actor) => {
     if (!a.id) return;
@@ -1268,7 +1287,7 @@ async function threadExtras(db: Database, orgId: string, rows: ThreadSqlRow[]) {
     push(a.threadId, { type: a.authorType, id: a.authorType === "person" ? a.userId : a.agentId });
   }
   const latest = new Map(latestRows.map((m) => [m.threadId ?? "", m]));
-  return { authors, latest };
+  return { authors, latest, later };
 }
 
 function toView(
@@ -1318,6 +1337,7 @@ function toView(
     working: r.working === true,
     needsYou: r.needs_you === true,
     ...threadWork(r),
+    laterAt: extras.later.get(r.id) ?? null,
     suggestedResolved: r.suggested_resolved === true,
     canManage: r.created_by === userId || (r.author_type === "person" && r.author_user_id === userId) || isAdmin,
     following: r.following === true,
@@ -1352,7 +1372,7 @@ export async function listThreads(
   if (input.channelId) await requireChannelAccess(db, actorId, input.orgId, input.channelId);
   const isAdmin = can(membership, "manage_channels");
   const { rows, nextCursor } = await queryThreads(db, actorId, input);
-  const extras = await threadExtras(db, input.orgId, rows);
+  const extras = await threadExtras(db, input.orgId, actorId, rows);
   return { threads: rows.map((r) => toView(r, extras, actorId, isAdmin)), nextCursor };
 }
 
@@ -1409,9 +1429,9 @@ export async function getThread(db: Database, actorId: string, orgId: string, ro
       following: await followsRoot(db, orgId, actorId, root.id),
       cursor_at: root.createdAt.toISOString(),
     };
-    return toView(r, await threadExtras(db, orgId, [r]), actorId, isAdmin);
+    return toView(r, await threadExtras(db, orgId, actorId, [r]), actorId, isAdmin);
   }
-  return toView(found, await threadExtras(db, orgId, rows), actorId, isAdmin);
+  return toView(found, await threadExtras(db, orgId, actorId, rows), actorId, isAdmin);
 }
 
 /** What everyone may hear of a thread: nothing only the actor has (following it, its unread for them). */

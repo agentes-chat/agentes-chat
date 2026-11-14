@@ -11,7 +11,7 @@ import {
 import { cx } from "../cx";
 import { Icon } from "../icons/Icon";
 import { claimPlayback, releasePlayback, stopPlayback } from "./media-playback";
-import { drawVoiceWave, useWaveRepaint } from "./voice-wave";
+import { drawVoiceWave, useWaveRepaint, waveAt } from "./voice-wave";
 
 export interface VoicePlayerLabels {
   play: string;
@@ -166,12 +166,8 @@ export function VoicePlayer({
     if (dead) return;
     e.preventDefault();
     const el = e.currentTarget;
-    const at = (x: number) => {
-      const r = el.getBoundingClientRect();
-      seek((x - r.left) / r.width);
-    };
-    at(e.clientX);
-    const move = (ev: globalThis.PointerEvent) => at(ev.clientX);
+    seek(waveAt(el, e.clientX));
+    const move = (ev: globalThis.PointerEvent) => seek(waveAt(el, ev.clientX));
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);

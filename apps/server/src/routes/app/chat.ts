@@ -2,6 +2,7 @@ import {
   activeRunsIn,
   addChannelMember,
   answerNow,
+  can,
   cancelFollowUp,
   channelCard,
   consultationConversation,
@@ -18,6 +19,7 @@ import {
   type MessageView,
   messageCard,
   openConsultationsIn,
+  pendingReturns,
   postPersonMessage,
   requireChannelAccess,
   STICKER_MOODS,
@@ -38,7 +40,7 @@ import {
   requireSession,
   security,
 } from "./context";
-import { Channel, Message } from "./schemas";
+import { Channel, Message, PendingReturn } from "./schemas";
 
 const tags = ["Chat"];
 const ChannelParams = OrgParams.extend({ channelId: z.uuid() });
@@ -727,13 +729,37 @@ export function chatRoutes(deps: AppDeps) {
 
   app.openapi(
     createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/channels/{channelId}/follow-ups",
+      tags,
+      security,
+      summary: "Returns agents set here, still to come: the bar above the composer holds them",
+      description:
+        "An agent's `follow_up` brings it back to this conversation at a time (ADR 0037): a line nobody sees in the timeline, listed here while its wake is queued, the soonest first, with who may cancel it. A thread's are those with its `threadId`; the main timeline's have none. Live: a `message.created` of a `follow_up` notice here changes the list (set, canceled, come).",
+      request: { params: ChannelParams },
+      responses: { 200: json(z.object({ followUps: z.array(PendingReturn) })), ...errors },
+    }),
+    async (c) => {
+      const { orgId, channelId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const { workspace } = await requireChannelAccess(db, userId, orgId, channelId);
+      const followUps = await pendingReturns(db, userId, orgId, {
+        channelId,
+        managesAgents: can(workspace, "manage_agents"),
+      });
+      return c.json({ followUps }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
       method: "post",
       path: "/organizations/{orgId}/messages/{messageId}/cancel-follow-up",
       tags,
       security,
-      summary: "Cancel an agent's follow-up from its line",
+      summary: "Cancel a return an agent set (its follow-up)",
       description:
-        "The id is the follow-up's line (`meta.notice.kind` `follow_up`). Anyone who can read the conversation. The line changes in place (`message.created` with the same id); at its time the agent isn't woken. 409 `follow_up.not_pending` once it came or was canceled.",
+        "The id is the return's line (`meta.notice.kind` `follow_up`, `GET …/channels/{channelId}/follow-ups`). The person it is for, the agent's owner or an admin, reading the conversation; anyone else gets 403 `follow_up.not_yours`. The line changes in place (`message.created` with the same id) and the agent's status moves (`agent.status`); at its time the agent isn't woken. 409 `follow_up.not_pending` once it came or was canceled.",
       request: { params: OrgParams.extend({ messageId: z.uuid() }) },
       responses: { 204: noContent[204], ...errors },
     }),

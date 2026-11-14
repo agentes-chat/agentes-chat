@@ -1116,10 +1116,12 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
   position: relative;
   padding: 8px 24px 20px;
 }
-/* The activity bar takes room only while someone works: no empty band above the composer. Its room opens and closes
-   in a short glide, so the messages above (kept at the bottom) move with it instead of jumping its height. */
-/* Its room opens and closes in a glide: by its cap (`max-height`), since a name that wraps makes it taller. */
-.channel__composer > .ac-typing:not([data-active="true"]) {
+/* The activity bar takes room only while someone works here or comes back here (a return, `data-rest`): no empty band
+   above the composer. Its room opens and closes in a short glide, so the messages above (kept at the bottom) move with
+   it instead of jumping its height. */
+/* Its room opens and closes in a glide: by its cap (`max-height`), since a name that wraps makes it taller. Work and a
+   return share the box: from one to the other the glass, its shadow and its words change in place. */
+.channel__composer > .ac-typing:not([data-active="true"]):not([data-rest="true"]) {
   min-height: 0;
   max-height: 0;
   margin: 0;
@@ -1128,7 +1130,9 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
   .channel__composer > .ac-typing {
     transition:
       max-height 180ms ease-out,
-      margin 180ms ease-out;
+      margin 180ms ease-out,
+      background-color 180ms ease-out,
+      box-shadow 180ms ease-out;
   }
 }
 /* Messages fade out at the list's bottom edge, above the composer: a mask on the list itself, so a hovered
@@ -3613,9 +3617,10 @@ html:not([data-pointer]) .channel-ref:focus-visible {
 }
 /*
  * A tall message in a conversation (ClippedBody): whole up to `LONG_MESSAGE.over`, past it only its first
- * `LONG_MESSAGE.shows`, fading out, with "Ver mais" under it. The limits sit on the words' own root, so the bubble
- * still reads them as its direct child. `clip`, not `hidden`: the browser's find must not scroll the words inside
- * their box. Only a cut message is clipped: one that shows whole keeps whatever reaches past its lines.
+ * `LONG_MESSAGE.shows`, fading out, with "Ver mais" under it, which opens it in place. The limits sit on the words'
+ * own root, so the bubble still reads them as its direct child. `clip`, not `hidden`: the browser's find must not
+ * scroll the words inside their box. Only a cut message is clipped: one that shows whole keeps whatever reaches past
+ * its lines.
  */
 .msg-clip--cut {
   max-height: 360px;
@@ -3628,13 +3633,6 @@ html:not([data-pointer]) .channel-ref:focus-visible {
   margin-top: var(--space-1);
   font-size: var(--text-sm);
   color: inherit;
-}
-/* The same message whole, in its dialog: the conversation's reading size, room under the last line. */
-.msg-clip__whole {
-  padding-bottom: var(--dialog-pad);
-  font-size: var(--msg-text, 14px);
-  line-height: var(--msg-line, 24px);
-  overflow-wrap: anywhere;
 }
 .channel-card__head {
   display: flex;
@@ -7295,6 +7293,7 @@ html:not([data-pointer]) .run-continue:focus-visible {
 }
 /* The pill's buttons are round and fit it; the last one sits in its round end, 2px from the edge all around. */
 .ac-typing__browser.ac-btn,
+.ac-typing__menu.ac-btn,
 .ac-typing .stop-run {
   flex: none;
   width: 24px;
@@ -7305,8 +7304,69 @@ html:not([data-pointer]) .run-continue:focus-visible {
 .ac-typing__browser.ac-btn {
   color: var(--ink2);
 }
-.ac-typing[data-active="true"] > :is(.stop-run-wrap, .ac-typing__browser):last-child {
+.ac-typing__menu.ac-btn {
+  margin-left: auto;
+  color: var(--muted);
+}
+.ac-typing[data-active="true"] > :is(.stop-run-wrap, .ac-typing__browser):last-child,
+.ac-typing[data-rest="true"] > .ac-typing__menu:last-child {
   margin-right: -6px;
+}
+/* At rest (ADR 0037 addendum of 2026-11-13): a return waits here and nobody works. The live pill's box, bare (no glass,
+   no shadow, no sky) and one line high, so work taking it moves nothing: faces · clock · "Ada retorna às 00:32 · her
+   words" · +1 · ⋯. The faces' plates take the conversation's ground. */
+.ac-typing[data-rest="true"] {
+  min-height: 28px;
+  max-height: 28px;
+  padding: 2px 8px 2px 7px;
+  border-radius: var(--radius-full);
+}
+.ac-typing[data-rest="true"] .ac-typing__tok {
+  background: var(--pane);
+}
+.ac-typing__rest-mark {
+  flex: none;
+  color: var(--faint);
+}
+/* One line: her words (with their " · ") that don't fit beside the time wrap onto a second line the box hides, so
+   they show whole or not at all, never cut. */
+.ac-typing__rest {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  min-width: 0;
+  height: 16px;
+  overflow: hidden;
+}
+.ac-typing__said {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: pre;
+}
+/* Short of room the name ends in "…" (after the sentence gave up its "retorna às"), never the time. */
+.ac-typing__said > b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ac-typing__said > span {
+  flex: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ac-typing__said {
+    animation: ac-fade-in 160ms ease-out both;
+  }
+}
+.ac-typing__about {
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+.ac-typing__about-dot {
+  color: var(--faint);
 }
 /* Who is typing comes last and keeps its width: the agents' words before it end in "…" first, then the names,
    never what they do ("Maria Fernan… está digitando…"). */
@@ -7338,9 +7398,35 @@ html:not([data-pointer]) .run-continue:focus-visible {
   text-overflow: ellipsis;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .ac-typing__people {
+  .ac-typing__people,
+  .ac-typing__group {
     animation: ac-fade-in 160ms ease-out both;
   }
+}
+/* Who records a voice message comes last, as a group: their mark and their faces, then their words, keeping their
+   width as who types does (the agents' words give way first), the names alone ending in "…". While both are at it,
+   who types is a group too, and the second goes on a line of its own when one is short of room: every verb stays
+   whole, and each line starts with its own mark. */
+.ac-typing__group {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+.ac-typing__group > .ac-typing__people {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+/* After words, a mark keeps the room a mark has before words, inside each piece's own width. */
+.ac-typing__agents + .ac-typing__group {
+  padding-left: var(--space-1);
+}
+.ac-typing__group:has(+ .ac-typing__group) {
+  padding-right: var(--space-1);
+}
+.ac-typing[data-active="true"] .ac-typing__text:has(> .ac-typing__group + .ac-typing__group) {
+  flex-wrap: wrap;
 }
 
 /* ── Calendário: pages/calendar.css ── */
@@ -12565,9 +12651,6 @@ html:not([data-pointer]) .sidebar__section-toggle:focus-visible {
 .channel-category__add {
   margin-top: 4px;
 }
-.channel-details__archive {
-  color: var(--danger);
-}
 /* Channel settings (ADR 0134): a nav on the left as in Settings, one section in the pane; stacked on a phone. The
    nav is a column of its own (a soft ground and a hairline to the pane, down to the dialog's cut corner): without it
    the sections floated in the dialog's empty left side and the current one read as a stray key. */
@@ -12596,18 +12679,31 @@ html:not([data-pointer]) .sidebar__section-toggle:focus-visible {
   flex-direction: column;
   gap: 2px;
 }
+/* No background of its own here: the nav's hover plate and its current section's key are the links' own. */
 .channel-settings__nav .settings__link {
   width: 100%;
   border: 0;
-  background: none;
   font: inherit;
   font-size: 14px;
   cursor: pointer;
 }
+/* Leave, archive and delete: rows of the nav like its sections (each as wide as it, its hover plate across), in red. */
 .channel-settings__danger {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: 2px;
+}
+.channel-settings__nav .channel-settings__act,
+.channel-settings__nav .channel-settings__act > .ac-icon {
+  color: var(--danger);
+}
+.channel-settings__act:disabled {
+  background: none;
+  cursor: progress;
+}
+/* The spinner is 16 where the icon is 18: the words stay where they were. */
+.channel-settings__act > .ac-pixspin {
+  margin-inline: 1px;
 }
 .channel-settings__pane {
   flex: 1 1 auto;
@@ -13528,6 +13624,10 @@ html:not([data-pointer]) .channel__latest-btn.ac-btn:focus-visible {
 .ac-typing__also {
   flex: 0 1 auto;
   margin-right: auto;
+}
+/* Who types, then who records: what is left over goes after the last. */
+.ac-typing__also:has(+ .ac-typing__also) {
+  margin-right: 0;
 }
 .ac-typing__also::before {
   content: "· ";

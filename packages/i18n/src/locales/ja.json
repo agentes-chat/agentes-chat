@@ -502,6 +502,7 @@
       "noPassword": "このアカウントはagentes.chatアプリからログインします。",
       "noPasswordLead": "このサーバーを動かしているコンピューターでアプリを開き、「設定 › あなたのアカウント」で「パスワードを追加」を選んでください。",
       "backToSignIn": "ログインに戻る",
+      "backToAccount": "{{name}} に戻る",
       "toAuthorizeApp": "アプリをagentes.chatに接続するために。"
     },
     "desktop": {
@@ -1437,22 +1438,6 @@
     "moveDown": "下へ移動",
     "restoreOrder": "デフォルトの順番に戻す"
   },
-  "appIcon": {
-    "title": "アプリのアイコン",
-    "hintWeb": "このブラウザのタブに表示されるアイコン。",
-    "hintMac": "アプリが開いている間のDockのアイコン。FinderとLaunchpadは標準のままです。",
-    "hintDesktop": "アプリが開いている間のタスクバーのアイコン。",
-    "hintAndroid": "ホーム画面によっては、新しいアイコンが表示されるまで数秒かかります。",
-    "failed": "アイコンを変更できませんでした。もう一度お試しください。",
-    "agentsOf": "{{org}} のエージェント",
-    "names": {
-      "night": "夜",
-      "moon": "月",
-      "sky": "空",
-      "peekNight": "夜にのぞく",
-      "peekSky": "空からのぞく"
-    }
-  },
   "install": {
     "frames": "{{system}}へのインストール方法",
     "step": "ステップ{{n}}",
@@ -1560,6 +1545,22 @@
       "activities": "アクティビティ",
       "readingLists": "パッケージリストを読み込んでいます... 完了",
       "settingUp": "agentes-chat ({{version}}) を設定しています ..."
+    }
+  },
+  "appIcon": {
+    "title": "アプリのアイコン",
+    "hintWeb": "このブラウザのタブに表示されるアイコン。",
+    "hintMac": "アプリが開いている間のDockのアイコン。FinderとLaunchpadは標準のままです。",
+    "hintDesktop": "アプリが開いている間のタスクバーのアイコン。",
+    "hintAndroid": "ホーム画面によっては、新しいアイコンが表示されるまで数秒かかります。",
+    "failed": "アイコンを変更できませんでした。もう一度お試しください。",
+    "agentsOf": "{{org}} のエージェント",
+    "names": {
+      "night": "夜",
+      "moon": "月",
+      "sky": "空",
+      "peekNight": "夜にのぞく",
+      "peekSky": "空からのぞく"
     }
   },
   "legal": {
@@ -1785,6 +1786,8 @@
     "newWorkspace": "新しいワークスペース",
     "addWorkspace": "ワークスペースを追加",
     "addWorkspaceHint": "既存のワークスペースに参加、新規作成、またはチームのサーバーを使う",
+    "addAccount": "アカウントを追加",
+    "addAccountHint": "このアカウントのまま、別のアカウントにログイン",
     "yourServer": "自分のサーバー",
     "serverHere": "この{{device}}の agentes.chat",
     "serverStopped": "停止中",
@@ -2255,8 +2258,7 @@
       "fileName": "message.txt"
     },
     "long": {
-      "more": "もっと見る",
-      "title": "{{name}}のメッセージ"
+      "more": "もっと見る"
     },
     "retrySend": "もう一度試す",
     "thinking": "{{name}}が考えています…",
@@ -3718,7 +3720,32 @@
     "here": "ここ",
     "routine": "ルーティン中",
     "yourApproval": "あなたの承認",
-    "yourAnswer": "あなたの回答"
+    "yourAnswer": "あなたの回答",
+    "later": "フォローアップ {{when}}",
+    "laterShort": "フォローアップ"
+  },
+  "followUps": {
+    "when": {
+      "at": "{{time}}",
+      "today": "今日 {{time}}",
+      "tomorrow": "明日 {{time}}"
+    },
+    "whenLabel": {
+      "at": "{{time}}",
+      "today": "今日 {{time}}",
+      "tomorrow": "明日 {{time}}"
+    },
+    "bar": {
+      "at": "{{name}}は{{when}}にフォローアップします",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}}はあなたの回答後にフォローアップします",
+      "held": "{{name}}は回答があり次第フォローアップします"
+    },
+    "title": "フォローアップ",
+    "see": "メッセージを見る",
+    "cancel": "フォローアップを取り消す",
+    "cancelOf": "{{name}}の{{when}}のフォローアップを取り消す",
+    "inTime": "{{time}}後"
   },
   "mentions": {
     "list": "人とエージェント",
@@ -3774,7 +3801,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "さらに表示",
     "less": "表示を減らす"
   },
   "secret": {
@@ -4272,6 +4298,10 @@
   "approval": {
     "expiredChip": "期限切れ · {{when}}",
     "canceledChip": "キャンセル済み · {{when}}",
+    "line": {
+      "after": "「{{title}}」の後に実行",
+      "notRun": "未実行：前の依頼が承認されませんでした"
+    },
     "waitingFor": "{{name}}の対応待ち",
     "waitingAdmin": "管理者の対応待ち",
     "reasonLine": "理由: {{reason}}",
@@ -4332,8 +4362,6 @@
       "noSubject": "（件名なし）",
       "toSender": "メッセージの送信者へ",
       "toList": "宛先: {{to}}",
-      "more": "すべて読む",
-      "less": "表示を減らす",
       "answers": "<b>「{{subject}}」</b>に返信",
       "answersFrom": "{{from}}からの<b>「{{subject}}」</b>に返信",
       "forwards": "<b>「{{subject}}」</b>を転送",
@@ -4822,8 +4850,15 @@
       "canceled": "キャンセル済み",
       "failed": "失敗",
       "running": "実行中",
-      "scheduled": "予定済み"
+      "scheduled": "予定済み",
+      "queued": "順番待ち",
+      "notRun": "未実行"
     },
+    "queuedLine": "承認済み。先に依頼された「{{title}}」の後に実行されます。",
+    "notRunRefused": "先に依頼された「{{title}}」が、これを承認した後に却下されたため、これは実行されませんでした。",
+    "notRunExpired": "先に依頼された「{{title}}」が、これを承認した後に判断のないまま期限切れになったため、これは実行されませんでした。",
+    "notRunEarlier": "これを承認した後に前の依頼が却下されたか期限切れになったため、これは実行されませんでした。",
+    "position": "{{n}} / {{total}}",
     "expiredLine": "24時間以内に誰も判断しなかったため、何も行われていません。",
     "canceledLine": "判断の前に実行が停止しました。",
     "supersededLine": "エージェントが新しい版で依頼し直したため、これは実行されませんでした。",
@@ -4890,10 +4925,10 @@
       "email": "メール",
       "text": "公開される内容",
       "textDone": "公開した内容",
+      "textNot": "公開されるはずだった内容",
       "values": "実行する内容",
       "valuesDone": "実行した内容",
-      "more": "すべて表示",
-      "less": "表示を減らす",
+      "valuesNot": "実行するはずだった内容",
       "trail": "ここまでの流れ",
       "showSteps": "各ステップを見る",
       "hideSteps": "ステップを隠す",
@@ -8378,8 +8413,7 @@
       "releasePaused": "ミッションは一時停止中です。セッションを続けるには再開してください。",
       "releaseClosed": "ミッションは終了しています。セッションは続行しません。",
       "onlyDeciders": "コマンドを許可できるのは、このミッションで判断する人だけです。",
-      "pick": "{{command}}を許可",
-      "showAll": "すべて表示"
+      "pick": "{{command}}を許可"
     },
     "decision": {
       "approveAll_other": "暫定の{{count}}件を承認",
@@ -8770,6 +8804,7 @@
       "input": "回答待ち",
       "computer": "コンピューター待ち",
       "queued": "順番待ち",
+      "later": "フォローアップ {{when}}",
       "open": "オープン",
       "closed": "終了",
       "archived": "アーカイブ済み"
@@ -11092,8 +11127,6 @@
     "thousand": "K",
     "building": "まとめています…",
     "openBig": "大きく開く",
-    "showAll": "すべて表示",
-    "showLess": "表示を減らす",
     "keep": "Driveに保存",
     "kept": "Driveに保存済み",
     "inDrive": "Drive内",
@@ -13120,6 +13153,9 @@
       "titleTooLong": "タイトルは最大{{max}}文字です。",
       "noContext": "このスレッドは会話の範囲から作られたものではありません。",
       "notUndoable": "元に戻せるのは、範囲から作られたスレッドだけです。"
+    },
+    "followUp": {
+      "notYours": "このフォローアップを取り消せるのは、その対象の人、エージェントの所有者、または管理者だけです。"
     },
     "routine": {
       "tooFrequent": "ルーティンの実行間隔は最短15分です。もっと長い間隔を選んでください。",
@@ -15362,10 +15398,6 @@
       "someAnswered": "{{total}}件中{{done}}件回答",
       "labelMany": "{{from}}と{{to}}の会話"
     },
-    "talk": {
-      "readAll": "すべて読む",
-      "more_other": "あと{{count}}行"
-    },
     "consultPanel": {
       "label": "{{from}}と{{to}}の会話",
       "title": "{{from}} ⇄ {{to}}",
@@ -15393,14 +15425,6 @@
       "agentNote": "{{from}}からのメモ",
       "agentNoteAnon": "別のエージェントからのメモ",
       "waitResult": "{{name}}が待っていたものが届きました",
-      "followUp": "{{name}}は{{time}}に「{{about}}」のために戻ります",
-      "followUpOn": "{{name}}は{{day}} {{time}}に「{{about}}」のために戻ります",
-      "followUpDone": "{{name}}は{{time}}に「{{about}}」のために戻りました",
-      "followUpDoneOn": "{{name}}は{{day}} {{time}}に「{{about}}」のために戻りました",
-      "followUpCanceled": "{{name}}は{{time}}に「{{about}}」のために戻りません",
-      "followUpCanceledOn": "{{name}}は{{day}} {{time}}に「{{about}}」のために戻りません",
-      "followUpWake": "{{name}}が「{{about}}」のために戻りました",
-      "followUpCancel": "キャンセル",
       "other": "{{name}}へのお知らせ",
       "wakeSkipped": "{{name}}のメンションは{{agents}}に届きませんでした",
       "wakeSkippedAnon": "{{name}} のメンションはほかのエージェントに届きませんでした",
@@ -15587,6 +15611,7 @@
         "usingTool": "ツール{{tool}}を使いました",
         "thinking": "考えました",
         "typing": "書きました",
+        "recordingVoice": "音声を録音しました",
         "writing": "書きました"
       }
     },
@@ -15596,6 +15621,7 @@
       "updatingRoutine": "ルーティンを変更中",
       "thinking": "作業中",
       "typing": "入力中",
+      "recordingVoice": "音声を録音中",
       "writing": "書いています",
       "consulting": "{{app}}を確認中",
       "creatingIssue": "タスクを作成中",
@@ -17117,7 +17143,8 @@
     "sections": {
       "asked": "人からの依頼",
       "delegated": "エージェントの依頼",
-      "background": "バックグラウンドのルーティン"
+      "background": "バックグラウンドのルーティン",
+      "returns": "フォローアップ"
     },
     "state": {
       "working": "作業中",
@@ -17205,6 +17232,9 @@
       "stopped": "あなたが停止",
       "stoppedBy": "{{name}}が停止",
       "failed": "完了できませんでした",
+      "returnCanceled": "フォローアップを取り消し済み",
+      "returnCanceledYou": "あなたがフォローアップを取り消しました",
+      "returnCanceledBy": "{{name}}がフォローアップを取り消しました",
       "none": "今日終了したものはまだありません。"
     },
     "empty": {

@@ -43,6 +43,7 @@ import { announceAgentStatus, askRunStatus, startRunStatus, statusCandidates } f
 import { type Agent, getAgentCached } from "./agents";
 import { agentsDmReads, readerOfRun } from "./agents-dm-reads";
 import { type AgentAi, agentAiState, noAiReasonOf, ownNotSignedIn } from "./ai-status";
+import { heldBehind, markNotRun, notRunAfter, notRunText, wakeLine } from "./approval-order";
 import { deciderName, publishApproval } from "./approvals";
 import { accountablePerson, fedByRoutine, personOfMessage, runAuthority } from "./authority";
 import {
@@ -1259,6 +1260,9 @@ async function executeRunInner(
       // Decided while the computer turn that asked still runs: its job resumes the run when that turn ends
       // (`suspendedByBridge`), so the brain's session never takes two turns at once.
       if (stored?.pending?.calls.some((c) => c.inTurn) && (await runJobElsewhere(db, run.id, options.jobId))) return;
+      // Its approved actions go in the order they were asked on their card: behind another run's request still
+      // waiting or not done yet, it keeps waiting, and that request settling wakes it (`approval-order.ts`).
+      if (await heldBehind(db, run.id)) return;
       const resumed = await transitionRun(
         db,
         run.id,
@@ -2515,6 +2519,8 @@ async function executeRunInner(
     const moot = transcript.mootRequests ?? {};
     /** Calls nobody decided: withdrawn as moot. Only those leave it free to stay quiet. */
     let mootCalls = 0;
+    /** Its requests settled here: the agent's runs waiting behind them on their card go next (`wakeLine`). */
+    const settled: Approval[] = [];
     for (const call of transcript.pending.calls) {
       let result = call.result;
       const mootText = moot[call.questionId ?? call.secretRequestId ?? call.waitId ?? call.approvalId ?? ""];
@@ -2562,7 +2568,14 @@ async function executeRunInner(
           byPerson = true;
           deciders.add(decider);
         }
-        if (approval?.status === "approved" && deps.tools) {
+        if (approval) settled.push(approval);
+        // Approved before a request asked ahead of it on its card was refused or expired: it doesn't run.
+        const before = approval?.status === "approved" && !approval.executedAt ? await notRunAfter(db, approval) : null;
+        if (approval && before) {
+          result = { content: notRunText(before), isError: true };
+          const kept = await markNotRun(db, approval.id, before);
+          if (kept) await publishApproval({ db, pubsub: deps.pubsub }, kept, "approval.decided").catch(() => {});
+        } else if (approval?.status === "approved" && deps.tools) {
           const output = await deps.tools.executeApproved(ctx, approval);
           result = { content: output.content, isError: output.isError === true };
           // The approvals screen shows it ran (and what came back).
@@ -2593,6 +2606,7 @@ async function executeRunInner(
       });
     }
     if (blocks.length > 0) transcript.messages.push({ role: "user", content: blocks });
+    await wakeLine(db, settled).catch(() => {});
     if (bridgedLines.length > 0) {
       resumeText = `What a person decided on your waiting call${bridgedLines.length > 1 ? "s" : ""}:\n${bridgedLines.join("\n")}`;
     }

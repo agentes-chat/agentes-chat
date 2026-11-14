@@ -78,6 +78,8 @@ export type ConversationRow =
       wait: ThreadInfo["wait"];
       since: string | null;
       worker: string | null;
+      /** A return an agent set there, still ahead: "Retorno às 00:32" when nothing else is on. */
+      laterAt: string | null;
       /** Whose face the row shows: the last reply's author, else who started it. */
       face: ThreadActor;
       last: LastLine | null;
@@ -140,6 +142,7 @@ export function buildConversations(input: {
       wait: t.wait ?? null,
       since: t.since ?? null,
       worker: t.worker ?? null,
+      laterAt: t.laterAt ?? null,
       face: t.lastMessage?.author ?? t.rootAuthor,
       last: t.lastMessage
         ? {

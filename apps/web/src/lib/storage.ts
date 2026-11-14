@@ -102,6 +102,10 @@ export const STORAGE_KEYS = {
   flowReturn: "agentes.flow.return",
   /** In `sessionStore`: my messages waiting for the connection (the shared `outbox`), kept through a reload. */
   outbox: "agentes.outbox",
+  /** In `sessionStore`: this tab is loading again as another of the browser's accounts (lib/accounts.ts, ADR 0183). */
+  accountMoved: "agentes.accountMoved",
+  /** When this browser's session last became another account's: the other tabs follow (lib/accounts.ts). */
+  accountChanged: "agentes.accountChanged",
   /** The app icon this browser's tabs show (lib/app-icon.ts, ADR 0179); the desktop app keeps its own. */
   appIcon: "agentes.appIcon",
   /** The app's sounds on this device: "tactile" (default), "sky", "pixel" or "off" (lib/sounds.ts). */

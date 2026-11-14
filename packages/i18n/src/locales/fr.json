@@ -514,6 +514,7 @@
       "noPassword": "Ce compte se connecte depuis l'app agentes.chat.",
       "noPasswordLead": "Sur l'ordinateur qui fait tourner ce serveur, ouvrez l'app et choisissez Ajouter un mot de passe dans Paramètres › Votre compte.",
       "backToSignIn": "Retour à la connexion",
+      "backToAccount": "Revenir à {{name}}",
       "toAuthorizeApp": "Pour connecter une app à agentes.chat."
     },
     "desktop": {
@@ -1521,22 +1522,6 @@
     "moveDown": "Descendre",
     "restoreOrder": "Rétablir l'ordre par défaut"
   },
-  "appIcon": {
-    "title": "Icône de l'app",
-    "hintWeb": "L'icône dans les onglets de ce navigateur.",
-    "hintMac": "L'icône du Dock tant que l'app est ouverte. Le Finder et le Launchpad gardent celle par défaut.",
-    "hintDesktop": "L'icône de la barre des tâches tant que l'app est ouverte.",
-    "hintAndroid": "Certains écrans d'accueil mettent quelques secondes à afficher la nouvelle icône.",
-    "failed": "Impossible de changer l'icône. Réessayez.",
-    "agentsOf": "Agents de {{org}}",
-    "names": {
-      "night": "Nuit",
-      "moon": "Lune",
-      "sky": "Ciel",
-      "peekNight": "Coup d'œil nocturne",
-      "peekSky": "Coup d'œil dans le ciel"
-    }
-  },
   "install": {
     "frames": "Comment installer sur {{system}}",
     "step": "Étape {{n}}",
@@ -1644,6 +1629,22 @@
       "activities": "Activités",
       "readingLists": "Lecture des listes de paquets... Fait",
       "settingUp": "Paramétrage de agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "Icône de l'app",
+    "hintWeb": "L'icône dans les onglets de ce navigateur.",
+    "hintMac": "L'icône du Dock tant que l'app est ouverte. Le Finder et le Launchpad gardent celle par défaut.",
+    "hintDesktop": "L'icône de la barre des tâches tant que l'app est ouverte.",
+    "hintAndroid": "Certains écrans d'accueil mettent quelques secondes à afficher la nouvelle icône.",
+    "failed": "Impossible de changer l'icône. Réessayez.",
+    "agentsOf": "Agents de {{org}}",
+    "names": {
+      "night": "Nuit",
+      "moon": "Lune",
+      "sky": "Ciel",
+      "peekNight": "Coup d'œil nocturne",
+      "peekSky": "Coup d'œil dans le ciel"
     }
   },
   "legal": {
@@ -1869,6 +1870,8 @@
     "newWorkspace": "Nouvel espace de travail",
     "addWorkspace": "Ajouter un espace de travail",
     "addWorkspaceHint": "Rejoindre un workspace existant, en créer un ou utiliser le serveur de votre équipe",
+    "addAccount": "Ajouter un compte",
+    "addAccountHint": "Connectez-vous à un autre compte sans quitter celui-ci",
     "yourServer": "Votre serveur",
     "serverHere": "L’agentes.chat de ce {{device}}",
     "serverStopped": "arrêté",
@@ -2397,8 +2400,7 @@
       "fileName": "message.txt"
     },
     "long": {
-      "more": "Voir plus",
-      "title": "Message de {{name}}"
+      "more": "Voir plus"
     },
     "retrySend": "Réessayer",
     "thinking": "{{name}} réfléchit…",
@@ -3970,7 +3972,32 @@
     "here": "ici",
     "routine": "sur une routine",
     "yourApproval": "votre approbation",
-    "yourAnswer": "votre réponse"
+    "yourAnswer": "votre réponse",
+    "later": "suivi {{when}}",
+    "laterShort": "suivi"
+  },
+  "followUps": {
+    "when": {
+      "at": "à {{time}}",
+      "today": "aujourd'hui à {{time}}",
+      "tomorrow": "demain à {{time}}"
+    },
+    "whenLabel": {
+      "at": "À {{time}}",
+      "today": "Aujourd'hui à {{time}}",
+      "tomorrow": "Demain à {{time}}"
+    },
+    "bar": {
+      "at": "{{name}} fera le suivi {{when}}",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}} fera le suivi quand vous aurez répondu",
+      "held": "{{name}} fera le suivi après une réponse"
+    },
+    "title": "Suivis",
+    "see": "Voir le message",
+    "cancel": "Annuler le suivi",
+    "cancelOf": "Annuler le suivi de {{name}} {{when}}",
+    "inTime": "dans {{time}}"
   },
   "mentions": {
     "list": "Personnes et agents",
@@ -4030,7 +4057,6 @@
     "issue": "Issue"
   },
   "folded": {
-    "more": "Afficher plus",
     "less": "Afficher moins"
   },
   "secret": {
@@ -4548,6 +4574,10 @@
   "approval": {
     "expiredChip": "Expirée · {{when}}",
     "canceledChip": "Annulée · {{when}}",
+    "line": {
+      "after": "s'exécute après « {{title}} »",
+      "notRun": "pas exécutée : la demande précédente n'a pas été approuvée"
+    },
     "waitingFor": "En attente de {{name}}",
     "waitingAdmin": "En attente d'un admin",
     "reasonLine": "Raison : {{reason}}",
@@ -4617,8 +4647,6 @@
       "noSubject": "(sans objet)",
       "toSender": "À l’expéditeur du message",
       "toList": "À {{to}}",
-      "more": "Tout lire",
-      "less": "Afficher moins",
       "answers": "Répond à <b>« {{subject}} »</b>",
       "answersFrom": "Répond à <b>« {{subject}} »</b>, de {{from}}",
       "forwards": "Transfère <b>« {{subject}} »</b>",
@@ -5169,8 +5197,15 @@
       "canceled": "Annulée",
       "failed": "Échec",
       "running": "En cours",
-      "scheduled": "Prévue"
+      "scheduled": "Prévue",
+      "queued": "En file d'attente",
+      "notRun": "Pas exécutée"
     },
+    "queuedLine": "Approuvée. S'exécute après « {{title}} », demandée avant.",
+    "notRunRefused": "« {{title}} », demandée avant, a été refusée après l'approbation de celle-ci. Celle-ci n'a donc pas été exécutée.",
+    "notRunExpired": "« {{title}} », demandée avant, a expiré sans décision après l'approbation de celle-ci. Celle-ci n'a donc pas été exécutée.",
+    "notRunEarlier": "Une demande précédente a été refusée ou a expiré après l'approbation de celle-ci. Celle-ci n'a donc pas été exécutée.",
+    "position": "{{n}} sur {{total}}",
     "expiredLine": "Personne n'a décidé dans les 24 h, donc rien n'a été fait.",
     "canceledLine": "L'exécution s'est arrêtée avant une décision.",
     "supersededLine": "L'agent a redemandé avec une version plus récente. Celle-ci n'a pas été faite.",
@@ -5239,10 +5274,10 @@
       "email": "L'e-mail",
       "text": "Ce qui sera publié",
       "textDone": "Ce qui a été publié",
+      "textNot": "Ce qui aurait été publié",
       "values": "Ce qui sera fait",
       "valuesDone": "Ce qui a été fait",
-      "more": "Tout afficher",
-      "less": "Afficher moins",
+      "valuesNot": "Ce qui aurait été fait",
       "trail": "Comment on en est arrivé là",
       "showSteps": "Voir chaque étape",
       "hideSteps": "Masquer les étapes",
@@ -9013,8 +9048,7 @@
       "releasePaused": "La mission est en pause : reprenez-la pour que la session continue.",
       "releaseClosed": "La mission est close : la session ne continuera pas.",
       "onlyDeciders": "Seules les personnes qui décident dans cette mission autorisent les commandes.",
-      "pick": "Autoriser {{command}}",
-      "showAll": "Tout afficher"
+      "pick": "Autoriser {{command}}"
     },
     "decision": {
       "approveAll_one": "Approuver {{count}} décision provisoire",
@@ -9443,6 +9477,7 @@
       "input": "Attend une réponse",
       "computer": "Attend son ordinateur",
       "queued": "Dans la file",
+      "later": "Suivi {{when}}",
       "open": "Ouvert",
       "closed": "Fermé",
       "archived": "Archivé"
@@ -11997,8 +12032,6 @@
     "thousand": "k",
     "building": "Assemblage en cours…",
     "openBig": "Ouvrir en grand",
-    "showAll": "Tout afficher",
-    "showLess": "Afficher moins",
     "keep": "Garder dans le Drive",
     "kept": "Gardé dans le Drive",
     "inDrive": "Dans le Drive",
@@ -14123,6 +14156,9 @@
       "titleTooLong": "Un titre contient au maximum {{max}} caractères.",
       "noContext": "Ce fil ne provient pas d'une plage de conversation.",
       "notUndoable": "Seul un fil créé à partir d'une plage peut être annulé."
+    },
+    "followUp": {
+      "notYours": "Seuls la personne concernée, le propriétaire de l'agent ou un admin peuvent annuler ce suivi."
     },
     "routine": {
       "tooFrequent": "Une routine s'exécute au maximum toutes les 15 minutes. Choisissez un intervalle plus long.",
@@ -16441,12 +16477,6 @@
       "someAnswered": "{{done}} sur {{total}} ont répondu",
       "labelMany": "Échanges de {{from}} avec {{to}}"
     },
-    "talk": {
-      "readAll": "Tout lire",
-      "more_one": "{{count}} ligne de plus",
-      "more_many": "{{count}} lignes de plus",
-      "more_other": "{{count}} lignes de plus"
-    },
     "consultPanel": {
       "label": "Conversation entre {{from}} et {{to}}",
       "title": "{{from}} ⇄ {{to}}",
@@ -16479,14 +16509,6 @@
       "agentNote": "Note de {{from}}",
       "agentNoteAnon": "Note d'un autre agent",
       "waitResult": "Ce que {{name}} attendait est arrivé",
-      "followUp": "{{name}} reviendra à {{time}} pour « {{about}} »",
-      "followUpOn": "{{name}} reviendra le {{day}} à {{time}} pour « {{about}} »",
-      "followUpDone": "{{name}} est revenu à {{time}} pour « {{about}} »",
-      "followUpDoneOn": "{{name}} est revenu le {{day}} à {{time}} pour « {{about}} »",
-      "followUpCanceled": "{{name}} ne reviendra pas à {{time}} pour « {{about}} »",
-      "followUpCanceledOn": "{{name}} ne reviendra pas le {{day}} à {{time}} pour « {{about}} »",
-      "followUpWake": "{{name}} est de retour pour « {{about}} »",
-      "followUpCancel": "Annuler",
       "other": "Avis pour {{name}}",
       "wakeSkipped": "La mention de {{name}} n'a pas atteint {{agents}}",
       "wakeSkippedAnon": "La mention de {{name}} n’a atteint aucun autre agent",
@@ -16677,6 +16699,7 @@
         "usingTool": "A utilisé l'outil {{tool}}",
         "thinking": "A réfléchi",
         "typing": "A écrit",
+        "recordingVoice": "A enregistré un audio",
         "writing": "A écrit"
       }
     },
@@ -16686,6 +16709,7 @@
       "updatingRoutine": "modification d'une routine",
       "thinking": "au travail",
       "typing": "en train d'écrire",
+      "recordingVoice": "en train d'enregistrer un audio",
       "writing": "rédaction",
       "consulting": "consultation de {{app}}",
       "creatingIssue": "création d'une tâche",
@@ -18356,7 +18380,8 @@
     "sections": {
       "asked": "Demandées par des personnes",
       "delegated": "Demandées par des agents",
-      "background": "Routines en arrière-plan"
+      "background": "Routines en arrière-plan",
+      "returns": "Suivis"
     },
     "state": {
       "working": "Au travail",
@@ -18452,6 +18477,9 @@
       "stopped": "Vous l'avez arrêtée",
       "stoppedBy": "{{name}} l'a arrêtée",
       "failed": "N'a pas abouti",
+      "returnCanceled": "Suivi annulé",
+      "returnCanceledYou": "Vous avez annulé le suivi",
+      "returnCanceledBy": "Suivi annulé par {{name}}",
       "none": "Rien n'est encore terminé aujourd'hui."
     },
     "empty": {

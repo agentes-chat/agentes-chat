@@ -502,6 +502,7 @@
       "noPassword": "这个账号通过 agentes.chat 应用登录。",
       "noPasswordLead": "在运行这个服务器的电脑上，打开应用，在 设置 › 你的账号 中选择“添加密码”。",
       "backToSignIn": "返回登录",
+      "backToAccount": "返回 {{name}}",
       "toAuthorizeApp": "用于把应用连接到 agentes.chat。"
     },
     "desktop": {
@@ -1437,22 +1438,6 @@
     "moveDown": "下移",
     "restoreOrder": "恢复默认顺序"
   },
-  "appIcon": {
-    "title": "应用图标",
-    "hintWeb": "此浏览器标签页上的图标。",
-    "hintMac": "应用打开时 Dock 中的图标。访达和启动台仍显示默认图标。",
-    "hintDesktop": "应用打开时任务栏中的图标。",
-    "hintAndroid": "部分主屏幕需要几秒钟才会显示新图标。",
-    "failed": "无法更换图标，请重试。",
-    "agentsOf": "{{org}} 的智能体",
-    "names": {
-      "night": "夜晚",
-      "moon": "月亮",
-      "sky": "天空",
-      "peekNight": "夜里探头",
-      "peekSky": "天空探头"
-    }
-  },
   "install": {
     "frames": "如何在 {{system}} 上安装",
     "step": "第 {{n}} 步",
@@ -1560,6 +1545,22 @@
       "activities": "活动",
       "readingLists": "正在读取软件包列表... 完成",
       "settingUp": "正在设置 agentes-chat ({{version}}) ..."
+    }
+  },
+  "appIcon": {
+    "title": "应用图标",
+    "hintWeb": "此浏览器标签页上的图标。",
+    "hintMac": "应用打开时 Dock 中的图标。访达和启动台仍显示默认图标。",
+    "hintDesktop": "应用打开时任务栏中的图标。",
+    "hintAndroid": "部分主屏幕需要几秒钟才会显示新图标。",
+    "failed": "无法更换图标，请重试。",
+    "agentsOf": "{{org}} 的智能体",
+    "names": {
+      "night": "夜晚",
+      "moon": "月亮",
+      "sky": "天空",
+      "peekNight": "夜里探头",
+      "peekSky": "天空探头"
     }
   },
   "legal": {
@@ -1785,6 +1786,8 @@
     "newWorkspace": "新建工作区",
     "addWorkspace": "添加工作区",
     "addWorkspaceHint": "加入已有的工作区、创建新的，或使用团队的服务器",
+    "addAccount": "添加账号",
+    "addAccountHint": "登录其他账号，无需退出当前账号",
     "yourServer": "你的服务器",
     "serverHere": "这台 {{device}} 上的 agentes.chat",
     "serverStopped": "已停止",
@@ -2258,8 +2261,7 @@
       "fileName": "message.txt"
     },
     "long": {
-      "more": "查看更多",
-      "title": "{{name}} 的消息"
+      "more": "查看更多"
     },
     "retrySend": "重试",
     "thinking": "{{name}} 正在思考…",
@@ -3719,7 +3721,32 @@
     "here": "这里",
     "routine": "在执行例行任务",
     "yourApproval": "你的批准",
-    "yourAnswer": "你的回答"
+    "yourAnswer": "你的回答",
+    "later": "跟进 {{when}}",
+    "laterShort": "跟进"
+  },
+  "followUps": {
+    "when": {
+      "at": "{{time}}",
+      "today": "今天 {{time}}",
+      "tomorrow": "明天 {{time}}"
+    },
+    "whenLabel": {
+      "at": "{{time}}",
+      "today": "今天 {{time}}",
+      "tomorrow": "明天 {{time}}"
+    },
+    "bar": {
+      "at": "{{name}} 将于 {{when}} 跟进",
+      "short": "{{name}} {{time}}",
+      "heldYou": "{{name}} 将在你回复后跟进",
+      "held": "{{name}} 将在有人回复后跟进"
+    },
+    "title": "跟进",
+    "see": "查看消息",
+    "cancel": "取消跟进",
+    "cancelOf": "取消 {{name}} {{when}} 的跟进",
+    "inTime": "{{time}}后"
   },
   "mentions": {
     "list": "成员和智能体",
@@ -3775,7 +3802,6 @@
     "issue": "议题"
   },
   "folded": {
-    "more": "显示更多",
     "less": "收起"
   },
   "secret": {
@@ -4272,6 +4298,10 @@
   "approval": {
     "expiredChip": "已过期 · {{when}}",
     "canceledChip": "已取消 · {{when}}",
+    "line": {
+      "after": "在“{{title}}”之后执行",
+      "notRun": "未执行：前一个请求没有获批"
+    },
     "waitingFor": "等待 {{name}}",
     "waitingAdmin": "等待管理员",
     "reasonLine": "原因：{{reason}}",
@@ -4333,8 +4363,6 @@
       "noSubject": "（无主题）",
       "toSender": "发给消息的发件人",
       "toList": "收件人：{{to}}",
-      "more": "阅读全文",
-      "less": "收起",
       "answers": "回复 <b>“{{subject}}”</b>",
       "answersFrom": "回复 <b>“{{subject}}”</b>，来自 {{from}}",
       "forwards": "转发 <b>“{{subject}}”</b>",
@@ -4827,8 +4855,15 @@
       "canceled": "已取消",
       "failed": "失败",
       "running": "执行中",
-      "scheduled": "已计划"
+      "scheduled": "已计划",
+      "queued": "排队中",
+      "notRun": "未执行"
     },
+    "queuedLine": "已批准。会在先前请求的“{{title}}”之后执行。",
+    "notRunRefused": "先前请求的“{{title}}”在这一项获批后被拒绝，所以这一项没有执行。",
+    "notRunExpired": "先前请求的“{{title}}”在这一项获批后无人决定而过期，所以这一项没有执行。",
+    "notRunEarlier": "在这一项获批后，先前的请求被拒绝或已过期，所以这一项没有执行。",
+    "position": "第 {{n}} 个，共 {{total}} 个",
     "expiredLine": "24 小时内没有人决定，所以什么都没做。",
     "canceledLine": "运行在做出决定前就停止了。",
     "supersededLine": "智能体用更新的版本重新请求了，这一版没有执行。",
@@ -4897,10 +4932,10 @@
       "email": "邮件",
       "text": "将要发布的内容",
       "textDone": "已发布的内容",
+      "textNot": "本将发布的内容",
       "values": "将要做的事",
       "valuesDone": "已做的事",
-      "more": "显示全部",
-      "less": "收起",
+      "valuesNot": "本将要做的事",
       "trail": "来龙去脉",
       "showSteps": "查看每一步",
       "hideSteps": "隐藏步骤",
@@ -8423,8 +8458,7 @@
       "releasePaused": "专项任务已暂停：恢复后会话才会继续。",
       "releaseClosed": "专项任务已关闭：会话不会继续。",
       "onlyDeciders": "只有此专项任务的决策者可以允许命令。",
-      "pick": "允许 {{command}}",
-      "showAll": "显示全部"
+      "pick": "允许 {{command}}"
     },
     "decision": {
       "approveAll_other": "批准 {{count}} 个临时决定",
@@ -8815,6 +8849,7 @@
       "input": "等待回答",
       "computer": "等待电脑",
       "queued": "排队中",
+      "later": "跟进 {{when}}",
       "open": "进行中",
       "closed": "已关闭",
       "archived": "已归档"
@@ -11160,8 +11195,6 @@
     "thousand": "千",
     "building": "正在整理…",
     "openBig": "放大打开",
-    "showAll": "显示全部",
-    "showLess": "收起",
     "keep": "保存到 Drive",
     "kept": "已保存到 Drive",
     "inDrive": "在 Drive 中",
@@ -13184,6 +13217,9 @@
       "titleTooLong": "标题最多 {{max}} 个字符。",
       "noContext": "这个话题不是由对话中的一段消息创建的。",
       "notUndoable": "只有由一段消息创建的话题才能撤销。"
+    },
+    "followUp": {
+      "notYours": "只有相关的人、智能体的所有者或管理员可以取消此跟进。"
     },
     "routine": {
       "tooFrequent": "例行工作最短每 15 分钟运行一次，请选择更长的间隔。",
@@ -15428,10 +15464,6 @@
       "someAnswered": "{{total}} 个中 {{done}} 个已回答",
       "labelMany": "{{from}} 与 {{to}} 的对话"
     },
-    "talk": {
-      "readAll": "阅读全部",
-      "more_other": "还有 {{count}} 行"
-    },
     "consultPanel": {
       "label": "{{from}} 和 {{to}} 之间的对话",
       "title": "{{from}} ⇄ {{to}}",
@@ -15462,14 +15494,6 @@
       "agentNote": "来自 {{from}} 的备注",
       "agentNoteAnon": "来自另一个智能体的备注",
       "waitResult": "{{name}} 等待的结果到了",
-      "followUp": "{{name}} 会在 {{time}} 回来跟进“{{about}}”",
-      "followUpOn": "{{name}} 会在 {{day}} {{time}} 回来跟进“{{about}}”",
-      "followUpDone": "{{name}} 在 {{time}} 回来跟进了“{{about}}”",
-      "followUpDoneOn": "{{name}} 在 {{day}} {{time}} 回来跟进了“{{about}}”",
-      "followUpCanceled": "{{name}} 不会在 {{time}} 回来跟进“{{about}}”了",
-      "followUpCanceledOn": "{{name}} 不会在 {{day}} {{time}} 回来跟进“{{about}}”了",
-      "followUpWake": "{{name}} 回来跟进“{{about}}”了",
-      "followUpCancel": "取消",
       "other": "给 {{name}} 的通知",
       "wakeSkipped": "{{name}} 的提及没有传达给 {{agents}}",
       "wakeSkippedAnon": "{{name}} 的提及没有叫到其他智能体",
@@ -15656,6 +15680,7 @@
         "usingTool": "使用了 {{tool}} 工具",
         "thinking": "思考了",
         "typing": "撰写了",
+        "recordingVoice": "录制了语音",
         "writing": "撰写了"
       }
     },
@@ -15665,6 +15690,7 @@
       "updatingRoutine": "修改例行工作",
       "thinking": "工作",
       "typing": "输入",
+      "recordingVoice": "录音",
       "writing": "撰写",
       "consulting": "查看 {{app}}",
       "creatingIssue": "创建任务",
@@ -17295,7 +17321,8 @@
     "sections": {
       "asked": "成员的请求",
       "delegated": "智能体发起",
-      "background": "后台例行工作"
+      "background": "后台例行工作",
+      "returns": "跟进"
     },
     "state": {
       "working": "工作中",
@@ -17383,6 +17410,9 @@
       "stopped": "被你停止",
       "stoppedBy": "被 {{name}} 停止",
       "failed": "未能完成",
+      "returnCanceled": "跟进已取消",
+      "returnCanceledYou": "你取消了跟进",
+      "returnCanceledBy": "{{name}} 取消了跟进",
       "none": "今天还没有结束的任务。"
     },
     "empty": {

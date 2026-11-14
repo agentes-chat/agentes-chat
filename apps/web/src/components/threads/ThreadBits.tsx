@@ -32,6 +32,7 @@ const WAIT_ICON: Partial<Record<ThreadWorkState, IconName>> = {
   input: "clock",
   computer: "clock",
   queued: "clock",
+  later: "clock",
 };
 
 /**
@@ -42,10 +43,10 @@ export function ThreadStatusChip({
   thread,
   className,
 }: {
-  thread: Pick<ThreadInfo, "state" | "working" | "needsYou" | "wait">;
+  thread: Pick<ThreadInfo, "state" | "working" | "needsYou" | "wait" | "laterAt">;
   className?: string;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const status = threadStatus(thread);
   // One state with the chip under its root (`threadWorkState`): a run in line counts as at work but reads "Na fila".
   const wait = status === "open" || status === "working" ? threadWorkState(thread) : null;
@@ -53,7 +54,7 @@ export function ThreadStatusChip({
   if (wait && icon) {
     return (
       <Chip icon={icon} tone="neutral" className={className}>
-        {threadWorkWord(t, wait)}
+        {threadWorkWord(t, wait, { at: thread.laterAt, locale: i18n.language })}
       </Chip>
     );
   }

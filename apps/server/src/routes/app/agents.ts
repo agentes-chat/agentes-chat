@@ -825,10 +825,12 @@ export function agentRoutes(deps: AppDeps) {
                 }),
                 work: z
                   .object({
-                    state: z.enum(["you", "working", "approval", "answer", "computer", "outage", "queued"]).openapi({
-                      description:
-                        "`you`: it waits on your decision (you may decide its approval) or your answer; `working`; waiting on someone else's approval or answer, on its computer or its AI provider; `queued`: in line.",
-                    }),
+                    state: z
+                      .enum(["you", "working", "approval", "answer", "computer", "outage", "queued", "later"])
+                      .openapi({
+                        description:
+                          "`you`: it waits on your decision (you may decide its approval) or your answer; `working`; waiting on someone else's approval or answer, on its computer or its AI provider; `queued`: in line; `later`: nothing on, and a return it set comes at `at` where you read.",
+                      }),
                     ask: z.enum(["approval", "answer"]).nullable().openapi({ description: "With `you`: on what." }),
                     since: z.string().openapi({
                       description:
@@ -849,11 +851,12 @@ export function agentRoutes(deps: AppDeps) {
                     forAgentId: z.uuid().nullable().openapi({ description: "The agent that handed it off." }),
                     routine: z.boolean().openapi({ description: "A routine's work: no conversation holds it." }),
                     count: z.number().int().openapi({ description: "How many runs it has on." }),
+                    at: z.string().optional().openapi({ description: "With `later`: when it comes back (ISO)." }),
                   })
                   .nullable()
                   .openapi({
                     description:
-                      "Its most important work for you (waiting on you, working, waiting on someone else, in line; then the oldest), with where it shows if you read that conversation (ADR 0084). Null: none.",
+                      "Its most important work for you (waiting on you, working, waiting on someone else, in line, a return to come; then the oldest), with where it shows if you read that conversation (ADR 0084). Null: none.",
                   }),
               }),
             ),
