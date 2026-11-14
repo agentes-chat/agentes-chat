@@ -5222,7 +5222,8 @@
             "not_signed_in_after_login": "{{brand}}에서 로그인은 받아들였지만 이 계정은 여기서 사용할 수 없어요. 요금제에 포함되지 않았을 수 있어요. 다른 계정이나 API 키를 사용해 보세요.",
             "status_unknown": "{{brand}}에서 계정 로그인 여부를 알려 주지 않았어요. 다시 시도해 주세요.",
             "no_token": "{{brand}}에서 계정 토큰을 보여 주지 않고 끝났어요. 다시 시도해 주세요.",
-            "not_kept": "계정은 로그인됐지만 {{computer}}에 로그인을 저장하지 못했어요. 다시 시도해 주세요."
+            "not_kept": "계정은 로그인됐지만 {{computer}}에 로그인을 저장하지 못했어요. 다시 시도해 주세요.",
+            "sandbox": "{{brand}}에 로그인했지만 {{computer}}에서 샌드박스를 시작할 수 없어 어떤 에이전트도 쓸 수 없어요. {{computer}}를 업데이트한 다음 다시 로그인해 주세요."
           },
           "geminiNotShared": "Gemini에 로그인했지만 {{computer}}에서는 이 로그인을 모든 에이전트와 공유할 수 없어요. 대신 Gemini API 키를 사용하세요.",
           "duplicate": {

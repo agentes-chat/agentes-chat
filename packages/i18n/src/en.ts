@@ -5774,6 +5774,9 @@ export const en = {
             status_unknown: "{{brand}} didn't say whether the account signed in. Try again.",
             no_token: "{{brand}} finished without showing the account's token. Try again.",
             not_kept: "The account signed in, but {{computer}} couldn't keep the sign-in. Try again.",
+            /** Grok Build signed in, but its sandbox doesn't start on the computer for an agent (runner `sandbox`). */
+            sandbox:
+              "{{brand}} signed in, but its sandbox can't start on {{computer}}, so no agent could use it. Update {{computer}}, then sign in again.",
           },
           /** Gemini signed in for all agents, but a copy of it doesn't work for each one: signing in again won't help. */
           geminiNotShared:

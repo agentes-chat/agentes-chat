@@ -5603,7 +5603,8 @@
             "not_signed_in_after_login": "{{brand}} ha accettato l'accesso, ma questo account non si può usare qui, forse il piano non lo include. Prova un altro account o una chiave API.",
             "status_unknown": "{{brand}} non ha indicato se l'account ha effettuato l'accesso. Riprova.",
             "no_token": "{{brand}} ha finito senza mostrare il token dell'account. Riprova.",
-            "not_kept": "L'account ha effettuato l'accesso, ma {{computer}} non è riuscito a conservarlo. Riprova."
+            "not_kept": "L'account ha effettuato l'accesso, ma {{computer}} non è riuscito a conservarlo. Riprova.",
+            "sandbox": "{{brand}} ha effettuato l'accesso, ma la sua sandbox non si avvia su {{computer}}, quindi nessun agente potrebbe usarlo. Aggiorna {{computer}}, poi accedi di nuovo."
           },
           "geminiNotShared": "Gemini ha effettuato l'accesso, ma su {{computer}} questo accesso non si può condividere con tutti gli agenti. Usa invece una chiave API di Gemini.",
           "duplicate": {

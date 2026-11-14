@@ -5247,7 +5247,8 @@
             "not_signed_in_after_login": "{{brand}} 接受了登录，但此账号无法在这里使用，可能套餐不包含。请换一个账号或使用 API 密钥。",
             "status_unknown": "{{brand}} 没有说明账号是否已登录，请重试。",
             "no_token": "{{brand}} 结束时没有显示账号的令牌，请重试。",
-            "not_kept": "账号已登录，但 {{computer}} 无法保存登录状态，请重试。"
+            "not_kept": "账号已登录，但 {{computer}} 无法保存登录状态，请重试。",
+            "sandbox": "{{brand}} 已登录，但它的沙盒无法在 {{computer}} 上启动，所以没有代理能使用它。请更新 {{computer}}，然后重新登录。"
           },
           "geminiNotShared": "Gemini 已登录，但 {{computer}} 无法把这个登录共享给所有智能体。请改用 Gemini API 密钥。",
           "duplicate": {

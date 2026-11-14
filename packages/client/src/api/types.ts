@@ -6099,6 +6099,7 @@ export type AccountLoginFailure =
   | "status_unknown"
   | "no_token"
   | "not_kept"
+  | "sandbox"
   | "timeout"
   | "canceled";
 

@@ -5793,7 +5793,8 @@
             "not_signed_in_after_login": "{{brand}} przyjął logowanie, ale tego konta nie można tu używać, być może plan tego nie obejmuje. Spróbuj z innym kontem lub kluczem API.",
             "status_unknown": "{{brand}} nie potwierdził, czy konto jest zalogowane. Spróbuj ponownie.",
             "no_token": "{{brand}} zakończył bez pokazania tokenu konta. Spróbuj ponownie.",
-            "not_kept": "Konto jest zalogowane, ale komputer {{computer}} nie mógł zapisać logowania. Spróbuj ponownie."
+            "not_kept": "Konto jest zalogowane, ale komputer {{computer}} nie mógł zapisać logowania. Spróbuj ponownie.",
+            "sandbox": "{{brand}} jest zalogowany, ale jego sandbox nie uruchamia się na komputerze {{computer}}, więc żaden agent nie mógłby go używać. Zaktualizuj komputer {{computer}}, a potem zaloguj się ponownie."
           },
           "geminiNotShared": "Gemini zalogował się, ale {{computer}} nie może udostępnić tego logowania wszystkim agentom. Użyj zamiast tego klucza API Gemini.",
           "duplicate": {

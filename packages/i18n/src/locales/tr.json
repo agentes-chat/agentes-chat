@@ -5399,7 +5399,8 @@
             "not_signed_in_after_login": "{{brand}} girişi kabul etti ama bu hesap burada kullanılamıyor, planı bunu kapsamıyor olabilir. Başka bir hesap veya bir API anahtarı deneyin.",
             "status_unknown": "{{brand}}, hesabın giriş yapıp yapmadığını bildirmedi. Tekrar deneyin.",
             "no_token": "{{brand}}, hesabın belirtecini göstermeden bitti. Tekrar deneyin.",
-            "not_kept": "Hesap giriş yaptı ama {{computer}} girişi saklayamadı. Tekrar deneyin."
+            "not_kept": "Hesap giriş yaptı ama {{computer}} girişi saklayamadı. Tekrar deneyin.",
+            "sandbox": "{{brand}} giriş yaptı ama sandbox'ı {{computer}} üzerinde başlamıyor, bu yüzden hiçbir ajan onu kullanamaz. {{computer}} bilgisayarını güncelleyin, sonra yeniden giriş yapın."
           },
           "geminiNotShared": "Gemini'ye giriş yapıldı, ancak {{computer}} bu girişi tüm ajanlarla paylaşamıyor. Bunun yerine bir Gemini API anahtarı kullanın.",
           "duplicate": {

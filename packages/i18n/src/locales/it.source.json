@@ -13305,6 +13305,9 @@
   "agentPage.work.brain.add.why.not_kept": {
     "value": "The account signed in, but {{computer}} couldn't keep the sign-in. Try again."
   },
+  "agentPage.work.brain.add.why.sandbox": {
+    "value": "{{brand}} signed in, but its sandbox can't start on {{computer}}, so no agent could use it. Update {{computer}}, then sign in again."
+  },
   "agentPage.work.brain.add.geminiNotShared": {
     "value": "Gemini signed in, but {{computer}} can't share that sign-in with every agent. Use a Gemini API key instead."
   },

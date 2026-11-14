@@ -5416,7 +5416,8 @@
             "not_signed_in_after_login": "{{brand}} hat die Anmeldung angenommen, aber dieses Konto lässt sich hier nicht nutzen, vielleicht deckt der Tarif das nicht ab. Versuch ein anderes Konto oder einen API-Schlüssel.",
             "status_unknown": "{{brand}} hat nicht gemeldet, ob das Konto angemeldet ist. Versuch es noch einmal.",
             "no_token": "{{brand}} wurde fertig, ohne das Token des Kontos anzuzeigen. Versuch es noch einmal.",
-            "not_kept": "Das Konto ist angemeldet, aber {{computer}} konnte die Anmeldung nicht speichern. Versuch es noch einmal."
+            "not_kept": "Das Konto ist angemeldet, aber {{computer}} konnte die Anmeldung nicht speichern. Versuch es noch einmal.",
+            "sandbox": "{{brand}} ist angemeldet, aber seine Sandbox startet auf {{computer}} nicht, daher könnte kein Agent es nutzen. Aktualisiere {{computer}} und melde dich dann erneut an."
           },
           "geminiNotShared": "Gemini hat sich angemeldet, aber auf {{computer}} lässt sich diese Anmeldung nicht mit allen Agenten teilen. Nutze stattdessen einen Gemini-API-Schlüssel.",
           "duplicate": {

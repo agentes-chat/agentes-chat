@@ -5575,7 +5575,8 @@
             "not_signed_in_after_login": "{{brand}} aceptó el inicio de sesión, pero esta cuenta no se puede usar aquí, quizá su plan no lo incluye. Prueba con otra cuenta o una clave de API.",
             "status_unknown": "{{brand}} no indicó si la cuenta inició sesión. Inténtalo de nuevo.",
             "no_token": "{{brand}} terminó sin mostrar el token de la cuenta. Inténtalo de nuevo.",
-            "not_kept": "La cuenta inició sesión, pero {{computer}} no pudo guardarla. Inténtalo de nuevo."
+            "not_kept": "La cuenta inició sesión, pero {{computer}} no pudo guardarla. Inténtalo de nuevo.",
+            "sandbox": "{{brand}} inició sesión, pero su sandbox no arranca en {{computer}}, así que ningún agente podría usarlo. Actualiza {{computer}} y vuelve a iniciar sesión."
           },
           "geminiNotShared": "Gemini inició sesión, pero {{computer}} no puede compartir ese inicio de sesión con todos los agentes. Usa una clave de API de Gemini.",
           "duplicate": {

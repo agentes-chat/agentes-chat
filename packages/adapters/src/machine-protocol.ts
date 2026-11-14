@@ -1207,6 +1207,8 @@ export const ACCOUNT_LOGIN_FAILURES = [
   "no_token",
   /** It signed in, but the computer couldn't keep the sign-in. */
   "not_kept",
+  /** Grok Build signed in, but its sandbox doesn't start there for an agent's user (bubblewrap's words in `message`). */
+  "sandbox",
   /** Nobody finished it within `ACCOUNT_LOGIN_TTL_MS` (`expired`). */
   "timeout",
   /** The person canceled it. */

@@ -5239,7 +5239,8 @@
             "not_signed_in_after_login": "{{brand}} menerima login, tetapi akun ini tidak bisa dipakai di sini, mungkin paketnya tidak mencakupnya. Coba akun lain atau kunci API.",
             "status_unknown": "{{brand}} tidak memberi tahu apakah akun sudah masuk. Coba lagi.",
             "no_token": "{{brand}} selesai tanpa menampilkan token akun. Coba lagi.",
-            "not_kept": "Akun sudah masuk, tetapi {{computer}} tidak bisa menyimpan loginnya. Coba lagi."
+            "not_kept": "Akun sudah masuk, tetapi {{computer}} tidak bisa menyimpan loginnya. Coba lagi.",
+            "sandbox": "{{brand}} sudah masuk, tetapi sandbox-nya tidak bisa berjalan di {{computer}}, jadi tidak ada agen yang bisa memakainya. Perbarui {{computer}}, lalu masuk lagi."
           },
           "geminiNotShared": "Gemini sudah masuk, tetapi sesi masuk itu tidak bisa dibagikan ke semua agen di {{computer}}. Pakai kunci API Gemini saja.",
           "duplicate": {

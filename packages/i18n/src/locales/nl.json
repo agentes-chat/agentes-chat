@@ -5439,7 +5439,8 @@
             "not_signed_in_after_login": "{{brand}} accepteerde het inloggen, maar dit account kan hier niet worden gebruikt, misschien valt het niet onder het abonnement. Probeer een ander account of een API-sleutel.",
             "status_unknown": "{{brand}} liet niet weten of het account is ingelogd. Probeer het opnieuw.",
             "no_token": "{{brand}} was klaar zonder het token van het account te tonen. Probeer het opnieuw.",
-            "not_kept": "Het account is ingelogd, maar {{computer}} kon de login niet bewaren. Probeer het opnieuw."
+            "not_kept": "Het account is ingelogd, maar {{computer}} kon de login niet bewaren. Probeer het opnieuw.",
+            "sandbox": "{{brand}} is ingelogd, maar de sandbox start niet op {{computer}}, dus geen enkele agent kan het gebruiken. Werk {{computer}} bij en log daarna opnieuw in."
           },
           "geminiNotShared": "Gemini is ingelogd, maar {{computer}} kan die login niet met alle agents delen. Gebruik liever een Gemini-API-sleutel.",
           "duplicate": {

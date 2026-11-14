@@ -1,6 +1,7 @@
 import { mkdirSync, realpathSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { GROK_ACCOUNT_HOMES } from "@agenteschat/adapters/command-policy";
 import {
   cgroupCounters,
   diskFigures,
@@ -61,7 +62,7 @@ import {
 } from "./access";
 import { AccountBrains } from "./account-brains";
 import { accountSelfCheck, SELF_CHECK_EVERY_MS, SELF_CHECK_RETRY_MS } from "./account-check";
-import { AccountManager, lchownTree, SYSTEM_ACCOUNTS_ROOT } from "./accounts";
+import { AccountManager, grokSandboxFails, lchownTree, SYSTEM_ACCOUNTS_ROOT } from "./accounts";
 import { ActivityLog } from "./activity";
 import {
   AccountUsers,
@@ -373,11 +374,12 @@ export interface DaemonOptions {
   /** Tests (system mode): how agents' users are found and their workers started. */
   workers?: Pick<SupervisorOptions, "user" | "start">;
   /**
-   * Tests (system mode): where the account folders are, how one is handed to an agent's user, and what goes before
-   * root's Claude CLIs (none when left out).
+   * Tests (system mode): where the account folders are (Grok Build's under `root` too unless `grokRoot`), how one is
+   * handed to an agent's user, and what goes before root's Claude CLIs (none when left out).
    */
   systemAccounts?: {
     root: string;
+    grokRoot?: string;
     chown: (file: string, uid: number, gid: number) => Promise<void>;
     authEgress?: () => string[] | null;
   };
@@ -525,13 +527,22 @@ export class RunnerDaemon implements RequestObserver {
       // an unreadable config starts unpaired
     }
     const lent = system
-      ? (opts.systemAccounts ?? { root: SYSTEM_ACCOUNTS_ROOT, chown: lchownTree, authEgress: () => authEgressPrefix() })
+      ? (opts.systemAccounts ?? {
+          root: SYSTEM_ACCOUNTS_ROOT,
+          grokRoot: GROK_ACCOUNT_HOMES,
+          chown: lchownTree,
+          authEgress: () => authEgressPrefix(),
+        })
       : null;
     const accountUsers = system ? (opts.accountUsers ?? new AccountUsers({ home: opts.home, log: opts.log })) : null;
     this.accountUsers = accountUsers;
     this.accounts = new AccountManager({
       root: lent?.root ?? path.join(opts.home, "accounts"),
       ...(lent ? { lending: { chown: lent.chown } } : {}),
+      ...(lent?.grokRoot ? { grokRoot: lent.grokRoot } : {}),
+      ...(lent && !opts.systemAccounts && process.platform === "linux"
+        ? { grokSandbox: (dir: string) => grokSandboxFails(dir) }
+        : {}),
       ...(lent?.authEgress ? { authEgress: lent.authEgress } : {}),
       ...(accountUsers
         ? {

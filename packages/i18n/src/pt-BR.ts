@@ -5690,7 +5690,7 @@ export const ptBR = {
           expired: "O tempo para entrar acabou. Tente de novo.",
           /**
            * Why a sign-in ended on the computer, by its code (`loginFailureLine`). `brand`: the provider or the plan.
-           * `cli_exit` and `not_signed_in_after_login` show the CLI's own words under them.
+           * `cli_exit`, `not_signed_in_after_login` and `sandbox` show the CLI's own words under them.
            */
           why: {
             not_installed: "O {{brand}} não está instalado no {{computer}}. Tente de novo.",
@@ -5703,6 +5703,9 @@ export const ptBR = {
             status_unknown: "O {{brand}} não respondeu se a conta entrou. Tente de novo.",
             no_token: "O {{brand}} terminou sem mostrar o token da conta. Tente de novo.",
             not_kept: "A conta entrou, mas o {{computer}} não conseguiu guardar o login. Tente de novo.",
+            /** Grok Build signed in, but its sandbox doesn't start on the computer for an agent (runner `sandbox`). */
+            sandbox:
+              "O {{brand}} entrou, mas a sandbox dele não abre no {{computer}}, então nenhum agente conseguiria usar. Atualize o {{computer}} e entre de novo.",
           },
           geminiNotShared:
             "O Gemini entrou, mas o {{computer}} não consegue compartilhar esse login com todos os agentes. Use uma chave de API do Gemini.",
