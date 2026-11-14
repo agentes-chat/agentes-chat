@@ -239,6 +239,9 @@ export function routeNewWindowLinks(root: HTMLElement): () => void {
   return () => root.removeEventListener("click", onClick);
 }
 
+/** The app's Preferences tabs a page may open (`answerThisMac` in apps/desktop control/this-mac.ts). */
+export type PrefsTab = "folders" | "tools" | "updates" | "servers";
+
 export const thisMac = {
   status: () => invoke<ThisMacStatus>({ kind: "status" }),
   /**
@@ -249,11 +252,13 @@ export const thisMac = {
     invoke<{ userCode: string | null }>({ kind: "connect", orgId, ...(orgName ? { orgName } : {}) }),
   /** The socket again (this Mac went offline for `orgId`). */
   reconnect: (orgId: string) => invoke<unknown>({ kind: "reconnect", orgId }),
-  openPrefs: (tab: "folders" | "tools" | "updates") => invoke<unknown>({ kind: "prefs", tab }),
+  openPrefs: (tab: PrefsTab) => invoke<unknown>({ kind: "prefs", tab }),
   /** The menu bar's popover, where access requests are answered. */
   showRequests: () => invoke<unknown>({ kind: "requests" }),
   /** System Settings on the microphone's list (a voice message macOS refused); an older app refuses it. */
   openMicrophoneSettings: () => invoke<unknown>({ kind: "privacy", pane: "microphone" }),
+  /** System Settings on the Local Network list (Wi-Fi pairing found no phone); an older app refuses it. */
+  openLocalNetworkSettings: () => invoke<unknown>({ kind: "privacy", pane: "network" }),
   /**
    * The app icon on this computer (ADR 0179): one of the app's ids, or an agent with the Dock's and the windows'
    * pictures drawn here (PNG in base64); the app keeps and shows it, and answers the one kept (nothing asked: reads it).

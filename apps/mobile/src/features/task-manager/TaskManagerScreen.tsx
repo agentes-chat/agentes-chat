@@ -23,6 +23,8 @@ import {
   taskTime,
   taskTitle,
   taskWaitWords,
+  type WaitCause,
+  waitCauses,
 } from "@agenteschat/client/lib/task-manager";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -44,6 +46,7 @@ import {
   PixelDone,
   PixelFail,
   PixelStopped,
+  ProviderLogo,
   SCREEN_X,
   SectionHeader,
   SkeletonList,
@@ -170,6 +173,8 @@ function TaskManager() {
   const askedCount = groups.reduce((n, g) => n + g.tasks.length, 0);
   const delegatedCount = delegated.reduce((n, g) => n + g.tasks.length, 0);
   const computers = view?.computers ?? [];
+  const causes = waitCauses(all).slice(0, CAUSES_MAX);
+  const done = view?.doneToday ?? ended.filter((e) => e.status === "done").length;
   return (
     <PushedLargeTitle
       title={t("taskManager.title")}
@@ -192,6 +197,19 @@ function TaskManager() {
             <Text variant="subhead" tone="muted" style={styles.summary}>
               {summary}
             </Text>
+            {causes.length > 0 ? (
+              <Animated.View {...fade} layout={layout}>
+                <Text variant="footnote" tone="muted" style={styles.today}>
+                  {t("taskManager.capacity.today", {
+                    count: done,
+                    waiting: all.filter((x) => taskState(x) === "waiting").length,
+                  })}
+                </Text>
+                {causes.map((cause, i) => (
+                  <CauseRow key={cause.key} cause={cause} computers={computers} divider={i > 0} />
+                ))}
+              </Animated.View>
+            ) : null}
             {sum.tasks + hidden > 0 ? null : (
               <EmptyState
                 size="panel"
@@ -457,6 +475,61 @@ function OneLine({ title, line, variant = "body" }: { title: string; line?: stri
   );
 }
 
+/** Causes shown at most: the ones holding the most work. */
+const CAUSES_MAX = 3;
+
+/**
+ * What holds waiting work (`waitCauses`), one line with its count, as the web's strip: a plan at its limit opens IA e
+ * uso, a full computer its line, one away the computers, people's oks and answers the first such task's screen.
+ */
+function CauseRow({ cause, computers, divider }: { cause: WaitCause; computers: ComputerSummary[]; divider: boolean }) {
+  const { t, i18n } = useTranslation();
+  const c = useColors();
+  const openQueue = useOpenQueue();
+  const first = cause.tasks[0] as ManagedTask;
+  const words = taskWaitWords(t, i18n.language, first);
+  const count = t("taskManager.tasks", { count: cause.tasks.length });
+  const computer = cause.kind === "computer" ? computers.find((m) => m.id === cause.machineId) : undefined;
+  const brain = first.brain && first.brain !== "model" ? first.brain : null;
+  const kind = useComputerKind(useOrgId(), cause.kind === "computer" ? cause.machineId : null);
+  const row =
+    cause.kind === "limit"
+      ? {
+          title: words?.state ?? "",
+          line: [words?.next, count].filter(Boolean).join(" · "),
+          lead: brain ? <ProviderLogo id={brain} size="xs" /> : <Icon name="clock" size={16} color={c.muted} />,
+          onPress: () => router.push("/usage"),
+        }
+      : cause.kind === "computer"
+        ? {
+            title: computer?.name ?? first.machine?.name ?? "",
+            line: cause.busy
+              ? t("taskManager.queue.full", { count: computer?.inLine || cause.tasks.length })
+              : [words?.state, count].join(" · "),
+            lead: <ComputerIcon kind={kind} size={16} color={c.muted} />,
+            onPress: cause.busy ? () => openQueue(cause.machineId) : () => router.push("/settings/devices"),
+          }
+        : {
+            title: t("taskManager.waiting", { count: cause.tasks.length }),
+            line: words?.next ?? "",
+            lead: <Icon name="clock" size={16} color={c.muted} />,
+            onPress: () => router.push(taskHref(first.runId)),
+          };
+  return (
+    <Pressable
+      onPress={row.onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${row.title}, ${row.line}`}
+      style={({ pressed }) => [styles.task, pressed && { backgroundColor: c.sunken }]}
+    >
+      {divider ? <View style={[styles.divider, styles.textDivider, { backgroundColor: c.line2 }]} /> : null}
+      <Tile size={LEAD}>{row.lead}</Tile>
+      <OneLine title={row.title} line={row.line} variant="subhead" />
+      <Icon name="right" size={15} color={c.faint} />
+    </Pressable>
+  );
+}
+
 /**
  * A computer with work (ADR 0128): its name, whether it has room or how many wait for it, how many run there now. It
  * opens its line (`QueueSheet`).
@@ -693,6 +766,7 @@ const styles = StyleSheet.create({
   centerText: { textAlign: "center" },
   // Under the large title's words, as Equipe's line.
   summary: { paddingHorizontal: SCREEN_X, marginTop: -4, paddingBottom: 4 },
+  today: { paddingHorizontal: SCREEN_X, paddingTop: 8 },
   // One line each: the touch rows' 12 above and below it, the lead (28) at most as tall as that.
   agent: {
     flexDirection: "row",

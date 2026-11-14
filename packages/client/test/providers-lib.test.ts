@@ -6,7 +6,9 @@ import {
   autoMakerOf,
   keyLine,
   keyLooksValid,
+  keyName,
   keyStepHint,
+  keyThinks,
   modelChoices,
   PROVIDERS,
   providerGuess,
@@ -109,6 +111,36 @@ describe("a saved key's line", () => {
     expect(keyLine(t, { label: "Marketing", provider: "anthropic", keyHint: "0000" })).toBe(
       'newAgent.otherKeyDesc {"provider":"Claude","hint":"0000"}',
     );
+  });
+
+  test("an endpoint's key is named by its own name and its line says where it is, never the raw id custom", () => {
+    const endpoint = { style: "openai" as const, baseURL: "https://api.example.com/v1", models: [{ id: "m1" }] };
+    const cc = { label: "Gateway Sul", provider: "custom", keyHint: "x7Qp", endpoint };
+    expect(keyName(cc)).toBe("Gateway Sul");
+    expect(keyName({ label: "Marketing", provider: "anthropic" })).toBe("Claude");
+    expect(keyLine(t, cc)).toBe('newAgent.otherKeyDesc {"provider":"api.example.com","hint":"x7Qp"}');
+    // A local server with no key: only where it is, with its port.
+    const local = { ...cc, keyHint: "", endpoint: { ...endpoint, baseURL: "http://127.0.0.1:11434/v1" } };
+    expect(keyLine(t, local)).toBe("127.0.0.1:11434");
+  });
+
+  test("a key thinks once saved; an endpoint's once one of its models answered a test, tools or not", () => {
+    const withCheck = (check?: "ok" | "no_tools" | "failed") => ({
+      provider: "custom",
+      endpoint: {
+        style: "openai" as const,
+        baseURL: "https://api.example.com/v1",
+        models: [
+          { id: "a", check: "failed" as const },
+          { id: "b", ...(check ? { check } : {}) },
+        ],
+      },
+    });
+    expect(keyThinks({ provider: "openai" })).toBe(true);
+    expect(keyThinks(withCheck("ok"))).toBe(true);
+    expect(keyThinks(withCheck("no_tools"))).toBe(true);
+    expect(keyThinks(withCheck())).toBe(false);
+    expect(keyThinks(withCheck("failed"))).toBe(false);
   });
 });
 

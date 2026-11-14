@@ -7273,6 +7273,8 @@ export interface TaskManagerView {
   followUps?: PendingReturn[];
   /** Returns canceled since `since`, the latest first (absent on an older server). */
   canceledFollowUps?: CanceledReturn[];
+  /** Your tasks done since `since`, all of them (`ended` is cut at 50); absent on an older server. */
+  doneToday?: number;
 }
 
 /** A one-off reminder in a conversation (`reminders.*`; also a routine in Rotinas). */

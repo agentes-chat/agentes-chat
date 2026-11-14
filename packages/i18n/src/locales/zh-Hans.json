@@ -1163,6 +1163,8 @@
         "paperclip": "拖入包文件夹（包含 COMPANY.md 的那个），拖入它的 .zip，或者粘贴它的 GitHub 链接。",
         "agenteschat": "在另一个工作区中：设置 → 导入和导出 → 下载文件。然后把 .json 拖到这里。"
       },
+      "whereOther": "从另一个工作区下载文件，然后把 .json 拖到这里。",
+      "whereOtherLink": "从 {{org}} 下载",
       "request": {
         "grok-bot": {
           "title": "让你的机器人导出",
@@ -1779,11 +1781,10 @@
     "browser": "此浏览器",
     "phone": "手机",
     "phoneOn": "在手机应用中，锁屏时也会收到",
-    "phoneOff": "请在手机应用的 你 › 通知 中开启",
+    "phoneOff": "请在手机应用中开启",
     "mac": "Mac 应用",
     "macHelp": "应用打开时，即使在后台也会收到",
     "on": "开启",
-    "off": "关闭",
     "failed": "无法保存。请重试。",
     "loadFailed": "暂时无法加载你的选择。",
     "category": {
@@ -1834,7 +1835,7 @@
     },
     "inline": {
       "title": "想在 {{name}} 回复时第一时间知道吗？",
-      "why": "即使标签页已关闭也会提醒。可随时在“设置 › 通知”中更改。"
+      "why": "即使标签页已关闭也会提醒。可随时在<link>通知</link>中更改。"
     }
   },
   "shell": {
@@ -2080,7 +2081,8 @@
     "private": "扫描此二维码的人会以你的身份登录。",
     "failed": "无法生成二维码。",
     "localOnly": "这台服务器只能在运行它的电脑上打开，所以你的手机无法访问它。",
-    "localOnlyHow": "在那台电脑的 agentes.chat 应用中，打开偏好设置 › 服务器里的“从你的手机和队友那里访问”，然后回到这里。"
+    "localOnlyHow": "在那台电脑的 agentes.chat 应用中，打开偏好设置 › 服务器里的“从你的手机和队友那里访问”，然后回到这里。",
+    "localOnlyHere": "打开“从你的手机和队友那里访问”，然后回到这里。"
   },
   "team": {
     "title": "团队",
@@ -2599,7 +2601,8 @@
     "computerYours": "这是你在工作区电脑上的专属空间。只有你能查看或控制。",
     "sharedName": "{{name}}(共享)",
     "sharedPlace": "用于频道和自动运行的工作。整个工作区共用这个空间。请不要在这里存放任何私密内容。",
-    "computerNoHome": "还没有电脑。等这个工作区在“设置”的“电脑”中添加了自己的电脑后，它就会有一台。",
+    "computerNoHome": "还没有电脑。等这个工作区有了自己的电脑后，它就会有一台。",
+    "addComputer": "添加电脑",
     "computerOneUser": "这里没有电脑。工作区的电脑让所有智能体以同一个用户运行，无法把每个人的空间分开。用安装程序的 --system 选项安装的 Linux 服务器可以做到。",
     "powers": {
       "title": "工作区权限",
@@ -2971,19 +2974,6 @@
       "zen": "连接 OpenCode",
       "api_key": "添加 API 密钥"
     },
-    "toolOff": {
-      "text": "{{computer}} 已连接，但其中的 {{program}} 已关闭。只有连接这台电脑的人能打开它。",
-      "where": "在 {{computer}} 上",
-      "one": "点击时钟旁的 agentes.chat 图标 <mark/>",
-      "oneWindows": "在 Windows 上，它可能藏在任务栏的箭头 ^ 里。",
-      "two": "打开<b>偏好设置</b>",
-      "three": "在<b>工具</b>中开启 <b>{{program}}</b>",
-      "terminal": "在这台电脑的终端中运行：",
-      "here": "在<b>工具</b>中开启 <b>{{program}}</b>。",
-      "oneClick": "这台电脑上的 <b>{{program}}</b> 已关闭。",
-      "oneClickOther": "{{name}} 的电脑上的 <b>{{program}}</b> 已关闭。",
-      "waiting": "正在等待你开启。此界面会自动更新。"
-    },
     "titleFor": "为 {{name}} 连接 AI",
     "titleFor_female": "为 {{name}} 连接 AI",
     "have": {
@@ -3109,7 +3099,15 @@
       "create": "创建你的 {{provider}} API 密钥",
       "paste": "粘贴到这里",
       "forAll": "所有没有套餐的智能体都用它来思考。",
+      "forAgent": "{{agent}} 将用它思考。",
       "saved": "已保存。所有没有套餐的智能体都用它来思考。",
+      "savedFor": "已保存。{{agent}} 现在用 {{label}} 思考。",
+      "savedAll": "已保存。没有自己 AI 的智能体用它思考。",
+      "savedMade": "已保存。你的智能体现在用它思考，不再用 {{other}}。",
+      "savedOther": "已保存。你的智能体仍在用 {{other}} 思考。",
+      "useForAll": "为所有人使用此密钥",
+      "untested": "{{name}} 的模型还没有通过测试。",
+      "testModels": "测试模型",
       "savedUnchecked": "已保存，但 {{provider}} 没有回应，因此无法检查这个密钥。如果它失败，对话里会说明原因。",
       "closed": "API 密钥随工作区的 agentes.chat 套餐开放。",
       "notPlan": "编程套餐的密钥请填在上方它自己的选项里。",
@@ -7798,8 +7796,8 @@
         "repoPlaceholder": "所有者/名称",
         "oneClick": "创建 Webhook",
         "added": "已在 {{repo}} 中创建 Webhook。",
-        "byHand": "也可以手动：在仓库中打开 Settings › Webhooks › Add webhook。",
-        "open": "在仓库中打开 Settings › Webhooks › Add webhook。",
+        "byHand": "也可以在 GitHub 上手动创建。",
+        "open": "在 GitHub 的仓库中创建 webhook。",
         "openLink": "在 GitHub 中打开",
         "url": "Payload URL",
         "type": "Content type: application/json",
@@ -8800,7 +8798,6 @@
       "homeHint": "专项任务会有一个话题：{{name}} 在那里沟通、请你做决定并展示他的工作。",
       "homeHint_female": "专项任务会有一个话题：{{name}} 在那里沟通、请你做决定并展示她的工作。",
       "offline": "{{name}} 处于离线状态。它恢复在线后计划就会开始。",
-      "needsMachine": "专项任务在已连接的电脑上运行。请在 设置 › 设备 中为 {{name}} 连接一台。",
       "commandHint": "你也可以在任意对话的输入框中输入以下命令来开始：",
       "approvals": "默认情况下，合并、部署和回滚需要审批",
       "start": "开始专项任务",
@@ -9191,6 +9188,8 @@
     "fetch": "获取模型",
     "listFailed": "服务器没有列出模型（{{error}}）。请在下方输入每个模型的 ID。",
     "choose": "选择智能体可以使用的模型",
+    "search": "搜索模型",
+    "noMatch": "没有包含“{{query}}”的模型。",
     "addModel": "添加模型",
     "add": "添加",
     "modelPlaceholder": "模型 ID，例如 llama-4",
@@ -11017,8 +11016,6 @@
       "no_computer": "在“电脑”中选择一台已连接的电脑即可使用。",
       "exec_off": "这台电脑连接时没有授予运行程序的权限。",
       "runner_old": "在电脑上更新 agentes.chat 程序即可使用。",
-      "tool_off": "{{program}} 在 {{computer}} 上已关闭。请在那台电脑的 agentes.chat 应用中开启：偏好设置 → 工具。",
-      "tool_offLinux": "{{program}} 在 {{computer}} 上已关闭。请在那台电脑的 agentes.chat 应用中开启，或使用 {{command}}。",
       "tool_offOne": "{{computer}} 上的 {{program}} 已关闭。",
       "not_installed": "{{computer}} 上没有安装 {{program}}。",
       "not_reported": "{{computer}} 还在检查有哪些程序。完成后这里会自动更新。",
@@ -11166,8 +11163,9 @@
   },
   "access": {
     "matrixTitle": "智能体权限",
-    "matrixHint": "默认情况下，敏感操作（合并、部署、分享、付款）需要审批。如需逐个工具设置，请打开连接器的“工具”。",
+    "matrixHint": "默认情况下，敏感操作（合并、部署、分享、付款）需要审批。如需逐个工具设置，请打开连接器。",
     "matrixHow": "点击单元格即可更改：",
+    "openConnectors": "打开连接器",
     "kindLabel": "显示",
     "kind": {
       "connectors": "连接器",
@@ -13606,7 +13604,8 @@
       "ask": "请 {{name}} 打开",
       "asked": "已发送请求。{{name}} 会收到一个打开它的按钮。",
       "done": "已在 {{machine}} 上打开。",
-      "outdated": "请更新 {{machine}} 上的 agentes.chat 应用，才能在这里打开。"
+      "outdated": "请更新 {{machine}} 上的 agentes.chat 应用，才能在这里打开。",
+      "offline": "{{machine}} 已离线。它一回来，按钮就会打开{{tool}}。"
     },
     "remotePause": {
       "button": "暂停",
@@ -13664,7 +13663,7 @@
       },
       "grantHere": "就是这台{{device}}：请在应用的偏好设置中允许文件夹。",
       "openFolders": "打开文件夹设置",
-      "toolsHere": "就是这台{{device}}：请在应用的偏好设置的“工具”中开启浏览器。",
+      "openServers": "打开服务器设置",
       "openTools": "打开工具设置",
       "reconnect": "重新连接",
       "reconnecting": "正在重新连接这台{{device}}…",
@@ -13672,8 +13671,6 @@
       "offline": "这台{{device}}目前离线。",
       "outageTitle": "这台{{device}}在{{ago}}断开了连接",
       "toolsOff": "这台{{device}}上已关闭。请在应用的偏好设置的“工具”中开启。",
-      "browserTitle": "在这台{{device}}上开启浏览器",
-      "browserText": "在应用的偏好设置的“工具”中点一下即可。此页面会自动察觉。",
       "noReport": "这台{{device}}还没有报告它允许的内容。请更新应用。",
       "update": "更新应用"
     },
@@ -14181,6 +14178,7 @@
       "pairingCode": "WLAN 配对码",
       "pair": "配对",
       "tryAgain": "重试",
+      "openLocalNetwork": "打开本地网络设置",
       "qrLabel": "用于手机无线调试的二维码",
       "qrLine": "不要用相机扫描",
       "qrCaption": "相机会显示一个名为 agentes-… 的 Wi-Fi 网络，但它并不存在。让手机保持连接电脑所在的 Wi-Fi。",
@@ -15094,6 +15092,7 @@
       "help": "成员数、智能体数、机器规格、使用的 AI token 数，以及智能体浏览器收发的数据量等计数。绝不包括消息、文件、名称或网站。",
       "envOff": "已在此服务器的设置中关闭（TELEMETRY=off）。",
       "envOffDesktop": "已在此服务器所在电脑上的 agentes.chat 应用中关闭（偏好设置 › 服务器）。",
+      "envOffHere": "已在这台电脑的 agentes.chat 应用中关闭。",
       "see": "查看发送的内容",
       "dialogTitle": "发送的内容",
       "dialogText": "每天一次。下面就是下一份报告的完整内容。"
@@ -17096,8 +17095,9 @@
       "meter": "已使用 {{used}}，共 {{limit}}。",
       "near": "已使用 {{used}}，共 {{limit}}。达到上限后上传会暂停，不会删除任何内容。",
       "full": "上传已在 {{limit}} 处暂停。没有删除任何内容。",
-      "fullAdmin": "更换 agentes.chat 套餐、删除不再使用的文件，或在 设置 › 存储 中连接你自己的存储桶。",
-      "dailyFull": "今天的上传量已达 {{limit}}。几小时后可以再次上传。"
+      "fullAdmin": "更换 agentes.chat 套餐、删除不再使用的文件，或连接你自己的存储桶。",
+      "dailyFull": "今天的上传量已达 {{limit}}。几小时后可以再次上传。",
+      "connectBucket": "连接存储桶"
     }
   },
   "computerSetup": {
@@ -17486,8 +17486,7 @@
       "touchHint": "轻点以点击 · 拖动以滚动 · 按住以拖拽 · 双指移动视图",
       "turn": "横屏",
       "upright": "竖屏",
-      "message": "给 {{name}} 发消息",
-      "chooseOnWeb": "请在 agentes.chat 的 设置 › 设备 中选择。"
+      "message": "给 {{name}} 发消息"
     }
   },
   "agora": {
@@ -17653,6 +17652,12 @@
       "full_other": "已满 · {{count}} 个在排队",
       "room": "有空位",
       "computers": "电脑"
+    },
+    "capacity": {
+      "label": "是什么卡住了任务",
+      "today_other": "今天：已完成 {{count}} 项 · {{waiting}} 项等待中",
+      "usage": "查看用量",
+      "computers": "查看电脑"
     },
     "cards": {
       "label": "智能体",
