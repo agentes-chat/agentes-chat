@@ -41,20 +41,29 @@ A preview APK installs over an earlier one only when both were signed with the s
 
 Run **iOS build** (Actions → Run workflow): production only, sent to TestFlight (or, with "Send to TestFlight" off,
 an `.ipa` kept as the run's artifact). It runs `expo prebuild --platform ios --clean`, `pod install`, then
-`xcodebuild archive` and `-exportArchive` on a macOS runner. Signing is automatic: with the App Store Connect API
-key, Xcode asks Apple for the certificate and the profiles of the app and its share extension
-(`chat.agentes.app.share-extension`, app group `group.chat.agentes.app`), so no certificate or profile is stored
-anywhere. Nothing goes through EAS.
+`xcodebuild archive` and `-exportArchive` on a macOS runner, and Apple's uploader sends the build. Nothing goes
+through EAS, and Xcode never signs in to Apple: the build is signed by hand. The Apple Distribution certificate
+comes from a secret into a keychain made for the run; the App Store provisioning profiles of the app and its share
+extension are read from App Store Connect with the API key (`scripts/app-store-connect.sh`), and
+`plugins/with-ios-manual-signing.js` gives each target its own. Everything is removed at the end.
 
-One time:
-1. In App Store Connect: the app exists for `chat.agentes.app` (an upload is refused before that), and an API key
-   with the **Admin** role (Users and Access → Integrations → App Store Connect API); automatic signing takes no
-   lesser role.
-2. In GitHub → Settings → Secrets and variables → Actions: `APPLE_TEAM_ID` (the team's id), `ASC_API_KEY_ID` (the
-   key's id), `ASC_API_ISSUER_ID` (the issuer id) and `ASC_API_KEY_P8` (the text of the `.p8` file). Without them
-   the workflow stops at its first step.
-3. Optional: the variable `IOS_BUILD_NUMBER_BASE` (added to the run number) above the last build number in App
-   Store Connect, if any.
+One time, in the Apple Developer account:
+1. The app exists in App Store Connect for `chat.agentes.app` (an upload is refused before that).
+2. Identifiers `chat.agentes.app` and `chat.agentes.app.share-extension`, both with App Groups on and the group
+   `group.chat.agentes.app` selected (the share extension hands what it receives to the app through it); the app's
+   also with Push Notifications, Sign in with Apple and Associated Domains.
+3. An **Apple Distribution** certificate, exported with its private key as a `.p12`, and an **App Store**
+   provisioning profile for each of the two identifiers, made with that certificate. The workflow takes the newest
+   active one of each, so a profile made again (a new capability, a new certificate) needs no change here.
+4. An App Store Connect API key (Users and Access → Integrations) that may read provisioning profiles and upload
+   builds.
+
+Then in GitHub → Settings → Secrets and variables → Actions: `APPLE_TEAM_ID` (the team's id),
+`IOS_DIST_CERT_P12_BASE64` (`base64 -i dist.p12`), `IOS_DIST_CERT_PASSWORD`, `ASC_API_KEY_ID` (the key's id),
+`ASC_API_ISSUER_ID` (the issuer id) and `ASC_API_KEY_P8` (the text of the `.p8` file). Without them the workflow
+stops at its first step; a key App Store Connect refuses, or a target with no profile, stops it at the second.
+Optional variables: `IOS_BUILD_NUMBER_BASE` (added to the run number) above the last build number in App Store
+Connect, and `IOS_XCODE_VERSION` (`26.6`) to build with one Xcode whatever the runner's image brings.
 
 A build made by your own team needs your own bundle id: Apple gives `chat.agentes.app` to one team only.
 
@@ -84,6 +93,7 @@ on expo.dev (EAS environment variables) for EAS:
 | `GOOGLE_SERVICES_JSON` | Path to Firebase's `google-services.json` (the Android workflow writes it from a secret): push on Android (FCM). | none |
 | `ANDROID_VERSION_CODE` | The build's version code (the Android workflow's run). | from the config |
 | `APPLE_TEAM_ID` | The Apple team that signs the iOS app and its share extension (the iOS workflow's secret). | none |
+| `IOS_SIGNING_PROFILES` | JSON of bundle id → provisioning profile name: the iOS build signed by hand (the iOS workflow). | none (Xcode signs automatically) |
 | `IOS_BUILD_NUMBER` | The build's number on iOS (the iOS workflow's run). | from the config |
 | `APP_VARIANT` | `development` / `preview` / `production`: name and bundle id suffix, so all three install side by side. | `production` |
 
