@@ -204,6 +204,9 @@ export const agentRuns = pgTable(
     index().on(t.orgId, t.stretchId).where(sql`${t.stretchId} is not null`),
     // Runs waiting for a computer, found when it reconnects (only those rows are indexed).
     index("agent_runs_waiting_machine_idx").on(t.waitingMachineId).where(sql`${t.waitingMachineId} is not null`),
+    // The task manager's count of today's finished tasks, asked at every poll: only today's rows read, not every run
+    // the workspace ever finished. Built CONCURRENTLY (its migration), as agent_runs is large.
+    index("agent_runs_done_finished_idx").on(t.orgId, t.finishedAt).where(sql`${t.status} = 'done'`),
   ],
 );
 
