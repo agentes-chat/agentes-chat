@@ -2776,6 +2776,11 @@ export const ptBR = {
       update_role: "Mudar o cargo <b>{{name}}</b>",
       delete_role: "Apagar o cargo <b>{{name}}</b> de vez",
       move_role: "Mudar o cargo <b>{{name}}</b> de lugar",
+      /** "Quem pode…": who may do one thing, Todos and the roles at once. `short`: the permission (`permissions.*.short`). */
+      set_permission_holders: "Mudar quem pode <b>{{short}}</b>",
+      set_permission_holders_computers: "Mudar quem usa <b>os computadores dos agentes</b>",
+      /** Under it, when nobody but the owners would have it. */
+      holdersOwnersOnly: "Só os donos",
       set_member_roles: "Mudar os cargos de <b>{{name}}</b>: {{change}}",
       set_channel_permissions: "Mudar o que {{who}} pode fazer em <b>#{{channel}}</b>",
       set_my_status: "Mudar seu status: <b>{{what}}</b>",
@@ -3658,6 +3663,8 @@ export const ptBR = {
       changed_update_role: "Mudei o cargo <b>{{name}}</b>",
       changed_delete_role: "Apaguei o cargo <b>{{name}}</b>",
       changed_move_role: "Mudei o cargo <b>{{name}}</b> de lugar",
+      changed_set_permission_holders: "Mudei quem pode <b>{{short}}</b>",
+      changed_set_permission_holders_computers: "Mudei quem usa <b>os computadores dos agentes</b>",
       changed_set_member_roles: "Mudei os cargos de <b>{{name}}</b>: {{change}}",
       changed_set_channel_permissions: "Mudei o que {{who}} pode fazer em <b>#{{channel}}</b>",
       changed_set_my_status: "Mudei seu status: <b>{{what}}</b>",
@@ -4669,6 +4676,11 @@ export const ptBR = {
   approval: {
     expiredChip: "Expirou · {{when}}",
     canceledChip: "Cancelado · {{when}}",
+    /** After an approved request's outcome on a shared card: it runs in the order asked. */
+    line: {
+      after: "roda depois de “{{title}}”",
+      notRun: "não rodou: o pedido anterior não foi aprovado",
+    },
     waitingFor: "Aguardando {{name}}",
     waitingAdmin: "Aguardando um admin",
     reasonLine: "Motivo: {{reason}}",
@@ -5276,7 +5288,18 @@ export const ptBR = {
       failed: "Falhou",
       running: "Executando",
       scheduled: "Agendado",
+      queued: "Na fila",
+      notRun: "Não rodou",
     },
+    /** Approved, waiting for a request the agent asked before it on the same card to be decided and done. */
+    queuedLine: "Aprovado. Roda depois de “{{title}}”, pedido antes.",
+    /** Approved before a request asked ahead of it was refused or expired: it didn't run. */
+    notRunRefused: "“{{title}}”, pedido antes, foi recusado depois que este foi aprovado. Por isso este não rodou.",
+    notRunExpired:
+      "“{{title}}”, pedido antes, expirou sem decisão depois que este foi aprovado. Por isso este não rodou.",
+    notRunEarlier: "Um pedido anterior foi recusado ou expirou depois que este foi aprovado. Por isso este não rodou.",
+    /** Its place among the requests on its card, in the order the agent asked. */
+    position: "{{n}} de {{total}}",
     expiredLine: "Ninguém decidiu em 24 h, então nada foi feito.",
     canceledLine: "A execução parou antes da decisão.",
     /** Replaced by the agent's newer request for the same action (`supersededById`). */
@@ -5347,8 +5370,10 @@ export const ptBR = {
       email: "O e-mail",
       text: "O que vai ser publicado",
       textDone: "O que foi publicado",
+      textNot: "O que seria publicado",
       values: "O que vai fazer",
       valuesDone: "O que fez",
+      valuesNot: "O que ia fazer",
       trail: "Como chegou aqui",
       showSteps: "Ver cada passo",
       hideSteps: "Esconder os passos",
@@ -11439,15 +11464,6 @@ export const ptBR = {
       nowYours: "Parou para ler seu recado",
       nowOf: "Parou para ler o recado de {{name}}",
     },
-    choice: {
-      label: "Como mandar enquanto o {{name}} trabalha",
-      label_female: "Como mandar enquanto a {{name}} trabalha",
-      join: "Juntar ao que o {{name}} faz",
-      join_female: "Juntar ao que a {{name}} faz",
-      interrupt: "Parar e mandar",
-      joins: "junta",
-      interrupts: "para e manda",
-    },
     strip: {
       see: "Ver",
       toStop: "para parar",
@@ -15232,6 +15248,11 @@ export const ptBR = {
         left: "Saiu do workspace",
         role_changed: "Mudou o cargo de um membro",
         password_link: "Gerou um link de senha nova para um membro",
+      },
+      role: {
+        /** Todos and the roles at once ("Quem pode…"). `short`: the permission (`permissions.*.short`). */
+        permission_set: "Mudou quem pode {{short}}",
+        permission_set_computers: "Mudou quem usa os computadores dos agentes",
       },
       apps: {
         connected: "Conectou o {{app}}",

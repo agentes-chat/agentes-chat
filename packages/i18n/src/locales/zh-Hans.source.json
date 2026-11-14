@@ -6662,6 +6662,15 @@
   "rightHand.action.move_role": {
     "value": "Move the role <b>{{name}}</b>"
   },
+  "rightHand.action.set_permission_holders": {
+    "value": "Change who can <b>{{short}}</b>"
+  },
+  "rightHand.action.set_permission_holders_computers": {
+    "value": "Change who uses <b>the agents' computers</b>"
+  },
+  "rightHand.action.holdersOwnersOnly": {
+    "value": "Only owners"
+  },
   "rightHand.action.set_member_roles": {
     "value": "Change the roles of <b>{{name}}</b>: {{change}}"
   },
@@ -8463,6 +8472,12 @@
   },
   "agentActions.workspace.changed_move_role": {
     "value": "Moved the role <b>{{name}}</b>"
+  },
+  "agentActions.workspace.changed_set_permission_holders": {
+    "value": "Changed who can <b>{{short}}</b>"
+  },
+  "agentActions.workspace.changed_set_permission_holders_computers": {
+    "value": "Changed who uses <b>the agents' computers</b>"
   },
   "agentActions.workspace.changed_set_member_roles": {
     "value": "Changed the roles of <b>{{name}}</b>: {{change}}"
@@ -10872,6 +10887,12 @@
   "approval.canceledChip": {
     "value": "Canceled · {{when}}"
   },
+  "approval.line.after": {
+    "value": "runs after “{{title}}”"
+  },
+  "approval.line.notRun": {
+    "value": "not run: the request before it wasn't approved"
+  },
   "approval.waitingFor": {
     "value": "Waiting for {{name}}"
   },
@@ -12321,6 +12342,27 @@
   "approvals.status.scheduled": {
     "value": "Scheduled"
   },
+  "approvals.status.queued": {
+    "value": "In line"
+  },
+  "approvals.status.notRun": {
+    "value": "Not run"
+  },
+  "approvals.queuedLine": {
+    "value": "Approved. Runs after “{{title}}”, asked before it."
+  },
+  "approvals.notRunRefused": {
+    "value": "“{{title}}”, asked before this, was refused after this was approved, so this didn't run."
+  },
+  "approvals.notRunExpired": {
+    "value": "“{{title}}”, asked before this, expired undecided after this was approved, so this didn't run."
+  },
+  "approvals.notRunEarlier": {
+    "value": "A request asked before this was refused or expired after this was approved, so this didn't run."
+  },
+  "approvals.position": {
+    "value": "{{n}} of {{total}}"
+  },
   "approvals.expiredLine": {
     "value": "Nobody decided within 24 h, so nothing was done."
   },
@@ -12498,11 +12540,17 @@
   "approvals.review.textDone": {
     "value": "What it published"
   },
+  "approvals.review.textNot": {
+    "value": "What it would have published"
+  },
   "approvals.review.values": {
     "value": "What it will do"
   },
   "approvals.review.valuesDone": {
     "value": "What it did"
+  },
+  "approvals.review.valuesNot": {
+    "value": "What it would have done"
   },
   "approvals.review.trail": {
     "value": "How it got here"
@@ -27142,21 +27190,6 @@
   "run.well.nowOf": {
     "value": "Stopped to read {{name}}'s note"
   },
-  "run.choice.label": {
-    "value": "How to send while {{name}} works"
-  },
-  "run.choice.join": {
-    "value": "Add to what {{name}} is doing"
-  },
-  "run.choice.interrupt": {
-    "value": "Stop and send"
-  },
-  "run.choice.joins": {
-    "value": "adds"
-  },
-  "run.choice.interrupts": {
-    "value": "stops and sends"
-  },
   "run.strip.see": {
     "value": "View"
   },
@@ -36641,6 +36674,12 @@
   },
   "audit.change.member.password_link": {
     "value": "Made a new-password link for a member"
+  },
+  "audit.change.role.permission_set": {
+    "value": "Changed who can {{short}}"
+  },
+  "audit.change.role.permission_set_computers": {
+    "value": "Changed who uses the agents' computers"
   },
   "audit.change.apps.connected": {
     "value": "Connected {{app}}"

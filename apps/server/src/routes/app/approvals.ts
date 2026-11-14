@@ -87,7 +87,14 @@ export const Approval = z
     ownerUserId: z.string().nullable().openapi({ description: "The agent's owner (they and admins may decide)." }),
     executedAt: z.string().nullable().openapi({ description: "When the approved action ran." }),
     result: z
-      .object({ ok: z.boolean(), text: z.string() })
+      .object({
+        ok: z.boolean(),
+        text: z.string(),
+        notRunAfter: z.string().optional().openapi({
+          description:
+            "Not run: approved before this request, asked ahead of it on its card, was refused or expired (its id).",
+        }),
+      })
       .nullable()
       .openapi({ description: "What the action returned once it ran (raw, short)." }),
     connector: z.string().nullable().openapi({ example: "github" }),

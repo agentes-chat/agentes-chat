@@ -3679,7 +3679,7 @@ html:not([data-pointer]) .ac-back:focus-visible {
   border-radius: var(--radius-cut);
 }
 
-/* Before and after, as GitHub shows a change: added on green with a green bar, removed on red, struck through. */
+/* Before and after: added on green, removed on red, struck through. The tint alone says which, no bar on the edge. */
 .ac-diff {
   display: flex;
   flex-direction: column;
@@ -3687,7 +3687,7 @@ html:not([data-pointer]) .ac-back:focus-visible {
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
-/* The rows on its rounded corners take its radius less its border, so a row's tint and bar follow the corner. */
+/* The rows on its rounded corners take its radius less its border, so a row's tint follows the corner. */
 .ac-diff > :first-child {
   border-top-left-radius: calc(var(--radius-sm) - 1px);
   border-top-right-radius: calc(var(--radius-sm) - 1px);
@@ -3716,12 +3716,10 @@ html:not([data-pointer]) .ac-back:focus-visible {
 .ac-diff__line--add,
 .ac-diff__block--add {
   background: color-mix(in srgb, var(--ok) 12%, transparent);
-  box-shadow: inset 3px 0 0 var(--ok);
 }
 .ac-diff__line--del,
 .ac-diff__block--del {
   background: color-mix(in srgb, var(--danger) 10%, transparent);
-  box-shadow: inset 3px 0 0 var(--danger);
 }
 .ac-diff__line--add .ac-diff__mark {
   color: var(--ok);
@@ -7315,42 +7313,6 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
 .ac-composer__send[data-mode="stop"] .ac-composer__glyph--stop {
   transform: none;
   opacity: 1;
-}
-/* While an agent works and there is text: "Juntar ao que ele faz" / "Parar e mandar" above the box. */
-.ac-composer-choice {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 0 4px 6px;
-  font-size: 12.5px;
-  color: var(--muted);
-}
-.ac-composer-choice .ac-seg__item[data-on] {
-  background: var(--raised);
-  box-shadow: var(--seg-plate-ring), var(--top);
-}
-.ac-composer-choice__hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--faint);
-}
-@media (max-width: 760px), (hover: none), (pointer: coarse) {
-  .ac-composer-choice__hint {
-    display: none;
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .ac-composer-choice {
-    animation: ac-composer-choice-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-}
-@keyframes ac-composer-choice-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
 }
 .ac-composer__send-text {
   display: inline-flex;

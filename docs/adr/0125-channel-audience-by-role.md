@@ -41,7 +41,9 @@ was a private channel kept by hand.
 5. **Apps.** "Quem pode entrar" has a third card, "Departamentos ou cargos", with the roles to tick (the same rows as
    an agent's audience, `RoleChecklist`), in Criar canal and in the channel's details (saved on each change once a
    role is ticked; hidden for #general). The phone joins such a channel from its card like a public one
-   (`joinable`); choosing who may join stays on the web, as private channels did.
+   (`joinable`); choosing who may join stays on the web, as private channels did. *Amended 2026-11-13:* a cargo's
+   Canais tab (ADR 0085, addendum of 2026-11-13) sets the same `audience_role_ids` from the cargo's side, with the
+   same meaning: see and join, membership following the cargos.
 
 ## Consequences
 

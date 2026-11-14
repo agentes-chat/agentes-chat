@@ -2870,6 +2870,11 @@ export const en = {
       update_role: "Change the role <b>{{name}}</b>",
       delete_role: "Delete the role <b>{{name}}</b> for good",
       move_role: "Move the role <b>{{name}}</b>",
+      /** "Who can…": who may do one thing, Everyone and the roles at once. `short`: the permission (`permissions.*.short`). */
+      set_permission_holders: "Change who can <b>{{short}}</b>",
+      set_permission_holders_computers: "Change who uses <b>the agents' computers</b>",
+      /** Under it, when nobody but the owners would have it. */
+      holdersOwnersOnly: "Only owners",
       set_member_roles: "Change the roles of <b>{{name}}</b>: {{change}}",
       set_channel_permissions: "Change what {{who}} may do in <b>#{{channel}}</b>",
       set_my_status: "Set your status: <b>{{what}}</b>",
@@ -3751,6 +3756,8 @@ export const en = {
       changed_update_role: "Changed the role <b>{{name}}</b>",
       changed_delete_role: "Deleted the role <b>{{name}}</b>",
       changed_move_role: "Moved the role <b>{{name}}</b>",
+      changed_set_permission_holders: "Changed who can <b>{{short}}</b>",
+      changed_set_permission_holders_computers: "Changed who uses <b>the agents' computers</b>",
       changed_set_member_roles: "Changed the roles of <b>{{name}}</b>: {{change}}",
       changed_set_channel_permissions: "Changed what {{who}} may do in <b>#{{channel}}</b>",
       changed_set_my_status: "Set your status: <b>{{what}}</b>",
@@ -4783,6 +4790,11 @@ export const en = {
   approval: {
     expiredChip: "Expired · {{when}}",
     canceledChip: "Canceled · {{when}}",
+    /** After an approved request's outcome on a shared card: it runs in the order asked. */
+    line: {
+      after: "runs after “{{title}}”",
+      notRun: "not run: the request before it wasn't approved",
+    },
     waitingFor: "Waiting for {{name}}",
     waitingAdmin: "Waiting for an admin",
     reasonLine: "Reason: {{reason}}",
@@ -5376,7 +5388,17 @@ export const en = {
       failed: "Failed",
       running: "Running",
       scheduled: "Scheduled",
+      queued: "In line",
+      notRun: "Not run",
     },
+    /** Approved, waiting for a request the agent asked before it on the same card to be decided and done. */
+    queuedLine: "Approved. Runs after “{{title}}”, asked before it.",
+    /** Approved before a request asked ahead of it was refused or expired: it didn't run. */
+    notRunRefused: "“{{title}}”, asked before this, was refused after this was approved, so this didn't run.",
+    notRunExpired: "“{{title}}”, asked before this, expired undecided after this was approved, so this didn't run.",
+    notRunEarlier: "A request asked before this was refused or expired after this was approved, so this didn't run.",
+    /** Its place among the requests on its card, in the order the agent asked. */
+    position: "{{n}} of {{total}}",
     expiredLine: "Nobody decided within 24 h, so nothing was done.",
     canceledLine: "The run stopped before a decision.",
     /** Replaced by the agent's newer request for the same action (`supersededById`). */
@@ -5445,8 +5467,10 @@ export const en = {
       email: "The email",
       text: "What it will publish",
       textDone: "What it published",
+      textNot: "What it would have published",
       values: "What it will do",
       valuesDone: "What it did",
+      valuesNot: "What it would have done",
       trail: "How it got here",
       showSteps: "See each step",
       hideSteps: "Hide the steps",
@@ -11390,13 +11414,6 @@ export const en = {
       nowYours: "Stopped to read your note",
       nowOf: "Stopped to read {{name}}'s note",
     },
-    choice: {
-      label: "How to send while {{name}} works",
-      join: "Add to what {{name}} is doing",
-      interrupt: "Stop and send",
-      joins: "adds",
-      interrupts: "stops and sends",
-    },
     strip: {
       see: "View",
       toStop: "to stop",
@@ -15255,6 +15272,11 @@ export const en = {
         left: "Left the workspace",
         role_changed: "Changed a member's role",
         password_link: "Made a new-password link for a member",
+      },
+      role: {
+        /** Everyone and the roles at once ("Who can…"). `short`: the permission (`permissions.*.short`). */
+        permission_set: "Changed who can {{short}}",
+        permission_set_computers: "Changed who uses the agents' computers",
       },
       apps: {
         connected: "Connected {{app}}",
