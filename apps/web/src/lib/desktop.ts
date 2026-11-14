@@ -222,21 +222,33 @@ export function pageReadyAfterPaint() {
 /**
  * Links that open a new window (`target="_blank"`) in the app: the window's `on_new_window` sends them on, a page
  * of this server to the window and anything else to the browser (main_window.rs). The app's shell plugin adds
- * a click listener of its own to every page (on `body`) that takes these links first and asks the app over IPC,
- * which the site may not do, so a click did nothing. This one sits on the React root: after the page's own
- * handlers (one that handled the click itself, a popup, keeps it) and before the plugin's.
+ * a click listener of its own to every page (on `body`, as the page loads) that takes these links, even one whose
+ * click the page handled, and asks the app over IPC, which the site may not do, so a click did nothing. This one
+ * takes the click at the last element under `body` on its way up (the React root, or what the site lays over it in
+ * `body`: a dialog, a popover, a side panel, a toast): after the page's own handlers (one that handled the click
+ * itself, a popup, keeps it) and before the plugin's, which never sees it. React handles the clicks in what it puts
+ * in `body` on `body` itself, after the plugin: a link there that handles its own click does it in `onClickCapture`.
  */
-export function routeNewWindowLinks(root: HTMLElement): () => void {
-  const onClick = (e: MouseEvent) => {
-    if (e.defaultPrevented || e.button !== 0) return;
+export function routeNewWindowLinks(): () => void {
+  const route = (e: MouseEvent) => {
+    if (e.button !== 0) return;
     const link = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>("a[href]") : null;
     if (link?.target !== "_blank" || !/^(https?|mailto|tel):$/.test(link.protocol)) return;
-    e.preventDefault();
     e.stopPropagation();
+    if (e.defaultPrevented) return;
+    e.preventDefault();
     window.open(link.href, "_blank", "noopener");
   };
-  root.addEventListener("click", onClick);
-  return () => root.removeEventListener("click", onClick);
+  // Last on that element, after the page's own listeners there, for this click: one a click stopped on its way left
+  // behind runs for the next click, which it checks like any other.
+  const onClick = (e: MouseEvent) => {
+    const path = e.composedPath();
+    const top = path[path.indexOf(document.body) - 1] as HTMLElement | undefined;
+    top?.removeEventListener("click", route);
+    top?.addEventListener("click", route, { once: true });
+  };
+  document.addEventListener("click", onClick, true);
+  return () => document.removeEventListener("click", onClick, true);
 }
 
 export const thisMac = {

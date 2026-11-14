@@ -32,11 +32,7 @@ function Root() {
   // In the app: once this first screen is on the glass, the app's cover over the window goes.
   useEffect(pageReadyAfterPaint, []);
   // In the app: a link to another site opens in the browser, one to this server in the window (main_window.rs).
-  useEffect(() => {
-    const root = document.getElementById("root");
-    if (!inDesktopApp() || !root) return;
-    return routeNewWindowLinks(root);
-  }, []);
+  useEffect(() => (inDesktopApp() ? routeNewWindowLinks() : undefined), []);
   // The app opens a page of the site that is already open (the tray, a notification, ⌘-click) without
   // loading it again: the route moves (main_window.rs). Downloads and the API go as a plain load.
   useEffect(() => {
