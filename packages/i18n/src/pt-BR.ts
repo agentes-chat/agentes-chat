@@ -15509,6 +15509,9 @@ export const ptBR = {
         /** The words of every message, in every look, smallest step first. */
         textSize: "Tamanho do texto",
         textSizeHelp: "Das mensagens, em todas as conversas e nos seus aparelhos",
+        fullMessages: "Mostrar mensagens completas",
+        fullMessagesHelp:
+          "Mostra mensagens longas sem “Ver mais”, em todas as conversas e em todos os seus dispositivos.",
         /** On the phone, under the text size slider: the choice sizes the whole app, on top of the system's own setting. */
         textSizePhone: "Vale para o app todo, junto com o tamanho de texto do celular",
         textXs: "Menor",
