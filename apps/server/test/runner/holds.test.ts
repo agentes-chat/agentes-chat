@@ -1,5 +1,4 @@
 import { afterEach, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { AgentUser } from "../../runner/agent-users";
@@ -305,7 +304,7 @@ test("the browser's wait ends a few looks after its slice is empty", async () =>
   const dir = tempDir("cg-");
   dirs.push(dir);
   const events = path.join(dir, "cgroup.events");
-  spawnSync("/bin/sh", ["-c", `printf 'populated 1\\nfrozen 0\\n' > ${events}`]);
+  writeFileSync(events, "populated 1\nfrozen 0\n");
   const wait = lockCommand({ uid: 1, browser: true }, Date.now()).slice(5);
   wait[3] = events;
   const waiting = Bun.spawn(wait);
@@ -315,6 +314,6 @@ test("the browser's wait ends a few looks after its slice is empty", async () =>
   });
   await Bun.sleep(2500);
   expect(done).toBe(false);
-  spawnSync("/bin/sh", ["-c", `printf 'populated 0\\nfrozen 0\\n' > ${events}`]);
+  writeFileSync(events, "populated 0\nfrozen 0\n");
   await waitFor(() => done, 12_000);
 });
