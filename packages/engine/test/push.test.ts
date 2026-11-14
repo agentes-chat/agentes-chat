@@ -245,10 +245,41 @@ describe("push delivery", () => {
       notificationId: n?.id,
       channelId: f.general.id,
       messageId: sent.id,
+      // Whose it is: a device signed in with several accounts opens it as theirs (ADR 0183).
+      user: bia.id,
     });
     // A retried job sends nothing new (one job per notification).
     await drain();
     expect(push.sent).toHaveLength(1);
+  });
+
+  test("a token moves to whoever registers it; nobody named in `sharedWith` gains one (ADR 0183)", async () => {
+    f = await setup();
+    const { bia } = await withPhone();
+    const eve = await addMember(f.db, f.org.id, "member", "eve");
+    const dan = await addMember(f.db, f.org.id, "member", "dan");
+    // The same phone signed in as Eve beside Bia. While a token is one person's in the database, it is the last
+    // one to register who hears it; naming someone who never registered it gives them nothing either way.
+    await registerPushDevice(f.db, eve.id, {
+      token: TOKEN_BIA,
+      platform: "ios",
+      locale: "en",
+      sharedWith: [bia.id, dan.id],
+    });
+    expect((await listPushDevices(f.db, eve.id)).map((d) => d.token)).toEqual([TOKEN_BIA]);
+    expect(await listPushDevices(f.db, dan.id)).toEqual([]);
+    // Registered again: still one row, refreshed.
+    await registerPushDevice(f.db, eve.id, {
+      token: TOKEN_BIA,
+      platform: "ios",
+      locale: "pt-BR",
+      sharedWith: [bia.id],
+    });
+    expect((await listPushDevices(f.db, eve.id)).map((d) => d.locale)).toEqual(["pt-BR"]);
+    // The phone changed hands: Bia alone now, and Eve stops hearing it.
+    await registerPushDevice(f.db, bia.id, { token: TOKEN_BIA, platform: "ios", locale: "pt-BR" });
+    expect(await listPushDevices(f.db, eve.id)).toEqual([]);
+    expect(await listPushDevices(f.db, bia.id)).toHaveLength(1);
   });
 
   test("what the right hand writes by itself pushes its own words under its name, never as a reply", async () => {

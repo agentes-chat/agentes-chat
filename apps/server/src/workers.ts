@@ -39,6 +39,7 @@ import {
   pollMailWatches,
   postAutonomyDigests,
   pruneDeletionCodes,
+  pruneEmailChanges,
   pruneJoinRequests,
   pruneMessageClientIds,
   pruneOperatorEvents,
@@ -314,6 +315,7 @@ export function startWorkers(deps: WorkerDeps) {
 
   every("deletions", WORKER_INTERVALS_MS.deletions, async () => {
     await pruneDeletionCodes(db);
+    await pruneEmailChanges(db);
     const accounts = await enqueueOverdueAccountDeletions(db);
     const due = await enqueueOverdueDeletions(db);
     if (due + accounts > 0) {

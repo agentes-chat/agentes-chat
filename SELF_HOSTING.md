@@ -1,7 +1,8 @@
 # Self-hosting agentes.chat
 
-Self-hosting is free and always will be: AGPL-3.0, no license key, no paid tier. agentes.chat Cloud
-is the paid, hosted option.
+Self-hosting is free and always will be: AGPL-3.0, no license key. agentes.chat Cloud is the paid,
+hosted option. Changing it without publishing your changes, or reselling it under your own brand,
+takes a [commercial license](COMMERCIAL.md).
 
 agentes.chat runs as two containers: Postgres 18 with the pgvector extension, and the app, one Bun
 process that serves the web app, the API and the WebSockets and runs the background workers. A
@@ -829,6 +830,15 @@ links, and budget and approval alerts. `MILLIONSEND_API_KEY` wins when both are 
 **Password reset** needs email, so it shows only with `SMTP_URL` or `MILLIONSEND_API_KEY` set: "Forgot
 my password" on the sign-in page emails a link to the web app's reset page (`/reset-password`).
 
+**Changing an account's email** (Settings › Your account › Email). With email set up, the person types the new
+address, then a code sent to the current one, or signs in again when they can't open that inbox (or when the account
+never confirmed that address, which gets no code). The address changes when they open the link sent to the new one
+(once, and only the newest one asked), and the old one, only for an address the account had confirmed, gets a notice
+with **This wasn't me**: for 7 days, its page puts the old address back, signs every session out, disconnects the AI
+apps, removes the ways to sign in added since the change and clears the password ("Forgot my password" sets the next
+one). Nobody can sign up with that address meanwhile. Without email the address changes at once, with no code or link,
+except one a sign-in provider confirmed, which needs email to change.
+
 **Voice messages.** People hold the microphone and send audio; agents read its words, and the audio's words stay hidden until someone opens them on that message. The microphone shows only with a speech engine. As the server's owner, pick a provider and paste its key in **Settings**, or set it in the environment: `ASSEMBLYAI_API_KEY`, `ELEVENLABS_API_KEY`, `SONIOX_API_KEY`, `GROQ_API_KEY`, `OPENAI_SPEECH_API_KEY` or `DEEPINFRA_API_KEY`, with `SPEECH_ENGINES` for the order they are tried. With any of these, the audio goes to that provider to become text. DeepInfra is the cheapest of them, with the same Whisper as Groq. `LOCAL_SPEECH_URL` points at a server of your own that speaks the OpenAI format (Speaches, a local Whisper or Parakeet), and the audio stays with you: `LOCAL_SPEECH_API_KEY` if it asks for a key, and `LOCAL_SPEECH_WARM=on` if it loads its model on demand and can start when someone presses the microphone (`POST <LOCAL_SPEECH_URL>/warm`). Every request to it names the workspace in `X-Agentes-Org`, and one that takes more than half a minute plus twice the recording goes to the next engine. A self-hosted server has no limit on minutes. Engines hear the language in the audio: the app's language goes only to Soniox, as a hint.
 
 **Voice messages on this machine.** The `speech` profile runs NVIDIA's Parakeet on this server, as agentes.chat's Cloud does: add `speech` to `COMPOSE_PROFILES` and set `LOCAL_SPEECH_URL=http://speech:8000/v1`, then `docker compose up -d`. The first pull is about 1 GB, its models included; once it has started, it needs no internet, and its network reaches only the app. Parakeet knows 25 European languages and picks the one spoken, once a language guess gives them together at least `SPEECH_LANGUAGE_MIN` (0.7); another language, an unsure guess, a recording it hears no words in, or one that arrives when every worker is taken, goes to the next engine at once, so give it one: `SPEECH_ENGINES=local,deepinfra` with `DEEPINFRA_API_KEY`, for example. Without one, a recording in another language goes out as audio with no words, and a busy server's wait for the job's retries; `SPEECH_LANGUAGE_MIN=0` then gives Parakeet every recording, unsure ones included. By default it takes up to 4 CPUs and 4 GB of memory (`SPEECH_CPUS`, `SPEECH_MEMORY`; Docker refuses more CPUs than the machine has, so set `SPEECH_CPUS=2` on a 2-CPU server), runs 2 recordings at once on 2 threads each (`SPEECH_WORKERS`, `SPEECH_THREADS`) and lets 4 more wait up to 3 seconds each (`SPEECH_QUEUE`, `SPEECH_WAIT_SECONDS`); a short note takes a few seconds. `LOCAL_SPEECH_API_KEY`, when set, is the key both sides use. The service runs `ghcr.io/agentes-chat/speech`, published with each release under the app's tags, and `AGENTES_SPEECH_IMAGE` holds a version; from a checkout, `docker build -t agentes-speech:local deploy/speech` builds it (downloading the models from Hugging Face), with `AGENTES_SPEECH_IMAGE=agentes-speech:local`.
@@ -870,6 +880,32 @@ deletes the account at Composio, without revoking it at the service. Instagram c
 creator accounts only, and WhatsApp a WhatsApp Business account, whose id Composio's page asks for.
 Composio's own LinkedIn and YouTube apps share their rate limits and daily quota with all of Composio's
 customers: with heavy use, give them OAuth apps of your own in `COMPOSIO_AUTH_CONFIGS`.
+
+**Your own MCP servers know who is calling (optional).** An MCP server you run for your own workspace
+(an internal tool your agents use) gets nothing with a call but its key, and a key that leaks works from
+any other workspace and from anywhere on the internet. List the server's host with a secret the server
+holds too, and every tool call an agent makes to it says, verifiably, who is calling:
+`MCP_CALLER_IDENTITY=tools.example.com=<secret>` (a bare lower-case host name; a secret of at least 32
+characters, `openssl rand -base64 48`; several pairs separated by commas, with no spaces), then restart.
+Connect the server as usual, by its address in **Settings → Connectors**. Each `tools/call` to it then
+carries, in the request's `params._meta["chat.agentes/caller"]`, a JWT signed with the secret (HS256):
+
+| Claim | What it is |
+| --- | --- |
+| `iss` | This instance: the origin of `PUBLIC_URL` |
+| `aud` | The server's host |
+| `org`, `agent`, `conn` | The ids of the workspace, the agent and the connection |
+| `run` | The run's id (absent for the rare call made outside a run) |
+| `user` | The id of the person the run acts for; absent when nobody is behind it, as in a routine's run |
+| `iat`, `exp`, `jti` | When it was made, 60 seconds later, and an id that is new for every call |
+
+In your server: check the signature with the algorithm pinned to HS256, that `aud` is your host and `iss`
+your instance, that `exp` hasn't passed and that this `jti` wasn't used before; then serve only the `org`
+and `agent` you expect. Refuse a call with a tool error, not HTTP 401, which marks the connection as
+needing to be reconnected. Listing the tools carries no statement, since no agent is calling yet, so keep
+the tools' names and descriptions free of anything private. A host that isn't listed gets nothing, and
+neither does a server over http or on a port other than 443. [ADR 0181](docs/adr/0181-mcp-caller-identity.md)
+has the rest.
 
 **Deleting workspaces and accounts.** An owner deletes a workspace in **Settings → General**, with a
 code emailed to them (with no email set up, their password instead): it turns read-only for everyone at
@@ -1598,6 +1634,13 @@ docker compose pull
 docker compose run --rm agentes migrate
 docker compose up -d
 ```
+
+A migration that builds an index on a big table does it without stopping writes. It can take minutes
+with nothing in the log after `applying database migrations`, and it waits for a dump or another long
+transaction to end; cut short, it runs whole again at the next start. If `migrate` stands still and
+the app is down, the app restarted while it ran: on 0.1.1 or older, a starting app waits for the
+migration in a way the migration waits for too, so neither ends. Stop `migrate` with Ctrl-C and run
+`docker compose up -d`: the new version finishes the migration as it starts.
 
 Migrations only go forward, and a version refuses to start on a database that a newer one migrated.
 Take a dump before a big jump (Backups below): rolling back is the previous pin plus that dump.

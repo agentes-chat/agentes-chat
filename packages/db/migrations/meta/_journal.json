@@ -1849,6 +1849,13 @@
       "when": 1794755500000,
       "tag": "0265_right_hand_proactive",
       "breakpoints": true
+    },
+    {
+      "idx": 266,
+      "version": "7",
+      "when": 1794755600000,
+      "tag": "0266_operator_read_indexes",
+      "breakpoints": true
     }
   ]
 }

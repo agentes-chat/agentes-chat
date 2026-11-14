@@ -346,3 +346,11 @@ export function shortTarget(text: string, max = 40) {
   const space = cut.lastIndexOf(" ");
   return space > max / 2 ? cut.slice(0, space) : cut;
 }
+
+/** "1,2 s", "760 ms", "22 min", "1,5 h": a line's time, finer than the block's (and the work states' one clock). */
+export function formatLineTime(locale: string, ms: number) {
+  if (ms < 1000) return `${Math.max(1, Math.round(ms))} ms`;
+  if (ms < 60_000) return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(ms / 1000)} s`;
+  if (ms < 3600_000) return `${Math.round(ms / 60_000)} min`;
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: ms < 10 * 3600_000 ? 1 : 0 }).format(ms / 3600_000)} h`;
+}

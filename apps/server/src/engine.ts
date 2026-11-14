@@ -6,7 +6,7 @@ import {
   type SpeechFetch,
   STREAM_CLOSE,
 } from "@agenteschat/adapters";
-import { type Config, connectorOAuthApps, githubAppConfig } from "@agenteschat/config";
+import { type Config, connectorOAuthApps, githubAppConfig, mcpCallerIdentity } from "@agenteschat/config";
 import type { Database } from "@agenteschat/db";
 import {
   AntigravityBrain,
@@ -485,6 +485,7 @@ export function buildEngine(o: EngineOptions) {
         log: o.log,
         judge: context.judge,
         githubApp: githubAppAccess,
+        callerIdentity: mcpCallerIdentity(config),
       }),
       // People's mailboxes (ADR 0038): only when the server has a mail path (Composio, IMAP).
       createMailToolSource({

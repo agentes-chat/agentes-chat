@@ -496,6 +496,9 @@ export const en = {
       nameLead: "What does your team call you?",
       namePlaceholder: "Your name",
       nameIsPassword: "Is this your name? It's the same as the password you typed.",
+      /** A sign-up with an address an account just left: held while that account's “This wasn't me” works. */
+      emailHeld:
+        "This email just left an account here and is held for 7 days. If that account is yours, press “This wasn't me” in the email we sent to it.",
       nameLooksLikePassword: "That looks like a password. Your name goes here.",
       newPassword: "Now a password.",
       newPasswordNamed: "Great, {{name}}. Now a password.",
@@ -518,6 +521,8 @@ export const en = {
       noPasswordLead:
         "On the computer that runs this server, open the app and choose Add a password in Settings\u00a0›\u00a0Your account.",
       backToSignIn: "Back to sign in",
+      /** Under the sign-in opened by "Add account": back to the account still signed in. */
+      backToAccount: "Back to {{name}}",
       toAuthorizeApp: "To connect an app to agentes.chat.",
     },
     desktop: {
@@ -1914,6 +1919,12 @@ export const en = {
       same: "That's already your email.",
       noMail:
         "This server sends no email, so the new address can't be confirmed. Ask whoever runs the server to set up email.",
+      held: "This email just left another account and is held for it for 7 days. Use another one.",
+      taken: "Another account already uses this email. Use another one.",
+      /** Under the code sent to the current address: a fresh sign-in instead. */
+      cantOpen: "Can't open that inbox?",
+      signInInstead: "Sign in again and change it without the code. You'll come back here.",
+      useCode: "Use the code",
     },
     openOnPhone: "Open on your phone",
     openOnPhoneHint: "Sign in to the app with a QR code",
@@ -1935,6 +1946,9 @@ export const en = {
     /** The desktop app's window to add one (ADR 0154): in place of New workspace on agentes.chat, after it elsewhere. */
     addWorkspace: "Add workspace",
     addWorkspaceHint: "Join one you already have, create one, or use your team's server",
+    /** Another account on this server, signed in beside the one open (ADR 0183). */
+    addAccount: "Add account",
+    addAccountHint: "Sign in to another account without leaving this one",
     /** Beside a server's name above its workspaces, when it isn't agentes.chat. */
     yourServer: "Your server",
     /** A server's line in "Your workspaces" in the desktop app: the one on this computer, and its state (ADR 0158). */
@@ -2451,10 +2465,9 @@ export const en = {
       asFile: "Send as a file",
       fileName: "message.txt",
     },
-    /** A tall message, clipped in the conversation: the button under it and the dialog that shows it whole. */
+    /** Under words folded to their start (a tall message, a long text, an email): opens them in place, for good. */
     long: {
       more: "See more",
-      title: "Message from {{name}}",
     },
     retrySend: "Try again",
     thinking: "{{name}} is thinking…",
@@ -2855,6 +2868,11 @@ export const en = {
       update_role: "Change the role <b>{{name}}</b>",
       delete_role: "Delete the role <b>{{name}}</b> for good",
       move_role: "Move the role <b>{{name}}</b>",
+      /** "Who can…": who may do one thing, Everyone and the roles at once. `short`: the permission (`permissions.*.short`). */
+      set_permission_holders: "Change who can <b>{{short}}</b>",
+      set_permission_holders_computers: "Change who uses <b>the agents' computers</b>",
+      /** Under it, when nobody but the owners would have it. */
+      holdersOwnersOnly: "Only owners",
       set_member_roles: "Change the roles of <b>{{name}}</b>: {{change}}",
       set_channel_permissions: "Change what {{who}} may do in <b>#{{channel}}</b>",
       set_my_status: "Set your status: <b>{{what}}</b>",
@@ -3736,6 +3754,8 @@ export const en = {
       changed_update_role: "Changed the role <b>{{name}}</b>",
       changed_delete_role: "Deleted the role <b>{{name}}</b>",
       changed_move_role: "Moved the role <b>{{name}}</b>",
+      changed_set_permission_holders: "Changed who can <b>{{short}}</b>",
+      changed_set_permission_holders_computers: "Changed who uses <b>the agents' computers</b>",
       changed_set_member_roles: "Changed the roles of <b>{{name}}</b>: {{change}}",
       changed_set_channel_permissions: "Changed what {{who}} may do in <b>#{{channel}}</b>",
       changed_set_my_status: "Set your status: <b>{{what}}</b>",
@@ -4022,6 +4042,10 @@ export const en = {
     hidden: "Invisible",
     offline: "Offline",
     out: "Out of office",
+    /** An agent's face (ADR 0084 addendum of 2026-11-13): free, at work, or waiting on you. Never a person's. */
+    available: "Available",
+    working: "Working",
+    waiting: "Waiting for you",
     lower: {
       online: "online",
       away: "away",
@@ -4111,6 +4135,51 @@ export const en = {
     bySelf: "Written by {{name}} · clears when it's done",
     byAuto: "What it's doing now",
   },
+  /**
+   * An agent's work in a list's line and on its profile card (ADR 0084 addendum of 2026-11-13), lowercase: where it
+   * works or what it waits on. Its other words are `chat.consultPanel.helping` and `chat.consultPair.*`.
+   */
+  agentWork: {
+    working: "working",
+    you: "waiting for you",
+    /** Short, when the whole line doesn't fit. */
+    waiting: "waiting",
+    queued: "in line",
+    /** Its own work in the conversation the list belongs to (the members column). */
+    here: "here",
+    routine: "on a routine",
+    /** After "Waiting for you" on the profile card. */
+    yourApproval: "your approval",
+    yourAnswer: "your answer",
+    /** A return it set comes then (`followUps.when`): "follow-up at 12:32 AM". */
+    later: "follow-up {{when}}",
+    laterShort: "follow-up",
+  },
+  /** An agent comes back to a conversation by itself (its `follow_up`, ADR 0037): a follow-up. */
+  followUps: {
+    /** When it comes: the day only more than 12 h away, so the words never turn at midnight. */
+    when: { at: "at {{time}}", today: "today at {{time}}", tomorrow: "tomorrow at {{time}}" },
+    /** The same, opening a label: "At 12:32 AM". */
+    whenLabel: { at: "At {{time}}", today: "Today at {{time}}", tomorrow: "Tomorrow at {{time}}" },
+    /** The bar above the composer while a follow-up waits here. The agent's words follow after " · ", as written. */
+    bar: {
+      at: "{{name}} follows up {{when}}",
+      /** Where even the sentence doesn't fit: the name and the time. */
+      short: "{{name}} {{time}}",
+      /** Its time came while what it asked here waits on an answer: the reader may answer it. */
+      heldYou: "{{name}} follows up once you answer",
+      held: "{{name}} follows up after an answer",
+    },
+    /** The list of the follow-ups here (the bar's ⋯, the phone's sheet). */
+    title: "Follow-ups",
+    /** A row's tip: it goes to the reply that said it. */
+    see: "See the message",
+    cancel: "Cancel follow-up",
+    /** A row's ×, for screen readers (`when`: "at 12:32 AM"). */
+    cancelOf: "Cancel {{name}}'s follow-up {{when}}",
+    /** The task manager's time column: how soon (`time`: "33 min"). */
+    inTime: "in {{time}}",
+  },
   mentions: {
     list: "People and agents",
     inChannel: "In this channel",
@@ -4170,9 +4239,8 @@ export const en = {
     merge: "Merge request",
     issue: "Issue",
   },
-  /** A long text an agent wrote, folded on a page: a run's record, a mission's summary. */
+  /** A list folded to its first rows (the approvals' digest): the button that folds it back. */
   folded: {
-    more: "Show more",
     less: "Show less",
   },
   secret: {
@@ -4720,6 +4788,11 @@ export const en = {
   approval: {
     expiredChip: "Expired · {{when}}",
     canceledChip: "Canceled · {{when}}",
+    /** After an approved request's outcome on a shared card: it runs in the order asked. */
+    line: {
+      after: "runs after “{{title}}”",
+      notRun: "not run: the request before it wasn't approved",
+    },
     waitingFor: "Waiting for {{name}}",
     waitingAdmin: "Waiting for an admin",
     reasonLine: "Reason: {{reason}}",
@@ -4801,8 +4874,6 @@ export const en = {
       /** A connector's reply: who it goes to is the message's sender, not in its call. */
       toSender: "To whoever sent the message",
       toList: "To {{to}}",
-      more: "Read all",
-      less: "Show less",
       answers: "Answers <b>“{{subject}}”</b>",
       answersFrom: "Answers <b>“{{subject}}”</b>, from {{from}}",
       forwards: "Forwards <b>“{{subject}}”</b>",
@@ -5315,7 +5386,17 @@ export const en = {
       failed: "Failed",
       running: "Running",
       scheduled: "Scheduled",
+      queued: "In line",
+      notRun: "Not run",
     },
+    /** Approved, waiting for a request the agent asked before it on the same card to be decided and done. */
+    queuedLine: "Approved. Runs after “{{title}}”, asked before it.",
+    /** Approved before a request asked ahead of it was refused or expired: it didn't run. */
+    notRunRefused: "“{{title}}”, asked before this, was refused after this was approved, so this didn't run.",
+    notRunExpired: "“{{title}}”, asked before this, expired undecided after this was approved, so this didn't run.",
+    notRunEarlier: "A request asked before this was refused or expired after this was approved, so this didn't run.",
+    /** Its place among the requests on its card, in the order the agent asked. */
+    position: "{{n}} of {{total}}",
     expiredLine: "Nobody decided within 24 h, so nothing was done.",
     canceledLine: "The run stopped before a decision.",
     /** Replaced by the agent's newer request for the same action (`supersededById`). */
@@ -5384,10 +5465,10 @@ export const en = {
       email: "The email",
       text: "What it will publish",
       textDone: "What it published",
+      textNot: "What it would have published",
       values: "What it will do",
       valuesDone: "What it did",
-      more: "Show all",
-      less: "Show less",
+      valuesNot: "What it would have done",
       trail: "How it got here",
       showSteps: "See each step",
       hideSteps: "Hide the steps",
@@ -9008,7 +9089,6 @@ export const en = {
       releaseClosed: "The mission is closed: the session won't go on.",
       onlyDeciders: "Only those who decide in this mission allow commands.",
       pick: "Allow {{command}}",
-      showAll: "Show all",
     },
     decision: {
       approveAll_one: "Approve {{count}} provisional",
@@ -9408,6 +9488,13 @@ export const en = {
     status: {
       needsYou: "Waiting for you",
       working: "Working",
+      /** What its work waits on when none of it runs. */
+      approval: "Waiting for approval",
+      input: "Waiting for an answer",
+      computer: "Waiting for its computer",
+      queued: "In line",
+      /** A follow-up an agent set here (`followUps.when`). */
+      later: "Follow-up {{when}}",
       open: "Open",
       closed: "Closed",
       archived: "Archived",
@@ -10418,6 +10505,8 @@ export const en = {
     noMic: "No microphone found.",
     failed: "Couldn't open the microphone. Try again.",
     noPlayback: "Can't play it right now. You can still send it or keep recording.",
+    /** Under a voice message that failed to load or play, before "Try again" (`common.retry`). */
+    cantPlay: "Couldn't play the audio.",
     settings: {
       title: "Voice messages",
       on: "Voice messages",
@@ -11803,8 +11892,6 @@ export const en = {
     thousand: "k",
     building: "Putting it together…",
     openBig: "Open large",
-    showAll: "Show all",
-    showLess: "Show less",
     keep: "Keep in Drive",
     kept: "Kept in Drive",
     inDrive: "In Drive",
@@ -13701,6 +13788,9 @@ export const en = {
       noContext: "This thread didn't come from a range of a conversation.",
       notUndoable: "Only a thread made from a range can be undone.",
     },
+    followUp: {
+      notYours: "Only the person it's for, the agent's owner or an admin can cancel this follow-up.",
+    },
     routine: {
       tooFrequent: "A routine runs at most every 15 minutes. Pick a longer interval.",
       tooMany: "This agent already has 20 active routines. Pause or delete one first.",
@@ -15186,6 +15276,11 @@ export const en = {
         role_changed: "Changed a member's role",
         password_link: "Made a new-password link for a member",
       },
+      role: {
+        /** Everyone and the roles at once ("Who can…"). `short`: the permission (`permissions.*.short`). */
+        permission_set: "Changed who can {{short}}",
+        permission_set_computers: "Changed who uses the agents' computers",
+      },
       apps: {
         connected: "Connected {{app}}",
         scopes_changed: "Let {{app}} send tasks",
@@ -16029,6 +16124,15 @@ export const en = {
       answered: "{{to}} answered. {{from}} is writing",
       writing: "{{from}} is writing",
       clock: "Waiting for {{time}}",
+      /** One agent at work on what another handed it: its name, then its step (`chat.activity.*`: "reading the Drive"). */
+      doing: "{{name}} {{doing}}",
+      yourApproval: "{{name}} is waiting for your approval",
+      yourAnswer: "{{name}} is waiting for your answer",
+      /** The work handed off came back: whoever handed it writes now. */
+      done: "{{to}} is done. {{from}} is writing",
+      notDone: "{{to}} didn't finish. {{from}} is writing",
+      /** The bar's tip over work handed off. */
+      handedOff: "{{to}} is working on what {{from}} handed off",
     },
     /** The card on top of a reply when the agent asked another agent (`meta.consulted`). */
     consultation: {
@@ -16055,6 +16159,7 @@ export const en = {
       waitingProvider: "{{name}}: the AI provider is down · retries by itself",
       /** Its part done, the agent waits on what it handed to other agents. */
       waitingAgents: "{{name}} handed part of it on and is waiting to hear back",
+      queued: "{{name}} is in line",
     },
     /**
      * The slim row before a reply whose agent asked others first ("Theo ⇄ Atlas · 2 min"): the short word after the
@@ -16070,6 +16175,10 @@ export const en = {
       waitingInput: "waiting for an answer",
       waitingComputer: "waiting for its computer",
       waitingProvider: "AI provider down",
+      /** What it waits on is yours to give: the row turns amber. */
+      waitingYourApproval: "waiting for your approval",
+      waitingYourAnswer: "waiting for your answer",
+      queued: "in line",
       /** Its part done, it waits on agents it handed some to. */
       handedOn: "waiting on other agents",
       noAnswer: "didn't answer",
@@ -16081,12 +16190,6 @@ export const en = {
       labelMany: "{{from}}'s talks with {{to}}",
     },
     /** A question opened in the panel over the conversation ("Theo ⇄ Iris"): what the two agents said, read only. */
-    /** A long message from one agent to another, folded to its first paragraph: the whole opens in its thread. */
-    talk: {
-      readAll: "Read all",
-      more_one: "{{count}} more line",
-      more_other: "{{count}} more lines",
-    },
     consultPanel: {
       label: "Conversation between {{from}} and {{to}}",
       /** The phone's bar (the web draws the arrows as an icon between the names). */
@@ -16118,14 +16221,6 @@ export const en = {
       agentNote: "Note from {{from}}",
       agentNoteAnon: "Note from another agent",
       waitResult: "What {{name}} was waiting for came in",
-      followUp: "{{name}} will be back at {{time}} to «{{about}}»",
-      followUpOn: "{{name}} will be back on {{day}} at {{time}} to «{{about}}»",
-      followUpDone: "{{name}} came back at {{time}} to «{{about}}»",
-      followUpDoneOn: "{{name}} came back on {{day}} at {{time}} to «{{about}}»",
-      followUpCanceled: "{{name}} won't be back at {{time}} to «{{about}}»",
-      followUpCanceledOn: "{{name}} won't be back on {{day}} at {{time}} to «{{about}}»",
-      followUpWake: "{{name}} is back to «{{about}}»",
-      followUpCancel: "Cancel",
       other: "Notice for {{name}}",
       wakeSkipped: "{{name}}'s mention didn't reach {{agents}}",
       /** The same, on an older line that didn't keep whom. */
@@ -16333,6 +16428,7 @@ export const en = {
         usingTool: "Used the {{tool}} tool",
         thinking: "Thought",
         typing: "Wrote",
+        recordingVoice: "Recorded audio",
         writing: "Wrote",
       },
     },
@@ -16342,6 +16438,8 @@ export const en = {
       updatingRoutine: "changing a routine",
       thinking: "working",
       typing: "typing",
+      /** A person recording a voice message, after their name: "Marina is recording audio…". */
+      recordingVoice: "recording audio",
       writing: "writing",
       consulting: "checking {{app}}",
       creatingIssue: "creating a task",
@@ -17472,6 +17570,20 @@ export const en = {
     type: "Type {{name}} to confirm",
     submit: "Delete workspace",
   },
+  /** “This wasn't me”: the page the notice to an account's old address links to (`/email-undo?token=`). */
+  emailUndo: {
+    title: "Bring your email back",
+    lead: "The address this link went to becomes your account's email again. Every session is signed out, the AI apps are disconnected and ways to sign in added since the change stop working. The password is cleared too, and “Forgot my password” sets the next one.",
+    button: "This wasn't me",
+    done: "Your email is back",
+    /** `{{email}}`: the address the account has again. Then: Sign in. */
+    doneLead:
+      "{{email}} is your account's email again. Every session is signed out, ways to sign in added since the change no longer work, and the password was cleared: “Forgot my password” sets the next one when you sign in.",
+    gone: "This link no longer works",
+    goneLead: "It was already used, or its 7 days are over.",
+    taken: "Another account has this email",
+    takenLead: "{{email}} is another account's email now, so it can't come back. Nothing changed.",
+  },
   /** Proof that it's the person, before deleting (ADR 0088 §2): a code emailed to them, or their password. */
   proof: {
     /** `{{email}}`: the account's own address. */
@@ -18010,10 +18122,11 @@ export const en = {
       asked: "Asked by people",
       delegated: "Asked by agents",
       background: "Routines in the background",
+      returns: "Follow-ups",
     },
     state: {
       working: "Working",
-      ok: "Waits for your ok",
+      ok: "Waiting for you",
       answer: "Waits for an answer",
       computerBusy: "Waits for room on the computer",
       inLine: "In line · #{{position}}",
@@ -18108,6 +18221,10 @@ export const en = {
       stopped: "You stopped it",
       stoppedBy: "{{name}} stopped it",
       failed: "Couldn't finish",
+      /** A follow-up that won't come: canceled by its time (the agent or the person left), by you, by someone. */
+      returnCanceled: "Follow-up canceled",
+      returnCanceledYou: "You canceled the follow-up",
+      returnCanceledBy: "Follow-up canceled by {{name}}",
       none: "Nothing ended today yet.",
     },
     empty: {
