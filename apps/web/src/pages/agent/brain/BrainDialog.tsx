@@ -16,7 +16,7 @@ import {
 import { brainModelLine, brainPickText } from "@agenteschat/client/lib/brain-picker";
 import { contextSize } from "@agenteschat/client/lib/context-limits";
 import { keyRefusal } from "@agenteschat/client/lib/errors";
-import { namesText } from "@agenteschat/client/lib/format";
+import { namesText, rosterText } from "@agenteschat/client/lib/format";
 import { type AiChoice, planMark } from "@agenteschat/client/lib/no-ai";
 import { usageWhen } from "@agenteschat/client/lib/plan-usage";
 import { geminiPersonal, isPlanId, planFreeHint, signInProviderOf } from "@agenteschat/client/lib/plans";
@@ -32,7 +32,6 @@ import {
   EffortPixels,
   Icon,
   type IconName,
-  OptionCard,
   ProviderLogo,
   planState,
   SettingNote,
@@ -47,6 +46,7 @@ import { DEFAULT_KEY } from "@/components/AgentFields";
 import { AddAccount, OpenPage } from "@/components/ai/AddAccountFlow";
 import { PlanHold } from "@/components/ai/ConnectAiSteps";
 import { PlanReplies } from "@/components/ai/PlanReplies";
+import { AudienceCard } from "@/components/arrival/AudienceCard";
 import { HaveList, HaveRow, sortHave } from "@/components/arrival/ConnectHave";
 import { TeamScene, useDawn } from "@/components/arrival/TeamScene";
 import { useConnectAi } from "@/components/ConnectAi";
@@ -787,30 +787,26 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
         <>
           {/* biome-ignore lint/a11y/useSemanticElements: pressable cards, not a native fieldset */}
           <div className="arrival-for" role="group" aria-label={t("agentPage.work.brain.v2.teamAria")}>
-            <OptionCard pressed={!teamToo} onClick={() => setTeamToo(false)}>
-              <AgentAvatar agentId={agent.id} name={agent.name} size="sm" />
-              <span className="ac-option__text">
-                <span className="ac-option__title">{t("agentPage.work.brain.v2.justOne", g)}</span>
-                {agent.role && <span className="ac-option__desc">{agent.role}</span>}
-              </span>
-            </OptionCard>
-            <OptionCard pressed={teamToo} onClick={() => setTeamToo(true)}>
-              <AvatarStack>
-                {team.slice(0, 4).map((a) => (
-                  <AgentAvatar key={a.id} agentId={a.id} name={a.name} size="sm" />
-                ))}
-              </AvatarStack>
-              <span className="ac-option__text">
-                <span className="ac-option__title">{t("agentPage.work.brain.v2.everyone")}</span>
-                <span className="ac-option__desc">
-                  {namesText(
-                    t,
-                    team.map((a) => a.name),
-                    2,
-                  )}
-                </span>
-              </span>
-            </OptionCard>
+            <AudienceCard
+              pressed={!teamToo}
+              onClick={() => setTeamToo(false)}
+              faces={<AgentAvatar agentId={agent.id} name={agent.name} size="sm" />}
+              title={t("agentPage.work.brain.v2.justOne", g)}
+              tip={agent.role || undefined}
+            />
+            <AudienceCard
+              pressed={teamToo}
+              onClick={() => setTeamToo(true)}
+              faces={
+                <AvatarStack>
+                  {team.slice(0, 4).map((a) => (
+                    <AgentAvatar key={a.id} agentId={a.id} name={a.name} size="sm" />
+                  ))}
+                </AvatarStack>
+              }
+              title={t("agentPage.work.brain.v2.everyone")}
+              tip={rosterText(t, team)}
+            />
           </div>
           <div className="bd-use">
             <p className="arrival-opts__label">{t("agentPage.work.brain.v2.target")}</p>
