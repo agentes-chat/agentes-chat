@@ -492,20 +492,26 @@ export const useRoles = (orgId: string) => {
   return useQuery({ queryKey: keys.roles(orgId), queryFn: () => api.roles.list(orgId), staleTime: 30_000 });
 };
 
-export function useCreateRole(orgId: string) {
+/** `silent`: the caller shows a failure itself (in its dialog). */
+export function useCreateRole(orgId: string, silent = false) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
+    meta: { silent },
     mutationFn: (input: RoleInput) => api.roles.create(orgId, input),
     onSettled: () => refreshRoles(qc, orgId),
   });
 }
 
-/** Changes a role at once on screen (the toggles save by themselves), then reads the truth back. */
-export function useUpdateRole(orgId: string) {
+/**
+ * Changes a role at once on screen (the toggles save by themselves), then reads the truth back. `silent`: the caller
+ * shows a failure itself.
+ */
+export function useUpdateRole(orgId: string, silent = false) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
+    meta: { silent },
     mutationFn: ({ roleId, patch }: { roleId: string; patch: Partial<RoleInput> }) =>
       api.roles.update(orgId, roleId, patch),
     onMutate: async ({ roleId, patch }) => {
@@ -525,10 +531,12 @@ export function useUpdateRole(orgId: string) {
   });
 }
 
-export function useDeleteRole(orgId: string) {
+/** `silent`: the caller shows a failure itself (in its dialog). */
+export function useDeleteRole(orgId: string, silent = false) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
+    meta: { silent },
     mutationFn: (roleId: string) => api.roles.remove(orgId, roleId),
     onSettled: () => refreshRoles(qc, orgId),
   });
@@ -564,12 +572,13 @@ export function useReorderRoles(orgId: string) {
 
 /**
  * "Quem pode…": who holds one row, `everyone` and the roles in one call (`PUT …/permissions/{row}`); the roles it
- * answers with replace the cached ones.
+ * answers with replace the cached ones. `silent`: the caller shows a failure itself.
  */
-export function useSetRowHolders(orgId: string) {
+export function useSetRowHolders(orgId: string, silent = false) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
+    meta: { silent },
     mutationFn: ({ row, holders }: { row: string; holders: RowHolders }) => api.roles.setRow(orgId, row, holders),
     onSuccess: (roles) => qc.setQueryData(keys.roles(orgId), roles),
     onSettled: () => refreshRoles(qc, orgId),

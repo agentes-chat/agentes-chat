@@ -1,0 +1,400 @@
+import { afterEach, describe, expect, test } from "bun:test";
+import { setupDom } from "@agenteschat/ui/testing/dom";
+
+setupDom();
+
+import type { Agent, Channel, OrgRole } from "@agenteschat/client";
+import { act, cleanup, fireEvent, within } from "@testing-library/react";
+import {
+  ADA_ID,
+  ATLAS_ID,
+  createFakeApi,
+  ENG_ID,
+  type FakeState,
+  GENERAL_ID,
+  ORG_ID,
+  seedRoles,
+  seedState,
+} from "./fake-api";
+import { renderApp, screen, settle } from "./render";
+
+afterEach(() => cleanup());
+
+const click = async (el: Element) => {
+  await act(async () => fireEvent.click(el));
+  await settle(4);
+};
+const last = (state: FakeState, method: string) => state.calls.findLast((c) => c.method === method)?.args;
+const pick = async (combobox: HTMLElement, option: string | RegExp) => {
+  combobox.focus();
+  await act(async () => fireEvent.keyDown(combobox, { key: "Enter" }));
+  await click(screen().getByRole("option", { name: option }));
+};
+
+const SUPORTE = "role-support";
+const FIN = "role-fin";
+
+/**
+ * Acme with Admin, Suporte (approves actions, invites people) and Financeiro (sees costs), Todos as a new workspace's;
+ * João holds Admin, Carla and Diego Suporte, Fabio Financeiro. Private #suporte is limited to Suporte, #diretoria is
+ * invite only; Atlas answers only João.
+ */
+function acme(extra: (state: FakeState) => void = () => {}) {
+  const state = seedState();
+  const [admin, everyone] = seedRoles() as [OrgRole, OrgRole];
+  const custom = { ...admin, hoist: false };
+  state.roles = [
+    admin,
+    { ...custom, id: SUPORTE, name: "Suporte", icon: "message", color: "teal", position: 1, permissions: ["approve_actions", "invite_people"] },
+    { ...custom, id: FIN, name: "Financeiro", icon: "wallet", color: "amber", position: 2, permissions: ["view_usage"] },
+    { ...everyone, position: 3 },
+  ];
+  const person = (userId: string, name: string, roleIds: string[]) => ({
+    userId,
+    name,
+    email: `${name.toLowerCase()}@example.com`,
+    image: null,
+    role: "member" as const,
+    roleIds,
+    joinedAt: "2026-11-01T12:00:00.000Z",
+    handle: name.toLowerCase(),
+    timezone: "America/Sao_Paulo",
+  });
+  state.members.push(
+    person("u-carla", "Carla", [SUPORTE]),
+    person("u-diego", "Diego", [SUPORTE]),
+    person("u-fabio", "Fabio", [FIN]),
+  );
+  const channel = (id: string, name: string, more: Partial<Channel>): Channel => ({
+    id,
+    name,
+    topic: "",
+    visibility: "private",
+    isMember: true,
+    createdAt: "2026-11-01T12:00:00.000Z",
+    ...more,
+  });
+  state.channels.push(
+    channel("chan-suporte", "suporte", { audienceRoleIds: [SUPORTE] }),
+    channel("chan-diretoria", "diretoria", {}),
+  );
+  state.channelMembers["chan-suporte"] = [
+    { type: "person", id: "u-walter" },
+    { type: "person", id: "u-carla" },
+    { type: "person", id: "u-diego" },
+  ];
+  state.channelMembers["chan-diretoria"] = [{ type: "person", id: "u-walter" }];
+  const atlas = state.agents.find((a) => a.id === ATLAS_ID) as Agent;
+  atlas.audience = { mode: "owner", userIds: [], roleIds: [] };
+  extra(state);
+  return state;
+}
+
+async function open(path: string, state = acme()) {
+  const api = createFakeApi(state);
+  await renderApp(`/org/${ORG_ID}/settings/${path}`, { api });
+  await settle(8);
+  return state;
+}
+
+const row = (name: string) =>
+  [...document.querySelectorAll<HTMLElement>(".roles-row")].find(
+    (r) => r.querySelector(".roles-row__name")?.textContent === name,
+  ) as HTMLElement;
+const reach = (name: string) =>
+  [...row(name).querySelectorAll(".roles-reach__item")].map((i) => i.textContent?.trim());
+const permRow = (title: string) =>
+  [...document.querySelectorAll<HTMLElement>(".roles-perm")].find(
+    (r) => r.querySelector(".settings-row__label")?.textContent === title,
+  ) as HTMLElement;
+
+describe("Settings › Cargos, the list (W1)", () => {
+  test("its own entry: Todos pinned under Base, then Dono and the cargos, each saying what it adds", async () => {
+    await open("roles");
+    const nav = screen().getByRole("navigation", { name: "Seções das configurações" });
+    expect(within(nav).getByRole("link", { name: "Cargos" }).getAttribute("aria-current")).toBe("page");
+    expect(screen().queryByRole("tab", { name: "Cargos" })).toBeNull();
+    expect(screen().getByRole("heading", { level: 2, name: "Cargos" })).toBeTruthy();
+    expect(
+      [...document.querySelectorAll(".roles-row__name")].map((n) => n.textContent),
+    ).toEqual(["Todos", "Dono", "Admin", "Suporte", "Financeiro"]);
+    // Todos says what everyone has; a cargo what it adds, its channels and agents counted.
+    expect(reach("Todos")).toEqual(["8 permissões", "2 canais", "1 agente"]);
+    expect(reach("Dono")).toEqual(["Pode tudo, sempre"]);
+    expect(reach("Admin")).toEqual(["Pode tudo"]);
+    expect(reach("Suporte")).toEqual(["+2 permissões", "+1 canal"]);
+    expect(reach("Financeiro")).toEqual(["+1 permissão"]);
+    // The mark is 18 on the name's line, the owner's row has no grip.
+    expect(row("Suporte").querySelector(".ac-rolemark")?.getAttribute("style")).toContain("width: 18px");
+    expect(row("Dono").querySelector(".roles-row__grip")).toBeNull();
+    expect(row("Suporte").querySelector(".roles-row__grip")).toBeTruthy();
+  });
+
+  test("a grip's menu moves a cargo, never above one the viewer can't change", async () => {
+    const state = await open("roles");
+    const grip = within(row("Financeiro")).getByRole("button", { name: "Mover Financeiro" });
+    await click(grip);
+    const up = screen().getByRole("menuitem", { name: "Mover para cima" });
+    await click(up);
+    expect(last(state, "roles.reorder")?.[1]).toEqual(["role-admin", FIN, SUPORTE]);
+    await settle(4);
+    expect([...document.querySelectorAll(".roles-row__name")].map((n) => n.textContent)).toEqual([
+      "Todos",
+      "Dono",
+      "Admin",
+      "Financeiro",
+      "Suporte",
+    ]);
+  });
+
+  test("by the keys: Space lifts, an arrow moves, Space drops and saves once", async () => {
+    const state = await open("roles");
+    const grip = within(row("Financeiro")).getByRole("button", { name: "Mover Financeiro" });
+    grip.focus();
+    await act(async () => fireEvent.keyDown(grip, { key: " " }));
+    expect(grip.getAttribute("aria-pressed")).toBe("true");
+    await act(async () => fireEvent.keyDown(grip, { key: "ArrowUp" }));
+    expect(state.calls.some((c) => c.method === "roles.reorder")).toBe(false);
+    await act(async () => fireEvent.keyDown(grip, { key: " " }));
+    await settle(4);
+    expect(last(state, "roles.reorder")?.[1]).toEqual(["role-admin", FIN, SUPORTE]);
+  });
+
+  test("past 8 cargos a search; at 100 Criar cargo waits, saying why", async () => {
+    const many = acme((s) => {
+      const [admin] = seedRoles() as [OrgRole];
+      const extra = Array.from({ length: 98 }, (_, i) => ({
+        ...admin,
+        id: `role-x${i}`,
+        name: `Equipe ${i}`,
+        permissions: [],
+        position: 3 + i,
+      }));
+      s.roles = [...(s.roles ?? []).slice(0, 3), ...extra, { ...(s.roles?.at(-1) as OrgRole), position: 200 }];
+    });
+    await open("roles", many);
+    const create = screen().getByRole("button", { name: "Criar cargo" }) as HTMLButtonElement;
+    expect(create.disabled).toBe(true);
+    const search = screen().getByRole("searchbox", { name: "Buscar cargo" });
+    await act(async () => fireEvent.change(search, { target: { value: "financ" } }));
+    expect([...document.querySelectorAll(".roles-row__name")].map((n) => n.textContent)).toEqual(["Financeiro"]);
+    await act(async () => fireEvent.change(search, { target: { value: "zzz" } }));
+    expect(screen().getByText("Nenhum cargo com “zzz”.")).toBeTruthy();
+  });
+});
+
+describe("a cargo's page (W2, W3, W4)", () => {
+  test("its head and tabs; a row everyone has carries the Todos chip and stays live", async () => {
+    await open(`roles/${SUPORTE}`);
+    expect(screen().getByRole("button", { name: /^Suporte, Ir para outro cargo/ })).toBeTruthy();
+    expect([...document.querySelectorAll(".roles-glance .roles-reach__item")].map((i) => i.textContent)).toEqual([
+      "2 pessoas",
+      "+2 permissões",
+      "+1 canal",
+    ]);
+    expect(screen().getAllByRole("tab").map((t) => t.textContent)).toEqual(["Permissões", "Canais", "Agentes", "Pessoas 2"]);
+    const create = permRow("Criar canais");
+    expect(within(create).getByRole("button", { name: "Todos" })).toBeTruthy();
+    const toggle = within(create).getByRole("switch");
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    expect((toggle as HTMLButtonElement).disabled).toBe(false);
+    expect(screen().queryByText("Vem de Todos")).toBeNull();
+  });
+
+  test("turning off what everyone has asks who may: Todos and the cargos at once, naming who loses it", async () => {
+    const state = await open(`roles/${SUPORTE}`);
+    await click(within(permRow("Criar canais")).getByRole("switch"));
+    const dialog = screen().getByRole("dialog", { name: "Quem pode criar canais" });
+    expect(within(dialog).getByRole("radio", { name: /Só alguns cargos/ }).getAttribute("aria-checked")).toBe("true");
+    const box = (name: string) => within(dialog).getByRole("checkbox", { name: new RegExp(`^${name}`) });
+    // Administrador may everything: ticked and fixed. This cargo starts unticked, the others ticked.
+    expect([box("Admin").getAttribute("aria-checked"), (box("Admin") as HTMLButtonElement).disabled]).toEqual([
+      "true",
+      true,
+    ]);
+    expect(box("Suporte").getAttribute("aria-checked")).toBe("false");
+    expect(box("Financeiro").getAttribute("aria-checked")).toBe("true");
+    expect(dialog.textContent).toContain("Donos sempre podem.");
+    expect(dialog.querySelector(".roles-line--live")?.textContent).toBe("Deixam de poder: Carla e Diego.");
+    await click(within(dialog).getByRole("button", { name: "Salvar" }));
+    expect(last(state, "roles.setRow")?.slice(1)).toEqual([
+      "create_channels",
+      { everyone: 0, roles: [{ id: SUPORTE, level: 0 }, { id: FIN, level: 1 }] },
+    ]);
+  });
+
+  test("a key of its own saves at once, the cargo's whole list", async () => {
+    const state = await open(`roles/${SUPORTE}`);
+    await click(within(permRow("Ver a auditoria")).getByRole("switch"));
+    const saved = last(state, "roles.update");
+    expect(saved?.[1]).toBe(SUPORTE);
+    expect((saved?.[2] as { permissions: string[] }).permissions.sort()).toEqual(
+      ["approve_actions", "invite_people", "view_audit"].sort(),
+    );
+  });
+
+  test("the computers are one choice of five steps; below Todos' it asks who keeps it", async () => {
+    const state = await open(`roles/${SUPORTE}`);
+    const steps = within(permRow("Computadores dos agentes")).getByRole("combobox");
+    expect(steps.textContent).toContain("Computador dos próprios agentes");
+    steps.focus();
+    await act(async () => fireEvent.keyDown(steps, { key: "Enter" }));
+    // Two groups, Próprios agentes and Qualquer agente: Navegador and Computador in each.
+    const computers = screen().getAllByRole("option", { name: "Computador" });
+    expect(computers).toHaveLength(2);
+    await click(computers[1] as HTMLElement);
+    expect((last(state, "roles.update")?.[2] as { permissions: string[] }).permissions).toContain("control_computers");
+    cleanup();
+    const again = await open(`roles/${SUPORTE}`);
+    await pick(within(permRow("Computadores dos agentes")).getByRole("combobox"), "Não usa");
+    const dialog = screen().getByRole("dialog", { name: "Quem fica com o computador dos próprios agentes" });
+    expect(dialog.textContent).toContain("Todos deixam de usar os computadores dos agentes.");
+    await click(within(dialog).getByRole("button", { name: "Salvar" }));
+    expect(last(again, "roles.setRow")?.slice(1)).toEqual([
+      "computers",
+      { everyone: 0, roles: [{ id: SUPORTE, level: 0 }, { id: FIN, level: 2 }] },
+    ]);
+  });
+
+  test("Administrador asks first, then folds the groups into one line", async () => {
+    const state = await open(`roles/${SUPORTE}`);
+    await click(within(permRow("Administrador")).getByRole("switch"));
+    const ask = screen().getByRole("dialog", { name: "Ligar Administrador em Suporte?" });
+    expect(ask.textContent).toContain("São 2 pessoas.");
+    await click(within(ask).getByRole("button", { name: "Ligar Administrador" }));
+    expect((last(state, "roles.update")?.[2] as { permissions: string[] }).permissions).toContain("administrator");
+    await settle(4);
+    expect(screen().getByText("Com Administrador, Suporte pode tudo, menos o que é só do dono.")).toBeTruthy();
+    expect(permRow("Criar canais")).toBeUndefined();
+  });
+
+  test("Todos' own rows: one only some cargos have shows their marks and opens who may", async () => {
+    await open("roles/everyone");
+    expect(screen().getAllByRole("tab").map((t) => t.textContent)).toEqual(["Permissões", "Canais", "Agentes"]);
+    const approve = permRow("Aprovar ações dos agentes");
+    const chip = within(approve).getByRole("button", { name: /^Só Admin e Suporte/ });
+    await click(chip);
+    expect(screen().getByRole("dialog", { name: "Quem pode aprovar ações" })).toBeTruthy();
+  });
+});
+
+describe("a cargo's Canais and Agentes (W5–W8)", () => {
+  test("its channels as a checklist with who sees each; #general fixed; opening an invite-only one asks", async () => {
+    const state = await open(`roles/${SUPORTE}?tab=channels`);
+    const box = (name: string) => screen().getByRole("checkbox", { name: new RegExp(`#${name}$`) });
+    expect((box("general") as HTMLButtonElement).disabled).toBe(true);
+    expect(box("suporte").getAttribute("aria-checked")).toBe("true");
+    expect(box("diretoria").getAttribute("aria-checked")).toBe("false");
+    await click(box("diretoria"));
+    const ask = screen().getByRole("dialog", { name: "Abrir #diretoria para Suporte?" });
+    await click(within(ask).getByRole("button", { name: "Abrir" }));
+    expect(last(state, "chat.update")?.slice(1)).toEqual([
+      "chan-diretoria",
+      { visibility: "private", audienceRoleIds: [SUPORTE] },
+    ]);
+  });
+
+  test("unticking a public channel asks who sees it, the three words", async () => {
+    await open(`roles/${SUPORTE}?tab=channels`);
+    await click(screen().getByRole("checkbox", { name: /#eng$/ }));
+    const dialog = screen().getByRole("dialog", { name: "Quem vê #eng" });
+    expect(within(dialog).getAllByRole("radio").map((r) => r.querySelector(".ac-optrow__title")?.textContent)).toEqual([
+      "Todos",
+      "Só alguns cargos",
+      "Só quem for adicionado",
+    ]);
+  });
+
+  test("its agents; one only its owner talks to opens who talks to it, the cargo ticked", async () => {
+    await open(`roles/${SUPORTE}?tab=agents`);
+    const box = (name: string) => screen().getByRole("checkbox", { name: new RegExp(`^${name}`) });
+    expect(box("Ada").getAttribute("aria-checked")).toBe("true");
+    expect(box("Atlas").getAttribute("aria-checked")).toBe("false");
+    await click(box("Atlas"));
+    const dialog = screen().getByRole("dialog", { name: "Quem fala com Atlas" });
+    expect(within(dialog).getByRole("radio", { name: /Só alguns cargos e pessoas/ }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    expect(within(dialog).getByRole("checkbox", { name: /^Suporte/ }).getAttribute("aria-checked")).toBe("true");
+  });
+});
+
+describe("a cargo's Pessoas (W9)", () => {
+  test("adding someone who'd take a mailbox from an agent asks first, in the same dialog", async () => {
+    const state = acme((s) => {
+      s.roleMailLoss = {
+        [SUPORTE]: [
+          {
+            agentId: ADA_ID,
+            agentName: "Ada",
+            accountId: "acc-1",
+            address: "bruno@example.com",
+            ownerUserId: "u-joao",
+            ownerName: "João",
+          },
+        ],
+      };
+    });
+    await open(`roles/${SUPORTE}?tab=people`, state);
+    await click(screen().getByRole("button", { name: "Adicionar pessoas" }));
+    const dialog = screen().getByRole("dialog", { name: "Adicionar a Suporte" });
+    await click(within(dialog).getByRole("checkbox", { name: /^Fabio/ }));
+    await click(within(dialog).getByRole("button", { name: "Adicionar 1" }));
+    await settle(4);
+    const step = screen().getByRole("dialog", { name: "Ada perde a caixa de e-mail de João" });
+    expect(step.textContent).toContain("bruno@example.com");
+    expect(state.calls.some((c) => c.method === "roles.setFor")).toBe(false);
+    await click(within(step).getByRole("button", { name: "Adicionar mesmo assim" }));
+    await settle(4);
+    expect(last(state, "roles.setFor")?.slice(1)).toEqual(["u-fabio", [FIN, SUPORTE]]);
+  });
+});
+
+describe("look, create and the members' menu (W12, W13, W15)", () => {
+  test("Nome, cor e ícone: a live preview, then one save", async () => {
+    const state = await open(`roles/${SUPORTE}`);
+    await click(screen().getByRole("button", { name: "Mudar nome, cor e ícone" }));
+    const dialog = screen().getByRole("dialog", { name: "Nome, cor e ícone" });
+    // The mark on the name's line, by the kit's capitals'-middle rule.
+    expect(dialog.querySelector(".roles-preview")?.className).toContain("ac-iconline");
+    expect(dialog.querySelector(".roles-preview > .ac-rolemark")).toBeTruthy();
+    await click(within(dialog).getByRole("radio", { name: "Cor rose" }));
+    await click(within(dialog).getByRole("button", { name: "Salvar" }));
+    expect(last(state, "roles.update")?.slice(1)).toEqual([SUPORTE, { color: "rose" }]);
+  });
+
+  test("Criar cargo from another one copies its channels and agents too", async () => {
+    const state = await open("roles");
+    await click(screen().getByRole("button", { name: "Criar cargo" }));
+    const dialog = screen().getByRole("dialog", { name: "Criar cargo" });
+    await act(async () => fireEvent.change(within(dialog).getByRole("textbox"), { target: { value: "Plantão" } }));
+    await pick(within(dialog).getByRole("combobox"), "Suporte");
+    await click(within(dialog).getByRole("button", { name: "Criar cargo" }));
+    expect(last(state, "roles.create")?.[1]).toEqual({ name: "Plantão", copyFrom: SUPORTE });
+  });
+
+  test("a person's ⋯ › Cargos: the kit's checkbox at each cargo's end, each tick saves", async () => {
+    const state = await open("members");
+    const carla = [...document.querySelectorAll<HTMLElement>(".members-person")].find((r) =>
+      r.textContent?.includes("Carla"),
+    ) as HTMLElement;
+    await act(async () =>
+      fireEvent.pointerDown(within(carla).getByRole("button", { name: "Mais de Carla" }), { button: 0, ctrlKey: false }),
+    );
+    await settle(2);
+    const sub = screen().getByRole("menuitem", { name: "Cargos" });
+    await act(async () => fireEvent.keyDown(sub, { key: "Enter" }));
+    await settle(2);
+    const fin = screen().getByRole("menuitemcheckbox", { name: "Financeiro" });
+    expect(fin.querySelector(".ac-check.ac-menu__box")?.getAttribute("data-state")).toBe("unchecked");
+    expect(
+      screen().getByRole("menuitemcheckbox", { name: "Suporte" }).querySelector(".ac-menu__box")?.getAttribute("data-state"),
+    ).toBe("checked");
+    await click(fin);
+    await settle(4);
+    expect(last(state, "roles.setFor")?.slice(1)).toEqual(["u-carla", [SUPORTE, FIN]]);
+  });
+});
+
+void ENG_ID;
+void GENERAL_ID;

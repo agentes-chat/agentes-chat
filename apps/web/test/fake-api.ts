@@ -1290,12 +1290,32 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
     state.roles ??= seedRoles();
     return state.roles;
   };
-  /** `GET …/roles`: the roles with how many hold each, and the areas. */
+  /**
+   * `GET …/roles`: the roles with how many hold each, what each reaches (the channels limited to it, `everyone` the
+   * public ones; the agents whose audience lists it, `everyone` those that answer everyone) and the areas.
+   */
   const rolesPayload = () => ({
     roles: roles().map((r) => ({
       ...r,
       people:
         r.kind === "everyone" ? state.members.length : state.members.filter((m) => m.roleIds?.includes(r.id)).length,
+      channelIds: state.channels
+        .filter((c) =>
+          r.kind === "everyone"
+            ? c.visibility === "public"
+            : c.visibility === "private" && (c.audienceRoleIds ?? []).includes(r.id),
+        )
+        .map((c) => c.id),
+      hiddenChannels: 0,
+      agentIds: state.agents
+        .filter((a) => {
+          if (a.builtin === "right_hand" || a.former) return false;
+          const mode = a.audience?.mode ?? a.audienceMode ?? "everyone";
+          return r.kind === "everyone"
+            ? mode === "everyone"
+            : mode === "people" && (a.audience?.roleIds ?? []).includes(r.id);
+        })
+        .map((a) => a.id),
     })),
     areas: structuredClone(PERMISSION_AREAS),
     colors: ["indigo", "violet", "rose", "amber", "green", "teal", "graphite"],

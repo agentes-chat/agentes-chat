@@ -34,6 +34,7 @@ import {
   providerLabel,
   providerOf,
 } from "@agenteschat/client/lib/providers";
+import type { RoleTab } from "@agenteschat/client/lib/roles";
 import { settingsNav, settingsTabs } from "@agenteschat/client/lib/settings-nav";
 import { parseAmount } from "@agenteschat/client/lib/text";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -134,6 +135,9 @@ function Settings({
   skill,
   agent,
   person,
+  role,
+  tab,
+  create,
 }: {
   /** The section a link names; none (`/settings`): Geral for who opens it, else their first one. */
   section?: SettingsSection;
@@ -156,6 +160,11 @@ function Settings({
   agent?: string;
   /** Orçamento e uso › Pessoas: the person whose month opens (a limit's notice). */
   person?: string;
+  /** Cargos › one cargo (its id, `everyone` or `owner`) and its tab (`/settings/roles/{role}?tab=`). */
+  role?: string;
+  tab?: RoleTab;
+  /** Cargos, with Criar cargo open (⌘K's "Criar cargo"). */
+  create?: boolean;
 }) {
   const { t } = useTranslation();
   const { org } = useOrg();
@@ -243,7 +252,7 @@ function Settings({
       {current === "apps" && <AiAppsSection />}
       {current === "general" && <GeneralSection />}
       {current === "members" && <MembersPage embedded />}
-      {current === "roles" && <RolesSection />}
+      {current === "roles" && <RolesSection roleId={role} tab={tab} create={create} />}
       {current === "vault" && <VaultSection />}
       {current === "audit" && <AuditSection agent={agent} />}
       {current === "media" && <MediaSettingsSection />}

@@ -190,9 +190,10 @@ test("every hairline between a card's rows, and over its foot, has one step of r
   // Over a foot, the rows give back the card's gap: the last row's padding is all that's over the foot's hairline.
   expect(last(layout, ".settings-rows:has(+.ac-card__foot)", "margin-bottom")).toBe("calc(-1 * var(--space-3))");
   const roles = topLevel(await read(join(SRC, "components/roles/roles.css")));
-  expect(last(roles, ".roles-row", "padding")).toBe("var(--row-py) 20px");
-  expect(last(roles, ".roles-area", "padding")).toBe("var(--row-py) 0");
-  expect(last(roles, ".roles-look__row", "padding")).toBe("var(--row-py) 0");
+  // The cargos' list keeps 12 above and below its words (a list row's), each row's words past its grip's slot.
+  expect(last(roles, ".roles-row__open", "padding")).toBe(
+    "var(--space-3) var(--space-4) var(--space-3) var(--space-3)",
+  );
   // Limites are settings rows: every select on one right edge.
   const people = topLevel(await read(join(SRC, "components/people-usage.css")));
   expect(declarations(people, ".pu-limits__row")).toEqual([]);
