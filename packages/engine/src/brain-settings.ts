@@ -305,6 +305,8 @@ export type BrainUnavailable =
   | "outdated"
   /** Its runner hasn't said which CLIs it has yet (`detectedAt`): nobody knows whether this one is there. */
   | "not_reported"
+  /** It is there and can't start (`executors.broken`, with its own error): not missing, so installing it won't help. */
+  | "cant_start"
   /** Its runner doesn't run this CLI on the computer's system (`brainRunsOn`): Cursor on Windows, for one. */
   | "system";
 
@@ -334,9 +336,15 @@ type MachineLike = Parameters<typeof machineExecutors>[0] & {
   } | null;
 } & Parameters<typeof machineOnline>[0];
 
-/** A CLI the computer doesn't list: gone only once its runner has looked (the same check the turns make). */
-const missingCli = (machine: MachineLike): BrainUnavailable =>
-  machine.executors?.detectedAt ? "not_installed" : "not_reported";
+/**
+ * A CLI the computer doesn't list: gone only once its runner has looked (the same check the turns make), and there but
+ * unable to start where the runner says so.
+ */
+const missingCli = (
+  machine: MachineLike,
+  cli: keyof NonNullable<schema.MachineExecutors["broken"]>,
+): BrainUnavailable =>
+  machine.executors?.broken?.[cli] ? "cant_start" : machine.executors?.detectedAt ? "not_installed" : "not_reported";
 
 /**
  * What the agent's computer can think with; the model brain always. A
@@ -358,7 +366,7 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
       reason = "runner_old";
     else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
     else if (!found?.available.includes(executor))
-      reason = executor === "codex" && found?.codexTooOld ? "outdated" : missingCli(machine);
+      reason = executor === "codex" && found?.codexTooOld ? "outdated" : missingCli(machine, executor);
     return {
       kind,
       available: !reason,
@@ -402,7 +410,7 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
     reason = "runner_old";
   else if (!brainRunsOn(kind, machine.os)) reason = "system";
   else if (tools && (tools[kind] ?? tools.codex) !== true) reason = "tool_off";
-  else if (!machine.executors?.[kind]) reason = missingCli(machine);
+  else if (!machine.executors?.[kind]) reason = missingCli(machine, kind);
   return {
     kind,
     available: !reason,

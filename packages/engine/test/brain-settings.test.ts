@@ -212,6 +212,12 @@ describe("brain settings", () => {
       ["claude_code", false, "not_installed"],
       ["codex", false, "outdated"],
     ]);
+    // There and failing to start: said as that, never "not installed".
+    const broken = mac({ executors: { codex: { version: "0.170.0" }, broken: { claude: "boom" }, detectedAt: "x" } });
+    expect(reasons(broken).slice(1, 3)).toEqual([
+      ["claude_code", false, "cant_start"],
+      ["codex", true, null],
+    ]);
     const both = mac({ executors: { claude: { version: "2" }, codex: { version: "0.170.0" }, detectedAt: "x" } });
     expect(
       brainOptions(both).every((o) => o.available || ["cursor", "opencode", "grok", "antigravity"].includes(o.kind)),

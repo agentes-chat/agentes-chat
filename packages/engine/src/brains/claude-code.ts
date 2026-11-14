@@ -7,6 +7,7 @@ import {
   BRAIN_PROTOCOL,
   type BrainTurnRequest,
   brainTopic,
+  CLI_GIT_MISSING,
   CONTEXT_LIMIT_PROTOCOL,
   CONVERSATION_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
@@ -222,6 +223,19 @@ export function speedFields(
   return { speed: turn.speed };
 }
 
+/** A CLI the computer doesn't list: not installed, or there and failing to start (`executors.broken`) with its error. */
+export function cliMissingMessage(
+  program: string,
+  status: Pick<MachineStatus, "name" | "executors">,
+  cli: keyof NonNullable<NonNullable<MachineStatus["executors"]>["broken"]>,
+) {
+  const said = status.executors?.broken?.[cli];
+  if (!said) return `${program} is not installed on ${status.name}.`;
+  return said === CLI_GIT_MISSING
+    ? `${program} is on ${status.name} but can't start: Git for Windows isn't installed there.`
+    : `${program} is on ${status.name} but can't start: ${said}`;
+}
+
 /** Why the turn can't go to this machine now (null: it can). With an account, the account decides the sign-in. */
 export function claudeCodeAvailability(status: MachineStatus | null, account?: BrainAccount): BrainEvent | null {
   if (!status) return err("machine_offline", "The agent's computer is not connected to the organization.", true);
@@ -241,7 +255,7 @@ export function claudeCodeAvailability(status: MachineStatus | null, account?: B
     );
   }
   const ex = status.executors ?? {};
-  if (ex.detectedAt && !ex.claude) return err("cli_missing", `Claude Code is not installed on ${status.name}.`, true);
+  if (ex.detectedAt && !ex.claude) return err("cli_missing", cliMissingMessage("Claude Code", status, "claude"), true);
   if (account) {
     const e = accountUnavailable(status, account, "claude_code");
     return e ? err(e.code, e.message, true) : null;

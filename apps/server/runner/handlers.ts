@@ -216,6 +216,9 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "keep.end": "machine",
   // The person's own session: macOS's password window opens on their screen (a system-mode runner answers unsupported).
   "xcode.fix": "machine",
+  // The person's own CLIs, installed and looked up as the runner's user (system mode answers unsupported).
+  "clis.check": "machine",
+  "cli.install": "machine",
 };
 
 type AccessRequestOp = Extract<MachineRequest, { op: "access.request" }>;
@@ -337,6 +340,9 @@ export interface HandlerContext {
   };
   /** `XCODE_FIX_PROTOCOL`: fixing this Mac's own Xcode; without it the op answers `unsupported`. */
   xcodeFix?: (req: Extract<MachineRequest, { op: "xcode.fix" }>) => MachineReplies["xcode.fix"];
+  /** `CLI_INSTALL_PROTOCOL`: the coding CLIs looked up now, and installed from the apps. */
+  clisCheck?: () => Promise<MachineReplies["clis.check"]>;
+  cliInstall?: (req: Extract<MachineRequest, { op: "cli.install" }>) => MachineReplies["cli.install"];
 }
 
 export interface RequestScope {
@@ -714,6 +720,17 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     return (
       ctx.xcodeFix?.(req) ?? {
         fix: { kind: req.kind === "update" ? "update" : "select", state: "unsupported", step: 0 },
+      }
+    );
+  }
+  if (req.op === "clis.check") {
+    if (!ctx.clisCheck) throw new RunnerError("bad_request", "This runner doesn't look up its programs on request");
+    return ctx.clisCheck();
+  }
+  if (req.op === "cli.install") {
+    return (
+      ctx.cliInstall?.(req) ?? {
+        install: req.tool ? { tool: req.tool, state: "unsupported" } : null,
       }
     );
   }

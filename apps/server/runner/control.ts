@@ -138,6 +138,8 @@ export class ControlServer {
         return d
           .iphoneSetup()
           .fixXcode(m.action === "cancel" ? "cancel" : "start", m.kind === "update" ? "update" : "select");
+      case "cli.install":
+        return d.cliInstaller().handle(m);
       case "shutdown":
         return { stopping: true };
       default:

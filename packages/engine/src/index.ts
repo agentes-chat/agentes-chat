@@ -169,6 +169,7 @@ export * from "./key-line";
 export * from "./limits";
 export * from "./machine-access";
 export * from "./machine-accounts";
+export * from "./machine-clis";
 export * from "./machine-device";
 export * from "./machine-holds";
 export * from "./machine-hub";
