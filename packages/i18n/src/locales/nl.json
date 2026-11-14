@@ -67,7 +67,7 @@
     "create": "Rol maken",
     "base": "Basis",
     "everyoneName": "Iedereen",
-    "orderHint": "De volgorde telt: wie hoger staat, beheert de rollen en mensen eronder.",
+    "orderHint": "Wie hoger staat, beheert de rollen en mensen eronder. De naamkleur van elke persoon komt van diens hoogste rol. Sleep om de volgorde te wijzigen.",
     "reorder": "Volgorde wijzigen",
     "reorderDone": "Klaar",
     "moveUp": "{{name}} omhoog",
@@ -109,6 +109,26 @@
         "none": "Niemand ziet of gebruikt de computers of browsers van agents, ook geen inlogverzoeken",
         "browser": "De browser van de eigen agents en inlogverzoeken aan de persoon, nooit het hele scherm",
         "full": "Het hele scherm en de terminal van de eigen agents en van de computers die de persoon heeft gekoppeld"
+      },
+      "steps": {
+        "off": "Geen toegang",
+        "ownBrowser": "Browser van de eigen agents",
+        "ownComputer": "Computer van de eigen agents",
+        "anyBrowser": "Browser van elke agent",
+        "anyComputer": "Computer van elke agent"
+      },
+      "short": {
+        "browser": "Browser",
+        "computer": "Computer"
+      },
+      "groupOwn": "Eigen agents",
+      "groupAny": "Elke agent",
+      "hint": "Browser: de browser en de inlogverzoeken. Computer: ook het hele scherm en de terminal. Eigen agents: die waarvoor de persoon verantwoordelijk is en de computers die die heeft gekoppeld.",
+      "with": {
+        "ownBrowser": "de browser van de eigen agents",
+        "ownComputer": "de computer van de eigen agents",
+        "anyBrowser": "de browser van elke agent",
+        "anyComputer": "de computer van elke agent"
       }
     },
     "everyoneNote": "Geldt voor iedereen in de werkruimte. Andere rollen voegen er alleen iets aan toe.",
@@ -146,10 +166,10 @@
     "name": "Naam",
     "nameDesc": "Hoe iedereen het ziet.",
     "color": "Kleur",
-    "colorDesc": "Kleurt het teken van de rol.",
+    "colorDesc": "Kleurt het rolbadge en de naam van wie hem als hoogste rol heeft.",
     "colorOf": "Kleur {{color}}",
     "hoist": "Apart tonen in de ledenlijst",
-    "hoistDesc": "Wie deze rol heeft, krijgt een eigen groep in de ledenkolom.",
+    "hoistDesc": "Wie deze rol heeft, krijgt een eigen groep in de ledenkolom. Agents blijven in de hunne.",
     "icon": "Icoon",
     "iconDesc": "Naast de naam getoond.",
     "more": "Meer opties",
@@ -168,7 +188,7 @@
     },
     "newTitle": "Rol maken",
     "newSub": "Je kunt later alles wijzigen.",
-    "namePlaceholder": "Bijv. Moderators",
+    "namePlaceholder": "Bijv. Support",
     "startFrom": "Beginnen met",
     "templates": {
       "blank": "Niets",
@@ -192,7 +212,139 @@
     "added_other": "{{count}} mensen met {{name}}",
     "rolesOf": "Rollen van {{name}}",
     "rolesCta": "Rollen",
-    "aboveYou": "Boven je rol"
+    "aboveYou": "Boven je rol",
+    "search": "Rol zoeken",
+    "noneYet": "Nog geen rollen. Maak er een om sommige mensen meer te geven.",
+    "noMatch": "Geen rol met ‘{{q}}’.",
+    "full": "Deze werkruimte heeft al {{max}} rollen. Verwijder er een om een nieuwe te maken.",
+    "loadError": "De rollen konden niet worden geladen. {{cause}}",
+    "move": "{{name}} verplaatsen",
+    "moveHint": "Sleep hem, of gebruik de spatiebalk en de pijltjes.",
+    "reach": {
+      "permissions_one": "+{{count}} recht",
+      "permissions_other": "+{{count}} rechten",
+      "channels_one": "+{{count}} kanaal",
+      "channels_other": "+{{count}} kanalen",
+      "agents_one": "+{{count}} agent",
+      "agents_other": "+{{count}} agents",
+      "basePermissions_one": "{{count}} recht",
+      "basePermissions_other": "{{count}} rechten",
+      "baseChannels_one": "{{count}} kanaal",
+      "baseChannels_other": "{{count}} kanalen",
+      "baseAgents_one": "{{count}} agent",
+      "baseAgents_other": "{{count}} agents",
+      "owner": "Mag alles, altijd",
+      "admin": "Mag alles",
+      "none": "Alleen wat Iedereen mag",
+      "hidden_one": "{{count}} die je niet ziet",
+      "hidden_other": "{{count}} die je niet ziet"
+    },
+    "switchTo": "Naar een andere rol",
+    "look": "Naam, kleur en icoon wijzigen",
+    "lookColor": "Kleur wijzigen",
+    "inviteWith": "Uitnodigen met deze rol",
+    "tabs": {
+      "permissions": "Rechten",
+      "channels": "Kanalen",
+      "agents": "Agents",
+      "people": "Mensen"
+    },
+    "gone": "Iemand heeft deze rol verwijderd.",
+    "backToList": "Terug naar de rollen",
+    "searchPermission": "Recht zoeken",
+    "noPermissionMatch": "Geen recht met ‘{{q}}’.",
+    "everyoneTip": "Iedereen mag dit. Klik om te kiezen wie het mag.",
+    "only": "Alleen {{names}}",
+    "notHeld": "Je hebt dit recht niet.",
+    "nowAbove": "Deze rol staat nu boven de jouwe. Alleen wie hoger staat, wijzigt hem.",
+    "agentsNote": "Rollen gelden voor mensen. Elke agent heeft eigen rechten, op zijn pagina.",
+    "adminHint": "Mag alles behalve wat alleen van de eigenaar is. Geef dit alleen aan wie de werkruimte beheert.",
+    "adminOn": "Met Beheerder mag {{name}} alles behalve wat alleen van de eigenaar is.",
+    "adminAsk": {
+      "title": "Beheerder aanzetten in {{name}}?",
+      "text_one": "Wie {{name}} heeft, mag dan alles behalve wat alleen van de eigenaar is. Dat is {{count}} persoon.",
+      "text_other": "Wie {{name}} heeft, mag dan alles behalve wat alleen van de eigenaar is. Dat zijn {{count}} mensen.",
+      "confirm": "Beheerder aanzetten"
+    },
+    "who": {
+      "title": "Wie mag {{short}}",
+      "everyoneDesc": "Elke persoon in de werkruimte",
+      "some": "Alleen sommige rollen",
+      "owners": "Eigenaren mogen het altijd.",
+      "losing": "Verliezen het:",
+      "gaining": "Krijgen het:",
+      "everyoneGains": "Iedereen krijgt het.",
+      "nobody": "Niemand verliest het.",
+      "noRoles": "Er zijn nog geen andere rollen.",
+      "computersTitle": "Wie houdt {{what}}",
+      "computersLow": "Iedereen krijgt {{what}}.",
+      "computersNone": "Iedereen stopt met de computers van de agents."
+    },
+    "channels": {
+      "line": "Wie {{name}} heeft, ziet de aangevinkte kanalen en kan erin.",
+      "lineBase": "Iedereen ziet de aangevinkte kanalen en kan erin.",
+      "hint": "Geldt voor mensen. Een agent komt in een kanaal als iemand hem toevoegt.",
+      "search": "Kanaal zoeken",
+      "general": "Iedereen blijft in #general.",
+      "notYours": "Alleen wie #{{channel}} maakte of kanalen ordent, wijzigt wie het ziet.",
+      "removeTitle": "#{{channel}} weghalen bij {{name}}?",
+      "leave": "Verlaten het kanaal:",
+      "openTitle": "#{{channel}} openen voor {{name}}?",
+      "openText": "Wie {{name}} heeft, ziet het kanaal en de hele geschiedenis, en kan erin.",
+      "open": "Openen",
+      "openAllTitle": "#{{channel}} openen voor iedereen?",
+      "openAllText": "De hele geschiedenis komt open te staan voor de werkruimte.",
+      "admin": "Met Beheerder ziet wie {{name}} heeft alle kanalen.",
+      "onlyGeneral": "Er is voorlopig alleen #general.",
+      "noMatch": "Geen kanaal met ‘{{q}}’."
+    },
+    "sees": {
+      "title": "Wie ziet #{{channel}}",
+      "private": "Alleen wie wordt toegevoegd",
+      "privateDesc": "Niemand nieuw ziet het. Wie erin zit, blijft.",
+      "unsee": "Wie erin zit, blijft. Zien het niet meer:"
+    },
+    "agents": {
+      "line": "Wie {{name}} heeft, praat met de aangevinkte agents.",
+      "lineBase": "Iedereen praat met de aangevinkte agents.",
+      "hint": "Dit gaat over mensen. Wat elke agent doet, staat op zijn pagina.",
+      "noTalk": "Wie alleen {{name}} heeft, praat niet met agents.",
+      "turnOnTalk": "Met agents praten aanzetten",
+      "search": "Agent zoeken",
+      "notYours": "Alleen {{owner}}, verantwoordelijk voor {{name}}, of wie elke agent bewerkt, wijzigt dit.",
+      "notYoursNoOwner": "Alleen wie elke agent bewerkt, wijzigt dit.",
+      "none": "Er zijn nog geen agents.",
+      "noMatch": "Geen agent met ‘{{q}}’."
+    },
+    "talks": {
+      "title": "Wie praat met {{name}}",
+      "some": "Alleen sommige rollen en mensen",
+      "ownerDesc": "Wie verantwoordelijk is voor {{name}}",
+      "losing": "Praten niet meer met {{agent}}:"
+    },
+    "holders": {
+      "agent": "{{name}} is een agent. Agents hebben geen rol.",
+      "seeAgents": "Agents bekijken",
+      "removed": "{{person}} heeft {{name}} niet meer",
+      "undo": "Ongedaan maken",
+      "selfTitle": "Jezelf uit {{name}} halen?",
+      "selfText": "Je verliest wat alleen {{name}} geeft. Alleen iemand boven je geeft het terug.",
+      "noMatch": "Niemand met ‘{{q}}’."
+    },
+    "mail": {
+      "title": "{{agent}} verliest de mailbox van {{owner}}",
+      "titleMany": "Agents verliezen mailboxen",
+      "lead": "Als meer mensen met ze praten, lezen de agents deze mailboxen niet meer.",
+      "of": "Mailbox van {{owner}} · {{agent}}",
+      "again": "Alleen wie de mailbox gaf, geeft hem opnieuw.",
+      "addAnyway": "Toch toevoegen",
+      "giveAnyway": "Toch geven"
+    },
+    "previewWhere": "in de chat",
+    "sameAs": "Zoals",
+    "deleteLeave": "Verlaten kanalen die ze alleen via {{name}} zagen:",
+    "deleteReading": "Kijken wie kanalen verlaat…",
+    "ownerAdd": "Eigenaren toevoegen"
   },
   "permissions": {
     "areas": {
@@ -6928,6 +7080,7 @@
     "everyoneNote": "Iedereen geldt voor elke persoon in de werkruimte.",
     "everyoneNotePersonal": "Zonder rol gebruikt iemand de agents. Met {{role}} helpt iemand je het te beheren.",
     "noRolesToGive": "Geen rollen onder de jouwe om toe te kennen.",
+    "rolesAbove": "Rollen boven de jouwe zie je niet.",
     "roleFilter": "Rol",
     "rolesCount_one": "{{count}} rol",
     "rolesCount_other": "{{count}} rollen",
@@ -10381,6 +10534,7 @@
     "someone": "iemand"
   },
   "palette": {
+    "roleKeywords": "rol rollen maken nieuw rechten",
     "newWikiKeywords": "wiki nieuwe pagina maken new page create",
     "actions": "Acties",
     "inviteSub": "via e-mail of link",
@@ -13641,7 +13795,7 @@
       "aboveYou": "Alleen iemand boven deze rol kan hem wijzigen.",
       "base": "Elke werkruimte houdt de rol Iedereen.",
       "unknown": "Die rol bestaat niet meer.",
-      "orderIncomplete": "De rollen zijn veranderd. Herlaad en probeer het opnieuw."
+      "orderIncomplete": "De rollen zijn veranderd terwijl je ze verplaatste. Laad opnieuw en probeer het nog eens."
     },
     "teamProposal": {
       "undoExpired": "Er is meer dan een dag verstreken sinds dit team is gemaakt, dus het kan hier niet ongedaan worden gemaakt. Archiveer de agents op hun pagina's."
@@ -15310,7 +15464,7 @@
       "general": "Algemeen",
       "right_hand": "Rechterhand",
       "members": "Leden en uitnodigingen",
-      "roles": "Rollen en rechten",
+      "roles": "Rollen",
       "vault": "Vault",
       "access": "Agents en toegang",
       "connectors": "Connectors en MCP's",
@@ -15341,7 +15495,7 @@
       "general": "Naam, tijdzone en wat elke agent over de werkruimte weet.",
       "right_hand": "De assistent die met ieder het team opbouwt, in hun DM.",
       "members": "Wie er in de werkruimte zit, en uitnodigingen.",
-      "roles": "Wat iedereen kan doen. Rollen tellen op.",
+      "roles": "Elke rol voegt rechten, kanalen en agents toe.",
       "vault": "Wachtwoorden, sleutels en contacten van je agents. Wachtwoorden zien ze nooit.",
       "access": "Wat elke agent kan gebruiken: één niveau per connector.",
       "connectors": "Diensten en MCP-servers die één keer voor de hele werkruimte zijn gekoppeld.",
