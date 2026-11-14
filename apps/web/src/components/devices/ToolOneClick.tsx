@@ -108,7 +108,7 @@ export function useToolOneClick(machine: Machine | null | undefined) {
 /**
  * The way out where a program is off on a computer, under the line that says so (every screen that says it uses this
  * one): whoever connected it turns it on here, or waits for it to come online, anyone else asks them, an app too old
- * says to update it there (the button only in the app on that very computer). `children`: the screen's other ways on
+ * says to update it there; in the app on that very computer, its Preferences → Ferramentas instead. `children`: the screen's other ways on
  * the same line (a key). On a computer that may have no app, the command for whoever turns it on there.
  */
 export function ToolOffWayOut({
@@ -127,16 +127,15 @@ export function ToolOffWayOut({
   const offline = oneClick?.kind === "allow" && !machine.online;
   const line = offline
     ? t("machines.oneClick.offline", { machine: machine.name, tool: toolWords(t, tool) })
-    : oneClick?.kind === "outdated"
+    : oneClick?.kind === "outdated" && !here
       ? t("machines.oneClick.outdated", { machine: machine.name })
       : null;
+  // In the app on that very computer its Preferences turn the program on at any app version: no update needed.
   const button =
     oneClick?.kind === "allow" || oneClick?.kind === "ask" ? (
       <MachineToolButton machine={machine} tool={tool} disabled={offline} />
     ) : here ? (
-      <OpenPrefsButton tab={oneClick ? "updates" : "tools"}>
-        {t(oneClick ? "machines.thisMac.update" : "machines.thisMac.openTools")}
-      </OpenPrefsButton>
+      <OpenPrefsButton tab="tools">{t("machines.thisMac.openTools")}</OpenPrefsButton>
     ) : null;
   const command =
     machine.kind === "managed" || oneClick?.kind === "ask" || allowsInApp(machine.os)
