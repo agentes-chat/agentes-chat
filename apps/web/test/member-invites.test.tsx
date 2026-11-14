@@ -719,10 +719,10 @@ describe("People › Convites", () => {
   test("pending: while a row's call runs its other actions wait; Desativar's dialog holds until the link is off", async () => {
     const state = withSupport();
     state.invitations.push(
-      invitation({ id: "inv-rafa", email: "rafael@acme.com" }),
+      invitation({ id: "inv-rafa", email: "rafa@example.com" }),
       invitation({
         id: "inv-old",
-        email: "old@acme.com",
+        email: "velho@example.com",
         status: "expired",
         expiresAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
       }),
@@ -736,18 +736,18 @@ describe("People › Convites", () => {
     await members(state, "invites", api);
     const row = (email: string) => screen().getByRole("group", { name: `Convite para ${email}` });
 
-    await click(within(row("rafael@acme.com")).getByRole("button", { name: "Reenviar" }));
+    await click(within(row("rafa@example.com")).getByRole("button", { name: "Reenviar" }));
     await settle(2);
-    expect(off(within(row("rafael@acme.com")).getByRole("button", { name: "Copiar link" }))).toBe(true);
-    expect(off(within(row("rafael@acme.com")).getByRole("button", { name: "Mais ações para rafael@acme.com" }))).toBe(
+    expect(off(within(row("rafa@example.com")).getByRole("button", { name: "Copiar link" }))).toBe(true);
+    expect(off(within(row("rafa@example.com")).getByRole("button", { name: "Mais ações para rafa@example.com" }))).toBe(
       true,
     );
     await resend.release();
-    expect(off(within(row("rafael@acme.com")).getByRole("button", { name: "Copiar link" }))).toBe(false);
+    expect(off(within(row("rafa@example.com")).getByRole("button", { name: "Copiar link" }))).toBe(false);
 
-    await click(within(row("old@acme.com")).getByRole("button", { name: "Renovar" }));
+    await click(within(row("velho@example.com")).getByRole("button", { name: "Renovar" }));
     await settle(2);
-    expect(off(within(row("old@acme.com")).getByRole("button", { name: "Tirar" }))).toBe(true);
+    expect(off(within(row("velho@example.com")).getByRole("button", { name: "Tirar" }))).toBe(true);
     await resend.release();
 
     const links = screen().getByRole("region", { name: "Links" });
