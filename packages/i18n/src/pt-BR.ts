@@ -6166,6 +6166,9 @@ export const ptBR = {
         cli_stopped: "O {{brain}} parou com um erro.",
         /** The agent's CLI ended without its answer and without a word (it crashed or was killed). */
         cli_closed: "O {{brain}} fechou de repente.",
+        /** The agent's CLI couldn't start its sandbox on its computer (bubblewrap refused), before the model was asked. */
+        cli_sandbox:
+          "O {{brain}} não consegue abrir a sandbox dele neste computador. Atualize o computador e peça de novo.",
         account_missing:
           "A conta escolhida para este agente não está mais no computador dele. Escolha outra nas configurações do agente ou adicione de novo.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */

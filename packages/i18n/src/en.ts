@@ -6220,6 +6220,9 @@ export const en = {
         cli_stopped: "The {{brain}} program stopped with an error.",
         /** The agent's CLI ended without its answer and without a word (it crashed or was killed). */
         cli_closed: "The {{brain}} program closed unexpectedly.",
+        /** The agent's CLI couldn't start its sandbox on its computer (bubblewrap refused), before the model was asked. */
+        cli_sandbox:
+          "The {{brain}} program can't start its sandbox on this computer. Update the computer, then ask again.",
         account_missing:
           "The account chosen for this agent isn't on its computer anymore. Choose another one in the agent's settings, or add it again.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */

@@ -2964,6 +2964,36 @@ test("a CLI that refuses to start on its computer fails the run at once with wha
   expect(pending).toEqual([]);
 });
 
+test("a CLI whose sandbox can't start fails the run at once with that cause, whether the runner calls it retryable or not", async () => {
+  const said =
+    "Grok Build exited with code 1: bwrap: Can't mkdir parents for /var/lib/agentes-runner-agents/accounts: Permission denied";
+  for (const retryable of [true, undefined]) {
+    if (retryable === undefined) await f.close();
+    f = await setup();
+    await computerAgent(f, { brainFallback: false });
+    const { brain, seen } = scriptedComputerBrain(() => [
+      { type: "error", code: "grok_failed", message: said, ...(retryable ? { retryable } : {}) },
+    ]);
+    const handlers = createJobHandlers({
+      ...f.jobDeps,
+      brains: { claude_code: () => brain },
+      machines: { status: async (id) => statusOf(id) },
+    });
+    await post(f, "@dev roda os testes");
+    await drainOutbox(f.db, handlers);
+    await runJobsDue(f);
+    await drainOutbox(f.db, handlers);
+
+    expect(seen.length).toBe(1);
+    const [run] = await f.db.select().from(schema.agentRuns);
+    expect([retryable, run?.status, run?.error]).toEqual([retryable, "failed", "cli_sandbox: Grok Build"]);
+    const pending = (await f.db.select().from(schema.outbox)).filter(
+      (j) => j.kind === "agent_run.execute" && j.status === "pending",
+    );
+    expect(pending).toEqual([]);
+  }
+});
+
 test("a failure that keeps coming back parks after its tries in a row, though waits for room hand it new jobs", async () => {
   f = await setup();
   await computerAgent(f, { brainFallback: false });
