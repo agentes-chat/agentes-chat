@@ -54,11 +54,7 @@ export function DriveCard({
   const menu = useItemMenu(a, onOpen, onDelete);
   return (
     <>
-      <article
-        className={cx("drive-card", selected && "drive-card--selected")}
-        data-kind={a.kind}
-        {...menu.props}
-      >
+      <article className={cx("drive-card", selected && "drive-card--selected")} data-kind={a.kind} {...menu.props}>
         <DrivePreview artifact={a} />
         <span className="drive-card__kind">
           <Icon name={itemIcon(a)} size={14} />
@@ -128,11 +124,7 @@ export function DriveRow({
   const menu = useItemMenu(a, onOpen, onDelete);
   return (
     <>
-      <li
-        className={cx("drive-row", selected && "drive-row--selected")}
-        data-kind={a.kind}
-        {...menu.props}
-      >
+      <li className={cx("drive-row", selected && "drive-row--selected")} data-kind={a.kind} {...menu.props}>
         <Checkbox
           className="drive-check"
           checked={selected}

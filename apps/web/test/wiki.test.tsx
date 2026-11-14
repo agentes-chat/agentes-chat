@@ -811,7 +811,11 @@ describe("Obsidian vaults", () => {
     const { state, router } = await go("wiki");
     // "Import" is in the header; the side column keeps it in the "…" beside "New page", no button at its foot.
     expect(document.querySelector(".wiki-nav .wiki-import-btn")).toBeNull();
-    expect(document.querySelector(".wiki-nav__head button[aria-haspopup='menu']")).not.toBeNull();
+    expect(
+      within(document.querySelector(".wiki-nav__head") as HTMLElement).getByRole("button", {
+        name: "Mais ações: Wiki",
+      }),
+    ).toBeTruthy();
     const [open] = screen().getAllByRole("button", { name: /^Importar$/ });
     await click(open as HTMLElement);
     const dialog = screen().getByRole("dialog", { name: "Importar para a wiki" });

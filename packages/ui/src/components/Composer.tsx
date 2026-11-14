@@ -834,300 +834,298 @@ export function Composer({
       : undefined;
 
   return (
-    <>
-      <RPopover.Root
-        open={open}
-        onOpenChange={(o) => {
-          if (!o && open) dismiss();
-        }}
-      >
-        <RPopover.Anchor asChild>
-          {/* biome-ignore lint/a11y/noStaticElementInteractions: files dropped anywhere on the card (the attach button is the accessible way), and its empty room is part of the text box, as a mouse sees it */}
-          <div
-            ref={box}
-            className={cx("ac-composer", className)}
-            data-disabled={disabled || undefined}
-            data-dragging={dragging || undefined}
-            data-voice={recording ? rec.phase : undefined}
-            data-esc-layer={recording || attachments ? "" : undefined}
-            style={heldHeight ? { minHeight: heldHeight, maxHeight: heldHeight } : undefined}
-            onMouseDown={(e) => {
-              if ((e.target as HTMLElement).closest(COMPOSER_CONTROLS)) return;
-              // Keeps the caret where it was.
-              e.preventDefault();
-              ref.current?.focus();
-            }}
-            onDragOver={
-              onFiles
-                ? (e) => {
-                    if (!hasFiles(e) || disabled) return;
-                    e.preventDefault();
-                    setDragging(true);
-                  }
-                : undefined
-            }
-            onDragLeave={
-              onFiles
-                ? (e) => {
-                    if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)))
-                      setDragging(false);
-                  }
-                : undefined
-            }
-            onDrop={
-              onFiles
-                ? (e) => {
+    <RPopover.Root
+      open={open}
+      onOpenChange={(o) => {
+        if (!o && open) dismiss();
+      }}
+    >
+      <RPopover.Anchor asChild>
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: files dropped anywhere on the card (the attach button is the accessible way), and its empty room is part of the text box, as a mouse sees it */}
+        <div
+          ref={box}
+          className={cx("ac-composer", className)}
+          data-disabled={disabled || undefined}
+          data-dragging={dragging || undefined}
+          data-voice={recording ? rec.phase : undefined}
+          data-esc-layer={recording || attachments ? "" : undefined}
+          style={heldHeight ? { minHeight: heldHeight, maxHeight: heldHeight } : undefined}
+          onMouseDown={(e) => {
+            if ((e.target as HTMLElement).closest(COMPOSER_CONTROLS)) return;
+            // Keeps the caret where it was.
+            e.preventDefault();
+            ref.current?.focus();
+          }}
+          onDragOver={
+            onFiles
+              ? (e) => {
+                  if (!hasFiles(e) || disabled) return;
+                  e.preventDefault();
+                  setDragging(true);
+                }
+              : undefined
+          }
+          onDragLeave={
+            onFiles
+              ? (e) => {
+                  if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)))
                     setDragging(false);
-                    const dropped = files(e.dataTransfer?.files);
-                    if (dropped.length === 0 || disabled) return;
+                }
+              : undefined
+          }
+          onDrop={
+            onFiles
+              ? (e) => {
+                  setDragging(false);
+                  const dropped = files(e.dataTransfer?.files);
+                  if (dropped.length === 0 || disabled) return;
+                  e.preventDefault();
+                  onFiles(dropped);
+                }
+              : undefined
+          }
+        >
+          {header && <div className="ac-composer__header">{header}</div>}
+          {pills && <div className="ac-composer__pills">{pills}</div>}
+          {attachments && <div className="ac-composer__attachments">{attachments}</div>}
+          {notice && (
+            <div className="ac-composer__notice" role="alert">
+              {notice}
+            </div>
+          )}
+          <div className="ac-composer__row">
+            <div className="ac-composer__tools">
+              {voice && recording && (
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  size="sm"
+                  icon="trash"
+                  className="ac-composer__voice-trash"
+                  aria-label={voice.labels.discard}
+                  onClick={() => rec.discard(true)}
+                />
+              )}
+              {attachLabel && (
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  size="sm"
+                  icon="attach"
+                  aria-label={attachLabel}
+                  onClick={onAttach ?? (onFiles ? () => fileInput.current?.click() : undefined)}
+                  disabled={(!onAttach && !onFiles) || disabled}
+                />
+              )}
+              {onFiles && !onAttach && (
+                <input
+                  ref={fileInput}
+                  type="file"
+                  multiple
+                  hidden
+                  tabIndex={-1}
+                  aria-label={attachLabel}
+                  onChange={(e) => {
+                    const picked = files(e.target.files);
+                    e.target.value = "";
+                    if (picked.length > 0) onFiles(picked);
+                  }}
+                />
+              )}
+              {emoji && !disabled && (
+                <EmojiPickerPopover
+                  labels={emoji}
+                  onPick={insertEmoji}
+                  tabs={pickerTabs}
+                  tabLabels={pickerLabels}
+                  align="start"
+                  // Back to the text box (the caret after the emoji), not to the button.
+                  onCloseAutoFocus={(e) => {
                     e.preventDefault();
-                    onFiles(dropped);
-                  }
-                : undefined
-            }
-          >
-            {header && <div className="ac-composer__header">{header}</div>}
-            {pills && <div className="ac-composer__pills">{pills}</div>}
-            {attachments && <div className="ac-composer__attachments">{attachments}</div>}
-            {notice && (
-              <div className="ac-composer__notice" role="alert">
-                {notice}
-              </div>
-            )}
-            <div className="ac-composer__row">
-              <div className="ac-composer__tools">
-                {voice && recording && (
-                  <Button
-                    variant="ghost"
-                    iconOnly
-                    size="sm"
-                    icon="trash"
-                    className="ac-composer__voice-trash"
-                    aria-label={voice.labels.discard}
-                    onClick={() => rec.discard(true)}
-                  />
-                )}
-                {attachLabel && (
-                  <Button
-                    variant="ghost"
-                    iconOnly
-                    size="sm"
-                    icon="attach"
-                    aria-label={attachLabel}
-                    onClick={onAttach ?? (onFiles ? () => fileInput.current?.click() : undefined)}
-                    disabled={(!onAttach && !onFiles) || disabled}
-                  />
-                )}
-                {onFiles && !onAttach && (
-                  <input
-                    ref={fileInput}
-                    type="file"
-                    multiple
-                    hidden
-                    tabIndex={-1}
-                    aria-label={attachLabel}
-                    onChange={(e) => {
-                      const picked = files(e.target.files);
-                      e.target.value = "";
-                      if (picked.length > 0) onFiles(picked);
-                    }}
-                  />
-                )}
-                {emoji && !disabled && (
-                  <EmojiPickerPopover
-                    labels={emoji}
-                    onPick={insertEmoji}
-                    tabs={pickerTabs}
-                    tabLabels={pickerLabels}
-                    align="start"
-                    // Back to the text box (the caret after the emoji), not to the button.
-                    onCloseAutoFocus={(e) => {
-                      e.preventDefault();
-                      ref.current?.focus();
-                    }}
-                    trigger={<Button variant="ghost" iconOnly size="sm" icon="smile" aria-label={emoji.button} />}
-                  />
-                )}
-              </div>
-              <div className="ac-composer__text">
-                {textarea}
-                {format && !disabled && (
-                  <FormatBar
-                    labels={format}
-                    onFormat={applyKind}
-                    range={recording || open ? null : selected}
-                    value={value}
-                    field={ref}
-                    card={box}
-                    barRef={bar}
-                    onLeave={(to, back) => {
-                      if (back) ref.current?.focus();
-                      else if (to !== ref.current && !(to instanceof Node && bar.current?.contains(to)))
-                        setSelected(null);
-                    }}
-                  />
-                )}
-                {voice && (
-                  // biome-ignore lint/a11y/useSemanticElements: a recording's controls, named as one
-                  <div className="ac-composer__voice" role="group" aria-label={voice.labels.recording}>
-                    {rec.phase === "paused" ? (
-                      <button
-                        type="button"
-                        className="ac-voice__play ac-composer__listen"
-                        aria-label={rec.listening ? voice.labels.stopListening : voice.labels.listen}
-                        onClick={() => void rec.toggleListening()}
-                      >
-                        <Icon name={rec.listening ? "pause" : "play"} size={14} />
-                      </button>
-                    ) : (
-                      <span className="ac-composer__voice-dot" aria-hidden="true" />
-                    )}
-                    <span ref={rec.timer} className="ac-composer__voice-time">
-                      0:00
+                    ref.current?.focus();
+                  }}
+                  trigger={<Button variant="ghost" iconOnly size="sm" icon="smile" aria-label={emoji.button} />}
+                />
+              )}
+            </div>
+            <div className="ac-composer__text">
+              {textarea}
+              {format && !disabled && (
+                <FormatBar
+                  labels={format}
+                  onFormat={applyKind}
+                  range={recording || open ? null : selected}
+                  value={value}
+                  field={ref}
+                  card={box}
+                  barRef={bar}
+                  onLeave={(to, back) => {
+                    if (back) ref.current?.focus();
+                    else if (to !== ref.current && !(to instanceof Node && bar.current?.contains(to)))
+                      setSelected(null);
+                  }}
+                />
+              )}
+              {voice && (
+                // biome-ignore lint/a11y/useSemanticElements: a recording's controls, named as one
+                <div className="ac-composer__voice" role="group" aria-label={voice.labels.recording}>
+                  {rec.phase === "paused" ? (
+                    <button
+                      type="button"
+                      className="ac-voice__play ac-composer__listen"
+                      aria-label={rec.listening ? voice.labels.stopListening : voice.labels.listen}
+                      onClick={() => void rec.toggleListening()}
+                    >
+                      <Icon name={rec.listening ? "pause" : "play"} size={14} />
+                    </button>
+                  ) : (
+                    <span className="ac-composer__voice-dot" aria-hidden="true" />
+                  )}
+                  <span ref={rec.timer} className="ac-composer__voice-time">
+                    0:00
+                  </span>
+                  <canvas ref={wave} className="ac-composer__wave" onPointerDown={rec.onWavePointerDown} />
+                  {recording && (
+                    <span
+                      className="ac-composer__voice-hint"
+                      data-left={countdown <= VOICE_COUNTDOWN_S || undefined}
+                      aria-live="off"
+                    >
+                      {voiceHint}
                     </span>
-                    <canvas ref={wave} className="ac-composer__wave" onPointerDown={rec.onWavePointerDown} />
-                    {recording && (
-                      <span
-                        className="ac-composer__voice-hint"
-                        data-left={countdown <= VOICE_COUNTDOWN_S || undefined}
-                        aria-live="off"
-                      >
-                        {voiceHint}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="ac-composer__tools">
-                {hasMic && (
-                  <Button
-                    variant="ghost"
-                    iconOnly
-                    size="sm"
-                    icon={rec.phase === "rec" && !rec.hold ? "pause" : "mic"}
-                    className="ac-composer__mic"
-                    data-on={rec.phase === "rec" || rec.phase === "paused" || undefined}
-                    aria-label={micLabel}
-                    title={micLabel}
-                    {...rec.micProps}
-                  />
-                )}
-                {/* The compact primary square (32px): dim until there is something to send. */}
-                {working !== undefined ? (
-                  // An agent may work here: one button whose glyph morphs between send and stop.
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="ac-composer__send ac-btn--icon"
-                    data-ready={ready || stopMode || recording ? "" : undefined}
-                    data-mode={stopMode ? "stop" : "send"}
-                    data-press={pressed || undefined}
-                    aria-label={recording && voice ? voice.labels.send : stopMode ? working?.stopLabel : sendLabel}
-                    title={sendTitle}
-                    onClick={() => {
-                      if (stopMode) stop();
-                      else {
-                        press();
-                        send();
-                      }
-                    }}
-                    disabled={!ready && !stopMode && !recording}
-                  >
-                    <span className="ac-composer__glyph ac-composer__glyph--send" aria-hidden="true">
-                      <Icon name="send" />
-                    </span>
-                    <span className="ac-composer__glyph ac-composer__glyph--stop" aria-hidden="true">
-                      <PixelStop size={13} animated={stopMode} />
-                    </span>
-                  </Button>
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    iconOnly
-                    icon="send"
-                    className="ac-composer__send"
-                    data-ready={ready || recording ? "" : undefined}
-                    aria-label={recording && voice ? voice.labels.send : sendLabel}
-                    title={sendTitle}
-                    onClick={() => send()}
-                    disabled={!ready && !recording}
-                  />
-                )}
-              </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="ac-composer__tools">
+              {hasMic && (
+                <Button
+                  variant="ghost"
+                  iconOnly
+                  size="sm"
+                  icon={rec.phase === "rec" && !rec.hold ? "pause" : "mic"}
+                  className="ac-composer__mic"
+                  data-on={rec.phase === "rec" || rec.phase === "paused" || undefined}
+                  aria-label={micLabel}
+                  title={micLabel}
+                  {...rec.micProps}
+                />
+              )}
+              {/* The compact primary square (32px): dim until there is something to send. */}
+              {working !== undefined ? (
+                // An agent may work here: one button whose glyph morphs between send and stop.
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="ac-composer__send ac-btn--icon"
+                  data-ready={ready || stopMode || recording ? "" : undefined}
+                  data-mode={stopMode ? "stop" : "send"}
+                  data-press={pressed || undefined}
+                  aria-label={recording && voice ? voice.labels.send : stopMode ? working?.stopLabel : sendLabel}
+                  title={sendTitle}
+                  onClick={() => {
+                    if (stopMode) stop();
+                    else {
+                      press();
+                      send();
+                    }
+                  }}
+                  disabled={!ready && !stopMode && !recording}
+                >
+                  <span className="ac-composer__glyph ac-composer__glyph--send" aria-hidden="true">
+                    <Icon name="send" />
+                  </span>
+                  <span className="ac-composer__glyph ac-composer__glyph--stop" aria-hidden="true">
+                    <PixelStop size={13} animated={stopMode} />
+                  </span>
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  iconOnly
+                  icon="send"
+                  className="ac-composer__send"
+                  data-ready={ready || recording ? "" : undefined}
+                  aria-label={recording && voice ? voice.labels.send : sendLabel}
+                  title={sendTitle}
+                  onClick={() => send()}
+                  disabled={!ready && !recording}
+                />
+              )}
             </div>
           </div>
-        </RPopover.Anchor>
-        {(mentions || commands || links || channels) && (
-          <RPopover.Portal>
-            <RPopover.Content
-              className={cx("ac-menu ac-suggest", isSlash && "ac-suggest--commands")}
-              side="top"
-              align="start"
-              sideOffset={6}
-              collisionPadding={EDGE_ROOM}
-              // Focus stays in the text box (combobox).
-              onOpenAutoFocus={(e) => e.preventDefault()}
-              onCloseAutoFocus={(e) => e.preventDefault()}
-              onInteractOutside={(e) => {
-                if (e.target instanceof Node && box.current?.contains(e.target)) e.preventDefault();
-              }}
+        </div>
+      </RPopover.Anchor>
+      {(mentions || commands || links || channels) && (
+        <RPopover.Portal>
+          <RPopover.Content
+            className={cx("ac-menu ac-suggest", isSlash && "ac-suggest--commands")}
+            side="top"
+            align="start"
+            sideOffset={6}
+            collisionPadding={EDGE_ROOM}
+            // Focus stays in the text box (combobox).
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onCloseAutoFocus={(e) => e.preventDefault()}
+            onInteractOutside={(e) => {
+              if (e.target instanceof Node && box.current?.contains(e.target)) e.preventDefault();
+            }}
+          >
+            <div
+              role="listbox"
+              id={listId}
+              aria-label={
+                isSlash
+                  ? (commands?.listLabel ?? "")
+                  : isLink
+                    ? (links?.listLabel ?? "")
+                    : isChannel
+                      ? (channels?.listLabel ?? "")
+                      : (mentions?.listLabel ?? "")
+              }
             >
-              <div
-                role="listbox"
-                id={listId}
-                aria-label={
-                  isSlash
-                    ? (commands?.listLabel ?? "")
-                    : isLink
-                      ? (links?.listLabel ?? "")
-                      : isChannel
-                        ? (channels?.listLabel ?? "")
-                        : (mentions?.listLabel ?? "")
-                }
-              >
-                {items.map((item, i) => {
-                  const heading = item.group && item.group !== items[i - 1]?.group;
-                  return (
-                    <div key={item.key} role="presentation">
-                      {heading && (
-                        <div className="ac-menu__heading" role="presentation">
-                          {item.group}
-                        </div>
-                      )}
-                      <div
-                        id={optionId(i)}
-                        role="option"
-                        tabIndex={-1}
-                        aria-selected={i === current}
-                        data-active={i === current || undefined}
-                        className="ac-menu__item ac-suggest__item"
-                        onPointerDown={(e) => {
-                          e.preventDefault();
-                          pick(item);
-                        }}
-                        onClick={() => pick(item)}
-                        onKeyDown={() => {}}
-                      >
-                        {item.leading && (
-                          <span className="ac-menu__leading" aria-hidden="true">
-                            {item.leading}
-                          </span>
-                        )}
-                        <span className="ac-menu__label">
-                          <span>{item.label}</span>
-                          {item.description && <span className="ac-menu__desc">{item.description}</span>}
-                        </span>
-                        {item.note && <span className="ac-suggest__note">{item.note}</span>}
+              {items.map((item, i) => {
+                const heading = item.group && item.group !== items[i - 1]?.group;
+                return (
+                  <div key={item.key} role="presentation">
+                    {heading && (
+                      <div className="ac-menu__heading" role="presentation">
+                        {item.group}
                       </div>
+                    )}
+                    <div
+                      id={optionId(i)}
+                      role="option"
+                      tabIndex={-1}
+                      aria-selected={i === current}
+                      data-active={i === current || undefined}
+                      className="ac-menu__item ac-suggest__item"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        pick(item);
+                      }}
+                      onClick={() => pick(item)}
+                      onKeyDown={() => {}}
+                    >
+                      {item.leading && (
+                        <span className="ac-menu__leading" aria-hidden="true">
+                          {item.leading}
+                        </span>
+                      )}
+                      <span className="ac-menu__label">
+                        <span>{item.label}</span>
+                        {item.description && <span className="ac-menu__desc">{item.description}</span>}
+                      </span>
+                      {item.note && <span className="ac-suggest__note">{item.note}</span>}
                     </div>
-                  );
-                })}
-              </div>
-            </RPopover.Content>
-          </RPopover.Portal>
-        )}
-      </RPopover.Root>
-    </>
+                  </div>
+                );
+              })}
+            </div>
+          </RPopover.Content>
+        </RPopover.Portal>
+      )}
+    </RPopover.Root>
   );
 }

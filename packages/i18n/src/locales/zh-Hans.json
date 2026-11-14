@@ -10722,13 +10722,6 @@
       "nowYours": "停下来阅读你的留言",
       "nowOf": "停下来阅读 {{name}} 的留言"
     },
-    "choice": {
-      "label": "{{name}} 工作时如何发送",
-      "join": "补充到 {{name}} 正在做的事中",
-      "interrupt": "停止并发送",
-      "joins": "补充",
-      "interrupts": "停止并发送"
-    },
     "strip": {
       "see": "查看",
       "toStop": "以停止"

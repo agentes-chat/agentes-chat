@@ -169,13 +169,6 @@ describe("Compartilhar (ADR 0157)", () => {
   test("the viewer's header has Compartilhar beside Baixar", async () => {
     const { report } = await drive();
     await click(screen().getByRole("button", { name: "Relatório de visitas" }));
-    await settle(4);
-    const panel = screen().getByRole("dialog", { name: "Relatório de visitas" });
-    await click(
-      within(panel)
-        .getAllByRole("button", { name: "Abrir" })
-        .find((b) => b.textContent?.trim() === "Abrir") as HTMLElement,
-    );
     await settle(6);
     const viewer = screen().getByRole("dialog", { name: "Relatório de visitas" });
     const share = within(viewer).getByRole("button", { name: "Compartilhar" });

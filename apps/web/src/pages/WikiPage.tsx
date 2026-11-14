@@ -254,6 +254,8 @@ function WikiNav({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<"delete" | "agents" | null>(null);
   const uid = useId();
+  // The side column's own "…", named apart from the open page's: "Mais ações: Wiki".
+  const moreLabel = t("artifacts.more", { title: t("wiki.title") });
   const trashed = useWikiTrash(org.id, writes).data?.length ?? 0;
   const stopSelecting = () => {
     setSelecting(false);
@@ -430,10 +432,8 @@ function WikiNav({
         {can(org, "edit_wiki") && (
           <Menu
             align="end"
-            label={t("wiki.more")}
-            trigger={
-              <Button size="sm" variant="ghost" iconOnly icon="more" aria-label={t("wiki.more")} title={t("wiki.more")} />
-            }
+            label={moreLabel}
+            trigger={<Button size="sm" variant="ghost" iconOnly icon="more" aria-label={moreLabel} title={moreLabel} />}
           >
             <MenuItem icon="upload" onSelect={onImport}>
               {t("wiki.import.cta")}

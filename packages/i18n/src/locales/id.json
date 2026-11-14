@@ -10710,15 +10710,6 @@
       "nowYours": "Berhenti untuk membaca catatanmu",
       "nowOf": "Berhenti untuk membaca catatan {{name}}"
     },
-    "choice": {
-      "label": "Cara mengirim saat {{name}} bekerja",
-      "label_female": "Cara mengirim saat {{name}} bekerja",
-      "join": "Tambahkan ke yang sedang dikerjakan {{name}}",
-      "join_female": "Tambahkan ke yang sedang dikerjakan {{name}}",
-      "interrupt": "Hentikan dan kirim",
-      "joins": "menambahkan",
-      "interrupts": "menghentikan dan mengirim"
-    },
     "strip": {
       "see": "Lihat",
       "toStop": "untuk menghentikan"

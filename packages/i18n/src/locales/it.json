@@ -11541,13 +11541,6 @@
       "nowYours": "Si è fermato per leggere la tua nota",
       "nowOf": "Si è fermato per leggere la nota di {{name}}"
     },
-    "choice": {
-      "label": "Come inviare mentre {{name}} lavora",
-      "join": "Aggiungi a ciò che {{name}} sta facendo",
-      "interrupt": "Ferma e invia",
-      "joins": "aggiunge",
-      "interrupts": "ferma e invia"
-    },
     "strip": {
       "see": "Vedi",
       "toStop": "per fermare"

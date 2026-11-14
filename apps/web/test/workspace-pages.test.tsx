@@ -216,8 +216,12 @@ describe("Memória e propostas", () => {
     expect(screen().getByRole("tab", { name: /Propostas de melhoria/, selected: true }).textContent).toContain("2");
     expect(screen().getByRole("link", { name: "O que a Ada sabe" })).toBeTruthy();
     const detail = screen().getByRole("article");
-    expect(detail.textContent).toContain("Ada propõe · instruções da Ada");
-    expect(detail.querySelector(".ac-chip--waiting")?.textContent).toBe("Aguardando você");
+    // Who proposes and what it changes, on the requests' head; that it waits on me, in its list row, as words.
+    expect(detail.querySelector(".ap-review__by")?.textContent).toContain("Adainstruções da Ada");
+    expect(detail.querySelector(".ac-chip")).toBeNull();
+    expect(
+      within(screen().getByRole("navigation", { name: "Propostas" })).getAllByRole("button")[0]?.textContent,
+    ).toContain("Aguardando você");
     const added = detail.querySelectorAll(".ac-diff__block--add");
     const removed = detail.querySelectorAll(".ac-diff__block--del");
     expect(added.length).toBe(2);
@@ -233,7 +237,10 @@ describe("Memória e propostas", () => {
     await type(text, "Programa em branches, nunca direto na main.");
     await click(within(detail).getByRole("button", { name: "Aceitar com ajustes" }));
     await settle(4);
-    expect(screen().getByRole("article").querySelector(".ac-chip--done")?.textContent).toBe("Aceita por você · agora");
+    // How it ended: the first of its cards, as a request's outcome is.
+    expect(screen().getByRole("article").querySelector(".ap-outcome--done h2")?.textContent).toBe(
+      "Aceita por você · agora",
+    );
     const accepted = await r.services.api.proposals.list(ORG_ID);
     expect(accepted.find((p) => p.agentId === ADA_ID)?.after).toBe("Programa em branches, nunca direto na main.");
   });
