@@ -2365,6 +2365,7 @@
     "noOtherRoles": "Henüz başka rol yok.",
     "channels": {
       "header": "{{name}} rolüne sahip olanların gördükleri",
+      "headerBase": "Herkesin gördükleri",
       "hint": "Bu, kişilerle ilgilidir. Bir ajan, biri onu eklediğinde kanala girer.",
       "search": "Kanal ara",
       "everyone": "Herkes görür",
@@ -2392,6 +2393,7 @@
     },
     "agents": {
       "header": "{{name}} rolüne sahip olanların konuştukları",
+      "headerBase": "Herkesin konuştukları",
       "hint": "Bu, kişilerle ilgilidir. Her ajanın ne yaptığı kendi sayfasındadır.",
       "everyone": "Herkes konuşur",
       "gate": "Yalnızca {{name}} rolüne sahip olanlar ajanlarla konuşmaz.",

@@ -5807,6 +5807,9 @@
   "roles.channels.header": {
     "value": "People with {{name}} see"
   },
+  "roles.channels.headerBase": {
+    "value": "Everyone sees"
+  },
   "roles.channels.hint": {
     "value": "This is about people. An agent joins a channel when someone adds it."
   },
@@ -5881,6 +5884,9 @@
   },
   "roles.agents.header": {
     "value": "People with {{name}} talk to"
+  },
+  "roles.agents.headerBase": {
+    "value": "Everyone talks to"
   },
   "roles.agents.hint": {
     "value": "This is about people. What each agent does is on its page."

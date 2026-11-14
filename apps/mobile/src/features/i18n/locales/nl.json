@@ -2365,6 +2365,7 @@
     "noOtherRoles": "Er zijn nog geen andere rollen.",
     "channels": {
       "header": "Wie {{name}} heeft, ziet",
+      "headerBase": "Iedereen ziet",
       "hint": "Dit gaat over mensen. Een agent komt in een kanaal als iemand hem toevoegt.",
       "search": "Kanaal zoeken",
       "everyone": "Iedereen ziet het",
@@ -2392,6 +2393,7 @@
     },
     "agents": {
       "header": "Wie {{name}} heeft, praat met",
+      "headerBase": "Iedereen praat met",
       "hint": "Dit gaat over mensen. Wat elke agent doet, staat op zijn pagina.",
       "everyone": "Iedereen praat ermee",
       "gate": "Wie alleen {{name}} heeft, praat niet met agents.",

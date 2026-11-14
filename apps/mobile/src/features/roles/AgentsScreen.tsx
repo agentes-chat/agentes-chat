@@ -60,6 +60,7 @@ export function RoleAgentsScreen({ roleId }: { roleId: string }) {
   const list = listedAgents(agents.data);
   const gate = talkGate(role, everyone);
   const opens = !locked && holdsAll(viewer, ["talk_to_agents"]);
+  const header = isEveryone(role) ? t("mobile.roles.agents.headerBase") : t("mobile.roles.agents.header", { name });
   return (
     <SettingsPage title={title} subtitle={name} locked={update.isPending}>
       {gate ? (
@@ -83,13 +84,8 @@ export function RoleAgentsScreen({ roleId }: { roleId: string }) {
           ) : null}
         </>
       ) : null}
-      <GroupedHeader
-        hint={{
-          name: t("common.about", { label: t("mobile.roles.agents.header", { name }) }),
-          text: t("mobile.roles.agents.hint"),
-        }}
-      >
-        {t("mobile.roles.agents.header", { name })}
+      <GroupedHeader hint={{ name: t("common.about", { label: header }), text: t("mobile.roles.agents.hint") }}>
+        {header}
       </GroupedHeader>
       <GroupedList>
         {list.map((a) => (
@@ -275,6 +271,7 @@ export function AgentWhoScreen({ roleId, agentId }: { roleId: string; agentId: s
                 label={p.name}
                 sub={p.email}
                 subLines={2}
+                media
                 remove={{
                   label: t("common.removeName", { name: p.name }),
                   onPress: () => setPeople(who.userIds.filter((id) => id !== p.userId)),

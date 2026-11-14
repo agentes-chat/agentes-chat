@@ -233,7 +233,8 @@ export interface GroupedRowProps {
   buttons?: readonly RowButton[];
   /**
    * The web's MediaRow: the lead, the label and what ends it on one line, `sub` and `below` under them at the row's
-   * full width. For a row whose lead would otherwise sit beside three lines or more.
+   * full width. For a row whose lead would otherwise sit beside three lines or more, or beside a label that may wrap:
+   * the lead stays on the label's middle, never above a one-line label.
    */
   media?: boolean;
   /**
@@ -308,7 +309,8 @@ function Row({
         }
       : onPress;
   // What goes under the label goes under the lead too: the lead, the label and the end share one centred line.
-  const flat = media && Boolean(icon || leading) && Boolean(sub || below || belowText);
+  const flat = media && Boolean(icon || leading);
+  const hasUnder = Boolean(sub || below || belowText);
   // Text that can take more than one line: the tile sits at the top and what is on the right stays on the
   // label's line (centred on the whole row it floated between lines). One-line rows keep everything centred.
   const tall = !flat && (labelLines !== 1 || subLines !== 1 || Boolean(below) || Boolean(belowText));
@@ -502,7 +504,7 @@ function Row({
             <View style={styles.grow}>{labelText}</View>
             {end}
           </View>
-          <View>{under}</View>
+          {hasUnder ? <View>{under}</View> : null}
         </>
       ) : (
         <>

@@ -99,6 +99,7 @@ export function RolePeopleScreen({ roleId }: { roleId: string }) {
               label={p.userId === viewer.userId ? `${p.name}${t("common.youSuffix")}` : p.name}
               sub={p.email}
               subLines={2}
+              media
               {...(giving && below
                 ? {
                     remove: {
@@ -222,6 +223,7 @@ export function AddToRoleScreen({ roleId }: { roleId: string }) {
               label={p.name}
               sub={p.email}
               subLines={2}
+              media
               checked={picked.has(p.userId)}
               onPress={() => {
                 tapHaptic();
@@ -282,6 +284,7 @@ export function PersonRolesScreen({ userId }: { userId: string }) {
               leading={<CargoMark role={r} size={30} />}
               label={r.name}
               labelLines={0}
+              media
               toggle={on}
               disabled={cargo.busy}
               onPress={() => void flip(r, !on)}

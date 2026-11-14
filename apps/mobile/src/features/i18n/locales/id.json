@@ -2257,6 +2257,7 @@
     "noOtherRoles": "Belum ada peran lain.",
     "channels": {
       "header": "Yang punya {{name}} melihat",
+      "headerBase": "Semua orang melihat",
       "hint": "Ini tentang orang. Agen masuk ke kanal saat seseorang menambahkannya.",
       "search": "Cari kanal",
       "everyone": "Semua orang melihatnya",
@@ -2283,6 +2284,7 @@
     },
     "agents": {
       "header": "Yang punya {{name}} bicara dengan",
+      "headerBase": "Semua orang bicara dengan",
       "hint": "Ini tentang orang. Apa yang dilakukan tiap agen ada di halamannya.",
       "everyone": "Semua orang bicara dengannya",
       "gate": "Yang hanya punya {{name}} tidak bicara dengan agen.",

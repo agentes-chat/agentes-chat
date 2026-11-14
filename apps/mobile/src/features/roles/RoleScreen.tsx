@@ -234,6 +234,7 @@ function OwnerScreen({ people }: { people: Person[] }) {
             label={p.userId === viewer.userId ? `${p.name}${t("common.youSuffix")}` : p.name}
             sub={p.email}
             subLines={2}
+            media
             {...(mine && !sole
               ? {
                   remove: {

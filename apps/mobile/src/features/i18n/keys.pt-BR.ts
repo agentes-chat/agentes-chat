@@ -2419,6 +2419,7 @@ export const featureKeysPtBR = {
     noOtherRoles: "Ainda não há outros cargos.",
     channels: {
       header: "Quem tem {{name}} vê",
+      headerBase: "Todo mundo vê",
       hint: "Vale para pessoas. Um agente entra num canal quando alguém o adiciona.",
       search: "Buscar canal",
       everyone: "Todos veem",
@@ -2446,6 +2447,7 @@ export const featureKeysPtBR = {
     },
     agents: {
       header: "Quem tem {{name}} conversa com",
+      headerBase: "Todo mundo conversa com",
       hint: "Isto é sobre pessoas. O que cada agente faz fica na página dele.",
       everyone: "Todos falam",
       gate: "Quem só tem {{name}} não conversa com agentes.",

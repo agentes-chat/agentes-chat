@@ -2507,6 +2507,8 @@ export const featureKeysEn = {
     channels: {
       /** Over the channels a role opens: "People with Support see". */
       header: "People with {{name}} see",
+      /** The same over Everyone's channels. */
+      headerBase: "Everyone sees",
       hint: "This is about people. An agent joins a channel when someone adds it.",
       search: "Search channels",
       everyone: "Everyone sees it",
@@ -2537,6 +2539,8 @@ export const featureKeysEn = {
     agents: {
       /** Over the agents a role talks to: "People with Support talk to". */
       header: "People with {{name}} talk to",
+      /** The same over the agents Everyone talks to. */
+      headerBase: "Everyone talks to",
       hint: "This is about people. What each agent does is on its page.",
       everyone: "Everyone talks to it",
       gate: "People with only {{name}} don't talk to agents.",

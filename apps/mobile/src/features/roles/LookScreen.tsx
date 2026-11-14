@@ -45,6 +45,7 @@ export function RoleLookScreen({ roleId }: { roleId: string }) {
           leading={<CargoMark role={role} size={30} />}
           label={roleName(t, role)}
           labelLines={0}
+          media
           chevron={!base && !off}
           disabled={base || off}
           onPress={() => router.push(rolesHref.tab("rename", role.id))}

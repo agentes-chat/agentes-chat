@@ -2581,6 +2581,7 @@
     "noOtherRoles": "Nie ma jeszcze innych ról.",
     "channels": {
       "header": "Kto ma {{name}}, widzi",
+      "headerBase": "Wszyscy widzą",
       "hint": "To dotyczy osób. Agent trafia do kanału, gdy ktoś go doda.",
       "search": "Szukaj kanału",
       "everyone": "Widzą wszyscy",
@@ -2610,6 +2611,7 @@
     },
     "agents": {
       "header": "Kto ma {{name}}, rozmawia z",
+      "headerBase": "Wszyscy rozmawiają z",
       "hint": "To dotyczy osób. Co robi każdy agent, jest na jego stronie.",
       "everyone": "Rozmawiają wszyscy",
       "gate": "Kto ma tylko {{name}}, nie rozmawia z agentami.",

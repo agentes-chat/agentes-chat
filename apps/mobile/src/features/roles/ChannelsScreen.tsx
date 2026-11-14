@@ -80,6 +80,7 @@ export function RoleChannelsScreen({ roleId }: { roleId: string }) {
   const admin = !isEveryone(role) && role.permissions.includes("administrator");
   const groups = channelGroups(channels.data, categories.data ?? [], query);
   const onlyGeneral = channels.data.every(isGeneral);
+  const header = isEveryone(role) ? t("mobile.roles.channels.headerBase") : t("mobile.roles.channels.header", { name });
   const send = (channel: Channel, input: ChannelInput) =>
     save.mutate({ channelId: channel.id, input }, { onSuccess: () => successHaptic(), onError: fail });
   const tap = async (channel: Channel) => {
@@ -142,13 +143,8 @@ export function RoleChannelsScreen({ roleId }: { roleId: string }) {
   };
   return (
     <SettingsPage title={title} subtitle={name}>
-      <GroupedHeader
-        hint={{
-          name: t("common.about", { label: t("mobile.roles.channels.header", { name }) }),
-          text: t("mobile.roles.channels.hint"),
-        }}
-      >
-        {t("mobile.roles.channels.header", { name })}
+      <GroupedHeader hint={{ name: t("common.about", { label: header }), text: t("mobile.roles.channels.hint") }}>
+        {header}
       </GroupedHeader>
       {admin ? (
         <View style={styles.note}>

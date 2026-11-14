@@ -661,6 +661,9 @@ describe("RoleMark: the web's mark on the phone", () => {
 
   test("the dither's cells and the icon follow the web's sizes, the icon never past 72% of the circle", () => {
     expect(roleMarkFit(14)).toEqual({ cells: 8, icon: 10 });
+    expect(roleMarkFit(16)).toEqual({ cells: 8, icon: 10 });
+    for (const size of [14, 16, 18, 20, 22, 24, 26, 30, 32, 40, 56, 64])
+      expect([size, roleMarkFit(size).icon / size <= 0.72]).toEqual([size, true]);
     expect(roleMarkFit(24)).toEqual({ cells: 10, icon: 16 });
     expect(roleMarkFit(30)).toEqual({ cells: 14, icon: 20 });
     expect(roleMarkFit(56)).toEqual({ cells: 18, icon: 26 });

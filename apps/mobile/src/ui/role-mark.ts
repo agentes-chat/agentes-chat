@@ -7,14 +7,16 @@ import { ICON_NAMES, type IconName } from "./icons.data";
  */
 export function roleMarkFit(size: number) {
   const web =
-    size <= 20
-      ? { cells: 8, icon: 12 }
-      : size <= 28
-        ? { cells: 10, icon: 16 }
-        : size <= 40
-          ? { cells: 14, icon: 20 }
-          : { cells: 18, icon: Math.round(size * 0.47) };
-  return { cells: web.cells, icon: Math.min(web.icon, Math.round(size * 0.72)) };
+    size <= 16
+      ? { cells: 8, icon: 10 }
+      : size <= 20
+        ? { cells: 8, icon: 12 }
+        : size <= 28
+          ? { cells: 10, icon: 16 }
+          : size <= 40
+            ? { cells: 14, icon: 20 }
+            : { cells: 18, icon: Math.round(size * 0.47) };
+  return { cells: web.cells, icon: Math.min(web.icon, Math.floor(size * 0.72)) };
 }
 
 /** The icon a mark draws: the role's when the phone has it, else the shield (the server's default). */
