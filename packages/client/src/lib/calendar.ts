@@ -236,7 +236,7 @@ export function toItems(range: CalendarRange | undefined): CalItem[] {
 
 /** All-day, or crossing midnight: drawn as a bar above the hour grid. */
 export const isBarItem = (it: CalItem) =>
-  it.allDay || it.end.getTime() - startOfDay(it.start).getTime() > 86_400_000 + 60_000;
+  it.allDay || it.end.getTime() - addDays(startOfDay(it.start), 1).getTime() > 60_000;
 
 /** Whether an item touches a day. */
 export const onDay = (it: CalItem, d: Date) => it.start < addDays(startOfDay(d), 1) && it.end > startOfDay(d);
