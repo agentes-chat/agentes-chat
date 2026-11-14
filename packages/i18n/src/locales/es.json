@@ -5576,7 +5576,7 @@
             "status_unknown": "{{brand}} no indicó si la cuenta inició sesión. Inténtalo de nuevo.",
             "no_token": "{{brand}} terminó sin mostrar el token de la cuenta. Inténtalo de nuevo.",
             "not_kept": "La cuenta inició sesión, pero {{computer}} no pudo guardarla. Inténtalo de nuevo.",
-            "sandbox": "{{brand}} inició sesión, pero su sandbox no arranca en {{computer}}, así que ningún agente podría usarlo. Actualiza {{computer}} y vuelve a iniciar sesión."
+            "sandbox": "{{brand}} inició sesión, pero su sandbox no arranca en {{computer}}, así que ningún agente podría usarlo. Usa una clave de API."
           },
           "geminiNotShared": "Gemini inició sesión, pero {{computer}} no puede compartir ese inicio de sesión con todos los agentes. Usa una clave de API de Gemini.",
           "duplicate": {
@@ -6005,7 +6005,7 @@
         "cli_failed": "El programa {{brain}} se detuvo con un error: {{detail}}",
         "cli_stopped": "El programa {{brain}} se detuvo con un error.",
         "cli_closed": "El programa {{brain}} se cerró de repente.",
-        "cli_sandbox": "El programa {{brain}} no puede iniciar su sandbox en esta computadora. Actualiza la computadora y vuelve a pedirlo.",
+        "cli_sandbox": "El programa {{brain}} no puede iniciar su sandbox en esta computadora. Elige otra IA en la configuración del agente.",
         "account_missing": "La cuenta elegida para este agente ya no está en su computadora. Elige otra en la configuración del agente o agrégala de nuevo.",
         "windows_sandbox": "Esta computadora con Windows no puede aislar los comandos de Codex: necesita Windows 11 24H2 o una versión más reciente.",
         "our_error": "Algo salió mal de nuestro lado y la tarea se detuvo. Pide de nuevo en un rato.",

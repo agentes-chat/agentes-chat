@@ -5440,7 +5440,7 @@
             "status_unknown": "{{brand}} liet niet weten of het account is ingelogd. Probeer het opnieuw.",
             "no_token": "{{brand}} was klaar zonder het token van het account te tonen. Probeer het opnieuw.",
             "not_kept": "Het account is ingelogd, maar {{computer}} kon de login niet bewaren. Probeer het opnieuw.",
-            "sandbox": "{{brand}} is ingelogd, maar de sandbox start niet op {{computer}}, dus geen enkele agent kan het gebruiken. Werk {{computer}} bij en log daarna opnieuw in."
+            "sandbox": "{{brand}} is ingelogd, maar de sandbox start niet op {{computer}}, dus geen enkele agent kan het gebruiken. Gebruik liever een API-sleutel."
           },
           "geminiNotShared": "Gemini is ingelogd, maar {{computer}} kan die login niet met alle agents delen. Gebruik liever een Gemini-API-sleutel.",
           "duplicate": {
@@ -5862,7 +5862,7 @@
         "cli_failed": "Het programma {{brain}} is gestopt met een fout: {{detail}}",
         "cli_stopped": "Het programma {{brain}} is gestopt met een fout.",
         "cli_closed": "Het programma {{brain}} werd onverwacht afgesloten.",
-        "cli_sandbox": "Het programma {{brain}} kan zijn sandbox niet starten op deze computer. Werk de computer bij en vraag het daarna opnieuw.",
+        "cli_sandbox": "Het programma {{brain}} kan zijn sandbox niet starten op deze computer. Kies een andere AI in de instellingen van de agent.",
         "account_missing": "Het account dat voor deze agent gekozen is staat niet meer op zijn computer. Kies een ander in de instellingen van de agent of voeg het opnieuw toe.",
         "windows_sandbox": "Deze Windows-computer kan de opdrachten van Codex niet isoleren: hij heeft Windows 11 24H2 of nieuwer nodig.",
         "our_error": "Er ging iets mis aan onze kant en de taak is gestopt. Vraag het over een poosje opnieuw.",

@@ -5705,7 +5705,7 @@ export const ptBR = {
             not_kept: "A conta entrou, mas o {{computer}} não conseguiu guardar o login. Tente de novo.",
             /** Grok Build signed in, but its sandbox doesn't start on the computer for an agent (runner `sandbox`). */
             sandbox:
-              "O {{brand}} entrou, mas a sandbox dele não abre no {{computer}}, então nenhum agente conseguiria usar. Atualize o {{computer}} e entre de novo.",
+              "O {{brand}} entrou, mas a sandbox dele não abre no {{computer}}, então nenhum agente conseguiria usá-lo. Use uma chave de API.",
           },
           geminiNotShared:
             "O Gemini entrou, mas o {{computer}} não consegue compartilhar esse login com todos os agentes. Use uma chave de API do Gemini.",
@@ -6171,7 +6171,7 @@ export const ptBR = {
         cli_closed: "O {{brain}} fechou de repente.",
         /** The agent's CLI couldn't start its sandbox on its computer (bubblewrap refused), before the model was asked. */
         cli_sandbox:
-          "O {{brain}} não consegue abrir a sandbox dele neste computador. Atualize o computador e peça de novo.",
+          "O {{brain}} não consegue abrir a sandbox dele neste computador. Escolha outra IA nas configurações do agente.",
         account_missing:
           "A conta escolhida para este agente não está mais no computador dele. Escolha outra nas configurações do agente ou adicione de novo.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */

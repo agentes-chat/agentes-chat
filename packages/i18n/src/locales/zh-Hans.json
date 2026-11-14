@@ -5248,7 +5248,7 @@
             "status_unknown": "{{brand}} 没有说明账号是否已登录，请重试。",
             "no_token": "{{brand}} 结束时没有显示账号的令牌，请重试。",
             "not_kept": "账号已登录，但 {{computer}} 无法保存登录状态，请重试。",
-            "sandbox": "{{brand}} 已登录，但它的沙盒无法在 {{computer}} 上启动，所以没有代理能使用它。请更新 {{computer}}，然后重新登录。"
+            "sandbox": "{{brand}} 已登录，但它的沙盒无法在 {{computer}} 上启动，所以没有智能体能使用它。请改用 API 密钥。"
           },
           "geminiNotShared": "Gemini 已登录，但 {{computer}} 无法把这个登录共享给所有智能体。请改用 Gemini API 密钥。",
           "duplicate": {
@@ -5651,7 +5651,7 @@
         "cli_failed": "因为出错，{{brain}} 程序已停止：{{detail}}",
         "cli_stopped": "因为出错，{{brain}} 程序已停止。",
         "cli_closed": "程序 {{brain}} 意外关闭。",
-        "cli_sandbox": "程序 {{brain}} 无法在这台电脑上启动它的沙盒。请更新电脑，然后再问一次。",
+        "cli_sandbox": "程序 {{brain}} 无法在这台电脑上启动它的沙盒。请在智能体设置中选择其他 AI。",
         "account_missing": "为这个智能体选择的账号已不在它的电脑上。请在智能体设置中选择另一个账号，或重新添加。",
         "windows_sandbox": "这台 Windows 电脑无法隔离 Codex 的命令：需要 Windows 11 24H2 或更高版本。",
         "our_error": "我们这边出了点问题，任务已停止。请稍后再提一次。",

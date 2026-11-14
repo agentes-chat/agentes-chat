@@ -5604,7 +5604,7 @@
             "status_unknown": "{{brand}} non ha indicato se l'account ha effettuato l'accesso. Riprova.",
             "no_token": "{{brand}} ha finito senza mostrare il token dell'account. Riprova.",
             "not_kept": "L'account ha effettuato l'accesso, ma {{computer}} non è riuscito a conservarlo. Riprova.",
-            "sandbox": "{{brand}} ha effettuato l'accesso, ma la sua sandbox non si avvia su {{computer}}, quindi nessun agente potrebbe usarlo. Aggiorna {{computer}}, poi accedi di nuovo."
+            "sandbox": "{{brand}} ha effettuato l'accesso, ma la sua sandbox non si avvia su {{computer}}, quindi nessun agente potrebbe usarlo. Usa invece una chiave API."
           },
           "geminiNotShared": "Gemini ha effettuato l'accesso, ma su {{computer}} questo accesso non si può condividere con tutti gli agenti. Usa invece una chiave API di Gemini.",
           "duplicate": {
@@ -6045,7 +6045,7 @@
         "cli_failed": "Il programma {{brain}} si è fermato con un errore: {{detail}}",
         "cli_stopped": "Il programma {{brain}} si è fermato con un errore.",
         "cli_closed": "Il programma {{brain}} si è chiuso all'improvviso.",
-        "cli_sandbox": "Il programma {{brain}} non riesce ad avviare la sua sandbox su questo computer. Aggiorna il computer, poi chiedi di nuovo.",
+        "cli_sandbox": "Il programma {{brain}} non riesce ad avviare la sua sandbox su questo computer. Scegli un'altra IA nelle impostazioni dell'agente.",
         "account_missing": "L'account scelto per questo agente non è più sul suo computer. Scegline un altro nelle impostazioni dell'agente o aggiungilo di nuovo.",
         "windows_sandbox": "Questo computer Windows non riesce a isolare i comandi di Codex: serve Windows 11 24H2 o più recente.",
         "our_error": "Qualcosa è andato storto da parte nostra e l'attività si è fermata. Richiedilo tra poco.",
