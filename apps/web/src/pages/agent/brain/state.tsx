@@ -46,7 +46,7 @@ import {
   planModel as planModelOf,
   planOf,
 } from "@agenteschat/client/lib/plans";
-import { apiProviderOf, isAuto, keyLine, modelChoices, providerLabel } from "@agenteschat/client/lib/providers";
+import { apiProviderOf, isAuto, keyLine, keySource, modelChoices } from "@agenteschat/client/lib/providers";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { Icon, type IconName, ProviderLogo, planState } from "@agenteschat/ui";
 import { useTranslation } from "react-i18next";
@@ -327,7 +327,7 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
             DEFAULT_KEY,
             t("newAgent.defaultKey"),
             def
-              ? t("newAgent.defaultKeyDesc", { provider: providerLabel(def.provider), hint: def.keyHint })
+              ? t("newAgent.defaultKeyDesc", { provider: keySource(def), hint: def.keyHint })
               : t("agentPage.work.brain.modelText", g),
             def?.provider ?? apiProvider,
           ),
