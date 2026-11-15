@@ -220,7 +220,7 @@ test("deleting a task: 204, gone from the list and its address; a member who did
   expect((await api(`/issues/${created.id}`, { method: "DELETE" })).status).toBe(404);
 });
 
-test("projects API: a description and a repository, refused with their codes, cleared on null, and the counts say done and total (ADR 0186)", async () => {
+test("projects API: a description and a repository, refused with their codes, cleared on null, and the counts say done and total (ADR 0188)", async () => {
   const owner = browser(t);
   await signUp(owner, "owner@example.com");
   const { orgId } = await seedOrg(owner);

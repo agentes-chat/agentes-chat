@@ -2061,7 +2061,7 @@ export const en = {
       why: "Even with the tab closed. Change it anytime in <link>Notifications</link>.",
     },
   },
-  /** The projects page (ADR 0186): one row per project, with its repository and how far its tasks are. */
+  /** The projects page (ADR 0188): one row per project, with its repository and how far its tasks are. */
   projectsPage: {
     title: "Projects",
     subtitle: "Each project's repository and progress",

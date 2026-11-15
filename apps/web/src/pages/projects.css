@@ -1,4 +1,4 @@
-/* The projects page (ADR 0186): one row per project in a card, a hairline between rows. */
+/* The projects page (ADR 0188): one row per project in a card, a hairline between rows. */
 .projects-card {
   padding: 0;
   overflow-x: auto;

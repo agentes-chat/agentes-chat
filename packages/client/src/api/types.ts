@@ -3988,7 +3988,7 @@ export interface IssueProjectRef {
   archived: boolean;
 }
 
-/** A project with what its page shows besides the card's name and color (ADR 0186). */
+/** A project with what its page shows besides the card's name and color (ADR 0188). */
 export interface IssueProjectDetail extends IssueProjectRef {
   description: string | null;
   /** `owner/name`. */

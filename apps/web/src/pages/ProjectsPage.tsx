@@ -36,7 +36,7 @@ const STATUS_LOOK: Record<ProjectStatus, { icon: IconName; tone: ChipTone }> = {
 type Dialog = { kind: "new" } | { kind: "edit" | "delete"; project: IssueProject };
 
 /**
- * The projects page (ADR 0186): one row per project, its board one click away, with its repository on GitHub, the
+ * The projects page (ADR 0188): one row per project, its board one click away, with its repository on GitHub, the
  * tasks I see in it, how many are done and where it stands. Whoever may create tasks may also edit them.
  */
 export function ProjectsPage() {

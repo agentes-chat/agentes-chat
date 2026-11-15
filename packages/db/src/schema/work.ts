@@ -57,7 +57,7 @@ export const issueColumns = pgTable(
 
 /**
  * A task's project (ADR 0171): a name and a colour, and, optionally, a short description and the GitHub repository its
- * work lives in (ADR 0186). A task has at most one, and a project's board is the org's board showing only its tasks.
+ * work lives in (ADR 0188). A task has at most one, and a project's board is the org's board showing only its tasks.
  * Archived: offered nowhere new, its tasks keep it.
  */
 export const issueProjects = pgTable(
@@ -72,9 +72,9 @@ export const issueProjects = pgTable(
     name: text().notNull(),
     /** One of the roles' colors (`ROLE_COLORS`). */
     color: text().notNull().default("graphite"),
-    /** A few lines on what the project is for (ADR 0186); null: none. */
+    /** A few lines on what the project is for (ADR 0188); null: none. */
     description: text(),
-    /** The one repository its work lives in, as `owner/name` (ADR 0186); null: none. */
+    /** The one repository its work lives in, as `owner/name` (ADR 0188); null: none. */
     githubRepo: text(),
     archivedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

@@ -1970,7 +1970,7 @@ export const ptBR = {
       why: "Mesmo com a aba fechada. Você muda quando quiser em <link>Notificações</link>.",
     },
   },
-  /** The projects page (ADR 0186): one row per project, with its repository and how far its tasks are. */
+  /** The projects page (ADR 0188): one row per project, with its repository and how far its tasks are. */
   projectsPage: {
     title: "Projetos",
     subtitle: "Repositório e andamento de cada projeto",

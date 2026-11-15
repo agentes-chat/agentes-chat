@@ -55,7 +55,7 @@ const go = async (api = createFakeApi(seedState())) => {
   return { ...r, api };
 };
 
-describe("Projetos: the projects page (ADR 0186)", () => {
+describe("Projetos: the projects page (ADR 0188)", () => {
   test("a row per project by name with the archived last: its tasks, the done ones and where it stands", async () => {
     const { api } = await withProjects();
     await go(api);

@@ -43,7 +43,7 @@ export const liveProjectFilter = (projects: IssueProjectRef[], picked: string) =
 export const projectOfFilter = (projects: IssueProject[] | undefined, filter: string | undefined) =>
   filter && filter !== NO_PROJECT ? (projects?.find((p) => p.id === filter) ?? null) : null;
 
-/** Where a project stands, as the projects page says it (ADR 0186). */
+/** Where a project stands, as the projects page says it (ADR 0188). */
 export type ProjectStatus = "active" | "done" | "archived";
 
 /**
