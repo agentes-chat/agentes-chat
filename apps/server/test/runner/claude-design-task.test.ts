@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync 
 import os from "node:os";
 import path from "node:path";
 import type { RunnerFrame } from "@agenteschat/adapters";
+import { resolveCommand } from "../../runner/executors";
 import { TaskManager, type TaskManagerOptions } from "../../runner/tasks";
 
 const roots: string[] = [];
@@ -251,4 +252,38 @@ test("native consent replies are correlated and disconnect denies a waiting runn
   m.designConsented({ type: "design.consented", requestId: sent.requestId, pending: true, allow: false });
   m.detach();
   expect(await waiting).toBe(false);
+});
+
+test("a Design launch resolves a CLI installed after its task manager started", async () => {
+  const bin = mkdtempSync(path.join(os.tmpdir(), "design-new-cli-"));
+  roots.push(bin);
+  const executable = path.join(bin, "claude");
+  let launched = "";
+  let resolutions = 0;
+  const { make } = setup({
+    cli: () => {
+      resolutions++;
+      return resolveCommand("claude", bin, "");
+    },
+    hookCommand: [process.execPath],
+    capability: async () => ({
+      version: "2.1.322",
+      platform: "darwin",
+      arch: "arm64",
+      runnerMode: "user",
+      authMethod: "cli_login",
+    }),
+    run: async (options) => {
+      launched = options.cli;
+      return { jobId: "job-1", state: "failed", sourceFiles: [] };
+    },
+  });
+  const manager = make();
+  await manager.init();
+  expect(resolutions).toBe(0);
+  writeFileSync(executable, "#!/bin/sh\nexit 0\n", { mode: 0o700 });
+  await manager.start(agent, req);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(launched).toBe(executable);
+  expect(resolutions).toBe(1);
 });

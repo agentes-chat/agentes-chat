@@ -1,9 +1,6 @@
-import { designJobIdsOf } from "@agenteschat/client/lib/claude-design";
-import { ClaudeDesignJobCard } from "@/components/ai/ClaudeDesignJob";
-
 // Not compiled by React Compiler: views here read the live store and refs while rendering (the rows'
 // memoization is written by hand).
-("use no memo");
+"use no memo";
 
 import type {
   Agent,
@@ -117,6 +114,7 @@ import {
 } from "@agenteschat/client/lib/chat";
 import { firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
+import { designJobIdsOf } from "@agenteschat/client/lib/claude-design";
 import { draftKeyOf } from "@agenteschat/client/lib/composer-drafts";
 import { type ConsultPairItem, consultsForLine } from "@agenteschat/client/lib/consult-group";
 import { consultationsOf } from "@agenteschat/client/lib/consultations";
@@ -271,6 +269,7 @@ import { AgentPanel } from "@/components/AgentPanel";
 import { ApprovalAsk, ApprovalGroupAsk } from "@/components/ApprovalAsk";
 import { AgentPanelContext, AgentPanelShownContext, useOpenAgentPanel } from "@/components/agent-panel-context";
 import { AgentSidebar } from "@/components/agents/AgentSidebar";
+import { ClaudeDesignJobCard } from "@/components/ai/ClaudeDesignJob";
 import { ModelStandInLine } from "@/components/ai/ModelPicker";
 import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
 import { ImageSet } from "@/components/artifacts/ArtifactViewer";

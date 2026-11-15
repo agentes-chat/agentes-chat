@@ -1198,7 +1198,7 @@ export class RunnerDaemon implements RequestObserver {
       ...(config.mode !== "system" && process.platform === "darwin" && process.arch === "arm64"
         ? {
             claudeDesign: {
-              cli: resolveCommand("claude"),
+              cli: () => resolveCommand("claude"),
               hookCommand: this.self.command,
               noteRateLimit: (accountId: string, info: unknown) => this.accounts.noteRateLimit(accountId, info),
               capability: async (accountId: string) => {

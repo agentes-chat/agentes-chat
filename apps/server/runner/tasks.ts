@@ -281,7 +281,8 @@ export interface SettledTask {
 
 export interface TaskManagerOptions {
   claudeDesign?: {
-    cli: string;
+    /** Resolve at launch: the person may install or move the CLI while the session is running. */
+    cli: string | (() => string);
     hookCommand: string[];
     capability(account: string): Promise<ClaudeDesignCompatibility | null>;
     run?: typeof runClaudeDesign;
@@ -1575,7 +1576,7 @@ export class TaskManager {
       };
       const options: DesignManagerOptions = {
         session,
-        cli: profile.cli,
+        cli: typeof profile.cli === "function" ? profile.cli() : profile.cli,
         hookCommand: profile.hookCommand,
         accountDir: signIn.home,
         settingsPath: path.join(controlDir, "settings.json"),
