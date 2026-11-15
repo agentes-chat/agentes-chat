@@ -2,9 +2,9 @@
 Description=VPS Zen keepalive, every minute
 
 [Timer]
-OnBootSec=1min
-OnUnitActiveSec=1min
-AccuracySec=10s
+OnCalendar=*-*-* *:*:00
+AccuracySec=5s
+Persistent=false
 
 [Install]
 WantedBy=timers.target

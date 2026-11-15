@@ -34,7 +34,7 @@ fi
 # 3. The runner (the agents' computer): its user service active, else started again.
 uid=$(id -u "$RUNNER_USER")
 export XDG_RUNTIME_DIR=/run/user/$uid
-userctl() { sudo -u "$RUNNER_USER" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user "$@"; }
+userctl() { systemctl --user -M "$RUNNER_USER@" "$@"; }
 if [ -S "$XDG_RUNTIME_DIR/systemd/private" ] || [ -S "$XDG_RUNTIME_DIR/bus" ]; then
   if ! userctl is-active --quiet agentes-runner; then
     log "runner is $(userctl is-active agentes-runner 2>/dev/null): starting it"

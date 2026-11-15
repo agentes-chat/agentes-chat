@@ -68,6 +68,6 @@ if [ "$back" = "yes" ]; then
   log "runner reconnected"
 else
   log "runner didn't reconnect in 3 min: restarting its service"
-  sudo -u agentes XDG_RUNTIME_DIR=/run/user/$uid systemctl --user restart agentes-runner
+  systemctl --user -M agentes@ restart agentes-runner
 fi
 log "done: $(grep -E '^AGENTES_IMAGE=' "$DIR/.env")"
