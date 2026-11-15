@@ -215,7 +215,10 @@ test("write implies read for built-ins: issues:write lets the agent list its iss
   const tree = await getAgentAccess(f.db, f.owner.id, f.org.id, f.agent.id);
   const issuesRead = tree.builtins.find((b) => b.scope === "issues:read");
   expect(issuesRead?.state).toBe("inherited");
-  expect(issuesRead?.tools.map((t) => [t.name, t.state])).toEqual([["list_issues", "inherited"]]);
+  expect(issuesRead?.tools.map((t) => [t.name, t.state])).toEqual([
+    ["list_issues", "inherited"],
+    ["list_projects", "inherited"],
+  ]);
   expect(tree.builtins.find((b) => b.scope === "drive:read")?.tools.every((t) => t.state === "inherited")).toBe(true);
   expect(tree.builtins.find((b) => b.scope === "calendar:read")?.state).toBe("off");
 });

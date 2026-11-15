@@ -157,6 +157,7 @@ export async function learnTrust(ctx: Pick<ToolContext, "orgId" | "runId" | "tri
 const OTHERS_WORDS = new Set([
   "team_status",
   "list_issues",
+  "list_projects",
   "list_artifacts",
   "list_routines",
   "get_summary",

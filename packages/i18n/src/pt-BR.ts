@@ -18128,6 +18128,10 @@ export const ptBR = {
       label: "Ver tarefas",
       description: "Lista e abre tarefas.",
     },
+    list_projects: {
+      label: "Ver projetos",
+      description: "Lista os projetos de tarefas, para que servem e seus repositórios.",
+    },
     create_issue: {
       label: "Criar tarefa",
       description: "Cria uma tarefa com critérios de aceite.",

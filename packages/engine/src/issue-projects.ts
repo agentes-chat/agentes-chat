@@ -166,6 +166,15 @@ export async function listIssueProjects(
   };
 }
 
+/**
+ * The workspace's projects as an agent reads them (ADR 0186): the live ones, or with the archived. No counts: what a
+ * count may tell depends on whom the agent answers (`canSee`), so a project here is its name, what it is for and its
+ * repository, and the tasks stay with `list_issues`.
+ */
+export async function listProjectsForAgent(db: Database, orgId: string, withArchived = false) {
+  return (await projectRows(db, orgId)).filter((p) => withArchived || !p.archivedAt).map(projectDetail);
+}
+
 async function announce(deps: ProjectDeps, orgId: string) {
   await publishOrgEvent(deps.pubsub, { type: "org.broadcast", orgId, event: { type: "issue.projects" } });
 }

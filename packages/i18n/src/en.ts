@@ -18209,6 +18209,10 @@ export const en = {
       label: "View tasks",
       description: "Lists and opens tasks.",
     },
+    list_projects: {
+      label: "View projects",
+      description: "Lists the task projects, what they are for and their repositories.",
+    },
     create_issue: {
       label: "Create task",
       description: "Creates a task with acceptance criteria.",
