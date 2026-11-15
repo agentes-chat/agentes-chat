@@ -344,12 +344,12 @@
     width: 180px;
   }
   /* The person's card fills the stacked column again, and its agents indent under it with a line. */
-  .team-tree__col > .team-node {
+  .team-tree .team-tree__col > .team-node {
     align-self: stretch;
     min-width: 0;
     max-width: none;
   }
-  .team-tree__agents {
+  .team-tree .team-tree__agents {
     align-items: stretch;
     margin-left: 12px;
     padding-left: 12px;
