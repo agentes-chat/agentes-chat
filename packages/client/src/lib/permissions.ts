@@ -10,6 +10,7 @@ export type RolePermission =
   | "mention_everyone"
   | "manage_channels"
   | "talk_to_agents"
+  | "view_all_agents"
   | "assign_work"
   | "manage_routines"
   | "approve_actions"

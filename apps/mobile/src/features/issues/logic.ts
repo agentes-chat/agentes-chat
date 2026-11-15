@@ -230,8 +230,8 @@ export const currentStep = (w: Pick<IssueWork, "steps" | "state"> | null | undef
  * last one's time. The last line is the step the agent is on while the run works (`going`), and reads as going on
  * ("…") unless its command was refused or waits on a person.
  */
-export function workLines(t: TFunction, steps: IssueWork["steps"], running: boolean) {
-  const lines = foldSteps(steps, (s) => stepPhrase(t, s));
+export function workLines(t: TFunction, steps: IssueWork["steps"], running: boolean, locale?: string) {
+  const lines = foldSteps(steps, (s) => stepPhrase(t, s, locale));
   return lines.map(({ step, text, count }, k) => {
     const last = k === lines.length - 1;
     const going = last && running;

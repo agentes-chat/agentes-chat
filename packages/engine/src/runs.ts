@@ -1,5 +1,6 @@
 import { and, type Executor, eq, type SQL, schema, sql } from "@agenteschat/db";
 import { PROVIDERS, type ProviderCause, ProviderError, providerCause } from "@agenteschat/providers";
+import { wakeLineOfRun } from "./approval-order";
 import { BRAIN_NAMES, type ComputerBrainKind, planName } from "./brains/types";
 import { cutText, pgSafeJson } from "./format";
 import { recordRunFinished } from "./operator-events";
@@ -182,13 +183,15 @@ export interface CliFailure {
  * `apt install -y bubblewrap`. Refusing to start with denied paths unprotected."), outside its pinned version range.
  */
 const REFUSED_START = /\brefus(?:e|es|ing) to start\b/i;
+/** A CLI's sandbox (bubblewrap) that didn't start on its computer, before the model was asked (`bwrap: …`). */
+const SANDBOX_FAILED = /\bbwrap: /;
 
 /**
- * A CLI that refused to start on its computer: every retry fails the same way until someone installs or updates
- * something there, whatever the runner called it.
+ * A CLI that refused to start on its computer, or whose sandbox didn't: every retry fails the same way until someone
+ * installs or updates something there, whatever the runner called it.
  */
 export const cliRefusedStart = (failure: CliFailure) =>
-  isCliFailure(failure.code) && REFUSED_START.test(failure.message);
+  isCliFailure(failure.code) && (REFUSED_START.test(failure.message) || SANDBOX_FAILED.test(failure.message));
 
 /**
  * Who failed a CLI's turn: the provider, when it refused or failed the CLI's call (a status, or the runner's cause), as
@@ -231,7 +234,8 @@ export function cliWords(failure: CliFailure): string {
 /**
  * A CLI's failure as its run stores it (`runErrorDetail` reads it back): the provider's as a key's
  * (`provider_error: cause@Claude: …`, `gave_up: …` after the outage's waits), else `cli_failed: Claude Code: what it
- * said`, or `cli_closed: Claude Code: exit 1` when it ended without a word. Null for any other code.
+ * said`, `cli_sandbox: Grok Build` when its sandbox didn't start, or `cli_closed: Claude Code: exit 1` when it ended
+ * without a word. Null for any other code.
  */
 export function cliFailureText(
   failure: CliFailure,
@@ -241,6 +245,7 @@ export function cliFailureText(
   const of = cliFailureOf(failure, account);
   if (!of) return null;
   if ("provider" in of) return providerFailureText(kind, of.provider);
+  if (SANDBOX_FAILED.test(failure.message)) return `cli_sandbox: ${of.brain}`;
   if (of.words) return `cli_failed: ${of.brain}: ${of.words}`;
   return of.ended ? `cli_closed: ${of.brain}: ${of.ended}` : `cli_failed: ${of.brain}`;
 }
@@ -259,7 +264,7 @@ export function brainFailureText(failure: CliFailure, kind: ComputerBrainKind): 
 }
 
 /** `cli_failed: Claude Code: what it said` (`cliFailureText`); `cli_closed` when it ended without a word. */
-const CLI_FAILURE = /^cli_(failed|closed): ([^:]+?)(?:: ([\s\S]*))?$/;
+const CLI_FAILURE = /^cli_(failed|closed|sandbox): ([^:]+?)(?:: ([\s\S]*))?$/;
 
 /** A run that stopped on an error of ours that kept repeating (`gave up` in the executor): its stored text's start. */
 export const OUR_ERROR = "Stopped after an error";
@@ -268,6 +273,15 @@ export const OUR_ERROR = "Stopped after an error";
 const PROVIDER_ACCOUNT = "account: ";
 
 const OUR_KEY_CAUSES: ReadonlySet<ProviderCause> = new Set(["no_credit", "invalid_key", "no_access", "rate_limit"]);
+
+/** A key refused for what the key is, on every call until someone fixes it: no retry and no wait gets past it. */
+const KEY_REFUSALS: ReadonlySet<ProviderCause> = new Set(["no_credit", "invalid_key", "no_access"]);
+
+/** Whether a provider refused the call for its key (no credit, a wrong key, no access), whoever's key it is. */
+export function keyRefused(error: ProviderError) {
+  const cause = providerCause(error);
+  return cause !== null && KEY_REFUSALS.has(cause);
+}
 
 /**
  * A provider failure in the terms the apps word it: a known cause, `ours` (it came on the server's own key, so nothing
@@ -323,7 +337,7 @@ export function runErrorDetail(error: string | null | undefined): {
   const cli = CLI_FAILURE.exec(error);
   if (cli) {
     const [, how, brain = "", detail = ""] = cli;
-    if (how === "closed") return { errorCode: "run.cli_closed", errorParams: { brain } };
+    if (how === "closed" || how === "sandbox") return { errorCode: `run.cli_${how}`, errorParams: { brain } };
     return detail
       ? { errorCode: "run.cli_failed", errorParams: { brain, detail } }
       : { errorCode: "run.cli_stopped", errorParams: { brain } };
@@ -354,8 +368,8 @@ export function runErrorDetail(error: string | null | undefined): {
   }
   if (error.startsWith("gave_up:"))
     return { errorCode: "run.provider_unavailable", errorParams: { detail: error.slice(8).trim() } };
-  if (error.startsWith("canceled_by:"))
-    return { errorCode: "run.canceled", errorParams: { byUserId: error.slice(12) } };
+  const stop = personStopOf(error);
+  if (stop) return { errorCode: "run.canceled", errorParams: { byUserId: stop.userId } };
   // A computer brain's background run cut after its tools ran, or with nothing to think with (`executor.ts`).
   const brain = /^(brain_interrupted|brain_unavailable): ?/.exec(error);
   if (brain) return { errorCode: `run.${brain[1]}`, errorParams: { detail: error.slice(brain[0].length) } };
@@ -403,9 +417,36 @@ export function providerFailure(error: string | null | undefined) {
   return provider ? detail : null;
 }
 
-/** Who canceled (stored on the run as `canceled_by:{userId}`). */
-export const canceledBy = (error: string | null | undefined) =>
-  error?.startsWith("canceled_by:") ? error.slice("canceled_by:".length) : null;
+const CANCELED_BY = "canceled_by:";
+
+/**
+ * Who or what stopped a run (`stopRun`): a person, or `agentId` that stopped it at their word (the right hand); the
+ * system with its reason (`agent_archived`, a closed workspace's, `mission_*`).
+ */
+export type StopActor = { type: "person"; id: string; agentId?: string } | { type: "system"; reason: string };
+
+/** The run's error for a stop: `canceled_by:{userId}`, then `|agent:{agentId}`; the system's reason as it is. */
+export const stopError = (actor: StopActor) =>
+  actor.type === "system" ? actor.reason : `${CANCELED_BY}${actor.id}${actor.agentId ? `|agent:${actor.agentId}` : ""}`;
+
+/** The stop written under what the agent wrote, in the message's body; the apps say it from `meta.canceled`. */
+export const stopNote = (person?: string | null, stopper?: string | null) =>
+  `_Stopped${person ? ` by ${stopper ? `${stopper} for ` : ""}${person}` : ""}._`;
+
+/** A person's stop read back from its run's error (`stopError`); null for any other error. */
+export function personStopOf(error: string | null | undefined) {
+  if (!error?.startsWith(CANCELED_BY)) return null;
+  const [userId = "", tail = ""] = error.slice(CANCELED_BY.length).split("|");
+  return { userId, agentId: tail.startsWith("agent:") ? tail.slice("agent:".length) : null };
+}
+
+/** Who canceled: the person behind the stop, also when the right hand did it at their word. */
+export const canceledBy = (error: string | null | undefined) => personStopOf(error)?.userId ?? null;
+
+/** `canceledBy` in SQL, over a run's error column: the person's id, else null. */
+export const canceledBySql = (error: SQL) =>
+  sql<string | null>`(case when ${error} like ${sql.raw(`'${CANCELED_BY}%'`)}
+    then split_part(substring(${error} from ${sql.raw(String(CANCELED_BY.length + 1))}), '|', 1) end)`;
 
 /**
  * Whether Continuar can go on from how a run ended (`continueRun`): a person stopped it, its reply says it reached its
@@ -482,6 +523,9 @@ export async function transitionRun(
         : undefined,
     );
     await releaseProfileTurns(db, row.id);
+    // Failed or stopped, its requests no longer hold the agent's later actions on their cards (ADR 0182). A run that
+    // ends done settled its own on resuming (and woke the line there): no query on every reply.
+    if (to !== "done") await wakeLineOfRun(db, row.id);
   }
   return row ?? null;
 }

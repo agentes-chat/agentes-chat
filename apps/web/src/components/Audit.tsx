@@ -305,7 +305,7 @@ function AuditPanel({ row, onClose }: { row: AuditRow; onClose: () => void }) {
         </span>
         <div className="thread-head__text">
           <h1 className="channel__title thread-title">
-            <span className="thread-title__text">{auditHint(t, row) ?? auditPhrase(t, row)}</span>
+            <span className="thread-title__text">{auditHint(t, row) ?? auditPhrase(t, row, i18n.language)}</span>
           </h1>
           <span className="channel__topic thread-head__meta">
             <span className="thread-head__where">{name}</span>

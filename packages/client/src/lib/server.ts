@@ -22,6 +22,10 @@ export const helpUrl = (slug: string, locale: string, section?: string) =>
 /** The app API contract these apps speak; a server serves its `minApi` up to its `api` (`GET /api/instance`). */
 export const APP_API = 1;
 
+/** A workspace's Settings section on the server's website (from the phone, which has no such screen). */
+export const webSettingsUrl = (server: string, orgId: string, section: string) =>
+  `${server.replace(/\/+$/, "")}/org/${encodeURIComponent(orgId)}/settings/${section}`;
+
 /**
  * `agenteschat://connect?server=<origin>[&token=<one-time sign-in>][&claim=<owner claim>]` opens the phone or
  * the desktop app on that server.

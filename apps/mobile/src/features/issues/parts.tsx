@@ -37,10 +37,10 @@ import { criteriaProgress, type IssueState, issueState, latestPr } from "./logic
 
 /** An agent's step in the person's words ("Mexeu nos arquivos do PC · trips.service.ts"), as the web says it. */
 export function useStepText() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return useCallback(
-    (step: Parameters<typeof stepPhrase>[1] | null | undefined) => (step ? stepPhrase(t, step) : ""),
-    [t],
+    (step: Parameters<typeof stepPhrase>[1] | null | undefined) => (step ? stepPhrase(t, step, i18n.language) : ""),
+    [t, i18n.language],
   );
 }
 

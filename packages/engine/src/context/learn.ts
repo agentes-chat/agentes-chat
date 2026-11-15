@@ -197,7 +197,7 @@ export async function ownWords(
 // ── At turn end ──────────────────────────────────────────────────────────────
 
 /** Tool calls that already wrote memory: the run kept what it learned itself. */
-const WROTE_MEMORY = new Set(["remember", "save_how_to", "update_memory", "update_skill"]);
+const WROTE_MEMORY = new Set(["remember", "save_how_to", "update_memory", "update_skill", "create_skill"]);
 
 type EndedRun = { id: string; orgId: string; agentId: string; channelId: string; threadRootId: string };
 

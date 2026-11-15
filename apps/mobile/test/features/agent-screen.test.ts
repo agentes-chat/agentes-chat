@@ -1,4 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
+import { pointerInView, pointerShare } from "@agenteschat/client";
+import { pointerStep, TAG_BELOW, watchView } from "../../src/features/computer/agent-pointer";
 import { CURSOR_CELLS, cursorCells } from "../../src/features/computer/pixel-cursor";
 import {
   BUTTON,
@@ -54,6 +56,10 @@ describe("the page behind the agent's screen", () => {
     expect(url).toBe("https://app.example/screen.html?o=org&a=ada&p=1");
     expect(screenPageStays(SERVER, url)).toBe(true);
     expect(screenPageUrl(SERVER, "org", "ada", { preview: false })).toBe(screenPageUrl(SERVER, "org", "ada"));
+    // An agent's shared place is asked for by name, and its page is still the server's own.
+    const shared = screenPageUrl(SERVER, "org", "ada", { seat: "shared" });
+    expect(shared).toBe("https://app.example/screen.html?o=org&a=ada&s=shared");
+    expect(screenPageStays(SERVER, shared)).toBe(true);
   });
 
   test("a message counts only from the server's page, and only as what it can say", () => {
@@ -456,5 +462,130 @@ describe("typing straight onto the screen", () => {
     // The caret went back to "he" and typed "x": the screen's "hello" becomes "hexllo" too.
     const { back, typed } = typedSince("hello", "hexllo");
     expect("hello".slice(0, 5 - back) + typed).toBe("hexllo");
+  });
+});
+
+describe("the agent's own pointer on its screen", () => {
+  const desk = DEFAULT_DESKTOP;
+  const view = (camera: { x: number; y: number }, s: number) => ({ s, ...camera, ...desk });
+  // The picture draws desktop pixel p at (p - camera) × s: the arrow's tip must land on the same spot.
+  const drawn = (p: { x: number; y: number }, camera: { x: number; y: number }, s: number) => ({
+    x: (p.x - camera.x) * s,
+    y: (p.y - camera.y) * s,
+  });
+  // The agent's computer says its points on a screen of its own size (here twice the desktop's pixels).
+  const said = (x: number, y: number) => pointerShare({ x: x * 2, y: y * 2, width: 2560, height: 1800, act: "move" });
+
+  test("watching the whole screen, upright and sideways, each corner is the picture's corner", () => {
+    for (const box of [PHONE, { width: 932, height: 430 }]) {
+      const s = fitScale(box, desk);
+      const camera = boundCamera(0, 0, s, box, desk);
+      for (const p of [
+        { x: 0, y: 0 },
+        { x: 1280, y: 0 },
+        { x: 0, y: 900 },
+        { x: 1280, y: 900 },
+        { x: 640, y: 450 },
+      ]) {
+        const at = pointerInView(said(p.x, p.y), view(camera, s));
+        const want = drawn(p, camera, s);
+        expect(at.x).toBeCloseTo(want.x, 6);
+        expect(at.y).toBeCloseTo(want.y, 6);
+      }
+    }
+  });
+
+  test("after a pinch the arrow stays on the point under the fingers, and its size never changes", () => {
+    const before = boundCamera(0, 0, fitScale(PHONE, desk), PHONE, desk);
+    const focal = { x: 120, y: 90 };
+    const pixel = toDesktop(focal, before, fitScale(PHONE, desk), desk);
+    const after = zoomCamera(before, fitScale(PHONE, desk), 2, focal, PHONE, desk);
+    const at = pointerInView(said(pixel.x, pixel.y), view(after, 2));
+    expect(at.x).toBeCloseTo(focal.x, 6);
+    expect(at.y).toBeCloseTo(focal.y, 6);
+  });
+
+  test("panned to the desktop's far corner, its far corner is the box's; a point out of view lands outside the box", () => {
+    const s = 2;
+    const camera = boundCamera(9999, 9999, s, PHONE, desk);
+    const corner = pointerInView(said(1280, 900), view(camera, s));
+    expect(corner.x).toBeCloseTo(PHONE.width, 6);
+    expect(corner.y).toBeCloseTo(PHONE.height, 6);
+    const gone = pointerInView(said(0, 0), view(camera, s));
+    expect(gone.x).toBeLessThan(0);
+    expect(gone.y).toBeLessThan(0);
+  });
+
+  test("the card's view of the screen is pinned at its top left, scaled to fit", () => {
+    const box = { width: 336, height: 336 * (900 / 1280) };
+    const w = watchView(box, desk);
+    expect(w).toEqual({ s: fitScale(box, desk), x: 0, y: 0, ...desk, boxWidth: box.width, boxHeight: box.height });
+    const at = pointerInView(said(1280, 900), w);
+    expect(at.x).toBeCloseTo(box.width, 6);
+    expect(at.y).toBeCloseTo(box.height, 6);
+  });
+
+  const card = watchView({ width: 336, height: 336 * (900 / 1280) }, desk);
+  const p = { x: 640, y: 450, width: 1280, height: 900, n: 1, at: 10_000 };
+
+  test("a click rings once, a double click twice, typing leaves only the face; past 0.74 of the box the name turns", () => {
+    expect(pointerStep({ ...p, act: "click" }, card, 10_000)).toEqual({
+      to: { x: 0.5, y: 0.5 },
+      presses: 1,
+      quiet: false,
+      flip: false,
+      lift: false,
+    });
+    expect(pointerStep({ ...p, act: "double" }, card, 10_000)?.presses).toBe(2);
+    expect(pointerStep({ ...p, act: "move" }, card, 10_000)?.presses).toBe(0);
+    expect(pointerStep({ ...p, act: "type" }, card, 10_000)).toMatchObject({ presses: 0, quiet: true });
+    expect(pointerStep({ ...p, x: 1000, act: "move" }, card, 10_000)?.flip).toBe(true);
+    expect(pointerStep({ ...p, x: 900, act: "move" }, card, 10_000)?.flip).toBe(false);
+  });
+
+  test("zoomed in and panned, the name turns where the tip lands near the box's right edge, not by the desktop", () => {
+    const s = 2;
+    // The desktop's middle panned to the box's right side: x = 0.55 of the desktop lands about 20 pt from its edge.
+    const camera = { x: 0.55 * desk.width - (PHONE.width - 20) / s, y: 0 };
+    const zoomed = { ...view(camera, s), boxWidth: PHONE.width, boxHeight: PHONE.height };
+    const tip = { ...p, x: 0.55 * 1280, act: "click" as const };
+    expect(pointerInView(pointerShare(tip), zoomed).x).toBeCloseTo(PHONE.width - 20, 6);
+    expect(pointerStep(tip, zoomed, 10_000)?.flip).toBe(true);
+    // Panned the other way, a point at 0.9 of the desktop sits on the box's left: the name opens right.
+    const left = { ...view({ x: 0.9 * desk.width - 20 / s, y: 0 }, s), boxWidth: PHONE.width, boxHeight: PHONE.height };
+    expect(pointerStep({ ...tip, x: 0.9 * 1280 }, left, 10_000)?.flip).toBe(false);
+  });
+
+  test("the name opens above the arrow where the tip lands too near the box's bottom for it to fit below", () => {
+    const h = card.boxHeight;
+    const at = (y: number, x = 640) => pointerStep({ ...p, x, y, act: "move" }, card, 10_000);
+    // Top and middle: below, as always.
+    expect(at(10)?.lift).toBe(false);
+    expect(at(450)?.lift).toBe(false);
+    // Room for the whole tag below ends `TAG_BELOW` above the bottom.
+    const edge = ((h - TAG_BELOW) / h) * 900;
+    expect(at(edge - 1)?.lift).toBe(false);
+    expect(at(edge + 1)?.lift).toBe(true);
+    expect(at(0.95 * 900)?.lift).toBe(true);
+    // The bottom right corner turns both ways.
+    expect(at(0.95 * 900, 0.95 * 1280)).toMatchObject({ flip: true, lift: true });
+  });
+
+  test("zoomed in, the name lifts where the tip lands in the box, not by the desktop", () => {
+    const s = 2;
+    // The desktop's middle panned to the box's bottom: y = 0.5 of the desktop lands 10 pt above its bottom edge.
+    const camera = { x: 0, y: 0.5 * desk.height - (PHONE.height - 10) / s };
+    const zoomed = { ...view(camera, s), boxWidth: PHONE.width, boxHeight: PHONE.height };
+    const tip = { ...p, x: 0.1 * 1280, y: 0.5 * 900, act: "move" as const };
+    expect(pointerInView(pointerShare(tip), zoomed).y).toBeCloseTo(PHONE.height - 10, 6);
+    expect(pointerStep(tip, zoomed, 10_000)?.lift).toBe(true);
+    // Unzoomed, the same point is the card's middle: the name stays below.
+    expect(pointerStep(tip, card, 10_000)?.lift).toBe(false);
+  });
+
+  test("a gesture over before the view showed it is never replayed", () => {
+    expect(pointerStep({ ...p, act: "click" }, card, 10_000 + 4000)).not.toBeNull();
+    expect(pointerStep({ ...p, act: "click" }, card, 10_000 + 4001)).toBeNull();
+    expect(pointerStep({ ...p, act: "click" }, card, 10_000 + 60_000)).toBeNull();
   });
 });

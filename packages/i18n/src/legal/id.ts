@@ -8,7 +8,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Perjanjian untuk menggunakan agentes.chat: ruang kerja Anda, agen Anda, dan apa yang menjadi tanggung jawab masing-masing pihak.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-06",
+    updated: "2026-11-13",
     sections: [
       {
         id: "agreement",
@@ -175,7 +175,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Apa yang kami kumpulkan, apa yang dikirim agen dan ke mana, siapa yang dapat melihat ruang kerja Anda, dan hak-hak yang Anda miliki.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-12",
+    updated: "2026-11-14",
     sections: [
       {
         id: "overview",
@@ -231,7 +231,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
           {
             list: [
               "**Antara perangkat dan server kami.** Segala sesuatu yang dikirim antara server kami dan peramban, aplikasi, serta komputer yang terhubung dengannya, termasuk Konten Ruang Kerja, melewati penyedia jaringan kami, yang melindungi Layanan dari serangan. Untuk itu, penyedia jaringan tersebut mendekripsi lalu lintas ini di pusat datanya yang terdekat dengan setiap perangkat, dan menanganinya atas nama kami.",
-              "**Menjawab.** Ketika agen bekerja, agen mengirimkan konteks yang dibutuhkannya (konteks ruang kerja, instruksi agen, percakapan, memori yang relevan, dan hasil alat-alatnya) kepada penyedia model yang dipilih untuk agen tersebut. Dengan kunci API yang ditambahkan oleh ruang kerja, pemanggilan dilakukan di bawah akun dan perjanjian ruang kerja itu sendiri dengan penyedia tersebut. Dengan paket AI, seperti Claude atau ChatGPT, yang dihubungkan ke suatu agen, agen bekerja di bawah akun orang yang menghubungkan paket tersebut dan berdasarkan ketentuan penyedia.",
+              "**Menjawab.** Ketika agen bekerja, agen mengirimkan konteks yang dibutuhkannya (konteks ruang kerja, instruksi agen, percakapan, memori yang relevan, dan hasil alat-alatnya) kepada penyedia model yang dipilih untuk agen tersebut. Dengan kunci API yang ditambahkan oleh ruang kerja, pemanggilan dilakukan di bawah akun dan perjanjian ruang kerja itu sendiri dengan penyedia tersebut. Beberapa penyedia meneruskan pemanggilan kepada perusahaan yang membuat atau menghosting model, yang kemudian juga memprosesnya berdasarkan ketentuan penyedia tersebut. Dengan paket AI, seperti Claude atau ChatGPT, yang dihubungkan ke suatu agen, agen bekerja di bawah akun orang yang menghubungkan paket tersebut dan berdasarkan ketentuan penyedia.",
               "**Menentukan siapa yang membalas.** Model perutean membaca pesan baru, nama dan peran agen ruang kerja, serta percakapan terbaru untuk menentukan agen mana, jika ada, yang harus membalas. Model ini berjalan di TypeSafe atau, sebagai cadangan, di penyedia model ruang kerja. Perutean tidak pernah memberikan izin apa pun kepada agen.",
               "**Memori.** Agen menyimpan memori dari percakapan (ringkasan, fakta, dan pelajaran) agar semakin baik dari waktu ke waktu. Sebagian penilaian tentang memori (apakah sesuatu layak disimpan, atau bertentangan dengan apa yang sudah diketahui agen) dilakukan oleh TypeSafe. Memori dapat dilihat dan dihapus di halaman agen, dan dihapus bersama ruang kerja.",
               "**Pencarian.** Untuk menemukan pesan dan dokumen terkait, teks dapat diubah menjadi vektor (embedding) oleh Voyage AI.",
@@ -286,14 +286,14 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Transfer internasional",
         blocks: [
-          "Aplikasi kami dan basis datanya berjalan di Amerika Serikat, dan penyedia yang disebutkan dalam kebijakan ini memproses data di Amerika Serikat. Komputer ruang kerja berjalan di Uni Eropa atau di Amerika Serikat, dan penyedia jaringan kami menangani lalu lintas di pusat datanya yang terdekat dengan setiap perangkat, di Amerika Serikat atau di tempat lain. Apabila data pribadi yang tunduk pada GDPR atau UK GDPR ditransfer ke negara ketiga, kami mengandalkan Klausul Kontrak Standar Komisi Eropa dan Adendum Inggris (UK Addendum). Untuk data yang tunduk pada LGPD, kami mengandalkan pengamanan kontraktual Pasal 33.",
+          "Aplikasi kami dan basis datanya berjalan di Amerika Serikat, dan penyedia yang disebutkan dalam kebijakan ini memproses data di Amerika Serikat, kecuali penyedia model dan layanan yang terhubung yang dipilih oleh ruang kerja, serta perusahaan tempat mereka meneruskan pemanggilan, yang dapat memproses data di negara lain berdasarkan ketentuannya sendiri. Komputer ruang kerja berjalan di Uni Eropa atau di Amerika Serikat, dan penyedia jaringan kami menangani lalu lintas di pusat datanya yang terdekat dengan setiap perangkat, di Amerika Serikat atau di tempat lain. Apabila data pribadi yang tunduk pada GDPR atau UK GDPR ditransfer ke negara ketiga, kami mengandalkan Klausul Kontrak Standar Komisi Eropa dan Adendum Inggris (UK Addendum). Untuk data yang tunduk pada LGPD, kami mengandalkan pengamanan kontraktual Pasal 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. Aplikasi ponsel dan Mac",
         blocks: [
-          "Aplikasi ponsel mengirim notifikasi melalui Expo, Apple, dan Google. Notifikasi dapat menampilkan nama penulis dan awal pesan, dan Anda memilih notifikasi mana yang Anda terima. Aplikasi Mac dan komputer yang terhubung menyimpan sesi masuknya di perangkat. Menghapus akun Anda (juga tersedia di aplikasi) mengeluarkan semua perangkat dari sesi masuk.",
+          "Aplikasi ponsel mengirim notifikasi melalui Apple dan Google. Notifikasi dapat menampilkan nama penulis dan awal pesan, dan Anda memilih notifikasi mana yang Anda terima. Aplikasi Mac dan komputer yang terhubung menyimpan sesi masuknya di perangkat. Menghapus akun Anda (juga tersedia di aplikasi) mengeluarkan semua perangkat dari sesi masuk.",
         ],
       },
       {

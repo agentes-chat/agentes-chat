@@ -305,7 +305,7 @@ export function AuditRowScreen({ id }: { id: string }) {
 
   return (
     <SettingsPage
-      title={auditHint(t, row) ?? auditPhrase(t, row)}
+      title={auditHint(t, row) ?? auditPhrase(t, row, i18n.language)}
       subtitle={`${name} · ${whenAt(t, i18n.language, row.at)}`}
     >
       <View style={styles.lead}>

@@ -83,6 +83,10 @@ export const strings: Partial<PushStrings> = {
   deviceAccessBody: "点按允许一次、始终允许，或拒绝。",
   deviceToolTitle: (a, d) => `${a} 请你在 ${d} 上打开一个工具`,
   deviceToolBody: "点按即可一键打开。",
+  deviceCliTitle: (a, d) => `${a} 请你在 ${d} 上安装一个程序`,
+  deviceCliBody: "点按即可一键安装。",
+  deviceFolderTitle: (a, f, d) => (f ? `${a} 请你在你的 ${d} 上开放 ${f}` : `${a} 请你在你的 ${d} 上开放一个文件夹`),
+  deviceFolderBody: "在那台电脑的 App 里允许它。",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} 请你把一个智能体加入 #${l}`
@@ -100,4 +104,5 @@ export const strings: Partial<PushStrings> = {
   joinRequestTitlePersonal: (name) => `${name} 请求加入你的工作区`,
   joinSuggestionTitlePersonal: (by, name) => `${by} 建议邀请 ${name}`,
   teamWeekReadyPersonal: "你的周报已准备好",
+  teamWatchStill: (n) => `还有 ${n} 件事在等你`,
 };

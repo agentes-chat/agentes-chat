@@ -54,7 +54,10 @@ describe("one stop, one pill", () => {
     const screen = src("features/chat/ChatScreen.tsx");
     expect(screen).toContain("<StopsMovedOnContext.Provider value={stopsMoved}>");
     expect(screen).toContain("stopsMovedOn(");
-    expect(src("features/chat/MessageRow.tsx")).toContain("const open = may && !continued && !busy && !movedOn;");
+    // Only a stop a person made (also through the right hand) or a run at its limit picks up again: never the system's.
+    expect(src("features/chat/MessageRow.tsx")).toContain(
+      "const open = Boolean(limit || by) && may && !continued && !busy && !movedOn;",
+    );
   });
 
   test("the conversation's list provides the stops; the notice draws nothing while its reply has them", () => {
@@ -113,10 +116,11 @@ describe("the event pill", () => {
       "features/chat/issue-work.tsx",
     ])
       expect(src(file)).toContain("<EventPill");
-    // No more " · " chains with the time in the notice line; "Cancel" on a follow-up still to come.
+    // No more " · " chains with the time in the notice line. A return has no line here (the dock holds it), so no
+    // "Cancel" either.
     const line = src("features/chat/EventLine.tsx");
     expect(line).toContain("time={when.time(message.createdAt)}");
-    expect(line).toContain('t("chat.notice.followUpCancel")');
+    expect(line).not.toContain("followUpCancel");
     expect(line).not.toContain('" · "');
   });
 

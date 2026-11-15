@@ -505,6 +505,10 @@ export const wifiHosts = (hosts: readonly ComputerDevice[]) =>
 
 const LOCAL_NETWORK = new Set(["timed_out", "same_wifi", "mdns_off"]);
 
+/** A Wi-Fi pairing that failed in a way macOS's Local Network permission for the app may cause. */
+export const failedOnLocalNetwork = (p: Pick<WifiPairing, "state" | "reason"> | undefined) =>
+  p?.state === "failed" && LOCAL_NETWORK.has(p.reason ?? "");
+
 /**
  * The line a Wi-Fi pairing shows: where it is while it runs, else why it failed (the cause and the way out). A code
  * the phone refused reads differently from a pairing it stopped. On a Mac, a phone it never heard from, couldn't reach
@@ -599,6 +603,9 @@ export function xcodeBlockedOf(host: ComputerDevice | undefined): XcodeBlocked |
     : null;
 }
 
+/** What updates a runner installed from the Terminal (the app updates its own). */
+export const RUNNER_UPDATE_COMMAND = "agentes-runner update";
+
 /** How often the iPhone guide asks where a fix of the Mac's Xcode stands while it runs. */
 export const XCODE_FIX_POLL_MS = 1500;
 
@@ -649,6 +656,58 @@ export function useStalled(key: string | null, ms = SETUP_STALL_MS): boolean {
   return key !== null && since.key === key && Date.now() - since.at >= ms;
 }
 
+/** How long an iPhone gone from its Mac at the Developer Mode step reads as restarting before the guide asks for it. */
+export const IPHONE_RESTART_MS = 3 * 60_000;
+
+/** The iPhone guide's memory of the Developer Mode step: which phone was at it, since when it is gone, whether it came back. */
+export interface IphoneRestartMemo {
+  at: string | null;
+  goneAt: number | null;
+  back: boolean;
+}
+export const NO_IPHONE_RESTART: IphoneRestartMemo = { at: null, goneAt: null, back: false };
+/** `restarting`: gone from its Mac after the Developer Mode step; `back`: there again and the mode still off. */
+export type IphoneRestart = "restarting" | "back" | null;
+/** An iPhone as the guide sees it now: a key that names it, and its reason (null: none, ready). */
+export type IphoneSeen = { key: string; reason: string | null | undefined } | null;
+
+/** The memo after seeing `phone` (null: the Mac lists none) at `now`. */
+export function iphoneRestartNext(memo: IphoneRestartMemo, phone: IphoneSeen, now: number): IphoneRestartMemo {
+  if (!phone) return memo.at && memo.goneAt === null ? { ...memo, goneAt: now } : memo;
+  if (phone.reason !== "developer_mode_off") return NO_IPHONE_RESTART;
+  const same = memo.at === phone.key;
+  return { at: phone.key, goneAt: null, back: same && (memo.back || memo.goneAt !== null) };
+}
+
+export function iphoneRestartOf(memo: IphoneRestartMemo, phone: IphoneSeen, now: number): IphoneRestart {
+  if (!phone) return memo.at && memo.goneAt !== null && now - memo.goneAt < IPHONE_RESTART_MS ? "restarting" : null;
+  return memo.back && memo.at === phone.key && phone.reason === "developer_mode_off" ? "back" : null;
+}
+
+/**
+ * An iPhone restarts to turn Developer Mode on, and is gone from its Mac meanwhile: the guide stays on that step
+ * (`restarting`) for up to `IPHONE_RESTART_MS` instead of asking for the cable again, then says what to do once it is
+ * back (`back`). Kept in memory: a guide opened during the restart starts from what the Mac sees.
+ */
+export function useIphoneRestart(phone: IphoneSeen): IphoneRestart {
+  const [memo, setMemo] = useState(NO_IPHONE_RESTART);
+  const [, rerender] = useState(0);
+  const now = Date.now();
+  const next = iphoneRestartNext(memo, phone, now);
+  const changed = next.at !== memo.at || next.goneAt !== memo.goneAt || next.back !== memo.back;
+  useEffect(() => {
+    if (changed) setMemo(next);
+  }, [changed, next]);
+  const goneAt = next.goneAt;
+  useEffect(() => {
+    if (goneAt === null) return;
+    // Read again just after the time is up: the answer is the clock's.
+    const timer = setTimeout(() => rerender((n) => n + 1), Math.max(0, goneAt + IPHONE_RESTART_MS - Date.now()) + 100);
+    return () => clearTimeout(timer);
+  }, [goneAt]);
+  return iphoneRestartOf(next, phone, now);
+}
+
 /** The iPhone a Mac reaches (a real one first), for the iPhone guide. */
 export const iphoneOf = (host: ComputerDevice | undefined) =>
   host?.phones.find((p) => p.platform === "ios" && p.phoneKind === "device" && p.status.kind !== "offline") ?? null;
@@ -656,15 +715,19 @@ export const iphoneOf = (host: ComputerDevice | undefined) =>
 /**
  * The iPhone guide's checklist, mirrored from what the Mac reports: steps before the phone's reason are done, that
  * one is current (amber when only the person can do it), the rest wait. No Xcode on the Mac stops at step one; with
- * no iPhone plugged in yet, the Apple Account comes from what the Mac found in Xcode.
+ * no iPhone plugged in yet, the Apple Account comes from what the Mac found in Xcode. An iPhone restarting to turn
+ * Developer Mode on (`restarting`, `useIphoneRestart`) stays on that step, under way.
  */
 export function iphoneSteps(
   host: ComputerDevice | undefined,
   phone: PhoneDevice | null,
+  restarting = false,
 ): Record<IphoneStep, StepState> {
   let at: IphoneStep | null;
   let needs = false;
-  if (!phone) {
+  if (!phone && restarting) {
+    at = "developerMode";
+  } else if (!phone) {
     at = !host?.toolchains.xcode ? "xcode" : !hasAppleTeam(host) ? "account" : "connected";
     needs = at !== "connected";
   } else if (phone.status.kind === "unsupported") {
@@ -1041,13 +1104,17 @@ export type DeviceNoticeKind =
   | "device.in_use"
   | "device.access_request"
   | "device.waiting"
-  | "device.tool_request";
+  | "device.tool_request"
+  | "device.cli_request"
+  | "device.folder_request";
 const NOTICE_KINDS = new Set<string>([
   "device.join_request",
   "device.in_use",
   "device.access_request",
   "device.waiting",
   "device.tool_request",
+  "device.cli_request",
+  "device.folder_request",
 ]);
 
 /**
@@ -1070,8 +1137,13 @@ export interface DeviceNotice {
   forName: string | null;
   text: string | null;
   join: { name: string; os: string; ip: string; location: string | null } | null;
-  /** `device.tool_request`: the tool to turn on (`latest.reason`) and who asked (the person actor). */
+  /**
+   * `device.tool_request`: the tool to turn on (`latest.reason`) and who asked (the person actor);
+   * `device.cli_request`: the coding CLI to install, the same way.
+   */
   tool: MachineTool | null;
+  /** `device.folder_request`: the folder an agent waits for on this computer (`latest.title`). */
+  path: string | null;
   askerId: string | null;
 }
 
@@ -1084,7 +1156,8 @@ export function deviceNoticeOf(
   const l = n.latest as Record<string, unknown>;
   const join = kind === "device.join_request";
   const actor = n.actors?.find((a) => a.type === "agent");
-  const tool = kind === "device.tool_request" ? (str(l.reason) as MachineTool | null) : null;
+  const tool =
+    kind === "device.tool_request" || kind === "device.cli_request" ? (str(l.reason) as MachineTool | null) : null;
   return {
     kind: kind as DeviceNoticeKind,
     requestId: str(s.requestId),
@@ -1094,7 +1167,8 @@ export function deviceNoticeOf(
     device: str(s.label) ?? str(l.title) ?? "",
     agentId: actor?.id ?? str(s.agentId),
     userId: str(s.userId),
-    forName: join ? null : str(l.title),
+    // A folder request's `latest.title` is the folder itself, not a person: it reads in the line, not as a name.
+    forName: join || kind === "device.folder_request" ? null : str(l.title),
     text: str(l.text),
     join: join
       ? {
@@ -1105,6 +1179,7 @@ export function deviceNoticeOf(
         }
       : null,
     tool,
+    path: kind === "device.folder_request" ? str(l.title) : null,
     askerId: tool ? (n.actors?.find((a) => a.type === "user")?.id ?? null) : null,
   };
 }

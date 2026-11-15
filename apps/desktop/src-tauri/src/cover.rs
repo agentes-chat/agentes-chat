@@ -17,7 +17,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use tauri::window::Color;
-use tauri::{AppHandle, LogicalPosition, Manager, WebviewBuilder, WebviewUrl};
+use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, WebviewBuilder, WebviewUrl};
 
 use crate::main_window;
 
@@ -44,16 +44,32 @@ struct Shown {
     generation: u64,
 }
 
+/// On Linux, Tauri packs a child web view beside the site in the window's GtkBox, never over it (`add_child`'s
+/// position and size are ignored there): a cover would take half the window from the site, black where it hasn't
+/// painted. There the window's own backdrop covers the moment before the site's first paint, and the cover's
+/// bookkeeping still runs without its web view (the server here's late start, the next opening's cache step).
+const OVER_THE_SITE: bool = !cfg!(target_os = "linux");
+
+/// The window's inner size in points, for the cover's own. In points, never pixels: a web view's size, and the
+/// share of the window it keeps as the window resizes, are worked out in points with the window's scale at the
+/// moment it is made or resized. A size read in pixels is right only while that scale is the one it was read
+/// with; when it isn't, the cover is twice the window on a 2× screen, its message off in a corner.
+fn window_points(window: &tauri::Window) -> tauri::Result<LogicalSize<f64>> {
+    Ok(window.inner_size()?.to_logical(window.scale_factor()?))
+}
+
 /// Adds the cover to the freshly made main window, showing (the splash).
 pub fn attach(app: &AppHandle, window: &tauri::Window) -> tauri::Result<()> {
-    let size = window.inner_size()?;
-    let cover = WebviewBuilder::new(LABEL, WebviewUrl::App("cover.html".into()))
-        // Transparent only where the site shows through it as it fades: a transparent WebView2 shows black, not
-        // the web view under it, and drops the color.
-        .transparent(!cfg!(target_os = "windows"))
-        .background_color(SKY)
-        .auto_resize();
-    window.add_child(cover, LogicalPosition::new(0.0, 0.0), size)?;
+    if OVER_THE_SITE {
+        let size = window_points(window)?;
+        let cover = WebviewBuilder::new(LABEL, WebviewUrl::App("cover.html".into()))
+            // Transparent only where the site shows through it as it fades: a transparent WebView2 shows black, not
+            // the web view under it, and drops the color.
+            .transparent(!cfg!(target_os = "windows"))
+            .background_color(SKY)
+            .auto_resize();
+        window.add_child(cover, LogicalPosition::new(0.0, 0.0), size)?;
+    }
     let mut shown = lock(app);
     shown.since = Some((Instant::now(), OPENING));
     shown.generation += 1;
@@ -67,7 +83,6 @@ fn lock(app: &AppHandle) -> std::sync::MutexGuard<'_, Shown> {
 /// Covers the site now (it is loading a whole page again), for at least `min`. Already covering (the
 /// splash, when the first load starts), it keeps whatever minimum is left.
 pub fn show(app: &AppHandle, min: Duration) {
-    let Some(cover) = app.get_webview(LABEL) else { return };
     let was_shown = {
         let mut shown = lock(app);
         let now = Instant::now();
@@ -80,8 +95,13 @@ pub fn show(app: &AppHandle, min: Duration) {
         shown.since = Some((now, min.max(left)));
         was_shown
     };
+    let Some(cover) = app.get_webview(LABEL) else { return };
     if !was_shown {
         let _ = cover.eval("window.__coverShown?.()");
+    }
+    // Whatever became of its size while it was hidden, it shows as large as the window.
+    if let Some(Ok(size)) = app.get_window(main_window::LABEL).map(|w| window_points(&w)) {
+        let _ = cover.set_size(size);
     }
     let _ = cover.show();
     main_window::keep_lights(app);
@@ -109,12 +129,14 @@ pub fn hide(app: &AppHandle) {
     std::thread::spawn(move || {
         std::thread::sleep(wait);
         let current = |app: &AppHandle| lock(app).generation == generation;
-        let Some(cover) = app.get_webview(LABEL) else { return };
+        let cover = app.get_webview(LABEL);
         if !current(&app) {
             return;
         }
-        let _ = cover.eval("window.__coverFade?.()");
-        std::thread::sleep(FADE);
+        if let Some(cover) = &cover {
+            let _ = cover.eval("window.__coverFade?.()");
+            std::thread::sleep(FADE);
+        }
         {
             let mut shown = lock(&app);
             if shown.generation != generation {
@@ -122,6 +144,7 @@ pub fn hide(app: &AppHandle) {
             }
             shown.since = None;
         }
+        let Some(cover) = cover else { return };
         let _ = cover.hide();
         // Hiding a web view lays the window out anew, the buttons back at the title bar's top.
         main_window::keep_lights(&app);

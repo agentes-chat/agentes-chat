@@ -2,8 +2,10 @@ import { afterEach, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { browserNeeded } from "@agenteschat/adapters/machine-protocol";
+import { browserNeeded, MACHINE_PROTOCOL_VERSION } from "@agenteschat/adapters/machine-protocol";
 import { findChrome } from "../../runner/browser";
+import { RUNNER_VERSION } from "../../runner/errors";
+import { acquireLock, LOCK_FILE } from "../../runner/lock";
 import {
   type DeviceCode,
   devicePair,
@@ -342,6 +344,32 @@ test("Ctrl-C while it waits for the confirmation: Canceled, and 130 for the inst
   }
 }, 20_000);
 
+test("status reports the version of the runner serving the home, not this command's", () => {
+  const home = tempDir("status-");
+  dirs.push(home);
+  const status = () =>
+    Bun.spawnSync([process.execPath, RUNNER, "status", "--home", home], {
+      env: { ...process.env, HOME: home },
+    }).stdout.toString();
+
+  // A runner serving this home, older than this command: the version and protocol it puts in its `hello`, kept here.
+  expect(acquireLock(home, "start", { version: "0.12.0", protocol: 21 }).ok).toBe(true);
+  const reported = status();
+  expect(reported).toContain(`agentes-runner 0.12.0 (protocol 21) running here · this command is ${RUNNER_VERSION}`);
+  expect(reported).toContain(`Running: pid ${process.pid} (start)`);
+  // This command's own constant never passes for what serves the machine.
+  expect(reported).not.toContain(`agentes-runner ${RUNNER_VERSION} (protocol`);
+
+  // A lock from before it carried the version: nothing to report, and the line says whose version it shows.
+  writeFileSync(
+    path.join(home, LOCK_FILE),
+    JSON.stringify({ pid: process.pid, mode: "app", startedAt: new Date().toISOString() }),
+  );
+  const older = status();
+  expect(older).toContain(`agentes-runner ${RUNNER_VERSION} (protocol ${MACHINE_PROTOCOL_VERSION}) `);
+  expect(older).toContain("— this command's version: the runner here didn't report one");
+});
+
 test("status, never connected: each state with its mark, and where the config lives", () => {
   const home = tempDir("status-");
   dirs.push(home);
@@ -351,6 +379,7 @@ test("status, never connected: each state with its mark, and where the config li
   const out = run.stdout.toString();
   expect(run.exitCode).toBe(0);
   expect(out).toStartWith("agentes.chat agentes-runner ");
+  expect(out).toContain("— this command's version: no runner is running");
   expect(out).toContain("\n■  Not connected.\n▲  Running: no\n▲  Service: not installed\n");
   expect(out).toContain(`\n   Config: ${path.join(home, "config.json")}\n`);
   expect(out).not.toContain("\x1b");

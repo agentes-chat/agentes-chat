@@ -1,4 +1,5 @@
 import type { MachineTool } from "../api/types";
+import { brainTool } from "./machines";
 
 /**
  * "Computador desconectado": when the computer that runs some agents' brain
@@ -258,7 +259,7 @@ export function waitToolOff(
   if (!info?.machineId) return null;
   if (info.code === "exec_disabled") return { machineId: info.machineId, tool: "commands" };
   if (info.code !== "tool_off") return null;
-  return { machineId: info.machineId, tool: info.brain === "claude_code" ? "claude" : info.brain };
+  return { machineId: info.machineId, tool: brainTool(info.brain) };
 }
 
 const SWITCHES: readonly string[] = [

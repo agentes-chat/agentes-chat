@@ -216,6 +216,12 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "keep.end": "machine",
   // The person's own session: macOS's password window opens on their screen (a system-mode runner answers unsupported).
   "xcode.fix": "machine",
+  "xcode.open": "machine",
+  // Looking for the coding CLIs only reads the computer's PATH, so root answers it in system mode too.
+  "clis.check": "machine",
+  // Installed as the runner's own user. Root answers unsupported: the agents' users get their CLIs from the
+  // computer's setup, never from an install run as root.
+  "cli.install": "machine",
 };
 
 type AccessRequestOp = Extract<MachineRequest, { op: "access.request" }>;
@@ -337,6 +343,11 @@ export interface HandlerContext {
   };
   /** `XCODE_FIX_PROTOCOL`: fixing this Mac's own Xcode; without it the op answers `unsupported`. */
   xcodeFix?: (req: Extract<MachineRequest, { op: "xcode.fix" }>) => MachineReplies["xcode.fix"];
+  /** `CLI_INSTALL_PROTOCOL`: the coding CLIs looked up now, and installed from the apps. */
+  clisCheck?: () => Promise<MachineReplies["clis.check"]>;
+  cliInstall?: (req: Extract<MachineRequest, { op: "cli.install" }>) => MachineReplies["cli.install"];
+  /** `IPHONE_DEV_MODE_PROTOCOL`: opening Xcode on this Mac; without it the op answers `opened: false`. */
+  xcodeOpen?: () => Promise<MachineReplies["xcode.open"]>;
 }
 
 export interface RequestScope {
@@ -707,13 +718,26 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
     return ctx.phones.pair(req);
   }
-  if (req.op === "phone.look") return { looking: ctx.phones?.look() ?? false } satisfies MachineReplies["phone.look"];
+  if (req.op === "phone.look")
+    return { looking: (await ctx.phones?.look()) ?? false } satisfies MachineReplies["phone.look"];
+  if (req.op === "xcode.open") return (await ctx.xcodeOpen?.()) ?? { opened: false };
   if (req.op === "phone.wifi")
     return ctx.phones ? ctx.phones.wifi(req) : ({ available: [] } satisfies MachineReplies["phone.wifi"]);
   if (req.op === "xcode.fix") {
     return (
       ctx.xcodeFix?.(req) ?? {
         fix: { kind: req.kind === "update" ? "update" : "select", state: "unsupported", step: 0 },
+      }
+    );
+  }
+  if (req.op === "clis.check") {
+    if (!ctx.clisCheck) throw new RunnerError("bad_request", "This runner doesn't look up its programs on request");
+    return ctx.clisCheck();
+  }
+  if (req.op === "cli.install") {
+    return (
+      (ctx.systemMode?.() ? undefined : ctx.cliInstall?.(req)) ?? {
+        install: req.tool ? { tool: req.tool, state: "unsupported" } : null,
       }
     );
   }
@@ -1414,6 +1438,7 @@ async function doCodexTurn(
           ...(ctx.grants && !chat ? { grants: ctx.grants } : {}),
           ...(ctx.accounts || codex.accounts ? { accounts: ctx.accounts ?? codex.accounts } : {}),
           ...(codex.spawn ? { spawn: codex.spawn } : {}),
+          ...(ctx.grant ? { grant: ctx.grant } : {}),
         },
         req as unknown as GrokBrainTurnRequest,
         { signal: scope.signal, emit },

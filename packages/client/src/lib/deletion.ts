@@ -42,6 +42,7 @@ export function deletedByText(t: TFunction, locale: string, deletion: OrgDeletio
 export const SETTINGS_OPEN_WHILE_DELETING: ReadonlySet<string> = new Set([
   "account",
   "notifications",
+  "download",
   "approvals",
   "usage",
   "audit",
@@ -136,24 +137,40 @@ export function accountDeletingText(t: TFunction, locale: string, dueAt: string 
     : t("accountDeleting.textLate");
 }
 
-/** What proves it's the person before deleting: a code emailed to them, their password, or a password added first. */
-export type DeletionProof = "code" | "password" | "addPassword";
+/**
+ * What proves it's the person before deleting: a code emailed to them, their password, a password added first, or a
+ * sign-in in the last 10 minutes on this Mac.
+ */
+export type DeletionProof = "code" | "password" | "addPassword" | "thisMac";
 
 /**
  * The proof deleting takes (ADR 0088 §2): a code emailed to the person where the server sends email, else their
- * password, which an account without one adds first.
+ * password, which an account without one adds first. `onThisMac`: the desktop app's owner on its own server
+ * (`confirmsOnThisMac`, in the app), whose fresh sign-in through the app is the proof instead.
  */
 export const deletionProof = (
   config: Pick<AuthConfig, "passwordReset"> | undefined,
   hasPassword: boolean | undefined,
-): DeletionProof => (sendsEmail(config) ? "code" : hasPassword === false ? "addPassword" : "password");
+  onThisMac = false,
+): DeletionProof =>
+  sendsEmail(config) ? "code" : onThisMac ? "thisMac" : hasPassword === false ? "addPassword" : "password";
 
-/** What the deletion sends as its proof, and whether it can yet: all the code's digits once one went out, or a password. */
-export function proofToSend(kind: DeletionProof, typed: { sent: boolean; code: string; password: string }) {
+/**
+ * What the deletion sends as its proof, and whether it can yet: all the code's digits once one went out, a password,
+ * or nothing once the sign-in on this Mac is `fresh`.
+ */
+export function proofToSend(
+  kind: DeletionProof,
+  typed: { sent: boolean; code: string; password: string; fresh?: boolean },
+) {
   const input: DeletionProofInput =
     kind === "code" ? { code: typed.code } : kind === "password" ? { password: typed.password } : {};
   const ready =
-    kind === "code" ? typed.sent && typed.code.length === CODE_LENGTH : kind === "password" && typed.password !== "";
+    kind === "code"
+      ? typed.sent && typed.code.length === CODE_LENGTH
+      : kind === "password"
+        ? typed.password !== ""
+        : kind === "thisMac" && typed.fresh === true;
   return { input, ready };
 }
 

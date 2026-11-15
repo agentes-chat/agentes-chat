@@ -538,7 +538,7 @@
         if (!hasSurface(s) || s.display === "inline") continue;
         const b = el.getBoundingClientRect();
         if (b.width > 320 || el.scrollWidth > el.clientWidth + 1) continue;
-        // A face at the start of a pill sits concentric with its round end, tighter than the words at the other.
+        // A face at the start of a pill sits tighter than the words at the other end (`nest` checks its corner).
         if (el.firstElementChild?.matches(".ac-avatar,.ac-rolemark,canvas,[class*='face']")) continue;
         // A frame split into segments (an event pill's actions, each after a hairline) pads each one, not the whole.
         if (el.querySelector(":scope > [class*='__actions']")) continue;
@@ -654,7 +654,9 @@
           const clips = (v) => v === "hidden" || v === "clip";
           if (clips(s.overflowX) && wide > 1 && s.textOverflow !== "ellipsis")
             out.push({ rule: "clipped", node: el, el: sig(el), px: wide, text: words(el) });
-          if (clips(s.overflowY) && tall > 2 && s.webkitLineClamp === "none" && s.textOverflow !== "ellipsis")
+          // A fold ends its words under a fade (a mask) with "Ver mais" under them: on purpose, not at a hard edge.
+          const fold = (s.maskImage || s.webkitMaskImage || "none") !== "none";
+          if (clips(s.overflowY) && tall > 2 && s.webkitLineClamp === "none" && s.textOverflow !== "ellipsis" && !fold)
             out.push({ rule: "clipped", node: el, el: sig(el), px: tall, text: words(el) });
           // Cut by a box around it instead: that box's "…" reaches only words on its own lines, not a block inside it
           // (a picker's two lines, a flex column), so they stop mid-word at its edge.
@@ -1320,11 +1322,19 @@
     /**
      * In a stack of fields (a box holding two or more), each field's control is as wide as the field and as tall as the
      * stack's usual control, within 1 and 0.5px. A button that shows a value is drawn as a select, never a plain button.
+     * A control that grows with what it holds (a chip field's tokens, picks on a second line) a line or more past its
+     * min-height is measured by that min-height: its first line is the one that matches.
      */
     fieldwidth(out) {
       const LABEL = ".ac-field__label,.ac-field__label-row,.ac-hintline";
       const TOGGLE =
         "[role=checkbox],[role=radio],[role=switch],[role=radiogroup],input[type=checkbox],input[type=radio]";
+      const heightOf = (c) => {
+        const h = c.getBoundingClientRect().height;
+        if (c.matches("textarea") || c.querySelector("textarea")) return h;
+        const min = parseFloat(style(c).minHeight) || 0;
+        return min > 0 && h - min >= 16 ? min : h;
+      };
       const stacks = new Set();
       for (const field of document.querySelectorAll(".ac-field")) {
         const p = layoutParent(field);
@@ -1344,7 +1354,7 @@
         );
         const count = new Map();
         for (const [, c] of controls) {
-          const h = Math.round(c.getBoundingClientRect().height * 2) / 2;
+          const h = Math.round(heightOf(c) * 2) / 2;
           count.set(h, (count.get(h) ?? 0) + 1);
         }
         const usual = [...count].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] ?? 0;
@@ -1357,12 +1367,76 @@
             parseFloat(fs.borderLeftWidth) -
             parseFloat(fs.borderRightWidth);
           const c = control.getBoundingClientRect();
+          const h = heightOf(control);
           const base = { rule: "fieldwidth", node: control, el: sig(control), box: sig(field) };
           if (control.matches(".ac-btn")) out.push({ ...base, drawn: "button", text: words(control) });
           if (Math.abs(c.width - inner) > 1) out.push({ ...base, side: "width", px: +(c.width - inner).toFixed(1) });
-          const tall = control.matches("textarea") || control.querySelector("textarea") || c.height > 2 * usual;
-          if (!tall && Math.abs(c.height - usual) > 0.5)
-            out.push({ ...base, side: "height", px: +(c.height - usual).toFixed(1) });
+          const tall = control.matches("textarea") || control.querySelector("textarea") || h > 2 * usual;
+          if (!tall && Math.abs(h - usual) > 0.5) out.push({ ...base, side: "height", px: +(h - usual).toFixed(1) });
+        }
+      }
+    },
+    /**
+     * Rounded inside rounded: a plate or a face near a corner of the box it sits on, with room between them, has that
+     * box's corner less the room (`outer - gap`). In a fully round pill that makes what sits at its ends fully round. A
+     * thing flush with the edge is `corner`'s. Percent corners resolve against the box, every corner clamps to half the
+     * shorter side, as the browser draws them. Only on the surfaces built to it (the notice island, toasts, the banners
+     * over the composer and the computer's stage): elsewhere a card's buttons keep the kit's own corner.
+     */
+    nest(out) {
+      const NESTED = ".ni,.ac-toast,.noai-banner,.cmp-banner";
+      const CORNERS = [
+        ["TopLeft", "Top", "Left"],
+        ["TopRight", "Top", "Right"],
+        ["BottomLeft", "Bottom", "Left"],
+        ["BottomRight", "Bottom", "Right"],
+      ];
+      const REACH = 24;
+      const radius = (s, name, r) => {
+        const v = s[`border${name}Radius`].split(" ")[0];
+        const px = v.endsWith("%") ? (parseFloat(v) / 100) * r.width : parseFloat(v);
+        return Math.min(px || 0, r.width / 2, r.height / 2);
+      };
+      for (const el of document.body.querySelectorAll("*")) {
+        if (!seen(el) || el.closest("svg")) continue;
+        const s = style(el);
+        if (!hasSurface(s) && !el.matches(FACE)) continue;
+        // What a rounded box between them clips (a face's canvas, a tile's picture) takes that box's corner, not its own.
+        let box = el.parentElement;
+        let clipped = false;
+        for (; box && box !== document.body && !hasSurface(style(box)); box = box.parentElement) {
+          const ps = style(box);
+          if (ps.overflowX !== "visible" && parseFloat(ps.borderTopLeftRadius) > 0) clipped = true;
+        }
+        if (clipped || !box || box === document.body || !box.matches(NESTED)) continue;
+        const bs = style(box);
+        const a = el.getBoundingClientRect();
+        const b = box.getBoundingClientRect();
+        const gap = {
+          Top: a.top - b.top - parseFloat(bs.borderTopWidth),
+          Bottom: b.bottom - parseFloat(bs.borderBottomWidth) - a.bottom,
+          Left: a.left - b.left - parseFloat(bs.borderLeftWidth),
+          Right: b.right - parseFloat(bs.borderRightWidth) - a.right,
+        };
+        // An agent's cut corner (`--radius-agent`) is its mark, not a curve to follow.
+        const cut = el.matches(".ac-avatar--agent:not(.ac-avatar--framed)") ? "BottomLeft" : null;
+        for (const [name, v, h] of CORNERS) {
+          if (name === cut || gap[v] > REACH || gap[h] > REACH) continue;
+          const g = Math.min(gap[v], gap[h]);
+          if (g < 1) continue;
+          const want = radius(bs, name, b) - g;
+          if (!(want > 2)) continue;
+          const own = radius(s, name, a);
+          if (Math.abs(own - want) > 1.5)
+            out.push({
+              rule: "nest",
+              node: el,
+              el: sig(el),
+              box: sig(box),
+              side: name,
+              px: +own.toFixed(1),
+              want: +want.toFixed(1),
+            });
         }
       }
     },

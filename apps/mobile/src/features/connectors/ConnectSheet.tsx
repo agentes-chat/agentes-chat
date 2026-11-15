@@ -27,6 +27,15 @@ import {
 import { sameServer } from "@agenteschat/client/lib/custom-tools";
 import { knownErrorText, oauthReturnText } from "@agenteschat/client/lib/errors";
 import { can } from "@agenteschat/client/lib/permissions";
+import {
+  BLANK_HEADER,
+  connectsWithoutKey,
+  type HeaderRefused,
+  type HeaderRow,
+  headerRefused,
+  headersToSend,
+  savedHeadersUnreadable,
+} from "@agenteschat/client/lib/request-headers";
 import { connectorName, scopeText } from "@agenteschat/client/lib/scopes";
 import { reviewDecisions, reviewToolsOf } from "@agenteschat/client/lib/tool-review";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -73,6 +82,7 @@ import {
   stateOf,
 } from "./logic";
 import { Problem } from "./Problem";
+import { RequestHeaders } from "./RequestHeaders";
 import { ADDRESS_STEPS, CATALOG_STEPS, doneSummary, firstStep, reviewTarget, STEP_KEYS, type Step } from "./review";
 import { ReviewStep } from "./ToolReview";
 import { openTools } from "./ToolsScreen";
@@ -481,7 +491,8 @@ export function ConnectedNote({ name, text }: { name: string; text: string | nul
  * `item`: an account of a server by address (its address; `reconnect`: a new sign-in for it). A new account
  * goes on (`onConnected`); a new sign-in, or the same account again, ends with a toast (`onDone`). GitHub, where
  * the server has the agentes.chat app (ADR 0156), offers the app first and an account as the other way, unless
- * `accountOnly` (a sign-in asked for as such).
+ * `accountOnly` (a sign-in asked for as such). A server by address the catalog doesn't list also takes request headers
+ * (ADR 0186), under its key: with a key or alone.
  */
 function ConnectStep({
   def,
@@ -527,7 +538,19 @@ function ConnectStep({
   const appOffered = def?.id === "github" && !viaComposio && !accountOnly && githubApp.data?.installable === true;
   const [via, setVia] = useState<"app" | "account">("app");
   const how = def ? connectHow(def) : "either";
-  const [mode, setMode] = useState<"signIn" | "key">(how === "key" ? "key" : "signIn");
+  // Reconectar: the headers the account has, by name. They stay unless new ones are typed or "Remover" drops them.
+  const savedHeaders = (reconnect && item?.server?.headerNames) || [];
+  const canHeaders = byAddress && !viaComposio && (def === null || savedHeaders.length > 0);
+  // An account with headers opens on them: they are typed with the key.
+  const [mode, setMode] = useState<"signIn" | "key">(how === "key" || savedHeaders.length > 0 ? "key" : "signIn");
+  const [headerRows, setHeaderRows] = useState<HeaderRow[]>(savedHeaders.length > 0 ? [] : [BLANK_HEADER]);
+  const [dropSaved, setDropSaved] = useState(false);
+  const [headersOpen, setHeadersOpen] = useState(savedHeaders.length > 0);
+  const [refused, setRefused] = useState<HeaderRefused | null>(null);
+  // The saved headers couldn't be read: kept until the sheet closes, so nothing brings "they stay" back.
+  const [unreadable, setUnreadable] = useState<HeaderRefused | null>(null);
+  const headers = canHeaders ? headersToSend(headerRows, dropSaved) : undefined;
+  const sendsHeaders = canHeaders && (headers ? headers.length > 0 : savedHeaders.length > 0);
   const [url, setUrl] = useState(initialUrl ?? "");
   // By address: the address first (Continuar checks it), then how to get in, once the host is known.
   const [phase, setPhase] = useState<"address" | "enter">(() =>
@@ -573,6 +596,20 @@ function ConnectStep({
     setError(text);
   };
   const fail = (error?: unknown) => oops(knownErrorText(t, error) ?? t("mobile.connectors.failed"));
+  /** A failed connect by address: the server refusing a header says so where the headers are, whichever way in. */
+  const failed = (error: unknown) => {
+    const refusal = headerRefused(headerRows, headers, error);
+    if (!refusal) return fail(error);
+    errorHaptic();
+    setMode("key");
+    setHeadersOpen(true);
+    // Its words stand where the saved names were said to stay. Nothing is removed for the person: connecting again
+    // is refused again until they type the headers or choose Remover.
+    // With no saved names in this form (its list is older than the account's headers) they have no line to stand in:
+    // they show under the rows, as any refusal does.
+    if (savedHeadersUnreadable(error) && savedHeaders.length > 0) setUnreadable(refusal);
+    else setRefused(refusal);
+  };
   /** The browser round trip: open, wait for the answer, finish with the app's session. */
   const signInWith = async (authorizeUrl: string) => {
     const state = stateOf(authorizeUrl);
@@ -596,8 +633,10 @@ function ConnectStep({
     }
   };
 
+  /** With no key: the server's own sign-in, or, with request headers, the headers alone. */
   const signIn = async () => {
     setError(null);
+    setRefused(null);
     if (askUrl && !isHttpsUrl(url)) return oops(t("mobile.connectors.addressInvalid"));
     try {
       if (byAddress) {
@@ -606,11 +645,14 @@ function ConnectStep({
           returnTo: APP_OAUTH_RETURN,
           ...(label ? { label } : {}),
           ...(connectionId ? { connectionId } : {}),
+          ...(headers ? { headers } : {}),
         });
         if (res.status === "oauth") return void (await signInWith(res.authorizeUrl));
         if (res.status === "needs_key") {
           setMode("key");
-          return oops(needsKeyText(t, res, shownName));
+          // "Check their values": the headers it sent are in sight.
+          if (sendsHeaders) setHeadersOpen(true);
+          return oops(needsKeyText(t, res, shownName, sendsHeaders));
         }
         return await connected(res.server.id, res.server.label, res.outcome);
       }
@@ -618,12 +660,16 @@ function ConnectStep({
       const authorizeUrl = await start.mutateAsync({ connector: def.id, returnTo: APP_OAUTH_RETURN });
       await signInWith(authorizeUrl);
     } catch (error) {
-      fail(error);
+      failed(error);
     }
   };
 
   const submitKey = async () => {
+    // Headers alone connect, and an account's saved ones are removed with no key: with none typed there is none to
+    // check or to send.
+    if (canHeaders && connectsWithoutKey(headers, savedHeaders) && key.trim() === "") return signIn();
     setError(null);
+    setRefused(null);
     if (askUrl && !isHttpsUrl(url)) return oops(t("mobile.connectors.addressInvalid"));
     if (key.trim().length < 8) return oops(t("mobile.connectors.keyShort"));
     try {
@@ -634,6 +680,7 @@ function ConnectStep({
           returnTo: APP_OAUTH_RETURN,
           ...(label ? { label } : {}),
           ...(connectionId ? { connectionId } : {}),
+          ...(headers ? { headers } : {}),
         });
         if (res.status === "connected") return await connected(res.server.id, res.server.label, res.outcome);
         return fail();
@@ -643,7 +690,7 @@ function ConnectStep({
       // One account per catalog connector: connecting it again is its new sign-in.
       await connected(conn.id, name, reconnect ? "reconnected" : "connected");
     } catch (error) {
-      fail(error);
+      failed(error);
     }
   };
 
@@ -796,6 +843,24 @@ function ConnectStep({
                   </Pressable>
                 </View>
               </Locked>
+              {canHeaders ? (
+                <Locked when={busy}>
+                  <RequestHeaders
+                    rows={headerRows}
+                    saved={savedHeaders}
+                    dropSaved={dropSaved}
+                    open={headersOpen}
+                    refused={refused}
+                    unreadable={unreadable}
+                    onOpen={setHeadersOpen}
+                    onChange={(rows, drop) => {
+                      setHeaderRows(rows);
+                      setDropSaved(drop);
+                      setRefused(null);
+                    }}
+                  />
+                </Locked>
+              ) : null}
               <Button
                 variant="primary"
                 wide

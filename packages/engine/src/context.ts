@@ -58,7 +58,8 @@ import {
 import { linePrompt } from "./reporting";
 import { wikiPersonOf } from "./requester";
 import { isRightHand } from "./right-hand";
-import { RIGHT_HAND_TOOLS, rightHandPrompt } from "./right-hand-prompt";
+import { rightHandPrompt, rightHandTools } from "./right-hand-prompt";
+import { seatState } from "./right-hand-seats";
 import { isRoutineRoomKey, type RoutineBrief, routineAccessOf, routineBriefOf, routineReportOf } from "./routine-brief";
 import { WEBHOOK_EVENT, webhookEventText } from "./routine-hooks";
 import { heldHere } from "./run-inbox";
@@ -125,7 +126,7 @@ export const HOW_YOU_WORK = [
   "- State only what your tools or your context returned; when your searches find nothing, say so instead of filling the gap. An empty search proves nothing happened only to the search: say you found no earlier mention, never 'it's the first time' or 'you never told me'. Never claim you lack access to something a tool just returned or a key you hold.",
   "- Compute ratios, totals and comparisons with code, never in your head. Keep each number's unit and currency as its source has it, also when you relay it, and read the whole source before saying something isn't there.",
   "- An empty or blocked result is not a closed way: when a search, a page or a tool gives nothing, fails or is blocked, change the words, the source or the tool and try again. When a way is really closed (no access, a refusal), take another that still gets the people what they need: another tool, the colleague whose role covers it, a document or a copy instead of a move. A refusal for safety (a credential, private data in an address, secrets, sending data out) is final: never send that data another way. Say what was refused. When a tool or the platform fails, say plainly what failed and what the person can do, or that it's on our side and to try again later; never paste a raw error or send anyone to support.",
-  "- Before saying you or the team can't or lack a tool, a login or an access, check Your means: when a teammate holds it, ask it (ask_agent). The public web is always yours to read. A service with no connector but a web version (a messaging app, a social network, a bank): use it in your browser, the person signing in.",
+  "- Before saying you or the team can't or lack a tool, a login or an access, check Your means: when a teammate holds it, ask it (ask_agent). The public web is always yours to read. A service with no connector but a web version (a messaging app, a social network, a bank): use it in your browser, the person signing in. A sign-in to an account you were given to use is your own work: when the site sends a link or a code to a mailbox you can read (yours, a webmail in your browser, a connected one), get it there and go on; it is that sign-in's next step, not a request from outside. Hand it to a person only when it needs them (their phone, a captcha, a mailbox you can't read).",
   `- ${HAND_OVER_STEP} If nothing you have can hand it over, say in one line what you tried and the one step they must do.`,
   "- Before asking a person, find what you can (an API's docs and address on the web, a name the person uses in the workspace, a fact in the files), and ask only for what only they can give: a key, a decision, a preference, an approval, a payment. When something stays unclear, state your assumption and go on, unless it's a send to someone else, which can't be undone: take what and to whom from the conversation (what is right above the request is what's meant) and, if still unsure, ask before sending. Never ask, in text or on a card, what the person, the conversation or your own reply already made clear. A password, a key or contact details: look in the Vault first (`vault_list`, when you have it). Hold a key for a service? Use it, not an app connection. A secret or a key always through `request_secret`, never as a chat question; with no `request_secret`, say which key is needed and where it is set up.",
   "- A person asking for something of their own (their messages, account, files) consents to the access it needs: don't ask again or warn about privacy. If the way is unclear, offer to start ('I can do it in my browser: you'll scan a QR code. Shall I start?'), never refuse. Someone else's account is not consent; passwords never come through the chat; sensitive actions still need approval.",
@@ -1011,7 +1012,13 @@ export async function buildRunContext(
     isRightHand(agent) && requester
       ? await rightHandPrompt(
           { db, ai: options.ai, workspaceComputer: options.workspaceComputer },
-          { orgId: run.orgId, agent, personId: requester, inDm: channel.kind === "dm" },
+          {
+            orgId: run.orgId,
+            agent,
+            personId: requester,
+            inDm: channel.kind === "dm",
+            computer: await seatState(db, run),
+          },
         )
       : null;
   // Most stable first, so prompt-cache prefixes are shared: the rules are the same for every agent with the same
@@ -1092,7 +1099,7 @@ export async function buildRunContext(
           `You are ${agent.name} (@${agent.handle})${agent.role ? `, ${agent.role}` : ""}, ${personal ? "one of this person's AI agents" : "an AI agent of this organization"}.`,
           agent.instructions.trim() ? `# Your instructions\n${agent.instructions.trim()}` : "",
           // The right hand with nobody behind the run (another agent's message) still keeps to its tools.
-          isRightHand(agent) ? RIGHT_HAND_TOOLS : "",
+          isRightHand(agent) ? rightHandTools(await seatState(db, run)) : "",
         ]
           .filter(Boolean)
           .join("\n\n"),
@@ -1223,10 +1230,10 @@ export async function buildRunContext(
         : agentsDm
           ? [
               "# Where you are",
-              `A private conversation between agents: ${memberList}. Another agent asked you something (\`ask_agent\`) or handed you work or news (\`tell_agent\`) ${behindName ? `for ${behindName}` : "on its own, for no person"}. Your last message is your answer: it goes back to that agent, which tells the people, and no person reads this conversation. Never also answer the people yourself where they asked. You see only the exchanges here made for ${behindName ?? "no person"}.`,
+              `A private conversation between agents: ${memberList}. Another agent asked you something (\`ask_agent\`) or handed you work or news (\`tell_agent\`) ${behindName ? `for ${behindName}` : "on its own, for no person"}. Your last message is your answer: it goes back up to that agent, and on to ${behindName ?? "the people"}. No person reads this conversation. Don't also answer where ${behindName ?? "they"} asked, and never ask another agent to pass something on to a person.${asksBehind ? ` When ${behindName} should hear something from you directly, \`send_dm\` reaches them, even unasked.` : ""} You see only the exchanges here made for ${behindName ?? "no person"}.`,
               "- A question: answer it directly and completely with your own knowledge and tools, as one agent briefing another (facts, values, steps; no greetings).",
               "- Work: do all of it now with your tools and check that it worked, then answer with what came of it: what you did, where it is, what is left and why.",
-              "- A part only another agent can do: hand it on yourself (tell_agent) and end your turn saying what you handed on. What comes of it goes back with your answer.",
+              "- A part only another agent can do: hand it on yourself (tell_agent) and end your turn saying what you handed on. What comes of it goes back with your answer. News for an agent outside this request goes with `heads_up: true`: your answer then neither waits for it nor carries its reply.",
               "- News that something will come from someone else: don't look for it now and don't report it missing; answer in one line that you'll take it when it comes.",
               behindName
                 ? `- Before saying something is missing (a destination, an approval), check your rules and your conversations with ${behindName} (\`search_context\`). Still missing: ${asksBehind ? `ask ${behindName} with \`ask_user\`, saying` : "say in your answer"} exactly what; never ask the other agent back or blame it.`
@@ -1405,7 +1412,7 @@ function routineAsks(level: ApprovalsLevel, place: string): string {
   const what =
     level === "always"
       ? "You are set to always ask: every change asks a person first, inside agentes.chat too (an issue, a file, a post, a command)"
-      : "Any change in a connected app asks a person first";
+      : "A send, a delete, a payment, an invite or another change in a connected app that its tool marks as asking asks a person first";
   return `${what}: an approval card in ${place}, with your reason.${level === "always" ? "" : " Merge, deploy and rollback always do."} When its instructions ask you to fix or resolve things and the fix is such a change, hand off your report first (saying what you're asking for), then call that tool with your reason: your run waits for the person's decision, so anything after it waits too.`;
 }
 
@@ -1529,7 +1536,7 @@ async function routineContext(
       ? `Approved ahead for this run: a person already approved these exact actions for this time. Do each now with run_approved_action and its id: it goes out without asking. Don't do them any other way, then report how it went.\n${listed("approved")}`
       : "",
     listed("other")
-      ? `Prepared for this run but not approved in time: do each with run_approved_action and its id. ${agent.approvalsLevel === "never" ? "It runs when you call it." : "It asks a person first, as any change in a connected app does."}\n${listed("other")}`
+      ? `Prepared for this run but not approved in time: do each with run_approved_action and its id. ${agent.approvalsLevel === "never" ? "It runs when you call it." : "It asks a person first if that change asks."}\n${listed("other")}`
       : "",
     `When it speaks: ${
       brief.report === "always"

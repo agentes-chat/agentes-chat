@@ -24,6 +24,7 @@ export const SETTINGS_SCREENS: Record<string, string> = {
   apps: "/settings/apps",
   general: "/settings/general",
   members: "/me/members",
+  invites: "/settings/invites",
   audit: "/settings/audit",
   access: "/settings/access",
   connectors: "/connectors",
@@ -137,8 +138,8 @@ function workspaceScreen(rest: string[], q: Record<string, string>): Record<stri
     case "settings":
       if (id === undefined) return "/settings";
       if (WEB_ONLY_QUERIES.some((key) => key in q)) return null;
-      // A join request's Approve/Deny in its email: that request, on top of the requests.
-      if (id === "members" && isSafeId(q.request)) return `/join-requests?request=${q.request}`;
+      // A join request's Approve/Deny in its email: that request, on top of the requests (Convites on the web now).
+      if ((id === "members" || id === "invites") && isSafeId(q.request)) return `/join-requests?request=${q.request}`;
       if ((id === "computers" || id === "devices") && sub !== undefined) {
         // A phone's guide (the web's and the desktop app's QR codes name it `computer`), for the computer it plugs into.
         if (sub === "android-setup" || sub === "iphone-setup") {

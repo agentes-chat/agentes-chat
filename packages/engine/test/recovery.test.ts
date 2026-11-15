@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { eq, schema } from "@agenteschat/db";
+import { eq, schema, sql } from "@agenteschat/db";
 import type { FakeReply } from "@agenteschat/providers/testing";
 import {
   activeRunsIn,
@@ -543,6 +543,41 @@ describe("server restarts", () => {
     });
     await drainOutbox(f.db, f.handlers);
     expect(f.provider.calls).toHaveLength(1);
+  });
+
+  test("an orphan cut while it wrote again a reply held for its wording posts that reply with the notice", async () => {
+    const { run } = await interruptedRun();
+    await orphan(run.id);
+    await f.db
+      .update(schema.agentRuns)
+      .set({
+        heartbeatAt: new Date(Date.now() - RESUME_MAX_AGE_MS - 60_000),
+        transcript: sql`jsonb_set(${schema.agentRuns.transcript}, '{postedUpTo}', to_jsonb(jsonb_array_length(${schema.agentRuns.transcript} -> 'messages'))) || '{"heldWording": "O relatório está pronto."}'::jsonb`,
+      })
+      .where(eq(schema.agentRuns.id, run.id));
+
+    expect((await recoverStaleRuns({ db: f.db, pubsub: f.pubsub })).failed).toEqual([run.id]);
+    const timeline = await listMessages(f.db, f.owner.id, f.org.id, f.general.id);
+    expect(timeline.at(-1)?.body).toStartWith("O relatório está pronto.\n\n");
+    expect(timeline.at(-1)?.body).toContain(INTERRUPTED_BY_RESTART);
+  });
+
+  test("a reply held for its wording wins over the working text its rewrite wrote with a tool call since", async () => {
+    // Its first step wrote "Trabalhando nisso." with a tool call, after the held reply, and was never posted.
+    const { run } = await interruptedRun();
+    await orphan(run.id);
+    await f.db
+      .update(schema.agentRuns)
+      .set({
+        heartbeatAt: new Date(Date.now() - RESUME_MAX_AGE_MS - 60_000),
+        transcript: sql`${schema.agentRuns.transcript} || '{"heldWording": "O relatório está pronto."}'::jsonb`,
+      })
+      .where(eq(schema.agentRuns.id, run.id));
+
+    expect((await recoverStaleRuns({ db: f.db, pubsub: f.pubsub })).failed).toEqual([run.id]);
+    const last = (await listMessages(f.db, f.owner.id, f.org.id, f.general.id)).at(-1)?.body ?? "";
+    expect(last).toStartWith("O relatório está pronto.\n\n");
+    expect(last).not.toContain("Trabalhando nisso.");
   });
 
   test("an orphan cut in the middle of a tool call fails with the notice, keeps its text, and the app hears it", async () => {

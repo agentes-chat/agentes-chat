@@ -112,6 +112,9 @@ export type CodexBrainEvent =
       model?: string;
       cacheRead?: number;
       cacheWrite?: number;
+      /** App-server only: the model requests of the turn, and the most input one read (its context then). */
+      calls?: number;
+      maxContext?: number;
     }
   | { type: "limit"; resetsAt?: string }
   | { type: "done"; text: string; session?: { id: string } }

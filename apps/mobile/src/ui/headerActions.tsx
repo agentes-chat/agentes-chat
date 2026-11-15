@@ -19,6 +19,8 @@ export interface HeaderAction {
   sf: SFSymbolName;
   label: string;
   onPress: () => void;
+  /** While what it starts is under way. */
+  disabled?: boolean;
 }
 
 const IOS = Platform.OS === "ios";
@@ -51,7 +53,7 @@ export function useHeaderActionOptions({
   const leftSlot = useHeaderSlot(left ?? null);
   const hasLeft = left != null;
   const describe = (list: HeaderAction[] | undefined) =>
-    (list ?? []).map(({ icon, sf, label }) => ({ icon, sf, label }));
+    (list ?? []).map(({ icon, sf, label, disabled }) => ({ icon, sf, label, disabled }));
   const signature = JSON.stringify([describe(right), describe(leftActions)]);
   return useMemo<NativeStackNavigationOptions>(() => {
     const [actions, lefts] = JSON.parse(signature) as Omit<HeaderAction, "onPress">[][];
@@ -66,6 +68,7 @@ export function useHeaderActionOptions({
               label: a.label,
               accessibilityLabel: a.label,
               icon: { type: "sfSymbol" as const, name: a.sf },
+              disabled: a.disabled,
               onPress: press(i),
             }))
         : undefined;
@@ -96,7 +99,13 @@ export function useHeaderActionOptions({
         ? () => (
             <HeaderCapsule>
               {actions.map((a, i) => (
-                <IconButton key={`${a.icon}:${a.label}`} icon={a.icon} label={a.label} onPress={press(i)} />
+                <IconButton
+                  key={`${a.icon}:${a.label}`}
+                  icon={a.icon}
+                  label={a.label}
+                  disabled={a.disabled ?? false}
+                  onPress={press(i)}
+                />
               ))}
             </HeaderCapsule>
           )

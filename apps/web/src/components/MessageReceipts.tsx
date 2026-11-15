@@ -111,12 +111,12 @@ function KeptAnswer({ message, kept, children }: { message: Message; kept: boole
 
 /**
  * What became of a message sent into a task at work: the double check every read message has once it was read (who
- * read it is in the mark's description and its popover, never a face in the bubble), else the spinner while it waits
- * for the next pause, the bolt when it stopped to read, a check once handed over, the clock while an approval holds it.
+ * read it is in the mark's description and its popover, never a face in the bubble), else the bolt when it stopped to
+ * read, a check once handed over, the clock while an approval holds it. One that waits for the next pause wears no
+ * mark (`MessageReceipts`).
  */
 function SteerMark({ steer, size }: { steer: SteerState; size?: 14 }) {
   if (steer.state === "read" || steer.state === "resolved") return <Icon name="checks" size={size} />;
-  if (steer.state === "waiting") return <PixelSpinner size={size ?? 16} />;
   return <Icon name={steer.state === "now" ? "bolt" : steer.state === "delivered" ? "check" : "waiting"} size={size} />;
 }
 
@@ -148,6 +148,9 @@ export function MessageReceipts({ message, part }: { message: Message; part: "ch
   // The pills' list (live through `message.reactions`), else the message's: an agent's reaction is its answer.
   const reactions = useReactions(org.id, message.id, false).data ?? message.reactions;
   const steer = useSteerState(org.id, message.channelId, part === "check" ? message.id : "");
+  // Waiting for the agent's next pause: no mark at all. It was sent, and a spinner or a clock beside its time reads as
+  // a message that never arrived; the agent's row says when it reads it.
+  const waits = steer?.state === "waiting";
   const steerName = steer ? dir.agentById.get(steer.agentId)?.name : undefined;
   const steered =
     steer && steerName
@@ -199,7 +202,7 @@ export function MessageReceipts({ message, part }: { message: Message; part: "ch
     </div>
   );
   // The mark stays where a line says the rest (a failure, no AI): what became of it in the task is its own news.
-  if (part === "line" ? !worded && !fanned : worded && !steered) return everyoneRow || null;
+  if (part === "line" ? !worded && !fanned : waits || (worded && !steered)) return everyoneRow || null;
   const marked = view.seen.length > 0 || view.picking === true || steered !== null;
   if (!marked && status?.kind !== "no_ai" && status?.kind !== "platform_cap") return everyoneRow || null;
 

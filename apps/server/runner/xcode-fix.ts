@@ -6,6 +6,7 @@ import path from "node:path";
 import type { XcodeBlocked, XcodeFix, XcodeFixKind } from "@agenteschat/adapters/machine-protocol";
 import { killTree } from "./exec";
 import { shQuote } from "./install-script";
+import { pageLocale, XCODE_PROMPT } from "./page-words";
 import { findXcodeApp } from "./toolchains";
 
 /**
@@ -23,11 +24,9 @@ export const XCODE_FIX_RUN_MS = 20 * 60_000;
 export const XCODE_FIX_STEPS = 3;
 const POLL_MS = 500;
 
-/** The line macOS's password window shows, in the Mac's own language when we have it. */
+/** The line macOS's password window shows, in the Mac's own language when it is one of the app's, else English. */
 export function xcodeFixPrompt(locale = Intl.DateTimeFormat().resolvedOptions().locale): string {
-  return locale.toLowerCase().startsWith("pt")
-    ? "O agentes.chat quer colocar o Xcode em uso para conectar iPhones."
-    : "agentes.chat wants to put Xcode in use to connect iPhones.";
+  return XCODE_PROMPT[pageLocale(locale)];
 }
 
 export interface XcodeFixOptions {

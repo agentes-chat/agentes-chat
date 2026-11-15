@@ -1,17 +1,20 @@
 import {
   type AppNotification,
   type Approval,
+  type NotificationCounts,
   type Routine,
   useAiStatus,
   useNotificationAction,
+  useNotificationBulkPending,
   useNotifications,
   useRoutines,
 } from "@agenteschat/client";
 import { approvalDetail, approvalSummary, approvalTitle } from "@agenteschat/client/lib/approval-words";
-import { restrictionLine } from "@agenteschat/client/lib/errors";
+import { errorText, restrictionLine } from "@agenteschat/client/lib/errors";
 import { timeLeft, upperFirst } from "@agenteschat/client/lib/format";
 import { mediaWord } from "@agenteschat/client/lib/media";
 import { latestText } from "@agenteschat/client/lib/message-body";
+import { canClearAll, teamWatchOf } from "@agenteschat/client/lib/notifications";
 import { usageLimitLine } from "@agenteschat/client/lib/person-usage";
 import { useLocalSearchParams } from "expo-router";
 import type { TFunction } from "i18next";
@@ -24,6 +27,7 @@ import {
   Button,
   EmptyState,
   Filters,
+  type HeaderAction,
   HoldButton,
   type IconName,
   LargeTitleScreen,
@@ -43,6 +47,7 @@ import {
 import { router } from "@/ui/navigation";
 import { approvalAction } from "../approvals/logic";
 import { ApprovalMark, ApprovalWhy, useApprovalSource, useApproveNow } from "../approvals/parts";
+import { WhenAsksLink } from "../approvals/when-asks";
 import type { AskKind } from "../chat/ask-store";
 import { ASK_ICON, AskButtons } from "../chat/asks";
 import { dashboardWaitingCard } from "../dashboards/logic";
@@ -100,7 +105,9 @@ export function ActivityScreen() {
   const { waiting, days } = activitySections(items, filter);
   const waitingCount = Math.max(waiting.length, counts?.waiting ?? waiting.length);
   const pull = usePullRefresh(list.refetch);
-  const header = useTabHeader();
+  const tabHeader = useTabHeader();
+  const clearAll = useClearAll(filter, counts, items);
+  const header = clearAll ? { ...tabHeader, actions: [clearAll, ...tabHeader.actions] } : tabHeader;
   const reduced = useReducedMotion();
   // A card decided while the page shows fades out and the rest close up; a new one fades in.
   const cardMotion = reduced ? {} : { entering: CARD_IN, exiting: CARD_OUT, layout: LinearTransition };
@@ -205,6 +212,8 @@ function WaitingCardView({ item: n, first = false }: { item: AppNotification; fi
   // Someone asking to join: who asked (the first names, how many in all), with their faces.
   const join = card.kind === "join" ? joinRequestLine(t, n) : null;
   const notice = useNoticeTitle(n);
+  // What the right hand found (ADR 0177 §1): the problem in the reader's language, and its way out on the button.
+  const found = teamWatchOf(n);
   const title =
     card.kind === "approval" && request
       ? [approvalTitle(t, request), onCard > 1 ? t("approval.all.waitingCount", { count: onCard }) : null]
@@ -212,7 +221,7 @@ function WaitingCardView({ item: n, first = false }: { item: AppNotification; fi
           .join(" · ")
       : join
         ? join.text
-        : card.kind === "limit"
+        : card.kind === "limit" || found
           ? notice.title
           : (dash?.title ?? card.title);
   // A routine's trouble opens the routine; the computer being ready, Connect an AI while no agent has one.
@@ -229,7 +238,11 @@ function WaitingCardView({ item: n, first = false }: { item: AppNotification; fi
   const where = [place ? t("mobile.chats.waitIn", { where: place }) : null, when.short(n.updatedAt)]
     .filter(Boolean)
     .join(" · ");
-  const button = dash ? t("mobile.activityNow.open") : t(`mobile.activityNow.${card.action}`);
+  const button = found?.act
+    ? (t as unknown as (key: string) => string)(found.act)
+    : dash
+      ? t("mobile.activityNow.open")
+      : t(`mobile.activityNow.${card.action}`);
   const open = () => {
     if (n.readAt === null) act.mutate({ type: "read", item: n, read: true });
     if (href) router.push(href);
@@ -312,31 +325,34 @@ function ApproveHere({ approval: a, primary }: { approval: Approval; primary: bo
   const { t } = useTranslation();
   const { approve, pending, high } = useApproveNow(a);
   return (
-    <AskButtons
-      primary={
-        high ? (
-          <HoldButton size="card" label={t("mobile.approval.hold")} onConfirm={() => approve()} />
-        ) : (
+    <View style={styles.decision}>
+      <AskButtons
+        primary={
+          high ? (
+            <HoldButton size="card" label={t("mobile.approval.hold")} onConfirm={() => approve()} />
+          ) : (
+            <Button
+              variant={primary ? "primary" : "secondary"}
+              size="card"
+              wide
+              label={approvalAction(a) === "draft" ? t("approval.approve.draft") : t("mobile.approval.approve")}
+              disabled={pending}
+              onPress={() => approve()}
+            />
+          )
+        }
+        secondary={
           <Button
-            variant={primary ? "primary" : "secondary"}
+            variant="secondary"
             size="card"
             wide
-            label={approvalAction(a) === "draft" ? t("approval.approve.draft") : t("mobile.approval.approve")}
-            disabled={pending}
-            onPress={() => approve()}
+            label={t("mobile.approval.refuse")}
+            onPress={() => router.push(`/approval/${a.id}?mode=refuse`)}
           />
-        )
-      }
-      secondary={
-        <Button
-          variant="secondary"
-          size="card"
-          wide
-          label={t("mobile.approval.refuse")}
-          onPress={() => router.push(`/approval/${a.id}?mode=refuse`)}
-        />
-      }
-    />
+        }
+      />
+      <WhenAsksLink approval={a} />
+    </View>
   );
 }
 
@@ -422,6 +438,45 @@ function nextRunWords(t: TFunction, when: ReturnType<typeof useWhen>, iso: strin
 }
 
 /**
+ * "Clear all" in the bar, as the web's: everything listed goes to Feitas but what waits on you, and the toast offers
+ * Desfazer. Only in Tudo, and only with something to move.
+ */
+function useClearAll(
+  filter: ActivityFilter,
+  counts: NotificationCounts | undefined,
+  items: AppNotification[],
+): HeaderAction | null {
+  const { t } = useTranslation();
+  const orgId = useOrgId();
+  const act = useNotificationAction(orgId);
+  const busy = useNotificationBulkPending(orgId);
+  const toast = useToast();
+  if (!canClearAll(filter, counts, items)) return null;
+  const run = () =>
+    act.mutate(
+      { type: "doneAll", filter: "all" },
+      {
+        onSuccess: (res) => {
+          if (!res.ids.length) return;
+          toast({
+            title: t("mobile.activity.doneAllToast", { count: res.ids.length }),
+            action: {
+              label: t("mobile.activity.undo"),
+              onPress: () =>
+                act.mutate(
+                  { type: "undoneMany", ids: res.ids },
+                  { onError: (e) => toast({ title: errorText(t, e), icon: "x" }) },
+                ),
+            },
+          });
+        },
+        onError: (e) => toast({ title: errorText(t, e), icon: "x" }),
+      },
+    );
+  return { icon: "check", sf: "checkmark.circle", label: t("notifications.doneAll"), disabled: busy, onPress: run };
+}
+
+/**
  * One item, in Conversas' row: the faces, who did what (the names bold)
  * and when, the snippet and where; a red dot on the right while unread. Swipe right to mark read or unread,
  * left for "Feito"; tapping opens where it happened.
@@ -433,6 +488,7 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
   const when = useWhen();
   const toast = useToast();
   const act = useNotificationAction(orgId);
+  const busy = useNotificationBulkPending(orgId);
   // A routine's trouble opens the routine; the computer being ready, Connect an AI while no agent has one.
   const ai = useAiStatus(orgId, n.kind === "computer_ready").data;
   const href = notificationHref(n, ai);
@@ -458,12 +514,15 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
     ? restrictionLine(t, restriction.code, restriction.facts)
     : n.kind === "usage_limit"
       ? usageLimitLine(t, n)
-      : failed
-        ? failed.sub
-        : // A widget's or routine's name is often its line too: said once ("Assinaturas hoje", not twice).
-          [emojisOf(n).join(" "), [...new Set([line, placeOf(n)].filter(Boolean))].join(" · ")]
-            .filter(Boolean)
-            .join(" ");
+      : // What the right hand found (ADR 0177 §1) is the title itself: nothing under it says it again.
+        n.kind === "team_watch"
+        ? ""
+        : failed
+          ? failed.sub
+          : // A widget's or routine's name is often its line too: said once ("Assinaturas hoje", not twice).
+            [emojisOf(n).join(" "), [...new Set([line, placeOf(n)].filter(Boolean))].join(" · ")]
+              .filter(Boolean)
+              .join(" ");
   const time = when.short(n.updatedAt);
   // As Conversas' rows: line 1 who (the names alone, one line, the time on their baseline), line 2 what they did and
   // where. A sentence that doesn't open with the names (or has none) is line 1 itself, on one line too.
@@ -473,10 +532,13 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
   const second = byNames ? [action, sub].filter(Boolean).join(" · ") : sub;
 
   // The swipe taps on its own (SwipeRow); VoiceOver's actions call these too.
-  const toggleRead = () => act.mutate({ type: "read", item: n, read: unread });
+  const toggleRead = () => {
+    if (!busy) act.mutate({ type: "read", item: n, read: unread });
+  };
   // In "Feitas" the same swipe moves it back to the inbox. Marked done, a toast offers the way back for a moment.
   const isDone = Boolean(n.doneAt);
   const done = () => {
+    if (busy) return;
     act.mutate({ type: "done", item: n, done: !isDone });
     if (!isDone)
       toast({
@@ -511,15 +573,24 @@ const ActivityRow = memo(function ActivityRow({ item: n, divider }: { item: AppN
   return (
     <View>
       <SwipeRow
-        left={{
-          label: unread ? t("mobile.activity.markRead") : t("mobile.activity.markUnread"),
-          icon: unread ? "check" : "bell",
-          color: c.agent,
-          ink: c.onAgent,
-          onAction: toggleRead,
-        }}
+        // While "Clear all" or its undo is under way, a row doesn't swipe.
+        left={
+          busy
+            ? undefined
+            : {
+                label: unread ? t("mobile.activity.markRead") : t("mobile.activity.markUnread"),
+                icon: unread ? "check" : "bell",
+                color: c.agent,
+                ink: c.onAgent,
+                onAction: toggleRead,
+              }
+        }
         // On the green, the page's color reads in both themes (white in light, near black on dark's light green).
-        right={{ label: doneLabel, icon: isDone ? "undo" : "archive", color: c.ok, ink: c.bg, onAction: done }}
+        right={
+          busy
+            ? undefined
+            : { label: doneLabel, icon: isDone ? "undo" : "archive", color: c.ok, ink: c.bg, onAction: done }
+        }
       >
         <View style={{ backgroundColor: c.bg }}>
           <ListRow
@@ -582,6 +653,8 @@ const faceOf = (a: AppNotification["actors"][number] | undefined) =>
   a ? { type: a.type === "agent" ? "agent" : "person", id: a.id } : null;
 
 const styles = StyleSheet.create({
+  // The decision, then "Mudar quando perguntar" on its own line at the card's words' edge.
+  decision: { gap: 4 },
   // Cards 12 apart, at the screen's margin.
   cards: { gap: 12, paddingHorizontal: 16 },
   change: { paddingHorizontal: 16, paddingBottom: 12 },
