@@ -18676,6 +18676,27 @@
   "issues.priorityFilter": {
     "value": "Priority"
   },
+  "issues.labelFilter": {
+    "value": "Label"
+  },
+  "issues.table.task": {
+    "value": "Task"
+  },
+  "issues.table.github": {
+    "value": "GitHub"
+  },
+  "issues.table.sortBy": {
+    "value": "Sort by {{column}}"
+  },
+  "issues.fold.open": {
+    "value": "Open {{name}}"
+  },
+  "issues.fold.close": {
+    "value": "Fold {{name}}"
+  },
+  "issues.fold.column": {
+    "value": "Fold column"
+  },
   "issues.title": {
     "value": "Tasks"
   },
@@ -18792,6 +18813,24 @@
   },
   "issues.display.order.due": {
     "value": "Due date"
+  },
+  "issues.display.order.updated": {
+    "value": "Recent"
+  },
+  "issues.display.done": {
+    "value": "Done"
+  },
+  "issues.display.doneIs.all": {
+    "value": "All"
+  },
+  "issues.display.doneIs.recent": {
+    "value": "Last {{days}} days"
+  },
+  "issues.display.doneIs.hidden": {
+    "value": "None"
+  },
+  "issues.display.hideEmpty": {
+    "value": "Hide empty groups"
   },
   "issues.display.field.project": {
     "value": "Project"
@@ -20985,6 +21024,9 @@
   },
   "routines.code.stoppedBy": {
     "value": "Stopped by {{name}}"
+  },
+  "routines.code.stalled": {
+    "value": "Let go: nothing moved in it for 20 minutes"
   },
   "routines.code.no_report": {
     "value": "Finished without telling the result"
@@ -25039,6 +25081,18 @@
       "other": "{{count}} unused logins removed."
     }
   },
+  "aiAccounts.page.removeAllGrok": {
+    "value": "Remove all Grok logins"
+  },
+  "aiAccounts.page.removeAllTitle": {
+    "value": "Remove all {{n}} Grok logins?"
+  },
+  "aiAccounts.page.removeAllText": {
+    "value": "They stop thinking for their agents on {{computers}}. Nobody else's logins are touched."
+  },
+  "aiAccounts.page.removeAllDone": {
+    "value": "{{n}} Grok logins removed."
+  },
   "aiAccounts.page.disconnect": {
     "value": "Disconnect"
   },
@@ -25200,6 +25254,12 @@
   },
   "aiAccounts.usage.resetsOn": {
     "value": "resets {{day}} at {{time}}"
+  },
+  "aiAccounts.usage.allModels": {
+    "value": "All models"
+  },
+  "aiAccounts.usage.onlyModels": {
+    "value": "Only {{name}}"
   },
   "aiAccounts.usage.almost": {
     "value": "Almost at the limit"
@@ -31147,6 +31207,9 @@
   "connectors.reconnectAdds": {
     "value": "Reconnect {{name}} so agents can also {{what}}."
   },
+  "connectors.sendsToo": {
+    "value": "Also sends: <names/>. To change that, use Reconnect."
+  },
   "connectors.adds.github_project": {
     "value": "use GitHub Projects (read boards and move cards)"
   },
@@ -34345,6 +34408,48 @@
   "connectFlow.serverSaid": {
     "value": "The server answered: {{detail}}"
   },
+  "connectFlow.headers.title": {
+    "value": "Request headers"
+  },
+  "connectFlow.headers.help": {
+    "value": "For a key that goes in another header, or a gateway in front of the server. Most servers need none."
+  },
+  "connectFlow.headers.value": {
+    "value": "Value"
+  },
+  "connectFlow.headers.nameOf": {
+    "value": "Name of header {{n}}"
+  },
+  "connectFlow.headers.valueOf": {
+    "value": "Value of header {{n}}"
+  },
+  "connectFlow.headers.remove": {
+    "value": "Remove header {{n}}"
+  },
+  "connectFlow.headers.add": {
+    "value": "Add header"
+  },
+  "connectFlow.headers.saved": {
+    "value": {
+      "one": "Saved: <names/>. It stays unless you type new ones.",
+      "other": "Saved: <names/>. They stay unless you type new ones."
+    }
+  },
+  "connectFlow.headers.drop": {
+    "value": "Remove"
+  },
+  "connectFlow.headers.dropping": {
+    "value": {
+      "one": "<names/> will be removed when you reconnect.",
+      "other": "<names/> will be removed when you reconnect."
+    }
+  },
+  "connectFlow.headers.undo": {
+    "value": "Undo"
+  },
+  "connectFlow.headers.refused": {
+    "value": "The server didn't accept these headers. Check their values, or connect with an API key."
+  },
   "connectFlow.nothingYet": {
     "value": "Nothing is available to agents until step 3."
   },
@@ -36001,6 +36106,30 @@
   },
   "errors.connector.misconfigured": {
     "value": "The connection to {{provider}} is set up wrong on the server, so it can't finish. Whoever runs the server needs to replace the key in the app's settings."
+  },
+  "errors.connector.headerName": {
+    "value": "Use only letters, digits and hyphens in a header's name, like X-API-Key."
+  },
+  "errors.connector.headerValue": {
+    "value": "Type a value for {{header}}: up to 2,000 characters on one line, with no accented letters or emoji."
+  },
+  "errors.connector.headerReserved": {
+    "value": "{{header}} is already sent with every request and can't be changed. Remove this header."
+  },
+  "errors.connector.headerTwice": {
+    "value": "{{header}} is in the list twice. Remove one of them."
+  },
+  "errors.connector.headerAndKey": {
+    "value": "The API key is already sent as Authorization. Clear the key, or remove this header."
+  },
+  "errors.connector.headersTooMany": {
+    "value": "A server takes at most {{max}} headers. Remove one to add another."
+  },
+  "errors.connector.headersWithSignIn": {
+    "value": "This server asks for a sign-in, and a sign-in can't carry headers yet. Remove the headers to sign in, or connect with an API key."
+  },
+  "errors.connector.headersUnreadable": {
+    "value": "The saved headers couldn't be read. Type them again, or remove them."
   },
   "errors.wiki.githubNoNotes": {
     "value": "No Markdown notes in this link."
@@ -40509,6 +40638,12 @@
   },
   "settings.account.chat.textSizeHelp": {
     "value": "Of messages, in every conversation and on all your devices"
+  },
+  "settings.account.chat.fullMessages": {
+    "value": "Show full messages"
+  },
+  "settings.account.chat.fullMessagesHelp": {
+    "value": "Show long messages without “See more”, in every conversation and on all your devices"
   },
   "settings.account.chat.textSizePhone": {
     "value": "Applies to the whole app, on top of your phone's text size"

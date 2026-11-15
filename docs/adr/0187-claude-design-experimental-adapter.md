@@ -1,4 +1,4 @@
-# 0186. Claude Design needs a dedicated, verified adapter
+# 0187. Claude Design needs a dedicated, verified adapter
 
 - Status: Proposed — experimental qualification recorded, production admission closed
 - Date: 2026-11-13
@@ -111,7 +111,7 @@ This qualification and review concern the experimental implementation. They do n
 
 ## Port onto current main (2026-11-15)
 
-The upstream port requires runner protocol 67: upstream protocols 65 and 66 do not implement this dedicated task variant. Earlier native qualification above used the isolated implementation and does not qualify the merged protocol for production. Both production gates stay closed. The original experimental migration chain was never accepted upstream; its schema is now generated as migration 0277 after upstream 0276, preserving every accepted migration byte for byte. Disposable databases created with the old experimental chain must stay on that isolated source or be recreated; this migration is not an in-place upgrade for those databases. ADR numbering moved to 0186 because upstream already assigned 0177.
+The upstream port requires runner protocol 68: upstream protocols 65, 66 and 67 do not implement this dedicated task variant. Earlier native qualification above used the isolated implementation and does not qualify the merged protocol for production. Both production gates stay closed. The original experimental migration chain was never accepted upstream; its schema is now generated as migration 0278 after upstream 0277, preserving every accepted migration byte for byte. Disposable databases created with the old experimental chain must stay on that isolated source or be recreated; this migration is not an in-place upgrade for those databases. ADR numbering moved to 0187 because upstream already assigned 0177 and 0186.
 
 
 The final port review identified two integration defects, both reproduced before their fixes: Design imports had invalidated the chat file’s React Compiler opt-out, and the daemon retained an executable path from session startup even when Claude was installed later. The chat directive is again first, and Design resolves the command per launch while retaining native version/authentication checks. The final combined automated suite passed 895 tests across 77 files (one existing migration-process test skipped), with 11,187 assertions. All package typechecks, web/server/standalone-runner builds, lint (warnings only), boundaries, migration safety and schema drift checks passed. This remains automated compatibility evidence, without a new provider operation or production admission.

@@ -39,7 +39,7 @@ export {
   EventPillText,
 } from "./EventPill";
 export { type FilterItem, Filters, type FiltersProps } from "./Filters";
-export { Glass, type GlassProps } from "./Glass";
+export { Glass, type GlassProps, liquidHere } from "./Glass";
 export {
   GroupedField,
   GroupedFooter,

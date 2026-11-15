@@ -1049,8 +1049,11 @@
   "server.restartedBody": {
     "value": "It comes back by itself. If it keeps happening, open the app to see why."
   },
-  "server.version": {
-    "value": "Version {{version}}, updated with the app"
+  "server.installedVersion": {
+    "value": "Installed package version"
+  },
+  "server.internalVersion": {
+    "value": "Internal server version"
   },
   "server.updatesWithApp": {
     "value": "Updating the app updates agentes.chat on this {{device}} too."

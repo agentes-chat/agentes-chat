@@ -7784,6 +7784,17 @@
     },
     "assigneeFilter": "Toegewezen aan",
     "priorityFilter": "Prioriteit",
+    "labelFilter": "Label",
+    "table": {
+      "task": "Taak",
+      "github": "GitHub",
+      "sortBy": "Sorteren op {{column}}"
+    },
+    "fold": {
+      "open": "{{name}} openen",
+      "close": "{{name}} inklappen",
+      "column": "Kolom inklappen"
+    },
     "title": "Taken",
     "summary": "{{open}} open · {{agents}} bij agents",
     "search": "Taken zoeken",
@@ -7826,8 +7837,16 @@
       "order": {
         "manual": "Handmatig",
         "priority": "Prioriteit",
-        "due": "Deadline"
+        "due": "Deadline",
+        "updated": "Recent"
       },
+      "done": "Voltooid",
+      "doneIs": {
+        "all": "Alle",
+        "recent": "Laatste {{days}} dagen",
+        "hidden": "Geen"
+      },
+      "hideEmpty": "Lege groepen verbergen",
       "field": {
         "project": "Project",
         "assignee": "Toegewezen aan",
@@ -8750,6 +8769,7 @@
       "waiting_budget_late": "Zijn moment gemist: het budget werd te laat vernieuwd",
       "stopped": "Door iemand gestopt",
       "stoppedBy": "Gestopt door {{name}}",
+      "stalled": "Vrijgegeven: er bewoog 20 minuten niets",
       "no_report": "Klaar zonder het resultaat te melden",
       "handoff_blocked": "Kon het niet melden: de routine is gepauzeerd of wie hem maakte, kan daar niet meer posten",
       "deleted": "Gestopt: de routine is verwijderd",
@@ -10389,6 +10409,10 @@
       "removeCopies": "Verwijderen",
       "copiesRemoved_one": "{{count}} ongebruikte login verwijderd.",
       "copiesRemoved_other": "{{count}} ongebruikte logins verwijderd.",
+      "removeAllDone": "{{n}} Grok-aanmeldingen verwijderd.",
+      "removeAllText": "Ze denken niet meer voor hun agenten op {{computers}}. Aanmeldingen van anderen blijven staan.",
+      "removeAllTitle": "Alle {{n}} Grok-aanmeldingen verwijderen?",
+      "removeAllGrok": "Alle Grok-aanmeldingen verwijderen",
       "disconnect": "Ontkoppelen",
       "renameTitle": "{{label}} hernoemen",
       "nameLabel": "Naam",
@@ -10450,6 +10474,8 @@
       },
       "resetsAt": "reset om {{time}}",
       "resetsOn": "reset {{day}} om {{time}}",
+      "allModels": "Alle modellen",
+      "onlyModels": "Alleen {{name}}",
       "almost": "Bijna aan de limiet",
       "limited": "Limiet bereikt",
       "limitedUntil": "Limiet bereikt tot {{when}}",
@@ -12954,6 +12980,7 @@
     "connected": "Gekoppeld",
     "connectedAs": "Gekoppeld als {{account}}",
     "reconnectAdds": "Verbind {{name}} opnieuw zodat agents ook {{what}}.",
+    "sendsToo": "Stuurt ook mee: <names/>. Gebruik Opnieuw koppelen om dat te wijzigen.",
     "adds": {
       "github_project": "GitHub Projects kunnen gebruiken (borden lezen en kaarten verplaatsen)"
     },
@@ -14062,6 +14089,22 @@
     "needsKey": "Deze server ondersteunt geen OAuth. Koppel met een API-sleutel.",
     "notApproved": "{{name}} laat alleen goedgekeurde apps inloggen, en agentes.chat is nog niet goedgekeurd. Krijg je er een API-sleutel, dan kun je daarmee koppelen.",
     "serverSaid": "De server antwoordde: {{detail}}",
+    "headers": {
+      "title": "Headers van het verzoek",
+      "help": "Voor een sleutel die in een andere header hoort, of een gateway vóór de server. De meeste servers hebben er geen nodig.",
+      "value": "Waarde",
+      "nameOf": "Naam van header {{n}}",
+      "valueOf": "Waarde van header {{n}}",
+      "remove": "Header {{n}} verwijderen",
+      "add": "Header toevoegen",
+      "saved_one": "Opgeslagen: <names/>. Die blijft, tenzij je nieuwe invult.",
+      "saved_other": "Opgeslagen: <names/>. Die blijven, tenzij je nieuwe invult.",
+      "drop": "Verwijderen",
+      "dropping_one": "<names/> wordt verwijderd bij het opnieuw koppelen.",
+      "dropping_other": "<names/> worden verwijderd bij het opnieuw koppelen.",
+      "undo": "Ongedaan maken",
+      "refused": "De server accepteerde deze headers niet. Controleer de waarden, of koppel met een API-sleutel."
+    },
     "nothingYet": "Tot stap 3 is er niets beschikbaar voor agents.",
     "allCanUse": "Na het koppelen kan elke agent het gebruiken. Dat kun je later aanpassen.",
     "replace": "Vervangt de huidige login. Wie het gebruikt, blijft hetzelfde.",
@@ -14759,7 +14802,15 @@
       "gone": "Dat account is niet meer gekoppeld.",
       "unfinished": "Het inloggen bij Composio is niet afgerond. Probeer het opnieuw.",
       "unavailable": "Deze dienst kan hier niet gekoppeld worden.",
-      "misconfigured": "De koppeling met {{provider}} is verkeerd ingesteld op de server, dus die kan niet worden afgerond. Wie de server beheert, moet de sleutel vervangen in de instellingen van de app."
+      "misconfigured": "De koppeling met {{provider}} is verkeerd ingesteld op de server, dus die kan niet worden afgerond. Wie de server beheert, moet de sleutel vervangen in de instellingen van de app.",
+      "headerName": "Gebruik in de naam van een header alleen letters, cijfers en koppeltekens, zoals X-API-Key.",
+      "headerValue": "Vul een waarde in voor {{header}}: hooguit 2.000 tekens op één regel, zonder accenten of emoji.",
+      "headerReserved": "{{header}} wordt al met elk verzoek meegestuurd en is niet te wijzigen. Verwijder deze header.",
+      "headerTwice": "{{header}} staat twee keer in de lijst. Verwijder er één.",
+      "headerAndKey": "De API-sleutel wordt al als Authorization meegestuurd. Wis de sleutel, of verwijder deze header.",
+      "headersTooMany": "Een server neemt hooguit {{max}} headers. Verwijder er één om een andere toe te voegen.",
+      "headersWithSignIn": "Deze server vraagt om in te loggen, en een login kan nog geen headers meesturen. Verwijder de headers om in te loggen, of koppel met een API-sleutel.",
+      "headersUnreadable": "De opgeslagen headers konden niet worden gelezen. Vul ze opnieuw in of verwijder ze."
     },
     "wiki": {
       "githubNoNotes": "Geen Markdown-notities in deze link.",
@@ -16559,6 +16610,8 @@
         "openLatest": "Nieuwste bericht",
         "textSize": "Tekstgrootte",
         "textSizeHelp": "Van berichten, in alle gesprekken en op al je apparaten",
+        "fullMessages": "Berichten volledig tonen",
+        "fullMessagesHelp": "Lange berichten zonder “Meer tonen”, in alle gesprekken en op al je apparaten",
         "textSizePhone": "Geldt voor de hele app, bovenop de tekstgrootte van je telefoon",
         "textXs": "Kleiner",
         "textSm": "Klein",

@@ -7461,6 +7461,17 @@
     },
     "assigneeFilter": "담당자",
     "priorityFilter": "우선순위",
+    "labelFilter": "라벨",
+    "table": {
+      "task": "작업",
+      "github": "GitHub",
+      "sortBy": "{{column}} 기준 정렬"
+    },
+    "fold": {
+      "open": "{{name}} 열기",
+      "close": "{{name}} 접기",
+      "column": "열 접기"
+    },
     "title": "작업",
     "summary": "진행 중 {{open}}개 · 에이전트 담당 {{agents}}개",
     "search": "작업 검색",
@@ -7502,8 +7513,16 @@
       "order": {
         "manual": "수동",
         "priority": "우선순위",
-        "due": "마감일"
+        "due": "마감일",
+        "updated": "최근"
       },
+      "done": "완료",
+      "doneIs": {
+        "all": "전체",
+        "recent": "최근 {{days}}일",
+        "hidden": "없음"
+      },
+      "hideEmpty": "빈 그룹 숨기기",
       "field": {
         "project": "프로젝트",
         "assignee": "담당자",
@@ -8398,6 +8417,7 @@
       "waiting_budget_late": "실행 시간을 놓침: 예산이 너무 늦게 갱신됐어요",
       "stopped": "누군가 중지했어요",
       "stoppedBy": "{{name}}이(가) 중지했어요",
+      "stalled": "놓아줌: 20분 동안 아무것도 진행되지 않았어요",
       "no_report": "결과를 알리지 않고 끝났어요",
       "handoff_blocked": "알리지 못했어요: 루틴이 일시 중지됐거나 만든 사람이 더 이상 그곳에 글을 올릴 수 없어요",
       "deleted": "중지됨: 루틴이 삭제됐어요",
@@ -9920,6 +9940,10 @@
       "copies_other": "에이전트가 없는 이 계정의 로그인이 {{count}}개 더 있어요.",
       "removeCopies": "삭제",
       "copiesRemoved_other": "쓰지 않는 로그인 {{count}}개를 삭제했어요.",
+      "removeAllDone": "Grok 로그인 {{n}}개를 제거했습니다.",
+      "removeAllText": "{{computers}}에서 각자의 에이전트를 위해 생각하지 않게 됩니다. 다른 사람의 로그인은 그대로 둡니다.",
+      "removeAllTitle": "Grok 로그인 {{n}}개를 모두 제거할까요?",
+      "removeAllGrok": "Grok 로그인 모두 제거",
       "disconnect": "연결 해제",
       "renameTitle": "{{label}} 이름 바꾸기",
       "nameLabel": "이름",
@@ -9974,6 +9998,8 @@
       },
       "resetsAt": "{{time}}에 초기화",
       "resetsOn": "{{day}} {{time}}에 초기화",
+      "allModels": "모든 모델",
+      "onlyModels": "{{name}}만",
       "almost": "한도에 거의 도달",
       "limited": "한도 도달",
       "limitedUntil": "{{when}}까지 한도 도달",
@@ -12385,6 +12411,7 @@
     "connected": "연결됨",
     "connectedAs": "{{account}}(으)로 연결됨",
     "reconnectAdds": "{{name}}을(를) 다시 연결하면 에이전트가 {{what}} 수도 있어요.",
+    "sendsToo": "함께 보냄: <names/>. 바꾸려면 다시 연결을 사용하세요.",
     "adds": {
       "github_project": "GitHub Projects를 쓸(보드를 읽고 카드를 옮길)"
     },
@@ -13473,6 +13500,20 @@
     "needsKey": "이 서버는 OAuth를 지원하지 않아요. API 키로 연결하세요.",
     "notApproved": "{{name}}은(는) 승인한 앱만 로그인할 수 있는데, agentes.chat은 아직 승인되지 않았어요. API 키를 받을 수 있다면 그 키로 연결하면 돼요.",
     "serverSaid": "서버 응답: {{detail}}",
+    "headers": {
+      "title": "요청 헤더",
+      "help": "키를 다른 헤더로 보내야 하거나 서버 앞에 게이트웨이가 있을 때 써요. 대부분의 서버에는 필요 없어요.",
+      "value": "값",
+      "nameOf": "헤더 {{n}} 이름",
+      "valueOf": "헤더 {{n}} 값",
+      "remove": "헤더 {{n}} 삭제",
+      "add": "헤더 추가",
+      "saved_other": "저장됨: <names/>. 새로 입력하지 않으면 그대로 유지돼요.",
+      "drop": "삭제",
+      "dropping_other": "<names/>: 다시 연결하면 삭제돼요.",
+      "undo": "실행 취소",
+      "refused": "서버가 이 헤더를 받아들이지 않았어요. 값을 확인하거나 API 키로 연결하세요."
+    },
     "nothingYet": "3단계 전까지는 에이전트가 아무것도 사용할 수 없어요.",
     "allCanUse": "연결하면 모든 에이전트가 사용할 수 있어요. 나중에 조정할 수 있어요.",
     "replace": "현재 로그인을 대체해요. 사용하는 대상은 그대로예요.",
@@ -14153,7 +14194,15 @@
       "gone": "그 계정은 더 이상 연결되어 있지 않아요.",
       "unfinished": "Composio 로그인이 끝나지 않았어요. 다시 시도하세요.",
       "unavailable": "이 서비스는 여기서 연결할 수 없어요.",
-      "misconfigured": "서버에서 {{provider}} 연결이 잘못 설정돼서 연결을 끝낼 수 없어요. 서버를 운영하는 사람이 앱 설정에서 키를 바꿔야 해요."
+      "misconfigured": "서버에서 {{provider}} 연결이 잘못 설정돼서 연결을 끝낼 수 없어요. 서버를 운영하는 사람이 앱 설정에서 키를 바꿔야 해요.",
+      "headerName": "헤더 이름에는 X-API-Key처럼 영문자, 숫자, 하이픈만 쓰세요.",
+      "headerValue": "{{header}} 값을 입력하세요. 한 줄로 2,000자까지, 영문자와 숫자, 기호만 쓸 수 있어요.",
+      "headerReserved": "{{header}}: 모든 요청에 이미 자동으로 보내져서 바꿀 수 없어요. 이 헤더를 삭제하세요.",
+      "headerTwice": "{{header}}: 목록에 두 번 있어요. 하나를 삭제하세요.",
+      "headerAndKey": "API 키는 이미 Authorization으로 보내져요. 키를 지우거나 이 헤더를 삭제하세요.",
+      "headersTooMany": "서버 하나에 헤더는 {{max}}개까지예요. 추가하려면 하나를 삭제하세요.",
+      "headersWithSignIn": "이 서버는 로그인을 요구하는데, 로그인으로는 아직 헤더를 보낼 수 없어요. 헤더를 삭제하고 로그인하거나 API 키로 연결하세요.",
+      "headersUnreadable": "저장된 헤더를 읽지 못했어요. 다시 입력하거나 삭제하세요."
     },
     "wiki": {
       "githubNoNotes": "이 링크에는 Markdown 노트가 없어요.",
@@ -15932,6 +15981,8 @@
         "openLatest": "가장 최근 메시지",
         "textSize": "글자 크기",
         "textSizeHelp": "메시지 글자예요. 모든 대화와 내 모든 기기에 적용돼요",
+        "fullMessages": "메시지 전체 보기",
+        "fullMessagesHelp": "긴 메시지를 “더 보기” 없이 보여줘요. 모든 대화와 내 모든 기기에 적용돼요",
         "textSizePhone": "휴대폰의 글자 크기 설정에 더해 앱 전체에 적용돼요",
         "textXs": "더 작게",
         "textSm": "작게",

@@ -8014,6 +8014,17 @@
     },
     "assigneeFilter": "Responsable",
     "priorityFilter": "Priorité",
+    "labelFilter": "Étiquette",
+    "table": {
+      "task": "Tâche",
+      "github": "GitHub",
+      "sortBy": "Trier par {{column}}"
+    },
+    "fold": {
+      "open": "Ouvrir {{name}}",
+      "close": "Replier {{name}}",
+      "column": "Replier la colonne"
+    },
     "title": "Tâches",
     "summary": "{{open}} ouvertes · {{agents}} avec des agents",
     "search": "Rechercher des tâches",
@@ -8057,8 +8068,16 @@
       "order": {
         "manual": "Manuel",
         "priority": "Priorité",
-        "due": "Échéance"
+        "due": "Échéance",
+        "updated": "Récentes"
       },
+      "done": "Terminées",
+      "doneIs": {
+        "all": "Toutes",
+        "recent": "{{days}} derniers jours",
+        "hidden": "Aucune"
+      },
+      "hideEmpty": "Masquer les groupes vides",
       "field": {
         "project": "Projet",
         "assignee": "Responsable",
@@ -9006,6 +9025,7 @@
       "waiting_budget_late": "A manqué son heure : le budget s'est renouvelé trop tard",
       "stopped": "Arrêtée par quelqu'un",
       "stoppedBy": "Arrêtée par {{name}}",
+      "stalled": "Libérée : rien n'a avancé pendant 20 minutes",
       "no_report": "Terminée sans donner le résultat",
       "handoff_blocked": "Impossible de rapporter : la routine a été mise en pause ou la personne qui l'a créée ne peut plus publier ici",
       "deleted": "Arrêtée : la routine a été supprimée",
@@ -10725,6 +10745,10 @@
       "copiesRemoved_one": "{{count}} connexion inutilisée supprimée.",
       "copiesRemoved_many": "{{count}} connexions inutilisées supprimées.",
       "copiesRemoved_other": "{{count}} connexions inutilisées supprimées.",
+      "removeAllDone": "{{n}} connexions Grok supprimées.",
+      "removeAllText": "Elles cessent de réfléchir pour leurs agents sur {{computers}}. Les connexions des autres personnes ne sont pas touchées.",
+      "removeAllTitle": "Supprimer les {{n}} connexions Grok ?",
+      "removeAllGrok": "Supprimer toutes les connexions Grok",
       "disconnect": "Déconnecter",
       "renameTitle": "Renommer {{label}}",
       "nameLabel": "Nom",
@@ -10792,6 +10816,8 @@
       },
       "resetsAt": "se réinitialise à {{time}}",
       "resetsOn": "se réinitialise {{day}} à {{time}}",
+      "allModels": "Tous les modèles",
+      "onlyModels": "Uniquement {{name}}",
       "almost": "Presque à la limite",
       "limited": "Limite atteinte",
       "limitedUntil": "Limite atteinte jusqu'à {{when}}",
@@ -13354,6 +13380,7 @@
     "connected": "Connecté",
     "connectedAs": "Connecté en tant que {{account}}",
     "reconnectAdds": "Reconnectez {{name}} pour que les agents puissent aussi {{what}}.",
+    "sendsToo": "Envoie aussi : <names/>. Pour changer cela, utilisez Reconnecter.",
     "adds": {
       "github_project": "utiliser GitHub Projects (lire les tableaux et déplacer les cartes)"
     },
@@ -14482,6 +14509,22 @@
     "needsKey": "Ce serveur ne prend pas en charge OAuth. Connectez-le avec une clé API.",
     "notApproved": "{{name}} n'autorise la connexion qu'aux applications qu'il a approuvées, et agentes.chat ne l'est pas encore. S'il vous fournit une clé API, vous pouvez vous connecter avec.",
     "serverSaid": "Le serveur a répondu : {{detail}}",
+    "headers": {
+      "title": "En-têtes de requête",
+      "help": "Pour une clé à envoyer dans un autre en-tête, ou une passerelle placée devant le serveur. La plupart des serveurs n'en ont pas besoin.",
+      "value": "Valeur",
+      "nameOf": "Nom de l'en-tête {{n}}",
+      "valueOf": "Valeur de l'en-tête {{n}}",
+      "remove": "Retirer l'en-tête {{n}}",
+      "add": "Ajouter un en-tête",
+      "saved_one": "Enregistré : <names/>. Il est conservé, sauf si vous en saisissez de nouveaux.",
+      "saved_other": "Enregistrés : <names/>. Ils sont conservés, sauf si vous en saisissez de nouveaux.",
+      "drop": "Retirer",
+      "dropping_one": "<names/> sera retiré à la reconnexion.",
+      "dropping_other": "<names/> seront retirés à la reconnexion.",
+      "undo": "Annuler",
+      "refused": "Le serveur n'a pas accepté ces en-têtes. Vérifiez leurs valeurs, ou connectez-le avec une clé API."
+    },
     "nothingYet": "Rien n'est disponible pour les agents avant l'étape 3.",
     "allCanUse": "Une fois connecté, tous les agents peuvent l'utiliser. Vous pourrez ajuster cela plus tard.",
     "replace": "Remplace la connexion actuelle. Ceux qui l'utilisent restent les mêmes.",
@@ -15196,7 +15239,15 @@
       "gone": "Ce compte n'est plus connecté.",
       "unfinished": "La connexion sur Composio n'a pas abouti. Réessayez.",
       "unavailable": "Ce service ne peut pas être connecté ici.",
-      "misconfigured": "La connexion à {{provider}} est mal configurée sur le serveur, donc elle ne peut pas aboutir. La personne qui gère le serveur doit remplacer la clé dans les paramètres de l'app."
+      "misconfigured": "La connexion à {{provider}} est mal configurée sur le serveur, donc elle ne peut pas aboutir. La personne qui gère le serveur doit remplacer la clé dans les paramètres de l'app.",
+      "headerName": "N'utilisez que des lettres, des chiffres et des tirets dans le nom d'un en-tête, comme X-API-Key.",
+      "headerValue": "Saisissez une valeur pour {{header}} : 2 000 caractères au plus, sur une seule ligne, sans accents ni emojis.",
+      "headerReserved": "{{header}} est déjà envoyé avec chaque requête et ne peut pas être modifié. Retirez cet en-tête.",
+      "headerTwice": "{{header}} figure deux fois dans la liste. Retirez-en un.",
+      "headerAndKey": "La clé API est déjà envoyée dans Authorization. Effacez la clé, ou retirez cet en-tête.",
+      "headersTooMany": "Un serveur accepte {{max}} en-têtes au plus. Retirez-en un pour en ajouter un autre.",
+      "headersWithSignIn": "Ce serveur demande une connexion à un compte, et celle-ci ne peut pas encore transmettre d'en-têtes. Retirez les en-têtes pour vous connecter, ou connectez-le avec une clé API.",
+      "headersUnreadable": "Les en-têtes enregistrés n'ont pas pu être lus. Saisissez-les à nouveau ou retirez-les."
     },
     "wiki": {
       "githubNoNotes": "Aucune note Markdown dans ce lien.",
@@ -17015,6 +17066,8 @@
         "openLatest": "Message le plus récent",
         "textSize": "Taille du texte",
         "textSizeHelp": "Des messages, dans toutes les discussions et sur tous vos appareils",
+        "fullMessages": "Afficher les messages en entier",
+        "fullMessagesHelp": "Affiche les longs messages sans « Voir plus », dans toutes les discussions et sur tous vos appareils",
         "textSizePhone": "S'applique à toute l'app, en plus de la taille du texte de votre téléphone",
         "textXs": "Plus petit",
         "textSm": "Petit",

@@ -7962,6 +7962,17 @@
     },
     "assigneeFilter": "Responsable",
     "priorityFilter": "Prioridad",
+    "labelFilter": "Etiqueta",
+    "table": {
+      "task": "Tarea",
+      "github": "GitHub",
+      "sortBy": "Ordenar por {{column}}"
+    },
+    "fold": {
+      "open": "Abrir {{name}}",
+      "close": "Contraer {{name}}",
+      "column": "Contraer columna"
+    },
     "title": "Tareas",
     "summary": "{{open}} abiertas · {{agents}} con agentes",
     "search": "Buscar tareas",
@@ -8005,8 +8016,16 @@
       "order": {
         "manual": "Manual",
         "priority": "Prioridad",
-        "due": "Fecha límite"
+        "due": "Fecha límite",
+        "updated": "Recientes"
       },
+      "done": "Completadas",
+      "doneIs": {
+        "all": "Todas",
+        "recent": "Últimos {{days}} días",
+        "hidden": "Ninguna"
+      },
+      "hideEmpty": "Ocultar grupos vacíos",
       "field": {
         "project": "Proyecto",
         "assignee": "Responsable",
@@ -8954,6 +8973,7 @@
       "waiting_budget_late": "Se le pasó la hora: el presupuesto se renovó demasiado tarde",
       "stopped": "Alguien la detuvo",
       "stoppedBy": "Detenida por {{name}}",
+      "stalled": "Liberada: nada avanzó en ella durante 20 minutos",
       "no_report": "Terminó sin contar el resultado",
       "handoff_blocked": "No pudo contarlo: la rutina se pausó o quien la creó ya no puede publicar allí",
       "deleted": "Detenida: la rutina se eliminó",
@@ -10667,6 +10687,10 @@
       "copiesRemoved_one": "{{count}} inicio de sesión sin uso quitado.",
       "copiesRemoved_many": "{{count}} inicios de sesión sin uso quitados.",
       "copiesRemoved_other": "{{count}} inicios de sesión sin uso quitados.",
+      "removeAllDone": "{{n}} inicios de sesión de Grok quitados.",
+      "removeAllText": "Dejan de pensar por sus agentes en {{computers}}. Los inicios de sesión de otras personas no se tocan.",
+      "removeAllTitle": "¿Quitar los {{n}} inicios de sesión de Grok?",
+      "removeAllGrok": "Quitar todos los inicios de sesión de Grok",
       "disconnect": "Desconectar",
       "renameTitle": "Cambiar el nombre de {{label}}",
       "nameLabel": "Nombre",
@@ -10733,6 +10757,8 @@
       },
       "resetsAt": "se renueva a las {{time}}",
       "resetsOn": "se renueva el {{day}} a las {{time}}",
+      "allModels": "Todos los modelos",
+      "onlyModels": "Solo {{name}}",
       "almost": "Casi en el límite",
       "limited": "En el límite",
       "limitedUntil": "En el límite hasta {{when}}",
@@ -13283,6 +13309,7 @@
     "connected": "Conectado",
     "connectedAs": "Conectado como {{account}}",
     "reconnectAdds": "Vuelve a conectar {{name}} para que los agentes también puedan {{what}}.",
+    "sendsToo": "También envía: <names/>. Para cambiarlo, usa Volver a conectar.",
     "adds": {
       "github_project": "usar GitHub Projects (leer tableros y mover tarjetas)"
     },
@@ -14411,6 +14438,22 @@
     "needsKey": "Este servidor no admite OAuth. Conéctalo con una clave de API.",
     "notApproved": "{{name}} solo deja iniciar sesión a las apps que aprobó, y agentes.chat todavía no está aprobado. Si te da una clave de API, puedes conectarlo con ella.",
     "serverSaid": "El servidor respondió: {{detail}}",
+    "headers": {
+      "title": "Encabezados de la solicitud",
+      "help": "Para una clave que va en otro encabezado, o un gateway delante del servidor. La mayoría de los servidores no los necesita.",
+      "value": "Valor",
+      "nameOf": "Nombre del encabezado {{n}}",
+      "valueOf": "Valor del encabezado {{n}}",
+      "remove": "Quitar el encabezado {{n}}",
+      "add": "Agregar encabezado",
+      "saved_one": "Guardado: <names/>. Se mantiene, a menos que escribas otros nuevos.",
+      "saved_other": "Guardados: <names/>. Se mantienen, a menos que escribas otros nuevos.",
+      "drop": "Quitar",
+      "dropping_one": "<names/> se quitará al volver a conectar.",
+      "dropping_other": "<names/> se quitarán al volver a conectar.",
+      "undo": "Deshacer",
+      "refused": "El servidor no aceptó estos encabezados. Revisa sus valores, o conéctalo con una clave de API."
+    },
     "nothingYet": "Nada queda disponible para los agentes hasta el paso 3.",
     "allCanUse": "Una vez conectado, todos los agentes pueden usarlo. Puedes ajustarlo después.",
     "replace": "Reemplaza el inicio de sesión actual. Quién lo usa sigue igual.",
@@ -15125,7 +15168,15 @@
       "gone": "Esa cuenta ya no está conectada.",
       "unfinished": "El inicio de sesión en Composio no terminó. Intenta de nuevo.",
       "unavailable": "Este servicio no se puede conectar aquí.",
-      "misconfigured": "La conexión con {{provider}} está mal configurada en el servidor, así que no puede terminar. Quien administra el servidor tiene que cambiar la clave en la configuración de la app."
+      "misconfigured": "La conexión con {{provider}} está mal configurada en el servidor, así que no puede terminar. Quien administra el servidor tiene que cambiar la clave en la configuración de la app.",
+      "headerName": "Usa solo letras, números y guiones en el nombre del encabezado, como X-API-Key.",
+      "headerValue": "Escribe un valor para {{header}}: hasta 2000 caracteres en una sola línea, sin acentos ni emojis.",
+      "headerReserved": "{{header}} ya se envía con cada solicitud y no se puede cambiar. Quita este encabezado.",
+      "headerTwice": "{{header}} está dos veces en la lista. Quita uno.",
+      "headerAndKey": "La clave de API ya se envía como Authorization. Borra la clave o quita este encabezado.",
+      "headersTooMany": "Un servidor admite como máximo {{max}} encabezados. Quita uno para agregar otro.",
+      "headersWithSignIn": "Este servidor pide iniciar sesión, y un inicio de sesión todavía no puede llevar encabezados. Quita los encabezados para iniciar sesión, o conéctalo con una clave de API.",
+      "headersUnreadable": "No se pudieron leer los encabezados guardados. Escríbelos de nuevo o quítalos."
     },
     "wiki": {
       "githubNoNotes": "No hay notas en Markdown en este enlace.",
@@ -16944,6 +16995,8 @@
         "openLatest": "Mensaje más reciente",
         "textSize": "Tamaño del texto",
         "textSizeHelp": "De los mensajes, en todas las conversaciones y en todos tus dispositivos",
+        "fullMessages": "Mostrar mensajes completos",
+        "fullMessagesHelp": "Muestra los mensajes largos sin “Ver más”, en todas las conversaciones y en todos tus dispositivos",
         "textSizePhone": "Se aplica a toda la app, además del tamaño de texto de tu teléfono",
         "textXs": "Más pequeño",
         "textSm": "Pequeño",

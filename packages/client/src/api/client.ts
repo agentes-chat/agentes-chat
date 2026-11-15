@@ -272,6 +272,7 @@ import type {
   Reminder,
   ReminderInput,
   RemovalPreview,
+  RequestHeader,
   RightHandApprovals,
   RightHandApprovalsInput,
   Role,
@@ -1366,11 +1367,22 @@ export interface ApiClient {
      * Connects to an https MCP server: a new account, or with `connectionId` a new sign-in for that one
      * ("Reconectar"). Without `apiKey` the server tries OAuth (discovery + dynamic client registration); if the
      * MCP server doesn't support it, answers `needs_key` (`reason: "not_approved"` when it only registers apps it
-     * approved, with its refusal in `detail`).
+     * approved, with its refusal in `detail`). `headers` go with every request to the server (at most 10; a refused
+     * one is a 400 `connector.header_*` whose params name it, `header` and `index`). Without a key, a server that
+     * answers with them is connected by them alone; one that asks for a sign-in is refused
+     * (`connector.headers_with_sign_in`). With `connectionId`: absent keeps the account's (a 400
+     * `connector.headers_unreadable` when they can no longer be read), `[]` removes them, a list replaces them.
      */
     connect(
       orgId: string,
-      input: { serverUrl: string; apiKey?: string; label?: string; returnTo: string; connectionId?: string },
+      input: {
+        serverUrl: string;
+        apiKey?: string;
+        label?: string;
+        returnTo: string;
+        connectionId?: string;
+        headers?: RequestHeader[];
+      },
     ): Promise<CustomConnectStart>;
     /** Lists the server's tools again; new ones come back unclassified. */
     refresh(orgId: string, serverId: string): Promise<CustomServer>;

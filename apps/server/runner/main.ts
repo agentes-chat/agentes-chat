@@ -84,6 +84,7 @@ import {
   takeEnrollCode,
   whoCanUse,
 } from "./pairing";
+import { askPark, parkDone } from "./park";
 import { agentWorkspace } from "./paths";
 import { connectVnc, type VncConnection, vncInit } from "./rfb";
 import { installService, installSystemService, removeOwnService, serviceStatus, uninstallService } from "./service";
@@ -139,6 +140,10 @@ Usage:
       n minutes the computer is running (default 5), or with resume; ask again to keep it.
   agentes-runner resume
       Ends standby: the runner connects again at once.
+  agentes-runner park
+      For a server hosting this computer that runs short of memory: the running runner parks the agents'
+      desktops nobody used for an hour (each opens again as it was when next used) and eases their idle
+      browsers, keeping every tab. Prints one JSON line: {"desktops", "browsers"}.
   agentes-runner status
       The connection, the service, and whether the agents' desktops and the terminal can run here.
   agentes-runner doctor [--wait | --no-wait] [--json]
@@ -791,6 +796,31 @@ async function standby(p: Parsed, on: boolean): Promise<number> {
         ? `In standby for ${minutes} min of running time: no link to the server, everything else runs.`
         : "Standby is over: connecting to the server.",
     );
+    return 0;
+  }
+  console.error("The runner didn't answer in time.");
+  return 1;
+}
+
+/**
+ * Desktops parked one after another take a few seconds each: their processes get `KILL_WAIT_MS` to end. Kept under
+ * 90 s, how long a caller of this verb is expected to wait, so a slow park still answers in time.
+ */
+const PARK_ANSWER_MS = 85_000;
+
+/** `agentes-runner park` (`park.ts`): prints what the running runner did, `{"desktops":0,"browsers":0}` with none running. */
+async function park(): Promise<number> {
+  const home = runnerHome();
+  const holder = readLock(home);
+  if (!holder || !pidAlive(holder.pid)) {
+    console.log(JSON.stringify({ desktops: 0, browsers: 0 }));
+    return 0;
+  }
+  const ask = askPark(home);
+  for (const until = Date.now() + PARK_ANSWER_MS; Date.now() < until; await sleep(100)) {
+    const done = parkDone(home, ask.id);
+    if (!done) continue;
+    console.log(JSON.stringify({ desktops: done.desktops, browsers: done.browsers }));
     return 0;
   }
   console.error("The runner didn't answer in time.");
@@ -1455,6 +1485,8 @@ async function main(argv: string[]): Promise<number> {
     case "standby":
     case "resume":
       return standby(p, command === "standby");
+    case "park":
+      return park();
     case "service": {
       const stored = storedOrNull();
       const hostService = p.flags.has("host");

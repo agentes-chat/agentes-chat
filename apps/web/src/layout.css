@@ -3465,6 +3465,7 @@ html:not([data-pointer]) .profile-trigger:focus-visible {
   .wiki-editor,
   .cal-side__section,
   .cflow__key,
+  .cflow__headers,
   .imp-block
 ) > :where(p, ul, ol) {
   margin-block: 0;
@@ -5306,6 +5307,48 @@ html:not([data-pointer]) .cflow__more summary:focus-visible {
   flex-direction: column;
   gap: var(--form-gap);
   margin-top: var(--space-3);
+}
+/* A server by address's request headers: what they are for, the saved names, a name and a value per row, one more. */
+.cflow__headers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+/* A header's name is one long word. */
+.cflow__headers > p,
+.cflow__headers .ac-field__error {
+  overflow-wrap: anywhere;
+}
+.cflow__hgroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--field-gap);
+}
+.cflow__hrows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The name gets the wider field: it is read, and a value shows only dots. Then Remover, as tall as the fields. The
+   labels' row leaves its column empty. */
+.cflow__hrow {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) var(--control-h-md);
+  align-items: center;
+  gap: var(--field-gap) var(--space-2);
+}
+.cflow__hrow > .ac-field__error {
+  grid-column: 1 / -1;
+}
+.cflow__hadd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
 }
 /* The server's own words under ours: its codes are long unbroken words. */
 .cflow__said {

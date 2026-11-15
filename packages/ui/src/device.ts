@@ -16,6 +16,13 @@ export const hoverless = () => typeof window.matchMedia === "function" && window
 /** Keys that can move the focus besides Tab: between radios, tabs or a menu's items. In a field they move the caret. */
 const MOVES = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"]);
 
+/**
+ * A key the browser turns into text itself: a dead key, an input method's, a phone keyboard's. Safari and the macOS
+ * app fire the key that ends a composition after `compositionend`, still with keyCode 229.
+ */
+export const composes = (e: KeyboardEvent) =>
+  e.isComposing || e.keyCode === 229 || e.key === "Dead" || e.key === "Process" || e.key === "Unidentified";
+
 let byKeys = false;
 let tracked: Document | null = null;
 
@@ -26,7 +33,8 @@ let tracked: Document | null = null;
  * Alt is a shortcut, not a move, except Tab: by default, Safari and the macOS app reach a button only with ⌥Tab.
  * `<html data-pointer>` says the pointer leads, so that only the keys draw focus rings: a browser also draws one on
  * whatever a script focuses after any key, typing included (a dialog that closes on Enter gives the focus back to its
- * button). Installed once per document, by the first caller.
+ * button). Also keeps an input method's own Enter from the app (`composes`). Installed once per document, by the
+ * first caller.
  */
 export function trackInput() {
   if (typeof document === "undefined" || tracked === document) return;
@@ -37,6 +45,15 @@ export function trackInput() {
     root.toggleAttribute("data-pointer", !keys);
   };
   set(false);
+  // The Enter that confirms a word in an input method (Japanese, Chinese, Korean) is the input method's: it ends
+  // here, so that no field's own Enter (send, pick, save) takes it for the person's.
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.key === "Enter" && composes(e)) e.stopPropagation();
+    },
+    true,
+  );
   // While the key is down, not only during its event: Radix's roving focus (a menu's arrows) moves it in a timeout.
   let moving = false;
   document.addEventListener(

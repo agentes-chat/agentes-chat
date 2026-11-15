@@ -3323,6 +3323,16 @@ html:not([data-pointer]) .ac-tab:focus-visible {
   grid-column: 1 / -1;
   height: 6px;
 }
+/* A section's heading over its first row: whom the quotas below bind ("Todos os modelos", "Só Claude and GPT"). */
+.ac-planmeter__group {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.ac-planmeter__window:has(> .ac-planmeter__group):not(:first-child) {
+  margin-top: 6px;
+}
 .ac-planmeter__pct {
   justify-self: end;
   white-space: nowrap;

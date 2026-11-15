@@ -4,7 +4,7 @@
 
 **Goal:** Complete the authorized Claude Design integration with native human permission review, verified recovery and existing app controls.
 
-**Qualification status (2026-11-14):** Native create/update, app owner review, source upload, lost-delivery journal recovery and owner-associated read-only recovery passed in the disposable admitted copy. Native cancellation/isolation and iOS component review also passed. Final review found two Important defects, corrected with regression tests. Production admission, merge and deployment remain separate; both rollout gates stay closed. See ADR 0186 and the research report for scope and existing CI exceptions.
+**Qualification status (2026-11-14):** Native create/update, app owner review, source upload, lost-delivery journal recovery and owner-associated read-only recovery passed in the disposable admitted copy. Native cancellation/isolation and iOS component review also passed. Final review found two Important defects, corrected with regression tests. Production admission, merge and deployment remain separate; both rollout gates stay closed. See ADR 0187 and the research report for scope and existing CI exceptions.
 
 **Architecture:** Preserve the dedicated task/account/grant lifecycle and pre-effect hook. Replace only the permission transport with pinned CLI stdio control, store native consents in PostgreSQL and obtain owner decisions through existing app UI. Resume the unfinished original tasks after that gate is testable.
 
@@ -60,7 +60,7 @@
 
 ### Task 4: Finish original recovery, controls and admission
 
-**Files:** original plan Tasks 7/8 files, strict native source parser/recovery, existing AiAccounts web/mobile, ADR0186 and rollout evidence. Tests include original design-results/recovery and new controls.
+**Files:** original plan Tasks 7/8 files, strict native source parser/recovery, existing AiAccounts web/mobile, ADR0187 and rollout evidence. Tests include original design-results/recovery and new controls.
 
 - [x] Read original Task7/8 briefs. Write failing tests for actual native source envelope, drift across reads, correct source-task binding, incomplete shell/denied consent and partial-published cancellation. Keep original native version proof/causality rules: partial publications remain published/locked with sources_incomplete and are shown as such, never silently terminalized.
 - [x] Complete read-only source retrieval and idempotent Drive import, then original per-agent grant/account controls, job/results/manual recovery surfaces and explicit local-HTML alternative.

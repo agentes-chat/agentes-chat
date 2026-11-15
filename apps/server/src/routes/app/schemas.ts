@@ -123,6 +123,9 @@ export const ChatPrefs = z
       .enum(CHAT_TEXT_SIZES)
       .optional()
       .openapi({ description: "Tamanho do texto of the messages, smallest first; absent: `md`." }),
+    fullMessages: z.boolean().optional().openapi({
+      description: "Show messages in full without See more; absent: long messages are folded.",
+    }),
     feedbackAuto: z.boolean().optional().openapi({
       description:
         "Always send: a report an agent offers about the app goes with its reply, without asking; absent: it asks.",

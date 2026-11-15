@@ -2937,6 +2937,11 @@ export interface CustomServer {
   /** The account as the provider names it ("Acme"), when it says. */
   accountLabel?: string | null;
   authType: "oauth" | "api_key";
+  /**
+   * The request headers typed for it, by name (their values are never returned); empty when it has none, and for
+   * who doesn't manage connectors. Older servers leave it out.
+   */
+  headerNames?: string[];
   /** The server's own icon, kept and served by the backend (`/api/app/connector-icons/…`); null = a monogram. */
   iconUrl?: string | null;
   /** A service through Composio (ADR 0107): its address means nothing to people. */
@@ -2960,6 +2965,12 @@ export interface ComposioUsage {
   limit: number | null;
   /** `2026-11`. */
   month: string;
+}
+
+/** A request header an admin types for a server by address, sent with every request to it. */
+export interface RequestHeader {
+  name: string;
+  value: string;
 }
 
 /** What connecting did: a new account, a new sign-in for one ("Reconectar"), or the same account again. */
@@ -6715,7 +6726,7 @@ export type NotificationKind =
   /** ADR 0139 §2: three of its decisions undone in a week stopped it. Waiting until it is turned back on. */
   | "right_hand_paused"
   /**
-   * ADR 0186 §1: the right hand found something that stops the team and this person can fix. One open row per cause
+   * ADR 0177 §1: the right hand found something that stops the team and this person can fix. One open row per cause
    * (`latest.reason`: `sign_in`, `connector`, `mailbox`, `database`, `budget_out`, `budget_low`, `computer`),
    * `latest.names` the first things it is about and `count` how many, `latest.text` the whole sentence in the
    * person's language. `source.agentId`, `machineId` or `accountId` when it is about one. Done once fixed.
@@ -7072,15 +7083,26 @@ export interface SidebarView {
 export interface IssuesView {
   layout: "board" | "list";
   group: "stage" | "assignee" | "priority";
-  /** `manual`: the board's own order (what people drag); by priority (high first) or by due date (soonest first). */
-  sort: "manual" | "priority" | "due";
+  /**
+   * `manual`: the board's own order (what people drag); by priority (high first), by due date (soonest first) or by
+   * the last change (newest first).
+   */
+  sort: "manual" | "priority" | "due" | "updated";
   /** What the cards show besides their number and title. */
   fields: Record<IssueCardField, boolean>;
   /** Only tasks with one of these assignees: `agent:<id>`, `person:<id>` or `none` (empty: every task). */
   assignees: string[];
   /** Only tasks with one of these priorities (empty: every task). */
   priorities: IssuePriority[];
+  /** Only tasks with one of these labels (empty: every task). */
+  labels: string[];
+  /** Which finished tasks show: every one, the ones changed in the last `DONE_RECENT_DAYS` days, or none. */
+  done: "all" | "recent" | "hidden";
   showCanceled: boolean;
+  /** Groups with no task on screen take no room (they come back while a card moves, to drop it there). */
+  hideEmpty: boolean;
+  /** The groups folded to their name and count: column ids, assignee keys or priorities. */
+  collapsed: string[];
 }
 export type IssueCardField = "project" | "assignee" | "priority" | "due" | "criteria" | "pullRequest" | "label";
 

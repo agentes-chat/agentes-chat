@@ -500,12 +500,16 @@ const agyLimit = (line: string) => {
 
 /**
  * The Antigravity CLI's `/usage` report (ADR 0143), printed in print mode: per model group ("Gemini Models", "Claude
- * and GPT models", "Gemini 4 Argon"), its five-hour and weekly limits, with when each refreshes where it says
- * (antigravity.google/docs/models' View Usage panel). Every percentage there is what is left, whether or not the line
- * says "Remaining" (Argon's "Weekly Limit 100%" is all of it left); only a line that says "used" counts up. A group
- * starts at any short line without a % that limit lines follow, whatever its words. The first group's (Gemini's) are
- * the plan's windows; every other group's come as `other` with its name, so they never put the plan at its limit.
- * ponytail: read from the docs' panel, not a real report; the probe drops what it can't read.
+ * and GPT models", "Gemini 4 Argon"), its five-hour and weekly limits, with when each refreshes. The first group's
+ * (Gemini's) are the plan's windows; every other group's come as `other` named `<group> · 5h|7d`: a model group's own
+ * quota, which binds only that group's models (`planBinding`), never the whole account (`planState`).
+ *
+ * Two shapes: the CLI's (1.5.6, read 2026-11-14), one tab-separated row per quota (`Gemini Models\tWeekly Limit
+ * Remaining\t98%\t2026-11-21T21:48:50Z`, the percent `disabled` where the plan has none, its reset an ISO time); and
+ * the docs' panel (antigravity.google/docs/models' View Usage panel), the group on a line of its own above its quotas
+ * (a group starts at any short line without a % that limit lines follow, whatever its words), a reset in words.
+ * Every percentage is what is left, whether or not the line says "Remaining" (Argon's "Weekly Limit\t99%"); only a
+ * line that says "used" counts up.
  */
 export function antigravityUsage(text: string, source: PlanUsage["source"], now = Date.now()): PlanUsage | null {
   const lines = text
@@ -517,8 +521,28 @@ export function antigravityUsage(text: string, source: PlanUsage["source"], now 
   const windows: PlanWindow[] = [];
   let group = "";
   let first: string | undefined;
+  const add = (where: string, which: "five_hour" | "seven_day", used: number, at: string | undefined) => {
+    first ??= where;
+    windows.push({
+      ...(where !== first && where
+        ? { kind: "other" as const, label: label(`${where} · ${which === "five_hour" ? "5h" : "7d"}`) }
+        : { kind: which }),
+      usedPercent: percent(used),
+      ...(at ? { resetsAt: at } : {}),
+    });
+  };
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
+    const cells = line.split("\t").map((c) => c.trim());
+    const row = cells.length >= 3 ? agyLimit(cells[1] ?? "") : null;
+    if (row) {
+      // The CLI's row: a quota that's `disabled` (no number) is no window.
+      const left = /^(\d{1,3}(?:\.\d+)?)\s*%$/.exec(cells[2] ?? "");
+      const at = cells[3] && !Number.isNaN(Date.parse(cells[3])) ? resetIso(cells[3]) : undefined;
+      if (left?.[1]) add(cells[0] ?? "", row.which, 100 - Number(left[1]), at);
+      continue;
+    }
+    // The docs' panel.
     const limit = agyLimit(line);
     if (!limit) {
       const header = !/%|\b(?:resets?|refresh)/i.test(line) && line.length <= 60;
@@ -532,16 +556,12 @@ export function antigravityUsage(text: string, source: PlanUsage["source"], now 
     if (!pct?.[1]) continue;
     const used = /\bused\b/i.test(`${line} ${shown}`) ? Number(pct[1]) : 100 - Number(pct[1]);
     const after = lines[j + 1] ?? "";
-    const at = resetFromWords(`${line} ${shown} ${agyLimit(after) || /%/.test(after) ? "" : after}`, now);
-    first ??= group;
-    const other = group !== first && group;
-    windows.push({
-      ...(other
-        ? { kind: "other" as const, label: label(`${group} · ${limit.which === "five_hour" ? "5h" : "7d"}`) }
-        : { kind: limit.which }),
-      usedPercent: percent(used),
-      ...(at ? { resetsAt: at } : {}),
-    });
+    add(
+      group,
+      limit.which,
+      used,
+      resetFromWords(`${line} ${shown} ${agyLimit(after) || /%/.test(after) ? "" : after}`, now),
+    );
   }
   return snapshot(windows, source, now);
 }

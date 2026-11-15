@@ -7464,6 +7464,17 @@
     },
     "assigneeFilter": "担当者",
     "priorityFilter": "優先度",
+    "labelFilter": "ラベル",
+    "table": {
+      "task": "タスク",
+      "github": "GitHub",
+      "sortBy": "{{column}}で並べ替え"
+    },
+    "fold": {
+      "open": "{{name}}を開く",
+      "close": "{{name}}を折りたたむ",
+      "column": "列を折りたたむ"
+    },
     "title": "タスク",
     "summary": "未完了 {{open}} · エージェント担当 {{agents}}",
     "search": "タスクを検索",
@@ -7505,8 +7516,16 @@
       "order": {
         "manual": "手動",
         "priority": "優先度",
-        "due": "期日"
+        "due": "期日",
+        "updated": "最近"
       },
+      "done": "完了",
+      "doneIs": {
+        "all": "すべて",
+        "recent": "過去{{days}}日間",
+        "hidden": "なし"
+      },
+      "hideEmpty": "空のグループを非表示",
       "field": {
         "project": "プロジェクト",
         "assignee": "担当者",
@@ -8401,6 +8420,7 @@
       "waiting_budget_late": "予定時刻を過ぎました: 予算の更新が遅すぎました",
       "stopped": "誰かが停止しました",
       "stoppedBy": "{{name}}が停止しました",
+      "stalled": "解放しました: 20分間何も進みませんでした",
       "no_report": "結果を伝えずに終了しました",
       "handoff_blocked": "報告できませんでした: ルーティンが一時停止されたか、作成した人がそこに投稿できなくなりました",
       "deleted": "停止: ルーティンが削除されました",
@@ -9926,6 +9946,10 @@
       "copies_other": "エージェントのいない、このアカウントのログインがあと{{count}}件あります。",
       "removeCopies": "削除",
       "copiesRemoved_other": "使われていないログインを{{count}}件削除しました。",
+      "removeAllDone": "Grok のログインを {{n}} 件削除しました。",
+      "removeAllText": "{{computers}} でそれぞれのエージェントのために考えなくなります。他の人のログインはそのまま残ります。",
+      "removeAllTitle": "Grok のログイン {{n}} 件をすべて削除しますか？",
+      "removeAllGrok": "Grok のログインをすべて削除",
       "disconnect": "接続を解除",
       "renameTitle": "{{label}}の名前を変更",
       "nameLabel": "名前",
@@ -9980,6 +10004,8 @@
       },
       "resetsAt": "{{time}}にリセット",
       "resetsOn": "{{day}} {{time}}にリセット",
+      "allModels": "すべてのモデル",
+      "onlyModels": "{{name}} のみ",
       "almost": "まもなく上限",
       "limited": "上限に達しました",
       "limitedUntil": "{{when}}まで上限に達しています",
@@ -12391,6 +12417,7 @@
     "connected": "接続済み",
     "connectedAs": "{{account}}として接続済み",
     "reconnectAdds": "{{name}}を再接続すると、エージェントは{{what}}こともできます。",
+    "sendsToo": "追加で送信: <names/>。変更するには「再接続」を使ってください。",
     "adds": {
       "github_project": "GitHub Projects を使う（ボードを読み、カードを移動する）"
     },
@@ -13479,6 +13506,20 @@
     "needsKey": "このサーバーはOAuthに対応していません。APIキーで接続してください。",
     "notApproved": "{{name}}は承認済みのアプリしかログインを許可しておらず、agentes.chatはまだ承認されていません。APIキーが発行されれば、それで接続できます。",
     "serverSaid": "サーバーの応答: {{detail}}",
+    "headers": {
+      "title": "リクエストヘッダー",
+      "help": "キーを別のヘッダーで送る場合や、サーバーの前にゲートウェイがある場合に使います。ほとんどのサーバーでは不要です。",
+      "value": "値",
+      "nameOf": "ヘッダー{{n}}の名前",
+      "valueOf": "ヘッダー{{n}}の値",
+      "remove": "ヘッダー{{n}}を削除",
+      "add": "ヘッダーを追加",
+      "saved_other": "保存済み: <names/>。新しく入力しない限り、そのまま使われます。",
+      "drop": "削除",
+      "dropping_other": "<names/>は再接続時に削除されます。",
+      "undo": "元に戻す",
+      "refused": "サーバーがこれらのヘッダーを受け付けませんでした。値を確認するか、APIキーで接続してください。"
+    },
     "nothingYet": "ステップ3までは、エージェントは何も使えません。",
     "allCanUse": "接続すると、すべてのエージェントが使えます。あとから調整できます。",
     "replace": "現在のログインを置き換えます。使う人はそのままです。",
@@ -14159,7 +14200,15 @@
       "gone": "そのアカウントはもう接続されていません。",
       "unfinished": "Composioでのログインが完了しませんでした。もう一度お試しください。",
       "unavailable": "このサービスはここでは接続できません。",
-      "misconfigured": "サーバーで{{provider}}との接続が正しく設定されていないため、接続を完了できません。サーバーの運用者がアプリの設定でキーを差し替える必要があります。"
+      "misconfigured": "サーバーで{{provider}}との接続が正しく設定されていないため、接続を完了できません。サーバーの運用者がアプリの設定でキーを差し替える必要があります。",
+      "headerName": "ヘッダーの名前には、X-API-Keyのように英数字とハイフンだけを使ってください。",
+      "headerValue": "{{header}}の値を入力してください。1行で2,000文字まで、半角の英数字と記号だけが使えます。",
+      "headerReserved": "{{header}}はすべてのリクエストで自動的に送信されるため、変更できません。このヘッダーを削除してください。",
+      "headerTwice": "{{header}}がリストに2回あります。どちらかを削除してください。",
+      "headerAndKey": "APIキーはすでにAuthorizationとして送信されます。キーを消すか、このヘッダーを削除してください。",
+      "headersTooMany": "1つのサーバーに設定できるヘッダーは{{max}}個までです。追加するには、どれかを削除してください。",
+      "headersWithSignIn": "このサーバーはログインを求めていますが、ログインではまだヘッダーを送れません。ヘッダーを削除してログインするか、APIキーで接続してください。",
+      "headersUnreadable": "保存済みのヘッダーを読み込めませんでした。もう一度入力するか、削除してください。"
     },
     "wiki": {
       "githubNoNotes": "このリンクにMarkdownノートはありません。",
@@ -15940,6 +15989,8 @@
         "openLatest": "最新のメッセージ",
         "textSize": "文字サイズ",
         "textSizeHelp": "メッセージの文字。すべての会話とあなたのすべてのデバイスに反映されます",
+        "fullMessages": "メッセージを全文表示",
+        "fullMessagesHelp": "長いメッセージを「もっと見る」なしで表示します。すべての会話とあなたのすべてのデバイスに反映されます",
         "textSizePhone": "スマートフォン本体の文字サイズに加えて、アプリ全体に反映されます",
         "textXs": "最小",
         "textSm": "小",

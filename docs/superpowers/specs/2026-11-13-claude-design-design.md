@@ -1,6 +1,6 @@
 # Claude Design por uma ferramenta do agentes.chat
 
-Estado: execução Native aprovada pelo usuário em 2026-11-13. O usuário selecionou a conta Max local e autorizou a segunda conta por um segundo perfil isolado de validação. O smoke posterior do manager de produção encontrou um requisito nativo de consentimento interativo incompatível com o callback headless. Tasks 1–7 implementadas experimentalmente; controles da Task 8 e qualificação stdio concluídos na continuação. A admissão do piloto em produção permanece fechada. Nenhuma combinação foi admitida para produção; ver ADR 0186 e relatório de pesquisa.
+Estado: execução Native aprovada pelo usuário em 2026-11-13. O usuário selecionou a conta Max local e autorizou a segunda conta por um segundo perfil isolado de validação. O smoke posterior do manager de produção encontrou um requisito nativo de consentimento interativo incompatível com o callback headless. Tasks 1–7 implementadas experimentalmente; controles da Task 8 e qualificação stdio concluídos na continuação. A admissão do piloto em produção permanece fechada. Nenhuma combinação foi admitida para produção; ver ADR 0187 e relatório de pesquisa.
 
 ## Intenção
 

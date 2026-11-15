@@ -7503,6 +7503,17 @@
     },
     "assigneeFilter": "负责人",
     "priorityFilter": "优先级",
+    "labelFilter": "标签",
+    "table": {
+      "task": "任务",
+      "github": "GitHub",
+      "sortBy": "按{{column}}排序"
+    },
+    "fold": {
+      "open": "打开{{name}}",
+      "close": "折叠{{name}}",
+      "column": "折叠列"
+    },
     "title": "任务",
     "summary": "{{open}} 个未完成 · {{agents}} 个由智能体负责",
     "search": "搜索任务",
@@ -7544,8 +7555,16 @@
       "order": {
         "manual": "手动",
         "priority": "优先级",
-        "due": "截止日期"
+        "due": "截止日期",
+        "updated": "最近"
       },
+      "done": "已完成",
+      "doneIs": {
+        "all": "全部",
+        "recent": "最近 {{days}} 天",
+        "hidden": "无"
+      },
+      "hideEmpty": "隐藏空分组",
       "field": {
         "project": "项目",
         "assignee": "负责人",
@@ -8446,6 +8465,7 @@
       "waiting_budget_late": "错过了时间：预算更新得太晚",
       "stopped": "被人停止",
       "stoppedBy": "被 {{name}} 停止",
+      "stalled": "已释放：20 分钟内没有任何进展",
       "no_report": "已结束，但没有告知结果",
       "handoff_blocked": "无法告知：例行工作已暂停，或创建者已无法在那里发消息",
       "deleted": "已停止：例行工作已删除",
@@ -9979,6 +9999,10 @@
       "copies_other": "这个账号还有 {{count}} 个登录，没有任何智能体使用。",
       "removeCopies": "移除",
       "copiesRemoved_other": "已移除 {{count}} 个未使用的登录。",
+      "removeAllDone": "已移除 {{n}} 个 Grok 登录。",
+      "removeAllText": "它们将不再为 {{computers}} 上的代理思考。其他人的登录不会被改动。",
+      "removeAllTitle": "要移除全部 {{n}} 个 Grok 登录吗？",
+      "removeAllGrok": "移除所有 Grok 登录",
       "disconnect": "断开连接",
       "renameTitle": "重命名 {{label}}",
       "nameLabel": "名称",
@@ -10034,6 +10058,8 @@
       },
       "resetsAt": "{{time}} 重置",
       "resetsOn": "{{day}} {{time}} 重置",
+      "allModels": "所有模型",
+      "onlyModels": "仅 {{name}}",
       "almost": "即将达到限额",
       "limited": "已达限额",
       "limitedUntil": "已达限额，直到 {{when}}",
@@ -12455,6 +12481,7 @@
     "connected": "已连接",
     "connectedAs": "已连接为 {{account}}",
     "reconnectAdds": "重新连接 {{name}}，让智能体也能{{what}}。",
+    "sendsToo": "还会发送：<names/>。要更改，请使用“重新连接”。",
     "adds": {
       "github_project": "使用 GitHub Projects（读取看板并移动卡片）"
     },
@@ -13543,6 +13570,20 @@
     "needsKey": "此服务器不支持 OAuth，请用 API 密钥连接。",
     "notApproved": "{{name}} 只允许它批准过的应用登录，而 agentes.chat 还未获批。如果它提供 API 密钥，你可以用密钥连接。",
     "serverSaid": "服务器返回：{{detail}}",
+    "headers": {
+      "title": "请求标头",
+      "help": "用于密钥需要放在其他标头中，或服务器前面有网关的情况。大多数服务器不需要。",
+      "value": "值",
+      "nameOf": "标头 {{n}} 的名称",
+      "valueOf": "标头 {{n}} 的值",
+      "remove": "移除标头 {{n}}",
+      "add": "添加标头",
+      "saved_other": "已保存：<names/>。除非你输入新的，否则保持不变。",
+      "drop": "移除",
+      "dropping_other": "重新连接时将移除 <names/>。",
+      "undo": "撤销",
+      "refused": "服务器没有接受这些标头。请检查它们的值，或用 API 密钥连接。"
+    },
     "nothingYet": "到第 3 步之前，智能体都用不了任何功能。",
     "allCanUse": "连接后，所有智能体都可以使用。之后可以调整。",
     "replace": "替换当前的登录，使用者保持不变。",
@@ -14223,7 +14264,15 @@
       "gone": "那个账号已不再连接。",
       "unfinished": "在 Composio 的登录没有完成，请重试。",
       "unavailable": "这个服务无法在这里连接。",
-      "misconfigured": "服务器上与 {{provider}} 的连接配置有误，所以无法完成连接。运行服务器的人需要在应用的设置中更换密钥。"
+      "misconfigured": "服务器上与 {{provider}} 的连接配置有误，所以无法完成连接。运行服务器的人需要在应用的设置中更换密钥。",
+      "headerName": "标头名称只能使用字母、数字和连字符，例如 X-API-Key。",
+      "headerValue": "请为 {{header}} 输入一个值：最多 2,000 个字符，写在一行内，只能用英文字母、数字和符号。",
+      "headerReserved": "{{header}} 已随每个请求自动发送，无法更改。请移除这个标头。",
+      "headerTwice": "{{header}} 在列表中出现了两次。请移除其中一个。",
+      "headerAndKey": "API 密钥已作为 Authorization 发送。请清空密钥，或移除这个标头。",
+      "headersTooMany": "一个服务器最多可设置 {{max}} 个标头。请先移除一个再添加。",
+      "headersWithSignIn": "此服务器要求登录，而登录暂时无法携带标头。请移除标头后登录，或用 API 密钥连接。",
+      "headersUnreadable": "无法读取已保存的标头。请重新输入，或将其移除。"
     },
     "wiki": {
       "githubNoNotes": "此链接中没有 Markdown 笔记。",
@@ -16004,6 +16053,8 @@
         "openLatest": "最新消息",
         "textSize": "文字大小",
         "textSizeHelp": "消息的文字，适用于所有对话，并同步到你的所有设备",
+        "fullMessages": "显示完整消息",
+        "fullMessagesHelp": "长消息不再折叠为“查看更多”，适用于所有对话，并同步到你的所有设备",
         "textSizePhone": "作用于整个应用，并叠加在手机的文字大小之上",
         "textXs": "更小",
         "textSm": "小",

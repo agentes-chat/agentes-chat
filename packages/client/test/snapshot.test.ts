@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { QueryClient } from "@tanstack/react-query";
+import { MutationObserver, onlineManager, QueryClient } from "@tanstack/react-query";
 import type { Me, Message, SnapshotStorage } from "../src/index";
 import { createSnapshot, keys, MISSIONS_WAITING_COUNT, SNAPSHOT_MAX_AGE_MS, SNAPSHOT_VERSION } from "../src/index";
 import { recentConversations } from "../src/lib/recent";
@@ -67,6 +67,24 @@ test("keeps the lists and the latest messages of a chat, without anything off th
   expect(kept).toHaveLength(50);
   expect(kept[0]?.id).toBe("m10");
   expect(kept.at(-1)?.id).toBe("m59");
+});
+
+test("a request that waits for the network isn't kept: what it carries stays in memory", async () => {
+  const qc = new QueryClient();
+  const store = memory();
+  qc.setQueryData(keys.me, me("u1"));
+  onlineManager.setOnline(false);
+  try {
+    const connect = new MutationObserver(qc, { mutationFn: async (_typed: { apiKey: string }) => null });
+    void connect.mutate({ apiKey: "fake-typed-key" }).catch(() => {});
+    await tick();
+    expect(connect.getCurrentResult().isPaused).toBe(true);
+    await createSnapshot(qc, store).flush();
+    expect(store.value()).toContain("u1");
+    expect(store.value()).not.toContain("fake-typed-key");
+  } finally {
+    onlineManager.setOnline(true);
+  }
 });
 
 test("only the most recently updated chats are kept, with their roster", async () => {

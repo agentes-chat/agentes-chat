@@ -7704,6 +7704,17 @@
     },
     "assigneeFilter": "Atanan",
     "priorityFilter": "Öncelik",
+    "labelFilter": "Etiket",
+    "table": {
+      "task": "Görev",
+      "github": "GitHub",
+      "sortBy": "{{column}} ölçütüne göre sırala"
+    },
+    "fold": {
+      "open": "{{name}} öğesini aç",
+      "close": "{{name}} öğesini daralt",
+      "column": "Sütunu daralt"
+    },
     "title": "Görevler",
     "summary": "{{open}} açık · {{agents}} ajanlarda",
     "search": "Görevlerde ara",
@@ -7746,8 +7757,16 @@
       "order": {
         "manual": "Elle",
         "priority": "Öncelik",
-        "due": "Son tarih"
+        "due": "Son tarih",
+        "updated": "En yeni"
       },
+      "done": "Tamamlananlar",
+      "doneIs": {
+        "all": "Tümü",
+        "recent": "Son {{days}} gün",
+        "hidden": "Hiçbiri"
+      },
+      "hideEmpty": "Boş grupları gizle",
       "field": {
         "project": "Proje",
         "assignee": "Atanan",
@@ -8661,6 +8680,7 @@
       "waiting_budget_late": "Zamanını kaçırdı: bütçe çok geç yenilendi",
       "stopped": "Biri tarafından durduruldu",
       "stoppedBy": "{{name}} durdurdu",
+      "stalled": "Bırakıldı: 20 dakika boyunca hiçbir şey ilerlemedi",
       "no_report": "Sonucu bildirmeden bitti",
       "handoff_blocked": "Bildirilemedi: rutin duraklatıldı ya da oluşturan kişi artık oraya yazamıyor",
       "deleted": "Durduruldu: rutin silindi",
@@ -10280,6 +10300,10 @@
       "removeCopies": "Kaldır",
       "copiesRemoved_one": "Kullanılmayan {{count}} giriş kaldırıldı.",
       "copiesRemoved_other": "Kullanılmayan {{count}} giriş kaldırıldı.",
+      "removeAllDone": "{{n}} Grok oturumu kaldırıldı.",
+      "removeAllText": "{{computers}} üzerinde artık kendi ajanları için düşünmezler. Başkalarının oturumlarına dokunulmaz.",
+      "removeAllTitle": "{{n}} Grok oturumunun tümü kaldırılsın mı?",
+      "removeAllGrok": "Tüm Grok oturumlarını kaldır",
       "disconnect": "Bağlantıyı kes",
       "renameTitle": "{{label}} adını değiştir",
       "nameLabel": "Ad",
@@ -10340,6 +10364,8 @@
       },
       "resetsAt": "{{time}} saatinde sıfırlanır",
       "resetsOn": "{{day}}, {{time}} saatinde sıfırlanır",
+      "allModels": "Tüm modeller",
+      "onlyModels": "Yalnızca {{name}}",
       "almost": "Sınıra yakın",
       "limited": "Sınırda",
       "limitedUntil": "Sınırda · bitiş: {{when}}",
@@ -12827,6 +12853,7 @@
     "connected": "Bağlı",
     "connectedAs": "{{account}} olarak bağlı",
     "reconnectAdds": "Ajanlar {{what}} diye {{name}} bağlantısını yeniden kurun.",
+    "sendsToo": "Şunları da gönderir: <names/>. Değiştirmek için Yeniden bağla'yı kullanın.",
     "adds": {
       "github_project": "GitHub Projects'i de kullanabilsin (panoları okuyup kartları taşıyabilsin)"
     },
@@ -13935,6 +13962,22 @@
     "needsKey": "Bu sunucu OAuth desteklemiyor. API anahtarıyla bağlayın.",
     "notApproved": "{{name}} yalnızca onayladığı uygulamaların giriş yapmasına izin veriyor ve agentes.chat henüz onaylanmadı. Size bir API anahtarı veriyorsa onunla bağlanabilirsiniz.",
     "serverSaid": "Sunucunun yanıtı: {{detail}}",
+    "headers": {
+      "title": "İstek başlıkları",
+      "help": "Başka bir başlıkta gönderilen bir anahtar ya da sunucunun önündeki bir ağ geçidi için. Çoğu sunucunun buna ihtiyacı yoktur.",
+      "value": "Değer",
+      "nameOf": "{{n}}. başlığın adı",
+      "valueOf": "{{n}}. başlığın değeri",
+      "remove": "{{n}}. başlığı kaldır",
+      "add": "Başlık ekle",
+      "saved_one": "Kayıtlı: <names/>. Yenisini yazmadığınız sürece kalır.",
+      "saved_other": "Kayıtlı: <names/>. Yenilerini yazmadığınız sürece kalırlar.",
+      "drop": "Kaldır",
+      "dropping_one": "<names/> yeniden bağlanınca kaldırılacak.",
+      "dropping_other": "<names/> yeniden bağlanınca kaldırılacak.",
+      "undo": "Geri al",
+      "refused": "Sunucu bu başlıkları kabul etmedi. Değerlerini kontrol edin ya da API anahtarıyla bağlayın."
+    },
     "nothingYet": "3. adıma kadar ajanlar hiçbir şey kullanamaz.",
     "allCanUse": "Bağlandıktan sonra her ajan kullanabilir. Bunu daha sonra ayarlayabilirsiniz.",
     "replace": "Mevcut girişin yerini alır. Kimin kullandığı aynı kalır.",
@@ -14632,7 +14675,15 @@
       "gone": "O hesap artık bağlı değil.",
       "unfinished": "Composio'da giriş tamamlanmadı. Tekrar deneyin.",
       "unavailable": "Bu hizmet burada bağlanamaz.",
-      "misconfigured": "Sunucuda {{provider}} bağlantısı yanlış ayarlanmış, bu yüzden tamamlanamıyor. Sunucuyu yöneten kişinin anahtarı uygulamanın ayarlarında değiştirmesi gerekiyor."
+      "misconfigured": "Sunucuda {{provider}} bağlantısı yanlış ayarlanmış, bu yüzden tamamlanamıyor. Sunucuyu yöneten kişinin anahtarı uygulamanın ayarlarında değiştirmesi gerekiyor.",
+      "headerName": "Başlık adında yalnızca harf, rakam ve kısa çizgi kullanın, X-API-Key gibi.",
+      "headerValue": "{{header}} için bir değer yazın: tek satırda en çok 2.000 karakter, aksanlı harf ve emoji olmadan.",
+      "headerReserved": "{{header}} zaten her istekle gönderiliyor ve değiştirilemez. Bu başlığı kaldırın.",
+      "headerTwice": "{{header}} listede iki kez var. Birini kaldırın.",
+      "headerAndKey": "API anahtarı zaten Authorization olarak gönderiliyor. Anahtarı silin ya da bu başlığı kaldırın.",
+      "headersTooMany": "Bir sunucu en çok {{max}} başlık alır. Yenisini eklemek için birini kaldırın.",
+      "headersWithSignIn": "Bu sunucu giriş istiyor ve giriş henüz başlık taşıyamıyor. Giriş yapmak için başlıkları kaldırın ya da API anahtarıyla bağlayın.",
+      "headersUnreadable": "Kayıtlı başlıklar okunamadı. Yeniden yazın ya da kaldırın."
     },
     "wiki": {
       "githubNoNotes": "Bu bağlantıda Markdown notu yok.",
@@ -16432,6 +16483,8 @@
         "openLatest": "En yeni mesaj",
         "textSize": "Metin boyutu",
         "textSizeHelp": "Mesajların, tüm sohbetlerde ve tüm cihazlarınızda",
+        "fullMessages": "Mesajların tamamını göster",
+        "fullMessagesHelp": "Uzun mesajları “Devamını gör” olmadan gösterir, tüm sohbetlerde ve tüm cihazlarınızda",
         "textSizePhone": "Telefonunuzun metin boyutunun üzerine, tüm uygulamada geçerlidir",
         "textXs": "Daha küçük",
         "textSm": "Küçük",

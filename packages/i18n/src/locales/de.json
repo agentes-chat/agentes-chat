@@ -7744,6 +7744,17 @@
     },
     "assigneeFilter": "Zuständig",
     "priorityFilter": "Priorität",
+    "labelFilter": "Label",
+    "table": {
+      "task": "Aufgabe",
+      "github": "GitHub",
+      "sortBy": "Nach {{column}} sortieren"
+    },
+    "fold": {
+      "open": "{{name}} öffnen",
+      "close": "{{name}} einklappen",
+      "column": "Spalte einklappen"
+    },
     "title": "Aufgaben",
     "summary": "{{open}} offen · {{agents}} bei Agenten",
     "search": "Aufgaben durchsuchen",
@@ -7786,8 +7797,16 @@
       "order": {
         "manual": "Manuell",
         "priority": "Priorität",
-        "due": "Fälligkeit"
+        "due": "Fälligkeit",
+        "updated": "Neueste"
       },
+      "done": "Erledigte",
+      "doneIs": {
+        "all": "Alle",
+        "recent": "Letzte {{days}} Tage",
+        "hidden": "Keine"
+      },
+      "hideEmpty": "Leere Gruppen ausblenden",
       "field": {
         "project": "Projekt",
         "assignee": "Zuständig",
@@ -8704,6 +8723,7 @@
       "waiting_budget_late": "Hat ihre Zeit verpasst: Das Budget hat sich zu spät erneuert",
       "stopped": "Von jemandem gestoppt",
       "stoppedBy": "Von {{name}} gestoppt",
+      "stalled": "Freigegeben: 20 Minuten lang hat sich nichts bewegt",
       "no_report": "Fertig, ohne das Ergebnis mitzuteilen",
       "handoff_blocked": "Konnte nicht berichten: Die Routine wurde pausiert oder wer sie erstellt hat, kann dort nicht mehr posten",
       "deleted": "Gestoppt: Die Routine wurde gelöscht",
@@ -10336,6 +10356,10 @@
       "removeCopies": "Entfernen",
       "copiesRemoved_one": "{{count}} ungenutzte Anmeldung entfernt.",
       "copiesRemoved_other": "{{count}} ungenutzte Anmeldungen entfernt.",
+      "removeAllDone": "{{n}} Grok-Anmeldungen entfernt.",
+      "removeAllText": "Sie denken dann für ihre Agenten auf {{computers}} nicht mehr mit. Anmeldungen anderer Personen bleiben unangetastet.",
+      "removeAllTitle": "Alle {{n}} Grok-Anmeldungen entfernen?",
+      "removeAllGrok": "Alle Grok-Anmeldungen entfernen",
       "disconnect": "Trennen",
       "renameTitle": "{{label}} umbenennen",
       "nameLabel": "Name",
@@ -10396,6 +10420,8 @@
       },
       "resetsAt": "setzt sich um {{time}} zurück",
       "resetsOn": "setzt sich {{day}} um {{time}} zurück",
+      "allModels": "Alle Modelle",
+      "onlyModels": "Nur {{name}}",
       "almost": "Fast am Limit",
       "limited": "Am Limit",
       "limitedUntil": "Am Limit bis {{when}}",
@@ -12890,6 +12916,7 @@
     "connected": "Verbunden",
     "connectedAs": "Verbunden als {{account}}",
     "reconnectAdds": "Verbinde {{name}} neu, damit Agenten auch {{what}} können.",
+    "sendsToo": "Sendet außerdem: <names/>. Zum Ändern nutze Erneut verbinden.",
     "adds": {
       "github_project": "GitHub Projects nutzen (Boards lesen und Karten verschieben)"
     },
@@ -13998,6 +14025,22 @@
     "needsKey": "Dieser Server unterstützt kein OAuth. Verbinde ihn mit einem API-Schlüssel.",
     "notApproved": "{{name}} lässt nur freigegebene Apps zur Anmeldung zu, und agentes.chat ist noch nicht freigegeben. Wenn du dort einen API-Schlüssel bekommst, kannst du dich damit verbinden.",
     "serverSaid": "Der Server hat geantwortet: {{detail}}",
+    "headers": {
+      "title": "Anfrage-Header",
+      "help": "Für einen Schlüssel, der in einen anderen Header gehört, oder ein Gateway vor dem Server. Die meisten Server brauchen keine.",
+      "value": "Wert",
+      "nameOf": "Name von Header {{n}}",
+      "valueOf": "Wert von Header {{n}}",
+      "remove": "Header {{n}} entfernen",
+      "add": "Header hinzufügen",
+      "saved_one": "Gespeichert: <names/>. Er bleibt, solange du keine neuen eingibst.",
+      "saved_other": "Gespeichert: <names/>. Sie bleiben, solange du keine neuen eingibst.",
+      "drop": "Entfernen",
+      "dropping_one": "<names/> wird beim erneuten Verbinden entfernt.",
+      "dropping_other": "<names/> werden beim erneuten Verbinden entfernt.",
+      "undo": "Rückgängig",
+      "refused": "Der Server hat diese Header nicht akzeptiert. Prüf ihre Werte oder verbinde ihn mit einem API-Schlüssel."
+    },
     "nothingYet": "Bis Schritt 3 ist nichts für Agenten verfügbar.",
     "allCanUse": "Nach dem Verbinden kann jeder Agent ihn nutzen. Das kannst du später anpassen.",
     "replace": "Ersetzt die aktuelle Anmeldung. Wer sie nutzt, bleibt gleich.",
@@ -14695,7 +14738,15 @@
       "gone": "Dieses Konto ist nicht mehr verbunden.",
       "unfinished": "Die Anmeldung bei Composio wurde nicht abgeschlossen. Versuch es noch einmal.",
       "unavailable": "Dieser Dienst kann hier nicht verbunden werden.",
-      "misconfigured": "Die Verbindung zu {{provider}} ist auf dem Server falsch eingerichtet, deshalb kann sie nicht abgeschlossen werden. Die Person, die den Server betreibt, muss den Schlüssel in den Einstellungen der App ersetzen."
+      "misconfigured": "Die Verbindung zu {{provider}} ist auf dem Server falsch eingerichtet, deshalb kann sie nicht abgeschlossen werden. Die Person, die den Server betreibt, muss den Schlüssel in den Einstellungen der App ersetzen.",
+      "headerName": "Verwende im Namen eines Headers nur Buchstaben, Ziffern und Bindestriche, wie in X-API-Key.",
+      "headerValue": "Gib einen Wert für {{header}} ein: höchstens 2.000 Zeichen in einer Zeile, ohne Umlaute, Akzente oder Emojis.",
+      "headerReserved": "{{header}} wird schon mit jeder Anfrage gesendet und lässt sich nicht ändern. Entferne diesen Header.",
+      "headerTwice": "{{header}} steht zweimal in der Liste. Entferne einen davon.",
+      "headerAndKey": "Der API-Schlüssel wird schon als Authorization gesendet. Lösch den Schlüssel oder entferne diesen Header.",
+      "headersTooMany": "Ein Server nimmt höchstens {{max}} Header. Entferne einen, um einen weiteren hinzuzufügen.",
+      "headersWithSignIn": "Dieser Server verlangt eine Anmeldung, und eine Anmeldung kann noch keine Header mitsenden. Entferne die Header, um dich anzumelden, oder verbinde ihn mit einem API-Schlüssel.",
+      "headersUnreadable": "Die gespeicherten Header konnten nicht gelesen werden. Gib sie neu ein oder entferne sie."
     },
     "wiki": {
       "githubNoNotes": "Unter diesem Link gibt es keine Markdown-Notizen.",
@@ -16495,6 +16546,8 @@
         "openLatest": "Neueste Nachricht",
         "textSize": "Textgröße",
         "textSizeHelp": "Für Nachrichten, in allen Unterhaltungen und auf all deinen Geräten",
+        "fullMessages": "Nachrichten vollständig anzeigen",
+        "fullMessagesHelp": "Lange Nachrichten ohne „Mehr anzeigen“, in allen Unterhaltungen und auf all deinen Geräten",
         "textSizePhone": "Gilt für die ganze App, zusätzlich zur Textgröße deines Handys",
         "textXs": "Kleiner",
         "textSm": "Klein",

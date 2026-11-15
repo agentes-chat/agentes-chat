@@ -1916,8 +1916,15 @@
     {
       "idx": 275,
       "version": "7",
-      "when": 1794760358940,
-      "tag": "0277_claude_design",
+      "when": 1794757100000,
+      "tag": "0277_mcp_request_headers",
+      "breakpoints": true
+    },
+    {
+      "idx": 276,
+      "version": "7",
+      "when": 1794765703702,
+      "tag": "0278_claude_design",
       "breakpoints": true
     }
   ]

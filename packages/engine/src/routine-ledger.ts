@@ -491,6 +491,10 @@ export async function reapRoutineRuns(deps: LedgerDeps, now = new Date()): Promi
   for (const r of lost) {
     if (await finishRoutineRow(deps, r, { status: "failed", code: "lost" }, null)) closed++;
   }
+  // A run left working with nothing moving for `ROUTINE_STALL_MS` is let go, its slot with it (§6.3):
+  // loaded here, since the firing rules import this file.
+  const { releaseStalledRoutineRuns } = await import("./routine-firing");
+  closed += await releaseStalledRoutineRuns(deps, now).catch(() => 0);
   const gathered = await db
     .selectDistinct({ routineId: routineRuns.routineId })
     .from(routineRuns)

@@ -1,5 +1,5 @@
 /** Experimental native Artifact integration. Product limits, not provider limits. */
-export const CLAUDE_DESIGN_PROTOCOL = 67;
+export const CLAUDE_DESIGN_PROTOCOL = 68;
 export const CLAUDE_DESIGN_LIMITS = {
   briefChars: 20_000,
   titleChars: 120,

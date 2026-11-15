@@ -31,7 +31,8 @@ const running: LocalServerStatus = {
   phase: "running",
   url: LOCAL,
   publicUrl: LOCAL,
-  version: "1.4.0",
+  installedVersion: "0.8.5",
+  serverVersion: "0.1.1",
   dir: "/Users/ana/.agentes",
 };
 const reached: LocalServerStatus = { ...running, reach: true, publicUrl: TAILNET };

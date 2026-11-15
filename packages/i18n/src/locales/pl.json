@@ -8268,6 +8268,17 @@
     },
     "assigneeFilter": "Przypisana osoba",
     "priorityFilter": "Priorytet",
+    "labelFilter": "Etykieta",
+    "table": {
+      "task": "Zadanie",
+      "github": "GitHub",
+      "sortBy": "Sortuj według: {{column}}"
+    },
+    "fold": {
+      "open": "Otwórz: {{name}}",
+      "close": "Zwiń: {{name}}",
+      "column": "Zwiń kolumnę"
+    },
     "title": "Zadania",
     "summary": "Otwarte: {{open}} · z agentami: {{agents}}",
     "search": "Szukaj zadań",
@@ -8312,8 +8323,16 @@
       "order": {
         "manual": "Ręcznie",
         "priority": "Priorytet",
-        "due": "Termin"
+        "due": "Termin",
+        "updated": "Ostatnie"
       },
+      "done": "Ukończone",
+      "doneIs": {
+        "all": "Wszystkie",
+        "recent": "Ostatnie {{days}} dni",
+        "hidden": "Żadne"
+      },
+      "hideEmpty": "Ukryj puste grupy",
       "field": {
         "project": "Projekt",
         "assignee": "Przypisana osoba",
@@ -9273,6 +9292,7 @@
       "waiting_budget_late": "Przegapiona pora: budżet odnowił się za późno",
       "stopped": "Zatrzymane przez kogoś",
       "stoppedBy": "Zatrzymane przez: {{name}}",
+      "stalled": "Zwolnione: przez 20 minut nic się nie ruszyło",
       "no_report": "Zakończone bez przekazania wyniku",
       "handoff_blocked": "Nie udało się przekazać: rutyna została wstrzymana albo jej twórca nie może już tam pisać",
       "deleted": "Zatrzymane: rutyna została usunięta",
@@ -11088,6 +11108,10 @@
       "copiesRemoved_few": "Usunięto {{count}} nieużywane logowania.",
       "copiesRemoved_many": "Usunięto {{count}} nieużywanych logowań.",
       "copiesRemoved_other": "Usunięto {{count}} nieużywanego logowania.",
+      "removeAllDone": "Usunięto {{n}} logowań Grok.",
+      "removeAllText": "Przestaną myśleć za swoje agenty na {{computers}}. Logowania innych osób zostają.",
+      "removeAllTitle": "Usunąć wszystkie {{n}} logowań Grok?",
+      "removeAllGrok": "Usuń wszystkie logowania Grok",
       "disconnect": "Rozłącz",
       "renameTitle": "Zmień nazwę: {{label}}",
       "nameLabel": "Nazwa",
@@ -11161,6 +11185,8 @@
       },
       "resetsAt": "odnawia się o {{time}}",
       "resetsOn": "odnawia się {{day}} o {{time}}",
+      "allModels": "Wszystkie modele",
+      "onlyModels": "Tylko {{name}}",
       "almost": "Prawie u limitu",
       "limited": "Limit osiągnięty",
       "limitedUntil": "Limit osiągnięty do {{when}}",
@@ -13825,6 +13851,7 @@
     "connected": "Połączono",
     "connectedAs": "Połączono jako {{account}}",
     "reconnectAdds": "Połącz ponownie {{name}}, aby agenci mogli też {{what}}.",
+    "sendsToo": "Wysyła też: <names/>. Aby to zmienić, użyj Połącz ponownie.",
     "adds": {
       "github_project": "korzystać z GitHub Projects (czytać tablice i przenosić karty)"
     },
@@ -14973,6 +15000,26 @@
     "needsKey": "Ten serwer nie obsługuje OAuth. Połącz go kluczem API.",
     "notApproved": "{{name}} pozwala logować się tylko zatwierdzonym aplikacjom, a agentes.chat jeszcze nie jest zatwierdzony. Jeśli dostaniesz tam klucz API, możesz połączyć się nim.",
     "serverSaid": "Odpowiedź serwera: {{detail}}",
+    "headers": {
+      "title": "Nagłówki żądania",
+      "help": "Dla klucza wysyłanego w innym nagłówku albo bramy przed serwerem. Większość serwerów ich nie potrzebuje.",
+      "value": "Wartość",
+      "nameOf": "Nazwa nagłówka {{n}}",
+      "valueOf": "Wartość nagłówka {{n}}",
+      "remove": "Usuń nagłówek {{n}}",
+      "add": "Dodaj nagłówek",
+      "saved_one": "Zapisany: <names/>. Zostaje, dopóki nie wpiszesz nowych.",
+      "saved_few": "Zapisane: <names/>. Zostają, dopóki nie wpiszesz nowych.",
+      "saved_many": "Zapisane: <names/>. Zostają, dopóki nie wpiszesz nowych.",
+      "saved_other": "Zapisane: <names/>. Zostają, dopóki nie wpiszesz nowych.",
+      "drop": "Usuń",
+      "dropping_one": "<names/> zostanie usunięty przy ponownym połączeniu.",
+      "dropping_few": "<names/> zostaną usunięte przy ponownym połączeniu.",
+      "dropping_many": "<names/> zostaną usunięte przy ponownym połączeniu.",
+      "dropping_other": "<names/> zostaną usunięte przy ponownym połączeniu.",
+      "undo": "Cofnij",
+      "refused": "Serwer nie przyjął tych nagłówków. Sprawdź ich wartości albo połącz go kluczem API."
+    },
     "nothingYet": "Do kroku 3 nic nie jest dostępne dla agentów.",
     "allCanUse": "Po połączeniu każdy agent może z niego korzystać. Możesz to później dostosować.",
     "replace": "Zastępuje obecne logowanie. Kto z niego korzysta, pozostaje bez zmian.",
@@ -15704,7 +15751,15 @@
       "gone": "To konto nie jest już połączone.",
       "unfinished": "Logowanie w Composio nie zostało dokończone. Spróbuj ponownie.",
       "unavailable": "Tej usługi nie można tu połączyć.",
-      "misconfigured": "Połączenie z {{provider}} jest źle skonfigurowane na serwerze, więc nie może się zakończyć. Osoba zarządzająca serwerem musi zmienić klucz w ustawieniach aplikacji."
+      "misconfigured": "Połączenie z {{provider}} jest źle skonfigurowane na serwerze, więc nie może się zakończyć. Osoba zarządzająca serwerem musi zmienić klucz w ustawieniach aplikacji.",
+      "headerName": "W nazwie nagłówka używaj tylko liter, cyfr i łączników, jak w X-API-Key.",
+      "headerValue": "Wpisz wartość dla {{header}}: do 2000 znaków w jednym wierszu, bez polskich znaków, akcentów i emoji.",
+      "headerReserved": "{{header}} jest już wysyłany z każdym żądaniem i nie można go zmienić. Usuń ten nagłówek.",
+      "headerTwice": "{{header}} jest na liście dwa razy. Usuń jeden z nich.",
+      "headerAndKey": "Klucz API jest już wysyłany jako Authorization. Wyczyść klucz albo usuń ten nagłówek.",
+      "headersTooMany": "Serwer przyjmuje najwyżej {{max}} nagłówków. Usuń jeden, aby dodać kolejny.",
+      "headersWithSignIn": "Ten serwer wymaga logowania, a logowanie nie może jeszcze przenosić nagłówków. Usuń nagłówki, aby się zalogować, albo połącz go kluczem API.",
+      "headersUnreadable": "Nie udało się odczytać zapisanych nagłówków. Wpisz je ponownie albo usuń."
     },
     "wiki": {
       "githubNoNotes": "Pod tym linkiem nie ma notatek Markdown.",
@@ -17543,6 +17598,8 @@
         "openLatest": "Najnowsza wiadomość",
         "textSize": "Rozmiar tekstu",
         "textSizeHelp": "Wiadomości, we wszystkich rozmowach i na wszystkich twoich urządzeniach",
+        "fullMessages": "Pokazuj całe wiadomości",
+        "fullMessagesHelp": "Długie wiadomości bez „Pokaż więcej”, we wszystkich rozmowach i na wszystkich twoich urządzeniach",
         "textSizePhone": "Dotyczy całej aplikacji, razem z rozmiarem tekstu w telefonie",
         "textXs": "Mniejszy",
         "textSm": "Mały",

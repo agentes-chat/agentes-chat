@@ -1523,16 +1523,16 @@ function Chat({
   const [topDay, setTopDay] = useState<string | null>(null);
   const dayShown = useSharedValue(0);
   const dayTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const showDay = useCallback(() => {
-    clearTimeout(dayTimer.current);
-    dayShown.value = withTiming(1, { duration: 120 });
-  }, [dayShown]);
   const hideDay = useCallback(() => {
     clearTimeout(dayTimer.current);
     dayTimer.current = setTimeout(() => {
       dayShown.value = withTiming(0, { duration: 300 });
     }, DATE_PILL_IDLE_MS);
   }, [dayShown]);
+  const showDay = useCallback(() => {
+    dayShown.value = withTiming(1, { duration: 120 });
+    hideDay();
+  }, [dayShown, hideDay]);
   useEffect(() => () => clearTimeout(dayTimer.current), []);
   const onViewable = useCallback<NonNullable<OnViewableItemsChanged<Row>>>(
     ({ viewableItems }) => {

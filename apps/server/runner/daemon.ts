@@ -136,6 +136,7 @@ import {
 } from "./network-state";
 import { type CachedLogo, logoDataUrl, readCachedLogo, removeCachedLogo, syncOrgLogo } from "./org-logo";
 import { type DeviceGrant, devicePair, type FetchFn, LINK_CODE, PairingError, uniqueWorkspace } from "./pairing";
+import { ackPark, takePark } from "./park";
 import { agentId8, agentWorkspace } from "./paths";
 import { iphonesWifiFileOf, PhoneManager, type PhoneManagerOptions } from "./phones";
 import { agentSecrets, dropStoredSiteSecrets, secretValue } from "./secrets";
@@ -504,6 +505,8 @@ export class RunnerDaemon implements RequestObserver {
   private standby = false;
   /** The last standby ask answered (`standby-ack.json`). */
   private standbyAsk: string | null = null;
+  /** A park (`park.ts`) under way: the next ask waits for it. */
+  private parking = false;
   /** A fix of the Mac's own Xcode (`xcode.fix`, the desktop app's iPhone window), made on its first request. */
   private fixer: XcodeFixer | null = null;
   /** An install of a coding CLI (`cli.install`), made on its first request. */
@@ -822,7 +825,10 @@ export class RunnerDaemon implements RequestObserver {
     this.timers.push(sizes);
     // System mode: for an operator's network guard, at most once a minute.
     this.checkStandby();
-    const standby = setInterval(() => this.checkStandby(), STANDBY_POLL_MS);
+    const standby = setInterval(() => {
+      this.checkStandby();
+      this.checkPark();
+    }, STANDBY_POLL_MS);
     standby.unref?.();
     this.timers.push(standby);
     const relayed = setInterval(() => {
@@ -1432,6 +1438,7 @@ export class RunnerDaemon implements RequestObserver {
             ? this.accounts.noteCodexRateLimits(accountId, info)
             : this.accounts.noteRateLimit(accountId, info),
         codexAuth: (accountId, auth) => this.accounts.keepCodexAuth(accountId, auth),
+        grokAuth: (accountId, auth) => this.accounts.keepGrokAuth(accountId, auth),
         desktop: (agent, use) => this.workerDesktop(agent, use),
         desktopViewers: (agentId) => this.desktops.status({ id: agentId }).streams,
         browserKept: (agentId) => this.holds?.kept(agentId) ?? false,
@@ -1714,6 +1721,26 @@ export class RunnerDaemon implements RequestObserver {
         this.opts.log(`standby: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
+  }
+
+  /** An operator's park (`park.ts`): idle desktops parked, idle browsers eased, then the answer with how many. */
+  private checkPark() {
+    if (this.parking) return;
+    const ask = takePark(this.opts.home);
+    if (!ask) return;
+    this.parking = true;
+    void (async () => {
+      const desktops = await this.desktops.parkIdle();
+      const browsers = (await this.session?.browser.easeIdle()) ?? 0;
+      this.opts.log(`park: ${desktops} idle desktops parked, ${browsers} idle browsers eased`);
+      ackPark(this.opts.home, { id: ask.id, desktops, browsers });
+    })()
+      .catch((err: unknown) => {
+        this.opts.log(`park: ${err instanceof Error ? err.message : String(err)}`);
+      })
+      .finally(() => {
+        this.parking = false;
+      });
   }
 
   private networkScopesBusy(agentId: string): boolean {

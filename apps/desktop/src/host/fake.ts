@@ -71,6 +71,8 @@ export interface HereOptions {
 
 const LOCAL_URL = "http://127.0.0.1:4310";
 const TAILNET_URL = "https://ana-mac.tail1234.ts.net";
+const LOCAL_BUNDLE_VERSION = "0.8.5";
+const LOCAL_SERVER_VERSION = "0.1.1";
 
 export interface FakeHost extends Host {
   window: WindowName;
@@ -185,7 +187,8 @@ export function createFakeHost(
           url: LOCAL_URL,
           publicUrl: here.reach ? TAILNET_URL : LOCAL_URL,
           reach: !!here.reach,
-          version: "1.4.0",
+          installedVersion: LOCAL_BUNDLE_VERSION,
+          serverVersion: running && (here.phase ?? "running") === "running" ? LOCAL_SERVER_VERSION : null,
           backTo: here.back ?? null,
           awake: running,
           eraseTo: "/Users/voce/agentes.chat erased 2026-11-14",
@@ -202,7 +205,6 @@ export function createFakeHost(
         ? {
             installed: "terminal" as const,
             url: LOCAL_URL,
-            version: "1.4.0",
             serving: here.serving !== false,
             claim: here.claim && here.serving !== false ? "b3duZXItY2xhaW0tYWJjZGVmZ2hpamtsbW5vcHFy" : null,
           }
@@ -220,6 +222,7 @@ export function createFakeHost(
   let dropUpdate: (() => void) | null = null;
   const setLocal = (next: Partial<LocalServerStatus>) => {
     local = { ...local, ...next };
+    local.serverVersion = local.phase === "running" ? LOCAL_SERVER_VERSION : null;
     for (const l of localListeners) l(local);
     devChanged();
   };
@@ -547,7 +550,7 @@ export function createFakeHost(
         publicUrl: reach ? TAILNET_URL : LOCAL_URL,
         reach,
         usage: choice.usage,
-        version: "1.4.0",
+        installedVersion: LOCAL_BUNDLE_VERSION,
       });
       cancelSetup = null;
       await host.chooseServer(local.publicUrl ?? LOCAL_URL, "/desktop/handover#token=fake");

@@ -267,6 +267,7 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
 /** Keys whose server words mean another server (an MCP or database server, one the person picks): every setup. */
 export const ANYWHERE: readonly string[] = [
   "connectFlow.needsKey",
+  "errors.connector.headersWithSignIn",
   "database.error.blocked_host",
   "database.error.no_databases",
   "database.scopeAll",

@@ -417,7 +417,8 @@ export const desktopPtBR = {
     /** It restarted by itself 3 times in a few minutes (a notification). */
     restartedBanner: "O agentes.chat reiniciou 3 vezes neste {{device}}",
     restartedBody: "Ele volta sozinho. Se continuar, abra o app para ver o motivo.",
-    version: "Versão {{version}}, atualizada com o app",
+    installedVersion: "Versão do pacote instalado",
+    internalVersion: "Versão interna do servidor",
     updatesWithApp: "Atualizar o app atualiza também o agentes.chat neste {{device}}.",
     updateBack: "A atualização não iniciou. O agentes.chat voltou para a {{version}}.",
     updateBackBody: "A versão nova é tentada de novo na próxima atualização do app.",

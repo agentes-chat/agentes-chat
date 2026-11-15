@@ -4,6 +4,7 @@ import { type ComponentRef, createContext, type ReactNode, useContext, useEffect
 import { useTranslation } from "react-i18next";
 import { AccessibilityInfo, Pressable, StyleSheet, View } from "react-native";
 import Animated, { Easing, LinearTransition } from "react-native-reanimated";
+import { useOrg } from "@/providers/org";
 import { motion, Text, useReducedMotion } from "@/ui";
 import { withOpacity } from "./turn";
 
@@ -52,7 +53,8 @@ export function ClippedMessage({
   const screen = useContext(OpenedMessagesContext);
   // Opened from this row: it grows. One the screen kept open comes back open, still.
   const [tapped, setTapped] = useState(false);
-  const open = tapped || Boolean(screen?.has(id));
+  const fullMessages = useOrg().org?.chatPrefs?.fullMessages === true;
+  const open = fullMessages || tapped || Boolean(screen?.has(id));
   const [height, setHeight] = useState(0);
   const cut = clippedHeight(height);
   const foldable = cut !== null || lead != null;

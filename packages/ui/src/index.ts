@@ -420,6 +420,7 @@ export { WorkLine, WorkLineAction, type WorkLineTone, WorkPlan } from "./compone
 export { COMPUTER_GRID, COMPUTER_KINDS, COMPUTER_STATES, drawComputer, PHONE_KINDS } from "./computer/portrait.js";
 export { cx } from "./cx";
 export {
+  composes,
   focusAtEnd,
   focusIdle,
   hoverPointer,

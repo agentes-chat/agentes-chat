@@ -424,7 +424,8 @@ export const desktopEn = {
     /** It restarted by itself 3 times in a few minutes (a notification). */
     restartedBanner: "agentes.chat restarted 3 times on this {{device}}",
     restartedBody: "It comes back by itself. If it keeps happening, open the app to see why.",
-    version: "Version {{version}}, updated with the app",
+    installedVersion: "Installed package version",
+    internalVersion: "Internal server version",
     updatesWithApp: "Updating the app updates agentes.chat on this {{device}} too.",
     updateBack: "The update didn't start. agentes.chat is back on {{version}}.",
     updateBackBody: "The new version is tried again with the app's next update.",

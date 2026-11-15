@@ -27,7 +27,10 @@ export interface LocalServerStatus {
   reach: boolean;
   /** Usage statistics on (`TELEMETRY`). */
   usage: boolean;
-  version: string | null;
+  /** The installed bundle's version, even while the server is stopped or restarting. */
+  installedVersion: string | null;
+  /** The package version reported by the running local server. */
+  serverVersion: string | null;
   dir: string;
   /** The person's name on this computer (the welcome window only). */
   systemName: string | null;
@@ -132,7 +135,8 @@ export const NO_SERVER: LocalServerStatus = {
   publicUrl: null,
   reach: false,
   usage: true,
-  version: null,
+  installedVersion: null,
+  serverVersion: null,
   dir: "~/.agentes",
   systemName: null,
   serving: false,
