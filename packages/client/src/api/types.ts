@@ -3988,9 +3988,18 @@ export interface IssueProjectRef {
   archived: boolean;
 }
 
-/** A project in the projects menu, with the open tasks in it that I see. */
-export interface IssueProject extends IssueProjectRef {
+/** A project with what its page shows besides the card's name and color (ADR 0186). */
+export interface IssueProjectDetail extends IssueProjectRef {
+  description: string | null;
+  /** `owner/name`. */
+  githubRepo: string | null;
+}
+
+/** A project in the projects menu and on its page, with the tasks in it that I see (`total` = `open` + `done`). */
+export interface IssueProject extends IssueProjectDetail {
   open: number;
+  done: number;
+  total: number;
 }
 
 /** The projects by name (archived last) and how many of my open tasks have none. */

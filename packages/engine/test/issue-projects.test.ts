@@ -13,6 +13,7 @@ import {
   listIssueProjects,
   listIssues,
   openTasksBrief,
+  PROJECT_DESCRIPTION_MAX,
   PROJECTS_MAX,
   updateIssue,
   updateIssueProject,
@@ -261,5 +262,94 @@ describe("task projects", () => {
     const brief = await openTasksBrief(f.db, f.org.id, f.agent.id, f.general.id, false);
     expect(brief).toContain("Pedido no site (todo, project Padaria Lia)");
     expect(brief).toContain("Sem projeto (todo)");
+  });
+});
+
+describe("task project details (ADR 0186)", () => {
+  test("a project takes a short description and one repository, written as owner/name or pasted as its address", async () => {
+    f = await setup();
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const made = await createIssueProject(deps, f.owner.id, f.org.id, {
+      name: "Clínica Teo",
+      description: "  Agenda e lembretes de retorno.  ",
+      githubRepo: "https://github.com/Acme-Co/clinica.git",
+    });
+    expect(made).toMatchObject({
+      description: "Agenda e lembretes de retorno.",
+      githubRepo: "Acme-Co/clinica",
+      open: 0,
+      done: 0,
+      total: 0,
+    });
+    // A deeper page of the repository, and its plain owner/name, both come to the same value.
+    const deep = await updateIssueProject(deps, f.owner.id, f.org.id, made.id, {
+      githubRepo: "https://www.github.com/acme-co/clinica-site/tree/main/apps?tab=1",
+    });
+    expect(deep.githubRepo).toBe("acme-co/clinica-site");
+    expect(
+      (await updateIssueProject(deps, f.owner.id, f.org.id, made.id, { githubRepo: "acme-co/api.v2" })).githubRepo,
+    ).toBe("acme-co/api.v2");
+    // Left out keeps both; empty or null clears each on its own.
+    const kept = await updateIssueProject(deps, f.owner.id, f.org.id, made.id, { color: "teal" });
+    expect(kept).toMatchObject({ description: "Agenda e lembretes de retorno.", githubRepo: "acme-co/api.v2" });
+    const cleared = await updateIssueProject(deps, f.owner.id, f.org.id, made.id, {
+      description: "  ",
+      githubRepo: null,
+    });
+    expect(cleared).toMatchObject({ description: null, githubRepo: null });
+    const listed = (await listIssueProjects(f.db, f.owner.id, f.org.id)).projects;
+    expect(listed.map((p) => [p.name, p.description, p.githubRepo])).toEqual([["Clínica Teo", null, null]]);
+  });
+
+  test("a repository that is not owner/name, and a description over the limit, are refused with their reasons", async () => {
+    f = await setup();
+    const deps = { db: f.db, pubsub: f.pubsub };
+    for (const bad of [
+      "acme",
+      "acme/",
+      "/clinica",
+      "acme/clinica/extra",
+      "-acme/clinica",
+      "acme/..",
+      "https://gitlab.com/acme/clinica",
+      "acme/cli nica",
+    ]) {
+      const refused = await rejection(createIssueProject(deps, f.owner.id, f.org.id, { name: "X", githubRepo: bad }));
+      expect(refused, bad).toMatchObject({ code: "issue_project.bad_repo" });
+    }
+    const long = "a".repeat(PROJECT_DESCRIPTION_MAX + 1);
+    expect(
+      await rejection(createIssueProject(deps, f.owner.id, f.org.id, { name: "X", description: long })),
+    ).toMatchObject({
+      code: "issue_project.description_too_long",
+    });
+    const ok = await createIssueProject(deps, f.owner.id, f.org.id, {
+      name: "X",
+      description: "a".repeat(PROJECT_DESCRIPTION_MAX),
+    });
+    expect(ok.description).toHaveLength(PROJECT_DESCRIPTION_MAX);
+    // Nothing half-made: the refused ones left no project behind.
+    expect((await listIssueProjects(f.db, f.owner.id, f.org.id)).projects).toHaveLength(1);
+  });
+
+  test("the list counts what the reader sees: open, done, and both, a canceled task counting nowhere", async () => {
+    f = await setup();
+    const deps = { db: f.db, pubsub: f.pubsub };
+    const ana = person(f.owner.id);
+    const clinic = await createIssueProject(deps, f.owner.id, f.org.id, { name: "Clínica Teo" });
+    await createIssueProject(deps, f.owner.id, f.org.id, { name: "Padaria Lia" });
+    const make = (title: string, status?: "done" | "canceled") =>
+      createIssue(deps, ana, f.org.id, { title, projectId: clinic.id }).then((i) =>
+        status ? updateIssue(deps, ana, f.org.id, i.id, { status }) : i,
+      );
+    await make("Lembrete");
+    await make("Agenda");
+    await make("Prontuário", "done");
+    await make("Importação", "done");
+    await make("Teste", "done");
+    await make("Duplicada", "canceled");
+    const [teo, lia] = (await listIssueProjects(f.db, f.owner.id, f.org.id)).projects;
+    expect(teo).toMatchObject({ name: "Clínica Teo", open: 2, done: 3, total: 5 });
+    expect(lia).toMatchObject({ name: "Padaria Lia", open: 0, done: 0, total: 0 });
   });
 });

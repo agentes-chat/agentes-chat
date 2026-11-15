@@ -183,7 +183,7 @@ import type {
   IssueInput,
   IssuePatch,
   IssueProject,
-  IssueProjectRef,
+  IssueProjectDetail,
   IssueProjects,
   IssueStatus,
   IssuesView,
@@ -1456,13 +1456,22 @@ export interface ApiClient {
     /** Deletes a column; its tasks go to `moveTo`. A stage keeps at least one column. */
     deleteColumn(orgId: string, columnId: string, moveTo: string): Promise<IssueColumn[]>;
     projects(orgId: string): Promise<IssueProjects>;
-    createProject(orgId: string, input: { name: string; color?: string }): Promise<IssueProject>;
-    /** Rename, recolour, archive or bring back. */
+    createProject(
+      orgId: string,
+      input: { name: string; color?: string; description?: string | null; githubRepo?: string | null },
+    ): Promise<IssueProject>;
+    /** Rename, recolour, describe, link to a repository (`null` or empty clears), archive or bring back. */
     updateProject(
       orgId: string,
       projectId: string,
-      patch: { name?: string; color?: string; archived?: boolean },
-    ): Promise<IssueProjectRef>;
+      patch: {
+        name?: string;
+        color?: string;
+        description?: string | null;
+        githubRepo?: string | null;
+        archived?: boolean;
+      },
+    ): Promise<IssueProjectDetail>;
     /** Its tasks stay, with no project. */
     deleteProject(orgId: string, projectId: string): Promise<void>;
   };
