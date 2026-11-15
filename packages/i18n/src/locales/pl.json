@@ -1878,6 +1878,12 @@
     "use": "Użyj tej ikony",
     "inUse": "W użyciu",
     "sky": "Tło",
+    "pose": "Pozycja",
+    "poses": {
+      "front": "Na wprost",
+      "peek": "Zerkanie"
+    },
+    "peekBare": "Gdy zerka, nie nosi dodatku.",
     "expression": "Mina",
     "ready": "Gotowe ikony",
     "oneOrOther": "Z dodatkiem mina pozostaje zwykła.",
@@ -12347,7 +12353,6 @@
       "open": "Zmień model agenta {{agent}}",
       "ownSignIn": "Konto tego komputera",
       "apiKey": "{{provider}} z kluczem API",
-      "default": "domyślny",
       "refused": "Odrzucony dla tego klucza",
       "textOnly": "Czyta tylko tekst",
       "search": "Szukaj modeli",
@@ -18176,6 +18181,7 @@
       "waitingYourAnswer": "czeka na twoją odpowiedź",
       "queued": "w kolejce",
       "handedOn": "czeka na innych agentów",
+      "answered": "odpowiedział",
       "noAnswer": "nie odpowiedział",
       "notFinished": "nie skończył",
       "someAnswered": "odpowiedziało {{done}} z {{total}}",

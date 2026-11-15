@@ -284,6 +284,11 @@ const STARS_PEEK = [
 ];
 const CLOUD_A = ["..XX...", ".XXXXX.", "XXXXXXX"];
 const CLOUD_B = [".XXX.", "XXXXX"];
+/** What is behind the leaning agent: the night's stars or the day's clouds, clear of it. */
+const PEEK_BACK = {
+  night: () => [grid(32, nightAt(false)), cells(32, STARS_PEEK)],
+  sky: () => [grid(32, dayAt), shape(32, CLOUD_A, 3, 2, WHITE), shape(32, CLOUD_B, 17, 1, WHITE)],
+};
 const MOON = [
   [25, 5.2, 3.3],
   [26.6, 4.2, 2.7],
@@ -407,7 +412,7 @@ export const SCENES = {
   },
   /** Espiando à noite: the agent big, coming up from the bottom edge and looking up, under the night's stars. */
   peekNight: {
-    light: () => [grid(32, nightAt(false)), cells(32, STARS_PEEK), ...agent({ ...PEEK, tones: SKY_T })],
+    light: () => [...PEEK_BACK.night(), ...agent({ ...PEEK, tones: SKY_T })],
     dark: () => [fill(BLACK_NIGHT), cells(32, STARS_PEEK), ...agent({ ...PEEK, tones: SKY_T })],
     favicon: (N) =>
       N === 32
@@ -424,13 +429,8 @@ export const SCENES = {
   },
   /** Espiando no céu: the same, in the day sky with clouds, the agent navy. */
   peekSky: {
-    light: () => [
-      grid(32, dayAt),
-      shape(32, CLOUD_A, 3, 2, WHITE),
-      shape(32, CLOUD_B, 17, 1, WHITE),
-      ...agent({ ...PEEK, tones: NAVY_T }),
-    ],
-    dark: () => [grid(32, nightAt(false)), cells(32, STARS_PEEK), ...agent({ ...PEEK, tones: SKY_T })],
+    light: () => [...PEEK_BACK.sky(), ...agent({ ...PEEK, tones: NAVY_T })],
+    dark: () => [...PEEK_BACK.night(), ...agent({ ...PEEK, tones: SKY_T })],
     favicon: (N) =>
       N === 32
         ? [
@@ -452,9 +452,17 @@ export const MADE_FACES = ["round", "dots", "wide", "happy", "sleepy", "wink", "
 export const MADE_ACCESSORIES = Object.keys(ACCESSORIES);
 /** A face or an accessory, never both: a build carries every combination, and both together would be 1,920 icons. */
 export const MADE_LOOKS = [...MADE_FACES, ...MADE_ACCESSORIES];
-export const madeId = ({ sky, color, look }) => `made-${sky}-${color}-${look}`;
+/** Facing, as the shipped icon, or leaning in from the corner as the Peeking ones (a face only: nothing it wears fits). */
+export const MADE_POSES = ["front", "peek"];
+export const madeId = ({ sky, color, look, pose }) => `made-${sky}-${color}-${look}${pose === "peek" ? "-peek" : ""}`;
 export const madeIcons = () =>
-  MADE_SKIES.flatMap((sky) => MADE_COLORS.flatMap((color) => MADE_LOOKS.map((look) => ({ sky, color, look }))));
+  MADE_POSES.flatMap((pose) =>
+    MADE_SKIES.flatMap((sky) =>
+      MADE_COLORS.flatMap((color) =>
+        (pose === "peek" ? MADE_FACES : MADE_LOOKS).map((look) => ({ sky, color, look, pose })),
+      ),
+    ),
+  );
 
 /** Wearing something, the agent is smaller and lower so it fits: cells 8..23 × 13..28 (as the web draws it). */
 const AG_WEARING = { x: 256, y: 416, s: 512, n: 16 };
@@ -477,10 +485,17 @@ function accessory({ x, y, s }, name) {
   return { part: "accessory", mask: (X, Y) => color(X, Y) !== undefined, color };
 }
 
-/** A made icon's 1024 scene: the Night's sky or the day's, and the agent in its color with its face or accessory. */
-export function madeScene({ sky, color, look }) {
+/**
+ * A made icon's 1024 scene: the Night's sky or the day's, and the agent in its color with its face or accessory,
+ * or leaning in with its face as the Peeking icons' agent.
+ */
+export function madeScene({ sky, color, look, pose = "front" }) {
   const wears = Object.hasOwn(ACCESSORIES, look);
   const face = wears ? "round" : look;
+  if (pose === "peek") {
+    const leaning = EYE_STYLES[face] ? { style: face } : { pose: { ...PEEK.pose, expression: face } };
+    return [...PEEK_BACK[sky](), ...agent({ ...PEEK, tones: bodyTones(color), ...leaning })];
+  }
   const eyes = EYE_STYLES[face] ? { style: face } : { pose: { expression: face } };
   const at = wears ? AG_WEARING : AG;
   const back =

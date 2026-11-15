@@ -1775,6 +1775,12 @@
     "use": "Dieses Symbol verwenden",
     "inUse": "In Verwendung",
     "sky": "Hintergrund",
+    "pose": "Haltung",
+    "poses": {
+      "front": "Von vorn",
+      "peek": "Neugierig"
+    },
+    "peekBare": "Neugierig trägt er kein Accessoire.",
     "expression": "Gesichtsausdruck",
     "ready": "Vorgefertigte",
     "oneOrOther": "Mit einem Accessoire bleibt der Ausdruck der normale.",
@@ -11474,7 +11480,6 @@
       "open": "Modell von {{agent}} ändern",
       "ownSignIn": "Konto dieses Computers",
       "apiKey": "{{provider}} mit API-Schlüssel",
-      "default": "Standard",
       "refused": "Mit diesem Schlüssel abgelehnt",
       "textOnly": "Liest nur Text",
       "search": "Modelle suchen",
@@ -17092,6 +17097,7 @@
       "waitingYourAnswer": "wartet auf deine Antwort",
       "queued": "in der Warteschlange",
       "handedOn": "wartet auf andere Agenten",
+      "answered": "hat geantwortet",
       "noAnswer": "hat nicht geantwortet",
       "notFinished": "nicht fertig geworden",
       "someAnswered": "{{done}} von {{total}} haben geantwortet",

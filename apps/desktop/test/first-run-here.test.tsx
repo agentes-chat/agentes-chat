@@ -221,6 +221,18 @@ describe("Run agentes.chat on this Mac", () => {
     );
   });
 
+  test("erased from Preferences: it opens on Run here's form, its first line saying where the old data went", () =>
+    firstRun("here", async ({ el, host, until }) => {
+      await until(() => el.querySelector(".dk-fr")?.getAttribute("data-screen") === "choose");
+      await act(async () => {
+        await host.eraseLocalServer();
+      });
+      await until(() => el.querySelector("form.dk-fr__here .dk-fr__who"));
+      expect(el.querySelector(".dk-lead")?.textContent).toBe(
+        "Erased. Its old data is in ~/agentes.chat erased 2026-11-14.",
+      );
+    }));
+
   test("no account left, but opened for something else: the window starts where it always does", () =>
     firstRun(
       "here",

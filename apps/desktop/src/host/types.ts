@@ -117,7 +117,8 @@ export interface Host {
   siteFetch(server: string, method: string, path: string, body?: string): Promise<SiteAnswer>;
   /**
    * How the welcome window opens, taken once: `add` from the site's "Add a workspace", `owner` when the app opened it
-   * because no account is left on the server it runs (Run here's form makes the new owner), else null.
+   * on Run here's form to make a new owner (no account is left on the server it runs, or it was just erased), else
+   * null.
    */
   welcomeMode(): Promise<"add" | "owner" | null>;
   /** The welcome window in its adding mode ("Add a workspace", from Preferences). */
@@ -213,6 +214,13 @@ export interface Host {
   setLocalBackups(nightly: boolean, copyTo: string | null): Promise<void>;
   /** The server here goes back to one of its backups; rejects with `start` when that backup didn't start. */
   restoreLocalServer(file: string): Promise<void>;
+  /**
+   * "Erase and start over": it stops, its folder moves whole to `eraseTo`, the app forgets it and the welcome window
+   * opens. Resolves with where its data went; when the folder couldn't move (its data stays where it was), rejects with
+   * `held` (another server uses the folder), `move` (the move itself failed; it stays stopped) or `running` (it started
+   * again meanwhile).
+   */
+  eraseLocalServer(): Promise<string>;
   /** Automatic login and start after a power failure (macOS). */
   keepRunning(): Promise<KeepRunning>;
   /** System Settings at Users & Groups or Energy (macOS). */

@@ -115,7 +115,7 @@ import {
 import { firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
 import { draftKeyOf } from "@agenteschat/client/lib/composer-drafts";
-import { consultsForLine } from "@agenteschat/client/lib/consult-group";
+import { type ConsultPairItem, consultsForLine } from "@agenteschat/client/lib/consult-group";
 import { consultationsOf } from "@agenteschat/client/lib/consultations";
 import { deviceWaitOf } from "@agenteschat/client/lib/devices";
 import { clearDraft, peekDraft } from "@agenteschat/client/lib/drafts";
@@ -133,7 +133,7 @@ import {
 } from "@agenteschat/client/lib/errors";
 import { everyoneWord, isEveryoneMention, mentionsReader, offersEveryone } from "@agenteschat/client/lib/everyone";
 import { fileIcon, fitsUpload, formatBytes, MAX_UPLOAD_MB, previewKind } from "@agenteschat/client/lib/files";
-import { dayLabel, formatFullDate, formatTime } from "@agenteschat/client/lib/format";
+import { dayLabel, formatClock, formatFullDate, formatTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
 import { issueTakenOf, issueWorkOf, taskConversationOf } from "@agenteschat/client/lib/issues";
@@ -474,7 +474,7 @@ export interface DmSideControl {
 /** Header and empty state of a channel, or of a DM (same layout). */
 export interface ChannelChrome {
   /** A page's own header; a function gets the header search's way into its results and the sidebar (a DM's). */
-  header?: ReactNode | ((h: { onSearch: () => void; side: DmSideControl | null }) => ReactNode);
+  header?: ReactNode | ((h: { onSearch: () => void; side: DmSideControl | null; searching: boolean }) => ReactNode);
   emptyText?: string;
   /** Composer label/placeholder target, e.g. "Ada" instead of "#eng". */
   composerTarget?: string;
@@ -994,7 +994,8 @@ function ChannelView({
   }, [panelId]);
   // A question an agent asked another from here, opened from its line in the reply ("Theo ⇄ Iris"): a dialog over
   // the conversation, whatever pane is open beside it.
-  const [consultId, setConsultId] = useState<string | null>(null);
+  const [consult, setConsult] = useState<{ id: string; group?: readonly ConsultPairItem[] } | null>(null);
+  const consultId = consult?.id ?? null;
   // A DM with an agent: its tasks (ADR 0128), from the pill in the header; one panel too, any other one closes it.
   const [tasksOpen, setTasksOpen] = useState(false);
   useEffect(() => {
@@ -2362,7 +2363,7 @@ function ChannelView({
       setSearchOpen(false);
       setPanel({ id, reply: false, focus });
     },
-    openConsultation: (id) => setConsultId(id),
+    openConsultation: (id, group) => setConsult({ id, group }),
     seeRequest: (id) => seeAsk(id),
     requestCorrection: (message, text) => {
       const handle = message.author.type === "agent" ? dir.agentById.get(message.author.id ?? "")?.handle : undefined;
@@ -2399,7 +2400,7 @@ function ChannelView({
       reply: replies ? (message) => now().reply(message) : undefined,
       // A thread view has no panel: its links go to the thread's page.
       openThread: inThread ? undefined : (id, focus) => now().openThread(id, focus),
-      openConsultation: (id) => now().openConsultation(id),
+      openConsultation: (id, group) => now().openConsultation(id, group),
       seeRequest: (id) => now().seeRequest(id),
       requestCorrection: (message, text) => now().requestCorrection(message, text),
       jumpTo: (messageId) => now().jumpTo(messageId),
@@ -2463,7 +2464,7 @@ function ChannelView({
                   <AgentTasksContext.Provider value={tasksControl}>
                     <AgentPanelShownContext.Provider value={profile?.agentId ?? null}>
                       {typeof chrome.header === "function"
-                        ? chrome.header({ onSearch: openSearch, side })
+                        ? chrome.header({ onSearch: openSearch, side, searching: searchOpen })
                         : chrome.header}
                     </AgentPanelShownContext.Provider>
                   </AgentTasksContext.Provider>
@@ -2478,6 +2479,7 @@ function ChannelView({
                     onMembers={() => toggleColumn(membersColumn)}
                     onDetails={() => setDetailsOpen(true)}
                     onSearch={openSearch}
+                    searching={searchOpen}
                   />
                 )}
                 {/* Under the header: the conversation, and the members beside it (the header spans both, as Discord's). */}
@@ -3046,15 +3048,16 @@ function ChannelView({
                     channelId={channel.id}
                     channelName={chrome?.composerTarget ? null : channel.name}
                     consultationId={consultId}
-                    onClose={() => setConsultId(null)}
+                    group={consult?.group}
+                    onClose={() => setConsult(null)}
                     // The composer takes the focus once the dialog is gone: its trap would hold it while open.
                     onTalk={(handle) => {
-                      setConsultId(null);
+                      setConsult(null);
                       actions.insertMention(handle);
                       requestAnimationFrame(() => actions.focusComposer());
                     }}
                     onAnswer={() => {
-                      setConsultId(null);
+                      setConsult(null);
                       requestAnimationFrame(() => actions.focusComposer());
                     }}
                     renderMessage={(m, grouped) => (
@@ -4627,6 +4630,7 @@ export const TimelineMessage = memo(function TimelineMessage({
         time={
           live ? <RunClock run={live} /> : <time dateTime={m.createdAt}>{formatTime(i18n.language, m.createdAt)}</time>
         }
+        gutterTime={live ? undefined : <time dateTime={m.createdAt}>{formatClock(i18n.language, m.createdAt)}</time>}
         meta={m.local || live ? undefined : details}
         note={joinedTip ? { label: t("chat.joined.label"), tip: joinedTip } : undefined}
         // Its words arriving: its time and its stop after the time it started (the bar no longer says them).

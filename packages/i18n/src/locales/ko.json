@@ -1725,6 +1725,12 @@
     "use": "이 아이콘 사용",
     "inUse": "사용 중",
     "sky": "배경",
+    "pose": "자세",
+    "poses": {
+      "front": "정면",
+      "peek": "빼꼼"
+    },
+    "peekBare": "빼꼼 자세에서는 액세서리를 쓰지 않아요.",
     "expression": "표정",
     "ready": "기본 제공 아이콘",
     "oneOrOther": "액세서리를 쓰면 표정은 기본으로 돌아가요.",
@@ -11001,7 +11007,6 @@
       "open": "{{agent}}의 모델 바꾸기",
       "ownSignIn": "이 컴퓨터의 계정",
       "apiKey": "API 키로 쓰는 {{provider}}",
-      "default": "기본값",
       "refused": "이 키로 거부됨",
       "textOnly": "텍스트만 읽어요",
       "search": "모델 검색",
@@ -16512,6 +16517,7 @@
       "waitingYourAnswer": "내 답변 대기 중",
       "queued": "차례 대기 중",
       "handedOn": "다른 에이전트 대기 중",
+      "answered": "답변함",
       "noAnswer": "답하지 않음",
       "notFinished": "끝내지 못함",
       "someAnswered": "{{total}}명 중 {{done}}명 답함",

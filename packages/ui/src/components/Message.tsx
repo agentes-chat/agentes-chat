@@ -48,6 +48,11 @@ export interface MessageProps extends Omit<HTMLAttributes<HTMLElement>, "childre
   author: ReactNode;
   time: ReactNode;
   /**
+   * A grouped row's time in its gutter, which never wraps: the clock without its day period (`formatClock`), as the
+   * gutter is a face wide. `time` when absent.
+   */
+  gutterTime?: ReactNode;
+  /**
    * Details behind the time, never in the header: "terça-feira, 14 de outubro
    * às 21:10 · sonnet 5.5 · 1.240 tokens · US$ 0,004". Shown in a tooltip on
    * hover or keyboard focus of the time (and read by screen readers).
@@ -135,6 +140,7 @@ export function Message({
   avatar,
   author,
   time,
+  gutterTime,
   meta,
   note,
   status,
@@ -340,7 +346,7 @@ export function Message({
           aria-hidden={gutterAside ? undefined : true}
         >
           <Tip className="ac-msg__gutter-time" tip={meta} look="ac-msg__tip" aria-hidden="true">
-            {time}
+            {gutterTime ?? time}
           </Tip>
           {gutterAside && <span className="ac-msg__aside">{aside}</span>}
         </span>

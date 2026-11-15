@@ -370,15 +370,16 @@ p {
 }
 
 /* The pair row right before a reply whose agent asked others first: "Theo ⇄ Atlas · 2 min", one 18px line 26 tall, a
-   line across the whole conversation as the day and "Novas" are, the two agents on its middle. Names too long for it
-   wrap whole, never cut: the row is one centred sentence, its faces and the ⇄ on the capitals of the words beside
-   them. */
+   line across the whole conversation as the day and "Novas" are, the two agents on its middle. Always one line: the
+   question's subject gives way first ("…", whole in the row's tip and its dialog), the names only once it is gone,
+   the count and the time never. Its faces and the ⇄ sit on the capitals of the words beside them. */
 .consult-pair {
   display: grid;
   grid-template-columns: minmax(16px, 1fr) minmax(0, auto) minmax(16px, 1fr);
   align-items: center;
   padding-inline: 16px;
   min-width: 0;
+  container-type: inline-size;
 }
 .consult-pair::before,
 .consult-pair::after {
@@ -393,7 +394,8 @@ p {
 .consult-pair__row {
   position: relative;
   grid-area: 1 / 2;
-  display: inline-block;
+  display: flex;
+  align-items: baseline;
   max-width: 100%;
   min-height: 26px;
   /* The same at both ends, the chevron in the room: the agents stay on the middle whether it shows or not. */
@@ -404,20 +406,38 @@ p {
   font: inherit;
   font-size: 13px;
   line-height: 18px;
-  text-align: center;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   color: var(--muted);
   cursor: pointer;
   transition:
     background-color 0.12s,
     color 0.12s;
 }
-/* A face and its name's first word never part; the name wraps at its own spaces. */
-.consult-pair__who {
-  white-space: nowrap;
+.consult-pair__row > * {
+  flex: none;
 }
-.consult-pair__who > .consult-pair__name {
-  white-space: normal;
+/* The names give way only once the subject has none left: the subject's share of any shrink is so much larger that
+   theirs rounds to nothing before then (any share at all would cut them, an ellipsis taking a whole word). Its
+   block's 2px above and below keeps the faces' rings out of the clip. */
+.consult-pair__lead {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-block: -2px;
+  padding-block: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.consult-pair__row > .consult-pair__subject {
+  flex: 0 100000 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A phone's line has room for the names, the count and the time only: the subject would be a letter and its "…". */
+@container (max-width: 420px) {
+  .consult-pair__subject {
+    display: none;
+  }
 }
 /* The faces on the capitals' middle, as an inline face (`.ac-who`): the row's type, not the face's own. */
 .consult-pair__who > .ac-avatar,
@@ -429,14 +449,12 @@ p {
 .consult-pair__faces {
   display: inline-flex;
 }
-/* How it went: the · stays with the name's last word, the time with the word before it, each kept whole. */
-.consult-pair__sep,
+/* How it went: the ·, then the word and its time, each kept whole. */
+.consult-pair__sep {
+  margin-inline: 6px 4px;
+}
 .consult-pair__time {
   margin-inline-start: 6px;
-}
-.consult-pair__word,
-.consult-pair__time {
-  white-space: nowrap;
 }
 .consult-pair__row:hover {
   background: var(--plate);
@@ -1060,6 +1078,14 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
   display: block;
   contain: inline-size;
   overflow-wrap: anywhere;
+}
+/* An agent's role and its person keep one line, ending in "…": the header's plate stays one height whatever the role
+   says, and the button over it shows the whole line in its tip. */
+.dm-who__text > .channel__topic--line {
+  overflow: hidden;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .dm-who__hit.profile-trigger {
   position: absolute;
@@ -3309,6 +3335,9 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 .md--message > * + * {
   margin-top: 14px;
 }
+.md-run {
+  word-break: break-all;
+}
 .md--message > p + ul,
 .md--message > p + ol {
   margin-top: 8px;
@@ -3410,7 +3439,6 @@ html:not([data-pointer]) .profile-trigger:focus-visible {
 .profile-card {
   --menu-pad: var(--space-2);
   width: 300px;
-  max-height: none;
   padding: var(--menu-pad);
 }
 /* A channel's card: its words further in than the room (`.ac-popover`), its buttons back on it. */
@@ -6905,6 +6933,12 @@ html:not([data-pointer]) .avatar-builder__swatch:focus-visible {
   flex-wrap: wrap;
   justify-content: space-between;
 }
+/* Its buttons' touch targets reach 4px past their plates (`.ac-btn--sm::after`): the plate holds them, as the kit's
+   formatting bar does. */
+.wiki-editor__bar.ac-glass {
+  padding: var(--space-1);
+  border-radius: calc(var(--control-r-sm) + var(--space-1));
+}
 .wiki-editor__tools {
   display: flex;
   flex-wrap: wrap;
@@ -6961,8 +6995,11 @@ html:not([data-pointer]) .avatar-builder__swatch:focus-visible {
   top: 48px;
   width: 300px;
   max-width: calc(100% - 32px);
-  padding: var(--menu-pad);
-  z-index: var(--z-floating);
+}
+/* The kit's menu with no trigger to match: as wide as set above, as tall as its rows (the floating one: `placeList`). */
+.ac-menu.wiki-suggest {
+  min-width: 0;
+  max-height: none;
 }
 /* "Salvar na wiki" */
 .save-wiki__list {
@@ -11824,7 +11861,6 @@ html:not([data-pointer]) .agp-subnav__item:focus-visible {
 .agp-changes.ac-popover {
   --menu-pad: var(--space-2);
   width: min(420px, calc(100vw - 24px));
-  max-height: 60vh;
   overflow: auto;
   padding: var(--menu-pad);
 }
@@ -13125,7 +13161,6 @@ html:not([data-pointer]) .sidebar__more:focus-visible {
 .sidebar__more-menu {
   width: max-content;
   max-width: min(400px, calc(100vw - 32px));
-  max-height: none;
 }
 .sidebar__more-item {
   text-decoration: none;

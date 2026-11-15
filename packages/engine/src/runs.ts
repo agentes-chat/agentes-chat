@@ -429,6 +429,10 @@ export type StopActor = { type: "person"; id: string; agentId?: string } | { typ
 export const stopError = (actor: StopActor) =>
   actor.type === "system" ? actor.reason : `${CANCELED_BY}${actor.id}${actor.agentId ? `|agent:${actor.agentId}` : ""}`;
 
+/** The stop written under what the agent wrote, in the message's body; the apps say it from `meta.canceled`. */
+export const stopNote = (person?: string | null, stopper?: string | null) =>
+  `_Stopped${person ? ` by ${stopper ? `${stopper} for ` : ""}${person}` : ""}._`;
+
 /** A person's stop read back from its run's error (`stopError`); null for any other error. */
 export function personStopOf(error: string | null | undefined) {
   if (!error?.startsWith(CANCELED_BY)) return null;

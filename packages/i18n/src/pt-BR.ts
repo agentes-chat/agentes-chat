@@ -1845,6 +1845,9 @@ export const ptBR = {
     use: "Usar este ícone",
     inUse: "Em uso",
     sky: "Fundo",
+    pose: "Posição",
+    poses: { front: "De frente", peek: "Espiando" },
+    peekBare: "Espiando, ele fica sem acessório.",
     expression: "Expressão",
     ready: "Prontos",
     oneOrOther: "Com acessório, a expressão fica a normal.",
@@ -11840,7 +11843,6 @@ export const ptBR = {
       open: "Mudar o modelo de {{agent}}",
       ownSignIn: "Conta deste computador",
       apiKey: "{{provider}} por chave de API",
-      default: "padrão",
       refused: "Recusado por esta chave",
       textOnly: "Só lê texto",
       search: "Buscar modelos",
@@ -17356,6 +17358,8 @@ export const ptBR = {
       queued: "na fila",
       /** Its part done, it waits on agents it handed some to. */
       handedOn: "esperando outros agentes",
+      /** On a consulted agent's choice in the dialog of a row of several: its answer came. */
+      answered: "respondeu",
       noAnswer: "não respondeu",
       /** Work handed off that its agent couldn't finish. */
       notFinished: "não terminou",

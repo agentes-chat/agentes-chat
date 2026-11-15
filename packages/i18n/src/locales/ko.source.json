@@ -4400,6 +4400,18 @@
   "appIcon.sky": {
     "value": "Background"
   },
+  "appIcon.pose": {
+    "value": "Position"
+  },
+  "appIcon.poses.front": {
+    "value": "Facing"
+  },
+  "appIcon.poses.peek": {
+    "value": "Peeking"
+  },
+  "appIcon.peekBare": {
+    "value": "Peeking, it wears no accessory."
+  },
   "appIcon.expression": {
     "value": "Expression"
   },
@@ -28061,9 +28073,6 @@
   "brain.picker.apiKey": {
     "value": "{{provider}} with an API key"
   },
-  "brain.picker.default": {
-    "value": "default"
-  },
   "brain.picker.refused": {
     "value": "Refused for this key"
   },
@@ -42066,6 +42075,9 @@
   },
   "chat.consultPair.handedOn": {
     "value": "waiting on other agents"
+  },
+  "chat.consultPair.answered": {
+    "value": "answered"
   },
   "chat.consultPair.noAnswer": {
     "value": "didn't answer"

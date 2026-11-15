@@ -75,6 +75,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Anmelden auf anderen Geräten",
         blocks: [
           "Der Inhaber startet ohne Passwort: Die App meldet dich auf diesem Computer an. Um dich im Browser eines anderen Computers anzumelden, leg unter **Einstellungen\u00a0›\u00a0Dein Konto** eins an. Bis dahin weist **Einstellungen\u00a0›\u00a0Server** darauf hin, und **Passwort anlegen** öffnet diese Seite. Die Handy-App verbindet sich, wenn du den QR-Code unter **Auf deinem Handy** in **Einstellungen\u00a0›\u00a0Server** scannst. Dafür muss **Von deinem Handy und deinem Team erreichbar** an sein.",
+          "Löscht der Inhaber sein Konto unter **Einstellungen\u00a0›\u00a0Dein Konto**, ist es 7 Tage später endgültig weg, und die Workspaces, in denen nur er war, verschwinden mit ihm. Bis dahin meldest du dich an und drückst **Konto wiederherstellen**, um es zurückzuholen. Ist es weg und kein Konto mehr übrig, öffnet die App ihr Willkommensfenster, um einen neuen Inhaber anzulegen. Haben andere noch ein Konto, meldet sich jeder mit seiner eigenen E-Mail an.",
         ],
       },
       {
@@ -90,6 +91,25 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         blocks: [
           "Ist **Jede Nacht sichern** an (ab App-Version 0.8.1), unter **Einstellungen\u00a0›\u00a0Server**, speichert die App jede Nacht um 3:00 die Datenbank, die Dateien und `.env` in `.agentes/backups` in deinem Benutzerordner. Ein Computer, der da schlief, sichert, sobald er wach ist. **Jetzt sichern** macht dasselbe sofort. Jede Sicherung stoppt den Server kurz, und die zwei neuesten bleiben erhalten.",
           "**Kopieren nach** legt jede neue Sicherung zusätzlich in einen Ordner deiner Wahl, etwa auf einen USB-Stick oder in iCloud Drive, wo die zwei neuesten bleiben. Sie enthalten deine Schlüssel: Behalte sie für dich. **Wiederherstellen…** setzt agentes.chat auf eine Sicherung zurück: Nachrichten, Dateien und Einstellungen. Es stoppt dafür eine Minute, und was vorher da war, bleibt im Sicherungsordner.",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "Neu anfangen oder deinstallieren",
+        blocks: [
+          "Alles, was agentes.chat auf diesem Computer speichert, liegt in Ordnern in deinem Benutzerordner, nicht in der App. Wenn du die App in den Papierkorb legst, wird also nichts davon gelöscht, und agentes.chat stoppt nicht, falls es läuft.",
+          "Um neu anzufangen, drück **Löschen und neu anfangen…** in **Einstellungen\u00a0›\u00a0Server**. agentes.chat stoppt hier, und alles, was es enthält, wird in einen neuen Ordner in deinem Benutzerordner verschoben, der `agentes.chat erased` mit dem Datum des Tages heißt. Dort bleibt es, bis du ihn löschst. Was seine Agenten auf diesem Computer gespeichert hatten, etwa ihre Browser und Anmeldungen, wird aus `.agentes-runner` gelöscht. Seine Workspaces verschwinden für alle, die sie nutzen. Danach öffnet sich das Willkommensfenster, und du richtest es mit einem neuen Inhaber-Konto neu ein. Die Dateien der Agenten, in `agentes` in deinem Benutzerordner, bleiben, wo sie sind.",
+          "Um es später zurückzuholen, beende die App, leg einen neueren Ordner `.agentes` beiseite, falls es einen gibt, benenne den Ordner `agentes.chat erased` in `.agentes` um, öffne die App und richte es auf diesem Computer wieder ein. Es startet mit seinen Workspaces und seinem Eigentümer, wie sie waren. Was seine Agenten auf diesem Computer gespeichert hatten, kommt nicht zurück, sie müssen sich also neu anmelden.",
+          "So entfernst du agentes.chat ganz von diesem Computer:",
+          {
+            list: [
+              "Schalte **Bei der Anmeldung öffnen** unter **Einstellungen\u00a0›\u00a0Allgemein** aus.",
+              "Beende die App. Das Fenster zu schließen reicht nicht. Auf einem Mac klickst du auf ihr Symbol im Dock und wählst im Menü agentes.chat oben am Bildschirm **agentes.chat beenden**, oder du drückst ⌘Q. Unter Windows und Linux klickst du auf das agentes.chat-Symbol neben der Uhr und wählst **agentes.chat beenden**. Fragt sie **agentes.chat beenden?**, drück **Beenden**.",
+              "Lösch die App. Auf einem Mac legst du sie in den Papierkorb. Unter Windows und Linux deinstallierst du sie wie jede andere App.",
+              "Lösch diese Ordner in deinem Benutzerordner. Sie enthalten deine Daten, und einmal gelöscht kommen sie nicht zurück. Leg also vorher woanders ein Backup ab, falls du sie noch brauchen könntest: `.agentes` (Nachrichten, Dateien, Konten, Einstellungen und Backups), jeden Ordner `agentes.chat erased`, `.agentes-runner` (was die Agenten auf diesem Computer speichern, etwa ihre Browser und Anmeldungen) und `agentes` (die Dateien der Agenten). Ordner, deren Name mit einem Punkt beginnt, sind ausgeblendet. Auf einem Mac öffnest du deinen Benutzerordner im Finder und drückst ⇧⌘. (Umschalt, Befehl und die Punkttaste), um sie zu zeigen.",
+              "Lösch die Ordner der App selbst. Sie enthalten nur ihre Einstellungen, die Anmeldungen ihres Fensters und ihre Protokolle. Auf einem Mac: alles, dessen Name mit `chat.agentes.desktop` beginnt, in den Ordnern Application Support, Caches, HTTPStorages, Logs, Preferences und WebKit von `~/Library`, und `agentes.chat.plist` in `~/Library/LaunchAgents`. Unter Windows: `%APPDATA%\\chat.agentes.desktop` und `%LOCALAPPDATA%\\chat.agentes.desktop`. Unter Linux: `~/.config/chat.agentes.desktop` und `~/.local/share/chat.agentes.desktop`. Auf einem Mac öffnest du einen dieser Ordner, indem du im Finder ⇧⌘G drückst und seinen Pfad eingibst, etwa `~/Library/Caches`.",
+            ],
+          },
         ],
       },
       {

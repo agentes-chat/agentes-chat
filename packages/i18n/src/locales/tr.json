@@ -1775,6 +1775,12 @@
     "use": "Bu simgeyi kullan",
     "inUse": "Kullanımda",
     "sky": "Arka plan",
+    "pose": "Duruş",
+    "poses": {
+      "front": "Karşıdan",
+      "peek": "Gözetleyen"
+    },
+    "peekBare": "Gözetlerken aksesuar takmaz.",
     "expression": "İfade",
     "ready": "Hazır simgeler",
     "oneOrOther": "Aksesuar takılıyken ifade normal kalır.",
@@ -11415,7 +11421,6 @@
       "open": "{{agent}} modelini değiştir",
       "ownSignIn": "Bu bilgisayarın hesabı",
       "apiKey": "API anahtarıyla {{provider}}",
-      "default": "varsayılan",
       "refused": "Bu anahtar için reddedildi",
       "textOnly": "Yalnızca metin okur",
       "search": "Model ara",
@@ -17023,6 +17028,7 @@
       "waitingYourAnswer": "yanıtınızı bekliyor",
       "queued": "sırada",
       "handedOn": "diğer ajanları bekliyor",
+      "answered": "yanıtladı",
       "noAnswer": "yanıt vermedi",
       "notFinished": "bitiremedi",
       "someAnswered": "{{total}} ajandan {{done}} tanesi yanıt verdi",

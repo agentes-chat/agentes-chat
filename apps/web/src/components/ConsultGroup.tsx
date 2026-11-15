@@ -22,10 +22,10 @@ import {
   openableConsultation,
   pairItemOf,
 } from "@agenteschat/client/lib/consult-group";
-import { consultSubject, consultTimeText, withoutRelayLine } from "@agenteschat/client/lib/consultations";
+import { consultSubject, consultTimeText, previewOf, withoutRelayLine } from "@agenteschat/client/lib/consultations";
 import { joinNames, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { cx, Icon } from "@agenteschat/ui";
+import { cx, Icon, Tip } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { createContext, useContext, useMemo, useState } from "react";
@@ -36,6 +36,7 @@ import { useChannelActions } from "@/components/channel-actions";
 import { useNow } from "@/components/missions/MissionBits";
 import { useOrg } from "@/components/org-context";
 import { askOf, usePendingAsks, WaitMark } from "@/components/RequestCard";
+import { rowTip } from "@/components/tasks/TaskBits";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useChannelEvents } from "@/realtime/context";
 
@@ -195,69 +196,77 @@ export function ConsultPairRow({ askerId, items }: { askerId: string; items: rea
   // The subject comes from the question a click opens, so a folded row of several is called by the one it shows.
   const opened = items.find((c) => c.id === pair.opens) ?? items[0];
   const subject = consultSubject(opened?.question);
+  // The whole question, which the row's one line cuts: in its tip and, for screen readers, its description.
+  const question = previewOf(opened?.question ?? "");
   const title =
     names.length === 1
       ? t("chat.consultPanel.label", { from, to: names[0] })
       : t("chat.consultPair.labelMany", { from, to: joinNames(names, t) });
   return (
     <div className="consult-pair">
-      <button
-        type="button"
-        className={cx("consult-pair__row", pair.tone && `consult-pair__row--${pair.tone}`)}
-        title={title}
-        {...(seeCard
-          ? { onClick: seeCard }
-          : openConsultation
-            ? {
-                "aria-pressed": items.some((c) => c.id === openId),
-                onClick: () => openConsultation(pair.opens),
-              }
-            : { "aria-expanded": open, onClick: () => setOpen((o) => !o) })}
-      >
-        {/* One sentence that wraps at its spaces: each face keeps its name's first word, the · its name's last. */}
-        <span className="consult-pair__who">
-          <AgentAvatar agentId={askerId} size="xs" name={from} state="idle" />
-          <span className="consult-pair__name">{from}</span>
-        </span>
-        {pair.tone === "you" ? (
-          <span className="consult-pair__swap consult-pair__wait">
-            <WaitMark />
+      <Tip button look="ac-msg__tip tm-tip" tip={rowTip(title, question ? [question] : [])}>
+        <button
+          type="button"
+          className={cx("consult-pair__row", pair.tone && `consult-pair__row--${pair.tone}`)}
+          aria-description={question || undefined}
+          {...(seeCard
+            ? { onClick: seeCard }
+            : openConsultation
+              ? {
+                  "aria-pressed": items.some((c) => c.id === openId),
+                  onClick: () => openConsultation(pair.opens, items),
+                }
+              : { "aria-expanded": open, onClick: () => setOpen((o) => !o) })}
+        >
+          <span className="consult-pair__lead">
+            <span className="consult-pair__who">
+              <AgentAvatar agentId={askerId} size="xs" name={from} state="idle" />
+              <span className="consult-pair__name">{from}</span>
+            </span>
+            {pair.tone === "you" ? (
+              <span className="consult-pair__swap consult-pair__wait">
+                <WaitMark />
+              </span>
+            ) : (
+              <Icon name="swap" size={16} className="consult-pair__swap" label={t("newAgent.and")} />
+            )}
+            <span className="consult-pair__who">
+              <span className="ac-avatar-stack consult-pair__faces">
+                {pair.faces.slice(0, 3).map((f) => (
+                  <AgentAvatar
+                    key={f.agentId}
+                    agentId={f.agentId}
+                    size="xs"
+                    name={nameOf(f.agentId)}
+                    state={pair.tone === "you" ? "waiting" : pair.tone === "live" && !f.off ? "thinking" : "idle"}
+                    className={f.off ? "consult-pair__off" : undefined}
+                  />
+                ))}
+              </span>
+              <span className="consult-pair__name">{names.length === 1 ? names[0] : namesText(t, names, 1)}</span>
+            </span>
           </span>
-        ) : (
-          <Icon name="swap" size={16} className="consult-pair__swap" label={t("newAgent.and")} />
-        )}
-        <span className="consult-pair__who">
-          <span className="ac-avatar-stack consult-pair__faces">
-            {pair.faces.slice(0, 3).map((f) => (
-              <AgentAvatar
-                key={f.agentId}
-                agentId={f.agentId}
-                size="xs"
-                name={nameOf(f.agentId)}
-                state={pair.tone === "you" ? "waiting" : pair.tone === "live" && !f.off ? "thinking" : "idle"}
-                className={f.off ? "consult-pair__off" : undefined}
-              />
-            ))}
-          </span>
-          <span className="consult-pair__name">{names.length === 1 ? names[0] : namesText(t, names, 1)}</span>
-        </span>
-        {(subject || pair.word || pair.seconds !== null) && (
-          <span className="consult-pair__sep" aria-hidden="true">
-            ·
-          </span>
-        )}{" "}
-        {subject && <span className="consult-pair__subject">{subject}</span>}
-        {subject && (pair.word || pair.seconds !== null) && (
-          <span className="consult-pair__sep" aria-hidden="true">
-            ·
-          </span>
-        )}{" "}
-        {pair.word && <span className="consult-pair__word">{t(pair.word.key, pair.word.values)}</span>}
-        {pair.seconds !== null && (
-          <span className="consult-pair__time">{consultTimeText(t, i18n.language, live, pair.seconds)}</span>
-        )}
-        <Icon name={openConsultation ? "chevronRight" : "chevronDown"} size={14} className="consult-pair__chev" />
-      </button>
+          {/* The subject carries its own ·: when it has no room left, the dot goes with it. */}
+          {subject && (
+            <span className="consult-pair__subject">
+              <span className="consult-pair__sep" aria-hidden="true">
+                ·
+              </span>
+              {subject}
+            </span>
+          )}{" "}
+          {(pair.word || pair.seconds !== null) && (
+            <span className="consult-pair__sep" aria-hidden="true">
+              ·
+            </span>
+          )}{" "}
+          {pair.word && <span className="consult-pair__word">{t(pair.word.key, pair.word.values)}</span>}
+          {pair.seconds !== null && (
+            <span className="consult-pair__time">{consultTimeText(t, i18n.language, live, pair.seconds)}</span>
+          )}
+          <Icon name={openConsultation ? "chevronRight" : "chevronDown"} size={14} className="consult-pair__chev" />
+        </button>
+      </Tip>
       {open && !openConsultation && (
         <div className="consult-pair__detail">
           {items.map((c) => (

@@ -1725,6 +1725,12 @@
     "use": "使用此图标",
     "inUse": "使用中",
     "sky": "背景",
+    "pose": "姿势",
+    "poses": {
+      "front": "正面",
+      "peek": "探头"
+    },
+    "peekBare": "探头时不佩戴配饰。",
     "expression": "表情",
     "ready": "预设图标",
     "oneOrOther": "佩戴配饰时，表情保持普通样式。",
@@ -11072,7 +11078,6 @@
       "open": "更改 {{agent}} 的模型",
       "ownSignIn": "此电脑的账号",
       "apiKey": "通过 API 密钥使用 {{provider}}",
-      "default": "默认",
       "refused": "此密钥被拒绝",
       "textOnly": "仅读取文本",
       "search": "搜索模型",
@@ -16586,6 +16591,7 @@
       "waitingYourAnswer": "等你回答",
       "queued": "排队中",
       "handedOn": "等待其他智能体",
+      "answered": "已回答",
       "noAnswer": "未回答",
       "notFinished": "未完成",
       "someAnswered": "{{total}} 个中 {{done}} 个已回答",

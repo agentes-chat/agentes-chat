@@ -292,7 +292,7 @@ export const phoneTargetOf = (
 ): PhoneTarget => ({ platform: row.platform, serial: runnerSerial(row), holder });
 
 /** A device only its owner may widen (admins only narrow it): one person's computer, not the workspace's. */
-const personalComputer = (m: Pick<MachineRow, "kind" | "pairedByUserId" | "executors" | "belongsToWorkspace">) =>
+export const personalComputer = (m: Pick<MachineRow, "kind" | "pairedByUserId" | "executors" | "belongsToWorkspace">) =>
   m.kind === "connected" && m.pairedByUserId !== null && m.executors?.mode !== "system" && !m.belongsToWorkspace;
 
 function computerStatus(m: MachineRow, running: number, now: Date): DeviceStatus {

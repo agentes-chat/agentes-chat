@@ -1,14 +1,13 @@
 /*
  * Agora (`Agora.tsx`). Its button takes its place's sizes: the sidebar's collapse beside it (layout.css), the title
- * bar's buttons (desktop.css). Its popover: 360 wide (the window less its room on a phone), at most 560 tall or the
- * window less its bars, the menu's concentric corner (its rows' 10 plus its 8 of room).
+ * bar's buttons (desktop.css). Its popover: 360 wide (the window less its room on a phone), as tall as the window lets
+ * it (`.ac-popover`, its list scrolls past that), the menu's concentric corner (its rows' 10 plus its 8 of room).
  */
 .agora.ac-popover {
   --menu-pad: var(--space-2);
   width: min(360px, calc(100vw - 24px));
   min-width: 0;
   max-width: none;
-  max-height: min(560px, calc(100vh - 120px));
   padding: var(--menu-pad);
   border-radius: calc(var(--radius-item) + var(--menu-pad));
   box-shadow: var(--e3);

@@ -5,7 +5,9 @@ import {
   APP_ICONS,
   DEFAULT_APP_ICON,
   MADE_ICON_COLORS,
+  MADE_ICON_FACES,
   MADE_ICON_LOOKS,
+  MADE_ICON_POSES,
   MADE_ICON_SKIES,
   madeIconId,
   madeIconOf,
@@ -24,7 +26,7 @@ interface Manifest {
 // The config plugin is plain CommonJS (expo prebuild loads it); its pure parts are tested here.
 const plugin = require("../plugins/with-app-icons") as {
   ICONS: string[];
-  MADE: { skies: string[]; colors: string[]; looks: string[] };
+  MADE: { skies: string[]; colors: string[]; faces: string[]; looks: string[]; poses: string[] };
   MADE_IDS: string[];
   iosName: (id: string) => string;
   androidAlias: (id: string) => string;
@@ -108,12 +110,18 @@ describe("app icons on the phone (ADR 0179)", () => {
     expect(plugin.MADE).toEqual({
       skies: [...MADE_ICON_SKIES],
       colors: [...MADE_ICON_COLORS],
+      faces: [...MADE_ICON_FACES],
       looks: [...MADE_ICON_LOOKS],
+      poses: [...MADE_ICON_POSES],
     });
     const made = madeIcons();
-    expect(made).toHaveLength(336);
+    // Facing: 2 skies × 8 colors × 21 faces and accessories. Leaning: 2 × 8 × 10 faces.
+    expect(made).toHaveLength(336 + 160);
+    expect(
+      made.filter((icon) => icon.pose === "peek").every((icon) => MADE_ICON_FACES.includes(icon.look as never)),
+    ).toBe(true);
     expect(plugin.MADE_IDS).toEqual(made.map(madeIconId));
-    expect(new Set(made.map((icon) => nativeIconName(icon, "android"))).size).toBe(336);
+    expect(new Set(made.map((icon) => nativeIconName(icon, "android"))).size).toBe(496);
     for (const icon of made) {
       const id = madeIconId(icon);
       expect(madeIconOf(id)).toEqual(icon);
@@ -125,9 +133,19 @@ describe("app icons on the phone (ADR 0179)", () => {
     expect(plugin.iosName("made-sky-rose-heart")).toBe("AppIcon-made-sky-rose-heart");
     expect(plugin.androidAlias("made-sky-rose-heart")).toBe("AppIconMadeSkyRoseHeart");
     expect(plugin.androidRes("made-sky-rose-heart")).toBe("ic_launcher_made_sky_rose_heart");
+    expect(plugin.iosName("made-sky-rose-heart-peek")).toBe("AppIcon-made-sky-rose-heart-peek");
+    expect(plugin.androidAlias("made-sky-rose-heart-peek")).toBe("AppIconMadeSkyRoseHeartPeek");
+    expect(plugin.androidRes("made-sky-rose-heart-peek")).toBe("ic_launcher_made_sky_rose_heart_peek");
+    expect(madeIconOf("made-sky-rose-heart-peek")).toEqual({ sky: "sky", color: "rose", look: "heart", pose: "peek" });
     expect(madeIconOf("made-sky-rose-nothing")).toBeNull();
+    // Leaning, the agent wears nothing.
+    expect(madeIconOf("made-sky-rose-crown-peek")).toBeNull();
+    expect(madeIconOf("made-sky-rose-heart-up")).toBeNull();
     expect(madeIconOf("night")).toBeNull();
-    for (const sky of MADE_ICON_SKIES) expect(existsSync(join(ASSETS, "made", `${sky}.png`))).toBe(true);
+    for (const sky of MADE_ICON_SKIES) {
+      expect(existsSync(join(ASSETS, "made", `${sky}.png`))).toBe(true);
+      expect(existsSync(join(ASSETS, "made", `${sky}-peek.png`))).toBe(true);
+    }
   });
 
   test("every icon has the files the app and the plugin read", () => {

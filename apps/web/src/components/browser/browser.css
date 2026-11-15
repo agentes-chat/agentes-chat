@@ -1340,7 +1340,8 @@ html:not([data-pointer]) .brw-trail__ext:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-/* The DM header's "Computador": a dot while the agent works on its computer, amber while a request waits. */
+/* The DM header's "Computador · 4 aguardando": a dot while the agent works on its computer, amber while a request
+   waits. */
 .brw-dm.ac-btn {
   position: relative;
 }
@@ -1359,14 +1360,6 @@ html:not([data-pointer]) .brw-trail__ext:focus-visible {
   background: var(--warn);
 }
 @media (max-width: 640px) {
-  .brw-dm .brw-dm__label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
   /* Its words gone to screen readers, the button is its icon in a 32 square. */
   .brw-dm.ac-btn {
     padding-inline: calc((var(--control-h-sm) - var(--control-icon-sm)) / 2);

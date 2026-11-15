@@ -1933,6 +1933,11 @@ export const en = {
     inUse: "In use",
     /** The made icon's parts. */
     sky: "Background",
+    /** How the agent stands in the icon: facing, or leaning in from the corner. */
+    pose: "Position",
+    poses: { front: "Facing", peek: "Peeking" },
+    /** Under the positions: the peeking agent has a face, never an accessory. */
+    peekBare: "Peeking, it wears no accessory.",
     expression: "Expression",
     /** Over the icons that come ready. */
     ready: "Ready-made",
@@ -11801,7 +11806,6 @@ export const en = {
       open: "Change {{agent}}'s model",
       ownSignIn: "This computer's account",
       apiKey: "{{provider}} with an API key",
-      default: "default",
       refused: "Refused for this key",
       textOnly: "Reads text only",
       search: "Search models",
@@ -17418,6 +17422,8 @@ export const en = {
       queued: "in line",
       /** Its part done, it waits on agents it handed some to. */
       handedOn: "waiting on other agents",
+      /** On a consulted agent's choice in the dialog of a row of several: its answer came. */
+      answered: "answered",
       noAnswer: "didn't answer",
       /** Work handed off that its agent couldn't finish. */
       notFinished: "didn't finish",

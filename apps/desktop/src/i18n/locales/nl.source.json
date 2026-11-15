@@ -1130,6 +1130,27 @@
   "server.restoreUnreadable": {
     "value": "That backup can't be opened. Try the other one."
   },
+  "server.erase": {
+    "value": "Erase and start over…"
+  },
+  "server.eraseTitle": {
+    "value": "Erase agentes.chat on this {{device}}?"
+  },
+  "server.eraseBody": {
+    "value": "Its workspaces go for everyone who uses them, on every device. Its data moves to {{path}} and stays there. What its agents kept on this {{device}}, such as their browsers and sign-ins, is deleted. The agents' files in ~/agentes are yours and stay where they are. Then you set it up again with a new owner."
+  },
+  "server.eraseConfirm": {
+    "value": "Erase it"
+  },
+  "server.erased": {
+    "value": "Erased. Its old data is in {{path}}."
+  },
+  "server.eraseMoveFailed": {
+    "value": "Its data couldn't be moved, so nothing was erased and it stays in {{path}}. It's stopped until you start it again."
+  },
+  "server.eraseHeld": {
+    "value": "Another agentes.chat server is using its folder, so nothing was erased. Stop that server, then try again."
+  },
   "server.noPassword": {
     "value": "Add a password to sign in from your phone and other computers."
   },

@@ -51,6 +51,7 @@ const COMMANDS: &[&str] = &[
     "local_server_backup",
     "local_server_backups_set",
     "local_server_restore",
+    "local_server_erase",
     "keep_running",
     "open_system_settings",
     "local_server_diagnostics",

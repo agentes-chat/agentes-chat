@@ -188,6 +188,7 @@ export function createFakeHost(
           version: "1.4.0",
           backTo: here.back ?? null,
           awake: running,
+          eraseTo: "/Users/voce/agentes.chat erased 2026-11-14",
           backups: {
             nightly: true,
             copyTo: null,
@@ -613,6 +614,19 @@ export function createFakeHost(
       setLocal({ phase: "starting" });
       await wait(1500);
       setLocal({ phase: "running" });
+    },
+    eraseLocalServer: async () => {
+      // As the app does: it stops first, still the server here, and only then its folder moves.
+      if (local.run) setLocal({ phase: "stopped", awake: false });
+      await wait(600);
+      const to = local.eraseTo ?? "";
+      // Its agents' homes on this computer go with it.
+      for (const [homeId, runner] of runners) if (runner.server === LOCAL_URL) await host.removeRunner(homeId);
+      for (const server of new Set([local.publicUrl, local.url])) if (server) await host.removeServer(server);
+      setLocal({ ...NO_SERVER, bundled: true, dir: local.dir, systemName: "Ana Souza", erased: to });
+      ownerMode = true;
+      await host.showWindow("welcome");
+      return to;
     },
     keepRunning: async () => ({ autoLogin: false, autoRestart: false }),
     openSystemSettings: async (page) => {

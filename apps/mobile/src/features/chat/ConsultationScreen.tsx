@@ -1,13 +1,21 @@
-import { useChannels, useExchangeConversation } from "@agenteschat/client";
-import { consultLineState, consultOriginKey } from "@agenteschat/client/lib/consult-group";
+import { useChannels, useConsultations, useExchangeConversation } from "@agenteschat/client";
+import {
+  consultChoiceKey,
+  consultChoiceOf,
+  consultChoices,
+  consultLineState,
+  consultOriginKey,
+  openableConsultation,
+} from "@agenteschat/client/lib/consult-group";
 import { consultSubject } from "@agenteschat/client/lib/consultations";
+import { namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { groupsWith } from "@agenteschat/client/lib/timeline";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button, LineIcon, PixelOrbit, SheetSurface, Text } from "@/ui";
+import { Button, LineIcon, PixelOrbit, Segmented, SheetSurface, Text } from "@/ui";
 import { chatHref } from "../links/logic";
 import { useColors, useDirectory, useMeId, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
@@ -26,22 +34,40 @@ import { MessageText } from "./MessageText";
  * agent wrote and the cards it posted in the conversation (an approval, a question, a secret), drawn as the
  * conversation draws them. Read only: people don't write in the agents' DM; "Falar com o Theo" goes back to the
  * conversation with the agent that asked mentioned in its field. The DM sends the app no events: it reloads while
- * the question is out.
+ * the question is out. From a row of several asked agents (`group`): named as the row is ("Theo ⇄ Atlas e mais 1"),
+ * with one choice per agent saying where it stands.
  */
-export function ConsultationScreen({ consultationId, channelId }: { consultationId: string; channelId: string }) {
+export function ConsultationScreen({
+  consultationId,
+  channelId,
+  group,
+}: {
+  consultationId: string;
+  channelId: string;
+  /** The questions of the row that opened it, when it stands for several agents. */
+  group?: readonly string[];
+}) {
   // The cards drawn here open their sheets (a question answered "do meu jeito") as in the conversation.
   return (
     <SheetHostProvider>
       <FocusLive>
         <SheetSurface>
-          <Consultation consultationId={consultationId} channelId={channelId} />
+          <Consultation consultationId={consultationId} channelId={channelId} group={group} />
         </SheetSurface>
       </FocusLive>
     </SheetHostProvider>
   );
 }
 
-function Consultation({ consultationId, channelId }: { consultationId: string; channelId: string }) {
+function Consultation({
+  consultationId: opened,
+  channelId,
+  group,
+}: {
+  consultationId: string;
+  channelId: string;
+  group?: readonly string[];
+}) {
   const { t } = useTranslation();
   const orgId = useOrgId();
   const meId = useMeId();
@@ -50,6 +76,18 @@ function Consultation({ consultationId, channelId }: { consultationId: string; c
   const when = useWhen();
   const look = useConversationLook(false);
   const insets = useSafeAreaInsets();
+  const several = Boolean(group && group.length > 1);
+  const listed = useConsultations(orgId, channelId, several && Boolean(channelId));
+  const items = useMemo(
+    () => (several ? (listed.data ?? []).filter((x) => group?.includes(x.id)) : []),
+    [several, group, listed.data],
+  );
+  const choices = consultChoices(items, Date.now(), items[0]?.agentId).filter((ch) => openableConsultation(ch.opens));
+  const [pick, setPick] = useState(opened);
+  const picked = consultChoiceOf(choices, items, pick) ?? choices[0];
+  // On the chosen agent's own exchange as its asker asked it, so the title and "Falar com" stay on the asker.
+  const consultationId = choices.length > 1 && picked ? picked.opens : pick;
+  const nameOf = (id: string) => dir.agentById.get(id)?.name ?? t("mobile.chat.someone");
   // The whole exchange its row stands for: the other questions between the same two agents come in it too.
   const query = useExchangeConversation(orgId, channelId, consultationId && channelId ? consultationId : null);
   // DMs aren't in the list: no channel name there.
@@ -84,7 +122,21 @@ function Consultation({ consultationId, channelId }: { consultationId: string; c
       >
         <View style={[styles.head, { backgroundColor: c.bg }]}>
           <SheetTitle
-            title={q ? t("chat.consultPanel.title", { from: from.name, to: to.name }) : ""}
+            title={
+              q
+                ? t("chat.consultPanel.title", {
+                    from: from.name,
+                    to:
+                      choices.length > 1
+                        ? namesText(
+                            t,
+                            choices.map((ch) => nameOf(ch.agentId)),
+                            1,
+                          )
+                        : to.name,
+                  })
+                : ""
+            }
             subtitle={[
               // What the exchange is about, ahead of where it is and how many messages it has.
               consultSubject(q?.question),
@@ -95,6 +147,25 @@ function Consultation({ consultationId, channelId }: { consultationId: string; c
               .join(" · ")}
           />
         </View>
+        {choices.length > 1 && picked ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pad}>
+            <Segmented
+              value={picked.agentId}
+              onChange={(agentId) => setPick(choices.find((ch) => ch.agentId === agentId)?.opens ?? pick)}
+              items={choices.map((ch) => ({
+                key: ch.agentId,
+                label: (
+                  <>
+                    {nameOf(ch.agentId)}{" "}
+                    <Text variant="footnote" tone="faint">
+                      {t(consultChoiceKey(ch.state, ch.item))}
+                    </Text>
+                  </>
+                ),
+              }))}
+            />
+          </ScrollView>
+        ) : null}
         {query.isLoading ? <ActivityIndicator color={c.muted} /> : null}
         {!query.isLoading && !query.data ? (
           <Text variant="small" tone="muted" style={styles.pad}>

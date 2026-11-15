@@ -46,6 +46,10 @@ export interface LocalServerStatus {
   backups: LocalBackups;
   /** This Mac doesn't sleep while it runs (`caffeinate`). */
   awake: boolean;
+  /** Where "Erase and start over" moves its folder today (the app's own install only). */
+  eraseTo: string | null;
+  /** Where an erase moved its folder, until a new setup makes one again. */
+  erased: string | null;
 }
 
 export interface LocalBackups {
@@ -139,6 +143,8 @@ export const NO_SERVER: LocalServerStatus = {
   tailnetDown: false,
   backups: { nightly: true, copyTo: null, files: [], problem: null },
   awake: false,
+  eraseTo: null,
+  erased: null,
 };
 
 /** "Setting it up", in order; access from other devices only when it was asked for. */

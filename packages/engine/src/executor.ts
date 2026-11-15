@@ -40,6 +40,7 @@ import { pendingConnectors } from "./access";
 import { linkRunActions, publishMessageActions } from "./agent-actions";
 import { withTimeout } from "./agent-media";
 import { announceAgentStatus, askRunStatus, startRunStatus, statusCandidates } from "./agent-status";
+import { TECHNICAL_STYLE_LINE } from "./agent-style";
 import { type Agent, getAgentCached } from "./agents";
 import { agentsDmReads, readerOfRun } from "./agents-dm-reads";
 import { type AgentAi, agentAiState, noAiReasonOf, ownNotSignedIn } from "./ai-status";
@@ -166,13 +167,16 @@ import {
   advance as advanceContinuation,
   type ContinuationState,
   callLine,
+  computerWork,
   continuationVerdict,
   decideTurnEnd,
   heldNudge,
   heldReplyRead,
   type LearnSignal,
+  localPathsCited,
   reportRunFailure,
   type TurnEndDecision,
+  toolsNamed,
   triedCalls,
   verdictRecord,
 } from "./continuation";
@@ -181,6 +185,7 @@ import { sha256 } from "./crypto";
 import { widgetRunWaitChanged } from "./dashboards/refresh-fire";
 import { WIDGET_FAILURES } from "./dashboards/types";
 import { publishDelivery } from "./delivery";
+import { personalComputer } from "./devices";
 import { kickParkedWakes } from "./dispatch";
 import { isAgentOnlyDm } from "./dms";
 import {
@@ -229,6 +234,7 @@ import {
 } from "./machine-accounts";
 import { computerBackSoon, type MachineCaller } from "./machine-hub";
 import { TASK_OFFLINE_GRACE_MS } from "./machine-tasks";
+import { getMachine } from "./machines";
 import { MEDIA_TOOLS } from "./media";
 import {
   getMessage,
@@ -321,9 +327,10 @@ import {
   replyThreadOf,
   runErrorDetail,
   STUCK_ERROR,
+  stopNote,
   transitionRun,
 } from "./runs";
-import { truncateOutput } from "./sandbox";
+import { SANDBOX_SCOPE, truncateOutput } from "./sandbox";
 import { secretResult } from "./secrets";
 import { enabledSkills } from "./skills";
 import { type SpillRecord, spillMayHelp, spillPlan, spillTarget } from "./spill";
@@ -549,7 +556,7 @@ export interface Transcript {
   promptKey?: string;
   /** "Automático": the model tier and effort chosen for this run; a resume thinks with the same. */
   autoModel?: AutoModelRecord;
-  /** Assistant text before this index was already posted to the chat (or was history). */
+  /** Assistant text before this index was already posted to the chat (or was history, or a reply held unposted). */
   postedUpTo: number;
   /** Chat messages this run posted so far. */
   postedCount: number;
@@ -560,6 +567,13 @@ export interface Transcript {
    * (`heldWords`), or alone when the run ends without any (a pass, an empty turn, a closing line, a failure).
    */
   held?: string;
+  /**
+   * A reply held for its wording (`tool_names`, `local_paths`), always one the run would otherwise have posted: unseen,
+   * and never merged into its next words. It goes out wherever the run ends before any (an empty rewrite, a pass, a
+   * failure, the step limit, a stop, the restart sweep); a run that parks keeps it until it resumes or ends, and a
+   * pause card drops it.
+   */
+  heldWording?: string;
   /** What replies once streamed counted their pieces with: read by nothing now, kept on old runs' transcripts. */
   deltaSeq?: number;
   /** Memory changes made by tools, not yet attached to a posted message (`meta.memoryUpdates`). */
@@ -1574,7 +1588,12 @@ async function executeRunInner(
   /** `ledger`: the routine run's coded reason when the run error's own code isn't the right one. */
   const fail = async (reason: string, ledger?: { code: string; detail?: string }) => {
     // The turn after a held reply failed (its provider, its plan): that reply is still the answer, and it goes out.
-    if (endWithHeld && transcript?.held && reason !== "agent_archived" && !standingErrorDetail(reason))
+    if (
+      endWithHeld &&
+      (transcript?.held || transcript?.heldWording) &&
+      reason !== "agent_archived" &&
+      !standingErrorDetail(reason)
+    )
       return endWithHeld();
     await deferred;
     const plan = brainPlan && isComputerBrain(brainPlan.kind) ? BRAIN_PLAN_NAMES[brainPlan.kind] : undefined;
@@ -2024,6 +2043,27 @@ async function executeRunInner(
     return at ? { workingSince: at } : {};
   };
   /**
+   * What `post` publishes of the agent's own words. What a run a routine's reading feeds writes holds no credential it
+   * may have read (ADR 0053 §3); one a person wrote into since (`steeredBy`, in the transcript as it is now) answers
+   * that person. Any other run writes as the agent, with its own grants, as a person's does. A run that read outside
+   * content (ADR 0117) marks what it posts, so the next agent reads it as relayed and memory from it stays low trust;
+   * once it has read outside, every later post is marked too, and a credential in its reply is masked unless a person
+   * wrote it here. The right hand never posts a sign-in or a key, not even one a person wrote (ADR 0137 §4). Applying
+   * it twice changes nothing.
+   */
+  const publishable = async (tx: Executor, threadId: string | null, body: string) => {
+    const current = { ...run, transcript: transcript as unknown as Record<string, unknown> | null };
+    if (!readOutside) readOutside = await runReadOutside(tx, current, undefined, outsideMemo);
+    const masked = !carriesCredential(body)
+      ? body
+      : fedByRoutine(await runAuthority(tx, current))
+        ? maskCredentials(body)
+        : readOutside
+          ? maskCredentialsExcept(body, await personWords(tx, run.orgId, run.channelId, threadId))
+          : body;
+    return isRightHand(agent) ? await scrubRightHandReply(tx, run, masked) : masked;
+  };
+  /**
    * Posts as the agent where it replies, at the end of the conversation (what it writes shows whole there, once: none of
    * it went out live, ADR 0010). `note`: a line the server writes about the run (not its words).
    */
@@ -2040,24 +2080,7 @@ async function executeRunInner(
       [FEEDBACK_SEND]?: { key: string; feedback: Feedback };
     };
     const tagged = report && !note ? { routine: report } : {};
-    // What a run a routine's reading feeds writes holds no credential it may have read (ADR 0053 §3); one a person
-    // wrote into since (`steeredBy`, in the transcript as it is now) answers that person. Any other run writes as
-    // the agent, with its own grants, as a person's does.
-    const current = { ...run, transcript: transcript as unknown as Record<string, unknown> | null };
-    // A run that read outside content (ADR 0117) marks what it posts, so the next agent reads it as relayed and memory
-    // from it stays low trust; once it has read outside, every later post is marked too. A credential in its reply is
-    // masked unless a person wrote it here.
-    if (!note && !readOutside) readOutside = await runReadOutside(tx, current, undefined, outsideMemo);
-    const masked =
-      note || !carriesCredential(body)
-        ? body
-        : fedByRoutine(await runAuthority(tx, current))
-          ? maskCredentials(body)
-          : readOutside
-            ? maskCredentialsExcept(body, await personWords(tx, run.orgId, run.channelId, threadId))
-            : body;
-    // The right hand never posts a sign-in or a key, not even one a person wrote (ADR 0137 §4).
-    const said = !note && isRightHand(agent) ? await scrubRightHandReply(tx, run, masked) : masked;
+    const said = note ? body : await publishable(tx, threadId, body);
     // Team actions (ADR 0064): what the run didn't repeat because the team already did it rides on its reply.
     const teamChecks = note ? [] : await runChecksForReply(tx, run.orgId, run.id);
     // "Ver o que ele fez" under the reply: how many tool calls so far, so the apps leave it out at 0, and one call
@@ -2161,6 +2184,7 @@ async function executeRunInner(
       transcript.lastPosted = body.trim();
       // Its words went out, the held reply with them or in their place (`heldWords`), or before them (`closeWith`).
       delete transcript.held;
+      delete transcript.heldWording;
     }
     return m;
   };
@@ -2714,7 +2738,9 @@ async function executeRunInner(
       : [];
     // Nobody stopped it: its cause, for the apps to say in the person's words (an archived agent, a closed workspace).
     const cause = by ? null : runErrorDetail(row?.error);
+    // A reply held for its wording is a finished answer, nothing it held for what it says (`heldWording`).
     const wrote = [
+      t.heldWording ?? "",
       ...t.messages
         .slice(t.postedUpTo)
         // A step that called a tool wrote working text: it stays on the transcript and the run's activity.
@@ -2729,7 +2755,7 @@ async function executeRunInner(
     // Cut mid-stream: what it was writing stays in the transcript too ("Continuar" picks up from there).
     if (partial.trim() && t.messages.at(-1)?.role !== "assistant")
       t.messages.push({ role: "assistant", content: [{ type: "text", text: partial.trim() }] });
-    const note = `_Stopped${person ? ` by ${stopper ? `${stopper.name} for ` : ""}${person.name}` : ""}._`;
+    const note = stopNote(person?.name, stopper?.name);
     const message = await db.transaction(async (tx) => {
       // What rides on the reply (files, memory, its browser's trail).
       const carried = takeMemoryUpdates(t);
@@ -3095,7 +3121,7 @@ async function executeRunInner(
     const t = transcript as Transcript;
     // Long work (ADR 0121): this closing line is its report, home; out of steps or stuck, it didn't finish.
     const unfinished = code === "step_limit" ? "run.too_many_tool_calls" : code === "stuck" ? "run.stuck" : undefined;
-    const held = t.held;
+    const held = t.held || t.heldWording;
     const posted = await db.transaction(async (tx) => {
       const lead = held ? await post(tx, workThread(), held, withFallback(t, takeMemoryUpdates(t))) : null;
       if (lead) {
@@ -3137,8 +3163,9 @@ async function executeRunInner(
   /** Ends the run on the reply it held back (`held`), its own words, with what it changed and its cards. */
   const closeOnHeld = () => {
     const t = transcript as Transcript;
-    const held = t.held ?? "";
+    const held = t.held || t.heldWording || "";
     delete t.held;
+    delete t.heldWording;
     return closeWith(held, null, { held: true });
   };
   endWithHeld = closeOnHeld;
@@ -3168,9 +3195,9 @@ async function executeRunInner(
       delete t.passed;
       return false;
     }
-    // It held a reply back (`held`): passing or ending without a word after it ("nothing to add") leaves that reply
-    // as its answer, never lost.
-    if (t.held) {
+    // It held a reply back (`held`, `heldWording`): passing or ending without a word after it ("nothing to add") leaves
+    // that reply as its answer, never lost.
+    if (t.held || t.heldWording) {
       delete t.passed;
       await closeOnHeld();
       return true;
@@ -3210,8 +3237,9 @@ async function executeRunInner(
     const questionId = Bun.randomUUIDv7();
     const toolUseId = `continuation:${questionId}`;
     t.pending = { calls: [{ toolUseId, name: ASK_USER_TOOL, questionId, bridged: true }] };
-    // Its question carries the reply it held back (`heldWords`).
+    // Its question carries the reply it held back (`heldWords`), and is its next words.
     delete t.held;
+    delete t.heldWording;
     const pause = await db.transaction(async (tx) => {
       const posted = await postPauseCards(tx, run, {
         approvals: [],
@@ -3553,6 +3581,8 @@ async function executeRunInner(
     // A background run never posts by itself (ADR 0053 §5): its cards speak for it.
     if (run.background || repeatsLastPost(text)) text = "";
     text = await heldWords(text);
+    // Its cards are its next step: a reply held for its wording no longer stands in for an answer.
+    delete t.heldWording;
     // The bridge posted its cards when it asked: what it says goes with them.
     const message = text ? await post(db, replyThreadId, text, withFallback(t, takeMemoryUpdates(t)), at) : null;
     if (message) t.postedCount++;
@@ -3594,8 +3624,8 @@ async function executeRunInner(
     await deferred;
     const t = transcript as Transcript;
     const name = isComputerBrain(from) ? BRAIN_NAMES[from] : "Claude Code";
-    // A reply it held back (`held`) is still part of what it said.
-    const said = [t.held, stripSentinel(partial)].filter(Boolean).join("\n\n");
+    // A reply it held back (`held`, `heldWording`) is still part of what it said.
+    const said = [t.held || t.heldWording, stripSentinel(partial)].filter(Boolean).join("\n\n");
     // What the CLI said goes where everyone in the conversation reads it: without its paths, stack or secrets.
     const why = cliErrorWords(failure.message);
     const note = `_${name} stopped before finishing (${why}). Already done, not repeated: ${executed.join(", ")}._`;
@@ -5091,6 +5121,8 @@ async function executeRunInner(
         const text = stripSentinel(turnText);
         const spoken = run.background ? "" : asks.length > 0 ? text : pauseLead(text);
         const said = await heldWords(repeatsLastPost(spoken) ? "" : spoken);
+        // Its cards are its next step: a reply held for its wording no longer stands in for an answer.
+        delete t.heldWording;
         const posted = await db.transaction(async (tx) => {
           const lead = said ? await post(tx, replyThreadId, said, withFallback(t, takeMemoryUpdates(t))) : null;
           // The cards, the same way a computer brain's bridged call posts them (`postPauseCards`).
@@ -5248,14 +5280,19 @@ async function executeRunInner(
       // Or it posted a mission report and has no card left to attach: the report is the answer. Coding CLIs
       // always close with a summary that repeats it, whatever the prompt says, so the text is dropped too.
       const noCards = !transcript.artifacts?.length && !transcript.memoryUpdates?.length;
-      // A reply it held back (`held`) is no reaction's or GIF's to replace.
-      const held = transcript.held ?? "";
+      // A reply it held back (`held`, `heldWording`) is no reaction's or GIF's to replace.
+      const held = transcript.held || transcript.heldWording || "";
       const silent =
         (!held && Boolean(transcript.reacted) && restatesReaction(said)) ||
         (!held && Boolean(transcript.mediaSent) && !said && noCards) ||
         (Boolean(transcript.reported) && noCards);
-      // Its own words: this turn's, with the reply it held back, or that reply alone when this turn adds nothing.
-      const words = silent ? said : await heldWords(said);
+      // Its own words: this turn's, with the reply it held back, or that reply alone when this turn adds nothing. A
+      // reply held for its wording is the answer when its rewrite writes nothing (a tool call alone, an empty turn, an
+      // emoji repeating its reaction).
+      const words = silent
+        ? said
+        : (await heldWords(transcript.heldWording && transcript.reacted && restatesReaction(said) ? "" : said)) ||
+          (transcript.heldWording ?? "");
       // The message is the final answer only: the last model call's text. Without it, a short closing line.
       const written = silent
         ? ""
@@ -5335,10 +5372,53 @@ async function executeRunInner(
               ),
             )
           : "";
+      const request = t.request ?? triggerMessage?.body ?? triggerText;
+      // Only this turn's words, when they are posted: a reply it held back (`held`) was read already. A person who chose
+      // technical replies welcomes tool names and paths (ADR 0147), and in a repository's or a mission's work they are
+      // code talk.
+      const fresh = text && words !== held ? said : "";
+      const plain =
+        Boolean(fresh) &&
+        !capped &&
+        !betweenAgents &&
+        !t.repo &&
+        !plan.missionId &&
+        !t.system.some((b) => b.text === TECHNICAL_STYLE_LINE);
+      const listed = [...granted, ...tools];
+      const namedTools = plain
+        ? toolsNamed(
+            fresh,
+            listed.map((x) => x.name),
+            request,
+          )
+        : [];
+      // Files on its computer it cites to people, who can't open them: an agent that can share them and writes no code
+      // (git). Only the model brain shows what its computer did; a coding CLI's own shell isn't in the transcript.
+      const cited =
+        plain &&
+        plan.kind === "model" &&
+        granted.some((g) => g.name === "upload_file") &&
+        !granted.some((g) => g.name === "git_clone")
+          ? localPathsCited(fresh, request, () =>
+              computerWork(t.messages, new Set(listed.filter((x) => x.scope === SANDBOX_SCOPE).map((x) => x.name))),
+            )
+          : [];
+      // The person who connected that computer as their own can open them; a server's own computer is nobody's.
+      const computerId = cited.length > 0 ? (plan.session?.machineId ?? agent.machineId) : null;
+      const machine = computerId ? await getMachine(db, run.orgId, computerId).catch(() => null) : null;
+      const theirs = Boolean(
+        machine &&
+          triggerMessage?.authorUserId &&
+          personalComputer(machine) &&
+          machine.pairedByUserId === triggerMessage.authorUserId,
+      );
+      const localPaths = theirs ? [] : cited;
       let decision = await decideTurnEnd({
         state,
         kind: betweenAgents ? "agents_dm" : "conversation",
         openRequest,
+        namedTools,
+        localPaths,
         executed: transcript.executedCalls ?? 0,
         bound: t.stuck?.endAt !== undefined ? "stuck" : t.wrapUpNoted ? "step_limit" : null,
         quiet: silent && !judged,
@@ -5358,7 +5438,7 @@ async function executeRunInner(
                 orgId: run.orgId,
                 agentId: run.agentId,
                 runId: run.id,
-                request: t.request ?? triggerMessage?.body ?? triggerText,
+                request,
                 reply: judged,
                 ...(await judging.gather()),
                 runKind: betweenAgents ? "agents_dm" : "conversation",
@@ -5390,7 +5470,7 @@ async function executeRunInner(
               agentId: run.agentId,
               runId: run.id,
               question: judged,
-              request: t.request ?? triggerMessage?.body ?? triggerText,
+              request,
               ...judging.evidence,
             }).catch(() => (saysNeedsNothing(judged) ? ("none" as const) : ("person" as const)));
         if (asks === "none") decision = { outcome: "done", rule: "asks_nothing", verdict: "done" };
@@ -5412,6 +5492,8 @@ async function executeRunInner(
         secret: "secret",
         unbacked: "unbacked",
         open_request: "open_request",
+        tool_names: "tool_names",
+        local_paths: "local_paths",
       }[decision.rule];
       const { nudge: _, ...recorded } = { ...decision, count: t.continuation.count };
       later(() =>
@@ -5434,13 +5516,30 @@ async function executeRunInner(
         // after something the next turn may do itself.
         // Nor a secret asked in the chat (ADR 0109 addendum).
         // Nor a result it claims that no call produced (ADR 0167).
+        // Nor a reply naming its tools to a person, nor one citing files on its computer, which nobody else can open.
         if (
           decision.rule === "decision" ||
           decision.rule === "answer" ||
           decision.rule === "untried" ||
           decision.rule === "secret" ||
-          decision.rule === "unbacked"
+          decision.rule === "unbacked" ||
+          decision.rule === "tool_names" ||
+          decision.rule === "local_paths"
         ) {
+          // Its text is never picked up again as unposted words: as the closing line of a turn that writes nothing, in
+          // what a stopped run wrote, or by the restart sweep. A give-up judged untried still goes out if nothing better
+          // comes (`held`), and so does a reply held for its wording (`heldWording`).
+          if (["secret", "unbacked", "tool_names", "local_paths"].includes(decision.rule))
+            t.postedUpTo = t.messages.length;
+          // Held for its wording only, it is still an answer: posted wherever the run ends before its next words. Its
+          // text already carries a reply held back before it (`heldWords`). A later reply held for what it says
+          // (secret, unbacked) leaves it standing and is never posted itself.
+          // Kept as `post` would publish it: a fallback outside this process (a stop while parked, the restart sweep)
+          // posts it as it is.
+          if (decision.rule === "tool_names" || decision.rule === "local_paths") {
+            t.heldWording = await publishable(db, replyThreadId, text);
+            delete t.held;
+          }
           await saveTranscript(db, t);
           continue;
         }

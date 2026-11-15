@@ -190,8 +190,6 @@ html:not([data-pointer]) .issues-stalled__title:focus-visible {
   --menu-pad: var(--space-2);
   width: 344px;
   max-width: calc(100vw - 24px);
-  /* All of it where it fits; on a short screen (a phone) it scrolls inside the room the trigger leaves, not off it. */
-  max-height: var(--radix-popover-content-available-height, none);
   padding: var(--menu-pad);
   gap: 14px;
 }

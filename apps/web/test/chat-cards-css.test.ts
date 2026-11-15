@@ -126,19 +126,22 @@ test("a card's rows start under its title: a row's hover never covers it", () =>
 });
 
 test("two agents talking is one pair row; on a reach line it ends where the list's own line ends", () => {
-  // Long names wrap whole, never cut: the row is one centred sentence, each face kept with its name's first word, the
-  // faces and the ⇄ on the capitals of the words beside them.
-  expect(value(".consult-pair__name", "text-overflow")).toBeUndefined();
-  expect(value(".consult-pair__name", "overflow")).toBeUndefined();
-  expect(value(".consult-pair__row", "white-space")).toBeUndefined();
-  expect(value(".consult-pair__row", "display")).toBe("inline-block");
-  expect(value(".consult-pair__row", "text-align")).toBe("center");
+  // One line, always: the subject gives way first, the names only once it has none left, the word and time never.
+  expect(value(".consult-pair__row", "white-space")).toBe("nowrap");
+  expect(value(".consult-pair__row", "display")).toBe("flex");
   expect(value(".consult-pair__row", "line-height")).toBe("18px");
-  expect(value(".consult-pair__who", "white-space")).toBe("nowrap");
-  expect(value(".consult-pair__who>.consult-pair__name", "white-space")).toBe("normal");
+  expect(value(".consult-pair__row>*", "flex")).toBe("none");
+  expect(value(".consult-pair__row>.consult-pair__subject", "flex")).toBe("0 100000 auto");
+  expect(value(".consult-pair__row>.consult-pair__subject", "text-overflow")).toBe("ellipsis");
+  expect(value(".consult-pair__lead", "flex")).toMatch(/^0 (1 )?auto$/);
+  expect(value(".consult-pair__lead", "text-overflow")).toBe("ellipsis");
+  // On a phone's line the subject leaves the names, the count and the time their room.
+  expect(value(".consult-pair", "container-type")).toBe("inline-size");
+  expect(value(".consult-pair__subject", "display")).toBe("none");
+  expect(value(".consult-pair__word", "flex")).toBeUndefined();
+  expect(value(".consult-pair__time", "flex")).toBeUndefined();
   expect(value(".consult-pair__faces", "vertical-align")).toContain("var(--cap-mid)");
   expect(value(".consult-pair__faces", "display")).toBe("inline-flex");
-  expect(value(".consult-pair__word", "white-space")).toBe("nowrap");
   expect(value(".consult-pair__swap", "vertical-align")).toContain("var(--cap-mid)");
   expect(value(".ag-rcs .ag-rc--talk>.consult-pair", "padding-inline")).toBe("calc(16px - var(--msg-inline))");
 });

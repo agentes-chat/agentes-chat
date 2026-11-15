@@ -446,6 +446,16 @@ export const desktopPtBR = {
     restored: "Backup de {{time}} restaurado",
     restoreFailed: "Esse backup não iniciou, então o agentes.chat voltou como estava. Tente o outro backup.",
     restoreUnreadable: "Esse backup não abre. Tente o outro.",
+    erase: "Apagar e começar de novo…",
+    eraseTitle: "Apagar o agentes.chat neste {{device}}?",
+    eraseBody:
+      "Os workspaces dele somem para todos que os usam, em qualquer aparelho. Os dados dele vão para {{path}} e ficam lá. O que os agentes dele guardavam neste {{device}}, como navegadores e logins, é apagado. Os arquivos dos agentes em ~/agentes são seus e ficam onde estão. Depois você configura de novo, com um novo dono.",
+    eraseConfirm: "Apagar",
+    erased: "Apagado. Os dados antigos estão em {{path}}.",
+    eraseMoveFailed:
+      "Não deu para mover os dados, então nada foi apagado e eles continuam em {{path}}. Ele fica parado até você iniciar de novo.",
+    eraseHeld:
+      "Outro servidor do agentes.chat está usando a pasta dele, então nada foi apagado. Pare esse servidor e tente de novo.",
     noPassword: "Crie uma senha para entrar pelo celular e por outros computadores.",
     addPassword: "Criar uma senha",
     keep: "Manter funcionando",

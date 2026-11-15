@@ -207,6 +207,66 @@ test("a turn cut by the plan after a tool waits in its session and picks up afte
   expect(await notes(f, "plan_limit_cut")).toHaveLength(1);
 });
 
+test("a reply held for its wording waits out the plan's limit on the run: one reply, the rewrite, after the reset", async () => {
+  const named = "Me envie a senha do painel por `request_secret`.";
+  const rewrite = "Te mandei um campo seguro para a senha do painel.";
+  f = await setup({
+    reply: () => ({ chunks: ["pela API"] }),
+    toolSources: [
+      {
+        name: "secrets",
+        tools: async () => [
+          {
+            name: "request_secret",
+            description: "Ask a person for a password or a key on a secure card.",
+            scope: "",
+            inputSchema: { type: "object" },
+            execute: async () => ({ content: "asked" }),
+          },
+        ],
+      },
+    ],
+  });
+  await computerAgent(f);
+  const now = Date.now();
+  setSystemTime(new Date(now));
+  const resetsAt = later(150).toISOString();
+  // Its reply names a tool and is held; its rewrite is cut by the plan after a tool, then finishes after the reset.
+  const { brain, seen } = scripted((n) =>
+    n === 0
+      ? [{ type: "done", text: named }]
+      : n === 1
+        ? [
+            {
+              type: "tool_call",
+              id: "t1",
+              name: "Bash",
+              input: { command: "ls" },
+              executed: { content: "ok" },
+            },
+            { type: "limit", resetsAt },
+            { type: "error", code: "plan_limit", message: "You've hit your session limit", worked: true },
+          ]
+        : [{ type: "done", text: rewrite }],
+  );
+  const handlers = handlersWith(f, brain);
+  await post(f, "@dev entra no painel da Northwind");
+  await drainOutbox(f.db, handlers);
+  const [parked] = await runs(f);
+  expect(parked?.status).toBe("waiting_input");
+  expect((parked?.transcript as { heldWording?: string } | undefined)?.heldWording).toBe(named);
+
+  setSystemTime(new Date(now + 200));
+  await drainOutbox(f.db, handlers, { now: later(RESUME_AFTER_MS + RESUME_GAP_MS) });
+  expect(seen).toHaveLength(3);
+  const [done] = await runs(f);
+  expect(done?.status).toBe("done");
+  const replies = (await f.db.select().from(schema.messages).orderBy(schema.messages.createdAt))
+    .filter((m) => m.authorType === "agent" && !m.meta.bodyCode)
+    .map((m) => m.body);
+  expect(replies).toEqual([rewrite]);
+});
+
 test("a cut whose turn used only the computer's own tools never falls back, even with an API key", async () => {
   f = await setup({ reply: () => ({ chunks: ["pela API"] }) });
   await computerAgent(f);

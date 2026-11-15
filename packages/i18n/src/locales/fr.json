@@ -1827,6 +1827,12 @@
     "use": "Utiliser cette icône",
     "inUse": "Utilisée",
     "sky": "Arrière-plan",
+    "pose": "Pose",
+    "poses": {
+      "front": "De face",
+      "peek": "Coup d'œil"
+    },
+    "peekBare": "En coup d'œil, il ne porte pas d'accessoire.",
     "expression": "Expression du visage",
     "ready": "Prédéfinies",
     "oneOrOther": "Avec un accessoire, l'expression reste la normale.",
@@ -11909,7 +11915,6 @@
       "open": "Changer le modèle de {{agent}}",
       "ownSignIn": "Compte de cet ordinateur",
       "apiKey": "{{provider}} avec une clé d'API",
-      "default": "par défaut",
       "refused": "Refusé avec cette clé",
       "textOnly": "Lit seulement du texte",
       "search": "Rechercher des modèles",
@@ -17637,6 +17642,7 @@
       "waitingYourAnswer": "attend votre réponse",
       "queued": "dans la file",
       "handedOn": "attend d’autres agents",
+      "answered": "a répondu",
       "noAnswer": "n’a pas répondu",
       "notFinished": "n’a pas terminé",
       "someAnswered": "{{done}} sur {{total}} ont répondu",

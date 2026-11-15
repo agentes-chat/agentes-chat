@@ -20,8 +20,9 @@ export const appIconNameKey = (id: AppIconId) => `appIcon.names.${id}` as const;
 
 /**
  * The icons a person makes on their phone (ADR 0179): a sky, one of the agents' colors and either a face or an
- * accessory. A phone takes only icons its build carries, so every combination is drawn when the app is built (336);
- * a face and an accessory together would be 1,920. The generator and the phone's plugin list the same parts.
+ * accessory, or the agent leaning in from the corner with a face. A phone takes only icons its build carries, so
+ * every combination is drawn when the app is built (496); a face and an accessory together would be 1,920. The
+ * generator and the phone's plugin list the same parts.
  */
 export const MADE_ICON_SKIES = ["night", "sky"] as const;
 export type MadeIconSky = (typeof MADE_ICON_SKIES)[number];
@@ -40,14 +41,19 @@ export type MadeIconAccessory = (typeof MADE_ICON_ACCESSORIES)[number];
 export const MADE_ICON_LOOKS = [...MADE_ICON_FACES, ...MADE_ICON_ACCESSORIES] as const;
 export type MadeIconLook = (typeof MADE_ICON_LOOKS)[number];
 
+/** Facing, as the shipped icon, or leaning in from the corner as the Peeking ones: then a face only, as nothing it wears fits. */
+export const MADE_ICON_POSES = ["front", "peek"] as const;
+export type MadeIconPose = (typeof MADE_ICON_POSES)[number];
+
 export interface MadeIcon {
   sky: MadeIconSky;
   color: MadeIconColor;
   look: MadeIconLook;
+  pose: MadeIconPose;
 }
 
 /** The made icon a new pick starts from: the shipped icon's sky, color and face. */
-export const DEFAULT_MADE_ICON: MadeIcon = { sky: "night", color: "sky", look: "round" };
+export const DEFAULT_MADE_ICON: MadeIcon = { sky: "night", color: "sky", look: "round", pose: "front" };
 
 const within = <T extends string>(list: readonly T[], value: string | undefined): T | undefined =>
   (list as readonly string[]).includes(value ?? "") ? (value as T) : undefined;
@@ -57,8 +63,9 @@ export const isMadeIconFace = (look: MadeIconLook): look is MadeIconFace =>
 export const isMadeIconExpression = (look: MadeIconLook): look is MadeIconExpression =>
   (MADE_ICON_EXPRESSIONS as readonly string[]).includes(look);
 
-/** Its id, as the build names its files: `made-night-rose-heart`. */
-export const madeIconId = (icon: MadeIcon) => `made-${icon.sky}-${icon.color}-${icon.look}`;
+/** Its id, as the build names its files: `made-night-rose-heart`, and `made-night-rose-heart-peek` leaning. */
+export const madeIconId = (icon: MadeIcon) =>
+  `made-${icon.sky}-${icon.color}-${icon.look}${icon.pose === "peek" ? "-peek" : ""}`;
 
 /** The made icon an id stands for (null for anything else). */
 export function madeIconOf(id: string): MadeIcon | null {
@@ -66,11 +73,17 @@ export function madeIconOf(id: string): MadeIcon | null {
   const sky = within(MADE_ICON_SKIES, rawSky);
   const color = within(MADE_ICON_COLORS, rawColor);
   const look = within(MADE_ICON_LOOKS, rawLook);
-  return made === "made" && rest.length === 0 && sky && color && look ? { sky, color, look } : null;
+  const pose = rest.length === 0 ? "front" : rest.length === 1 && rest[0] === "peek" ? "peek" : undefined;
+  if (made !== "made" || !sky || !color || !look || !pose) return null;
+  return pose === "peek" && !isMadeIconFace(look) ? null : { sky, color, look, pose };
 }
 
-/** Every made icon, in the lists' order. */
+/** Every made icon, in the lists' order: the facing ones, then the leaning ones. */
 export const madeIcons = (): MadeIcon[] =>
-  MADE_ICON_SKIES.flatMap((sky) =>
-    MADE_ICON_COLORS.flatMap((color) => MADE_ICON_LOOKS.map((look) => ({ sky, color, look }))),
+  MADE_ICON_POSES.flatMap((pose) =>
+    MADE_ICON_SKIES.flatMap((sky) =>
+      MADE_ICON_COLORS.flatMap((color) =>
+        (pose === "peek" ? MADE_ICON_FACES : MADE_ICON_LOOKS).map((look) => ({ sky, color, look, pose })),
+      ),
+    ),
   );

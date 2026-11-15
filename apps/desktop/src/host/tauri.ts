@@ -122,6 +122,7 @@ export function createTauriHost(): Host {
     backupLocalServer: () => invoke<string>("local_server_backup"),
     setLocalBackups: (nightly, copyTo) => invoke<void>("local_server_backups_set", { nightly, copyTo }),
     restoreLocalServer: (file) => invoke<void>("local_server_restore", { file }),
+    eraseLocalServer: () => invoke<string>("local_server_erase"),
     keepRunning: () => invoke<KeepRunning>("keep_running"),
     openSystemSettings: (page) => invoke<void>("open_system_settings", { page }),
     localDiagnostics: () => invoke<string>("local_server_diagnostics"),

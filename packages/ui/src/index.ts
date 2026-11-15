@@ -439,6 +439,7 @@ export {
   emojiEntry,
   searchEmoji,
 } from "./emoji-data";
+export { placeList } from "./floating";
 export {
   applyFormat,
   codeBlock,

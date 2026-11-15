@@ -6,6 +6,7 @@ import {
   MADE_ICON_ACCESSORIES,
   MADE_ICON_COLORS,
   MADE_ICON_FACES,
+  MADE_ICON_POSES,
   MADE_ICON_SKIES,
   madeIconId,
   madeIcons as madeIconList,
@@ -16,6 +17,7 @@ import {
   MADE_ACCESSORIES,
   MADE_COLORS,
   MADE_FACES,
+  MADE_POSES,
   MADE_SKIES,
   madeIcons,
   madeId,
@@ -57,9 +59,25 @@ describe("app icons (ADR 0179)", () => {
     expect(MADE_COLORS).toEqual([...MADE_ICON_COLORS]);
     expect(MADE_FACES).toEqual([...MADE_ICON_FACES]);
     expect(MADE_ACCESSORIES).toEqual([...MADE_ICON_ACCESSORIES]);
+    expect(MADE_POSES).toEqual([...MADE_ICON_POSES]);
     expect(madeIcons().map(madeId)).toEqual(madeIconList().map(madeIconId));
     for (const sky of MADE_SKIES)
-      expect(sizeOf(read(`apps/mobile/assets/app-icons/made/${sky}.png`))).toEqual([360, 360]);
+      for (const name of [sky, `${sky}-peek`])
+        expect(sizeOf(read(`apps/mobile/assets/app-icons/made/${name}.png`))).toEqual([360, 360]);
+  });
+
+  test("a made icon's agent leans in as the Peeking icons' agent, in its color and with its face", () => {
+    const picture = (icon: { sky: string; color: string; look: string; pose?: string }) =>
+      [...render(64, madeScene(icon), { k: 16 }).px].join();
+    // The shipped color and face, leaning in the night, is the Peeking at night icon.
+    expect(picture({ sky: "night", color: "sky", look: "round", pose: "peek" })).toBe(
+      [...render(64, SCENES.peekNight.light(), { k: 16 }).px].join(),
+    );
+    const leaning = picture({ sky: "night", color: "rose", look: "heart", pose: "peek" });
+    expect(leaning).not.toBe(picture({ sky: "night", color: "rose", look: "heart" }));
+    expect(leaning).not.toBe(picture({ sky: "night", color: "rose", look: "round", pose: "peek" }));
+    expect(leaning).not.toBe(picture({ sky: "night", color: "teal", look: "heart", pose: "peek" }));
+    expect(leaning).not.toBe(picture({ sky: "sky", color: "rose", look: "heart", pose: "peek" }));
   });
 
   test("a made icon draws its face or its accessory on the agent", () => {

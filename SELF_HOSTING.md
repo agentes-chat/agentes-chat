@@ -568,14 +568,40 @@ computer and opens agentes.chat, signed in.
 - **Agents with Commands on can reach everything on this Mac**, the server's data in `~/.agentes`
   included. Commands are on by default. Turn them off in the app's **Preferences › Tools**.
 - **No password:** the app signs you in, and on its sign-in screen **Continue on this Mac** does it again
-  whenever your session ends. For a browser on another device, add one in **Settings › Your account**, **Add
-  a password**.
+  whenever your session ends, for as long as your account exists. For a browser on another device, add one in
+  **Settings › Your account**, **Add a password**.
+- **When the owner deletes their account** (**Settings › Your account**), it goes for good 7 days later,
+  with the workspaces only they were in; before then, signing in and pressing **Restore account** brings it
+  back. After that, with no account left, the app opens its welcome window on the account step to make a new
+  owner. With other accounts left, **Continue on this Mac** signs no one in, and each person signs in with
+  their own email.
 - **Preferences › Servers › agentes.chat on this Mac:** reach (Tailscale needs HTTPS turned on for your
   tailnet, which **Turn it on** opens; on Linux, connect Tailscale with `sudo tailscale up`, and run
   `sudo tailscale set --operator=$USER` once), the phone's QR code, usage statistics, **Back up now**
   (`~/.agentes/backups/agentes-<date>.tar.gz`, with the database, the files and `.env`), Restart, Stop,
   and **Stop running it here…**, which keeps its data and stops its agents here; **Start it here** there
   brings both back.
+- **Erase and start over…**, beside it: stops it, moves `~/.agentes` whole to
+  `~/agentes.chat erased <YYYY-MM-DD>` (a number after it when that name is taken), deletes its agents'
+  homes for this computer in `~/.agentes-runner/orgs`, forgets its addresses and their sign-ins in the
+  app, and opens the welcome window for a new setup with a new owner. Its workspaces go for everyone; the
+  agents' files in `~/agentes` stay. Only for the folder the app made, never a terminal install's.
+  To bring it back: quit the app, move a newer `~/.agentes` out of the way, rename the erased folder to
+  `~/.agentes`, and set it up on this computer again. It starts with its workspaces and its owner (the
+  owner key is in the folder); its agents' homes are gone, so they sign in again.
+- **The Trash removes nothing.** All of the above lives outside the app, so trashing it leaves every folder
+  and doesn't stop a running app. To remove it entirely, in this order: turn off **Open at login**
+  (**Preferences › General**), quit the app (**Quit agentes.chat**: on a Mac in the agentes.chat menu or
+  ⌘Q, on Windows and Linux from its icon by the clock; **Quit** if it asks; closing the window only hides
+  it), delete the app, stop a server you installed in `~/.agentes` from the terminal with its own
+  `~/.agentes/app/<version>/bin/agentes-server service uninstall` (quitting the app doesn't stop it), then
+  delete your data, `~/.agentes`, every `~/agentes.chat erased …`, `~/.agentes-runner`
+  (the agents' homes: their browsers and sign-ins) and `~/agentes` (the agents' files), and the app's own
+  settings, window sign-ins and logs: on a Mac every `chat.agentes.desktop*` in
+  `~/Library/Application Support`, `Caches`, `HTTPStorages`, `Logs`, `Preferences` and `WebKit`, and
+  `~/Library/LaunchAgents/agentes.chat.plist`; on Windows `%APPDATA%\chat.agentes.desktop` and
+  `%LOCALAPPDATA%\chat.agentes.desktop`; on Linux `~/.config/chat.agentes.desktop` and
+  `~/.local/share/chat.agentes.desktop`.
 - **Something went wrong?** **Copy details** copies what the app knows, the setup's steps and the end of
   `~/.agentes/logs/server.log`.
 - A server you installed in `~/.agentes` from the terminal stays the terminal's: while it runs, the app

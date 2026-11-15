@@ -17,7 +17,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use tauri::window::Color;
-use tauri::{AppHandle, LogicalPosition, Manager, WebviewBuilder, WebviewUrl};
+use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, WebviewBuilder, WebviewUrl};
 
 use crate::main_window;
 
@@ -50,10 +50,18 @@ struct Shown {
 /// bookkeeping still runs without its web view (the server here's late start, the next opening's cache step).
 const OVER_THE_SITE: bool = !cfg!(target_os = "linux");
 
+/// The window's inner size in points, for the cover's own. In points, never pixels: a web view's size, and the
+/// share of the window it keeps as the window resizes, are worked out in points with the window's scale at the
+/// moment it is made or resized. A size read in pixels is right only while that scale is the one it was read
+/// with; when it isn't, the cover is twice the window on a 2× screen, its message off in a corner.
+fn window_points(window: &tauri::Window) -> tauri::Result<LogicalSize<f64>> {
+    Ok(window.inner_size()?.to_logical(window.scale_factor()?))
+}
+
 /// Adds the cover to the freshly made main window, showing (the splash).
 pub fn attach(app: &AppHandle, window: &tauri::Window) -> tauri::Result<()> {
     if OVER_THE_SITE {
-        let size = window.inner_size()?;
+        let size = window_points(window)?;
         let cover = WebviewBuilder::new(LABEL, WebviewUrl::App("cover.html".into()))
             // Transparent only where the site shows through it as it fades: a transparent WebView2 shows black, not
             // the web view under it, and drops the color.
@@ -90,6 +98,10 @@ pub fn show(app: &AppHandle, min: Duration) {
     let Some(cover) = app.get_webview(LABEL) else { return };
     if !was_shown {
         let _ = cover.eval("window.__coverShown?.()");
+    }
+    // Whatever became of its size while it was hidden, it shows as large as the window.
+    if let Some(Ok(size)) = app.get_window(main_window::LABEL).map(|w| window_points(&w)) {
+        let _ = cover.set_size(size);
     }
     let _ = cover.show();
     main_window::keep_lights(app);

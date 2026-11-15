@@ -1725,6 +1725,12 @@
     "use": "このアイコンを使う",
     "inUse": "使用中",
     "sky": "背景",
+    "pose": "ポーズ",
+    "poses": {
+      "front": "正面",
+      "peek": "のぞく"
+    },
+    "peekBare": "のぞくときは、アクセサリーをつけません。",
     "expression": "表情",
     "ready": "既製のアイコン",
     "oneOrOther": "アクセサリーをつけると、表情はふつうになります。",
@@ -11007,7 +11013,6 @@
       "open": "{{agent}}のモデルを変更",
       "ownSignIn": "このコンピューターのアカウント",
       "apiKey": "APIキーで使う{{provider}}",
-      "default": "既定",
       "refused": "このキーでは拒否されました",
       "textOnly": "テキストのみ",
       "search": "モデルを検索",
@@ -16520,6 +16525,7 @@
       "waitingYourAnswer": "あなたの回答待ち",
       "queued": "順番待ち",
       "handedOn": "ほかのエージェント待ち",
+      "answered": "回答済み",
       "noAnswer": "回答なし",
       "notFinished": "完了せず",
       "someAnswered": "{{total}}件中{{done}}件回答",

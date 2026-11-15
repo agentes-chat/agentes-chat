@@ -1827,6 +1827,12 @@
     "use": "Usa questa icona",
     "inUse": "In uso",
     "sky": "Sfondo",
+    "pose": "Posizione",
+    "poses": {
+      "front": "Di fronte",
+      "peek": "Sbirciando"
+    },
+    "peekBare": "Sbirciando, non porta accessori.",
     "expression": "Espressione",
     "ready": "Predefinite",
     "oneOrOther": "Con un accessorio, l'espressione resta quella normale.",
@@ -11925,7 +11931,6 @@
       "open": "Cambia il modello di {{agent}}",
       "ownSignIn": "Account di questo computer",
       "apiKey": "{{provider}} con chiave API",
-      "default": "predefinito",
       "refused": "Rifiutato con questa chiave",
       "textOnly": "Legge solo testo",
       "search": "Cerca modelli",
@@ -17643,6 +17648,7 @@
       "waitingYourAnswer": "aspetta la tua risposta",
       "queued": "in coda",
       "handedOn": "in attesa di altri agenti",
+      "answered": "ha risposto",
       "noAnswer": "non ha risposto",
       "notFinished": "non ha finito",
       "someAnswered": "{{done}} su {{total}} hanno risposto",
