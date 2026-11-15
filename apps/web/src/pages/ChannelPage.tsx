@@ -1045,14 +1045,28 @@ function ChannelView({
   // Once per conversation (each one mounts its own view): the cursor waits in the box, at the end of a draft.
   // biome-ignore lint/correctness/useExhaustiveDependencies: only on opening; a thread opened with it takes the focus
   useEffect(() => {
-    const box = composer.current;
-    if (draftKey && peekDraft(draftKey)) {
-      // Text handed here is for the person to finish, whatever else holds the focus.
-      if (box) focusAtEnd(box);
-    } else if (box && !panel && mayTakeFocus()) {
-      focusAtEnd(box);
-    }
+    // Text handed here is for the person to finish, whatever else holds the focus.
+    const handed = Boolean(draftKey && peekDraft(draftKey));
     if (draftKey) clearDraft(draftKey);
+    // The box may not take the focus on the first try (not there yet, still off): a few more frames, as long as
+    // nothing else took the focus meanwhile and the person hasn't clicked or touched anything.
+    const held = document.activeElement;
+    let frame = 0;
+    let tries = 0;
+    const stop = () => cancelAnimationFrame(frame);
+    const place = () => {
+      const box = composer.current;
+      if (box && document.activeElement === box) return;
+      if (document.activeElement !== held && document.activeElement !== document.body) return;
+      if (box && !box.disabled && (handed || (!panel && mayTakeFocus()))) focusAtEnd(box);
+      if (document.activeElement !== box && ++tries < 30) frame = requestAnimationFrame(place);
+    };
+    place();
+    window.addEventListener("pointerdown", stop, true);
+    return () => {
+      stop();
+      window.removeEventListener("pointerdown", stop, true);
+    };
   }, [draftKey]);
   // A printable key typed on the conversation, outside any field, goes into its box. Space, Enter, the arrows and the
   // page keys stay the list's, and a key with ⌘, Ctrl or Alt is a shortcut.
@@ -1064,7 +1078,9 @@ function ChannelView({
       if (!/^\S$/u.test(e.key) || typingInField(e.target) || box.closest("[data-voice]")) return;
       // The innermost conversation the key landed in (a thread's panel sits inside its channel); none: the page's.
       const at = e.target instanceof Element ? e.target.closest(".shell__main--chat") : null;
-      if (at ? at !== root.current : chrome?.panel || e.target !== document.body) return;
+      // The sidebar's row of this conversation keeps the focus after the click that opened it: its keys come here too.
+      const fromRow = e.target instanceof Element && e.target.closest('.sidebar a[aria-current="page"]') !== null;
+      if (at ? at !== root.current : chrome?.panel || (e.target !== document.body && !fromRow)) return;
       // A side panel over it (an agent's page, the search's results, its tasks) is not the conversation.
       const side = at && (e.target as Element).closest(".thread-panel");
       if (side && at.contains(side)) return;
