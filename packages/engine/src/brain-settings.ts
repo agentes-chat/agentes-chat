@@ -1610,9 +1610,17 @@ export async function setAccountServes(
 
 // ── Missions ────────────────────────────────────────────────────────────────
 
-/** The brain a mission's executor means (`claude` → Claude Code, `codex` → Codex, `agent` → the model). */
-export const executorBrain = (executor: string): BrainKind =>
-  executor === "codex" ? "codex" : executor === "agent" ? "model" : "claude_code";
+/** The brain a mission's executor means; "agent" follows its brain on this computer, falling back to the API. */
+export const executorBrain = (
+  executor: string,
+  agent?: Pick<Agent, "brain" | "machineId"> | null,
+  missionMachineId?: string | null,
+): BrainKind => {
+  if (executor === "codex") return "codex";
+  if (executor !== "agent") return "claude_code";
+  const configured = brainOf(agent?.brain);
+  return configured === "model" || agent?.machineId === missionMachineId ? configured : "model";
+};
 
 export interface MissionBrainView {
   missionId: string;
@@ -1638,7 +1646,9 @@ async function missionBrainView(
     agentMachine(deps.db, mission.orgId, mission.machineId),
     getAgent(deps.db, mission.orgId, mission.agentId),
   ]);
-  const effectiveBrain = isBrainKind(mission.brain) ? mission.brain : executorBrain(mission.executor);
+  const effectiveBrain = isBrainKind(mission.brain)
+    ? mission.brain
+    : executorBrain(mission.executor, agent, mission.machineId);
   const agentModel = agent && brainOf(agent.brain) === effectiveBrain ? agent.brainModel : null;
   const actor = role === "owner" || role === "decide";
   const open = OPEN_MISSION_STATUSES.includes(mission.status);
@@ -1686,7 +1696,8 @@ export async function setMissionBrain(
       status: mission.status,
     });
   }
-  const effective = isBrainKind(brain) ? brain : executorBrain(mission.executor);
+  const agent = await getAgent(deps.db, orgId, mission.agentId);
+  const effective = isBrainKind(brain) ? brain : executorBrain(mission.executor, agent, mission.machineId);
   if (brainChanged && isComputerBrain(effective)) {
     const machine = await agentMachine(deps.db, orgId, mission.machineId);
     const option = brainOptions(machine).find((o) => o.kind === effective);

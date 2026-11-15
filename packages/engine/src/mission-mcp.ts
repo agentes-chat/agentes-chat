@@ -46,7 +46,7 @@ import {
   requestReview,
   updatePlan,
 } from "./missions";
-import { missionBrain } from "./missions-engine";
+import { missionBrainFor } from "./missions-engine";
 import { resumeRunsWaitingForMachine } from "./run-resume";
 import { type BridgeIdentity, verifyRunToolToken } from "./run-tool-tokens";
 import { bridgeToolsFor, invokeToolForRun } from "./run-tools";
@@ -271,22 +271,27 @@ export function createMissionRunToolSource(deps: Omit<MissionDeps, "db">): ToolS
       const machineId = bridge.machineId;
       const ours = await missionOfRun(ctx);
       /** The run as the mission sees it: its main session, on the computer that holds the bridge. */
-      const asTask = (m: MissionRow) =>
-        ({
+      const asTask = async (m: MissionRow, db: MissionDeps["db"]) => {
+        const { brain } = await missionBrainFor(db, m);
+        return {
           id: ctx.runId,
           sessionId: m.mainSessionId,
-          executor: missionBrain(m).brain === "codex" ? "codex" : "claude",
+          executor: brain === "claude_code" ? "claude" : brain,
           machineId,
           cwd: missionCwd(m),
           missionId: m.id,
-        }) as unknown as MachineTaskRow;
+        } as unknown as MachineTaskRow;
+      };
       const call = async (tool: string, input: Record<string, unknown>, c: typeof ctx): Promise<ToolOutput> => {
         const d = { ...deps, db: c.db };
         // Read again: the mission may have moved since the list.
         const live = await missionOfRun(c);
         try {
           if (tool === PERMISSION_TOOL) {
-            if (live) return { content: await handlePermissionPrompt(d, live, asTask(live), masked(input) as never) };
+            if (live)
+              return {
+                content: await handlePermissionPrompt(d, live, await asTask(live, c.db), masked(input) as never),
+              };
             const granted = await grantedScopeKeys(c.db, c.orgId, c.agentId).catch(() => new Set<string>());
             const asksFirst = (await approvalsLevelOf(c.db, c.orgId, c.agentId)) === "always";
             const canRun = granted.has(grantKey(null, SANDBOX_SCOPE));
@@ -298,7 +303,7 @@ export function createMissionRunToolSource(deps: Omit<MissionDeps, "db">): ToolS
             return refused("mission.not_allowed", NOT_FOR_MISSION);
           }
           return {
-            content: await run(d, live, asTask(live), tool, masked(input) as Record<string, unknown>),
+            content: await run(d, live, await asTask(live, c.db), tool, masked(input) as Record<string, unknown>),
           };
         } catch (error) {
           const code = (error as { code?: unknown }).code;

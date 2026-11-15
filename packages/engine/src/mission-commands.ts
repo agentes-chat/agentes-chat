@@ -416,7 +416,16 @@ const agentCommandRule = (db: Executor, mission: MissionRow, kind: string) =>
     { tool: COMMAND_RULE_TOOL, actions: [kind] },
   );
 
-const executorName = (e: string | null | undefined) => (e === "codex" ? "Codex" : "Claude Code");
+const EXECUTOR_NAMES: Record<string, string> = {
+  claude: "Claude Code",
+  claude_code: "Claude Code",
+  codex: "Codex",
+  cursor: "Cursor",
+  opencode: "OpenCode",
+  grok: "Grok Build",
+  antigravity: "Antigravity",
+};
+const executorName = (e: string | null | undefined) => EXECUTOR_NAMES[e ?? ""] ?? "the agent";
 
 /** The command cards of a mission (who reads its conversation). */
 export async function listMissionCommands(deps: MissionDeps, userId: string, orgId: string, missionId: string) {

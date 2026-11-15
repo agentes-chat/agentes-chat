@@ -100,8 +100,8 @@ const {
 
 /**
  * Missions (ADR 0029): the control layer of long work. The mission's main
- * session is the agent's run in the home thread with the mission's brain (the
- * API model, Claude Code or Codex; ADR 0032 §6, missions-engine.ts): it plans
+ * session is the agent's run in the home thread with the mission's brain
+ * (the API model or a computer brain; ADR 0032 §6, missions-engine.ts): it plans
  * the mission, hears what people send and splits the work into item tasks on
  * the connected computer; our side shows, stores, asks for approval and
  * delivers, with code and no model.

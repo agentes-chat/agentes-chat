@@ -1,5 +1,5 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { and, desc, type Executor, eq, gte, inArray, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, desc, type Executor, eq, gte, inArray, isNull, rowsOf, schema, sql } from "@agenteschat/db";
 import { publishApproval } from "./approvals";
 import type { BrainKind, BrainSession, BrainTurn, ToolResult } from "./brains/types";
 import { abortLocalRun, RUN_CANCEL_TOPIC } from "./cancel";
@@ -51,8 +51,9 @@ const {
  * Missions on the agent engine (ADR 0032 §6, block 4).
  *
  * A mission's main session is the agent's run in the mission's home thread
- * with the mission's brain: `model` (the API, what "executor agent" was),
- * `claude_code` or `codex` (a session on the mission's computer, resumed by
+ * with the mission's brain: the executor's brain, or the configured agent
+ * brain when the executor is "agent" (API or computer CLI); a computer brain
+ * runs in a session on the mission's computer, resumed by
  * `missions.main_session_id`). Everything that wakes the main session — a
  * person's word, Start, accepted suggestions, decisions, reviews, an item's
  * end, the inbox — is a notice in the thread (`meta.missionInbox` / `meta.machineTask`) that starts a run of the
@@ -134,16 +135,51 @@ type BrainOverride = { brain?: string | null; brainModel?: string | null };
 
 /**
  * The mission's brain: its own override (`missions.brain`), else its executor
- * (claude → claude_code, codex → codex, agent → model). The model is the
- * mission's (`missions.brain_model`), else the brain's default (undefined).
+ * (claude → claude_code, codex → codex), or the agent's configured brain
+ * when the executor is "agent" and the computer matches. Otherwise, "agent"
+ * uses the API model.
  */
-export function missionBrain(mission: Pick<MissionRow, "executor"> & BrainOverride): {
+export function missionBrain(
+  mission: Pick<MissionRow, "executor"> & Partial<Pick<MissionRow, "machineId">> & BrainOverride,
+  agent?: { brain?: string | null; machineId?: string | null } | null,
+): {
   brain: BrainKind;
   model?: string;
 } {
   const override = mission.brain && (BRAINS as readonly string[]).includes(mission.brain) ? mission.brain : null;
-  const brain = (override as BrainKind | null) ?? BRAIN_OF_EXECUTOR[mission.executor] ?? "model";
+  const configured = agent?.brain && (BRAINS as readonly string[]).includes(agent.brain) ? agent.brain : null;
+  const inherited =
+    mission.executor === "agent" &&
+    (configured === "model" || agent?.machineId === mission.machineId)
+      ? configured
+      : null;
+  const brain =
+    (override as BrainKind | null) ??
+    (inherited as BrainKind | null) ??
+    BRAIN_OF_EXECUTOR[mission.executor] ??
+    "model";
   return mission.brainModel ? { brain, model: mission.brainModel } : { brain };
+}
+
+/** Resolves the executor against the agent's current brain for mission turns and settings. */
+export async function missionBrainFor(
+  db: Executor,
+  mission: Pick<MissionRow, "orgId" | "agentId" | "executor"> & BrainOverride,
+) {
+  const override = mission.brain && (BRAINS as readonly string[]).includes(mission.brain);
+  if (mission.executor !== "agent" || override) return missionBrain(mission);
+  const [agent] = await db
+    .select({ brain: schema.agents.brain, machineId: schema.agents.machineId })
+    .from(schema.agents)
+    .where(
+      and(
+        eq(schema.agents.orgId, mission.orgId),
+        eq(schema.agents.id, mission.agentId),
+        isNull(schema.agents.deletedAt),
+      ),
+    )
+    .limit(1);
+  return missionBrain(mission, agent);
 }
 
 /** Marks the first engine turn of a session (so later turns resume it). */
@@ -196,7 +232,7 @@ export async function missionTurnFor(
   if (!run.threadRootId || run.threadRootId === run.triggerMessageId) return null;
   const mission = await missionOfThread(db, run.orgId, run.threadRootId);
   if (!mission || mission.agentId !== run.agentId || !OPEN_MISSION_STATUSES.includes(mission.status)) return null;
-  const choice = missionBrain(mission as MissionRow & BrainOverride);
+  const choice = await missionBrainFor(db, mission as MissionRow & BrainOverride);
   const session = await missionSession(db, mission, choice.brain, { exceptRunId: run.id ?? null });
   return { missionId: mission.id, ...choice, ...(session ? { session } : {}) };
 }
@@ -273,7 +309,7 @@ export async function tellMainSession(
     await queueForSession(deps.db, fresh, entry);
     return { delivered: false };
   }
-  const choice = missionBrain(fresh as MissionRow & BrainOverride);
+  const choice = await missionBrainFor(deps.db, fresh as MissionRow & BrainOverride);
   const engine = engineOf(deps);
   if (options.resume) {
     const waiting = await waitingRun(deps.db, fresh);
