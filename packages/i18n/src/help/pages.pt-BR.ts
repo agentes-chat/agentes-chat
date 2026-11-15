@@ -489,7 +489,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Quando o agentes.chat hospeda o seu workspace, o Jev está incluído. Num servidor que você mesmo roda, ele usa a chave da TypeSafe do dono, cerca de US$ 0,0001 por mensagem: [Configurar o Jev](/help/jev#setup).",
+          "Quando o agentes.chat hospeda o seu workspace, o Jev está incluído. Num servidor que você mesmo roda, ele usa a chave da TypeSafe ou do OpenRouter do dono, cerca de US$ 0,0001 por mensagem: [Configurar o Jev](/help/jev#setup).",
         ],
       },
       {
@@ -551,6 +551,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
               "No agentes.chat, abra **Configurações\u00a0›\u00a0IA e uso** e cole em **Jev**. Só quem configurou este servidor vê essa parte.",
             ],
           },
+          "Já paga o OpenRouter? Escolha **OpenRouter** em **Jev** e cole uma chave de https://openrouter.ai/keys, ou ligue o Jev com a chave do OpenRouter do workspace num clique. É o mesmo Jev, cobrado pelo OpenRouter pelo mesmo preço.",
           "Num servidor que você roda com Docker, dá para colocar a chave no `.env` como `TYPESAFE_API_KEY`. Essa vale mais que a das Configurações.",
         ],
       },
@@ -585,6 +586,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
           },
           "A TypeSafe roda o Jev nos Estados Unidos e não treina os modelos dela com o que você envia. Ela guarda os dados pelo tempo necessário para operar o serviço. A TypeSafe oferece retenção zero nos planos enterprise.",
           "Política de privacidade da TypeSafe: https://typesafe.ai/legal/privacy-policy. Contrato de tratamento de dados: https://typesafe.ai/legal/data-processing.",
+          "Com uma chave do OpenRouter, os mesmos pedidos passam pelo OpenRouter a caminho da TypeSafe, sob os termos do OpenRouter e as suas configurações de privacidade lá: https://openrouter.ai/privacy.",
         ],
       },
       {

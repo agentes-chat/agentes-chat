@@ -2744,6 +2744,7 @@
         "ai_account": "割り当てられるのはアカウントの持ち主だけです",
         "name": "エージェントの名前を変えられるのは管理者だけです",
         "look": "見た目を変えられるのは管理者と責任者だけです",
+        "group": "エージェントの部署を変えられるのは管理者だけです",
         "reports_to": "エージェントの報告先を変えられるのは管理者だけです",
         "many": "これらの変更ができるのは管理者だけです"
       }
@@ -2758,6 +2759,7 @@
       "channel": "チャンネル",
       "name": "名前",
       "look": "見た目",
+      "group": "部署",
       "reports_to": "報告先",
       "skill": "スキル「{{name}}」"
     },
@@ -9801,7 +9803,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "TypeSafeの高速モデルで、すばやい判断のために作られています。agentes.chatは、誰が返信するかといった小さな質問をJevに尋ねます。料金はTypeSafeに直接お支払いください。",
+    "about": "TypeSafeの高速モデルで、すばやい判断のために作られています。agentes.chatは、誰が返信するかといった小さな質問をJevに尋ねます。料金はTypeSafeに直接、またはOpenRouter経由で同じ料金でお支払いください。",
     "lead": "エージェントがチームとして働けるよう手助けします。",
     "how": "Jevのしくみ",
     "why": {
@@ -9841,6 +9843,32 @@
       "envInvalid": "TypeSafeがこのキーを受け付けませんでした。このサーバーの設定（TYPESAFE_API_KEY）で変更してください。"
     },
     "checkAgain": "もう一度確認",
+    "via": {
+      "label": "Jevの支払い先",
+      "typesafe": "TypeSafe",
+      "typesafeText": "TypeSafeのアカウントで、前払いのクレジットを使います。",
+      "openrouter": "OpenRouter",
+      "openrouterText": "OpenRouterのキーで、同じ料金です。",
+      "connected": "キーは接続済み"
+    },
+    "openRouter": {
+      "create": "OpenRouterでキーを作成",
+      "createHint": "OpenRouterのクレジットを使います。料金はTypeSafeと同じで、100万トークンあたりUS$ {{price}}、返信する人の選択1回あたり約US$ {{call}}です。",
+      "open": "OpenRouterを開く",
+      "placeholder": "OpenRouterのキー",
+      "shape": "OpenRouterのキーはsk-or-v1-で始まります。確認してもう一度貼り付けてください。",
+      "invalid": "OpenRouterがこのキーを受け付けませんでした。キーのページからもう一度コピーしてください。",
+      "keyName": "OpenRouterのキー",
+      "same": "プロバイダーのキーにあるもの",
+      "forAll": "このサーバーのすべてのワークスペースの Jev の料金をこのキーで支払います。",
+      "turnOn": "Jevをオンにする",
+      "otherKey": "別のキーを使う",
+      "line": {
+        "invalid": "OpenRouterがこのキーを受け付けませんでした。新しいキーを作成してください。",
+        "no_credit": "OpenRouterでクレジットを追加してください。Jevは自動で再開します。",
+        "envInvalid": "OpenRouterがこのキーを受け付けませんでした。このサーバーの設定（TYPESAFE_API_KEY）で変更してください。"
+      }
+    },
     "remove": {
       "title": "Jevのキーを削除しますか？",
       "text": "キーがなくてもエージェントは動き続けます。"
@@ -14444,7 +14472,8 @@
     },
     "agentGroup": {
       "notFound": "この部署はもうありません。",
-      "tooMany": "このワークスペースにはすでに {{max}} 個の部署があります。先に 1 つ削除してください。"
+      "tooMany": "このワークスペースにはすでに {{max}} 個の部署があります。先に 1 つ削除してください。",
+      "ambiguous": "{{name}} という名前の部署が 2 つあります。どちらかの名前を変えてから、もう一度お試しください。"
     },
     "rightHand": {
       "permanent": "右腕はワークスペースの一部で、チャンネルには入りません。@メンションすれば、どのチャンネルでも呼べます。",

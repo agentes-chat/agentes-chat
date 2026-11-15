@@ -31,13 +31,18 @@ export interface ServerTelemetry {
 export interface JevKey {
   /** `env`: `TYPESAFE_API_KEY`, read-only here. `settings`: added in Settings. Null: none. */
   source: "env" | "settings" | null;
+  /** Who the key is from: Jev called and paid through TypeSafe, or through OpenRouter. Null: no key. */
+  via: "typesafe" | "openrouter" | null;
   /** The key's last 4 characters (the key itself is never returned). */
   hint: string | null;
-  /** What its owner can fix: TypeSafe refused the key, or its account is out of credit. Else `ok`. */
+  /** What its owner can fix: TypeSafe or OpenRouter refused the key, or its account is out of credit. Else `ok`. */
   state: "off" | "ok" | "invalid" | "no_credit";
   /** Jev's calls this month (UTC), every workspace together. */
   month: { decisions: number; costUsd: number };
 }
+
+/** Jev's key to save: one pasted (TypeSafe's or OpenRouter's), or the workspace's own OpenRouter key. */
+export type JevKeyInput = string | { orgId: string; credentialId: string };
 
 /**
  * The installation's GIPHY key, for its pinned owner on a server that isn't agentes.chat's own (`GET
@@ -1033,7 +1038,7 @@ export interface AgentInput {
   mediaReplies?: boolean;
   /** The Autonomia it starts with (the last setup's, ADR 0094): only an admin or its own owner sends it. */
   autonomy?: CommandApproval;
-  /** Editing only: its autonomy brakes (ADR 0131); the fields given change. */
+  /** Its autonomy brakes (ADR 0131); the fields given change. Same permission as editing the agent. */
   brakes?: Partial<AgentBrakes>;
   /** How much it asks before acting (ADR 0173); same permission as editing the agent. */
   approvalsLevel?: ApprovalsLevel;
@@ -2385,6 +2390,7 @@ export type ProposalSettingField =
   | "skill"
   | "name"
   | "look"
+  | "group"
   | "reports_to"
   | "archive"
   | "delete";
@@ -2394,8 +2400,8 @@ export type ProposalSettingField =
  * null (the workspace's default); `owner` a user id; `audience` `{ mode, userIds, roleIds }`; `channel_add` /
  * `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a
  * mention); `skill` whether it has the skill in `skillId` on (its name in `label.to`); `name` its name; `look`
- * `{ color, eyes, accessory }`; `reports_to` an agent id or null (Responde a); `archive` true. `label`: the server's
- * names for ids.
+ * `{ color, eyes, accessory }`; `reports_to` an agent id or null (Responde a); `group` its department's name or
+ * null; `archive` true. `label`: the server's names for ids.
  */
 export interface ProposalSettingLine {
   field: ProposalSettingField;

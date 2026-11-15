@@ -2744,6 +2744,7 @@
         "ai_account": "계정 주인만 줄 수 있어요",
         "name": "에이전트 이름은 관리자만 바꿀 수 있어요",
         "look": "모습은 관리자와 담당자만 바꿀 수 있어요",
+        "group": "에이전트의 부서는 관리자만 바꿀 수 있어요",
         "reports_to": "에이전트의 보고 대상은 관리자만 바꿀 수 있어요",
         "many": "이 변경은 관리자만 할 수 있어요"
       }
@@ -2758,6 +2759,7 @@
       "channel": "채널",
       "name": "이름",
       "look": "모습",
+      "group": "부서",
       "reports_to": "보고 대상",
       "skill": "스킬 {{name}}"
     },
@@ -9795,7 +9797,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "TypeSafe가 만든 빠른 모델로, 빠른 결정을 위해 만들어졌어요. agentes.chat은 누가 답할지 같은 작은 질문을 Jev에게 물어요. 비용은 TypeSafe에 직접 결제해요.",
+    "about": "TypeSafe가 만든 빠른 모델로, 빠른 결정을 위해 만들어졌어요. agentes.chat은 누가 답할지 같은 작은 질문을 Jev에게 물어요. 비용은 TypeSafe에 직접 결제하거나, 같은 가격으로 OpenRouter를 통해 결제해요.",
     "lead": "에이전트들이 팀으로 일하도록 도와요.",
     "how": "Jev 작동 방식",
     "why": {
@@ -9835,6 +9837,32 @@
       "envInvalid": "TypeSafe가 이 키를 받지 않았어요. 이 서버의 설정(TYPESAFE_API_KEY)에서 바꾸세요."
     },
     "checkAgain": "다시 확인",
+    "via": {
+      "label": "Jev 결제처",
+      "typesafe": "TypeSafe",
+      "typesafeText": "TypeSafe 계정에서 선불 크레딧으로 결제해요.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "OpenRouter 키로, 같은 가격이에요.",
+      "connected": "키가 이미 연결됨"
+    },
+    "openRouter": {
+      "create": "OpenRouter에서 키 만들기",
+      "createHint": "OpenRouter 크레딧으로 결제해요. Jev 가격은 TypeSafe와 같아요. 100만 토큰당 US$ {{price}}이고, 누가 답할지 고르는 데 약 US$ {{call}}이 들어요.",
+      "open": "OpenRouter 열기",
+      "placeholder": "OpenRouter 키",
+      "shape": "OpenRouter 키는 sk-or-v1-로 시작해요. 확인하고 다시 붙여넣으세요.",
+      "invalid": "OpenRouter가 이 키를 받지 않았어요. 키 페이지에서 다시 복사하세요.",
+      "keyName": "OpenRouter 키",
+      "same": "제공업체 키에 있는 키",
+      "forAll": "이 키로 이 서버의 모든 워크스페이스에서 쓰는 Jev 비용을 내요.",
+      "turnOn": "Jev 켜기",
+      "otherKey": "다른 키 사용",
+      "line": {
+        "invalid": "OpenRouter가 이 키를 받지 않았어요. 새 키를 만드세요.",
+        "no_credit": "OpenRouter에서 크레딧을 충전하세요. Jev가 알아서 다시 시작해요.",
+        "envInvalid": "OpenRouter가 이 키를 받지 않았어요. 이 서버의 설정(TYPESAFE_API_KEY)에서 바꾸세요."
+      }
+    },
     "remove": {
       "title": "Jev 키를 삭제할까요?",
       "text": "키가 없어도 에이전트는 계속 일해요."
@@ -14438,7 +14466,8 @@
     },
     "agentGroup": {
       "notFound": "이 부서는 더 이상 없어요.",
-      "tooMany": "이 워크스페이스에는 이미 부서가 {{max}}개 있어요. 먼저 하나를 삭제하세요."
+      "tooMany": "이 워크스페이스에는 이미 부서가 {{max}}개 있어요. 먼저 하나를 삭제하세요.",
+      "ambiguous": "{{name}}(이)라는 부서가 두 개 있어요. 하나의 이름을 바꾼 뒤 다시 시도하세요."
     },
     "rightHand": {
       "permanent": "오른팔은 워크스페이스의 일부라 채널에 들어가지 않아요. @멘션하면 어느 채널에서든 부를 수 있어요.",

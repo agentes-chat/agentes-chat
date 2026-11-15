@@ -14288,6 +14288,26 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 .jev-steps__below {
   margin: 0;
 }
+/* The workspace's OpenRouter key on offer for Jev: the key's name and line, then the button that turns Jev on. */
+.jev-ready {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.jev-ready__key {
+  display: flex;
+  flex-direction: column;
+}
+/* Its buttons go under one another on a phone, never past the card's edge (as a card's own line of buttons). */
+.jev-ready > .ac-acts {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+}
+/* Where Jev is paid, in the card's narrow body: a row's quiet tag ("Key already connected") goes under its name. */
+.jev__body .ac-optrow__title {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
 /* Leading a receipt's line under its message, the icon's 2px of padding reach out, so the icon starts on the text's
    edge, as the words do. */
 .ac-msg__foot .ac-receipt > .ac-receipt__check:first-child {

@@ -2931,6 +2931,7 @@
         "ai_account": "Solo il proprietario dell’account lo assegna",
         "name": "Solo gli admin rinominano un agente",
         "look": "Solo gli admin e il responsabile cambiano il suo aspetto",
+        "group": "Solo gli admin spostano un agente di reparto",
         "reports_to": "Solo gli admin cambiano a chi risponde un agente",
         "many": "Solo gli admin fanno queste modifiche"
       }
@@ -2945,6 +2946,7 @@
       "channel": "Canale",
       "name": "Nome",
       "look": "Aspetto",
+      "group": "Reparto",
       "reports_to": "Risponde a",
       "skill": "Skill {{name}}"
     },
@@ -10599,7 +10601,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "Un modello veloce di TypeSafe, pensato per decisioni rapide. agentes.chat gli fa piccole domande, come chi deve rispondere. Paghi TypeSafe direttamente.",
+    "about": "Un modello veloce di TypeSafe, pensato per decisioni rapide. agentes.chat gli fa piccole domande, come chi deve rispondere. Paghi TypeSafe direttamente, oppure tramite OpenRouter allo stesso prezzo.",
     "lead": "Aiuta i tuoi agenti a lavorare in team.",
     "how": "Come funziona Jev",
     "why": {
@@ -10641,6 +10643,32 @@
       "envInvalid": "TypeSafe non ha accettato questa chiave. Cambiala nelle impostazioni di questo server (TYPESAFE_API_KEY)."
     },
     "checkAgain": "Controlla di nuovo",
+    "via": {
+      "label": "Dove paghi Jev",
+      "typesafe": "TypeSafe",
+      "typesafeText": "Un account direttamente su TypeSafe, con credito prepagato.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "Con una chiave OpenRouter, allo stesso prezzo.",
+      "connected": "Chiave già collegata"
+    },
+    "openRouter": {
+      "create": "Crea una chiave su OpenRouter",
+      "createHint": "Con credito su OpenRouter. Jev costa come su TypeSafe: US$ {{price}} per milione di token. Scegliere chi risponde costa circa US$ {{call}}.",
+      "open": "Apri OpenRouter",
+      "placeholder": "La tua chiave OpenRouter",
+      "shape": "Le chiavi OpenRouter iniziano con sk-or-v1-. Controllala e incollala di nuovo.",
+      "invalid": "OpenRouter non ha accettato questa chiave. Copiala di nuovo dalla pagina delle chiavi.",
+      "keyName": "Chiave OpenRouter",
+      "same": "Quella in Chiavi dei provider",
+      "forAll": "Paga Jev per tutti gli spazi di lavoro di questo server.",
+      "turnOn": "Attiva Jev",
+      "otherKey": "Usa un'altra chiave",
+      "line": {
+        "invalid": "OpenRouter non ha accettato questa chiave. Creane una nuova.",
+        "no_credit": "Aggiungi credito su OpenRouter. Jev riparte da solo.",
+        "envInvalid": "OpenRouter non ha accettato questa chiave. Cambiala nelle impostazioni di questo server (TYPESAFE_API_KEY)."
+      }
+    },
     "remove": {
       "title": "Rimuovere la chiave di Jev?",
       "text": "Gli agenti continuano a lavorare anche senza."
@@ -15497,7 +15525,8 @@
     },
     "agentGroup": {
       "notFound": "Questo reparto non esiste più.",
-      "tooMany": "Questo spazio di lavoro ha già {{max}} reparti. Eliminane prima uno."
+      "tooMany": "Questo spazio di lavoro ha già {{max}} reparti. Eliminane prima uno.",
+      "ambiguous": "Due reparti si chiamano {{name}}. Rinominane uno e riprova."
     },
     "rightHand": {
       "permanent": "Il braccio destro fa parte dello spazio di lavoro e resta fuori dai canali. Una @menzione lo raggiunge in qualsiasi canale.",

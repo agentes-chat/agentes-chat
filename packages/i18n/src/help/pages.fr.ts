@@ -496,7 +496,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Quand agentes.chat héberge votre espace de travail, Jev est inclus. Sur un serveur que vous gérez vous-même, il utilise la clé TypeSafe du propriétaire, environ 0,0001 USD par message : [Configurer Jev](/help/jev#setup).",
+          "Quand agentes.chat héberge votre espace de travail, Jev est inclus. Sur un serveur que vous gérez vous-même, il utilise la clé TypeSafe ou OpenRouter du propriétaire, environ 0,0001 USD par message : [Configurer Jev](/help/jev#setup).",
         ],
       },
       {
@@ -558,6 +558,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
               "Dans agentes.chat, ouvrez **Paramètres › IA et utilisation** et collez-la sous **Jev**. Seule la personne qui a installé ce serveur la voit.",
             ],
           },
+          "Vous payez déjà OpenRouter ? Choisissez **OpenRouter** sous **Jev** et collez une clé de https://openrouter.ai/keys, ou activez Jev en un clic avec la clé OpenRouter de l'espace de travail. C'est le même Jev, facturé via OpenRouter au même prix.",
           "Sur un serveur que vous faites tourner avec Docker, vous pouvez plutôt mettre la clé dans `.env` en tant que `TYPESAFE_API_KEY`. Celle-ci l’emporte sur celle des Paramètres.",
         ],
       },
@@ -592,6 +593,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe fait tourner Jev aux États-Unis et n’entraîne pas ses modèles sur ce que vous envoyez. Il conserve les données le temps nécessaire au fonctionnement du service. La rétention zéro est disponible dans ses offres entreprise.",
           "Politique de confidentialité de TypeSafe : https://typesafe.ai/legal/privacy-policy. Son accord de traitement des données : https://typesafe.ai/legal/data-processing.",
+          "Avec une clé OpenRouter, les mêmes requêtes passent par OpenRouter avant d'arriver chez TypeSafe, selon les conditions d'OpenRouter et vos réglages de confidentialité chez lui : https://openrouter.ai/privacy.",
         ],
       },
       {

@@ -2743,6 +2743,7 @@
         "ai_account": "只有账户所有者能分配它",
         "name": "只有管理员能重命名智能体",
         "look": "只有管理员和负责人能更改它的外观",
+        "group": "只有管理员能更改智能体所在的部门",
         "reports_to": "只有管理员能更改智能体的汇报对象",
         "many": "只有管理员能做这些更改"
       }
@@ -2757,6 +2758,7 @@
       "channel": "频道",
       "name": "名称",
       "look": "外观",
+      "group": "部门",
       "reports_to": "汇报对象",
       "skill": "技能 {{name}}"
     },
@@ -9846,7 +9848,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "TypeSafe 推出的快速模型，专为快速决策而生。agentes.chat 会问它一些小问题，比如该由谁来回复。费用直接付给 TypeSafe。",
+    "about": "TypeSafe 推出的快速模型，专为快速决策而生。agentes.chat 会问它一些小问题，比如该由谁来回复。费用直接付给 TypeSafe，或以同样的价格通过 OpenRouter 支付。",
     "lead": "帮你的智能体像团队一样协作。",
     "how": "Jev 如何工作",
     "why": {
@@ -9886,6 +9888,32 @@
       "envInvalid": "TypeSafe 不接受这个密钥。请在此服务器的设置中更改（TYPESAFE_API_KEY）。"
     },
     "checkAgain": "重新检查",
+    "via": {
+      "label": "Jev 的付费方式",
+      "typesafe": "TypeSafe",
+      "typesafeText": "直接使用 TypeSafe 账户，预付费额度。",
+      "openrouter": "OpenRouter",
+      "openrouterText": "使用 OpenRouter 密钥，价格相同。",
+      "connected": "密钥已连接"
+    },
+    "openRouter": {
+      "create": "在 OpenRouter 创建密钥",
+      "createHint": "使用 OpenRouter 的额度。Jev 的价格与 TypeSafe 相同：每百万 token US$ {{price}}。决定一次谁来回复大约花费 US$ {{call}}。",
+      "open": "打开 OpenRouter",
+      "placeholder": "你的 OpenRouter 密钥",
+      "shape": "OpenRouter 密钥以 sk-or-v1- 开头。请检查后重新粘贴。",
+      "invalid": "OpenRouter 不接受这个密钥。请从密钥页面重新复制。",
+      "keyName": "OpenRouter 密钥",
+      "same": "服务商密钥中的那个",
+      "forAll": "它为此服务器上所有工作区的 Jev 付费。",
+      "turnOn": "开启 Jev",
+      "otherKey": "使用其他密钥",
+      "line": {
+        "invalid": "OpenRouter 不接受这个密钥。请创建一个新的。",
+        "no_credit": "在 OpenRouter 充值后，Jev 会自动恢复。",
+        "envInvalid": "OpenRouter 不接受这个密钥。请在此服务器的设置中更改（TYPESAFE_API_KEY）。"
+      }
+    },
     "remove": {
       "title": "移除 Jev 密钥？",
       "text": "没有它，智能体也会继续工作。"
@@ -14508,7 +14536,8 @@
     },
     "agentGroup": {
       "notFound": "这个部门已不存在。",
-      "tooMany": "这个工作区已有 {{max}} 个部门。请先删除一个。"
+      "tooMany": "这个工作区已有 {{max}} 个部门。请先删除一个。",
+      "ambiguous": "有两个部门都叫 {{name}}。请重命名其中一个，然后重试。"
     },
     "rightHand": {
       "permanent": "得力助手属于整个工作区，不加入频道。在任何频道 @提及它即可叫到它。",

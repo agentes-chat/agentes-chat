@@ -273,6 +273,10 @@ export async function createAgent(
   if (input.approvalsLevel !== undefined && !can(membership, "manage_agents")) {
     throw new ForbiddenError("Only who manages agents can set how much an agent asks");
   }
+  // So are its brakes (ADR 0131), stored normalized as on an edit.
+  if (input.autonomyBrakes !== undefined && !can(membership, "manage_agents")) {
+    throw new ForbiddenError("Only who manages agents can set an agent's brakes");
+  }
   // What one agent may spend beyond the workspace's default is for who edits any agent: a member's new agent takes
   // at most the default.
   if (
@@ -286,6 +290,7 @@ export async function createAgent(
     ...fields,
     handle: fields.handle.toLowerCase(),
     model: fields.model ?? defaults.model,
+    ...(fields.autonomyBrakes !== undefined ? { autonomyBrakes: chosenAutonomy(fields.autonomyBrakes) } : {}),
   });
   await validateAgentFields(db, orgId, values);
   const ownerUserId = input.ownerUserId === undefined ? actorId : input.ownerUserId;

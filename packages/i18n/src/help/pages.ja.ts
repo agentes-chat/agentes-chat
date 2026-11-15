@@ -492,7 +492,7 @@ export const helpJa: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "agentes.chat がワークスペースをホストしている場合、Jev は含まれています。自分で運用するサーバーでは、オーナーの TypeSafe キーを使い、1メッセージあたり約 US$ 0.0001 かかります: [Jev を設定する](/help/jev#setup)",
+          "agentes.chat がワークスペースをホストしている場合、Jev は含まれています。自分で運用するサーバーでは、オーナーの TypeSafe または OpenRouter のキーを使い、1メッセージあたり約 US$ 0.0001 かかります: [Jev を設定する](/help/jev#setup)",
         ],
       },
       {
@@ -554,6 +554,7 @@ export const helpJa: Partial<Record<HelpSlug, HelpDocument>> = {
               "agentes.chat で **設定 › AIと使用量** を開き、**Jev** の欄に貼り付けます。キーを見られるのは、このサーバーを設定した人だけです。",
             ],
           },
+          "すでに OpenRouter を使っているなら、**Jev** で **OpenRouter** を選んで https://openrouter.ai/keys のキーを貼り付けるか、ワークスペースの OpenRouter キーでワンクリックで Jev をオンにできます。同じ Jev が、同じ料金で OpenRouter 経由で請求されます。",
           "Docker で運用しているサーバーでは、代わりに `.env` の `TYPESAFE_API_KEY` にキーを入れることもできます。その場合は設定画面のキーより優先されます。",
         ],
       },
@@ -588,6 +589,7 @@ export const helpJa: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe は Jev を米国で運用しており、送信された内容をモデルの学習に使いません。データはサービスの運用に必要な期間だけ保持します。データを保持しないオプションは、エンタープライズプランで利用できます。",
           "TypeSafe のプライバシーポリシー: https://typesafe.ai/legal/privacy-policy 。データ処理契約: https://typesafe.ai/legal/data-processing 。",
+          "OpenRouter のキーを使う場合、同じリクエストが OpenRouter を経由して TypeSafe に届き、OpenRouter の規約とそこでのプライバシー設定が適用されます: https://openrouter.ai/privacy",
         ],
       },
       {

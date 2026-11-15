@@ -2838,6 +2838,7 @@
         "ai_account": "Nur die Person, der das Konto gehört, vergibt es",
         "name": "Nur Admins benennen einen Agenten um",
         "look": "Nur Admins und sein Verantwortlicher ändern sein Aussehen",
+        "group": "Nur Admins versetzen einen Agenten in eine andere Abteilung",
         "reports_to": "Nur Admins ändern, an wen ein Agent berichtet",
         "many": "Nur Admins machen diese Änderungen"
       }
@@ -2852,6 +2853,7 @@
       "channel": "Kanal",
       "name": "Name",
       "look": "Aussehen",
+      "group": "Abteilung",
       "reports_to": "Berichtet an",
       "skill": "Skill {{name}}"
     },
@@ -10205,7 +10207,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "Ein schnelles Modell von TypeSafe, gemacht für schnelle Entscheidungen. agentes.chat stellt ihm kleine Fragen, etwa wer antworten soll. Du bezahlst TypeSafe direkt.",
+    "about": "Ein schnelles Modell von TypeSafe, gemacht für schnelle Entscheidungen. agentes.chat stellt ihm kleine Fragen, etwa wer antworten soll. Du bezahlst TypeSafe direkt oder über OpenRouter zum selben Preis.",
     "lead": "Hilft deinen Agenten, als Team zu arbeiten.",
     "how": "So funktioniert Jev",
     "why": {
@@ -10246,6 +10248,32 @@
       "envInvalid": "TypeSafe hat diesen Schlüssel nicht akzeptiert. Ändere ihn in den Einstellungen dieses Servers (TYPESAFE_API_KEY)."
     },
     "checkAgain": "Erneut prüfen",
+    "via": {
+      "label": "Wo du für Jev bezahlst",
+      "typesafe": "TypeSafe",
+      "typesafeText": "Ein Konto direkt bei TypeSafe, mit Prepaid-Guthaben.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "Mit einem OpenRouter-Schlüssel, zum selben Preis.",
+      "connected": "Schlüssel schon verbunden"
+    },
+    "openRouter": {
+      "create": "Erstelle einen Schlüssel bei OpenRouter",
+      "createHint": "Mit Guthaben bei OpenRouter. Jev kostet dasselbe wie bei TypeSafe: US$ {{price}} pro Million Tokens. Die Wahl, wer antwortet, kostet etwa US$ {{call}}.",
+      "open": "OpenRouter öffnen",
+      "placeholder": "Dein OpenRouter-Schlüssel",
+      "shape": "OpenRouter-Schlüssel beginnen mit sk-or-v1-. Prüfe ihn und füge ihn noch einmal ein.",
+      "invalid": "OpenRouter hat diesen Schlüssel nicht akzeptiert. Kopiere ihn noch einmal von der Schlüsselseite.",
+      "keyName": "OpenRouter-Schlüssel",
+      "same": "Der aus den Anbieterschlüsseln",
+      "forAll": "Er bezahlt Jev für jeden Workspace auf diesem Server.",
+      "turnOn": "Jev einschalten",
+      "otherKey": "Anderen Schlüssel verwenden",
+      "line": {
+        "invalid": "OpenRouter hat diesen Schlüssel nicht akzeptiert. Erstelle einen neuen.",
+        "no_credit": "Lade Guthaben bei OpenRouter auf. Jev macht dann von selbst weiter.",
+        "envInvalid": "OpenRouter hat diesen Schlüssel nicht akzeptiert. Ändere ihn in den Einstellungen dieses Servers (TYPESAFE_API_KEY)."
+      }
+    },
     "remove": {
       "title": "Jev-Schlüssel entfernen?",
       "text": "Die Agenten arbeiten ohne ihn weiter."
@@ -14983,7 +15011,8 @@
     },
     "agentGroup": {
       "notFound": "Diese Abteilung gibt es nicht mehr.",
-      "tooMany": "Dieser Workspace hat schon {{max}} Abteilungen. Lösch zuerst eine."
+      "tooMany": "Dieser Workspace hat schon {{max}} Abteilungen. Lösch zuerst eine.",
+      "ambiguous": "Zwei Abteilungen heißen {{name}}. Benenne eine davon um und versuch es noch einmal."
     },
     "rightHand": {
       "permanent": "Die rechte Hand gehört zum Workspace und bleibt außerhalb der Kanäle. Eine @Erwähnung erreicht sie in jedem davon.",

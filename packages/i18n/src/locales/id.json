@@ -2744,6 +2744,7 @@
         "ai_account": "Hanya pemilik akun yang memberikannya",
         "name": "Hanya admin yang mengganti nama agen",
         "look": "Hanya admin dan penanggung jawabnya yang mengubah tampilannya",
+        "group": "Hanya admin yang memindahkan agen ke departemen lain",
         "reports_to": "Hanya admin yang mengubah kepada siapa agen melapor",
         "many": "Hanya admin yang membuat perubahan ini"
       }
@@ -2758,6 +2759,7 @@
       "channel": "Kanal",
       "name": "Nama",
       "look": "Tampilan",
+      "group": "Departemen",
       "reports_to": "Melapor ke",
       "skill": "Skill {{name}}"
     },
@@ -9850,7 +9852,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "Model cepat dari TypeSafe, dibuat untuk keputusan cepat. agentes.chat mengajukan pertanyaan kecil padanya, seperti siapa yang sebaiknya menjawab. Kamu membayar langsung ke TypeSafe.",
+    "about": "Model cepat dari TypeSafe, dibuat untuk keputusan cepat. agentes.chat mengajukan pertanyaan kecil padanya, seperti siapa yang sebaiknya menjawab. Kamu membayar langsung ke TypeSafe, atau lewat OpenRouter dengan harga yang sama.",
     "lead": "Membantu agen-agenmu bekerja sebagai tim.",
     "how": "Cara kerja Jev",
     "why": {
@@ -9890,6 +9892,32 @@
       "envInvalid": "TypeSafe tidak menerima kunci ini. Ubah di pengaturan server ini (TYPESAFE_API_KEY)."
     },
     "checkAgain": "Periksa lagi",
+    "via": {
+      "label": "Tempat kamu membayar Jev",
+      "typesafe": "TypeSafe",
+      "typesafeText": "Akun langsung di TypeSafe, dengan saldo prabayar.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "Dengan kunci OpenRouter, harganya sama.",
+      "connected": "Kunci sudah terhubung"
+    },
+    "openRouter": {
+      "create": "Buat kunci di OpenRouter",
+      "createHint": "Dengan saldo di OpenRouter. Harga Jev sama seperti di TypeSafe: US$ {{price}} per sejuta token. Memilih siapa yang menjawab biayanya sekitar US$ {{call}}.",
+      "open": "Buka OpenRouter",
+      "placeholder": "Kunci OpenRouter-mu",
+      "shape": "Kunci OpenRouter diawali sk-or-v1-. Periksa lalu tempel lagi.",
+      "invalid": "OpenRouter tidak menerima kunci ini. Salin lagi dari halaman kunci.",
+      "keyName": "Kunci OpenRouter",
+      "same": "Yang ada di Kunci penyedia",
+      "forAll": "Kunci ini membayar Jev untuk semua ruang kerja di server ini.",
+      "turnOn": "Nyalakan Jev",
+      "otherKey": "Pakai kunci lain",
+      "line": {
+        "invalid": "OpenRouter tidak menerima kunci ini. Buat yang baru.",
+        "no_credit": "Tambahkan saldo di OpenRouter. Jev lanjut dengan sendirinya.",
+        "envInvalid": "OpenRouter tidak menerima kunci ini. Ubah di pengaturan server ini (TYPESAFE_API_KEY)."
+      }
+    },
     "remove": {
       "title": "Hapus kunci Jev?",
       "text": "Agen tetap bekerja tanpanya."
@@ -14498,7 +14526,8 @@
     },
     "agentGroup": {
       "notFound": "Departemen ini sudah tidak ada.",
-      "tooMany": "Ruang kerja ini sudah punya {{max}} departemen. Hapus satu dulu."
+      "tooMany": "Ruang kerja ini sudah punya {{max}} departemen. Hapus satu dulu.",
+      "ambiguous": "Dua departemen bernama {{name}}. Ganti nama salah satunya, lalu coba lagi."
     },
     "rightHand": {
       "permanent": "Tangan kanan adalah bagian dari ruang kerja dan tetap di luar kanal. Sebuah @sebutan menjangkaunya di kanal mana pun.",

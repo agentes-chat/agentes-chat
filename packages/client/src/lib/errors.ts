@@ -99,6 +99,7 @@ const KNOWN = {
   "machine.exec_disabled": "errors.mission.execDisabled",
   budget_exceeded: "agentPage.activity.errors.budget_exceeded",
   "agent_group.not_found": "errors.agentGroup.notFound",
+  "agent_group.ambiguous": "errors.agentGroup.ambiguous",
   "agent_group.too_many": "errors.agentGroup.tooMany",
   "thread.context_not_visible": "errors.thread.contextNotVisible",
   "thread.archived": "errors.thread.archived",

@@ -1483,16 +1483,27 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         return { ...offer, state: decision === "send" ? "sent" : "dismissed", decidedAt: new Date().toISOString() };
       },
       jev: async () => state.jev ?? null,
-      saveJev: async (apiKey) => {
-        log("system.saveJev", apiKey);
+      saveJev: async (input) => {
+        log("system.saveJev", input);
         if (!state.jev) throw new ApiError(404, "not_found", "Not found");
+        // The workspace's own OpenRouter key: a key ending like that credential's.
+        const apiKey =
+          typeof input === "string"
+            ? input
+            : `sk-or-v1-${state.credentials.find((c) => c.id === input.credentialId)?.keyHint ?? "0000"}`;
         const verdict = state.jevVerdicts?.[apiKey];
         if (verdict === "invalid") throw new ApiError(422, "jev_key_invalid", "TypeSafe didn't accept this key.");
         if (verdict === "rate_limited") {
           delete state.jevVerdicts?.[apiKey];
           throw new ApiError(429, "rate_limited", "Too many tries. Wait a minute.");
         }
-        state.jev = { ...state.jev, source: "settings", hint: apiKey.slice(-4), state: verdict ?? "ok" };
+        state.jev = {
+          ...state.jev,
+          source: "settings",
+          via: apiKey.startsWith("sk-or-") ? "openrouter" : "typesafe",
+          hint: apiKey.slice(-4),
+          state: verdict ?? "ok",
+        };
         return state.jev;
       },
       checkJev: async () => {
@@ -1503,7 +1514,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       removeJev: async () => {
         log("system.removeJev");
         if (!state.jev) throw new ApiError(404, "not_found", "Not found");
-        state.jev = { ...state.jev, source: null, hint: null, state: "off" };
+        state.jev = { ...state.jev, source: null, via: null, hint: null, state: "off" };
         return state.jev;
       },
       gifKey: async () => state.gifKey ?? null,

@@ -494,7 +494,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Cuando agentes.chat aloja tu espacio de trabajo, Jev viene incluido. En un servidor que administras tú, usa la clave de TypeSafe del propietario, unos US$ 0.0001 por mensaje: [Configura Jev](/help/jev#setup).",
+          "Cuando agentes.chat aloja tu espacio de trabajo, Jev viene incluido. En un servidor que administras tú, usa la clave de TypeSafe u OpenRouter del propietario, unos US$ 0.0001 por mensaje: [Configura Jev](/help/jev#setup).",
         ],
       },
       {
@@ -558,6 +558,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
               "En agentes.chat, abre **Configuración › IA y uso** y pégala en **Jev**. Solo la persona que configuró este servidor la ve.",
             ],
           },
+          "¿Ya pagas OpenRouter? Elige **OpenRouter** en **Jev** y pega una clave de https://openrouter.ai/keys, o activa Jev con un clic usando la clave de OpenRouter del espacio de trabajo. Es el mismo Jev, cobrado a través de OpenRouter al mismo precio.",
           "En un servidor que ejecutas con Docker, también puedes poner la clave en `.env` como `TYPESAFE_API_KEY`. Esa tiene prioridad sobre la de Configuración.",
         ],
       },
@@ -592,6 +593,7 @@ export const helpEs: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe ejecuta Jev en Estados Unidos y no entrena sus modelos con lo que envías. Guarda los datos mientras los necesite para prestar el servicio. Sus planes empresariales ofrecen retención cero.",
           "La política de privacidad de TypeSafe: https://typesafe.ai/legal/privacy-policy. Su acuerdo de tratamiento de datos: https://typesafe.ai/legal/data-processing.",
+          "Con una clave de OpenRouter, las mismas solicitudes pasan por OpenRouter camino de TypeSafe, bajo los términos de OpenRouter y tu configuración de privacidad allí: https://openrouter.ai/privacy.",
         ],
       },
       {
