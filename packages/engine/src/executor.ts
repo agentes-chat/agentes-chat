@@ -86,6 +86,7 @@ import {
   refusalScope,
   regionRefusal,
   resolveBrain,
+  spareAccountFor,
   storedPlanUsage,
   UNAVAILABLE_CODES,
 } from "./brains/select";
@@ -760,6 +761,8 @@ export interface Transcript {
     drops: number;
     early?: number;
     cause?: "restart" | "plan_limit";
+    /** VPS Zen: tools the restart cut mid-call (`recoverStaleRuns`): they may or may not have taken effect. */
+    uncertain?: string[];
   };
   /** What the computer brain's turn under way was asked: a turn cut by a crash is sent again with it. */
   turnPrompt?: string;
@@ -892,6 +895,10 @@ export function interruptedTurnPrompt(
   extra: string | null = null,
 ): string {
   const done = t.executed.length > 0 ? ` Already done in it, do not repeat: ${t.executed.join(", ")}.` : "";
+  const unsure =
+    t.uncertain && t.uncertain.length > 0
+      ? ` Cut in the middle, so they may or may not have taken effect: ${t.uncertain.join(", ")}. Check their result before doing them again.`
+      : "";
   const why =
     t.cause === "restart"
       ? "the server restarted"
@@ -899,7 +906,7 @@ export function interruptedTurnPrompt(
         ? "the plan's usage limit was reached"
         : "the computer disconnected";
   return [
-    `Your previous turn was cut off because ${why}.${done} Pick up where you left off and finish it. What you were asked:`,
+    `Your previous turn was cut off because ${why}.${done}${unsure} Pick up where you left off and finish it. What you were asked:`,
     t.prompt,
     extra,
   ]
@@ -3838,6 +3845,13 @@ async function executeRunInner(
     const budget = u.code === "budget" || u.pause?.source === "budget";
     const paused = u.code === "usage_pause";
     const machineId = plan.session?.machineId ?? agent.machineId ?? "";
+    // VPS Zen: the plan's own limit (not one model's, not the budget) with another account that has room on this
+    // computer: it goes on there in a few seconds, quietly (`spareAccountFor`; `resolveBrain` picks it on the resume).
+    const spare =
+      !budget && !scope && plan.account && machineId && isComputerBrain(plan.kind)
+        ? await spareAccountFor(db, agent, plan.kind, machineId, plan.account, now).catch(() => undefined)
+        : undefined;
+    if (spare && u.code === "plan_limit") notePlanLimit(machineId, plan.kind, u.resetsAt, now, plan.account?.id);
     const wait = t.usageWait ?? { since: now, step: 0 };
     const key = budget
       ? usageWaitKey({ code: "budget", agentId: agent.id })
@@ -3865,9 +3879,10 @@ async function executeRunInner(
       const brainBack = Date.parse(t.fallback.resetsAt ?? "");
       at = Math.min(at, brainBack > now ? brainBack : now + ladderDelay(wait.step++));
     }
-    const runAt = new Date(at + RESUME_AFTER_MS + RESUME_GAP_MS * line.place);
+    const runAt = spare ? new Date(now + 5_000) : new Date(at + RESUME_AFTER_MS + RESUME_GAP_MS * line.place);
     // The region a model needs, a model switched off or no subscription has no reset: its note says what to do.
     const tellOwner =
+      !spare &&
       !budget &&
       !paused &&
       scope !== "region" &&
@@ -3890,7 +3905,7 @@ async function executeRunInner(
     const name = planName(plan.kind, plan.account?.provider);
     // A routine's run waits quietly (Rotinas says so); any other says it once per wait.
     const firstPark = t.brainNotice !== u.code;
-    const say = !(run.background || viaRoutine !== null || u.soon) && firstPark;
+    const say = !spare && !(run.background || viaRoutine !== null || u.soon) && firstPark;
     const waitId = Bun.randomUUIDv7();
     let joined = null as Message | null;
     const note = say
@@ -4020,7 +4035,7 @@ async function executeRunInner(
     // The line pauses together: whoever is behind it waits for the same reset, in its place, 60 s apart (with an
     // unknown reset, on the safety timer until the head gets through).
     if (!u.soon) {
-      const base = known ? at : now + LINE_SAFETY_MS;
+      const base = spare ? now : known ? at : now + LINE_SAFETY_MS;
       await retimeLine(db, line.behind, (i) => new Date(base + RESUME_AFTER_MS + RESUME_GAP_MS * (line.place + 1 + i)));
     }
     const moved = await transitionRun(db, run.id, "running", "waiting_input", {

@@ -2,7 +2,7 @@ import type { PlanUsage } from "@agenteschat/adapters";
 import { and, type Database, eq, inArray, schema } from "@agenteschat/db";
 import type { Agent } from "./agents";
 import { brainOf } from "./brain-settings";
-import { planLimitOf } from "./brains/select";
+import { planLimitOf, spareAccountFor } from "./brains/select";
 import { isComputerBrain } from "./brains/types";
 import { monthStartUtc, orgDefaultAgentBudget } from "./usage";
 import { nextMonthStart } from "./usage-pause";
@@ -28,7 +28,8 @@ export type OutOfOfficeAgent = Pick<
   | "brainAccountId"
   | "machineId"
   | "monthlyBudgetNanoUsd"
->;
+> &
+  Partial<Pick<Agent, "ownerUserId">>;
 
 export interface OutOfOfficeOptions {
   now?: Date;
@@ -78,6 +79,22 @@ export async function outOfOffice(
     const usage = usable ? usable.usage : (machines.get(a.machineId)?.[kind] ?? null);
     const limited = planLimitOf(a.machineId, kind, usable?.id, usage, ms);
     if (!limited) continue;
+    // VPS Zen: another account with room thinks for it meanwhile (`spareAccountFor`): not out.
+    if (usable && a.ownerUserId) {
+      const owner = a.ownerUserId;
+      const spare = await spareAccountFor(
+        db,
+        { ...a, ownerUserId: owner },
+        kind,
+        a.machineId,
+        {
+          id: usable.id,
+          ...(usable.provider ? { provider: usable.provider } : {}),
+        },
+        ms,
+      ).catch(() => undefined);
+      if (spare) continue;
+    }
     const plan: OutOfOffice = { reason: "plan", until: limited.until !== null ? new Date(limited.until) : null };
     // A conversation falls back to the model brain (ADR 0032 §5): out only when that can't answer either.
     if (a.brainFallback === false) {
@@ -96,6 +113,7 @@ interface AccountUsage {
   id: string;
   machineId: string;
   kind: string;
+  provider: string | null;
   usage: PlanUsage | null;
 }
 
@@ -108,6 +126,7 @@ async function accountUsages(db: Database, orgId: string, list: OutOfOfficeAgent
       id: machineAccounts.id,
       machineId: machineAccounts.machineId,
       kind: machineAccounts.kind,
+      provider: machineAccounts.provider,
       usage: machineAccounts.usage,
     })
     .from(machineAccounts)
@@ -171,6 +190,7 @@ export async function outOfOfficeIds(
       brainAccountId: agents.brainAccountId,
       machineId: agents.machineId,
       monthlyBudgetNanoUsd: agents.monthlyBudgetNanoUsd,
+      ownerUserId: agents.ownerUserId,
     })
     .from(agents)
     .where(and(eq(agents.orgId, orgId), inArray(agents.id, agentIds)));

@@ -22,7 +22,7 @@ import {
   planOf,
   speedFits,
 } from "@agenteschat/providers/plans";
-import { planFull, planState } from "@agenteschat/ui/plan-state";
+import { PLAN_PAUSE, planFull, planState } from "@agenteschat/ui/plan-state";
 import type { Agent } from "../agents";
 import type { MachineStatus } from "../machine-hub";
 import { pausedMessage } from "../machines";
@@ -546,10 +546,108 @@ export function brainModelFor(
  */
 export async function brainAccountFor(
   db: Executor,
-  agent: Pick<Agent, "orgId" | "brain" | "brainAccountId" | "machineId">,
+  agent: Pick<Agent, "orgId" | "brain" | "brainAccountId" | "machineId"> & Partial<Pick<Agent, "id" | "ownerUserId">>,
   kind: BrainKind,
   machineId: string | null,
 ): Promise<BrainAccount | undefined> {
+  const own = await ownBrainAccountFor(db, agent, kind, machineId);
+  // VPS Zen: its own account at its limit thinks with another one that has room (`spareAccountFor`).
+  if (!own) return undefined;
+  const owner = agent.ownerUserId;
+  if (!machineId || !owner) return strip(own);
+  const now = Date.now();
+  if (own.status === "active" && !accountSpent(machineId, kind, own.id, own.usage, now)) {
+    noteSwitch(agent.id, own, undefined);
+    return strip(own);
+  }
+  const spare = await spareAccountFor(db, { ...agent, ownerUserId: owner }, kind, machineId, own, now).catch(
+    () => undefined,
+  );
+  noteSwitch(agent.id, own, spare);
+  return strip(spare ?? own);
+}
+
+const strip = ({ usage: _, ...account }: BrainAccount & { usage?: unknown }): BrainAccount => account;
+
+/**
+ * VPS Zen: whether an account has no room for a turn now: at its plan limit (`planLimitOf`), or at the long-work pause
+ * (`PLAN_PAUSE`, ADR 0118), where its long work would stop.
+ */
+function accountSpent(machineId: string, kind: BrainKind, id: string, usage: PlanUsage | null, now: number) {
+  if (planLimitOf(machineId, kind, id, usage, now)) return true;
+  return usage ? planState(usage, now).used >= PLAN_PAUSE : false;
+}
+
+/**
+ * VPS Zen: another account of the same kind (and plan provider) on the same computer, signed in, that may think for
+ * this agent (`planIsOwners`) and has room: the one with the most left. Nothing is stored: once the agent's own
+ * account resets, its turns go back to it by themselves. Undefined: none, the agent waits as before.
+ */
+export async function spareAccountFor(
+  db: Executor,
+  agent: Pick<Agent, "orgId" | "ownerUserId"> & Partial<Pick<Agent, "brainAccountId" | "brainAccountLentBy">>,
+  kind: BrainKind,
+  machineId: string,
+  own: { id: string; provider?: string },
+  now = Date.now(),
+): Promise<(BrainAccount & { usage: PlanUsage | null }) | undefined> {
+  if (!agent.ownerUserId) return undefined;
+  const { machineAccounts } = schema;
+  const rows = await db
+    .select({
+      id: machineAccounts.id,
+      label: machineAccounts.label,
+      kind: machineAccounts.kind,
+      provider: machineAccounts.provider,
+      usage: machineAccounts.usage,
+    })
+    .from(machineAccounts)
+    .where(
+      and(
+        eq(machineAccounts.orgId, agent.orgId),
+        eq(machineAccounts.machineId, machineId),
+        eq(machineAccounts.status, "active"),
+        ne(machineAccounts.id, own.id),
+      ),
+    );
+  const used = (u: PlanUsage | null) => (u ? planState(u, now).used : 0);
+  const room = rows
+    .map((r) => ({ ...r, usage: (r.usage as PlanUsage | null | undefined) ?? null }))
+    .filter((r) => r.kind === kind && (r.provider ?? undefined) === own.provider)
+    .filter((r) => !accountSpent(machineId, kind, r.id, r.usage, now))
+    .sort((a, b) => used(a.usage) - used(b.usage));
+  for (const r of room) {
+    if (!(await planIsOwners(db, agent, machineId, { id: r.id }))) continue;
+    return {
+      id: r.id,
+      label: r.label,
+      status: "active",
+      usage: r.usage,
+      ...(r.provider ? { provider: r.provider } : {}),
+    };
+  }
+  return undefined;
+}
+
+/** VPS Zen: the switch, once in the log each time an agent's account changes. */
+const switched = new Map<string, string>();
+function noteSwitch(agentId: string | undefined, own: BrainAccount, spare: BrainAccount | undefined) {
+  if (!agentId) return;
+  const to = spare?.id ?? own.id;
+  const before = switched.get(agentId);
+  if (before === to) return;
+  switched.set(agentId, to);
+  if (spare) console.info(`[vps-zen] agent ${agentId}: "${own.label}" has no room, thinking with "${spare.label}"`);
+  else if (before) console.info(`[vps-zen] agent ${agentId}: thinking with its own account "${own.label}" again`);
+}
+
+/** The agent's own account (ADR 0041), with its last plan reading. */
+async function ownBrainAccountFor(
+  db: Executor,
+  agent: Pick<Agent, "orgId" | "brain" | "brainAccountId" | "machineId">,
+  kind: BrainKind,
+  machineId: string | null,
+): Promise<(BrainAccount & { usage: PlanUsage | null }) | undefined> {
   if (!agent.brainAccountId || !machineId || machineId !== agent.machineId || kindOf(agent.brain) !== kind) {
     return undefined;
   }
@@ -561,6 +659,7 @@ export async function brainAccountFor(
       status: machineAccounts.status,
       kind: machineAccounts.kind,
       provider: machineAccounts.provider,
+      usage: machineAccounts.usage,
     })
     .from(machineAccounts)
     .where(
@@ -576,6 +675,7 @@ export async function brainAccountFor(
     id: row.id,
     label: row.label,
     status: row.status === "active" ? "active" : "signed_out",
+    usage: (row.usage as PlanUsage | null | undefined) ?? null,
     ...(row.provider ? { provider: row.provider } : {}),
   };
 }

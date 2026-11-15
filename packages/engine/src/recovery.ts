@@ -106,11 +106,16 @@ export async function recoverStaleRuns(
         .limit(500);
       const recovered = steps.filter((s) => s.kind === "error" && s.data.reason === "recovered").length;
       const results = new Set(steps.filter((s) => s.kind === "tool_result").map((s) => String(s.data.toolUseId)));
-      const cutTool = steps.some((s) => s.kind === "tool_call" && !results.has(String(s.data.toolUseId)));
+      const cut = steps.filter((s) => s.kind === "tool_call" && !results.has(String(s.data.toolUseId)));
+      const cutTool = cut.length > 0;
       const beat = run.heartbeatAt ?? run.startedAt ?? run.updatedAt;
       const recent = now.getTime() - beat.getTime() < RESUME_MAX_AGE_MS;
-      if (!cutTool && recent && recovered < MAX_RECOVERIES && run.transcript) {
-        if (await resume(db, run, at, ranSinceLastCall(steps))) out.resumed.push(run.id);
+      // VPS Zen: a computer brain's turn is sent again as cut off whatever was cut, told which calls were cut in
+      // the middle (`interruptedTurn.uncertain`), instead of failing and losing the work in progress.
+      const resumable = !cutTool || thinksOnComputer(run);
+      if (resumable && recent && recovered < MAX_RECOVERIES && run.transcript) {
+        const unsure = [...new Set(cut.map((s) => String(s.data.name ?? "")).filter(Boolean))];
+        if (await resume(db, run, at, ranSinceLastCall(steps), unsure)) out.resumed.push(run.id);
       } else if (await failInterrupted(deps, run, at)) {
         out.failed.push(run.id);
       }
@@ -211,7 +216,7 @@ async function claimStale(tx: Executor, runId: string, at: SweepTime) {
  * Hands the run to a new job: the executor continues from the transcript. False when the run was taken first
  * (`claimStale`).
  */
-async function resume(db: Database, run: AgentRun, at: SweepTime, ran: string[]) {
+async function resume(db: Database, run: AgentRun, at: SweepTime, ran: string[], unsure: string[] = []) {
   return db.transaction(async (tx) => {
     if (!(await claimStale(tx, run.id, at))) return false;
     if (thinksOnComputer(run)) {
@@ -228,6 +233,9 @@ async function resume(db: Database, run: AgentRun, at: SweepTime, ran: string[])
         drops: prev?.drops ?? 0,
         ...(prev?.early ? { early: prev.early } : {}),
         cause: "restart",
+        ...(unsure.length > 0 || prev?.uncertain
+          ? { uncertain: [...new Set([...(prev?.uncertain ?? []), ...unsure])] }
+          : {}),
       };
       await tx
         .update(agentRuns)
