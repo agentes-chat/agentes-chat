@@ -33,9 +33,11 @@ import {
   TASKS_PROTOCOL,
   type Unsubscribe,
 } from "@agenteschat/adapters";
-import { and, type Database, eq, inArray, lt, schema } from "@agenteschat/db";
+import { and, type Database, eq, inArray, lt, schema, sql } from "@agenteschat/db";
 import type { ToolImage } from "@agenteschat/providers";
 import { getAgentCached } from "./agents";
+import { closeClaudeDesignConsents, pollClaudeDesignConsent } from "./claude-design/consent";
+import { acceptClaudeDesignTaskResult, authorizeClaudeDesignEffect } from "./claude-design/lifecycle";
 import { type MachinePhoneRow, publishDevicesChanged, syncMachinePhones } from "./devices";
 import { cutText } from "./format";
 import { agentCoAuthorLine } from "./git/signature";
@@ -287,6 +289,7 @@ export interface MachineConnection {
 }
 
 export interface MachineHubDeps {
+  claudeDesignEnabled?: () => boolean;
   db: Database;
   pubsub: PubSub;
   /** This process (default: random): rows record which replica holds a socket. */
@@ -573,7 +576,33 @@ export function createMachineHub(deps: MachineHubDeps) {
   /** `task.done`: persisted (and the conversation woken), then acknowledged so the runner stops re-sending it. */
   async function taskDone(conn: MachineConnection, frame: Extract<RunnerFrame, { type: "task.done" }>) {
     const machineId = conn.machineId as string;
-    if (frame.interrupted) {
+    if (conn.orgId)
+      await closeClaudeDesignConsents({ db, pubsub, enabled: false }, conn.orgId, machineId, frame.taskId);
+    if (frame.claudeDesign) {
+      if (!conn.orgId) return;
+      await acceptClaudeDesignTaskResult(
+        { db, enabled: deps.claudeDesignEnabled?.() === true },
+        conn.orgId,
+        machineId,
+        frame.taskId,
+        frame.claudeDesign,
+      );
+      await applyTaskDone({ db, pubsub }, machineId, {
+        ...frame,
+        exitCode: frame.claudeDesign.state === "published" && !frame.claudeDesign.error ? 0 : 1,
+        canceled: frame.claudeDesign.state === "canceled",
+      });
+    } else if (
+      frame.interrupted ||
+      (
+        await db
+          .select({ id: schema.claudeDesignJobs.id })
+          .from(schema.claudeDesignJobs)
+          .where(
+            sql`(${schema.claudeDesignJobs.taskId} = ${frame.taskId}::uuid or ${schema.claudeDesignJobs.recoveryTaskId} = ${frame.taskId}::uuid)`,
+          )
+      ).length > 0
+    ) {
       const row = await getTask(db, frame.taskId);
       if (row && row.machineId === machineId) {
         // A mission item's resume waits in the mission's queue (ADR 0044): walked in the background (like
@@ -1355,7 +1384,12 @@ export function createMachineHub(deps: MachineHubDeps) {
     if (conn.machineId && local.get(conn.machineId) === conn) {
       local.delete(conn.machineId);
       browserHooks.closed?.(conn.machineId);
+      // Persist liveness before the additional consent cleanup can yield to a caller reading status.
       await markOffline(conn, serverStop).catch(() => undefined);
+      if (conn.orgId)
+        await closeClaudeDesignConsents({ db, pubsub, enabled: false }, conn.orgId, conn.machineId).catch(
+          () => undefined,
+        );
     }
   }
 
@@ -1460,7 +1494,29 @@ export function createMachineHub(deps: MachineHubDeps) {
       else if (frame.type === "browser.frame") browserHooks.frame?.(conn.machineId, frame);
       else if (frame.type === "browser.stream.ended") browserHooks.streamEnded?.(conn.machineId, frame);
       else if (frame.type === "pong") await touch(conn, frame);
-      else if (frame.type === "task.event") {
+      else if (frame.type === "design.consent") {
+        if (conn.orgId)
+          send(
+            conn,
+            await pollClaudeDesignConsent(
+              { db, pubsub, enabled: deps.claudeDesignEnabled?.() === true },
+              conn.orgId,
+              conn.machineId,
+              frame,
+            ),
+          );
+      } else if (frame.type === "design.authorize") {
+        if (conn.orgId)
+          send(
+            conn,
+            await authorizeClaudeDesignEffect(
+              { db, enabled: deps.claudeDesignEnabled?.() === true },
+              conn.orgId,
+              conn.machineId,
+              frame,
+            ),
+          );
+      } else if (frame.type === "task.event") {
         await applyTaskEvent({ db, pubsub }, conn.machineId, frame).catch(() => undefined);
       } else if (frame.type === "mcp.call") {
         if (frame.token) touchBrain(conn, (b) => b.token === frame.token);

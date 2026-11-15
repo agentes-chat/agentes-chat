@@ -749,3 +749,16 @@ describe("push devices (ADR 0035, ADR 0071)", () => {
     expect(JSON.parse(String(calls.at(-1)?.init.body))).toEqual({ ids: ["n1", "n2"] });
   });
 });
+
+test("Design consent uses the session transport and sends one explicit reviewed decision", async () => {
+  const route = "/api/app/organizations/o1/claude-design/consents/c1";
+  const { fetch, calls } = fakeFetch({
+    [route]: { status: 200, body: { id: "c1", status: "pending" } },
+    [`POST ${route}`]: { status: 200, body: { id: "c1", status: "approved" } },
+  });
+  const api = createHttpApi({ fetch });
+  expect(await api.claudeDesign.getConsent("o1", "c1")).toMatchObject({ status: "pending" });
+  await api.claudeDesign.decideConsent("o1", "c1", { decision: "approve", reviewed: true });
+  expect(calls[1]?.init.body).toBe('{"decision":"approve","reviewed":true}');
+  expect(calls[1]?.init.credentials).toBe("same-origin");
+});

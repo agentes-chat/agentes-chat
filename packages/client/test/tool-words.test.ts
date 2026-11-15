@@ -53,3 +53,9 @@ describe("the engine's tools and the words for them", () => {
     expect(toolActivity("github_list_issues")).toMatchObject({ kind: "consulting", app: "GitHub" });
   });
 });
+
+test("dedicated Design tools use existing task activity words instead of their raw names", () => {
+  expect(toolActivity("create_claude_design")).toEqual({ kind: "startingTask" });
+  expect(toolActivity("update_claude_design")).toEqual({ kind: "startingTask" });
+  expect(toolActivity("get_claude_design_job")).toEqual({ kind: "checkingTask" });
+});

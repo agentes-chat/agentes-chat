@@ -1,0 +1,1 @@
+ALTER TABLE "claude_design_jobs" ADD COLUMN "source_manifest" jsonb;

@@ -142,6 +142,15 @@ export async function dropMailOfOwner(db: Executor, orgId: string, ownerUserId: 
  * connector's catalog (`connectors/catalog.ts`).
  */
 export const BUILTIN_SCOPES: Record<string, { label: string; description: string; sensitive?: boolean }> = {
+  "claude-design:read": {
+    label: "Read Claude Design jobs",
+    description: "Read Design results in the account owner’s conversation.",
+  },
+  "claude-design:write": {
+    label: "Create and update Claude Design",
+    description: "Use an explicitly granted Claude account to create private designs.",
+    sensitive: true,
+  },
   "context:read": {
     label: "Read context",
     description: "Search messages, summaries and facts in the agent's channels.",
@@ -312,7 +321,7 @@ export function toolAccess(
 
 /** `drive:read` → `drive:write` for built-in scopes that have both; otherwise null. */
 export function impliedByWrite(scope: string) {
-  const m = /^(drive|issues|calendar|wiki):read$/.exec(scope);
+  const m = /^(drive|issues|calendar|wiki|claude-design):read$/.exec(scope);
   return m ? `${m[1]}:write` : null;
 }
 

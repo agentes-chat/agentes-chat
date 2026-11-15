@@ -64,6 +64,7 @@ export async function createUpload(
     note?: string | null;
     targetArtifactId?: string | null;
     maxBytes?: number;
+    expectedSha256?: string;
     now?: Date;
   },
 ): Promise<UploadRow> {
@@ -84,6 +85,7 @@ export async function createUpload(
       targetArtifactId: input.targetArtifactId ?? null,
       status: "pending",
       maxBytes: Math.min(input.maxBytes ?? ARTIFACT_LIMITS.fileBytes, ARTIFACT_LIMITS.fileBytes),
+      expectedSha256: input.expectedSha256,
       expiresAt: new Date(now.getTime() + UPLOAD_TTL_MS),
       createdAt: now,
     })
@@ -133,10 +135,32 @@ export async function completeUpload(
     /** The machine sending it (connected machines); must match the upload's. */
     machineId?: string | null;
   },
+  atomic = false,
 ): Promise<{ upload: UploadRow; artifact: ArtifactDetailView }> {
   const { db } = deps;
   const row = await getUpload(db, uploadId);
   if (!row) throw new NotFoundError("Upload not found", "upload.not_found");
+  // A pinned Design upload and its artifact commit together. Retrying its id cannot create a duplicate file.
+  if (row.expectedSha256 && !atomic) {
+    try {
+      const location = await deps.artifacts.blobs.forOrg(row.orgId);
+      const blobs = { ...deps.artifacts.blobs, forOrg: async () => location };
+      const result = await db.transaction((tx) =>
+        completeUpload(
+          { ...deps, db: tx, artifacts: { ...deps.artifacts, db: tx, blobs, pubsub: undefined }, pubsub: undefined },
+          uploadId,
+          input,
+          true,
+        ),
+      );
+      await signal(deps.pubsub, result.upload);
+      return result;
+    } catch (error) {
+      if ((row.machineId ?? null) === (input.machineId ?? null))
+        await failUpload(deps, row.id, "Design source upload failed");
+      throw error;
+    }
+  }
   if ((row.machineId ?? null) !== (input.machineId ?? null)) {
     throw new ForbiddenError("This upload is for another computer", "upload.wrong_machine");
   }
@@ -151,7 +175,7 @@ export async function completeUpload(
     throw new ValidationError(`the file is too large (max ${maxMb} MB)`, "artifact.file_too_large", { maxMb });
   }
   const sha = new Bun.CryptoHasher("sha256").update(input.bytes).digest("hex");
-  if (input.sha256 && input.sha256.toLowerCase() !== sha) {
+  if ((input.sha256 && input.sha256.toLowerCase() !== sha) || (row.expectedSha256 && row.expectedSha256 !== sha)) {
     await failUpload(deps, row.id, "the file arrived damaged (SHA-256 mismatch)");
     throw new ValidationError("The file arrived damaged (SHA-256 mismatch)", "upload.sha_mismatch");
   }

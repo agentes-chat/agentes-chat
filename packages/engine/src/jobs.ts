@@ -9,7 +9,7 @@ import type {
   SearchKind,
   WebPushSender,
 } from "@agenteschat/adapters";
-import { and, count, eq, inArray, isNull, ne, queryTrace, schema, sql } from "@agenteschat/db";
+import { and, count, eq, inArray, isNull, ne, or, queryTrace, schema, sql } from "@agenteschat/db";
 import { ACCOUNT_CONTACT_JOB, saveAccountContact } from "./account-contacts";
 import { AGENT_MEDIA_JOB, enqueueAgentMedia, maybeSendAgentMedia } from "./agent-media";
 import { aiConnectIntent, type ConnectIntent } from "./ai-intent";
@@ -24,6 +24,9 @@ import { type BrakeReport, brakeWakes, callableAgents, LATER_JOB, notCallableWhy
 import { HANDOFF_REMIND_JOB, remindBrowserHandoff } from "./browser/handoff";
 import { typingLogFor } from "./burst";
 import { CHANNEL_DELETE_JOB, purgeChannel } from "./channel-deletion";
+import { designJobView } from "./claude-design/ledger";
+import { claudeDesignNotice } from "./claude-design/notice";
+import { CLAUDE_DESIGN_RECONCILE_JOB, reconcileClaudeDesignJob } from "./claude-design/service";
 import { crowdedAgents, publishQueueChanged } from "./computer-queue";
 import type { ConnectorDeps } from "./connectors/connections";
 import { startNoteRun } from "./consultations";
@@ -159,6 +162,7 @@ async function maybeEnqueueReflection(deps: JobDeps, orgId: string, threadId: st
 }
 
 export interface JobDeps extends RunExecutorDeps {
+  claudeDesignEnabled?: boolean;
   maxHops: number;
   /** Search index (jobs `search.index`, `search.reindex`). */
   search?: SearchIndexResolver;
@@ -1039,7 +1043,57 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       });
     },
     // A background task on a connected computer ended: its conversation wakes (ADR 0029).
+    [CLAUDE_DESIGN_RECONCILE_JOB]: async (job) => {
+      const hub = deps.sandbox?.machines?.hub;
+      if (!hub || !deps.artifacts) return;
+      await reconcileClaudeDesignJob(
+        {
+          db: deps.db,
+          enabled: deps.claudeDesignEnabled === true,
+          pubsub: deps.pubsub,
+          hub,
+          artifacts: deps.artifacts,
+          publicUrl: deps.sandbox?.publicUrl ?? "",
+        },
+        String(job.payload.jobId),
+      );
+    },
     "machine.task_done": async (job) => {
+      const taskId = String(job.payload.taskId);
+      const [designJob] = await deps.db
+        .select()
+        .from(schema.claudeDesignJobs)
+        .where(
+          and(
+            eq(schema.claudeDesignJobs.orgId, job.orgId ?? ""),
+            or(eq(schema.claudeDesignJobs.taskId, taskId), eq(schema.claudeDesignJobs.recoveryTaskId, taskId)),
+          ),
+        );
+      if (designJob) {
+        const hub = deps.sandbox?.machines?.hub;
+        if (hub && deps.artifacts)
+          await reconcileClaudeDesignJob(
+            {
+              db: deps.db,
+              enabled: deps.claudeDesignEnabled === true,
+              pubsub: deps.pubsub,
+              hub,
+              artifacts: deps.artifacts,
+              publicUrl: deps.sandbox?.publicUrl ?? "",
+            },
+            designJob.id,
+          ).catch(() => undefined);
+        const [current] = await deps.db
+          .select()
+          .from(schema.claudeDesignJobs)
+          .where(eq(schema.claudeDesignJobs.id, designJob.id));
+        if (current)
+          await wakeConversationForTask({ db: deps.db, pubsub: deps.pubsub }, taskId, {
+            maxHops: deps.maxHops,
+            notice: claudeDesignNotice(await designJobView(deps.db, current)),
+          });
+        return;
+      }
       const woke = await wakeConversationForTask({ db: deps.db, pubsub: deps.pubsub }, String(job.payload.taskId), {
         maxHops: deps.maxHops,
       });

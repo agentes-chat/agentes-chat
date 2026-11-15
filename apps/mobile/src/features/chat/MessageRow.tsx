@@ -23,6 +23,7 @@ import { channelRefsOf } from "@agenteschat/client/lib/channel-refs";
 import { type RunPosition, runAround } from "@agenteschat/client/lib/chat";
 import { mineOnRight } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
+import { designJobIdsOf } from "@agenteschat/client/lib/claude-design";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
 import { CONTINUE_ERRORS, errorCode, errorText, sendFailureText, sendNeedsEdit } from "@agenteschat/client/lib/errors";
 import { mentionsReader } from "@agenteschat/client/lib/everyone";
@@ -76,6 +77,7 @@ import {
 import { router } from "@/ui/navigation";
 import { InstructionProposals } from "../agents/InstructionProposalCard";
 import { ProposalCard } from "../agents/ProposalCard";
+import { ClaudeDesignJobCard } from "../ai/ClaudeDesignJob";
 import { CostlyProposalCard } from "../ai/CostlyProposalCard";
 import { NoAiCard } from "../ai/NoAiCard";
 import { OfferCard } from "../ai/OfferCard";
@@ -433,8 +435,12 @@ export const MessageRow = memo(function MessageRow({
   const mentionsMe = !mine && mentionsReader({ body, meta }, myHandle);
 
   // The cards it carries: above an agent's tools, which come last.
+  const designJobs = designJobIdsOf(meta);
   const cards = (
     <>
+      {designJobs.map((id) => (
+        <ClaudeDesignJobCard key={id} jobId={id} />
+      ))}
       {issueWork ? (
         <IssueWorkCard work={issueWork} authorId={m.author.type === "person" ? (m.author.id ?? null) : null} />
       ) : null}

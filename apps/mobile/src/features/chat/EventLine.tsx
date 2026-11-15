@@ -1,4 +1,5 @@
 import { type Message, useApi } from "@agenteschat/client";
+import { designConsentIdOf } from "@agenteschat/client/lib/claude-design";
 import { type ConsultNoticeFold, pairItemOf } from "@agenteschat/client/lib/consult-group";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
 import { errorText } from "@agenteschat/client/lib/errors";
@@ -7,6 +8,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { EventPill, EventPillAction, EventPillText, ProviderLogo, useToast } from "@/ui";
+import { ClaudeDesignConsentCard } from "../ai/ClaudeDesignConsent";
 import { useDirectory, useOrgId, useWhen } from "../shared/hooks";
 import { ConsultPairRow } from "./ConsultGroup";
 import { eventLineOf } from "./logic";
@@ -30,6 +32,13 @@ export function EventLine({ message, fold, gap }: { message: Message; fold?: Con
   const when = useWhen();
   const [open, setOpen] = useState(false);
   const inset = useQuietInset();
+  const consentId = designConsentIdOf(message.meta);
+  if (consentId)
+    return (
+      <View style={{ marginTop: gap }}>
+        <ClaudeDesignConsentCard consentId={consentId} />
+      </View>
+    );
   // A person stopped one of the agent's tasks (ADR 0128): its own line, with the reason, or a way to give one.
   const stopped = stoppedNoticeOf(message.meta);
   if (stopped) return <StoppedLine message={message} notice={stopped} gap={gap} />;

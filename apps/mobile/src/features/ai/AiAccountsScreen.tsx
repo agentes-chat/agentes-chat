@@ -22,6 +22,7 @@ import {
   ownSignInTitle,
   signInOf,
 } from "@agenteschat/client/lib/ai-accounts";
+import { showDesignAccountControls } from "@agenteschat/client/lib/claude-design";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { errorText, keyRefusal } from "@agenteschat/client/lib/errors";
 import { joinNames, relativeTime } from "@agenteschat/client/lib/format";
@@ -47,6 +48,7 @@ import { useColors, useDirectory, useMeId } from "../shared/hooks";
 import { errorHaptic, PushedHeader, successHaptic } from "../shared/parts";
 import { PlanMeter } from "../usage/parts";
 import { AddAccount } from "./AddAccount";
+import { ClaudeDesignGrants } from "./ClaudeDesignGrant";
 import { openKeyForAll } from "./KeyForAllScreen";
 import { openConnectAi } from "./NoAiCard";
 import { alertKeyRefused, Note, PlanHoldNote, usePlanHold } from "./parts";
@@ -275,8 +277,15 @@ export function AiAccountsScreen() {
                   more
                   onPress={() => actions(a)}
                   below={
-                    out || unknown || a.usage || (plan && !plan.usage) ? (
+                    out ||
+                    unknown ||
+                    a.usage ||
+                    (plan && !plan.usage) ||
+                    showDesignAccountControls(a, can(org, "manage_agents")) ? (
                       <View style={styles.below}>
+                        {showDesignAccountControls(a, can(org, "manage_agents")) ? (
+                          <ClaudeDesignGrants accountId={a.id} />
+                        ) : null}
                         {out ? (
                           <Note icon="x">
                             {plan ? t("aiAccounts.page.keyRefused") : t("aiAccounts.page.signedOut")}

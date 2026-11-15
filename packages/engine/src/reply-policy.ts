@@ -1,4 +1,5 @@
 import { and, asc, type Executor, eq, gt, isNull, ne, schema, sql } from "@agenteschat/db";
+import { designCompletionOf } from "./claude-design/notice-data";
 import { cutText } from "./format";
 import type { Message } from "./messages";
 import type { AgentRun } from "./runs";
@@ -122,6 +123,8 @@ export function replyPolicyFor(
   if (options.answerOwed) return { mayPass: false, background: false };
   // Catching up after a usage pause (`catch-up.ts`): someone else may have answered it meanwhile.
   if (options.catchUp || options.moot) return { mayPass: true, background: false };
+  // A Design result card already delivers its status/link. Extra requested analysis remains optional here.
+  if (trigger?.authorType === "agent" && designCompletionOf(trigger.meta)) return { mayPass: true, background: false };
   const notice = trigger?.meta?.notice as { kind?: unknown; refs?: { report?: unknown } } | undefined;
   if (typeof notice?.kind === "string" && INFORMING_NOTICES.has(notice.kind))
     return { mayPass: true, background: false };

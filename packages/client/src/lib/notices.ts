@@ -7,6 +7,7 @@ type Meta = Record<string, unknown> | undefined;
 
 /** What reached the agent's conversation (packages/engine/src/notices.ts; a test keeps the two lists equal). */
 export const NOTICE_KINDS = [
+  "design_consent",
   "routine_handoff",
   "consult_reply",
   "agent_note",
@@ -201,6 +202,8 @@ export function noticeView(
   });
   const kind = notice.kind as NoticeKind;
   switch (kind) {
+    case "design_consent":
+      return line("claudeDesign.pending");
     case "routine_handoff": {
       const routine = noticeRoutineName(notice);
       // The report is what the routine found for people: the same words the agent's reply unfolds.

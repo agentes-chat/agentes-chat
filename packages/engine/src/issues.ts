@@ -20,6 +20,7 @@ import { audienceError, canTalkTo, speakerFor } from "./audience";
 import { recordAudit } from "./audit";
 import { runAuthorityById, runPerson } from "./authority";
 import { requireChannelAccess } from "./channels";
+import { type DesignProgress, designBlocked, designProgressOf, matchesDesignIssue } from "./claude-design/progress";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import {
   publishChannelEvent,
@@ -39,7 +40,7 @@ import { can, getMembership, requireActiveMembership } from "./organizations";
 import { membersWhoMaySql } from "./permissions";
 import { fireRoutineEvent } from "./routines";
 import { agentSearchChannels, enqueueIndex, registerDocumentBuilder } from "./search";
-import { AUDIENCE_MAX, type Audience, admitTaskAgents, taskSeenSql } from "./task-access";
+import { AUDIENCE_MAX, type Audience, admitTaskAgents, designTaskOwner, taskSeenSql } from "./task-access";
 import {
   ensureTaskConversation,
   type TaskConversationRef,
@@ -73,7 +74,7 @@ export interface WorkActor {
 }
 export type IssueSource =
   | { type: "manual" }
-  | { type: "message"; channelId: string; messageId: string }
+  | { type: "message"; channelId: string; messageId: string; designOwnerUserId?: string }
   | { type: "agent"; agentId: string; workId?: string; channelId?: string; messageId?: string }
   | { type: "webhook"; provider: string };
 
@@ -212,7 +213,7 @@ type AgentActor = { type: "agent"; agentId: string; channelId: string; runId?: s
 
 type IssueRow = typeof issues.$inferSelect;
 /** The columns that say who sees a task. */
-type TaskScope = Pick<IssueRow, "channelId" | "restricted" | "audienceUserIds">;
+type TaskScope = Pick<IssueRow, "channelId" | "restricted" | "audienceUserIds"> & { source?: IssueRow["source"] };
 /** What an agent's reach also reads of a task. */
 type TaskRef = TaskScope & Partial<Pick<IssueRow, "assigneeType" | "assigneeId" | "conversationChannelId">>;
 
@@ -346,6 +347,8 @@ async function inConversation(db: Database, userId: string, orgId: string, chann
 
 /** Whether a person sees a task (ADR 0151). Mirrors `taskSeenSql`. */
 async function personSees(db: Database, userId: string, orgId: string, t: TaskScope) {
+  const owner = designTaskOwner(t.source);
+  if (owner) return owner === userId;
   if (t.restricted ? t.audienceUserIds.includes(userId) : !t.channelId) return true;
   const membership = await getMembership(db, userId, orgId);
   if (membership && can(membership, "administrator")) return true;
@@ -387,6 +390,12 @@ async function agentReaches(db: Database, actor: AgentActor, orgId: string, t: T
 /** By id, an agent working for a person also reaches what that person reaches (ADR 0151). */
 export async function canSee(db: Database, actor: IssueActor, orgId: string, t: TaskRef) {
   if (actor.type === "person") return personSees(db, actor.userId, orgId, t);
+  if (designTaskOwner(t.source))
+    return (
+      t.assigneeType === "agent" &&
+      t.assigneeId === actor.agentId &&
+      (actor.channelId === t.source?.channelId || actor.channelId === t.conversationChannelId)
+    );
   if (await agentReaches(db, actor, orgId, t)) return true;
   const person = await runPerson(db, orgId, actor.runId);
   return person !== null && personSees(db, person, orgId, t);
@@ -429,10 +438,14 @@ const OPEN_FOR_WORK = new Set<IssueStatus>(["todo", "in_progress", "in_review"])
 const STEPS_SHOWN = 8;
 
 /** The assigned agents' work on these issues: their latest linked run and its last tool calls. */
-async function workOf(db: Database, rows: IssueRow[]): Promise<Map<string, IssueWork>> {
+async function workOf(
+  db: Database,
+  rows: IssueRow[],
+): Promise<{ work: Map<string, IssueWork>; nativeProgress: Map<string, DesignProgress> }> {
   const out = new Map<string, IssueWork>();
+  const nativeProgress = new Map<string, DesignProgress>();
   const withAgent = rows.filter((r) => r.assigneeType === "agent" && r.assigneeId && OPEN_FOR_WORK.has(r.status));
-  if (withAgent.length === 0) return out;
+  if (withAgent.length === 0) return { work: out, nativeProgress };
   const latest = await db
     .selectDistinctOn([agentRuns.issueId], {
       id: agentRuns.id,
@@ -544,12 +557,42 @@ async function workOf(db: Database, rows: IssueRow[]): Promise<Map<string, Issue
       ...(reason ? { reason } : {}),
     });
   }
-  return out;
+  const nativeJobs = await db
+    .select()
+    .from(schema.claudeDesignJobs)
+    .where(
+      inArray(
+        schema.claudeDesignJobs.issueId,
+        withAgent.map((r) => r.id),
+      ),
+    );
+  const progress = await designProgressOf(db, nativeJobs);
+  for (const job of nativeJobs) {
+    const row = withAgent.find((r) => r.id === job.issueId && matchesDesignIssue(job, r));
+    const p = progress.get(job.id);
+    if (!row || !p) continue;
+    nativeProgress.set(row.id, p);
+    if (["queued", "succeeded", "canceled"].includes(p.stage)) continue;
+    out.set(row.id, {
+      agentId: job.agentId,
+      runId: null,
+      state:
+        p.stage === "waiting_approval"
+          ? "waiting_approval"
+          : ["unknown", "failed"].includes(p.stage)
+            ? "stalled"
+            : "running",
+      since: p.updatedAt,
+      steps: [],
+      ...(["unknown", "failed"].includes(p.stage) ? { reason: "failed" as const } : {}),
+    });
+  }
+  return { work: out, nativeProgress };
 }
 
 /** `reader`: who reads them, for what only they may get (`backgroundWorksOf`). */
 async function views(db: Database, rows: IssueRow[], reader?: string): Promise<IssueView[]> {
-  const [work, works, conversations] = await Promise.all([
+  const [{ work, nativeProgress }, works, conversations] = await Promise.all([
     workOf(db, rows),
     backgroundWorksOf(db, rows, reader),
     taskConversationSummaries(db, rows),
@@ -597,7 +640,7 @@ async function views(db: Database, rows: IssueRow[], reader?: string): Promise<I
       return f ? [{ id: f.id, title: f.title, createdBy: { type: f.type as WorkActor["type"], id: f.by } }] : [];
     }),
     work: work.get(r.id) ?? null,
-    blocked: r.blocked ?? null,
+    blocked: nativeProgress.has(r.id) ? designBlocked(nativeProgress.get(r.id)!, null, r.blocked) : (r.blocked ?? null),
     backgroundWork: works.get(r.id) ?? null,
     conversation: conversations.get(r.id) ?? null,
     createdAt: r.createdAt.toISOString(),
@@ -789,11 +832,16 @@ export interface IssueDeps {
 export async function publishToTaskReaders(
   deps: IssueDeps,
   orgId: string,
-  task: { channelId: string | null; audience: Pick<IssueAudience, "mode" | "userIds"> },
+  task: { channelId: string | null; audience: Pick<IssueAudience, "mode" | "userIds">; source?: IssueSource },
   event:
     | { type: "issue.created" | "issue.updated"; issue: IssueView }
     | { type: "issue.deleted"; issueId: string; number: number },
 ) {
+  const owner = designTaskOwner(task.source);
+  if (owner) {
+    await publishUserEvent(deps.pubsub, orgId, owner, event);
+    return;
+  }
   if (task.audience.mode === "everyone") {
     await publishOrgEvent(deps.pubsub, { type: "org.broadcast", orgId, event });
     return;
@@ -847,7 +895,12 @@ export async function createIssue(
     .map((text) => ({ id: Bun.randomUUIDv7(), text, done: false }));
   const [parent] = input.parentIssueId
     ? await db
-        .select({ channelId: issues.channelId, restricted: issues.restricted, audienceUserIds: issues.audienceUserIds })
+        .select({
+          channelId: issues.channelId,
+          restricted: issues.restricted,
+          audienceUserIds: issues.audienceUserIds,
+          source: issues.source,
+        })
         .from(issues)
         .where(and(eq(issues.id, input.parentIssueId), eq(issues.orgId, orgId)))
     : [];
@@ -869,8 +922,12 @@ export async function createIssue(
   await checkAssignee(db, orgId, input.assignee, scope);
   const project = input.projectId ? await projectForTask(db, orgId, input.projectId) : null;
   const author = actorOf(actor);
-  const source: IssueSource =
+  const sourceBase: IssueSource =
     input.source ?? (actor.type === "agent" ? { type: "agent", agentId: actor.agentId } : { type: "manual" });
+  const inheritedOwner = designTaskOwner(parent?.source);
+  const source: IssueSource = inheritedOwner
+    ? ({ ...sourceBase, designOwnerUserId: inheritedOwner } as IssueSource)
+    : sourceBase;
   const row = await db.transaction(async (tx) => {
     const [counter] = await tx
       .insert(issueCounters)
@@ -1854,7 +1911,7 @@ registerDocumentBuilder("issue", async (db, orgId, id) => {
     kind: "issue",
     sourceId: i.id,
     // A limited task is its own scope: only who sees it searches it (`searchForUser`).
-    channelIds: i.restricted ? [i.id] : i.channelId ? [i.channelId] : [],
+    channelIds: i.restricted || designTaskOwner(i.source) ? [i.id] : i.channelId ? [i.channelId] : [],
     title: `#${i.number} ${i.title}`,
     body: [i.description, ...i.criteria.map((c) => c.text)].join("\n").slice(0, 20_000),
     createdAt: i.createdAt,
@@ -1883,9 +1940,20 @@ export async function linkIssueToWork(
         }).catch(() => null)
       : null;
     issueId =
-      found && !found.restricted && (found.channelId === null || found.channelId === work.channelId) ? found.id : null;
+      found &&
+      !designTaskOwner(found.source) &&
+      !found.restricted &&
+      (found.channelId === null || found.channelId === work.channelId)
+        ? found.id
+        : null;
   }
-  issueId ??= run.issueId;
+  if (!issueId && run.issueId) {
+    const [candidate] = await deps.db
+      .select()
+      .from(issues)
+      .where(and(eq(issues.orgId, run.orgId), eq(issues.id, run.issueId)));
+    if (candidate && !designTaskOwner(candidate.source)) issueId = candidate.id;
+  }
   if (!issueId) {
     const created = await createIssue(deps, actor, run.orgId, {
       title: work.title,
@@ -1924,7 +1992,7 @@ export async function setWorkIssueState(
   if (!work.issueId) return;
   const view = (await workViews(deps.db, work.orgId, [work.id])).get(work.id);
   const [current] = await deps.db.select().from(issues).where(eq(issues.id, work.issueId));
-  if (!view || !current || current.status === "canceled") return;
+  if (!view || !current || current.status === "canceled" || designTaskOwner(current.source)) return;
   const now = new Date();
   let status: IssueStatus = current.status;
   let blocked: IssueRow["blocked"] = null;
@@ -2033,6 +2101,12 @@ export async function setIssueAudience(
 ) {
   const { db } = deps;
   const current = await findVisible(db, actor, orgId, { id: issueId });
+  const nativeOwner = designTaskOwner(current.source);
+  if (
+    nativeOwner &&
+    (audience.mode !== "people" || audience.userIds.length !== 1 || audience.userIds[0] !== nativeOwner)
+  )
+    throw new ValidationError("Claude Design tracking stays private to the account owner");
   const assignee = current.assigneeType === "person" ? current.assigneeId : null;
   const scope = await chosenScope(db, actor, orgId, audience, assignee);
   const tied = (await tiedPeople(db, [current])).has(current.channelId ?? "");

@@ -108,7 +108,8 @@ export interface ConnectionOptions {
    * `welcome` re-sends every `task.done` not yet acknowledged, `task.ack`
    * marks one delivered. Defaults to `context.tasks`.
    */
-  tasks?: Pick<NonNullable<HandlerContext["tasks"]>, "list" | "attach" | "detach" | "ack">;
+  tasks?: Pick<NonNullable<HandlerContext["tasks"]>, "list" | "attach" | "detach" | "ack"> &
+    Partial<Pick<NonNullable<HandlerContext["tasks"]>, "designAuthorized" | "designConsented">>;
   /** Protocol 5: the local MCP endpoint of mission tasks; its calls go out while connected. */
   mcp?: Pick<McpBridge, "attach" | "detach" | "result"> & Partial<Pick<McpBridge, "tools">>;
   /** Protocol 7: the coding CLIs on the machine, looked up for each `hello` (cached by the caller). */
@@ -353,6 +354,12 @@ export class RunnerConnection {
             return;
           case "mcp.tools":
             opts.mcp?.tools?.(frame);
+            return;
+          case "design.consented":
+            tasks?.designConsented?.(frame);
+            break;
+          case "design.authorized":
+            tasks?.designAuthorized?.(frame);
             return;
           case "task.ack":
             tasks?.ack(frame.taskId);

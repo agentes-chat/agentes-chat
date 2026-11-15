@@ -1,6 +1,7 @@
 import { mkdirSync, realpathSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { claudeDesignVersion } from "@agenteschat/adapters/claude-design";
 import {
   cgroupCounters,
   diskFigures,
@@ -107,7 +108,7 @@ import { DesktopManager } from "./desktop";
 import { DesktopSessions, type DesktopUser, runnerUser, systemDesktopUser } from "./desktop-session";
 import { EgressObservation, probeEgress } from "./egress";
 import { NetworkChangingError, RUNNER_VERSION, RunnerError } from "./errors";
-import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun } from "./executors";
+import { cachedExecutors, EXECUTORS_TTL_MS, type ExecutorRun, resolveCommand } from "./executors";
 import { systemGitCache } from "./git";
 import type { HandlerContext, RequestObserver, RequestOutcome } from "./handlers";
 import { Holds } from "./holds";
@@ -1159,6 +1160,28 @@ export class RunnerDaemon implements RequestObserver {
     const socketPath = mcpSocketPath(home);
     const mcpCommand = { socketPath, command: this.self.command };
     const tasks = new TaskManager({
+      ...(config.mode !== "system" && process.platform === "darwin" && process.arch === "arm64"
+        ? {
+            claudeDesign: {
+              cli: resolveCommand("claude"),
+              hookCommand: this.self.command,
+              noteRateLimit: (accountId: string, info: unknown) => this.accounts.noteRateLimit(accountId, info),
+              capability: async (accountId: string) => {
+                const account = (await this.accounts.list()).find(
+                  (a) => a.id === accountId && a.kind === "claude_code",
+                );
+                if (!account?.loggedIn || account.statusUnknown || account.authMethod !== "cli_login") return null;
+                return {
+                  version: claudeDesignVersion(this.executors().claude?.version ?? ""),
+                  platform: process.platform,
+                  arch: process.arch,
+                  runnerMode: "user",
+                  authMethod: account.authMethod,
+                };
+              },
+            },
+          }
+        : {}),
       mcp: mcpCommand,
       root: path.join(home, "tasks"),
       workspaceReal,
@@ -2015,6 +2038,13 @@ export class RunnerDaemon implements RequestObserver {
 
   private setAgents(raw: unknown, deletedIds?: unknown) {
     const list = parseAgents(raw);
+    for (const agent of [...this.agents, ...list]) {
+      const current = list.find((a) => a.id === agent.id);
+      this.session?.tasks.keepDesignAccounts(
+        agent.id,
+        current ? [current.account, ...(current.accounts ?? [])].filter((id): id is string => !!id) : [],
+      );
+    }
     // System mode: an account folder stays with an agent's user only while that agent thinks with it.
     if (this.stored?.mode === "system") {
       const users = readAgentUsers(this.opts.home);

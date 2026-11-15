@@ -48,6 +48,12 @@ const DSN_MESSAGE = "must be a DSN such as https://<key>@errors.example.com/1";
 const modelId = z.string().regex(/^[a-z0-9][a-z0-9.-]*$/, "must be a model id such as claude-sonnet-5-5");
 
 export const envVars = {
+  CLAUDE_DESIGN_EXPERIMENTAL: {
+    schema: z.stringbool().default(false),
+    description:
+      "Request the experimental Claude Design pilot. Currently unavailable: native interactive consent has not passed the guarded app smoke. This flag alone cannot enable it. Existing results remain readable.",
+    section: "Agents",
+  },
   NODE_ENV: {
     schema: z.enum(["development", "test", "production"]).default("development"),
     description: "Runtime mode. Use `production` for any real deployment.",

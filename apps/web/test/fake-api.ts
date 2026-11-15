@@ -1276,7 +1276,10 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       const keys = roles()
         .filter((r) => r.kind === "everyone" || mine.includes(r.id))
         .flatMap((r) => r.permissions);
-      return { ...o, permissions: ["read", ...grants(keys)] };
+      return {
+        ...o,
+        permissions: ["read", ...grants(keys)],
+      };
     }),
   });
   /** A DM as the list has it: its last message and unread count. */
@@ -1331,6 +1334,27 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
     return budget > 0 ? Math.round((spent / budget) * 1000) / 10 : 0;
   };
   return {
+    claudeDesign: {
+      getGrant: async () => ({ enabled: false, available: false, accountId: null, revision: 0, reason: "disabled" }),
+      setGrant: async () => {
+        throw new ApiError(403, "forbidden", "Design unavailable");
+      },
+      getJob: async () => {
+        throw new ApiError(404, "not_found", "Design unavailable");
+      },
+      cancel: async () => {
+        throw new ApiError(404, "not_found", "Design unavailable");
+      },
+      recover: async () => {
+        throw new ApiError(404, "not_found", "Design unavailable");
+      },
+      getConsent: async () => {
+        throw new ApiError(404, "not_found", "Design unavailable");
+      },
+      decideConsent: async () => {
+        throw new ApiError(404, "not_found", "Design unavailable");
+      },
+    },
     system: {
       health: async () => ({ status: "ok", version: "test", edition: state.edition ?? "cloud" }),
       instance: async () => ({

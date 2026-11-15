@@ -1828,6 +1828,41 @@
       "when": 1794745400000,
       "tag": "0262_agent_co_author",
       "breakpoints": true
+    },
+    {
+      "idx": 263,
+      "version": "7",
+      "when": 1794745400001,
+      "tag": "0263_claude_design",
+      "breakpoints": true
+    },
+    {
+      "idx": 264,
+      "version": "7",
+      "when": 1794745400002,
+      "tag": "0264_claude_design_recovery",
+      "breakpoints": true
+    },
+    {
+      "idx": 265,
+      "version": "7",
+      "when": 1794745400003,
+      "tag": "0265_claude_design_consents",
+      "breakpoints": true
+    },
+    {
+      "idx": 266,
+      "version": "7",
+      "when": 1794745400004,
+      "tag": "0266_claude_design_source_pins",
+      "breakpoints": true
+    },
+    {
+      "idx": 267,
+      "version": "7",
+      "when": 1794745400005,
+      "tag": "0267_claude_design_board",
+      "breakpoints": true
     }
   ]
 }

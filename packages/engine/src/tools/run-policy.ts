@@ -307,6 +307,7 @@ export function toolKind(tool: PolicyTool): ToolKind {
   // only when its scope says so. Connector names can collide with built-ins (a custom MCP
   // server named "permission" exposing "prompt"). Classify by provenance
   // before consulting the built-in name table.
+  if (tool.scope === "claude-design:write") return { kind: "external" };
   if (tool.connectionId) return isReadScope(tool.scope) && !tool.sensitive ? { kind: "read" } : { kind: "external" };
   if (tool.name === "hand_off") return { kind: "hand_off" };
   if (tool.name === "update_widget" && tool.scope === "") return { kind: "widget" };

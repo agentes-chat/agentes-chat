@@ -27,6 +27,7 @@ import {
   useThreadMission,
   useThreadTasks,
 } from "@agenteschat/client";
+import { designJobIdOf } from "@agenteschat/client/lib/claude-design";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -81,6 +82,7 @@ import { useDirectory } from "@/hooks/useDirectory";
 import { inlineWords } from "@/lib/markdown";
 import { useToast } from "@/lib/toast";
 import { useStreams } from "@/realtime/context";
+import { ClaudeDesignJobCard } from "../ai/ClaudeDesignJob";
 import {
   CommandApprovalSelect,
   ExecutorMark,
@@ -1168,6 +1170,13 @@ export function TaskNoticeLine({ message }: { message: Message }) {
   const here = useIsThisMac(org.id, typeof asked === "string" ? asked : "");
   // A note from before the workspace's own computer stopped taking requests: nobody can run its command there.
   const managed = useMachines(org.id).data?.some((m) => m.id === asked && m.kind === "managed");
+  const designJobId = designJobIdOf(message.meta);
+  if (designJobId)
+    return (
+      <div data-message-id={message.id}>
+        <ClaudeDesignJobCard jobId={designJobId} />
+      </div>
+    );
   if (!notice) return null;
   // A folder request (ADR 0036 §8): the server sends `path` and `computer`; the agent is the note's author.
   const author =

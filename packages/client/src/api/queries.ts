@@ -6727,3 +6727,62 @@ export function useWifiPairState(orgId: string, machineId: string | null, starte
   }, [api, orgId, machineId, id]);
   return started && state.data ? { ...state.data, qr: started.qr } : started;
 }
+
+/** Native reviews remain live until the exact waiting runner consumes or loses its decision. */
+export function useClaudeDesignConsent(orgId: string, consentId: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.claudeDesignConsent(orgId, consentId),
+    queryFn: () => api.claudeDesign.getConsent(orgId, consentId),
+    retry: false,
+    refetchInterval: (query) => (["pending", "approved"].includes(query.state.data?.status ?? "") ? 2000 : false),
+  });
+}
+export function useDecideClaudeDesignConsent(orgId: string, consentId: string) {
+  const api = useApi(),
+    qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: import("./types").ClaudeDesignConsentDecision) =>
+      api.claudeDesign.decideConsent(orgId, consentId, input),
+    onSuccess: (row) => qc.setQueryData(keys.claudeDesignConsent(orgId, consentId), row),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.claudeDesignConsent(orgId, consentId) }),
+  });
+}
+
+export function useClaudeDesignGrant(orgId: string, agentId: string, accountId: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.claudeDesignGrant(orgId, agentId, accountId),
+    queryFn: () => api.claudeDesign.getGrant(orgId, agentId, accountId),
+    retry: false,
+  });
+}
+export function useSetClaudeDesignGrant(orgId: string, agentId: string, accountId: string) {
+  const api = useApi(),
+    qc = useQueryClient();
+  return useMutation({
+    mutationFn: (selected: string | null) => api.claudeDesign.setGrant(orgId, agentId, selected),
+    onSuccess: (row) => qc.setQueryData(keys.claudeDesignGrant(orgId, agentId, accountId), row),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["org", orgId, "claude-design", "grant"] }),
+  });
+}
+export function useClaudeDesignJob(orgId: string, jobId: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.claudeDesignJob(orgId, jobId),
+    queryFn: () => api.claudeDesign.getJob(orgId, jobId),
+    retry: false,
+    refetchInterval: (q) =>
+      ["queued", "running", "published", "unknown"].includes(q.state.data?.state ?? "") ? 3000 : false,
+  });
+}
+export function useChangeClaudeDesignJob(orgId: string, jobId: string) {
+  const api = useApi(),
+    qc = useQueryClient();
+  return useMutation({
+    mutationFn: (request: { remoteUrl: string; confirmAssociation: true } | null) =>
+      request ? api.claudeDesign.recover(orgId, jobId, request) : api.claudeDesign.cancel(orgId, jobId),
+    onSuccess: (row) => qc.setQueryData(keys.claudeDesignJob(orgId, jobId), row),
+    onSettled: () => qc.invalidateQueries({ queryKey: keys.claudeDesignJob(orgId, jobId) }),
+  });
+}

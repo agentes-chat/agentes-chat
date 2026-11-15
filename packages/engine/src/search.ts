@@ -369,8 +369,8 @@ export async function userVisibleChannels(
  */
 async function issueSearchScopes(db: Database, orgId: string, userId: string) {
   const rows = rowsOf<{ scope: string }>(
-    await db.execute(sql`select coalesce(i.channel_id, i.id) as scope from ${schema.issues} i
-      where i.org_id = ${orgId}::uuid and (i.restricted or i.channel_id is not null)
+    await db.execute(sql`select case when i.source->>'designOwnerUserId' is not null then i.id else coalesce(i.channel_id, i.id) end as scope from ${schema.issues} i
+      where i.org_id = ${orgId}::uuid and (i.restricted or i.channel_id is not null or i.source->>'designOwnerUserId' is not null)
         and ${taskSeenSql("i", sql`${userId}::text`)}`),
   );
   return [...new Set(rows.map((r) => r.scope))];

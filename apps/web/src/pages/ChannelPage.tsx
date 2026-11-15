@@ -1,6 +1,9 @@
+import { designJobIdsOf } from "@agenteschat/client/lib/claude-design";
+import { ClaudeDesignJobCard } from "@/components/ai/ClaudeDesignJob";
+
 // Not compiled by React Compiler: views here read the live store and refs while rendering (the rows'
 // memoization is written by hand).
-"use no memo";
+("use no memo");
 
 import type {
   Agent,
@@ -4262,6 +4265,7 @@ export const TimelineMessage = memo(function TimelineMessage({
   const missionReport = m.author.type === "agent" ? missionReportOf(meta) : null;
   const missionSuggestion = m.author.type === "person" ? missionSuggestionOf(meta) : null;
   // A mission proposed from here whose thread lives elsewhere: its link card under the reply.
+  const designJobs = designJobIdsOf(meta);
   const missionLink = m.author.type === "agent" ? missionLinkOf(meta) : null;
   // Preparing the mission's copy of the project failed (ADR 0044): the card with "Tentar de novo".
   const missionSetup = missionSetupOf(meta);
@@ -4668,6 +4672,9 @@ export const TimelineMessage = memo(function TimelineMessage({
             {missionReport && <MissionReportExtras report={missionReport} message={m} />}
             {missionStart && <MissionStartLink message={m} />}
             {missionLink && <MissionLinkCard link={missionLink} />}
+            {designJobs.map((id) => (
+              <ClaudeDesignJobCard key={id} jobId={id} />
+            ))}
             {issueWork && (
               <IssueWorkCard work={issueWork} authorId={m.author.type === "person" ? (m.author.id ?? null) : null} />
             )}

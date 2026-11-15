@@ -53,6 +53,8 @@ export interface ToolContext {
    * when its command policy would hold it. Never set from a call's input.
    */
   approved?: boolean;
+  /** Server-derived binding of the authority behind an approved call, never accepted from tool input. */
+  approvedAuthority?: string;
   /**
    * Set by the gateway for our own tools, never a connected server's (`schedule_action`): asks a person now to
    * approve one exact call for a routine's run later, after every check that call meets then (ADR 0015, ahead).
@@ -216,6 +218,8 @@ export interface ToolDefinition {
    * Connector-wide rules (GitHub repositories) live in `tools/checks.ts`.
    */
   checkCall?(input: Record<string, unknown>, ctx: ToolContext): Promise<CallCheck>;
+  /** Snapshot current external authority into the action hash; changing it invalidates a pending approval. */
+  approvalBinding?(input: Record<string, unknown>, ctx: ToolContext): Promise<string>;
   execute(input: Record<string, unknown>, ctx: ToolContext): Promise<ToolOutput>;
 }
 

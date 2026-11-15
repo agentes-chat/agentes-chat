@@ -285,7 +285,8 @@
       "install.scene.finder",
       "install.scene.downloads",
       "devices.armBuild",
-      "devices.iphone.xcodeFix.ok"
+      "devices.iphone.xcodeFix.ok",
+      "claudeDesign.name"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -530,7 +531,8 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "claudeDesign.name"
     ],
     "fr": [
       "channel.tooLong.fileName",
@@ -942,7 +944,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "claudeDesign.source",
+      "claudeDesign.name"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1378,7 +1382,8 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "claudeDesign.name"
     ],
     "it": [
       "shell.email.label",
@@ -1733,7 +1738,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "claudeDesign.account",
+      "claudeDesign.name"
     ],
     "nl": [
       "calendar.moreRuns",
@@ -2312,7 +2319,9 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "claudeDesign.account",
+      "claudeDesign.name"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -2477,7 +2486,8 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "claudeDesign.name"
     ],
     "ko": [
       "channel.tooLong.fileName",
@@ -2636,7 +2646,8 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "claudeDesign.name"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -2786,7 +2797,8 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "claudeDesign.name"
     ],
     "id": [
       "shell.email.label",
@@ -3083,7 +3095,8 @@
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
       "machines.oneClick.tools.browser",
-      "machines.oneClick.tools.terminal"
+      "machines.oneClick.tools.terminal",
+      "claudeDesign.name"
     ],
     "tr": [
       "devices.cpus",
@@ -3267,7 +3280,8 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "claudeDesign.name"
     ],
     "pl": [
       "devices.cpus",
@@ -3551,7 +3565,8 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "claudeDesign.name"
     ],
     "ru": [
       "channel.tooLong.fileName",
@@ -3701,7 +3716,8 @@
       "machines.oneClick.tools.cursor",
       "machines.oneClick.tools.opencode",
       "machines.oneClick.tools.grok",
-      "machines.oneClick.tools.antigravity"
+      "machines.oneClick.tools.antigravity",
+      "claudeDesign.name"
     ]
   },
   "mobile-base": {

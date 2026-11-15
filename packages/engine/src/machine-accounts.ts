@@ -69,6 +69,7 @@ import { liveModelLimits } from "./brains/select";
 import { BRAIN_PLAN_NAMES } from "./brains/types";
 import { caches } from "./cache";
 import { claudeAuthMethodFor, claudeAuthPolicy } from "./claude-auth-policy";
+import { invalidateClaudeDesignAccounts } from "./claude-design/access";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { type MachineCaller, MachineRequestError } from "./machine-hub";
 import {
@@ -382,6 +383,7 @@ async function tombstone(db: Executor, orgId: string, ids: string[], now = new D
     .update(machineAccounts)
     .set({ status: "removing", updatedAt: now })
     .where(and(eq(machineAccounts.orgId, orgId), inArray(machineAccounts.id, ids)));
+  await invalidateClaudeDesignAccounts(db, orgId, ids);
   return releaseAgents(db, orgId, ids, now);
 }
 
@@ -1670,6 +1672,11 @@ export async function releaseMemberAccounts(
   const out: ReleasedAccounts = { machines: [], agents: [] };
   for (const org of new Set(rows.map((r) => r.orgId))) {
     const mine = rows.filter((r) => r.orgId === org);
+    await invalidateClaudeDesignAccounts(
+      db,
+      org,
+      mine.map((r) => r.id),
+    );
     out.agents.push({
       orgId: org,
       agentIds: await releaseAgents(

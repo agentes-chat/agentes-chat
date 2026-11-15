@@ -7864,3 +7864,62 @@ export interface PhoneDeviceInput {
   name?: string;
   audience?: DeviceAudience;
 }
+
+export interface ClaudeDesignGrant {
+  enabled: boolean;
+  available: boolean;
+  accountId: string | null;
+  revision: number;
+  reason: "disabled" | "unsupported" | "unavailable" | null;
+}
+export interface ClaudeDesignJob {
+  issue?: { id: string; number: number } | null;
+  progress?: {
+    stage:
+      | "queued"
+      | "working"
+      | "waiting_approval"
+      | "recovering"
+      | "importing"
+      | "succeeded"
+      | "failed"
+      | "canceled"
+      | "unknown";
+    updatedAt: string;
+    pendingConsentId: string | null;
+    issue: { id: string; number: number } | null;
+  };
+  title?: string;
+  preview?: {
+    version: string;
+    files: {
+      artifactId: string;
+      version: number;
+      relativePath: string;
+      sha256: string;
+      size: number;
+      contentType: string;
+    }[];
+  };
+  id: string;
+  state: "queued" | "running" | "published" | "succeeded" | "failed" | "canceled" | "unknown";
+  designId: string | null;
+  revision: number | null;
+  remote: { id: string; url: string; version: string } | null;
+  artifactIds: string[];
+  error?: { code: string; message: string };
+}
+export interface ClaudeDesignConsent {
+  id: string;
+  jobId: string;
+  status: "pending" | "approved" | "denied" | "consumed" | "expired" | "canceled";
+  title: string;
+  accountLabel: string;
+  remoteUrl: string;
+  description: string;
+  expiresAt: string;
+  canDecide: boolean;
+}
+export type ClaudeDesignConsentDecision =
+  | { decision: "approve"; reviewed: true }
+  | { decision: "deny"; reviewed: boolean };

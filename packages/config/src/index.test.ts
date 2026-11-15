@@ -25,6 +25,7 @@ describe("loadConfig", () => {
     expect(config.PORT).toBe(3000);
     expect(config.RUN_MIGRATIONS_ON_BOOT).toBe(true);
     expect(config.ALLOW_SIGNUP).toBe(false);
+    expect(config.CLAUDE_DESIGN_EXPERIMENTAL).toBe(false);
     expect(config.AGENT_DEFAULT_MODEL).toBe("claude-sonnet-5-5");
     expect(config.ROUTER_MODEL).toBe("claude-haiku-5-5");
     expect(config.AGENT_MAX_HOPS).toBe(100);

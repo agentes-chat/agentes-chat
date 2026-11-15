@@ -146,6 +146,9 @@ export interface ToolService {
 
 /** The engine's own tools (packages/engine/src/context, issues, artifacts, calendar). */
 const BUILTIN: Record<string, ActivityKind> = {
+  create_claude_design: "startingTask",
+  update_claude_design: "startingTask",
+  get_claude_design_job: "checkingTask",
   create_issue: "creatingIssue",
   update_issue: "updatingIssue",
   comment_issue: "updatingIssue",
