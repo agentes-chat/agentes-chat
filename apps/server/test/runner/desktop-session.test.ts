@@ -267,7 +267,7 @@ test("a runner running as root starts a desktop only through a launcher that run
   expect(unlaunched.info().available).toBe(true);
   expect(await errorCode(() => unlaunched.ensure(dev))).toBe("desktop_unavailable");
   expect(t.fake.procs).toHaveLength(0);
-  const prefix = ["/usr/sbin/runuser", "-u", "ag-01a142cb", "--"];
+  const prefix = ["/usr/bin/setpriv", "--reuid=ag-01a142cb", "--regid=ag-01a142cb", "--init-groups", "--"];
   const user = async (agent: AgentScope) => ({ ...(await t.opts.user(agent)), prefix });
   const launched = new DesktopSessions({ ...t.opts, system: root, agentUsers: true, user });
   await launched.ensure(dev);
@@ -629,7 +629,7 @@ test("each start's line says where its time went; its session's programs follow 
   );
   const [launched] = t.fake.of("dbus-launch");
   if (!launched) throw new Error("not started");
-  // dbus-launch became the session (system mode: runuser's child); another desktop's programs aren't its own.
+  // dbus-launch became the session (system mode: the launch's child); another desktop's programs aren't its own.
   t.fake.stats.push(
     { pid: launched.pid, ppid: 1, name: "xfce4-session", start: 5000, cpu: 0.2 },
     { pid: 9001, ppid: launched.pid, name: "xfwm4", start: 5000.31, cpu: 0.4 },
@@ -688,7 +688,7 @@ test("system mode: every process as the agent, and the password file root's (rea
   dirs.push(root, runDir);
   const home = path.join(root, "home", "ag-01a142cb");
   const gid = process.getgid?.() ?? 0;
-  const prefix = ["/usr/sbin/runuser", "-u", "ag-01a142cb", "--"];
+  const prefix = ["/usr/bin/setpriv", "--reuid=ag-01a142cb", "--regid=ag-01a142cb", "--init-groups", "--"];
   const user: DesktopUser = {
     prefix,
     env: {
@@ -750,7 +750,14 @@ test("system mode's desktop user: the agent's launcher and home; the cookie and 
     // Its X server's lock is in its own /tmp, where root looks for it.
     tmp: "/run/agentes-runner-tmp/21001/tmp",
   });
-  expect(launcher.prefix.at(-2)).toBe("ag-01a142cb");
+  // The last step becomes the agent: its own user, never through a PAM session (setpriv, #253).
+  expect(launcher.prefix.slice(-5)).toEqual([
+    "/usr/bin/setpriv",
+    "--reuid=ag-01a142cb",
+    "--regid=ag-01a142cb",
+    "--init-groups",
+    "--",
+  ]);
   expect(launcher.env.HOME).toBe("/home/ag-01a142cb");
 });
 
@@ -1254,7 +1261,7 @@ test("a runner running as root refreshes a running desktop only through the agen
   unlaunched.close();
 
   // System mode: as the agent, through its launcher.
-  const prefix = ["/usr/sbin/runuser", "-u", "ag-01a142cb", "--"];
+  const prefix = ["/usr/bin/setpriv", "--reuid=ag-01a142cb", "--regid=ag-01a142cb", "--init-groups", "--"];
   const user = async (agent: AgentScope) => ({ ...(await t.opts.user(agent)), prefix });
   const launched = new DesktopSessions({ ...t.opts, system: root, agentUsers: true, user });
   launched.restore();

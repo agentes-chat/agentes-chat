@@ -1906,6 +1906,8 @@ export async function openPageInControl(
         ...(agent.browserAllowedDomains ? { allowedDomains: agent.browserAllowedDomains } : {}),
         link: agentBrowserLink(orgId, agentId),
         ...(desktop ? { desktop: true } : {}),
+        // The person in control's own move: it runs while they drive (anything else waits for them).
+        person: true,
       },
       { timeoutMs: (OPEN_PAGE_SECONDS + 30) * 1000 },
     );

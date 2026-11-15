@@ -165,13 +165,14 @@ export async function startServer(options: StartOptions) {
     release,
     runtime: { name: "bun", version: Bun.version },
   });
-  const log = createLogger(config.LOG_LEVEL, errors);
+  const log = createLogger(config.LOG_LEVEL, errors, config.LOG_FORMAT);
   try {
     const started = await boot(options, config, log, release, errors);
     // Once it serves: a boot's own long steps (migrations, the built-in database's start) aren't what it is for.
     startFreezeWatch(
       {
         logLevel: config.LOG_LEVEL,
+        logFormat: config.LOG_FORMAT,
         ...(config.SENTRY_DSN
           ? { reports: { dsn: config.SENTRY_DSN, environment: config.SENTRY_ENVIRONMENT, release } }
           : {}),
@@ -201,7 +202,11 @@ async function boot(
       ? { to: new URL(config.SENTRY_DSN).host, environment: config.SENTRY_ENVIRONMENT, release }
       : { reports: "off" },
   );
-  if (config.NODE_ENV === "production" && config.PUBLIC_URL === "http://localhost:3000") {
+  if (
+    config.NODE_ENV === "production" &&
+    config.PUBLIC_URL === "http://localhost:3000" &&
+    !config.EXTRA_TRUSTED_ORIGINS?.length
+  ) {
     log.warn(
       "PUBLIC_URL is http://localhost:3000 (the default): only a browser on this machine, at exactly that address, can sign in and save. Set PUBLIC_URL to the address people open (e.g. https://chat.example.com): sign-in cookies, the browser origin allowed to make changes (CSRF) and the links in emails all come from it, so from any other address sign-in and saving fail with bad_origin.",
     );

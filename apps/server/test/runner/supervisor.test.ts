@@ -3258,10 +3258,11 @@ test("the launch line: the agent's launcher, then this runner's worker with the 
     CONTAINER_HOST: "unix:///run/user/21000/podman/podman.sock",
     DOCKER_HOST: "unix:///run/user/21000/podman/podman.sock",
   });
-  expect(workerCommand(ana, runner, home, false).argv.slice(0, 4)).toEqual([
-    "/usr/sbin/runuser",
-    "-u",
-    "ag-a1b2c3d4",
+  expect(workerCommand(ana, runner, home, false).argv.slice(0, 5)).toEqual([
+    "/usr/bin/setpriv",
+    "--reuid=ag-a1b2c3d4",
+    "--regid=ag-a1b2c3d4",
+    "--init-groups",
     "--",
   ]);
 });

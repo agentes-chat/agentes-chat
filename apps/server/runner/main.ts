@@ -428,7 +428,7 @@ async function start(): Promise<number> {
     console.error(`This runtime has no WebSocket client (${process.version}). Use Node.js 22 or newer, or Bun.`);
     return 1;
   }
-  const lock = acquireLock(home, "start");
+  const lock = acquireLock(home, "start", { version: RUNNER_VERSION, protocol: MACHINE_PROTOCOL_VERSION });
   if (!lock.ok) {
     console.error(lockedMessage(home, lock.holder));
     return serviceSafe(4);
@@ -497,7 +497,7 @@ async function app(): Promise<number> {
   console.debug = toLog;
   console.error = toLog;
   process.stdout.on("error", () => {});
-  const lock = acquireLock(home, "app");
+  const lock = acquireLock(home, "app", { version: RUNNER_VERSION, protocol: MACHINE_PROTOCOL_VERSION });
   const ac = new AbortController();
   process.once("SIGTERM", () => ac.abort());
   process.once("SIGINT", () => ac.abort());
@@ -618,7 +618,7 @@ async function host(p: Parsed): Promise<number> {
   // Read once, then out of the environment: the organizations' runners (and their agents) never see it.
   const envToken = flags.tokenEnv ? process.env[flags.tokenEnv]?.trim() || null : null;
   if (flags.tokenEnv) delete process.env[flags.tokenEnv];
-  const lock = acquireLock(flags.state, "host");
+  const lock = acquireLock(flags.state, "host", { version: RUNNER_VERSION, protocol: MACHINE_PROTOCOL_VERSION });
   if (!lock.ok) {
     console.error(lockedMessage(flags.state, lock.holder));
     return 4;
@@ -857,18 +857,29 @@ function status(): number {
   const stored = storedOrNull(home);
   const config = readConfig(home);
   const bun = (process.versions as { bun?: string }).bun;
-  term.intro(
-    `agentes-runner ${RUNNER_VERSION} (protocol ${MACHINE_PROTOCOL_VERSION}) on ${bun ? `bun ${bun}` : `${process.release.name} ${process.version}`}${runningCompiled() ? " (compiled)" : ""}`,
-    false,
-  );
+  // The version worth reporting is the one of the runner serving this home, which keeps in the lock what it puts
+  // in its `hello`. This command may be another install's shim: its own constant is only the answer when no runner
+  // reports one, and then the line says whose version it is.
+  const holder = readLock(home);
+  const running = holder && pidAlive(holder.pid) ? holder : null;
+  const version = running?.version ?? RUNNER_VERSION;
+  const protocol = running?.protocol ?? MACHINE_PROTOCOL_VERSION;
+  const here = `agentes-runner ${version} (protocol ${protocol})`;
+  const build = `on ${bun ? `bun ${bun}` : `${process.release.name} ${process.version}`}${runningCompiled() ? " (compiled)" : ""}`;
+  const same = version === RUNNER_VERSION && protocol === MACHINE_PROTOCOL_VERSION;
+  const line = !running?.version
+    ? `${here} ${build} — this command's version: ${running ? "the runner here didn't report one" : "no runner is running"}`
+    : same
+      ? `${here} ${build}`
+      : `${here} running here · this command is ${RUNNER_VERSION} (protocol ${MACHINE_PROTOCOL_VERSION}) ${build}`;
+  term.intro(line, false);
   if (config) {
     term.step(
       `Connected${stored?.orgName ? ` to ${stored.orgName}` : ""} as "${config.name}"`,
       `${config.server} · workspace ${config.workspace}`,
     );
   } else term.fail("Not connected.");
-  const holder = readLock(home);
-  if (holder && pidAlive(holder.pid)) term.step(`Running: pid ${holder.pid}${holder.mode ? ` (${holder.mode})` : ""}`);
+  if (running) term.step(`Running: pid ${running.pid}${running.mode ? ` (${running.mode})` : ""}`);
   else term.warn("Running: no");
   const service = serviceStatus(undefined, stored?.mode === "system");
   // systemd says how the unit is ("(active)", "(inactive)", "(failed)"); launchd and Windows only that it's there.

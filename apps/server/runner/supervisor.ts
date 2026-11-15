@@ -1959,7 +1959,7 @@ export function launchWorker(
       stdout: child.stdout,
       stderr: child.stderr,
       exited,
-      // runuser passes SIGTERM on to the worker.
+      // Every step of the launcher execs the next one, so this is the worker itself.
       kill: () => {
         child.stdin.destroy();
         child.kill("SIGTERM");

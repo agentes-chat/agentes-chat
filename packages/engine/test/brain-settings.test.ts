@@ -239,6 +239,19 @@ describe("brain settings", () => {
       ["claude_code", false, "tool_off"],
       ["codex", true, null],
     ]);
+    // Not installed stays "not_installed" even when its toggle is off in the app's Tools.
+    const uninstalledOff = mac({
+      ...both,
+      protocol: OPENCODE_ACP_PROTOCOL,
+      executors: { detectedAt: "2026-01-01T00:00:00Z" },
+      access: { tools: { claude: false, codex: false, opencode: false, cursor: false } },
+    });
+    expect(reasons(uninstalledOff).slice(1, 3)).toEqual([
+      ["claude_code", false, "not_installed"],
+      ["codex", false, "not_installed"],
+    ]);
+    expect(brainOptions(uninstalledOff).find((o) => o.kind === "opencode")?.reason).toBe("not_installed");
+    expect(brainOptions(uninstalledOff).find((o) => o.kind === "cursor")?.reason).toBe("not_installed");
     expect(reasons(mac({ access: { tools: { claude: true } } }))[1]).toEqual(["claude_code", true, null]);
     // Commands off (the app's default for a new workspace) with Claude Code on: the plan still thinks there, as the
     // runner runs it; "no permission to run programs" is only for a runner that reports no tools.

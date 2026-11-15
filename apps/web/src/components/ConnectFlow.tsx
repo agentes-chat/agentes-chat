@@ -19,6 +19,7 @@ import {
   type Level,
   type LevelState,
   levelIn,
+  resourcesOf,
   saveLevels,
   sharedLevel,
 } from "@agenteschat/client/lib/access-levels";
@@ -846,8 +847,11 @@ function WhoStep({ item, onBack, onClose }: { item: ConnectedItem; onBack: () =>
   const ready = who !== null;
   const picked = (agentId: string) => who?.[agentId] ?? "none";
   const levelLabel = (l: LevelState) => t(`access.level.${l}`);
+  // The connection's own levels (no "Ler" when none of its tools only reads), from any agent's fresh tree.
+  const tree = list.map((a) => access.byAgent.get(a.id)).find((x) => x !== undefined);
+  const levels = (tree && resourcesOf(tree).find((r) => r.id === resourceId)?.levels) ?? LEVELS;
   const options = (agentId: string) => [
-    ...LEVELS.map((l) => ({ value: l as LevelState, label: levelLabel(l) })),
+    ...levels.map((l) => ({ value: l as LevelState, label: levelLabel(l) })),
     // Granted tool by tool before: shown as is until a level is picked.
     ...(current(agentId) === "custom" ? [{ value: "custom" as LevelState, label: levelLabel("custom") }] : []),
   ];
@@ -900,7 +904,7 @@ function WhoStep({ item, onBack, onClose }: { item: ConnectedItem; onBack: () =>
                     onValueChange={(l) => {
                       if (l) setWho(Object.fromEntries(list.map((a) => [a.id, l])));
                     }}
-                    options={LEVELS.map((l) => ({ value: l, label: levelLabel(l) }))}
+                    options={levels.map((l) => ({ value: l, label: levelLabel(l) }))}
                   />
                 </div>
               )}

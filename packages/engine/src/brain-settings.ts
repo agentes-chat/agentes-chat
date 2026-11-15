@@ -369,9 +369,9 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
     else if (machine.protocol < BRAIN_PROTOCOL) reason = "runner_old";
     else if (executor === "codex" && machine.os === "windows" && machine.protocol < CODEX_WINDOWS_PROTOCOL)
       reason = "runner_old";
-    else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
     else if (!found?.available.includes(executor))
       reason = executor === "codex" && found?.codexTooOld ? "outdated" : missingCli(machine, executor);
+    else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
     return {
       kind,
       available: !reason,
@@ -414,8 +414,8 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
   else if (kind === "opencode" && machine.os === "windows" && machine.protocol < OPENCODE_ACP_PROTOCOL)
     reason = "runner_old";
   else if (!brainRunsOn(kind, machine.os)) reason = "system";
-  else if (tools && (tools[kind] ?? tools.codex) !== true) reason = "tool_off";
   else if (!machine.executors?.[kind]) reason = missingCli(machine, kind);
+  else if (tools && (tools[kind] ?? tools.codex) !== true) reason = "tool_off";
   return {
     kind,
     available: !reason,

@@ -36,6 +36,8 @@ import { errorCode, removeDirs, tempDir } from "./helpers";
 
 /** A root-owned executable that is no link: `/usr/bin/true` is one where coreutils is a multicall binary (Ubuntu 26.04). */
 const ROOT_TOOL = realpathSync("/usr/bin/true");
+/** How every launch becomes ag-a1b2c3d4: setpriv, never through a PAM session (runuser, su). */
+const AS_AGENT = ["/usr/bin/setpriv", "--reuid=ag-a1b2c3d4", "--regid=ag-a1b2c3d4", "--init-groups", "--"];
 
 const dirs: string[] = [];
 afterEach(() => removeDirs(dirs));
@@ -338,7 +340,7 @@ test("the launcher: the agent's slice, its own temporary folders, its user, abso
     "-c",
   ]);
   expect(p.join("\n")).not.toContain("hidepid=");
-  expect(p.slice(19)).toEqual(["sh", "21003", "/usr/sbin/runuser", "-u", "ag-a1b2c3d4", "--"]);
+  expect(p.slice(19)).toEqual(["sh", "21003", ...AS_AGENT]);
   expect(launcher).toMatchObject({ env, home: "/home/ag-a1b2c3d4", tmp: "/run/agentes-runner-tmp/21003/tmp" });
   // Root on the computer: the agent's own tmpfs, mounted once (a lock, so two first launches don't stack two).
   expect((p[8] ?? "").split("\n")).toEqual([
@@ -408,9 +410,9 @@ test("the launcher: the agent's slice, its own temporary folders, its user, abso
   const keeps = systemLauncher(user, true, true, false, false).prefix;
   expect(keeps.slice(3, 6)).toEqual(["--collect", "--property=OOMPolicy=continue", "--slice=agents-21003.slice"]);
   expect(keeps.slice(6)).toEqual(p.slice(5));
-  // No systemd as PID 1 (a container): runuser alone.
+  // No systemd as PID 1 (a container): becoming the agent alone.
   expect(systemLauncher(user, false)).toEqual({
-    prefix: ["/usr/sbin/runuser", "-u", "ag-a1b2c3d4", "--"],
+    prefix: AS_AGENT,
     env,
     home: "/home/ag-a1b2c3d4",
   });
@@ -553,13 +555,16 @@ test("a privileged network hook rejects writable ancestors, symlinks and non-exe
   expect(() => trustedNetworkLauncher("launch", stats())).toThrow();
 });
 
-test.if(process.platform !== "win32")("the optional namespace launcher precedes runuser for every agent launch", () => {
-  const prefix = systemLauncher(
-    { id: ANA.id, user: "ag-a1b2c3d4", uid: 21000, networkLauncher: ROOT_TOOL },
-    false,
-  ).prefix;
-  expect(prefix).toEqual([ROOT_TOOL, "21000", "--", "/usr/sbin/runuser", "-u", "ag-a1b2c3d4", "--"]);
-});
+test.if(process.platform !== "win32")(
+  "the optional namespace launcher precedes becoming the agent for every launch",
+  () => {
+    const prefix = systemLauncher(
+      { id: ANA.id, user: "ag-a1b2c3d4", uid: 21000, networkLauncher: ROOT_TOOL },
+      false,
+    ).prefix;
+    expect(prefix).toEqual([ROOT_TOOL, "21000", "--", ...AS_AGENT]);
+  },
+);
 
 test("a configured routing mark drops network capabilities even without a namespace hook", () => {
   const user = { id: "a1b2c3d4", user: "ag-a1b2c3d4", uid: 21000, networkMark: 0x08000000 };
@@ -568,16 +573,32 @@ test("a configured routing mark drops network capabilities even without a namesp
     "--no-new-privs",
     "--bounding-set=-net_admin,-net_raw",
     "--",
-    "/usr/sbin/runuser",
-    "-u",
-    user.user,
-    "--",
+    ...AS_AGENT,
   ]);
   const scoped = systemLauncher({ ...user, networkLauncher: ROOT_TOOL }, true).prefix;
   expect(scoped.indexOf(ROOT_TOOL)).toBeLessThan(scoped.indexOf("/usr/bin/setpriv"));
   expect(scoped.join("\n")).toContain("mount -t proc -o nosuid,nodev,noexec,hidepid=2 proc /proc");
-  expect(scoped.indexOf("/usr/bin/setpriv")).toBeLessThan(scoped.indexOf("/usr/sbin/runuser"));
-  expect(systemLauncher({ ...user, networkMark: undefined }, false).prefix[0]).toBe("/usr/sbin/runuser");
+  expect(scoped.slice(-AS_AGENT.length)).toEqual(AS_AGENT);
+  expect(systemLauncher({ ...user, networkMark: undefined }, false).prefix).toEqual(AS_AGENT);
+});
+
+test("no launch goes through runuser or su: only setpriv changes to the agent, and no PAM session can move it out of its slice", () => {
+  const user = { id: ANA.id, user: "ag-a1b2c3d4", uid: 21003 };
+  // Every way a command reaches an agent: a container (no systemd), its scope, its scope with a network hook and a
+  // routing mark, and its containers service.
+  const launches = [
+    systemLauncher(user, false).prefix,
+    systemLauncher(user, true, false, false, false).prefix,
+    systemLauncher({ ...user, networkLauncher: ROOT_TOOL, networkMark: 0x08000000 }, true).prefix,
+    containersCommand(user, true),
+  ];
+  for (const argv of launches) {
+    expect(argv.join(" ")).not.toContain("runuser");
+    expect(argv).not.toContain("/bin/su");
+    // setpriv, given the user's own group and its groups: what runuser -u did without a PAM session (Arch's runuser
+    // loads pam_systemd through `system-login`, which moves the process to user-<uid>.slice, #253).
+    expect(argv.join(" ")).toContain(`--reuid=${user.user} --regid=${user.user} --init-groups --`);
+  }
 });
 
 // ── Rootless containers (ADR 0169) ──────────────────────────────────────────
@@ -721,10 +742,10 @@ test("the containers service: a delegated unit of the agent's slice, its steps, 
     "/run/agentes-runner-tmp/21003/cgroup",
     "/usr/bin/setpriv",
     "--bounding-set=-net_admin,-net_raw",
+    "--reuid=ag-a1b2c3d4",
+    "--regid=ag-a1b2c3d4",
+    "--init-groups",
     "--",
-    "/usr/sbin/runuser",
-    "-u",
-    "ag-a1b2c3d4",
   ]);
   expect(argv).not.toContain("--no-new-privs");
   expect(argv).toContain("XDG_RUNTIME_DIR=/run/user/21003");
