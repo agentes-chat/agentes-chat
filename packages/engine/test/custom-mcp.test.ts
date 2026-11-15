@@ -1059,6 +1059,115 @@ describe("custom MCP servers", () => {
     expect(await f.db.select().from(schema.oauthClients)).toHaveLength(1);
   });
 
+  test("Kleos: its Supabase Auth, at a path, registers us; the sign-in asks for no scope and is named by the organization whoami answers", async () => {
+    f = await setup();
+    const kleos = "https://mcp.usekleos.app/mcp";
+    const issuer = "https://pobtuupxakiravaduknp.supabase.co/auth/v1";
+    const seen = { challenge: "", authMethods: [] as string[], bearer: [] as (string | undefined)[] };
+    // As Kleos and its authorization server answered on 2026-11-15.
+    const http = (async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === kleos) {
+        return new Response("", {
+          status: 401,
+          headers: {
+            "www-authenticate":
+              'Bearer realm="kleos", resource_metadata="https://mcp.usekleos.app/.well-known/oauth-protected-resource/mcp"',
+          },
+        });
+      }
+      if (url.startsWith("https://mcp.usekleos.app/.well-known/oauth-protected-resource")) {
+        return Response.json({
+          resource: kleos,
+          authorization_servers: [issuer],
+          bearer_methods_supported: ["header"],
+          resource_name: "Kleos",
+        });
+      }
+      if (url === "https://pobtuupxakiravaduknp.supabase.co/.well-known/oauth-authorization-server/auth/v1") {
+        return Response.json({
+          issuer,
+          authorization_endpoint: `${issuer}/oauth/authorize`,
+          token_endpoint: `${issuer}/oauth/token`,
+          registration_endpoint: `${issuer}/oauth/clients/register`,
+          scopes_supported: ["openid", "profile", "email", "phone", "offline_access"],
+          response_types_supported: ["code"],
+          grant_types_supported: ["authorization_code", "refresh_token"],
+          token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post", "none"],
+          code_challenge_methods_supported: ["S256", "plain"],
+        });
+      }
+      if (url === `${issuer}/oauth/clients/register`) {
+        seen.authMethods.push(JSON.parse(String(init?.body)).token_endpoint_auth_method);
+        return Response.json({ client_id: "kleos-client", token_endpoint_auth_method: "none" }, { status: 201 });
+      }
+      if (url === `${issuer}/oauth/token`) {
+        const form = new URLSearchParams(String(init?.body));
+        const verified =
+          createHash("sha256")
+            .update(form.get("code_verifier") ?? "")
+            .digest("base64url") === seen.challenge;
+        if (!verified || form.get("resource") !== kleos)
+          return Response.json({ error: "invalid_grant" }, { status: 400 });
+        return Response.json({
+          access_token: "kleos-at",
+          refresh_token: "kleos-rt",
+          token_type: "bearer",
+          expires_in: 3600,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+    const connect: McpConnect = async (_connection, headers) => {
+      seen.bearer.push(headers.authorization);
+      const server = new McpServer({ name: "kleos", version: "1" });
+      server.registerTool(
+        "whoami",
+        {
+          description: "Returns the account behind this connection",
+          inputSchema: {},
+          annotations: { readOnlyHint: true },
+        },
+        async () => ({
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                user: { id: "user_1", email: "ana@acme.com" },
+                organization: { id: "org_acme", name: "Acme", kind: "client" },
+                auth: "oauth",
+              }),
+            },
+          ],
+        }),
+      );
+      const [client, transport] = InMemoryTransport.createLinkedPair();
+      await server.connect(transport);
+      return mcpSessionOver(client);
+    };
+    const deps = depsOf(f, { http, connect, resolveHost: async () => ["93.184.216.34"] });
+    const started = await connectCustomServer(deps, f.owner.id, f.org.id, { serverUrl: kleos, label: "Kleos" });
+    if (started.status !== "oauth") throw new Error(`expected oauth, got ${started.status}`);
+    const url = new URL(started.authorizeUrl);
+    expect(url.origin + url.pathname).toBe(`${issuer}/oauth/authorize`);
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({
+      client_id: "kleos-client",
+      code_challenge_method: "S256",
+      resource: kleos,
+    });
+    // Kleos lists no scope (what an app may do there is picked on its consent screen): the server's defaults.
+    expect(url.searchParams.get("scope")).toBeNull();
+    expect(seen.authMethods).toEqual(["none"]);
+    seen.challenge = url.searchParams.get("code_challenge") ?? "";
+    const { connection } = await completeOAuth(
+      deps,
+      { id: f.owner.id },
+      { state: url.searchParams.get("state") ?? "", code: "code-1" },
+    );
+    expect(seen.bearer).toContain("Bearer kleos-at");
+    expect(connection).toMatchObject({ label: "Kleos (Acme)", accountId: "org_acme", accountLabel: "Acme" });
+  });
+
   test("offline_access goes with the scopes asked for when the authorization server lists it (Vercel asks only openid), never alone", async () => {
     f = await setup();
     const vercel = oauthServer({ scopes: ["openid"], serverScopes: ["openid", "email", "profile", "offline_access"] });

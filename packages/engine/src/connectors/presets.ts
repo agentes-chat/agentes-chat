@@ -1256,6 +1256,18 @@ export const MCP_PRESETS: readonly McpPreset[] = [
       ],
     },
   },
+  {
+    id: "kleos",
+    category: "social",
+    label: "Kleos",
+    description: "Kleos social media posts: create, schedule and measure them on TikTok, Instagram and more.",
+    icon: "kleos",
+    serverUrl: "https://mcp.usekleos.app/mcp",
+    // Checked 2026-11-15: its authorization server is Supabase Auth at a path (`/auth/v1`, RFC 8414 path insertion),
+    // with registration and PKCE S256. A sign-in reaches the one Kleos organization chosen on Kleos's consent screen,
+    // which `whoami` names.
+    account: { tool: "whoami", id: ["organization.id"], name: "organization.name" },
+  },
 ];
 
 export const mcpPreset = (id: string) => MCP_PRESETS.find((p) => p.id === id) ?? null;

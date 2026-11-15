@@ -13222,6 +13222,11 @@
         "2": "Crear plantillas de mensajes",
         "ask": "Enviar mensajes siempre pide tu aprobación"
       },
+      "kleos": {
+        "1": "Ver publicaciones, el calendario y los resultados",
+        "2": "Crear y programar publicaciones con la voz de tu marca",
+        "ask": "Publicar y eliminar siempre piden tu aprobación"
+      },
       "database": {
         "1": "Ver las tablas",
         "2": "Consultar los datos para responder",
@@ -13377,7 +13382,8 @@
       "youtube": "Videos, comentarios, listas de reproducción y estadísticas del canal de YouTube.",
       "pinterest": "Pines, tableros y estadísticas de Pinterest.",
       "reddit": "Publicaciones, comentarios y comunidades de Reddit.",
-      "whatsapp": "Mensajes y plantillas de WhatsApp Business."
+      "whatsapp": "Mensajes y plantillas de WhatsApp Business.",
+      "kleos": "Publicaciones para TikTok, Instagram y más: redacción, programación y resultados."
     }
   },
   "toolNames": {

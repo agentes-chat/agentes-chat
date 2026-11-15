@@ -12766,6 +12766,11 @@
         "2": "Mesaj şablonları oluşturur",
         "ask": "Mesaj göndermek her zaman onayınızı ister"
       },
+      "kleos": {
+        "1": "Gönderileri, takvimi ve sonuçları görür",
+        "2": "Markanızın üslubuyla gönderi oluşturur ve planlar",
+        "ask": "Yayınlama ve silme her zaman onayınızı ister"
+      },
       "database": {
         "1": "Tabloları görür",
         "2": "Yanıt vermek için verileri sorgular",
@@ -12916,7 +12921,8 @@
       "youtube": "YouTube kanalının videoları, yorumları, oynatma listeleri ve analizleri.",
       "pinterest": "Pinterest pinleri, panoları ve analizleri.",
       "reddit": "Reddit gönderileri, yorumları ve toplulukları.",
-      "whatsapp": "WhatsApp Business mesajları ve şablonları."
+      "whatsapp": "WhatsApp Business mesajları ve şablonları.",
+      "kleos": "TikTok, Instagram ve diğer ağlar için gönderiler: yazım, planlama ve sonuçlar."
     }
   },
   "toolNames": {

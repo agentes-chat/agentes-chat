@@ -12394,6 +12394,11 @@
         "2": "创建消息模板",
         "ask": "发送消息始终需要你的审批"
       },
+      "kleos": {
+        "1": "查看帖子、日程和效果",
+        "2": "以品牌的语气创建和排期帖子",
+        "ask": "发布和删除始终需要你的审批"
+      },
       "database": {
         "1": "查看数据表",
         "2": "查询数据来回答问题",
@@ -12539,7 +12544,8 @@
       "youtube": "YouTube 频道的视频、评论、播放列表和数据分析。",
       "pinterest": "Pinterest 的 Pin 图、图板和数据分析。",
       "reddit": "Reddit 的帖子、评论和社区。",
-      "whatsapp": "WhatsApp Business 消息和模板。"
+      "whatsapp": "WhatsApp Business 消息和模板。",
+      "kleos": "TikTok、Instagram 等平台的帖子：撰写、排期和效果。"
     }
   },
   "toolNames": {

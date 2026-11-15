@@ -12324,6 +12324,11 @@
         "2": "메시지 템플릿 만들기",
         "ask": "메시지 보내기는 항상 승인을 요청해요"
       },
+      "kleos": {
+        "1": "게시물, 캘린더, 성과 보기",
+        "2": "브랜드의 말투로 게시물 작성과 예약",
+        "ask": "게시와 삭제는 항상 승인을 요청해요"
+      },
       "database": {
         "1": "테이블 보기",
         "2": "데이터를 조회해 답변하기",
@@ -12469,7 +12474,8 @@
       "youtube": "YouTube 채널의 동영상, 댓글, 재생목록, 분석.",
       "pinterest": "Pinterest 핀, 보드, 분석.",
       "reddit": "Reddit 게시물, 댓글, 커뮤니티.",
-      "whatsapp": "WhatsApp Business 메시지와 템플릿."
+      "whatsapp": "WhatsApp Business 메시지와 템플릿.",
+      "kleos": "TikTok, Instagram 등의 게시물: 작성, 예약, 성과."
     }
   },
   "toolNames": {

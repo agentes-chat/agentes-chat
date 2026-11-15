@@ -31114,6 +31114,15 @@
   "connectors.can.whatsapp.ask": {
     "value": "Sending messages always asks for your approval"
   },
+  "connectors.can.kleos.1": {
+    "value": "See posts, the calendar and results"
+  },
+  "connectors.can.kleos.2": {
+    "value": "Create and schedule posts in your brand's voice"
+  },
+  "connectors.can.kleos.ask": {
+    "value": "Publishing and deleting always ask for your approval"
+  },
   "connectors.can.database.1": {
     "value": "See the tables"
   },
@@ -31530,6 +31539,9 @@
   },
   "connectors.descriptions.whatsapp": {
     "value": "WhatsApp Business messages and templates."
+  },
+  "connectors.descriptions.kleos": {
+    "value": "Posts for TikTok, Instagram and more: writing, scheduling and results."
   },
   "toolNames.order": {
     "value": "modifiers-first"

@@ -12893,6 +12893,11 @@
         "2": "Berichtsjablonen maken",
         "ask": "Berichten versturen vraagt altijd om jouw goedkeuring"
       },
+      "kleos": {
+        "1": "Posts, de kalender en resultaten bekijken",
+        "2": "Posts maken en inplannen in de stem van je merk",
+        "ask": "Publiceren en verwijderen vragen altijd om jouw goedkeuring"
+      },
       "database": {
         "1": "De tabellen bekijken",
         "2": "De data bevragen om te antwoorden",
@@ -13043,7 +13048,8 @@
       "youtube": "Video's, reacties, afspeellijsten en statistieken van het YouTube-kanaal.",
       "pinterest": "Pins, borden en statistieken op Pinterest.",
       "reddit": "Posts, reacties en community's op Reddit.",
-      "whatsapp": "Berichten en sjablonen van WhatsApp Business."
+      "whatsapp": "Berichten en sjablonen van WhatsApp Business.",
+      "kleos": "Posts voor TikTok, Instagram en meer: schrijven, inplannen en resultaten."
     }
   },
   "toolNames": {

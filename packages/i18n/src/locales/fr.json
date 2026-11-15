@@ -13293,6 +13293,11 @@
         "2": "Créer des modèles de message",
         "ask": "L'envoi de messages demande toujours votre approbation"
       },
+      "kleos": {
+        "1": "Voir les publications, le calendrier et les résultats",
+        "2": "Créer et programmer des publications avec la voix de votre marque",
+        "ask": "La publication et les suppressions demandent toujours votre approbation"
+      },
       "database": {
         "1": "Voir les tables",
         "2": "Interroger les données pour répondre",
@@ -13448,7 +13453,8 @@
       "youtube": "Vidéos, commentaires, playlists et statistiques de la chaîne YouTube.",
       "pinterest": "Épingles, tableaux et statistiques Pinterest.",
       "reddit": "Publications, commentaires et communautés Reddit.",
-      "whatsapp": "Messages et modèles WhatsApp Business."
+      "whatsapp": "Messages et modèles WhatsApp Business.",
+      "kleos": "Publications pour TikTok, Instagram et plus encore : rédaction, programmation et résultats."
     }
   },
   "toolNames": {

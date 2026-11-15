@@ -12829,6 +12829,11 @@
         "2": "Nachrichtenvorlagen erstellen",
         "ask": "Nachrichten senden fragt immer nach deiner Freigabe"
       },
+      "kleos": {
+        "1": "Beiträge, Kalender und Ergebnisse ansehen",
+        "2": "Beiträge in der Stimme deiner Marke erstellen und planen",
+        "ask": "Veröffentlichen und Löschen fragen immer nach deiner Freigabe"
+      },
       "database": {
         "1": "Tabellen ansehen",
         "2": "Daten abfragen, um zu antworten",
@@ -12979,7 +12984,8 @@
       "youtube": "Videos, Kommentare, Playlists und Statistiken des YouTube-Kanals.",
       "pinterest": "Pins, Pinnwände und Statistiken auf Pinterest.",
       "reddit": "Beiträge, Kommentare und Communitys auf Reddit.",
-      "whatsapp": "Nachrichten und Vorlagen von WhatsApp Business."
+      "whatsapp": "Nachrichten und Vorlagen von WhatsApp Business.",
+      "kleos": "Beiträge für TikTok, Instagram und mehr: Schreiben, Planen und Ergebnisse."
     }
   },
   "toolNames": {

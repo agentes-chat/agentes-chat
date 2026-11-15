@@ -13060,6 +13060,11 @@ export const ptBR = {
         "2": "Criar modelos de mensagem",
         ask: "Enviar mensagens sempre pede sua aprovação",
       },
+      kleos: {
+        "1": "Ver posts, a agenda e os resultados",
+        "2": "Criar e agendar posts na voz da sua marca",
+        ask: "Publicar e apagar sempre pedem sua aprovação",
+      },
       database: { "1": "Ver as tabelas", "2": "Consultar os dados para responder", "3": "Nunca altera nada" },
     },
     connectedList: "Conectados",
@@ -13210,6 +13215,7 @@ export const ptBR = {
       pinterest: "Pins, pastas e métricas do Pinterest.",
       reddit: "Posts, comentários e comunidades do Reddit.",
       whatsapp: "Mensagens e modelos do WhatsApp Business.",
+      kleos: "Posts para TikTok, Instagram e outras redes: criação, agenda e resultados.",
     },
   },
   toolNames: {

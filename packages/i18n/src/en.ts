@@ -13037,6 +13037,11 @@ export const en = {
         "2": "Create message templates",
         ask: "Sending messages always asks for your approval",
       },
+      kleos: {
+        "1": "See posts, the calendar and results",
+        "2": "Create and schedule posts in your brand's voice",
+        ask: "Publishing and deleting always ask for your approval",
+      },
       database: { "1": "See the tables", "2": "Query the data to answer", "3": "Never changes anything" },
     },
     connectedList: "Connected",
@@ -13190,6 +13195,7 @@ export const en = {
       pinterest: "Pinterest pins, boards and analytics.",
       reddit: "Reddit posts, comments and communities.",
       whatsapp: "WhatsApp Business messages and templates.",
+      kleos: "Posts for TikTok, Instagram and more: writing, scheduling and results.",
     },
   },
   toolNames: {

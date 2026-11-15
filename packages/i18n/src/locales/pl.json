@@ -13764,6 +13764,11 @@
         "2": "Tworzenie szablonów wiadomości",
         "ask": "Wysyłanie wiadomości zawsze prosi o twoje zatwierdzenie"
       },
+      "kleos": {
+        "1": "Przeglądanie postów, kalendarza i wyników",
+        "2": "Tworzenie i planowanie postów głosem twojej marki",
+        "ask": "Publikowanie i usuwanie zawsze prosi o twoje zatwierdzenie"
+      },
       "database": {
         "1": "Podgląd tabel",
         "2": "Zapytania do danych, żeby odpowiedzieć",
@@ -13924,7 +13929,8 @@
       "youtube": "Filmy, komentarze, playlisty i statystyki kanału YouTube.",
       "pinterest": "Piny, tablice i statystyki na Pintereście.",
       "reddit": "Posty, komentarze i społeczności na Reddicie.",
-      "whatsapp": "Wiadomości i szablony WhatsApp Business."
+      "whatsapp": "Wiadomości i szablony WhatsApp Business.",
+      "kleos": "Posty na TikToka, Instagrama i nie tylko: pisanie, planowanie i wyniki."
     }
   },
   "toolNames": {
