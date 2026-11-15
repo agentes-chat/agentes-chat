@@ -35,6 +35,27 @@ Official NeMo CPU auto had process-wall p95 6.159 s. Its median 2.376 s and RTF 
 
 Auto: median session 6700.763 ms; first partial 1374.704 ms after feed start; final text 136.838 ms relative to audio end; stop-to-drain 114.351 ms. The SDK feeds audio in real-time 256 ms chunks. Session wall includes feed/stop/drain/dispose and is not compute-only RTF. Loading was separate by segment. Auto and pt both resolved to simulated pt-BR; identical outputs do not prove autodetection. English synthetic clips sometimes returned empty. The first six calls retain a pause-attestation gap; configuration/catalog changed in the model-info artifact between segments even though checked weights/config/license identities matched. Do not infer any provider on a corporate laptop from this result.
 
+## Later matched resident CPU/CUDA review
+
+A later experiment measured resident CPU as well as CUDA. The reviewed state is **partial acceptance**, not acceptance of the entire GPU benchmark or product integration. Sources archived with the experiments:
+
+- `gpu-asr-eval/final-report.md`, generated 2026-11-15T00:19:47.107Z; SHA-256 `955091611212d1025d6801238fa6d1407c2cc4a531d33f267184bd4a8b389202`.
+- `gpu-asr-eval/review/final-independent.json`, reviewed 2026-11-15T00:21:12.686656+00:00; SHA-256 `96c425b8041103131c7a6c8c3e6ce73a51e0cd30346698043291e97f172ee222`.
+- Iris's “Comparação GPU CPU — revisão Iris e ressalvas”, document version 1, corroborates those sources. The older aggregate JSON linked above remains the historical snapshot; these later measurements are not silently inserted into its original cells.
+
+On the tested i7-11700K, official NeMo Q8_0 auto CPU process wall was median **2.376 s**, including model load, with median RTF **0.358** and speech WER **103/826 (12.47%)**. The later **resident CPU request** median is **2.025 s**, p95 **5.693 s**, excluding model load. Resident load is reported separately (median CPU **0.176 s**); the first post-load request is excluded from steady-state medians. Request timing does not measure streaming partial latency or interactive app delivery.
+
+| Model, auto | Resident CPU request median / p95 s | Accepted resident GPU request median / p95 s | GPU speech WER, repetition 1 |
+| --- | --- | --- | --- |
+| Official NeMo Q8_0 | 2.025 / 5.693 | 0.628 / 1.895 | 100/826 (12.11%) |
+| Whisper turbo Q5_0 | 21.937 / 24.809 | 0.327 / 0.558 | 86/826 (10.41%) |
+
+These resident columns use client request wall time without loading and may be compared within this experiment. Do not mix them with process-spawn timings, historical Qwen ASR-only timing, or Foundry real-time feeding. No claim about portable speed or corporate concurrency follows.
+
+All 4410 calls completed; independent recalculation checked 4410 calls and 1800 aggregates with zero divergences. **605 GPU calls were excluded** by per-call telemetry gates: official NeMo cold 147, Ottema cold 150, turbo cold 100, small cold 103, medium cold 104, and small resident one. The previous 297 NeMo exclusions are already included. A session-level pass does not override a per-call exclusion. Cold medians are partial accepted-call subsets and cannot establish a general cold GPU conclusion. Small's excluded resident call is in repetition 2; displayed quality uses repetition 1. Device-global VRAM includes other processes and is not model memory.
+
+Turbo is the provisional resident GPU candidate in this reviewed corpus; CPU official NeMo remains a hardening candidate. The corpus, identity/number/punctuation/quiet-speech failures, interrupted CPU medium attempt, turbo v1 snapshot gap, two delayed NeMo hashes and six early Foundry snapshot gaps still apply. Neither human quality acceptance nor production readiness has been established.
+
 ## Historical CUDA raw auto quality
 
 | Model/system | Overall WER | Human PT-BR WER |
