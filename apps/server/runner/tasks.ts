@@ -53,12 +53,13 @@ import {
   withSignIn,
   yieldRoute,
 } from "./accounts";
-import { codexThreadKey, unwrapShell } from "./brain-codex";
+import { CODEX_NO_NETWORK, codexThreadKey, unwrapShell } from "./brain-codex";
 import { coAuthorLines } from "./co-authors";
 import { commandApproval, ownBranches } from "./command-gate";
+import { CODEX_WINDOWS_CONFIG, codexLaunch, WINDOWS_SANDBOX_MESSAGE, windowsMxcReady } from "./codex-windows";
 import { RunnerError } from "./errors";
 import { shellCommand, windowsTaskkill } from "./exec";
-import { envValue, findOnWindowsPath, NO_CWD_LOOKUP, winQuote } from "./executors";
+import { cachedCodexVersion, envValue, findOnWindowsPath, NO_CWD_LOOKUP, type CliRun, winQuote } from "./executors";
 import { readJson, writeJson } from "./json-file";
 import {
   CODEX_MCP_ENV,
@@ -67,6 +68,7 @@ import {
   codexWritableRoots,
   MCP_TOKEN_FILE,
   type McpTaskInfo,
+  codexMissionExecutorArgv,
   missionBranchPrefix,
   missionExecutorArgs,
   newMcpToken,
@@ -493,6 +495,39 @@ export function flipSessionFlag(command: string, session: string, resumed: boole
 }
 
 /**
+ * Raw Codex argv for a Windows mission. The CLI itself enforces MXC; no command is routed through cmd.exe except the
+ * helper's guarded fallback for an unsupported npm shim.
+ */
+function windowsMissionCodexArgs(options: {
+  cwd: string;
+  sandbox: "read-only" | "workspace-write";
+  lastFile: string;
+  thread?: string;
+  extra?: string[];
+  addDirs?: string[];
+}): string[] {
+  return [
+    "exec",
+    "--json",
+    "--skip-git-repo-check",
+    "--ignore-rules",
+    "-C",
+    options.cwd,
+    "--sandbox",
+    options.sandbox,
+    ...CODEX_WINDOWS_CONFIG.flatMap((config) => ["-c", config]),
+    ...(options.sandbox === "workspace-write"
+      ? ["-c", CODEX_NO_NETWORK, "-c", codexWritableRoots(options.addDirs ?? [])]
+      : []),
+    ...(options.extra ?? []),
+    "-o",
+    options.lastFile,
+    ...(options.thread ? ["resume", options.thread] : []),
+    "-",
+  ];
+}
+
+/**
  * The command line for an executor. Prompts never go on it (no quoting
  * across shells): the wrapper feeds them through stdin.
  */
@@ -508,7 +543,15 @@ export function executorCommand(
     /** Claude Code as the line starts it (default `claude`; on Windows its full path, quoted). */
     program?: string;
     /** Codex: where it works (`-C`), its sandbox, the file for its last message, the thread to resume. */
-    codex?: { cwd: string; sandbox: "read-only" | "workspace-write"; lastFile: string; thread?: string };
+    codex?: {
+      cwd: string;
+      sandbox: "read-only" | "workspace-write";
+      lastFile: string;
+      thread?: string;
+      /** Windows mission tasks run in MXC and cannot reach the network. */
+      windowsSandbox?: boolean;
+      networkAccess?: boolean;
+    };
     /**
      * Protocol 10: the folders allowed for the agent besides its own. Claude
      * Code gets `--add-dir` for each, Codex its sandbox's writable roots.
@@ -525,8 +568,8 @@ export function executorCommand(
   }
   // `extra`: a mission task's MCP server and rules (already quoted for the shell).
   if (executor === "codex") {
-    // `codex exec` (JSONL events) runs unattended with approval_policy=never: the sandbox is the limit, so
-    // workspace-write with network (git push, installs) for work, read-only for a plan. No `--full-auto` (removed).
+    // `codex exec` (JSONL events) runs unattended with approval_policy=never: the sandbox is the limit. The
+    // network setting is explicit; Windows mission work disables it and uses MXC. No `--full-auto` (removed).
     // Nothing in the Codex home lifts it: no one's own rules (an allow there runs a command outside it), no folder
     // but the agent's. Global options go before `resume`; the prompt comes on stdin (`-`). Always resumed by id.
     const q = (v: string) => shellArg(v, options.platform);
@@ -538,8 +581,14 @@ export function executorCommand(
       "--skip-git-repo-check",
       "--ignore-rules",
       ...(c ? ["-C", q(c.cwd), "--sandbox", c.sandbox] : []),
+      ...(c?.windowsSandbox ? CODEX_WINDOWS_CONFIG.flatMap((config) => ["-c", q(config)]) : []),
       ...(c?.sandbox === "workspace-write"
-        ? ["-c", q("sandbox_workspace_write.network_access=true"), "-c", q(codexWritableRoots(addDirs))]
+        ? [
+            "-c",
+            q(`sandbox_workspace_write.network_access=${c.networkAccess ?? true}`),
+            "-c",
+            q(codexWritableRoots(addDirs)),
+          ]
         : []),
       ...(options.extra ?? []),
       ...(c ? ["-o", q(c.lastFile)] : []),
@@ -856,6 +905,7 @@ export class TaskManager {
   private caffeinate: ChildProcess | null = null;
   private readonly log: (line: string) => void;
   private readonly now: () => number;
+  private readonly codexVersion = cachedCodexVersion();
   private closed = false;
 
   constructor(private readonly opts: TaskManagerOptions) {
@@ -1072,13 +1122,40 @@ export class TaskManager {
       );
     }
     const executor: TaskExecutor = req.executor === "claude" || req.executor === "codex" ? req.executor : "shell";
-    // A Codex task is `codex exec` with the network for its work, on a line cmd.exe would read: none of the Windows
-    // sandbox its turns run in (`codex-windows.ts`, ADR 0053 §3) holds it yet.
-    if (executor === "codex" && process.platform === "win32") {
+    const missionId =
+      executor !== "shell" && typeof req.mission?.id === "string" && TASK_ID.test(req.mission.id)
+        ? req.mission.id
+        : undefined;
+    const windowsCodexMission = executor === "codex" && process.platform === "win32" && Boolean(missionId);
+    // General background Codex tasks keep the Windows refusal until they also have a bounded mission sandbox.
+    if (executor === "codex" && process.platform === "win32" && !windowsCodexMission) {
       throw new RunnerError(
         "not_allowed",
         "Background Codex tasks don't run on Windows yet. Do this work in your own turn instead (run_code).",
       );
+    }
+    if (windowsCodexMission) {
+      const version = await this.codexVersion();
+      if (version === undefined) throw new RunnerError("not_found", "Codex is not installed on this computer.");
+      if (version === null) {
+        throw new RunnerError(
+          "not_allowed",
+          "Couldn't check whether Microsoft Execution Containers (MXC) can isolate Codex on this computer. Try again.",
+        );
+      }
+      let ready: boolean | null;
+      try {
+        ready = await windowsMxcReady({ runnerHome: path.dirname(this.opts.root), version });
+      } catch {
+        ready = null;
+      }
+      if (ready === false) throw new RunnerError("not_allowed", WINDOWS_SANDBOX_MESSAGE);
+      if (ready === null) {
+        throw new RunnerError(
+          "not_allowed",
+          "Couldn't check whether Microsoft Execution Containers (MXC) can isolate Codex on this computer. Try again.",
+        );
+      }
     }
     const session = typeof req.session === "string" && SESSION_ID.test(req.session) ? req.session : undefined;
     const prompt = typeof req.prompt === "string" ? req.prompt : "";
@@ -1172,13 +1249,10 @@ export class TaskManager {
     if (executor === "codex") resume = Boolean(codexThread);
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     // A mission task (protocol 5): our MCP server for its executor, bound to this task by a token.
-    const missionId =
-      executor !== "shell" && typeof req.mission?.id === "string" && TASK_ID.test(req.mission.id)
-        ? req.mission.id
-        : undefined;
     // Protocol 14: a read item (ADR 0044) can't edit, whatever its prompt says.
     const readOnly = Boolean(missionId) && req.mission?.mode === "plan";
     let extra: string[] = [];
+    let rawCodexExtra: string[] | undefined;
     let mcpToken: string | undefined;
     const input = where ? `${where}\n\n${prompt}` : prompt;
     // On an account, Claude Code's endpoint and proxies are pinned in its own `--settings`, as a turn's: a project's
@@ -1227,7 +1301,7 @@ export class TaskManager {
           { mode: 0o600 },
         );
       }
-      extra = missionExecutorArgs(executor === "codex" ? "codex" : "claude", {
+      const missionArgs = {
         configFile,
         command: this.opts.mcp.command,
         taskId,
@@ -1242,7 +1316,9 @@ export class TaskManager {
                 : {}),
             }
           : { resumed: Boolean(codexThread) }),
-      });
+      };
+      extra = missionExecutorArgs(executor === "codex" ? "codex" : "claude", missionArgs);
+      if (windowsCodexMission) rawCodexExtra = codexMissionExecutorArgv(missionArgs);
     } else if (missionId) {
       this.log(`task ${taskId} works for a mission, but this runner has no MCP endpoint`);
     } else if (executor === "claude" && this.opts.mcp) {
@@ -1304,6 +1380,7 @@ export class TaskManager {
                   sandbox: readOnly ? ("read-only" as const) : ("workspace-write" as const),
                   lastFile: path.join(dir, "last.txt"),
                   ...(codexThread ? { thread: codexThread } : {}),
+                  ...(windowsCodexMission ? { windowsSandbox: true, networkAccess: false } : {}),
                 },
               }
             : {}),
@@ -1316,17 +1393,8 @@ export class TaskManager {
     );
     const secrets = (await this.opts.secrets?.(agent)) ?? null;
     let pid: number | undefined = process.pid;
+    let windowsCodexLaunch: CliRun | undefined;
     if (!hosted) {
-      const shell = shellCommand(command);
-      writeJson(path.join(dir, "spec.json"), {
-        file: shell.file,
-        args: shell.args,
-        verbatim: shell.verbatim,
-        cwd,
-        maxSeconds,
-        ...(signIn?.token ? { tokenFd: true } : {}),
-      });
-      if (executor !== "shell") writeFileSync(path.join(dir, "stdin.txt"), input, { mode: 0o600 });
       // A Codex task's sandbox is what holds it: no way out through the agent's containers service (ADR 0169).
       const own = executor === "codex" ? withoutContainers(process.env) : process.env;
       const base: NodeJS.ProcessEnv = { ...own, ...(secrets?.env ?? {}) };
@@ -1335,6 +1403,35 @@ export class TaskManager {
       const env = signIn ? accountEnv(signIn.kind, signIn.home, base) : base;
       if (plan && signIn?.planKey) env[plan.claudeCode.tokenEnv] = signIn.planKey.key;
       if (signIn?.token) Object.assign(env, TOKEN_FD_ENV);
+      if (windowsCodexMission) {
+        const direct = codexLaunch(
+          windowsMissionCodexArgs({
+            cwd,
+            sandbox: readOnly ? "read-only" : "workspace-write",
+            lastFile: path.join(dir, "last.txt"),
+            ...(codexThread ? { thread: codexThread } : {}),
+            extra: rawCodexExtra,
+            addDirs: allowed?.grants?.filter((g) => !isInside(g, cwd)),
+          }),
+          { pathList: envValue(env, "PATH") ?? "" },
+        );
+        if ("error" in direct) {
+          throw new RunnerError(direct.missing ? "not_found" : "not_allowed", direct.error);
+        }
+        windowsCodexLaunch = direct;
+      }
+      const shell = windowsCodexLaunch ? undefined : shellCommand(command);
+      const file = windowsCodexLaunch?.file ?? shell?.file;
+      if (!file) throw new RunnerError("internal", "Couldn't prepare the Codex task command");
+      writeJson(path.join(dir, "spec.json"), {
+        file,
+        args: windowsCodexLaunch?.args ?? shell?.args ?? [],
+        verbatim: windowsCodexLaunch?.windowsVerbatimArguments ?? shell?.verbatim,
+        cwd,
+        maxSeconds,
+        ...(signIn?.token ? { tokenFd: true } : {}),
+      });
+      if (executor !== "shell") writeFileSync(path.join(dir, "stdin.txt"), input, { mode: 0o600 });
       // Claude Code and Codex tasks run on their sign-in (the account's, or the computer's own): a route there stops
       // first (two processes on one sign-in race on its refresh token), right before the task starts.
       if (executor !== "shell") await yieldRoute(executor === "codex" ? "codex" : "claude_code", signIn?.home);
@@ -1354,7 +1451,10 @@ export class TaskManager {
                 { MCP_TOOL_TIMEOUT: String(PERMISSION_WAIT_MS + 5 * 60_000) }
               : {};
         // The agent's secrets (ADR 0027) through the environment only, never on disk here.
-        launch = { env: { ...env, ...mcpEnv }, ...(signIn?.token ? { token: signIn.token } : {}) };
+        launch = {
+          env: { ...env, ...mcpEnv, ...(windowsCodexLaunch?.env ?? {}) },
+          ...(signIn?.token ? { token: signIn.token } : {}),
+        };
         child = this.spawnWrapper(dir, launch.env, executor, launch.token);
       } catch (err) {
         throw new RunnerError(

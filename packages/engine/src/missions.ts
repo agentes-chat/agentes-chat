@@ -204,27 +204,12 @@ export function machineExecutors(machine: {
   return { available, codexTooOld };
 }
 
-/**
- * What a computer can run a mission's items with: `machineExecutors`, less Codex on Windows, where the runner doesn't
- * run Codex background tasks yet (ADR 0053's addendum of 2026-11-12), though Codex brain turns run there. No update
- * changes that, so a Codex too old there isn't worth saying.
- */
+/** What a computer can run a mission's items with: what it has installed and what its runner speaks. */
 export function missionExecutors(
   machine: Parameters<typeof machineExecutors>[0] & { os?: string | null },
 ): ReturnType<typeof machineExecutors> {
-  const found = machineExecutors(machine);
-  return machine.os === "windows"
-    ? { available: found.available.filter((e) => e !== "codex"), codexTooOld: false }
-    : found;
+  return machineExecutors(machine);
 }
-
-/** Codex asked for a mission's items on a Windows computer (`missionExecutors`): no update makes it run there. */
-const codexWindowsRefusal = (computer: string) =>
-  new ConflictError(
-    `Codex can't run a mission's items on ${computer} yet (Windows): choose Claude Code, the agent itself or another computer`,
-    "mission.codex_windows",
-    { computer },
-  );
 
 /** The default: Claude Code when the computer has it, else our agent. */
 export const defaultExecutor = (available: MissionExecutor[]): MissionExecutor =>
@@ -992,7 +977,6 @@ async function usableMachine(
   }
   const { available, codexTooOld } = missionExecutors(status);
   // Before any update it might ask for: none makes Codex run a mission's items there.
-  if (asked === "codex" && status.os === "windows") throw codexWindowsRefusal(status.name);
   // Every mission works in its own copy of the project (ADR 0044): runner protocol 14.
   if (
     available.length === 0 ||
@@ -2360,7 +2344,6 @@ export async function setMissionMachine(
   if (machine.kind === "connected" && machine.pairedByUserId !== actorId) {
     throw new ForbiddenError("Choose a computer you paired", "mission.not_your_computer");
   }
-  if (mission.executor === "codex" && machine.os === "windows") throw codexWindowsRefusal(machine.name);
   if (
     machine.protocol < MISSION_WORKTREE_PROTOCOL ||
     !missionExecutors(machine).available.includes(mission.executor as MissionExecutor)

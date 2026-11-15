@@ -1106,22 +1106,22 @@ describe("missions (ADR 0029)", () => {
         executors: { codex: { version: "codex-cli 0.163.0" }, detectedAt: "x" },
       }).available,
     ).toEqual(["codex", "agent"]);
-    // Codex background tasks don't run on Windows yet: a mission there can't ask Codex for its items.
+    // Windows missions can select Codex; the runner checks MXC before a task starts.
     const codexHere = {
       protocol: 7,
       execAllowed: true,
       executors: { codex: { version: "codex-cli 0.163.0" }, detectedAt: "x" },
     };
-    expect(missionExecutors({ ...codexHere, os: "windows" }).available).toEqual(["agent"]);
+    expect(missionExecutors({ ...codexHere, os: "windows" }).available).toEqual(["codex", "agent"]);
     expect(missionExecutors({ ...codexHere, os: "darwin" }).available).toEqual(["codex", "agent"]);
     // The version as the runner reports it, read part by part (a long run of digits is no version).
     expect(versionOf("codex-cli 0.163.0")).toEqual([0, 163, 0]);
     expect(versionOf("0".repeat(5000))).toBeNull();
-    // No update makes it, so an old Codex there isn't worth an "update it".
+    // An old Codex is still reported as outdated on Windows.
     const oldCodex = { codex: { version: "codex-cli 0.150.0" }, detectedAt: "x" };
     expect(missionExecutors({ ...codexHere, executors: oldCodex, os: "windows" })).toEqual({
       available: ["agent"],
-      codexTooOld: false,
+      codexTooOld: true,
     });
     await expect(
       createMission(md(), f.owner.id, f.org.id, {
@@ -1140,7 +1140,7 @@ describe("missions (ADR 0029)", () => {
     expect(view.machine?.executors).toEqual(["agent"]);
   });
 
-  test("Codex on a Windows computer: asking it for a mission's items says it doesn't run there, not to update", async () => {
+  test("Codex on a Windows computer can be selected for a mission", async () => {
     f = await setup({ machines: true, missionTools: true });
     const paired = await pairedMachine();
     const runner = missionRunner(f.machineHub as MachineHub);
@@ -1155,17 +1155,16 @@ describe("missions (ADR 0029)", () => {
         ...RUNNER,
         os: "windows",
         exec: true,
-        executors: { codex: { version: "codex-cli 0.150.0" } },
+        executors: { codex: { version: "codex-cli 0.163.0" } },
       }),
     );
-    await expect(
-      createMission(md(), f.owner.id, f.org.id, {
-        agentId: f.agent.id,
-        channelId: f.general.id,
-        goal: "Build",
-        executor: "codex",
-      }),
-    ).rejects.toMatchObject({ code: "mission.codex_windows" });
+    const view = await createMission(md(), f.owner.id, f.org.id, {
+      agentId: f.agent.id,
+      channelId: f.general.id,
+      goal: "Build",
+      executor: "codex",
+    });
+    expect(view.executor).toBe("codex");
   });
 
   describe("command approvals (Claude Code's permission prompts)", () => {
