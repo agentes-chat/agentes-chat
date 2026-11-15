@@ -35,8 +35,9 @@ export function canvasPage({
   let clock = lastClock;
   let nextId = 1;
   let queue = new Map<number, FrameRequestCallback>();
-  // Timers run by the same clock; the real one is kept too, so an `await` inside a test still sees its timers fire.
-  const timers = new Map<number, { at: number; fire: () => void; real: ReturnType<typeof setTimeout> }>();
+  // Timers run by the same clock only: one fires when `frames` moves the clock past it, never by real time, so what a
+  // test sees does not depend on how fast the machine is.
+  const timers = new Map<number, { at: number; fire: () => void }>();
   let nextTimer = 1e9;
   const g = globalThis as unknown as Record<string, unknown>;
   const saved = {
@@ -47,7 +48,6 @@ export function canvasPage({
     IntersectionObserver: g.IntersectionObserver,
     ResizeObserver: g.ResizeObserver,
   };
-  const realSet = globalThis.setTimeout;
   const realClear = globalThis.clearTimeout;
   const resized: (() => void)[] = [];
   g.requestAnimationFrame = (cb: FrameRequestCallback) => {
@@ -64,17 +64,15 @@ export function canvasPage({
       const t = timers.get(id);
       if (!t) return;
       timers.delete(id);
-      realClear(t.real);
       cb(...args);
     };
-    timers.set(id, { at: clock + ms, fire, real: realSet(fire, ms) });
+    timers.set(id, { at: clock + ms, fire });
     return id;
   };
   g.clearTimeout = (id: unknown) => {
     const t = typeof id === "number" ? timers.get(id) : undefined;
     if (!t) return realClear(id as ReturnType<typeof setTimeout>);
     timers.delete(id as number);
-    realClear(t.real);
   };
   g.IntersectionObserver = class {
     private watcher: { cb: (entries: Entries) => void; targets: Set<Element> };
@@ -186,7 +184,6 @@ export function canvasPage({
     close() {
       host.remove();
       lastClock = clock;
-      for (const t of timers.values()) realClear(t.real);
       timers.clear();
       now.mockRestore();
       globalMedia.mockRestore();

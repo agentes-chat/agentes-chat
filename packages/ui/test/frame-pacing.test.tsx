@@ -67,10 +67,10 @@ function sticker(add = addLiveSticker) {
   const canvas = document.createElement("canvas");
   canvas.getContext = (() => null) as unknown as typeof canvas.getContext;
   document.body.append(canvas);
-  const live = {
+  const live: LiveSticker = {
     canvas,
-    spec: () => ({ look: {}, mood: "idle", size: 32, seed: 0 }),
-  } as unknown as LiveSticker;
+    spec: () => ({ look: {}, mood: "wave", size: 32, seed: 0 }),
+  };
   const stop = add(live);
   closers.push(() => {
     stop();
