@@ -222,6 +222,7 @@ export const CLAUDE_CODE_MODELS: readonly BrainModelOption[] = (
   ] as const
 ).map((o) => ({ ...o, label: MODEL_CATALOG[o.modelId]?.label.replace(/^Claude /, "") ?? o.value }));
 
+/**
  * Muse Code's models (ADR 0174): what its MSP host's `model/list` returned for the agent's computer, else the ids
  * Meta documents, newest first as the other CLIs list theirs. The id is free text on the wire — `session/start` takes
  * any `modelId` — so a catalog with no rows still leaves a picker worth opening.
