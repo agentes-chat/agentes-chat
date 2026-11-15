@@ -105,6 +105,7 @@ export const brainToolOf = (t: ToolDefinition): BrainTool => ({
 
 /** What tools leave for the next message the run posts (cards), and how it ends (`react`, a GIF or a sticker). */
 export interface ToolSideEffects {
+  claudeDesignJobs?: string[];
   /** Memory changes, for the "memory updated" card (`meta.memoryUpdates`). */
   memoryUpdates?: MemoryUpdate[];
   /** Artifacts created or changed (`meta.artifacts`). */
@@ -234,6 +235,9 @@ function withArtifacts(list: ArtifactLink[] | undefined, more: ArtifactLink[]): 
  */
 export function absorbToolData(t: ToolSideEffects, data: Record<string, unknown> | undefined): MemoryUpdate | null {
   if (!data) return null;
+  const design = (data.claudeDesign as { id?: unknown } | undefined)?.id;
+  if (typeof design === "string" && /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(design))
+    t.claudeDesignJobs = [...new Set([...(t.claudeDesignJobs ?? []), design])].slice(-16);
   const artifact = data.artifact as ArtifactLink | undefined;
   if (artifact) t.artifacts = withArtifacts(t.artifacts, [artifact]);
   const link = data.missionLink as { missionId: string; threadId: string } | undefined;
@@ -291,6 +295,8 @@ export function mergeToolEffects(t: ToolSideEffects, e: ToolSideEffects | null |
   if (e.artifacts?.length) t.artifacts = withArtifacts(t.artifacts, e.artifacts);
   if (e.memoryUpdates?.length) t.memoryUpdates = [...(t.memoryUpdates ?? []), ...e.memoryUpdates];
   if (e.missionLink) t.missionLink = e.missionLink;
+  if (e.claudeDesignJobs?.length)
+    t.claudeDesignJobs = [...new Set([...(t.claudeDesignJobs ?? []), ...e.claudeDesignJobs])].slice(-16);
   if (e.reacted) t.reacted = true;
   if (e.mediaSent) t.mediaSent = true;
   if (e.reported) t.reported = true;
@@ -306,7 +312,8 @@ export function mergeToolEffects(t: ToolSideEffects, e: ToolSideEffects | null |
 
 const hasEffects = (e: ToolSideEffects) =>
   Boolean(
-    e.artifacts?.length ||
+    e.claudeDesignJobs?.length ||
+      e.artifacts?.length ||
       e.memoryUpdates?.length ||
       e.missionLink ||
       e.reacted ||

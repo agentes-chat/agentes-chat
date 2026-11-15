@@ -298,7 +298,8 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "claudeDesign.name"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -552,7 +553,8 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "claudeDesign.name"
     ],
     "fr": [
       "channel.tooLong.fileName",
@@ -986,7 +988,9 @@
       "storage.connect.awsRegion.eu-central-2",
       "storage.connect.awsRegion.eu-west-3",
       "storage.connect.awsRegion.eu-south-1",
-      "storage.connect.awsRegion.eu-north-1"
+      "storage.connect.awsRegion.eu-north-1",
+      "claudeDesign.source",
+      "claudeDesign.name"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1446,7 +1450,8 @@
       "storage.connect.theirName.s3Secret",
       "storage.connect.theirName.b2Key",
       "storage.connect.theirName.b2Secret",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "claudeDesign.name"
     ],
     "it": [
       "shell.email.label",
@@ -1818,7 +1823,9 @@
       "appsDownload.computer",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "claudeDesign.account",
+      "claudeDesign.name"
     ],
     "nl": [
       "calendar.moreRuns",
@@ -2426,7 +2433,9 @@
       "storage.connect.theirName.s3Key",
       "storage.connect.theirName.s3Secret",
       "storage.connect.theirName.b2Key",
-      "storage.connect.theirName.b2Secret"
+      "storage.connect.theirName.b2Secret",
+      "claudeDesign.account",
+      "claudeDesign.name"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -2598,7 +2607,8 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "claudeDesign.name"
     ],
     "ko": [
       "channel.tooLong.fileName",
@@ -2764,7 +2774,8 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "claudeDesign.name"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -2921,7 +2932,8 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "claudeDesign.name"
     ],
     "id": [
       "shell.email.label",
@@ -3231,7 +3243,8 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "claudeDesign.name"
     ],
     "tr": [
       "devices.cpus",
@@ -3422,7 +3435,8 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "claudeDesign.name"
     ],
     "pl": [
       "devices.cpus",
@@ -3723,7 +3737,8 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.region"
+      "storage.connect.region",
+      "claudeDesign.name"
     ],
     "ru": [
       "channel.tooLong.fileName",
@@ -3880,7 +3895,8 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "claudeDesign.name"
     ]
   },
   "mobile-base": {

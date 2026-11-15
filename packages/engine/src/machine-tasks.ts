@@ -885,6 +885,36 @@ export async function settleInterruptedTask(
     .returning();
   if (!claimed) return null;
   await recordTaskFinished(deps.db, claimed);
+  const [designJob] = await deps.db
+    .select()
+    .from(schema.claudeDesignJobs)
+    .where(
+      and(
+        eq(schema.claudeDesignJobs.orgId, claimed.orgId),
+        sql`(${schema.claudeDesignJobs.taskId} = ${claimed.id}::uuid or ${schema.claudeDesignJobs.recoveryTaskId} = ${claimed.id}::uuid)`,
+      ),
+    );
+  if (designJob) {
+    const { acceptClaudeDesignTaskResult } = await import("./claude-design/lifecycle");
+    await acceptClaudeDesignTaskResult(
+      { db: deps.db, enabled: false },
+      claimed.orgId,
+      claimed.machineId,
+      claimed.id,
+      frame?.claudeDesign ?? {
+        jobId: designJob.id,
+        state: "unknown",
+        sourceFiles: [],
+        error: {
+          code: "result_unknown",
+          message: "Design execution was interrupted; it will not be repeated automatically",
+        },
+      },
+    );
+    await enqueueWake(deps.db, claimed);
+    await publishTaskEvent(deps.pubsub, claimed);
+    return claimed;
+  }
   const machine = await getMachineById(deps.db, claimed.machineId);
   // A mission's task resumes when the mission says so and still runs (ADR 0029).
   const [mission] = claimed.missionId
@@ -1214,6 +1244,16 @@ export async function reconcileMachineTasks(
   const byId = new Map(reported.map((t) => [t.taskId, t]));
   for (const row of rows) {
     const there = byId.get(row.id);
+    if (there?.claudeDesign && there.agentId === row.agentId) {
+      const { acceptClaudeDesignTaskResult } = await import("./claude-design/lifecycle");
+      await acceptClaudeDesignTaskResult(
+        { db: deps.db, enabled: false },
+        row.orgId,
+        machineId,
+        row.id,
+        there.claudeDesign,
+      );
+    }
     // A start cut by a drop: this list may come before the runner has written it down, and a supervisor lists
     // every task it handed a worker, started or not. Only the agent's own journal settles it, once its start
     // can't still be underway (`checkCutTaskStart`).
@@ -1335,7 +1375,11 @@ export function taskEndNotice(row: MachineTaskRow, computer: string | null, loca
  * channel. A run of that agent already active in the thread gets it as a
  * new message instead (one run per agent and conversation).
  */
-export async function wakeConversationForTask(deps: TaskDeps, taskId: string, options: { maxHops: number }) {
+export async function wakeConversationForTask(
+  deps: TaskDeps,
+  taskId: string,
+  options: { maxHops: number; notice?: typeof taskEndNotice },
+) {
   const row = await getTask(deps.db, taskId);
   if (!row || row.wokeAt || !row.endedAt) return null;
   // A mission's task (the main session's own, or an item session's) ends through the mission.
@@ -1377,7 +1421,7 @@ export async function wakeConversationForTask(deps: TaskDeps, taskId: string, op
     row.requestedByUserId ? { requesterUserId: row.requestedByUserId } : {},
   );
   const locale = await lineLocale(deps.db, row.orgId, row.requestedByUserId, row.runId);
-  const notice = taskEndNotice(row, machine?.name ?? null, locale);
+  const notice = (options.notice ?? taskEndNotice)(row, machine?.name ?? null, locale);
   const machineTask = {
     ...notice.meta.machineTask,
     ...(row.runId ? { runId: row.runId } : {}),

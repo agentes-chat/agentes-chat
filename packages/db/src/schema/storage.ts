@@ -285,6 +285,8 @@ export const artifactUploads = pgTable(
     /** `pending`, `storing` (bytes arrived, being saved), `done` or `failed`. */
     status: text().notNull().default("pending"),
     maxBytes: integer().notNull(),
+    /** Optional server-pinned content, used for task-bound Design sources. */
+    expectedSha256: text(),
     artifactId: uuid(),
     version: integer(),
     error: text(),

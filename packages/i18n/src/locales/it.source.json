@@ -49156,5 +49156,35 @@
   },
   "feedback.offer.askFirst": {
     "value": "Ask before sending"
+  },
+  "claudeDesign.task": {
+    "value": "View task #{{number}}"
+  },
+  "claudeDesign.progress.queued": {
+    "value": "Waiting to start"
+  },
+  "claudeDesign.progress.working": {
+    "value": "Creating the design in Claude"
+  },
+  "claudeDesign.progress.waiting_approval": {
+    "value": "Waiting for your approval in this conversation"
+  },
+  "claudeDesign.progress.recovering": {
+    "value": "Recovering the design sources"
+  },
+  "claudeDesign.progress.importing": {
+    "value": "Published; importing the source files"
+  },
+  "claudeDesign.progress.succeeded": {
+    "value": "Design ready"
+  },
+  "claudeDesign.progress.failed": {
+    "value": "Design execution failed"
+  },
+  "claudeDesign.progress.canceled": {
+    "value": "Design canceled"
+  },
+  "claudeDesign.progress.unknown": {
+    "value": "Result uncertain; verification is needed"
   }
 }

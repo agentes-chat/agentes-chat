@@ -115,23 +115,31 @@ test("it can't be archived, deleted or given other instructions; its name, model
   expect((await exportBundle(f.db, f.owner.id, f.org.id)).agents.map((a) => a.handle)).toEqual(["dev"]);
 });
 
-test("it holds every built-in scope an agent can be given, a computer's as rows it is made with, and its grant rows count on top", async () => {
+test("it holds regular scopes and computer grant rows while Design requires explicit grants", async () => {
   f = await setup({ rightHand: true });
   const [lodi] = await rightHandOf(f.org.id);
   if (!lodi) throw new Error("no right hand");
-  // A new built-in scope joins its list, or this fails: only a computer's stay out, which are rows.
+  // Regular built-ins join its list; computer scopes are rows, while Design remains explicitly admitted.
   expect([...RIGHT_HAND_GRANTS].sort()).toEqual(
     Object.keys(BUILTIN_SCOPES)
-      .filter((scope) => !NOT_IN_ALL.has(scope))
+      .filter((scope) => !NOT_IN_ALL.has(scope) && !scope.startsWith("claude-design:"))
       .sort(),
   );
+  expect(RIGHT_HAND_GRANTS).not.toContain("claude-design:read");
+  expect(RIGHT_HAND_GRANTS).not.toContain("claude-design:write");
+  const initial = await grantedScopeKeys(f.db, f.org.id, lodi.id);
+  expect(initial.has(grantKey(null, "claude-design:read"))).toBe(false);
+  expect(initial.has(grantKey(null, "claude-design:write"))).toBe(false);
   const connectionId = crypto.randomUUID();
   await f.db.insert(schema.agentScopes).values([
+    { orgId: f.org.id, agentId: lodi.id, scope: "claude-design:read" },
     { orgId: f.org.id, agentId: lodi.id, connectionId, scope: "connector:*" },
     { orgId: f.org.id, agentId: lodi.id, scope: "deny:send_dm" },
   ]);
   const keys = await grantedScopeKeys(f.db, f.org.id, lodi.id);
   for (const scope of RIGHT_HAND_GRANTS) expect(keys.has(grantKey(null, scope))).toBe(true);
+  expect(keys.has(grantKey(null, "claude-design:read"))).toBe(true);
+  expect(keys.has(grantKey(null, "claude-design:write"))).toBe(false);
   // An app given to it and a tool an admin turned off are rows, and both hold.
   expect(keys.has(grantKey(connectionId, "connector:*"))).toBe(true);
   expect(toolAccess(keys, { name: "send_dm", scope: "" })).toBe("denied");

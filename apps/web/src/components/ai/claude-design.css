@@ -1,0 +1,53 @@
+.claude-design-consent {
+  min-width: 0;
+  max-width: 100%;
+}
+.claude-design-review,
+.claude-design-review dl {
+  display: grid;
+  gap: var(--space-4);
+}
+.claude-design-review dl {
+  margin: 0;
+}
+.claude-design-review dt {
+  color: var(--muted);
+}
+.claude-design-review dd {
+  margin: var(--space-1) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.claude-design-review__ack {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.claude-design-job {
+  width: 100%;
+  max-width: 40rem;
+  gap: var(--space-2);
+}
+.claude-design-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: var(--space-2);
+  min-width: 0;
+}
+.claude-design-result:not(.ac-acts) {
+  column-gap: var(--space-2);
+}
+.claude-design-result > p {
+  margin: 0;
+}
+.claude-design-result > .small,
+.claude-design-sources:has(.artifact-cards) {
+  flex-basis: 100%;
+}
+.claude-design-sources {
+  min-width: 0;
+}
+.claude-design-sources .artifact-cards {
+  margin-top: var(--space-2);
+}

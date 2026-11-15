@@ -74,6 +74,9 @@ import type {
   ChannelMember,
   ChannelOverride,
   Choices,
+  ClaudeDesignConsent,
+  ClaudeDesignGrant,
+  ClaudeDesignJob,
   CliInstall,
   CodeSent,
   CommandApproval,
@@ -334,6 +337,22 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
   };
 
   return {
+    claudeDesign: {
+      getGrant: (o, a, accountId) =>
+        request<ClaudeDesignGrant>(`${org(o)}/claude-design/agents/${enc(a)}/grant`, { query: { accountId } }),
+      setGrant: (o, a, accountId) =>
+        request<ClaudeDesignGrant>(`${org(o)}/claude-design/agents/${enc(a)}/grant`, {
+          method: "PUT",
+          json: { accountId },
+        }),
+      getJob: (o, j) => request<ClaudeDesignJob>(`${org(o)}/claude-design/jobs/${enc(j)}`),
+      cancel: (o, j) => request<ClaudeDesignJob>(`${org(o)}/claude-design/jobs/${enc(j)}/cancel`, { json: {} }),
+      recover: (o, j, input) =>
+        request<ClaudeDesignJob>(`${org(o)}/claude-design/jobs/${enc(j)}/recovery`, { json: input }),
+      getConsent: (o, c) => request<ClaudeDesignConsent>(`${org(o)}/claude-design/consents/${enc(c)}`),
+      decideConsent: (o, c, input) =>
+        request<ClaudeDesignConsent>(`${org(o)}/claude-design/consents/${enc(c)}`, { json: input }),
+    },
     actions: {
       undo: (orgId, actionId) => request<AgentAction>(`${org(orgId)}/actions/${enc(actionId)}/undo`, { json: {} }),
       redo: (orgId, actionId) => request<AgentAction>(`${org(orgId)}/actions/${enc(actionId)}/redo`, { json: {} }),

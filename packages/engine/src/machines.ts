@@ -694,6 +694,7 @@ export async function machineAgents(db: Database, orgId: string, machineId: stri
         // user holds those sign-ins while it thinks.
         or(
           eq(agents.machineId, machineId),
+          sql`exists (select 1 from ${schema.claudeDesignGrants} dg where dg.org_id = ${agents.orgId} and dg.agent_id = ${agents.id} and dg.machine_id = ${machineId}::uuid and dg.enabled)`,
           and(
             eq(agents.builtin, RIGHT_HAND),
             or(
@@ -721,11 +722,34 @@ export async function machineAgents(db: Database, orgId: string, machineId: stri
         )
         .where(and(eq(schema.rightHandBrains.orgId, orgId), eq(schema.machineAccounts.machineId, machineId)))
     : [];
+  const designGrants = await db
+    .select({ agentId: schema.claudeDesignGrants.agentId, accountId: schema.claudeDesignGrants.accountId })
+    .from(schema.claudeDesignGrants)
+    .innerJoin(
+      schema.machineAccounts,
+      and(
+        eq(schema.machineAccounts.orgId, schema.claudeDesignGrants.orgId),
+        eq(schema.machineAccounts.id, schema.claudeDesignGrants.accountId),
+      ),
+    )
+    .where(
+      and(
+        eq(schema.claudeDesignGrants.orgId, orgId),
+        eq(schema.claudeDesignGrants.machineId, machineId),
+        eq(schema.claudeDesignGrants.enabled, true),
+        eq(schema.machineAccounts.status, "active"),
+        eq(schema.machineAccounts.authMethod, "cli_login"),
+        eq(schema.machineAccounts.createdBy, schema.claudeDesignGrants.ownerUserId),
+      ),
+    );
   const listed = rows.map((a): MachineAgent => {
     const own = a.builtin === RIGHT_HAND ? lentAccount(a) : null;
     const extra = a.builtin === RIGHT_HAND ? [...new Set(personal.map((p) => p.id))].filter((id) => id !== own) : [];
     // The right hand off any workspace plan here thinks only with people's own: the first is its frame's account.
     const account = a.builtin === RIGHT_HAND ? (own ?? extra.shift() ?? null) : lentAccount(a);
+    for (const grant of designGrants)
+      if (grant.agentId === a.id && grant.accountId !== account && !extra.includes(grant.accountId))
+        extra.push(grant.accountId);
     return {
       id: a.id,
       handle: a.handle,

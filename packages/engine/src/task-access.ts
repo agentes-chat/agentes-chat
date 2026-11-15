@@ -19,14 +19,20 @@ export const adminChannelSql = (orgId: unknown, userId: unknown) =>
  * the whole workspace, or who reads the conversation it's tied to (`channel_id`: its members, anyone for a public
  * channel). The workspace membership is the caller's check. Mirrors `personSees` in `issues.ts`.
  */
+/** Native Design tracking inherits the account owner's DM confidentiality, including against other admins. */
+export function designTaskOwner(source: unknown): string | null {
+  const owner = (source as { designOwnerUserId?: unknown } | null)?.designOwnerUserId;
+  return typeof owner === "string" ? owner : null;
+}
+
 export function taskSeenSql(alias: string, userId: SQL): SQL {
   const t = sql.raw(alias);
-  return sql`(${maySql(sql`${t}.org_id`, userId, "administrator")}
+  return sql`((${t}.source->>'designOwnerUserId' is null or ${t}.source->>'designOwnerUserId' = ${userId}) and (${maySql(sql`${t}.org_id`, userId, "administrator")}
     or (${t}.restricted and ${userId} = any(${t}.audience_user_ids))
     or (not ${t}.restricted and (${t}.channel_id is null
       or exists (select 1 from ${channelMembers} tm where tm.channel_id = ${t}.channel_id and tm.user_id = ${userId})
       or exists (select 1 from ${channels} tc where tc.id = ${t}.channel_id and tc.visibility = 'public'
-        and tc.kind = 'channel'))))`;
+        and tc.kind = 'channel')))))`;
 }
 
 /**

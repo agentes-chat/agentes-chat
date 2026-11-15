@@ -308,6 +308,7 @@ export const actionHash = (action: {
   scope: string;
   connectionId: string | null;
   params: Record<string, unknown>;
+  authorityBinding?: string;
 }) => sha256(canonicalJson(action));
 
 export const APPROVAL_TTL_MS = 24 * 3600_000;
@@ -1064,13 +1065,20 @@ export function createToolGateway(deps: {
   async function runApproved(ctx: ToolContext, approval: Approval, toolUseId: string): Promise<ToolOutput> {
     if (approval.status !== "approved") return { content: "This action was not approved", isError: true };
     if (approval.executedAt) return ranBefore(approval);
+    const tool = (await allTools(ctx)).get(approval.tool);
+    let authorityBinding: string | undefined;
+    try {
+      authorityBinding = await tool?.approvalBinding?.(approval.params, ctx);
+    } catch {
+      return { content: "The authority for this action changed. Ask again.", isError: true };
+    }
     const expected = actionHash({
       tool: approval.tool,
       scope: approval.scope,
       connectionId: approval.connectionId,
       params: approval.params,
+      ...(authorityBinding ? { authorityBinding } : {}),
     });
-    const tool = (await allTools(ctx)).get(approval.tool);
     // Why the approved action can't run any more; null = it may.
     const refusal = async (): Promise<string | null> => {
       if (expected !== approval.actionHash) return "Approval does not match the action";
@@ -1108,7 +1116,12 @@ export function createToolGateway(deps: {
         }
         return ranBefore(row ?? approval);
       }
-      output = await run(tool, approval.params, { ...ctx, toolUseId, approved: true }, 1);
+      output = await run(
+        tool,
+        approval.params,
+        { ...ctx, toolUseId, approved: true, ...(authorityBinding ? { approvedAuthority: authorityBinding } : {}) },
+        1,
+      );
       outside = readsOutsideText(tool, output);
       // Team actions (ADR 0064): what a person approved and went out is the team's too.
       if (isOutsideTool(tool) && !output.isError) {
@@ -1604,7 +1617,13 @@ export function createToolGateway(deps: {
             scope: tool.scope,
             connectionId,
             params: call.input,
-            actionHash: actionHash({ tool: tool.name, scope: tool.scope, connectionId, params: call.input }),
+            actionHash: actionHash({
+              tool: tool.name,
+              scope: tool.scope,
+              connectionId,
+              params: call.input,
+              ...(tool.approvalBinding ? { authorityBinding: await tool.approvalBinding(call.input, ctx) } : {}),
+            }),
             title: cutMarked(described.title, 300),
             detail: cutMarked(described.detail ?? "", APPROVAL_DETAIL_CHARS),
             why,

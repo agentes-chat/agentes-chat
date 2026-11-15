@@ -2,6 +2,7 @@ import type { Agent, Message } from "@agenteschat/client";
 import { keys } from "@agenteschat/client";
 import { APP_BRANDS } from "@agenteschat/client/lib/apps";
 import { seesDetails } from "@agenteschat/client/lib/audience";
+import { designConsentIdOf } from "@agenteschat/client/lib/claude-design";
 import { pairItemOf } from "@agenteschat/client/lib/consult-group";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatTime } from "@agenteschat/client/lib/format";
@@ -40,6 +41,7 @@ import { useOrg } from "@/components/org-context";
 import { SayWhy } from "@/components/tasks/TaskBits";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useToast } from "@/lib/toast";
+import { ClaudeDesignConsentCard } from "./ai/ClaudeDesignConsent";
 import "./chat-notices.css";
 
 const NOTICE_ICON: Record<string, IconName> = {
@@ -135,6 +137,13 @@ export function NoticeLine({ message }: { message: Message }) {
   const dir = useDirectory(org.id);
   const notice = noticeOf(message.meta);
   if (!notice) return null;
+  const consentId = designConsentIdOf(message.meta);
+  if (consentId)
+    return (
+      <div data-message-id={message.id}>
+        <ClaudeDesignConsentCard consentId={consentId} />
+      </div>
+    );
   // A person stopped one of the agent's tasks (ADR 0128): its pill, with "Add a reason" for who stopped it. The
   // conversation hides it while the stopped reply is here: the reply's own pill says it (`Timeline`).
   const stopped = stoppedNoticeOf(message.meta);

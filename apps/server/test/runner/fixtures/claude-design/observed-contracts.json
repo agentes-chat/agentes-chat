@@ -1,0 +1,21 @@
+{
+  "kind": "synthetic-sanitized-observed-shapes",
+  "candidateVersion": "2.1.322",
+  "init": { "type": "system", "subtype": "init", "tools": ["Artifact", "Read"], "mcp_servers": [] },
+  "quickstartInput": { "action": "quickstart", "intent": "design" },
+  "publishInputWithoutExplicitAction": {
+    "url": "https://example.invalid/design/test",
+    "root": "/work",
+    "file_path": "/work/project/canvas.json",
+    "files": { "project/probe.dc.html": "project/probe.dc.html" }
+  },
+  "readFileInput": { "action": "read", "url": "https://example.invalid/design/test", "path": "project/probe.dc.html" },
+  "refusedPublication": {
+    "type": "tool_result",
+    "tool_use_id": "synthetic-call",
+    "is_error": true,
+    "content": "Synthetic summary: the published file changed since this session read it; nothing was published."
+  },
+  "finalCliResultAfterToolFailure": { "type": "result", "subtype": "success", "is_error": false },
+  "warning": "These are normalized synthetic shapes, not raw provider responses or proof of product compatibility. URLs are deliberately placeholders."
+}

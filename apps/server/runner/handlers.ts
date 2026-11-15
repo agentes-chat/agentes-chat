@@ -832,7 +832,13 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
         maxBytes: clampInt(req.maxBytes, 0, Number.MAX_SAFE_INTEGER, 0),
         fetch: ctx.fetch,
         signal: scope.signal,
-        resolve: (p) => resolveToRead(ctx, p),
+        resolve: async (p) => {
+          if (req.claudeDesignSource !== undefined) {
+            if (!ctx.tasks) throw new RunnerError("bad_request", "Design sources unavailable");
+            return ctx.tasks.designSource(req.agent, req.claudeDesignSource, p);
+          }
+          return resolveToRead(ctx, p);
+        },
       });
     case "pull":
       return pullFile({

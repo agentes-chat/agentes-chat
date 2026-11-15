@@ -30,6 +30,7 @@ import { browserProfileRoutes } from "./routes/app/browser-profiles";
 import { calendarRoutes } from "./routes/app/calendar";
 import { channelRoutes } from "./routes/app/channels";
 import { chatRoutes } from "./routes/app/chat";
+import { claudeDesignRoutes } from "./routes/app/claude-design";
 import { connectorRoutes } from "./routes/app/connectors";
 import { customConnectorRoutes } from "./routes/app/connectors-custom";
 import { type AppDeps, agentDetailsGate, readOnlyWhileDeleting } from "./routes/app/context";
@@ -220,6 +221,7 @@ export function createApp(options: AppOptions) {
     api.route("/app", deviceWaitRoutes(deps));
     api.route("/app", deviceAppRoutes(deps));
     api.route("/app", machineAccountRoutes(deps));
+    api.route("/app", claudeDesignRoutes(deps));
     api.route("/app", planUsageRoutes(deps));
     api.route("/app", personUsageRoutes(deps));
     api.route("/app", teamWeekRoutes(deps));

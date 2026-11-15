@@ -104,6 +104,10 @@ import type {
   ChannelMember,
   ChannelOverride,
   Choices,
+  ClaudeDesignConsent,
+  ClaudeDesignConsentDecision,
+  ClaudeDesignGrant,
+  ClaudeDesignJob,
   CliInstall,
   CodeSent,
   CommandApproval,
@@ -379,6 +383,20 @@ export interface OpenedWorkspace {
 }
 
 export interface ApiClient {
+  claudeDesign: {
+    getGrant(orgId: string, agentId: string, accountId?: string): Promise<ClaudeDesignGrant>;
+    setGrant(orgId: string, agentId: string, accountId: string | null): Promise<ClaudeDesignGrant>;
+    getJob(orgId: string, jobId: string): Promise<ClaudeDesignJob>;
+    cancel(orgId: string, jobId: string): Promise<ClaudeDesignJob>;
+    recover(
+      orgId: string,
+      jobId: string,
+      input: { remoteUrl: string; confirmAssociation: true },
+    ): Promise<ClaudeDesignJob>;
+    getConsent(orgId: string, consentId: string): Promise<ClaudeDesignConsent>;
+    decideConsent(orgId: string, consentId: string, input: ClaudeDesignConsentDecision): Promise<ClaudeDesignConsent>;
+  };
+
   system: {
     health(): Promise<Health>;
     instance(): Promise<Instance>;

@@ -433,6 +433,7 @@ const GROUP_LABELS: Record<string, string> = {
   [RARE_GROUP]:
     "More of the conversation (reading a channel or a message by its link, stickers, your status, reply style, threads, adding agents to channels, the agents' directory, your usage, instruction changes, your own settings, the agents' line on commits, feedback on this app)",
   drive: "Files (Drive)",
+  "claude-design": "Claude Design",
   [DASHBOARD_GROUP]: "Dashboards and widgets (numbers and charts kept up to date, boards to share)",
   issues: "Issues",
   calendar: "Calendar",

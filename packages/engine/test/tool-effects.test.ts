@@ -121,3 +121,15 @@ describe("where the agent browsed, for the card after the run", () => {
     expect(t.browser?.every((s) => s.tool === "browser_click")).toBe(true);
   });
 });
+
+test("dedicated Design job ids reach the reply through local and bridge effects once", () => {
+  const id = crypto.randomUUID(),
+    other = crypto.randomUUID();
+  const t: ToolSideEffects = {};
+  absorbToolData(t, { claudeDesign: { id } });
+  absorbToolData(t, { claudeDesign: { id } });
+  mergeToolEffects(t, { claudeDesignJobs: [other, id] });
+  expect(t.claudeDesignJobs).toEqual([id, other]);
+  absorbToolData(t, { claudeDesign: { id: "forged" } });
+  expect(t.claudeDesignJobs).toEqual([id, other]);
+});

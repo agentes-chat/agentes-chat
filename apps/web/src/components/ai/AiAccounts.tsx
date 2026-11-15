@@ -9,10 +9,12 @@ import {
   type PlanAccount,
   unusedCopies,
 } from "@agenteschat/client/lib/ai-accounts";
+import { showDesignAccountControls } from "@agenteschat/client/lib/claude-design";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { agentAi, aiStateOf } from "@agenteschat/client/lib/no-ai";
+import { can } from "@agenteschat/client/lib/permissions";
 import { isPlanId, planOf, signInProviderOf } from "@agenteschat/client/lib/plans";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
@@ -34,6 +36,7 @@ import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useToast } from "@/lib/toast";
 import { AddAccount } from "./AddAccountFlow";
+import { ClaudeDesignGrants } from "./ClaudeDesignGrant";
 import { PlanHold, usePlanHold } from "./ConnectAiSteps";
 import { UseKeyForAll } from "./UseKeyForAll";
 
@@ -142,6 +145,7 @@ export function AccountActions({ machineId, accountId }: { machineId: string; ac
       {copies.length > 0 && (
         <SettingNote icon="repeat">{t("aiAccounts.page.copies", { count: copies.length })}</SettingNote>
       )}
+      {showDesignAccountControls(a, can(org, "manage_agents")) ? <ClaudeDesignGrants accountId={a.id} /> : null}
       <div className="ac-acts ai-accounts__acts">
         {give.length === 1 && give[0] ? (
           <Button variant="link" disabled={busy} onClick={() => give[0] && void giveTo(give[0])}>

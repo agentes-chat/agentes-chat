@@ -353,6 +353,12 @@ export const envVars = {
       "Unused: new agents start on Automático (`auto`, each run picks the model and effort), whatever this says. Still checked when set; to be removed.",
     section: "Agents",
   },
+  CLAUDE_DESIGN_EXPERIMENTAL: {
+    schema: z.stringbool().default(false),
+    description:
+      "Request the experimental Claude Design pilot. Currently unavailable: native interactive consent has not passed the guarded app smoke. This flag alone cannot enable it. Existing results remain readable.",
+    section: "Agents",
+  },
   ROUTER_ENABLED: {
     schema: z.stringbool().default(true),
     description:

@@ -18,6 +18,7 @@ import {
   authorizeStream,
   type BrainTurn,
   blockSpecAt,
+  CLAUDE_DESIGN_PILOT_READY,
   CodexBrain,
   type ContextDeps,
   CursorBrain,
@@ -37,6 +38,7 @@ import {
   createCalendarToolSource,
   createChatToolSource,
   createClaudeCodeBrain,
+  createClaudeDesignToolSource,
   createCoAuthorToolSource,
   createConnectorToolSource,
   createContextToolSource,
@@ -312,6 +314,7 @@ export function buildEngine(o: EngineOptions) {
   const artifacts: ArtifactDeps = { db, blobs: createBlobStoreResolver(storage), pubsub: adapters.pubsub };
   // Agents' computers (ADR 0025): connected machines, through the hub that holds their sockets.
   const machineHub = createMachineHub({
+    claudeDesignEnabled: () => config.CLAUDE_DESIGN_EXPERIMENTAL && CLAUDE_DESIGN_PILOT_READY,
     db,
     pubsub: adapters.pubsub,
     replicaId: o.replicaId,
@@ -450,6 +453,14 @@ export function buildEngine(o: EngineOptions) {
       // Runs nobody called by name may stay quiet (reply-policy.ts): listed only for them.
       createPassToolSource(),
       createArtifactToolSource(artifacts),
+      createClaudeDesignToolSource({
+        db,
+        enabled: config.CLAUDE_DESIGN_EXPERIMENTAL && CLAUDE_DESIGN_PILOT_READY,
+        pubsub: adapters.pubsub,
+        hub: machineHub,
+        artifacts,
+        publicUrl: config.PUBLIC_URL,
+      }),
       // Live blocks and votes in the agent's own conversation (ADR 0113).
       createBlockToolSource(artifacts),
       createChatToolSource({ pubsub: adapters.pubsub, artifacts, gif: createAgentGifPoster(adapters.gifs) }),
@@ -762,6 +773,7 @@ export function buildEngine(o: EngineOptions) {
       : null,
   };
   const jobDeps: JobDeps = {
+    claudeDesignEnabled: config.CLAUDE_DESIGN_EXPERIMENTAL && CLAUDE_DESIGN_PILOT_READY,
     feedbackBlobs: adapters.platformBlobs,
     feedbackFetch: o.http,
     accountEmails: adapters.email.delivers ? { publicUrl: config.PUBLIC_URL, support: config.SUPPORT_EMAIL } : null,

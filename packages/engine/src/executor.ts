@@ -582,6 +582,7 @@ export interface Transcript {
   artifacts?: ArtifactLink[];
   /** A mission proposed with its home elsewhere (a flat DM's new thread): the reply carries its link card (`meta.missionLink`). */
   missionLink?: { missionId: string; threadId: string } | null;
+  claudeDesignJobs?: string[];
   /** Agents it consulted (`ask_agent`, ADR 0034), not yet shown on a posted message (`meta.consulted`). */
   consulted?: { agentId: string; consultationId: string; status: string; question?: string; answer?: string | null }[];
   /** Its browser calls since the last post, for the card of where it browsed (`meta.browser`). */
@@ -6318,6 +6319,7 @@ function takeMemoryUpdates(t: Transcript): Record<string, unknown> | undefined {
   const updates = t.memoryUpdates ?? [];
   const files = t.artifacts ?? [];
   const link = t.missionLink ?? null;
+  const designJobs = t.claudeDesignJobs ?? [];
   const consulted = t.consulted ?? [];
   const browser = t.browser ?? [];
   const desktop = t.desktop ?? [];
@@ -6332,6 +6334,7 @@ function takeMemoryUpdates(t: Transcript): Record<string, unknown> | undefined {
     updates.length === 0 &&
     files.length === 0 &&
     !link &&
+    designJobs.length === 0 &&
     consulted.length === 0 &&
     browser.length === 0 &&
     desktop.length === 0 &&
@@ -6341,6 +6344,7 @@ function takeMemoryUpdates(t: Transcript): Record<string, unknown> | undefined {
   t.memoryUpdates = [];
   t.artifacts = [];
   t.missionLink = null;
+  t.claudeDesignJobs = [];
   t.consulted = [];
   t.browser = [];
   t.desktop = [];
@@ -6355,6 +6359,7 @@ function takeMemoryUpdates(t: Transcript): Record<string, unknown> | undefined {
   if (updates.length > 0) meta.memoryUpdates = updates;
   if (files.length > 0) meta.artifacts = files;
   if (link) meta.missionLink = link;
+  if (designJobs.length) meta.claudeDesignJobs = designJobs;
   if (consulted.length > 0) meta.consulted = consulted;
   if (browser.length > 0) meta.browser = { steps: browser };
   if (desktop.length > 0) meta.desktop = { steps: desktop };

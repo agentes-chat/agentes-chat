@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import {
   appendFileSync,
@@ -10,6 +11,7 @@ import {
   readdirSync,
   readFileSync,
   readSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
@@ -19,6 +21,17 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import {
+  type ClaudeDesignCompatibility,
+  type ClaudeDesignConsentReply,
+  type ClaudeDesignEffectReply,
+  type ClaudeDesignResult,
+  type ClaudeDesignTask,
+  isClaudeDesignCompatible,
+  parseClaudeDesignResult,
+  parseClaudeDesignTask,
+  validClaudeDesignEnvelope,
+} from "@agenteschat/adapters/claude-design";
 import { ASK_AGAIN, MISSION_DENY_RULES, PUSH_ASK_RULES } from "@agenteschat/adapters/command-policy";
 import {
   type AccountKind,
@@ -54,6 +67,8 @@ import {
   yieldRoute,
 } from "./accounts";
 import { codexThreadKey, unwrapShell } from "./brain-codex";
+import { type DesignGuardSession, designFile } from "./claude-design/guard";
+import { type DesignManagerOptions, runClaudeDesign } from "./claude-design/manager";
 import { coAuthorLines } from "./co-authors";
 import { commandApproval, ownBranches } from "./command-gate";
 import { RunnerError } from "./errors";
@@ -149,6 +164,8 @@ export const RESUME_NOTE =
   "You were interrupted (the computer went offline). Look at your folder (git status when it is a git repository) and continue where you stopped.";
 
 interface Entry {
+  claudeDesignTask?: ClaudeDesignTask;
+  claudeDesign?: ClaudeDesignResult;
   taskId: string;
   agentId: string;
   agentHandle: string;
@@ -263,6 +280,14 @@ export interface SettledTask {
 }
 
 export interface TaskManagerOptions {
+  claudeDesign?: {
+    /** Resolve at launch: the person may install or move the CLI while the session is running. */
+    cli: string | (() => string);
+    hookCommand: string[];
+    capability(account: string): Promise<ClaudeDesignCompatibility | null>;
+    run?: typeof runClaudeDesign;
+    noteRateLimit?(accountId: string, info: unknown): void;
+  };
   /** `<runner home>/tasks`. */
   root: string;
   workspaceReal: string;
@@ -857,6 +882,10 @@ export class TaskManager {
   private readonly log: (line: string) => void;
   private readonly now: () => number;
   private closed = false;
+  private readonly designControllers = new Map<string, AbortController>();
+  private readonly designStarting = new Set<string>();
+  private readonly designConsentPending = new Map<string, (reply: ClaudeDesignConsentReply) => void>();
+  private readonly designPending = new Map<string, (reply: ClaudeDesignEffectReply) => void>();
 
   constructor(private readonly opts: TaskManagerOptions) {
     this.log = opts.log ?? (() => {});
@@ -891,7 +920,17 @@ export class TaskManager {
       }
     }
     for (const t of this.journal.tasks) {
-      if (t.status === "running") await this.watch(t, true, await this.reattachRedact(t));
+      if (t.status === "running" && t.claudeDesignTask) {
+        t.claudeDesign = t.claudeDesign?.remote
+          ? { ...t.claudeDesign, state: "published" }
+          : {
+              jobId: t.claudeDesignTask.jobId,
+              state: "unknown",
+              sourceFiles: [],
+              error: { code: "result_unknown", message: "The runner restarted before the task was confirmed" },
+            };
+        this.finishDesign(t, t.claudeDesign);
+      } else if (t.status === "running") await this.watch(t, true, await this.reattachRedact(t));
     }
     this.save();
     this.updateCaffeinate();
@@ -927,6 +966,7 @@ export class TaskManager {
     );
     return {
       taskId: t.taskId,
+      ...(t.claudeDesign ? { claudeDesign: t.claudeDesign } : {}),
       agentId: t.agentId,
       status: t.status,
       ...(t.pid ? { pid: t.pid } : {}),
@@ -947,7 +987,16 @@ export class TaskManager {
     }
   }
 
+  designAuthorized(reply: ClaudeDesignEffectReply) {
+    this.designPending.get(reply.requestId)?.(reply);
+  }
+
+  designConsented(reply: ClaudeDesignConsentReply) {
+    this.designConsentPending.get(reply.requestId)?.(reply);
+  }
+
   detach() {
+    for (const controller of this.designControllers.values()) controller.abort();
     this.send = null;
   }
 
@@ -1003,6 +1052,19 @@ export class TaskManager {
         this.cancel(undefined, t.taskId);
       }
     }
+  }
+
+  /** Design loans are additional to the main brain's account, and affect this agent only. */
+  keepDesignAccounts(agentId: string, accounts: readonly string[]) {
+    for (const entry of this.journal.tasks)
+      if (
+        entry.agentId === agentId &&
+        entry.claudeDesignTask &&
+        entry.status === "running" &&
+        entry.account &&
+        !accounts.includes(entry.account)
+      )
+        this.cancel(undefined, entry.taskId);
   }
 
   /** New limits from the config (the app's Preferences, or an edit): they apply to the next start. */
@@ -1061,6 +1123,7 @@ export class TaskManager {
     grant?: AccountGrant,
   ): Promise<MachineReplies["task.start"]> {
     if (this.closed) throw new RunnerError("internal", "The runner is stopping");
+    if ("claudeDesign" in req) return this.startDesign(agent, req, grant);
     const taskId = String(req.taskId ?? "");
     const dir = this.dirOf(taskId);
     if (this.journal.tasks.some((t) => t.taskId === taskId)) throw new RunnerError("bad_request", "Duplicate task id");
@@ -1415,6 +1478,186 @@ export class TaskManager {
     };
   }
 
+  private finishDesign(entry: Entry, result: ClaudeDesignResult) {
+    entry.claudeDesign = result;
+    entry.status = "done";
+    entry.endedAt = new Date(this.now()).toISOString();
+    entry.done = {
+      taskId: entry.taskId,
+      exitCode: result.state === "published" && !result.error ? 0 : 1,
+      seconds: Math.max(0, Math.round((this.now() - Date.parse(entry.startedAt)) / 1000)),
+      claudeDesign: result,
+      result: `Claude Design: ${result.state}`,
+      ...(entry.canceling ? { canceled: true } : {}),
+    };
+    this.save();
+    this.emit({ type: "task.done", ...entry.done });
+    this.opts.onSettled?.(this.settled(entry));
+    this.updateCaffeinate();
+  }
+
+  private async startDesign(
+    agent: AgentScope,
+    req: TaskStart,
+    grant?: AccountGrant,
+  ): Promise<MachineReplies["task.start"]> {
+    const profile = this.opts.claudeDesign;
+    const task = parseClaudeDesignTask(req.claudeDesign);
+    if (!profile || grant || !task || !validClaudeDesignEnvelope({ ...req, agent }))
+      throw new RunnerError("not_allowed", "Claude Design is unavailable for this task");
+    const taskId = String(req.taskId);
+    this.dirOf(taskId);
+    const existing = this.journal.tasks.find((t) => t.taskId === taskId);
+    if (existing) {
+      if (
+        existing.agentId !== agent.id ||
+        existing.account !== req.account ||
+        JSON.stringify(existing.claudeDesignTask) !== JSON.stringify(task)
+      )
+        throw new RunnerError("bad_request", "Task identity conflict");
+      return {
+        taskId,
+        pid: existing.pid ?? process.pid,
+        startedAt: existing.startedAt,
+        cwd: existing.cwdRel,
+        command: existing.command,
+      };
+    }
+    if (
+      this.designStarting.has(taskId) ||
+      this.running + this.designStarting.size >= (this.opts.maxConcurrent ?? DEFAULT_MAX_CONCURRENT_TASKS)
+    )
+      throw new RunnerError("no_slot", "No task slot available");
+    this.designStarting.add(taskId);
+    try {
+      const capability = await profile.capability(String(req.account));
+      if (!capability || !isClaudeDesignCompatible(capability))
+        throw new RunnerError("not_allowed", "Claude Design is unsupported on this account");
+      const signIn = await this.signIn("claude", req.account);
+      if (!signIn || signIn.planKey || signIn.token)
+        throw new RunnerError("not_allowed", "Claude Design requires the selected CLI login");
+      if (this.closed) throw new RunnerError("internal", "Runner stopped");
+      const folder = await this.opts.agentFolder(agent);
+      const cwdRel = `designs/${taskId}/work`;
+      const cwd = path.join(folder, cwdRel);
+      mkdirSync(cwd, { recursive: true, mode: 0o700 });
+      const real = realpathSync(cwd);
+      const controlDir = path.join(this.dirOf(taskId), "design-control");
+      const entry: Entry = {
+        taskId,
+        agentId: agent.id,
+        agentHandle: agent.handle,
+        executor: "claude",
+        account: String(req.account),
+        command: "Claude Design",
+        cwd: real,
+        cwdRel,
+        folder,
+        status: "running",
+        startedAt: new Date(this.now()).toISOString(),
+        maxSeconds: Math.min(req.maxSeconds ?? 900, this.opts.defaultMaxSeconds ?? 900, 900),
+        files: [],
+        claudeDesignTask: task,
+      };
+      const controller = new AbortController();
+      this.designControllers.set(taskId, controller);
+      this.journal.tasks.push(entry);
+      this.save();
+      const session: DesignGuardSession = {
+        taskId,
+        accountId: String(req.account),
+        workspace: real,
+        task,
+        sequence: 0,
+        created: false,
+        publishing: false,
+        reads: new Set(),
+        approved: new Map(),
+      };
+      const options: DesignManagerOptions = {
+        session,
+        cli: typeof profile.cli === "function" ? profile.cli() : profile.cli,
+        hookCommand: profile.hookCommand,
+        accountDir: signIn.home,
+        settingsPath: path.join(controlDir, "settings.json"),
+        controlDir,
+        capability,
+        signal: controller.signal,
+        maxSeconds: entry.maxSeconds,
+        onRateLimit: (info) => profile.noteRateLimit?.(String(req.account), info),
+        checkpoint: async (checkpoint) => {
+          entry.claudeDesign = checkpoint;
+          this.save();
+        },
+        consent: (request) =>
+          new Promise<boolean>((resolve) => {
+            if (!this.send || controller.signal.aborted) return resolve(false);
+            const finish = (allow: boolean) => {
+              clearInterval(poll);
+              clearTimeout(deadline);
+              controller.signal.removeEventListener("abort", canceled);
+              this.designConsentPending.delete(request.requestId);
+              resolve(allow);
+            };
+            const canceled = () => finish(false);
+            const poll = setInterval(() => this.emit(request), 2000);
+            const deadline = setTimeout(canceled, (entry.maxSeconds ?? 900) * 1000);
+            controller.signal.addEventListener("abort", canceled, { once: true });
+            this.designConsentPending.set(request.requestId, (reply) => {
+              if (!reply.pending) finish(reply.allow === true);
+            });
+            this.emit(request);
+          }),
+        authorize: (effect) =>
+          new Promise<boolean>((resolve) => {
+            if (!this.send || controller.signal.aborted) return resolve(false);
+            const timer = setTimeout(() => {
+              this.designPending.delete(effect.requestId);
+              resolve(false);
+            }, 5000);
+            this.designPending.set(effect.requestId, (reply) => {
+              clearTimeout(timer);
+              this.designPending.delete(effect.requestId);
+              resolve(reply.allow === true);
+            });
+            this.emit(effect);
+          }),
+      };
+      void (profile.run ?? runClaudeDesign)(options)
+        .then((result) => {
+          const parsed = parseClaudeDesignResult(result);
+          if (!parsed || parsed.jobId !== task.jobId) throw new Error("Invalid Design result");
+          this.finishDesign(entry, parsed);
+        })
+        .catch(() =>
+          this.finishDesign(
+            entry,
+            entry.claudeDesign?.remote
+              ? {
+                  ...entry.claudeDesign,
+                  state: "published",
+                  error: { code: "sources_incomplete", message: "Design sources could not be confirmed" },
+                }
+              : {
+                  jobId: task.jobId,
+                  state: "unknown",
+                  sourceFiles: [],
+                  error: { code: "result_unknown", message: "Design result could not be confirmed" },
+                },
+          ),
+        )
+        .finally(() => {
+          controller.abort();
+          this.designControllers.delete(taskId);
+          signIn.release?.();
+        });
+      this.updateCaffeinate();
+      return { taskId, pid: process.pid, startedAt: entry.startedAt, cwd: cwdRel, command: "Claude Design" };
+    } finally {
+      this.designStarting.delete(taskId);
+    }
+  }
+
   private hostedTask(taskId: string) {
     return this.journal.tasks.find((t) => t.taskId === taskId && t.hosted && t.status === "running");
   }
@@ -1452,6 +1695,34 @@ export class TaskManager {
       ...(t.folder ? { folder: t.folder } : {}),
       ...(this.watches.get(t.taskId)?.redact ? { redact: this.watches.get(t.taskId)?.redact } : {}),
     };
+  }
+
+  /** A backend manifest cannot name another task, agent, symlink, or changed local source. */
+  designSource(agent: AgentScope | undefined, raw: unknown, requestedPath: string) {
+    if (!agent || !raw || typeof raw !== "object") throw new RunnerError("bad_request", "Invalid Design source");
+    const source = raw as Record<string, unknown>;
+    if (Object.keys(source).some((k) => !["taskId", "relativePath", "sha256", "size"].includes(k)))
+      throw new RunnerError("bad_request", "Invalid Design source");
+    const t = this.journal.tasks.find(
+      (t) => t.agentId === agent.id && t.taskId === source.taskId && t.claudeDesignTask,
+    );
+    const file = t?.claudeDesign?.sourceFiles.find(
+      (f) => f.relativePath === source.relativePath && f.sha256 === source.sha256 && f.size === source.size,
+    );
+    if (!t || !file || requestedPath !== `designs/${t.taskId}/work/${file.relativePath}`)
+      throw new RunnerError("bad_request", "Unknown Design source");
+    const abs = designFile(
+      { workspace: t.cwd, task: t.claudeDesignTask } as DesignGuardSession,
+      path.join(t.cwd, file.relativePath),
+    );
+    const target = abs && path.join(t.cwd, abs);
+    if (
+      !target ||
+      statSync(target).size !== file.size ||
+      createHash("sha256").update(readFileSync(target)).digest("hex") !== file.sha256
+    )
+      throw new RunnerError("bad_request", "Design source changed");
+    return { abs: target, rel: file.relativePath, exists: true, root: t.cwd };
   }
 
   status(agent: AgentScope | undefined, taskId?: string): MachineReplies["task.status"] {
@@ -1492,6 +1763,7 @@ export class TaskManager {
     if (!t) throw new RunnerError("not_found", "No such task on this computer");
     if (t.status !== "running") return { canceled: false };
     t.canceling = true;
+    this.designControllers.get(taskId)?.abort();
     this.save();
     const dir = this.dirOf(t.taskId);
     // The wrapper polls this file every second. No SIGTERM to it right away: a wrapper that is still
@@ -1869,6 +2141,7 @@ export class TaskManager {
   /** The runner is exiting: stop watching; the tasks themselves go on. */
   close() {
     this.closed = true;
+    for (const controller of this.designControllers.values()) controller.abort();
     for (const w of this.watches.values()) clearInterval(w.timer);
     this.watches.clear();
     this.launches.clear();

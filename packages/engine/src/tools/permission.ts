@@ -35,6 +35,8 @@ export async function missingPermissions(ctx: Pick<ToolContext, "db" | "orgId" |
   const all = granted.has(grantKey(null, ALL_TOOLS));
   const out: MissingPermission[] = [];
   for (const [scope, info] of Object.entries(BUILTIN_SCOPES)) {
+    // Design is granted only by its account owner on the dedicated account surface.
+    if (scope.startsWith("claude-design:")) continue;
     if (granted.has(grantKey(null, scope))) continue;
     const write = impliedByWrite(scope);
     if (write && granted.has(grantKey(null, write))) continue;

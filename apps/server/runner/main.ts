@@ -38,6 +38,7 @@ import {
 } from "./browser-bind-check";
 import { ensureBrowserBindPolicy, prepareAgents } from "./browser-bind-policy";
 import { browserPortsForUid } from "./browser-ports";
+import { runClaudeDesignHook, runClaudeDesignPermission } from "./claude-design/manager";
 import { computerNow } from "./computer-now";
 import {
   accessToStore,
@@ -1475,6 +1476,10 @@ async function main(argv: string[]): Promise<number> {
       runTaskWrapper(path.resolve(sub));
       return new Promise<number>(() => {});
     }
+    case "claude-design-permission":
+      return sub ? runClaudeDesignPermission(sub) : 1;
+    case "claude-design-hook":
+      return sub ? runClaudeDesignHook(sub) : 1;
     case "update":
       return update();
     case "standby":

@@ -27,6 +27,8 @@ import { isSandboxedBrain } from "./brains/types";
 import { caches } from "./cache";
 import { summarizeScopes } from "./capabilities";
 import { peopleAllIn } from "./channels";
+import { designWorkBrief } from "./claude-design/brief";
+import { DESIGN_COMPLETION_GUIDANCE, designCompletionOf } from "./claude-design/notice-data";
 import { consultationOrigin, type HandOff, handOffsFrom } from "./consultations";
 import { teamMemoryForPrompt } from "./context/tools";
 import { widgetRunContext } from "./dashboards/refresh-context";
@@ -652,6 +654,7 @@ export async function buildRunContext(
       ? null
       : openTasksBrief(db, run.orgId, agent.id, run.channelId, options.issueTools === true, personal).catch(() => null);
   // Its background work in this conversation (ADR 0121): a new run knows it, to pass messages on or stop it.
+  const designs = options.routine ? null : designWorkBrief(db, run);
   const works = options.routine || run.background || run.workId ? null : workBrief(db, run).catch(() => null);
   const trigger = triggerRows[0];
   if (!org || !channel || !trigger) throw new Error("run context is incomplete (org, channel or trigger missing)");
@@ -1264,6 +1267,7 @@ export async function buildRunContext(
     // Per turn and read whole, like memory: it changes between runs, and a live computer session keeps the
     // system prompt it started with.
     ...(openTasks ? await openTasks.then((text) => (text ? [{ turn: true, found: true, text }] : [])) : []),
+    ...(designs ? await designs.then((text) => (text ? [{ turn: true, found: true, text }] : [])) : []),
     ...(works ? await works.then((text) => (text ? [{ turn: true, found: true, text }] : [])) : []),
     ...(heldElsewhere ? await heldElsewhere.then((text) => (text ? [{ turn: true, found: true, text }] : [])) : []),
     ...(openRequests ? await openRequests.then((text) => (text ? [{ turn: true, found: true, text }] : [])) : []),
@@ -2287,6 +2291,11 @@ export function taskNotice(m: Pick<Message, "body" | "meta">, current = false, p
         : ""
     }`;
   }
+  const design = designCompletionOf(m.meta);
+  if (design)
+    return `[Claude Design result]:\n${untrustedBlock("verified Design status", JSON.stringify(design))}${
+      current ? `\n${DESIGN_COMPLETION_GUIDANCE}` : ""
+    }`;
   const t = m.meta?.machineTask as
     | {
         title?: unknown;

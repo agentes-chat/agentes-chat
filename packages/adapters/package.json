@@ -17,7 +17,8 @@
     "./host-stats": "./src/host-stats.ts",
     "./in-flight": "./src/in-flight.ts",
     "./browser-start": "./src/browser-start.ts",
-    "./vault/site": "./src/vault/site.ts"
+    "./vault/site": "./src/vault/site.ts",
+    "./claude-design": "./src/claude-design.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"

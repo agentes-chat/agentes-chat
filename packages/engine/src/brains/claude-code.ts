@@ -528,6 +528,8 @@ export async function recordPlanUsage(
     /** The computer the turn ran on and the account it spent; `accountId` null: that computer's own sign-in. */
     machineId?: string;
     accountId?: string | null;
+    /** Stable task UUID: repeated completion frames record usage once. */
+    idempotencyKey?: string;
     model?: string;
     /** Every input token the turn read, cache included. */
     inputTokens: number;
@@ -542,6 +544,7 @@ export async function recordPlanUsage(
   const [row] = await db
     .insert(schema.usageRecords)
     .values({
+      ...(input.idempotencyKey ? { id: input.idempotencyKey } : {}),
       orgId: input.orgId,
       agentId: input.agentId,
       kind: input.kind ?? "agent",
@@ -561,6 +564,7 @@ export async function recordPlanUsage(
       brainAccountId: input.machineId ? (input.accountId ?? null) : null,
       personId: input.personId ?? null,
     })
+    .onConflictDoNothing()
     .returning({ id: schema.usageRecords.id, inputTokens: schema.usageRecords.inputTokens });
   if (row && input.personId) {
     // One unit for everything: a plan's tokens count at what they would cost through the API.

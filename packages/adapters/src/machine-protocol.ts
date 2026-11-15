@@ -1,3 +1,17 @@
+import {
+  type ClaudeDesignConsentReply,
+  type ClaudeDesignConsentRequest,
+  type ClaudeDesignEffectReply,
+  type ClaudeDesignEffectRequest,
+  type ClaudeDesignResult,
+  type ClaudeDesignTask,
+  parseClaudeDesignConsentReply,
+  parseClaudeDesignConsentRequest,
+  parseClaudeDesignEffectReply,
+  parseClaudeDesignEffectRequest,
+  parseClaudeDesignResult,
+  validClaudeDesignEnvelope,
+} from "./claude-design";
 import type { MergeDone } from "./command-policy";
 /**
  * The wire protocol between our server and the runner on a connected
@@ -7,7 +21,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 67;
+export const MACHINE_PROTOCOL_VERSION = 68;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -1882,6 +1896,8 @@ export const TASK_ACCOUNTS_PROTOCOL = 31;
  * until the server acknowledges it (`task.ack`).
  */
 export interface TaskStart {
+  /** Experimental dedicated execution; never resumed through the generic CLI profile. */
+  claudeDesign?: ClaudeDesignTask;
   /** Chosen by the server (a UUID). */
   taskId: string;
   executor: TaskExecutor;
@@ -2217,6 +2233,7 @@ export type BrainRouteReply =
 
 /** A task as the runner's journal has it (in `hello` and `task.status`). */
 export interface RunnerTask {
+  claudeDesign?: ClaudeDesignResult;
   taskId: string;
   agentId: string;
   /** `interrupted`: the process is gone without an exit (the machine slept, rebooted or killed it). */
@@ -2233,6 +2250,7 @@ export interface RunnerTask {
 
 /** `task.done`: how a task ended. Sent once per task, again after a reconnect until acknowledged. */
 export interface TaskDone {
+  claudeDesign?: ClaudeDesignResult;
   taskId: string;
   /** Null when there is no exit code (killed by a signal, or interrupted). */
   exitCode: number | null;
@@ -2535,6 +2553,8 @@ export type MachineRequest = (
   | { op: "access.allow"; tool: keyof RunnerTools; by: string; byName: string }
   | {
       op: "push";
+      /** A journaled Design manifest; the runner must bind this to its original task workspace. */
+      claudeDesignSource?: { taskId: string; relativePath: string; sha256: string; size: number };
       path: string;
       /** Absolute URL of our upload endpoint (`PUT`, machine token as bearer). */
       url: string;
@@ -3034,6 +3054,8 @@ export type MachineErrorCode =
 
 /** Server → runner. */
 export type ServerFrame =
+  | ClaudeDesignEffectReply
+  | ClaudeDesignConsentReply
   | {
       type: "welcome";
       machineId: string;
@@ -3083,6 +3105,8 @@ export type ServerFrame =
 
 /** Runner → server. */
 export type RunnerFrame =
+  | ClaudeDesignEffectRequest
+  | ClaudeDesignConsentRequest
   | ({ type: "hello"; token: string } & RunnerInfo)
   | { type: "output"; id: string; stream: "stdout" | "stderr"; chunk: string }
   | { type: "result"; id: string; ok: true; data: unknown }
@@ -3590,11 +3614,14 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
 /** A journal entry from `hello` or `task.status`; null when malformed. */
 export function parseRunnerTask(v: unknown): RunnerTask | null {
   if (!isObject(v) || !isString(v.taskId) || !isString(v.agentId) || !isString(v.startedAt)) return null;
+  const claudeDesign = v.claudeDesign === undefined ? undefined : parseClaudeDesignResult(v.claudeDesign);
+  if (claudeDesign === null) return null;
   const status = (["running", "done", "interrupted"] as const).find((s) => s === v.status);
   if (!status) return null;
   const exitCode = v.exitCode === null ? null : finite(v.exitCode);
   return {
     taskId: v.taskId.slice(0, 64),
+    ...(claudeDesign ? { claudeDesign } : {}),
     agentId: v.agentId.slice(0, 64),
     status,
     ...(finite(v.pid) !== undefined ? { pid: finite(v.pid) } : {}),
@@ -3619,6 +3646,10 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
   }
   if (!isObject(f)) return null;
   switch (f.type) {
+    case "design.consent":
+      return parseClaudeDesignConsentRequest(f);
+    case "design.authorize":
+      return parseClaudeDesignEffectRequest(f);
     case "hello": {
       if (!isString(f.token) || !isString(f.version) || typeof f.protocol !== "number") return null;
       const paused = parsePause(f.paused);
@@ -3815,6 +3846,8 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
     }
     case "task.done": {
       if (!isString(f.taskId)) return null;
+      const claudeDesign = f.claudeDesign === undefined ? undefined : parseClaudeDesignResult(f.claudeDesign);
+      if (claudeDesign === null) return null;
       const exitCode = finite(f.exitCode) ?? null;
       const result = cut(f.result, TASK_LIMITS.result);
       const lastLine = cut(f.lastLine, TASK_LIMITS.line);
@@ -3825,6 +3858,7 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
       const shas = isSha(f.startSha) && isSha(f.endSha) ? { startSha: f.startSha, endSha: f.endSha } : {};
       return {
         type: "task.done",
+        ...(claudeDesign ? { claudeDesign } : {}),
         taskId: f.taskId.slice(0, 64),
         exitCode,
         signal: isString(f.signal) ? f.signal.slice(0, 20) : null,
@@ -3891,9 +3925,12 @@ export function parseServerFrame(raw: string): ServerFrame | null {
     return null;
   }
   if (!isObject(f) || !isString(f.type)) return null;
+  if (f.type === "design.consented") return parseClaudeDesignConsentReply(f);
+  if (f.type === "design.authorized") return parseClaudeDesignEffectReply(f);
   if (f.type === "request") {
     if (!isString(f.id) || !isString(f.op)) return null;
     if (!MACHINE_OPS.includes(f.op as MachineOp)) return null;
+    if (f.op === "task.start" && "claudeDesign" in f && !validClaudeDesignEnvelope(f)) return null;
   }
   if ((f.type === "cancel" || f.type === "request") && !isString(f.id)) return null;
   if (f.type === "task.ack" && !isString(f.taskId)) return null;
