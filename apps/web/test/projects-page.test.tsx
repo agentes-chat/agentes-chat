@@ -133,6 +133,25 @@ describe("Projetos: the projects page (ADR 0188)", () => {
     ).toBe("https://github.com/acme/padaria");
   });
 
+  test("the longest name, description and repository stay whole in their row, never cut", async () => {
+    // The worst case for the page's geometry check (it lays this screen out at 1280, 390 and 320).
+    const repo = "organizacao-com-nome-grande/repositorio-com-um-nome-realmente-comprido";
+    const name = "Plataforma de integrações com nome bem comprido demais";
+    const api = createFakeApi(seedState());
+    await api.issues.createProject(ORG_ID, {
+      name,
+      color: "rose",
+      description:
+        "Um projeto com nome, descrição e repositório longos, para ver como a linha se comporta quando as palavras não cabem de uma vez e precisam quebrar sem esconder nada de ninguém.",
+      githubRepo: repo,
+    });
+    await go(api);
+    const [row] = rows();
+    expect(row?.textContent).toContain(name);
+    expect(row?.textContent).toContain(repo);
+    expect(row?.querySelector(".projects-repo__name")?.textContent).toBe(repo);
+  });
+
   test("a workspace with no project says so and offers to create the first", async () => {
     await go();
     expect(screen().getByText("Nenhum projeto ainda")).toBeTruthy();

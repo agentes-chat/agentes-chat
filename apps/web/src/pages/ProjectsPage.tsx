@@ -87,7 +87,7 @@ export function ProjectsPage() {
                 <th>{t("projectsPage.columns.project")}</th>
                 <th className="projects-repo-cell">{t("projectsPage.columns.repository")}</th>
                 <th className="projects-num">
-                  <span className="projects-headline">
+                  <span className="ac-hintline">
                     {t("projectsPage.columns.tasks")}
                     <InfoHint name={t("common.about", { label: t("projectsPage.columns.tasks") })}>
                       {t("projectsPage.countsHint")}
@@ -110,7 +110,7 @@ export function ProjectsPage() {
                 return (
                   <tr key={p.id} data-archived={p.archived ? "" : undefined}>
                     <td>
-                      <div className="projects-name">
+                      <div className="projects-name ac-iconline">
                         <ColorDot color={p.color} />
                         <Link
                           className="ac-link"
@@ -129,7 +129,7 @@ export function ProjectsPage() {
                     >
                       {p.githubRepo ? (
                         <a
-                          className="projects-repo"
+                          className="projects-repo ac-iconline"
                           href={githubRepoUrl(p.githubRepo)}
                           target="_blank"
                           rel="noopener noreferrer"
