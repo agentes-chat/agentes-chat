@@ -586,7 +586,10 @@ export function modelPickerTiles(
     if (o.kind === "model" || !runs(o.kind)) continue;
     const k = o.kind as MachineAccountKind;
     const own = view.brain === k && view.account === null;
-    if (own || (view.ownSignIn && o.available))
+    // The computer's own sign-in only where it proved it (a usage read) or no account stands for this plan: a
+    // computer whose CLIs think through connected accounts has none, and an agent left there had no AI (ADR 0187).
+    const proven = Boolean(view.ownUsage[k]) || !byChoice.get(planOfKind(k))?.length;
+    if (own || (view.ownSignIn && o.available && proven))
       add(planOfKind(k), {
         id: null,
         label: t("brain.picker.ownSignIn"),
@@ -599,7 +602,11 @@ export function modelPickerTiles(
     if (!accounts?.length) return [];
     const inUse = (a: PickerAccount) => view.brain !== "model" && (a.id ?? null) === (view.account ?? null);
     const sorted = [...accounts].sort(
-      (a, b) => Number(inUse(b)) - Number(inUse(a)) || usedOf(a.usage) - usedOf(b.usage),
+      // A connected account before the computer's own sign-in: a pick takes the first (ADR 0187).
+      (a, b) =>
+        Number(inUse(b)) - Number(inUse(a)) ||
+        Number(a.id === null) - Number(b.id === null) ||
+        usedOf(a.usage) - usedOf(b.usage),
     );
     return [
       {

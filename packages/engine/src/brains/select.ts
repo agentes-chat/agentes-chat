@@ -546,13 +546,12 @@ export function brainModelFor(
  */
 export async function brainAccountFor(
   db: Executor,
-  agent: Pick<Agent, "orgId" | "brain" | "brainAccountId" | "machineId">,
+  agent: Pick<Agent, "orgId" | "brain" | "brainAccountId" | "machineId"> & Partial<Pick<Agent, "ownerUserId">>,
   kind: BrainKind,
   machineId: string | null,
 ): Promise<BrainAccount | undefined> {
-  if (!agent.brainAccountId || !machineId || machineId !== agent.machineId || kindOf(agent.brain) !== kind) {
-    return undefined;
-  }
+  if (!machineId || machineId !== agent.machineId || kindOf(agent.brain) !== kind) return undefined;
+  if (!agent.brainAccountId) return ownSignInStandIn(db, agent, kind, machineId).catch(() => undefined);
   const { machineAccounts } = schema;
   const [row] = await db
     .select({
@@ -578,6 +577,68 @@ export async function brainAccountFor(
     status: row.status === "active" ? "active" : "signed_out",
     ...(row.provider ? { provider: row.provider } : {}),
   };
+}
+
+/**
+ * Whether the computer said its own sign-in of this CLI thinks: Claude Code's `claude auth status` (a usage read
+ * where it said nothing), another CLI's own plan usage. Only those are ever reported, so anything else is unproven.
+ */
+function ownSignInProven(executors: schema.MachineExecutors | null | undefined, kind: BrainKind): boolean {
+  const usage = executors?.ownUsage as Partial<Record<string, unknown>> | undefined;
+  if (kind === "claude_code") {
+    const loggedIn = executors?.claude?.loggedIn;
+    return loggedIn === true || (loggedIn !== false && Boolean(usage?.claude_code));
+  }
+  return Boolean(usage?.[kind]);
+}
+
+/**
+ * The account that thinks for an agent with no account picked (ADR 0187): "the computer's own sign-in" means the CLI
+ * signed in at that computer's terminal, which a computer whose CLIs think only through connected accounts never has.
+ * There every turn failed `not_logged_in`: a person's quietly on the agent's API key, a routine's for good, since
+ * background work never falls back (ADR 0053 §6.4). So where the computer never proved that sign-in
+ * (`ownSignInProven`) and a signed-in account of the same CLI there may think for the agent (it serves everyone, or
+ * it is the agent's owner's), that account thinks: the owner's first, then the oldest. None where each agent is its
+ * own OS user (the computer hands each worker the one account it was given).
+ */
+async function ownSignInStandIn(
+  db: Executor,
+  agent: Pick<Agent, "orgId"> & Partial<Pick<Agent, "ownerUserId">>,
+  kind: BrainKind,
+  machineId: string,
+): Promise<BrainAccount | undefined> {
+  if (kind === "model") return undefined;
+  const { machineAccounts, machines, organizationMembers: members } = schema;
+  const [machine] = await db
+    .select({ executors: machines.executors })
+    .from(machines)
+    .where(and(eq(machines.orgId, agent.orgId), eq(machines.id, machineId)));
+  if (!machine || machine.executors?.mode === "system" || ownSignInProven(machine.executors, kind)) return undefined;
+  const owner = agent.ownerUserId ?? null;
+  const rows = await db
+    .select({
+      id: machineAccounts.id,
+      label: machineAccounts.label,
+      provider: machineAccounts.provider,
+      createdBy: machineAccounts.createdBy,
+    })
+    .from(machineAccounts)
+    .innerJoin(members, and(eq(members.orgId, machineAccounts.orgId), eq(members.userId, machineAccounts.createdBy)))
+    .where(
+      and(
+        eq(machineAccounts.orgId, agent.orgId),
+        eq(machineAccounts.machineId, machineId),
+        eq(machineAccounts.kind, kind),
+        eq(machineAccounts.status, "active"),
+        owner
+          ? or(eq(machineAccounts.serves, "everyone"), eq(machineAccounts.createdBy, owner))
+          : eq(machineAccounts.serves, "everyone"),
+      ),
+    )
+    .orderBy(machineAccounts.createdAt, machineAccounts.id);
+  const pick = rows.find((r) => r.createdBy === owner) ?? rows[0];
+  if (!pick) return undefined;
+  return { id: pick.id, label: pick.label, status: "active", ...(pick.provider ? { provider: pick.provider } : {}) };
 }
 
 /**

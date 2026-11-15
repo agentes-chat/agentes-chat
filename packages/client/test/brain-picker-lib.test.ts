@@ -417,7 +417,8 @@ describe("the model picker: the agent's AI changed in place", () => {
     accounts: [go, otherClaude, someoneElses],
     account: "acc-go",
     ownSignIn: true,
-    ownUsage: {},
+    // The computer proved its own Claude sign-in (a usage read): the picker offers it.
+    ownUsage: { claude_code: { windows: [], source: "probe" as const, at } },
     effort: "medium" as const,
   };
   const api = modelChoices(MODELS, [{ id: "k0", provider: "anthropic" } as never], false);
@@ -429,8 +430,8 @@ describe("the model picker: the agent's AI changed in place", () => {
       ["opencode", true],
       ["api:anthropic", false],
     ]);
-    // Someone else's account isn't the owner's to pick; the computer's own sign-in is. The most room first.
-    expect(tiles[0]?.accounts.map((a) => a.id)).toEqual([null, "acc-claude"]);
+    // Someone else's account isn't the owner's to pick; the computer's own sign-in is, after the connected one.
+    expect(tiles[0]?.accounts.map((a) => a.id)).toEqual(["acc-claude", null]);
     // Without a computer brain that runs, no plan tile.
     expect(
       modelPickerTiles(
@@ -442,6 +443,21 @@ describe("the model picker: the agent's AI changed in place", () => {
         MODELS,
       ).map((x) => x.key),
     ).toEqual(["api:anthropic"]);
+  });
+
+  test("the computer's own sign-in it never proved: not offered where a connected account stands for the plan", () => {
+    // A computer whose CLIs think through connected accounts (ADR 0187): a pick there takes the account.
+    const unproven = { ...view, ownUsage: {} };
+    const tiles = modelPickerTiles(t, unproven, "u1", api, "auto", MODELS);
+    const claudeTile = tiles.find((x) => x.key === "claude");
+    expect(claudeTile?.accounts.map((a) => a.id)).toEqual(["acc-claude"]);
+    if (!claudeTile) throw new Error("no Claude tile");
+    expect(modelPickerSave(unproven, claudeTile, claudeTile.accounts[0], "opus")).toEqual({
+      brain: { brain: "claude_code", account: "acc-claude", model: "opus" },
+    });
+    // With no account for the plan, the computer's own sign-in is still the way in.
+    const alone = { ...unproven, accounts: [go] };
+    expect(modelPickerTiles(t, alone, "u1", api, "auto", MODELS)[0]?.accounts.map((a) => a.id)).toEqual([null]);
   });
 
   test("models: Automático first, the one it runs checked on its own tile, a refused one dimmed", () => {
@@ -456,7 +472,7 @@ describe("the model picker: the agent's AI changed in place", () => {
     // Another tile: nothing checked there.
     const claudeTile = tiles.find((x) => x.key === "claude");
     if (!claudeTile) throw new Error("no Claude tile");
-    const claude = modelPickerModels(t, "pt-BR", view, claudeTile, claudeTile.accounts[1], api, "auto");
+    const claude = modelPickerModels(t, "pt-BR", view, claudeTile, claudeTile.accounts[0], api, "auto");
     expect(claude.map((r) => r.label)).toEqual(["brain.auto.label", "Opus", "Sonnet", "Haiku"]);
     expect(claude.some((r) => r.checked)).toBe(false);
     const keys = tiles.find((x) => x.key === "api:anthropic");
@@ -477,10 +493,10 @@ describe("the model picker: the agent's AI changed in place", () => {
     expect(modelPickerSave(view, goTile, goTile.accounts[0], "auto")).toEqual({
       brain: { brain: "claude_code", model: "auto", effort: "auto" },
     });
-    expect(modelPickerSave(view, claudeTile, claudeTile.accounts[1], "opus")).toEqual({
+    expect(modelPickerSave(view, claudeTile, claudeTile.accounts[0], "opus")).toEqual({
       brain: { brain: "claude_code", account: "acc-claude", model: "opus" },
     });
-    expect(modelPickerSave(view, claudeTile, claudeTile.accounts[0], "auto")).toEqual({
+    expect(modelPickerSave(view, claudeTile, claudeTile.accounts[1], "auto")).toEqual({
       brain: { brain: "claude_code", account: null, model: "auto", effort: "auto" },
     });
     expect(modelPickerSave(view, keys, undefined, "claude-sonnet-5-5")).toEqual({
