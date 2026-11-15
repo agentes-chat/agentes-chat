@@ -228,23 +228,84 @@
 .team-lodi-chip:hover {
   background: var(--raised-2);
 }
-/* A supervisor's reports, indented under it and joined by a line. */
+/* A supervisor's reports side by side under it, centred, joined by a bar across them and a drop to each: the same
+   strokes as the people's row above (`.team-tree__col`), so one that supervises nests the same way. A card keeps 180 px
+   (a person's column minimum) so a name and its role don't break in a crowded row, and 240 px at most. Below 720 px the
+   reports stack and indent again (the media block below). */
 .team-line {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
   min-width: 0;
 }
+.team-line .team-node {
+  min-width: 180px;
+  max-width: 240px;
+}
+.team-line > .team-node {
+  align-self: stretch;
+}
+.team-line--sup > .team-node {
+  align-self: center;
+}
 .team-line__reports {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-left: 14px;
-  padding-left: 12px;
+  align-items: center;
+}
+/* The supervisor's drop to its count, and the count's to the bar. */
+.team-line__reports::before,
+.team-line__row::before {
+  content: "";
+  position: absolute;
+  left: 50%;
   border-left: 1.5px solid var(--line-strong);
 }
-.team-line__count {
-  align-self: flex-start;
+.team-line__reports::before {
+  top: -8px;
+  height: 8px;
+}
+.team-line__row {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 12px;
+}
+.team-line__row::before {
+  top: 0;
+  height: 12px;
+}
+.team-line__row > .team-line {
+  position: relative;
+  padding-top: 16px;
+}
+.team-line__row > .team-line::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -6px;
+  right: -6px;
+  border-top: 1.5px solid var(--line-strong);
+}
+.team-line__row > .team-line:first-child::before {
+  left: 50%;
+}
+.team-line__row > .team-line:last-child::before {
+  right: 50%;
+}
+.team-line__row > .team-line:only-child::before {
+  display: none;
+}
+.team-line__row > .team-line::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 16px;
+  border-left: 1.5px solid var(--line-strong);
 }
 .team-node[data-line-drop] {
   border-color: var(--agent);
@@ -278,6 +339,45 @@
   .team-tree__org {
     flex-direction: column;
   }
+  /* The reports stack again, indented under their supervisor in a column of the people row's old width. */
+  .team-tree .team-tree__col {
+    width: 180px;
+  }
+  .team-line {
+    align-items: stretch;
+  }
+  .team-line .team-node {
+    min-width: 0;
+    max-width: none;
+  }
+  .team-line--sup > .team-node {
+    align-self: stretch;
+  }
+  .team-line__reports {
+    align-items: stretch;
+    gap: 8px;
+    margin-left: 14px;
+    padding-left: 12px;
+    border-left: 1.5px solid var(--line-strong);
+  }
+  .team-line__count {
+    align-self: flex-start;
+  }
+  .team-line__row {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 8px;
+    padding-top: 0;
+  }
+  .team-line__reports::before,
+  .team-line__row::before,
+  .team-line__row > .team-line::before,
+  .team-line__row > .team-line::after {
+    display: none;
+  }
+  .team-line__row > .team-line {
+    padding-top: 0;
+  }
 }
 .team-tree__top > .team-node + .team-node::before {
   content: "";
@@ -299,7 +399,7 @@
   flex: none;
   flex-direction: column;
   gap: 8px;
-  width: 180px;
+  min-width: 180px;
   padding-top: 20px;
 }
 /* The bar across the columns, and each column's drop to its person. */

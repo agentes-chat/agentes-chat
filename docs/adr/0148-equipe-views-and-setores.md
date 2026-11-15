@@ -72,3 +72,11 @@ A customer wanted to put one agent of his own between himself and the sectors in
 
 - An agent moved into a setor later doesn't inherit its supervisor: the setor card says so with Aplicar. A setor column (`agent_groups.lead_agent_id`) waits until that is annoying.
 - A failed routine doesn't wake its supervisor on its own; its prompt says to ask it.
+
+## Addendum (2026-11-15): a supervisor's reports side by side on the web
+
+The addendum of 2026-11-07 put a supervisor's reports "indented under it". In Organograma › Por pessoa each person's column was a fixed 180 px, and the indent took about 50 of them, so a supervisor with five reports left each card around 128 px and names and roles broke.
+
+- **Web, wide:** the reports of a supervisor sit in one row, centred under it and joined by a bar across them with a drop to each card (the same strokes as the people's row above, so a report that supervises nests the same way; a single report has the drop only). The count chip stays on the supervisor's line. A person's column is as wide as its content, 180 px at least, and a card keeps 180 to 240 px, so a crowded row grows sideways inside the chart's own scroller instead of squeezing.
+- **Below 720 px and on the phone** the reports stay indented in a column, as before: a row of cards doesn't fit there, and the column's old width is what the stacked layout was drawn for. Dragging to change who an agent reports to is unchanged.
+- Por setor, Mapa and the phone's Organograma are not touched. Code: `ChartLine` in `apps/web/src/components/team/TeamChart.tsx` and `.team-line*` in `apps/web/src/pages/team.css`.
