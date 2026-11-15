@@ -953,7 +953,7 @@ port reaches every workspace, so never publish it or put it behind your proxy: t
 doesn't publish it, and containers on the same Docker network reach it as `http://agentes:3001`.
 For a caller that only looks things up, set `OPERATOR_API_READ_TOKEN` too (a different value, same
 length): it is accepted for `GET` requests alone and never for `GET /review/...`, and anything else
-it asks for is refused (403). It still reads names, emails and IP addresses, so keep it as private.
+it asks for is refused (403). It still reads names, emails and IP addresses, so keep it private.
 `GET /users?q=` finds an account by part of its address or name, `GET /resolve?ref=` says what a
 pasted link, an `@handle` or an id names, and `GET /orgs/{orgId}/members`, `/channels` and `/agents`
 list who and what is in a workspace, never what was written there.
