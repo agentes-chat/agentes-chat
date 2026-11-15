@@ -31,13 +31,13 @@ describe("pixel marks", () => {
     expect(body().getByRole("img", { name: "Feito" })).toBeTruthy();
   });
 
-  test("PixelStop: one rounded square; animated while working, dim when stopped", () => {
-    const { container, rerender } = render(<PixelStop animated />);
+  test("PixelStop: one rounded square, still while working, dim when stopped", () => {
+    const { container, rerender } = render(<PixelStop />);
     const mark = container.querySelector(".ac-pixstop") as HTMLElement;
     expect(mark.querySelectorAll("span")).toHaveLength(1);
     expect(mark.style.getPropertyValue("--stop-side")).toBe("10px");
     expect(mark.style.getPropertyValue("--mark-size")).toBe("13px");
-    expect(mark.hasAttribute("data-animated")).toBe(true);
+    expect(mark.hasAttribute("data-dim")).toBe(false);
     expect(mark.getAttribute("aria-hidden")).toBe("true");
     rerender(<PixelStop dim />);
     const still = container.querySelector(".ac-pixstop") as HTMLElement;

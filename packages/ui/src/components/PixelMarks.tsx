@@ -60,8 +60,6 @@ export function PixelFail({ size = 14, label, className }: PixelDoneProps) {
 
 export interface PixelStopProps {
   size?: number;
-  /** An agent is working: the square breathes (a slow fade, 1.6 s). */
-  animated?: boolean;
   /** Stopped (a halted step): dimmed. */
   dim?: boolean;
   label?: string;
@@ -69,14 +67,13 @@ export interface PixelStopProps {
 }
 
 /** Stop: one rounded square in the text color, ~3/4 of the box. */
-export function PixelStop({ size = 13, animated = false, dim = false, label, className }: PixelStopProps) {
+export function PixelStop({ size = 13, dim = false, label, className }: PixelStopProps) {
   const side = Math.round(size * 0.76);
   const radius = Math.max(2, Math.round(side * 0.24));
   return (
     <span
       className={cx("ac-pixstop", className)}
-      data-animated={animated || undefined}
-      data-dim={(!animated && dim) || undefined}
+      data-dim={dim || undefined}
       style={
         {
           width: size,

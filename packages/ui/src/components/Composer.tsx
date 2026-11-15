@@ -1039,7 +1039,7 @@ export function Composer({
                       <Icon name="send" />
                     </span>
                     <span className="ac-composer__glyph ac-composer__glyph--stop" aria-hidden="true">
-                      <PixelStop size={13} animated={stopMode} />
+                      <PixelStop size={13} />
                     </span>
                   </Button>
                 ) : (

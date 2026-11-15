@@ -5140,7 +5140,7 @@ html:not([data-pointer]) .ac-switch:focus-visible {
     transform: none;
   }
 }
-/* Stop: a 2×2 pixel square in the text color; while an agent works one cell dims in turn (220 ms each). */
+/* Stop: one rounded square in the text color. It stays still while an agent works: an infinite animation keeps the compositor drawing at the screen's rate. */
 .ac-pixstop {
   display: inline-block;
   position: relative;
@@ -5157,16 +5157,6 @@ html:not([data-pointer]) .ac-switch:focus-visible {
 }
 .ac-pixstop[data-dim] > span {
   opacity: 0.55;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .ac-pixstop[data-animated] > span {
-    animation: ac-pixstop-breathe 1600ms ease-in-out infinite;
-  }
-}
-@keyframes ac-pixstop-breathe {
-  50% {
-    opacity: 0.6;
-  }
 }
 /* Loading button: the label keeps its width under the spinner. */
 .ac-btn--loading {
@@ -6661,21 +6651,7 @@ html:not([data-pointer]) .ac-hint:focus-visible {
   height: 100%;
   border-radius: inherit;
 }
-@media (prefers-reduced-motion: no-preference) {
-  .ac-avatar--running::after {
-    animation: ac-halo 1.6s var(--out) infinite;
-  }
-}
-@keyframes ac-halo {
-  0% {
-    opacity: 0.9;
-    transform: scale(0.96);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.12);
-  }
-}
+/* The working ring stays still: an infinite animation keeps the compositor drawing at the screen's rate, and the agent's body on the canvas already shows the work. */
 
 /* Messages: a faint hover plate; the action bar fades in */
 .ac-msg {
