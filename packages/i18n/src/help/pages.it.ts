@@ -75,6 +75,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Accedere da altri dispositivi",
         blocks: [
           "Il proprietario parte senza password: l’app ti fa accedere su questo computer. Per accedere da un browser su un altro computer, aggiungine una in **Impostazioni\u00a0›\u00a0Il tuo account**. Finché non lo fai, **Preferenze\u00a0›\u00a0Server** te lo ricorda, e **Aggiungi una password** apre quella pagina. L’app per il telefono si collega scansionando il codice QR sotto **Sul telefono**, in **Preferenze\u00a0›\u00a0Server**. Serve **Raggiungilo dal telefono e dai colleghi** attivo.",
+          "Quando il proprietario elimina il suo account, in **Impostazioni\u00a0›\u00a0Il tuo account**, l’account sparisce per sempre 7 giorni dopo, e gli spazi di lavoro in cui c’era solo lui se ne vanno con esso. Fino ad allora, accedi e premi **Ripristina account** per recuperarlo. Quando non c’è più, se non resta nessun account, l’app apre la finestra di benvenuto per creare un nuovo proprietario. Se altre persone hanno ancora un account, ognuna accede con la propria email.",
         ],
       },
       {
@@ -90,6 +91,25 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         blocks: [
           "Con **Fai un backup ogni notte** attivo (app 0.8.1 e successive), in **Preferenze\u00a0›\u00a0Server**, l’app salva ogni notte alle 3:00 il database, i file e `.env` in `.agentes/backups`, nella tua cartella personale. Un computer che dormiva a quell’ora fa il backup appena si risveglia. **Fai il backup ora** fa lo stesso subito. Ogni backup ferma il server per un momento, e restano i due più recenti.",
           "**Copia in** mette anche ogni nuovo backup in una cartella che scegli, come una chiavetta USB o iCloud Drive, dove restano i due più recenti. Contengono le tue chiavi: tienili privati. **Ripristina…** riporta agentes.chat a un backup: messaggi, file e impostazioni. Si ferma per un minuto, e quello che c’era prima resta nella cartella dei backup.",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "Ricominciare o disinstallare",
+        blocks: [
+          "Tutto ciò che agentes.chat tiene su questo computer sta in cartelle della tua cartella personale, non dentro l’app. Quindi spostare l’app nel Cestino non ne elimina niente, e non ferma agentes.chat se è in funzione.",
+          "Per ricominciare, premi **Cancella e ricomincia da capo…** in **Preferenze\u00a0›\u00a0Server**. agentes.chat si ferma qui e tutto ciò che contiene viene spostato in una nuova cartella della tua cartella personale, chiamata `agentes.chat erased` con la data del giorno, dove resta finché non la elimini. Ciò che i suoi agenti tenevano su questo computer, come i loro browser e accessi, viene eliminato da `.agentes-runner`. I suoi spazi di lavoro spariscono per tutti quelli che li usano. Poi si apre la finestra di benvenuto e lo configuri di nuovo con un nuovo account proprietario. I file degli agenti, in `agentes` nella tua cartella personale, restano dove sono.",
+          "Per riaverlo più tardi, esci dall’app, sposta altrove una cartella `.agentes` più recente, se c’è, rinomina la cartella `agentes.chat erased` in `.agentes`, poi apri l’app e configuralo di nuovo su questo computer. Riparte con i suoi spazi di lavoro e il suo proprietario com’erano. Ciò che i suoi agenti tenevano su questo computer non torna, quindi devono accedere di nuovo.",
+          "Per togliere del tutto agentes.chat da questo computer:",
+          {
+            list: [
+              "Disattiva **Apri all'accesso** in **Preferenze\u00a0›\u00a0Generali**.",
+              "Esci dall’app. Chiudere la finestra non basta. Su un Mac, fai clic sulla sua icona nel Dock e scegli **Esci da agentes.chat** nel menu agentes.chat, in alto sullo schermo, oppure premi ⌘Q. Su Windows e Linux, fai clic sull’icona di agentes.chat vicino all’orologio e scegli **Esci da agentes.chat**. Se chiede **Uscire da agentes.chat?**, premi **Esci**.",
+              "Elimina l’app. Su un Mac, spostala nel Cestino. Su Windows e Linux, disinstallala come qualsiasi altra app.",
+              "Elimina queste cartelle della tua cartella personale. Contengono i tuoi dati, e una volta eliminati non tornano, quindi tieni prima un backup altrove se potresti volerli: `.agentes` (messaggi, file, account, impostazioni e backup), ogni cartella `agentes.chat erased`, `.agentes-runner` (ciò che gli agenti tengono su questo computer, come i loro browser e accessi) e `agentes` (i file degli agenti). Le cartelle il cui nome inizia con un punto sono nascoste. Su un Mac, apri la tua cartella personale nel Finder e premi ⇧⌘. (Maiuscole, Comando e il tasto del punto) per mostrarle.",
+              "Elimina le cartelle dell’app stessa. Contengono solo le sue impostazioni, gli accessi della sua finestra e i suoi log. Su un Mac: tutto ciò il cui nome inizia con `chat.agentes.desktop` nelle cartelle Application Support, Caches, HTTPStorages, Logs, Preferences e WebKit di `~/Library`, e `agentes.chat.plist` in `~/Library/LaunchAgents`. Su Windows: `%APPDATA%\\chat.agentes.desktop` e `%LOCALAPPDATA%\\chat.agentes.desktop`. Su Linux: `~/.config/chat.agentes.desktop` e `~/.local/share/chat.agentes.desktop`. Su un Mac, per aprire una di queste cartelle, premi ⇧⌘G nel Finder e scrivi il suo percorso, per esempio `~/Library/Caches`.",
+            ],
+          },
         ],
       },
       {
@@ -474,7 +494,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Quando è agentes.chat a ospitare il tuo spazio di lavoro, Jev è incluso. Su un server che gestisci tu, usa la chiave TypeSafe del proprietario, circa 0,0001 US$ a messaggio: [Configura Jev](/help/jev#setup).",
+          "Quando è agentes.chat a ospitare il tuo spazio di lavoro, Jev è incluso. Su un server che gestisci tu, usa la chiave TypeSafe o OpenRouter del proprietario, circa 0,0001 US$ a messaggio: [Configura Jev](/help/jev#setup).",
         ],
       },
       {
@@ -536,6 +556,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
               "In agentes.chat, apri **Impostazioni › IA e consumi** e incollala sotto **Jev**. La vede solo chi ha configurato questo server.",
             ],
           },
+          "Paghi già OpenRouter? Scegli **OpenRouter** sotto **Jev** e incolla una chiave da https://openrouter.ai/keys, oppure attiva Jev con un clic usando la chiave OpenRouter dello spazio di lavoro. È lo stesso Jev, addebitato tramite OpenRouter allo stesso prezzo.",
           "Su un server che gestisci con Docker, puoi invece mettere la chiave in `.env` come `TYPESAFE_API_KEY`. Questa ha la precedenza su quella in Impostazioni.",
         ],
       },
@@ -570,6 +591,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe fa girare Jev negli Stati Uniti e non addestra i suoi modelli su quello che invii. Conserva i dati per il tempo necessario a far funzionare il servizio. La conservazione zero è disponibile nei suoi piani enterprise.",
           "Informativa sulla privacy di TypeSafe: https://typesafe.ai/legal/privacy-policy. Il suo accordo sul trattamento dei dati: https://typesafe.ai/legal/data-processing.",
+          "Con una chiave OpenRouter, le stesse richieste passano da OpenRouter prima di arrivare a TypeSafe, secondo i termini di OpenRouter e le tue impostazioni sulla privacy lì: https://openrouter.ai/privacy.",
         ],
       },
       {

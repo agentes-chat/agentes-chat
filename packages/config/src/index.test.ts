@@ -273,6 +273,19 @@ describe("loadConfig", () => {
     ]);
   });
 
+  test("EXTRA_TRUSTED_ORIGINS: off unless set; a list of origins, trimmed, a trailing slash dropped, never a path", () => {
+    expect(loadConfig(valid).EXTRA_TRUSTED_ORIGINS).toBeUndefined();
+    expect(
+      loadConfig({
+        ...valid,
+        EXTRA_TRUSTED_ORIGINS: " http://192.168.0.10:3000 , https://x.ts.net/, ,",
+      }).EXTRA_TRUSTED_ORIGINS,
+    ).toEqual(["http://192.168.0.10:3000", "https://x.ts.net"]);
+    for (const entry of ["x.ts.net", "https://x.ts.net/chat", "https://x.ts.net?q=1", "ftp://x.ts.net"]) {
+      expect(() => loadConfig({ ...valid, EXTRA_TRUSTED_ORIGINS: entry })).toThrow(/EXTRA_TRUSTED_ORIGINS/);
+    }
+  });
+
   test("OPS_REPORT_EMAIL: off unless set, one address or a list, each an address", () => {
     expect(loadConfig(valid).OPS_REPORT_EMAIL).toBeUndefined();
     expect(loadConfig({ ...valid, OPS_REPORT_EMAIL: " ops@example.com, ana@example.com ," }).OPS_REPORT_EMAIL).toEqual([

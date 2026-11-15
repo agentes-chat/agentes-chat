@@ -310,7 +310,7 @@ describe("Settings › Cargos, the list (W1)", () => {
       "Financeiro",
     ]);
     // Todos says what everyone has; a cargo what it adds, its channels and agents counted.
-    expect(reach("Todos")).toEqual(["8 permissões", "2 canais", "1 agente"]);
+    expect(reach("Todos")).toEqual(["9 permissões", "2 canais", "1 agente"]);
     expect(reach("Dono")).toEqual(["Pode tudo, sempre"]);
     expect(reach("Admin")).toEqual(["Pode tudo"]);
     expect(reach("Suporte")).toEqual(["+2 permissões", "+1 canal"]);

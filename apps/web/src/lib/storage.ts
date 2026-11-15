@@ -61,6 +61,10 @@ export const STORAGE_KEYS = {
    * filled in again when the dialog comes back.
    */
   emailChangeAsk: "agentes.emailChangeAsk",
+  /** sessionStorage: when this tab's window last traded the desktop app's sign-in (ms), for a deletion's proof. */
+  thisMacSignedInAt: "agentes.thisMac.signedInAt",
+  /** sessionStorage (JSON `{ to, at }`): the page to come back to after the desktop app signs the window in again. */
+  thisMacReturn: "agentes.thisMac.return",
   /** "0" when the person switched off the picture viewer's hover lens (on by default). */
   imageLens: "agentes.image.lens",
   /** The Drive's view: "grid" (default) or "list". */

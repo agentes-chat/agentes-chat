@@ -131,12 +131,25 @@ export const keySource = (key: NamedKey) =>
  * or only "termina em 1a2b" when its name is already the provider's (a key named after nothing else, as most are),
  * never "Claude" over "Claude · …". A key-less endpoint (a local server) says only where it is.
  */
-export const keyLine = (t: TFunction, key: NamedKey & Pick<Credential, "keyHint">) =>
-  !key.keyHint && key.endpoint
-    ? keySource(key)
-    : keyNamedAfterProvider(key)
-      ? t("vault.item.endsIn", { hint: key.keyHint })
-      : t("newAgent.otherKeyDesc", { provider: keySource(key), hint: key.keyHint });
+export const keyLine = (t: TFunction, key: NamedKey & Pick<Credential, "keyHint" | "copies">) =>
+  [
+    !key.keyHint && key.endpoint
+      ? keySource(key)
+      : keyNamedAfterProvider(key)
+        ? t("vault.item.endsIn", { hint: key.keyHint })
+        : t("newAgent.otherKeyDesc", { provider: keySource(key), hint: key.keyHint }),
+    keyCopiesLine(t, key),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+/** "4 cópias iguais" on the row that stands for a key saved more than once (`copies` others), else nothing. */
+export const keyCopiesLine = (t: TFunction, key: Pick<Credential, "copies">) =>
+  key.copies ? t("settings.keyCopies", { count: key.copies + 1 }) : "";
+
+/** The keys a list shows: live ones, a key saved more than once as its one row (`copyOf` rows left out). */
+export const shownKeys = <K extends Pick<Credential, "revokedAt" | "copyOf">>(keys: readonly K[]) =>
+  keys.filter((k) => !k.revokedAt && !k.copyOf);
 
 /**
  * A saved key can think: a provider's once saved (the save tried it), an endpoint's once one of its models answered a

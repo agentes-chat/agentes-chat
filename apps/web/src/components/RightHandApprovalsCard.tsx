@@ -7,6 +7,7 @@ import { Button, HintLine } from "@agenteschat/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApprovalAsk } from "@/components/ApprovalAsk";
+import { WhenAsksLink } from "@/components/ApprovalsLevelDialog";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { inlineWords } from "@/lib/markdown";
@@ -87,6 +88,10 @@ function RoutineGroup({
   const count = routine.length;
   const title = t("rightHand.digest.routine", { count });
   const [all, setAll] = useState(false);
+  // "Mudar quando perguntar" names one agent: a group of several agents' requests leaves it to each one's own card.
+  const decider = routine.find((a) => a.canDecide);
+  const oneAgent =
+    decider && routine.every((a) => a.agentId === decider.agentId) ? dir.anyAgent(decider.agentId) : undefined;
   const { rows, hidden, folds } = digestRows(
     routine,
     (a) => approvalTitle(t, a),
@@ -108,6 +113,7 @@ function RoutineGroup({
       }
       what={title}
       locked={decide.isPending}
+      under={decider && oneAgent ? <WhenAsksLink approval={decider} agent={oneAgent} /> : undefined}
       body={
         <ul className="rq__items">
           {rows.map((row) => {

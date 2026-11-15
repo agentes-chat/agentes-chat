@@ -26,8 +26,8 @@ export function ConnectedRow({
   chips: ReactNode;
   using: Agent[];
   total: number;
-  /** One muted line each. */
-  details: (string | null | false)[];
+  /** One muted line each, always in the same order. */
+  details: ReactNode[];
   actions?: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -55,9 +55,10 @@ export function ConnectedRow({
       }
     >
       {details.map(
-        (line) =>
+        (line, i) =>
           line && (
-            <span key={line} className="connected-row__text small muted">
+            // biome-ignore lint/suspicious/noArrayIndexKey: a line's place is what it is
+            <span key={i} className="connected-row__text small muted">
               {line}
             </span>
           ),

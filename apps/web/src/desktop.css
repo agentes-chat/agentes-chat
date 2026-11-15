@@ -84,12 +84,12 @@ html[data-desktop="linux"] {
 /*
  * The sidebar's ⌘K field (.sidebar__jump): a small field of the ruler (32, r10), centred in the bar. Centred on the
  * window, not on what's left after the buttons: it moves back by half the room the window's buttons and the nav take
- * (`--titlebar-nav`: three 32px buttons and their two 8px gaps, two where a tablet has no sidebar button) less what
+ * (`--titlebar-nav`: three 32px buttons and their two 8px gaps) less what
  * Agora takes at the bar's end (`--titlebar-end`: its 32 and the gap before it), but never past the free room on its
  * left, so in a narrow window it stops beside the nav instead of sliding over it.
  */
 .titlebar__search {
-  --titlebar-nav: calc(2 * var(--control-h-sm) + var(--space-2));
+  --titlebar-nav: calc(3 * var(--control-h-sm) + 2 * var(--space-2));
   --titlebar-end: calc(var(--control-h-sm) + 12px);
   display: flex;
   align-items: center;
@@ -111,9 +111,6 @@ html[data-desktop="linux"] {
   line-height: normal;
   color: var(--faint);
   cursor: pointer;
-}
-.titlebar:has(> .titlebar__nav > :nth-child(3)) .titlebar__search {
-  --titlebar-nav: calc(3 * var(--control-h-sm) + 2 * var(--space-2));
 }
 .titlebar__search > .ac-icon {
   width: var(--control-icon-sm);

@@ -44,7 +44,7 @@ import { publishUserEvent } from "./events";
 import { maySql, type RolePermission } from "./permissions";
 import { addPersonSpend, assertPersonUnderLimit, personSpendAdded } from "./person-usage";
 import { assertCanWork, standingRefusal } from "./standing";
-import { redactCredentials } from "./tool-detail";
+import { maskValues, redactCredentials } from "./tool-detail";
 import { budgetPercent, monthStartUtc, withEffectiveBudget } from "./usage";
 
 const {
@@ -178,7 +178,7 @@ export type KeyCheck =
 const periodOf = (now: Date) => monthStartUtc(now).toISOString().slice(0, 10);
 
 /** The call's own key first: a key of an unusual shape is one no pattern knows. */
-const withoutKey = (text: string, apiKey: string) => redactCredentials(apiKey ? text.replaceAll(apiKey, "••••") : text);
+const withoutKey = (text: string, apiKey: string) => redactCredentials(maskValues(text, [apiKey]));
 
 /**
  * A provider failure as it leaves the gateway: its words (a refused request keeps the API's) with credentials masked,

@@ -31,13 +31,18 @@ export interface ServerTelemetry {
 export interface JevKey {
   /** `env`: `TYPESAFE_API_KEY`, read-only here. `settings`: added in Settings. Null: none. */
   source: "env" | "settings" | null;
+  /** Who the key is from: Jev called and paid through TypeSafe, or through OpenRouter. Null: no key. */
+  via: "typesafe" | "openrouter" | null;
   /** The key's last 4 characters (the key itself is never returned). */
   hint: string | null;
-  /** What its owner can fix: TypeSafe refused the key, or its account is out of credit. Else `ok`. */
+  /** What its owner can fix: TypeSafe or OpenRouter refused the key, or its account is out of credit. Else `ok`. */
   state: "off" | "ok" | "invalid" | "no_credit";
   /** Jev's calls this month (UTC), every workspace together. */
   month: { decisions: number; costUsd: number };
 }
+
+/** Jev's key to save: one pasted (TypeSafe's or OpenRouter's), or the workspace's own OpenRouter key. */
+export type JevKeyInput = string | { orgId: string; credentialId: string };
 
 /**
  * The installation's GIPHY key, for its pinned owner on a server that isn't agentes.chat's own (`GET
@@ -263,6 +268,11 @@ export interface User {
   hasPassword?: boolean;
   /** Opened the link that confirms the email address. */
   emailVerified?: boolean;
+  /**
+   * The installation's owner on the desktop app's own server: a sign-in in the last 10 minutes through Continue on this
+   * Mac is their proof before a deletion (absent from an older server: false).
+   */
+  confirmsOnThisMac?: boolean;
   /**
    * A new workspace would be made for them (false on agentes.chat Cloud while sign-up is by invitation, unless early
    * access allowed them; `org.create_refused` and `org.create_unpaid` can still refuse it).
@@ -732,6 +742,12 @@ export interface Credential {
   usedBy?: { id: string; name: string }[];
   /** On a key just saved: `ok` a real call passed, `unchecked` the provider didn't say. */
   check?: "ok" | "unchecked";
+  /** On a key just saved: the workspace already had it, so that key was updated instead of adding a copy. */
+  reused?: boolean;
+  /** In a list of keys: how many other saved keys are this same key ("Remover cópias" folds them into it). */
+  copies?: number;
+  /** In a list of keys: the key this one is a copy of, the row shown for both. */
+  copyOf?: string;
   createdAt: string;
   revokedAt: string | null;
 }
@@ -831,6 +847,8 @@ export interface Agent {
   brakes?: AgentBrakes;
   /** How much it asks before acting (ADR 0173); absent from an older server (`risky`). */
   approvalsLevel?: ApprovalsLevel;
+  /** Whether that level is its own choice; false: it follows the workspace's. Absent from an older server. */
+  approvalsLevelOwn?: boolean;
   /**
    * Its setup checklist at the top of its chat (ADR 0155 §2): the ready-made role it started from and the steps a
    * person confirmed. Null or absent: an agent made before it (none shows).
@@ -1022,10 +1040,10 @@ export interface AgentInput {
   mediaReplies?: boolean;
   /** The Autonomia it starts with (the last setup's, ADR 0094): only an admin or its own owner sends it. */
   autonomy?: CommandApproval;
-  /** Editing only: its autonomy brakes (ADR 0131); the fields given change. */
+  /** Its autonomy brakes (ADR 0131); the fields given change. Same permission as editing the agent. */
   brakes?: Partial<AgentBrakes>;
-  /** How much it asks before acting (ADR 0173); same permission as editing the agent. */
-  approvalsLevel?: ApprovalsLevel;
+  /** How much it asks before acting (ADR 0173), as its own choice; null follows the workspace's again. */
+  approvalsLevel?: ApprovalsLevel | null;
   /**
    * Creating only: the ready-made role it starts from, for its setup checklist (ADR 0155 §2), and what its card said
    * (ADR 0164): how it introduced itself, the personal starter it began as, the apps it will use at their levels.
@@ -2374,6 +2392,7 @@ export type ProposalSettingField =
   | "skill"
   | "name"
   | "look"
+  | "group"
   | "reports_to"
   | "archive"
   | "delete";
@@ -2383,8 +2402,8 @@ export type ProposalSettingField =
  * null (the workspace's default); `owner` a user id; `audience` `{ mode, userIds, roleIds }`; `channel_add` /
  * `channel_remove` / `reply_mode` its seat in `channelId` (null: not in it, else whether it answers without a
  * mention); `skill` whether it has the skill in `skillId` on (its name in `label.to`); `name` its name; `look`
- * `{ color, eyes, accessory }`; `reports_to` an agent id or null (Responde a); `archive` true. `label`: the server's
- * names for ids.
+ * `{ color, eyes, accessory }`; `reports_to` an agent id or null (Responde a); `group` its department's name or
+ * null; `archive` true. `label`: the server's names for ids.
  */
 export interface ProposalSettingLine {
   field: ProposalSettingField;
@@ -2493,10 +2512,12 @@ export interface OrgSettings {
   agentMediaAvailable: boolean;
   /** Who the workspace is for (ADR 0159); absent from an older server, which is a team's. */
   mode?: WorkspaceMode;
+  /** What agents without their own choice ask before acting (ADR 0173); absent from an older server. */
+  approvalsLevel?: ApprovalsLevel;
 }
 
-/** `OrgSettings` the server works out itself: never in a PATCH. */
-export type ReadOnlyOrgSettings = "gifsAvailable" | "agentMediaAvailable" | "voiceAvailable";
+/** `OrgSettings` the server works out itself, or sets through its own call: never in a PATCH. */
+export type ReadOnlyOrgSettings = "gifsAvailable" | "agentMediaAvailable" | "voiceAvailable" | "approvalsLevel";
 
 /** Automático's sizes: quick tasks, everyday work, hard work. */
 export type ModelTier = "small" | "medium" | "large";
@@ -2654,6 +2675,8 @@ export interface WorkView {
   queuePosition: number | null;
   pausedUntil: string | null;
   canceledByUserId: string | null;
+  /** The right hand that made that stop at their word. */
+  canceledByAgentId?: string | null;
   errorCode: string | null;
 }
 
@@ -2938,6 +2961,11 @@ export interface CustomServer {
   /** The account as the provider names it ("Acme"), when it says. */
   accountLabel?: string | null;
   authType: "oauth" | "api_key";
+  /**
+   * The request headers typed for it, by name (their values are never returned); empty when it has none, and for
+   * who doesn't manage connectors. Older servers leave it out.
+   */
+  headerNames?: string[];
   /** The server's own icon, kept and served by the backend (`/api/app/connector-icons/…`); null = a monogram. */
   iconUrl?: string | null;
   /** A service through Composio (ADR 0107): its address means nothing to people. */
@@ -2961,6 +2989,12 @@ export interface ComposioUsage {
   limit: number | null;
   /** `2026-11`. */
   month: string;
+}
+
+/** A request header an admin types for a server by address, sent with every request to it. */
+export interface RequestHeader {
+  name: string;
+  value: string;
 }
 
 /** What connecting did: a new account, a new sign-in for one ("Reconectar"), or the same account again. */
@@ -3520,8 +3554,13 @@ export interface SecretBox {
 
 export type StorageKind = "agentes" | "s3";
 
-/** What an admin types for "Seu próprio bucket". Keys empty = keep the stored ones. */
+/** The service an admin picked when connecting their own storage: which steps the app shows. */
+export type StorageProvider = "r2" | "s3" | "b2" | "other";
+
+/** What an admin types for "Your own storage". Keys empty = keep the stored ones. */
 export interface S3Input {
+  /** Null from settings saved before the app said it (older servers leave it out). */
+  provider?: StorageProvider | null;
   endpoint: string;
   region: string;
   bucket: string;
@@ -3567,7 +3606,8 @@ export type StorageStep = "write" | "read" | "list" | "delete";
 
 export interface StorageTestResult {
   ok: boolean;
-  steps: { step: StorageStep; ok: boolean; error?: string | null }[];
+  /** `code`: the failure's stable code (`storage.permission`…), absent from an older server. */
+  steps: { step: StorageStep; ok: boolean; error?: string | null; code?: string | null }[];
 }
 
 export interface StorageMigration {
@@ -5887,10 +5927,16 @@ export interface BrainModelOption {
   free?: boolean;
 }
 
+export interface CodexVersionRequirement {
+  detected: string;
+  minimum: string;
+}
+
 export interface BrainOption {
   kind: BrainKind;
   available: boolean;
   reason?: BrainUnavailable;
+  codexVersion?: CodexVersionRequirement;
   models: BrainModelOption[];
   defaultModel: string | null;
 }
@@ -6046,6 +6092,7 @@ export interface AiComputer {
   };
   /** Why a CLI of `brains` can't think there (absent: an older server). */
   off?: Partial<Record<MachineAccountKind, BrainUnavailable>>;
+  codexVersion?: CodexVersionRequirement;
   /** What it can think with now: Claude Code (Claude and the coding plans) and Codex (ChatGPT). */
   brains: {
     claude_code: boolean;
@@ -6583,6 +6630,12 @@ export type NotificationKind =
   /** Someone needs a coding CLI installed on this person's computer: `latest.reason` the program, one-click install. */
   | "device.cli_request"
   /**
+   * An agent waits for a folder on this person's computer (`request_folder_access`): `source.machineId`, its name in
+   * `source.label`, the folder in `latest.title`, its reason in `latest.text`, the agent as actor. Waiting; answered on
+   * the computer itself, and done once it says so.
+   */
+  | "device.folder_request"
+  /**
    * "Pedir a um admin" (`POST …/admin-asks`): the asker as actor, what in `latest.reason` (`channel_agent` with
    * `source.channelId` and `agentId`, waiting until added; `create_agents`; `webhook` with the service in `latest.title`).
    */
@@ -7054,15 +7107,26 @@ export interface SidebarView {
 export interface IssuesView {
   layout: "board" | "list";
   group: "stage" | "assignee" | "priority";
-  /** `manual`: the board's own order (what people drag); by priority (high first) or by due date (soonest first). */
-  sort: "manual" | "priority" | "due";
+  /**
+   * `manual`: the board's own order (what people drag); by priority (high first), by due date (soonest first) or by
+   * the last change (newest first).
+   */
+  sort: "manual" | "priority" | "due" | "updated";
   /** What the cards show besides their number and title. */
   fields: Record<IssueCardField, boolean>;
   /** Only tasks with one of these assignees: `agent:<id>`, `person:<id>` or `none` (empty: every task). */
   assignees: string[];
   /** Only tasks with one of these priorities (empty: every task). */
   priorities: IssuePriority[];
+  /** Only tasks with one of these labels (empty: every task). */
+  labels: string[];
+  /** Which finished tasks show: every one, the ones changed in the last `DONE_RECENT_DAYS` days, or none. */
+  done: "all" | "recent" | "hidden";
   showCanceled: boolean;
+  /** Groups with no task on screen take no room (they come back while a card moves, to drop it there). */
+  hideEmpty: boolean;
+  /** The groups folded to their name and count: column ids, assignee keys or priorities. */
+  collapsed: string[];
 }
 export type IssueCardField = "project" | "assignee" | "priority" | "due" | "criteria" | "pullRequest" | "label";
 
@@ -7279,8 +7343,8 @@ export interface EndedTask {
   routine: { id: string; name: string } | null;
   startedAt: string | null;
   finishedAt: string;
-  /** Stopped by a person: who. */
-  stoppedBy: { userId: string; name: string } | null;
+  /** Stopped by a person: who, and the agent that stopped it at their word (the right hand). */
+  stoppedBy: { userId: string; name: string; agentId?: string } | null;
 }
 
 /** A task's steps (`GET …/task-manager/{runId}/steps`): the chat chip's fields per call, how each ended. */

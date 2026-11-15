@@ -11,7 +11,8 @@
  * - Web (apps/web/public/): favicon.ico, apple-touch-icon.png and icon-512.png, app-icons/<id>.ico/.png for the
  *   pick (the tab's icon and the picker's preview), and app-icons/night-sky.png, the Night's sky without its agent,
  *   on which the web draws a workspace's agent picked as the icon.
- * - The skies of the icons a person makes on their phone (apps/mobile/assets/app-icons/made/<sky>.png), on which
+ * - The skies of the icons a person makes on their phone (apps/mobile/assets/app-icons/made/<sky>.png, and
+ *   <sky>-peek.png behind the leaning agent), on which
  *   its picker draws the agent; those icons' own files are drawn when the app is built (app-icons/made-files.mjs).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -24,6 +25,7 @@ import {
   frontLayers,
   MADE_COLORS,
   MADE_LOOKS,
+  MADE_POSES,
   MADE_SKIES,
   madeScene,
   monoLayers,
@@ -81,7 +83,9 @@ for (const id of APP_ICON_IDS) {
   }
 }
 
-for (const sky of MADE_SKIES) {
-  const back = backLayers(madeScene({ sky, color: MADE_COLORS[0], look: MADE_LOOKS[0] }));
-  write(`apps/mobile/assets/app-icons/made/${sky}.png`, png(render(360, back, { k: 1024 / 360 }), { opaque: true }));
-}
+for (const pose of MADE_POSES)
+  for (const sky of MADE_SKIES) {
+    const back = backLayers(madeScene({ sky, color: MADE_COLORS[0], look: MADE_LOOKS[0], pose }));
+    const name = pose === "peek" ? `${sky}-peek` : sky;
+    write(`apps/mobile/assets/app-icons/made/${name}.png`, png(render(360, back, { k: 1024 / 360 }), { opaque: true }));
+  }

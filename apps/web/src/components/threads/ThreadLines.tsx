@@ -35,8 +35,6 @@ import "./threads.css";
 export interface ChannelThreadsView {
   /** This channel's threads by root id (open and closed; archived ones aren't shown). */
   byId: Map<string, ThreadInfo>;
-  /** Messages that are a thread's context and still in the channel: the gutter mark. */
-  marks: Set<string>;
   /** The thread open in the panel beside the channel (its line shows pressed). */
   open: string | null;
   /** "Responder" threads by the message their line sits under, with how many replies went to the panel. */

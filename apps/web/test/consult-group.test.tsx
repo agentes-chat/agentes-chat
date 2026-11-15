@@ -161,7 +161,7 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(r.querySelector(".consult-pair__time")?.textContent).toMatch(/^\d+ s$/);
     expect(r.querySelector(".consult-pair__row--live")).not.toBeNull();
     // A one-sentence question is its own subject.
-    expect(r.querySelector(".consult-pair__subject")?.textContent).toBe(QUESTION);
+    expect(r.querySelector(".consult-pair__subject")?.textContent).toBe(`·${QUESTION}`);
     expect(r.textContent).not.toContain(ANSWER);
     // The reply under it shows its face and name again (not grouped under the message above).
     expect(asked().classList.contains("ac-msg--grouped")).toBe(false);
@@ -172,12 +172,12 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     await open(withTalk(withAsk([c]), c));
     const r = row() as HTMLElement;
     const subject = "Investigue as notificações duplicadas.";
-    expect(r.querySelector(".consult-pair__subject")?.textContent).toBe(subject);
+    expect(r.querySelector(".consult-pair__subject")?.textContent).toBe(`·${subject}`);
     // Names first, then · subject · word and time.
     const parts = [...r.querySelectorAll(".consult-pair__name, .consult-pair__subject, .consult-pair__word")].map(
       (n) => n.textContent,
     );
-    expect(parts).toEqual(["Ada", "Atlas", subject, "perguntando"]);
+    expect(parts).toEqual(["Ada", "Atlas", `·${subject}`, "perguntando"]);
     expect(r.querySelectorAll(".consult-pair__sep")).toHaveLength(2);
     await act(async () => fireEvent.click(rowButton()));
     await settle(3);
@@ -201,10 +201,73 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(r.querySelectorAll(".consult-pair__faces .ac-avatar")).toHaveLength(2);
     expect(r.textContent).toContain("Atlas e mais 1");
     expect(r.querySelector(".consult-pair__word")?.textContent).toBe("0 de 2");
-    expect(rowButton().getAttribute("title")).toBe("Conversas de Ada com Atlas e Iris");
+    // Its tip names them all, then the whole question; no browser title doubles it.
+    expect(rowButton().getAttribute("title")).toBeNull();
+    expect(rowButton().getAttribute("aria-description")).toBe(QUESTION);
+    await act(async () => {
+      fireEvent.keyDown(document.body, { key: "Tab" });
+      rowButton().focus();
+    });
+    const tip = document.querySelector(".ac-tip.tm-tip") as HTMLElement;
+    expect(tip?.querySelector("b")?.textContent).toBe("Conversas de Ada com Atlas e Iris");
+    expect(tip?.textContent).toContain(QUESTION);
   });
 
-  test("long names wrap whole on the row, never cut: one sentence, each face with its name's first word", async () => {
+  test("the row of several opens them all: named as the row, one choice per agent saying where it stands", async () => {
+    const q1 = consultation({ status: "answered", answer: ANSWER, answeredAt: ago(5) });
+    const q2 = consultation({ id: "q2", consultedAgentId: "agent-iris", consultedRunId: "iris-run" });
+    const state = withTalk(withAsk([q1, q2]), q1);
+    const first = state.consultationConversations;
+    withTalk(state, q2);
+    state.consultationConversations = { ...first, ...state.consultationConversations };
+    const atlas = state.agents.find((a) => a.id === ATLAS_ID);
+    if (atlas) state.agents.push({ ...atlas, id: "agent-iris", name: "Iris", handle: "iris" });
+    await open(state);
+    await act(async () => fireEvent.click(rowButton()));
+    await settle(3);
+    const side = panel() as HTMLElement;
+    // The row said "Ada ⇄ Atlas e mais 1": so does the dialog, and both agents are in it.
+    expect(side.querySelector(".consult-title")?.textContent).toBe("AdaAtlas e mais 1");
+    const choices = within(side).getAllByRole("radio");
+    expect(choices.map((c) => c.textContent)).toEqual(["Atlasrespondeu", "Iristrabalhando"]);
+    // It opens on the one still out, as the row's click says.
+    expect(choices[1]?.getAttribute("aria-checked")).toBe("true");
+    expect(panelLabel()).toBe("Conversa entre Ada e Iris");
+    expect(side.textContent).not.toContain("subiu 6 pb");
+    await act(async () => fireEvent.click(choices[0] as HTMLElement));
+    await settle(3);
+    expect(panelLabel()).toBe("Conversa entre Ada e Atlas");
+    expect(side.textContent).toContain("subiu 6 pb");
+    // Read only as before; its way out still goes to the agent that asked.
+    expect(within(side).queryByRole("combobox")).toBeNull();
+    expect(within(side).getByRole("button", { name: "Falar com a Ada" })).toBeTruthy();
+  });
+
+  test("a long question stays on the row's one line, cut by the row, whole in its tip", async () => {
+    const long = `${"Revise o relatório de cobranças recorrentes do último trimestre e diga quais clientes ".repeat(2)}foram cobrados duas vezes`;
+    const c = consultation({ question: long });
+    await open(withTalk(withAsk([c]), c));
+    const r = row() as HTMLElement;
+    // The question stays whole: the row shows its subject (`consultSubject`) and the line's CSS cuts that.
+    const subject = r.querySelector(".consult-pair__subject")?.textContent ?? "";
+    expect(long.startsWith(subject.replace(/^·|…$/g, ""))).toBe(true);
+    expect(rowButton().getAttribute("aria-description")).toBe(long);
+    // Names, the count and the time are their own pieces beside it, never inside what gives way.
+    const pieces = [...rowButton().children].map((e) => e.className.split(" ")[0]);
+    // The subject carries its own ·, so a subject with no room left leaves no lone dot behind.
+    expect(pieces.slice(0, 3)).toEqual(["consult-pair__lead", "consult-pair__subject", "consult-pair__sep"]);
+    expect(r.querySelector(".consult-pair__subject > .consult-pair__sep")?.textContent).toBe("·");
+    expect(
+      r.querySelector(".consult-pair__subject .consult-pair__word, .consult-pair__subject .consult-pair__time"),
+    ).toBeNull();
+    await act(async () => {
+      fireEvent.pointerEnter(rowButton(), { pointerType: "mouse" });
+      await Bun.sleep(300);
+    });
+    expect(document.querySelector(".ac-tip.tm-tip")?.textContent).toBe(`Conversa entre Ada e Atlas${long}`);
+  });
+
+  test("long names stay whole on the row's one line, each face beside its name", async () => {
     const state = withAsk([consultation({}), consultation({ id: "q2", consultedAgentId: "agent-iris" })]);
     const ada = state.agents.find((a) => a.id === ADA_ID);
     const atlas = state.agents.find((a) => a.id === ATLAS_ID);
@@ -218,12 +281,12 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
       "Assistente de Atendimento ao Cliente",
       "Especialista em Faturamento Recorrente e mais 1",
     ]);
-    // One sentence: each face keeps its name's first word (`__who`), the · follows the second name's last word.
-    const who = [...r.querySelectorAll(".consult-pair__row > .consult-pair__who")];
+    // The names, faces and ⇄ in one piece (`__lead`), which gives way only once the subject has none left.
+    const who = [...r.querySelectorAll(".consult-pair__row > .consult-pair__lead > .consult-pair__who")];
     expect(who).toHaveLength(2);
     expect(who[0]?.firstElementChild?.matches(".ac-avatar")).toBe(true);
     expect(who[1]?.firstElementChild?.matches(".consult-pair__faces")).toBe(true);
-    expect(r.querySelector(".consult-pair__who + .consult-pair__sep")).not.toBeNull();
+    expect(r.querySelector(".consult-pair__lead + .consult-pair__subject")).not.toBeNull();
   });
 
   test("waiting on a person, for its computer, on what it handed on: a short word in the same slot, quiet", async () => {
@@ -290,6 +353,8 @@ describe("the pair row before the reply that asked (ConsultPairRow)", () => {
     expect(side.textContent).toContain(QUESTION);
     expect(side.textContent).toContain("subiu 6 pb");
     expect(rowButton().getAttribute("aria-pressed")).toBe("true");
+    // A row of one: no choice between agents, the dialog as it always was.
+    expect(within(side).queryByRole("radio")).toBeNull();
     // Read only: no composer there, a note instead.
     expect(within(side).queryByRole("combobox")).toBeNull();
     expect(side.textContent).toContain("Só leitura.");

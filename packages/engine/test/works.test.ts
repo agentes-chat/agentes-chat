@@ -679,6 +679,19 @@ test("cards: none for a quick run nor a short auto work; card: true makes one; a
   expect(end?.meta.workEnd).toMatchObject({ status: "canceled", byUserId: f.owner.id });
   // Stopped: by whom, in the person's words.
   expect(end?.meta.bodyParams).toMatchObject({ byName: f.owner.name });
+  expect(await workView(f.db, f.org.id, named.work.id)).toMatchObject({
+    canceledByUserId: f.owner.id,
+    canceledByAgentId: null,
+  });
+  // The right hand's stop at the person's word: the view names both, so its line names the right hand.
+  await f.db
+    .update(schema.agentRuns)
+    .set({ error: `canceled_by:${f.owner.id}|agent:agent-lodi` })
+    .where(eq(schema.agentRuns.id, reuse.id));
+  expect(await workView(f.db, f.org.id, named.work.id)).toMatchObject({
+    canceledByUserId: f.owner.id,
+    canceledByAgentId: "agent-lodi",
+  });
 });
 
 test("a work 15 minutes old gets its card at its check-in", async () => {

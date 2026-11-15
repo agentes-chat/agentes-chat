@@ -22,7 +22,7 @@ import {
   planOf,
   speedFits,
 } from "@agenteschat/providers/plans";
-import { planState, planWindows } from "@agenteschat/ui/plan-state";
+import { planFull, planState } from "@agenteschat/ui/plan-state";
 import type { Agent } from "../agents";
 import type { MachineStatus } from "../machine-hub";
 import { pausedMessage } from "../machines";
@@ -224,7 +224,7 @@ export function refusalScope(
   if (!m) return { scope: "account" };
   if (regionRefusal(provider, model, message)) return { scope: "region" };
   if (offRefusal(provider, model, message)) return { scope: PLAN_INACTIVE_TEXT.test(message) ? "inactive" : "off" };
-  if (usage && planWindows(usage, now).some((w) => w.used >= 100)) return { scope: "account" };
+  if (usage && planFull(usage, now)) return { scope: "account" };
   const kind = MODEL_WINDOW_WORDS.find(([words]) => words.test(message))?.[1];
   const at = kind ? usage?.windows.find((w) => w.kind === kind)?.resetsAt : undefined;
   return { scope: "model", ...(at && Date.parse(at) > now ? { resetsAt: at } : {}) };

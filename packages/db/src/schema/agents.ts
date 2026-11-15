@@ -196,6 +196,12 @@ export const agents = pgTable(
      */
     approvalsLevel: text().$type<"always" | "risky" | "never">().notNull().default("risky"),
     /**
+     * Whether `approvals_level` is the agent's own choice. False: it follows the workspace's
+     * (`organization_settings.approvals_level`), copied here whenever that changes, so every reader keeps reading
+     * `approvals_level` alone.
+     */
+    approvalsLevelOwn: boolean().notNull().default(false),
+    /**
      * Who thinks for it (ADR 0032): `model` (the API, default), `claude_code`
      * or `codex` on its computer; validated in code (`brain-settings.ts`).
      */
@@ -403,6 +409,11 @@ export const organizationSettings = pgTable("organization_settings", {
   teamWatch: boolean().notNull().default(true),
   /** "Dar boas-vindas a quem entra": the right hand greets each person who joins, once. On without a row too. */
   welcomePeople: boolean().notNull().default(true),
+  /**
+   * How much the workspace's agents ask before acting (ADR 0173 addendum 2026-11-15): what every agent without its
+   * own choice (`agents.approvals_level_own`) uses. A workspace with no row here is at `risky`.
+   */
+  approvalsLevel: text().$type<"always" | "risky" | "never">().notNull().default("risky"),
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
 

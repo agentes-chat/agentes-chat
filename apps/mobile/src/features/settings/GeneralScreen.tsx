@@ -42,6 +42,7 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { MemoryFix } from "../agents/AgentProfileScreen";
+import { WorkspaceApprovalsRow } from "../agents/ApprovalsLevelRow";
 import { useMemoryOriginText } from "../agents/useMemoryOriginText";
 import { Note } from "../ai/parts";
 import { ZoneList } from "../me/AccountPage";
@@ -336,6 +337,12 @@ export function GeneralScreen() {
       />
     </GroupedList>
   );
+  const approvals = can(org, "manage_agents") ? (
+    <>
+      <WorkspaceApprovalsRow />
+      <Gap />
+    </>
+  ) : null;
   // Who the workspace is for (ADR 0159 §4): the mode it is in, and for who configures it the screen that switches it.
   const mode = (
     <GroupedList>
@@ -428,6 +435,7 @@ export function GeneralScreen() {
           <Gap />
           {checks}
           <Gap />
+          {approvals}
           {mode}
         </>
       ) : (
@@ -440,6 +448,7 @@ export function GeneralScreen() {
           <Gap />
           {checks}
           <Gap />
+          {approvals}
           {mode}
           {contextPart}
         </>

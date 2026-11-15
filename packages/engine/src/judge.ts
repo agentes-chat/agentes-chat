@@ -2,7 +2,7 @@ import { modelInfo } from "@agenteschat/providers";
 import { cutText } from "./format";
 import type { ModelGateway } from "./gateway";
 import { callJev, type JevKeySource } from "./jev-key";
-import { jevCostNanoUsd } from "./router-jev";
+import { jevCostOf } from "./router-jev";
 
 /**
  * Small semantic judgments about what people write ("is this asking the agent
@@ -117,7 +117,10 @@ function boxOf(v: unknown): JudgeBox {
   return { top, left, bottom: Math.max(top, clamp(b.bottom)), right: Math.max(left, clamp(b.right)) };
 }
 
-/** TypeSafe Jev (`POST /v1/systemone`): one request, all questions answered in parallel. */
+/**
+ * TypeSafe Jev (`POST /v1/systemone`, or OpenRouter's Decisions route with an OpenRouter key): one request, all
+ * questions answered in parallel.
+ */
 export function createJevJudge(options: {
   /** Read on every call (`jev-key.ts`): without one it throws `JevOffError`. */
   key: JevKeySource;
@@ -145,7 +148,7 @@ export function createJevJudge(options: {
       const body = await callJev<{
         model?: string;
         answers?: Record<string, JudgeAnswer>;
-        usage?: { input_tokens?: number; output_tokens?: number };
+        usage?: { input_tokens?: number; output_tokens?: number; cost?: number };
       }>(options.key, {
         fetch: options.fetch,
         baseURL: options.baseURL,
@@ -174,7 +177,7 @@ export function createJevJudge(options: {
           model: body.model ?? model,
           inputTokens,
           outputTokens: body.usage?.output_tokens ?? 0,
-          costNanoUsd: jevCostNanoUsd(inputTokens),
+          costNanoUsd: jevCostOf(body.usage),
         })
         .catch(() => {});
       const out: Record<string, JudgeAnswer> = {};

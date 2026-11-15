@@ -29,6 +29,7 @@ import {
   isAgentesCloud,
   isFeedbackRelay,
   onUserCreated,
+  pinnedOwner,
   queueEmail,
   recordSession,
   recordSignUp,
@@ -172,7 +173,15 @@ export function createAuth(deps: {
     // Derived from AGENTES_SECRET so self-hosters manage a single secret.
     secret: deriveSecret(config.AGENTES_SECRET, "sessions"),
     // Apple posts the sign-in result back from its own origin (`response_mode=form_post`).
-    trustedOrigins: [config.PUBLIC_URL, ...devOrigins, ...appOrigins, ...(apple ? [APPLE_ORIGIN] : [])],
+    // `EXTRA_TRUSTED_ORIGINS` is for an instance opened at more than one address (a LAN IP, a tunnel hostname) besides
+    // `PUBLIC_URL`; each is already an origin, as Better Auth compares them.
+    trustedOrigins: [
+      config.PUBLIC_URL,
+      ...(config.EXTRA_TRUSTED_ORIGINS ?? []),
+      ...devOrigins,
+      ...appOrigins,
+      ...(apple ? [APPLE_ORIGIN] : []),
+    ],
     plugins: [
       expo(),
       // Several accounts signed in on one browser (ADR 0183): every sign-in also leaves a cookie of its own, so the
@@ -868,14 +877,28 @@ export async function changeAccountEmail(
 const PROOF_TRIES = { limit: 5, windowMs: 15 * 60_000 };
 
 /**
+ * Whether a sign-in in the last 10 minutes proves `userId` before a deletion (ADR 0088 §2, amended 2026-11-14): only
+ * on the desktop app's own server (an owner key, no email), and only for its pinned owner, whom the app signs in with
+ * its key (Continue on this Mac). `GET /me` says it as `confirmsOnThisMac`.
+ */
+export async function confirmsOnThisMac(
+  deps: { db: Database; ownerKey: boolean; emailDelivers: boolean },
+  userId: string,
+) {
+  // `pinnedOwner` pins on first read: only servers with an owner key ever ask.
+  return deps.ownerKey && !deps.emailDelivers && (await pinnedOwner(deps.db)) === userId;
+}
+
+/**
  * Proof that the person at this session is the account's own, before deleting the workspace `orgId`, or their account
  * when it is null (ADR 0088 §2): the code emailed to them (`spendDeletionCode`). On a server that sends no email, their
- * password instead, with 5 tries per 15 minutes per account (429 after). Throws `reauth.code` without a code, and
- * `reauth.password` without a password or with a wrong one.
+ * password instead, with 5 tries per 15 minutes per account (429 after), or, for the owner `confirmsOnThisMac`, a
+ * sign-in in the last 10 minutes when no password comes. Throws `reauth.code` without a code, `reauth.sign_in` for
+ * that owner's older sign-in, and `reauth.password` without a password or with a wrong one.
  */
 export async function deletionProof(
   auth: Auth,
-  deps: { db: Database; rateLimiter: RateLimiter; emailDelivers: boolean },
+  deps: { db: Database; rateLimiter: RateLimiter; emailDelivers: boolean; ownerKey: boolean },
   headers: Headers,
   userId: string,
   orgId: string | null,
@@ -884,6 +907,10 @@ export async function deletionProof(
   if (deps.emailDelivers) {
     if (!proof.code) throw new ForbiddenError("Type the code we emailed you", "reauth.code");
     return spendDeletionCode(deps, userId, orgId, proof.code);
+  }
+  if (!proof.password && (await confirmsOnThisMac(deps, userId))) {
+    if (await signedInLately(auth, headers, userId)) return;
+    throw new ForbiddenError("Sign in again to confirm it's you", "reauth.sign_in");
   }
   const { password } = proof;
   if (!password) throw new ForbiddenError("Give your password to confirm it's you", "reauth.password");

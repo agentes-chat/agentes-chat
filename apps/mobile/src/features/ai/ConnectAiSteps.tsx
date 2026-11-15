@@ -1427,6 +1427,11 @@ function KeyPage({
             ? (keyThinks(settled.key) && form.savedNote) || savedKeyLine(t, settled.outcome, settled.key)
             : form.savedNote || t("connectAi.key.saved")}
         </Text>
+        {form.resaved || settled?.key.reused ? (
+          <Text variant="subhead" tone="muted" style={styles.center}>
+            {t("settings.keyResaved")}
+          </Text>
+        ) : null}
         {settled?.outcome.kind === "other" && keyThinks(settled.key) ? (
           <Button
             variant="secondary"

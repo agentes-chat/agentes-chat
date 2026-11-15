@@ -906,6 +906,9 @@
     },
     "doneToast": "Listo",
     "undo": "Deshacer",
+    "doneAllToast_one": "{{count}} movida a Completadas",
+    "doneAllToast_many": "{{count}} movidas a Completadas",
+    "doneAllToast_other": "{{count}} movidas a Completadas",
     "day": {
       "today": "Hoy",
       "yesterday": "Ayer",
@@ -1267,6 +1270,7 @@
     "blocked": "Eres el único propietario de {{names}}. En el sitio web, en Personas, haz propietario a alguien más y después vuelve.",
     "addPasswordFirst": "Primero agrega una contraseña a tu cuenta en el sitio web y después escríbela aquí.",
     "addPasswordWeb": "Agregar una contraseña en el sitio web",
+    "onThisComputer": "Bórralo en la app de agentes.chat en la computadora donde corre este servidor.",
     "otherAccount": "Iniciaste sesión en otra cuenta. No se eliminó nada.",
     "hold": "Mantén presionado para eliminar"
   },
@@ -2105,6 +2109,7 @@
       "waitingFor": "{{names}} está esperando {{device}} para {{person}}",
       "tool_request": "{{names}} te pide activar {{tool}} en tu {{device}}",
       "cli_request": "{{names}} te pide instalar {{tool}} en tu {{device}}",
+      "folder_request": "{{names}} te pide la carpeta {{path}} en tu {{device}}",
       "allowOnce": "Permitir una vez",
       "always": "Permitir siempre a {{name}}",
       "no": "No",

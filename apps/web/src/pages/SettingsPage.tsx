@@ -9,6 +9,7 @@ import {
   useJoinRequests,
   usePlatformKey,
   useRemoveCredential,
+  useRemoveCredentialCopies,
   useRotateCredential,
   useServerTelemetry,
   useSetServerTelemetry,
@@ -29,6 +30,7 @@ import { formatShortDate, formatUsd, relativeTime } from "@agenteschat/client/li
 import { can } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey, settingsSectionTextKey } from "@agenteschat/client/lib/personal-view";
 import {
+  keyCopiesLine,
   keyLooksValid,
   keyName,
   keyNamedAfterProvider,
@@ -36,6 +38,7 @@ import {
   providerGuess,
   providerLabel,
   providerOf,
+  shownKeys,
 } from "@agenteschat/client/lib/providers";
 import type { RoleTab } from "@agenteschat/client/lib/roles";
 import { settingsNav, settingsTabs } from "@agenteschat/client/lib/settings-nav";
@@ -57,6 +60,8 @@ import {
   Input,
   List,
   Locked,
+  Menu,
+  MenuItem,
   overLimit,
   PageHeader,
   ProviderLogo,
@@ -74,6 +79,7 @@ import { AccessMatrixSection } from "@/components/AccessLevels";
 import { AccountSection } from "@/components/AccountSettings";
 import { AiAppsSection } from "@/components/AiApps";
 import { ApprovalsSection } from "@/components/ApprovalCover";
+import { WorkspaceApprovalsRow } from "@/components/ApprovalsLevelDialog";
 import { AppsDownloadSection } from "@/components/AppsDownload";
 import { AuditSection } from "@/components/Audit";
 import { AutoModelsRow } from "@/components/AutoModels";
@@ -598,6 +604,7 @@ function GeneralSection() {
         {nameRow}
         {!personal && zoneRow}
         {checkRow}
+        <WorkspaceApprovalsRow />
         {modeRow}
       </div>
     </Card>
@@ -801,18 +808,22 @@ function KeysSection() {
   const platform = usePlatformKey(org.id);
   const updateSettings = useUpdateSettings(org.id);
   const remove = useRemoveCredential(org.id);
+  const removeCopies = useRemoveCredentialCopies(org.id);
+  const toast = useToast();
   const [dialog, setDialog] = useState<
     | null
     | { type: "add" }
     | { type: "rotate"; cred: Credential }
     | { type: "remove"; cred: Credential }
+    | { type: "copies"; cred: Credential }
     | { type: "models"; cred: Credential }
   >(null);
   const look = useRightHandLook();
   const hold = usePlanHold();
   const plans = useAiAccounts(org.id).data?.accounts.length ?? 0;
   if (!allowed) return null;
-  const live = (credentials.data ?? []).filter((c) => !c.revokedAt);
+  const all = (credentials.data ?? []).filter((c) => !c.revokedAt);
+  const live = shownKeys(credentials.data ?? []);
   const noKeys = credentials.isSuccess && live.length === 0;
   // On plans alone the screen is the accounts: the first key is added from "Conectar uma IA", and this card comes
   // with it.
@@ -870,6 +881,12 @@ function KeysSection() {
                     <span style={{ whiteSpace: "nowrap" }}>
                       {t("settings.keyAdded", { when: relativeTime(t, i18n.language, c.createdAt) })}
                     </span>
+                    {c.copies ? (
+                      <>
+                        {" · "}
+                        <span style={{ whiteSpace: "nowrap" }}>{keyCopiesLine(t, c)}</span>
+                      </>
+                    ) : null}
                   </span>
                 </span>
                 <span className="key-row__tail ac-mediarow__end ac-mediarow__end--wrap">
@@ -889,20 +906,33 @@ function KeysSection() {
                       {t("settings.makeDefault")}
                     </Button>
                   )}
-                  <div className="ac-acts">
+                  <Menu
+                    align="end"
+                    label={t("settings.keyMore", { label: c.label })}
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        icon="more"
+                        aria-label={t("settings.keyMore", { label: c.label })}
+                      />
+                    }
+                  >
                     {!hold && (
-                      <Button variant="link" onClick={() => setDialog({ type: "rotate", cred: c })}>
+                      <MenuItem icon="key" onSelect={() => setDialog({ type: "rotate", cred: c })}>
                         {t("settings.rotate")}
-                      </Button>
+                      </MenuItem>
                     )}
-                    <Button
-                      variant="link"
-                      className="ac-link--danger"
-                      onClick={() => setDialog({ type: "remove", cred: c })}
-                    >
+                    {c.copies ? (
+                      <MenuItem icon="repeat" onSelect={() => setDialog({ type: "copies", cred: c })}>
+                        {t("settings.removeCopies")}
+                      </MenuItem>
+                    ) : null}
+                    <MenuItem icon="trash" danger onSelect={() => setDialog({ type: "remove", cred: c })}>
                       {t("settings.remove")}
-                    </Button>
-                  </div>
+                    </MenuItem>
+                  </Menu>
                 </span>
               </div>
             );
@@ -935,7 +965,7 @@ function KeysSection() {
         open={dialog?.type === "remove"}
         onOpenChange={(o) => !o && setDialog(null)}
         title={t("settings.removeTitle", { label: dialog?.type === "remove" ? dialog.cred.label : "" })}
-        description={dialog?.type === "remove" ? keyRemovalText(t, dialog.cred, live, platform.data === true) : ""}
+        description={dialog?.type === "remove" ? keyRemovalText(t, dialog.cred, all, platform.data === true) : ""}
         closeLabel={t("common.close")}
         width={440}
       >
@@ -951,6 +981,36 @@ function KeysSection() {
             }}
           >
             {t("settings.remove")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+      <Dialog
+        open={dialog?.type === "copies"}
+        onOpenChange={(o) => !o && setDialog(null)}
+        title={t("settings.removeCopiesTitle", { label: dialog?.type === "copies" ? dialog.cred.label : "" })}
+        description={t("settings.removeCopiesText")}
+        closeLabel={t("common.close")}
+        width={440}
+      >
+        <DialogFooter>
+          <Button disabled={removeCopies.isPending} onClick={() => setDialog(null)}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            variant="primary"
+            disabled={removeCopies.isPending}
+            loading={removeCopies.isPending}
+            onClick={() => {
+              if (dialog?.type !== "copies") return;
+              removeCopies.mutate(dialog.cred.id, {
+                onSuccess: ({ removed }) => {
+                  toast.show(t("settings.copiesRemoved", { count: removed }));
+                  setDialog(null);
+                },
+              });
+            }}
+          >
+            {t("settings.removeCopies")}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -1087,6 +1147,7 @@ export function KeyDialog({
                 {
                   onError: failed,
                   onSuccess: (saved) => {
+                    if (saved.reused) toast.show(t("settings.keyResaved"));
                     unchecked(saved);
                     onAdded?.(saved);
                     onClose();

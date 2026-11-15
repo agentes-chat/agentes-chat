@@ -27,7 +27,7 @@ import {
   requireSession,
   security,
 } from "./context";
-import { AccountKind, BrainUnavailable, MachineAccount, PlanUsage } from "./schemas";
+import { AccountKind, BrainUnavailable, CodexVersionRequirement, MachineAccount, PlanUsage } from "./schemas";
 import { SecretBox } from "./secrets";
 
 const tags = ["Connected computers"];
@@ -279,6 +279,7 @@ export function machineAccountRoutes(deps: AppDeps) {
                   off: z
                     .record(z.string(), BrainUnavailable)
                     .openapi({ description: "Why a CLI of `brains` can't think there, by its kind." }),
+                  codexVersion: CodexVersionRequirement.optional(),
                   brains: z
                     .object({
                       claude_code: z.boolean(),

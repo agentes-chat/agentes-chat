@@ -225,6 +225,21 @@ export const seesAgentDetails = (
   membership: Pick<Membership, "permissions" | "roleIds"> | null,
 ) => can(membership, "manage_agents") || canTalkTo(a, userId, speakerOf(membership));
 
+/** Whether the workspace's lists of agents (Equipe, its sectors, the counts) name every agent for this person. */
+export const listsAllAgents = (membership: Pick<Membership, "permissions"> | null) =>
+  can(membership, "view_all_agents") || can(membership, "manage_agents");
+
+/**
+ * Whether those lists name the agent for this person: every agent with `listsAllAgents`, else only the ones whose
+ * workings they see (`seesAgentDetails`). It narrows lists only: the agent's public card and its messages in shared
+ * channels still show. `audienceSql` is the same rule as SQL for who doesn't list all.
+ */
+export const listsAgentTo = (
+  a: AudienceFields,
+  userId: string,
+  membership: Pick<Membership, "permissions" | "roleIds"> | null,
+) => listsAllAgents(membership) || seesAgentDetails(a, userId, membership);
+
 /** The agent, for someone who sees how it works (`seesAgentDetails`); 403 `agent.details_hidden` for anyone else. */
 export async function requireAgentDetails(db: Database, userId: string, orgId: string, agentId: string) {
   const membership = await requirePermission(db, userId, orgId, "read");

@@ -122,17 +122,6 @@ export function taskSubline(
   return [where === title ? null : where, chain ?? asked, plan, helpers].filter(Boolean).join(" · ");
 }
 
-/** How a task ended, for "Terminadas hoje": done, stopped (by you, by someone), or couldn't finish. */
-export function endedText(t: TFunction, task: Pick<EndedTask, "status" | "stoppedBy">, meId: string | null): string {
-  const state = endedState(task);
-  if (state === "done") return t("taskManager.ended.done");
-  if (state === "failed") return t("taskManager.ended.failed");
-  if (!task.stoppedBy) return t("taskManager.state.stopped");
-  return task.stoppedBy.userId === meId
-    ? t("taskManager.ended.stopped")
-    : t("taskManager.ended.stoppedBy", { name: task.stoppedBy.name });
-}
-
 /** "Terminadas hoje", the latest first. */
 export const endedLatestFirst = (ended: readonly EndedTask[]) =>
   [...ended].sort((a, b) => Date.parse(b.finishedAt) - Date.parse(a.finishedAt));

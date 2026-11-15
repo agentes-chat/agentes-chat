@@ -20,7 +20,7 @@ import { type CanceledReturn, canceledReturns, type PendingReturn, pendingReturn
 import { replyExcerpt } from "./messages";
 import { can, requireActiveMembership } from "./organizations";
 import { pendingIds } from "./recovery";
-import { shownStatusSql } from "./runs";
+import { canceledBySql, personStopOf, shownStatusSql } from "./runs";
 import { channelReaderSql } from "./task-access";
 import { mayContinuePause } from "./usage-pause";
 
@@ -213,8 +213,8 @@ export interface EndedTask {
   routine: { id: string; name: string } | null;
   startedAt: string | null;
   finishedAt: string;
-  /** Stopped by a person: who. */
-  stoppedBy: { userId: string; name: string } | null;
+  /** Stopped by a person: who, and the agent that stopped it at their word (the right hand). */
+  stoppedBy: { userId: string; name: string; agentId?: string } | null;
 }
 
 /** The workspace's work the caller may not see: how much, never what. */
@@ -396,7 +396,7 @@ async function visibleRuns(
           : sql``
       }
       left join ${users} ru on ru.id = trig.author_user_id
-      left join ${users} su on r.error like 'canceled_by:%' and su.id = substring(r.error from 13)
+      left join ${users} su on su.id = ${canceledBySql(sql`r.error`)}
       left join ${routineRuns} rr on rr.org_id = ${orgId}::uuid and rr.agent_run_id = r.id
       left join ${routines} rt on rt.id = rr.routine_id
       left join lateral (
@@ -728,7 +728,7 @@ export async function taskManager(
     if (place) task.line = place;
   }
   const endedTasks: EndedTask[] = ended.map((r) => {
-    const by = r.error?.startsWith("canceled_by:") ? r.error.slice("canceled_by:".length) : null;
+    const stop = personStopOf(r.error);
     return {
       runId: r.id,
       agentId: r.agent_id,
@@ -739,7 +739,9 @@ export async function taskManager(
       routine: routineOf(r),
       startedAt: iso(r.started_at),
       finishedAt: iso(r.finished_at) as string,
-      stoppedBy: by ? { userId: by, name: r.stopper_name ?? "" } : null,
+      stoppedBy: stop
+        ? { userId: stop.userId, name: r.stopper_name ?? "", ...(stop.agentId ? { agentId: stop.agentId } : {}) }
+        : null,
     };
   });
   return {

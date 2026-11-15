@@ -20,6 +20,8 @@ import {
   browserSetupOf,
   CHROME_FAILURES,
   CHROMIUM_LINUX,
+  chromeExitCause,
+  chromeExitText,
   chromeFailureKind,
   decodeBrowserFrame,
   MACHINE_PROTOCOL_VERSION,
@@ -215,7 +217,7 @@ function setup(over: Partial<BrowserManagerOptions> = {}, secrets: Record<string
       ...(extra.allowedDomains ? { allowedDomains: extra.allowedDomains } : {}),
     });
   // The fake appends one line per call: a line still being written (no newline yet) is left for the next read.
-  const logged = (): Logged[] =>
+  const everyCall = (): Logged[] =>
     existsSync(log)
       ? readFileSync(log, "utf8")
           .split("\n")
@@ -223,11 +225,13 @@ function setup(over: Partial<BrowserManagerOptions> = {}, secrets: Record<string
           .filter(Boolean)
           .map((l) => JSON.parse(l) as Logged)
       : [];
+  // Without the runner's own look at whether the agent's tab shows (`foreground`), which goes before any command.
+  const logged = (): Logged[] => everyCall().filter((l) => l.args.at(-1) !== "document.visibilityState");
   const page = (patch: Record<string, unknown>) => {
     const cur = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, "utf8")) : {};
     writeFileSync(stateFile, JSON.stringify({ ...cur, ...patch }));
   };
-  return { ws, home, manager, frames, sockets, folder, act, logged, page, chromes: chromes.started };
+  return { ws, home, manager, frames, sockets, folder, act, logged, everyCall, page, chromes: chromes.started };
 }
 
 class FakeSocket implements StreamSocket {
@@ -657,6 +661,57 @@ test("a click goes as a person's: the box, then a pointer path into it, a check 
   expect(t.logged().at(-1)?.args.slice(-4)).toEqual(["drag", "@e1", "@e2", "--human"]);
 });
 
+test("a tab in the background comes to the front before a command; one that shows is left alone", async () => {
+  let now = 1_000_000;
+  const logs: string[] = [];
+  const t = setup({ now: () => now, log: (l) => logs.push(l) });
+  const calls = () => t.everyCall().map((l) => l.args.slice(l.args.indexOf("--screenshot-dir") + 2).join(" "));
+  const LOOK = "eval document.visibilityState";
+  // Chrome came up with the tabs it had: the one `agent-browser` holds is behind the page Chrome started on.
+  t.page({ hidden: true });
+  expect(await t.act("open", ["https://a.example/"])).toMatchObject({ success: true });
+  // Looked at, found hidden, switched to again (which brings it to the front), then the command.
+  expect(calls()).toEqual([LOOK, "tab", "tab t1", "open https://a.example/"]);
+  expect(logs).toContain("the browser of dev brought its tab to the front");
+
+  // The commands of one batch share that look; a second later it is looked at again, and shows.
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(
+    calls()
+      .slice(4)
+      .filter((c) => c === LOOK),
+  ).toEqual([]);
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === LOOK)).toHaveLength(2);
+  expect(calls().filter((c) => c === "tab t1")).toHaveLength(1);
+
+  // A tab that stays hidden (a window that can't come up) doesn't fail the command, and isn't tried at each one.
+  t.page({ hidden: true, staysHidden: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === "tab t1")).toHaveLength(2);
+  // Once it shows again, the next time it hides it is brought up as before.
+  t.page({ hidden: false, staysHidden: false });
+  now += 30_000;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  t.page({ hidden: true });
+  now += 1_001;
+  expect(await t.act("snapshot")).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === "tab t1")).toHaveLength(3);
+
+  // Switching tabs and waiting need no page in front.
+  const before = calls().filter((c) => c === LOOK).length;
+  now += 31_000;
+  expect(await t.act("tab", ["2"])).toMatchObject({ success: true });
+  expect(await t.act("wait", ["10"])).toMatchObject({ success: true });
+  expect(calls().filter((c) => c === LOOK)).toHaveLength(before);
+});
+
 test("an action on a point of the page: the pointer goes along a path, text as keys when a field has the focus", async () => {
   const t = setup();
   await t.act("open", ["https://shop.example.com"]);
@@ -786,7 +841,339 @@ describe("a person takes control while the agent's pointer and keys are going", 
     expect((await going).error).toContain("A person took control");
     await control;
   });
+
+  test("a read hung on the page stops, what the agent queued never runs, and the person's input reaches the page", async () => {
+    const t = setup({ inputTimeoutMs: 200, ...(posix ? {} : { startPageDirectory: tempDir() }) });
+    // The daemon runs one command at a time, the relay's too, and finishes one whose client is gone: while the
+    // agent's read holds it, the person's input waits there.
+    let held: Promise<void> | null = null;
+    const relay = fakeRelay();
+    const daemon = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      async fetch(req) {
+        if (held) await held;
+        return fetch(`http://127.0.0.1:${relay.port}${new URL(req.url).pathname}`, {
+          method: "POST",
+          headers: req.headers,
+          body: await req.text(),
+        });
+      },
+    });
+    try {
+      await t.act("open", ["https://shop.example.com"]);
+      t.page({ port: daemon.port, hang: { command: "get", ms: 20_000 } });
+      await t.manager.streamStart(dev, "watch");
+      const before = t.logged().length;
+      const startedAt = performance.now();
+      // A batch: the read, then a look that tolerates failing.
+      const reading = t.manager.batch(dev, await t.folder(), {
+        op: "browser.batch",
+        commands: [
+          { command: "get", args: ["text", "@e3"], timeoutSeconds: 30 },
+          { command: "snapshot", args: [], timeoutSeconds: 30, tolerate: true },
+        ],
+      });
+      await waitFor(() =>
+        t
+          .logged()
+          .slice(before)
+          .some((c) => c.args.includes("get")),
+      );
+      // The daemon finishes the cut-off read later than the relay's own timeout.
+      let release = () => {};
+      held = new Promise<void>((r) => {
+        release = () => {
+          held = null;
+          r();
+        };
+      });
+      setTimeout(() => release(), 600);
+      await t.manager.streamStart(dev, "control");
+      const { answers } = await reading;
+      expect(answers).toHaveLength(1);
+      expect(answers[0]?.error).toContain("A person took control");
+      expect(performance.now() - startedAt).toBeLessThan(5_000);
+      // The look after it never reached the browser.
+      expect(
+        t
+          .logged()
+          .slice(before)
+          .some((c) => c.args.includes("snapshot")),
+      ).toBe(false);
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mousePressed", x: 5, y: 6, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 5, y: 6, button: "left", clickCount: 1 },
+      ]);
+      expect(res).toEqual({ accepted: 2 });
+      expect(relay.received.map((r) => r.body.type)).toEqual(["mousePressed", "mouseReleased"]);
+      // Once the daemon answered, an input that gets no answer fails at the relay's own timeout again.
+      held = new Promise<void>(() => {});
+      const waited = performance.now();
+      expect(await t.manager.input(dev, [{ kind: "key", type: "keyDown", key: "Enter" }])).toEqual({
+        accepted: 0,
+        failed: 1,
+      });
+      expect(performance.now() - waited).toBeLessThan(2_000);
+      held = null;
+    } finally {
+      daemon.stop(true);
+      relay.server.stop(true);
+    }
+  });
+
+  test("while a person drives, nothing but their own commands reaches the browser, and their input goes at once", async () => {
+    const t = setup({ inputTimeoutMs: 200, ...(posix ? {} : { startPageDirectory: tempDir() }) });
+    const relay = fakeRelay();
+    try {
+      await t.act("open", ["https://shop.example.com"]);
+      // Any read that reached the daemon would hold it (and the person's clicks behind it) for 20 s.
+      t.page({ port: relay.port, hang: { command: "get", ms: 20_000 } });
+      await t.manager.streamStart(dev, "control");
+      const before = t.logged().length;
+      const startedAt = performance.now();
+      const folder = await t.folder();
+      // The server's read of the address (the handoff's keep-alive, the page a person took control on): the live view's.
+      const url = await t.manager.act(dev, folder, {
+        op: "browser.act",
+        command: "get",
+        args: ["url"],
+        timeoutSeconds: 10,
+      });
+      expect(url).toMatchObject({ success: true, data: { url: expect.stringContaining("shop.example.com") } });
+      // Anything else, an agent's command or batch included: refused before the queue.
+      for (const [command, args] of [
+        ["get", ["text", "@e3"]],
+        ["click", ["@e2"]],
+        ["wait", ["#late"]],
+      ] as const) {
+        const answer = await t.manager.act(dev, folder, {
+          op: "browser.act",
+          command,
+          args: [...args],
+          timeoutSeconds: 30,
+        });
+        expect(answer).toMatchObject({ success: false, code: "person_in_control" });
+        expect(answer.error).toContain("A person has control of your browser");
+      }
+      const { answers } = await t.manager.batch(dev, folder, {
+        op: "browser.batch",
+        commands: [{ command: "snapshot", args: [], timeoutSeconds: 30 }],
+      });
+      expect(answers).toEqual([expect.objectContaining({ code: "person_in_control" })]);
+      expect(performance.now() - startedAt).toBeLessThan(1_000);
+      // Taking control again (each `browser.handoff` while active says so) doesn't make their input wait either.
+      t.manager.setHandoff(dev.id, { status: "active", controller: "Maria" });
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mousePressed", x: 5, y: 6, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 5, y: 6, button: "left", clickCount: 1 },
+      ]);
+      expect(res).toEqual({ accepted: 2 });
+      expect(performance.now() - startedAt).toBeLessThan(1_500);
+      const reached = t
+        .logged()
+        .slice(before)
+        .filter((c) => !c.args.includes("screenshot"));
+      expect(reached.some((c) => ["get", "click", "wait", "snapshot"].some((a) => c.args.includes(a)))).toBe(false);
+      // The person's own move (the live view's address field) still runs while they drive.
+      const moved = await t.manager.act(dev, folder, {
+        op: "browser.act",
+        command: "open",
+        args: ["https://shop.example.com/cart"],
+        timeoutSeconds: 30,
+        person: true,
+      });
+      expect(moved.success).toBe(true);
+      expect(
+        t
+          .logged()
+          .slice(before)
+          .some((c) => c.args.includes("open")),
+      ).toBe(true);
+      // Back to watching: the agent's commands run again.
+      await t.manager.streamStart(dev, "watch");
+      t.page({ hang: null });
+      expect((await t.act("get", ["url"])).code).toBeUndefined();
+    } finally {
+      relay.server.stop(true);
+    }
+  });
+
+  test("with the daemon held (its own upkeep, a picture, a call hung on Chrome), the person's input still reaches the page at once", async () => {
+    // The daemon's one lock, which its relay waits on too, held for good: in production each input waited there 5 s
+    // and failed ("this didn't reach the page") on a Cloudflare check.
+    let relayed = 0;
+    const daemon = Bun.serve({
+      port: 0,
+      hostname: "127.0.0.1",
+      async fetch() {
+        relayed++;
+        await new Promise(() => {});
+        return new Response(null);
+      },
+    });
+    const pages: FakePage[] = [];
+    const t = setup({
+      inputTimeoutMs: 2_000,
+      firstFrameMs: 30,
+      connectPage: (url) => {
+        const p = new FakePage(url);
+        pages.push(p);
+        queueMicrotask(() => p.onopen?.());
+        return p;
+      },
+      ...(posix ? {} : { startPageDirectory: tempDir() }),
+    });
+    try {
+      await t.act("open", ["https://dash.example.com/login"]);
+      t.page({ port: daemon.port, viewport: [1280, 800] });
+      await t.manager.streamStart(dev, "control");
+      const stream = t.sockets.at(-1) as FakeSocket;
+      stream.push({ type: "status", viewportWidth: 1280, viewportHeight: 800 });
+      stream.push({
+        type: "tabs",
+        tabs: [
+          { targetId: "START0", url: "file:///start.html", active: false },
+          { targetId: "AB12CD34", url: "https://dash.example.com/login", active: true },
+        ],
+      });
+      // An idle page sends no frame: its first picture comes from the tab's socket too, not the held daemon.
+      await waitFor(() => t.frames.some((f) => f.type === "browser.frame" && f.seq === 0));
+      // It says the size the tab itself has (a narrow sign-in window), not the 1280 the stream's status says for
+      // any page: a click mapped with the wrong width lands elsewhere on the page.
+      expect(t.frames.find((f) => f.type === "browser.frame" && f.seq === 0)).toMatchObject({
+        metadata: { deviceWidth: 500, deviceHeight: 487 },
+      });
+      // So does a frame of the stream, which `agent-browser` labels 1280×720 whatever its picture shows.
+      const labelled = { deviceWidth: 1280, deviceHeight: 720 };
+      stream.push({ type: "frame", seq: 4, data: jpegOf(500, 487), metadata: labelled });
+      expect(t.frames.at(-1)).toMatchObject({ seq: 4, metadata: { deviceWidth: 500, deviceHeight: 487 } });
+      const startedAt = performance.now();
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mouseMoved", x: 40, y: 50 },
+        { kind: "mouse", type: "mousePressed", x: 40, y: 50, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 40, y: 50, button: "left", clickCount: 1 },
+        { kind: "text", text: "maria@example.com" },
+        { kind: "key", type: "keyDown", key: "Enter" },
+        { kind: "key", type: "keyDown", key: "a", modifiers: 2 },
+      ]);
+      const took = performance.now() - startedAt;
+      expect(res).toEqual({ accepted: 6 });
+      expect(took).toBeLessThan(300);
+      expect(relayed).toBe(0);
+      expect(pages.map((p) => p.url)).toEqual([`ws://127.0.0.1:${t.chromes[0]?.port}/devtools/page/AB12CD34`]);
+      const calls = (pages[0] as FakePage).calls.filter(
+        (c) => c.method !== "Page.captureScreenshot" && c.method !== "Page.getLayoutMetrics",
+      );
+      expect(calls).toEqual([
+        {
+          method: "Input.dispatchMouseEvent",
+          params: expect.objectContaining({ type: "mouseMoved", x: 40, y: 50, button: "none", buttons: 0 }),
+        },
+        {
+          method: "Input.dispatchMouseEvent",
+          params: expect.objectContaining({ type: "mousePressed", button: "left", buttons: 1, clickCount: 1 }),
+        },
+        {
+          method: "Input.dispatchMouseEvent",
+          params: expect.objectContaining({ type: "mouseReleased", button: "left", buttons: 0, clickCount: 1 }),
+        },
+        { method: "Input.insertText", params: { text: "maria@example.com" } },
+        // Whether a field took the text: asked on the tab, too.
+        { method: "Runtime.evaluate", params: expect.objectContaining({ returnByValue: true }) },
+        {
+          method: "Input.dispatchKeyEvent",
+          params: expect.objectContaining({ type: "keyDown", key: "Enter", windowsVirtualKeyCode: 13, text: "\r" }),
+        },
+        { method: "Input.dispatchKeyEvent", params: expect.objectContaining({ type: "keyUp", key: "Enter" }) },
+        {
+          method: "Input.dispatchKeyEvent",
+          params: {
+            type: "keyDown",
+            key: "a",
+            code: "KeyA",
+            windowsVirtualKeyCode: 65,
+            nativeVirtualKeyCode: 65,
+            modifiers: 2,
+          },
+        },
+        {
+          method: "Input.dispatchKeyEvent",
+          params: {
+            type: "keyUp",
+            key: "a",
+            code: "KeyA",
+            windowsVirtualKeyCode: 65,
+            nativeVirtualKeyCode: 65,
+            modifiers: 2,
+          },
+        },
+      ]);
+      // Another tab becomes the active one (a popup the click opened): the input follows it there.
+      stream.push({ type: "tabs", tabs: [{ targetId: "EF56", url: "https://appleid.example.com/", active: true }] });
+      expect(await t.manager.input(dev, [{ kind: "mouse", type: "mouseMoved", x: 1, y: 2 }])).toEqual({ accepted: 1 });
+      expect(pages.map((p) => p.url.split("/").at(-1))).toEqual(["AB12CD34", "EF56"]);
+      expect((pages[0] as FakePage).closed).toBe(true);
+      // The stream ends: so does the tab's socket.
+      await t.manager.streamStop(dev);
+      await waitFor(() => (pages[1] as FakePage).closed);
+    } finally {
+      daemon.stop(true);
+    }
+  });
+
+  test.if(posix)("a tab whose socket can't open: the input goes on the daemon's relay as before", async () => {
+    const relay = fakeRelay();
+    const t = setup({
+      connectPage: (url) => {
+        const p = new FakePage(url);
+        queueMicrotask(() => p.onerror?.());
+        return p;
+      },
+    });
+    try {
+      await t.act("open", ["https://shop.example.com"]);
+      t.page({ port: relay.port });
+      await t.manager.streamStart(dev, "control");
+      (t.sockets.at(-1) as FakeSocket).push({
+        type: "tabs",
+        tabs: [{ targetId: "AB12CD34", url: "https://shop.example.com/", active: true }],
+      });
+      const res = await t.manager.input(dev, [
+        { kind: "mouse", type: "mousePressed", x: 5, y: 6, button: "left", clickCount: 1 },
+        { kind: "mouse", type: "mouseReleased", x: 5, y: 6, button: "left", clickCount: 1 },
+      ]);
+      expect(res).toEqual({ accepted: 2 });
+      expect(relay.received.map((r) => r.body.type)).toEqual(["mousePressed", "mouseReleased"]);
+    } finally {
+      relay.server.stop(true);
+    }
+  });
 });
+
+/** The start of a JPEG of that size, in base64: all a frame's size is read from. */
+function jpegOf(width: number, height: number): string {
+  const head = [0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03];
+  return Buffer.from([...head, ...new Array(12).fill(0)]).toString("base64");
+}
+
+/** A tab's own DevTools socket (`connectPage`): records each call and answers it as Chrome does. */
+class FakePage extends FakeSocket {
+  calls: { method: string; params: Record<string, unknown> }[] = [];
+  override send(data: string) {
+    const msg = JSON.parse(data) as { id: number; method: string; params: Record<string, unknown> };
+    this.calls.push({ method: msg.method, params: msg.params });
+    const result =
+      msg.method === "Runtime.evaluate"
+        ? { result: { type: "boolean", value: true } }
+        : msg.method === "Page.captureScreenshot"
+          ? { data: Buffer.from("jpeg").toString("base64") }
+          : msg.method === "Page.getLayoutMetrics"
+            ? { cssLayoutViewport: { pageX: 0, pageY: 0, clientWidth: 500, clientHeight: 487 } }
+            : {};
+    queueMicrotask(() => this.push({ id: msg.id, result }));
+  }
+}
 
 test("after a hover the pointer goes straight to the next element, and curves again once it left", async () => {
   const t = setup();
@@ -910,15 +1297,18 @@ test.if(posix)(
       "Failed to create a ProcessSingleton for your profile directory. Aborting now to avoid profile corruption.";
     err = await failedStart(`echo "${held}" >&2; exit 21`);
     expect(err.missing).toEqual([]);
-    expect(err.message).toBe("Chrome closed while starting (another Chrome is using this profile)");
+    expect(err.message).toBe("Chrome closed while starting (another Chrome is using this profile, exit 21)");
     expect(err.profile).toBe(true);
     expect(err.detail).toBe(held);
 
-    // Any other exit, a loader error among them, gets no guess at why; what Chrome said goes to the logs.
+    // Any other exit, a loader error among them, gets no guess at why, only its code; what Chrome said goes to the logs.
     err = await failedStart(`echo "$0: /lib/libc.so.6: version 'GLIBC_2.38' not found (required by $0)" >&2; exit 1`);
     expect(err.missing).toEqual([]);
-    expect(err.message).toBe("Chrome closed while starting");
+    expect(err.message).toBe("Chrome closed while starting (exit 1)");
+    expect(err.why).toStartWith("Google Chrome closed as it started (exit 1). Update Google Chrome on it");
     expect(err.detail).toContain("version 'GLIBC_2.38' not found");
+    err = await failedStart("kill -SEGV $$");
+    expect(err.message).toBe("Chrome closed while starting (signal SIGSEGV)");
   },
 );
 
@@ -1014,14 +1404,17 @@ function fakeDevtools(down: number[], answer: (reply: () => void) => void = (rep
         const event = (method: string, params: object, sessionId?: string) =>
           ws.send(JSON.stringify({ method, params, ...(sessionId ? { sessionId } : {}) }));
         const result = (r: object) => ws.send(JSON.stringify({ id: msg.id, result: r }));
-        if (msg.method === "Target.setAutoAttach" && !msg.sessionId) {
+        if (msg.method === "Target.setDiscoverTargets") {
           answer(() => {
+            event("Target.targetCreated", { targetInfo: { type: "page", targetId: `tab-${n}` } });
             result({});
-            event("Target.attachedToTarget", {
-              sessionId: `page-${n}`,
-              targetInfo: { type: "page", targetId: `tab-${n}` },
-            });
           });
+        } else if (msg.method === "Target.attachToTarget") {
+          event("Target.attachedToTarget", {
+            sessionId: `page-${n}`,
+            targetInfo: { type: "page", targetId: `tab-${n}` },
+          });
+          result({});
         } else if (msg.method === "Network.enable") {
           event(
             "Network.requestWillBeSentExtraInfo",
@@ -1076,7 +1469,7 @@ test.if(posix)("a new Chrome's first command waits for its traffic counter to at
   try {
     const t = setup({ startChrome: chromesAt(held).start });
     const opened = t.act("open", ["https://a.example/"]);
-    await waitFor(() => held.asked.includes("Target.setAutoAttach"));
+    await waitFor(() => held.asked.includes("Target.setDiscoverTargets"));
     await Bun.sleep(300);
     expect(t.logged()).toEqual([]);
     reply();
@@ -2159,8 +2552,63 @@ test.if(posix)(
     const libs = (await said()) as { message: string };
     expect(libs.message).toStartWith(`${CHROME_FAILURES.start} This computer is missing system libraries`);
     expect(chromeFailureKind(libs.message)).toBe("start");
+    // How it closed reaches the agent, with the way out.
+    failure = new ChromeStartError("Chrome closed while starting (exit 1)", "", [], false, chromeExitCause(1, null));
+    const exited = (await said()) as { message: string };
+    expect(exited.message).toBe(`${CHROME_FAILURES.start} ${chromeExitCause(1, null)}`);
+    expect(chromeFailureKind(exited.message)).toBe("start");
     // Anything else of the browser's (a busy computer) isn't a Chrome failure.
     expect(chromeFailureKind("This computer already has 8 browsers open (its limit).")).toBeNull();
+  },
+);
+
+test("a Chrome's exit code reads in hex on Windows, and the codes we know name their cause", () => {
+  expect(chromeExitText(0xc0000005, null, "win32")).toBe("exit 0xC0000005/3221225477");
+  // Some runtimes hand Windows codes over as signed numbers.
+  expect(chromeExitText(-1073741515, null, "win32")).toBe("exit 0xC0000135/3221225781");
+  expect(chromeExitText(21, null, "win32")).toBe("exit 0x15/21");
+  expect(chromeExitText(1, null, "linux")).toBe("exit 1");
+  expect(chromeExitText(null, "SIGKILL", "linux")).toBe("signal SIGKILL");
+  expect(chromeExitCause(-1073741515, null, "win32")).toBe(
+    "A file Google Chrome needs is missing (exit 0xC0000135/3221225781). Reinstall Google Chrome from google.com/chrome, then try again.",
+  );
+  expect(chromeExitCause(0xc0000005, null, "win32")).toStartWith(
+    "Google Chrome crashed as it started (exit 0xC0000005/3221225477). Update Google Chrome on it (open Chrome, then Settings › About Chrome, and Relaunch)",
+  );
+  expect(chromeExitCause(24, null, "win32")).toStartWith(
+    "Another Google Chrome already running with the agent's profile",
+  );
+  expect(chromeExitCause(0, null, "win32")).toBe(
+    "Google Chrome closed as it started (exit 0x0/0). Update Google Chrome on it (open Chrome, then Settings › About Chrome, and Relaunch), then try again.",
+  );
+});
+
+test.if(posix)(
+  "a Chrome that keeps closing as it starts isn't started again for a minute: the agent hears the last cause at once",
+  async () => {
+    let now = 1_000_000;
+    let starts = 0;
+    const lines: string[] = [];
+    const why = chromeExitCause(0xc0000005, null, "win32");
+    const t = setup({
+      now: () => now,
+      log: (l) => lines.push(l),
+      startChrome: async () => {
+        starts++;
+        throw new ChromeStartError("Chrome closed while starting (exit 0xC0000005/3221225477)", "", [], false, why);
+      },
+    });
+    const said = () => t.act("open", ["https://a/"]).catch((e: { code: string; message: string }) => e);
+    for (let i = 0; i < 3; i++) {
+      expect(await said()).toMatchObject({ code: "browser_unavailable", message: `${CHROME_FAILURES.start} ${why}` });
+    }
+    expect(starts).toBe(3);
+    expect(lines.some((l) => l.includes("closed while starting 3 times in a row"))).toBe(true);
+    expect(await said()).toMatchObject({ code: "browser_unavailable", message: `${CHROME_FAILURES.start} ${why}` });
+    expect(starts).toBe(3);
+    now += 60_000;
+    await said();
+    expect(starts).toBe(4);
   },
 );
 
@@ -2479,8 +2927,9 @@ test.if(posix)(
       seq: 0,
       data: expect.stringMatching(/^\/9j\//), // the JPEG the fake writes for a .jpg
       metadata: {
+        // The page's own size (what it answers), not the 1280×720 the stream's status says.
         deviceWidth: 1280,
-        deviceHeight: 720,
+        deviceHeight: 800,
         capturedAt: expect.any(Number),
         url: "https://shop.example.com/",
         title: "Loja",
@@ -4099,3 +4548,189 @@ test.if(posix)(
     expect(emulationOn(devtools[2], "tab-3")).toEqual([]);
   },
 );
+
+test("spawn resolves promptly after exit even when a background child inherits stdio pipes", async () => {
+  const t = setup();
+  const spawnFn = (
+    t.manager as unknown as {
+      spawn: (
+        command: string[],
+        args: string[],
+        opts: { timeoutMs: number; cwd: string },
+      ) => Promise<{ stdout: string; stderr: string; exitCode: number | null; timedOut: boolean }>;
+    }
+  ).spawn.bind(t.manager);
+  const sleeper = "setTimeout(() => {}, 3000)";
+  const launcher = `
+    const { spawn } = require("node:child_process");
+    const sub = spawn(process.execPath, ["-e", ${JSON.stringify(sleeper)}], {
+      detached: true,
+      stdio: "inherit",
+      windowsHide: true,
+    });
+    sub.unref();
+    process.stdout.write(String(sub.pid ?? 0));
+  `;
+  const started = Date.now();
+  let childPid = 0;
+  try {
+    const res = await spawnFn([process.execPath], ["-e", launcher], { timeoutMs: 2500, cwd: t.ws });
+    const elapsed = Date.now() - started;
+    childPid = Number(res.stdout.trim());
+    expect(res.exitCode).toBe(0);
+    expect(res.timedOut).toBe(false);
+    expect(childPid).toBeGreaterThan(0);
+    expect(elapsed).toBeLessThan(1500);
+  } finally {
+    if (childPid > 0) {
+      try {
+        process.kill(childPid);
+      } catch {
+        // already exited
+      }
+    }
+  }
+});
+
+test.if(posix)(
+  "its server short of memory: idle browsers close their duplicate and blank tabs and free memory, every other tab kept; one watched or just used is left alone, one its agent holds only tidied",
+  async () => {
+    let now = 1_000_000;
+    const devtools: FakeSocket[] = [];
+    const chromes = fakeChromes();
+    const json = jsonTargets([
+      { id: "CUR", url: "https://shop.example.com/", title: "Shop" },
+      { id: "A", url: "https://docs.example.com/", title: "Docs" },
+      { id: "A2", url: "https://docs.example.com/", title: "Docs" },
+      { id: "BLANK", url: "about:blank" },
+    ]);
+    const t = setup({
+      now: () => now,
+      kept: (agentId) => agentId === ops.id,
+      fetch: json.fetch,
+      startChrome: async (exe, args, profile) => ({
+        ...(await chromes.start(exe, args, profile)),
+        wsPath: "/devtools/browser/eased",
+      }),
+      connectDevtools: (url) => {
+        const s = new FakeSocket(url);
+        devtools.push(s);
+        queueMicrotask(() => {
+          s.onopen?.();
+          s.push({ id: 1, result: {} });
+        });
+        return s;
+      },
+    });
+    await t.act("open", ["https://shop.example.com/"]);
+    await t.act("open", ["https://shop.example.com/"], { agent: ops });
+    await waitFor(() => devtools.length === 2);
+    const eased = (i: number) =>
+      (devtools[i]?.sent ?? []).filter((m) => m.method === "Memory.simulatePressureNotification");
+    // Used a moment ago: nothing.
+    now += 30_000;
+    expect(await t.manager.easeIdle()).toBe(0);
+    json.closed.length = 0;
+    now += 2 * 60_000;
+    expect(await t.manager.easeIdle()).toBe(2);
+    expect(json.closed).toContain("A2");
+    expect(json.closed).toContain("BLANK");
+    expect(json.closed).not.toContain("A");
+    expect(json.closed).not.toContain("CUR");
+    expect(eased(0)).toEqual([expect.objectContaining({ params: { level: "critical" } })]);
+    expect(eased(1)).toEqual([]);
+    expect(t.chromes.every((c) => !c.killed)).toBe(true);
+    // Someone watches dev's browser: it is left as it is.
+    await t.manager.streamStart(dev, "watch");
+    now += 5 * 60_000;
+    expect(await t.manager.easeIdle()).toBe(1);
+    expect(eased(0)).toHaveLength(1);
+  },
+);
+
+describe("one deadline for a whole command", () => {
+  const stuckIn = (answer: BrowserAnswer | undefined) => ({ code: answer?.code, error: answer?.error });
+
+  test.if(posix)(
+    "a browser that stops answering in the runner's own checks answers browser_stuck, naming the step, inside the command's time",
+    async () => {
+      const t = setup();
+      await t.act("open", ["https://shop.example.com/"]);
+      // Every eval hangs: the look at whether the tab shows and the names put on the controls before a snapshot, each
+      // 15 s on its own, which the server never counted.
+      t.page({ hang: { command: "eval", ms: 20_000 } });
+      const startedAt = performance.now();
+      const { answers } = await t.manager.batch(dev, await t.folder(), {
+        op: "browser.batch",
+        commands: [{ command: "snapshot", args: [], timeoutSeconds: 2 }],
+      });
+      const took = performance.now() - startedAt;
+      expect(took).toBeGreaterThan(1_500);
+      expect(took).toBeLessThan(4_000);
+      expect(stuckIn(answers.at(-1))).toEqual({
+        code: "browser_stuck",
+        error: `The browser didn't answer within 2 s: stuck on "snapshot"`,
+      });
+      // What was running stopped with it: the next command runs at once.
+      t.page({ hang: null });
+      const after = performance.now();
+      expect((await t.act("get", ["url"])).success).toBe(true);
+      expect(performance.now() - after).toBeLessThan(2_000);
+    },
+  );
+
+  test.if(posix)("a command waiting behind a stuck one says it was waiting in the queue", async () => {
+    const t = setup();
+    await t.act("open", ["https://shop.example.com/"]);
+    t.page({ hang: { command: "get", ms: 20_000 } });
+    const folder = await t.folder();
+    const first = new AbortController();
+    const held = t.manager.act(
+      dev,
+      folder,
+      { op: "browser.act", command: "get", args: ["text", "@e3"], timeoutSeconds: 20 },
+      first.signal,
+    );
+    await waitFor(() => t.logged().some((c) => c.args.includes("text")));
+    const { answers } = await t.manager.batch(dev, folder, {
+      op: "browser.batch",
+      commands: [{ command: "snapshot", args: [], timeoutSeconds: 1 }],
+    });
+    expect(stuckIn(answers.at(-1))).toEqual({
+      code: "browser_stuck",
+      error: "The browser didn't answer within 1 s: stuck waiting behind the agent's earlier browser command",
+    });
+    first.abort();
+    await held;
+    t.page({ hang: null });
+  });
+
+  test.if(posix)(
+    "a killed agent-browser whose child still holds its output frees the queue a moment later",
+    async () => {
+      const t = setup();
+      await t.act("open", ["https://shop.example.com/"]);
+      t.page({ orphan: { command: "get", ms: 60_000 } });
+      const folder = await t.folder();
+      try {
+        const stuck = await t.manager.act(dev, folder, {
+          op: "browser.act",
+          command: "get",
+          args: ["url"],
+          timeoutSeconds: 1,
+        });
+        expect(stuck.code).toBe("browser_stuck");
+        t.page({ orphan: null });
+        // The killed process exited; its child holding the pipe no longer holds the agent's next command.
+        const startedAt = performance.now();
+        expect((await t.act("get", ["url"])).success).toBe(true);
+        expect(performance.now() - startedAt).toBeLessThan(8_000);
+      } finally {
+        const pid = JSON.parse(readFileSync(process.env.FAKE_AB_STATE as string, "utf8")).orphanPid as
+          | number
+          | undefined;
+        if (pid) process.kill(pid, "SIGKILL");
+      }
+    },
+  );
+});

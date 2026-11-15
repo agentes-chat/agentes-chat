@@ -5,9 +5,12 @@ import {
   browserHandoffOf,
   controlledBy,
   createTouchInput,
+  frameView,
   handoffIsMine,
   heldTakeoversHere,
   machineProfiles,
+  pointerInView,
+  pointerShare,
 } from "@agenteschat/client";
 import { sortWaiting, waitingCardOf } from "../../src/features/activity/logic";
 import {
@@ -399,4 +402,20 @@ test("the computer's screen lists its browser profiles only on a single-mode com
   expect(machineProfiles(profiles, { id: "m1", mode: "system" })).toEqual([]);
   // The Cloud's computer still being prepared: no hello yet, so its view says single, but it's managed.
   expect(machineProfiles(profiles, { id: "m1", mode: "single", kind: "managed" })).toEqual([]);
+});
+
+describe("the agent's pointer over the open card's page", () => {
+  test("its tip lands on the drawn page, past the letterbox band above it", () => {
+    const box = { width: 360, height: 300 };
+    const page = { deviceWidth: 1272, deviceHeight: 653 };
+    const view = frameView(box, page);
+    const at = pointerInView(pointerShare({ x: 630, y: 608, width: 1272, height: 653, act: "click" }), view);
+    const scale = 360 / 1272;
+    const band = (300 - 653 * scale) / 2;
+    expect(band).toBeGreaterThan(50);
+    expect(at.x).toBeCloseTo(630 * scale, 6);
+    expect(at.y).toBeCloseTo(band + 608 * scale, 6);
+    // The touch input reads the same picture back to the same page point.
+    expect(touchOnPage(at, box, page, false)).toEqual({ x: 630, y: 608 });
+  });
 });

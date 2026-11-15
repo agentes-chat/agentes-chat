@@ -54,7 +54,10 @@ describe("one stop, one pill", () => {
     const screen = src("features/chat/ChatScreen.tsx");
     expect(screen).toContain("<StopsMovedOnContext.Provider value={stopsMoved}>");
     expect(screen).toContain("stopsMovedOn(");
-    expect(src("features/chat/MessageRow.tsx")).toContain("const open = may && !continued && !busy && !movedOn;");
+    // Only a stop a person made (also through the right hand) or a run at its limit picks up again: never the system's.
+    expect(src("features/chat/MessageRow.tsx")).toContain(
+      "const open = Boolean(limit || by) && may && !continued && !busy && !movedOn;",
+    );
   });
 
   test("the conversation's list provides the stops; the notice draws nothing while its reply has them", () => {

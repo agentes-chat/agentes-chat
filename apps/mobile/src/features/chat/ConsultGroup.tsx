@@ -18,7 +18,7 @@ import {
   openableConsultation,
   pairItemOf,
 } from "@agenteschat/client/lib/consult-group";
-import { consultSubject, consultTimeText } from "@agenteschat/client/lib/consultations";
+import { consultSubject, consultTimeText, withoutRelayLine } from "@agenteschat/client/lib/consultations";
 import { namesText } from "@agenteschat/client/lib/format";
 import type { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useQueryClient } from "@tanstack/react-query";
@@ -159,8 +159,12 @@ export function ConsultPairRow({
   // What the question a tap opens is about, between the names and how it went, as on the web.
   const opened = items.find((x) => x.id === pair.opens) ?? items[0];
   const subject = consultSubject(opened?.question);
+  // The whole question, which the row's one line cuts: for screen readers here, on the screen a tap opens.
+  const question = withoutRelayLine(opened?.question ?? "").trim();
   // An old reply's question with no id of its own has no conversation to open.
   const opens = openableConsultation(pair.opens);
+  // A row of several opens on all of them: the screen offers each agent's exchange.
+  const ids = items.map((x) => x.id);
   return (
     <View
       style={[
@@ -179,16 +183,17 @@ export function ConsultPairRow({
       <View style={[styles.rule, { backgroundColor: c.line }]} />
       <Pressable
         onPress={() => {
-          if (opens) router.push(consultationHref(opens, channelId));
+          if (opens) router.push(consultationHref(opens, channelId, ids));
         }}
         disabled={!opens}
         accessibilityRole="button"
+        accessibilityHint={question || undefined}
         // A 28-point row: 8 above and below gives it the 44-point target.
         hitSlop={{ top: 8, bottom: 8 }}
         style={({ pressed }) => [styles.row, pressed && { backgroundColor: c.plate }]}
       >
         <AgentFace agentId={askerId} size={FACE} live={false} />
-        <Text variant="footnote" tone="ink2" style={styles.name}>
+        <Text variant="footnote" tone="ink2" numberOfLines={1} style={styles.name}>
           {from}
         </Text>
         {pair.tone === "you" ? (
@@ -210,20 +215,16 @@ export function ConsultPairRow({
             </View>
           ))}
         </View>
-        <Text variant="footnote" tone="ink2" style={styles.name}>
+        <Text variant="footnote" tone="ink2" numberOfLines={1} style={styles.name}>
           {to}
         </Text>
-        {subject || pair.word || pair.seconds !== null ? (
-          <Text variant="footnote" tone="faint">
-            ·
-          </Text>
-        ) : null}
+        {/* The subject carries its own ·: when it has no room left, the dot goes with it. */}
         {subject ? (
-          <Text variant="footnote" tone="faint" style={styles.subject}>
-            {subject}
+          <Text variant="footnote" tone="faint" numberOfLines={1} style={styles.subject}>
+            {`· ${subject}`}
           </Text>
         ) : null}
-        {subject && (pair.word || pair.seconds !== null) ? (
+        {pair.word || pair.seconds !== null ? (
           <Text variant="footnote" tone="faint">
             ·
           </Text>
@@ -255,26 +256,25 @@ const styles = StyleSheet.create({
   // Across the conversation, the two agents on its middle: a line, as the day and "Novas" are.
   line: { flexDirection: "row", alignItems: "center" },
   rule: { flex: 1, minWidth: 16, height: StyleSheet.hairlineWidth },
-  // Names never cut: what doesn't fit wraps onto a second line, on the row's middle.
+  // Always one line: the subject gives way first ("…"), the names only once it has none left, the word and time never.
   row: {
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "center",
     alignItems: "center",
     columnGap: 6,
-    rowGap: 2,
     minHeight: 28,
     paddingHorizontal: ROW_INSET,
     borderRadius: 10,
     flexShrink: 1,
   },
+  // The names give way only once the subject has none left: its share of any shrink dwarfs theirs.
   name: { fontWeight: "600", flexShrink: 1 },
-  subject: { flexShrink: 1 },
+  subject: { flexShrink: 100000 },
   faces: { flexDirection: "row", alignItems: "center" },
   stacked: { marginLeft: -6, borderLeftWidth: 1.5, borderRadius: 6 },
   off: { opacity: 0.45 },
-  word: { fontWeight: "600", flexShrink: 1 },
+  word: { fontWeight: "600", flexShrink: 0 },
   // The wait mark in the arrows' 13-point place, so the names don't move.
   mark: { width: 13, height: 13, alignItems: "center", justifyContent: "center" },
-  time: { fontVariant: ["tabular-nums"] },
+  time: { fontVariant: ["tabular-nums"], flexShrink: 0 },
 });

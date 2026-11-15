@@ -84,7 +84,7 @@ noVNC in the web app ⇄ `wss /api/desktop` ⇄ the server ⇄ one data WebSocke
 
 Superseded by ADR 0065 §1: the apps have no terminal view (in control, the desktop's own Terminal app is there). What follows stays on the runner and the server until a later change removes it.
 
-- A `Bun.Terminal` PTY with the login shell as the agent's OS user, never root (system mode: `systemd-run --scope --slice=agents-<uid>.slice -- runuser -u ag-<id8> -- bash -l`). Its folder is the agent's; its environment has none of the agent's secrets and `TERM=xterm-256color`.
+- A `Bun.Terminal` PTY with the login shell as the agent's OS user, never root (system mode: `systemd-run --scope --slice=agents-<uid>.slice -- setpriv --reuid=ag-<id8> --regid=ag-<id8> --init-groups -- bash -l`). Its folder is the agent's; its environment has none of the agent's secrets and `TERM=xterm-256color`.
 - A resize is a text frame. Output beyond a 1 MB backlog is dropped, followed by `[output skipped: too fast]` (`Bun.Terminal` can't pause).
 - Closed after 30 idle minutes, and after 12 hours at most. No history is kept, and reconnecting opens a new shell: nobody types into a shell they didn't see start.
 - Where session screening is on, the server refuses the terminal socket (ADR 0076).

@@ -55,6 +55,7 @@ import {
   failedStep,
   hereView,
   type LocalServerStatus,
+  ownerless,
   type ReachStage,
   type SetupStep,
   type StepChange,
@@ -180,7 +181,15 @@ export function FirstRun() {
   const takeMode = useCallback(() => {
     void host
       .welcomeMode()
-      .then((mode) => setAdding(mode === "add"))
+      .then((mode) => {
+        setAdding(mode === "add");
+        // No account left on the server the app runs, or it was just erased: straight to Run here's form, which
+        // makes the new owner.
+        const at = screenRef.current;
+        if (mode !== "owner" || at === "link" || at === "pair" || settingUp.current) return;
+        setTrail(["choose"]);
+        setScreen("here");
+      })
       .catch(() => setAdding(false));
     void host
       .workspaces()
@@ -923,7 +932,13 @@ function RunHere({
       <BackLink label={t("desktop.place.title")} onClick={onBack} />
       <h1 className="dk-fr__h1sm">{t("desktop.here.title")}</h1>
       <p className="dk-lead dk-fr__wide">
-        {view.ask ? t("desktop.here.how") : t("desktop.here.again", { path: shortPath(status.dir) })}
+        {!view.ask
+          ? t("desktop.here.again", { path: shortPath(status.dir) })
+          : ownerless(status)
+            ? t("desktop.here.ownerNone")
+            : status.erased
+              ? t("desktop.server.erased", { path: shortPath(status.erased) })
+              : t("desktop.here.how")}
       </p>
       <form className="dk-fr__here" onSubmit={submit} noValidate>
         {view.ask && (

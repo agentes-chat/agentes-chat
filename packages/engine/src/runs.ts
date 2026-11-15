@@ -368,8 +368,8 @@ export function runErrorDetail(error: string | null | undefined): {
   }
   if (error.startsWith("gave_up:"))
     return { errorCode: "run.provider_unavailable", errorParams: { detail: error.slice(8).trim() } };
-  if (error.startsWith("canceled_by:"))
-    return { errorCode: "run.canceled", errorParams: { byUserId: error.slice(12) } };
+  const stop = personStopOf(error);
+  if (stop) return { errorCode: "run.canceled", errorParams: { byUserId: stop.userId } };
   // A computer brain's background run cut after its tools ran, or with nothing to think with (`executor.ts`).
   const brain = /^(brain_interrupted|brain_unavailable): ?/.exec(error);
   if (brain) return { errorCode: `run.${brain[1]}`, errorParams: { detail: error.slice(brain[0].length) } };
@@ -417,9 +417,36 @@ export function providerFailure(error: string | null | undefined) {
   return provider ? detail : null;
 }
 
-/** Who canceled (stored on the run as `canceled_by:{userId}`). */
-export const canceledBy = (error: string | null | undefined) =>
-  error?.startsWith("canceled_by:") ? error.slice("canceled_by:".length) : null;
+const CANCELED_BY = "canceled_by:";
+
+/**
+ * Who or what stopped a run (`stopRun`): a person, or `agentId` that stopped it at their word (the right hand); the
+ * system with its reason (`agent_archived`, a closed workspace's, `mission_*`).
+ */
+export type StopActor = { type: "person"; id: string; agentId?: string } | { type: "system"; reason: string };
+
+/** The run's error for a stop: `canceled_by:{userId}`, then `|agent:{agentId}`; the system's reason as it is. */
+export const stopError = (actor: StopActor) =>
+  actor.type === "system" ? actor.reason : `${CANCELED_BY}${actor.id}${actor.agentId ? `|agent:${actor.agentId}` : ""}`;
+
+/** The stop written under what the agent wrote, in the message's body; the apps say it from `meta.canceled`. */
+export const stopNote = (person?: string | null, stopper?: string | null) =>
+  `_Stopped${person ? ` by ${stopper ? `${stopper} for ` : ""}${person}` : ""}._`;
+
+/** A person's stop read back from its run's error (`stopError`); null for any other error. */
+export function personStopOf(error: string | null | undefined) {
+  if (!error?.startsWith(CANCELED_BY)) return null;
+  const [userId = "", tail = ""] = error.slice(CANCELED_BY.length).split("|");
+  return { userId, agentId: tail.startsWith("agent:") ? tail.slice("agent:".length) : null };
+}
+
+/** Who canceled: the person behind the stop, also when the right hand did it at their word. */
+export const canceledBy = (error: string | null | undefined) => personStopOf(error)?.userId ?? null;
+
+/** `canceledBy` in SQL, over a run's error column: the person's id, else null. */
+export const canceledBySql = (error: SQL) =>
+  sql<string | null>`(case when ${error} like ${sql.raw(`'${CANCELED_BY}%'`)}
+    then split_part(substring(${error} from ${sql.raw(String(CANCELED_BY.length + 1))}), '|', 1) end)`;
 
 /**
  * Whether Continuar can go on from how a run ended (`continueRun`): a person stopped it, its reply says it reached its

@@ -41,8 +41,9 @@ test("the DM header's button opens the tiles and models; a model of another AI s
   expect(state.calls.some((c) => c.method === "agents.setBrain")).toBe(false);
   const models = [...panel.querySelectorAll(".mp__model-name")].map((n) => n.textContent);
   expect(models).toEqual(["Automático", "Opus 5.5", "Sonnet 5.5", "Haiku 5.5"]);
-  // Automático is marked as the default.
-  expect(panel.querySelector(".mp__model-tag")?.textContent).toBe("padrão");
+  // Automático says what it does, with no tag repeating that it is the default.
+  expect(panel.querySelector(".mp__model-tag")).toBeNull();
+  expect(within(panel).getByRole("option", { name: /^Automático/ }).textContent).not.toContain("padrão");
   await click(within(panel).getByRole("option", { name: /Opus/ }));
   const call = state.calls.find((c) => c.method === "agents.setBrain");
   expect(call?.args[2]).toMatchObject({ brain: "claude_code", model: "opus" });

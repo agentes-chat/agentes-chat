@@ -13,7 +13,7 @@ import {
 } from "react";
 import { channelQuery, insertChannelRef } from "../channel-refs";
 import { cx } from "../cx";
-import { onScreenKeyboard } from "../device";
+import { composes, onScreenKeyboard } from "../device";
 import { EDGE_ROOM, placeOverSelection } from "../floating";
 import {
   applyFormat,
@@ -709,6 +709,8 @@ export function Composer({
     );
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Choosing and confirming a word in an input method takes Enter, Tab, Esc and the arrows: none is the box's.
+    if (composes(e.nativeEvent)) return;
     // A layer above already closed on this Esc: the suggestions, or a card that opened under the pointer and left the
     // focus here. It is spent: it stops no agent, and the page's own Esc (an inbox reply closes on it) never sees it.
     if (e.key === "Escape" && e.defaultPrevented) {
@@ -753,7 +755,7 @@ export function Composer({
       return;
     }
     // On-screen keyboards: Enter is a new line; the send button sends.
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && !onScreenKeyboard()) {
+    if (e.key === "Enter" && !e.shiftKey && !onScreenKeyboard()) {
       e.preventDefault();
       send(e.metaKey || e.ctrlKey);
     }

@@ -40,6 +40,8 @@ export const RESUME_MAX_AGE_MS = 6 * 60 * 60_000;
 type StoredTranscript = {
   messages?: { role: string; content: Parameters<typeof textOf>[0] }[];
   postedUpTo?: number;
+  /** A reply held for its wording (`Transcript.heldWording`): its answer, over what its rewrite wrote since. */
+  heldWording?: string;
 };
 
 /** When the run's worker last said it was alive. */
@@ -263,12 +265,15 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
   const { db } = deps;
   const threadId = replyThreadOf(run);
   const t = (run.transcript ?? {}) as StoredTranscript;
-  const said = (t.messages ?? [])
-    .slice(t.postedUpTo ?? 0)
-    .filter((m) => m.role === "assistant")
-    .map((m) => textOf(m.content).trim())
-    .filter(Boolean)
-    .join("\n\n");
+  // A reply held for its wording is a finished answer: it wins over the working text its rewrite wrote since.
+  const said =
+    t.heldWording ||
+    (t.messages ?? [])
+      .slice(t.postedUpTo ?? 0)
+      .filter((m) => m.role === "assistant")
+      .map((m) => textOf(m.content).trim())
+      .filter(Boolean)
+      .join("\n\n");
   const note = `_${INTERRUPTED_BY_RESTART}. Ask again to continue._`;
   const result = await db.transaction(async (tx) => {
     if (!(await claimStale(tx, run.id, at))) return null;

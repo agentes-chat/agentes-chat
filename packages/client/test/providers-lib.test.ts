@@ -14,6 +14,7 @@ import {
   providerGuess,
   providerOf,
   providersForKey,
+  shownKeys,
 } from "../src/lib/providers";
 
 const ids = (key: string) => providersForKey(key).map((p) => p.id);
@@ -123,6 +124,15 @@ describe("a saved key's line", () => {
     // A local server with no key: only where it is, with its port.
     const local = { ...cc, keyHint: "", endpoint: { ...endpoint, baseURL: "http://127.0.0.1:11434/v1" } };
     expect(keyLine(t, local)).toBe("127.0.0.1:11434");
+  });
+
+  test("a key saved more than once: one row, its line counting every copy", () => {
+    expect(keyLine(t, { label: "Claude", provider: "anthropic", keyHint: "0000", copies: 3 })).toBe(
+      'vault.item.endsIn {"hint":"0000"} · settings.keyCopies {"count":4}',
+    );
+    const row = { revokedAt: null, id: "a", copies: 1 };
+    const keys = [row, { revokedAt: null, id: "b", copyOf: "a" }, { revokedAt: "2026-11-01", id: "c" }];
+    expect(shownKeys(keys)).toEqual([row]);
   });
 
   test("a key thinks once saved; an endpoint's once one of its models answered a test, tools or not", () => {

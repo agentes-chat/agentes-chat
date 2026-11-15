@@ -225,6 +225,7 @@ export const desktopEn = {
     title: "Let's get this {{device}} ready",
     how: "It takes a minute. Everything stays here, with you alone.",
     again: "It ran here before, and its data is still in {{path}}.",
+    ownerNone: "No account is left on it. Your name and email make you its new owner.",
     name: "Your name",
     nameNeeded: "Write your name.",
     email: "Your email",
@@ -423,7 +424,8 @@ export const desktopEn = {
     /** It restarted by itself 3 times in a few minutes (a notification). */
     restartedBanner: "agentes.chat restarted 3 times on this {{device}}",
     restartedBody: "It comes back by itself. If it keeps happening, open the app to see why.",
-    version: "Version {{version}}, updated with the app",
+    installedVersion: "Installed package version",
+    internalVersion: "Internal server version",
     updatesWithApp: "Updating the app updates agentes.chat on this {{device}} too.",
     updateBack: "The update didn't start. agentes.chat is back on {{version}}.",
     updateBackBody: "The new version is tried again with the app's next update.",
@@ -452,6 +454,18 @@ export const desktopEn = {
     restored: "Restored the backup from {{time}}",
     restoreFailed: "That backup didn't start, so agentes.chat is back as it was. Try the other backup.",
     restoreUnreadable: "That backup can't be opened. Try the other one.",
+    /** Preferences › Servers: it stops, its folder moves whole to a dated folder in the home folder, its agents' homes here (browser profiles, sign-ins, machine tokens) are deleted, and a new setup starts. */
+    erase: "Erase and start over…",
+    eraseTitle: "Erase agentes.chat on this {{device}}?",
+    eraseBody:
+      "Its workspaces go for everyone who uses them, on every device. Its data moves to {{path}} and stays there. What its agents kept on this {{device}}, such as their browsers and sign-ins, is deleted. The agents' files in ~/agentes are yours and stay where they are. Then you set it up again with a new owner.",
+    eraseConfirm: "Erase it",
+    erased: "Erased. Its old data is in {{path}}.",
+    eraseMoveFailed:
+      "Its data couldn't be moved, so nothing was erased and it stays in {{path}}. It's stopped until you start it again.",
+    /** Another agentes-server, started outside the app, holds the folder's lock, so the folder can't move. */
+    eraseHeld:
+      "Another agentes.chat server is using its folder, so nothing was erased. Stop that server, then try again.",
     noPassword: "Add a password to sign in from your phone and other computers.",
     addPassword: "Add a password",
     keep: "Keep it running",

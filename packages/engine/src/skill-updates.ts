@@ -128,7 +128,7 @@ export async function updateSkillFromSource(
   const mark = async (fields: Partial<typeof skills.$inferInsert>) => {
     const [row] = await deps.db
       .update(skills)
-      .set({ checkedAt, updateError: null, ...fields })
+      .set({ checkedAt, updateError: null, sourceByFolder: incoming.sourceByFolder, ...fields })
       .where(eq(skills.id, s.id))
       .returning();
     return skillDetail(deps.db, row ?? s);

@@ -10,7 +10,7 @@ import type {
 } from "@agenteschat/client";
 import { agentStateIn, agentWorkingIn, keys, useApi } from "@agenteschat/client";
 import { agentWork } from "@agenteschat/client/lib/agent-work";
-import { type AgentFace, agentPresenceShown, agentStatusText } from "@agenteschat/client/lib/presence";
+import { type AgentFace, agentFaceOf, agentStatusText, isAgentOff, liveLine } from "@agenteschat/client/lib/presence";
 import { useQuery } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useCallback, useMemo } from "react";
@@ -26,10 +26,6 @@ import { useStreams } from "@/realtime/context";
 
 /** The line's emoji when its author picked none. */
 export const STATUS_EMOJI = "💬";
-
-/** A line whose end has passed reads as none (the server clears it on read; a list kept here may be older). */
-const live = <T extends { until: string | null }>(line: T | null | undefined, now = Date.now()): T | null =>
-  line && (!line.until || new Date(line.until).getTime() > now) ? line : null;
 
 /** What you picked, from how you appear to yourself, when the server didn't say (`Person.availability`). */
 export const availabilityOf = (presence: MemberPresence | undefined): Availability =>
@@ -57,7 +53,7 @@ export function usePersonPresence(userId: string | null | undefined): PersonPres
     select: pick,
   }).data;
   if (!userId || !person) return null;
-  return { presence: person.presence, status: live(person.status), person };
+  return { presence: person.presence, status: liveLine(person.status), person };
 }
 
 const presenceMap = (list: Person[]) => new Map(list.map((p) => [p.userId, p.presence]));
@@ -118,12 +114,10 @@ export function useAgentPresence(agentId: string | null | undefined): AgentShown
     agentId && agentStateIn(s, agentId) !== "idle" ? agentWorkingIn(s, agentId) : null,
   );
   if (!on || status === undefined) return null;
-  const working = workingIn !== null;
-  // At work it has an AI, whatever the AIs' list reads for this person (the right hand's is each person's own).
-  const noAi = ai === "no_ai" && !working && status?.working !== true;
+  const { presence, noAi } = agentFaceOf(status ?? undefined, ai, workingIn !== null);
   return {
-    presence: agentPresenceShown(status ?? undefined, !noAi, working),
-    line: noAi ? null : live(status?.status),
+    presence,
+    line: noAi ? null : liveLine(status?.status),
     work: agentWork(status, workingIn ? { channelId: workingIn } : null),
     activeAt: status?.activeAt ?? null,
     noAi,
@@ -152,7 +146,40 @@ export function useAgentsWorking(): ReadonlySet<string> {
   return useMemo(() => new Set(key ? key.split(",") : []), [key]);
 }
 
-const linesOf = (list: AgentStatus[]) => new Map(list.map((s) => [s.agentId, live(s.status)]));
+// Plain objects of only what the face reads: the query keeps the same one while those don't change (structural
+// sharing skips Maps), so a poll that moves only `activeAt` doesn't redraw the whole list.
+const facesById = (list: AgentStatus[]) =>
+  Object.fromEntries(list.map((s) => [s.agentId, { presence: s.presence, working: s.working }]));
+const aisById = (status: AiStatus) => Object.fromEntries(status.agents.map((a) => [a.agentId, a.state]));
+
+/**
+ * Whether an agent is off now (`isAgentOff`: out of office, held, or no AI) by the rule its face is drawn by
+ * (`agentFaceOf`), so a list that groups by it never disagrees with its row. `working`: a run of its this tab hears.
+ * Nobody is off while the list loads.
+ */
+export function useAgentOff(): (agentId: string, working: boolean) => boolean {
+  const { org } = useOrg();
+  const api = useApi();
+  const on = org.id.length > 0;
+  const statuses = useQuery({
+    queryKey: keys.agentStatus(org.id),
+    queryFn: () => api.agents.statuses(org.id),
+    staleTime: 15_000,
+    enabled: on,
+    select: facesById,
+  }).data;
+  const ais = useQuery({
+    queryKey: keys.aiStatus(org.id),
+    queryFn: () => api.agents.aiStatus(org.id),
+    staleTime: 30_000,
+    enabled: on,
+    select: aisById,
+  }).data;
+  return (agentId, working) =>
+    statuses !== undefined && isAgentOff(agentFaceOf(statuses[agentId], ais?.[agentId], working).presence);
+}
+
+const linesOf = (list: AgentStatus[]) => new Map(list.map((s) => [s.agentId, liveLine(s.status)]));
 const NO_LINES: ReadonlyMap<string, AgentStatusLine | null> = new Map();
 
 /** Every agent's line by id (ADR 0084), from the list every face reads, with no poll of its own. */

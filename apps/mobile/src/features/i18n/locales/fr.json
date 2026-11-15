@@ -906,6 +906,9 @@
     },
     "doneToast": "Terminé",
     "undo": "Annuler",
+    "doneAllToast_one": "{{count}} déplacée dans Terminées",
+    "doneAllToast_many": "{{count}} déplacées dans Terminées",
+    "doneAllToast_other": "{{count}} déplacées dans Terminées",
     "day": {
       "today": "Aujourd'hui",
       "yesterday": "Hier",
@@ -1267,6 +1270,7 @@
     "blocked": "Vous êtes le seul propriétaire de {{names}}. Sur le site, dans Personnes, nommez quelqu'un d'autre propriétaire, puis revenez.",
     "addPasswordFirst": "Ajoutez d'abord un mot de passe à votre compte sur le site, puis saisissez-le ici.",
     "addPasswordWeb": "Ajouter un mot de passe sur le site",
+    "onThisComputer": "Supprimez-le dans l'app agentes.chat sur l'ordinateur où tourne ce serveur.",
     "otherAccount": "Vous vous êtes connecté à un autre compte. Rien n'a été supprimé.",
     "hold": "Maintenir pour supprimer"
   },
@@ -2105,6 +2109,7 @@
       "waitingFor": "{{names}} attend {{device}} pour {{person}}",
       "tool_request": "{{names}} vous demande d'activer {{tool}} sur votre {{device}}",
       "cli_request": "{{names}} vous demande d'installer {{tool}} sur votre {{device}}",
+      "folder_request": "{{names}} vous demande le dossier {{path}} sur votre {{device}}",
       "allowOnce": "Autoriser une fois",
       "always": "Toujours autoriser {{name}}",
       "no": "Non",

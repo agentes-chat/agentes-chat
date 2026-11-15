@@ -882,6 +882,8 @@
     },
     "doneToast": "Afgerond",
     "undo": "Ongedaan maken",
+    "doneAllToast_one": "{{count}} verplaatst naar Afgerond",
+    "doneAllToast_other": "{{count}} verplaatst naar Afgerond",
     "day": {
       "today": "Vandaag",
       "yesterday": "Gisteren",
@@ -1193,6 +1195,7 @@
     "blocked": "Je bent de enige eigenaar van {{names}}. Maak op de website, bij Mensen, iemand anders eigenaar en kom dan terug.",
     "addPasswordFirst": "Voeg eerst op de website een wachtwoord toe aan je account en typ het dan hier.",
     "addPasswordWeb": "Een wachtwoord toevoegen op de website",
+    "onThisComputer": "Verwijder het in de agentes.chat-app op de computer waarop deze server draait.",
     "otherAccount": "Je bent ingelogd op een ander account. Er is niets verwijderd.",
     "hold": "Ingedrukt houden om te verwijderen"
   },
@@ -2012,6 +2015,7 @@
       "waitingFor": "{{names}} wacht op {{device}} voor {{person}}",
       "tool_request": "{{names}} vraagt je {{tool}} aan te zetten op je {{device}}",
       "cli_request": "{{names}} vraagt je {{tool}} te installeren op je {{device}}",
+      "folder_request": "{{names}} vraagt je om de map {{path}} op je {{device}}",
       "allowOnce": "Eén keer toestaan",
       "always": "{{name}} altijd toestaan",
       "no": "Nee",

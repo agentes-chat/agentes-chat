@@ -371,7 +371,6 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
                 </span>
               )}
             </span>
-            {r.auto && <span className="mp__model-tag">{t("brain.picker.default")}</span>}
             <svg className="ac-menu__check" viewBox="0 0 20 20" aria-hidden="true">
               <path d="m5.5 10.5 3 3 6-7" />
             </svg>

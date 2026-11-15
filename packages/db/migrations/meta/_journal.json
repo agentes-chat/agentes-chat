@@ -1898,6 +1898,34 @@
       "when": 1794756800000,
       "tag": "0274_personal_skills",
       "breakpoints": true
+    },
+    {
+      "idx": 273,
+      "version": "7",
+      "when": 1794756900000,
+      "tag": "0275_view_all_agents",
+      "breakpoints": true
+    },
+    {
+      "idx": 274,
+      "version": "7",
+      "when": 1794757000000,
+      "tag": "0276_skill_source_by_folder",
+      "breakpoints": true
+    },
+    {
+      "idx": 275,
+      "version": "7",
+      "when": 1794757100000,
+      "tag": "0277_mcp_request_headers",
+      "breakpoints": true
+    },
+    {
+      "idx": 276,
+      "version": "7",
+      "when": 1794757200000,
+      "tag": "0278_workspace_approvals_level",
+      "breakpoints": true
     }
   ]
 }

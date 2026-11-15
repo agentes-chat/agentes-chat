@@ -11,6 +11,14 @@ html {
 html[data-theme="dark"] {
   color-scheme: dark;
 }
+/* While the theme changes (`switchTheme`), every element takes its new colors in the same frame. */
+html[data-theme-switching],
+html[data-theme-switching] *,
+html[data-theme-switching] *::before,
+html[data-theme-switching] *::after {
+  /* biome-ignore lint/complexity/noImportantStyles: must beat every component's own transition, hover and state rules too */
+  transition: none !important;
+}
 body {
   margin: 0;
   font-family: var(--font-sans);
@@ -398,7 +406,6 @@ html:not([data-pointer]) .ac-btn:focus-visible {
 }
 .ac-btn--primary:hover {
   background: var(--action);
-  opacity: 0.88;
 }
 .ac-btn--agent {
   border-bottom-left-radius: var(--radius-cut);
@@ -1426,8 +1433,8 @@ html:not([data-pointer]) .ac-msg--grouped:focus-within .ac-msg__gutter-time {
 /*
  * A grouped row's receipt in its gutter: always seen, on the words' first line, its end 4px short of them (into the
  * row's gap). The time shows on its left on hover, overflowing the gutter leftwards, capped at 12px so at the larger
- * text sizes it stays inside the row's own padding. A 12-hour time ("11:43 PM") would run past the row's edge on one
- * line: it stacks its two words in the first line's height instead.
+ * text sizes it stays inside the row's own padding. Never on two lines: the gutter gets the clock without its day
+ * period (`gutterTime`), which fits in every language.
  */
 .ac-msg__gutter--aside {
   justify-content: flex-end;
@@ -1438,16 +1445,7 @@ html:not([data-pointer]) .ac-msg--grouped:focus-within .ac-msg__gutter-time {
   flex: none;
 }
 .ac-msg__gutter--aside > .ac-msg__gutter-time {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  width: min-content;
-  min-height: var(--msg-line);
   font-size: min(12px, max(11px, calc(var(--msg-text) - 3px)));
-  line-height: calc(var(--msg-line) / 2);
-  text-align: right;
-  white-space: normal;
-  word-break: keep-all;
 }
 .ac-msg__gutter--aside > .ac-msg__aside {
   margin-right: calc(var(--space-1) - var(--space-3));
@@ -2423,7 +2421,7 @@ html:not([data-pointer]) .ac-select__trigger:focus-visible,
 }
 .ac-menu--select {
   min-width: var(--radix-select-trigger-width);
-  max-height: min(280px, var(--radix-select-content-available-height));
+  max-height: var(--radix-select-content-available-height);
 }
 /*
  * A select's rows scroll in its viewport: the room at the ends goes inside it, so the last row keeps it once
@@ -2449,8 +2447,7 @@ html:not([data-pointer]) .ac-select__trigger:focus-visible,
 }
 .ac-menu--dropdown {
   min-width: 200px;
-  /* A dropdown shows all its actions; it scrolls only when the screen is short. */
-  max-height: min(520px, var(--radix-dropdown-menu-content-available-height, 520px));
+  max-height: var(--radix-dropdown-menu-content-available-height);
 }
 /* The right click (MenuAt): at the pointer at once, like the system's menus. */
 .ac-menu.ac-menu--at[data-state="open"] {
@@ -3326,6 +3323,16 @@ html:not([data-pointer]) .ac-tab:focus-visible {
   grid-column: 1 / -1;
   height: 6px;
 }
+/* A section's heading over its first row: whom the quotas below bind ("Todos os modelos", "Só Claude and GPT"). */
+.ac-planmeter__group {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.ac-planmeter__window:has(> .ac-planmeter__group):not(:first-child) {
+  margin-top: 6px;
+}
 .ac-planmeter__pct {
   justify-self: end;
   white-space: nowrap;
@@ -4193,10 +4200,17 @@ html:not([data-pointer]) .ac-receipt__action:focus-visible {
 /* A popover with words and controls of its own (`--menu-pad: var(--space-2)`): what touches its corners (a card, a
    field, the actions' row) sits on that room, so the menu's concentric corner holds; its words this much further in,
    14px from the edge. */
+/*
+ * A Radix layer (popover, dropdown, select list) is as tall as the window lets it on its side, never a fixed cap: it
+ * scrolls only when its content can't fit the window at all. No fallback in the var(): before Radix first places it
+ * the cap is none, so its flip measures the whole content and opens on the side with room (with a cap there, the cut
+ * card "fits" the short side and scrolls there).
+ */
 .ac-popover {
   --popover-in: 6px;
   min-width: 220px;
   max-width: 320px;
+  max-height: var(--radix-popover-content-available-height);
   gap: var(--space-1);
 }
 .ac-popover:focus {
@@ -4594,7 +4608,7 @@ html:not([data-pointer]) .ac-receipt__check:focus-visible {
   --menu-pad: var(--space-2);
   min-width: 0;
   width: 280px;
-  max-height: none;
+  max-height: var(--radix-popover-content-available-height);
   gap: var(--menu-pad);
 }
 .ac-date__head {
@@ -4869,15 +4883,11 @@ html:not([data-pointer]) .ac-token__remove:focus-visible {
 .ac-chipfield > :is(.ac-token, .ac-token__tip) ~ .ac-chipfield__input {
   padding-inline-start: 4px;
 }
-/* No search row on top: the list takes the menu's whole height. */
-.ac-chipfield__menu .ac-tz__list {
-  max-height: min(420px, var(--radix-popover-content-available-height, 420px));
-}
-
-/* "@" suggestions above the composer */
+/* "@" suggestions above the composer: all of them where the window has room, not the menu's 280. */
 .ac-suggest {
   min-width: 280px;
   max-width: min(420px, calc(100vw - 32px));
+  max-height: var(--radix-popover-content-available-height);
 }
 .ac-suggest__item {
   align-items: center;
@@ -5519,7 +5529,6 @@ html:not([data-pointer]) .ac-btn:focus-visible {
     0 6px 14px -6px rgba(0, 0, 0, 0.45);
 }
 .ac-btn--primary:hover {
-  opacity: 1;
   background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 82%, var(--bg)) 0%, var(--ink) 100%);
   filter: brightness(1.08);
   box-shadow:
@@ -6172,7 +6181,8 @@ html:not([data-pointer]) .ac-seg__item:focus-visible {
 
 /*
  * Cards: neutral, a hairline on the white page, no shadow. Every card keeps the cut corner: straight bottom-left, the rest rounded.
- * Interactive ones darken their line and lift a little.
+ * Interactive ones darken their line. Nothing a pointer rests on moves: lifted by its hover, a card slid out from under
+ * a pointer on its bottom edge, lost the hover, dropped back under it and blinked every frame.
  */
 .ac-card {
   border: 0;
@@ -6190,7 +6200,6 @@ html:not([data-pointer]) .ac-seg__item:focus-visible {
 }
 .ac-card--interactive:hover {
   box-shadow: var(--card-shadow-hover);
-  transform: translateY(-1px);
 }
 /* Head: the lead (a key with the icon, the title and an optional quiet line), the action on the right. The key (an
    `.ac-iconline` lead) stays on the title's first line when the title or the quiet line wraps; the action stays
@@ -9302,7 +9311,7 @@ html:not([data-pointer]) .ac-recur__day:focus-visible {
   --menu-pad: 6px;
   width: max(320px, var(--radix-popover-trigger-width, 320px));
   max-width: 92vw;
-  max-height: min(420px, var(--radix-popover-content-available-height, 420px));
+  max-height: var(--radix-popover-content-available-height);
   padding: 0;
   overflow: hidden;
 }
@@ -9323,7 +9332,6 @@ html:not([data-pointer]) .ac-recur__day:focus-visible {
 .ac-tz__list {
   flex: 1 1 auto;
   min-height: 0;
-  max-height: 360px;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: var(--menu-pad);
@@ -10219,14 +10227,17 @@ html:not([data-pointer]) .ac-filter__clear:focus-visible {
   --menu-pad: 6px;
   min-width: 240px;
   max-width: min(340px, 92vw);
+  max-height: var(--radix-popover-content-available-height);
   padding: 0;
   overflow: hidden;
 }
+/* The list gives way under its search row and above its foot, and scrolls in what the window leaves. */
 .ac-filter__list {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   gap: 2px;
-  max-height: 340px;
   overflow-y: auto;
   padding: var(--menu-pad);
   outline: none;

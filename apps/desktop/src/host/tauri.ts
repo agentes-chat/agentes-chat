@@ -73,7 +73,8 @@ export function createTauriHost(): Host {
     askToPair: (server, org) => invoke<boolean>("pair_ask", { server, org }),
     siteFetch: (server, method, path, body) =>
       invoke<SiteAnswer>("site_fetch", { server, method, path, body: body ?? null }),
-    welcomeMode: () => invoke<string | null>("welcome_mode_take").then((m) => (m === "add" ? "add" : null)),
+    welcomeMode: () =>
+      invoke<string | null>("welcome_mode_take").then((m) => (m === "add" || m === "owner" ? m : null)),
     addWorkspace: () => invoke<void>("welcome_add"),
     discover: () => invoke<Candidate[]>("discover"),
     // From the web view itself: every server answers `/api/instance` to any origin (it is public).
@@ -121,6 +122,7 @@ export function createTauriHost(): Host {
     backupLocalServer: () => invoke<string>("local_server_backup"),
     setLocalBackups: (nightly, copyTo) => invoke<void>("local_server_backups_set", { nightly, copyTo }),
     restoreLocalServer: (file) => invoke<void>("local_server_restore", { file }),
+    eraseLocalServer: () => invoke<string>("local_server_erase"),
     keepRunning: () => invoke<KeepRunning>("keep_running"),
     openSystemSettings: (page) => invoke<void>("open_system_settings", { page }),
     localDiagnostics: () => invoke<string>("local_server_diagnostics"),

@@ -70,6 +70,11 @@ export const skills = pgTable(
      * again. Null: read with no credentials.
      */
     sourceVia: text(),
+    /**
+     * Its link is read folder by folder (the folder's file list, then its files), not from the repository's archive,
+     * which was past the archive's cap: updating skips that download.
+     */
+    sourceByFolder: boolean().notNull().default(false),
     version: integer().notNull().default(1),
     /** Enabled for agents created later. */
     defaultForNewAgents: boolean().notNull().default(false),

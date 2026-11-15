@@ -15,6 +15,7 @@ import { creditedMessage, runCoAuthors, signatureLine, signedBody } from "../git
 import type { Judge } from "../judge";
 import { assertPublicHttpsUrl, outboundFetch, type ResolveHost } from "../net-guard";
 import { replyThreadOf } from "../runs";
+import { maskValues } from "../tool-detail";
 import { MAX_RESULT_CHARS } from "../tools/gateway";
 import type { ToolContext, ToolDefinition, ToolSource } from "../tools/types";
 import { CONNECTOR_CATALOG, type ConnectorTool, connectorScope, fillTitle } from "./catalog";
@@ -136,13 +137,60 @@ export async function mcpSessionOver(transport: Transport): Promise<McpSession> 
   };
 }
 
-export const connectOverHttp: McpConnect = (connection, headers) =>
-  mcpSessionOver(
-    new StreamableHTTPClientTransport(new URL(connection.serverUrl), {
-      requestInit: { headers },
-      fetch: tolerantMcpFetch(outboundFetch({ ownRedirects: true })),
-    }),
+/**
+ * The shortest header value masked in what a server says back. A shorter one is a setting (`1`, `v2`), not a key, and
+ * masked wherever it shows it would take "HTTP 401" with it. A key is never shorter (`connector.key_too_short`).
+ */
+const MASKED_FROM = 8;
+
+/**
+ * A session over streamable HTTP whose failures hold none of the header values it was opened with: a server may repeat
+ * what it was sent in its refusal, and that text goes to the log, the connection's last error and the agent. The
+ * error thrown is the server's own (its class and code are read), with its words changed. A tool's answer flagged as
+ * an error is a refusal in the server's words too; any other answer is left as it came.
+ */
+export const connectOverHttp: McpConnect = async (connection, headers) => {
+  const secrets = Object.entries(headers)
+    // `Authorization` is a scheme and a credential: a server names the credential alone.
+    .flatMap(([name, value]) =>
+      name.toLowerCase() === "authorization" ? [value, value.slice(value.indexOf(" ") + 1)] : [value],
+    )
+    .filter((value) => value.length >= MASKED_FROM)
+    // A JSON body writes a quote, a backslash and a tab its own way, and some encoders a slash as `\/`.
+    .flatMap((value) => {
+      const json = JSON.stringify(value).slice(1, -1);
+      return [value, json, json.replaceAll("/", "\\/")];
+    });
+  const clean = (text: string) => maskValues(text, secrets);
+  const masked = <T>(work: Promise<T>) =>
+    work.catch((error: unknown) => {
+      if (error instanceof Error) {
+        // Written only where a value was: an abort's message (a DOMException's) can't be written at all.
+        for (const part of ["message", "stack"] as const) {
+          const text = error[part] ?? "";
+          const safe = clean(text);
+          if (safe !== text) error[part] = safe;
+        }
+      }
+      throw error;
+    });
+  const session = await masked(
+    mcpSessionOver(
+      new StreamableHTTPClientTransport(new URL(connection.serverUrl), {
+        requestInit: { headers },
+        fetch: tolerantMcpFetch(outboundFetch({ ownRedirects: true })),
+      }),
+    ),
   );
+  return {
+    ...session,
+    listTools: () => masked(session.listTools()),
+    callTool: async (...call) => {
+      const result = await masked(session.callTool(...call));
+      return result.isError ? { ...result, content: clean(result.content) } : result;
+    },
+  };
+};
 
 const JSONRPC_MEMBERS = ["jsonrpc", "id", "method", "params", "result", "error"];
 

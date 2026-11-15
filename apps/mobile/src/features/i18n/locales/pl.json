@@ -930,6 +930,10 @@
     },
     "doneToast": "Gotowe",
     "undo": "Cofnij",
+    "doneAllToast_one": "Przeniesiono {{count}} do Zakończonych",
+    "doneAllToast_few": "Przeniesiono {{count}} do Zakończonych",
+    "doneAllToast_many": "Przeniesiono {{count}} do Zakończonych",
+    "doneAllToast_other": "Przeniesiono {{count}} do Zakończonych",
     "day": {
       "today": "Dzisiaj",
       "yesterday": "Wczoraj",
@@ -1347,6 +1351,7 @@
     "blocked": "Jesteś jedynym właścicielem: {{names}}. Na stronie, w sekcji Osoby, nadaj komuś rolę właściciela i wróć tutaj.",
     "addPasswordFirst": "Najpierw dodaj hasło do konta na stronie, a potem wpisz je tutaj.",
     "addPasswordWeb": "Dodaj hasło na stronie",
+    "onThisComputer": "Usuń to w aplikacji agentes.chat na komputerze, na którym działa ten serwer.",
     "otherAccount": "Zalogowano się na inne konto. Nic nie zostało usunięte.",
     "hold": "Przytrzymaj, aby usunąć"
   },
@@ -2208,6 +2213,7 @@
       "waitingFor": "{{names}} czeka na urządzenie {{device}} dla {{person}}",
       "tool_request": "{{names}} prosi Cię o włączenie: {{tool}} na {{device}}",
       "cli_request": "{{names}} prosi o zainstalowanie {{tool}} na Twoim {{device}}",
+      "folder_request": "{{names}} prosi Cię o folder {{path}} na {{device}}",
       "allowOnce": "Zezwól raz",
       "always": "Zawsze zezwalaj: {{name}}",
       "no": "Nie",

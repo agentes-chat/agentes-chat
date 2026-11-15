@@ -19,9 +19,9 @@ export const showsActivity = (org: Pick<OrgSummary, "showActivity"> | null | und
 export const toolLabel = (name: string) => name.replace(/[_-]+/g, " ").trim();
 
 /** A tool in "Usou a ferramenta …": the catalog's words, else its own name in words, without the app it starts with. */
-function toolWords(t: TFunction, tool: string) {
+function toolWords(t: TFunction, tool: string, locale?: string) {
   const worded = catalogLabel(t, tool);
-  return worded ? lowerFirst(worded) : toolLabel(toolKey(tool).key || tool);
+  return worded ? lowerFirst(worded, locale) : toolLabel(toolKey(tool).key || tool);
 }
 
 /** One thing the agent did (a tool call), for the work summary: what it did, in which service. */
@@ -341,8 +341,8 @@ export function workHeader(t: TFunction, w: { steps: number; connectors: string[
 }
 
 /** "Consultou o Himetrica", "Atualizou o plano", and for a tool with no words of its own "Usou a ferramenta enviar e-mail". */
-export function stepLabel(t: TFunction, s: Pick<WorkItem, "kind" | "app" | "tool">) {
-  return t(`chat.work.step.${s.kind}`, { app: appLabel(s), tool: toolWords(t, s.tool) });
+export function stepLabel(t: TFunction, s: Pick<WorkItem, "kind" | "app" | "tool">, locale?: string) {
+  return t(`chat.work.step.${s.kind}`, { app: appLabel(s), tool: toolWords(t, s.tool, locale) });
 }
 
 /**
@@ -362,10 +362,11 @@ export const shownSteps = <T extends { tool: string }>(steps: readonly T[]): T[]
 export function stepPhrase(
   t: TFunction,
   step: { tool: string; detail?: string | null; outcome?: "refused" | "waiting" },
+  locale?: string,
 ) {
   const a = toolActivity(step.tool, null, step.detail);
   const state = step.outcome === "refused" ? "fail" : step.outcome === "waiting" ? "stop" : "done";
-  const label = toolPhrase(t, { ...a, tool: step.tool, state });
+  const label = toolPhrase(t, { ...a, tool: step.tool, state }, locale);
   const detail = step.detail?.trim();
   return detail && detail !== a.app ? `${label} · ${detail}` : label;
 }
@@ -384,31 +385,38 @@ export function foldSteps<T>(steps: T[], text: (step: T) => string): { step: T; 
   return lines;
 }
 
+/** Who or what stopped a run, as its stopped reply's `meta.canceled` keeps it (the engine's `stopCanceled`). */
+export interface ReplyStop {
+  byUserId: string | null;
+  /** The agent that stopped it at that person's word (the right hand). */
+  byAgentId: string | null;
+  /** Nobody stopped it: its cause (`run.agent_archived`…), in the person's words through `runErrorText`. */
+  code: string | null;
+}
+
+/** The stop of a reply's `meta.canceled` (`true` on older replies, else an object). */
+export function replyStopOf(canceled: unknown): ReplyStop {
+  const c = typeof canceled === "object" && canceled ? (canceled as Record<string, unknown>) : {};
+  const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+  return { byUserId: str(c.byUserId), byAgentId: str(c.byAgentId), code: str(c.code) };
+}
+
 /**
- * A message of a stopped run (`meta.canceled`, `true` or `{ byUserId }`) ends
- * with the server's "_Interrompido por Walter._": that line leaves the text,
- * and the note is written on the client, in the UI language, from the meta.
- * `note` is the server's line (only a fallback when the meta has no person).
+ * A message of a stopped run (`meta.canceled`, `true` or an object) ends with the server's English "_Stopped by
+ * Walter._": that line leaves the text, and the apps word the stop in the person's language from the meta.
  */
-export function splitCanceled(body: string, meta: Record<string, unknown> | undefined) {
+export function splitCanceled(
+  body: string,
+  meta: Record<string, unknown> | undefined,
+): ReplyStop & { body: string; canceled: boolean } {
   const canceled = meta?.canceled;
-  if (!canceled) return { body, canceled: false, byUserId: null as string | null, note: null as string | null };
-  const byUserId =
-    typeof canceled === "object" && canceled && typeof (canceled as { byUserId?: unknown }).byUserId === "string"
-      ? ((canceled as { byUserId: string }).byUserId as string)
-      : null;
+  const stop = replyStopOf(canceled);
+  if (!canceled) return { body, canceled: false, ...stop };
   // The server also sends what the agent wrote, without the note.
-  const said = typeof canceled === "object" && canceled ? (canceled as { text?: unknown }).text : undefined;
+  const said = typeof canceled === "object" ? (canceled as { text?: unknown }).text : undefined;
+  if (typeof said === "string") return { body: said, canceled: true, ...stop };
   const match = /\n*\s*_([^_\n]+)_\s*$/.exec(body);
-  if (typeof said === "string")
-    return { body: said, canceled: true, byUserId, note: match?.[1]?.trim().replace(/\.$/, "") ?? null };
-  if (!match) return { body, canceled: true, byUserId, note: null };
-  return {
-    body: body.slice(0, match.index).trimEnd(),
-    canceled: true,
-    byUserId,
-    note: (match[1] ?? "").trim().replace(/\.$/, ""),
-  };
+  return { body: match ? body.slice(0, match.index).trimEnd() : body, canceled: true, ...stop };
 }
 
 /**
@@ -746,14 +754,14 @@ export const toolNow = (items: ToolItem[]) => linesOf(items).at(-1) ?? null;
  * consultando o GitHub" when it failed, "Consultando o GitHub" (no dots) when the run stopped during it.
  * A command the permission check refused says so: "Recusado: Rerun the tests".
  */
-export function toolPhrase(t: TFunction, l: Pick<ToolLine, "kind" | "app" | "tool" | "state">) {
+export function toolPhrase(t: TFunction, l: Pick<ToolLine, "kind" | "app" | "tool" | "state">, locale?: string) {
   const verb = activityVerb(t, { kind: l.kind, app: l.app });
   if (l.state === "run") return `${capitalize(verb)}…`;
   if (l.state === "stop") return capitalize(verb);
   if (l.state === "fail" && l.kind === "runningCommand") return t("chat.work.refused", { app: appLabel(l) });
   if (l.state === "fail" && l.kind === "runningCommandAny") return t("chat.work.refusedAny");
   if (l.state === "fail") return t("chat.work.erred", { activity: verb });
-  return t(`chat.work.step.${l.kind}`, { app: appLabel(l), tool: toolWords(t, l.tool) });
+  return t(`chat.work.step.${l.kind}`, { app: appLabel(l), tool: toolWords(t, l.tool, locale) });
 }
 
 /** A turn quicker than this shows nothing new: its step line says the agent's own words only past it. */

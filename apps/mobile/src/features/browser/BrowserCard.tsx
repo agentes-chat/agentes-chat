@@ -462,7 +462,14 @@ export function BrowserCard({
               {sky ? (
                 <Sky color={color} surface="raised" depth={0.95} fade={0} style={StyleSheet.absoluteFill} />
               ) : null}
-              {live.frame ? <FrameView frame={live.frame} enabled={mine} onInput={live.sendInput} /> : null}
+              {live.frame ? (
+                <FrameView
+                  frame={live.frame}
+                  enabled={mine}
+                  onInput={live.sendInput}
+                  cursor={{ agentId, name, color, pointer: controller ? null : live.pointer }}
+                />
+              ) : null}
               {live.frame?.metadata.emulated ? (
                 <View style={[styles.emu, raised]}>
                   <Text variant="caption" tone="ink" style={styles.semibold}>

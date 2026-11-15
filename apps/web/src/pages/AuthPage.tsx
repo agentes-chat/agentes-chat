@@ -89,6 +89,13 @@ const STEP_ACTIONS: Partial<Record<Step, HumanAction>> = {
 const REDEEM_EVERY_MS = 2000;
 const REDEEM_FOR_MS = 10 * 60_000;
 
+/**
+ * Continue on this Mac refused for a reason the page can name (`sign_in_window` in the desktop app): the server's
+ * owner deleted their account, or no account is left and the app opened its own window to make the new owner.
+ */
+const ownerRefusal = (e: unknown) =>
+  e === "owner_gone" ? "auth.desktopOwner.gone" : e === "owner_none" ? "auth.desktopOwner.none" : undefined;
+
 /** Help under a new password, live: what's missing, or "Senha ok." */
 export function passwordHelp(t: TFunction, password: string) {
   const state = passwordState(password);
@@ -207,6 +214,8 @@ export function AuthPage({
   // In the app, until it said whether this is its own server: the provider buttons wait, never shown then taken away.
   const [placeKnown, setPlaceKnown] = useState(!desktop);
   const [ownerPending, setOwnerPending] = useState(false);
+  // The server's owner deleted their account: Continue on this Mac signs nobody in, so it is offered no more.
+  const [ownerGone, setOwnerGone] = useState(false);
   // The server the app runs on this computer: its owner signs in with Continue on this Mac, and a provider's sign-in
   // needs an address registered with that provider, which a computer's own server doesn't have.
   const offeredProviders = local || !placeKnown ? [] : allProviders;
@@ -224,8 +233,9 @@ export function AuthPage({
     try {
       // The app moves this window to the sign-in it made; nothing to do here after.
       await thisMac.signIn();
-    } catch {
-      setError(t("common.unknownError"));
+    } catch (e) {
+      setError(t(ownerRefusal(e) ?? "common.unknownError"));
+      setOwnerGone(e === "owner_gone");
       setOwnerPending(false);
     }
   };
@@ -239,8 +249,13 @@ export function AuthPage({
     ownerTried.current = true;
     setOwnerPending(true);
     // Refused (too soon after another, the server not up yet): the screen stays, its button one click away.
-    void thisMac.signIn().catch(() => setOwnerPending(false));
-  }, [ownerAgain]);
+    void thisMac.signIn().catch((e) => {
+      setOwnerPending(false);
+      const why = ownerRefusal(e);
+      if (why) setError(t(why));
+      setOwnerGone(e === "owner_gone");
+    });
+  }, [ownerAgain, t]);
 
   // "Add account": whoever is signed in stays so, one click back.
   const stays = useQuery({ ...meQuery(api), enabled: adding }).data ?? null;
@@ -256,6 +271,8 @@ export function AuthPage({
   // address, and on a server that emails, a new password is a click away. Never a new confirmation: that would keep
   // the password of whoever made the account (ADR 0006).
   const providerRefused = refusal !== null && error === refusal;
+  // Nor does Continue on this Mac's refusal: no address typed here makes its owner sign in.
+  const ownerRefused = error === t("auth.desktopOwner.gone") || error === t("auth.desktopOwner.none");
   const offerReset = providerRefused && refused === ACCOUNT_NOT_LINKED && canReset && isEmail(email);
 
   const fail = (e: unknown) =>
@@ -586,7 +603,7 @@ export function AuthPage({
             <Locked when={pending || ownerPending}>
               {who}
 
-              {local && (step === "email" || step === "noPassword") && (
+              {local && !ownerGone && (step === "email" || step === "noPassword") && (
                 <>
                   <Button
                     type="button"
@@ -618,7 +635,7 @@ export function AuthPage({
                     placeholder={t("auth.flow.emailPlaceholder")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    invalid={error !== null && !providerRefused}
+                    invalid={error !== null && !providerRefused && !ownerRefused}
                     autoFocus
                   />
                   {fix && (
@@ -683,7 +700,7 @@ export function AuthPage({
                 <div className="auth-last-host">
                   <Button
                     type="submit"
-                    variant={local && step === "email" ? "default" : "primary"}
+                    variant={local && !ownerGone && step === "email" ? "default" : "primary"}
                     size="lg"
                     block
                     kbd={["↵"]}

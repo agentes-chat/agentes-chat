@@ -20,11 +20,16 @@ import {
   getRun,
   INVITE_CHOICES_MAX,
   INVITE_NOTE_MAX,
+  ISSUES_DONE,
   ISSUES_GROUPS,
   ISSUES_LAYOUTS,
   ISSUES_SORTS,
   ISSUES_VIEW_ASSIGNEE,
+  ISSUES_VIEW_GROUP,
+  ISSUES_VIEW_LABEL_MAX,
   ISSUES_VIEW_MAX_ASSIGNEES,
+  ISSUES_VIEW_MAX_COLLAPSED,
+  ISSUES_VIEW_MAX_LABELS,
   ISSUES_VIEW_PRIORITIES,
   inviteMany,
   listAgentChannels,
@@ -71,6 +76,7 @@ import {
   setShowActivity,
   setStartPage,
   setStopReason,
+  setWorkspaceApprovalsLevel,
   sidebarPlaceAllowed,
   speakerOf,
   taskManager,
@@ -99,6 +105,7 @@ import { credentialOut } from "./credential-view";
 import {
   AgentAppearance,
   AgentAudience,
+  ApprovalsLevel,
   CanceledReturn,
   ChatPrefs,
   Credential,
@@ -144,11 +151,16 @@ const IssuesView = z
     fields: IssueCardFields,
     assignees: z.array(z.string().regex(ISSUES_VIEW_ASSIGNEE)).max(ISSUES_VIEW_MAX_ASSIGNEES),
     priorities: z.array(z.enum(ISSUES_VIEW_PRIORITIES)).max(ISSUES_VIEW_PRIORITIES.length),
+    // Absent from an app of before them: each at its default.
+    labels: z.array(z.string().trim().min(1).max(ISSUES_VIEW_LABEL_MAX)).max(ISSUES_VIEW_MAX_LABELS).default([]),
+    done: z.enum(ISSUES_DONE).default("all"),
     showCanceled: z.boolean(),
+    hideEmpty: z.boolean().default(false),
+    collapsed: z.array(z.string().regex(ISSUES_VIEW_GROUP)).max(ISSUES_VIEW_MAX_COLLAPSED).default([]),
   })
   .openapi("IssuesView", {
     description:
-      "How you look at Tarefas in one workspace: `board` or `list`, grouped by `stage`, `assignee` or `priority`, in `manual` order (the board's) or by `priority` or `due` date, what the cards show (`fields`), the assignee filter (`agent:<id>`, `person:<id>`, `none`) and the priority filter (empty: every task), and whether canceled tasks show.",
+      "How you look at Tarefas in one workspace: `board` or `list`, grouped by `stage`, `assignee` or `priority`, in `manual` order (the board's), by `priority`, by `due` date or by the last change (`updated`), what the cards show (`fields`), the assignee filter (`agent:<id>`, `person:<id>`, `none`), the priority filter and the label filter (empty: every task), which finished tasks show (`all`, `recent`: changed in the last 7 days, `hidden`), whether canceled tasks show, whether groups with no task show (`hideEmpty`), and the groups folded shut (`collapsed`: column ids, assignee keys or priorities).",
   });
 
 const Settings = z
@@ -205,6 +217,10 @@ const Settings = z
     }),
     welcomePeople: z.boolean().openapi({
       description: "The right hand greets each person who joins the workspace, once. On by default.",
+    }),
+    approvalsLevel: ApprovalsLevel.openapi({
+      description:
+        "What every agent without its own choice asks before acting (ADR 0173). `risky` by default. Set with `PUT …/approvals-level`.",
     }),
     voiceAvailable: z.boolean().openapi({
       description: "Read only: this server has a speech engine now, from its environment or from its owner's Settings.",
@@ -526,7 +542,13 @@ const EndedTask = z
     routine: Routine,
     startedAt: z.string().nullable(),
     finishedAt: z.string(),
-    stoppedBy: z.object({ userId: z.string(), name: z.string() }).nullable(),
+    stoppedBy: z
+      .object({
+        userId: z.string(),
+        name: z.string(),
+        agentId: z.string().optional().openapi({ description: "The agent that stopped it at their word." }),
+      })
+      .nullable(),
   })
   .openapi("EndedTask");
 
@@ -653,6 +675,45 @@ export function managementRoutes(deps: AppDeps) {
       const seesCost = await canViewCost(db, actor, orgId);
       // Only who configures the workspace gets here (`updateOrgSettings`).
       return c.json({ ...settingsFor(settings, seesCost, true), ...(await mediaAvailable()) }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/approvals-level",
+      tags: ["Organization"],
+      security,
+      summary: "Set how much the workspace's agents ask before acting (who manages agents)",
+      description:
+        "Every agent that follows the workspace takes the level at once; an agent with its own choice keeps it unless `everyAgent` is true, which clears every agent's own choice.",
+      request: {
+        params: OrgParams,
+        body: body(
+          z.object({
+            level: ApprovalsLevel,
+            everyAgent: z.boolean().optional().openapi({ description: "Also clear every agent's own choice." }),
+          }),
+        ),
+      },
+      responses: {
+        200: json(
+          z.object({
+            level: ApprovalsLevel,
+            ownAgents: z.number().openapi({ description: "Agents that keep their own choice." }),
+          }),
+        ),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const { level, everyAgent } = c.req.valid("json");
+      const out = await setWorkspaceApprovalsLevel(db, c.get("user").id, orgId, level, {
+        everyAgent,
+        pubsub: adapters.pubsub,
+      });
+      return c.json(out, 200);
     },
   );
 

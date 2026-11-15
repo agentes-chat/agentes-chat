@@ -35,13 +35,15 @@ export function DeviceHeadline({ n, dir }: { n: AppNotification; dir: Dir }) {
   const values =
     d.kind === "device.join_request"
       ? { name: d.join?.name ?? d.device, org: org.name }
-      : d.kind === "device.tool_request" || d.kind === "device.cli_request"
-        ? {
-            who: (d.askerId ? dir.memberById.get(d.askerId)?.name : undefined) ?? t("channel.unknownPerson"),
-            tool: d.tool ? toolWords(t, d.tool) : "",
-            deviceName: d.device,
-          }
-        : { who: whoFor(dir, d, tt), deviceName: d.device };
+      : d.kind === "device.folder_request"
+        ? { who: whoFor(dir, d, tt), path: d.path ?? "", deviceName: d.device }
+        : d.kind === "device.tool_request" || d.kind === "device.cli_request"
+          ? {
+              who: (d.askerId ? dir.memberById.get(d.askerId)?.name : undefined) ?? t("channel.unknownPerson"),
+              tool: d.tool ? toolWords(t, d.tool) : "",
+              deviceName: d.device,
+            }
+          : { who: whoFor(dir, d, tt), deviceName: d.device };
   const key = {
     "device.join_request": "devices.notice.join",
     "device.in_use": "devices.notice.inUse",
@@ -49,6 +51,7 @@ export function DeviceHeadline({ n, dir }: { n: AppNotification; dir: Dir }) {
     "device.waiting": "devices.notice.waiting",
     "device.tool_request": "devices.notice.toolRequest",
     "device.cli_request": "devices.notice.cliRequest",
+    "device.folder_request": "devices.notice.folderRequest",
   }[d.kind];
   return <Trans i18nKey={key as never} values={values} components={{ b: <b /> }} {...TYPED_VALUES} />;
 }

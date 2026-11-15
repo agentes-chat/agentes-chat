@@ -1,6 +1,16 @@
 import { afterEach, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync, writeSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  utimesSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import { createConnection } from "node:net";
 import path from "node:path";
 import type { AgentScope, MachineRequest, RunnerAccess } from "@agenteschat/adapters/machine-protocol";
@@ -267,7 +277,7 @@ test("a runner running as root starts a desktop only through a launcher that run
   expect(unlaunched.info().available).toBe(true);
   expect(await errorCode(() => unlaunched.ensure(dev))).toBe("desktop_unavailable");
   expect(t.fake.procs).toHaveLength(0);
-  const prefix = ["/usr/sbin/runuser", "-u", "ag-01a142cb", "--"];
+  const prefix = ["/usr/bin/setpriv", "--reuid=ag-01a142cb", "--regid=ag-01a142cb", "--init-groups", "--"];
   const user = async (agent: AgentScope) => ({ ...(await t.opts.user(agent)), prefix });
   const launched = new DesktopSessions({ ...t.opts, system: root, agentUsers: true, user });
   await launched.ensure(dev);
@@ -629,7 +639,7 @@ test("each start's line says where its time went; its session's programs follow 
   );
   const [launched] = t.fake.of("dbus-launch");
   if (!launched) throw new Error("not started");
-  // dbus-launch became the session (system mode: runuser's child); another desktop's programs aren't its own.
+  // dbus-launch became the session (system mode: the launch's child); another desktop's programs aren't its own.
   t.fake.stats.push(
     { pid: launched.pid, ppid: 1, name: "xfce4-session", start: 5000, cpu: 0.2 },
     { pid: 9001, ppid: launched.pid, name: "xfwm4", start: 5000.31, cpu: 0.4 },
@@ -688,7 +698,7 @@ test("system mode: every process as the agent, and the password file root's (rea
   dirs.push(root, runDir);
   const home = path.join(root, "home", "ag-01a142cb");
   const gid = process.getgid?.() ?? 0;
-  const prefix = ["/usr/sbin/runuser", "-u", "ag-01a142cb", "--"];
+  const prefix = ["/usr/bin/setpriv", "--reuid=ag-01a142cb", "--regid=ag-01a142cb", "--init-groups", "--"];
   const user: DesktopUser = {
     prefix,
     env: {
@@ -750,7 +760,14 @@ test("system mode's desktop user: the agent's launcher and home; the cookie and 
     // Its X server's lock is in its own /tmp, where root looks for it.
     tmp: "/run/agentes-runner-tmp/21001/tmp",
   });
-  expect(launcher.prefix.at(-2)).toBe("ag-01a142cb");
+  // The last step becomes the agent: its own user, never through a PAM session (setpriv, #253).
+  expect(launcher.prefix.slice(-5)).toEqual([
+    "/usr/bin/setpriv",
+    "--reuid=ag-01a142cb",
+    "--regid=ag-01a142cb",
+    "--init-groups",
+    "--",
+  ]);
   expect(launcher.env.HOME).toBe("/home/ag-01a142cb");
 });
 
@@ -899,7 +916,7 @@ test("Terminals open when the computer restarted open again at the desktop's nex
   expect(env).toMatchObject({
     DISPLAY: `:${display}`,
     DBUS_SESSION_BUS_ADDRESS: "unix:path=/tmp/dbus-0f1e,guid=0f1e",
-    [TERMINAL_NOTE_ENV]: terminalNote(false),
+    [TERMINAL_NOTE_ENV]: terminalNote("restarted"),
   });
   expect(env).not.toHaveProperty("LD_PRELOAD");
   // Once: later sweeps keep what is open now and open nothing more; a desktop stopped on purpose forgets it.
@@ -923,6 +940,11 @@ function keeperList(home: string, list: unknown) {
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, JSON.stringify(list));
   return file;
+}
+
+/** Each agent's keeper listed no app window: what a park needs to know it loses nothing. */
+async function keptNothing(t: ReturnType<typeof setup>, ...agents: AgentScope[]) {
+  for (const a of agents) keeperList((await t.opts.user(a)).home, { v: 1, browser: false, apps: [] });
 }
 
 test("after a move the desktop opens again its browser and its other apps as the keeper listed them, each as the agent in its folder, and its Terminals say the computer moved", async () => {
@@ -989,8 +1011,8 @@ test("after a move the desktop opens again its browser and its other apps as the
   await next.sweep();
   expect(opened).toEqual([dev.id]);
   const terminal = t.fake.procs.find((p) => p.argv.some((a) => path.basename(a) === "xfce4-terminal"));
-  expect(terminal?.opts.env).toMatchObject({ [TERMINAL_NOTE_ENV]: terminalNote(true) });
-  expect(terminalNote(true)).toBe("The computer moved to another server: this is a new shell in the same folder.");
+  expect(terminal?.opts.env).toMatchObject({ [TERMINAL_NOTE_ENV]: terminalNote("moved") });
+  expect(terminalNote("moved")).toBe("The computer moved to another server: this is a new shell in the same folder.");
   const apps = t.fake.of("agentes-app");
   expect(apps.map((p) => p.argv.slice(4))).toEqual([
     [notes, "mousepad", "todo.txt"],
@@ -1254,7 +1276,7 @@ test("a runner running as root refreshes a running desktop only through the agen
   unlaunched.close();
 
   // System mode: as the agent, through its launcher.
-  const prefix = ["/usr/sbin/runuser", "-u", "ag-01a142cb", "--"];
+  const prefix = ["/usr/bin/setpriv", "--reuid=ag-01a142cb", "--regid=ag-01a142cb", "--init-groups", "--"];
   const user = async (agent: AgentScope) => ({ ...(await t.opts.user(agent)), prefix });
   const launched = new DesktopSessions({ ...t.opts, system: root, agentUsers: true, user });
   launched.restore();
@@ -1395,6 +1417,7 @@ test("parking: short of memory, the least recently used desktop untouched for an
   // Each desktop takes 0.4 GiB of what this computer has; 1.5 GiB must stay free when one more starts.
   const running = () => t.fake.of("Xtigervnc").filter((p) => p.alive).length;
   const t = setup({ memAvailable: () => 3.4 * GiB - running() * 0.4 * GiB, inUse: (id) => id === busy.id });
+  await keptNothing(t, a, b, watched, busy, recent, c, d, e);
   await t.desktops.ensure(a);
   t.clock.now += 60_000;
   for (const next of [b, watched, busy]) await t.desktops.ensure(next);
@@ -1431,6 +1454,7 @@ test("parking: with every display taken, the least recently used desktop untouch
     t.fake.others.set(9000 + slot, ["/usr/lib/xorg/Xorg", `:${20 + slot}`]);
   }
   const qa: AgentScope = { id: "77aa0000-0000-7000-8000-000000000000", handle: "qa" };
+  await keptNothing(t, dev, ops, qa);
   await t.desktops.ensure(dev);
   t.clock.now += 60_000;
   await t.desktops.ensure(ops);
@@ -1450,6 +1474,7 @@ test("the agent's Chrome in use on its desktop touches it: parked an hour after 
     memAvailable: () => (t.desktops.status(dev).running ? GiB : 4 * GiB),
     inUse: (id) => id === dev.id && chromeInUse,
   });
+  await keptNothing(t, dev);
   await t.desktops.ensure(dev);
   // Hours of browsing on it, the sweep once a minute; then its Chrome closes.
   for (let minute = 0; minute < 180; minute++) {
@@ -1462,6 +1487,116 @@ test("the agent's Chrome in use on its desktop touches it: parked an hour after 
   t.clock.now += PARK_AFTER_MS;
   expect((await t.desktops.ensure(ops)).started).toBe(true);
   expect(t.desktops.status(dev).running).toBe(false);
+  t.desktops.close();
+});
+
+test("its server short of memory: every desktop untouched for an hour, unwatched and unused, is parked at once, and opens again as it was", async () => {
+  const opened: string[] = [];
+  const t = setup({ inUse: (id) => id === ops.id, openBrowser: async (agent) => void opened.push(agent.id) });
+  const qa: AgentScope = { id: "77aa0000-0000-7000-8000-000000000000", handle: "qa" };
+  const { display } = await t.desktops.ensure(dev);
+  await t.desktops.ensure(ops);
+  await t.desktops.ensure(qa);
+  const site = path.join(t.folders, "dev", "site");
+  t.fake.stats.push(
+    { pid: 7000, ppid: 1, name: "xfce4-terminal", start: 50, cpu: 1 },
+    { pid: 7001, ppid: 7000, name: "bash", start: 51, cpu: 0 },
+  );
+  t.fake.envs.set(7000, { DISPLAY: `:${display}` });
+  t.fake.cwds.set(7001, site);
+  keeperList((await t.opts.user(dev)).home, { v: 1, browser: true, apps: [] });
+  t.clock.now += 2 * PARK_AFTER_MS;
+  // A person on qa's screen keeps it; ops's agent uses its Chrome there.
+  const release = t.desktops.hold(qa.id);
+  const runs = () => [dev, ops, qa].map((a) => t.desktops.status(a).running);
+  expect(await t.desktops.parkIdle()).toBe(1);
+  expect(runs()).toEqual([false, true, true]);
+  expect(t.logs).toContainEqual(
+    "the desktop of dev was parked: its server is short of memory, nobody used it for an hour",
+  );
+  // Asked again with nothing left to park: nothing happens.
+  expect(await t.desktops.parkIdle()).toBe(0);
+  release?.();
+  // Its viewer gone, qa's desktop was just watched: an hour must pass again.
+  expect(await t.desktops.parkIdle()).toBe(0);
+
+  // Asked for again, dev's desktop opens what was open on it, saying why.
+  t.fake.stats.length = 0;
+  t.fake.files.add(site);
+  await t.desktops.ensure(dev);
+  const session = t.fake.of("dbus-launch").at(-1);
+  if (!session) throw new Error("no session");
+  t.fake.stats.push(
+    { pid: session.pid, ppid: 1, name: "dbus-launch", start: 99, cpu: 0 },
+    { pid: 9000, ppid: session.pid, name: "xfce4-session", start: 100, cpu: 1 },
+  );
+  t.clock.now += 15_000;
+  await t.desktops.sweep();
+  expect(opened).toEqual([dev.id]);
+  const terminal = t.fake.procs.find((p) => p.argv.some((a) => path.basename(a) === "xfce4-terminal"));
+  expect(terminal?.argv).toEqual(["/usr/bin/xfce4-terminal", "--disable-server", `--working-directory=${site}`]);
+  expect(terminal?.opts.env).toMatchObject({ [TERMINAL_NOTE_ENV]: terminalNote("parked") });
+  expect(terminalNote("parked")).toBe(
+    "This desktop was put to rest while nobody used it: this is a new shell in the same folder.",
+  );
+  expect(t.logs).toContainEqual(
+    "the desktop of dev opened again after its park: 1 terminals, 0 other apps, its browser",
+  );
+  t.desktops.close();
+});
+
+test("short of memory, a desktop is never parked while a command runs in its Terminal or an app other than Files is open", async () => {
+  const t = setup();
+  const { display } = await t.desktops.ensure(dev);
+  await keptNothing(t, dev);
+  t.fake.stats.push(
+    { pid: 7000, ppid: 1, name: "xfce4-terminal", start: 50, cpu: 1 },
+    { pid: 7001, ppid: 7000, name: "bash", start: 51, cpu: 0 },
+    { pid: 7002, ppid: 7001, name: "node", start: 52, cpu: 9 },
+  );
+  t.fake.envs.set(7000, { DISPLAY: `:${display}` });
+  t.clock.now += 2 * PARK_AFTER_MS;
+  // A dev server left running: parking would end it and lose its output.
+  expect(await t.desktops.parkIdle()).toBe(0);
+  expect(t.desktops.status(dev).running).toBe(true);
+  // Done, its shell idle, but an editor is open: what it hasn't saved would be lost.
+  t.fake.stats.pop();
+  const home = (await t.opts.user(dev)).home;
+  keeperList(home, { v: 1, browser: false, apps: [{ argv: ["mousepad", "notes.txt"], cwd: home }] });
+  expect(await t.desktops.parkIdle()).toBe(0);
+  // Only a Files window: nothing to lose, so it is parked.
+  keeperList(home, { v: 1, browser: false, apps: [{ argv: ["thunar", home], cwd: home }] });
+  expect(await t.desktops.parkIdle()).toBe(1);
+  expect(t.desktops.status(dev).running).toBe(false);
+  t.desktops.close();
+});
+
+test("short of memory, a desktop whose apps the keeper can't vouch for, or whose Terminal runs a program, is never parked", async () => {
+  const t = setup();
+  const { display } = await t.desktops.ensure(dev);
+  const home = (await t.opts.user(dev)).home;
+  t.clock.now += 2 * PARK_AFTER_MS;
+  // No keeper (python3-xlib missing, or its autostart never written): its windows are unknown.
+  expect(await t.desktops.parkIdle()).toBe(0);
+  // A list from before this session started.
+  const file = keeperList(home, { v: 1, browser: false, apps: [] });
+  utimesSync(file, 1, 1);
+  expect(await t.desktops.parkIdle()).toBe(0);
+  // A window the keeper couldn't list (no pid, another pid space, a command line over the cap).
+  keeperList(home, { v: 1, browser: false, apps: [], unkept: true });
+  expect(await t.desktops.parkIdle()).toBe(0);
+  // A Terminal started on an editor: the editor is the Terminal's child, with no child of its own.
+  keeperList(home, { v: 1, browser: false, apps: [] });
+  t.fake.stats.push(
+    { pid: 7000, ppid: 1, name: "xfce4-terminal", start: 50, cpu: 1 },
+    { pid: 7001, ppid: 7000, name: "vim", start: 51, cpu: 0 },
+  );
+  t.fake.envs.set(7000, { DISPLAY: `:${display}` });
+  expect(await t.desktops.parkIdle()).toBe(0);
+  expect(t.desktops.status(dev).running).toBe(true);
+  // Its shell back at the prompt: parked.
+  t.fake.stats[t.fake.stats.length - 1] = { pid: 7001, ppid: 7000, name: "bash", start: 51, cpu: 0 };
+  expect(await t.desktops.parkIdle()).toBe(1);
   t.desktops.close();
 });
 

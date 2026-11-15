@@ -1,12 +1,12 @@
 /**
  * The files of the icons a person makes on their phone (ADR 0179): `node made-files.mjs <dir>`. They are never
- * committed (336 icons): the phone's plugin (apps/mobile/plugins/with-app-icons.js) runs this when the app is built
+ * committed (496 icons): the phone's plugin (apps/mobile/plugins/with-app-icons.js) runs this when the app is built
  * and keeps the result while these scripts stay the same.
  *
  * - <id>/ios.png: the 1024 icon (one look; a made icon has no dark or tinted version).
  * - <id>/android-foreground.png (432) and <id>/android-legacy.png (192, Android before 8).
  * - sky-<sky>/android-background.png and mono-<look>/android-monochrome.png (432): shared by every icon of that sky
- *   and of that face or accessory.
+ *   and of that face or accessory. The leaning agent's are apart: sky-<sky>-peek and mono-<face>-peek.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -17,6 +17,7 @@ import {
   MADE_COLORS,
   MADE_FACES,
   MADE_LOOKS,
+  MADE_POSES,
   MADE_SKIES,
   madeIcons,
   madeId,
@@ -55,7 +56,7 @@ function cut(img, shape) {
 
 /**
  * An icon is its sky, its body and its face or accessory, one over the other, and each of those is the same in many
- * icons: every part is drawn once (40 of them) and the 336 icons are put together from the pictures.
+ * icons: every part is drawn once and the 496 icons are put together from the pictures.
  */
 export function writeMadeIcons(dir) {
   const write = (path, data) => {
@@ -73,7 +74,7 @@ export function writeMadeIcons(dir) {
   const part = (icon, which, android) => {
     const wears = !MADE_FACES.includes(icon.look);
     const key = which === "back" ? icon.sky : which === "body" ? `${icon.color}|${wears}` : icon.look;
-    return once(`${which}|${android}|${key}`, () => {
+    return once(`${which}|${android}|${icon.pose}|${key}`, () => {
       const scene = madeScene(icon);
       const layers =
         which === "back" ? backLayers(scene) : scene.filter((l) => (which === "body" ? l.part === "agent" : isFace(l)));
@@ -90,14 +91,20 @@ export function writeMadeIcons(dir) {
   }
   const [color] = MADE_COLORS;
   const [look] = MADE_LOOKS;
-  for (const sky of MADE_SKIES)
-    write(`sky-${sky}/android-background.png`, png(part({ sky, color, look }, "back", true), { opaque: true }));
   const [sky] = MADE_SKIES;
-  for (const each of MADE_LOOKS)
-    write(
-      `mono-${each}/android-monochrome.png`,
-      png(render(432, monoLayers(madeScene({ sky, color, look: each })), ANDROID)),
-    );
+  for (const pose of MADE_POSES) {
+    const tail = pose === "peek" ? "-peek" : "";
+    for (const each of MADE_SKIES)
+      write(
+        `sky-${each}${tail}/android-background.png`,
+        png(part({ sky: each, color, look, pose }, "back", true), { opaque: true }),
+      );
+    for (const each of pose === "peek" ? MADE_FACES : MADE_LOOKS)
+      write(
+        `mono-${each}${tail}/android-monochrome.png`,
+        png(render(432, monoLayers(madeScene({ sky, color, look: each, pose })), ANDROID)),
+      );
+  }
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

@@ -375,6 +375,13 @@ html:not([data-pointer]) .rq__more:focus-visible {
     inset: calc((var(--control-h-sm) - var(--touch-target)) / 2) 0;
   }
 }
+/* A quiet link under the decision, on a line of its own at the words' edge, a small button's height. */
+.rq__under {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  min-height: var(--control-h-sm);
+}
 /* Its buttons 8 apart, a ghost too: it keeps its own padding instead of reaching into the gap. */
 .rq__foot,
 .rq__item-acts {

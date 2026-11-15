@@ -9,6 +9,7 @@ import {
   answerNow,
   answerQuestion,
   CONSULTATION_HUNG_MS,
+  CONSULTATION_KNOWN_WAIT_MS,
   CONSULTATION_TTL_MS,
   cancelRun,
   consultationConversation,
@@ -1068,6 +1069,83 @@ describe("ask_agent", () => {
     expect(await expireConsultations({ db: f.db }, sweep)).toBe(0);
     expect((await consultations())[0]?.status).toBe("open");
     expect((await runs()).find((r) => r.id === target.id)?.status).toBe("waiting_input");
+  });
+
+  test("a plan wait with a known reset stays open past the limit, until the reset and a margin", async () => {
+    f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
+    const { handlers, target } = await asked();
+    const now = Date.now();
+    const resetsAt = new Date(now + 5 * 3600_000).toISOString();
+    const wait = { kind: "claude_code", machineId: "", code: "plan_limit", waitId: "w", since: now, resetsAt };
+    await park(target.id, { waitingForBrain: wait });
+    expect(await expireConsultations({ db: f.db }, new Date(now + CONSULTATION_HUNG_MS + CONSULTATION_TTL_MS))).toBe(0);
+    expect((await consultations())[0]?.status).toBe("open");
+    expect((await runs()).find((r) => r.id === target.id)?.status).toBe("waiting_input");
+    expect(await expireConsultations({ db: f.db }, new Date(Date.parse(resetsAt) + 31 * 60_000))).toBe(1);
+    expect((await consultations())[0]?.answer).toContain("it stayed at its plan's or budget's limit for over 5 hours");
+    await drainOutbox(f.db, handlers);
+    expect(lastText(f.provider.calls.at(-1)?.request as ModelRequest)).toContain("plan's or budget's limit");
+  });
+
+  test("deep in its plan's line, the wait holds until its own turn to resume, not just the reset", async () => {
+    f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
+    const { target } = await asked();
+    const now = Date.now();
+    const reset = now + 5 * 3600_000;
+    const resetsAt = new Date(reset).toISOString();
+    const until = new Date(reset + 40 * 60_000).toISOString();
+    const wait = { kind: "claude_code", machineId: "", code: "plan_limit", waitId: "w", since: now, resetsAt, until };
+    await park(target.id, { waitingForBrain: wait });
+    expect(await expireConsultations({ db: f.db }, new Date(reset + 31 * 60_000))).toBe(0);
+    expect((await runs()).find((r) => r.id === target.id)?.status).toBe("waiting_input");
+    expect(await expireConsultations({ db: f.db }, new Date(Date.parse(until) + 31 * 60_000))).toBe(1);
+    expect((await consultations())[0]?.answer).toContain("it stayed at its plan's or budget's limit for over 6 hours");
+  });
+
+  test("a plan wait whose reset was never said ends after a day", async () => {
+    f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
+    const { target } = await asked();
+    const now = Date.now();
+    await park(target.id, { waitingForBrain: { kind: "claude_code", machineId: "", code: "plan_limit", since: now } });
+    expect(await expireConsultations({ db: f.db }, new Date(now + CONSULTATION_HUNG_MS + CONSULTATION_TTL_MS))).toBe(0);
+    expect(await expireConsultations({ db: f.db }, new Date(now + CONSULTATION_KNOWN_WAIT_MS + 60_000))).toBe(1);
+    expect((await consultations())[0]?.answer).toContain("plan's or budget's limit for over 24 hours");
+  });
+
+  test("a plan reset days away holds it no longer than a day", async () => {
+    f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
+    const { target } = await asked();
+    const now = Date.now();
+    const resetsAt = new Date(now + 3 * CONSULTATION_KNOWN_WAIT_MS).toISOString();
+    await park(target.id, {
+      waitingForBrain: { kind: "claude_code", machineId: "", code: "plan_limit", since: now, resetsAt },
+    });
+    expect(await expireConsultations({ db: f.db }, new Date(now + CONSULTATION_KNOWN_WAIT_MS + 60_000))).toBe(1);
+    expect((await consultations())[0]?.answer).toContain("plan's or budget's limit for over 24 hours");
+  });
+
+  test("in line on a computer that is online it stays open past the limit; a day in line still ends it", async () => {
+    f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
+    const { target } = await asked();
+    const [machine] = await f.db.insert(schema.machines).values({ orgId: f.org.id, name: "Mac" }).returning();
+    if (!machine) throw new Error("no machine");
+    const now = Date.now();
+    const busy = { kind: "claude_code", machineId: machine.id, code: "busy", waitId: Bun.randomUUIDv7() };
+    await park(target.id, { waitingForBrain: busy, roomWaitSince: now });
+    await f.db.update(schema.agentRuns).set({ waitingMachineId: machine.id }).where(eq(schema.agentRuns.id, target.id));
+    const sweepAt = async (at: Date) => {
+      await f.db
+        .update(schema.machines)
+        .set({ online: true, lastSeenAt: at })
+        .where(eq(schema.machines.id, machine.id));
+      return expireConsultations({ db: f.db }, at);
+    };
+    expect(await sweepAt(new Date(now + CONSULTATION_HUNG_MS + CONSULTATION_TTL_MS))).toBe(0);
+    expect((await consultations())[0]?.status).toBe("open");
+    expect(await sweepAt(new Date(now + CONSULTATION_KNOWN_WAIT_MS + 60_000))).toBe(1);
+    expect((await consultations())[0]?.answer).toContain(
+      "it stayed in line for room on its computer for over 24 hours",
+    );
   });
 
   test("stopping a helper alone: its asker wakes knowing who stopped it and not to ask again", async () => {

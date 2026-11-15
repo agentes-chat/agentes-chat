@@ -1131,8 +1131,20 @@ describe("an agent's turn: nothing drawn while it works, its work kept for the r
   });
 
   test("a stopped reply: who stopped it and whether it was continued", () => {
-    expect(stoppedOf({ canceled: { byUserId: "u1" } })).toEqual({ byUserId: "u1", continuedRunId: null });
-    expect(stoppedOf({ canceled: true })).toEqual({ byUserId: null, continuedRunId: null });
+    const none = { byAgentId: null, code: null, continuedRunId: null };
+    expect(stoppedOf({ canceled: { byUserId: "u1" } })).toEqual({ ...none, byUserId: "u1" });
+    expect(stoppedOf({ canceled: true })).toEqual({ ...none, byUserId: null });
+    // The right hand at u1's word, or the system's cause.
+    expect(stoppedOf({ canceled: { byUserId: "u1", byAgentId: "lodi" } })).toEqual({
+      ...none,
+      byUserId: "u1",
+      byAgentId: "lodi",
+    });
+    expect(stoppedOf({ canceled: { byUserId: null, code: "run.agent_archived" } })).toEqual({
+      ...none,
+      byUserId: null,
+      code: "run.agent_archived",
+    });
     expect(stoppedOf({})).toBeNull();
     const next = withContinued({ canceled: { byUserId: "u1", text: "Oi" }, other: 1 }, "r2");
     expect(next).toEqual({ canceled: { byUserId: "u1", text: "Oi", continuedRunId: "r2" }, other: 1 });

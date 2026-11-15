@@ -66,6 +66,8 @@ export function useConnectKey(orgId: string, asked?: string) {
   const [failed, setFailed] = useState(false);
   const [refused, setRefused] = useState<ReturnType<typeof keyRefusal>>(null);
   const [savedNote, setSavedNote] = useState<string>();
+  // The workspace already had this key: the save updated it instead of adding a copy.
+  const [resaved, setResaved] = useState(false);
   // What the save came to (`settleSavedKey`), and "Usar esta chave para todos" while it runs.
   const [settled, setSettled] = useState<{ key: Credential; outcome: SavedKey }>();
   const [makingDefault, setMakingDefault] = useState(false);
@@ -100,6 +102,7 @@ export function useConnectKey(orgId: string, asked?: string) {
     try {
       const entry = providerOf(provider);
       const saved = await api.agents.addCredential(orgId, { provider, label: entry?.label ?? provider, apiKey: clean });
+      setResaved(saved.reused === true);
       if (saved.check === "unchecked")
         setSavedNote(t("connectAi.key.savedUnchecked", { provider: providerLabel(provider) }));
       // `aiStatus` lives under `credentials`: both refresh.
@@ -128,6 +131,7 @@ export function useConnectKey(orgId: string, asked?: string) {
     refused,
     savedNote,
     setSavedNote,
+    resaved,
     settled,
     setSettled,
     makingDefault,

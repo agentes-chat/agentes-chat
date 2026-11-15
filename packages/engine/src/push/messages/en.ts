@@ -78,6 +78,12 @@ export interface PushStrings {
   /** `device.cli_request`: someone needs a coding CLI installed on the person's computer. */
   deviceCliTitle: (a: string, d: string) => string;
   deviceCliBody: string;
+  /**
+   * `device.folder_request`: an agent waits for a folder on the person's computer (`f` the folder, `d` the computer).
+   * The person allows it on the computer itself, so the body sends them there.
+   */
+  deviceFolderTitle: (a: string, f: string, d: string) => string;
+  deviceFolderBody: string;
   /** `admin_ask`: `a` asks who may do it (`what`: channel_agent, create_agents, webhook; `l` the channel or service). */
   adminAskTitle: (a: string, what: string, l: string) => string;
   deviceWaitingTitle: (person: string, device: string) => string;
@@ -185,6 +191,8 @@ export const en: PushStrings = {
   deviceToolBody: "Tap to turn it on in one click.",
   deviceCliTitle: (a, d) => `${a} asks you to install a program on your ${d}`,
   deviceCliBody: "Tap to install it in one click.",
+  deviceFolderTitle: (a, f, d) => (f ? `${a} asks for ${f} on your ${d}` : `${a} asks for a folder on your ${d}`),
+  deviceFolderBody: "Allow it in the app on that computer.",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} asks you to add an agent to #${l}`

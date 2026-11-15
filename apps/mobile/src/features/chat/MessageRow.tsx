@@ -24,7 +24,14 @@ import { type RunPosition, runAround } from "@agenteschat/client/lib/chat";
 import { mineOnRight } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
-import { CONTINUE_ERRORS, errorCode, errorText, sendFailureText, sendNeedsEdit } from "@agenteschat/client/lib/errors";
+import {
+  CONTINUE_ERRORS,
+  errorCode,
+  errorText,
+  runErrorText,
+  sendFailureText,
+  sendNeedsEdit,
+} from "@agenteschat/client/lib/errors";
 import { mentionsReader } from "@agenteschat/client/lib/everyone";
 import { folderRequestOf } from "@agenteschat/client/lib/folder-access";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -43,7 +50,7 @@ import { replyOf } from "@agenteschat/client/lib/reply";
 import { isReminderMessage, reminderBody, routineReplyOf } from "@agenteschat/client/lib/routines";
 import { appVia } from "@agenteschat/client/lib/via";
 import { voiceOf } from "@agenteschat/client/lib/voice";
-import { showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
+import { type ReplyStop, showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { useQueryClient } from "@tanstack/react-query";
 import { memo, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -860,6 +867,8 @@ export const MessageRow = memo(function MessageRow({
                 stopped={
                   stopped ?? {
                     byUserId: null,
+                    byAgentId: null,
+                    code: null,
                     continuedRunId: atLimit?.continuedRunId ?? providerCut?.continuedRunId ?? null,
                   }
                 }
@@ -1015,7 +1024,7 @@ function StoppedLine({
 }: {
   message: Message;
   runId: string;
-  stopped: { byUserId: string | null; continuedRunId: string | null };
+  stopped: ReplyStop & { continuedRunId: string | null };
   /**
    * It ended at its step limit, or because it got stuck, or its long work failed on its AI provider (the end's text
    * already says so, so only Continue shows): nobody stopped it.
@@ -1036,17 +1045,17 @@ function StoppedLine({
   const stop = useStoppedRun(limit ? null : runId);
   // Continued here or on another device (`run.continued`), or already in the message's meta.
   const continued = useContinuedRun(m.id) ?? stopped.continuedRunId;
-  const byMe = Boolean(meId) && (stop?.notice.byUserId || stopped.byUserId) === meId;
-  // Without a notice and a name for whoever stopped it, or nobody did: the words the reply alone can say.
+  const by = limit ? null : stop?.notice.byUserId || stopped.byUserId;
+  const byMe = Boolean(meId) && by === meId;
+  // The pill names whoever it can (`stopLine`); these are its words when it can't: the step limit, stuck, the plain
+  // stop, or its cause when no person stopped it (an archived agent, a closed workspace).
   const fallback = limit
     ? limit === "failed"
       ? null
       : t(limit === "stuck" ? "mobile.chat.stopped.stuck" : "mobile.chat.stopped.limit")
-    : byMe
-      ? t("mobile.chat.stopped.byYou")
-      : stopped.byUserId && dir.nameOf({ type: "person", id: stopped.byUserId })
-        ? t("mobile.chat.stopped.by", { name: dir.nameOf({ type: "person", id: stopped.byUserId }) })
-        : t("mobile.chat.stopped.plain");
+    : by
+      ? t("mobile.chat.stopped.plain")
+      : (runErrorText(t, stopped.code) ?? t("mobile.chat.stopped.plain"));
   const owner = m.author.id ? dir.agentById.get(m.author.id)?.ownerUserId : null;
   const loaded = [
     ...(qc.getQueryData<Message[]>(keys.messages(orgId, m.channelId)) ?? []),
@@ -1061,7 +1070,8 @@ function StoppedLine({
     );
   // The agent works here again, or wrote after the stop: it went on, the stop offers nothing.
   const movedOn = useStopMovedOn(runId);
-  const open = may && !continued && !busy && !movedOn;
+  // Only a stop a person made (also through the right hand) or a run at its limit picks up again: never the system's.
+  const open = Boolean(limit || by) && may && !continued && !busy && !movedOn;
   const onContinue = () => {
     setBusy(true);
     api.agents
@@ -1107,7 +1117,8 @@ function StoppedLine({
         agent={agentName}
         notice={stop?.notice}
         at={stop?.message.createdAt}
-        byUserId={limit ? null : stopped.byUserId}
+        byUserId={by}
+        byAgentId={limit ? null : stopped.byAgentId}
         fallback={fallback}
         cont={
           !continued && (open || busy) ? (

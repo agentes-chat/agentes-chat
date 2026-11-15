@@ -1484,6 +1484,7 @@ body[data-window="popover"] {
 /* The server here: Restart and Stop under its card, "Stop running it here…" at the far end. */
 .dk-here__acts {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }

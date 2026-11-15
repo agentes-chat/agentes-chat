@@ -2,6 +2,7 @@ import { LONG_MESSAGE } from "@agenteschat/client/lib/message-length";
 import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useChannelActions } from "@/components/channel-actions";
+import { useOrg } from "@/components/org-context";
 import { useOverflows } from "@/hooks/useOverflows";
 import { useReveal } from "@/hooks/useReveal";
 
@@ -22,6 +23,7 @@ export function ClippedBody({
 }) {
   const { t } = useTranslation();
   const actions = useChannelActions();
+  const fullMessages = useOrg().org.chatPrefs?.fullMessages === true;
   const foot = useRef<HTMLDivElement>(null);
   const words = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
@@ -29,12 +31,13 @@ export function ClippedBody({
     words.current = el instanceof HTMLElement ? el : null;
   }, []);
   const [open, setOpen] = useState(false);
-  const cut = useOverflows(words, !open, LONG_MESSAGE.over);
+  const expanded = open || fullMessages;
+  const cut = useOverflows(words, !expanded, LONG_MESSAGE.over);
   const reveal = useReveal(words, open);
-  const folded = !open && (cut || lead !== undefined);
+  const folded = !expanded && (cut || lead !== undefined);
   return (
     <>
-      {children(cut && !open ? "msg-clip msg-clip--cut" : "msg-clip", open ? undefined : lead)}
+      {children(cut && !expanded ? "msg-clip msg-clip--cut" : "msg-clip", expanded ? undefined : lead)}
       {/* Always there, to find the words by; empty under a message that shows whole, so its text reads as its words alone. */}
       <div ref={foot} className="msg-clip__foot" hidden={!folded}>
         {folded && (

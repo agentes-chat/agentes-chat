@@ -86,6 +86,7 @@ import {
 import { getMachine, type MachineRow, machineOnline, mayBeHome, publishMachineAgentsChanged } from "./machines";
 import {
   agentMissionApproval,
+  CODEX_MIN_VERSION,
   type CommandApproval,
   type MissionDeps,
   type MissionRow,
@@ -315,10 +316,16 @@ export type BrainUnavailable =
   /** Its runner doesn't run this CLI on the computer's system (`brainRunsOn`): Cursor on Windows, for one. */
   | "system";
 
+export interface CodexVersionRequirement {
+  detected: string;
+  minimum: string;
+}
+
 export interface BrainOption {
   kind: BrainKind;
   available: boolean;
   reason?: BrainUnavailable;
+  codexVersion?: CodexVersionRequirement;
   models: BrainModelOption[];
   defaultModel: string | null;
 }
@@ -369,13 +376,17 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
     else if (machine.protocol < BRAIN_PROTOCOL) reason = "runner_old";
     else if (executor === "codex" && machine.os === "windows" && machine.protocol < CODEX_WINDOWS_PROTOCOL)
       reason = "runner_old";
-    else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
     else if (!found?.available.includes(executor))
       reason = executor === "codex" && found?.codexTooOld ? "outdated" : missingCli(machine, executor);
+    else if (machine.access?.tools && machine.access.tools[executor] !== true) reason = "tool_off";
+    const detected = machine?.executors?.codex?.version;
     return {
       kind,
       available: !reason,
       ...(reason ? { reason } : {}),
+      ...(reason === "outdated" && detected
+        ? { codexVersion: { detected: detected.replace(/^codex-cli\s+/i, ""), minimum: CODEX_MIN_VERSION } }
+        : {}),
       models: brainModelOptions(kind),
       defaultModel: defaultBrainModel(kind),
     };
@@ -414,8 +425,8 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
   else if (kind === "opencode" && machine.os === "windows" && machine.protocol < OPENCODE_ACP_PROTOCOL)
     reason = "runner_old";
   else if (!brainRunsOn(kind, machine.os)) reason = "system";
-  else if (tools && (tools[kind] ?? tools.codex) !== true) reason = "tool_off";
   else if (!machine.executors?.[kind]) reason = missingCli(machine, kind);
+  else if (tools && (tools[kind] ?? tools.codex) !== true) reason = "tool_off";
   return {
     kind,
     available: !reason,
@@ -464,7 +475,7 @@ export interface AgentBrainView {
   brain: BrainKind;
   /** As stored (null = the brain's default). */
   model: string | null;
-  /** What it runs with (`model ?? defaultModel`), null for the model brain. */
+  /** What it runs with (`model ?? defaultModel`), null for the model brain: its model is the agent's own `model`. */
   effectiveModel: string | null;
   fallback: boolean;
   /** Long work may go on into the plan's paid extra usage where the provider reports it on (ADR 0118). */
@@ -1870,8 +1881,8 @@ export interface AiComputer {
   /** Its runner takes coding plans' keys (protocol 20). */
   keys: boolean;
   /**
-   * A new sign-in there thinks for all of the caller's agents on it (protocol 29): Claude's, ChatGPT's and a
-   * coding plan's key.
+   * A new sign-in there thinks for all of the caller's agents on it (protocol 29): Claude's, ChatGPT's, Gemini's,
+   * Grok Build's (protocol 67) and a coding plan's key.
    */
   shares: {
     claude_code: boolean;
@@ -1884,6 +1895,7 @@ export interface AiComputer {
   };
   /** Why a CLI of `brains` can't think there, as `brainOptions` says it. */
   off: Partial<Record<BrainKind, BrainUnavailable>>;
+  codexVersion?: CodexVersionRequirement;
   /** What it can think with now: Claude Code (Claude and the coding plans), Codex (ChatGPT), Cursor, OpenCode, Grok, Antigravity. */
   brains: {
     claude_code: boolean;
@@ -1935,6 +1947,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
     accounts: accounts.flat(),
     computers: rows.map((m) => {
       const options = brainOptions(m);
+      const codexVersion = options.find((o) => o.kind === "codex")?.codexVersion;
       const can = (kind: BrainKind) => options.some((o) => o.kind === kind && o.available);
       return {
         machineId: m.id,
@@ -1953,6 +1966,7 @@ export async function listAiAccounts(deps: BrainDeps, userId: string, orgId: str
           key: sharesSignIns(m, "key"),
         },
         off: Object.fromEntries(options.flatMap((o) => (o.reason ? [[o.kind, o.reason]] : []))),
+        ...(codexVersion ? { codexVersion } : {}),
         brains: {
           claude_code: can("claude_code"),
           codex: can("codex"),

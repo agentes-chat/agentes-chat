@@ -142,6 +142,11 @@ export function EndpointForm({
     return (
       <>
         <Body>
+          {saved.cred.reused && (
+            <SettingNote icon="check" live>
+              {t("settings.keyResaved")}
+            </SettingNote>
+          )}
           <b>{t("endpoint.results")}</b>
           <ul className="ac-iconlist endpoint-checks">
             {checksInOrder(draft, saved.checks).map((c) => {

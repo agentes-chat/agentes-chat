@@ -394,6 +394,7 @@ export const SUMMARY_ORDER: readonly RolePermission[] = [
   "own_computers",
   "own_browsers",
   "talk_to_agents",
+  "view_all_agents",
   "assign_work",
   "post",
   "create_channels",

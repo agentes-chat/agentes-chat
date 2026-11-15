@@ -426,6 +426,8 @@ export type ChannelEvent =
       agentId: string;
       runId: string;
       byUserId: string;
+      /** The agent that stopped it at that person's word (the right hand). */
+      byAgentId?: string;
     }
   /**
    * A person is typing (client frame `typing`), or recording a voice message (`kind: "voice"`, also while its words

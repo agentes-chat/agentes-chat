@@ -10,6 +10,7 @@ import { useOrg } from "@/providers/org";
 import { EventPillAction, EventPillText, Text, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { approvalTitleText } from "../approvals/parts";
+import { WhenAsksLink } from "../approvals/when-asks";
 import { AskWaiting } from "../chat/asks";
 import { parseInline } from "../chat/logic";
 import { Spans } from "../chat/MessageSpans";
@@ -45,6 +46,9 @@ export function OfferApprovals({ card }: { card: ApprovalsCard }) {
       (a) => approvalDetail(a, i18n.language),
       all,
     );
+    // "Mudar quando perguntar" names one agent: several agents' requests leave it to each one's sheet.
+    const decider = routine.find((a) => a.canDecide);
+    const oneAgent = decider && routine.every((a) => a.agentId === decider.agentId) ? decider : undefined;
     return (
       <AskWaiting
         forMe
@@ -106,6 +110,7 @@ export function OfferApprovals({ card }: { card: ApprovalsCard }) {
             <Text variant="footnote" tone="muted">
               {t("rightHand.digest.help")}
             </Text>
+            {oneAgent ? <WhenAsksLink approval={oneAgent} /> : null}
           </EventPillText>
         }
       />

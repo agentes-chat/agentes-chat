@@ -33,13 +33,14 @@ Comparing directions, more than one was liked, which raised the question of lett
    script again.
 
 2. **The scenes sit on a pixel grid.** A 1024 icon is 32 cells a side and the agent's dither cells are the sky's
-   cells, so nothing is half a pixel. The favicon is drawn on its own at 16 and 32 px with its eyes on whole pixels
+   cells, so nothing is half a pixel (but in the two Peeking icons, whose agent leans: its cells turn with it, on a
+   sky that stays on the grid). The favicon is drawn on its own at 16 and 32 px with its eyes on whole pixels
    and mirrored (at 16 px the body is three flat bands, as a dither there is noise); the `.ico` carries both, and
    browsers pick by size. `favicon.svg` stays as the agent's mark (the boot screen, apps' and connectors' logos).
 
 3. **Five icons.** Night ships (the night sky with a dither glow around the agent); Moon, Sky (the day sky with the
-   sky's navy agent), Peeking at night and Peeking in the sky (the agent big, coming up from the bottom edge) are
-   the others. `APP_ICONS` is the list; the generator, the phone's plugin and the desktop app list the same ids and
+   sky's navy agent), Peeking at night and Peeking in the sky (the agent big, leaning in from the bottom right
+   corner; their 16 and 32 px favicons keep it upright, as a lean there is a blur) are the others. `APP_ICONS` is the list; the generator, the phone's plugin and the desktop app list the same ids and
    a test keeps them equal.
 
 4. **The pick is the device's, not the account's.** Like the theme, it is set where it shows, and never synced: iOS
@@ -75,13 +76,15 @@ Comparing directions, more than one was liked, which raised the question of lett
    every icon that can be made: a sky (Night or Sky), one of the agents' eight colors, and either a face (the five
    eye styles and five expressions that hold as a still picture) or one of the eleven accessories, 336 in all
    (`MADE_ICON_*` in `packages/client/src/lib/app-icons.ts`; the generator and the plugin list the same parts and
-   tests keep them equal). A face and an accessory together would be 1,920 icons, so it is one or the other; a free
+   tests keep them equal). The agent can also lean in from the corner, as in the Peeking icons (`pose`: `front` or
+   `peek`), in every sky, color and face: 160 more, 496 in all. Leaning it wears nothing, as what it wears would be
+   cut by the icon's edge: picking an accessory stands it up, and leaning takes the accessory off. A face and an accessory together would be 1,920 icons, so it is one or the other; a free
    color has no icon to show. Their files are not committed: the plugin runs
    `packages/ui/scripts/app-icons/made-files.mjs` when the app is built, which draws each part once and puts the
    icons together, and keeps the result while those scripts stay the same (`node_modules/.cache/app-icons`). A made
-   icon is `made-<sky>-<color>-<look>`: one more `AppIcon-<id>` set on iOS, with a single look (no dark or tinted
+   icon is `made-<sky>-<color>-<look>` (`…-peek` leaning): one more `AppIcon-<id>` set on iOS, with a single look (no dark or tinted
    version), and one more alias on Android, whose back layer is its sky's and whose one-color layer is its face's or
-   accessory's, shared. Android's module turns off only the alias that was on, since each change is a call to the
+   accessory's, shared (the leaning ones have their own of both). Android's module turns off only the alias that was on, since each change is a call to the
    system and there are hundreds.
 
 5. **Where.** Settings › Account › This device › App icon on the web and in the desktop app (a dialog listing the

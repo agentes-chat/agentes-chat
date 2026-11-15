@@ -415,7 +415,11 @@ describe("a computer's line", () => {
     await act(async () => socket.push(orgEvent({ type: "computer.queue", machineId: queue.machineId })));
     await settle(6);
     // (Behind the computer's dialog, so read from the page itself.)
-    expect(header.querySelectorAll(".brw-dm")).toHaveLength(1);
+    const icon = header.querySelector(".dm-computer") as HTMLElement;
+    expect(icon.getAttribute("aria-label")).toBe("Computador");
+    // The icon alone, a header glyph like the others, its name in the kit's tip.
+    expect(icon.textContent).toBe("");
+    expect(icon.classList.contains("channel__icon")).toBe(true);
     expect(header.querySelector(".cq-btn")).toBeNull();
   });
 });
@@ -685,18 +689,16 @@ describe("an offline computer's note", () => {
   });
 });
 
-test("pills never wrap; the pair row before a reply is one 26px line that wraps whole, its names never cut", async () => {
+test("pills never wrap; the pair row before a reply is one 26px line, its question's subject cut first", async () => {
   const css = await builtCss("src/styles.css", "src/components/computer-queue.css");
   const value = (selector: string, property: string) =>
     declarations(css, selector).findLast(([p]) => p === property)?.[1];
   expect(value(".ac-chip", "white-space")).toBe("nowrap");
   expect(value(".cq-link", "white-space")).toBe("nowrap");
-  // One centred sentence: 26 tall on one line, names too long for it wrap at their spaces, each face with its first word.
-  expect(value(".consult-pair__row", "white-space")).toBeUndefined();
+  // One line 26 tall, whatever its words: the question's subject is what gives way.
+  expect(value(".consult-pair__row", "white-space")).toBe("nowrap");
   expect(value(".consult-pair__row", "min-height")).toBe("26px");
-  expect(value(".consult-pair__row", "overflow-wrap")).toBe("anywhere");
-  expect(value(".consult-pair__who", "white-space")).toBe("nowrap");
-  expect(value(".consult-pair__who>.consult-pair__name", "white-space")).toBe("normal");
+  expect(value(".consult-pair__row>.consult-pair__subject", "text-overflow")).toBe("ellipsis");
   expect(value(".consult-pair__name", "text-overflow")).toBeUndefined();
 });
 
@@ -718,7 +720,6 @@ test("a narrow header fits: the waiting count alone beside the computer, the nam
   expect(value(phone, ".cq-btn .cq-btn__label", "position")).toBe("absolute");
   expect(value(phone, ".cq-btn .cq-btn__label", "width")).toBe("1px");
   expect(value(phone, ".cq-btn .cq-btn__count", "display")).toBe("inline-block");
-  expect(value(phone, ".brw-dm .brw-dm__label", "position")).toBe("absolute");
   // Buttons keep their size; the title and its line wrap whole, never cut, and the glyphs go under them instead.
   const narrow = atRule(css, "@media (max-width: 760px)");
   expect(value(narrow, ".channel__header", "flex-wrap")).toBe("nowrap");

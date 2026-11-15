@@ -9,6 +9,7 @@ import {
   costlyGate,
   costlyKind,
   createAgent,
+  createRole,
   DIGEST_AFTER_MS,
   decideCostlyProposal,
   endsAsking,
@@ -25,10 +26,12 @@ import {
   postAutonomyDigests,
   postPersonMessage,
   type RunAuthority,
+  setMemberRoles,
   signatureOf,
   speakerFor,
   type ToolDefinition,
   teammatesFor,
+  UNREQUESTED_OPEN_PER_SLOT,
   updateAgent,
   wakeFollowUp,
 } from "../src";
@@ -538,6 +541,49 @@ describe("one item is worked once, noise waits for a digest, repeats stop (§4�
     expect(later?.payload).toMatchObject({ messageId: second.id, agentId: ada.id, look: 1 });
   });
 
+  test("a run of work nobody asked for parked on a person or an approval holds no room: the next one starts", async () => {
+    f = await setup();
+    const ada = await agentOf("Ada", "ada", { maxUnrequested: 1 });
+    const first = await alert(f.agent.id, "Deploy falhou no job build-web");
+    expect((await brakeWakes({ db: f.db, judge: fakeJudge(0) }, first, [ada.id])).wake).toEqual([ada.id]);
+    const parked = await working(ada.id, first.id);
+    for (const status of ["waiting_input", "waiting_approval"] as const) {
+      await f.db.update(agentRuns).set({ status }).where(eq(agentRuns.id, parked.id));
+      const next = await alert(f.agent.id, `Fila de e-mails parada (${status})`);
+      expect((await brakeWakes({ db: f.db, judge: fakeJudge(0) }, next, [ada.id])).wake).toEqual([ada.id]);
+    }
+  });
+
+  test("parked runs of work nobody asked for still meet a ceiling: a burst of items can't each open a card", async () => {
+    f = await setup();
+    const ada = await agentOf("Ada", "ada", { maxUnrequested: 1 });
+    const items = [
+      "Deploy falhou",
+      "Fila de e-mails parada",
+      "Disco cheio",
+      "Certificado expirando",
+      "Backup atrasado",
+    ];
+    expect(items).toHaveLength(UNREQUESTED_OPEN_PER_SLOT);
+    for (const body of items) {
+      const item = await alert(f.agent.id, body);
+      expect((await brakeWakes({ db: f.db, judge: fakeJudge(0) }, item, [ada.id])).wake).toEqual([ada.id]);
+      const run = await working(ada.id, item.id);
+      await f.db.update(agentRuns).set({ status: "waiting_approval" }).where(eq(agentRuns.id, run.id));
+    }
+    const next = await alert(f.agent.id, "Webhook de pagamentos falhando");
+    expect((await brakeWakes({ db: f.db, judge: fakeJudge(0) }, next, [ada.id])).held.get(ada.id)).toBe("later");
+  });
+
+  test("work an agent handed on on purpose is never set aside as noise", async () => {
+    f = await setup();
+    const ada = await agentOf("Ada", "ada");
+    const note = await alert(f.agent.id, "Sentry: ResizeObserver loop limit exceeded, veja se é o mesmo do checkout");
+    const out = await brakeWakes({ db: f.db, judge: fakeJudge(0.9) }, note, [ada.id], { triage: false });
+    expect(out.wake).toEqual([ada.id]);
+    expect(await signalsOf("digest")).toHaveLength(0);
+  });
+
   test("work held only for room is never digested as noise: past the hour it looks slower, after a day it starts", async () => {
     f = await setup();
     const ada = await agentOf("Ada", "ada", { maxUnrequested: 1 });
@@ -594,7 +640,7 @@ describe("who an agent may call (§8)", () => {
       .set({ autonomyBrakes: { callAgents: "some", callAgentIds: [kai.id], otherProjects: true } })
       .where(eq(schema.agents.id, caller.id));
     expect(await callableAgents(f.db, f.org.id, caller.id, [ada.id, kai.id])).toEqual(new Set([kai.id]));
-    const team = await f.db.select().from(schema.agents);
+    const team = (await f.db.select().from(schema.agents)).map((a) => ({ ...a, groupName: null }));
     const listed = teammatesFor(team, caller.id, f.owner.id, new Set(), await speakerFor(f.db, f.org.id, f.owner.id));
     expect(listed.map((a) => a.handle)).toEqual(["kai"]);
   });
@@ -651,5 +697,37 @@ describe("who an agent may call (§8)", () => {
       callAgents: "none",
       costly: "ask",
     });
+  });
+
+  test("brakes given at creation are stored as on an edit; only who manages agents sets them", async () => {
+    f = await setup();
+    const defaults = { model: f.agent.model };
+    const made = await createAgent(
+      f.db,
+      f.owner.id,
+      f.org.id,
+      {
+        name: "Bia",
+        handle: "bia",
+        autonomyBrakes: { maxUnrequested: 99, callAgents: "some", callAgentIds: [f.agent.id] },
+      },
+      defaults,
+    );
+    expect(made.autonomyBrakes).toEqual({ maxUnrequested: 20, callAgents: "some", callAgentIds: [f.agent.id] });
+    const member = await addMember(f.db, f.org.id, "member", "Caio");
+    const makers = await createRole(f.db, f.owner.id, f.org.id, { name: "Makers", permissions: ["create_agents"] });
+    await setMemberRoles(f.db, f.owner.id, f.org.id, member.id, [makers.id]);
+    // Who may create agents may not, by that alone, choose whom they may call.
+    await expect(
+      createAgent(
+        f.db,
+        member.id,
+        f.org.id,
+        { name: "Edu", handle: "edu", autonomyBrakes: { callAgents: "none" } },
+        defaults,
+      ),
+    ).rejects.toThrow(/brakes/);
+    const edu = await createAgent(f.db, member.id, f.org.id, { name: "Edu", handle: "edu" }, defaults);
+    expect(edu.autonomyBrakes).toEqual({});
   });
 });

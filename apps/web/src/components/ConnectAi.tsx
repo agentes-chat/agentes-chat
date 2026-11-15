@@ -746,6 +746,7 @@ function ConnectAiDialog({
           )
         }
       >
+        {savedKey.key.reused && `${t("settings.keyResaved")} `}
         {keyNote ?? savedKeyLine(t, savedKey.outcome, savedKey.key)}
       </SettingNote>
     ) : (
@@ -784,13 +785,14 @@ function ConnectAiDialog({
             void qc.invalidateQueries({ queryKey: keys.agents(org.id) });
             void qc.invalidateQueries({ queryKey: keys.agentBrain(org.id, hand.id) });
           }
-          setKeyNote(
+          const note =
             key.check === "unchecked"
               ? t("connectAi.key.savedUnchecked", { provider })
               : moved && hand
                 ? thinksWithLine(t, "workspace", hand.name, key.label)
-                : undefined,
-          );
+                : undefined;
+          // With no saved key's own line (the right hand's), the note says the key was already there.
+          setKeyNote(hand && key.reused ? [t("settings.keyResaved"), note].filter(Boolean).join(" ") : note);
           if (!hand) await settleKey(key);
           setKeySaved(true);
           done();

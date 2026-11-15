@@ -1,6 +1,6 @@
 import type { LiveRun } from "@agenteschat/client";
 import { holdsText } from "@agenteschat/client/lib/text";
-import { type ToolItem, toolItemsLive } from "@agenteschat/client/lib/work";
+import { type ReplyStop, replyStopOf, type ToolItem, toolItemsLive } from "@agenteschat/client/lib/work";
 
 /**
  * An agent's turn in the conversation: while it works nothing of it draws there (the line above the box says who
@@ -111,19 +111,16 @@ export function recentTurn(runId: string, now: number, maxAgeMs = 8000): TurnSna
 // ── A stopped reply ──────────────────────────────────────────────────────────
 
 /**
- * `meta.canceled` of a stopped reply: who stopped it, and the run that continued it ("Continuar" goes
- * away then). Null when it wasn't stopped.
+ * `meta.canceled` of a stopped reply: who stopped it (or the right hand at their word, or the system's cause), and the
+ * run that continued it ("Continuar" goes away then). Null when it wasn't stopped.
  */
 export function stoppedOf(
   meta: Record<string, unknown> | undefined,
-): { byUserId: string | null; continuedRunId: string | null } | null {
+): (ReplyStop & { continuedRunId: string | null }) | null {
   const c = meta?.canceled;
   if (!c) return null;
   const o = typeof c === "object" ? (c as Record<string, unknown>) : {};
-  return {
-    byUserId: typeof o.byUserId === "string" ? o.byUserId : null,
-    continuedRunId: typeof o.continuedRunId === "string" ? o.continuedRunId : null,
-  };
+  return { ...replyStopOf(c), continuedRunId: typeof o.continuedRunId === "string" ? o.continuedRunId : null };
 }
 
 /**

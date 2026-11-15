@@ -411,6 +411,9 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
 function toBody(request: ModelRequest, compatible: boolean) {
   const claude = !compatible && isClaude(request.model);
   const reasoning = compatible ? undefined : reasoningFor(request.effort, modelInfo(request.model));
+  // A workspace endpoint (#432): Chat Completions' own `reasoning_effort`, which OpenAI, vLLM, LiteLLM and most gateways
+  // take. `none` is left out, since not every model can turn thinking off, and so is a request with no effort.
+  const reasoningEffort = compatible && request.effort && request.effort !== "none" ? request.effort : undefined;
   return {
     model: request.model,
     messages: toMessages(request, claude),
@@ -426,6 +429,7 @@ function toBody(request: ModelRequest, compatible: boolean) {
         }
       : {}),
     ...(reasoning ? { reasoning } : {}),
+    ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
     ...(request.outputSchema
       ? {
           response_format: {

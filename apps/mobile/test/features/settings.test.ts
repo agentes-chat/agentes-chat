@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { AuthConfig, ComputerSetup, Machine, StorageConfig } from "@agenteschat/client";
 import { showsAbout } from "@agenteschat/client/lib/about";
 import { type SetupView, setupView } from "@agenteschat/client/lib/computer";
+import { proofToSend } from "@agenteschat/client/lib/deletion";
 import { changedByText, changesSinceLink, skillPendingViews, skillUpdateWords } from "@agenteschat/client/lib/skills";
 import { storageUsageLine } from "@agenteschat/client/lib/storage";
 import {
@@ -661,7 +662,7 @@ test("Sobre o agentes.chat in Você: on every self-hosted server, old ones too; 
 
 test("Auditoria's row screen: the call's title in words, and what the tool said only in the technical group", () => {
   const src = readFileSync(join(import.meta.dir, "..", "..", "src", "features", "settings", "AuditScreen.tsx"), "utf8");
-  expect(src).toContain("title={auditHint(t, row) ?? auditPhrase(t, row)}");
+  expect(src).toContain("title={auditHint(t, row) ?? auditPhrase(t, row, i18n.language)}");
   const tech = src.slice(src.indexOf('t("audit.panel.tech")'));
   expect(tech).toContain('label={t("audit.panel.techSaid")} sub={said}');
 });
@@ -693,4 +694,28 @@ test("my photo on Você changes it with a tap, through Conta's own Alterar foto"
   const parts = read("parts.tsx");
   expect(parts).toContain("export function useChangePhoto()");
   expect(parts).toContain('...(hasPhoto ? [t("mobile.me.account.removePhoto")] : [])');
+});
+
+test("the desktop app's owner with no password deletes on that computer: one line, the hold stays off", () => {
+  const src = (path: string) => readFileSync(join(import.meta.dir, "..", "..", "src", path), "utf8");
+  for (const file of ["features/settings/DeleteWorkspaceScreen.tsx", "features/me/DeleteAccountScreen.tsx"]) {
+    const screen = src(file);
+    // In place of adding a password on the website, which their server has no other way in for.
+    expect([file, screen.includes("me?.user.confirmsOnThisMac ? (")]).toEqual([file, true]);
+    expect([file, screen.includes('t("mobile.delete.onThisComputer")')]).toEqual([file, true]);
+    // The hold waits for a proof that's ready, which "addPassword" never is.
+    expect([file, /disabled=\{!(toSend\.)?ready \|\| busy\}/.test(screen)]).toEqual([file, true]);
+    expect([file, screen.includes("proofToSend(proof, { sent: sent !== null, code, password })")]).toEqual([
+      file,
+      true,
+    ]);
+  }
+  expect(proofToSend("addPassword", { sent: false, code: "", password: "" }).ready).toBe(false);
+  // Back from adding a password on the computer, the account screen asks again.
+  const account = src("features/me/DeleteAccountScreen.tsx");
+  const branch = account.slice(
+    account.indexOf('t("mobile.delete.onThisComputer")'),
+    account.indexOf('t("mobile.delete.addPasswordFirst")'),
+  );
+  expect(branch).toContain('t("mobile.common.retry")');
 });

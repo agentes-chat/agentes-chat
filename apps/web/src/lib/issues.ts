@@ -16,8 +16,8 @@ export function useAssigneeColor() {
 
 /** The step an agent is on, in the person's words ("Atualizou uma tarefa · #131", "Rodou: Rerun the tests"). */
 export function useStepText() {
-  const { t } = useTranslation();
-  return (step: Parameters<typeof stepPhrase>[1] | undefined) => (step ? stepPhrase(t, step) : "");
+  const { t, i18n } = useTranslation();
+  return (step: Parameters<typeof stepPhrase>[1] | undefined) => (step ? stepPhrase(t, step, i18n.language) : "");
 }
 
 // ── The board: one per org, custom columns, each in a fixed stage ───────────

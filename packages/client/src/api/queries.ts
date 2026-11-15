@@ -1,7 +1,10 @@
 import {
+  hashKey,
   type InfiniteData,
   mutationOptions,
   notifyManager,
+  type QueryCache,
+  type QueryCacheNotifyEvent,
   type QueryClient,
   queryOptions,
   useInfiniteQuery,
@@ -13,6 +16,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { moveInGroups } from "../lib/agent-groups";
+import { type LevelsBefore, levelsBefore } from "../lib/approvals-level";
 import { artifactRefs } from "../lib/artifacts";
 import { newerBlockState, stateChanges, stateForPage } from "../lib/blocks";
 import type { ChatPrefs } from "../lib/chat-look";
@@ -28,7 +32,7 @@ import {
   XCODE_FIX_POLL_MS,
   xcodeFixLive,
 } from "../lib/devices";
-import { answerWithin, noAnswer, sendFailureOf, sendWaits, sessionEnded } from "../lib/errors";
+import { answerWithin, isGone, noAnswer, sendFailureOf, sendWaits, sessionEnded } from "../lib/errors";
 import { ISSUES_VIEW_DEFAULT, type IssuesViewChange, withIssuesView } from "../lib/issues-view";
 import { CLI_INSTALL_POLL_MS, LoginReadError, loginReadPasses } from "../lib/machines";
 import { GIF_PAGE, isMediaAfterReply, messageMediaOf, postedMedia } from "../lib/media";
@@ -95,6 +99,7 @@ import type {
   AppNotification,
   Approval,
   ApprovalCoverInput,
+  ApprovalsLevel,
   ArtifactContent,
   ArtifactDetail,
   ArtifactFilters,
@@ -135,6 +140,7 @@ import type {
   IssueStatus,
   IssuesView,
   JevKey,
+  JevKeyInput,
   Machine,
   MachineAccessReduce,
   MachineTool,
@@ -149,6 +155,7 @@ import type {
   NotificationEvent,
   NotificationFilter,
   OrgRoles,
+  OrgSettings,
   PendingReturn,
   Person,
   PersonalTokenInput,
@@ -156,6 +163,7 @@ import type {
   Proposal,
   ReactionCount,
   ReminderInput,
+  RequestHeader,
   RightHandApprovals,
   RightHandApprovalsInput,
   Role,
@@ -271,20 +279,45 @@ export function useMe() {
   const cache = useQueryClient().getQueryCache();
   const current = () => cache.get(ME_HASH);
   useSyncExternalStore(
-    useCallback(
-      (changed: () => void) => {
-        // After the render in course, never during it: the first reader to render makes the query, which says `added`.
-        const later = notifyManager.batchCalls(changed);
-        return cache.subscribe((e) => {
-          if (e.query.queryHash === ME_HASH && (e.type === "added" || e.type === "removed")) later();
-        });
-      },
-      [cache],
-    ),
+    useCallback((changed: () => void) => onQueryEvent(cache, ME_HASH, ["added", "removed"], changed), [cache]),
     current,
     current,
   );
   return result;
+}
+
+type QueryEventType = QueryCacheNotifyEvent["type"];
+type QueryReader = { types: readonly QueryEventType[]; changed: () => void };
+
+/**
+ * One cache listener for every reader of one query (`useMe`, `useCachedMessages`): the cache calls each listener on
+ * each of its events (every observer a row adds included), and a long conversation has hundreds of readers.
+ */
+const queryReaders = new WeakMap<QueryCache, { byHash: Map<string, Set<QueryReader>>; stop: () => void }>();
+function onQueryEvent(cache: QueryCache, hash: string, types: readonly QueryEventType[], changed: () => void) {
+  let entry = queryReaders.get(cache);
+  if (!entry) {
+    const byHash = new Map<string, Set<QueryReader>>();
+    const stop = cache.subscribe((e) => {
+      for (const r of byHash.get(e.query.queryHash) ?? []) if (r.types.includes(e.type)) r.changed();
+    });
+    entry = { byHash, stop };
+    queryReaders.set(cache, entry);
+  }
+  const { byHash, stop } = entry;
+  const readers = byHash.get(hash) ?? new Set<QueryReader>();
+  byHash.set(hash, readers);
+  // After the render in course, never during it: the first reader to render makes the query, which says `added`.
+  const reader = { types, changed: notifyManager.batchCalls(changed) };
+  readers.add(reader);
+  return () => {
+    readers.delete(reader);
+    if (readers.size > 0) return;
+    if (byHash.get(hash) === readers) byHash.delete(hash);
+    if (byHash.size > 0) return;
+    stop();
+    queryReaders.delete(cache);
+  };
 }
 export const useAuthConfig = () => useQuery(authConfigQuery(useApi()));
 export const useHealth = () => {
@@ -327,7 +360,7 @@ function useJevChange<T>(change: (api: ApiClient, input: T) => Promise<JevKey>, 
     ...(silent ? { meta: { silent: true } } : {}),
   });
 }
-export const useSaveJevKey = () => useJevChange((api, apiKey: string) => api.system.saveJev(apiKey), true);
+export const useSaveJevKey = () => useJevChange((api, input: JevKeyInput) => api.system.saveJev(input), true);
 export const useCheckJevKey = () => useJevChange<void>((api) => api.system.checkJev());
 export const useRemoveJevKey = () => useJevChange<void>((api) => api.system.removeJev());
 
@@ -1327,6 +1360,51 @@ export const useMessages = (orgId: string, channelId: string, enabled = true) =>
   const api = useApi();
   return useQuery({ ...messagesQuery(api, orgId, channelId), enabled });
 };
+
+const NO_MESSAGES: readonly Message[] = [];
+
+/**
+ * These messages as their conversation's cached lists hold them (its channel's latest page and, in a thread, the
+ * thread's), for a row that shows a piece of another message. The reader draws again when one of them arrives or
+ * changes, never for the rest of the list; with no ids it listens to nothing.
+ */
+export function useCachedMessages(
+  orgId: string,
+  channelId: string,
+  threadId: string | null | undefined,
+  ids: readonly string[],
+): readonly Message[] {
+  const cache = useQueryClient().getQueryCache();
+  const wanted = ids.join(" ");
+  const hashes = useMemo(
+    () => [
+      hashKey(keys.messages(orgId, channelId)),
+      ...(threadId ? [hashKey(keys.thread(orgId, channelId, threadId))] : []),
+    ],
+    [orgId, channelId, threadId],
+  );
+  const subscribe = useCallback(
+    (changed: () => void) => {
+      if (!wanted) return () => {};
+      const stops = hashes.map((h) => onQueryEvent(cache, h, ["added", "updated", "removed"], changed));
+      return () => {
+        for (const stop of stops) stop();
+      };
+    },
+    [cache, hashes, wanted],
+  );
+  const last = useRef(NO_MESSAGES);
+  const read = () => {
+    if (!wanted) return NO_MESSAGES;
+    const set = new Set(wanted.split(" "));
+    const found = hashes.flatMap((h) => (cache.get<Message[]>(h)?.state.data ?? []).filter((m) => set.has(m.id)));
+    const before = last.current;
+    if (found.length === before.length && found.every((m, i) => m === before[i])) return before;
+    last.current = found;
+    return found;
+  };
+  return useSyncExternalStore(subscribe, read, read);
+}
 
 /** Sidebar hover/focus: load a conversation before the click. */
 export function usePrefetchMessages(orgId: string) {
@@ -2622,6 +2700,73 @@ export function useUpdateSettings(orgId: string) {
   });
 }
 
+/** Sets the workspace's approvals level: the settings and every agent's level show it at once. */
+export function useSetWorkspaceApprovalsLevel(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { level: ApprovalsLevel; everyAgent?: boolean }) => api.orgs.setApprovalsLevel(orgId, input),
+    onSuccess: ({ level }) => {
+      qc.setQueryData<OrgSettings>(keys.settings(orgId), (s) => (s ? { ...s, approvalsLevel: level } : s));
+      levelsChanged(qc, orgId);
+    },
+  });
+}
+
+/**
+ * "Mudar quando perguntar": one agent's own level, or with `everyAgent` the workspace's for every agent (their own
+ * choices cleared). Resolves to the levels before, for "Desfazer" (`useUndoWhenAsks`).
+ */
+export function useChangeWhenAsks(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      agentId,
+      level,
+      everyAgent,
+    }: {
+      agentId: string;
+      level: ApprovalsLevel;
+      everyAgent?: boolean;
+    }) => {
+      const [agents, settings] = await Promise.all([
+        qc.ensureQueryData({ queryKey: keys.agents(orgId), queryFn: () => api.agents.list(orgId) }),
+        everyAgent
+          ? qc.ensureQueryData({ queryKey: keys.settings(orgId), queryFn: () => api.orgs.settings(orgId) })
+          : null,
+      ]);
+      const before = levelsBefore(settings?.approvalsLevel ?? "risky", agents, everyAgent ? undefined : agentId);
+      if (everyAgent) await api.orgs.setApprovalsLevel(orgId, { level, everyAgent: true });
+      else await api.agents.update(orgId, agentId, { approvalsLevel: level });
+      return before;
+    },
+    onSuccess: () => levelsChanged(qc, orgId),
+  });
+}
+
+/** "Desfazer" after `useChangeWhenAsks`: the workspace's level (for every agent) and each agent's choice come back. */
+export function useUndoWhenAsks(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ before, everyAgent }: { before: LevelsBefore; everyAgent?: boolean }) => {
+      if (everyAgent) await api.orgs.setApprovalsLevel(orgId, { level: before.workspace });
+      // ponytail: one request per agent that had its own choice, a batch call if workspaces with many appear.
+      for (const a of before.agents) await api.agents.update(orgId, a.id, { approvalsLevel: a.level });
+    },
+    onSuccess: () => levelsChanged(qc, orgId),
+  });
+}
+
+function levelsChanged(qc: QueryClient, orgId: string) {
+  void qc.invalidateQueries({ queryKey: keys.settings(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+  void qc.invalidateQueries({
+    predicate: (q) => q.queryKey[0] === "org" && q.queryKey[1] === orgId && q.queryKey[4] === "detail",
+  });
+}
+
 export const usePeople = (orgId: string) => {
   const api = useApi();
   return useQuery({ queryKey: keys.people(orgId), queryFn: () => api.orgs.people(orgId), staleTime: 30_000 });
@@ -3205,6 +3350,21 @@ export function useRemoveCredential(orgId: string) {
   });
 }
 
+/** "Remover cópias": the copies' agents now think with the kept key. */
+export function useRemoveCredentialCopies(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.agents.removeCredentialCopies(orgId, id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.agentPages(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.models });
+      return qc.invalidateQueries({ queryKey: keys.credentials(orgId) });
+    },
+  });
+}
+
 export const useAgentDetail = (orgId: string, agentId: string) => {
   const api = useApi();
   return useQuery({
@@ -3674,9 +3834,12 @@ export function useCustomServerAction(orgId: string) {
         label?: string;
         returnTo: string;
         connectionId?: string;
+        headers?: RequestHeader[];
       }) => api.customConnectors.connect(orgId, input),
       // A new server is every agent's: their access trees change too.
       onSuccess: () => Promise.all([done(), qc.invalidateQueries({ queryKey: keys.access(orgId) })]),
+      // The form says its own failures: a refused header shows on its row.
+      meta: { silent: true },
     }),
     refresh: useMutation({ mutationFn: (id: string) => api.customConnectors.refresh(orgId, id), onSuccess: done }),
     save: useMutation({
@@ -5918,7 +6081,8 @@ export const useIssuesView = (orgId: string) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.issuesView(orgId),
-    queryFn: () => api.orgs.issuesView(orgId),
+    // Whole even from a server of before a part of it.
+    queryFn: async () => withIssuesView(await api.orgs.issuesView(orgId), {}),
     staleTime: 60_000,
   });
 };
@@ -6038,13 +6202,15 @@ export function applyNotificationEvent(qc: QC, orgId: string, event: Notificatio
   if (event.type === "notification.upserted" && event.notification.kind === "join_request")
     void qc.invalidateQueries({ queryKey: keys.joinRequests(orgId) });
   // What waits on me changes with a waiting row coming or any row leaving (a count alone says nothing new).
+  // `cancelRefetch: false`: "Concluir todas" sends one event per row, all after its single update, so the fetch already
+  // under way serves the whole burst.
   if (event.type === "notification.removed" || (event.type === "notification.upserted" && event.notification.waiting))
-    void qc.invalidateQueries({ queryKey: keys.waiting(orgId) });
+    void qc.invalidateQueries({ queryKey: keys.waiting(orgId) }, { cancelRefetch: false });
   if (event.type === "notification.upserted") cacheNotification(qc, orgId, event.notification);
   else if (event.type === "notification.removed") {
     dropNotification(qc, orgId, event.id, true);
     // Marked done on another device: "Concluídas" gains it (one auto-resolved changes nothing there).
-    void qc.invalidateQueries({ queryKey: keys.notificationList(orgId, "done") });
+    void qc.invalidateQueries({ queryKey: keys.notificationList(orgId, "done") }, { cancelRefetch: false });
   } else {
     const count = { unread: event.unread, waiting: event.waiting };
     qc.setQueryData<NotificationCount>(keys.notificationCount(orgId), count);
@@ -6063,7 +6229,11 @@ export type NotificationAction =
   | { type: "snooze"; item: AppNotification; until: string | null }
   | { type: "readAll"; filter: NotificationFilter }
   /** Undo of "Marcar tudo como lido": the ids it changed. */
-  | { type: "unreadMany"; ids: string[] };
+  | { type: "unreadMany"; ids: string[] }
+  /** "Concluir todas" in a filter: what waits on me stays. */
+  | { type: "doneAll"; filter: NotificationFilter }
+  /** Undo of "Concluir todas": the ids it changed, back in the inbox. */
+  | { type: "undoneMany"; ids: string[] };
 
 /** The changed items as the server sent them, and the ids "Marcar tudo como lido" touched. */
 export interface NotificationActionResult {
@@ -6089,7 +6259,32 @@ function optimistic(qc: QC, orgId: string, action: NotificationAction, now: stri
         const known = knownNotification(qc, orgId, id);
         return known ? [{ ...known, readAt: null }] : [];
       });
+    case "doneAll": {
+      const loaded = allItems(qc.getQueryData<NotificationPages>(keys.notificationList(orgId, action.filter)));
+      return loaded.filter((n) => !n.waiting && n.doneAt === null).map((n) => ({ ...n, doneAt: now }));
+    }
+    case "undoneMany":
+      return action.ids.flatMap((id) => {
+        const known = knownNotification(qc, orgId, id);
+        return known ? [{ ...known, doneAt: null }] : [];
+      });
   }
+}
+
+const notificationActionKey = (orgId: string) => ["notificationAction", orgId] as const;
+
+const isBulk = (action: NotificationAction | undefined) => action?.type === "doneAll" || action?.type === "undoneMany";
+
+/**
+ * "Concluir todas" or its undo under way, from any screen or row: the inbox's own actions wait for it (each row runs
+ * its own mutation on the phone).
+ */
+export function useNotificationBulkPending(orgId: string) {
+  const pending = useIsMutating({
+    mutationKey: notificationActionKey(orgId),
+    predicate: (mutation) => isBulk(mutation.state.variables as NotificationAction | undefined),
+  });
+  return pending > 0;
 }
 
 /**
@@ -6100,6 +6295,7 @@ export function useNotificationAction(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: notificationActionKey(orgId),
     mutationFn: async (action: NotificationAction): Promise<NotificationActionResult> => {
       switch (action.type) {
         case "read":
@@ -6118,6 +6314,17 @@ export function useNotificationAction(orgId: string) {
             items: await Promise.all(action.ids.map((id) => api.notifications.read(orgId, id, false))),
             ids: action.ids,
           };
+        case "doneAll":
+          return { items: [], ids: (await api.notifications.doneAll(orgId, action.filter)).ids };
+        case "undoneMany": {
+          // One failure doesn't undo the rest: a row deleted meanwhile (its task or channel gone) is just gone, and
+          // only when nothing came back does the undo fail.
+          const settled = await Promise.allSettled(action.ids.map((id) => api.notifications.done(orgId, id, false)));
+          const items = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+          const failed = settled.find((r) => r.status === "rejected" && !isGone(r.reason));
+          if (!items.length && failed?.status === "rejected") throw failed.reason;
+          return { items, ids: items.map((n) => n.id) };
+        }
       }
     },
     onMutate: async (action) => {
@@ -6137,8 +6344,8 @@ export function useNotificationAction(orgId: string) {
     },
     onSettled: (_r, _e, action) => {
       void qc.invalidateQueries({ queryKey: keys.notificationCount(orgId) });
-      // Marking everything read touches items beyond the loaded pages.
-      if (action.type === "readAll" || action.type === "unreadMany")
+      // A bulk action touches items beyond the loaded pages (and "Concluídas").
+      if (action.type === "readAll" || action.type === "unreadMany" || isBulk(action))
         void qc.invalidateQueries({ queryKey: [...keys.notifications(orgId), "list"] });
     },
   });

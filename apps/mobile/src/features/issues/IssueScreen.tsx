@@ -477,7 +477,7 @@ function WorkCard({ issue: i }: { issue: Issue }) {
   // What a person reads: never an engine-only step (the silent `pass`).
   const steps = shownSteps(w.steps);
   const last = steps.at(-1);
-  const lines = workLines(t, steps, state === "running");
+  const lines = workLines(t, steps, state === "running", i18n.language);
   return (
     <View style={[styles.work, surface]}>
       <View style={styles.workHead}>

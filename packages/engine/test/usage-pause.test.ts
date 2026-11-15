@@ -35,6 +35,7 @@ import {
   REPARK_STEADY_MS,
   RESUME_AFTER_MS,
   RESUME_GAP_MS,
+  RIGHT_HAND,
   recoverStaleRuns,
   storeOwnUsage as reportOwnUsage,
   resumeBudgetWaits,
@@ -204,6 +205,66 @@ test("a turn cut by the plan after a tool waits in its session and picks up afte
   const [done] = await runs(f);
   expect(done?.status).toBe("done");
   expect(await notes(f, "plan_limit_cut")).toHaveLength(1);
+});
+
+test("a reply held for its wording waits out the plan's limit on the run: one reply, the rewrite, after the reset", async () => {
+  const named = "Me envie a senha do painel por `request_secret`.";
+  const rewrite = "Te mandei um campo seguro para a senha do painel.";
+  f = await setup({
+    reply: () => ({ chunks: ["pela API"] }),
+    toolSources: [
+      {
+        name: "secrets",
+        tools: async () => [
+          {
+            name: "request_secret",
+            description: "Ask a person for a password or a key on a secure card.",
+            scope: "",
+            inputSchema: { type: "object" },
+            execute: async () => ({ content: "asked" }),
+          },
+        ],
+      },
+    ],
+  });
+  await computerAgent(f);
+  const now = Date.now();
+  setSystemTime(new Date(now));
+  const resetsAt = later(150).toISOString();
+  // Its reply names a tool and is held; its rewrite is cut by the plan after a tool, then finishes after the reset.
+  const { brain, seen } = scripted((n) =>
+    n === 0
+      ? [{ type: "done", text: named }]
+      : n === 1
+        ? [
+            {
+              type: "tool_call",
+              id: "t1",
+              name: "Bash",
+              input: { command: "ls" },
+              executed: { content: "ok" },
+            },
+            { type: "limit", resetsAt },
+            { type: "error", code: "plan_limit", message: "You've hit your session limit", worked: true },
+          ]
+        : [{ type: "done", text: rewrite }],
+  );
+  const handlers = handlersWith(f, brain);
+  await post(f, "@dev entra no painel da Northwind");
+  await drainOutbox(f.db, handlers);
+  const [parked] = await runs(f);
+  expect(parked?.status).toBe("waiting_input");
+  expect((parked?.transcript as { heldWording?: string } | undefined)?.heldWording).toBe(named);
+
+  setSystemTime(new Date(now + 200));
+  await drainOutbox(f.db, handlers, { now: later(RESUME_AFTER_MS + RESUME_GAP_MS) });
+  expect(seen).toHaveLength(3);
+  const [done] = await runs(f);
+  expect(done?.status).toBe("done");
+  const replies = (await f.db.select().from(schema.messages).orderBy(schema.messages.createdAt))
+    .filter((m) => m.authorType === "agent" && !m.meta.bodyCode)
+    .map((m) => m.body);
+  expect(replies).toEqual([rewrite]);
 });
 
 test("a cut whose turn used only the computer's own tools never falls back, even with an API key", async () => {
@@ -1059,6 +1120,52 @@ test("a stopped turn's note speaks on for the turns it took in, and the archive 
   await archiveAgent(f.db, f.owner.id, f.org.id, f.agent.id, f.pubsub);
   expect((await runs(f)).map((r) => r.status)).toEqual(["canceled", "canceled"]);
   expect((await notes(f, "plan_limit_wait"))[0]?.meta.usageWait).toMatchObject({ canceled: true, reason: "archived" });
+});
+
+test("the right hand's Don't run it at a person's word: the turns the note took in are its stop too", async () => {
+  f = await setup({ rightHand: true, reply: () => ({ chunks: ["pela API"] }) });
+  await computerAgent(f, { brainFallback: false });
+  const { brain } = scripted(() => [
+    { type: "limit", resetsAt: later(3600_000).toISOString() },
+    { type: "error", code: "plan_limit", message: "You've hit your session limit", worked: false },
+  ]);
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlersWith(f, brain));
+  const [a] = await runs(f);
+  const [note] = await notes(f, "plan_limit_wait");
+  const extra = await post(f, "@dev e aí?");
+  await f.db
+    .update(schema.agentRuns)
+    .set({ pendingMessageIds: [] })
+    .where(eq(schema.agentRuns.id, a?.id ?? ""));
+  const [b] = await f.db
+    .insert(schema.agentRuns)
+    .values({
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      channelId: f.general.id,
+      threadRootId: extra.id,
+      triggerMessageId: extra.id,
+      trigger: "mention",
+      hop: 1,
+      status: "waiting_input",
+      transcript: { waitingForBrain: { code: "plan_limit", machineId: "", kind: "claude_code" } } as never,
+    })
+    .returning();
+  await f.db
+    .update(schema.messages)
+    .set({ meta: { ...note?.meta, usageWait: { ...(note?.meta.usageWait as object), runIds: [b?.id] } } })
+    .where(eq(schema.messages.id, note?.id ?? ""));
+  const [lodi] = await f.db
+    .select()
+    .from(schema.agents)
+    .where(and(eq(schema.agents.orgId, f.org.id), eq(schema.agents.builtin, RIGHT_HAND)));
+
+  await cancelRun({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, a?.id ?? "", { byAgentId: lodi?.id ?? "" });
+  expect((await runs(f)).map((r) => [r.status, r.error])).toEqual([
+    ["canceled", `canceled_by:${f.owner.id}|agent:${lodi?.id}`],
+    ["canceled", `canceled_by:${f.owner.id}|agent:${lodi?.id}`],
+  ]);
 });
 
 test("back after a long wait, a conversation catches up: how long, what was posted since, and it may pass", async () => {

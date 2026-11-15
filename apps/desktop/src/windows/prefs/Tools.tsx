@@ -208,9 +208,9 @@ export function Tools() {
           />
         }
         under={
-          !info && (
+          (!info || cli === "codex") && (
             <>
-              {command && <CommandCopy command={command} />}
+              {!info && command && <CommandCopy command={command} />}
               {note && (
                 <p className="dk-help" role="status">
                   {note}
@@ -227,7 +227,7 @@ export function Tools() {
                     {t("desktop.tools.getGit")}
                   </Button>
                 )}
-                {installable && !said && (
+                {!info && installable && !said && (
                   <Button
                     variant={gitMissing ? "default" : "primary"}
                     size="sm"
@@ -243,8 +243,8 @@ export function Tools() {
                   size="sm"
                   icon="refresh"
                   loading={pending === `check:${cli}`}
-                  disabled={pending !== null}
-                  onClick={() => void checkAgain(cli, name, Boolean(command))}
+                  disabled={homes.length === 0 || pending !== null}
+                  onClick={() => void checkAgain(cli, name, !info && Boolean(command))}
                 >
                   {checkLabel}
                 </Button>

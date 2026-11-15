@@ -1028,6 +1028,23 @@ describe("A device's page", () => {
     expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([{ spill: { own: false } }]);
   });
 
+  test("Only some people or roles: the picker opens with nobody yet, and the first pick is what saves", async () => {
+    const { state } = await open(`/org/${ORG_ID}/settings/devices/${MAC}`);
+    const select = screen().getByRole("combobox", { name: "Who can use it" });
+    expect(select.textContent).toBe("Only the owner");
+    select.focus();
+    await act(async () => fireEvent.keyDown(select, { key: "Enter" }));
+    await click(screen().getByRole("option", { name: "Only some people or roles" }));
+    // Nobody picked is the owner alone on the server: nothing to save yet, and the choice stays on the page.
+    expect(calls(state, "devices.updateComputer")).toEqual([]);
+    expect(screen().getByRole("combobox", { name: "Who can use it" }).textContent).toBe("Only some people or roles");
+    const picker = document.querySelector(".dv-picker") as HTMLElement;
+    await click(within(picker).getByRole("checkbox", { name: /Ana Costa/ }));
+    expect(calls(state, "devices.updateComputer").map((c) => c.args.at(-1))).toEqual([
+      { audience: { mode: "people", userIds: [ANA], roleIds: [] } },
+    ]);
+  });
+
   test("an admin on someone's computer may only narrow who can use it", async () => {
     await open(`/org/${ORG_ID}/settings/devices/${IMAC}`);
     const select = screen().getByRole("combobox", { name: "Who can use it" });

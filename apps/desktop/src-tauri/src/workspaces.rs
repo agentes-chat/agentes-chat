@@ -166,10 +166,11 @@ fn refresh(app: &AppHandle) {
     let mut logos = lock(app).logos.clone();
     let before = list(app);
     let mut next = Vec::with_capacity(file.servers.len());
+    // Read once for every server, and never with Tauri's own read (cookies.rs: it stops the app on macOS).
+    let window_cookies = crate::cookies::read(&page);
     for server in &file.servers {
         let Ok(url) = server.parse::<Url>() else { continue };
-        let cookies: Vec<_> = page.cookies().unwrap_or_default().into_iter().filter(|c| sent_to(c, &url)).collect();
-        let cookie = cookie_header(cookies.iter().map(|c| (c.name(), c.value())));
+        let cookie = cookie_header(window_cookies.iter().filter(|c| sent_to(*c, &url)).map(|c| (c.name(), c.value())));
         let here = crate::local_server::is_here(app, server);
         let agents_here = main_window::agents_here(server, here)
             && home.as_ref().is_some_and(|h| !crate::discover::served_here(h, server));
@@ -266,7 +267,7 @@ fn ask(agent: &ureq::Agent, server: &str, cookie: &str, logos: &mut HashMap<Stri
 pub fn window_user(app: &AppHandle, server: &str) -> Option<String> {
     let page = app.get_webview(main_window::LABEL)?;
     let url = server.parse::<Url>().ok()?;
-    let cookies: Vec<_> = page.cookies().ok()?.into_iter().filter(|c| sent_to(c, &url)).collect();
+    let cookies: Vec<_> = crate::cookies::read(&page).into_iter().filter(|c| sent_to(c, &url)).collect();
     let cookie = cookie_header(cookies.iter().map(|c| (c.name(), c.value())));
     if cookie.is_empty() {
         return None;
@@ -612,7 +613,7 @@ pub fn with_session(
     }
     let url: Url = format!("{server}{path}").parse().map_err(|_| "bad address")?;
     let page = app.get_webview(main_window::LABEL).ok_or("signed_out")?;
-    let cookies = page.cookies_for_url(url.clone()).unwrap_or_default();
+    let cookies: Vec<_> = crate::cookies::read(&page).into_iter().filter(|c| sent_to(c, &url)).collect();
     let cookie = cookie_header(cookies.iter().map(|c| (c.name(), c.value())));
     if cookie.is_empty() {
         return Err("signed_out".into());

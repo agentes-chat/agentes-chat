@@ -127,6 +127,11 @@ export function EndpointForm({
   if (saved) {
     return (
       <View style={styles.gap}>
+        {saved.key.reused ? (
+          <Note icon="check" live>
+            {t("settings.keyResaved")}
+          </Note>
+        ) : null}
         <GroupedHeader>{t("endpoint.results")}</GroupedHeader>
         <GroupedList>
           {checksInOrder(draft, saved.checks).map((r) => (

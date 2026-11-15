@@ -175,13 +175,28 @@ describe("Issues (board and list)", () => {
       await act(async () => fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" }));
       await settle(2);
     };
-    // Me first, then the agents and the people with a task here, then nobody; then the priorities.
+    // Me first, then the agents and the people with a task here, then nobody; then the priorities; then the labels the
+    // tasks here have.
     let menu = await filterMenu("Filtro");
     expect(
       within(menu)
         .getAllByRole("menuitemcheckbox")
         .map((o) => o.querySelector(".ac-menu__label")?.textContent),
-    ).toEqual(["Eu", "Ada", "Atlas", "João", "Sem responsável", "Alta", "Normal", "Baixa"]);
+    ).toEqual([
+      "Eu",
+      "Ada",
+      "Atlas",
+      "João",
+      "Sem responsável",
+      "Alta",
+      "Normal",
+      "Baixa",
+      "agendamento",
+      "bug",
+      "ops",
+      "pesquisa",
+      "produto",
+    ]);
     await pickIn(menu, "Ada");
     // An open menu hides the rest of the page from the accessibility tree: read the board once it closes.
     await closeMenu();
@@ -221,15 +236,18 @@ describe("Issues (board and list)", () => {
     expect(rows).toHaveLength(7);
     expect(rows[0]?.textContent).toContain("#132");
     expect(rows.find((r) => r.textContent?.includes("#126"))?.textContent).toContain("Feito");
-    // The list gives every row the same columns of facts, one for each fact some task has: labels stand under labels
-    // and priorities under priorities, whatever each row has. How much room they take says when they stand (CSS).
-    const list = rows[0]?.closest(".ac-groups") as HTMLElement;
-    const columns = list.style.getPropertyValue("--issue-facts");
-    expect(Number(list.getAttribute("data-fact-columns")) % 80).toBe(0);
-    const kinds = [...list.querySelectorAll(".issue-card__facts > .ac-factline__fact")].map((f) =>
-      f.getAttribute("data-fact"),
-    );
-    for (const kind of new Set(kinds)) if (kind !== "number") expect(columns).toContain(`[${kind}] `);
+    // The list is a table: one line of column names, one for each thing some task shown has, and every row's facts
+    // in those columns (issues.css gives each fact its column by `data-fact`).
+    const list = rows[0]?.closest(".issue-table") as HTMLElement;
+    expect([...list.querySelectorAll(".issue-table__head > [data-column]")].map((c) => c.textContent)).toEqual([
+      "Tarefa",
+      "Rótulo",
+      "Prioridade",
+      "Prazo",
+      "Critérios",
+      "GitHub",
+      "Responsável",
+    ]);
     expect(state.issuesView?.layout).toBe("list");
   });
 

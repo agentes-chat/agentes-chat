@@ -30,6 +30,7 @@ import { isAgentOnlyDm, openAgentDm } from "./dms";
 import { publishChannelEvent } from "./events";
 import { cutText } from "./format";
 import type { Judge } from "./judge";
+import { machineOnline } from "./machines";
 import { getMessage, insertMessage, type Message, type MessageView, withMessageDetails } from "./messages";
 import type { Notice } from "./notices";
 import { notifyAgentUnreached } from "./notification-producers";
@@ -47,7 +48,7 @@ import { untrustedBlock } from "./untrusted";
 import { USAGE_WAIT_CODES } from "./usage-pause";
 import { inWorkspaceWords } from "./workspace-mode";
 
-const { agentConsultations, agentRuns, agents, channels, messages, outbox, users } = schema;
+const { agentConsultations, agentRuns, agents, channels, machines, messages, outbox, users } = schema;
 
 export const ASK_AGENT_TOOL = "ask_agent";
 export const TELL_AGENT_TOOL = "tell_agent";
@@ -59,10 +60,18 @@ export const TELL_AGENT_TOOL = "tell_agent";
 export const CONSULTATION_TTL_MS = 15 * 60_000;
 /**
  * How long a question or a hand-off may go without moving before it ends with why: its colleague never started, or
- * sits in its computer's line, on a computer that's away, on its plan or budget, or on its AI provider. A colleague
- * at work has no such limit, and neither has one waiting on a person: its card has its own deadline.
+ * sits on a computer that's away, behind its own long work or on its AI provider. A wait that ends by itself (an online
+ * computer's line, a plan's reset) holds it longer (`CONSULTATION_KNOWN_WAIT_MS`). A colleague at work has no such
+ * limit, and neither has one waiting on a person: its card has its own deadline.
  */
 export const CONSULTATION_HUNG_MS = 2 * 3600_000;
+/**
+ * The most a wait known to end by itself may hold a question or a hand-off (`stuckOn`): a line on a computer that is
+ * online, a plan's limit. A plan's known reset ends it sooner: when its run resumes and `RESET_MARGIN_MS` more.
+ */
+export const CONSULTATION_KNOWN_WAIT_MS = 24 * 3600_000;
+/** After a parked run's own resume time (`waitingForBrain.until`), the time its resumed turn takes to start. */
+const RESET_MARGIN_MS = 30 * 60_000;
 /**
  * Agents already in a chain before one more may be asked (a lead → a dev → a reviewer → a specialist → one more).
  * Real teams delegate three and four deep; cycles are refused anyway, and the stretch limits (`stretch.ts`: runs
@@ -382,12 +391,12 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
           { db, pubsub: deps.pubsub, judge: deps.judge ?? null },
           sent.message,
           [target.id],
-          { reportIn: await peopleSee(db, reached.run, here) },
+          { reportIn: await peopleSee(db, reached.run, here), triage: false },
         );
         const outcome = held.get(target.id);
         waitsForRoom = outcome === "later";
         if (!outcome) await startNoteRun(db, sent.message, target.id);
-        else if (outcome !== "later") {
+        else if (outcome === "linked" || outcome === "loop") {
           await db
             .update(agentConsultations)
             .set({ status: "answered", answer: HELD_WORDS[outcome], answeredAt: new Date(), reportedAt: new Date() })
@@ -440,11 +449,9 @@ export async function peopleSee(db: Executor, run: AgentRun, here: { kind: strin
     : { channelId: run.channelId, threadId: replyThreadOf(run) };
 }
 
-/** What the sender reads when the brakes held its note (ADR 0131 §4–6). */
-const HELD_WORDS: Record<Exclude<BrakeOutcome, "later">, string> = {
+/** What the sender reads when the brakes held its note (ADR 0131 §4 and §6). */
+const HELD_WORDS: Record<Exclude<BrakeOutcome, "later" | "digest">, string> = {
   linked: "is already working on this same item: your note joined that work, nothing new started.",
-  digest:
-    "didn't start on it: it looks known or harmless, so it goes into a summary for a person instead. Don't send it again.",
   loop: "stopped working on this item on its own: it came back too often today, and a person was asked how to handle it. Don't send it again.",
 };
 
@@ -1926,23 +1933,47 @@ export async function announceConsultationChange(
 /** A row this close to its deadline whose colleague is still at it gets `CONSULTATION_TTL_MS` more. */
 const EXTEND_BEFORE_MS = 2 * 60_000;
 
-/** What holds a colleague that isn't moving, as the asking agent reads it; null while it works or waits on a person. */
-function stuckOn(target: {
-  status: string | null;
-  code: string | null;
-  outage: boolean;
-  waitingMachineId: string | null;
-}) {
-  if (target.status === null) return "it never got to start";
+/**
+ * What holds a colleague that isn't moving, as the asking agent reads it, and when (ms) it counts as hung; null while
+ * it works or waits on a person. `started`: when the wait began.
+ */
+function stuckOn(
+  target: {
+    status: string | null;
+    code: string | null;
+    outage: boolean;
+    waitingMachineId: string | null;
+    resetsAt: string | null;
+    until: string | null;
+    computerOnline: boolean;
+  },
+  started: number,
+): { why: string; at: number } | null {
+  const hung = (why: string, after = CONSULTATION_HUNG_MS) => ({ why, at: started + after });
+  if (target.status === null) return hung("it never got to start");
   // Asking its computer from the line it still waits (`computerWaitOf`).
   const asking = target.status === "running" && target.waitingMachineId !== null;
   if (target.status !== "waiting_input" && !asking) return null;
-  if (target.outage) return "its AI provider stayed down";
-  if (asking || target.code === "busy") return "it stayed in line for room on its computer";
+  if (target.outage) return hung("its AI provider stayed down");
+  if (asking || target.code === "busy")
+    return hung(
+      "it stayed in line for room on its computer",
+      target.computerOnline ? CONSULTATION_KNOWN_WAIT_MS : CONSULTATION_HUNG_MS,
+    );
   if (target.code === null) return null;
-  if (target.code === "work_queue") return "it stayed behind its own long work";
-  if (USAGE_WAIT_CODES.has(target.code)) return "it stayed at its plan's or budget's limit";
-  return "its computer stayed away";
+  if (target.code === "work_queue") return hung("it stayed behind its own long work");
+  if (USAGE_WAIT_CODES.has(target.code)) {
+    // A run deep in its plan's line resumes well past the reset (`waitForUsage`: 60 s apart), at its own `until`.
+    const resumes = target.resetsAt
+      ? Math.max(Date.parse(target.resetsAt), Date.parse(target.until ?? "") || 0)
+      : Number.NaN;
+    const reset = resumes - started + RESET_MARGIN_MS;
+    const after = Number.isFinite(reset)
+      ? Math.min(Math.max(reset, CONSULTATION_HUNG_MS), CONSULTATION_KNOWN_WAIT_MS)
+      : CONSULTATION_KNOWN_WAIT_MS;
+    return hung("it stayed at its plan's or budget's limit", after);
+  }
+  return hung("its computer stayed away");
 }
 
 /**
@@ -1955,7 +1986,8 @@ const waitSinceSql = () => sql<string>`(extract(epoch from ${waitSinceIn("agent_
  * The worker's sweep, every minute (ADR 0095). A colleague at it (queued, running, waiting on a person, or done but
  * waiting on what it handed on) keeps a row open, and so does a wake still waiting to start a run: near its deadline
  * it gets more time (its line and clock stay where it was asked), and that run is never stopped. Past
- * `CONSULTATION_HUNG_MS` without moving (`stuckOn`) a row ends with why, and its run or wake with it. Past its
+ * `CONSULTATION_HUNG_MS` without moving (`stuckOn`) a row ends with why, and its run or wake with it; a wait known to
+ * end by itself (an online computer's line, a plan's reset) holds it up to `CONSULTATION_KNOWN_WAIT_MS`. Past its
  * deadline, a row nobody started (the stretch held it) or whose run is gone closes: with what it gathered, else
  * expired, and its run stops. Returns how many closed.
  */
@@ -1966,13 +1998,17 @@ export async function expireConsultations(deps: { db: Database; pubsub?: PubSub 
       target: agentRuns.status,
       handedOn: handedOnSql,
       code: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'code'`,
+      resetsAt: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'resetsAt'`,
+      until: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'until'`,
       outage: outageParkedSql,
       waitingMachineId: agentRuns.waitingMachineId,
+      machine: { online: machines.online, lastSeenAt: machines.lastSeenAt, deletedAt: machines.deletedAt },
       since: waitSinceSql(),
       wake: sql<boolean>`(${agentConsultations.targetRunId} is null and ${wakeWaitsSql(sql`${agentConsultations}`)})`,
     })
     .from(agentConsultations)
     .leftJoin(agentRuns, eq(agentRuns.id, agentConsultations.targetRunId))
+    .leftJoin(machines, eq(machines.id, agentRuns.waitingMachineId))
     .where(
       and(
         eq(agentConsultations.status, "open"),
@@ -1982,12 +2018,19 @@ export async function expireConsultations(deps: { db: Database; pubsub?: PubSub 
     .limit(200);
   let closed = 0;
   const announced = new Set<string>();
-  for (const { row, target, handedOn, code, outage, waitingMachineId, since, wake } of rows) {
+  for (const { row, target, handedOn, code, resetsAt, until, outage, waitingMachineId, machine, since, wake } of rows) {
     const started = target ? Number(since) : row.createdAt.getTime();
-    const stuck = target || wake ? stuckOn({ status: target, code, outage: Boolean(outage), waitingMachineId }) : null;
-    if (stuck && now.getTime() - started >= CONSULTATION_HUNG_MS) {
-      const hours = CONSULTATION_HUNG_MS / 3600_000;
-      const why = `${stuck} for over ${hours} hours, so it was stopped and nothing more will come of it. Ask again later, or tell the person what is missing`;
+    const computerOnline = machine ? machineOnline(machine, now) : false;
+    const stuck =
+      target || wake
+        ? stuckOn(
+            { status: target, code, outage: Boolean(outage), waitingMachineId, resetsAt, until, computerOnline },
+            started,
+          )
+        : null;
+    if (stuck && now.getTime() >= stuck.at) {
+      const hours = Math.floor((now.getTime() - started) / 3600_000);
+      const why = `${stuck.why} for over ${hours} hours, so it was stopped and nothing more will come of it. Ask again later, or tell the person what is missing`;
       const c = await closeConsultation(deps, row, "failed", why);
       if (!c) continue;
       closed++;
@@ -2164,6 +2207,47 @@ export async function consultationOrigin(
   }
   if (origin && (await answersAgentsOnly(db, orgId, runId))) return null;
   return origin;
+}
+
+/**
+ * Whether an agent this run answers speaks in `channelId`: a run up one of the chains of questions and notes it
+ * answers is at work there, or is a routine's that reports there. That agent delivers what this run makes, so a
+ * post of its own there would repeat it (`post_message`). Every chain counts: a second request joins a run still at
+ * work (`startOrJoinRun`), where `consultationOrigin` names the latest alone, for the run's cards. A heads-up is not
+ * one: nobody carries its reply.
+ */
+export async function askerSpeaksIn(db: Executor, orgId: string, runId: string, channelId: string): Promise<boolean> {
+  const seen = new Set([runId]);
+  let targets = [runId];
+  for (let depth = 0; depth < MAX_HANDOFF_LINKS && targets.length > 0; depth++) {
+    const askers = await db
+      .select({
+        id: agentRuns.id,
+        orgId: agentRuns.orgId,
+        channelId: agentRuns.channelId,
+        triggerMessageId: agentRuns.triggerMessageId,
+        background: agentRuns.background,
+      })
+      .from(agentConsultations)
+      .innerJoin(agentRuns, eq(agentRuns.id, agentConsultations.askerRunId))
+      .where(
+        and(
+          eq(agentConsultations.orgId, orgId),
+          inArray(agentConsultations.targetRunId, targets),
+          sql`not ${headsUpSql(sql`${agentConsultations}`)}`,
+        ),
+      );
+    targets = [];
+    for (const asker of askers) {
+      if (seen.has(asker.id)) continue;
+      seen.add(asker.id);
+      const report = asker.background ? (await routineBriefOfRun(db, asker))?.deliverTo : undefined;
+      if ((report?.channelId ?? asker.channelId) === channelId) return true;
+      // A routine's run is where its chain began, as for `consultationOrigin`.
+      if (!report) targets.push(asker.id);
+    }
+  }
+  return false;
 }
 
 /** This run answers a question that began in a routine's or long work's run, through any chain of agents. */

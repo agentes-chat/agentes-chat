@@ -154,6 +154,25 @@ test("one by one shows each routine request on its own card, and nothing is sent
   expect(state.calls.some((c) => c.method === "approvals.decideMany")).toBe(false);
 });
 
+test("one agent's routine group has Mudar quando perguntar, which saves that agent's choice and approves nothing", async () => {
+  const state = seedState();
+  ask(state, "ap-a", "Metas do trimestre", true);
+  ask(state, "ap-b", "Riscos", true);
+  await go(withDigest(state, ["ap-a", "ap-b"]));
+  const group = within(card()).getByRole("group", { name: "2 pedidos de rotina" });
+  await click(within(group).getByRole("button", { name: "Mudar quando perguntar" }));
+  const dialog = screen().getByRole("dialog", { name: "Aprovações" });
+  await click(within(dialog).getByRole("radio", { name: /Nunca perguntar/ }));
+  expect(state.calls.find((c) => c.method === "agents.update")?.args).toEqual([
+    ORG_ID,
+    ADA_ID,
+    { approvalsLevel: "never" },
+  ]);
+  expect(state.calls.some((c) => c.method.startsWith("approvals.decide") || c.method === "approvals.approve")).toBe(
+    false,
+  );
+});
+
 test("no group for one routine request, for none, or for someone who may not decide them", async () => {
   const state = seedState();
   ask(state, "ap-a", "Metas do trimestre", true);

@@ -211,6 +211,7 @@ export function RequestCard({
   body,
   actions,
   end,
+  under,
   what,
   onSubmit,
   muted = false,
@@ -255,6 +256,8 @@ export function RequestCard({
   actions?: ReactNode;
   /** The footer's right end: the fuse and its time left. */
   end?: ReactNode;
+  /** A quiet link on its own line under the footer's decision ("Mudar quando perguntar"). */
+  under?: ReactNode;
   /** The object's short title, for the bar ("Enviar e-mail"). */
   what: string;
   /** Its field and footer are a form (a secret): Enter sends it. */
@@ -331,6 +334,7 @@ export function RequestCard({
       <div className="rq__foot">
         {actions}
         {end && <span className="rq__end">{end}</span>}
+        {under && <span className="rq__under">{under}</span>}
       </div>
     )
   );

@@ -8,6 +8,7 @@
 //! web view.
 
 mod app_icon;
+mod cookies;
 mod cover;
 mod deep_link;
 mod discover;
@@ -637,6 +638,7 @@ pub fn run() {
             local_server::local_server_backup,
             local_server::local_server_backups_set,
             local_server::local_server_restore,
+            local_server::local_server_erase,
             local_server::keep_running,
             local_server::open_system_settings,
             local_server::local_server_diagnostics,

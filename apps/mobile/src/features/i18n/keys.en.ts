@@ -941,6 +941,9 @@ export const featureKeysEn = {
     /** The toast after a swipe marked an item done, with the way back. */
     doneToast: "Done",
     undo: "Undo",
+    /** The toast after "Clear all" (named after the Done pill), with the way back. */
+    doneAllToast_one: "{{count}} moved to Done",
+    doneAllToast_other: "{{count}} moved to Done",
     day: {
       today: "Today",
       yesterday: "Yesterday",
@@ -1273,6 +1276,8 @@ export const featureKeysEn = {
     /** No password, and no way to sign in again here: the website adds one. */
     addPasswordFirst: "Add a password to your account on the website first, then type it here.",
     addPasswordWeb: "Add a password on the website",
+    /** The owner of a server the desktop app runs, with no password: that app's sign-in is their proof. */
+    onThisComputer: "Delete it in the agentes.chat app on the computer that runs this server.",
     otherAccount: "You signed in to another account. Nothing was deleted.",
     hold: "Hold to delete",
   },
@@ -2116,6 +2121,7 @@ export const featureKeysEn = {
       waitingFor: "{{names}} is waiting for {{device}} for {{person}}",
       tool_request: "{{names}} asks you to turn on {{tool}} on your {{device}}",
       cli_request: "{{names}} asks you to install {{tool}} on your {{device}}",
+      folder_request: "{{names}} asks for the folder {{path}} on your {{device}}",
       allowOnce: "Allow once",
       always: "Always allow {{name}}",
       no: "No",

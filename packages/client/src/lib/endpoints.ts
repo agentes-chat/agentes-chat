@@ -37,7 +37,7 @@ export const endpointBaseExample = (style: EndpointStyle) =>
   style === "anthropic" ? "https://api.example.com/anthropic" : "https://api.example.com/v1";
 
 const MODEL_ID = /^[\w.:/@+-]{1,200}$/;
-export const MAX_ENDPOINT_MODELS = 30;
+export const MAX_ENDPOINT_MODELS = 100;
 
 /** The models an endpoint listed, merged in: the ones already there keep their choice and prices, new ones start off. */
 export function withListedModels(draft: EndpointDraft, listed: readonly { id: string }[]): EndpointDraft {
