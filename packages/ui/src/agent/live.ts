@@ -3,7 +3,9 @@
  * agent engine (engine.js). Only visible avatars are drawn: about 24 times a
  * second while the agent works, reacts or follows the gaze, about 12 at rest
  * (every blink still shows; a slow turn reads the same); with reduced motion
- * each one is drawn once, still. A page can set a gaze point (the landing's
+ * each one is drawn once, still. A timer waits out the gap and the browser is
+ * asked for a frame only when one is due, and with no avatar in view the loop
+ * stops until one comes back into view. A page can set a gaze point (the landing's
  * pointer): avatars inside an element marked `data-gaze` turn their heads
  * toward it.
  */
@@ -104,11 +106,13 @@ export function playAgentReaction(key: string, kind: AgentReaction) {
   redraw();
   if (reduced()) {
     for (const ms of [600, 700, (REACTION_SECONDS + 0.05) * 1000]) setTimeout(redraw, ms);
-  } else if (!raf && agents.size && typeof requestAnimationFrame === "function") raf = requestAnimationFrame(tick);
+  } else start();
 }
 
 const agents = new Set<LiveAgent>();
 const visible = new WeakSet<HTMLElement>();
+// The loop's one handle: a timer waiting out the gap to the next frame, then the frame asked for once it is due.
+let timer: ReturnType<typeof setTimeout> | 0 = 0;
 let raf = 0;
 let last = 0;
 let lastRest = 0;
@@ -126,10 +130,10 @@ let motionQuery: MediaQueryList | null | undefined;
 const reduced = () => {
   if (motionQuery === undefined) {
     motionQuery = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
-    // Motion allowed again: the loop starts moving.
+    // Motion allowed again: the loop starts moving; asked to stop: it stops.
     motionQuery?.addEventListener?.("change", () => {
-      if (!motionQuery?.matches && !raf && agents.size && typeof requestAnimationFrame === "function")
-        raf = requestAnimationFrame(tick);
+      if (motionQuery?.matches) cancelLoop();
+      else start();
     });
   }
   return motionQuery?.matches === true;
@@ -149,7 +153,10 @@ export function getGaze() {
 
 /** Where avatars inside `[data-gaze]` look (client coordinates), or null to let them wander. */
 export function setGaze(point: { x: number; y: number } | null) {
+  const wasNone = !gaze;
   gaze = point;
+  // Avatars that follow it now run at the full rate.
+  if (wasNone && point) start();
 }
 
 /** In the app expressions are rare (one every ~18 s per agent); thinking speeds the head up. */
@@ -307,23 +314,63 @@ const busy = (a: LiveAgent) => {
   return Boolean(gaze && a.box.closest("[data-gaze]"));
 };
 
+const anyVisible = () => {
+  for (const a of agents) if (visible.has(a.box)) return true;
+  return false;
+};
+
+function cancelLoop() {
+  if (timer) clearTimeout(timer);
+  if (raf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(raf);
+  timer = 0;
+  raf = 0;
+}
+
+/**
+ * Asks for the next frame only when one is due: a timer waits out the gap (the full rate while a visible avatar is
+ * busy, the rest's otherwise), then the browser is asked once. Asking at every refresh and dropping the early ones
+ * keeps the compositor awake on a high-refresh screen. With no avatar in view, or with reduced motion, no frame is
+ * asked for; `start` brings the loop back.
+ */
+function schedule() {
+  if (typeof requestAnimationFrame !== "function") return;
+  if (timer || raf || reduced() || !anyVisible()) return;
+  let working = false;
+  for (const a of agents) if (visible.has(a.box) && busy(a)) working = true;
+  timer = setTimeout(
+    () => {
+      timer = 0;
+      raf = requestAnimationFrame(tick);
+    },
+    Math.max(0, (working ? ACTIVE_MS : REST_MS) - (clock() - last)),
+  );
+}
+
+/** Starts the loop, or makes it look again at how fast it should run (an avatar became busy). */
+function start() {
+  if (raf) return;
+  if (timer) {
+    clearTimeout(timer);
+    timer = 0;
+  }
+  schedule();
+}
+
 function tick(now: number) {
   raf = 0;
-  if (now - last >= ACTIVE_MS) {
-    last = now;
-    const rest = now - lastRest >= REST_MS;
-    if (rest) lastRest = now;
-    const t = now / 1000;
-    // A full-screen menu is open (MenuOverlay): the app behind is blurred, so its avatars hold still
-    // (each frame there would blur the whole screen again); the ones in the menu keep moving.
-    const covered = typeof document !== "undefined" && document.documentElement.dataset.menuOverlay !== undefined;
-    for (const a of agents) {
-      if (!visible.has(a.box) || !(rest || busy(a))) continue;
-      if (covered && !a.box.closest(".ac-mo")) continue;
-      drawLive(a, t);
-    }
+  last = now;
+  const rest = now - lastRest >= REST_MS;
+  if (rest) lastRest = now;
+  const t = now / 1000;
+  // A full-screen menu is open (MenuOverlay): the app behind is blurred, so its avatars hold still
+  // (each frame there would blur the whole screen again); the ones in the menu keep moving.
+  const covered = typeof document !== "undefined" && document.documentElement.dataset.menuOverlay !== undefined;
+  for (const a of agents) {
+    if (!visible.has(a.box) || !(rest || busy(a))) continue;
+    if (covered && !a.box.closest(".ac-mo")) continue;
+    drawLive(a, t);
   }
-  if (agents.size && !reduced()) raf = requestAnimationFrame(tick);
+  schedule();
 }
 
 /** Starts drawing an agent; returns the cleanup. */
@@ -336,6 +383,8 @@ export function addLiveAgent(agent: LiveAgent): () => void {
         if (e.isIntersecting) visible.add(e.target as HTMLElement);
         else visible.delete(e.target as HTMLElement);
       }
+      // The loop stops with nothing in view: an avatar coming into view starts it again.
+      start();
     });
     observer.observe(agent.box);
   } else visible.add(agent.box);
@@ -351,12 +400,13 @@ export function addLiveAgent(agent: LiveAgent): () => void {
     resizes.observe(agent.box);
   }
   drawLive(agent, typeof performance === "object" ? performance.now() / 1000 : 0);
-  if (!raf && !reduced() && typeof requestAnimationFrame === "function") raf = requestAnimationFrame(tick);
+  start();
   return () => {
     agents.delete(agent);
     observer?.unobserve(agent.box);
     resizes?.unobserve(agent.box);
     sizes.delete(agent.box);
     visible.delete(agent.box);
+    if (!anyVisible()) cancelLoop();
   };
 }

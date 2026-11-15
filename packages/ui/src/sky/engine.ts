@@ -7,7 +7,9 @@
  * and made palette-agnostic: any agent color, faded from any surface token.
  *
  * One animation loop runs for every sky on the page, about 30 frames a
- * second, and only while a sky moves: a sky off screen costs nothing, and the
+ * second, and only while a sky moves: it waits out the gap between frames with a
+ * timer and asks the browser for a frame only when one is due, so a high-refresh
+ * screen is not woken at every refresh. A sky off screen costs nothing, and the
  * browser holds the loop while the page is hidden. With reduced motion a sky
  * is drawn once (and again on resize or a theme change), with no loop between,
  * and nothing in it moves between those frames, the pointer included.
@@ -145,22 +147,37 @@ interface Sky {
   step(dt: number): void;
 }
 const live = new Set<Sky>();
+// The loop's one handle: a timer that waits out the gap to the next frame, then the frame asked for once it is due.
+let timer: ReturnType<typeof setTimeout> | 0 = 0;
 let raf = 0;
 let last = 0;
 const hasRaf = () => typeof requestAnimationFrame === "function";
+/**
+ * The next frame is asked for only when one is due. Asking at every refresh and dropping the early ones keeps the
+ * compositor awake on a high-refresh screen (hundreds of callbacks a second for 30 drawn frames), so the gap is
+ * waited out with a timer and the browser is asked once after it.
+ */
+function schedule() {
+  timer = setTimeout(
+    () => {
+      timer = 0;
+      raf = requestAnimationFrame(tick);
+    },
+    Math.max(0, SKY_FRAME_MS - (performance.now() - last)),
+  );
+}
 function tick(now: number) {
-  if (now - last >= SKY_FRAME_MS) {
-    const dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
-    for (const s of live) s.step(dt);
-  }
+  raf = 0;
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  for (const s of live) s.step(dt);
   // With nothing to draw the loop stops; a sky that has something again wakes it (`wake`).
-  raf = hasRaf() && [...live].some((s) => s.wanted()) ? requestAnimationFrame(tick) : 0;
+  if ([...live].some((s) => s.wanted())) schedule();
 }
 function wake() {
-  if (raf || !hasRaf()) return;
+  if (timer || raf || !hasRaf()) return;
   last = performance.now();
-  raf = requestAnimationFrame(tick);
+  schedule();
 }
 
 function context2d(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
