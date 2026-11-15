@@ -1926,6 +1926,31 @@
       "why": "Sekme kapalıyken bile. İstediğin zaman <link>Bildirimler</link> bölümünden değiştir."
     }
   },
+  "projectsPage": {
+    "title": "Projeler",
+    "subtitle": "Her projenin deposu ve ilerlemesi",
+    "new": "Yeni proje",
+    "columns": {
+      "project": "Proje",
+      "repository": "Depo",
+      "tasks": "Görevler",
+      "done": "Tamamlanan",
+      "status": "Durum",
+      "actions": "Eylemler"
+    },
+    "countsHint": "Görebildiğiniz görevleri sayar. İptal edilen görevler sayılmaz.",
+    "status": {
+      "active": "Etkin",
+      "done": "Tamamlandı",
+      "archived": "Arşivlendi"
+    },
+    "noRepo": "Yok",
+    "openRepo": "{{repo}} deposunu GitHub'da aç",
+    "openBoard": "{{name}} panosunu aç",
+    "rowActions": "{{name}} için seçenekler",
+    "emptyTitle": "Henüz proje yok",
+    "empty": "Her müşteri veya ürün için bir tane oluşturun, ardından görevlerini içine koyun."
+  },
   "shell": {
     "otherChannels": "Diğer kanallar",
     "otherChannelsPersonal": "Diğer grup sohbetleri",
@@ -1941,6 +1966,7 @@
       "proposals": "Ajanların değiştirmeyi önerdikleri",
       "threads": "Ayrılan konuşmalar ve misyonlar",
       "issues": "Kişiler ve ajanlar için ekibin işleri",
+      "projects": "Her müşteri veya ürün, deposu ve ilerlemesiyle",
       "wiki": "Ekibin bildikleri, herkes için yazılmış",
       "drive": "Dosyalar, raporlar ve tablolar",
       "routines": "Ajanların zamanında kendi başlarına yaptıkları",
@@ -1952,6 +1978,7 @@
       "proposalsPersonal": "Ajanlarınızın değiştirmeyi önerdikleri",
       "threadsPersonal": "Yan sohbetler ve misyonlar",
       "issuesPersonal": "Sizin ve ajanlarınızın görevleri",
+      "projectsPersonal": "Projeleriniz, depoları ve ilerlemeleriyle",
       "wikiPersonal": "Ajanlarınızın okuyabileceği notlar",
       "calendarPersonal": "Randevularınız ve son tarihleriniz",
       "teamPersonal": "Ajanlarınız ve burada başka kimler var",
@@ -2057,6 +2084,7 @@
     "approvals": "Onaylar",
     "proposals": "İyileştirme önerileri",
     "issues": "Görevler",
+    "projects": "Projeler",
     "missionsWaiting_one": "Sizi bekleyen {{count}} misyon",
     "missionsWaiting_other": "Sizi bekleyen {{count}} misyon",
     "threads": "İleti dizileri",
@@ -7775,7 +7803,12 @@
       "delete": "Projeyi sil",
       "deleteTitle": "{{name}} projesi silinsin mi?",
       "deleteBody": "Görevleri projesiz olarak kalır.",
-      "empty": "Bu projede henüz görev yok."
+      "empty": "Bu projede henüz görev yok.",
+      "description": "Açıklama",
+      "descriptionPlaceholder": "Bu proje ne için?",
+      "repository": "GitHub deposu",
+      "repositoryExample": "acme/klinik",
+      "repositoryHint": "Bu projenin işinin bulunduğu depo. Ajanlar bunu proje ile birlikte okur."
     },
     "columns": {
       "add": "Sütun ekle",
@@ -14657,6 +14690,8 @@
       "projectNameTaken": "Bu adla bir proje zaten var.",
       "projectArchived": "Bu proje arşivlendi ve yeni görev almıyor.",
       "projectsFull": "Bir çalışma alanında en fazla {{max}} proje olabilir. Önce birini silin.",
+      "projectBadRepo": "Depoyu sahip/ad biçiminde yazın veya github.com adresini yapıştırın.",
+      "projectDescriptionTooLong": "Açıklama en fazla {{max}} karakter olabilir.",
       "stageFull": "Bir aşama en fazla {{max}} sütun alır. Önce sütunlarından birini silin.",
       "deleteForbidden": "Bu görevi yalnızca oluşturan kişi veya bir yönetici silebilir.",
       "audienceEmpty": "Kimlerin göreceğini seçin."
@@ -17725,6 +17760,10 @@
     "list_issues": {
       "label": "Görevleri gör",
       "description": "Görevleri listeler ve açar."
+    },
+    "list_projects": {
+      "label": "Projeleri gör",
+      "description": "Görev projelerini, ne işe yaradıklarını ve depolarını listeler."
     },
     "create_issue": {
       "label": "Görev oluştur",

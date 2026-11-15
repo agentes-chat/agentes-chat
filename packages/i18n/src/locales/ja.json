@@ -1876,6 +1876,31 @@
       "why": "タブを閉じていても届きます。<link>通知</link>でいつでも変更できます。"
     }
   },
+  "projectsPage": {
+    "title": "プロジェクト",
+    "subtitle": "各プロジェクトのリポジトリと進捗",
+    "new": "新しいプロジェクト",
+    "columns": {
+      "project": "プロジェクト",
+      "repository": "リポジトリ",
+      "tasks": "タスク",
+      "done": "完了",
+      "status": "ステータス",
+      "actions": "操作"
+    },
+    "countsHint": "見えるタスクの数です。キャンセルしたタスクは数えません。",
+    "status": {
+      "active": "進行中",
+      "done": "完了",
+      "archived": "アーカイブ済み"
+    },
+    "noRepo": "なし",
+    "openRepo": "GitHubで{{repo}}を開く",
+    "openBoard": "{{name}}のボードを開く",
+    "rowActions": "{{name}}のオプション",
+    "emptyTitle": "プロジェクトはまだありません",
+    "empty": "クライアントや製品ごとに作成し、そのタスクを入れてください。"
+  },
   "shell": {
     "otherChannels": "その他のチャンネル",
     "otherChannelsPersonal": "その他のグループ会話",
@@ -1891,6 +1916,7 @@
       "proposals": "エージェントが変更を提案している内容",
       "threads": "枝分かれした会話とミッション",
       "issues": "人とエージェントのためのチームの作業",
+      "projects": "クライアントや製品ごとに、リポジトリと進捗をまとめます",
       "wiki": "チームの知識を全員向けにまとめたもの",
       "drive": "ファイル、レポート、表",
       "routines": "エージェントが時間どおりに自動で行うこと",
@@ -1902,6 +1928,7 @@
       "proposalsPersonal": "あなたのエージェントが変更を提案している内容",
       "threadsPersonal": "別の流れの会話とミッション",
       "issuesPersonal": "あなたとエージェントのタスク",
+      "projectsPersonal": "あなたのプロジェクトと、そのリポジトリや進捗です",
       "wikiPersonal": "エージェントが読めるメモ",
       "calendarPersonal": "予定と締め切り",
       "teamPersonal": "あなたのエージェントと、ここにいるほかの人",
@@ -2006,6 +2033,7 @@
     "approvals": "承認",
     "proposals": "改善提案",
     "issues": "タスク",
+    "projects": "プロジェクト",
     "missionsWaiting_other": "{{count}}件のミッションがあなたを待っています",
     "threads": "スレッド",
     "routines": "ルーティン",
@@ -7533,7 +7561,12 @@
       "delete": "プロジェクトを削除",
       "deleteTitle": "プロジェクト「{{name}}」を削除しますか？",
       "deleteBody": "タスクはプロジェクトなしで残ります。",
-      "empty": "このプロジェクトにはまだタスクがありません。"
+      "empty": "このプロジェクトにはまだタスクがありません。",
+      "description": "説明",
+      "descriptionPlaceholder": "このプロジェクトは何のためのものですか？",
+      "repository": "GitHubリポジトリ",
+      "repositoryExample": "acme/clinica",
+      "repositoryHint": "このプロジェクトの作業があるリポジトリです。エージェントはプロジェクトと一緒に読みます。"
     },
     "columns": {
       "add": "列を追加",
@@ -14181,6 +14214,8 @@
       "projectNameTaken": "同じ名前のプロジェクトがすでにあります。",
       "projectArchived": "このプロジェクトはアーカイブ済みで、新しいタスクは追加できません。",
       "projectsFull": "ワークスペースのプロジェクトは最大{{max}}個です。先に1つ削除してください。",
+      "projectBadRepo": "リポジトリは「所有者/名前」の形で書くか、github.comのアドレスを貼り付けてください。",
+      "projectDescriptionTooLong": "説明は最大{{max}}文字までです。",
       "stageFull": "1つのステージに置ける列は{{max}}列までです。先にその列を1つ削除してください。",
       "deleteForbidden": "このタスクを削除できるのは作成者か管理者だけです。",
       "audienceEmpty": "閲覧できる人を選んでください。"
@@ -17212,6 +17247,10 @@
     "list_issues": {
       "label": "タスクを見る",
       "description": "タスクを一覧表示して開きます。"
+    },
+    "list_projects": {
+      "label": "プロジェクトを見る",
+      "description": "タスクのプロジェクトと、その用途やリポジトリを一覧にします。"
     },
     "create_issue": {
       "label": "タスクを作成",

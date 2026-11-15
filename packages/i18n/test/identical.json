@@ -298,7 +298,8 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "projectsPage.columns.status"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -986,7 +987,9 @@
       "storage.connect.awsRegion.eu-central-2",
       "storage.connect.awsRegion.eu-west-3",
       "storage.connect.awsRegion.eu-south-1",
-      "storage.connect.awsRegion.eu-north-1"
+      "storage.connect.awsRegion.eu-north-1",
+      "issues.projects.description",
+      "projectsPage.columns.actions"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1446,7 +1449,9 @@
       "storage.connect.theirName.s3Secret",
       "storage.connect.theirName.b2Key",
       "storage.connect.theirName.b2Secret",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "projectsPage.columns.repository",
+      "projectsPage.columns.status"
     ],
     "it": [
       "shell.email.label",
@@ -1818,7 +1823,8 @@
       "appsDownload.computer",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "projectsPage.columns.repository"
     ],
     "nl": [
       "calendar.moreRuns",
@@ -2426,7 +2432,10 @@
       "storage.connect.theirName.s3Key",
       "storage.connect.theirName.s3Secret",
       "storage.connect.theirName.b2Key",
-      "storage.connect.theirName.b2Secret"
+      "storage.connect.theirName.b2Secret",
+      "projectsPage.columns.repository",
+      "projectsPage.columns.status",
+      "projectsPage.columns.project"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -3231,7 +3240,8 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "projectsPage.columns.status"
     ],
     "tr": [
       "devices.cpus",
@@ -3723,7 +3733,8 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.region"
+      "storage.connect.region",
+      "projectsPage.columns.status"
     ],
     "ru": [
       "channel.tooLong.fileName",
