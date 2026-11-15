@@ -44,6 +44,8 @@ import {
 import {
   ANTIGRAVITY_MODELS,
   antigravityBaseModel,
+  antigravityFamilyLabel,
+  antigravityLevel,
   claudeCodeModel,
   GROK_BUILD_MODELS,
   isPlanModelId,
@@ -149,6 +151,12 @@ export interface BrainModelOption {
   inPlan?: boolean;
   /** OpenCode (ADR 0132): a model of OpenCode's free tier (no key, no cost). */
   free?: boolean;
+  /**
+   * A model sold at several thinking levels as separate ids (Antigravity's `gemini-4-hydrogen-xhigh`): the model it
+   * belongs to, which the apps show as one choice, and this id's level, which they offer as the effort.
+   */
+  family?: { id: string; label: string };
+  level?: BrainEffort;
 }
 
 /**
@@ -200,12 +208,20 @@ export const grokModels = (listed: readonly { id: string; label?: string }[] = [
 
 /**
  * The Antigravity CLI's models (ADR 0143): what it listed on the agent's computer (`agy models`), else
- * `ANTIGRAVITY_MODELS`. A slug is a model at one thinking level (`gemini-4-argon-high`): its catalog model is the base.
+ * `ANTIGRAVITY_MODELS`. A slug is a model at one thinking level (`gemini-4-argon-high`): its catalog model is the base,
+ * and the family is the model the apps show once, its levels being the effort they offer.
  */
 export const antigravityModels = (listed: readonly { id: string; label?: string }[] = []): BrainModelOption[] =>
   (listed.length ? listed : ANTIGRAVITY_MODELS).map((m) => {
     const base = antigravityBaseModel(m.id);
-    return { value: m.id, label: m.label || m.id, ...(catalogModelOf(base) ? { modelId: base } : {}) };
+    const level = antigravityLevel(m.id);
+    const label = m.label || m.id;
+    return {
+      value: m.id,
+      label,
+      ...(catalogModelOf(base) ? { modelId: base } : {}),
+      ...(level ? { family: { id: base, label: antigravityFamilyLabel(label) }, level } : {}),
+    };
   });
 
 /**
@@ -1775,7 +1791,9 @@ export function brainModelLabel(
   const stored = model ?? defaultBrainModel(kind);
   if (!stored) return null;
   const value = kind === "claude_code" && !isAutoModel(stored) ? claudeCodeModel(undefined, stored) : stored;
-  return brainModelOptions(kind).find((o) => o.value === value)?.label ?? value;
+  const option = brainModelOptions(kind).find((o) => o.value === value);
+  // A model sold at thinking levels shows by its name ("Gemini 4 Argon"), its level being the effort (`family`).
+  return option?.family?.label ?? option?.label ?? value;
 }
 
 /** Each agent's brain summary for this viewer (one query for the computers, one for the accounts). */

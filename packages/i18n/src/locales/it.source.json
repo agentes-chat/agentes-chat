@@ -13533,14 +13533,23 @@
   "agentPage.work.brain.efforts.none": {
     "value": "Model default"
   },
+  "agentPage.work.brain.efforts.noneLevel": {
+    "value": "None"
+  },
   "agentPage.work.brain.efforts.low": {
     "value": "Low"
+  },
+  "agentPage.work.brain.efforts.minimal": {
+    "value": "Minimal"
   },
   "agentPage.work.brain.efforts.medium": {
     "value": "Medium"
   },
   "agentPage.work.brain.efforts.high": {
     "value": "High"
+  },
+  "agentPage.work.brain.efforts.xhigh": {
+    "value": "Extra high"
   },
   "agentPage.work.brain.efforts.max": {
     "value": "Maximum"
@@ -13551,11 +13560,17 @@
   "agentPage.work.brain.effortsLower.low": {
     "value": "low"
   },
+  "agentPage.work.brain.effortsLower.minimal": {
+    "value": "minimal"
+  },
   "agentPage.work.brain.effortsLower.medium": {
     "value": "medium"
   },
   "agentPage.work.brain.effortsLower.high": {
     "value": "high"
+  },
+  "agentPage.work.brain.effortsLower.xhigh": {
+    "value": "extra high"
   },
   "agentPage.work.brain.effortsLower.max": {
     "value": "maximum"
@@ -13565,6 +13580,9 @@
   },
   "agentPage.work.brain.effortText.low": {
     "value": "Answers fast. Good for simple questions."
+  },
+  "agentPage.work.brain.effortText.minimal": {
+    "value": "Thinks only a little before answering. The fastest there is."
   },
   "agentPage.work.brain.effortText.medium": {
     "value": "The default. Thinks enough most of the time."
@@ -13577,6 +13595,9 @@
   },
   "agentPage.work.brain.effortText.high": {
     "value": "Thinks more on hard tasks. Slower and costs more."
+  },
+  "agentPage.work.brain.effortText.xhigh": {
+    "value": "Thinks more than high, short of the maximum. Slower still."
   },
   "agentPage.work.brain.effortText.max": {
     "value": "Thinks as much as possible. Much slower and pricier."

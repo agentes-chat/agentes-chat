@@ -5693,25 +5693,32 @@
         "efforts": {
           "auto": "Automatico",
           "none": "Predefinito del modello",
+          "noneLevel": "Nessuno",
           "low": "Basso",
+          "minimal": "Minimo",
           "medium": "Medio",
           "high": "Alto",
+          "xhigh": "Molto alto",
           "max": "Massimo"
         },
         "effortsLower": {
           "auto": "automatico",
           "low": "basso",
+          "minimal": "minimo",
           "medium": "medio",
           "high": "alto",
+          "xhigh": "molto alto",
           "max": "massimo"
         },
         "effortText": {
           "auto": "Il modello Automatico sceglie l'impegno di ogni attività. Scegli un modello per fissare l'impegno.",
           "low": "Risponde in fretta. Adatto alle domande semplici.",
+          "minimal": "Pensa solo un po' prima di rispondere. Il più veloce che c'è.",
           "medium": "Il predefinito. Ragiona abbastanza quasi sempre.",
           "mediumKey": "Ragiona abbastanza quasi sempre.",
           "none": "Il modello ragiona quanto fa di solito. Scegli un livello per fissare l'impegno.",
           "high": "Ragiona di più sulle attività difficili. Più lento e costa di più.",
+          "xhigh": "Pensa più del livello alto, senza arrivare al massimo. Ancora più lento.",
           "max": "Ragiona il più possibile. Molto più lento e più caro."
         },
         "speed": "Velocità",

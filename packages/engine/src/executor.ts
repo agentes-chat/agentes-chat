@@ -34,8 +34,16 @@ import {
   type ToolImage,
   textOf,
 } from "@agenteschat/providers";
-import { autoPlanModel, droppedPlanModel, ownLimitsModel, planModel, planOf } from "@agenteschat/providers/plans";
-import { PLAN_NOTICE, PLAN_PAUSE } from "@agenteschat/ui/plan-state";
+import {
+  antigravityGroupLabel,
+  antigravityGroupOf,
+  autoPlanModel,
+  droppedPlanModel,
+  ownLimitsModel,
+  planModel,
+  planOf,
+} from "@agenteschat/providers/plans";
+import { PLAN_NOTICE, PLAN_PAUSE, planFull } from "@agenteschat/ui/plan-state";
 import { pendingConnectors } from "./access";
 import { linkRunActions, publishMessageActions } from "./agent-actions";
 import { withTimeout } from "./agent-media";
@@ -69,6 +77,7 @@ import { brainSessionId, missingTurnFolder, recordPlanUsage } from "./brains/cla
 import { ModelBrain } from "./brains/model";
 import type { ComputerTurn } from "./brains/prompt";
 import {
+  antigravityGroupLimit,
   type BrainPlan,
   type BrainUnavailability,
   bindingReset,
@@ -3781,6 +3790,23 @@ async function executeRunInner(
     machineId: string,
     error: BrainFailure,
   ): Promise<Pick<BrainUnavailability, "scope" | "resetsAt">> => {
+    // Antigravity's limits are its model groups' ("agy /usage"): a refusal is a group's, and stops that group's
+    // models alone, unless the plan's own windows are full (then it is the account's, as for any plan).
+    if (plan.kind === "antigravity" && machineId) {
+      const stored = await storedPlanUsage(db, run.orgId, machineId, plan.kind, plan.account?.id).catch(() => null);
+      const now = Date.now();
+      if (stored && planFull(stored, now)) {
+        const reset = bindingReset(stored, now);
+        const resetsAt = reset !== null ? new Date(reset).toISOString() : error.resetsAt;
+        notePlanLimit(machineId, plan.kind, resetsAt, now, plan.account?.id);
+        return resetsAt ? { resetsAt } : {};
+      }
+      const group = antigravityGroupLimit(stored, plan.model, now);
+      // A group whose own windows have room contradicts the refusal (a conversation's stale error, a burst limit):
+      // no reset from its words then, so the run re-checks on the ladder soon instead of waiting hours for one.
+      const resetsAt = group.full ? group.resetsAt : undefined;
+      return { scope: "model", ...(resetsAt ? { resetsAt } : {}) };
+    }
     const account = plan.account;
     const ownModel = ownLimitsModel(account?.provider, plan.model);
     if (!account || !ownModel) return error.resetsAt ? { resetsAt: error.resetsAt } : {};
@@ -3909,7 +3935,11 @@ async function executeRunInner(
             return null;
           }
           const ownModel = scope ? ownLimitsModel(plan.account?.provider, plan.model) : null;
-          const modelWords: Record<string, string> = ownModel ? { model: ownModel.label, agent: agent.name } : {};
+          // Antigravity's are its model groups' limits: one group's quota, the plan's other models keep working.
+          const groupLabel =
+            scope && plan.kind === "antigravity" ? antigravityGroupLabel(antigravityGroupOf(plan.model)) : null;
+          const scopeLabel = ownModel?.label ?? groupLabel;
+          const modelWords: Record<string, string> = scopeLabel ? { model: scopeLabel, agent: agent.name } : {};
           const [code, text] = budget
             ? [
                 "budget_wait",
@@ -3930,10 +3960,10 @@ async function executeRunInner(
                       "plan_model_off_wait",
                       `OpenCode refused ${ownModel.label} with this key: the model or the account is turned off there. Turn it on in OpenCode or change ${agent.name}'s model.`,
                     ]
-                  : ownModel
+                  : scopeLabel
                     ? [
                         known ? "plan_model_limit_wait" : "plan_model_limit_wait_unknown",
-                        `${ownModel.label} hit its own limit on ${name}. The plan's other models keep working: change ${agent.name}'s model or wait ${known ? "until it resets" : "for it to reset"}.`,
+                        `${scopeLabel} hit its own limit on ${name}. The plan's other models keep working: change ${agent.name}'s model or wait ${known ? "until it resets" : "for it to reset"}.`,
                       ]
                     : cut
                       ? [
@@ -4603,9 +4633,11 @@ async function executeRunInner(
               turnLimited = true;
               const machineId = turnPlan.session?.machineId;
               // A plan whose models have their own limits: whose this one is waits for the refusal's words.
+              // Antigravity's limits are its model groups' (refusalOf): never the whole plan from a turn's words.
               if (
                 machineId &&
                 turnPlan.kind !== "model" &&
+                turnPlan.kind !== "antigravity" &&
                 !ownLimitsModel(turnPlan.account?.provider, turnPlan.model)
               ) {
                 notePlanLimit(machineId, turnPlan.kind, resetsAt, Date.now(), turnPlan.account?.id);

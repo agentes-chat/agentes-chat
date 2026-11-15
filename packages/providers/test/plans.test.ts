@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { MODEL_CATALOG } from "../src/catalog";
 import {
+  ANTIGRAVITY_MODELS,
+  antigravityBaseModel,
+  antigravityFamilyLabel,
+  antigravityGroupLabel,
+  antigravityGroupOf,
+  antigravityGroupOfLabel,
+  antigravityLevel,
   autoPlanModel,
   CODING_PLANS,
   claudeCodeModel,
@@ -404,6 +411,52 @@ test("a model the plan's live list dropped: named, with the table's label; nothi
   } finally {
     learnPlanModels({ opencode: table });
   }
+});
+
+test("Antigravity's fallback models: every slug agy models listed, each level its own, and the catalog model behind it", () => {
+  const byId = new Map(ANTIGRAVITY_MODELS.map((m) => [m.id, m]));
+  expect([...byId.keys()]).toEqual([
+    "gemini-4-argon-medium",
+    "gemini-4-argon-high",
+    "gemini-4-argon-low",
+    "gemini-4-hydrogen-high",
+    "gemini-4-hydrogen-xhigh",
+    "gemini-4-hydrogen-medium",
+    "gemini-4-hydrogen-low",
+    "gemini-pro-orchestrator-g1-pro",
+    "gemini-3.8-flash-high",
+    "gemini-3.8-flash-medium",
+    "gemini-3.8-flash-low",
+    "claude-opus-5-5-low",
+    "claude-opus-5-5-medium",
+    "claude-opus-5-5-high",
+    "claude-sonnet-5-5-low",
+    "claude-sonnet-5-5-medium",
+    "claude-sonnet-5-5-high",
+    "gpt-oss-120b-medium",
+  ]);
+  expect(byId.get("gemini-4-hydrogen-xhigh")?.label).toBe("Gemini 4 Hydrogen (XHigh)");
+  expect(byId.get("gemini-pro-orchestrator-g1-pro")?.label).toBe("Orchestrator (Argon)");
+  // The level suffix comes off, "-xhigh" too; a slug with none is its own model.
+  expect(antigravityBaseModel("gemini-4-hydrogen-xhigh")).toBe("gemini-4-hydrogen");
+  expect(antigravityBaseModel("claude-sonnet-5-5-low")).toBe("claude-sonnet-5-5");
+  expect(antigravityBaseModel("gemini-pro-orchestrator-g1-pro")).toBe("gemini-pro-orchestrator-g1-pro");
+  // The level its id names, and its name without it: what the apps offer as the effort and as the model.
+  expect(antigravityLevel("gemini-4-hydrogen-xhigh")).toBe("xhigh");
+  expect(antigravityLevel("claude-sonnet-5-5-low")).toBe("low");
+  expect(antigravityLevel("gemini-pro-orchestrator-g1-pro")).toBeUndefined();
+  expect(antigravityFamilyLabel("Gemini 4 Argon (High)")).toBe("Gemini 4 Argon");
+  expect(antigravityFamilyLabel("Gemini 4 Hydrogen (XHigh)")).toBe("Gemini 4 Hydrogen");
+  expect(antigravityFamilyLabel("Orchestrator (Argon)")).toBe("Orchestrator (Argon)");
+  // The quota groups `agy /usage` reports: a limit in one stops its own models only.
+  expect(antigravityGroupOf("gemini-4-argon-medium")).toBe("argon");
+  expect(antigravityGroupOf("claude-opus-5-5-high")).toBe("claude");
+  expect(antigravityGroupOf("gpt-oss-120b-medium")).toBe("claude");
+  expect(antigravityGroupOf("gemini-4-hydrogen-xhigh")).toBe("gemini");
+  expect(antigravityGroupOfLabel("Claude and GPT models · 7d")).toBe("claude");
+  expect(antigravityGroupOfLabel("Gemini 4 Argon Gemini 4 Argon · 7d")).toBe("argon");
+  expect(antigravityGroupOfLabel("Gemini models · 5h")).toBe("gemini");
+  expect(antigravityGroupLabel("argon")).toBe("Gemini 4 Argon");
 });
 
 test("before this process has read the plan's live list, no model counts as dropped", () => {

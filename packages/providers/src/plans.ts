@@ -602,17 +602,31 @@ export const GROK_BUILD_MODELS: readonly { id: string; label: string }[] = [
 
 /**
  * The Antigravity CLI's models (ADR 0143) where the agent's computer listed none (`agy models` asks Google: none
- * offline), each slug a model at one thinking level, and the plans that include it (antigravity.google/docs/models,
- * read 2026-11-04): Gemini 4 Argon on paid Google AI Pro, Ultra and Enterprise, Gemini 3.8 Flash on every plan, the
- * older Flash and 3.1 Pro on Enterprise only. What the CLI lists comes first; with none chosen its own default runs.
+ * offline): what `agy models` listed on a signed-in Linux computer (CLI 1.5.9, 2026-11-15), each slug a model at one
+ * of its thinking levels — Gemini 4 Hydrogen and Argon, the Orchestrator, Gemini 3.8 Flash, Claude Opus and Sonnet 5.5
+ * and GPT-OSS 120B. Which plan serves which varies (Claude's models on the paid ones). What the CLI lists comes first;
+ * with none chosen its own default runs.
  * ponytail: hand-copied list, the CLI's own listing replaces it wherever the runner reports one.
  */
 export const ANTIGRAVITY_MODELS: readonly { id: string; label: string }[] = [
-  { id: "gemini-4-argon-high", label: "Gemini 4 Argon (High)" },
   { id: "gemini-4-argon-medium", label: "Gemini 4 Argon (Medium)" },
+  { id: "gemini-4-argon-high", label: "Gemini 4 Argon (High)" },
+  { id: "gemini-4-argon-low", label: "Gemini 4 Argon (Low)" },
+  { id: "gemini-4-hydrogen-high", label: "Gemini 4 Hydrogen (High)" },
+  { id: "gemini-4-hydrogen-xhigh", label: "Gemini 4 Hydrogen (XHigh)" },
+  { id: "gemini-4-hydrogen-medium", label: "Gemini 4 Hydrogen (Medium)" },
+  { id: "gemini-4-hydrogen-low", label: "Gemini 4 Hydrogen (Low)" },
+  { id: "gemini-pro-orchestrator-g1-pro", label: "Orchestrator (Argon)" },
   { id: "gemini-3.8-flash-high", label: "Gemini 3.8 Flash (High)" },
   { id: "gemini-3.8-flash-medium", label: "Gemini 3.8 Flash (Medium)" },
   { id: "gemini-3.8-flash-low", label: "Gemini 3.8 Flash (Low)" },
+  { id: "claude-opus-5-5-low", label: "Claude Opus 5.5 (Low)" },
+  { id: "claude-opus-5-5-medium", label: "Claude Opus 5.5 (Medium)" },
+  { id: "claude-opus-5-5-high", label: "Claude Opus 5.5 (High)" },
+  { id: "claude-sonnet-5-5-low", label: "Claude Sonnet 5.5 (Low)" },
+  { id: "claude-sonnet-5-5-medium", label: "Claude Sonnet 5.5 (Medium)" },
+  { id: "claude-sonnet-5-5-high", label: "Claude Sonnet 5.5 (High)" },
+  { id: "gpt-oss-120b-medium", label: "GPT-OSS 120B (Medium)" },
 ];
 
 /**
@@ -632,5 +646,47 @@ export const signInProviderOf = (provider: string | null | undefined): string | 
 export const providerFitsChoice = (provider: string | null | undefined, choice: string, coding: boolean) =>
   coding ? provider === choice : !provider || provider === GEMINI_ENTERPRISE_PROVIDER;
 
-/** An Antigravity model slug's model in the catalog: `gemini-4-argon-high` → `gemini-4-argon`. */
-export const antigravityBaseModel = (slug: string) => slug.replace(/-(?:low|medium|high)$/, "");
+/** The quota groups `agy /usage` reports: each has its own weekly and five-hour windows. */
+export type AntigravityGroup = "gemini" | "claude" | "argon";
+
+/**
+ * The quota group a model belongs to, as `agy /usage` groups them: Gemini 4 Argon alone, Claude's and GPT's models
+ * together, every other Gemini model together. A group's limit stops its models only.
+ */
+export const antigravityGroupOf = (slug: string | null | undefined): AntigravityGroup => {
+  const s = slug ?? "";
+  if (/argon/i.test(s)) return "argon";
+  if (/^(?:claude|gpt)/i.test(s)) return "claude";
+  return "gemini";
+};
+
+/** A quota group's name, as `agy /usage` prints it (its own header), for a note about its limit. */
+export const antigravityGroupLabel = (group: AntigravityGroup) =>
+  group === "argon" ? "Gemini 4 Argon" : group === "claude" ? "Claude and GPT models" : "Gemini models";
+
+/** The quota group a `/usage` window's label names ("Claude and GPT models · 7d", "Gemini 4 Argon · 5h"). */
+export const antigravityGroupOfLabel = (label: string | null | undefined): AntigravityGroup => {
+  const s = label ?? "";
+  if (/argon/i.test(s)) return "argon";
+  if (/claude|gpt/i.test(s)) return "claude";
+  return "gemini";
+};
+
+/**
+ * An Antigravity model slug's model in the catalog: `gemini-4-argon-high` → `gemini-4-argon` (the level's suffix,
+ * `-xhigh` included; a slug that names none, like the Orchestrator's, is its own model).
+ */
+export const antigravityBaseModel = (slug: string) => slug.replace(/-(?:low|medium|high|xhigh|max)$/, "");
+
+/**
+ * The thinking level a slug names (`gemini-4-argon-low` → `low`), or undefined when it names none (the Orchestrator,
+ * which is chosen as it is): the apps offer the levels a model is sold at as one effort control.
+ */
+export const antigravityLevel = (slug: string): "low" | "medium" | "high" | "xhigh" | "max" | undefined => {
+  const level = /-(low|medium|high|xhigh|max)$/.exec(slug)?.[1];
+  return level as "low" | "medium" | "high" | "xhigh" | "max" | undefined;
+};
+
+/** A label without the level it names ("Gemini 4 Argon (High)" → "Gemini 4 Argon"), for the model's one row. */
+export const antigravityFamilyLabel = (label: string) =>
+  label.replace(/\s*\((?:low|medium|high|xhigh|max)\)$/i, "").trim() || label;

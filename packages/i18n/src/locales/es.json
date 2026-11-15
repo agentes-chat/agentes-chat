@@ -5665,25 +5665,32 @@
         "efforts": {
           "auto": "Automático",
           "none": "Predeterminado del modelo",
+          "noneLevel": "Ninguno",
           "low": "Bajo",
+          "minimal": "Mínimo",
           "medium": "Medio",
           "high": "Alto",
+          "xhigh": "Muy alto",
           "max": "Máximo"
         },
         "effortsLower": {
           "auto": "automático",
           "low": "bajo",
+          "minimal": "mínimo",
           "medium": "medio",
           "high": "alto",
+          "xhigh": "muy alto",
           "max": "máximo"
         },
         "effortText": {
           "auto": "El modelo Automático elige el esfuerzo de cada tarea. Elige un modelo para fijar el esfuerzo.",
           "low": "Responde rápido. Bueno para preguntas simples.",
+          "minimal": "Piensa solo un poco antes de responder. Lo más rápido que hay.",
           "medium": "El predeterminado. Piensa lo suficiente casi siempre.",
           "mediumKey": "Piensa lo suficiente casi siempre.",
           "none": "El modelo piensa lo que suele pensar. Elige un nivel para fijar el esfuerzo.",
           "high": "Piensa más en las tareas difíciles. Más lento y más caro.",
+          "xhigh": "Piensa más que alto, sin llegar al máximo. Aún más lento.",
           "max": "Piensa todo lo posible. Mucho más lento y caro."
         },
         "speed": "Velocidad",

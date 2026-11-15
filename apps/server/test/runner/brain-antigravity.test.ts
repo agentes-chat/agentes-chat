@@ -75,10 +75,17 @@ test("command line: headless stream-json in the sandbox; work takes edits, plan 
   expect(work.slice(0, 4)).toEqual(["-p", "oi", "--output-format", "stream-json"]);
   expect(work.join(" ")).toContain("--sandbox --disable-slash-commands --mode accept-edits");
   expect(work.join(" ")).toContain("--model gemini-4-argon-high");
-  // A slug names its thinking level: no `--effort` beside it.
+  // A slug names its thinking level: no `--effort` beside it (agy: "--model %s conflicts with --effort=%s").
   expect(work).not.toContain("--effort");
+  const hydrogen = antigravityTurnArgs({ prompt: "oi", model: "gemini-4-hydrogen-xhigh", effort: "high" });
+  expect(hydrogen.join(" ")).toContain("--model gemini-4-hydrogen-xhigh");
+  expect(hydrogen).not.toContain("--effort");
   expect(work.join(" ")).toContain(`--conversation ${FIRST}`);
   expect(antigravityTurnArgs({ prompt: "oi", effort: "xhigh" }).join(" ")).toContain("--effort high");
+  // A slug with no level of its own (the Orchestrator) takes the ramp's.
+  expect(
+    antigravityTurnArgs({ prompt: "oi", model: "gemini-pro-orchestrator-g1-pro", effort: "high" }).join(" "),
+  ).toContain("--effort high");
   const plan = antigravityTurnArgs({ prompt: "oi", profile: "plan" }).join(" ");
   expect(plan).not.toContain("--mode");
   expect(plan).not.toContain("--dangerously-skip-permissions");

@@ -9,7 +9,7 @@ import {
   planOf,
 } from "@agenteschat/providers/plans";
 import type { TFunction } from "i18next";
-import type { AgentBrain } from "../api/types";
+import type { AgentBrain, BrainEffort, BrainOption } from "../api/types";
 import { agentGrammar } from "./grammar";
 import { isAuto } from "./providers";
 
@@ -19,6 +19,12 @@ export interface BrainModelChoice extends Pick<PlanModel, "label" | "tag" | "nee
   value: string;
   /** Cursor: its CLI said the person's plan includes it (the others cost API prices there). */
   inPlan?: boolean;
+  /**
+   * A model sold at several thinking levels as separate ids (Antigravity): the model it belongs to, shown as one
+   * choice, and this id's level, offered as the effort.
+   */
+  family?: { id: string; label: string };
+  level?: BrainEffort;
 }
 
 const planChoice = (m: PlanModel, value: string): BrainModelChoice => ({
@@ -42,20 +48,142 @@ export const opencodeGoModel = (id: string) => `opencode-go/${id}`;
  */
 export function brainModelChoices(
   plan: CodingPlan | undefined,
-  models: readonly { value: string; label: string; inPlan?: boolean; free?: boolean }[],
+  models: readonly {
+    value: string;
+    label: string;
+    inPlan?: boolean;
+    free?: boolean;
+    family?: { id: string; label: string };
+    level?: BrainEffort;
+  }[],
   provider?: string | null,
 ): BrainModelChoice[] {
   if (plan) return plan.claudeCode.models.map((m) => planChoice(m, planModelValue(m)));
-  const own = models.map(({ value, label, inPlan, free }) => ({
+  const own = models.map(({ value, label, inPlan, free, family, level }) => ({
     value,
     label,
     ...(inPlan ? { inPlan } : {}),
     ...(free ? { free } : {}),
+    ...(family ? { family } : {}),
+    ...(level ? { level } : {}),
   }));
   if (provider !== "zen") return own;
   const go = (planOf("opencode")?.claudeCode.models ?? []).map((m) => planChoice(m, opencodeGoModel(m.id)));
   return [...own, ...go.filter((m) => !own.some((o) => o.value === m.value))];
 }
+
+/** The order thinking levels climb, lowest first: the apps' effort ladder. */
+const LEVEL_ORDER: readonly BrainEffort[] = ["low", "medium", "high", "xhigh", "max"];
+
+/** The level a stored model names, where it is sold at several levels (Antigravity); undefined for any other. */
+export const levelOfModel = (
+  options: readonly BrainOption[] | undefined,
+  kind: string,
+  model: string | null | undefined,
+): BrainEffort | undefined =>
+  model ? options?.find((o) => o.kind === kind)?.models.find((m) => m.value === model)?.level : undefined;
+
+/** A model sold at several thinking levels as separate ids: the model, and the id that runs each level. */
+export interface BrainModelFamily {
+  id: string;
+  label: string;
+  /** Its levels, lowest first. */
+  levels: BrainEffort[];
+  /** The stored id that runs each level. */
+  values: Partial<Record<BrainEffort, string>>;
+}
+
+/** Every model sold at several levels among the choices, in the list's order. */
+export function modelFamilies(choices: readonly BrainModelChoice[]): BrainModelFamily[] {
+  const out: BrainModelFamily[] = [];
+  const byId = new Map<string, BrainModelFamily>();
+  for (const c of choices) {
+    if (!c.family || !c.level) continue;
+    let family = byId.get(c.family.id);
+    if (!family) {
+      family = { id: c.family.id, label: c.family.label, levels: [], values: {} };
+      byId.set(family.id, family);
+      out.push(family);
+    }
+    if (!family.levels.includes(c.level)) family.levels.push(c.level);
+    family.values[c.level] = c.value;
+  }
+  return out.map((family) => ({
+    ...family,
+    levels: [...family.levels].sort((a, b) => LEVEL_ORDER.indexOf(a) - LEVEL_ORDER.indexOf(b)),
+  }));
+}
+
+/** The model a stored id belongs to (undefined: a model sold as it is). */
+export const familyOfModel = (
+  choices: readonly BrainModelChoice[],
+  value: string | null | undefined,
+): BrainModelFamily | undefined => {
+  if (!value) return undefined;
+  return modelFamilies(choices).find((family) => Object.values(family.values).includes(value));
+};
+
+/** The level nearest the one wanted: it when the model is sold at it, else the closest one it is. */
+export function nearestLevel(levels: readonly BrainEffort[], wanted?: BrainEffort | null): BrainEffort | undefined {
+  if (levels.length === 0) return undefined;
+  if (wanted && levels.includes(wanted)) return wanted;
+  if (!wanted) return levels.includes("medium") ? "medium" : levels[0];
+  const at = LEVEL_ORDER.indexOf(wanted);
+  return [...levels].sort((a, b) => Math.abs(LEVEL_ORDER.indexOf(a) - at) - Math.abs(LEVEL_ORDER.indexOf(b) - at))[0];
+}
+
+/** One model as the apps list it: a model sold at several levels collapsed into its one row. */
+export interface BrainModelDisplay {
+  /** What a pick stores: the id for the level the model runs now, or the nearest to the effort wanted. */
+  value: string;
+  label: string;
+  /** The first of its ids: what it is sold as, its maker, its need. */
+  choice: BrainModelChoice;
+  family?: BrainModelFamily;
+}
+
+/**
+ * The models as one row each (web and phone): a model sold at several thinking levels (Antigravity's slugs) shows
+ * once, storing the id of the level it runs now (`stored`), else the one nearest the effort chosen.
+ */
+export function modelDisplays(
+  choices: readonly BrainModelChoice[],
+  stored?: string | null,
+  effort?: BrainEffort | null,
+): BrainModelDisplay[] {
+  const families = modelFamilies(choices);
+  const done = new Set<string>();
+  const rows: BrainModelDisplay[] = [];
+  for (const choice of choices) {
+    const family = choice.family ? families.find((f) => f.id === choice.family?.id) : undefined;
+    if (!family) {
+      rows.push({ value: choice.value, label: choice.label, choice });
+      continue;
+    }
+    if (done.has(family.id)) continue;
+    done.add(family.id);
+    const ids = Object.values(family.values);
+    const kept = stored && ids.includes(stored) ? stored : undefined;
+    const level = nearestLevel(family.levels, effort ?? null);
+    rows.push({
+      value: kept ?? (level ? family.values[level] : undefined) ?? ids[0] ?? family.id,
+      label: family.label,
+      choice,
+      family,
+    });
+  }
+  return rows;
+}
+
+/**
+ * What changing the effort of a model sold at several levels stores: the id of that level, besides the effort
+ * itself (a CLI whose id names its level takes no effort flag).
+ */
+export const effortPick = (
+  family: BrainModelFamily | undefined,
+  level: BrainEffort,
+): { model?: string; effort: BrainEffort } =>
+  family?.values[level] ? { model: family.values[level], effort: level } : { effort: level };
 
 /**
  * Under OpenCode Go's models (web and phone): Go's key thinks through Claude Code, where OpenCode's free tier

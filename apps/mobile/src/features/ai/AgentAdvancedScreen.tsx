@@ -10,6 +10,7 @@ import {
   SPEEDS,
   viewSpeedFits,
 } from "@agenteschat/client/lib/brain-advanced";
+import { effortFamily } from "@agenteschat/client/lib/brain-picker";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
 import {
   autoContextLine,
@@ -19,7 +20,7 @@ import {
   isContextLimit,
 } from "@agenteschat/client/lib/context-limits";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { planOf } from "@agenteschat/client/lib/plans";
+import { brainPlan, levelOfModel, planOf } from "@agenteschat/client/lib/plans";
 import { isAuto } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,7 +55,8 @@ export const openAgentAdvanced = (agentId: string) => router.push(`/agent-advanc
 export const advancedOf = (view: AgentBrain, options?: readonly ContextLimit[]): Advanced => {
   const tokens = isContextLimit(view.contextTokens) ? view.contextTokens : null;
   return {
-    effort: effortOf(view.brain, view.effort),
+    // A model sold at thinking levels (Antigravity) names its effort in its own id.
+    effort: levelOfModel(view.options, view.brain, view.effectiveModel) ?? effortOf(view.brain, view.effort),
     speed: viewSpeedFits(view) ? view.speed : "standard",
     contextTokens: tokens !== null && (!options || options.includes(tokens)) ? tokens : null,
     onlyOwner: view.onlyOwner,
@@ -101,7 +103,8 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
         );
   const now = view ? advancedOf(view, options) : null;
   const may = !busy && view?.canEdit === true;
-  const effort = useEffortChoice(agentId, now?.effort);
+  const family = view ? effortFamily(view, brainPlan(view)) : undefined;
+  const effort = useEffortChoice(agentId, now?.effort, undefined, family ? (level) => family.values[level] : undefined);
   const speed = useBrainChoice<BrainSpeed>(agentId, now?.speed ?? "standard", (value) => ({ speed: value }));
   const fallbackLabel = t("agentPage.work.brain.fallbackTitle", {
     computer: computerNameOf(t, org?.name ?? "", view?.computer?.name ?? "", isPersonal(org)),
@@ -165,6 +168,7 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
                         onChange={effort.change}
                         color={agentLook(agent).color}
                         kind={view.brain}
+                        levels={family?.levels}
                         disabled={!view.canEdit}
                       />
                     </View>

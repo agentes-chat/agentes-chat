@@ -92,9 +92,15 @@ export const AGY_RUN_ENV = "AGENTES_MCP_RUN";
 const OURS = new RegExp(`^(?:mcp[_.:/-]{1,2})?${CODEX_MCP_SERVER}(?:__|[_.:/-])[\\w.-]+$`);
 export const isOurAgyTool = (name: unknown) => typeof name === "string" && OURS.test(name);
 
-/** `--effort`: low, medium or high (`xhigh` and `max` as high); a slug that names its level (`…-high`) takes none. */
+/**
+ * A slug that names the model's own thinking level (`gemini-4-hydrogen-xhigh`): `agy` refuses `--effort` beside it
+ * ("--model %s conflicts with --effort=%s", CLI 1.5.9).
+ */
+const LEVEL_IN_SLUG = /-(?:low|medium|high|xhigh|max)$/;
+
+/** `--effort`: low, medium or high (`xhigh` and `max` as high); a slug that names its level takes none. */
 const agyEffort = (effort?: BrainEffort, model?: string) =>
-  model && /-(?:low|medium|high)$/.test(model) ? undefined : effort === "xhigh" || effort === "max" ? "high" : effort;
+  model && LEVEL_IN_SLUG.test(model) ? undefined : effort === "xhigh" || effort === "max" ? "high" : effort;
 
 /** The `agy` arguments for one turn. */
 export function antigravityTurnArgs(input: {
@@ -440,6 +446,9 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       opts.emit({ type: "done", text, session: { id: input.sessionId } });
       return;
     }
+    // The CLI replays a conversation's last error on every resume (a quota one included, with its old reset):
+    // the next turn opens a new conversation, with the context the engine sends anyway.
+    if (chat) opts.chats.delete(chatKey);
     const agyError = parseAgyError(stderr);
     const why =
       agyError?.message ??

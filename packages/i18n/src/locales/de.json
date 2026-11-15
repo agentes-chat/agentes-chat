@@ -5500,25 +5500,32 @@
         "efforts": {
           "auto": "Automatisch",
           "none": "Standard des Modells",
+          "noneLevel": "Keine",
           "low": "Niedrig",
+          "minimal": "Gering",
           "medium": "Mittel",
           "high": "Hoch",
+          "xhigh": "Sehr hoch",
           "max": "Maximal"
         },
         "effortsLower": {
           "auto": "automatisch",
           "low": "niedrig",
+          "minimal": "gering",
           "medium": "mittel",
           "high": "hoch",
+          "xhigh": "sehr hoch",
           "max": "maximal"
         },
         "effortText": {
           "auto": "Das automatische Modell wählt den Aufwand jeder Aufgabe. Wähle ein Modell, um den Aufwand festzulegen.",
           "low": "Antwortet schnell. Gut für einfache Fragen.",
+          "minimal": "Denkt nur kurz nach, bevor es antwortet. Das Schnellste, was es gibt.",
           "medium": "Der Standard. Denkt meistens genug nach.",
           "mediumKey": "Denkt meistens genug nach.",
           "none": "Das Modell denkt so viel wie üblich. Wähle eine Stufe, um den Aufwand festzulegen.",
           "high": "Denkt bei schweren Aufgaben mehr nach. Langsamer und teurer.",
+          "xhigh": "Denkt mehr als hoch, aber nicht am Maximum. Noch langsamer.",
           "max": "Denkt so viel wie möglich nach. Viel langsamer und teurer."
         },
         "speed": "Geschwindigkeit",

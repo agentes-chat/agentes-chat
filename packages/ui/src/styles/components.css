@@ -11152,6 +11152,14 @@ html:not([data-pointer]) .ac-effort:focus-visible .ac-effort__ramp {
 .ac-effort__names button[data-on] {
   color: var(--ink);
 }
+/* A level the model isn't sold at: greyed out and unclickable. */
+.ac-effort__names button[data-off] {
+  opacity: 0.35;
+  cursor: default;
+}
+html:not([data-pointer]) .ac-effort__names button[data-off] {
+  cursor: default;
+}
 .ac-effort--off {
   opacity: 0.5;
 }

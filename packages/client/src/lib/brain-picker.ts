@@ -4,6 +4,7 @@ import type {
   AgentBrain,
   AgentBrainInput,
   AiAccounts,
+  BrainEffort,
   BrainMachine,
   MachineAccountKind,
   Model,
@@ -25,9 +26,13 @@ import {
 } from "./no-ai";
 import {
   type BrainModelChoice,
+  type BrainModelFamily,
   brainModelChoice,
   brainModelChoices,
   type CodingPlan,
+  familyOfModel,
+  levelOfModel,
+  modelDisplays,
   modelLimitOf,
   type PlanModelNeed,
   planFreeHint,
@@ -221,12 +226,13 @@ export function brainPickOptions(
           keywords: searched,
           pick: { ...base, model: AUTO },
         },
-        ...models.map((m) => {
+        ...modelDisplays(models).map((d) => {
+          const m = d.choice;
           const line = brainModelLine(t, kind, coding, m, cursorSays);
           return {
-            value: `${key}/${m.value}`,
-            label: m.label,
-            title: `${thinksWith(t, choice, m.label)}${of}`,
+            value: `${key}/${d.value}`,
+            label: d.label,
+            title: `${thinksWith(t, choice, d.label)}${of}`,
             group,
             mark: m.maker ?? planMark(choice),
             ...(line ? { description: line } : {}),
@@ -234,7 +240,7 @@ export function brainPickOptions(
             disabled: false,
             free: m.free === true,
             keywords: `${searched} ${m.maker ? providerLabel(m.maker) : ""} ${m.free ? `free ${t("brain.free")}` : ""}`,
-            pick: { ...base, model: m.value },
+            pick: { ...base, model: d.value },
           };
         }),
       ];
@@ -411,6 +417,8 @@ export interface ModelRow {
   needs?: PlanModelNeed;
   /** Who makes it, on a plan of several makers' models: a provider's id or the maker's name. */
   maker?: string;
+  /** A model sold at several thinking levels (Antigravity): its levels, which the effort ramp offers. */
+  family?: BrainModelFamily;
   checked: boolean;
 }
 
@@ -421,7 +429,8 @@ export interface ModelRow {
  */
 export function modelRows(
   t: TFunction,
-  view: Pick<AgentBrain, "brain" | "effectiveModel" | "options"> & Partial<Pick<AgentBrain, "account" | "accounts">>,
+  view: Pick<AgentBrain, "brain" | "effectiveModel" | "options"> &
+    Partial<Pick<AgentBrain, "account" | "accounts" | "effort">>,
   plan: CodingPlan | undefined,
 ): ModelRow[] {
   const option = view.options.find((o) => o.kind === view.brain);
@@ -429,33 +438,48 @@ export function modelRows(
   const provider = view.accounts?.find((a) => a.id === view.account)?.provider;
   const models = brainModelChoices(plan, option?.models ?? [], provider);
   const cursorSays = view.brain === "cursor" && models.some((m) => m.inPlan);
+  const effort = view.effort && view.effort !== AUTO ? (view.effort as BrainEffort) : null;
+  // One row per model: a model sold at several thinking levels (Antigravity) shows once, and its levels are the ramp's.
+  const displays = modelDisplays(models, chosen, effort);
+  const inFamily = (family: BrainModelFamily | undefined) =>
+    Boolean(family && Object.values(family.values).includes(chosen));
   const rows: Omit<ModelRow, "checked">[] = [
     { value: AUTO, label: t("brain.auto.label"), sub: t("brain.auto.hint") },
     // The model it runs stays a row when its list doesn't have it, as the web's picker keeps it: one row is checked.
-    ...(!chosen || isAuto(chosen) || models.some((m) => m.value === chosen) ? [] : [{ value: chosen, label: chosen }]),
-    ...models.map((m) => {
+    ...(!chosen || isAuto(chosen) || displays.some((d) => d.value === chosen || inFamily(d.family))
+      ? []
+      : [{ value: chosen, label: chosen }]),
+    ...displays.map((d) => {
       // What each is for (Claude's own), sold as, or costs: the agent's page's line.
-      const sub = brainModelLine(t, view.brain, plan, m, cursorSays);
+      const sub = brainModelLine(t, view.brain, plan, d.choice, cursorSays);
       return {
-        value: m.value,
-        label: m.label,
+        value: d.value,
+        label: d.label,
         ...(sub ? { sub } : {}),
-        ...(m.needs ? { note: t(`brain.modelNeeds.${m.needs}`), needs: m.needs } : {}),
-        ...(m.maker ? { maker: m.maker } : {}),
+        ...(d.choice.needs ? { note: t(`brain.modelNeeds.${d.choice.needs}`), needs: d.choice.needs } : {}),
+        ...(d.choice.maker ? { maker: d.choice.maker } : {}),
+        ...(d.family ? { family: d.family } : {}),
       };
     }),
   ];
-  return rows.map((r) => ({ ...r, checked: r.value === chosen }));
+  return rows.map((r) => ({ ...r, checked: r.value === chosen || inFamily(r.family) }));
 }
 
-/** What picking a model saves, as the web's dialog does: Automático picks the effort too; a fixed one after it, Médio. */
+/**
+ * What picking a model saves, as the web's dialog does: Automático picks the effort too; a fixed one after it, Médio.
+ * A model sold at thinking levels (Antigravity) saves the level its id names as the effort as well.
+ */
 export function modelInput(
   value: string,
   view: Pick<AgentBrain, "effort" | "options" | "brain">,
 ): Pick<AgentBrainInput, "model" | "effort"> {
   if (isAuto(value)) return { model: AUTO, effort: AUTO };
   const defaultModel = view.options.find((o) => o.kind === view.brain)?.defaultModel;
-  return { model: value === defaultModel ? null : value, ...(isAuto(view.effort) ? { effort: "medium" } : {}) };
+  const level = levelOfModel(view.options, view.brain, value);
+  return {
+    model: value === defaultModel ? null : value,
+    ...(level ? { effort: level } : isAuto(view.effort) ? { effort: "medium" } : {}),
+  };
 }
 
 /** Those rows as a select's options: what each is under its name, grouped by maker where a plan has several. */
@@ -555,6 +579,8 @@ export interface PickerModel {
   refused: boolean;
   /** It reads text only. */
   textOnly: boolean;
+  /** A model sold at several thinking levels: its levels, so the ramp offers only the ones it has. */
+  family?: BrainModelFamily;
 }
 
 /** How full an account is: its tightest window's use, unknown as empty. */
@@ -693,6 +719,7 @@ export function modelPickerModels(
       value: r.value,
       label: r.label,
       ...(r.sub ? { sub: r.sub } : {}),
+      ...(r.family ? { family: r.family } : {}),
       auto: isAuto(r.value),
       checked: here && r.checked,
       refused: Boolean(limit && (limit.off || limit.region || limit.inactive)),
@@ -715,11 +742,13 @@ export function modelPickerSave(
   if (tile.kind === "model") return { brain: view.brain === "model" ? null : { brain: "model" }, model: value };
   const same = view.brain === tile.kind && (account?.id ?? null) === (view.account ?? null);
   if (same) return { brain: { brain: tile.kind, ...modelInput(value, { ...view, brain: tile.kind }) } };
+  const level = levelOfModel(view.options, tile.kind, value);
   return {
     brain: {
       ...brainPickInput({ kind: tile.kind, ...(account?.id ? { accountId: account.id } : {}), model: value }),
       ...(account?.id ? {} : { account: null }),
       ...(isAuto(value) ? { model: AUTO, effort: AUTO } : {}),
+      ...(level ? { effort: level } : {}),
     },
   };
 }
@@ -747,6 +776,16 @@ export function modelPickerUndo(
       ? { brain: "model" }
       : { brain: before.brain, account: before.account, model: before.model, effort: before.effort };
   return saved.model !== undefined && saved.model !== before.apiModel ? { brain, model: before.apiModel } : { brain };
+}
+
+/** The model the agent thinks with, when it is sold at thinking levels (Antigravity): its levels and ids. */
+export function effortFamily(
+  view: Pick<AgentBrain, "brain" | "effectiveModel" | "options" | "account" | "accounts">,
+  plan: CodingPlan | undefined,
+): BrainModelFamily | undefined {
+  const option = view.options.find((o) => o.kind === view.brain);
+  const provider = view.accounts?.find((a) => a.id === view.account)?.provider;
+  return familyOfModel(brainModelChoices(plan, option?.models ?? [], provider), view.effectiveModel);
 }
 
 /** Whether the viewer changes this agent's AI and model in place: an admin or its owner, never for the team's right hand. */

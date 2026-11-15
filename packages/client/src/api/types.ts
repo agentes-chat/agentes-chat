@@ -5916,6 +5916,12 @@ export interface BrainModelOption {
   inPlan?: boolean;
   /** OpenCode (ADR 0132): a model of OpenCode's free tier (no key, no cost). */
   free?: boolean;
+  /**
+   * A model sold at several thinking levels as separate ids (Antigravity's `gemini-4-hydrogen-xhigh`): the model it
+   * belongs to, shown as one choice, and this id's level, offered as the effort.
+   */
+  family?: { id: string; label: string };
+  level?: BrainEffort;
 }
 
 export interface CodexVersionRequirement {

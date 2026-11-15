@@ -5483,25 +5483,32 @@
         "efforts": {
           "auto": "Otomatik",
           "none": "Modelin varsayılanı",
+          "noneLevel": "Yok",
           "low": "Düşük",
+          "minimal": "Minimum",
           "medium": "Orta",
           "high": "Yüksek",
+          "xhigh": "Çok yüksek",
           "max": "En yüksek"
         },
         "effortsLower": {
           "auto": "otomatik",
           "low": "düşük",
+          "minimal": "minimum",
           "medium": "orta",
           "high": "yüksek",
+          "xhigh": "çok yüksek",
           "max": "en yüksek"
         },
         "effortText": {
           "auto": "Otomatik model her görevin çabasını seçer. Çabayı sabitlemek için bir model seçin.",
           "low": "Hızlı yanıt verir. Basit sorular için iyidir.",
+          "minimal": "Yanıtlamadan önce çok az düşünür. En hızlısı.",
           "medium": "Varsayılan. Çoğu zaman yeterince düşünür.",
           "mediumKey": "Çoğu zaman yeterince düşünür.",
           "none": "Model her zamanki kadar düşünür. Çabayı sabitlemek için bir seviye seçin.",
           "high": "Zor görevlerde daha çok düşünür. Daha yavaş ve daha pahalıdır.",
+          "xhigh": "Yüksekten fazla, en yüksekten az düşünür. Daha da yavaş.",
           "max": "Olabildiğince çok düşünür. Çok daha yavaş ve daha pahalıdır."
         },
         "speed": "Hız",

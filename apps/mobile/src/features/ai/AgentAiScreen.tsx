@@ -9,6 +9,7 @@ import {
 } from "@agenteschat/client/lib/ai-accounts";
 import { brainLine, thinksWith } from "@agenteschat/client/lib/brain";
 import { advancedContents, viewSpeedFits } from "@agenteschat/client/lib/brain-advanced";
+import { effortFamily } from "@agenteschat/client/lib/brain-picker";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { aiChoiceOf, planOfKind } from "@agenteschat/client/lib/no-ai";
@@ -391,7 +392,13 @@ function EffortDock({
   const dir = useDirectory();
   const { orgId } = useOrg();
   const view = useAgentBrain(orgId, agentId, true, false, scope).data;
-  const effort = useEffortChoice(agentId, view ? advancedOf(view).effort : undefined, scope);
+  const family = view ? effortFamily(view, brainPlan(view)) : undefined;
+  const effort = useEffortChoice(
+    agentId,
+    view ? advancedOf(view).effort : undefined,
+    scope,
+    family ? (level) => family.values[level] : undefined,
+  );
   const out = useSharedValue(shown ? 0 : 1);
   const height = useSharedValue(0);
   useEffect(() => {
@@ -416,6 +423,7 @@ function EffortDock({
           value={effort.value}
           onChange={effort.change}
           color={agentLook(dir.agentById.get(agentId)).color}
+          levels={family?.levels}
           disabled={view?.canEdit !== true}
         />
       </Glass>

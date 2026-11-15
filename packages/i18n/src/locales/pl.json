@@ -5889,25 +5889,32 @@
         "efforts": {
           "auto": "Automatycznie",
           "none": "Domyślny modelu",
+          "noneLevel": "Brak",
           "low": "Niski",
+          "minimal": "Minimalny",
           "medium": "Średni",
           "high": "Wysoki",
+          "xhigh": "Bardzo wysoki",
           "max": "Maksymalny"
         },
         "effortsLower": {
           "auto": "automatyczny",
           "low": "niski",
+          "minimal": "minimalny",
           "medium": "średni",
           "high": "wysoki",
+          "xhigh": "bardzo wysoki",
           "max": "maksymalny"
         },
         "effortText": {
           "auto": "Model Automatyczny wybiera wysiłek dla każdego zadania. Wybierz model, aby ustawić wysiłek.",
           "low": "Odpowiada szybko. Dobre do prostych pytań.",
+          "minimal": "Myśli tylko trochę przed odpowiedzią. Najszybciej, jak się da.",
           "medium": "Domyślny. Zwykle myśli wystarczająco.",
           "mediumKey": "Zwykle myśli wystarczająco.",
           "none": "Model myśli tyle, ile zwykle. Wybierz poziom, aby ustalić wysiłek.",
           "high": "Myśli więcej przy trudnych zadaniach. Wolniej i drożej.",
+          "xhigh": "Myśli więcej niż wysoki, ale nie maksymalnie. Jeszcze wolniej.",
           "max": "Myśli tyle, ile się da. Dużo wolniej i drożej."
         },
         "speed": "Szybkość",

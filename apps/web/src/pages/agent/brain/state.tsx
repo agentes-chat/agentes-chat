@@ -407,6 +407,8 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
   const plan = isPlanId(savedCard) ? planOf(savedCard) : undefined;
   const planModels = brainModelChoices(plan, option?.models ?? [], currentAccount?.provider);
   const shownModel = brainModelChoice(kind, plan, view.effectiveModel ?? option?.defaultModel ?? "");
+  // A model sold at thinking levels shows by its name; its level is the effort.
+  const chosenModel = planModels.find((m) => m.value === shownModel);
   const keyModels = apiModelOptions(
     t,
     i18n.language,
@@ -417,7 +419,7 @@ export function useBrainState(view: AgentBrain, opts: { added: readonly MachineA
     ? t("brain.auto.label")
     : kind === "model"
       ? (all.find((m) => m.id === saved.model)?.label ?? saved.model)
-      : (planModels.find((m) => m.value === shownModel)?.label ?? view.effectiveModel ?? "");
+      : (chosenModel?.family?.label ?? chosenModel?.label ?? view.effectiveModel ?? "");
   const modelMaker =
     kind === "model"
       ? apiProvider

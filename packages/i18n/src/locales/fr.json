@@ -5691,25 +5691,32 @@
         "efforts": {
           "auto": "Automatique",
           "none": "Par défaut du modèle",
+          "noneLevel": "Aucun",
           "low": "Faible",
+          "minimal": "Minime",
           "medium": "Moyen",
           "high": "Élevé",
+          "xhigh": "Très élevé",
           "max": "Maximal"
         },
         "effortsLower": {
           "auto": "automatique",
           "low": "faible",
+          "minimal": "minime",
           "medium": "moyen",
           "high": "élevé",
+          "xhigh": "très élevé",
           "max": "maximal"
         },
         "effortText": {
           "auto": "Le modèle Automatique choisit l'effort de chaque tâche. Choisissez un modèle pour fixer l'effort.",
           "low": "Répond vite. Idéal pour les questions simples.",
+          "minimal": "Réfléchit juste un peu avant de répondre. Le plus rapide qui existe.",
           "medium": "Par défaut. Réfléchit assez la plupart du temps.",
           "mediumKey": "Réfléchit assez la plupart du temps.",
           "none": "Le modèle réfléchit autant que d'habitude. Choisissez un niveau pour fixer l'effort.",
           "high": "Réfléchit davantage sur les tâches difficiles. Plus lent et plus cher.",
+          "xhigh": "Réfléchit plus que le niveau élevé, sans atteindre le maximum. Encore plus lent.",
           "max": "Réfléchit autant que possible. Bien plus lent et plus cher."
         },
         "speed": "Vitesse",

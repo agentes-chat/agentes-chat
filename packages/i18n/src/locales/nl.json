@@ -5523,25 +5523,32 @@
         "efforts": {
           "auto": "Automatisch",
           "none": "Standaard van het model",
+          "noneLevel": "Geen",
           "low": "Laag",
+          "minimal": "Minimaal",
           "medium": "Gemiddeld",
           "high": "Hoog",
+          "xhigh": "Zeer hoog",
           "max": "Maximaal"
         },
         "effortsLower": {
           "auto": "automatisch",
           "low": "laag",
+          "minimal": "minimaal",
           "medium": "gemiddeld",
           "high": "hoog",
+          "xhigh": "zeer hoog",
           "max": "maximaal"
         },
         "effortText": {
           "auto": "Het automatische model kiest de inspanning per taak. Kies een model om de inspanning vast te zetten.",
           "low": "Antwoordt snel. Goed voor simpele vragen.",
+          "minimal": "Denkt maar kort na voordat het antwoordt. Het snelst dat er is.",
           "medium": "De standaard. Denkt meestal genoeg na.",
           "mediumKey": "Denkt meestal genoeg na.",
           "none": "Het model denkt zoveel als het gewoonlijk doet. Kies een niveau om de inspanning vast te zetten.",
           "high": "Denkt meer na bij moeilijke taken. Trager en duurder.",
+          "xhigh": "Denkt meer dan hoog, maar niet het maximum. Nog langzamer.",
           "max": "Denkt zoveel mogelijk na. Veel trager en duurder."
         },
         "speed": "Snelheid",

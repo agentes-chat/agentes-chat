@@ -5317,25 +5317,32 @@
         "efforts": {
           "auto": "Otomatis",
           "none": "Default model",
+          "noneLevel": "Tidak ada",
           "low": "Rendah",
+          "minimal": "Minim",
           "medium": "Sedang",
           "high": "Tinggi",
+          "xhigh": "Sangat tinggi",
           "max": "Maksimum"
         },
         "effortsLower": {
           "auto": "otomatis",
           "low": "rendah",
+          "minimal": "minim",
           "medium": "sedang",
           "high": "tinggi",
+          "xhigh": "sangat tinggi",
           "max": "maksimum"
         },
         "effortText": {
           "auto": "Model Otomatis memilih upaya tiap tugas. Pilih model untuk menetapkan upayanya.",
           "low": "Menjawab cepat. Cocok untuk pertanyaan sederhana.",
+          "minimal": "Berpikir sedikit saja sebelum menjawab. Yang tercepat.",
           "medium": "Default. Berpikir cukup hampir setiap saat.",
           "mediumKey": "Berpikir cukup hampir setiap saat.",
           "none": "Model berpikir seperti biasanya. Pilih tingkat untuk menetapkan upaya.",
           "high": "Berpikir lebih banyak untuk tugas sulit. Lebih lambat dan lebih mahal.",
+          "xhigh": "Berpikir lebih dari tinggi, belum maksimal. Lebih lambat lagi.",
           "max": "Berpikir semaksimal mungkin. Jauh lebih lambat dan lebih mahal."
         },
         "speed": "Kecepatan",

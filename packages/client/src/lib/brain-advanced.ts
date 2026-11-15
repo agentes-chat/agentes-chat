@@ -1,6 +1,6 @@
 import { speedFits } from "@agenteschat/providers/plans";
 import type { TFunction } from "i18next";
-import type { AgentBrain, BrainKind, BrainSpeed } from "../api/types";
+import type { AgentBrain, BrainEffort, BrainKind, BrainSpeed } from "../api/types";
 import { type ContextLimit, contextSize } from "./context-limits";
 import { isAuto } from "./providers";
 
@@ -18,6 +18,20 @@ export const EFFORT_LEVELS: readonly EffortLevel[] = ["low", "medium", "high", "
 export const KEY_EFFORT_LEVELS: readonly EffortLevel[] = ["low", "medium", "high"];
 export const effortLevelsOf = (kind: BrainKind | undefined) => (kind === "model" ? KEY_EFFORT_LEVELS : EFFORT_LEVELS);
 
+/**
+ * The whole ladder a model can be sold at, lowest first, for a model that names its level in its id (Antigravity's
+ * `gemini-4-hydrogen-xhigh`): the apps offer every level, the ones the model isn't sold at greyed out.
+ */
+export type EffortScaleLevel = "none" | "low" | "minimal" | "medium" | "high" | "xhigh" | "max";
+export const EFFORT_SCALE: readonly EffortScaleLevel[] = ["none", "low", "minimal", "medium", "high", "xhigh", "max"];
+
+/** A model's ramp: the whole ladder, each level off when the model isn't sold at it (undefined: all of them on). */
+export const effortScaleSteps = (levels: readonly string[] | undefined) =>
+  EFFORT_SCALE.map((value) => ({ value, disabled: levels ? !levels.includes(value) : false }));
+
+/** The translation key of a ladder step ("none" is a level of its own, unlike the ramp's unset). */
+export const effortStepKey = (value: EffortScaleLevel) => (value === "none" ? "noneLevel" : value);
+
 /** Velocidade's choices (ADR 0149). */
 export const SPEEDS: readonly BrainSpeed[] = ["standard", "fast"];
 
@@ -31,8 +45,8 @@ export const viewSpeedFits = (view: Pick<AgentBrain, "brain" | "account" | "acco
   });
 
 export interface Advanced {
-  /** Null only on an API key with none chosen: the provider's own default. */
-  effort: EffortLevel | null;
+  /** Null only on an API key with none chosen: the provider's own default. A model sold at levels keeps its own. */
+  effort: BrainEffort | null;
   /** Always `standard` where Velocidade doesn't show (`viewSpeedFits`). */
   speed: BrainSpeed;
   contextTokens: ContextLimit | null;
