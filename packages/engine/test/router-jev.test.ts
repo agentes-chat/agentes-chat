@@ -136,13 +136,13 @@ function fakeJev(
       }
     | Error,
 ) {
-  const requests: { headers: Headers; body: Record<string, unknown> }[] = [];
-  const fetcher = (async (_url: string, init: RequestInit) => {
+  const requests: { url: string; headers: Headers; body: Record<string, unknown> }[] = [];
+  const fetcher = (async (url: string | URL | Request, init: RequestInit) => {
     const body = JSON.parse(String(init.body)) as {
       state: Record<string, unknown>;
       questions: Record<string, { instructions: { agent?: { handle: string } } }>;
     };
-    requests.push({ headers: new Headers(init.headers), body });
+    requests.push({ url: String(url), headers: new Headers(init.headers), body });
     const r = script(body.state);
     if (r instanceof Error) return new Response("boom", { status: 529 });
     const answers: Record<string, unknown> = { needs_agent: { type: "noul", noul: r.needs } };
@@ -253,6 +253,51 @@ describe("Jev's questions", () => {
 });
 
 describe("who a message speaks to", () => {
+  let originFixture: Fixture | undefined;
+  afterEach(async () => {
+    await originFixture?.close();
+    originFixture = undefined;
+  });
+
+  test("the shared Jev origin reaches key check, router and judge calls", async () => {
+    originFixture = await setup();
+    const fixture = originFixture;
+    const origin = "http://jev.example:3425";
+    const check = fakeJev(() => ({ nouls: {}, needs: 0.9 }));
+    const key = createJevKey({
+      db: fixture.db,
+      keyWrapper: fixture.keyWrapper,
+      keyWrappers: [fixture.keyWrapper],
+      fetch: check.fetcher,
+    });
+    await key.ready();
+    await key.save("ts_shared_origin_key_1", fixture.owner.id, origin);
+    expect(check.requests[0]?.url).toBe(`${origin}/v1/systemone`);
+
+    const router = fakeJev(() => ({ nouls: {}, needs: 0.9, best: "dev" }));
+    await createJevRouterStrategy({ key, recordUsage: async () => {}, fetch: router.fetcher }).decide({
+      orgId: "o",
+      channel: { id: "c", name: "geral", topic: "" },
+      message: { id: "m", author: "ana", body: "quem pode ajudar?" },
+      thread: [],
+      candidates: [cand("dev")],
+    });
+    expect(router.requests[0]?.url).toBe(`${origin}/v1/systemone`);
+
+    const judge = fakeJev(() => ({ nouls: {}, needs: 0.9 }));
+    await createJevJudge({
+      key,
+      gateway: { recordExternalUsage: async () => null },
+      fetch: judge.fetcher,
+    }).ask({
+      orgId: "o",
+      kind: "test",
+      state: { text: "ok" },
+      questions: { ok: { type: "noul", instructions: "Is it ok?", criteria: { true: "yes", false: "no" } } },
+    });
+    expect(judge.requests[0]?.url).toBe(`${origin}/v1/systemone`);
+  });
+
   const ada = { ...cand("ada"), name: "Ada", role: "Engenharia" };
   const theo = { ...cand("theo"), name: "Theo" };
   const decide = (answer: Parameters<typeof fakeJev>[0], body: string, more: Partial<RoutingInput> = {}) => {

@@ -10096,6 +10096,12 @@
     },
     "withoutHint": "Jev olmadan, API anahtarlarınızdan birindeki küçük bir model kimin yanıt vereceğini seçer. Anahtar yoksa, her kişinin kendi Claude veya ChatGPT planı, yazdığı mesajlar için birkaç saniyede seçer. Her durumda bir yanıt ya da devam mesajı yine ajanına ulaşır. Bir ajanı çağırmak için ondan bahsedin.",
     "setUp": "Jev'i kur",
+    "provider": "Sağlayıcı",
+    "providerAccessible": "Jev sağlayıcısı",
+    "providerTypesafe": "TypeSafe",
+    "baseURL": "Jev temel URL'si",
+    "baseURLPlaceholder": "https://jev.example",
+    "invalidBaseURL": "Yol, sorgu, parça veya kullanıcı bilgisi içermeyen bir HTTP(S) kaynağı girin.",
     "steps": {
       "account": "Bir TypeSafe hesabı oluşturup kredi ekleyin",
       "accountHint": "Jev ön ödemelidir: milyon token başına US$ {{price}}. Kimin yanıt vereceğini seçmek yaklaşık US$ {{call}} tutar.",
@@ -10109,6 +10115,7 @@
       "savedNoCredit": "Kaydedildi. TypeSafe'te kredi ekleyin, Jev kendiliğinden başlar."
     },
     "keyName": "TypeSafe anahtarı",
+    "keyNameOther": "Sağlayıcı anahtarı",
     "month_one": "Bu ay {{count, number}} karar · {{cost}}",
     "month_other": "Bu ay {{count, number}} karar · {{cost}}",
     "state": {

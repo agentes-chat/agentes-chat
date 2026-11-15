@@ -10197,6 +10197,12 @@
     },
     "withoutHint": "Zonder Jev kiest een klein model op een van je API-sleutels wie antwoordt. Zonder sleutel kiest het eigen Claude- of ChatGPT-abonnement van elke persoon voor de berichten die die persoon schrijft, binnen een paar seconden. Verder komt een antwoord of vervolgbericht altijd bij de juiste agent aan. Vermeld een agent om die erbij te halen.",
     "setUp": "Jev instellen",
+    "provider": "Aanbieder",
+    "providerAccessible": "Jev-aanbieder",
+    "providerTypesafe": "TypeSafe",
+    "baseURL": "Basis-URL van Jev",
+    "baseURLPlaceholder": "https://jev.example",
+    "invalidBaseURL": "Voer een HTTP(S)-oorsprong in zonder pad, query, fragment of gebruikersinfo.",
     "steps": {
       "account": "Maak een TypeSafe-account aan en voeg tegoed toe",
       "accountHint": "Jev is prepaid: US$ {{price}} per miljoen tokens. Kiezen wie antwoordt kost ongeveer US$ {{call}}.",
@@ -10210,6 +10216,7 @@
       "savedNoCredit": "Opgeslagen. Voeg tegoed toe bij TypeSafe en Jev begint vanzelf."
     },
     "keyName": "TypeSafe-sleutel",
+    "keyNameOther": "Aanbietersleutel",
     "month_one": "{{count, number}} beslissing deze maand · {{cost}}",
     "month_other": "{{count, number}} beslissingen deze maand · {{cost}}",
     "state": {

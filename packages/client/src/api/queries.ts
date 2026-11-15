@@ -138,6 +138,7 @@ import type {
   IssueStatus,
   IssuesView,
   JevKey,
+  JevKeyInput,
   Machine,
   MachineAccessReduce,
   MachineTool,
@@ -355,7 +356,7 @@ function useJevChange<T>(change: (api: ApiClient, input: T) => Promise<JevKey>, 
     ...(silent ? { meta: { silent: true } } : {}),
   });
 }
-export const useSaveJevKey = () => useJevChange((api, apiKey: string) => api.system.saveJev(apiKey), true);
+export const useSaveJevKey = () => useJevChange((api, input: JevKeyInput) => api.system.saveJev(input), true);
 export const useCheckJevKey = () => useJevChange<void>((api) => api.system.checkJev());
 export const useRemoveJevKey = () => useJevChange<void>((api) => api.system.removeJev());
 

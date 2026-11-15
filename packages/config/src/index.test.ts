@@ -121,6 +121,34 @@ describe("loadConfig", () => {
     );
   });
 
+  test("JEV_BASE_URL is optional and accepts only an HTTP(S) origin", () => {
+    expect(loadConfig(valid).JEV_BASE_URL).toBeUndefined();
+    expect(loadConfig({ ...valid, JEV_BASE_URL: "http://jev.example:3425/" }).JEV_BASE_URL).toBe(
+      "http://jev.example:3425",
+    );
+    expect(loadConfig({ ...valid, JEV_BASE_URL: "https://jev.example" }).JEV_BASE_URL).toBe("https://jev.example");
+    for (const address of [
+      "ftp://jev.example",
+      "jev.example",
+      "http:///missing-host",
+      "http://jev.example/v1",
+      "http://jev.example/path/",
+      "http://jev.example?key=value",
+      "http://jev.example#fragment",
+      "http://user@jev.example",
+      String.raw`https://jev.example\v1`,
+      String.raw`https://jev.example\..\v1`,
+      "https://jev.example/./v1",
+      "https://jev.example//v1",
+      "https://jev.example\tv1",
+      "https://jev.example\n/v1",
+      "\nhttps://jev.example",
+      "https://jev.example\u0000",
+    ]) {
+      expect(() => loadConfig({ ...valid, JEV_BASE_URL: address })).toThrow(/JEV_BASE_URL/);
+    }
+  });
+
   test("rejects malformed model ids", () => {
     expect(() => loadConfig({ ...valid, AGENT_DEFAULT_MODEL: "Claude Sonnet" })).toThrow(/AGENT_DEFAULT_MODEL/);
   });

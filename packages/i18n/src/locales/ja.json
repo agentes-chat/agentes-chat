@@ -9747,6 +9747,12 @@
     },
     "withoutHint": "Jevがない場合は、お使いのAPIキーのいずれかで動く小さなモデルが返信する人を選びます。キーもない場合は、各自のClaudeまたはChatGPTプランが、その人の書いたメッセージについて数秒で選びます。いずれでもない場合も、返信やフォローアップはそのエージェントに届きます。エージェントを呼ぶにはメンションしてください。",
     "setUp": "Jevを設定",
+    "provider": "プロバイダー",
+    "providerAccessible": "Jevのプロバイダー",
+    "providerTypesafe": "TypeSafe",
+    "baseURL": "JevのベースURL",
+    "baseURLPlaceholder": "https://jev.example",
+    "invalidBaseURL": "パス、クエリ、フラグメント、ユーザー情報を含まない HTTP(S) のオリジンを入力してください。",
     "steps": {
       "account": "TypeSafeのアカウントを作成してクレジットを追加",
       "accountHint": "Jevは前払い制です。100万トークンあたりUS$ {{price}}で、返信する人の選択1回あたり約US$ {{call}}かかります。",
@@ -9760,6 +9766,7 @@
       "savedNoCredit": "保存しました。TypeSafeでクレジットを追加すると、Jevが自動で動き始めます。"
     },
     "keyName": "TypeSafeのキー",
+    "keyNameOther": "プロバイダーのキー",
     "month_other": "今月の判断 {{count, number}}件 · {{cost}}",
     "state": {
       "off": "オフ",

@@ -55,6 +55,7 @@ import type {
   InviteLink,
   IssuesView,
   JevKey,
+  JevKeyInput,
   JoinApproval,
   JoinClaim,
   JoinRequest,
@@ -1459,16 +1460,23 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         return { ...offer, state: decision === "send" ? "sent" : "dismissed", decidedAt: new Date().toISOString() };
       },
       jev: async () => state.jev ?? null,
-      saveJev: async (apiKey) => {
-        log("system.saveJev", apiKey);
+      saveJev: async (input: JevKeyInput) => {
+        log("system.saveJev", input);
         if (!state.jev) throw new ApiError(404, "not_found", "Not found");
-        const verdict = state.jevVerdicts?.[apiKey];
+        const verdict = state.jevVerdicts?.[input.apiKey];
         if (verdict === "invalid") throw new ApiError(422, "jev_key_invalid", "TypeSafe didn't accept this key.");
         if (verdict === "rate_limited") {
-          delete state.jevVerdicts?.[apiKey];
+          delete state.jevVerdicts?.[input.apiKey];
           throw new ApiError(429, "rate_limited", "Too many tries. Wait a minute.");
         }
-        state.jev = { ...state.jev, source: "settings", hint: apiKey.slice(-4), state: verdict ?? "ok" };
+        state.jev = {
+          ...state.jev,
+          source: "settings",
+          hint: input.apiKey.slice(-4),
+          state: verdict ?? "ok",
+          baseURL: input.baseURL ?? state.jev.baseURL,
+          baseURLSource: "settings",
+        };
         return state.jev;
       },
       checkJev: async () => {
@@ -1479,7 +1487,14 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       removeJev: async () => {
         log("system.removeJev");
         if (!state.jev) throw new ApiError(404, "not_found", "Not found");
-        state.jev = { ...state.jev, source: null, hint: null, state: "off" };
+        state.jev = {
+          ...state.jev,
+          source: null,
+          hint: null,
+          state: "off",
+          baseURL: "https://api.typesafe.ai",
+          baseURLSource: "default",
+        };
         return state.jev;
       },
       gifKey: async () => state.gifKey ?? null,

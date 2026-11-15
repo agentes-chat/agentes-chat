@@ -1,3 +1,4 @@
+import { jevOriginSchema } from "@agenteschat/config";
 import {
   isAgentesCloud,
   type JevKey,
@@ -22,8 +23,13 @@ const Jev = z
       .openapi({ description: "`env`: `TYPESAFE_API_KEY`, read-only here. `settings`: added here. Null: none." }),
     hint: z.string().nullable().openapi({ description: "The key's last 4 characters. The key is never returned." }),
     state: z.enum(["off", "ok", "invalid", "no_credit"]).openapi({
-      description: "What its owner can fix: TypeSafe refused the key, or its account is out of credit. Else `ok`.",
+      description: "What its owner can fix: the endpoint refused the key, or its account is out of credit. Else `ok`.",
     }),
+    baseURL: z
+      .string()
+      .url()
+      .openapi({ description: "The effective System One origin. Only returned to the pinned owner." }),
+    baseURLSource: z.enum(["settings", "env", "default"]),
     month: z
       .object({ decisions: z.number().int(), costUsd: z.number() })
       .openapi({ description: "Jev's calls this month (UTC), every workspace on the server together." }),
@@ -33,7 +39,11 @@ const Jev = z
 const ApiKey = z.object({
   apiKey: z.string().trim().min(8).max(512).openapi({
     description:
-      "The TypeSafe key, checked with TypeSafe before it is stored. Printable ASCII with no spaces, else 422 `jev_key_invalid` before any check, like a key TypeSafe refuses.",
+      "The key, checked against the selected System One origin before it is stored. Printable ASCII with no spaces, else 422 `jev_key_invalid` before any check, like a key the endpoint refuses.",
+  }),
+  baseURL: jevOriginSchema.optional().openapi({
+    description:
+      "Optional HTTP(S) origin without path, query, fragment or userinfo. Omitted keeps the current selection.",
   }),
 });
 
@@ -56,9 +66,14 @@ export function jevRoutes(deps: AppDeps) {
     return jev;
   };
   const allowed = async (userId: string) => (await deps.adapters.rateLimiter.consume(`jev:${userId}`, WRITES)).allowed;
-  const withMonth = async (view: JevKeyView) => {
+  const withMonth = async (jev: JevKey, view: JevKeyView) => {
     const month = await jevMonth(db);
-    return { ...view, month: { decisions: month.decisions, costUsd: nanoUsdToUsd(month.costNanoUsd) } };
+    return {
+      ...view,
+      baseURL: jev.baseURL(),
+      baseURLSource: jev.baseURLSource(),
+      month: { decisions: month.decisions, costUsd: nanoUsdToUsd(month.costNanoUsd) },
+    };
   };
 
   app.openapi(
@@ -73,7 +88,7 @@ export function jevRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const jev = await ownerOnly(c.get("user").id);
-      return c.json(await withMonth(await jev.view()), 200);
+      return c.json(await withMonth(jev, await jev.view()), 200);
     },
   );
 
@@ -98,7 +113,8 @@ export function jevRoutes(deps: AppDeps) {
       const jev = await ownerOnly(user.id);
       if (!(await allowed(user.id))) return apiError(c, 429, "rate_limited", "Too many tries. Wait a minute.");
       try {
-        return c.json(await withMonth(await jev.save(c.req.valid("json").apiKey, user.id)), 200);
+        const input = c.req.valid("json");
+        return c.json(await withMonth(jev, await jev.save(input.apiKey, user.id, input.baseURL)), 200);
       } catch (error) {
         if (error instanceof ValidationError && error.code === "jev_key_invalid") {
           return apiError(c, 422, error.code, error.message);
@@ -122,7 +138,7 @@ export function jevRoutes(deps: AppDeps) {
       const user = c.get("user");
       const jev = await ownerOnly(user.id);
       if (!(await allowed(user.id))) return apiError(c, 429, "rate_limited", "Too many tries. Wait a minute.");
-      return c.json(await withMonth(await jev.check()), 200);
+      return c.json(await withMonth(jev, await jev.check()), 200);
     },
   );
 
@@ -139,7 +155,7 @@ export function jevRoutes(deps: AppDeps) {
     async (c) => {
       const user = c.get("user");
       const jev = await ownerOnly(user.id);
-      return c.json(await withMonth(await jev.remove(user.id)), 200);
+      return c.json(await withMonth(jev, await jev.remove(user.id)), 200);
     },
   );
 

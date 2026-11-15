@@ -10488,6 +10488,12 @@ export const ptBR = {
     withoutHint:
       "Sem o Jev, um modelo pequeno numa das suas chaves de API escolhe quem responde. Sem chave, o plano do Claude ou do ChatGPT de cada pessoa escolhe nas mensagens que ela escreve, em alguns segundos. Fora isso, uma resposta ou uma continuação ainda chega ao agente. Mencione um agente para chamá-lo.",
     setUp: "Configurar o Jev",
+    provider: "Provedor",
+    providerAccessible: "Provedor do Jev",
+    providerTypesafe: "TypeSafe",
+    baseURL: "URL de base do Jev",
+    baseURLPlaceholder: "https://jev.example",
+    invalidBaseURL: "Informe uma origem HTTP(S), sem caminho, consulta, fragmento ou dados de usuário.",
     steps: {
       account: "Crie uma conta na TypeSafe e adicione crédito",
       accountHint:
@@ -10502,6 +10508,7 @@ export const ptBR = {
       savedNoCredit: "Salva. Adicione crédito na TypeSafe e o Jev começa sozinho.",
     },
     keyName: "Chave da TypeSafe",
+    keyNameOther: "Chave do provedor",
     month_one: "{{count, number}} decisão este mês · {{cost}}",
     month_other: "{{count, number}} decisões este mês · {{cost}}",
     state: {

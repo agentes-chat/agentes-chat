@@ -34,16 +34,19 @@ export interface JevKey {
   usable(): boolean;
   /** How a call went. `key`: the one it was made with, so an answer for a key replaced since is dropped. */
   report(state: JevState, retryAfterMs?: number, key?: string): void;
+  /** Effective System One origin and where the owner can change it. */
+  baseURL(): string;
+  baseURLSource(): "settings" | "env" | "default";
   view(): Promise<JevKeyView>;
-  /** Checked with TypeSafe first: a refused key is never stored (`jev_key_invalid`). */
-  save(apiKey: string, userId: string): Promise<JevKeyView>;
+  /** Checked at the candidate origin first: a refused key is never stored (`jev_key_invalid`). */
+  save(apiKey: string, userId: string, baseURL?: string): Promise<JevKeyView>;
   remove(userId: string): Promise<JevKeyView>;
   /** Asks TypeSafe again. An answer that says nothing about the key leaves its state as it was. */
   check(): Promise<JevKeyView>;
 }
 
 /** A fixed key (evals, tests), or the installation's. */
-export type JevKeySource = string | Pick<JevKey, "key" | "report" | "usable">;
+export type JevKeySource = string | (Pick<JevKey, "key" | "report" | "usable"> & Partial<Pick<JevKey, "baseURL">>);
 
 /** No Jev key to call with now: the next step decides. */
 export class JevOffError extends Error {
@@ -123,7 +126,8 @@ export async function callJev<T>(source: JevKeySource, call: JevCall): Promise<T
   const jev = typeof source === "string" ? { key: async () => source, report: () => {} } : source;
   const apiKey = await jev.key();
   if (!apiKey) throw new JevOffError();
-  const r = await systemOne(apiKey, call);
+  const baseURL = call.baseURL ?? (typeof source === "string" ? undefined : source.baseURL?.());
+  const r = await systemOne(apiKey, { ...call, baseURL });
   if (r.state) jev.report(r.state, r.retryAfterMs, apiKey);
   if (r.state !== "ok" || r.body === null) {
     throw new Error(r.status ? `TypeSafe answered ${r.status}` : "TypeSafe didn't answer");
@@ -191,7 +195,7 @@ export function createJevKey(deps: {
   const envKey = env && KEY_SHAPE.test(env) ? env : null;
   const tsa = { fetch: deps.fetch, baseURL: deps.baseURL };
   /** The saved row as last read. `key` is null when it doesn't open (another `AGENTES_SECRET`). */
-  let saved: { key: string | null; hint: string; at: number } | null = null;
+  let saved: { key: string | null; hint: string; baseURL: string | null; at: number } | null = null;
   let readAt = Number.NEGATIVE_INFINITY;
   let reading: Promise<void> | null = null;
   let state: JevState = env ? (envKey ? "unchecked" : "invalid") : "off";
@@ -204,6 +208,9 @@ export function createJevKey(deps: {
     downs = 0;
   };
   const current = () => (env ? envKey : (saved?.key ?? null));
+  const effectiveBaseURL = () => saved?.baseURL ?? deps.baseURL ?? "https://api.typesafe.ai";
+  const baseURLSource = (): "settings" | "env" | "default" =>
+    saved?.baseURL ? "settings" : deps.baseURL ? "env" : "default";
 
   async function read() {
     const [row] = await deps.db.select().from(instanceSecrets).where(eq(instanceSecrets.name, NAME));
@@ -216,7 +223,7 @@ export function createJevKey(deps: {
     const at = row.updatedAt.getTime();
     if (saved?.at === at) return;
     const key = await openSecret(deps.keyWrappers, row, AAD).catch(() => null);
-    saved = { key, hint: row.keyHint, at };
+    saved = { key, hint: row.keyHint, baseURL: row.baseUrl, at };
     restart(key ? "unchecked" : "invalid");
   }
   const refresh = () => {
@@ -256,19 +263,24 @@ export function createJevKey(deps: {
     },
     usable: () => current() !== null && now() >= skipUntil,
     report,
+    baseURL: effectiveBaseURL,
+    baseURLSource,
     async view() {
       await refresh();
       return snapshot();
     },
-    async save(apiKey, userId) {
+    async save(apiKey, userId, selectedBaseURL) {
       if (env) throw envError();
       const key = apiKey.trim();
       if (!KEY_SHAPE.test(key)) throw invalidError();
-      const checked = await checkJevKey(key, tsa);
+      const candidateBaseURL = selectedBaseURL ?? effectiveBaseURL();
+      const checked = await checkJevKey(key, { ...tsa, baseURL: candidateBaseURL });
       if (checked === "invalid") throw invalidError();
+      const baseUrl = selectedBaseURL ?? saved?.baseURL ?? null;
       const values = {
         ...(await sealSecret(deps.keyWrapper, key, AAD)),
         keyHint: key.slice(-4),
+        baseUrl,
         updatedBy: userId,
         updatedAt: new Date(),
       };
@@ -279,7 +291,7 @@ export function createJevKey(deps: {
           .onConflictDoUpdate({ target: instanceSecrets.name, set: values });
         await auditEveryOrg(tx, NAME, { type: "person", id: userId }, "jev.key_saved", { hint: values.keyHint });
       });
-      saved = { key, hint: values.keyHint, at: values.updatedAt.getTime() };
+      saved = { key, hint: values.keyHint, baseURL: values.baseUrl, at: values.updatedAt.getTime() };
       readAt = now();
       restart("unchecked");
       if (checked === "ok" || checked === "no_credit") report(checked);
@@ -297,7 +309,7 @@ export function createJevKey(deps: {
       await refresh();
       const key = current();
       if (key) {
-        const checked = await checkJevKey(key, tsa);
+        const checked = await checkJevKey(key, { ...tsa, baseURL: effectiveBaseURL() });
         if (checked === "ok" || checked === "invalid" || checked === "no_credit") report(checked, undefined, key);
       }
       return snapshot();

@@ -24722,6 +24722,24 @@
   "jev.setUp": {
     "value": "Set up Jev"
   },
+  "jev.provider": {
+    "value": "Provider"
+  },
+  "jev.providerAccessible": {
+    "value": "Jev provider"
+  },
+  "jev.providerTypesafe": {
+    "value": "TypeSafe"
+  },
+  "jev.baseURL": {
+    "value": "Jev base URL"
+  },
+  "jev.baseURLPlaceholder": {
+    "value": "https://jev.example"
+  },
+  "jev.invalidBaseURL": {
+    "value": "Enter an HTTP(S) origin without a path, query, fragment or userinfo."
+  },
   "jev.steps.account": {
     "value": "Create a TypeSafe account and add credit"
   },
@@ -24754,6 +24772,9 @@
   },
   "jev.keyName": {
     "value": "TypeSafe key"
+  },
+  "jev.keyNameOther": {
+    "value": "Provider key"
   },
   "jev.month": {
     "value": {

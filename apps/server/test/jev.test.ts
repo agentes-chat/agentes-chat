@@ -19,14 +19,49 @@ afterEach(async () => {
 
 const SECRET_KEY = "ts_live_do_not_leak_9f2c";
 
+function jevCompositionFetch() {
+  const urls: string[] = [];
+  const keys: string[] = [];
+  const fetch = (async (url: string | URL | Request, init: RequestInit) => {
+    urls.push(String(url));
+    keys.push(new Headers(init.headers).get("authorization") ?? "");
+    const body = JSON.parse(String(init.body)) as { questions?: Record<string, unknown> };
+    const answers = Object.fromEntries(
+      Object.keys(body.questions ?? {}).map((name) => [
+        name,
+        name === "best_agent"
+          ? { type: "choice", choice: "ada", probabilities: { ada: 0.9, none: 0.1 }, confidence: 0.9 }
+          : { type: "noul", noul: 0.9 },
+      ]),
+    );
+    return Response.json({ model: "jev-test", answers, usage: { input_tokens: 10, output_tokens: 1 } });
+  }) as unknown as typeof globalThis.fetch;
+  return { fetch, keys, urls };
+}
+
+async function routerConversation(t: TestServer) {
+  const router = t.engine.router;
+  if (!router) throw new Error("test router is disabled");
+  await router.strategy.decide({
+    orgId: "composition-test-org",
+    channel: { id: "channel", name: "general", topic: "" },
+    message: { id: "message", author: "Heitor", body: "Ada, can you check this?" },
+    thread: [],
+    candidates: [{ agentId: "ada-id", handle: "ada", name: "Ada", role: "assistant", about: "" }],
+    authorUserId: "person-id",
+  });
+}
+
 /** A fake TypeSafe that answers every call with `status`, and counts them. */
 function typesafe(status = 200) {
   const calls: string[] = [];
-  const fetch = (async (_url: string, init: RequestInit) => {
+  const urls: string[] = [];
+  const fetch = (async (url: string | URL | Request, init: RequestInit) => {
+    urls.push(String(url));
     calls.push(new Headers(init.headers).get("authorization") ?? "");
     return Response.json(status < 300 ? { answers: { ok: { noul: 1 } } } : { detail: {} }, { status });
   }) as unknown as typeof globalThis.fetch;
-  return { fetch, calls };
+  return { fetch, calls, urls };
 }
 
 async function server(options: { env?: Record<string, string>; status?: number } = {}) {
@@ -46,13 +81,22 @@ const org = async (b: Browser, name: string) =>
 test("only the installation's first account reaches it: signed out 401, anyone else 404", async () => {
   const { t, owner, other } = await server();
   expect((await browser(t)("/api/app/jev")).status).toBe(401);
-  expect((await other("/api/app/jev")).status).toBe(404);
+  const hidden = await other("/api/app/jev");
+  expect(hidden.status).toBe(404);
+  expect(await hidden.text()).not.toContain("jev.private.example");
   expect((await other("/api/app/jev", { method: "PUT", json: { apiKey: SECRET_KEY } })).status).toBe(404);
   expect((await other("/api/app/jev/check", { json: {} })).status).toBe(404);
   expect((await other("/api/app/jev", { method: "DELETE" })).status).toBe(404);
   const res = await owner("/api/app/jev");
   expect(res.status).toBe(200);
-  expect(await res.json()).toEqual({ source: null, hint: null, state: "off", month: { decisions: 0, costUsd: 0 } });
+  expect(await res.json()).toMatchObject({
+    source: null,
+    hint: null,
+    state: "off",
+    baseURL: "https://api.typesafe.ai",
+    baseURLSource: "default",
+    month: { decisions: 0, costUsd: 0 },
+  });
 });
 
 test("on agentes.chat itself nobody has it", async () => {
@@ -88,12 +132,22 @@ test("saved: shown by its last 4 only, recorded in every workspace without the k
   const beta = await org(other, "Beta");
   // Routing decisions name who decides: the cheap model until there is a key.
   expect(t.engine.router?.strategy.name).toBe("llm");
-  const saved = await owner("/api/app/jev", { method: "PUT", json: { apiKey: ` ${SECRET_KEY} ` } });
+  const saved = await owner("/api/app/jev", {
+    method: "PUT",
+    json: { apiKey: ` ${SECRET_KEY} `, baseURL: "http://jev.example:3425" },
+  });
   expect(saved.status).toBe(200);
   expect(t.engine.router?.strategy.name).toBe("jev");
   const text = await saved.text();
   expect(text).not.toContain("do_not_leak");
-  expect(JSON.parse(text)).toMatchObject({ source: "settings", hint: "9f2c", state: "ok" });
+  expect(JSON.parse(text)).toMatchObject({
+    source: "settings",
+    hint: "9f2c",
+    state: "ok",
+    baseURL: "http://jev.example:3425",
+    baseURLSource: "settings",
+  });
+  expect(ts.urls).toEqual(["http://jev.example:3425/v1/systemone"]);
   expect(ts.calls).toEqual([`Bearer ${SECRET_KEY}`]);
   const read = await (await owner("/api/app/jev")).text();
   expect(read).not.toContain("do_not_leak");
@@ -103,15 +157,93 @@ test("saved: shown by its last 4 only, recorded in every workspace without the k
   expect(audit.map((a) => a.orgId).sort()).toEqual([acme, beta].sort());
   expect(JSON.stringify(audit)).not.toContain("do_not_leak");
 
-  // Check again asks TypeSafe once more.
+  const [savedRow] = await t.db.select().from(schema.instanceSecrets);
+  expect(savedRow?.baseUrl).toBe("http://jev.example:3425");
+
+  // Check again asks the selected origin once more.
   expect((await owner("/api/app/jev/check", { json: {} })).status).toBe(200);
-  expect(ts.calls).toHaveLength(2);
+  expect(ts.urls).toEqual(["http://jev.example:3425/v1/systemone", "http://jev.example:3425/v1/systemone"]);
 
   const removed = await owner("/api/app/jev", { method: "DELETE" });
-  expect(await removed.json()).toMatchObject({ source: null, hint: null, state: "off" });
+  expect(await removed.json()).toMatchObject({
+    source: null,
+    hint: null,
+    state: "off",
+    baseURL: "https://api.typesafe.ai",
+  });
   expect(await t.db.select().from(schema.instanceSecrets)).toEqual([]);
   const gone = await t.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "jev.key_removed"));
   expect(gone).toHaveLength(2);
+});
+
+test("the operator origin is shown only to the pinned owner", async () => {
+  const { owner, other } = await server({ env: { JEV_BASE_URL: "https://jev.private.example" } });
+  expect(await (await owner("/api/app/jev")).json()).toMatchObject({
+    baseURL: "https://jev.private.example",
+    baseURLSource: "env",
+  });
+  const hidden = await other("/api/app/jev");
+  expect(hidden.status).toBe(404);
+  expect(await hidden.text()).not.toContain("jev.private.example");
+});
+
+test("the server-composed key check and conversation share the owner-selected origin over the operator default", async () => {
+  const selected = "https://owner.jevt.example";
+  const operator = "https://operator.jevt.example";
+  const io = jevCompositionFetch();
+  t = await createTestServer({
+    env: { ALLOW_SIGNUP: "true", JEV_BASE_URL: operator },
+    jevFetch: io.fetch,
+  });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  expect(
+    (
+      await owner("/api/app/jev", {
+        method: "PUT",
+        json: { apiKey: SECRET_KEY, baseURL: selected },
+      })
+    ).status,
+  ).toBe(200);
+  await routerConversation(t);
+  expect(io.urls).toEqual([`${selected}/v1/systemone`, `${selected}/v1/systemone`]);
+  expect(io.keys).toEqual([`Bearer ${SECRET_KEY}`, `Bearer ${SECRET_KEY}`]);
+  expect(io.urls).not.toContain(`${operator}/v1/systemone`);
+});
+
+test("the server-composed key check and conversation honor an explicit TypeSafe owner choice over the operator default", async () => {
+  const selected = "https://api.typesafe.ai";
+  const operator = "https://operator.jevt.example";
+  const io = jevCompositionFetch();
+  t = await createTestServer({
+    env: { ALLOW_SIGNUP: "true", JEV_BASE_URL: operator },
+    jevFetch: io.fetch,
+  });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  expect(
+    (
+      await owner("/api/app/jev", {
+        method: "PUT",
+        json: { apiKey: SECRET_KEY, baseURL: selected },
+      })
+    ).status,
+  ).toBe(200);
+  await routerConversation(t);
+  expect(io.urls).toEqual([`${selected}/v1/systemone`, `${selected}/v1/systemone`]);
+  expect(io.keys).toEqual([`Bearer ${SECRET_KEY}`, `Bearer ${SECRET_KEY}`]);
+  expect(io.urls).not.toContain(`${operator}/v1/systemone`);
+});
+
+test("an invalid origin is refused before any key check or persistence", async () => {
+  const { t, owner, ts } = await server();
+  const response = await owner("/api/app/jev", {
+    method: "PUT",
+    json: { apiKey: SECRET_KEY, baseURL: "https://jev.example/v1?token=hidden" },
+  });
+  expect(response.status).toBe(400);
+  expect(ts.urls).toEqual([]);
+  expect(await t.db.select().from(schema.instanceSecrets)).toEqual([]);
 });
 
 test("with TYPESAFE_API_KEY set: shown read-only, 409 on save and remove", async () => {
@@ -130,6 +262,38 @@ test("ten saves or checks a minute, then 429", async () => {
   }
   expect((await owner("/api/app/jev", { method: "PUT", json: { apiKey: SECRET_KEY } })).status).toBe(429);
   expect((await owner("/api/app/jev/check", { json: {} })).status).toBe(429);
+});
+
+test("an owner key with no origin chosen calls the operator's JEV_BASE_URL in the composed server", async () => {
+  const operator = "https://operator.jevt.example";
+  const io = jevCompositionFetch();
+  t = await createTestServer({ env: { ALLOW_SIGNUP: "true", JEV_BASE_URL: operator }, jevFetch: io.fetch });
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  expect((await owner("/api/app/jev", { method: "PUT", json: { apiKey: SECRET_KEY } })).status).toBe(200);
+  await routerConversation(t);
+  expect(io.urls).toEqual([`${operator}/v1/systemone`, `${operator}/v1/systemone`]);
+});
+
+test("parser-normalized paths and separators are refused before key check or persistence", async () => {
+  const { t, owner, ts } = await server();
+  const invalid = [
+    String.raw`https://jev.example\v1`,
+    String.raw`https://jev.example\..\v1`,
+    "https://jev.example/./v1",
+    "https://jev.example//v1",
+    "https://jev.example\tv1",
+    "https://jev.example\n/v1",
+    "\nhttps://jev.example",
+    "https://jev.example\u0000",
+    "https://jev.example/v1?key=hidden",
+  ];
+  for (const baseURL of invalid) {
+    const response = await owner("/api/app/jev", { method: "PUT", json: { apiKey: SECRET_KEY, baseURL } });
+    expect(response.status).toBe(400);
+  }
+  expect(ts.urls).toEqual([]);
+  expect(await t.db.select().from(schema.instanceSecrets)).toEqual([]);
 });
 
 test("the month: Jev's calls since the 1st (UTC), every workspace together, and nothing else", async () => {

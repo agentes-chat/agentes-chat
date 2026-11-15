@@ -26,6 +26,7 @@
   "dependencies": {
     "@agenteschat/adapters": "workspace:*",
     "@agenteschat/client": "workspace:*",
+    "@agenteschat/config": "workspace:*",
     "@agenteschat/i18n": "workspace:*",
     "@agenteschat/ui": "workspace:*",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",

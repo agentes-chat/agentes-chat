@@ -1912,6 +1912,13 @@
       "when": 1794757000000,
       "tag": "0276_skill_source_by_folder",
       "breakpoints": true
+    },
+    {
+      "idx": 275,
+      "version": "7",
+      "when": 1794757000001,
+      "tag": "0277_jev-base-url",
+      "breakpoints": true
     }
   ]
 }

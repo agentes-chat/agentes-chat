@@ -187,6 +187,7 @@ import type {
   IssueStatus,
   IssuesView,
   JevKey,
+  JevKeyInput,
   JoinApproval,
   JoinClaim,
   JoinRequest,
@@ -395,8 +396,8 @@ export interface ApiClient {
     decideFeedbackOffer(orgId: string, messageId: string, decision: "send" | "dismiss"): Promise<FeedbackOffer>;
     /** `null` unless I am the installation's owner on a self-hosted server. */
     jev(): Promise<JevKey | null>;
-    /** Checked with TypeSafe first: `jev_key_invalid` (422) when it refuses, `jev_key_env` (409) with an env key. */
-    saveJev(apiKey: string): Promise<JevKey>;
+    /** Checked with the selected System One origin first; `jev_key_invalid` (422) when it refuses. */
+    saveJev(input: JevKeyInput): Promise<JevKey>;
     checkJev(): Promise<JevKey>;
     removeJev(): Promise<JevKey>;
     /** The GIPHY key (ADR 0091): `null` unless I am the installation's owner on a self-hosted server. */

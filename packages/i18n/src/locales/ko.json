@@ -9741,6 +9741,12 @@
     },
     "withoutHint": "Jev가 없으면 API 키 중 하나로 작은 모델이 누가 답할지 골라요. 키도 없으면 각 사람의 Claude 또는 ChatGPT 요금제가 그 사람이 쓴 메시지에 대해 몇 초 안에 골라요. 그 밖의 경우에도 답장이나 후속 메시지는 해당 에이전트에게 전달돼요. 에이전트를 부르려면 멘션하세요.",
     "setUp": "Jev 설정",
+    "provider": "제공자",
+    "providerAccessible": "Jev 제공자",
+    "providerTypesafe": "TypeSafe",
+    "baseURL": "Jev 기본 URL",
+    "baseURLPlaceholder": "https://jev.example",
+    "invalidBaseURL": "경로, 쿼리, 프래그먼트, 사용자 정보가 없는 HTTP(S) 출처를 입력하세요.",
     "steps": {
       "account": "TypeSafe 계정을 만들고 크레딧 충전하기",
       "accountHint": "Jev는 선불이에요. 100만 토큰당 US$ {{price}}예요. 누가 답할지 고르는 데 약 US$ {{call}}이 들어요.",
@@ -9754,6 +9760,7 @@
       "savedNoCredit": "저장했어요. TypeSafe에서 크레딧을 충전하면 Jev가 알아서 시작해요."
     },
     "keyName": "TypeSafe 키",
+    "keyNameOther": "제공자 키",
     "month_other": "이번 달 결정 {{count, number}}건 · {{cost}}",
     "state": {
       "off": "꺼짐",

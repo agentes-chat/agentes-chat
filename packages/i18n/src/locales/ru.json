@@ -10853,6 +10853,12 @@
     },
     "withoutHint": "Без Jev отвечающего выбирает небольшая модель на одном из ваших API-ключей. Без ключа за несколько секунд выбирает собственный тариф Claude или ChatGPT того, кто пишет сообщение. В любом случае ответ или продолжение разговора дойдут до своего агента. Упомяните агента, чтобы позвать его.",
     "setUp": "Настроить Jev",
+    "provider": "Поставщик",
+    "providerAccessible": "Поставщик Jev",
+    "providerTypesafe": "TypeSafe",
+    "baseURL": "Базовый URL Jev",
+    "baseURLPlaceholder": "https://jev.example",
+    "invalidBaseURL": "Введите источник HTTP(S) без пути, строки запроса, фрагмента и данных пользователя.",
     "steps": {
       "account": "Создайте аккаунт TypeSafe и пополните баланс",
       "accountHint": "Jev работает по предоплате: US$ {{price}} за миллион токенов. Выбор отвечающего стоит около US$ {{call}}.",
@@ -10866,6 +10872,7 @@
       "savedNoCredit": "Сохранено. Пополните баланс в TypeSafe, и Jev включится сам."
     },
     "keyName": "Ключ TypeSafe",
+    "keyNameOther": "Ключ поставщика",
     "month_one": "{{count, number}} решение в этом месяце · {{cost}}",
     "month_few": "{{count, number}} решения в этом месяце · {{cost}}",
     "month_many": "{{count, number}} решений в этом месяце · {{cost}}",

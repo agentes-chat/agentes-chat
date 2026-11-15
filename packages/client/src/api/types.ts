@@ -33,14 +33,21 @@ export interface JevKey {
   source: "env" | "settings" | null;
   /** The key's last 4 characters (the key itself is never returned). */
   hint: string | null;
-  /** What its owner can fix: TypeSafe refused the key, or its account is out of credit. Else `ok`. */
+  /** What its owner can fix: the endpoint refused the key, or its account is out of credit. Else `ok`. */
   state: "off" | "ok" | "invalid" | "no_credit";
+  /** Effective System One origin, visible only to the installation's pinned owner. */
+  baseURL: string;
+  baseURLSource: "settings" | "env" | "default";
   /** Jev's calls this month (UTC), every workspace together. */
   month: { decisions: number; costUsd: number };
 }
 
-/**
- * The installation's GIPHY key, for its pinned owner on a server that isn't agentes.chat's own (`GET
+export interface JevKeyInput {
+  apiKey: string;
+  baseURL?: string;
+}
+
+/** for its pinned owner on a server that isn't agentes.chat's own (`GET
  * /api/app/gif-key`, ADR 0091): with it, every workspace has GIFs (`OrgSettings.gifsAvailable`).
  */
 export interface GifKey {

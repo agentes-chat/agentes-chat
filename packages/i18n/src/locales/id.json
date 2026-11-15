@@ -9796,6 +9796,12 @@
     },
     "withoutHint": "Tanpa Jev, model kecil di salah satu kunci API-mu yang memilih siapa yang menjawab. Tanpa kunci, paket Claude atau ChatGPT milik tiap orang yang memilih untuk pesan yang mereka tulis, dalam beberapa detik. Selain itu, balasan atau tindak lanjut tetap sampai ke agennya. Sebut agen untuk memanggilnya.",
     "setUp": "Siapkan Jev",
+    "provider": "Penyedia",
+    "providerAccessible": "Penyedia Jev",
+    "providerTypesafe": "TypeSafe",
+    "baseURL": "URL dasar Jev",
+    "baseURLPlaceholder": "https://jev.example",
+    "invalidBaseURL": "Masukkan origin HTTP(S) tanpa path, query, fragment, atau userinfo.",
     "steps": {
       "account": "Buat akun TypeSafe dan tambahkan saldo",
       "accountHint": "Jev prabayar: US$ {{price}} per sejuta token. Memilih siapa yang menjawab biayanya sekitar US$ {{call}}.",
@@ -9809,6 +9815,7 @@
       "savedNoCredit": "Tersimpan. Tambahkan saldo di TypeSafe dan Jev mulai dengan sendirinya."
     },
     "keyName": "Kunci TypeSafe",
+    "keyNameOther": "Kunci penyedia",
     "month_other": "{{count, number}} keputusan bulan ini · {{cost}}",
     "state": {
       "off": "Mati",

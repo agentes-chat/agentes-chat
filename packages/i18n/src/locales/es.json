@@ -10477,6 +10477,12 @@
     },
     "withoutHint": "Sin Jev, un modelo pequeño con una de tus claves de API elige quién responde. Sin clave, el plan de Claude o ChatGPT de cada persona elige para los mensajes que escribe, en unos segundos. Si no, una respuesta o un seguimiento igual llega a su agente. Menciona a un agente para llamarlo.",
     "setUp": "Configurar Jev",
+    "provider": "Proveedor",
+    "providerAccessible": "Proveedor de Jev",
+    "providerTypesafe": "TypeSafe",
+    "baseURL": "URL base de Jev",
+    "baseURLPlaceholder": "https://jev.example",
+    "invalidBaseURL": "Escriba un origen HTTP(S) sin ruta, consulta, fragmento ni información de usuario.",
     "steps": {
       "account": "Crea una cuenta en TypeSafe y añade crédito",
       "accountHint": "Jev es prepago: US$ {{price}} por millón de tokens. Elegir quién responde cuesta unos US$ {{call}}.",
@@ -10490,6 +10496,7 @@
       "savedNoCredit": "Guardada. Añade crédito en TypeSafe y Jev empieza solo."
     },
     "keyName": "Clave de TypeSafe",
+    "keyNameOther": "Clave del proveedor",
     "month_one": "{{count, number}} decisión este mes · {{cost}}",
     "month_many": "{{count, number}} decisiones este mes · {{cost}}",
     "month_other": "{{count, number}} decisiones este mes · {{cost}}",

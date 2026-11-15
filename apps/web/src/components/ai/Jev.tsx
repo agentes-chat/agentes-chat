@@ -11,6 +11,7 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { formatDecimal, formatUsd } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { routingLineOf } from "@agenteschat/client/lib/routing";
+import { isJevOrigin } from "@agenteschat/config/jev-origin";
 import {
   Button,
   Card,
@@ -26,6 +27,7 @@ import {
   List,
   Locked,
   ProviderLogo,
+  Select,
   SettingNote,
 } from "@agenteschat/ui";
 import { useRouterState } from "@tanstack/react-router";
@@ -44,6 +46,8 @@ import { OpenPage, Step, StepTitle } from "./AddAccountFlow";
 /** TypeSafe's console: where an account is made and credit is added, and where its keys are made. */
 const TYPESAFE_CONSOLE = "https://console.typesafe.ai";
 const TYPESAFE_KEYS = `${TYPESAFE_CONSOLE}/keys`;
+const TYPESAFE_ORIGIN = "https://api.typesafe.ai";
+type JevProvider = "typesafe" | "other";
 /** What Jev costs (US$): per million tokens it reads, and about one pick of who answers. */
 const JEV_PRICE = 0.042;
 const JEV_CALL = 0.0001;
@@ -86,6 +90,10 @@ export function JevSteps({
   replace,
   value,
   onChange,
+  provider,
+  onProviderChange,
+  baseURL,
+  onBaseURLChange,
   error,
   saved,
   onSave,
@@ -95,6 +103,10 @@ export function JevSteps({
   replace?: boolean;
   value: string;
   onChange: (value: string) => void;
+  provider: JevProvider;
+  onProviderChange: (value: JevProvider) => void;
+  baseURL: string;
+  onBaseURLChange: (value: string) => void;
   /** Under the field, in place of where the key is kept: why it wasn't saved. */
   error?: string | null;
   /** Saved, with a line to say so (a key whose account has no credit yet). */
@@ -110,10 +122,48 @@ export function JevSteps({
   const key = value.trim();
   // The way on is the first button until a key is typed.
   const first = key === "";
+  const other = provider === "other";
+  const validOrigin = other && isJevOrigin(baseURL);
+  const canSave = key.length >= JEV_KEY_MIN && (!other || validOrigin);
   const n = replace ? 0 : 1;
   return (
     <div className="agp-addacct jev-steps">
-      {!replace && (
+      <div className="ac-field">
+        <label className="ac-field__label" htmlFor={`${id}-provider`}>
+          {t("jev.provider")}
+        </label>
+        <Select
+          id={`${id}-provider`}
+          aria-label={t("jev.providerAccessible")}
+          value={provider}
+          onValueChange={onProviderChange}
+          options={[
+            { value: "typesafe", label: t("jev.providerTypesafe") },
+            { value: "other", label: t("endpoint.option") },
+          ]}
+        />
+      </div>
+      {other ? (
+        <Step n={1}>
+          <StepTitle title={t("jev.baseURL")} htmlFor={`${id}-base-url`} />
+          <Locked when={Boolean(saving)}>
+            <Input
+              id={`${id}-base-url`}
+              type="url"
+              value={baseURL}
+              autoComplete="url"
+              spellCheck={false}
+              placeholder={t("jev.baseURLPlaceholder")}
+              invalid={baseURL.length > 0 && !validOrigin}
+              aria-describedby={`${id}-origin-below`}
+              onChange={(e) => onBaseURLChange(e.target.value)}
+            />
+          </Locked>
+          <p id={`${id}-origin-below`} className="jev-steps__below ac-field__example">
+            {baseURL.length > 0 && !validOrigin ? t("jev.invalidBaseURL") : " "}
+          </p>
+        </Step>
+      ) : !replace ? (
         <Step
           n={1}
           side={
@@ -130,18 +180,25 @@ export function JevSteps({
             })}
           />
         </Step>
+      ) : null}
+      {!other && (
+        <Step
+          n={n + 1}
+          side={
+            <OpenPage href={TYPESAFE_KEYS} primary={replace && first}>
+              {t("jev.steps.openKeys")}
+            </OpenPage>
+          }
+        >
+          <StepTitle title={t("jev.steps.key")} />
+        </Step>
       )}
-      <Step
-        n={n + 1}
-        side={
-          <OpenPage href={TYPESAFE_KEYS} primary={replace && first}>
-            {t("jev.steps.openKeys")}
-          </OpenPage>
-        }
-      >
-        <StepTitle title={t("jev.steps.key")} />
-      </Step>
-      <Step n={n + 2}>
+      {other && (
+        <Step n={2}>
+          <StepTitle title={t("jev.steps.key")} />
+        </Step>
+      )}
+      <Step n={other ? 3 : n + 2}>
         <StepTitle title={t("jev.steps.paste")} htmlFor={field} />
         <span className="agp-addacct__paste">
           <Locked when={Boolean(saving)}>
@@ -160,12 +217,12 @@ export function JevSteps({
               onKeyDown={(e) => {
                 if (e.key !== "Enter" || !onSave) return;
                 e.preventDefault();
-                if (key.length >= JEV_KEY_MIN && !saving) onSave();
+                if (canSave && !saving) onSave();
               }}
             />
           </Locked>
           {onSave && (
-            <Button variant="primary" disabled={key.length < JEV_KEY_MIN} loading={saving} onClick={onSave}>
+            <Button variant="primary" disabled={!canSave} loading={saving} onClick={onSave}>
               {t("settings.saveKey")}
             </Button>
           )}
@@ -237,6 +294,8 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   const remove = useRemoveJevKey();
   const [steps, setSteps] = useState<null | "set" | "replace">(null);
   const [draft, setDraft] = useState("");
+  const [provider, setProvider] = useState<JevProvider>("typesafe");
+  const [baseURL, setBaseURL] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
   const box = useRef<HTMLElement>(null);
@@ -265,7 +324,20 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
     setError(null);
     refocus.current = true;
   };
-  const submit = () => save.mutate(draft.trim(), { onSuccess: close, onError: (e) => setError(errorText(t, e)) });
+  const beginSteps = (mode: "set" | "replace") => {
+    const current = view.baseURL;
+    setProvider(current === TYPESAFE_ORIGIN ? "typesafe" : "other");
+    setBaseURL(current === TYPESAFE_ORIGIN ? "" : current);
+    setDraft("");
+    setError(null);
+    setSteps(mode);
+  };
+  const selectedBaseURL = provider === "typesafe" ? TYPESAFE_ORIGIN : baseURL;
+  const submit = () =>
+    save.mutate(
+      { apiKey: draft.trim(), baseURL: selectedBaseURL },
+      { onSuccess: close, onError: (e) => setError(errorText(t, e)) },
+    );
   const stepsOf = (replace: boolean) => (
     <JevSteps
       replace={replace}
@@ -274,16 +346,27 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
         setDraft(v);
         setError(null);
       }}
+      provider={provider}
+      onProviderChange={(next) => {
+        setProvider(next);
+        setError(null);
+      }}
+      baseURL={baseURL}
+      onBaseURLChange={(next) => {
+        setBaseURL(next);
+        setError(null);
+      }}
       error={error}
       onSave={submit}
       saving={save.isPending}
       onCancel={close}
     />
   );
+  const isTypesafe = view.baseURL === TYPESAFE_ORIGIN;
   const site =
-    view.state === "invalid" ? (
+    isTypesafe && view.state === "invalid" ? (
       <OpenPage href={TYPESAFE_KEYS}>{t("jev.steps.openKeys")}</OpenPage>
-    ) : view.state === "no_credit" ? (
+    ) : isTypesafe && view.state === "no_credit" ? (
       <OpenPage href={TYPESAFE_CONSOLE}>{t("jev.steps.openSite")}</OpenPage>
     ) : null;
   const ghost = (
@@ -309,7 +392,7 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   ) : view.state === "invalid" ? (
     <>
       {site}
-      {ghost(t("settings.rotate"), () => setSteps("replace"), { ref: opener })}
+      {ghost(t("settings.rotate"), () => beginSteps("replace"), { ref: opener })}
     </>
   ) : view.state === "no_credit" ? (
     <>
@@ -318,7 +401,7 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
     </>
   ) : (
     <>
-      {ghost(t("settings.rotate"), () => setSteps("replace"), { ref: opener })}
+      {ghost(t("settings.rotate"), () => beginSteps("replace"), { ref: opener })}
       {ghost(t("settings.remove"), () => setRemoving(true), { danger: true })}
     </>
   );
@@ -331,6 +414,7 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
       : null;
   const facts = [
     view.hint && t("settings.keyEndsIn", { hint: view.hint }),
+    !isTypesafe && view.baseURL,
     view.month.decisions > 0 &&
       t("jev.month", { count: view.month.decisions, cost: formatUsd(i18n.language, view.month.costUsd) }),
   ].filter(Boolean);
@@ -363,7 +447,7 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
             {steps ? (
               stepsOf(false)
             ) : (
-              <Button ref={opener} size="sm" variant="primary" onClick={() => setSteps("set")}>
+              <Button ref={opener} size="sm" variant="primary" onClick={() => beginSteps("set")}>
                 {t("jev.setUp")}
               </Button>
             )}
@@ -372,7 +456,7 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
           <>
             <div className="ac-list__row jev__key">
               <span className="list-col">
-                <span className="ai-accounts__name">{t("jev.keyName")}</span>
+                <span className="ai-accounts__name">{t(isTypesafe ? "jev.keyName" : "jev.keyNameOther")}</span>
                 <span className="small muted">
                   {facts.map((fact, i) => (
                     <Fragment key={String(fact)}>

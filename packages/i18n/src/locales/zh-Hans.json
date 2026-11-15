@@ -9792,6 +9792,12 @@
     },
     "withoutHint": "没有 Jev 时，由你某个 API 密钥上的小模型决定谁来回复。没有密钥时，每个人自己的 Claude 或 ChatGPT 套餐会为他发的消息做决定，只需几秒。除此之外，回复或跟进消息仍会送达对应的智能体。提及某个智能体即可叫它。",
     "setUp": "设置 Jev",
+    "provider": "提供方",
+    "providerAccessible": "Jev 提供方",
+    "providerTypesafe": "TypeSafe",
+    "baseURL": "Jev 基础 URL",
+    "baseURLPlaceholder": "https://jev.example",
+    "invalidBaseURL": "请输入不含路径、查询、片段或用户信息的 HTTP(S) 源。",
     "steps": {
       "account": "创建 TypeSafe 账号并充值",
       "accountHint": "Jev 采用预付费：每百万 token US$ {{price}}。决定一次谁来回复大约花费 US$ {{call}}。",
@@ -9805,6 +9811,7 @@
       "savedNoCredit": "已保存。在 TypeSafe 充值后，Jev 会自动开始工作。"
     },
     "keyName": "TypeSafe 密钥",
+    "keyNameOther": "提供方密钥",
     "month_other": "本月 {{count, number}} 次决策 · {{cost}}",
     "state": {
       "off": "关闭",

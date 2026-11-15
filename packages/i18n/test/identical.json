@@ -296,7 +296,9 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -548,7 +550,9 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "fr": [
       "channel.tooLong.fileName",
@@ -980,7 +984,9 @@
       "storage.connect.awsRegion.eu-central-2",
       "storage.connect.awsRegion.eu-west-3",
       "storage.connect.awsRegion.eu-south-1",
-      "storage.connect.awsRegion.eu-north-1"
+      "storage.connect.awsRegion.eu-north-1",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1437,7 +1443,9 @@
       "storage.connect.theirName.s3Secret",
       "storage.connect.theirName.b2Key",
       "storage.connect.theirName.b2Secret",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "it": [
       "shell.email.label",
@@ -1807,7 +1815,9 @@
       "appsDownload.computer",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "nl": [
       "calendar.moreRuns",
@@ -2411,7 +2421,9 @@
       "storage.connect.theirName.s3Key",
       "storage.connect.theirName.s3Secret",
       "storage.connect.theirName.b2Key",
-      "storage.connect.theirName.b2Secret"
+      "storage.connect.theirName.b2Secret",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -2581,7 +2593,9 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "ko": [
       "channel.tooLong.fileName",
@@ -2745,7 +2759,9 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -2900,7 +2916,9 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "id": [
       "shell.email.label",
@@ -3207,7 +3225,9 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "tr": [
       "devices.cpus",
@@ -3396,7 +3416,9 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "pl": [
       "devices.cpus",
@@ -3695,7 +3717,9 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.region"
+      "storage.connect.region",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ],
     "ru": [
       "channel.tooLong.fileName",
@@ -3850,7 +3874,9 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "jev.providerTypesafe",
+      "jev.baseURLPlaceholder"
     ]
   },
   "mobile-base": {
