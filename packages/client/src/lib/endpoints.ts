@@ -14,6 +14,8 @@ export interface EndpointModelDraft {
   on: boolean;
   input: string;
   output: string;
+  /** Kept as saved: the form has no switch for it yet, but changing prices must not drop it. */
+  images?: true;
 }
 
 export interface EndpointDraft {
@@ -83,7 +85,11 @@ export function endpointModelsOf(draft: Pick<EndpointDraft, "models">): Endpoint
   return on.map((m) => {
     const input = parsePrice(m.input);
     const output = parsePrice(m.output);
-    return { id: m.id, ...(input != null && output != null ? { prices: { input, output } } : {}) };
+    return {
+      id: m.id,
+      ...(input != null && output != null ? { prices: { input, output } } : {}),
+      ...(m.images ? { images: true as const } : {}),
+    };
   });
 }
 
@@ -116,6 +122,7 @@ export function draftOfEndpoint(
       on: true,
       input: m.prices ? String(m.prices.input) : "",
       output: m.prices ? String(m.prices.output) : "",
+      ...(m.images ? { images: true as const } : {}),
     })),
   };
 }

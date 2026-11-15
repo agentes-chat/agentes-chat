@@ -1,5 +1,5 @@
 import { createAnthropicProvider } from "./anthropic";
-import { parseCustomModel } from "./catalog";
+import { modelInfo, parseCustomModel } from "./catalog";
 import { createOpenRouterProvider } from "./openrouter";
 import { type Endpoint, type ModelProvider, type ModelResult, ProviderError } from "./types";
 
@@ -146,9 +146,12 @@ export function endpointHeaders(baseURL: string, session: string, version = "dev
 
 /**
  * Claude reads images wherever it is served (Amazon Bedrock's runtime and Mantle, a gateway): its ids all name it
- * (`global.anthropic.claude-sonnet-5-5`). Another company's model on an Anthropic-compatible endpoint isn't trusted to.
+ * (`global.anthropic.claude-sonnet-5-5`). Another company's model isn't trusted to unless the admin said it does
+ * (`ModelInfo.images`, ADR 0146 §7): a model that can't would fail the whole request, not just lose a picture.
  */
 const readsImages = (model: string) => /claude/i.test(model);
+/** A model its admin said reads pictures (`ModelInfo.images`): the only way one on Chat Completions gets them. */
+const saidToReadImages = (id: string) => modelInfo(id)?.images === true;
 
 /**
  * The adapter for every workspace endpoint, registered once as `custom`: each call names its endpoint
@@ -170,17 +173,18 @@ export function createCustomProvider(
       if (!endpoint || !parsed) throw new ProviderError("this model has no endpoint", false);
       const extra = endpointHeaders(endpoint.baseURL, streamOptions.session ?? crypto.randomUUID(), options.version);
       const http = extra ? withHeaders(bounded, extra) : bounded;
+      const images = (endpoint.style === "anthropic" && readsImages(parsed.model)) || saidToReadImages(request.model);
       const inner =
         endpoint.style === "anthropic"
           ? createAnthropicProvider({
               id: "custom",
               baseURL: endpoint.baseURL,
-              compat: { toolChoiceAny: false, images: readsImages(parsed.model) },
+              compat: { toolChoiceAny: false, images },
               fetch: http,
               maxRetries: options.maxRetries,
             })
           : createOpenRouterProvider({
-              compatible: { id: "custom", baseURL: endpoint.baseURL },
+              compatible: { id: "custom", baseURL: endpoint.baseURL, images },
               fetch: http,
               maxRetries: options.maxRetries,
             });

@@ -37,6 +37,8 @@ export interface StoredEndpoint {
     prices?: { input: number; output: number; cacheRead: number; cacheWrite: number };
     /** The last test call: answered and called a tool, answered without calling it, or failed. */
     check?: "ok" | "no_tools" | "failed";
+    /** An admin said the model reads pictures: tool results' pictures go to it (PDFs never do over Chat Completions). */
+    images?: true;
   }[];
 }
 
