@@ -2,7 +2,7 @@ import type { PubSub } from "@agenteschat/adapters";
 import { and, count, desc, eq, isNull, or, schema, sql } from "@agenteschat/db";
 import { type ArtifactDeps, shareArtifact } from "./artifacts";
 import { recordAudit } from "./audit";
-import { answersAgentsOnly } from "./consultations";
+import { answersAgentsOnly, askerSpeaksIn } from "./consultations";
 import { addAgentReaction, isValidReaction, normalizeReaction } from "./context/feedback";
 import { openPersonAgentDm } from "./dms";
 import { publishMessageCreated } from "./events";
@@ -62,6 +62,14 @@ const origin = (ctx: ToolContext) => ({
 
 /** Posting where the run already is: a reply. */
 const SAME_CONVERSATION = "That is this conversation: just reply.";
+
+/**
+ * A run answering another agent, asked to post where that agent speaks (`askerSpeaksIn`): the agent that asked
+ * delivers its work there, so a post of its own would repeat it, and at the channel's top level even when the
+ * person asked in a thread. The agents' conversation already says so ("Don't also answer where … asked").
+ */
+const askerSpeaksThere = (channel: string) =>
+  `#${channel} is where the agent that asked you answers, with what you give it: put what you made in your answer (each file's artifact id) and post nothing there yourself.`;
 
 /** `post_message`'s and `send_dm`'s GIF, listed only when the agent may send one (`AgentGifPoster.offered`). */
 const GIF_PROPERTY = {
@@ -240,9 +248,12 @@ export function createChatToolSource(deps: {
                 : "you are";
             return { content: `No channel #${name} that ${who} in.`, isError: true };
           }
+          const here = channel.id === ctx.channelId;
+          if (!here && (await askerSpeaksIn(ctx.db, ctx.orgId, ctx.runId, channel.id))) {
+            return { content: askerSpeaksThere(channel.name), isError: true };
+          }
           const moving = input.move_here === true;
           const [run] = await ctx.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, ctx.runId));
-          const here = channel.id === ctx.channelId;
           const inThread = replyThreadOf(ctx) !== null;
           const movable = (moving || (here && inThread)) && !!run && (await movableRun(ctx.db, run));
           if (here && !(moving && inThread && movable)) {

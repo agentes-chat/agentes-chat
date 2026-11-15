@@ -11211,6 +11211,10 @@
       "cant_start": "{{program}} 在 {{computer}} 上，但无法启动。",
       "not_reported": "{{computer}} 还在检查有哪些程序。完成后这里会自动更新。",
       "outdated": "{{computer}} 上的版本太旧。请更新 Codex 后使用。",
+      "outdatedCodex": "在 {{computer}} 上检测到 Codex CLI {{detected}}。请更新到 {{minimum}} 或更高版本。",
+      "codexUpdateGuide": "如何更新 Codex CLI",
+      "codexRecheckHere": "更新后，请在偏好设置 › 工具的 Codex 一行中选择「重新检查」。",
+      "codexRecheckThere": "请在 {{computer}} 上更新 Codex CLI。如果该电脑运行桌面应用，请在偏好设置 › 工具的 Codex 一行中选择「重新检查」。",
       "system": "{{program}} 暂时还不能在 {{computer}} 的系统上运行。",
       "no_computerCloud": "{{computer}} 一就绪即可使用。"
     },
@@ -15325,6 +15329,7 @@
       "waiting": "<b>{{who}}</b> 正在等待 <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> 请你在你的 <b>{{deviceName}}</b> 上打开{{tool}}",
       "cliRequest": "<b>{{who}}</b> 请你在 <b>{{deviceName}}</b> 上安装 {{tool}}",
+      "folderRequest": "<b>{{who}}</b> 请你在你的 <b>{{deviceName}}</b> 上开放文件夹 {{path}}",
       "once": "允许一次",
       "always": "始终允许",
       "no": "不允许",

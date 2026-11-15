@@ -2121,6 +2121,7 @@ export const featureKeysEn = {
       waitingFor: "{{names}} is waiting for {{device}} for {{person}}",
       tool_request: "{{names}} asks you to turn on {{tool}} on your {{device}}",
       cli_request: "{{names}} asks you to install {{tool}} on your {{device}}",
+      folder_request: "{{names}} asks for the folder {{path}} on your {{device}}",
       allowOnce: "Allow once",
       always: "Always allow {{name}}",
       no: "No",

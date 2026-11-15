@@ -11611,6 +11611,10 @@
       "cant_start": "{{program}} ist auf {{computer}}, startet aber nicht.",
       "not_reported": "{{computer}} prüft noch, welche Programme vorhanden sind. Das ändert sich von selbst, wenn es so weit ist.",
       "outdated": "Die Version auf {{computer}} ist veraltet. Aktualisiere Codex, um es zu nutzen.",
+      "outdatedCodex": "Auf {{computer}} wurde Codex CLI {{detected}} gefunden. Aktualisiere auf Version {{minimum}} oder neuer.",
+      "codexUpdateGuide": "Codex CLI aktualisieren",
+      "codexRecheckHere": "Wähle nach dem Update in den Einstellungen unter Tools bei Codex „Erneut prüfen“.",
+      "codexRecheckThere": "Aktualisiere Codex CLI auf {{computer}}. Falls dort die Desktop-App läuft, wähle in den Einstellungen unter Tools bei Codex „Erneut prüfen“.",
       "system": "{{program}} läuft noch nicht auf dem System von {{computer}}.",
       "no_computerCloud": "Bereit, sobald {{computer}} es ist."
     },
@@ -15802,6 +15806,7 @@
       "waiting": "<b>{{who}}</b> wartet auf <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> bittet dich, {{tool}} auf deinem <b>{{deviceName}}</b> einzuschalten",
       "cliRequest": "<b>{{who}}</b> bittet dich, {{tool}} auf deinem <b>{{deviceName}}</b> zu installieren",
+      "folderRequest": "<b>{{who}}</b> bittet dich um den Ordner {{path}} auf deinem <b>{{deviceName}}</b>",
       "once": "Einmal erlauben",
       "always": "Immer",
       "no": "Nein",

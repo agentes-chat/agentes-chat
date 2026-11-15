@@ -28289,6 +28289,18 @@
   "brain.reasons.outdated": {
     "value": "The version on {{computer}} is old. Update Codex to use it."
   },
+  "brain.reasons.outdatedCodex": {
+    "value": "Codex CLI {{detected}} was found on {{computer}}. Update it to {{minimum}} or later."
+  },
+  "brain.reasons.codexUpdateGuide": {
+    "value": "How to update Codex CLI"
+  },
+  "brain.reasons.codexRecheckHere": {
+    "value": "After updating, choose Check again for Codex in Preferences › Tools."
+  },
+  "brain.reasons.codexRecheckThere": {
+    "value": "Update Codex CLI on {{computer}}. If it runs the desktop app, choose Check again for Codex in Preferences › Tools."
+  },
   "brain.reasons.system": {
     "value": "{{program}} doesn't run on {{computer}}'s system yet."
   },
@@ -38793,6 +38805,9 @@
   },
   "devices.notice.cliRequest": {
     "value": "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>"
+  },
+  "devices.notice.folderRequest": {
+    "value": "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>"
   },
   "devices.notice.once": {
     "value": "Allow once"

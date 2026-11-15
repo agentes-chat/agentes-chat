@@ -2015,6 +2015,7 @@
       "waitingFor": "{{names}} wacht op {{device}} voor {{person}}",
       "tool_request": "{{names}} vraagt je {{tool}} aan te zetten op je {{device}}",
       "cli_request": "{{names}} vraagt je {{tool}} te installeren op je {{device}}",
+      "folder_request": "{{names}} vraagt je om de map {{path}} op je {{device}}",
       "allowOnce": "Eén keer toestaan",
       "always": "{{name}} altijd toestaan",
       "no": "Nee",

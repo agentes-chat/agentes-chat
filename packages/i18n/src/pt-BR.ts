@@ -11977,6 +11977,13 @@ export const ptBR = {
       cant_start: "O {{program}} está no {{computer}}, mas não abre.",
       not_reported: "O {{computer}} ainda está vendo quais programas tem. Isto muda sozinho quando terminar.",
       outdated: "A versão no {{computer}} é antiga. Atualize o Codex para usar.",
+      outdatedCodex:
+        "O Codex CLI {{detected}} foi encontrado no {{computer}}. Atualize para a versão {{minimum}} ou superior.",
+      codexUpdateGuide: "Como atualizar o Codex CLI",
+      codexRecheckHere:
+        "Depois de atualizar, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
+      codexRecheckThere:
+        "Atualize o Codex CLI no {{computer}}. Se ele usa o app para computador, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
       system: "O {{program}} ainda não roda no sistema do {{computer}}.",
       no_computerCloud: "Disponível assim que o {{computer}} ficar pronto.",
     },
@@ -16019,6 +16026,7 @@ export const ptBR = {
       waiting: "<b>{{who}}</b> está esperando <b>{{deviceName}}</b>",
       toolRequest: "<b>{{who}}</b> pede para ligar {{tool}} no seu <b>{{deviceName}}</b>",
       cliRequest: "<b>{{who}}</b> pede para instalar {{tool}} no seu <b>{{deviceName}}</b>",
+      folderRequest: "<b>{{who}}</b> pede a pasta {{path}} no seu <b>{{deviceName}}</b>",
       once: "Permitir uma vez",
       always: "Sempre",
       no: "Não",

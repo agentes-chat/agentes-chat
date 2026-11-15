@@ -11552,6 +11552,10 @@
       "cant_start": "{{program}}, {{computer}} üzerinde var ama açılmıyor.",
       "not_reported": "{{computer}} hangi programların olduğunu hâlâ kontrol ediyor. Bittiğinde bu kendiliğinden değişir.",
       "outdated": "{{computer}} üzerindeki sürüm eski. Kullanmak için Codex'i güncelleyin.",
+      "outdatedCodex": "{{computer}} üzerinde Codex CLI {{detected}} bulundu. {{minimum}} veya daha yeni bir sürüme güncelleyin.",
+      "codexUpdateGuide": "Codex CLI nasıl güncellenir?",
+      "codexRecheckHere": "Güncellemeden sonra Tercihler › Araçlar bölümünde Codex satırındaki Tekrar kontrol et seçeneğini seçin.",
+      "codexRecheckThere": "Codex CLI aracını {{computer}} üzerinde güncelleyin. Bu bilgisayarda masaüstü uygulaması çalışıyorsa Tercihler › Araçlar bölümünde Codex satırındaki Tekrar kontrol et seçeneğini seçin.",
       "system": "{{program}} henüz {{computer}} sisteminde çalışmıyor.",
       "no_computerCloud": "{{computer}} hazır olur olmaz hazır."
     },
@@ -15739,6 +15743,7 @@
       "waiting": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazını bekliyor",
       "toolRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınızda {{tool}} açmanızı istiyor",
       "cliRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınıza {{tool}} kurmanızı istiyor",
+      "folderRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınızda {{path}} klasörünü istiyor",
       "once": "Bir kez izin ver",
       "always": "Her zaman",
       "no": "Hayır",

@@ -11197,6 +11197,10 @@
       "cant_start": "{{program}} ada di {{computer}}, tetapi tidak mau berjalan.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
       "outdated": "Versi di {{computer}} sudah lama. Perbarui Codex untuk memakainya.",
+      "outdatedCodex": "Codex CLI {{detected}} ditemukan di {{computer}}. Perbarui ke versi {{minimum}} atau yang lebih baru.",
+      "codexUpdateGuide": "Cara memperbarui Codex CLI",
+      "codexRecheckHere": "Setelah memperbarui, pilih Periksa lagi pada baris Codex di Preferensi › Alat.",
+      "codexRecheckThere": "Perbarui Codex CLI di {{computer}}. Jika komputer itu menjalankan aplikasi desktop, pilih Periksa lagi pada baris Codex di Preferensi › Alat.",
       "system": "{{program}} belum berjalan di sistem {{computer}}.",
       "no_computerCloud": "Siap begitu {{computer}} siap."
     },
@@ -15315,6 +15319,7 @@
       "waiting": "<b>{{who}}</b> sedang menunggu <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> memintamu menyalakan {{tool}} di <b>{{deviceName}}</b> milikmu",
       "cliRequest": "<b>{{who}}</b> meminta kamu memasang {{tool}} di <b>{{deviceName}}</b> kamu",
+      "folderRequest": "<b>{{who}}</b> memintamu membuka folder {{path}} di <b>{{deviceName}}</b> milikmu",
       "once": "Izinkan sekali",
       "always": "Selalu",
       "no": "Tidak",

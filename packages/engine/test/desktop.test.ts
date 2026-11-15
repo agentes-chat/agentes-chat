@@ -700,6 +700,67 @@ describe("folders and tools on the machine (protocol 10)", () => {
     expect(later.some((m) => m.meta.bodyCode === "machine_access_expired")).toBe(true);
   });
 
+  test("a folder an agent waits for waits in the computer owner's inbox, and the answer ends it", async () => {
+    f = await setup({ machines: true, reply: () => ({ chunks: ["Ok"] }) });
+    const hub = f.machineHub as MachineHub;
+    const paired = await pairMachine(deps(), f.owner.id, f.org.id, COMPUTER);
+    const carl = await addMember(f.db, f.org.id, "member", "carl");
+    await grantScopes(f.db, f.org.id, f.agent.id, SANDBOX);
+    await setAgentComputerTarget(deps(), f.owner.id, f.org.id, f.agent.id, paired.machineId);
+    const runner = fakeRunner(hub, (req) => {
+      if (req.op !== "access.request") return undefined;
+      const status = req.path === "/Users/ana/Projects" ? "granted" : "pending";
+      return { ok: true, data: { requestId: req.requestId, status } };
+    });
+    await runner.hello(paired.token, {
+      access: { folders: [{ path: "/Users/ana/Projects", agents: [f.agent.id] }], tools: ACCESS.tools },
+    });
+    const ctx = await runCtx();
+    const folderRows = () =>
+      f.db.select().from(schema.notifications).where(eq(schema.notifications.kind, "device.folder_request"));
+
+    // Already allowed: nothing waits, so nobody's inbox gets a row.
+    await invoke(ctx, "request_folder_access", { path: "/Users/ana/Projects", reason: "o site" });
+    expect(await folderRows()).toEqual([]);
+
+    await invoke(ctx, "request_folder_access", { path: "/Users/ana/Documents", reason: "ler os contratos" });
+    const [asked] = await f.db
+      .select()
+      .from(schema.machineAccessRequests)
+      .where(eq(schema.machineAccessRequests.path, "/Users/ana/Documents"));
+    expect(asked?.status).toBe("pending");
+    const rows = await folderRows();
+    // The person who connected the computer, once, waiting: nobody else (the member is not its owner).
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      orgId: f.org.id,
+      userId: f.owner.id,
+      kind: "device.folder_request",
+      waiting: true,
+      readAt: null,
+      doneAt: null,
+      actors: [{ type: "agent", id: f.agent.id }],
+      source: {
+        machineId: paired.machineId,
+        label: "MacBook",
+        agentId: f.agent.id,
+        requestId: asked?.id,
+        channelId: f.general.id,
+        userId: f.owner.id,
+      },
+      latest: { title: "/Users/ana/Documents", text: "ler os contratos" },
+    });
+    expect(rows.some((r) => r.userId === carl.id)).toBe(false);
+
+    // Answered on the computer: the row stops waiting, and a second decision changes nothing (one row, done).
+    await runner.send({ type: "access.decided", requestId: asked?.id, decision: "denied" });
+    const [settled] = await folderRows();
+    expect(settled?.doneAt).not.toBeNull();
+    await runner.send({ type: "access.decided", requestId: asked?.id, decision: "granted", scope: "agent" });
+    expect(await folderRows()).toHaveLength(1);
+    expect((await folderRows())[0]?.doneAt).not.toBeNull();
+  });
+
   test("the workspace's own computer: nobody to ask, and every refusal says what the agent can do", async () => {
     f = await setup({ machines: true, reply: () => ({ chunks: ["Ok"] }) });
     const hub = f.machineHub as MachineHub;

@@ -11939,6 +11939,11 @@ export const en = {
       /** Its runner hasn't said which CLIs it has yet: nobody knows whether this one is there. */
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
       outdated: "The version on {{computer}} is old. Update Codex to use it.",
+      outdatedCodex: "Codex CLI {{detected}} was found on {{computer}}. Update it to {{minimum}} or later.",
+      codexUpdateGuide: "How to update Codex CLI",
+      codexRecheckHere: "After updating, choose Check again for Codex in Preferences › Tools.",
+      codexRecheckThere:
+        "Update Codex CLI on {{computer}}. If it runs the desktop app, choose Check again for Codex in Preferences › Tools.",
       /** The runner doesn't run this program on that computer's system (Cursor on Windows, for one). */
       system: "{{program}} doesn't run on {{computer}}'s system yet.",
       no_computerCloud: "Ready as soon as {{computer}} is.",
@@ -16081,6 +16086,7 @@ export const en = {
       waiting: "<b>{{who}}</b> is waiting for <b>{{deviceName}}</b>",
       toolRequest: "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>",
       cliRequest: "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>",
+      folderRequest: "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>",
       once: "Allow once",
       always: "Always",
       no: "No",

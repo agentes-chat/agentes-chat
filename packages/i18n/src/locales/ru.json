@@ -12435,6 +12435,10 @@
       "cant_start": "{{program}} есть на {{computer}}, но не запускается.",
       "not_reported": "{{computer}} ещё проверяет, какие программы на нём есть. Это изменится само, когда он закончит.",
       "outdated": "Версия на {{computer}} устарела. Обновите Codex, чтобы им пользоваться.",
+      "outdatedCodex": "На компьютере {{computer}} обнаружен Codex CLI {{detected}}. Обновите его до версии {{minimum}} или новее.",
+      "codexUpdateGuide": "Как обновить Codex CLI",
+      "codexRecheckHere": "После обновления выберите «Проверить снова» в строке Codex в разделе Настройки › Инструменты.",
+      "codexRecheckThere": "Обновите Codex CLI на компьютере {{computer}}. Если там запущено приложение для компьютера, выберите «Проверить снова» в строке Codex в разделе Настройки › Инструменты.",
       "system": "{{program}} пока не работает в системе компьютера {{computer}}.",
       "no_computerCloud": "Будет готово, как только будет готов {{computer}}."
     },
@@ -16771,6 +16775,7 @@
       "waiting": "<b>{{who}}</b> ждёт <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> просит вас включить {{tool}} на вашем <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> просит установить {{tool}} на вашем <b>{{deviceName}}</b>",
+      "folderRequest": "<b>{{who}}</b> просит папку {{path}} на вашем <b>{{deviceName}}</b>",
       "once": "Разрешить один раз",
       "always": "Всегда",
       "no": "Нет",

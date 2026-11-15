@@ -5892,10 +5892,16 @@ export interface BrainModelOption {
   free?: boolean;
 }
 
+export interface CodexVersionRequirement {
+  detected: string;
+  minimum: string;
+}
+
 export interface BrainOption {
   kind: BrainKind;
   available: boolean;
   reason?: BrainUnavailable;
+  codexVersion?: CodexVersionRequirement;
   models: BrainModelOption[];
   defaultModel: string | null;
 }
@@ -6051,6 +6057,7 @@ export interface AiComputer {
   };
   /** Why a CLI of `brains` can't think there (absent: an older server). */
   off?: Partial<Record<MachineAccountKind, BrainUnavailable>>;
+  codexVersion?: CodexVersionRequirement;
   /** What it can think with now: Claude Code (Claude and the coding plans) and Codex (ChatGPT). */
   brains: {
     claude_code: boolean;
@@ -6587,6 +6594,12 @@ export type NotificationKind =
   | "device.tool_request"
   /** Someone needs a coding CLI installed on this person's computer: `latest.reason` the program, one-click install. */
   | "device.cli_request"
+  /**
+   * An agent waits for a folder on this person's computer (`request_folder_access`): `source.machineId`, its name in
+   * `source.label`, the folder in `latest.title`, its reason in `latest.text`, the agent as actor. Waiting; answered on
+   * the computer itself, and done once it says so.
+   */
+  | "device.folder_request"
   /**
    * "Pedir a um admin" (`POST …/admin-asks`): the asker as actor, what in `latest.reason` (`channel_agent` with
    * `source.channelId` and `agentId`, waiting until added; `create_agents`; `webhook` with the service in `latest.title`).
