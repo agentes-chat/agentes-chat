@@ -371,7 +371,9 @@ const CLI_KEYS = {
   [CURSOR_KEY_PROVIDER]: { file: CURSOR_KEY_FILE, label: "a Cursor API key" },
   [OPENCODE_KEY_PROVIDER]: { file: OPENCODE_KEY_FILE, label: "an OpenCode API key" },
 } as const;
-type CliKeyProvider = keyof typeof CLI_KEYS;
+type CliKeyProvider = typeof CURSOR_KEY_PROVIDER | typeof OPENCODE_KEY_PROVIDER;
+const isCliKeyProvider = (v: unknown): v is CliKeyProvider =>
+  v === CURSOR_KEY_PROVIDER || v === OPENCODE_KEY_PROVIDER;
 
 /**
  * How Claude Code gets a token root hands over: on descriptor 3, which it reads at its start, then closes, dropping
@@ -433,7 +435,7 @@ const LAST_OUTPUT_MS = 500;
  */
 export type AccountGrant =
   | { kind: "token"; token: string }
-  | { kind: "key"; provider: PlanId; key: string }
+  | { kind: "key"; provider: PlanId | CliKeyProvider; key: string }
   /** A ChatGPT sign-in for all agents: root's newest `auth.json`, refreshed copies coming back (`watchCodexAuth`). */
   | { kind: "codex_auth"; auth: string }
   /** A Gemini sign-in for all agents: what root's Antigravity CLI keeps, copied in for each turn (`holdAgySignIn`). */
@@ -452,7 +454,12 @@ export function grantOf(v: unknown): AccountGrant | null {
   if (g?.kind === "token" && typeof g.token === "string" && WHOLE_OAUTH_TOKEN.test(g.token)) {
     return { kind: "token", token: g.token };
   }
-  if (g?.kind === "key" && isPlanId(g.provider) && typeof g.key === "string" && g.key) {
+  if (
+    g?.kind === "key" &&
+    (isPlanId(g.provider) || isCliKeyProvider(g.provider)) &&
+    typeof g.key === "string" &&
+    g.key
+  ) {
     return { kind: "key", provider: g.provider, key: g.key };
   }
   const agy = g?.kind === "agy_auth" ? agySignInFrom(g) : null;
@@ -759,6 +766,8 @@ export interface AccountSignIn {
   home: string;
   /** A coding plan's key (protocol 20): in the CLI's env, under the plan's own name. */
   planKey?: { provider: PlanId; key: string };
+  /** A Cursor or OpenCode API key root hands to an agent in a shared-computer worker. */
+  cliKey?: { provider: CliKeyProvider; key: string };
   /** A token root keeps (protocol 29): on descriptor 3 only (`TOKEN_FD_ENV`), never in an env. */
   token?: string;
   /**
@@ -800,10 +809,19 @@ export async function accountSignIn(
     if (send) release = watchGrokAuth(home, grant.auth, (auth) => send(id, auth)).stop;
   }
   const planKey =
-    grant?.kind === "key" ? { provider: grant.provider, key: grant.key } : grant ? null : await planKeyOf(home);
+    grant?.kind === "key" && isPlanId(grant.provider)
+      ? { provider: grant.provider, key: grant.key }
+      : grant
+        ? null
+        : await planKeyOf(home);
+  const cliKey =
+    grant?.kind === "key" && isCliKeyProvider(grant.provider)
+      ? { provider: grant.provider, key: grant.key }
+      : undefined;
   return {
     home,
     ...(planKey ? { planKey } : {}),
+    ...(cliKey ? { cliKey } : {}),
     ...(grant?.kind === "token" ? { token: grant.token } : {}),
     ...(release ? { release } : {}),
   };
@@ -2766,6 +2784,14 @@ export class AccountManager {
     if (kind === "antigravity") {
       const signIn = await this.agySignIn(id);
       return signIn ? { kind: "agy_auth", ...signIn } : { kind: "none" };
+    }
+    if (kind === "cursor") {
+      const key = await cursorKeyOf(dir);
+      if (key) return { kind: "key", provider: CURSOR_KEY_PROVIDER, key };
+    }
+    if (kind === "opencode") {
+      const key = await opencodeKeyOf(dir);
+      if (key) return { kind: "key", provider: OPENCODE_KEY_PROVIDER, key };
     }
     const plan = await planKeyOf(dir);
     if (plan) return { kind: "key", provider: plan.provider, key: plan.key };

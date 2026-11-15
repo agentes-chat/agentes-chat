@@ -7,7 +7,17 @@ import type { CommandProfile } from "@agenteschat/adapters/command-policy";
 import type { AgentScope } from "@agenteschat/adapters/machine-protocol";
 import { isAccountId } from "@agenteschat/adapters/machine-protocol";
 import { redactSecrets } from "@agenteschat/adapters/secret-box";
-import { ACCOUNT_MISSING_MESSAGE, accountEnv, cursorKeyOf, withoutContainers, withoutSignIns } from "./accounts";
+import {
+  ACCOUNT_MISSING_MESSAGE,
+  ACCOUNT_SIGNED_OUT,
+  accountEnv,
+  accountSignIn,
+  cursorKeyOf,
+  type AccountFolders,
+  type AccountGrant,
+  withoutContainers,
+  withoutSignIns,
+} from "./accounts";
 import {
   CODEX_TOOL_OUTPUT_MAX,
   type CodexBrainEvent,
@@ -573,7 +583,8 @@ export interface CursorBrainContext {
   chats?: CodexThreads;
   bin?: string;
   grants?: string[];
-  accounts?: { accountDir(kind: "cursor", id: string): string | null };
+  accounts?: AccountFolders;
+  grant?: AccountGrant;
   spawn?: Spawn;
 }
 
@@ -609,13 +620,17 @@ export async function handleCursorBrainTurn(
   const accountId: unknown = req.account;
   if (accountId !== undefined && accountId !== null && accountId !== "") {
     if (!isAccountId(accountId)) throw new RunnerError("bad_request", "Invalid account id");
-    const home = ctx.accounts?.accountDir("cursor", accountId);
-    if (!home) {
+    const signIn = await accountSignIn(ctx.accounts, "cursor", accountId, ctx.grant);
+    if (signIn === "signed_out") {
+      scope.emit({ type: "error", code: "not_logged_in", message: ACCOUNT_SIGNED_OUT, retryable: true });
+      return;
+    }
+    if (signIn === "missing") {
       scope.emit({ type: "error", code: "account_missing", message: ACCOUNT_MISSING_MESSAGE.cursor, retryable: false });
       return;
     }
-    const key = await cursorKeyOf(home);
-    account = { id: accountId, home, ...(key ? { key } : {}) };
+    const key = signIn.cliKey?.key ?? (await cursorKeyOf(signIn.home));
+    account = { id: accountId, home: signIn.home, ...(key ? { key } : {}) };
   }
   const secrets = chat ? null : await agentSecrets(ctx.secretsDir, req.agent);
   const file = cursorChatsFile(ctx.runnerHome);
