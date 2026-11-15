@@ -356,6 +356,21 @@
   "tray.notifTitle": {
     "value": "{{agent}} wants to use the folder {{folder}}"
   },
+  "tray.allowedTitle": {
+    "value": "{{name}} turned on {{tool}} from agentes.chat"
+  },
+  "tray.allowedBody": {
+    "value": "If it wasn't you, undo it here."
+  },
+  "tray.allowedUndo": {
+    "value": "Undo"
+  },
+  "tray.allowedOk": {
+    "value": "OK"
+  },
+  "tray.allowedUndone": {
+    "value": "Off again: {{tool}}"
+  },
   "tray.quitTitle": {
     "value": "Quit agentes.chat?"
   },
@@ -367,24 +382,6 @@
   },
   "tray.quitConfirm": {
     "value": "Quit"
-  },
-  "first.title": {
-    "value": "Your team and your agents, together"
-  },
-  "first.lead": {
-    "value": "Chat, tasks and documents where people and AI agents work side by side."
-  },
-  "first.cloud": {
-    "value": "Sign in to agentes.chat"
-  },
-  "first.create": {
-    "value": "New here?"
-  },
-  "first.createLink": {
-    "value": "Create an account"
-  },
-  "first.own": {
-    "value": "Use your own server"
   },
   "first.addTitle": {
     "value": "Add a workspace"
@@ -401,35 +398,77 @@
   "first.addNewLink": {
     "value": "Create one"
   },
-  "first.addOwn": {
-    "value": "Use your team's server"
+  "place.title": {
+    "value": "Where will your workspace live?"
   },
-  "own.title": {
-    "value": "Your own server"
+  "place.lead": {
+    "value": "Your agents work wherever it is. You can change it later."
   },
-  "own.lead": {
-    "value": "agentes.chat runs on your computers, and your data stays on them."
+  "place.recommended": {
+    "value": "Recommended"
   },
-  "own.back": {
-    "value": "agentes.chat"
+  "place.cloud": {
+    "value": "In the agentes.chat cloud"
   },
-  "own.connect": {
-    "value": "Connect to my server"
+  "place.cloudText": {
+    "value": "Always on. We take care of everything, you just use it."
   },
-  "own.connectText": {
-    "value": "It runs on another computer: a Mac mini, a spare laptop or a server online."
+  "place.here": {
+    "value": "On this {{device}}"
   },
-  "own.here": {
-    "value": "Run agentes.chat on this {{device}}"
+  "place.hereText": {
+    "value": "Your agents work while the app is open."
   },
-  "own.hereText": {
-    "value": "This {{device}} becomes the server, while it's on."
+  "place.box": {
+    "value": "On a computer that's always on"
   },
-  "own.which": {
-    "value": "Which one to choose?"
+  "place.boxText": {
+    "value": "A Mac mini or an office computer, installed once."
+  },
+  "place.goCloud": {
+    "value": "Continue in the cloud"
+  },
+  "place.goHere": {
+    "value": "Get this {{device}} ready"
+  },
+  "place.goBox": {
+    "value": "See how to install"
+  },
+  "place.haveOne": {
+    "value": "Have one already?"
+  },
+  "place.haveOneLink": {
+    "value": "Sign in by its address"
+  },
+  "install.title": {
+    "value": "Install on a computer that's always on"
+  },
+  "install.lead": {
+    "value": "It's done once. Then it keeps running by itself, even with this app closed."
+  },
+  "install.step1": {
+    "value": "On the computer that stays on, open the Terminal and paste this"
+  },
+  "install.step2": {
+    "value": "At the end a link shows up. Open it here and that's it."
+  },
+  "install.noLink": {
+    "value": "No link?"
+  },
+  "install.someoneElse": {
+    "value": "Someone else will install it?"
+  },
+  "install.copy": {
+    "value": "Copy the instructions"
+  },
+  "install.copied": {
+    "value": "Instructions copied"
+  },
+  "install.text": {
+    "value": "To install agentes.chat on a computer that stays on (a Mac mini, an office computer or a server):\n\n1. On that computer, open the Terminal and paste this:\n{{command}}\n\n2. At the end a link shows up. Send it to me: it opens the workspace in the app."
   },
   "connect.title": {
-    "value": "Connect to my server"
+    "value": "Sign in to a workspace that already exists"
   },
   "connect.lead": {
     "value": "Its address, the same one you open in the browser."
@@ -441,7 +480,7 @@
     "value": "agentes.yourteam.ts.net"
   },
   "connect.go": {
-    "value": "Connect"
+    "value": "Sign in"
   },
   "connect.checking": {
     "value": "Checking…"
@@ -453,7 +492,7 @@
     "value": "Looking for your server…"
   },
   "connect.foundTailnet": {
-    "value": "On your Tailscale network"
+    "value": "On your team's network"
   },
   "connect.foundHere": {
     "value": "agentes.chat is running here"
@@ -482,11 +521,8 @@
   "connect.checkUpdates": {
     "value": "Check for updates"
   },
-  "connect.none": {
-    "value": "Don't have one yet? Run this on it"
-  },
-  "connect.noneText": {
-    "value": "In the terminal of a server or a Mac mini. At the end it shows a link that connects this app to it."
+  "connect.noneYet": {
+    "value": "Don't have one yet?"
   },
   "connect.invalid": {
     "value": "Check the address, something like agentes.yourteam.ts.net."
@@ -519,13 +555,16 @@
     "value": "Update the app to use {{host}}."
   },
   "here.title": {
-    "value": "Run agentes.chat on this {{device}}"
+    "value": "Let's get this {{device}} ready"
   },
   "here.how": {
-    "value": "It runs inside this app, with its own database built in, and keeps everything in one folder on this {{device}}."
+    "value": "It takes a minute. Everything stays here, with you alone."
   },
   "here.again": {
     "value": "It ran here before, and its data is still in {{path}}."
+  },
+  "here.ownerNone": {
+    "value": "No account is left on it. Your name and email make you its new owner."
   },
   "here.name": {
     "value": "Your name"
@@ -591,28 +630,31 @@
     "value": "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites."
   },
   "here.start": {
-    "value": "Start agentes.chat"
+    "value": "Start"
   },
   "here.setting": {
-    "value": "Setting up agentes.chat on this {{device}}"
+    "value": "Getting everything ready"
+  },
+  "here.rest": {
+    "value": "When you close the app, your agents rest. They're back as soon as you open it again."
   },
   "here.step.database": {
-    "value": "Preparing the database"
+    "value": "Making room for your data"
   },
   "here.step.databaseNote": {
     "value": "first time only"
   },
   "here.step.start": {
-    "value": "Starting"
+    "value": "Turning agentes.chat on"
   },
   "here.step.account": {
     "value": "Creating your account"
   },
   "here.step.computer": {
-    "value": "Getting this {{device}} ready for your agents"
+    "value": "Calling your agents"
   },
   "here.step.reach": {
-    "value": "Turning on access from your devices"
+    "value": "Turning on access from your phone"
   },
   "here.stepState.active": {
     "value": "in progress"
@@ -636,7 +678,7 @@
     "value": "Your account wasn't created."
   },
   "here.fail.retry": {
-    "value": "Try again in Preferences › Servers."
+    "value": "Try again in Preferences"
   },
   "here.reason.https": {
     "value": "HTTPS is off on your Tailscale network"
@@ -711,19 +753,25 @@
     "value": "Open it"
   },
   "link.question": {
-    "value": "Connect the app to this server?"
+    "value": "Open this workspace in the app?"
   },
   "link.questionSignIn": {
     "value": "Sign in to this server with your account from the other device?"
   },
   "link.questionClaim": {
-    "value": "Set up this server: create its owner account."
+    "value": "Open the workspace you installed?"
+  },
+  "link.claimLead": {
+    "value": "You create its owner account now."
   },
   "link.leave": {
     "value": "You leave {{current}} in this app. Your account there stays."
   },
   "link.connect": {
     "value": "Connect"
+  },
+  "link.open": {
+    "value": "Open"
   },
   "link.continue": {
     "value": "Continue"
@@ -821,6 +869,9 @@
   "servers.signOut": {
     "value": "Sign out of this server"
   },
+  "servers.addAccount": {
+    "value": "Add account"
+  },
   "servers.signedOutDone": {
     "value": "You signed out of {{host}}"
   },
@@ -886,9 +937,6 @@
   },
   "server.jevText": {
     "value": "A fast model by TypeSafe that picks who answers, keeps memory tidy and lets agents see the screen. Optional, with your own key."
-  },
-  "server.jevWhere": {
-    "value": "In agentes.chat › Settings › AI and usage."
   },
   "server.reachFailed": {
     "value": "Access from your devices didn't turn on: {{reason}}."
@@ -1001,8 +1049,11 @@
   "server.restartedBody": {
     "value": "It comes back by itself. If it keeps happening, open the app to see why."
   },
-  "server.version": {
-    "value": "Version {{version}}, updated with the app"
+  "server.installedVersion": {
+    "value": "Installed package version"
+  },
+  "server.internalVersion": {
+    "value": "Internal server version"
   },
   "server.updatesWithApp": {
     "value": "Updating the app updates agentes.chat on this {{device}} too."
@@ -1012,6 +1063,141 @@
   },
   "server.updateBackBody": {
     "value": "The new version is tried again with the app's next update."
+  },
+  "server.backups": {
+    "value": "Backups"
+  },
+  "server.nightly": {
+    "value": "Back up every night"
+  },
+  "server.nightlyLast": {
+    "value": "At {{at}} · last one {{time}}"
+  },
+  "server.nightlyNone": {
+    "value": "At {{at}} · no backup yet"
+  },
+  "server.lastBackup": {
+    "value": "Last one {{time}}"
+  },
+  "server.noBackup": {
+    "value": "No backup yet"
+  },
+  "server.backupFailed": {
+    "value": "The last backup didn't finish. Back up now to try again."
+  },
+  "server.copyTo": {
+    "value": "Copy to"
+  },
+  "server.copyToText": {
+    "value": "Each new backup is copied to this folder too, like a USB drive or iCloud Drive. The two newest stay there."
+  },
+  "server.copyToNone": {
+    "value": "Only on this {{device}}"
+  },
+  "server.copyToStop": {
+    "value": "Stop copying"
+  },
+  "server.choose": {
+    "value": "Choose…"
+  },
+  "server.change": {
+    "value": "Change…"
+  },
+  "server.copyFailed": {
+    "value": "The last backup didn't reach this folder. Check that it's still there, or choose another."
+  },
+  "server.restore": {
+    "value": "Restore…"
+  },
+  "server.restoreTitle": {
+    "value": "Restore a backup?"
+  },
+  "server.restoreBody": {
+    "value": "agentes.chat on this {{device}} goes back to that backup: messages, files and settings. It stops for a minute. What's there now is kept in the backups folder."
+  },
+  "server.restoreWhich": {
+    "value": "Backup to restore"
+  },
+  "server.backupOf": {
+    "value": "Backup from {{time}}"
+  },
+  "server.restoreConfirm": {
+    "value": "Restore"
+  },
+  "server.restored": {
+    "value": "Restored the backup from {{time}}"
+  },
+  "server.restoreFailed": {
+    "value": "That backup didn't start, so agentes.chat is back as it was. Try the other backup."
+  },
+  "server.restoreUnreadable": {
+    "value": "That backup can't be opened. Try the other one."
+  },
+  "server.erase": {
+    "value": "Erase and start over…"
+  },
+  "server.eraseTitle": {
+    "value": "Erase agentes.chat on this {{device}}?"
+  },
+  "server.eraseBody": {
+    "value": "Its workspaces go for everyone who uses them, on every device. Its data moves to {{path}} and stays there. What its agents kept on this {{device}}, such as their browsers and sign-ins, is deleted. The agents' files in ~/agentes are yours and stay where they are. Then you set it up again with a new owner."
+  },
+  "server.eraseConfirm": {
+    "value": "Erase it"
+  },
+  "server.erased": {
+    "value": "Erased. Its old data is in {{path}}."
+  },
+  "server.eraseMoveFailed": {
+    "value": "Its data couldn't be moved, so nothing was erased and it stays in {{path}}. It's stopped until you start it again."
+  },
+  "server.eraseHeld": {
+    "value": "Another agentes.chat server is using its folder, so nothing was erased. Stop that server, then try again."
+  },
+  "server.noPassword": {
+    "value": "Add a password to sign in from your phone and other computers."
+  },
+  "server.addPassword": {
+    "value": "Add a password"
+  },
+  "server.keep": {
+    "value": "Keep it running"
+  },
+  "server.keepLogin": {
+    "value": "Opens at login"
+  },
+  "server.keepLoginOn": {
+    "value": "Turn on"
+  },
+  "server.keepAutoLogin": {
+    "value": "Signs in by itself after a restart"
+  },
+  "server.keepAutoLoginText": {
+    "value": "After a restart, this {{device}} waits at its sign-in screen and agentes.chat doesn't open. Turn on automatic login in Users & Groups."
+  },
+  "server.keepAutoLoginOpen": {
+    "value": "Open Users & Groups"
+  },
+  "server.keepPower": {
+    "value": "Starts after a power failure"
+  },
+  "server.keepPowerText": {
+    "value": "After a power cut, this {{device}} stays off until someone presses its button. Energy settings can start it by itself."
+  },
+  "server.keepPowerOpen": {
+    "value": "Open Energy settings"
+  },
+  "server.keepAwake": {
+    "value": "Doesn't sleep while serving"
+  },
+  "server.keepAwakeText": {
+    "value": "This {{device}} stays awake while agentes.chat runs here. Start agentes.chat to keep it awake."
+  },
+  "server.keepOn": {
+    "value": "Done"
+  },
+  "server.keepOff": {
+    "value": "Not yet"
   },
   "pair.title": {
     "value": "Let agents of {{org}} work on this {{device}}?"
@@ -1058,8 +1244,14 @@
   "pair.done": {
     "value": "Connected to {{org}}"
   },
+  "pair.addFolders": {
+    "value": "Add folders"
+  },
   "pair.expired": {
-    "value": "This link expired. Make a new one under Settings › Devices."
+    "value": "This link expired. Make a new one in Devices."
+  },
+  "pair.openDevices": {
+    "value": "Open Devices"
   },
   "pair.denied": {
     "value": "{{by}} didn't let it in. Nothing changed."
@@ -1220,6 +1412,33 @@
   "tools.stillMissing": {
     "value": "{{tool}} still isn't found. Run the command above, then check again."
   },
+  "tools.install": {
+    "value": "Install for me"
+  },
+  "tools.installing": {
+    "value": "Installing {{tool}}. It takes about a minute."
+  },
+  "tools.installFailed": {
+    "value": "Couldn't install: {{message}}"
+  },
+  "tools.gitMissing": {
+    "value": "{{tool}} needs Git for Windows on this computer."
+  },
+  "tools.getGit": {
+    "value": "Download Git for Windows"
+  },
+  "tools.cantStart": {
+    "value": "It's here, but it won't start: {{message}}"
+  },
+  "tools.cantStartChip": {
+    "value": "Won't start"
+  },
+  "tools.installedNotFound": {
+    "value": "The installer finished, but {{tool}} still isn't found."
+  },
+  "tools.notFoundYet": {
+    "value": "{{tool}} still isn't found."
+  },
   "tools.browserName": {
     "value": "Browser"
   },
@@ -1363,12 +1582,6 @@
   },
   "prefs.general.notifyBrowserDesc": {
     "value": "The request already reaches your phone and the site. This tells you here too."
-  },
-  "prefs.general.dockTitle": {
-    "value": "Show in the Dock"
-  },
-  "prefs.general.dockDesc": {
-    "value": "With the count of what waits for you. Off, the app stays in the menu bar only while no window is open."
   },
   "prefs.general.menuBarTitle": {
     "value": "Show in the menu bar"
@@ -1637,6 +1850,9 @@
   "prefs.accounts.ok": {
     "value": "OK"
   },
+  "prefs.accounts.chooseAgents": {
+    "value": "Choose agents"
+  },
   "prefs.accounts.failedTitle": {
     "value": "The account wasn't added"
   },
@@ -1717,6 +1933,9 @@
   },
   "prefs.updates.whatsNew": {
     "value": "What's new in {{version}}"
+  },
+  "prefs.updates.systemDetails": {
+    "value": "System details"
   },
   "prefs.activity.title": {
     "value": "Activity"
@@ -2194,119 +2413,5 @@
   },
   "menu.downloaded": {
     "value": "Download complete"
-  },
-  "server.backups": {
-    "value": "Backups"
-  },
-  "server.nightly": {
-    "value": "Back up every night"
-  },
-  "server.nightlyLast": {
-    "value": "At {{at}} · last one {{time}}"
-  },
-  "server.nightlyNone": {
-    "value": "At {{at}} · no backup yet"
-  },
-  "server.lastBackup": {
-    "value": "Last one {{time}}"
-  },
-  "server.noBackup": {
-    "value": "No backup yet"
-  },
-  "server.backupFailed": {
-    "value": "The last backup didn't finish. Back up now to try again."
-  },
-  "server.copyTo": {
-    "value": "Copy to"
-  },
-  "server.copyToText": {
-    "value": "Each new backup is copied to this folder too, like a USB drive or iCloud Drive. The two newest stay there."
-  },
-  "server.copyToNone": {
-    "value": "Only on this {{device}}"
-  },
-  "server.copyToStop": {
-    "value": "Stop copying"
-  },
-  "server.choose": {
-    "value": "Choose…"
-  },
-  "server.change": {
-    "value": "Change…"
-  },
-  "server.copyFailed": {
-    "value": "The last backup didn't reach this folder. Check that it's still there, or choose another."
-  },
-  "server.restore": {
-    "value": "Restore…"
-  },
-  "server.restoreTitle": {
-    "value": "Restore a backup?"
-  },
-  "server.restoreBody": {
-    "value": "agentes.chat on this {{device}} goes back to that backup: messages, files and settings. It stops for a minute. What's there now is kept in the backups folder."
-  },
-  "server.restoreWhich": {
-    "value": "Backup to restore"
-  },
-  "server.backupOf": {
-    "value": "Backup from {{time}}"
-  },
-  "server.restoreConfirm": {
-    "value": "Restore"
-  },
-  "server.restored": {
-    "value": "Restored the backup from {{time}}"
-  },
-  "server.restoreFailed": {
-    "value": "That backup didn't start, so agentes.chat is back as it was. Try the other backup."
-  },
-  "server.restoreUnreadable": {
-    "value": "That backup can't be opened. Try the other one."
-  },
-  "server.noPassword": {
-    "value": "Add a password to sign in from your phone and other computers."
-  },
-  "server.addPassword": {
-    "value": "Add a password"
-  },
-  "server.keep": {
-    "value": "Keep it running"
-  },
-  "server.keepLogin": {
-    "value": "Opens at login"
-  },
-  "server.keepLoginOn": {
-    "value": "Turn on"
-  },
-  "server.keepAutoLogin": {
-    "value": "Signs in by itself after a restart"
-  },
-  "server.keepAutoLoginText": {
-    "value": "After a restart, this {{device}} waits at its sign-in screen and agentes.chat doesn't open. Turn on automatic login in Users & Groups."
-  },
-  "server.keepAutoLoginOpen": {
-    "value": "Open Users & Groups"
-  },
-  "server.keepPower": {
-    "value": "Starts after a power failure"
-  },
-  "server.keepPowerText": {
-    "value": "After a power cut, this {{device}} stays off until someone presses its button. Energy settings can start it by itself."
-  },
-  "server.keepPowerOpen": {
-    "value": "Open Energy settings"
-  },
-  "server.keepAwake": {
-    "value": "Doesn't sleep while serving"
-  },
-  "server.keepAwakeText": {
-    "value": "This {{device}} stays awake while agentes.chat runs here. Start agentes.chat to keep it awake."
-  },
-  "server.keepOn": {
-    "value": "Done"
-  },
-  "server.keepOff": {
-    "value": "Not yet"
   }
 }

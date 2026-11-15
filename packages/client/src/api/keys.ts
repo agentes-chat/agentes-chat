@@ -1,3 +1,4 @@
+import { hashKey } from "@tanstack/react-query";
 import type { ScreenKind } from "./types";
 
 /** React Query keys. Everything under ["org", orgId] is dropped when switching organizations. */
@@ -135,6 +136,9 @@ export const keys = {
   devices: (orgId: string) => ["org", orgId, "machines", "devices"] as const,
   /** Under `devices`: a phone picked over Wi-Fi leaves the offer when the list refetches. */
   wifiIphones: (orgId: string, machineId: string) => ["org", orgId, "machines", "devices", "wifi", machineId] as const,
+  xcodeFix: (orgId: string, machineId: string) => ["org", orgId, "machines", "devices", "xcode", machineId] as const,
+  cliInstall: (orgId: string, machineId: string, tool: string) =>
+    ["org", orgId, "machines", "cli-install", machineId, tool] as const,
   connectLink: (orgId: string, linkId: string) => ["org", orgId, "machines", "devices", "link", linkId] as const,
   /** Under `machines`: a computer that changes refreshes what a new agent could think with. */
   brainMachines: (orgId: string) => ["org", orgId, "machines", "brains"] as const,
@@ -229,6 +233,7 @@ export const keys = {
   wikiReads: (orgId: string) => ["org", orgId, "wiki", "reads"] as const,
   wikiTrash: (orgId: string) => ["org", orgId, "wiki", "trash"] as const,
   pins: (orgId: string, channelId: string) => ["org", orgId, "channel", channelId, "pins"] as const,
+  followUps: (orgId: string, channelId: string) => ["org", orgId, "channel", channelId, "follow-ups"] as const,
   /** Every GIF search (prefix): the workspace's rating or its GIFs switch changing refreshes them all (ADR 0091). */
   gifs: (orgId: string) => ["org", orgId, "gifs"] as const,
   /** One search's pages: free text or a category (neither: what is trending), in the person's language. */
@@ -288,3 +293,6 @@ export const keys = {
   widgetSuggestions: (orgId: string, agentId: string) => ["org", orgId, "dashboards", "suggestions", agentId] as const,
   widgetPinnable: (orgId: string) => ["org", orgId, "dashboards", "pinnable"] as const,
 };
+
+/** `keys.me` as the query cache names it, for telling its events apart. */
+export const ME_HASH = hashKey(keys.me);

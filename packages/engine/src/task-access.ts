@@ -92,6 +92,23 @@ export async function taskReadersAmong(db: Executor, issueId: string, userIds: r
 }
 
 /**
+ * The task's agent of the task conversation `channelId` (ADR 0145): its assignee when that is an agent, else the agent
+ * that created it, else the agent that last wrote in its conversation; archived ones never. Its conversation is a DM
+ * with that agent: a message there that names nobody is for it (`insertMessageWithRuns`). A uuid, or null.
+ */
+export const taskAgentSql = (channelId: SQL) => sql`(select coalesce(
+    (select ta.id from ${agents} ta where ti.assignee_type = 'agent' and ta.id::text = ti.assignee_id
+      and ta.org_id = ti.org_id and ta.archived_at is null),
+    (select ta.id from ${agents} ta where ti.created_by_type = 'agent' and ta.id::text = ti.created_by_id
+      and ta.org_id = ti.org_id and ta.archived_at is null),
+    (select tm.author_agent_id from ${schema.messages} tm
+      join ${agents} ta on ta.id = tm.author_agent_id and ta.archived_at is null
+      where tm.org_id = ti.org_id and tm.channel_id = ti.conversation_channel_id and tm.author_type = 'agent'
+        and tm.deleted_at is null
+      order by tm.created_at desc limit 1))
+  from ${issues} ti where ti.conversation_channel_id = ${channelId})`;
+
+/**
  * Agents join a task's conversation as members (so a mention there reaches them like anywhere else) when they see
  * the task: one of the whole workspace, one limited to people (who mentioned it reads it, and an agent reaches what
  * they reach), or one of a channel they are in (or a public one), by current handle (a person's mention). By id: the
@@ -101,17 +118,20 @@ export async function admitTaskAgents(
   db: Executor,
   orgId: string,
   channelId: string,
-  who: { handles?: string[]; ids?: string[] },
+  /** `taskAgent`: the task's agent too (`taskAgentSql`), whoever created or took the task before. */
+  who: { handles?: string[]; ids?: string[]; taskAgent?: boolean },
 ): Promise<string[]> {
   const handles = (who.handles ?? []).filter((h) => /^[a-z0-9_-]+$/.test(h));
   const ids = (who.ids ?? []).filter((v) => /^[0-9a-f-]{36}$/i.test(v));
-  if (handles.length === 0 && ids.length === 0) return [];
+  const taskAgent = who.taskAgent === true;
+  if (handles.length === 0 && ids.length === 0 && !taskAgent) return [];
   const rows = rowsOf<{ agent_id: string }>(
     await db.execute(sql`insert into ${channelMembers} (org_id, channel_id, agent_id)
       select a.org_id, ${channelId}::uuid, a.id from ${agents} a
       join ${issues} i on i.conversation_channel_id = ${channelId}::uuid and i.org_id = a.org_id
       where a.org_id = ${orgId}::uuid and a.archived_at is null
         and (a.id = any(${`{${ids.join(",")}}`}::uuid[])
+          or (${taskAgent}::boolean and a.id = ${taskAgentSql(sql`${channelId}::uuid`)})
           or (a.handle = any(${`{${handles.join(",")}}`}::text[]) and (i.restricted or i.channel_id is null
             or exists (select 1 from ${channelMembers} am where am.channel_id = i.channel_id and am.agent_id = a.id)
             or exists (select 1 from ${channels} ac where ac.id = i.channel_id and ac.visibility = 'public'

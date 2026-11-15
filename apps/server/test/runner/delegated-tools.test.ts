@@ -196,6 +196,26 @@ test("commands get the agent's secrets, and no result shows them", async () => {
   expect(textOf(out)).toBe("value=[secret]");
 });
 
+test("commands get what root's turn named for its agent (its commits' lines), the session's latest", async () => {
+  const asked: unknown[] = [];
+  const line = "Co-authored-by: Ada <noreply@agentes.chat>";
+  const { call, state, tools, scope } = setup(
+    { agent: { ...AGENT, coAuthors: [line] } },
+    {
+      secrets: async (agent) => {
+        asked.push(agent);
+        return { ...SECRETS, env: { AGENTES_CO_AUTHORS: agent?.coAuthors?.join("\n") ?? "" } };
+      },
+    },
+  );
+  state.answer = allow;
+  expect(textOf(await call("Bash", { command: 'echo "[$AGENTES_CO_AUTHORS]"' }))).toBe(`[${line}]`);
+  // Turned off: root's next turn names the agent without them.
+  tools.surface({ ...scope, agent: AGENT });
+  expect(textOf(await call("Bash", { command: 'echo "[$AGENTES_CO_AUTHORS]"' }))).toBe("[]");
+  expect(asked).toEqual([{ ...AGENT, coAuthors: [line] }, AGENT]);
+});
+
 test("output past the inline limit comes back as a preview and a file Read can page, redacted", async () => {
   const { call, state } = setup({}, { secrets: async () => SECRETS });
   state.answer = allow;

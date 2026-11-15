@@ -6,10 +6,11 @@ import {
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   isBrainEffort,
+  OPENCODE_ACP_PROTOCOL,
   OPENCODE_PROTOCOL,
   type PlanUsage,
 } from "@agenteschat/adapters";
-import { and, desc, type Executor, eq, isNotNull, ne, schema, sql } from "@agenteschat/db";
+import { and, desc, type Executor, eq, isNotNull, ne, or, schema, sql } from "@agenteschat/db";
 import { isAutoModel } from "@agenteschat/providers";
 import {
   autoPlanModel,
@@ -21,7 +22,7 @@ import {
   planOf,
   speedFits,
 } from "@agenteschat/providers/plans";
-import { planState, planWindows } from "@agenteschat/ui/plan-state";
+import { planFull, planState } from "@agenteschat/ui/plan-state";
 import type { Agent } from "../agents";
 import type { MachineStatus } from "../machine-hub";
 import { pausedMessage } from "../machines";
@@ -29,7 +30,7 @@ import { missionTurnFor } from "../missions-engine";
 import { isRightHand, rightHandPerson, rightHandPlanRefusal, thinkingAgent } from "../right-hand";
 import { runnerUpdateWay } from "../runner-update";
 import type { AgentRun } from "../runs";
-import { accountUnavailable, brainSessionId, claudeCodeAvailability, toolOff } from "./claude-code";
+import { accountUnavailable, brainSessionId, claudeCodeAvailability, cliMissingMessage, toolOff } from "./claude-code";
 import { codexVersionOk } from "./codex";
 import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainAccount, type BrainKind, type BrainSession } from "./types";
 
@@ -223,7 +224,7 @@ export function refusalScope(
   if (!m) return { scope: "account" };
   if (regionRefusal(provider, model, message)) return { scope: "region" };
   if (offRefusal(provider, model, message)) return { scope: PLAN_INACTIVE_TEXT.test(message) ? "inactive" : "off" };
-  if (usage && planWindows(usage, now).some((w) => w.used >= 100)) return { scope: "account" };
+  if (usage && planFull(usage, now)) return { scope: "account" };
   const kind = MODEL_WINDOW_WORDS.find(([words]) => words.test(message))?.[1];
   const at = kind ? usage?.windows.find((w) => w.kind === kind)?.resetsAt : undefined;
   return { scope: "model", ...(at && Date.parse(at) > now ? { resetsAt: at } : {}) };
@@ -426,8 +427,15 @@ export function computerBrainUnavailable(
         message: `The runner on ${status.name} is too old for ${name} agents. ${runnerUpdateWay(status)}`,
       };
     }
+    // On Windows a runner before `OPENCODE_ACP_PROTOCOL` refuses every OpenCode turn.
+    if (kind === "opencode" && status.os === "windows" && status.protocol < OPENCODE_ACP_PROTOCOL) {
+      return {
+        code: "runner_outdated",
+        message: `The runner on ${status.name} is too old for ${name} agents on Windows. ${runnerUpdateWay(status)}`,
+      };
+    }
     if (status.executors?.detectedAt && !status.executors[kind]) {
-      return { code: `${kind}_missing`, message: `${name}'s CLI is not installed on ${status.name}.` };
+      return { code: `${kind}_missing`, message: cliMissingMessage(`${name}'s CLI`, status, kind) };
     }
     return accountUnavailable(status, account, kind);
   }
@@ -443,7 +451,7 @@ export function computerBrainUnavailable(
   }
   const codex = status.executors?.codex;
   if (status.executors?.detectedAt && !codex) {
-    return { code: "codex_missing", message: `Codex is not installed on ${status.name}.` };
+    return { code: "codex_missing", message: cliMissingMessage("Codex", status, "codex") };
   }
   if (codex && !codexVersionOk(codex.version)) {
     return { code: "codex_too_old", message: `Codex on ${status.name} is too old. Update it there.` };
@@ -573,11 +581,9 @@ export async function brainAccountFor(
 }
 
 /**
- * A plan thinks only for its owner's agents (ADR 0059 §3): the account's
- * owner, or with the computer's own sign-in the person who connected that
- * computer, must be the agent's owner, still in the organization. The account
- * someone who may use other people's plans gave it (`brainAccountLentBy`)
- * needs only its own owner still there.
+ * Whether the plan may think for this agent (ADR 0059 §3): an account that serves everyone in the workspace
+ * (`machine_accounts.serves`), or one that serves only its owner when that is the agent's owner; either way its owner
+ * still in the organization. The computer's own sign-in thinks only for agents of the person who connected it.
  */
 export async function planIsOwners(
   db: Executor,
@@ -587,7 +593,6 @@ export async function planIsOwners(
 ): Promise<boolean> {
   const owner = agent.ownerUserId;
   if (!owner) return false;
-  const lent = account !== undefined && !!agent.brainAccountLentBy && agent.brainAccountId === account.id;
   const { machineAccounts, machines, organizationMembers: members } = schema;
   const rows = account
     ? await db
@@ -601,7 +606,7 @@ export async function planIsOwners(
           and(
             eq(machineAccounts.orgId, agent.orgId),
             eq(machineAccounts.id, account.id),
-            lent ? undefined : eq(machineAccounts.createdBy, owner),
+            or(eq(machineAccounts.createdBy, owner), eq(machineAccounts.serves, "everyone")),
           ),
         )
     : await db
@@ -612,9 +617,13 @@ export async function planIsOwners(
   return rows.length > 0;
 }
 
-/** The agent's effort when it thinks with its own brain (a mission's other brain: the CLI's default). */
+/**
+ * The agent's effort when it thinks with its own brain (a mission's other brain: the CLI's default). On an API key it
+ * holds for a fixed model; "Automático" picks its own (`autoApplied`), and a computer brain's fallback to the API sends
+ * none.
+ */
 export function brainEffortFor(agent: Pick<Agent, "brain" | "brainEffort">, kind: BrainKind): BrainEffort | undefined {
-  if (kind === "model" || kindOf(agent.brain) !== kind) return undefined;
+  if (kindOf(agent.brain) !== kind) return undefined;
   return isBrainEffort(agent.brainEffort) ? agent.brainEffort : undefined;
 }
 
@@ -675,6 +684,7 @@ async function sessionFor(
   run: AgentRun,
   kind: BrainKind,
   conversation: string,
+  machineId: string,
   options: { fresh?: boolean; promptKey?: string },
   now: Date,
 ): Promise<{ id: string; resume: boolean }> {
@@ -714,6 +724,10 @@ async function sessionFor(
             where r3.org_id = "agent_runs"."org_id" and r3.brain_session_id = "agent_runs"."brain_session_id"
               and r3.id <> ${run.id}
               and (r3.work_id is not null or r3.status in ('queued', 'running', 'waiting_input', 'waiting_approval')))`,
+          // Never one that thought on another computer (spill-over): its files are on that computer's disk.
+          sql`not exists (select 1 from ${usageRecords} u4 where u4.org_id = "agent_runs"."org_id"
+            and u4.run_id = "agent_runs"."id" and u4.provider = ${kind} and u4.machine_id is not null
+            and u4.machine_id <> ${machineId}::uuid)`,
           // Never a session background work thought in (a routine's: it was told to answer NO_REPLY, and a
           // conversation that picked it up answered that). Any run that shared it counts, older rows too.
           sql`not exists (select 1 from ${agentRuns} r2
@@ -767,7 +781,10 @@ export async function resolveBrain(
   const agent = await thinkingAgent(deps.db, given, await rightHandPerson(deps.db, given, run));
   const kind = brainFor(agent, run, mission);
   const base = mission ? { missionId: mission.missionId } : {};
-  if (kind === "model") return { kind, ...base };
+  if (kind === "model") {
+    const effort = brainEffortFor(agent, kind);
+    return { kind, ...base, ...(effort ? { effort } : {}) };
+  }
   const model = brainModelFor(kind, agent, mission);
   const machineId = mission?.session?.machineId ?? agent.machineId ?? null;
   const [status, account] = await Promise.all([
@@ -821,7 +838,7 @@ export async function resolveBrain(
     mission?.session ??
     (machineId
       ? {
-          ...(await sessionFor(deps.db, agent, run, kind, conversation, options, options.now ?? new Date())),
+          ...(await sessionFor(deps.db, agent, run, kind, conversation, machineId, options, options.now ?? new Date())),
           machineId,
           cwd: "",
         }

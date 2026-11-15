@@ -32,7 +32,7 @@ const planOf = (ownerId: string | undefined) =>
 const groups = () => [...document.querySelectorAll(".rh-group .ac-grouphead__title")].map((h) => h.textContent);
 const row = (name: RegExp) => screen().getByRole("button", { name });
 
-test("Lodi's old settings address opens Lodi's page: two groups, the face opens the look, the fallback AI is one row that opens", async () => {
+test("Lodi's old settings address opens Lodi's page: three groups, the face opens the look, the fallback AI is one row that opens", async () => {
   const state = withRightHand(seedState(), { brain: { kind: "claude_code", model: "Sonnet" } });
   const api = createFakeApi(state);
   let onPlan = true;
@@ -63,11 +63,15 @@ test("Lodi's old settings address opens Lodi's page: two groups, the face opens 
   const { router } = await renderApp(`/org/${ORG_ID}/settings/right_hand`, { api });
   await settle(8);
   expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/agents/${LODI_ID}`);
-  expect(groups()).toEqual(["Só para você", "Para todo o workspace· só admins"]);
+  expect(groups()).toEqual(["Só para você", "O que o Lodi faz por conta própria", "Para todo o workspace· só admins"]);
   expect(screen().queryByRole("button", { name: "Mudar visual" })).toBeNull();
-  // The weekly card's button stands on a plate like the selects beside it: wrapped under them on a phone, it starts
-  // on their edge, never a padding further in as bare words would.
-  expect(screen().getByRole("button", { name: "Parar de receber" }).classList.contains("ac-btn--ghost")).toBe(false);
+  // Each card stops and starts with the switch at its row's end, its selects in a group named after it: no button
+  // of words beside them.
+  expect(screen().queryByRole("button", { name: "Parar de receber" })).toBeNull();
+  for (const name of ["Resumo do dia", "Semana da equipe"]) {
+    const selects = screen().getByRole("group", { name });
+    expect(within(selects.closest(".settings-row") as HTMLElement).getByRole("switch", { name })).toBeTruthy();
+  }
   await act(async () => fireEvent.click(screen().getByRole("button", { name: "Mudar o visual do Lodi" })));
   await settle(4);
   expect(screen().getByRole("dialog", { name: "Mudar visual" })).toBeTruthy();
@@ -76,17 +80,13 @@ test("Lodi's old settings address opens Lodi's page: two groups, the face opens 
   // The value is under the row's name, the chevron at its end: no button of its own, nothing floating right.
   const ai = row(/^IA de quem não tem plano próprio/);
   expect(ai.matches(".settings-row--open")).toBe(true);
-  expect(ai.querySelector(".settings-row__status")?.textContent).toBe("Plano Trabalho · Sonnet");
+  expect(ai.querySelector(".settings-row__status")?.textContent).toBe("Plano Trabalho · Sonnet 5.5");
   expect(ai.querySelector(".settings-row__status .ac-provider-logo, .settings-row__status svg")).toBeTruthy();
   expect(ai.querySelector(".settings-row__chevron")).toBeTruthy();
   expect(ai.querySelector(".settings-row__value")).toBeNull();
   expect(screen().queryByRole("button", { name: "Usar uma chave de API" })).toBeNull();
-  // The switch says what it does once: its state is the switch.
-  const lend = screen().getByRole("switch", { name: "Emprestar este plano a quem não tem um" });
-  const lendRow = lend.closest(".settings-row") as HTMLElement;
-  expect(lendRow.querySelector(".settings-row__status")).toBeNull();
-  // The plan's terms on lending it stay one press away, beside the name.
-  expect(within(lendRow).getByRole("button", { name: "Sobre Emprestar este plano a quem não tem um" })).toBeTruthy();
+  // Who a plan serves is its owner's choice in IA e uso (ADR 0059 §3): no lending switch here.
+  expect(screen().queryByRole("switch", { name: /Emprestar/ })).toBeNull();
   // The row opens the choice in place, and choosing there changes the row.
   await act(async () => fireEvent.click(ai));
   await settle(4);
@@ -110,10 +110,9 @@ test("Lodi's old settings address opens Lodi's page: two groups, the face opens 
   expect(row(/^IA de quem não tem plano próprio/).querySelector(".settings-row__status")?.textContent).toBe(
     "OpenAI da Acme · Automático",
   );
-  expect(screen().queryByRole("switch", { name: "Emprestar este plano a quem não tem um" })).toBeNull();
 });
 
-test("a member's Lodi page is only Só para você: Sua IA is one row that opens, and connects their plan from its dialog", async () => {
+test("a member's Lodi page has nothing of the workspace's: Sua IA is one row that opens, and connects their plan from its dialog", async () => {
   const state = withRightHand(seedState());
   const me = state.me?.organizations[0];
   if (me) me.role = "member";
@@ -128,7 +127,7 @@ test("a member's Lodi page is only Só para você: Sua IA is one row that opens,
     });
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
   await settle(8);
-  expect(groups()).toEqual(["Só para você"]);
+  expect(groups()).toEqual(["Só para você", "O que o Lodi faz por conta própria"]);
   expect(screen().queryByText("Nome e visual")).toBeNull();
   expect(screen().queryByText("Quem pode usar")).toBeNull();
   const mine = row(/^Sua IA/);
@@ -167,7 +166,7 @@ test("Sua IA on a plan of mine: the dialog goes back to the workspace's AI, and 
   };
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
   await settle(8);
-  expect(row(/^Sua IA/).querySelector(".settings-row__status")?.textContent).toBe("Trabalho · seu plano · Sonnet");
+  expect(row(/^Sua IA/).querySelector(".settings-row__status")?.textContent).toBe("Trabalho · seu plano · Sonnet 5.5");
   await act(async () => fireEvent.click(row(/^Sua IA/)));
   await settle(4);
   const dialog = screen().getByRole("dialog", { name: "Quem pensa pelo Lodi para você" });
@@ -209,8 +208,8 @@ test("a plan's model is a line that opens its list, in Sua IA and in the workspa
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
   await settle(8);
   for (const [name, scope, before] of [
-    [/^Sua IA/, "mine", "Trabalho · seu plano · Sonnet"],
-    [/^IA de quem não tem plano próprio/, "workspace", "Plano Trabalho · Sonnet"],
+    [/^Sua IA/, "mine", "Trabalho · seu plano · Sonnet 5.5"],
+    [/^IA de quem não tem plano próprio/, "workspace", "Plano Trabalho · Sonnet 5.5"],
   ] as const) {
     expect(row(name).querySelector(".settings-row__status")?.textContent).toBe(before);
     await act(async () => fireEvent.click(row(name)));
@@ -239,13 +238,12 @@ test("a plan's model is a line that opens its list, in Sua IA and in the workspa
   }
 });
 
-test("Poderes do workspace is one row for everyone that opens what only Lodi does, and no Computador row without a computer", async () => {
+test("Poderes do workspace is one row for everyone that opens what only Lodi does", async () => {
   const state = withRightHand(seedState());
   const me = state.me?.organizations[0];
   if (me) me.role = "member";
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api: createFakeApi(state) });
   await settle(8);
-  expect(screen().queryByRole("button", { name: /^Computador/ })).toBeNull();
   const powers = row(/^Poderes do workspace/);
   expect(powers.matches(".settings-row--open")).toBe(true);
   await act(async () => fireEvent.click(powers));
@@ -304,7 +302,7 @@ test("the worst case keeps its shape: a very long account and owner name stay un
   await settle(8);
   const ai = row(/^IA de quem não tem plano próprio/);
   const value = ai.querySelector(".settings-row__status .rh-value") as HTMLElement;
-  expect(value.textContent).toBe(`Plano ${long} · conta de Maximiliana-Bernardette · Sonnet`);
+  expect(value.textContent).toBe(`Plano ${long} · conta de Maximiliana-Bernardette · Sonnet 5.5`);
   // Under the name, in the words' column: never a second column squeezing the name, never cut.
   expect(value.closest(".settings-row__text")).toBeTruthy();
   const css = await Bun.file(new URL("../src/layout.css", import.meta.url).pathname).text();

@@ -73,11 +73,11 @@ import { TypeBar } from "../browser/parts";
 import { useFinishHandoff } from "../browser/useFinishHandoff";
 import { AskButtons, AskCard, AskFoot, ExpiryLine } from "../chat/asks";
 import { mayStopRun } from "../chat/logic";
-import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useNow } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { successHaptic, tapHaptic } from "../shared/parts";
 import { useActiveWork } from "../shared/queries";
+import { DesktopAgentPointer } from "./AgentPointer";
 import { Cover } from "./Cover";
 import { DOCK_HANG, DockDone, DockIcon, DockRule, DockText, EdgeDock } from "./EdgeDock";
 import { LiveTrail } from "./LiveTrail";
@@ -306,6 +306,14 @@ export function AgentScreen({
     mode: taking ? "control" : finishing ? "watch" : mode,
     session,
   });
+  const pointerView = useDerivedValue(() => ({
+    s: s.value,
+    x: x.value,
+    y: y.value,
+    ...desk.value,
+    boxWidth: box.value.width,
+    boxHeight: box.value.height,
+  }));
   // Opening, or a switch the stream never takes: past `STUCK_MS` it says so, with Tentar de novo.
   const waitsOn = screenWaits({ active, shown, switching: switching !== null });
   useEffect(() => {
@@ -795,6 +803,14 @@ export function AgentScreen({
                   }}
                 />
               </Animated.View>
+              {/* The agent's own pointer, while the person watches its screen live (theirs is drawn in control). */}
+              <DesktopAgentPointer
+                agentId={agentId}
+                name={name}
+                color={color}
+                enabled={live && !inControl && switching === null}
+                view={pointerView}
+              />
               {inControl && !wide ? (
                 <Animated.View pointerEvents="none" style={[styles.cursor, pointer]}>
                   <PixelCursor />
@@ -1457,7 +1473,6 @@ function Watching({
           ) : (
             <Composer
               placeholder={t("agentComputer.phone.message", { name })}
-              face={<AgentFace agentId={agentId} size={22} live={false} />}
               working={
                 atWork ? (mayStop ? { stop: { label: t("mobile.chat.stopAgent", { name }), onStop: stop } } : {}) : null
               }

@@ -120,6 +120,7 @@ export function actionTextValues(
       return v;
     }
     case "memory.saved":
+      if (p.team === true) return { text: str(p.text), context: p.rule === true ? "team_rule" : "team" };
       return p.rule === true ? { text: str(p.text), context: "rule" } : { text: str(p.text) };
     case "memory.updated":
     case "memory.forgotten":
@@ -149,6 +150,8 @@ export function actionTextValues(
     case "thread.closed":
       return { title };
     case "skill.created":
+      // Made when a person asked (`create_skill`), not from its how-tos.
+      return p.asked === true ? { name: str(p.name) || title, context: "asked" } : { name: str(p.name) || title };
     case "skill.updated":
       return { name: str(p.name) || title };
     case "agent.settings_changed": {
@@ -186,6 +189,8 @@ export const workspaceActionContext = (action: string, words: Record<string, str
  * notification) said here, so "Mudei seu status: ausente" never reads "away".
  */
 export function workspaceActionWords(action: string, words: Record<string, string>, t: TFunction) {
+  if (action === "set_permission_holders" && words.permission)
+    return { ...words, short: t(`permissions.${words.permission}.short` as never, { defaultValue: words.permission }) };
   if (action === "set_my_status" && !words.what && words.availability) {
     const key = words.availability === "auto" ? "online" : words.availability;
     return { ...words, what: t(`presence.lower.${key}` as never, { defaultValue: words.availability }) as string };
@@ -241,7 +246,13 @@ const BLENDS: Partial<Record<AgentActionKind, Blend>> = {
     same: (a) => [a.params.assigneeType ?? null, a.params.assigneeId ?? null],
     contexts: ["self", "you", "none"],
   },
-  "memory.saved": { ref: named("text"), contexts: ["rule"], slot: "text" },
+  "memory.saved": {
+    ref: named("text"),
+    // The team's memory and the agent's own never share a sentence.
+    same: (a) => a.params.team === true,
+    contexts: ["rule", "team_rule", "team"],
+    slot: "text",
+  },
   "memory.updated": { ref: named("text"), slot: "text" },
   "memory.forgotten": { ref: named("text"), slot: "text" },
   "routine.created": { ref: named("name") },
@@ -252,7 +263,7 @@ const BLENDS: Partial<Record<AgentActionKind, Blend>> = {
   "wiki.page_created": { ref: named("title") },
   "wiki.page_edited": { ref: named("title") },
   "thread.closed": { ref: named("title") },
-  "skill.created": { ref: named("name") },
+  "skill.created": { ref: named("name"), contexts: ["asked"] },
   "skill.updated": { ref: named("name") },
   "agent.settings_changed": { ref: named("agentName") },
   "pr.merged": { ref: hashed("number"), same: (_a, v) => v.repo },

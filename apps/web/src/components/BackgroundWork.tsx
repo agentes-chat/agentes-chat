@@ -39,6 +39,7 @@ function useWorkLine(work: WorkView, inUpdatesThread = false) {
     meId: me.user.id,
     agentName: agent?.name ?? t("channel.unknownAgent"),
     nameOf: (id) => dir.memberById.get(id)?.name ?? null,
+    agentNameOf: (id) => dir.anyAgent(id)?.name,
     canStop,
     inUpdatesThread,
   });

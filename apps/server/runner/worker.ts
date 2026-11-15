@@ -107,6 +107,7 @@ function parseWorkerState(f: Record<string, unknown>): WorkerState | null {
   const accounts = Array.isArray(f.accounts) ? { accounts: f.accounts.filter(isAccountId) } : {};
   const host = typeof f.commitHost === "string" && /^[a-z0-9.-]{1,253}$/i.test(f.commitHost) ? f.commitHost : null;
   const commitHost = host ? { commitHost: host } : {};
+  const locale = typeof f.locale === "string" && f.locale.length <= 32 ? { locale: f.locale } : {};
   return access && paused
     ? {
         access,
@@ -118,6 +119,7 @@ function parseWorkerState(f: Record<string, unknown>): WorkerState | null {
         ...account,
         ...accounts,
         ...commitHost,
+        ...locale,
       }
     : null;
 }
@@ -151,7 +153,9 @@ export class WorkerLink {
    * Root needs room for a brain turn: with `peek`, what this agent would close (`BrainManager.idleCandidate`),
    * else whether an idle CLI of this agent's closed.
    */
-  onReclaim: (ask: { spare?: string; peek: boolean }) => Promise<BrainReclaimed> = async () => ({ closed: false });
+  onReclaim: (ask: { spare?: string; peek: boolean; browser: boolean }) => Promise<BrainReclaimed> = async () => ({
+    closed: false,
+  });
   /** A delegated CLI's bridge, or its end. */
   onBridge: (bridge: DelegatedBridge) => void = () => {};
   onTurnPrepare: (ask: { agent: AgentScope; cwd?: string; text: boolean }) => Promise<TurnContext> = async () => {
@@ -269,7 +273,11 @@ export class WorkerLink {
       case "brain.reclaim":
         if (typeof f.reclaimId === "string") {
           const reclaimId = f.reclaimId.slice(0, 64);
-          const ask = { ...(typeof f.spare === "string" ? { spare: f.spare } : {}), peek: f.peek === true };
+          const ask = {
+            ...(typeof f.spare === "string" ? { spare: f.spare } : {}),
+            peek: f.peek === true,
+            browser: f.browser === true,
+          };
           void this.onReclaim(ask)
             .catch(() => ({ closed: false }))
             .then((out) =>
@@ -441,6 +449,11 @@ export class WorkerLink {
     this.write(JSON.stringify({ type: "codex.auth", account, auth } satisfies WorkerLinkFrame));
   }
 
+  /** A Grok Build sign-in root keeps, refreshed by this agent's Grok: root takes it only for a turn it sent here. */
+  grokAuth(account: string, auth: string) {
+    this.write(JSON.stringify({ type: "grok.auth", account, auth } satisfies WorkerLinkFrame));
+  }
+
   /** What its agent's Chrome sent and received since the last time (protocol 23); nothing when it moved nothing. */
   traffic({ up, down }: { up: number; down: number }) {
     if (up > 0 || down > 0) this.write(JSON.stringify({ type: "browser.traffic", up, down } satisfies WorkerLinkFrame));
@@ -560,6 +573,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     agentHome: (kind: AccountKind, id: string) => agentAccountHome(home, kind, id),
     noteRateLimit: (account: string, info: unknown) => link.usage("claude_code", account, info),
     codexAuth: (account: string, auth: string) => link.codexAuth(account, auth),
+    grokAuth: (account: string, auth: string) => link.grokAuth(account, auth),
   };
   const tasks = new TaskManager({
     mcp: mcpCommand,
@@ -604,7 +618,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
   // Claude Code's own tools for a CLI root runs on a shared sign-in: nothing here until root opens a bridge.
   const delegatedRuns = new Map<string, McpTaskInfo>();
   const delegated = new DelegatedTools({
-    secrets: () => agentSecrets(secretsDir, { id: o.agentId, handle: "agent" }),
+    secrets: (agent) => agentSecrets(secretsDir, agent ?? { id: o.agentId, handle: "agent" }),
     onNotice: (notice) => link.toolNotice(notice),
     onDenied: (session, tool, input) => tasks.hostedDenial(session, tool, input),
     ...(cli ? { spawn: cli } : {}),
@@ -695,6 +709,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     },
     onChange: () => queueMicrotask(lease),
     kept: () => state.browserKept === true,
+    locale: () => state.locale,
     ...(chrome ? { startChrome: (exe, args, profile, env) => launchChrome(exe, args, profile, env, chrome) } : {}),
     // The agents share their memory (`agentLimits`): the limit a page dies at is all of theirs.
     memoryEvents: {
@@ -709,7 +724,12 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
   const counted = setInterval(() => link.traffic(browser.takeTraffic()), LOAD_SAMPLE_MS);
   counted.unref?.();
   void browser.closeAll();
-  link.onReclaim = async ({ spare, peek }) => {
+  link.onReclaim = async ({ spare, peek, browser: ofBrowser }) => {
+    if (ofBrowser) {
+      if (!peek) return { closed: await browser.reclaimIdle() };
+      const since = browser.reclaimCandidate();
+      return { closed: false, ...(since !== null ? { browserIdle: since } : {}) };
+    }
     if (!peek) return { closed: await brains.reclaimIdle(spare) };
     const idle = brains.idleCandidate(spare);
     return { closed: false, ...(idle ? { idle } : {}), ...(spare && brains.warm(spare) ? { warm: true } : {}) };
@@ -745,6 +765,7 @@ export async function runWorker(o: WorkerOptions): Promise<number> {
     uids: () => (own === null ? null : { runner: 0, agents: new Map([[o.agentId, own]]) }),
     secrets: (agent) => agentSecrets(secretsDir, agent),
     browserPid: (agentId) => browser.chromePid(agentId),
+    pointer: (agentId, to) => void live?.send({ type: "desktop.pointer", agentId, ...to }),
     log,
     ...o.desktop,
   });

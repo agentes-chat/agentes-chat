@@ -134,6 +134,14 @@ export class ControlServer {
         return d.iphoneSetup().start();
       case "iphone.open":
         return d.iphoneSetup().open(m.app === "xcode" ? "xcode" : "appStore");
+      case "iphone.fixXcode":
+        return d
+          .iphoneSetup()
+          .fixXcode(m.action === "cancel" ? "cancel" : "start", m.kind === "update" ? "update" : "select");
+      case "cli.install":
+        return d.cliInstaller().handle(m);
+      case "iphone.look":
+        return d.iphoneLook();
       case "shutdown":
         return { stopping: true };
       default:

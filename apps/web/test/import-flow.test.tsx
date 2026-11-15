@@ -548,6 +548,18 @@ describe("Configurações → Importar e exportar", () => {
     }
   });
 
+  test("agentes.chat, with one other workspace on this server: a link to its export instead of the path", async () => {
+    const state = seedState();
+    state.me?.organizations.push({ id: "org-north", name: "Estúdio Norte", role: "owner", showActivity: true });
+    await go(state);
+    await click(button(/^agentes\.chat$/), 1);
+    const tip = document.querySelector(".imp-tip") as HTMLElement;
+    expect(tip.textContent).toBe("Baixe o arquivo do outro workspace e solte o .json aqui.Baixar de Estúdio Norte");
+    const link = within(tip).getByRole("link", { name: "Baixar de Estúdio Norte" });
+    expect(link.getAttribute("href")).toBe("/org/org-north/settings/import");
+    expect(link.getAttribute("target")).toBe("_blank");
+  });
+
   test("a folder is recognized and planned on the server; unchecking an agent holds back what needs it; Importar applies and reports", async () => {
     const { state } = await go();
     // Each app the parsers read has a card with where its file is, but OpenBot, which few use: the drop zone reads
@@ -1040,6 +1052,14 @@ describe("Configurações → Importar e exportar", () => {
       expect(files.textContent).toContain("Arquivos do sistema");
       expect(files.textContent).toContain(".DS_Store, ._rivals.txt");
       expect(text()).not.toContain("agents/scout/files/.env");
+      // The system files the reader dropped, counted once, with what they are behind an ⓘ.
+      const system = [...document.querySelectorAll(".imp-note")].find((n) =>
+        n.textContent?.includes("arquivos de sistema ficaram de fora"),
+      );
+      expect(system?.querySelector(".ac-hintline > span")?.textContent).toBe("2 arquivos de sistema ficaram de fora");
+      expect(system?.querySelector("button.ac-hint")?.getAttribute("aria-label")).toBe(
+        "Sobre 2 arquivos de sistema ficaram de fora",
+      );
       expect(copies(state)).toEqual([]);
 
       await importIt();

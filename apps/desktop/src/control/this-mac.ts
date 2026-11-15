@@ -33,9 +33,14 @@ export type ThisMacRequest =
   | { kind: "reconnect"; orgId: string; origin: string; local?: boolean; also?: string }
   | { kind: "prefs"; tab: PrefsTab }
   | { kind: "requests" }
-  | { kind: "files"; local?: boolean };
+  | { kind: "files"; local?: boolean }
+  /** The page's one way out where macOS refused it something: that permission's own list in System Settings. */
+  | { kind: "privacy"; pane: PrivacyPane };
 
-export type PrefsTab = "folders" | "tools" | "updates";
+export type PrefsTab = "folders" | "tools" | "updates" | "servers";
+/** The microphone (a voice message), the Local Network list (Wi-Fi pairing of a phone). */
+type PrivacyPane = "microphone" | "network";
+const PRIVACY_PANES: readonly string[] = ["microphone", "network"] satisfies PrivacyPane[];
 
 export interface ThisMacStatus {
   orgs: { orgId: string; machineId: string | null; connection: string }[];
@@ -56,6 +61,8 @@ export interface ThisMacDeps {
   openPrefs(tab: PrefsTab): Promise<void>;
   /** The popover, where access requests are answered. */
   showRequests(): Promise<void>;
+  /** System Settings on a permission's list; absent: the page's request is refused. */
+  openPrivacy?(pane: PrivacyPane): Promise<void>;
   /** The server here's folder (`~/.agentes`), as the app runs it now. */
   localDir(): Promise<string>;
   /** A folder of this computer in Finder or the file manager; rejects when it isn't one. */
@@ -103,6 +110,11 @@ export async function answerThisMac(deps: ThisMacDeps, request: ThisMacRequest):
   }
   if (request.kind === "requests") {
     await deps.showRequests();
+    return {};
+  }
+  if (request.kind === "privacy") {
+    if (!PRIVACY_PANES.includes(request.pane) || !deps.openPrivacy) throw new Error("not_here");
+    await deps.openPrivacy(request.pane);
     return {};
   }
   if (request.kind === "files") {

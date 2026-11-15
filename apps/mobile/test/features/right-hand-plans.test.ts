@@ -71,23 +71,18 @@ test("Sua IA is one row that opens its choice: what answers me, by its logo and 
   );
 });
 
-test("Lodi's settings: the workspace's plan is lent by a switch for whoever sets its AI, saying what it does once", () => {
+test("Lodi's settings: the workspace's plan has no lending switch, since a plan serves the whole workspace", () => {
   const screen = readFileSync(join(import.meta.dir, "../../src/features/right-hand/SettingsScreen.tsx"), "utf8");
   // The workspace's AI is read and saved as such; the look opens from the row, with no "Mudar visual" on it.
   expect(screen).toContain('useAgentBrain(orgId, agent.id, true, false, "workspace")');
   expect(screen).toContain('{ scope: "workspace", ...input }');
   expect(screen).not.toContain("rightHand.settings.changeLook");
-  // As for any agent on its owner's plan: an admin may override (the plan's owner hears it by email).
-  expect(screen).toContain('label={t("rightHand.settings.lend")}');
-  expect(screen).toContain("set({ onlyOwner: on })");
-  expect(screen).toContain("disabled={!view.canEdit || busy}");
-  // No sentence under the switch: its name says what it does, the plan's terms are behind its ⓘ.
-  expect(screen).not.toContain("sharesOn");
-  expect(screen).toContain("{...(terms ? { hint: { name: terms.about, text: terms.text } } : {})}");
+  // Who a plan serves is its owner's choice in IA e uso (ADR 0059 §3), not a switch here.
+  expect(screen).not.toContain("rightHand.settings.lend");
+  expect(screen).not.toContain("set({ onlyOwner: on })");
   expect(screen).toContain('t("rightHand.settings.planName", { name: a.label })');
-  // The budget only where something bills per use, lending and the audience only with someone else here.
+  // The budget only where something bills per use, the audience only with someone else here.
   expect(screen).toContain("{usesApi ? (");
-  expect(screen).toContain("{kind && view && !solo ? (");
   expect(screen).toContain("{solo ? null : (");
   // What it is now is one row that opens the choice of the key or a plan, the one in use checked: no loose
   // "Usar uma chave de API" row and no second list of plans under another heading.

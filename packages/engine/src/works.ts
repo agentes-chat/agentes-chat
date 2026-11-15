@@ -20,7 +20,7 @@ import { lineLocale } from "./requester";
 import { personCanPost } from "./routine-state";
 import { ACTIVE_RUN_STATUSES, passedOnTo } from "./run-inbox";
 import { deliverNoticeToRun } from "./run-resume";
-import { type AgentRun, continuableEnd, isTerminal, replyThreadOf, runErrorDetail } from "./runs";
+import { type AgentRun, continuableEnd, isTerminal, personStopOf, replyThreadOf, runErrorDetail } from "./runs";
 import { runStretchOf } from "./stretch";
 import { ago, stepLine } from "./talker-snapshot";
 import { nameConversation } from "./thread-assess";
@@ -152,6 +152,8 @@ export interface WorkView {
   pausedUntil: string | null;
   /** Stopped by a person: who. */
   canceledByUserId: string | null;
+  /** The right hand that made that stop at their word. */
+  canceledByAgentId: string | null;
   errorCode: string | null;
 }
 
@@ -269,6 +271,7 @@ export async function workViews(db: Executor, orgId: string, ids: string[]): Pro
     const asked =
       state === "waiting_input" ? questions.find((q) => q.runId === run?.id && q.channelId === w.channelId) : undefined;
     const detail = status === "failed" ? runErrorDetail(run?.error) : null;
+    const stop = status === "canceled" ? personStopOf(run?.error) : null;
     out.set(w.id, {
       id: w.id,
       agentId: w.agentId,
@@ -301,7 +304,8 @@ export async function workViews(db: Executor, orgId: string, ids: string[]): Pro
       resultMessageId: w.resultMessageId,
       queuePosition: state === "queued" ? Math.max(1, mine.findIndex((l) => l.id === w.id) + 1) : null,
       pausedUntil: state === "paused" ? (run?.until ?? null) : null,
-      canceledByUserId: status === "canceled" && run?.error?.startsWith("canceled_by:") ? run.error.slice(12) : null,
+      canceledByUserId: stop?.userId ?? null,
+      canceledByAgentId: stop?.agentId ?? null,
       errorCode: detail?.errorCode ?? (w.resultMessageId ? (reportCodes.get(w.resultMessageId) ?? null) : null),
     });
   }
@@ -875,10 +879,16 @@ export async function endWork(
     if (!resultId) {
       const detail = status === "failed" ? runErrorDetail(run.error) : null;
       const minutes = Math.max(1, Math.round((now.getTime() - work.startedAt.getTime()) / 60_000));
-      const byUserId = run.error?.startsWith("canceled_by:") ? run.error.slice(12) : null;
+      const stop = personStopOf(run.error);
+      const byUserId = stop?.userId ?? null;
       const locale = await lineLocale(tx, work.orgId, work.requestedByUserId, run.id);
       const last = status !== "done" && work.updateSeq > 0 ? work.lastUpdateText : null;
-      const [by] = byUserId ? await tx.select({ name: users.name }).from(users).where(eq(users.id, byUserId)) : [];
+      // "Stopped by Lodi" when the right hand stopped it at someone's word, else the person who stopped it.
+      const [by] = stop?.agentId
+        ? await tx.select({ name: schema.agents.name }).from(schema.agents).where(eq(schema.agents.id, stop.agentId))
+        : byUserId
+          ? await tx.select({ name: users.name }).from(users).where(eq(users.id, byUserId))
+          : [];
       end = await insertMessage(tx, {
         orgId: work.orgId,
         channelId: work.channelId,

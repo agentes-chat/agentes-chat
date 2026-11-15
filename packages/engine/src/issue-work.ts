@@ -69,7 +69,7 @@ export async function issueWorkBrief(
     criteria ? `## Acceptance criteria\n${criteria}` : "",
     prs ? `## Pull requests linked\n${prs}` : "",
     files.length
-      ? `## Files attached to the issue\n${files.map((f) => `- ${f.title} (artifact ${f.id})`).join("\n")}\nOpen one with \`read_artifact\` when it helps.`
+      ? `## Files attached to the issue\n${files.map((f) => `- ${f.title} (artifact ${f.id})`).join("\n")}\nOpen each with \`read_artifact\` before you work on it: pictures and PDFs are shown to you, documents, sheets and audio come as text.`
       : "",
     [
       "## How to work on it",

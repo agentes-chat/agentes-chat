@@ -5,6 +5,7 @@ import {
   BRAIN_PROFILES_PROTOCOL,
   BRAIN_PROTOCOL,
   brainTopic,
+  CONTEXT_LIMIT_PROTOCOL,
   CONVERSATION_PROTOCOL,
   createMemoryPubSub,
   MACHINE_PROTOCOL_VERSION,
@@ -389,6 +390,21 @@ test("accounts (ADR 0041): the account and effort go to a runner that knows them
   });
   expect(claudeCodeAvailability(ownSignedOut)?.type).toBe("error");
   expect(claudeCodeAvailability(ownSignedOut, account)).toBeNull();
+});
+
+test("context: Automático sends Claude Code 200K, a chosen limit wins, an older runner gets none", async () => {
+  const sent = async (s: MachineStatus, over: Partial<BrainTurn>) => {
+    const pubsub = createMemoryPubSub();
+    const { hub, calls } = fakeHub(pubsub, { status: s });
+    await collect(brainWith(pubsub, hub).run(turn(over), io()));
+    return calls[0]?.request as { contextTokens?: number } | undefined;
+  };
+  expect((await sent(status({ protocol: CONTEXT_LIMIT_PROTOCOL }), {}))?.contextTokens).toBe(200_000);
+  expect((await sent(status({ protocol: CONTEXT_LIMIT_PROTOCOL }), { contextTokens: 1_000_000 }))?.contextTokens).toBe(
+    1_000_000,
+  );
+  const old = await sent(status({ protocol: CONTEXT_LIMIT_PROTOCOL - 1 }), {});
+  expect(old && "contextTokens" in old).toBe(false);
 });
 
 test("a failed request becomes the turn's error (offline and old runners may fall back; a timeout doesn't)", async () => {

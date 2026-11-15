@@ -1,4 +1,10 @@
-import { useCatalog, useConnections, useCustomServers, useRenameConnection } from "@agenteschat/client";
+import {
+  useCatalog,
+  useConnections,
+  useCustomServerAction,
+  useCustomServers,
+  useRenameConnection,
+} from "@agenteschat/client";
 import {
   accountUnchecked,
   type ConnectedItem,
@@ -39,7 +45,7 @@ import { AgentLevelList, DisconnectRow } from "./Access";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { AddressSheet, ConnectSheet } from "./ConnectSheet";
 import { GitHubAppGroup } from "./GitHubApp";
-import { accountActions } from "./logic";
+import { accountActions, headerNamesText } from "./logic";
 import { Problem } from "./Problem";
 import { openTools } from "./ToolsScreen";
 
@@ -51,9 +57,9 @@ export const openConnection = (id: string) => router.push(`/connectors/${id}`);
  * bar reads its name, with "…" for renaming; its mark with the check, its name and its account under it; who uses
  * it (one row per agent, the level as its value, changed in place), what always asks as that group's footer; its
  * tools as one row (what waits on you under it, in amber; a screen of their own); the account (which, Reconectar,
- * another account of an MCP server, each in a sheet); and Desconectar, alone in red, behind the system's
- * confirmation. GitHub also lists its repositories through the agentes.chat app, under who uses it. Connecting a new
- * service stays in its sheet.
+ * another account of an MCP server, each in a sheet, and under them the request headers a server by address also
+ * sends, by name); and Desconectar, alone in red, behind the system's confirmation. GitHub also lists its
+ * repositories through the agentes.chat app, under who uses it. Connecting a new service stays in its sheet.
  */
 export function ConnectionScreen({ id }: { id: string }) {
   return (
@@ -74,6 +80,8 @@ function Connection({ id }: { id: string }) {
   const connections = useConnections(orgId);
   const servers = useCustomServers(orgId);
   const admin = can(org, "manage_connectors");
+  const { refresh } = useCustomServerAction(orgId);
+  const toast = useToast();
   const sheet = useSheet();
   const { y, onScroll } = useCoverScroll();
   const item = connectedItems(connections.data ?? [], servers.data ?? [], catalog.data?.connectors ?? []).find(
@@ -95,6 +103,7 @@ function Connection({ id }: { id: string }) {
             : "";
   const waiting = admin && item ? item.pending : 0;
   const actions = item ? accountActions(item) : [];
+  const sent = item?.server?.headerNames ?? [];
   // "…": renaming, the one thing about the account that isn't a step of its own.
   const more =
     admin && item && actions.includes("rename") ? (
@@ -146,7 +155,28 @@ function Connection({ id }: { id: string }) {
             {item.needsReconnect ? (
               <Problem text={t("mobile.connectors.needsReconnect", { name })} />
             ) : item.toolsError ? (
-              <Problem text={t("mobile.connectors.noTools", { name })} />
+              <View style={styles.problem}>
+                <Problem text={t("mobile.connectors.noTools", { name })} />
+                {admin && item.server ? (
+                  <Button
+                    variant="primary"
+                    wide
+                    label={t("mobile.connectors.readAgain")}
+                    loading={refresh.isPending}
+                    disabled={refresh.isPending}
+                    onPress={() => {
+                      const server = item.server;
+                      if (server)
+                        refresh.mutate(server.id, {
+                          onError: () => {
+                            errorHaptic();
+                            toast({ title: t("mobile.connectors.review.refreshFailed") });
+                          },
+                        });
+                    }}
+                  />
+                ) : null}
+              </View>
             ) : item.reconnectAdds.length > 0 ? (
               <Text variant="footnote" tone="muted" style={styles.lead}>
                 {reconnectAddsText(t, item)}
@@ -212,6 +242,10 @@ function Connection({ id }: { id: string }) {
                       />
                     ))}
                 </GroupedList>
+                {/* The request headers a server by address is also sent, by name: their values are never shown. */}
+                {sent.length > 0 ? (
+                  <GroupedFooter>{headerNamesText(t, "connectors.sendsToo", sent)}</GroupedFooter>
+                ) : null}
                 {item.custom && accountUnchecked([item.server]) ? (
                   <GroupedFooter>{t("connectFlow.replaceUnchecked")}</GroupedFooter>
                 ) : null}
@@ -306,6 +340,7 @@ const styles = StyleSheet.create({
   loading: { marginTop: 24 },
   // The pushed screens' 16-point margin (the connectors list and the settings screens use it too).
   body: { paddingHorizontal: 16 },
+  problem: { gap: 12 },
   lead: { paddingHorizontal: 16, paddingTop: 12 },
   gap: { height: 24 },
 });

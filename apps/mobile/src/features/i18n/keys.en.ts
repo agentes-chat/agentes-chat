@@ -59,6 +59,8 @@ export const featureKeysEn = {
     reopen: "Show again",
     answeredBy: "{{name}} picked",
     failed: "Your pick didn't go through. Try again.",
+    /** After the message's size and limit, when a written answer makes the reply too long. */
+    tooLongFix: "Shorten the answer.",
   },
   chart: {
     table: "Table",
@@ -317,7 +319,7 @@ export const featureKeysEn = {
   /** The line over the tab bar that goes with you while an agent does long work or waits on you. */
   along: {
     agent: "An agent",
-    waits: "{{name}} is waiting for your ok",
+    waits: "{{name}} · waiting for you",
     on: "{{name}} · {{what}}",
     working: "{{name}} is working",
     more: "+{{count}}",
@@ -833,7 +835,7 @@ export const featureKeysEn = {
     managerQuiet: "Nothing in progress",
     /** A row's state, as text in the state's color (amber only for what waits on the person). */
     state: {
-      waitsYou: "waits for your OK",
+      waitsYou: "waiting for you",
       noAi: "No AI connected",
       connect: "Connect",
       archived: "Archived",
@@ -939,6 +941,9 @@ export const featureKeysEn = {
     /** The toast after a swipe marked an item done, with the way back. */
     doneToast: "Done",
     undo: "Undo",
+    /** The toast after "Clear all" (named after the Done pill), with the way back. */
+    doneAllToast_one: "{{count}} moved to Done",
+    doneAllToast_other: "{{count}} moved to Done",
     day: {
       today: "Today",
       yesterday: "Yesterday",
@@ -976,6 +981,9 @@ export const featureKeysEn = {
       routine_failed_other: "Routine failed",
       run_failed_one: "Couldn't finish",
       run_failed_other: "Couldn't finish",
+      admin_ask_channel_agent: "{{names}} asks you to add {{agent}} to #{{label}}",
+      admin_ask_create_agents: "{{names}} asks to be able to create agents",
+      admin_ask_webhook: "{{names}} asks you to set up the {{service}} webhook for routines",
       routine_paused_one: "Routine paused",
       routine_paused_other: "Routine paused",
       routine_stalled_one: "Routine waiting for the computer",
@@ -1036,6 +1044,8 @@ export const featureKeysEn = {
       plan_lent_other: "{{names}} connected your {{plan}} plan to {{agent}}",
       plan_lent_female_one: "{{names}} connected your {{plan}} plan to {{agent}}",
       plan_lent_female_other: "{{names}} connected your {{plan}} plan to {{agent}}",
+      plan_serves_one: "Your {{plan}} now serves the whole workspace",
+      plan_serves_other: "Your {{plan}} now serves the whole workspace",
       /** An agent's model left its plan's list (`plan_model_dropped`): `runs` the model it uses now. */
       plan_model_dropped_one: "{{model}} left {{plan}}. {{names}} is using {{runs}} for now",
       plan_model_dropped_other: "{{model}} left {{plan}}. {{names}} is using {{runs}} for now",
@@ -1204,6 +1214,11 @@ export const featureKeysEn = {
     addWorkspaceTeamShort: "Join your team's server",
     addWorkspaceTeamSubShort: "Address or the computer's QR code",
     addWorkspaceFoot: "You don't leave any workspace.",
+    /** Another account on the server the app is on, signed in beside this one (ADR 0183). */
+    addAccount: "Sign in to another account",
+    addAccountSub: "On {{host}}, without leaving this one",
+    /** In Workspaces, under an account of this phone that has no workspace. */
+    accountNoWorkspace: "No workspace yet",
     teamServerLeadShort: "What your team opens in the browser.",
     /** The team server's screen: the question is the title, in two lines on the sign-in's ruler. */
     teamServerQuestion: "What's your team's address?",
@@ -1222,6 +1237,9 @@ export const featureKeysEn = {
       name: "Name",
       namePlaceholder: "Your name",
       email: "Email",
+      /** E-mail, under the code: someone who can't open that inbox signs in again on the website instead. */
+      emailWebLead: "Sign in again on the website and change it there, without the code.",
+      emailWeb: "Sign in again on the website",
       inWorkspace: "In this workspace · {{org}}",
       handle: "Your @",
       timezone: "Time zone",
@@ -1258,6 +1276,8 @@ export const featureKeysEn = {
     /** No password, and no way to sign in again here: the website adds one. */
     addPasswordFirst: "Add a password to your account on the website first, then type it here.",
     addPasswordWeb: "Add a password on the website",
+    /** The owner of a server the desktop app runs, with no password: that app's sign-in is their proof. */
+    onThisComputer: "Delete it in the agentes.chat app on the computer that runs this server.",
     otherAccount: "You signed in to another account. Nothing was deleted.",
     hold: "Hold to delete",
   },
@@ -1512,7 +1532,7 @@ export const featureKeysEn = {
       plain: "finished a task",
     },
     rowWait: {
-      approval: "waits for your ok",
+      approval: "waiting for you",
       question: "waits for your answer",
       mission: "waits for your review",
     },
@@ -1552,13 +1572,13 @@ export const featureKeysEn = {
   // intentional: agents
   intentAgents: {
     waitingSection: "Waiting on you",
-    waitingLine: "{{title}} · needs your ok",
+    waitingLine: "{{title}} · waiting for you",
     waitingMore_one: "{{title}} · and {{count}} more waiting on you",
     waitingMore_other: "{{title}} · and {{count}} more waiting on you",
-    waitingLabel: "{{name}}, needs your ok",
+    waitingLabel: "{{name}}, waiting for you",
     owner: "Owner: {{name}}",
     ownerYou: "Owner: you",
-    nowWaiting: "Needs your ok: {{title}}",
+    nowWaiting: "Waiting for you: {{title}}",
     did: {
       title: "What he did for you",
       title_female: "What she did for you",
@@ -1577,7 +1597,7 @@ export const featureKeysEn = {
         image: "Image",
         file: "File",
       },
-      waitingOnYou: "Needs your ok",
+      waitingOnYou: "Waiting for you",
       youApproved: "You approved",
       youRefused: "You declined",
       action: {
@@ -1809,6 +1829,8 @@ export const featureKeysEn = {
         offlineCloudM: "{{name}}'s computer isn't answering right now.",
         stuckF: "Couldn't open {{name}}'s browser.",
         stuckM: "Couldn't open {{name}}'s browser.",
+        noAnswerF: "{{name}}'s browser didn't answer.",
+        noAnswerM: "{{name}}'s browser didn't answer.",
         tooManyF: "Too many browsers open at once. This one shows when another one closes.",
         tooManyM: "Too many browsers open at once. This one shows when another one closes.",
       },
@@ -2062,8 +2084,26 @@ export const featureKeysEn = {
       /** Under a step that sat unchanged for a while: what most likely holds it, and one way out. */
       stall: {
         plug: "{{host}} doesn't see this iPhone yet. Use a cable that carries data, not only power, keep this iPhone unlocked and tap Trust if it asks.",
-        devmode:
-          "Developer Mode turns on only after this iPhone restarts. Tap Restart, then Turn On once it's back. No switch there? Unplug this iPhone and plug it in again.",
+      },
+      /** Under Developer Mode, on the iPhone itself. */
+      devMode: {
+        /** It restarted to turn the mode on, and its Mac doesn't see it again yet. */
+        restarting: "{{host}} doesn't see this iPhone again yet after its restart. Keep it plugged in.",
+        /** Back from the restart with the mode still off: iOS shows its alert once unlocked. */
+        back: "Tap Turn On in the alert on this iPhone and enter your passcode.",
+        /** A button: the Mac looks at this iPhone again now. */
+        check: "I turned it on, check again",
+        stillOff: "{{host}} still sees Developer Mode off.",
+        /** Each reason the switch may be missing, with its one way out. */
+        missing: "Don't see the option?",
+        hidden: "This iPhone hides the option until Xcode asks to show it.",
+        /** For who can't open Xcode from here: someone who doesn't manage the Mac, or a Mac whose app is too old. */
+        hiddenOpen:
+          "This iPhone hides the option until Xcode asks to show it. Open Xcode on {{host}} with this iPhone plugged in.",
+        openXcode: "Open Xcode",
+        opened: "Xcode opened on {{host}}. Look in Settings again, then close Xcode there.",
+        unlock: "Turned it on and it restarted? The alert with Turn On shows once this iPhone is unlocked.",
+        outdated: "The agentes.chat app on {{host}} is out of date. Update it on that Mac.",
       },
     },
     /**
@@ -2079,6 +2119,9 @@ export const featureKeysEn = {
       access_requestFor: "{{names}} asks to use {{device}} for {{person}}",
       waiting: "{{names}} is waiting for {{device}}",
       waitingFor: "{{names}} is waiting for {{device}} for {{person}}",
+      tool_request: "{{names}} asks you to turn on {{tool}} on your {{device}}",
+      cli_request: "{{names}} asks you to install {{tool}} on your {{device}}",
+      folder_request: "{{names}} asks for the folder {{path}} on your {{device}}",
       allowOnce: "Allow once",
       always: "Always allow {{name}}",
       no: "No",
@@ -2148,7 +2191,8 @@ export const featureKeysEn = {
     everyoneFailed: "Couldn't change everyone's access. Try again.",
     disconnectFailed: "Couldn't disconnect {{name}}. Try again.",
     needsReconnect: "The {{name}} account stopped working. Agents can't use it until someone reconnects it.",
-    noTools: "{{name}}'s tools couldn't be read. Agents go without them until they're read again, in Tools.",
+    noTools: "{{name}}'s tools couldn't be read. Agents go without them until they're read again.",
+    readAgain: "Read again",
     accountTitle: "Account",
     renameFailed: "Couldn't rename it. Try again.",
     whoTitle: "Who uses it",
@@ -2219,8 +2263,6 @@ export const featureKeysEn = {
   },
   joinRequests: {
     share: "Share the link",
-    roles: "Roles",
-    rolesHint: "They join with the roles turned on. With none, they may do what Everyone may.",
   },
   humanCheck: {
     title: "Quick check",
@@ -2228,16 +2270,9 @@ export const featureKeysEn = {
   },
   /** Convidar pessoas and the sent invitations' sheet (ADR 0090); the other words are the shared `members.*`. */
   invitePeople: {
-    emailsHelp: "Paste a list or type. Each person gets an email and joins right away.",
-    here: "Already here",
-    invited: "Already invited",
-    fix: "Check this",
-    channels: "Channels",
     optional: "Optional",
     ok: "OK",
     noteHelp: "It shows in the email with your name. Up to {{max}} characters.",
-    roleHelp: "Changes what the person gets on joining.",
-    remove: "Take off the list",
     sendAgain: "Send again",
     cancelTitle: "Cancel the invitation to {{email}}?",
     cancelText: "Its link stops opening.",
@@ -2368,18 +2403,191 @@ export const featureKeysEn = {
       tooBig: "That image is too big. Try another one.",
     },
     machine: {
-      toolsHow: "Tap a tool that's on to turn it off. Turning it back on happens only on the computer itself.",
-    },
-    roles: {
-      /** Under the roles and a role's name and color: what only the web changes. */
-      onComputer: "The roles' order and each role's icon change on the computer.",
-      /** Over an area's permissions, each with its own switch. */
-      items: "Item by item",
-      create: "Create",
+      toolsHow:
+        "Tap a tool that's on to turn it off. To turn it back on: on the computer itself, or here by whoever connected it.",
+      /** For whoever connected the computer: a tap turns an off tool on, and one that is on off. */
+      toolsHowOwner: "Tap a tool to turn it on or off.",
     },
     import: {
       preparing: "Preparing the file…",
       failed: "Couldn't download the file. Try again.",
+    },
+  },
+  /** Configurações › Cargos (ADR 0085): the workspace's roles, what each adds, and who holds what. */
+  roles: {
+    create: "Create",
+    search: "Search roles",
+    /** The ⓘ on BASE: what Everyone is. */
+    baseHint: "Applies to every person in the workspace. Roles add to it.",
+    /** The ⓘ on ROLES: what the order means. */
+    orderHint:
+      "Whoever is higher manages the roles and the people below. Each person's name color comes from their highest role.",
+    /** The header word that shows ▲▼ on each role, and the one that saves the order. */
+    order: "Reorder",
+    orderDone: "Done",
+    up: "Move {{name}} up",
+    down: "Move {{name}} down",
+    orderChanged: "The roles changed while you were moving them. Reload and try again.",
+    none: "No roles yet. Create one to give some people more.",
+    noMatch: "No role matches “{{q}}”.",
+    tooMany: "This workspace already has 100 roles. Delete one to create another.",
+    loadFailed: "Couldn't load the roles. {{cause}}",
+    backToList: "Back to roles",
+    /** A role nobody holds yet, at the start of its glance line. */
+    nobody: "Nobody",
+    /** What a role adds to what Everyone can, under its name: "+3 permissions · +2 channels · +1 agent". */
+    reach: {
+      permissions_one: "{{count}} permission",
+      permissions_other: "{{count}} permissions",
+      channels_one: "{{count}} channel",
+      channels_other: "{{count}} channels",
+      agents_one: "{{count}} agent",
+      agents_other: "{{count}} agents",
+      /** Before what a role adds beyond Everyone: "+3 permissions". */
+      more: "+{{what}}",
+      all: "Can do everything",
+      owner: "Can do everything, always",
+      none: "Only what Everyone can",
+      /** Everyone with no permission, channel or agent at all. */
+      baseNone: "Read only",
+    },
+    tabs: {
+      permissions: "Permissions",
+      channels: "Channels",
+      agents: "Agents",
+    },
+    addOwners: "Add owners",
+    /** Each role icon's name, for screen readers on the icon grid. */
+    icons: {
+      shield: "Shield",
+      code: "Code",
+      wallet: "Wallet",
+      mail: "Email",
+      bolt: "Bolt",
+      flag: "Flag",
+      book: "Book",
+      chart: "Chart",
+      bulb: "Light bulb",
+      globe: "Globe",
+      pullRequest: "Pull request",
+      calendar: "Calendar",
+      message: "Message",
+      eye: "Eye",
+      plug: "Plug",
+      person: "Person",
+    },
+    inviteWith: "Invite with this role",
+    searchPermission: "Search permissions",
+    /** Under a permission everyone already has. */
+    everyoneCan: "Everyone can",
+    /** Some roles or people: "Only Support and Finance". */
+    only: "Only {{names}}",
+    notHeld: "You don't have this permission.",
+    noPermissionMatch: "No permission matches “{{q}}”.",
+    advanced: "Advanced",
+    peopleOnly: "Roles are for people. Each agent has its own permissions, on its page.",
+    nowAbove: "This role is now above yours. Only someone higher changes it.",
+    admin: {
+      title: "Turn on Administrator for {{name}}?",
+      text: "Everyone with {{name}} can then do everything but what only the owner does.",
+      count_one: "That's {{count}} person.",
+      count_other: "That's {{count}} people.",
+      on: "Turn on Administrator",
+      note: "With Administrator, {{name}} can do everything but what only the owner does.",
+    },
+    computers: {
+      title: "Agents' computers",
+      hint: "Browser: the browser and the sign-in requests. Computer: also the whole screen and the terminal. Their own agents: the ones the person looks after and the computers they connected.",
+      /** The five steps, lowest first: what people with the role use of the agents' computers. */
+      steps: {
+        "0": "Doesn't use",
+        "1": "Their own agents' browser",
+        "2": "Their own agents' computer",
+        "3": "Any agent's browser",
+        "4": "Any agent's computer",
+      },
+      /** The same steps inside a sentence ("Everyone gets their own agents' browser."). */
+      stepsIn: {
+        "1": "their own agents' browser",
+        "2": "their own agents' computer",
+        "3": "any agent's browser",
+        "4": "any agent's computer",
+      },
+      everyoneTo: "Everyone gets {{step}}.",
+      everyoneNone: "Everyone stops using the agents' computers.",
+    },
+    /** "Who can…": who keeps a permission, Everyone and the roles at once. */
+    whoCan: "Who can",
+    everyoneSub: "Every person in the workspace",
+    someRoles: "Only some roles",
+    losing: "Losing it: {{names}}.",
+    nobodyLoses: "Nobody loses it.",
+    everyoneGets: "Everyone gets it.",
+    ownersAlways: "Owners always can.",
+    noOtherRoles: "There are no other roles yet.",
+    channels: {
+      /** Over the channels a role opens: "People with Support see". */
+      header: "People with {{name}} see",
+      /** The same over Everyone's channels. */
+      headerBase: "Everyone sees",
+      hint: "This is about people. An agent joins a channel when someone adds it.",
+      search: "Search channels",
+      everyone: "Everyone sees it",
+      private: "Private",
+      general: "Everyone stays in #general.",
+      locked: "Only whoever created #{{channel}} or arranges channels changes who sees it.",
+      leaveTitle: "Remove #{{channel}} from {{name}}?",
+      leave_one: "{{names}} leaves the channel.",
+      leave_other: "{{names}} leave the channel.",
+      leaveAction: "Remove",
+      openTitle: "Open #{{channel}} to {{name}}?",
+      openText: "People with {{name}} see the channel and all its history, and can join.",
+      openAction: "Open",
+      openAllTitle: "Open #{{channel}} to everyone?",
+      openAllText: "All its history opens to the workspace.",
+      admin: "With Administrator, people with {{name}} see every channel.",
+      onlyGeneral: "There's only #general for now.",
+      noMatch: "No channel matches “{{q}}”.",
+      /** The channels in no category, first, as in the sidebar. */
+      ungrouped: "Channels",
+      /** "Who sees #channel": everyone, some roles, or only who is added. */
+      whoSees: "Who sees",
+      allSub: "Anyone in the workspace sees it and can join.",
+      invited: "Only who is added",
+      invitedSub: "Nobody new sees it. Who's in stays.",
+      unsee: "Who's in stays. No longer see it: {{names}}.",
+    },
+    agents: {
+      /** Over the agents a role talks to: "People with Support talk to". */
+      header: "People with {{name}} talk to",
+      /** The same over the agents Everyone talks to. */
+      headerBase: "Everyone talks to",
+      hint: "This is about people. What each agent does is on its page.",
+      everyone: "Everyone talks to it",
+      gate: "People with only {{name}} don't talk to agents.",
+      gateOn: "Turn on Talk to agents",
+      locked: "Only {{owner}}, who looks after {{name}}, or someone who edits any agent changes it.",
+      locked_female: "Only {{owner}}, who looks after {{name}}, or someone who edits any agent changes it.",
+      lockedNoOwner: "Only someone who edits any agent changes it.",
+      none: "No agents yet.",
+      some: "Only some roles and people",
+      addPerson: "Add a person",
+      losing: "No longer talk to {{agent}}: {{names}}.",
+    },
+    people: {
+      removed: "{{person}} no longer has {{name}}",
+      selfTitle: "Take yourself out of {{name}}?",
+      selfText: "You lose what only {{name}} gives. Only someone above you gives it back.",
+    },
+    /** Before a role takes a mailbox from an agent: only a mailbox's owner gives an agent access to it. */
+    mail: {
+      title_one: "An agent loses a mailbox",
+      title_other: "Agents lose {{count}} mailboxes",
+      loses: "{{agent}} loses {{address}}, {{owner}}'s mailbox.",
+      losesAddress: "{{agent}} loses the mailbox {{address}}.",
+      only: "Only whoever gave a mailbox gives it again.",
+      addAnyway: "Add anyway",
+      giveAnyway: "Give it anyway",
     },
   },
   vault: {
@@ -2418,7 +2626,7 @@ export const featureKeysEn = {
     },
     import: {
       title: "Import from a computer",
-      text: "To bring passwords from a browser or a password manager, open Settings, Vault on the web and choose Import.",
+      text: "To bring passwords from a browser or a password manager, import them on the web.",
     },
     connections: {
       text: "Connect a password manager and your agents use the logins kept there. Nothing is copied: a password is read only when it's used.",

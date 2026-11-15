@@ -2,7 +2,7 @@ import type { Message } from "@agenteschat/client";
 import { useAiStatus, useAuthConfig, useMessages, useThreadMessages } from "@agenteschat/client";
 import { withoutApiKeys } from "@agenteschat/client/lib/api-key-text";
 import type { BillingHold } from "@agenteschat/client/lib/billing";
-import { failedRunFix } from "@agenteschat/client/lib/errors";
+import { FIX_BRAIN_SCREEN, failedRunFix } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
   aiStateOf,
@@ -123,7 +123,15 @@ export function NoAiCard({ message }: { message: Message }) {
   if (card.held || hold) return <KeptCard message={message} card={card} hold={hold} />;
   if (card.planLine)
     return (
-      <PlanLineCard message={message} agentId={card.agentId} line={card.planLine} model={card.model} why={card.why} />
+      <PlanLineCard
+        message={message}
+        agentId={card.agentId}
+        line={card.planLine}
+        model={card.model}
+        why={card.why}
+        owner={card.owner}
+        plan={card.plan}
+      />
     );
   const agent = dir.agentById.get(card.agentId);
   const name = agent?.name ?? t("channel.unknownAgent");
@@ -320,12 +328,16 @@ function PlanLineCard({
   line,
   model,
   why,
+  owner,
+  plan,
 }: {
   message: Message;
   agentId: string;
   line: RightHandPlanLine;
   model?: string;
   why?: string;
+  owner?: string;
+  plan?: string;
 }) {
   const { t } = useTranslation();
   const { org, me } = useOrg();
@@ -351,7 +363,7 @@ function PlanLineCard({
         {t("noAi.card.connected", { name })}
       </RequestDone>
     );
-  const sentence = t(planLineKey(line, why), { name, model, why });
+  const sentence = t(planLineKey(line, why), { name, model, why, owner, plan });
   const mine = connect !== null && (fix === "connectMine" || fix === "useKey");
   return (
     <RequestOpen
@@ -378,8 +390,8 @@ function PlanLineCard({
 }
 
 /**
- * Beside a failed run's reason: the one thing that fixes it, for who can do it, a key (the Connect dialog) or another
- * model (its AI settings).
+ * Beside a failed run's reason: the one thing that fixes it, for who can do it, a key (the Connect dialog), another
+ * model or another account ("Quem pensa" on that screen).
  */
 export function FailedRunFix({ code, agentId }: { code: string | undefined; agentId: string }) {
   const { t } = useTranslation();
@@ -398,15 +410,15 @@ export function FailedRunFix({ code, agentId }: { code: string | undefined; agen
         {t("noAi.rightHand.useKey")}
       </Button>
     );
-  if (fix !== "changeModel") return null;
+  if (fix !== "changeModel" && fix !== "changeAccount") return null;
   return (
     <Link
       to="/org/$orgId/agents/$agentId"
       params={{ orgId: org.id, agentId }}
-      search={{ tab: "settings", sec: "brain" }}
+      search={{ tab: "settings", sec: "brain", brain: FIX_BRAIN_SCREEN[fix] }}
       className="ac-btn ac-btn--sm"
     >
-      {t("usageCard.changeModel")}
+      {t(`usageCard.${fix}`)}
     </Link>
   );
 }

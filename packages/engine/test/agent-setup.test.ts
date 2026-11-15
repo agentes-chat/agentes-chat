@@ -18,7 +18,7 @@ import {
   updateAgent,
   ValidationError,
 } from "../src";
-import { addMember, type Fixture, setup } from "./fixtures";
+import { addMember, everyoneWithout, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
 /*
@@ -54,6 +54,8 @@ async function world() {
   };
   const mac = await pair("MacBook");
   const pc = await pair("PC");
+  // Bia is a member of a workspace whose admins took Criar agentes off Todos.
+  await everyoneWithout(fx.db, fx.org.id, "create_agents");
   const bia = await addMember(fx.db, fx.org.id, "member", "bia");
   const caio = await addMember(fx.db, fx.org.id, "admin", "caio");
   await fx.db.insert(schema.machineAccounts).values([

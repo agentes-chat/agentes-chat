@@ -134,7 +134,9 @@ test("an account's windows split by agent and its month by agent; the email for 
   expect(pessoal?.equivalentUsd).toBeGreaterThan(0);
   // Atlas thinks with the computer's own sign-in now: it is listed, with no windows known yet.
   const own = mine.accounts.find((a) => a.accountId === null);
-  expect(own).toMatchObject({ label: null, usage: null, monthTokens: 0, ownerName: "ana", mine: true });
+  expect(own).toMatchObject({ label: null, usage: null, monthTokens: 0, ownerName: "ana", mine: true, serves: null });
+  // Who it serves (ADR 0059 §3) and its seat: an opaque key, the same for anyone who signs in to that address.
+  expect(pessoal).toMatchObject({ serves: "everyone", seat: expect.stringMatching(/^[0-9a-f]{24}$/) });
   expect(own?.agents.map((a) => [a.name, a.now])).toEqual([["Atlas", true]]);
 
   // A member: the same accounts and percentages, no email and no money anywhere.
@@ -142,7 +144,7 @@ test("an account's windows split by agent and its month by agent; the email for 
   const seen = await orgPlanUsage(f.db, bia.id, f.org.id);
   expect(seen.money).toBe(false);
   const theirs = seen.accounts.find((a) => a.accountId === PESSOAL);
-  expect(theirs).toMatchObject({ email: null, mine: false, ownerName: "ana" });
+  expect(theirs).toMatchObject({ email: null, mine: false, ownerName: "ana", seat: pessoal?.seat });
   expect(theirs?.usage?.windows.find((w) => w.kind === "five_hour")?.usedPercent).toBe(60);
   expect(JSON.stringify(seen)).not.toMatch(/usd|cost|ana@example/i);
 });
@@ -304,4 +306,38 @@ test("parts: use from before a window started stays out of it; a model without a
     ["Atlas", 25.7],
     ["Dev", 4.3],
   ]);
+});
+
+test("a plan's models at a limit of their own reach the usage views, and only those that still hold", async () => {
+  const { machineId } = await scene();
+  const at = new Date().toISOString();
+  const live = hours(48);
+  await f.db
+    .update(schema.machineAccounts)
+    .set({
+      provider: "opencode",
+      usage: {
+        ...usage([{ kind: "monthly", usedPercent: 20 }]),
+        models: {
+          "glm-5.3": { at, until: live },
+          "minimax-m3": { at, off: true },
+          // Its reset passed: the views don't show a limit that no longer holds.
+          "deepseek-v4.1-pro": { at, until: hours(-1) },
+        },
+      },
+    })
+    .where(eq(schema.machineAccounts.id, PESSOAL));
+
+  const view = await orgPlanUsage(f.db, f.owner.id, f.org.id);
+  const account = view.accounts.find((a) => a.accountId === PESSOAL);
+  expect(account?.usage?.models).toEqual({
+    "glm-5.3": { at, until: live },
+    "minimax-m3": { at, off: true },
+  });
+  // The window it was read with is on show too: the account's meters, and the models under them.
+  expect(account?.usage?.windows.map((w) => w.kind)).toEqual(["monthly"]);
+  // The agent's "Uso" tab reads the same account: the same models.
+  const dev = await agentPlanUsage(f.db, f.owner.id, f.org.id, f.agent.id);
+  expect(dev.current?.usage?.models).toEqual(account?.usage?.models);
+  expect(dev.current?.machineId).toBe(machineId);
 });

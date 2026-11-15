@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types";
 export const privacyEn: LegalDocument = {
   title: "Privacy Policy",
   summary: "What we collect, what agents send where, who can see your workspace, and the rights you have.",
-  updated: "2026-11-12",
+  updated: "2026-11-14",
   sections: [
     {
       id: "overview",
@@ -59,7 +59,7 @@ export const privacyEn: LegalDocument = {
         {
           list: [
             "**Between devices and our servers.** Everything sent between our servers and the browsers, apps and computers that connect to them, Workspace Content included, passes through our network provider, which protects the Service from attacks. To do that, the network provider decrypts this traffic at its data center nearest to each device, and handles it on our behalf.",
-            "**Answering.** When an agent works, it sends the context it needs (the workspace's context, the agent's instructions, the conversation, relevant memory and the results of its tools) to the model provider chosen for that agent. With an API key the workspace added, the call is made under the workspace's own account and agreement with that provider. With an AI plan, such as Claude or ChatGPT, connected to an agent, the agent works under the account of the person who connected the plan and under the provider's terms.",
+            "**Answering.** When an agent works, it sends the context it needs (the workspace's context, the agent's instructions, the conversation, relevant memory and the results of its tools) to the model provider chosen for that agent. With an API key the workspace added, the call is made under the workspace's own account and agreement with that provider. Some providers pass the call on to the company that makes or hosts the model, which then also processes it under that provider's terms. With an AI plan, such as Claude or ChatGPT, connected to an agent, the agent works under the account of the person who connected the plan and under the provider's terms.",
             "**Deciding who replies.** A routing model reads a new message, the names and roles of the workspace's agents, and recent conversation to decide which agent, if any, should reply. It runs at TypeSafe or, as a fallback, at the workspace's model provider. Routing never grants an agent any permission.",
             "**Memory.** Agents keep memory from conversations (summaries, facts and lessons) so they improve over time. Some judgments about memory (whether something is worth keeping, or conflicts with what an agent already knows) are made by TypeSafe. Memory can be seen and removed in the agent's page, and it is deleted with the workspace.",
             "**Search.** To find related messages and documents, text may be turned into vectors (embeddings) by Voyage AI.",
@@ -114,14 +114,14 @@ export const privacyEn: LegalDocument = {
       id: "transfers",
       heading: "9. International transfers",
       blocks: [
-        "Our application and its database run in the United States, and the providers named in this policy process data in the United States. The workspaces' computers run in the European Union or the United States, and our network provider handles traffic at its data center nearest to each device, in the United States or elsewhere. Where personal data subject to the GDPR or UK GDPR is transferred to a third country, we rely on the European Commission's Standard Contractual Clauses and the UK Addendum. For data subject to the LGPD, we rely on the contractual safeguards of Article 33.",
+        "Our application and its database run in the United States, and the providers named in this policy process data in the United States, except the model providers and connected services a workspace chooses, and the companies they pass calls on to, which may process data in other countries under their own terms. The workspaces' computers run in the European Union or the United States, and our network provider handles traffic at its data center nearest to each device, in the United States or elsewhere. Where personal data subject to the GDPR or UK GDPR is transferred to a third country, we rely on the European Commission's Standard Contractual Clauses and the UK Addendum. For data subject to the LGPD, we rely on the contractual safeguards of Article 33.",
       ],
     },
     {
       id: "apps",
       heading: "10. Phone and Mac apps",
       blocks: [
-        "The phone app sends notifications through Expo, Apple and Google. A notification may show the name of who wrote and the beginning of the message, and you choose which notifications you get. The Mac app and connected computers keep their sign-in on the device. Deleting your account (also available in the apps) signs every device out.",
+        "The phone app sends notifications through Apple and Google. A notification may show the name of who wrote and the beginning of the message, and you choose which notifications you get. The Mac app and connected computers keep their sign-in on the device. Deleting your account (also available in the apps) signs every device out.",
       ],
     },
     {

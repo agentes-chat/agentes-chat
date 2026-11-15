@@ -9,6 +9,11 @@ import {
   allowFolderCommand,
   allowsInApp,
   beginLogin,
+  brainTool,
+  browserNoAnswerMessage,
+  browserOffMessage,
+  cliInstallFailure,
+  cliOneClick,
   commandInReason,
   computerKind,
   computerState,
@@ -19,6 +24,7 @@ import {
   formatUserCode,
   freeDuplicate,
   geminiNotShared,
+  installableCli,
   installCommand,
   isHandheld,
   isPaused,
@@ -31,15 +37,18 @@ import {
   loginReadPasses,
   machineReasonText,
   normalizeUserCode,
+  oneClickTerminal,
   otherThanHint,
   pausedByText,
   pauseUntil,
   platformOf,
+  profileRefusalLine,
+  profileToolOff,
   sharedFolderFacts,
   sharedFolderOf,
   shellQuote,
-  toolOffReason,
   toolOnCommand,
+  toolOneClick,
 } from "../src/lib/machines";
 import { openTarget, workspaceHeadline } from "../src/lib/notifications";
 import { accessOf, applyComputerEvent, applyMachineEvent, pauseOf } from "../src/realtime/machines";
@@ -172,7 +181,7 @@ describe("connected computers helpers (ADR 0036)", () => {
     expect([android, iphone, linux, mac].map(isHandheld)).toEqual([true, true, false, false]);
   });
 
-  test("a tool turned off: the app's Preferences on a Mac or a PC, the command too elsewhere (sudo in system mode)", () => {
+  test("a tool turned off: its command (sudo in system mode), the app only on a Mac or a PC, a brain's switch by name", () => {
     expect(toolOnCommand({ mode: "single" }, "browser")).toBe("agentes-runner tools enable browser");
     expect(toolOnCommand({ mode: "system" }, "desktop")).toBe("sudo agentes-runner tools enable desktop");
     expect([allowsInApp("darwin"), allowsInApp("windows"), allowsInApp("linux"), allowsInApp("other")]).toEqual([
@@ -181,18 +190,8 @@ describe("connected computers helpers (ADR 0036)", () => {
       false,
       false,
     ]);
-    expect(toolOffReason({ os: "darwin", mode: "single" }, "claude_code")).toEqual({
-      key: "brain.reasons.tool_off",
-      command: "",
-    });
-    expect(toolOffReason({ os: "windows", mode: "single" }, "codex").key).toBe("brain.reasons.tool_off");
-    expect(toolOffReason({ os: "linux", mode: "system" }, "claude_code")).toEqual({
-      key: "brain.reasons.tool_offLinux",
-      command: "sudo agentes-runner tools enable claude",
-    });
-    expect(toolOffReason({ os: "linux", mode: "single" }, "codex").command).toBe("agentes-runner tools enable codex");
-    // Not known yet: the app's line, as before.
-    expect(toolOffReason(undefined, "codex").key).toBe("brain.reasons.tool_off");
+    expect(brainTool("claude_code")).toBe("claude");
+    expect(brainTool("opencode")).toBe("opencode");
   });
 
   test("portraits: the kind from the machine's os, the state with pause over online", () => {
@@ -479,7 +478,7 @@ describe("the shared folder (ADR 0115)", () => {
     expect(sharedFolderFacts(t, "en", null)).toBe("machines.shared.measuring");
   });
 
-  test("why a sign-in ended: a line per code, the CLI's words under two of them, none when canceled", () => {
+  test("why a sign-in ended: a line per code, the CLI's words under three of them, none when canceled", () => {
     const add = "agentPage.work.brain.add";
     const worded = [
       "not_installed",
@@ -491,11 +490,12 @@ describe("the shared folder (ADR 0115)", () => {
       "status_unknown",
       "no_token",
       "not_kept",
+      "sandbox",
     ];
     for (const code of worded) {
       expect(loginFailureLine(code)).toEqual({
         key: `${add}.why.${code}`,
-        detail: code === "cli_exit" || code === "not_signed_in_after_login",
+        detail: code === "cli_exit" || code === "not_signed_in_after_login" || code === "sandbox",
       } as never);
     }
     // Too long is what an expired sign-in already says.
@@ -546,5 +546,109 @@ describe("pausing from the apps", () => {
     expect(pausedByText(t, "en", { until: null, by: { id: "u2", name: "Bia" } }, "u1")).toBe(
       'machines.remotePause.byName{"name":"Bia"}',
     );
+  });
+});
+
+describe("one click where a tool is off (ADR 0036 §8)", () => {
+  const bia = { id: "u-bia", name: "Bia Rocha" };
+  const mac = { kind: "connected", pairedBy: bia, accessAllow: true } as Pick<
+    Machine,
+    "kind" | "pairedBy" | "accessAllow"
+  >;
+
+  test("whoever connected it turns it on; anyone else asks them; an old app updates first; the Cloud's never", () => {
+    expect(toolOneClick(mac, "u-bia")).toEqual({ kind: "allow" });
+    expect(toolOneClick({ ...mac, accessAllow: false }, "u-bia")).toEqual({ kind: "outdated" });
+    expect(toolOneClick(mac, "u-caio")).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(toolOneClick({ ...mac, kind: "managed" }, "u-bia")).toBeNull();
+    expect(toolOneClick({ ...mac, pairedBy: null }, "u-caio")).toBeNull();
+    expect(toolOneClick(null, "u-bia")).toBeNull();
+  });
+
+  test("a coding CLI: whoever connected it installs it, anyone else asks, never where no installer runs", () => {
+    const pc = { kind: "connected", pairedBy: bia, cliInstall: true, os: "windows", mode: "single" } as Pick<
+      Machine,
+      "kind" | "pairedBy" | "cliInstall" | "os" | "mode"
+    >;
+    expect(cliOneClick(pc, "u-bia", "claude")).toEqual({ kind: "allow" });
+    expect(cliOneClick({ ...pc, cliInstall: false }, "u-bia", "claude")).toEqual({ kind: "outdated" });
+    expect(cliOneClick(pc, "u-caio", "claude")).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    // OpenAI's Windows build has no installer of its own; root's agents get theirs from the computer's setup.
+    expect(cliOneClick(pc, "u-bia", "codex")).toBeNull();
+    expect(cliOneClick({ ...pc, os: "darwin" }, "u-bia", "codex")).toEqual({ kind: "allow" });
+    expect(cliOneClick({ ...pc, os: "linux", mode: "system" }, "u-bia", "claude")).toBeNull();
+    expect(cliOneClick({ ...pc, kind: "managed" }, "u-bia", "claude")).toBeNull();
+    expect(installableCli("claude_code")).toBe("claude");
+    const words = { program: "Claude Code", computer: "PC" };
+    const said = (k: string, v?: Record<string, unknown>) => `${k} ${JSON.stringify(v)}`;
+    const t = said as unknown as Parameters<typeof cliInstallFailure>[0];
+    expect(cliInstallFailure(t, { tool: "claude", state: "running" }, words)).toBeNull();
+    expect(cliInstallFailure(t, { tool: "claude", state: "failed", cause: "git_missing" }, words)).toContain(
+      "connectAi.cli.gitMissing",
+    );
+    expect(cliInstallFailure(t, { tool: "claude", state: "failed", message: "curl: (6)" }, words)).toBe(
+      'connectAi.cli.failed {"computer":"PC","message":"curl: (6)"}',
+    );
+    expect(installableCli("cursor")).toBeNull();
+  });
+
+  test("Prefiro no Terminal: the same switches as one command, only for who turns them on, where there may be no app", () => {
+    const linux: Pick<Machine, "mode" | "os"> = { mode: "single", os: "linux" };
+    expect(oneClickTerminal(linux, { kind: "allow" }, ["desktop", "commands"])).toBe(
+      "agentes-runner tools enable desktop && agentes-runner tools enable commands",
+    );
+    expect(oneClickTerminal({ ...linux, mode: "system" }, { kind: "allow" }, ["browser"])).toBe(
+      "sudo agentes-runner tools enable browser",
+    );
+    expect(oneClickTerminal({ ...linux, os: "darwin" }, { kind: "allow" }, ["browser"])).toBeNull();
+    expect(oneClickTerminal(linux, { kind: "ask", ownerId: "u-bia", ownerName: "Bia" }, ["browser"])).toBeNull();
+    expect(oneClickTerminal(linux, { kind: "allow" }, [])).toBeNull();
+  });
+
+  test("a refused Fazer login reads its cause and what this person can do", () => {
+    const t = ((key: string, o?: Record<string, unknown>) => `${key}${o ? JSON.stringify(o) : ""}`) as never;
+    const off = (params: Record<string, unknown>) =>
+      new ApiError(400, "browser_profile.tool_off", "The browser is turned off on Mac", {
+        machineId: "m1",
+        machineName: "Bia's Mac",
+        tool: "browser",
+        ...params,
+      });
+    expect(profileToolOff(off({ mayAllow: true }))).toEqual({
+      machineId: "m1",
+      machineName: "Bia's Mac",
+      tool: "browser",
+      oneClick: { kind: "allow" },
+    });
+    expect(profileToolOff(off({ outdated: true }))?.oneClick).toEqual({ kind: "outdated" });
+    const ask = off({ ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(profileToolOff(ask)?.oneClick).toEqual({ kind: "ask", ownerId: "u-bia", ownerName: "Bia Rocha" });
+    expect(profileRefusalLine(t, ask)).toBe('browser.profiles.toolOffOther{"name":"Bia"}');
+    expect(profileRefusalLine(t, off({ mayAllow: true }))).toBe("browser.profiles.toolOff");
+    const other = new ApiError(400, "browser_profile.unavailable", "Chrome isn't installed", { machineName: "Mac" });
+    expect(profileToolOff(other)).toBeNull();
+    expect(profileRefusalLine(t, other)).toBe('browser.profiles.notOpened{"machine":"Mac"}');
+    expect(profileRefusalLine(t, new ApiError(409, "browser_profile.busy", "busy"))).toBe("browser.profiles.busy");
+    expect(profileToolOff(new Error("boom"))).toBeNull();
+  });
+
+  test("the runner's refusal of a browser that is off is read in every runner version's words", () => {
+    expect(
+      browserOffMessage("Browser is turned off on this computer (its owner can turn it on from agentes.chat)"),
+    ).toBe(true);
+    expect(
+      browserOffMessage(
+        "Browser is turned off on this computer (its owner can turn it on in the agentes app (Preferences > Tools))",
+      ),
+    ).toBe(true);
+    expect(browserOffMessage("The browser is turned off on this computer")).toBe(true);
+    expect(browserOffMessage("Too many browsers are open")).toBe(false);
+    expect(browserOffMessage(undefined)).toBe(false);
+  });
+
+  test("the runner's own timeout is told apart from the computer's", () => {
+    expect(browserNoAnswerMessage("The browser didn't answer within 15 s")).toBe(true);
+    expect(browserNoAnswerMessage("the computer Desk did not answer within 120 s")).toBe(false);
+    expect(browserNoAnswerMessage(null)).toBe(false);
   });
 });

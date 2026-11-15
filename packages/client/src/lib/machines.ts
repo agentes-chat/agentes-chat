@@ -2,18 +2,21 @@ import type { TFunction } from "i18next";
 import type {
   AccountLoginFailure,
   AccountLoginStatus,
+  CliInstall,
   DeviceLocation,
+  InstallableCli,
   Machine,
   MachineAccess,
   MachineAccount,
   MachineAccountKind,
   MachineFolderGrant,
   MachinePause,
+  MachineTool,
   MachineToolName,
 } from "../api/types";
-import { errorCode, sendWaits } from "./errors";
+import { errorCode, errorText, sendWaits } from "./errors";
 import { formatBytes } from "./files";
-import { clockAt } from "./format";
+import { clockAt, firstName } from "./format";
 
 /**
  * Connected computers (ADR 0025, ADR 0036): the device code, the commands the
@@ -87,19 +90,145 @@ export const toolOnCommand = (m: Pick<Machine, "mode">, tool: keyof MachineAcces
 /** A Mac or a PC: folders and tools are allowed in the agentes.chat app there. Any other may be a server without it. */
 export const allowsInApp = (os: string | null | undefined) => os === "darwin" || os === "windows";
 
+/** The switch of the program a brain runs on its computer: Claude Code's is "claude". */
+export const brainTool = (kind: MachineAccountKind): MachineToolName => (kind === "claude_code" ? "claude" : kind);
+
 /**
- * `brain.reasons.tool_off`'s line for a brain whose tool is off on `m`: the app's Preferences on a Mac or a PC, and on
- * any other computer the command too.
+ * What one click does where a tool is off on `m`, for the person `meId`: `allow` turns it on there (they paired it),
+ * `ask` sends whoever paired it the same button, `outdated` means its app must update first; null where nobody can
+ * from here (the workspace's own computer, or one with nobody behind it).
  */
-export function toolOffReason(
-  m: Pick<Machine, "os" | "mode"> | null | undefined,
-  kind: "claude_code" | "codex" | "cursor" | "opencode" | "grok" | "antigravity",
+export type ToolOneClick =
+  | { kind: "allow" }
+  | { kind: "ask"; ownerId: string; ownerName: string }
+  | { kind: "outdated" };
+export function toolOneClick(
+  m: Pick<Machine, "kind" | "pairedBy" | "accessAllow"> | null | undefined,
+  meId: string | null | undefined,
+): ToolOneClick | null {
+  if (!m || m.kind === "managed" || !m.pairedBy) return null;
+  if (m.pairedBy.id === meId) return m.accessAllow ? { kind: "allow" } : { kind: "outdated" };
+  return { kind: "ask", ownerId: m.pairedBy.id, ownerName: m.pairedBy.name };
+}
+
+/** How often a screen asks where an install of a coding CLI stands while it runs. */
+export const CLI_INSTALL_POLL_MS = 1500;
+
+/** `Machine.cliErrors`' word for Claude Code on Windows without Git for Windows (mirror of `CLI_GIT_MISSING`). */
+export const CLI_GIT_MISSING = "git_missing";
+
+/** Where Git for Windows is downloaded, which Claude Code needs on Windows. */
+export const GIT_FOR_WINDOWS_URL = "https://git-scm.com/downloads/win";
+
+/** The coding CLI a brain runs, when the computer installs it from the apps (`INSTALLABLE_CLIS`); null otherwise. */
+export const installableCli = (kind: string): InstallableCli | null =>
+  kind === "claude_code" || kind === "claude" ? "claude" : kind === "codex" ? "codex" : null;
+
+/** Why an install of a coding CLI failed, in words, with the installer's own line; null when it didn't fail. */
+export function cliInstallFailure(
+  t: TFunction,
+  install: CliInstall | null | undefined,
+  words: { program: string; computer: string },
+): string | null {
+  if (install?.state !== "failed") return null;
+  if (install.cause === "git_missing") return t("connectAi.cli.gitMissing", words);
+  if (install.cause === "still_missing") return t("connectAi.cli.stillMissing", words);
+  return t("connectAi.cli.failed", { computer: words.computer, message: install.message ?? "" });
+}
+
+/**
+ * What one click does where a coding CLI isn't on `m`, for the person `meId`, as `toolOneClick` for a switch: `allow`
+ * installs it there (they paired it), `ask` sends whoever paired it the same button, `outdated` means its app must
+ * update first. Null where nobody installs from here (the workspace's own computer installs its own, or nobody is
+ * behind it), and `allow` only where an installer exists there: never Codex on Windows, nor a computer whose agents
+ * are users of their own (its setup installs for them).
+ */
+export function cliOneClick(
+  m: Pick<Machine, "kind" | "pairedBy" | "cliInstall" | "os" | "mode"> | null | undefined,
+  meId: string | null | undefined,
+  cli: InstallableCli,
+): ToolOneClick | null {
+  if (!m || m.kind === "managed" || !m.pairedBy) return null;
+  if (m.mode === "system" || (cli === "codex" && m.os === "windows")) return null;
+  if (m.pairedBy.id !== meId) return { kind: "ask", ownerId: m.pairedBy.id, ownerName: m.pairedBy.name };
+  return m.cliInstall ? { kind: "allow" } : { kind: "outdated" };
+}
+
+/**
+ * "Prefiro no Terminal" under the one-click button: the same switches as a command, for the person who turns them on
+ * themselves on a computer that may have no app (a server). Null where the button is all there is.
+ */
+export function oneClickTerminal(
+  m: Pick<Machine, "mode" | "os">,
+  oneClick: ToolOneClick | null,
+  tools: readonly (keyof MachineAccess["tools"])[],
 ) {
-  if (!m || allowsInApp(m.os)) return { key: "brain.reasons.tool_off" as const, command: "" };
+  if (oneClick?.kind !== "allow" || allowsInApp(m.os) || tools.length === 0) return null;
+  return tools.map((tool) => toolOnCommand(m, tool)).join(" && ");
+}
+
+/** The tool off behind a refused "Fazer login" (`browser_profile.tool_off`), with what this person can do about it. */
+export interface ProfileToolOff {
+  machineId: string;
+  machineName: string;
+  tool: MachineTool;
+  oneClick: ToolOneClick | null;
+}
+export function profileToolOff(err: unknown): ProfileToolOff | null {
+  const e = err as { code?: unknown; params?: Record<string, unknown> } | null;
+  if (e?.code !== "browser_profile.tool_off" || !e.params) return null;
+  const p = e.params;
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  if (!str(p.machineId)) return null;
+  const ownerId = str(p.ownerId);
   return {
-    key: "brain.reasons.tool_offLinux" as const,
-    command: toolOnCommand(m, kind === "claude_code" ? "claude" : kind),
+    machineId: str(p.machineId),
+    machineName: str(p.machineName),
+    tool: (str(p.tool) || "browser") as MachineTool,
+    oneClick:
+      p.mayAllow === true
+        ? { kind: "allow" }
+        : p.outdated === true
+          ? { kind: "outdated" }
+          : ownerId
+            ? { kind: "ask", ownerId, ownerName: str(p.ownerName) }
+            : null,
   };
+}
+
+/** "Fazer login" refused for another cause (`browser_profile.unavailable`), on which computer. */
+export function profileUnavailable(err: unknown): { machineName: string } | null {
+  const e = err as { code?: unknown; params?: Record<string, unknown> } | null;
+  if (e?.code !== "browser_profile.unavailable") return null;
+  return { machineName: typeof e.params?.machineName === "string" ? e.params.machineName : "" };
+}
+
+/** A tool in a sentence: "o navegador", "os comandos", "o Claude Code". */
+export const toolWords = (t: TFunction, tool: MachineTool) => t(`machines.oneClick.tools.${tool}`);
+
+/** The runner said the browser is off there (every runner version words it so). */
+export const browserOffMessage = (message: string | null | undefined) =>
+  /\bbrowser is turned off\b/i.test(message ?? "");
+
+/** The runner's own timeout: the browser took no command in time ("The browser didn't answer within 15 s"). */
+export const browserNoAnswerMessage = (message: string | null | undefined) =>
+  /\bbrowser didn't answer\b/i.test(message ?? "");
+
+/**
+ * A refused "Fazer login" in one line: the browser off there (whose computer it is when not this person's), the
+ * computer's own words for another cause, else the plain failure.
+ */
+export function profileRefusalLine(t: TFunction, err: unknown): string {
+  const off = profileToolOff(err);
+  if (off)
+    return off.oneClick?.kind === "ask"
+      ? t("browser.profiles.toolOffOther", { name: firstName(off.oneClick.ownerName) })
+      : t("browser.profiles.toolOff");
+  // The computer's own words are English: the person's language says what happened.
+  const other = profileUnavailable(err);
+  if (other) return t("browser.profiles.notOpened", { machine: other.machineName });
+  if (errorCode(err) === "browser_profile.busy") return t("browser.profiles.busy");
+  return errorText(t, err);
 }
 
 /** The last part of a path: "/Users/you/Projects/loja-v5" → "loja-v5". */
@@ -329,6 +458,7 @@ const WORDED_LOGIN_FAILURES = [
   "status_unknown",
   "no_token",
   "not_kept",
+  "sandbox",
 ] as const satisfies readonly AccountLoginFailure[];
 
 /**
@@ -342,7 +472,7 @@ export function loginFailureLine(code: string | null | undefined) {
   const worded = WORDED_LOGIN_FAILURES.find((c) => c === code);
   return {
     key: worded ? (`agentPage.work.brain.add.why.${worded}` as const) : ("agentPage.work.brain.add.failed" as const),
-    detail: worded === "cli_exit" || worded === "not_signed_in_after_login",
+    detail: worded === "cli_exit" || worded === "not_signed_in_after_login" || worded === "sandbox",
   };
 }
 

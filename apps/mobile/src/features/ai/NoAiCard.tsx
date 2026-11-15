@@ -98,7 +98,13 @@ export function NoAiCard({ message: m }: { message: Message }) {
   const title = answering
     ? t("noAi.card.answering", { name })
     : planLine
-      ? t(planLineKey(planLine, card.why), { name, model: card.model, why: card.why })
+      ? t(planLineKey(planLine, card.why), {
+          name,
+          model: card.model,
+          why: card.why,
+          owner: card.owner,
+          plan: card.plan,
+        })
       : ready
         ? t("noAi.card.connected", { name })
         : answer === "still_missing"

@@ -9,6 +9,13 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
       "Die agentes.chat-App kann agentes.chat auch selbst ausführen, auf einem Mac, einem PC oder einem Linux-Computer, für dich oder ein kleines Team.",
     sections: [
       {
+        id: "download",
+        heading: "Lade die App herunter",
+        blocks: [
+          "[Lade die agentes.chat-App herunter](/download), für deinen Mac, PC oder Linux-Computer, und öffne sie. Wähle **Auf deinem eigenen Server**, drück **Weiter mit meinem Server** und dann **agentes.chat auf diesem Computer ausführen**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Wie es läuft",
         blocks: [
@@ -68,6 +75,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Anmelden auf anderen Geräten",
         blocks: [
           "Der Inhaber startet ohne Passwort: Die App meldet dich auf diesem Computer an. Um dich im Browser eines anderen Computers anzumelden, leg unter **Einstellungen\u00a0›\u00a0Dein Konto** eins an. Bis dahin weist **Einstellungen\u00a0›\u00a0Server** darauf hin, und **Passwort anlegen** öffnet diese Seite. Die Handy-App verbindet sich, wenn du den QR-Code unter **Auf deinem Handy** in **Einstellungen\u00a0›\u00a0Server** scannst. Dafür muss **Von deinem Handy und deinem Team erreichbar** an sein.",
+          "Löscht der Inhaber sein Konto unter **Einstellungen\u00a0›\u00a0Dein Konto**, ist es 7 Tage später endgültig weg, und die Workspaces, in denen nur er war, verschwinden mit ihm. Bis dahin meldest du dich an und drückst **Konto wiederherstellen**, um es zurückzuholen. Ist es weg und kein Konto mehr übrig, öffnet die App ihr Willkommensfenster, um einen neuen Inhaber anzulegen. Haben andere noch ein Konto, meldet sich jeder mit seiner eigenen E-Mail an.",
         ],
       },
       {
@@ -83,6 +91,25 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         blocks: [
           "Ist **Jede Nacht sichern** an (ab App-Version 0.8.1), unter **Einstellungen\u00a0›\u00a0Server**, speichert die App jede Nacht um 3:00 die Datenbank, die Dateien und `.env` in `.agentes/backups` in deinem Benutzerordner. Ein Computer, der da schlief, sichert, sobald er wach ist. **Jetzt sichern** macht dasselbe sofort. Jede Sicherung stoppt den Server kurz, und die zwei neuesten bleiben erhalten.",
           "**Kopieren nach** legt jede neue Sicherung zusätzlich in einen Ordner deiner Wahl, etwa auf einen USB-Stick oder in iCloud Drive, wo die zwei neuesten bleiben. Sie enthalten deine Schlüssel: Behalte sie für dich. **Wiederherstellen…** setzt agentes.chat auf eine Sicherung zurück: Nachrichten, Dateien und Einstellungen. Es stoppt dafür eine Minute, und was vorher da war, bleibt im Sicherungsordner.",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "Neu anfangen oder deinstallieren",
+        blocks: [
+          "Alles, was agentes.chat auf diesem Computer speichert, liegt in Ordnern in deinem Benutzerordner, nicht in der App. Wenn du die App in den Papierkorb legst, wird also nichts davon gelöscht, und agentes.chat stoppt nicht, falls es läuft.",
+          "Um neu anzufangen, drück **Löschen und neu anfangen…** in **Einstellungen\u00a0›\u00a0Server**. agentes.chat stoppt hier, und alles, was es enthält, wird in einen neuen Ordner in deinem Benutzerordner verschoben, der `agentes.chat erased` mit dem Datum des Tages heißt. Dort bleibt es, bis du ihn löschst. Was seine Agenten auf diesem Computer gespeichert hatten, etwa ihre Browser und Anmeldungen, wird aus `.agentes-runner` gelöscht. Seine Workspaces verschwinden für alle, die sie nutzen. Danach öffnet sich das Willkommensfenster, und du richtest es mit einem neuen Inhaber-Konto neu ein. Die Dateien der Agenten, in `agentes` in deinem Benutzerordner, bleiben, wo sie sind.",
+          "Um es später zurückzuholen, beende die App, leg einen neueren Ordner `.agentes` beiseite, falls es einen gibt, benenne den Ordner `agentes.chat erased` in `.agentes` um, öffne die App und richte es auf diesem Computer wieder ein. Es startet mit seinen Workspaces und seinem Eigentümer, wie sie waren. Was seine Agenten auf diesem Computer gespeichert hatten, kommt nicht zurück, sie müssen sich also neu anmelden.",
+          "So entfernst du agentes.chat ganz von diesem Computer:",
+          {
+            list: [
+              "Schalte **Bei der Anmeldung öffnen** unter **Einstellungen\u00a0›\u00a0Allgemein** aus.",
+              "Beende die App. Das Fenster zu schließen reicht nicht. Auf einem Mac klickst du auf ihr Symbol im Dock und wählst im Menü agentes.chat oben am Bildschirm **agentes.chat beenden**, oder du drückst ⌘Q. Unter Windows und Linux klickst du auf das agentes.chat-Symbol neben der Uhr und wählst **agentes.chat beenden**. Fragt sie **agentes.chat beenden?**, drück **Beenden**.",
+              "Lösch die App. Auf einem Mac legst du sie in den Papierkorb. Unter Windows und Linux deinstallierst du sie wie jede andere App.",
+              "Lösch diese Ordner in deinem Benutzerordner. Sie enthalten deine Daten, und einmal gelöscht kommen sie nicht zurück. Leg also vorher woanders ein Backup ab, falls du sie noch brauchen könntest: `.agentes` (Nachrichten, Dateien, Konten, Einstellungen und Backups), jeden Ordner `agentes.chat erased`, `.agentes-runner` (was die Agenten auf diesem Computer speichern, etwa ihre Browser und Anmeldungen) und `agentes` (die Dateien der Agenten). Ordner, deren Name mit einem Punkt beginnt, sind ausgeblendet. Auf einem Mac öffnest du deinen Benutzerordner im Finder und drückst ⇧⌘. (Umschalt, Befehl und die Punkttaste), um sie zu zeigen.",
+              "Lösch die Ordner der App selbst. Sie enthalten nur ihre Einstellungen, die Anmeldungen ihres Fensters und ihre Protokolle. Auf einem Mac: alles, dessen Name mit `chat.agentes.desktop` beginnt, in den Ordnern Application Support, Caches, HTTPStorages, Logs, Preferences und WebKit von `~/Library`, und `agentes.chat.plist` in `~/Library/LaunchAgents`. Unter Windows: `%APPDATA%\\chat.agentes.desktop` und `%LOCALAPPDATA%\\chat.agentes.desktop`. Unter Linux: `~/.config/chat.agentes.desktop` und `~/.local/share/chat.agentes.desktop`. Auf einem Mac öffnest du einen dieser Ordner, indem du im Finder ⇧⌘G drückst und seinen Pfad eingibst, etwa `~/Library/Caches`.",
+            ],
+          },
         ],
       },
       {
@@ -217,6 +244,15 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
           "Melde dich in derselben App bei jedem Workspace an und drück für jeden **Erlauben**. Workspaces auf agentes.chat Cloud und auf deinen eigenen Servern können sich einen Computer teilen (ab App-Version 0.6.1). Jeder hat dort eigene Agenten und Ordner, und wenn du einen trennst, bleiben die anderen unberührt.",
           "Ein Server, den die App auf diesem Computer ausführt, ist schon verbunden und braucht nichts. Um den Computer auch einem Workspace an anderer Stelle zu leihen, sieh dir [Auch einem anderen Workspace leihen](/help/run-on-your-computer#another-workspace) an.",
           "Nutzt du die App auf einem Laptop nur als Fenster zu deinem Workspace? Wenn sie fragt, ob Agenten den Laptop nutzen dürfen, bleibt sie mit **Nicht jetzt** ein einfaches Fenster.",
+          "Ein Server, der mit der Terminal-Zeile verbunden wurde, arbeitet für einen Workspace. Wird er von einem anderen Workspace aus verbunden, wechselt der Server zu diesem, und der erste erreicht ihn nicht mehr. Für mehrere Workspaces auf einem Computer nutze die App.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Wenn Agenten in der Warteschlange stehen",
+        blocks: [
+          "Jede Arbeit eines Agenten braucht Arbeitsspeicher des Computers. Wird der freie Speicher knapp, wartet die nächste in der Warteschlange, bis eine andere endet. Menschen kommen zuerst dran. Die Zahl der CPUs ändert daran nichts.",
+          "Ein Computer mit 4 GB Arbeitsspeicher führt zwei oder drei Arbeiten gleichzeitig aus, einer mit 8 GB etwa neun. Ein Mac oder PC führt bis zu acht aus. Browser und Desktops, die Agenten offen lassen, brauchen ebenfalls Speicher. Für eine kürzere Warteschlange nutze einen Computer mit mehr Arbeitsspeicher oder verbinde einen weiteren und verteile die Agenten auf beide. Workspaces, die sich einen Computer teilen, teilen sich seinen Speicher.",
         ],
       },
       {
@@ -460,7 +496,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Wenn agentes.chat deinen Workspace hostet, ist Jev inklusive. Auf einem Server, den du selbst betreibst, nutzt es den TypeSafe-Schlüssel des Inhabers, etwa US$ 0,0001 pro Nachricht: [Jev einrichten](/help/jev#setup).",
+          "Wenn agentes.chat deinen Workspace hostet, ist Jev inklusive. Auf einem Server, den du selbst betreibst, nutzt es den TypeSafe- oder OpenRouter-Schlüssel des Inhabers, etwa US$ 0,0001 pro Nachricht: [Jev einrichten](/help/jev#setup).",
         ],
       },
       {
@@ -522,6 +558,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
               "Öffne in agentes.chat **Einstellungen\u00a0›\u00a0KI und Verbrauch** und füge ihn unter **Jev** ein. Nur die Person, die diesen Server eingerichtet hat, sieht ihn.",
             ],
           },
+          "Du zahlst schon bei OpenRouter? Wähle unter **Jev** **OpenRouter** und füge einen Schlüssel von https://openrouter.ai/keys ein, oder schalte Jev mit einem Klick mit dem OpenRouter-Schlüssel des Workspaces ein. Es ist derselbe Jev, abgerechnet über OpenRouter zum selben Preis.",
           "Auf einem Server, den du mit Docker betreibst, kannst du den Schlüssel stattdessen als `TYPESAFE_API_KEY` in `.env` eintragen. Dieser hat Vorrang vor dem in den Einstellungen.",
         ],
       },
@@ -556,6 +593,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe betreibt Jev in den USA und trainiert seine Modelle nicht mit dem, was du sendest. Daten werden so lange aufbewahrt, wie es für den Dienst nötig ist. Null Aufbewahrung gibt es in den Enterprise-Tarifen.",
           "Die Datenschutzerklärung von TypeSafe: https://typesafe.ai/legal/privacy-policy. Der Auftragsverarbeitungsvertrag: https://typesafe.ai/legal/data-processing.",
+          "Mit einem OpenRouter-Schlüssel laufen dieselben Anfragen auf dem Weg zu TypeSafe über OpenRouter, unter den Bedingungen von OpenRouter und deinen Datenschutzeinstellungen dort: https://openrouter.ai/privacy.",
         ],
       },
       {
@@ -747,7 +785,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "E-Mail",
         blocks: [
-          "Ohne E-Mail schreibt agentes.chat jede E-Mail in sein Log, statt sie zu senden, also lässt sich ein Einladungslink dort kopieren. Passwort zurücksetzen bleibt aus.",
+          "Ohne E-Mail schreibt agentes.chat jede E-Mail in sein Log, statt sie zu senden, also lässt sich ein Einladungslink dort kopieren. Passwort zurücksetzen bleibt aus, und eine neue E-Mail-Adresse für ein Konto gilt sofort, ohne Code und ohne Link.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

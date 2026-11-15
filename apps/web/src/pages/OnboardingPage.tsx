@@ -59,6 +59,7 @@ import { ImageCropDialog, OrgMark } from "@/components/ProfilePhoto";
 import { BootSplash, OnboardingHorizon, OnboardingProgress } from "@/components/Sky";
 import { StepRail } from "@/components/StepRail";
 import { ZonePicker } from "@/components/ZoneSelect";
+import { useSignOut } from "@/hooks/useSignOut";
 import { ARRIVAL_BETA_ONLY, ARRIVAL_PARAM } from "@/lib/arrival";
 import { sendNewLink } from "@/lib/email-confirmation";
 import { lookOf } from "@/lib/look";
@@ -103,6 +104,7 @@ export function OnboardingPage() {
   const { t, i18n } = useTranslation();
   const api = useApi();
   const auth = useAuth();
+  const { signOut } = useSignOut();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const toast = useToast();
@@ -716,15 +718,7 @@ export function OnboardingPage() {
                 {t("deleteAccount.menu")}
               </MenuItem>
             )}
-            <MenuItem
-              icon="arrowRight"
-              danger
-              onSelect={async () => {
-                await auth.signOut();
-                qc.clear();
-                await navigate({ to: "/login" });
-              }}
-            >
+            <MenuItem icon="arrowRight" danger onSelect={() => void signOut()}>
               {t("auth.signOut")}
             </MenuItem>
           </Menu>

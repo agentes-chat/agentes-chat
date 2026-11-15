@@ -9,6 +9,13 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
       "agentes.chat 앱은 Mac, PC, Linux 컴퓨터에서 agentes.chat 자체를 실행할 수도 있어요. 혼자 쓰거나 작은 팀에 알맞아요.",
     sections: [
       {
+        id: "download",
+        heading: "앱 다운로드",
+        blocks: [
+          "Mac, PC 또는 Linux 컴퓨터용 [agentes.chat 앱을 다운로드](/download)하고 여세요. **내 서버에서**를 고르고 **내 서버로 계속**을 누른 다음 **이 컴퓨터에서 agentes.chat 실행**을 누르세요.",
+        ],
+      },
+      {
         id: "how",
         heading: "실행 방식",
         blocks: [
@@ -68,6 +75,7 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "다른 기기에서 로그인하기",
         blocks: [
           "소유자는 처음에 비밀번호가 없어요. 이 컴퓨터에서는 앱이 로그인해 줘요. 다른 컴퓨터의 브라우저에서 로그인하려면 **설정\u00a0›\u00a0내 계정**에서 비밀번호를 추가하세요. 추가하기 전까지 **환경설정\u00a0›\u00a0서버**에 알림이 보이고, **비밀번호 추가**를 누르면 그 페이지가 열려요. 휴대폰 앱은 **환경설정\u00a0›\u00a0서버**의 **내 휴대폰에서** 아래에 있는 QR 코드를 스캔해서 연결해요. 이때 **휴대폰과 팀원이 접속할 수 있게 하기**가 켜져 있어야 해요.",
+          "소유자가 **설정\u00a0›\u00a0내 계정**에서 계정을 삭제하면 7일 뒤에 완전히 사라지고, 소유자 혼자 있던 워크스페이스도 함께 사라져요. 그때까지는 로그인한 뒤 **계정 복원**을 누르면 되돌릴 수 있어요. 계정이 사라진 뒤 남은 계정이 하나도 없으면, 앱이 환영 창을 열어 새 소유자를 만들어요. 다른 사람의 계정이 남아 있으면 각자 자기 이메일로 로그인해요.",
         ],
       },
       {
@@ -83,6 +91,25 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
         blocks: [
           "**환경설정\u00a0›\u00a0서버**의 **매일 밤 백업**이 켜져 있으면(앱 0.8.1 이상) 앱이 매일 밤 3:00에 데이터베이스, 파일, `.env`를 홈 폴더의 `.agentes/backups`에 저장해요. 그 시간에 잠자기 상태였던 컴퓨터는 깨어나면 백업해요. **지금 백업**은 같은 일을 바로 해요. 백업할 때마다 서버가 잠깐 멈추고, 가장 최근 것 2개를 남겨요.",
           "**복사할 위치**를 고르면 새 백업을 USB 드라이브나 iCloud Drive 같은 폴더에도 복사하고, 거기에도 가장 최근 것 2개를 남겨요. 키가 들어 있으니 다른 사람에게 보여 주지 마세요. **복원…**은 agentes.chat을 백업 시점으로 되돌려요. 메시지, 파일, 설정까지요. 1분 정도 멈추고, 그 전의 내용은 백업 폴더에 남아요.",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "처음부터 다시 시작하거나 제거하기",
+        blocks: [
+          "agentes.chat이 이 컴퓨터에 저장하는 모든 것은 앱 안이 아니라 홈 폴더의 폴더들에 있어요. 그래서 앱을 휴지통으로 옮겨도 아무것도 지워지지 않고, 실행 중인 agentes.chat도 멈추지 않아요.",
+          "처음부터 다시 시작하려면 **환경설정\u00a0›\u00a0서버**에서 **지우고 처음부터 시작…**을 누르세요. 이 컴퓨터의 agentes.chat이 멈추고, 담긴 모든 것은 홈 폴더의 새 폴더(이름은 `agentes.chat erased`와 그날 날짜)로 옮겨져 직접 지울 때까지 남아요. 에이전트가 이 컴퓨터에 저장해 둔 것(예: 브라우저와 로그인 정보)은 `.agentes-runner`에서 삭제돼요. 그 워크스페이스는 쓰던 모든 사람이 쓸 수 없게 돼요. 그다음 환영 창이 열리고, 새 소유자 계정으로 다시 설정해요. 홈 폴더의 `agentes`에 있는 에이전트 파일은 그 자리에 그대로 남아요.",
+          "나중에 되돌리려면 앱을 종료하고, 더 새로운 `.agentes` 폴더가 있으면 다른 곳으로 옮긴 다음, `agentes.chat erased` 폴더의 이름을 `.agentes`로 바꾸고, 앱을 열어 이 컴퓨터에서 다시 설정하세요. 워크스페이스와 소유자가 그대로인 채로 시작돼요. 에이전트가 이 컴퓨터에 저장해 둔 것은 돌아오지 않으니, 에이전트는 다시 로그인해야 해요.",
+          "이 컴퓨터에서 agentes.chat을 완전히 제거하려면:",
+          {
+            list: [
+              "**환경설정\u00a0›\u00a0일반**에서 **로그인할 때 열기**를 끄세요.",
+              "앱을 종료하세요. 창을 닫는 것만으로는 종료되지 않아요. Mac에서는 Dock의 아이콘을 클릭한 다음 화면 위쪽의 agentes.chat 메뉴에서 **agentes.chat 종료**를 고르거나 ⌘Q를 누르세요. Windows와 Linux에서는 시계 옆의 agentes.chat 아이콘을 클릭하고 **agentes.chat 종료**를 고르세요. **agentes.chat을 종료할까요?**라고 물으면 **종료**를 누르세요.",
+              "앱을 삭제하세요. Mac에서는 휴지통으로 옮기세요. Windows와 Linux에서는 다른 앱처럼 제거하세요.",
+              "홈 폴더에서 다음 폴더를 삭제하세요. 내 데이터가 들어 있고 삭제하면 되돌릴 수 없으니, 나중에 필요할 수 있다면 먼저 다른 곳에 백업해 두세요. `.agentes`(메시지, 파일, 계정, 설정, 백업), 모든 `agentes.chat erased` 폴더, `.agentes-runner`(에이전트가 이 컴퓨터에 저장한 것, 예를 들어 브라우저와 로그인 정보), `agentes`(에이전트 파일). 이름이 점으로 시작하는 폴더는 숨겨져 있어요. Mac에서는 Finder에서 홈 폴더를 열고 ⇧⌘.(Shift, Command, 마침표 키)를 누르면 보여요.",
+              "앱 자체의 폴더를 삭제하세요. 앱 설정, 창의 로그인 정보, 로그만 들어 있어요. Mac: `~/Library`의 Application Support, Caches, HTTPStorages, Logs, Preferences, WebKit 폴더에서 이름이 `chat.agentes.desktop`으로 시작하는 모든 것과 `~/Library/LaunchAgents`의 `agentes.chat.plist`. Windows: `%APPDATA%\\chat.agentes.desktop`과 `%LOCALAPPDATA%\\chat.agentes.desktop`. Linux: `~/.config/chat.agentes.desktop`과 `~/.local/share/chat.agentes.desktop`. Mac에서 이 폴더들을 열려면 Finder에서 ⇧⌘G를 누르고 경로(예: `~/Library/Caches`)를 입력하세요.",
+            ],
+          },
         ],
       },
       {
@@ -177,6 +204,15 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
           "같은 앱에서 워크스페이스마다 로그인하고 각각 **허용**을 누르세요. agentes.chat Cloud의 워크스페이스와 내 서버의 워크스페이스가 컴퓨터 한 대를 함께 쓸 수 있어요(앱 0.6.1 이상). 워크스페이스마다 거기에 자기 에이전트와 폴더가 있고, 하나를 연결 해제해도 나머지는 그대로예요.",
           "앱이 이 컴퓨터에서 실행하는 서버는 이미 연결되어 있어서 따로 할 일이 없어요. 그 컴퓨터를 다른 곳에 있는 워크스페이스에도 빌려주려면 [다른 워크스페이스에도 빌려주기](/help/run-on-your-computer#another-workspace)를 보세요.",
           "노트북의 앱을 워크스페이스를 보는 창으로만 쓰나요? 에이전트가 노트북을 쓰게 할지 물어보면 **나중에**를 누르세요. 그냥 창으로 남아요.",
+          "터미널 한 줄로 연결한 서버는 하나의 워크스페이스를 위해 일합니다. 다른 워크스페이스에서 연결하면 서버가 그쪽으로 옮겨 가고, 처음 워크스페이스는 더 이상 서버를 쓸 수 없습니다. 한 컴퓨터에서 여러 워크스페이스를 쓰려면 앱을 사용하세요.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "에이전트가 줄을 서서 기다릴 때",
+        blocks: [
+          "에이전트의 작업은 각각 컴퓨터의 메모리를 사용합니다. 남은 메모리가 부족해지면 다음 작업은 다른 작업이 끝날 때까지 줄에서 기다립니다. 사람이 먼저입니다. CPU 개수는 상관없습니다.",
+          "메모리 4 GB인 컴퓨터는 한 번에 두세 개, 8 GB는 약 아홉 개, Mac이나 PC는 최대 여덟 개의 작업을 실행합니다. 에이전트가 열어 둔 브라우저와 데스크톱도 메모리를 사용합니다. 줄을 줄이려면 메모리가 더 많은 컴퓨터를 쓰거나, 한 대를 더 연결해 에이전트를 나누세요. 한 컴퓨터를 함께 쓰는 워크스페이스는 메모리도 함께 씁니다.",
         ],
       },
       {
@@ -455,7 +491,7 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "agentes.chat이 워크스페이스를 호스팅하면 Jev가 포함돼요. 직접 운영하는 서버에서는 소유자의 TypeSafe 키를 쓰고, 메시지당 약 US$ 0.0001이 들어요: [Jev 설정하기](/help/jev#setup).",
+          "agentes.chat이 워크스페이스를 호스팅하면 Jev가 포함돼요. 직접 운영하는 서버에서는 소유자의 TypeSafe 또는 OpenRouter 키를 쓰고, 메시지당 약 US$ 0.0001이 들어요: [Jev 설정하기](/help/jev#setup).",
         ],
       },
       {
@@ -515,6 +551,7 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
               "agentes.chat에서 **설정 › AI와 사용량**을 열고 **Jev** 아래에 붙여넣으세요. 이 서버를 설정한 사람만 볼 수 있어요.",
             ],
           },
+          "이미 OpenRouter를 쓰고 있나요? **Jev**에서 **OpenRouter**를 고르고 https://openrouter.ai/keys 의 키를 붙여 넣거나, 워크스페이스의 OpenRouter 키로 한 번에 Jev를 켜세요. 같은 Jev가 같은 가격으로 OpenRouter를 통해 청구돼요.",
           "Docker로 운영하는 서버라면 대신 `.env`에 `TYPESAFE_API_KEY`로 키를 넣어도 돼요. 그 키가 설정의 키보다 우선해요.",
         ],
       },
@@ -549,6 +586,7 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe는 Jev를 미국에서 운영하고, 보낸 내용으로 모델을 학습시키지 않아요. 데이터는 서비스 운영에 필요한 기간만 보관해요. 엔터프라이즈 요금제에서는 데이터를 전혀 보관하지 않는 옵션도 있어요.",
           "TypeSafe 개인정보처리방침: https://typesafe.ai/legal/privacy-policy. 데이터 처리 계약: https://typesafe.ai/legal/data-processing.",
+          "OpenRouter 키를 쓰면 같은 요청이 OpenRouter를 거쳐 TypeSafe로 가고, OpenRouter의 약관과 그곳의 개인정보 설정을 따라요: https://openrouter.ai/privacy.",
         ],
       },
       {
@@ -739,7 +777,7 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "이메일",
         blocks: [
-          "이메일이 없으면 agentes.chat은 이메일을 보내는 대신 로그에 기록하므로, 초대 링크는 거기서 복사할 수 있습니다. 비밀번호 재설정은 꺼져 있습니다.",
+          "이메일이 없으면 agentes.chat은 이메일을 보내는 대신 로그에 기록하므로, 초대 링크는 거기서 복사할 수 있습니다. 비밀번호 재설정은 꺼져 있고, 계정의 새 이메일은 코드나 링크 없이 바로 바뀝니다.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

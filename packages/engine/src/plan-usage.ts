@@ -7,9 +7,11 @@ import {
 } from "@agenteschat/adapters";
 import { and, type Database, eq, gte, inArray, isNull, or, schema, sql } from "@agenteschat/db";
 import { catalogModelOf, nanoUsdToUsd, summedCostNanoUsd } from "@agenteschat/providers";
+import { modelLimitOf } from "@agenteschat/providers/plans";
 import { agentIdsWithDetails } from "./audience";
+import { sha256 } from "./crypto";
 import { NotFoundError } from "./errors";
-import { LISTED_ACCOUNT_STATUSES } from "./machine-accounts";
+import { LISTED_ACCOUNT_STATUSES, type PlanServes, servesOf } from "./machine-accounts";
 import { requirePermission } from "./organizations";
 import { agentBudgetsThisMonth, budgetPercent, canViewCost, monthStartUtc } from "./usage";
 import { WEB_USAGE_PROVIDER } from "./web-tools";
@@ -71,10 +73,21 @@ export interface PlanAccountInfo {
   /** Its owner's eyes only. */
   email: string | null;
   signedOut: boolean;
+  /** Who it thinks for (ADR 0059 §3); null for the computer's own sign-in, which thinks for its pairer's agents. */
+  serves: PlanServes | null;
+  /**
+   * The same seat signed in on one computer by anyone in the workspace (its maker, plan and email, opaque): logins with
+   * one `seat` are one account, whoever connected them. Per computer, as "Quem usa" changes a computer's logins
+   * (`sameLogins`). Null where that isn't known (a key, or no email yet).
+   */
+  seat: string | null;
 }
 
 export interface PlanAccountUsage extends PlanAccountInfo {
-  /** The plan's windows as last reported, each with the agents' parts; null: not known yet. */
+  /**
+   * The plan's windows as last reported, each with the agents' parts, and the models at a limit of their own that
+   * still hold (`models`: the quota per model, which the windows can't show); null: not known yet.
+   */
   usage: (Omit<PlanUsage, "windows"> & { windows: PlanWindowParts[] }) | null;
   /** This month per agent, biggest first; `now`: the agent thinks with this account today. */
   agents: { agentId: string; name: string; tokens: number; now: boolean }[];
@@ -316,6 +329,8 @@ function accountOf(ctx: Context, key: string, viewerId: string | null): FoundAcc
         mine: viewerId !== null && machine.pairer === viewerId,
         email: null,
         signedOut: kind === "claude_code" && machine.claudeOut,
+        serves: null,
+        seat: null,
       },
       usage: machine.own[kind] ?? null,
     };
@@ -338,6 +353,13 @@ function accountOf(ctx: Context, key: string, viewerId: string | null): FoundAcc
       mine,
       email: mine ? row.email : null,
       signedOut: row.status === "signed_out",
+      serves: servesOf(row.serves),
+      seat:
+        row.email && !row.provider
+          ? sha256(
+              `${row.orgId}:${row.machineId}:${row.kind}:${row.email.toLowerCase()}:${row.providerOrgId ?? ""}`,
+            ).slice(0, 24)
+          : null,
     },
     usage: row.usage ?? null,
   };
@@ -397,6 +419,27 @@ async function hourlySince(db: Database, orgId: string, usages: (PlanUsage | nul
   return readUsage(db, orgId, new Date(earliest), { hourly: true, planOnly: true });
 }
 
+/**
+ * A plan's reading as the usage views show it: its windows with each agent's estimated part, and the models at a
+ * limit of their own that still hold (`modelLimitOf`). The rest of the engine's bookkeeping stays where it is: this
+ * is a reading for the person, never the switch ("Automático" and its turns decide by themselves).
+ */
+function usageForView(
+  ctx: Context,
+  key: string,
+  usage: PlanUsage,
+  hourly: UsageRow[],
+  now: Date,
+): NonNullable<PlanAccountUsage["usage"]> {
+  const { models = {}, ...rest } = usage;
+  const held = Object.entries(models).filter(([id]) => modelLimitOf(models, id, now.getTime()));
+  return {
+    ...rest,
+    windows: usage.windows.map((w) => ({ ...w, agents: partsOf(ctx, w, key, hourly, now.getTime()) })),
+    ...(held.length > 0 ? { models: Object.fromEntries(held) } : {}),
+  };
+}
+
 function accountUsage(
   ctx: Context,
   { info, usage }: FoundAccount,
@@ -419,14 +462,10 @@ function accountUsage(
     }))
     .sort((a, b) => b.tokens - a.tokens || Number(b.now) - Number(a.now) || a.name.localeCompare(b.name));
   const equivalent = equivalentNano(rows);
+  const shown = usage ? usageForView(ctx, info.key, usage, hourly, now) : null;
   return {
     ...info,
-    usage: usage
-      ? {
-          ...usage,
-          windows: usage.windows.map((w) => ({ ...w, agents: partsOf(ctx, w, info.key, hourly, now.getTime()) })),
-        }
-      : null,
+    usage: shown,
     agents: list,
     monthTokens: list.reduce((s, a) => s + a.tokens, 0),
     ...(money ? { equivalentUsd: equivalent === null ? null : nanoUsdToUsd(equivalent) } : {}),

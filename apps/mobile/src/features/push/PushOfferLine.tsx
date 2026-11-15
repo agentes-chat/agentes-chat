@@ -30,7 +30,13 @@ export function PushOfferLine({ agent, onDone }: { agent: string; onDone?: () =>
     setAsking(false);
     onDone?.();
     if (ok) toast({ title: t("mobile.push.ask.done"), icon: "bell" });
-    else if (allowed) toast({ title: t("mobile.push.ask.failed"), icon: "x" });
+    // Its way out right there: asking again registers this phone again.
+    else if (allowed)
+      toast({
+        title: t("mobile.push.ask.failed"),
+        icon: "x",
+        action: { label: t("mobile.common.retry"), onPress: () => void ask().catch(() => false) },
+      });
   };
 
   return (

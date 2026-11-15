@@ -2,8 +2,9 @@ import type { TFunction } from "i18next";
 import type { MessageVoice } from "../api/types";
 
 /**
- * Voice messages (ADR 0100), the half the web and the phone app share. To people a voice message is its audio: a list,
- * a quote or a notification names it, and its words open only on demand, in the player.
+ * Voice messages (ADR 0100), the half the web and the phone app share. To people a voice message is its audio, with
+ * the text typed beside it above the player: a list, a quote or a notification shows that text or names the audio,
+ * and its words open only on demand, in the player.
  */
 
 type Meta = Record<string, unknown> | null | undefined;
@@ -28,8 +29,37 @@ export function voiceOf(meta: Meta): MessageVoice | null {
     durationMs: o.durationMs,
     peaks: Array.isArray(o.peaks) ? o.peaks.filter((p): p is number => typeof p === "number") : [],
     ...(typeof o.expiresAt === "string" ? { expiresAt: o.expiresAt } : {}),
-    ...(o.noWords === true ? { noWords: true } : {}),
+    // `unheard`: the server's `noWords` for a take with typed text (see the engine's `MessageVoice`).
+    ...(o.noWords === true || o.unheard === true ? { noWords: true } : {}),
+    ...(typeof o.text === "string" && o.text ? { text: o.text } : {}),
   };
+}
+
+/**
+ * A voice message's two halves: what was typed beside the take, shown as text above the player, and the words said,
+ * for the player's transcript (null when there are none to open). The server writes `body` as the typed text, a
+ * blank line, then the words, and `meta.voice.text` as the typed text. A body that doesn't start that way (a message
+ * from before typed text could go with a take) is all words.
+ */
+export function voiceParts(message: { body: string; meta?: Meta }): { typed: string; words: string | null } {
+  const voice = voiceOf(message.meta);
+  const typed = voice?.text ?? "";
+  if (voice?.noWords) return { typed, words: null };
+  const body = message.body;
+  const words = !typed
+    ? body
+    : body === typed
+      ? ""
+      : body.startsWith(`${typed}\n\n`)
+        ? body.slice(typed.length + 2)
+        : body;
+  return { typed, words: words.trim() ? words : null };
+}
+
+/** A message's text where a list or a quote shows it: of a voice message only what was typed beside it, never its words. */
+export function listedText(body: string, meta: Meta) {
+  const voice = voiceOf(meta);
+  return voice ? (voice.text ?? "") : body;
 }
 
 /** Whether its date passed. The server may also answer 410 before that (`voiceAudioGone`). */

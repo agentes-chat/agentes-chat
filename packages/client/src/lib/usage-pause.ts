@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import type { CatchUpClosed } from "../api/types";
+import { timeAgo } from "./format";
 import { usageWhen } from "./plan-usage";
 
 /**
@@ -179,3 +180,28 @@ export const closedNoteText = (t: TFunction, closed: CatchUpClosed) =>
       name: closed.who?.name ?? "",
     },
   );
+
+const PLAN_LIMIT_NOTES = new Set([
+  "plan_limit_wait",
+  "plan_limit_wait_unknown",
+  "plan_limit_cut",
+  "plan_limit_cut_unknown",
+]);
+
+/** A note waiting on a whole plan's limit, which the server reads again every few minutes ("Conferido há 4 min"). */
+export const planLimitNote = (meta: Record<string, unknown> | null | undefined) =>
+  typeof meta?.bodyCode === "string" && PLAN_LIMIT_NOTES.has(meta.bodyCode);
+
+/**
+ * "Conferido há 4 min" under a plan limit's wait note (web and phone): when its plan was last read or asked about
+ * (`UsageQueue.checkedAt`). Null for any other note, or with no time known.
+ */
+export function usageCheckedText(
+  t: TFunction,
+  meta: Record<string, unknown> | null | undefined,
+  checkedAt: string | null | undefined,
+  now = Date.now(),
+): string | null {
+  if (!checkedAt || !planLimitNote(meta)) return null;
+  return t("usageCard.checked", { when: timeAgo(t, checkedAt, now) });
+}

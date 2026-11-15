@@ -549,6 +549,12 @@ async function checkRequests(deps: ParkedDeps, judge: Judge, run: AgentRun, trig
 export const quietEnd = (run: Pick<AgentRun, "transcript">) =>
   transcriptOf(run).passListed ? "call `pass`" : "end your turn without writing anything";
 
+/** A run's transcript with `requestId`'s waiting call reading `text` (`mootRequests`), free to stay quiet after it. */
+export const withMootRequest = (requestId: string, text: string) =>
+  sql`jsonb_set(jsonb_set(coalesce(${agentRuns.transcript}, '{}'::jsonb), '{mootRequests}',
+    coalesce(${agentRuns.transcript}->'mootRequests', '{}'::jsonb) || jsonb_build_object(${requestId}::text, ${text}::text)),
+    '{requestMoot}', 'true'::jsonb)`;
+
 /**
  * Withdraws a request of the run's that nobody needs to answer anymore (its need was met here, or the agent withdrew it
  * in another turn): its waiting call reads `text` instead of "nobody will answer" (`mootRequests`), and the run may
@@ -564,11 +570,7 @@ export async function withdrawMoot(
 ) {
   const marked = await deps.db
     .update(agentRuns)
-    .set({
-      transcript: sql`jsonb_set(jsonb_set(coalesce(${agentRuns.transcript}, '{}'::jsonb), '{mootRequests}',
-        coalesce(${agentRuns.transcript}->'mootRequests', '{}'::jsonb) || jsonb_build_object(${request.id}::text, ${text}::text)),
-        '{requestMoot}', 'true'::jsonb)`,
-    })
+    .set({ transcript: withMootRequest(request.id, text) })
     .where(
       and(
         eq(agentRuns.id, run.id),

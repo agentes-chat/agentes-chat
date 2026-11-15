@@ -42,6 +42,7 @@ import {
 } from "@agenteschat/client/lib/brain-picker";
 import { type ConnectedItem, itemName } from "@agenteschat/client/lib/connected";
 import { errorText as failureText } from "@agenteschat/client/lib/errors";
+import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { choiceOf, defaultPolicy, MAIL_ACTIONS, toMailLevel } from "@agenteschat/client/lib/mail";
@@ -70,6 +71,7 @@ import {
   Locked,
   Logo,
   modKey,
+  overLimit,
   ProviderLogo,
   prefersReducedMotion,
   randomAppearance,
@@ -85,6 +87,7 @@ import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } 
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { LevelRow, useConnectedById } from "@/components/AccessLevels";
+import { AskAdminButton } from "@/components/AdminAsk";
 import { AudienceChoice } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import {
@@ -115,6 +118,7 @@ import { AgentBornSky, AgentPreviewSky, OnboardingHorizon } from "@/components/S
 import { StepRail } from "@/components/StepRail";
 import { useFlowExit } from "@/hooks/useFlowExit";
 import { useKeeperName, usePersonalView } from "@/hooks/usePersonalView";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { flowReturn } from "@/lib/flow-return";
 import { CARD_MARK, IMPORT_CARDS } from "@/lib/import-flow";
 import {
@@ -257,7 +261,7 @@ export function NewAgentPage({
             <h1 className="page-title">{t("newAgent.title")}</h1>
           </header>
           {!allowed ? (
-            <EmptyState icon="agent">
+            <EmptyState icon="agent" actions={<AskAdminButton ask={{ what: "create_agents" }} variant="primary" />}>
               {t(keeperKey(org, keeper, "newAgent.adminsOnly"), { org: org.name, keeper })}
             </EmptyState>
           ) : proposal.isPending ? (
@@ -384,6 +388,7 @@ function NewAgentFlow({
     was?.look ?? (draft?.appearance as Required<AgentAppearance> | null) ?? BLANK_LOOK,
   );
   const [instructions, setInstructions] = useState(was?.instructions ?? draft?.instructions ?? "");
+  const instructionsLimit = useTextLimit(FIELD_LIMITS.instructions);
   const [levels, setLevels] = useState<Record<string, Level>>(
     was?.levels ?? (draft && managesAgents ? draftLevels(draft) : {}),
   );
@@ -749,7 +754,15 @@ function NewAgentFlow({
         // person's own, its plan's sign-in opens once it's created: only the owner signs a plan in for it.
         signIn = ownerId === me.user.id && needsOwnSignIn(aiAccounts.data?.computers, plan);
       } catch {
-        toast.show(t("newAgent.planNotSaved", { ...g, brain: t(`brain.card.${plan.kind}`) }), "error");
+        toast.show(t("newAgent.planNotSaved", { ...g, brain: t(`brain.card.${plan.kind}`) }), "error", {
+          label: t("usageCard.chooseBrain"),
+          run: () =>
+            void navigate({
+              to: "/org/$orgId/agents/$agentId",
+              params: { orgId: org.id, agentId: agent.id },
+              search: { tab: "settings", sec: "brain", brain: "switch" },
+            }),
+        });
       }
     } else if (start?.brain === "model" && onStart && start.contextTokens !== null) {
       await api.agents.setBrain(org.id, agent.id, { brain: "model", contextTokens: start.contextTokens });
@@ -820,6 +833,10 @@ function NewAgentFlow({
   };
   const next = () => {
     if (created || create.isPending || importing) return;
+    if (overLimit(instructions, instructionsLimit)) {
+      goTo(NEW_AGENT_STEPS.indexOf("instructions"));
+      return;
+    }
     if (stepErrors(step, check).length > 0) {
       fail(step);
       setTimeout(() => root.current?.querySelector<HTMLElement>("[aria-invalid='true']")?.focus());
@@ -1289,7 +1306,7 @@ function NewAgentFlow({
             <Textarea
               className="newag__textarea"
               rows={9}
-              maxLength={50_000}
+              limit={instructionsLimit}
               placeholder={t("newAgent.instructionsPlaceholder")}
               value={instructions}
               onChange={(e) => {
@@ -1648,18 +1665,29 @@ function NewAgentFlow({
             </div>
           </div>
           <Card as="div" className="newag__card">
-            <BudgetField
-              id="ag-budget"
-              value={budget}
-              onChange={setBudget}
-              defaultBudget={defaultBudget}
-              error={errorOf("budget") ? errorText(errorOf("budget") as DraftError) : undefined}
-            />
-            {!errorOf("budget") && (
+            {managesAgents ? (
+              <>
+                <BudgetField
+                  id="ag-budget"
+                  value={budget}
+                  onChange={setBudget}
+                  defaultBudget={defaultBudget}
+                  error={errorOf("budget") ? errorText(errorOf("budget") as DraftError) : undefined}
+                />
+                {!errorOf("budget") && (
+                  <span className="small muted">
+                    {defaultBudget === undefined
+                      ? t("agent.budgetDefaultHelp")
+                      : t("agent.budgetDefaultHelpAmount", { amount: usd(t, locale, defaultBudget) })}
+                  </span>
+                )}
+              </>
+            ) : (
+              // More than the workspace's default is an admin's to give (the server's rule): no field to raise it.
               <span className="small muted">
                 {defaultBudget === undefined
-                  ? t("agent.budgetDefaultHelp")
-                  : t("agent.budgetDefaultHelpAmount", { amount: usd(t, locale, defaultBudget) })}
+                  ? t("newAgent.budgetCapped")
+                  : t("newAgent.budgetCappedAmount", { amount: usd(t, locale, defaultBudget) })}
               </span>
             )}
           </Card>

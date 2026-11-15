@@ -9,6 +9,7 @@ import type { CommandProfile, CommandScope } from "@agenteschat/adapters/command
 import { type BrainSteerReply, type BrainSteerRequest, isBrainEffort } from "@agenteschat/adapters/machine-protocol";
 import { accountEnv, withoutContainers, yieldRoute } from "./accounts";
 import {
+  CODEX_DIRECT_MCP_CONFIG,
   CODEX_NO_NETWORK,
   type CodexAppRunner,
   type CodexBrainEvent,
@@ -197,7 +198,12 @@ export function codexAppServerArgs(input: {
     codexWritableRoots(input.writableRoots ?? []),
     ...(input.windows ? CODEX_WINDOWS_CONFIG.flatMap((c) => ["-c", c]) : []),
     ...codexContextOverride(input.contextTokens),
-    ...(input.mcp ? codexBridgeOverrides({ runId: input.processId, ...input.mcp }).flatMap((o) => ["-c", o]) : []),
+    ...(input.mcp
+      ? [CODEX_DIRECT_MCP_CONFIG, ...codexBridgeOverrides({ runId: input.processId, ...input.mcp })].flatMap((o) => [
+          "-c",
+          o,
+        ])
+      : []),
   ];
 }
 
@@ -488,6 +494,9 @@ export class CodexAppMapper {
   /** The thread's totals before this `brain.turn`, and now. */
   private base?: TokenUsageBreakdown;
   private total?: TokenUsageBreakdown;
+  /** Model requests of this `brain.turn`, and the most input one read. */
+  private calls = 0;
+  private maxContext = 0;
   /** An `error` notification Codex won't retry (the turn's own error says more). */
   lastError?: string;
   /** The turn ran a command, changed a file or called our bridge: a cut now loses work the API couldn't see. */
@@ -588,6 +597,11 @@ export class CodexAppMapper {
     // The first one of this `brain.turn`: the thread's totals before its first model request.
     if (!this.base) this.base = isObj(u.last) ? usageDiff(u.total, u.last) : u.total;
     // Totals, not sums: Codex says the same usage again (rate-limit updates) without counting twice.
+    if (!this.total || num(u.total.totalTokens) > num(this.total.totalTokens)) {
+      this.calls++;
+      // Codex counts cached input inside `inputTokens`: the request's whole context.
+      if (isObj(u.last)) this.maxContext = Math.max(this.maxContext, num(u.last.inputTokens));
+    }
     this.total = u.total;
   }
 
@@ -613,6 +627,8 @@ export class CodexAppMapper {
           // Codex counts cached input inside `inputTokens`.
           ...(u && u.cachedInputTokens > 0 ? { cacheRead: u.cachedInputTokens } : {}),
           ...(u && u.cacheWriteInputTokens > 0 ? { cacheWrite: u.cacheWriteInputTokens } : {}),
+          ...(this.calls > 0 ? { calls: this.calls } : {}),
+          ...(this.maxContext > 0 ? { maxContext: this.maxContext } : {}),
         },
         { type: "done", text: answer, session: { id: sessionId } },
       ];

@@ -125,6 +125,8 @@ export const REQUIREMENTS = ["browser", "desktop", "claude", "codex"] as const;
 export type Requirement = (typeof REQUIREMENTS)[number];
 /** Anthropic's installer for Claude Code (it checks what it downloads against its own manifest). */
 export const CLAUDE_INSTALL_URL = "https://claude.ai/install.sh";
+/** The same installer for Windows, in PowerShell: Claude Code's native build into `%USERPROFILE%\.local\bin`. */
+export const CLAUDE_INSTALL_PS1_URL = "https://claude.ai/install.ps1";
 export const CLAUDE_EXE = "/usr/local/bin/claude";
 /** OpenAI's Codex CLI: its latest release's static Linux build, `codex-<arch>-unknown-linux-musl.tar.gz`. */
 export const CODEX_RELEASES = "https://github.com/openai/codex/releases/latest/download";

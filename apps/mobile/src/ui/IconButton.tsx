@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { Glass } from "./Glass";
 import { Icon, type IconName } from "./Icon";
@@ -7,6 +8,8 @@ import { useTheme } from "./theme";
 
 export interface IconButtonProps {
   icon: IconName;
+  /** Drawn in place of the icon (a maker's logo). */
+  mark?: ReactNode;
   onPress: () => void;
   /** For screen readers (always required: the button has no visible text). */
   label: string;
@@ -26,7 +29,15 @@ const SIZE = ICON_BUTTON_SIZE;
  * system's own sheet and bar buttons: Liquid Glass on iOS 26, the blur before it, an opaque plate on Android (with a
  * hairline and a short shadow, `usePlateEdge`, so it floats over the sky or the conversation as the glass does).
  */
-export function IconButton({ icon, onPress, label, plate = false, small = false, disabled = false }: IconButtonProps) {
+export function IconButton({
+  icon,
+  mark,
+  onPress,
+  label,
+  plate = false,
+  small = false,
+  disabled = false,
+}: IconButtonProps) {
   const { colors } = useTheme();
   const edge = usePlateEdge();
   const side = small ? TOOL_H : SIZE;
@@ -47,11 +58,11 @@ export function IconButton({ icon, onPress, label, plate = false, small = false,
           intensity={40}
           style={[{ flexGrow: 1, borderRadius: side / 2, alignItems: "center", justifyContent: "center" }, edge]}
         >
-          <Icon name={icon} size={glyph} color={colors.ink2} />
+          {mark ?? <Icon name={icon} size={glyph} color={colors.ink2} />}
         </Glass>
       ) : (
         <View style={{ flexGrow: 1, alignItems: "center", justifyContent: "center" }}>
-          <Icon name={icon} size={glyph} color={colors.ink2} />
+          {mark ?? <Icon name={icon} size={glyph} color={colors.ink2} />}
         </View>
       )}
     </PressScale>

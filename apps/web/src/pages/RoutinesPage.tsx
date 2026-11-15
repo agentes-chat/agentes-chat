@@ -25,9 +25,10 @@ import {
   useRuleDescribe,
   useRuleParse,
 } from "@agenteschat/client";
-import { approvalTitle, ownActionName } from "@agenteschat/client/lib/approval-words";
+import { approvalTitle, ownActionName, routineVaultKey, splitOwnActions } from "@agenteschat/client/lib/approval-words";
 import type { RunStatus } from "@agenteschat/client/lib/calendar";
 import { errorText } from "@agenteschat/client/lib/errors";
+import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { formatBytes } from "@agenteschat/client/lib/files";
 import {
   capitalize,
@@ -100,8 +101,11 @@ import {
   type IconName,
   InfoHint,
   Input,
+  LimitLine,
   Locked,
+  limitShown,
   Menu,
+  overLimit,
   PageHeader,
   RecurrencePicker,
   type RecurrenceRule,
@@ -156,6 +160,7 @@ import { ZoneSelect } from "@/components/ZoneSelect";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useEdited } from "@/hooks/useEdited";
 import { useRightHandLook } from "@/hooks/useRightHandLook";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import { copyText, type MenuEntry } from "@/lib/context-menu";
 import { entityMenu } from "@/lib/entity-menu";
 import { lookOf } from "@/lib/look";
@@ -1460,6 +1465,7 @@ function RoutineDetails({ routine: r, now, onClose }: { routine: Routine; now: D
                 <OwnActions routine={r} />
               </DetailsSection>
             )}
+            {r.canSeeDetails && <VaultKeys routine={r} />}
             <DetailsSection title={t("routines.panel.nexts")}>
               {mailTrouble(r) && (
                 <Chip icon="alert" tone="waiting">
@@ -1639,6 +1645,7 @@ function RoutinePrompt({ routine: r, onSaved }: { routine: Routine; onSaved: () 
   const ref = useFocusAtEnd<HTMLTextAreaElement>(draft !== null);
   // As tall as its text where the engine can't size it from CSS (`field-sizing`, which the Mac app's WebKit lacks).
   useAutoGrow(ref, draft ?? "", draft !== null);
+  const limit = useTextLimit(FIELD_LIMITS.routinePrompt);
   if (!r.canSeeDetails || r.prompt === null) return <p className="small muted">{t("routines.detailsHidden")}</p>;
   if (isWidgetRoutine(r))
     return (
@@ -1649,7 +1656,8 @@ function RoutinePrompt({ routine: r, onSaved }: { routine: Routine; onSaved: () 
     );
   if (!r.canManage) return <p className="routine-details__prompt">{prompt}</p>;
   const save = () => {
-    if (draft === null) return;
+    // Past its limit it stays open, the line under it saying so: nothing is saved cut.
+    if (draft === null || overLimit(draft, limit)) return;
     const next = draft.trim();
     setDraft(null);
     if (!next || next === prompt.trim()) return;
@@ -1674,7 +1682,8 @@ function RoutinePrompt({ routine: r, onSaved }: { routine: Routine; onSaved: () 
             className="issue-new__text routine-prompt__text"
             rows={8}
             value={draft}
-            maxLength={10_000}
+            aria-invalid={overLimit(draft, limit) || undefined}
+            aria-describedby={limitShown(draft, limit) ? `routine-prompt-${r.id}-limit` : undefined}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={save}
             onKeyDown={(e) => {
@@ -1686,6 +1695,7 @@ function RoutinePrompt({ routine: r, onSaved }: { routine: Routine; onSaved: () 
             aria-label={t("routines.form.what")}
           />
         </div>
+        <LimitLine id={`routine-prompt-${r.id}-limit`} value={draft} limit={limit} />
         <p className="issue-new__hint small muted">{t("issues.edit.hint")}</p>
         <RoutineReachWarnings prompt={draft} agentId={r.agentId} creatorUserId={r.createdByUserId} />
       </>
@@ -2100,7 +2110,9 @@ function WebhookPanel({ routine: r, runs }: { routine: Routine; runs: RoutineRun
       <LoadingList count={1} avatar={false} />
     );
   }
-  const busy = (what: "address" | "secret" | "unsign" | "test") => action.isPending && action.variables === what;
+  const busy = (what: "address" | "secret" | "unsign" | "test" | "onAndTest") =>
+    action.isPending && action.variables === what;
+  const test = r.active ? "test" : "onAndTest";
   const change = (what: "address" | "secret" | "unsign") =>
     action.mutate(what, {
       onSuccess: (done) => {
@@ -2195,10 +2207,11 @@ function WebhookPanel({ routine: r, runs }: { routine: Routine; runs: RoutineRun
             type="button"
             size="sm"
             icon="send"
-            loading={busy("test")}
-            onClick={() => action.mutate("test", { onSuccess: () => toast.show(t("routines.webhook.tested")) })}
+            disabled={action.isPending}
+            loading={busy(test)}
+            onClick={() => action.mutate(test, { onSuccess: () => toast.show(t("routines.webhook.tested")) })}
           >
-            {t("routines.webhook.test")}
+            {t(r.active ? "routines.webhook.test" : "routines.webhook.turnOnAndTest")}
           </Button>
         </div>
       </div>
@@ -2397,6 +2410,7 @@ function RoutineDialog({
   const [agentId, setAgentId] = useState(routine?.agentId ?? "");
   const [target, setTarget] = useState(targetChoice(routine?.target));
   const [prompt, setPrompt] = useState(routine?.prompt ?? "");
+  const promptLimit = useTextLimit(FIELD_LIMITS.routinePrompt);
   const [name, setName] = useState(routine?.name ?? "");
   // The starting point picked, and one waiting for the person's ok to write over their words.
   const [template, setTemplate] = useState<RoutineTemplateOption>();
@@ -2603,7 +2617,7 @@ function RoutineDialog({
   };
   const submit = () => {
     setTouched(true);
-    if ((!part && !prompt.trim()) || unfilled || !agentId || !scheduleOk) return;
+    if ((!part && !prompt.trim()) || unfilled || overLimit(prompt, promptLimit) || !agentId || !scheduleOk) return;
     if (routine) {
       const all = changes(routine);
       // A part sends only its own fields (a prompt stored with spaces around it is not a change of "Quando").
@@ -2733,6 +2747,7 @@ function RoutineDialog({
                   <Textarea
                     rows={3}
                     value={prompt}
+                    limit={promptLimit}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder={t("routines.form.whatPlaceholder")}
                   />
@@ -2911,7 +2926,12 @@ function RoutineDialog({
           <Button type="button" onClick={onClose}>
             {t("routines.form.cancel")}
           </Button>
-          <Button type="submit" variant="primary" disabled={!agentId || !scheduleOk} loading={action.isPending}>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={!agentId || !scheduleOk || overLimit(prompt, promptLimit)}
+            loading={action.isPending}
+          >
             {editing ? t("routines.form.save") : t("routines.form.create")}
           </Button>
         </DialogFooter>
@@ -2952,7 +2972,8 @@ function OwnActions({
   const { t } = useTranslation();
   const { org } = useOrg();
   const action = useRoutineAction(org.id);
-  const own = routine?.ownActions ?? [];
+  const all = routine?.ownActions ?? [];
+  const own = splitOwnActions(all).apps;
   const about = t("common.about", { label: t("routines.panel.ownActions") });
   const line = (short: string, hint: string) => (
     <p className="small muted">
@@ -2984,7 +3005,7 @@ function OwnActions({
                   action.mutate({
                     type: "update",
                     id: routine.id,
-                    patch: { ownActions: own.filter((a) => a !== name) },
+                    patch: { ownActions: all.filter((a) => a !== name) },
                   })
                 }
               />
@@ -2994,6 +3015,45 @@ function OwnActions({
       </ul>
       {line(t("routines.ownActions.hintShort"), t("routines.ownActions.hint"))}
     </>
+  );
+}
+
+/** "Chaves do Vault que usa": the keys its commands use without asking, each taken out with its ×. */
+function VaultKeys({ routine }: { routine: Routine }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const action = useRoutineAction(org.id);
+  const all = routine.ownActions ?? [];
+  const keys = splitOwnActions(all).keys;
+  if (keys.length === 0) return null;
+  return (
+    <DetailsSection title={t("routines.vaultKeys.title")}>
+      <ul className="routine-own" aria-label={t("routines.vaultKeys.title")}>
+        {keys.map((key) => (
+          <li key={key}>
+            <code>{key}</code>
+            {routine.canManage && (
+              <Button
+                variant="ghost"
+                size="sm"
+                iconOnly
+                icon="close"
+                aria-label={t("routines.vaultKeys.remove", { key })}
+                disabled={action.isPending}
+                onClick={() =>
+                  action.mutate({
+                    type: "update",
+                    id: routine.id,
+                    patch: { ownActions: all.filter((a) => routineVaultKey(a) !== key) },
+                  })
+                }
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="small muted">{t("routines.vaultKeys.hint")}</p>
+    </DetailsSection>
   );
 }
 

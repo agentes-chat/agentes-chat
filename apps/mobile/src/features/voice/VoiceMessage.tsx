@@ -11,7 +11,7 @@ import { appHeaders, authedFetch, lastCookie } from "@/lib/auth";
 import { serverUrl } from "@/lib/server";
 import { Icon, PressScale, Text } from "@/ui";
 import { useColors, useOrgId } from "../shared/hooks";
-import { hasWords, nextSpeed } from "./logic";
+import { nextSpeed, spokenWords, waveAt } from "./logic";
 import { playingId, seekPlayback, setPlaybackSpeed, startPlayback, stopPlayback, subscribePlayback } from "./playback";
 import { PixelWave, wavePaths } from "./VoiceBars";
 
@@ -46,6 +46,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
   const [rate, setRate] = useState(speed);
   const [gone, setGone] = useState(() => expired.has(clipId) || Boolean(voice && voiceExpired(voice)));
   const [open, setOpen] = useState(() => opened.has(message.id));
+  const [broken, setBroken] = useState(false);
   const lastSecond = useRef(-1);
 
   // A recycled row takes on another message.
@@ -55,6 +56,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
     setTime(durationMs);
     setGone(expired.has(clipId) || Boolean(voice && voiceExpired(voice)));
     setOpen(opened.has(message.id));
+    setBroken(false);
   }, [clipId, message.id]);
   useEffect(() => {
     if (width <= 0 || !voice) return;
@@ -86,6 +88,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
       stopPlayback();
       return;
     }
+    setBroken(false);
     // A player says nothing of why a file failed: the server is asked first.
     const url = voiceAudioUrl(orgId, clipId, serverUrl());
     if (await voiceAudioGone(url, authedFetch as typeof fetch)) {
@@ -100,7 +103,8 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
       speed,
       onProgress: report,
       onEnd: ended,
-    });
+      onError: () => setBroken(true),
+    }).catch(() => setBroken(true));
   };
   const seek = (at: number) => {
     report(at);
@@ -124,7 +128,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
     failOffsetY: [-12, 12],
     onUpdate: (e) => {
       "worklet";
-      if (width > 0) progress.value = Math.max(0, Math.min(0.999, e.x / width));
+      if (width > 0) progress.value = waveAt(e.x, width);
     },
     onDeactivate: () => {
       "worklet";
@@ -135,18 +139,18 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
     enabled: canPlay,
     onDeactivate: (e) => {
       "worklet";
-      if (width > 0) scheduleOnRN(seek, Math.max(0, Math.min(0.999, e.x / width)));
+      if (width > 0) scheduleOnRN(seek, waveAt(e.x, width));
     },
   });
   const scrub = useExclusiveGestures(pan, tap);
 
-  const words = useMemo(() => hasWords(message), [message]);
+  const words = useMemo(() => spokenWords(message), [message]);
   // The speed as the language writes it ("1,5×" in Portuguese).
   const speedFormat = useMemo(
     () => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }),
     [i18n.language],
   );
-  const more = words && !open && (message.body.length > ONE_LINE || message.body.includes("\n"));
+  const more = words && !open && (words.length > ONE_LINE || words.includes("\n"));
   if (!voice) return null;
   return (
     <View style={styles.box}>
@@ -214,7 +218,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
             style={styles.words}
           >
             <Text variant="small" tone="muted" numberOfLines={open ? undefined : 1} selectable={open}>
-              {message.body}
+              {words}
             </Text>
             {more ? (
               <Text variant="footnote" tone="faint" numberOfLines={1}>
@@ -224,6 +228,22 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
           </Pressable>
         ) : null}
       </View>
+      {broken ? (
+        // Like a message that didn't go (MessageRow): why, then the way out.
+        <Pressable
+          onPress={() => void toggle()}
+          accessibilityRole="button"
+          hitSlop={14}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <Text variant="caption" tone="danger">
+            {t("voice.cantPlay")}
+          </Text>
+          <Text variant="caption" tone="ink" style={styles.retry}>
+            {t("common.retry")}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 });
@@ -257,6 +277,7 @@ const styles = StyleSheet.create({
   },
   speedText: { fontVariant: ["tabular-nums"], fontWeight: "600" },
   pressed: { opacity: 0.6 },
+  retry: { fontWeight: "600", textDecorationLine: "underline" },
   // Under the wave, past the play button; "Ver tudo" on its own line below the words.
   words: { paddingLeft: 38, paddingBottom: 2, gap: 2 },
 });

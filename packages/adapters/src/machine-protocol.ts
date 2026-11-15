@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 61;
+export const MACHINE_PROTOCOL_VERSION = 67;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -240,6 +240,15 @@ export type ScreenKind = (typeof SCREEN_KINDS)[number];
  */
 export const PLAN_USAGE_PROTOCOL = 19;
 /**
+ * From this protocol on, `list.recheck`: a Claude setup-token account the server sees stuck at its plan's limit is
+ * checked with one call on the cheapest model (refused while still full, so free), at most every
+ * `TOKEN_RECHECK_MS`, since a token can't read its usage any other way. Older runners ignore it.
+ */
+export const PLAN_RECHECK_PROTOCOL = 62;
+/** How often a plan stuck at its limit is read again: a free probe (a CLI login, a key) and a token's check. */
+export const PLAN_RECHECK_MS = 5 * 60_000;
+export const TOKEN_RECHECK_MS = 10 * 60_000;
+/**
  * From this protocol on: coding plans as key accounts on Claude Code (ADR
  * 0059). `begin` with `provider` (a plan of `@agenteschat/providers/plans`)
  * starts no CLI: the runner makes the folder and a key the browser seals the
@@ -466,8 +475,8 @@ export const SHARED_COMPUTER_PROTOCOL = 37;
  */
 export const SHARED_CODEX_PROTOCOL = 38;
 /**
- * From this protocol on (ADR 0132): the OpenCode brain. `brain.turn` takes `kind: "opencode"` (OpenCode's CLI,
- * `opencode run --format json`, one process per turn), `account` takes `kind: "opencode"` (only an OpenCode key sealed
+ * From this protocol on (ADR 0132): the OpenCode brain. `brain.turn` takes `kind: "opencode"` (OpenCode's CLI, one
+ * process per turn; over ACP since `OPENCODE_ACP_PROTOCOL`), `account` takes `kind: "opencode"` (only an OpenCode key sealed
  * to the machine: `begin` with `provider: "zen"`), `hello.executors.opencode` reports the CLI with the models it lists
  * (`free` on OpenCode's free tier), and `access.tools.opencode` turns it on or off. The server never sends any of these
  * to an older runner.
@@ -627,8 +636,75 @@ export const CODEX_WINDOWS_PROTOCOL = 60;
  * and `keep.ended` says one ended. The server asks no older runner.
  */
 export const KEEP_RUNNING_PROTOCOL = 61;
+/**
+ * OpenCode turns over the Agent Client Protocol (ADR 0132 §ACP): `opencode acp` instead of `opencode run`, so they run
+ * on OpenCode 1.x and 2.x alike, on Windows too, and an OpenCode 2 turn takes `brain.steer`. A Windows runner before it
+ * refuses every OpenCode turn, so the server reads it as too old for OpenCode there.
+ */
+export const OPENCODE_ACP_PROTOCOL = 64;
 /** Why a hold ended on the computer: its program or browser went away (or its lock did), or its time ran out. */
 export type HoldEnd = "exited" | "expired";
+/**
+ * From this protocol on, `mcp.result` carries `images` (pictures and PDFs a tool returned, base64) and the runner hands
+ * them to the CLI as MCP `image` and embedded `resource` content. An older runner shows only the text: the server tells
+ * the agent there that the picture can't reach it until the app on that computer is updated.
+ */
+export const MCP_IMAGES_PROTOCOL = 62;
+/**
+ * `xcode.fix`: a Mac fixes its own Xcode for an iPhone's setup, started from the apps. `select` points the developer
+ * folder at Xcode, accepts its license and installs its first-launch packages behind macOS's own password window;
+ * `update` gets the device support files for a newer iOS (no password). The server sends no command: the runner holds
+ * the script. Older runners answer `bad_request`, and the apps show the Terminal command instead.
+ */
+export const XCODE_FIX_PROTOCOL = 62;
+/**
+ * `access.allow`: the person who paired the computer turns one of its tools on from the apps (ADR 0036 §8). The runner
+ * applies it as its own switch (`access.changed` follows) and tells whoever is at the computer, with a way to undo it.
+ * Older runners answer `bad_request`: the server asks none of them.
+ */
+export const ACCESS_ALLOW_PROTOCOL = 62;
+/**
+ * The iPhone guide's Developer Mode step: `phone.look` on a Mac reads its iPhones again before it answers (one turned
+ * on the mode, or came back from its restart), and `xcode.open` opens Xcode there, which shows the Developer Mode
+ * switch on a plugged iPhone that hides it. Older runners answer `phone.look` at once and `xcode.open` `bad_request`.
+ */
+export const IPHONE_DEV_MODE_PROTOCOL = 65;
+/**
+ * From this protocol on, in system mode a Grok Build sign-in is made for all of its owner's agents there too
+ * (`begin`'s `shared` for `grok`): root's `GROK_HOME` keeps the sign-in (`auth.json`, never lent) and each agent's
+ * turn gets a copy in its own folder for the account (`grok_auth` grant), a copy its Grok refreshed going back to
+ * root (`grok.auth`). An older runner lends the account's folder to one agent, so the server reads it as one login
+ * per agent, as before.
+ */
+export const SHARED_GROK_PROTOCOL = 67;
+
+/**
+ * `clis.check`: the coding CLIs looked up again now, the PATH read again first (the apps' "I installed it, check again").
+ * `cli.install`: the person who paired the computer installs a coding CLI there from the apps, through its vendor's
+ * official installer, run as that person. The server sends a program id from `INSTALLABLE_CLIS`, never a command: the
+ * runner holds the installers. Older runners answer `bad_request`: the server asks none of them.
+ */
+export const CLI_INSTALL_PROTOCOL = 66;
+/** The coding CLIs `cli.install` installs: Claude Code and Codex. */
+export const INSTALLABLE_CLIS = ["claude", "codex"] as const;
+export type InstallableCli = (typeof INSTALLABLE_CLIS)[number];
+export const isInstallableCli = (v: unknown): v is InstallableCli =>
+  (INSTALLABLE_CLIS as readonly unknown[]).includes(v);
+export const CLI_INSTALL_STATES = ["running", "done", "failed", "canceled", "unsupported"] as const;
+/** Why an install failed before or after its installer ran, as a code the apps word (`message` has the rest). */
+export const CLI_INSTALL_CAUSES = ["git_missing", "still_missing"] as const;
+/**
+ * Where an install stands: `running`, `done` (the look after it found the CLI), `failed` (`message`: the installer's
+ * own last line; `cause`: `git_missing`, Claude Code on Windows without Git for Windows, so nothing was installed, or
+ * `still_missing`, the installer ended well and the look after it still doesn't find the CLI), `canceled`,
+ * `unsupported` (this runner can't: system mode, a system it has no installer for).
+ */
+export interface CliInstall {
+  tool: InstallableCli;
+  state: (typeof CLI_INSTALL_STATES)[number];
+  message?: string;
+  cause?: (typeof CLI_INSTALL_CAUSES)[number];
+}
 
 export type PhonePlatform = "android" | "ios";
 export type PhoneKind = "device" | "emulator" | "simulator";
@@ -766,6 +842,35 @@ export function pairAddress(input: unknown): string | null {
   return v6?.[1]?.includes(":") ? text : null;
 }
 
+export const XCODE_BLOCKED = ["command_line_tools", "license"] as const;
+export type XcodeBlocked = (typeof XCODE_BLOCKED)[number];
+
+/** `select`: Xcode in use, its license and first-launch packages (asks the Mac's password); `update`: `ddis update`. */
+export type XcodeFixKind = "select" | "update";
+export const XCODE_FIX_STATES = [
+  "asking",
+  "running",
+  "done",
+  "canceled",
+  "no_answer",
+  "failed",
+  "unsupported",
+] as const;
+/**
+ * Where a fix stands: `asking` (macOS's password window is open on the Mac), `running` (`step` of 3 commands done),
+ * `done`, `canceled` (Cancel in that window, or from the apps), `no_answer` (nobody typed the password in 3 minutes),
+ * `failed` (`message`: the command's own last line), `unsupported` (this runner can't: not a Mac, a system-mode runner,
+ * no Xcode in /Applications).
+ */
+export interface XcodeFix {
+  kind: XcodeFixKind;
+  state: (typeof XCODE_FIX_STATES)[number];
+  step: number;
+  message?: string;
+  /** `failed` after a `select` whose commands all ran: the look after it still finds Xcode blocked, and why. */
+  still?: XcodeBlocked;
+}
+
 /** What this computer can build and drive with (versions found, best effort; absent: not found). */
 export interface RunnerToolchains {
   git?: string;
@@ -783,6 +888,11 @@ export interface RunnerToolchains {
   appleAccount?: "team" | "no_team" | "none";
   /** The iPhone SDK's version (`xcrun --sdk iphoneos --show-sdk-version`, "26.2"): the newest iOS it drives. */
   xcodeSdk?: string;
+  /**
+   * Xcode is installed but its tools don't answer, for a reason one command fixes: the developer folder is still the
+   * Command Line Tools (`xcode-select -s`), or Xcode's license isn't agreed to. Absent with `xcode`.
+   */
+  xcodeBlocked?: XcodeBlocked;
   node?: string;
   /** Podman's version: with the runner in system mode, the agents' containers (ADR 0169). */
   podman?: string;
@@ -1075,7 +1185,10 @@ export interface PlanUsage {
   limited?: boolean;
   source: "turn" | "probe";
   at: string;
-  /** Server side only: the models at a limit of their own (`PlanModelLimit`), by model id. */
+  /**
+   * The models at a limit of their own (`PlanModelLimit`), by model id: the usage views show it to people, and the
+   * engine uses it so "Automático" and its own turns don't pick an exhausted model (never a switch on its own).
+   */
   models?: Record<string, PlanModelLimit>;
   /** Server side only, on a plan whose models have their own limits: the model that last answered with this key. */
   answered?: string;
@@ -1139,6 +1252,8 @@ export const ACCOUNT_LOGIN_FAILURES = [
   "no_token",
   /** It signed in, but the computer couldn't keep the sign-in. */
   "not_kept",
+  /** Grok Build signed in, but its sandbox doesn't start there for an agent's user (bubblewrap's words in `message`). */
+  "sandbox",
   /** Nobody finished it within `ACCOUNT_LOGIN_TTL_MS` (`expired`). */
   "timeout",
   /** The person canceled it. */
@@ -1183,7 +1298,15 @@ export type AccountRequest =
    * Protocol 19: `fresh`, accounts (ids, or `OWN_USAGE_ID`s) whose usage to look up now: the runner
    * answers at once, probes in the background and sends `accounts.changed` when it knows more.
    */
-  | { action: "list"; fresh?: string[] }
+  | {
+      action: "list";
+      fresh?: string[];
+      /**
+       * Protocol 62 (`PLAN_RECHECK_PROTOCOL`): Claude setup-token accounts at their plan's limit, of those in `fresh`,
+       * to check with one call on the cheapest model (a token has no usage to read without one).
+       */
+      recheck?: string[];
+    }
   | { action: "remove"; kind: AccountKind; accountId: string };
 
 export const ACCOUNT_LOGIN_TTL_MS = 15 * 60_000;
@@ -1206,16 +1329,16 @@ export const isLoginEmail = (v: unknown): v is string =>
   /^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}@[A-Za-z0-9][A-Za-z0-9-]*(\.[A-Za-z0-9][A-Za-z0-9-]*)+$/.test(v);
 
 /** The `agent-browser` release the runner and the desktop app ship (ADR 0040 §2). */
-export const AGENT_BROWSER_VERSION = "0.39.1";
+export const AGENT_BROWSER_VERSION = "0.42.0";
 /** Targets of `agent-browser`'s release assets (`agent-browser-<target>`, `.exe` on Windows). */
 export type AgentBrowserTarget = "darwin-arm64" | "darwin-x64" | "linux-arm64" | "linux-x64" | "win32-x64";
 /** SHA-256 (hex) of each release asset of `AGENT_BROWSER_VERSION`, checked before the binary is used. */
 export const AGENT_BROWSER_SHA256: Record<AgentBrowserTarget, string> = {
-  "darwin-arm64": "cc18fac41d9dc9821918340a136e643286ea05544c4dd35671b796f1a874cdef",
-  "darwin-x64": "339cb9aa6dfd404856cf938df34cd3b4779c61dfd57fc257be11b14fd1a885f9",
-  "linux-arm64": "9d8fdc586056df65747927ae166157c83af91b52cea287175e5544afd2591d33",
-  "linux-x64": "6906d3a2a67b05809932a93d99e53d1132373f0a52a617b2d6032dbb954df6fc",
-  "win32-x64": "af1ff5f2afd5c187fb50ac3bbc1e7114baadc180d67cef63f644af9031be5049",
+  "darwin-arm64": "b1b2946c95d218b035262483f2c6193e0f216c155c903bcc532ce47e29d8e72d",
+  "darwin-x64": "802883bc38519e550525f74bb3e7ca692029082bdd2b7c235c26167b130c8d66",
+  "linux-arm64": "a219b10251ecd85e5787d1126dc969d926ac8d2dea325f9d94413907a8856f40",
+  "linux-x64": "b69e0f5ea76dcb51f8f75da6bcb87c7f4d81f79b5738f1f08bd121b51cb3dc57",
+  "win32-x64": "8209f42e604d012f789caa14ae73a57200925608409fa09427b0fd6e4f3adf15",
 };
 /** `darwin-arm64` → `agent-browser-darwin-arm64`; `win32-x64` → `agent-browser-win32-x64.exe`. */
 export const agentBrowserAsset = (target: AgentBrowserTarget) =>
@@ -1241,6 +1364,42 @@ export const BROWSER_LIMITS = {
   title: 300,
   message: 500,
 } as const;
+
+/**
+ * The agent's tabs after a `browser.act` or `browser.batch`: how many, the first `BROWSER_TABS_LISTED` most recently
+ * used first (titles are the sites': data, never instructions), which one its commands act on, and the hosts of the
+ * tabs its runner closed to keep them tidy since the agent last heard ("blank" for an empty tab). An older runner sends
+ * none, and the agent is told nothing.
+ */
+export interface BrowserTabs {
+  count: number;
+  open: { title: string; host: string; current?: boolean }[];
+  closed?: string[];
+}
+export const BROWSER_TABS_LISTED = 12;
+/** At most this many tabs stay open in an agent's Chrome: past it the runner closes the least recently used. */
+export const BROWSER_TABS_KEPT = 8;
+
+/** A reply's `tabs`, checked; undefined when there is none or it isn't one. */
+export function browserTabsOf(v: unknown): BrowserTabs | undefined {
+  if (!isObject(v) || !Number.isInteger(v.count) || !Array.isArray(v.open)) return undefined;
+  const text = (x: unknown, max: number) => (typeof x === "string" ? x.slice(0, max) : "");
+  const open = v.open
+    .slice(0, BROWSER_TABS_LISTED)
+    .filter(isObject)
+    .map((t) => ({
+      title: text(t.title, BROWSER_LIMITS.title),
+      host: text(t.host, 255),
+      ...(t.current === true ? { current: true } : {}),
+    }));
+  const closed = Array.isArray(v.closed)
+    ? v.closed
+        .slice(0, 50)
+        .map((h) => text(h, 255))
+        .filter(Boolean)
+    : [];
+  return { count: Math.max(open.length, v.count as number), open, ...(closed.length > 0 ? { closed } : {}) };
+}
 
 /** Where people get Google Chrome, which agents' browsers run on (ADR 0133). */
 export const CHROME_DOWNLOAD_URL = "https://www.google.com/chrome/";
@@ -1287,6 +1446,40 @@ export const CHROME_FAILURES = {
 } as const;
 
 export type ChromeFailure = "missing" | "start" | "profile" | "outdated";
+/** The way out of a Chrome that closed as it started for no cause we know. */
+const UPDATE_CHROME =
+  "Update Google Chrome on it (open Chrome, then Settings › About Chrome, and Relaunch), then try again.";
+
+/**
+ * How a Chrome that closed while starting exited, for logs and people: its exit code (in hex too on Windows, whose
+ * codes are often NTSTATUS values) or the signal that ended it.
+ */
+export function chromeExitText(code: number | null, signal: string | null, platform: string = process.platform) {
+  if (code === null) return signal ? `signal ${signal}` : "no exit code";
+  const n = platform === "win32" ? code >>> 0 : code;
+  return platform === "win32" ? `exit 0x${n.toString(16).toUpperCase()}/${n}` : `exit ${n}`;
+}
+
+/**
+ * What follows `CHROME_FAILURES.start` when Chrome closed while starting: the cause, when its exit code is one we
+ * know, and one way out. 21 (a profile in use) is `CHROME_FAILURES.profile` instead.
+ */
+export function chromeExitCause(code: number | null, signal: string | null, platform: string = process.platform) {
+  const exit = chromeExitText(code, signal, platform);
+  switch (code === null ? null : code >>> 0) {
+    // chrome_result_codes.h: RESULT_CODE_NORMAL_EXIT_PROCESS_NOTIFIED, handed to a Chrome already on the profile.
+    case 24:
+      return `Another Google Chrome already running with the agent's profile took over its start (${exit}). Try again in a minute.`;
+    // NTSTATUS STATUS_DLL_NOT_FOUND.
+    case 0xc0000135:
+      return `A file Google Chrome needs is missing (${exit}). Reinstall Google Chrome from google.com/chrome, then try again.`;
+    // NTSTATUS STATUS_ACCESS_VIOLATION.
+    case 0xc0000005:
+      return `Google Chrome crashed as it started (${exit}). ${UPDATE_CHROME}`;
+    default:
+      return `Google Chrome closed as it started (${exit}). ${UPDATE_CHROME}`;
+  }
+}
 
 /** Which of `CHROME_FAILURES` a runner's message is, or null for another one (an older runner's, a busy computer). */
 export function chromeFailureKind(message: string): ChromeFailure | null {
@@ -1513,6 +1706,31 @@ export type BrowserInputEvent =
     }
   /** Whole text into the focused field (CDP `Input.insertText`): accents, paste, the app's own text field. */
   | { kind: "text"; text: string };
+
+/** What the agent's pointer does where it arrives: `type` stays there while the keys go in. */
+export const AGENT_POINTER_ACTS = ["move", "click", "double", "type"] as const;
+export type AgentPointerAct = (typeof AGENT_POINTER_ACTS)[number];
+
+/** A point the agent's pointer goes to, in the pixels of a surface `width`×`height` (the page's viewport). */
+export interface AgentPointer {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  act: AgentPointerAct;
+}
+
+/** An `AgentPointer` out of a frame: a point inside a surface of a sane size, or null. */
+export function parseAgentPointer(f: Record<string, unknown>): AgentPointer | null {
+  const [x, y, width, height] = [f.x, f.y, f.width, f.height].map((n) =>
+    typeof n === "number" && Number.isFinite(n) ? n : undefined,
+  );
+  const act = AGENT_POINTER_ACTS.find((a) => a === f.act);
+  if (x === undefined || y === undefined || width === undefined || height === undefined || !act) return null;
+  if (width < 1 || height < 1 || width > 16_384 || height > 16_384) return null;
+  const within = (n: number, max: number) => Math.round(Math.min(Math.max(n, 0), max));
+  return { x: within(x, width), y: within(y, height), width: Math.round(width), height: Math.round(height), act };
+}
 
 /** What a frame shows. */
 export interface BrowserFrameMetadata {
@@ -1774,6 +1992,10 @@ export interface TaskStart {
   model?: string;
 }
 
+/** The coding CLIs `hello.executors` reports. */
+export const CLI_NAMES = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
+export type CliName = (typeof CLI_NAMES)[number];
+
 /** A coding CLI on the machine, as `hello` reports it (protocol 7). */
 export interface RunnerExecutorInfo {
   /** The first line of `<cli> --version`. */
@@ -1805,6 +2027,16 @@ export interface CursorModelInfo {
 export const CURSOR_MODEL_LIMITS = { models: 60, id: 80, label: 80 } as const;
 
 /**
+ * How a brain turn started on the runner (Claude Code; an older runner leaves it out): on a process already open
+ * (`warm`), how long a new one took to say it was ready (`initMs`), and the first event after the turn began.
+ */
+export interface BrainTurnTimings {
+  warm: boolean;
+  initMs?: number;
+  firstEventMs?: number;
+}
+
+/**
  * One event of a brain turn on the wire (`brain.event`), the same shape as
  * the engine's `BrainEvent` (packages/engine/src/brains/types.ts; this file
  * imports nothing).
@@ -1827,12 +2059,17 @@ export type WireBrainEvent =
       model?: string;
       cacheRead?: number;
       cacheWrite?: number;
-      /** Claude Code: the API calls the turn made (`num_turns`), and the most uncached input one of them read. */
+      /**
+       * The API calls the turn made (Claude Code's `num_turns`, Codex's model requests), the most uncached input one of
+       * them read (Claude Code), and the most input one read, cache included: its context at that step. An older
+       * runner sends none.
+       */
       calls?: number;
       maxUncached?: number;
+      maxContext?: number;
     }
   | { type: "limit"; resetsAt?: string }
-  | { type: "done"; text: string; session?: { id: string } }
+  | { type: "done"; text: string; session?: { id: string }; timings?: BrainTurnTimings }
   /**
    * `worked`: on a `plan_limit`, whether the turn used any tool before it was cut (an older runner leaves it out:
    * the engine counts that as worked).
@@ -2108,6 +2345,7 @@ export interface MachineAgent {
   /**
    * Its containers service may run here (ADR 0169). Absent for a brain whose shell runs in a sandbox of the CLI's own,
    * which that service, outside it, would be a way out of, and for the team's right hand, which thinks on several.
+   * A person's seat of the right hand (an entry of its own here, ADR 0175) has it.
    */
   containers?: boolean;
 }
@@ -2199,6 +2437,11 @@ export interface RunnerInfo {
     opencode?: RunnerExecutorInfo;
     grok?: RunnerExecutorInfo;
     antigravity?: RunnerExecutorInfo;
+    /**
+     * `CLI_INSTALL_PROTOCOL`: a CLI that is there and whose `--version` keeps failing, with its own last line of
+     * error. It is not listed above: it can't run turns, and it isn't missing either.
+     */
+    broken?: Partial<Record<CliName, string>>;
   };
   /** Protocol 9: whether the owner paused this computer. */
   paused?: RunnerPause;
@@ -2255,12 +2498,19 @@ export interface FileEntry {
  * The agent a request is for (protocol 2+). The runner gives each agent its
  * own folder inside the workspace, `<handle>-<first 8 of id>`, and treats it
  * as that request's workspace; a renamed agent keeps its folder (found by id).
+ * The id isn't always an agent's row: a browser profile's, or a person's seat of the team's right hand (ADR 0175),
+ * which the runner serves like any agent.
  */
 export interface AgentScope {
   id: string;
   handle: string;
   /** Protocol 9: the agent's display name, for the machine's activity log. */
   name?: string;
+  /**
+   * Protocol 63 (ADR 0156): on the work the server starts (`exec`, `brain.turn`, `task.start`), the `Co-authored-by`
+   * lines its commits end with. The runner hands them to git in the agent's own processes alone (`co-authors.ts`).
+   */
+  coAuthors?: string[];
 }
 
 /** What the server asks. Paths are always relative to the workspace (the agent's folder when `agent` is set). */
@@ -2315,6 +2565,8 @@ export type MachineRequest = (
       removeFolder?: { path: string; agentId?: string };
       disableTool?: keyof RunnerTools;
     }
+  /** `ACCESS_ALLOW_PROTOCOL`: the computer's owner turned `tool` on from the apps (`by` their user id, `byName` shown). */
+  | { op: "access.allow"; tool: keyof RunnerTools; by: string; byName: string }
   | {
       op: "push";
       path: string;
@@ -2354,6 +2606,12 @@ export type MachineRequest = (
        * may start Chrome, never while someone watches it or a person's turn is open.
        */
       desktop?: boolean;
+      /**
+       * The person in control sent it (the live view's address field, a restart): it runs while they drive the
+       * browser. Anything else meanwhile never reaches the browser: a read of the address or title is answered from
+       * the live view, the rest is refused (a person's input waits behind whatever the browser is busy with).
+       */
+      person?: boolean;
     }
   /** Protocol 12: close the agent's browser session (Stop, idle). */
   | { op: "browser.stop" }
@@ -2444,8 +2702,9 @@ export type MachineRequest = (
   | { op: "pause.set"; paused: boolean; until?: string | null; by: string }
   /**
    * A phone guide is open and waits for a phone: for the next minute, a Windows runner also looks for a plugged phone
-   * Windows has no USB driver for (adb never lists one) and reports it as `no_driver`. Older runners answer
-   * `bad_request`, which the server ignores.
+   * Windows has no USB driver for (adb never lists one) and reports it as `no_driver`. From `IPHONE_DEV_MODE_PROTOCOL`
+   * a Mac reads its iPhones again and answers once `phones.changed` went out. Older runners answer `bad_request`,
+   * which the server ignores.
    */
   | { op: "phone.look" }
   /**
@@ -2461,6 +2720,14 @@ export type MachineRequest = (
   | { op: "keep.start"; holdId: string; pid?: number; browser?: boolean; until?: string }
   /** Ends hold `holdId`; with `stop`, what it holds too: its program (SIGTERM, SIGKILL 10 s later) or the browser. */
   | { op: "keep.end"; holdId: string; stop?: boolean }
+  /** `XCODE_FIX_PROTOCOL`: start a fix (`kind`), or say where the last one stands, or stop it. One at a time. */
+  | { op: "xcode.fix"; action: "start" | "status" | "cancel"; kind?: XcodeFixKind }
+  /** `CLI_INSTALL_PROTOCOL`: the PATH and the coding CLIs looked up now; `executors.changed` follows a change. */
+  | { op: "clis.check" }
+  /** `CLI_INSTALL_PROTOCOL`: start an install of `tool`, or say where the last one stands, or stop it. One at a time. */
+  | { op: "cli.install"; action: "start" | "status" | "cancel"; tool?: InstallableCli }
+  /** `IPHONE_DEV_MODE_PROTOCOL`: open Xcode on this Mac (it shows Developer Mode on a plugged iPhone). */
+  | { op: "xcode.open" }
 ) & {
   agent?: AgentScope;
   /** Protocol 34: a `browser.*` op in this browser profile's session instead of the agent's (ADR 0110). */
@@ -2498,6 +2765,7 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "mission.worktree",
   "access.request",
   "access.reduce",
+  "access.allow",
   "browser.act",
   "browser.stop",
   "browser.stream.start",
@@ -2536,6 +2804,10 @@ export const MACHINE_OPS: readonly MachineOp[] = [
   "phone.wifi",
   "keep.start",
   "keep.end",
+  "xcode.fix",
+  "clis.check",
+  "cli.install",
+  "xcode.open",
 ];
 
 /** What each op answers with `ok: true`. */
@@ -2605,6 +2877,7 @@ export interface MachineReplies {
   "mission.worktree": Partial<MissionWorktreeEnsured> & { removed?: boolean };
   "access.request": { requestId: string; status: "pending" | "granted" };
   "access.reduce": { access: RunnerAccess };
+  "access.allow": { access: RunnerAccess };
   /**
    * `agent-browser`'s own JSON answer: `success: false` with its `error` is a page-level failure (stale ref, covered
    * click). Protocol 45: `code` names a Vault refusal (`VAULT_TYPE_REFUSALS`).
@@ -2617,6 +2890,7 @@ export interface MachineReplies {
     setup?: BrowserSetup;
     /** Protocol 52: the page size its browser emulates (`agentes:viewport`) after the command; absent at its own. */
     emulated?: NonNullable<BrowserViewport>;
+    tabs?: BrowserTabs;
   };
   /** `false`: there was no session. */
   "browser.stop": { stopped: boolean };
@@ -2634,6 +2908,7 @@ export interface MachineReplies {
     setup?: BrowserSetup;
     /** As `browser.act`'s, after the batch. */
     emulated?: NonNullable<BrowserViewport>;
+    tabs?: BrowserTabs;
   };
   /** `false`: nothing was started (it runs or starts already, a person has the browser, or no room). */
   "browser.warm": { started: boolean; setup?: BrowserSetup };
@@ -2700,6 +2975,10 @@ export interface MachineReplies {
   "keep.start": { held: true };
   /** `false`: no such hold lived here. */
   "keep.end": { ended: boolean };
+  "xcode.fix": { fix: XcodeFix | null };
+  "clis.check": { executors: NonNullable<RunnerInfo["executors"]> };
+  "cli.install": { install: CliInstall | null };
+  "xcode.open": { opened: boolean };
 }
 
 /** An element numbered on a `browser.capture` image: its ref and box (CSS pixels). */
@@ -2808,7 +3087,14 @@ export type ServerFrame =
   /** The server stored this task's `task.done`: the runner stops re-sending it. */
   | { type: "task.ack"; taskId: string }
   /** Protocol 5: the answer to an `mcp.call` (the text the executor's tool call returns). */
-  | { type: "mcp.result"; callId: string; ok: true; text: string }
+  | {
+      type: "mcp.result";
+      callId: string;
+      ok: true;
+      text: string;
+      /** `MCP_IMAGES_PROTOCOL`: pictures (PNG, JPEG, GIF, WebP) and PDFs the tool returned, base64. */
+      images?: { mediaType: string; data: string; name?: string }[];
+    }
   | { type: "mcp.result"; callId: string; ok: false; error: { code: string; message: string } }
   /** Protocol 8: the answer to an `mcp.list`: the tools this run may use (JSON Schemas simplified for the CLIs). */
   | { type: "mcp.tools"; callId: string; ok: true; tools: McpToolInfo[] }
@@ -2909,6 +3195,13 @@ export type RunnerFrame =
   | { type: "browser.frame"; agentId: string; seq: number; data: string; metadata: BrowserFrameMetadata }
   /** Protocol 12: an agent's stream stopped on the machine (asked, session closed, error). */
   | { type: "browser.stream.ended"; agentId: string; reason: "stopped" | "closed" | "error"; message?: string }
+  /**
+   * Where the agent's pointer goes on its browser's page, said as the gesture starts so whoever watches sees it
+   * arrive before the page changes (ADR 0040 §7.2). An older server drops it: nothing asks for it.
+   */
+  | ({ type: "browser.pointer"; agentId: string } & AgentPointer)
+  /** The same on the agent's desktop (ADR 0062), in the screen's pixels: desktop use, and its browser's window there. */
+  | ({ type: "desktop.pointer"; agentId: string } & AgentPointer)
   /** `KEEP_RUNNING_PROTOCOL`: a hold ended on the computer by itself (the next `hello` says so again). */
   | { type: "keep.ended"; holdId: string; reason: HoldEnd };
 
@@ -2965,6 +3258,7 @@ const TOOLCHAINS: readonly (keyof RunnerToolchains)[] = [
   "appleTeam",
   "appleAccount",
   "xcodeSdk",
+  "xcodeBlocked",
   "node",
   "podman",
 ];
@@ -3041,6 +3335,7 @@ export function parseToolchains(v: Record<string, unknown>): RunnerToolchains {
     if (value) (out as Record<string, string>)[key] = value;
   }
   if (out.appleAccount && !["team", "no_team", "none"].includes(out.appleAccount)) delete out.appleAccount;
+  if (out.xcodeBlocked && !(XCODE_BLOCKED as readonly string[]).includes(out.xcodeBlocked)) delete out.xcodeBlocked;
   return out;
 }
 
@@ -3106,11 +3401,14 @@ export function parseCursorModels(v: unknown): CursorModelInfo[] {
   return out;
 }
 
-/** `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok` and `antigravity`, each with a short version line (and Claude Code's login). */
+/**
+ * `hello.executors`: only `claude`, `codex`, `cursor`, `opencode`, `grok` and `antigravity`, each with a short version
+ * line (and Claude Code's login), and `broken`: the error line of each of them that is there and can't start.
+ */
 export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerInfo["executors"]> {
   const out: NonNullable<RunnerInfo["executors"]> = {};
   const word = (x: unknown) => (isString(x) && /^[\w.-]{1,40}$/.test(x) ? x : undefined);
-  for (const name of ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const) {
+  for (const name of CLI_NAMES) {
     const e = v[name];
     if (!isObject(e) || !isString(e.version)) continue;
     const authMethod = word(e.authMethod);
@@ -3124,8 +3422,21 @@ export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerIn
     const models = name === "claude" || name === "codex" ? [] : parseCursorModels(e.models);
     if (models.length) out[name] = { ...out[name], models } as RunnerExecutorInfo;
   }
+  if (isObject(v.broken)) {
+    const broken: Partial<Record<CliName, string>> = {};
+    for (const name of CLI_NAMES) {
+      const said = v.broken[name];
+      if (!out[name] && isString(said)) broken[name] = said.replace(/\s+/g, " ").trim().slice(0, CLI_ERROR_MAX);
+    }
+    if (Object.keys(broken).length) out.broken = broken;
+  }
   return out;
 }
+
+/** The longest error line `executors.broken` keeps for a CLI. */
+export const CLI_ERROR_MAX = 300;
+/** `executors.broken.claude` on Windows when Git for Windows, which Claude Code needs there, isn't on the computer. */
+export const CLI_GIT_MISSING = "git_missing";
 
 /** `hello.accounts` (protocol 13): at most `MAX_MACHINE_ACCOUNTS`, ids and kinds checked, short words only. */
 export function parseAccounts(v: unknown[]): RunnerAccountInfo[] {
@@ -3250,13 +3561,31 @@ export function parseBrainEvent(v: unknown): WireBrainEvent | null {
         ...(num(v.cacheWrite) > 0 ? { cacheWrite: num(v.cacheWrite) } : {}),
         ...(num(v.calls) > 0 ? { calls: num(v.calls) } : {}),
         ...(num(v.maxUncached) > 0 ? { maxUncached: num(v.maxUncached) } : {}),
+        ...(num(v.maxContext) > 0 ? { maxContext: num(v.maxContext) } : {}),
       };
     case "limit":
       return { type: "limit", ...(isString(v.resetsAt) ? { resetsAt: v.resetsAt.slice(0, 40) } : {}) };
     case "done": {
       if (!isString(v.text)) return null;
       const session = isObject(v.session) && isString(v.session.id) ? { id: v.session.id.slice(0, 64) } : undefined;
-      return { type: "done", text: v.text.slice(0, BRAIN_LIMITS.doneText), ...(session ? { session } : {}) };
+      const ms = (x: unknown) => (finite(x) !== undefined && (x as number) >= 0 ? Math.round(x as number) : undefined);
+      const t = isObject(v.timings) && typeof v.timings.warm === "boolean" ? v.timings : null;
+      const initMs = ms(t?.initMs);
+      const firstEventMs = ms(t?.firstEventMs);
+      return {
+        type: "done",
+        text: v.text.slice(0, BRAIN_LIMITS.doneText),
+        ...(session ? { session } : {}),
+        ...(t
+          ? {
+              timings: {
+                warm: t.warm as boolean,
+                ...(initMs !== undefined ? { initMs } : {}),
+                ...(firstEventMs !== undefined ? { firstEventMs } : {}),
+              },
+            }
+          : {}),
+      };
     }
     case "error":
       if (!isString(v.code)) return null;
@@ -3412,6 +3741,11 @@ export function parseRunnerFrame(raw: string): RunnerFrame | null {
         reason,
         ...(message !== undefined ? { message } : {}),
       };
+    }
+    case "browser.pointer":
+    case "desktop.pointer": {
+      const pointer = parseAgentPointer(f);
+      return isString(f.agentId) && pointer ? { type: f.type, agentId: f.agentId.slice(0, 64), ...pointer } : null;
     }
     case "runner.state": {
       const paused = parsePause(f.paused);

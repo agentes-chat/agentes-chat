@@ -35,6 +35,7 @@ import { useDirectory } from "@/hooks/useDirectory";
 import { useToast } from "@/lib/toast";
 import { AddAccount } from "./AddAccountFlow";
 import { PlanHold, usePlanHold } from "./ConnectAiSteps";
+import { UseKeyForAll } from "./UseKeyForAll";
 
 /*
  * What the owner of a plan account does with it (ADR 0059), where Configurações › IA e uso opens the account: what its
@@ -43,7 +44,7 @@ import { PlanHold, usePlanHold } from "./ConnectAiSteps";
  */
 
 type Row = AiAccountsView["accounts"][number];
-type Open = { type: "rename" | "again" | "remove"; account: PlanAccount<Row> };
+type Open = { type: "rename" | "again" | "remove" | "all"; account: PlanAccount<Row> };
 
 /** The viewer's own account's notes and actions, by one of its logins; nothing for an account that isn't theirs. */
 export function AccountActions({ machineId, accountId }: { machineId: string; accountId: string }) {
@@ -164,6 +165,11 @@ export function AccountActions({ machineId, accountId }: { machineId: string; ac
             </Menu>
           )
         )}
+        {plan && a.status === "active" && (
+          <Button variant="link" disabled={busy} onClick={() => setOpen({ type: "all", account })}>
+            {t("aiAccounts.page.useAll")}
+          </Button>
+        )}
         <Button variant="link" disabled={busy} onClick={() => setOpen({ type: "rename", account })}>
           {t("aiAccounts.page.rename")}
         </Button>
@@ -191,6 +197,7 @@ export function AccountActions({ machineId, accountId }: { machineId: string; ac
         </Button>
       </div>
 
+      {open?.type === "all" && <UseKeyForAll account={a} onClose={() => setOpen(null)} />}
       {open?.type === "rename" && open.account.logins[0] && (
         <RenameDialog
           account={open.account.logins[0]}

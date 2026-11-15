@@ -210,7 +210,7 @@ describe("profile card", () => {
     expect(c.textContent).toContain("Agente · Dev");
     expect(c.textContent).toContain("Responsável");
     expect(c.textContent).toContain("João");
-    expect(c.textContent).toContain("sonnet 5.5");
+    expect(c.textContent).toContain("Claude Sonnet 5.5");
     expect(c.textContent).not.toContain("Pode");
     expect(c.textContent).toContain("31% do orçamento usado este mês");
     expect(c.textContent).not.toContain("US$");

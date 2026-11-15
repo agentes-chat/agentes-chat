@@ -13,7 +13,7 @@ import { ConflictError, ForbiddenError, NotFoundError } from "./errors";
 import { publishChannelEvent, publishMessageCreated, publishRouted } from "./events";
 import type { Judge } from "./judge";
 import { getMessage, insertMessage, type Message, messageView } from "./messages";
-import { can, type Membership } from "./organizations";
+import { can, type Membership, requireActiveMembership } from "./organizations";
 import { type RouterDeps, routeMessage } from "./router";
 import { bodyCode } from "./run-tools";
 import { type AgentRun, NO_AI, replyThreadOf } from "./runs";
@@ -51,6 +51,8 @@ const REASON_TEXT: Partial<Record<NoAiCardReason, string>> = {
   commands_off: "I can't answer now: commands are turned off on my plan's computer.",
   plan_not_shared:
     "I can't answer you on the workspace's plan: it serves only its owner. Connect your own plan and I will.",
+  plans_not_yours:
+    "I can't answer you: the plans connected here serve only the people who connected them. Connect your own and I will.",
   plan_unattended:
     "I didn't answer: the request didn't come from a person, and the workspace's plan serves only its owner.",
   runner_outdated: "I can't answer now: the program on my plan's computer needs an update.",
@@ -81,6 +83,9 @@ export interface NoAiCard extends ConnectIntent {
   model?: string;
   /** With `cli_failed`: what the plan's CLI said (`cliWords`), the cause the line names. */
   why?: string;
+  /** With `plans_not_yours`: whose the workspace's plans are, and what they are ("Claude"). */
+  owner?: string;
+  plan?: string;
   /** The run that couldn't think (deleted when "Responder agora" starts it again). */
   runId: string;
 }
@@ -121,6 +126,7 @@ export async function postNoAiCard(
   own?: AgentAi["own"],
   model?: string,
   why?: string,
+  notYours?: Pick<AgentAi, "owner" | "plan">,
 ): Promise<Message | null> {
   const { db } = deps;
   const threadId = replyThreadOf(run);
@@ -148,6 +154,7 @@ export async function postNoAiCard(
       ...(own ? { own } : {}),
       ...(model ? { model } : {}),
       ...(why && reason === "cli_failed" ? { why } : {}),
+      ...(reason === "plans_not_yours" && notYours?.owner ? { owner: notYours.owner, plan: notYours.plan } : {}),
       ...intent,
       runId: run.id,
     };
@@ -373,12 +380,17 @@ export async function answerNow(
 ): Promise<{ runs: Answering }> {
   const message = await getMessage(deps.db, orgId, messageId);
   if (!message || message.deletedAt) throw new NotFoundError("Message not found");
-  const { membership } = await requireChannelAccess(deps.db, userId, orgId, message.channelId);
+  const usage = message.authorType === "agent" ? usagePauseCardOf(message.meta) : null;
+  // A long-work pause card may sit in an agents' DM (the paused run answers another agent), which no person is a
+  // member of: people open it from where they asked. Who may press it is the run's rule alone (`mayStopRun`), as
+  // for its "Don't run it" (`cancelRun`) and the task manager's line (`continuePausedRuns`).
+  const membership = usage
+    ? await requireActiveMembership(deps.db, userId, orgId)
+    : (await requireChannelAccess(deps.db, userId, orgId, message.channelId)).membership;
   // Refused here, first: a key saved earlier reads as ready, and the restarted run would only be refused again.
   await assertCanWork(deps.db, orgId);
   const paused = message.authorType === "agent" ? stretchCardOf(message.meta) : null;
   if (paused) return continueStretch(deps, userId, membership, message, paused);
-  const usage = message.authorType === "agent" ? usagePauseCardOf(message.meta) : null;
   if (usage) return continueUsagePause(deps, userId, membership, message, usage);
   const card = noAiCardOf(message);
   const found = await answeringRuns(deps.db, message, card);

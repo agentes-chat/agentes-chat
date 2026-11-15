@@ -76,6 +76,7 @@ const KNOWN = {
   "device.link_not_found": "errors.machine.pairingInvalid",
   "device.not_link_maker": "errors.device.notLinkMaker",
   "device.widen_forbidden": "errors.device.widenForbidden",
+  "device.spill_owner_only": "errors.device.spillOwnerOnly",
   "device.not_home": "errors.device.notHome",
   "machine.not_found": "errors.machine.notFound",
   "machine.name_required": "errors.machine.nameRequired",
@@ -87,6 +88,9 @@ const KNOWN = {
   "machine.target_same": "errors.machine.targetSame",
   "machine.target_paused": "errors.machine.targetPaused",
   "machine.pause_past": "errors.machine.pausePast",
+  "machine.not_owner": "errors.machine.notOwner",
+  "machine.ask_self": "errors.machine.askSelf",
+  "admin_ask.self": "errors.machine.adminAskSelf",
   // A computer that can't take the request now (`MachineOfflineError`, `MachinePausedError`: `name`), or its own
   // refusal (`MachineRequestError`, as `machine.<code>`).
   "machine.offline": "errors.machine.offline",
@@ -95,6 +99,7 @@ const KNOWN = {
   "machine.exec_disabled": "errors.mission.execDisabled",
   budget_exceeded: "agentPage.activity.errors.budget_exceeded",
   "agent_group.not_found": "errors.agentGroup.notFound",
+  "agent_group.ambiguous": "errors.agentGroup.ambiguous",
   "agent_group.too_many": "errors.agentGroup.tooMany",
   "thread.context_not_visible": "errors.thread.contextNotVisible",
   "thread.archived": "errors.thread.archived",
@@ -102,6 +107,7 @@ const KNOWN = {
   "thread.range_has_replies": "errors.thread.rangeHasReplies",
   "thread.move_other_channel": "errors.thread.moveOtherChannel",
   "thread.not_allowed": "errors.thread.notAllowed",
+  "follow_up.not_yours": "errors.followUp.notYours",
   "thread.range_invalid": "errors.thread.rangeInvalid",
   "thread.range_empty": "errors.thread.rangeEmpty",
   "thread.range_too_long": "errors.thread.rangeTooLong",
@@ -187,12 +193,22 @@ const KNOWN = {
   "connector.unfinished": "errors.connector.unfinished",
   "connector.unavailable": "errors.connector.unavailable",
   "connector.misconfigured": "errors.connector.misconfigured",
+  "connector.header_name": "errors.connector.headerName",
+  "connector.header_value": "errors.connector.headerValue",
+  "connector.header_reserved": "errors.connector.headerReserved",
+  "connector.header_twice": "errors.connector.headerTwice",
+  "connector.header_and_key": "errors.connector.headerAndKey",
+  "connector.headers_too_many": "errors.connector.headersTooMany",
+  "connector.headers_with_sign_in": "errors.connector.headersWithSignIn",
+  "connector.headers_unreadable": "errors.connector.headersUnreadable",
   // Facts only (the phone shows this one): the web's onboarding says `standing.createUnpaid` beside the way to pay.
   "org.create_unpaid": "standing.createInactive",
   "credentials.plan_hold": "connectAi.key.closed",
   "machine.managed": "computerSetup.managedNotRemovable",
   "machine.managed_access": "computerSetup.managedAccess",
   "join.link_closed": "errors.join.linkClosed",
+  "join.link_full": "errors.join.linkFull",
+  "join.link_full_approval": "errors.join.linkFullApproval",
   "join.full": "errors.join.full",
   "join.rate_limited": "errors.join.rateLimited",
   "join.link_busy": "errors.join.linkBusy",
@@ -212,6 +228,13 @@ const KNOWN = {
   "reauth.code_tries": "errors.code.tries",
   "reauth.code_limit": "errors.code.limit",
   "reauth.code_wait": "errors.code.wait",
+  // A new address for the account (apps/server auth.ts `changeAccountEmail`) and its "This wasn't me".
+  "email.same": "shell.email.same",
+  "email.held": "shell.email.held",
+  "email.no_mail": "shell.email.noMail",
+  "email.taken": "shell.email.taken",
+  "email.undo_gone": "emailUndo.goneLead",
+  "email.undo_taken": "emailUndo.takenLead",
   "invitation.ask_to_join": "errors.invitation.askToJoin",
   "org.create_invite_only": "errors.org.createInviteOnly",
   "org.not_restorable": "errors.org.notRestorable",
@@ -231,6 +254,8 @@ const KNOWN = {
   SIGNUP_CLOSED: "auth.flow.closedLead",
   // A sign-up whose name is its password (apps/server auth.ts `NAME_IS_PASSWORD`).
   NAME_IS_PASSWORD: "auth.flow.nameIsPassword",
+  // A sign-up with an address an account just left, held for its "This wasn't me" (apps/server auth.ts `EMAIL_HELD`).
+  EMAIL_HELD: "auth.flow.emailHeld",
   // Better Auth's own refusals on sign-up or a password change (an expired reset link is the reset page's own state).
   USER_ALREADY_EXISTS: "auth.refused.linked",
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: "auth.refused.linked",
@@ -268,6 +293,7 @@ const KNOWN = {
   "skill.too_large": "errors.skill.tooLarge",
   "skill.too_many_files": "errors.skill.tooManyFiles",
   "skill.repo_too_large": "errors.skill.repoTooLarge",
+  "skill.link_too_large": "errors.skill.linkTooLarge",
   "skill.no_frontmatter": "errors.skill.noFrontmatter",
   "skill.body_too_long": "errors.skill.bodyTooLong",
   "skill.no_skill_md_zip": "errors.skill.noSkillMdZip",
@@ -392,6 +418,9 @@ const KNOWN = {
   "action.not_undone": "errors.said.alreadyDone",
   "action_card.asked": "errors.said.alreadyDone",
   "action_card.decided": "errors.said.alreadyDone",
+  // A card that names all it does (an invite's addresses, a key) is applied only by an app that words it.
+  "action_card.update_app": "errors.rightHand.updateApp",
+  "action_card.nobody_new": "errors.rightHand.nobodyNew",
   "agent_proposal.asked": "errors.said.alreadyDone",
   "approval.not_ahead": "errors.said.alreadyDone",
   "approval.not_cancelable": "errors.said.alreadyDone",
@@ -412,6 +441,8 @@ const KNOWN = {
   "secret.closed": "errors.said.alreadyDone",
   "team_week.done": "errors.said.alreadyDone",
   "upload.not_pending": "errors.said.alreadyDone",
+  // What an invite card names (a role) moved since: the server rewrote the card, so a refresh shows it as it is.
+  "action_card.changed": "errors.said.changed",
   "agent.mail_loss_changed": "errors.said.changed",
   "mission.plan_conflict": "errors.said.changed",
   "run.state_changed": "errors.said.changed",
@@ -488,6 +519,7 @@ const KNOWN = {
   "wiki.body_too_long": "errors.said.tooLong",
   "account.runner_old": "errors.said.updateComputerApp",
   "machine.access_outdated": "errors.said.updateComputerApp",
+  "machine.cli_outdated": "errors.said.updateComputerApp",
   "machine.outdated": "errors.said.updateComputerApp",
   "machine.updates_itself": "errors.said.computerUpdatesItself",
   "database.disabled": "errors.said.offHere",
@@ -506,6 +538,8 @@ const KNOWN = {
   "browser.not_in_control": "errors.said.takeControl",
   "browser_profile.busy": "errors.said.profileBusy",
   "browser_profile.name_taken": "errors.said.nameTaken",
+  "browser_profile.tool_off": "browser.profiles.toolOff",
+  "browser_profile.unavailable": "browser.profiles.notOpened",
   "channel.delete_name": "errors.said.deleteName",
   "channel.general": "errors.said.generalKept",
   "channel.general_stays": "errors.said.generalStays",
@@ -673,6 +707,19 @@ export const CONTINUE_ERRORS: ReadonlySet<string> = new Set([
 export const errorCode = (error: unknown) => (error instanceof ApiError ? error.code : undefined);
 
 /**
+ * Where Sua conta › E-mail says why a new address was refused, web and phone: under the address (`email.same`,
+ * `email.held`, `email.taken`), under the code (`reauth.code_*`), else on its own. A code that went out a moment ago
+ * (`reauth.code_wait`) is no refusal: the code's countdown says it.
+ */
+export function emailChangeRefusal(error: unknown): "address" | "code" | "wait" | "other" | null {
+  const code = errorCode(error);
+  if (!error) return null;
+  if (code === "reauth.code_wait") return "wait";
+  if (code === "email.same" || code === "email.held" || code === "email.taken") return "address";
+  return code?.startsWith("reauth.code") ? "code" : "other";
+}
+
+/**
  * What the proxy in front answers while the server restarts, is down or too slow: Caddy's 502, 503 and 504, and
  * Cloudflare's 520 to 527 and 530 (as apps/web/public/unavailable.html reads them). The server's own errors carry a
  * code of theirs (its 503 for a computer's error does).
@@ -762,6 +809,8 @@ export function knownErrorText(t: TFunction, error: unknown, locale = "en"): str
   // The person who connected the mailbox is gone or unnamed: no blank name in the sentence.
   if (error.code === "mail.owner_only" && !error.params?.ownerName)
     return t("errors.mail.ownerOnlyUnknown", error.params);
+  if (error.code === "browser_profile.unavailable")
+    return t("browser.profiles.notOpened", { machine: error.params?.machineName ?? "" });
   // `provider`: the provider whose key is missing, when the server could name it.
   if (error.code === "missing_credential" && typeof error.params?.provider === "string")
     return t("agentPage.activity.errors.missing_credential", error.params);
@@ -792,6 +841,9 @@ const FIELD_ISSUES = {
 
 /** The app has its own line for this server code. */
 export const hasWordsFor = (code: string) => Object.hasOwn(KNOWN, code);
+
+/** The server knows no session for this request (401): only signing in again helps. */
+export const sessionEnded = (error: unknown) => error instanceof ApiError && error.status === 401;
 
 /** What the request named isn't there anymore (deleted, archived, or never this person's to see): trying again won't help. */
 export const isGone = (error: unknown) => error instanceof ApiError && (error.status === 404 || error.status === 410);
@@ -974,14 +1026,15 @@ export function vaultConnectRefusal(t: TFunction, kind: string, error: unknown, 
 }
 
 /**
- * A failed request in the person's words: a code the app knows, a file too big, a refusal, no answer (offline or the
- * server out of reach), else `untranslatedText`. Never a raw error's own words ("Failed to fetch", "Bad Gateway").
+ * A failed request in the person's words: a code the app knows, a request too big, a refusal, no answer (offline or
+ * the server out of reach), else `untranslatedText`. Never a raw error's own words ("Failed to fetch", "Bad Gateway").
+ * `maxMb`: the most the caller's request may carry, said when the server or a proxy before it refuses its size.
  */
-export function errorText(t: TFunction, error: unknown, locale?: string): string {
+export function errorText(t: TFunction, error: unknown, locale?: string, { maxMb }: { maxMb?: number } = {}): string {
   if (error instanceof ApiError) {
     const known = knownErrorText(t, error, locale);
     if (known) return known;
-    if (error.status === 413) return t("errors.artifact.fileTooLarge", { max: MAX_UPLOAD_MB });
+    if (error.status === 413) return maxMb ? t("errors.tooLargeMax", { max: maxMb }) : t("errors.tooLarge");
     if (error.status === 403) return forbiddenText(t, error, locale);
   }
   if (noAnswer(error)) return noAnswerText(t);
@@ -999,17 +1052,31 @@ const KEY_FAILURES = new Set([
 ]);
 
 /**
- * The one thing to do about a failed run, by its code, for someone who can: another key (`keys`: who manages them), or
- * another model (the agent's owner or who manages agents). Null when nothing fixes it or it's someone else's to do.
+ * A reply whose agent opened a picture or PDF its AI reads as text only through its connection (`meta.filesTextOnly`):
+ * its fix is another AI, like a failed run's.
+ */
+export const FILES_TEXT_ONLY = "run.files_text_only";
+
+export const filesTextOnlyOf = (meta: Record<string, unknown> | null | undefined) =>
+  meta?.filesTextOnly === true ? FILES_TEXT_ONLY : null;
+
+/**
+ * The one thing to do about a failed run, by its code, for someone who can: another key (`keys`: who manages them),
+ * another model or another account (the agent's owner or who manages agents). Null when nothing fixes it or it's
+ * someone else's to do.
  */
 export function failedRunFix(
   code: string | null | undefined,
   who: { keys: boolean; admin: boolean; owner: boolean },
-): "useKey" | "changeModel" | null {
-  if (code === "run.model_unlisted" || code === "run.provider_model_unavailable")
+): "useKey" | "changeModel" | "changeAccount" | null {
+  if (code === "run.model_unlisted" || code === "run.provider_model_unavailable" || code === FILES_TEXT_ONLY)
     return who.admin || who.owner ? "changeModel" : null;
+  if (code === "run.account_missing") return who.admin || who.owner ? "changeAccount" : null;
   return code && KEY_FAILURES.has(code) && who.keys ? "useKey" : null;
 }
+
+/** The screen of "Quem pensa" a model or account fix opens on. */
+export const FIX_BRAIN_SCREEN = { changeModel: "model", changeAccount: "switch" } as const;
 
 /**
  * A failed run's reason in the reader's words, from the server's code (`run.stuck`, `run.computer_failed`): null for
@@ -1021,6 +1088,13 @@ export function runErrorText(t: TFunction, code: string | null | undefined, para
   const say = t as unknown as (key: string, options: Record<string, unknown>) => string;
   return say(`agentPage.activity.errors.${key}`, { ...params, defaultValue: "" }) || null;
 }
+
+/**
+ * A failed run's stored text when it can stand as its reason: never a bare code (`unsupported`, `not_allowed`), which
+ * says nothing to a person; null then, and the line says only that it couldn't answer.
+ */
+export const runErrorWords = (error: string | null | undefined): string | null =>
+  error && !/^[a-z][a-z0-9]*(?:[_.][a-z0-9]+)*$/.test(error.trim()) ? error : null;
 
 /**
  * A failed run as one line for the conversation: a restriction in its words, a computer that stayed busy, else

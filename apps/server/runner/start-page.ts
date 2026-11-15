@@ -20,10 +20,9 @@ import HTML from "./assets/start/start.html.txt" with { type: "text" };
 import JS from "./assets/start/start.js.txt" with { type: "text" };
 import { desktopName } from "./desktop-look";
 import { SYSTEM_BROWSER_DIR } from "./install-script";
+import { pageLocale, START_WORDS } from "./page-words";
 
 export const systemStartPage = (uid: number) => path.join(SYSTEM_BROWSER_DIR, "start", String(uid));
-export const startLocale = (locale?: string | null): "pt-BR" | "en" =>
-  /^pt(?:-|$)/i.test(locale ?? "") ? "pt-BR" : "en";
 export interface StartPageData {
   locale?: string;
   egress?: MachineEgress | null;
@@ -37,10 +36,11 @@ export interface StartPageData {
  * keeps that bubble off this page alone; real sites still get it.
  */
 export function startPageHtml(agent: Pick<AgentScope, "name" | "handle">, data: StartPageData = {}): string {
-  const locale = startLocale(data.locale);
+  const locale = pageLocale(data.locale);
   const json = JSON.stringify({
     name: desktopName(agent),
     locale,
+    words: START_WORDS[locale],
     egress: data.egress ?? null,
     flag: countryFlagUrl(data.egress?.country),
   }).replace(/</g, "\\u003c");

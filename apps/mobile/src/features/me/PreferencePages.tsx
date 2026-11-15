@@ -15,7 +15,7 @@ import { SOUND_STYLES, type SoundStyle } from "@agenteschat/ui/sfx";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, View } from "react-native";
+import { Linking, StyleSheet, View } from "react-native";
 import { pushPermission, unregisterPush } from "@/lib/push";
 import { setSoundChoice, useSoundChoice } from "@/lib/sounds";
 import { readValue, STORED } from "@/lib/storage";
@@ -36,7 +36,7 @@ import { Page } from "./parts";
 
 /**
  * Você's smaller screens, each pushed from its row: Workspaces, Notificações, Ao abrir o app, Respostas dos agentes,
- * Sons, Aparência and Idioma.
+ * Sons, Aparência and Idioma (Ícone do app is AppIconPage.tsx).
  */
 
 const SOUND_LABELS: Record<SoundStyle, string> = {
@@ -77,7 +77,13 @@ export function usePushSwitch() {
       // Through the provider, so Conversas knows the phone was asked (our sheet won't open after this).
       const ok = await ask();
       setOn(ok);
-      if (!ok) toast({ title: t("mobile.me.pushOff"), subtitle: t("mobile.me.pushOffSub"), icon: "bell" });
+      if (!ok)
+        toast({
+          title: t("mobile.me.pushOff"),
+          subtitle: t("mobile.me.pushOffSub"),
+          icon: "bell",
+          action: { label: t("mobile.common.openSettings"), onPress: () => void Linking.openSettings() },
+        });
     } else await unregisterPush();
   };
   return { on, set };

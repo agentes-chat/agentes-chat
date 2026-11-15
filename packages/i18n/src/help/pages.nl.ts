@@ -9,6 +9,13 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
       "De agentes.chat-app kan ook agentes.chat zelf draaien, op een Mac, een pc of een Linux-computer, voor jou of een klein team.",
     sections: [
       {
+        id: "download",
+        heading: "Download de app",
+        blocks: [
+          "[Download de agentes.chat-app](/download) voor je Mac, pc of Linux-computer en open hem. Kies **Op je eigen server**, druk op **Verder met mijn server** en dan op **agentes.chat draaien op deze computer**.",
+        ],
+      },
+      {
         id: "how",
         heading: "Hoe het draait",
         blocks: [
@@ -68,6 +75,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Inloggen vanaf andere apparaten",
         blocks: [
           "De eigenaar begint zonder wachtwoord: de app logt je in op deze computer. Om in te loggen vanuit een browser op een andere computer, stel je er een in bij **Instellingen\u00a0›\u00a0Je account**. Tot je dat doet, meldt **Voorkeuren\u00a0›\u00a0Servers** het, en **Wachtwoord toevoegen** opent die pagina. De telefoonapp maakt verbinding als je de QR-code scant onder **Op je telefoon**, in **Voorkeuren\u00a0›\u00a0Servers**. Daarvoor moet **Bereik het vanaf je telefoon en je teamgenoten** aan staan.",
+          "Als de eigenaar zijn account verwijdert, bij **Instellingen\u00a0›\u00a0Je account**, is het 7 dagen later voorgoed weg, en de werkruimtes waar alleen hij in zat gaan mee. Tot dan log je in en druk je op **Account herstellen** om het terug te halen. Is het weg en is er geen account meer over, dan opent de app het welkomstvenster om een nieuwe eigenaar aan te maken. Hebben anderen nog een account, dan logt ieder in met zijn eigen e-mailadres.",
         ],
       },
       {
@@ -83,6 +91,25 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         blocks: [
           "Met **Elke nacht een back-up maken** aan (app 0.8.1 en nieuwer), in **Voorkeuren\u00a0›\u00a0Servers**, bewaart de app elke nacht om 3:00 de database, de bestanden en `.env` in `.agentes/backups`, in je thuismap. Een computer die toen sliep, maakt de back-up zodra hij wakker is. **Nu een back-up maken** doet hetzelfde meteen. Elke back-up stopt de server even, en de twee nieuwste blijven bewaard.",
           "**Kopiëren naar** zet elke nieuwe back-up ook in een map die je kiest, zoals een USB-stick of iCloud Drive, waar de twee nieuwste blijven. Ze bevatten je sleutels: houd ze privé. **Terugzetten…** zet agentes.chat terug naar een back-up: berichten, bestanden en instellingen. Het stopt een minuut, en wat er eerst stond, blijft bewaard in de back-upmap.",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "Opnieuw beginnen of de-installeren",
+        blocks: [
+          "Alles wat agentes.chat op deze computer bewaart, staat in mappen in je thuismap, niet in de app. Als je de app naar de prullenmand sleept, verdwijnt daar dus niets van, en stopt agentes.chat niet als het draait.",
+          "Wil je opnieuw beginnen, druk dan op **Wissen en opnieuw beginnen…** in **Voorkeuren\u00a0›\u00a0Servers**. agentes.chat stopt hier en alles wat erin staat gaat naar een nieuwe map in je thuismap, `agentes.chat erased` met de datum van die dag, waar het blijft tot je de map verwijdert. Wat de agenten op deze computer bewaarden, zoals hun browsers en logins, wordt uit `.agentes-runner` verwijderd. Zijn werkruimtes verdwijnen voor iedereen die ze gebruikt. Daarna opent het welkomstvenster en stel je het opnieuw in met een nieuw eigenaarsaccount. De bestanden van de agenten, in `agentes` in je thuismap, blijven waar ze zijn.",
+          "Wil je het later terughalen, sluit dan de app af, zet een nieuwere map `.agentes` opzij als die er is, hernoem de map `agentes.chat erased` naar `.agentes`, open de app en stel het opnieuw in op deze computer. Het start met zijn werkruimtes en zijn eigenaar zoals ze waren. Wat de agenten op deze computer bewaarden komt niet terug, dus ze moeten opnieuw inloggen.",
+          "Zo haal je agentes.chat helemaal van deze computer:",
+          {
+            list: [
+              "Zet **Openen bij inloggen** uit in **Voorkeuren\u00a0›\u00a0Algemeen**.",
+              "Sluit de app af. Het venster sluiten is niet genoeg. Klik op een Mac op het icoon in het Dock en kies **agentes.chat afsluiten** in het menu agentes.chat bovenaan het scherm, of druk op ⌘Q. Klik op Windows en Linux op het agentes.chat-icoon bij de klok en kies **agentes.chat afsluiten**. Vraagt hij **agentes.chat afsluiten?**, druk dan op **Afsluiten**.",
+              "Verwijder de app. Sleep hem op een Mac naar de prullenmand. Verwijder hem op Windows en Linux zoals elke andere app.",
+              "Verwijder deze mappen in je thuismap. Ze bevatten je gegevens, en eenmaal verwijderd komen die niet terug, dus bewaar eerst ergens anders een back-up als je ze misschien nog wilt: `.agentes` (berichten, bestanden, accounts, instellingen en back-ups), elke map `agentes.chat erased`, `.agentes-runner` (wat de agenten op deze computer bewaren, zoals hun browsers en logins) en `agentes` (de bestanden van de agenten). Mappen waarvan de naam met een punt begint, zijn verborgen. Open op een Mac je thuismap in de Finder en druk op ⇧⌘. (Shift, Command en de punttoets) om ze te tonen.",
+              "Verwijder de mappen van de app zelf. Daarin staan alleen de instellingen, de logins van het venster en de logboeken. Op een Mac: alles waarvan de naam begint met `chat.agentes.desktop` in de mappen Application Support, Caches, HTTPStorages, Logs, Preferences en WebKit van `~/Library`, en `agentes.chat.plist` in `~/Library/LaunchAgents`. Op Windows: `%APPDATA%\\chat.agentes.desktop` en `%LOCALAPPDATA%\\chat.agentes.desktop`. Op Linux: `~/.config/chat.agentes.desktop` en `~/.local/share/chat.agentes.desktop`. Open op een Mac een van deze mappen door in de Finder op ⇧⌘G te drukken en het pad te typen, zoals `~/Library/Caches`.",
+            ],
+          },
         ],
       },
       {
@@ -217,6 +244,15 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
           "Meld je in dezelfde app aan bij elke werkruimte en druk voor elk op **Toestaan**. Werkruimtes op agentes.chat Cloud en op je eigen servers kunnen een computer delen (app 0.6.1 en nieuwer). Elk heeft er eigen agents en mappen, en als je er een loskoppelt, blijven de andere ongemoeid.",
           "Een server die de app op deze computer draait, is al gekoppeld en heeft niets nodig. Om die computer ook uit te lenen aan een werkruimte ergens anders, zie [Leen hem ook uit aan een andere werkruimte](/help/run-on-your-computer#another-workspace).",
           "Gebruik je de app op een laptop alleen als venster op je werkruimte? Als hij vraagt of agents de laptop mogen gebruiken, houdt **Niet nu** het bij een gewoon venster.",
+          "Een server die met de terminalregel is verbonden, werkt voor één workspace. Verbind je hem vanuit een andere workspace, dan gaat de server naar die workspace en bereikt de eerste hem niet meer. Gebruik de app voor meerdere workspaces op één computer.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Als agenten in de rij wachten",
+        blocks: [
+          "Elk werk van een agent gebruikt geheugen van de computer. Als er weinig vrij geheugen is, wacht het volgende in de rij tot een ander klaar is. Mensen gaan voor. Het aantal CPU's verandert dit niet.",
+          "Een computer met 4 GB geheugen draait twee of drie tegelijk, een met 8 GB ongeveer negen. Een Mac of pc draait er tot acht. Browsers en bureaubladen die agenten open laten, gebruiken ook geheugen. Voor een kortere rij gebruik je een computer met meer geheugen, of verbind je er nog een en verdeel je de agenten over beide. Workspaces die een computer delen, delen het geheugen ervan.",
         ],
       },
       {
@@ -456,7 +492,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Als agentes.chat je werkruimte host, zit Jev erbij inbegrepen. Op een server die je zelf beheert, gebruikt hij de TypeSafe-sleutel van de eigenaar, ongeveer US$ 0,0001 per bericht: [Jev instellen](/help/jev#setup).",
+          "Als agentes.chat je werkruimte host, zit Jev erbij inbegrepen. Op een server die je zelf beheert, gebruikt hij de TypeSafe- of OpenRouter-sleutel van de eigenaar, ongeveer US$ 0,0001 per bericht: [Jev instellen](/help/jev#setup).",
         ],
       },
       {
@@ -518,6 +554,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
               "Open in agentes.chat **Instellingen › AI en gebruik** en plak hem onder **Jev**. Alleen degene die deze server heeft ingericht, ziet hem.",
             ],
           },
+          "Betaal je al bij OpenRouter? Kies **OpenRouter** onder **Jev** en plak een sleutel van https://openrouter.ai/keys, of zet Jev met één klik aan met de OpenRouter-sleutel van de werkruimte. Het is dezelfde Jev, gefactureerd via OpenRouter voor dezelfde prijs.",
           "Op een server die je met Docker draait, kun je de sleutel ook in `.env` zetten als `TYPESAFE_API_KEY`. Die gaat voor op de sleutel in Instellingen.",
         ],
       },
@@ -552,6 +589,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe draait Jev in de Verenigde Staten en traint zijn modellen niet op wat je stuurt. Het bewaart gegevens zo lang als nodig is om de dienst te leveren. Met de enterprise-abonnementen kun je ervoor kiezen dat er niets wordt bewaard.",
           "Het privacybeleid van TypeSafe: https://typesafe.ai/legal/privacy-policy. De verwerkersovereenkomst: https://typesafe.ai/legal/data-processing.",
+          "Met een OpenRouter-sleutel gaan dezelfde verzoeken via OpenRouter naar TypeSafe, onder de voorwaarden van OpenRouter en je privacyinstellingen daar: https://openrouter.ai/privacy.",
         ],
       },
       {
@@ -742,7 +780,7 @@ export const helpNl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "E-mail",
         blocks: [
-          "Zonder e-mail schrijft agentes.chat elke e-mail in zijn log in plaats van hem te versturen, dus een uitnodigingslink kun je daar nog kopiëren. Wachtwoord herstellen blijft uit.",
+          "Zonder e-mail schrijft agentes.chat elke e-mail in zijn log in plaats van hem te versturen, dus een uitnodigingslink kun je daar nog kopiëren. Wachtwoord herstellen blijft uit, en een nieuw e-mailadres voor een account geldt meteen, zonder code of link.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

@@ -10,6 +10,7 @@ import {
 import { startInFlight } from "@agenteschat/adapters/in-flight";
 import { and, desc, eq, inArray, isNotNull, isNull, or, schema, sql } from "@agenteschat/db";
 import { auditsCall, callSubject, callTitle, recordToolCall, type ToolCallSubject } from "../agent-audit";
+import { getAgentCached } from "../agents";
 import {
   COMMAND_RULE_TOOL,
   coveringRules,
@@ -17,11 +18,19 @@ import {
   MAX_OWN_ACTIONS,
   OWN_ACTION_NAME,
   type RememberedKind,
+  rememberedKindOf,
   rulesApprover,
   SQL_READS,
   sqlReadsTarget,
 } from "../approval-rules";
-import { fedByRoutine, type RunAuthority, runAuthorityById, UUID } from "../authority";
+import {
+  fedByRoutine,
+  MAX_AUTHORITY_CHAIN,
+  type RunAuthority,
+  runAuthorityById,
+  steeredByOf,
+  UUID,
+} from "../authority";
 import { type CostKind, costlyGate, costlyKind, LONG_STEPS, unrequested } from "../brakes";
 import { countToolCall } from "../connector-usage";
 import { actionLevel, nameWords, openEnded } from "../connectors/classify";
@@ -30,13 +39,14 @@ import { answersAgentsOnly, consultationOrigin } from "../consultations";
 import { recordOutcome } from "../context/outcomes";
 import { sha256 } from "../crypto";
 import { provenReadOnly } from "../databases/guard";
-import { isUnexpectedError } from "../errors";
+import { isUnexpectedError, ToolOffError } from "../errors";
 import { cutMarked, cutText, pgSafeJson, pgSafeText } from "../format";
 import { mergeReposOfCall, recordMergeDone, reposOfGithubCall } from "../git/repos";
 import { recordRead } from "../outbound";
 import { routineCreatorOf } from "../requester";
-import { isRightHandId, RIGHT_HAND_NO_COMPUTER } from "../right-hand";
-import type { RoutineBrief } from "../routine-brief";
+import { isRightHand, RIGHT_HAND_NOT_OFFERED } from "../right-hand";
+import { type RoutineBrief, routineBriefOf } from "../routine-brief";
+import { keysOfCall, RUN_CODE_TOOL, routineKeysAllowed, routineKeysKind } from "../routine-keys";
 import { addRunStep } from "../runs";
 import { describeWhen } from "../schedule";
 import { REQUEST_SECRET_TOOL } from "../secrets";
@@ -83,7 +93,7 @@ import {
 } from "./scopes";
 import type { AheadOutcome, AheadRequest, ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./types";
 
-const { approvals, agents, agentRunSteps, routines } = schema;
+const { approvals, agents, agentConsultations, agentRuns, agentRunSteps, messages, routines } = schema;
 type AuditOutcome = schema.AuditOutcome;
 
 /** Merge, deploy and rollback need a person whatever a connector says, unless the agent never asks (ADR 0173). */
@@ -187,7 +197,7 @@ export async function rememberKinds(
 
 /** Our own tools whose job is asking a person: the agent chose to ask, so one that never asks still does. */
 const ASKING_TOOLS = new Set(["request_approval", REQUEST_PERMISSION_TOOL, "send_feedback"]);
-const asksByChoice = (tool: Pick<ToolDefinition, "name" | "scope" | "connectionId">) =>
+export const asksByChoice = (tool: Pick<ToolDefinition, "name" | "scope" | "connectionId">) =>
   tool.connectionId ? tool.name === "request_branch_push" && serverGitTool(tool) : ASKING_TOOLS.has(tool.name);
 
 /**
@@ -210,6 +220,56 @@ export function unaskedAtNever(level: ApprovalsLevel, tool: ToolDefinition, auth
 const NEVER_IN_ROUTINE =
   /^(delete|deletes|deleted|remove|removes|destroy|drop|purge|erase|wipe|trash|truncate|overwrite|revoke|unbind|pay|pays|payment|payments|payout|payouts|refund|refunds|charge|charges|transfer|transfers|invoice|invoices|purchase|buy|renew|checkout|withdraw|withdrawal|approve|review|reviews)$/;
 const neverInRoutine = (name: string) => nameWords(name).some((w) => NEVER_IN_ROUTINE.test(w));
+
+/** Words of a tool that runs whatever its input says: code, a command, a script, a raw request, a query, a migration. */
+const RUNS_ITS_INPUT = new Set(
+  "run exec execute eval evaluate invoke trigger shell bash script command code terminal workbench proxy raw http query request call api function custom migration apply".split(
+    " ",
+  ),
+);
+/** Words of a call that posts in public, changes who gets in, moves money or puts other people's work away. */
+const REACHES_FAR = new Set(
+  "post posts tweet article pin video upload sharing collaborator member subscription budget clear archive cancel dns".split(
+    " ",
+  ),
+);
+/** A name that says all its call does, and nothing a person reads one by one: no merge, send, post, delete or payment. */
+const plainAction = (name: string) =>
+  !highRisk(name, "") &&
+  actionLevel(name) !== "sensitive" &&
+  !neverInRoutine(name) &&
+  !nameWords(name).some((w) => RUNS_ITS_INPUT.has(w) || REACHES_FAR.has(w));
+
+type AskedCall = Pick<
+  Approval,
+  "tool" | "scope" | "connectionId" | "highRisk" | "approvers" | "approveAlways" | "origin"
+>;
+
+/** A waiting call that is SQL the Postgres guard proved read-only when it asked (`rememberKinds`). */
+export function readsSqlOnly(a: Pick<Approval, "approveAlways">): boolean {
+  const kept = rememberedKindOf(a.approveAlways)?.actions ?? [];
+  return kept.length > 0 && kept.every((action) => action.startsWith(SQL_READS));
+}
+
+/**
+ * Whether a waiting call may be approved together with others in one tap, as far as its row tells. It errs towards
+ * leaving a call on its own card: only a connected app's named action passes, or SQL proven read-only (`readsSqlOnly`).
+ * Never one that is high risk, sends, posts, deletes or pays by any word of its name, runs whatever its input says
+ * (Composio's executor too: nothing vouches for the actions its input names), asks by choice, or names who decides
+ * (`request_approval`, someone's mailbox). Our own tools stay out whole: a command on the agent's computer, its
+ * browser, the workspace's people, keys and settings. A row does not say why its call asked, so a name is never
+ * enough: the connection has its say after this (`routineIds` in `approvals.ts`).
+ */
+export function routineCall(a: AskedCall): boolean {
+  if (!a.connectionId || a.approvers || a.scope.startsWith("mail:")) return false;
+  if (asksByChoice({ name: a.tool, scope: a.scope, connectionId: a.connectionId })) return false;
+  if (readsSqlOnly(a)) return true;
+  // At the level that asks for some things (the only one that offers a kind to keep), a person's run asks a
+  // connected app's call only when the tool is marked to ask.
+  if (!a.origin && a.approveAlways) return false;
+  if (a.highRisk) return false;
+  return [a.tool, ...(rememberedKindOf(a.approveAlways)?.actions ?? [])].every(plainAction);
+}
 
 /** The scope of the GitHub connector's `merge_pull_request`. */
 const GITHUB_MERGE_SCOPE = "github:pr.merge";
@@ -261,6 +321,12 @@ const serverGitTool = (tool: Pick<ToolDefinition, "name" | "scope">) =>
   (tool.name === "git_clone" && tool.scope === "github:git.read") ||
   (tool.name === "open_pull_request" && tool.scope === "github:pr.write") ||
   ((tool.name === "delete_branches" || tool.name === "request_branch_push") && tool.scope === "github:git.write");
+/**
+ * One of the server's own tools, never a connected app's: its name is written here, not by a workspace or by the
+ * server it connected.
+ */
+const ownTool = (tool: Pick<ToolDefinition, "name" | "scope" | "connectionId">) =>
+  !tool.connectionId || serverGitTool(tool);
 
 /**
  * An `external` tool's output (an MCP server's answer) reaches the model inside the one envelope for
@@ -368,7 +434,6 @@ async function refusalOf(
   granted: Set<string>,
 ) {
   const of = access.of;
-  if (NOT_IN_ALL.has(of.scope) && (await isRightHandId(ctx.db, ctx.orgId, ctx.agentId))) return RIGHT_HAND_NO_COMPUTER;
   if (access.state === "denied") {
     return `${of === tool ? "this tool" : of.name} is turned off for this agent, not for good: an admin can turn it back on, on the agent's page in Tools and access (in Portuguese, Ferramentas e acesso). Say so in plain words (the person asking may be that admin), never that it can't be done`;
   }
@@ -427,8 +492,12 @@ const authorityOf = (ctx: ToolContext): Promise<RunAuthority | null> =>
   ctx.runId ? runAuthorityById(ctx.db, ctx.orgId, ctx.runId) : Promise.resolve(null);
 
 const ALLOWED: PolicyDecision = { action: "allow" };
-const policyFor = (authority: RunAuthority | null, tool: ToolDefinition, level = DEFAULT_APPROVALS_LEVEL) =>
-  authority ? toolPolicy(authority, tool, level) : ALLOWED;
+const policyFor = (
+  authority: RunAuthority | null,
+  tool: ToolDefinition,
+  level = DEFAULT_APPROVALS_LEVEL,
+  creatorDecides = false,
+) => (authority ? toolPolicy(authority, tool, level, creatorDecides) : ALLOWED);
 
 /**
  * A tool as a run sees it: one the policy says asks a person becomes sensitive (its card, and the
@@ -504,14 +573,15 @@ export function createToolGateway(deps: {
 
   async function allTools(ctx: ToolContext) {
     const byName = new Map<string, ToolDefinition>();
+    const rightHand = isRightHand(await getAgentCached(ctx.db, ctx.orgId, ctx.agentId));
     for (const source of deps.sources) {
       for (const tool of await source.tools(ctx)) {
         if (!TOOL_NAME.test(tool.name)) continue;
+        if (rightHand && RIGHT_HAND_NOT_OFFERED.has(tool.name)) continue;
         const current = byName.get(tool.name);
         // A connected MCP server must not shadow one of our own tools just
         // because its source appears earlier in the list.
-        if (!current || (current.connectionId && (!tool.connectionId || serverGitTool(tool))))
-          byName.set(tool.name, tool);
+        if (!current || (current.connectionId && ownTool(tool))) byName.set(tool.name, tool);
       }
     }
     return byName;
@@ -533,15 +603,16 @@ export function createToolGateway(deps: {
     known?: Map<string, ToolDefinition>,
     heldBack?: string[],
   ): Promise<ToolDefinition[]> {
-    const [keys, all, level] = await Promise.all([
+    const [keys, all, level, decides] = await Promise.all([
       grantedScopeKeys(ctx.db, ctx.orgId, ctx.agentId),
       known ?? allTools(ctx),
       approvalsLevelOf(ctx.db, ctx.orgId, ctx.agentId),
+      creatorDecides(ctx, authority),
     ]);
     return [...all.values()]
       .filter((t) => isAllowed(accessWithNeeds(keys, t).state))
       .flatMap((t) => {
-        const decision = policyFor(authority, t, level);
+        const decision = policyFor(authority, t, level, decides);
         if (decision.action !== "refuse") return [asListed(t, decision, unaskedAtNever(level, t, authority))];
         heldBack?.push(t.name);
         return [];
@@ -647,6 +718,7 @@ export function createToolGateway(deps: {
       return {
         content: `Tool failed: ${tool.external ? wrapExternal(tool.name, message) : message}${hint && `\n${hint}`}`,
         isError: true,
+        ...(error instanceof ToolOffError ? { data: { toolOff: error.toolOff } } : {}),
       };
     } finally {
       done();
@@ -796,6 +868,105 @@ export function createToolGateway(deps: {
         ),
       );
     return row ?? null;
+  }
+
+  /** Whether a routine's own run has a creator who still decides its agent's approvals (`toolPolicy`). Read fresh. */
+  async function creatorDecides(ctx: ToolContext, authority: RunAuthority | null) {
+    if (authority?.kind !== "routine" || !authority.brief || !UUID.test(authority.brief.routineId)) return false;
+    const row = await routineOf(ctx, authority.brief);
+    return row?.creator ? decidesAgentApprovals(ctx.db, ctx.orgId, row.creator, row.owner) : false;
+  }
+
+  /** The messages a run read after its trigger, as they joined it (between steps or live: `steeredMessageIds`). */
+  async function joinedReads(ctx: ToolContext, runId: string) {
+    const steps = await ctx.db
+      .select({ data: agentRunSteps.data })
+      .from(agentRunSteps)
+      .where(
+        and(
+          eq(agentRunSteps.orgId, ctx.orgId),
+          eq(agentRunSteps.runId, runId),
+          eq(agentRunSteps.kind, "context"),
+          sql`${agentRunSteps.data} ? 'steeredMessageIds'`,
+        ),
+      );
+    const ids = steps.flatMap((s) => (Array.isArray(s.data.steeredMessageIds) ? s.data.steeredMessageIds : []));
+    return [...new Set(ids)].filter((id): id is string => typeof id === "string" && UUID.test(id));
+  }
+
+  /** The notice a message is, as the server wrote it; never a person's message. */
+  async function noticeOfMessage(ctx: ToolContext, messageId: string) {
+    const [m] = await ctx.db
+      .select({ authorType: messages.authorType, meta: messages.meta })
+      .from(messages)
+      .where(and(eq(messages.orgId, ctx.orgId), eq(messages.id, messageId)));
+    if (!m || m.authorType === "person") return null;
+    return (m.meta.notice ?? null) as { kind?: unknown; refs?: Record<string, unknown> } | null;
+  }
+
+  /** The run that asked the question a `consult_reply` notice answers, when a teammate of this agent answered it. */
+  async function answeredAsker(ctx: ToolContext, notice: { kind?: unknown; refs?: Record<string, unknown> } | null) {
+    const id = notice?.kind === "consult_reply" ? notice.refs?.consultationId : null;
+    if (typeof id !== "string" || !UUID.test(id)) return null;
+    const [c] = await ctx.db
+      .select({ askerRunId: agentConsultations.askerRunId, targetAgentId: agentConsultations.targetAgentId })
+      .from(agentConsultations)
+      .where(
+        and(
+          eq(agentConsultations.orgId, ctx.orgId),
+          eq(agentConsultations.id, id),
+          eq(agentConsultations.askerAgentId, ctx.agentId),
+          eq(agentConsultations.kind, "question"),
+          eq(agentConsultations.status, "answered"),
+        ),
+      );
+    return c && c.targetAgentId !== ctx.agentId ? c.askerRunId : null;
+  }
+
+  /**
+   * Whether a run nobody is behind still does routine `routineId`'s own job (ADR 0053, addendum 2026-11-13): that
+   * routine's report woke it (`routine_handoff`) and nothing joined it since, or a teammate's answer to a question a
+   * run doing that job asked woke it (that routine's own run included) and what joined it since is only more answers
+   * to that run's questions. Walked through the server's links (a notice's run, a consultation's asker), never text.
+   */
+  async function onOwnJob(ctx: ToolContext, routineId: string) {
+    let runId = ctx.runId;
+    let mustBeRoutine = false;
+    for (let depth = 0; depth <= MAX_AUTHORITY_CHAIN; depth++) {
+      const [run] = await ctx.db
+        .select({
+          agentId: agentRuns.agentId,
+          background: agentRuns.background,
+          triggerMessageId: agentRuns.triggerMessageId,
+          transcript: agentRuns.transcript,
+        })
+        .from(agentRuns)
+        .where(and(eq(agentRuns.orgId, ctx.orgId), eq(agentRuns.id, runId)));
+      if (!run || run.agentId !== ctx.agentId) return false;
+      if (run.background) {
+        const [trigger] = await ctx.db
+          .select({ meta: messages.meta })
+          .from(messages)
+          .where(and(eq(messages.orgId, ctx.orgId), eq(messages.id, run.triggerMessageId)));
+        return routineBriefOf(trigger?.meta)?.routineId === routineId;
+      }
+      // A person who wrote into a run is behind it from then on: what it asked is theirs, not the routine's.
+      if (mustBeRoutine || steeredByOf(run.transcript)) return false;
+      const notice = await noticeOfMessage(ctx, run.triggerMessageId);
+      const joined = await joinedReads(ctx, runId);
+      if (notice?.kind === "routine_handoff") {
+        const reporter = notice.refs?.runId;
+        if (joined.length > 0 || typeof reporter !== "string" || !UUID.test(reporter)) return false;
+        runId = reporter;
+        mustBeRoutine = true;
+        continue;
+      }
+      const asker = await answeredAsker(ctx, notice);
+      if (!asker) return false;
+      for (const id of joined) if ((await answeredAsker(ctx, await noticeOfMessage(ctx, id))) !== asker) return false;
+      runId = asker;
+    }
+    return false;
   }
 
   /**
@@ -1057,6 +1228,8 @@ export function createToolGateway(deps: {
         input: call.input,
         ...(detail ? { detail } : {}),
         ...(command ? { command } : {}),
+        // What the name was resolved to, kept with the call: the same name may be a connected server's another day.
+        ...(tool && ownTool(tool) ? { builtIn: true } : {}),
         ...(tool?.connectorLabel ? { connector: tool.connectorLabel } : {}),
         ...(tool?.service ? { service: tool.service } : {}),
         ...(tool?.serviceIcon ? { serviceIcon: tool.serviceIcon } : {}),
@@ -1152,8 +1325,14 @@ export function createToolGateway(deps: {
       }
       if (tool.sensitive && tool.asksNobody?.(call.input)) tool = { ...tool, sensitive: false };
       const builtIn = isBuiltIn(tool);
+      const decides = level === "risky" && (await creatorDecides(ctx, authority));
       // A call that only looks is judged as at the default level: an agent that always asks asks for changes.
-      const decision = policyFor(authority, tool, tool.looksOnly?.(call.input) ? DEFAULT_APPROVALS_LEVEL : level);
+      const decision = policyFor(
+        authority,
+        tool,
+        tool.looksOnly?.(call.input) ? DEFAULT_APPROVALS_LEVEL : level,
+        decides,
+      );
       if (decision.action === "refuse") {
         return finish(
           { content: decision.reason, isError: true, data: { code: "tool.not_allowed", refusal: "policy" } },
@@ -1257,12 +1436,38 @@ export function createToolGateway(deps: {
       const remember = kinds[0] ?? null;
       if (await coveredBy(kinds)) approves = false;
       // The routine's own job: an action its creator allowed when they set it up runs like an allowed one, every run,
-      // unless its agent always asks.
-      const ownJob =
-        approves && level !== "always" && authority?.kind === "routine" && authority.brief
-          ? await ownJobCovers(ctx, authority.brief, tool, call.input)
-          : false;
+      // unless its agent always asks. The run its report woke does that job too, and so does the run a teammate's
+      // answer to that job's question woke (`onOwnJob`, ADR 0053, addendum 2026-11-13): anything else that woke or
+      // joined it (the end of a task, another routine's report, another agent's message) is not the job the person
+      // set up, and would choose an allowed action's arguments.
+      const ownJobBrief =
+        !approves || level === "always"
+          ? null
+          : authority?.kind === "routine"
+            ? authority.brief
+            : authority?.kind === "unattended" &&
+                fedByRoutine(authority) &&
+                authority.brief &&
+                (await onOwnJob(ctx, authority.brief.routineId))
+              ? authority.brief
+              : null;
+      const ownJob = ownJobBrief ? await ownJobCovers(ctx, ownJobBrief, tool, call.input) : false;
       if (ownJob) approves = false;
+      // A routine's own run puts Vault keys in a command only where its creator allowed them, or its agent never asks
+      // (ADR 0144 §2): else a person says yes first, and "Sempre nesta rotina" keeps those keys as the routine's own.
+      const keyNames =
+        tool.name === RUN_CODE_TOOL && !tool.connectionId && !never && authority?.kind === "routine" && authority.brief
+          ? keysOfCall(call.input)
+          : [];
+      const keysAt =
+        keyNames.length > 0 && authority?.kind === "routine" && authority.brief
+          ? { orgId: ctx.orgId, agentId: ctx.agentId, routineId: authority.brief.routineId }
+          : null;
+      const keysAsk =
+        keysAt && UUID.test(keysAt.routineId) && !(await routineKeysAllowed(ctx.db, keysAt, keyNames))
+          ? (level !== "always" && (await routineKeysKind(ctx.db, keysAt, tool.name, keyNames))) || false
+          : null;
+      if (keysAsk !== null) approves = true;
       // "Pode fazer merge sem perguntar": a merge in a repository its owner or an admin chose, with no card. An agent
       // that never asks merges anywhere it may, and leaves the same receipt.
       const mergeAlone: MergeDone | null = approves
@@ -1272,9 +1477,9 @@ export function createToolGateway(deps: {
           : null;
       if (mergeAlone) approves = false;
       // Approved ahead: the exact call a person approved for this routine run's slot runs like an allowed one, why
-      // or not; the one they refused never runs, whatever the agent's level.
+      // or not; the one they refused never runs, whatever the agent's level, a write its creator's run does unasked too.
       const ahead =
-        (approves || unasked) && authority?.kind === "routine" && authority.brief
+        (approves || unasked || decides) && authority?.kind === "routine" && authority.brief
           ? await aheadFor(
               ctx,
               authority.brief,
@@ -1432,11 +1637,13 @@ export function createToolGateway(deps: {
         return { type: "approval", approval: row };
       };
       if (approves) {
-        // A routine's card offers "Sempre nesta rotina" where the action can be its own: the narrower word for the
-        // same run. Not for an agent that always asks: its routine's own actions ask too.
-        const own =
-          level !== "always" && authority?.kind === "routine" && authority.brief
-            ? await routineKind(ctx, authority.brief, tool, call.input)
+        // A card of a run doing a routine's job (its own run, or one its report or a teammate's answer woke:
+        // `ownJobBrief`) offers "Sempre nesta rotina" where the action can be its own: the narrower word for the same
+        // job. Not for an agent that always asks: its routine's own actions ask too.
+        const own = keysAsk
+          ? keysAsk
+          : keysAsk === null && ownJobBrief
+            ? await routineKind(ctx, ownJobBrief, tool, call.input)
             : null;
         return askPerson(why, own ?? remember);
       }

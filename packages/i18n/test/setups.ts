@@ -99,6 +99,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "noAi.kept.plan",
   ],
   selfhost: [
+    // A server that sends no e-mail can't confirm a new address: only there (`email.no_mail`).
+    "shell.email.noMail",
     "auth.owner.",
     "auth.flow.ownerWaits",
     "auth.flow.ownerWaitsLead",
@@ -124,7 +126,6 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "members.requests.copyText",
     "missions.new.connect",
     "missions.new.connectComputer",
-    "missions.new.needsMachine",
     "missions.new.noEligibleText",
     "missions.new.reason.no_computer",
     "missions.pinned.noComputers",
@@ -150,6 +151,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "help.selfhost.",
     // A server other than the Cloud with no terms or privacy page of its own: the Cloud always shows its documents.
     "legal.none.",
+    // Only to the owner of a server the desktop app runs (`confirmsOnThisMac`), which has no password.
+    "mobile.delete.onThisComputer",
     "mobile.newMission.noAgents",
     "mobile.newMission.reason.no_computer",
     // The Jev card and its setup screen render only for the installation's owner on self-host
@@ -173,6 +176,9 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // and the link's refusals.
     "auth.forgotHere.",
     "errors.passwordLink.",
+    // Continue on this Mac's refusals: only on the server the desktop app runs on the person's computer.
+    "auth.desktopOwner.gone",
+    "auth.desktopOwner.none",
     // The catalog's line for a server without Composio (`composioOffText`): the Cloud always has its key.
     "connectors.composio.off_one",
     "connectors.composio.off_other",
@@ -182,6 +188,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "githubApp.ownerHint",
   ],
   email: [
+    // Said once the link to a new address went out, which only a server that sends e-mail does.
+    "shell.email.sent",
     "auth.newLinkSent",
     "invite.ask.approvedEmail",
     "invite.ask.sentEmail",
@@ -196,6 +204,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "proof.willSend",
     "proof.sent",
     "errors.reauth.code",
+    // An address held for an account that just left it (`changeAccountEmail`): only a server that sends e-mail holds it.
+    "auth.flow.emailHeld",
   ],
   apiKey: ["agentPage.work.brain.fallbackTitle"],
   // A message nobody mentions still gets an agent: routing.mine (the chip and its help line), routing.by (Settings),
@@ -208,9 +218,13 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "help.any.computers.sections.0.blocks.0",
     "help.any.computers.sections.1.blocks.1.list.0",
     // The moving steps' command is the Mac's, said so in the step above it.
-    "help.selfhost.run-on-your-computer.sections.10.blocks.1.code",
-    "desktop.prefs.general.dockDesc",
+    "help.selfhost.run-on-your-computer.sections.12.blocks.1.code",
+    // Uninstalling: how Finder shows hidden folders and opens one by its path, each after "On a Mac".
+    "help.selfhost.run-on-your-computer.sections.10.blocks.4.list.3",
+    "help.selfhost.run-on-your-computer.sections.10.blocks.4.list.4",
     "desktop.prefs.general.menuBarTitle",
+    // The app icon's hint shows only in the Mac's desktop app (AppIconPicker.tsx): its Dock and Finder.
+    "appIcon.hintMac",
     "desktop.prefs.updates.",
     "desktop.server.reveal",
     "desktop.cover.tailnetUp",
@@ -253,6 +267,7 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
 /** Keys whose server words mean another server (an MCP or database server, one the person picks): every setup. */
 export const ANYWHERE: readonly string[] = [
   "connectFlow.needsKey",
+  "errors.connector.headersWithSignIn",
   "database.error.blocked_host",
   "database.error.no_databases",
   "database.scopeAll",
@@ -263,12 +278,16 @@ export const ANYWHERE: readonly string[] = [
   "mobile.auth.server.",
   "mobile.auth.connect.",
   "desktop.first.",
-  "desktop.own.",
+  // The desktop app's first screen and its install: the Cloud, this computer and one always on, side by side.
+  "desktop.place.",
+  "desktop.install.",
   "desktop.connect.",
   "desktop.link.",
   "desktop.servers.",
   // The desktop app's workspaces by server: the line under a server that isn't agentes.chat, whichever server this is.
   "shell.yourServer",
+  // "Onde fica o seu workspace?": the Cloud and one's own server compared side by side, each named, whichever this is.
+  "hosting.",
   // People connect their own computers and phones in every setup, the Cloud included.
   "devices.",
   "mobile.devices.",

@@ -9,10 +9,11 @@ import { STORAGE_KEYS, storage } from "@/lib/storage";
  * signed out, sign-in (the landing page is its own site, `LANDING_URL`). `?open=jev` (the desktop app's Jev row) goes
  * on to Settings › AI accounts, where the server's owner finds Jev's key, after signing in if need be. `?open=password`
  * (the desktop app's "Add a password") opens the add-a-password dialog in the workspace (`?account=password`).
+ * `?open=devices` (the desktop app's expired pair link) goes on to Settings › Devices, where a new link is made.
  */
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): { open?: "jev" | "password" } =>
-    search.open === "jev" || search.open === "password" ? { open: search.open } : {},
+  validateSearch: (search: Record<string, unknown>): { open?: "jev" | "password" | "devices" } =>
+    search.open === "jev" || search.open === "password" || search.open === "devices" ? { open: search.open } : {},
   beforeLoad: async ({ context, search, preload }) => {
     const me = await context.queryClient.ensureQueryData(meQuery(context.api));
     if (!me)
@@ -24,6 +25,12 @@ export const Route = createFileRoute("/")({
         to: "/org/$orgId/settings/$section",
         params: { orgId: landing.orgId, section: "usage" },
         hash: "jev",
+      });
+    }
+    if (search.open === "devices") {
+      throw redirect({
+        to: "/org/$orgId/settings/$section",
+        params: { orgId: landing.orgId, section: "devices" },
       });
     }
     if (search.open === "password") {
