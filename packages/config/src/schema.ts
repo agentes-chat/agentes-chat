@@ -1168,6 +1168,12 @@ export const envVars = {
     description: "Minimum log level written to stdout.",
     section: "Observability",
   },
+  LOG_FORMAT: {
+    schema: z.enum(["json", "gcp"]).default("json"),
+    description:
+      "How each log line is written. json: time, level and msg. gcp: time, severity and message, the fields Google Cloud Logging reads.",
+    section: "Observability",
+  },
   SENTRY_DSN: {
     schema: z.string().regex(DSN, DSN_MESSAGE).optional(),
     description:

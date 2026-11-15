@@ -782,6 +782,7 @@ ones a self-hosted instance usually touches:
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | | Files in an S3-compatible bucket instead, when all four are set. `S3_REGION` (default `auto`); `S3_PATH_STYLE=true` for MinIO and Garage. |
 | `RUN_MIGRATIONS_ON_BOOT` | `true` | `false` only if you run `docker compose run --rm agentes migrate` yourself before each start. |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`. |
+| `LOG_FORMAT` | `json` | `gcp` for Google Cloud Logging (`severity` and `message`). |
 | `TELEMETRY` | `on` | `off` stops the anonymous usage report (Optional services and what they receive). |
 | `FEEDBACK_RELAY` | `true` | The apps' feedback form sends what a person writes to the agentes.chat team. `false`: no form (Optional services and what they receive). |
 | `TYPESAFE_API_KEY` | | Your TypeSafe key for Jev (AI: plans and keys). Wins over the key added in Settings → AI and usage. |
