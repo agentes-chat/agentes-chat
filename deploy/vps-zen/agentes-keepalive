@@ -1,0 +1,57 @@
+#!/bin/bash
+# VPS Zen keepalive, every minute by agentes-keepalive.timer (as root). Keeps the agentes.chat app, its Postgres and
+# the agents' runner up without anyone bringing them up by hand, and points the kernel's OOM killer at Chrome first.
+# While agentes-deploy holds /run/agentes-deploy.lock it does nothing: a deploy restarts things on purpose.
+set -u
+COMPOSE_DIR=/opt/agentes
+RUNNER_USER=agentes
+STATE=/run/agentes-keepalive
+mkdir -p "$STATE"
+log() { echo "keepalive: $*"; }
+
+exec 9>/run/agentes-deploy.lock
+if ! flock -n 9; then exit 0; fi
+
+# 1. The app and Postgres: running, else up again (compose recreates whatever is missing).
+for c in agentes-postgres-1 agentes-agentes-1; do
+  state=$(docker inspect -f '{{.State.Status}}' "$c" 2>/dev/null || echo missing)
+  if [ "$state" != "running" ] && [ "$state" != "restarting" ]; then
+    log "$c is $state: bringing it up"
+    (cd "$COMPOSE_DIR" && docker compose up -d) || log "compose up failed"
+    break
+  fi
+done
+
+# 2. The app answers: unhealthy for 3 checks in a row (3 min), restart it.
+health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' agentes-agentes-1 2>/dev/null || echo missing)
+if [ "$health" = "unhealthy" ] || ! curl -fsS -o /dev/null -m 10 http://127.0.0.1:3000/api/health; then
+  n=$(( $(cat "$STATE/app-bad" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$STATE/app-bad"
+  if [ "$n" -ge 3 ]; then log "app unhealthy for $n checks: restarting"; docker restart agentes-agentes-1 >/dev/null; echo 0 > "$STATE/app-bad"; fi
+else
+  echo 0 > "$STATE/app-bad"
+fi
+
+# 3. The runner (the agents' computer): its user service active, else started again.
+uid=$(id -u "$RUNNER_USER")
+export XDG_RUNTIME_DIR=/run/user/$uid
+userctl() { sudo -u "$RUNNER_USER" XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR" systemctl --user "$@"; }
+if [ -S "$XDG_RUNTIME_DIR/systemd/private" ] || [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+  if ! userctl is-active --quiet agentes-runner; then
+    log "runner is $(userctl is-active agentes-runner 2>/dev/null): starting it"
+    userctl reset-failed agentes-runner 2>/dev/null
+    userctl start agentes-runner || log "runner start failed"
+  fi
+else
+  log "user manager of $RUNNER_USER not running: starting it"
+  loginctl enable-linger "$RUNNER_USER"; systemctl start "user@$uid.service"
+fi
+
+# 4. Out of memory, the kernel kills Chrome (the agents' browsers) first, and the app and Postgres last.
+for p in $(pgrep -u "$RUNNER_USER" -f -- '(chrome|chromium|openbot|cua-driver)' 2>/dev/null); do
+  [ "$(cat /proc/$p/oom_score_adj 2>/dev/null)" = "800" ] || echo 800 > /proc/$p/oom_score_adj 2>/dev/null
+done
+for c in agentes-agentes-1 agentes-postgres-1; do
+  pid=$(docker inspect -f '{{.State.Pid}}' "$c" 2>/dev/null)
+  [ -n "$pid" ] && [ "$pid" != "0" ] && for p in $pid $(pgrep -P "$pid"); do echo -500 > /proc/$p/oom_score_adj 2>/dev/null; done
+done
+exit 0

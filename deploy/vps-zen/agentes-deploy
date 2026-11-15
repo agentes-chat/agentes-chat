@@ -1,0 +1,73 @@
+#!/bin/bash
+# VPS Zen: deploy an agentes.chat image without anyone bringing anything up by hand.
+#   agentes-deploy <image> [--now]     e.g. agentes-deploy agentes-local:a160acc56
+# Runs detached (systemd-run), so the agent or shell that started it may go away with the restart. It:
+#   1. holds /run/agentes-deploy.lock (the keepalive stays out of the way meanwhile);
+#   2. waits up to 15 min for no run to be mid-turn (--now skips it; a run cut anyway is resumed by the app);
+#   3. backs up the database (pg_dump) and the .env, switches AGENTES_IMAGE and runs docker compose up -d agentes;
+#   4. waits up to 5 min for /api/health; not healthy: puts the previous image back and brings that up instead;
+#   5. checks the runner reconnected (restarts its service if not) and logs everything to /var/log/agentes-deploy.log.
+set -u
+IMAGE=${1:?usage: agentes-deploy <image> [--now]}
+NOW=${2:-}
+if [ -z "${AGENTES_DEPLOY_DETACHED:-}" ]; then
+  unit="agentes-deploy-$(date +%Y%m%d%H%M%S)"
+  systemd-run --unit "$unit" --collect -E AGENTES_DEPLOY_DETACHED=1 "$(readlink -f "$0")" "$IMAGE" "$NOW" >/dev/null
+  echo "deploy of $IMAGE started as $unit; follow it in /var/log/agentes-deploy.log"
+  exit 0
+fi
+exec >>/var/log/agentes-deploy.log 2>&1
+DIR=/opt/agentes
+log() { echo "$(date -u +%FT%TZ) $*"; }
+psql() { docker exec agentes-postgres-1 psql -U agentes -d agentes -Atc "$1"; }
+exec 9>/run/agentes-deploy.lock
+flock -w 600 9 || { log "another deploy holds the lock: giving up"; exit 1; }
+docker image inspect "$IMAGE" >/dev/null 2>&1 || { log "no image $IMAGE"; exit 1; }
+PREV=$(grep -E '^AGENTES_IMAGE=' "$DIR/.env" | cut -d= -f2-)
+log "deploy $IMAGE (was $PREV)"
+if [ "$NOW" != "--now" ]; then
+  for i in $(seq 1 90); do
+    busy=$(psql "select count(*) from agent_runs where status='running'")
+    [ "$busy" = "0" ] && break
+    [ $((i % 6)) = 1 ] && log "waiting: $busy runs mid-turn"
+    sleep 10
+  done
+  log "going on with ${busy:-?} runs mid-turn (they resume on the new instance)"
+fi
+stamp=$(date -u +%Y%m%d%H%M%S)
+mkdir -p /var/backups/agentes
+docker exec agentes-postgres-1 pg_dump -U agentes -d agentes -Fc > "/var/backups/agentes/agentes-$stamp.dump" && log "pg_dump ok"
+ls -1t /var/backups/agentes/agentes-*.dump 2>/dev/null | tail -n +6 | xargs -r rm -f
+cp "$DIR/.env" "$DIR/.env.bak-$stamp"
+up() {
+  sed -i "s|^AGENTES_IMAGE=.*|AGENTES_IMAGE=$1|" "$DIR/.env"
+  (cd "$DIR" && docker compose up -d agentes)
+  for i in $(seq 1 60); do
+    sleep 5
+    [ "$(docker inspect -f '{{.State.Health.Status}}' agentes-agentes-1 2>/dev/null)" = "healthy" ] &&
+      curl -fsS -o /dev/null -m 10 http://127.0.0.1:3000/api/health && return 0
+  done
+  return 1
+}
+started=$(date -u +%FT%TZ)
+if up "$IMAGE"; then
+  log "healthy on $IMAGE"
+else
+  log "NOT healthy on $IMAGE: rolling back to $PREV"
+  docker logs --tail 40 agentes-agentes-1 2>&1 | sed 's/^/  app: /'
+  if up "$PREV"; then log "rolled back, healthy on $PREV"; else log "rollback not healthy either: the keepalive keeps trying"; fi
+fi
+# The runner reconnects by itself (its backoff is under a minute); if it hasn't in 3 min, its service starts again.
+uid=$(id -u agentes)
+back=no
+for i in $(seq 1 36); do
+  sleep 5
+  if journalctl --since "$started" --no-pager -q _SYSTEMD_USER_UNIT=agentes-runner.service 2>/dev/null | grep -q 'connected as'; then back=yes; break; fi
+done
+if [ "$back" = "yes" ]; then
+  log "runner reconnected"
+else
+  log "runner didn't reconnect in 3 min: restarting its service"
+  sudo -u agentes XDG_RUNTIME_DIR=/run/user/$uid systemctl --user restart agentes-runner
+fi
+log "done: $(grep -E '^AGENTES_IMAGE=' "$DIR/.env")"

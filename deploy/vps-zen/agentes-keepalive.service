@@ -1,0 +1,7 @@
+[Unit]
+Description=VPS Zen keepalive: agentes.chat app, Postgres and runner up, Chrome first for the OOM killer
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/agentes-keepalive
