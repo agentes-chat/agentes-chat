@@ -1,7 +1,8 @@
 # Self-hosting agentes.chat
 
-Self-hosting is free and always will be: AGPL-3.0, no license key, no paid tier. agentes.chat Cloud
-is the paid, hosted option.
+Self-hosting is free and always will be: AGPL-3.0, no license key. agentes.chat Cloud is the paid,
+hosted option. Changing it without publishing your changes, or reselling it under your own brand,
+takes a [commercial license](COMMERCIAL.md).
 
 agentes.chat runs as two containers: Postgres 18 with the pgvector extension, and the app, one Bun
 process that serves the web app, the API and the WebSockets and runs the background workers. A
@@ -12,10 +13,12 @@ Everything it keeps is in Postgres, except uploaded files, which the compose fil
 (`https://agentes.tail1234.ts.net`, `https://chat.example.com`, or `http://localhost:3000` on your
 own machine). The setup writes it for you. Sign-in cookies, the only browser origin allowed to change
 anything, and every link the app sends come from it. Opened at any other address, sign-in fails with
-"Invalid origin" and saving fails with `bad_origin`.
+"Invalid origin" and saving fails with `bad_origin`. To reach the same instance at more than one
+address (the machine's LAN IP and a tunnel hostname, say), list the others in
+`EXTRA_TRUSTED_ORIGINS`, comma-separated; `PUBLIC_URL` stays trusted either way.
 
 The server needs no model key of its own. Each organization adds its own keys (Claude, OpenAI,
-Gemini, DeepSeek, Kimi, Z.ai, MiniMax or OpenRouter) in **Settings → AI and usage**. Keys are stored encrypted with a key derived from `AGENTES_SECRET` and are
+Gemini, DeepSeek, Kimi, Z.ai, MiniMax, Command Code or OpenRouter) in **Settings → AI and usage**. Keys are stored encrypted with a key derived from `AGENTES_SECRET` and are
 never sent to browsers.
 
 **Requirements**
@@ -567,14 +570,40 @@ computer and opens agentes.chat, signed in.
 - **Agents with Commands on can reach everything on this Mac**, the server's data in `~/.agentes`
   included. Commands are on by default. Turn them off in the app's **Preferences › Tools**.
 - **No password:** the app signs you in, and on its sign-in screen **Continue on this Mac** does it again
-  whenever your session ends. For a browser on another device, add one in **Settings › Your account**, **Add
-  a password**.
+  whenever your session ends, for as long as your account exists. For a browser on another device, add one in
+  **Settings › Your account**, **Add a password**.
+- **When the owner deletes their account** (**Settings › Your account**), it goes for good 7 days later,
+  with the workspaces only they were in; before then, signing in and pressing **Restore account** brings it
+  back. After that, with no account left, the app opens its welcome window on the account step to make a new
+  owner. With other accounts left, **Continue on this Mac** signs no one in, and each person signs in with
+  their own email.
 - **Preferences › Servers › agentes.chat on this Mac:** reach (Tailscale needs HTTPS turned on for your
   tailnet, which **Turn it on** opens; on Linux, connect Tailscale with `sudo tailscale up`, and run
   `sudo tailscale set --operator=$USER` once), the phone's QR code, usage statistics, **Back up now**
   (`~/.agentes/backups/agentes-<date>.tar.gz`, with the database, the files and `.env`), Restart, Stop,
   and **Stop running it here…**, which keeps its data and stops its agents here; **Start it here** there
   brings both back.
+- **Erase and start over…**, beside it: stops it, moves `~/.agentes` whole to
+  `~/agentes.chat erased <YYYY-MM-DD>` (a number after it when that name is taken), deletes its agents'
+  homes for this computer in `~/.agentes-runner/orgs`, forgets its addresses and their sign-ins in the
+  app, and opens the welcome window for a new setup with a new owner. Its workspaces go for everyone; the
+  agents' files in `~/agentes` stay. Only for the folder the app made, never a terminal install's.
+  To bring it back: quit the app, move a newer `~/.agentes` out of the way, rename the erased folder to
+  `~/.agentes`, and set it up on this computer again. It starts with its workspaces and its owner (the
+  owner key is in the folder); its agents' homes are gone, so they sign in again.
+- **The Trash removes nothing.** All of the above lives outside the app, so trashing it leaves every folder
+  and doesn't stop a running app. To remove it entirely, in this order: turn off **Open at login**
+  (**Preferences › General**), quit the app (**Quit agentes.chat**: on a Mac in the agentes.chat menu or
+  ⌘Q, on Windows and Linux from its icon by the clock; **Quit** if it asks; closing the window only hides
+  it), delete the app, stop a server you installed in `~/.agentes` from the terminal with its own
+  `~/.agentes/app/<version>/bin/agentes-server service uninstall` (quitting the app doesn't stop it), then
+  delete your data, `~/.agentes`, every `~/agentes.chat erased …`, `~/.agentes-runner`
+  (the agents' homes: their browsers and sign-ins) and `~/agentes` (the agents' files), and the app's own
+  settings, window sign-ins and logs: on a Mac every `chat.agentes.desktop*` in
+  `~/Library/Application Support`, `Caches`, `HTTPStorages`, `Logs`, `Preferences` and `WebKit`, and
+  `~/Library/LaunchAgents/agentes.chat.plist`; on Windows `%APPDATA%\chat.agentes.desktop` and
+  `%LOCALAPPDATA%\chat.agentes.desktop`; on Linux `~/.config/chat.agentes.desktop` and
+  `~/.local/share/chat.agentes.desktop`.
 - **Something went wrong?** **Copy details** copies what the app knows, the setup's steps and the end of
   `~/.agentes/logs/server.log`.
 - A server you installed in `~/.agentes` from the terminal stays the terminal's: while it runs, the app
@@ -755,6 +784,7 @@ ones a self-hosted instance usually touches:
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `PUBLIC_URL` | `http://localhost:3000` | The exact address people open. |
+| `EXTRA_TRUSTED_ORIGINS` | | Other addresses this instance is opened at, comma-separated, each an origin such as `http://192.168.0.10:3000` or `https://agentes.tail1234.ts.net`. Sign-in and saving work from them too; `PUBLIC_URL` is always trusted. |
 | `AGENTES_SECRET` | required | Master secret, at least 32 characters. Never change it on an instance in use. |
 | `POSTGRES_PASSWORD` | required | Database password. Read by the compose file only. |
 | `AGENTES_IMAGE` | `ghcr.io/agentes-chat/agentes:latest` | The image to run. A version tag or a digest holds a version. |
@@ -781,14 +811,15 @@ ones a self-hosted instance usually touches:
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | | Files in an S3-compatible bucket instead, when all four are set. `S3_REGION` (default `auto`); `S3_PATH_STYLE=true` for MinIO and Garage. |
 | `RUN_MIGRATIONS_ON_BOOT` | `true` | `false` only if you run `docker compose run --rm agentes migrate` yourself before each start. |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`. |
+| `LOG_FORMAT` | `json` | `gcp` for Google Cloud Logging (`severity` and `message`). |
 | `TELEMETRY` | `on` | `off` stops the anonymous usage report (Optional services and what they receive). |
 | `FEEDBACK_RELAY` | `true` | The apps' feedback form sends what a person writes to the agentes.chat team. `false`: no form (Optional services and what they receive). |
-| `TYPESAFE_API_KEY` | | Your TypeSafe key for Jev (AI: plans and keys). Wins over the key added in Settings → AI and usage. |
+| `TYPESAFE_API_KEY` | | Your TypeSafe key for Jev, or an OpenRouter key (`sk-or-…`) to call the same Jev through OpenRouter (AI: plans and keys). Wins over the key added in Settings → AI and usage. |
 | `COMPOSIO_API_KEY`, `COMPOSIO_WEBHOOK_SECRET` | | Your Composio project: Gmail and Outlook mailboxes and the services connected through Composio (below). |
 | `COMPOSIO_AUTH_CONFIGS`, `COMPOSIO_CALLS_PER_MONTH` | `0` for the cap (none) | Auth configs of your own per toolkit (`googledrive=ac_…`), and the Composio calls a workspace may make per month. |
 
 **Model keys.** Each organization adds its own keys (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai,
-MiniMax or OpenRouter) in **Settings → AI and usage**, and each agent uses one of them. Usage and cost are recorded per agent.
+MiniMax, Command Code or OpenRouter) in **Settings → AI and usage**, and each agent uses one of them. Usage and cost are recorded per agent.
 
 **Your own models.** **Other provider** there takes any server that speaks OpenAI's Chat Completions or
 Anthropic's Messages: an Ollama, vLLM, LM Studio or LiteLLM next to this server, or a gateway. Give its base
@@ -828,6 +859,15 @@ links, and budget and approval alerts. `MILLIONSEND_API_KEY` wins when both are 
 
 **Password reset** needs email, so it shows only with `SMTP_URL` or `MILLIONSEND_API_KEY` set: "Forgot
 my password" on the sign-in page emails a link to the web app's reset page (`/reset-password`).
+
+**Changing an account's email** (Settings › Your account › Email). With email set up, the person types the new
+address, then a code sent to the current one, or signs in again when they can't open that inbox (or when the account
+never confirmed that address, which gets no code). The address changes when they open the link sent to the new one
+(once, and only the newest one asked), and the old one, only for an address the account had confirmed, gets a notice
+with **This wasn't me**: for 7 days, its page puts the old address back, signs every session out, disconnects the AI
+apps, removes the ways to sign in added since the change and clears the password ("Forgot my password" sets the next
+one). Nobody can sign up with that address meanwhile. Without email the address changes at once, with no code or link,
+except one a sign-in provider confirmed, which needs email to change.
 
 **Voice messages.** People hold the microphone and send audio; agents read its words, and the audio's words stay hidden until someone opens them on that message. The microphone shows only with a speech engine. As the server's owner, pick a provider and paste its key in **Settings**, or set it in the environment: `ASSEMBLYAI_API_KEY`, `ELEVENLABS_API_KEY`, `SONIOX_API_KEY`, `GROQ_API_KEY`, `OPENAI_SPEECH_API_KEY` or `DEEPINFRA_API_KEY`, with `SPEECH_ENGINES` for the order they are tried. With any of these, the audio goes to that provider to become text. DeepInfra is the cheapest of them, with the same Whisper as Groq. `LOCAL_SPEECH_URL` points at a server of your own that speaks the OpenAI format (Speaches, a local Whisper or Parakeet), and the audio stays with you: `LOCAL_SPEECH_API_KEY` if it asks for a key, and `LOCAL_SPEECH_WARM=on` if it loads its model on demand and can start when someone presses the microphone (`POST <LOCAL_SPEECH_URL>/warm`). Every request to it names the workspace in `X-Agentes-Org`, and one that takes more than half a minute plus twice the recording goes to the next engine. A self-hosted server has no limit on minutes. Engines hear the language in the audio: the app's language goes only to Soniox, as a hint.
 
@@ -870,6 +910,32 @@ deletes the account at Composio, without revoking it at the service. Instagram c
 creator accounts only, and WhatsApp a WhatsApp Business account, whose id Composio's page asks for.
 Composio's own LinkedIn and YouTube apps share their rate limits and daily quota with all of Composio's
 customers: with heavy use, give them OAuth apps of your own in `COMPOSIO_AUTH_CONFIGS`.
+
+**Your own MCP servers know who is calling (optional).** An MCP server you run for your own workspace
+(an internal tool your agents use) gets nothing with a call but its key, and a key that leaks works from
+any other workspace and from anywhere on the internet. List the server's host with a secret the server
+holds too, and every tool call an agent makes to it says, verifiably, who is calling:
+`MCP_CALLER_IDENTITY=tools.example.com=<secret>` (a bare lower-case host name; a secret of at least 32
+characters, `openssl rand -base64 48`; several pairs separated by commas, with no spaces), then restart.
+Connect the server as usual, by its address in **Settings → Connectors**. Each `tools/call` to it then
+carries, in the request's `params._meta["chat.agentes/caller"]`, a JWT signed with the secret (HS256):
+
+| Claim | What it is |
+| --- | --- |
+| `iss` | This instance: the origin of `PUBLIC_URL` |
+| `aud` | The server's host |
+| `org`, `agent`, `conn` | The ids of the workspace, the agent and the connection |
+| `run` | The run's id (absent for the rare call made outside a run) |
+| `user` | The id of the person the run acts for; absent when nobody is behind it, as in a routine's run |
+| `iat`, `exp`, `jti` | When it was made, 60 seconds later, and an id that is new for every call |
+
+In your server: check the signature with the algorithm pinned to HS256, that `aud` is your host and `iss`
+your instance, that `exp` hasn't passed and that this `jti` wasn't used before; then serve only the `org`
+and `agent` you expect. Refuse a call with a tool error, not HTTP 401, which marks the connection as
+needing to be reconnected. Listing the tools carries no statement, since no agent is calling yet, so keep
+the tools' names and descriptions free of anything private. A host that isn't listed gets nothing, and
+neither does a server over http or on a port other than 443. [ADR 0181](docs/adr/0181-mcp-caller-identity.md)
+has the rest.
 
 **Deleting workspaces and accounts.** An owner deletes a workspace in **Settings → General**, with a
 code emailed to them (with no email set up, their password instead): it turns read-only for everyone at
@@ -1035,18 +1101,18 @@ party only when you turn that service on:
 
 | Service | Turned on by | What it receives |
 | --- | --- | --- |
-| Claude (Anthropic), OpenAI, Gemini (Google), DeepSeek, Kimi, Z.ai, MiniMax | An organization's key | What an agent reads to answer: its instructions, the organization's context, recent messages, and the files and tool results it opens. Summaries and memory upkeep use the same key. |
+| Claude (Anthropic), OpenAI, Gemini (Google), DeepSeek, Kimi, Z.ai, MiniMax, Command Code | An organization's key | What an agent reads to answer: its instructions, the organization's context, recent messages, and the files and tool results it opens. Summaries and memory upkeep use the same key. |
 | Another provider (OpenAI- or Anthropic-compatible) | An organization's endpoint (Settings → AI and usage → Other provider) | What the other model providers receive, sent to the address the organization typed. When it is saved, the server also reads that address's model list and makes one small test call per model. |
 | OpenRouter | An organization's key | What the other model providers receive, passed on by OpenRouter to the model's own provider (the organization's OpenRouter privacy settings decide which may keep it). While a workspace has an OpenRouter key, the server also reads OpenRouter's public model list, with no key: about once an hour, and up to once a minute while agents' runs ask for a model the list lacks. |
 | OpenCode | Always on | Nothing of yours: the server reads OpenCode Go's public model list, with no key, at boot and about once an hour, so that plan's model picker stays current. If the list is out of reach, the picker uses the list built into this version. |
-| TypeSafe Jev | `TYPESAFE_API_KEY`, or the key the owner adds in **Settings → AI and usage** (the variable wins). Either way it is your own TypeSafe key, so TypeSafe bills your account. | To pick which agent answers a message nobody @mentioned: the channel's name and topic, the message (up to 4,000 characters), recent messages (up to 800 each), and the name, role, description and tools of the channel's agents. To pick an agent's model or the tools it loads: its name, role and instructions (up to 1,500 characters), the message (up to 2,000) and recent messages (up to 400 each). Also the messages and memory items it is asked to judge (a request to stop, a hand-off, a permission change, whether to archive a memory), a long run's task and latest words with the tool calls and the start of the results it may set aside, a mission's commands it is asked to rate with the mission's goal and current step, the names and descriptions of a connector's tools, and, when a message meets no AI connected, that message (up to 4,000 characters), to tell whether it asks to connect one. On agents' computers, what is on the screen it is asked to look at: the page's address, its text and a screenshot. Without it, a small model on one of the organization's API keys picks and judges instead, each person's own plan picks for their own messages, and simple rules do the rest. Some memory and tool decisions go back to what they did before Jev, nothing guesses what to connect, and nothing is read from images. |
+| TypeSafe Jev | `TYPESAFE_API_KEY`, or the key the owner adds in **Settings → AI and usage** (the variable wins). Either way it is your own key, so TypeSafe bills your account; with an OpenRouter key (`sk-or-…`) the same requests go through OpenRouter, which passes them on to TypeSafe and bills your OpenRouter account. | To pick which agent answers a message nobody @mentioned: the channel's name and topic, the message (up to 4,000 characters), recent messages (up to 800 each), and the name, role, description and tools of the channel's agents. To pick an agent's model or the tools it loads: its name, role and instructions (up to 1,500 characters), the message (up to 2,000) and recent messages (up to 400 each). Also the messages and memory items it is asked to judge (a request to stop, a hand-off, a permission change, whether to archive a memory), a long run's task and latest words with the tool calls and the start of the results it may set aside, a mission's commands it is asked to rate with the mission's goal and current step, the names and descriptions of a connector's tools, and, when a message meets no AI connected, that message (up to 4,000 characters), to tell whether it asks to connect one. On agents' computers, what is on the screen it is asked to look at: the page's address, its text and a screenshot. Without it, a small model on one of the organization's API keys picks and judges instead, each person's own plan picks for their own messages, and simple rules do the rest. Some memory and tool decisions go back to what they did before Jev, nothing guesses what to connect, and nothing is read from images. |
 | Voyage AI, DeepInfra, OpenAI or another embeddings server | `EMBEDDINGS_PROVIDER=voyage` with `VOYAGE_API_KEY`, or `EMBEDDINGS_PROVIDER=openai` with `EMBEDDINGS_URL` | The text of what `EMBEDDINGS_KINDS` lists (memory items by default) as it is indexed, up to 8,000 characters each, and search queries. The `embeddings` profile keeps them on this machine. Without one, search is full-text only. |
 | Web search for agents | Always on: DuckDuckGo's HTML page with no key, unless `BRAVE_SEARCH_API_KEY` (Brave Search) or `SEARXNG_URL` (your own SearXNG) is set; an agent with a browser on its computer searches there instead (Google, then Bing or DuckDuckGo) | The words an agent searches for (`web_search`). `web_fetch` opens the public pages an agent asks for, from this server: never an internal or private address. |
 | Composio | `COMPOSIO_API_KEY` | Gmail and Outlook mailboxes for agents, and the services connected through it (Google Drive, Calendar, Sheets and Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit and WhatsApp Business): Composio holds those connections, and what agents read or write there passes through it, files included. IMAP mailboxes and the other connectors connect directly. |
 | MillionSend or Resend | `MILLIONSEND_API_KEY` | Each email the app sends: recipients, subject and body, links included. `SMTP_URL` uses your own mail server instead. |
-| Expo | An iPhone signed in to the instance | For each push to that iPhone: its push token, a title (up to 80 characters) and a line of text (up to 180), through Expo's push service. |
-| agentes.chat push relay | An Android phone signed in to the instance, unless `FIREBASE_SERVICE_ACCOUNT` is set or `PUSH_SENDER` is `direct` or `off` | Once, to register the instance: its version. Then, for each push to that phone: its FCM token, a title (up to 80 characters), a line of text (up to 180) and what the notification opens (ids of the workspace, conversation or request), which the relay passes to Firebase Cloud Messaging without keeping them. |
+| agentes.chat push relay | A phone signed in to the instance: an Android phone unless `FIREBASE_SERVICE_ACCOUNT` is set, an iPhone unless `APNS_KEY` is, neither when `PUSH_SENDER` is `direct` or `off` | Once, to register the instance: its version. Then, for each push to that phone: its push token (FCM's or Apple's; for an iPhone also the app's bundle id), a title (up to 80 characters), a line of text (up to 180) and what the notification opens (ids of the workspace, conversation or request), which the relay passes to Firebase Cloud Messaging or to Apple without keeping them. |
 | Firebase Cloud Messaging (Google) | An Android phone signed in to the instance (through the relay above, or directly with `FIREBASE_SERVICE_ACCOUNT`) | For each push to that phone: its FCM token, the title, the line of text and what the notification opens. Directly, also a request signed with the service account's key, for an access token. |
+| Apple Push Notification service | An iPhone signed in to the instance (through the relay above, or directly with `APNS_KEY`) | For each push to that iPhone: its device token, the app's bundle id, the title, the line of text and what the notification opens. Directly, each request also carries a token signed with the APNs key. |
 | Your browser's push service (Google, Mozilla, Apple, Microsoft) | Someone turns on **Notifications in this browser** (`WEB_PUSH=off` hides it) | For each push to that browser: the notification encrypted to that browser (RFC 8291), which the push service can't read, the instance's public key, and a contact for the instance: `PUBLIC_URL` when it is a public https address, else the `EMAIL_FROM` address, else agentes.chat's site. |
 | A Sentry-compatible server you choose | `SENTRY_DSN`, `SENTRY_WEB_DSN`, `SENTRY_MOBILE_DSN` | Error reports, below. |
 | Tailscale | `COMPOSE_PROFILES=tailscale`, or the desktop app's **Reach it from your phone and teammates** | Its coordination server keeps the server's name, tailnet addresses and public keys, as for any device in your tailnet. Connections are encrypted end to end (WireGuard), through Tailscale's relays when no direct path exists; with Funnel, visitors' connections pass through Tailscale's servers, still encrypted to this server. The HTTPS certificate comes from Let's Encrypt, which publishes the server's name in the public Certificate Transparency log. |
@@ -1293,6 +1359,23 @@ Chrome is missing. Since its agents run as the
 person who connected it, a computer leaves the organization with them when they leave, are removed or
 delete their account; one installed with `--system` is the team's and stays.
 
+**Lodi's computer.** Lodi, the built-in agent every member talks to, works on the workspace's own computer (the
+server's own, set up with `--system`), where each person gets a place of their own: a separate user with its
+own files, browser, desktop and sign-ins, which only that person can watch or take control of, from Lodi's
+page. A computer that runs every agent as one user (the simple mode, a Mac, a computer a person connected)
+can't keep people's places apart, so Lodi has no computer there, and its page says so. Turn its commands,
+browser or desktop off for everyone on its page, under what it can use. The computer's shared folder is
+still shared: every agent and every person's Lodi reads and writes it.
+
+Where others read what Lodi does (a channel, a dashboard widget, a routine that reports to a channel) it works in
+one more place, shared by the whole workspace: one more user on that computer, "Lodi (shared)". Nothing of a
+person's own place reaches it. A person's own place is used only for what that person asks Lodi in their own
+conversation with it: a routine that reports there, or anything else nobody asked for there, has no computer.
+Whoever may open any agent's computer (the admins of computers) opens it from the computer's page in Settings,
+Computers. Turning all three of Lodi's computer permissions off ends that place and stops what runs there, and
+turning one back on starts an empty one. The ended place's files stay on the computer's disk under a user nothing
+runs as, until you delete that user.
+
 **What an agent reaches on its computer (`--system`).** Each agent reaches the local ports its own
 processes open (any port, port 0 included, on 127.0.0.1, ::1 or the computer's own addresses), and
 nobody else's: another agent's listeners refuse it at once, so two agents can run dev servers, test
@@ -1334,7 +1417,13 @@ computer), plus swap for a third of that, which keeps the rest for the system, t
 the server. At that limit the kernel stops one process, usually the biggest (Chrome's pages first), and
 only that process: the command it belonged to fails, and the agent is told it was most likely memory
 (with systemd 253 or newer; a desktop or a task already running when you update gets this when it next
-starts).
+starts). What agents leave in `/tmp` holds RAM until they delete it or the computer restarts. To keep
+it on disk instead, add `"agentTmpOnDisk": true` to `/var/lib/agentes-runner/config.json` as root (on
+this server's own computer too, for all its organizations): each agent takes it at its first launch
+after the next boot (until then it keeps the `/tmp` it has). The agents' `/tmp` is then a filesystem of
+their own, made anew at every boot in `/var/cache/agentes-runner-tmp` with half of what the system disk
+has free, so they can't fill that disk or take its inodes. It needs loop devices and `mkfs.ext4`
+(e2fsprogs), which an unprivileged container doesn't have.
 `agentes-runner computer`, which any agent (or you) can run, prints what the computer has, what is free
 for new work and which agents use the most; agents are told to run it before something heavy, to tell
 the person when another agent's work leaves no room, and to stop what a finished build left running.
@@ -1493,7 +1582,9 @@ memory spots repeats said in other words, and agents find buttons from a descrip
 screenshots. The person who set up the server adds the key in **Settings → AI and usage** (the setup
 asks once), or puts it in `.env` as `TYPESAFE_API_KEY`, which wins. It is stored encrypted like
 provider keys and never sent back to a browser. TypeSafe bills your account: US$ 0.042 per million
-tokens read, about US$ 0.0001 per routed message. Without it, see https://agentes.chat/docs/jev#without.
+tokens read, about US$ 0.0001 per routed message. An OpenRouter key (`sk-or-…`) works too: the same
+Jev, called and billed through OpenRouter at the same price, and the open workspace's OpenRouter key
+can turn it on with one press. Without it, see https://agentes.chat/docs/jev#without.
 
 **Plans.** An agent can think with a Claude or ChatGPT subscription instead of a key, on a connected
 computer: Claude Code or Codex signs in there with the provider's own flow. Each account is a folder
@@ -1581,6 +1672,13 @@ docker compose pull
 docker compose run --rm agentes migrate
 docker compose up -d
 ```
+
+A migration that builds an index on a big table does it without stopping writes. It can take minutes
+with nothing in the log after `applying database migrations`, and it waits for a dump or another long
+transaction to end; cut short, it runs whole again at the next start. If `migrate` stands still and
+the app is down, the app restarted while it ran: on 0.1.1 or older, a starting app waits for the
+migration in a way the migration waits for too, so neither ends. Stop `migrate` with Ctrl-C and run
+`docker compose up -d`: the new version finishes the migration as it starts.
 
 Migrations only go forward, and a version refuses to start on a database that a newer one migrated.
 Take a dump before a big jump (Backups below): rolling back is the previous pin plus that dump.
@@ -1737,6 +1835,22 @@ S3_SECRET_ACCESS_KEY=...
 S3_BACKUP_BUCKET=agentes-backups
 ```
 
+**Encrypted dumps (optional).** A dump leaves the server as `pg_dump` wrote it unless
+`BACKUP_AGE_RECIPIENT` holds an [age](https://age-encryption.org) public key (`age1…`): then each dump
+is encrypted to that key before it is uploaded, as `agentes-<stamp>.dump.age`, and the bucket's key
+alone can't read it. Only the public key sits on the server, so create the pair somewhere else
+(`age-keygen -o key.txt`, which prints the public key and keeps the private one in `key.txt`) and keep
+the private key apart from the server and from the bucket: a dump whose key is lost can't be restored.
+Add the public key to `.env` and run `docker compose up -d`:
+
+```sh
+BACKUP_AGE_RECIPIENT=age1...
+```
+
+Restoring needs `age` on the machine that restores (`apk add age`, `apt install age` or
+`brew install age`) and that private key. Switching either way is safe: `list` and the retention cover
+both names, and the dumps already in the bucket stay as they are.
+
 Add `backup` to `COMPOSE_PROFILES` too, comma-separated: `COMPOSE_PROFILES=tailscale,backup` on
 Tailscale (the setup's default), `https,backup` with Caddy, or `backup` alone. Running the setup
 again keeps it. Run `docker compose up -d`: the first dump runs right away, unless the bucket has one
@@ -1770,7 +1884,15 @@ start the line with `cd /path/to/compose/dir && umask 077;` and write `\%F`).
 
 **Restore** with the app stopped, so nothing writes in between, into an emptied database: tables that
 a newer version added aren't in an older dump and would keep it from replacing the rest. A dump in
-the bucket comes down to the server first, under a name from `list`:
+the bucket comes down to the server first, under a name from `list`. An encrypted one (`.dump.age`)
+is decrypted with the private key, which the server doesn't have:
+
+```sh
+(umask 077 && docker compose run --rm -T backup fetch agentes-20261020-030000.dump.age > agentes-2026-10-20.dump.age)
+age -d -i key.txt agentes-2026-10-20.dump.age > agentes-2026-10-20.dump
+```
+
+A dump without `.age` is ready as it comes down:
 
 ```sh
 (umask 077 && docker compose run --rm -T backup fetch agentes-20261020-030000.dump > agentes-2026-10-20.dump)

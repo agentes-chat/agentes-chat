@@ -28,8 +28,9 @@
 Agents join your channels and DMs with a role, an owner and a budget, work where everyone can see,
 and ask before anything sensitive. They think with Claude, ChatGPT and Codex, Gemini, Grok or any
 OpenRouter model, use MCP tools, and get a computer and a browser of their own. Self-hosting is
-free and always will be (AGPL-3.0, no license key, no paid tier), or use agentes.chat Cloud, the
-paid, hosted option: both run this same codebase.
+free and always will be (AGPL-3.0, no license key), or use agentes.chat Cloud, the paid, hosted
+option: both run this same codebase. Changing it without publishing your changes, or reselling it
+under your own brand? There is a [commercial license](COMMERCIAL.md).
 
 ## Why agentes.chat
 
@@ -58,7 +59,7 @@ as Grok Bot, ChatGPT dots, OpenBot.run and OpenMausBot (all of which it imports 
   network, private and with HTTPS, in about 10 minutes. [SELF_HOSTING.md](SELF_HOSTING.md) covers
   the phone, a public domain instead, upgrades and backups, and running it without Docker.
 
-Each organization adds its own model key (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai, MiniMax or
+Each organization adds its own model key (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai, MiniMax, Command Code or
 OpenRouter) in the app.
 
 ## Features
@@ -66,7 +67,7 @@ OpenRouter) in the app.
 | Feature | Status | Notes |
 | --- | --- | --- |
 | Channels, threads and DMs | ✅ | Public and private channels, DMs with people and agents, and threads started from a message or a stretch of conversation, then followed, closed and archived. |
-| Agents | ✅ | Each has a role, instructions, a model (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai, MiniMax, or any of OpenRouter's), a monthly budget checked before every call, and an owner who gets its approvals and budget alerts. |
+| Agents | ✅ | Each has a role, instructions, a model (Claude, OpenAI, Gemini, DeepSeek, Kimi, Z.ai, MiniMax, Command Code, or any of OpenRouter's), a monthly budget checked before every call, and an owner who gets its approvals and budget alerts. |
 | Router | ✅ | A message nobody @mentioned goes to the router. Code picks the candidates, and Jev, a small model on the workspace's key, the author's own plan (on a server you run yourself) or simple rules pick among them. Up to four agents answer, or none, and the message says who picked. It never grants a permission. |
 | Approvals | ✅ | Merge, deploy, rollback and anything a connector marks sensitive wait for the agent's owner or an admin, as a card in the chat. The approved action runs once, exactly as approved. |
 | Connectors (MCP) | ✅ | The organization connects an MCP server once (official servers such as Linear, Sentry, Notion and Stripe in one click, or any server by URL), and each agent gets only the scopes granted to it. With a Composio key, Google Drive, Calendar, Sheets and Docs, Slack, Microsoft Teams, OneDrive, HubSpot, Salesforce, Zendesk, Asana, Figma, Intercom, Dropbox, Square, Instagram, Facebook, LinkedIn, YouTube, Pinterest, Reddit and WhatsApp Business connect through Composio. |
@@ -102,7 +103,12 @@ agentes.chat is licensed under the [GNU AGPL-3.0-only](LICENSE). [NOTICE](NOTICE
 to distribute the phone and desktop apps through app stores, and an attribution term (section 7(b)):
 copies and modified versions keep "Based on agentes.chat by Codari Global, LLC" in their About
 screen. The setup CLI in `packages/setup` (`@agenteschat/setup`) is MIT. Contributions come in under
-the same terms, with nothing to sign. Third-party notices are in [NOTICE](NOTICE) too.
+the same terms and require our [Contributor License Agreement](CLA.md), which the CLA bot asks you
+to accept on your first pull request. Third-party notices are in [NOTICE](NOTICE) too.
+
+Codari Global, LLC also licenses agentes.chat on commercial terms, for those who change it and don't
+want to publish their changes, sell it under their own brand without the attribution, build it into
+a closed product, or can't use AGPL software. See [COMMERCIAL.md](COMMERCIAL.md).
 
 The agentes.chat name, logo and icons are trademarks and are not licensed under the AGPL. See
 [TRADEMARKS.md](TRADEMARKS.md).

@@ -323,6 +323,23 @@ describe("the broker", () => {
     expect(broker.count(f.agent.id, "desktop")).toBe(0);
   });
 
+  test("who watches an agent's desktop from its computer: each person once, never a terminal or another computer", async () => {
+    f = await setup();
+    const machine = await paired();
+    const { broker } = brokerFor(machine);
+    const first = broker.open(fakeSocket().socket, input(WATCH));
+    const second = broker.open(fakeSocket().socket, input(WATCH));
+    const shell = broker.open(fakeSocket().socket, input(TERMINAL));
+    await until(() => [first, second, shell].every((s) => s.runner !== null), "the data sockets");
+    // The agent's pointer on its desktop goes to them (ADR 0040 §7.2).
+    expect(broker.desktopViewers(f.agent.id, machine.machineId)).toEqual([{ orgId: f.org.id, userId: f.owner.id }]);
+    expect(broker.desktopViewers(f.agent.id, "another-computer")).toEqual([]);
+    expect(broker.desktopViewers("another-agent", machine.machineId)).toEqual([]);
+    broker.close(first);
+    broker.close(second);
+    expect(broker.desktopViewers(f.agent.id, machine.machineId)).toEqual([]);
+  });
+
   test("an older runner refuses a desktop that isn't running: the server starts it and opens once more", async () => {
     f = await setup();
     const machine = await paired();

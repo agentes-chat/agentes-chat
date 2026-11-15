@@ -149,7 +149,8 @@ export function createAnthropicProvider(
             textOnly ? withoutImages(request.messages, request.model) : request.messages,
             id,
             withThinking,
-            cacheControl(request),
+            // Anthropic behind a compatible endpoint refuses a 1-hour breakpoint after the system's 5-minute ones.
+            compat ? undefined : cacheControl(request),
           ),
           ...(compat ? {} : { cache_control: { type: "ephemeral" as const } }),
           ...(tools.length > 0 ? { tools } : {}),

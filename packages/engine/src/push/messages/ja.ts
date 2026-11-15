@@ -85,6 +85,11 @@ export const strings: Partial<PushStrings> = {
   deviceAccessBody: "タップして今回のみ許可、常に許可、または断る",
   deviceToolTitle: (a, d) => `${a} が ${d} のツールをオンにするよう求めています`,
   deviceToolBody: "タップしてワンクリックでオンにする",
+  deviceCliTitle: (a, d) => `${a} が ${d} にプログラムをインストールするよう求めています`,
+  deviceCliBody: "タップしてワンクリックでインストール",
+  deviceFolderTitle: (a, f, d) =>
+    f ? `${a} があなたの ${d} で ${f} を求めています` : `${a} があなたの ${d} でフォルダを求めています`,
+  deviceFolderBody: "そのコンピューターのアプリで許可してください。",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} が #${l} にエージェントを追加するよう求めています`
@@ -102,4 +107,5 @@ export const strings: Partial<PushStrings> = {
   joinRequestTitlePersonal: (name) => `${name} があなたのワークスペースへの参加をリクエストしています`,
   joinSuggestionTitlePersonal: (by, name) => `${by} が ${name} の招待を提案しました`,
   teamWeekReadyPersonal: "1週間のまとめができました",
+  teamWatchStill: (n) => `${n}件があなたを待っています`,
 };

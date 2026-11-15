@@ -61,6 +61,10 @@ export function agentFolders(access: RunnerAccess | null | undefined, agentId: s
 }
 
 const toolRequestKey = (machineId: string, tool: string) => `device-tool:${machineId}:${tool}`;
+/** One inbox row per computer and program for its owner (`device.cli_request`, `askMachineCliInstall`). */
+export const cliRequestKey = (machineId: string, tool: string) => `device-cli:${machineId}:${tool}`;
+/** One inbox row per folder an agent waits for (`device.folder_request`), done when the machine answers it. */
+export const folderRequestKey = (requestId: string) => `device-folder:${requestId}`;
 
 /** The runner's report, stored as is (the machine is the source of truth), and told to the org. */
 export async function storeMachineAccess(deps: AccessDeps, machineId: string, access: RunnerAccess) {
@@ -83,12 +87,12 @@ export async function storeMachineAccess(deps: AccessDeps, machineId: string, ac
   }
 }
 
-/** What `machines.executors` keeps of the coding CLIs: each one found and when they were looked up. */
+/** What `machines.executors` keeps of the coding CLIs: each one found, those that can't start, and when they were looked up. */
 export function storedExecutors(stored: schema.MachineExecutors | null | undefined): schema.MachineExecutors {
   if (!stored) return {};
-  const { claude, codex, cursor, opencode, grok, antigravity, detectedAt } = stored;
+  const { claude, codex, cursor, opencode, grok, antigravity, broken, detectedAt } = stored;
   return Object.fromEntries(
-    Object.entries({ claude, codex, cursor, opencode, grok, antigravity, detectedAt }).filter(
+    Object.entries({ claude, codex, cursor, opencode, grok, antigravity, broken, detectedAt }).filter(
       ([, v]) => v !== undefined,
     ),
   );
@@ -107,12 +111,21 @@ export async function storeMachineExecutors(
   const [row] = await deps.db
     .update(machines)
     .set({
-      executors: sql`(coalesce(${machines.executors}, '{}'::jsonb) - 'claude' - 'codex' - 'cursor' - 'opencode' - 'grok' - 'antigravity') || ${next}::jsonb`,
+      executors: sql`(coalesce(${machines.executors}, '{}'::jsonb) - 'claude' - 'codex' - 'cursor' - 'opencode' - 'grok' - 'antigravity' - 'broken') || ${next}::jsonb`,
       updatedAt: new Date(),
     })
     .where(eq(machines.id, machineId))
     .returning({ orgId: machines.orgId });
-  if (row) await publishMachineUpdated(deps.pubsub, row.orgId, machineId, { executors: true });
+  if (!row) return;
+  await publishMachineUpdated(deps.pubsub, row.orgId, machineId, { executors: true });
+  // A program installed, from the apps or by hand, answers whoever asked for it.
+  for (const tool of ["claude", "codex"] as const) {
+    if (!executors[tool]) continue;
+    await resolveNotifications(deps, row.orgId, {
+      groupKey: cliRequestKey(machineId, tool),
+      kind: "device.cli_request",
+    }).catch(() => 0);
+  }
 }
 
 /** `toolchains.changed`: what `hello.toolchains` said, replaced whole; the rest of `executors` stays. */
@@ -390,6 +403,16 @@ export async function requestFolderAccess(
       .where(eq(machineAccessRequests.id, row.id));
     throw error;
   }
+  // The agent now waits, up to a day, for whoever is at the computer: its owner hears about it in the inbox, waiting.
+  await notifyFolderRequest(deps, row, machine).catch(() => undefined);
+  const [settled] = await deps.db
+    .select({ status: machineAccessRequests.status })
+    .from(machineAccessRequests)
+    .where(eq(machineAccessRequests.id, row.id));
+  // The answer reached us while the row was being written: nothing waits any more.
+  if (settled && settled.status !== "pending") {
+    await resolveNotifications(deps, row.orgId, { groupKey: folderRequestKey(row.id) }).catch(() => 0);
+  }
   await recordAudit(deps.db, {
     orgId: ctx.orgId,
     actor: { type: "agent", id: ctx.agentId },
@@ -399,6 +422,38 @@ export async function requestFolderAccess(
   }).catch(() => undefined);
   await postRequestedNote(deps, row, machine.name, agent?.handle ?? "agent").catch(() => undefined);
   return { status: "pending", requestId: row.id, path };
+}
+
+/**
+ * The owner of the computer hears about the folder an agent waits for (`device.folder_request`): one waiting row per
+ * request, the agent as actor, the computer and the folder in it. Nobody else can answer it (it happens on the
+ * machine), so the row has no button of its own: it opens the computer, and `access.decided` ends it.
+ */
+async function notifyFolderRequest(
+  deps: AccessDeps,
+  row: AccessRequestRow,
+  machine: { id: string; name: string; pairedByUserId: string | null },
+) {
+  const ownerId = machine.pairedByUserId;
+  if (!ownerId) return;
+  await notify(deps, {
+    orgId: row.orgId,
+    userIds: [ownerId],
+    kind: "device.folder_request",
+    groupKey: folderRequestKey(row.id),
+    waiting: true,
+    actor: { type: "agent", id: row.agentId },
+    source: {
+      machineId: machine.id,
+      label: machine.name,
+      agentId: row.agentId,
+      requestId: row.id,
+      channelId: row.channelId,
+      ...(row.threadRootId ? { threadId: row.threadRootId } : {}),
+      ...(row.requestedByUserId ? { userId: row.requestedByUserId } : {}),
+    },
+    latest: { title: row.path, text: row.reason },
+  });
 }
 
 /** The terminal command that allows the folder on a machine without the app (ADR 0036 §8). */
@@ -437,7 +492,7 @@ export async function applyAccessDecided(
   machineId: string,
   frame: Extract<RunnerFrame, { type: "access.decided" }>,
 ) {
-  return deps.db.transaction(async (tx) => {
+  const row = await deps.db.transaction(async (tx) => {
     const [row] = await tx
       .update(machineAccessRequests)
       .set({
@@ -463,6 +518,10 @@ export async function applyAccessDecided(
     });
     return row;
   });
+  if (!row) return null;
+  // The owner answered it (or it ran out): the row waiting on them in the inbox is done.
+  await resolveNotifications(deps, row.orgId, { groupKey: folderRequestKey(row.id) }).catch(() => 0);
+  return row;
 }
 
 /** The note in the thread (English; the app shows `bodyCode` in the person's language). */

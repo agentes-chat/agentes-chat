@@ -80,7 +80,17 @@ describe("geometry check", () => {
     const rules = readFileSync(join(import.meta.dir, "rules.js"), "utf8");
     const check = readFileSync(join(import.meta.dir, "check.ts"), "utf8");
     for (const rule of ["floating", "inset", "icongap", "square"]) expect(SELF_TESTED).toContain(rule);
-    for (const rule of ["squarecol", "rim", "inlinebase", "iconmid", "fieldwidth", "corner", "clip", "cascadeorder"])
+    for (const rule of [
+      "squarecol",
+      "rim",
+      "inlinebase",
+      "iconmid",
+      "fieldwidth",
+      "corner",
+      "nest",
+      "clip",
+      "cascadeorder",
+    ])
       expect(SELF_TESTED).toContain(rule);
     for (const rule of ["pagetop", "groupedge", "menuitem", "rowpad", "emptyselect", "toolorder", "toolrow", "captop"])
       expect(SELF_TESTED).toContain(rule);
@@ -112,6 +122,8 @@ describe("geometry check", () => {
     expect(fixture).toContain("good-midword--hyphens");
     // The face on a menu's top that changes the photo (`MenuFace`) is no row: neither its height nor its room.
     for (const twin of ["good-menuitem--face", "good-rim--face"]) expect(fixture).toContain(twin);
+    // A chip field grown to a second line of tokens is still the stack's height on its first.
+    expect(fixture).toContain("good-fieldwidth--grown");
     for (const rule of SELF_TESTED) {
       expect(fixture).toContain(`bad-${rule}`);
       expect(fixture).toContain(`good-${rule}`);

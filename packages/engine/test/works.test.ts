@@ -61,6 +61,7 @@ import {
 import { PASSED_ON_NOTE, renderSteered } from "../src/live-steer";
 import { noticeText } from "../src/notices";
 import { takeInbox } from "../src/run-inbox";
+import { deliverNoticeToRun } from "../src/run-resume";
 import { addMember, answerSteering, type Fixture, setup } from "./fixtures";
 
 setDefaultTimeout(30_000);
@@ -678,6 +679,19 @@ test("cards: none for a quick run nor a short auto work; card: true makes one; a
   expect(end?.meta.workEnd).toMatchObject({ status: "canceled", byUserId: f.owner.id });
   // Stopped: by whom, in the person's words.
   expect(end?.meta.bodyParams).toMatchObject({ byName: f.owner.name });
+  expect(await workView(f.db, f.org.id, named.work.id)).toMatchObject({
+    canceledByUserId: f.owner.id,
+    canceledByAgentId: null,
+  });
+  // The right hand's stop at the person's word: the view names both, so its line names the right hand.
+  await f.db
+    .update(schema.agentRuns)
+    .set({ error: `canceled_by:${f.owner.id}|agent:agent-lodi` })
+    .where(eq(schema.agentRuns.id, reuse.id));
+  expect(await workView(f.db, f.org.id, named.work.id)).toMatchObject({
+    canceledByUserId: f.owner.id,
+    canceledByAgentId: "agent-lodi",
+  });
 });
 
 test("a work 15 minutes old gets its card at its check-in", async () => {
@@ -1794,4 +1808,29 @@ test("a work sent on to a channel she isn't in: her follow-up comes where she as
   });
   // Its job again finds it there.
   expect(await followUpWork(deps(), f.org.id, await jobInput())).toEqual([]);
+});
+
+test("an answer that comes after the work reported is read and answered home, not in the work's thread", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Chegou: aqui está o resultado."] }) });
+  const run = await working("@dev monta o relatório com a ajuda do time");
+  const { work, anchor } = await moved(run);
+  const answer = { kind: "consult_reply" as const, text: "Os números do mês.", from: "@dados" };
+
+  // While the work is on, what comes for it lands in its own thread.
+  const during = await f.db.transaction((tx) => deliverNoticeToRun(tx, { ...run, threadRootId: anchor.id }, answer));
+  expect(during.message.threadId).toBe(anchor.id);
+
+  // It reported and ended with a question still out: the answer wakes the agent in the conversation.
+  const ended = await finishRun(run.id);
+  await endWork(deps(), ended, "done");
+  expect((await works()).find((w) => w.id === work.id)?.status).toBe("done");
+  const after = await f.db.transaction((tx) => deliverNoticeToRun(tx, ended, answer));
+  expect(after.message.channelId).toBe(f.general.id);
+  expect(after.message.threadId).toBeNull();
+  await drainOutbox(f.db, f.handlers);
+  const woken = (await runs()).find((r) => r.triggerMessageId === after.message.id);
+  expect(woken?.status).toBe("done");
+  const said = (await messages()).find((m) => m.agentRunId === woken?.id);
+  expect(said?.body).toBe("Chegou: aqui está o resultado.");
+  expect(said?.threadId).toBeNull();
 });

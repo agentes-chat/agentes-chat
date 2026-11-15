@@ -176,7 +176,8 @@ describe("a plan with no agentes.chat plan in force", () => {
     }
     await pickCard(dialog, "Chave de API");
     expect(shownText(dialog)).not.toContain(HELD);
-    expect(shownText(dialog)).toContain("Todo agente sem plano pensa com ela.");
+    // Opened for Ada: the key will go on her.
+    expect(shownText(dialog)).toContain("Ada vai pensar com ela.");
   });
 
   test("Ver planos goes to the real billing page, minted on the click", async () => {

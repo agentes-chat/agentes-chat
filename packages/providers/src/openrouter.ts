@@ -37,8 +37,9 @@ export const OPENROUTER_API = "https://openrouter.ai/api/v1";
 /** OpenRouter's app attribution: the product's name and site, never a self-hosted server's own address. */
 const ATTRIBUTION = { "HTTP-Referer": "https://agentes.chat", "X-OpenRouter-Title": "agentes.chat" };
 
-/** An OpenRouter model id (`z-ai/glm-5.3`, `~z-ai/glm-latest`): the catalog's ids never have a slash. */
-export const isOpenRouterModel = (model: string) => model.includes("/") && !isCustomModel(model);
+/** An OpenRouter model id (`z-ai/glm-5.3`, `~z-ai/glm-latest`): the catalog's ids have a slash only on Command Code's. */
+export const isOpenRouterModel = (model: string) =>
+  model.includes("/") && !isCustomModel(model) && !model.startsWith("commandcode:");
 
 /**
  * A model's provider: a workspace endpoint's by its id, the catalog's or the list's, else OpenRouter's by the id's
@@ -410,6 +411,9 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
 function toBody(request: ModelRequest, compatible: boolean) {
   const claude = !compatible && isClaude(request.model);
   const reasoning = compatible ? undefined : reasoningFor(request.effort, modelInfo(request.model));
+  // A workspace endpoint (#432): Chat Completions' own `reasoning_effort`, which OpenAI, vLLM, LiteLLM and most gateways
+  // take. `none` is left out, since not every model can turn thinking off, and so is a request with no effort.
+  const reasoningEffort = compatible && request.effort && request.effort !== "none" ? request.effort : undefined;
   return {
     model: request.model,
     messages: toMessages(request, claude),
@@ -425,6 +429,7 @@ function toBody(request: ModelRequest, compatible: boolean) {
         }
       : {}),
     ...(reasoning ? { reasoning } : {}),
+    ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
     ...(request.outputSchema
       ? {
           response_format: {

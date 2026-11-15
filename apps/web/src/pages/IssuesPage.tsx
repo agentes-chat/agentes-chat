@@ -1,5 +1,6 @@
 import type { Actor, Issue, IssueColumn, IssuePriority, IssueStatus, IssuesView } from "@agenteschat/client";
 import {
+  keys,
   useIssue,
   useIssueColumns,
   useIssueProjectAction,
@@ -9,16 +10,26 @@ import {
   useSetIssuesView,
   useTaskUnread,
 } from "@agenteschat/client";
-import { dueLabel, dueTone, relativeTime } from "@agenteschat/client/lib/format";
+import { dueLabel, dueTone, namesText, stoppedLine } from "@agenteschat/client/lib/format";
 import { githubLinkLabel } from "@agenteschat/client/lib/github-link";
 import { NO_PROJECT, projectOfFilter } from "@agenteschat/client/lib/issue-projects";
-import { ISSUES_VIEW_DEFAULT, PRIORITY_ORDER, sortIssues } from "@agenteschat/client/lib/issues-view";
-import { can } from "@agenteschat/client/lib/permissions";
 import {
+  ISSUES_VIEW_DEFAULT,
+  type IssuesViewChange,
+  issueInView,
+  PRIORITY_ORDER,
+  sortIssues,
+} from "@agenteschat/client/lib/issues-view";
+import { can } from "@agenteschat/client/lib/permissions";
+import { shownSteps } from "@agenteschat/client/lib/work";
+import {
+  AvatarStack,
   Button,
   Chip,
   ColorDot,
   cx,
+  Dialog,
+  DialogFooter,
   EmptyState,
   FactLine,
   GroupHeading,
@@ -34,9 +45,11 @@ import {
   Toolbar,
   WorkSweep,
 } from "@agenteschat/ui";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useDeferredValue, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useApi } from "@/api/context";
 import { ActorAvatar, ActorWho, AgentAvatar } from "@/components/AgentAvatar";
 import { AskAgentButton } from "@/components/AskAgentButton";
 import { actorFromKey, actorKey, NO_ACTOR, useActors } from "@/components/actors";
@@ -59,7 +72,6 @@ import {
   isCustomBoard,
   isOpen,
   isStalled,
-  isWorking,
   rankAt,
   STATUS_ICON,
   type CardState as TaskState,
@@ -151,11 +163,7 @@ export function IssuesPage() {
   const columnsQuery = useIssueColumns(org.id);
   const columns = columnsQuery.data;
   const all = issues.data ?? [];
-  const filtered = all.filter(
-    (i) =>
-      (view.assignees.length === 0 || view.assignees.includes(actorKey(i.assignee))) &&
-      (view.priorities.length === 0 || view.priorities.includes(i.priority)),
-  );
+  const filtered = all.filter((i) => issueInView(i, actorKey(i.assignee), view));
   const noIssues = issues.isSuccess && all.length === 0 && !search && !projectParam;
   const emptyProject = issues.isSuccess && all.length === 0 && !search && Boolean(projectParam);
   // A new task on a project's board starts in it. An archived project takes none, so its board offers none.
@@ -233,7 +241,7 @@ export function IssuesPage() {
               )
             }
           />
-          <WorkingNow issues={all} onOpen={toggle} />
+          <StalledNow issues={all} onOpen={toggle} />
           <Toolbar
             label={t("issues.filters")}
             search={
@@ -357,7 +365,7 @@ export function IssuesPage() {
                 <Button
                   onClick={() => {
                     setQ("");
-                    changeView({ assignees: [], priorities: [] });
+                    changeView({ assignees: [], priorities: [], labels: [], done: "all" });
                   }}
                 >
                   {copy.clearAll}
@@ -375,8 +383,9 @@ export function IssuesPage() {
               // A project's own board doesn't say its name again on every card.
               view={projectParam ? { ...view, fields: { ...view.fields, project: false } } : view}
               columns={columns}
-              issues={filtered.filter((i) => view.showCanceled || i.status !== "canceled")}
+              issues={filtered}
               all={all}
+              onChange={changeView}
               openNumber={openNumber}
               onOpen={toggle}
               onNew={adds ? (columnId) => setCreating({ columnId }) : undefined}
@@ -429,14 +438,17 @@ function IssuesBody({
   columns,
   issues,
   all,
+  onChange,
   openNumber,
   onOpen,
   onNew,
 }: {
   view: IssuesView;
   columns: IssueColumn[];
-  /** The tasks on screen: filtered, canceled ones only when asked. */
+  /** The tasks on screen: filtered, canceled and finished ones as the view asks. */
   issues: Issue[];
+  /** Folding a group, and the order a column's head asks for. */
+  onChange: (change: IssuesViewChange) => void;
   /** Every task loaded: who has one gets a column when grouped by assignee. */
   all: Issue[];
   openNumber: number | null;
@@ -566,6 +578,8 @@ function IssuesBody({
       canceled: (i) => t("issues.drag.canceled", { number: i.number }),
     },
   });
+  const onFold = (group: string, folded: boolean) =>
+    onChange({ collapsed: folded ? [...view.collapsed, group] : view.collapsed.filter((g) => g !== group) });
   const renderCard = (i: Issue, group: string, state: CardState) => (
     <IssueCard
       issue={i}
@@ -592,6 +606,9 @@ function IssuesBody({
           dnd={dnd}
           renderCard={renderCard}
           onNew={onNew}
+          hideEmpty={view.hideEmpty}
+          collapsed={view.collapsed}
+          onFold={onFold}
         />
       ) : (
         <IssueList
@@ -603,6 +620,10 @@ function IssuesBody({
           onOpen={onOpen}
           fields={view.fields}
           helpId={helpId}
+          sort={view.sort}
+          onSort={(sort) => onChange({ sort })}
+          collapsed={view.collapsed}
+          onFold={onFold}
         />
       )}
     </div>
@@ -610,78 +631,256 @@ function IssuesBody({
 }
 
 /**
- * The agents on issues right now (live runs), then the stalled ones (in progress, no run alive): the live step, or the
- * last one, and "Pedir para continuar". What each needs is on its card, so the strip never says it again.
+ * Above the board, only the stalled tasks (in progress, no run alive), as one line: an agent at work already shows on
+ * its own card on the board, so the strip says only what needs a person, a nudge. Nothing stalled, no strip.
  */
-function WorkingNow({ issues, onOpen }: { issues: Issue[]; onOpen: (n: number) => void }) {
+function StalledNow({ issues, onOpen }: { issues: Issue[]; onOpen: (n: number) => void }) {
+  const { t } = useTranslation();
+  const stalled = issues.filter((i) => isOpen(i) && isStalled(i) && i.work && i.assignee?.type === "agent");
+  if (stalled.length === 0) return null;
+  return (
+    <section className="issues-now" aria-label={t("issues.now.stalledTitle")}>
+      <StalledLine issues={stalled} onOpen={onOpen} />
+    </section>
+  );
+}
+
+/**
+ * A task's last step in the person's words, never an engine-only one (the silent `pass`), and without the task's own
+ * number ("Updated a task · #86" on #86 says nothing the card doesn't).
+ */
+function useTaskStep() {
+  const stepText = useStepText();
+  return (i: Issue) => {
+    const last = shownSteps(i.work?.steps ?? []).at(-1);
+    if (!last) return "";
+    return stepText(last.detail?.trim() === `#${i.number}` ? { ...last, detail: undefined } : last);
+  };
+}
+
+/** Stalled tasks by agent, the agent with the most first. */
+function stalledByAgent(issues: Issue[], name: (a: Actor) => string) {
+  const groups = new Map<string, { agent: Actor; name: string; issues: Issue[] }>();
+  for (const i of issues) {
+    if (!i.assignee) continue;
+    const g = groups.get(i.assignee.id);
+    if (g) g.issues.push(i);
+    else groups.set(i.assignee.id, { agent: i.assignee, name: name(i.assignee), issues: [i] });
+  }
+  return [...groups.values()].sort((a, b) => b.issues.length - a.issues.length || a.name.localeCompare(b.name));
+}
+
+/**
+ * Asking stalled tasks' agents to pick up where they stopped: the same call as the task's own "Ask to continue", one per
+ * task, all at once. A task counts as asked while its stall is the one it was asked on (`work.since`): its agent
+ * starting leaves the stalled list, and a later stall is a new one. A failed ask reaches the shared error toast.
+ */
+function useResumeStalled() {
+  const { org } = useOrg();
+  const api = useApi();
+  const qc = useQueryClient();
+  const [asked, setAsked] = useState<ReadonlyMap<string, string>>(new Map());
+  const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
+  const mark = (ids: string[], on: boolean) =>
+    setBusy((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  const ask = useMutation({
+    mutationFn: async (list: Issue[]) => {
+      const ids = list.map((i) => i.id);
+      mark(ids, true);
+      const results = await Promise.allSettled(
+        list.map((i) => api.issues.askAgent(org.id, i.id, i.assignee?.id ?? "")),
+      );
+      mark(ids, false);
+      setAsked((prev) => {
+        const next = new Map(prev);
+        for (const [k, r] of results.entries()) {
+          const i = list[k];
+          if (r.status === "fulfilled" && i?.work) next.set(i.id, i.work.since);
+        }
+        return next;
+      });
+      const failed = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+      if (failed) throw failed.reason;
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: keys.issues(org.id) });
+      void qc.invalidateQueries({ queryKey: keys.calendar(org.id) });
+    },
+  });
+  return {
+    send: (list: Issue[]) => list.length > 0 && ask.mutate(list),
+    isAsked: (i: Issue) => i.work !== undefined && i.work !== null && asked.get(i.id) === i.work.since,
+    isBusy: (i: Issue) => busy.has(i.id),
+  };
+}
+
+/**
+ * The stalled tasks as one quiet line: how many, whose (faces and names), "See stalled" for the list and "Continue
+ * all". Once all are asked it says so until their agents start.
+ */
+function StalledLine({ issues, onOpen }: { issues: Issue[]; onOpen: (n: number) => void }) {
+  const { t } = useTranslation();
+  const actors = useActors();
+  const [open, setOpen] = useState(false);
+  const resume = useResumeStalled();
+  const left = issues.filter((i) => !resume.isAsked(i));
+  const groups = stalledByAgent(left.length ? left : issues, actors.name);
+  const names = namesText(
+    t,
+    groups.map((g) => g.name),
+    4,
+  );
+  return (
+    <>
+      {left.length === 0 ? (
+        <div className="issues-stalled is-sent" role="status">
+          <Icon name="play" size={16} className="issues-stalled__icon" />
+          <span className="issues-stalled__text">{t("issues.now.sent", { count: groups.length, names })}</span>
+        </div>
+      ) : (
+        <div className="issues-stalled">
+          <Icon name="pause" size={16} className="issues-stalled__icon" />
+          <span className="issues-stalled__text">
+            <b>{t("issues.now.stalledCount", { count: left.length })}</b>
+            <span className="issues-stalled__who">
+              <AvatarStack>
+                {groups.slice(0, 4).map((g) => (
+                  <AgentAvatar key={g.agent.id} agentId={g.agent.id} name={g.name} size="sm" expression="closed" />
+                ))}
+              </AvatarStack>
+              {names}
+            </span>
+          </span>
+          <span className="issues-stalled__acts">
+            <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
+              {t("issues.now.viewStalled")}
+            </Button>
+            <Button
+              size="sm"
+              icon="play"
+              loading={left.length > 0 && left.every(resume.isBusy)}
+              onClick={() => resume.send(left)}
+            >
+              {t("issues.now.continueAll")}
+            </Button>
+          </span>
+        </div>
+      )}
+      <StalledDialog
+        open={open}
+        onOpenChange={setOpen}
+        issues={issues}
+        resume={resume}
+        onOpen={(n) => {
+          setOpen(false);
+          onOpen(n);
+        }}
+      />
+    </>
+  );
+}
+
+/** Every stalled task by agent: what it did last and when it stopped, "Continue" on each and "Continue all". */
+function StalledDialog({
+  open,
+  onOpenChange,
+  issues,
+  resume,
+  onOpen,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  issues: Issue[];
+  resume: ReturnType<typeof useResumeStalled>;
+  onOpen: (n: number) => void;
+}) {
   const { t, i18n } = useTranslation();
   const actors = useActors();
-  const color = useAssigneeColor();
-  const stepText = useStepText();
-  const working = issues.filter((i) => isOpen(i) && isWorking(i));
-  const stalled = issues.filter((i) => isOpen(i) && isStalled(i));
-  if (working.length + stalled.length === 0) return null;
+  const stepOf = useTaskStep();
+  const groups = stalledByAgent(issues, actors.name);
+  const left = issues.filter((i) => !resume.isAsked(i));
   return (
-    <section className="issues-now" aria-label={t("issues.now.title")}>
-      <h2 className="issues-now__title">
-        {t("issues.now.title")}
-        <span>{working.length}</span>
-        {stalled.length > 0 && <span>· {t("issues.now.stalled", { count: stalled.length })}</span>}
-      </h2>
-      <div className="issues-now__list">
-        {[...working, ...stalled].map((i) => {
-          const w = i.work;
-          if (!w || !i.assignee) return null;
-          const name = actors.name(i.assignee);
-          const stall = w.state === "stalled";
-          const waiting = w.state === "waiting_approval" || w.state === "waiting_input";
-          const step = stepText(w.steps.at(-1));
-          const body = stall
-            ? step
-              ? t("issues.work.noRunStep", { step })
-              : t("issues.work.noRun")
-            : waiting
-              ? step && t("issues.work.lastStep", { step })
-              : step || t("issues.work.starting");
-          return (
-            <button
-              key={i.id}
-              type="button"
-              className={cx("issues-now__card ac-mediarow", stall && "is-stalled", waiting && "is-waiting")}
-              onClick={() => onOpen(i.number)}
-            >
-              <span className="ac-mediarow__face">
-                <AgentAvatar
-                  agentId={i.assignee.id}
-                  name={name}
-                  size="md"
-                  state={stall ? "idle" : waiting ? "idle" : "writing"}
-                  running={!stall && !waiting}
-                  expression={stall ? "closed" : undefined}
-                />
-              </span>
-              <span className="ac-mediarow__head">
-                <b>{name}</b>
-                <span className="ac-mediarow__meta">
-                  #{i.number} · {relativeTime(t, i18n.language, w.since)}
-                </span>
-              </span>
-              <span className="ac-mediarow__body">
-                <span className="issues-now__task">{codeAndBold(i.title)}</span>
-                {body && <span className={cx("issues-now__step", !stall && !waiting && "is-live")}>{body}</span>}
-                {stall && (
-                  <span className="issues-now__go">
-                    <Icon name="play" size={14} />
-                    {t("issues.work.continue")}
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("issues.now.stalledTitle")}
+      subtitle={t("issues.now.stalledSub", {
+        tasks: t("issues.now.tasks", { count: issues.length }),
+        agents: t("issues.now.agents", { count: groups.length }),
+      })}
+      description={t("issues.now.stalledText")}
+      closeLabel={t("common.close")}
+      width={560}
+    >
+      <section className="ac-dialog__list issues-stalled__list" aria-label={t("issues.now.stalledTitle")}>
+        {groups.map((g) => (
+          <div key={g.agent.id} className="issues-stalled__group">
+            <h3 className="issues-stalled__grouphead">
+              <AgentAvatar agentId={g.agent.id} name={g.name} size="xs" />
+              {g.name}
+              <span>· {g.issues.length}</span>
+            </h3>
+            {g.issues.map((i) => {
+              const asked = resume.isAsked(i);
+              const step = stepOf(i);
+              const when = i.work ? stoppedLine(t, i18n.language, i.work.since) : "";
+              return (
+                <div key={i.id} className={cx("issues-stalled__task", asked && "is-sent")}>
+                  <span className="issues-stalled__tasktext">
+                    <button type="button" className="issues-stalled__title" onClick={() => onOpen(i.number)}>
+                      <span className="ac-mediarow__num">#{i.number}</span> {codeAndBold(i.title)}
+                    </button>
+                    {asked ? (
+                      <span className="issues-stalled__meta">{t("issues.now.rowSent")}</span>
+                    ) : (
+                      <span className="issues-stalled__meta ac-iconline">
+                        <Icon name="pause" size={14} />
+                        <span>{step ? `${when} · ${step}` : when}</span>
+                      </span>
+                    )}
                   </span>
-                )}
-              </span>
-              {!stall && <WorkSweep color={color(i) ?? "sky"} waiting={waiting} />}
-            </button>
-          );
-        })}
-      </div>
-    </section>
+                  {!asked && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      icon="play"
+                      loading={resume.isBusy(i)}
+                      onClick={() => resume.send([i])}
+                    >
+                      {t("issues.now.continue")}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </section>
+      <DialogFooter bar>
+        {left.length > 0 ? (
+          <Button
+            size="sm"
+            variant="primary"
+            icon="play"
+            loading={left.length > 0 && left.every(resume.isBusy)}
+            onClick={() => resume.send(left)}
+          >
+            {t("issues.now.continueAllCount", { count: left.length })}
+          </Button>
+        ) : (
+          <Button size="sm" onClick={() => onOpenChange(false)}>
+            {t("common.close")}
+          </Button>
+        )}
+      </DialogFooter>
+    </Dialog>
   );
 }
 
@@ -799,6 +998,78 @@ function CardFacts({ issue: i, fields }: { issue: Issue; fields: IssuesView["fie
       title: talk > 0 ? t("issues.conversation.messages", { count: talk }) : undefined,
     });
   return <FactLine className="issue-card__facts" facts={facts} />;
+}
+
+/** The list's columns after the number and the title, in the row's order (issues.css names a grid line for each). */
+type ListColumn = "project" | "label" | "priority" | "due" | "criteria" | "github" | "who";
+
+/**
+ * The columns the list stands as a table: one for each thing some task shown has (and its view toggle allows), so no
+ * column is a blank strip under its name. Labels are one column (the first label and "+2"), GitHub another (the pull
+ * request and the link).
+ */
+function listColumns(issues: Issue[], fields: IssuesView["fields"]): ListColumn[] {
+  const any = (has: (i: Issue) => unknown) => issues.some((i) => Boolean(has(i)));
+  return (
+    [
+      ["project", fields.project && any((i) => i.project)],
+      ["label", fields.label && any((i) => i.labels.length > 0)],
+      ["priority", fields.priority && any((i) => i.priority !== "normal")],
+      ["due", fields.due && any((i) => i.dueDate && isOpen(i))],
+      ["criteria", fields.criteria && any((i) => i.criteria.length > 0)],
+      ["github", fields.pullRequest && any((i) => i.pullRequests.length > 0 || i.githubUrl)],
+      ["who", fields.assignee && any((i) => i.assignee)],
+    ] as const
+  )
+    .filter(([, shown]) => shown)
+    .map(([name]) => name);
+}
+
+/** The columns a click on their name orders the list by, and that order. */
+const COLUMN_SORT: Partial<Record<ListColumn, IssuesView["sort"]>> = { priority: "priority", due: "due" };
+
+/**
+ * The table's line of column names, over every group. "Priority" and "Due date" order the list: a click takes that
+ * order, another gives the board's own back (the same choice as "Sort by" in "Display").
+ */
+function ListHead({
+  columns,
+  sort,
+  onSort,
+}: {
+  columns: ListColumn[];
+  sort: IssuesView["sort"];
+  onSort: (sort: IssuesView["sort"]) => void;
+}) {
+  const { t } = useTranslation();
+  const name = (c: ListColumn) =>
+    c === "github" ? t("issues.table.github") : t(`issues.display.field.${c === "who" ? "assignee" : c}`);
+  return (
+    <div className="issue-table__head">
+      <span data-column="title">{t("issues.table.task")}</span>
+      {columns.map((c) => {
+        const by = COLUMN_SORT[c];
+        return (
+          <span key={c} data-column={c}>
+            {by ? (
+              <button
+                type="button"
+                className="issue-table__sort"
+                aria-pressed={sort === by}
+                title={t("issues.table.sortBy", { column: name(c) })}
+                onClick={() => onSort(sort === by ? "manual" : by)}
+              >
+                {name(c)}
+                <Icon name="arrowDown" size={14} />
+              </button>
+            ) : (
+              name(c)
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 /**
@@ -934,8 +1205,10 @@ function IssueCard({
 }
 
 /**
- * The list. Grouped by stage: each stage, then its columns when the board is customized. Otherwise one group per
- * assignee or priority. A group with nothing in it shows only while a card moves, so there is somewhere to drop it.
+ * The list, a table: one line of column names, then the groups, every row's facts in the same columns. Grouped by
+ * stage: each stage, then its columns when the board is customized. Otherwise one group per assignee or priority. A
+ * group with nothing in it shows only while a card moves, so there is somewhere to drop it; a folded one shows its
+ * name and count.
  */
 function IssueList({
   groups,
@@ -946,6 +1219,10 @@ function IssueList({
   onOpen,
   fields,
   helpId,
+  sort,
+  onSort,
+  collapsed,
+  onFold,
 }: {
   groups: IssueGroup[];
   stages: { stage: IssueStatus; columns: IssueColumn[] }[] | null;
@@ -955,34 +1232,82 @@ function IssueList({
   onOpen: (n: number) => void;
   fields: IssuesView["fields"];
   helpId: string;
+  sort: IssuesView["sort"];
+  onSort: (sort: IssuesView["sort"]) => void;
+  collapsed: string[];
+  onFold: (group: string, folded: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const stageName = useStageName();
   const title = useColumnTitle();
   const custom = isCustomBoard(columns);
   const byId = new Map(groups.map((g) => [g.id, g]));
+  const head = (
+    <ListHead
+      columns={listColumns(
+        groups.flatMap((g) => g.items),
+        fields,
+      )}
+      sort={sort}
+      onSort={onSort}
+    />
+  );
+  /** A group's name as the button that folds and opens it. */
+  const fold = (id: string, name: string, lead: ReactNode) => {
+    const folded = collapsed.includes(id);
+    const words = t(folded ? "issues.fold.open" : "issues.fold.close", { name });
+    return (
+      <button
+        type="button"
+        aria-expanded={!folded}
+        aria-label={words}
+        title={words}
+        onClick={() => onFold(id, !folded)}
+      >
+        <Icon name={folded ? "chevronRight" : "chevronDown"} size={14} />
+        {lead}
+        {name}
+      </button>
+    );
+  };
   const zone = (g: IssueGroup, heading?: ReactNode) => (
     <div key={g.id} className={cx("issues-group__col", dnd.over === g.id && "is-over")} data-col>
       {heading}
-      <IssueRows group={g} dnd={dnd} openNumber={openNumber} onOpen={onOpen} fields={fields} helpId={helpId} />
+      <IssueRows
+        group={g}
+        folded={collapsed.includes(g.id)}
+        dnd={dnd}
+        openNumber={openNumber}
+        onOpen={onOpen}
+        fields={fields}
+        helpId={helpId}
+      />
     </div>
   );
   if (stages)
     return (
-      <div className="ac-groups">
+      <div className="ac-groups issue-table">
+        {head}
         {stages.map(({ stage, columns: cols }) => {
           const count = cols.reduce((n, c) => n + dnd.count(c.id), 0);
           if (count === 0 && !dnd.active) return null;
+          const only = custom ? undefined : cols[0];
+          const lead = <Icon name={STATUS_ICON[stage]} size={16} />;
           return (
             <section key={stage} className="issues-group" aria-label={stageName(stage)}>
               <GroupHeading
                 title={
-                  <>
-                    <Icon name={STATUS_ICON[stage]} size={16} />
-                    {stageName(stage)}
-                  </>
+                  only ? (
+                    fold(only.id, stageName(stage), lead)
+                  ) : (
+                    <>
+                      {lead}
+                      {stageName(stage)}
+                    </>
+                  )
                 }
                 count={
-                  <span className="tabular" data-count={custom ? undefined : cols[0]?.id}>
+                  <span className="tabular" data-count={only?.id}>
                     {count}
                   </span>
                 }
@@ -995,7 +1320,7 @@ function IssueList({
                   custom && stage !== "canceled" && (
                     <GroupHeading
                       level={3}
-                      title={title(c)}
+                      title={fold(c.id, title(c), null)}
                       count={
                         <span className="tabular" data-count={c.id}>
                           {dnd.count(c.id)}
@@ -1011,19 +1336,15 @@ function IssueList({
       </div>
     );
   return (
-    <div className="ac-groups">
+    <div className="ac-groups issue-table">
+      {head}
       {groups.map((g) => {
         const count = dnd.count(g.id);
         if (count === 0 && !dnd.active) return null;
         return (
           <section key={g.id} className="issues-group" aria-label={g.name}>
             <GroupHeading
-              title={
-                <>
-                  {g.lead}
-                  {g.name}
-                </>
-              }
+              title={fold(g.id, g.name, g.lead)}
               count={
                 <span className="tabular" data-count={g.id}>
                   {count}
@@ -1040,6 +1361,7 @@ function IssueList({
 
 function IssueRows({
   group: g,
+  folded,
   dnd,
   openNumber,
   onOpen,
@@ -1047,6 +1369,8 @@ function IssueRows({
   helpId,
 }: {
   group: IssueGroup;
+  /** Folded: no row but one picked with the keyboard and moved here, so the focus has where to stay. */
+  folded: boolean;
   dnd: IssueDrag<Issue>;
   openNumber: number | null;
   onOpen: (n: number) => void;
@@ -1054,7 +1378,8 @@ function IssueRows({
   helpId: string;
 }) {
   const menuOf = useIssueMenu();
-  const entries = dnd.entries(g.id);
+  const entries = dnd.entries(g.id).filter((e) => !folded || (e.kind === "card" && e.state === "picked"));
+  if (folded && entries.length === 0) return <ul className="issue-list issue-list--folded" data-drop={g.id} />;
   const shown = entries.some((e) => e.kind === "spot" || e.state !== "hidden");
   return (
     <ul className="issue-list" data-drop={g.id}>
@@ -1091,8 +1416,8 @@ function IssueRows({
 }
 
 /**
- * A task in the list, from the card's parts: wide, its number, its title whole, its facts at its end (up to 40% of the
- * row, ending on one right edge) and who has it; narrow, stacked as a card, the number among the facts.
+ * A task in the list, from the card's parts: wide, a table's row (its number, its title on two lines at most, each
+ * fact in its column, who has it); narrow, stacked as a card, the number among the facts.
  */
 function IssueRow({
   issue: i,
@@ -1134,7 +1459,9 @@ function IssueRow({
       <span className="issue-list__num tabular" aria-hidden="true">
         #{i.number}
       </span>
-      <span className="issue-list__title">{codeAndBold(i.title)}</span>
+      <span className="issue-list__title" title={i.title}>
+        {codeAndBold(i.title)}
+      </span>
       <CardFacts issue={i} fields={fields} />
       <CardWho issue={i} state={state} assignee={fields.assignee} />
       <span className="issue-sr">{t(`issues.status.${i.status}`)}</span>

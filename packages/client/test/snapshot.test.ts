@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { QueryClient } from "@tanstack/react-query";
+import { MutationObserver, onlineManager, QueryClient } from "@tanstack/react-query";
 import type { Me, Message, SnapshotStorage } from "../src/index";
 import { createSnapshot, keys, MISSIONS_WAITING_COUNT, SNAPSHOT_MAX_AGE_MS, SNAPSHOT_VERSION } from "../src/index";
 import { recentConversations } from "../src/lib/recent";
@@ -69,6 +69,24 @@ test("keeps the lists and the latest messages of a chat, without anything off th
   expect(kept.at(-1)?.id).toBe("m59");
 });
 
+test("a request that waits for the network isn't kept: what it carries stays in memory", async () => {
+  const qc = new QueryClient();
+  const store = memory();
+  qc.setQueryData(keys.me, me("u1"));
+  onlineManager.setOnline(false);
+  try {
+    const connect = new MutationObserver(qc, { mutationFn: async (_typed: { apiKey: string }) => null });
+    void connect.mutate({ apiKey: "fake-typed-key" }).catch(() => {});
+    await tick();
+    expect(connect.getCurrentResult().isPaused).toBe(true);
+    await createSnapshot(qc, store).flush();
+    expect(store.value()).toContain("u1");
+    expect(store.value()).not.toContain("fake-typed-key");
+  } finally {
+    onlineManager.setOnline(true);
+  }
+});
+
 test("only the most recently updated chats are kept, with their roster", async () => {
   const qc = new QueryClient();
   const store = memory();
@@ -107,6 +125,38 @@ test("clearing the cache (sign-out, sign-in, 401) drops the snapshot", async () 
   await tick();
   expect(store.value()).toBeNull();
   stop();
+});
+
+test("an account waiting for its deletion is never kept: its screen is the server's to say, and what was saved goes", async () => {
+  const qc = new QueryClient();
+  const store = memory();
+  qc.setQueryData(keys.me, me("u1"));
+  const snapshot = createSnapshot(qc, store);
+  await snapshot.flush();
+  expect(store.value()).not.toBeNull();
+  const waiting = me("u1");
+  waiting.user.deletion = { dueAt: "2026-11-18T10:00:00.000Z", requestedAt: "2026-11-11T10:00:00.000Z" };
+  qc.setQueryData(keys.me, waiting);
+  await snapshot.flush();
+  expect(store.value()).toBeNull();
+});
+
+test("a saved account that waits for its deletion isn't put back: the snapshot goes", async () => {
+  const qc = new QueryClient();
+  const store = memory();
+  qc.setQueryData(keys.me, me("u1"));
+  await createSnapshot(qc, store).flush();
+  const saved = JSON.parse(store.value() ?? "");
+  saved.state.queries[0].state.data.user.deletion = {
+    dueAt: "2026-11-18T10:00:00.000Z",
+    requestedAt: "2026-11-11T10:00:00.000Z",
+  };
+  await store.write(JSON.stringify(saved));
+
+  const next = new QueryClient();
+  expect(await createSnapshot(next, store).restore()).toBe(false);
+  expect(next.getQueryData(keys.me)).toBeUndefined();
+  expect(store.value()).toBeNull();
 });
 
 test("someone else on this device: the snapshot and the previous person's workspace data go", async () => {

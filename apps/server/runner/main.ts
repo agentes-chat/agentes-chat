@@ -83,6 +83,7 @@ import {
   takeEnrollCode,
   whoCanUse,
 } from "./pairing";
+import { askPark, parkDone } from "./park";
 import { agentWorkspace } from "./paths";
 import { connectVnc, type VncConnection, vncInit } from "./rfb";
 import { installService, installSystemService, removeOwnService, serviceStatus, uninstallService } from "./service";
@@ -138,6 +139,10 @@ Usage:
       n minutes the computer is running (default 5), or with resume; ask again to keep it.
   agentes-runner resume
       Ends standby: the runner connects again at once.
+  agentes-runner park
+      For a server hosting this computer that runs short of memory: the running runner parks the agents'
+      desktops nobody used for an hour (each opens again as it was when next used) and eases their idle
+      browsers, keeping every tab. Prints one JSON line: {"desktops", "browsers"}.
   agentes-runner status
       The connection, the service, and whether the agents' desktops and the terminal can run here.
   agentes-runner doctor [--wait | --no-wait] [--json]
@@ -428,7 +433,7 @@ async function start(): Promise<number> {
     console.error(`This runtime has no WebSocket client (${process.version}). Use Node.js 22 or newer, or Bun.`);
     return 1;
   }
-  const lock = acquireLock(home, "start");
+  const lock = acquireLock(home, "start", { version: RUNNER_VERSION, protocol: MACHINE_PROTOCOL_VERSION });
   if (!lock.ok) {
     console.error(lockedMessage(home, lock.holder));
     return serviceSafe(4);
@@ -497,7 +502,7 @@ async function app(): Promise<number> {
   console.debug = toLog;
   console.error = toLog;
   process.stdout.on("error", () => {});
-  const lock = acquireLock(home, "app");
+  const lock = acquireLock(home, "app", { version: RUNNER_VERSION, protocol: MACHINE_PROTOCOL_VERSION });
   const ac = new AbortController();
   process.once("SIGTERM", () => ac.abort());
   process.once("SIGINT", () => ac.abort());
@@ -618,7 +623,7 @@ async function host(p: Parsed): Promise<number> {
   // Read once, then out of the environment: the organizations' runners (and their agents) never see it.
   const envToken = flags.tokenEnv ? process.env[flags.tokenEnv]?.trim() || null : null;
   if (flags.tokenEnv) delete process.env[flags.tokenEnv];
-  const lock = acquireLock(flags.state, "host");
+  const lock = acquireLock(flags.state, "host", { version: RUNNER_VERSION, protocol: MACHINE_PROTOCOL_VERSION });
   if (!lock.ok) {
     console.error(lockedMessage(flags.state, lock.holder));
     return 4;
@@ -796,6 +801,31 @@ async function standby(p: Parsed, on: boolean): Promise<number> {
   return 1;
 }
 
+/**
+ * Desktops parked one after another take a few seconds each: their processes get `KILL_WAIT_MS` to end. Kept under
+ * 90 s, how long a caller of this verb is expected to wait, so a slow park still answers in time.
+ */
+const PARK_ANSWER_MS = 85_000;
+
+/** `agentes-runner park` (`park.ts`): prints what the running runner did, `{"desktops":0,"browsers":0}` with none running. */
+async function park(): Promise<number> {
+  const home = runnerHome();
+  const holder = readLock(home);
+  if (!holder || !pidAlive(holder.pid)) {
+    console.log(JSON.stringify({ desktops: 0, browsers: 0 }));
+    return 0;
+  }
+  const ask = askPark(home);
+  for (const until = Date.now() + PARK_ANSWER_MS; Date.now() < until; await sleep(100)) {
+    const done = parkDone(home, ask.id);
+    if (!done) continue;
+    console.log(JSON.stringify({ desktops: done.desktops, browsers: done.browsers }));
+    return 0;
+  }
+  console.error("The runner didn't answer in time.");
+  return 1;
+}
+
 /** Replaces this script with the server's latest bundle; the pairing and the workspace stay. */
 async function update(): Promise<number> {
   const term = createTerm();
@@ -857,18 +887,29 @@ function status(): number {
   const stored = storedOrNull(home);
   const config = readConfig(home);
   const bun = (process.versions as { bun?: string }).bun;
-  term.intro(
-    `agentes-runner ${RUNNER_VERSION} (protocol ${MACHINE_PROTOCOL_VERSION}) on ${bun ? `bun ${bun}` : `${process.release.name} ${process.version}`}${runningCompiled() ? " (compiled)" : ""}`,
-    false,
-  );
+  // The version worth reporting is the one of the runner serving this home, which keeps in the lock what it puts
+  // in its `hello`. This command may be another install's shim: its own constant is only the answer when no runner
+  // reports one, and then the line says whose version it is.
+  const holder = readLock(home);
+  const running = holder && pidAlive(holder.pid) ? holder : null;
+  const version = running?.version ?? RUNNER_VERSION;
+  const protocol = running?.protocol ?? MACHINE_PROTOCOL_VERSION;
+  const here = `agentes-runner ${version} (protocol ${protocol})`;
+  const build = `on ${bun ? `bun ${bun}` : `${process.release.name} ${process.version}`}${runningCompiled() ? " (compiled)" : ""}`;
+  const same = version === RUNNER_VERSION && protocol === MACHINE_PROTOCOL_VERSION;
+  const line = !running?.version
+    ? `${here} ${build} — this command's version: ${running ? "the runner here didn't report one" : "no runner is running"}`
+    : same
+      ? `${here} ${build}`
+      : `${here} running here · this command is ${RUNNER_VERSION} (protocol ${MACHINE_PROTOCOL_VERSION}) ${build}`;
+  term.intro(line, false);
   if (config) {
     term.step(
       `Connected${stored?.orgName ? ` to ${stored.orgName}` : ""} as "${config.name}"`,
       `${config.server} · workspace ${config.workspace}`,
     );
   } else term.fail("Not connected.");
-  const holder = readLock(home);
-  if (holder && pidAlive(holder.pid)) term.step(`Running: pid ${holder.pid}${holder.mode ? ` (${holder.mode})` : ""}`);
+  if (running) term.step(`Running: pid ${running.pid}${running.mode ? ` (${running.mode})` : ""}`);
   else term.warn("Running: no");
   const service = serviceStatus(undefined, stored?.mode === "system");
   // systemd says how the unit is ("(active)", "(inactive)", "(failed)"); launchd and Windows only that it's there.
@@ -1439,6 +1480,8 @@ async function main(argv: string[]): Promise<number> {
     case "standby":
     case "resume":
       return standby(p, command === "standby");
+    case "park":
+      return park();
     case "service": {
       const stored = storedOrNull();
       const hostService = p.flags.has("host");

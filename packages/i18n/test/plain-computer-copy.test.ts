@@ -75,7 +75,6 @@ const SELFHOST_ONLY = [
   "agentComputer.state.outdated",
   "agentComputer.state.noComputer",
   "agentComputer.state.browserOff",
-  "agentComputer.phone.chooseOnWeb",
 ];
 
 /**

@@ -581,12 +581,15 @@ describe("All agents: one login per agent, the key pasted once", () => {
     expect(set("zai", [{ id: "ada" }, { id: "bo" }])).toEqual([]);
   });
 
-  test("one sign-in for all of them where the computer says so: ChatGPT's and Gemini's too", () => {
-    // Where each agent is its own OS user, Claude's, ChatGPT's and Gemini's sign-ins and plans' keys think for all.
-    expect(SHARED_SIGN_INS).toEqual({ claude_code: true, codex: true, antigravity: true, key: true });
+  test("one sign-in for all of them where the computer says so: ChatGPT's, Gemini's and Grok's too", () => {
+    // Where each agent is its own OS user, Claude's, ChatGPT's, Gemini's and Grok's sign-ins and plans' keys think for
+    // all of them.
+    expect(SHARED_SIGN_INS).toEqual({ claude_code: true, codex: true, antigravity: true, grok: true, key: true });
     const sharing = { shares: { claude_code: true, codex: true, key: true } };
     expect(signsInOnce("chatgpt", sharing)).toBe(true);
     expect(signsInOnce("gemini", sharing)).toBe(false);
+    expect(signsInOnce("grok", sharing)).toBe(false);
+    expect(signsInOnce("grok", { shares: { ...sharing.shares, grok: true } })).toBe(true);
     expect(signsInOnce("gemini", { shares: { ...sharing.shares, antigravity: true } })).toBe(true);
     expect(signsInOnce("zai", { shares: { claude_code: true, codex: false, key: false } })).toBe(false);
     expect(signsInOnce("claude", undefined)).toBe(false);
@@ -813,7 +816,7 @@ describe("why a plan can't sign in yet, in plain words (`gateLine`)", () => {
   const pt = instance.t.bind(instance) as TFunction;
   const computer = "Computador da Acme";
   const line = (gate: PlanGate, edition: "cloud" | "selfhost", kind: "claude_code" | "codex" = "codex") =>
-    gateLine(pt, { gate, edition, kind, computer, machine: { os: "linux", mode: "single" } });
+    gateLine(pt, { gate, edition, kind, computer });
   const off = (reason: Extract<PlanGate, { state: "unsupported" }>["reason"]) =>
     ({ state: "unsupported", reason }) as const;
 
@@ -841,6 +844,14 @@ describe("why a plan can't sign in yet, in plain words (`gateLine`)", () => {
       text: "O Computador da Acme está reiniciando ou se reconectando. Isto muda sozinho quando ele voltar.",
       rechecks: true,
     });
+  });
+
+  test("an outdated self-hosted Codex names the detected and minimum versions", () => {
+    const codexVersion = { detected: "0.149.0", minimum: "0.163.0" };
+    const status = line({ ...off("outdated"), codexVersion }, "selfhost");
+    expect(status?.text).toContain("Codex CLI");
+    expect(status?.text).toContain(codexVersion.detected);
+    expect(status?.text).toContain(codexVersion.minimum);
   });
 
   test("a program not allowed there says it's on our side, and looks again only when asked", () => {
@@ -897,12 +908,22 @@ describe("why a plan can't sign in yet, in plain words (`gateLine`)", () => {
       text: "O Codex não está instalado no Computador da Acme.",
       rechecks: false,
     });
-    expect(line(off("tool_off"), "selfhost")?.text).toContain("agentes-runner tools enable codex");
+    // The cause alone: its way out is the button beside it, never a path to a settings screen in the sentence.
+    expect(line(off("tool_off"), "selfhost")?.text).toBe("O Codex está desligado no Computador da Acme.");
     expect(line(off("keys"), "selfhost")?.text).toBe(pt("aiAccounts.connect.needs.keys"));
     expect(line({ state: "offline" }, "selfhost")).toEqual({
       text: pt("brain.offline", { computer }),
       rechecks: true,
     });
+  });
+
+  test('a computer a person connected to the Cloud is theirs: its words are self-host\'s, never "on our side"', () => {
+    const say = (gate: PlanGate, kind: "connected" | "managed") =>
+      gateLine(pt, { gate, edition: "cloud", kind: "codex", computer, machine: { kind } })?.text;
+    expect(say(off("tool_off"), "connected")).toBe("O Codex está desligado no Computador da Acme.");
+    expect(say(off("not_installed"), "connected")).toBe("O Codex não está instalado no Computador da Acme.");
+    expect(say({ state: "offline" }, "connected")).toBe(pt("brain.offline", { computer }));
+    expect(say(off("tool_off"), "managed")).toContain("Isso é do nosso lado");
   });
 
   test("any other gate has no line", () => {

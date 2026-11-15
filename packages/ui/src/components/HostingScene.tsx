@@ -47,3 +47,101 @@ export function HostingScene({ hosting, shape = "band" }: { hosting: Hosting; sh
     </div>
   );
 }
+
+/** Where the desktop app's first screen says a workspace can live: the Cloud, this computer, or one always on. */
+export type Place = "cloud" | "here" | "box";
+
+/** A pixel cloud under the Cloud's agent: its body, and its underside every other pixel (`=`). */
+const CLOUD = [
+  "........########..........",
+  ".....##############.......",
+  "...##################.....",
+  "..#####################...",
+  ".#########################",
+  "##########################",
+  "##########################",
+  "=.=.=.=.=.=.=.=.=.=.=.=.=.",
+  ".=.=.=.=.=.=.=.=.=.=.=.=..",
+];
+
+function PixelCloud() {
+  return (
+    <svg
+      className="ac-place__cloud"
+      viewBox={`0 0 ${CLOUD[0]?.length ?? 0} ${CLOUD.length}`}
+      shapeRendering="crispEdges"
+      aria-hidden="true"
+    >
+      {CLOUD.flatMap((row, y) =>
+        [...row].map((c, x) =>
+          c === "." ? null : (
+            // biome-ignore lint/suspicious/noArrayIndexKey: a fixed drawing, cells by their place
+            <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} className={c === "#" ? "body" : "under"} />
+          ),
+        ),
+      )}
+    </svg>
+  );
+}
+
+/**
+ * The desktop app's "Onde seu workspace vai ficar?" drawn (ADR 0066 §1, amended 2026-11-14): the team under the place
+ * picked, day in every one: the Cloud as the agentes.chat agent on a cloud, this computer as its portrait (`computer`),
+ * one always on as the server tower. Decorative: the words beside it say the same.
+ */
+export function PlaceScene({
+  place,
+  computer = "mac",
+  shape = "tall",
+}: {
+  place: Place;
+  computer?: "mac" | "windows" | "linux";
+  shape?: "band" | "tall";
+}) {
+  const options = useMemo(() => teamSky(1), []);
+  return (
+    <div className={cx("ac-hosting", `ac-hosting--${shape}`, "ac-place")} data-place={place} aria-hidden="true">
+      <PixelSky options={options} />
+      <div className="ac-hosting__row">
+        <span className="ac-hosting__cast" data-awake="">
+          {HOSTING_CAST.map((a, i) => (
+            <span key={a.name} className="ac-hosting__agent" style={{ "--i": i } as CSSProperties}>
+              <Avatar
+                kind="agent"
+                name={a.name}
+                appearance={a.look}
+                size="lg"
+                framed={false}
+                state="idle"
+                expression={i === 1 ? "happy" : undefined}
+              />
+            </span>
+          ))}
+        </span>
+        <span className="ac-hosting__trail ac-place__trail" data-lit="">
+          {[0, 1, 2].map((n) => (
+            <i key={n} />
+          ))}
+        </span>
+        <span className="ac-place__subject" key={place}>
+          {place === "cloud" ? (
+            <span className="ac-place__brand">
+              <Avatar
+                kind="agent"
+                name="agentes.chat"
+                appearance={{ color: "sky", eyes: "round" }}
+                size="xl"
+                framed={false}
+                state="idle"
+                expression="happy"
+              />
+              <PixelCloud />
+            </span>
+          ) : (
+            <ComputerPortrait kind={place === "here" ? computer : "linux"} state="online" size={96} />
+          )}
+        </span>
+      </div>
+    </div>
+  );
+}

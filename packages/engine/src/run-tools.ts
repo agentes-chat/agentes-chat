@@ -1,12 +1,12 @@
 import { PERMISSION_TOOL, type PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, inArray, isNull, type SQL, schema, sql } from "@agenteschat/db";
 import { linkRunActions, publishMessageActions } from "./agent-actions";
-import { followWork } from "./agent-status";
+import { announceAgentStatus, followWork } from "./agent-status";
 import { openApprovalCard, publishApproval, supersedeApprovals } from "./approvals";
 import { runAuthorityById } from "./authority";
 import type { BrainTool, ToolResult } from "./brains/types";
 import { readableChannelIds } from "./channels";
-import { consultationCardThread, consultationOrigin } from "./consultations";
+import { announceConsultationChange, consultationCardThread, consultationOrigin } from "./consultations";
 import { NotFoundError } from "./errors";
 import { type MemoryUpdate, publishChannelEvent, publishMessageCreated, takeStepWords } from "./events";
 import { type PendingFeedbackOffer, pendingFeedbackOfferOf } from "./feedback-offers";
@@ -25,6 +25,7 @@ import {
   questionView,
   syncQuestionMessage,
 } from "./questions";
+import { PASS_TOOL } from "./reply-policy";
 import { routineBriefOf } from "./routine-brief";
 import type { BridgeIdentity } from "./run-tool-tokens";
 import { type AgentRun, replyThreadOf } from "./runs";
@@ -411,11 +412,6 @@ export async function takeBridgeResult(db: Database, runId: string): Promise<Bri
   });
 }
 
-/** Takes (and clears) the side effects the bridge kept for this run. */
-export async function takeBridgeEffects(db: Database, runId: string): Promise<ToolSideEffects | null> {
-  return (await takeBridgeResult(db, runId)).effects;
-}
-
 // ── Calls ────────────────────────────────────────────────────────────────────
 
 /** What `invokeWithChip` needs: the run's tool context, where its events go and the tools of this turn. */
@@ -537,7 +533,9 @@ export async function invokeWithChip(
   const command = toolCommand(use.name, input);
   // The agent's line follows what it does now (ADR 0084 §10), beside the call, never in its way.
   if (def) void followWork(deps, ctx, def).catch(() => {});
-  const said = takeStepWords(where.runId);
+  const words = takeStepWords(where.runId);
+  // What it wrote before staying quiet was never meant for people: shown, it would vanish with the pass.
+  const said = use.name === PASS_TOOL ? undefined : words;
   await publishChannelEvent(deps.pubsub, {
     type: "agent.tool",
     ...where,
@@ -1143,6 +1141,10 @@ export async function suspendRunForTool(
       status: posted.status,
       ...(run.background ? { background: true as const } : {}),
     });
+    // It parked mid-turn: its face and lists say so now, and so does the conversation that handed it the work (its
+    // own events reach only the agents' DM, which nobody has open). The turn's end says it again.
+    await announceAgentStatus(deps.pubsub, run.orgId, run.agentId).catch(() => {});
+    await announceConsultationChange(deps, run).catch(() => {});
   }
 
   if (gated.type === "approval") {

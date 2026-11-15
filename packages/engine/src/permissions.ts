@@ -18,8 +18,16 @@ export const PERMISSION_AREAS = [
   },
   {
     id: "agents",
-    use: ["talk_to_agents", "assign_work", "manage_routines"],
-    keys: ["talk_to_agents", "assign_work", "manage_routines", "approve_actions", "create_agents", "manage_agents"],
+    use: ["talk_to_agents", "view_all_agents", "assign_work", "manage_routines"],
+    keys: [
+      "talk_to_agents",
+      "view_all_agents",
+      "assign_work",
+      "manage_routines",
+      "approve_actions",
+      "create_agents",
+      "manage_agents",
+    ],
   },
   {
     id: "tools",
@@ -61,18 +69,33 @@ export type RolePermission = "administrator" | (typeof PERMISSION_AREAS)[number]
 export type Permission = RolePermission | "read" | "manage_owners";
 
 /**
- * The agents' computers, one choice per role on the roles screen (none, the browser, the whole computer), stored as
- * one of two keys per reach. `control_*`: every agent's. `own_*`: an agent the person is responsible for, a computer
- * they connected, a run they asked for and a request addressed to them; `everyone` holds these, the other roles the
- * `control_*` pair. The browser is the agent's browser view and its sign-in requests; the whole computer adds its
- * full screen, taking control of it and its terminal. Each key gives the ones below it, so a check names only the
- * least it needs.
+ * The agents' computers, one ladder of five steps per role (ADR 0085 §12 and its 2026-11-13 addendum): nothing, then
+ * `own_browsers`, `own_computers`, `control_browsers`, `control_computers`. `control_*`: every agent's. `own_*`: an
+ * agent the person is responsible for, a computer they connected, a run they asked for and a request addressed to
+ * them. The browser is the agent's browser view and its sign-in requests; the whole computer adds its full screen,
+ * taking control of it and its terminal. Each key gives the ones below it, so a check names only the least it needs.
  */
 const IMPLIED: Partial<Record<RolePermission, readonly RolePermission[]>> = {
   control_computers: ["control_browsers", "own_computers", "own_browsers"],
-  control_browsers: ["own_browsers"],
+  control_browsers: ["own_computers", "own_browsers"],
   own_computers: ["own_browsers"],
 };
+
+/** The ladder's keys, lowest first: a role on step `n` holds `COMPUTER_STEPS[n - 1]`, step 0 none of them. */
+export const COMPUTER_STEPS = ["own_browsers", "own_computers", "control_browsers", "control_computers"] as const;
+
+/** The one row the four computer keys make on the roles screen and in `setRowHolders`. */
+export const COMPUTERS_ROW = "computers";
+
+/**
+ * The rows of the roles screen, in its order: every key of the areas, the four computer keys as one row in their
+ * place. `administrator` isn't one: it has its own switch.
+ */
+export const PERMISSION_ROWS = PERMISSION_AREAS.flatMap((a) =>
+  a.keys.flatMap((k): string[] =>
+    k === COMPUTER_STEPS[0] ? [COMPUTERS_ROW] : (COMPUTER_STEPS as readonly string[]).includes(k) ? [] : [k],
+  ),
+);
 /** The keys that give `permission`, itself first. */
 const givers = (permission: RolePermission): RolePermission[] => [
   permission,
@@ -88,13 +111,16 @@ export const isRolePermission = (v: unknown): v is RolePermission =>
 
 /**
  * What the `everyone` role ("Todos") holds in a new workspace: what any member could do before roles, now as
- * keys (the same list as migration 0130, with `own_computers` from migration 0211).
+ * keys (the same list as migration 0130, with `own_computers` from migration 0211, `create_agents` from 0272 and
+ * `view_all_agents` from 0275).
  */
 export const EVERYONE_DEFAULTS: readonly RolePermission[] = [
   "post",
   "create_channels",
   "talk_to_agents",
+  "view_all_agents",
   "assign_work",
+  "create_agents",
   "pair_computers",
   "own_computers",
   "edit_wiki",

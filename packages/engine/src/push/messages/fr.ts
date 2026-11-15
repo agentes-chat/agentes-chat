@@ -84,6 +84,10 @@ export const strings: Partial<PushStrings> = {
   deviceAccessBody: "Touchez pour autoriser une fois, toujours, ou dire non.",
   deviceToolTitle: (a, d) => `${a} vous demande d'activer un outil sur votre ${d}`,
   deviceToolBody: "Touchez pour l'activer en un clic.",
+  deviceCliTitle: (a, d) => `${a} vous demande d'installer un programme sur votre ${d}`,
+  deviceCliBody: "Touchez pour l'installer en un clic.",
+  deviceFolderTitle: (a, f, d) => (f ? `${a} demande ${f} sur votre ${d}` : `${a} demande un dossier sur votre ${d}`),
+  deviceFolderBody: "Autorisez-le dans l'app sur cet ordinateur.",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} vous demande d'ajouter un agent à #${l}`
@@ -104,4 +108,5 @@ export const strings: Partial<PushStrings> = {
   joinRequestTitlePersonal: (name) => `${name} demande à rejoindre votre espace de travail`,
   joinSuggestionTitlePersonal: (by, name) => `${by} a proposé d’inviter ${name}`,
   teamWeekReadyPersonal: "Votre semaine est prête",
+  teamWatchStill: (n) => (n === 1 ? "1 chose vous attend encore" : `${n} choses vous attendent encore`),
 };

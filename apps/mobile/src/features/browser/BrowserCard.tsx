@@ -21,7 +21,7 @@ import {
   useMachines,
 } from "@agenteschat/client";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { browserOffMessage, profileRefusalLine } from "@agenteschat/client/lib/machines";
+import { browserNoAnswerMessage, browserOffMessage, profileRefusalLine } from "@agenteschat/client/lib/machines";
 import { isBlankPage } from "@agenteschat/client/lib/sites";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -169,6 +169,7 @@ export function BrowserCard({
   );
   // A profile whose browser is off on its computer: the switch in the page's place (ADR 0036 §8).
   const offHere = Boolean(profile) && live.unavailable === "unavailable" && browserOffMessage(live.message);
+  const noAnswer = Boolean(profile) && live.unavailable === "unavailable" && browserNoAnswerMessage(live.message);
   const machines = useMachines(orgId, offHere);
   const profileMachine = offHere ? machines.data?.find((m) => m.id === profile?.machineId) : undefined;
   // Closed on the agent's screen: a recent picture of it, never a stream.
@@ -208,7 +209,7 @@ export function BrowserCard({
     waitsForPage(live.unavailable) &&
     !(live.frame && !live.unavailable);
   const stuck = useBrowserStuck(waitingForPage, attempt);
-  const note = pageNoteOf(live.unavailable, live.hidden, mine, stuck);
+  const note = pageNoteOf(live.unavailable, live.hidden, mine, stuck, noAnswer);
   // biome-ignore lint/correctness/useExhaustiveDependencies: said each time, also when a try that failed fails again
   useEffect(() => {
     if (mine && live.lost) toast({ title: t(live.lost.words), icon: "x" });
@@ -461,7 +462,14 @@ export function BrowserCard({
               {sky ? (
                 <Sky color={color} surface="raised" depth={0.95} fade={0} style={StyleSheet.absoluteFill} />
               ) : null}
-              {live.frame ? <FrameView frame={live.frame} enabled={mine} onInput={live.sendInput} /> : null}
+              {live.frame ? (
+                <FrameView
+                  frame={live.frame}
+                  enabled={mine}
+                  onInput={live.sendInput}
+                  cursor={{ agentId, name, color, pointer: controller ? null : live.pointer }}
+                />
+              ) : null}
               {live.frame?.metadata.emulated ? (
                 <View style={[styles.emu, raised]}>
                   <Text variant="caption" tone="ink" style={styles.semibold}>
@@ -512,7 +520,7 @@ export function BrowserCard({
                     ) : null}
                     {offHere && profileMachine ? (
                       <MachineToolButton machine={profileMachine} tool="browser" onAllowed={retry} />
-                    ) : note.say === "stuck" || (note.say === "unavailable" && profile) ? (
+                    ) : note.say === "stuck" || note.say === "noAnswer" || (note.say === "unavailable" && profile) ? (
                       <Button variant="secondary" size="sm" label={t("mobile.common.retry")} onPress={retry} />
                     ) : null}
                   </View>

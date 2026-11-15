@@ -36,7 +36,7 @@ import { Page } from "./parts";
 
 /**
  * Você's smaller screens, each pushed from its row: Workspaces, Notificações, Ao abrir o app, Respostas dos agentes,
- * Sons, Aparência and Idioma.
+ * Sons, Aparência and Idioma (Ícone do app is AppIconPage.tsx).
  */
 
 const SOUND_LABELS: Record<SoundStyle, string> = {

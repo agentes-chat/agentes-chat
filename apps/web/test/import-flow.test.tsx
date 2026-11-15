@@ -548,6 +548,18 @@ describe("Configurações → Importar e exportar", () => {
     }
   });
 
+  test("agentes.chat, with one other workspace on this server: a link to its export instead of the path", async () => {
+    const state = seedState();
+    state.me?.organizations.push({ id: "org-north", name: "Estúdio Norte", role: "owner", showActivity: true });
+    await go(state);
+    await click(button(/^agentes\.chat$/), 1);
+    const tip = document.querySelector(".imp-tip") as HTMLElement;
+    expect(tip.textContent).toBe("Baixe o arquivo do outro workspace e solte o .json aqui.Baixar de Estúdio Norte");
+    const link = within(tip).getByRole("link", { name: "Baixar de Estúdio Norte" });
+    expect(link.getAttribute("href")).toBe("/org/org-north/settings/import");
+    expect(link.getAttribute("target")).toBe("_blank");
+  });
+
   test("a folder is recognized and planned on the server; unchecking an agent holds back what needs it; Importar applies and reports", async () => {
     const { state } = await go();
     // Each app the parsers read has a card with where its file is, but OpenBot, which few use: the drop zone reads

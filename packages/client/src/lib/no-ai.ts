@@ -6,6 +6,7 @@ import type {
   AiComputer,
   AiStatus,
   BrainUnavailable,
+  CodexVersionRequirement,
   ConnectIntent,
   Edition,
   Machine,
@@ -18,7 +19,6 @@ import { answersOthers, audienceOf } from "./audience";
 import { type BillingHold, billingHoldOf } from "./billing";
 import { type SetupView, setupPending } from "./computer";
 import { firstName } from "./format";
-import { toolOffReason } from "./machines";
 import { can } from "./permissions";
 import { CODING_PLANS, isPlanId, loginPerAgent, PLAN_IDS, type PlanId } from "./plans";
 import { isRightHand } from "./right-hand";
@@ -389,7 +389,12 @@ export type PlanGate =
   /** No computer for the agent: none connected (self-host), or the Cloud's said ready and still gave it none. */
   | { state: "missing" }
   /** `overdue`: on the Cloud, it should have passed by itself by now and didn't. */
-  | { state: "unsupported"; reason: BrainUnavailable | "keys"; overdue?: boolean }
+  | {
+      state: "unsupported";
+      reason: BrainUnavailable | "keys";
+      overdue?: boolean;
+      codexVersion?: CodexVersionRequirement;
+    }
   /** `owner`: the viewer doesn't own the agent; `computer`: only whoever connected it adds a sign-in there. */
   | { state: "locked"; who: "owner" | "computer" }
   /** The Cloud's workspace is on a billing hold: it has no computer to sign in on until its agentes.chat plan is active. */
@@ -415,9 +420,11 @@ export const unsupportedGate = (
   edition: Edition | null,
   setup: SetupView | null,
   now = Date.now(),
+  codexVersion?: CodexVersionRequirement,
 ): PlanGate => ({
   state: "unsupported",
   reason,
+  ...(reason === "outdated" && codexVersion ? { codexVersion } : {}),
   ...(edition === "cloud" && reason !== "tool_off" && installOverdue(setup, now) ? { overdue: true } : {}),
 });
 
@@ -455,7 +462,8 @@ export function planGate({
     return edition === "cloud" && !caughtUp ? { state: "preparing", view: null } : { state: "missing" };
   if (!brain.computer.online) return { state: "offline" };
   const option = brain.options.find((o) => o.kind === kindOf(choice));
-  if (!option?.available) return unsupportedGate(option?.reason ?? "not_reported", edition, setup, now);
+  if (!option?.available)
+    return unsupportedGate(option?.reason ?? "not_reported", edition, setup, now, option?.codexVersion);
   if (!brain.accountsSupported) return unsupportedGate("runner_old", edition, setup, now);
   if (isPlanId(choice) && !computer?.keys) return unsupportedGate("keys", edition, setup, now);
   if (!brain.canManageAccounts) return { state: "locked", who: "computer" };
@@ -508,7 +516,10 @@ export function planGateWithoutAgent({
   }
   if (!computer.online) return { gate: { state: "offline" }, computer };
   if (computer.brains[kind] !== true)
-    return { gate: unsupportedGate(computer.off?.[kind] ?? "not_reported", edition, setup, now), computer };
+    return {
+      gate: unsupportedGate(computer.off?.[kind] ?? "not_reported", edition, setup, now, computer.codexVersion),
+      computer,
+    };
   if (isPlanId(choice) && !computer.keys) return { gate: unsupportedGate("keys", edition, setup, now), computer };
   return { gate: { state: "ready" }, computer };
 }
@@ -564,6 +575,7 @@ const CLOUD_REASON = {
   not_reported: "stuck",
   // The Cloud's computers run Linux, where every CLI runs: never said there.
   system: "stuck",
+  cant_start: "stuck",
 } as const satisfies Record<BrainUnavailable | "keys", string>;
 
 /**
@@ -572,14 +584,15 @@ const CLOUD_REASON = {
  * program being installed or updated, a restart) and that it comes back by itself (`rechecks`), or that it's on our
  * side. The Cloud's computer that never reached this agent has no line of its own: nothing is coming, as past a wait.
  * `hold`: a workspace on hold (`holdText`) waits for that, not for the computer, so it speaks instead. Null for any
- * other gate. `computer`: its name as the panel says it; `machine`: its row, for the way to allow a program on a
- * self-hosted one.
+ * other gate. `computer`: its name as the panel says it; `machine`: its row. A computer a person connected to the
+ * Cloud is theirs, not ours: it gets self-host's words. A program off there is said alone, its way out is a button
+ * beside the line (`ToolOffWayOut`).
  */
 export function gateLine(
   t: TFunction,
   {
     gate,
-    edition,
+    edition: asked,
     kind,
     computer,
     machine,
@@ -590,11 +603,12 @@ export function gateLine(
     edition: Edition | null;
     kind: MachineAccountKind;
     computer: string;
-    machine?: (Pick<Machine, "os" | "mode"> & Partial<Pick<Machine, "lastSeenAt">>) | null;
+    machine?: Partial<Pick<Machine, "lastSeenAt" | "kind">> | null;
     hold?: string | null;
     now?: number;
   },
 ): { text: string; rechecks: boolean } | null {
+  const edition = asked === "cloud" && machine?.kind && machine.kind !== "managed" ? "selfhost" : asked;
   const rechecks = gateRechecks(gate, edition);
   const program = t(`brain.card.${kind}`);
   if (hold && (gate.state === "offline" || gate.state === "unsupported")) return { text: hold, rechecks: false };
@@ -624,10 +638,9 @@ export function gateLine(
       rechecks,
     };
   if (gate.reason === "keys") return { text: t("aiAccounts.connect.needs.keys"), rechecks };
-  if (gate.reason === "tool_off") {
-    const off = toolOffReason(machine, kind);
-    return { text: t(off.key, { computer, command: off.command, program }), rechecks };
-  }
+  if (gate.reason === "tool_off") return { text: t("brain.reasons.tool_offOne", { computer, program }), rechecks };
+  if (gate.reason === "outdated" && gate.codexVersion)
+    return { text: t("brain.reasons.outdatedCodex", { computer, ...gate.codexVersion }), rechecks };
   return { text: t(`brain.reasons.${gate.reason}`, { computer, program }), rechecks };
 }
 
@@ -635,7 +648,12 @@ export function gateLine(
 export function dimmedLine(
   t: TFunction,
   gate: PlanGate,
-  where: { edition: Edition | null; kind: MachineAccountKind; computer: string },
+  where: {
+    edition: Edition | null;
+    kind: MachineAccountKind;
+    computer: string;
+    machine?: Partial<Pick<Machine, "lastSeenAt" | "kind">> | null;
+  },
 ) {
   if (gate.state === "billing") return t("connectAi.billing");
   return gateLine(t, { gate, ...where })?.text ?? t("aiAccounts.connect.noComputer");

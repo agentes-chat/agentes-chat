@@ -74,6 +74,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         heading: "Entrar de outros aparelhos",
         blocks: [
           "A conta dona começa sem senha: o app faz o seu login neste computador. Para entrar pelo navegador de outro computador, crie uma em **Configurações\u00a0›\u00a0Sua conta**. Enquanto não criar, **Preferências\u00a0›\u00a0Servidores** avisa, e **Criar uma senha** abre essa página. O app do celular se conecta escaneando o QR code em **No celular**, em **Preferências\u00a0›\u00a0Servidores**. Para isso, **Acessar pelo celular e pela equipe** precisa estar ligado.",
+          "Quando o dono apaga a conta, em **Configurações\u00a0›\u00a0Sua conta**, ela some de vez 7 dias depois, e os workspaces em que só ele estava vão junto. Até lá, entre e aperte **Restaurar conta** para trazer a conta de volta. Depois que ela some, se não sobrar nenhuma conta, o app abre a janela de boas-vindas para criar um novo dono. Se outras pessoas ainda têm conta, cada uma entra com o próprio e-mail.",
         ],
       },
       {
@@ -89,6 +90,25 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         blocks: [
           "Com **Fazer backup toda noite** ligado (app 0.8.1 ou mais novo), em **Preferências\u00a0›\u00a0Servidores**, o app guarda o banco de dados, os arquivos e o `.env` em `.agentes/backups`, na sua pasta pessoal, toda noite às 3:00. Um computador que estava dormindo faz o backup quando acorda. **Fazer backup agora** faz o mesmo na hora. Cada backup para o servidor por um instante, e os dois mais novos ficam.",
           "**Copiar para** também põe cada backup novo numa pasta que você escolhe, como um pendrive ou o iCloud Drive, onde os dois mais novos ficam. Eles guardam as suas chaves: mantenha em sigilo. **Restaurar…** volta o agentes.chat para um backup: mensagens, arquivos e ajustes. Ele para por um minuto, e o que havia antes fica guardado na pasta de backups.",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "Começar de novo ou desinstalar",
+        blocks: [
+          "Tudo o que o agentes.chat guarda neste computador fica em pastas da sua pasta pessoal, não dentro do app. Por isso, mandar o app para a Lixeira não apaga nada disso, e não para o agentes.chat se ele estiver rodando.",
+          "Para começar de novo, aperte **Apagar e começar de novo…** em **Preferências\u00a0›\u00a0Servidores**. Ele para o agentes.chat aqui e leva tudo o que ele guarda para uma pasta nova na sua pasta pessoal, chamada `agentes.chat erased` com a data do dia, onde fica até você apagar. O que os agentes dele guardavam neste computador, como os navegadores e logins deles, é apagado de `.agentes-runner`. Os workspaces dele somem para todos que os usam. Depois a janela de boas-vindas abre, e você configura de novo, com uma nova conta de dono. Os arquivos dos agentes, em `agentes` na sua pasta pessoal, ficam onde estão.",
+          "Para trazer de volta depois, saia do app, tire do caminho uma pasta `.agentes` mais nova, se houver, renomeie a pasta `agentes.chat erased` para `.agentes`, abra o app e configure de novo neste computador. Ele volta com os workspaces e o dono como estavam. O que os agentes guardavam neste computador não volta, então eles precisam entrar de novo nas contas.",
+          "Para tirar o agentes.chat deste computador por completo:",
+          {
+            list: [
+              "Desligue **Abrir ao iniciar a sessão** em **Preferências\u00a0›\u00a0Geral**.",
+              "Saia do app. Fechar a janela não basta. Num Mac, clique no ícone dele no Dock e escolha **Sair do agentes.chat** no menu agentes.chat, no alto da tela, ou aperte ⌘Q. No Windows e no Linux, clique no ícone do agentes.chat perto do relógio e escolha **Sair do agentes.chat**. Se ele perguntar **Sair do agentes.chat?**, aperte **Sair**.",
+              "Apague o app. Num Mac, mande para a Lixeira. No Windows e no Linux, desinstale como qualquer outro app.",
+              "Apague estas pastas da sua pasta pessoal. Elas guardam os seus dados, e depois de apagados eles não voltam, então guarde um backup em outro lugar antes se puder querer de volta: `.agentes` (mensagens, arquivos, contas, ajustes e backups), toda pasta `agentes.chat erased`, `.agentes-runner` (o que os agentes guardam neste computador, como os navegadores e logins deles) e `agentes` (os arquivos dos agentes). Pastas cujo nome começa com ponto ficam ocultas. Num Mac, abra a sua pasta pessoal no Finder e aperte ⇧⌘. (Shift, Command e a tecla de ponto) para mostrá-las.",
+              "Apague as pastas do próprio app. Elas guardam só os ajustes dele, os logins da janela e os registros. Num Mac: tudo cujo nome começa com `chat.agentes.desktop` nas pastas Application Support, Caches, HTTPStorages, Logs, Preferences e WebKit de `~/Library`, e `agentes.chat.plist` em `~/Library/LaunchAgents`. No Windows: `%APPDATA%\\chat.agentes.desktop` e `%LOCALAPPDATA%\\chat.agentes.desktop`. No Linux: `~/.config/chat.agentes.desktop` e `~/.local/share/chat.agentes.desktop`. Num Mac, para abrir uma dessas pastas, aperte ⇧⌘G no Finder e digite o caminho dela, como `~/Library/Caches`.",
+            ],
+          },
         ],
       },
       {
@@ -196,7 +216,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "who",
         heading: "Quem pode usar",
         blocks: [
-          "Um dispositivo novo é só seu: **Só eu** quer dizer você e os agentes que trabalham para você. Abra para todo o workspace, ou para algumas pessoas e papéis, na hora de permitir ou depois, na página dele em **Configurações\u00a0›\u00a0Dispositivos**.",
+          "Um dispositivo novo é só seu: **Só eu** quer dizer você e os agentes que trabalham para você. Abra para todo o workspace, ou para algumas pessoas e cargos, na hora de permitir ou depois, na página dele em **Configurações\u00a0›\u00a0Dispositivos**.",
         ],
       },
       {
@@ -269,7 +289,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         blocks: [
           {
             list: [
-              "Agentes, com nome, papel, instruções e aparência.",
+              "Agentes, com nome, função, instruções e aparência.",
               "Skills, ligadas para os agentes que as tinham.",
               "Canais públicos, com os agentes dentro.",
               "Rotinas, ativas e no horário delas. Dá para pausar em **Rotinas** quando quiser.",
@@ -424,7 +444,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
           {
             list: [
               "Quem é responsável pelo agente, nos pedidos dele.",
-              "Quem tem um papel com **Aprovar ações dos agentes**, em todos os agentes.",
+              "Quem tem um cargo com **Aprovar ações dos agentes**, em todos os agentes.",
               "As pessoas que o agente nomeia ao pedir, no lugar do responsável.",
               "Quem cobre alguém em **Quem aprova por mim**, no que é pedido a essa pessoa. Merge, deploy e outras ações de risco só quando isso está ligado.",
             ],
@@ -469,7 +489,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Quando o agentes.chat hospeda o seu workspace, o Jev está incluído. Num servidor que você mesmo roda, ele usa a chave da TypeSafe do dono, cerca de US$ 0,0001 por mensagem: [Configurar o Jev](/help/jev#setup).",
+          "Quando o agentes.chat hospeda o seu workspace, o Jev está incluído. Num servidor que você mesmo roda, ele usa a chave da TypeSafe ou do OpenRouter do dono, cerca de US$ 0,0001 por mensagem: [Configurar o Jev](/help/jev#setup).",
         ],
       },
       {
@@ -531,6 +551,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
               "No agentes.chat, abra **Configurações\u00a0›\u00a0IA e uso** e cole em **Jev**. Só quem configurou este servidor vê essa parte.",
             ],
           },
+          "Já paga o OpenRouter? Escolha **OpenRouter** em **Jev** e cole uma chave de https://openrouter.ai/keys, ou ligue o Jev com a chave do OpenRouter do workspace num clique. É o mesmo Jev, cobrado pelo OpenRouter pelo mesmo preço.",
           "Num servidor que você roda com Docker, dá para colocar a chave no `.env` como `TYPESAFE_API_KEY`. Essa vale mais que a das Configurações.",
         ],
       },
@@ -555,7 +576,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
           {
             list: [
               "O nome e a descrição do canal, a mensagem e as poucas antes dela",
-              "Os nomes e papéis dos agentes, o começo das instruções deles e as ferramentas que eles podem usar",
+              "Os nomes e funções dos agentes, o começo das instruções deles e as ferramentas que eles podem usar",
               "Os itens de memória que ele compara",
               "A tarefa de um agente e o começo dos resultados das ferramentas",
               "O objetivo de uma missão e os comandos que um agente quer rodar nela",
@@ -565,6 +586,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
           },
           "A TypeSafe roda o Jev nos Estados Unidos e não treina os modelos dela com o que você envia. Ela guarda os dados pelo tempo necessário para operar o serviço. A TypeSafe oferece retenção zero nos planos enterprise.",
           "Política de privacidade da TypeSafe: https://typesafe.ai/legal/privacy-policy. Contrato de tratamento de dados: https://typesafe.ai/legal/data-processing.",
+          "Com uma chave do OpenRouter, os mesmos pedidos passam pelo OpenRouter a caminho da TypeSafe, sob os termos do OpenRouter e as suas configurações de privacidade lá: https://openrouter.ai/privacy.",
         ],
       },
       {
@@ -755,7 +777,7 @@ export const helpPtBR: Record<HelpSlug, HelpDocument> = {
         id: "email",
         heading: "E-mail",
         blocks: [
-          "Sem e-mail, o agentes.chat escreve cada e-mail no log em vez de enviar, então dá para copiar um link de convite de lá. Redefinir a senha fica desligado.",
+          "Sem e-mail, o agentes.chat escreve cada e-mail no log em vez de enviar, então dá para copiar um link de convite de lá. Redefinir a senha fica desligado, e um e-mail novo para uma conta muda na hora, sem código nem link.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

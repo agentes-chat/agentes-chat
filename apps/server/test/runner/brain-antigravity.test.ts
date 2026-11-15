@@ -205,6 +205,24 @@ test("the CLI's words: its models, its sign-in status, its sign-in link and its 
   expect(resetFromWords("Resets at 2026-11-05T10:00:00Z")).toBe("2026-11-05T10:00:00.000Z");
 });
 
+test("the CLI's real /usage: one tab-separated row per quota, each model group its own, disabled ones skipped", () => {
+  // `agy -p /usage` of Antigravity CLI 1.5.6, 2026-11-14: group, quota, percent left (or "disabled"), its reset.
+  const report = [
+    "Gemini Models\tWeekly Limit Remaining\t98%\t2026-11-21T21:48:50Z",
+    "Gemini Models\tFive Hour Limit Remaining\t97%\t2026-11-15T02:48:50Z",
+    "Claude and GPT models\tWeekly Limit Remaining\t0%\t2026-11-17T04:21:04Z",
+    "Claude and GPT models\tFive Hour Limit Remaining\tdisabled\t",
+    "Gemini 4 Argon\tGemini 4 Argon Weekly Limit\t99%\t2026-11-21T21:45:50Z",
+    "",
+  ].join("\n");
+  expect(antigravityUsage(report, "probe", NOW)?.windows).toEqual([
+    { kind: "seven_day", usedPercent: 2, resetsAt: "2026-11-21T21:48:50.000Z" },
+    { kind: "five_hour", usedPercent: 3, resetsAt: "2026-11-15T02:48:50.000Z" },
+    { kind: "other", label: "Claude and GPT models · 7d", usedPercent: 100, resetsAt: "2026-11-17T04:21:04.000Z" },
+    { kind: "other", label: "Gemini 4 Argon · 7d", usedPercent: 1, resetsAt: "2026-11-21T21:45:50.000Z" },
+  ]);
+});
+
 test("an account's folder is the CLI's whole home: no keyring, no Gemini key or ADC from the runner, no updates", () => {
   const env = accountEnv("antigravity", "/acc/x", {
     PATH: "/bin",

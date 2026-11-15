@@ -8,7 +8,6 @@ import {
   mergeToolEffects,
   storedTranscript,
   type ToolSideEffects,
-  takeBridgeEffects,
   takeBridgeResult,
 } from "../src/run-tools";
 import { type Fixture, setup } from "./fixtures";
@@ -93,7 +92,7 @@ describe("files a run's tools leave for its reply", () => {
     });
     expect((await stored()).bridgeEffects).toBeUndefined();
     expect((await stored()).bridgeCalls).toBeUndefined();
-    expect(await takeBridgeEffects(fx.db, run.id)).toBeNull();
+    expect((await takeBridgeResult(fx.db, run.id)).effects).toBeNull();
   });
 });
 

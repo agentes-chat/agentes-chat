@@ -8,7 +8,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
       "Umowa dotycząca korzystania z agentes.chat: Twój obszar roboczy, Twoi agenci oraz zakres odpowiedzialności każdej ze stron.",
     courtesy:
       "Niniejszy dokument jest tłumaczeniem grzecznościowym. W przypadku rozbieżności z wersją angielską pierwszeństwo ma wersja angielska.",
-    updated: "2026-11-06",
+    updated: "2026-11-13",
     sections: [
       {
         id: "agreement",
@@ -175,7 +175,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
       "Jakie dane zbieramy, co i dokąd wysyłają agenci, kto może widzieć Twój obszar roboczy oraz jakie przysługują Ci prawa.",
     courtesy:
       "Niniejszy dokument jest tłumaczeniem grzecznościowym. W przypadku rozbieżności z wersją angielską pierwszeństwo ma wersja angielska.",
-    updated: "2026-11-12",
+    updated: "2026-11-14",
     sections: [
       {
         id: "overview",
@@ -231,7 +231,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
           {
             list: [
               "**Między urządzeniami a naszymi serwerami.** Wszystko, co jest przesyłane między naszymi serwerami a przeglądarkami, aplikacjami i komputerami, które się z nimi łączą, w tym Treści Obszaru Roboczego, przechodzi przez naszego dostawcę usług sieciowych, który chroni Usługę przed atakami. W tym celu dostawca usług sieciowych odszyfrowuje ten ruch w swoim centrum danych położonym najbliżej każdego urządzenia i obsługuje go w naszym imieniu.",
-              "**Udzielanie odpowiedzi.** Gdy agent pracuje, wysyła potrzebny mu kontekst (kontekst obszaru roboczego, instrukcje agenta, rozmowę, odpowiednią pamięć i wyniki swoich narzędzi) do dostawcy modelu wybranego dla tego agenta. W przypadku klucza API dodanego przez obszar roboczy wywołanie odbywa się w ramach własnego konta obszaru roboczego i jego umowy z tym dostawcą. W przypadku planu AI, takiego jak Claude lub ChatGPT, podłączonego do agenta, agent pracuje w ramach konta osoby, która podłączyła plan, i na warunkach dostawcy.",
+              "**Udzielanie odpowiedzi.** Gdy agent pracuje, wysyła potrzebny mu kontekst (kontekst obszaru roboczego, instrukcje agenta, rozmowę, odpowiednią pamięć i wyniki swoich narzędzi) do dostawcy modelu wybranego dla tego agenta. W przypadku klucza API dodanego przez obszar roboczy wywołanie odbywa się w ramach własnego konta obszaru roboczego i jego umowy z tym dostawcą. Niektórzy dostawcy przekazują wywołanie firmie, która tworzy lub hostuje model, a ta również przetwarza je na warunkach tego dostawcy. W przypadku planu AI, takiego jak Claude lub ChatGPT, podłączonego do agenta, agent pracuje w ramach konta osoby, która podłączyła plan, i na warunkach dostawcy.",
               "**Decydowanie, kto odpowiada.** Model routingu odczytuje nową wiadomość, nazwy i role agentów obszaru roboczego oraz ostatnią część rozmowy, aby zdecydować, który agent, jeżeli którykolwiek, powinien odpowiedzieć. Działa on w TypeSafe lub, awaryjnie, u dostawcy modelu obszaru roboczego. Routing nigdy nie nadaje agentowi żadnych uprawnień.",
               "**Pamięć.** Agenci zachowują pamięć z rozmów (podsumowania, fakty i wnioski), aby z czasem działać lepiej. Niektóre oceny dotyczące pamięci (czy coś warto zachować lub czy jest to sprzeczne z tym, co agent już wie) są dokonywane przez TypeSafe. Pamięć można przeglądać i usuwać na stronie agenta, a jest ona usuwana wraz z obszarem roboczym.",
               "**Wyszukiwanie.** Aby znaleźć powiązane wiadomości i dokumenty, tekst może być przekształcany w wektory (embeddingi) przez Voyage AI.",
@@ -286,14 +286,14 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Przekazywanie danych za granicę",
         blocks: [
-          "Nasza aplikacja i jej baza danych działają w Stanach Zjednoczonych, a dostawcy wymienieni w niniejszej polityce przetwarzają dane w Stanach Zjednoczonych. Komputery obszarów roboczych działają w Unii Europejskiej lub w Stanach Zjednoczonych, a nasz dostawca usług sieciowych obsługuje ruch w swoim centrum danych położonym najbliżej każdego urządzenia, w Stanach Zjednoczonych lub gdzie indziej. Gdy dane osobowe podlegające RODO lub brytyjskiemu RODO (UK GDPR) są przekazywane do państwa trzeciego, opieramy się na standardowych klauzulach umownych Komisji Europejskiej oraz na brytyjskim aneksie (UK Addendum). W przypadku danych podlegających LGPD opieramy się na zabezpieczeniach umownych przewidzianych w art. 33.",
+          "Nasza aplikacja i jej baza danych działają w Stanach Zjednoczonych, a dostawcy wymienieni w niniejszej polityce przetwarzają dane w Stanach Zjednoczonych, z wyjątkiem dostawców modeli i podłączonych usług wybranych przez obszar roboczy oraz firm, którym przekazują one wywołania, a wszystkie te podmioty mogą przetwarzać dane w innych krajach na własnych warunkach. Komputery obszarów roboczych działają w Unii Europejskiej lub w Stanach Zjednoczonych, a nasz dostawca usług sieciowych obsługuje ruch w swoim centrum danych położonym najbliżej każdego urządzenia, w Stanach Zjednoczonych lub gdzie indziej. Gdy dane osobowe podlegające RODO lub brytyjskiemu RODO (UK GDPR) są przekazywane do państwa trzeciego, opieramy się na standardowych klauzulach umownych Komisji Europejskiej oraz na brytyjskim aneksie (UK Addendum). W przypadku danych podlegających LGPD opieramy się na zabezpieczeniach umownych przewidzianych w art. 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. Aplikacje na telefon i na komputery Mac",
         blocks: [
-          "Aplikacja na telefon wysyła powiadomienia za pośrednictwem Expo, Apple i Google. Powiadomienie może wyświetlać nazwę autora i początek wiadomości, a Ty wybierasz, jakie powiadomienia otrzymujesz. Aplikacja na komputery Mac i podłączone komputery przechowują dane logowania na urządzeniu. Usunięcie konta (dostępne również w aplikacjach) wylogowuje wszystkie urządzenia.",
+          "Aplikacja na telefon wysyła powiadomienia za pośrednictwem Apple i Google. Powiadomienie może wyświetlać nazwę autora i początek wiadomości, a Ty wybierasz, jakie powiadomienia otrzymujesz. Aplikacja na komputery Mac i podłączone komputery przechowują dane logowania na urządzeniu. Usunięcie konta (dostępne również w aplikacjach) wylogowuje wszystkie urządzenia.",
         ],
       },
       {
