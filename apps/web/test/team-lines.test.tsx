@@ -110,7 +110,7 @@ describe("Responde a, by clicking (ADR 0148 addendum)", () => {
     expect(chip.textContent).toContain("acompanha tudo com você");
   });
 
-  test("Organograma: five reports are five siblings of one row, and a report that supervises has its own row", async () => {
+  test("Organograma: four direct reports share a row, and a report that supervises has its own row", async () => {
     const state = lined();
     const ada = state.agents.find((a) => a.id === ADA_ID) as Agent;
     const more = ["Bia", "Caio", "Duda", "Eli"].map((name, i) => ({
