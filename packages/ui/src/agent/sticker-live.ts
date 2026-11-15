@@ -1,9 +1,8 @@
 /**
  * Living stickers (ADR 0091): one shared loop draws every sticker on screen, about 25 times a second, and only the
  * ones in view (a picker full of them, or a long conversation, costs what is visible). With reduced motion the loop
- * stands still: each sticker is drawn once, at its still frame, and again when what it shows changes. A timer waits
- * out the gap and the browser is asked for a frame only when one is due; with no sticker in view the loop stops
- * until one comes back into view.
+ * stands still: each sticker is drawn once, at its still frame, and again when what it shows changes. With no sticker in
+ * view the loop stops until one comes back into view.
  */
 import { drawSticker, STICKER_STILL_T, type StickerLook, type StickerMood } from "./stickers";
 
@@ -18,7 +17,6 @@ export interface LiveSticker {
 
 const stickers = new Set<LiveSticker>();
 const visible = new WeakSet<HTMLCanvasElement>();
-// The loop's one handle: a timer waiting out the gap to the next frame, then the frame asked for once it is due.
 let timer: ReturnType<typeof setTimeout> | 0 = 0;
 let raf = 0;
 let last = 0;

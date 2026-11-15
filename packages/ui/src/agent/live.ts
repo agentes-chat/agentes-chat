@@ -3,9 +3,8 @@
  * agent engine (engine.js). Only visible avatars are drawn: about 24 times a
  * second while the agent works, reacts or follows the gaze, about 12 at rest
  * (every blink still shows; a slow turn reads the same); with reduced motion
- * each one is drawn once, still. A timer waits out the gap and the browser is
- * asked for a frame only when one is due, and with no avatar in view the loop
- * stops until one comes back into view. A page can set a gaze point (the landing's
+ * each one is drawn once, still. With no avatar in view the loop stops until
+ * one comes back into view. A page can set a gaze point (the landing's
  * pointer): avatars inside an element marked `data-gaze` turn their heads
  * toward it.
  */
@@ -111,7 +110,6 @@ export function playAgentReaction(key: string, kind: AgentReaction) {
 
 const agents = new Set<LiveAgent>();
 const visible = new WeakSet<HTMLElement>();
-// The loop's one handle: a timer waiting out the gap to the next frame, then the frame asked for once it is due.
 let timer: ReturnType<typeof setTimeout> | 0 = 0;
 let raf = 0;
 let last = 0;

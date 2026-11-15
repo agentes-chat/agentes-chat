@@ -7,9 +7,7 @@
  * and made palette-agnostic: any agent color, faded from any surface token.
  *
  * One animation loop runs for every sky on the page, about 30 frames a
- * second, and only while a sky moves: it waits out the gap between frames with a
- * timer and asks the browser for a frame only when one is due, so a high-refresh
- * screen is not woken at every refresh. A sky off screen costs nothing, and the
+ * second, and only while a sky moves. A sky off screen costs nothing, and the
  * browser holds the loop while the page is hidden. With reduced motion a sky
  * is drawn once (and again on resize or a theme change), with no loop between,
  * and nothing in it moves between those frames, the pointer included.
@@ -147,7 +145,6 @@ interface Sky {
   step(dt: number): void;
 }
 const live = new Set<Sky>();
-// The loop's one handle: a timer that waits out the gap to the next frame, then the frame asked for once it is due.
 let timer: ReturnType<typeof setTimeout> | 0 = 0;
 let raf = 0;
 let last = 0;

@@ -11,11 +11,11 @@ import { spyOn } from "bun:test";
 
 type Entries = { isIntersecting: boolean; target: Element }[];
 
+let lastClock = 0;
 /**
  * Intersection observers made while a page was open, kept past its `close`: a loop keeps its observer for the whole
  * run (a module's own), so the next page's `onScreen` still reaches it.
  */
-let lastClock = 0;
 const watchers = new Set<{ cb: (entries: Entries) => void; targets: Set<Element> }>();
 
 export function canvasPage({
