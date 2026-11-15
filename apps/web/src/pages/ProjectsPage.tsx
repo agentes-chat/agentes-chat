@@ -49,7 +49,7 @@ export function ProjectsPage() {
   const projects = query.data?.projects ?? [];
   const number = (n: number) => formatInt(i18n.language, n);
   return (
-    <>
+    <div className="page page--list projects">
       <PageHeader
         title={t("projectsPage.title")}
         meta={t("projectsPage.subtitle")}
@@ -85,7 +85,7 @@ export function ProjectsPage() {
             <thead>
               <tr>
                 <th>{t("projectsPage.columns.project")}</th>
-                <th>{t("projectsPage.columns.repository")}</th>
+                <th className="projects-repo-cell">{t("projectsPage.columns.repository")}</th>
                 <th className="projects-num">
                   <span className="projects-headline">
                     {t("projectsPage.columns.tasks")}
@@ -95,7 +95,7 @@ export function ProjectsPage() {
                   </span>
                 </th>
                 <th className="projects-num">{t("projectsPage.columns.done")}</th>
-                <th>{t("projectsPage.columns.status")}</th>
+                <th className="projects-status">{t("projectsPage.columns.status")}</th>
                 {posts && (
                   <th className="projects-actions-col">
                     <span className="ac-visually-hidden">{t("projectsPage.columns.actions")}</span>
@@ -124,7 +124,9 @@ export function ProjectsPage() {
                       </div>
                       {p.description && <p className="projects-description">{p.description}</p>}
                     </td>
-                    <td>
+                    <td
+                      className={p.githubRepo ? "projects-repo-cell" : "projects-repo-cell projects-repo-cell--empty"}
+                    >
                       {p.githubRepo ? (
                         <a
                           className="projects-repo"
@@ -134,14 +136,19 @@ export function ProjectsPage() {
                           aria-label={t("projectsPage.openRepo", { repo: p.githubRepo })}
                         >
                           <ProviderLogo id="github" size="xs" />
+                          <span className="projects-repo__name">{p.githubRepo}</span>
                         </a>
                       ) : (
                         <span className="projects-quiet">{t("projectsPage.noRepo")}</span>
                       )}
                     </td>
-                    <td className="projects-num tabular">{number(p.total)}</td>
-                    <td className="projects-num tabular">{number(p.done)}</td>
-                    <td>
+                    <td className="projects-num tabular" data-label={t("projectsPage.columns.tasks")}>
+                      {number(p.total)}
+                    </td>
+                    <td className="projects-num tabular" data-label={t("projectsPage.columns.done")}>
+                      {number(p.done)}
+                    </td>
+                    <td className="projects-status" data-label={t("projectsPage.columns.status")}>
                       <Chip icon={look.icon} tone={look.tone}>
                         {t(`projectsPage.status.${status}`)}
                       </Chip>
@@ -189,6 +196,6 @@ export function ProjectsPage() {
       {dialog?.kind === "delete" && (
         <DeleteProjectDialog project={dialog.project} onClose={() => setDialog(null)} onDeleted={() => undefined} />
       )}
-    </>
+    </div>
   );
 }
