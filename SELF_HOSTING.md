@@ -1218,7 +1218,7 @@ clones go through your server. A computer runs at most two clones at once, and a
 your server restarts. Clones fetched from github.com share a cache that is never pruned (checkouts
 borrow its objects): `~/.agentes-runner/git-cache` on a single-user computer, `/var/cache/agentes-git`
 on a computer that runs each agent as its own user (owned by a system user `agentes-git` the runner
-makes; each agent reads only the repositories GitHub let it fetch, through an ACL, so install the
+makes; each agent reads only the repositories GitHub lets it fetch, through an ACL, so install the
 `acl` package there, or clones go without the cache). Remove a repository's folder there only once no
 agent's checkout of it is left.
 On Tailscale, install Tailscale on it and sign in to the same tailnet first. The runner runs on
