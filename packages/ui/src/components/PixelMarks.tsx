@@ -6,8 +6,8 @@ import { cx } from "../cx";
  * `PixelDone`, one green pixel (the spinner grid's center cell) that pops in
  * when a step is done, `PixelFail`, an exclamation in two pixels of the danger
  * color when a step failed, and `PixelStop`, a solid rounded square that reads as
- * "stop" (it breathes while an agent works). Pure CSS; still under
- * prefers-reduced-motion. Decorative unless `label` is given.
+ * "stop", still, and softened with `dim`. Pure CSS; the pop of `PixelDone` is
+ * skipped under prefers-reduced-motion. Decorative unless `label` is given.
  */
 
 /** A cell of an n×n pixel grid `size` px wide: its pitch, the gap and the drawn side (PixelSpinner's rule). */
