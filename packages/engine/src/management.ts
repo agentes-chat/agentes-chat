@@ -3,6 +3,7 @@ import { and, asc, type Database, desc, eq, gte, inArray, isNull, lt, schema, sq
 import { MODEL_TIERS, type ModelTier } from "@agenteschat/providers";
 import { getAgent } from "./agents";
 import { decidableBySql } from "./approvals";
+import { audienceSql, listsAllAgents } from "./audience";
 import { recordAudit } from "./audit";
 import type { AutoModels } from "./auto-model";
 import { caches } from "./cache";
@@ -85,6 +86,10 @@ export interface OrgSettings extends MediaSettings {
   autoModels: AutoModels;
   /** Who the workspace is for (ADR 0159): `team` or `personal`. */
   mode: WorkspaceMode;
+  /** The right hand watches for what stops the team and tells who can fix it. On by default. */
+  teamWatch: boolean;
+  /** The right hand greets each person who joins, once. On by default. */
+  welcomePeople: boolean;
 }
 
 export const TEAM_SIZES = ["solo", "small", "medium", "large"] as const;
@@ -109,6 +114,8 @@ export async function getOrgSettings(db: Database, actorId: string, orgId: strin
     voiceMessages: s?.voiceMessages ?? true,
     autoModels: (s?.autoModels ?? {}) as AutoModels,
     mode: isWorkspaceMode(s?.mode) ? s.mode : "team",
+    teamWatch: s?.teamWatch ?? true,
+    welcomePeople: s?.welcomePeople ?? true,
     ...mediaSettingsFrom(s),
   };
 }
@@ -241,6 +248,8 @@ export async function updateOrgSettings(
       ...(input.agentStickers !== undefined ? { agentStickers: input.agentStickers } : {}),
       ...(input.agentMedia !== undefined ? { agentMedia: input.agentMedia } : {}),
       ...(input.mode !== undefined ? { mode: input.mode } : {}),
+      ...(input.teamWatch !== undefined ? { teamWatch: input.teamWatch } : {}),
+      ...(input.welcomePeople !== undefined ? { welcomePeople: input.welcomePeople } : {}),
       ...(input.autoModels !== undefined
         ? { autoModels: mergeAutoModels(await storedAutoModels(), input.autoModels) }
         : {}),
@@ -302,8 +311,15 @@ export async function orgOverview(db: Database, actorId: string, orgId: string, 
   const [agentCount] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(agents)
-    // Every agent, the right hand (ADR 0137) included: the sidebar lists it under this count with the others.
-    .where(and(eq(agents.orgId, orgId), isNull(agents.archivedAt)));
+    // The agents the person's lists name (`listsAgentTo`), the right hand (ADR 0137) included: the sidebar lists it
+    // under this count with the others.
+    .where(
+      and(
+        eq(agents.orgId, orgId),
+        isNull(agents.archivedAt),
+        listsAllAgents(membership) ? undefined : audienceSql("agents", sql`${actorId}::text`),
+      ),
+    );
   const [pending] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(approvals)

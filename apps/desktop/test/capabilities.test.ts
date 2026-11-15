@@ -205,8 +205,8 @@ describe("each window may call every app command its code calls", () => {
       expect({ screen, found: units.has(screen) }).toEqual({ screen, found: true });
   });
 
-  test("the welcome window's help links reach the browser", () => {
-    expect(commandsOf("welcome").get("open_external")).toBe("ui/bits.tsx#HelpLink");
+  test("the welcome window still reaches the browser: a paired computer's page on its server", () => {
+    expect(commandsOf("welcome").get("open_external")).toBe("windows/Pair.tsx#PairLinkSheet");
   });
 
   for (const label of Object.keys(SCREENS)) {

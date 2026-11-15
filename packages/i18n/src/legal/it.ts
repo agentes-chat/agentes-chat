@@ -8,7 +8,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
       "L'accordo per l'utilizzo di agentes.chat: il tuo workspace, i tuoi agenti e ciò di cui ciascuna parte è responsabile.",
     courtesy:
       "La presente è una traduzione di cortesia. In caso di divergenza rispetto alla versione inglese, prevale la versione inglese.",
-    updated: "2026-11-06",
+    updated: "2026-11-13",
     sections: [
       {
         id: "agreement",
@@ -175,7 +175,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
       "Quali dati raccogliamo, che cosa gli agenti inviano e dove, chi può vedere il tuo workspace e quali diritti hai.",
     courtesy:
       "La presente è una traduzione di cortesia. In caso di divergenza rispetto alla versione inglese, prevale la versione inglese.",
-    updated: "2026-11-12",
+    updated: "2026-11-14",
     sections: [
       {
         id: "overview",
@@ -231,7 +231,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
           {
             list: [
               "**Tra i dispositivi e i nostri server.** Tutto ciò che viene scambiato tra i nostri server e i browser, le app e i computer che vi si collegano, compreso il Contenuto del Workspace, passa attraverso il nostro fornitore di rete, che protegge il Servizio dagli attacchi. A tal fine, il fornitore di rete decifra questo traffico nel suo data center più vicino a ciascun dispositivo e lo gestisce per nostro conto.",
-              "**Risposte.** Quando un agente lavora, invia il contesto di cui ha bisogno (il contesto del workspace, le istruzioni dell'agente, la conversazione, la memoria pertinente e i risultati dei suoi strumenti) al fornitore di modelli scelto per quell'agente. Con una chiave API aggiunta dal workspace, la chiamata viene effettuata nell'ambito dell'account del workspace stesso e del suo accordo con tale fornitore. Con un piano di IA, come Claude o ChatGPT, collegato a un agente, l'agente lavora nell'ambito dell'account della persona che ha collegato il piano e dei termini del fornitore.",
+              "**Risposte.** Quando un agente lavora, invia il contesto di cui ha bisogno (il contesto del workspace, le istruzioni dell'agente, la conversazione, la memoria pertinente e i risultati dei suoi strumenti) al fornitore di modelli scelto per quell'agente. Con una chiave API aggiunta dal workspace, la chiamata viene effettuata nell'ambito dell'account del workspace stesso e del suo accordo con tale fornitore. Alcuni fornitori inoltrano la chiamata all'azienda che sviluppa o ospita il modello, che a sua volta la tratta nell'ambito dei termini di tale fornitore. Con un piano di IA, come Claude o ChatGPT, collegato a un agente, l'agente lavora nell'ambito dell'account della persona che ha collegato il piano e dei termini del fornitore.",
               "**Scelta di chi risponde.** Un modello di instradamento legge un nuovo messaggio, i nomi e i ruoli degli agenti del workspace e la conversazione recente per decidere quale agente, se del caso, debba rispondere. Viene eseguito presso TypeSafe o, in subordine, presso il fornitore di modelli del workspace. L'instradamento non concede mai alcuna autorizzazione a un agente.",
               "**Memoria.** Gli agenti conservano una memoria delle conversazioni (riepiloghi, fatti e lezioni apprese) in modo da migliorare nel tempo. Alcune valutazioni sulla memoria (se qualcosa meriti di essere conservato, o sia in contrasto con ciò che un agente già sa) sono effettuate da TypeSafe. La memoria può essere visualizzata e rimossa nella pagina dell'agente e viene eliminata insieme al workspace.",
               "**Ricerca.** Per trovare messaggi e documenti correlati, il testo può essere trasformato in vettori (embedding) da Voyage AI.",
@@ -286,14 +286,14 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Trasferimenti internazionali",
         blocks: [
-          "La nostra applicazione e il relativo database operano negli Stati Uniti, e i fornitori indicati nella presente informativa trattano i dati negli Stati Uniti. I computer dei workspace operano nell'Unione europea o negli Stati Uniti, e il nostro fornitore di rete gestisce il traffico nel suo data center più vicino a ciascun dispositivo, negli Stati Uniti o altrove. Laddove dati personali soggetti al GDPR o allo UK GDPR siano trasferiti verso un paese terzo, ci avvaliamo delle Clausole contrattuali tipo della Commissione europea e dell'Addendum del Regno Unito (UK Addendum). Per i dati soggetti alla LGPD, ci avvaliamo delle garanzie contrattuali di cui all'articolo 33.",
+          "La nostra applicazione e il relativo database operano negli Stati Uniti, e i fornitori indicati nella presente informativa trattano i dati negli Stati Uniti, ad eccezione dei fornitori di modelli e dei servizi collegati scelti da un workspace, e delle aziende a cui essi inoltrano le chiamate, che possono trattare i dati in altri paesi in base ai propri termini. I computer dei workspace operano nell'Unione europea o negli Stati Uniti, e il nostro fornitore di rete gestisce il traffico nel suo data center più vicino a ciascun dispositivo, negli Stati Uniti o altrove. Laddove dati personali soggetti al GDPR o allo UK GDPR siano trasferiti verso un paese terzo, ci avvaliamo delle Clausole contrattuali tipo della Commissione europea e dell'Addendum del Regno Unito (UK Addendum). Per i dati soggetti alla LGPD, ci avvaliamo delle garanzie contrattuali di cui all'articolo 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. App per telefono e per Mac",
         blocks: [
-          "L'app per telefono invia notifiche tramite Expo, Apple e Google. Una notifica può mostrare il nome di chi ha scritto e l'inizio del messaggio, e sei tu a scegliere quali notifiche ricevere. L'app per Mac e i computer collegati mantengono l'accesso sul dispositivo. L'eliminazione del tuo account (disponibile anche nelle app) disconnette tutti i dispositivi.",
+          "L'app per telefono invia notifiche tramite Apple e Google. Una notifica può mostrare il nome di chi ha scritto e l'inizio del messaggio, e sei tu a scegliere quali notifiche ricevere. L'app per Mac e i computer collegati mantengono l'accesso sul dispositivo. L'eliminazione del tuo account (disponibile anche nelle app) disconnette tutti i dispositivi.",
         ],
       },
       {

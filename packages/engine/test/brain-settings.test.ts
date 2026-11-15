@@ -5,9 +5,11 @@ import {
   CODEX_WINDOWS_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
   MISSION_PROTOCOL,
+  OPENCODE_ACP_PROTOCOL,
   SPEED_PROTOCOL,
 } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
+import { MODEL_CATALOG } from "@agenteschat/providers";
 import { CODING_PLANS, learnPlanModels, planOf } from "@agenteschat/providers/plans";
 import {
   ConflictError,
@@ -29,13 +31,14 @@ import {
   brainModelOptions,
   brainOf,
   brainOptions,
+  CLAUDE_CODE_MODELS,
   defaultBrainModel,
   executorBrain,
   normalizeBrainModel,
 } from "../src/brain-settings";
 import { contextFields, recordPlanUsage, speedFields } from "../src/brains/claude-code";
 import { brainAccountFor, brainSpeedFor, planIsOwners } from "../src/brains/select";
-import { addMember, type Fixture, setup } from "./fixtures";
+import { addMember, everyoneWithout, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
 const mac = (patch: Record<string, unknown> = {}) => ({
@@ -52,7 +55,7 @@ const mac = (patch: Record<string, unknown> = {}) => ({
 
 describe("brain settings", () => {
   test("a coding plan's models: any of them by id, its aliases named after what they run there", () => {
-    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Opus", "Sonnet", "Haiku"]);
+    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Opus 5.5", "Sonnet 5.5", "Haiku 5.5"]);
     expect(brainModelOptions("codex").every((o) => o.modelId?.startsWith("gpt"))).toBe(true);
     // Codex offers the catalog's OpenAI rows, GPT-6.1 Terra and GPT-6 Astra among them; GPT-6.1 Sol stays its default.
     expect(brainModelOptions("codex").map((o) => o.label)).toEqual([
@@ -71,15 +74,24 @@ describe("brain settings", () => {
     // An alias the plan leaves out, or "Automático", is its main model; the value stays an alias.
     expect(brainModelLabel("claude_code", "opus", "zai")).toBe("GLM-5.3");
     expect(brainModelLabel("claude_code", "auto", "minimax")).toBe("MiniMax M3.1 Flash");
-    expect(brainModelLabel("claude_code", "opus")).toBe("Opus");
+    expect(brainModelLabel("claude_code", "opus")).toBe("Opus 5.5");
     expect(normalizeBrainModel("claude_code", "haiku")).toBe("haiku");
     // One of a plan's other models is stored by its id and named after it there; while Claude thinks it runs Sonnet.
     expect(normalizeBrainModel("claude_code", "deepseek-v4.1-flash")).toBe("deepseek-v4.1-flash");
     expect(normalizeBrainModel("claude_code", "k3-256k")).toBe("k3-256k");
     expect(brainModelLabel("claude_code", "deepseek-v4.1-flash", "opencode")).toBe("DeepSeek V4.1 Flash");
     expect(brainModelLabel("claude_code", "deepseek-v4.1-flash", "kimi")).toBe("Kimi for Coding");
-    expect(brainModelLabel("claude_code", "deepseek-v4.1-flash")).toBe("Sonnet");
+    expect(brainModelLabel("claude_code", "deepseek-v4.1-flash")).toBe("Sonnet 5.5");
     expect(brainModelLabel("claude_code", "auto")).toBe("auto");
+  });
+
+  test("a Claude alias is named with its version from the catalog row it runs, so a new row renames it", () => {
+    for (const o of CLAUDE_CODE_MODELS) {
+      const row = MODEL_CATALOG[o.modelId ?? ""];
+      expect(row?.provider).toBe("anthropic");
+      expect(`Claude ${o.label}`).toBe(row?.label ?? "");
+      expect(o.label).toMatch(/^[A-Z][a-z]+ \d+(\.\d+)*$/);
+    }
   });
 
   test("stored values read back; executors map to brains", () => {
@@ -129,6 +141,44 @@ describe("brain settings", () => {
     ]);
   });
 
+  test("options: on Windows OpenCode needs a runner that speaks ACP; a CLI that doesn't run on the computer's system says so", () => {
+    const executors = {
+      claude: { version: "2" },
+      cursor: { version: "2026.11.01" },
+      opencode: { version: "1.19.5" },
+      grok: { version: "1.0.80" },
+      antigravity: { version: "1.2.3" },
+      detectedAt: "x",
+    };
+    const reasons = (m: ReturnType<typeof mac>) =>
+      Object.fromEntries(
+        brainOptions(m)
+          .slice(3)
+          .map((o) => [o.kind, o.reason ?? null]),
+      );
+    // An older Windows runner refuses every OpenCode turn; Cursor and Grok Build don't run on Windows; the Antigravity
+    // CLI only on Linux.
+    expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL - 1, executors }))).toEqual({
+      cursor: "system",
+      opencode: "runner_old",
+      grok: "system",
+      antigravity: "system",
+    });
+    expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL, executors })).opencode).toBeNull();
+    expect(reasons(mac({ os: "darwin", protocol: OPENCODE_ACP_PROTOCOL - 1, executors }))).toEqual({
+      cursor: null,
+      opencode: null,
+      grok: null,
+      antigravity: "system",
+    });
+    expect(reasons(mac({ os: "linux", protocol: OPENCODE_ACP_PROTOCOL, executors }))).toEqual({
+      cursor: null,
+      opencode: null,
+      grok: null,
+      antigravity: null,
+    });
+  });
+
   test("options: only what the computer has; why the rest can't be chosen", () => {
     const reasons = (m: ReturnType<typeof mac> | null) =>
       brainOptions(m).map((o) => [o.kind, o.available, o.reason ?? null]);
@@ -173,6 +223,12 @@ describe("brain settings", () => {
       ["claude_code", false, "not_installed"],
       ["codex", false, "outdated"],
     ]);
+    // There and failing to start: said as that, never "not installed".
+    const broken = mac({ executors: { codex: { version: "0.170.0" }, broken: { claude: "boom" }, detectedAt: "x" } });
+    expect(reasons(broken).slice(1, 3)).toEqual([
+      ["claude_code", false, "cant_start"],
+      ["codex", true, null],
+    ]);
     const both = mac({ executors: { claude: { version: "2" }, codex: { version: "0.170.0" }, detectedAt: "x" } });
     expect(
       brainOptions(both).every((o) => o.available || ["cursor", "opencode", "grok", "antigravity"].includes(o.kind)),
@@ -183,6 +239,19 @@ describe("brain settings", () => {
       ["claude_code", false, "tool_off"],
       ["codex", true, null],
     ]);
+    // Not installed stays "not_installed" even when its toggle is off in the app's Tools.
+    const uninstalledOff = mac({
+      ...both,
+      protocol: OPENCODE_ACP_PROTOCOL,
+      executors: { detectedAt: "2026-01-01T00:00:00Z" },
+      access: { tools: { claude: false, codex: false, opencode: false, cursor: false } },
+    });
+    expect(reasons(uninstalledOff).slice(1, 3)).toEqual([
+      ["claude_code", false, "not_installed"],
+      ["codex", false, "not_installed"],
+    ]);
+    expect(brainOptions(uninstalledOff).find((o) => o.kind === "opencode")?.reason).toBe("not_installed");
+    expect(brainOptions(uninstalledOff).find((o) => o.kind === "cursor")?.reason).toBe("not_installed");
     expect(reasons(mac({ access: { tools: { claude: true } } }))[1]).toEqual(["claude_code", true, null]);
     // Commands off (the app's default for a new workspace) with Claude Code on: the plan still thinks there, as the
     // runner runs it; "no permission to run programs" is only for a runner that reports no tools.
@@ -254,12 +323,18 @@ async function world() {
 }
 
 describe("Criar agente: what a new agent could think with", () => {
-  test("admins see every computer with what it offers; a member can't create agents", async () => {
+  test("admins see every computer with what it offers; a member the server's own and theirs, never someone else's", async () => {
     const { fx, deps, machineId, bia, caio } = await world();
     const [mine] = await newAgentBrainMachines(deps, caio.id, fx.org.id);
     expect(mine).toMatchObject({ machineId, name: "mac" });
     expect(mine?.options.find((o) => o.kind === "claude_code")?.available).toBe(true);
     expect(mine?.options.find((o) => o.kind === "codex")).toMatchObject({ available: false, reason: "not_installed" });
+    // Ana's Mac is hers: Bia's new agent can't live there.
+    expect(await newAgentBrainMachines(deps, bia.id, fx.org.id)).toEqual([]);
+    // The server's own computer is recorded as its owner's, yet it is the workspace's: Bia's agent may live there.
+    await fx.db.update(schema.machines).set({ kind: "host" }).where(eq(schema.machines.id, machineId));
+    expect((await newAgentBrainMachines(deps, bia.id, fx.org.id)).map((m) => m.machineId)).toEqual([machineId]);
+    await everyoneWithout(fx.db, fx.org.id, "create_agents");
     await expect(newAgentBrainMachines(deps, bia.id, fx.org.id)).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
@@ -293,9 +368,19 @@ describe("context window (Configuração avançada)", () => {
   });
 
   test("a computer turn carries it only to a runner that knows it (protocol 28)", () => {
-    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, { contextTokens: 400_000 })).toEqual({ contextTokens: 400_000 });
-    expect(contextFields(CONTEXT_LIMIT_PROTOCOL - 1, { contextTokens: 400_000 })).toEqual({});
-    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {})).toEqual({});
+    const chosen = { contextTokens: 1_000_000 };
+    for (const kind of ["claude_code", "codex", "cursor"]) {
+      expect(contextFields(CONTEXT_LIMIT_PROTOCOL, chosen, kind)).toEqual(chosen);
+      expect(contextFields(CONTEXT_LIMIT_PROTOCOL - 1, chosen, kind)).toEqual({});
+    }
+    // "Automático": Claude Code and Codex summarise at 200K; programs that take no limit get none.
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "claude_code")).toEqual({ contextTokens: 200_000 });
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "codex")).toEqual({ contextTokens: 200_000 });
+    expect(contextFields(undefined, {}, "codex")).toEqual({ contextTokens: 200_000 });
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "cursor")).toEqual({});
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL, {}, "antigravity")).toEqual({});
+    // An older runner never sees it: it keeps compacting at the model's window.
+    expect(contextFields(CONTEXT_LIMIT_PROTOCOL - 1, {}, "claude_code")).toEqual({});
   });
 
   test("each model choice says its window: which limits are worth offering with it", () => {

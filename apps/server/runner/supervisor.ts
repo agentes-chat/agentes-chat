@@ -171,6 +171,8 @@ export interface WorkerState {
   account?: string | null;
   /** The other accounts it thinks with (the right hand on people's own plans): kept too. */
   accounts?: string[];
+  /** The language of its agent's person (`MachineAgent.locale`), for the pages people see in its browser. */
+  locale?: string;
 }
 
 /** The agent's desktop as its worker uses it (desktop use, its Chrome): where it runs, never its VNC passwords. */
@@ -394,6 +396,8 @@ export interface SupervisorOptions {
   account?: (agentId: string) => string | null;
   /** The other accounts it thinks with now (`MachineAgent.accounts`). */
   accounts?: (agentId: string) => string[];
+  /** The language of the agent's person (`MachineAgent.locale`). */
+  locale?: (agentId: string) => string | undefined;
   /** Root's shared git cache (`systemGitCache`); without it a worker's clones get none. */
   gitCache?: (input: { connection: string; repo: string; github: string; uid: number }) => Promise<string | null>;
   /** Tests: the clock of the browser's lease. */
@@ -1305,6 +1309,7 @@ export class Supervisor {
       ...(this.opts.browserKept?.(w.user.id) ? { browserKept: true } : {}),
       ...(this.opts.account ? { account: this.opts.account(w.user.id) } : {}),
       ...(this.opts.accounts?.(w.user.id).length ? { accounts: this.opts.accounts(w.user.id) } : {}),
+      ...(this.opts.locale?.(w.user.id) ? { locale: this.opts.locale(w.user.id) } : {}),
     };
     const line = JSON.stringify(frame);
     if (line === w.state) return;
@@ -1373,6 +1378,11 @@ export class Supervisor {
         if (this.opts.send(f)) this.calls.set(f.callId, w);
         return;
       }
+      case "browser.pointer":
+      case "desktop.pointer":
+        // Its own agent's pointer only.
+        if (f.agentId === w.user.id) this.opts.send(f);
+        return;
       case "browser.frame":
       case "browser.stream.ended": {
         if (f.agentId !== w.user.id) return;
@@ -1949,7 +1959,7 @@ export function launchWorker(
       stdout: child.stdout,
       stderr: child.stderr,
       exited,
-      // runuser passes SIGTERM on to the worker.
+      // Every step of the launcher execs the next one, so this is the worker itself.
       kill: () => {
         child.stdin.destroy();
         child.kill("SIGTERM");

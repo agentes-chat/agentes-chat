@@ -486,43 +486,59 @@ export function resetFromWords(text: string, now = Date.now()): string | undefin
   return ms > 0 ? iso(now + ms) : undefined;
 }
 
+/** A name without the panel's info glyphs (ⓘ), bullets and trailing punctuation. */
+const agyName = (s: string) => s.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N})]+$/gu, "");
+/** A limit line of Antigravity's report: which window, and what comes before its words (Argon's own name). */
+const agyLimit = (line: string) => {
+  const m = /five[- ]hour|weekly|seven[- ]day/i.exec(line);
+  if (!m) return null;
+  return {
+    which: /^five/i.test(m[0]) ? ("five_hour" as const) : ("seven_day" as const),
+    prefix: agyName(line.slice(0, m.index)),
+  };
+};
+
 /**
- * The Antigravity CLI's `/usage` report (ADR 0143), printed in print mode: per model group, its "Five Hour Limit
- * Remaining" and "Weekly Limit Remaining" as percentages left (antigravity.google/docs/models' View Usage panel, read
- * 2026-11-04), with when each refreshes where it says. The first group's (Gemini's) are the plan's windows; another
- * group's ("Claude and GPT models") come as `other` with its name.
+ * The Antigravity CLI's `/usage` report (ADR 0143), printed in print mode: per model group ("Gemini Models", "Claude
+ * and GPT models", "Gemini 4 Argon"), its five-hour and weekly limits, with when each refreshes where it says
+ * (antigravity.google/docs/models' View Usage panel). Every percentage there is what is left, whether or not the line
+ * says "Remaining" (Argon's "Weekly Limit 100%" is all of it left); only a line that says "used" counts up. A group
+ * starts at any short line without a % that limit lines follow, whatever its words. The first group's (Gemini's) are
+ * the plan's windows; every other group's come as `other` with its name, so they never put the plan at its limit.
  * ponytail: read from the docs' panel, not a real report; the probe drops what it can't read.
  */
 export function antigravityUsage(text: string, source: PlanUsage["source"], now = Date.now()): PlanUsage | null {
   const lines = text
     // biome-ignore lint/suspicious/noControlCharactersInRegex: the CLI's colors
     .replace(/\u001b\[[0-9;]*m/g, "")
-    .split("\n")
-    .map((l) => l.trim());
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   const windows: PlanWindow[] = [];
   let group = "";
   let first: string | undefined;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
-    const which = /five[- ]hour/i.test(line) ? "five_hour" : /weekly|seven[- ]day/i.test(line) ? "seven_day" : null;
-    if (!which) {
-      if (/\bmodels?\b/i.test(line) && !/%/.test(line) && line.length <= 60) {
-        group = line.replace(/[:]+$/, "");
-      }
+    const limit = agyLimit(line);
+    if (!limit) {
+      const header = !/%|\b(?:resets?|refresh)/i.test(line) && line.length <= 60;
+      if (header && agyLimit(lines[i + 1] ?? "")) group = agyName(line);
       continue;
     }
-    const near = `${line} ${lines[i + 1] ?? ""}`;
-    const left = /(\d{1,3}(?:\.\d+)?)\s*%/.exec(near);
-    if (!left?.[1]) continue;
-    const remaining = /remaining|left/i.test(line);
-    const used = remaining ? 100 - Number(left[1]) : Number(left[1]);
-    const at = resetFromWords(`${near} ${lines[i + 2] ?? ""}`, now);
+    if (limit.prefix) group = limit.prefix;
+    const j = /%/.test(line) ? i : i + 1;
+    const shown = lines[j] ?? "";
+    const pct = /(\d{1,3}(?:\.\d+)?)\s*%/.exec(shown);
+    if (!pct?.[1]) continue;
+    const used = /\bused\b/i.test(`${line} ${shown}`) ? Number(pct[1]) : 100 - Number(pct[1]);
+    const after = lines[j + 1] ?? "";
+    const at = resetFromWords(`${line} ${shown} ${agyLimit(after) || /%/.test(after) ? "" : after}`, now);
     first ??= group;
     const other = group !== first && group;
     windows.push({
       ...(other
-        ? { kind: "other" as const, label: label(`${group} · ${which === "five_hour" ? "5h" : "7d"}`) }
-        : { kind: which }),
+        ? { kind: "other" as const, label: label(`${group} · ${limit.which === "five_hour" ? "5h" : "7d"}`) }
+        : { kind: limit.which }),
       usedPercent: percent(used),
       ...(at ? { resetsAt: at } : {}),
     });

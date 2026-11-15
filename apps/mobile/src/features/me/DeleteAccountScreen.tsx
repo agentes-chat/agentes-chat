@@ -304,17 +304,26 @@ export function DeleteAccountScreen() {
               </Text>
             ) : null}
             {proof === "addPassword" ? (
-              <View style={styles.proof}>
-                <Text variant="body" tone="ink2">
-                  {t("mobile.delete.addPasswordFirst")}
-                </Text>
-                <Button
-                  variant="secondary"
-                  label={t("mobile.delete.addPasswordWeb")}
-                  onPress={() => web(shell ? `/org/${shell.id}?account=password` : "/")}
-                />
-                <Button variant="ghost" label={t("mobile.common.retry")} onPress={() => void meQuery.refetch()} />
-              </View>
+              me?.user.confirmsOnThisMac ? (
+                <View style={styles.proof}>
+                  <Text variant="body" tone="ink2">
+                    {t("mobile.delete.onThisComputer")}
+                  </Text>
+                  <Button variant="ghost" label={t("mobile.common.retry")} onPress={() => void meQuery.refetch()} />
+                </View>
+              ) : (
+                <View style={styles.proof}>
+                  <Text variant="body" tone="ink2">
+                    {t("mobile.delete.addPasswordFirst")}
+                  </Text>
+                  <Button
+                    variant="secondary"
+                    label={t("mobile.delete.addPasswordWeb")}
+                    onPress={() => web(shell ? `/org/${shell.id}?account=password` : "/")}
+                  />
+                  <Button variant="ghost" label={t("mobile.common.retry")} onPress={() => void meQuery.refetch()} />
+                </View>
+              )
             ) : null}
             <HoldButton label={t("mobile.delete.hold")} disabled={!ready || busy} onConfirm={() => void confirm()} />
           </>

@@ -29,7 +29,7 @@ import { type CodexBrainEvent, type CodexBrainTurnRequest, handleCodexBrainTurn 
 import type { CodexAppServers } from "./brain-codex-app";
 import { type CursorBrainTurnRequest, handleCursorBrainTurn } from "./brain-cursor";
 import { type GrokBrainTurnRequest, handleGrokBrainTurn } from "./brain-grok";
-import { handleOpencodeBrainTurn, type OpencodeBrainTurnRequest } from "./brain-opencode";
+import { handleOpencodeBrainTurn, type OpencodeBrainTurnRequest, steerOpencodeTurn } from "./brain-opencode";
 import { routeWithPlan } from "./brain-route";
 import { type BrowserManager, browserSetupText } from "./browser";
 import type { BrowserViews } from "./browser-views";
@@ -216,6 +216,12 @@ export const OP_ROUTES: Readonly<Record<MachineOp, "machine" | "agent">> = {
   "keep.end": "machine",
   // The person's own session: macOS's password window opens on their screen (a system-mode runner answers unsupported).
   "xcode.fix": "machine",
+  "xcode.open": "machine",
+  // Looking for the coding CLIs only reads the computer's PATH, so root answers it in system mode too.
+  "clis.check": "machine",
+  // Installed as the runner's own user. Root answers unsupported: the agents' users get their CLIs from the
+  // computer's setup, never from an install run as root.
+  "cli.install": "machine",
 };
 
 type AccessRequestOp = Extract<MachineRequest, { op: "access.request" }>;
@@ -337,6 +343,11 @@ export interface HandlerContext {
   };
   /** `XCODE_FIX_PROTOCOL`: fixing this Mac's own Xcode; without it the op answers `unsupported`. */
   xcodeFix?: (req: Extract<MachineRequest, { op: "xcode.fix" }>) => MachineReplies["xcode.fix"];
+  /** `CLI_INSTALL_PROTOCOL`: the coding CLIs looked up now, and installed from the apps. */
+  clisCheck?: () => Promise<MachineReplies["clis.check"]>;
+  cliInstall?: (req: Extract<MachineRequest, { op: "cli.install" }>) => MachineReplies["cli.install"];
+  /** `IPHONE_DEV_MODE_PROTOCOL`: opening Xcode on this Mac; without it the op answers `opened: false`. */
+  xcodeOpen?: () => Promise<MachineReplies["xcode.open"]>;
 }
 
 export interface RequestScope {
@@ -707,13 +718,26 @@ async function routeRequest(ctx: HandlerContext, req: MachineRequest, scope: Req
     if (!ctx.phones) throw new RunnerError("phone_missing", "This computer doesn't reach phones.");
     return ctx.phones.pair(req);
   }
-  if (req.op === "phone.look") return { looking: ctx.phones?.look() ?? false } satisfies MachineReplies["phone.look"];
+  if (req.op === "phone.look")
+    return { looking: (await ctx.phones?.look()) ?? false } satisfies MachineReplies["phone.look"];
+  if (req.op === "xcode.open") return (await ctx.xcodeOpen?.()) ?? { opened: false };
   if (req.op === "phone.wifi")
     return ctx.phones ? ctx.phones.wifi(req) : ({ available: [] } satisfies MachineReplies["phone.wifi"]);
   if (req.op === "xcode.fix") {
     return (
       ctx.xcodeFix?.(req) ?? {
         fix: { kind: req.kind === "update" ? "update" : "select", state: "unsupported", step: 0 },
+      }
+    );
+  }
+  if (req.op === "clis.check") {
+    if (!ctx.clisCheck) throw new RunnerError("bad_request", "This runner doesn't look up its programs on request");
+    return ctx.clisCheck();
+  }
+  if (req.op === "cli.install") {
+    return (
+      (ctx.systemMode?.() ? undefined : ctx.cliInstall?.(req)) ?? {
+        install: req.tool ? { tool: req.tool, state: "unsupported" } : null,
       }
     );
   }
@@ -1263,18 +1287,22 @@ async function doHostedTurn(
 }
 
 /**
- * Cursor, OpenCode, Grok and Antigravity turns in progress, by run: `brain.steer` answers `unsupported` for them
- * (`agent -p`, `opencode run`, `grok -p` and `agy -p` take nothing mid-turn).
+ * Cursor, Grok and Antigravity turns in progress, by run: `brain.steer` answers `unsupported` for them (`agent -p`,
+ * `grok -p` and `agy -p` take nothing mid-turn).
  */
-const turnOnlyRuns = new Map<string, "Cursor" | "OpenCode" | "Grok Build" | "Antigravity CLI">();
+const turnOnlyRuns = new Map<string, "Cursor" | "Grok Build" | "Antigravity CLI">();
+
+/** OpenCode turns in progress, by run: `no_turn` until the turn can take messages (`steerOpencodeTurn`). */
+const opencodeRuns = new Set<string>();
 
 const STEER_UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 /**
  * `brain.steer` (protocol 15): messages for the request's agent's turn of
  * `runId` in progress (Claude Code reads them at its next tool boundary; a
- * Codex turn on its app-server at its next model request, `turn/steer`).
- * A Codex turn run by `codex exec` can't take any: `unsupported`.
+ * Codex turn on its app-server at its next model request, `turn/steer`; an
+ * OpenCode 2 turn at its next model step, `_session/steering`). A Codex turn
+ * run by `codex exec` and an OpenCode 1 turn can't take any: `unsupported`.
  */
 function doBrainSteer(
   ctx: HandlerContext,
@@ -1293,6 +1321,9 @@ function doBrainSteer(
   });
   const turnOnly = turnOnlyRuns.get(runId);
   if (turnOnly) return { status: "unsupported", reason: `${turnOnly} reads messages only between turns` };
+  if (opencodeRuns.has(runId)) {
+    return steerOpencodeTurn(String(req.agent.id), { runId, session, messages }) ?? { status: "no_turn" };
+  }
   if (ctx.codex?.runs.has(runId)) {
     return ctx.codex.app
       ? ctx.codex.app.steer(String(req.agent.id), { runId, session, messages })
@@ -1383,9 +1414,8 @@ async function doCodexTurn(
     }
     scope.emit?.({ type: "brain.event", runId, event });
   };
-  if (cursor || opencode || grok || agy) {
-    turnOnlyRuns.set(runId, cursor ? "Cursor" : opencode ? "OpenCode" : grok ? "Grok Build" : "Antigravity CLI");
-  }
+  if (opencode) opencodeRuns.add(runId);
+  else if (cursor || grok || agy) turnOnlyRuns.set(runId, cursor ? "Cursor" : grok ? "Grok Build" : "Antigravity CLI");
   try {
     if (agy) {
       await handleAntigravityBrainTurn(
@@ -1468,6 +1498,7 @@ async function doCodexTurn(
   } finally {
     codex.runs.delete(runId);
     turnOnlyRuns.delete(runId);
+    opencodeRuns.delete(runId);
   }
   signedOut(ctx, req, final);
   scope.emit?.({ type: "brain.done", runId });

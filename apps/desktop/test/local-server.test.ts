@@ -9,6 +9,7 @@ import {
   isHereServer,
   type LocalServerStatus,
   NO_SERVER,
+  ownerless,
   REASON_TEXT,
   STEP_SLOW_MS,
   setupSteps,
@@ -156,6 +157,16 @@ describe("which screen", () => {
     expect(hereView(running, null)).toEqual({ kind: "running", server: LOCAL });
     expect(hereView(reached, null)).toEqual({ kind: "running", server: TAILNET });
     expect(hereView({ ...running, phase: "failing" }, null).kind).toBe("running");
+  });
+
+  test("running with no account left (its owner deleted theirs): the form asks who the new owner is", () => {
+    const gone = { ...running, owner: false };
+    expect(hereView(gone, null)).toEqual({ kind: "form", ask: true });
+    expect(ownerless(gone)).toBe(true);
+    expect(ownerless(running)).toBe(false);
+    // Stopped, or one from the terminal: never this.
+    expect(ownerless({ ...gone, run: false, phase: "off" })).toBe(false);
+    expect(ownerless({ ...gone, installed: "terminal" })).toBe(false);
   });
 });
 

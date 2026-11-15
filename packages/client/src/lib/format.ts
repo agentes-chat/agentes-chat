@@ -58,6 +58,22 @@ export const clockHour = (locale: string): "numeric" | "2-digit" => (uses12h(loc
 export const formatTime = (locale: string, iso: string) =>
   new Intl.DateTimeFormat(locale, { hour: clockHour(locale), minute: "2-digit" }).format(new Date(iso));
 
+/**
+ * The clock alone, without its day period: "8:39" for "8:39 PM", "1:32" for "오후 1:32", "10:42" in 24-hour
+ * locales. For a column too narrow for "PM" on the same line (a grouped message's gutter, under a turn whose header
+ * says the whole time).
+ */
+export function formatClock(locale: string, iso: string) {
+  const parts = new Intl.DateTimeFormat(locale, { hour: clockHour(locale), minute: "2-digit" }).formatToParts(
+    new Date(iso),
+  );
+  const digits = parts.flatMap((p, i) => (p.type === "hour" || p.type === "minute" ? [i] : []));
+  return parts
+    .slice(digits[0], (digits.at(-1) ?? parts.length - 1) + 1)
+    .map((p) => p.value)
+    .join("");
+}
+
 /** "14:05" today, "24 out 14:05" another day (a pause's end, when a computer went offline). */
 export const clockAt = (locale: string, iso: string, now = new Date()) =>
   daysBetween(iso, now) === 0 ? formatTime(locale, iso) : `${formatShortDate(locale, iso)} ${formatTime(locale, iso)}`;
@@ -177,6 +193,21 @@ export function relativeTime(t: TFunction, locale: string, iso: string, now = ne
   return formatShortDate(locale, iso);
 }
 
+/** When an agent stopped working on a task: "Stopped 2 h ago", "Stopped yesterday", "Stopped on Nov 11". */
+export function stoppedLine(t: TFunction, locale: string, iso: string, now = new Date()) {
+  const diff = now.getTime() - new Date(iso).getTime();
+  if (diff < 60_000) return t("issues.now.stoppedNow");
+  if (diff < 3_600_000)
+    return t("issues.now.stoppedAgo", { ago: t("format.minutesAgo", { count: Math.floor(diff / 60_000) }) });
+  const days = daysBetween(iso, now);
+  if (days === 0)
+    return t("issues.now.stoppedAgo", { ago: t("format.hoursAgo", { count: Math.floor(diff / 3_600_000) }) });
+  if (days === 1) return t("issues.now.stoppedYesterday");
+  return t("issues.now.stoppedOn", {
+    date: formatShortDate(locale, iso, new Date(iso).getFullYear() !== now.getFullYear()),
+  });
+}
+
 /** How long since: "há 12 min", "há 3 h", "há 2 dias"; "agora" under a minute (a computer offline, a task stopped). */
 export function timeAgo(t: TFunction, iso: string, now = Date.now()): string {
   const diff = now - Date.parse(iso);
@@ -251,6 +282,9 @@ export const emailName = (email: string) => email.split("@")[0] || email;
 /** "Ada, Atlas, and Theo", "Ada, Atlas e Theo", "Ada、Atlas、Theo": the language's own list (Intl.ListFormat), in `t`'s language. */
 export const joinNames = (names: readonly string[], t: TFunction): string => t("format.list", { names });
 
+/** A name held whole in running text ("#chamados-urgentes"): its hyphens never break the line (U+2011). */
+export const heldWhole = (name: string) => name.replaceAll("-", "\u2011");
+
 /** How many names a list of a team says before "and N more" (`namesText`): a ready-made team's four, whole. */
 export const NAMES_SHOWN = 4;
 
@@ -259,6 +293,23 @@ export function namesText(t: TFunction, names: string[], max = 2, total = names.
   const shown = names.slice(0, max);
   if (total <= shown.length) return joinNames(shown, t);
   return joinNames([...shown, t("notifications.namesMore", { count: total - shown.length })], t);
+}
+
+/** How many agents a roster (`rosterText`) names, one per line, before "and N more". */
+export const ROSTER_SHOWN = 8;
+
+/** "Ana · Designer" per line, the first `max` of them, then "e mais 3": a team to read in a tip. */
+export function rosterText(
+  t: TFunction,
+  agents: readonly { name: string; role?: string | null }[],
+  max = ROSTER_SHOWN,
+) {
+  // A name often carries its role already ("Lumen · Tradutora"): it isn't said twice.
+  const lines = agents
+    .slice(0, max)
+    .map((a) => (a.role && !a.name.includes(a.role) ? `${a.name} · ${a.role}` : a.name));
+  if (agents.length > max) lines.push(t("format.andMore", { count: agents.length - max }));
+  return lines.join("\n");
 }
 
 /** Short model label for message meta: "Claude Sonnet 5.5" → "sonnet 5.5". */
@@ -330,4 +381,12 @@ export function shortTarget(text: string, max = 40) {
   const cut = out.slice(0, max);
   const space = cut.lastIndexOf(" ");
   return space > max / 2 ? cut.slice(0, space) : cut;
+}
+
+/** "1,2 s", "760 ms", "22 min", "1,5 h": a line's time, finer than the block's (and the work states' one clock). */
+export function formatLineTime(locale: string, ms: number) {
+  if (ms < 1000) return `${Math.max(1, Math.round(ms))} ms`;
+  if (ms < 60_000) return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(ms / 1000)} s`;
+  if (ms < 3600_000) return `${Math.round(ms / 60_000)} min`;
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: ms < 10 * 3600_000 ? 1 : 0 }).format(ms / 3600_000)} h`;
 }

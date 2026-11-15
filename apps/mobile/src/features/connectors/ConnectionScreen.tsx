@@ -1,4 +1,10 @@
-import { useCatalog, useConnections, useCustomServers, useRenameConnection } from "@agenteschat/client";
+import {
+  useCatalog,
+  useConnections,
+  useCustomServerAction,
+  useCustomServers,
+  useRenameConnection,
+} from "@agenteschat/client";
 import {
   accountUnchecked,
   type ConnectedItem,
@@ -74,6 +80,8 @@ function Connection({ id }: { id: string }) {
   const connections = useConnections(orgId);
   const servers = useCustomServers(orgId);
   const admin = can(org, "manage_connectors");
+  const { refresh } = useCustomServerAction(orgId);
+  const toast = useToast();
   const sheet = useSheet();
   const { y, onScroll } = useCoverScroll();
   const item = connectedItems(connections.data ?? [], servers.data ?? [], catalog.data?.connectors ?? []).find(
@@ -146,7 +154,28 @@ function Connection({ id }: { id: string }) {
             {item.needsReconnect ? (
               <Problem text={t("mobile.connectors.needsReconnect", { name })} />
             ) : item.toolsError ? (
-              <Problem text={t("mobile.connectors.noTools", { name })} />
+              <View style={styles.problem}>
+                <Problem text={t("mobile.connectors.noTools", { name })} />
+                {admin && item.server ? (
+                  <Button
+                    variant="primary"
+                    wide
+                    label={t("mobile.connectors.readAgain")}
+                    loading={refresh.isPending}
+                    disabled={refresh.isPending}
+                    onPress={() => {
+                      const server = item.server;
+                      if (server)
+                        refresh.mutate(server.id, {
+                          onError: () => {
+                            errorHaptic();
+                            toast({ title: t("mobile.connectors.review.refreshFailed") });
+                          },
+                        });
+                    }}
+                  />
+                ) : null}
+              </View>
             ) : item.reconnectAdds.length > 0 ? (
               <Text variant="footnote" tone="muted" style={styles.lead}>
                 {reconnectAddsText(t, item)}
@@ -306,6 +335,7 @@ const styles = StyleSheet.create({
   loading: { marginTop: 24 },
   // The pushed screens' 16-point margin (the connectors list and the settings screens use it too).
   body: { paddingHorizontal: 16 },
+  problem: { gap: 12 },
   lead: { paddingHorizontal: 16, paddingTop: 12 },
   gap: { height: 24 },
 });

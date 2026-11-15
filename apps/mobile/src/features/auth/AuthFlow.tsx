@@ -30,6 +30,7 @@ import { Shake } from "@/ui/auth/Shake";
 import { LastUsed, lastSignIn, rememberSignIn, SocialButtons, useSocialProviders } from "@/ui/auth/SocialButtons";
 import { Button } from "@/ui/Button";
 import { haptics } from "@/ui/haptics";
+import { LineIcon } from "@/ui/LineIcon";
 import { Locked } from "@/ui/Locked";
 import { router } from "@/ui/navigation";
 import { Text } from "@/ui/Text";
@@ -62,7 +63,7 @@ export const LAST_EMAIL = "last-email";
 /** How often the e-mail's lookup tries again while there is no connection. */
 const OFFLINE_RETRY_MS = 5000;
 /** The no-connection line: the orbit on the first line of its words. */
-const OFFLINE_LINE = { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 } as const;
+const OFFLINE_LINE = { flexDirection: "row", alignItems: "flex-start", justifyContent: "center", gap: 8 } as const;
 
 type Step =
   | "email"
@@ -227,18 +228,23 @@ export function AuthFlow({
     setError(t(network ? "mobile.auth.errors.network" : "mobile.auth.errors.generic"));
   };
 
+  // The e-mail's lookup passed the bot check: its pass stands for the next step's (ADR 0075), so nobody meets
+  // Cloudflare twice in one sign-in. The widget is asked only when the server no longer takes the pass.
   const signIn = async () => {
     setPending(true);
     setError(null);
     try {
-      const refused = await withHumanCheck(human.check, async (token) =>
-        refusalOf(
-          await authClient().signIn.email({
-            email: email.trim(),
-            password,
-            fetchOptions: { headers: humanCheckHeaders(token) },
-          }),
-        ),
+      const refused = await withHumanCheck(
+        human.check,
+        async (token) =>
+          refusalOf(
+            await authClient().signIn.email({
+              email: email.trim(),
+              password,
+              fetchOptions: { headers: humanCheckHeaders(token) },
+            }),
+          ),
+        options?.pass,
       );
       if (refused) {
         haptics.warning();
@@ -263,15 +269,18 @@ export function AuthFlow({
     setPending(true);
     setError(null);
     try {
-      const refused = await withHumanCheck(human.check, async (token) =>
-        refusalOf(
-          await authClient().signUp.email({
-            name: name.trim(),
-            email: email.trim(),
-            password,
-            fetchOptions: { headers: { ...humanCheckHeaders(token), ...requests.headers } },
-          }),
-        ),
+      const refused = await withHumanCheck(
+        human.check,
+        async (token) =>
+          refusalOf(
+            await authClient().signUp.email({
+              name: name.trim(),
+              email: email.trim(),
+              password,
+              fetchOptions: { headers: { ...humanCheckHeaders(token), ...requests.headers } },
+            }),
+          ),
+        options?.pass,
       );
       if (refused) {
         haptics.warning();
@@ -298,14 +307,17 @@ export function AuthFlow({
     try {
       // The answer is the same whether or not the account exists. Relative: the server resolves it
       // against its own address, so the link opens its web page whatever address the app reached it at.
-      const refused = await withHumanCheck(human.check, async (token) =>
-        refusalOf(
-          await authClient().requestPasswordReset({
-            email: email.trim(),
-            redirectTo: "/reset-password",
-            fetchOptions: { headers: humanCheckHeaders(token) },
-          }),
-        ),
+      const refused = await withHumanCheck(
+        human.check,
+        async (token) =>
+          refusalOf(
+            await authClient().requestPasswordReset({
+              email: email.trim(),
+              redirectTo: "/reset-password",
+              fetchOptions: { headers: humanCheckHeaders(token) },
+            }),
+          ),
+        options?.pass,
       );
       if (refused) return failed(refused);
       haptics.success();
@@ -532,7 +544,9 @@ export function AuthFlow({
 
       {offline && step === "email" ? (
         <View style={OFFLINE_LINE} accessibilityLiveRegion="polite">
-          <PixelOrbit color="sky" size={16} />
+          <LineIcon variant="subhead" size={16} mark>
+            <PixelOrbit color="sky" size={16} />
+          </LineIcon>
           <Text variant="subhead" tone="muted" style={{ flexShrink: 1 }}>
             {t("mobile.auth.errors.offlineRetry")}
           </Text>

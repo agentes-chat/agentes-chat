@@ -122,7 +122,7 @@ describe("Quem pensa: the account on the computer and the effort (ADR 0041)", ()
     // The computer's own sign-in by the name the Connect cards give it, never the computer's.
     expect(brainCell()).toEqual({
       label: "Pensa com Claude",
-      value: "Sonnet · esforço médio",
+      value: "Sonnet 5.5 · esforço médio",
       sub: "A conta que os seus agentes dividem",
     });
     expect(sentence().textContent).not.toContain("Conta deste MacBook");
@@ -728,7 +728,7 @@ describe("Usar em outros agentes (ADR 0094)", () => {
       { brain: "claude_code", model: "opus" },
     ]);
     const c = await copyDialog(d);
-    expect(c.textContent).toContain("Eles passam a pensar com Opus pelo plano do Claude.");
+    expect(c.textContent).toContain("Eles passam a pensar com Opus 5.5 pelo plano do Claude.");
     // What each would do, from the server's preview, Ada first as her own setup is what they take.
     expect(copyCalls(state)).toEqual([
       {
@@ -758,7 +758,7 @@ describe("Usar em outros agentes (ADR 0094)", () => {
       setup: expect.objectContaining({ brain: "claude_code", model: "opus", effort: "medium" }),
       agentIds: [ATLAS_ID],
     });
-    expect(document.body.textContent).toContain("1 agente agora pensa com Opus pelo plano do Claude.");
+    expect(document.body.textContent).toContain("1 agente agora pensa com Opus 5.5 pelo plano do Claude.");
     expect(screen().queryByRole("dialog", { name: "Usar em outros agentes" })).toBeNull();
     // No agent picked on someone else's plan: nothing asked.
     expect(screen().queryByRole("dialog", { name: /^Usar o plano/ })).toBeNull();
@@ -821,7 +821,9 @@ describe("Usar em outros agentes (ADR 0094)", () => {
     await click(row);
     await settle(4);
     const c = screen().getByRole("dialog", { name: "Usar em outros agentes" });
-    expect(c.textContent).toContain("Eles passam a pensar com Opus pelo plano do Claude · Autonomia: Não pergunta.");
+    expect(c.textContent).toContain(
+      "Eles passam a pensar com Opus 5.5 pelo plano do Claude · Autonomia: Não pergunta.",
+    );
     expect(copyCalls(state)[0]).toMatchObject({ setup: { autonomy: "never" }, preview: true });
     // Atlas already thinks so and Lia works on another computer: only their Autonomia changes, and they can take it.
     const atlas = within(c).getByRole("checkbox", { name: /^Atlas/ });
@@ -841,7 +843,7 @@ describe("Usar em outros agentes (ADR 0094)", () => {
       agentIds: [ATLAS_ID, LIA_ID],
     });
     const toasts = document.body.textContent;
-    expect(toasts).toContain("1 agente agora pensa com Opus pelo plano do Claude · Autonomia: Não pergunta.");
+    expect(toasts).toContain("1 agente agora pensa com Opus 5.5 pelo plano do Claude · Autonomia: Não pergunta.");
     expect(toasts).toContain("1 agente mudou só a autonomia.");
     expect(toasts).not.toContain("não mudou");
   });
@@ -876,7 +878,7 @@ describe("Usar em outros agentes (ADR 0094)", () => {
     const again = copyCalls(state).at(-1);
     expect(again).toMatchObject({ agentIds: [ADA_ID, ATLAS_ID, LIA_ID], preview: true });
     expect(again).not.toHaveProperty(["setup", "autonomy"]);
-    expect(c.textContent).toContain("Eles passam a pensar com Opus pelo plano do Claude.");
+    expect(c.textContent).toContain("Eles passam a pensar com Opus 5.5 pelo plano do Claude.");
     expect(c.textContent).not.toContain("Autonomia:");
     expect(within(c).getByRole("checkbox", { name: /^Lia/ }).hasAttribute("disabled")).toBe(true);
     expect(c.textContent).toContain("1 agente pode usar");
@@ -889,7 +891,7 @@ describe("Usar em outros agentes (ADR 0094)", () => {
       agentIds: [ATLAS_ID],
     });
     expect(used).not.toHaveProperty(["setup", "autonomy"]);
-    expect(document.body.textContent).toContain("1 agente agora pensa com Opus pelo plano do Claude.");
+    expect(document.body.textContent).toContain("1 agente agora pensa com Opus 5.5 pelo plano do Claude.");
     expect(document.body.textContent).not.toContain("mudou só a autonomia");
   });
 

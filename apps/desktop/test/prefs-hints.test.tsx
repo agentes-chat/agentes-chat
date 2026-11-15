@@ -10,9 +10,10 @@ import { AppProvider } from "../src/app";
 import type { Tailnet } from "../src/control/local-server";
 import { DesktopStore } from "../src/control/store";
 import type { UpdateCheck } from "../src/hooks";
-import { createFakeHost, type FakeHost, type Scenario } from "../src/host/fake";
+import { createFakeHost, type FakeHost, type HereOptions, type Scenario } from "../src/host/fake";
 import { createDesktopI18n } from "../src/i18n";
 import { ToastProvider } from "../src/ui/Toast";
+import { Prefs } from "../src/windows/Prefs";
 import { Advanced } from "../src/windows/prefs/Advanced";
 import { Folders } from "../src/windows/prefs/Folders";
 import { General } from "../src/windows/prefs/General";
@@ -32,9 +33,9 @@ async function pane(
   view: ReactNode,
   ready: (el: HTMLElement) => unknown,
   check: (el: HTMLElement, host: FakeHost, opened: string[]) => Promise<void> | void,
-  options: { someCommands?: boolean; host?: (host: FakeHost) => void } = {},
+  options: { someCommands?: boolean; here?: HereOptions; host?: (host: FakeHost) => void } = {},
 ) {
-  const host = createFakeHost("prefs", scenario, { someCommands: options.someCommands });
+  const host = createFakeHost("prefs", scenario, { someCommands: options.someCommands, here: options.here });
   options.host?.(host);
   const opened: string[] = [];
   host.openExternal = async (url) => {
@@ -84,6 +85,17 @@ const rows = (root: ParentNode) =>
     };
   });
 const row = (root: ParentNode, title: string) => rows(root).find((r) => r.title === title);
+const buttonIn = (root: ParentNode, text: string) =>
+  [...root.querySelectorAll("button")].find((b) => b.textContent === text);
+const eraseButton = (root: ParentNode) => buttonIn(root, "Erase and start over…");
+/** A failed erase: its line inside the dialog, which stays open with both buttons pressable again, and no toast. */
+const expectFailureInDialog = (dialog: HTMLElement, line: string) => {
+  expect(document.querySelector('[role="dialog"]')).toBe(dialog);
+  expect(dialog.querySelector('[role="alert"]')?.textContent).toBe(line);
+  expect((buttonIn(dialog, "Cancel") as HTMLButtonElement).disabled).toBe(false);
+  expect((buttonIn(dialog, "Erase it") as HTMLButtonElement).disabled).toBe(false);
+  expect(document.querySelector(".dk-toast")?.textContent).toBe("");
+};
 
 describe("Preferences: a setting's explanation behind its ⓘ", () => {
   test("General: no lead, and each behavior on one line, its ⓘ where it has something to say", () =>
@@ -108,13 +120,6 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
             title: "Let me know when an agent needs me in its browser",
             hint: "The request already reaches your phone and the site. This tells you here too.",
             switch: "The request already reaches your phone and the site. This tells you here too.",
-            line: null,
-          },
-          {
-            title: "Show in the Dock",
-            hint: "With the count of what waits for you. Off, the app stays in the menu bar only while no window is open.",
-            switch:
-              "With the count of what waits for you. Off, the app stays in the menu bar only while no window is open.",
             line: null,
           },
           { title: "Show in the menu bar", hint: null, switch: null, line: null },
@@ -182,6 +187,138 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
       },
     );
   });
+
+  test("Preferences: once the server here is erased, the window's header no longer names its address", () =>
+    pane(
+      "here",
+      <Prefs />,
+      (el) => buttonIn(el, "Servers"),
+      async (el, host) => {
+        const header = () => el.querySelector(".dk-pnav__whotext")?.textContent ?? "";
+        const address = new URL((await host.servers()).current ?? "").host;
+        await act(async () => buttonIn(el, "Servers")?.click());
+        await until(() => eraseButton(el));
+        await act(async () => eraseButton(el)?.click());
+        await until(() => document.querySelector('[role="dialog"]'));
+        await act(async () => buttonIn(document.querySelector('[role="dialog"]') as HTMLElement, "Erase it")?.click());
+        await until(() => !eraseButton(el) && !document.querySelector('[role="dialog"]'));
+        // Its agents' homes went with it, so the header is the app's own again: its name, and no server under it.
+        await until(() => host.runners.size === 0);
+        await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+        expect(header()).not.toContain(address);
+        expect(header()).toBe("agentes.chat");
+      },
+    ));
+
+  test("Servers: Erase and start over… asks once, then the server here's card goes and a line says where its data went", () =>
+    pane(
+      "here",
+      <Servers />,
+      (el) => eraseButton(el),
+      async (el, host) => {
+        expect(eraseButton(el)?.closest(".dk-here__end")?.textContent).toContain("Stop running it here…");
+        await act(async () => eraseButton(el)?.click());
+        await until(() => document.querySelector('[role="dialog"]'));
+        const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+        expect(dialog.textContent).toContain("Erase agentes.chat on this Mac?");
+        // Its date never breaks at a hyphen (U+2011).
+        expect(dialog.textContent).toContain("~/agentes.chat erased 2026\u201111\u201114");
+        expect([...dialog.querySelectorAll("button")].map((b) => b.textContent).filter(Boolean)).toEqual([
+          "Cancel",
+          "Erase it",
+        ]);
+        await act(async () => buttonIn(dialog, "Erase it")?.click());
+        // While it erases, nothing else can be pressed in its dialog, and it stays up once the server stopped.
+        expect((buttonIn(dialog, "Cancel") as HTMLButtonElement).disabled).toBe(true);
+        expect((await host.localServer()).phase).toBe("stopped");
+        await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+        expect(document.querySelector('[role="dialog"]')).toBe(dialog);
+        await until(() => !eraseButton(el) && !document.querySelector('[role="dialog"]'));
+        expect(el.textContent).not.toContain("agentes.chat on this Mac");
+        expect(document.querySelector(".dk-toast")?.textContent).toContain(
+          "Erased. Its old data is in ~/agentes.chat erased 2026-11-14.",
+        );
+        expect(host.window).toBe("welcome");
+        expect(await host.localServer()).toMatchObject({ installed: "none", run: false });
+      },
+    ));
+
+  test("Servers: on the stopped card too; a folder that couldn't move says so in its dialog, which stays open", () =>
+    pane(
+      "here",
+      <Servers />,
+      (el) => eraseButton(el),
+      async (el) => {
+        // Under the card, as on the running one: the line about its data keeps its width.
+        expect(eraseButton(el)?.closest(".dk-crow")).toBeNull();
+        expect(eraseButton(el)?.closest(".dk-here__end")).toBeTruthy();
+        expect(el.textContent).toContain("Start it here");
+        await act(async () => eraseButton(el)?.click());
+        await until(() => document.querySelector('[role="dialog"]'));
+        const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+        await act(async () => buttonIn(dialog, "Erase it")?.click());
+        await until(() => dialog.querySelector('[role="alert"]'));
+        expectFailureInDialog(
+          dialog,
+          "Its data couldn't be moved, so nothing was erased and it stays in ~/.agentes. It's stopped until you start it again.",
+        );
+        // Opened again later, it starts clean.
+        await act(async () => buttonIn(dialog, "Cancel")?.click());
+        await until(() => !document.querySelector('[role="dialog"]'));
+        await act(async () => eraseButton(el)?.click());
+        await until(() => document.querySelector('[role="dialog"]'));
+        expect(document.querySelector('[role="dialog"] [role="alert"]')).toBeNull();
+      },
+      {
+        here: { run: false },
+        host: (host) => {
+          host.eraseLocalServer = () => Promise.reject("move");
+        },
+      },
+    ));
+
+  test("Servers: another server holding its folder: its dialog says to stop it first, and a second try erases", () =>
+    pane(
+      "here",
+      <Servers />,
+      (el) => eraseButton(el),
+      async (el) => {
+        await act(async () => eraseButton(el)?.click());
+        await until(() => document.querySelector('[role="dialog"]'));
+        const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+        // Everything that goes and everything that stays, in that order.
+        expect(dialog.textContent).toContain(
+          "Its workspaces go for everyone who uses them, on every device. Its data moves to ~/agentes.chat erased 2026\u201111\u201114 and stays there. What its agents kept on this Mac, such as their browsers and sign-ins, is deleted. The agents' files in ~/agentes are yours and stay where they are. Then you set it up again with a new owner.",
+        );
+        await act(async () => buttonIn(dialog, "Erase it")?.click());
+        await until(() => dialog.querySelector('[role="alert"]'));
+        expectFailureInDialog(
+          dialog,
+          "Another agentes.chat server is using its folder, so nothing was erased. Stop that server, then try again.",
+        );
+        await act(async () => buttonIn(dialog, "Erase it")?.click());
+        await until(() => !document.querySelector('[role="dialog"]'));
+        expect(document.querySelector(".dk-toast")?.textContent).toContain("Erased. Its old data is in");
+      },
+      {
+        host: (host) => {
+          const erase = host.eraseLocalServer;
+          let tries = 0;
+          host.eraseLocalServer = () => (tries++ === 0 ? Promise.reject("held") : erase());
+        },
+      },
+    ));
+
+  test("Servers: Erase and start over… waits while it starts, updates or restarts, since its files are being copied", () =>
+    pane(
+      "here",
+      <Servers />,
+      (el) => eraseButton(el),
+      (el) => {
+        expect((eraseButton(el) as HTMLButtonElement).disabled).toBe(true);
+      },
+      { here: { phase: "updating" } },
+    ));
 
   test("Folders: the note under the list is a link to how folders work, opened in the browser", () =>
     pane(
@@ -430,6 +567,50 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
         expect(el.querySelector(".dk-ver__acts .dk-help")?.textContent).toBe("Your servers and settings stay.");
       },
     );
+  });
+
+  test("Updates: on Linux, the system details to copy; elsewhere no such row", async () => {
+    const update: UpdateCheck = {
+      state: { latest: null, available: false, required: false },
+      checkedAt: null,
+      checking: false,
+      failed: false,
+      check: async () => null,
+      version: "0.6.0",
+    };
+    const copied: string[] = [];
+    const clipboard = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => void copied.push(text) },
+    });
+    try {
+      await pane(
+        "linux",
+        <Updates update={update} />,
+        (el) => rows(el).some((r) => r.title === "System details"),
+        async (el) => {
+          const row = [...el.querySelectorAll(".dk-crow")].find(
+            (r) => r.querySelector(".dk-crow__title")?.textContent === "System details",
+          ) as HTMLElement;
+          const line = "Ubuntu 26.04 LTS · wayland (GNOME) · WebKitGTK 2.50.4 · Intel (i915) · CPU · AppImage";
+          expect(row.querySelector("small")?.textContent).toBe(line);
+          await act(async () => (row.querySelector("button") as HTMLButtonElement).click());
+          await until(() => copied.length > 0);
+          expect(copied).toEqual([line]);
+        },
+      );
+      await pane(
+        "selfhost",
+        <Updates update={update} />,
+        (el) => rows(el).some((r) => r.title === "Install updates by itself, at night"),
+        (el) => {
+          expect(rows(el).map((r) => r.title)).not.toContain("System details");
+        },
+      );
+    } finally {
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: clipboard });
+    }
   });
 
   test("Updates: the download with its bar and Cancel, which drops it; once whole, Installing… with no Cancel", async () => {

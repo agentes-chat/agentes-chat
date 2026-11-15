@@ -1,12 +1,8 @@
 import {
-  type InvitationWithStatus,
   type Person,
   type RemovalPreview,
-  useAllInvitations,
   useApi,
   useCancelSuggestion,
-  useJoinRequests,
-  useMe,
   useMySuggestions,
   usePeople,
   useRemoveMember,
@@ -17,10 +13,9 @@ import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { namesText } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import { removalLines } from "@agenteschat/client/lib/removal";
-import { leaves, removes } from "@agenteschat/client/lib/roles";
+import { isBelow, leaves, removes } from "@agenteschat/client/lib/roles";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
@@ -29,39 +24,19 @@ import { router } from "@/ui/navigation";
 import { openAgentAi } from "../ai/AgentAiScreen";
 import { Page } from "../me/parts";
 import { useOpenDm } from "../new/useOpenDm";
+import { rolesHref } from "../roles/parts";
 import { chooseAction } from "../settings/parts";
 import { Face } from "../shared/Face";
 import { useColors, useMeId } from "../shared/hooks";
 import { errorHaptic, Loaded, successHaptic } from "../shared/parts";
-import { SheetHostProvider, useSheet } from "../shared/SheetHost";
-import { InvitationSheet } from "./InviteSheets";
-import {
-  invitationLine,
-  invitationSender,
-  invitersOf,
-  memberActions,
-  memberLine,
-  membersByName,
-  pendingInvitations,
-  waitingLine,
-  whenWords,
-} from "./logic";
-import { MembersFullNote } from "./MembersFullNote";
+import { invitersOf, memberActions, memberLine, membersByName, whenWords } from "./logic";
 
 /**
- * Membros e convites (ADR 0090), one page: whoever may invite gets "Convidar pessoas" on top (the workspace's link
- * lives on that screen), then what waits on them and the invitations sent; a member who may not invite suggests
- * someone. Then the people, each with their roles (ADR 0085).
+ * Membros (ADR 0090): whoever may invite gets "Convidar pessoas" on top (what waits on them, the links and the
+ * invitations sent are Convites', its own screen beside this one); a member who may not invite suggests someone.
+ * Then the people, each with their roles (ADR 0085).
  */
 export function MembersPage() {
-  return (
-    <SheetHostProvider>
-      <Members />
-    </SheetHostProvider>
-  );
-}
-
-function Members() {
   const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
   const c = useColors();
@@ -78,6 +53,9 @@ function Members() {
   // Remover do workspace for whoever may, Sair on one's own row (not the last owner); the server checks it again.
   const removable = (m: Person) =>
     m.userId === meId ? leaves(viewer, list ?? []) : !frozen && removes(viewer, m, roles);
+  // Their cargos (P11): who manages people, for someone below them (or themselves), with a cargo to give.
+  const givesCargos = (m: Person) =>
+    !frozen && can(org, "manage_members") && isBelow(viewer, m, roles) && roles.some((r) => r.givable);
 
   return (
     <Page
@@ -92,13 +70,9 @@ function Members() {
       <View style={styles.gap} />
       <Locked when={frozen} readable>
         {invites ? (
-          <>
-            <GroupedList>
-              <GroupedRow icon="plus" label={t("members.inviteTitle")} onPress={() => router.push("/invite-people")} />
-            </GroupedList>
-            <WaitingYou />
-            <SentInvitations />
-          </>
+          <GroupedList>
+            <GroupedRow icon="plus" label={t("members.inviteTitle")} onPress={() => router.push("/invite-people")} />
+          </GroupedList>
         ) : (
           <Suggestions />
         )}
@@ -109,8 +83,12 @@ function Members() {
         <Loaded>
           <GroupedList>
             {membersByName(list, i18n.language).map((m) => {
-              const acts = memberActions(m.userId === meId, Boolean(removable(m)));
-              const run = { dm: () => void openDm({ userId: m.userId }), remove: () => void remove(m) };
+              const acts = memberActions(m.userId === meId, Boolean(removable(m)), givesCargos(m));
+              const run = {
+                dm: () => void openDm({ userId: m.userId }),
+                roles: () => router.push(rolesHref.person(m.userId)),
+                remove: () => void remove(m),
+              };
               return (
                 <GroupedRow
                   key={m.userId}
@@ -129,12 +107,14 @@ function Members() {
                               label: t(
                                 a === "dm"
                                   ? "profile.dm"
-                                  : a === "leave"
-                                    ? "members.remove.leave"
-                                    : "members.remove.item",
+                                  : a === "roles"
+                                    ? "rolesPage.rolesCta"
+                                    : a === "leave"
+                                      ? "members.remove.leave"
+                                      : "members.remove.item",
                               ),
-                              destructive: a !== "dm",
-                              onPress: run[a === "dm" ? "dm" : "remove"],
+                              destructive: a === "remove" || a === "leave",
+                              onPress: run[a === "leave" ? "remove" : a],
                             })),
                             t("common.cancel"),
                           ),
@@ -156,7 +136,7 @@ function Members() {
  * "Remover do workspace" (or "Sair do workspace"): what goes with the person, as the server reads it, in the system's
  * confirmation; then the removal, and the person's own leaving goes back to the start.
  */
-function useRemoveFlow() {
+export function useRemoveFlow() {
   const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
   const api = useApi();
@@ -169,7 +149,7 @@ function useRemoveFlow() {
     errorHaptic();
     toast({ title: knownErrorText(t, e, i18n.language) ?? t("mobile.app.failed"), icon: "x" });
   };
-  return async (m: Person) => {
+  return async (m: Pick<Person, "userId" | "name">) => {
     const mine = m.userId === meId;
     let lines: string[];
     let preview: RemovalPreview;
@@ -216,80 +196,6 @@ function useRemoveFlow() {
       ],
     );
   };
-}
-
-/** Esperando você: who asked through the link and whom members suggested, each opening the review (ADR 0068, 0090). */
-function WaitingYou() {
-  const { t, i18n } = useTranslation();
-  const { orgId } = useOrg();
-  const requests = useJoinRequests(orgId).data ?? [];
-  if (requests.length === 0) return null;
-  return (
-    <>
-      <GroupedHeader>{`${t("members.waitingTitle")} · ${requests.length}`}</GroupedHeader>
-      <GroupedList>
-        {requests.map((r) => (
-          <GroupedRow
-            key={r.id}
-            leading={<PersonAvatar name={r.name} size={30} />}
-            label={r.name}
-            sub={waitingLine(t, i18n.language, r)}
-            subLines={2}
-            media
-            chevron
-            onPress={() => router.push({ pathname: "/join-requests", params: { request: r.id } })}
-          />
-        ))}
-      </GroupedList>
-      <MembersFullNote />
-    </>
-  );
-}
-
-/** Convites enviados: those still waiting, each opening its actions (ADR 0090). */
-function SentInvitations() {
-  const { t, i18n } = useTranslation();
-  const { orgId } = useOrg();
-  const sheet = useSheet();
-  const me = useMe().data?.user.name;
-  const list = pendingInvitations(useAllInvitations(orgId).data ?? []);
-  const roles = useRoles(orgId).data?.roles ?? [];
-  // Sent again from here: until when it works now.
-  const [resent, setResent] = useState<Record<string, string>>({});
-  if (list.length === 0) return null;
-  const open = (inv: InvitationWithStatus) =>
-    sheet.open(
-      <InvitationSheet
-        invitation={inv}
-        line={invitationLine(t, i18n.language, inv, roles, {
-          resentUntil: resent[inv.id],
-          sender: invitationSender(t, inv, me),
-        })}
-        resent={Boolean(resent[inv.id])}
-        onResent={(id, until) => setResent((all) => ({ ...all, [id]: until }))}
-      />,
-      { solid: true },
-    );
-  return (
-    <>
-      <GroupedHeader>{`${t("members.invitations.title")} · ${list.length}`}</GroupedHeader>
-      <GroupedList>
-        {list.map((inv) => (
-          <GroupedRow
-            key={inv.id}
-            leading={<PersonAvatar name={inv.email} size={30} />}
-            label={inv.email}
-            labelLines={2}
-            sub={invitationLine(t, i18n.language, inv, roles, { resentUntil: resent[inv.id] })}
-            subLines={2}
-            media
-            more
-            onPress={() => open(inv)}
-          />
-        ))}
-      </GroupedList>
-    </>
-  );
 }
 
 /**

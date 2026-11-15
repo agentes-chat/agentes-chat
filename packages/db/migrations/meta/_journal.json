@@ -1832,36 +1832,92 @@
     {
       "idx": 263,
       "version": "7",
-      "when": 1794745400001,
-      "tag": "0263_claude_design",
+      "when": 1794745500000,
+      "tag": "0263_right_hand_seats",
       "breakpoints": true
     },
     {
       "idx": 264,
       "version": "7",
-      "when": 1794745400002,
-      "tag": "0264_claude_design_recovery",
+      "when": 1794745600000,
+      "tag": "0264_partner_waitlist",
       "breakpoints": true
     },
     {
       "idx": 265,
       "version": "7",
-      "when": 1794745400003,
-      "tag": "0265_claude_design_consents",
+      "when": 1794755500000,
+      "tag": "0265_right_hand_proactive",
       "breakpoints": true
     },
     {
       "idx": 266,
       "version": "7",
-      "when": 1794745400004,
-      "tag": "0266_claude_design_source_pins",
+      "when": 1794755600000,
+      "tag": "0266_operator_read_indexes",
       "breakpoints": true
     },
     {
       "idx": 267,
       "version": "7",
-      "when": 1794745400005,
-      "tag": "0267_claude_design_board",
+      "when": 1794755700000,
+      "tag": "0268_invite_choices",
+      "breakpoints": true
+    },
+    {
+      "idx": 268,
+      "version": "7",
+      "when": 1794755800000,
+      "tag": "0269_phone_state_since",
+      "breakpoints": true
+    },
+    {
+      "idx": 269,
+      "version": "7",
+      "when": 1794756000000,
+      "tag": "0271_agent_runs_done_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 270,
+      "version": "7",
+      "when": 1794756100000,
+      "tag": "0272_everyone_creates_agents",
+      "breakpoints": true
+    },
+    {
+      "idx": 271,
+      "version": "7",
+      "when": 1794756700000,
+      "tag": "0273_push_apns",
+      "breakpoints": true
+    },
+    {
+      "idx": 272,
+      "version": "7",
+      "when": 1794756800000,
+      "tag": "0274_personal_skills",
+      "breakpoints": true
+    },
+    {
+      "idx": 273,
+      "version": "7",
+      "when": 1794756900000,
+      "tag": "0275_view_all_agents",
+      "breakpoints": true
+    },
+    {
+      "idx": 274,
+      "version": "7",
+      "when": 1794757000000,
+      "tag": "0276_skill_source_by_folder",
+      "breakpoints": true
+    },
+    {
+      "idx": 275,
+      "version": "7",
+      "when": 1794760358940,
+      "tag": "0277_claude_design",
       "breakpoints": true
     }
   ]

@@ -567,7 +567,7 @@ export async function loadImportState(
     db
       .select({ id: skills.id, slug: skills.slug, deletedAt: skills.deletedAt })
       .from(skills)
-      .where(eq(skills.orgId, orgId)),
+      .where(and(eq(skills.orgId, orgId), isNull(skills.ownerUserId))),
     db
       .select({
         id: channels.id,

@@ -1,6 +1,18 @@
 import { expect, test } from "bun:test";
-import { CODEX_FOLDER_PROTOCOL, CODEX_WINDOWS_PROTOCOL, MACHINE_PROTOCOL_VERSION } from "@agenteschat/adapters";
-import { type BrainTurnRequest, CodexBrain, type ComputerBrainLink, codexVersionOk } from "../src/brains/codex";
+import {
+  CODEX_FOLDER_PROTOCOL,
+  CODEX_WINDOWS_PROTOCOL,
+  CONTEXT_LIMIT_PROTOCOL,
+  MACHINE_PROTOCOL_VERSION,
+  OPENCODE_ACP_PROTOCOL,
+} from "@agenteschat/adapters";
+import {
+  type BrainTurnRequest,
+  CodexBrain,
+  type ComputerBrainLink,
+  codexVersionOk,
+  OpencodeBrain,
+} from "../src/brains/codex";
 import { computerPrompt } from "../src/brains/prompt";
 import type { BrainEvent, BrainTurn } from "../src/brains/types";
 import { MachineRequestError } from "../src/machine-hub";
@@ -95,6 +107,33 @@ test("on Windows a runner before CODEX_WINDOWS_PROTOCOL refuses every Codex turn
   expect(current.sent).toHaveLength(1);
   // Elsewhere that runner is new enough.
   const mac = link({ os: "darwin", protocol: CODEX_WINDOWS_PROTOCOL - 1, events: done });
+  await collect(brain(mac).run(turn(), io()));
+  expect(mac.sent).toHaveLength(1);
+});
+
+test("on Windows a runner before OPENCODE_ACP_PROTOCOL refuses every OpenCode turn: too old there, nothing sent", async () => {
+  const opencodeLink = (os: string, protocol: number) => {
+    const l = link({ os, protocol, events: [{ type: "done", text: "ok" }] });
+    l.status = async () => ({
+      online: true,
+      execAllowed: true,
+      protocol,
+      os,
+      executors: { opencode: { version: "1.19.5" } },
+    });
+    return l;
+  };
+  const brain = (l: ComputerBrainLink) => new OpencodeBrain({ link: l, mcp: async () => ({ token: "t" }) });
+  const old = opencodeLink("windows", OPENCODE_ACP_PROTOCOL - 1);
+  expect(await collect(brain(old).run(turn(), io()))).toMatchObject([
+    { type: "error", code: "runner_outdated", message: expect.stringContaining("OpenCode on Windows") },
+  ]);
+  expect(old.sent).toEqual([]);
+  const current = opencodeLink("windows", OPENCODE_ACP_PROTOCOL);
+  await collect(brain(current).run(turn(), io()));
+  expect(current.sent).toHaveLength(1);
+  expect(current.sent[0]).toMatchObject({ kind: "opencode" });
+  const mac = opencodeLink("darwin", OPENCODE_ACP_PROTOCOL - 1);
   await collect(brain(mac).run(turn(), io()));
   expect(mac.sent).toHaveLength(1);
 });
@@ -240,6 +279,17 @@ test("accounts (ADR 0041): account and effort go to a runner that knows them; a 
   expect(refused).toMatchObject([{ type: "error", code: "not_logged_in", retryable: true }]);
   expect((refused[0] as { message: string }).message).toContain('"Pessoal"');
   expect(out.sent).toHaveLength(0);
+});
+
+test("context: Automático sends Codex 200K, a chosen limit wins, an older runner gets none", async () => {
+  const sent = async (protocol: number, t: BrainTurn) => {
+    const l = link({ protocol, events: [{ type: "done", text: "ok" }] });
+    await collect(new CodexBrain({ link: l, mcp: async () => ({ token: "t" }) }).run(t, io()));
+    return l.sent[0] as { contextTokens?: number };
+  };
+  expect((await sent(CONTEXT_LIMIT_PROTOCOL, turn())).contextTokens).toBe(200_000);
+  expect((await sent(CONTEXT_LIMIT_PROTOCOL, turn({ contextTokens: 400_000 }))).contextTokens).toBe(400_000);
+  expect("contextTokens" in (await sent(CONTEXT_LIMIT_PROTOCOL - 1, turn()))).toBe(false);
 });
 
 test("live steering (protocol 15): the turn on its way takes messages through brain.steer; steer_read passes; null at the end", async () => {

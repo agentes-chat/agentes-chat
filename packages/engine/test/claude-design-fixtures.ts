@@ -7,7 +7,7 @@ import { pairMachine } from "./machine-fixtures";
 
 export async function designFixture() {
   const f = await setup();
-  const { machineId } = await pairMachine(f, f.owner.id, f.org.id, { os: "darwin", arch: "arm64", protocol: 65 });
+  const { machineId } = await pairMachine(f, f.owner.id, f.org.id, { os: "darwin", arch: "arm64", protocol: 67 });
   await f.db
     .update(schema.machines)
     .set({ online: true, executors: { claude: { version: "2.1.322", loggedIn: true } } })

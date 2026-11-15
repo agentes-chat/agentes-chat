@@ -15,7 +15,8 @@
  * noowner.tail1234.ts.net waits for its owner; old.example.com is too old; chat.example.com doesn't answer;
  * anything else isn't agentes.chat. `?found=0` makes discovery find nothing.
  * The server here: `?phase=` (starting, updating, stopped, failing), `?reach=1`, `?back=<version>` (an update
- * went back), `?run=0` (it stopped running here, its data kept), `?usage=0` (usage statistics off),
+ * went back), `?run=0` (it stopped running here, its data kept), `?owner=0` (it runs with no account left, and the
+ * welcome window opens on Run here's form), `?usage=0` (usage statistics off),
  * `?tailscale=` (on, off, missing), `?installed=terminal` (one from the terminal; `&claim=1` waits for its owner,
  * `&serving=0` isn't running), `?fail=` (database, start, account, reach: that setup step fails), `?hold=<step>`
  * (setting up stops there). Cancel ends a setup at once, held or not (it rejects with "cancelled", as the app's
@@ -53,6 +54,8 @@ export interface HereOptions {
   reach?: boolean;
   back?: string | null;
   run?: boolean;
+  /** False: it runs, but its owner deleted their account and nobody else has one. */
+  owner?: boolean;
   usage?: boolean;
   tailscale?: Tailnet["state"];
   installed?: "terminal";
@@ -159,6 +162,8 @@ export function createFakeHost(
   let version = "0.6.0";
   const platform: Platform = scenario === "windows" ? "windows" : scenario === "linux" ? "linux" : "mac";
   const here = options.here ?? {};
+  // With no account left, the app opens the welcome window on Run here's form once.
+  let ownerMode = here.owner === false;
   const tailnet: Tailnet =
     here.tailscale === "missing"
       ? { state: "missing" }
@@ -175,7 +180,7 @@ export function createFakeHost(
       ? {
           installed: "app" as const,
           run: running,
-          owner: true,
+          owner: here.owner !== false,
           phase: running ? (here.phase ?? "running") : "off",
           url: LOCAL_URL,
           publicUrl: here.reach ? TAILNET_URL : LOCAL_URL,
@@ -183,6 +188,7 @@ export function createFakeHost(
           version: "1.4.0",
           backTo: here.back ?? null,
           awake: running,
+          eraseTo: "/Users/voce/agentes.chat erased 2026-11-14",
           backups: {
             nightly: true,
             copyTo: null,
@@ -357,7 +363,12 @@ export function createFakeHost(
       };
     },
     askToPair: async () => true,
-    welcomeMode: async () => (options.welcomeAdd ? "add" : null),
+    welcomeMode: async () => {
+      if (options.welcomeAdd) return "add";
+      if (!ownerMode) return null;
+      ownerMode = false;
+      return "owner";
+    },
     addWorkspace: async () => {
       options.welcomeAdd = true;
       await host.showWindow("welcome");
@@ -423,6 +434,10 @@ export function createFakeHost(
       os: platform === "mac" ? "macos" : platform,
       arch: platform === "mac" ? "aarch64" : "x86_64",
       system: platform === "mac" ? "15.5" : null,
+      graphics:
+        platform === "linux"
+          ? "Ubuntu 26.04 LTS · wayland (GNOME) · WebKitGTK 2.50.4 · Intel (i915) · CPU · AppImage"
+          : null,
     }),
     autostart: async () => autostart,
     setAutostart: async (on) => {
@@ -447,7 +462,6 @@ export function createFakeHost(
     setAppMenu: async () => {},
     onMenuAction: () => () => {},
     thisMacListening: async () => {},
-    setDock: async () => {},
     setSiteNotify: async () => {},
     onBadge: (cb) => {
       const timer = setTimeout(() => cb({ waiting: 3, unread: 5 }), 50);
@@ -600,6 +614,19 @@ export function createFakeHost(
       setLocal({ phase: "starting" });
       await wait(1500);
       setLocal({ phase: "running" });
+    },
+    eraseLocalServer: async () => {
+      // As the app does: it stops first, still the server here, and only then its folder moves.
+      if (local.run) setLocal({ phase: "stopped", awake: false });
+      await wait(600);
+      const to = local.eraseTo ?? "";
+      // Its agents' homes on this computer go with it.
+      for (const [homeId, runner] of runners) if (runner.server === LOCAL_URL) await host.removeRunner(homeId);
+      for (const server of new Set([local.publicUrl, local.url])) if (server) await host.removeServer(server);
+      setLocal({ ...NO_SERVER, bundled: true, dir: local.dir, systemName: "Ana Souza", erased: to });
+      ownerMode = true;
+      await host.showWindow("welcome");
+      return to;
     },
     keepRunning: async () => ({ autoLogin: false, autoRestart: false }),
     openSystemSettings: async (page) => {

@@ -31,7 +31,7 @@ import { agentAi, aiStateOf } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { settingsSectionNameKey, settingsSectionTextKey } from "@agenteschat/client/lib/personal-view";
 import { planOf, signInProviderOf } from "@agenteschat/client/lib/plans";
-import { keyNamedAfterProvider, providerLabel } from "@agenteschat/client/lib/providers";
+import { keyCopiesLine, keyName, keyNamedAfterProvider, keySource, shownKeys } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -393,7 +393,8 @@ function KeysSection({ locale }: { locale: string }) {
   const credentials = useCredentials(orgId);
   const settings = useSettings(orgId);
   const update = useUpdateSettings(orgId);
-  const live = (credentials.data ?? []).filter((k) => !k.revokedAt);
+  const all = (credentials.data ?? []).filter((k) => !k.revokedAt);
+  const live = shownKeys(credentials.data ?? []);
   const refetch = () => void qc.invalidateQueries({ queryKey: keys.credentials(orgId) });
   const failed = (error: unknown) => {
     errorHaptic();
@@ -420,7 +421,7 @@ function KeysSection({ locale }: { locale: string }) {
               toast({
                 title:
                   saved.check === "unchecked"
-                    ? t("connectAi.key.savedUnchecked", { provider: providerLabel(k.provider) })
+                    ? t("connectAi.key.savedUnchecked", { provider: keyName(k) })
                     : t("settings.rotated"),
                 icon: "check",
               });
@@ -433,7 +434,7 @@ function KeysSection({ locale }: { locale: string }) {
     );
   };
   const remove = (k: Credential) =>
-    Alert.alert(t("settings.removeTitle", { label: k.label }), keyRemovalText(t, k, live, platform.data === true), [
+    Alert.alert(t("settings.removeTitle", { label: k.label }), keyRemovalText(t, k, all, platform.data === true), [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("settings.remove"),
@@ -441,6 +442,21 @@ function KeysSection({ locale }: { locale: string }) {
         onPress: () =>
           api.agents.removeCredential(orgId, k.id, true, true).then(() => {
             successHaptic();
+            refetch();
+            void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+            void qc.invalidateQueries({ queryKey: keys.agentPages(orgId) });
+          }, failed),
+      },
+    ]);
+  const removeCopies = (k: Credential) =>
+    Alert.alert(t("settings.removeCopiesTitle", { label: k.label }), t("settings.removeCopiesText"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("settings.removeCopies"),
+        onPress: () =>
+          api.agents.removeCredentialCopies(orgId, k.id).then(({ removed }) => {
+            successHaptic();
+            toast({ title: t("settings.copiesRemoved", { count: removed }), icon: "check" });
             refetch();
             void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
             void qc.invalidateQueries({ queryKey: keys.agentPages(orgId) });
@@ -455,6 +471,7 @@ function KeysSection({ locale }: { locale: string }) {
           ? []
           : [{ label: t("settings.makeDefault"), onPress: () => update.mutate({ defaultCredentialId: k.id }) }]),
         ...(Platform.OS === "ios" && !held ? [{ label: t("settings.rotate"), onPress: () => rotate(k) }] : []),
+        ...(k.copies ? [{ label: t("settings.removeCopies"), onPress: () => removeCopies(k) }] : []),
         { label: t("settings.remove"), destructive: true, onPress: () => remove(k) },
       ],
       t("common.cancel"),
@@ -486,9 +503,10 @@ function KeysSection({ locale }: { locale: string }) {
                 leading={<ProviderLogo id={k.provider} size="sm" />}
                 label={k.label}
                 sub={[
-                  keyNamedAfterProvider(k) ? null : providerLabel(k.provider),
+                  keyNamedAfterProvider(k) ? null : keySource(k),
                   t("settings.keyEndsIn", { hint: k.keyHint }),
                   t("settings.keyAdded", { when: relativeTime(t, locale, k.createdAt) }),
+                  keyCopiesLine(t, k),
                 ]
                   .filter(Boolean)
                   .join(" · ")}

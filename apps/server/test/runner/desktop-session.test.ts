@@ -267,7 +267,7 @@ test("a runner running as root starts a desktop only through a launcher that run
   expect(unlaunched.info().available).toBe(true);
   expect(await errorCode(() => unlaunched.ensure(dev))).toBe("desktop_unavailable");
   expect(t.fake.procs).toHaveLength(0);
-  const prefix = ["/usr/sbin/runuser", "-u", "ag-01a142cb", "--"];
+  const prefix = ["/usr/bin/setpriv", "--reuid=ag-01a142cb", "--regid=ag-01a142cb", "--init-groups", "--"];
   const user = async (agent: AgentScope) => ({ ...(await t.opts.user(agent)), prefix });
   const launched = new DesktopSessions({ ...t.opts, system: root, agentUsers: true, user });
   await launched.ensure(dev);
@@ -629,7 +629,7 @@ test("each start's line says where its time went; its session's programs follow 
   );
   const [launched] = t.fake.of("dbus-launch");
   if (!launched) throw new Error("not started");
-  // dbus-launch became the session (system mode: runuser's child); another desktop's programs aren't its own.
+  // dbus-launch became the session (system mode: the launch's child); another desktop's programs aren't its own.
   t.fake.stats.push(
     { pid: launched.pid, ppid: 1, name: "xfce4-session", start: 5000, cpu: 0.2 },
     { pid: 9001, ppid: launched.pid, name: "xfwm4", start: 5000.31, cpu: 0.4 },
@@ -688,7 +688,7 @@ test("system mode: every process as the agent, and the password file root's (rea
   dirs.push(root, runDir);
   const home = path.join(root, "home", "ag-01a142cb");
   const gid = process.getgid?.() ?? 0;
-  const prefix = ["/usr/sbin/runuser", "-u", "ag-01a142cb", "--"];
+  const prefix = ["/usr/bin/setpriv", "--reuid=ag-01a142cb", "--regid=ag-01a142cb", "--init-groups", "--"];
   const user: DesktopUser = {
     prefix,
     env: {
@@ -750,7 +750,14 @@ test("system mode's desktop user: the agent's launcher and home; the cookie and 
     // Its X server's lock is in its own /tmp, where root looks for it.
     tmp: "/run/agentes-runner-tmp/21001/tmp",
   });
-  expect(launcher.prefix.at(-2)).toBe("ag-01a142cb");
+  // The last step becomes the agent: its own user, never through a PAM session (setpriv, #253).
+  expect(launcher.prefix.slice(-5)).toEqual([
+    "/usr/bin/setpriv",
+    "--reuid=ag-01a142cb",
+    "--regid=ag-01a142cb",
+    "--init-groups",
+    "--",
+  ]);
   expect(launcher.env.HOME).toBe("/home/ag-01a142cb");
 });
 
@@ -1254,7 +1261,7 @@ test("a runner running as root refreshes a running desktop only through the agen
   unlaunched.close();
 
   // System mode: as the agent, through its launcher.
-  const prefix = ["/usr/sbin/runuser", "-u", "ag-01a142cb", "--"];
+  const prefix = ["/usr/bin/setpriv", "--reuid=ag-01a142cb", "--regid=ag-01a142cb", "--init-groups", "--"];
   const user = async (agent: AgentScope) => ({ ...(await t.opts.user(agent)), prefix });
   const launched = new DesktopSessions({ ...t.opts, system: root, agentUsers: true, user });
   launched.restore();
@@ -1473,6 +1480,65 @@ test("the desktops of agents this computer no longer serves stop; the others go 
   expect([dev, ops].map((a) => t.desktops.status(a).running)).toEqual([false, true]);
   await t.desktops.stopAll();
   expect(t.desktops.status(ops).running).toBe(false);
+});
+
+test("the desktop of an agent that left, its processes killed, isn't started again: its end heard after the list, found by the sweep, or already being answered", async () => {
+  const kill = (t: ReturnType<typeof setup>) => {
+    for (const p of t.fake.procs) p.exit(null);
+  };
+  const settled = () => new Promise((r) => setTimeout(r, 20));
+
+  // Killed and left in one turn: the stop is queued before the end is heard.
+  const t = setup();
+  await t.desktops.ensure(dev);
+  kill(t);
+  await t.desktops.serve([]);
+  await settled();
+  expect(t.fake.of("Xtigervnc")).toHaveLength(1);
+
+  // The list first, the kill while its stop waits.
+  await t.desktops.ensure(dev);
+  const left = t.desktops.serve([]);
+  kill(t);
+  await left;
+  await settled();
+  expect(t.fake.of("Xtigervnc")).toHaveLength(2);
+  expect(t.logs.filter((l) => l.includes("starting it again"))).toEqual([]);
+
+  // Taken back from an earlier runner: no end to hear, the sweep finds it gone.
+  const before = new DesktopSessions({ ...t.opts, system: gone(t.fake.system) });
+  await before.ensure(dev);
+  before.close();
+  const next = new DesktopSessions(t.opts);
+  next.restore();
+  kill(t);
+  const stopped = next.serve([]);
+  void next.sweep();
+  await stopped;
+  await settled();
+  expect(t.fake.of("Xtigervnc")).toHaveLength(3);
+
+  // It ended by itself a moment before its agent left: the start already under way is stopped once it is up.
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let asked = 0;
+  const late = setup({
+    user: async (agent) => {
+      if (++asked === 2) await held;
+      return runnerUser(late.home, path.join(late.folders, agent.handle), agent);
+    },
+  });
+  await late.desktops.ensure(dev);
+  kill(late);
+  await waitFor(() => asked === 2);
+  const leaving = late.desktops.serve([]);
+  release();
+  await leaving;
+  await settled();
+  expect(late.desktops.status(dev).running).toBe(false);
+  expect(late.fake.of("Xtigervnc").filter((p) => p.alive)).toEqual([]);
 });
 
 test("where the memory isn't known there is always room", async () => {

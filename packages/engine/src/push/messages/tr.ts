@@ -85,6 +85,8 @@ export const strings: Partial<PushStrings> = {
   deviceAccessBody: "Bir kez ya da her zaman izin vermek veya hayır demek için dokunun.",
   deviceToolTitle: (a, d) => `${a}, ${d} cihazınızda bir aracı açmanızı istiyor`,
   deviceToolBody: "Tek tıkla açmak için dokunun.",
+  deviceCliTitle: (a, d) => `${a}, ${d} cihazınıza bir program kurmanızı istiyor`,
+  deviceCliBody: "Tek tıkla kurmak için dokunun.",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a}, #${l} kanalına bir ajan eklemenizi istiyor`
@@ -102,4 +104,5 @@ export const strings: Partial<PushStrings> = {
   joinRequestTitlePersonal: (name) => `${name}, çalışma alanınıza katılmak istiyor`,
   joinSuggestionTitlePersonal: (by, name) => `${by}, ${name} adlı kişiyi davet etmeyi önerdi`,
   teamWeekReadyPersonal: "Haftan hazır",
+  teamWatchStill: (n) => `${n} şey hâlâ seni bekliyor`,
 };

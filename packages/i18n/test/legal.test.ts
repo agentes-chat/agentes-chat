@@ -30,6 +30,35 @@ describe("the privacy policy says where Workspace Content passes through our net
   });
 });
 
+describe("the privacy policy covers every model provider a workspace may choose, without naming one", () => {
+  // §9's US claim covers only the providers the policy names, so a provider a workspace picks (and the model's maker
+  // or host it passes calls on to) falls under the §9 exception, and a new provider in the product needs no edit here.
+  const section = (locale: "en" | "pt-BR", id: string) =>
+    JSON.stringify(legalDocuments.privacy[locale].sections.find((s) => s.id === id)?.blocks);
+  test("en", () => {
+    expect(section("en", "agents")).toContain("Some providers pass the call on to the company that makes or hosts");
+    expect(section("en", "transfers")).toContain(
+      "except the model providers and connected services a workspace chooses, and the companies they pass calls on to",
+    );
+  });
+  test("pt-BR", () => {
+    expect(section("pt-BR", "agents")).toContain("Alguns provedores repassam a chamada à empresa que faz ou hospeda");
+    expect(section("pt-BR", "transfers")).toContain(
+      "exceto os provedores de modelo e os serviços conectados que um workspace escolhe",
+    );
+  });
+  test("no language names a provider a workspace picks", () => {
+    for (const [code, doc] of Object.entries(legalDocuments.privacy))
+      expect({
+        code,
+        named: JSON.stringify(doc).match(/\b(?:OpenRouter|Command Code|DeepSeek|Kimi|MiniMax|Z\.ai)\b/g),
+      }).toEqual({
+        code,
+        named: null,
+      });
+  });
+});
+
 describe("agentes.chat Cloud's restriction lines cite the Terms this server serves", () => {
   // The section each line rests on, by its id: when the Terms are renumbered, this fails until the lines follow.
   const RESTS_ON = {

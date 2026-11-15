@@ -118,6 +118,8 @@ export function createFakeSkills(
     if (!s) throw new MockNotFoundError("Skill não encontrada.");
     return s;
   };
+  /** A personal install is its installer's, as the server keeps it (`ownerUserId`). */
+  const ownerOf = async (personal?: boolean) => (personal ? { ownerUserId: (await ctx.lookup.me())?.user.id } : {});
   const make = async (
     orgId: string,
     s: Omit<SkillDetail, "id" | "metadata" | "createdAt" | "updatedAt" | "version">,
@@ -167,6 +169,7 @@ export function createFakeSkills(
     create: async (orgId, input) => {
       log("skills.create", orgId, input);
       return make(orgId, {
+        ...(await ownerOf(input.personal)),
         name: input.name,
         description: input.description,
         body: input.body,
@@ -176,8 +179,9 @@ export function createFakeSkills(
         files: [{ path: "SKILL.md", size: input.body.length, mime: "text/markdown", status: "stored" }],
       });
     },
-    import: async (orgId, input) => {
+    import: async (orgId, input, upload) => {
       log("skills.import", orgId, input);
+      upload?.onProgress?.(1);
       const url = "url" in input ? input.url : null;
       const hidden = url?.includes("/acme/secret")
         ? "acme/secret"
@@ -198,6 +202,7 @@ export function createFakeSkills(
       if (url && "list" in input && input.list) return { choices: await marked(orgId, CHOICES.slice(0, 1)), ...via };
       const name = url ? (url.split("/").filter(Boolean).pop() ?? "skill") : "Skill enviada";
       return make(orgId, {
+        ...(await ownerOf(input.personal)),
         name,
         description: url ? "Instalada do GitHub." : "Enviada em .zip.",
         body: `# ${name}`,
@@ -208,14 +213,22 @@ export function createFakeSkills(
         files: [{ path: "SKILL.md", size: 10, mime: "text/markdown", status: "stored" }],
       });
     },
-    importPicked: async (orgId, url, paths, forAgentId) => {
-      log("skills.importPicked", orgId, url, paths, ...(forAgentId ? [forAgentId] : []));
+    importPicked: async (orgId, url, paths, forAgentId, personal) => {
+      log(
+        "skills.importPicked",
+        orgId,
+        url,
+        paths,
+        ...(forAgentId ? [forAgentId] : []),
+        ...(personal ? [personal] : []),
+      );
       const installed: SkillDetail[] = [];
       for (const path of paths) {
         const choice = CHOICES.find((c) => c.path === path);
         if (!choice) throw new MockNotFoundError("Skill não encontrada.");
         installed.push(
           await make(orgId, {
+            ...(await ownerOf(personal)),
             name: choice.name,
             description: choice.description,
             body: `# ${choice.name}`,

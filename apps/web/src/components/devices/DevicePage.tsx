@@ -379,6 +379,7 @@ function ComputerPage({ machineId }: { machineId: string }) {
       <Card aria-label={t("devices.sharing")}>
         <div className="settings-rows">
           <WhoCanUseRow
+            key={d.id}
             idPrefix="dv-pc"
             value={d.audience}
             ownerUserId={d.ownerUserId}
@@ -620,6 +621,7 @@ function PhonePage({ phoneId }: { phoneId: string }) {
         <div className="settings-rows">
           {p.audience ? (
             <WhoCanUseRow
+              key={p.id}
               idPrefix="dv-phone"
               value={p.audience}
               ownerUserId={p.ownerUserId}

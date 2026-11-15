@@ -113,9 +113,10 @@ const size = (r: ModelRequest) =>
  * its own settings on its card (`request_settings_change` named, its definition on demand: up front it would add 3,800,
  * ADR 0137), and 47,631 with recall reading the asker's own DM with the agent from anywhere they ask, an empty search
  * never told as "the first time", and the DM rule saying what may be said of it elsewhere. Where each workspace gets its
- * own computer, `workspaceComputerText` adds 447 to that (48,078); the ceiling leaves a little room above both.
+ * own computer, `workspaceComputerText` adds 447 to that (48,078); and a sign-in whose link or
+ * code goes to a mailbox the agent reads being its own work adds 360; the ceiling leaves a little room above both.
  */
-const OI_CEILING_CHARS = 48_200;
+const OI_CEILING_CHARS = 48_700;
 
 test("a DM 'oi' stays under the size ceiling", async () => {
   const [request] = await play(TURNS.find((t) => t.id === "greet-dm") as ScriptedTurn);

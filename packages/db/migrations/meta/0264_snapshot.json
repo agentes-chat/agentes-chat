@@ -1,6 +1,6 @@
 {
-  "id": "45029ace-ad2c-40b4-bd8e-7bf5c1760584",
-  "prevId": "f3c434e8-9103-442f-9131-aad74f68a0ee",
+  "id": "51f6cacb-b11e-4fbf-a5ed-e57153863993",
+  "prevId": "f228aa10-4f2e-492b-8673-a0e3290b29ca",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1117,6 +1117,88 @@
           ]
         }
       },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.right_hand_seats": {
+      "name": "right_hand_seats",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "removed_at": {
+          "name": "removed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "right_hand_seats_one_live": {
+          "name": "right_hand_seats_one_live",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"right_hand_seats\".\"removed_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "right_hand_seats_org_id_organizations_id_fk": {
+          "name": "right_hand_seats_org_id_organizations_id_fk",
+          "tableFrom": "right_hand_seats",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -2369,6 +2451,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "seat_user_id": {
+          "name": "seat_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "note": {
           "name": "note",
           "type": "text",
@@ -2444,8 +2532,8 @@
           "method": "btree",
           "with": {}
         },
-        "browser_handoffs_one_open": {
-          "name": "browser_handoffs_one_open",
+        "browser_handoffs_one_open_screen": {
+          "name": "browser_handoffs_one_open_screen",
           "columns": [
             {
               "expression": "agent_id",
@@ -2457,6 +2545,12 @@
               "expression": "screen",
               "isExpression": false,
               "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "coalesce(\"seat_user_id\", '')",
+              "asc": true,
+              "isExpression": true,
               "nulls": "last"
             }
           ],
@@ -2518,6 +2612,19 @@
             "id"
           ],
           "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "browser_handoffs_seat_user_id_users_id_fk": {
+          "name": "browser_handoffs_seat_user_id_users_id_fk",
+          "tableFrom": "browser_handoffs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "seat_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "browser_handoffs_org_id_agent_id_agents_org_id_id_fk": {
@@ -4422,808 +4529,6 @@
       },
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.claude_design_artifacts": {
-      "name": "claude_design_artifacts",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "org_id": {
-          "name": "org_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "agent_id": {
-          "name": "agent_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "owner_user_id": {
-          "name": "owner_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "machine_id": {
-          "name": "machine_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "channel_id": {
-          "name": "channel_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "remote_id": {
-          "name": "remote_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "remote_url": {
-          "name": "remote_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "remote_version": {
-          "name": "remote_version",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "last_job_id": {
-          "name": "last_job_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "artifact_ids": {
-          "name": "artifact_ids",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "unavailable": {
-          "name": "unavailable",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "claude_design_remote": {
-          "name": "claude_design_remote",
-          "columns": [
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "account_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "remote_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"claude_design_artifacts\".\"remote_id\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "claude_design_artifacts_org_id_organizations_id_fk": {
-          "name": "claude_design_artifacts_org_id_organizations_id_fk",
-          "tableFrom": "claude_design_artifacts",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_artifacts_owner_user_id_users_id_fk": {
-          "name": "claude_design_artifacts_owner_user_id_users_id_fk",
-          "tableFrom": "claude_design_artifacts",
-          "tableTo": "users",
-          "columnsFrom": [
-            "owner_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_artifacts_org_id_agent_id_agents_org_id_id_fk": {
-          "name": "claude_design_artifacts_org_id_agent_id_agents_org_id_id_fk",
-          "tableFrom": "claude_design_artifacts",
-          "tableTo": "agents",
-          "columnsFrom": [
-            "org_id",
-            "agent_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_artifacts_org_id_channel_id_channels_org_id_id_fk": {
-          "name": "claude_design_artifacts_org_id_channel_id_channels_org_id_id_fk",
-          "tableFrom": "claude_design_artifacts",
-          "tableTo": "channels",
-          "columnsFrom": [
-            "org_id",
-            "channel_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_artifacts_org_id_machine_id_machines_org_id_id_fk": {
-          "name": "claude_design_artifacts_org_id_machine_id_machines_org_id_id_fk",
-          "tableFrom": "claude_design_artifacts",
-          "tableTo": "machines",
-          "columnsFrom": [
-            "org_id",
-            "machine_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "claude_design_artifacts_orgId_id_unique": {
-          "name": "claude_design_artifacts_orgId_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "org_id",
-            "id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "claude_design_revision": {
-          "name": "claude_design_revision",
-          "value": "\"claude_design_artifacts\".\"revision\" >= 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.claude_design_grants": {
-      "name": "claude_design_grants",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "org_id": {
-          "name": "org_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "agent_id": {
-          "name": "agent_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "machine_id": {
-          "name": "machine_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "owner_user_id": {
-          "name": "owner_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "revision": {
-          "name": "revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "claude_design_grants_org_id_organizations_id_fk": {
-          "name": "claude_design_grants_org_id_organizations_id_fk",
-          "tableFrom": "claude_design_grants",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_grants_owner_user_id_users_id_fk": {
-          "name": "claude_design_grants_owner_user_id_users_id_fk",
-          "tableFrom": "claude_design_grants",
-          "tableTo": "users",
-          "columnsFrom": [
-            "owner_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_grants_org_id_agent_id_agents_org_id_id_fk": {
-          "name": "claude_design_grants_org_id_agent_id_agents_org_id_id_fk",
-          "tableFrom": "claude_design_grants",
-          "tableTo": "agents",
-          "columnsFrom": [
-            "org_id",
-            "agent_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_grants_org_id_machine_id_machines_org_id_id_fk": {
-          "name": "claude_design_grants_org_id_machine_id_machines_org_id_id_fk",
-          "tableFrom": "claude_design_grants",
-          "tableTo": "machines",
-          "columnsFrom": [
-            "org_id",
-            "machine_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "claude_design_grants_orgId_id_unique": {
-          "name": "claude_design_grants_orgId_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "org_id",
-            "id"
-          ]
-        },
-        "claude_design_grants_orgId_agentId_unique": {
-          "name": "claude_design_grants_orgId_agentId_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "org_id",
-            "agent_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "claude_design_grant_revision": {
-          "name": "claude_design_grant_revision",
-          "value": "\"claude_design_grants\".\"revision\" > 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.claude_design_jobs": {
-      "name": "claude_design_jobs",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "org_id": {
-          "name": "org_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "agent_id": {
-          "name": "agent_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "owner_user_id": {
-          "name": "owner_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "channel_id": {
-          "name": "channel_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "thread_root_id": {
-          "name": "thread_root_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "trigger_message_id": {
-          "name": "trigger_message_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "run_id": {
-          "name": "run_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tool_use_id": {
-          "name": "tool_use_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "input_hash": {
-          "name": "input_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "grant_id": {
-          "name": "grant_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "grant_revision": {
-          "name": "grant_revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "machine_id": {
-          "name": "machine_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "action": {
-          "name": "action",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "brief": {
-          "name": "brief",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "source_artifact_ids": {
-          "name": "source_artifact_ids",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "design_id": {
-          "name": "design_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expected_revision": {
-          "name": "expected_revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "task_id": {
-          "name": "task_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "recovery_task_id": {
-          "name": "recovery_task_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "recovery_candidate_url": {
-          "name": "recovery_candidate_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "recovery_grant_revision": {
-          "name": "recovery_grant_revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "recovery_effect_sequence": {
-          "name": "recovery_effect_sequence",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "source_task_id": {
-          "name": "source_task_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "file_imports": {
-          "name": "file_imports",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "reference_artifact_id": {
-          "name": "reference_artifact_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "state": {
-          "name": "state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'queued'"
-        },
-        "result": {
-          "name": "result",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "effect_sequence": {
-          "name": "effect_sequence",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "cancel_requested_at": {
-          "name": "cancel_requested_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "claude_design_active_job": {
-          "name": "claude_design_active_job",
-          "columns": [
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "design_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"claude_design_jobs\".\"state\" in ('queued','running','published','unknown')",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "claude_design_jobs_org_id_state_index": {
-          "name": "claude_design_jobs_org_id_state_index",
-          "columns": [
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "state",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "claude_design_jobs_org_id_organizations_id_fk": {
-          "name": "claude_design_jobs_org_id_organizations_id_fk",
-          "tableFrom": "claude_design_jobs",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_jobs_owner_user_id_users_id_fk": {
-          "name": "claude_design_jobs_owner_user_id_users_id_fk",
-          "tableFrom": "claude_design_jobs",
-          "tableTo": "users",
-          "columnsFrom": [
-            "owner_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_jobs_org_id_grant_id_claude_design_grants_org_id_id_fk": {
-          "name": "claude_design_jobs_org_id_grant_id_claude_design_grants_org_id_id_fk",
-          "tableFrom": "claude_design_jobs",
-          "tableTo": "claude_design_grants",
-          "columnsFrom": [
-            "org_id",
-            "grant_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_jobs_org_id_design_id_claude_design_artifacts_org_id_id_fk": {
-          "name": "claude_design_jobs_org_id_design_id_claude_design_artifacts_org_id_id_fk",
-          "tableFrom": "claude_design_jobs",
-          "tableTo": "claude_design_artifacts",
-          "columnsFrom": [
-            "org_id",
-            "design_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_jobs_org_id_agent_id_agents_org_id_id_fk": {
-          "name": "claude_design_jobs_org_id_agent_id_agents_org_id_id_fk",
-          "tableFrom": "claude_design_jobs",
-          "tableTo": "agents",
-          "columnsFrom": [
-            "org_id",
-            "agent_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_jobs_org_id_channel_id_channels_org_id_id_fk": {
-          "name": "claude_design_jobs_org_id_channel_id_channels_org_id_id_fk",
-          "tableFrom": "claude_design_jobs",
-          "tableTo": "channels",
-          "columnsFrom": [
-            "org_id",
-            "channel_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "claude_design_jobs_org_id_machine_id_machines_org_id_id_fk": {
-          "name": "claude_design_jobs_org_id_machine_id_machines_org_id_id_fk",
-          "tableFrom": "claude_design_jobs",
-          "tableTo": "machines",
-          "columnsFrom": [
-            "org_id",
-            "machine_id"
-          ],
-          "columnsTo": [
-            "org_id",
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "claude_design_jobs_taskId_unique": {
-          "name": "claude_design_jobs_taskId_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "task_id"
-          ]
-        },
-        "claude_design_jobs_recoveryTaskId_unique": {
-          "name": "claude_design_jobs_recoveryTaskId_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "recovery_task_id"
-          ]
-        },
-        "claude_design_jobs_orgId_id_unique": {
-          "name": "claude_design_jobs_orgId_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "org_id",
-            "id"
-          ]
-        },
-        "claude_design_jobs_orgId_runId_toolUseId_unique": {
-          "name": "claude_design_jobs_orgId_runId_toolUseId_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "org_id",
-            "run_id",
-            "tool_use_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "claude_design_job_state": {
-          "name": "claude_design_job_state",
-          "value": "\"claude_design_jobs\".\"state\" in ('queued','running','published','succeeded','failed','canceled','unknown')"
-        },
-        "claude_design_job_action": {
-          "name": "claude_design_job_action",
-          "value": "\"claude_design_jobs\".\"action\" in ('create','update')"
-        }
-      },
       "isRLSEnabled": false
     },
     "public.composio_usage": {
@@ -18120,6 +17425,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "scope_id": {
+          "name": "scope_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "machine_id": {
           "name": "machine_id",
           "type": "uuid",
@@ -20515,12 +19826,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
-        },
-        "expected_sha256": {
-          "name": "expected_sha256",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "artifact_id": {
           "name": "artifact_id",
@@ -24691,6 +23996,95 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.partner_waitlist_entries": {
+      "name": "partner_waitlist_entries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "whatsapp": {
+          "name": "whatsapp",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "locale": {
+          "name": "locale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'en'"
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'partners'"
+        },
+        "answers": {
+          "name": "answers",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "partner_waitlist_entries_email": {
+          "name": "partner_waitlist_entries_email",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

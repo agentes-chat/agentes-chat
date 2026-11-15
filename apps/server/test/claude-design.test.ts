@@ -20,7 +20,7 @@ async function setup(enabled = true) {
       name: "Design test",
       os: "darwin",
       arch: "arm64",
-      protocol: 65,
+      protocol: 67,
       pairedByUserId: owner.id,
       executors: { claude: { version: "2.1.322 (Claude Code)" } },
     })

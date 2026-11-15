@@ -89,6 +89,16 @@ export function planWindows<W extends PlanMeterWindow>(usage: { windows: readonl
 }
 
 /**
+ * A window of the whole plan: not an `other` one (a single model's week, extra usage, another model group's quota),
+ * which never puts the plan at its limit; a refusal it causes still does (`limited`).
+ */
+export const planOwn = (w: Pick<PlanMeterWindow, "kind">) => w.kind !== "other";
+
+/** A window of the whole plan is full now. */
+export const planFull = (usage: { windows: readonly PlanMeterWindow[] }, now = Date.now()) =>
+  planWindows(usage, now).some((w) => planOwn(w) && w.used >= 100);
+
+/**
  * Where the plan stands: at its limit (a window is full, or it refused a
  * request and no full window has reset since), almost (`PLAN_ALMOST`), or fine.
  * `until`: when every full window has reset; `used`: the tightest window's.
@@ -97,9 +107,9 @@ export function planState(
   usage: PlanMeterUsage,
   now = Date.now(),
 ): { state: PlanState; until: string | null; used: number } {
-  const rows = planWindows(usage, now);
+  const rows = planWindows(usage, now).filter(planOwn);
   const full = rows.filter((w) => w.used >= 100);
-  const refused = usage.limited === true && !usage.windows.some((w) => w.usedPercent >= 100);
+  const refused = usage.limited === true && !usage.windows.some((w) => planOwn(w) && w.usedPercent >= 100);
   const used = rows[0]?.used ?? 0;
   if (full.length === 0 && !refused) return { state: used >= PLAN_ALMOST ? "almost" : "ok", until: null, used };
   const resets = full.flatMap((w) => (w.resetsAt ? [w.resetsAt] : []));

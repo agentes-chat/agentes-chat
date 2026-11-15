@@ -261,8 +261,10 @@ export function OpenPage({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={(e) => {
-          if (openPopup(href)) e.preventDefault();
+        // In a dialog, the desktop app's link routing (lib/desktop.ts) takes the click before React's `onClick`. The
+        // app opens no popup (its window.open goes to the browser and returns null): the link itself goes there, once.
+        onClickCapture={(e) => {
+          if (!inDesktopApp() && openPopup(href)) e.preventDefault();
           onOpened?.();
         }}
       >

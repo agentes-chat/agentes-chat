@@ -1,4 +1,17 @@
-import { Button, Chip, Dialog, DialogBody, DialogFooter, Icon, Menu, MenuItem, Select, Switch } from "@agenteschat/ui";
+import { heldWhole } from "@agenteschat/client/lib/format";
+import {
+  Alert,
+  Button,
+  Chip,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  Icon,
+  Menu,
+  MenuItem,
+  Select,
+  Switch,
+} from "@agenteschat/ui";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../../app";
@@ -66,8 +79,9 @@ export function Servers() {
   // The server here has its own card, above.
   const others = list.servers.filter((server) => !isHereServer(local, server));
 
-  const open = async (server: string) => {
-    await host.chooseServer(server).catch(() => toast(t("desktop.common.error"), "alert"));
+  // `page`: the server's sign-in for one more account, or its first page as one of its accounts (ADR 0183).
+  const open = async (server: string, page?: string) => {
+    await host.chooseServer(server, page).catch(() => toast(t("desktop.common.error"), "alert"));
     read();
   };
 
@@ -136,7 +150,14 @@ export function Servers() {
                     </>
                   }
                   under={
-                    known?.signedIn && known.orgs.length > 1 ? (
+                    known?.signedIn && (known.accounts?.length ?? 0) > 1 ? (
+                      <AccountRows
+                        accounts={known.accounts ?? []}
+                        dim={offline}
+                        open={now}
+                        onOpen={(userId) => void open(server, `/?as=${userId}`)}
+                      />
+                    ) : known?.signedIn && known.orgs.length > 1 ? (
                       <WorkspaceRows orgs={known.orgs} dim={offline} />
                     ) : undefined
                   }
@@ -168,6 +189,11 @@ export function Servers() {
                           />
                         }
                       >
+                        {known?.signedIn && (
+                          <MenuItem icon="plus" onSelect={() => void open(server, "/login?add=1")}>
+                            {t("desktop.servers.addAccount")}
+                          </MenuItem>
+                        )}
                         {known?.signedIn && (
                           <MenuItem icon="arrowRight" onSelect={() => void signOut(server)}>
                             {t("desktop.servers.signOut")}
@@ -239,6 +265,47 @@ function WorkspaceRows({ orgs, dim = false }: { orgs: ServerWorkspaces["orgs"]; 
   );
 }
 
+/**
+ * A server's accounts under its row, when the window is signed in there with several (ADR 0183): who each is, its
+ * workspaces, and the way to it. The one the window shows now says so in words, never a pill (ADR 0158).
+ */
+function AccountRows({
+  accounts,
+  dim,
+  open,
+  onOpen,
+}: {
+  accounts: NonNullable<ServerWorkspaces["accounts"]>;
+  dim: boolean;
+  /** The window is on this server now. */
+  open: boolean;
+  onOpen: (userId: string) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <ul className="dk-accts" data-dim={dim || undefined}>
+      {accounts.map((a) => (
+        <li key={a.userId}>
+          <div className="dk-acct">
+            <span className="dk-acct__who">
+              <span className="dk-ws-name">{a.name}</span>
+              <span className="dk-ws-count">{a.email}</span>
+            </span>
+            {a.current && open ? (
+              <span className="dk-ws-count">{t("desktop.servers.openNow")}</span>
+            ) : (
+              <Button size="sm" variant="ghost" onClick={() => onOpen(a.userId)}>
+                {t("desktop.servers.open")}
+              </Button>
+            )}
+          </div>
+          {a.orgs.length > 0 && <WorkspaceRows orgs={a.orgs} />}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** agentes.chat on this computer, stopped running here ("Stop running it here…"): its data stays, Start brings it back. */
 function StoppedHere({ local }: { local: LocalServerStatus }) {
   const { t } = useTranslation();
@@ -246,36 +313,44 @@ function StoppedHere({ local }: { local: LocalServerStatus }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   return (
-    <PrefCard>
-      <PrefRow
-        lead={<ServerTile kind="here" />}
-        title={t("desktop.server.title")}
-        desc={t("desktop.server.notHere", { path: shortPath(local.dir) })}
-        end={
-          <Button
-            size="sm"
-            icon="play"
-            loading={busy}
-            onClick={() => {
-              setBusy(true);
-              void host
-                .startLocalServer()
-                .catch(() => toast(t("desktop.common.error"), "alert"))
-                .finally(() => setBusy(false));
-            }}
-          >
-            {t("desktop.server.startHere")}
-          </Button>
-        }
-      />
-    </PrefCard>
+    <>
+      <PrefCard>
+        <PrefRow
+          lead={<ServerTile kind="here" />}
+          title={t("desktop.server.title")}
+          desc={t("desktop.server.notHere", { path: shortPath(local.dir) })}
+          end={
+            <Button
+              size="sm"
+              icon="play"
+              loading={busy}
+              onClick={() => {
+                setBusy(true);
+                void host
+                  .startLocalServer()
+                  .catch(() => toast(t("desktop.common.error"), "alert"))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              {t("desktop.server.startHere")}
+            </Button>
+          }
+        />
+      </PrefCard>
+      {/* Under the card, where the running card has it: beside Start it would squeeze the line about its data. */}
+      <div className="dk-under-card dk-here__acts">
+        <span className="dk-here__end">
+          <EraseHere local={local} disabled={busy} />
+        </span>
+      </div>
+    </>
   );
 }
 
 /**
  * agentes.chat on this computer (the app runs it): its state and address, reach from the person's other
  * devices (Tailscale) and the phone's QR code with it, the usage-statistics switch, the way to Jev's key, its
- * version, data and backups, Restart and Stop, and "Stop running it here…" (its data stays).
+ * version, data and backups, Restart and Stop, "Stop running it here…" (its data stays) and "Erase and start over…".
  */
 function HereServer({ local, current }: { local: LocalServerStatus; current: string | null }) {
   const { t, i18n } = useTranslation();
@@ -471,11 +546,7 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
             session there to read it with. */}
         <PrefRow
           title={t("desktop.server.jev")}
-          hint={hintFor(
-            t,
-            t("desktop.server.jev"),
-            t("common.joinSentences", { a: t("desktop.server.jevText"), b: t("desktop.server.jevWhere") }),
-          )}
+          hint={hintFor(t, t("desktop.server.jev"), t("desktop.server.jevText"))}
           end={
             <Button
               size="sm"
@@ -610,7 +681,8 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
             {t("desktop.server.start")}
           </Button>
         )}
-        <span className="dk-here__end">
+        <span className="dk-here__end dk-here__acts">
+          <EraseHere local={local} disabled={busy !== null} />
           <Button size="sm" variant="ghost" className="dk-danger-text" onClick={() => setStopping(true)}>
             {t("desktop.server.stopHere")}
           </Button>
@@ -732,6 +804,79 @@ function HereServer({ local, current }: { local: LocalServerStatus; current: str
             }
           >
             {t("desktop.server.stopHereConfirm")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </>
+  );
+}
+
+/** A start, an update or a restart copies or moves its files: an erase waits until it runs or stops (`files_moving`). */
+const MOVING: ReadonlySet<LocalServerStatus["phase"]> = new Set(["starting", "updating", "restarting"]);
+
+/**
+ * "Erase and start over…": one question, then the server here stops, its folder moves whole to `eraseTo` (its data
+ * kept there) and the welcome window offers a new setup. A folder that couldn't move leaves it stopped, data in place.
+ */
+function EraseHere({ local, disabled }: { local: LocalServerStatus; disabled: boolean }) {
+  const { t } = useTranslation();
+  const host = useHost();
+  const toast = useToast();
+  const [asking, setAsking] = useState(false);
+  // Why the last try didn't erase, shown in the dialog until it closes: a toast would cut it and take it away.
+  const [failed, setFailed] = useState<string | null>(null);
+  const [busy, run] = usePending<"erase">();
+  const erase = () =>
+    run("erase", async () => {
+      setFailed(null);
+      try {
+        const to = await host.eraseLocalServer();
+        setAsking(false);
+        toast(t("desktop.server.erased", { path: shortPath(to) }), "check");
+      } catch (e) {
+        setFailed(
+          e === "held"
+            ? t("desktop.server.eraseHeld")
+            : e === "move"
+              ? t("desktop.server.eraseMoveFailed", { path: shortPath(local.dir) })
+              : t("desktop.common.error"),
+        );
+      }
+    });
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="dk-danger-text"
+        disabled={disabled || !local.eraseTo || MOVING.has(local.phase)}
+        onClick={() => {
+          setFailed(null);
+          setAsking(true);
+        }}
+      >
+        {t("desktop.server.erase")}
+      </Button>
+      <Dialog
+        open={asking}
+        onOpenChange={(o) => !o && busy === null && setAsking(false)}
+        title={t("desktop.server.eraseTitle")}
+        // The date in the folder's name stays on one line.
+        description={t("desktop.server.eraseBody", { path: heldWhole(shortPath(local.eraseTo ?? "")) })}
+        closeLabel={t("desktop.common.close")}
+        width={440}
+      >
+        {failed && (
+          <DialogBody>
+            <Alert>{failed}</Alert>
+          </DialogBody>
+        )}
+        <DialogFooter bar>
+          <Button variant="ghost" onClick={() => setAsking(false)} disabled={busy !== null}>
+            {t("desktop.common.cancel")}
+          </Button>
+          <Button variant="danger" loading={busy !== null} onClick={() => void erase()}>
+            {t("desktop.server.eraseConfirm")}
           </Button>
         </DialogFooter>
       </Dialog>

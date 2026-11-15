@@ -1,5 +1,5 @@
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
-import { installTitleTips } from "@agenteschat/ui";
+import { installTitleTips, switchTheme } from "@agenteschat/ui";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider } from "react-i18next";
@@ -36,6 +36,7 @@ const fakeHost = inTauri()
           reach: params.get("reach") === "1",
           back: params.get("back"),
           run: params.get("run") !== "0",
+          owner: params.get("owner") !== "0",
           usage: params.get("usage") !== "0",
           tailscale: (params.get("tailscale") as Tailnet["state"] | null) ?? undefined,
           installed: params.get("installed") === "terminal" ? "terminal" : undefined,
@@ -64,8 +65,7 @@ window.addEventListener("storage", (e) => {
 const dark = window.matchMedia("(prefers-color-scheme: dark)");
 const forced = fakeHost ? params.get("theme") : null;
 const applyTheme = () => {
-  document.documentElement.dataset.theme =
-    forced === "dark" || forced === "light" ? forced : dark.matches ? "dark" : "light";
+  switchTheme(forced === "dark" || forced === "light" ? forced : dark.matches ? "dark" : "light");
 };
 applyTheme();
 dark.addEventListener("change", applyTheme);

@@ -62,6 +62,38 @@ describe("/desktop/handover", () => {
     }
   });
 
+  test("after the app signed the window in again from a page, it goes back there once, and notes the sign-in", async () => {
+    const assign = recordAssign();
+    const { auth } = createFakeAuth();
+    const back = (to: string, at = Date.now()) =>
+      sessionStorage.setItem("agentes.thisMac.return", JSON.stringify({ to, at }));
+    try {
+      back("/org/acme/settings/general?delete=1");
+      window.history.replaceState(null, "", `/desktop/handover#token=${TOKEN}`);
+      await renderApp(`/desktop/handover#token=${TOKEN}`, { api: createFakeApi(seedState({ me: null })), auth });
+      await settle(6);
+      expect(assign.urls).toEqual(["/org/acme/settings/general?delete=1"]);
+      expect(sessionStorage.getItem("agentes.thisMac.return")).toBeNull();
+      expect(Date.now() - Number(sessionStorage.getItem("agentes.thisMac.signedInAt"))).toBeLessThan(60_000);
+
+      // Older than the app's sign-in lasts, or another site's: the app's first page.
+      for (const stale of [
+        () => back("/org/acme/settings?delete=1", Date.now() - 4 * 60_000),
+        () => back("//evil.example.com"),
+      ]) {
+        cleanup();
+        stale();
+        window.history.replaceState(null, "", `/desktop/handover#token=${TOKEN}`);
+        await renderApp(`/desktop/handover#token=${TOKEN}`, { api: createFakeApi(seedState({ me: null })), auth });
+        await settle(6);
+      }
+      expect(assign.urls.slice(1)).toEqual(["/", "/"]);
+    } finally {
+      assign.restore();
+      sessionStorage.clear();
+    }
+  });
+
   test("no token, or not one: nothing is traded", async () => {
     const { auth, calls } = createFakeAuth();
     window.history.replaceState(null, "", "/desktop/handover#token=<script>");

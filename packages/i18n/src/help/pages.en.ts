@@ -74,6 +74,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         heading: "Signing in from other devices",
         blocks: [
           "The owner starts with no password: the app signs you in on this computer. To sign in from a browser on another computer, add one in **Settings\u00a0›\u00a0Your account**. Until you do, **Preferences\u00a0›\u00a0Servers** says so, and **Add a password** opens that page. The phone app connects by scanning the QR code under **On your phone**, in **Preferences\u00a0›\u00a0Servers**. The QR code needs **Reach it from your phone and teammates** on.",
+          "When the owner deletes their account, in **Settings\u00a0›\u00a0Your account**, it goes for good 7 days later, and the workspaces only they were in go with it. Until then, sign in and press **Restore account** to bring it back. Once it's gone, if no account is left, the app opens its welcome window to make a new owner. If other people still have accounts, each of them signs in with their own email.",
         ],
       },
       {
@@ -89,6 +90,25 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         blocks: [
           "With **Back up every night** on (app 0.8.1 and later), in **Preferences\u00a0›\u00a0Servers**, the app saves the database, the files and `.env` in `.agentes/backups`, in your home folder, every night at 3:00. A computer that was asleep then backs up once it's awake. **Back up now** does the same at once. Each backup stops the server for a moment, and the two newest stay.",
           "**Copy to** also puts each new backup in a folder you pick, like a USB drive or iCloud Drive, where the two newest stay. They hold your keys: keep them private. **Restore…** takes agentes.chat back to a backup: messages, files and settings. It stops for a minute, and what was there before is kept in the backups folder.",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "Start over or uninstall",
+        blocks: [
+          "Everything agentes.chat keeps on this computer is in folders in your home folder, not inside the app. So moving the app to the Trash removes none of it, and doesn't stop agentes.chat if it's running.",
+          "To start over, press **Erase and start over…** in **Preferences\u00a0›\u00a0Servers**. It stops agentes.chat here and moves everything it holds to a new folder in your home folder, named `agentes.chat erased` and the day's date, where it stays until you delete it. What its agents kept on this computer, such as their browsers and sign-ins, is deleted from `.agentes-runner`. Its workspaces go for everyone who uses them. Then the welcome window opens, and you set it up again with a new owner account. The agents' files, in `agentes` in your home folder, stay where they are.",
+          "To bring it back later, quit the app, move a newer `.agentes` folder out of the way if there is one, rename the `agentes.chat erased` folder to `.agentes`, then open the app and set it up on this computer again. It starts with its workspaces and its owner as they were. What its agents kept on this computer doesn't come back, so they need their sign-ins again.",
+          "To remove agentes.chat from this computer entirely:",
+          {
+            list: [
+              "Turn off **Open at login** in **Preferences\u00a0›\u00a0General**.",
+              "Quit the app. Closing its window isn't enough. On a Mac, click its icon in the Dock, then choose **Quit agentes.chat** in the agentes.chat menu at the top of the screen, or press ⌘Q. On Windows and Linux, click the agentes.chat icon by the clock and choose **Quit agentes.chat**. If it asks **Quit agentes.chat?**, press **Quit**.",
+              "Delete the app. On a Mac, move it to the Trash. On Windows and Linux, uninstall it like any other app.",
+              "Delete these folders in your home folder. They hold your data, and once they're deleted it can't come back, so keep a backup somewhere else first if you might want it: `.agentes` (messages, files, accounts, settings and backups), every `agentes.chat erased` folder, `.agentes-runner` (what the agents keep on this computer, such as their browsers and sign-ins) and `agentes` (the agents' files). Folders whose name starts with a dot are hidden. On a Mac, open your home folder in Finder and press ⇧⌘. (Shift, Command and the period key) to show them.",
+              "Delete the app's own folders. They hold only its settings, its window's sign-ins and its logs. On a Mac: everything whose name starts with `chat.agentes.desktop` in the Application Support, Caches, HTTPStorages, Logs, Preferences and WebKit folders of `~/Library`, and `agentes.chat.plist` in `~/Library/LaunchAgents`. On Windows: `%APPDATA%\\chat.agentes.desktop` and `%LOCALAPPDATA%\\chat.agentes.desktop`. On Linux: `~/.config/chat.agentes.desktop` and `~/.local/share/chat.agentes.desktop`. On a Mac, to open one of these folders, press ⇧⌘G in Finder and type its path, such as `~/Library/Caches`.",
+            ],
+          },
         ],
       },
       {
@@ -751,7 +771,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "email",
         heading: "Email",
         blocks: [
-          "Without email, agentes.chat writes each email to its log instead of sending it, so an invitation link can still be copied from there. Password resets stay off.",
+          "Without email, agentes.chat writes each email to its log instead of sending it, so an invitation link can still be copied from there. Password resets stay off, and a new email for an account changes at once, with no code or link.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

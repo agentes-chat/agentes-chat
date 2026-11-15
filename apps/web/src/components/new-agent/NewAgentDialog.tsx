@@ -12,21 +12,27 @@ import {
 } from "@agenteschat/client";
 import { type Level, saveLevels } from "@agenteschat/client/lib/access-levels";
 import { errorText as failureText } from "@agenteschat/client/lib/errors";
+import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
 import { addsAgentsTo, can } from "@agenteschat/client/lib/permissions";
 import { connectorName, scopeText } from "@agenteschat/client/lib/scopes";
+import { skillsToGive } from "@agenteschat/client/lib/skills";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
   type AgentAppearance,
   type AgentColor,
   agentTones,
   Button,
+  ChipButton,
   Dialog,
   DialogBody,
   DialogFooter,
   Icon,
+  LimitLine,
+  limitShown,
   OptionList,
+  overLimit,
   PixelSky,
   pixelBurst,
   playAgentReaction,
@@ -64,6 +70,7 @@ import { ConnectorIcon } from "@/components/ConnectorCatalog";
 import { useMediaQuery } from "@/components/NavDrawer";
 import { useOrg } from "@/components/org-context";
 import { agentCoverOptions, facePool } from "@/components/Sky";
+import { useTextLimit } from "@/hooks/useTextLimit";
 import {
   BLANK_LOOK,
   type CardLevel,
@@ -123,6 +130,8 @@ export interface NewAgentRequest {
   channelId?: string | null;
   /** Back from connecting an app elsewhere (OAuth): the card as it was, and the app that just connected. */
   resume?: { sel: Pick; drafts: Partial<Record<Pick, Draft>>; connected: string | null };
+  /** A plan account of the person's own just connected ("Criar um agente com este plano"): it thinks with that one. */
+  accountId?: string;
 }
 
 /**
@@ -217,7 +226,7 @@ export function NewAgentProvider({ children }: { children: ReactNode }) {
   );
   const value = useMemo(() => ({ open }), [open]);
   useEffect(() => {
-    const onAsk = () => open();
+    const onAsk = (e: Event) => open((e as CustomEvent<NewAgentRequest | null>).detail ?? undefined);
     window.addEventListener(NEW_AGENT_EVENT, onAsk);
     return () => window.removeEventListener(NEW_AGENT_EVENT, onAsk);
   }, [open]);
@@ -276,7 +285,10 @@ export function CreateAgentLink() {
   );
 }
 
-/** The Mac menu bar's New agent (`MenuBarActions`, mounted outside the dialog's provider) asks through this event. */
+/**
+ * Who sits outside the dialog's provider asks through this event: the Mac menu bar's New agent (`MenuBarActions`), and
+ * Connect AI's "Criar um agente com este plano" (a `CustomEvent` whose `detail` is the request).
+ */
 export const NEW_AGENT_EVENT = "agentes:new-agent";
 
 /** The ready-made words of a starting point: a personal starter's (`teamTemplates.agents`) or a role's. */
@@ -363,7 +375,7 @@ function NewAgentDialog({
   const dms = useDms(org.id);
   const library = useSkills(org.id);
   const create = useCreateAgent(org.id);
-  const brain = useNewAgentBrain();
+  const brain = useNewAgentBrain(request.accountId);
   const connectAi = useConnectAi();
   const qc = useQueryClient();
 
@@ -470,7 +482,7 @@ function NewAgentDialog({
 
   // Its skills: what its starting point suggests that the library has, and the ones on for new agents; hidden where
   // the library is empty or this server has none.
-  const lib = library.data ?? [];
+  const lib = skillsToGive(library.data ?? [], me.user.id);
   const skillsShown = library.isSuccess && lib.length > 0;
   const suggestedSkills = (pick: Pick) => {
     const titles = (SKILL_SUGGESTIONS[pick] ?? []).flatMap((k) => [k, norm(tt(`teamTemplates.skills.${k}.name`))]);
@@ -570,7 +582,9 @@ function NewAgentDialog({
   useScrollEdges(list, [picks.length, step, steps]);
   useScrollEdges(body, [sel, lookOpen, draft, step, steps]);
 
-  const ready = name !== "" && handle !== "" && (sel !== "zero" || draft.what.trim() !== "");
+  const instructionsLimit = useTextLimit(FIELD_LIMITS.instructions);
+  const tooLong = overLimit(draft.instructions, instructionsLimit);
+  const ready = name !== "" && handle !== "" && (sel !== "zero" || draft.what.trim() !== "") && !tooLong;
   const react = () => playAgentReaction(REACTION, "up");
   const hopFrom = useRef<DOMRect | null>(null);
   // While words are typed into its bubble it looks at them.
@@ -1066,11 +1080,10 @@ function NewAgentDialog({
                         <span className="nac__chips">
                           {appIds.length === 0 && <span className="nac__none">{t("newAgentCard.usesNone")}</span>}
                           {appIds.map((id) => (
-                            <button key={id} type="button" className="ac-chip nac__app" onClick={() => setAppOpen(id)}>
-                              {appIcon(id)}
-                              <span className="ac-chip__text">{appName(id)}</span>
+                            <ChipButton key={id} className="nac__app" lead={appIcon(id)} onClick={() => setAppOpen(id)}>
+                              {appName(id)}
                               <span className="nac__level">{tt(`newAgentCard.level.${draft.apps[id] ?? "read"}`)}</span>
-                            </button>
+                            </ChipButton>
                           ))}
                         </span>
                       </section>
@@ -1151,13 +1164,17 @@ function NewAgentDialog({
                             className="nac__instr"
                             rows={3}
                             value={draft.instructions}
-                            maxLength={50_000}
                             placeholder={t("newAgentCard.instructionsPlaceholder")}
                             aria-label={t("newAgent.instructions")}
+                            aria-invalid={tooLong || undefined}
+                            aria-describedby={
+                              limitShown(draft.instructions, instructionsLimit) ? "nac-instr-limit" : undefined
+                            }
                             onChange={(e) => update({ instructions: e.target.value })}
                           />
                           <Icon name="edit" size={14} className="nac__pen" />
                         </span>
+                        <LimitLine id="nac-instr-limit" value={draft.instructions} limit={instructionsLimit} />
                         <span className="nac__tips">
                           {TIPS.map((tip) => (
                             <Button key={tip} size="sm" variant="ghost" icon="plus" onClick={() => addTip(tip)}>

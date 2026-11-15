@@ -7,7 +7,7 @@ import type { Message, RunStep } from "@agenteschat/client";
 import { applyChannelEvent, emptyStreams, reconcileRuns, type StreamsState } from "@agenteschat/client";
 import { splitCanceled, stopsMovedOn, workFromSteps } from "@agenteschat/client/lib/work";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { ADA_ID, createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
+import { ADA_ID, createFakeApi, ENG_ID, ORG_ID, seedState, withRightHand } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -93,8 +93,14 @@ describe("work summary and stopped messages", () => {
   test("splitCanceled keeps the text and takes out the server's last line; the person comes from the meta", () => {
     expect(
       splitCanceled("Comecei a análise.\n\n_Interrompido por Walter._", { canceled: { byUserId: "u-walter" } }),
-    ).toEqual({ body: "Comecei a análise.", canceled: true, byUserId: "u-walter", note: "Interrompido por Walter" });
-    expect(splitCanceled("_ênfase_", {})).toEqual({ body: "_ênfase_", canceled: false, byUserId: null, note: null });
+    ).toEqual({ body: "Comecei a análise.", canceled: true, byUserId: "u-walter", byAgentId: null, code: null });
+    expect(splitCanceled("_ênfase_", {})).toEqual({
+      body: "_ênfase_",
+      canceled: false,
+      byUserId: null,
+      byAgentId: null,
+      code: null,
+    });
   });
 });
 
@@ -189,6 +195,49 @@ describe("in the channel", () => {
     expect(document.querySelector(".run-canceled")).toBeNull();
     expect(document.body.textContent).not.toContain("Você parou");
     expect(screen().queryByRole("button", { name: "Continuar" })).toBeNull();
+  });
+
+  test("who stopped it, as the pill says it: the right hand at my word, someone else, or the system's cause", async () => {
+    const state = withRightHand(seedState());
+    state.messages.push(
+      // The right hand stopped it at my word: its name, never "Você parou", and Continuar still mine (the latest, so
+      // the agent has not gone on after it).
+      fromAda("m-lodi", "Comecei o relatório.\n\n_Stopped by Lodi for Walter._", "r-lodi", 1, {
+        canceled: {
+          byUserId: "u-walter",
+          byAgentId: "00000000-0000-4000-8000-0000000000a9",
+          text: "Comecei o relatório.",
+        },
+      }),
+      // João pressed Stop.
+      fromAda("m-joao", "Comecei os testes.\n\n_Stopped by João._", "r-joao", 5, {
+        canceled: { byUserId: "u-joao", text: "Comecei os testes." },
+      }),
+      // Archived: its cause in my language, never the server's English, and nothing to continue.
+      fromAda("m-archived", "Comecei o deploy.\n\n_Stopped._", "r-archived", 4, {
+        canceled: { byUserId: null, code: "run.agent_archived", text: "Comecei o deploy." },
+      }),
+      // A cause with no words of its own: the plain stop line.
+      fromAda("m-mission", "Comecei o plano.\n\n_Stopped._", "r-mission", 3, {
+        canceled: { byUserId: null, code: "run.failed", text: "Comecei o plano." },
+      }),
+    );
+    await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state) });
+    await settle(5);
+    const lineOf = (text: string) =>
+      (screen().getByText(text).closest(".ac-msg") as HTMLElement).querySelector(".run-canceled") as HTMLElement;
+    const lodi = lineOf("Comecei o relatório.");
+    expect(lodi.textContent).toContain("Lodi parou a Ada");
+    expect(lodi.textContent).not.toContain("Você");
+    expect(within(lodi).getByRole("button", { name: "Continuar" })).toBeTruthy();
+    expect(lineOf("Comecei os testes.").textContent).toContain("João parou a Ada");
+    const archived = lineOf("Comecei o deploy.");
+    expect(archived.textContent).toContain("O agente foi arquivado.");
+    expect(within(archived).queryByRole("button", { name: "Continuar" })).toBeNull();
+    const mission = lineOf("Comecei o plano.");
+    expect(mission.textContent).toContain("Parou aqui");
+    expect(within(mission).queryByRole("button", { name: "Continuar" })).toBeNull();
+    expect(document.body.textContent).not.toContain("Stopped");
   });
 
   test("a stopped reply the agent wrote after keeps its pill and loses Continuar", async () => {

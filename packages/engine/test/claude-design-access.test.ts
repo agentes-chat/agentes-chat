@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { eq, schema } from "@agenteschat/db";
-import { authorizeClaudeDesign, setClaudeDesignGrant } from "../src/claude-design/access";
+import { authorizeClaudeDesign, getClaudeDesignGrant, setClaudeDesignGrant } from "../src/claude-design/access";
 import { type DesignFixture, designFixture } from "./claude-design-fixtures";
 import { addMember } from "./fixtures";
 
@@ -72,4 +72,20 @@ test("generic permission cards never offer the owner-only Design account grant",
   const missing = await missingPermissions(f.ctx);
   expect(missing.some((p) => p.id === "sandbox:run")).toBe(true);
   expect(missing.some((p) => p.id.startsWith("claude-design:"))).toBe(false);
+});
+
+test("upstream runners 65 and 66 cannot grant or execute Design; protocol 67 can", async () => {
+  f = await designFixture();
+  await setClaudeDesignGrant(f.designDeps, f.owner.id, f.org.id, f.agent.id, f.accountId);
+  for (const protocol of [65, 66]) {
+    await f.db.update(schema.machines).set({ protocol }).where(eq(schema.machines.id, f.machineId));
+    expect(await getClaudeDesignGrant(f.designDeps, f.owner.id, f.org.id, f.agent.id, f.accountId)).toMatchObject({
+      available: false,
+      reason: "unsupported",
+    });
+    await expect(setClaudeDesignGrant(f.designDeps, f.owner.id, f.org.id, f.agent.id, f.accountId)).rejects.toThrow();
+    await expect(authorizeClaudeDesign(f.designDeps, f.ctx, "create")).rejects.toThrow();
+  }
+  await f.db.update(schema.machines).set({ protocol: 67 }).where(eq(schema.machines.id, f.machineId));
+  expect((await authorizeClaudeDesign(f.designDeps, f.ctx, "create")).accountId).toBe(f.accountId);
 });

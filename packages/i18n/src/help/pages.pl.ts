@@ -75,6 +75,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Logowanie z innych urządzeń",
         blocks: [
           "Właściciel zaczyna bez hasła: aplikacja loguje cię na tym komputerze. Żeby zalogować się w przeglądarce na innym komputerze, ustaw hasło w **Ustawienia\u00a0›\u00a0Twoje konto**. Dopóki tego nie zrobisz, **Preferencje\u00a0›\u00a0Serwery** o tym przypomina, a **Dodaj hasło** otwiera tę stronę. Aplikacja na telefon łączy się po zeskanowaniu kodu QR z sekcji **Na telefonie**, w **Preferencje\u00a0›\u00a0Serwery**. Musi być przy tym włączone **Dostęp z telefonu i dla zespołu**.",
+          "Gdy właściciel usunie swoje konto w **Ustawienia\u00a0›\u00a0Twoje konto**, znika ono na dobre 7 dni później, a przestrzenie robocze, w których był tylko on, znikają razem z nim. Do tego czasu zaloguj się i naciśnij **Przywróć konto**, żeby je odzyskać. Gdy już go nie ma i nie zostało żadne konto, aplikacja otwiera okno powitalne, żeby utworzyć nowego właściciela. Jeśli inni nadal mają konta, każdy loguje się własnym adresem e-mail.",
         ],
       },
       {
@@ -90,6 +91,25 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         blocks: [
           "Gdy **Rób kopię co noc** jest włączone (aplikacja 0.8.1 i nowsze), w **Preferencje\u00a0›\u00a0Serwery**, aplikacja co noc o 3:00 zapisuje bazę danych, pliki i `.env` w `.agentes/backups`, w twoim folderze domowym. Komputer, który wtedy spał, robi kopię, gdy się obudzi. **Zrób kopię zapasową teraz** robi to samo od razu. Każda kopia na chwilę zatrzymuje serwer, a zostają dwie najnowsze.",
           "**Kopiuj do** umieszcza też każdą nową kopię w wybranym folderze, na przykład na pendrivie albo w iCloud Drive, gdzie zostają dwie najnowsze. Zawierają twoje klucze: trzymaj je w tajemnicy. **Przywróć…** cofa agentes.chat do kopii: wiadomości, plików i ustawień. Zatrzymuje się na minutę, a to, co było wcześniej, zostaje w folderze kopii.",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "Zacznij od nowa lub odinstaluj",
+        blocks: [
+          "Wszystko, co agentes.chat trzyma na tym komputerze, jest w folderach w twoim folderze domowym, nie w aplikacji. Dlatego przeniesienie aplikacji do Kosza niczego z tego nie usuwa i nie zatrzymuje agentes.chat, jeśli działa.",
+          "Żeby zacząć od nowa, naciśnij **Wymaż i zacznij od nowa…** w **Preferencje\u00a0›\u00a0Serwery**. agentes.chat zatrzymuje się tutaj, a wszystko, co zawiera, trafia do nowego folderu w twoim folderze domowym, nazwanego `agentes.chat erased` z datą tego dnia, i zostaje tam, dopóki go nie usuniesz. To, co jego agenci trzymali na tym komputerze, na przykład ich przeglądarki i logowania, zostaje usunięte z `.agentes-runner`. Jego przestrzenie robocze znikają dla wszystkich, którzy z nich korzystają. Potem otwiera się okno powitalne i konfigurujesz go od nowa z nowym kontem właściciela. Pliki agentów, w `agentes` w twoim folderze domowym, zostają tam, gdzie są.",
+          "Żeby później go przywrócić, zakończ aplikację, odłóż na bok nowszy folder `.agentes`, jeśli jest, zmień nazwę folderu `agentes.chat erased` na `.agentes`, otwórz aplikację i skonfiguruj go ponownie na tym komputerze. Wraca ze swoimi przestrzeniami roboczymi i właścicielem, tak jak były. To, co jego agenci trzymali na tym komputerze, nie wraca, więc muszą zalogować się ponownie.",
+          "Żeby całkowicie usunąć agentes.chat z tego komputera:",
+          {
+            list: [
+              "Wyłącz **Otwieraj po zalogowaniu** w **Preferencje\u00a0›\u00a0Ogólne**.",
+              "Zakończ aplikację. Samo zamknięcie okna nie wystarczy. Na Macu kliknij jej ikonę w Docku i wybierz **Zakończ agentes.chat** w menu agentes.chat u góry ekranu albo naciśnij ⌘Q. Na Windowsie i Linuksie kliknij ikonę agentes.chat przy zegarze i wybierz **Zakończ agentes.chat**. Jeśli zapyta **Zakończyć agentes.chat?**, naciśnij **Zakończ**.",
+              "Usuń aplikację. Na Macu przenieś ją do Kosza. Na Windowsie i Linuksie odinstaluj ją jak każdą inną aplikację.",
+              "Usuń te foldery ze swojego folderu domowego. Są w nich twoje dane, a po usunięciu nie da się ich odzyskać, więc najpierw zrób kopię w innym miejscu, jeśli możesz ich jeszcze potrzebować: `.agentes` (wiadomości, pliki, konta, ustawienia i kopie zapasowe), każdy folder `agentes.chat erased`, `.agentes-runner` (to, co agenci trzymają na tym komputerze, na przykład ich przeglądarki i logowania) i `agentes` (pliki agentów). Foldery, których nazwa zaczyna się od kropki, są ukryte. Na Macu otwórz swój folder domowy w Finderze i naciśnij ⇧⌘. (Shift, Command i klawisz kropki), żeby je pokazać.",
+              "Usuń foldery samej aplikacji. Są w nich tylko jej ustawienia, logowania jej okna i logi. Na Macu: wszystko, czego nazwa zaczyna się od `chat.agentes.desktop`, w folderach Application Support, Caches, HTTPStorages, Logs, Preferences i WebKit w `~/Library`, oraz `agentes.chat.plist` w `~/Library/LaunchAgents`. Na Windowsie: `%APPDATA%\\chat.agentes.desktop` i `%LOCALAPPDATA%\\chat.agentes.desktop`. Na Linuksie: `~/.config/chat.agentes.desktop` i `~/.local/share/chat.agentes.desktop`. Na Macu, żeby otworzyć jeden z tych folderów, naciśnij ⇧⌘G w Finderze i wpisz jego ścieżkę, na przykład `~/Library/Caches`.",
+            ],
+          },
         ],
       },
       {
@@ -755,7 +775,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "E-mail",
         blocks: [
-          "Bez e-maila agentes.chat zapisuje każdą wiadomość w swoim logu zamiast ją wysłać, więc link z zaproszeniem da się stamtąd skopiować. Resetowanie hasła pozostaje wyłączone.",
+          "Bez e-maila agentes.chat zapisuje każdą wiadomość w swoim logu zamiast ją wysłać, więc link z zaproszeniem da się stamtąd skopiować. Resetowanie hasła pozostaje wyłączone, a nowy e-mail konta zmienia się od razu, bez kodu i linku.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

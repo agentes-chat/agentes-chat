@@ -2,6 +2,7 @@ import { SCREEN_KINDS } from "@agenteschat/adapters";
 import {
   askAdmins,
   listNotifications,
+  markAllNotificationsDone,
   markAllNotificationsRead,
   markNotificationDone,
   markNotificationRead,
@@ -135,6 +136,10 @@ const Notification = z
         description:
           "`org_standing` on agentes.chat Cloud: the apps read `text` as the restriction, with how to contest it.",
       }),
+      still: z.number().optional().openapi({
+        description:
+          "A reminder of what the person left unread in the waiting inbox: how many things still wait, this one included.",
+      }),
     }),
     readAt: z.string().nullable(),
     doneAt: z.string().nullable(),
@@ -232,6 +237,25 @@ export function notificationRoutes(deps: AppDeps) {
       const { orgId } = c.req.valid("param");
       const { filter } = c.req.valid("json");
       return c.json(await markAllNotificationsRead(nd, c.get("user").id, orgId, filter), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/notifications/done-all",
+      tags,
+      security,
+      summary: "Done for everything (in a filter) but what waits on you; returns the ids changed, for the undo",
+      description:
+        "Each leaves the inbox as with `POST …/{notificationId}/done` (undo it there with `done: false`). Approvals and questions waiting on you stay until answered; `waiting` and `done` change nothing.",
+      request: { params: OrgParams, body: body(z.object({ filter: Filter.optional() })) },
+      responses: { 200: json(z.object({ ids: z.array(z.uuid()) })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const { filter } = c.req.valid("json");
+      return c.json(await markAllNotificationsDone(nd, c.get("user").id, orgId, filter), 200);
     },
   );
 

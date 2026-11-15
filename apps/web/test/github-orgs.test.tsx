@@ -74,6 +74,40 @@ describe("Reconectar GitHub", () => {
     expect(reconnectDialog().textContent).toContain("Agora também: beta.");
   });
 
+  test("in the desktop app too: the link opens once, and back in the window it says what changed", async () => {
+    const win = window as { __agentesDesktop?: unknown };
+    const realOpen = window.open;
+    const opened: string[] = [];
+    const pluginSaw: string[] = [];
+    // The app's shell plugin, on `body` from the page's load: it would take the link and ask the app over IPC.
+    const plugin = (e: Event) => {
+      const link = e.target instanceof Element ? e.target.closest("a") : null;
+      if (link?.target !== "_blank") return;
+      pluginSaw.push(link.href);
+      e.preventDefault();
+    };
+    window.open = ((url?: string | URL) => {
+      opened.push(String(url));
+      return null;
+    }) as typeof window.open;
+    win.__agentesDesktop = { version: "0.6.0" };
+    document.body.addEventListener("click", plugin);
+    try {
+      const state = seedState();
+      state.githubAccess = { orgs: ["acme"], manageUrl: PAGE };
+      await openReconnect(state);
+      await click(within(reconnectDialog()).getByRole("link", { name: "Liberar organizações no GitHub" }));
+      expect(opened).toEqual([PAGE]);
+      expect(pluginSaw).toEqual([]);
+      await backToTab();
+      expect(reconnectDialog().textContent).toContain("Nada mudou nas organizações.");
+    } finally {
+      document.body.removeEventListener("click", plugin);
+      window.open = realOpen;
+      delete win.__agentesDesktop;
+    }
+  });
+
   test("GitHub didn't answer: it says so, with a way to try again", async () => {
     const state = seedState();
     state.githubAccess = { orgs: null, manageUrl: PAGE };

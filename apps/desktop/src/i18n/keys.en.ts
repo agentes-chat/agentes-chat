@@ -152,28 +152,47 @@ export const desktopEn = {
     /** Adding a workspace, under "Sign in to agentes.chat": a new one instead. */
     addNew: "Want a new workspace?",
     addNewLink: "Create one",
-    addOwn: "Use your team's server",
   },
-  own: {
-    title: "Your own server",
-    lead: "agentes.chat runs on your computers, and your data stays on them.",
-    back: "agentes.chat",
-    connect: "Connect to my server",
-    connectText: "It runs on another computer: a Mac mini, a spare laptop or a server online.",
-    here: "Run agentes.chat on this {{device}}",
-    hereText: "This {{device}} becomes the server, while it's on.",
-    which: "Which one to choose?",
+  /** The first screen ("Onde seu workspace vai ficar?", FirstRun.tsx): the three places, the drawing following the one picked. */
+  place: {
+    title: "Where will your workspace live?",
+    lead: "Your agents work wherever it is. You can change it later.",
+    recommended: "Recommended",
+    cloud: "In the agentes.chat cloud",
+    cloudText: "Always on. We take care of everything, you just use it.",
+    here: "On this {{device}}",
+    hereText: "Your agents work while the app is open.",
+    box: "On a computer that's always on",
+    boxText: "A Mac mini or an office computer, installed once.",
+    goCloud: "Continue in the cloud",
+    goHere: "Get this {{device}} ready",
+    goBox: "See how to install",
+    haveOne: "Have one already?",
+    haveOneLink: "Sign in by its address",
+  },
+  /** "Num computador sempre ligado": the one-command install, and the instructions to send to whoever installs it. */
+  install: {
+    title: "Install on a computer that's always on",
+    lead: "It's done once. Then it keeps running by itself, even with this app closed.",
+    step1: "On the computer that stays on, open the Terminal and paste this",
+    step2: "At the end a link shows up. Open it here and that's it.",
+    noLink: "No link?",
+    someoneElse: "Someone else will install it?",
+    copy: "Copy the instructions",
+    copied: "Instructions copied",
+    /** What "Copy the instructions" puts on the clipboard, to send to whoever installs it. */
+    text: "To install agentes.chat on a computer that stays on (a Mac mini, an office computer or a server):\n\n1. On that computer, open the Terminal and paste this:\n{{command}}\n\n2. At the end a link shows up. Send it to me: it opens the workspace in the app.",
   },
   connect: {
-    title: "Connect to my server",
+    title: "Sign in to a workspace that already exists",
     lead: "Its address, the same one you open in the browser.",
     label: "Server address",
     placeholder: "agentes.yourteam.ts.net",
-    go: "Connect",
+    go: "Sign in",
     checking: "Checking…",
     found: "Found",
     looking: "Looking for your server…",
-    foundTailnet: "On your Tailscale network",
+    foundTailnet: "On your team's network",
     foundHere: "agentes.chat is running here",
     /** A server found on this computer that still waits for its owner account (the app opens its owner page). */
     foundNoOwner: "Waiting for its owner account",
@@ -185,8 +204,8 @@ export const desktopEn = {
     /** Under the address field: what an address looks like, and what a Tailscale one ends in. */
     addressHint: "An address with https, or its Tailscale one, which ends in .ts.net.",
     checkUpdates: "Check for updates",
-    none: "Don't have one yet? Run this on it",
-    noneText: "In the terminal of a server or a Mac mini. At the end it shows a link that connects this app to it.",
+    /** Under the found servers: none yet, so the always-on install. */
+    noneYet: "Don't have one yet?",
     invalid: "Check the address, something like agentes.yourteam.ts.net.",
     httpRefused:
       "{{host}} doesn't use a secure connection (https), and only servers on this {{device}} may go without one. Use its https address or its Tailscale one.",
@@ -203,9 +222,10 @@ export const desktopEn = {
     appTooOld: "Update the app to use {{host}}.",
   },
   here: {
-    title: "Run agentes.chat on this {{device}}",
-    how: "It runs inside this app, with its own database built in, and keeps everything in one folder on this {{device}}.",
+    title: "Let's get this {{device}} ready",
+    how: "It takes a minute. Everything stays here, with you alone.",
     again: "It ran here before, and its data is still in {{path}}.",
+    ownerNone: "No account is left on it. Your name and email make you its new owner.",
     name: "Your name",
     nameNeeded: "Write your name.",
     email: "Your email",
@@ -233,15 +253,17 @@ export const desktopEn = {
     usage: "Send anonymous usage statistics to agentes.chat",
     usageText:
       "Counts such as people, agents, machine sizes, AI tokens used and how much data the agents' browsers send and receive. Never messages, files, names or sites.",
-    start: "Start agentes.chat",
-    setting: "Setting up agentes.chat on this {{device}}",
+    start: "Start",
+    setting: "Getting everything ready",
+    /** Under the form, beside a sleeping agent: what closing the app does. */
+    rest: "When you close the app, your agents rest. They're back as soon as you open it again.",
     step: {
-      database: "Preparing the database",
+      database: "Making room for your data",
       databaseNote: "first time only",
-      start: "Starting",
+      start: "Turning agentes.chat on",
       account: "Creating your account",
-      computer: "Getting this {{device}} ready for your agents",
-      reach: "Turning on access from your devices",
+      computer: "Calling your agents",
+      reach: "Turning on access from your phone",
     },
     /** Each step's state in words, for screen readers (the marks are drawn). */
     stepState: {
@@ -254,7 +276,7 @@ export const desktopEn = {
       start: "agentes.chat didn't start on this {{device}}.",
       database: "The database wasn't prepared.",
       account: "Your account wasn't created.",
-      retry: "Try again in Preferences\u00a0›\u00a0Servers.",
+      retry: "Try again in Preferences",
     },
     reason: {
       https: "HTTPS is off on your Tailscale network",
@@ -288,11 +310,14 @@ export const desktopEn = {
     openIt: "Open it",
   },
   link: {
-    question: "Connect the app to this server?",
+    question: "Open this workspace in the app?",
     questionSignIn: "Sign in to this server with your account from the other device?",
-    questionClaim: "Set up this server: create its owner account.",
+    questionClaim: "Open the workspace you installed?",
+    /** Under it: what opening it does. */
+    claimLead: "You create its owner account now.",
     leave: "You leave {{current}} in this app. Your account there stays.",
     connect: "Connect",
+    open: "Open",
     continue: "Continue",
     checking: "Checking the server…",
     notALink: "This link isn't from an agentes.chat server.",
@@ -331,6 +356,8 @@ export const desktopEn = {
     offline: "Offline since {{time}}",
     signIn: "Sign in",
     signOut: "Sign out of this server",
+    /** A server with several accounts signed in (ADR 0183): one more beside them, from its menu. */
+    addAccount: "Add account",
     signedOutDone: "You signed out of {{host}}",
     removeFromApp: "Remove from this app",
     /** The system's notification for a server not open in the window: "Oficina · agentes.exemplo.com.br". */
@@ -357,7 +384,6 @@ export const desktopEn = {
     jev: "Jev",
     jevText:
       "A fast model by TypeSafe that picks who answers, keeps memory tidy and lets agents see the screen. Optional, with your own key.",
-    jevWhere: "In agentes.chat\u00a0›\u00a0Settings\u00a0›\u00a0AI and usage.",
     reachFailed: "Access from your devices didn't turn on: {{reason}}.",
     backup: "Back up now",
     backedUp: "Backed up: {{file}}",
@@ -427,6 +453,18 @@ export const desktopEn = {
     restored: "Restored the backup from {{time}}",
     restoreFailed: "That backup didn't start, so agentes.chat is back as it was. Try the other backup.",
     restoreUnreadable: "That backup can't be opened. Try the other one.",
+    /** Preferences › Servers: it stops, its folder moves whole to a dated folder in the home folder, its agents' homes here (browser profiles, sign-ins, machine tokens) are deleted, and a new setup starts. */
+    erase: "Erase and start over…",
+    eraseTitle: "Erase agentes.chat on this {{device}}?",
+    eraseBody:
+      "Its workspaces go for everyone who uses them, on every device. Its data moves to {{path}} and stays there. What its agents kept on this {{device}}, such as their browsers and sign-ins, is deleted. The agents' files in ~/agentes are yours and stay where they are. Then you set it up again with a new owner.",
+    eraseConfirm: "Erase it",
+    erased: "Erased. Its old data is in {{path}}.",
+    eraseMoveFailed:
+      "Its data couldn't be moved, so nothing was erased and it stays in {{path}}. It's stopped until you start it again.",
+    /** Another agentes-server, started outside the app, holds the folder's lock, so the folder can't move. */
+    eraseHeld:
+      "Another agentes.chat server is using its folder, so nothing was erased. Stop that server, then try again.",
     noPassword: "Add a password to sign in from your phone and other computers.",
     addPassword: "Add a password",
     keep: "Keep it running",
@@ -470,7 +508,9 @@ export const desktopEn = {
     linkBody: "If you didn't ask for this, choose Not now.",
     waiting: "Waiting for {{by}} to let it in…",
     done: "Connected to {{org}}",
-    expired: "This link expired. Make a new one under Settings\u00a0›\u00a0Devices.",
+    addFolders: "Add folders",
+    expired: "This link expired. Make a new one in Devices.",
+    openDevices: "Open Devices",
     denied: "{{by}} didn't let it in. Nothing changed.",
     /** Preferences › General › This Mac: one switch per workspace. */
     letOrg: "Let {{org}}'s agents use this {{device}}",
@@ -543,6 +583,15 @@ export const desktopEn = {
     lookPath: "agentes.chat looks in your login shell's PATH.",
     lookPathWindows: "agentes.chat looks in PATH.",
     stillMissing: "{{tool}} still isn't found. Run the command above, then check again.",
+    install: "Install for me",
+    installing: "Installing {{tool}}. It takes about a minute.",
+    installFailed: "Couldn't install: {{message}}",
+    gitMissing: "{{tool}} needs Git for Windows on this computer.",
+    getGit: "Download Git for Windows",
+    cantStart: "It's here, but it won't start: {{message}}",
+    cantStartChip: "Won't start",
+    installedNotFound: "The installer finished, but {{tool}} still isn't found.",
+    notFoundYet: "{{tool}} still isn't found.",
     browserName: "Browser",
     browserDesc: "Opens websites for the agents in a browser of their own, without your logins.",
     browserLogins:
@@ -599,9 +648,6 @@ export const desktopEn = {
       notifyTitle: "Let me know when an agent asks for a folder",
       notifyBrowserTitle: "Let me know when an agent needs me in its browser",
       notifyBrowserDesc: "The request already reaches your phone and the site. This tells you here too.",
-      dockTitle: "Show in the Dock",
-      dockDesc:
-        "With the count of what waits for you. Off, the app stays in the menu bar only while no window is open.",
       menuBarTitle: "Show in the menu bar",
       notchTitle: "Show the agents in the notch",
       notchDesc: "On MacBooks with a notch: who is working shows around the camera.",
@@ -734,6 +780,8 @@ export const desktopEn = {
       installerNote: "Open the downloaded file: it installs the new version over the old one.",
       keepNote: "Your servers and settings stay.",
       whatsNew: "What's new in {{version}}",
+      /** Linux: how this computer draws the app (system, graphics card, renderer), one line to copy. */
+      systemDetails: "System details",
     },
     activity: {
       title: "Activity",

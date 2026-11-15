@@ -63,7 +63,7 @@ import {
   SHARED_SIGN_INS,
   sharedSignIn,
 } from "@agenteschat/providers/plans";
-import { PLAN_PAUSE, planCheckedAt, planState, planWindows } from "@agenteschat/ui/plan-state";
+import { PLAN_PAUSE, planCheckedAt, planFull, planState } from "@agenteschat/ui/plan-state";
 import { recordAudit } from "./audit";
 import { liveModelLimits } from "./brains/select";
 import { BRAIN_PLAN_NAMES } from "./brains/types";
@@ -677,7 +677,7 @@ function accountReading(provider: string | null, prev: PlanUsage | null | undefi
   const perModel = planOf(provider)?.limitsPerModel === true;
   return {
     ...rest,
-    ...(limited && !(perModel && !planWindows(next).some((w) => w.used >= 100)) ? { limited } : {}),
+    ...(limited && !(perModel && !planFull(next)) ? { limited } : {}),
     ...(models ? { models } : {}),
     ...(perModel && prev?.answered ? { answered: prev.answered } : {}),
   };
@@ -1033,17 +1033,12 @@ async function unshare(db: Executor, orgId: string, row: MachineAccountRow, shar
   return (using?.n ?? 0) > 1 ? releaseAgents(db, orgId, [row.id], now) : [];
 }
 
-/** A turn ran with it (best effort, after the turn); `succeeded`: a Claude Code turn, its success kept too. */
-export async function touchMachineAccount(
-  db: Executor,
-  orgId: string,
-  accountId: string,
-  { succeeded = false }: { succeeded?: boolean } = {},
-) {
+/** A turn ran and answered with it (best effort, after the turn). */
+export async function touchMachineAccount(db: Executor, orgId: string, accountId: string) {
   const now = new Date();
   await db
     .update(machineAccounts)
-    .set({ lastUsedAt: now, ...(succeeded ? { lastSuccessAt: now } : {}) })
+    .set({ lastUsedAt: now, lastSuccessAt: now })
     .where(and(eq(machineAccounts.orgId, orgId), eq(machineAccounts.id, accountId)));
 }
 
@@ -1103,10 +1098,11 @@ export async function getListedAccount(db: Executor, orgId: string, machineId: s
 /**
  * Who adds accounts to a computer: the person who connected it (other
  * people's sign-ins on someone's own computer would need their consent, and
- * outlive it), or any member on one nobody did (the Cloud's, a server's own).
+ * outlive it), or any member on the workspace's own (the Cloud's, nobody's;
+ * a server's own, recorded as its owner's but nobody's own computer).
  */
-export const mayAddAccounts = (machine: Pick<MachineRow, "pairedByUserId">, userId: string) =>
-  machine.pairedByUserId === null || machine.pairedByUserId === userId;
+export const mayAddAccounts = (machine: Pick<MachineRow, "pairedByUserId" | "kind">, userId: string) =>
+  machine.pairedByUserId === null || machine.kind === "host" || machine.pairedByUserId === userId;
 
 /** A member and the machine of the organization. */
 async function memberMachine(db: Database, userId: string, orgId: string, machineId: string) {
