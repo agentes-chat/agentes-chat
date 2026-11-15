@@ -100,6 +100,11 @@ describe("Responde a, by clicking (ADR 0148 addendum)", () => {
     const row = line.querySelector(":scope > .team-line__row") as HTMLElement;
     expect([...row.children].map((c) => c.textContent)).toEqual([expect.stringContaining("Ada")]);
     expect(row.contains(line.querySelector(".team-line__count"))).toBe(false);
+    // The row is a labelled group naming its supervisor.
+    expect(row.getAttribute("role")).toBe("group");
+    expect(row.getAttribute("aria-label")).toBe("Supervisor: Atlas");
+    // The person's card is a direct child of the column, so `.team-tree__col > .team-node` holds it to a card's width.
+    expect(document.querySelector(".team-tree__col > .team-node--person")).not.toBeNull();
     const chip = document.querySelector(".team-lodi-chip") as HTMLElement;
     expect(chip.textContent).toContain("Lodi");
     expect(chip.textContent).toContain("acompanha tudo com você");

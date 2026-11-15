@@ -197,7 +197,12 @@ function ChartLine({ node, line }: { node: ChartNode; line?: ReturnType<typeof u
           <CountChip size="sm" className="team-line__count">
             {t("team.agents", { count: size })}
           </CountChip>
-          <div className="team-line__row">
+          {/* biome-ignore lint/a11y/useSemanticElements: a labelled row of an agent's reports, not a form's fieldset */}
+          <div
+            className="team-line__row"
+            role="group"
+            aria-label={t("team.chart.supervisor", { name: node.agent.name })}
+          >
             {node.reports.map((r) => (
               <ChartLine key={r.agent.id} node={r} line={line} />
             ))}

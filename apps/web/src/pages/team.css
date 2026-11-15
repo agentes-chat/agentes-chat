@@ -343,6 +343,18 @@
   .team-tree .team-tree__col {
     width: 180px;
   }
+  /* The person's card fills the stacked column again, and its agents indent under it with a line. */
+  .team-tree__col > .team-node {
+    align-self: stretch;
+    min-width: 0;
+    max-width: none;
+  }
+  .team-tree__agents {
+    align-items: stretch;
+    margin-left: 12px;
+    padding-left: 12px;
+    border-left: 1.5px solid var(--line-strong);
+  }
   .team-line {
     align-items: stretch;
   }
@@ -402,6 +414,12 @@
   min-width: 180px;
   padding-top: 20px;
 }
+/* The person's card keeps a card's width (180 to 240 px) over the column, whatever the row of reports beneath is. */
+.team-tree__col > .team-node {
+  align-self: center;
+  min-width: 180px;
+  max-width: 240px;
+}
 /* The bar across the columns, and each column's drop to its person. */
 .team-tree__col::before {
   content: "";
@@ -431,10 +449,8 @@
 .team-tree__agents {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
-  margin-left: 12px;
-  padding-left: 12px;
-  border-left: 1px solid var(--line);
 }
 
 /* Organograma › Por setor: one frame per setor in its color. */
