@@ -1,0 +1,72 @@
+/* The projects page (ADR 0186): one row per project in a card, a hairline between rows. */
+.projects-card {
+  padding: 0;
+  overflow-x: auto;
+}
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.projects-table th {
+  padding: var(--row-py) var(--space-2);
+  text-align: left;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+.projects-table td {
+  padding: var(--row-py) var(--space-2);
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+.projects-table th:first-child,
+.projects-table td:first-child {
+  padding-left: var(--card-pad);
+}
+.projects-table th:last-child,
+.projects-table td:last-child {
+  padding-right: var(--card-pad);
+}
+.projects-table tr:last-child td {
+  border-bottom: 0;
+}
+/* The name and its dot on one line; the description wraps under it, never cut. */
+.projects-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.projects-description {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.projects-repo {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--space-4);
+  color: var(--ink);
+}
+.projects-quiet {
+  color: var(--muted);
+}
+.projects-num {
+  text-align: right;
+}
+.projects-headline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.projects-actions-col {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+/* An archived project reads quieter, its row stays whole. */
+.projects-table tr[data-archived] .projects-name,
+.projects-table tr[data-archived] .projects-description {
+  opacity: 0.7;
+}

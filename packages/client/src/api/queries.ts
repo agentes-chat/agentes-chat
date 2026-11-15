@@ -4585,13 +4585,23 @@ export function useIssueProjectAction(orgId: string) {
   return useMutation({
     mutationFn: (
       action:
-        | { type: "create"; name: string; color: string }
-        | { type: "update"; projectId: string; name?: string; color?: string; archived?: boolean }
+        | { type: "create"; name: string; color: string; description?: string | null; githubRepo?: string | null }
+        | {
+            type: "update";
+            projectId: string;
+            name?: string;
+            color?: string;
+            description?: string | null;
+            githubRepo?: string | null;
+            archived?: boolean;
+          }
         | { type: "delete"; projectId: string },
     ): Promise<IssueProjectRef | undefined> => {
       switch (action.type) {
-        case "create":
-          return api.issues.createProject(orgId, { name: action.name, color: action.color });
+        case "create": {
+          const { type: _type, ...input } = action;
+          return api.issues.createProject(orgId, input);
+        }
         case "update": {
           const { type: _type, projectId, ...patch } = action;
           return api.issues.updateProject(orgId, projectId, patch);

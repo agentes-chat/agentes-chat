@@ -7070,6 +7070,7 @@ export type SidebarItem =
   | "proposals"
   | "threads"
   | "issues"
+  | "projects"
   | "wiki"
   | "drive"
   | "routines"

@@ -128,6 +128,7 @@ describe("the tools on top", () => {
     expect(inMore(more)).toEqual([
       "Esperando você",
       "Propostas de melhoria",
+      "Projetos",
       "Wiki",
       "Rotinas",
       "Calendário",
@@ -152,6 +153,7 @@ describe("the tools on top", () => {
       "Esperando você",
       "Aprovações",
       "Propostas de melhoria",
+      "Projetos",
       "Wiki",
       "Rotinas",
       "Calendário",
@@ -278,6 +280,7 @@ describe("the tools on top", () => {
       "Esperando você",
       "Aprovações",
       "Propostas de melhoria",
+      "Projetos",
       "Wiki",
       "Drive",
       "Calendário",
@@ -358,6 +361,7 @@ describe("the tools on top", () => {
           "threads",
           "drive",
           "issues",
+          "projects",
           "wiki",
           "routines",
           "calendar",
@@ -402,6 +406,7 @@ describe("the tools on top", () => {
         "threads",
         "issues",
         "drive",
+        "projects",
         "wiki",
         "routines",
         "calendar",
@@ -420,6 +425,7 @@ describe("the tools on top", () => {
       expect(
         (within(dialog).getByRole("button", { name: "Mover para cima: Esperando você" }) as HTMLButtonElement).disabled,
       ).toBe(true);
+      await click(within(dialog).getByRole("button", { name: "Mover para cima: Drive" }));
       await click(within(dialog).getByRole("button", { name: "Mover para cima: Drive" }));
       await click(within(dialog).getByRole("button", { name: "Mover para cima: Drive" }));
       expect(names().slice(0, 6)).toEqual([
