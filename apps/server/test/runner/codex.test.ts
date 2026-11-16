@@ -72,7 +72,7 @@ test("Codex command lines: first turn, resume by id (options before resume), pla
   });
   // No one's own rules, and no folder but the agent's, whatever the Codex home's config says.
   expect(first).toBe(
-    "codex exec --json --skip-git-repo-check --ignore-rules -C '/w/my app' --sandbox workspace-write -c 'sandbox_workspace_write.network_access=true' -c 'sandbox_workspace_write.writable_roots=[]' -c 'x=1' -o '/r/tasks/t/last.txt' -",
+    "codex exec --json --skip-git-repo-check --ignore-rules -c 'features.apps=false' -C '/w/my app' --sandbox workspace-write -c 'sandbox_workspace_write.network_access=true' -c 'sandbox_workspace_write.writable_roots=[]' -c 'x=1' -o '/r/tasks/t/last.txt' -",
   );
   const resumed = executorCommand("codex", {
     platform: "linux",

@@ -241,6 +241,14 @@ export const codexSandbox = (profile: CommandProfile) => (profile === "plan" ? "
  */
 export const CODEX_NO_NETWORK = "sandbox_workspace_write.network_access=false";
 
+/**
+ * Codex's own apps (`codex_apps`: the connectors of the ChatGPT account it signed in with, `github.*`, `linear.*`…) off
+ * on every turn: their calls never reach the Tool Gateway (no scopes, no audit, no approval card), and a write one asks
+ * an approval the runner can only refuse, which Codex reports as "user rejected MCP tool call" (#198). Connected apps
+ * reach an agent through our bridge only.
+ */
+export const CODEX_NO_APPS = "features.apps=false";
+
 /** The Codex home a turn runs in: its account's folder (ADR 0041), else the computer's own. */
 export const codexHomeOf = (account?: { home: string }) =>
   account?.home ?? (envValue(process.env, "CODEX_HOME") || path.join(homedir(), ".codex"));
@@ -495,6 +503,8 @@ export function codexTurnArgs(input: {
     ...(input.chat ? ["--ignore-user-config"] : []),
     // No one's own rules on any turn: an allow there runs a command outside the sandbox and asks nobody.
     "--ignore-rules",
+    "-c",
+    CODEX_NO_APPS,
     ...(input.chat
       ? [...CODEX_CHAT_CONFIG.flatMap((c) => ["-c", c]), ...CODEX_CHAT_OFF.flatMap((feature) => ["--disable", feature])]
       : []),

@@ -10,6 +10,7 @@ import { type BrainSteerReply, type BrainSteerRequest, isBrainEffort } from "@ag
 import { accountEnv, withoutContainers, yieldRoute } from "./accounts";
 import {
   CODEX_DIRECT_MCP_CONFIG,
+  CODEX_NO_APPS,
   CODEX_NO_NETWORK,
   type CodexAppRunner,
   type CodexBrainEvent,
@@ -191,6 +192,8 @@ export function codexAppServerArgs(input: {
     "app-server",
     "-c",
     "features.fast_mode=true",
+    "-c",
+    CODEX_NO_APPS,
     "-c",
     CODEX_NO_NETWORK,
     "-c",

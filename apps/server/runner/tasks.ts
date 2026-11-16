@@ -53,7 +53,7 @@ import {
   withSignIn,
   yieldRoute,
 } from "./accounts";
-import { codexThreadKey, unwrapShell } from "./brain-codex";
+import { CODEX_NO_APPS, codexThreadKey, unwrapShell } from "./brain-codex";
 import { coAuthorLines } from "./co-authors";
 import { commandApproval, ownBranches } from "./command-gate";
 import { RunnerError } from "./errors";
@@ -537,6 +537,9 @@ export function executorCommand(
       "--json",
       "--skip-git-repo-check",
       "--ignore-rules",
+      // Nothing asks here (`never`): an app's write would run past the Tool Gateway (`CODEX_NO_APPS`).
+      "-c",
+      q(CODEX_NO_APPS),
       ...(c ? ["-C", q(c.cwd), "--sandbox", c.sandbox] : []),
       ...(c?.sandbox === "workspace-write"
         ? ["-c", q("sandbox_workspace_write.network_access=true"), "-c", q(codexWritableRoots(addDirs))]
