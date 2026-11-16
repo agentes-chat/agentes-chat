@@ -42,3 +42,16 @@ Use equivalent paths and directory/copy commands on Windows. The script launches
 - Preference default, persistence, on/off, pending save, read/write failures, platform visibility, explicit reopen, and confirmation while agents use the computer.
 - Native preference default/persistence/corrupt file, preserving existing browser arguments, and configuring every initial window before browser startup.
 - Desktop capability checks include the Windows-only preference commands.
+
+## Validation results
+
+[Verification run](https://github.com/celularsem4-collab/agentes-chat/actions/runs/43930375947):
+
+- Desktop UI on Linux: **284 passed**, including the six lightweight-mode preference tests.
+- Desktop TypeScript checks, build, repository lint, edition boundaries and dependency licenses: passed.
+- Native Linux compilation and unit tests: **100 passed**.
+- Native Windows compilation succeeded. Candidate: **94 passed, 2 failed**; original upstream `58e62635d3c8e95920754e6f0d24729e8f30d498`: **91 passed, the same 2 failed**. All three new lightweight-mode native tests passed. The comparison job requires identical failure sets and passing new tests; a green comparison is not a claim that the entire Windows suite passes.
+
+The two unchanged Windows failures are `local_server::tests::an_update_that_doesnt_start_goes_back_with_its_database` and `local_server::tests::only_the_child_that_wrote_server_json_is_the_server`. Both existing tests launch Unix shell process fixtures. No local-server implementation or tests were changed in this contribution.
+
+Gitleaks v8.30.1 found no leaks in the contribution's commits. A second full execution of the published benchmark harness also completed all six runs with zero idle canvas drawing in lightweight mode and successful counter interaction.
