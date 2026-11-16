@@ -13,6 +13,8 @@
 // `hang`: `{ command, ms }` makes that command take that long; `orphan`: `{ command, ms }` leaves a process holding
 // the output open that long, and never answers.
 // `typingMs`: a batch that presses keys or moves the pointer takes that long (a person can step in meanwhile).
+// `onScreen`: what an `eval` reading `screenX` answers, `[width, height, cornerX, cornerY]` (a headed window's page on
+// its desktop); without it, the page's size alone.
 import { appendFileSync, existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 
 const argv = process.argv.slice(2);
@@ -270,13 +272,15 @@ switch (command) {
     out({
       success: true,
       data: {
-        result: args.join(" ").includes("innerWidth")
-          ? [1280, 800]
-          : args.at(-1) === "document.visibilityState"
-            ? state.hidden
-              ? "hidden"
-              : "visible"
-            : true,
+        result: args.join(" ").includes("screenX")
+          ? (state.onScreen ?? [1280, 800])
+          : args.join(" ").includes("innerWidth")
+            ? [1280, 800]
+            : args.at(-1) === "document.visibilityState"
+              ? state.hidden
+                ? "hidden"
+                : "visible"
+              : true,
         origin: state.url,
       },
     });
