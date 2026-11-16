@@ -417,6 +417,12 @@ export const ptBR = {
       short: "conversar",
       say: "conversa com os agentes",
     },
+    view_all_agents: {
+      title: "Ver todos os agentes",
+      desc: "Na Equipe e na barra lateral. Sem isto, só os que respondem à pessoa.",
+      short: "ver todos os agentes",
+      say: "vê todos os agentes",
+    },
     assign_work: {
       title: "Dar missões aos agentes",
       desc: "Pedir trabalho longo, que segue sozinho.",
@@ -726,6 +732,8 @@ export const ptBR = {
     desktopOwner: {
       continue: "Continuar neste {{device}}",
       text: "Você instalou o agentes.chat neste {{device}}: não precisa de senha.",
+      gone: "O dono deste servidor apagou a conta, então Continuar neste {{device}} não consegue entrar com ninguém. Entre com o seu próprio e-mail.",
+      none: "Não sobrou nenhuma conta no agentes.chat deste {{device}}. Crie o novo dono na janela que abriu.",
     },
     /** The line over the sign-in in the desktop app: which server it signs in to (ADR 0158). */
     server: {
@@ -1837,6 +1845,9 @@ export const ptBR = {
     use: "Usar este ícone",
     inUse: "Em uso",
     sky: "Fundo",
+    pose: "Posição",
+    poses: { front: "De frente", peek: "Espiando" },
+    peekBare: "Espiando, ele fica sem acessório.",
     expression: "Expressão",
     ready: "Prontos",
     oneOrOther: "Com acessório, a expressão fica a normal.",
@@ -2701,6 +2712,15 @@ export const ptBR = {
   rightHand: {
     label: "seu braço direito",
     labelCapitalized: "Seu braço direito",
+    unusable: {
+      title: "Não pensa pelo {{name}} agora",
+      title_female: "Não pensa pela {{name}} agora",
+      computerOnly: "Conectado só em {{computer}}. O {{name}} pensa com um plano conectado como conta.",
+      computerOnly_female: "Conectado só em {{computer}}. A {{name}} pensa com um plano conectado como conta.",
+      away: "De {{owner}}, em {{computer}}, que está ausente.",
+      awayYours: "Seu, em {{computer}}, que está ausente.",
+      connect: "Conectar um computador",
+    },
     newDot: "Novo",
     actsAsYou: "age com as suas permissões",
     composerHint: "nada muda sem você",
@@ -2895,6 +2915,7 @@ export const ptBR = {
         ai_account: "Só o dono da conta a escolhe",
         name: "Só admins mudam o nome de um agente",
         look: "Só admins e o responsável mudam a aparência",
+        group: "Só admins mudam um agente de setor",
         reports_to: "Só admins mudam a quem um agente responde",
         many: "Só admins fazem essas mudanças",
       },
@@ -2909,6 +2930,7 @@ export const ptBR = {
       channel: "Canal",
       name: "Nome",
       look: "Aparência",
+      group: "Setor",
       reports_to: "Responde a",
       skill: "Skill {{name}}",
     },
@@ -3584,6 +3606,23 @@ export const ptBR = {
       title: "Nunca perguntar",
       text: "Não pergunta nada, nem em merge, deploy, pagamentos e rotinas.",
     },
+    /** The quiet link on a waiting approval that opens its agent's three choices in place. */
+    change: "Mudar quando perguntar",
+    /** The toast after a choice from that link. {{level}}: the choice's title. */
+    now: "{{name}} agora: {{level}}.",
+    nowEveryAgent: "Todos os agentes agora: {{level}}.",
+    undo: "Desfazer",
+    /** In that dialog, for who may set the workspace's level: it also clears each agent's own choice. */
+    everyAgent: "Para todos os agentes do workspace",
+    /** An agent's row value while it has no choice of its own. */
+    follows: "Segue o workspace",
+    /** Settings → Aprovações: the button that opens the three choices. */
+    edit: "Mudar",
+    /** Settings → Aprovações: the workspace's level. */
+    workspaceLead: "Quando os agentes perguntam a uma pessoa antes de agir.",
+    workspaceHelp: "Cada agente segue esta escolha até alguém mudar a dele na página do agente.",
+    ownAgents_one: "{{count}} agente tem a própria escolha e não muda.",
+    ownAgents_other: "{{count}} agentes têm a própria escolha e não mudam.",
   },
   /** Configurações do agente: o que ele pode começar sem ninguém pedir diretamente, e quais agentes pode chamar (ADR 0131). */
   brakes: {
@@ -5189,6 +5228,8 @@ export const ptBR = {
     summaryAllRead: "tudo lido",
     summaryNothing: "Nada novo por aqui.",
     readAll: "Marcar tudo como lido",
+    /** Everything in the filter to Done, except what waits on the person. */
+    doneAll: "Concluir todas",
     filters: "Filtrar notificações",
     filter: {
       all: "Tudo",
@@ -5423,6 +5464,8 @@ export const ptBR = {
       undo: "Desfazer",
       readAll_one: "{{count}} marcada como lida",
       readAll_other: "{{count}} marcadas como lidas",
+      doneAll_one: "{{count}} movida para Concluídas",
+      doneAll_other: "{{count}} movidas para Concluídas",
       sent: "Resposta enviada",
       see: "Ver",
       answered: "{{name}} recebeu sua resposta",
@@ -8085,6 +8128,14 @@ export const ptBR = {
     },
     assigneeFilter: "Responsável",
     priorityFilter: "Prioridade",
+    labelFilter: "Rótulo",
+    table: {
+      task: "Tarefa",
+      github: "GitHub",
+      sortBy: "Ordenar por {{column}}",
+      resize: "Redimensionar a coluna {{column}}",
+    },
+    fold: { open: "Abrir {{name}}", close: "Recolher {{name}}", column: "Recolher coluna" },
     title: "Tarefas",
     summary: "{{open}} em aberto · {{agents}} com agentes",
     search: "Buscar tarefas",
@@ -8120,7 +8171,10 @@ export const ptBR = {
       saved: "Salvo para você neste workspace",
       reset: "Voltar ao padrão",
       by: { stage: "Etapa", assignee: "Responsável", priority: "Prioridade" },
-      order: { manual: "Manual", priority: "Prioridade", due: "Prazo" },
+      order: { manual: "Manual", priority: "Prioridade", due: "Prazo", updated: "Recentes" },
+      done: "Concluídas",
+      doneIs: { all: "Todas", recent: "Últimos {{days}} dias", hidden: "Nenhuma" },
+      hideEmpty: "Ocultar grupos vazios",
       field: {
         project: "Projeto",
         assignee: "Responsável",
@@ -8146,6 +8200,8 @@ export const ptBR = {
       canceled: "A #{{number}} voltou para o lugar.",
       assigned: "#{{number}} agora está com {{name}}.",
       unassigned: "#{{number}} ficou sem responsável.",
+      /** Dragged off one of several who have it: the others still do. */
+      removed: "#{{number}} não está mais com {{name}}.",
       prioritized: "#{{number}} agora tem prioridade {{priority}}.",
     },
     canceledColumn: "Canceladas",
@@ -8294,6 +8350,8 @@ export const ptBR = {
     priority: { low: "Baixa", normal: "Normal", high: "Alta" },
     priorityLower: { low: "baixa", normal: "normal", high: "alta" },
     noAssignee: "Sem responsável",
+    /** The dialog that picks who has a task: the list's name over it, and the button that closes it. */
+    assignees: { people: "Pessoas e agentes", done: "Pronto" },
     agentRole: "Agente · {{role}}",
     pr: "PR #{{number}}",
     open: "#{{number}} {{title}}",
@@ -8437,7 +8495,10 @@ export const ptBR = {
       status_changed: "mudou o status para {{status}}",
       priority_changed: "mudou a prioridade para {{priority}}",
       assigned: "atribuiu a tarefa",
-      unassigned: "removeu o responsável",
+      unassigned: "removeu um responsável",
+      /** With who it was (`name`), when the event says. */
+      assigned_named: "atribuiu a tarefa a {{name}}",
+      unassigned_named: "tirou {{name}} da tarefa",
       due_date_set: "definiu o prazo para {{date}}",
       due_date_removed: "removeu o prazo",
       pr_linked: "ligou o PR #{{number}}",
@@ -9045,6 +9106,7 @@ export const ptBR = {
       waiting_budget_late: "Perdeu o horário: o orçamento renovou tarde demais",
       stopped: "Parada por alguém",
       stoppedBy: "Parada por {{name}}",
+      stalled: "Liberada: nada andou nela por 20 minutos",
       no_report: "Terminou sem contar o resultado",
       handoff_blocked: "Não pôde contar: a rotina foi pausada ou quem criou não pode mais falar ali",
       deleted: "Parou: a rotina foi apagada",
@@ -10459,7 +10521,7 @@ export const ptBR = {
   jev: {
     title: "Jev",
     about:
-      "Um modelo rápido da TypeSafe, feito para decisões rápidas. O agentes.chat faz perguntas pequenas a ele, como quem deve responder. Você paga direto à TypeSafe.",
+      "Um modelo rápido da TypeSafe, feito para decisões rápidas. O agentes.chat faz perguntas pequenas a ele, como quem deve responder. Você paga direto à TypeSafe ou pelo OpenRouter, pelo mesmo preço.",
     lead: "Ajuda os agentes a trabalhar em equipe.",
     how: "Como o Jev funciona",
     why: {
@@ -10502,6 +10564,35 @@ export const ptBR = {
       envInvalid: "A TypeSafe não aceitou esta chave. Troque nas configurações deste servidor (TYPESAFE_API_KEY).",
     },
     checkAgain: "Verificar de novo",
+    /** Where Jev is called and paid (ADR 0073 §9): the rows under the reasons once "Set up Jev" is pressed. */
+    via: {
+      label: "Onde você paga o Jev",
+      typesafe: "TypeSafe",
+      typesafeText: "Uma conta direto na TypeSafe, com crédito pré-pago.",
+      openrouter: "OpenRouter",
+      openrouterText: "Com uma chave do OpenRouter, pelo mesmo preço.",
+      connected: "Chave já conectada",
+    },
+    /** Jev through OpenRouter: its steps, the workspace's own key, and the key's lines once saved. */
+    openRouter: {
+      create: "Crie uma chave no OpenRouter",
+      createHint:
+        "Com crédito no OpenRouter. O Jev custa o mesmo que na TypeSafe: US$ {{price}} por milhão de tokens. Escolher quem responde custa cerca de US$ {{call}}.",
+      open: "Abrir o OpenRouter",
+      placeholder: "A sua chave do OpenRouter",
+      shape: "As chaves do OpenRouter começam com sk-or-v1-. Confira e cole de novo.",
+      invalid: "O OpenRouter não aceitou esta chave. Copie de novo na página de chaves.",
+      keyName: "Chave do OpenRouter",
+      same: "A mesma de Chaves de provedor",
+      forAll: "Ela paga o Jev de todos os workspaces deste servidor.",
+      turnOn: "Ligar o Jev",
+      otherKey: "Usar outra chave",
+      line: {
+        invalid: "O OpenRouter não aceitou esta chave. Crie uma nova.",
+        no_credit: "Adicione crédito no OpenRouter. O Jev volta sozinho.",
+        envInvalid: "O OpenRouter não aceitou esta chave. Troque nas configurações deste servidor (TYPESAFE_API_KEY).",
+      },
+    },
     remove: {
       title: "Remover a chave do Jev?",
       text: "Os agentes continuam trabalhando sem ele.",
@@ -10639,6 +10730,12 @@ export const ptBR = {
       removeCopies: "Remover",
       copiesRemoved_one: "{{count}} login sem uso removido.",
       copiesRemoved_other: "{{count}} logins sem uso removidos.",
+      /** Every Grok login the viewer owns at once (issue #319): one sign-in per agent, removed together. */
+      removeAllGrok: "Remover todos os logins do Grok",
+      removeAllTitle: "Remover todos os {{n}} logins do Grok?",
+      removeAllText:
+        "Eles deixam de pensar nos agentes deles em {{computers}}. Os logins de outras pessoas não são tocados.",
+      removeAllDone: "{{n}} logins do Grok removidos.",
       disconnect: "Desconectar",
       renameTitle: "Renomear {{label}}",
       nameLabel: "Nome",
@@ -10704,6 +10801,8 @@ export const ptBR = {
       },
       resetsAt: "renova às {{time}}",
       resetsOn: "renova {{day}} às {{time}}",
+      allModels: "Todos os modelos",
+      onlyModels: "Só {{name}}",
       almost: "Quase no limite",
       limited: "No limite",
       limitedUntil: "No limite até {{when}}",
@@ -10876,6 +10975,9 @@ export const ptBR = {
     keys: "Enter envia · Esc apaga",
     keysHold: "Solte para enviar · Esc apaga",
     keysPaused: "Pausado · Espaço ouve · Enter envia · Esc apaga",
+    askDiscard: "Apagar o áudio? O texto fica.",
+    askDelete: "Apagar",
+    askKeep: "Manter",
     pausePlay: "Pausar",
     seek: "Posição do áudio",
     speedAt: "Velocidade {{speed}}×",
@@ -11828,7 +11930,6 @@ export const ptBR = {
       open: "Mudar o modelo de {{agent}}",
       ownSignIn: "Conta deste computador",
       apiKey: "{{provider}} por chave de API",
-      default: "padrão",
       refused: "Recusado por esta chave",
       textOnly: "Só lê texto",
       search: "Buscar modelos",
@@ -11915,6 +12016,13 @@ export const ptBR = {
       cant_start: "O {{program}} está no {{computer}}, mas não abre.",
       not_reported: "O {{computer}} ainda está vendo quais programas tem. Isto muda sozinho quando terminar.",
       outdated: "A versão no {{computer}} é antiga. Atualize o Codex para usar.",
+      outdatedCodex:
+        "O Codex CLI {{detected}} foi encontrado no {{computer}}. Atualize para a versão {{minimum}} ou superior.",
+      codexUpdateGuide: "Como atualizar o Codex CLI",
+      codexRecheckHere:
+        "Depois de atualizar, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
+      codexRecheckThere:
+        "Atualize o Codex CLI no {{computer}}. Se ele usa o app para computador, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
       system: "O {{program}} ainda não roda no sistema do {{computer}}.",
       no_computerCloud: "Disponível assim que o {{computer}} ficar pronto.",
     },
@@ -12453,8 +12561,8 @@ export const ptBR = {
       agentes: "o armazenamento do agentes.chat",
       server: "este servidor",
     },
-    s3: "Seu próprio bucket",
-    s3Text: "S3, R2, MinIO e outros compatíveis com S3.",
+    s3: "Seu próprio armazenamento",
+    s3Text: "Cloudflare R2, Amazon S3, Backblaze B2 ou outro compatível com S3.",
     current: "Em uso",
     // What the option in use holds, no-break spaces inside each part: a narrow card breaks the line after its "·".
     usage: {
@@ -12506,6 +12614,148 @@ export const ptBR = {
     backDone: "Armazenamento trocado para {{place}}.",
     required: "Preencha este campo.",
     keysRequired: "Informe a access key e o secret.",
+    connect: {
+      open: "Conectar um armazenamento",
+      edit: "Editar conexão",
+      pickTitle: "Onde fica o seu armazenamento?",
+      pickText: "Escolha o serviço. A gente mostra onde clicar lá e o que colar aqui.",
+      provider: {
+        r2: "Cloudflare R2",
+        s3: "Amazon S3",
+        b2: "Backblaze B2",
+        other: "Outro",
+      },
+      providerText: {
+        r2: "O mais simples de criar do zero",
+        s3: "Para quem já usa a AWS",
+        b2: "Para quem já tem conta lá",
+        other: "MinIO, Wasabi e outros compatíveis com S3",
+      },
+      title: {
+        r2: "Conectar o Cloudflare R2",
+        s3: "Conectar o Amazon S3",
+        b2: "Conectar o Backblaze B2",
+        other: "Conectar outro armazenamento",
+      },
+      editTitle: {
+        r2: "Editar o Cloudflare R2",
+        s3: "Editar o Amazon S3",
+        b2: "Editar o Backblaze B2",
+        other: "Editar o armazenamento",
+      },
+      lede: {
+        r2: "Dois passos no Cloudflare. Depois testamos antes de trocar.",
+        s3: "Três passos na AWS. Depois testamos antes de trocar.",
+        b2: "Dois passos no Backblaze. Depois testamos antes de trocar.",
+        other: "Qualquer serviço compatível com S3. Depois testamos antes de trocar.",
+      },
+      editLede: "Troque o que mudou. Deixe as chaves em branco para manter as salvas.",
+      bucketName: "Nome do bucket",
+      accessKeyId: "ID da chave de acesso",
+      secret: "Chave de acesso secreta",
+      r2Endpoint: "Endereço do R2",
+      b2Endpoint: "Endpoint do bucket",
+      region: "Região",
+      regionPick: "Escolha a região",
+      regionOption: "{{name}} · {{code}}",
+      /** Under each field, what the service itself calls it, so people know what to paste where. */
+      theirName: {
+        r2Key: "No Cloudflare: Access Key ID",
+        r2Secret: "No Cloudflare: Secret Access Key",
+        r2Endpoint: "No Cloudflare: o endpoint, que termina em r2.cloudflarestorage.com.",
+        s3Key: "Na AWS: Access key",
+        s3Secret: "Na AWS: Secret access key",
+        b2Key: "No Backblaze: keyID",
+        b2Secret: "No Backblaze: applicationKey",
+        b2Endpoint: "A região sai dele.",
+      },
+      /** Menu and button names in bold, in the English the services' dashboards show by default. */
+      step: {
+        bucketTitle: "Crie um bucket",
+        keyTitle: "Crie a chave de acesso",
+        userTitle: "Crie um usuário só para o agentes.chat",
+        r2Bucket: "No painel do Cloudflare, abra o <b>R2</b> e clique em <b>Create bucket</b>. Qualquer nome serve.",
+        r2Key:
+          "Na página do R2, em <b>API Tokens</b>, clique em <b>Manage</b> e depois em <b>Create API Token</b>. Escolha a permissão <b>Object Read & Write</b> e o seu bucket. No fim, o Cloudflare mostra os três valores abaixo uma única vez.",
+        s3Bucket: "No console da AWS, abra o <b>S3</b> e clique em <b>Create bucket</b>. Anote a região que escolher.",
+        s3User:
+          "No <b>IAM</b>, abra <b>Users</b> e clique em <b>Create user</b>. Em permissões, crie uma política com o texto copiado abaixo: ela dá acesso só a este bucket.",
+        s3Key:
+          "No usuário novo, abra <b>Security credentials</b> e clique em <b>Create access key</b>. Escolha <b>Application running outside AWS</b> e cole os dois valores.",
+        b2Bucket:
+          "No Backblaze, abra <b>Buckets</b> e clique em <b>Create a Bucket</b>. Na página do bucket, copie o <b>Endpoint</b>.",
+        b2Key:
+          "Abra <b>Application Keys</b> e clique em <b>Add a New Application Key</b>. Dê acesso ao seu bucket com <b>Read and Write</b>. A chave principal da conta (master key) não funciona aqui.",
+      },
+      openR2: "Abrir o R2",
+      openS3: "Abrir o S3",
+      openIam: "Abrir o IAM",
+      openB2: "Abrir o Backblaze",
+      copyPolicy: "Copiar a política",
+      policyCopied: "Política copiada, com o bucket {{bucket}}.",
+      back: "Voltar",
+      testAgain: "Testar de novo",
+      passed: "Conexão funcionando: gravamos, lemos, listamos e apagamos um arquivo de teste.",
+      /** After a test refused for permission: what to check in that service. */
+      permissionHint: {
+        r2: "No Cloudflare, confira se o token tem a permissão <b>Object Read & Write</b> e acesso ao bucket {{bucket}}. Corrija e teste de novo.",
+        s3: "Na AWS, confira se o usuário tem a política copiada no passo 2, com o bucket {{bucket}}. Corrija e teste de novo.",
+        b2: "No Backblaze, confira se a chave tem <b>Read and Write</b> e acesso ao bucket {{bucket}}. Corrija e teste de novo.",
+      },
+      inUse: "{{provider}} · {{bucket}}",
+      inUseAt: "{{bucket}} em {{host}}",
+      /** A failed test step by its code (`stepErrorText` in `@agenteschat/client/lib/storage`). */
+      stepError: {
+        auth: "A chave de acesso ou a secreta não foi aceita.",
+        permission: "A chave não tem permissão para esta etapa.",
+        bucketMissing: "Esse bucket não existe nesse endereço.",
+        region: "A região não é a do bucket.",
+        network: "Não deu para chegar ao endereço.",
+        address: "O endereço não é válido.",
+        https: "Use um endereço que comece com https://.",
+        internal: "Esse endereço aponta para uma rede interna.",
+        hostNotFound: "Não achamos esse endereço.",
+        notFound: "O arquivo de teste não voltou na leitura.",
+        unexpected: "Falha inesperada ao falar com o armazenamento.",
+        invalidBucket: "O nome do bucket não é válido.",
+        keysRequired: "Informe as duas chaves.",
+      },
+      /** Amazon S3's regions by code (`AWS_REGIONS`), as its console names them. */
+      awsRegion: {
+        "us-east-1": "Leste dos EUA (Norte da Virgínia)",
+        "us-east-2": "Leste dos EUA (Ohio)",
+        "us-west-1": "Oeste dos EUA (Norte da Califórnia)",
+        "us-west-2": "Oeste dos EUA (Oregon)",
+        "ca-central-1": "Canadá (Central)",
+        "ca-west-1": "Oeste do Canadá (Calgary)",
+        "mx-central-1": "México (Central)",
+        "sa-east-1": "América do Sul (São Paulo)",
+        "eu-central-1": "Europa (Frankfurt)",
+        "eu-central-2": "Europa (Zurique)",
+        "eu-west-1": "Europa (Irlanda)",
+        "eu-west-2": "Europa (Londres)",
+        "eu-west-3": "Europa (Paris)",
+        "eu-south-1": "Europa (Milão)",
+        "eu-south-2": "Europa (Espanha)",
+        "eu-north-1": "Europa (Estocolmo)",
+        "il-central-1": "Israel (Tel Aviv)",
+        "me-south-1": "Oriente Médio (Bahrein)",
+        "me-central-1": "Oriente Médio (Emirados Árabes Unidos)",
+        "af-south-1": "África (Cidade do Cabo)",
+        "ap-east-1": "Ásia-Pacífico (Hong Kong)",
+        "ap-south-1": "Ásia-Pacífico (Mumbai)",
+        "ap-south-2": "Ásia-Pacífico (Hyderabad)",
+        "ap-northeast-1": "Ásia-Pacífico (Tóquio)",
+        "ap-northeast-2": "Ásia-Pacífico (Seul)",
+        "ap-northeast-3": "Ásia-Pacífico (Osaka)",
+        "ap-southeast-1": "Ásia-Pacífico (Singapura)",
+        "ap-southeast-2": "Ásia-Pacífico (Sydney)",
+        "ap-southeast-3": "Ásia-Pacífico (Jacarta)",
+        "ap-southeast-4": "Ásia-Pacífico (Melbourne)",
+        "ap-southeast-5": "Ásia-Pacífico (Malásia)",
+        "ap-southeast-7": "Ásia-Pacífico (Tailândia)",
+      },
+    },
   },
   githubApp: {
     title: "Repositórios do GitHub",
@@ -12916,6 +13166,7 @@ export const ptBR = {
     connected: "Conectado",
     connectedAs: "Conectado como {{account}}",
     reconnectAdds: "Reconecte o {{name}} para os agentes também poderem {{what}}.",
+    sendsToo: "Envia também: <names/>. Para mudar, use Reconectar.",
     adds: { github_project: "usar o GitHub Projects (ler quadros e mover cards)" },
     toolsCount_one: "{{count}} ferramenta",
     toolsCount_other: "{{count}} ferramentas",
@@ -14015,6 +14266,22 @@ export const ptBR = {
     notApproved:
       "{{name}} só deixa entrar apps que aprovou, e o agentes.chat ainda não foi aprovado. Se ele te der uma chave de API, dá para conectar com ela.",
     serverSaid: "O servidor respondeu: {{detail}}",
+    headers: {
+      title: "Cabeçalhos da requisição",
+      help: "Para uma chave que vai em outro cabeçalho, ou um gateway na frente do servidor. A maioria dos servidores não precisa.",
+      value: "Valor",
+      nameOf: "Nome do cabeçalho {{n}}",
+      valueOf: "Valor do cabeçalho {{n}}",
+      remove: "Remover cabeçalho {{n}}",
+      add: "Adicionar cabeçalho",
+      saved_one: "Salvo: <names/>. Continua, a menos que você digite novos.",
+      saved_other: "Salvos: <names/>. Continuam, a menos que você digite novos.",
+      drop: "Remover",
+      dropping_one: "<names/> sai ao reconectar.",
+      dropping_other: "<names/> saem ao reconectar.",
+      undo: "Desfazer",
+      refused: "O servidor não aceitou esses cabeçalhos. Confira os valores, ou conecte com uma chave de API.",
+    },
     nothingYet: "Nada fica disponível para os agentes até o passo 3.",
     allCanUse: "Ao conectar, todos os agentes podem usar. Dá para ajustar depois.",
     replace: "Substitui o login atual. Quem usa continua igual.",
@@ -14671,6 +14938,15 @@ export const ptBR = {
        */
       misconfigured:
         "A conexão com {{provider}} está mal configurada no servidor, então ela não conclui. Quem cuida do servidor precisa trocar a chave nas configurações do app.",
+      headerName: "Use só letras, números e hífens no nome do cabeçalho, como em X-API-Key.",
+      headerValue: "Digite um valor para {{header}}: até 2.000 caracteres em uma linha, sem acentos nem emojis.",
+      headerReserved: "{{header}} já é enviado em toda requisição e não dá para trocar. Remova este cabeçalho.",
+      headerTwice: "{{header}} está na lista duas vezes. Remova um deles.",
+      headerAndKey: "A chave de API já é enviada como Authorization. Apague a chave ou remova este cabeçalho.",
+      headersTooMany: "Um servidor aceita no máximo {{max}} cabeçalhos. Remova um para adicionar outro.",
+      headersWithSignIn:
+        "Este servidor pede login, e o login ainda não leva cabeçalhos. Remova os cabeçalhos para entrar, ou conecte com uma chave de API.",
+      headersUnreadable: "Não deu para ler os cabeçalhos salvos. Digite de novo, ou remova.",
     },
     /** Restricted wiki pages (ADR 0023). */
     wiki: {
@@ -14907,7 +15183,8 @@ export const ptBR = {
       invalidDescription: "A descrição precisa ter de 1 a {{max}} caracteres.",
       tooLarge: "Esta skill tem {{size}} MB de texto e scripts, e o limite é {{max}} MB.",
       tooManyFiles: "Esta skill tem {{files}} arquivos, e o limite é {{max}}.",
-      repoTooLarge: "O repositório é grande demais para baixar (máximo de {{max}} MB). Envie a pasta da skill em .zip.",
+      repoTooLarge: "O repositório é grande demais para baixar (máximo de {{max}} MB).",
+      linkTooLarge: "A pasta desse link tem arquivos demais para ler. Cole o link da pasta da própria skill.",
       noFrontmatter: "O SKILL.md precisa de um bloco no topo com nome e descrição, entre duas linhas ---.",
       bodyTooLong: "O SKILL.md é longo demais (máximo de {{max}} caracteres).",
       noSkillMdZip: "Nenhum SKILL.md no topo da pasta do zip.",
@@ -14923,6 +15200,8 @@ export const ptBR = {
     agentGroup: {
       notFound: "Este setor não existe mais.",
       tooMany: "Este workspace já tem {{max}} setores. Exclua um antes.",
+      /** `agent_group.ambiguous`: a card names a department two of them are called; renaming one decides. */
+      ambiguous: "Dois setores se chamam {{name}}. Renomeie um deles e tente de novo.",
     },
     /** `agent.right_hand_permanent`: archiving, deleting or adding the right hand to a channel (ADR 0137). */
     rightHand: {
@@ -15822,6 +16101,7 @@ export const ptBR = {
       waiting: "<b>{{who}}</b> está esperando <b>{{deviceName}}</b>",
       toolRequest: "<b>{{who}}</b> pede para ligar {{tool}} no seu <b>{{deviceName}}</b>",
       cliRequest: "<b>{{who}}</b> pede para instalar {{tool}} no seu <b>{{deviceName}}</b>",
+      folderRequest: "<b>{{who}}</b> pede a pasta {{path}} no seu <b>{{deviceName}}</b>",
       once: "Permitir uma vez",
       always: "Sempre",
       no: "Não",
@@ -16482,11 +16762,11 @@ export const ptBR = {
       rolesPersonal: "O que cada pessoa daqui pode fazer. Quem é dono pode tudo.",
     },
     about: {
-      basedOn: "Baseado no <site>agentes.chat</site> da Codari Global, LLC",
+      basedOn: "Baseado no <site>agentes.chat</site> da AGENTESCHAT, LLC",
       version: "Versão",
       license: "Software livre sob a <license>GNU Affero General Public License v3</license>, sem garantia.",
       source: "Código-fonte",
-      copyright: "Copyright © 2026 Codari Global, LLC e colaboradores",
+      copyright: "Copyright © 2026 AGENTESCHAT, LLC e colaboradores",
     },
     title: "Configurações",
     account: {
@@ -16523,6 +16803,8 @@ export const ptBR = {
         /** The words of every message, in every look, smallest step first. */
         textSize: "Tamanho do texto",
         textSizeHelp: "Das mensagens, em todas as conversas e nos seus aparelhos",
+        fullMessages: "Mostrar mensagens completas",
+        fullMessagesHelp: "Mostra mensagens longas sem “Ver mais”, em todas as conversas e nos seus aparelhos",
         /** On the phone, under the text size slider: the choice sizes the whole app, on top of the system's own setting. */
         textSizePhone: "Vale para o app todo, junto com o tamanho de texto do celular",
         textXs: "Menor",
@@ -16904,6 +17186,19 @@ export const ptBR = {
     },
     actions: { raise: "Aumentar para {{amount}} este mês", refuse: "Recusar", see: "Ver o uso" },
   },
+  usage: {
+    kinds: {
+      label: "Por tipo",
+      handoffs: "Repasses entre agentes",
+      people: "Conversas com pessoas",
+      routines: "Rotinas",
+    },
+    hint: {
+      handoffs:
+        "A maior parte do uso desta semana veio de agentes passando trabalho uns aos outros. Para trabalhos longos, peça direto ao agente.",
+      message: "Mandar mensagem para {{name}}",
+    },
+  },
   usageViews: {
     signedOut: "Saiu da conta",
     whose: "de {{name}}",
@@ -17116,6 +17411,14 @@ export const ptBR = {
       text: "O ChatGPT recusou a velocidade Rápida nesta conta ou neste modelo, então esta resposta veio no padrão.",
       action: "Abrir agente",
     },
+    standIn: {
+      needsComputer: "Respondi com {{via}}: {{plan}} precisa de um computador.",
+      away: "Respondi com {{via}}: o computador do {{plan}} está ausente.",
+      notShared: "Respondi com {{via}}: {{plan}} atende só quem o conectou.",
+      limit: "Respondi com {{via}}: {{plan}} chegou ao limite.",
+      cant: "Respondi com {{via}}: {{plan}} não consegue pensar agora.",
+      change: "Trocar",
+    },
     /** Under a reply "Automático" gave with another model because the plan refused the one it maps to (`meta.modelStandIn`). */
     modelStandIn: {
       text: "O {{plan}} recusou o {{from}} com esta chave. Respondi com o {{to}}, que funciona nela.",
@@ -17209,6 +17512,8 @@ export const ptBR = {
       queued: "na fila",
       /** Its part done, it waits on agents it handed some to. */
       handedOn: "esperando outros agentes",
+      /** On a consulted agent's choice in the dialog of a row of several: its answer came. */
+      answered: "respondeu",
       noAnswer: "não respondeu",
       /** Work handed off that its agent couldn't finish. */
       notFinished: "não terminou",

@@ -114,6 +114,13 @@ export const listsAgent = (org: OrgSummary | null | undefined, agent: Pick<Agent
   can(org, "manage_agents") || canTalk(agent);
 
 /**
+ * Whether Equipe, its sectors and the counts name every agent for me (the server's `listsAllAgents`); without it the
+ * server sends them only the agents that answer me.
+ */
+export const listsAllAgents = (org: OrgSummary | null | undefined) =>
+  can(org, "view_all_agents") || can(org, "manage_agents");
+
+/**
  * The agents my lists leave out (`listsAgent`, from the server's `canTalk`): unless I manage agents, the ones not
  * answering me.
  */

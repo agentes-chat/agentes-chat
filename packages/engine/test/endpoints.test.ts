@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { eq, schema } from "@agenteschat/db";
-import { customModelId, ProviderError } from "@agenteschat/providers";
+import { customModelId, MODEL_CATALOG, ProviderError } from "@agenteschat/providers";
 import {
   agentAiState,
   allowsPrivateEndpoints,
@@ -280,6 +280,37 @@ describe("calls", () => {
     const [record] = await f.db.select().from(schema.usageRecords);
     expect(record).toMatchObject({ inputTokens: 500, outputTokens: 50, costNanoUsd: 0 });
     await expect(run(customModelId(cred.id, "paid"))).rejects.toBeInstanceOf(BudgetExceededError);
+  });
+
+  test("a model named as the endpoint lists it gets its full id; one it doesn't list says which it has", async () => {
+    f = await setup();
+    const cred = await addEndpoint(f, [{ id: "vendor/model-a" }, { id: "model-b" }]);
+    const both = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, {
+      model: "vendor/model-a",
+      credentialId: cred.id,
+    });
+    expect(both.model).toBe(customModelId(cred.id, "vendor/model-a"));
+    // The model alone, on the agent's endpoint key.
+    const alone = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: "model-b" });
+    expect(alone.model).toBe(customModelId(cred.id, "model-b"));
+    expect(alone.credentialId).toBe(cred.id);
+    await expect(
+      updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: "not-listed", credentialId: cred.id }),
+    ).rejects.toThrow("Its models: vendor/model-a, model-b");
+  });
+
+  test("a known model picked alone leaves the endpoint key, even when the endpoint lists the same id", async () => {
+    f = await setup();
+    const openai = Object.entries(MODEL_CATALOG).find(([, m]) => m.provider === "openai")?.[0];
+    if (!openai) throw new Error("no OpenAI model in the catalog");
+    const cred = await addEndpoint(f, [{ id: openai }]);
+    const onEndpoint = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, {
+      model: openai,
+      credentialId: cred.id,
+    });
+    expect(onEndpoint.model).toBe(customModelId(cred.id, openai));
+    const moved = await updateAgent(f.db, f.owner.id, f.org.id, f.agent.id, { model: openai });
+    expect([moved.model, moved.credentialId]).toEqual([openai, null]);
   });
 
   test("another workspace's endpoint model is unknown here", async () => {

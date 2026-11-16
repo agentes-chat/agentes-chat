@@ -1,7 +1,10 @@
 import {
+  hashKey,
   type InfiniteData,
   mutationOptions,
   notifyManager,
+  type QueryCache,
+  type QueryCacheNotifyEvent,
   type QueryClient,
   queryOptions,
   useInfiniteQuery,
@@ -13,6 +16,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { moveInGroups } from "../lib/agent-groups";
+import { type LevelsBefore, levelsBefore } from "../lib/approvals-level";
 import { artifactRefs } from "../lib/artifacts";
 import { newerBlockState, stateChanges, stateForPage } from "../lib/blocks";
 import type { ChatPrefs } from "../lib/chat-look";
@@ -28,7 +32,7 @@ import {
   XCODE_FIX_POLL_MS,
   xcodeFixLive,
 } from "../lib/devices";
-import { answerWithin, noAnswer, sendFailureOf, sendWaits, sessionEnded } from "../lib/errors";
+import { answerWithin, isGone, noAnswer, sendFailureOf, sendWaits, sessionEnded } from "../lib/errors";
 import { ISSUES_VIEW_DEFAULT, type IssuesViewChange, withIssuesView } from "../lib/issues-view";
 import { CLI_INSTALL_POLL_MS, LoginReadError, loginReadPasses } from "../lib/machines";
 import { GIF_PAGE, isMediaAfterReply, messageMediaOf, postedMedia } from "../lib/media";
@@ -62,7 +66,7 @@ import { playSound } from "../lib/sounds";
 import type { TeamWeekAct } from "../lib/team-week";
 import { threadStartOf } from "../lib/threads";
 import { upsertMessage, withLocalCopies } from "../lib/timeline";
-import { voiceOf } from "../lib/voice";
+import { listedText } from "../lib/voice";
 import type { AudienceChoice } from "../lib/who-sees";
 import type { WikiAccess } from "../lib/wiki";
 import type { RealtimeConnection } from "../realtime/connection";
@@ -73,6 +77,7 @@ import { ApiError, type UploadOptions } from "./http";
 import { keys, ME_HASH } from "./keys";
 import { keepSending, outbox } from "./outbox";
 import type {
+  Actor,
   AdminAsk,
   Agent,
   AgentAction,
@@ -95,6 +100,7 @@ import type {
   AppNotification,
   Approval,
   ApprovalCoverInput,
+  ApprovalsLevel,
   ArtifactContent,
   ArtifactDetail,
   ArtifactFilters,
@@ -135,6 +141,7 @@ import type {
   IssueStatus,
   IssuesView,
   JevKey,
+  JevKeyInput,
   Machine,
   MachineAccessReduce,
   MachineTool,
@@ -149,6 +156,7 @@ import type {
   NotificationEvent,
   NotificationFilter,
   OrgRoles,
+  OrgSettings,
   PendingReturn,
   Person,
   PersonalTokenInput,
@@ -156,6 +164,7 @@ import type {
   Proposal,
   ReactionCount,
   ReminderInput,
+  RequestHeader,
   RightHandApprovals,
   RightHandApprovalsInput,
   Role,
@@ -271,20 +280,45 @@ export function useMe() {
   const cache = useQueryClient().getQueryCache();
   const current = () => cache.get(ME_HASH);
   useSyncExternalStore(
-    useCallback(
-      (changed: () => void) => {
-        // After the render in course, never during it: the first reader to render makes the query, which says `added`.
-        const later = notifyManager.batchCalls(changed);
-        return cache.subscribe((e) => {
-          if (e.query.queryHash === ME_HASH && (e.type === "added" || e.type === "removed")) later();
-        });
-      },
-      [cache],
-    ),
+    useCallback((changed: () => void) => onQueryEvent(cache, ME_HASH, ["added", "removed"], changed), [cache]),
     current,
     current,
   );
   return result;
+}
+
+type QueryEventType = QueryCacheNotifyEvent["type"];
+type QueryReader = { types: readonly QueryEventType[]; changed: () => void };
+
+/**
+ * One cache listener for every reader of one query (`useMe`, `useCachedMessages`): the cache calls each listener on
+ * each of its events (every observer a row adds included), and a long conversation has hundreds of readers.
+ */
+const queryReaders = new WeakMap<QueryCache, { byHash: Map<string, Set<QueryReader>>; stop: () => void }>();
+function onQueryEvent(cache: QueryCache, hash: string, types: readonly QueryEventType[], changed: () => void) {
+  let entry = queryReaders.get(cache);
+  if (!entry) {
+    const byHash = new Map<string, Set<QueryReader>>();
+    const stop = cache.subscribe((e) => {
+      for (const r of byHash.get(e.query.queryHash) ?? []) if (r.types.includes(e.type)) r.changed();
+    });
+    entry = { byHash, stop };
+    queryReaders.set(cache, entry);
+  }
+  const { byHash, stop } = entry;
+  const readers = byHash.get(hash) ?? new Set<QueryReader>();
+  byHash.set(hash, readers);
+  // After the render in course, never during it: the first reader to render makes the query, which says `added`.
+  const reader = { types, changed: notifyManager.batchCalls(changed) };
+  readers.add(reader);
+  return () => {
+    readers.delete(reader);
+    if (readers.size > 0) return;
+    if (byHash.get(hash) === readers) byHash.delete(hash);
+    if (byHash.size > 0) return;
+    stop();
+    queryReaders.delete(cache);
+  };
 }
 export const useAuthConfig = () => useQuery(authConfigQuery(useApi()));
 export const useHealth = () => {
@@ -327,7 +361,7 @@ function useJevChange<T>(change: (api: ApiClient, input: T) => Promise<JevKey>, 
     ...(silent ? { meta: { silent: true } } : {}),
   });
 }
-export const useSaveJevKey = () => useJevChange((api, apiKey: string) => api.system.saveJev(apiKey), true);
+export const useSaveJevKey = () => useJevChange((api, input: JevKeyInput) => api.system.saveJev(input), true);
 export const useCheckJevKey = () => useJevChange<void>((api) => api.system.checkJev());
 export const useRemoveJevKey = () => useJevChange<void>((api) => api.system.removeJev());
 
@@ -1328,6 +1362,51 @@ export const useMessages = (orgId: string, channelId: string, enabled = true) =>
   return useQuery({ ...messagesQuery(api, orgId, channelId), enabled });
 };
 
+const NO_MESSAGES: readonly Message[] = [];
+
+/**
+ * These messages as their conversation's cached lists hold them (its channel's latest page and, in a thread, the
+ * thread's), for a row that shows a piece of another message. The reader draws again when one of them arrives or
+ * changes, never for the rest of the list; with no ids it listens to nothing.
+ */
+export function useCachedMessages(
+  orgId: string,
+  channelId: string,
+  threadId: string | null | undefined,
+  ids: readonly string[],
+): readonly Message[] {
+  const cache = useQueryClient().getQueryCache();
+  const wanted = ids.join(" ");
+  const hashes = useMemo(
+    () => [
+      hashKey(keys.messages(orgId, channelId)),
+      ...(threadId ? [hashKey(keys.thread(orgId, channelId, threadId))] : []),
+    ],
+    [orgId, channelId, threadId],
+  );
+  const subscribe = useCallback(
+    (changed: () => void) => {
+      if (!wanted) return () => {};
+      const stops = hashes.map((h) => onQueryEvent(cache, h, ["added", "updated", "removed"], changed));
+      return () => {
+        for (const stop of stops) stop();
+      };
+    },
+    [cache, hashes, wanted],
+  );
+  const last = useRef(NO_MESSAGES);
+  const read = () => {
+    if (!wanted) return NO_MESSAGES;
+    const set = new Set(wanted.split(" "));
+    const found = hashes.flatMap((h) => (cache.get<Message[]>(h)?.state.data ?? []).filter((m) => set.has(m.id)));
+    const before = last.current;
+    if (found.length === before.length && found.every((m, i) => m === before[i])) return before;
+    last.current = found;
+    return found;
+  };
+  return useSyncExternalStore(subscribe, read, read);
+}
+
 /** Sidebar hover/focus: load a conversation before the click. */
 export function usePrefetchMessages(orgId: string) {
   const api = useApi();
@@ -1818,6 +1897,8 @@ export function dropLocalVoice(qc: QueryClient, orgId: string, channelId: string
  * Sends a recording (ADR 0100): its bubble appears at once and stays until the server's message replaces it (same
  * `clientId`). Without a connection the recording waits in memory and goes when it comes back, with the same
  * `clientId`, so a send whose answer was lost is stored once. `onRefused`: the server said no, and the bubble went.
+ * `text` and the files in `meta.artifacts` (as `localMeta` writes them) go in the same message. Resolves false when
+ * the server refused it, so the caller can give the text and the files back.
  */
 export function useSendVoice(
   orgId: string,
@@ -1838,8 +1919,11 @@ export function useSendVoice(
       replyTo: string | null;
       language: string | null;
       meta?: Record<string, unknown>;
-    }) => {
+      text?: string;
+    }): Promise<boolean> => {
       const { blob, durationMs, peaks, threadId, replyTo, language, meta } = input;
+      const text = input.text?.trim() ?? "";
+      const attachments = artifactRefs(meta).map((r) => r.id);
       const clientId = newClientId();
       voiceLocal.set(clientId, URL.createObjectURL(blob));
       const local: Message = {
@@ -1847,10 +1931,10 @@ export function useSendVoice(
         channelId,
         threadId,
         author: { type: "person", id: latest.current.me.id },
-        body: "",
+        body: text,
         mentionedAgentIds: [],
         agentRunId: null,
-        meta: { ...meta, voice: { clipId: "", durationMs, peaks } },
+        meta: { ...meta, voice: { clipId: "", durationMs, peaks, ...(text ? { text } : {}) } },
         clientId,
         local: "pending",
         createdAt: new Date().toISOString(),
@@ -1865,14 +1949,24 @@ export function useSendVoice(
         );
       for (let attempt = 0; ; attempt++) {
         try {
-          await api.voice.send(orgId, channelId, { blob, durationMs, peaks, clientId, threadId, replyTo, language });
+          await api.voice.send(orgId, channelId, {
+            blob,
+            durationMs,
+            peaks,
+            clientId,
+            threadId,
+            replyTo,
+            language,
+            ...(text ? { text } : {}),
+            ...(attachments.length > 0 ? { attachments } : {}),
+          });
           waiting(false);
-          return;
+          return true;
         } catch (error) {
           if (!sendWaits(error)) {
             dropLocalVoice(qc, orgId, channelId, clientId);
             latest.current.onRefused?.(error);
-            return;
+            return false;
           }
           waiting(true);
           await voiceRetryWait(attempt);
@@ -2619,6 +2713,73 @@ export function useUpdateSettings(orgId: string) {
         predicate: (q) => q.queryKey[0] === "org" && q.queryKey[1] === orgId && q.queryKey[4] === "detail",
       });
     },
+  });
+}
+
+/** Sets the workspace's approvals level: the settings and every agent's level show it at once. */
+export function useSetWorkspaceApprovalsLevel(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { level: ApprovalsLevel; everyAgent?: boolean }) => api.orgs.setApprovalsLevel(orgId, input),
+    onSuccess: ({ level }) => {
+      qc.setQueryData<OrgSettings>(keys.settings(orgId), (s) => (s ? { ...s, approvalsLevel: level } : s));
+      levelsChanged(qc, orgId);
+    },
+  });
+}
+
+/**
+ * "Mudar quando perguntar": one agent's own level, or with `everyAgent` the workspace's for every agent (their own
+ * choices cleared). Resolves to the levels before, for "Desfazer" (`useUndoWhenAsks`).
+ */
+export function useChangeWhenAsks(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      agentId,
+      level,
+      everyAgent,
+    }: {
+      agentId: string;
+      level: ApprovalsLevel;
+      everyAgent?: boolean;
+    }) => {
+      const [agents, settings] = await Promise.all([
+        qc.ensureQueryData({ queryKey: keys.agents(orgId), queryFn: () => api.agents.list(orgId) }),
+        everyAgent
+          ? qc.ensureQueryData({ queryKey: keys.settings(orgId), queryFn: () => api.orgs.settings(orgId) })
+          : null,
+      ]);
+      const before = levelsBefore(settings?.approvalsLevel ?? "risky", agents, everyAgent ? undefined : agentId);
+      if (everyAgent) await api.orgs.setApprovalsLevel(orgId, { level, everyAgent: true });
+      else await api.agents.update(orgId, agentId, { approvalsLevel: level });
+      return before;
+    },
+    onSuccess: () => levelsChanged(qc, orgId),
+  });
+}
+
+/** "Desfazer" after `useChangeWhenAsks`: the workspace's level (for every agent) and each agent's choice come back. */
+export function useUndoWhenAsks(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ before, everyAgent }: { before: LevelsBefore; everyAgent?: boolean }) => {
+      if (everyAgent) await api.orgs.setApprovalsLevel(orgId, { level: before.workspace });
+      // ponytail: one request per agent that had its own choice, a batch call if workspaces with many appear.
+      for (const a of before.agents) await api.agents.update(orgId, a.id, { approvalsLevel: a.level });
+    },
+    onSuccess: () => levelsChanged(qc, orgId),
+  });
+}
+
+function levelsChanged(qc: QueryClient, orgId: string) {
+  void qc.invalidateQueries({ queryKey: keys.settings(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+  void qc.invalidateQueries({
+    predicate: (q) => q.queryKey[0] === "org" && q.queryKey[1] === orgId && q.queryKey[4] === "detail",
   });
 }
 
@@ -3689,9 +3850,12 @@ export function useCustomServerAction(orgId: string) {
         label?: string;
         returnTo: string;
         connectionId?: string;
+        headers?: RequestHeader[];
       }) => api.customConnectors.connect(orgId, input),
       // A new server is every agent's: their access trees change too.
       onSuccess: () => Promise.all([done(), qc.invalidateQueries({ queryKey: keys.access(orgId) })]),
+      // The form says its own failures: a refused header shows on its row.
+      meta: { silent: true },
     }),
     refresh: useMutation({ mutationFn: (id: string) => api.customConnectors.refresh(orgId, id), onSuccess: done }),
     save: useMutation({
@@ -4356,19 +4520,30 @@ export function useIssueAction(orgId: string) {
 
 /**
  * An agent picked for a task starts on it ("Pedir"). When it can't, the agent stays the task's, as the person picked
- * it, and the call rejects with why: the caller says it with the task's own words and offers to ask again, so it's
- * silent here (no second toast).
+ * it (first among `assignees`, the ones the task has), and the call rejects with why: the caller says it with the
+ * task's own words and offers to ask again, so it's silent here (no second toast).
  */
 export function useStartAgentOnTask(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
     meta: { silent: true },
-    mutationFn: async ({ issueId, agentId }: { issueId: string; agentId: string }) => {
+    mutationFn: async ({
+      issueId,
+      agentId,
+      assignees = [],
+    }: {
+      issueId: string;
+      agentId: string;
+      assignees?: Actor[];
+    }) => {
       try {
         return await api.issues.askAgent(orgId, issueId, agentId);
       } catch (error) {
-        await api.issues.update(orgId, issueId, { assignee: { type: "agent", id: agentId } }).catch(() => {});
+        const others = assignees.filter((a) => !(a.type === "agent" && a.id === agentId));
+        await api.issues
+          .update(orgId, issueId, { assignees: [{ type: "agent", id: agentId }, ...others] })
+          .catch(() => {});
         throw error;
       }
     },
@@ -5540,7 +5715,7 @@ export function cachedThreadInfo(qc: QueryClient, orgId: string, threadId: strin
     channelName: channel?.name ?? "",
     channelKind: channel ? "channel" : "dm",
     title: null,
-    rootText: voiceOf(root.meta) ? "" : root.body.replace(/\s+/g, " ").trim(),
+    rootText: listedText(root.body, root.meta).replace(/\s+/g, " ").trim(),
     rootAuthor: author,
     state: "open",
     createdBy: null,
@@ -5920,7 +6095,8 @@ export const useIssuesView = (orgId: string) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.issuesView(orgId),
-    queryFn: () => api.orgs.issuesView(orgId),
+    // Whole even from a server of before a part of it.
+    queryFn: async () => withIssuesView(await api.orgs.issuesView(orgId), {}),
     staleTime: 60_000,
   });
 };
@@ -6040,13 +6216,15 @@ export function applyNotificationEvent(qc: QC, orgId: string, event: Notificatio
   if (event.type === "notification.upserted" && event.notification.kind === "join_request")
     void qc.invalidateQueries({ queryKey: keys.joinRequests(orgId) });
   // What waits on me changes with a waiting row coming or any row leaving (a count alone says nothing new).
+  // `cancelRefetch: false`: "Concluir todas" sends one event per row, all after its single update, so the fetch already
+  // under way serves the whole burst.
   if (event.type === "notification.removed" || (event.type === "notification.upserted" && event.notification.waiting))
-    void qc.invalidateQueries({ queryKey: keys.waiting(orgId) });
+    void qc.invalidateQueries({ queryKey: keys.waiting(orgId) }, { cancelRefetch: false });
   if (event.type === "notification.upserted") cacheNotification(qc, orgId, event.notification);
   else if (event.type === "notification.removed") {
     dropNotification(qc, orgId, event.id, true);
     // Marked done on another device: "Concluídas" gains it (one auto-resolved changes nothing there).
-    void qc.invalidateQueries({ queryKey: keys.notificationList(orgId, "done") });
+    void qc.invalidateQueries({ queryKey: keys.notificationList(orgId, "done") }, { cancelRefetch: false });
   } else {
     const count = { unread: event.unread, waiting: event.waiting };
     qc.setQueryData<NotificationCount>(keys.notificationCount(orgId), count);
@@ -6065,7 +6243,11 @@ export type NotificationAction =
   | { type: "snooze"; item: AppNotification; until: string | null }
   | { type: "readAll"; filter: NotificationFilter }
   /** Undo of "Marcar tudo como lido": the ids it changed. */
-  | { type: "unreadMany"; ids: string[] };
+  | { type: "unreadMany"; ids: string[] }
+  /** "Concluir todas" in a filter: what waits on me stays. */
+  | { type: "doneAll"; filter: NotificationFilter }
+  /** Undo of "Concluir todas": the ids it changed, back in the inbox. */
+  | { type: "undoneMany"; ids: string[] };
 
 /** The changed items as the server sent them, and the ids "Marcar tudo como lido" touched. */
 export interface NotificationActionResult {
@@ -6091,7 +6273,32 @@ function optimistic(qc: QC, orgId: string, action: NotificationAction, now: stri
         const known = knownNotification(qc, orgId, id);
         return known ? [{ ...known, readAt: null }] : [];
       });
+    case "doneAll": {
+      const loaded = allItems(qc.getQueryData<NotificationPages>(keys.notificationList(orgId, action.filter)));
+      return loaded.filter((n) => !n.waiting && n.doneAt === null).map((n) => ({ ...n, doneAt: now }));
+    }
+    case "undoneMany":
+      return action.ids.flatMap((id) => {
+        const known = knownNotification(qc, orgId, id);
+        return known ? [{ ...known, doneAt: null }] : [];
+      });
   }
+}
+
+const notificationActionKey = (orgId: string) => ["notificationAction", orgId] as const;
+
+const isBulk = (action: NotificationAction | undefined) => action?.type === "doneAll" || action?.type === "undoneMany";
+
+/**
+ * "Concluir todas" or its undo under way, from any screen or row: the inbox's own actions wait for it (each row runs
+ * its own mutation on the phone).
+ */
+export function useNotificationBulkPending(orgId: string) {
+  const pending = useIsMutating({
+    mutationKey: notificationActionKey(orgId),
+    predicate: (mutation) => isBulk(mutation.state.variables as NotificationAction | undefined),
+  });
+  return pending > 0;
 }
 
 /**
@@ -6102,6 +6309,7 @@ export function useNotificationAction(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
+    mutationKey: notificationActionKey(orgId),
     mutationFn: async (action: NotificationAction): Promise<NotificationActionResult> => {
       switch (action.type) {
         case "read":
@@ -6120,6 +6328,17 @@ export function useNotificationAction(orgId: string) {
             items: await Promise.all(action.ids.map((id) => api.notifications.read(orgId, id, false))),
             ids: action.ids,
           };
+        case "doneAll":
+          return { items: [], ids: (await api.notifications.doneAll(orgId, action.filter)).ids };
+        case "undoneMany": {
+          // One failure doesn't undo the rest: a row deleted meanwhile (its task or channel gone) is just gone, and
+          // only when nothing came back does the undo fail.
+          const settled = await Promise.allSettled(action.ids.map((id) => api.notifications.done(orgId, id, false)));
+          const items = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+          const failed = settled.find((r) => r.status === "rejected" && !isGone(r.reason));
+          if (!items.length && failed?.status === "rejected") throw failed.reason;
+          return { items, ids: items.map((n) => n.id) };
+        }
       }
     },
     onMutate: async (action) => {
@@ -6139,8 +6358,8 @@ export function useNotificationAction(orgId: string) {
     },
     onSettled: (_r, _e, action) => {
       void qc.invalidateQueries({ queryKey: keys.notificationCount(orgId) });
-      // Marking everything read touches items beyond the loaded pages.
-      if (action.type === "readAll" || action.type === "unreadMany")
+      // A bulk action touches items beyond the loaded pages (and "Concluídas").
+      if (action.type === "readAll" || action.type === "unreadMany" || isBulk(action))
         void qc.invalidateQueries({ queryKey: [...keys.notifications(orgId), "list"] });
     },
   });
@@ -6201,12 +6420,48 @@ function part<
   return value as NonNullable<ApiClient[K]>;
 }
 
+/**
+ * A read that didn't reach the server (the network dropped, the server restarting) goes again: nothing else would
+ * send it until the conversation's next message, and its mark would stay meanwhile. A refusal is final.
+ */
+const retryRead = (count: number, error: unknown) => !(error instanceof ApiError && error.status < 500) && count < 3;
+
+/** Replies heard in each conversation's threads since this app started, per query client (`useThreadActivity`). */
+const threadActivity = new WeakMap<QueryClient, { counts: Map<string, number>; heard: Set<() => void> }>();
+
+function threadActivityOf(qc: QueryClient) {
+  const found = threadActivity.get(qc);
+  if (found) return found;
+  const made = { counts: new Map<string, number>(), heard: new Set<() => void>() };
+  threadActivity.set(qc, made);
+  return made;
+}
+
+/**
+ * Changes each time a thread of this conversation gets a reply that counts as unread for me (the server tells only
+ * a thread's followers and the people it mentions). Such a reply counts in the conversation's own mark too, and is
+ * no new message of its timeline: the screen showing the conversation reads it again on this.
+ */
+export function useThreadActivity(orgId: string, channelId: string): number {
+  const store = threadActivityOf(useQueryClient());
+  const subscribe = useCallback(
+    (heard: () => void) => {
+      store.heard.add(heard);
+      return () => void store.heard.delete(heard);
+    },
+    [store],
+  );
+  const read = () => store.counts.get(`${orgId}:${channelId}`) ?? 0;
+  return useSyncExternalStore(subscribe, read, read);
+}
+
 /** Marks a channel or DM read now; the channel and DM lists show it with no unread at once. */
 export function useMarkChannelRead(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
     meta: { silent: true },
+    retry: retryRead,
     mutationFn: (channelId: string) => api.dms.markRead(orgId, channelId),
     onMutate: (channelId) => clearUnread(qc, orgId, channelId),
     onSettled: () => {
@@ -6286,6 +6541,7 @@ export function useMarkThreadRead(orgId: string) {
   const qc = useQueryClient();
   return useMutation({
     meta: { silent: true },
+    retry: retryRead,
     // A client without reads (a test's fake) has nothing to mark.
     mutationFn: async (threadId: string) => api.reads?.markThreadRead(orgId, threadId),
     onMutate: (threadId) => clearThreadUnread(qc, orgId, threadId),
@@ -6297,10 +6553,14 @@ function clearThreadUnread(qc: QueryClient, orgId: string, threadId: string) {
   qc.setQueryData<ThreadInfo>(keys.threadInfo(orgId, threadId), (t) => (t ? { ...t, unread: 0 } : t));
 }
 
-/** The thread lists, the Threads mark, the channels (a thread's replies count there too) and the tasks read again. */
+/**
+ * The thread lists, the Threads mark, the channels and DMs (a thread's replies count there too) and the tasks read
+ * again.
+ */
 function refreshThreadUnread(qc: QueryClient, orgId: string) {
   void qc.invalidateQueries({ queryKey: keys.threads(orgId), predicate: (q) => q.queryKey[3] !== "one" });
   void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
   void qc.invalidateQueries({ queryKey: keys.unreadTasks(orgId) });
 }
 
@@ -6397,11 +6657,16 @@ export function applyUnreadEvent(qc: QueryClient, orgId: string, event: { type: 
       void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", e.channelId], refetchType: "none" });
     if (e.dm) readOncePerBurst(`${orgId}:dms`, () => void qc.invalidateQueries({ queryKey: keys.dms(orgId) }));
     else readOncePerBurst(`${orgId}:channels`, () => void qc.invalidateQueries({ queryKey: keys.channels(orgId) }));
-    if (e.threadId)
+    if (e.threadId) {
+      const store = threadActivityOf(qc);
+      const key = `${orgId}:${e.channelId}`;
+      store.counts.set(key, (store.counts.get(key) ?? 0) + 1);
+      for (const heard of store.heard) heard();
       readOncePerBurst(
         `${orgId}:threads`,
         () => void qc.invalidateQueries({ queryKey: keys.threads(orgId), predicate: (q) => q.queryKey[3] !== "one" }),
       );
+    }
   } else if (e.type === "channel.read") {
     clearUnread(qc, orgId, e.channelId);
     void qc.invalidateQueries({ queryKey: keys.channels(orgId) });

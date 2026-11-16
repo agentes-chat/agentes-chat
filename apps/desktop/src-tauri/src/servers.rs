@@ -197,6 +197,12 @@ pub fn remove(app: &AppHandle, origin: &str) {
     crate::menus::servers_changed(app);
 }
 
+/// The main window's cookies sent to `origin` go. From a thread of its own only (`cookies`).
+pub fn drop_cookies(app: &AppHandle, origin: &str) {
+    let (Some(page), Ok(url)) = (app.get_webview(crate::main_window::LABEL), origin.parse::<Url>()) else { return };
+    crate::cookies::remove(&page, move |c| crate::workspaces::sent_to(c, &url));
+}
+
 /// The main window's capability for a server other than agentes.chat, for its own origin only.
 fn grant(app: &AppHandle, origin: &str) {
     if origin == CLOUD {
@@ -251,14 +257,9 @@ pub async fn server_remove(app: AppHandle, server: String) -> Result<(), String>
     let page = app.get_webview(crate::main_window::LABEL);
     let showing = page.as_ref().and_then(|p| p.url().ok()).is_some_and(|u| u.origin().ascii_serialization() == server);
     // Cookies are per host, not per port: on this computer they are also the other servers' here, so they stay.
-    if let (Some(page), Ok(url), false) = (page, server.parse::<Url>(), is_loopback(&server)) {
-        tauri::async_runtime::spawn_blocking(move || {
-            for cookie in page.cookies().unwrap_or_default().into_iter().filter(|c| crate::workspaces::sent_to(c, &url)) {
-                let _ = page.delete_cookie(cookie);
-            }
-        })
-        .await
-        .map_err(|e| e.to_string())?;
+    if !is_loopback(&server) {
+        let (app, server) = (app.clone(), server.clone());
+        tauri::async_runtime::spawn_blocking(move || drop_cookies(&app, &server)).await.map_err(|e| e.to_string())?;
     }
     // Its workspaces leave the window's list now, not at the next minute's read.
     crate::workspaces::trigger(&app);
@@ -288,7 +289,7 @@ pub async fn server_sign_out(app: AppHandle, server: String) -> Result<(), Strin
     let (asking, shared) = (server.clone(), is_loopback(&server));
     tauri::async_runtime::spawn_blocking(move || {
         let cookies: Vec<_> =
-            page.cookies().unwrap_or_default().into_iter().filter(|c| crate::workspaces::sent_to(c, &url)).collect();
+            crate::cookies::read(&page).into_iter().filter(|c| crate::workspaces::sent_to(c, &url)).collect();
         let cookie = crate::workspaces::cookie_header(cookies.iter().map(|c| (c.name(), c.value())));
         if !cookie.is_empty() {
             let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(10)).redirects(0).build();
@@ -300,9 +301,7 @@ pub async fn server_sign_out(app: AppHandle, server: String) -> Result<(), Strin
                 .send_string("{}");
         }
         if !shared {
-            for cookie in cookies {
-                let _ = page.delete_cookie(cookie);
-            }
+            crate::cookies::remove(&page, move |c| crate::workspaces::sent_to(c, &url));
         }
     })
     .await

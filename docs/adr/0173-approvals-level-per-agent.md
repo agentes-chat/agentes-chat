@@ -189,3 +189,37 @@ Consequences of the amendment:
 - Screens that named merge, deploy and rollback as always asking now say "by default" or "unless the agent never
   asks". Lines about other sensitive actions (a send, a share, a delete "always asks for approval") are unchanged
   and are untrue for an agent set to never ask.
+
+## Addendum 2026-11-15: a workspace level, and changing it from the card
+
+People were asked again and again and could not find where to stop it: the level lived only on each agent's page,
+and no approval card pointed to it. What each level means is unchanged (the amendment above still holds).
+
+1. **The workspace has a level**, `organization_settings.approvals_level` (`risky` without a row). An agent follows
+   it until someone sets the agent's own choice. `agents.approvals_level_own` says which: false while it follows.
+   The workspace's level is copied onto each following agent (`setWorkspaceApprovalsLevel`, and at creation through
+   `createAgent` and the right hand's provisioning), so every reader keeps reading `agents.approvals_level` alone and
+   the policy, the prompt lines and the git proxy needed no change.
+2. **The migration changes nothing on deploy.** Migration `0278_workspace_approvals_level` marks an agent at any
+   level but `risky` as its own choice, and the rest follow the workspace, which starts at `risky`. An agent someone
+   set back to `risky` by hand reads as following, which behaves the same.
+3. **Who sets it.** Whoever may set any agent's level (`manage_agents`), through `PUT …/approvals-level`. Setting it
+   changes every agent that follows it and leaves own choices alone. The answer and Settings say how many agents keep
+   their own. With `everyAgent` it also clears every agent's own choice, so all of them follow it. An agent's `PATCH`
+   with `approvalsLevel: null` makes it follow the workspace again. A level given in a `PATCH` or at creation is the
+   agent's own choice. Both are audited (`organization.approvals_level`, `agent.updated`).
+4. **The apps.** Settings → Aprovações (admins) shows the workspace's level with the same three choices, titles and
+   lines as an agent's row, and an ⓘ. An agent's row says "Segue o workspace" while it follows. Every waiting
+   approval (the conversation's card, the approvals page, the notifications, the right hand's cards, the phone's
+   approval sheet, its conversation cards and its notifications) has "Mudar quando perguntar" for who decides it and may set the agent's
+   level (`changesWhenAsks`: `canDecide` and `manage_agents`). It opens the agent's three choices in place, approves
+   nothing, and a toast says the new choice with Desfazer, which puts back the levels before it. Who may set the
+   workspace's level also gets "Para todos os agentes do workspace" there, which is `everyAgent`. Ticked, no level
+   shows as chosen, so the agent's current level can be given to every agent too.
+
+Consequences:
+
+- An agent's owner who decides its approvals but doesn't manage agents doesn't see the link: they couldn't save the
+  choice. Widening who sets an agent's level is a separate decision.
+- Desfazer after "Para todos os agentes" sets the workspace's level back and saves each cleared own choice again,
+  one request per agent that had one.

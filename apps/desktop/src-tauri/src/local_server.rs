@@ -526,20 +526,38 @@ pub fn healthy(port: u16) -> bool {
     matches!(http(port, "GET", "/api/health", None), Some((200, _)))
 }
 
+/// The owner key refused: the server's status (0 when it didn't answer) and, when it said why, `owner_none` or
+/// `owner_gone` (`owner_refusal`).
+pub type Refused = (u16, Option<&'static str>);
+const NO_ANSWER: Refused = (0, None);
+
+/// Why the server refused the owner key, from its answer: `owner_none` (no account is left: a name and email make
+/// the new owner), `owner_gone` (the owner deleted their account while others still have one), else None.
+pub fn owner_refusal(status: u16, body: &str) -> Option<&'static str> {
+    if status != 409 {
+        return None;
+    }
+    match serde_json::from_str::<Value>(body).ok()?["code"].as_str()? {
+        "OWNER_NONE" => Some("owner_none"),
+        "OWNER_GONE" => Some("owner_gone"),
+        _ => None,
+    }
+}
+
 /// A one-time sign-in for the owner, and the owner's account id when the server says it (newer servers do).
-pub fn owner_sign_in_as(folder: &Folder, port: u16) -> Result<(String, Option<String>), u16> {
-    let key = fs::read_to_string(folder.owner_key()).map_err(|_| 0u16)?;
+pub fn owner_sign_in_as(folder: &Folder, port: u16) -> Result<(String, Option<String>), Refused> {
+    let key = fs::read_to_string(folder.owner_key()).map_err(|_| NO_ANSWER)?;
     match http(port, "POST", "/api/auth/owner-key", Some(&json!({ "key": key.trim() }))) {
         Some((200, text)) => {
-            let body = serde_json::from_str::<Value>(&text).map_err(|_| 0u16)?;
+            let body = serde_json::from_str::<Value>(&text).map_err(|_| NO_ANSWER)?;
             let token = body["token"]
                 .as_str()
                 .filter(|t| crate::servers::page_path(&format!("/desktop/handover#token={t}")))
-                .ok_or(0u16)?;
+                .ok_or(NO_ANSWER)?;
             Ok((token.to_string(), body["userId"].as_str().map(str::to_string)))
         }
-        Some((status, _)) => Err(status),
-        None => Err(0),
+        Some((status, text)) => Err((status, owner_refusal(status, &text))),
+        None => Err(NO_ANSWER),
     }
 }
 
@@ -569,9 +587,9 @@ fn follow_window(app: &AppHandle, folder: &Folder, port: u16, url: &str, was: Op
 }
 
 /// A one-time sign-in for the owner (`POST /api/auth/owner-key`, ADR 0060 §6); with `who`, the owner is made
-/// first when there is none. Err: the server's status, or 0 when it didn't answer.
-pub fn owner_sign_in(folder: &Folder, port: u16, who: Option<(&str, &str)>) -> Result<String, u16> {
-    let key = fs::read_to_string(folder.owner_key()).map_err(|_| 0u16)?;
+/// first when there is none.
+pub fn owner_sign_in(folder: &Folder, port: u16, who: Option<(&str, &str)>) -> Result<String, Refused> {
+    let key = fs::read_to_string(folder.owner_key()).map_err(|_| NO_ANSWER)?;
     let mut body = json!({ "key": key.trim() });
     if let Some((name, email)) = who {
         body["name"] = json!(name.trim());
@@ -582,9 +600,9 @@ pub fn owner_sign_in(folder: &Folder, port: u16, who: Option<(&str, &str)>) -> R
             .ok()
             .and_then(|v| v["token"].as_str().map(str::to_string))
             .filter(|t| crate::servers::page_path(&format!("/desktop/handover#token={t}")))
-            .ok_or(0),
-        Some((status, _)) => Err(status),
-        None => Err(0),
+            .ok_or(NO_ANSWER),
+        Some((status, text)) => Err((status, owner_refusal(status, &text))),
+        None => Err(NO_ANSWER),
     }
 }
 
@@ -962,6 +980,8 @@ struct Inner {
     backup_problem: Option<&'static str>,
     /// The night (`YYYY-MM-DD`) a nightly backup was last tried: once a night, even when it fails.
     nightly_tried: Option<String>,
+    /// Where "Erase and start over" moved its folder.
+    erased: Option<String>,
 }
 
 #[derive(Default)]
@@ -973,6 +993,8 @@ pub struct LocalServer {
     cancel: AtomicBool,
     /// The person stopped waiting for HTTPS to be allowed in their tailnet.
     reach_stop: AtomicBool,
+    /// "Erase and start over" runs: nothing starts the server on the folder it is moving.
+    erasing: AtomicBool,
 }
 
 fn state(app: &AppHandle) -> std::sync::MutexGuard<'_, Inner> {
@@ -985,6 +1007,10 @@ pub fn cancelled(app: &AppHandle) -> bool {
 
 pub fn setting_up(app: &AppHandle) -> bool {
     state(app).setting_up.is_some()
+}
+
+fn erasing(app: &AppHandle) -> bool {
+    app.state::<LocalServer>().erasing.load(SeqCst)
 }
 
 pub fn folder(app: &AppHandle) -> Option<Folder> {
@@ -1122,7 +1148,8 @@ pub struct Status {
     public_url: Option<String>,
     reach: bool,
     usage: bool,
-    version: Option<String>,
+    installed_version: Option<String>,
+    server_version: Option<String>,
     dir: String,
     /// The person's name on this computer, for the owner's name (the welcome window only).
     system_name: Option<String>,
@@ -1141,6 +1168,10 @@ pub struct Status {
     backups: Backups,
     /// `caffeinate` keeps this Mac awake for it now.
     awake: bool,
+    /// Where "Erase and start over" would move its folder today (the app's own install only, not the welcome window).
+    erase_to: Option<String>,
+    /// Where an erase in this app session moved its folder, until a new setup makes one again.
+    erased: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -1182,10 +1213,29 @@ fn system_name() -> Option<String> {
     }
 }
 
+/// The installed bundle and the running server report different versions.
+fn server_versions(folder: Option<&Folder>, ready: Option<&Value>, phase: Phase) -> (Option<String>, Option<String>) {
+    let installed = folder.and_then(current_version);
+    let server = if matches!(phase, Phase::Running) {
+        ready.and_then(|r| r["version"].as_str()).map(str::to_string)
+    } else {
+        None
+    };
+    (installed, server)
+}
+
 pub fn status(app: &AppHandle, welcome: bool) -> Status {
-    let (here, phase, back_to, tailnet_down, backup_problem, awake) = {
+    let (here, phase, back_to, tailnet_down, backup_problem, awake, erased) = {
         let inner = state(app);
-        (inner.here.clone(), inner.phase, inner.back_to.clone(), inner.tailnet_down, inner.backup_problem, inner.awake.is_some())
+        (
+            inner.here.clone(),
+            inner.phase,
+            inner.back_to.clone(),
+            inner.tailnet_down,
+            inner.backup_problem,
+            inner.awake.is_some(),
+            inner.erased.clone(),
+        )
     };
     let folder = folder(app);
     let env = folder.as_ref().map(read_env).unwrap_or_default();
@@ -1208,20 +1258,20 @@ pub fn status(app: &AppHandle, welcome: bool) -> Status {
         .and_then(|f| fs::read_to_string(f.claim()).ok())
         .map(|c| c.trim().to_string())
         .filter(|c| crate::servers::page_path(&format!("/owner#claim={c}")));
+    let phase = if run { phase.unwrap_or(Phase::Stopped) } else { Phase::Off };
+    let (installed_version, server_version) = server_versions(folder.as_ref(), ready.as_ref(), phase);
     Status {
         bundled: bundle(app).is_some() && runner_binary().is_some(),
         installed,
         run,
         owner: here.owner,
-        phase: if run { phase.unwrap_or(Phase::Stopped) } else { Phase::Off },
+        phase,
         url: port.map(loopback_url).or_else(|| ready.as_ref().and_then(|r| r["url"].as_str().map(str::to_string))),
         reach,
         public_url: public,
         usage: telemetry_on(env_get(&env, "TELEMETRY").as_deref()),
-        version: ready
-            .as_ref()
-            .and_then(|r| r["version"].as_str().map(str::to_string))
-            .or_else(|| folder.as_ref().and_then(current_version)),
+        installed_version,
+        server_version,
         dir: folder.as_ref().map(|f| f.0.to_string_lossy().into_owned()).unwrap_or_default(),
         system_name: (welcome && installed != Installed::App).then(system_name).flatten(),
         serving,
@@ -1246,6 +1296,13 @@ pub fn status(app: &AppHandle, welcome: bool) -> Status {
             problem: backup_problem,
         },
         awake,
+        erase_to: folder
+            .as_ref()
+            .filter(|_| installed == Installed::App && !welcome)
+            .and_then(|f| f.0.parent())
+            .and_then(|home| erased_folder(home, &today(), taken))
+            .map(|p| p.to_string_lossy().into_owned()),
+        erased: erased.filter(|_| installed == Installed::None),
     }
 }
 
@@ -1285,7 +1342,8 @@ fn launch_of(app: &AppHandle) -> Option<Launch> {
 pub fn start(app: &AppHandle) {
     {
         let mut inner = state(app);
-        if inner.pid.is_some() || inner.launching {
+        // Read under `inner`, as `erase` reads `launching`: one of the two always sees the other.
+        if inner.pid.is_some() || inner.launching || erasing(app) {
             return;
         }
         inner.launching = true;
@@ -1799,6 +1857,10 @@ pub fn hold_stopped(app: &AppHandle, minutes: Option<u64>) {
 
 /// Start, by the person (the popover, Preferences, the menus): any hold ends.
 pub fn start_by_hand(app: &AppHandle) {
+    // A menu built before an erase may still offer Start: nothing to start without the app's own install.
+    if !folder(app).is_some_and(|f| installed(&f) == Installed::App) {
+        return;
+    }
     if state(app).here.hold.is_some() {
         set_hold(app, None);
     }
@@ -1852,15 +1914,46 @@ fn open_signed_in(app: &AppHandle, origin: &str, token: &str) -> Result<(), Stri
     crate::main_window::show_url(app, url)
 }
 
-/// The site's sign-in asked to sign the owner in ("Continue on this Mac", `this_mac` `signIn`).
+/// The site's sign-in asked to sign the owner in ("Continue on this Mac", `this_mac` `signIn`). Refused with
+/// `owner_gone` or `owner_none`, which the page explains; with no account left, the welcome window opens on the
+/// account step to make the new owner (setting up again over the same folder only adds the owner).
 pub fn sign_in_window(app: &AppHandle, origin: &str) -> Result<(), String> {
     if !answers_within(app, origin, Duration::ZERO) {
         return Err("not running".into());
     }
     let folder = folder(app).ok_or("no folder")?;
     let port = port_of(&folder).ok_or("no port")?;
-    let token = owner_sign_in(&folder, port, None).map_err(|s| format!("sign-in refused ({s})"))?;
+    let token = match owner_sign_in(&folder, port, None) {
+        Ok(token) => token,
+        Err((_, Some(code))) => {
+            // A setup on screen makes the owner itself: its account step may be under way.
+            if code == "owner_none" && !setting_up(app) {
+                save_owner(app, false);
+                *app.state::<crate::workspaces::WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()) =
+                    Some("owner");
+                let _ = crate::present(app, "welcome");
+            }
+            return Err(code.into());
+        }
+        Err((status, None)) => return Err(format!("sign-in refused ({status})")),
+    };
+    // The key signs in, so there is an owner, whatever was saved (a setup that made one, then stopped).
+    save_owner(app, true);
     open_signed_in(app, origin, &token)
+}
+
+/// Whether the server here has an owner, saved and told to the windows when it changed.
+fn save_owner(app: &AppHandle, owner: bool) {
+    let here = {
+        let mut inner = state(app);
+        if inner.here.owner == owner {
+            return;
+        }
+        inner.here.owner = owner;
+        inner.here.clone()
+    };
+    save_here(app, &here);
+    emit_status(app);
 }
 
 fn notify(app: &AppHandle, title: &str, body: &str, version: Option<&str>) {
@@ -2008,7 +2101,7 @@ fn install(app: &AppHandle, choice: &Choice) -> Result<(), String> {
     // owner in: never a setup that ends in an error with every step done.
     if let Some(origin) = public_url(app) {
         let signed_in = owner_sign_in(&folder, port, None)
-            .map_err(|status| format!("the owner's sign-in: the server answered {status}"))
+            .map_err(|(status, _)| format!("the owner's sign-in: the server answered {status}"))
             .and_then(|token| open_signed_in(app, &origin, &token));
         if let Err(why) = signed_in {
             note(app, why);
@@ -2044,7 +2137,7 @@ fn start_with_owner(
     let port = port_of(folder).ok_or_else(|| fail("account", "no PORT in .env".into()))?;
     let who = choice.name.as_deref().zip(choice.email.as_deref());
     owner_sign_in(folder, port, who)
-        .map_err(|status| fail("account", format!("the owner's account: the server answered {status}")))?;
+        .map_err(|(status, _)| fail("account", format!("the owner's account: the server answered {status}")))?;
     state(app).here.owner = true;
     Ok(port)
 }
@@ -2377,18 +2470,208 @@ fn diagnostics(app: &AppHandle) -> String {
         })
         .unwrap_or_default();
     format!(
-        "agentes.chat app {} ({} {})\nserver here: {:?}, version {}, at {}, reach {}, usage statistics {}\n\n{}\n\n{}",
+        "agentes.chat app {} ({} {})\nserver here: {:?}, installed package version {}, internal server version {}, at {}, reach {}, usage statistics {}\n\n{}\n\n{}",
         app.package_info().version,
         std::env::consts::OS,
         std::env::consts::ARCH,
         status.phase,
-        status.version.unwrap_or_default(),
+        status.installed_version.as_deref().unwrap_or("unknown"),
+        status.server_version.as_deref().unwrap_or("unknown"),
         status.public_url.unwrap_or_default(),
         if status.reach { "on" } else { "off" },
         if status.usage { "on" } else { "off" },
         lines,
         log
     )
+}
+
+// ───────────────────────────── erase and start over ─────────────────────────────
+
+/// Why "Erase and start over" can't run now: only on the folder the app made (a terminal install's is the person's
+/// own), never while a setup may be making that folder's database, and never while a start or an update copies or
+/// moves files in it with no server to stop yet (`moving`).
+pub fn erase_refusal(installed: Installed, setting_up: bool, moving: bool) -> Option<&'static str> {
+    if setting_up {
+        Some("setting up")
+    } else if moving {
+        Some("starting")
+    } else if installed != Installed::App {
+        Some("not set up here")
+    } else {
+        None
+    }
+}
+
+/// A start, an update or the exit watcher may be copying or moving its files with no server process to stop: a start
+/// before its child exists (`launching`), an update's database move, or a restart's wait and its go-back to the
+/// previous version's database.
+pub fn files_moving(launching: bool, pid: Option<u32>, phase: Option<Phase>) -> bool {
+    launching || (pid.is_none() && matches!(phase, Some(Phase::Updating | Phase::Restarting)))
+}
+
+/// Where an erased folder goes: a visible folder in `home` named with the day (`YYYY-MM-DD`), with a number after it
+/// when that name is `taken`. None once 99 of them are there.
+pub fn erased_folder(home: &Path, date: &str, taken: impl Fn(&Path) -> bool) -> Option<PathBuf> {
+    (1..100)
+        .map(|n| match n {
+            1 => home.join(format!("agentes.chat erased {date}")),
+            n => home.join(format!("agentes.chat erased {date} {n}")),
+        })
+        .find(|p| !taken(p))
+}
+
+/// Something is at `path`, a link that leads nowhere included.
+fn taken(path: &Path) -> bool {
+    path.symlink_metadata().is_ok()
+}
+
+/// Today on this computer's clock, `YYYY-MM-DD`.
+fn today() -> String {
+    local_stamp().and_then(|s| s.get(..10).map(str::to_string)).unwrap_or_else(stamp)
+}
+
+/// The data folder moves whole to `erased_folder`'s place in `home`: a rename, so nothing is copied or deleted.
+fn move_away(folder: &Path, home: &Path, date: &str) -> io::Result<PathBuf> {
+    let to = erased_folder(home, date, taken).ok_or_else(|| io::Error::new(io::ErrorKind::AlreadyExists, "no free name"))?;
+    fs::rename(folder, &to)?;
+    Ok(to)
+}
+
+/// The erase's order: it stops, its folder moves away, and only once the folder moved does anything else go. A folder
+/// that didn't move leaves it stopped with its data where it was.
+fn erase_in_order<E>(
+    stop: impl FnOnce(),
+    move_folder: impl FnOnce() -> Result<PathBuf, E>,
+    clean_up: impl FnOnce(),
+) -> Result<PathBuf, E> {
+    stop();
+    let to = move_folder()?;
+    clean_up();
+    Ok(to)
+}
+
+/// Clears `erasing` when the erase ends, a panic included: left set, it would refuse every start until the app quits.
+struct Erasing<'a>(&'a AtomicBool);
+
+impl Drop for Erasing<'_> {
+    fn drop(&mut self) {
+        self.0.store(false, SeqCst);
+    }
+}
+
+/// The server here's addresses in the list: its public one and its loopback one (read from its folder's `.env`).
+fn addresses(app: &AppHandle) -> Vec<String> {
+    let mut all: Vec<String> = public_url(app).into_iter().chain(folder(app).and_then(|f| port_of(&f)).map(loopback_url)).collect();
+    all.dedup();
+    all
+}
+
+/// The server here's addresses leave the list, and the main window goes to the server open now, or hides when none is
+/// left.
+fn leave_list(app: &AppHandle, addresses: &[String]) {
+    for origin in addresses {
+        crate::servers::remove(app, origin);
+    }
+    // Its workspaces leave the window's list now, not at the next minute's read.
+    crate::workspaces::trigger(app);
+    match crate::servers::current(app) {
+        Some(url) => {
+            let _ = crate::main_window::show_url(app, url);
+        }
+        None => {
+            if let Some(window) = app.get_window(crate::main_window::LABEL) {
+                let _ = window.hide();
+            }
+        }
+    }
+}
+
+/// "Erase and start over": it stops, its folder moves whole to a dated one in the home folder (kept, so its data can
+/// still be brought back), then what the app kept about it goes: its host homes, its addresses in the list and the
+/// main window's cookies there, and `local-server.json`. The welcome window then opens on a new setup. Ok: where its
+/// data went. Err: why it didn't run (`erase_refusal`), or why the folder didn't move: `held` (another server holds
+/// its lock), `running` (it started again meanwhile), `move` (the rename failed). Called with `erasing` set, so
+/// nothing starts it meanwhile.
+fn erase(app: &AppHandle) -> Result<String, String> {
+    let folder = folder(app).ok_or("no folder")?;
+    let home = folder.0.parent().ok_or("no home folder")?.to_path_buf();
+    let (moving, was_run) = {
+        let inner = state(app);
+        (files_moving(inner.launching, inner.pid, inner.phase), inner.here.run)
+    };
+    if let Some(why) = erase_refusal(installed(&folder), setting_up(app), moving) {
+        return Err(why.into());
+    }
+    // Read while the folder is there: they live in its `.env`.
+    let addresses = addresses(app);
+    let local = port_of(&folder).map(loopback_url);
+    let result = erase_in_order(
+        // Not forgotten yet: until the folder moved, it is still the server here that stopped.
+        || {
+            stop_by_hand(app, false);
+            stop_leftover(app, &folder);
+        },
+        || {
+            let idle = {
+                let inner = state(app);
+                inner.pid.is_none() && !inner.launching
+            };
+            if !idle {
+                return Err(("running", "it started again".to_string()));
+            }
+            if let Err(err) = not_held(&folder) {
+                return Err(("held", err.to_string()));
+            }
+            move_away(&folder.0, &home, &today()).map_err(|err| ("move", err.to_string()))
+        },
+        || {
+            let runners = app.state::<crate::runners::Runners>();
+            for (id, dir) in local.as_deref().map(|s| crate::runners::host_homes(app, s)).unwrap_or_default() {
+                let _ = runners.remove(app, &id);
+                // Gone from the runners' list once the server stopped, so `remove` alone leaves it on disk.
+                let _ = fs::remove_dir_all(dir);
+            }
+            // The loopback one's too, although a server at another port here shares them: its sign-in is asked
+            // again once, where the old session would otherwise meet a new server.
+            for origin in &addresses {
+                crate::servers::drop_cookies(app, origin);
+            }
+            leave_list(app, &addresses);
+            {
+                let mut inner = state(app);
+                inner.here = HereFile::default();
+                inner.phase = None;
+                inner.failed = 0;
+                inner.back_to = None;
+                inner.update_from = None;
+                inner.https_url = None;
+                inner.tailnet_down = false;
+                inner.backup_problem = None;
+            }
+            save_here(app, &HereFile::default());
+        },
+    );
+    match result {
+        Ok(to) => {
+            let to = to.to_string_lossy().into_owned();
+            state(app).erased = Some(to.clone());
+            emit_status(app);
+            *app.state::<crate::workspaces::WelcomeMode>().0.lock().unwrap_or_else(|e| e.into_inner()) = Some("owner");
+            let _ = crate::present(app, "welcome");
+            Ok(to)
+        }
+        Err((why, cause)) => {
+            note(app, format!("erase: the folder didn't move ({cause}), it stays in {}", folder.0.display()));
+            if was_run && why != "running" {
+                // As after Stop: stopped until Start, and a page of it on screen offers Start.
+                set_hold(app, Some(Hold { until: None }));
+                crate::cover::over_server_here(app);
+            } else {
+                emit_status(app);
+            }
+            Err(why.to_string())
+        }
+    }
 }
 
 // ───────────────────────────── commands ─────────────────────────────
@@ -2482,6 +2765,9 @@ pub fn local_server_start(app: AppHandle, webview: tauri::Webview) -> Result<(),
     if !folder(&app).is_some_and(|f| installed(&f) == Installed::App) {
         return Err("not set up here".into());
     }
+    if erasing(&app) {
+        return Err("erasing".into());
+    }
     {
         let mut inner = state(&app);
         inner.here.run = true;
@@ -2520,26 +2806,27 @@ pub async fn local_server_stop(
             hold_stopped(&app, minutes);
         }
         if forget {
-            if let Some(origin) = public_url(&app) {
-                crate::servers::remove(&app, &origin);
-            }
-            if let Some(local) = folder(&app).and_then(|f| port_of(&f)).map(loopback_url) {
-                crate::servers::remove(&app, &local);
-            }
-            match crate::servers::current(&app) {
-                Some(url) => {
-                    let _ = crate::main_window::show_url(&app, url);
-                }
-                None => {
-                    if let Some(window) = app.get_window(crate::main_window::LABEL) {
-                        let _ = window.hide();
-                    }
-                }
-            }
+            leave_list(&app, &addresses(&app));
         }
     })
     .await
     .map_err(|e| e.to_string())
+}
+
+/// "Erase and start over…": where its data went, or `move` when its folder couldn't move (it stays stopped, its data
+/// where it was).
+#[tauri::command]
+pub async fn local_server_erase(app: AppHandle, webview: tauri::Webview) -> Result<String, String> {
+    app_window(&webview, &["prefs"])?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let server = app.state::<LocalServer>();
+        let _busy = server.busy.lock().unwrap_or_else(|e| e.into_inner());
+        server.erasing.store(true, SeqCst);
+        let _erasing = Erasing(&server.erasing);
+        erase(&app)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -2769,6 +3056,17 @@ mod tests {
     }
 
     #[test]
+    fn the_owner_keys_refusal_says_whether_an_account_is_left() {
+        let says = |code: &str| format!("{{\"code\":\"{code}\",\"message\":\"x\"}}");
+        assert_eq!(owner_refusal(409, &says("OWNER_NONE")), Some("owner_none"));
+        assert_eq!(owner_refusal(409, &says("OWNER_GONE")), Some("owner_gone"));
+        assert_eq!(owner_refusal(409, &says("SOMETHING_ELSE")), None);
+        assert_eq!(owner_refusal(401, &says("OWNER_GONE")), None, "only the server's conflict carries it");
+        assert_eq!(owner_refusal(400, "{\"message\":\"The owner's name and email are needed\"}"), None, "an older server");
+        assert_eq!(owner_refusal(409, "not json"), None);
+    }
+
+    #[test]
     fn the_nightly_backup_once_a_night_after_three() {
         let due = |now, last, tried| nightly_due(now, last, tried);
         assert!(!due("2026-11-11-025900", None, None));
@@ -2833,6 +3131,90 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn erase_runs_only_on_the_app_s_own_folder_and_never_during_a_setup_or_a_start() {
+        assert_eq!(erase_refusal(Installed::App, false, false), None);
+        assert_eq!(erase_refusal(Installed::Terminal, false, false), Some("not set up here"));
+        assert_eq!(erase_refusal(Installed::None, false, false), Some("not set up here"));
+        assert_eq!(erase_refusal(Installed::App, true, false), Some("setting up"));
+        assert_eq!(erase_refusal(Installed::Terminal, true, false), Some("setting up"));
+        // A start copying files, or an update moving its database, with no server to stop yet.
+        assert_eq!(erase_refusal(Installed::App, false, true), Some("starting"));
+        assert!(files_moving(true, None, Some(Phase::Starting)));
+        assert!(files_moving(false, None, Some(Phase::Updating)));
+        // The exit watcher's wait before it starts again, and its go-back copying the previous database.
+        assert!(files_moving(false, None, Some(Phase::Restarting)));
+        // A server process to stop first, or nothing under way.
+        assert!(!files_moving(false, Some(42), Some(Phase::Updating)));
+        assert!(!files_moving(false, Some(42), Some(Phase::Running)));
+        assert!(!files_moving(false, None, Some(Phase::Stopped)));
+        assert!(!files_moving(false, None, Some(Phase::Failing)));
+        assert!(!files_moving(false, None, None));
+    }
+
+    #[test]
+    fn an_erased_folder_is_named_with_the_day_and_a_number_when_that_name_is_taken() {
+        let home = Path::new("/home/ana");
+        let first = home.join("agentes.chat erased 2026-11-14");
+        assert_eq!(erased_folder(home, "2026-11-14", |_| false), Some(first.clone()));
+        let second = home.join("agentes.chat erased 2026-11-14 2");
+        assert_eq!(erased_folder(home, "2026-11-14", |p| p == first), Some(second.clone()));
+        assert_eq!(
+            erased_folder(home, "2026-11-14", |p| p == first || p == second),
+            Some(home.join("agentes.chat erased 2026-11-14 3"))
+        );
+        assert_eq!(erased_folder(home, "2026-11-14", |_| true), None);
+    }
+
+    #[test]
+    fn erasing_moves_the_folder_whole_and_never_over_another() {
+        let home = temp("erase");
+        let data = home.join(".agentes");
+        fs::create_dir_all(data.join("db")).unwrap();
+        fs::write(data.join("owner-key"), "k").unwrap();
+        let to = move_away(&data, &home, "2026-11-14").unwrap();
+        assert_eq!(to, home.join("agentes.chat erased 2026-11-14"));
+        assert!(!data.exists());
+        assert_eq!(fs::read_to_string(to.join("owner-key")).unwrap(), "k");
+        assert!(to.join("db").is_dir());
+        // A second one the same day keeps the first.
+        fs::create_dir_all(&data).unwrap();
+        fs::write(data.join("owner-key"), "k2").unwrap();
+        let again = move_away(&data, &home, "2026-11-14").unwrap();
+        assert_eq!(again, home.join("agentes.chat erased 2026-11-14 2"));
+        assert_eq!(fs::read_to_string(to.join("owner-key")).unwrap(), "k");
+        // No folder to move: an error, and nothing made.
+        assert!(move_away(&data, &home, "2026-11-15").is_err());
+        assert!(!home.join("agentes.chat erased 2026-11-15").exists());
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn erasing_stops_first_and_cleans_up_only_once_the_folder_moved() {
+        let steps = std::cell::RefCell::new(Vec::new());
+        let done = erase_in_order(
+            || steps.borrow_mut().push("stop"),
+            || {
+                steps.borrow_mut().push("move");
+                Ok::<_, &str>(PathBuf::from("/home/ana/agentes.chat erased 2026-11-14"))
+            },
+            || steps.borrow_mut().push("clean up"),
+        );
+        assert_eq!(done, Ok(PathBuf::from("/home/ana/agentes.chat erased 2026-11-14")));
+        assert_eq!(*steps.borrow(), vec!["stop", "move", "clean up"]);
+        steps.borrow_mut().clear();
+        let failed = erase_in_order(
+            || steps.borrow_mut().push("stop"),
+            || {
+                steps.borrow_mut().push("move");
+                Err("held")
+            },
+            || steps.borrow_mut().push("clean up"),
+        );
+        assert_eq!(failed, Err("held"));
+        assert_eq!(*steps.borrow(), vec!["stop", "move"], "a folder that didn't move leaves everything else");
     }
 
     #[test]
@@ -2907,6 +3289,27 @@ mod tests {
         fs::write(bundle.join("server/lib/native.js"), mark).unwrap();
         fs::write(bundle.join("web/index.html"), mark).unwrap();
         bundle
+    }
+
+    #[test]
+    fn installed_and_internal_versions_stay_distinct_through_a_restart() {
+        let root = temp("restart-versions");
+        let folder = Folder(root.join(".agentes"));
+        let bundle = fake_bundle(&root, "bundle");
+        install_version(&folder, &bundle, "0.8.5").unwrap();
+        let ready = serde_json::json!({ "version": "0.1.1" });
+        let assert_versions = |phase, ready, expected_server: Option<&str>| {
+            let (installed, server) = server_versions(Some(&folder), ready, phase);
+            assert_eq!(installed.as_deref(), Some("0.8.5"));
+            assert_eq!(server.as_deref(), expected_server);
+        };
+
+        assert_versions(Phase::Running, Some(&ready), Some("0.1.1"));
+        assert_versions(Phase::Stopped, Some(&ready), None);
+        assert_versions(Phase::Starting, None, None);
+        assert_versions(Phase::Starting, Some(&ready), None);
+        assert_versions(Phase::Running, Some(&ready), Some("0.1.1"));
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
@@ -3162,6 +3565,8 @@ mod tests {
         let second = launch.run(&[], ANSWER_WITHIN, &|| false).unwrap();
         assert_eq!(second.code, Some(exit::LOCKED), "{}", second.err);
 
+        // No account yet, and no name and email: the server says so.
+        assert_eq!(owner_sign_in(&folder, port, None), Err((409, Some("owner_none"))));
         // The owner: made once with no password, then a one-time sign-in on every call.
         let first = owner_sign_in(&folder, port, Some(("Ana Souza", "ana@example.com"))).unwrap();
         let again = owner_sign_in(&folder, port, None).unwrap();

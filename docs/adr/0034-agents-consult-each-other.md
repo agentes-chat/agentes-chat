@@ -117,3 +117,12 @@ Not done: restoring an archived agent (there is no restore, so the refusal point
 - **No expiry while a colleague works.** A question or note whose run is queued, running, waiting on a person or its computer, or waiting on what it handed on gets 15 more minutes each time, and that run is never stopped. Only one nobody started, or whose run is gone, expires.
 - **Roll-up.** An agent that answers a question or note and hands part of it on keeps its answer open, and what comes back joins it before it goes back. Nothing starts a run in an agents' DM to read a result.
 - **Cards.** A note's recipient answers the person behind it: its approval, question and secret cards land where that person asked.
+
+## Addendum (2026-11-15): a consulted run posts nothing where its asker answers
+
+A person asked an agent for cover images in a thread; that agent asked a second one for the photos. The second agent, working in the two agents' DM, also called `post_message` into the person's channel each time. `post_message` posts at a channel's top level, so the photos showed up in the channel, outside the thread, and again in the thread once the first agent delivered the covers. The agents' DM already tells a run "Don't also answer where … asked"; nothing enforced it.
+
+- **Refused in code.** `post_message` refuses a channel where an agent this run answers speaks (`askerSpeaksIn` in `consultations.ts`): a run up one of the chains of questions and notes it answers is at work there, or is a routine's that reports there. The refusal tells the agent to put what it made in its answer, with each file's artifact id, for the agent that asked to deliver. By channel, not by thread: `post_message` never posts in a thread.
+- **Every chain counts.** A second request for the same person joins a consulted run still at work (`startOrJoinRun`), so one run may answer agents in several conversations. `consultationOrigin` names the latest alone, which is where the run's cards go; the refusal looks at all of them.
+- **Not a heads-up.** Nobody carries the reply to a `tell_agent` with `heads_up`, so a run woken by one may still post there.
+- **Unchanged.** Any other channel the person can post in, `send_dm` to the person behind the run (the agents' DM offers it), a run that answers agents only (refused everywhere, ADR 0085 addendum), and where a consulted run's approval, question, secret and file cards go.

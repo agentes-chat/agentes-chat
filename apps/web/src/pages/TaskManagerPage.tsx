@@ -14,6 +14,7 @@ import {
   computersBesides,
   delegationText,
   endedState,
+  endedText,
   groupLead,
   groupTasks,
   helpersOf,
@@ -354,6 +355,7 @@ export function TaskManagerPage({
           key={e.runId}
           task={e}
           agentName={nameOf(e.agentId)}
+          nameOf={(id) => dir.anyAgent(id)?.name}
           meId={me.user.id}
           selected={panel === e.runId}
           onOpen={() => setPanel(e.runId)}
@@ -1069,24 +1071,22 @@ const ENDED_ICON: Record<"done" | "stopped" | "failed", IconName> = {
 function EndedRow({
   task,
   agentName,
+  nameOf,
   meId,
   selected,
   onOpen,
 }: {
   task: EndedTask;
   agentName: string;
+  /** An agent's name: the right hand that stopped the task at someone's word. */
+  nameOf: (agentId: string) => string | undefined;
   meId: string;
   selected: boolean;
   onOpen: () => void;
 }) {
   const { t } = useTranslation();
   const state = endedState(task);
-  const word =
-    state === "stopped"
-      ? task.stoppedBy && task.stoppedBy.userId !== meId
-        ? t("taskManager.ended.stoppedBy", { name: task.stoppedBy.name })
-        : t("taskManager.ended.stopped")
-      : t(state === "done" ? "taskManager.ended.done" : "taskManager.ended.failed");
+  const word = endedText(t, task, meId, nameOf);
   const took = formatDuration(
     t,
     Math.max(0, Date.parse(task.finishedAt) - Date.parse(task.startedAt ?? task.finishedAt)),

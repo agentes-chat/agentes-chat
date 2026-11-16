@@ -858,6 +858,7 @@
     },
     "doneToast": "Selesai",
     "undo": "Urungkan",
+    "doneAllToast_other": "{{count}} dipindahkan ke Selesai",
     "day": {
       "today": "Hari ini",
       "yesterday": "Kemarin",
@@ -1116,6 +1117,7 @@
     "blocked": "Kamu satu-satunya pemilik {{names}}. Di situs web, di Orang, jadikan orang lain pemilik, lalu kembali ke sini.",
     "addPasswordFirst": "Tambahkan kata sandi ke akunmu di situs web dulu, lalu ketik di sini.",
     "addPasswordWeb": "Tambahkan kata sandi di situs web",
+    "onThisComputer": "Hapus di aplikasi agentes.chat di komputer yang menjalankan server ini.",
     "otherAccount": "Kamu masuk ke akun lain. Tidak ada yang dihapus.",
     "hold": "Tahan untuk menghapus"
   },
@@ -1914,6 +1916,7 @@
       "waitingFor": "{{names}} sedang menunggu {{device}} untuk {{person}}",
       "tool_request": "{{names}} memintamu menyalakan {{tool}} di {{device}} milikmu",
       "cli_request": "{{names}} meminta kamu memasang {{tool}} di {{device}} kamu",
+      "folder_request": "{{names}} memintamu membuka folder {{path}} di {{device}} milikmu",
       "allowOnce": "Izinkan sekali",
       "always": "Selalu izinkan {{name}}",
       "no": "Tidak",

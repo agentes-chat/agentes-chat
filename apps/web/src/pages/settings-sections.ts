@@ -126,7 +126,7 @@ export function settingsNavEntry(
  * `?connected=github` (back from OAuth), `?review=1` (a custom MCP server to
  * classify), `?mail=connected|failed&account={id}` (back from Gmail/Outlook),
  * `?request={id}&do=approve|deny` (a request to join, from the admins' email),
- * `?delete=1` (Geral's dialog that deletes the workspace), `?create=1` (Cargos' Criar cargo, from ⌘K), `?install={link}` (Skills, back from connecting GitHub
+ * `?delete=1` (the dialog that deletes the workspace, from Geral or Sua conta), `?create=1` (Cargos' Criar cargo, from ⌘K), `?install={link}` (Skills, back from connecting GitHub
  * in Instalar skill: the link to read again, with `agent` when an agent's card opened it) and `?agent={id}`
  * (Auditoria filtered to that agent).
  */

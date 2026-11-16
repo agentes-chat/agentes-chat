@@ -858,6 +858,7 @@
     },
     "doneToast": "完了にしました",
     "undo": "元に戻す",
+    "doneAllToast_other": "{{count}}件を完了に移動しました",
     "day": {
       "today": "今日",
       "yesterday": "昨日",
@@ -1116,6 +1117,7 @@
     "blocked": "あなたは{{names}}の唯一のオーナーです。ウェブサイトの「人」で別の人をオーナーにしてから、戻ってきてください。",
     "addPasswordFirst": "まずウェブサイトでアカウントにパスワードを追加してから、ここに入力してください。",
     "addPasswordWeb": "ウェブサイトでパスワードを追加",
+    "onThisComputer": "このサーバーを動かしているコンピューターの agentes.chat アプリで削除してください。",
     "otherAccount": "別のアカウントでログインしました。何も削除されていません。",
     "hold": "長押しして削除"
   },
@@ -1914,6 +1916,7 @@
       "waitingFor": "{{names}}が{{person}}の依頼で{{device}}を待っています",
       "tool_request": "{{names}} があなたの {{device}} で{{tool}}をオンにするよう頼んでいます",
       "cli_request": "{{names}} が {{device}} に {{tool}} をインストールするよう求めています",
+      "folder_request": "{{names}} があなたの {{device}} でフォルダ {{path}} を求めています",
       "allowOnce": "今回のみ許可",
       "always": "{{name}}を常に許可",
       "no": "許可しない",

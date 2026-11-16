@@ -61,6 +61,13 @@ export const afterSealing = (check: () => void) => waitFor(check, { timeout: 10_
 
 export const screen = () => within(document.body);
 
+/** A conversation header's search field, opened from its icon when it is still closed. */
+export function headerSearchBox(header = document.querySelector(".channel__header") as HTMLElement) {
+  const field = () => within(header).queryByRole("combobox", { name: "Buscar" }) as HTMLInputElement | null;
+  if (!field()) fireEvent.click(within(header).getByRole("button", { name: "Buscar" }));
+  return field() as HTMLInputElement;
+}
+
 /**
  * The app in another language, as a person's pick shows it, the page's `lang` too: CI's geometry capture keeps a
  * screen per language, so a test's worst case in German or Japanese is measured there.

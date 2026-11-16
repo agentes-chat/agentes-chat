@@ -53,6 +53,8 @@ export interface WorkLineContext {
   agentName: string;
   /** Who stopped it, by id (null: unknown). */
   nameOf?: (userId: string) => string | null;
+  /** The right hand that stopped it at someone's word, by id. */
+  agentNameOf?: (agentId: string) => string | null | undefined;
   /** Who may stop it (`mayStopRun`: who asked, the agent's owner, an admin). */
   canStop: boolean;
   /** Shown inside the thread its updates go to: they are read there, so the line doesn't repeat the last one. */
@@ -90,7 +92,11 @@ export function workLine(t: TFunction, w: WorkView, c: WorkLineContext): WorkLin
       result: w.resultMessageId ? { messageId: w.resultMessageId, label: say("work.whatHappened") } : null,
     };
   if (w.status === "canceled") {
-    const name = w.canceledByUserId ? c.nameOf?.(w.canceledByUserId) : null;
+    const name = w.canceledByAgentId
+      ? c.agentNameOf?.(w.canceledByAgentId)
+      : w.canceledByUserId
+        ? c.nameOf?.(w.canceledByUserId)
+        : null;
     return {
       ...base,
       tone: "stopped",

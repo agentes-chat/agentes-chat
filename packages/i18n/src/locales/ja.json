@@ -378,6 +378,12 @@
       "short": "話す",
       "say": "エージェントと話す"
     },
+    "view_all_agents": {
+      "title": "すべてのエージェントを表示",
+      "desc": "チームとサイドバーで。オフにすると、その人に応答するエージェントだけになります。",
+      "short": "すべてのエージェントを表示",
+      "say": "すべてのエージェントを表示"
+    },
     "assign_work": {
       "title": "エージェントにミッションを任せる",
       "desc": "自動で進む長い作業を依頼できます。",
@@ -684,7 +690,9 @@
     },
     "desktopOwner": {
       "continue": "この{{device}}で続ける",
-      "text": "この{{device}}でagentes.chatをセットアップしたので、パスワードは不要です。"
+      "text": "この{{device}}でagentes.chatをセットアップしたので、パスワードは不要です。",
+      "gone": "このサーバーのオーナーがアカウントを削除したため、「この{{device}}で続ける」では誰もサインインできません。自分のメールアドレスでサインインしてください。",
+      "none": "この{{device}}のagentes.chatにはアカウントが1つも残っていません。開いたウィンドウで新しいオーナーを作成してください。"
     },
     "server": {
       "into": "<b>{{server}}</b> にサインイン",
@@ -1717,6 +1725,12 @@
     "use": "このアイコンを使う",
     "inUse": "使用中",
     "sky": "背景",
+    "pose": "ポーズ",
+    "poses": {
+      "front": "正面",
+      "peek": "のぞく"
+    },
+    "peekBare": "のぞくときは、アクセサリーをつけません。",
     "expression": "表情",
     "ready": "既製のアイコン",
     "oneOrOther": "アクセサリーをつけると、表情はふつうになります。",
@@ -2532,6 +2546,13 @@
   "rightHand": {
     "label": "あなたの右腕",
     "labelCapitalized": "あなたの右腕",
+    "unusable": {
+      "title": "今は{{name}}のために考えられません",
+      "computerOnly": "{{computer}}でのみサインイン中。{{name}}はアカウントとしてサインインしたプランで考えます。",
+      "away": "{{owner}}さんのもの。{{computer}}は離席中です。",
+      "awayYours": "あなたのもの。{{computer}}は離席中です。",
+      "connect": "コンピューターを接続"
+    },
     "newDot": "新規",
     "actsAsYou": "あなたの権限で動きます",
     "composerHint": "あなたなしでは何も変わりません",
@@ -2683,6 +2704,7 @@
         "ai_account": "割り当てられるのはアカウントの持ち主だけです",
         "name": "エージェントの名前を変えられるのは管理者だけです",
         "look": "見た目を変えられるのは管理者と責任者だけです",
+        "group": "エージェントの部署を変えられるのは管理者だけです",
         "reports_to": "エージェントの報告先を変えられるのは管理者だけです",
         "many": "これらの変更ができるのは管理者だけです"
       }
@@ -2697,6 +2719,7 @@
       "channel": "チャンネル",
       "name": "名前",
       "look": "見た目",
+      "group": "部署",
       "reports_to": "報告先",
       "skill": "スキル「{{name}}」"
     },
@@ -3271,7 +3294,17 @@
     "never": {
       "title": "確認しない",
       "text": "マージ、デプロイ、支払い、ルーティンを含め、一切確認しません。"
-    }
+    },
+    "change": "確認するタイミングを変更",
+    "now": "{{name}} は今後：{{level}}。",
+    "nowEveryAgent": "すべてのエージェントは今後：{{level}}。",
+    "undo": "元に戻す",
+    "everyAgent": "ワークスペースのすべてのエージェントに適用",
+    "follows": "ワークスペースに従う",
+    "edit": "変更",
+    "workspaceLead": "エージェントが動く前に人へ確認するタイミング。",
+    "workspaceHelp": "各エージェントは、誰かがエージェントのページで個別に変更するまでこの設定に従います。",
+    "ownAgents_other": "{{count}} 件のエージェントは個別の設定があり、変わりません。"
   },
   "brakes": {
     "title": "誰も頼んでいない作業",
@@ -4755,6 +4788,7 @@
     "summaryAllRead": "すべて既読",
     "summaryNothing": "新しいものはありません。",
     "readAll": "すべて既読にする",
+    "doneAll": "すべて完了にする",
     "filters": "通知を絞り込む",
     "filter": {
       "all": "すべて",
@@ -4966,6 +5000,7 @@
       "restored": "受信トレイに戻しました",
       "undo": "元に戻す",
       "readAll_other": "{{count}}件を既読にしました",
+      "doneAll_other": "{{count}}件を完了に移動しました",
       "sent": "返信を送信しました",
       "see": "見る",
       "answered": "{{name}}があなたの答えを受け取りました",
@@ -7401,6 +7436,18 @@
     },
     "assigneeFilter": "担当者",
     "priorityFilter": "優先度",
+    "labelFilter": "ラベル",
+    "table": {
+      "task": "タスク",
+      "github": "GitHub",
+      "sortBy": "{{column}}で並べ替え",
+      "resize": "列「{{column}}」の幅を変更"
+    },
+    "fold": {
+      "open": "{{name}}を開く",
+      "close": "{{name}}を折りたたむ",
+      "column": "列を折りたたむ"
+    },
     "title": "タスク",
     "summary": "未完了 {{open}} · エージェント担当 {{agents}}",
     "search": "タスクを検索",
@@ -7442,8 +7489,16 @@
       "order": {
         "manual": "手動",
         "priority": "優先度",
-        "due": "期日"
+        "due": "期日",
+        "updated": "最近"
       },
+      "done": "完了",
+      "doneIs": {
+        "all": "すべて",
+        "recent": "過去{{days}}日間",
+        "hidden": "なし"
+      },
+      "hideEmpty": "空のグループを非表示",
       "field": {
         "project": "プロジェクト",
         "assignee": "担当者",
@@ -7469,6 +7524,7 @@
       "canceled": "#{{number}}は元の場所に戻りました。",
       "assigned": "#{{number}}の担当は{{name}}になりました。",
       "unassigned": "#{{number}}の担当者がいなくなりました。",
+      "removed": "#{{number}}の担当から{{name}}が外れました。",
       "prioritized": "#{{number}}の優先度は{{priority}}になりました。"
     },
     "canceledColumn": "キャンセル済み",
@@ -7611,6 +7667,10 @@
       "high": "高"
     },
     "noAssignee": "担当者なし",
+    "assignees": {
+      "people": "人とエージェント",
+      "done": "完了"
+    },
     "agentRole": "エージェント · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -7746,7 +7806,9 @@
       "status_changed": "ステータスを{{status}}に変更しました",
       "priority_changed": "優先度を{{priority}}に変更しました",
       "assigned": "タスクを割り当てました",
-      "unassigned": "担当者を外しました",
+      "unassigned": "担当者を1人外しました",
+      "assigned_named": "タスクを{{name}}に割り当てました",
+      "unassigned_named": "{{name}}をタスクの担当から外しました",
       "due_date_set": "期日を{{date}}に設定しました",
       "due_date_removed": "期日を削除しました",
       "pr_linked": "PR #{{number}}をリンクしました",
@@ -8338,6 +8400,7 @@
       "waiting_budget_late": "予定時刻を過ぎました: 予算の更新が遅すぎました",
       "stopped": "誰かが停止しました",
       "stoppedBy": "{{name}}が停止しました",
+      "stalled": "解放しました: 20分間何も進みませんでした",
       "no_report": "結果を伝えずに終了しました",
       "handoff_blocked": "報告できませんでした: ルーティンが一時停止されたか、作成した人がそこに投稿できなくなりました",
       "deleted": "停止: ルーティンが削除されました",
@@ -9718,7 +9781,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "TypeSafeの高速モデルで、すばやい判断のために作られています。agentes.chatは、誰が返信するかといった小さな質問をJevに尋ねます。料金はTypeSafeに直接お支払いください。",
+    "about": "TypeSafeの高速モデルで、すばやい判断のために作られています。agentes.chatは、誰が返信するかといった小さな質問をJevに尋ねます。料金はTypeSafeに直接、またはOpenRouter経由で同じ料金でお支払いください。",
     "lead": "エージェントがチームとして働けるよう手助けします。",
     "how": "Jevのしくみ",
     "why": {
@@ -9758,6 +9821,32 @@
       "envInvalid": "TypeSafeがこのキーを受け付けませんでした。このサーバーの設定（TYPESAFE_API_KEY）で変更してください。"
     },
     "checkAgain": "もう一度確認",
+    "via": {
+      "label": "Jevの支払い先",
+      "typesafe": "TypeSafe",
+      "typesafeText": "TypeSafeのアカウントで、前払いのクレジットを使います。",
+      "openrouter": "OpenRouter",
+      "openrouterText": "OpenRouterのキーで、同じ料金です。",
+      "connected": "キーは接続済み"
+    },
+    "openRouter": {
+      "create": "OpenRouterでキーを作成",
+      "createHint": "OpenRouterのクレジットを使います。料金はTypeSafeと同じで、100万トークンあたりUS$ {{price}}、返信する人の選択1回あたり約US$ {{call}}です。",
+      "open": "OpenRouterを開く",
+      "placeholder": "OpenRouterのキー",
+      "shape": "OpenRouterのキーはsk-or-v1-で始まります。確認してもう一度貼り付けてください。",
+      "invalid": "OpenRouterがこのキーを受け付けませんでした。キーのページからもう一度コピーしてください。",
+      "keyName": "OpenRouterのキー",
+      "same": "プロバイダーのキーにあるもの",
+      "forAll": "このサーバーのすべてのワークスペースの Jev の料金をこのキーで支払います。",
+      "turnOn": "Jevをオンにする",
+      "otherKey": "別のキーを使う",
+      "line": {
+        "invalid": "OpenRouterがこのキーを受け付けませんでした。新しいキーを作成してください。",
+        "no_credit": "OpenRouterでクレジットを追加してください。Jevは自動で再開します。",
+        "envInvalid": "OpenRouterがこのキーを受け付けませんでした。このサーバーの設定（TYPESAFE_API_KEY）で変更してください。"
+      }
+    },
     "remove": {
       "title": "Jevのキーを削除しますか？",
       "text": "キーがなくてもエージェントは動き続けます。"
@@ -9863,6 +9952,10 @@
       "copies_other": "エージェントのいない、このアカウントのログインがあと{{count}}件あります。",
       "removeCopies": "削除",
       "copiesRemoved_other": "使われていないログインを{{count}}件削除しました。",
+      "removeAllGrok": "Grok のログインをすべて削除",
+      "removeAllTitle": "Grok のログイン {{n}} 件をすべて削除しますか？",
+      "removeAllText": "{{computers}} でそれぞれのエージェントのために考えなくなります。他の人のログインはそのまま残ります。",
+      "removeAllDone": "Grok のログインを {{n}} 件削除しました。",
       "disconnect": "接続を解除",
       "renameTitle": "{{label}}の名前を変更",
       "nameLabel": "名前",
@@ -9917,6 +10010,8 @@
       },
       "resetsAt": "{{time}}にリセット",
       "resetsOn": "{{day}} {{time}}にリセット",
+      "allModels": "すべてのモデル",
+      "onlyModels": "{{name}} のみ",
       "almost": "まもなく上限",
       "limited": "上限に達しました",
       "limitedUntil": "{{when}}まで上限に達しています",
@@ -10068,6 +10163,9 @@
     "keys": "Enter で送信 · Esc で削除",
     "keysHold": "離すと送信 · Esc で削除",
     "keysPaused": "一時停止中 · スペースで再生 · Enter で送信 · Esc で削除",
+    "askDiscard": "音声を削除しますか？テキストは残ります。",
+    "askDelete": "削除",
+    "askKeep": "残す",
     "pausePlay": "一時停止",
     "seek": "再生位置",
     "speedAt": "速度 {{speed}}×",
@@ -10997,7 +11095,6 @@
       "open": "{{agent}}のモデルを変更",
       "ownSignIn": "このコンピューターのアカウント",
       "apiKey": "APIキーで使う{{provider}}",
-      "default": "既定",
       "refused": "このキーでは拒否されました",
       "textOnly": "テキストのみ",
       "search": "モデルを検索",
@@ -11082,6 +11179,10 @@
       "cant_start": "{{program}} は {{computer}} にありますが、起動しません。",
       "not_reported": "{{computer}}は、入っているプログラムをまだ確認しています。終わりしだい自動で切り替わります。",
       "outdated": "{{computer}}のバージョンが古くなっています。使うにはCodexをアップデートしてください。",
+      "outdatedCodex": "{{computer}} で Codex CLI {{detected}} が見つかりました。{{minimum}} 以降に更新してください。",
+      "codexUpdateGuide": "Codex CLI の更新方法",
+      "codexRecheckHere": "更新後、環境設定 › ツールの Codex の行で「もう一度確認」を選びます。",
+      "codexRecheckThere": "{{computer}} で Codex CLI を更新してください。デスクトップアプリがある場合は、環境設定 › ツールの Codex の行で「もう一度確認」を選びます。",
       "system": "{{program}}は{{computer}}のシステムではまだ動きません。",
       "no_computerCloud": "{{computer}}の準備ができ次第使えます。"
     },
@@ -11591,8 +11692,8 @@
       "agentes": "agentes.chatストレージ",
       "server": "このサーバー"
     },
-    "s3": "独自のバケット",
-    "s3Text": "S3、R2、MinIOなど、S3互換のストレージ。",
+    "s3": "独自のストレージ",
+    "s3Text": "Cloudflare R2、Amazon S3、Backblaze B2、またはその他のS3互換ストレージ。",
     "current": "使用中",
     "usage": {
       "files": "ファイル{{size}}",
@@ -11642,7 +11743,139 @@
     "backText": "新しいファイルは再び{{place}}に保存されます。すでにバケットにあるものはそのまま残ります。",
     "backDone": "ストレージを{{place}}に切り替えました。",
     "required": "この項目を入力してください。",
-    "keysRequired": "アクセスキーとシークレットを入力してください。"
+    "keysRequired": "アクセスキーとシークレットを入力してください。",
+    "connect": {
+      "open": "ストレージを接続",
+      "edit": "接続を編集",
+      "pickTitle": "ストレージはどこにありますか？",
+      "pickText": "サービスを選んでください。そのサービスでクリックする場所と、ここに貼り付ける内容をご案内します。",
+      "provider": {
+        "r2": "Cloudflare R2",
+        "s3": "Amazon S3",
+        "b2": "Backblaze B2",
+        "other": "その他"
+      },
+      "providerText": {
+        "r2": "一から設定するならいちばん簡単",
+        "s3": "すでにAWSをお使いの方向け",
+        "b2": "Backblazeのアカウントをお持ちの方向け",
+        "other": "MinIO、WasabiなどのS3互換サービス"
+      },
+      "title": {
+        "r2": "Cloudflare R2を接続",
+        "s3": "Amazon S3を接続",
+        "b2": "Backblaze B2を接続",
+        "other": "その他のストレージを接続"
+      },
+      "editTitle": {
+        "r2": "Cloudflare R2を編集",
+        "s3": "Amazon S3を編集",
+        "b2": "Backblaze B2を編集",
+        "other": "ストレージを編集"
+      },
+      "lede": {
+        "r2": "Cloudflareで2つの手順を行います。切り替える前に接続をテストします。",
+        "s3": "AWSで3つの手順を行います。切り替える前に接続をテストします。",
+        "b2": "Backblazeで2つの手順を行います。切り替える前に接続をテストします。",
+        "other": "S3互換のサービスならどれでも使えます。切り替える前に接続をテストします。"
+      },
+      "editLede": "変更した項目だけ書き換えてください。キーを空欄のままにすると、保存済みのキーを使い続けます。",
+      "bucketName": "バケット名",
+      "accessKeyId": "アクセスキーID",
+      "secret": "シークレットアクセスキー",
+      "r2Endpoint": "R2のアドレス",
+      "b2Endpoint": "バケットのエンドポイント",
+      "region": "リージョン",
+      "regionPick": "リージョンを選択",
+      "regionOption": "{{name}} · {{code}}",
+      "theirName": {
+        "r2Key": "Cloudflareでの名称：Access Key ID",
+        "r2Secret": "Cloudflareでの名称：Secret Access Key",
+        "r2Endpoint": "Cloudflareでは、r2.cloudflarestorage.comで終わるエンドポイントです。",
+        "s3Key": "AWSでの名称：Access key",
+        "s3Secret": "AWSでの名称：Secret access key",
+        "b2Key": "Backblazeでの名称：keyID",
+        "b2Secret": "Backblazeでの名称：applicationKey",
+        "b2Endpoint": "リージョンはここから判別します。"
+      },
+      "step": {
+        "bucketTitle": "バケットを作成",
+        "keyTitle": "アクセスキーを作成",
+        "userTitle": "agentes.chat専用のユーザーを作成",
+        "r2Bucket": "Cloudflareのダッシュボードで<b>R2</b>を開き、<b>Create bucket</b>をクリックします。名前は何でもかまいません。",
+        "r2Key": "R2のページの<b>API Tokens</b>で<b>Manage</b>をクリックし、続けて<b>Create API Token</b>をクリックします。<b>Object Read & Write</b>の権限とバケットを選択します。最後に、Cloudflareが下の3つの値を一度だけ表示します。",
+        "s3Bucket": "AWSコンソールで<b>S3</b>を開き、<b>Create bucket</b>をクリックします。選んだリージョンを控えておいてください。",
+        "s3User": "<b>IAM</b>で<b>Users</b>を開き、<b>Create user</b>をクリックします。権限の設定で、下でコピーしたテキストを使ってポリシーを作成します。このバケットだけにアクセスできるポリシーです。",
+        "s3Key": "新しいユーザーで<b>Security credentials</b>を開き、<b>Create access key</b>をクリックします。<b>Application running outside AWS</b>を選び、2つの値を貼り付けます。",
+        "b2Bucket": "Backblazeで<b>Buckets</b>を開き、<b>Create a Bucket</b>をクリックします。バケットのページで<b>Endpoint</b>をコピーします。",
+        "b2Key": "<b>Application Keys</b>を開き、<b>Add a New Application Key</b>をクリックします。バケットへのアクセスを<b>Read and Write</b>で許可します。アカウントのマスターキーはここでは使えません。"
+      },
+      "openR2": "R2を開く",
+      "openS3": "S3を開く",
+      "openIam": "IAMを開く",
+      "openB2": "Backblazeを開く",
+      "copyPolicy": "ポリシーをコピー",
+      "policyCopied": "バケット{{bucket}}を含むポリシーをコピーしました。",
+      "back": "戻る",
+      "testAgain": "もう一度テスト",
+      "passed": "接続できました。テストファイルの書き込み、読み取り、一覧表示、削除を確認しました。",
+      "permissionHint": {
+        "r2": "Cloudflareで、トークンに<b>Object Read & Write</b>の権限とバケット{{bucket}}へのアクセスがあるか確認してください。修正したら、もう一度テストしてください。",
+        "s3": "AWSで、ユーザーに手順2でコピーしたポリシー（バケット{{bucket}}）が付いているか確認してください。修正したら、もう一度テストしてください。",
+        "b2": "Backblazeで、キーに<b>Read and Write</b>とバケット{{bucket}}へのアクセスがあるか確認してください。修正したら、もう一度テストしてください。"
+      },
+      "inUse": "{{provider}} · {{bucket}}",
+      "inUseAt": "{{host}}の{{bucket}}",
+      "stepError": {
+        "auth": "アクセスキーまたはシークレットが受け付けられませんでした。",
+        "permission": "このキーにはこの手順を実行する権限がありません。",
+        "bucketMissing": "このアドレスにこのバケットはありません。",
+        "region": "リージョンがバケットのものと一致しません。",
+        "network": "アドレスに接続できませんでした。",
+        "address": "アドレスが無効です。",
+        "https": "https://で始まるアドレスを使ってください。",
+        "internal": "このアドレスは内部ネットワークを指しています。",
+        "hostNotFound": "このアドレスが見つかりませんでした。",
+        "notFound": "読み取り時にテストファイルが返ってきませんでした。",
+        "unexpected": "ストレージとの通信中に予期しないエラーが発生しました。",
+        "invalidBucket": "バケット名が無効です。",
+        "keysRequired": "両方のキーを入力してください。"
+      },
+      "awsRegion": {
+        "us-east-1": "米国東部 (バージニア北部)",
+        "us-east-2": "米国東部 (オハイオ)",
+        "us-west-1": "米国西部 (北カリフォルニア)",
+        "us-west-2": "米国西部 (オレゴン)",
+        "ca-central-1": "カナダ (中部)",
+        "ca-west-1": "カナダ西部 (カルガリー)",
+        "mx-central-1": "メキシコ (中部)",
+        "sa-east-1": "南米 (サンパウロ)",
+        "eu-central-1": "欧州 (フランクフルト)",
+        "eu-central-2": "欧州 (チューリッヒ)",
+        "eu-west-1": "欧州 (アイルランド)",
+        "eu-west-2": "欧州 (ロンドン)",
+        "eu-west-3": "欧州 (パリ)",
+        "eu-south-1": "欧州 (ミラノ)",
+        "eu-south-2": "欧州 (スペイン)",
+        "eu-north-1": "欧州 (ストックホルム)",
+        "il-central-1": "イスラエル (テルアビブ)",
+        "me-south-1": "中東 (バーレーン)",
+        "me-central-1": "中東 (UAE)",
+        "af-south-1": "アフリカ (ケープタウン)",
+        "ap-east-1": "アジアパシフィック (香港)",
+        "ap-south-1": "アジアパシフィック (ムンバイ)",
+        "ap-south-2": "アジアパシフィック (ハイデラバード)",
+        "ap-northeast-1": "アジアパシフィック (東京)",
+        "ap-northeast-2": "アジアパシフィック (ソウル)",
+        "ap-northeast-3": "アジアパシフィック (大阪)",
+        "ap-southeast-1": "アジアパシフィック (シンガポール)",
+        "ap-southeast-2": "アジアパシフィック (シドニー)",
+        "ap-southeast-3": "アジアパシフィック (ジャカルタ)",
+        "ap-southeast-4": "アジアパシフィック (メルボルン)",
+        "ap-southeast-5": "アジアパシフィック (マレーシア)",
+        "ap-southeast-7": "アジアパシフィック (タイ)"
+      }
+    }
   },
   "githubApp": {
     "title": "GitHubリポジトリ",
@@ -12193,6 +12426,7 @@
     "connected": "接続済み",
     "connectedAs": "{{account}}として接続済み",
     "reconnectAdds": "{{name}}を再接続すると、エージェントは{{what}}こともできます。",
+    "sendsToo": "追加で送信: <names/>。変更するには「再接続」を使ってください。",
     "adds": {
       "github_project": "GitHub Projects を使う（ボードを読み、カードを移動する）"
     },
@@ -13281,6 +13515,20 @@
     "needsKey": "このサーバーはOAuthに対応していません。APIキーで接続してください。",
     "notApproved": "{{name}}は承認済みのアプリしかログインを許可しておらず、agentes.chatはまだ承認されていません。APIキーが発行されれば、それで接続できます。",
     "serverSaid": "サーバーの応答: {{detail}}",
+    "headers": {
+      "title": "リクエストヘッダー",
+      "help": "キーを別のヘッダーで送る場合や、サーバーの前にゲートウェイがある場合に使います。ほとんどのサーバーでは不要です。",
+      "value": "値",
+      "nameOf": "ヘッダー{{n}}の名前",
+      "valueOf": "ヘッダー{{n}}の値",
+      "remove": "ヘッダー{{n}}を削除",
+      "add": "ヘッダーを追加",
+      "saved_other": "保存済み: <names/>。新しく入力しない限り、そのまま使われます。",
+      "drop": "削除",
+      "dropping_other": "<names/>は再接続時に削除されます。",
+      "undo": "元に戻す",
+      "refused": "サーバーがこれらのヘッダーを受け付けませんでした。値を確認するか、APIキーで接続してください。"
+    },
     "nothingYet": "ステップ3までは、エージェントは何も使えません。",
     "allCanUse": "接続すると、すべてのエージェントが使えます。あとから調整できます。",
     "replace": "現在のログインを置き換えます。使う人はそのままです。",
@@ -13961,7 +14209,15 @@
       "gone": "そのアカウントはもう接続されていません。",
       "unfinished": "Composioでのログインが完了しませんでした。もう一度お試しください。",
       "unavailable": "このサービスはここでは接続できません。",
-      "misconfigured": "サーバーで{{provider}}との接続が正しく設定されていないため、接続を完了できません。サーバーの運用者がアプリの設定でキーを差し替える必要があります。"
+      "misconfigured": "サーバーで{{provider}}との接続が正しく設定されていないため、接続を完了できません。サーバーの運用者がアプリの設定でキーを差し替える必要があります。",
+      "headerName": "ヘッダーの名前には、X-API-Keyのように英数字とハイフンだけを使ってください。",
+      "headerValue": "{{header}}の値を入力してください。1行で2,000文字まで、半角の英数字と記号だけが使えます。",
+      "headerReserved": "{{header}}はすべてのリクエストで自動的に送信されるため、変更できません。このヘッダーを削除してください。",
+      "headerTwice": "{{header}}がリストに2回あります。どちらかを削除してください。",
+      "headerAndKey": "APIキーはすでにAuthorizationとして送信されます。キーを消すか、このヘッダーを削除してください。",
+      "headersTooMany": "1つのサーバーに設定できるヘッダーは{{max}}個までです。追加するには、どれかを削除してください。",
+      "headersWithSignIn": "このサーバーはログインを求めていますが、ログインではまだヘッダーを送れません。ヘッダーを削除してログインするか、APIキーで接続してください。",
+      "headersUnreadable": "保存済みのヘッダーを読み込めませんでした。もう一度入力するか、削除してください。"
     },
     "wiki": {
       "githubNoNotes": "このリンクにMarkdownノートはありません。",
@@ -14182,7 +14438,8 @@
       "invalidDescription": "説明は1〜{{max}}文字にしてください。",
       "tooLarge": "このスキルのテキストとスクリプトは{{size}} MBで、上限は{{max}} MBです。",
       "tooManyFiles": "このスキルのファイルは{{files}}個で、上限は{{max}}個です。",
-      "repoTooLarge": "リポジトリが大きすぎてダウンロードできません（最大{{max}} MB）。スキルのフォルダを.zipでアップロードしてください。",
+      "repoTooLarge": "リポジトリが大きすぎてダウンロードできません（最大{{max}} MB）。",
+      "linkTooLarge": "このリンクのフォルダはファイルが多すぎて読み込めません。スキル自体のフォルダのリンクを貼り付けてください。",
       "noFrontmatter": "SKILL.mdの先頭に、名前と説明を2本の---行で挟んだブロックが必要です。",
       "bodyTooLong": "SKILL.mdが長すぎます（最大{{max}}文字）。",
       "noSkillMdZip": "zipのフォルダの先頭にSKILL.mdがありません。",
@@ -14196,7 +14453,8 @@
     },
     "agentGroup": {
       "notFound": "この部署はもうありません。",
-      "tooMany": "このワークスペースにはすでに {{max}} 個の部署があります。先に 1 つ削除してください。"
+      "tooMany": "このワークスペースにはすでに {{max}} 個の部署があります。先に 1 つ削除してください。",
+      "ambiguous": "{{name}} という名前の部署が 2 つあります。どちらかの名前を変えてから、もう一度お試しください。"
     },
     "rightHand": {
       "permanent": "右腕はワークスペースの一部で、チャンネルには入りません。@メンションすれば、どのチャンネルでも呼べます。",
@@ -15066,6 +15324,7 @@
       "waiting": "<b>{{who}}</b>が<b>{{deviceName}}</b>を待っています",
       "toolRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> で{{tool}}をオンにするよう頼んでいます",
       "cliRequest": "<b>{{who}}</b> が <b>{{deviceName}}</b> に {{tool}} をインストールするよう求めています",
+      "folderRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> でフォルダ {{path}} を求めています",
       "once": "今回のみ許可",
       "always": "常に許可",
       "no": "許可しない",
@@ -15703,11 +15962,11 @@
       "rolesPersonal": "ここで各メンバーができること。オーナーはすべてできます。"
     },
     "about": {
-      "basedOn": "Codari Global, LLC の <site>agentes.chat</site> をもとにしています",
+      "basedOn": "AGENTESCHAT, LLC の <site>agentes.chat</site> をもとにしています",
       "version": "バージョン",
       "license": "<license>GNU Affero General Public License v3</license> のもとで提供される自由ソフトウェアです。保証はありません。",
       "source": "ソースコード",
-      "copyright": "Copyright © 2026 Codari Global, LLC およびコントリビューター"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC およびコントリビューター"
     },
     "title": "設定",
     "account": {
@@ -15740,6 +15999,8 @@
         "openLatest": "最新のメッセージ",
         "textSize": "文字サイズ",
         "textSizeHelp": "メッセージの文字。すべての会話とあなたのすべてのデバイスに反映されます",
+        "fullMessages": "メッセージを全文表示",
+        "fullMessagesHelp": "長いメッセージを「もっと見る」なしで表示します。すべての会話とあなたのすべてのデバイスに反映されます",
         "textSizePhone": "スマートフォン本体の文字サイズに加えて、アプリ全体に反映されます",
         "textXs": "最小",
         "textSm": "小",
@@ -16133,6 +16394,18 @@
       "see": "利用を見る"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "種類別",
+      "handoffs": "エージェント間の引き継ぎ",
+      "people": "人との会話",
+      "routines": "ルーティン"
+    },
+    "hint": {
+      "handoffs": "今週の利用の大半は、エージェント同士の作業の引き継ぎによるものです。長い作業はエージェントに直接頼みましょう。",
+      "message": "{{name}}にメッセージ"
+    }
+  },
   "usageViews": {
     "signedOut": "ログアウト済み",
     "whose": "{{name}}の",
@@ -16316,6 +16589,14 @@
       "text": "ChatGPTがこのアカウントまたはモデルでの高速を拒否したため、この返信は標準の速度で届きました。",
       "action": "エージェントを開く"
     },
+    "standIn": {
+      "needsComputer": "{{via}}で回答しました: {{plan}}にはコンピューターが必要です。",
+      "away": "{{via}}で回答しました: {{plan}}のコンピューターは離席中です。",
+      "notShared": "{{via}}で回答しました: {{plan}}は接続した本人だけが使えます。",
+      "limit": "{{via}}で回答しました: {{plan}}は上限に達しました。",
+      "cant": "{{via}}で回答しました: {{plan}}は今考えられません。",
+      "change": "変更"
+    },
     "modelStandIn": {
       "text": "{{plan}}がこのキーで{{from}}を拒否しました。このキーで使える{{to}}で返信しました。",
       "useAll": "すべてで{{model}}を使う",
@@ -16377,6 +16658,7 @@
       "waitingYourAnswer": "あなたの回答待ち",
       "queued": "順番待ち",
       "handedOn": "ほかのエージェント待ち",
+      "answered": "回答済み",
       "noAnswer": "回答なし",
       "notFinished": "完了せず",
       "someAnswered": "{{total}}件中{{done}}件回答",

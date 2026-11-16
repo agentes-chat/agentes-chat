@@ -858,6 +858,7 @@
     },
     "doneToast": "완료",
     "undo": "실행 취소",
+    "doneAllToast_other": "{{count}}개를 완료로 옮겼어요",
     "day": {
       "today": "오늘",
       "yesterday": "어제",
@@ -1116,6 +1117,7 @@
     "blocked": "{{names}}의 유일한 소유자예요. 웹사이트의 사람 메뉴에서 다른 사람을 소유자로 지정한 다음 다시 오세요.",
     "addPasswordFirst": "먼저 웹사이트에서 계정에 비밀번호를 추가한 다음 여기에 입력하세요.",
     "addPasswordWeb": "웹사이트에서 비밀번호 추가",
+    "onThisComputer": "이 서버를 실행하는 컴퓨터의 agentes.chat 앱에서 삭제하세요.",
     "otherAccount": "다른 계정으로 로그인했어요. 아무것도 삭제되지 않았어요.",
     "hold": "길게 눌러 삭제"
   },
@@ -1914,6 +1916,7 @@
       "waitingFor": "{{names}}이(가) {{person}} 님을 위해 {{device}}을(를) 기다리고 있어요",
       "tool_request": "{{names}}님이 회원님의 {{device}}에서 {{tool}}을(를) 켜 달라고 요청합니다",
       "cli_request": "{{names}} 님이 {{device}}에 {{tool}}을(를) 설치해 달라고 요청합니다",
+      "folder_request": "{{names}}님이 회원님의 {{device}}에서 {{path}} 폴더를 요청합니다",
       "allowOnce": "한 번 허용",
       "always": "{{name}} 항상 허용",
       "no": "아니요",

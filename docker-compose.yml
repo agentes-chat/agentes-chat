@@ -47,6 +47,7 @@ services:
       S3_BACKUP_BUCKET: "${S3_BACKUP_BUCKET:-}"
       BACKUP_RETENTION_DAYS: "${BACKUP_RETENTION_DAYS:-}"
       BACKUP_INTERVAL_HOURS: "${BACKUP_INTERVAL_HOURS:-}"
+      BACKUP_AGE_RECIPIENT: "${BACKUP_AGE_RECIPIENT:-}"
     depends_on:
       postgres:
         condition: service_healthy

@@ -1689,6 +1689,7 @@ async function replyRefFor(
   }
   const person = row.authorType === "person";
   const media = mediaOf(row.meta);
+  const voice = voiceOf(row.meta);
   return {
     messageId: row.id,
     threadId: row.threadId,
@@ -1696,7 +1697,8 @@ async function replyRefFor(
     authorName: (person ? row.userName : row.agentName) ?? "",
     // A file with no words is quoted by its name, so people and agents still see what is answered.
     excerpt: replyExcerpt(readableBody(row.body, row.meta) || fileNameOf(row.meta)),
-    ...(voiceOf(row.meta) ? { mediaKind: "voice" as const } : media ? { mediaKind: media.kind } : {}),
+    // A voice message with typed text is quoted by that text (`readableBody`), else named as one.
+    ...(voice ? (voice.text ? {} : { mediaKind: "voice" as const }) : media ? { mediaKind: media.kind } : {}),
   };
 }
 
@@ -1711,8 +1713,8 @@ export const fileIdsOf = (meta: Record<string, unknown> | undefined): string[] =
     typeof f?.id === "string" ? [f.id] : [],
   );
 
-/** Files for a message: the person's own uploads or files of this channel, not deleted. */
-async function attachmentRefsFor(db: Database, userId: string, orgId: string, channelId: string, ids: string[]) {
+/** Files a message may carry: this workspace's, its sender's uploads or of this channel, not deleted. Throws on others. */
+export async function attachmentRefsFor(db: Database, userId: string, orgId: string, channelId: string, ids: string[]) {
   const wanted = [...new Set(ids)];
   if (wanted.length > MAX_MESSAGE_ATTACHMENTS) {
     throw new ValidationError(`At most ${MAX_MESSAGE_ATTACHMENTS} files per message`, "message.too_many_attachments", {

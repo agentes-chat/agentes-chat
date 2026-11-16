@@ -187,9 +187,12 @@ function Writer({
   };
 
   const done = (saved: WikiPage, created: boolean) => {
+    // Already left while it saved (the discard alert): it is saved all the same, and nothing moves them again.
+    const left = leaving.current;
     leaving.current = true;
     successHaptic();
     toast({ title: created ? t("wiki.created") : t("wiki.saved") });
+    if (left) return;
     if (created) router.replace(`/wiki/${encodeURIComponent(saved.slug)}`);
     else goBack();
   };

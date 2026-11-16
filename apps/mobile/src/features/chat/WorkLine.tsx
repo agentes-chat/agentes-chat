@@ -54,6 +54,7 @@ function useLine(work: WorkView, inUpdatesThread = false) {
     meId,
     agentName: agent?.name ?? "",
     nameOf: (id) => dir.memberById.get(id)?.name ?? null,
+    agentNameOf: (id) => dir.anyAgent(id)?.name,
     canStop: manage || agent?.ownerUserId === meId || work.requestedByUserId === meId,
     inUpdatesThread,
   });

@@ -404,6 +404,12 @@
       "short": "parlare",
       "say": "parla con gli agenti"
     },
+    "view_all_agents": {
+      "title": "Vedere tutti gli agenti",
+      "desc": "In Team e nella barra laterale. Senza, solo quelli che rispondono alla persona.",
+      "short": "vedere tutti gli agenti",
+      "say": "vede tutti gli agenti"
+    },
     "assign_work": {
       "title": "Affidare missioni agli agenti",
       "desc": "Chiedere lavori lunghi che vanno avanti da soli.",
@@ -712,7 +718,9 @@
     },
     "desktopOwner": {
       "continue": "Continua su questo {{device}}",
-      "text": "Hai configurato agentes.chat su questo {{device}}: non serve una password."
+      "text": "Hai configurato agentes.chat su questo {{device}}: non serve una password.",
+      "gone": "Il proprietario di questo server ha eliminato il suo account, quindi «Continua su questo {{device}}» non può far accedere nessuno. Accedi invece con la tua email.",
+      "none": "Nell’agentes.chat di questo {{device}} non è rimasto nessun account. Crea il nuovo proprietario nella finestra che si è aperta."
     },
     "server": {
       "into": "Accesso a <b>{{server}}</b>",
@@ -1819,6 +1827,12 @@
     "use": "Usa questa icona",
     "inUse": "In uso",
     "sky": "Sfondo",
+    "pose": "Posizione",
+    "poses": {
+      "front": "Di fronte",
+      "peek": "Sbirciando"
+    },
+    "peekBare": "Sbirciando, non porta accessori.",
     "expression": "Espressione",
     "ready": "Predefinite",
     "oneOrOther": "Con un accessorio, l'espressione resta quella normale.",
@@ -2719,6 +2733,13 @@
   "rightHand": {
     "label": "il tuo braccio destro",
     "labelCapitalized": "Il tuo braccio destro",
+    "unusable": {
+      "title": "Non può pensare per {{name}} ora",
+      "computerOnly": "Connesso solo su {{computer}}. {{name}} pensa con un piano connesso come account.",
+      "away": "Di {{owner}}, su {{computer}}, che è assente.",
+      "awayYours": "Tuo, su {{computer}}, che è assente.",
+      "connect": "Connetti un computer"
+    },
     "newDot": "Nuovo",
     "actsAsYou": "agisce con i tuoi permessi",
     "composerHint": "nulla cambia senza di te",
@@ -2870,6 +2891,7 @@
         "ai_account": "Solo il proprietario dell’account lo assegna",
         "name": "Solo gli admin rinominano un agente",
         "look": "Solo gli admin e il responsabile cambiano il suo aspetto",
+        "group": "Solo gli admin spostano un agente di reparto",
         "reports_to": "Solo gli admin cambiano a chi risponde un agente",
         "many": "Solo gli admin fanno queste modifiche"
       }
@@ -2884,6 +2906,7 @@
       "channel": "Canale",
       "name": "Nome",
       "look": "Aspetto",
+      "group": "Reparto",
       "reports_to": "Risponde a",
       "skill": "Skill {{name}}"
     },
@@ -3519,7 +3542,19 @@
     "never": {
       "title": "Non chiedere mai",
       "text": "Non chiede mai, nemmeno per merge, deploy, pagamenti e routine."
-    }
+    },
+    "change": "Cambia quando chiede",
+    "now": "{{name}} ora: {{level}}.",
+    "nowEveryAgent": "Tutti gli agenti ora: {{level}}.",
+    "undo": "Annulla",
+    "everyAgent": "Per tutti gli agenti del workspace",
+    "follows": "Segue il workspace",
+    "edit": "Cambia",
+    "workspaceLead": "Quando gli agenti chiedono a una persona prima di agire.",
+    "workspaceHelp": "Ogni agente segue questa scelta finché qualcuno non cambia la sua nella pagina dell’agente.",
+    "ownAgents_one": "{{count}} agente ha una scelta propria e non cambia.",
+    "ownAgents_many": "{{count}} agenti hanno una scelta propria e non cambiano.",
+    "ownAgents_other": "{{count}} agenti hanno una scelta propria e non cambiano."
   },
   "brakes": {
     "title": "Lavoro che nessuno ha chiesto",
@@ -5082,6 +5117,7 @@
     "summaryAllRead": "tutto letto",
     "summaryNothing": "Niente di nuovo qui.",
     "readAll": "Segna tutto come letto",
+    "doneAll": "Completa tutte",
     "filters": "Filtra notifiche",
     "filter": {
       "all": "Tutte",
@@ -5325,6 +5361,9 @@
       "readAll_one": "{{count}} segnata come letta",
       "readAll_many": "{{count}} segnate come lette",
       "readAll_other": "{{count}} segnate come lette",
+      "doneAll_one": "{{count}} spostata in Completate",
+      "doneAll_many": "{{count}} spostate in Completate",
+      "doneAll_other": "{{count}} spostate in Completate",
       "sent": "Risposta inviata",
       "see": "Vedi",
       "answered": "{{name}} ha ricevuto la tua risposta",
@@ -7956,6 +7995,18 @@
     },
     "assigneeFilter": "Assegnatario",
     "priorityFilter": "Priorità",
+    "labelFilter": "Etichetta",
+    "table": {
+      "task": "Attività",
+      "github": "GitHub",
+      "sortBy": "Ordina per {{column}}",
+      "resize": "Ridimensiona la colonna {{column}}"
+    },
+    "fold": {
+      "open": "Apri {{name}}",
+      "close": "Comprimi {{name}}",
+      "column": "Comprimi colonna"
+    },
     "title": "Attività",
     "summary": "{{open}} aperte · {{agents}} con agenti",
     "search": "Cerca attività",
@@ -7999,8 +8050,16 @@
       "order": {
         "manual": "Manuale",
         "priority": "Priorità",
-        "due": "Scadenza"
+        "due": "Scadenza",
+        "updated": "Recenti"
       },
+      "done": "Completate",
+      "doneIs": {
+        "all": "Tutte",
+        "recent": "Ultimi {{days}} giorni",
+        "hidden": "Nessuna"
+      },
+      "hideEmpty": "Nascondi gruppi vuoti",
       "field": {
         "project": "Progetto",
         "assignee": "Assegnatario",
@@ -8026,6 +8085,7 @@
       "canceled": "La #{{number}} è tornata al suo posto.",
       "assigned": "La #{{number}} ora è di {{name}}.",
       "unassigned": "La #{{number}} ora non ha un assegnatario.",
+      "removed": "La #{{number}} non è più di {{name}}.",
       "prioritized": "La #{{number}} ora ha priorità {{priority}}."
     },
     "canceledColumn": "Annullate",
@@ -8187,6 +8247,10 @@
       "high": "alta"
     },
     "noAssignee": "Nessun assegnatario",
+    "assignees": {
+      "people": "Persone e agenti",
+      "done": "Fatto"
+    },
     "agentRole": "Agente · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -8334,7 +8398,9 @@
       "status_changed": "ha cambiato lo stato in {{status}}",
       "priority_changed": "ha cambiato la priorità in {{priority}}",
       "assigned": "ha assegnato l'attività",
-      "unassigned": "ha rimosso l'assegnatario",
+      "unassigned": "ha rimosso un assegnatario",
+      "assigned_named": "ha assegnato l'attività a {{name}}",
+      "unassigned_named": "ha tolto {{name}} dall'attività",
       "due_date_set": "ha impostato la scadenza al {{date}}",
       "due_date_removed": "ha rimosso la scadenza",
       "pr_linked": "ha collegato la PR #{{number}}",
@@ -8945,6 +9011,7 @@
       "waiting_budget_late": "Ha mancato l'orario: il budget si è rinnovato troppo tardi",
       "stopped": "Fermata da qualcuno",
       "stoppedBy": "Fermata da {{name}}",
+      "stalled": "Liberata: niente si è mosso per 20 minuti",
       "no_report": "Terminata senza riferire il risultato",
       "handoff_blocked": "Non ha potuto riferire: la routine era in pausa o chi l'ha creata non può più scrivere lì",
       "deleted": "Fermata: la routine è stata eliminata",
@@ -10514,7 +10581,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "Un modello veloce di TypeSafe, pensato per decisioni rapide. agentes.chat gli fa piccole domande, come chi deve rispondere. Paghi TypeSafe direttamente.",
+    "about": "Un modello veloce di TypeSafe, pensato per decisioni rapide. agentes.chat gli fa piccole domande, come chi deve rispondere. Paghi TypeSafe direttamente, oppure tramite OpenRouter allo stesso prezzo.",
     "lead": "Aiuta i tuoi agenti a lavorare in team.",
     "how": "Come funziona Jev",
     "why": {
@@ -10556,6 +10623,32 @@
       "envInvalid": "TypeSafe non ha accettato questa chiave. Cambiala nelle impostazioni di questo server (TYPESAFE_API_KEY)."
     },
     "checkAgain": "Controlla di nuovo",
+    "via": {
+      "label": "Dove paghi Jev",
+      "typesafe": "TypeSafe",
+      "typesafeText": "Un account direttamente su TypeSafe, con credito prepagato.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "Con una chiave OpenRouter, allo stesso prezzo.",
+      "connected": "Chiave già collegata"
+    },
+    "openRouter": {
+      "create": "Crea una chiave su OpenRouter",
+      "createHint": "Con credito su OpenRouter. Jev costa come su TypeSafe: US$ {{price}} per milione di token. Scegliere chi risponde costa circa US$ {{call}}.",
+      "open": "Apri OpenRouter",
+      "placeholder": "La tua chiave OpenRouter",
+      "shape": "Le chiavi OpenRouter iniziano con sk-or-v1-. Controllala e incollala di nuovo.",
+      "invalid": "OpenRouter non ha accettato questa chiave. Copiala di nuovo dalla pagina delle chiavi.",
+      "keyName": "Chiave OpenRouter",
+      "same": "Quella in Chiavi dei provider",
+      "forAll": "Paga Jev per tutti gli spazi di lavoro di questo server.",
+      "turnOn": "Attiva Jev",
+      "otherKey": "Usa un'altra chiave",
+      "line": {
+        "invalid": "OpenRouter non ha accettato questa chiave. Creane una nuova.",
+        "no_credit": "Aggiungi credito su OpenRouter. Jev riparte da solo.",
+        "envInvalid": "OpenRouter non ha accettato questa chiave. Cambiala nelle impostazioni di questo server (TYPESAFE_API_KEY)."
+      }
+    },
     "remove": {
       "title": "Rimuovere la chiave di Jev?",
       "text": "Gli agenti continuano a lavorare anche senza."
@@ -10677,6 +10770,10 @@
       "copiesRemoved_one": "{{count}} accesso inutilizzato rimosso.",
       "copiesRemoved_many": "{{count}} accessi inutilizzati rimossi.",
       "copiesRemoved_other": "{{count}} accessi inutilizzati rimossi.",
+      "removeAllGrok": "Rimuovi tutti gli accessi a Grok",
+      "removeAllTitle": "Rimuovere tutti i {{n}} accessi a Grok?",
+      "removeAllText": "Smettono di pensare per i loro agenti su {{computers}}. Gli accessi di altre persone non vengono toccati.",
+      "removeAllDone": "{{n}} accessi a Grok rimossi.",
       "disconnect": "Scollega",
       "renameTitle": "Rinomina {{label}}",
       "nameLabel": "Nome",
@@ -10744,6 +10841,8 @@
       },
       "resetsAt": "si azzera alle {{time}}",
       "resetsOn": "si azzera {{day}} alle {{time}}",
+      "allModels": "Tutti i modelli",
+      "onlyModels": "Solo {{name}}",
       "almost": "Quasi al limite",
       "limited": "Al limite",
       "limitedUntil": "Al limite fino a {{when}}",
@@ -10911,6 +11010,9 @@
     "keys": "Invio invia · Esc elimina",
     "keysHold": "Rilascia per inviare · Esc elimina",
     "keysPaused": "In pausa · Spazio ascolta · Invio invia · Esc elimina",
+    "askDiscard": "Eliminare l’audio? Il tuo testo resta.",
+    "askDelete": "Elimina",
+    "askKeep": "Tieni",
     "pausePlay": "Pausa",
     "seek": "Posizione nell'audio",
     "speedAt": "Velocità {{speed}}×",
@@ -11913,7 +12015,6 @@
       "open": "Cambia il modello di {{agent}}",
       "ownSignIn": "Account di questo computer",
       "apiKey": "{{provider}} con chiave API",
-      "default": "predefinito",
       "refused": "Rifiutato con questa chiave",
       "textOnly": "Legge solo testo",
       "search": "Cerca modelli",
@@ -12000,6 +12101,10 @@
       "cant_start": "{{program}} è su {{computer}}, ma non si avvia.",
       "not_reported": "{{computer}} sta ancora controllando quali programmi ha. Questo cambia da solo quando ha finito.",
       "outdated": "La versione su {{computer}} è vecchia. Aggiorna Codex per usarlo.",
+      "outdatedCodex": "Su {{computer}} è stato rilevato Codex CLI {{detected}}. Aggiornalo alla versione {{minimum}} o successiva.",
+      "codexUpdateGuide": "Come aggiornare Codex CLI",
+      "codexRecheckHere": "Dopo l’aggiornamento, seleziona Controlla di nuovo nella riga di Codex in Preferenze › Strumenti.",
+      "codexRecheckThere": "Aggiorna Codex CLI su {{computer}}. Se è presente l’app desktop, seleziona Controlla di nuovo nella riga di Codex in Preferenze › Strumenti.",
       "system": "{{program}} non funziona ancora sul sistema di {{computer}}.",
       "no_computerCloud": "Pronto appena lo è {{computer}}."
     },
@@ -12560,8 +12665,8 @@
       "agentes": "l'archiviazione agentes.chat",
       "server": "questo server"
     },
-    "s3": "Il tuo bucket",
-    "s3Text": "S3, R2, MinIO e altri compatibili con S3.",
+    "s3": "La tua archiviazione",
+    "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 o un altro compatibile con S3.",
     "current": "In uso",
     "usage": {
       "files": "{{size}} di file",
@@ -12611,7 +12716,139 @@
     "backText": "I file nuovi tornano a {{place}}. Ciò che è già nel tuo bucket resta lì.",
     "backDone": "Archiviazione spostata su {{place}}.",
     "required": "Compila questo campo.",
-    "keysRequired": "Inserisci la chiave di accesso e il segreto."
+    "keysRequired": "Inserisci la chiave di accesso e il segreto.",
+    "connect": {
+      "open": "Collega un'archiviazione",
+      "edit": "Modifica connessione",
+      "pickTitle": "Dov'è la tua archiviazione?",
+      "pickText": "Scegli il servizio. Ti mostriamo dove cliccare lì e cosa incollare qui.",
+      "provider": {
+        "r2": "Cloudflare R2",
+        "s3": "Amazon S3",
+        "b2": "Backblaze B2",
+        "other": "Altro"
+      },
+      "providerText": {
+        "r2": "Il più semplice da creare da zero",
+        "s3": "Per chi usa già AWS",
+        "b2": "Per chi ha già un account lì",
+        "other": "MinIO, Wasabi e altri compatibili con S3"
+      },
+      "title": {
+        "r2": "Collega Cloudflare R2",
+        "s3": "Collega Amazon S3",
+        "b2": "Collega Backblaze B2",
+        "other": "Collega un'altra archiviazione"
+      },
+      "editTitle": {
+        "r2": "Modifica Cloudflare R2",
+        "s3": "Modifica Amazon S3",
+        "b2": "Modifica Backblaze B2",
+        "other": "Modifica l'archiviazione"
+      },
+      "lede": {
+        "r2": "Due passaggi su Cloudflare. Poi facciamo un test prima di cambiare.",
+        "s3": "Tre passaggi su AWS. Poi facciamo un test prima di cambiare.",
+        "b2": "Due passaggi su Backblaze. Poi facciamo un test prima di cambiare.",
+        "other": "Qualsiasi servizio compatibile con S3. Poi facciamo un test prima di cambiare."
+      },
+      "editLede": "Modifica ciò che è cambiato. Lascia vuote le chiavi per tenere quelle salvate.",
+      "bucketName": "Nome del bucket",
+      "accessKeyId": "ID chiave di accesso",
+      "secret": "Chiave di accesso segreta",
+      "r2Endpoint": "Indirizzo R2",
+      "b2Endpoint": "Endpoint del bucket",
+      "region": "Regione",
+      "regionPick": "Scegli la regione",
+      "regionOption": "{{name}} · {{code}}",
+      "theirName": {
+        "r2Key": "Su Cloudflare: Access Key ID",
+        "r2Secret": "Su Cloudflare: Secret Access Key",
+        "r2Endpoint": "Su Cloudflare: l'endpoint, che termina con r2.cloudflarestorage.com.",
+        "s3Key": "Su AWS: Access key",
+        "s3Secret": "Su AWS: Secret access key",
+        "b2Key": "Su Backblaze: keyID",
+        "b2Secret": "Su Backblaze: applicationKey",
+        "b2Endpoint": "La regione si ricava da qui."
+      },
+      "step": {
+        "bucketTitle": "Crea un bucket",
+        "keyTitle": "Crea la chiave di accesso",
+        "userTitle": "Crea un utente solo per agentes.chat",
+        "r2Bucket": "Nella dashboard di Cloudflare, apri <b>R2</b> e clicca su <b>Create bucket</b>. Va bene qualsiasi nome.",
+        "r2Key": "Nella pagina di R2, sotto <b>API Tokens</b>, clicca su <b>Manage</b> e poi su <b>Create API Token</b>. Scegli il permesso <b>Object Read & Write</b> e il tuo bucket. Alla fine, Cloudflare mostra i tre valori qui sotto una sola volta.",
+        "s3Bucket": "Nella console AWS, apri <b>S3</b> e clicca su <b>Create bucket</b>. Annota la regione che scegli.",
+        "s3User": "In <b>IAM</b>, apri <b>Users</b> e clicca su <b>Create user</b>. Nei permessi, crea una policy con il testo copiato qui sotto: dà accesso solo a questo bucket.",
+        "s3Key": "Nel nuovo utente, apri <b>Security credentials</b> e clicca su <b>Create access key</b>. Scegli <b>Application running outside AWS</b> e incolla entrambi i valori.",
+        "b2Bucket": "Su Backblaze, apri <b>Buckets</b> e clicca su <b>Create a Bucket</b>. Nella pagina del bucket, copia l'<b>Endpoint</b>.",
+        "b2Key": "Apri <b>Application Keys</b> e clicca su <b>Add a New Application Key</b>. Dagli accesso al tuo bucket con <b>Read and Write</b>. La master key dell'account qui non funziona."
+      },
+      "openR2": "Apri R2",
+      "openS3": "Apri S3",
+      "openIam": "Apri IAM",
+      "openB2": "Apri Backblaze",
+      "copyPolicy": "Copia la policy",
+      "policyCopied": "Policy copiata, con il bucket {{bucket}}.",
+      "back": "Indietro",
+      "testAgain": "Ripeti il test",
+      "passed": "La connessione funziona: abbiamo scritto, letto, elencato ed eliminato un file di prova.",
+      "permissionHint": {
+        "r2": "Su Cloudflare, controlla che il token abbia il permesso <b>Object Read & Write</b> e l'accesso al bucket {{bucket}}. Correggi e ripeti il test.",
+        "s3": "Su AWS, controlla che l'utente abbia la policy copiata al passaggio 2, con il bucket {{bucket}}. Correggi e ripeti il test.",
+        "b2": "Su Backblaze, controlla che la chiave abbia <b>Read and Write</b> e l'accesso al bucket {{bucket}}. Correggi e ripeti il test."
+      },
+      "inUse": "{{provider}} · {{bucket}}",
+      "inUseAt": "{{bucket}} su {{host}}",
+      "stepError": {
+        "auth": "La chiave di accesso o quella segreta non è stata accettata.",
+        "permission": "La chiave non ha il permesso per questo passaggio.",
+        "bucketMissing": "Questo bucket non esiste a questo indirizzo.",
+        "region": "La regione non è quella del bucket.",
+        "network": "Impossibile raggiungere l'indirizzo.",
+        "address": "L'indirizzo non è valido.",
+        "https": "Usa un indirizzo che inizi con https://.",
+        "internal": "Questo indirizzo punta a una rete interna.",
+        "hostNotFound": "Non abbiamo trovato questo indirizzo.",
+        "notFound": "Il file di prova non è stato trovato in lettura.",
+        "unexpected": "Errore imprevisto durante la comunicazione con l'archiviazione.",
+        "invalidBucket": "Il nome del bucket non è valido.",
+        "keysRequired": "Inserisci entrambe le chiavi."
+      },
+      "awsRegion": {
+        "us-east-1": "Stati Uniti orientali (Virginia settentrionale)",
+        "us-east-2": "Stati Uniti orientali (Ohio)",
+        "us-west-1": "Stati Uniti occidentali (California settentrionale)",
+        "us-west-2": "Stati Uniti occidentali (Oregon)",
+        "ca-central-1": "Canada (Centrale)",
+        "ca-west-1": "Canada occidentale (Calgary)",
+        "mx-central-1": "Messico (Centrale)",
+        "sa-east-1": "Sud America (San Paolo)",
+        "eu-central-1": "Europa (Francoforte)",
+        "eu-central-2": "Europa (Zurigo)",
+        "eu-west-1": "Europa (Irlanda)",
+        "eu-west-2": "Europa (Londra)",
+        "eu-west-3": "Europa (Parigi)",
+        "eu-south-1": "Europa (Milano)",
+        "eu-south-2": "Europa (Spagna)",
+        "eu-north-1": "Europa (Stoccolma)",
+        "il-central-1": "Israele (Tel Aviv)",
+        "me-south-1": "Medio Oriente (Bahrein)",
+        "me-central-1": "Medio Oriente (Emirati Arabi Uniti)",
+        "af-south-1": "Africa (Città del Capo)",
+        "ap-east-1": "Asia Pacifico (Hong Kong)",
+        "ap-south-1": "Asia Pacifico (Mumbai)",
+        "ap-south-2": "Asia Pacifico (Hyderabad)",
+        "ap-northeast-1": "Asia Pacifico (Tokyo)",
+        "ap-northeast-2": "Asia Pacifico (Seoul)",
+        "ap-northeast-3": "Asia Pacifico (Osaka)",
+        "ap-southeast-1": "Asia Pacifico (Singapore)",
+        "ap-southeast-2": "Asia Pacifico (Sydney)",
+        "ap-southeast-3": "Asia Pacifico (Giacarta)",
+        "ap-southeast-4": "Asia Pacifico (Melbourne)",
+        "ap-southeast-5": "Asia Pacifico (Malesia)",
+        "ap-southeast-7": "Asia Pacifico (Thailandia)"
+      }
+    }
   },
   "githubApp": {
     "title": "Repository GitHub",
@@ -13166,6 +13403,7 @@
     "connected": "Collegato",
     "connectedAs": "Collegato come {{account}}",
     "reconnectAdds": "Ricollega {{name}} così gli agenti possono anche {{what}}.",
+    "sendsToo": "Invia anche: <names/>. Per cambiare, usa Ricollega.",
     "adds": {
       "github_project": "usare GitHub Projects (leggere le board e spostare le schede)"
     },
@@ -14294,6 +14532,22 @@
     "needsKey": "Questo server non supporta OAuth. Collegalo con una chiave API.",
     "notApproved": "{{name}} consente l'accesso solo alle app che ha approvato, e agentes.chat non è ancora approvato. Se ti fornisce una chiave API, puoi collegarti con quella.",
     "serverSaid": "Il server ha risposto: {{detail}}",
+    "headers": {
+      "title": "Intestazioni della richiesta",
+      "help": "Per una chiave che va in un'altra intestazione, o un gateway davanti al server. La maggior parte dei server non ne ha bisogno.",
+      "value": "Valore",
+      "nameOf": "Nome dell'intestazione {{n}}",
+      "valueOf": "Valore dell'intestazione {{n}}",
+      "remove": "Rimuovi l'intestazione {{n}}",
+      "add": "Aggiungi intestazione",
+      "saved_one": "Salvata: <names/>. Resta, a meno che tu non ne scriva di nuove.",
+      "saved_other": "Salvate: <names/>. Restano, a meno che tu non ne scriva di nuove.",
+      "drop": "Rimuovi",
+      "dropping_one": "<names/> verrà rimossa quando ricolleghi.",
+      "dropping_other": "<names/> verranno rimosse quando ricolleghi.",
+      "undo": "Annulla",
+      "refused": "Il server non ha accettato queste intestazioni. Controlla i valori, oppure collegalo con una chiave API."
+    },
     "nothingYet": "Niente è disponibile per gli agenti fino al passaggio 3.",
     "allCanUse": "Una volta collegato, ogni agente può usarlo. Puoi regolarlo in seguito.",
     "replace": "Sostituisce l'accesso attuale. Chi lo usa resta invariato.",
@@ -15008,7 +15262,15 @@
       "gone": "Quell'account non è più collegato.",
       "unfinished": "L'accesso su Composio non è stato completato. Riprova.",
       "unavailable": "Questo servizio non si può collegare qui.",
-      "misconfigured": "Il collegamento a {{provider}} è configurato male sul server, quindi non può finire. Chi gestisce il server deve sostituire la chiave nelle impostazioni dell'app."
+      "misconfigured": "Il collegamento a {{provider}} è configurato male sul server, quindi non può finire. Chi gestisce il server deve sostituire la chiave nelle impostazioni dell'app.",
+      "headerName": "Usa solo lettere, numeri e trattini nel nome di un'intestazione, come X-API-Key.",
+      "headerValue": "Scrivi un valore per {{header}}: fino a 2.000 caratteri su una sola riga, senza accenti né emoji.",
+      "headerReserved": "{{header}} viene già inviata con ogni richiesta e non si può cambiare. Rimuovi questa intestazione.",
+      "headerTwice": "{{header}} è nell'elenco due volte. Rimuovine una.",
+      "headerAndKey": "La chiave API viene già inviata come Authorization. Cancella la chiave, oppure rimuovi questa intestazione.",
+      "headersTooMany": "Un server accetta al massimo {{max}} intestazioni. Rimuovine una per aggiungerne un'altra.",
+      "headersWithSignIn": "Questo server chiede un accesso, e un accesso non può ancora portare intestazioni. Rimuovi le intestazioni per accedere, oppure collegalo con una chiave API.",
+      "headersUnreadable": "Non è stato possibile leggere le intestazioni salvate. Scrivile di nuovo oppure rimuovile."
     },
     "wiki": {
       "githubNoNotes": "Nessuna nota Markdown in questo link.",
@@ -15231,7 +15493,8 @@
       "invalidDescription": "La descrizione deve avere da 1 a {{max}} caratteri.",
       "tooLarge": "Questa skill ha {{size}} MB di testo e script, e il limite è {{max}} MB.",
       "tooManyFiles": "Questa skill ha {{files}} file, e il limite è {{max}}.",
-      "repoTooLarge": "Il repository è troppo grande da scaricare (massimo {{max}} MB). Carica invece la cartella della skill come .zip.",
+      "repoTooLarge": "Il repository è troppo grande da scaricare (massimo {{max}} MB).",
+      "linkTooLarge": "La cartella di quel link ha troppi file da leggere. Incolla il link della cartella della skill.",
       "noFrontmatter": "Il SKILL.md deve avere in alto un blocco con nome e descrizione, tra due righe ---.",
       "bodyTooLong": "Il SKILL.md è troppo lungo (massimo {{max}} caratteri).",
       "noSkillMdZip": "Nessun SKILL.md in cima alla cartella dello zip.",
@@ -15245,7 +15508,8 @@
     },
     "agentGroup": {
       "notFound": "Questo reparto non esiste più.",
-      "tooMany": "Questo spazio di lavoro ha già {{max}} reparti. Eliminane prima uno."
+      "tooMany": "Questo spazio di lavoro ha già {{max}} reparti. Eliminane prima uno.",
+      "ambiguous": "Due reparti si chiamano {{name}}. Rinominane uno e riprova."
     },
     "rightHand": {
       "permanent": "Il braccio destro fa parte dello spazio di lavoro e resta fuori dai canali. Una @menzione lo raggiunge in qualsiasi canale.",
@@ -16123,6 +16387,7 @@
       "waiting": "<b>{{who}}</b> sta aspettando <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> ti chiede di attivare {{tool}} sul tuo <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> ti chiede di installare {{tool}} sul tuo <b>{{deviceName}}</b>",
+      "folderRequest": "<b>{{who}}</b> ti chiede la cartella {{path}} sul tuo <b>{{deviceName}}</b>",
       "once": "Consenti una volta",
       "always": "Sempre",
       "no": "No",
@@ -16788,11 +17053,11 @@
       "rolesPersonal": "Cosa può fare ogni persona qui. Chi è proprietario può fare tutto."
     },
     "about": {
-      "basedOn": "Basato su <site>agentes.chat</site> di Codari Global, LLC",
+      "basedOn": "Basato su <site>agentes.chat</site> di AGENTESCHAT, LLC",
       "version": "Versione",
       "license": "Software libero sotto la <license>GNU Affero General Public License v3</license>, senza garanzia.",
       "source": "Codice sorgente",
-      "copyright": "Copyright © 2026 Codari Global, LLC e collaboratori"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC e collaboratori"
     },
     "title": "Impostazioni",
     "account": {
@@ -16825,6 +17090,8 @@
         "openLatest": "Messaggio più recente",
         "textSize": "Dimensione del testo",
         "textSizeHelp": "Dei messaggi, in tutte le conversazioni e su tutti i tuoi dispositivi",
+        "fullMessages": "Mostra i messaggi completi",
+        "fullMessagesHelp": "Mostra i messaggi lunghi senza “Mostra altro”, in tutte le conversazioni e su tutti i tuoi dispositivi",
         "textSizePhone": "Vale per tutta l'app, oltre alla dimensione del testo del telefono",
         "textXs": "Più piccolo",
         "textSm": "Piccolo",
@@ -17238,6 +17505,18 @@
       "see": "Vedi l'utilizzo"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "Per tipo",
+      "handoffs": "Passaggi tra agenti",
+      "people": "Conversazioni con persone",
+      "routines": "Routine"
+    },
+    "hint": {
+      "handoffs": "Gran parte dell’uso di questa settimana viene da agenti che si passano il lavoro. Per i lavori lunghi, chiedi direttamente all’agente.",
+      "message": "Scrivi a {{name}}"
+    }
+  },
   "usageViews": {
     "signedOut": "Disconnesso",
     "whose": "di {{name}}",
@@ -17427,6 +17706,14 @@
       "text": "ChatGPT ha rifiutato la velocità Rapida per questo account o modello, quindi questa risposta è arrivata a velocità standard.",
       "action": "Apri agente"
     },
+    "standIn": {
+      "needsComputer": "Ho risposto con {{via}}: {{plan}} ha bisogno di un computer.",
+      "away": "Ho risposto con {{via}}: il computer di {{plan}} è assente.",
+      "notShared": "Ho risposto con {{via}}: {{plan}} serve solo chi l'ha connesso.",
+      "limit": "Ho risposto con {{via}}: {{plan}} ha raggiunto il limite.",
+      "cant": "Ho risposto con {{via}}: {{plan}} non può pensare ora.",
+      "change": "Cambia"
+    },
     "modelStandIn": {
       "text": "{{plan}} ha rifiutato {{from}} con questa chiave. Ho risposto con {{to}}, che funziona con essa.",
       "useAll": "Usa {{model}} per tutti",
@@ -17498,6 +17785,7 @@
       "waitingYourAnswer": "aspetta la tua risposta",
       "queued": "in coda",
       "handedOn": "in attesa di altri agenti",
+      "answered": "ha risposto",
       "noAnswer": "non ha risposto",
       "notFinished": "non ha finito",
       "someAnswered": "{{done}} su {{total}} hanno risposto",

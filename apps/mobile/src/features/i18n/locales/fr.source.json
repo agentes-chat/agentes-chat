@@ -2094,6 +2094,12 @@
   "activity.undo": {
     "value": "Undo"
   },
+  "activity.doneAllToast": {
+    "value": {
+      "one": "{{count}} moved to Done",
+      "other": "{{count}} moved to Done"
+    }
+  },
   "activity.day.today": {
     "value": "Today"
   },
@@ -2938,6 +2944,9 @@
   },
   "delete.addPasswordWeb": {
     "value": "Add a password on the website"
+  },
+  "delete.onThisComputer": {
+    "value": "Delete it in the agentes.chat app on the computer that runs this server."
   },
   "delete.otherAccount": {
     "value": "You signed in to another account. Nothing was deleted."
@@ -4957,6 +4966,9 @@
   },
   "devices.notice.cli_request": {
     "value": "{{names}} asks you to install {{tool}} on your {{device}}"
+  },
+  "devices.notice.folder_request": {
+    "value": "{{names}} asks for the folder {{path}} on your {{device}}"
   },
   "devices.notice.allowOnce": {
     "value": "Allow once"

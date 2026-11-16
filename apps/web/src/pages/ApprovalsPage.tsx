@@ -102,6 +102,7 @@ import {
   CancelAhead,
   decisionLabel,
 } from "@/components/ApprovalItem";
+import { WhenAsksLink } from "@/components/ApprovalsLevelDialog";
 import { ApprovalsTabs } from "@/components/ApprovalsTabs";
 import { ConnectorIcon } from "@/components/ConnectorCatalog";
 import { EmailLetter } from "@/components/EmailLetter";
@@ -1117,6 +1118,7 @@ function RunRow({
   const name = agent?.name ?? t("channel.unknownAgent");
   const head = t("approval.run.head", { count: run.length, name, what: approvalTitle(t, first) });
   const lead = run.find((a) => always.has(a.id) && a.canDecide);
+  const decider = run.find((a) => a.canDecide);
   const deadline = cardDeadline(run) ?? first.expiresAt;
   const leftMs = new Date(deadline).getTime() - Date.now();
   return (
@@ -1139,9 +1141,12 @@ function RunRow({
           </ApproveAll>
         </Locked>
       </div>
-      <Button variant="link" className="ap-run__more" aria-expanded={open} onClick={onToggle}>
-        {t("approval.run.show")}
-      </Button>
+      <div className="ap-run__links">
+        <Button variant="link" aria-expanded={open} onClick={onToggle}>
+          {t("approval.run.show")}
+        </Button>
+        {decider && <WhenAsksLink approval={decider} agent={agent} />}
+      </div>
       {open && <div className="ap-run__items">{children}</div>}
     </section>
   );
@@ -1573,6 +1578,7 @@ function DecisionBar({
         : t("approvals.review.grants", { name, doing: approvalDoing(t, a, i18n.language) });
   return (
     <div className={cx("ap-bar ap-bar--acts", floating && "ap-bar--float")}>
+      <WhenAsksLink approval={a} agent={agent} className="ap-bar__when" />
       <div className="ap-bar__acts">
         <Locked when={deciding}>
           {approveAlwaysOffered(a) && <ApproveAlways approval={a} agent={agent} also={also} />}

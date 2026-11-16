@@ -393,7 +393,8 @@ export const hidesBody = (m: Message) =>
       m.meta?.issueWork ||
       m.meta?.browserHandoff ||
       m.meta?.missionSetup ||
-      voiceOf(m.meta) ||
+      // A voice message shows only what was typed beside it as text; its words are the player's.
+      (voiceOf(m.meta) && !voiceOf(m.meta)?.text) ||
       questionOf(m.meta)?.text.trim() === m.body.trim(),
   );
 

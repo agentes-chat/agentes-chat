@@ -1,4 +1,5 @@
 import type { Agent, Message as MessageType } from "@agenteschat/client";
+import type { ConsultPairItem } from "@agenteschat/client/lib/consult-group";
 import { Menu, MenuItem } from "@agenteschat/ui";
 import { createContext, useContext } from "react";
 import { useTranslation } from "react-i18next";
@@ -33,9 +34,10 @@ export interface ChannelActions {
   openThread?: (threadId: string, focusMessageId?: string) => void;
   /**
    * A question an agent asked another from here ("Theo ⇄ Iris" in the reply's block): what the two said for it, in
-   * the panel beside the channel, read only (absent in a thread view: the block opens it in place).
+   * the panel beside the channel, read only (absent in a thread view: the block opens it in place). `group`: the
+   * questions of the row that opened it, when it stands for several agents: the dialog reaches each one's exchange.
    */
-  openConsultation?: (consultationId: string) => void;
+  openConsultation?: (consultationId: string, group?: readonly ConsultPairItem[]) => void;
   /** A request card here that waits on the viewer (`PendingAsk.id`): scroll to it and light it up. */
   seeRequest?: (askId: string) => void;
   /** "Pedir correção" after my 👎: my reply in the same conversation, quoting that message and mentioning its agent. */

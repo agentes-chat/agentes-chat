@@ -391,6 +391,12 @@
       "short": "konuşma",
       "say": "ajanlarla konuşur"
     },
+    "view_all_agents": {
+      "title": "Tüm ajanları görme",
+      "desc": "Ekip'te ve kenar çubuğunda. Bu olmadan yalnızca kişiye yanıt verenler.",
+      "short": "tüm ajanları görme",
+      "say": "tüm ajanları görür"
+    },
     "assign_work": {
       "title": "Ajanlara misyon verme",
       "desc": "Kendi kendine süren uzun işler isteme.",
@@ -698,7 +704,9 @@
     },
     "desktopOwner": {
       "continue": "Bu {{device}} üzerinde devam et",
-      "text": "agentes.chat'i bu {{device}} üzerinde kurdunuz: şifre gerekmez."
+      "text": "agentes.chat'i bu {{device}} üzerinde kurdunuz: şifre gerekmez.",
+      "gone": "Bu sunucunun sahibi hesabını sildi, bu yüzden Bu {{device}} üzerinde devam et kimsenin girişini yapamaz. Bunun yerine kendi e-postanızla giriş yapın.",
+      "none": "Bu {{device}} üzerindeki agentes.chat'te hiç hesap kalmadı. Yeni sahibini açılan pencerede oluşturun."
     },
     "server": {
       "into": "<b>{{server}}</b> sunucusuna giriş",
@@ -1767,6 +1775,12 @@
     "use": "Bu simgeyi kullan",
     "inUse": "Kullanımda",
     "sky": "Arka plan",
+    "pose": "Duruş",
+    "poses": {
+      "front": "Karşıdan",
+      "peek": "Gözetleyen"
+    },
+    "peekBare": "Gözetlerken aksesuar takmaz.",
     "expression": "İfade",
     "ready": "Hazır simgeler",
     "oneOrOther": "Aksesuar takılıyken ifade normal kalır.",
@@ -2622,6 +2636,13 @@
   "rightHand": {
     "label": "sağ kolun",
     "labelCapitalized": "Sağ kolun",
+    "unusable": {
+      "title": "Şu an {{name}} için düşünemiyor",
+      "computerOnly": "Yalnızca {{computer}} üzerinde oturum açık. {{name}}, hesap olarak oturum açılmış bir planla düşünür.",
+      "away": "{{owner}} adlı kişinin, {{computer}} üzerinde, şu an uzakta.",
+      "awayYours": "Senin, {{computer}} üzerinde, şu an uzakta.",
+      "connect": "Bilgisayar bağla"
+    },
     "newDot": "Yeni",
     "actsAsYou": "senin izinlerinle çalışır",
     "composerHint": "sen olmadan hiçbir şey değişmez",
@@ -2773,6 +2794,7 @@
         "ai_account": "Yalnızca hesabın sahibi verebilir",
         "name": "Bir ajanın adını yalnızca yöneticiler değiştirir",
         "look": "Görünümünü yalnızca yöneticiler ve sorumlusu değiştirir",
+        "group": "Bir ajanın departmanını yalnızca yöneticiler değiştirir",
         "reports_to": "Bir ajanın kime rapor verdiğini yalnızca yöneticiler değiştirir",
         "many": "Bu değişiklikleri yalnızca yöneticiler yapar"
       }
@@ -2787,6 +2809,7 @@
       "channel": "Kanal",
       "name": "Ad",
       "look": "Görünüm",
+      "group": "Departman",
       "reports_to": "Rapor verdiği",
       "skill": "{{name}} becerisi"
     },
@@ -3386,7 +3409,18 @@
     "never": {
       "title": "Hiç sorma",
       "text": "Hiç sormaz, merge, deploy, ödemeler ve rutinler dahil."
-    }
+    },
+    "change": "Ne zaman soracağını değiştir",
+    "now": "{{name}} artık: {{level}}.",
+    "nowEveryAgent": "Tüm ajanlar artık: {{level}}.",
+    "undo": "Geri al",
+    "everyAgent": "Workspace’teki tüm ajanlar için",
+    "follows": "Workspace’i izler",
+    "edit": "Değiştir",
+    "workspaceLead": "Ajanların harekete geçmeden önce birine ne zaman sorduğu.",
+    "workspaceHelp": "Biri ajanın sayfasında kendi seçimini değiştirene kadar her ajan bu seçimi izler.",
+    "ownAgents_one": "{{count}} ajanın kendi seçimi var ve değişmez.",
+    "ownAgents_other": "{{count}} ajanın kendi seçimi var ve değişmez."
   },
   "brakes": {
     "title": "Kimsenin istemediği iş",
@@ -4915,6 +4949,7 @@
     "summaryAllRead": "hepsi okundu",
     "summaryNothing": "Burada yeni bir şey yok.",
     "readAll": "Tümünü okundu olarak işaretle",
+    "doneAll": "Tümünü tamamla",
     "filters": "Bildirimleri filtrele",
     "filter": {
       "all": "Tümü",
@@ -5141,6 +5176,8 @@
       "undo": "Geri al",
       "readAll_one": "{{count}} bildirim okundu olarak işaretlendi",
       "readAll_other": "{{count}} bildirim okundu olarak işaretlendi",
+      "doneAll_one": "{{count}} bildirim Tamamlananlar'a taşındı",
+      "doneAll_other": "{{count}} bildirim Tamamlananlar'a taşındı",
       "sent": "Yanıt gönderildi",
       "see": "Gör",
       "answered": "{{name}} yanıtınızı aldı",
@@ -7640,6 +7677,18 @@
     },
     "assigneeFilter": "Atanan",
     "priorityFilter": "Öncelik",
+    "labelFilter": "Etiket",
+    "table": {
+      "task": "Görev",
+      "github": "GitHub",
+      "sortBy": "{{column}} ölçütüne göre sırala",
+      "resize": "{{column}} sütununu yeniden boyutlandır"
+    },
+    "fold": {
+      "open": "{{name}} öğesini aç",
+      "close": "{{name}} öğesini daralt",
+      "column": "Sütunu daralt"
+    },
     "title": "Görevler",
     "summary": "{{open}} açık · {{agents}} ajanlarda",
     "search": "Görevlerde ara",
@@ -7682,8 +7731,16 @@
       "order": {
         "manual": "Elle",
         "priority": "Öncelik",
-        "due": "Son tarih"
+        "due": "Son tarih",
+        "updated": "En yeni"
       },
+      "done": "Tamamlananlar",
+      "doneIs": {
+        "all": "Tümü",
+        "recent": "Son {{days}} gün",
+        "hidden": "Hiçbiri"
+      },
+      "hideEmpty": "Boş grupları gizle",
       "field": {
         "project": "Proje",
         "assignee": "Atanan",
@@ -7709,6 +7766,7 @@
       "canceled": "#{{number}} yerine döndü.",
       "assigned": "#{{number}} artık {{name}} üzerinde.",
       "unassigned": "#{{number}} artık kimseye atanmamış.",
+      "removed": "#{{number}} artık {{name}} üzerinde değil.",
       "prioritized": "#{{number}} artık {{priority}} öncelikli."
     },
     "canceledColumn": "İptal edildi",
@@ -7858,6 +7916,10 @@
       "high": "yüksek"
     },
     "noAssignee": "Atanan yok",
+    "assignees": {
+      "people": "Kişiler ve ajanlar",
+      "done": "Tamam"
+    },
     "agentRole": "Ajan · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -7997,7 +8059,9 @@
       "status_changed": "durumu {{status}} olarak değiştirdi",
       "priority_changed": "önceliği {{priority}} olarak değiştirdi",
       "assigned": "görevi atadı",
-      "unassigned": "atananı kaldırdı",
+      "unassigned": "atananlardan birini kaldırdı",
+      "assigned_named": "görevi {{name}} adlı kişiye atadı",
+      "unassigned_named": "{{name}} adlı kişiyi görevden çıkardı",
       "due_date_set": "son tarihi {{date}} olarak ayarladı",
       "due_date_removed": "son tarihi kaldırdı",
       "pr_linked": "PR #{{number}} bağladı",
@@ -8597,6 +8661,7 @@
       "waiting_budget_late": "Zamanını kaçırdı: bütçe çok geç yenilendi",
       "stopped": "Biri tarafından durduruldu",
       "stoppedBy": "{{name}} durdurdu",
+      "stalled": "Bırakıldı: 20 dakika boyunca hiçbir şey ilerlemedi",
       "no_report": "Sonucu bildirmeden bitti",
       "handoff_blocked": "Bildirilemedi: rutin duraklatıldı ya da oluşturan kişi artık oraya yazamıyor",
       "deleted": "Durduruldu: rutin silindi",
@@ -10066,7 +10131,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "TypeSafe'in hızlı kararlar için yaptığı hızlı bir model. agentes.chat ona kimin yanıt vereceği gibi küçük sorular sorar. Ücreti doğrudan TypeSafe'e ödersiniz.",
+    "about": "TypeSafe'in hızlı kararlar için yaptığı hızlı bir model. agentes.chat ona kimin yanıt vereceği gibi küçük sorular sorar. Ücreti doğrudan TypeSafe'e ya da aynı fiyatla OpenRouter üzerinden ödersiniz.",
     "lead": "Ajanlarınızın ekip olarak çalışmasına yardım eder.",
     "how": "Jev nasıl çalışır",
     "why": {
@@ -10107,6 +10172,32 @@
       "envInvalid": "TypeSafe bu anahtarı kabul etmedi. Bu sunucunun ayarlarından değiştirin (TYPESAFE_API_KEY)."
     },
     "checkAgain": "Tekrar kontrol et",
+    "via": {
+      "label": "Jev için nereden ödersiniz",
+      "typesafe": "TypeSafe",
+      "typesafeText": "Doğrudan TypeSafe'te bir hesap, ön ödemeli krediyle.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "Bir OpenRouter anahtarıyla, aynı fiyata.",
+      "connected": "Anahtar zaten bağlı"
+    },
+    "openRouter": {
+      "create": "OpenRouter'da bir anahtar oluşturun",
+      "createHint": "OpenRouter'daki krediyle. Jev, TypeSafe'teki ile aynı fiyattadır: milyon token başına US$ {{price}}. Kimin yanıt vereceğini seçmek yaklaşık US$ {{call}} tutar.",
+      "open": "OpenRouter'ı aç",
+      "placeholder": "OpenRouter anahtarınız",
+      "shape": "OpenRouter anahtarları sk-or-v1- ile başlar. Kontrol edip tekrar yapıştırın.",
+      "invalid": "OpenRouter bu anahtarı kabul etmedi. Anahtarlar sayfasından tekrar kopyalayın.",
+      "keyName": "OpenRouter anahtarı",
+      "same": "Sağlayıcı anahtarlarındaki",
+      "forAll": "Bu anahtar, bu sunucudaki tüm çalışma alanlarında Jev'in ücretini öder.",
+      "turnOn": "Jev'i aç",
+      "otherKey": "Başka anahtar kullan",
+      "line": {
+        "invalid": "OpenRouter bu anahtarı kabul etmedi. Yeni bir tane oluşturun.",
+        "no_credit": "OpenRouter'da kredi ekleyin. Jev kendiliğinden devam eder.",
+        "envInvalid": "OpenRouter bu anahtarı kabul etmedi. Bu sunucunun ayarlarından değiştirin (TYPESAFE_API_KEY)."
+      }
+    },
     "remove": {
       "title": "Jev anahtarı kaldırılsın mı?",
       "text": "Ajanlar onsuz da çalışmaya devam eder."
@@ -10216,6 +10307,10 @@
       "removeCopies": "Kaldır",
       "copiesRemoved_one": "Kullanılmayan {{count}} giriş kaldırıldı.",
       "copiesRemoved_other": "Kullanılmayan {{count}} giriş kaldırıldı.",
+      "removeAllGrok": "Tüm Grok oturumlarını kaldır",
+      "removeAllTitle": "{{n}} Grok oturumunun tümü kaldırılsın mı?",
+      "removeAllText": "{{computers}} üzerinde artık kendi ajanları için düşünmezler. Başkalarının oturumlarına dokunulmaz.",
+      "removeAllDone": "{{n}} Grok oturumu kaldırıldı.",
       "disconnect": "Bağlantıyı kes",
       "renameTitle": "{{label}} adını değiştir",
       "nameLabel": "Ad",
@@ -10276,6 +10371,8 @@
       },
       "resetsAt": "{{time}} saatinde sıfırlanır",
       "resetsOn": "{{day}}, {{time}} saatinde sıfırlanır",
+      "allModels": "Tüm modeller",
+      "onlyModels": "Yalnızca {{name}}",
       "almost": "Sınıra yakın",
       "limited": "Sınırda",
       "limitedUntil": "Sınırda · bitiş: {{when}}",
@@ -10429,6 +10526,9 @@
     "keys": "Enter gönderir · Esc siler",
     "keysHold": "Göndermek için bırakın · Esc siler",
     "keysPaused": "Duraklatıldı · Boşluk dinletir · Enter gönderir · Esc siler",
+    "askDiscard": "Ses silinsin mi? Metnin kalır.",
+    "askDelete": "Sil",
+    "askKeep": "Tut",
     "pausePlay": "Duraklat",
     "seek": "Ses konumu",
     "speedAt": "Hız {{speed}}×",
@@ -11404,7 +11504,6 @@
       "open": "{{agent}} modelini değiştir",
       "ownSignIn": "Bu bilgisayarın hesabı",
       "apiKey": "API anahtarıyla {{provider}}",
-      "default": "varsayılan",
       "refused": "Bu anahtar için reddedildi",
       "textOnly": "Yalnızca metin okur",
       "search": "Model ara",
@@ -11489,6 +11588,10 @@
       "cant_start": "{{program}}, {{computer}} üzerinde var ama açılmıyor.",
       "not_reported": "{{computer}} hangi programların olduğunu hâlâ kontrol ediyor. Bittiğinde bu kendiliğinden değişir.",
       "outdated": "{{computer}} üzerindeki sürüm eski. Kullanmak için Codex'i güncelleyin.",
+      "outdatedCodex": "{{computer}} üzerinde Codex CLI {{detected}} bulundu. {{minimum}} veya daha yeni bir sürüme güncelleyin.",
+      "codexUpdateGuide": "Codex CLI nasıl güncellenir?",
+      "codexRecheckHere": "Güncellemeden sonra Tercihler › Araçlar bölümünde Codex satırındaki Tekrar kontrol et seçeneğini seçin.",
+      "codexRecheckThere": "Codex CLI aracını {{computer}} üzerinde güncelleyin. Bu bilgisayarda masaüstü uygulaması çalışıyorsa Tercihler › Araçlar bölümünde Codex satırındaki Tekrar kontrol et seçeneğini seçin.",
       "system": "{{program}} henüz {{computer}} sisteminde çalışmıyor.",
       "no_computerCloud": "{{computer}} hazır olur olmaz hazır."
     },
@@ -12026,8 +12129,8 @@
       "agentes": "agentes.chat depolama alanı",
       "server": "bu sunucu"
     },
-    "s3": "Kendi bucket'ınız",
-    "s3Text": "S3, R2, MinIO ve S3 uyumlu diğerleri.",
+    "s3": "Kendi depolama alanınız",
+    "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 veya S3 uyumlu başka bir hizmet.",
     "current": "Kullanımda",
     "usage": {
       "files": "{{size}} dosya",
@@ -12077,7 +12180,139 @@
     "backText": "Yeni dosyalar yeniden {{place}} içine gider. Bucket'ınızda zaten olanlar orada kalır.",
     "backDone": "Depolama {{place}} seçeneğine geçirildi.",
     "required": "Bu alanı doldurun.",
-    "keysRequired": "Erişim anahtarını ve gizli anahtarı girin."
+    "keysRequired": "Erişim anahtarını ve gizli anahtarı girin.",
+    "connect": {
+      "open": "Depolama bağla",
+      "edit": "Bağlantıyı düzenle",
+      "pickTitle": "Depolama alanınız nerede?",
+      "pickText": "Hizmeti seçin. Orada nereye tıklayacağınızı ve buraya ne yapıştıracağınızı gösterelim.",
+      "provider": {
+        "r2": "Cloudflare R2",
+        "s3": "Amazon S3",
+        "b2": "Backblaze B2",
+        "other": "Diğer"
+      },
+      "providerText": {
+        "r2": "Sıfırdan kurulumu en kolay olanı",
+        "s3": "Zaten AWS kullananlar için",
+        "b2": "Orada hesabı olanlar için",
+        "other": "MinIO, Wasabi ve S3 uyumlu diğerleri"
+      },
+      "title": {
+        "r2": "Cloudflare R2'yi bağla",
+        "s3": "Amazon S3'ü bağla",
+        "b2": "Backblaze B2'yi bağla",
+        "other": "Başka bir depolama bağla"
+      },
+      "editTitle": {
+        "r2": "Cloudflare R2'yi düzenle",
+        "s3": "Amazon S3'ü düzenle",
+        "b2": "Backblaze B2'yi düzenle",
+        "other": "Depolamayı düzenle"
+      },
+      "lede": {
+        "r2": "Cloudflare'de iki adım. Sonra geçmeden önce test ederiz.",
+        "s3": "AWS'de üç adım. Sonra geçmeden önce test ederiz.",
+        "b2": "Backblaze'de iki adım. Sonra geçmeden önce test ederiz.",
+        "other": "S3 uyumlu herhangi bir hizmet. Sonra geçmeden önce test ederiz."
+      },
+      "editLede": "Değişeni değiştirin. Kayıtlı anahtarları korumak için anahtar alanlarını boş bırakın.",
+      "bucketName": "Bucket adı",
+      "accessKeyId": "Erişim anahtarı kimliği",
+      "secret": "Gizli erişim anahtarı",
+      "r2Endpoint": "R2 adresi",
+      "b2Endpoint": "Bucket uç noktası",
+      "region": "Bölge",
+      "regionPick": "Bölgeyi seçin",
+      "regionOption": "{{name}} · {{code}}",
+      "theirName": {
+        "r2Key": "Cloudflare'de: Access Key ID",
+        "r2Secret": "Cloudflare'de: Secret Access Key",
+        "r2Endpoint": "Cloudflare'de: sonu r2.cloudflarestorage.com ile biten uç nokta.",
+        "s3Key": "AWS'de: Access key",
+        "s3Secret": "AWS'de: Secret access key",
+        "b2Key": "Backblaze'de: keyID",
+        "b2Secret": "Backblaze'de: applicationKey",
+        "b2Endpoint": "Bölge buradan alınır."
+      },
+      "step": {
+        "bucketTitle": "Bir bucket oluşturun",
+        "keyTitle": "Erişim anahtarını oluşturun",
+        "userTitle": "Sadece agentes.chat için bir kullanıcı oluşturun",
+        "r2Bucket": "Cloudflare panelinde <b>R2</b> bölümünü açın ve <b>Create bucket</b> düğmesine tıklayın. Herhangi bir ad olur.",
+        "r2Key": "R2 sayfasında, <b>API Tokens</b> altında <b>Manage</b>, ardından <b>Create API Token</b> düğmesine tıklayın. <b>Object Read & Write</b> iznini ve bucket'ınızı seçin. Sonunda Cloudflare aşağıdaki üç değeri yalnızca bir kez gösterir.",
+        "s3Bucket": "AWS konsolunda <b>S3</b> hizmetini açın ve <b>Create bucket</b> düğmesine tıklayın. Seçtiğiniz bölgeyi not edin.",
+        "s3User": "<b>IAM</b> içinde <b>Users</b> bölümünü açın ve <b>Create user</b> düğmesine tıklayın. İzinler kısmında aşağıda kopyalanan metinle bir politika oluşturun: yalnızca bu bucket'a erişim verir.",
+        "s3Key": "Yeni kullanıcıda <b>Security credentials</b> sekmesini açın ve <b>Create access key</b> düğmesine tıklayın. <b>Application running outside AWS</b> seçeneğini seçin ve iki değeri de yapıştırın.",
+        "b2Bucket": "Backblaze'de <b>Buckets</b> bölümünü açın ve <b>Create a Bucket</b> düğmesine tıklayın. Bucket sayfasında <b>Endpoint</b> değerini kopyalayın.",
+        "b2Key": "<b>Application Keys</b> bölümünü açın ve <b>Add a New Application Key</b> düğmesine tıklayın. Bucket'ınıza <b>Read and Write</b> ile erişim verin. Hesabın ana anahtarı (master key) burada çalışmaz."
+      },
+      "openR2": "R2'yi aç",
+      "openS3": "S3'ü aç",
+      "openIam": "IAM'i aç",
+      "openB2": "Backblaze'i aç",
+      "copyPolicy": "Politikayı kopyala",
+      "policyCopied": "Politika kopyalandı, {{bucket}} bucket'ı ile.",
+      "back": "Geri",
+      "testAgain": "Yeniden test et",
+      "passed": "Bağlantı çalışıyor: bir test dosyası yazdık, okuduk, listeledik ve sildik.",
+      "permissionHint": {
+        "r2": "Cloudflare'de token'ın <b>Object Read & Write</b> iznine ve {{bucket}} bucket'ına erişimi olduğunu kontrol edin. Düzeltin ve yeniden test edin.",
+        "s3": "AWS'de kullanıcının, 2. adımda kopyalanan ve {{bucket}} bucket'ını içeren politikaya sahip olduğunu kontrol edin. Düzeltin ve yeniden test edin.",
+        "b2": "Backblaze'de anahtarın <b>Read and Write</b> iznine ve {{bucket}} bucket'ına erişimi olduğunu kontrol edin. Düzeltin ve yeniden test edin."
+      },
+      "inUse": "{{provider}} · {{bucket}}",
+      "inUseAt": "{{host}} üzerindeki {{bucket}}",
+      "stepError": {
+        "auth": "Erişim anahtarı veya gizli anahtar kabul edilmedi.",
+        "permission": "Anahtarın bu adım için izni yok.",
+        "bucketMissing": "Bu adreste böyle bir bucket yok.",
+        "region": "Bu bölge bucket'ın bölgesi değil.",
+        "network": "Adrese ulaşılamadı.",
+        "address": "Adres geçerli değil.",
+        "https": "https:// ile başlayan bir adres kullanın.",
+        "internal": "Bu adres dahili bir ağı gösteriyor.",
+        "hostNotFound": "Bu adresi bulamadık.",
+        "notFound": "Test dosyası okunurken geri gelmedi.",
+        "unexpected": "Depolamayla iletişimde beklenmeyen bir hata oluştu.",
+        "invalidBucket": "Bucket adı geçerli değil.",
+        "keysRequired": "İki anahtarı da girin."
+      },
+      "awsRegion": {
+        "us-east-1": "ABD Doğu (Kuzey Virginia)",
+        "us-east-2": "ABD Doğu (Ohio)",
+        "us-west-1": "ABD Batı (Kuzey Kaliforniya)",
+        "us-west-2": "ABD Batı (Oregon)",
+        "ca-central-1": "Kanada (Orta)",
+        "ca-west-1": "Kanada Batı (Calgary)",
+        "mx-central-1": "Meksika (Orta)",
+        "sa-east-1": "Güney Amerika (São Paulo)",
+        "eu-central-1": "Avrupa (Frankfurt)",
+        "eu-central-2": "Avrupa (Zürih)",
+        "eu-west-1": "Avrupa (İrlanda)",
+        "eu-west-2": "Avrupa (Londra)",
+        "eu-west-3": "Avrupa (Paris)",
+        "eu-south-1": "Avrupa (Milano)",
+        "eu-south-2": "Avrupa (İspanya)",
+        "eu-north-1": "Avrupa (Stockholm)",
+        "il-central-1": "İsrail (Tel Aviv)",
+        "me-south-1": "Orta Doğu (Bahreyn)",
+        "me-central-1": "Orta Doğu (BAE)",
+        "af-south-1": "Afrika (Cape Town)",
+        "ap-east-1": "Asya Pasifik (Hong Kong)",
+        "ap-south-1": "Asya Pasifik (Mumbai)",
+        "ap-south-2": "Asya Pasifik (Haydarabad)",
+        "ap-northeast-1": "Asya Pasifik (Tokyo)",
+        "ap-northeast-2": "Asya Pasifik (Seul)",
+        "ap-northeast-3": "Asya Pasifik (Osaka)",
+        "ap-southeast-1": "Asya Pasifik (Singapur)",
+        "ap-southeast-2": "Asya Pasifik (Sidney)",
+        "ap-southeast-3": "Asya Pasifik (Cakarta)",
+        "ap-southeast-4": "Asya Pasifik (Melbourne)",
+        "ap-southeast-5": "Asya Pasifik (Malezya)",
+        "ap-southeast-7": "Asya Pasifik (Tayland)"
+      }
+    }
   },
   "githubApp": {
     "title": "GitHub depoları",
@@ -12628,6 +12863,7 @@
     "connected": "Bağlı",
     "connectedAs": "{{account}} olarak bağlı",
     "reconnectAdds": "Ajanlar {{what}} diye {{name}} bağlantısını yeniden kurun.",
+    "sendsToo": "Şunları da gönderir: <names/>. Değiştirmek için Yeniden bağla'yı kullanın.",
     "adds": {
       "github_project": "GitHub Projects'i de kullanabilsin (panoları okuyup kartları taşıyabilsin)"
     },
@@ -13736,6 +13972,22 @@
     "needsKey": "Bu sunucu OAuth desteklemiyor. API anahtarıyla bağlayın.",
     "notApproved": "{{name}} yalnızca onayladığı uygulamaların giriş yapmasına izin veriyor ve agentes.chat henüz onaylanmadı. Size bir API anahtarı veriyorsa onunla bağlanabilirsiniz.",
     "serverSaid": "Sunucunun yanıtı: {{detail}}",
+    "headers": {
+      "title": "İstek başlıkları",
+      "help": "Başka bir başlıkta gönderilen bir anahtar ya da sunucunun önündeki bir ağ geçidi için. Çoğu sunucunun buna ihtiyacı yoktur.",
+      "value": "Değer",
+      "nameOf": "{{n}}. başlığın adı",
+      "valueOf": "{{n}}. başlığın değeri",
+      "remove": "{{n}}. başlığı kaldır",
+      "add": "Başlık ekle",
+      "saved_one": "Kayıtlı: <names/>. Yenisini yazmadığınız sürece kalır.",
+      "saved_other": "Kayıtlı: <names/>. Yenilerini yazmadığınız sürece kalırlar.",
+      "drop": "Kaldır",
+      "dropping_one": "<names/> yeniden bağlanınca kaldırılacak.",
+      "dropping_other": "<names/> yeniden bağlanınca kaldırılacak.",
+      "undo": "Geri al",
+      "refused": "Sunucu bu başlıkları kabul etmedi. Değerlerini kontrol edin ya da API anahtarıyla bağlayın."
+    },
     "nothingYet": "3. adıma kadar ajanlar hiçbir şey kullanamaz.",
     "allCanUse": "Bağlandıktan sonra her ajan kullanabilir. Bunu daha sonra ayarlayabilirsiniz.",
     "replace": "Mevcut girişin yerini alır. Kimin kullandığı aynı kalır.",
@@ -14433,7 +14685,15 @@
       "gone": "O hesap artık bağlı değil.",
       "unfinished": "Composio'da giriş tamamlanmadı. Tekrar deneyin.",
       "unavailable": "Bu hizmet burada bağlanamaz.",
-      "misconfigured": "Sunucuda {{provider}} bağlantısı yanlış ayarlanmış, bu yüzden tamamlanamıyor. Sunucuyu yöneten kişinin anahtarı uygulamanın ayarlarında değiştirmesi gerekiyor."
+      "misconfigured": "Sunucuda {{provider}} bağlantısı yanlış ayarlanmış, bu yüzden tamamlanamıyor. Sunucuyu yöneten kişinin anahtarı uygulamanın ayarlarında değiştirmesi gerekiyor.",
+      "headerName": "Başlık adında yalnızca harf, rakam ve kısa çizgi kullanın, X-API-Key gibi.",
+      "headerValue": "{{header}} için bir değer yazın: tek satırda en çok 2.000 karakter, aksanlı harf ve emoji olmadan.",
+      "headerReserved": "{{header}} zaten her istekle gönderiliyor ve değiştirilemez. Bu başlığı kaldırın.",
+      "headerTwice": "{{header}} listede iki kez var. Birini kaldırın.",
+      "headerAndKey": "API anahtarı zaten Authorization olarak gönderiliyor. Anahtarı silin ya da bu başlığı kaldırın.",
+      "headersTooMany": "Bir sunucu en çok {{max}} başlık alır. Yenisini eklemek için birini kaldırın.",
+      "headersWithSignIn": "Bu sunucu giriş istiyor ve giriş henüz başlık taşıyamıyor. Giriş yapmak için başlıkları kaldırın ya da API anahtarıyla bağlayın.",
+      "headersUnreadable": "Kayıtlı başlıklar okunamadı. Yeniden yazın ya da kaldırın."
     },
     "wiki": {
       "githubNoNotes": "Bu bağlantıda Markdown notu yok.",
@@ -14655,7 +14915,8 @@
       "invalidDescription": "Açıklama 1 ile {{max}} karakter arasında olmalı.",
       "tooLarge": "Bu beceride {{size}} MB metin ve betik var, sınır {{max}} MB.",
       "tooManyFiles": "Bu beceride {{files}} dosya var, sınır {{max}}.",
-      "repoTooLarge": "Depo indirmek için çok büyük (en fazla {{max}} MB). Becerinin klasörünü .zip olarak yükle.",
+      "repoTooLarge": "Depo indirmek için çok büyük (en fazla {{max}} MB).",
+      "linkTooLarge": "Bu bağlantının klasöründe okunamayacak kadar çok dosya var. Becerinin kendi klasörünün bağlantısını yapıştır.",
       "noFrontmatter": "SKILL.md'nin en üstünde, iki --- satırı arasında adını ve açıklamasını içeren bir blok olmalı.",
       "bodyTooLong": "SKILL.md çok uzun (en fazla {{max}} karakter).",
       "noSkillMdZip": "Zip klasörünün en üstünde SKILL.md yok.",
@@ -14669,7 +14930,8 @@
     },
     "agentGroup": {
       "notFound": "Bu departman artık yok.",
-      "tooMany": "Bu çalışma alanında zaten {{max}} departman var. Önce birini silin."
+      "tooMany": "Bu çalışma alanında zaten {{max}} departman var. Önce birini silin.",
+      "ambiguous": "İki departmanın adı {{name}}. Birinin adını değiştirip yeniden deneyin."
     },
     "rightHand": {
       "permanent": "Sağ kol çalışma alanının bir parçasıdır ve kanalların dışında kalır. Bir @bahsetme onu herhangi bir kanalda çağırır.",
@@ -15543,6 +15805,7 @@
       "waiting": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazını bekliyor",
       "toolRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınızda {{tool}} açmanızı istiyor",
       "cliRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınıza {{tool}} kurmanızı istiyor",
+      "folderRequest": "<b>{{who}}</b>, <b>{{deviceName}}</b> cihazınızda {{path}} klasörünü istiyor",
       "once": "Bir kez izin ver",
       "always": "Her zaman",
       "no": "Hayır",
@@ -16194,11 +16457,11 @@
       "rolesPersonal": "Buradaki her kişinin neler yapabileceği. Sahip her şeyi yapabilir."
     },
     "about": {
-      "basedOn": "Codari Global, LLC tarafından geliştirilen <site>agentes.chat</site> tabanlı",
+      "basedOn": "AGENTESCHAT, LLC tarafından geliştirilen <site>agentes.chat</site> tabanlı",
       "version": "Sürüm",
       "license": "<license>GNU Affero General Public License v3</license> kapsamında özgür yazılım, garantisi yoktur.",
       "source": "Kaynak kodu",
-      "copyright": "Copyright © 2026 Codari Global, LLC ve katkıda bulunanlar"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC ve katkıda bulunanlar"
     },
     "title": "Ayarlar",
     "account": {
@@ -16231,6 +16494,8 @@
         "openLatest": "En yeni mesaj",
         "textSize": "Metin boyutu",
         "textSizeHelp": "Mesajların, tüm sohbetlerde ve tüm cihazlarınızda",
+        "fullMessages": "Mesajların tamamını göster",
+        "fullMessagesHelp": "Uzun mesajları “Devamını gör” olmadan gösterir, tüm sohbetlerde ve tüm cihazlarınızda",
         "textSizePhone": "Telefonunuzun metin boyutunun üzerine, tüm uygulamada geçerlidir",
         "textXs": "Daha küçük",
         "textSm": "Küçük",
@@ -16634,6 +16899,18 @@
       "see": "Kullanımı gör"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "Türe göre",
+      "handoffs": "Ajanlar arası devirler",
+      "people": "İnsanlarla konuşmalar",
+      "routines": "Rutinler"
+    },
+    "hint": {
+      "handoffs": "Bu haftaki kullanımın çoğu, ajanların birbirine iş devretmesinden geldi. Uzun işler için doğrudan ajana sorun.",
+      "message": "{{name}} ile mesajlaş"
+    }
+  },
   "usageViews": {
     "signedOut": "Oturum kapatıldı",
     "whose": "{{name}} hesabı",
@@ -16817,6 +17094,14 @@
       "text": "ChatGPT bu hesap veya model için Hızlı hızı reddetti, bu yüzden bu yanıt standart hızda geldi.",
       "action": "Ajanı aç"
     },
+    "standIn": {
+      "needsComputer": "{{via}} ile yanıtladım: {{plan}} bir bilgisayara ihtiyaç duyuyor.",
+      "away": "{{via}} ile yanıtladım: {{plan}} bilgisayarı şu an uzakta.",
+      "notShared": "{{via}} ile yanıtladım: {{plan}} yalnızca onu bağlayan kişiye hizmet ediyor.",
+      "limit": "{{via}} ile yanıtladım: {{plan}} sınırına ulaştı.",
+      "cant": "{{via}} ile yanıtladım: {{plan}} şu an düşünemiyor.",
+      "change": "Değiştir"
+    },
     "modelStandIn": {
       "text": "{{plan}} bu anahtarla {{from}} modelini reddetti. Onunla çalışan {{to}} ile yanıt verdim.",
       "useAll": "Hepsinde {{model}} kullan",
@@ -16879,6 +17164,7 @@
       "waitingYourAnswer": "yanıtınızı bekliyor",
       "queued": "sırada",
       "handedOn": "diğer ajanları bekliyor",
+      "answered": "yanıtladı",
       "noAnswer": "yanıt vermedi",
       "notFinished": "bitiremedi",
       "someAnswered": "{{total}} ajandan {{done}} tanesi yanıt verdi",

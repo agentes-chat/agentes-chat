@@ -1,9 +1,16 @@
 import type { Issue, IssueColumn, IssueProjectRef } from "@agenteschat/client";
 import { useIssueProjects, useTaskUnread } from "@agenteschat/client";
-import { dueLabel, dueTone } from "@agenteschat/client/lib/format";
+import { dueLabel, dueTone, joinNames } from "@agenteschat/client/lib/format";
 import { githubLinkLabel } from "@agenteschat/client/lib/github-link";
 import { pickableProjects } from "@agenteschat/client/lib/issue-projects";
-import { type CardState, cardState, cardStateText, cardWaits, isOpen } from "@agenteschat/client/lib/issues";
+import {
+  type CardState,
+  cardState,
+  cardStateText,
+  cardWaits,
+  isOpen,
+  taskAgentId,
+} from "@agenteschat/client/lib/issues";
 import { codeAndBoldParts } from "@agenteschat/client/lib/markdown";
 import { stepPhrase } from "@agenteschat/client/lib/work";
 import { bodyTones } from "@agenteschat/ui/agent/engine";
@@ -119,23 +126,72 @@ export function StateChip({ issue }: { issue: Issue }) {
       ? t("mobile.issues.state.reviewPr", { number: pr.number })
       : t(`mobile.issues.state.${state}`);
   if (state === "running") {
-    const agent = issue.assignee?.type === "agent" ? dir.agentById.get(issue.assignee.id) : undefined;
+    const agent = dir.agentById.get(taskAgentId(issue) ?? "");
     return <Chip label={label} leading={<PixelOrbit color={agentLook(agent).color} size={10} />} />;
   }
   return <Chip label={label} icon={STATE_ICON[state]} />;
 }
 
-/** Who has it: the agent's living body (moving while it works) or the person's face; nobody: an empty tile. */
-export function AssigneeFace({ issue, size, live }: { issue: Issue; size: number; live: boolean }) {
-  if (!issue.assignee) return <Tile icon="circle" size={size} />;
-  const running = issue.work?.state === "running";
-  return (
+/** Faces shown of a task several have, before "+N". */
+const FACES_MAX = 3;
+
+/**
+ * Who has it: the agent's living body (moving while it works) or the person's face; nobody: an empty tile. Several:
+ * their faces overlapping, three at most and then "+N", read out as their names; only the agent whose run it is moves.
+ */
+export function AssigneeFace({
+  issue,
+  size,
+  live,
+  ring,
+}: {
+  issue: Pick<Issue, "assignees" | "work">;
+  size: number;
+  live: boolean;
+  /** The surface the faces stand on, which rings each of several (default a card's). */
+  ring?: string;
+}) {
+  const { t } = useTranslation();
+  const c = useColors();
+  const dir = useDirectory();
+  const [first, ...rest] = issue.assignees;
+  if (!first) return <Tile icon="circle" size={size} />;
+  const state = issue.work?.state;
+  const agentId = taskAgentId(issue);
+  const working = (who: Issue["assignees"][number]) => who.type === "agent" && who.id === agentId;
+  const face = (who: Issue["assignees"][number], side: number) => (
     <Face
-      who={issue.assignee}
-      size={issue.assignee.type === "agent" ? size : size - 4}
-      mode={running ? "run" : issue.work?.state === "stalled" ? "rest" : "idle"}
+      who={who}
+      size={who.type === "agent" ? side : side - 4}
+      mode={working(who) && state === "running" ? "run" : working(who) && state === "stalled" ? "rest" : "idle"}
       live={live}
     />
+  );
+  if (rest.length === 0) return face(first, size);
+  const more = issue.assignees.length - FACES_MAX;
+  return (
+    <View
+      style={styles.faces}
+      accessible
+      accessibilityLabel={joinNames(
+        issue.assignees.map((a) => dir.nameOf(a)),
+        t,
+      )}
+    >
+      {issue.assignees.slice(0, FACES_MAX).map((who, k) => (
+        <View
+          key={`${who.type}:${who.id}`}
+          style={[styles.facesTile, { backgroundColor: ring ?? c.raised }, k > 0 && styles.facesOverlap]}
+        >
+          {face(who, size - 4)}
+        </View>
+      ))}
+      {more > 0 ? (
+        <Text variant="small" tone="muted" style={styles.facesMore}>
+          +{more}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -164,7 +220,7 @@ export function useCardState(i: Issue) {
 export function StateWords({ issue, state, words }: { issue: Issue; state: CardState; words: string }) {
   const c = useColors();
   const dir = useDirectory();
-  const agent = issue.assignee?.type === "agent" ? dir.agentById.get(issue.assignee.id) : undefined;
+  const agent = dir.agentById.get(taskAgentId(issue) ?? "");
   return (
     <View style={[styles.inline, styles.state]}>
       {state.kind === "running" ? (
@@ -297,7 +353,8 @@ export const BoardCard = memo(function BoardCard({
   const reduced = useReducedMotion();
   const axis = mediaRowAxis(24, textLineOf("small", useFontScale()));
   const { state, words } = useCardState(i);
-  const agent = i.assignee?.type === "agent" ? dir.agentById.get(i.assignee.id) : undefined;
+  const agent = dir.agentById.get(taskAgentId(i) ?? "");
+  const [who, ...others] = i.assignees;
   // Mentions of me not read in its conversation (ADR 0145), red as on the web's card.
   const { mentions, unread } = useTaskUnread(useOrgId(), i.id);
   return (
@@ -326,15 +383,18 @@ export const BoardCard = memo(function BoardCard({
       ) : null}
       <TaskTitle title={i.title} variant="callout" style={styles.title} />
       <CardFacts issue={i} mentions={mentions} unread={unread > 0} project={project} />
-      {i.assignee || state ? (
+      {who || state ? (
         <View style={styles.who}>
-          {i.assignee ? (
+          {who && others.length > 0 ? (
+            // Several have it: their faces say who, as the web's card does.
+            <AssigneeFace issue={i} size={24} live={live} />
+          ) : who ? (
             <View style={styles.person}>
               <View style={[styles.face, { marginTop: axis.face }]}>
                 <AssigneeFace issue={i} size={24} live={live} />
               </View>
               <Text variant="small" tone="ink2" style={[styles.bold, styles.name, { paddingTop: axis.words }]}>
-                {dir.nameOf(i.assignee)}
+                {dir.nameOf(who)}
               </Text>
             </View>
           ) : null}
@@ -484,6 +544,11 @@ const styles = StyleSheet.create({
   facts: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 12, rowGap: 2 },
   // The face with the name, then the state; a state that doesn't fit goes to the next line whole.
   who: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 8, rowGap: 4 },
+  faces: { flexDirection: "row", alignItems: "center", flexShrink: 0 },
+  // Each face ringed in the card's surface, the next one over its edge.
+  facesTile: { padding: 1.5, borderRadius: 8 },
+  facesOverlap: { marginLeft: -6 },
+  facesMore: { marginLeft: 6 },
   // Never the face alone on a line: the name wraps beside it.
   person: { flexDirection: "row", alignItems: "flex-start", gap: 8, flexShrink: 1 },
   // A person's photo is 20 (an agent's body 24): either sits in the 24 box, on the name's first line.

@@ -87,6 +87,8 @@ export const strings: Partial<PushStrings> = {
   deviceToolBody: "Нажмите, чтобы включить в один клик.",
   deviceCliTitle: (a, d) => `${a} просит установить программу на вашем ${d}`,
   deviceCliBody: "Нажмите, чтобы установить в один клик.",
+  deviceFolderTitle: (a, f, d) => (f ? `${a} просит ${f} на вашем ${d}` : `${a} просит папку на вашем ${d}`),
+  deviceFolderBody: "Разрешите её в приложении на этом компьютере.",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} просит добавить агента в #${l}`

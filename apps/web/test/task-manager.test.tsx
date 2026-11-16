@@ -23,7 +23,18 @@ import { keys, TASK_MANAGER_POLL_MS } from "@agenteschat/client";
 import { formatTime } from "@agenteschat/client/lib/format";
 import { usageWhenShort } from "@agenteschat/client/lib/plan-usage";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { ADA_ID, ATLAS_ID, createFakeApi, ENG_ID, type FakeState, fakeMachinesOf, ORG_ID, seedState } from "./fake-api";
+import {
+  ADA_ID,
+  ATLAS_ID,
+  createFakeApi,
+  ENG_ID,
+  type FakeState,
+  fakeMachinesOf,
+  LODI_ID,
+  ORG_ID,
+  seedState,
+  withRightHand,
+} from "./fake-api";
 import { renderApp, screen, settle, showIn } from "./render";
 
 afterEach(() => {
@@ -661,6 +672,34 @@ describe("the task manager page", () => {
     expect(rows[0]).toContain("Terminou");
     expect(rows[1]).toContain("Responder os tickets");
     expect(rows[1]).toContain("João parou");
+  });
+
+  test("Terminadas hoje never says I stopped what nobody did: the system plainly, the right hand by its name", async () => {
+    const view = busy();
+    view.ended = [
+      ended({ runId: "r-archived", agentId: ADA_ID, status: "canceled", label: "Limpar os logs", finishedAt: ago(9) }),
+      ended({
+        runId: "r-lodi",
+        agentId: ATLAS_ID,
+        status: "canceled",
+        label: "Fechar o mês",
+        stoppedBy: { userId: "u-walter", name: "Walter", agentId: LODI_ID },
+        finishedAt: ago(8),
+      }),
+    ];
+    await open(withRightHand(seedState({ taskManager: view })), "task-manager");
+    await click(screen().getByRole("button", { name: /Terminadas hoje/ }));
+    const rows = [...document.querySelectorAll<HTMLElement>(".tm-row--ended")];
+    const row = (label: string) => rows.find((r) => r.textContent?.includes(label)) as HTMLElement;
+    expect(row("Limpar os logs").textContent).toContain("Parada");
+    expect(row("Fechar o mês").textContent).toContain("Lodi parou");
+    expect(rows.map((r) => r.textContent).join()).not.toContain("Você parou");
+    await click(within(row("Fechar o mês")).getByRole("button", { name: "Fechar o mês" }));
+    await settle(4);
+    const panel = screen().getByRole("complementary", { name: "Fechar o mês" });
+    expect(panel.textContent).toContain("Lodi parou o Atlas");
+    // Stopped at my word: I still say why.
+    expect(within(panel).getByPlaceholderText("Quer dizer por quê? (opcional)")).toBeTruthy();
   });
 
   test("a finished row opens its panel like one still on: how it ended, how long as people say it, its message", async () => {

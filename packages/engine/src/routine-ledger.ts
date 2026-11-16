@@ -11,7 +11,7 @@ import { enqueue } from "./outbox";
 import { lodiFor, lodiSwitches, saidKey, saidOnce } from "./right-hand-proactive";
 import { startGatheredRun } from "./routine-events";
 import { pauseRoutine, ROUTINE_FATIGUE_LIMIT, routineJobAlive } from "./routine-state";
-import { type AgentRun, runErrorDetail } from "./runs";
+import { type AgentRun, canceledBy, runErrorDetail } from "./runs";
 
 const { routineRuns, routines, agentRuns, outbox } = schema;
 
@@ -434,8 +434,7 @@ export async function recordRoutineReportMessage(
 function endOfAgentRun(status: string, error: string | null): RoutineRunEnd {
   if (status === "done") return { status: "done", text: "" };
   if (status === "failed") return { status: "failed", code: routineFailureCode(error), detail: error ?? undefined };
-  const by = error?.startsWith("canceled_by:") ? error.slice("canceled_by:".length) : null;
-  return { status: "canceled", code: "stopped", byUserId: by };
+  return { status: "canceled", code: "stopped", byUserId: canceledBy(error) };
 }
 
 /** The reaper leaves an ending this long to its own path before closing it. */
@@ -492,6 +491,10 @@ export async function reapRoutineRuns(deps: LedgerDeps, now = new Date()): Promi
   for (const r of lost) {
     if (await finishRoutineRow(deps, r, { status: "failed", code: "lost" }, null)) closed++;
   }
+  // A run left working with nothing moving for `ROUTINE_STALL_MS` is let go, its slot with it (§6.3):
+  // loaded here, since the firing rules import this file.
+  const { releaseStalledRoutineRuns } = await import("./routine-firing");
+  closed += await releaseStalledRoutineRuns(deps, now).catch(() => 0);
   const gathered = await db
     .selectDistinct({ routineId: routineRuns.routineId })
     .from(routineRuns)

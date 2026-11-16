@@ -370,15 +370,16 @@ p {
 }
 
 /* The pair row right before a reply whose agent asked others first: "Theo ⇄ Atlas · 2 min", one 18px line 26 tall, a
-   line across the whole conversation as the day and "Novas" are, the two agents on its middle. Names too long for it
-   wrap whole, never cut: the row is one centred sentence, its faces and the ⇄ on the capitals of the words beside
-   them. */
+   line across the whole conversation as the day and "Novas" are, the two agents on its middle. Always one line: the
+   question's subject gives way first ("…", whole in the row's tip and its dialog), the names only once it is gone,
+   the count and the time never. Its faces and the ⇄ sit on the capitals of the words beside them. */
 .consult-pair {
   display: grid;
   grid-template-columns: minmax(16px, 1fr) minmax(0, auto) minmax(16px, 1fr);
   align-items: center;
   padding-inline: 16px;
   min-width: 0;
+  container-type: inline-size;
 }
 .consult-pair::before,
 .consult-pair::after {
@@ -393,7 +394,8 @@ p {
 .consult-pair__row {
   position: relative;
   grid-area: 1 / 2;
-  display: inline-block;
+  display: flex;
+  align-items: baseline;
   max-width: 100%;
   min-height: 26px;
   /* The same at both ends, the chevron in the room: the agents stay on the middle whether it shows or not. */
@@ -404,20 +406,38 @@ p {
   font: inherit;
   font-size: 13px;
   line-height: 18px;
-  text-align: center;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   color: var(--muted);
   cursor: pointer;
   transition:
     background-color 0.12s,
     color 0.12s;
 }
-/* A face and its name's first word never part; the name wraps at its own spaces. */
-.consult-pair__who {
-  white-space: nowrap;
+.consult-pair__row > * {
+  flex: none;
 }
-.consult-pair__who > .consult-pair__name {
-  white-space: normal;
+/* The names give way only once the subject has none left: the subject's share of any shrink is so much larger that
+   theirs rounds to nothing before then (any share at all would cut them, an ellipsis taking a whole word). Its
+   block's 2px above and below keeps the faces' rings out of the clip. */
+.consult-pair__lead {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-block: -2px;
+  padding-block: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.consult-pair__row > .consult-pair__subject {
+  flex: 0 100000 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A phone's line has room for the names, the count and the time only: the subject would be a letter and its "…". */
+@container (max-width: 420px) {
+  .consult-pair__subject {
+    display: none;
+  }
 }
 /* The faces on the capitals' middle, as an inline face (`.ac-who`): the row's type, not the face's own. */
 .consult-pair__who > .ac-avatar,
@@ -429,14 +449,12 @@ p {
 .consult-pair__faces {
   display: inline-flex;
 }
-/* How it went: the · stays with the name's last word, the time with the word before it, each kept whole. */
-.consult-pair__sep,
+/* How it went: the ·, then the word and its time, each kept whole. */
+.consult-pair__sep {
+  margin-inline: 6px 4px;
+}
 .consult-pair__time {
   margin-inline-start: 6px;
-}
-.consult-pair__word,
-.consult-pair__time {
-  white-space: nowrap;
 }
 .consult-pair__row:hover {
   background: var(--plate);
@@ -1061,6 +1079,14 @@ html:not([data-pointer]) .sidebar__user:focus-visible {
   contain: inline-size;
   overflow-wrap: anywhere;
 }
+/* An agent's role and its person keep one line, ending in "…": the header's plate stays one height whatever the role
+   says, and the button over it shows the whole line in its tip. */
+.dm-who__text > .channel__topic--line {
+  overflow: hidden;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 .dm-who__hit.profile-trigger {
   position: absolute;
   inset: 0;
@@ -1451,6 +1477,14 @@ html:not([data-pointer]) .member-row--add:focus-visible {
   flex: 1 1 240px;
   min-width: 0;
   color: var(--ink-muted);
+}
+/* "Mudar quando perguntar" under an approval's decision: a quiet link, in the card's small words. */
+.ac-link.when-asks {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+.ac-link.when-asks:hover {
+  color: var(--ink);
 }
 .scope-row {
   display: flex;
@@ -3309,6 +3343,9 @@ html:not([data-pointer]) .artifact-table__sort:focus-visible {
 .md--message > * + * {
   margin-top: 14px;
 }
+.md-run {
+  word-break: break-all;
+}
 .md--message > p + ul,
 .md--message > p + ol {
   margin-top: 8px;
@@ -3410,7 +3447,6 @@ html:not([data-pointer]) .profile-trigger:focus-visible {
 .profile-card {
   --menu-pad: var(--space-2);
   width: 300px;
-  max-height: none;
   padding: var(--menu-pad);
 }
 /* A channel's card: its words further in than the room (`.ac-popover`), its buttons back on it. */
@@ -3437,6 +3473,7 @@ html:not([data-pointer]) .profile-trigger:focus-visible {
   .wiki-editor,
   .cal-side__section,
   .cflow__key,
+  .cflow__headers,
   .imp-block
 ) > :where(p, ul, ol) {
   margin-block: 0;
@@ -4787,7 +4824,6 @@ html:not([data-pointer]) .catalog__cat:focus-visible {
 }
 .catalog-feat__card:hover,
 .catalog-tile:hover {
-  transform: translateY(-1px);
   box-shadow: var(--e2), var(--top);
 }
 .catalog-feat__card:active,
@@ -5279,6 +5315,48 @@ html:not([data-pointer]) .cflow__more summary:focus-visible {
   flex-direction: column;
   gap: var(--form-gap);
   margin-top: var(--space-3);
+}
+/* A server by address's request headers: what they are for, the saved names, a name and a value per row, one more. */
+.cflow__headers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+/* A header's name is one long word. */
+.cflow__headers > p,
+.cflow__headers .ac-field__error {
+  overflow-wrap: anywhere;
+}
+.cflow__hgroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--field-gap);
+}
+.cflow__hrows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The name gets the wider field: it is read, and a value shows only dots. Then Remover, as tall as the fields. The
+   labels' row leaves its column empty. */
+.cflow__hrow {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) var(--control-h-md);
+  align-items: center;
+  gap: var(--field-gap) var(--space-2);
+}
+.cflow__hrow > .ac-field__error {
+  grid-column: 1 / -1;
+}
+.cflow__hadd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
 }
 /* The server's own words under ours: its codes are long unbroken words. */
 .cflow__said {
@@ -6509,7 +6587,6 @@ html:not([data-pointer]) .photo-drop:focus-visible {
     box-shadow 0.16s;
 }
 .avatar-ask__door:hover {
-  transform: translateY(-2px);
   box-shadow: var(--e2);
 }
 .avatar-ask__door:active {
@@ -6907,6 +6984,12 @@ html:not([data-pointer]) .avatar-builder__swatch:focus-visible {
   flex-wrap: wrap;
   justify-content: space-between;
 }
+/* Its buttons' touch targets reach 4px past their plates (`.ac-btn--sm::after`): the plate holds them, as the kit's
+   formatting bar does. */
+.wiki-editor__bar.ac-glass {
+  padding: var(--space-1);
+  border-radius: calc(var(--control-r-sm) + var(--space-1));
+}
 .wiki-editor__tools {
   display: flex;
   flex-wrap: wrap;
@@ -6963,8 +7046,11 @@ html:not([data-pointer]) .avatar-builder__swatch:focus-visible {
   top: 48px;
   width: 300px;
   max-width: calc(100% - 32px);
-  padding: var(--menu-pad);
-  z-index: var(--z-floating);
+}
+/* The kit's menu with no trigger to match: as wide as set above, as tall as its rows (the floating one: `placeList`). */
+.ac-menu.wiki-suggest {
+  min-width: 0;
+  max-height: none;
 }
 /* "Salvar na wiki" */
 .save-wiki__list {
@@ -7234,12 +7320,9 @@ p.run-canceled {
   line-height: normal;
   color: var(--ink);
   cursor: pointer;
-  transition: transform 0.18s var(--spring);
 }
-@media (prefers-reduced-motion: no-preference) {
-  .run-continue:hover:not(:disabled) {
-    transform: translateY(-1px);
-  }
+.run-continue:hover:not(:disabled) {
+  box-shadow: var(--card-shadow-hover);
 }
 html:not([data-pointer]) .run-continue:focus-visible {
   outline: none;
@@ -7473,6 +7556,17 @@ html:not([data-pointer]) .run-continue:focus-visible {
 .sidebar[data-rail="true"] .sidebar__org {
   flex-direction: column;
   padding: 0;
+}
+/* A tablet's rail opened by its toggle: the whole sidebar over the page, which keeps the rail's room and its layout. */
+.sidebar[data-float="true"] {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  z-index: var(--z-floating);
+  box-shadow: var(--e3);
+}
+.shell:has(> .sidebar[data-float="true"]) {
+  padding-left: 68px;
 }
 .sidebar[data-rail="true"] .sidebar__org-text,
 .sidebar[data-rail="true"] .sidebar__org-button > .ac-icon,
@@ -9471,7 +9565,6 @@ html:not([data-pointer]) .onb__step:focus-visible {
 }
 .newag__role:hover,
 .newag__tip:hover {
-  transform: translateY(-2px);
   box-shadow: var(--e2), var(--top);
 }
 .newag__role[aria-pressed="true"] {
@@ -9633,7 +9726,7 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
   transition: transform 0.2s var(--spring);
 }
 .newag__swatch:hover {
-  transform: translateY(-2px);
+  transform: scale(1.12);
 }
 .newag__swatch--custom {
   background: conic-gradient(from 200deg, #f58aa6, #f3c25c, #5fcf8b, #4cd0c0, #8cc3ff, #7d8bff, #ae8cf7, #f58aa6);
@@ -9679,7 +9772,6 @@ html:not([data-pointer]) .newag__addrow:focus-visible {
 }
 .newag__opt:hover {
   color: var(--ink);
-  transform: translateY(-1px);
 }
 .newag__opt[aria-pressed="true"] {
   background: var(--chosen-bg);
@@ -11820,7 +11912,6 @@ html:not([data-pointer]) .agp-subnav__item:focus-visible {
 .agp-changes.ac-popover {
   --menu-pad: var(--space-2);
   width: min(420px, calc(100vw - 24px));
-  max-height: 60vh;
   overflow: auto;
   padding: var(--menu-pad);
 }
@@ -13121,7 +13212,6 @@ html:not([data-pointer]) .sidebar__more:focus-visible {
 .sidebar__more-menu {
   width: max-content;
   max-width: min(400px, calc(100vw - 32px));
-  max-height: none;
 }
 .sidebar__more-item {
   text-decoration: none;
@@ -14205,6 +14295,26 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
 /* Under the key's field: where it is kept, or why it wasn't saved. */
 .jev-steps__below {
   margin: 0;
+}
+/* The workspace's OpenRouter key on offer for Jev: the key's name and line, then the button that turns Jev on. */
+.jev-ready {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.jev-ready__key {
+  display: flex;
+  flex-direction: column;
+}
+/* Its buttons go under one another on a phone, never past the card's edge (as a card's own line of buttons). */
+.jev-ready > .ac-acts {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+}
+/* Where Jev is paid, in the card's narrow body: a row's quiet tag ("Key already connected") goes under its name. */
+.jev__body .ac-optrow__title {
+  flex-wrap: wrap;
+  row-gap: 0;
 }
 /* Leading a receipt's line under its message, the icon's 2px of padding reach out, so the icon starts on the text's
    edge, as the words do. */

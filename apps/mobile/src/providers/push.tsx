@@ -131,6 +131,13 @@ export function PushProvider({ children }: { children: ReactNode }) {
       const id = response.notification.request.identifier;
       if (opened.has(id)) return;
       opened.add(id);
+      // The system keeps the last tapped notification and hands it over again on every later launch: it is cleared
+      // once taken, so opening the app by its icon doesn't land on that notification's screen again.
+      try {
+        Notifications.clearLastNotificationResponse();
+      } catch {
+        // Nothing kept to clear.
+      }
       const data = readPushData(response.notification.request.content.data);
       // From another server this phone is signed in to: the app moves there first, then opens it (ADR 0154). One
       // from a server it left opens nothing.

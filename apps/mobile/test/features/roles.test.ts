@@ -61,8 +61,16 @@ const AREAS: OrgRoles["areas"] = [
   },
   {
     id: "agents",
-    use: ["talk_to_agents", "assign_work", "manage_routines"],
-    keys: ["talk_to_agents", "assign_work", "manage_routines", "approve_actions", "create_agents", "manage_agents"],
+    use: ["talk_to_agents", "view_all_agents", "assign_work", "manage_routines"],
+    keys: [
+      "talk_to_agents",
+      "view_all_agents",
+      "assign_work",
+      "manage_routines",
+      "approve_actions",
+      "create_agents",
+      "manage_agents",
+    ],
   },
   {
     id: "tools",
@@ -97,6 +105,7 @@ const DEFAULTS = [
   "post",
   "create_channels",
   "talk_to_agents",
+  "view_all_agents",
   "assign_work",
   "pair_computers",
   "own_computers",
@@ -186,7 +195,7 @@ describe("What a cargo adds (P2, P3)", () => {
     const t = await translator("pt-BR");
     expect(reachLine(t, suporte, everyone, AREAS)).toBe("+3 permissões · +2 canais · +1 agente");
     expect(reachLine(t, fin, everyone, AREAS)).toBe("+2 permissões · +1 canal · +1 agente");
-    expect(reachLine(t, everyone, everyone, AREAS)).toBe("8 permissões · 4 canais · 3 agentes");
+    expect(reachLine(t, everyone, everyone, AREAS)).toBe("9 permissões · 4 canais · 3 agentes");
     expect(reachLine(t, admin, everyone, AREAS)).toBe("Pode tudo");
     // What Todos already gives adds nothing.
     expect(reachLine(t, role({ id: "x", permissions: ["post"] }), everyone, AREAS)).toBe("Só o que Todos podem");
@@ -204,7 +213,7 @@ describe("What a cargo adds (P2, P3)", () => {
     expect(glanceLine(t, suporte, everyone, AREAS, 3)).toBe("3 pessoas · +3 permissões · +2 canais · +1 agente");
     expect(glanceLine(t, suporte, everyone, AREAS, 0)).toBe("Ninguém · +3 permissões · +2 canais · +1 agente");
     expect(tabValues(t, suporte, everyone, AREAS)).toEqual({ permissions: "+3", channels: "+2", agents: "+1" });
-    expect(tabValues(t, everyone, everyone, AREAS)).toEqual({ permissions: "8", channels: "4", agents: "3" });
+    expect(tabValues(t, everyone, everyone, AREAS)).toEqual({ permissions: "9", channels: "4", agents: "3" });
     expect(tabValues(t, role({ id: "x" }), everyone, AREAS)).toEqual({ permissions: "", channels: "", agents: "" });
     expect(tabValues(t, admin, everyone, AREAS).permissions).toBe("Pode tudo");
   });
@@ -243,6 +252,11 @@ describe("Permissões (P4): the Todos trap is gone", () => {
     const routines = groups[1]?.rows.find((r) => r.row === "manage_routines");
     expect(routines?.holders.map((r) => r.name)).toEqual(["Admin", "Suporte"]);
     expect(groups[0]?.rows.find((r) => r.row === "post")?.fromEveryone).toBe(false);
+    // On for Todos by default: turning it off is what narrows Equipe to the agents that answer each person.
+    expect(groups[1]?.rows.find((r) => r.row === "view_all_agents")).toMatchObject({
+      title: "Ver todos os agentes",
+      own: 1,
+    });
   });
 
   test("an Administrador cargo shows only Avançado; search finds a title, an ⓘ's words or a group, accents aside", async () => {

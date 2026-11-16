@@ -58,6 +58,22 @@ export const clockHour = (locale: string): "numeric" | "2-digit" => (uses12h(loc
 export const formatTime = (locale: string, iso: string) =>
   new Intl.DateTimeFormat(locale, { hour: clockHour(locale), minute: "2-digit" }).format(new Date(iso));
 
+/**
+ * The clock alone, without its day period: "8:39" for "8:39 PM", "1:32" for "오후 1:32", "10:42" in 24-hour
+ * locales. For a column too narrow for "PM" on the same line (a grouped message's gutter, under a turn whose header
+ * says the whole time).
+ */
+export function formatClock(locale: string, iso: string) {
+  const parts = new Intl.DateTimeFormat(locale, { hour: clockHour(locale), minute: "2-digit" }).formatToParts(
+    new Date(iso),
+  );
+  const digits = parts.flatMap((p, i) => (p.type === "hour" || p.type === "minute" ? [i] : []));
+  return parts
+    .slice(digits[0], (digits.at(-1) ?? parts.length - 1) + 1)
+    .map((p) => p.value)
+    .join("");
+}
+
 /** "14:05" today, "24 out 14:05" another day (a pause's end, when a computer went offline). */
 export const clockAt = (locale: string, iso: string, now = new Date()) =>
   daysBetween(iso, now) === 0 ? formatTime(locale, iso) : `${formatShortDate(locale, iso)} ${formatTime(locale, iso)}`;

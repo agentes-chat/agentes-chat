@@ -110,3 +110,20 @@ test("Connect is everyone's for Lodi, and its own AI has no Atende outras pessoa
   expect(steps).toContain('gates.view?.scope === "mine" ? null : (');
   expect(steps).toContain('t("noAi.lockedOwner")');
 });
+
+test("another AI answered for its plan: a quiet pill with Change, and its dimmed plans with why (ADR 0137 §7, amended)", () => {
+  const card = source("NoAiCard.tsx");
+  // The stand-in line: neutral (never `waiting`), its words in the reader's language, Change opens its settings.
+  expect(card).toContain("if (card.standIn) return <StandInLine standIn={card.standIn} />;");
+  expect(card).toContain("t(standInKey(standIn.why), { via: standIn.via, plan: standIn.plan })");
+  expect(card).toContain('router.push("/settings/right-hand" as never)');
+  const row = readFileSync(join(import.meta.dir, "../../src/features/chat/MessageRow.tsx"), "utf8");
+  expect(row).toContain('isStandInLine(meta) ? ""');
+  const screen = readFileSync(join(import.meta.dir, "../../src/features/right-hand/SettingsScreen.tsx"), "utf8");
+  expect(screen).toContain("rightHandUnusable(aiAccounts)");
+  expect(screen).toContain('t("rightHand.unusable.title", g)');
+  expect(screen).toContain('t("rightHand.unusable.computerOnly"');
+  // The way out is the workspace's computers, for who may connect one: no button of Lodi's own.
+  expect(screen).toContain('can(org, "pair_computers") && edition !== "cloud" && cant.some((u) => u.why === "away")');
+  expect(`${card}${screen}`).not.toContain("Give Lodi a computer");
+});

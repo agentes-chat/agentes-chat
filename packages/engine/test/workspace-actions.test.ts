@@ -706,6 +706,17 @@ describe("the rest of the app through the right hand", () => {
       "Done at once",
     );
     expect((await status())?.status).toBe("canceled");
+    // Done at once, the stop is the right hand's at the owner's word, never the owner's own press.
+    const lodi = await lodiOf(f);
+    expect((await status())?.error).toBe(`canceled_by:${f.owner.id}|agent:${lodi.id}`);
+    const [audit] = await f.db
+      .select()
+      .from(schema.auditLog)
+      .where(and(eq(schema.auditLog.action, "run.canceled"), eq(schema.auditLog.targetId, run.id)));
+    expect(audit).toMatchObject({ actorType: "agent", actorId: lodi.id, onBehalfOfUserId: f.owner.id });
+    const notices = await f.db.select().from(schema.messages).where(eq(schema.messages.orgId, f.org.id));
+    const told = notices.find((m) => (m.meta.notice as { kind?: string } | undefined)?.kind === "run_stopped");
+    expect(told?.body).toStartWith(`${lodi.name}, at ana's word, stopped your task`);
     const self = await act(f, ctx, { action: "stop_work", input: { agent: "@lodi" } });
     expect(self).toMatchObject({ isError: true, content: "That is you: say so, and stop nothing." });
     const none = await act(f, ctx, { action: "continue_work", input: { agent: "@dev" } });

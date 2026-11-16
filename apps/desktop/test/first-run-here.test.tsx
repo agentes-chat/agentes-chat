@@ -165,6 +165,91 @@ describe("Run agentes.chat on this Mac", () => {
       { here: { run: false } },
     ));
 
+  test("running with no account left: the window opens on the form, says so, and Start makes the new owner", () => {
+    const sent: unknown[] = [];
+    return firstRun(
+      "here",
+      async ({ el, press, until }) => {
+        await until(() => el.querySelector("form.dk-fr__here"));
+        expect(el.querySelector(".dk-lead")?.textContent).toBe(
+          "No account is left on it. Your name and email make you its new owner.",
+        );
+        const [name, email] = [...el.querySelectorAll(".dk-fr__who input")];
+        await act(async () => typeInto(name ?? null, "Carla Dias"));
+        await act(async () => typeInto(email ?? null, "carla@example.com"));
+        await press("Start");
+        await until(() => sent.length > 0);
+        expect(sent[0]).toMatchObject({ name: "Carla Dias", email: "carla@example.com" });
+      },
+      {
+        here: { owner: false, pace: 10 },
+        host: (host) => {
+          const install = host.installLocalServer;
+          host.installLocalServer = async (choice) => {
+            sent.push(choice);
+            return install(choice);
+          };
+        },
+      },
+    );
+  });
+
+  test("open already when the app finds no account left: shown again, it goes to the form", () => {
+    let gone = false;
+    let mode: "owner" | null = null;
+    return firstRun(
+      "here",
+      async ({ el, host, until }) => {
+        await until(() => el.querySelector(".dk-fr")?.getAttribute("data-screen") === "choose");
+        gone = true;
+        mode = "owner";
+        await act(async () => host.showWindow("welcome"));
+        await until(() => el.querySelector("form.dk-fr__here .dk-fr__who"));
+        expect(el.querySelector(".dk-lead")?.textContent).toStartWith("No account is left on it.");
+      },
+      {
+        host: (host) => {
+          const read = host.localServer;
+          host.localServer = async () => ({ ...(await read()), ...(gone ? { owner: false } : {}) });
+          host.welcomeMode = async () => {
+            const taken = mode;
+            mode = null;
+            return taken;
+          };
+        },
+      },
+    );
+  });
+
+  test("erased from Preferences: it opens on Run here's form, its first line saying where the old data went", () =>
+    firstRun("here", async ({ el, host, until }) => {
+      await until(() => el.querySelector(".dk-fr")?.getAttribute("data-screen") === "choose");
+      await act(async () => {
+        await host.eraseLocalServer();
+      });
+      await until(() => el.querySelector("form.dk-fr__here .dk-fr__who"));
+      expect(el.querySelector(".dk-lead")?.textContent).toBe(
+        "Erased. Its old data is in ~/agentes.chat erased 2026-11-14.",
+      );
+    }));
+
+  test("no account left, but opened for something else: the window starts where it always does", () =>
+    firstRun(
+      "here",
+      async ({ el, host, until }) => {
+        await until(() => el.querySelector(".dk-fr")?.getAttribute("data-screen") === "choose");
+        await act(async () => host.addWorkspace());
+        await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
+        expect(el.querySelector(".dk-fr")?.getAttribute("data-screen")).toBe("choose");
+      },
+      {
+        host: (host) => {
+          const read = host.localServer;
+          host.localServer = async () => ({ ...(await read()), owner: false });
+        },
+      },
+    ));
+
   test("running here already: one sentence, never its address", () =>
     firstRun("here", async ({ el, press, until }) => {
       await press("On this Mac");

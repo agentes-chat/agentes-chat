@@ -6,6 +6,7 @@ import type {
   AiComputer,
   AiStatus,
   BrainUnavailable,
+  CodexVersionRequirement,
   ConnectIntent,
   Edition,
   Machine,
@@ -13,7 +14,7 @@ import type {
   MachineAccountKind,
   OrgStanding,
 } from "../api/types";
-import { ownSignInReady, ownSignIns, planWordOf } from "./ai-accounts";
+import { type OwnSignInRow, ownSignInReady, ownSignIns, planWordOf } from "./ai-accounts";
 import { answersOthers, audienceOf } from "./audience";
 import { type BillingHold, billingHoldOf } from "./billing";
 import { type SetupView, setupPending } from "./computer";
@@ -64,6 +65,33 @@ export interface NoAiCard {
   /** With `plans_not_yours`: whose the workspace's plans are (first name) and what they are ("Claude"). */
   owner?: string;
   plan?: string;
+  /**
+   * Not a card: the right hand answered with another AI than its plan (`postStandInLine`), a quiet line under its reply
+   * with "Change" (`isStandInLine`). No banner, Connect or "Answer now" goes with it.
+   */
+  standIn?: StandIn;
+}
+
+/** Why the right hand's own plan didn't answer, as its stand-in line says it (`chat.standIn.{why}`). */
+export type StandInWhy = "needsComputer" | "away" | "notShared" | "limit" | "cant";
+const STAND_IN_WHYS: ReadonlySet<string> = new Set<StandInWhy>(["needsComputer", "away", "notShared", "limit", "cant"]);
+
+/** What answered for the right hand (`via`, "Acme OpenAI"), the plan that couldn't ("Claude Max") and why. */
+export interface StandIn {
+  via: string;
+  plan: string;
+  why: StandInWhy;
+}
+
+function standInOf(raw: unknown): StandIn | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.via !== "string" || typeof o.plan !== "string") return null;
+  return {
+    via: o.via,
+    plan: o.plan,
+    why: typeof o.why === "string" && STAND_IN_WHYS.has(o.why) ? (o.why as StandInWhy) : "cant",
+  };
 }
 
 /** Why the right hand's plan can't think for this message (`NoAiCard.planLine`). */
@@ -107,6 +135,8 @@ export function noAiCardOf(meta: Record<string, unknown> | null | undefined): No
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   if (typeof o.agentId !== "string") return null;
+  const standIn = standInOf(o.standIn);
+  if (standIn) return { agentId: o.agentId, forUserId: null, intent: "task", standIn };
   const signedOut = o.reason === "not_signed_in";
   const own =
     signedOut &&
@@ -137,6 +167,19 @@ export function noAiCardOf(meta: Record<string, unknown> | null | undefined): No
       : {}),
   };
 }
+
+/** An agent's message is the right hand's stand-in line (`NoAiCard.standIn`), not a card that it has no AI. */
+export const isStandInLine = (meta: Record<string, unknown> | null | undefined) =>
+  noAiCardOf(meta)?.standIn !== undefined;
+
+/** A real no-AI card: one that says the agent has no AI, never the stand-in line. */
+export const noAiCardShown = (meta: Record<string, unknown> | null | undefined) => {
+  const card = noAiCardOf(meta);
+  return card && !card.standIn ? card : null;
+};
+
+/** The stand-in line's words (`chat.standIn.{why}`, with `via` and `plan`). */
+export const standInKey = (why: StandInWhy) => `chat.standIn.${why}` as const;
 
 /**
  * "O Claude daqui é só de Walter" (`plans_not_yours`, ADR 0059 §3): whose the workspace's plans are when none serves
@@ -388,7 +431,12 @@ export type PlanGate =
   /** No computer for the agent: none connected (self-host), or the Cloud's said ready and still gave it none. */
   | { state: "missing" }
   /** `overdue`: on the Cloud, it should have passed by itself by now and didn't. */
-  | { state: "unsupported"; reason: BrainUnavailable | "keys"; overdue?: boolean }
+  | {
+      state: "unsupported";
+      reason: BrainUnavailable | "keys";
+      overdue?: boolean;
+      codexVersion?: CodexVersionRequirement;
+    }
   /** `owner`: the viewer doesn't own the agent; `computer`: only whoever connected it adds a sign-in there. */
   | { state: "locked"; who: "owner" | "computer" }
   /** The Cloud's workspace is on a billing hold: it has no computer to sign in on until its agentes.chat plan is active. */
@@ -414,9 +462,11 @@ export const unsupportedGate = (
   edition: Edition | null,
   setup: SetupView | null,
   now = Date.now(),
+  codexVersion?: CodexVersionRequirement,
 ): PlanGate => ({
   state: "unsupported",
   reason,
+  ...(reason === "outdated" && codexVersion ? { codexVersion } : {}),
   ...(edition === "cloud" && reason !== "tool_off" && installOverdue(setup, now) ? { overdue: true } : {}),
 });
 
@@ -454,7 +504,8 @@ export function planGate({
     return edition === "cloud" && !caughtUp ? { state: "preparing", view: null } : { state: "missing" };
   if (!brain.computer.online) return { state: "offline" };
   const option = brain.options.find((o) => o.kind === kindOf(choice));
-  if (!option?.available) return unsupportedGate(option?.reason ?? "not_reported", edition, setup, now);
+  if (!option?.available)
+    return unsupportedGate(option?.reason ?? "not_reported", edition, setup, now, option?.codexVersion);
   if (!brain.accountsSupported) return unsupportedGate("runner_old", edition, setup, now);
   if (isPlanId(choice) && !computer?.keys) return unsupportedGate("keys", edition, setup, now);
   if (!brain.canManageAccounts) return { state: "locked", who: "computer" };
@@ -507,7 +558,10 @@ export function planGateWithoutAgent({
   }
   if (!computer.online) return { gate: { state: "offline" }, computer };
   if (computer.brains[kind] !== true)
-    return { gate: unsupportedGate(computer.off?.[kind] ?? "not_reported", edition, setup, now), computer };
+    return {
+      gate: unsupportedGate(computer.off?.[kind] ?? "not_reported", edition, setup, now, computer.codexVersion),
+      computer,
+    };
   if (isPlanId(choice) && !computer.keys) return { gate: unsupportedGate("keys", edition, setup, now), computer };
   return { gate: { state: "ready" }, computer };
 }
@@ -627,6 +681,8 @@ export function gateLine(
     };
   if (gate.reason === "keys") return { text: t("aiAccounts.connect.needs.keys"), rechecks };
   if (gate.reason === "tool_off") return { text: t("brain.reasons.tool_offOne", { computer, program }), rechecks };
+  if (gate.reason === "outdated" && gate.codexVersion)
+    return { text: t("brain.reasons.outdatedCodex", { computer, ...gate.codexVersion }), rechecks };
   return { text: t(`brain.reasons.${gate.reason}`, { computer, program }), rechecks };
 }
 
@@ -848,3 +904,23 @@ export const teamThinks = (agentIds: readonly string[], status: AiStatus | undef
   if (states.some((s) => s === undefined)) return undefined;
   return states.length > 0 && states.every((s) => s !== "no_ai");
 };
+
+/**
+ * Plans the right hand can't think with now, for the dialog that picks its AI (dimmed, each with why): a computer's own
+ * sign-in, which names no account (it thinks only with a plan signed in as one), and an account whose computer is
+ * away. Nothing to press there: it stands in on what can think meanwhile (ADR 0137 §7, amended 2026-11-15).
+ */
+export type UnusablePlan =
+  | { id: string; why: "computerOnly"; own: OwnSignInRow }
+  | { id: string; why: "away"; account: AiAccounts["accounts"][number] };
+
+export function rightHandUnusable(view: AiAccounts | null | undefined): UnusablePlan[] {
+  if (!view) return [];
+  const away = new Set(view.computers.filter((c) => !c.online).map((c) => c.machineId));
+  return [
+    ...ownSignIns(view).map((own): UnusablePlan => ({ id: own.key, why: "computerOnly", own })),
+    ...view.accounts
+      .filter((a) => a.status === "active" && away.has(a.machineId))
+      .map((account): UnusablePlan => ({ id: account.id, why: "away", account })),
+  ];
+}

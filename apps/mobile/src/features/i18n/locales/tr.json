@@ -882,6 +882,8 @@
     },
     "doneToast": "Tamamlandı",
     "undo": "Geri al",
+    "doneAllToast_one": "{{count}} bildirim Tamamlananlar'a taşındı",
+    "doneAllToast_other": "{{count}} bildirim Tamamlananlar'a taşındı",
     "day": {
       "today": "Bugün",
       "yesterday": "Dün",
@@ -1193,6 +1195,7 @@
     "blocked": "{{names}} çalışma alanının tek sahibi sizsiniz. Web sitesinde, Kişiler bölümünde başka birini sahip yapın, sonra geri gelin.",
     "addPasswordFirst": "Önce web sitesinden hesabınıza bir şifre ekleyin, sonra buraya yazın.",
     "addPasswordWeb": "Web sitesinde şifre ekle",
+    "onThisComputer": "Bu sunucuyu çalıştıran bilgisayardaki agentes.chat uygulamasından silin.",
     "otherAccount": "Başka bir hesaba giriş yaptınız. Hiçbir şey silinmedi.",
     "hold": "Silmek için basılı tutun"
   },
@@ -2012,6 +2015,7 @@
       "waitingFor": "{{names}}, {{person}} için {{device}} cihazını bekliyor",
       "tool_request": "{{names}}, {{device}} cihazınızda {{tool}} açmanızı istiyor",
       "cli_request": "{{names}}, {{device}} cihazınıza {{tool}} kurmanızı istiyor",
+      "folder_request": "{{names}}, {{device}} cihazınızda {{path}} klasörünü istiyor",
       "allowOnce": "Bir kez izin ver",
       "always": "{{name}} için her zaman izin ver",
       "no": "Hayır",

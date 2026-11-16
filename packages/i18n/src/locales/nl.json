@@ -391,6 +391,12 @@
       "short": "praten",
       "say": "praat met de agents"
     },
+    "view_all_agents": {
+      "title": "Alle agents zien",
+      "desc": "In Team en de zijbalk. Zonder dit alleen de agents die de persoon antwoorden.",
+      "short": "alle agents zien",
+      "say": "ziet alle agents"
+    },
     "assign_work": {
       "title": "Agents missies geven",
       "desc": "Vragen om lang werk dat vanzelf doorloopt.",
@@ -698,7 +704,9 @@
     },
     "desktopOwner": {
       "continue": "Doorgaan op deze {{device}}",
-      "text": "Je hebt agentes.chat op deze {{device}} ingericht: geen wachtwoord nodig."
+      "text": "Je hebt agentes.chat op deze {{device}} ingericht: geen wachtwoord nodig.",
+      "gone": "De eigenaar van deze server heeft zijn account verwijderd, dus ‘Doorgaan op deze {{device}}’ kan niemand aanmelden. Meld je in plaats daarvan aan met je eigen e-mail.",
+      "none": "Op agentes.chat op deze {{device}} is geen account meer over. Maak de nieuwe eigenaar aan in het venster dat openging."
     },
     "server": {
       "into": "Aanmelden bij <b>{{server}}</b>",
@@ -1767,6 +1775,12 @@
     "use": "Dit icoon gebruiken",
     "inUse": "In gebruik",
     "sky": "Achtergrond",
+    "pose": "Houding",
+    "poses": {
+      "front": "Recht vooruit",
+      "peek": "Glurend"
+    },
+    "peekBare": "Glurend draagt hij geen accessoire.",
     "expression": "Gezichtsuitdrukking",
     "ready": "Kant-en-klare iconen",
     "oneOrOther": "Met een accessoire blijft de uitdrukking de gewone.",
@@ -2625,6 +2639,13 @@
   "rightHand": {
     "label": "je rechterhand",
     "labelCapitalized": "Je rechterhand",
+    "unusable": {
+      "title": "Kan nu niet voor {{name}} denken",
+      "computerOnly": "Alleen aangemeld op {{computer}}. {{name}} denkt met een abonnement dat als account is aangemeld.",
+      "away": "Van {{owner}}, op {{computer}}, die afwezig is.",
+      "awayYours": "Van jou, op {{computer}}, die afwezig is.",
+      "connect": "Een computer koppelen"
+    },
     "newDot": "Nieuw",
     "actsAsYou": "handelt met jouw rechten",
     "composerHint": "niets verandert zonder jou",
@@ -2776,6 +2797,7 @@
         "ai_account": "Alleen de eigenaar van het account geeft het",
         "name": "Alleen admins hernoemen een agent",
         "look": "Alleen admins en de verantwoordelijke wijzigen het uiterlijk",
+        "group": "Alleen admins verplaatsen een agent naar een andere afdeling",
         "reports_to": "Alleen admins veranderen aan wie een agent rapporteert",
         "many": "Alleen admins maken deze wijzigingen"
       }
@@ -2790,6 +2812,7 @@
       "channel": "Kanaal",
       "name": "Naam",
       "look": "Uiterlijk",
+      "group": "Afdeling",
       "reports_to": "Rapporteert aan",
       "skill": "Skill {{name}}"
     },
@@ -3400,7 +3423,18 @@
     "never": {
       "title": "Nooit vragen",
       "text": "Vraagt nooit, ook niet bij merge, deploy, betalingen en routines."
-    }
+    },
+    "change": "Wijzigen wanneer hij vraagt",
+    "now": "{{name}} nu: {{level}}.",
+    "nowEveryAgent": "Alle agents nu: {{level}}.",
+    "undo": "Ongedaan maken",
+    "everyAgent": "Voor alle agents in de workspace",
+    "follows": "Volgt de workspace",
+    "edit": "Wijzigen",
+    "workspaceLead": "Wanneer agents iemand vragen voordat ze iets doen.",
+    "workspaceHelp": "Elke agent volgt deze keuze tot iemand die van de agent wijzigt op zijn pagina.",
+    "ownAgents_one": "{{count}} agent heeft een eigen keuze en verandert niet.",
+    "ownAgents_other": "{{count}} agents hebben een eigen keuze en veranderen niet."
   },
   "brakes": {
     "title": "Werk waar niemand om vroeg",
@@ -4933,6 +4967,7 @@
     "summaryAllRead": "alles gelezen",
     "summaryNothing": "Niets nieuws hier.",
     "readAll": "Alles als gelezen markeren",
+    "doneAll": "Alles afronden",
     "filters": "Meldingen filteren",
     "filter": {
       "all": "Alle",
@@ -5161,6 +5196,8 @@
       "undo": "Ongedaan maken",
       "readAll_one": "{{count}} als gelezen gemarkeerd",
       "readAll_other": "{{count}} als gelezen gemarkeerd",
+      "doneAll_one": "{{count}} verplaatst naar Afgerond",
+      "doneAll_other": "{{count}} verplaatst naar Afgerond",
       "sent": "Antwoord verstuurd",
       "see": "Bekijken",
       "answered": "{{name}} heeft je antwoord gekregen",
@@ -7720,6 +7757,18 @@
     },
     "assigneeFilter": "Toegewezen aan",
     "priorityFilter": "Prioriteit",
+    "labelFilter": "Label",
+    "table": {
+      "task": "Taak",
+      "github": "GitHub",
+      "sortBy": "Sorteren op {{column}}",
+      "resize": "Breedte van kolom {{column}} aanpassen"
+    },
+    "fold": {
+      "open": "{{name}} openen",
+      "close": "{{name}} inklappen",
+      "column": "Kolom inklappen"
+    },
     "title": "Taken",
     "summary": "{{open}} open · {{agents}} bij agents",
     "search": "Taken zoeken",
@@ -7762,8 +7811,16 @@
       "order": {
         "manual": "Handmatig",
         "priority": "Prioriteit",
-        "due": "Deadline"
+        "due": "Deadline",
+        "updated": "Recent"
       },
+      "done": "Voltooid",
+      "doneIs": {
+        "all": "Alle",
+        "recent": "Laatste {{days}} dagen",
+        "hidden": "Geen"
+      },
+      "hideEmpty": "Lege groepen verbergen",
       "field": {
         "project": "Project",
         "assignee": "Toegewezen aan",
@@ -7789,6 +7846,7 @@
       "canceled": "#{{number}} staat weer op zijn plek.",
       "assigned": "#{{number}} ligt nu bij {{name}}.",
       "unassigned": "#{{number}} is nu aan niemand toegewezen.",
+      "removed": "#{{number}} ligt niet meer bij {{name}}.",
       "prioritized": "#{{number}} heeft nu prioriteit {{priority}}."
     },
     "canceledColumn": "Geannuleerd",
@@ -7943,6 +8001,10 @@
       "high": "hoog"
     },
     "noAssignee": "Niet toegewezen",
+    "assignees": {
+      "people": "Mensen en agents",
+      "done": "Klaar"
+    },
     "agentRole": "Agent · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -8086,7 +8148,9 @@
       "status_changed": "heeft de status gewijzigd in {{status}}",
       "priority_changed": "heeft de prioriteit gewijzigd in {{priority}}",
       "assigned": "heeft de taak toegewezen",
-      "unassigned": "heeft de toewijzing verwijderd",
+      "unassigned": "heeft een toewijzing verwijderd",
+      "assigned_named": "heeft de taak toegewezen aan {{name}}",
+      "unassigned_named": "heeft {{name}} van de taak gehaald",
       "due_date_set": "heeft de deadline op {{date}} gezet",
       "due_date_removed": "heeft de deadline verwijderd",
       "pr_linked": "heeft PR #{{number}} gekoppeld",
@@ -8686,6 +8750,7 @@
       "waiting_budget_late": "Zijn moment gemist: het budget werd te laat vernieuwd",
       "stopped": "Door iemand gestopt",
       "stoppedBy": "Gestopt door {{name}}",
+      "stalled": "Vrijgegeven: er bewoog 20 minuten niets",
       "no_report": "Klaar zonder het resultaat te melden",
       "handoff_blocked": "Kon het niet melden: de routine is gepauzeerd of wie hem maakte, kan daar niet meer posten",
       "deleted": "Gestopt: de routine is verwijderd",
@@ -10167,7 +10232,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "Een snel model van TypeSafe, gemaakt voor snelle beslissingen. agentes.chat stelt het kleine vragen, zoals wie moet antwoorden. Je betaalt TypeSafe rechtstreeks.",
+    "about": "Een snel model van TypeSafe, gemaakt voor snelle beslissingen. agentes.chat stelt het kleine vragen, zoals wie moet antwoorden. Je betaalt TypeSafe rechtstreeks, of via OpenRouter voor dezelfde prijs.",
     "lead": "Helpt je agents samen te werken als team.",
     "how": "Hoe Jev werkt",
     "why": {
@@ -10208,6 +10273,32 @@
       "envInvalid": "TypeSafe heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (TYPESAFE_API_KEY)."
     },
     "checkAgain": "Opnieuw controleren",
+    "via": {
+      "label": "Waar je voor Jev betaalt",
+      "typesafe": "TypeSafe",
+      "typesafeText": "Een account bij TypeSafe zelf, met prepaid tegoed.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "Met een OpenRouter-sleutel, voor dezelfde prijs.",
+      "connected": "Sleutel al gekoppeld"
+    },
+    "openRouter": {
+      "create": "Maak een sleutel aan bij OpenRouter",
+      "createHint": "Met tegoed bij OpenRouter. Jev kost hetzelfde als bij TypeSafe: US$ {{price}} per miljoen tokens. Kiezen wie antwoordt kost ongeveer US$ {{call}}.",
+      "open": "OpenRouter openen",
+      "placeholder": "Je OpenRouter-sleutel",
+      "shape": "OpenRouter-sleutels beginnen met sk-or-v1-. Controleer hem en plak hem opnieuw.",
+      "invalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Kopieer hem opnieuw van de sleutelpagina.",
+      "keyName": "OpenRouter-sleutel",
+      "same": "Die uit Sleutels van aanbieders",
+      "forAll": "Hij betaalt Jev voor elke werkruimte op deze server.",
+      "turnOn": "Jev aanzetten",
+      "otherKey": "Een andere sleutel gebruiken",
+      "line": {
+        "invalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Maak een nieuwe aan.",
+        "no_credit": "Voeg tegoed toe bij OpenRouter. Jev gaat vanzelf weer verder.",
+        "envInvalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (TYPESAFE_API_KEY)."
+      }
+    },
     "remove": {
       "title": "De Jev-sleutel verwijderen?",
       "text": "Agents blijven ook zonder werken."
@@ -10325,6 +10416,10 @@
       "removeCopies": "Verwijderen",
       "copiesRemoved_one": "{{count}} ongebruikte login verwijderd.",
       "copiesRemoved_other": "{{count}} ongebruikte logins verwijderd.",
+      "removeAllGrok": "Alle Grok-aanmeldingen verwijderen",
+      "removeAllTitle": "Alle {{n}} Grok-aanmeldingen verwijderen?",
+      "removeAllText": "Ze denken niet meer voor hun agenten op {{computers}}. Aanmeldingen van anderen blijven staan.",
+      "removeAllDone": "{{n}} Grok-aanmeldingen verwijderd.",
       "disconnect": "Ontkoppelen",
       "renameTitle": "{{label}} hernoemen",
       "nameLabel": "Naam",
@@ -10386,6 +10481,8 @@
       },
       "resetsAt": "reset om {{time}}",
       "resetsOn": "reset {{day}} om {{time}}",
+      "allModels": "Alle modellen",
+      "onlyModels": "Alleen {{name}}",
       "almost": "Bijna aan de limiet",
       "limited": "Limiet bereikt",
       "limitedUntil": "Limiet bereikt tot {{when}}",
@@ -10551,6 +10648,9 @@
     "keys": "Enter verstuurt · Esc verwijdert",
     "keysHold": "Loslaten om te versturen · Esc verwijdert",
     "keysPaused": "Gepauzeerd · Spatie luistert · Enter verstuurt · Esc verwijdert",
+    "askDiscard": "Audio verwijderen? Je tekst blijft staan.",
+    "askDelete": "Verwijderen",
+    "askKeep": "Houden",
     "pausePlay": "Pauzeren",
     "seek": "Positie in de audio",
     "speedAt": "Snelheid {{speed}}×",
@@ -11528,7 +11628,6 @@
       "open": "Model van {{agent}} wijzigen",
       "ownSignIn": "Account van deze computer",
       "apiKey": "{{provider}} met een API-sleutel",
-      "default": "standaard",
       "refused": "Geweigerd voor deze sleutel",
       "textOnly": "Leest alleen tekst",
       "search": "Modellen zoeken",
@@ -11615,6 +11714,10 @@
       "cant_start": "{{program}} staat op {{computer}}, maar start niet.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
       "outdated": "De versie op {{computer}} is oud. Werk Codex bij om het te gebruiken.",
+      "outdatedCodex": "Op {{computer}} is Codex CLI {{detected}} gevonden. Werk bij naar versie {{minimum}} of hoger.",
+      "codexUpdateGuide": "Codex CLI bijwerken",
+      "codexRecheckHere": "Kies na het bijwerken Opnieuw controleren bij Codex in Voorkeuren › Tools.",
+      "codexRecheckThere": "Werk Codex CLI bij op {{computer}}. Als daar de desktopapp draait, kies je Opnieuw controleren bij Codex in Voorkeuren › Tools.",
       "system": "{{program}} werkt nog niet op het systeem van {{computer}}.",
       "no_computerCloud": "Klaar zodra {{computer}} klaar is."
     },
@@ -12153,8 +12256,8 @@
       "agentes": "agentes.chat-opslag",
       "server": "deze server"
     },
-    "s3": "Je eigen bucket",
-    "s3Text": "S3, R2, MinIO en andere die compatibel zijn met S3.",
+    "s3": "Je eigen opslag",
+    "s3Text": "Cloudflare R2, Amazon S3, Backblaze B2 of een andere S3-compatibele dienst.",
     "current": "In gebruik",
     "usage": {
       "files": "{{size}} aan bestanden",
@@ -12204,7 +12307,139 @@
     "backText": "Nieuwe bestanden gaan weer naar {{place}}. Wat al in je bucket staat, blijft daar.",
     "backDone": "Opslag overgezet naar {{place}}.",
     "required": "Vul dit veld in.",
-    "keysRequired": "Vul de access key en het secret in."
+    "keysRequired": "Vul de access key en het secret in.",
+    "connect": {
+      "open": "Opslag koppelen",
+      "edit": "Koppeling bewerken",
+      "pickTitle": "Waar staat je opslag?",
+      "pickText": "Kies de dienst. We laten zien waar je daar klikt en wat je hier plakt.",
+      "provider": {
+        "r2": "Cloudflare R2",
+        "s3": "Amazon S3",
+        "b2": "Backblaze B2",
+        "other": "Anders"
+      },
+      "providerText": {
+        "r2": "Het eenvoudigst om helemaal nieuw op te zetten",
+        "s3": "Voor wie al AWS gebruikt",
+        "b2": "Voor wie daar al een account heeft",
+        "other": "MinIO, Wasabi en andere S3-compatibele diensten"
+      },
+      "title": {
+        "r2": "Cloudflare R2 koppelen",
+        "s3": "Amazon S3 koppelen",
+        "b2": "Backblaze B2 koppelen",
+        "other": "Andere opslag koppelen"
+      },
+      "editTitle": {
+        "r2": "Cloudflare R2 bewerken",
+        "s3": "Amazon S3 bewerken",
+        "b2": "Backblaze B2 bewerken",
+        "other": "Opslag bewerken"
+      },
+      "lede": {
+        "r2": "Twee stappen in Cloudflare. Daarna testen we voordat we overstappen.",
+        "s3": "Drie stappen in AWS. Daarna testen we voordat we overstappen.",
+        "b2": "Twee stappen in Backblaze. Daarna testen we voordat we overstappen.",
+        "other": "Elke dienst die compatibel is met S3. Daarna testen we voordat we overstappen."
+      },
+      "editLede": "Pas aan wat er veranderd is. Laat de sleutels leeg om de opgeslagen sleutels te houden.",
+      "bucketName": "Bucketnaam",
+      "accessKeyId": "Toegangssleutel-ID",
+      "secret": "Geheime toegangssleutel",
+      "r2Endpoint": "R2-adres",
+      "b2Endpoint": "Endpoint van de bucket",
+      "region": "Regio",
+      "regionPick": "Kies de regio",
+      "regionOption": "{{name}} · {{code}}",
+      "theirName": {
+        "r2Key": "In Cloudflare: Access Key ID",
+        "r2Secret": "In Cloudflare: Secret Access Key",
+        "r2Endpoint": "In Cloudflare: het endpoint dat eindigt op r2.cloudflarestorage.com.",
+        "s3Key": "In AWS: Access key",
+        "s3Secret": "In AWS: Secret access key",
+        "b2Key": "In Backblaze: keyID",
+        "b2Secret": "In Backblaze: applicationKey",
+        "b2Endpoint": "De regio halen we hieruit."
+      },
+      "step": {
+        "bucketTitle": "Maak een bucket",
+        "keyTitle": "Maak de toegangssleutel",
+        "userTitle": "Maak een gebruiker alleen voor agentes.chat",
+        "r2Bucket": "Open <b>R2</b> in het Cloudflare-dashboard en klik op <b>Create bucket</b>. Elke naam is goed.",
+        "r2Key": "Klik op de R2-pagina onder <b>API Tokens</b> op <b>Manage</b> en daarna op <b>Create API Token</b>. Kies de machtiging <b>Object Read & Write</b> en je bucket. Aan het eind toont Cloudflare de drie waarden hieronder maar één keer.",
+        "s3Bucket": "Open <b>S3</b> in de AWS-console en klik op <b>Create bucket</b>. Noteer de regio die je kiest.",
+        "s3User": "Ga in <b>IAM</b> naar <b>Users</b> en klik op <b>Create user</b>. Maak bij de machtigingen een beleid met de tekst die je hieronder kopieert: dat geeft alleen toegang tot deze bucket.",
+        "s3Key": "Open <b>Security credentials</b> bij de nieuwe gebruiker en klik op <b>Create access key</b>. Kies <b>Application running outside AWS</b> en plak beide waarden.",
+        "b2Bucket": "Open <b>Buckets</b> in Backblaze en klik op <b>Create a Bucket</b>. Kopieer op de pagina van de bucket het <b>Endpoint</b>.",
+        "b2Key": "Open <b>Application Keys</b> en klik op <b>Add a New Application Key</b>. Geef hem toegang tot je bucket met <b>Read and Write</b>. De master key van het account werkt hier niet."
+      },
+      "openR2": "R2 openen",
+      "openS3": "S3 openen",
+      "openIam": "IAM openen",
+      "openB2": "Backblaze openen",
+      "copyPolicy": "Beleid kopiëren",
+      "policyCopied": "Beleid gekopieerd, met de bucket {{bucket}}.",
+      "back": "Terug",
+      "testAgain": "Opnieuw testen",
+      "passed": "De verbinding werkt: we hebben een testbestand geschreven, gelezen, in de lijst gezien en verwijderd.",
+      "permissionHint": {
+        "r2": "Controleer in Cloudflare of het token de machtiging <b>Object Read & Write</b> heeft en toegang tot de bucket {{bucket}}. Pas het aan en test opnieuw.",
+        "s3": "Controleer in AWS of de gebruiker het in stap 2 gekopieerde beleid heeft, met de bucket {{bucket}}. Pas het aan en test opnieuw.",
+        "b2": "Controleer in Backblaze of de sleutel <b>Read and Write</b> heeft en toegang tot de bucket {{bucket}}. Pas het aan en test opnieuw."
+      },
+      "inUse": "{{provider}} · {{bucket}}",
+      "inUseAt": "{{bucket}} op {{host}}",
+      "stepError": {
+        "auth": "De toegangssleutel of de geheime sleutel werd niet geaccepteerd.",
+        "permission": "De sleutel mag deze stap niet uitvoeren.",
+        "bucketMissing": "Deze bucket bestaat niet op dit adres.",
+        "region": "Dit is niet de regio van de bucket.",
+        "network": "Het adres was niet bereikbaar.",
+        "address": "Het adres is niet geldig.",
+        "https": "Gebruik een adres dat begint met https://.",
+        "internal": "Dit adres verwijst naar een intern netwerk.",
+        "hostNotFound": "We konden dit adres niet vinden.",
+        "notFound": "Het testbestand kwam niet terug bij het lezen.",
+        "unexpected": "Onverwachte fout bij de communicatie met de opslag.",
+        "invalidBucket": "De bucketnaam is niet geldig.",
+        "keysRequired": "Vul beide sleutels in."
+      },
+      "awsRegion": {
+        "us-east-1": "VS-Oost (Noord-Virginia)",
+        "us-east-2": "VS-Oost (Ohio)",
+        "us-west-1": "VS-West (Noord-Californië)",
+        "us-west-2": "VS-West (Oregon)",
+        "ca-central-1": "Canada (Centraal)",
+        "ca-west-1": "Canada-West (Calgary)",
+        "mx-central-1": "Mexico (Centraal)",
+        "sa-east-1": "Zuid-Amerika (São Paulo)",
+        "eu-central-1": "Europa (Frankfurt)",
+        "eu-central-2": "Europa (Zürich)",
+        "eu-west-1": "Europa (Ierland)",
+        "eu-west-2": "Europa (Londen)",
+        "eu-west-3": "Europa (Parijs)",
+        "eu-south-1": "Europa (Milaan)",
+        "eu-south-2": "Europa (Spanje)",
+        "eu-north-1": "Europa (Stockholm)",
+        "il-central-1": "Israël (Tel Aviv)",
+        "me-south-1": "Midden-Oosten (Bahrein)",
+        "me-central-1": "Midden-Oosten (VAE)",
+        "af-south-1": "Afrika (Kaapstad)",
+        "ap-east-1": "Azië-Pacific (Hongkong)",
+        "ap-south-1": "Azië-Pacific (Mumbai)",
+        "ap-south-2": "Azië-Pacific (Hyderabad)",
+        "ap-northeast-1": "Azië-Pacific (Tokio)",
+        "ap-northeast-2": "Azië-Pacific (Seoul)",
+        "ap-northeast-3": "Azië-Pacific (Osaka)",
+        "ap-southeast-1": "Azië-Pacific (Singapore)",
+        "ap-southeast-2": "Azië-Pacific (Sydney)",
+        "ap-southeast-3": "Azië-Pacific (Jakarta)",
+        "ap-southeast-4": "Azië-Pacific (Melbourne)",
+        "ap-southeast-5": "Azië-Pacific (Maleisië)",
+        "ap-southeast-7": "Azië-Pacific (Thailand)"
+      }
+    }
   },
   "githubApp": {
     "title": "GitHub-repository's",
@@ -12755,6 +12990,7 @@
     "connected": "Gekoppeld",
     "connectedAs": "Gekoppeld als {{account}}",
     "reconnectAdds": "Verbind {{name}} opnieuw zodat agents ook {{what}}.",
+    "sendsToo": "Stuurt ook mee: <names/>. Gebruik Opnieuw koppelen om dat te wijzigen.",
     "adds": {
       "github_project": "GitHub Projects kunnen gebruiken (borden lezen en kaarten verplaatsen)"
     },
@@ -13863,6 +14099,22 @@
     "needsKey": "Deze server ondersteunt geen OAuth. Koppel met een API-sleutel.",
     "notApproved": "{{name}} laat alleen goedgekeurde apps inloggen, en agentes.chat is nog niet goedgekeurd. Krijg je er een API-sleutel, dan kun je daarmee koppelen.",
     "serverSaid": "De server antwoordde: {{detail}}",
+    "headers": {
+      "title": "Headers van het verzoek",
+      "help": "Voor een sleutel die in een andere header hoort, of een gateway vóór de server. De meeste servers hebben er geen nodig.",
+      "value": "Waarde",
+      "nameOf": "Naam van header {{n}}",
+      "valueOf": "Waarde van header {{n}}",
+      "remove": "Header {{n}} verwijderen",
+      "add": "Header toevoegen",
+      "saved_one": "Opgeslagen: <names/>. Die blijft, tenzij je nieuwe invult.",
+      "saved_other": "Opgeslagen: <names/>. Die blijven, tenzij je nieuwe invult.",
+      "drop": "Verwijderen",
+      "dropping_one": "<names/> wordt verwijderd bij het opnieuw koppelen.",
+      "dropping_other": "<names/> worden verwijderd bij het opnieuw koppelen.",
+      "undo": "Ongedaan maken",
+      "refused": "De server accepteerde deze headers niet. Controleer de waarden, of koppel met een API-sleutel."
+    },
     "nothingYet": "Tot stap 3 is er niets beschikbaar voor agents.",
     "allCanUse": "Na het koppelen kan elke agent het gebruiken. Dat kun je later aanpassen.",
     "replace": "Vervangt de huidige login. Wie het gebruikt, blijft hetzelfde.",
@@ -14560,7 +14812,15 @@
       "gone": "Dat account is niet meer gekoppeld.",
       "unfinished": "Het inloggen bij Composio is niet afgerond. Probeer het opnieuw.",
       "unavailable": "Deze dienst kan hier niet gekoppeld worden.",
-      "misconfigured": "De koppeling met {{provider}} is verkeerd ingesteld op de server, dus die kan niet worden afgerond. Wie de server beheert, moet de sleutel vervangen in de instellingen van de app."
+      "misconfigured": "De koppeling met {{provider}} is verkeerd ingesteld op de server, dus die kan niet worden afgerond. Wie de server beheert, moet de sleutel vervangen in de instellingen van de app.",
+      "headerName": "Gebruik in de naam van een header alleen letters, cijfers en koppeltekens, zoals X-API-Key.",
+      "headerValue": "Vul een waarde in voor {{header}}: hooguit 2.000 tekens op één regel, zonder accenten of emoji.",
+      "headerReserved": "{{header}} wordt al met elk verzoek meegestuurd en is niet te wijzigen. Verwijder deze header.",
+      "headerTwice": "{{header}} staat twee keer in de lijst. Verwijder er één.",
+      "headerAndKey": "De API-sleutel wordt al als Authorization meegestuurd. Wis de sleutel, of verwijder deze header.",
+      "headersTooMany": "Een server neemt hooguit {{max}} headers. Verwijder er één om een andere toe te voegen.",
+      "headersWithSignIn": "Deze server vraagt om in te loggen, en een login kan nog geen headers meesturen. Verwijder de headers om in te loggen, of koppel met een API-sleutel.",
+      "headersUnreadable": "De opgeslagen headers konden niet worden gelezen. Vul ze opnieuw in of verwijder ze."
     },
     "wiki": {
       "githubNoNotes": "Geen Markdown-notities in deze link.",
@@ -14782,7 +15042,8 @@
       "invalidDescription": "De beschrijving moet 1 tot {{max}} tekens hebben.",
       "tooLarge": "Deze skill heeft {{size}} MB aan tekst en scripts, en de limiet is {{max}} MB.",
       "tooManyFiles": "Deze skill heeft {{files}} bestanden, en de limiet is {{max}}.",
-      "repoTooLarge": "De repository is te groot om te downloaden (max. {{max}} MB). Upload de map van de skill als .zip.",
+      "repoTooLarge": "De repository is te groot om te downloaden (max. {{max}} MB).",
+      "linkTooLarge": "De map van die link heeft te veel bestanden om te lezen. Plak de link van de eigen map van de skill.",
       "noFrontmatter": "De SKILL.md heeft bovenaan een blok nodig met naam en beschrijving, tussen twee regels met ---.",
       "bodyTooLong": "De SKILL.md is te lang (max. {{max}} tekens).",
       "noSkillMdZip": "Geen SKILL.md bovenin de map van de zip.",
@@ -14796,7 +15057,8 @@
     },
     "agentGroup": {
       "notFound": "Deze afdeling bestaat niet meer.",
-      "tooMany": "Deze werkruimte heeft al {{max}} afdelingen. Verwijder er eerst een."
+      "tooMany": "Deze werkruimte heeft al {{max}} afdelingen. Verwijder er eerst een.",
+      "ambiguous": "Twee afdelingen heten {{name}}. Geef er een een andere naam en probeer het opnieuw."
     },
     "rightHand": {
       "permanent": "De rechterhand hoort bij de werkruimte en blijft buiten de kanalen. Een @vermelding bereikt hem in elk kanaal.",
@@ -15670,6 +15932,7 @@
       "waiting": "<b>{{who}}</b> wacht op <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> vraagt je {{tool}} aan te zetten op je <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> vraagt je {{tool}} te installeren op je <b>{{deviceName}}</b>",
+      "folderRequest": "<b>{{who}}</b> vraagt je om de map {{path}} op je <b>{{deviceName}}</b>",
       "once": "Eén keer toestaan",
       "always": "Altijd",
       "no": "Nee",
@@ -16321,11 +16584,11 @@
       "rolesPersonal": "Wat ieder hier kan doen. Eigenaren kunnen alles."
     },
     "about": {
-      "basedOn": "Gebaseerd op <site>agentes.chat</site> van Codari Global, LLC",
+      "basedOn": "Gebaseerd op <site>agentes.chat</site> van AGENTESCHAT, LLC",
       "version": "Versie",
       "license": "Vrije software onder de <license>GNU Affero General Public License v3</license>, zonder garantie.",
       "source": "Broncode",
-      "copyright": "Copyright © 2026 Codari Global, LLC en bijdragers"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC en bijdragers"
     },
     "title": "Instellingen",
     "account": {
@@ -16358,6 +16621,8 @@
         "openLatest": "Nieuwste bericht",
         "textSize": "Tekstgrootte",
         "textSizeHelp": "Van berichten, in alle gesprekken en op al je apparaten",
+        "fullMessages": "Berichten volledig tonen",
+        "fullMessagesHelp": "Lange berichten zonder “Meer tonen”, in alle gesprekken en op al je apparaten",
         "textSizePhone": "Geldt voor de hele app, bovenop de tekstgrootte van je telefoon",
         "textXs": "Kleiner",
         "textSm": "Klein",
@@ -16761,6 +17026,18 @@
       "see": "Gebruik bekijken"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "Per soort",
+      "handoffs": "Overdrachten tussen agents",
+      "people": "Gesprekken met mensen",
+      "routines": "Routines"
+    },
+    "hint": {
+      "handoffs": "Het meeste gebruik deze week kwam van agents die elkaar werk overdragen. Vraag lang werk rechtstreeks aan de agent.",
+      "message": "Bericht aan {{name}}"
+    }
+  },
   "usageViews": {
     "signedOut": "Uitgelogd",
     "whose": "Van {{name}}",
@@ -16944,6 +17221,14 @@
       "text": "ChatGPT weigerde de snelheid Snel voor dit account of model, dus dit antwoord kwam op standaardsnelheid.",
       "action": "Agent openen"
     },
+    "standIn": {
+      "needsComputer": "Beantwoord met {{via}}: {{plan}} heeft een computer nodig.",
+      "away": "Beantwoord met {{via}}: de computer van {{plan}} is afwezig.",
+      "notShared": "Beantwoord met {{via}}: {{plan}} is alleen voor wie het koppelde.",
+      "limit": "Beantwoord met {{via}}: {{plan}} heeft zijn limiet bereikt.",
+      "cant": "Beantwoord met {{via}}: {{plan}} kan nu niet denken.",
+      "change": "Wijzigen"
+    },
     "modelStandIn": {
       "text": "{{plan}} heeft {{from}} met deze sleutel geweigerd. Ik heb geantwoord met {{to}}, dat er wel mee werkt.",
       "useAll": "{{model}} voor iedereen gebruiken",
@@ -17014,6 +17299,7 @@
       "waitingYourAnswer": "wacht op je antwoord",
       "queued": "in de rij",
       "handedOn": "wacht op andere agents",
+      "answered": "heeft geantwoord",
       "noAnswer": "gaf geen antwoord",
       "notFinished": "niet afgemaakt",
       "someAnswered": "{{done}} van {{total}} gaven antwoord",

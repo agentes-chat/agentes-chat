@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 66;
+export const MACHINE_PROTOCOL_VERSION = 67;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -669,6 +669,14 @@ export const ACCESS_ALLOW_PROTOCOL = 62;
  * switch on a plugged iPhone that hides it. Older runners answer `phone.look` at once and `xcode.open` `bad_request`.
  */
 export const IPHONE_DEV_MODE_PROTOCOL = 65;
+/**
+ * From this protocol on, in system mode a Grok Build sign-in is made for all of its owner's agents there too
+ * (`begin`'s `shared` for `grok`): root's `GROK_HOME` keeps the sign-in (`auth.json`, never lent) and each agent's
+ * turn gets a copy in its own folder for the account (`grok_auth` grant), a copy its Grok refreshed going back to
+ * root (`grok.auth`). An older runner lends the account's folder to one agent, so the server reads it as one login
+ * per agent, as before.
+ */
+export const SHARED_GROK_PROTOCOL = 67;
 
 /**
  * `clis.check`: the coding CLIs looked up again now, the PATH read again first (the apps' "I installed it, check again").
@@ -1321,16 +1329,16 @@ export const isLoginEmail = (v: unknown): v is string =>
   /^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}@[A-Za-z0-9][A-Za-z0-9-]*(\.[A-Za-z0-9][A-Za-z0-9-]*)+$/.test(v);
 
 /** The `agent-browser` release the runner and the desktop app ship (ADR 0040 §2). */
-export const AGENT_BROWSER_VERSION = "0.39.1";
+export const AGENT_BROWSER_VERSION = "0.42.0";
 /** Targets of `agent-browser`'s release assets (`agent-browser-<target>`, `.exe` on Windows). */
 export type AgentBrowserTarget = "darwin-arm64" | "darwin-x64" | "linux-arm64" | "linux-x64" | "win32-x64";
 /** SHA-256 (hex) of each release asset of `AGENT_BROWSER_VERSION`, checked before the binary is used. */
 export const AGENT_BROWSER_SHA256: Record<AgentBrowserTarget, string> = {
-  "darwin-arm64": "cc18fac41d9dc9821918340a136e643286ea05544c4dd35671b796f1a874cdef",
-  "darwin-x64": "339cb9aa6dfd404856cf938df34cd3b4779c61dfd57fc257be11b14fd1a885f9",
-  "linux-arm64": "9d8fdc586056df65747927ae166157c83af91b52cea287175e5544afd2591d33",
-  "linux-x64": "6906d3a2a67b05809932a93d99e53d1132373f0a52a617b2d6032dbb954df6fc",
-  "win32-x64": "af1ff5f2afd5c187fb50ac3bbc1e7114baadc180d67cef63f644af9031be5049",
+  "darwin-arm64": "b1b2946c95d218b035262483f2c6193e0f216c155c903bcc532ce47e29d8e72d",
+  "darwin-x64": "802883bc38519e550525f74bb3e7ca692029082bdd2b7c235c26167b130c8d66",
+  "linux-arm64": "a219b10251ecd85e5787d1126dc969d926ac8d2dea325f9d94413907a8856f40",
+  "linux-x64": "b69e0f5ea76dcb51f8f75da6bcb87c7f4d81f79b5738f1f08bd121b51cb3dc57",
+  "win32-x64": "8209f42e604d012f789caa14ae73a57200925608409fa09427b0fd6e4f3adf15",
 };
 /** `darwin-arm64` → `agent-browser-darwin-arm64`; `win32-x64` → `agent-browser-win32-x64.exe`. */
 export const agentBrowserAsset = (target: AgentBrowserTarget) =>
@@ -1438,6 +1446,40 @@ export const CHROME_FAILURES = {
 } as const;
 
 export type ChromeFailure = "missing" | "start" | "profile" | "outdated";
+/** The way out of a Chrome that closed as it started for no cause we know. */
+const UPDATE_CHROME =
+  "Update Google Chrome on it (open Chrome, then Settings › About Chrome, and Relaunch), then try again.";
+
+/**
+ * How a Chrome that closed while starting exited, for logs and people: its exit code (in hex too on Windows, whose
+ * codes are often NTSTATUS values) or the signal that ended it.
+ */
+export function chromeExitText(code: number | null, signal: string | null, platform: string = process.platform) {
+  if (code === null) return signal ? `signal ${signal}` : "no exit code";
+  const n = platform === "win32" ? code >>> 0 : code;
+  return platform === "win32" ? `exit 0x${n.toString(16).toUpperCase()}/${n}` : `exit ${n}`;
+}
+
+/**
+ * What follows `CHROME_FAILURES.start` when Chrome closed while starting: the cause, when its exit code is one we
+ * know, and one way out. 21 (a profile in use) is `CHROME_FAILURES.profile` instead.
+ */
+export function chromeExitCause(code: number | null, signal: string | null, platform: string = process.platform) {
+  const exit = chromeExitText(code, signal, platform);
+  switch (code === null ? null : code >>> 0) {
+    // chrome_result_codes.h: RESULT_CODE_NORMAL_EXIT_PROCESS_NOTIFIED, handed to a Chrome already on the profile.
+    case 24:
+      return `Another Google Chrome already running with the agent's profile took over its start (${exit}). Try again in a minute.`;
+    // NTSTATUS STATUS_DLL_NOT_FOUND.
+    case 0xc0000135:
+      return `A file Google Chrome needs is missing (${exit}). Reinstall Google Chrome from google.com/chrome, then try again.`;
+    // NTSTATUS STATUS_ACCESS_VIOLATION.
+    case 0xc0000005:
+      return `Google Chrome crashed as it started (${exit}). ${UPDATE_CHROME}`;
+    default:
+      return `Google Chrome closed as it started (${exit}). ${UPDATE_CHROME}`;
+  }
+}
 
 /** Which of `CHROME_FAILURES` a runner's message is, or null for another one (an older runner's, a busy computer). */
 export function chromeFailureKind(message: string): ChromeFailure | null {
@@ -2564,6 +2606,12 @@ export type MachineRequest = (
        * may start Chrome, never while someone watches it or a person's turn is open.
        */
       desktop?: boolean;
+      /**
+       * The person in control sent it (the live view's address field, a restart): it runs while they drive the
+       * browser. Anything else meanwhile never reaches the browser: a read of the address or title is answered from
+       * the live view, the rest is refused (a person's input waits behind whatever the browser is busy with).
+       */
+      person?: boolean;
     }
   /** Protocol 12: close the agent's browser session (Stop, idle). */
   | { op: "browser.stop" }

@@ -6,7 +6,7 @@ import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishTyping, publishUserEvent } from "./events";
 import type { Judge } from "./judge";
 import type { MessageVoice } from "./message-preview";
-import { postPersonMessage } from "./messages";
+import { attachmentRefsFor, MAX_MESSAGE_LENGTH, postPersonMessage } from "./messages";
 import { can } from "./organizations";
 import { enqueue } from "./outbox";
 
@@ -134,6 +134,10 @@ export async function acceptVoiceClip(
     threadId?: string | null;
     replyTo?: string | null;
     language?: string | null;
+    /** Typed beside the take, with the same limit as a typed message. */
+    text?: string | null;
+    /** Files (artifact ids) sent with it, checked as a typed message's. */
+    attachments?: string[] | null;
   },
 ): Promise<{ clipId: string }> {
   const { membership } = await requireChannelAccess(deps.db, userId, orgId, channelId);
@@ -153,6 +157,16 @@ export async function acceptVoiceClip(
     throw new ValidationError("The recording is too long or too short", "voice.bad_duration");
   }
   if (!(await voiceAllowed(deps, userId, orgId))) throw new ValidationError("Too many voice messages", "voice.limit");
+  const text = input.text?.trim() || null;
+  if (text && text.length > MAX_MESSAGE_LENGTH) {
+    throw new ValidationError(`Message is longer than ${MAX_MESSAGE_LENGTH} characters`, "message.too_long", {
+      length: text.length,
+      max: MAX_MESSAGE_LENGTH,
+    });
+  }
+  const attachments = input.attachments?.length
+    ? (await attachmentRefsFor(deps.db, userId, orgId, channelId, input.attachments)).map((f) => f.id)
+    : null;
   const declared = input.contentType.split(";")[0]?.trim().toLowerCase() || "audio/mp4";
   const contentType = VOICE_ARRIVES_AS[declared] ?? declared;
   if (!VOICE_TYPES.includes(contentType)) throw new ValidationError("Not a voice recording", "voice.bad_type");
@@ -178,6 +192,8 @@ export async function acceptVoiceClip(
         durationMs: Math.round(input.durationMs),
         peaks: cleanPeaks(input.peaks),
         language: input.language?.slice(0, 8) ?? null,
+        text,
+        attachments,
       })
       .onConflictDoNothing()
       .returning({ id: voiceClips.id });
@@ -296,9 +312,9 @@ const costOf = (engine: SpeechEngine, durationMs: number) =>
   Math.round((Math.max(durationMs / 1000, engine.minBilledSeconds) / 3600) * engine.nanoUsdPerHour);
 
 /**
- * Job `voice.transcribe`: the recording's words, then the message, as if the person had sent it. Nothing said drops
- * the recording and tells its sender; words nobody can make out after every try still go out, as audio people can
- * hear, and the agent is told so.
+ * Job `voice.transcribe`: the recording's words, then the message, as if the person had sent it, with the text typed
+ * beside the take first and its files. Nothing said and nothing typed or attached drops the recording and tells its
+ * sender; words nobody can make out after every try still go out, as audio people can hear, and the agent is told so.
  */
 export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, options: { finalAttempt: boolean }) {
   const [clip] = await deps.db.select().from(voiceClips).where(eq(voiceClips.id, clipId));
@@ -317,15 +333,21 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
   } finally {
     await recorded();
   }
-  if (words && !words.text) return dropClip(deps, clip, "silent");
+  const typed = clip.text ?? "";
+  if (words && !words.text && !typed && !clip.attachments?.length) return dropClip(deps, clip, "silent");
   const expiresAt = expiryOf(clip.createdAt, deps.retentionDays);
   const voice: MessageVoice = {
     clipId: clip.id,
     durationMs: clip.durationMs,
     peaks: clip.peaks,
     ...(expiresAt ? { expiresAt: expiresAt.toISOString() } : {}),
-    ...(words ? {} : { noWords: true as const }),
+    ...(words ? {} : typed ? { unheard: true as const } : { noWords: true as const }),
+    ...(typed ? { text: typed } : {}),
   };
+  // Typed first, so agents, mentions and search read both: the apps show `meta.voice.text` as text, the rest as words.
+  // The typed text may use the whole length a message has: the words then keep what is left of it.
+  const spoken = words ? words.text : VOICE_NO_WORDS_BODY;
+  const said = typed ? spoken.slice(0, Math.max(0, MAX_MESSAGE_LENGTH - typed.length - 2)) : spoken;
   try {
     const message = await postPersonMessage(
       { db: deps.db, pubsub: deps.pubsub, judge: deps.judge ?? undefined },
@@ -333,8 +355,9 @@ export async function transcribeVoiceClip(deps: VoiceDeps, clipId: string, optio
       clip.orgId,
       clip.channelId,
       {
-        body: words?.text ?? VOICE_NO_WORDS_BODY,
+        body: typed && said ? `${typed}\n\n${said}` : typed || said,
         threadId: clip.threadId,
+        attachments: clip.attachments ?? undefined,
         clientId: clip.clientId,
         replyTo: clip.replyTo,
         meta: { voice },

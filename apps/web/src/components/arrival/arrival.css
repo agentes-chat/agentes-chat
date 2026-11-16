@@ -646,6 +646,20 @@
   opacity: 0.55;
   cursor: default;
 }
+/* A row that says why it can't be picked keeps its words at full strength: only its mark and name are dimmed. */
+.arrival-have__row[data-why] {
+  opacity: 1;
+}
+.arrival-have__row[data-why] > :first-child,
+.arrival-have__row[data-why] .arrival-have__title {
+  opacity: 0.55;
+}
+.arrival-have__why {
+  color: var(--ink-muted);
+  font-size: 13px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
 /* Out of sight and out of the grid, still the row's keyboard stop and its state for screen readers. */
 .arrival-have__row > .ac-radio {
   position: absolute;

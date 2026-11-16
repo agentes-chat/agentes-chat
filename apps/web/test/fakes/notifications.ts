@@ -132,6 +132,18 @@ export function createFakeNotifications(
         }
       return { ids };
     },
+    doneAll: async (orgId, filter) => {
+      log("notifications.doneAll", orgId, filter);
+      const now = Date.now();
+      const ids: string[] = [];
+      if (filter === "waiting" || filter === "done") return { ids };
+      for (const n of inbox.items)
+        if (n.doneAt === null && !n.waiting && matchesFilter(n, filter ?? "all", now)) {
+          n.doneAt = new Date().toISOString();
+          ids.push(n.id);
+        }
+      return { ids };
+    },
     prefs: async (orgId) => {
       log("notifications.prefs", orgId);
       inbox.prefs ??= structuredClone(DEFAULT_PREFS);

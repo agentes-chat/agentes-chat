@@ -8,6 +8,7 @@ import {
   MADE_ICON_ACCESSORIES,
   MADE_ICON_COLORS,
   MADE_ICON_FACES,
+  MADE_ICON_POSES,
   MADE_ICON_SKIES,
   type MadeIcon,
   type MadeIconLook,
@@ -36,6 +37,9 @@ const CORNER = 0.225;
  */
 const BARE = { x: 224, y: 192, side: 576, cells: 18 };
 const WEARING = { x: 256, y: 416, side: 512, cells: 16 };
+/** Leaning in from the bottom right corner, as the Peeking icons' agent: bigger, looking up, turned around its eyes. */
+const LEANING = { x: 170, y: 202, side: 960, cells: 30 };
+const LEAN = { degrees: -18, about: [650, 600], look: [-0.035, -0.045] } as const;
 
 /** What a made icon's look is to the agent engine: its eyes, a held expression and what it wears. */
 function agentOf(icon: MadeIcon) {
@@ -50,27 +54,39 @@ function agentOf(icon: MadeIcon) {
 
 /** A made icon as the home screen will show it: its sky's picture and the agent drawn over it by the agent engine. */
 function MadeIconPicture({ icon, size }: { icon: MadeIcon; size: number }) {
-  const { color, look } = icon;
+  const { color, look, pose } = icon;
   const picture = useMemo(() => {
-    const agent = agentOf({ sky: "night", color, look });
-    const wears = agent.accessory !== "none";
-    const at = wears ? WEARING : BARE;
+    const agent = agentOf({ sky: "night", color, look, pose });
+    const leans = pose === "peek";
+    const wears = !leans && agent.accessory !== "none";
+    const at = leans ? LEANING : wears ? WEARING : BARE;
     const u = size / 1024;
     const rec = new RecordingContext();
+    if (leans) {
+      const [ax, ay] = LEAN.about;
+      rec.save();
+      rec.translate(ax * u, ay * u);
+      rec.rotate((LEAN.degrees * Math.PI) / 180);
+      rec.translate(-ax * u, -ay * u);
+    }
     drawAgent(asCtx(rec), at.x * u, at.y * u, at.side * u, {
       color: agent.color,
       eyes: agent.eyes,
       cells: at.cells,
-      pose: agent.expression ? { expression: agent.expression } : {},
+      pose: {
+        ...(leans ? { look: [...LEAN.look] as [number, number] } : {}),
+        ...(agent.expression ? { expression: agent.expression } : {}),
+      },
       after: wears ? (ctx, side, frame) => drawAccessory(ctx, side, agent.accessory, frame) : undefined,
     });
+    if (leans) rec.restore();
     const frame = compile(rec.commands);
     return createPicture((canvas) => replay(canvas, frame), { width: size, height: size });
-  }, [color, look, size]);
+  }, [color, look, pose, size]);
   return (
     <View style={{ width: size, height: size, borderRadius: Math.round(size * CORNER), overflow: "hidden" }}>
       <Image
-        source={MADE_ICON_SKY_PICTURES[icon.sky]}
+        source={MADE_ICON_SKY_PICTURES[icon.pose][icon.sky]}
         style={{ width: size, height: size }}
         accessibilityIgnoresInvertColors
       />
@@ -113,7 +129,7 @@ function useLookName() {
 
 /**
  * App icon (ADR 0179), pushed from You: the icon as the home screen will show it, then what it is made of (its sky,
- * its color and a face or an accessory) and the ready ones. Nothing changes until "Use this icon": iOS confirms every
+ * how the agent stands, its color and a face or an accessory) and the ready ones. Nothing changes until "Use this icon": iOS confirms every
  * change with an alert of its own, which trying the choices one by one would show each time.
  */
 export function AppIconPage() {
@@ -144,7 +160,13 @@ function AppIconMaker({ current, set }: { current: PhoneIcon; set: (icon: PhoneI
 
   const make = (patch: Partial<MadeIcon>) => {
     tapHaptic();
-    setMade({ ...made, ...patch });
+    const next = { ...made, ...patch };
+    // Leaning, the agent has a face only: picking an accessory stands it up, and leaning takes off what it wears.
+    if (next.pose === "peek" && !isMadeIconFace(next.look)) {
+      if (patch.pose) next.look = "round";
+      else next.pose = "front";
+    }
+    setMade(next);
     setReady(null);
   };
   const use = () => {
@@ -163,7 +185,13 @@ function AppIconMaker({ current, set }: { current: PhoneIcon; set: (icon: PhoneI
           {name}
         </Text>
         <Text variant="footnote" tone="muted">
-          {ready ? t("appIcon.readyOne") : `${t(appIconNameKey(made.sky))} · ${lookName(made.look)}`}
+          {ready
+            ? t("appIcon.readyOne")
+            : [
+                t(appIconNameKey(made.sky)),
+                ...(made.pose === "peek" ? [t("appIcon.poses.peek")] : []),
+                lookName(made.look),
+              ].join(" · ")}
         </Text>
       </View>
       <Button
@@ -197,6 +225,32 @@ function AppIconMaker({ current, set }: { current: PhoneIcon; set: (icon: PhoneI
           })}
         </View>
       </GroupedList>
+
+      <GroupedHeader>{t("appIcon.pose")}</GroupedHeader>
+      <GroupedList>
+        <View style={styles.skies} accessibilityRole="radiogroup" accessibilityLabel={t("appIcon.pose")}>
+          {MADE_ICON_POSES.map((pose) => {
+            const on = !ready && made.pose === pose;
+            // The leaning one is shown with a face, as picking it gives.
+            const look = pose === "peek" ? face : made.look;
+            return (
+              <Choice
+                key={pose}
+                on={on}
+                label={t(`appIcon.poses.${pose}`)}
+                onPress={() => make({ pose })}
+                style={styles.half}
+              >
+                <View style={[plate(on), styles.sky]}>
+                  <MadeIconPicture icon={{ ...made, look, pose }} size={30} />
+                  <Text variant="callout">{t(`appIcon.poses.${pose}`)}</Text>
+                </View>
+              </Choice>
+            );
+          })}
+        </View>
+      </GroupedList>
+      <GroupedFooter>{t("appIcon.peekBare")}</GroupedFooter>
 
       <GroupedHeader>{t("look.color")}</GroupedHeader>
       <GroupedList>

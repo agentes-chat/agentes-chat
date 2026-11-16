@@ -563,6 +563,9 @@
   "here.again": {
     "value": "It ran here before, and its data is still in {{path}}."
   },
+  "here.ownerNone": {
+    "value": "No account is left on it. Your name and email make you its new owner."
+  },
   "here.name": {
     "value": "Your name"
   },
@@ -1046,8 +1049,11 @@
   "server.restartedBody": {
     "value": "It comes back by itself. If it keeps happening, open the app to see why."
   },
-  "server.version": {
-    "value": "Version {{version}}, updated with the app"
+  "server.installedVersion": {
+    "value": "Installed package version"
+  },
+  "server.internalVersion": {
+    "value": "Internal server version"
   },
   "server.updatesWithApp": {
     "value": "Updating the app updates agentes.chat on this {{device}} too."
@@ -1126,6 +1132,27 @@
   },
   "server.restoreUnreadable": {
     "value": "That backup can't be opened. Try the other one."
+  },
+  "server.erase": {
+    "value": "Erase and start over…"
+  },
+  "server.eraseTitle": {
+    "value": "Erase agentes.chat on this {{device}}?"
+  },
+  "server.eraseBody": {
+    "value": "Its workspaces go for everyone who uses them, on every device. Its data moves to {{path}} and stays there. What its agents kept on this {{device}}, such as their browsers and sign-ins, is deleted. The agents' files in ~/agentes are yours and stay where they are. Then you set it up again with a new owner."
+  },
+  "server.eraseConfirm": {
+    "value": "Erase it"
+  },
+  "server.erased": {
+    "value": "Erased. Its old data is in {{path}}."
+  },
+  "server.eraseMoveFailed": {
+    "value": "Its data couldn't be moved, so nothing was erased and it stays in {{path}}. It's stopped until you start it again."
+  },
+  "server.eraseHeld": {
+    "value": "Another agentes.chat server is using its folder, so nothing was erased. Stop that server, then try again."
   },
   "server.noPassword": {
     "value": "Add a password to sign in from your phone and other computers."
@@ -1564,6 +1591,33 @@
   },
   "prefs.general.notchDesc": {
     "value": "On MacBooks with a notch: who is working shows around the camera."
+  },
+  "prefs.general.compatTitle": {
+    "value": "Compatibility mode"
+  },
+  "prefs.general.compatDesc": {
+    "value": "Draws the window without the graphics card. It's slower but works on any computer. Use it if the window goes black, gets cut off or freezes."
+  },
+  "prefs.general.compatReopen": {
+    "value": "Takes effect when the app reopens."
+  },
+  "prefs.general.reopenNow": {
+    "value": "Reopen now"
+  },
+  "prefs.general.compatFellBack": {
+    "value": "The window didn't open with the graphics card, so it opened in compatibility mode."
+  },
+  "prefs.general.compatTryCard": {
+    "value": "Try the graphics card again"
+  },
+  "prefs.general.compatOwn": {
+    "value": "WEBKIT_DISABLE_DMABUF_RENDERER decides this now. To choose here, quit the app and open it without that variable."
+  },
+  "prefs.general.reopenTitle": {
+    "value": "Reopen agentes.chat?"
+  },
+  "prefs.general.reopenBody": {
+    "value": "Agents can't use this computer until the app opens again. What is already running finishes first."
   },
   "prefs.thisMac.agents": {
     "value": "Agents"

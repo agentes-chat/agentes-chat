@@ -81,6 +81,8 @@
       "issues.priorityLower.normal",
       "issues.statusLabel",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "look.accessories.headset",
       "machines.access.tool.claude",
       "machines.access.tool.codex",
@@ -292,7 +294,11 @@
       "invites.links",
       "invites.linkLabel",
       "appsDownload.appStore",
-      "appsDownload.googlePlay"
+      "appsDownload.googlePlay",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2",
+      "storage.connect.awsRegion.il-central-1"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -385,6 +391,8 @@
       "issues.priority.normal",
       "issues.priorityLower.normal",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "look.color",
       "machines.access.tool.claude",
       "machines.access.tool.codex",
@@ -540,9 +548,14 @@
       "machines.oneClick.tools.antigravity",
       "settings.section.roles",
       "appsDownload.appStore",
-      "appsDownload.googlePlay"
+      "appsDownload.googlePlay",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2",
+      "storage.connect.awsRegion.il-central-1"
     ],
     "fr": [
+      "usage.kinds.routines",
       "channel.tooLong.fileName",
       "calendar.moreRuns",
       "devices.cpus",
@@ -671,6 +684,8 @@
       "issues.display.field.pullRequest",
       "issues.pr",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "look.colors.graphite",
       "look.colors.indigo",
       "look.colors.rose",
@@ -965,7 +980,14 @@
       "invites.type",
       "invites.typesCount",
       "appsDownload.appStore",
-      "appsDownload.googlePlay"
+      "appsDownload.googlePlay",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2",
+      "storage.connect.awsRegion.eu-central-2",
+      "storage.connect.awsRegion.eu-west-3",
+      "storage.connect.awsRegion.eu-south-1",
+      "storage.connect.awsRegion.eu-north-1"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1118,12 +1140,15 @@
       "issues.columns.createdDetail",
       "issues.columns.name",
       "issues.display.field.label",
+      "issues.labelFilter",
       "issues.moved",
       "issues.pr",
       "issues.priority.normal",
       "issues.priorityLower.normal",
       "issues.statusLabel",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "look.accessories.headset",
       "look.colors.indigo",
       "machines.access.tool.browser",
@@ -1411,7 +1436,18 @@
       "invites.links",
       "invites.linkLabel",
       "appsDownload.appStore",
-      "appsDownload.googlePlay"
+      "appsDownload.googlePlay",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2",
+      "storage.connect.region",
+      "storage.connect.theirName.r2Key",
+      "storage.connect.theirName.r2Secret",
+      "storage.connect.theirName.s3Key",
+      "storage.connect.theirName.s3Secret",
+      "storage.connect.theirName.b2Key",
+      "storage.connect.theirName.b2Secret",
+      "storage.connect.awsRegion.il-central-1"
     ],
     "it": [
       "shell.email.label",
@@ -1542,6 +1578,8 @@
       "issues.moved",
       "issues.pr",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "look.accessories.antenna",
       "machines.access.tool.browser",
       "machines.access.tool.claude",
@@ -1778,9 +1816,13 @@
       "invites.linkLabel",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
-      "appsDownload.computer"
+      "appsDownload.computer",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2"
     ],
     "nl": [
+      "usage.kinds.routines",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
       "devices.filter.computers",
@@ -1987,11 +2029,15 @@
       "issues.now.agents",
       "issues.columns.createdDetail",
       "issues.display.field.label",
+      "issues.labelFilter",
+      "issues.display.order.updated",
       "issues.display.field.pullRequest",
       "issues.moved",
       "issues.pr",
       "issues.statusLabel",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "look.accessories.headset",
       "look.colors.amber",
       "look.colors.indigo",
@@ -2373,7 +2419,16 @@
       "invites.linkLabel",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
-      "appsDownload.computer"
+      "appsDownload.computer",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2",
+      "storage.connect.theirName.r2Key",
+      "storage.connect.theirName.r2Secret",
+      "storage.connect.theirName.s3Key",
+      "storage.connect.theirName.s3Secret",
+      "storage.connect.theirName.b2Key",
+      "storage.connect.theirName.b2Secret"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -2442,6 +2497,8 @@
       "format.usd",
       "issues.pr",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "machines.access.tool.claude",
       "machines.access.tool.codex",
       "machines.access.tool.cursor",
@@ -2540,7 +2597,10 @@
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
       "appsDownload.appStore",
-      "appsDownload.googlePlay"
+      "appsDownload.googlePlay",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2"
     ],
     "ko": [
       "channel.tooLong.fileName",
@@ -2609,6 +2669,8 @@
       "format.usd",
       "issues.pr",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "machines.access.tool.claude",
       "machines.access.tool.codex",
       "machines.access.tool.cursor",
@@ -2701,7 +2763,10 @@
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
       "appsDownload.appStore",
-      "appsDownload.googlePlay"
+      "appsDownload.googlePlay",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -2769,6 +2834,8 @@
       "format.usd",
       "issues.pr",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "machines.access.tool.claude",
       "machines.access.tool.codex",
       "machines.access.tool.cursor",
@@ -2853,7 +2920,10 @@
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
       "appsDownload.appStore",
-      "appsDownload.googlePlay"
+      "appsDownload.googlePlay",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2"
     ],
     "id": [
       "shell.email.label",
@@ -2961,6 +3031,7 @@
       "files.zoom.toolbar",
       "format.usd",
       "issues.display.field.label",
+      "issues.labelFilter",
       "issues.display.field.pullRequest",
       "issues.display.order.manual",
       "issues.pr",
@@ -2968,6 +3039,8 @@
       "issues.priorityLower.normal",
       "issues.statusLabel",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "look.accessories.headset",
       "machines.access.tool.browser",
       "machines.access.tool.claude",
@@ -3156,7 +3229,11 @@
       "invites.byEmail",
       "invites.edit",
       "appsDownload.appStore",
-      "appsDownload.googlePlay"
+      "appsDownload.googlePlay",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2",
+      "storage.connect.awsRegion.il-central-1"
     ],
     "tr": [
       "devices.cpus",
@@ -3233,6 +3310,8 @@
       "issues.priority.normal",
       "issues.priorityLower.normal",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "machines.access.tool.claude",
       "machines.access.tool.codex",
       "machines.access.tool.cursor",
@@ -3342,7 +3421,10 @@
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
       "appsDownload.appStore",
-      "appsDownload.googlePlay"
+      "appsDownload.googlePlay",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2"
     ],
     "pl": [
       "devices.cpus",
@@ -3448,6 +3530,8 @@
       "issues.pr",
       "issues.statusLabel",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "machines.access.tool.claude",
       "machines.access.tool.codex",
       "machines.access.tool.cursor",
@@ -3637,7 +3721,11 @@
       "invites.link",
       "invites.linkLabel",
       "appsDownload.appStore",
-      "appsDownload.googlePlay"
+      "appsDownload.googlePlay",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2",
+      "storage.connect.region"
     ],
     "ru": [
       "channel.tooLong.fileName",
@@ -3696,6 +3784,8 @@
       "files.pdfFrame",
       "issues.pr",
       "jev.title",
+      "jev.via.typesafe",
+      "jev.via.openrouter",
       "machines.access.tool.claude",
       "machines.access.tool.codex",
       "machines.access.tool.cursor",
@@ -3789,7 +3879,10 @@
       "machines.oneClick.tools.grok",
       "machines.oneClick.tools.antigravity",
       "appsDownload.appStore",
-      "appsDownload.googlePlay"
+      "appsDownload.googlePlay",
+      "storage.connect.provider.r2",
+      "storage.connect.provider.s3",
+      "storage.connect.provider.b2"
     ]
   },
   "mobile-base": {

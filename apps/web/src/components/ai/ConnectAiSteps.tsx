@@ -108,6 +108,7 @@ import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { ToolOffWayOut } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
 import { KeyMismatch, KeyRefused, ProviderSelect } from "@/components/ProviderKey";
+import { OpenPrefsButton, useIsThisMac } from "@/components/ThisMac";
 import { managedOf, SetupProgress, useSetupWait, useWaitReader } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
 import { planWord } from "@/lib/plan-usage";
@@ -855,7 +856,7 @@ export function PlanWithoutAgent({
               </Button>
             </span>
           )}
-          {elsewhere && mayAddKey && (
+          {elsewhere && mayAddKey && keyFitsPlan(kindOf(choice)) && (
             <span>
               <Button size="sm" onClick={onKey}>
                 {t("connectAi.wait.useKey")}
@@ -1618,6 +1619,12 @@ export function PlanHold({ hold }: { hold: BillingHold }) {
 }
 
 /**
+ * Whether "Use an API key now" fits a plan's panel: the key row adds workspace API keys, and OpenCode's key is an
+ * account kept on the computer for its CLI (`provider: "zen"`), which that row can't take.
+ */
+const keyFitsPlan = (kind: MachineAccountKind) => kind !== "opencode";
+
+/**
  * Why a plan's panel waits or can't sign in there (`PlanGate`), with the way on: the computer's wait, a key now, a
  * computer to connect. Nothing once it's ready.
  */
@@ -1652,15 +1659,16 @@ function GateWait({
   const { t } = useTranslation();
   const { org } = useOrg();
   const reader = useWaitReader();
+  const here = useIsThisMac(org.id, machineId ?? "");
   const machines = useMachines(org.id, edition !== null);
   const preparing = gate.state === "preparing" ? gate.view : null;
   const { eta, email } = useSetupWait(preparing, reader.held);
-  const keyButton = (
+  const keyButton = keyFitsPlan(kind) ? (
     <Button size="sm" onClick={onKey}>
       {t("connectAi.wait.useKey")}
     </Button>
-  );
-  const useKey = <span>{keyButton}</span>;
+  ) : null;
+  const useKey = keyButton && <span>{keyButton}</span>;
   const line = (lead: ReactNode, text: string) => (
     <p className="setup-line ac-iconline" role="status">
       {lead}
@@ -1752,6 +1760,23 @@ function GateWait({
         <SettingNote icon={why.rechecks ? "clock" : "alert"} live={why.rechecks}>
           {why.text}
         </SettingNote>
+        {!hold &&
+          edition === "selfhost" &&
+          kind === "codex" &&
+          gate.state === "unsupported" &&
+          gate.reason === "outdated" && (
+            <>
+              <p className="setup-line">
+                {t(here ? "brain.reasons.codexRecheckHere" : "brain.reasons.codexRecheckThere", { computer })}
+              </p>
+              <div className="ac-acts">
+                <OpenPage href="https://learn.chatgpt.com/docs/codex/cli#install-codex">
+                  {t("brain.reasons.codexUpdateGuide")}
+                </OpenPage>
+                {here && <OpenPrefsButton tab="tools">{t("machines.thisMac.openTools")}</OpenPrefsButton>}
+              </div>
+            </>
+          )}
         {!hold && useKey}
       </>
     );

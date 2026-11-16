@@ -1,4 +1,6 @@
+import type { TFunction } from "i18next";
 import type { ConsultationStatus, MessageConsultation } from "../api/types";
+import { agentGrammar } from "./grammar";
 import { reachOf } from "./reach";
 import { routineReplyOf } from "./routines";
 
@@ -317,8 +319,12 @@ export function routineReportText(messages: readonly Said[], noticeId: string | 
  */
 export interface StoppedNotice {
   runId: string;
+  /** The person who stopped it, or at whose word `byAgentId` did. */
   byUserId: string;
   byName: string;
+  /** The agent that stopped it at that person's word (the right hand), and its name then. */
+  byAgentId: string | null;
+  byAgentName: string;
   label: string;
   was: "working" | "waiting" | "queued";
   reason: string | null;
@@ -335,8 +341,51 @@ export function stoppedNoticeOf(meta: Meta): StoppedNotice | null {
     runId: s(r.runId),
     byUserId: s(r.byUserId),
     byName: s(r.byName),
+    byAgentId: s(r.byAgentId) || null,
+    byAgentName: s(r.byAgentName),
     label: s(r.label),
     was,
     reason: s(r.reason) || null,
   };
+}
+
+/** Whom a stop's line names: the agent that stopped it, the viewer ("You"), another person, or nobody. */
+export type Stopper = { kind: "agent"; agentId: string } | { kind: "you" } | { kind: "person"; userId: string } | null;
+
+/**
+ * Whom a stop's line names (ADR 0128): the agent that stopped it at a person's word (the right hand) is never "you",
+ * "you" only for the person who stopped it, any other person by name, and nobody when no person did (the system: its
+ * cause says why).
+ */
+export function stopperOf(
+  stop: { byUserId?: string | null; byAgentId?: string | null },
+  meId: string | null | undefined,
+): Stopper {
+  if (stop.byAgentId) return { kind: "agent", agentId: stop.byAgentId };
+  if (!stop.byUserId) return null;
+  return stop.byUserId === meId ? { kind: "you" } : { kind: "person", userId: stop.byUserId };
+}
+
+/** Looks up a stopper's name: the agent's (`agent`) or the person's (`person`); empty or missing when not known. */
+export interface StopperNames {
+  agent: (agentId: string) => string | null | undefined;
+  person: (userId: string) => string | null | undefined;
+}
+
+/** The name a stop's line gives its stopper (`stopperOf`); null for "you", for nobody, or when the name isn't known. */
+export function stopperName(stopper: Stopper, names: StopperNames): string | null {
+  if (stopper?.kind === "agent") return names.agent(stopper.agentId) || null;
+  if (stopper?.kind === "person") return names.person(stopper.userId) || null;
+  return null;
+}
+
+/**
+ * A stop pill's sentence (web and phone, the chat's pill and the task panel): "You stopped Ada", "Lodi stopped Ada" or
+ * "Ana stopped Ada"; null when there is no one to name, and the caller's own words for the stop say it.
+ */
+export function stopLine(t: TFunction, agent: string, stopper: Stopper, names: StopperNames): string | null {
+  const { context } = agentGrammar(agent);
+  if (stopper?.kind === "you") return t("taskManager.stopped.line", { agent, context });
+  const name = stopperName(stopper, names);
+  return name ? t("taskManager.stopped.lineBy", { name, agent, context }) : null;
 }

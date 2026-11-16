@@ -11,7 +11,7 @@ import { runContext } from "@/components/StopRun";
 import { createI18n } from "@/i18n";
 import { requestAgentPanel } from "@/lib/agent-panel-ask";
 import { ADA_ID, createFakeApi, ENG_ID, ORG_ID, seedState } from "./fake-api";
-import { renderApp, screen, settle } from "./render";
+import { headerSearchBox, renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
 
@@ -121,7 +121,7 @@ describe("Parar is immediate", () => {
     const { state, ev } = await open();
     await ev({ type: "agent.run", ...ids, status: "running" });
     await settle(2);
-    const search = screen().getAllByRole("combobox", { name: "Buscar" })[0] as HTMLInputElement;
+    const search = headerSearchBox();
     search.focus();
     await act(async () => fireEvent.change(search, { target: { value: "login" } }));
     await settle(2);

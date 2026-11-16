@@ -272,10 +272,3 @@ html:not([data-pointer]) .dm-side__row--link:focus-visible {
 .dm-side__sec .settings-row--open:hover {
   background: var(--side-hover);
 }
-/* Under the sidebar's breakpoint the header's glyphs hold the computer, the search and the toggle: the search gives
-   way, leaving the name its room beside them. */
-@media (max-width: 1099px) {
-  .channel__acts:has(> .dm-side-toggle) > .channel__search.search-box {
-    width: 130px;
-  }
-}

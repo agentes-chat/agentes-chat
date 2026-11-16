@@ -592,6 +592,8 @@ export async function saveSkill(
     source: "upload" | "url" | "manual";
     sourceUrl?: string | null;
     sourceVia?: SkillVia | null;
+    /** Its link was read folder by folder (`skills.sourceByFolder`). */
+    sourceByFolder?: boolean;
     /** What its link held (`skillSourceHash`), read from it. */
     sourceHash?: string;
     files?: SkillFileInput[];
@@ -623,6 +625,7 @@ export async function saveSkill(
         sourceUrl: input.sourceUrl ?? existing.sourceUrl,
         // A link read again says how it was read; an edit or an upload keeps what updating reads through.
         sourceVia: input.source === "url" ? (input.sourceVia ?? null) : existing.sourceVia,
+        sourceByFolder: input.source === "url" ? (input.sourceByFolder ?? false) : existing.sourceByFolder,
         ...(input.sourceHash ? { sourceHash: input.sourceHash } : {}),
         // Incremented in SQL (not from the value read above) so two concurrent saves take distinct versions.
         version: sql`${skills.version} + 1`,
@@ -653,6 +656,7 @@ export async function saveSkill(
         source: input.source,
         sourceUrl: input.sourceUrl ?? null,
         sourceVia: input.sourceVia ?? null,
+        sourceByFolder: input.sourceByFolder ?? false,
         sourceHash: input.sourceHash ?? null,
         defaultForNewAgents: owner ? false : (input.defaultForNewAgents ?? false),
         createdByUserId: actorId,
@@ -709,11 +713,11 @@ export async function importSkillZip(
   await requirePermission(deps.db, actorId, orgId, options.personal ? "read" : "manage_agents");
   const entries = listZip(zip).filter((e) => !e.symlink);
   return saveSkill(deps, actorId, orgId, {
-    ...repositorySkill(
-      zip,
+    ...(await repositorySkill(
+      async (e) => inflateZipEntry(zip, e),
       "",
       entries.map((e) => [e.path, e]),
-    ),
+    )),
     source: "upload",
     owner: options.personal ? actorId : null,
   });
@@ -876,10 +880,10 @@ type GithubTarget = ReturnType<typeof parseGithubUrl>;
 /** What reading a repository with the workspace's GitHub needs: no `github`, public repositories only. */
 export type GithubReadDeps = Pick<SkillDeps, "db" | "fetch" | "resolveHost" | "github">;
 
-/** A repository's archive is downloaded whole: past this size a link into it can't be read. */
+/** A repository's archive is downloaded whole: past this size it isn't (a skill's link reads its folder instead). */
 const ARCHIVE: GithubFetchOptions = {
   maxBytes: 50 * 1024 * 1024,
-  tooLarge: "The repository is too large to download (max 50 MB). Upload the skill's folder as a .zip instead.",
+  tooLarge: "The repository is too large to download (max 50 MB).",
   tooLargeCode: "skill.repo_too_large",
   tooLargeParams: { max: 50 },
   // github.com redirects to codeload.github.com, and first to the new name of a renamed repository.
@@ -911,6 +915,12 @@ const refMissing = (target: GithubTarget) => {
   });
 };
 
+/** A repository's files by path from its root (symbolic links left out), and how one is read. */
+interface Repository<E extends { size: number }> {
+  files: Map<string, E>;
+  read(entry: E): Promise<Uint8Array>;
+}
+
 /** An archive's files by path from the repository's root, symbolic links left out. */
 function repositoryOf(zip: Uint8Array) {
   const files = new Map<string, ZipListing>();
@@ -919,10 +929,19 @@ function repositoryOf(zip: Uint8Array) {
     const slash = entry.path.indexOf("/");
     if (!entry.symlink && slash > 0) files.set(entry.path.slice(slash + 1), entry);
   }
-  return { zip, files };
+  return { zip, files, read: async (entry: ZipListing) => inflateZipEntry(zip, entry) };
 }
 
-type GithubRepository = ReturnType<typeof repositoryOf>;
+/** How a repository is read: without credentials (null when github.com hides it), or with one of the workspace's tokens. */
+interface RepositoryReader<R> {
+  open(deps: GithubReadDeps, target: GithubTarget): Promise<R | null>;
+  withToken(deps: GithubReadDeps, target: GithubTarget, token: string): Promise<R | null | "refused">;
+}
+
+const repositoryApi = (target: GithubTarget) =>
+  `${GITHUB_API}/repos/${encodePath(target.owner)}/${encodePath(target.repo)}`;
+const repositoryPage = (target: GithubTarget) => `https://github.com/${encodePath(`${target.owner}/${target.repo}`)}`;
+const GITHUB_JSON = "application/vnd.github+json";
 
 /**
  * The repository at the link's ref, from its zip archive (`github.com/{owner}/{repo}/archive/{ref}.zip`, served by
@@ -931,7 +950,7 @@ type GithubRepository = ReturnType<typeof repositoryOf>;
  * missing).
  */
 async function publicRepository(deps: GithubReadDeps, target: GithubTarget) {
-  const archive = `https://github.com/${encodePath(`${target.owner}/${target.repo}`)}/archive/${encodePath(target.ref)}.zip`;
+  const archive = `${repositoryPage(target)}/archive/${encodePath(target.ref)}.zip`;
   const { res, at } = await githubGet(deps, archive, "application/zip", ARCHIVE);
   if (res.status === 404) {
     await res.body?.cancel();
@@ -949,20 +968,158 @@ async function publicRepository(deps: GithubReadDeps, target: GithubTarget) {
  * repository the token can't see: asking for the repository tells them apart.
  */
 async function tokenRepository(deps: GithubReadDeps, target: GithubTarget, token: string) {
-  const repo = `${GITHUB_API}/repos/${encodePath(target.owner)}/${encodePath(target.repo)}`;
   const ref = target.ref === "HEAD" ? "" : `/${encodePath(target.ref)}`;
-  const { res, at } = await githubGet(deps, `${repo}/zipball${ref}`, "application/vnd.github+json", ARCHIVE, token);
-  if (res.ok) return repositoryOf(await githubBody(res, at, ARCHIVE));
+  return tokenRead(
+    deps,
+    target,
+    token,
+    `zipball${ref}`,
+    ARCHIVE,
+    async (res, at) => repositoryOf(await githubBody(res, at, ARCHIVE)),
+    target.ref === "HEAD"
+      ? undefined
+      : () => {
+          throw refMissing(target);
+        },
+  );
+}
+
+/**
+ * GET `path` under the repository's API with a token, `ok` reading its success. Null when the token works and can't
+ * read it (403, or 404), `refused` when GitHub no longer takes it (401). `seen`: what a 404 is when the token sees the
+ * repository (its ref or path is what is missing), asked only then.
+ */
+async function tokenRead<R>(
+  deps: GithubReadDeps,
+  target: GithubTarget,
+  token: string,
+  path: string,
+  options: GithubFetchOptions,
+  ok: (res: Response, at: URL) => Promise<R>,
+  seen?: () => R,
+): Promise<R | null | "refused"> {
+  const repo = repositoryApi(target);
+  const { res, at } = await githubGet(deps, `${repo}/${path}`, GITHUB_JSON, options, token);
+  if (res.ok) return ok(res, at);
   await res.body?.cancel();
-  if (res.status === 404 && target.ref !== "HEAD") {
-    const seen = await githubGet(deps, repo, "application/vnd.github+json", ARCHIVE, token);
-    await seen.res.body?.cancel();
-    if (seen.res.ok) throw refMissing(target);
+  if (res.status === 404 && seen) {
+    const shown = await githubGet(deps, repo, GITHUB_JSON, options, token);
+    await shown.res.body?.cancel();
+    if (shown.res.ok) return seen();
   }
-  if (res.status === 401) return "refused" as const;
+  if (res.status === 401) return "refused";
   if (res.status === 403 || res.status === 404) return null;
   throw new ValidationError(`GitHub answered ${res.status} for ${at.pathname}`);
 }
+
+const ARCHIVE_READER: RepositoryReader<ReturnType<typeof repositoryOf>> = {
+  open: publicRepository,
+  withToken: tokenRepository,
+};
+
+/** A file of a link's folder, from its tree: its path from the repository's root, size and blob. */
+interface FolderFile {
+  path: string;
+  size: number;
+  sha: string;
+}
+
+/** The tree of a link's folder: GitHub cuts one past 100,000 entries or 7 MB (`truncated`). */
+const FOLDER_TREE: GithubFetchOptions = {
+  maxBytes: 16 * MB,
+  tooLarge: "That link's folder holds too many files to read. Link the skill's own folder.",
+  tooLargeCode: "skill.link_too_large",
+  // The API, like github.com, redirects a renamed repository to its new name.
+  redirects: 3,
+  timeoutMs: 30_000,
+};
+
+/** One file of a link's folder: no file a skill keeps is larger. */
+const FOLDER_FILE: GithubFetchOptions = {
+  maxBytes: Math.max(SKILL_LIMITS.maxBytes, SKILL_LIMITS.assetBytes),
+  tooLarge: "A file of the skill is too large to download",
+  redirects: 3,
+  timeoutMs: 30_000,
+};
+
+/** `git/trees/{ref}:{folder}?recursive=1`: the link's folder alone, every file below it. */
+const folderTreePath = (target: GithubTarget, folder: string) =>
+  `git/trees/${encodeURIComponent(folder ? `${target.ref}:${folder}` : target.ref)}?recursive=1`;
+
+/** A folder's tree answer → its files (no symbolic links or submodules) by path from the repository's root. */
+async function folderFiles(res: Response, at: URL, folder: string) {
+  const body = await githubBody(res, at, FOLDER_TREE);
+  const tree = JSON.parse(new TextDecoder().decode(body)) as {
+    tree?: { path: string; mode: string; type: string; sha: string; size?: number }[];
+    truncated?: boolean;
+  };
+  if (tree.truncated) {
+    throw new ValidationError(FOLDER_TREE.tooLarge, FOLDER_TREE.tooLargeCode);
+  }
+  const prefix = folder ? `${folder}/` : "";
+  const files = new Map<string, FolderFile>();
+  for (const e of tree.tree ?? []) {
+    if (e.type !== "blob" || e.mode === "120000") continue;
+    files.set(prefix + e.path, { path: prefix + e.path, size: e.size ?? 0, sha: e.sha });
+  }
+  return files;
+}
+
+/**
+ * A link's folder read file by file: from raw.githubusercontent.com at the link's ref without a token, else each blob
+ * from the API with it (raw.githubusercontent.com takes no token of ours).
+ */
+function folderRepository(
+  deps: GithubReadDeps,
+  target: GithubTarget,
+  files: Map<string, FolderFile>,
+  token?: string,
+): Repository<FolderFile> {
+  const raw = `https://raw.githubusercontent.com/${encodePath(`${target.owner}/${target.repo}`)}/${encodePath(target.ref)}`;
+  return {
+    files,
+    read: async (file) => {
+      const { res, at } = token
+        ? await githubGet(
+            deps,
+            `${repositoryApi(target)}/git/blobs/${encodeURIComponent(file.sha)}`,
+            "application/vnd.github.raw+json",
+            FOLDER_FILE,
+            token,
+          )
+        : await githubGet(deps, `${raw}/${encodePath(file.path)}`, "*/*", FOLDER_FILE);
+      return githubBody(res, at, FOLDER_FILE);
+    },
+  };
+}
+
+/**
+ * A link's folder, read without its repository's archive: its tree (one API call, on the token's limit where there is
+ * one, else on the server's shared one), then only its files. A folder or ref the repository lacks reads as an empty
+ * folder.
+ */
+const folderReader = (folder: string): RepositoryReader<Repository<FolderFile>> => ({
+  open: async (deps, target) => {
+    const tree = `${repositoryApi(target)}/${folderTreePath(target, folder)}`;
+    const { res, at } = await githubGet(deps, tree, GITHUB_JSON, FOLDER_TREE);
+    if (res.status !== 404) return folderRepository(deps, target, await folderFiles(res, at, folder));
+    await res.body?.cancel();
+    // The API answers 404 alike for a private repository and for a folder it lacks: github.com's page tells them apart.
+    const page = await githubGet(deps, repositoryPage(target), "text/html", REPOSITORY_PAGE);
+    await page.res.body?.cancel();
+    return page.res.ok ? folderRepository(deps, target, new Map()) : null;
+  },
+  withToken: (deps, target, token) =>
+    tokenRead(
+      deps,
+      target,
+      token,
+      folderTreePath(target, folder),
+      FOLDER_TREE,
+      async (res, at) => folderRepository(deps, target, await folderFiles(res, at, folder), token),
+      () => folderRepository(deps, target, new Map(), token),
+    ),
+});
 
 /** An account or repository name as GitHub allows it, so building an API path from one never climbs out of it. */
 const GITHUB_NAME = /^(?!\.\.?$)[A-Za-z0-9_.-]{1,100}$/;
@@ -1014,28 +1171,35 @@ type GithubConnectionState = "none" | "refused" | "ok";
  *
  * None reads it: `github.unreachable` when GitHub left a token request unanswered, `skill.connection_gone` when the
  * workspace no longer has the connection `through` names, else `github.repo_missing` with the connection's state and
- * whether the GitHub App is installed on some account (`app`).
+ * whether the GitHub App is installed on some account (`app`). `reader`: what is read (its archive, or one folder).
  */
-async function readRepository(deps: GithubReadDeps, orgId: string, target: GithubTarget, through: SkillVia | null) {
+async function readRepository<R>(
+  deps: GithubReadDeps,
+  orgId: string,
+  target: GithubTarget,
+  through: SkillVia | null,
+  reader: RepositoryReader<R>,
+) {
   let limited: TooManyError | null = null;
   if (!through) {
     try {
-      const open = await publicRepository(deps, target);
+      const open = await reader.open(deps, target);
       if (open) return { ...open, via: null };
     } catch (err) {
       if (!(err instanceof TooManyError) || err.code !== "github.limited") throw err;
       limited = err;
     }
   }
-  return workspaceRepository(deps, orgId, target, through, limited);
+  return workspaceRepository(deps, orgId, target, through, reader, limited);
 }
 
 /** The repository read with the workspace's tokens alone, as `readRepository` says: which one read it, or why none. */
-async function workspaceRepository(
+async function workspaceRepository<R>(
   deps: GithubReadDeps,
   orgId: string,
   target: GithubTarget,
   through: SkillVia | null,
+  reader: RepositoryReader<R>,
   limited: TooManyError | null = null,
 ) {
   const repo = `${target.owner}/${target.repo}`;
@@ -1064,7 +1228,7 @@ async function workspaceRepository(
       }
       if (!token) continue;
       tried = true;
-      const found = await tokenRepository(deps, target, token);
+      const found = await reader.withToken(deps, target, token);
       if (found === "refused") {
         if (via === "github") state = "refused";
       } else if (found) return { ...found, via: limited ? null : via };
@@ -1096,7 +1260,7 @@ async function workspaceRepository(
  */
 export async function linkedRepository(deps: GithubReadDeps, orgId: string, url: string) {
   const target = parseGithubUrl(url);
-  return { target, ...(await readRepository(deps, orgId, target, null)) };
+  return { target, ...(await readRepository(deps, orgId, target, null, ARCHIVE_READER)) };
 }
 
 /** github.com's page of a repository: a renamed one redirects to its new name. */
@@ -1108,7 +1272,7 @@ const REPOSITORY_PAGE: GithubFetchOptions = { maxBytes: 0, tooLarge: "", redirec
  * one, with its refusals.
  */
 export async function hiddenRepository(deps: GithubReadDeps, orgId: string, target: GithubTarget) {
-  const page = `https://github.com/${encodePath(`${target.owner}/${target.repo}`)}`;
+  const page = repositoryPage(target);
   let limited: TooManyError | null = null;
   try {
     const { res } = await githubGet(deps, page, "text/html", REPOSITORY_PAGE);
@@ -1118,14 +1282,14 @@ export async function hiddenRepository(deps: GithubReadDeps, orgId: string, targ
     if (!(err instanceof TooManyError) || err.code !== "github.limited") throw err;
     limited = err;
   }
-  return workspaceRepository(deps, orgId, target, null, limited);
+  return workspaceRepository(deps, orgId, target, null, ARCHIVE_READER, limited);
 }
 
 /**
  * The skill folders at or below `folder`, each with its SKILL.md, by path. A SKILL.md inside another skill's folder
  * is a file of that skill, not a skill of its own.
  */
-function skillFolders(files: GithubRepository["files"], folder: string) {
+function skillFolders<E>(files: ReadonlyMap<string, E>, folder: string) {
   const depth = (dir: string) => (dir ? dir.split("/").length : 0);
   const prefix = folder ? `${folder}/` : "";
   const found = [...files]
@@ -1133,27 +1297,30 @@ function skillFolders(files: GithubRepository["files"], folder: string) {
     .map(([path, entry]) => [parentOf(path), entry] as const)
     .filter(([dir]) => depth(dir) - depth(folder) <= SKILL_SEARCH.depth)
     .sort(([a], [b]) => depth(a) - depth(b));
-  const skills = new Map<string, ZipListing>();
+  const skills = new Map<string, E>();
   for (const [dir, entry] of found) if (folderOf(skills, dir) === undefined) skills.set(dir, entry);
   return new Map([...skills].sort(([a], [b]) => (a < b ? -1 : 1)));
 }
 
 /**
- * A skill folder of a zip (`inside`: its files), within the limits by their declared sizes before anything is
- * inflated: binaries past `SKILL_LIMITS.assetBytes` are listed, never inflated.
+ * A skill folder (`inside`: its files), within the limits by their declared sizes before anything is read: binaries
+ * past `SKILL_LIMITS.assetBytes` are listed, never read.
  */
-function repositorySkill(zip: Uint8Array, dir: string, inside: [string, ZipListing][]) {
+async function repositorySkill<E extends { size: number }>(
+  read: (entry: E) => Promise<Uint8Array>,
+  dir: string,
+  inside: [string, E][],
+) {
   const prefix = dir ? `${dir}/` : "";
   const listed = inside.map(([path, entry]) => ({ path: path.slice(prefix.length), size: entry.size, entry }));
   assertSkillSize(listed);
   const kept = keptBinaries(listed);
-  const { skillMd, files } = splitSkillFolder(
-    listed.map(({ path, size, entry }) =>
-      classifyFile(path).kind === "binary" && !kept.has(path)
-        ? { path, data: new Uint8Array(), skippedSize: size }
-        : { path, data: inflateZipEntry(zip, entry) },
-    ),
+  const loaded = await mapInBatches(listed, BLOB_BATCH, async ({ path, size, entry }) =>
+    classifyFile(path).kind === "binary" && !kept.has(path)
+      ? { path, data: new Uint8Array(), skippedSize: size }
+      : { path, data: await read(entry) },
   );
+  const { skillMd, files } = splitSkillFolder(loaded);
   return { ...parseSkillMarkdown(skillMd), files };
 }
 
@@ -1177,14 +1344,45 @@ export interface SkillSkipped {
   params?: ErrorParams;
 }
 
+/** A skill link's repository, how it was read, and whether folder by folder. */
+type LinkRepository = Repository<{ size: number }> & { via: SkillVia | null; byFolder: boolean };
+
+/**
+ * The repository a skill's link points into: from its archive, else only the link's folder (`folderReader`) when the
+ * archive is past its cap or `byFolder` (read so before, so the archive isn't downloaded again to be refused).
+ */
+async function linkRepository(
+  deps: SkillDeps,
+  orgId: string,
+  target: GithubTarget,
+  folder: string,
+  through: SkillVia | null,
+  byFolder: boolean,
+): Promise<LinkRepository> {
+  if (!byFolder) {
+    try {
+      return { ...(await readRepository(deps, orgId, target, through, ARCHIVE_READER)), byFolder: false };
+    } catch (err) {
+      if (!(err instanceof ValidationError) || err.code !== ARCHIVE.tooLargeCode) throw err;
+    }
+  }
+  return { ...(await readRepository(deps, orgId, target, through, folderReader(folder))), byFolder: true };
+}
+
 /**
  * What a GitHub link holds: the repository, how it was read, and the skill folders at or below the link (a file's:
  * its folder's).
  */
-async function readGithubLink(deps: SkillDeps, orgId: string, url: string, through: SkillVia | null = null) {
+async function readGithubLink(
+  deps: SkillDeps,
+  orgId: string,
+  url: string,
+  through: SkillVia | null = null,
+  byFolder = false,
+) {
   const target = parseGithubUrl(url);
-  const repository = await readRepository(deps, orgId, target, through);
   const folder = target.kind === "file" ? parentOf(target.path) : target.path;
+  const repository = await linkRepository(deps, orgId, target, folder, through, byFolder);
   const folders = skillFolders(repository.files, folder);
   const repo = `${target.owner}/${target.repo}`;
   if (folders.size === 0) {
@@ -1198,7 +1396,8 @@ async function readGithubLink(deps: SkillDeps, orgId: string, url: string, throu
       { max: SKILL_SEARCH.max },
     );
   }
-  const found = new Map([...folders].map(([dir, skillMd]) => [dir, { skillMd, files: [] as [string, ZipListing][] }]));
+  type Entry = { size: number };
+  const found = new Map([...folders].map(([dir, skillMd]) => [dir, { skillMd, files: [] as [string, Entry][] }]));
   // Every skill's files in one pass: no skill folder holds another.
   for (const file of repository.files) {
     const dir = folderOf(found, parentOf(file[0]));
@@ -1212,11 +1411,11 @@ async function readGithubLink(deps: SkillDeps, orgId: string, url: string, throu
     return skill;
   };
   /** The skill at `dir` from its SKILL.md alone, refused as installing it would be for its limits or its text. */
-  const about = (dir: string) =>
-    parseSkillMarkdown(new TextDecoder().decode(inflateZipEntry(repository.zip, skillIn(dir).skillMd)));
+  const about = async (dir: string) =>
+    parseSkillMarkdown(new TextDecoder().decode(await repository.read(skillIn(dir).skillMd)));
   /** The skill at `dir`, ready to save: from the link itself when it points at the skill, else from its folder. */
-  const skillAt = (dir: string) => {
-    const skill = repositorySkill(repository.zip, dir, skillIn(dir).files);
+  const skillAt = async (dir: string) => {
+    const skill = await repositorySkill(repository.read, dir, skillIn(dir).files);
     return {
       ...skill,
       sourceHash: skillSourceHash(skill),
@@ -1226,6 +1425,7 @@ async function readGithubLink(deps: SkillDeps, orgId: string, url: string, throu
           ? url
           : `https://github.com/${encodePath(repo)}/tree/${encodePath(target.ref)}/${encodePath(dir)}`,
       sourceVia: repository.via,
+      sourceByFolder: repository.byFolder,
     };
   };
   return { found, about, skillAt, via: repository.via };
@@ -1242,14 +1442,15 @@ export interface SkillPick {
 }
 
 /**
- * Import from a GitHub link, read by the backend from the repository's archive (only GitHub hosts, the SSRF guard
- * on every request, within `SKILL_LIMITS`): the skill
+ * Import from a GitHub link, read by the backend from the repository's archive or, past its cap, from the link's
+ * folder alone (only GitHub hosts, the SSRF guard on every request, within `SKILL_LIMITS`): the skill
  * folder it points at (a file's folder), or the one skill below it. A link that holds several answers with them to
  * pick from (`importPickedSkills`), nothing installed, and with those that can't be installed (past the limits, or a
  * SKILL.md that doesn't parse) apart, each with why; `list` answers so for one skill too. Installing a skill whose
  * name is already installed makes a new version. A private repository is read through the workspace's GitHub (the
  * GitHub App, else the connection): installing skills (`manage_agents`) is what lets a person read through it.
  * `through`: that connection first, with no read without credentials (a skill updated from the link it came from).
+ * `byFolder`: read its folder alone at once (`skills.sourceByFolder`).
  * `forAgentId`: the agent whose card opened the install (`turnOnFor`). `personal`: the actor's own skill, which any
  * member installs, from a public repository unless they manage agents (`githubFor`).
  */
@@ -1258,14 +1459,20 @@ export async function importSkillFromUrl(
   actorId: string,
   orgId: string,
   url: string,
-  options: { list?: boolean; through?: SkillVia | null; forAgentId?: string; personal?: boolean } = {},
+  options: {
+    list?: boolean;
+    through?: SkillVia | null;
+    byFolder?: boolean;
+    forAgentId?: string;
+    personal?: boolean;
+  } = {},
 ): Promise<SkillDetail | SkillPick> {
   const membership = await requirePermission(deps.db, actorId, orgId, options.personal ? "read" : "manage_agents");
   const owner = options.personal ? actorId : null;
-  const link = await readGithubLink(githubFor(deps, membership), orgId, url, options.through);
+  const link = await readGithubLink(githubFor(deps, membership), orgId, url, options.through, options.byFolder);
   const [only, ...more] = link.found.keys();
   if (!options.list && only !== undefined && more.length === 0) {
-    const skill = await saveSkill(deps, actorId, orgId, { ...link.skillAt(only), owner });
+    const skill = await saveSkill(deps, actorId, orgId, { ...(await link.skillAt(only)), owner });
     await turnOnFor(deps, actorId, orgId, options.forAgentId, [skill.id]);
     return skill;
   }
@@ -1274,7 +1481,7 @@ export async function importSkillFromUrl(
   let refused: unknown;
   for (const path of link.found.keys()) {
     try {
-      const { name, description } = link.about(path);
+      const { name, description } = await link.about(path);
       choices.push({ path, name, description });
     } catch (err) {
       if (!(err instanceof ValidationError)) throw err;
@@ -1340,9 +1547,9 @@ export async function importPickedSkills(
   const membership = await requirePermission(deps.db, actorId, orgId, options.personal ? "read" : "manage_agents");
   const link = await readGithubLink(githubFor(deps, membership), orgId, url);
   /** A refusal names the skill's folder. */
-  const named = <T>(dir: string, read: () => T) => {
+  const named = async <T>(dir: string, read: () => Promise<T>) => {
     try {
-      return read();
+      return await read();
     } catch (err) {
       if (err instanceof ValidationError) throw new ValidationError(`${dir}: ${err.message}`, err.code, err.params);
       throw err;
@@ -1351,17 +1558,18 @@ export async function importPickedSkills(
   const dirs = [...new Set(paths)];
   // Every pick's limits and text are checked before any is saved, by the SKILL.md alone: its files are inflated one
   // skill at a time, since a small archive can declare the most a skill keeps for each of the 100 it may hold.
-  const names = dirs.map((dir) => {
+  const names: string[] = [];
+  for (const dir of dirs) {
     if (!link.found.has(dir)) throw new ValidationError(`That link holds no skill at ${dir}`);
-    return named(dir, () => link.about(dir).name);
-  });
+    names.push((await named(dir, () => link.about(dir))).name);
+  }
   const twin = names.find((name, i) => names.indexOf(name) !== i);
   if (twin) throw new ValidationError(`Two of the skills picked are named ${twin}. Pick one of them.`);
   const installed: SkillDetail[] = [];
   for (const dir of dirs) {
     installed.push(
       await saveSkill(deps, actorId, orgId, {
-        ...named(dir, () => link.skillAt(dir)),
+        ...(await named(dir, () => link.skillAt(dir))),
         owner: options.personal ? actorId : null,
       }),
     );
@@ -1404,7 +1612,7 @@ export function runsCode(path: string) {
  */
 export async function readSkillSource(deps: SkillDeps, s: SkillRow) {
   if (!s.sourceUrl) throw new ValidationError("This skill wasn't imported from a link", "skill.no_link");
-  const link = await readGithubLink(deps, s.orgId, s.sourceUrl, s.sourceVia as SkillVia | null);
+  const link = await readGithubLink(deps, s.orgId, s.sourceUrl, s.sourceVia as SkillVia | null, s.sourceByFolder);
   const [only, ...more] = link.found.keys();
   if (only === undefined || more.length > 0) {
     throw new ValidationError(
@@ -1412,7 +1620,7 @@ export async function readSkillSource(deps: SkillDeps, s: SkillRow) {
       "skill.link_holds_several",
     );
   }
-  const skill = link.skillAt(only);
+  const skill = await link.skillAt(only);
   if (skill.name !== s.name) {
     throw new ValidationError(`Its link holds the skill ${skill.name} now`, "skill.link_renamed", { name: skill.name });
   }
@@ -1430,6 +1638,7 @@ export async function reimportSkill(deps: SkillDeps, actorId: string, orgId: str
   const through = s.sourceVia as SkillVia | null;
   const again = await importSkillFromUrl(deps, actorId, orgId, s.sourceUrl, {
     through,
+    byFolder: s.sourceByFolder,
     personal: s.ownerUserId !== null,
   });
   if ("choices" in again) {
