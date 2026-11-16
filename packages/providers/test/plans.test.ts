@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { MODEL_CATALOG } from "../src/catalog";
 import {
+  antigravityModelFor,
   autoPlanModel,
   CODING_PLANS,
   claudeCodeModel,
@@ -412,4 +413,73 @@ test("before this process has read the plan's live list, no model counts as drop
 console.log(JSON.stringify([droppedPlanModel("opencode", "glm-9"), droppedPlanModel("opencode", "hy3")]));`;
   const run = Bun.spawnSync([process.execPath, "-e", code]);
   expect(run.stdout.toString().trim()).toBe("[null,null]");
+});
+
+describe("antigravityModelFor", () => {
+  const now = Date.parse("2026-11-16T12:00:00.000Z");
+  const gemini = (used: number) => [
+    { kind: "seven_day", usedPercent: used, resetsAt: "2026-11-21T21:48:50.000Z" },
+    { kind: "five_hour", usedPercent: used, resetsAt: "2026-11-16T17:00:00.000Z" },
+  ];
+  const group = (label: string, used: number, resetsAt = "2026-11-21T21:45:50.000Z") => ({
+    kind: "other",
+    label,
+    usedPercent: used,
+    resetsAt,
+  });
+  const argon = (used: number) => group("Gemini 4 Argon · 7d", used);
+
+  test("the model as chosen while its group has room, whatever the other groups say", () => {
+    const usage = { windows: [...gemini(5), argon(100)] };
+    expect(antigravityModelFor("gemini-3.8-flash-high", "medium", usage, now)).toBe("gemini-3.8-flash-high");
+    expect(antigravityModelFor("gemini-4-argon-high", "medium", { windows: [...gemini(100), argon(0)] }, now)).toBe(
+      "gemini-4-argon-high",
+    );
+  });
+
+  test("a model whose group is full gives way to a group with room, at the same thinking level", () => {
+    expect(antigravityModelFor("gemini-4-argon-medium", "low", { windows: [...gemini(5), argon(100)] }, now)).toBe(
+      "gemini-3.8-flash-medium",
+    );
+    expect(antigravityModelFor("gemini-3.8-flash-high", "low", { windows: [...gemini(100), argon(0)] }, now)).toBe(
+      "gemini-4-argon-high",
+    );
+  });
+
+  test("none chosen (auto, unset): the account's own group at the level asked, else the first with room", () => {
+    const usage = { windows: [...gemini(5), argon(0)] };
+    expect(antigravityModelFor(undefined, "high", usage, now)).toBe("gemini-3.8-flash-high");
+    expect(antigravityModelFor("auto", "low", usage, now)).toBe("gemini-3.8-flash-low");
+    expect(antigravityModelFor(null, "medium", { windows: [...gemini(100), argon(0)] }, now)).toBe(
+      "gemini-4-argon-medium",
+    );
+    expect(antigravityModelFor(undefined, "low", { windows: [...gemini(100), argon(0)] }, now)).toBe(
+      "gemini-4-argon-medium",
+    );
+  });
+
+  test("a model of a group with no window of its own follows the account's, and Claude and GPT their own", () => {
+    const claude = group("Claude and GPT models · 7d", 100, "2026-11-17T04:21:04.000Z");
+    expect(antigravityModelFor("claude-sonnet-5-5-high", "medium", { windows: [...gemini(5), claude] }, now)).toBe(
+      "gemini-3.8-flash-high",
+    );
+    expect(antigravityModelFor("gpt-oss-120b-medium", "medium", { windows: [...gemini(5), claude] }, now)).toBe(
+      "gemini-3.8-flash-medium",
+    );
+    expect(antigravityModelFor("claude-sonnet-5-5-high", "medium", { windows: [...gemini(5)] }, now)).toBe(
+      "claude-sonnet-5-5-high",
+    );
+  });
+
+  test("a full window that has reset no longer counts; no reading, or every group full, asks what was chosen", () => {
+    const passed = group("Gemini 4 Argon · 7d", 100, "2026-11-16T11:00:00.000Z");
+    expect(antigravityModelFor("gemini-4-argon-high", "low", { windows: [...gemini(5), passed] }, now)).toBe(
+      "gemini-4-argon-high",
+    );
+    expect(antigravityModelFor("gemini-4-argon-high", "low", null, now)).toBe("gemini-4-argon-high");
+    expect(antigravityModelFor("gemini-4-argon-high", "low", { windows: [...gemini(100), argon(100)] }, now)).toBe(
+      "gemini-4-argon-high",
+    );
+    expect(antigravityModelFor(undefined, "medium", { windows: [...gemini(100), argon(100)] }, now)).toBeUndefined();
+  });
 });

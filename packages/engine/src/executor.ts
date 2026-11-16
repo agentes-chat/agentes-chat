@@ -37,7 +37,14 @@ import {
   type ToolImage,
   textOf,
 } from "@agenteschat/providers";
-import { autoPlanModel, droppedPlanModel, ownLimitsModel, planModel, planOf } from "@agenteschat/providers/plans";
+import {
+  antigravityModelFor,
+  autoPlanModel,
+  droppedPlanModel,
+  ownLimitsModel,
+  planModel,
+  planOf,
+} from "@agenteschat/providers/plans";
 import { PLAN_NOTICE, PLAN_PAUSE } from "@agenteschat/ui/plan-state";
 import { pendingConnectors } from "./access";
 import { linkRunActions, publishMessageActions } from "./agent-actions";
@@ -3367,6 +3374,18 @@ async function executeRunInner(
   let plan: BrainPlan = brainPlan;
   /** An Antigravity turn refused in this run already went again on a new session. */
   let antigravityFresh = false;
+  // Antigravity has no model per tier and its groups each have a quota: the model asked comes from the `/usage`
+  // reading (`antigravityModelFor`), so "Automático" never leaves the choice to the CLI's own default, which can be
+  // one out of quota, and an agent on a model whose group is full asks one that has room.
+  if (plan.kind === "antigravity") {
+    const asked = plan.effort;
+    const model = antigravityModelFor(
+      plan.model,
+      asked === "low" || asked === "medium" || asked === "high" ? asked : "medium",
+      plan.usage,
+    );
+    if (model && model !== plan.model) plan = { ...plan, model };
+  }
   /**
    * What the turn-end judge reads (ADR 0109), filled only when it runs: the run's general means (`turnMeans`, its
    * computer's own tools on a computer brain) and every call it tried (`triedCalls`). An `untried` nudge names them.

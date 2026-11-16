@@ -28,6 +28,7 @@ afterEach(() => {
 });
 
 const FLASH = "gemini-3.8-flash-medium";
+const ARGON = "gemini-4-argon-medium";
 const ARGON_WEEK = new Date(Date.now() + 6 * 86_400_000).toISOString();
 const REFUSAL = "Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 138h.";
 
@@ -176,4 +177,26 @@ test("a refusal on a new session too is a real one: the run waits on the re-chec
   expect(waitOf(run)).toMatchObject({ code: "plan_limit" });
   expect(waitOf(run)?.resetsAt).toBeUndefined();
   expect(planLimitOf(machineId, "antigravity", accountId, usage)).toBeNull();
+});
+
+test("an agent on Automático is asked a model, of the account's own group first", async () => {
+  for (const argonUsed of [100, 0]) {
+    f = await setup({ reply: () => ({ chunks: ["pela API"] }) });
+    await geminiAgent(f, argonUsed, "auto");
+    const { brain, seen } = scripted(() => answered("feito"));
+    await post(f, "@dev oi");
+    await drainOutbox(f.db, handlers(f, brain));
+    expect(seen[0]?.model).toMatch(/^gemini-3\.8-flash-(low|medium|high)$/);
+    await f.close();
+  }
+  f = undefined as unknown as Fixture;
+});
+
+test("an agent on a model whose group is full is asked another group's, at the same level", async () => {
+  f = await setup({ reply: () => ({ chunks: ["pela API"] }) });
+  await geminiAgent(f, 100, ARGON);
+  const { brain, seen } = scripted(() => answered("feito"));
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers(f, brain));
+  expect(seen[0]?.model).toBe(FLASH);
 });

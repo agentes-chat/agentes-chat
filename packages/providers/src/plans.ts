@@ -662,3 +662,47 @@ export const ANTIGRAVITY_LEVEL = /-(?:low|medium|high|xhigh)$/;
 
 /** An Antigravity model slug's model in the catalog: `gemini-4-argon-high` → `gemini-4-argon`, `…-neon-xhigh` too. */
 export const antigravityBaseModel = (slug: string) => slug.replace(ANTIGRAVITY_LEVEL, "");
+
+/** Antigravity's `/usage` window, as `PlanUsage` keeps it. */
+type AgyWindow = { kind: string; label?: string; usedPercent?: number; resetsAt?: string };
+
+/** The model names a group's label stands for: "Claude and GPT models · 7d" is `claude`, `gpt`. */
+const agyGroupNames = (label: string) =>
+  label
+    .toLowerCase()
+    .replace(/\s*·\s*(?:5h|7d)$/, "")
+    .replace(/\bmodels?\b/g, "")
+    .split(/\s+and\s+|,|\//)
+    .map((n) => n.trim().replace(/\s+/g, "-"))
+    .filter(Boolean);
+
+/**
+ * Whether the `/usage` reading says `model`'s group is out now: a window of its own that is full and has not reset
+ * (Argon's, Claude and GPT's), else, for the group the account's own windows are (Gemini's), those.
+ */
+function antigravityGroupFull(model: string, windows: readonly AgyWindow[] | undefined, now: number): boolean {
+  const all = windows ?? [];
+  const own = all.filter((w) => w.kind === "other" && w.label && agyGroupNames(w.label).some((n) => model.includes(n)));
+  const ofGroup = own.length > 0 ? own : all.filter((w) => w.kind !== "other");
+  return ofGroup.some((w) => (w.usedPercent ?? 0) >= 100 && (!w.resetsAt || Date.parse(w.resetsAt) > now));
+}
+
+/**
+ * The Antigravity model to ask for a `model` the agent chose (none or `auto`: it chose none), by the `/usage` reading.
+ * The model as chosen while its group has room; else, or when none was chosen (the CLI's own default can be a model
+ * out of quota), a catalog model of a group with room at the same thinking level (`level` when none was chosen). The
+ * account's own group (Gemini's Flash) comes before the others: the catalog lists it last. Undefined: nothing to ask.
+ */
+export function antigravityModelFor(
+  model: string | null | undefined,
+  level: "low" | "medium" | "high",
+  usage: { windows?: readonly AgyWindow[] } | null | undefined,
+  now = Date.now(),
+): string | undefined {
+  const chosen = model && model !== "auto" ? model : undefined;
+  const open = (id: string) => !antigravityGroupFull(id, usage?.windows, now);
+  if (chosen && open(chosen)) return chosen;
+  const want = (chosen && /-(low|medium|high|xhigh)$/.exec(chosen)?.[1]) || level;
+  const free = [...ANTIGRAVITY_MODELS].reverse().filter((m) => open(m.id));
+  return (free.find((m) => m.id.endsWith(`-${want}`)) ?? free[0])?.id ?? chosen;
+}
