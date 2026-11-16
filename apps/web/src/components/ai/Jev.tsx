@@ -3,6 +3,7 @@ import {
   useAiStatus,
   useCheckJevKey,
   useCredentials,
+  useDecisionModel,
   useJevKey,
   useModelLabel,
   useRemoveJevKey,
@@ -37,6 +38,7 @@ import { useTranslation } from "react-i18next";
 import { HelpLink } from "@/components/HelpLink";
 import { useOrg } from "@/components/org-context";
 import { OpenPage, Step, StepTitle } from "./AddAccountFlow";
+import { DecisionModelSection } from "./DecisionModel";
 
 /*
  * Who picks the agents for a message nobody mentioned (ADR 0074), and Jev on a self-hosted server (ADR 0073):
@@ -224,11 +226,12 @@ export function WhoPicksSection() {
   const { org } = useOrg();
   const admin = can(org, "manage_credentials");
   const jev = useJevKey();
+  const decision = useDecisionModel();
   // The server's owner gets Jev's card where they aren't an admin too, and its reasons follow who picks.
   const status = useAiStatus(org.id, admin || Boolean(jev.data));
   const modelLabel = useModelLabel();
   const line = admin ? routingLineOf(status.data, modelLabel) : null;
-  if (!line && !jev.data) return null;
+  if (!line && !jev.data && !decision.data) return null;
   return (
     <Card aria-labelledby="sec-routing" className="who-card">
       <CardHeader
@@ -240,6 +243,7 @@ export function WhoPicksSection() {
       {line && <p className="who-line">{t(line.key, line.params)}</p>}
       {line && status.data?.reflection === false && <p className="who-line">{t("routing.reflectionOff")}</p>}
       {jev.data && <JevCard routing={status.data?.routing?.by} />}
+      <DecisionModelSection />
     </Card>
   );
 }

@@ -1,0 +1,31 @@
+CREATE TABLE "instance_decision_model" (
+	"id" text PRIMARY KEY NOT NULL,
+	"enabled" boolean DEFAULT false NOT NULL,
+	"provider" text NOT NULL,
+	"model" text NOT NULL,
+	"base_url" text,
+	"runtime" text,
+	"ciphertext" text,
+	"wrapped_data_key" text,
+	"kek_id" text,
+	"key_hint" text,
+	"capabilities" jsonb DEFAULT '{"inputs":["text"]}'::jsonb NOT NULL,
+	"timeout_ms" integer DEFAULT 3000 NOT NULL,
+	"install_token" uuid,
+	"install_state" text DEFAULT 'idle' NOT NULL,
+	"install_model" text,
+	"install_progress" integer DEFAULT 0 NOT NULL,
+	"install_detail" text,
+	"install_error" text,
+	"install_started_at" timestamp with time zone,
+	"install_finished_at" timestamp with time zone,
+	"updated_by" text,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "instance_decision_model_single" CHECK ("instance_decision_model"."id" = 'default'),
+	CONSTRAINT "instance_decision_model_provider" CHECK ("instance_decision_model"."provider" in ('openai', 'gemini', 'local')),
+	CONSTRAINT "instance_decision_model_runtime" CHECK ("instance_decision_model"."runtime" is null or "instance_decision_model"."runtime" in ('ollama', 'llamacpp', 'lmstudio', 'custom')),
+	CONSTRAINT "instance_decision_model_install" CHECK ("instance_decision_model"."install_state" in ('idle', 'queued', 'checking', 'deleting', 'downloading', 'configuring', 'ready', 'failed', 'cancelled')),
+	CONSTRAINT "instance_decision_model_sealed" CHECK (("instance_decision_model"."ciphertext" is null and "instance_decision_model"."wrapped_data_key" is null and "instance_decision_model"."kek_id" is null) or ("instance_decision_model"."ciphertext" is not null and "instance_decision_model"."wrapped_data_key" is not null and "instance_decision_model"."kek_id" is not null))
+);
+--> statement-breakpoint
+ALTER TABLE "instance_decision_model" ADD CONSTRAINT "instance_decision_model_updated_by_users_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;

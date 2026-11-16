@@ -44,6 +44,63 @@ export interface JevKey {
 /** Jev's key to save: one pasted (TypeSafe's or OpenRouter's), or the workspace's own OpenRouter key. */
 export type JevKeyInput = string | { orgId: string; credentialId: string };
 
+/** A decision provider the installation's switch can use (ADR 0188). */
+export type DecisionProvider = "openai" | "gemini" | "local";
+export type DecisionRuntime = "ollama" | "llamacpp" | "lmstudio" | "custom";
+export type DecisionShownState = "off" | "ok" | "invalid" | "no_credit" | "unreachable";
+export type DecisionInstallState =
+  | "idle"
+  | "queued"
+  | "checking"
+  | "deleting"
+  | "downloading"
+  | "configuring"
+  | "ready"
+  | "failed"
+  | "cancelled";
+
+/** The installation's optional decision model (ADR 0188): off until its owner turns the switch on. */
+export interface DecisionModel {
+  source: "settings" | null;
+  enabled: boolean;
+  provider: DecisionProvider | null;
+  model: string | null;
+  baseURL: string | null;
+  runtime: DecisionRuntime | null;
+  hint: string | null;
+  state: DecisionShownState;
+  capabilities: { inputs: string[] };
+  timeoutMs: number;
+  install: {
+    state: DecisionInstallState;
+    model: string | null;
+    progress: number;
+    detail: string | null;
+    error: string | null;
+  } | null;
+}
+
+export interface DecisionModelInput {
+  enabled?: boolean;
+  provider?: DecisionProvider;
+  model?: string;
+  baseURL?: string;
+  apiKey?: string;
+  timeoutMs?: number;
+}
+
+/** This server's size and the local model that fits it (GET /api/app/decision-model/host). */
+export interface DecisionHost {
+  cpus: number;
+  memoryGb: number;
+  memoryLimitGb?: number;
+  diskGb: number;
+  diskFreeGb: number;
+  runtime: { kind: DecisionRuntime; baseURL: string; reachable: boolean } | null;
+  recommended: { id: string; label: string; sizeGb?: number; why: string } | null;
+  candidates: { id: string; label: string; sizeGb?: number; inputs: string[]; fits: boolean; why: string }[];
+}
+
 /**
  * The installation's GIPHY key, for its pinned owner on a server that isn't agentes.chat's own (`GET
  * /api/app/gif-key`, ADR 0091): with it, every workspace has GIFs (`OrgSettings.gifsAvailable`).
@@ -1531,10 +1588,12 @@ export type DecidedBy =
  * model while it picks. `noSmallModel`: with `rules`, the default key's provider, which has none (Kimi).
  */
 export interface AiRouting {
-  by: "jev" | "model" | "plans" | "rules" | "off";
-  mine: "jev" | "model" | "plan" | "rules" | "off";
+  by: "jev" | "decision" | "model" | "plans" | "rules" | "off";
+  mine: "jev" | "decision" | "model" | "plan" | "rules" | "off";
   model: string | null;
   noSmallModel: string | null;
+  /** With `decision`: the provider that decides (openai, gemini or local). */
+  decisionProvider?: string | null;
 }
 
 /** What a person who met "no AI" asked for (Jev): a Connect dialog step; `any` and `task` open its first step. */

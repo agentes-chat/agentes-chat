@@ -651,6 +651,8 @@ export async function orgModelProvider(db: Executor, orgId: string): Promise<str
 export interface RoutingSetup {
   /** Jev picks: a key whose owner sees it working (a limit or an outage doesn't count), and the chain starts with it. */
   jev(): Promise<boolean>;
+  /** The installation's optional decision model, when it is on and ready: it picks before Jev. */
+  decision?(): Promise<{ provider: string; model: string } | null>;
   /** The organization's small model, or null. */
   smallModel(orgId: string): Promise<string | null>;
   /** The plan step's computers; null where it is off (the Cloud). */
