@@ -101,7 +101,7 @@ import {
 import { planLentGroup, planModelDroppedGroup } from "./notification-producers";
 import { resolveNotifications } from "./notifications";
 import { can, getMembership, requirePermission } from "./organizations";
-import { isRightHand, personalBrain, personalModel } from "./right-hand";
+import { isRightHand, personalBrain, personalModel, rightHandPerson } from "./right-hand";
 import { orgModelProvider } from "./router";
 import { readRefusal } from "./standing";
 import { wakeAgentUsageWaits } from "./usage-pause";
@@ -800,12 +800,23 @@ async function setPersonalBrain(
       target: { type: "agent", id: agent.id },
       details: { scope: "mine", from, to },
     });
+  // What waited on this person's old plan (its limit, or long work paused near it) goes on and reads the new one:
+  // else it sleeps until the old plan's reset and its card quotes a percentage the new plan doesn't have.
+  const wakeOwnPlanWaits = () =>
+    wakeAgentUsageWaits(
+      db,
+      orgId,
+      agent.id,
+      Date.now(),
+      async (run) => (await rightHandPerson(db, agent, run)) === userId,
+    ).catch(() => null);
   if (input.brain === "model" || input.account === null) {
     if (current) {
       await db
         .delete(schema.rightHandBrains)
         .where(and(eq(schema.rightHandBrains.orgId, orgId), eq(schema.rightHandBrains.userId, userId)));
       await audit(null);
+      await wakeOwnPlanWaits();
     }
     return personalView(db, userId, orgId, agent);
   }
@@ -901,6 +912,7 @@ async function setPersonalBrain(
   });
   forgetAgents(orgId, released);
   await audit({ brain, model, account: account.id, effort: effort ?? null });
+  if (changed || model !== current?.brainModel) await wakeOwnPlanWaits();
   if (moved) {
     await recordAudit(db, {
       orgId,
