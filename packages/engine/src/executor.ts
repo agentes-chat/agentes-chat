@@ -3365,6 +3365,8 @@ async function executeRunInner(
   };
   thinksAs(brainPlan.kind);
   let plan: BrainPlan = brainPlan;
+  /** An Antigravity turn refused in this run already went again on a new session. */
+  let antigravityFresh = false;
   /**
    * What the turn-end judge reads (ADR 0109), filled only when it runs: the run's general means (`turnMeans`, its
    * computer's own tools on a computer brain) and every call it tried (`triedCalls`). An `untried` nudge names them.
@@ -4506,7 +4508,9 @@ async function executeRunInner(
     const line = await usageWaitPlace(db, run, key, wait.since, budget ? null : (plan.model ?? ""));
     let at = budget ? (u.soon ? Number.NaN : nextMonthStart(now)) : u.resetsAt ? Date.parse(u.resetsAt) : Number.NaN;
     // The account's windows say nothing about when a model's own limit resets.
-    if (!budget && !scope && !(at > now) && machineId) {
+    // Antigravity's refusal can be one model group's: the account's windows (the first one resetting, hours away and
+    // maybe unused) say nothing of it, so with no reset in the refusal it waits on the re-checks.
+    if (!budget && !scope && plan.kind !== "antigravity" && !(at > now) && machineId) {
       const stored = await storedPlanUsage(db, run.orgId, machineId, plan.kind, plan.account?.id).catch(() => null);
       at = bindingReset(stored, now) ?? Number.NaN;
     }
@@ -5305,9 +5309,13 @@ async function executeRunInner(
               turnLimited = true;
               const machineId = turnPlan.session?.machineId;
               // A plan whose models have their own limits: whose this one is waits for the refusal's words.
+              // Antigravity's model groups (Gemini, Claude and GPT, Argon) each have a quota of their own and its
+              // 429 doesn't say which one ran out, so a refusal never closes the whole account from here: the
+              // account's own windows (Gemini's) come from its `/usage` reading, which `storedPlanLimit` reads.
               if (
                 machineId &&
                 turnPlan.kind !== "model" &&
+                turnPlan.kind !== "antigravity" &&
                 !ownLimitsModel(turnPlan.account?.provider, turnPlan.model)
               ) {
                 notePlanLimit(machineId, turnPlan.kind, resetsAt, Date.now(), turnPlan.account?.id);
@@ -5530,6 +5538,26 @@ async function executeRunInner(
             transcript.sessionLost = gone;
             await saveTranscript(db, transcript);
             later(() => addRunStep(db, run, "context", { sessionLost: gone }));
+            continue;
+          }
+          // Antigravity keeps a quota refusal in its conversation: a session that failed on a model out of quota,
+          // resumed, answers with the same refusal whatever model is asked (and the runner resumes it whatever the
+          // `resume` hint says). So the first refusal of a run, with nothing run in it, goes again once on a new
+          // session, which the thread's next runs resume (`sessionFor`).
+          if (
+            turnPlan.kind === "antigravity" &&
+            error instanceof BrainFailure &&
+            error.code === "plan_limit" &&
+            plan.session &&
+            !plan.missionId &&
+            !antigravityFresh &&
+            executed.length === 0
+          ) {
+            antigravityFresh = true;
+            const fresh = Bun.randomUUIDv7();
+            await db.update(agentRuns).set({ brainSessionId: fresh }).where(eq(agentRuns.id, run.id));
+            plan = { ...plan, session: { ...plan.session, id: fresh, resume: false } };
+            later(() => addRunStep(db, run, "context", { antigravityFreshSession: true }));
             continue;
           }
           // The plan refused the rest of a turn that worked (the runner says so; an older one is taken as having

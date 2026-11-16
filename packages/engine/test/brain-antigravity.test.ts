@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { ANTIGRAVITY_PROTOCOL, LOCKED_BRAIN_PROTOCOL, SHARED_GEMINI_PROTOCOL } from "@agenteschat/adapters";
+import {
+  ANTIGRAVITY_PROTOCOL,
+  LOCKED_BRAIN_PROTOCOL,
+  type PlanUsage,
+  SHARED_GEMINI_PROTOCOL,
+} from "@agenteschat/adapters";
 import {
   ANTIGRAVITY_MODELS,
   GEMINI_ENTERPRISE_PROVIDER,
@@ -186,4 +191,66 @@ test("the right hand's reply never carries a Google token, refresh token, key or
   const out = scrubSignIns(`token ${access} refresh ${refresh} key ${key} secret ${secret}`, "[removed]");
   for (const v of [access, refresh, key, secret]) expect(out.text).not.toContain(v);
   expect(out.found).toBe(4);
+});
+
+// Antigravity's `/usage`: Gemini's windows are the plan's; Claude and GPT, and Argon, each have a week of their own.
+const hoursFrom = (now: number, h: number) => new Date(now + h * 3600_000).toISOString();
+const geminiWindows = (now: number, used5h: number): PlanUsage["windows"] => [
+  { kind: "seven_day", usedPercent: 3, resetsAt: hoursFrom(now, 100) },
+  { kind: "five_hour", usedPercent: used5h, resetsAt: hoursFrom(now, 5) },
+];
+const otherGroups = (now: number, used: number): PlanUsage["windows"] => [
+  { kind: "other", label: "Claude and GPT models · 7d", usedPercent: used, resetsAt: hoursFrom(now, 24) },
+  { kind: "other", label: "Gemini 4 Argon · 7d", usedPercent: used, resetsAt: hoursFrom(now, 100) },
+];
+const antigravityStatus = () =>
+  ({
+    name: "box",
+    online: true,
+    execAllowed: true,
+    protocol: ANTIGRAVITY_PROTOCOL,
+    pairedByUserId: "u1",
+    executors: { antigravity: { version: "agy 1.4.12" }, detectedAt: new Date().toISOString() },
+  }) as unknown as MachineStatus;
+
+test("Gemini's account is not at its limit because the other model groups' weeks are full", () => {
+  const now = Date.now();
+  const usage: PlanUsage = {
+    source: "probe",
+    at: new Date(now - 60_000).toISOString(),
+    windows: [...geminiWindows(now, 2), ...otherGroups(now, 100)],
+  };
+  expect(
+    computerBrainUnavailable(
+      "antigravity",
+      "m-groups",
+      antigravityStatus(),
+      now,
+      ACCOUNT,
+      true,
+      usage,
+      "gemini-3.8-flash-medium",
+    ),
+  ).toBeNull();
+});
+
+test("Gemini's account is at its limit, until its own full window resets, when that window is full", () => {
+  const now = Date.now();
+  const usage: PlanUsage = {
+    source: "probe",
+    at: new Date(now - 60_000).toISOString(),
+    windows: [...geminiWindows(now, 100), ...otherGroups(now, 0)],
+  };
+  expect(
+    computerBrainUnavailable(
+      "antigravity",
+      "m-full",
+      antigravityStatus(),
+      now,
+      ACCOUNT,
+      true,
+      usage,
+      "gemini-3.8-flash-medium",
+    ),
+  ).toMatchObject({ code: "plan_limit", resetsAt: hoursFrom(now, 5) });
 });
