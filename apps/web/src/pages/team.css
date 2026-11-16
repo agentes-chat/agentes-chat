@@ -339,9 +339,10 @@
   .team-tree__org {
     flex-direction: column;
   }
-  /* The reports stack again, indented under their supervisor in a column of the people row's old width. */
+  /* The reports stack again, indented under their supervisor. Every card keeps 180 px, so the column grows with the
+     indent of its depth instead of squeezing the cards; the people row scrolls sideways when that is wider. */
   .team-tree .team-tree__col {
-    width: 180px;
+    width: min-content;
   }
   /* The person's card fills the stacked column again, and its agents indent under it with a line. */
   .team-tree .team-tree__col > .team-node {
@@ -359,7 +360,7 @@
     align-items: stretch;
   }
   .team-line .team-node {
-    min-width: 0;
+    min-width: 180px;
     max-width: none;
   }
   .team-line--sup > .team-node {
