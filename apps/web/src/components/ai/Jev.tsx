@@ -54,6 +54,7 @@ const TYPESAFE_ORIGIN = "https://api.typesafe.ai";
 const OPENROUTER_KEYS = "https://openrouter.ai/keys";
 const OPENROUTER_CREDITS = "https://openrouter.ai/settings/credits";
 type JevProvider = "typesafe" | "other";
+/** Where Jev is called and paid: TypeSafe itself, or OpenRouter with an OpenRouter key. */
 type JevVia = NonNullable<JevKey["via"]>;
 /** What Jev costs (US$): per million tokens it reads, and about one pick of who answers. */
 const JEV_PRICE = 0.042;
@@ -140,7 +141,7 @@ export function JevSteps({
   const openRouter = via === "openrouter";
   const validOrigin = other && isJevOrigin(baseURL);
   const canSave = key.length >= JEV_KEY_MIN && (!other || validOrigin);
-  const n = replace ? 0 : 1;
+  const n = replace || openRouter ? 0 : 1;
   const price = {
     price: formatDecimal(i18n.language, JEV_PRICE),
     call: formatDecimal(i18n.language, JEV_CALL),
@@ -382,8 +383,10 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
     setBaseURL(view.otherProviderEnabled && current !== TYPESAFE_ORIGIN ? current : "");
     setDraft("");
     setError(null);
+    setPaste(false);
     setSteps(mode);
   };
+  // A refused key in the words of whoever refused it: an OpenRouter key goes to OpenRouter, whichever row it was in.
   const failed = (openRouterKey: boolean) => (e: unknown) =>
     setError(errorCode(e) === "jev_key_invalid" && openRouterKey ? t("jev.openRouter.invalid") : errorText(t, e));
   const submit = () => {

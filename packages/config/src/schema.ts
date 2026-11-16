@@ -382,13 +382,13 @@ export const envVars = {
   JEV_BASE_URL: {
     schema: jevOriginSchema.optional(),
     description:
-      "HTTP(S) origin of a System One compatible Jev endpoint. No path, query, fragment or userinfo. Used as the server default when JEV_OTHER_PROVIDER_ENABLED is true and there is no owner selection; otherwise Jev uses TypeSafe. Leave unset for TypeSafe.",
+      "HTTP(S) origin of a System One compatible Jev endpoint. No path, query, fragment or userinfo. Used as the server default when there is no owner selection, regardless of JEV_OTHER_PROVIDER_ENABLED; otherwise Jev uses TypeSafe. Leave unset for TypeSafe.",
     section: "Agents",
   },
   JEV_OTHER_PROVIDER_ENABLED: {
     schema: z.stringbool().default(false),
     description:
-      "Allow the installation's pinned owner to select a custom System One origin for Jev in Settings. When false (default), only TypeSafe is available and any saved custom origin is ignored.",
+      "Allow the installation's pinned owner to select a custom System One origin for Jev in Settings. When false (default), the owner cannot choose a custom origin and any saved custom origin is ignored; Jev uses JEV_BASE_URL when set, otherwise TypeSafe.",
     section: "Agents",
   },
   JEV_TIMEOUT_MS: {

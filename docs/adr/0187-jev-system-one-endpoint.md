@@ -20,6 +20,6 @@ ADR 0073 gives a self-hosted installation one Jev key, selected by `TYPESAFE_API
 ## Consequences
 
 - Self-hosters can use a local System One compatible service without changing the Jev request path or introducing another credential record.
-- Operators can set a default once with `JEV_BASE_URL`; owner-selected origins require `JEV_OTHER_PROVIDER_ENABLED=true` and take precedence over it.
+- Operators can set a default once with `JEV_BASE_URL`, regardless of `JEV_OTHER_PROVIDER_ENABLED`; owner-selected origins require `JEV_OTHER_PROVIDER_ENABLED=true` and take precedence over it.
 - Removing the key also removes the owner-specific endpoint, so another first account never inherits that choice.
 - Whether a custom endpoint supports image requests should be confirmed with maintainers; the server continues sending the existing image request shape.

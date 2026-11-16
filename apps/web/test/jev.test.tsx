@@ -509,6 +509,7 @@ describe("Jev through OpenRouter (ADR 0073 §9)", () => {
     const site = within(card()).getByRole("link", { name: "Abrir o OpenRouter" });
     expect(site.getAttribute("href")).toBe("https://openrouter.ai/keys");
     expect(field().getAttribute("placeholder")).toBe("A sua chave do OpenRouter");
+    expect([...card().querySelectorAll(".agp-addacct__step > i")].map((n) => n.textContent)).toEqual(["1", "2"]);
 
     await type(field(), "ts_live_key_00000000");
     await click(within(card()).getByRole("button", { name: "Salvar chave" }), 6);

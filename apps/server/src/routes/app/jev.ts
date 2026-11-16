@@ -145,12 +145,7 @@ export function jevRoutes(deps: AppDeps) {
         apiKey = credential.apiKey;
         from = { orgId: input.orgId, credentialId: input.credentialId };
       }
-      if (
-        "apiKey" in input &&
-        input.baseURL &&
-        input.baseURL !== "https://api.typesafe.ai" &&
-        !config.JEV_OTHER_PROVIDER_ENABLED
-      ) {
+      if ("apiKey" in input && input.baseURL && input.baseURL !== jev.baseURL() && !config.JEV_OTHER_PROVIDER_ENABLED) {
         return apiError(c, 400, "jev_other_provider_disabled", "Other Jev providers are disabled on this server.");
       }
       try {

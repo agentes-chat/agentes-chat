@@ -294,6 +294,17 @@ test("custom origins require JEV_OTHER_PROVIDER_ENABLED and are not fetched whil
   expect(ts.urls).toEqual([]);
   expect(await t.db.select().from(schema.instanceSecrets)).toEqual([]);
 });
+test("a disabled provider flag rejects a TypeSafe override of the operator origin", async () => {
+  const operator = "https://operator.jevt.example";
+  const { owner, ts } = await server({ env: { JEV_BASE_URL: operator } });
+  const response = await owner("/api/app/jev", {
+    method: "PUT",
+    json: { apiKey: SECRET_KEY, baseURL: "https://api.typesafe.ai" },
+  });
+  expect(response.status).toBe(400);
+  expect(ts.urls).toEqual([]);
+});
+
 test("an owner key with no origin chosen calls the operator's JEV_BASE_URL in the composed server", async () => {
   const operator = "https://operator.jevt.example";
   const io = jevCompositionFetch();
