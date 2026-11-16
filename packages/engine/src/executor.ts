@@ -6289,7 +6289,13 @@ async function executeRunInner(
         bound: t.stuck?.endAt !== undefined ? "stuck" : t.wrapUpNoted ? "step_limit" : null,
         quiet: silent && !judged,
         decided: decided && !silent && !said && !capped && !closingSummary(t, true) ? decided : null,
-        unanswered: !silent && !viaRoutine && !words && (sentinelOnly || (!text && !anythingPosted)),
+        // The server's own "Done." (tools ran, nothing was written) is no answer to a question put to it: Gemini's
+        // Flash ends turns after reading with no words, and "Done." would be the whole reply.
+        unanswered:
+          !silent &&
+          !viaRoutine &&
+          !words &&
+          (sentinelOnly || (!anythingPosted && (!text || (plan.kind === "antigravity" && text === DONE_TEXT)))),
         unreached,
         judged: owesAnswer && !capped ? judged : "",
         mission: Boolean(plan.missionId),

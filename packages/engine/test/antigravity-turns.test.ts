@@ -8,6 +8,7 @@ import {
   clearPlanLimits,
   createJobHandlers,
   drainOutbox,
+  listMessages,
   type MachineStatus,
   postPersonMessage,
 } from "../src";
@@ -199,4 +200,24 @@ test("an agent on a model whose group is full is asked another group's, at the s
   await post(f, "@dev oi");
   await drainOutbox(f.db, handlers(f, brain));
   expect(seen[0]?.model).toBe(FLASH);
+});
+
+test("a question that ended with tools and no words is asked once to answer, not closed with Done.", async () => {
+  f = await setup({ reply: () => ({ chunks: ["pela API"] }) });
+  await geminiAgent(f, 100);
+  const read = {
+    type: "tool_call",
+    id: "c1",
+    name: "list_issues",
+    input: {},
+    executed: { content: "#1 a\n#2 b" },
+  } as const;
+  const { brain, seen } = scripted((n) => (n === 0 ? [read, ...answered("")] : answered("Tenho 2 tarefas: #1 e #2.")));
+  await post(f, "@dev quais as suas tarefas?");
+  await drainOutbox(f.db, handlers(f, brain));
+  expect(seen).toHaveLength(2);
+  const replies = (await listMessages(f.db, f.owner.id, f.org.id, f.general.id, {})).filter(
+    (m) => m.author.type === "agent",
+  );
+  expect(replies.map((m) => m.body)).toEqual(["Tenho 2 tarefas: #1 e #2."]);
 });
