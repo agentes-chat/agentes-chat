@@ -752,3 +752,49 @@ test("a model the person chose for their own DM wins over the right hand's", asy
     .where(eq(schema.agents.id, lodi.id));
   expect((await runIn(bia.id)).model).toBe("glm-5.3");
 });
+
+test("a person's own plan changed on Lodi: what waited on the old plan goes on and reads the new one, nobody else's", async () => {
+  const { fx, deps, machineId, bia, caio, lodi } = await world();
+  await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: BIAS });
+  // Long work paused near a plan (a month at 99%), each in its person's DM; both on one account's line, as when
+  // someone's plan serves everyone.
+  const parked = async (userId: string) => {
+    const dm = await openPersonAgentDm(fx.db, fx.org.id, userId, lodi.id);
+    const m = await postPersonMessage({ db: fx.db, pubsub: fx.pubsub }, userId, fx.org.id, dm.id, { body: "oi" });
+    const [run] = await fx.db
+      .update(schema.agentRuns)
+      .set({
+        status: "waiting_input",
+        transcript: {
+          waitingForBrain: {
+            kind: "claude_code",
+            machineId: "",
+            code: "usage_pause",
+            source: "plan",
+            waitId: crypto.randomUUID(),
+            waitKey: `plan:${machineId}:claude_code:${BIAS}`,
+          },
+        } as never,
+      })
+      .where(eq(schema.agentRuns.triggerMessageId, m.id))
+      .returning();
+    return run?.id;
+  };
+  const biaRun = await parked(bia.id);
+  const caioRun = await parked(caio.id);
+  const woken = async () => {
+    const jobs = await fx.db.select().from(schema.outbox).where(eq(schema.outbox.kind, "agent_run.execute"));
+    await fx.db.delete(schema.outbox).where(eq(schema.outbox.kind, "agent_run.execute"));
+    return jobs.filter((j) => String(j.dedupeKey).includes(":switched:")).map((j) => j.payload.runId);
+  };
+  await woken();
+
+  await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", model: "sonnet" });
+  expect(await woken()).toEqual([biaRun]);
+  // Back to the workspace's AI: the same.
+  await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "model" });
+  expect(await woken()).toEqual([biaRun]);
+  // Caio on the workspace's AI picks a plan of his own: his goes on.
+  await setAgentBrain(deps, caio.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: CAIOS });
+  expect(await woken()).toEqual([caioRun]);
+});

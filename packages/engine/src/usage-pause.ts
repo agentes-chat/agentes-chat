@@ -1109,12 +1109,21 @@ export async function stopAgentUsageWaits(deps: { db: Database; pubsub?: PubSub 
 /**
  * The agent thinks with another AI account or model now: what waited on the old one's limit goes on, in line order,
  * 60 s apart, on the new sign-in (each claim reads the agent's brain again; one still limited parks in its new line).
+ * `only`: just the runs it keeps (the right hand's for the one person whose own AI changed, ADR 0137 §11).
  */
-export async function wakeAgentUsageWaits(db: Executor, orgId: string, agentId: string, now = Date.now()) {
+export async function wakeAgentUsageWaits(
+  db: Executor,
+  orgId: string,
+  agentId: string,
+  now = Date.now(),
+  only?: (run: { id: string; orgId: string; triggerMessageId: string }) => Promise<boolean>,
+) {
   const { agentRuns } = schema;
   const found = await db
     .select({
       id: agentRuns.id,
+      orgId: agentRuns.orgId,
+      triggerMessageId: agentRuns.triggerMessageId,
       waitId: sql<string | null>`${agentRuns.transcript}->'waitingForBrain'->>'waitId'`,
       background: agentRuns.background,
       workId: agentRuns.workId,
@@ -1130,8 +1139,12 @@ export async function wakeAgentUsageWaits(db: Executor, orgId: string, agentId: 
         sql`${agentRuns.transcript}->'waitingForBrain'->>'code' in ('plan_limit', 'budget', 'usage_pause')`,
       ),
     )
-    .limit(500);
-  const rows = found
+    // `only` filters in code, after the cap: room for one person's waits behind everyone else's.
+    .limit(only ? 5000 : 500);
+  const kept = only
+    ? (await Promise.all(found.map(async (r) => ((await only(r)) ? r : null)))).filter((r) => r !== null)
+    : found;
+  const rows = kept
     .filter((r) => r.waitId)
     .map((r) => ({ ...r, since: Number(r.since) }))
     .sort(inLineOrder);
