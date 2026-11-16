@@ -331,12 +331,15 @@ export const teamAnswered = (
 
 /**
  * Why the right hand has no computer for anyone in this workspace, as its desktop's state says it (`reason`), by the
- * line that tells it: the workspace has no computer of its own, or one where every agent is the same user. Null when
- * it has one, or for any other state (offline, starting), which its computer's own view tells.
+ * line that tells it: the workspace has no computer of its own (on a self-hosted server, this server made the agents'
+ * computer, `selfHost`), or one where every agent is the same user. Null when it has one, or for any other state
+ * (offline, starting), which its computer's own view tells.
  */
-export const rightHandNoComputer = (reason: string | null | undefined) =>
+export const rightHandNoComputer = (reason: string | null | undefined, selfHost = false) =>
   reason === "no_home"
-    ? ("rightHand.computerNoHome" as const)
+    ? selfHost
+      ? ("rightHand.computerNoHomeServer" as const)
+      : ("rightHand.computerNoHome" as const)
     : reason === "not_system"
       ? ("rightHand.computerOneUser" as const)
       : null;

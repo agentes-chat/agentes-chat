@@ -84,7 +84,8 @@ describe("the rows follow the same choice as the web", () => {
 
   test("a DM drops the name only where a bubble stands: a card alone keeps it ahead of its time", async () => {
     const row = await read("chat/MessageRow.tsx");
-    expect(row).toContain("{!inBubble || look.names ? (");
+    // Another agent helping in an agent's DM keeps its name: the DM names only its own agent.
+    expect(row).toContain("{!inBubble || look.names || helping ? (");
     expect(row).not.toContain("{!bubbled || look.names ? (");
   });
 

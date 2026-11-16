@@ -144,6 +144,8 @@ describe("calls", () => {
     expect(req?.headers.get("http-referer")).toBeNull();
     expect(req?.body).toMatchObject({ model: "meta-llama/llama-4:70b", stream_options: { include_usage: true } });
     expect(req?.body.reasoning).toBeUndefined();
+    // The agent's effort goes as Chat Completions' own field (#432).
+    expect(req?.body.reasoning_effort).toBe("high");
     expect(req?.body.provider).toBeUndefined();
     // The endpoint said a catalog id answered: the full id comes back, so the catalog's prices never apply.
     expect(result.model).toBe(id);
@@ -152,6 +154,28 @@ describe("calls", () => {
     // Any other endpoint: no session of ours, the SDK's own User-Agent.
     expect(req?.headers.get("x-opencode-session")).toBeNull();
     expect(req?.headers.get("user-agent")).not.toStartWith("agentes.chat/");
+  });
+
+  test("Chat Completions: no effort, or none, sends no reasoning_effort", async () => {
+    for (const effort of [undefined, "none"] as const) {
+      const { fetcher, requests } = scripted(
+        chat([
+          { choices: [{ index: 0, delta: { content: "ok" }, finish_reason: "stop" }] },
+          { choices: [], usage: { prompt_tokens: 1, completion_tokens: 1 } },
+        ]),
+      );
+      await createCustomProvider({ fetch: fetcher, maxRetries: 0 }).stream(
+        {
+          model: id,
+          system: "s",
+          messages: [{ role: "user", content: "hi" }],
+          maxTokens: 100,
+          ...(effort ? { effort } : {}),
+        },
+        { apiKey: "k-123456789", endpoint: { style: "openai", baseURL: "https://gw.example/v1" }, onDelta: () => {} },
+      );
+      expect(requests[0]?.body.reasoning_effort).toBeUndefined();
+    }
   });
 
   test("OpenCode (its Go plan): our User-Agent and the conversation's session on every call, both APIs", async () => {

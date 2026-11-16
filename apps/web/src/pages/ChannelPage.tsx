@@ -69,6 +69,7 @@ import {
   useSettings,
   usesBrowser,
   useTaskManager,
+  useThreadActivity,
   useThreadInfo,
   useThreadMessages,
   useThreadMission,
@@ -172,7 +173,7 @@ import { contextMarks, hiddenByThreads, rangeCandidates, threadStartOf } from "@
 import { buildTimeline, lastPostedId, mergeTimeline, type TimelineItem } from "@agenteschat/client/lib/timeline";
 import { usageWaitOf } from "@agenteschat/client/lib/usage-pause";
 import { appVia } from "@agenteschat/client/lib/via";
-import { voiceOf } from "@agenteschat/client/lib/voice";
+import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
 import { waitingAway, waitingNotification } from "@agenteschat/client/lib/waiting";
 import { barStep, makingImage, showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
 import {
@@ -273,7 +274,7 @@ import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
 import { ImageSet } from "@/components/artifacts/ArtifactViewer";
 import { objectUrls } from "@/components/artifacts/FileView";
 import { ImageMaking } from "@/components/artifacts/ImageMaking";
-import { MessageWorkLine } from "@/components/BackgroundWork";
+import { HandedWorkLine, MessageWorkLine } from "@/components/BackgroundWork";
 import { HeldBrowserCard, RunBrowserCard, useHeldTakeover } from "@/components/browser/BrowserCard";
 import { BrowserHandoffCard } from "@/components/browser/BrowserHandoffCard";
 import { BrowserTrailCard } from "@/components/browser/BrowserTrailCard";
@@ -375,7 +376,7 @@ import {
 } from "@/components/RequestCard";
 import { ReturnLine } from "@/components/ReturnLine";
 import { SidePanel } from "@/components/SidePanel";
-import { ActivitySky, ChannelWelcome, colorOf } from "@/components/Sky";
+import { ChannelWelcome, colorOf } from "@/components/Sky";
 import { isStoppable, StopButton, useContinueRun, useStopRun, useWasContinued } from "@/components/StopRun";
 import { SearchResultsPanel } from "@/components/search/SearchResultsPanel";
 import { TeamChecks } from "@/components/TeamChecks";
@@ -1204,6 +1205,9 @@ function ChannelView({
   const screenThread = thread?.id ?? null;
   useEffect(() => holdOnScreen({ channelId: channel.id, threadId: screenThread }), [channel.id, screenThread]);
   const lastId = lastPostedId(channelMessages.data);
+  // A reply in one of its threads counts in the channel's mark and is no message of this timeline: read again on it.
+  const threadReplies = useThreadActivity(org.id, channel.id);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a thread's reply marks the channel read again
   useEffect(() => {
     if (!isMember || !lastId) return;
     const mark = () => {
@@ -1212,7 +1216,7 @@ function ChannelView({
     mark();
     document.addEventListener("visibilitychange", mark);
     return () => document.removeEventListener("visibilitychange", mark);
-  }, [markChannelRead, channel.id, isMember, lastId]);
+  }, [markChannelRead, channel.id, isMember, lastId, threadReplies]);
   // A thread open in view: its replies are read (its unread and the Threads mark clear, on every device).
   const markThreadRead = useMarkThreadRead(org.id).mutate;
   const threadId = thread?.id;
@@ -1739,7 +1743,12 @@ function ChannelView({
   const asksOut = useAsksOutOfView(scroller, askRegistry, isMember);
   // …and all of them, in view or not: the bar says a hand-off waits on me from them.
   const pendingAsks = usePendingAsks(askRegistry);
-  const seeAsk = (id: string) => showRequest(scroller.current, id, !reducedMotion);
+  // "See" on the bar: the view stops following the end first (as `jumpTo` does), or the next row that grows while an
+  // agent writes pins it back down before it ever reaches the card.
+  const seeAsk = (id: string) => {
+    letGo();
+    showRequest(scroller.current, id, !reducedMotion);
+  };
   // …and what waits on me here with its card not loaded (older, or in a thread): the line counts it and goes to the
   // oldest (ADR 0172).
   const waitingOnMe = useWaitingOnMe(org.id).data?.items;
@@ -2120,7 +2129,8 @@ function ChannelView({
   const sendMedia = useCallback((media: MessageMedia) => sendMediaNow.current(media), []);
   const mediaTabs = useMediaTabs(sendMedia);
   // Voice messages (ADR 0100), where this person can write and the workspace has them; a reply to a mission goes in
-  // text, to the mission. The recording goes in the box's thread, and the box stays as it was.
+  // text, to the mission. The recording goes in the box's thread with what was typed and the finished files, in one
+  // message. A key pasted in the text stays in the box for the person to choose (`KeyGuardDialog`).
   const voiceSettings = useSettings(org.id);
   const voiceOn = Boolean(voiceSettings.data?.voiceAvailable && voiceSettings.data.voiceMessages);
   const voice: ComposerVoice | undefined =
@@ -2136,8 +2146,14 @@ function ChannelView({
           // message comes); the throttle makes it one frame every 3 s, and holds the upload's while they write.
           onRecording: () => sendTyping(undefined, "voice"),
           onTake: ({ blob, durationMs, peaks }) => {
+            const typed = draft.trim();
+            const key = looksLikeApiKey(typed);
+            const text = key ? "" : typed;
             toBottom(true);
             setQuote(null);
+            if (key) setKeyAsk({ text: typed, key });
+            else if (text) setDraft("");
+            const sentFiles = files.filter((f) => f.status === "done" && f.ref);
             const uploading = setInterval(() => sendTyping(undefined, "voice", true), 1000);
             void sendVoice({
               blob,
@@ -2146,7 +2162,18 @@ function ChannelView({
               threadId: thread ? thread.id : null,
               replyTo: quote?.id ?? null,
               language: i18n.language.split("-")[0] ?? null,
-            }).finally(() => clearInterval(uploading));
+              text,
+              meta: localMeta(quote, quote ? dir.authorName(quote.author) : "", attached),
+            })
+              .then((went) => {
+                // Refused: what was typed and attached comes back to the box (thumbnails as icons: theirs are freed).
+                if (went) return;
+                if (text) setDraft((now) => joinDrafts(text, now));
+                if (sentFiles.length > 0)
+                  setFiles((now) => [...sentFiles.map((f) => ({ ...f, preview: undefined })), ...now]);
+              })
+              .finally(() => clearInterval(uploading));
+            if (sentFiles.length > 0) dropFiles((f) => !sentFiles.includes(f));
           },
           onNotice: (notice: VoiceNotice) => {
             if (notice === "blocked") {
@@ -2174,6 +2201,9 @@ function ChannelView({
             keysHold: t("voice.keysHold"),
             keysPaused: t("voice.keysPaused"),
             left: (seconds) => t("voice.left", { seconds }),
+            askDiscard: t("voice.askDiscard"),
+            askDelete: t("voice.askDelete"),
+            askKeep: t("voice.askKeep"),
           },
         }
       : undefined;
@@ -2740,7 +2770,6 @@ function ChannelView({
                             onSeeAsk={seeAsk}
                             waiting={waitingHere}
                             onSeeWaiting={seeWaiting}
-                            stoppable={stopTarget?.runId}
                             consultBlocks={consultGroups.nearEnd}
                             member={isMember}
                           />
@@ -3923,11 +3952,12 @@ function useAsksOutOfView(scroller: { current: HTMLElement | null }, registry: A
 }
 
 /**
- * The bar right above the composer, one for everyone at work here and always one width: a glass pill (in
- * the first agent's color while agents work), their small faces (the typing dots first when only people type)
- * and one line that says it all. An agent whose live row is on screen is left out: the row says its step, its
+ * The bar right above the composer, one for everyone at work here and always one width: a bare line on the
+ * conversation's ground (no glass, no band behind it), their small faces (the typing dots first when only people
+ * type) and one line that says it all. An agent whose live row is on screen is left out: the row says its step, its
  * time and its stop. Its row out of view, or no words of its own yet (there is no thinking row in the conversation),
- * the bar speaks for it: its face, its step, its time, "Ver" once its row is there, and its stop.
+ * the bar speaks for it: its face, its step, its time and "Ver" once its row is there. Stopping it is the composer's
+ * button (and Esc), never a second one here.
  */
 function ActivityBar({
   channelId,
@@ -3940,7 +3970,6 @@ function ActivityBar({
   onSeeAsk,
   waiting,
   onSeeWaiting,
-  stoppable,
   consultBlocks,
   member,
 }: {
@@ -3963,8 +3992,6 @@ function ActivityBar({
   waiting: WaitingItem[];
   /** "Ver" on that count: goes to the oldest one. */
   onSeeWaiting: (item: WaitingItem) => void;
-  /** The run Esc stops (the pill shows its stop). */
-  stoppable?: string;
   /** Runs whose questions a block near the end shows (`ConsultGroup`): the line doesn't say them again. */
   consultBlocks: ReadonlySet<string>;
   /** The reader is in this conversation (may answer here). */
@@ -4021,12 +4048,10 @@ function ActivityBar({
     runs,
     rowInView,
   );
-  const { stop } = useStopRun();
   const active = entries.length > 0;
   const agents = entries.filter((e) => e.type === "agent");
-  // The strip behind the bar (and the orbit) take the color of the first agent at work.
   const firstAgent = agents[0];
-  // The time, "Ver" and the stop are one agent's: with several, the line can't say whose (the composer still stops).
+  // The time and "Ver" are one agent's: with several, the line can't say whose.
   const soloRun = agents.length === 1 && firstAgent ? runs.find((r) => r.agentId === firstAgent.id) : undefined;
   // Only while its row is out of view (a question it asks keeps its phrase here, its row in view or not).
   const soloAway = soloRun && !rowInView(soloRun) ? soloRun : undefined;
@@ -4060,7 +4085,6 @@ function ActivityBar({
     : consult?.id && openTalk
       ? () => openTalk(consult.id as string)
       : undefined;
-  const skyOf = consult ? consult.to : firstAgent?.id;
   const consultTip =
     consult?.kind === "note" && firstAgent
       ? t("chat.consult.handedOff", {
@@ -4103,7 +4127,6 @@ function ActivityBar({
       >
         {ask && (
           <>
-            <ActivitySky color={colorOf(dir.anyAgent(ask.agentId))} />
             <span className="ac-typing__avatars" aria-hidden="true">
               <span className="ac-typing__tok">
                 <AgentAvatar agentId={ask.agentId} size="xs" name={askName} state="waiting" />
@@ -4126,21 +4149,16 @@ function ActivityBar({
             <button type="button" className="ac-typing__see" onClick={() => onSeeAsk(ask.id)}>
               {t("ask.bar.see")}
             </button>
-            {/* An agent still at work keeps its stop at the end; the line stays the request. */}
-            {soloAway && stoppable === soloAway.runId && <StopButton run={soloAway} onStop={stop} place="bar" />}
           </>
         )}
         {away && (
           <>
             {awayAgent && (
-              <>
-                <ActivitySky color={colorOf(awayAgent)} />
-                <span className="ac-typing__avatars" aria-hidden="true">
-                  <span className="ac-typing__tok">
-                    <AgentAvatar agentId={awayAgent.id} size="xs" name={awayAgent.name} state="waiting" />
-                  </span>
+              <span className="ac-typing__avatars" aria-hidden="true">
+                <span className="ac-typing__tok">
+                  <AgentAvatar agentId={awayAgent.id} size="xs" name={awayAgent.name} state="waiting" />
                 </span>
-              </>
+              </span>
             )}
             <WaitMark />
             <span className="ac-typing__text">
@@ -4154,7 +4172,6 @@ function ActivityBar({
         )}
         {pill && (
           <>
-            {skyOf && !consult?.yours && <ActivitySky color={colorOf(dir.agentById.get(skyOf))} />}
             {/* Agents at work: their faces open the pill (their rows are out of view); people only typing: the dots
                 first. Who records has a mark of their own by their words, and so has who types beside them. */}
             {!firstAgent && someoneTypes(entries) && !bothAtIt(entries) && <TypingMark />}
@@ -4200,7 +4217,6 @@ function ActivityBar({
                 </button>
               </>
             )}
-            {soloAway && stoppable === soloAway.runId && <StopButton run={soloAway} onStop={stop} place="bar" />}
           </>
         )}
         {rest && <ReturnLine returns={returns} channelId={channelId} canAnswer={member} />}
@@ -4317,7 +4333,8 @@ export const TimelineMessage = memo(function TimelineMessage({
     () => splitCanceled(serverBody(t, m.body, m.meta, i18n.language), m.meta),
     [t, m.body, m.meta, i18n.language],
   );
-  const said = reminderBody(stopped.body, m.meta);
+  // A voice message's own text is what was typed beside its recording: its words are in the player.
+  const said = reminderBody(listedText(stopped.body, m.meta), m.meta);
   // A long work's anchor once it's over: no promise left, and dimmed (its line says how it ended).
   const body = m.longWork ? workAnchorBody(t, said, m.meta, m.longWork) : said;
   const workOver = Boolean(m.longWork && workIsOver(m.longWork));
@@ -4403,7 +4420,7 @@ export const TimelineMessage = memo(function TimelineMessage({
   const artifacts = artifactRefs(meta);
   // A GIF or a sticker (ADR 0091); with no words, the message is the picture alone.
   const media = useMemo(() => messageMediaOf(m.meta), [m.meta]);
-  // A voice message is its recording: the player, and no text (ADR 0100).
+  // A voice message is its recording: the player, under the text typed beside it if any (ADR 0100).
   const voice = useMemo(() => voiceOf(m.meta), [m.meta]);
   // The one an agent adds after its own reply: a message of its own, not a reply (no feedback, no run's cards).
   const mediaAfter = isMediaAfterReply(m.meta);
@@ -4441,10 +4458,16 @@ export const TimelineMessage = memo(function TimelineMessage({
     !live,
     reached,
   );
+  // Work it handed over that reports here: its line under this reply says what the pair row would.
+  const handedWorks = lastOfRun && !m.local ? (m.handedWorks ?? []) : [];
+  const paired = consults.filter((c) => !handedWorks.some((w) => w.handedBy?.consultationId === c.id));
   const pair =
-    m.author.type === "agent" && m.author.id && consults.length > 0 ? (
-      <ConsultPairRow askerId={m.author.id} items={consults} />
+    m.author.type === "agent" && m.author.id && paired.length > 0 ? (
+      <ConsultPairRow askerId={m.author.id} items={paired} />
     ) : null;
+  // Another agent's message in an agent's DM (it helps that agent): its name on its first line, the DM names only one.
+  const look = useContext(MessageLookContext);
+  const helpingLook = useMemo(() => (helping && look ? { ...look, names: true } : null), [helping, look]);
   // Nobody called it: it joined the conversation on its own (`meta.joined`).
   const joined = m.author.type === "agent" && meta.joined === true;
   const joinedTip = joined ? t("chat.joined.tip", agentGrammar(name)) : null;
@@ -4507,7 +4530,7 @@ export const TimelineMessage = memo(function TimelineMessage({
       !(actionCard && !weekCard) &&
       // A question's card already says it: its own text isn't repeated above.
       !(question && body.trim() === question.text.trim()) &&
-      !voice &&
+      !(voice && !body.trim()) &&
       !choiceReply &&
       Boolean(body.trim() || (!card && !stopped.canceled && artifacts.length === 0 && !media));
   // People see name, time and text; the date, model and tokens wait behind the time. An agent's sticker after its
@@ -4519,7 +4542,7 @@ export const TimelineMessage = memo(function TimelineMessage({
   ]
     .filter(Boolean)
     .join(" · ");
-  return (
+  const row = (
     <>
       {pair}
       <Message
@@ -4842,15 +4865,22 @@ export const TimelineMessage = memo(function TimelineMessage({
               />
             ) : null}
             {/* A question to another agent (in their DM) carries the asking run: its work shows on that run's reply. */}
-            {m.author.type === "agent" && replyRun && !card && !m.local && !keptAll && !m.meta?.consultation && (
-              <SavedTools
-                runId={replyRun}
-                meta={m.meta}
-                agentName={agent?.name ?? name}
-                color={colorOf(agent)}
-                skipScreens={onCards}
-              />
-            )}
+            {m.author.type === "agent" &&
+              replyRun &&
+              !card &&
+              !m.local &&
+              !keptAll &&
+              !m.meta?.consultation &&
+              // A work's updates are steps of one work: the trace stays on its report.
+              !m.meta?.workUpdate && (
+                <SavedTools
+                  runId={replyRun}
+                  meta={m.meta}
+                  agentName={agent?.name ?? name}
+                  color={colorOf(agent)}
+                  skipScreens={onCards}
+                />
+              )}
             {/* What waits for a person's click comes last, after the words and the tools. */}
             {approvalId && (
               <MessageApproval messageId={m.id} approvalId={approvalId} agent={agent} members={dir.memberById} />
@@ -4873,7 +4903,7 @@ export const TimelineMessage = memo(function TimelineMessage({
             ) : (
               usageWait && !usageWait.canceled && !usageWait.ended && <UsageWaitCancel message={m} wait={usageWait} />
             )}
-            {question && <QuestionCard question={question} />}
+            {question && <QuestionCard question={question} asker={helping ? name : undefined} />}
             {secretRequest && <SecretCard request={secretRequest} runId={m.agentRunId} />}
             {browserHandoff && <BrowserHandoffCard handoff={browserHandoff} />}
             {missionDecision && <MissionDecisionCard message={missionDecision} />}
@@ -4890,6 +4920,10 @@ export const TimelineMessage = memo(function TimelineMessage({
                 inThread={!threadsView && (m.threadId ?? m.id) === (m.longWork.threadId ?? m.longWork.anchorMessageId)}
               />
             )}
+            {/* Work this run handed over, reporting here: one line each, under the reply that handed it. */}
+            {handedWorks.map((w) => (
+              <HandedWorkLine key={w.id} work={w} />
+            ))}
             {/* A "Responder" thread went on from here: its line (opens the panel). */}
             {threadLine && <ThreadReplyLine thread={threadLine.thread} count={threadLine.count} />}
             {feedback && (
@@ -4912,6 +4946,7 @@ export const TimelineMessage = memo(function TimelineMessage({
       </Message>
     </>
   );
+  return helpingLook ? <MessageLookContext.Provider value={helpingLook}>{row}</MessageLookContext.Provider> : row;
 });
 
 function isSecretRequest(v: unknown): v is SecretRequest {

@@ -494,7 +494,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Quando è agentes.chat a ospitare il tuo spazio di lavoro, Jev è incluso. Su un server che gestisci tu, usa la chiave TypeSafe del proprietario, circa 0,0001 US$ a messaggio: [Configura Jev](/help/jev#setup).",
+          "Quando è agentes.chat a ospitare il tuo spazio di lavoro, Jev è incluso. Su un server che gestisci tu, usa la chiave TypeSafe o OpenRouter del proprietario, circa 0,0001 US$ a messaggio: [Configura Jev](/help/jev#setup).",
         ],
       },
       {
@@ -556,6 +556,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
               "In agentes.chat, apri **Impostazioni › IA e consumi** e incollala sotto **Jev**. La vede solo chi ha configurato questo server.",
             ],
           },
+          "Paghi già OpenRouter? Scegli **OpenRouter** sotto **Jev** e incolla una chiave da https://openrouter.ai/keys, oppure attiva Jev con un clic usando la chiave OpenRouter dello spazio di lavoro. È lo stesso Jev, addebitato tramite OpenRouter allo stesso prezzo.",
           "Su un server che gestisci con Docker, puoi invece mettere la chiave in `.env` come `TYPESAFE_API_KEY`. Questa ha la precedenza su quella in Impostazioni.",
         ],
       },
@@ -590,6 +591,7 @@ export const helpIt: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe fa girare Jev negli Stati Uniti e non addestra i suoi modelli su quello che invii. Conserva i dati per il tempo necessario a far funzionare il servizio. La conservazione zero è disponibile nei suoi piani enterprise.",
           "Informativa sulla privacy di TypeSafe: https://typesafe.ai/legal/privacy-policy. Il suo accordo sul trattamento dei dati: https://typesafe.ai/legal/data-processing.",
+          "Con una chiave OpenRouter, le stesse richieste passano da OpenRouter prima di arrivare a TypeSafe, secondo i termini di OpenRouter e le tue impostazioni sulla privacy lì: https://openrouter.ai/privacy.",
         ],
       },
       {

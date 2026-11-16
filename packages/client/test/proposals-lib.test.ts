@@ -128,6 +128,19 @@ describe("a name and a look on a settings card", () => {
       "rightHand.card.only.reports_to",
     );
   });
+  test("a department reads by its name, or none, and only admins move an agent", () => {
+    expect(settingLineText(t, "pt-BR", { field: "group", from: "Operações", to: "Vendas" }, names)).toEqual({
+      field: "rightHand.field.group",
+      from: "Operações",
+      to: "Vendas",
+    });
+    expect(settingLineText(t, "pt-BR", { field: "group", from: "Vendas", to: null }, names)).toEqual({
+      field: "rightHand.field.group",
+      from: "Vendas",
+      to: "rightHand.value.none",
+    });
+    expect(onlyKey({ settings: [{ field: "group", from: "Vendas", to: null }] })).toBe("rightHand.card.only.group");
+  });
 });
 
 describe("a skill line on a settings card", () => {

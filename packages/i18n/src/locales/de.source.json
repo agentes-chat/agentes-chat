@@ -6569,6 +6569,21 @@
   "rightHand.labelCapitalized": {
     "value": "Your right hand"
   },
+  "rightHand.unusable.title": {
+    "value": "Can't think for {{name}} now"
+  },
+  "rightHand.unusable.computerOnly": {
+    "value": "Signed in on {{computer}} only. {{name}} thinks with a plan signed in as an account."
+  },
+  "rightHand.unusable.away": {
+    "value": "{{owner}}'s, on {{computer}}, which is away."
+  },
+  "rightHand.unusable.awayYours": {
+    "value": "Yours, on {{computer}}, which is away."
+  },
+  "rightHand.unusable.connect": {
+    "value": "Connect a computer"
+  },
   "rightHand.newDot": {
     "value": "New"
   },
@@ -6836,6 +6851,9 @@
   "rightHand.computerNoHome": {
     "value": "No computer yet. It gets one when this workspace has a computer of its own."
   },
+  "rightHand.computerNoHomeServer": {
+    "value": "No browser yet. Set up <guide>this server as the agents' computer</guide> to give it one."
+  },
   "rightHand.addComputer": {
     "value": "Add a computer"
   },
@@ -6962,6 +6980,9 @@
   "rightHand.card.only.look": {
     "value": "Only admins and its owner change its look"
   },
+  "rightHand.card.only.group": {
+    "value": "Only admins move an agent to another department"
+  },
   "rightHand.card.only.reports_to": {
     "value": "Only admins change who an agent reports to"
   },
@@ -6994,6 +7015,9 @@
   },
   "rightHand.field.look": {
     "value": "Look"
+  },
+  "rightHand.field.group": {
+    "value": "Department"
   },
   "rightHand.field.reports_to": {
     "value": "Reports to"
@@ -8036,7 +8060,7 @@
     "value": "Google AI Pro, Google AI Ultra or Gemini Enterprise"
   },
   "connectAi.plan.gemini.warning": {
-    "value": "Google says using a personal Gemini plan inside other apps can get the account suspended."
+    "value": "Google says using a personal Gemini plan inside other apps can get the account suspended. To avoid that risk, use a Gemini API key or Gemini Enterprise."
   },
   "connectAi.plan.zen.title": {
     "value": "OpenCode"
@@ -8355,6 +8379,39 @@
   },
   "approvalsLevel.never.text": {
     "value": "Never asks, merge, deploy, payments and routines included."
+  },
+  "approvalsLevel.change": {
+    "value": "Change when it asks"
+  },
+  "approvalsLevel.now": {
+    "value": "{{name}} now: {{level}}."
+  },
+  "approvalsLevel.nowEveryAgent": {
+    "value": "Every agent now: {{level}}."
+  },
+  "approvalsLevel.undo": {
+    "value": "Undo"
+  },
+  "approvalsLevel.everyAgent": {
+    "value": "For every agent in the workspace"
+  },
+  "approvalsLevel.follows": {
+    "value": "Follows the workspace"
+  },
+  "approvalsLevel.edit": {
+    "value": "Change"
+  },
+  "approvalsLevel.workspaceLead": {
+    "value": "When agents ask a person before acting."
+  },
+  "approvalsLevel.workspaceHelp": {
+    "value": "Each agent follows this choice until someone changes its own on the agent's page."
+  },
+  "approvalsLevel.ownAgents": {
+    "value": {
+      "one": "{{count}} agent has its own choice and won't change.",
+      "other": "{{count}} agents have their own choice and won't change."
+    }
   },
   "brakes.title": {
     "value": "Work nobody asked for"
@@ -10280,6 +10337,9 @@
   },
   "secret.computerPaused": {
     "value": "{{agent}}'s computer is paused by its owner. This request stays open until {{time}}."
+  },
+  "secret.insecureContext": {
+    "value": "This page isn't open over https, so the browser won't lock the key. Open it at https:// (or localhost)."
   },
   "secret.failed": {
     "value": "Couldn't deliver it. Is the agent's computer on?"
@@ -18676,6 +18736,30 @@
   "issues.priorityFilter": {
     "value": "Priority"
   },
+  "issues.labelFilter": {
+    "value": "Label"
+  },
+  "issues.table.task": {
+    "value": "Task"
+  },
+  "issues.table.github": {
+    "value": "GitHub"
+  },
+  "issues.table.sortBy": {
+    "value": "Sort by {{column}}"
+  },
+  "issues.table.resize": {
+    "value": "Resize column {{column}}"
+  },
+  "issues.fold.open": {
+    "value": "Open {{name}}"
+  },
+  "issues.fold.close": {
+    "value": "Fold {{name}}"
+  },
+  "issues.fold.column": {
+    "value": "Fold column"
+  },
   "issues.title": {
     "value": "Tasks"
   },
@@ -18793,6 +18877,24 @@
   "issues.display.order.due": {
     "value": "Due date"
   },
+  "issues.display.order.updated": {
+    "value": "Recent"
+  },
+  "issues.display.done": {
+    "value": "Done"
+  },
+  "issues.display.doneIs.all": {
+    "value": "All"
+  },
+  "issues.display.doneIs.recent": {
+    "value": "Last {{days}} days"
+  },
+  "issues.display.doneIs.hidden": {
+    "value": "None"
+  },
+  "issues.display.hideEmpty": {
+    "value": "Hide empty groups"
+  },
   "issues.display.field.project": {
     "value": "Project"
   },
@@ -18849,6 +18951,9 @@
   },
   "issues.drag.unassigned": {
     "value": "#{{number}} has no assignee now."
+  },
+  "issues.drag.removed": {
+    "value": "#{{number}} is no longer with {{name}}."
   },
   "issues.drag.prioritized": {
     "value": "#{{number}} now has {{priority}} priority."
@@ -19219,6 +19324,12 @@
   },
   "issues.noAssignee": {
     "value": "No assignee"
+  },
+  "issues.assignees.people": {
+    "value": "People and agents"
+  },
+  "issues.assignees.done": {
+    "value": "Done"
   },
   "issues.agentRole": {
     "value": "Agent · {{role}}"
@@ -19591,7 +19702,13 @@
     "value": "assigned the task"
   },
   "issues.event.unassigned": {
-    "value": "removed the assignee"
+    "value": "removed an assignee"
+  },
+  "issues.event.assigned_named": {
+    "value": "assigned the task to {{name}}"
+  },
+  "issues.event.unassigned_named": {
+    "value": "took {{name}} off the task"
   },
   "issues.event.due_date_set": {
     "value": "set the due date to {{date}}"
@@ -20985,6 +21102,9 @@
   },
   "routines.code.stoppedBy": {
     "value": "Stopped by {{name}}"
+  },
+  "routines.code.stalled": {
+    "value": "Let go: nothing moved in it for 20 minutes"
   },
   "routines.code.no_report": {
     "value": "Finished without telling the result"
@@ -24690,7 +24810,7 @@
     "value": "Jev"
   },
   "jev.about": {
-    "value": "A fast model by TypeSafe, made for quick decisions. agentes.chat asks it small questions, like who should answer. You pay TypeSafe directly."
+    "value": "A fast model by TypeSafe, made for quick decisions. agentes.chat asks it small questions, like who should answer. You pay TypeSafe directly, or through OpenRouter at the same price."
   },
   "jev.lead": {
     "value": "Helps your agents work as a team."
@@ -24787,6 +24907,66 @@
   },
   "jev.checkAgain": {
     "value": "Check again"
+  },
+  "jev.via.label": {
+    "value": "Where you pay for Jev"
+  },
+  "jev.via.typesafe": {
+    "value": "TypeSafe"
+  },
+  "jev.via.typesafeText": {
+    "value": "An account at TypeSafe itself, with prepaid credit."
+  },
+  "jev.via.openrouter": {
+    "value": "OpenRouter"
+  },
+  "jev.via.openrouterText": {
+    "value": "With an OpenRouter key, at the same price."
+  },
+  "jev.via.connected": {
+    "value": "Key already connected"
+  },
+  "jev.openRouter.create": {
+    "value": "Create a key at OpenRouter"
+  },
+  "jev.openRouter.createHint": {
+    "value": "With credit at OpenRouter. Jev costs the same as at TypeSafe: US$ {{price}} per million tokens. Picking who answers costs about US$ {{call}}."
+  },
+  "jev.openRouter.open": {
+    "value": "Open OpenRouter"
+  },
+  "jev.openRouter.placeholder": {
+    "value": "Your OpenRouter key"
+  },
+  "jev.openRouter.shape": {
+    "value": "OpenRouter keys start with sk-or-v1-. Check it and paste it again."
+  },
+  "jev.openRouter.invalid": {
+    "value": "OpenRouter didn't accept this key. Copy it again from the keys page."
+  },
+  "jev.openRouter.keyName": {
+    "value": "OpenRouter key"
+  },
+  "jev.openRouter.same": {
+    "value": "The one in Provider keys"
+  },
+  "jev.openRouter.forAll": {
+    "value": "It pays for Jev in every workspace on this server."
+  },
+  "jev.openRouter.turnOn": {
+    "value": "Turn on Jev"
+  },
+  "jev.openRouter.otherKey": {
+    "value": "Use another key"
+  },
+  "jev.openRouter.line.invalid": {
+    "value": "OpenRouter didn't accept this key. Create a new one."
+  },
+  "jev.openRouter.line.no_credit": {
+    "value": "Add credit at OpenRouter. Jev resumes by itself."
+  },
+  "jev.openRouter.line.envInvalid": {
+    "value": "OpenRouter didn't accept this key. Change it in this server's settings (TYPESAFE_API_KEY)."
   },
   "jev.remove.title": {
     "value": "Remove the Jev key?"
@@ -25039,6 +25219,18 @@
       "other": "{{count}} unused logins removed."
     }
   },
+  "aiAccounts.page.removeAllGrok": {
+    "value": "Remove all Grok logins"
+  },
+  "aiAccounts.page.removeAllTitle": {
+    "value": "Remove all {{n}} Grok logins?"
+  },
+  "aiAccounts.page.removeAllText": {
+    "value": "They stop thinking for their agents on {{computers}}. Nobody else's logins are touched."
+  },
+  "aiAccounts.page.removeAllDone": {
+    "value": "{{n}} Grok logins removed."
+  },
   "aiAccounts.page.disconnect": {
     "value": "Disconnect"
   },
@@ -25200,6 +25392,12 @@
   },
   "aiAccounts.usage.resetsOn": {
     "value": "resets {{day}} at {{time}}"
+  },
+  "aiAccounts.usage.allModels": {
+    "value": "All models"
+  },
+  "aiAccounts.usage.onlyModels": {
+    "value": "Only {{name}}"
   },
   "aiAccounts.usage.almost": {
     "value": "Almost at the limit"
@@ -25576,6 +25774,15 @@
   },
   "voice.keysPaused": {
     "value": "Paused · Space listens · Enter sends · Esc deletes"
+  },
+  "voice.askDiscard": {
+    "value": "Delete the audio? Your text stays."
+  },
+  "voice.askDelete": {
+    "value": "Delete"
+  },
+  "voice.askKeep": {
+    "value": "Keep"
   },
   "voice.pausePlay": {
     "value": "Pause"
@@ -28288,6 +28495,18 @@
   },
   "brain.reasons.outdated": {
     "value": "The version on {{computer}} is old. Update Codex to use it."
+  },
+  "brain.reasons.outdatedCodex": {
+    "value": "Codex CLI {{detected}} was found on {{computer}}. Update it to {{minimum}} or later."
+  },
+  "brain.reasons.codexUpdateGuide": {
+    "value": "How to update Codex CLI"
+  },
+  "brain.reasons.codexRecheckHere": {
+    "value": "After updating, choose Check again for Codex in Preferences › Tools."
+  },
+  "brain.reasons.codexRecheckThere": {
+    "value": "Update Codex CLI on {{computer}}. If it runs the desktop app, choose Check again for Codex in Preferences › Tools."
   },
   "brain.reasons.system": {
     "value": "{{program}} doesn't run on {{computer}}'s system yet."
@@ -31134,6 +31353,9 @@
   },
   "connectors.reconnectAdds": {
     "value": "Reconnect {{name}} so agents can also {{what}}."
+  },
+  "connectors.sendsToo": {
+    "value": "Also sends: <names/>. To change that, use Reconnect."
   },
   "connectors.adds.github_project": {
     "value": "use GitHub Projects (read boards and move cards)"
@@ -34333,6 +34555,48 @@
   "connectFlow.serverSaid": {
     "value": "The server answered: {{detail}}"
   },
+  "connectFlow.headers.title": {
+    "value": "Request headers"
+  },
+  "connectFlow.headers.help": {
+    "value": "For a key that goes in another header, or a gateway in front of the server. Most servers need none."
+  },
+  "connectFlow.headers.value": {
+    "value": "Value"
+  },
+  "connectFlow.headers.nameOf": {
+    "value": "Name of header {{n}}"
+  },
+  "connectFlow.headers.valueOf": {
+    "value": "Value of header {{n}}"
+  },
+  "connectFlow.headers.remove": {
+    "value": "Remove header {{n}}"
+  },
+  "connectFlow.headers.add": {
+    "value": "Add header"
+  },
+  "connectFlow.headers.saved": {
+    "value": {
+      "one": "Saved: <names/>. It stays unless you type new ones.",
+      "other": "Saved: <names/>. They stay unless you type new ones."
+    }
+  },
+  "connectFlow.headers.drop": {
+    "value": "Remove"
+  },
+  "connectFlow.headers.dropping": {
+    "value": {
+      "one": "<names/> will be removed when you reconnect.",
+      "other": "<names/> will be removed when you reconnect."
+    }
+  },
+  "connectFlow.headers.undo": {
+    "value": "Undo"
+  },
+  "connectFlow.headers.refused": {
+    "value": "The server didn't accept these headers. Check their values, or connect with an API key."
+  },
   "connectFlow.nothingYet": {
     "value": "Nothing is available to agents until step 3."
   },
@@ -35990,6 +36254,30 @@
   "errors.connector.misconfigured": {
     "value": "The connection to {{provider}} is set up wrong on the server, so it can't finish. Whoever runs the server needs to replace the key in the app's settings."
   },
+  "errors.connector.headerName": {
+    "value": "Use only letters, digits and hyphens in a header's name, like X-API-Key."
+  },
+  "errors.connector.headerValue": {
+    "value": "Type a value for {{header}}: up to 2,000 characters on one line, with no accented letters or emoji."
+  },
+  "errors.connector.headerReserved": {
+    "value": "{{header}} is already sent with every request and can't be changed. Remove this header."
+  },
+  "errors.connector.headerTwice": {
+    "value": "{{header}} is in the list twice. Remove one of them."
+  },
+  "errors.connector.headerAndKey": {
+    "value": "The API key is already sent as Authorization. Clear the key, or remove this header."
+  },
+  "errors.connector.headersTooMany": {
+    "value": "A server takes at most {{max}} headers. Remove one to add another."
+  },
+  "errors.connector.headersWithSignIn": {
+    "value": "This server asks for a sign-in, and a sign-in can't carry headers yet. Remove the headers to sign in, or connect with an API key."
+  },
+  "errors.connector.headersUnreadable": {
+    "value": "The saved headers couldn't be read. Type them again, or remove them."
+  },
   "errors.wiki.githubNoNotes": {
     "value": "No Markdown notes in this link."
   },
@@ -36562,6 +36850,9 @@
   },
   "errors.agentGroup.tooMany": {
     "value": "This workspace already has {{max}} departments. Delete one first."
+  },
+  "errors.agentGroup.ambiguous": {
+    "value": "Two departments are called {{name}}. Rename one of them, then try again."
   },
   "errors.rightHand.permanent": {
     "value": "The right hand is part of the workspace and stays out of channels. An @mention reaches it in any of them."
@@ -37690,6 +37981,9 @@
   "devices.reason.xcode_too_old": {
     "value": "Xcode is too old for this iOS"
   },
+  "devices.reason.ios_behind_xcode": {
+    "value": "This iPhone's iOS is older than Xcode's"
+  },
   "devices.reason.device_support": {
     "value": "The Mac is getting the iPhone tools"
   },
@@ -37767,6 +38061,9 @@
   },
   "devices.fix.xcode_too_old": {
     "value": "Update Xcode"
+  },
+  "devices.fix.ios_behind_xcode": {
+    "value": "Update the iPhone"
   },
   "devices.fix.device_support": {
     "value": "Keep the Mac on"
@@ -38593,6 +38890,9 @@
   "devices.iphone.teamLimitText": {
     "value": "Remove an app you built yourself from the iPhone: a free Apple Account allows 3."
   },
+  "devices.iphone.iosBehind": {
+    "value": "This iPhone runs iOS {{ios}} and Xcode on this Mac is for iOS {{sdk}}. Update the iPhone: Settings › General › Software Update."
+  },
   "devices.iphone.xcodeOld": {
     "value": "{{name}} runs iOS {{version}} and Xcode on {{mac}} knows iOS {{sdk}} at most. Install Xcode {{major}}, then run this in Terminal."
   },
@@ -38793,6 +39093,9 @@
   },
   "devices.notice.cliRequest": {
     "value": "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>"
+  },
+  "devices.notice.folderRequest": {
+    "value": "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>"
   },
   "devices.notice.once": {
     "value": "Allow once"
@@ -40394,7 +40697,7 @@
     "value": "What each person here can do. The owner can do everything."
   },
   "settings.about.basedOn": {
-    "value": "Based on <site>agentes.chat</site> by Codari Global, LLC"
+    "value": "Based on <site>agentes.chat</site> by AGENTESCHAT, LLC"
   },
   "settings.about.version": {
     "value": "Version"
@@ -40406,7 +40709,7 @@
     "value": "Source code"
   },
   "settings.about.copyright": {
-    "value": "Copyright © 2026 Codari Global, LLC and contributors"
+    "value": "Copyright © 2026 AGENTESCHAT, LLC and contributors"
   },
   "settings.title": {
     "value": "Settings"
@@ -40494,6 +40797,12 @@
   },
   "settings.account.chat.textSizeHelp": {
     "value": "Of messages, in every conversation and on all your devices"
+  },
+  "settings.account.chat.fullMessages": {
+    "value": "Show full messages"
+  },
+  "settings.account.chat.fullMessagesHelp": {
+    "value": "Show long messages without “See more”, in every conversation and on all your devices"
   },
   "settings.account.chat.textSizePhone": {
     "value": "Applies to the whole app, on top of your phone's text size"
@@ -41479,6 +41788,24 @@
   "peopleUsage.actions.see": {
     "value": "See their usage"
   },
+  "usage.kinds.label": {
+    "value": "By kind"
+  },
+  "usage.kinds.handoffs": {
+    "value": "Handoffs between agents"
+  },
+  "usage.kinds.people": {
+    "value": "Conversations with people"
+  },
+  "usage.kinds.routines": {
+    "value": "Routines"
+  },
+  "usage.hint.handoffs": {
+    "value": "Most of this week's use came from agents handing work to each other. Ask the agent directly for long work."
+  },
+  "usage.hint.message": {
+    "value": "Message {{name}}"
+  },
   "usageViews.signedOut": {
     "value": "Signed out"
   },
@@ -41928,6 +42255,24 @@
   },
   "chat.speedFallback.action": {
     "value": "Open agent"
+  },
+  "chat.standIn.needsComputer": {
+    "value": "Answered with {{via}}: {{plan}} needs a computer."
+  },
+  "chat.standIn.away": {
+    "value": "Answered with {{via}}: the computer {{plan}} is on is away."
+  },
+  "chat.standIn.notShared": {
+    "value": "Answered with {{via}}: {{plan}} serves only its owner."
+  },
+  "chat.standIn.limit": {
+    "value": "Answered with {{via}}: {{plan}} reached its limit."
+  },
+  "chat.standIn.cant": {
+    "value": "Answered with {{via}}: {{plan}} can't think right now."
+  },
+  "chat.standIn.change": {
+    "value": "Change"
   },
   "chat.modelStandIn.text": {
     "value": "{{plan}} refused {{from}} with this key. I answered with {{to}}, which works with it."
@@ -48937,5 +49282,83 @@
   },
   "feedback.offer.askFirst": {
     "value": "Ask before sending"
+  },
+  "rightHand.brain.unusable.title": {
+    "value": "Needs a computer"
+  },
+  "rightHand.brain.unusable.computerOnly": {
+    "value": "{{owner}}'s, signed in on {{computer}} only. Lodi thinks with a plan signed in as an account."
+  },
+  "rightHand.brain.unusable.noComputer": {
+    "value": "{{owner}}'s. It needs a computer, and the workspace has none connected."
+  },
+  "rightHand.brain.unusable.away": {
+    "value": "{{owner}}'s, on {{computer}}, which is away."
+  },
+  "rightHand.brain.unusable.connect": {
+    "value": "Connect a computer"
+  },
+  "rightHand.brain.unusable.plans": {
+    "value": "See plans"
+  },
+  "issues.handedBy": {
+    "value": "handed by <0/>{{name}}"
+  },
+  "issues.fromDm": {
+    "value": "from <0>your DM with {{name}}</0>"
+  },
+  "issues.fromDmText": {
+    "value": "from your DM with {{name}}"
+  },
+  "issues.work.finishedTitle": {
+    "value": "{{name}} finished it"
+  },
+  "issues.work.finishedMeta": {
+    "value": "{{when}} · handed by {{name}}"
+  },
+  "issues.work.answer": {
+    "value": "Answer"
+  },
+  "work.handed.lead": {
+    "value": "Handed to <0/>{{name}}"
+  },
+  "work.handed.working": {
+    "value": "working on it"
+  },
+  "work.handed.done": {
+    "value": "done in {{duration}}"
+  },
+  "work.handed.waitingYou": {
+    "value": "waiting for your answer"
+  },
+  "work.handed.waiting": {
+    "value": "waiting for an answer"
+  },
+  "work.handed.waitingApprovalYou": {
+    "value": "waiting for your approval"
+  },
+  "work.handed.waitingApproval": {
+    "value": "waiting for approval"
+  },
+  "work.handed.waitingComputer": {
+    "value": "waiting for the computer"
+  },
+  "work.handed.paused": {
+    "value": "paused at the plan's limit"
+  },
+  "work.handed.queued": {
+    "value": "in line"
+  },
+  "work.handed.failed": {
+    "value": "didn't finish"
+  },
+  "work.handed.stopped": {
+    "value": "stopped"
+  },
+  "work.handed.step": {
+    "value": "step {{current}} of {{total}}"
+  },
+  "chat.request.asksYou": {
+    "value": "{{name}} asks you"
   }
 }

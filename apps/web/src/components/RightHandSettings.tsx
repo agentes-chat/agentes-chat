@@ -2,7 +2,9 @@ import type { Agent, AgentBrain, AgentBrainInput } from "@agenteschat/client";
 import {
   keys,
   useAgentBrain,
+  useAiAccounts,
   useApi,
+  useAuthConfig,
   useCredentials,
   useModels,
   usePlatformKey,
@@ -13,12 +15,14 @@ import {
   useUpdateSettings,
   useWorkspaceUsesApi,
 } from "@agenteschat/client";
-import { accountAbout, accountChoices, accountTitle } from "@agenteschat/client/lib/ai-accounts";
+import { selfHosted } from "@agenteschat/client/lib/about";
+import { accountAbout, accountChoices, accountTitle, ownSignInTitle } from "@agenteschat/client/lib/ai-accounts";
 import { audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
 import { modelInput, modelRows } from "@agenteschat/client/lib/brain-picker";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { handleAfterRename } from "@agenteschat/client/lib/new-agent";
+import { rightHandUnusable } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { brainPlan } from "@agenteschat/client/lib/plans";
 import { AUTO, modelChoices } from "@agenteschat/client/lib/providers";
@@ -50,7 +54,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { AudienceChoice } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { LookRows, modelOptions } from "@/components/AgentFields";
@@ -60,11 +64,13 @@ import type { HaveItem } from "@/components/arrival/ConnectHave";
 import { useConnectAi } from "@/components/ConnectAi";
 import { useAgentComputer } from "@/components/computer/facts";
 import { useOpenComputer } from "@/components/computer/open";
+import { HelpLink } from "@/components/HelpLink";
 import { LoadingLine } from "@/components/Loading";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { RightHandBrainDialog, type RightHandLink, type RightHandModel } from "@/components/RightHandBrainDialog";
 import { TeamWeekSchedule } from "@/components/TeamWeekSchedule";
+import { useComputerEdition } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
 import { usePersonalView } from "@/hooks/usePersonalView";
 import { fullLook, lookOf } from "@/lib/look";
@@ -306,15 +312,22 @@ function RightHandComputerRow({ agent }: { agent: Agent }) {
   const { org } = useOrg();
   const view = useAgentComputer(agent);
   const openComputer = useOpenComputer();
+  const auth = useAuthConfig();
   if (!view.ready || view.forbidden || !view.facts) return null;
-  const none = rightHandNoComputer(view.desktop?.reason);
+  const none = rightHandNoComputer(view.desktop?.reason, selfHosted(auth.data));
   if (none)
     return (
       <PrefRow
         id="rh-computer"
         icon="computer"
         label={t("agentComputer.button")}
-        status={t(none)}
+        status={
+          none === "rightHand.computerNoHomeServer" ? (
+            <Trans i18nKey={none} components={{ guide: <HelpLink slug="install-on-a-server" section="computers" /> }} />
+          ) : (
+            t(none)
+          )
+        }
         control={
           none === "rightHand.computerNoHome" &&
           can(org, "pair_computers") && (
@@ -400,6 +413,8 @@ function RightHandForm({ agent }: { agent: Agent }) {
   const dir = useDirectory(org.id);
   const hold = usePlanHold();
   const connect = useConnectAi();
+  const aiAccounts = useAiAccounts(org.id).data;
+  const edition = useComputerEdition(org.id);
   // The workspace's AI (ADR 0137 §11): what every DM thinks with while its person has no plan of their own.
   const kind = planKind(agent.brain?.kind);
   const view = useAgentBrain(org.id, agent.id, true, false, "workspace").data;
@@ -478,7 +493,46 @@ function RightHandForm({ agent }: { agent: Agent }) {
     };
   });
   const current = kind ? (planItems.find((i) => i.id === view?.account) ?? null) : keyItem;
-  const others = [...planItems.filter((i) => i.id !== current?.id), ...(kind ? [keyItem] : [])];
+  // Plans it can't think with now, dimmed under the others with why: it stands in on what can meanwhile.
+  const cant = rightHandUnusable(aiAccounts).filter((u) => u.id !== current?.id);
+  const away = new Set(cant.map((u) => u.id));
+  const others = [...planItems.filter((i) => i.id !== current?.id && !away.has(i.id)), ...(kind ? [keyItem] : [])];
+  // Connecting one is self-host's way out: Cloud's own computer is always on, and its way out is the plan.
+  const pairs = can(org, "pair_computers") && edition !== "cloud";
+  const unusable = cant.map((u) => {
+    if (u.why === "computerOnly")
+      return {
+        id: u.id,
+        item: { title: ownSignInTitle(t, u.own), mark: <ProviderLogo id={u.own.kind} size="xs" /> },
+        why: t("rightHand.unusable.computerOnly", { ...g, computer: u.own.computer }),
+      };
+    const a = u.account;
+    const owner = theirs(a.ownerId);
+    return {
+      id: u.id,
+      item: { title: accountTitle(a), mark: <ProviderLogo id={a.provider ?? a.kind} size="xs" /> },
+      why: (
+        <>
+          {owner
+            ? t("rightHand.unusable.away", { owner, computer: a.computer })
+            : t("rightHand.unusable.awayYours", { computer: a.computer })}
+          {pairs && (
+            <>
+              {" "}
+              <Link
+                className="ac-link"
+                to="/org/$orgId/settings/$section"
+                params={{ orgId: org.id, section: "devices" }}
+                search={{}}
+              >
+                {t("rightHand.unusable.connect")}
+              </Link>
+            </>
+          )}
+        </>
+      ),
+    };
+  });
   const pick = (id: string) => {
     if (id === KEY) return void (kind && setWorkspace({ brain: "model" }));
     const plan = listed.find((p) => p.id === id);
@@ -647,6 +701,7 @@ function RightHandForm({ agent }: { agent: Agent }) {
           ...(connectOther ? { more: connectOther } : {}),
         }}
         links={connectOther ? [connectOther] : []}
+        unusable={unusable}
         // On a billing hold nothing changes before the plan (ADR 0162).
         busy={busy || update.isPending}
         locked={!!hold}

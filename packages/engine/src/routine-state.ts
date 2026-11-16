@@ -49,6 +49,7 @@ export const ROUTINE_CODE_TEXT: Record<string, string> = {
   waiting_plan_late: "Missed: the plan reset too late",
   waiting_budget_late: "Missed: the budget renewed too late",
   stopped: "Stopped",
+  stalled: "Released: nothing moved in it for 20 minutes",
   no_report: "Ended without a report",
   auto_report: "Reported its final answer",
   handoff_blocked: "Its report could not be delivered",

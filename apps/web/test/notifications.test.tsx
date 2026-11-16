@@ -248,6 +248,8 @@ describe("Notificações", () => {
         .getAllByRole("button")
         .map((b) => b.getAttribute("aria-label")),
     ).toEqual(["Lembrar depois", "Feito"]);
+    // Who decides it and manages agents can change when Atlas asks, right on the item.
+    expect(within(card).getByRole("button", { name: "Mudar quando perguntar" })).toBeTruthy();
     await click(within(card).getByRole("button", { name: "Agora não" }));
     expect(card.querySelector("textarea")).toBeTruthy();
   });

@@ -225,6 +225,8 @@ test("someone else's plan: any that serves everyone, never one its owner keeps t
 
 test("the workspace's plan kept to its owner serves only them; the AI status says so per person", async () => {
   const { fx, deps, bia, caio, lodi, runIn } = await world();
+  // No key to stand in for a plan (ADR 0137 §7, amended 2026-11-15; right-hand-stand-in.test.ts has it).
+  await fx.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
   await setAgentBrain(deps, fx.owner.id, fx.org.id, lodi.id, { brain: "claude_code", account: ANAS });
   // Every plan kept to the person who connected it: nothing serves anyone else.
   await setAccountServes(deps, fx.owner.id, fx.org.id, ANAS, "owner");
@@ -420,6 +422,8 @@ async function keyRow(fx: Awaited<ReturnType<typeof world>>["fx"]) {
 
 test("a widget's build thinks with its creator's AI, else its routine's creator's, else the workspace's", async () => {
   const { fx, deps, bia, caio, lodi } = await world();
+  // No key to stand in for a plan (ADR 0137 §7, amended 2026-11-15; right-hand-stand-in.test.ts has it).
+  await fx.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
   // The workspace's plan serves only its owner; Bia and Caio each chose their own.
   await setAgentBrain(deps, fx.owner.id, fx.org.id, lodi.id, { brain: "claude_code", account: ANAS });
   await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: BIAS });
@@ -572,10 +576,12 @@ test("a creator whose own AI can't think: the build takes the next AI that can, 
   await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: BIAS });
   await fx.db.update(schema.machineAccounts).set({ status: "signed_out" }).where(eq(schema.machineAccounts.id, BIAS));
   const { build, end, made } = await sharedWidget(w, bia.id);
-  expect(await build()).toMatchObject({ pick: null, account: ANAS, unavailable: undefined });
+  // Bia's own can't think, so it thinks for her on the plan that stands in for it (ADR 0137 §7, amended 2026-11-15).
+  expect(await build()).toMatchObject({ pick: bia.id, account: ANAS, unavailable: undefined });
   await end();
-  // The workspace's plan serves only its owner, and nobody else has an AI that thinks: a widget of Caio's whose routine
-  // is the owner's builds for the owner, whom that plan answers.
+  // The workspace's plan serves only its owner, and nobody else has an AI that thinks (no key either): a widget of
+  // Caio's whose routine is the owner's builds for the owner, whom that plan answers.
+  await fx.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
   await fx.db.delete(schema.rightHandBrains).where(ne(schema.rightHandBrains.userId, fx.owner.id));
   await fx.db.update(schema.machineAccounts).set({ status: "signed_out" }).where(eq(schema.machineAccounts.id, CAIOS));
   await setAccountServes(deps, fx.owner.id, fx.org.id, ANAS, "owner");

@@ -2733,6 +2733,13 @@
   "rightHand": {
     "label": "il tuo braccio destro",
     "labelCapitalized": "Il tuo braccio destro",
+    "unusable": {
+      "title": "Non può pensare per {{name}} ora",
+      "computerOnly": "Connesso solo su {{computer}}. {{name}} pensa con un piano connesso come account.",
+      "away": "Di {{owner}}, su {{computer}}, che è assente.",
+      "awayYours": "Tuo, su {{computer}}, che è assente.",
+      "connect": "Connetti un computer"
+    },
     "newDot": "Nuovo",
     "actsAsYou": "agisce con i tuoi permessi",
     "composerHint": "nulla cambia senza di te",
@@ -2838,6 +2845,7 @@
     "sharedName": "{{name}} (condiviso)",
     "sharedPlace": "Si usa nei canali e nei lavori che girano da soli. Tutto il workspace condivide questo spazio. Non tenere qui nulla di privato.",
     "computerNoHome": "Ancora nessun computer. Ne avrà uno quando questo workspace avrà un computer proprio.",
+    "computerNoHomeServer": "Ancora nessun browser. Configura <guide>questo server come computer degli agenti</guide> per dargliene uno.",
     "addComputer": "Aggiungi un computer",
     "computerOneUser": "Qui nessun computer. Il computer del workspace esegue tutti gli agenti come un solo utente, quindi non può tenere separato lo spazio di ogni persona. Un server Linux installato con l'opzione --system dell'installer può farlo.",
     "powers": {
@@ -2884,6 +2892,7 @@
         "ai_account": "Solo il proprietario dell’account lo assegna",
         "name": "Solo gli admin rinominano un agente",
         "look": "Solo gli admin e il responsabile cambiano il suo aspetto",
+        "group": "Solo gli admin spostano un agente di reparto",
         "reports_to": "Solo gli admin cambiano a chi risponde un agente",
         "many": "Solo gli admin fanno queste modifiche"
       }
@@ -2898,6 +2907,7 @@
       "channel": "Canale",
       "name": "Nome",
       "look": "Aspetto",
+      "group": "Reparto",
       "reports_to": "Risponde a",
       "skill": "Skill {{name}}"
     },
@@ -3013,6 +3023,16 @@
       "invite_people_sent_many": "Inviti inviati a <b>{{emails}}</b>.",
       "invite_people_sent_other": "Inviti inviati a <b>{{emails}}</b>.",
       "remove_ai_key": "Elimina la chiave API «{{name}}»."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Serve un computer",
+        "computerOnly": "Di {{owner}}, collegato solo su {{computer}}. Lodi pensa con un piano collegato come account.",
+        "noComputer": "Di {{owner}}. Serve un computer, e il workspace non ne ha nessuno collegato.",
+        "away": "Di {{owner}}, su {{computer}}, che non è raggiungibile.",
+        "connect": "Collega un computer",
+        "plans": "Vedi i piani"
+      }
     }
   },
   "teamWeek": {
@@ -3381,7 +3401,7 @@
       "gemini": {
         "title": "Il tuo piano Gemini",
         "tiers": "Google AI Pro, Google AI Ultra o Gemini Enterprise",
-        "warning": "Google dice che usare un piano Gemini personale all'interno di altre app può portare alla sospensione dell'account."
+        "warning": "Google dice che usare un piano Gemini personale all'interno di altre app può portare alla sospensione dell'account. Per evitare questo rischio, usa una chiave API di Gemini o Gemini Enterprise."
       },
       "zen": {
         "title": "OpenCode",
@@ -3533,7 +3553,19 @@
     "never": {
       "title": "Non chiedere mai",
       "text": "Non chiede mai, nemmeno per merge, deploy, pagamenti e routine."
-    }
+    },
+    "change": "Cambia quando chiede",
+    "now": "{{name}} ora: {{level}}.",
+    "nowEveryAgent": "Tutti gli agenti ora: {{level}}.",
+    "undo": "Annulla",
+    "everyAgent": "Per tutti gli agenti del workspace",
+    "follows": "Segue il workspace",
+    "edit": "Cambia",
+    "workspaceLead": "Quando gli agenti chiedono a una persona prima di agire.",
+    "workspaceHelp": "Ogni agente segue questa scelta finché qualcuno non cambia la sua nella pagina dell’agente.",
+    "ownAgents_one": "{{count}} agente ha una scelta propria e non cambia.",
+    "ownAgents_many": "{{count}} agenti hanno una scelta propria e non cambiano.",
+    "ownAgents_other": "{{count}} agenti hanno una scelta propria e non cambiano."
   },
   "brakes": {
     "title": "Lavoro che nessuno ha chiesto",
@@ -4328,6 +4360,7 @@
     "seeNewer": "Vedi la richiesta più recente",
     "computerAway": "Il computer di {{agent}} non risponde in questo momento. Questa richiesta resta aperta fino alle {{time}}. Riprova tra un attimo.",
     "computerPaused": "Il computer di {{agent}} è in pausa per scelta del proprietario. Questa richiesta resta aperta fino alle {{time}}.",
+    "insecureContext": "Questa pagina non è aperta in https, quindi il browser non blocca la chiave. Aprila su https:// (o localhost).",
     "failed": "Non è stato possibile consegnarlo. Il computer dell'agente è acceso?",
     "changed": "Questa richiesta è cambiata mentre rispondevi. Non è stato inviato nulla. Inviala di nuovo.",
     "empty": "Scrivi il valore.",
@@ -7974,6 +8007,18 @@
     },
     "assigneeFilter": "Assegnatario",
     "priorityFilter": "Priorità",
+    "labelFilter": "Etichetta",
+    "table": {
+      "task": "Attività",
+      "github": "GitHub",
+      "sortBy": "Ordina per {{column}}",
+      "resize": "Ridimensiona la colonna {{column}}"
+    },
+    "fold": {
+      "open": "Apri {{name}}",
+      "close": "Comprimi {{name}}",
+      "column": "Comprimi colonna"
+    },
     "title": "Attività",
     "summary": "{{open}} aperte · {{agents}} con agenti",
     "search": "Cerca attività",
@@ -8017,8 +8062,16 @@
       "order": {
         "manual": "Manuale",
         "priority": "Priorità",
-        "due": "Scadenza"
+        "due": "Scadenza",
+        "updated": "Recenti"
       },
+      "done": "Completate",
+      "doneIs": {
+        "all": "Tutte",
+        "recent": "Ultimi {{days}} giorni",
+        "hidden": "Nessuna"
+      },
+      "hideEmpty": "Nascondi gruppi vuoti",
       "field": {
         "project": "Progetto",
         "assignee": "Assegnatario",
@@ -8044,6 +8097,7 @@
       "canceled": "La #{{number}} è tornata al suo posto.",
       "assigned": "La #{{number}} ora è di {{name}}.",
       "unassigned": "La #{{number}} ora non ha un assegnatario.",
+      "removed": "La #{{number}} non è più di {{name}}.",
       "prioritized": "La #{{number}} ora ha priorità {{priority}}."
     },
     "canceledColumn": "Annullate",
@@ -8178,7 +8232,10 @@
         "failed": "L'ultima esecuzione non è riuscita.",
         "canceled": "Qualcuno ha fermato l'esecuzione.",
         "budget": "Il budget mensile dell'agente è esaurito."
-      }
+      },
+      "finishedTitle": "{{name}} l'ha finita",
+      "finishedMeta": "{{when}} · passata da {{name}}",
+      "answer": "Rispondi"
     },
     "status": {
       "todo": "Da fare",
@@ -8205,6 +8262,10 @@
       "high": "alta"
     },
     "noAssignee": "Nessun assegnatario",
+    "assignees": {
+      "people": "Persone e agenti",
+      "done": "Fatto"
+    },
     "agentRole": "Agente · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -8352,7 +8413,9 @@
       "status_changed": "ha cambiato lo stato in {{status}}",
       "priority_changed": "ha cambiato la priorità in {{priority}}",
       "assigned": "ha assegnato l'attività",
-      "unassigned": "ha rimosso l'assegnatario",
+      "unassigned": "ha rimosso un assegnatario",
+      "assigned_named": "ha assegnato l'attività a {{name}}",
+      "unassigned_named": "ha tolto {{name}} dall'attività",
       "due_date_set": "ha impostato la scadenza al {{date}}",
       "due_date_removed": "ha rimosso la scadenza",
       "pr_linked": "ha collegato la PR #{{number}}",
@@ -8366,7 +8429,10 @@
       "criterion_checked": "ha spuntato il criterio \"{{text}}\"",
       "criterion_unchecked": "ha tolto la spunta al criterio \"{{text}}\"",
       "agent_asked": "ha chiesto a {{name}} di farla"
-    }
+    },
+    "handedBy": "passata da <0/>{{name}}",
+    "fromDm": "dalla <0>tua DM con {{name}}</0>",
+    "fromDmText": "dalla tua DM con {{name}}"
   },
   "routines": {
     "filters": "Filtra routine",
@@ -8963,6 +9029,7 @@
       "waiting_budget_late": "Ha mancato l'orario: il budget si è rinnovato troppo tardi",
       "stopped": "Fermata da qualcuno",
       "stoppedBy": "Fermata da {{name}}",
+      "stalled": "Liberata: niente si è mosso per 20 minuti",
       "no_report": "Terminata senza riferire il risultato",
       "handoff_blocked": "Non ha potuto riferire: la routine era in pausa o chi l'ha creata non può più scrivere lì",
       "deleted": "Fermata: la routine è stata eliminata",
@@ -10532,7 +10599,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "Un modello veloce di TypeSafe, pensato per decisioni rapide. agentes.chat gli fa piccole domande, come chi deve rispondere. Paghi TypeSafe direttamente.",
+    "about": "Un modello veloce di TypeSafe, pensato per decisioni rapide. agentes.chat gli fa piccole domande, come chi deve rispondere. Paghi TypeSafe direttamente, oppure tramite OpenRouter allo stesso prezzo.",
     "lead": "Aiuta i tuoi agenti a lavorare in team.",
     "how": "Come funziona Jev",
     "why": {
@@ -10574,6 +10641,32 @@
       "envInvalid": "TypeSafe non ha accettato questa chiave. Cambiala nelle impostazioni di questo server (TYPESAFE_API_KEY)."
     },
     "checkAgain": "Controlla di nuovo",
+    "via": {
+      "label": "Dove paghi Jev",
+      "typesafe": "TypeSafe",
+      "typesafeText": "Un account direttamente su TypeSafe, con credito prepagato.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "Con una chiave OpenRouter, allo stesso prezzo.",
+      "connected": "Chiave già collegata"
+    },
+    "openRouter": {
+      "create": "Crea una chiave su OpenRouter",
+      "createHint": "Con credito su OpenRouter. Jev costa come su TypeSafe: US$ {{price}} per milione di token. Scegliere chi risponde costa circa US$ {{call}}.",
+      "open": "Apri OpenRouter",
+      "placeholder": "La tua chiave OpenRouter",
+      "shape": "Le chiavi OpenRouter iniziano con sk-or-v1-. Controllala e incollala di nuovo.",
+      "invalid": "OpenRouter non ha accettato questa chiave. Copiala di nuovo dalla pagina delle chiavi.",
+      "keyName": "Chiave OpenRouter",
+      "same": "Quella in Chiavi dei provider",
+      "forAll": "Paga Jev per tutti gli spazi di lavoro di questo server.",
+      "turnOn": "Attiva Jev",
+      "otherKey": "Usa un'altra chiave",
+      "line": {
+        "invalid": "OpenRouter non ha accettato questa chiave. Creane una nuova.",
+        "no_credit": "Aggiungi credito su OpenRouter. Jev riparte da solo.",
+        "envInvalid": "OpenRouter non ha accettato questa chiave. Cambiala nelle impostazioni di questo server (TYPESAFE_API_KEY)."
+      }
+    },
     "remove": {
       "title": "Rimuovere la chiave di Jev?",
       "text": "Gli agenti continuano a lavorare anche senza."
@@ -10695,6 +10788,10 @@
       "copiesRemoved_one": "{{count}} accesso inutilizzato rimosso.",
       "copiesRemoved_many": "{{count}} accessi inutilizzati rimossi.",
       "copiesRemoved_other": "{{count}} accessi inutilizzati rimossi.",
+      "removeAllGrok": "Rimuovi tutti gli accessi a Grok",
+      "removeAllTitle": "Rimuovere tutti i {{n}} accessi a Grok?",
+      "removeAllText": "Smettono di pensare per i loro agenti su {{computers}}. Gli accessi di altre persone non vengono toccati.",
+      "removeAllDone": "{{n}} accessi a Grok rimossi.",
       "disconnect": "Scollega",
       "renameTitle": "Rinomina {{label}}",
       "nameLabel": "Nome",
@@ -10762,6 +10859,8 @@
       },
       "resetsAt": "si azzera alle {{time}}",
       "resetsOn": "si azzera {{day}} alle {{time}}",
+      "allModels": "Tutti i modelli",
+      "onlyModels": "Solo {{name}}",
       "almost": "Quasi al limite",
       "limited": "Al limite",
       "limitedUntil": "Al limite fino a {{when}}",
@@ -10929,6 +11028,9 @@
     "keys": "Invio invia · Esc elimina",
     "keysHold": "Rilascia per inviare · Esc elimina",
     "keysPaused": "In pausa · Spazio ascolta · Invio invia · Esc elimina",
+    "askDiscard": "Eliminare l’audio? Il tuo testo resta.",
+    "askDelete": "Elimina",
+    "askKeep": "Tieni",
     "pausePlay": "Pausa",
     "seek": "Posizione nell'audio",
     "speedAt": "Velocità {{speed}}×",
@@ -12017,6 +12119,10 @@
       "cant_start": "{{program}} è su {{computer}}, ma non si avvia.",
       "not_reported": "{{computer}} sta ancora controllando quali programmi ha. Questo cambia da solo quando ha finito.",
       "outdated": "La versione su {{computer}} è vecchia. Aggiorna Codex per usarlo.",
+      "outdatedCodex": "Su {{computer}} è stato rilevato Codex CLI {{detected}}. Aggiornalo alla versione {{minimum}} o successiva.",
+      "codexUpdateGuide": "Come aggiornare Codex CLI",
+      "codexRecheckHere": "Dopo l’aggiornamento, seleziona Controlla di nuovo nella riga di Codex in Preferenze › Strumenti.",
+      "codexRecheckThere": "Aggiorna Codex CLI su {{computer}}. Se è presente l’app desktop, seleziona Controlla di nuovo nella riga di Codex in Preferenze › Strumenti.",
       "system": "{{program}} non funziona ancora sul sistema di {{computer}}.",
       "no_computerCloud": "Pronto appena lo è {{computer}}."
     },
@@ -13315,6 +13421,7 @@
     "connected": "Collegato",
     "connectedAs": "Collegato come {{account}}",
     "reconnectAdds": "Ricollega {{name}} così gli agenti possono anche {{what}}.",
+    "sendsToo": "Invia anche: <names/>. Per cambiare, usa Ricollega.",
     "adds": {
       "github_project": "usare GitHub Projects (leggere le board e spostare le schede)"
     },
@@ -14443,6 +14550,22 @@
     "needsKey": "Questo server non supporta OAuth. Collegalo con una chiave API.",
     "notApproved": "{{name}} consente l'accesso solo alle app che ha approvato, e agentes.chat non è ancora approvato. Se ti fornisce una chiave API, puoi collegarti con quella.",
     "serverSaid": "Il server ha risposto: {{detail}}",
+    "headers": {
+      "title": "Intestazioni della richiesta",
+      "help": "Per una chiave che va in un'altra intestazione, o un gateway davanti al server. La maggior parte dei server non ne ha bisogno.",
+      "value": "Valore",
+      "nameOf": "Nome dell'intestazione {{n}}",
+      "valueOf": "Valore dell'intestazione {{n}}",
+      "remove": "Rimuovi l'intestazione {{n}}",
+      "add": "Aggiungi intestazione",
+      "saved_one": "Salvata: <names/>. Resta, a meno che tu non ne scriva di nuove.",
+      "saved_other": "Salvate: <names/>. Restano, a meno che tu non ne scriva di nuove.",
+      "drop": "Rimuovi",
+      "dropping_one": "<names/> verrà rimossa quando ricolleghi.",
+      "dropping_other": "<names/> verranno rimosse quando ricolleghi.",
+      "undo": "Annulla",
+      "refused": "Il server non ha accettato queste intestazioni. Controlla i valori, oppure collegalo con una chiave API."
+    },
     "nothingYet": "Niente è disponibile per gli agenti fino al passaggio 3.",
     "allCanUse": "Una volta collegato, ogni agente può usarlo. Puoi regolarlo in seguito.",
     "replace": "Sostituisce l'accesso attuale. Chi lo usa resta invariato.",
@@ -15157,7 +15280,15 @@
       "gone": "Quell'account non è più collegato.",
       "unfinished": "L'accesso su Composio non è stato completato. Riprova.",
       "unavailable": "Questo servizio non si può collegare qui.",
-      "misconfigured": "Il collegamento a {{provider}} è configurato male sul server, quindi non può finire. Chi gestisce il server deve sostituire la chiave nelle impostazioni dell'app."
+      "misconfigured": "Il collegamento a {{provider}} è configurato male sul server, quindi non può finire. Chi gestisce il server deve sostituire la chiave nelle impostazioni dell'app.",
+      "headerName": "Usa solo lettere, numeri e trattini nel nome di un'intestazione, come X-API-Key.",
+      "headerValue": "Scrivi un valore per {{header}}: fino a 2.000 caratteri su una sola riga, senza accenti né emoji.",
+      "headerReserved": "{{header}} viene già inviata con ogni richiesta e non si può cambiare. Rimuovi questa intestazione.",
+      "headerTwice": "{{header}} è nell'elenco due volte. Rimuovine una.",
+      "headerAndKey": "La chiave API viene già inviata come Authorization. Cancella la chiave, oppure rimuovi questa intestazione.",
+      "headersTooMany": "Un server accetta al massimo {{max}} intestazioni. Rimuovine una per aggiungerne un'altra.",
+      "headersWithSignIn": "Questo server chiede un accesso, e un accesso non può ancora portare intestazioni. Rimuovi le intestazioni per accedere, oppure collegalo con una chiave API.",
+      "headersUnreadable": "Non è stato possibile leggere le intestazioni salvate. Scrivile di nuovo oppure rimuovile."
     },
     "wiki": {
       "githubNoNotes": "Nessuna nota Markdown in questo link.",
@@ -15395,7 +15526,8 @@
     },
     "agentGroup": {
       "notFound": "Questo reparto non esiste più.",
-      "tooMany": "Questo spazio di lavoro ha già {{max}} reparti. Eliminane prima uno."
+      "tooMany": "Questo spazio di lavoro ha già {{max}} reparti. Eliminane prima uno.",
+      "ambiguous": "Due reparti si chiamano {{name}}. Rinominane uno e riprova."
     },
     "rightHand": {
       "permanent": "Il braccio destro fa parte dello spazio di lavoro e resta fuori dai canali. Una @menzione lo raggiunge in qualsiasi canale.",
@@ -15843,6 +15975,7 @@
       "ui_automation_off": "L'automazione UI è disattivata",
       "xcode_missing": "Xcode non è installato sul Mac",
       "xcode_too_old": "Xcode è troppo vecchio per questa versione di iOS",
+      "ios_behind_xcode": "L'iOS di questo iPhone è più vecchio di quello di Xcode",
       "device_support": "Il Mac sta scaricando gli strumenti per l'iPhone",
       "helper_missing": "L'app di test non è ancora configurata",
       "helper_expired": "L'app di test va rinnovata",
@@ -15871,6 +16004,7 @@
       "ui_automation_off": "Attiva l'automazione UI",
       "xcode_missing": "Installa Xcode",
       "xcode_too_old": "Aggiorna Xcode",
+      "ios_behind_xcode": "Aggiorna l'iPhone",
       "device_support": "Tieni acceso il Mac",
       "helper_missing": "Apri l'app sul Mac",
       "helper_expired": "Apri l'app sul Mac",
@@ -16192,6 +16326,7 @@
       "helperText": "Creata e rinnovata dal Mac ogni 7 giorni. Basta un Apple Account gratuito in Xcode.",
       "helperUntrustedText": "Tocca il nome dello sviluppatore, poi Autorizza.",
       "teamLimitText": "Rimuovi dall'iPhone un'app creata da te: un Apple Account gratuito ne consente 3.",
+      "iosBehind": "Questo iPhone ha iOS {{ios}} e Xcode su questo Mac è per iOS {{sdk}}. Aggiorna l'iPhone: Impostazioni › Generali › Aggiornamento software.",
       "xcodeOld": "{{name}} usa iOS {{version}} e Xcode su {{mac}} conosce al massimo iOS {{sdk}}. Installa Xcode {{major}}, poi esegui questo nel Terminale.",
       "xcodeOldAny": "{{name}} usa iOS {{version}}, più recente di quanto conosca Xcode su {{mac}}. Installa Xcode {{major}}, poi esegui questo nel Terminale.",
       "uiRefusedText": "L'iPhone ha rifiutato i tocchi dell'app di test. Sbloccalo e inserisci il suo codice se lo chiede. Se succede ancora, disattiva e riattiva Impostazioni › Sviluppatore › Abilita automazione UI.",
@@ -16273,6 +16408,7 @@
       "waiting": "<b>{{who}}</b> sta aspettando <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> ti chiede di attivare {{tool}} sul tuo <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> ti chiede di installare {{tool}} sul tuo <b>{{deviceName}}</b>",
+      "folderRequest": "<b>{{who}}</b> ti chiede la cartella {{path}} sul tuo <b>{{deviceName}}</b>",
       "once": "Consenti una volta",
       "always": "Sempre",
       "no": "No",
@@ -16938,11 +17074,11 @@
       "rolesPersonal": "Cosa può fare ogni persona qui. Chi è proprietario può fare tutto."
     },
     "about": {
-      "basedOn": "Basato su <site>agentes.chat</site> di Codari Global, LLC",
+      "basedOn": "Basato su <site>agentes.chat</site> di AGENTESCHAT, LLC",
       "version": "Versione",
       "license": "Software libero sotto la <license>GNU Affero General Public License v3</license>, senza garanzia.",
       "source": "Codice sorgente",
-      "copyright": "Copyright © 2026 Codari Global, LLC e collaboratori"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC e collaboratori"
     },
     "title": "Impostazioni",
     "account": {
@@ -16975,6 +17111,8 @@
         "openLatest": "Messaggio più recente",
         "textSize": "Dimensione del testo",
         "textSizeHelp": "Dei messaggi, in tutte le conversazioni e su tutti i tuoi dispositivi",
+        "fullMessages": "Mostra i messaggi completi",
+        "fullMessagesHelp": "Mostra i messaggi lunghi senza “Mostra altro”, in tutte le conversazioni e su tutti i tuoi dispositivi",
         "textSizePhone": "Vale per tutta l'app, oltre alla dimensione del testo del telefono",
         "textXs": "Più piccolo",
         "textSm": "Piccolo",
@@ -17388,6 +17526,18 @@
       "see": "Vedi l'utilizzo"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "Per tipo",
+      "handoffs": "Passaggi tra agenti",
+      "people": "Conversazioni con persone",
+      "routines": "Routine"
+    },
+    "hint": {
+      "handoffs": "Gran parte dell’uso di questa settimana viene da agenti che si passano il lavoro. Per i lavori lunghi, chiedi direttamente all’agente.",
+      "message": "Scrivi a {{name}}"
+    }
+  },
   "usageViews": {
     "signedOut": "Disconnesso",
     "whose": "di {{name}}",
@@ -17570,12 +17720,35 @@
       "failed": "Bloccato · non terminato",
       "failedWhy": "Bloccato · non terminato: {{why}}"
     },
-    "working": "In background"
+    "working": "In background",
+    "handed": {
+      "lead": "Passato a <0/>{{name}}",
+      "working": "ci sta lavorando",
+      "done": "fatto in {{duration}}",
+      "waitingYou": "aspetta la tua risposta",
+      "waiting": "aspetta una risposta",
+      "waitingApprovalYou": "aspetta la tua approvazione",
+      "waitingApproval": "aspetta un'approvazione",
+      "waitingComputer": "aspetta il computer",
+      "paused": "in pausa al limite del piano",
+      "queued": "in coda",
+      "failed": "non ha finito",
+      "stopped": "fermato",
+      "step": "passo {{current}} di {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
       "text": "ChatGPT ha rifiutato la velocità Rapida per questo account o modello, quindi questa risposta è arrivata a velocità standard.",
       "action": "Apri agente"
+    },
+    "standIn": {
+      "needsComputer": "Ho risposto con {{via}}: {{plan}} ha bisogno di un computer.",
+      "away": "Ho risposto con {{via}}: il computer di {{plan}} è assente.",
+      "notShared": "Ho risposto con {{via}}: {{plan}} serve solo chi l'ha connesso.",
+      "limit": "Ho risposto con {{via}}: {{plan}} ha raggiunto il limite.",
+      "cant": "Ho risposto con {{via}}: {{plan}} non può pensare ora.",
+      "change": "Cambia"
     },
     "modelStandIn": {
       "text": "{{plan}} ha rifiutato {{from}} con questa chiave. Ho risposto con {{to}}, che funziona con essa.",
@@ -18177,6 +18350,9 @@
       "interrupted": "Interrotto da un riavvio del server. Chiedi di nuovo per continuare.",
       "step_limit": "Ho esaurito i passaggi prima di finire.",
       "stuck": "Mi sono bloccato e mi sono fermato prima di finire."
+    },
+    "request": {
+      "asksYou": "{{name}} ti chiede"
     }
   },
   "builtinTools": {

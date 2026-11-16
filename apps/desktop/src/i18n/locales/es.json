@@ -392,7 +392,8 @@
     "failingBody": "Abre la app para ver qué pasó e intentarlo de nuevo.",
     "restartedBanner": "agentes.chat se reinició 3 veces en esta {{device}}",
     "restartedBody": "Vuelve solo. Si sigue pasando, abre la app para ver el motivo.",
-    "version": "Versión {{version}}, se actualiza con la app",
+    "installedVersion": "Versión del paquete instalado",
+    "internalVersion": "Versión interna del servidor",
     "updatesWithApp": "Actualizar la app también actualiza agentes.chat en esta {{device}}.",
     "updateBack": "La actualización no se inició. agentes.chat volvió a la {{version}}.",
     "updateBackBody": "La versión nueva se intentará de nuevo con la próxima actualización de la app.",
@@ -585,7 +586,16 @@
       "notifyBrowserDesc": "La solicitud ya llega a tu teléfono y al sitio. Esto también te avisa aquí.",
       "menuBarTitle": "Mostrar en la barra de menús",
       "notchTitle": "Mostrar los agentes en el notch",
-      "notchDesc": "En MacBooks con notch: quién está trabajando aparece alrededor de la cámara."
+      "notchDesc": "En MacBooks con notch: quién está trabajando aparece alrededor de la cámara.",
+      "compatTitle": "Modo de compatibilidad",
+      "compatDesc": "Dibuja la ventana sin la tarjeta gráfica. Es más lento, pero funciona en cualquier computadora. Úsalo si la ventana se pone negra, se corta o se congela.",
+      "compatReopen": "Se aplica al volver a abrir la app.",
+      "reopenNow": "Volver a abrir ahora",
+      "compatFellBack": "La ventana no se abrió con la tarjeta gráfica, así que se abrió en modo de compatibilidad.",
+      "compatTryCard": "Probar de nuevo la tarjeta gráfica",
+      "compatOwn": "Ahora lo decide WEBKIT_DISABLE_DMABUF_RENDERER. Para elegir aquí, sal de la app y ábrela sin esa variable.",
+      "reopenTitle": "¿Volver a abrir agentes.chat?",
+      "reopenBody": "Los agentes no pueden usar esta computadora hasta que la app se abra de nuevo. Lo que ya está en marcha termina antes."
     },
     "thisMac": {
       "agents": "Agentes",

@@ -384,7 +384,8 @@
     "failingBody": "Buka aplikasinya untuk melihat apa yang terjadi dan mencoba lagi.",
     "restartedBanner": "agentes.chat dimulai ulang 3 kali di {{device}} ini",
     "restartedBody": "Ini akan kembali sendiri. Kalau terus terjadi, buka aplikasinya untuk melihat alasannya.",
-    "version": "Versi {{version}}, diperbarui bersama aplikasi",
+    "installedVersion": "Versi paket terpasang",
+    "internalVersion": "Versi internal server",
     "updatesWithApp": "Memperbarui aplikasi juga memperbarui agentes.chat di {{device}} ini.",
     "updateBack": "Pembaruan tidak berjalan. agentes.chat kembali ke {{version}}.",
     "updateBackBody": "Versi baru akan dicoba lagi pada pembaruan aplikasi berikutnya.",
@@ -575,7 +576,16 @@
       "notifyBrowserDesc": "Permintaannya sudah sampai ke ponselmu dan situs. Ini memberi tahumu di sini juga.",
       "menuBarTitle": "Tampilkan di bar menu",
       "notchTitle": "Tampilkan agen di notch",
-      "notchDesc": "Di MacBook dengan notch: siapa yang sedang bekerja tampil di sekitar kamera."
+      "notchDesc": "Di MacBook dengan notch: siapa yang sedang bekerja tampil di sekitar kamera.",
+      "compatTitle": "Mode kompatibilitas",
+      "compatDesc": "Menggambar jendela tanpa kartu grafis. Lebih lambat, tetapi berjalan di komputer mana pun. Gunakan jika jendela menjadi hitam, terpotong, atau macet.",
+      "compatReopen": "Berlaku saat aplikasi dibuka ulang.",
+      "reopenNow": "Buka ulang sekarang",
+      "compatFellBack": "Jendela tidak terbuka dengan kartu grafis, jadi jendela terbuka dalam mode kompatibilitas.",
+      "compatTryCard": "Coba kartu grafis lagi",
+      "compatOwn": "Saat ini WEBKIT_DISABLE_DMABUF_RENDERER yang menentukan. Untuk memilih di sini, keluar dari aplikasi lalu buka lagi tanpa variabel itu.",
+      "reopenTitle": "Buka ulang agentes.chat?",
+      "reopenBody": "Agen tidak bisa memakai komputer ini sampai aplikasi terbuka lagi. Yang sudah berjalan selesai lebih dulu."
     },
     "thisMac": {
       "agents": "Agen",

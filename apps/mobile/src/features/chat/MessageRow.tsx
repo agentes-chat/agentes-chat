@@ -41,6 +41,7 @@ import { isMediaAfterReply, messageMediaOf } from "@agenteschat/client/lib/media
 import { memberRoleColor } from "@agenteschat/client/lib/member-groups";
 import { serverBody } from "@agenteschat/client/lib/message-body";
 import { missionSetupOf } from "@agenteschat/client/lib/missions";
+import { isStandInLine } from "@agenteschat/client/lib/no-ai";
 import { isTalkerReply, routineReportText, talkerWaited } from "@agenteschat/client/lib/notices";
 import { can } from "@agenteschat/client/lib/permissions";
 import { modelStandInText } from "@agenteschat/client/lib/plan-usage";
@@ -48,7 +49,7 @@ import { reachHandoffs } from "@agenteschat/client/lib/reach";
 import { replyOf } from "@agenteschat/client/lib/reply";
 import { isReminderMessage, reminderBody, routineReplyOf } from "@agenteschat/client/lib/routines";
 import { appVia } from "@agenteschat/client/lib/via";
-import { voiceOf } from "@agenteschat/client/lib/voice";
+import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
 import { type ReplyStop, showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { useQueryClient } from "@tanstack/react-query";
@@ -148,7 +149,7 @@ import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { TeamChecks } from "./TeamChecks";
 import { SavedTools, TurnTools } from "./ToolCalls";
 import { recentTurn, stepLimitOf, stoppedOf, turnOpener } from "./turn";
-import { MessageWorkLine } from "./WorkLine";
+import { HandedWorkLines, MessageWorkLine } from "./WorkLine";
 
 /** A run's message asks whether a take over still holds its browser only this recently (older: events only). */
 const TRAIL_RECENT_MS = 12 * 60 * 60_000;
@@ -247,9 +248,10 @@ export const MessageRow = memo(function MessageRow({
   const names = useNamesComputers();
   const said = hidesBody(m)
     ? ""
-    : reminderBody(splitCanceled(serverBody(t, m.body, meta, i18n.language, names), meta).body, meta);
+    : reminderBody(splitCanceled(serverBody(t, listedText(m.body, meta), meta, i18n.language, names), meta).body, meta);
   // A long work's anchor once it's over: no promise left, and dimmed (its line says how it ended).
-  const body = m.longWork ? workAnchorBody(t, said, meta, m.longWork) : said;
+  // The right hand's stand-in line is its pill's sentence (`NoAiCard`): no text above it too.
+  const body = isStandInLine(meta) ? "" : m.longWork ? workAnchorBody(t, said, meta, m.longWork) : said;
   const workOver = Boolean(m.longWork && workIsOver(m.longWork));
   // The person's pick on a choice card (ADR 0124): one compact line, not a bubble.
   const choiceReply = meta?.choiceReply && body ? <ChoiceReply text={choiceReplyLine(body)} /> : null;
@@ -283,9 +285,11 @@ export const MessageRow = memo(function MessageRow({
     consulted,
     reached,
   );
+  // Work it handed over that reports here: its line under this reply says what the pair row would.
+  const paired = consults.filter((c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id));
   const pair =
-    isAgent && m.author.id && consults.length > 0 ? (
-      <ConsultPairRow askerId={m.author.id} channelId={m.channelId} items={consults} />
+    isAgent && m.author.id && paired.length > 0 ? (
+      <ConsultPairRow askerId={m.author.id} channelId={m.channelId} items={paired} />
     ) : null;
   const grouped = groupedIn && !pair;
   // A question to another agent (in their DM) carries the asking run: its work shows on that run's reply.
@@ -508,13 +512,14 @@ export const MessageRow = memo(function MessageRow({
     );
     // A voice message and a choice's answer lead with their own player or line, so their time stays under them.
     const myBubble = bubbled && Boolean(body) && !voiceOf(meta) && !choiceReply;
-    // A voice message's player, a choice's answer, the bubble, or the GIF or sticker or the files of a message
-    // with no words, leads.
-    const lead = voiceOf(meta) ? (
+    const player = voiceOf(meta) ? (
       <View style={styles.meFiles}>
         <VoiceMessage message={m} />
       </View>
-    ) : choiceReply ? (
+    ) : null;
+    // A choice's answer, the bubble (a voice message's typed words, its player under them), or a voice message's
+    // player, the GIF or sticker or the files of a message with no words, leads.
+    const lead = choiceReply ? (
       <View style={styles.meFiles}>{choiceReply}</View>
     ) : body ? (
       <View
@@ -538,9 +543,11 @@ export const MessageRow = memo(function MessageRow({
               {...(solidInk ? { ink: solidInk } : {})}
             />
           </ClippedMessage>
-          {bubbled && !m.local ? stamp : null}
+          {myBubble && !m.local ? stamp : null}
         </View>
       </View>
+    ) : player ? (
+      player
     ) : media ? (
       <View style={styles.meFiles}>
         <ChatMedia media={media} align="end" liveId={m.id} />
@@ -569,12 +576,13 @@ export const MessageRow = memo(function MessageRow({
               </View>
             ) : null}
             {/* With no words there is no bubble to hold it. */}
-            {quote && (!body || voiceOf(meta) || choiceReply) ? (
+            {quote && (!body || choiceReply) ? (
               <View style={styles.meEnd}>
                 <QuotePlate reply={quote} onJump={onQuote} />
               </View>
             ) : null}
             {lead}
+            {body ? player : null}
             {body && media ? (
               <View style={styles.meFiles}>
                 <ChatMedia media={media} align="end" liveId={m.id} />
@@ -616,7 +624,7 @@ export const MessageRow = memo(function MessageRow({
         (inBubble || compact || !words) && styles.whoTight,
       ]}
     >
-      {!inBubble || look.names ? (
+      {!inBubble || look.names || helping ? (
         <Text
           variant="footnote"
           tone="ink2"
@@ -876,6 +884,7 @@ export const MessageRow = memo(function MessageRow({
             {isAgent ? <ReachLines message={m} /> : null}
             {isAgent ? <FeedbackOfferRow message={m} /> : null}
             {isAgent && m.longWork ? <MessageWorkLine message={m} threaded={Boolean(thread)} /> : null}
+            {isAgent && !m.local ? <HandedWorkLines message={m} /> : null}
             {files.length > 0 ? <MessageFiles files={files} /> : null}
             {trails && m.author.id && trails.browser.length > 0 ? (
               <TrailCard
@@ -906,7 +915,7 @@ export const MessageRow = memo(function MessageRow({
                 done
                 settled
               />
-            ) : steps && m.agentRunId ? (
+            ) : steps && m.agentRunId && !meta?.workUpdate ? (
               <SavedTools
                 runId={m.agentRunId}
                 meta={meta}
@@ -932,7 +941,13 @@ export const MessageRow = memo(function MessageRow({
             {isAgent ? <TeamWeek message={m} /> : null}
             {approvalId ? <ApprovalInline approvalId={approvalId} messageId={m.id} /> : null}
             {handoff ? <HandoffCard handoff={handoff} /> : null}
-            {question ? <QuestionCard key={`${question.id}:${question.status}`} question={question} /> : null}
+            {question ? (
+              <QuestionCard
+                key={`${question.id}:${question.status}`}
+                question={question}
+                asker={helping ? (agent?.name ?? name) : undefined}
+              />
+            ) : null}
             {secret ? <SecretCard key={`${secret.id}:${secret.status}`} request={secret} /> : null}
             {missionDecision}
             {foot}

@@ -85,6 +85,7 @@ const REASONS = new Set([
   "ui_automation_off",
   "xcode_missing",
   "xcode_too_old",
+  "ios_behind_xcode",
   "device_support",
   "helper_missing",
   "helper_expired",
@@ -548,6 +549,7 @@ export type IphoneStep = (typeof IPHONE_STEPS)[number];
 const IPHONE_REASON: Record<string, IphoneStep> = {
   xcode_missing: "xcode",
   xcode_too_old: "xcode",
+  ios_behind_xcode: "helper",
   device_support: "tools",
   untrusted: "trust",
   locked: "trust",
@@ -1105,7 +1107,8 @@ export type DeviceNoticeKind =
   | "device.access_request"
   | "device.waiting"
   | "device.tool_request"
-  | "device.cli_request";
+  | "device.cli_request"
+  | "device.folder_request";
 const NOTICE_KINDS = new Set<string>([
   "device.join_request",
   "device.in_use",
@@ -1113,6 +1116,7 @@ const NOTICE_KINDS = new Set<string>([
   "device.waiting",
   "device.tool_request",
   "device.cli_request",
+  "device.folder_request",
 ]);
 
 /**
@@ -1140,6 +1144,8 @@ export interface DeviceNotice {
    * `device.cli_request`: the coding CLI to install, the same way.
    */
   tool: MachineTool | null;
+  /** `device.folder_request`: the folder an agent waits for on this computer (`latest.title`). */
+  path: string | null;
   askerId: string | null;
 }
 
@@ -1163,7 +1169,8 @@ export function deviceNoticeOf(
     device: str(s.label) ?? str(l.title) ?? "",
     agentId: actor?.id ?? str(s.agentId),
     userId: str(s.userId),
-    forName: join ? null : str(l.title),
+    // A folder request's `latest.title` is the folder itself, not a person: it reads in the line, not as a name.
+    forName: join || kind === "device.folder_request" ? null : str(l.title),
     text: str(l.text),
     join: join
       ? {
@@ -1174,6 +1181,7 @@ export function deviceNoticeOf(
         }
       : null,
     tool,
+    path: kind === "device.folder_request" ? str(l.title) : null,
     askerId: tool ? (n.actors?.find((a) => a.type === "user")?.id ?? null) : null,
   };
 }

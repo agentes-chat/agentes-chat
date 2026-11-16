@@ -3984,7 +3984,7 @@
           },
           "waitCode": {
             "type": ["string", "null"],
-            "description": "What it last waited on that isn't a person: `busy`, `machine_offline`, `plan_limit`, `budget`, `usage_pause`, `work_queue`, `provider_outage`… Ignore values you don't know."
+            "description": "What it last waited on that isn't a person: `busy`, `machine_offline`, `plan_limit`, `budget`, `usage_pause`, `work_queue`, `provider_outage`… On an ended run: what it waited on when it ended. Ignore values you don't know."
           },
           "waitSource": {
             "type": ["string", "null"],
@@ -3994,14 +3994,74 @@
             "type": ["string", "null"],
             "description": "When the limit it waits on resets, when known."
           },
+          "waitAccountId": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "The AI sign-in whose plan it waits on (`plan_limit`, or a long-work pause on a plan). Null: the plan is its computer's own sign-in, or it waits on a budget or on no plan."
+          },
+          "waitAccountMachineId": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "The computer that sign-in is on. With `waitAccountId` null and this set: that computer's own sign-in is the plan it waits on."
+          },
           "waitingMachineId": {
             "type": ["string", "null"],
             "format": "uuid",
             "description": "The computer it waits for."
           },
+          "canceled": {
+            "type": ["object", "null"],
+            "properties": {
+              "by": {
+                "type": "string",
+                "enum": ["person", "agent", "system"],
+                "description": "`person`; `agent` (an agent stopped it at that person's word); `system` (the server did, for `reason`)."
+              },
+              "userId": {
+                "type": ["string", "null"],
+                "description": "The person who stopped it, or at whose word."
+              },
+              "agentId": {
+                "type": ["string", "null"],
+                "format": "uuid",
+                "description": "With `agent`: the agent that stopped it."
+              },
+              "reason": {
+                "type": ["string", "null"],
+                "enum": [
+                  "agent_archived",
+                  "channel_deleted",
+                  "consultation_expired",
+                  "mission_stopped",
+                  "mission_closed",
+                  "mission_executor_changed",
+                  "routine_superseded",
+                  "routine_waiting_plan",
+                  "routine_waiting_budget",
+                  "routine_waiting_computer",
+                  "routine_stalled",
+                  "routine_stale",
+                  "routine_waiting_plan_late",
+                  "routine_waiting_budget_late",
+                  "routine_stopped",
+                  "routine_paused",
+                  "routine_deleted",
+                  "routine_creator_left",
+                  "workspace_paused",
+                  "workspace_suspended",
+                  "workspace_deleting",
+                  "other",
+                  null
+                ],
+                "description": "With `system`, why: its agent or its conversation was deleted (`agent_archived`, `channel_deleted`), a consultation ran out, its mission stopped, closed or changed who works on it (`mission_…`), its routine's next firing took its place, gave up on what it waited for, or was stopped, paused or deleted (`routine_…`), or its workspace was paused, suspended or is being deleted (`workspace_…`). `other`: a reason this list does not hold. Null for a person's stop."
+              }
+            },
+            "required": ["by", "userId", "agentId", "reason"],
+            "description": "Who or what stopped it. Null unless `status` is `canceled`, and for a canceled run that kept no error: nothing says who stopped it."
+          },
           "errorCode": {
             "type": ["string", "null"],
-            "description": "The app's code for `error`: `run.no_ai`, `run.budget_exceeded`, `run.provider_rate_limit`, `run.cli_failed`, `run.canceled`… and `run.failed` for anything unrecognized."
+            "description": "The app's code for `error`: `run.no_ai`, `run.budget_exceeded`, `run.provider_rate_limit`, `run.cli_failed`, `run.canceled`… and `run.failed` for anything unrecognized. A run the system stopped reads `run.canceled` too, where the app has no code of its own for the reason: `canceled` says which."
           },
           "error": {
             "type": ["string", "null"],
@@ -4043,7 +4103,10 @@
           "waitCode",
           "waitSource",
           "waitResetsAt",
+          "waitAccountId",
+          "waitAccountMachineId",
           "waitingMachineId",
+          "canceled",
           "errorCode",
           "error",
           "createdAt",
@@ -4139,11 +4202,64 @@
                 },
                 "code": {
                   "type": ["string", "null"],
-                  "description": "An error's, or a tool result's own."
+                  "description": "An error's, or a tool result's own (`tool.unknown`, `tool.invalid_input`, `tool.failed`, `tool.not_allowed`…). On an error whose `reason` is `no_ai`: why the run had nothing to think with, one of `no_key`, `not_signed_in`, `no_computer`, `cli_missing`, `computer_away`, `computer_failed`, `cli_failed`, `plan_limit`, `model_limit`, `model_region`, `model_off`, `plan_inactive`, `commands_off`, `plan_not_shared`, `plans_not_yours`, `runner_outdated`, `plan_tools`, `plan_hold`, `plan_unattended`; null on a run from before the server kept it."
+                },
+                "errorClass": {
+                  "type": ["string", "null"],
+                  "enum": [
+                    "unknown_tool",
+                    "invalid_arguments",
+                    "rate_limited",
+                    "unauthorized",
+                    "forbidden",
+                    "not_found",
+                    "timeout",
+                    "server_error",
+                    "other",
+                    null
+                  ],
+                  "description": "A tool result's. How a failed result failed, in one word. Exact when the server kept the failure's status (`errorStatus`) or its own code (`tool.unknown`, `tool.invalid_input`), which it does for calls made since it kept them; otherwise read from the result's first words, which is a guess, and `other` when they say nothing known. Null: it did not fail, or the server refused it (`refusal`)."
+                },
+                "errorStatus": {
+                  "type": ["integer", "null"],
+                  "description": "A tool result's. The number the failed call's error carried: an HTTP status (`401`, `429`, `503`…) or a JSON-RPC error code (`-32601`…), never its words. Null: it carried none, the tool answered the error itself, or the call was made before the server kept this."
                 },
                 "reason": {
                   "type": ["string", "null"],
-                  "description": "An error's: `transient`, `provider_outage`, `brain_unavailable`, `usage_wait`, `canceled`, `gave_up`, `recovered`, `interrupted`…"
+                  "description": "An error's: `transient`, `provider_outage`, `brain_unavailable`, `usage_wait`, `no_ai`, `canceled`, `gave_up`, `recovered`, `interrupted`… A `context` step's that handed the run's unread messages on to another run (`redispatchedMessageIds`): why, one of `done`, `failed`, `canceled`, `interrupted`, `swept`, `held`."
+                },
+                "toRunId": {
+                  "type": ["string", "null"],
+                  "format": "uuid",
+                  "description": "A `context` step's that handed messages on, or that let go of messages answered while its run was parked: the run they went to."
+                },
+                "pause": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "enum": ["plan", "budget"]
+                    },
+                    "usedPercent": {
+                      "type": ["number", "null"],
+                      "description": "How much of it was used, as read then."
+                    },
+                    "window": {
+                      "type": ["string", "null"],
+                      "enum": [
+                        "five_hour",
+                        "seven_day",
+                        "seven_day_opus",
+                        "seven_day_sonnet",
+                        "monthly",
+                        "other",
+                        null
+                      ],
+                      "description": "A plan's: which of its windows the reading is of. Null for a budget."
+                    }
+                  },
+                  "required": ["source", "usedPercent", "window"],
+                  "description": "An error's whose `reason` is `usage_wait`, when long work paused near a limit: what it paused on and the reading that paused it. The step's `at` is when the run parked on that reading; when the reading itself was taken is not kept with the run. Null on a wait at a hard limit (`plan_limit`): the provider refused, nothing was read."
                 },
                 "model": {
                   "type": ["string", "null"],
@@ -4157,6 +4273,10 @@
                   "type": ["integer", "null"],
                   "minimum": 0,
                   "description": "How long a tool call's input and a tool result's text are, never either of them."
+                },
+                "inputDigest": {
+                  "type": ["string", "null"],
+                  "description": "A tool call's. Stands for the call's input, which is never returned: 16 hex characters, equal for two calls of one workspace whose inputs are equal, the reason the agent stated for the call (its `why`) aside. It compares with no other workspace's or server's, and says nothing else. Null: the call has no input."
                 },
                 "durationMs": {
                   "type": ["integer", "null"],
@@ -4186,10 +4306,15 @@
                 "isError",
                 "refusal",
                 "code",
+                "errorClass",
+                "errorStatus",
                 "reason",
+                "toRunId",
+                "pause",
                 "model",
                 "stopReason",
                 "chars",
+                "inputDigest",
                 "durationMs",
                 "messageId",
                 "records"
@@ -4446,6 +4571,10 @@
             "type": ["string", "null"],
             "description": "Its first 300 characters; cleared 30 days after the job ended."
           },
+          "lastErrorStatus": {
+            "type": ["integer", "null"],
+            "description": "The HTTP status the error behind `lastError` carried (an email or a push provider's refusal: `422`, `429`…). Null: it carried none, or the job failed before the server kept this. It stays after `lastError` is cleared."
+          },
           "runId": {
             "type": ["string", "null"],
             "format": "uuid",
@@ -4475,6 +4604,7 @@
           "lockedUntil",
           "lockedBy",
           "lastError",
+          "lastErrorStatus",
           "runId",
           "cause",
           "createdAt",
@@ -4552,6 +4682,26 @@
             "type": ["string", "null"],
             "description": "The result's own code, when it has one."
           },
+          "errorClass": {
+            "type": ["string", "null"],
+            "enum": [
+              "unknown_tool",
+              "invalid_arguments",
+              "rate_limited",
+              "unauthorized",
+              "forbidden",
+              "not_found",
+              "timeout",
+              "server_error",
+              "other",
+              null
+            ],
+            "description": "How a failed result failed, in one word. Exact when the server kept the failure's status (`errorStatus`) or its own code (`tool.unknown`, `tool.invalid_input`), which it does for calls made since it kept them; otherwise read from the result's first words, which is a guess, and `other` when they say nothing known. Null: it did not fail, or the server refused it (`refusal`)."
+          },
+          "errorStatus": {
+            "type": ["integer", "null"],
+            "description": "The number the failed call's error carried: an HTTP status (`401`, `429`, `503`…) or a JSON-RPC error code (`-32601`…), never its words. Null: it carried none, the tool answered the error itself, or the call was made before the server kept this."
+          },
           "durationMs": {
             "type": ["integer", "null"],
             "minimum": 0,
@@ -4561,6 +4711,10 @@
             "type": "integer",
             "minimum": 0,
             "description": "How long its input is: the input is never returned."
+          },
+          "inputDigest": {
+            "type": ["string", "null"],
+            "description": "Stands for the call's input, which is never returned: 16 hex characters, equal for two calls of one workspace whose inputs are equal, the reason the agent stated for the call (its `why`) aside. It compares with no other workspace's or server's, and says nothing else. Null: the call has no input."
           },
           "resultChars": {
             "type": ["integer", "null"],
@@ -4580,8 +4734,11 @@
           "outcome",
           "refusal",
           "code",
+          "errorClass",
+          "errorStatus",
           "durationMs",
           "inputChars",
+          "inputDigest",
           "resultChars"
         ]
       },
@@ -4799,7 +4956,7 @@
                       "items": {
                         "type": "string"
                       },
-                      "description": "The router's own marks on the pick (`follow-up`, `default`, `alone`, `talking to`, `for people`, `held back`…), never a model's words about the message."
+                      "description": "The router's own marks on the pick (`follow-up`, `default`, `alone`, `talking to`, `for people`, `held back`…), never a model's words about the message. When nobody was picked: `under need gate` (the message's need for an agent scored under the gate) and `default cap` (the pick it would have had by default was past the hour's limit)."
                     },
                     "error": {
                       "type": ["string", "null"],
@@ -4911,7 +5068,7 @@
                     },
                     "waitCode": {
                       "type": ["string", "null"],
-                      "description": "What it last waited on that isn't a person: `busy`, `machine_offline`, `plan_limit`, `budget`, `usage_pause`, `work_queue`, `provider_outage`… Ignore values you don't know."
+                      "description": "What it last waited on that isn't a person: `busy`, `machine_offline`, `plan_limit`, `budget`, `usage_pause`, `work_queue`, `provider_outage`… On an ended run: what it waited on when it ended. Ignore values you don't know."
                     },
                     "waitSource": {
                       "type": ["string", "null"],
@@ -4921,14 +5078,74 @@
                       "type": ["string", "null"],
                       "description": "When the limit it waits on resets, when known."
                     },
+                    "waitAccountId": {
+                      "type": ["string", "null"],
+                      "format": "uuid",
+                      "description": "The AI sign-in whose plan it waits on (`plan_limit`, or a long-work pause on a plan). Null: the plan is its computer's own sign-in, or it waits on a budget or on no plan."
+                    },
+                    "waitAccountMachineId": {
+                      "type": ["string", "null"],
+                      "format": "uuid",
+                      "description": "The computer that sign-in is on. With `waitAccountId` null and this set: that computer's own sign-in is the plan it waits on."
+                    },
                     "waitingMachineId": {
                       "type": ["string", "null"],
                       "format": "uuid",
                       "description": "The computer it waits for."
                     },
+                    "canceled": {
+                      "type": ["object", "null"],
+                      "properties": {
+                        "by": {
+                          "type": "string",
+                          "enum": ["person", "agent", "system"],
+                          "description": "`person`; `agent` (an agent stopped it at that person's word); `system` (the server did, for `reason`)."
+                        },
+                        "userId": {
+                          "type": ["string", "null"],
+                          "description": "The person who stopped it, or at whose word."
+                        },
+                        "agentId": {
+                          "type": ["string", "null"],
+                          "format": "uuid",
+                          "description": "With `agent`: the agent that stopped it."
+                        },
+                        "reason": {
+                          "type": ["string", "null"],
+                          "enum": [
+                            "agent_archived",
+                            "channel_deleted",
+                            "consultation_expired",
+                            "mission_stopped",
+                            "mission_closed",
+                            "mission_executor_changed",
+                            "routine_superseded",
+                            "routine_waiting_plan",
+                            "routine_waiting_budget",
+                            "routine_waiting_computer",
+                            "routine_stalled",
+                            "routine_stale",
+                            "routine_waiting_plan_late",
+                            "routine_waiting_budget_late",
+                            "routine_stopped",
+                            "routine_paused",
+                            "routine_deleted",
+                            "routine_creator_left",
+                            "workspace_paused",
+                            "workspace_suspended",
+                            "workspace_deleting",
+                            "other",
+                            null
+                          ],
+                          "description": "With `system`, why: its agent or its conversation was deleted (`agent_archived`, `channel_deleted`), a consultation ran out, its mission stopped, closed or changed who works on it (`mission_…`), its routine's next firing took its place, gave up on what it waited for, or was stopped, paused or deleted (`routine_…`), or its workspace was paused, suspended or is being deleted (`workspace_…`). `other`: a reason this list does not hold. Null for a person's stop."
+                        }
+                      },
+                      "required": ["by", "userId", "agentId", "reason"],
+                      "description": "Who or what stopped it. Null unless `status` is `canceled`, and for a canceled run that kept no error: nothing says who stopped it."
+                    },
                     "errorCode": {
                       "type": ["string", "null"],
-                      "description": "The app's code for `error`: `run.no_ai`, `run.budget_exceeded`, `run.provider_rate_limit`, `run.cli_failed`, `run.canceled`… and `run.failed` for anything unrecognized."
+                      "description": "The app's code for `error`: `run.no_ai`, `run.budget_exceeded`, `run.provider_rate_limit`, `run.cli_failed`, `run.canceled`… and `run.failed` for anything unrecognized. A run the system stopped reads `run.canceled` too, where the app has no code of its own for the reason: `canceled` says which."
                     },
                     "error": {
                       "type": ["string", "null"],
@@ -4972,7 +5189,10 @@
                     "waitCode",
                     "waitSource",
                     "waitResetsAt",
+                    "waitAccountId",
+                    "waitAccountMachineId",
                     "waitingMachineId",
+                    "canceled",
                     "errorCode",
                     "error",
                     "createdAt",
@@ -5379,7 +5599,7 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "The router's own marks on the pick (`follow-up`, `default`, `alone`, `talking to`, `for people`, `held back`…), never a model's words about the message."
+                "description": "The router's own marks on the pick (`follow-up`, `default`, `alone`, `talking to`, `for people`, `held back`…), never a model's words about the message. When nobody was picked: `under need gate` (the message's need for an agent scored under the gate) and `default cap` (the pick it would have had by default was past the hour's limit)."
               },
               "error": {
                 "type": ["string", "null"],
@@ -5899,6 +6119,110 @@
                 "onBehalfOfUserId": {
                   "type": ["string", "null"],
                   "description": "An agent's: the person behind that run."
+                },
+                "facts": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "fromMode": {
+                      "type": ["string", "null"],
+                      "enum": ["everyone", "people", "owner", null],
+                      "description": "`agent.audience_changed`: who could talk to the agent before (`everyone`, `people`: the ones listed, `owner`)."
+                    },
+                    "toMode": {
+                      "type": ["string", "null"],
+                      "enum": ["everyone", "people", "owner", null],
+                      "description": "`agent.audience_changed`: and who can now."
+                    },
+                    "peopleAdded": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "`agent.audience_changed`: how many people the list gained, never who."
+                    },
+                    "peopleRemoved": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "`agent.audience_changed`: how many it lost."
+                    },
+                    "rolesAdded": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "`agent.audience_changed`: how many roles the list gained."
+                    },
+                    "rolesRemoved": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "`agent.audience_changed`: how many it lost."
+                    },
+                    "via": {
+                      "type": ["string", "null"],
+                      "enum": ["invitation", null],
+                      "description": "`agent.audience_changed`: `invitation` when inviting someone made the change; null: someone saved it."
+                    },
+                    "tools": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "`connector.tool_definitions_changed`: how many of the connection's tools changed what they say of themselves, never which."
+                    },
+                    "descriptionsChanged": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "`connector.tool_definitions_changed`: how many of them changed their description."
+                    },
+                    "inputsChanged": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "`connector.tool_definitions_changed`: how many of them changed the input they take."
+                    },
+                    "fromStatus": {
+                      "type": ["string", "null"],
+                      "enum": [
+                        "queued",
+                        "running",
+                        "waiting_approval",
+                        "waiting_input",
+                        "done",
+                        "failed",
+                        "canceled",
+                        null
+                      ],
+                      "description": "`run.canceled`: the run's status when it was stopped."
+                    },
+                    "reason": {
+                      "type": ["string", "null"],
+                      "enum": [
+                        "agent_archived",
+                        "channel_deleted",
+                        "consultation_expired",
+                        "mission_stopped",
+                        "mission_closed",
+                        "mission_executor_changed",
+                        "routine_superseded",
+                        "routine_waiting_plan",
+                        "routine_waiting_budget",
+                        "routine_waiting_computer",
+                        "routine_stalled",
+                        "routine_stale",
+                        "routine_waiting_plan_late",
+                        "routine_waiting_budget_late",
+                        "routine_stopped",
+                        "routine_paused",
+                        "routine_deleted",
+                        "routine_creator_left",
+                        "workspace_paused",
+                        "workspace_suspended",
+                        "workspace_deleting",
+                        "other",
+                        null
+                      ],
+                      "description": "`run.canceled`: why the system stopped it, as a run's `canceled.reason`; null: a person did."
+                    },
+                    "agentId": {
+                      "type": ["string", "null"],
+                      "format": "uuid",
+                      "description": "`run.canceled`: the run's agent."
+                    }
+                  },
+                  "description": "What the entry's details say in listed words, counts and ids, for three actions, each with its own keys: `agent.audience_changed`, `connector.tool_definitions_changed` and `run.canceled`. Null for every other action."
                 }
               },
               "required": [
@@ -5911,10 +6235,11 @@
                 "targetId",
                 "outcome",
                 "runId",
-                "onBehalfOfUserId"
+                "onBehalfOfUserId",
+                "facts"
               ]
             },
-            "description": "Never an entry's details."
+            "description": "Never an entry's details, but the facts named in `facts`."
           },
           "next": {
             "type": ["string", "null"],
@@ -9623,7 +9948,7 @@
       "get": {
         "tags": ["Operator"],
         "summary": "One run from start to end: its steps, what it asked, its jobs, what it spent and its computer",
-        "description": "Which tool each step called, whether it is the server's own, whether it failed and how big its input and result were, never either of them. The steps page back from the end with `beforeSeq`.",
+        "description": "Which tool each step called, whether it is the server's own, whether it failed and how, and how big its input and result were, never either of them. The steps page back from the end with `beforeSeq`.",
         "parameters": [
           {
             "schema": {
@@ -9707,7 +10032,7 @@
       "get": {
         "tags": ["Operator"],
         "summary": "The tools a workspace's agents called, newest first; or how many, by tool, agent or outcome",
-        "description": "Which tool, whether it is the server's own, how the call ended and how long it took, with how long its input and its result are, never either of them.",
+        "description": "Which tool, whether it is the server's own, how the call ended (and, failed, how) and how long it took, with how long its input and its result are, never either of them.",
         "parameters": [
           {
             "schema": {
@@ -10637,7 +10962,7 @@
       "get": {
         "tags": ["Operator"],
         "summary": "A workspace's audit log, newest first: who did what to what, never an entry's details",
-        "description": "What people changed and what agents did, every entry as stored and without its details: those hold a tool's input and what a change was made of. A tool that writes an entry of its own beside its `tool.call` shows as two.",
+        "description": "What people changed and what agents did, every entry as stored and without its details, which hold a tool's input and what a change was made of: never an entry's details, but the facts named here (`facts`). A tool that writes an entry of its own beside its `tool.call` shows as two.",
         "parameters": [
           {
             "schema": {

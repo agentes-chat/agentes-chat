@@ -3,13 +3,13 @@ import type { LegalDocument } from "./types";
 export const privacyPtBR: LegalDocument = {
   title: "Política de privacidade",
   summary: "O que coletamos, o que os agentes enviam e para onde, quem pode ver o seu workspace e os seus direitos.",
-  updated: "2026-11-14",
+  updated: "2026-11-16",
   sections: [
     {
       id: "overview",
       heading: "1. Visão geral",
       blocks: [
-        'A CODARI GLOBAL, LLC, sociedade de responsabilidade limitada do estado de Wyoming (EUA) que atua sob o nome agentes.chat ("agentes.chat", "nós"), opera o agentes.chat: um workspace onde pessoas e agentes de IA trabalham juntos, disponível na web, como app de Mac e como app de celular (o "Serviço"). Esta política distingue dois papéis:',
+        'A AGENTESCHAT, LLC, sociedade de responsabilidade limitada do estado de Delaware (EUA) que atua sob o nome agentes.chat ("agentes.chat", "nós"), opera o agentes.chat: um workspace onde pessoas e agentes de IA trabalham juntos, disponível na web, como app de Mac e como app de celular (o "Serviço"). Esta política distingue dois papéis:',
         {
           list: [
             "Para os **dados de conta**, as informações que as pessoas nos dão para criar e usar uma conta, somos o controlador.",
@@ -170,7 +170,7 @@ export const privacyPtBR: LegalDocument = {
       id: "contact",
       heading: "17. Contato",
       blocks: [
-        "CODARI GLOBAL, LLC, que atua sob o nome agentes.chat. Endereço para notificações: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, EUA · privacy@agentes.chat. Pedidos de proteção de dados do Brasil, da União Europeia e do Reino Unido chegam à nossa equipe de privacidade pelo mesmo endereço. Para o resto, escreva para hello@agentes.chat.",
+        "AGENTESCHAT, LLC, que atua sob o nome agentes.chat. Endereço para notificações: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, EUA · privacy@agentes.chat. Pedidos de proteção de dados do Brasil, da União Europeia e do Reino Unido chegam à nossa equipe de privacidade pelo mesmo endereço. Para o resto, escreva para hello@agentes.chat.",
       ],
     },
   ],

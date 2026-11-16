@@ -491,7 +491,7 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "agentes.chat이 워크스페이스를 호스팅하면 Jev가 포함돼요. 직접 운영하는 서버에서는 소유자의 TypeSafe 키를 쓰고, 메시지당 약 US$ 0.0001이 들어요: [Jev 설정하기](/help/jev#setup).",
+          "agentes.chat이 워크스페이스를 호스팅하면 Jev가 포함돼요. 직접 운영하는 서버에서는 소유자의 TypeSafe 또는 OpenRouter 키를 쓰고, 메시지당 약 US$ 0.0001이 들어요: [Jev 설정하기](/help/jev#setup).",
         ],
       },
       {
@@ -551,6 +551,7 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
               "agentes.chat에서 **설정 › AI와 사용량**을 열고 **Jev** 아래에 붙여넣으세요. 이 서버를 설정한 사람만 볼 수 있어요.",
             ],
           },
+          "이미 OpenRouter를 쓰고 있나요? **Jev**에서 **OpenRouter**를 고르고 https://openrouter.ai/keys 의 키를 붙여 넣거나, 워크스페이스의 OpenRouter 키로 한 번에 Jev를 켜세요. 같은 Jev가 같은 가격으로 OpenRouter를 통해 청구돼요.",
           "Docker로 운영하는 서버라면 대신 `.env`에 `TYPESAFE_API_KEY`로 키를 넣어도 돼요. 그 키가 설정의 키보다 우선해요.",
         ],
       },
@@ -585,6 +586,7 @@ export const helpKo: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe는 Jev를 미국에서 운영하고, 보낸 내용으로 모델을 학습시키지 않아요. 데이터는 서비스 운영에 필요한 기간만 보관해요. 엔터프라이즈 요금제에서는 데이터를 전혀 보관하지 않는 옵션도 있어요.",
           "TypeSafe 개인정보처리방침: https://typesafe.ai/legal/privacy-policy. 데이터 처리 계약: https://typesafe.ai/legal/data-processing.",
+          "OpenRouter 키를 쓰면 같은 요청이 OpenRouter를 거쳐 TypeSafe로 가고, OpenRouter의 약관과 그곳의 개인정보 설정을 따라요: https://openrouter.ai/privacy.",
         ],
       },
       {

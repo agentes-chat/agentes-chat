@@ -383,7 +383,11 @@ export async function agentBrainLines(
   const out = await agentBrainSummaries(db, viewerId, orgId, agents);
   for (const a of agents) {
     const line = out.get(a.id);
-    if (line?.kind === "model" && isAutoModel(a.model)) out.set(a.id, { ...line, maker: await autoProvider(db, a) });
+    if (line?.kind !== "model" || !isAutoModel(a.model)) continue;
+    const { provider, endpoint } = await autoLine(db, a);
+    // An endpoint key with no model to call fails every run as no AI (`modelReady`): it names no maker.
+    if (provider === "custom" && !autoModelFor(provider, "medium", undefined, endpoint)) continue;
+    out.set(a.id, { ...line, maker: provider });
   }
   return out;
 }

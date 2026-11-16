@@ -570,6 +570,24 @@ describe("in the chat and the inbox", () => {
       askerId: "u-caio",
       agentId: null,
     });
+    // An agent waits for a folder: the folder in `latest.title` (never read as a person's name), the computer and the
+    // agent in it.
+    const folder = {
+      kind: "device.folder_request",
+      actors: [{ type: "agent", id: "a-lia" }],
+      source: { machineId: "m1", label: "Bia's Mac", agentId: "a-lia", requestId: "fr1", userId: "u-rui" },
+      latest: { title: "/Users/bia/Music", text: "the playlist" },
+    } as never;
+    expect(deviceNoticeOf(folder)).toMatchObject({
+      kind: "device.folder_request",
+      machineId: "m1",
+      device: "Bia's Mac",
+      path: "/Users/bia/Music",
+      forName: null,
+      agentId: "a-lia",
+      userId: "u-rui",
+      text: "the playlist",
+    });
   });
 });
 

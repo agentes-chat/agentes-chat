@@ -480,7 +480,7 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "由 agentes.chat 托管你的工作区时，Jev 已包含在内。在你自己运行的服务器上，它使用所有者的 TypeSafe 密钥，每条消息约 0.0001 美元：[设置 Jev](/help/jev#setup)。",
+          "由 agentes.chat 托管你的工作区时，Jev 已包含在内。在你自己运行的服务器上，它使用所有者的 TypeSafe 或 OpenRouter 密钥，每条消息约 0.0001 美元：[设置 Jev](/help/jev#setup)。",
         ],
       },
       {
@@ -539,6 +539,7 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
               "在 agentes.chat 中打开 **设置 › AI 和用量**，把它粘贴到 **Jev** 下面。只有设置这台服务器的人能看到它。",
             ],
           },
+          "已经在用 OpenRouter？在 **Jev** 下选择 **OpenRouter**，粘贴 https://openrouter.ai/keys 的密钥，或一键用工作区的 OpenRouter 密钥开启 Jev。还是同一个 Jev，以同样的价格通过 OpenRouter 计费。",
           "在用 Docker 运行的服务器上，你也可以把密钥写进 `.env` 的 `TYPESAFE_API_KEY`。它优先于设置中的密钥。",
         ],
       },
@@ -573,6 +574,7 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe 在美国运行 Jev，不会用你发送的内容训练它的模型。它只在提供服务所需的时间内保留数据。它的企业版套餐提供零数据保留。",
           "TypeSafe 的隐私政策：https://typesafe.ai/legal/privacy-policy 。它的数据处理协议：https://typesafe.ai/legal/data-processing 。",
+          "使用 OpenRouter 密钥时，同样的请求会经由 OpenRouter 发往 TypeSafe，适用 OpenRouter 的条款和你在那里的隐私设置：https://openrouter.ai/privacy。",
         ],
       },
       {

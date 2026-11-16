@@ -496,7 +496,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Wenn agentes.chat deinen Workspace hostet, ist Jev inklusive. Auf einem Server, den du selbst betreibst, nutzt es den TypeSafe-Schlüssel des Inhabers, etwa US$ 0,0001 pro Nachricht: [Jev einrichten](/help/jev#setup).",
+          "Wenn agentes.chat deinen Workspace hostet, ist Jev inklusive. Auf einem Server, den du selbst betreibst, nutzt es den TypeSafe- oder OpenRouter-Schlüssel des Inhabers, etwa US$ 0,0001 pro Nachricht: [Jev einrichten](/help/jev#setup).",
         ],
       },
       {
@@ -558,6 +558,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
               "Öffne in agentes.chat **Einstellungen\u00a0›\u00a0KI und Verbrauch** und füge ihn unter **Jev** ein. Nur die Person, die diesen Server eingerichtet hat, sieht ihn.",
             ],
           },
+          "Du zahlst schon bei OpenRouter? Wähle unter **Jev** **OpenRouter** und füge einen Schlüssel von https://openrouter.ai/keys ein, oder schalte Jev mit einem Klick mit dem OpenRouter-Schlüssel des Workspaces ein. Es ist derselbe Jev, abgerechnet über OpenRouter zum selben Preis.",
           "Auf einem Server, den du mit Docker betreibst, kannst du den Schlüssel stattdessen als `TYPESAFE_API_KEY` in `.env` eintragen. Dieser hat Vorrang vor dem in den Einstellungen.",
         ],
       },
@@ -592,6 +593,7 @@ export const helpDe: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe betreibt Jev in den USA und trainiert seine Modelle nicht mit dem, was du sendest. Daten werden so lange aufbewahrt, wie es für den Dienst nötig ist. Null Aufbewahrung gibt es in den Enterprise-Tarifen.",
           "Die Datenschutzerklärung von TypeSafe: https://typesafe.ai/legal/privacy-policy. Der Auftragsverarbeitungsvertrag: https://typesafe.ai/legal/data-processing.",
+          "Mit einem OpenRouter-Schlüssel laufen dieselben Anfragen auf dem Weg zu TypeSafe über OpenRouter, unter den Bedingungen von OpenRouter und deinen Datenschutzeinstellungen dort: https://openrouter.ai/privacy.",
         ],
       },
       {

@@ -4424,6 +4424,9 @@
   "devices.reason.xcode_too_old": {
     "value": "Xcode is too old for this iPhone"
   },
+  "devices.reason.ios_behind_xcode": {
+    "value": "Update this iPhone's iOS"
+  },
   "devices.reason.device_support": {
     "value": "The Mac is preparing this iPhone"
   },
@@ -4966,6 +4969,9 @@
   },
   "devices.notice.cli_request": {
     "value": "{{names}} asks you to install {{tool}} on your {{device}}"
+  },
+  "devices.notice.folder_request": {
+    "value": "{{names}} asks for the folder {{path}} on your {{device}}"
   },
   "devices.notice.allowOnce": {
     "value": "Allow once"

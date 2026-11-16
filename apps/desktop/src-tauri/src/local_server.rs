@@ -1148,7 +1148,8 @@ pub struct Status {
     public_url: Option<String>,
     reach: bool,
     usage: bool,
-    version: Option<String>,
+    installed_version: Option<String>,
+    server_version: Option<String>,
     dir: String,
     /// The person's name on this computer, for the owner's name (the welcome window only).
     system_name: Option<String>,
@@ -1212,6 +1213,17 @@ fn system_name() -> Option<String> {
     }
 }
 
+/// The installed bundle and the running server report different versions.
+fn server_versions(folder: Option<&Folder>, ready: Option<&Value>, phase: Phase) -> (Option<String>, Option<String>) {
+    let installed = folder.and_then(current_version);
+    let server = if matches!(phase, Phase::Running) {
+        ready.and_then(|r| r["version"].as_str()).map(str::to_string)
+    } else {
+        None
+    };
+    (installed, server)
+}
+
 pub fn status(app: &AppHandle, welcome: bool) -> Status {
     let (here, phase, back_to, tailnet_down, backup_problem, awake, erased) = {
         let inner = state(app);
@@ -1246,20 +1258,20 @@ pub fn status(app: &AppHandle, welcome: bool) -> Status {
         .and_then(|f| fs::read_to_string(f.claim()).ok())
         .map(|c| c.trim().to_string())
         .filter(|c| crate::servers::page_path(&format!("/owner#claim={c}")));
+    let phase = if run { phase.unwrap_or(Phase::Stopped) } else { Phase::Off };
+    let (installed_version, server_version) = server_versions(folder.as_ref(), ready.as_ref(), phase);
     Status {
         bundled: bundle(app).is_some() && runner_binary().is_some(),
         installed,
         run,
         owner: here.owner,
-        phase: if run { phase.unwrap_or(Phase::Stopped) } else { Phase::Off },
+        phase,
         url: port.map(loopback_url).or_else(|| ready.as_ref().and_then(|r| r["url"].as_str().map(str::to_string))),
         reach,
         public_url: public,
         usage: telemetry_on(env_get(&env, "TELEMETRY").as_deref()),
-        version: ready
-            .as_ref()
-            .and_then(|r| r["version"].as_str().map(str::to_string))
-            .or_else(|| folder.as_ref().and_then(current_version)),
+        installed_version,
+        server_version,
         dir: folder.as_ref().map(|f| f.0.to_string_lossy().into_owned()).unwrap_or_default(),
         system_name: (welcome && installed != Installed::App).then(system_name).flatten(),
         serving,
@@ -2458,12 +2470,13 @@ fn diagnostics(app: &AppHandle) -> String {
         })
         .unwrap_or_default();
     format!(
-        "agentes.chat app {} ({} {})\nserver here: {:?}, version {}, at {}, reach {}, usage statistics {}\n\n{}\n\n{}",
+        "agentes.chat app {} ({} {})\nserver here: {:?}, installed package version {}, internal server version {}, at {}, reach {}, usage statistics {}\n\n{}\n\n{}",
         app.package_info().version,
         std::env::consts::OS,
         std::env::consts::ARCH,
         status.phase,
-        status.version.unwrap_or_default(),
+        status.installed_version.as_deref().unwrap_or("unknown"),
+        status.server_version.as_deref().unwrap_or("unknown"),
         status.public_url.unwrap_or_default(),
         if status.reach { "on" } else { "off" },
         if status.usage { "on" } else { "off" },
@@ -3276,6 +3289,27 @@ mod tests {
         fs::write(bundle.join("server/lib/native.js"), mark).unwrap();
         fs::write(bundle.join("web/index.html"), mark).unwrap();
         bundle
+    }
+
+    #[test]
+    fn installed_and_internal_versions_stay_distinct_through_a_restart() {
+        let root = temp("restart-versions");
+        let folder = Folder(root.join(".agentes"));
+        let bundle = fake_bundle(&root, "bundle");
+        install_version(&folder, &bundle, "0.8.5").unwrap();
+        let ready = serde_json::json!({ "version": "0.1.1" });
+        let assert_versions = |phase, ready, expected_server: Option<&str>| {
+            let (installed, server) = server_versions(Some(&folder), ready, phase);
+            assert_eq!(installed.as_deref(), Some("0.8.5"));
+            assert_eq!(server.as_deref(), expected_server);
+        };
+
+        assert_versions(Phase::Running, Some(&ready), Some("0.1.1"));
+        assert_versions(Phase::Stopped, Some(&ready), None);
+        assert_versions(Phase::Starting, None, None);
+        assert_versions(Phase::Starting, Some(&ready), None);
+        assert_versions(Phase::Running, Some(&ready), Some("0.1.1"));
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

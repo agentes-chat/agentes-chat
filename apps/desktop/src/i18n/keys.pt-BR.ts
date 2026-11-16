@@ -417,7 +417,8 @@ export const desktopPtBR = {
     /** It restarted by itself 3 times in a few minutes (a notification). */
     restartedBanner: "O agentes.chat reiniciou 3 vezes neste {{device}}",
     restartedBody: "Ele volta sozinho. Se continuar, abra o app para ver o motivo.",
-    version: "Versão {{version}}, atualizada com o app",
+    installedVersion: "Versão do pacote instalado",
+    internalVersion: "Versão interna do servidor",
     updatesWithApp: "Atualizar o app atualiza também o agentes.chat neste {{device}}.",
     updateBack: "A atualização não iniciou. O agentes.chat voltou para a {{version}}.",
     updateBackBody: "A versão nova é tentada de novo na próxima atualização do app.",
@@ -626,6 +627,18 @@ export const desktopPtBR = {
       menuBarTitle: "Mostrar na barra de menus",
       notchTitle: "Mostrar os agentes no notch",
       notchDesc: "Em MacBooks com notch: quem está trabalhando aparece em volta da câmera.",
+      compatTitle: "Modo compatível",
+      compatDesc:
+        "Desenha a janela sem a placa de vídeo. É mais lento, mas funciona em qualquer computador. Use se a janela ficar preta, cortada ou travada.",
+      compatReopen: "Vale ao reabrir o app.",
+      reopenNow: "Reabrir agora",
+      compatFellBack: "A janela não abriu com a placa de vídeo. Ela abriu no modo compatível.",
+      compatTryCard: "Tentar a placa de novo",
+      compatOwn:
+        "Quem decide agora é a variável WEBKIT_DISABLE_DMABUF_RENDERER. Para escolher aqui, saia do app e abra sem ela.",
+      reopenTitle: "Reabrir o agentes.chat?",
+      reopenBody:
+        "Os agentes não podem usar este computador até o app abrir de novo. O que já está rodando termina antes.",
     },
     thisMac: {
       agents: "Agentes",

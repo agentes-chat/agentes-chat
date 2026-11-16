@@ -396,7 +396,8 @@
     "failingBody": "Otwórz aplikację, aby zobaczyć, co się stało, i spróbować ponownie.",
     "restartedBanner": "agentes.chat uruchomił się ponownie 3 razy na tym urządzeniu ({{device}})",
     "restartedBody": "Wraca sam. Jeśli to się powtarza, otwórz aplikację, aby zobaczyć przyczynę.",
-    "version": "Wersja {{version}}, aktualizowana razem z aplikacją",
+    "installedVersion": "Wersja zainstalowanego pakietu",
+    "internalVersion": "Wewnętrzna wersja serwera",
     "updatesWithApp": "Aktualizacja aplikacji aktualizuje też agentes.chat na tym urządzeniu ({{device}}).",
     "updateBack": "Aktualizacja się nie uruchomiła. agentes.chat wrócił do wersji {{version}}.",
     "updateBackBody": "Nowa wersja zostanie wypróbowana ponownie przy następnej aktualizacji aplikacji.",
@@ -590,7 +591,16 @@
       "notifyBrowserDesc": "Prośba i tak trafia na twój telefon i stronę. Dzięki temu zobaczysz ją też tutaj.",
       "menuBarTitle": "Pokazuj na pasku menu",
       "notchTitle": "Pokazuj agentów w notchu",
-      "notchDesc": "Na MacBookach z notchem: wokół kamery widać, kto pracuje."
+      "notchDesc": "Na MacBookach z notchem: wokół kamery widać, kto pracuje.",
+      "compatTitle": "Tryb zgodności",
+      "compatDesc": "Rysuje okno bez karty graficznej. Działa wolniej, ale na każdym komputerze. Użyj go, gdy okno robi się czarne, jest ucięte albo się zawiesza.",
+      "compatReopen": "Zadziała po ponownym otwarciu aplikacji.",
+      "reopenNow": "Otwórz ponownie teraz",
+      "compatFellBack": "Okno nie otworzyło się z kartą graficzną, więc otworzyło się w trybie zgodności.",
+      "compatTryCard": "Spróbuj ponownie z kartą graficzną",
+      "compatOwn": "Teraz decyduje o tym WEBKIT_DISABLE_DMABUF_RENDERER. Aby wybrać tutaj, zamknij aplikację i otwórz ją bez tej zmiennej.",
+      "reopenTitle": "Otworzyć ponownie agentes.chat?",
+      "reopenBody": "Agenci nie mogą korzystać z tego komputera, dopóki aplikacja znów się nie otworzy. To, co już działa, najpierw się skończy."
     },
     "thisMac": {
       "agents": "Agenci",

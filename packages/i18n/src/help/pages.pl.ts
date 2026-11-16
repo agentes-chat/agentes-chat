@@ -490,7 +490,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Gdy twoja przestrzeń robocza działa na agentes.chat, Jev jest w cenie. Na serwerze, który prowadzisz samodzielnie, używa klucza TypeSafe właściciela, około 0,0001 USD za wiadomość: [Skonfiguruj Jeva](/help/jev#setup).",
+          "Gdy twoja przestrzeń robocza działa na agentes.chat, Jev jest w cenie. Na serwerze, który prowadzisz samodzielnie, używa klucza TypeSafe lub OpenRouter właściciela, około 0,0001 USD za wiadomość: [Skonfiguruj Jeva](/help/jev#setup).",
         ],
       },
       {
@@ -550,6 +550,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
               "W agentes.chat otwórz **Ustawienia › AI i zużycie** i wklej go w sekcji **Jev**. Widzi go tylko osoba, która skonfigurowała ten serwer.",
             ],
           },
+          "Płacisz już za OpenRouter? Wybierz **OpenRouter** w sekcji **Jev** i wklej klucz z https://openrouter.ai/keys albo włącz Jeva jednym kliknięciem kluczem OpenRouter przestrzeni roboczej. To ten sam Jev, rozliczany przez OpenRouter w tej samej cenie.",
           "Na serwerze uruchomionym przez Docker możesz zamiast tego wpisać klucz do `.env` jako `TYPESAFE_API_KEY`. Ten ma pierwszeństwo przed kluczem z Ustawień.",
         ],
       },
@@ -584,6 +585,7 @@ export const helpPl: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe uruchamia Jeva w Stanach Zjednoczonych i nie trenuje swoich modeli na tym, co wysyłasz. Przechowuje dane tak długo, jak potrzebuje do świadczenia usługi. Zerowa retencja jest dostępna w planach dla firm.",
           "Polityka prywatności TypeSafe: https://typesafe.ai/legal/privacy-policy. Umowa powierzenia przetwarzania danych: https://typesafe.ai/legal/data-processing.",
+          "Z kluczem OpenRouter te same zapytania przechodzą przez OpenRouter w drodze do TypeSafe, na warunkach OpenRouter i według twoich ustawień prywatności w tym serwisie: https://openrouter.ai/privacy.",
         ],
       },
       {

@@ -32,6 +32,7 @@ import {
 } from "./media";
 import { can, lockOrgMembers, requireActiveMembership, requirePermission } from "./organizations";
 import { isRightHand, rightHandPermanent } from "./right-hand";
+import { type ApprovalsLevel, DEFAULT_APPROVALS_LEVEL } from "./tools/run-policy";
 import {
   agentBudgetsThisMonth,
   budgetPercent,
@@ -90,6 +91,8 @@ export interface OrgSettings extends MediaSettings {
   teamWatch: boolean;
   /** The right hand greets each person who joins, once. On by default. */
   welcomePeople: boolean;
+  /** What agents without their own choice ask before acting (ADR 0173). Set with `setWorkspaceApprovalsLevel`. */
+  approvalsLevel: ApprovalsLevel;
 }
 
 export const TEAM_SIZES = ["solo", "small", "medium", "large"] as const;
@@ -116,6 +119,7 @@ export async function getOrgSettings(db: Database, actorId: string, orgId: strin
     mode: isWorkspaceMode(s?.mode) ? s.mode : "team",
     teamWatch: s?.teamWatch ?? true,
     welcomePeople: s?.welcomePeople ?? true,
+    approvalsLevel: s?.approvalsLevel ?? DEFAULT_APPROVALS_LEVEL,
     ...mediaSettingsFrom(s),
   };
 }
@@ -134,7 +138,7 @@ export async function updateOrgSettings(
   db: Database,
   actorId: string,
   orgId: string,
-  input: Partial<Omit<OrgSettings, "defaultCredentialIds" | "autoModels">> & {
+  input: Partial<Omit<OrgSettings, "defaultCredentialIds" | "autoModels" | "approvalsLevel">> & {
     defaultCredentialIds?: Partial<Record<string, string | null>>;
     /** Per provider and tier, a model of that provider; null puts the tier back on the default. */
     autoModels?: Partial<Record<string, Partial<Record<ModelTier, string | null>>>>;
@@ -684,8 +688,27 @@ export async function listRuns(
 ): Promise<RunSummary[]> {
   await requireUsageAccess(db, actorId, orgId, options.agentId);
   const limit = Math.min(options.limit ?? 50, 200);
+  // Only what a row of the list shows. Of the transcript, two names: whole, it is everything the run sent its model
+  // (megabytes on a long one), read `limit` times over to be thrown away.
+  const t = agentRuns.transcript;
   const rows = await db
-    .select()
+    .select({
+      id: agentRuns.id,
+      agentId: agentRuns.agentId,
+      channelId: agentRuns.channelId,
+      threadRootId: agentRuns.threadRootId,
+      triggerMessageId: agentRuns.triggerMessageId,
+      trigger: agentRuns.trigger,
+      status: agentRuns.status,
+      error: agentRuns.error,
+      turns: agentRuns.turns,
+      createdAt: agentRuns.createdAt,
+      finishedAt: agentRuns.finishedAt,
+      repo: sql<string | null>`case when jsonb_typeof(${t}->'repo') = 'string' then ${t}->>'repo' end`,
+      deniedRepo: sql<
+        string | null
+      >`case when jsonb_typeof(${t}->'deniedRepo') = 'string' then ${t}->>'deniedRepo' end`,
+    })
     .from(agentRuns)
     .where(
       and(
@@ -713,8 +736,13 @@ export async function listRuns(
     .where(and(eq(usageRecords.orgId, orgId), inArray(usageRecords.runId, ids)))
     .groupBy(usageRecords.runId);
   const byRun = new Map(usage.map((u) => [u.runId, u]));
+  // The start of each message and whether a routine sent it, not its whole body and meta.
   const triggers = await db
-    .select({ id: messages.id, body: messages.body, meta: messages.meta })
+    .select({
+      id: messages.id,
+      body: sql<string>`left(${messages.body}, 200)`,
+      routine: sql<boolean>`coalesce(jsonb_typeof(${messages.meta}->'routine'), 'null') <> 'null'`,
+    })
     .from(messages)
     .where(
       and(
@@ -726,7 +754,7 @@ export async function listRuns(
       ),
     );
   const bodies = new Map(triggers.map((t) => [t.id, t.body]));
-  const routineTriggers = new Set(triggers.filter((t) => t.meta?.routine != null).map((t) => t.id));
+  const routineTriggers = new Set(triggers.filter((t) => t.routine).map((t) => t.id));
   const readable = await readableChannelIds(
     db,
     orgId,
@@ -754,8 +782,8 @@ export async function listRuns(
       costNanoUsd: Number(u?.cost ?? 0),
       createdAt: r.createdAt,
       finishedAt: r.finishedAt,
-      repo: typeof r.transcript?.repo === "string" ? r.transcript.repo : null,
-      deniedRepo: typeof r.transcript?.deniedRepo === "string" ? r.transcript.deniedRepo : null,
+      repo: r.repo,
+      deniedRepo: r.deniedRepo,
     };
   });
 }

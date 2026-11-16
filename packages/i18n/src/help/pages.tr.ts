@@ -494,7 +494,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Çalışma alanınızı agentes.chat barındırıyorsa Jev dahildir. Kendi çalıştırdığınız bir sunucuda sahibin TypeSafe anahtarını kullanır, mesaj başına yaklaşık US$ 0,0001: [Jev'i kurun](/help/jev#setup).",
+          "Çalışma alanınızı agentes.chat barındırıyorsa Jev dahildir. Kendi çalıştırdığınız bir sunucuda sahibin TypeSafe ya da OpenRouter anahtarını kullanır, mesaj başına yaklaşık US$ 0,0001: [Jev'i kurun](/help/jev#setup).",
         ],
       },
       {
@@ -556,6 +556,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
               "agentes.chat'te **Ayarlar › Yapay zeka ve kullanım** bölümünü açın ve anahtarı **Jev** altına yapıştırın. Onu yalnızca bu sunucuyu kuran kişi görür.",
             ],
           },
+          "Zaten OpenRouter mı kullanıyorsunuz? **Jev** altında **OpenRouter**'ı seçip https://openrouter.ai/keys adresinden bir anahtar yapıştırın ya da çalışma alanının OpenRouter anahtarıyla Jev'i tek tıkla açın. Aynı Jev, aynı fiyatla OpenRouter üzerinden faturalanır.",
           "Docker ile çalıştırdığınız bir sunucuda anahtarı bunun yerine `.env` dosyasına `TYPESAFE_API_KEY` olarak koyabilirsiniz. Bu anahtar, Ayarlar'dakinin önüne geçer.",
         ],
       },
@@ -590,6 +591,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe, Jev'i Amerika Birleşik Devletleri'nde çalıştırır ve modellerini gönderdiklerinizle eğitmez. Verileri hizmeti sürdürmek için gerektiği kadar saklar. Kurumsal planlarında sıfır saklama seçeneği vardır.",
           "TypeSafe'in gizlilik politikası: https://typesafe.ai/legal/privacy-policy. Veri işleme sözleşmesi: https://typesafe.ai/legal/data-processing.",
+          "OpenRouter anahtarıyla aynı istekler TypeSafe'e giderken OpenRouter'dan geçer; OpenRouter'ın koşulları ve oradaki gizlilik ayarlarınız geçerli olur: https://openrouter.ai/privacy.",
         ],
       },
       {

@@ -569,7 +569,8 @@ describe("Conectar uma IA: one picker, plans first", () => {
     await choose("Gemini");
     const panel = within(dialog).getByRole("region", { name: "Seu plano do Gemini" });
     expect(panel.textContent).toContain("Google AI Pro, Google AI Ultra ou Gemini Enterprise");
-    const warning = "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta.";
+    const warning =
+      "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta. Para não correr esse risco, use uma chave de API do Gemini ou o Gemini Enterprise.";
     expect(shownText(panel)).toContain(warning);
     await click(within(panel).getByRole("button", { name: "Usar o Gemini Enterprise" }));
     expect(shownText(panel)).not.toContain(warning);
@@ -914,6 +915,24 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(dialog.textContent).toContain("Atualize o agentes no computador para usar a chave de um plano");
     await click(within(dialog).getByRole("button", { name: "Usar uma chave de API agora" }));
     expect(payWith(dialog, "Com chave de API").getAttribute("aria-checked")).toBe("true");
+  });
+
+  test("OpenCode not installed on its computer: said so, with no API key offered, since the key row can't take OpenCode's", async () => {
+    const { dialog, choose } = await connect({
+      computers: [{ ...MAC, keys: false, brains: { claude_code: true, codex: true, opencode: false } }],
+      brain: {
+        options: [
+          ...fakeAgentBrain(ADA_ID).options,
+          { kind: "opencode", available: false, reason: "not_installed", models: [], defaultModel: null },
+        ],
+      },
+    });
+    await choose("OpenCode");
+    expect(dialog.textContent).toContain("O OpenCode não está instalado no MacBook.");
+    expect(within(dialog).queryByRole("button", { name: "Usar uma chave de API agora" })).toBeNull();
+    // Another plan its computer can't take keeps the key one click away.
+    await choose("Kimi Code");
+    expect(within(dialog).getByRole("button", { name: "Usar uma chave de API agora" })).toBeTruthy();
   });
 
   test("a program not on the computer: one line, the Claude app told apart behind an ⓘ, installed or looked for from here", async () => {

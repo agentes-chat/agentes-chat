@@ -16,7 +16,7 @@ export interface GlassProps {
 }
 
 /** Read once: the system doesn't gain or lose Liquid Glass while the app runs. */
-const liquidHere = Platform.OS === "ios" && isLiquidGlassAvailable();
+export const liquidHere = Platform.OS === "ios" && isLiquidGlassAvailable();
 
 /**
  * The design system's glass (bars, sheets, toasts): a real blur under the theme's glass tint on iOS; an

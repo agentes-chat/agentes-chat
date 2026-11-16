@@ -2639,6 +2639,13 @@
   "rightHand": {
     "label": "je rechterhand",
     "labelCapitalized": "Je rechterhand",
+    "unusable": {
+      "title": "Kan nu niet voor {{name}} denken",
+      "computerOnly": "Alleen aangemeld op {{computer}}. {{name}} denkt met een abonnement dat als account is aangemeld.",
+      "away": "Van {{owner}}, op {{computer}}, die afwezig is.",
+      "awayYours": "Van jou, op {{computer}}, die afwezig is.",
+      "connect": "Een computer koppelen"
+    },
     "newDot": "Nieuw",
     "actsAsYou": "handelt met jouw rechten",
     "composerHint": "niets verandert zonder jou",
@@ -2744,6 +2751,7 @@
     "sharedName": "{{name}} (gedeeld)",
     "sharedPlace": "Wordt gebruikt in kanalen en bij werk dat vanzelf draait. De hele workspace deelt deze plek. Bewaar hier niets privés.",
     "computerNoHome": "Nog geen computer. Die komt er zodra deze workspace een eigen computer heeft.",
+    "computerNoHomeServer": "Nog geen browser. Stel <guide>deze server in als computer van de agents</guide> om er een te krijgen.",
     "addComputer": "Computer toevoegen",
     "computerOneUser": "Hier geen computer. De computer van de workspace draait alle agents als één gebruiker en kan de plek van elke persoon dus niet gescheiden houden. Een Linux-server die met de optie --system van het installatieprogramma is ingericht, kan dat wel.",
     "powers": {
@@ -2790,6 +2798,7 @@
         "ai_account": "Alleen de eigenaar van het account geeft het",
         "name": "Alleen admins hernoemen een agent",
         "look": "Alleen admins en de verantwoordelijke wijzigen het uiterlijk",
+        "group": "Alleen admins verplaatsen een agent naar een andere afdeling",
         "reports_to": "Alleen admins veranderen aan wie een agent rapporteert",
         "many": "Alleen admins maken deze wijzigingen"
       }
@@ -2804,6 +2813,7 @@
       "channel": "Kanaal",
       "name": "Naam",
       "look": "Uiterlijk",
+      "group": "Afdeling",
       "reports_to": "Rapporteert aan",
       "skill": "Skill {{name}}"
     },
@@ -2909,6 +2919,16 @@
       "invite_people_sent_one": "Uitnodiging verstuurd naar <b>{{emails}}</b>.",
       "invite_people_sent_other": "Uitnodigingen verstuurd naar <b>{{emails}}</b>.",
       "remove_ai_key": "API-sleutel \"{{name}}\" verwijderen."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Heeft een computer nodig",
+        "computerOnly": "Van {{owner}}, alleen aangemeld op {{computer}}. Lodi denkt met een plan dat als account is aangemeld.",
+        "noComputer": "Van {{owner}}. Er is een computer nodig, en de workspace heeft er geen verbonden.",
+        "away": "Van {{owner}}, op {{computer}}, die weg is.",
+        "connect": "Een computer verbinden",
+        "plans": "Plannen bekijken"
+      }
     }
   },
   "teamWeek": {
@@ -3262,7 +3282,7 @@
       "gemini": {
         "title": "Je Gemini-abonnement",
         "tiers": "Google AI Pro, Google AI Ultra of Gemini Enterprise",
-        "warning": "Volgens Google kan het gebruik van een persoonlijk Gemini-abonnement in andere apps ertoe leiden dat het account wordt geschorst."
+        "warning": "Volgens Google kan het gebruik van een persoonlijk Gemini-abonnement in andere apps ertoe leiden dat het account wordt geschorst. Gebruik een Gemini-API-sleutel of Gemini Enterprise om dat risico te vermijden."
       },
       "zen": {
         "title": "OpenCode",
@@ -3414,7 +3434,18 @@
     "never": {
       "title": "Nooit vragen",
       "text": "Vraagt nooit, ook niet bij merge, deploy, betalingen en routines."
-    }
+    },
+    "change": "Wijzigen wanneer hij vraagt",
+    "now": "{{name}} nu: {{level}}.",
+    "nowEveryAgent": "Alle agents nu: {{level}}.",
+    "undo": "Ongedaan maken",
+    "everyAgent": "Voor alle agents in de workspace",
+    "follows": "Volgt de workspace",
+    "edit": "Wijzigen",
+    "workspaceLead": "Wanneer agents iemand vragen voordat ze iets doen.",
+    "workspaceHelp": "Elke agent volgt deze keuze tot iemand die van de agent wijzigt op zijn pagina.",
+    "ownAgents_one": "{{count}} agent heeft een eigen keuze en verandert niet.",
+    "ownAgents_other": "{{count}} agents hebben een eigen keuze en veranderen niet."
   },
   "brakes": {
     "title": "Werk waar niemand om vroeg",
@@ -4195,6 +4226,7 @@
     "seeNewer": "Nieuwer verzoek bekijken",
     "computerAway": "De computer van {{agent}} antwoordt nu niet. Dit verzoek blijft open tot {{time}}. Probeer het zo opnieuw.",
     "computerPaused": "De computer van {{agent}} is door de eigenaar gepauzeerd. Dit verzoek blijft open tot {{time}}.",
+    "insecureContext": "Deze pagina is niet via https geopend, dus de browser vergrendelt de sleutel niet. Open hem via https:// (of localhost).",
     "failed": "Kon het niet leveren. Staat de computer van de agent aan?",
     "changed": "Dit verzoek is gewijzigd terwijl je antwoordde. Er is niets verzonden. Stuur het opnieuw.",
     "empty": "Typ de waarde.",
@@ -7737,6 +7769,18 @@
     },
     "assigneeFilter": "Toegewezen aan",
     "priorityFilter": "Prioriteit",
+    "labelFilter": "Label",
+    "table": {
+      "task": "Taak",
+      "github": "GitHub",
+      "sortBy": "Sorteren op {{column}}",
+      "resize": "Breedte van kolom {{column}} aanpassen"
+    },
+    "fold": {
+      "open": "{{name}} openen",
+      "close": "{{name}} inklappen",
+      "column": "Kolom inklappen"
+    },
     "title": "Taken",
     "summary": "{{open}} open · {{agents}} bij agents",
     "search": "Taken zoeken",
@@ -7779,8 +7823,16 @@
       "order": {
         "manual": "Handmatig",
         "priority": "Prioriteit",
-        "due": "Deadline"
+        "due": "Deadline",
+        "updated": "Recent"
       },
+      "done": "Voltooid",
+      "doneIs": {
+        "all": "Alle",
+        "recent": "Laatste {{days}} dagen",
+        "hidden": "Geen"
+      },
+      "hideEmpty": "Lege groepen verbergen",
       "field": {
         "project": "Project",
         "assignee": "Toegewezen aan",
@@ -7806,6 +7858,7 @@
       "canceled": "#{{number}} staat weer op zijn plek.",
       "assigned": "#{{number}} ligt nu bij {{name}}.",
       "unassigned": "#{{number}} is nu aan niemand toegewezen.",
+      "removed": "#{{number}} ligt niet meer bij {{name}}.",
       "prioritized": "#{{number}} heeft nu prioriteit {{priority}}."
     },
     "canceledColumn": "Geannuleerd",
@@ -7933,7 +7986,10 @@
         "failed": "De laatste run is mislukt.",
         "canceled": "Iemand heeft de run gestopt.",
         "budget": "Het maandbudget van de agent is op."
-      }
+      },
+      "finishedTitle": "{{name}} heeft het afgerond",
+      "finishedMeta": "{{when}} · overgedragen door {{name}}",
+      "answer": "Antwoorden"
     },
     "status": {
       "todo": "Te doen",
@@ -7960,6 +8016,10 @@
       "high": "hoog"
     },
     "noAssignee": "Niet toegewezen",
+    "assignees": {
+      "people": "Mensen en agents",
+      "done": "Klaar"
+    },
     "agentRole": "Agent · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -8103,7 +8163,9 @@
       "status_changed": "heeft de status gewijzigd in {{status}}",
       "priority_changed": "heeft de prioriteit gewijzigd in {{priority}}",
       "assigned": "heeft de taak toegewezen",
-      "unassigned": "heeft de toewijzing verwijderd",
+      "unassigned": "heeft een toewijzing verwijderd",
+      "assigned_named": "heeft de taak toegewezen aan {{name}}",
+      "unassigned_named": "heeft {{name}} van de taak gehaald",
       "due_date_set": "heeft de deadline op {{date}} gezet",
       "due_date_removed": "heeft de deadline verwijderd",
       "pr_linked": "heeft PR #{{number}} gekoppeld",
@@ -8117,7 +8179,10 @@
       "criterion_checked": "heeft het criterium \"{{text}}\" aangevinkt",
       "criterion_unchecked": "heeft het criterium \"{{text}}\" uitgevinkt",
       "agent_asked": "heeft {{name}} gevraagd het te doen"
-    }
+    },
+    "handedBy": "overgedragen door <0/>{{name}}",
+    "fromDm": "uit <0>je DM met {{name}}</0>",
+    "fromDmText": "uit je DM met {{name}}"
   },
   "routines": {
     "filters": "Routines filteren",
@@ -8703,6 +8768,7 @@
       "waiting_budget_late": "Zijn moment gemist: het budget werd te laat vernieuwd",
       "stopped": "Door iemand gestopt",
       "stoppedBy": "Gestopt door {{name}}",
+      "stalled": "Vrijgegeven: er bewoog 20 minuten niets",
       "no_report": "Klaar zonder het resultaat te melden",
       "handoff_blocked": "Kon het niet melden: de routine is gepauzeerd of wie hem maakte, kan daar niet meer posten",
       "deleted": "Gestopt: de routine is verwijderd",
@@ -10184,7 +10250,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "Een snel model van TypeSafe, gemaakt voor snelle beslissingen. agentes.chat stelt het kleine vragen, zoals wie moet antwoorden. Je betaalt TypeSafe rechtstreeks.",
+    "about": "Een snel model van TypeSafe, gemaakt voor snelle beslissingen. agentes.chat stelt het kleine vragen, zoals wie moet antwoorden. Je betaalt TypeSafe rechtstreeks, of via OpenRouter voor dezelfde prijs.",
     "lead": "Helpt je agents samen te werken als team.",
     "how": "Hoe Jev werkt",
     "why": {
@@ -10225,6 +10291,32 @@
       "envInvalid": "TypeSafe heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (TYPESAFE_API_KEY)."
     },
     "checkAgain": "Opnieuw controleren",
+    "via": {
+      "label": "Waar je voor Jev betaalt",
+      "typesafe": "TypeSafe",
+      "typesafeText": "Een account bij TypeSafe zelf, met prepaid tegoed.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "Met een OpenRouter-sleutel, voor dezelfde prijs.",
+      "connected": "Sleutel al gekoppeld"
+    },
+    "openRouter": {
+      "create": "Maak een sleutel aan bij OpenRouter",
+      "createHint": "Met tegoed bij OpenRouter. Jev kost hetzelfde als bij TypeSafe: US$ {{price}} per miljoen tokens. Kiezen wie antwoordt kost ongeveer US$ {{call}}.",
+      "open": "OpenRouter openen",
+      "placeholder": "Je OpenRouter-sleutel",
+      "shape": "OpenRouter-sleutels beginnen met sk-or-v1-. Controleer hem en plak hem opnieuw.",
+      "invalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Kopieer hem opnieuw van de sleutelpagina.",
+      "keyName": "OpenRouter-sleutel",
+      "same": "Die uit Sleutels van aanbieders",
+      "forAll": "Hij betaalt Jev voor elke werkruimte op deze server.",
+      "turnOn": "Jev aanzetten",
+      "otherKey": "Een andere sleutel gebruiken",
+      "line": {
+        "invalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Maak een nieuwe aan.",
+        "no_credit": "Voeg tegoed toe bij OpenRouter. Jev gaat vanzelf weer verder.",
+        "envInvalid": "OpenRouter heeft deze sleutel niet geaccepteerd. Wijzig hem in de instellingen van deze server (TYPESAFE_API_KEY)."
+      }
+    },
     "remove": {
       "title": "De Jev-sleutel verwijderen?",
       "text": "Agents blijven ook zonder werken."
@@ -10342,6 +10434,10 @@
       "removeCopies": "Verwijderen",
       "copiesRemoved_one": "{{count}} ongebruikte login verwijderd.",
       "copiesRemoved_other": "{{count}} ongebruikte logins verwijderd.",
+      "removeAllGrok": "Alle Grok-aanmeldingen verwijderen",
+      "removeAllTitle": "Alle {{n}} Grok-aanmeldingen verwijderen?",
+      "removeAllText": "Ze denken niet meer voor hun agenten op {{computers}}. Aanmeldingen van anderen blijven staan.",
+      "removeAllDone": "{{n}} Grok-aanmeldingen verwijderd.",
       "disconnect": "Ontkoppelen",
       "renameTitle": "{{label}} hernoemen",
       "nameLabel": "Naam",
@@ -10403,6 +10499,8 @@
       },
       "resetsAt": "reset om {{time}}",
       "resetsOn": "reset {{day}} om {{time}}",
+      "allModels": "Alle modellen",
+      "onlyModels": "Alleen {{name}}",
       "almost": "Bijna aan de limiet",
       "limited": "Limiet bereikt",
       "limitedUntil": "Limiet bereikt tot {{when}}",
@@ -10568,6 +10666,9 @@
     "keys": "Enter verstuurt · Esc verwijdert",
     "keysHold": "Loslaten om te versturen · Esc verwijdert",
     "keysPaused": "Gepauzeerd · Spatie luistert · Enter verstuurt · Esc verwijdert",
+    "askDiscard": "Audio verwijderen? Je tekst blijft staan.",
+    "askDelete": "Verwijderen",
+    "askKeep": "Houden",
     "pausePlay": "Pauzeren",
     "seek": "Positie in de audio",
     "speedAt": "Snelheid {{speed}}×",
@@ -11631,6 +11732,10 @@
       "cant_start": "{{program}} staat op {{computer}}, maar start niet.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
       "outdated": "De versie op {{computer}} is oud. Werk Codex bij om het te gebruiken.",
+      "outdatedCodex": "Op {{computer}} is Codex CLI {{detected}} gevonden. Werk bij naar versie {{minimum}} of hoger.",
+      "codexUpdateGuide": "Codex CLI bijwerken",
+      "codexRecheckHere": "Kies na het bijwerken Opnieuw controleren bij Codex in Voorkeuren › Tools.",
+      "codexRecheckThere": "Werk Codex CLI bij op {{computer}}. Als daar de desktopapp draait, kies je Opnieuw controleren bij Codex in Voorkeuren › Tools.",
       "system": "{{program}} werkt nog niet op het systeem van {{computer}}.",
       "no_computerCloud": "Klaar zodra {{computer}} klaar is."
     },
@@ -12903,6 +13008,7 @@
     "connected": "Gekoppeld",
     "connectedAs": "Gekoppeld als {{account}}",
     "reconnectAdds": "Verbind {{name}} opnieuw zodat agents ook {{what}}.",
+    "sendsToo": "Stuurt ook mee: <names/>. Gebruik Opnieuw koppelen om dat te wijzigen.",
     "adds": {
       "github_project": "GitHub Projects kunnen gebruiken (borden lezen en kaarten verplaatsen)"
     },
@@ -14011,6 +14117,22 @@
     "needsKey": "Deze server ondersteunt geen OAuth. Koppel met een API-sleutel.",
     "notApproved": "{{name}} laat alleen goedgekeurde apps inloggen, en agentes.chat is nog niet goedgekeurd. Krijg je er een API-sleutel, dan kun je daarmee koppelen.",
     "serverSaid": "De server antwoordde: {{detail}}",
+    "headers": {
+      "title": "Headers van het verzoek",
+      "help": "Voor een sleutel die in een andere header hoort, of een gateway vóór de server. De meeste servers hebben er geen nodig.",
+      "value": "Waarde",
+      "nameOf": "Naam van header {{n}}",
+      "valueOf": "Waarde van header {{n}}",
+      "remove": "Header {{n}} verwijderen",
+      "add": "Header toevoegen",
+      "saved_one": "Opgeslagen: <names/>. Die blijft, tenzij je nieuwe invult.",
+      "saved_other": "Opgeslagen: <names/>. Die blijven, tenzij je nieuwe invult.",
+      "drop": "Verwijderen",
+      "dropping_one": "<names/> wordt verwijderd bij het opnieuw koppelen.",
+      "dropping_other": "<names/> worden verwijderd bij het opnieuw koppelen.",
+      "undo": "Ongedaan maken",
+      "refused": "De server accepteerde deze headers niet. Controleer de waarden, of koppel met een API-sleutel."
+    },
     "nothingYet": "Tot stap 3 is er niets beschikbaar voor agents.",
     "allCanUse": "Na het koppelen kan elke agent het gebruiken. Dat kun je later aanpassen.",
     "replace": "Vervangt de huidige login. Wie het gebruikt, blijft hetzelfde.",
@@ -14708,7 +14830,15 @@
       "gone": "Dat account is niet meer gekoppeld.",
       "unfinished": "Het inloggen bij Composio is niet afgerond. Probeer het opnieuw.",
       "unavailable": "Deze dienst kan hier niet gekoppeld worden.",
-      "misconfigured": "De koppeling met {{provider}} is verkeerd ingesteld op de server, dus die kan niet worden afgerond. Wie de server beheert, moet de sleutel vervangen in de instellingen van de app."
+      "misconfigured": "De koppeling met {{provider}} is verkeerd ingesteld op de server, dus die kan niet worden afgerond. Wie de server beheert, moet de sleutel vervangen in de instellingen van de app.",
+      "headerName": "Gebruik in de naam van een header alleen letters, cijfers en koppeltekens, zoals X-API-Key.",
+      "headerValue": "Vul een waarde in voor {{header}}: hooguit 2.000 tekens op één regel, zonder accenten of emoji.",
+      "headerReserved": "{{header}} wordt al met elk verzoek meegestuurd en is niet te wijzigen. Verwijder deze header.",
+      "headerTwice": "{{header}} staat twee keer in de lijst. Verwijder er één.",
+      "headerAndKey": "De API-sleutel wordt al als Authorization meegestuurd. Wis de sleutel, of verwijder deze header.",
+      "headersTooMany": "Een server neemt hooguit {{max}} headers. Verwijder er één om een andere toe te voegen.",
+      "headersWithSignIn": "Deze server vraagt om in te loggen, en een login kan nog geen headers meesturen. Verwijder de headers om in te loggen, of koppel met een API-sleutel.",
+      "headersUnreadable": "De opgeslagen headers konden niet worden gelezen. Vul ze opnieuw in of verwijder ze."
     },
     "wiki": {
       "githubNoNotes": "Geen Markdown-notities in deze link.",
@@ -14945,7 +15075,8 @@
     },
     "agentGroup": {
       "notFound": "Deze afdeling bestaat niet meer.",
-      "tooMany": "Deze werkruimte heeft al {{max}} afdelingen. Verwijder er eerst een."
+      "tooMany": "Deze werkruimte heeft al {{max}} afdelingen. Verwijder er eerst een.",
+      "ambiguous": "Twee afdelingen heten {{name}}. Geef er een een andere naam en probeer het opnieuw."
     },
     "rightHand": {
       "permanent": "De rechterhand hoort bij de werkruimte en blijft buiten de kanalen. Een @vermelding bereikt hem in elk kanaal.",
@@ -15391,6 +15522,7 @@
       "ui_automation_off": "UI-automatisering staat uit",
       "xcode_missing": "Xcode is niet geïnstalleerd op de Mac",
       "xcode_too_old": "Xcode is te oud voor deze iOS-versie",
+      "ios_behind_xcode": "De iOS van deze iPhone is ouder dan die van Xcode",
       "device_support": "De Mac haalt de iPhone-tools op",
       "helper_missing": "De testhelper is nog niet ingesteld",
       "helper_expired": "De testhelper moet worden vernieuwd",
@@ -15419,6 +15551,7 @@
       "ui_automation_off": "Zet UI-automatisering aan",
       "xcode_missing": "Installeer Xcode",
       "xcode_too_old": "Werk Xcode bij",
+      "ios_behind_xcode": "Werk de iPhone bij",
       "device_support": "Laat de Mac aan staan",
       "helper_missing": "Open de app op de Mac",
       "helper_expired": "Open de app op de Mac",
@@ -15738,6 +15871,7 @@
       "helperText": "De Mac bouwt en vernieuwt hem elke 7 dagen. Een gratis Apple Account in Xcode is genoeg.",
       "helperUntrustedText": "Tik op de naam van de ontwikkelaar en dan op Vertrouw.",
       "teamLimitText": "Verwijder een zelfgemaakte app van de iPhone: een gratis Apple Account staat er 3 toe.",
+      "iosBehind": "Deze iPhone draait iOS {{ios}} en Xcode op deze Mac is voor iOS {{sdk}}. Werk de iPhone bij: Instellingen › Algemeen › Software-update.",
       "xcodeOld": "{{name}} draait iOS {{version}} en Xcode op {{mac}} kent hooguit iOS {{sdk}}. Installeer Xcode {{major}} en voer dit daarna uit in Terminal.",
       "xcodeOldAny": "{{name}} draait iOS {{version}}, nieuwer dan Xcode op {{mac}} kent. Installeer Xcode {{major}} en voer dit daarna uit in Terminal.",
       "uiRefusedText": "De iPhone weigerde de tikken van de testhelper. Ontgrendel hem en voer de toegangscode in als hij erom vraagt. Blijft het gebeuren, zet dan Instellingen › Ontwikkelaar › Schakel UI-automatisering in uit en weer aan.",
@@ -15819,6 +15953,7 @@
       "waiting": "<b>{{who}}</b> wacht op <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> vraagt je {{tool}} aan te zetten op je <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> vraagt je {{tool}} te installeren op je <b>{{deviceName}}</b>",
+      "folderRequest": "<b>{{who}}</b> vraagt je om de map {{path}} op je <b>{{deviceName}}</b>",
       "once": "Eén keer toestaan",
       "always": "Altijd",
       "no": "Nee",
@@ -16470,11 +16605,11 @@
       "rolesPersonal": "Wat ieder hier kan doen. Eigenaren kunnen alles."
     },
     "about": {
-      "basedOn": "Gebaseerd op <site>agentes.chat</site> van Codari Global, LLC",
+      "basedOn": "Gebaseerd op <site>agentes.chat</site> van AGENTESCHAT, LLC",
       "version": "Versie",
       "license": "Vrije software onder de <license>GNU Affero General Public License v3</license>, zonder garantie.",
       "source": "Broncode",
-      "copyright": "Copyright © 2026 Codari Global, LLC en bijdragers"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC en bijdragers"
     },
     "title": "Instellingen",
     "account": {
@@ -16507,6 +16642,8 @@
         "openLatest": "Nieuwste bericht",
         "textSize": "Tekstgrootte",
         "textSizeHelp": "Van berichten, in alle gesprekken en op al je apparaten",
+        "fullMessages": "Berichten volledig tonen",
+        "fullMessagesHelp": "Lange berichten zonder “Meer tonen”, in alle gesprekken en op al je apparaten",
         "textSizePhone": "Geldt voor de hele app, bovenop de tekstgrootte van je telefoon",
         "textXs": "Kleiner",
         "textSm": "Klein",
@@ -16910,6 +17047,18 @@
       "see": "Gebruik bekijken"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "Per soort",
+      "handoffs": "Overdrachten tussen agents",
+      "people": "Gesprekken met mensen",
+      "routines": "Routines"
+    },
+    "hint": {
+      "handoffs": "Het meeste gebruik deze week kwam van agents die elkaar werk overdragen. Vraag lang werk rechtstreeks aan de agent.",
+      "message": "Bericht aan {{name}}"
+    }
+  },
   "usageViews": {
     "signedOut": "Uitgelogd",
     "whose": "Van {{name}}",
@@ -17086,12 +17235,35 @@
       "failed": "Geblokkeerd · niet afgemaakt",
       "failedWhy": "Geblokkeerd · niet afgemaakt: {{why}}"
     },
-    "working": "Op de achtergrond"
+    "working": "Op de achtergrond",
+    "handed": {
+      "lead": "Overgedragen aan <0/>{{name}}",
+      "working": "bezig",
+      "done": "klaar in {{duration}}",
+      "waitingYou": "wacht op jouw antwoord",
+      "waiting": "wacht op een antwoord",
+      "waitingApprovalYou": "wacht op jouw goedkeuring",
+      "waitingApproval": "wacht op goedkeuring",
+      "waitingComputer": "wacht op de computer",
+      "paused": "gepauzeerd op de limiet van het plan",
+      "queued": "in de wachtrij",
+      "failed": "niet afgemaakt",
+      "stopped": "gestopt",
+      "step": "stap {{current}} van {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
       "text": "ChatGPT weigerde de snelheid Snel voor dit account of model, dus dit antwoord kwam op standaardsnelheid.",
       "action": "Agent openen"
+    },
+    "standIn": {
+      "needsComputer": "Beantwoord met {{via}}: {{plan}} heeft een computer nodig.",
+      "away": "Beantwoord met {{via}}: de computer van {{plan}} is afwezig.",
+      "notShared": "Beantwoord met {{via}}: {{plan}} is alleen voor wie het koppelde.",
+      "limit": "Beantwoord met {{via}}: {{plan}} heeft zijn limiet bereikt.",
+      "cant": "Beantwoord met {{via}}: {{plan}} kan nu niet denken.",
+      "change": "Wijzigen"
     },
     "modelStandIn": {
       "text": "{{plan}} heeft {{from}} met deze sleutel geweigerd. Ik heb geantwoord met {{to}}, dat er wel mee werkt.",
@@ -17685,6 +17857,9 @@
       "interrupted": "Onderbroken door een herstart van de server. Vraag het opnieuw om verder te gaan.",
       "step_limit": "Mijn stappen waren op voordat ik klaar was.",
       "stuck": "Ik liep vast en stopte voordat ik klaar was."
+    },
+    "request": {
+      "asksYou": "{{name}} vraagt je"
     }
   },
   "builtinTools": {

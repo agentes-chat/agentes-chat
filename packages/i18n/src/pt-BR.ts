@@ -2710,8 +2710,27 @@ export const ptBR = {
    * dos admins (`{{name}}`); "Lodi" só por padrão.
    */
   rightHand: {
+    brain: {
+      unusable: {
+        title: "Precisa de um computador",
+        computerOnly: "De {{owner}}, conectado só em {{computer}}. O Lodi pensa com um plano conectado como conta.",
+        noComputer: "De {{owner}}. Precisa de um computador, e o workspace não tem nenhum conectado.",
+        away: "De {{owner}}, em {{computer}}, que está ausente.",
+        connect: "Conectar um computador",
+        plans: "Ver planos",
+      },
+    },
     label: "seu braço direito",
     labelCapitalized: "Seu braço direito",
+    unusable: {
+      title: "Não pensa pelo {{name}} agora",
+      title_female: "Não pensa pela {{name}} agora",
+      computerOnly: "Conectado só em {{computer}}. O {{name}} pensa com um plano conectado como conta.",
+      computerOnly_female: "Conectado só em {{computer}}. A {{name}} pensa com um plano conectado como conta.",
+      away: "De {{owner}}, em {{computer}}, que está ausente.",
+      awayYours: "Seu, em {{computer}}, que está ausente.",
+      connect: "Conectar um computador",
+    },
     newDot: "Novo",
     actsAsYou: "age com as suas permissões",
     composerHint: "nada muda sem você",
@@ -2853,6 +2872,9 @@ export const ptBR = {
       "Usado em canais e em trabalhos que rodam sozinhos. Todo o workspace compartilha este espaço. Não guarde nada privado aqui.",
     /** The row where it has none for anyone: the workspace has no computer of its own. */
     computerNoHome: "Ainda sem computador. Passa a ter um quando este workspace tiver um computador próprio.",
+    /** The same row on a self-hosted server: this server made the agents' computer gives it one. `guide`: the setup guide. */
+    computerNoHomeServer:
+      "Ainda sem navegador. Configure <guide>este servidor como o computador dos agentes</guide> para ele ter um.",
     addComputer: "Adicionar um computador",
     /** The row where the workspace's computer runs every agent as one OS user. */
     computerOneUser:
@@ -2906,6 +2928,7 @@ export const ptBR = {
         ai_account: "Só o dono da conta a escolhe",
         name: "Só admins mudam o nome de um agente",
         look: "Só admins e o responsável mudam a aparência",
+        group: "Só admins mudam um agente de setor",
         reports_to: "Só admins mudam a quem um agente responde",
         many: "Só admins fazem essas mudanças",
       },
@@ -2920,6 +2943,7 @@ export const ptBR = {
       channel: "Canal",
       name: "Nome",
       look: "Aparência",
+      group: "Setor",
       reports_to: "Responde a",
       skill: "Skill {{name}}",
     },
@@ -3441,7 +3465,8 @@ export const ptBR = {
       gemini: {
         title: "Seu plano do Gemini",
         tiers: "Google AI Pro, Google AI Ultra ou Gemini Enterprise",
-        warning: "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta.",
+        warning:
+          "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta. Para não correr esse risco, use uma chave de API do Gemini ou o Gemini Enterprise.",
       },
       zen: { title: "OpenCode", tiers: "Modelos grátis, ou a sua chave do OpenCode" },
       zai: { tiers: "Lite, Pro ou Max" },
@@ -3595,6 +3620,23 @@ export const ptBR = {
       title: "Nunca perguntar",
       text: "Não pergunta nada, nem em merge, deploy, pagamentos e rotinas.",
     },
+    /** The quiet link on a waiting approval that opens its agent's three choices in place. */
+    change: "Mudar quando perguntar",
+    /** The toast after a choice from that link. {{level}}: the choice's title. */
+    now: "{{name}} agora: {{level}}.",
+    nowEveryAgent: "Todos os agentes agora: {{level}}.",
+    undo: "Desfazer",
+    /** In that dialog, for who may set the workspace's level: it also clears each agent's own choice. */
+    everyAgent: "Para todos os agentes do workspace",
+    /** An agent's row value while it has no choice of its own. */
+    follows: "Segue o workspace",
+    /** Settings → Aprovações: the button that opens the three choices. */
+    edit: "Mudar",
+    /** Settings → Aprovações: the workspace's level. */
+    workspaceLead: "Quando os agentes perguntam a uma pessoa antes de agir.",
+    workspaceHelp: "Cada agente segue esta escolha até alguém mudar a dele na página do agente.",
+    ownAgents_one: "{{count}} agente tem a própria escolha e não muda.",
+    ownAgents_other: "{{count}} agentes têm a própria escolha e não mudam.",
   },
   /** Configurações do agente: o que ele pode começar sem ninguém pedir diretamente, e quais agentes pode chamar (ADR 0131). */
   brakes: {
@@ -4417,6 +4459,8 @@ export const ptBR = {
     computerAway:
       "O computador de {{agent}} não está respondendo agora. O pedido continua aberto até {{time}}. Tente de novo em instantes.",
     computerPaused: "O dono pausou o computador de {{agent}}. O pedido continua aberto até {{time}}.",
+    insecureContext:
+      "Esta página não está aberta em https, então o navegador não tranca a chave. Abra pelo endereço https:// (ou localhost).",
     failed: "Não deu para entregar. O computador do agente está ligado?",
     changed: "Este pedido mudou enquanto você respondia. Nada foi enviado. Envie de novo.",
     empty: "Digite o valor.",
@@ -8088,6 +8132,9 @@ export const ptBR = {
     },
   },
   issues: {
+    handedBy: "passada por <0/>{{name}}",
+    fromDm: "da <0>sua DM com {{name}}</0>",
+    fromDmText: "da sua DM com {{name}}",
     delete: {
       action: "Excluir tarefa",
       title: "Excluir a tarefa #{{number}}?",
@@ -8100,6 +8147,14 @@ export const ptBR = {
     },
     assigneeFilter: "Responsável",
     priorityFilter: "Prioridade",
+    labelFilter: "Rótulo",
+    table: {
+      task: "Tarefa",
+      github: "GitHub",
+      sortBy: "Ordenar por {{column}}",
+      resize: "Redimensionar a coluna {{column}}",
+    },
+    fold: { open: "Abrir {{name}}", close: "Recolher {{name}}", column: "Recolher coluna" },
     title: "Tarefas",
     summary: "{{open}} em aberto · {{agents}} com agentes",
     search: "Buscar tarefas",
@@ -8135,7 +8190,10 @@ export const ptBR = {
       saved: "Salvo para você neste workspace",
       reset: "Voltar ao padrão",
       by: { stage: "Etapa", assignee: "Responsável", priority: "Prioridade" },
-      order: { manual: "Manual", priority: "Prioridade", due: "Prazo" },
+      order: { manual: "Manual", priority: "Prioridade", due: "Prazo", updated: "Recentes" },
+      done: "Concluídas",
+      doneIs: { all: "Todas", recent: "Últimos {{days}} dias", hidden: "Nenhuma" },
+      hideEmpty: "Ocultar grupos vazios",
       field: {
         project: "Projeto",
         assignee: "Responsável",
@@ -8161,6 +8219,8 @@ export const ptBR = {
       canceled: "A #{{number}} voltou para o lugar.",
       assigned: "#{{number}} agora está com {{name}}.",
       unassigned: "#{{number}} ficou sem responsável.",
+      /** Dragged off one of several who have it: the others still do. */
+      removed: "#{{number}} não está mais com {{name}}.",
       prioritized: "#{{number}} agora tem prioridade {{priority}}.",
     },
     canceledColumn: "Canceladas",
@@ -8266,6 +8326,9 @@ export const ptBR = {
       stoppedOn: "Parou em {{date}}",
     },
     work: {
+      finishedTitle: "{{name}} terminou",
+      finishedMeta: "{{when}} · passada por {{name}}",
+      answer: "Responder",
       label: "Trabalho do {{name}}",
       label_female: "Trabalho da {{name}}",
       runningTitle: "O {{name}} está trabalhando nisso",
@@ -8309,6 +8372,8 @@ export const ptBR = {
     priority: { low: "Baixa", normal: "Normal", high: "Alta" },
     priorityLower: { low: "baixa", normal: "normal", high: "alta" },
     noAssignee: "Sem responsável",
+    /** The dialog that picks who has a task: the list's name over it, and the button that closes it. */
+    assignees: { people: "Pessoas e agentes", done: "Pronto" },
     agentRole: "Agente · {{role}}",
     pr: "PR #{{number}}",
     open: "#{{number}} {{title}}",
@@ -8452,7 +8517,10 @@ export const ptBR = {
       status_changed: "mudou o status para {{status}}",
       priority_changed: "mudou a prioridade para {{priority}}",
       assigned: "atribuiu a tarefa",
-      unassigned: "removeu o responsável",
+      unassigned: "removeu um responsável",
+      /** With who it was (`name`), when the event says. */
+      assigned_named: "atribuiu a tarefa a {{name}}",
+      unassigned_named: "tirou {{name}} da tarefa",
       due_date_set: "definiu o prazo para {{date}}",
       due_date_removed: "removeu o prazo",
       pr_linked: "ligou o PR #{{number}}",
@@ -9060,6 +9128,7 @@ export const ptBR = {
       waiting_budget_late: "Perdeu o horário: o orçamento renovou tarde demais",
       stopped: "Parada por alguém",
       stoppedBy: "Parada por {{name}}",
+      stalled: "Liberada: nada andou nela por 20 minutos",
       no_report: "Terminou sem contar o resultado",
       handoff_blocked: "Não pôde contar: a rotina foi pausada ou quem criou não pode mais falar ali",
       deleted: "Parou: a rotina foi apagada",
@@ -10474,7 +10543,7 @@ export const ptBR = {
   jev: {
     title: "Jev",
     about:
-      "Um modelo rápido da TypeSafe, feito para decisões rápidas. O agentes.chat faz perguntas pequenas a ele, como quem deve responder. Você paga direto à TypeSafe.",
+      "Um modelo rápido da TypeSafe, feito para decisões rápidas. O agentes.chat faz perguntas pequenas a ele, como quem deve responder. Você paga direto à TypeSafe ou pelo OpenRouter, pelo mesmo preço.",
     lead: "Ajuda os agentes a trabalhar em equipe.",
     how: "Como o Jev funciona",
     why: {
@@ -10517,6 +10586,35 @@ export const ptBR = {
       envInvalid: "A TypeSafe não aceitou esta chave. Troque nas configurações deste servidor (TYPESAFE_API_KEY).",
     },
     checkAgain: "Verificar de novo",
+    /** Where Jev is called and paid (ADR 0073 §9): the rows under the reasons once "Set up Jev" is pressed. */
+    via: {
+      label: "Onde você paga o Jev",
+      typesafe: "TypeSafe",
+      typesafeText: "Uma conta direto na TypeSafe, com crédito pré-pago.",
+      openrouter: "OpenRouter",
+      openrouterText: "Com uma chave do OpenRouter, pelo mesmo preço.",
+      connected: "Chave já conectada",
+    },
+    /** Jev through OpenRouter: its steps, the workspace's own key, and the key's lines once saved. */
+    openRouter: {
+      create: "Crie uma chave no OpenRouter",
+      createHint:
+        "Com crédito no OpenRouter. O Jev custa o mesmo que na TypeSafe: US$ {{price}} por milhão de tokens. Escolher quem responde custa cerca de US$ {{call}}.",
+      open: "Abrir o OpenRouter",
+      placeholder: "A sua chave do OpenRouter",
+      shape: "As chaves do OpenRouter começam com sk-or-v1-. Confira e cole de novo.",
+      invalid: "O OpenRouter não aceitou esta chave. Copie de novo na página de chaves.",
+      keyName: "Chave do OpenRouter",
+      same: "A mesma de Chaves de provedor",
+      forAll: "Ela paga o Jev de todos os workspaces deste servidor.",
+      turnOn: "Ligar o Jev",
+      otherKey: "Usar outra chave",
+      line: {
+        invalid: "O OpenRouter não aceitou esta chave. Crie uma nova.",
+        no_credit: "Adicione crédito no OpenRouter. O Jev volta sozinho.",
+        envInvalid: "O OpenRouter não aceitou esta chave. Troque nas configurações deste servidor (TYPESAFE_API_KEY).",
+      },
+    },
     remove: {
       title: "Remover a chave do Jev?",
       text: "Os agentes continuam trabalhando sem ele.",
@@ -10654,6 +10752,12 @@ export const ptBR = {
       removeCopies: "Remover",
       copiesRemoved_one: "{{count}} login sem uso removido.",
       copiesRemoved_other: "{{count}} logins sem uso removidos.",
+      /** Every Grok login the viewer owns at once (issue #319): one sign-in per agent, removed together. */
+      removeAllGrok: "Remover todos os logins do Grok",
+      removeAllTitle: "Remover todos os {{n}} logins do Grok?",
+      removeAllText:
+        "Eles deixam de pensar nos agentes deles em {{computers}}. Os logins de outras pessoas não são tocados.",
+      removeAllDone: "{{n}} logins do Grok removidos.",
       disconnect: "Desconectar",
       renameTitle: "Renomear {{label}}",
       nameLabel: "Nome",
@@ -10719,6 +10823,8 @@ export const ptBR = {
       },
       resetsAt: "renova às {{time}}",
       resetsOn: "renova {{day}} às {{time}}",
+      allModels: "Todos os modelos",
+      onlyModels: "Só {{name}}",
       almost: "Quase no limite",
       limited: "No limite",
       limitedUntil: "No limite até {{when}}",
@@ -10891,6 +10997,9 @@ export const ptBR = {
     keys: "Enter envia · Esc apaga",
     keysHold: "Solte para enviar · Esc apaga",
     keysPaused: "Pausado · Espaço ouve · Enter envia · Esc apaga",
+    askDiscard: "Apagar o áudio? O texto fica.",
+    askDelete: "Apagar",
+    askKeep: "Manter",
     pausePlay: "Pausar",
     seek: "Posição do áudio",
     speedAt: "Velocidade {{speed}}×",
@@ -11929,6 +12038,13 @@ export const ptBR = {
       cant_start: "O {{program}} está no {{computer}}, mas não abre.",
       not_reported: "O {{computer}} ainda está vendo quais programas tem. Isto muda sozinho quando terminar.",
       outdated: "A versão no {{computer}} é antiga. Atualize o Codex para usar.",
+      outdatedCodex:
+        "O Codex CLI {{detected}} foi encontrado no {{computer}}. Atualize para a versão {{minimum}} ou superior.",
+      codexUpdateGuide: "Como atualizar o Codex CLI",
+      codexRecheckHere:
+        "Depois de atualizar, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
+      codexRecheckThere:
+        "Atualize o Codex CLI no {{computer}}. Se ele usa o app para computador, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
       system: "O {{program}} ainda não roda no sistema do {{computer}}.",
       no_computerCloud: "Disponível assim que o {{computer}} ficar pronto.",
     },
@@ -13066,6 +13182,7 @@ export const ptBR = {
     connected: "Conectado",
     connectedAs: "Conectado como {{account}}",
     reconnectAdds: "Reconecte o {{name}} para os agentes também poderem {{what}}.",
+    sendsToo: "Envia também: <names/>. Para mudar, use Reconectar.",
     adds: { github_project: "usar o GitHub Projects (ler quadros e mover cards)" },
     toolsCount_one: "{{count}} ferramenta",
     toolsCount_other: "{{count}} ferramentas",
@@ -14163,6 +14280,22 @@ export const ptBR = {
     notApproved:
       "{{name}} só deixa entrar apps que aprovou, e o agentes.chat ainda não foi aprovado. Se ele te der uma chave de API, dá para conectar com ela.",
     serverSaid: "O servidor respondeu: {{detail}}",
+    headers: {
+      title: "Cabeçalhos da requisição",
+      help: "Para uma chave que vai em outro cabeçalho, ou um gateway na frente do servidor. A maioria dos servidores não precisa.",
+      value: "Valor",
+      nameOf: "Nome do cabeçalho {{n}}",
+      valueOf: "Valor do cabeçalho {{n}}",
+      remove: "Remover cabeçalho {{n}}",
+      add: "Adicionar cabeçalho",
+      saved_one: "Salvo: <names/>. Continua, a menos que você digite novos.",
+      saved_other: "Salvos: <names/>. Continuam, a menos que você digite novos.",
+      drop: "Remover",
+      dropping_one: "<names/> sai ao reconectar.",
+      dropping_other: "<names/> saem ao reconectar.",
+      undo: "Desfazer",
+      refused: "O servidor não aceitou esses cabeçalhos. Confira os valores, ou conecte com uma chave de API.",
+    },
     nothingYet: "Nada fica disponível para os agentes até o passo 3.",
     allCanUse: "Ao conectar, todos os agentes podem usar. Dá para ajustar depois.",
     replace: "Substitui o login atual. Quem usa continua igual.",
@@ -14819,6 +14952,15 @@ export const ptBR = {
        */
       misconfigured:
         "A conexão com {{provider}} está mal configurada no servidor, então ela não conclui. Quem cuida do servidor precisa trocar a chave nas configurações do app.",
+      headerName: "Use só letras, números e hífens no nome do cabeçalho, como em X-API-Key.",
+      headerValue: "Digite um valor para {{header}}: até 2.000 caracteres em uma linha, sem acentos nem emojis.",
+      headerReserved: "{{header}} já é enviado em toda requisição e não dá para trocar. Remova este cabeçalho.",
+      headerTwice: "{{header}} está na lista duas vezes. Remova um deles.",
+      headerAndKey: "A chave de API já é enviada como Authorization. Apague a chave ou remova este cabeçalho.",
+      headersTooMany: "Um servidor aceita no máximo {{max}} cabeçalhos. Remova um para adicionar outro.",
+      headersWithSignIn:
+        "Este servidor pede login, e o login ainda não leva cabeçalhos. Remova os cabeçalhos para entrar, ou conecte com uma chave de API.",
+      headersUnreadable: "Não deu para ler os cabeçalhos salvos. Digite de novo, ou remova.",
     },
     /** Restricted wiki pages (ADR 0023). */
     wiki: {
@@ -15072,6 +15214,8 @@ export const ptBR = {
     agentGroup: {
       notFound: "Este setor não existe mais.",
       tooMany: "Este workspace já tem {{max}} setores. Exclua um antes.",
+      /** `agent_group.ambiguous`: a card names a department two of them are called; renaming one decides. */
+      ambiguous: "Dois setores se chamam {{name}}. Renomeie um deles e tente de novo.",
     },
     /** `agent.right_hand_permanent`: archiving, deleting or adding the right hand to a channel (ADR 0137). */
     rightHand: {
@@ -15510,6 +15654,7 @@ export const ptBR = {
       ui_automation_off: "A Automação de UI está desligada",
       xcode_missing: "O Xcode não está instalado no Mac",
       xcode_too_old: "O Xcode é antigo demais para este iOS",
+      ios_behind_xcode: "O iOS deste iPhone é mais antigo que o do Xcode",
       device_support: "O Mac está baixando as ferramentas do iPhone",
       helper_missing: "O assistente de testes ainda não foi preparado",
       helper_expired: "O assistente de testes precisa ser renovado",
@@ -15538,6 +15683,7 @@ export const ptBR = {
       ui_automation_off: "Ative a Automação de UI",
       xcode_missing: "Instale o Xcode",
       xcode_too_old: "Atualize o Xcode",
+      ios_behind_xcode: "Atualize o iPhone",
       device_support: "Deixe o Mac ligado",
       helper_missing: "Abra o app no Mac",
       helper_expired: "Abra o app no Mac",
@@ -15879,6 +16025,8 @@ export const ptBR = {
       helperText: "Criado e renovado pelo Mac a cada 7 dias. Uma Conta Apple gratuita no Xcode basta.",
       helperUntrustedText: "Toque no nome do desenvolvedor e em Confiar.",
       teamLimitText: "Remova do iPhone um app que você mesmo criou: a Conta Apple gratuita permite 3.",
+      iosBehind:
+        "Este iPhone está no iOS {{ios}} e o Xcode deste Mac é para o iOS {{sdk}}. Atualize o iPhone: Ajustes › Geral › Atualização de Software.",
       xcodeOld:
         "{{name}} usa o iOS {{version}} e o Xcode em {{mac}} conhece no máximo o iOS {{sdk}}. Instale o Xcode {{major}} e rode isto no Terminal.",
       xcodeOldAny:
@@ -15971,6 +16119,7 @@ export const ptBR = {
       waiting: "<b>{{who}}</b> está esperando <b>{{deviceName}}</b>",
       toolRequest: "<b>{{who}}</b> pede para ligar {{tool}} no seu <b>{{deviceName}}</b>",
       cliRequest: "<b>{{who}}</b> pede para instalar {{tool}} no seu <b>{{deviceName}}</b>",
+      folderRequest: "<b>{{who}}</b> pede a pasta {{path}} no seu <b>{{deviceName}}</b>",
       once: "Permitir uma vez",
       always: "Sempre",
       no: "Não",
@@ -16631,11 +16780,11 @@ export const ptBR = {
       rolesPersonal: "O que cada pessoa daqui pode fazer. Quem é dono pode tudo.",
     },
     about: {
-      basedOn: "Baseado no <site>agentes.chat</site> da Codari Global, LLC",
+      basedOn: "Baseado no <site>agentes.chat</site> da AGENTESCHAT, LLC",
       version: "Versão",
       license: "Software livre sob a <license>GNU Affero General Public License v3</license>, sem garantia.",
       source: "Código-fonte",
-      copyright: "Copyright © 2026 Codari Global, LLC e colaboradores",
+      copyright: "Copyright © 2026 AGENTESCHAT, LLC e colaboradores",
     },
     title: "Configurações",
     account: {
@@ -16672,6 +16821,8 @@ export const ptBR = {
         /** The words of every message, in every look, smallest step first. */
         textSize: "Tamanho do texto",
         textSizeHelp: "Das mensagens, em todas as conversas e nos seus aparelhos",
+        fullMessages: "Mostrar mensagens completas",
+        fullMessagesHelp: "Mostra mensagens longas sem “Ver mais”, em todas as conversas e nos seus aparelhos",
         /** On the phone, under the text size slider: the choice sizes the whole app, on top of the system's own setting. */
         textSizePhone: "Vale para o app todo, junto com o tamanho de texto do celular",
         textXs: "Menor",
@@ -17053,6 +17204,19 @@ export const ptBR = {
     },
     actions: { raise: "Aumentar para {{amount}} este mês", refuse: "Recusar", see: "Ver o uso" },
   },
+  usage: {
+    kinds: {
+      label: "Por tipo",
+      handoffs: "Repasses entre agentes",
+      people: "Conversas com pessoas",
+      routines: "Rotinas",
+    },
+    hint: {
+      handoffs:
+        "A maior parte do uso desta semana veio de agentes passando trabalho uns aos outros. Para trabalhos longos, peça direto ao agente.",
+      message: "Mandar mensagem para {{name}}",
+    },
+  },
   usageViews: {
     signedOut: "Saiu da conta",
     whose: "de {{name}}",
@@ -17172,6 +17336,21 @@ export const ptBR = {
     tomorrowAt: "amanhã {{time}}",
   },
   work: {
+    handed: {
+      lead: "Passado para <0/>{{name}}",
+      working: "trabalhando nisso",
+      done: "pronto em {{duration}}",
+      waitingYou: "esperando sua resposta",
+      waiting: "esperando uma resposta",
+      waitingApprovalYou: "esperando sua aprovação",
+      waitingApproval: "esperando aprovação",
+      waitingComputer: "esperando o computador",
+      paused: "pausado no limite do plano",
+      queued: "na fila",
+      failed: "não terminou",
+      stopped: "parado",
+      step: "etapa {{current}} de {{total}}",
+    },
     duration: {
       minutes_one: "{{count}} min",
       minutes_other: "{{count}} min",
@@ -17260,10 +17439,19 @@ export const ptBR = {
     working: "Em segundo plano",
   },
   chat: {
+    request: { asksYou: "{{name}} pergunta a você" },
     /** Under a reply that came at standard speed because Fast was refused (`meta.speedFallback`, ADR 0149). */
     speedFallback: {
       text: "O ChatGPT recusou a velocidade Rápida nesta conta ou neste modelo, então esta resposta veio no padrão.",
       action: "Abrir agente",
+    },
+    standIn: {
+      needsComputer: "Respondi com {{via}}: {{plan}} precisa de um computador.",
+      away: "Respondi com {{via}}: o computador do {{plan}} está ausente.",
+      notShared: "Respondi com {{via}}: {{plan}} atende só quem o conectou.",
+      limit: "Respondi com {{via}}: {{plan}} chegou ao limite.",
+      cant: "Respondi com {{via}}: {{plan}} não consegue pensar agora.",
+      change: "Trocar",
     },
     /** Under a reply "Automático" gave with another model because the plan refused the one it maps to (`meta.modelStandIn`). */
     modelStandIn: {

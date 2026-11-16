@@ -1,16 +1,21 @@
-import type { PlanAccountInfo, PlanAccountUsage, PlanServes } from "@agenteschat/client";
+import type { AiAccounts, PlanAccountInfo, PlanAccountUsage, PlanServes, PlanUseKind } from "@agenteschat/client";
 import { keys, useAiAccounts, useApi, useModels, usePlanUsage } from "@agenteschat/client";
+import { removableLogins } from "@agenteschat/client/lib/ai-accounts";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { formatPercent, formatTokensShort, formatUsd } from "@agenteschat/client/lib/format";
+import { formatPercent, formatTokensShort, formatUsd, joinNames } from "@agenteschat/client/lib/format";
+import { accountKinds, kindFacts } from "@agenteschat/client/lib/plan-usage";
 import { planName } from "@agenteschat/client/lib/plans";
 import { AUTO, apiProviderOf } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
+  Alert,
   agentGradient,
   Button,
   Card,
   CardHeader,
+  Dialog,
+  DialogFooter,
   EmptyState,
   HintLine,
   Icon,
@@ -126,6 +131,9 @@ export function PlanUsageCards() {
   // The viewer's own logins of one account are one row, as their plans group them.
   const accounts = groupUsageAccounts(usage.data.accounts, mine.data);
   const several = new Set(accounts.map((a) => a.machineId)).size > 1;
+  // One Grok login per agent is what connecting the same account for every agent left behind (issue #319): the batch
+  // removal takes them all at once, and only ever the viewer's own.
+  const grokLogins = removableLogins(mine.data?.accounts ?? [], "grok");
   const connect = connectAi && mayConnect && !hold && (
     <Button size="sm" icon="plus" onClick={() => connectAi.open({})}>
       {t("aiAccounts.page.connect")}
@@ -138,7 +146,7 @@ export function PlanUsageCards() {
         icon="computer"
         title={t("usageViews.accounts.title")}
         hint={{ name: t("common.about", { label: t("usageViews.accounts.title") }), text: t("usageViews.estimate") }}
-        action={accounts.length > 0 && connect}
+        action={accounts.length > 0 ? connect : undefined}
       />
       {/* What comes first: an invitation to connect a plan would contradict it. */}
       {hold && <PlanHold hold={hold} />}
@@ -171,6 +179,7 @@ export function PlanUsageCards() {
           ))}
         </List>
       )}
+      {grokLogins.length > 1 && <RemoveGrokLogins logins={grokLogins} />}
     </Card>
   );
 }
@@ -201,8 +210,12 @@ function AccountRow({
   const [held, setHeld] = useState(open);
   const body = useId();
   const shares = accountShares(account);
+  const window = shares.window ? text.short(shares.window) : null;
   const list = shares.shown.length > 0 && (
-    <AgentShares shares={shares} window={shares.window ? text.short(shares.window) : null} />
+    <>
+      <AgentShares shares={shares} window={window} />
+      <KindShares account={account} window={window} />
+    </>
   );
   // Whose it is, who uses it and how many logins it stands for: each moves to the next line whole.
   const facts = [accountOwner(t, account), servesText(t, account), loginsText(t, account)].filter((f): f is string =>
@@ -419,6 +432,50 @@ function AgentShares({ shares, window }: { shares: ReturnType<typeof accountShar
   );
 }
 
+const KIND_ICONS = { handoffs: "swap", people: "person", routines: "routines" } as const satisfies Record<
+  PlanUseKind,
+  string
+>;
+
+/**
+ * Under the agents, what the account's use was for ("Handoffs between agents · week 37% · 6.9M tokens"), and when
+ * handoffs led the week, a hint to ask the agent that took most of them directly.
+ */
+function KindShares({ account, window }: { account: PlanAccountUsage; window: string | null }) {
+  const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const kinds = accountKinds(account);
+  const target = account.hint ? dir.agentById.get(account.hint.agentId) : undefined;
+  if (kinds.length === 0) return null;
+  return (
+    <>
+      <p className="plan-kinds__label">{t("usage.kinds.label")}</p>
+      <div className="plan-shares plan-kinds">
+        {kinds.map((k) => (
+          <div key={k.kind} className="plan-shares__row">
+            <span className="plan-kinds__icon">
+              <Icon name={KIND_ICONS[k.kind]} size={16} />
+            </span>
+            <span>
+              <b>{t(`usage.kinds.${k.kind}`)}</b>
+              {kindFacts(t, i18n.language, window, k)}
+            </span>
+          </div>
+        ))}
+      </div>
+      {target && (
+        <Alert tone="neutral" icon="info" className="plan-kinds__hint">
+          {t("usage.hint.handoffs")}{" "}
+          <Link className="ac-link" to="/org/$orgId/dm/agent/$agentId" params={{ orgId: org.id, agentId: target.id }}>
+            {t("usage.hint.message", { name: target.name })}
+          </Link>
+        </Alert>
+      )}
+    </>
+  );
+}
+
 /** "US$ 0,32 de US$ 50,00 (padrão do workspace)": the closing "(…)" wraps as one piece, not split across lines. */
 function noteWhole(text: string) {
   const m = /^(.*\S)\s+(\(.+\))$/.exec(text);
@@ -480,5 +537,61 @@ export function ApiCard() {
         })}
       </div>
     </Card>
+  );
+}
+
+/**
+ * "Remover todos os logins do Grok" (issue #319): connecting one account for every agent used to leave one login per
+ * agent, and nobody removes eighteen of them one by one. One confirmation takes every Grok login the viewer owns, on
+ * every computer; another person's stays (the server refuses those anyway), and so does every other program's.
+ */
+function RemoveGrokLogins({ logins }: { logins: AiAccounts["accounts"] }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const api = useApi();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const computers = joinNames([...new Set(logins.map((l) => l.computer))], t);
+  const remove = async () => {
+    setBusy(true);
+    try {
+      for (const l of logins) await api.machines.removeAccount(org.id, l.machineId, l.id);
+      toast.show(t("aiAccounts.page.removeAllDone", { n: logins.length }));
+      setOpen(false);
+      for (const key of [keys.planUsage(org.id), keys.aiAccounts(org.id), keys.agents(org.id), keys.aiStatus(org.id)])
+        void qc.invalidateQueries({ queryKey: key });
+    } catch (error) {
+      toast.show(errorText(t, error), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <Button size="sm" variant="link" className="ac-link--danger" disabled={busy} onClick={() => setOpen(true)}>
+        {t("aiAccounts.page.removeAllGrok")}
+      </Button>
+      {open && (
+        <Dialog
+          open
+          onOpenChange={(o) => !o && !busy && setOpen(false)}
+          title={t("aiAccounts.page.removeAllTitle", { n: logins.length })}
+          description={t("aiAccounts.page.removeAllText", { computers })}
+          closeLabel={t("common.close")}
+          width={440}
+        >
+          <DialogFooter>
+            <Button disabled={busy} onClick={() => setOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button variant="danger" loading={busy} disabled={busy} onClick={() => void remove()}>
+              {t("aiAccounts.page.removeAllGrok")}
+            </Button>
+          </DialogFooter>
+        </Dialog>
+      )}
+    </>
   );
 }

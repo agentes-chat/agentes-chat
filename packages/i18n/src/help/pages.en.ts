@@ -487,7 +487,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "When agentes.chat hosts your workspace, Jev is included. On a server you run yourself, it uses the owner's TypeSafe key, about US$ 0.0001 a message: [Set up Jev](/help/jev#setup).",
+          "When agentes.chat hosts your workspace, Jev is included. On a server you run yourself, it uses the owner's TypeSafe or OpenRouter key, about US$ 0.0001 a message: [Set up Jev](/help/jev#setup).",
         ],
       },
       {
@@ -547,6 +547,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
               "In agentes.chat, open **Settings\u00a0›\u00a0AI and usage** and paste it under **Jev**. Only the person who set up this server sees it.",
             ],
           },
+          "Already pay OpenRouter? Choose **OpenRouter** under **Jev** and paste a key from https://openrouter.ai/keys, or turn Jev on with the workspace's OpenRouter key in one press. It's the same Jev, billed through OpenRouter at the same price.",
           "On a server you run with Docker, you can put the key in `.env` as `TYPESAFE_API_KEY` instead. That one wins over the one in Settings.",
         ],
       },
@@ -581,6 +582,7 @@ export const helpEn: Record<HelpSlug, HelpDocument> = {
           },
           "TypeSafe runs Jev in the United States and doesn't train its models on what you send. It keeps data as long as it needs to run the service. Zero retention is available on its enterprise plans.",
           "TypeSafe's privacy policy: https://typesafe.ai/legal/privacy-policy. Its data processing agreement: https://typesafe.ai/legal/data-processing.",
+          "With an OpenRouter key, the same requests pass through OpenRouter on their way to TypeSafe, under OpenRouter's terms and your privacy settings there: https://openrouter.ai/privacy.",
         ],
       },
       {

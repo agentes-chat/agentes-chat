@@ -103,8 +103,10 @@ jobs:
             backend:
               - "apps/server/**"
               - "install.sh"
+            # The layout check runs in the web tests' job, so a change to its rules alone must run that job too.
             web:
               - "apps/web/**"
+              - "scripts/geometry/**"
             mobile:
               - "apps/mobile/**"
             desktop:
@@ -405,7 +407,7 @@ jobs:
             install -m 755 /dev/null "src-tauri/binaries/$bin-x86_64-unknown-linux-gnu"
           done
           bun scripts/icons.ts
-          bun run tauri icon app-icon.png
+          bun run tauri icon app-icon-tile.png
       - name: Rust tests
         working-directory: apps/desktop/src-tauri
         run: cargo test

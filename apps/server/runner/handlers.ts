@@ -1438,6 +1438,7 @@ async function doCodexTurn(
           ...(ctx.grants && !chat ? { grants: ctx.grants } : {}),
           ...(ctx.accounts || codex.accounts ? { accounts: ctx.accounts ?? codex.accounts } : {}),
           ...(codex.spawn ? { spawn: codex.spawn } : {}),
+          ...(ctx.grant ? { grant: ctx.grant } : {}),
         },
         req as unknown as GrokBrainTurnRequest,
         { signal: scope.signal, emit },

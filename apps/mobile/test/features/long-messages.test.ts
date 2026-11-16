@@ -15,7 +15,7 @@ describe("long messages on the phone", () => {
     expect(clip).not.toMatch(/setTapped\((false|!)/);
     expect(src("features/chat/sheets.tsx")).toContain('label: t("mobile.chat.copy")');
     // The screen keeps which are open (its list unmounts rows off screen), and opening one stops it following the end.
-    expect(clip).toContain("const open = tapped || Boolean(screen?.has(id));");
+    expect(clip).toContain("const open = fullMessages || tapped || Boolean(screen?.has(id));");
     expect(clip).toContain("screen?.open(id);");
     const screen = src("features/chat/ChatScreen.tsx");
     expect(screen).toContain("<OpenedMessagesContext.Provider value={openedMessages}>");

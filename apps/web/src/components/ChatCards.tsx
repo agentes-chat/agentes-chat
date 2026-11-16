@@ -487,7 +487,7 @@ export function ProposalGroup({ proposalIds }: { proposalIds: string[] }) {
  * in the panel, a consultation, a channel whose composer posts elsewhere), so
  * it never depends on which composer is on screen.
  */
-export function QuestionCard({ question }: { question: AgentQuestion }) {
+export function QuestionCard({ question, asker }: { question: AgentQuestion; asker?: string }) {
   const { t, i18n } = useTranslation();
   const { org, me } = useOrg();
   const api = useApi();
@@ -606,6 +606,7 @@ export function QuestionCard({ question }: { question: AgentQuestion }) {
       id={question.id}
       kind="question"
       agent={agent}
+      asker={asker}
       runId={question.runId ?? null}
       label={t("question.group", { agent: name })}
       mine={mine}

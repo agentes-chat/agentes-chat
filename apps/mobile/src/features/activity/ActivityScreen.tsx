@@ -47,6 +47,7 @@ import {
 import { router } from "@/ui/navigation";
 import { approvalAction } from "../approvals/logic";
 import { ApprovalMark, ApprovalWhy, useApprovalSource, useApproveNow } from "../approvals/parts";
+import { WhenAsksLink } from "../approvals/when-asks";
 import type { AskKind } from "../chat/ask-store";
 import { ASK_ICON, AskButtons } from "../chat/asks";
 import { dashboardWaitingCard } from "../dashboards/logic";
@@ -324,31 +325,34 @@ function ApproveHere({ approval: a, primary }: { approval: Approval; primary: bo
   const { t } = useTranslation();
   const { approve, pending, high } = useApproveNow(a);
   return (
-    <AskButtons
-      primary={
-        high ? (
-          <HoldButton size="card" label={t("mobile.approval.hold")} onConfirm={() => approve()} />
-        ) : (
+    <View style={styles.decision}>
+      <AskButtons
+        primary={
+          high ? (
+            <HoldButton size="card" label={t("mobile.approval.hold")} onConfirm={() => approve()} />
+          ) : (
+            <Button
+              variant={primary ? "primary" : "secondary"}
+              size="card"
+              wide
+              label={approvalAction(a) === "draft" ? t("approval.approve.draft") : t("mobile.approval.approve")}
+              disabled={pending}
+              onPress={() => approve()}
+            />
+          )
+        }
+        secondary={
           <Button
-            variant={primary ? "primary" : "secondary"}
+            variant="secondary"
             size="card"
             wide
-            label={approvalAction(a) === "draft" ? t("approval.approve.draft") : t("mobile.approval.approve")}
-            disabled={pending}
-            onPress={() => approve()}
+            label={t("mobile.approval.refuse")}
+            onPress={() => router.push(`/approval/${a.id}?mode=refuse`)}
           />
-        )
-      }
-      secondary={
-        <Button
-          variant="secondary"
-          size="card"
-          wide
-          label={t("mobile.approval.refuse")}
-          onPress={() => router.push(`/approval/${a.id}?mode=refuse`)}
-        />
-      }
-    />
+        }
+      />
+      <WhenAsksLink approval={a} />
+    </View>
   );
 }
 
@@ -649,6 +653,8 @@ const faceOf = (a: AppNotification["actors"][number] | undefined) =>
   a ? { type: a.type === "agent" ? "agent" : "person", id: a.id } : null;
 
 const styles = StyleSheet.create({
+  // The decision, then "Mudar quando perguntar" on its own line at the card's words' edge.
+  decision: { gap: 4 },
   // Cards 12 apart, at the screen's margin.
   cards: { gap: 12, paddingHorizontal: 16 },
   change: { paddingHorizontal: 16, paddingBottom: 12 },

@@ -173,7 +173,15 @@ export function createAuth(deps: {
     // Derived from AGENTES_SECRET so self-hosters manage a single secret.
     secret: deriveSecret(config.AGENTES_SECRET, "sessions"),
     // Apple posts the sign-in result back from its own origin (`response_mode=form_post`).
-    trustedOrigins: [config.PUBLIC_URL, ...devOrigins, ...appOrigins, ...(apple ? [APPLE_ORIGIN] : [])],
+    // `EXTRA_TRUSTED_ORIGINS` is for an instance opened at more than one address (a LAN IP, a tunnel hostname) besides
+    // `PUBLIC_URL`; each is already an origin, as Better Auth compares them.
+    trustedOrigins: [
+      config.PUBLIC_URL,
+      ...(config.EXTRA_TRUSTED_ORIGINS ?? []),
+      ...devOrigins,
+      ...appOrigins,
+      ...(apple ? [APPLE_ORIGIN] : []),
+    ],
     plugins: [
       expo(),
       // Several accounts signed in on one browser (ADR 0183): every sign-in also leaves a cookie of its own, so the

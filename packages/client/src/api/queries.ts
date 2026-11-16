@@ -16,6 +16,7 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { moveInGroups } from "../lib/agent-groups";
+import { type LevelsBefore, levelsBefore } from "../lib/approvals-level";
 import { artifactRefs } from "../lib/artifacts";
 import { newerBlockState, stateChanges, stateForPage } from "../lib/blocks";
 import type { ChatPrefs } from "../lib/chat-look";
@@ -65,7 +66,7 @@ import { playSound } from "../lib/sounds";
 import type { TeamWeekAct } from "../lib/team-week";
 import { threadStartOf } from "../lib/threads";
 import { upsertMessage, withLocalCopies } from "../lib/timeline";
-import { voiceOf } from "../lib/voice";
+import { listedText } from "../lib/voice";
 import type { AudienceChoice } from "../lib/who-sees";
 import type { WikiAccess } from "../lib/wiki";
 import type { RealtimeConnection } from "../realtime/connection";
@@ -76,6 +77,7 @@ import { ApiError, type UploadOptions } from "./http";
 import { keys, ME_HASH } from "./keys";
 import { keepSending, outbox } from "./outbox";
 import type {
+  Actor,
   AdminAsk,
   Agent,
   AgentAction,
@@ -98,6 +100,7 @@ import type {
   AppNotification,
   Approval,
   ApprovalCoverInput,
+  ApprovalsLevel,
   ArtifactContent,
   ArtifactDetail,
   ArtifactFilters,
@@ -138,6 +141,7 @@ import type {
   IssueStatus,
   IssuesView,
   JevKey,
+  JevKeyInput,
   Machine,
   MachineAccessReduce,
   MachineTool,
@@ -152,6 +156,7 @@ import type {
   NotificationEvent,
   NotificationFilter,
   OrgRoles,
+  OrgSettings,
   PendingReturn,
   Person,
   PersonalTokenInput,
@@ -159,6 +164,7 @@ import type {
   Proposal,
   ReactionCount,
   ReminderInput,
+  RequestHeader,
   RightHandApprovals,
   RightHandApprovalsInput,
   Role,
@@ -355,7 +361,7 @@ function useJevChange<T>(change: (api: ApiClient, input: T) => Promise<JevKey>, 
     ...(silent ? { meta: { silent: true } } : {}),
   });
 }
-export const useSaveJevKey = () => useJevChange((api, apiKey: string) => api.system.saveJev(apiKey), true);
+export const useSaveJevKey = () => useJevChange((api, input: JevKeyInput) => api.system.saveJev(input), true);
 export const useCheckJevKey = () => useJevChange<void>((api) => api.system.checkJev());
 export const useRemoveJevKey = () => useJevChange<void>((api) => api.system.removeJev());
 
@@ -1519,7 +1525,10 @@ export function useAddChannelMember(orgId: string) {
  * `clientId`), which always waits in the channel list (a thread may not be loaded yet): a reply's copy is removed
  * from there too, or it would stay "sending…" next to the real one.
  */
-export function cacheMessage(qc: ReturnType<typeof useQueryClient>, orgId: string, message: Message) {
+export function cacheMessage(qc: ReturnType<typeof useQueryClient>, orgId: string, landed: Message) {
+  // A run that handed work over before this message of it came: its lines go under it.
+  const handed = landed.agentRunId ? handedByRun.get(`${orgId}:${landed.agentRunId}`) : undefined;
+  const message = handed && !landed.handedWorks ? { ...landed, handedWorks: handed } : landed;
   const channelKey = keys.messages(orgId, message.channelId);
   const key = message.threadId ? keys.thread(orgId, message.channelId, message.threadId) : channelKey;
   const withoutLocal = (list: Message[] | undefined) =>
@@ -1535,7 +1544,17 @@ export function cacheMessage(qc: ReturnType<typeof useQueryClient>, orgId: strin
   }
   // While that read is on its way, the root stands in as `useThreadMessages` shows it.
   const root = message.threadId ? cachedTopLevel(qc, orgId, message.threadId, message.channelId) : undefined;
-  qc.setQueryData<Message[]>(key, (list) => upsertMessage(withoutLocal(list) ?? (root && [root]), message));
+  qc.setQueryData<Message[]>(key, (list) => {
+    const next = upsertMessage(withoutLocal(list) ?? (root && [root]), message);
+    // The lines move under the run's newest message: one place each.
+    return handed && next
+      ? next.map((m) =>
+          m.id !== message.id && m.agentRunId === message.agentRunId && m.handedWorks
+            ? { ...m, handedWorks: undefined }
+            : m,
+        )
+      : next;
+  });
 }
 
 /**
@@ -1723,11 +1742,19 @@ export function cacheAgentProposal(
   void qc.invalidateQueries({ queryKey: keys.agentProposal(orgId, where.messageId) });
 }
 
-/** A new message's `clientId`: sent again with the same one (its answer was lost), it's written only once. */
-export const newClientId = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+/**
+ * A new message's `clientId`: sent again with the same one (its answer was lost), it's written only once. A v4 UUID
+ * also on a plain-http page, where `crypto.randomUUID` is missing but `getRandomValues` isn't, since some routes take
+ * only a UUID.
+ */
+export const newClientId = (): string => {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = ((b[6] ?? 0) & 0x0f) | 0x40;
+  b[8] = ((b[8] ?? 0) & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+};
 
 /**
  * What `chat.post` gets for a message of mine: the quoted message, the files by id and a GIF or a sticker by what
@@ -1891,6 +1918,8 @@ export function dropLocalVoice(qc: QueryClient, orgId: string, channelId: string
  * Sends a recording (ADR 0100): its bubble appears at once and stays until the server's message replaces it (same
  * `clientId`). Without a connection the recording waits in memory and goes when it comes back, with the same
  * `clientId`, so a send whose answer was lost is stored once. `onRefused`: the server said no, and the bubble went.
+ * `text` and the files in `meta.artifacts` (as `localMeta` writes them) go in the same message. Resolves false when
+ * the server refused it, so the caller can give the text and the files back.
  */
 export function useSendVoice(
   orgId: string,
@@ -1911,8 +1940,11 @@ export function useSendVoice(
       replyTo: string | null;
       language: string | null;
       meta?: Record<string, unknown>;
-    }) => {
+      text?: string;
+    }): Promise<boolean> => {
       const { blob, durationMs, peaks, threadId, replyTo, language, meta } = input;
+      const text = input.text?.trim() ?? "";
+      const attachments = artifactRefs(meta).map((r) => r.id);
       const clientId = newClientId();
       voiceLocal.set(clientId, URL.createObjectURL(blob));
       const local: Message = {
@@ -1920,10 +1952,10 @@ export function useSendVoice(
         channelId,
         threadId,
         author: { type: "person", id: latest.current.me.id },
-        body: "",
+        body: text,
         mentionedAgentIds: [],
         agentRunId: null,
-        meta: { ...meta, voice: { clipId: "", durationMs, peaks } },
+        meta: { ...meta, voice: { clipId: "", durationMs, peaks, ...(text ? { text } : {}) } },
         clientId,
         local: "pending",
         createdAt: new Date().toISOString(),
@@ -1938,14 +1970,24 @@ export function useSendVoice(
         );
       for (let attempt = 0; ; attempt++) {
         try {
-          await api.voice.send(orgId, channelId, { blob, durationMs, peaks, clientId, threadId, replyTo, language });
+          await api.voice.send(orgId, channelId, {
+            blob,
+            durationMs,
+            peaks,
+            clientId,
+            threadId,
+            replyTo,
+            language,
+            ...(text ? { text } : {}),
+            ...(attachments.length > 0 ? { attachments } : {}),
+          });
           waiting(false);
-          return;
+          return true;
         } catch (error) {
           if (!sendWaits(error)) {
             dropLocalVoice(qc, orgId, channelId, clientId);
             latest.current.onRefused?.(error);
-            return;
+            return false;
           }
           waiting(true);
           await voiceRetryWait(attempt);
@@ -2692,6 +2734,73 @@ export function useUpdateSettings(orgId: string) {
         predicate: (q) => q.queryKey[0] === "org" && q.queryKey[1] === orgId && q.queryKey[4] === "detail",
       });
     },
+  });
+}
+
+/** Sets the workspace's approvals level: the settings and every agent's level show it at once. */
+export function useSetWorkspaceApprovalsLevel(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { level: ApprovalsLevel; everyAgent?: boolean }) => api.orgs.setApprovalsLevel(orgId, input),
+    onSuccess: ({ level }) => {
+      qc.setQueryData<OrgSettings>(keys.settings(orgId), (s) => (s ? { ...s, approvalsLevel: level } : s));
+      levelsChanged(qc, orgId);
+    },
+  });
+}
+
+/**
+ * "Mudar quando perguntar": one agent's own level, or with `everyAgent` the workspace's for every agent (their own
+ * choices cleared). Resolves to the levels before, for "Desfazer" (`useUndoWhenAsks`).
+ */
+export function useChangeWhenAsks(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      agentId,
+      level,
+      everyAgent,
+    }: {
+      agentId: string;
+      level: ApprovalsLevel;
+      everyAgent?: boolean;
+    }) => {
+      const [agents, settings] = await Promise.all([
+        qc.ensureQueryData({ queryKey: keys.agents(orgId), queryFn: () => api.agents.list(orgId) }),
+        everyAgent
+          ? qc.ensureQueryData({ queryKey: keys.settings(orgId), queryFn: () => api.orgs.settings(orgId) })
+          : null,
+      ]);
+      const before = levelsBefore(settings?.approvalsLevel ?? "risky", agents, everyAgent ? undefined : agentId);
+      if (everyAgent) await api.orgs.setApprovalsLevel(orgId, { level, everyAgent: true });
+      else await api.agents.update(orgId, agentId, { approvalsLevel: level });
+      return before;
+    },
+    onSuccess: () => levelsChanged(qc, orgId),
+  });
+}
+
+/** "Desfazer" after `useChangeWhenAsks`: the workspace's level (for every agent) and each agent's choice come back. */
+export function useUndoWhenAsks(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ before, everyAgent }: { before: LevelsBefore; everyAgent?: boolean }) => {
+      if (everyAgent) await api.orgs.setApprovalsLevel(orgId, { level: before.workspace });
+      // ponytail: one request per agent that had its own choice, a batch call if workspaces with many appear.
+      for (const a of before.agents) await api.agents.update(orgId, a.id, { approvalsLevel: a.level });
+    },
+    onSuccess: () => levelsChanged(qc, orgId),
+  });
+}
+
+function levelsChanged(qc: QueryClient, orgId: string) {
+  void qc.invalidateQueries({ queryKey: keys.settings(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+  void qc.invalidateQueries({
+    predicate: (q) => q.queryKey[0] === "org" && q.queryKey[1] === orgId && q.queryKey[4] === "detail",
   });
 }
 
@@ -3678,6 +3787,24 @@ export function cacheMessageActions(
   });
 }
 
+/** Handed works by the run that handed them (`orgId:runId`), for that run's messages still to come (`cacheMessage`). */
+const handedByRun = new Map<string, WorkView[]>();
+
+/**
+ * A handed work in a cached list: where it already is, else under the last message here of the run that handed it.
+ * Unchanged when that run has no message here yet.
+ */
+export function withHandedWork(list: Message[], work: WorkView): Message[] {
+  const at = list.findIndex((m) => m?.handedWorks?.some((w) => w.id === work.id));
+  if (at >= 0)
+    return list.map((m, i) =>
+      i === at ? { ...m, handedWorks: m.handedWorks?.map((w) => (w.id === work.id ? work : w)) } : m,
+    );
+  const last = list.findLastIndex((m) => m && m.agentRunId === work.askerRunId);
+  if (last < 0) return list;
+  return list.map((m, i) => (i === last ? { ...m, handedWorks: [...(m.handedWorks ?? []), work] } : m));
+}
+
 /** A long work changed (`agent.work`, ADR 0121): its anchor's cached message carries the new view. */
 export function cacheMessageWork(
   qc: ReturnType<typeof useQueryClient>,
@@ -3685,9 +3812,14 @@ export function cacheMessageWork(
   channelId: string,
   work: WorkView,
 ) {
+  if (work.askerRunId) {
+    const key = `${orgId}:${work.askerRunId}`;
+    handedByRun.set(key, [...(handedByRun.get(key) ?? []).filter((w) => w.id !== work.id), work]);
+  }
   qc.setQueriesData({ queryKey: ["org", orgId, "channel", channelId] }, (data: unknown) => {
     if (!Array.isArray(data)) return data;
     const list = data as Message[];
+    if (work.askerRunId) return withHandedWork(list, work);
     if (!list.some((m) => m && m.id === work.anchorMessageId)) return data;
     return list.map((m) => (m.id === work.anchorMessageId ? { ...m, longWork: work } : m));
   });
@@ -3762,9 +3894,12 @@ export function useCustomServerAction(orgId: string) {
         label?: string;
         returnTo: string;
         connectionId?: string;
+        headers?: RequestHeader[];
       }) => api.customConnectors.connect(orgId, input),
       // A new server is every agent's: their access trees change too.
       onSuccess: () => Promise.all([done(), qc.invalidateQueries({ queryKey: keys.access(orgId) })]),
+      // The form says its own failures: a refused header shows on its row.
+      meta: { silent: true },
     }),
     refresh: useMutation({ mutationFn: (id: string) => api.customConnectors.refresh(orgId, id), onSuccess: done }),
     save: useMutation({
@@ -4429,19 +4564,30 @@ export function useIssueAction(orgId: string) {
 
 /**
  * An agent picked for a task starts on it ("Pedir"). When it can't, the agent stays the task's, as the person picked
- * it, and the call rejects with why: the caller says it with the task's own words and offers to ask again, so it's
- * silent here (no second toast).
+ * it (first among `assignees`, the ones the task has), and the call rejects with why: the caller says it with the
+ * task's own words and offers to ask again, so it's silent here (no second toast).
  */
 export function useStartAgentOnTask(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
     meta: { silent: true },
-    mutationFn: async ({ issueId, agentId }: { issueId: string; agentId: string }) => {
+    mutationFn: async ({
+      issueId,
+      agentId,
+      assignees = [],
+    }: {
+      issueId: string;
+      agentId: string;
+      assignees?: Actor[];
+    }) => {
       try {
         return await api.issues.askAgent(orgId, issueId, agentId);
       } catch (error) {
-        await api.issues.update(orgId, issueId, { assignee: { type: "agent", id: agentId } }).catch(() => {});
+        const others = assignees.filter((a) => !(a.type === "agent" && a.id === agentId));
+        await api.issues
+          .update(orgId, issueId, { assignees: [{ type: "agent", id: agentId }, ...others] })
+          .catch(() => {});
         throw error;
       }
     },
@@ -5613,7 +5759,7 @@ export function cachedThreadInfo(qc: QueryClient, orgId: string, threadId: strin
     channelName: channel?.name ?? "",
     channelKind: channel ? "channel" : "dm",
     title: null,
-    rootText: voiceOf(root.meta) ? "" : root.body.replace(/\s+/g, " ").trim(),
+    rootText: listedText(root.body, root.meta).replace(/\s+/g, " ").trim(),
     rootAuthor: author,
     state: "open",
     createdBy: null,
@@ -5993,7 +6139,8 @@ export const useIssuesView = (orgId: string) => {
   const api = useApi();
   return useQuery({
     queryKey: keys.issuesView(orgId),
-    queryFn: () => api.orgs.issuesView(orgId),
+    // Whole even from a server of before a part of it.
+    queryFn: async () => withIssuesView(await api.orgs.issuesView(orgId), {}),
     staleTime: 60_000,
   });
 };
@@ -6317,12 +6464,48 @@ function part<
   return value as NonNullable<ApiClient[K]>;
 }
 
+/**
+ * A read that didn't reach the server (the network dropped, the server restarting) goes again: nothing else would
+ * send it until the conversation's next message, and its mark would stay meanwhile. A refusal is final.
+ */
+const retryRead = (count: number, error: unknown) => !(error instanceof ApiError && error.status < 500) && count < 3;
+
+/** Replies heard in each conversation's threads since this app started, per query client (`useThreadActivity`). */
+const threadActivity = new WeakMap<QueryClient, { counts: Map<string, number>; heard: Set<() => void> }>();
+
+function threadActivityOf(qc: QueryClient) {
+  const found = threadActivity.get(qc);
+  if (found) return found;
+  const made = { counts: new Map<string, number>(), heard: new Set<() => void>() };
+  threadActivity.set(qc, made);
+  return made;
+}
+
+/**
+ * Changes each time a thread of this conversation gets a reply that counts as unread for me (the server tells only
+ * a thread's followers and the people it mentions). Such a reply counts in the conversation's own mark too, and is
+ * no new message of its timeline: the screen showing the conversation reads it again on this.
+ */
+export function useThreadActivity(orgId: string, channelId: string): number {
+  const store = threadActivityOf(useQueryClient());
+  const subscribe = useCallback(
+    (heard: () => void) => {
+      store.heard.add(heard);
+      return () => void store.heard.delete(heard);
+    },
+    [store],
+  );
+  const read = () => store.counts.get(`${orgId}:${channelId}`) ?? 0;
+  return useSyncExternalStore(subscribe, read, read);
+}
+
 /** Marks a channel or DM read now; the channel and DM lists show it with no unread at once. */
 export function useMarkChannelRead(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
     meta: { silent: true },
+    retry: retryRead,
     mutationFn: (channelId: string) => api.dms.markRead(orgId, channelId),
     onMutate: (channelId) => clearUnread(qc, orgId, channelId),
     onSettled: () => {
@@ -6402,6 +6585,7 @@ export function useMarkThreadRead(orgId: string) {
   const qc = useQueryClient();
   return useMutation({
     meta: { silent: true },
+    retry: retryRead,
     // A client without reads (a test's fake) has nothing to mark.
     mutationFn: async (threadId: string) => api.reads?.markThreadRead(orgId, threadId),
     onMutate: (threadId) => clearThreadUnread(qc, orgId, threadId),
@@ -6413,10 +6597,14 @@ function clearThreadUnread(qc: QueryClient, orgId: string, threadId: string) {
   qc.setQueryData<ThreadInfo>(keys.threadInfo(orgId, threadId), (t) => (t ? { ...t, unread: 0 } : t));
 }
 
-/** The thread lists, the Threads mark, the channels (a thread's replies count there too) and the tasks read again. */
+/**
+ * The thread lists, the Threads mark, the channels and DMs (a thread's replies count there too) and the tasks read
+ * again.
+ */
 function refreshThreadUnread(qc: QueryClient, orgId: string) {
   void qc.invalidateQueries({ queryKey: keys.threads(orgId), predicate: (q) => q.queryKey[3] !== "one" });
   void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
   void qc.invalidateQueries({ queryKey: keys.unreadTasks(orgId) });
 }
 
@@ -6513,11 +6701,16 @@ export function applyUnreadEvent(qc: QueryClient, orgId: string, event: { type: 
       void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", e.channelId], refetchType: "none" });
     if (e.dm) readOncePerBurst(`${orgId}:dms`, () => void qc.invalidateQueries({ queryKey: keys.dms(orgId) }));
     else readOncePerBurst(`${orgId}:channels`, () => void qc.invalidateQueries({ queryKey: keys.channels(orgId) }));
-    if (e.threadId)
+    if (e.threadId) {
+      const store = threadActivityOf(qc);
+      const key = `${orgId}:${e.channelId}`;
+      store.counts.set(key, (store.counts.get(key) ?? 0) + 1);
+      for (const heard of store.heard) heard();
       readOncePerBurst(
         `${orgId}:threads`,
         () => void qc.invalidateQueries({ queryKey: keys.threads(orgId), predicate: (q) => q.queryKey[3] !== "one" }),
       );
+    }
   } else if (e.type === "channel.read") {
     clearUnread(qc, orgId, e.channelId);
     void qc.invalidateQueries({ queryKey: keys.channels(orgId) });

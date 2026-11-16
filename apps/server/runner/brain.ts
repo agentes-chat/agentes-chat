@@ -704,6 +704,13 @@ export const tokenShapeTail = (text: string) => /s(?:k(?:-[A-Za-z0-9_-]*)?)?$/.e
 export const SHELLS_KEPT = 4096;
 
 const REFUSED_CONTROL = "Not allowed with this sign-in.";
+/**
+ * An elicitation is the one control request where a person's answer is the whole point (an MCP write tool asking for
+ * a form or a confirmation). Nobody is shown it, and the CLI reports the refusal as "user rejected MCP tool call" —
+ * the person rejected nothing, they were never asked. The model is told so it can ask in the thread itself.
+ */
+const REFUSED_ELICITATION =
+  "Not allowed with this sign-in, and nobody was shown the form it wanted: ask the person for it in the thread yourself.";
 export const PERSONAL_MCP_REFUSED =
   "Your own MCP servers don't work with this Claude sign-in. Turn them off for this agent or use another sign-in.";
 
@@ -1130,10 +1137,21 @@ export class ClaudeProcess {
       const ev = JSON.parse(line) as Record<string, unknown>;
       if (ev.type !== "control_request") return false;
       const request_id = str(ev.request_id);
+      const subtype = isObj(ev.request) ? str(ev.request.subtype) : "";
+      const elicited = subtype === "elicitation";
       this.write(
-        `${JSON.stringify({ type: "control_response", response: { subtype: "error", request_id, error: REFUSED_CONTROL } })}\n`,
+        `${JSON.stringify({
+          type: "control_response",
+          response: { subtype: "error", request_id, error: elicited ? REFUSED_ELICITATION : REFUSED_CONTROL },
+        })}\n`,
       );
-      this.onControl?.(isObj(ev.request) ? str(ev.request.subtype) : "");
+      this.onControl?.(subtype);
+      // After the answer, so the turn reads it as the reason its tool failed and the reply says so instead of
+      // "user rejected": a written message goes in as a later turn input, before a model's next move.
+      if (elicited) {
+        this.write(userMessageLine(REFUSED_ELICITATION, { uuid: crypto.randomUUID(), priority: "next" }));
+        if (!this.turn) this.ownTurnDue = true;
+      }
       return true;
     } catch {
       return false;
@@ -1988,6 +2006,8 @@ export class BrainManager {
     // A route on this sign-in stops first: two processes on one sign-in race on its refresh token. Kept right
     // before the process starts, since a route may begin during any await before it.
     await yieldRoute("claude_code", ctx.accountHome);
+    // The runner began to stop during the awaits since the turn came in: `close` wouldn't reach a process started now.
+    if (this.closed) return errorEvent("runner_stopping", "The runner is stopping.", true);
     const sig = this.signature(cwd, req, ctx);
     let live = this.live.get(key);
     // A turn Claude Code runs by itself there (or one due): its output would read as this turn's. Wait for

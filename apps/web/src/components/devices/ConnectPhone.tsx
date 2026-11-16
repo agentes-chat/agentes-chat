@@ -1106,11 +1106,13 @@ export function IphoneFlow({
     uiAutomation:
       reason === "ui_not_authorized" ? t("devices.iphone.uiRefusedText") : t("devices.iphone.uiAutomationText"),
     helper:
-      reason === "helper_untrusted"
-        ? t("devices.iphone.helperUntrustedText")
-        : reason === "team_limit"
-          ? t("devices.iphone.teamLimitText")
-          : t("devices.iphone.helperText"),
+      reason === "ios_behind_xcode" && phone?.osVersion && sdk
+        ? t("devices.iphone.iosBehind", { ios: phone.osVersion, sdk })
+        : reason === "helper_untrusted"
+          ? t("devices.iphone.helperUntrustedText")
+          : reason === "team_limit"
+            ? t("devices.iphone.teamLimitText")
+            : t("devices.iphone.helperText"),
   };
   const more: Partial<Record<IphoneStep, ReactNode>> = {
     xcode:

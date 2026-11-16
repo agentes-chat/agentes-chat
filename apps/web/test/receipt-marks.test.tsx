@@ -73,10 +73,10 @@ describe("a receipt never changes a message's height", () => {
       steerStore.apply({ type: "agent.run.read", channelId: ENG_ID, runId: "r1", agentId: ADA_ID, messageIds: ["s2"] });
     });
     await settle(4);
-    // My own rows: the mark ends the time's line. Waiting for the next pause: the spinner.
-    const waiting = row("s1").querySelector(".ac-msg__own-foot .ac-receipt__check");
-    expect(waiting?.getAttribute("data-steer")).toBe("waiting");
-    expect(waiting?.querySelector("canvas.ac-pixspin")).not.toBeNull();
+    // My own rows: the mark ends the time's line. Waiting for the next pause: no mark (it was sent; a spinner or a
+    // clock there reads as a message that never arrived).
+    expect(row("s1").querySelector(".ac-msg__own-foot .ac-receipt__check")).toBeNull();
+    expect(row("s1").querySelector("canvas.ac-pixspin")).toBeNull();
     // Read: the double check every read message has, in the same place and size, and no face in the bubble. Who
     // read it is in the mark's words.
     const read = row("s2").querySelector(".ac-msg__own-foot .ac-receipt__check");
@@ -246,20 +246,23 @@ describe("its words stay reachable", () => {
       steerStore.apply({ type: "agent.run.steered", channelId: ENG_ID, runId: "r2", agentId: ADA_ID, messageId: "s2" });
     });
     await settle(4);
+    // Waiting for the next pause: no mark on either (they were sent; a mark there reads as one that never arrived).
+    expect(row("s1").querySelector(".ac-receipt__check")).toBeNull();
+    expect(row("s2").querySelector(".ac-receipt__check")).toBeNull();
+    await act(async () => {
+      steerStore.apply({ type: "agent.run.read", channelId: ENG_ID, runId: "r1", agentId: ADA_ID, messageIds: ["s1"] });
+      steerStore.apply({ type: "agent.run.read", channelId: ENG_ID, runId: "r2", agentId: ADA_ID, messageIds: ["s2"] });
+    });
+    await settle(2);
     const check = row("s1").querySelector(".ac-receipt__check") as HTMLElement;
     const live = row("s1").querySelector(".ac-msg__aside .ac-visually-hidden[aria-live='polite']") as HTMLElement;
-    expect(live.textContent).toBe("Ada lê na próxima pausa");
+    expect(live.textContent).toBe("Ada leu");
     // The agents' words name the mark; what became of it in the task describes it.
     expect(check.getAttribute("aria-label")).toBe("Vista por Ada. Ada está respondendo");
     expect(check.getAttribute("aria-describedby")).toBe(live.id);
-    await act(async () => {
-      steerStore.apply({ type: "agent.run.read", channelId: ENG_ID, runId: "r1", agentId: ADA_ID, messageIds: ["s1"] });
-    });
-    await settle(2);
-    expect(live.textContent).toBe("Ada leu");
     // A message no agent was asked about: the words name the mark itself.
     const alone = row("s2").querySelector(".ac-receipt__check") as HTMLElement;
-    expect(alone.getAttribute("aria-label")).toBe("Ada lê na próxima pausa");
+    expect(alone.getAttribute("aria-label")).toBe("Ada leu");
     expect(alone.hasAttribute("aria-describedby")).toBe(false);
     // From the keyboard too: a button that opens the agents and, under them, what became of it.
     expect(check.tagName).toBe("BUTTON");

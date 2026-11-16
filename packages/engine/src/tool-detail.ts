@@ -181,6 +181,13 @@ const SECRET = new RegExp(`${KEY_SHAPES.source}|${SIGNED_SHAPES.source}`, "g");
 
 export const maskSecrets = (text: string) => text.replace(SECRET, "••••");
 
+/** `text` with each of `values` masked wherever it appears, the longest first: secrets known by value, of any shape. */
+export const maskValues = (text: string, values: readonly string[]) =>
+  values
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)
+    .reduce((masked, value) => masked.replaceAll(value, "••••"), text);
+
 /**
  * Whether a value carries a credential by its format (an API key, a token, a private key): what a run
  * nobody is behind never sends anywhere (ADR 0053 §3).

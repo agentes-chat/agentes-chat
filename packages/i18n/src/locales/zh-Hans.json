@@ -2545,6 +2545,13 @@
   "rightHand": {
     "label": "你的得力助手",
     "labelCapitalized": "你的得力助手",
+    "unusable": {
+      "title": "现在无法替{{name}}思考",
+      "computerOnly": "仅在{{computer}}上登录。{{name}}使用以账号登录的套餐思考。",
+      "away": "{{owner}}的，在{{computer}}上，当前离开。",
+      "awayYours": "你的，在{{computer}}上，当前离开。",
+      "connect": "连接一台电脑"
+    },
     "newDot": "新",
     "actsAsYou": "以你的权限行事",
     "composerHint": "没有你，什么都不会变",
@@ -2650,6 +2657,7 @@
     "sharedName": "{{name}}(共享)",
     "sharedPlace": "用于频道和自动运行的工作。整个工作区共用这个空间。请不要在这里存放任何私密内容。",
     "computerNoHome": "还没有电脑。等这个工作区有了自己的电脑后，它就会有一台。",
+    "computerNoHomeServer": "还没有浏览器。将<guide>此服务器设为智能体的电脑</guide>即可获得一个。",
     "addComputer": "添加电脑",
     "computerOneUser": "这里没有电脑。工作区的电脑让所有智能体以同一个用户运行，无法把每个人的空间分开。用安装程序的 --system 选项安装的 Linux 服务器可以做到。",
     "powers": {
@@ -2696,6 +2704,7 @@
         "ai_account": "只有账户所有者能分配它",
         "name": "只有管理员能重命名智能体",
         "look": "只有管理员和负责人能更改它的外观",
+        "group": "只有管理员能更改智能体所在的部门",
         "reports_to": "只有管理员能更改智能体的汇报对象",
         "many": "只有管理员能做这些更改"
       }
@@ -2710,6 +2719,7 @@
       "channel": "频道",
       "name": "名称",
       "look": "外观",
+      "group": "部门",
       "reports_to": "汇报对象",
       "skill": "技能 {{name}}"
     },
@@ -2805,6 +2815,16 @@
       "invite_roles_other": "角色为 {{roles}}。",
       "invite_people_sent_other": "已向 <b>{{emails}}</b> 发送邀请。",
       "remove_ai_key": "删除 API 密钥“{{name}}”。"
+    },
+    "brain": {
+      "unusable": {
+        "title": "需要一台电脑",
+        "computerOnly": "属于 {{owner}}，仅在 {{computer}} 上登录。Lodi 使用以账号登录的方案思考。",
+        "noComputer": "属于 {{owner}}。需要一台电脑，而工作区还没有连接任何电脑。",
+        "away": "属于 {{owner}}，在 {{computer}} 上，该电脑当前离线。",
+        "connect": "连接电脑",
+        "plans": "查看方案"
+      }
     }
   },
   "teamWeek": {
@@ -3136,7 +3156,7 @@
       "gemini": {
         "title": "你的 Gemini 套餐",
         "tiers": "Google AI Pro、Google AI Ultra 或 Gemini Enterprise",
-        "warning": "Google 表示，在其他应用中使用个人 Gemini 套餐可能导致账号被停用。"
+        "warning": "Google 表示，在其他应用中使用个人 Gemini 套餐可能导致账号被停用。为避免这一风险，请使用 Gemini API 密钥或 Gemini Enterprise。"
       },
       "zen": {
         "title": "OpenCode",
@@ -3288,7 +3308,17 @@
     "never": {
       "title": "从不询问",
       "text": "从不询问，包括合并、部署、付款和例程。"
-    }
+    },
+    "change": "更改何时询问",
+    "now": "{{name}} 现在：{{level}}。",
+    "nowEveryAgent": "所有智能体现在：{{level}}。",
+    "undo": "撤销",
+    "everyAgent": "应用到工作区的所有智能体",
+    "follows": "跟随工作区",
+    "edit": "更改",
+    "workspaceLead": "智能体在行动前何时询问人。",
+    "workspaceHelp": "每个智能体都跟随此选择，直到有人在智能体页面上更改它自己的设置。",
+    "ownAgents_other": "{{count}} 个智能体有自己的选择，不会改变。"
   },
   "brakes": {
     "title": "没人要求的工作",
@@ -4054,6 +4084,7 @@
     "seeNewer": "查看更新的请求",
     "computerAway": "{{agent}} 的电脑目前没有响应。此请求在 {{time}} 前保持开放。请稍后重试。",
     "computerPaused": "{{agent}} 的电脑已被所有者暂停。此请求在 {{time}} 前保持开放。",
+    "insecureContext": "此页面不是通过 https 打开的,因此浏览器无法锁定密钥。请通过 https://(或 localhost)打开。",
     "failed": "无法送达。智能体的电脑开着吗？",
     "changed": "你回复时此请求已更改。未发送任何内容。请重新发送。",
     "empty": "请输入值。",
@@ -7456,6 +7487,18 @@
     },
     "assigneeFilter": "负责人",
     "priorityFilter": "优先级",
+    "labelFilter": "标签",
+    "table": {
+      "task": "任务",
+      "github": "GitHub",
+      "sortBy": "按{{column}}排序",
+      "resize": "调整“{{column}}”列的宽度"
+    },
+    "fold": {
+      "open": "打开{{name}}",
+      "close": "折叠{{name}}",
+      "column": "折叠列"
+    },
     "title": "任务",
     "summary": "{{open}} 个未完成 · {{agents}} 个由智能体负责",
     "search": "搜索任务",
@@ -7497,8 +7540,16 @@
       "order": {
         "manual": "手动",
         "priority": "优先级",
-        "due": "截止日期"
+        "due": "截止日期",
+        "updated": "最近"
       },
+      "done": "已完成",
+      "doneIs": {
+        "all": "全部",
+        "recent": "最近 {{days}} 天",
+        "hidden": "无"
+      },
+      "hideEmpty": "隐藏空分组",
       "field": {
         "project": "项目",
         "assignee": "负责人",
@@ -7524,6 +7575,7 @@
       "canceled": "#{{number}} 回到了原位。",
       "assigned": "#{{number}} 现在由{{name}}负责。",
       "unassigned": "#{{number}} 现在没有负责人。",
+      "removed": "#{{number}} 不再由{{name}}负责。",
       "prioritized": "#{{number}} 现在是{{priority}}优先级。"
     },
     "canceledColumn": "已取消",
@@ -7644,7 +7696,10 @@
         "failed": "上次运行失败了。",
         "canceled": "有人停止了运行。",
         "budget": "智能体的月度预算已用完。"
-      }
+      },
+      "finishedTitle": "{{name}} 已完成",
+      "finishedMeta": "{{when}} · 由 {{name}} 移交",
+      "answer": "回答"
     },
     "status": {
       "todo": "待办",
@@ -7671,6 +7726,10 @@
       "high": "高"
     },
     "noAssignee": "无负责人",
+    "assignees": {
+      "people": "成员和智能体",
+      "done": "完成"
+    },
     "agentRole": "智能体 · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -7810,7 +7869,9 @@
       "status_changed": "将状态改为{{status}}",
       "priority_changed": "将优先级改为{{priority}}",
       "assigned": "分配了任务",
-      "unassigned": "移除了负责人",
+      "unassigned": "移除了一位负责人",
+      "assigned_named": "将任务分配给了{{name}}",
+      "unassigned_named": "将{{name}}移出了任务",
       "due_date_set": "将截止日期设为 {{date}}",
       "due_date_removed": "移除了截止日期",
       "pr_linked": "关联了 PR #{{number}}",
@@ -7824,7 +7885,10 @@
       "criterion_checked": "勾选了标准“{{text}}”",
       "criterion_unchecked": "取消勾选了标准“{{text}}”",
       "agent_asked": "请 {{name}} 来完成"
-    }
+    },
+    "handedBy": "由 <0/>{{name}} 移交",
+    "fromDm": "来自<0>你与 {{name}} 的私信</0>",
+    "fromDmText": "来自你与 {{name}} 的私信"
   },
   "routines": {
     "filters": "筛选例行工作",
@@ -8399,6 +8463,7 @@
       "waiting_budget_late": "错过了时间：预算更新得太晚",
       "stopped": "被人停止",
       "stoppedBy": "被 {{name}} 停止",
+      "stalled": "已释放：20 分钟内没有任何进展",
       "no_report": "已结束，但没有告知结果",
       "handoff_blocked": "无法告知：例行工作已暂停，或创建者已无法在那里发消息",
       "deleted": "已停止：例行工作已删除",
@@ -9779,7 +9844,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "TypeSafe 推出的快速模型，专为快速决策而生。agentes.chat 会问它一些小问题，比如该由谁来回复。费用直接付给 TypeSafe。",
+    "about": "TypeSafe 推出的快速模型，专为快速决策而生。agentes.chat 会问它一些小问题，比如该由谁来回复。费用直接付给 TypeSafe，或以同样的价格通过 OpenRouter 支付。",
     "lead": "帮你的智能体像团队一样协作。",
     "how": "Jev 如何工作",
     "why": {
@@ -9819,6 +9884,32 @@
       "envInvalid": "TypeSafe 不接受这个密钥。请在此服务器的设置中更改（TYPESAFE_API_KEY）。"
     },
     "checkAgain": "重新检查",
+    "via": {
+      "label": "Jev 的付费方式",
+      "typesafe": "TypeSafe",
+      "typesafeText": "直接使用 TypeSafe 账户，预付费额度。",
+      "openrouter": "OpenRouter",
+      "openrouterText": "使用 OpenRouter 密钥，价格相同。",
+      "connected": "密钥已连接"
+    },
+    "openRouter": {
+      "create": "在 OpenRouter 创建密钥",
+      "createHint": "使用 OpenRouter 的额度。Jev 的价格与 TypeSafe 相同：每百万 token US$ {{price}}。决定一次谁来回复大约花费 US$ {{call}}。",
+      "open": "打开 OpenRouter",
+      "placeholder": "你的 OpenRouter 密钥",
+      "shape": "OpenRouter 密钥以 sk-or-v1- 开头。请检查后重新粘贴。",
+      "invalid": "OpenRouter 不接受这个密钥。请从密钥页面重新复制。",
+      "keyName": "OpenRouter 密钥",
+      "same": "服务商密钥中的那个",
+      "forAll": "它为此服务器上所有工作区的 Jev 付费。",
+      "turnOn": "开启 Jev",
+      "otherKey": "使用其他密钥",
+      "line": {
+        "invalid": "OpenRouter 不接受这个密钥。请创建一个新的。",
+        "no_credit": "在 OpenRouter 充值后，Jev 会自动恢复。",
+        "envInvalid": "OpenRouter 不接受这个密钥。请在此服务器的设置中更改（TYPESAFE_API_KEY）。"
+      }
+    },
     "remove": {
       "title": "移除 Jev 密钥？",
       "text": "没有它，智能体也会继续工作。"
@@ -9932,6 +10023,10 @@
       "copies_other": "这个账号还有 {{count}} 个登录，没有任何智能体使用。",
       "removeCopies": "移除",
       "copiesRemoved_other": "已移除 {{count}} 个未使用的登录。",
+      "removeAllGrok": "移除所有 Grok 登录",
+      "removeAllTitle": "要移除全部 {{n}} 个 Grok 登录吗？",
+      "removeAllText": "它们将不再为 {{computers}} 上的代理思考。其他人的登录不会被改动。",
+      "removeAllDone": "已移除 {{n}} 个 Grok 登录。",
       "disconnect": "断开连接",
       "renameTitle": "重命名 {{label}}",
       "nameLabel": "名称",
@@ -9987,6 +10082,8 @@
       },
       "resetsAt": "{{time}} 重置",
       "resetsOn": "{{day}} {{time}} 重置",
+      "allModels": "所有模型",
+      "onlyModels": "仅 {{name}}",
       "almost": "即将达到限额",
       "limited": "已达限额",
       "limitedUntil": "已达限额，直到 {{when}}",
@@ -10150,6 +10247,9 @@
     "keys": "Enter 发送 · Esc 删除",
     "keysHold": "松开发送 · Esc 删除",
     "keysPaused": "已暂停 · 空格键收听 · Enter 发送 · Esc 删除",
+    "askDiscard": "删除这段语音？文字会保留。",
+    "askDelete": "删除",
+    "askKeep": "保留",
     "pausePlay": "暂停",
     "seek": "播放位置",
     "speedAt": "速度 {{speed}}×",
@@ -11164,6 +11264,10 @@
       "cant_start": "{{program}} 在 {{computer}} 上，但无法启动。",
       "not_reported": "{{computer}} 还在检查有哪些程序。完成后这里会自动更新。",
       "outdated": "{{computer}} 上的版本太旧。请更新 Codex 后使用。",
+      "outdatedCodex": "在 {{computer}} 上检测到 Codex CLI {{detected}}。请更新到 {{minimum}} 或更高版本。",
+      "codexUpdateGuide": "如何更新 Codex CLI",
+      "codexRecheckHere": "更新后，请在偏好设置 › 工具的 Codex 一行中选择「重新检查」。",
+      "codexRecheckThere": "请在 {{computer}} 上更新 Codex CLI。如果该电脑运行桌面应用，请在偏好设置 › 工具的 Codex 一行中选择「重新检查」。",
       "system": "{{program}} 暂时还不能在 {{computer}} 的系统上运行。",
       "no_computerCloud": "{{computer}} 一就绪即可使用。"
     },
@@ -12404,6 +12508,7 @@
     "connected": "已连接",
     "connectedAs": "已连接为 {{account}}",
     "reconnectAdds": "重新连接 {{name}}，让智能体也能{{what}}。",
+    "sendsToo": "还会发送：<names/>。要更改，请使用“重新连接”。",
     "adds": {
       "github_project": "使用 GitHub Projects（读取看板并移动卡片）"
     },
@@ -13492,6 +13597,20 @@
     "needsKey": "此服务器不支持 OAuth，请用 API 密钥连接。",
     "notApproved": "{{name}} 只允许它批准过的应用登录，而 agentes.chat 还未获批。如果它提供 API 密钥，你可以用密钥连接。",
     "serverSaid": "服务器返回：{{detail}}",
+    "headers": {
+      "title": "请求标头",
+      "help": "用于密钥需要放在其他标头中，或服务器前面有网关的情况。大多数服务器不需要。",
+      "value": "值",
+      "nameOf": "标头 {{n}} 的名称",
+      "valueOf": "标头 {{n}} 的值",
+      "remove": "移除标头 {{n}}",
+      "add": "添加标头",
+      "saved_other": "已保存：<names/>。除非你输入新的，否则保持不变。",
+      "drop": "移除",
+      "dropping_other": "重新连接时将移除 <names/>。",
+      "undo": "撤销",
+      "refused": "服务器没有接受这些标头。请检查它们的值，或用 API 密钥连接。"
+    },
     "nothingYet": "到第 3 步之前，智能体都用不了任何功能。",
     "allCanUse": "连接后，所有智能体都可以使用。之后可以调整。",
     "replace": "替换当前的登录，使用者保持不变。",
@@ -14172,7 +14291,15 @@
       "gone": "那个账号已不再连接。",
       "unfinished": "在 Composio 的登录没有完成，请重试。",
       "unavailable": "这个服务无法在这里连接。",
-      "misconfigured": "服务器上与 {{provider}} 的连接配置有误，所以无法完成连接。运行服务器的人需要在应用的设置中更换密钥。"
+      "misconfigured": "服务器上与 {{provider}} 的连接配置有误，所以无法完成连接。运行服务器的人需要在应用的设置中更换密钥。",
+      "headerName": "标头名称只能使用字母、数字和连字符，例如 X-API-Key。",
+      "headerValue": "请为 {{header}} 输入一个值：最多 2,000 个字符，写在一行内，只能用英文字母、数字和符号。",
+      "headerReserved": "{{header}} 已随每个请求自动发送，无法更改。请移除这个标头。",
+      "headerTwice": "{{header}} 在列表中出现了两次。请移除其中一个。",
+      "headerAndKey": "API 密钥已作为 Authorization 发送。请清空密钥，或移除这个标头。",
+      "headersTooMany": "一个服务器最多可设置 {{max}} 个标头。请先移除一个再添加。",
+      "headersWithSignIn": "此服务器要求登录，而登录暂时无法携带标头。请移除标头后登录，或用 API 密钥连接。",
+      "headersUnreadable": "无法读取已保存的标头。请重新输入，或将其移除。"
     },
     "wiki": {
       "githubNoNotes": "此链接中没有 Markdown 笔记。",
@@ -14408,7 +14535,8 @@
     },
     "agentGroup": {
       "notFound": "这个部门已不存在。",
-      "tooMany": "这个工作区已有 {{max}} 个部门。请先删除一个。"
+      "tooMany": "这个工作区已有 {{max}} 个部门。请先删除一个。",
+      "ambiguous": "有两个部门都叫 {{name}}。请重命名其中一个，然后重试。"
     },
     "rightHand": {
       "permanent": "得力助手属于整个工作区，不加入频道。在任何频道 @提及它即可叫到它。",
@@ -14852,6 +14980,7 @@
       "ui_automation_off": "UI 自动化已关闭",
       "xcode_missing": "Mac 上没有安装 Xcode",
       "xcode_too_old": "Xcode 版本太旧，不支持此 iOS",
+      "ios_behind_xcode": "此 iPhone 的 iOS 比 Xcode 对应的版本旧",
       "device_support": "Mac 正在获取 iPhone 工具",
       "helper_missing": "测试助手还没有设置好",
       "helper_expired": "测试助手需要续期",
@@ -14880,6 +15009,7 @@
       "ui_automation_off": "打开 UI 自动化",
       "xcode_missing": "安装 Xcode",
       "xcode_too_old": "更新 Xcode",
+      "ios_behind_xcode": "更新 iPhone",
       "device_support": "让 Mac 保持开机",
       "helper_missing": "在 Mac 上打开应用",
       "helper_expired": "在 Mac 上打开应用",
@@ -15197,6 +15327,7 @@
       "helperText": "由 Mac 构建，并每 7 天续期一次。在 Xcode 中登录免费的 Apple 账户即可。",
       "helperUntrustedText": "点按开发者的名称，然后点按“信任”。",
       "teamLimitText": "从 iPhone 上删除一个你自己构建的 App：免费 Apple 账户最多允许 3 个。",
+      "iosBehind": "此 iPhone 运行 iOS {{ios}},而这台 Mac 上的 Xcode 适用于 iOS {{sdk}}。请更新 iPhone:设置 › 通用 › 软件更新。",
       "xcodeOld": "{{name}} 运行 iOS {{version}}，而 {{mac}} 上的 Xcode 最高只支持 iOS {{sdk}}。安装 Xcode {{major}}，然后在终端中运行下面的命令。",
       "xcodeOldAny": "{{name}} 运行 iOS {{version}}，比 {{mac}} 上的 Xcode 支持的版本更新。安装 Xcode {{major}}，然后在终端中运行下面的命令。",
       "uiRefusedText": "iPhone 拒绝了测试助手的点按。请解锁它，如有要求就输入密码。如果反复出现，把 设置 › 开发者 › 启用 UI 自动化 关闭再打开。",
@@ -15278,6 +15409,7 @@
       "waiting": "<b>{{who}}</b> 正在等待 <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> 请你在你的 <b>{{deviceName}}</b> 上打开{{tool}}",
       "cliRequest": "<b>{{who}}</b> 请你在 <b>{{deviceName}}</b> 上安装 {{tool}}",
+      "folderRequest": "<b>{{who}}</b> 请你在你的 <b>{{deviceName}}</b> 上开放文件夹 {{path}}",
       "once": "允许一次",
       "always": "始终允许",
       "no": "不允许",
@@ -15915,11 +16047,11 @@
       "rolesPersonal": "这里每个人可以做什么。所有者可以做任何事。"
     },
     "about": {
-      "basedOn": "基于 Codari Global, LLC 的 <site>agentes.chat</site>",
+      "basedOn": "基于 AGENTESCHAT, LLC 的 <site>agentes.chat</site>",
       "version": "版本",
       "license": "依据 <license>GNU Affero General Public License v3</license> 发布的自由软件，不提供任何担保。",
       "source": "源代码",
-      "copyright": "Copyright © 2026 Codari Global, LLC 及贡献者"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 及贡献者"
     },
     "title": "设置",
     "account": {
@@ -15952,6 +16084,8 @@
         "openLatest": "最新消息",
         "textSize": "文字大小",
         "textSizeHelp": "消息的文字，适用于所有对话，并同步到你的所有设备",
+        "fullMessages": "显示完整消息",
+        "fullMessagesHelp": "长消息不再折叠为“查看更多”，适用于所有对话，并同步到你的所有设备",
         "textSizePhone": "作用于整个应用，并叠加在手机的文字大小之上",
         "textXs": "更小",
         "textSm": "小",
@@ -16345,6 +16479,18 @@
       "see": "查看用量"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "按类型",
+      "handoffs": "智能体之间的交接",
+      "people": "与人的对话",
+      "routines": "例行任务"
+    },
+    "hint": {
+      "handoffs": "本周的大部分用量来自智能体之间互相交接工作。长任务请直接交给该智能体。",
+      "message": "给 {{name}} 发消息"
+    }
+  },
   "usageViews": {
     "signedOut": "已退出登录",
     "whose": "{{name}} 的",
@@ -16515,12 +16661,35 @@
       "failed": "已阻塞 · 未完成",
       "failedWhy": "已阻塞 · 未完成：{{why}}"
     },
-    "working": "后台进行中"
+    "working": "后台进行中",
+    "handed": {
+      "lead": "已移交给 <0/>{{name}}",
+      "working": "进行中",
+      "done": "用时 {{duration}} 完成",
+      "waitingYou": "等待你的回答",
+      "waiting": "等待回答",
+      "waitingApprovalYou": "等待你的批准",
+      "waitingApproval": "等待批准",
+      "waitingComputer": "等待电脑",
+      "paused": "已在方案限额处暂停",
+      "queued": "排队中",
+      "failed": "未完成",
+      "stopped": "已停止",
+      "step": "第 {{current}} 步，共 {{total}} 步"
+    }
   },
   "chat": {
     "speedFallback": {
       "text": "ChatGPT 拒绝了此账号或模型的快速模式，因此这条回复以标准速度发送。",
       "action": "打开智能体"
+    },
+    "standIn": {
+      "needsComputer": "已用{{via}}回答：{{plan}}需要一台电脑。",
+      "away": "已用{{via}}回答：{{plan}}所在的电脑当前离开。",
+      "notShared": "已用{{via}}回答：{{plan}}只为连接它的人服务。",
+      "limit": "已用{{via}}回答：{{plan}}已达上限。",
+      "cant": "已用{{via}}回答：{{plan}}现在无法思考。",
+      "change": "更改"
     },
     "modelStandIn": {
       "text": "{{plan}} 用此密钥拒绝了 {{from}}。我改用可用的 {{to}} 回复了。",
@@ -17106,6 +17275,9 @@
       "interrupted": "因服务器重启而中断。请再问一次以继续。",
       "step_limit": "完成前步骤已用完。",
       "stuck": "我卡住了，在完成前停了下来。"
+    },
+    "request": {
+      "asksYou": "{{name}} 问你"
     }
   },
   "builtinTools": {
