@@ -698,6 +698,8 @@ async function personalAgent(db: Database, agent: Agent, userId: string, account
     brain: own?.brain ?? "model",
     brainModel: own ? personalModel(own, agent) : null,
     brainEffort: own?.brainEffort ?? null,
+    // Their own AI reads its own window; with no row the view is the workspace's AI, which keeps the right hand's.
+    contextTokens: own ? (own.brainContextTokens ?? null) : agent.contextTokens,
     brainAccountId: own?.brainAccountId ?? null,
     brainAccountLentBy: own?.brainAccountLentBy ?? null,
     brainFallback: false,
@@ -794,7 +796,13 @@ async function setPersonalBrain(
     throw new ValidationError("Choose model, claude_code, codex or cursor", "brain.invalid");
   }
   const from = current
-    ? { brain: current.brain, model: current.brainModel, account: current.brainAccountId, effort: current.brainEffort }
+    ? {
+        brain: current.brain,
+        model: current.brainModel,
+        account: current.brainAccountId,
+        effort: current.brainEffort,
+        contextTokens: current.brainContextTokens,
+      }
     : null;
   const audit = (to: unknown) =>
     recordAudit(db, {
@@ -885,6 +893,12 @@ async function setPersonalBrain(
       : kindChanged
         ? null
         : current?.brainEffort;
+  if (input.contextTokens !== undefined && input.contextTokens !== null && !isContextLimit(input.contextTokens)) {
+    throw new ValidationError("Choose 200000, 400000 or 1000000 tokens", "brain.invalid_context");
+  }
+  // Kept through a change of brain or account, as an agent's: the person chose how much their AI reads.
+  const contextTokens =
+    input.contextTokens === undefined ? (current?.brainContextTokens ?? null) : (input.contextTokens as number | null);
   const accountChanged = current?.brainAccountId !== account.id;
   const lentBy = !lent ? null : accountChanged ? userId : (current?.brainAccountLentBy ?? userId);
   const values = {
@@ -893,6 +907,7 @@ async function setPersonalBrain(
     brainAccountId: account.id,
     brainAccountLentBy: lentBy,
     brainEffort: effort ?? null,
+    brainContextTokens: contextTokens,
     updatedAt: new Date(),
   };
   const released = await db.transaction(async (tx) => {
@@ -904,7 +919,7 @@ async function setPersonalBrain(
     return released;
   });
   forgetAgents(orgId, released);
-  await audit({ brain, model, account: account.id, effort: effort ?? null });
+  await audit({ brain, model, account: account.id, effort: effort ?? null, contextTokens });
   if (moved) {
     await recordAudit(db, {
       orgId,

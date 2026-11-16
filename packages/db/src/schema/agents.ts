@@ -456,6 +456,11 @@ export const rightHandBrains = pgTable(
     /** Someone else's plan, given with `use_others_plans`: who gave it (themselves); its owner may take it back. */
     brainAccountLentBy: text().references(() => users.id, { onDelete: "set null" }),
     brainEffort: text(),
+    /**
+     * The most context that person's own AI reads, in tokens (`200000`, `400000`, `1000000`; validated in code), as an
+     * agent's `context_tokens`: null = its model's window. The workspace's AI keeps its own on the right hand's row.
+     */
+    brainContextTokens: integer(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

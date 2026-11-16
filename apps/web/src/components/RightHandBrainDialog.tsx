@@ -1,11 +1,23 @@
-import type { Agent } from "@agenteschat/client";
+import type { Agent, AgentBrain, AgentBrainInput } from "@agenteschat/client";
+import { useModels } from "@agenteschat/client";
+import {
+  type Advanced,
+  advancedDefaults,
+  type EffortLevel,
+  effortLevelsOf,
+  effortOf,
+  effortTextOf,
+} from "@agenteschat/client/lib/brain-advanced";
+import { type ContextLimit, contextChoices, contextSize, isContextLimit } from "@agenteschat/client/lib/context-limits";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { Button, Dialog, DialogBody, DialogFooter, Icon, type IconName } from "@agenteschat/ui";
-import { type ReactNode, useEffect, useState } from "react";
+import { isAuto } from "@agenteschat/client/lib/providers";
+import { Button, Dialog, DialogBody, DialogFooter, EffortPixels, Icon, type IconName } from "@agenteschat/ui";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type HaveItem, HaveList, HaveOffRow, HaveRow } from "@/components/arrival/ConnectHave";
 import { TeamScene } from "@/components/arrival/TeamScene";
-import { BrainLine, PickList, type PickOption } from "@/pages/agent/brain/pieces";
+import { fullLook, lookOf } from "@/lib/look";
+import { BrainLine, ContextField, Fold, PickList, type PickOption } from "@/pages/agent/brain/pieces";
 import "@/pages/agent/brain/brain-dialog.css";
 
 /** The model of the account in use: its name on the first screen, and the list its line opens. */
@@ -26,12 +38,19 @@ export interface RightHandLink {
   onClick: () => void;
 }
 
+/** The effort and the context window as the "Mais opções" screen holds them, before the save. */
+interface MoreDraft {
+  effort: EffortLevel | null;
+  contextTokens: ContextLimit | null;
+}
+
 /**
  * Who thinks for the right hand, drawn as any agent's "Quem pensa" (`BrainDialog`) and from its pieces: the agent and
- * the AI's mark under the sky, the account in use with its plan's room, the model on a line that opens its list, and
- * "Trocar de conta" where there are accounts to pick from (the workspace's AI), each account once, by owner. Its two
- * uses differ only in what they are given: the viewer's own AI, or the AI of people with no plan of their own
- * (ADR 0137 §11). A choice is saved when its screen's button is pressed.
+ * the AI's mark under the sky, the account in use with its plan's room, the model on a line that opens its list,
+ * "Mais opções" with the effort and the context window (the same as an agent's, ADR 0086), and "Trocar de conta" where
+ * there are accounts to pick from (the workspace's AI), each account once, by owner. Its two uses differ only in what
+ * they are given: the viewer's own AI, or the AI of people with no plan of their own (ADR 0137 §11). A choice is saved
+ * when its screen's button is pressed.
  */
 export function RightHandBrainDialog({
   agent,
@@ -48,6 +67,8 @@ export function RightHandBrainDialog({
   unusable = [],
   busy,
   locked = false,
+  view,
+  onAdvanced,
 }: {
   agent: Agent;
   open: boolean;
@@ -76,18 +97,28 @@ export function RightHandBrainDialog({
   busy: boolean;
   /** Nothing changes for now (a billing hold): the lines that change it don't open. */
   locked?: boolean;
+  /** The brain in use, for "Mais opções": without it (or `onAdvanced`) the line doesn't show. */
+  view?: AgentBrain;
+  /** Saves the effort and the context window on the caller's scope (the same `setBrain` it uses). */
+  onAdvanced?: (input: AgentBrainInput) => void;
 }) {
   const { t } = useTranslation();
   const g = agentGrammar(agent.name);
-  const [screen, setScreen] = useState<"glance" | "switch" | "model">("glance");
+  const models = useModels();
+  const [screen, setScreen] = useState<"glance" | "switch" | "model" | "more">("glance");
   const [account, setAccount] = useState<string>();
   const [picked, setPicked] = useState<string>();
+  const [more, setMore] = useState<MoreDraft | null>(null);
+  const [fold, setFold] = useState<"effort" | "context" | null>(null);
+  const foldId = useId();
   // Each opening starts on the first screen, with nothing picked.
   useEffect(() => {
     if (!open) return;
     setScreen("glance");
     setAccount(undefined);
     setPicked(undefined);
+    setMore(null);
+    setFold(null);
   }, [open]);
   const glance = () => setScreen("glance");
   const shown =
@@ -95,11 +126,118 @@ export function RightHandBrainDialog({
       ? t("agentPage.work.brain.v2.switchTitle", g)
       : screen === "model"
         ? t("agentPage.work.brain.v2.modelTitle", g)
-        : title;
+        : screen === "more"
+          ? t("agentPage.work.brain.advanced.title")
+          : title;
   const modelValue = picked ?? model?.value ?? "";
   const modelLabel = model?.options.find((o) => o.value === modelValue)?.label ?? "";
   const accountLabel = accounts?.items.find((i) => i.id === account)?.title ?? "";
   const stays = busy || locked;
+
+  // ── "Mais opções": the effort and the context window, as an agent's (ADR 0086) ──
+  const advanced = view && onAdvanced && !locked ? view : undefined;
+  const option = advanced?.options.find((o) => o.kind === advanced.brain);
+  // "Automático" picks the effort with the model: the ramp is said away, as on any agent's.
+  const autoModel = advanced
+    ? isAuto(advanced.brain === "model" ? agent.model : (advanced.effectiveModel ?? option?.defaultModel ?? ""))
+    : false;
+  const chosenModel = !advanced
+    ? undefined
+    : advanced.brain === "model"
+      ? isAuto(agent.model)
+        ? undefined
+        : models.data?.models.find((m) => m.id === agent.model)
+      : option?.models.find((m) => m.value === (advanced.effectiveModel ?? option?.defaultModel ?? ""));
+  // The limits worth offering with the model it thinks with ("Automático": any of its line).
+  const contextOptions = autoModel ? contextChoices(undefined) : contextChoices(chosenModel);
+  const savedContext =
+    advanced && isContextLimit(advanced.contextTokens) && contextOptions.includes(advanced.contextTokens)
+      ? advanced.contextTokens
+      : null;
+  const savedEffort = advanced ? effortOf(advanced.brain, advanced.effort) : null;
+  const openMore = () => {
+    if (!advanced) return;
+    setMore({ effort: savedEffort, contextTokens: savedContext });
+    setFold(null);
+    setScreen("more");
+  };
+  const resetMore = () => {
+    if (!advanced || !more) return;
+    const now: Advanced = {
+      effort: more.effort,
+      speed: "standard",
+      contextTokens: more.contextTokens,
+      onlyOwner: true,
+      fallback: true,
+    };
+    const defaults = advancedDefaults(advanced.brain, now);
+    setMore({ effort: defaults.effort, contextTokens: defaults.contextTokens });
+  };
+  const saveMore = () => {
+    if (!advanced || !onAdvanced || !more) return;
+    const input: AgentBrainInput = {};
+    // A fixed model takes the ramp's level; "Automático" picks its own.
+    if (!autoModel && more.effort !== savedEffort) input.effort = more.effort ?? "auto";
+    if (more.contextTokens !== savedContext) input.contextTokens = more.contextTokens;
+    if (Object.keys(input).length > 0) onAdvanced(input);
+    setMore(null);
+    glance();
+  };
+  const moreScreen = () => {
+    if (!advanced || !more) return null;
+    const line = (key: "effort" | "context", label: string, value: string, content: ReactNode) => (
+      <>
+        <BrainLine
+          label={label}
+          value={value}
+          folds
+          open={fold === key}
+          controls={`${foldId}-${key}`}
+          onOpen={() => setFold(fold === key ? null : key)}
+        />
+        <Fold id={`${foldId}-${key}`} open={fold === key}>
+          {content}
+        </Fold>
+      </>
+    );
+    return (
+      <div className="bd-lines">
+        {line(
+          "effort",
+          t("agentPage.work.brain.effort"),
+          autoModel ? t("brain.auto.label") : t(`agentPage.work.brain.efforts.${more.effort ?? "none"}`),
+          autoModel ? (
+            <p className="bd-fold__hint">{t("agentPage.work.brain.effortText.auto")}</p>
+          ) : (
+            <EffortPixels
+              label={t("agentPage.work.brain.effort")}
+              value={more.effort}
+              onValueChange={(e) => setMore({ ...more, effort: e })}
+              color={fullLook(lookOf(agent)).color}
+              steps={effortLevelsOf(advanced.brain).map((e) => ({
+                value: e,
+                label: t(`agentPage.work.brain.efforts.${e}`),
+              }))}
+              hint={(e) => t(`agentPage.work.brain.effortText.${effortTextOf(advanced.brain, e)}`)}
+              unset={t("agentPage.work.brain.efforts.none")}
+            />
+          ),
+        )}
+        {line(
+          "context",
+          t("agentPage.work.brain.context"),
+          more.contextTokens ? contextSize(more.contextTokens) : t("brain.auto.label"),
+          <ContextField
+            value={more.contextTokens}
+            options={contextOptions}
+            kind={advanced.brain}
+            onChange={(n) => setMore({ ...more, contextTokens: n })}
+          />,
+        )}
+      </div>
+    );
+  };
+
   return (
     <Dialog
       open={open}
@@ -159,6 +297,17 @@ export function RightHandBrainDialog({
                       value={model.label}
                       onOpen={stays ? undefined : () => setScreen("model")}
                     />
+                    {advanced && (
+                      <BrainLine
+                        label={t("agentPage.work.brain.v2.more")}
+                        value={t(
+                          autoModel
+                            ? "agentPage.work.brain.advanced.contents.model"
+                            : "agentPage.work.brain.advanced.contents.modelFixed",
+                        )}
+                        onOpen={stays ? undefined : openMore}
+                      />
+                    )}
                   </div>
                 )}
                 {links.map((link) => (
@@ -219,6 +368,7 @@ export function RightHandBrainDialog({
                 {...(model.search ? { searchLabel: model.search } : {})}
               />
             )}
+            {screen === "more" && moreScreen()}
           </DialogBody>
         </div>
         {screen === "glance" && (
@@ -263,6 +413,19 @@ export function RightHandBrainDialog({
               }}
             >
               {t("connectAi.use", { label: modelLabel })}
+            </Button>
+          </DialogFooter>
+        )}
+        {screen === "more" && advanced && more && (
+          <DialogFooter className="bd-foot" note={note}>
+            <Button
+              disabled={busy || (more.effort === savedEffort && more.contextTokens === savedContext)}
+              onClick={resetMore}
+            >
+              {t("agentPage.work.brain.advanced.defaults")}
+            </Button>
+            <Button variant="primary" disabled={busy} loading={busy} onClick={saveMore}>
+              {t("agentPage.work.brain.v2.finish")}
             </Button>
           </DialogFooter>
         )}

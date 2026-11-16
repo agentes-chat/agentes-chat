@@ -156,6 +156,39 @@ test("a member gives their own DM with Lodi their plan; everyone else keeps the 
   expect((await fx.db.select().from(schema.rightHandBrains)).map((r) => r.userId)).toEqual([caio.id]);
 });
 
+test("their own AI sets the effort and the context window, and the run follows both", async () => {
+  const { fx, deps, bia, lodi, runIn } = await world();
+  const view = await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, {
+    scope: "mine",
+    brain: "claude_code",
+    account: BIAS,
+    effort: "high",
+    contextTokens: 400_000,
+  });
+  expect(view).toMatchObject({ scope: "mine", brain: "claude_code", effort: "high", contextTokens: 400_000 });
+  expect(await getAgentBrain(deps, bia.id, fx.org.id, lodi.id, "mine")).toMatchObject({
+    effort: "high",
+    contextTokens: 400_000,
+  });
+  // The agent the run resolves with carries both: the executor's context budget and the brain turn read them.
+  const [row] = await fx.db.select().from(schema.agents).where(eq(schema.agents.id, lodi.id));
+  if (!row) throw new Error("no right hand");
+  expect((await withPersonalBrain(fx.db, row, bia.id)).agent).toMatchObject({
+    brain: "claude_code",
+    brainEffort: "high",
+    contextTokens: 400_000,
+  });
+  expect(await runIn(bia.id)).toMatchObject({ kind: "claude_code", account: { id: BIAS }, effort: "high" });
+  // A window the app doesn't offer is refused, and what was saved stays.
+  expect(await codeOf(setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", contextTokens: 123 }))).toBe(
+    "brain.invalid_context",
+  );
+  expect(await getAgentBrain(deps, bia.id, fx.org.id, lodi.id, "mine")).toMatchObject({ contextTokens: 400_000 });
+  // Back to the workspace's AI: the row goes, and its window with it.
+  await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "model" });
+  expect(await fx.db.select().from(schema.rightHandBrains)).toEqual([]);
+});
+
 test("with no key in the workspace, a person with no AI of their own thinks with a plan that serves them, the roomiest", async () => {
   const { fx, bia, runIn } = await world();
   // The workspace's AI is the model, with no key: before, everyone's DM read "no AI" despite plans being here.
