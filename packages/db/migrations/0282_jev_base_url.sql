@@ -1,0 +1,1 @@
+ALTER TABLE "instance_secrets" ADD COLUMN "base_url" text;

@@ -27,7 +27,9 @@ type Answer = number | "down" | "late" | { status: number; body?: unknown; retry
 /** A fake TypeSafe: answers in turn (the last one repeats), and records the keys it was called with. */
 function typesafe(...answers: Answer[]) {
   const keys: string[] = [];
-  const fetch = (async (_url: string, init: RequestInit) => {
+  const urls: string[] = [];
+  const fetch = (async (url: string, init: RequestInit) => {
+    urls.push(url);
     keys.push(new Headers(init.headers).get("authorization")?.replace("Bearer ", "") ?? "");
     const a = answers[Math.min(keys.length - 1, answers.length - 1)] ?? 200;
     if (a === "down") throw new TypeError("fetch failed");
@@ -41,7 +43,7 @@ function typesafe(...answers: Answer[]) {
       headers,
     });
   }) as unknown as typeof globalThis.fetch;
-  return { fetch, keys, answers };
+  return { fetch, keys, urls, answers };
 }
 
 const clock = { now: 1_800_000_000_000 };
@@ -51,9 +53,18 @@ const tick = (ms: number) => {
 const MIN = 60_000;
 const DOWN_SKIP_MS = 60_000;
 
-function jevKey(fetch: typeof globalThis.fetch, envKey?: string) {
+function jevKey(fetch: typeof globalThis.fetch, envKey?: string, envBaseURL?: string, otherProviderEnabled = false) {
   const keyWrapper = createLocalKeyWrapper(SECRET);
-  return createJevKey({ db: f.db, keyWrapper, keyWrappers: [keyWrapper], envKey, fetch, now: () => clock.now });
+  return createJevKey({
+    db: f.db,
+    keyWrapper,
+    keyWrappers: [keyWrapper],
+    envKey,
+    baseURL: envBaseURL,
+    otherProviderEnabled,
+    fetch,
+    now: () => clock.now,
+  });
 }
 
 /** One live call, as the router and the judge make them: answered, failed, or not made (no key now). */
@@ -124,6 +135,107 @@ describe("the key, saved and read", () => {
     expect(await key.key()).toBeNull();
     const removed = await f.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, "jev.key_removed"));
     expect(removed).toHaveLength(2);
+  });
+
+  test("checks and calls the saved custom origin, then clears it with the key", async () => {
+    f = await setup();
+    const origin = "http://jev.example:3425";
+    const checked = typesafe(200);
+    const key = jevKey(checked.fetch, undefined, undefined, true);
+
+    const view = await key.save("ts_custom_origin_key_1", f.owner.id, origin);
+    expect(checked.urls).toEqual([`${origin}/v1/systemone`]);
+    expect(view).toMatchObject({ source: "settings", hint: "ey_1", state: "ok" });
+    expect(key.baseURL()).toBe(origin);
+    expect(key.baseURLSource()).toBe("settings");
+    const [saved] = await f.db.select().from(schema.instanceSecrets);
+    expect(saved?.baseUrl).toBe(origin);
+
+    const request = typesafe(200);
+    expect(await live(key, request.fetch)).toBe("answered");
+    expect(request.urls).toEqual([`${origin}/v1/systemone`]);
+
+    await key.remove(f.owner.id);
+    expect(await f.db.select().from(schema.instanceSecrets)).toEqual([]);
+    expect(await key.baseURL()).toBe("https://api.typesafe.ai");
+  });
+
+  test("a custom origin is rejected without the opt-in flag", async () => {
+    f = await setup();
+    const ts = typesafe(200);
+    const key = jevKey(ts.fetch);
+    await expect(key.save("ts_custom_origin_key_1", f.owner.id, "https://alternate.example")).rejects.toMatchObject({
+      code: "jev_other_provider_disabled",
+    });
+    expect(ts.urls).toEqual([]);
+    expect(await f.db.select().from(schema.instanceSecrets)).toEqual([]);
+  });
+
+  test("with the opt-in flag off, the origin the server sets is accepted when named, and nothing is stored for it", async () => {
+    f = await setup();
+    const operator = "https://operator.example";
+    const ts = typesafe(200);
+    const key = jevKey(ts.fetch, undefined, operator);
+    await key.save("ts_operator_origin_key_1", f.owner.id, operator);
+    expect(ts.urls).toEqual([`${operator}/v1/systemone`]);
+    expect(key.baseURL()).toBe(operator);
+    expect(key.baseURLSource()).toBe("env");
+    const [saved] = await f.db.select().from(schema.instanceSecrets);
+    expect(saved?.baseUrl).toBeNull();
+  });
+
+  test("with the opt-in flag off, TypeSafe is refused when the server sets another origin", async () => {
+    f = await setup();
+    const ts = typesafe(200);
+    const key = jevKey(ts.fetch, undefined, "https://operator.example");
+    await expect(key.save("ts_typesafe_override_1", f.owner.id, "https://api.typesafe.ai")).rejects.toMatchObject({
+      code: "jev_other_provider_disabled",
+    });
+    expect(ts.urls).toEqual([]);
+    expect(await f.db.select().from(schema.instanceSecrets)).toEqual([]);
+  });
+
+  test("a previously saved custom origin is ignored when the opt-in flag is off", async () => {
+    f = await setup();
+    const selected = jevKey(typesafe(200).fetch, undefined, undefined, true);
+    await selected.save("ts_custom_origin_key_1", f.owner.id, "https://saved.example");
+
+    const operatorOrigin = "https://operator.example";
+    const disabled = jevKey(typesafe(200).fetch, undefined, operatorOrigin);
+    await disabled.ready();
+    expect(disabled.baseURL()).toBe(operatorOrigin);
+    expect(disabled.baseURLSource()).toBe("env");
+  });
+
+  test("a key refused at its candidate origin leaves the key and origin unchanged", async () => {
+    f = await setup();
+    const accepted = typesafe(200);
+    const key = jevKey(accepted.fetch, undefined, undefined, true);
+    await key.ready();
+    await key.save("ts_existing_key_1", f.owner.id, "https://old.example");
+
+    const refused = typesafe(401);
+    const replacement = jevKey(refused.fetch, undefined, undefined, true);
+    // Same shared database, independently constructed resolver reads the existing selection.
+    await replacement.ready();
+    await expect(replacement.save("ts_refused_key_1", f.owner.id, "https://candidate.example")).rejects.toMatchObject({
+      code: "jev_key_invalid",
+    });
+    expect(refused.urls).toEqual(["https://candidate.example/v1/systemone"]);
+    expect(await replacement.key()).toBe("ts_existing_key_1");
+    expect(replacement.baseURL()).toBe("https://old.example");
+  });
+
+  test("the operator origin is the default, and an owner selection takes precedence", async () => {
+    f = await setup();
+    const operatorOrigin = "https://operator.example";
+    const ownerOrigin = "http://owner.example:3425";
+    const key = jevKey(typesafe(200).fetch, undefined, operatorOrigin, true);
+    await key.ready();
+    expect(key.baseURL()).toBe(operatorOrigin);
+    await key.save("ts_owner_origin_key_1", f.owner.id, ownerOrigin);
+    expect(key.baseURL()).toBe(ownerOrigin);
+    expect(key.baseURLSource()).toBe("settings");
   });
 
   test("a key TypeSafe refuses is never stored", async () => {

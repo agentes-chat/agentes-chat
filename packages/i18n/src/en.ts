@@ -10541,6 +10541,12 @@ export const en = {
     withoutHint:
       "Without Jev, a small model on one of your API keys picks who answers. Without a key, each person's own Claude or ChatGPT plan picks for the messages they write, in a few seconds. Otherwise a reply or a follow-up still reaches its agent. Mention an agent to call it.",
     setUp: "Set up Jev",
+    provider: "Provider",
+    providerAccessible: "Jev provider",
+    providerTypesafe: "TypeSafe",
+    baseURL: "Jev base URL",
+    baseURLPlaceholder: "https://jev.example",
+    invalidBaseURL: "Enter an HTTP(S) origin without a path, query, fragment or userinfo.",
     steps: {
       account: "Create a TypeSafe account and add credit",
       accountHint: "Jev is prepaid: US$ {{price}} per million tokens. Picking who answers costs about US$ {{call}}.",
@@ -10548,12 +10554,15 @@ export const en = {
       key: "Create a key",
       openKeys: "Open API keys",
       paste: "Paste it here",
+      pasteOther: "Paste your API key here",
       placeholder: "Your TypeSafe key",
+      placeholderOther: "Your API key",
       sealed: "Encrypted on this server. Never shown again.",
       invalid: "TypeSafe didn't accept this key. Copy it again from the keys page.",
       savedNoCredit: "Saved. Add credit at TypeSafe and Jev starts by itself.",
     },
     keyName: "TypeSafe key",
+    keyNameOther: "Provider key",
     month_one: "{{count, number}} decision this month · {{cost}}",
     month_other: "{{count, number}} decisions this month · {{cost}}",
     state: {

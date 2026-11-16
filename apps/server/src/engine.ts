@@ -254,6 +254,8 @@ export function buildEngine(o: EngineOptions) {
     keyWrapper: adapters.keyWrapper,
     keyWrappers,
     envKey: config.TYPESAFE_API_KEY,
+    baseURL: config.JEV_BASE_URL,
+    otherProviderEnabled: config.JEV_OTHER_PROVIDER_ENABLED,
     fetch: o.jevFetch,
   });
   // The small model that routes and judges on an organization's keys (ADR 0074): the deployment's own on a

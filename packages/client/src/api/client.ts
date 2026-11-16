@@ -399,8 +399,8 @@ export interface ApiClient {
     /** `null` unless I am the installation's owner on a self-hosted server. */
     jev(): Promise<JevKey | null>;
     /**
-     * A pasted key (TypeSafe's, or OpenRouter's), or the workspace's own OpenRouter key. Checked first:
-     * `jev_key_invalid` (422) when it is refused, `jev_key_env` (409) with an env key.
+     * A pasted key is checked at its selected System One origin; an OpenRouter credential can also be selected from the workspace.
+     * `jev_key_invalid` (422) when refused, `jev_key_env` (409) while an env key is set.
      */
     saveJev(input: JevKeyInput): Promise<JevKey>;
     checkJev(): Promise<JevKey>;

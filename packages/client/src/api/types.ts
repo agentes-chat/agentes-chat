@@ -35,14 +35,19 @@ export interface JevKey {
   via: "typesafe" | "openrouter" | null;
   /** The key's last 4 characters (the key itself is never returned). */
   hint: string | null;
-  /** What its owner can fix: TypeSafe or OpenRouter refused the key, or its account is out of credit. Else `ok`. */
+  /** What its owner can fix: TypeSafe, OpenRouter or the selected endpoint refused the key, or its account is out of credit. Else `ok`. */
   state: "off" | "ok" | "invalid" | "no_credit";
+  /** Whether the pinned owner may choose a custom System One endpoint (server flag). */
+  otherProviderEnabled: boolean;
+  /** Effective System One origin, visible only to the installation's pinned owner. */
+  baseURL: string;
+  baseURLSource: "settings" | "env" | "default";
   /** Jev's calls this month (UTC), every workspace together. */
   month: { decisions: number; costUsd: number };
 }
 
-/** Jev's key to save: one pasted (TypeSafe's or OpenRouter's), or the workspace's own OpenRouter key. */
-export type JevKeyInput = string | { orgId: string; credentialId: string };
+/** Jev's key to save: one pasted, checked at the System One origin it is given (else the current one), or the workspace's own OpenRouter key. */
+export type JevKeyInput = { apiKey: string; baseURL?: string } | { orgId: string; credentialId: string };
 
 /**
  * The installation's GIPHY key, for its pinned owner on a server that isn't agentes.chat's own (`GET

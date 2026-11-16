@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jevOriginSchema } from "./jev-origin";
 import { parseFirebaseServiceAccount, parsePemKey } from "./pem";
 
 /**
@@ -377,6 +378,18 @@ export const envVars = {
       "Your TypeSafe key for Jev (https://console.typesafe.ai/keys), optional. Jev picks who answers messages nobody @mentioned, keeps memory tidy and finds what agents look for on their screens. An OpenRouter key (sk-or-…) works too: the same Jev, called and billed through OpenRouter. The installation's owner can also add one in Settings › AI accounts. This variable wins over that one. Never sent to a browser. Calls are billed to the key's account.",
     section: "Agents",
     secret: true,
+  },
+  JEV_BASE_URL: {
+    schema: jevOriginSchema.optional(),
+    description:
+      "HTTP(S) origin of a System One compatible Jev endpoint. No path, query, fragment or userinfo. Used as the server default when there is no owner selection, regardless of JEV_OTHER_PROVIDER_ENABLED; otherwise Jev uses TypeSafe. Leave unset for TypeSafe.",
+    section: "Agents",
+  },
+  JEV_OTHER_PROVIDER_ENABLED: {
+    schema: z.stringbool().default(false),
+    description:
+      "Allow the installation's pinned owner to select a custom System One origin for Jev in Settings. When false (default), the owner cannot choose a custom origin and any saved custom origin is ignored; Jev uses JEV_BASE_URL when set, otherwise TypeSafe.",
+    section: "Agents",
   },
   JEV_TIMEOUT_MS: {
     schema: z.coerce.number().int().min(200).max(30_000).default(2000),

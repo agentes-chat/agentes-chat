@@ -17,6 +17,8 @@ export const instanceSecrets = pgTable(
     kekId: text().notNull(),
     /** Its last 4 characters (the GitHub App's slug): the only part ever shown. */
     keyHint: text().notNull(),
+    /** Owner-selected System One origin for Jev; used only with JEV_OTHER_PROVIDER_ENABLED. */
+    baseUrl: text(),
     updatedBy: text().references(() => users.id, { onDelete: "set null" }),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },

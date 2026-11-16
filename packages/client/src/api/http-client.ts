@@ -592,8 +592,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           })
         ).offer,
       jev: () => nullOn(404, () => request<JevKey>("/api/app/jev")),
-      saveJev: (input) =>
-        request<JevKey>("/api/app/jev", { method: "PUT", json: typeof input === "string" ? { apiKey: input } : input }),
+      saveJev: (input) => request<JevKey>("/api/app/jev", { method: "PUT", json: input }),
       checkJev: () => request<JevKey>("/api/app/jev/check", { method: "POST" }),
       removeJev: () => request<JevKey>("/api/app/jev", { method: "DELETE" }),
       gifKey: () => nullOn(404, () => request<GifKey>("/api/app/gif-key")),

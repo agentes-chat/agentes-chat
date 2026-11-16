@@ -1466,8 +1466,8 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (!state.jev) throw new ApiError(404, "not_found", "Not found");
         // The workspace's own OpenRouter key: a key ending like that credential's.
         const apiKey =
-          typeof input === "string"
-            ? input
+          "apiKey" in input
+            ? input.apiKey
             : `sk-or-v1-${state.credentials.find((c) => c.id === input.credentialId)?.keyHint ?? "0000"}`;
         const verdict = state.jevVerdicts?.[apiKey];
         if (verdict === "invalid") throw new ApiError(422, "jev_key_invalid", "TypeSafe didn't accept this key.");
@@ -1481,6 +1481,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           via: apiKey.startsWith("sk-or-") ? "openrouter" : "typesafe",
           hint: apiKey.slice(-4),
           state: verdict ?? "ok",
+          ...("apiKey" in input && input.baseURL ? { baseURL: input.baseURL, baseURLSource: "settings" as const } : {}),
         };
         return state.jev;
       },
@@ -1492,7 +1493,15 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       removeJev: async () => {
         log("system.removeJev");
         if (!state.jev) throw new ApiError(404, "not_found", "Not found");
-        state.jev = { ...state.jev, source: null, via: null, hint: null, state: "off" };
+        state.jev = {
+          ...state.jev,
+          source: null,
+          via: null,
+          hint: null,
+          state: "off",
+          baseURL: "https://api.typesafe.ai",
+          baseURLSource: "default",
+        };
         return state.jev;
       },
       gifKey: async () => state.gifKey ?? null,
