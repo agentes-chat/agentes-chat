@@ -12,8 +12,10 @@ import {
   actionCardWords,
   agentProposalEnd,
   agentProposalOf,
+  type ConnectAiCard,
   cardInstallAgent,
   cardInstallOf,
+  connectAiDone,
   connectAppDone,
   draftLevels,
   draftMailLevels,
@@ -628,4 +630,21 @@ test("a people card's rows, as the web and the phone both say and gate them", ()
   expect(rows.map((r) => memberRowDone(r, members))).toEqual([false, false]);
   const after = [{ userId: "u2", role: "owner" as const, roleIds: rolesAfter(rows[1] as never, ["r2"]) }];
   expect(rows.map((r) => memberRowDone(r, after))).toEqual([true, true]);
+});
+
+test("a plan's Connect card isn't done while the model brain stands in for its computer brain", () => {
+  const card: ConnectAiCard = { kind: "connect_ai", forUserId: "u-1", what: "claude", agentIds: ["a-1"], why: "" };
+  const agents = new Map([["a-1", { brain: { kind: "claude_code" as const, model: null } }]]);
+  const status = (extra: { background?: "no_ai" | "waiting" }) => ({
+    any: true,
+    agents: [{ agentId: "a-1", state: "ready" as const, ...extra }],
+  });
+  // Claude Code not signed in, the agent's API key answering for it: still a Connect button.
+  expect(connectAiDone(card, status({ background: "no_ai" }), agents)).toBe(false);
+  expect(connectAiDone(card, status({}), agents)).toBe(true);
+  // A key's card: the model brain thinks, so it's done.
+  expect(connectAiDone({ ...card, what: "api_key" }, status({ background: "no_ai" }), agents)).toBe(true);
+  // The right hand's background is the workspace's AI, not its plan's.
+  const rightHand = new Map([["a-1", { ...agents.get("a-1"), builtin: "right_hand" as const }]]);
+  expect(connectAiDone(card, status({ background: "no_ai" }), rightHand)).toBe(true);
 });
