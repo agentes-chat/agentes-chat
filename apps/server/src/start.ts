@@ -414,6 +414,7 @@ async function boot(
   });
   // The saved Jev key, before anything calls Jev (vision reads it synchronously); the saved GitHub App likewise.
   await engine.jevKey.ready();
+  await engine.decisionModel.ready();
   await engine.githubApp.ready();
   await engine.speech.ready();
   log.info("voice messages", { engines: engine.speech.chain().map((e) => e.id) });
@@ -546,6 +547,7 @@ async function boot(
         talker: engine.talker,
         router: engine.router,
         jevKey: engine.jevKey,
+        decisionModel: engine.decisionModel,
         gifKey: gifKey ?? undefined,
         githubApp: engine.githubApp,
         speech: engine.speech,

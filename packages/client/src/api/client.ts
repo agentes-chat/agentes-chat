@@ -129,6 +129,9 @@ import type {
   DatabaseConnection,
   DatabaseConnectionInput,
   DatabaseTable,
+  DecisionHost,
+  DecisionModel,
+  DecisionModelInput,
   DeletionProofInput,
   DesktopPictureView,
   DesktopRelease,
@@ -405,6 +408,16 @@ export interface ApiClient {
     saveJev(input: JevKeyInput): Promise<JevKey>;
     checkJev(): Promise<JevKey>;
     removeJev(): Promise<JevKey>;
+    /** The installation's optional decision model (ADR 0188); null unless I am its owner on a self-hosted server. */
+    decisionModel(): Promise<DecisionModel | null>;
+    /** This server's CPUs, memory and disk, and the local model that fits them. */
+    decisionHost(): Promise<DecisionHost>;
+    /** Turn the switch on or off, or change the provider, model or key; the install runs in the background. */
+    saveDecisionModel(input: DecisionModelInput): Promise<DecisionModel>;
+    checkDecisionModel(): Promise<DecisionModel>;
+    retryDecisionInstall(): Promise<DecisionModel>;
+    cancelDecisionInstall(): Promise<DecisionModel>;
+    removeDecisionModel(): Promise<DecisionModel>;
     /** The GIPHY key (ADR 0091): `null` unless I am the installation's owner on a self-hosted server. */
     gifKey(): Promise<GifKey | null>;
     /** Checked with GIPHY first: `gif_key_invalid` (422) when it refuses, `gif_key_env` (409) with an env key. */

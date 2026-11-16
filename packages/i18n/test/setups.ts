@@ -161,6 +161,12 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // (GET /api/app/jev is 404 elsewhere).
     "jev.",
     "onboarding.jev.",
+    // The decision model's card, in Settings › AI and usage: only the installation's owner on a self-hosted
+    // server gets it (GET /api/app/decision-model is 404 elsewhere, ADR 0188).
+    "decision.providers.local",
+    "decision.providers.localText",
+    "decision.recommended",
+    "decision.hostLoading",
     // The GIPHY key's card too, in Settings › GIFs and stickers (GET /api/app/gif-key is 404 elsewhere, ADR 0091).
     "settings.media.giphy.",
     // The speech key's card, in Settings › Voice: only the owner of a self-hosted server gets it (ADR 0100).
@@ -212,7 +218,13 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
   apiKey: ["agentPage.work.brain.fallbackTitle"],
   // A message nobody mentions still gets an agent: routing.mine (the chip and its help line), routing.by (Settings),
   // or the receipt of a message a rule sent to its one candidate.
-  routing: ["channelMembers.replyAloneHelp", "routing.by.jev", "routing.by.model", "receipts.by.only_agent"],
+  routing: [
+    "channelMembers.replyAloneHelp",
+    "routing.by.jev",
+    "routing.by.model",
+    "routing.by.decision",
+    "receipts.by.only_agent",
+  ],
   system: [
     "wiki.import.howTo",
     "machines.download.step1",

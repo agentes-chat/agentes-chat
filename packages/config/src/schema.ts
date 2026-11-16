@@ -393,6 +393,13 @@ export const envVars = {
       "Jev model for judgments over images (an agent finding a target on a screenshot of its browser or desktop). Needs a release that takes images.",
     section: "Agents",
   },
+  DECISION_MODEL_URL: {
+    schema: z.url().optional(),
+    description:
+      "A local decision runtime of your own (ADR 0188): a llama.cpp server with Laya on this machine, at the compose file's `decision` profile (`http://decision:8080`), or any server speaking the same POST /v1/systemone. The installation's owner turns the switch on in Settings › AI accounts; this address is where it looks. Absent: `http://127.0.0.1:8080`.",
+    section: "Agents",
+    example: "http://decision:8080",
+  },
   OPENAI_CHEAP_MODEL: {
     schema: modelId.default("gpt-6-luna"),
     description:

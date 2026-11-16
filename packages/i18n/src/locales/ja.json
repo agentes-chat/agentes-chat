@@ -2950,7 +2950,8 @@
       "plans": "各プランは、そのオーナーのメッセージに対してだけ選びます。",
       "rules": "エージェントはメンション、返信、続きの会話に回答します。",
       "off": "エージェントはメンションされたときだけ回答します。",
-      "noSmall": "{{provider}}にはこの用途の小型モデルがありません。エージェントはメンション、返信、続きの会話に回答します。"
+      "noSmall": "{{provider}}にはこの用途の小型モデルがありません。エージェントはメンション、返信、続きの会話に回答します。",
+      "decision": "{{model}} picks who answers each message without a mention."
     }
   },
   "noAi": {
@@ -19549,5 +19550,60 @@
       "alwaysOn": "今後、このような報告は確認なしで送信されます。",
       "askFirst": "送信前に確認する"
     }
+  },
+  "decision": {
+    "title": "Decision model",
+    "offHint": "Off. Jev decides when it has a key. Otherwise, the small model on your key.",
+    "onHint": "On. This model decides before Jev, which keeps images and boxes and takes over if it fails.",
+    "providers": {
+      "local": "On this server",
+      "localText": "Laya, a small decision model that runs on this server.",
+      "openai": "OpenAI",
+      "openaiText": "GPT-6 Luna through OpenAI's Decisions API.",
+      "gemini": "Gemini",
+      "geminiText": "Gemini Decision 1, with text, image, audio, video and PDF."
+    },
+    "key": "API key",
+    "keyHint": "The key is encrypted on the server and never returned to the browser.",
+    "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
+    "recommended": "Recommended for this server: {{model}}.",
+    "hostLoading": "Reading this server's size...",
+    "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
+    "activate": "Turn on",
+    "activateLocal": "Turn on and download Laya",
+    "cancel": "Cancel",
+    "check": "Check",
+    "change": "Change",
+    "remove": "Remove",
+    "removeAsk": "Remove the decision model?",
+    "removeYes": "Remove",
+    "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
+    "failed": "The model could not be prepared: {{error}}",
+    "state": {
+      "off": "Off",
+      "ok": "On",
+      "invalid": "Key refused",
+      "no_credit": "No credit",
+      "unreachable": "No answer"
+    },
+    "install": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "checking": "Checking",
+      "deleting": "Switching the model",
+      "downloading": "Downloading",
+      "configuring": "Configuring",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Canceled"
+    },
+    "setupHint": "Choose where it runs, then turn it on. Jev decides until then.",
+    "providersLabel": "Where the decision model runs",
+    "recommendedTag": "Recommended",
+    "removeText": "Jev decides again.",
+    "switchAsk": "Switch the decision model?",
+    "switchCurrent": "The current model will be removed.",
+    "switchSlow": "The new model may take a while to be fully configured.",
+    "switchConfirm": "Switch and prepare"
   }
 }

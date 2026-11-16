@@ -748,10 +748,11 @@ export function agentRoutes(deps: AppDeps) {
               }),
             ),
             routing: z.object({
-              by: z.enum(["jev", "model", "plans", "rules", "off"]),
-              mine: z.enum(["jev", "model", "plan", "rules", "off"]),
+              by: z.enum(["jev", "decision", "model", "plans", "rules", "off"]),
+              mine: z.enum(["jev", "decision", "model", "plan", "rules", "off"]),
               model: z.string().nullable(),
               noSmallModel: z.string().nullable(),
+              decisionProvider: z.string().nullable().optional(),
             }),
             apiKey: z.boolean(),
             /** Memory reflects on finished conversations: a summary model it can call (ADR 0167). */

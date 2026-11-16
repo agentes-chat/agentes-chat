@@ -120,6 +120,8 @@ import type {
   ComputerSetup,
   DatabaseActionName,
   DatabaseConnectionInput,
+  DecisionModel,
+  DecisionModelInput,
   DeletionProofInput,
   DirectMessage,
   DmRead,
@@ -364,6 +366,49 @@ function useJevChange<T>(change: (api: ApiClient, input: T) => Promise<JevKey>, 
 export const useSaveJevKey = () => useJevChange((api, input: JevKeyInput) => api.system.saveJev(input), true);
 export const useCheckJevKey = () => useJevChange<void>((api) => api.system.checkJev());
 export const useRemoveJevKey = () => useJevChange<void>((api) => api.system.removeJev());
+
+/** The installation's optional decision model: `null` for everyone but its owner on a self-hosted server. */
+export const useDecisionModel = () => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.decisionModel,
+    queryFn: () => api.system.decisionModel(),
+    // A model being prepared in the background: the screen follows it until it ends.
+    refetchInterval: (query) => {
+      const install = query.state.data?.install?.state;
+      return install && ["queued", "checking", "deleting", "downloading", "configuring"].includes(install)
+        ? 2000
+        : false;
+    },
+  });
+};
+
+/** This server's size and the local model that fits it. */
+export const useDecisionHost = (enabled = true) => {
+  const api = useApi();
+  return useQuery({ queryKey: keys.decisionHost, queryFn: () => api.system.decisionHost(), enabled });
+};
+
+function useDecisionChange<T>(change: (api: ApiClient, input: T) => Promise<DecisionModel>, silent = false) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: T) => change(api, input),
+    onSuccess: (model) => {
+      qc.setQueryData(keys.decisionModel, model);
+      void qc.invalidateQueries({ queryKey: keys.decisionHost });
+      // The model is the server's: who picks the agents may change in every workspace.
+      void qc.invalidateQueries({ predicate: (q) => q.queryKey[3] === "ai-status" });
+    },
+    ...(silent ? { meta: { silent: true } } : {}),
+  });
+}
+export const useSaveDecisionModel = () =>
+  useDecisionChange((api, input: DecisionModelInput) => api.system.saveDecisionModel(input), true);
+export const useCheckDecisionModel = () => useDecisionChange<void>((api) => api.system.checkDecisionModel());
+export const useRetryDecisionInstall = () => useDecisionChange<void>((api) => api.system.retryDecisionInstall());
+export const useCancelDecisionInstall = () => useDecisionChange<void>((api) => api.system.cancelDecisionInstall());
+export const useRemoveDecisionModel = () => useDecisionChange<void>((api) => api.system.removeDecisionModel());
 
 /** The installation's GIPHY key (ADR 0091): `null` for everyone but its owner on a self-hosted server. */
 export const useGifKey = () => {

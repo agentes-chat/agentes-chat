@@ -31,7 +31,6 @@ const open = async (patch: Partial<ReturnType<typeof seedState>>) => {
   await settle(5);
   return { ...r, state };
 };
-const card = () => screen().getByRole("region", { name: "Jev" });
 const click = async (el: Element, rounds = 4) => {
   await act(async () => fireEvent.click(el));
   await settle(rounds);
@@ -45,7 +44,6 @@ const calls = (state: ReturnType<typeof seedState>, method: string) =>
 type Words = readonly [string, string];
 const SECTION: Words = ["Quem escolhe os agentes", "Who picks the agents"];
 const HOW_PICKED: Words = ["Como os agentes são escolhidos", "How agents are picked"];
-const ABOUT: Words = ["Sobre Jev", "About Jev"];
 const HOW_JEV: Words = ["Como o Jev funciona", "How Jev works"];
 const THIS_MONTH: Words = [
   "Termina em 9f2c · 1.240 decisões este mês · US$\u00a00,13",
@@ -53,6 +51,12 @@ const THIS_MONTH: Words = [
 ];
 const REPLACE: Words = ["Trocar a chave", "Replace the key"];
 const KEYS_PAGE: Words = ["Abrir as chaves de API", "Open API keys"];
+/** The card that holds every provider, Jev's rows under its own. */
+const card = () => document.querySelector(".decision-model") as HTMLElement;
+/** Jev's own rows inside that card: its key, its month and its steps. */
+const jevBody = () => card().querySelector("#jev") as HTMLElement;
+/** The chip beside Jev's name in the list, where its state shows. */
+const jevChip = () => card().querySelector(".ac-optrow .ac-chip")?.textContent ?? null;
 /** Each state of the card: its chip, its key's line, the note under it, its buttons after the ⓘ, its links before "How Jev works". */
 const STATES: {
   state: string;
@@ -151,22 +155,16 @@ describe("Jev's key in Configurações › IA e uso", () => {
     expect(document.body.textContent).not.toMatch(/jev|typesafe/i);
   });
 
-  test("its state sits on its name's first line, however many lines its name and line take", async () => {
+  test("its state sits beside its name in the list, and its rows open under the chosen one", async () => {
     await open({ aiStatus: routed("rules"), jev: OFF });
-    const head = card().querySelector(".jev__head") as HTMLElement;
-    // A MediaRow: its logo, its name and its state on one line, what it does under them at the row's width.
-    expect(head.classList.contains("ac-mediarow")).toBe(true);
-    expect(head.querySelector(":scope > .ac-mediarow__face > .ac-brand--sm")).toBeTruthy();
-    expect(head.querySelector(":scope > .ac-mediarow__head .jev__title")).toBeTruthy();
-    expect(head.querySelector(":scope > .ac-mediarow__end > .ac-chip")).toBeTruthy();
-    expect(head.querySelector(":scope > .ac-mediarow__body")?.textContent).toBeTruthy();
-    const layout = (await Bun.file(new URL("../src/layout.css", import.meta.url).pathname).text()).replace(
-      /\/\*[\s\S]*?\*\//g,
-      "",
-    );
-    // Nothing moves the chip off that line, and no rule of the page lays the head out on its own.
-    expect(layout).not.toMatch(/\.jev__head > \.ac-chip/);
-    expect(layout).not.toMatch(/\.jev__head[^{]*\{/);
+    // One row per provider: a logo, the name, the chip saying its state, then what it is.
+    const row = card().querySelector(".ac-optrow") as HTMLElement;
+    expect(row.querySelector(":scope > .ac-optrow__lead > .ac-brand--sm")).toBeTruthy();
+    expect(row.querySelector(":scope > .ac-optrow__text > .ac-optrow__title")?.textContent).toContain("Jev");
+    expect(row.querySelector(":scope > .ac-optrow__text > .ac-optrow__title .ac-chip")?.textContent).toBe("Desligado");
+    expect(row.querySelector(":scope > .ac-optrow__text .ac-optrow__desc")?.textContent).toBeTruthy();
+    // Chosen, it opens its own rows under itself, and those hold the key's facts.
+    expect(card().querySelector(".ac-optcard #jev")).toBeTruthy();
   });
 
   test("off: why it helps, then its steps in place, each with its link; a short key isn't offered", async () => {
@@ -335,7 +333,7 @@ describe("Jev's key in Configurações › IA e uso", () => {
     expect(within(card()).queryByRole("button", { name: "Trocar a chave" })).toBeNull();
     expect(within(card()).queryByRole("button", { name: "Apagar" })).toBeNull();
     expect(
-      within(card())
+      within(jevBody())
         .queryAllByRole("link")
         .map((l) => l.textContent),
     ).toEqual(["Como o Jev funciona"]);
@@ -372,13 +370,13 @@ describe("Jev's key in Configurações › IA e uso", () => {
         expect(within(section).getByRole("link", { name: HOW_PICKED[i] })).toBeTruthy();
         expect({
           state: c.state,
-          chip: card().querySelector(".ac-chip")?.textContent,
-          facts: card().querySelector(".jev__key .list-col > .small")?.textContent ?? null,
-          note: card().querySelector(".ac-setnote")?.textContent ?? null,
-          buttons: within(card())
+          chip: jevChip(),
+          facts: jevBody().querySelector(".jev__key .list-col > .small")?.textContent ?? null,
+          note: jevBody().querySelector(".ac-setnote")?.textContent ?? null,
+          buttons: within(jevBody())
             .queryAllByRole("button")
             .map((b) => b.getAttribute("aria-label") ?? b.textContent),
-          links: within(card())
+          links: within(jevBody())
             .queryAllByRole("link")
             .map((l) => l.textContent),
         }).toEqual({
@@ -386,7 +384,8 @@ describe("Jev's key in Configurações › IA e uso", () => {
           chip: c.chip[i],
           facts: c.facts?.[i] ?? null,
           note: c.note?.[i] ?? null,
-          buttons: [ABOUT[i], ...c.buttons.map((b) => b[i])],
+          // The ⓘ that once sat beside Jev's name now introduces the whole list, so the row's actions alone.
+          buttons: c.buttons.map((b) => b[i]),
           links: [...c.links.map((l) => l[i]), HOW_JEV[i]],
         });
         for (const text of c.text ?? []) expect(card().textContent).toContain(text[i]);
@@ -401,7 +400,7 @@ describe("Jev's key in Configurações › IA e uso", () => {
     await settle(6);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/usage`);
     expect(router.state.location.hash).toBe("jev");
-    expect(document.activeElement === card()).toBe(true);
+    expect(document.activeElement === jevBody()).toBe(true);
   });
 });
 
@@ -464,7 +463,8 @@ describe("Jev through OpenRouter (ADR 0073 §9)", () => {
     await click(within(card()).getByRole("button", { name: "Usar outra chave" }));
     expect(within(card()).getByLabelText("Cole aqui")).toBeTruthy();
     await click(within(card()).getByRole("button", { name: "Cancelar" }));
-    expect(within(card()).queryByRole("radiogroup")).toBeNull();
+    // Only the provider list is left: the steps' own choices closed with Cancel.
+    expect(within(jevBody()).queryByRole("radiogroup")).toBeNull();
 
     await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
     await click(within(card()).getByRole("button", { name: "Ligar o Jev" }), 6);
