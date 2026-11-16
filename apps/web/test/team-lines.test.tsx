@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
 import { setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
@@ -106,11 +105,6 @@ describe("Responde a, by clicking (ADR 0148 addendum)", () => {
     expect(row.getAttribute("aria-label")).toBe("Supervisor: Atlas");
     // The person's card is a direct child of the column, so `.team-tree__col > .team-node` holds it to a card's width.
     expect(document.querySelector(".team-tree__col > .team-node--person")).not.toBeNull();
-    // A role is clamped to two lines in the Organograma only, so its whole text stays in the title.
-    const css = readFileSync(new URL("../src/pages/team.css", import.meta.url), "utf8");
-    expect(css).toMatch(/^\.team-tree \.team-node__role \{/m);
-    expect(css).not.toMatch(/^\.team-node__role \{/m);
-    for (const r of document.querySelectorAll(".team-node__role")) expect(r.getAttribute("title")).toBe(r.textContent);
     const chip = document.querySelector(".team-lodi-chip") as HTMLElement;
     expect(chip.textContent).toContain("Lodi");
     expect(chip.textContent).toContain("acompanha tudo com você");

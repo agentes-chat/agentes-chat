@@ -135,12 +135,6 @@
   text-decoration: none;
   box-shadow: var(--e1);
 }
-.team-tree .team-node__role {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
 .team-node__text {
   display: flex;
   flex-direction: column;
@@ -275,30 +269,30 @@
   border-left: 1.5px solid var(--line-strong);
 }
 .team-line__reports::before {
-  top: -8px;
-  height: 8px;
+  top: calc(-1 * var(--space-2));
+  height: var(--space-2);
 }
 .team-line__row {
   position: relative;
   display: flex;
   justify-content: center;
-  gap: 12px;
-  padding-top: 12px;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
 }
 .team-line__row::before {
   top: 0;
-  height: 12px;
+  height: var(--space-3);
 }
 .team-line__row > .team-line {
   position: relative;
-  padding-top: 16px;
+  padding-top: var(--space-4);
 }
 .team-line__row > .team-line::before {
   content: "";
   position: absolute;
   top: 0;
-  left: -6px;
-  right: -6px;
+  left: calc(-1 * var(--space-3) / 2);
+  right: calc(-1 * var(--space-3) / 2);
   border-top: 1.5px solid var(--line-strong);
 }
 .team-line__row > .team-line:first-child::before {
@@ -315,7 +309,7 @@
   position: absolute;
   top: 0;
   left: 50%;
-  height: 16px;
+  height: var(--space-4);
   border-left: 1.5px solid var(--line-strong);
 }
 .team-node[data-line-drop] {
@@ -349,58 +343,6 @@
   }
   .team-tree__org {
     flex-direction: column;
-  }
-  /* The reports stack again, indented under their supervisor. Every card keeps 180 px, so the column grows with the
-     indent of its depth instead of squeezing the cards; the people row scrolls sideways when that is wider. */
-  .team-tree .team-tree__col {
-    width: min-content;
-  }
-  /* The person's card fills the stacked column again, and its agents indent under it with a line. */
-  .team-tree .team-tree__col > .team-node {
-    align-self: stretch;
-    min-width: 0;
-    max-width: none;
-  }
-  .team-tree .team-tree__agents {
-    align-items: stretch;
-    margin-left: 12px;
-    padding-left: 12px;
-    border-left: 1.5px solid var(--line-strong);
-  }
-  .team-line {
-    align-items: stretch;
-  }
-  .team-line .team-node {
-    min-width: 180px;
-    max-width: none;
-  }
-  .team-line--sup > .team-node {
-    align-self: stretch;
-  }
-  .team-line__reports {
-    align-items: stretch;
-    gap: 8px;
-    margin-left: 14px;
-    padding-left: 12px;
-    border-left: 1.5px solid var(--line-strong);
-  }
-  .team-line__count {
-    align-self: flex-start;
-  }
-  .team-line__row {
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: 8px;
-    padding-top: 0;
-  }
-  .team-line__reports::before,
-  .team-line__row::before,
-  .team-line__row > .team-line::before,
-  .team-line__row > .team-line::after {
-    display: none;
-  }
-  .team-line__row > .team-line {
-    padding-top: 0;
   }
 }
 .team-tree__top > .team-node + .team-node::before {
@@ -461,6 +403,61 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
+}
+@media (max-width: 720px) {
+  /* The reports stack again, indented under their supervisor. Every card keeps 180 px, so the column grows with the
+     indent of its depth instead of squeezing the cards; the people row scrolls sideways when that is wider. These
+     follow the base rules above, so they win the ties by coming after them. */
+  .team-tree__col {
+    width: min-content;
+  }
+  /* The person's card fills the stacked column again, and its agents indent under it with a line. */
+  .team-tree__col > .team-node {
+    align-self: stretch;
+    min-width: 0;
+    max-width: none;
+  }
+  .team-tree__agents {
+    align-items: stretch;
+    margin-left: var(--space-3);
+    padding-left: var(--space-3);
+    border-left: 1.5px solid var(--line-strong);
+  }
+  .team-line {
+    align-items: stretch;
+  }
+  .team-line .team-node {
+    min-width: 180px;
+    max-width: none;
+  }
+  .team-line--sup > .team-node {
+    align-self: stretch;
+  }
+  .team-line__reports {
+    align-items: stretch;
+    gap: var(--space-2);
+    margin-left: 14px;
+    padding-left: var(--space-3);
+    border-left: 1.5px solid var(--line-strong);
+  }
+  .team-line__count {
+    align-self: flex-start;
+  }
+  .team-line__row {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    padding-top: 0;
+  }
+  .team-line__reports::before,
+  .team-line__row::before,
+  .team-line__row > .team-line::before,
+  .team-line__row > .team-line::after {
+    display: none;
+  }
+  .team-line__row > .team-line {
+    padding-top: 0;
+  }
 }
 
 /* Organograma › Por setor: one frame per setor in its color. */
