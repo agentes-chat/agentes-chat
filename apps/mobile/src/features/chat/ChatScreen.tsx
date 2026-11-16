@@ -116,6 +116,7 @@ import { StickerStageContext } from "@/agent/StickerCanvas";
 import { createStickerStage } from "@/agent/sticker-stage";
 import { holdOpenConversation } from "@/lib/push";
 import { rightHandSeen } from "@/lib/storage";
+import { uploadPart } from "@/lib/upload-part";
 import { useOrg } from "@/providers/org";
 import { usePush } from "@/providers/push";
 import { useRealtime } from "@/providers/realtime";
@@ -1187,10 +1188,7 @@ function Chat({
     addPending([{ uri: file.uri, name: file.name, type: "text/plain" }]);
   };
   const uploadOne = async (file: PendingFile): Promise<ArtifactRef> => {
-    // React Native's FormData sends `{ uri, name, type }` as a file part.
-    const part = { uri: file.uri, name: file.name, type: file.type };
-    const asFile = part as unknown as Parameters<typeof api.artifacts.upload>[1];
-    const saved: ArtifactDetail = await api.artifacts.upload(orgId, asFile, {
+    const saved: ArtifactDetail = await api.artifacts.upload(orgId, uploadPart(file), {
       channelId,
       ...(threadId ? { threadId } : {}),
     });
