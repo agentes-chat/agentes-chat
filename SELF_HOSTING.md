@@ -1365,7 +1365,8 @@ own files, browser, desktop and sign-ins, which only that person can watch or ta
 page. A computer that runs every agent as one user (the simple mode, a Mac, a computer a person connected)
 can't keep people's places apart, so Lodi has no computer there, and its page says so. Turn its commands,
 browser or desktop off for everyone on its page, under what it can use. The computer's shared folder is
-still shared: every agent and every person's Lodi reads and writes it.
+still shared: every agent and every person's Lodi reads and writes it. Lodi's browser needs that setup
+(This server as the agents' computer, below): without it, Lodi has no browser, and its page links here.
 
 Where others read what Lodi does (a channel, a dashboard widget, a routine that reports to a channel) it works in
 one more place, shared by the whole workspace: one more user on that computer, "Lodi (shared)". Nothing of a

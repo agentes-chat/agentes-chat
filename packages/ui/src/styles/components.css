@@ -3209,6 +3209,16 @@ html:not([data-pointer]) .ac-tab:focus-visible {
 .ac-dialog__foot-acts:empty {
   display: none;
 }
+/* A button is never wider than its dialog: a long name in its words (an account, an agent) ends in an ellipsis, the
+   whole label still its name and, cut, its tip (title-tips.ts). */
+.ac-dialog__foot .ac-btn {
+  max-width: 100%;
+}
+.ac-dialog__foot .ac-btn__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 /* A ghost at the footer's start or end, or in its note: its words on the dialog's edge, as `.ac-acts` does in a row. */
 .ac-dialog__foot > .ac-btn--ghost:not(.ac-btn--icon):is(:first-child, :last-child),
 .ac-dialog__foot-acts > .ac-btn--ghost:not(.ac-btn--icon):last-child,

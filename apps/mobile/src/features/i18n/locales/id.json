@@ -1706,6 +1706,7 @@
       "ui_automation_off": "Otomatisasi UI mati",
       "xcode_missing": "Mac butuh Xcode",
       "xcode_too_old": "Xcode terlalu lama untuk iPhone ini",
+      "ios_behind_xcode": "Perbarui iOS iPhone ini",
       "device_support": "Mac sedang menyiapkan iPhone ini",
       "helper_missing": "Helper pengujian belum disiapkan",
       "helper_expired": "Helper pengujian perlu diperbarui",

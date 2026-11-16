@@ -1804,6 +1804,7 @@
       "ui_automation_off": "UI Otomasyonu kapalı",
       "xcode_missing": "Mac'in Xcode'a ihtiyacı var",
       "xcode_too_old": "Xcode bu iPhone için çok eski",
+      "ios_behind_xcode": "Bu iPhone'un iOS'unu güncelle",
       "device_support": "Mac bu iPhone'u hazırlıyor",
       "helper_missing": "Test yardımcısı henüz kurulmadı",
       "helper_expired": "Test yardımcısının yenilenmesi gerekiyor",

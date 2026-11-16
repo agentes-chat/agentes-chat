@@ -228,10 +228,12 @@ test("on a hold for its first plan the phone's card leads with the plan row: whe
 test("its Computador row is always there: it opens the viewer's own place, or says why it has none", () => {
   const screen = readFileSync(new URL("../../src/features/right-hand/SettingsScreen.tsx", import.meta.url), "utf8");
   expect(screen).toContain("      <Computer agentId={agent.id} />\n");
-  expect(screen).toContain("const none = rightHandNoComputer(view.desktopQ.data?.reason);");
+  expect(screen).toContain("const none = rightHandNoComputer(view.desktopQ.data?.reason, selfHosted(auth.data));");
   // With none there is nothing to open: no chevron, no press, and the reason under the row.
   expect(screen).toContain('<GroupedRow icon="laptop" label={t("agentComputer.button")} />');
-  expect(screen).toContain('<GroupedFooter>{t(none ?? "rightHand.computerYours")}</GroupedFooter>');
+  expect(screen).toContain('t(none ?? "rightHand.computerYours")');
+  // On a self-hosted server with none, the line links to making this server the agents' computer.
+  expect(screen).toContain('none === "rightHand.computerNoHomeServer" ? (');
   // No computer of the workspace's own: whoever may add one opens Dispositivos from the row.
   expect(screen).toContain('const add = none === "rightHand.computerNoHome" && can(org, "pair_computers");');
   expect(screen).toContain('onPress={() => router.push("/settings/devices")}');

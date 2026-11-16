@@ -1838,6 +1838,7 @@ export const featureKeysPtBR = {
       ui_automation_off: "A Automação da IU está desligada",
       xcode_missing: "O Mac precisa do Xcode",
       xcode_too_old: "O Xcode é antigo demais para este iPhone",
+      ios_behind_xcode: "Atualize o iOS deste iPhone",
       device_support: "O Mac está preparando este iPhone",
       helper_missing: "O app de testes ainda não está instalado",
       helper_expired: "O app de testes precisa ser renovado",

@@ -1,8 +1,9 @@
-import type { Actor, Issue, IssueActivity, IssuePatch, IssuePriority } from "@agenteschat/client";
+import type { Actor, Issue, IssueActivity, IssuePatch, IssuePriority, WorkView } from "@agenteschat/client";
 import {
   ApiError,
   keys,
   useChannels,
+  useDms,
   useIssue,
   useIssueAction,
   useIssueActivity,
@@ -134,6 +135,7 @@ function useIssueSource(i: Issue) {
   const { t } = useTranslation();
   const { org } = useOrg();
   const channels = useChannels(org.id);
+  const dms = useDms(org.id);
   switch (i.source.type) {
     case "message": {
       const { channelId } = i.source;
@@ -148,8 +150,27 @@ function useIssueSource(i: Issue) {
         />
       );
     }
-    case "agent":
-      return t("issues.fromAgent");
+    case "agent": {
+      // Handed from a DM with an agent: a link for whoever reads that DM, the plain words for anyone else.
+      const { channelId, messageId } = i.source;
+      const dm = dms.data?.find((d) => d.channelId === channelId && d.with.type === "agent");
+      if (!dm) return t("issues.fromAgent");
+      return (
+        <Trans
+          i18nKey="issues.fromDm"
+          values={{ name: dm.with.name }}
+          components={[
+            <Link
+              key="l"
+              to="/org/$orgId/dm/agent/$agentId"
+              params={{ orgId: org.id, agentId: dm.with.id }}
+              search={messageId ? { m: messageId } : {}}
+              className="ac-link"
+            />,
+          ]}
+        />
+      );
+    }
     case "webhook":
       return t("issues.fromWebhook", { provider: i.source.provider });
     default:
@@ -320,7 +341,8 @@ export function IssueDetails({
       >
         <TabPanel value="details">
           <WorkBox issue={i} />
-          <IssueWorkBlock issue={i} />
+          {/* Handed work: the box above follows it step by step, asks and ends; the line would say it twice. */}
+          {i.backgroundWork?.how !== "handed" && <IssueWorkBlock issue={i} />}
           {!i.assignees.some((a) => a.type === "agent") && isOpen(i) && <AskAgent issue={i} />}
           <DetailsSection title={t("issues.description")}>
             <IssueDescription issue={i} hasFiles={createdFiles.length > 0} onSaved={flashSaved} />
@@ -642,7 +664,8 @@ function WorkBox({ issue: i }: { issue: Issue }) {
     onSettled: () => void qc.invalidateQueries({ queryKey: keys.issues(org.id) }),
   });
   const w = i.work;
-  if (!w) return null;
+  const handed = i.backgroundWork?.how === "handed" ? i.backgroundWork : null;
+  if (!w) return handed?.status === "done" ? <HandedDoneBox issue={i} work={handed} /> : null;
   const name = actors.name({ type: "agent", id: w.agentId });
   const g = agentGrammar(name);
   const stalled = w.state === "stalled";
@@ -725,7 +748,67 @@ function WorkBox({ issue: i }: { issue: Issue }) {
           </ol>
         )
       )}
+      {handed?.question && w.state === "waiting_input" && <HandedAsk work={handed} />}
       {!stalled && <WorkSweep color={color(i) ?? "sky"} waiting={waiting} />}
+    </section>
+  );
+}
+
+/** Where a handed work's card waits for an answer: the person's DM with the agent that handed it, else its channel. */
+function useOpenAsk(work: WorkView) {
+  const { org } = useOrg();
+  const dms = useDms(org.id);
+  const navigate = useNavigate();
+  const dm = dms.data?.find((d) => d.channelId === work.channelId && d.with.type === "agent");
+  const m = work.question?.messageId ?? undefined;
+  return () =>
+    dm
+      ? void navigate({
+          to: "/org/$orgId/dm/agent/$agentId",
+          params: { orgId: org.id, agentId: dm.with.id },
+          search: m ? { m } : {},
+        })
+      : void navigate({
+          to: "/org/$orgId/c/$channelId",
+          params: { orgId: org.id, channelId: work.channelId },
+          search: m ? { m } : {},
+        });
+}
+
+/** A handed work waiting on the reader: its question, and one way to answer it where its card is. */
+function HandedAsk({ work }: { work: WorkView }) {
+  const { t } = useTranslation();
+  const open = useOpenAsk(work);
+  if (!work.question) return null;
+  return (
+    <>
+      <p className="issue-work__ask">{work.question.text}</p>
+      <div className="issue-work__actions">
+        <Button size="sm" variant="primary" icon="message" onClick={open}>
+          {t("issues.work.answer")}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+/** A handed work that finished: who did it, when, who handed it, and the first line of what came of it. */
+function HandedDoneBox({ issue: i, work }: { issue: Issue; work: WorkView }) {
+  const { t, i18n } = useTranslation();
+  const actors = useActors();
+  const name = actors.name({ type: "agent", id: work.agentId });
+  const by = work.handedBy ? actors.name({ type: "agent", id: work.handedBy.agentId }) : null;
+  const when = relativeTime(t, i18n.language, work.finishedAt ?? i.updatedAt);
+  return (
+    <section className="issue-work" aria-label={t("issues.work.label", agentGrammar(name))}>
+      <div className="issue-work__head ac-iconline">
+        <AgentAvatar agentId={work.agentId} name={name} size="sm" state="idle" />
+        <span className="issue-work__text">
+          <b>{t("issues.work.finishedTitle", { name })}</b>
+          <small>{by ? t("issues.work.finishedMeta", { when, name: by }) : when}</small>
+        </span>
+      </div>
+      {work.result && <p className="issue-work__result">{work.result.text}</p>}
     </section>
   );
 }

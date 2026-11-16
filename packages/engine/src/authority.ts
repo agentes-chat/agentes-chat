@@ -288,6 +288,16 @@ export type AuthorityRun = {
   transcript?: Record<string, unknown> | null;
 };
 
+/**
+ * Only these keys of a run's transcript, in its place in a select: a transcript holds the whole conversation (tens of
+ * KB), and the lookups that read a key or two would otherwise ship and parse all of it.
+ */
+export const transcriptKeys = (...keys: string[]) =>
+  sql<Record<string, unknown> | null>`jsonb_build_object(${sql.join(
+    keys.map((k) => sql`${k}::text, ${agentRuns.transcript}->${k}::text`),
+    sql`, `,
+  )})`;
+
 /** The person who wrote into an unattended run while it worked (`Transcript.steeredBy`), if any. */
 export const steeredByOf = (transcript: Record<string, unknown> | null | undefined) =>
   typeof transcript?.steeredBy === "string" ? transcript.steeredBy : null;
@@ -350,7 +360,7 @@ export async function runAuthorityById(db: Executor, orgId: string, runId: strin
       orgId: agentRuns.orgId,
       triggerMessageId: agentRuns.triggerMessageId,
       background: agentRuns.background,
-      transcript: agentRuns.transcript,
+      transcript: transcriptKeys("steeredBy"),
     })
     .from(agentRuns)
     .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, runId)));

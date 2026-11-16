@@ -103,8 +103,10 @@ jobs:
             backend:
               - "apps/server/**"
               - "install.sh"
+            # The layout check runs in the web tests' job, so a change to its rules alone must run that job too.
             web:
               - "apps/web/**"
+              - "scripts/geometry/**"
             mobile:
               - "apps/mobile/**"
             desktop:

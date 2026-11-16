@@ -169,7 +169,7 @@ describe("the agent's AI", () => {
       "Ada answers only you, on your Gemini seat.",
     );
     expect(pt("connectAi.plan.gemini.warning")).toBe(
-      "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta.",
+      "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta. Para não correr esse risco, use uma chave de API do Gemini ou o Gemini Enterprise.",
     );
     expect(geminiPersonal({ provider: "enterprise" })).toBe(false);
     expect(geminiPersonal(undefined)).toBe(true);

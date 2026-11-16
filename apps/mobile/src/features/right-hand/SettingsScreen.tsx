@@ -6,6 +6,7 @@ import {
   useAgentBrain,
   useAiAccounts,
   useApi,
+  useAuthConfig,
   useModelLabel,
   usePlatformKey,
   useRoles,
@@ -16,6 +17,7 @@ import {
   useUpdateSettings,
   useWorkspaceUsesApi,
 } from "@agenteschat/client";
+import { selfHosted } from "@agenteschat/client/lib/about";
 import { accountTitle, ownSignInTitle } from "@agenteschat/client/lib/ai-accounts";
 import { agentsReach, audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
 import { modelRows } from "@agenteschat/client/lib/brain-picker";
@@ -26,11 +28,12 @@ import { brainPlan } from "@agenteschat/client/lib/plans";
 import { AUTO } from "@agenteschat/client/lib/providers";
 import { mineStatus, RIGHT_HAND_POWERS, rightHandNoComputer, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { type LodiPrefsPatch, type LodiSwitch, teamWeekOn } from "@agenteschat/client/lib/right-hand-prefs";
+import { helpUrl } from "@agenteschat/client/lib/server";
 import { dayText, hourText } from "@agenteschat/client/lib/team-week";
 import { useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { StyleSheet, TextInput, View } from "react-native";
 import { useOrg } from "@/providers/org";
 import {
@@ -50,7 +53,7 @@ import { router } from "@/ui/navigation";
 import { openAgentEdit } from "../agents/AgentEditScreen";
 import { openAgentAi, openAgentModel } from "../ai/AgentAiScreen";
 import { openConnectAi } from "../ai/NoAiCard";
-import { PlanHoldNote, usePlanHold } from "../ai/parts";
+import { openPage, PlanHoldNote, usePlanHold } from "../ai/parts";
 import { openComputer } from "../computer/AgentComputerRow";
 import { useAgentComputer } from "../computer/useAgentComputer";
 import { useFailed } from "../routines/hooks";
@@ -129,11 +132,12 @@ function GroupTitle({ children, note }: { children: string; note?: string }) {
  * its own, or one that can't keep people apart) the row stays and says why, with nothing to open.
  */
 function Computer({ agentId }: { agentId: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { org } = useOrg();
+  const auth = useAuthConfig();
   const view = useAgentComputer(agentId);
   if (view.forbidden || !view.ready || !view.facts) return null;
-  const none = rightHandNoComputer(view.desktopQ.data?.reason);
+  const none = rightHandNoComputer(view.desktopQ.data?.reason, selfHosted(auth.data));
   // No computer of the workspace's own yet: whoever may add one gets there from the row.
   const add = none === "rightHand.computerNoHome" && can(org, "pair_computers");
   return (
@@ -159,7 +163,25 @@ function Computer({ agentId }: { agentId: string }) {
           />
         )}
       </GroupedList>
-      <GroupedFooter>{t(none ?? "rightHand.computerYours")}</GroupedFooter>
+      <GroupedFooter>
+        {none === "rightHand.computerNoHomeServer" ? (
+          <Trans
+            i18nKey={none}
+            components={{
+              guide: (
+                <Text
+                  variant="footnote"
+                  accessibilityRole="link"
+                  style={styles.link}
+                  onPress={() => openPage(helpUrl("install-on-a-server", i18n.language, "computers"))}
+                />
+              ),
+            }}
+          />
+        ) : (
+          t(none ?? "rightHand.computerYours")
+        )}
+      </GroupedFooter>
     </>
   );
 }
@@ -763,6 +785,7 @@ function Pills({
 }
 
 const styles = StyleSheet.create({
+  link: { textDecorationLine: "underline" },
   // Over a list's own header: the lists' 16 sides, a section's room above.
   groupTitle: { paddingTop: 24, paddingHorizontal: 16 },
   // Inside a group: its rows' 14 sides.

@@ -301,7 +301,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
     {
       name: "save_how_to",
       description:
-        "Save how you did something that took figuring out (several tries, a new API, a script you wrote), so next time you do it right away: what it is for, the exact way (address, command, parameters, which key it needs from a person through request_secret, never a secret's value, name or where it is kept) and where the script is on your computer. Write the method only, without private details from this conversation. Saving again under the same key replaces the old version. It comes back in your memory when a later request is about it. Save it on your own, before you answer; no one needs to ask.",
+        "Save how you did something that took figuring out (several tries, a new API, a script you wrote), so next time you do it right away: what it is for, the exact way (address, command, parameters, which key it needs from a person through request_secret, never a secret's value) and where the script and any key file are on your computer. Write the method only, without private details from this conversation. Saving again under the same key replaces the old version. It comes back when a later request is about it. Save it on your own, before you answer.",
       scope: "memory:write",
       inputSchema: {
         type: "object",
@@ -435,7 +435,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
                 eq(agentRuns.orgId, ctx.orgId),
                 or(
                   eq(agentRuns.id, ctx.runId),
-                  and(eq(agentRuns.agentId, ctx.agentId), inArray(agentRuns.brainSessionId, session)),
+                  and(eq(agentRuns.agentId, ctx.agentId), eq(agentRuns.brainSessionId, sql`(${session})`)),
                 ),
                 sql`${agentRuns.transcript} -> 'messages' @> ${JSON.stringify([{ content: [{ type: "tool_use", id }] }])}::jsonb`,
               ),
@@ -616,7 +616,7 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
     {
       name: "remember",
       description:
-        'Save, on your own, what you learn: a person correcting you or saying how they want things done (even in passing), a lasting fact about the company or its people. How its systems work (where code lives, how a tool behaves) is a note for yourself. Cite what grounds it (basis: person_said when a person here said it, found when you found it), write it as a fact ("Ana wants reports in Portuguese"), not as an order to yourself, and skip one-off requests. A person telling you not to do something again, or to always do it another way ("don\'t forward this to other agents", "não faça mais isso"), is a preference: save it in your own words, saying what to do instead, with everywhere: true to follow it everywhere (word it without private details from this one). A person\'s lasting rule for your work (no need to ask before each send, where to send things): kind rule, kept under their name everywhere, routines too. Asked to keep something for all of you ("everyone, remember…", "pessoal, lembrem…"): save it once with for: "team" (everywhere: false keeps it to this conversation); never ask other agents for copies. Never credentials or where secrets are kept.',
+        'Save, on your own, what you learn: a person correcting you or saying how they want things done (even in passing), a lasting fact about the company or its people. How its systems work (where code lives, how a tool behaves) is a note for yourself. Cite what grounds it (basis: person_said when a person here said it, found when you found it), write it as a fact ("Ana wants reports in Portuguese"), not as an order to yourself, and skip one-off requests. A person telling you not to do something again, or to always do it another way ("don\'t forward this to other agents", "não faça mais isso"), is a preference: save it in your own words, saying what to do instead, with everywhere: true to follow it everywhere (word it without private details from this one). A person\'s lasting rule for your work (no need to ask before each send, where to send things): kind rule, kept under their name everywhere, routines too. Asked to keep something for all of you ("everyone, remember…", "pessoal, lembrem…"): save it once with for: "team" (everywhere: false keeps it to this conversation); never ask other agents for copies. Never a secret\'s value; a system\'s host, port, user and key file path are a note for yourself.',
       scope: "memory:write",
       inputSchema: {
         type: "object",

@@ -1429,6 +1429,8 @@ export interface Message {
   actions?: AgentAction[];
   /** A long work's anchor (`meta.longWork`, ADR 0121): its line; live via `agent.work`. */
   longWork?: WorkView;
+  /** On a run's last message here: the works it handed over to other agents, each with its line; live via `agent.work`. */
+  handedWorks?: WorkView[];
   /** Client only: an optimistic message waiting for the server, or one that failed to send. */
   local?: "pending" | "failed";
   /** Client only, on a `failed` one the server refused: why (`sendFailureText`). */
@@ -2641,7 +2643,7 @@ export interface WorkView {
   status: "queued" | "live" | "done" | "failed" | "canceled";
   /** While live: what its run does now. */
   state: "working" | "waiting_approval" | "waiting_input" | "paused" | "waiting_computer" | "queued" | null;
-  how: "agent" | "auto";
+  how: "agent" | "auto" | "handed";
   anchorMessageId: string;
   /** Where its updates are. */
   threadId: string | null;
@@ -2664,6 +2666,14 @@ export interface WorkView {
   /** The right hand that made that stop at their word. */
   canceledByAgentId?: string | null;
   errorCode: string | null;
+  /** Handed over by another agent (absent: an older server). */
+  handedBy?: { agentId: string; consultationId: string } | null;
+  /** A handed work: the run that handed it; its line goes under that run's last message. */
+  askerRunId?: string | null;
+  /** The first step of its plan not done, 1-based, never past the last. */
+  planStep?: { current: number; total: number } | null;
+  /** Done: the first line of its report. */
+  result?: { text: string; messageId: string } | null;
 }
 
 /** `GET …/agent-status`: one agent's presence and its line. */
@@ -3889,7 +3899,7 @@ export interface Issue {
   source:
     | { type: "manual" }
     | { type: "message"; channelId: string; messageId: string }
-    | { type: "agent"; agentId: string }
+    | { type: "agent"; agentId: string; workId?: string; channelId?: string; messageId?: string }
     | { type: "webhook"; provider: string };
   /** The channel it lives in (from a message, or chosen). */
   channelId: string | null;

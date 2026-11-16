@@ -2845,6 +2845,7 @@
     "sharedName": "{{name}} (compartido)",
     "sharedPlace": "Se usa en canales y en trabajos que se ejecutan solos. Todo el workspace comparte este espacio. No guardes nada privado aquí.",
     "computerNoHome": "Aún sin computadora. Tendrá una cuando este workspace tenga una computadora propia.",
+    "computerNoHomeServer": "Todavía sin navegador. Configura <guide>este servidor como la computadora de los agentes</guide> para que tenga uno.",
     "addComputer": "Agregar una computadora",
     "computerOneUser": "Aquí no hay computadora. La computadora del workspace ejecuta todos los agentes como un solo usuario, así que no puede separar el espacio de cada persona. Un servidor Linux instalado con la opción --system del instalador sí puede.",
     "powers": {
@@ -3022,6 +3023,16 @@
       "invite_people_sent_many": "Invitaciones enviadas a <b>{{emails}}</b>.",
       "invite_people_sent_other": "Invitaciones enviadas a <b>{{emails}}</b>.",
       "remove_ai_key": "Eliminar la clave de API «{{name}}»."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Necesita un ordenador",
+        "computerOnly": "De {{owner}}, conectado solo en {{computer}}. Lodi piensa con un plan conectado como cuenta.",
+        "noComputer": "De {{owner}}. Necesita un ordenador y el espacio de trabajo no tiene ninguno conectado.",
+        "away": "De {{owner}}, en {{computer}}, que está ausente.",
+        "connect": "Conectar un ordenador",
+        "plans": "Ver planes"
+      }
     }
   },
   "teamWeek": {
@@ -3383,7 +3394,7 @@
       "gemini": {
         "title": "Tu plan de Gemini",
         "tiers": "Google AI Pro, Google AI Ultra o Gemini Enterprise",
-        "warning": "Google dice que usar un plan personal de Gemini dentro de otras apps puede hacer que suspendan la cuenta."
+        "warning": "Google dice que usar un plan personal de Gemini dentro de otras apps puede hacer que suspendan la cuenta. Para evitar ese riesgo, usa una clave de API de Gemini o Gemini Enterprise."
       },
       "zen": {
         "title": "OpenCode",
@@ -4343,6 +4354,7 @@
     "seeNewer": "Ver la solicitud más reciente",
     "computerAway": "La computadora de {{agent}} no responde ahora. Esta solicitud sigue abierta hasta las {{time}}. Inténtalo de nuevo en un momento.",
     "computerPaused": "Su dueño pausó la computadora de {{agent}}. Esta solicitud sigue abierta hasta las {{time}}.",
+    "insecureContext": "Esta página no está abierta por https, así que el navegador no cifra la clave. Ábrela en https:// (o localhost).",
     "failed": "No se pudo entregar. ¿La computadora del agente está encendida?",
     "changed": "Esta solicitud cambió mientras respondías. No se envió nada. Envíala de nuevo.",
     "empty": "Escribe el valor.",
@@ -8161,7 +8173,10 @@
         "failed": "La última ejecución falló.",
         "canceled": "Alguien detuvo la ejecución.",
         "budget": "Se acabó el presupuesto mensual del agente."
-      }
+      },
+      "finishedTitle": "{{name}} la terminó",
+      "finishedMeta": "{{when}} · entregada por {{name}}",
+      "answer": "Responder"
     },
     "status": {
       "todo": "Por hacer",
@@ -8355,7 +8370,10 @@
       "criterion_checked": "marcó el criterio \"{{text}}\"",
       "criterion_unchecked": "desmarcó el criterio \"{{text}}\"",
       "agent_asked": "le pidió a {{name}} que lo hiciera"
-    }
+    },
+    "handedBy": "entregada por <0/>{{name}}",
+    "fromDm": "de <0>tu DM con {{name}}</0>",
+    "fromDmText": "de tu DM con {{name}}"
   },
   "routines": {
     "filters": "Filtrar rutinas",
@@ -15874,6 +15892,7 @@
       "ui_automation_off": "La automatización de la IU está desactivada",
       "xcode_missing": "Xcode no está instalado en la Mac",
       "xcode_too_old": "Xcode es demasiado antiguo para esta versión de iOS",
+      "ios_behind_xcode": "El iOS de este iPhone es más antiguo que el de Xcode",
       "device_support": "La Mac está descargando las herramientas del iPhone",
       "helper_missing": "La app de pruebas aún no está configurada",
       "helper_expired": "Hay que renovar la app de pruebas",
@@ -15902,6 +15921,7 @@
       "ui_automation_off": "Activa la automatización de la IU",
       "xcode_missing": "Instala Xcode",
       "xcode_too_old": "Actualiza Xcode",
+      "ios_behind_xcode": "Actualiza el iPhone",
       "device_support": "Mantén la Mac encendida",
       "helper_missing": "Abre la app en la Mac",
       "helper_expired": "Abre la app en la Mac",
@@ -16223,6 +16243,7 @@
       "helperText": "La Mac la crea y la renueva cada 7 días. Basta con una Apple Account gratuita en Xcode.",
       "helperUntrustedText": "Toca el nombre del desarrollador y luego Confiar.",
       "teamLimitText": "Elimina del iPhone una app que creaste tú: una Apple Account gratuita permite 3.",
+      "iosBehind": "Este iPhone tiene iOS {{ios}} y Xcode en este Mac es para iOS {{sdk}}. Actualiza el iPhone: Ajustes › General › Actualización de software.",
       "xcodeOld": "{{name}} usa iOS {{version}} y Xcode en {{mac}} conoce como mucho iOS {{sdk}}. Instala Xcode {{major}} y luego ejecuta esto en Terminal.",
       "xcodeOldAny": "{{name}} usa iOS {{version}}, más nuevo de lo que conoce Xcode en {{mac}}. Instala Xcode {{major}} y luego ejecuta esto en Terminal.",
       "uiRefusedText": "El iPhone rechazó los toques de la app de pruebas. Desbloquéalo y escribe su código si lo pide. Si vuelve a pasar, desactiva y activa Configuración › Desarrollador › Activar automatización de la IU.",
@@ -17622,7 +17643,22 @@
       "failed": "Bloqueado · no terminó",
       "failedWhy": "Bloqueado · no terminó: {{why}}"
     },
-    "working": "En segundo plano"
+    "working": "En segundo plano",
+    "handed": {
+      "lead": "Entregado a <0/>{{name}}",
+      "working": "trabajando en ello",
+      "done": "listo en {{duration}}",
+      "waitingYou": "esperando tu respuesta",
+      "waiting": "esperando una respuesta",
+      "waitingApprovalYou": "esperando tu aprobación",
+      "waitingApproval": "esperando aprobación",
+      "waitingComputer": "esperando el ordenador",
+      "paused": "en pausa en el límite del plan",
+      "queued": "en cola",
+      "failed": "no terminó",
+      "stopped": "detenido",
+      "step": "paso {{current}} de {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -18225,6 +18261,9 @@
       "interrupted": "Interrumpido por un reinicio del servidor. Vuelve a pedirlo para continuar.",
       "step_limit": "Me quedé sin pasos antes de terminar.",
       "stuck": "Me trabé y me detuve antes de terminar."
+    },
+    "request": {
+      "asksYou": "{{name}} te pregunta"
     }
   },
   "builtinTools": {

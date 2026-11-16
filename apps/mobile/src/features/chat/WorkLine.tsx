@@ -1,14 +1,21 @@
 import { type Issue, type Message, useApi, useChannels, type WorkView } from "@agenteschat/client";
+import { relativeTime } from "@agenteschat/client/lib/format";
 import { heldBack } from "@agenteschat/client/lib/issues";
-import { blockedText, workLine, workPlanProgress, workWaitsOnPerson } from "@agenteschat/client/lib/long-work";
+import {
+  blockedText,
+  handedLine,
+  workLine,
+  workPlanProgress,
+  workWaitsOnPerson,
+} from "@agenteschat/client/lib/long-work";
 import { can } from "@agenteschat/client/lib/permissions";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from "react-native";
 import { useOrg } from "@/providers/org";
-import { haptics, LineIcon, PixelOrbit, Text, useToast } from "@/ui";
+import { Button, haptics, LineIcon, PixelOrbit, Text, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { chatHref } from "../links/logic";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
@@ -48,17 +55,18 @@ function useLine(work: WorkView, inUpdatesThread = false) {
     onError: () => toast({ title: t("work.stopFailed"), icon: "info" }),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", work.channelId] }),
   });
-  const view = workLine(t, work, {
+  const context = {
     locale: i18n.language || "pt-BR",
     now,
     meId,
     agentName: agent?.name ?? "",
-    nameOf: (id) => dir.memberById.get(id)?.name ?? null,
-    agentNameOf: (id) => dir.anyAgent(id)?.name,
+    nameOf: (id: string) => dir.memberById.get(id)?.name ?? null,
+    agentNameOf: (id: string) => dir.anyAgent(id)?.name,
     canStop: manage || agent?.ownerUserId === meId || work.requestedByUserId === meId,
     inUpdatesThread,
-  });
-  return { view, stop, t };
+  };
+  const view = workLine(t, work, context);
+  return { view, handed: () => handedLine(t, work, context), agentName: agent?.name ?? "", stop, t };
 }
 
 /** The work's thread, where its updates are, on the question it waits on. */
@@ -80,17 +88,24 @@ function Line({
   onThread,
   below,
   inUpdatesThread,
+  handed: asHanded,
 }: {
   work: WorkView;
   onThread?: () => void;
   below?: ReactNode;
   inUpdatesThread?: boolean;
+  /** Under the reply that handed it: "Handed to Atlas · working on it · step 3 of 5 · 2 min", Stop or the result. */
+  handed?: boolean;
 }) {
   const c = useColors();
   const surface = useSurface();
   const cardTop = useCardTop();
   const inBody = useContext(RowPartContext) !== null;
-  const { view, stop, t } = useLine(work, inUpdatesThread);
+  const line = useLine(work, inUpdatesThread);
+  const { stop, t } = line;
+  const h = asHanded ? line.handed() : null;
+  // Handed: no task, thread or repeated question on the line (the chip, the messages and the card below say them).
+  const view = h ? { ...line.view, ...h, task: null, threadId: null, question: null, update: null } : line.view;
   const jump = useContext(JumpToMessageContext);
   // An icon per state, never a colored dot: the shape says it without the color.
   const mark =
@@ -172,7 +187,21 @@ function Line({
       </View>
       <View style={styles.body}>
         <Text variant="small" tone="ink2">
-          {view.text}
+          {h ? (
+            <>
+              <Trans i18nKey="work.handed.lead" values={{ name: line.agentName }} components={[<Text key="face" />]} />
+              {" · "}
+              <Text
+                variant="small"
+                style={[styles.bold, { color: h.tone === "working" ? c.agent : h.tone === "waiting" ? c.warn : c.ink }]}
+              >
+                {h.state}
+              </Text>
+              {h.facts.map((fact) => ` · ${fact}`).join("")}
+            </>
+          ) : (
+            view.text
+          )}
         </Text>
         {view.question ? (
           <Text variant="small" tone="ink" numberOfLines={2}>
@@ -235,12 +264,26 @@ export function MessageWorkLine({ message, threaded }: { message: Message; threa
   );
 }
 
+/** Under the reply of the agent that handed work over: one line per handed work. */
+export function HandedWorkLines({ message }: { message: Message }) {
+  const works = message.handedWorks ?? [];
+  if (works.length === 0) return null;
+  return (
+    <>
+      {works.map((w) => (
+        <Line key={w.id} work={w} handed />
+      ))}
+    </>
+  );
+}
+
 /** On a task's screen: the work's line and the agent's plan. */
 export function IssueWorkLine({ issue, style }: { issue: Issue; style?: StyleProp<ViewStyle> }) {
   const { t } = useTranslation();
   const c = useColors();
   const work = issue.backgroundWork;
   const blocked = blockedText(t, issue.blocked);
+  if (work?.how === "handed") return <HandedWork work={work} style={[styles.block, style]} />;
   if (!work && !blocked) return null;
   const progress = work ? workPlanProgress(work) : null;
   return (
@@ -277,6 +320,56 @@ export function IssueWorkLine({ issue, style }: { issue: Issue; style?: StylePro
             ) : null
           }
         />
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * A handed task's work on its screen, as the web's box: its line while it works; its question with Answer (full width)
+ * when it waits on the reader, which opens the card where it was asked; once done, who finished it, when, who handed it
+ * and the first line of what came of it.
+ */
+function HandedWork({ work, style }: { work: WorkView; style?: StyleProp<ViewStyle> }) {
+  const { t, i18n } = useTranslation();
+  const dir = useDirectory();
+  const surface = useSurface();
+  if (work.status === "done") {
+    const name = dir.anyAgent(work.agentId)?.name ?? t("channel.unknownAgent");
+    const by = work.handedBy ? dir.anyAgent(work.handedBy.agentId)?.name : null;
+    const when = relativeTime(t, i18n.language, work.finishedAt ?? work.startedAt);
+    return (
+      <View style={[style, styles.done, surface]}>
+        <Text variant="small" tone="ink" style={styles.bold}>
+          {t("issues.work.finishedTitle", { name })}
+        </Text>
+        <Text variant="caption" tone="muted">
+          {by ? t("issues.work.finishedMeta", { when, name: by }) : when}
+        </Text>
+        {work.result ? (
+          <Text variant="small" tone="ink2">
+            {work.result.text}
+          </Text>
+        ) : null}
+      </View>
+    );
+  }
+  const asked = work.state === "waiting_input" ? work.question : null;
+  return (
+    <View style={style}>
+      <Line work={work} handed />
+      {asked ? (
+        <View style={styles.ask}>
+          <Text variant="small" tone="ink">
+            {asked.text}
+          </Text>
+          <Button
+            variant="primary"
+            wide
+            label={t("issues.work.answer")}
+            onPress={() => router.push(chatHref(work.channelId, work.homeThreadId, asked.messageId))}
+          />
+        </View>
       ) : null}
     </View>
   );
@@ -356,4 +449,6 @@ const styles = StyleSheet.create({
   step: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
   grow: { flex: 1, minWidth: 0 },
   bold: { fontWeight: "600" },
+  done: { gap: 4, padding: 14, borderRadius: 20 },
+  ask: { gap: 10, marginTop: 10 },
 });

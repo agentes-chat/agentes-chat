@@ -2845,6 +2845,7 @@
     "sharedName": "{{name}} (condiviso)",
     "sharedPlace": "Si usa nei canali e nei lavori che girano da soli. Tutto il workspace condivide questo spazio. Non tenere qui nulla di privato.",
     "computerNoHome": "Ancora nessun computer. Ne avrà uno quando questo workspace avrà un computer proprio.",
+    "computerNoHomeServer": "Ancora nessun browser. Configura <guide>questo server come computer degli agenti</guide> per dargliene uno.",
     "addComputer": "Aggiungi un computer",
     "computerOneUser": "Qui nessun computer. Il computer del workspace esegue tutti gli agenti come un solo utente, quindi non può tenere separato lo spazio di ogni persona. Un server Linux installato con l'opzione --system dell'installer può farlo.",
     "powers": {
@@ -3022,6 +3023,16 @@
       "invite_people_sent_many": "Inviti inviati a <b>{{emails}}</b>.",
       "invite_people_sent_other": "Inviti inviati a <b>{{emails}}</b>.",
       "remove_ai_key": "Elimina la chiave API «{{name}}»."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Serve un computer",
+        "computerOnly": "Di {{owner}}, collegato solo su {{computer}}. Lodi pensa con un piano collegato come account.",
+        "noComputer": "Di {{owner}}. Serve un computer, e il workspace non ne ha nessuno collegato.",
+        "away": "Di {{owner}}, su {{computer}}, che non è raggiungibile.",
+        "connect": "Collega un computer",
+        "plans": "Vedi i piani"
+      }
     }
   },
   "teamWeek": {
@@ -3390,7 +3401,7 @@
       "gemini": {
         "title": "Il tuo piano Gemini",
         "tiers": "Google AI Pro, Google AI Ultra o Gemini Enterprise",
-        "warning": "Google dice che usare un piano Gemini personale all'interno di altre app può portare alla sospensione dell'account."
+        "warning": "Google dice che usare un piano Gemini personale all'interno di altre app può portare alla sospensione dell'account. Per evitare questo rischio, usa una chiave API di Gemini o Gemini Enterprise."
       },
       "zen": {
         "title": "OpenCode",
@@ -4349,6 +4360,7 @@
     "seeNewer": "Vedi la richiesta più recente",
     "computerAway": "Il computer di {{agent}} non risponde in questo momento. Questa richiesta resta aperta fino alle {{time}}. Riprova tra un attimo.",
     "computerPaused": "Il computer di {{agent}} è in pausa per scelta del proprietario. Questa richiesta resta aperta fino alle {{time}}.",
+    "insecureContext": "Questa pagina non è aperta in https, quindi il browser non blocca la chiave. Aprila su https:// (o localhost).",
     "failed": "Non è stato possibile consegnarlo. Il computer dell'agente è acceso?",
     "changed": "Questa richiesta è cambiata mentre rispondevi. Non è stato inviato nulla. Inviala di nuovo.",
     "empty": "Scrivi il valore.",
@@ -8220,7 +8232,10 @@
         "failed": "L'ultima esecuzione non è riuscita.",
         "canceled": "Qualcuno ha fermato l'esecuzione.",
         "budget": "Il budget mensile dell'agente è esaurito."
-      }
+      },
+      "finishedTitle": "{{name}} l'ha finita",
+      "finishedMeta": "{{when}} · passata da {{name}}",
+      "answer": "Rispondi"
     },
     "status": {
       "todo": "Da fare",
@@ -8414,7 +8429,10 @@
       "criterion_checked": "ha spuntato il criterio \"{{text}}\"",
       "criterion_unchecked": "ha tolto la spunta al criterio \"{{text}}\"",
       "agent_asked": "ha chiesto a {{name}} di farla"
-    }
+    },
+    "handedBy": "passata da <0/>{{name}}",
+    "fromDm": "dalla <0>tua DM con {{name}}</0>",
+    "fromDmText": "dalla tua DM con {{name}}"
   },
   "routines": {
     "filters": "Filtra routine",
@@ -15957,6 +15975,7 @@
       "ui_automation_off": "L'automazione UI è disattivata",
       "xcode_missing": "Xcode non è installato sul Mac",
       "xcode_too_old": "Xcode è troppo vecchio per questa versione di iOS",
+      "ios_behind_xcode": "L'iOS di questo iPhone è più vecchio di quello di Xcode",
       "device_support": "Il Mac sta scaricando gli strumenti per l'iPhone",
       "helper_missing": "L'app di test non è ancora configurata",
       "helper_expired": "L'app di test va rinnovata",
@@ -15985,6 +16004,7 @@
       "ui_automation_off": "Attiva l'automazione UI",
       "xcode_missing": "Installa Xcode",
       "xcode_too_old": "Aggiorna Xcode",
+      "ios_behind_xcode": "Aggiorna l'iPhone",
       "device_support": "Tieni acceso il Mac",
       "helper_missing": "Apri l'app sul Mac",
       "helper_expired": "Apri l'app sul Mac",
@@ -16306,6 +16326,7 @@
       "helperText": "Creata e rinnovata dal Mac ogni 7 giorni. Basta un Apple Account gratuito in Xcode.",
       "helperUntrustedText": "Tocca il nome dello sviluppatore, poi Autorizza.",
       "teamLimitText": "Rimuovi dall'iPhone un'app creata da te: un Apple Account gratuito ne consente 3.",
+      "iosBehind": "Questo iPhone ha iOS {{ios}} e Xcode su questo Mac è per iOS {{sdk}}. Aggiorna l'iPhone: Impostazioni › Generali › Aggiornamento software.",
       "xcodeOld": "{{name}} usa iOS {{version}} e Xcode su {{mac}} conosce al massimo iOS {{sdk}}. Installa Xcode {{major}}, poi esegui questo nel Terminale.",
       "xcodeOldAny": "{{name}} usa iOS {{version}}, più recente di quanto conosca Xcode su {{mac}}. Installa Xcode {{major}}, poi esegui questo nel Terminale.",
       "uiRefusedText": "L'iPhone ha rifiutato i tocchi dell'app di test. Sbloccalo e inserisci il suo codice se lo chiede. Se succede ancora, disattiva e riattiva Impostazioni › Sviluppatore › Abilita automazione UI.",
@@ -17699,7 +17720,22 @@
       "failed": "Bloccato · non terminato",
       "failedWhy": "Bloccato · non terminato: {{why}}"
     },
-    "working": "In background"
+    "working": "In background",
+    "handed": {
+      "lead": "Passato a <0/>{{name}}",
+      "working": "ci sta lavorando",
+      "done": "fatto in {{duration}}",
+      "waitingYou": "aspetta la tua risposta",
+      "waiting": "aspetta una risposta",
+      "waitingApprovalYou": "aspetta la tua approvazione",
+      "waitingApproval": "aspetta un'approvazione",
+      "waitingComputer": "aspetta il computer",
+      "paused": "in pausa al limite del piano",
+      "queued": "in coda",
+      "failed": "non ha finito",
+      "stopped": "fermato",
+      "step": "passo {{current}} di {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -18314,6 +18350,9 @@
       "interrupted": "Interrotto da un riavvio del server. Chiedi di nuovo per continuare.",
       "step_limit": "Ho esaurito i passaggi prima di finire.",
       "stuck": "Mi sono bloccato e mi sono fermato prima di finire."
+    },
+    "request": {
+      "asksYou": "{{name}} ti chiede"
     }
   },
   "builtinTools": {

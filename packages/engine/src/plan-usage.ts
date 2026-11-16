@@ -169,7 +169,7 @@ async function readUsage(
   // A literal, never a parameter: Postgres must see the same expression in the select and the group by.
   const fmt = sql.raw(opts.hourly ? `'YYYY-MM-DD"T"HH24'` : `'YYYY-MM-DD'`);
   const bucket = sql<string>`to_char(${usageRecords.createdAt} at time zone 'UTC', ${fmt})`;
-  // Literals inline for the same reason as `fmt`. The join is on the runs' primary key.
+  // Literals inline for the same reason as `fmt`. The join is on the runs' primary key, within the org, so only its runs are read.
   const use = sql<UseKind>`case
     when ${usageRecords.runId} is null then 'people'
     when exists (select 1 from ${agentConsultations} where ${agentConsultations.targetRunId} = ${usageRecords.runId}) then 'handoffs'
@@ -192,7 +192,7 @@ async function readUsage(
       cost: sql<string>`sum(${usageRecords.costNanoUsd})`,
     })
     .from(usageRecords)
-    .leftJoin(agentRuns, eq(agentRuns.id, usageRecords.runId))
+    .leftJoin(agentRuns, and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, usageRecords.runId)))
     .where(
       and(
         eq(usageRecords.orgId, orgId),

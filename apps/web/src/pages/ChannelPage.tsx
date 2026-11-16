@@ -274,7 +274,7 @@ import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
 import { ImageSet } from "@/components/artifacts/ArtifactViewer";
 import { objectUrls } from "@/components/artifacts/FileView";
 import { ImageMaking } from "@/components/artifacts/ImageMaking";
-import { MessageWorkLine } from "@/components/BackgroundWork";
+import { HandedWorkLine, MessageWorkLine } from "@/components/BackgroundWork";
 import { HeldBrowserCard, RunBrowserCard, useHeldTakeover } from "@/components/browser/BrowserCard";
 import { BrowserHandoffCard } from "@/components/browser/BrowserHandoffCard";
 import { BrowserTrailCard } from "@/components/browser/BrowserTrailCard";
@@ -376,7 +376,7 @@ import {
 } from "@/components/RequestCard";
 import { ReturnLine } from "@/components/ReturnLine";
 import { SidePanel } from "@/components/SidePanel";
-import { ActivitySky, ChannelWelcome, colorOf } from "@/components/Sky";
+import { ChannelWelcome, colorOf } from "@/components/Sky";
 import { isStoppable, StopButton, useContinueRun, useStopRun, useWasContinued } from "@/components/StopRun";
 import { SearchResultsPanel } from "@/components/search/SearchResultsPanel";
 import { TeamChecks } from "@/components/TeamChecks";
@@ -2770,7 +2770,6 @@ function ChannelView({
                             onSeeAsk={seeAsk}
                             waiting={waitingHere}
                             onSeeWaiting={seeWaiting}
-                            stoppable={stopTarget?.runId}
                             consultBlocks={consultGroups.nearEnd}
                             member={isMember}
                           />
@@ -3953,11 +3952,12 @@ function useAsksOutOfView(scroller: { current: HTMLElement | null }, registry: A
 }
 
 /**
- * The bar right above the composer, one for everyone at work here and always one width: a glass pill (in
- * the first agent's color while agents work), their small faces (the typing dots first when only people type)
- * and one line that says it all. An agent whose live row is on screen is left out: the row says its step, its
+ * The bar right above the composer, one for everyone at work here and always one width: a bare line on the
+ * conversation's ground (no glass, no band behind it), their small faces (the typing dots first when only people
+ * type) and one line that says it all. An agent whose live row is on screen is left out: the row says its step, its
  * time and its stop. Its row out of view, or no words of its own yet (there is no thinking row in the conversation),
- * the bar speaks for it: its face, its step, its time, "Ver" once its row is there, and its stop.
+ * the bar speaks for it: its face, its step, its time and "Ver" once its row is there. Stopping it is the composer's
+ * button (and Esc), never a second one here.
  */
 function ActivityBar({
   channelId,
@@ -3970,7 +3970,6 @@ function ActivityBar({
   onSeeAsk,
   waiting,
   onSeeWaiting,
-  stoppable,
   consultBlocks,
   member,
 }: {
@@ -3993,8 +3992,6 @@ function ActivityBar({
   waiting: WaitingItem[];
   /** "Ver" on that count: goes to the oldest one. */
   onSeeWaiting: (item: WaitingItem) => void;
-  /** The run Esc stops (the pill shows its stop). */
-  stoppable?: string;
   /** Runs whose questions a block near the end shows (`ConsultGroup`): the line doesn't say them again. */
   consultBlocks: ReadonlySet<string>;
   /** The reader is in this conversation (may answer here). */
@@ -4051,12 +4048,10 @@ function ActivityBar({
     runs,
     rowInView,
   );
-  const { stop } = useStopRun();
   const active = entries.length > 0;
   const agents = entries.filter((e) => e.type === "agent");
-  // The strip behind the bar (and the orbit) take the color of the first agent at work.
   const firstAgent = agents[0];
-  // The time, "Ver" and the stop are one agent's: with several, the line can't say whose (the composer still stops).
+  // The time and "Ver" are one agent's: with several, the line can't say whose.
   const soloRun = agents.length === 1 && firstAgent ? runs.find((r) => r.agentId === firstAgent.id) : undefined;
   // Only while its row is out of view (a question it asks keeps its phrase here, its row in view or not).
   const soloAway = soloRun && !rowInView(soloRun) ? soloRun : undefined;
@@ -4090,7 +4085,6 @@ function ActivityBar({
     : consult?.id && openTalk
       ? () => openTalk(consult.id as string)
       : undefined;
-  const skyOf = consult ? consult.to : firstAgent?.id;
   const consultTip =
     consult?.kind === "note" && firstAgent
       ? t("chat.consult.handedOff", {
@@ -4133,7 +4127,6 @@ function ActivityBar({
       >
         {ask && (
           <>
-            <ActivitySky color={colorOf(dir.anyAgent(ask.agentId))} />
             <span className="ac-typing__avatars" aria-hidden="true">
               <span className="ac-typing__tok">
                 <AgentAvatar agentId={ask.agentId} size="xs" name={askName} state="waiting" />
@@ -4156,21 +4149,16 @@ function ActivityBar({
             <button type="button" className="ac-typing__see" onClick={() => onSeeAsk(ask.id)}>
               {t("ask.bar.see")}
             </button>
-            {/* An agent still at work keeps its stop at the end; the line stays the request. */}
-            {soloAway && stoppable === soloAway.runId && <StopButton run={soloAway} onStop={stop} place="bar" />}
           </>
         )}
         {away && (
           <>
             {awayAgent && (
-              <>
-                <ActivitySky color={colorOf(awayAgent)} />
-                <span className="ac-typing__avatars" aria-hidden="true">
-                  <span className="ac-typing__tok">
-                    <AgentAvatar agentId={awayAgent.id} size="xs" name={awayAgent.name} state="waiting" />
-                  </span>
+              <span className="ac-typing__avatars" aria-hidden="true">
+                <span className="ac-typing__tok">
+                  <AgentAvatar agentId={awayAgent.id} size="xs" name={awayAgent.name} state="waiting" />
                 </span>
-              </>
+              </span>
             )}
             <WaitMark />
             <span className="ac-typing__text">
@@ -4184,7 +4172,6 @@ function ActivityBar({
         )}
         {pill && (
           <>
-            {skyOf && !consult?.yours && <ActivitySky color={colorOf(dir.agentById.get(skyOf))} />}
             {/* Agents at work: their faces open the pill (their rows are out of view); people only typing: the dots
                 first. Who records has a mark of their own by their words, and so has who types beside them. */}
             {!firstAgent && someoneTypes(entries) && !bothAtIt(entries) && <TypingMark />}
@@ -4230,7 +4217,6 @@ function ActivityBar({
                 </button>
               </>
             )}
-            {soloAway && stoppable === soloAway.runId && <StopButton run={soloAway} onStop={stop} place="bar" />}
           </>
         )}
         {rest && <ReturnLine returns={returns} channelId={channelId} canAnswer={member} />}
@@ -4472,10 +4458,16 @@ export const TimelineMessage = memo(function TimelineMessage({
     !live,
     reached,
   );
+  // Work it handed over that reports here: its line under this reply says what the pair row would.
+  const handedWorks = lastOfRun && !m.local ? (m.handedWorks ?? []) : [];
+  const paired = consults.filter((c) => !handedWorks.some((w) => w.handedBy?.consultationId === c.id));
   const pair =
-    m.author.type === "agent" && m.author.id && consults.length > 0 ? (
-      <ConsultPairRow askerId={m.author.id} items={consults} />
+    m.author.type === "agent" && m.author.id && paired.length > 0 ? (
+      <ConsultPairRow askerId={m.author.id} items={paired} />
     ) : null;
+  // Another agent's message in an agent's DM (it helps that agent): its name on its first line, the DM names only one.
+  const look = useContext(MessageLookContext);
+  const helpingLook = useMemo(() => (helping && look ? { ...look, names: true } : null), [helping, look]);
   // Nobody called it: it joined the conversation on its own (`meta.joined`).
   const joined = m.author.type === "agent" && meta.joined === true;
   const joinedTip = joined ? t("chat.joined.tip", agentGrammar(name)) : null;
@@ -4550,7 +4542,7 @@ export const TimelineMessage = memo(function TimelineMessage({
   ]
     .filter(Boolean)
     .join(" · ");
-  return (
+  const row = (
     <>
       {pair}
       <Message
@@ -4873,15 +4865,22 @@ export const TimelineMessage = memo(function TimelineMessage({
               />
             ) : null}
             {/* A question to another agent (in their DM) carries the asking run: its work shows on that run's reply. */}
-            {m.author.type === "agent" && replyRun && !card && !m.local && !keptAll && !m.meta?.consultation && (
-              <SavedTools
-                runId={replyRun}
-                meta={m.meta}
-                agentName={agent?.name ?? name}
-                color={colorOf(agent)}
-                skipScreens={onCards}
-              />
-            )}
+            {m.author.type === "agent" &&
+              replyRun &&
+              !card &&
+              !m.local &&
+              !keptAll &&
+              !m.meta?.consultation &&
+              // A work's updates are steps of one work: the trace stays on its report.
+              !m.meta?.workUpdate && (
+                <SavedTools
+                  runId={replyRun}
+                  meta={m.meta}
+                  agentName={agent?.name ?? name}
+                  color={colorOf(agent)}
+                  skipScreens={onCards}
+                />
+              )}
             {/* What waits for a person's click comes last, after the words and the tools. */}
             {approvalId && (
               <MessageApproval messageId={m.id} approvalId={approvalId} agent={agent} members={dir.memberById} />
@@ -4904,7 +4903,7 @@ export const TimelineMessage = memo(function TimelineMessage({
             ) : (
               usageWait && !usageWait.canceled && !usageWait.ended && <UsageWaitCancel message={m} wait={usageWait} />
             )}
-            {question && <QuestionCard question={question} />}
+            {question && <QuestionCard question={question} asker={helping ? name : undefined} />}
             {secretRequest && <SecretCard request={secretRequest} runId={m.agentRunId} />}
             {browserHandoff && <BrowserHandoffCard handoff={browserHandoff} />}
             {missionDecision && <MissionDecisionCard message={missionDecision} />}
@@ -4921,6 +4920,10 @@ export const TimelineMessage = memo(function TimelineMessage({
                 inThread={!threadsView && (m.threadId ?? m.id) === (m.longWork.threadId ?? m.longWork.anchorMessageId)}
               />
             )}
+            {/* Work this run handed over, reporting here: one line each, under the reply that handed it. */}
+            {handedWorks.map((w) => (
+              <HandedWorkLine key={w.id} work={w} />
+            ))}
             {/* A "Responder" thread went on from here: its line (opens the panel). */}
             {threadLine && <ThreadReplyLine thread={threadLine.thread} count={threadLine.count} />}
             {feedback && (
@@ -4943,6 +4946,7 @@ export const TimelineMessage = memo(function TimelineMessage({
       </Message>
     </>
   );
+  return helpingLook ? <MessageLookContext.Provider value={helpingLook}>{row}</MessageLookContext.Provider> : row;
 });
 
 function isSecretRequest(v: unknown): v is SecretRequest {

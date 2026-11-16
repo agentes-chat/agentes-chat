@@ -2000,6 +2000,7 @@
       "ui_automation_off": "Automatyzacja UI jest wyłączona",
       "xcode_missing": "Mac potrzebuje Xcode",
       "xcode_too_old": "Xcode jest za stary dla tego iPhone'a",
+      "ios_behind_xcode": "Zaktualizuj iOS tego iPhone'a",
       "device_support": "Mac przygotowuje tego iPhone'a",
       "helper_missing": "Pomocnik testowy nie jest jeszcze skonfigurowany",
       "helper_expired": "Pomocnik testowy wymaga odnowienia",

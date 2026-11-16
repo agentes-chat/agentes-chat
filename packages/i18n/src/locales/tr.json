@@ -2748,6 +2748,7 @@
     "sharedName": "{{name}} (paylaşılan)",
     "sharedPlace": "Kanallarda ve kendi kendine çalışan işlerde kullanılır. Bu yeri tüm çalışma alanı paylaşır. Burada özel hiçbir şey tutma.",
     "computerNoHome": "Henüz bilgisayar yok. Bu çalışma alanının kendi bilgisayarı olduğunda bir tane olacak.",
+    "computerNoHomeServer": "Henüz tarayıcı yok. Bir tarayıcı olması için <guide>bu sunucuyu ajanların bilgisayarı olarak</guide> kurun.",
     "addComputer": "Bilgisayar ekle",
     "computerOneUser": "Burada bilgisayar yok. Çalışma alanının bilgisayarı tüm ajanları tek bir kullanıcı olarak çalıştırıyor, bu yüzden her kişinin yerini ayrı tutamıyor. Yükleyicinin --system seçeneğiyle kurulan bir Linux sunucusu bunu yapabilir.",
     "powers": {
@@ -2915,6 +2916,16 @@
       "invite_people_sent_one": "<b>{{emails}}</b> adresine davet gönderildi.",
       "invite_people_sent_other": "<b>{{emails}}</b> adreslerine davet gönderildi.",
       "remove_ai_key": "\"{{name}}\" API anahtarını sil."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Bir bilgisayar gerekiyor",
+        "computerOnly": "{{owner}} kişisine ait, yalnızca {{computer}} üzerinde oturum açık. Lodi, hesap olarak oturum açılmış bir planla düşünür.",
+        "noComputer": "{{owner}} kişisine ait. Bir bilgisayar gerekiyor ve çalışma alanında bağlı hiç yok.",
+        "away": "{{owner}} kişisine ait, {{computer}} üzerinde, şu an ulaşılamıyor.",
+        "connect": "Bilgisayar bağla",
+        "plans": "Planları gör"
+      }
     }
   },
   "teamWeek": {
@@ -3259,7 +3270,7 @@
       "gemini": {
         "title": "Gemini planınız",
         "tiers": "Google AI Pro, Google AI Ultra veya Gemini Enterprise",
-        "warning": "Google, kişisel bir Gemini planını başka uygulamaların içinde kullanmanın hesabın askıya alınmasına yol açabileceğini söylüyor."
+        "warning": "Google, kişisel bir Gemini planını başka uygulamaların içinde kullanmanın hesabın askıya alınmasına yol açabileceğini söylüyor. Bu riskten kaçınmak için bir Gemini API anahtarı veya Gemini Enterprise kullanın."
       },
       "zen": {
         "title": "OpenCode",
@@ -4200,6 +4211,7 @@
     "seeNewer": "Daha yeni isteği gör",
     "computerAway": "{{agent}} bilgisayarı şu anda yanıt vermiyor. Bu istek {{time}} saatine kadar açık kalır. Birazdan yeniden deneyin.",
     "computerPaused": "{{agent}} bilgisayarı sahibi tarafından duraklatıldı. Bu istek {{time}} saatine kadar açık kalır.",
+    "insecureContext": "Bu sayfa https üzerinden açılmadı, bu yüzden tarayıcı anahtarı kilitlemiyor. Sayfayı https:// (veya localhost) adresinden açın.",
     "failed": "İletilemedi. Ajanın bilgisayarı açık mı?",
     "changed": "Bu istek sen yanıtlarken değişti. Hiçbir şey gönderilmedi. Yeniden gönder.",
     "empty": "Değeri yazın.",
@@ -7889,7 +7901,10 @@
         "failed": "Son çalıştırma başarısız oldu.",
         "canceled": "Biri çalıştırmayı durdurdu.",
         "budget": "Ajanın aylık bütçesi bitti."
-      }
+      },
+      "finishedTitle": "{{name}} bitirdi",
+      "finishedMeta": "{{when}} · devreden: {{name}}",
+      "answer": "Yanıtla"
     },
     "status": {
       "todo": "Yapılacak",
@@ -8075,7 +8090,10 @@
       "criterion_checked": "\"{{text}}\" kriterini işaretledi",
       "criterion_unchecked": "\"{{text}}\" kriterinin işaretini kaldırdı",
       "agent_asked": "{{name}} ajanından yapmasını istedi"
-    }
+    },
+    "handedBy": "devreden: <0/>{{name}}",
+    "fromDm": "<0>{{name}} ile DM'inden</0>",
+    "fromDmText": "{{name}} ile DM'inden"
   },
   "routines": {
     "filters": "Rutinleri filtrele",
@@ -15377,6 +15395,7 @@
       "ui_automation_off": "UI Otomasyonu kapalı",
       "xcode_missing": "Mac'te Xcode yüklü değil",
       "xcode_too_old": "Xcode bu iOS için çok eski",
+      "ios_behind_xcode": "Bu iPhone'un iOS'u Xcode'unkinden eski",
       "device_support": "Mac, iPhone araçlarını indiriyor",
       "helper_missing": "Test yardımcısı henüz kurulmadı",
       "helper_expired": "Test yardımcısının yenilenmesi gerekiyor",
@@ -15405,6 +15424,7 @@
       "ui_automation_off": "UI Otomasyonu'nu açın",
       "xcode_missing": "Xcode'u yükleyin",
       "xcode_too_old": "Xcode'u güncelleyin",
+      "ios_behind_xcode": "iPhone'u güncelle",
       "device_support": "Mac'i açık tutun",
       "helper_missing": "Mac'te uygulamayı açın",
       "helper_expired": "Mac'te uygulamayı açın",
@@ -15724,6 +15744,7 @@
       "helperText": "Mac onu her 7 günde bir oluşturur ve yeniler. Xcode'da ücretsiz bir Apple Account yeterlidir.",
       "helperUntrustedText": "Geliştiricinin adına, ardından Güven'e dokunun.",
       "teamLimitText": "iPhone'dan kendi oluşturduğunuz bir uygulamayı silin: Ücretsiz Apple Account 3 taneye izin verir.",
+      "iosBehind": "Bu iPhone iOS {{ios}} kullanıyor ve bu Mac'teki Xcode iOS {{sdk}} için. iPhone'u güncelleyin: Ayarlar › Genel › Yazılım Güncelleme.",
       "xcodeOld": "{{name}} iOS {{version}} kullanıyor ve {{mac}} üzerindeki Xcode en fazla iOS {{sdk}} sürümünü biliyor. Xcode {{major}} yükleyin, ardından bunu Terminal'de çalıştırın.",
       "xcodeOldAny": "{{name}} iOS {{version}} kullanıyor, bu {{mac}} üzerindeki Xcode'un bildiğinden yeni. Xcode {{major}} yükleyin, ardından bunu Terminal'de çalıştırın.",
       "uiRefusedText": "iPhone, test yardımcısının dokunuşlarını reddetti. Kilidini açın ve isterse parolasını girin. Tekrar olursa Ayarlar › Geliştirici › UI Otomasyonunu Etkinleştir seçeneğini kapatıp açın.",
@@ -17087,7 +17108,22 @@
       "failed": "Engellendi · bitmedi",
       "failedWhy": "Engellendi · bitmedi: {{why}}"
     },
-    "working": "Arka planda"
+    "working": "Arka planda",
+    "handed": {
+      "lead": "Devredildi: <0/>{{name}}",
+      "working": "üzerinde çalışıyor",
+      "done": "{{duration}} içinde bitti",
+      "waitingYou": "yanıtını bekliyor",
+      "waiting": "bir yanıt bekliyor",
+      "waitingApprovalYou": "onayını bekliyor",
+      "waitingApproval": "onay bekliyor",
+      "waitingComputer": "bilgisayarı bekliyor",
+      "paused": "plan sınırında duraklatıldı",
+      "queued": "sırada",
+      "failed": "bitmedi",
+      "stopped": "durduruldu",
+      "step": "adım {{current}}/{{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -17682,6 +17718,9 @@
       "interrupted": "Sunucu yeniden başlatıldığı için kesildi. Devam etmek için yeniden sorun.",
       "step_limit": "Bitirmeden adımlarım tükendi.",
       "stuck": "Takıldım ve bitirmeden durdum."
+    },
+    "request": {
+      "asksYou": "{{name}} soruyor"
     }
   },
   "builtinTools": {

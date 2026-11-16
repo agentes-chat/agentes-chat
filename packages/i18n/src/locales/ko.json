@@ -2658,6 +2658,7 @@
     "sharedName": "{{name}} (공유)",
     "sharedPlace": "채널과 스스로 실행되는 작업에서 사용돼요. 워크스페이스 전체가 이 공간을 함께 써요. 비공개 내용은 여기에 두지 마세요.",
     "computerNoHome": "아직 컴퓨터가 없어요. 이 워크스페이스에 자체 컴퓨터가 추가되면 생겨요.",
+    "computerNoHomeServer": "아직 브라우저가 없어요. <guide>이 서버를 에이전트의 컴퓨터로</guide> 설정하면 생겨요.",
     "addComputer": "컴퓨터 추가",
     "computerOneUser": "여기에는 컴퓨터가 없어요. 워크스페이스 컴퓨터가 모든 에이전트를 하나의 사용자로 실행해서 사람마다 공간을 나눌 수 없어요. 설치 프로그램의 --system 옵션으로 설치한 Linux 서버는 나눌 수 있어요.",
     "powers": {
@@ -2815,6 +2816,16 @@
       "invite_roles_other": "{{roles}} 역할로 초대해요.",
       "invite_people_sent_other": "<b>{{emails}}</b>에게 초대를 보냈어요.",
       "remove_ai_key": "API 키 \"{{name}}\"을(를) 삭제합니다."
+    },
+    "brain": {
+      "unusable": {
+        "title": "컴퓨터가 필요해요",
+        "computerOnly": "{{owner}}의 것, {{computer}}에서만 로그인됨. Lodi는 계정으로 로그인한 플랜으로 생각해요.",
+        "noComputer": "{{owner}}의 것. 컴퓨터가 필요한데 워크스페이스에 연결된 컴퓨터가 없어요.",
+        "away": "{{owner}}의 것, {{computer}}에 있지만 자리를 비웠어요.",
+        "connect": "컴퓨터 연결",
+        "plans": "플랜 보기"
+      }
     }
   },
   "teamWeek": {
@@ -3142,7 +3153,7 @@
       "gemini": {
         "title": "내 Gemini 요금제",
         "tiers": "Google AI Pro, Google AI Ultra 또는 Gemini Enterprise",
-        "warning": "Google에 따르면 개인 Gemini 요금제를 다른 앱 안에서 사용하면 계정이 정지될 수 있어요."
+        "warning": "Google에 따르면 개인 Gemini 요금제를 다른 앱 안에서 사용하면 계정이 정지될 수 있어요. 이 위험을 피하려면 Gemini API 키나 Gemini Enterprise를 사용하세요."
       },
       "zen": {
         "title": "OpenCode",
@@ -4070,6 +4081,7 @@
     "seeNewer": "새 요청 보기",
     "computerAway": "{{agent}}의 컴퓨터가 지금 응답하지 않아요. 이 요청은 {{time}}까지 열려 있어요. 잠시 후 다시 시도하세요.",
     "computerPaused": "소유자가 {{agent}}의 컴퓨터를 일시 중지했어요. 이 요청은 {{time}}까지 열려 있어요.",
+    "insecureContext": "이 페이지는 https로 열려 있지 않아 브라우저가 키를 잠그지 않습니다. https://(또는 localhost)로 여세요.",
     "failed": "전달하지 못했어요. 에이전트의 컴퓨터가 켜져 있나요?",
     "changed": "답하는 동안 이 요청이 바뀌었어요. 아무것도 보내지 않았어요. 다시 보내 주세요.",
     "empty": "값을 입력하세요.",
@@ -7637,7 +7649,10 @@
         "failed": "마지막 실행이 실패했어요.",
         "canceled": "누군가 실행을 중지했어요.",
         "budget": "에이전트의 월 예산이 떨어졌어요."
-      }
+      },
+      "finishedTitle": "{{name}}이(가) 마쳤어요",
+      "finishedMeta": "{{when}} · {{name}}이(가) 넘김",
+      "answer": "답하기"
     },
     "status": {
       "todo": "할 일",
@@ -7819,7 +7834,10 @@
       "criterion_checked": "조건 \"{{text}}\"을(를) 체크했어요",
       "criterion_unchecked": "조건 \"{{text}}\"의 체크를 해제했어요",
       "agent_asked": "{{name}}에게 맡겼어요"
-    }
+    },
+    "handedBy": "<0/>{{name}}이(가) 넘김",
+    "fromDm": "<0>{{name}}와(과)의 DM</0>에서",
+    "fromDmText": "{{name}}와(과)의 DM에서"
   },
   "routines": {
     "filters": "루틴 필터",
@@ -14890,6 +14908,7 @@
       "ui_automation_off": "UI 자동화가 꺼져 있어요",
       "xcode_missing": "Mac에 Xcode가 설치되어 있지 않아요",
       "xcode_too_old": "Xcode가 이 iOS를 지원하기에는 너무 오래됐어요",
+      "ios_behind_xcode": "이 iPhone의 iOS가 Xcode의 iOS보다 오래됨",
       "device_support": "Mac이 iPhone 도구를 받는 중이에요",
       "helper_missing": "테스트 도우미가 아직 설정되지 않았어요",
       "helper_expired": "테스트 도우미를 갱신해야 해요",
@@ -14918,6 +14937,7 @@
       "ui_automation_off": "UI 자동화 켜기",
       "xcode_missing": "Xcode 설치",
       "xcode_too_old": "Xcode 업데이트",
+      "ios_behind_xcode": "iPhone 업데이트",
       "device_support": "Mac을 켜 두세요",
       "helper_missing": "Mac에서 앱 열기",
       "helper_expired": "Mac에서 앱 열기",
@@ -15235,6 +15255,7 @@
       "helperText": "Mac이 7일마다 빌드하고 갱신해요. Xcode에 무료 Apple 계정만 있으면 돼요.",
       "helperUntrustedText": "개발자 이름을 탭한 다음 신뢰를 탭하세요.",
       "teamLimitText": "직접 만든 앱 하나를 iPhone에서 삭제하세요(무료 Apple 계정은 3개까지).",
+      "iosBehind": "이 iPhone은 iOS {{ios}}이고 이 Mac의 Xcode는 iOS {{sdk}}용입니다. iPhone을 업데이트하세요: 설정 › 일반 › 소프트웨어 업데이트.",
       "xcodeOld": "{{name}}은(는) iOS {{version}}을(를) 쓰는데 {{mac}}의 Xcode는 iOS {{sdk}}까지만 알아요. Xcode {{major}}을(를) 설치한 다음 터미널에서 이것을 실행하세요.",
       "xcodeOldAny": "{{name}}은(는) {{mac}}의 Xcode가 아는 것보다 새로운 iOS {{version}}을(를) 써요. Xcode {{major}}을(를) 설치한 다음 터미널에서 이것을 실행하세요.",
       "uiRefusedText": "iPhone이 테스트 도우미의 탭을 거부했어요. 잠금을 해제하고 요청하면 암호를 입력하세요. 계속 그러면 설정 › 개발자 › UI 자동화 활성화를 껐다가 다시 켜세요.",
@@ -16574,7 +16595,22 @@
       "failed": "막힘 · 끝내지 못함",
       "failedWhy": "막힘 · 끝내지 못함: {{why}}"
     },
-    "working": "백그라운드"
+    "working": "백그라운드",
+    "handed": {
+      "lead": "<0/>{{name}}에게 넘김",
+      "working": "작업 중",
+      "done": "{{duration}} 만에 끝남",
+      "waitingYou": "내 답변 대기 중",
+      "waiting": "답변 대기 중",
+      "waitingApprovalYou": "내 승인 대기 중",
+      "waitingApproval": "승인 대기 중",
+      "waitingComputer": "컴퓨터 대기 중",
+      "paused": "요금제 한도로 일시 중지",
+      "queued": "대기 중",
+      "failed": "끝내지 못했어요",
+      "stopped": "중지됨",
+      "step": "{{total}}단계 중 {{current}}단계"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -17161,6 +17197,9 @@
       "interrupted": "서버 재시작으로 중단됐어요. 계속하려면 다시 요청하세요.",
       "step_limit": "끝내기 전에 단계를 모두 썼어요.",
       "stuck": "막혀서 끝내기 전에 멈췄어요."
+    },
+    "request": {
+      "asksYou": "{{name}}의 질문"
     }
   },
   "builtinTools": {

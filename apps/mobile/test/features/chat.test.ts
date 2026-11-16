@@ -396,8 +396,18 @@ describe("working line", () => {
     const lines = await source("features/chat/LiveRows.tsx");
     const line = lines.slice(lines.indexOf("export function WorkingLine("), lines.indexOf("type LinePiece"));
     expect(line).toContain(
-      "{color || !someoneTypes(entries) || bothAtIt(entries) ? null : <TypingDots color={c.muted} />}",
+      "{lead || !someoneTypes(entries) || bothAtIt(entries) ? null : <TypingDots color={c.muted} />}",
     );
+    // A bare line on the conversation's ground: no glass pill, no band sweeping behind it, the faces' plates the
+    // ground's own color.
+    expect(line).not.toContain("<Dither");
+    expect(line).not.toContain("glassSolid");
+    expect(line).toContain("const plate = [styles.tok, { backgroundColor: c.bg }];");
+    // The requests' lines that take its place are as bare.
+    const asks = await source("features/chat/asks.tsx");
+    const askLines = asks.slice(asks.indexOf("export function AskBar("), asks.indexOf("const styles"));
+    expect(askLines).not.toContain("glassSolid");
+    expect(askLines).not.toContain("<Sky");
     expect(line).toContain("{faces.length > 0 ? (");
     expect(line).toContain('faces={{ typing: groupFaces("typing"), voice: groupFaces("recordingVoice") }}');
     const words = lines.slice(lines.indexOf("function BarWords("), lines.indexOf("function TypingDots("));

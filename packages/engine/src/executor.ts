@@ -228,6 +228,7 @@ import {
 } from "./key-line";
 import { answerNoTurn, deliverLive, listenLiveSteering, renderSteered } from "./live-steer";
 import {
+  accountEverWorked,
   accountFailureCause,
   noteAccountFailure,
   publishAccountsChanged,
@@ -4981,8 +4982,28 @@ async function executeRunInner(
         // A CLI's failure says who failed it and what it said; the computer only ran it. One that refused to start
         // would fail every retry the same way: it ends here too.
         // A code the apps don't word (a runner's `unsupported`) reads as that brain's program's error, never bare.
+        // A sign-in that never answered a turn, with nothing to stand in: its CLI's own failure is how it is set up,
+        // not an outage that passes, so the run ends now on what the CLI said instead of waiting it out for a day.
+        const signIn = turnPlan.kind !== "model" ? turnPlan.account : undefined;
+        const neverWorked =
+          error instanceof BrainFailure &&
+          error.retryable &&
+          signIn !== undefined &&
+          computerTurns === 0 &&
+          "brain" in (cliFailureOf(error, signIn) ?? {}) &&
+          !(await accountEverWorked(db, run.orgId, signIn.id).catch(() => true));
+        // Not noted above (only a Claude Code sign-in with a known cause is): noted here, so its row says it failed.
+        if (neverWorked && signIn && !(turnPlan.kind === "claude_code" && brainFailure?.cause)) {
+          const failure = {
+            orgId: run.orgId,
+            accountId: signIn.id,
+            code: error.code,
+            cause: brainFailure?.cause ?? "unknown",
+          };
+          later(() => noteAccountFailure(db, failure));
+        }
         const cli =
-          error instanceof BrainFailure && (!error.retryable || cliRefusedStart(error))
+          error instanceof BrainFailure && (!error.retryable || cliRefusedStart(error) || neverWorked)
             ? (cliFailureText(error, turnPlan.account) ??
               (!error.retryable && isComputerBrain(turnPlan.kind) ? brainFailureText(error, turnPlan.kind) : null))
             : null;

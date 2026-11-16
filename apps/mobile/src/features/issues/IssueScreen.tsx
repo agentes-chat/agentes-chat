@@ -9,6 +9,7 @@ import {
   useAiStatus,
   useApi,
   useChannels,
+  useDms,
   useIssue,
   useIssueAction,
   useIssueColumns,
@@ -283,14 +284,23 @@ function Head({ issue: i }: { issue: Issue }) {
   const orgId = useOrgId();
   const channels = useChannels(orgId);
   const channel = i.channelId ? channels.data?.find((x) => x.id === i.channelId) : undefined;
+  // Handed from a DM with an agent: that DM, for whoever reads it.
+  const dms = useDms(orgId);
+  const source = i.source;
+  const dm =
+    source.type === "agent"
+      ? dms.data?.find((d) => d.channelId === source.channelId && d.with.type === "agent")
+      : undefined;
   const from =
     i.source.type === "message"
       ? t("mobile.issues.fromMessage")
-      : i.source.type === "agent"
-        ? t("mobile.issues.fromAgent")
-        : i.source.type === "webhook"
-          ? t("mobile.issues.fromWebhook", { provider: i.source.provider })
-          : null;
+      : dm
+        ? t("issues.fromDmText", { name: dm.with.name })
+        : i.source.type === "agent"
+          ? t("mobile.issues.fromAgent")
+          : i.source.type === "webhook"
+            ? t("mobile.issues.fromWebhook", { provider: i.source.provider })
+            : null;
   const creator = dir.nameOf(i.createdBy);
   // It starts the line now, under the title.
   const line = capitalize(
@@ -710,6 +720,20 @@ function Linked({ issue: i }: { issue: Issue }) {
   const orgId = useOrgId();
   const channels = useChannels(orgId);
   const rows: { key: string; icon: IconName; label: string; onPress: () => void }[] = [];
+  const dms = useDms(orgId);
+  const source = i.source;
+  const dm =
+    source.type === "agent"
+      ? dms.data?.find((d) => d.channelId === source.channelId && d.with.type === "agent")
+      : undefined;
+  if (dm && source.type === "agent") {
+    rows.push({
+      key: "source",
+      icon: "chat",
+      label: t("issues.fromDmText", { name: dm.with.name }),
+      onPress: () => router.push(chatHref(dm.channelId, null, source.messageId ?? null)),
+    });
+  }
   if (i.source.type === "message") {
     const { channelId } = i.source;
     const channel = channels.data?.find((x) => x.id === channelId);

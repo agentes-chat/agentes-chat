@@ -200,6 +200,7 @@ export function RequestCard({
   mine: waitsOnMe,
   waitingFor,
   who,
+  asker,
   source,
   lead,
   headless = false,
@@ -232,6 +233,8 @@ export function RequestCard({
   waitingFor?: string;
   /** Who asks, before the kind ("Ada · Pergunta"), where the card stands away from its conversation. */
   who?: ReactNode;
+  /** Another agent than the conversation's own asks here (work handed to it): "Atlas asks you". */
+  asker?: string;
   /** Where it was asked, after the kind ("Thread · #eng"), where the card stands away from its conversation. */
   source?: ReactNode;
   /** The agent's own words: what it asks. None on a card whose object says it all (one of a summary's). */
@@ -358,7 +361,7 @@ export function RequestCard({
                   {" · "}
                 </>
               )}
-              {askKindWords(t, kind, Boolean(mine))}
+              {asker && mine ? t("chat.request.asksYou", { name: asker }) : askKindWords(t, kind, Boolean(mine))}
               {source && <span className="rq__source"> · {source}</span>}
             </span>
           )}

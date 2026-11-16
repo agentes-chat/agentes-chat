@@ -2658,6 +2658,7 @@
     "sharedName": "{{name}}(共有)",
     "sharedPlace": "チャンネルや、自動で動く作業で使われます。この場所はワークスペース全体で共有されます。非公開のものはここに置かないでください。",
     "computerNoHome": "まだコンピューターがありません。このワークスペースに専用のコンピューターが追加されると使えるようになります。",
+    "computerNoHomeServer": "まだブラウザがありません。<guide>このサーバーをエージェントのコンピューターとして</guide>設定すると使えるようになります。",
     "addComputer": "コンピューターを追加",
     "computerOneUser": "ここではコンピューターを使えません。ワークスペースのコンピューターはすべてのエージェントを 1 人のユーザーとして動かすため、人ごとの場所を分けられません。インストーラーの --system オプションでセットアップした Linux サーバーなら分けられます。",
     "powers": {
@@ -2815,6 +2816,16 @@
       "invite_roles_other": "{{roles}}のロールで招待します。",
       "invite_people_sent_other": "<b>{{emails}}</b>に招待を送信しました。",
       "remove_ai_key": "APIキー「{{name}}」を削除します。"
+    },
+    "brain": {
+      "unusable": {
+        "title": "コンピューターが必要です",
+        "computerOnly": "{{owner}}のもの。{{computer}}でのみサインインしています。Lodiはアカウントとしてサインインしたプランで考えます。",
+        "noComputer": "{{owner}}のもの。コンピューターが必要ですが、ワークスペースには接続されたものがありません。",
+        "away": "{{owner}}のもの。{{computer}}上にありますが、離席中です。",
+        "connect": "コンピューターを接続",
+        "plans": "プランを見る"
+      }
     }
   },
   "teamWeek": {
@@ -3144,7 +3155,7 @@
       "gemini": {
         "title": "あなたのGeminiプラン",
         "tiers": "Google AI Pro、Google AI Ultra、またはGemini Enterprise",
-        "warning": "Googleによると、個人のGeminiプランを他のアプリ内で使うと、アカウントが停止されることがあります。"
+        "warning": "Googleによると、個人のGeminiプランを他のアプリ内で使うと、アカウントが停止されることがあります。このリスクを避けるには、Gemini APIキーまたはGemini Enterpriseを使ってください。"
       },
       "zen": {
         "title": "OpenCode",
@@ -4072,6 +4083,7 @@
     "seeNewer": "新しいリクエストを見る",
     "computerAway": "{{agent}}のコンピューターが今は応答していません。このリクエストは{{time}}まで開いています。少ししてからもう一度お試しください。",
     "computerPaused": "{{agent}}のコンピューターは所有者が一時停止しています。このリクエストは{{time}}まで開いています。",
+    "insecureContext": "このページは https で開かれていないため、ブラウザーはキーを保護できません。https://(または localhost)で開いてください。",
     "failed": "送信できませんでした。エージェントのコンピューターの電源は入っていますか？",
     "changed": "回答中にこのリクエストが変更されました。何も送信されていません。もう一度送信してください。",
     "empty": "値を入力してください。",
@@ -7640,7 +7652,10 @@
         "failed": "前回の実行が失敗しました。",
         "canceled": "誰かが実行を止めました。",
         "budget": "エージェントの月間予算を使い切りました。"
-      }
+      },
+      "finishedTitle": "{{name}}が完了しました",
+      "finishedMeta": "{{when}} · {{name}}から引き継ぎ",
+      "answer": "回答する"
     },
     "status": {
       "todo": "未着手",
@@ -7822,7 +7837,10 @@
       "criterion_checked": "条件「{{text}}」にチェックを入れました",
       "criterion_unchecked": "条件「{{text}}」のチェックを外しました",
       "agent_asked": "{{name}}に作業を頼みました"
-    }
+    },
+    "handedBy": "<0/>{{name}}から引き継ぎ",
+    "fromDm": "<0>{{name}}とのDM</0>から",
+    "fromDmText": "{{name}}とのDMから"
   },
   "routines": {
     "filters": "ルーティンを絞り込む",
@@ -14898,6 +14916,7 @@
       "ui_automation_off": "UIオートメーションがオフです",
       "xcode_missing": "MacにXcodeがインストールされていません",
       "xcode_too_old": "このiOSにはXcodeが古すぎます",
+      "ios_behind_xcode": "この iPhone の iOS は Xcode の対象より古い",
       "device_support": "MacがiPhone用のツールを取得しています",
       "helper_missing": "テストヘルパーがまだ設定されていません",
       "helper_expired": "テストヘルパーの更新が必要です",
@@ -14926,6 +14945,7 @@
       "ui_automation_off": "UIオートメーションをオンにする",
       "xcode_missing": "Xcodeをインストール",
       "xcode_too_old": "Xcodeをアップデート",
+      "ios_behind_xcode": "iPhone をアップデート",
       "device_support": "Macの電源を入れたままにする",
       "helper_missing": "Macでアプリを開く",
       "helper_expired": "Macでアプリを開く",
@@ -15243,6 +15263,7 @@
       "helperText": "Macが7日ごとにビルドして更新します。XcodeでApple Account（無料）を使えば十分です。",
       "helperUntrustedText": "デベロッパ名をタップしてから「信頼」をタップします。",
       "teamLimitText": "自分で作ったアプリを1つiPhoneから削除してください（無料のApple Accountでは3つまで）。",
+      "iosBehind": "この iPhone は iOS {{ios}} で、この Mac の Xcode は iOS {{sdk}} 向けです。iPhone をアップデートしてください:設定 › 一般 › ソフトウェアアップデート。",
       "xcodeOld": "{{name}}はiOS {{version}}ですが、{{mac}}のXcodeが対応するのはiOS {{sdk}}までです。Xcode {{major}}をインストールしてから、ターミナルでこれを実行してください。",
       "xcodeOldAny": "{{name}}はiOS {{version}}で、{{mac}}のXcodeより新しいバージョンです。Xcode {{major}}をインストールしてから、ターミナルでこれを実行してください。",
       "uiRefusedText": "iPhoneがテストヘルパーのタップを拒否しました。ロックを解除し、求められたらパスコードを入力してください。続く場合は、設定 › デベロッパ › UIオートメーションを有効にするをオフにしてからオンにしてください。",
@@ -16582,7 +16603,22 @@
       "failed": "ブロック中 · 完了しませんでした",
       "failedWhy": "ブロック中 · 完了しませんでした: {{why}}"
     },
-    "working": "バックグラウンドで作業中"
+    "working": "バックグラウンドで作業中",
+    "handed": {
+      "lead": "<0/>{{name}}に引き継ぎ",
+      "working": "作業中",
+      "done": "{{duration}}で完了",
+      "waitingYou": "あなたの回答待ち",
+      "waiting": "回答待ち",
+      "waitingApprovalYou": "あなたの承認待ち",
+      "waitingApproval": "承認待ち",
+      "waitingComputer": "コンピューター待ち",
+      "paused": "プランの上限で一時停止中",
+      "queued": "順番待ち",
+      "failed": "完了しませんでした",
+      "stopped": "停止しました",
+      "step": "ステップ {{current}}/{{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -17169,6 +17205,9 @@
       "interrupted": "サーバーの再起動で中断されました。続けるにはもう一度依頼してください。",
       "step_limit": "完了する前にステップを使い切りました。",
       "stuck": "行き詰まったため、完了前に停止しました。"
+    },
+    "request": {
+      "asksYou": "{{name}}からの質問"
     }
   },
   "builtinTools": {

@@ -1048,6 +1048,15 @@ export async function touchMachineAccount(db: Executor, orgId: string, accountId
     .where(and(eq(machineAccounts.orgId, orgId), eq(machineAccounts.id, accountId)));
 }
 
+/** Whether a turn ever answered with the account (`touchMachineAccount`). */
+export async function accountEverWorked(db: Executor, orgId: string, accountId: string) {
+  const [row] = await db
+    .select({ at: machineAccounts.lastSuccessAt })
+    .from(machineAccounts)
+    .where(and(eq(machineAccounts.orgId, orgId), eq(machineAccounts.id, accountId)));
+  return Boolean(row?.at);
+}
+
 /**
  * Why a computer turn's failure was the provider's (or its sign-in's): the cause the runner said, else what its
  * code means (an older runner). Null: not the provider's (canceled, offline, a refused request…).

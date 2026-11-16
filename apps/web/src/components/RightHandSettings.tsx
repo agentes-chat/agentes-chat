@@ -4,6 +4,7 @@ import {
   useAgentBrain,
   useAiAccounts,
   useApi,
+  useAuthConfig,
   useCredentials,
   useModels,
   usePlatformKey,
@@ -14,6 +15,7 @@ import {
   useUpdateSettings,
   useWorkspaceUsesApi,
 } from "@agenteschat/client";
+import { selfHosted } from "@agenteschat/client/lib/about";
 import { accountAbout, accountChoices, accountTitle, ownSignInTitle } from "@agenteschat/client/lib/ai-accounts";
 import { audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
 import { modelInput, modelRows } from "@agenteschat/client/lib/brain-picker";
@@ -52,7 +54,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { AudienceChoice } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { LookRows, modelOptions } from "@/components/AgentFields";
@@ -62,6 +64,7 @@ import type { HaveItem } from "@/components/arrival/ConnectHave";
 import { useConnectAi } from "@/components/ConnectAi";
 import { useAgentComputer } from "@/components/computer/facts";
 import { useOpenComputer } from "@/components/computer/open";
+import { HelpLink } from "@/components/HelpLink";
 import { LoadingLine } from "@/components/Loading";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
@@ -309,15 +312,22 @@ function RightHandComputerRow({ agent }: { agent: Agent }) {
   const { org } = useOrg();
   const view = useAgentComputer(agent);
   const openComputer = useOpenComputer();
+  const auth = useAuthConfig();
   if (!view.ready || view.forbidden || !view.facts) return null;
-  const none = rightHandNoComputer(view.desktop?.reason);
+  const none = rightHandNoComputer(view.desktop?.reason, selfHosted(auth.data));
   if (none)
     return (
       <PrefRow
         id="rh-computer"
         icon="computer"
         label={t("agentComputer.button")}
-        status={t(none)}
+        status={
+          none === "rightHand.computerNoHomeServer" ? (
+            <Trans i18nKey={none} components={{ guide: <HelpLink slug="install-on-a-server" section="computers" /> }} />
+          ) : (
+            t(none)
+          )
+        }
         control={
           none === "rightHand.computerNoHome" &&
           can(org, "pair_computers") && (

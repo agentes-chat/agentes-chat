@@ -2751,6 +2751,7 @@
     "sharedName": "{{name}} (gedeeld)",
     "sharedPlace": "Wordt gebruikt in kanalen en bij werk dat vanzelf draait. De hele workspace deelt deze plek. Bewaar hier niets privés.",
     "computerNoHome": "Nog geen computer. Die komt er zodra deze workspace een eigen computer heeft.",
+    "computerNoHomeServer": "Nog geen browser. Stel <guide>deze server in als computer van de agents</guide> om er een te krijgen.",
     "addComputer": "Computer toevoegen",
     "computerOneUser": "Hier geen computer. De computer van de workspace draait alle agents als één gebruiker en kan de plek van elke persoon dus niet gescheiden houden. Een Linux-server die met de optie --system van het installatieprogramma is ingericht, kan dat wel.",
     "powers": {
@@ -2918,6 +2919,16 @@
       "invite_people_sent_one": "Uitnodiging verstuurd naar <b>{{emails}}</b>.",
       "invite_people_sent_other": "Uitnodigingen verstuurd naar <b>{{emails}}</b>.",
       "remove_ai_key": "API-sleutel \"{{name}}\" verwijderen."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Heeft een computer nodig",
+        "computerOnly": "Van {{owner}}, alleen aangemeld op {{computer}}. Lodi denkt met een plan dat als account is aangemeld.",
+        "noComputer": "Van {{owner}}. Er is een computer nodig, en de workspace heeft er geen verbonden.",
+        "away": "Van {{owner}}, op {{computer}}, die weg is.",
+        "connect": "Een computer verbinden",
+        "plans": "Plannen bekijken"
+      }
     }
   },
   "teamWeek": {
@@ -3271,7 +3282,7 @@
       "gemini": {
         "title": "Je Gemini-abonnement",
         "tiers": "Google AI Pro, Google AI Ultra of Gemini Enterprise",
-        "warning": "Volgens Google kan het gebruik van een persoonlijk Gemini-abonnement in andere apps ertoe leiden dat het account wordt geschorst."
+        "warning": "Volgens Google kan het gebruik van een persoonlijk Gemini-abonnement in andere apps ertoe leiden dat het account wordt geschorst. Gebruik een Gemini-API-sleutel of Gemini Enterprise om dat risico te vermijden."
       },
       "zen": {
         "title": "OpenCode",
@@ -4215,6 +4226,7 @@
     "seeNewer": "Nieuwer verzoek bekijken",
     "computerAway": "De computer van {{agent}} antwoordt nu niet. Dit verzoek blijft open tot {{time}}. Probeer het zo opnieuw.",
     "computerPaused": "De computer van {{agent}} is door de eigenaar gepauzeerd. Dit verzoek blijft open tot {{time}}.",
+    "insecureContext": "Deze pagina is niet via https geopend, dus de browser vergrendelt de sleutel niet. Open hem via https:// (of localhost).",
     "failed": "Kon het niet leveren. Staat de computer van de agent aan?",
     "changed": "Dit verzoek is gewijzigd terwijl je antwoordde. Er is niets verzonden. Stuur het opnieuw.",
     "empty": "Typ de waarde.",
@@ -7974,7 +7986,10 @@
         "failed": "De laatste run is mislukt.",
         "canceled": "Iemand heeft de run gestopt.",
         "budget": "Het maandbudget van de agent is op."
-      }
+      },
+      "finishedTitle": "{{name}} heeft het afgerond",
+      "finishedMeta": "{{when}} · overgedragen door {{name}}",
+      "answer": "Antwoorden"
     },
     "status": {
       "todo": "Te doen",
@@ -8164,7 +8179,10 @@
       "criterion_checked": "heeft het criterium \"{{text}}\" aangevinkt",
       "criterion_unchecked": "heeft het criterium \"{{text}}\" uitgevinkt",
       "agent_asked": "heeft {{name}} gevraagd het te doen"
-    }
+    },
+    "handedBy": "overgedragen door <0/>{{name}}",
+    "fromDm": "uit <0>je DM met {{name}}</0>",
+    "fromDmText": "uit je DM met {{name}}"
   },
   "routines": {
     "filters": "Routines filteren",
@@ -15504,6 +15522,7 @@
       "ui_automation_off": "UI-automatisering staat uit",
       "xcode_missing": "Xcode is niet geïnstalleerd op de Mac",
       "xcode_too_old": "Xcode is te oud voor deze iOS-versie",
+      "ios_behind_xcode": "De iOS van deze iPhone is ouder dan die van Xcode",
       "device_support": "De Mac haalt de iPhone-tools op",
       "helper_missing": "De testhelper is nog niet ingesteld",
       "helper_expired": "De testhelper moet worden vernieuwd",
@@ -15532,6 +15551,7 @@
       "ui_automation_off": "Zet UI-automatisering aan",
       "xcode_missing": "Installeer Xcode",
       "xcode_too_old": "Werk Xcode bij",
+      "ios_behind_xcode": "Werk de iPhone bij",
       "device_support": "Laat de Mac aan staan",
       "helper_missing": "Open de app op de Mac",
       "helper_expired": "Open de app op de Mac",
@@ -15851,6 +15871,7 @@
       "helperText": "De Mac bouwt en vernieuwt hem elke 7 dagen. Een gratis Apple Account in Xcode is genoeg.",
       "helperUntrustedText": "Tik op de naam van de ontwikkelaar en dan op Vertrouw.",
       "teamLimitText": "Verwijder een zelfgemaakte app van de iPhone: een gratis Apple Account staat er 3 toe.",
+      "iosBehind": "Deze iPhone draait iOS {{ios}} en Xcode op deze Mac is voor iOS {{sdk}}. Werk de iPhone bij: Instellingen › Algemeen › Software-update.",
       "xcodeOld": "{{name}} draait iOS {{version}} en Xcode op {{mac}} kent hooguit iOS {{sdk}}. Installeer Xcode {{major}} en voer dit daarna uit in Terminal.",
       "xcodeOldAny": "{{name}} draait iOS {{version}}, nieuwer dan Xcode op {{mac}} kent. Installeer Xcode {{major}} en voer dit daarna uit in Terminal.",
       "uiRefusedText": "De iPhone weigerde de tikken van de testhelper. Ontgrendel hem en voer de toegangscode in als hij erom vraagt. Blijft het gebeuren, zet dan Instellingen › Ontwikkelaar › Schakel UI-automatisering in uit en weer aan.",
@@ -17214,7 +17235,22 @@
       "failed": "Geblokkeerd · niet afgemaakt",
       "failedWhy": "Geblokkeerd · niet afgemaakt: {{why}}"
     },
-    "working": "Op de achtergrond"
+    "working": "Op de achtergrond",
+    "handed": {
+      "lead": "Overgedragen aan <0/>{{name}}",
+      "working": "bezig",
+      "done": "klaar in {{duration}}",
+      "waitingYou": "wacht op jouw antwoord",
+      "waiting": "wacht op een antwoord",
+      "waitingApprovalYou": "wacht op jouw goedkeuring",
+      "waitingApproval": "wacht op goedkeuring",
+      "waitingComputer": "wacht op de computer",
+      "paused": "gepauzeerd op de limiet van het plan",
+      "queued": "in de wachtrij",
+      "failed": "niet afgemaakt",
+      "stopped": "gestopt",
+      "step": "stap {{current}} van {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -17821,6 +17857,9 @@
       "interrupted": "Onderbroken door een herstart van de server. Vraag het opnieuw om verder te gaan.",
       "step_limit": "Mijn stappen waren op voordat ik klaar was.",
       "stuck": "Ik liep vast en stopte voordat ik klaar was."
+    },
+    "request": {
+      "asksYou": "{{name}} vraagt je"
     }
   },
   "builtinTools": {

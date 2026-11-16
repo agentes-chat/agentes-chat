@@ -1804,6 +1804,7 @@
       "ui_automation_off": "UI-automatisering staat uit",
       "xcode_missing": "De Mac heeft Xcode nodig",
       "xcode_too_old": "Xcode is te oud voor deze iPhone",
+      "ios_behind_xcode": "Werk de iOS van deze iPhone bij",
       "device_support": "De Mac maakt deze iPhone klaar",
       "helper_missing": "De testhelper is nog niet ingesteld",
       "helper_expired": "De testhelper moet worden vernieuwd",

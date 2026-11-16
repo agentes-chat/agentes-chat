@@ -49,7 +49,10 @@
     "overflow-x",
   ];
 
-  const sig = (el) => {
+  /** A kit button's words sit in its label: whatever a rule finds in them, it names and places as the button. */
+  const worded = (el) => (el.matches(".ac-btn > .ac-btn__label") ? el.parentElement : el);
+  const sig = (labelOrEl) => {
+    const el = worded(labelOrEl);
     const classes = (typeof el.className === "string" ? el.className : (el.className?.baseVal ?? ""))
       .split(/\s+/)
       .filter((c) => c && !/^(ac-captop|ac-iconline|ac-actrow|is-|has-)/.test(c))
@@ -63,7 +66,7 @@
   const UTILITY = /^(ac-|row$|stack|small$|muted$|grow$|is-|has-)/;
   const kitOnly = (signature) => !(signature?.match(/\.[\w-]+/g) ?? []).some((c) => !UTILITY.test(c.slice(1)));
   const placeOf = (el) => {
-    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    for (let p = worded(el).parentElement; p && p !== document.body; p = p.parentElement) {
       const classes = typeof p.className === "string" ? p.className.split(/\s+/) : [];
       if (classes.some((c) => c && !UTILITY.test(c))) return sig(p);
     }
@@ -956,15 +959,21 @@
         }
       }
     },
-    /** A quiet line across the conversation sitting on a bubble above or under it, with no gap between them. */
+    /**
+     * A quiet line across the conversation sitting on a bubble above or under it, with no gap between them. Within one
+     * layer only: a dialog's line lies over the bubbles of the page behind it and touches none of them.
+     */
     quiet(out) {
+      const layer = (el) => el.closest("[role=dialog],[role=alertdialog]");
       const bubbles = [...document.querySelectorAll(".ac-msg__text")].filter(
         (b) => seen(b) && painted(style(b).backgroundColor),
       );
       for (const line of document.querySelectorAll(".consult-pair,.ac-divider,.channel__unread")) {
         if (!seen(line)) continue;
         const l = line.getBoundingClientRect();
+        const own = layer(line);
         for (const b of bubbles) {
+          if (layer(b) !== own) continue;
           const r = b.getBoundingClientRect();
           if (Math.min(l.right, r.right) - Math.max(l.left, r.left) <= 0) continue;
           const gap = Math.max(r.top - l.bottom, l.top - r.bottom);

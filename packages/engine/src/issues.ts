@@ -60,7 +60,7 @@ import {
 } from "./task-conversation";
 import { promptAnswer, promptPoll, toolDetail } from "./tool-detail";
 import { syncWikiLinks, withWikiLinks } from "./wiki-links";
-import { type WorkRow, type WorkView, workViews } from "./works";
+import { handOverWork, type WorkRow, type WorkView, workViews } from "./works";
 
 const {
   issues,
@@ -1699,7 +1699,7 @@ export async function askAgentToImplement(
   await admitTaskAgents(db, orgId, conversation.channelId, { ids: [agentId] });
   const card: IssueWorkMeta = { issueId: issue.id, number: issue.number, title: issue.title, agentId };
   const author: WorkActor = by ? { type: "agent", id: by.agentId } : { type: "person", id: userId };
-  const { start, runId } = await db.transaction(async (tx) => {
+  const { start, runId, consultationId } = await db.transaction(async (tx) => {
     const consultationId = Bun.randomUUIDv7();
     // What starts the run, in the conversation: short and human (shown in the person's language).
     const start = await insertMessage(tx, {
@@ -1737,7 +1737,7 @@ export async function askAgentToImplement(
       // The right hand looks at it again a day later, for the person it handed it over for.
       await queueTaskCheck(tx, orgId, consultationId);
     }
-    return { start, runId: run?.id ?? null };
+    return { start, runId: run?.id ?? null, consultationId: by ? consultationId : null };
   });
   await publishMessageCreated(pubsub, messageView(start));
   if (runId) {
@@ -1775,6 +1775,8 @@ export async function askAgentToImplement(
   });
   await announceTaken(deps, issue, card);
   await startedWork(deps, issue, agentId, runId ? [runId] : []);
+  // Handed by the right hand: the work reports in the person's DM, and this card follows it by itself.
+  if (consultationId) await handOverWork(deps, consultationId).catch(() => null);
   const fresh = await reload(db, issue);
   if (!fresh) return updated;
   const view = await one(db, fresh);
@@ -1946,7 +1948,32 @@ export async function linkIssueToWork(
   run: { id: string; orgId: string; agentId: string; channelId: string; issueId: string | null },
   input: { number?: number; description: string },
 ): Promise<string | null> {
-  const actor: IssueActor = { type: "agent", agentId: run.agentId, channelId: run.channelId, runId: run.id };
+  let actor: IssueActor = { type: "agent", agentId: run.agentId, channelId: run.channelId, runId: run.id };
+  let source: IssueSource = {
+    type: "agent",
+    agentId: run.agentId,
+    workId: work.id,
+    channelId: work.channelId,
+    messageId: work.anchorMessageId,
+  };
+  // Handed work: the card is the hand-off's, made by the agent that handed it, from where the person asked it.
+  const [handOff] = work.consultationId
+    ? await deps.db
+        .select({ agentId: agentConsultations.askerAgentId, runId: agentRuns.id, ask: agentRuns.triggerMessageId })
+        .from(agentConsultations)
+        .innerJoin(agentRuns, eq(agentRuns.id, agentConsultations.askerRunId))
+        .where(eq(agentConsultations.id, work.consultationId))
+    : [];
+  if (handOff) {
+    actor = { type: "agent", agentId: handOff.agentId, channelId: work.channelId, runId: handOff.runId };
+    source = {
+      type: "agent",
+      agentId: handOff.agentId,
+      workId: work.id,
+      channelId: work.channelId,
+      messageId: handOff.ask,
+    };
+  }
   let issueId: string | null = null;
   if (input.number !== undefined) {
     // Only a card the person behind the work can read, in this conversation or workspace-wide: its updates must not
@@ -1965,13 +1992,7 @@ export async function linkIssueToWork(
       title: work.title,
       description: input.description,
       assignees: [{ type: "agent", id: run.agentId }],
-      source: {
-        type: "agent",
-        agentId: run.agentId,
-        workId: work.id,
-        channelId: work.channelId,
-        messageId: work.anchorMessageId,
-      },
+      source,
       channelId: work.channelId,
     });
     issueId = created.id;

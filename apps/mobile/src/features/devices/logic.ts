@@ -224,6 +224,7 @@ export function androidStage(phone: Pick<PhoneDevice, "status"> | null | undefin
 
 /** What the Mac reports while it sets up the test helper (the last step). */
 const HELPER_STEP = new Set([
+  "ios_behind_xcode",
   "helper_missing",
   "helper_expired",
   "helper_untrusted",

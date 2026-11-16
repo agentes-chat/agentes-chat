@@ -303,7 +303,13 @@ export const routineRuns = pgTable(
     finishedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique().on(t.routineId, t.at), unique().on(t.routineId, t.dedupeKey), index().on(t.routineId, t.createdAt)],
+  (t) => [
+    unique().on(t.routineId, t.at),
+    unique().on(t.routineId, t.dedupeKey),
+    index().on(t.routineId, t.createdAt),
+    // A run's routine, joined per run by the task list.
+    index().on(t.agentRunId),
+  ],
 );
 
 /**

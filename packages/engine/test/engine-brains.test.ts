@@ -3142,6 +3142,54 @@ test("a CLI whose sandbox can't start fails the run at once with that cause, whe
   }
 });
 
+test("a sign-in that never answered fails at once on its CLI's own error, noted on it; one that answered before waits it out", async () => {
+  const said = "Grok Build exited with code 1: error: unexpected response from the model endpoint";
+  for (const worked of [false, true]) {
+    if (worked) await f.close();
+    f = await setup();
+    const machineId = await computerAgent(f, { brainFallback: false });
+    const account = crypto.randomUUID();
+    await f.db.insert(schema.machineAccounts).values({
+      id: account,
+      orgId: f.org.id,
+      machineId,
+      kind: "claude_code",
+      label: "Work",
+      status: "active",
+      createdBy: f.owner.id,
+      ...(worked ? { lastUsedAt: new Date(), lastSuccessAt: new Date() } : {}),
+    });
+    await f.db.update(schema.agents).set({ brainAccountId: account }).where(eq(schema.agents.id, f.agent.id));
+    const { brain, seen } = scriptedComputerBrain(() => [
+      { type: "error", code: "grok_failed", message: said, retryable: true },
+    ]);
+    const handlers = createJobHandlers({
+      ...f.jobDeps,
+      brains: { claude_code: () => brain },
+      machines: { status: async (id) => statusOf(id, { protocol: ACCOUNTS_PROTOCOL }) },
+    });
+    await post(f, "@dev roda os testes");
+    await drainOutbox(f.db, handlers);
+    await runJobsDue(f);
+    await drainOutbox(f.db, handlers);
+
+    const [run] = await f.db.select().from(schema.agentRuns);
+    const [row] = await f.db.select().from(schema.machineAccounts).where(eq(schema.machineAccounts.id, account));
+    if (worked) {
+      expect(seen.length).toBe(2);
+      expect(run?.status).toBe("running");
+      expect(row?.lastFailureCause).toBeNull();
+    } else {
+      expect(seen.length).toBe(1);
+      expect([run?.status, run?.error]).toEqual([
+        "failed",
+        "cli_failed: Grok Build: unexpected response from the model endpoint",
+      ]);
+      expect([row?.lastFailureCause, Boolean(row?.lastFailureAt)]).toEqual(["unknown", true]);
+    }
+  }
+});
+
 test("woken before its resume, a run parked on its CLI's failure keeps one resume; a sign-in that never answered isn't woken by its computer", async () => {
   f = await setup();
   const machineId = await computerAgent(f, { brainFallback: false });

@@ -117,6 +117,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "browser.inCard.noComputer",
     "browser.live.noComputer",
     "computers.hostMissing",
+    // Lodi's computer row on a self-hosted server (`rightHandNoComputer` with `selfHosted`).
+    "rightHand.computerNoHomeServer",
     "connectAi.wait.connecting",
     "errors.mission.unavailable",
     // The feedback form's line on who reads it, where the server isn't one of agentes.chat's own (`auth-config.cloud`).
@@ -293,6 +295,8 @@ export const ANYWHERE: readonly string[] = [
   // People connect their own computers and phones in every setup, the Cloud included.
   "devices.",
   "mobile.devices.",
+  // The right hand's plan that needs a computer: the workspace's way out is connecting one, in every setup.
+  "rightHand.brain.unusable.connect",
 ];
 
 /** A key's agent-gender variant (`_female`, ADR 0122) goes where its base key goes. */

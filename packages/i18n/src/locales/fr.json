@@ -2850,6 +2850,7 @@
     "sharedName": "{{name}} (partagé)",
     "sharedPlace": "Utilisé dans les canaux et pour le travail qui s'exécute tout seul. Tout le workspace partage cet espace. N'y gardez rien de privé.",
     "computerNoHome": "Pas encore d'ordinateur. Il en aura un quand ce workspace aura son propre ordinateur.",
+    "computerNoHomeServer": "Pas encore de navigateur. Configurez <guide>ce serveur comme ordinateur des agents</guide> pour lui en donner un.",
     "addComputer": "Ajouter un ordinateur",
     "computerOneUser": "Pas d'ordinateur ici. L'ordinateur du workspace exécute tous les agents sous un seul utilisateur et ne peut donc pas séparer l'espace de chaque personne. Un serveur Linux installé avec l'option --system de l'installateur le peut.",
     "powers": {
@@ -3027,6 +3028,16 @@
       "invite_people_sent_many": "Invitations envoyées à <b>{{emails}}</b>.",
       "invite_people_sent_other": "Invitations envoyées à <b>{{emails}}</b>.",
       "remove_ai_key": "Supprimer la clé API « {{name}} »."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Besoin d'un ordinateur",
+        "computerOnly": "De {{owner}}, connecté seulement sur {{computer}}. Lodi réfléchit avec un forfait connecté en tant que compte.",
+        "noComputer": "De {{owner}}. Il faut un ordinateur, et l'espace de travail n'en a aucun de connecté.",
+        "away": "De {{owner}}, sur {{computer}}, qui est absent.",
+        "connect": "Connecter un ordinateur",
+        "plans": "Voir les forfaits"
+      }
     }
   },
   "teamWeek": {
@@ -3388,7 +3399,7 @@
       "gemini": {
         "title": "Votre abonnement Gemini",
         "tiers": "Google AI Pro, Google AI Ultra ou Gemini Enterprise",
-        "warning": "Google indique qu'utiliser un abonnement Gemini personnel dans d'autres applications peut entraîner la suspension du compte."
+        "warning": "Google indique qu'utiliser un abonnement Gemini personnel dans d'autres applications peut entraîner la suspension du compte. Pour éviter ce risque, utilisez une clé API Gemini ou Gemini Enterprise."
       },
       "zen": {
         "title": "OpenCode",
@@ -4348,6 +4359,7 @@
     "seeNewer": "Voir la demande plus récente",
     "computerAway": "L'ordinateur de {{agent}} ne répond pas pour le moment. Cette demande reste ouverte jusqu'à {{time}}. Réessayez dans un instant.",
     "computerPaused": "L'ordinateur de {{agent}} est mis en pause par son propriétaire. Cette demande reste ouverte jusqu'à {{time}}.",
+    "insecureContext": "Cette page n'est pas ouverte en https, le navigateur ne verrouille donc pas la clé. Ouvrez-la en https:// (ou localhost).",
     "failed": "Impossible de le transmettre. L'ordinateur de l'agent est-il allumé ?",
     "changed": "Cette demande a changé pendant que vous répondiez. Rien n'a été envoyé. Renvoyez-la.",
     "empty": "Saisissez la valeur.",
@@ -8213,7 +8225,10 @@
         "failed": "La dernière exécution a échoué.",
         "canceled": "Quelqu'un a arrêté l'exécution.",
         "budget": "Le budget mensuel de l'agent est épuisé."
-      }
+      },
+      "finishedTitle": "{{name}} l'a terminée",
+      "finishedMeta": "{{when}} · confiée par {{name}}",
+      "answer": "Répondre"
     },
     "status": {
       "todo": "À faire",
@@ -8407,7 +8422,10 @@
       "criterion_checked": "a coché le critère « {{text}} »",
       "criterion_unchecked": "a décoché le critère « {{text}} »",
       "agent_asked": "a demandé à {{name}} de la faire"
-    }
+    },
+    "handedBy": "confiée par <0/>{{name}}",
+    "fromDm": "depuis <0>ta DM avec {{name}}</0>",
+    "fromDmText": "depuis ta DM avec {{name}}"
   },
   "routines": {
     "filters": "Filtrer les routines",
@@ -15945,6 +15963,7 @@
       "ui_automation_off": "L'automatisation de l'IU est désactivée",
       "xcode_missing": "Xcode n'est pas installé sur le Mac",
       "xcode_too_old": "Xcode est trop ancien pour cette version d'iOS",
+      "ios_behind_xcode": "L'iOS de cet iPhone est plus ancien que celui de Xcode",
       "device_support": "Le Mac récupère les outils de l'iPhone",
       "helper_missing": "L'app de test n'est pas encore configurée",
       "helper_expired": "L'app de test doit être renouvelée",
@@ -15973,6 +15992,7 @@
       "ui_automation_off": "Activez l'automatisation de l'IU",
       "xcode_missing": "Installez Xcode",
       "xcode_too_old": "Mettez Xcode à jour",
+      "ios_behind_xcode": "Mettez à jour l'iPhone",
       "device_support": "Laissez le Mac allumé",
       "helper_missing": "Ouvrez l'app sur le Mac",
       "helper_expired": "Ouvrez l'app sur le Mac",
@@ -16294,6 +16314,7 @@
       "helperText": "Créée et renouvelée par le Mac tous les 7 jours. Un Apple Account gratuit dans Xcode suffit.",
       "helperUntrustedText": "Touchez le nom du développeur, puis Se fier.",
       "teamLimitText": "Supprimez de l'iPhone une app que vous avez créée : un Apple Account gratuit en permet 3.",
+      "iosBehind": "Cet iPhone est sous iOS {{ios}} et Xcode sur ce Mac est pour iOS {{sdk}}. Mettez à jour l'iPhone : Réglages › Général › Mise à jour logicielle.",
       "xcodeOld": "{{name}} est sous iOS {{version}} et Xcode sur {{mac}} connaît au plus iOS {{sdk}}. Installez Xcode {{major}}, puis lancez ceci dans Terminal.",
       "xcodeOldAny": "{{name}} est sous iOS {{version}}, plus récent que ce que connaît Xcode sur {{mac}}. Installez Xcode {{major}}, puis lancez ceci dans Terminal.",
       "uiRefusedText": "L'iPhone a refusé les touchers de l'app de test. Déverrouillez-le et saisissez son code s'il le demande. Si cela continue, désactivez puis réactivez Réglages › Développeur › Activer l'automatisation de l'IU.",
@@ -17693,7 +17714,22 @@
       "failed": "Bloqué · pas terminé",
       "failedWhy": "Bloqué · pas terminé : {{why}}"
     },
-    "working": "En arrière-plan"
+    "working": "En arrière-plan",
+    "handed": {
+      "lead": "Confié à <0/>{{name}}",
+      "working": "en cours",
+      "done": "terminé en {{duration}}",
+      "waitingYou": "attend ta réponse",
+      "waiting": "attend une réponse",
+      "waitingApprovalYou": "attend ton approbation",
+      "waitingApproval": "attend une approbation",
+      "waitingComputer": "attend l'ordinateur",
+      "paused": "en pause à la limite du forfait",
+      "queued": "en file d'attente",
+      "failed": "n'a pas abouti",
+      "stopped": "arrêté",
+      "step": "étape {{current}} sur {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -18308,6 +18344,9 @@
       "interrupted": "Interrompu par un redémarrage du serveur. Redemandez pour continuer.",
       "step_limit": "Je n'avais plus d'étapes avant de terminer.",
       "stuck": "J'ai été bloqué et je me suis arrêté avant de terminer."
+    },
+    "request": {
+      "asksYou": "{{name}} te demande"
     }
   },
   "builtinTools": {

@@ -204,6 +204,8 @@ export const agentRuns = pgTable(
     index().on(t.issueId, t.createdAt),
     // A stretch's runs, counted before an agent starts another (`stretchStop`).
     index().on(t.orgId, t.stretchId).where(sql`${t.stretchId} is not null`),
+    // A computer brain's session's runs (`resolveBrain`, a cut tool call read back from an earlier run).
+    index().on(t.orgId, t.brainSessionId).where(sql`${t.brainSessionId} is not null`),
     // Runs waiting for a computer, found when it reconnects (only those rows are indexed).
     index("agent_runs_waiting_machine_idx").on(t.waitingMachineId).where(sql`${t.waitingMachineId} is not null`),
     // The task manager's count of today's finished tasks, asked at every poll: only today's rows read, not every run
@@ -239,8 +241,15 @@ export const agentWorks = pgTable(
     issueId: uuid().references(() => issues.id, { onDelete: "set null" }),
     /** `queued` | `live` | `done` | `failed` | `canceled`. */
     status: text().notNull(),
-    /** `agent` (it called work_in_background) | `auto` (the safety net moved it). */
+    /**
+     * `agent` (it called work_in_background) | `auto` (the safety net moved it) | `handed` (another agent handed it
+     * over for a person: it runs in the agents' DM or a task's conversation and reports in the person's, ADR 0121).
+     */
     how: text().notNull(),
+    /** A handed work: the hand-off (note) it came from. */
+    consultationId: uuid().references(() => agentConsultations.id, { onDelete: "set null" }),
+    /** A handed work: the thread of `channelId` its updates and report go to (null: the main timeline). */
+    handedThreadId: uuid(),
     /** The person behind it, for lists and notifications. */
     requestedByUserId: text(),
     updateSeq: integer().notNull().default(0),
@@ -259,6 +268,7 @@ export const agentWorks = pgTable(
     index().on(t.orgId, t.status).where(sql`${t.status} in ('queued', 'live')`),
     index().on(t.agentId, t.status).where(sql`${t.status} in ('queued', 'live')`),
     index().on(t.issueId).where(sql`${t.issueId} is not null`),
+    index().on(t.consultationId).where(sql`${t.consultationId} is not null`),
   ],
 );
 
@@ -331,6 +341,8 @@ export const agentRunSteps = pgTable(
     // A workspace's tool calls in a range of dates, for the operator API (only those steps are indexed). Built
     // concurrently: every step of every run is a row here, and a plain build keeps them all waiting until it ends.
     index("agent_run_steps_tool_calls_idx").on(t.orgId, t.createdAt).where(sql`${t.kind} = 'tool_call'`).concurrently(),
+    // The task list's count of a run's tool calls and its latest one, without reading the run's other steps.
+    index("agent_run_steps_tool_call_run_idx").on(t.runId, t.seq).where(sql`${t.kind} = 'tool_call'`),
   ],
 );
 
@@ -399,6 +411,8 @@ export const usageRecords = pgTable(
     index().on(t.orgId, t.personId, t.createdAt),
     // The operator's work analytics read every workspace's usage in a range of dates.
     index().on(t.createdAt),
+    // Usage by run (the task list, routines, cost): read per run id, never by time.
+    index().on(t.runId),
   ],
 );
 
@@ -421,6 +435,8 @@ export const agentBudgetPeriods = pgTable(
   (t) => [
     primaryKey({ columns: [t.agentId, t.periodStart] }),
     foreignKey({ columns: [t.orgId, t.agentId], foreignColumns: [agents.orgId, agents.id] }).onDelete("cascade"),
+    // A workspace's month (agents' statuses, the right hand's budget watch): the key starts with the agent.
+    index().on(t.orgId, t.periodStart),
   ],
 );
 
@@ -822,6 +838,8 @@ export const agentScopes = pgTable(
   (t) => [
     foreignKey({ columns: [t.orgId, t.agentId], foreignColumns: [agents.orgId, agents.id] }).onDelete("cascade"),
     unique().on(t.agentId, t.connectionId, t.scope).nullsNotDistinct(),
+    // A connection's grants across agents (a mailbox's or a database's people and agents).
+    index().on(t.connectionId).where(sql`${t.connectionId} is not null`),
   ],
 );
 

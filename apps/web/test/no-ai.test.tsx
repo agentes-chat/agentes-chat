@@ -1029,6 +1029,23 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     expect(screen().queryByRole("dialog")).toBeNull();
   });
 
+  test("a 60-plus-character account name: Usar … is the foot's whole name, its words in the label a narrow dialog cuts", async () => {
+    const state = walters(withCard(), ADA_ID);
+    const long = acct({
+      id: "acct_long",
+      label: "Conta compartilhada do time de atendimento ao cliente da Acme",
+      plan: "max",
+    });
+    const { box } = await connectAda(state, { accounts: [long] });
+    const use = within(box).getByRole("button", {
+      name: "Usar Conta compartilhada do time de atendimento ao cliente da Acme · Max",
+    });
+    expect(use.closest(".ac-dialog__foot")).not.toBeNull();
+    expect(use.querySelector(":scope > .ac-btn__label")?.textContent).toBe(
+      "Usar Conta compartilhada do time de atendimento ao cliente da Acme · Max",
+    );
+  });
+
   test("Só algumas pessoas with nobody picked: Atende outras pessoas lets nobody in, so it goes back off and says why", async () => {
     const state = walters(withCard(), ADA_ID);
     for (const a of state.agents) if (a.id === ADA_ID) a.audience = { mode: "people", userIds: [] };

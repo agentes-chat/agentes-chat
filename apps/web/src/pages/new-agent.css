@@ -28,6 +28,7 @@
 /* Review. A row's name, value and Editar each start on a line of one height (`--rv-line`), so the three share the
    first line whatever their type size. */
 .newag__review {
+  container: newag-review / inline-size;
   gap: 0;
   padding: var(--space-1) var(--space-4);
 }
@@ -57,6 +58,25 @@
   flex-direction: column;
   gap: var(--space-1);
   min-width: 0;
+}
+/* A narrow review (a phone, or the flow beside the app's sidebar and its own preview on a laptop): the name of what is
+   reviewed and its Editar (or switch) on one line, the value under them at the row's whole width, never a column
+   beside the button. By the review's own width: the window says nothing of the room the flow got. */
+@container newag-review (max-width: 520px) {
+  .newag__rv {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "k end" "v v";
+    align-items: center;
+  }
+  .newag__rv-k {
+    grid-area: k;
+  }
+  .newag__rv-v {
+    grid-area: v;
+  }
+  .newag__rv > :last-child:not(.newag__rv-v) {
+    grid-area: end;
+  }
 }
 .newag__quote {
   display: -webkit-box;
@@ -362,22 +382,6 @@
 @media (max-width: 820px) {
   .newag__work {
     padding: 0 16px;
-  }
-  /* Narrow: the name of what is reviewed and its Editar (or switch) on one line, the value under them at the row's
-     whole width, never a column beside the button. */
-  .newag__rv {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "k end" "v v";
-    align-items: center;
-  }
-  .newag__rv-k {
-    grid-area: k;
-  }
-  .newag__rv-v {
-    grid-area: v;
-  }
-  .newag__rv > :last-child:not(.newag__rv-v) {
-    grid-area: end;
   }
   .newag__born {
     min-height: 520px;
