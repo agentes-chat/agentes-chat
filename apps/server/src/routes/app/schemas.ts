@@ -257,7 +257,7 @@ export const EndpointModel = z
     efforts: z
       .array(z.string())
       .optional()
-      .openapi({ description: "The effort levels its check found it takes: low, medium and high (ADR 0186)." }),
+      .openapi({ description: "The effort levels its check found it takes: low, medium and high (ADR 0187)." }),
     effortsAt: z.string().optional().openapi({ description: "When those levels were checked." }),
   })
   .openapi("EndpointModel");
@@ -286,7 +286,7 @@ export const Credential = z
     openrouter: z
       .object({ models: z.array(z.string()) })
       .optional()
-      .openapi({ description: "OpenRouter (ADR 0186): the models this workspace chose to use with the key." }),
+      .openapi({ description: "OpenRouter (ADR 0187): the models this workspace chose to use with the key." }),
     keyHint: z.string().openapi({ description: "Last 4 characters of the key. The key itself is never returned." }),
     workspaceIdHint: z
       .string()
@@ -930,7 +930,7 @@ export const Model = z
     efforts: z
       .array(z.string())
       .optional()
-      .openapi({ description: "The effort levels it takes, when known (ADR 0186)." }),
+      .openapi({ description: "The effort levels it takes, when known (ADR 0187)." }),
     reasoning: z
       .boolean()
       .optional()

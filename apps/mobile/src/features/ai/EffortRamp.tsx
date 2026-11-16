@@ -69,7 +69,7 @@ export function EffortRamp({
   kind?: BrainKind;
   /** A model sold at thinking levels (Antigravity): its levels, the rest of the ladder greyed out. */
   levels?: readonly string[];
-  /** An API model's checked levels (ADR 0186): those steps alone, nothing above or below them. */
+  /** An API model's checked levels (ADR 0187): those steps alone, nothing above or below them. */
   only?: readonly EffortLevel[];
   disabled?: boolean;
 }) {

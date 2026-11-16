@@ -120,7 +120,7 @@ const infoOf = (endpointName: string, m: EndpointModel): ModelInfo => ({
   endpoint: endpointName,
   prices: m.prices ?? { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
   ...(m.prices ? {} : { unpriced: true as const }),
-  // The levels its effort check found it takes (ADR 0186): the pickers offer those alone, the gateway the nearest.
+  // The levels its effort check found it takes (ADR 0187): the pickers offer those alone, the gateway the nearest.
   ...(m.efforts ? { efforts: m.efforts } : {}),
   serverSideFallback: false,
   structuredOutput: false,
@@ -243,7 +243,7 @@ export async function checkEndpoint(
   return results;
 }
 
-/** The levels a credential's models are checked for: every level an API brain can store (ADR 0186). */
+/** The levels a credential's models are checked for: every level an API brain can store (ADR 0187). */
 export type EndpointEffort = "low" | "medium" | "high" | "xhigh" | "max";
 export const ENDPOINT_EFFORTS: readonly EndpointEffort[] = ["low", "medium", "high", "xhigh", "max"];
 const EFFORT_TIMEOUT_MS = 60_000;
@@ -292,7 +292,7 @@ function effortTargets(
 
 /**
  * One short call per effort level and model, through the Model Gateway (a `summary` call, its tokens recorded): the
- * levels a model takes, so the apps offer those alone (ADR 0186). A 4xx is a level it doesn't take; its key's own
+ * levels a model takes, so the apps offer those alone (ADR 0187). A 4xx is a level it doesn't take; its key's own
  * refusal stops the run; a transport failure throws (the job retries, and an outage is never recorded as no level).
  * What is learned is written per model as it goes, so a retried run keeps it. An endpoint's models and an OpenRouter
  * key's chosen models both; OpenRouter's are probed with the exact level (`exactEffort`), since its adapter would
@@ -360,7 +360,7 @@ export async function probeCredentialEfforts(
         throw error;
       }
     }
-    // Never wider than the list allows: a sweep can only confirm, never grant, a level (ADR 0186).
+    // Never wider than the list allows: a sweep can only confirm, never grant, a level (ADR 0187).
     const declared = offer.kind === "openrouter" ? modelInfo(target.model)?.efforts : undefined;
     levels.set(target.id, declared && declared.length > 0 ? accepted.filter((e) => declared.includes(e)) : accepted);
   };
@@ -403,7 +403,7 @@ export async function probeCredentialEfforts(
   return { tested: levels.size, levels: learned, ...(refused ? { error: refused } : {}) };
 }
 
-/** A background effort check that failed for good: the credential says so, with the server's words (ADR 0186). */
+/** A background effort check that failed for good: the credential says so, with the server's words (ADR 0187). */
 export async function markCredentialEffortsFailed(
   db: Database,
   orgId: string,

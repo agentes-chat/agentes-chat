@@ -127,7 +127,7 @@ export interface ModelRequest {
    */
   /** How hard it thinks: any level a model is sold at; the gateway takes it to the nearest one it takes. */
   effort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
-  /** A probe (ADR 0186): send that effort exactly, never the nearest one the model takes. */
+  /** A probe (ADR 0187): send that effort exactly, never the nearest one the model takes. */
   exactEffort?: boolean;
   /**
    * `1h`: the breakpoints of the stable prefix (stable tools, system blocks marked `cache`) last an hour where the

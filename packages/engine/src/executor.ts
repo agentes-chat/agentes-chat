@@ -2996,7 +2996,7 @@ async function executeRunInner(
     // OpenRouter's line is its list: in place before a tier maps onto it.
     if (provider === "openrouter") await ensureOpenRouterModels();
     const tiers = (await orgAutoModels(db, run.orgId).catch((): AutoModels => ({})))[provider];
-    // OpenRouter: Automático picks among the models the workspace chose, never the rest of the list (ADR 0186).
+    // OpenRouter: Automático picks among the models the workspace chose, never the rest of the list (ADR 0187).
     const allowed = provider === "openrouter" ? await openRouterSelection(db, run.orgId).catch(() => null) : null;
     const applied = autoApplied(agent, brainPlan, choice, provider, tiers, endpoint, allowed);
     // No model for the tier: OpenRouter's list couldn't be read, or an endpoint offers none (never a call on the

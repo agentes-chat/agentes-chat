@@ -106,7 +106,7 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
   const may = !busy && view?.canEdit === true;
   const family = view ? effortFamily(view, brainPlan(view)) : undefined;
   const effort = useEffortChoice(agentId, now?.effort, undefined, family ? (level) => family.values[level] : undefined);
-  // A fixed API model's ramp offers only the levels its key checked (ADR 0186).
+  // A fixed API model's ramp offers only the levels its key checked (ADR 0187).
   const keyScale =
     view?.brain === "model"
       ? keyEffortScale(models.data?.models?.find((m) => m.id === view.effectiveModel))

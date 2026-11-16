@@ -1135,7 +1135,7 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         period: String(job.payload.period),
       });
     },
-    // A workspace endpoint's effort check finished (ADR 0186): the person hears from the right hand.
+    // A workspace endpoint's effort check finished (ADR 0187): the person hears from the right hand.
     [CREDENTIAL_EFFORTS_JOB]: async (job) => {
       const orgId = orgOf(job);
       const credentialId = String(job.payload.credentialId);

@@ -5320,7 +5320,7 @@ export const ptBR = {
         "O {{model}} saiu do {{plan}}. <b>{{name}}</b> está usando o {{runs}} até você escolher outro modelo.",
       routineWaitingPlan: "<b>{{name}}</b> espera o plano renovar para rodar uma rotina",
       planResetUnknown: "O {{plan}} não disse quando o limite renova. O trabalho de <b>{{name}}</b> segue esperando.",
-      /** A workspace endpoint's effort check ended (`credential_efforts`, ADR 0186). */
+      /** A workspace endpoint's effort check ended (`credential_efforts`, ADR 0187). */
       credentialEfforts: "<b>{{name}}</b> terminou de verificar os níveis de esforço de {{label}}",
       credentialEffortsFailed: "<b>{{name}}</b> não conseguiu verificar os níveis de esforço de {{label}}",
       catchUpClosed_one: "<b>{{name}}</b> retomou e pulou {{count}} conversa que não precisava de resposta",

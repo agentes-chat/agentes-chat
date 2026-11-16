@@ -62,7 +62,7 @@ export function useConnectKey(orgId: string, asked?: string) {
   // "Outro provedor" (ADR 0146): its own form, saved by its own button (a sheet only: the first run saves a key).
   const [custom, setCustom] = useState(asked === CUSTOM_PROVIDER);
   const [key, setKeyRaw] = useState("");
-  // OpenRouter: the models this key uses (ADR 0186), chosen before it is saved.
+  // OpenRouter: the models this key uses (ADR 0187), chosen before it is saved.
   const [models, setModels] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -103,7 +103,7 @@ export function useConnectKey(orgId: string, asked?: string) {
   };
   const save = async (syncEfforts = false): Promise<Credential | null> => {
     if (!clean || saving) return null;
-    // An OpenRouter key is saved with the models it uses: none chosen is nothing to save (ADR 0186).
+    // An OpenRouter key is saved with the models it uses: none chosen is nothing to save (ADR 0187).
     if (provider === "openrouter" && models.length === 0) return null;
     setSaving(true);
     setFailed(false);

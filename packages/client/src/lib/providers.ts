@@ -232,7 +232,7 @@ export function modelChoices(
   models: Model[],
   credentials: readonly KeyLike[],
   platform: boolean,
-  /** The agent's current model: shown even when the workspace's OpenRouter choice left it out (ADR 0186). */
+  /** The agent's current model: shown even when the workspace's OpenRouter choice left it out (ADR 0187). */
   keep?: string | null,
 ) {
   const withKey = providersWithKeys(credentials);
@@ -255,7 +255,7 @@ export function modelChoices(
       (model.endpoint
         ? live.has(model.endpoint.credentialId)
         : withKey.has(model.provider) || (platform && model.provider === "anthropic"));
-    // Only what this workspace can think with now: other providers' models are not hinted at (ADR 0186); the one an
+    // Only what this workspace can think with now: other providers' models are not hinted at (ADR 0187); the one an
     // agent already runs stays, so a removed key doesn't hide its own setting.
     if (!available && model.id !== keep) continue;
     groups.set(group, [...(groups.get(group) ?? []), { model, available }]);

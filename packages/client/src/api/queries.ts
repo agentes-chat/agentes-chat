@@ -1113,7 +1113,7 @@ export function useEndpointModels(orgId: string) {
   });
 }
 
-/** OpenRouter's models, with the key checked when given (ADR 0186): the list to choose from. */
+/** OpenRouter's models, with the key checked when given (ADR 0187): the list to choose from. */
 export function useOpenRouterModels(orgId: string) {
   const api = useApi();
   return useMutation({
@@ -1121,7 +1121,7 @@ export function useOpenRouterModels(orgId: string) {
   });
 }
 
-/** The models an OpenRouter key uses (ADR 0186); the pickers follow. */
+/** The models an OpenRouter key uses (ADR 0187); the pickers follow. */
 export function useSetOpenRouterModels(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
@@ -1135,7 +1135,7 @@ export function useSetOpenRouterModels(orgId: string) {
   });
 }
 
-/** Checks an endpoint's models' effort levels in the background (ADR 0186). */
+/** Checks an endpoint's models' effort levels in the background (ADR 0187). */
 export function useTestEndpointEfforts(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();

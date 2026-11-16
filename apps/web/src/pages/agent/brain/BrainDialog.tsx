@@ -952,7 +952,7 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
       const autoModel = isAuto(s.modelNow);
       // The draft, not the saved model's level: a model sold at levels changes its id when Concluído saves.
       const effortShown = m.effort;
-      // An API model whose levels were never checked (or which takes none) gets no ramp: a note says so (ADR 0186).
+      // An API model whose levels were never checked (or which takes none) gets no ramp: a note says so (ADR 0187).
       const keyModel =
         s.kind === "model" ? s.models.find((x) => x.id === (s.shownModel || s.modelNow || "")) : undefined;
       const keyScale = s.kind === "model" ? keyEffortScale(keyModel) : null;

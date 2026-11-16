@@ -19,7 +19,7 @@ export const KEY_EFFORT_LEVELS: readonly EffortLevel[] = ["low", "medium", "high
 export const effortLevelsOf = (kind: BrainKind | undefined) => (kind === "model" ? KEY_EFFORT_LEVELS : EFFORT_LEVELS);
 
 /**
- * The effort levels an API model's ramp offers, when known: the levels it takes (ADR 0186). Null: no ramp at all — a
+ * The effort levels an API model's ramp offers, when known: the levels it takes (ADR 0187). Null: no ramp at all — a
  * workspace endpoint whose models were never checked, or one that takes none. A catalog model with no list keeps the
  * three, as before.
  */
@@ -31,7 +31,7 @@ export const keyEffortLevels = (model?: Pick<Model, "provider" | "efforts"> | nu
 };
 
 /**
- * The whole ladder an API model offers, the ones it doesn't take greyed out (ADR 0186): the levels it was checked
+ * The whole ladder an API model offers, the ones it doesn't take greyed out (ADR 0187): the levels it was checked
  * for or its provider lists. Null: no ramp at all — a workspace endpoint never checked, or a model with no effort
  * to choose. A catalog model with no list keeps all of them, as before.
  */

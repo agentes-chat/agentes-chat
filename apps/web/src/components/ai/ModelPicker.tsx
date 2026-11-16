@@ -215,7 +215,7 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
   const shown = q.trim() ? rows.filter((r) => r.label.toLowerCase().includes(q.trim().toLowerCase())) : rows;
   const [busy, setBusy] = useState(false);
   const checked = rows.find((r) => r.checked);
-  // An API model whose levels were never checked (or which takes none): no ramp to offer (ADR 0186).
+  // An API model whose levels were never checked (or which takes none): no ramp to offer (ADR 0187).
   const keyModel = checked && !checked.auto ? all.find((m) => m.id === checked.value) : undefined;
   const keyScale = checked && !checked.auto ? keyEffortScale(keyModel) : null;
   const effortOn = tile?.current && checked && !checked.auto && keyScale !== null;

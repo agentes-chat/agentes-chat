@@ -394,7 +394,7 @@ function EffortDock({
   const { orgId } = useOrg();
   const view = useAgentBrain(orgId, agentId, true, false, scope).data;
   const family = view ? effortFamily(view, brainPlan(view)) : undefined;
-  // An API model's ramp is the whole ladder, the levels it doesn't take greyed out (ADR 0186); null: no ramp.
+  // An API model's ramp is the whole ladder, the levels it doesn't take greyed out (ADR 0187); null: no ramp.
   const models = useModels().data?.models;
   const apiBrain = view?.brain === "model";
   const keyScale = apiBrain ? keyEffortScale(models?.find((m) => m.id === view?.effectiveModel)) : undefined;

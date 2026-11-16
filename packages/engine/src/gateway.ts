@@ -145,7 +145,7 @@ export interface OrgCall {
   effort?: ModelRequest["effort"];
   /** The effort as given, not taken to the model's nearest: the effort check probes each level. */
   rawEffort?: boolean;
-  /** Send that level exactly, even where an adapter would take it to the nearest one the list claims (ADR 0186). */
+  /** Send that level exactly, even where an adapter would take it to the nearest one the list claims (ADR 0187). */
   exactEffort?: boolean;
   /** Agent the call is about, if any (recorded, not billed to its budget). */
   agentId?: string | null;

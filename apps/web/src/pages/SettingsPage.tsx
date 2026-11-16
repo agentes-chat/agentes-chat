@@ -1105,7 +1105,7 @@ export function KeyDialog({
   const [custom, setCustom] = useState(false);
   const [workspaceId, setWorkspaceId] = useState("");
   const [touched, setTouched] = useState(false);
-  // OpenRouter: the models this key uses (ADR 0186), chosen before it is saved.
+  // OpenRouter: the models this key uses (ADR 0187), chosen before it is saved.
   const [openrouter, setOpenrouter] = useState<string[]>([]);
   // Whether to check the chosen models' effort levels in the background, asked when the key is saved.
   const [askEffort, setAskEffort] = useState(false);
@@ -1148,7 +1148,7 @@ export function KeyDialog({
   const submit = (syncEfforts: boolean) => {
     setTouched(true);
     if (!valid) return;
-    // An OpenRouter key is saved with the models it uses: none chosen is nothing to save (ADR 0186).
+    // An OpenRouter key is saved with the models it uses: none chosen is nothing to save (ADR 0187).
     if (mode === "add" && provider === "openrouter" && openrouter.length === 0) return;
     setRefused(null);
     if (mode === "rotate" && cred) {
@@ -1215,9 +1215,9 @@ export function KeyDialog({
               e.preventDefault();
               setTouched(true);
               if (!valid) return;
-              // An OpenRouter key is saved with the models it uses: none chosen is nothing to save (ADR 0186).
+              // An OpenRouter key is saved with the models it uses: none chosen is nothing to save (ADR 0187).
               if (mode === "add" && provider === "openrouter" && openrouter.length === 0) return;
-              // Its models' effort levels: asked once, then the save goes ahead (ADR 0186).
+              // Its models' effort levels: asked once, then the save goes ahead (ADR 0187).
               if (mode === "add" && provider === "openrouter") {
                 setAskEffort(true);
                 return;

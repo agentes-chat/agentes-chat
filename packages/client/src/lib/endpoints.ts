@@ -14,7 +14,7 @@ export interface EndpointModelDraft {
   on: boolean;
   input: string;
   output: string;
-  /** The effort levels its last check found it takes (ADR 0186); absent: never checked. */
+  /** The effort levels its last check found it takes (ADR 0187); absent: never checked. */
   efforts?: string[];
   effortsAt?: string;
 }

@@ -5436,7 +5436,7 @@ export const en = {
       planModelDropped: "{{model}} left {{plan}}. <b>{{name}}</b> is using {{runs}} until you choose another model.",
       routineWaitingPlan: "<b>{{name}}</b> is waiting for its plan to reset to run a routine",
       planResetUnknown: "{{plan}} didn't say when its limit resets. <b>{{name}}</b>'s work is still waiting.",
-      /** A workspace endpoint's effort check ended (`credential_efforts`, ADR 0186). */
+      /** A workspace endpoint's effort check ended (`credential_efforts`, ADR 0187). */
       credentialEfforts: "<b>{{name}}</b> finished checking the effort levels of {{label}}",
       credentialEffortsFailed: "<b>{{name}}</b> couldn't check the effort levels of {{label}}",
       catchUpClosed_one: "<b>{{name}}</b> is back and skipped {{count}} conversation that didn't need an answer",

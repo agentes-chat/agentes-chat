@@ -322,7 +322,7 @@ export function Headline({
       return k("routineWaitingPlan", { name });
     case "plan_reset_unknown":
       return k("planResetUnknown", { name, plan: n.latest.title ?? "" });
-    // A workspace endpoint's effort check ended (ADR 0186): the right hand says what it found.
+    // A workspace endpoint's effort check ended (ADR 0187): the right hand says what it found.
     case "credential_efforts":
       return k(n.latest.statusTo === "failed" ? "credentialEffortsFailed" : "credentialEfforts", {
         name,
