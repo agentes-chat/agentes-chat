@@ -150,7 +150,12 @@ export interface ServiceDefinition {
   log?: string;
 }
 
-/** The systemd unit of a service. `KillMode=process` keeps its children, which are in the unit's cgroup. */
+/**
+ * The systemd unit of a service. `KillMode=process` keeps its children, which are in the unit's cgroup. With them
+ * comes `OOMPolicy=continue`: when the kernel kills one child at the unit's memory limit (a command an agent ran),
+ * the default `stop` would stop the whole unit, the runner exits 0 on that SIGTERM, and `RestartPreventExitStatus=0`
+ * keeps it down: the computer stays offline until someone starts it by hand.
+ */
 export function systemdUnitText(d: ServiceDefinition, wantedBy: string): string {
   // Plain words (a command, a URL, a path) as they are; anything else quoted.
   const args = d.args.map((a) => (/^[\w./:-]+$/.test(a) ? a : systemdQuote(a)));
@@ -166,7 +171,7 @@ export function systemdUnitText(d: ServiceDefinition, wantedBy: string): string 
     "Restart=always",
     "RestartSec=5",
     `RestartPreventExitStatus=${d.finalExits.join(" ")}`,
-    ...(d.keepChildren ? ["KillMode=process"] : []),
+    ...(d.keepChildren ? ["KillMode=process", "OOMPolicy=continue"] : []),
     "",
     "[Install]",
     `WantedBy=${wantedBy}`,

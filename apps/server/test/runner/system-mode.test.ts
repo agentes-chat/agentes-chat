@@ -73,6 +73,8 @@ test("the system unit: root, from boot, a PATH root owns, and tasks outlive a re
   expect(unit).toContain("Restart=always");
   expect(unit).toContain("RestartPreventExitStatus=0 2 3");
   expect(unit).toContain("KillMode=process");
+  // A child killed at the unit's memory limit doesn't stop the runner, which would then never restart (exit 0).
+  expect(unit).toContain("OOMPolicy=continue");
   expect(unit).toContain("WantedBy=multi-user.target");
   // No User=: systemd runs a system unit as root.
   expect(unit).not.toContain("User=");
