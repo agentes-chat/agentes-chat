@@ -24,6 +24,8 @@ const ONE_LINE = 40;
 const opened = new Set<string>();
 const positions = new Map<string, number>();
 const expired = new Set<string>();
+/** The last tap on a play button, of any row. */
+let asked = 0;
 
 /**
  * A voice message: the audio is the message, with one line of its words under the wave, in the same card, and nowhere
@@ -95,10 +97,13 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
     setBroken(false);
     // A player says nothing of why a file failed: the server is asked first.
     const url = voiceAudioUrl(orgId, clipId, serverUrl());
+    const mine = ++asked;
     if (await voiceAudioGone(url, authedFetch as typeof fetch)) {
       lose();
       return;
     }
+    // Another recording was tapped while the server answered: the last tap plays, not the last answer.
+    if (mine !== asked) return;
     await startPlayback({
       id: clipId,
       source: { uri: url, headers: appHeaders(lastCookie()) },

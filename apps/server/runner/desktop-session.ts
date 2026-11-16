@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { createCipheriv, randomBytes, randomInt } from "node:crypto";
+import { createCipheriv, createHash, randomBytes, randomInt } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import {
   chmodSync,
@@ -349,6 +349,32 @@ export function runnerEnv(home: string): Record<string, string> {
 export function runnerUser(runnerHome: string, agentFolder: string, agent: AgentScope): DesktopUser {
   const home = path.join(agentFolder, ".agentes", "home");
   return { prefix: [], env: runnerEnv(home), home, dir: path.join(runnerHome, "desktop", id8(agent)) };
+}
+
+/**
+ * `sun_path` fits 107 bytes here (108 with its terminator). A desktop's socket is `dir`'s `vnc.sock`; when that path
+ * is too long for one (a runner home with a long user name), it goes to `agentes-desktop-<uid>` in the temp folder,
+ * named after the path so the same desktop always gets the same one. That folder is the runner's own and 0700
+ * (`ownSocketFolder`): in a shared /tmp another user could otherwise take the name first.
+ * Single-user mode only: in system mode the agent's /tmp is its own, so the runner couldn't reach a socket there.
+ * The desktop's other files (its cookie, its log, its record) stay where they are.
+ */
+export const LONG_SOCKET_PATH = 107;
+
+export function desktopSocketPath(dir: string, tmp = os.tmpdir(), uid = process.getuid?.() ?? 0) {
+  const inDir = path.join(dir, "vnc.sock");
+  if (Buffer.byteLength(inDir) <= LONG_SOCKET_PATH) return inDir;
+  const id = createHash("sha256").update(inDir).digest("hex").slice(0, 16);
+  return path.join(tmp, `agentes-desktop-${uid}`, `${id}.vnc.sock`);
+}
+
+/** Makes `folder` 0700, and refuses one that is a link, someone else's, or open to others. */
+export function ownSocketFolder(folder: string, uid = process.getuid?.() ?? 0) {
+  mkdirSync(folder, { recursive: true, mode: 0o700 });
+  const st = lstatSync(folder);
+  if (!st.isDirectory() || st.uid !== uid || (st.mode & 0o077) !== 0) {
+    throw new RunnerError("internal", `The desktop's socket folder ${folder} isn't the runner's own, 0700`);
+  }
 }
 
 /**
@@ -1235,12 +1261,13 @@ export class DesktopSessions {
       const passwords = { full: newPassword(), view: newPassword() };
       while (passwords.view === passwords.full) passwords.view = newPassword();
       const files = {
-        socket: path.join(user.dir, "vnc.sock"),
+        socket: user.ids ? path.join(user.dir, "vnc.sock") : desktopSocketPath(user.dir),
         xauthority: path.join(user.dir, "Xauthority"),
         passwd: user.ids
           ? path.join(this.opts.runDir ?? SYSTEM_RUN_DIR, String(user.ids.uid), "passwd")
           : path.join(user.dir, "passwd"),
       };
+      if (path.dirname(files.socket) !== user.dir) ownSocketFolder(path.dirname(files.socket));
       mkdirSync(this.dir, { recursive: true, mode: 0o700 });
       const logFile = path.join(this.dir, `${id8(agent)}.log`);
       // A desktop that ended by itself starts again at once: the log of the start that ended stays (`.log.1`).

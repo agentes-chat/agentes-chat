@@ -104,8 +104,9 @@ export function useVoiceTake(target: VoiceTarget) {
   /** The finger left before the recorder started. */
   const starting = useRef(false);
   const released = useRef(false);
-  /** The files that go with it are uploading: a second press waits for the first. */
-  const sending = useRef(false);
+  /** A pause or a send is stopping the recorder (or uploading what goes with it): a second tap meanwhile would keep
+   * the same stretch twice. */
+  const ending = useRef(false);
   const targetRef = useRef(target);
   targetRef.current = target;
 
@@ -205,15 +206,19 @@ export function useVoiceTake(target: VoiceTarget) {
   }, [joined, wholeWave, progress, setPhase]);
 
   const pause = useCallback(async () => {
-    if (phaseRef.current === "idle" || phaseRef.current === "paused") return;
-    await finishStretch();
+    if (phaseRef.current === "idle" || phaseRef.current === "paused" || ending.current) return;
+    ending.current = true;
+    try {
+      await finishStretch();
+    } finally {
+      ending.current = false;
+    }
     await held();
   }, [finishStretch, held]);
 
   /** Whether it went; when it didn't, the caller keeps what was typed. */
-  const send = useCallback(
-    async (typed = ""): Promise<boolean> => {
-      if (sending.current) return false;
+  const sendTake = useCallback(
+    async (typed: string): Promise<boolean> => {
       const { orgId, channelId, threadId, replyTo = null, authorId, afterSend, prepare } = targetRef.current;
       stopPlayback();
       await finishStretch();
@@ -224,10 +229,7 @@ export function useVoiceTake(target: VoiceTarget) {
         reset();
         return false;
       }
-      sending.current = true;
-      const extra = await (prepare ? prepare(typed) : Promise.resolve({ text: typed, artifacts: [] })).finally(() => {
-        sending.current = false;
-      });
+      const extra = await (prepare ? prepare(typed) : Promise.resolve({ text: typed, artifacts: [] }));
       if (!extra) {
         await held();
         return false;
@@ -264,6 +266,18 @@ export function useVoiceTake(target: VoiceTarget) {
       return true;
     },
     [finishStretch, held, i18n.language, joined, qc, refused, reset, t, toast],
+  );
+  const send = useCallback(
+    async (typed = ""): Promise<boolean> => {
+      if (ending.current) return false;
+      ending.current = true;
+      try {
+        return await sendTake(typed);
+      } finally {
+        ending.current = false;
+      }
+    },
+    [sendTake],
   );
 
   const cancel = useCallback(
@@ -336,6 +350,8 @@ export function useVoiceTake(target: VoiceTarget) {
       haptics.medium();
       setPhase("hold");
       await record();
+      // Deleted while the recorder was starting (`cancel` found nothing to stop yet): it stops here, not never.
+      if (phaseRef.current === "idle") return void (await cancel(false));
       if (released.current) await send();
     } catch {
       toast({ title: t("voice.notSent"), icon: "x" });
@@ -343,7 +359,7 @@ export function useVoiceTake(target: VoiceTarget) {
     } finally {
       starting.current = false;
     }
-  }, [record, reset, send, setPhase, t, toast]);
+  }, [cancel, record, reset, send, setPhase, t, toast]);
 
   /** The finger came up: a hold sends; a lock already took over. */
   const release = useCallback(() => {

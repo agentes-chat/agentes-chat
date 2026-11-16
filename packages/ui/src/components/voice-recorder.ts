@@ -252,6 +252,8 @@ export function useVoiceRecorder(options: VoiceRecorderOptions | undefined, wave
   const current = useRef<Recording | null>(null);
   const opening = useRef(false);
   const released = useRef(false);
+  /** Dropped while the microphone was still opening (another conversation, the composer gone): nothing to keep. */
+  const dropped = useRef(false);
   const latest = useRef(options);
   latest.current = options;
   const timer = useRef<HTMLSpanElement | null>(null);
@@ -279,7 +281,10 @@ export function useVoiceRecorder(options: VoiceRecorderOptions | undefined, wave
   const discard = useCallback(
     (say: boolean) => {
       const rec = current.current;
-      if (!rec) return;
+      if (!rec) {
+        if (opening.current) dropped.current = true;
+        return;
+      }
       rec.cancel();
       idle();
       if (say) latest.current?.onNotice("deleted");
@@ -292,17 +297,18 @@ export function useVoiceRecorder(options: VoiceRecorderOptions | undefined, wave
       if (current.current || opening.current) return;
       opening.current = true;
       released.current = false;
+      dropped.current = false;
       setPhase("starting");
       setHold(holding);
       try {
-        if (latest.current?.allowed && !(await latest.current.allowed())) {
+        if ((latest.current?.allowed && !(await latest.current.allowed())) || dropped.current) {
           idle();
           return;
         }
         stopVoicePlayback();
         const rec = await Recording.open();
-        // Let go while the browser asked for the microphone: nothing to record.
-        if (holding && released.current) {
+        // Let go, or dropped, while the browser asked for the microphone: nothing to record, and no mic left on.
+        if (dropped.current || (holding && released.current)) {
           rec.cancel();
           idle();
           return;
@@ -413,6 +419,7 @@ export function useVoiceRecorder(options: VoiceRecorderOptions | undefined, wave
 
   useEffect(
     () => () => {
+      dropped.current = true;
       current.current?.cancel();
       current.current = null;
     },

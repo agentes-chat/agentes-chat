@@ -800,6 +800,8 @@ export function AgentScreen({
                   onGone={() => {
                     setReady(false);
                     setSession(null);
+                    // The page that said "live" is gone: the new one starts over, so its cover and the wait for it do.
+                    setPage("connecting");
                     setLife((n) => n + 1);
                   }}
                 />
