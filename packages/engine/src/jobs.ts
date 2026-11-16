@@ -34,6 +34,9 @@ import { LEARN_JOB, learnRun } from "./context/learn";
 import { REFLECT_DEFAULTS, reflectThread } from "./context/reflect";
 import { judgeOf, summaryModelReady } from "./context/summaries";
 import { reportDroppedMentions, tellWakeSkipped } from "./continuation";
+import { DECISION_INSTALL_JOB, runDecisionInstall } from "./decision-install";
+import { createDecisionRouterStrategy } from "./decision-judge";
+import type { DecisionModel } from "./decision-model";
 import { DEVICE_WAIT_EXPIRED_JOB, expireDeviceWait } from "./device-waits";
 import {
   deferMentionReport,
@@ -194,6 +197,10 @@ export interface JobDeps extends RunExecutorDeps {
   voice?: VoiceDeps;
   /** The Vault's sources (job `vault.sync`, ADR 0144); absent: connections aren't read again. */
   vault?: VaultDeps;
+  /** The installation's optional decision model (ADR 0188): the switch's model, for its install job. */
+  decision?: DecisionModel;
+  /** Outbound HTTP to OpenAI, Gemini and the local runtime (tests inject a fake). */
+  decisionFetch?: typeof fetch;
   /** Connectors: job `org.delete` revokes a workspace's GitHub OAuth grants at GitHub before its rows go. */
   connectors?: ConnectorDeps;
   /** The server's GitHub App: job `org.delete` uninstalls it from the workspace's GitHub accounts (ADR 0156). */
@@ -225,6 +232,8 @@ export interface JobDeps extends RunExecutorDeps {
     strategy?: RouterStrategy;
     /** TypeSafe Jev as the chain's first step (the installation's key, never per org). */
     jev?: { key: JevKeySource; timeoutMs?: number; fetch?: typeof fetch; baseURL?: string };
+    /** The installation's optional decision model (ADR 0188): the model the switch turned on. */
+    decision?: DecisionModel;
     /**
      * The author's own plan as a step (ADR 0074 §3): the computers it picks on, and this server's address. Off
      * on the Cloud (`isAgentesCloud`), where Jev is ours. Absent: no plan step.
@@ -256,6 +265,10 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
   const jev = router.jev;
   const plans = router.plans && !isAgentesCloud(router.plans.publicUrl) ? router.plans.hub : null;
   const steps = [
+    // The switch's model (ADR 0188) goes first; when it is off the step skips itself without a trace.
+    ...(router.decision
+      ? [createDecisionRouterStrategy({ model: router.decision, gateway: deps.gateway, http: deps.decisionFetch })]
+      : []),
     ...(jev
       ? [
           createJevRouterStrategy({
@@ -291,7 +304,15 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
     hasAi: (orgId) => orgHasAi({ db: deps.db, gateway: deps.gateway, machines: deps.machines }, orgId),
     outOfOffice: (orgId, ids) =>
       outOfOfficeIds(deps.db, orgId, ids, { hasModel: (agent) => deps.gateway.hasModelCredential(agent) }),
-    routing: { jev: () => jevPicks(jev?.key), smallModel, plans },
+    routing: {
+      jev: () => jevPicks(jev?.key),
+      decision: async () => {
+        const current = await router.decision?.current().catch(() => null);
+        return current ? { provider: current.provider, model: current.model } : null;
+      },
+      smallModel,
+      plans,
+    },
     quietMs: router.quietMs,
     quietByTyping: router.quietByTyping,
     pubsub: deps.pubsub,
@@ -1130,6 +1151,11 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         level: job.payload.level === "reached" ? "reached" : "warning",
         period: String(job.payload.period),
       });
+    },
+    // The decision model the switch turned on (ADR 0188): prepared in the background, then the owner hears from the
+    // right hand.
+    [DECISION_INSTALL_JOB]: async (job) => {
+      await runDecisionInstall(deps, job);
     },
     // In-app notifications of a message: mentions, thread replies, DMs.
     "notifications.message": async (job) => {

@@ -3186,7 +3186,8 @@
       "plans": "Chaque abonnement choisit seulement pour les messages de son propriétaire.",
       "rules": "Les agents répondent aux mentions, aux réponses et aux suites de conversation.",
       "off": "Les agents ne répondent que lorsqu'ils sont mentionnés.",
-      "noSmall": "{{provider}} n'a pas de petit modèle pour cela. Les agents répondent aux mentions, aux réponses et aux suites de conversation."
+      "noSmall": "{{provider}} n'a pas de petit modèle pour cela. Les agents répondent aux mentions, aux réponses et aux suites de conversation.",
+      "decision": "{{model}} picks who answers each message without a mention."
     }
   },
   "noAi": {
@@ -20867,6 +20868,53 @@
       "always": "Toujours envoyer",
       "alwaysOn": "Désormais, les rapports de ce type partent sans demander.",
       "askFirst": "Demander avant d'envoyer"
+    }
+  },
+  "decision": {
+    "title": "Decision model",
+    "offHint": "Off. Jev decides when it has a key. Otherwise, the small model on your key.",
+    "onHint": "On. This model decides before Jev, which keeps images and boxes and takes over if it fails.",
+    "providers": {
+      "local": "On this server",
+      "localText": "Laya, a small decision model that runs on this server.",
+      "openai": "OpenAI",
+      "openaiText": "GPT-6 Luna through OpenAI's Decisions API.",
+      "gemini": "Gemini",
+      "geminiText": "Gemini Decision 1, with text, image, audio, video and PDF."
+    },
+    "key": "API key",
+    "keyHint": "The key is encrypted on the server and never returned to the browser.",
+    "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
+    "recommended": "Recommended for this server: {{model}}. {{why}}",
+    "hostLoading": "Reading this server's size...",
+    "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
+    "activate": "Turn on",
+    "activateLocal": "Turn on and download Laya",
+    "cancel": "Cancel",
+    "check": "Check",
+    "change": "Change",
+    "remove": "Remove",
+    "removeAsk": "Remove the decision model? Jev decides again.",
+    "removeYes": "Remove",
+    "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
+    "failed": "The model could not be prepared: {{error}}",
+    "state": {
+      "off": "Off",
+      "ok": "On",
+      "invalid": "Key refused",
+      "no_credit": "No credit",
+      "unreachable": "No answer"
+    },
+    "install": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "checking": "Checking",
+      "deleting": "Switching the model",
+      "downloading": "Downloading",
+      "configuring": "Configuring",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Canceled"
     }
   }
 }

@@ -103,6 +103,7 @@ export const LONG_JOB_KINDS = [
   "context.reflect",
   "search.reindex",
   "storage.migrate",
+  "decision.model.install",
   "skills.update",
   "vault.sync",
   "org.delete",

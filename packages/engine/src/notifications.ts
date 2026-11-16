@@ -86,6 +86,11 @@ export const NOTIFICATION_KINDS = [
    */
   "plan_reset_unknown",
   /**
+   * The installation's decision model finished preparing (ADR 0188): its owner, from the right hand (its actor),
+   * `source.label` the model's name, `latest.statusTo` `done` or `failed` (its words in `latest.text`).
+   */
+  "decision_model",
+  /**
    * An agent back from its plan or budget skipped catch-ups that looked handled (ADR 0136): its owner, one row per line
    * (`count` the conversations they can read), opening the latest skipped note. Inbox only (no category, no push).
    */
@@ -490,6 +495,13 @@ const MERGING: ReadonlySet<NotificationKind> = new Set([
   "catch_up_closed",
   // The day's decisions the right hand made for the person, one row while unread.
   "right_hand_decided",
+<<<<<<< HEAD
+=======
+  // A key's effort check: a retry or a check again says the latest state on the same row.
+  "credential_efforts",
+  // The decision model's install: a retry or a switch says the latest state on the same row.
+  "decision_model",
+>>>>>>> 09b9641561 (feat: an optional decision model for the installation (ADR 0188))
   // One per person, read or not, until nothing waits on them.
   "proposal_waiting",
 ]);
