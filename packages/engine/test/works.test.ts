@@ -54,6 +54,7 @@ import {
   WORK_FOLLOW_UP_JOB,
   WORK_IN_BACKGROUND_TOOL,
   WORK_LIMITS,
+  wakeConversationForTask,
   whileHeld,
   workBrief,
   workView,
@@ -63,6 +64,7 @@ import { noticeText } from "../src/notices";
 import { takeInbox } from "../src/run-inbox";
 import { deliverNoticeToRun } from "../src/run-resume";
 import { addMember, answerSteering, type Fixture, setup } from "./fixtures";
+import { pairMachine } from "./machine-fixtures";
 
 setDefaultTimeout(30_000);
 
@@ -1833,4 +1835,83 @@ test("an answer that comes after the work reported is read and answered home, no
   const said = (await messages()).find((m) => m.agentRunId === woken?.id);
   expect(said?.body).toBe("Chegou: aqui está o resultado.");
   expect(said?.threadId).toBeNull();
+});
+
+test("a task on the computer that ends after the work reported wakes the agent home, not in the work's thread", async () => {
+  f = await setup({ reply: () => ({ chunks: ["O vídeo ficou pronto."] }) });
+  const { machineId } = await pairMachine(deps(), f.owner.id, f.org.id, { name: "MacBook" });
+  const run = await working("@dev renderiza o vídeo");
+  const { work, anchor } = await moved(run);
+  const task = async () => {
+    const [row] = await f.db
+      .insert(schema.machineTasks)
+      .values({
+        orgId: f.org.id,
+        agentId: f.agent.id,
+        machineId,
+        channelId: f.general.id,
+        threadRootId: anchor.id,
+        runId: run.id,
+        title: "Renderizar o vídeo",
+        executor: "shell",
+        command: "ffmpeg",
+        status: "done",
+        exitCode: 0,
+        endedAt: new Date(),
+      })
+      .returning();
+    return wakeConversationForTask(deps(), row?.id ?? "", { maxHops: 100 });
+  };
+
+  // While the work is on, a task's end lands in its own thread.
+  expect((await task())?.message?.threadId).toBe(anchor.id);
+
+  // It reported and ended with the render still going: the render's end wakes the agent in the conversation.
+  const ended = await finishRun(run.id);
+  await endWork(deps(), ended, "done");
+  expect((await works()).find((w) => w.id === work.id)?.status).toBe("done");
+  const woke = await task();
+  expect(woke?.message?.channelId).toBe(f.general.id);
+  expect(woke?.message?.threadId).toBeNull();
+  await drainOutbox(f.db, f.handlers);
+  const said = (await messages()).find((m) => m.agentRunId === woke?.runs[0]?.id);
+  expect(said?.body).toBe("O vídeo ficou pronto.");
+  expect(said?.threadId).toBeNull();
+});
+
+test("a task on the computer whose run moved on to another channel ends where the run went", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Pronto."] }) });
+  const { machineId } = await pairMachine(deps(), f.owner.id, f.org.id, { name: "MacBook" });
+  const run = await working("@dev renderiza o vídeo");
+  const { anchor } = await moved(run);
+  const ops = await createChannel(f.db, f.owner.id, f.org.id, { name: "ops" });
+  await addChannelMember(f.db, f.owner.id, f.org.id, ops.id, { agentId: f.agent.id });
+  const [task] = await f.db
+    .insert(schema.machineTasks)
+    .values({
+      orgId: f.org.id,
+      agentId: f.agent.id,
+      machineId,
+      channelId: f.general.id,
+      threadRootId: anchor.id,
+      runId: run.id,
+      title: "Renderizar o vídeo",
+      executor: "shell",
+      command: "ffmpeg",
+      status: "done",
+      exitCode: 0,
+      endedAt: new Date(),
+    })
+    .returning();
+  const to = await insertMessage(f.db, {
+    orgId: f.org.id,
+    channelId: ops.id,
+    author: { type: "agent", agentId: f.agent.id, runId: run.id, hop: run.hop },
+    body: "Sigo aqui com o vídeo.",
+  });
+  await moveRun(deps(), (await runById(run.id)) as AgentRun, to);
+  const woke = await wakeConversationForTask(deps(), task?.id ?? "", { maxHops: 100 });
+  expect(woke?.message?.channelId).toBe(ops.id);
+  expect(woke?.message?.threadId).toBeNull();
+  expect(woke?.runs.map((r) => r.channelId)).toEqual([ops.id]);
 });
