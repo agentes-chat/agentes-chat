@@ -154,6 +154,26 @@ test("OpenCode's CLI on a computer is no sign-in of anyone's: a real key still l
   expect(keyed.accounts.filter((a) => a.machineId === machineId).map((a) => a.id)).toEqual([key]);
 });
 
+test("the computer's own Codex on an API key is listed: its login says so, with no plan usage to read", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine(BRAIN_PROTOCOL);
+  const own = async (codex: { version: string; loggedIn?: boolean }, ownUsage?: object) => {
+    await f.db
+      .update(schema.machines)
+      .set({ executors: { codex, ...(ownUsage ? { ownUsage } : {}), detectedAt: new Date().toISOString() } })
+      .where(eq(schema.machines.id, machineId));
+    return (await listAiAccounts({ db: f.db }, f.owner.id, f.org.id)).computers.find((c) => c.machineId === machineId)
+      ?.own;
+  };
+  const usage = { codex: { windows: [], at: new Date().toISOString() } };
+  expect(await own({ version: "codex-cli 0.170.0", loggedIn: true })).toEqual({ codex: {} });
+  // An older runner says nothing of the login: a usage read still lists it, as before.
+  expect(await own({ version: "codex-cli 0.170.0" })).toEqual({});
+  expect((await own({ version: "codex-cli 0.170.0" }, usage))?.codex).toBeDefined();
+  // Signed out wins over a usage read left from before.
+  expect(await own({ version: "codex-cli 0.170.0", loggedIn: false }, usage)).toEqual({});
+});
+
 const agentRow = async (id = f.agent.id) => {
   const [row] = await f.db.select().from(schema.agents).where(eq(schema.agents.id, id));
   if (!row) throw new Error("no agent");

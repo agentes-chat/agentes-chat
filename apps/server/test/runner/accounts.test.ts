@@ -140,6 +140,9 @@ test("status commands: signed in through claude.ai with email and plan (short wo
   expect(parseCodexStatus(0, `${ESC}[32mLogged in using ChatGPT${ESC}[0m\n`)).toEqual({ loggedIn: true });
   expect(parseCodexStatus(1, "Not logged in\n")).toEqual({ loggedIn: false });
   expect(parseCodexStatus(0, "Not logged in\n")).toEqual({ loggedIn: false });
+  // An API key: as recent versions say it, and as some older ones did.
+  expect(parseCodexStatus(0, "Logged in using an API key - sk-proj-***ABCDE\n")).toEqual({ loggedIn: true });
+  expect(parseCodexStatus(0, "API key configured - 11838e66***eZ1oL\n")).toEqual({ loggedIn: true });
 });
 
 test("Claude's plans by Anthropic's names: a Max on the 20x tier is Ultra, every other word as the CLI says it", () => {

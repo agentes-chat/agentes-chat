@@ -2000,6 +2000,9 @@ function ownSignIns(
       ...(claude?.plan ? { plan: claude.plan } : {}),
       ...(usage.claude_code ? { usage: usage.claude_code } : {}),
     };
-  if (can("codex") && usage.codex) out.codex = { usage: usage.codex };
+  // Codex on an API key has no usage to read: `codex login status` alone says it can think there.
+  const codex = executors?.codex;
+  if (can("codex") && (codex?.loggedIn === true || (codex?.loggedIn !== false && usage.codex)))
+    out.codex = usage.codex ? { usage: usage.codex } : {};
   return out;
 }

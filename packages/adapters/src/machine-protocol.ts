@@ -2000,7 +2000,10 @@ export type CliName = (typeof CLI_NAMES)[number];
 export interface RunnerExecutorInfo {
   /** The first line of `<cli> --version`. */
   version: string;
-  /** Protocol 8, `claude` only: `claude auth status` says it is logged in (absent: unknown). */
+  /**
+   * Protocol 8, `claude`: `claude auth status` says it is logged in. `codex`: `codex login status` says so, with
+   * ChatGPT or an API key. Absent: unknown (an older runner).
+   */
   loggedIn?: boolean;
   /** Protocol 8, `claude` only: how it is logged in (`claude.ai`, `api_key`…) and the plan (`pro`, `max`, `ultra`…). */
   authMethod?: string;
