@@ -42,4 +42,3 @@ Use equivalent paths and directory/copy commands on Windows. The script launches
 - Preference default, persistence, on/off, pending save, read/write failures, platform visibility, explicit reopen, and confirmation while agents use the computer.
 - Native preference default/persistence/corrupt file, preserving existing browser arguments, and configuring every initial window before browser startup.
 - Desktop capability checks include the Windows-only preference commands.
-
