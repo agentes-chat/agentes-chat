@@ -1,5 +1,5 @@
 import type { PubSub } from "@agenteschat/adapters";
-import { and, asc, type Database, desc, type Executor, eq, inArray, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, desc, type Executor, eq, inArray, or, rowsOf, schema, sql } from "@agenteschat/db";
 import { textOf } from "@agenteschat/providers";
 import { announceAgentStatus } from "./agent-status";
 import { publishApproval } from "./approvals";
@@ -142,7 +142,9 @@ export async function recoverStaleRuns(
     out.requeued.push(run.id);
   }
   // Waiting on its plan or budget past its time with no job left to wake it (that job failed or was lost): it would
-  // wait forever, and Rotinas and the agent's status would say so. Woken now; still limited, it parks again.
+  // wait forever, and Rotinas and the agent's status would say so. Woken now; still limited, it parks again. A wait
+  // for room on a busy computer has no time of its own (its job asks again every few seconds), and an online computer
+  // sends no "back" signal: parked past the stale cutoff with no job, it is asked again too.
   const overdue = await db
     .select({
       id: agentRuns.id,
@@ -153,9 +155,18 @@ export async function recoverStaleRuns(
     .where(
       and(
         eq(agentRuns.status, "waiting_input"),
-        inArray(sql<string>`${agentRuns.transcript}->'waitingForBrain'->>'code'`, [...USAGE_WAIT_CODES]),
         sql`${agentRuns.transcript}->'waitingForBrain'->>'waitId' is not null`,
-        sql`(${agentRuns.transcript}->'waitingForBrain'->>'until')::timestamptz < ${cutoff.toISOString()}::timestamptz`,
+        or(
+          and(
+            inArray(sql<string>`${agentRuns.transcript}->'waitingForBrain'->>'code'`, [...USAGE_WAIT_CODES]),
+            sql`(${agentRuns.transcript}->'waitingForBrain'->>'until')::timestamptz < ${cutoff.toISOString()}::timestamptz`,
+          ),
+          and(
+            sql`${agentRuns.transcript}->'waitingForBrain'->>'code' = 'busy'`,
+            // The wait's own clock: the row's `updatedAt` moves with every message that joins the run.
+            sql`(${agentRuns.transcript}->>'roomWaitSince')::bigint < ${cutoff.getTime()}`,
+          ),
+        ),
         sql`not ${liveJob}`,
       ),
     )

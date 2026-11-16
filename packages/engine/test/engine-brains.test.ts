@@ -3564,6 +3564,37 @@ test("no room on the computer: nothing in the chat, the person's message says it
   expect(after.filter((s) => s.data.roomFound === true)).toHaveLength(1);
 });
 
+test("a wait for room whose retry job was lost is asked again by the sweep, once, and answers when there is room", async () => {
+  f = await setup();
+  await computerAgent(f);
+  await f.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
+  const busy: BrainEvent = { type: "error", code: "busy", message: "The computer is busy.", retryable: true };
+  const { brain, seen } = scriptedComputerBrain((n) => (n < 1 ? [busy] : [{ type: "done", text: "Pronto." }]));
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect(run?.status).toBe("waiting_input");
+  // Its retry job is lost: nothing would ever ask the computer again.
+  await f.db
+    .update(schema.outbox)
+    .set({ status: "failed" })
+    .where(and(eq(schema.outbox.kind, "agent_run.execute"), eq(schema.outbox.status, "pending")));
+  // Not yet past the stale cutoff: left alone.
+  expect((await recoverStaleRuns({ db: f.db, pubsub: f.pubsub })).requeued).toEqual([]);
+  const later = new Date(Date.now() + 10 * 60_000);
+  expect((await recoverStaleRuns({ db: f.db, pubsub: f.pubsub }, { now: later })).requeued).toEqual([run?.id ?? ""]);
+  // Its new job is live: a second sweep adds none.
+  expect((await recoverStaleRuns({ db: f.db, pubsub: f.pubsub }, { now: later })).requeued).toEqual([]);
+  await drainOutbox(f.db, handlers, { now: later });
+  expect(seen.length).toBe(2);
+  expect((await f.db.select().from(schema.agentRuns))[0]?.status).toBe("done");
+});
+
 test("no room for over 30 minutes: the run never fails, it keeps its place and asks again (long work wakes through turns)", async () => {
   f = await setup();
   await computerAgent(f);
