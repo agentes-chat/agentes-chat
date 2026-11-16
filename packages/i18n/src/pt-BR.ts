@@ -13176,6 +13176,11 @@ export const ptBR = {
         "2": "Criar modelos de mensagem",
         ask: "Enviar mensagens sempre pede sua aprovação",
       },
+      boavoz: {
+        "1": "Ver conversas, contatos e leads",
+        "2": "Responder, pausar a IA e enviar campanhas",
+        ask: "Enviar, apagar e pagar sempre pede sua aprovação",
+      },
       database: { "1": "Ver as tabelas", "2": "Consultar os dados para responder", "3": "Nunca altera nada" },
     },
     connectedList: "Conectados",
@@ -13327,6 +13332,7 @@ export const ptBR = {
       pinterest: "Pins, pastas e métricas do Pinterest.",
       reddit: "Posts, comentários e comunidades do Reddit.",
       whatsapp: "Mensagens e modelos do WhatsApp Business.",
+      boavoz: "Atendimento com IA no WhatsApp, no Instagram e no chat do site: conversas, leads e campanhas.",
     },
   },
   toolNames: {

@@ -1059,6 +1059,157 @@ describe("custom MCP servers", () => {
     expect(await f.db.select().from(schema.oauthClients)).toHaveLength(1);
   });
 
+  test("BoaVoz: its Supabase Auth, at a path, registers us; the sign-in asks for no scope and is named by the account whoami answers", async () => {
+    f = await setup();
+    const boavoz = "https://www.boavoz.com/mcp";
+    const issuer = "https://projectref.supabase.co/auth/v1";
+    const seen = { challenge: "", authMethods: [] as string[], bearer: [] as (string | undefined)[] };
+    // As BoaVoz and its authorization server answered on 2026-11-16.
+    const http = (async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === boavoz) {
+        return Response.json(
+          {
+            error: {
+              code: "unauthorized",
+              message: "Conecte com o login do BoaVoz ou envie Authorization: Bearer <chave da API>.",
+            },
+          },
+          {
+            status: 401,
+            headers: {
+              "www-authenticate":
+                'Bearer realm="boavoz", resource_metadata="https://www.boavoz.com/.well-known/oauth-protected-resource/mcp"',
+            },
+          },
+        );
+      }
+      if (url.startsWith("https://www.boavoz.com/.well-known/oauth-protected-resource")) {
+        return Response.json({
+          resource: boavoz,
+          authorization_servers: [issuer],
+          bearer_methods_supported: ["header"],
+          resource_name: "BoaVoz",
+          resource_documentation: "https://www.boavoz.com/docs/mcp",
+        });
+      }
+      if (url === "https://projectref.supabase.co/.well-known/oauth-authorization-server/auth/v1") {
+        return Response.json({
+          issuer: "https://projectref.supabase.co/auth/v1",
+          authorization_endpoint: "https://projectref.supabase.co/auth/v1/oauth/authorize",
+          token_endpoint: "https://projectref.supabase.co/auth/v1/oauth/token",
+          jwks_uri: "https://projectref.supabase.co/auth/v1/.well-known/jwks.json",
+          userinfo_endpoint: "https://projectref.supabase.co/auth/v1/oauth/userinfo",
+          registration_endpoint: "https://projectref.supabase.co/auth/v1/oauth/clients/register",
+          scopes_supported: ["openid", "profile", "email", "phone", "offline_access"],
+          response_types_supported: ["code"],
+          response_modes_supported: ["query"],
+          grant_types_supported: ["authorization_code", "refresh_token"],
+          subject_types_supported: ["public"],
+          id_token_signing_alg_values_supported: ["RS256", "HS256", "ES256"],
+          token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post", "none"],
+          claims_supported: [
+            "sub",
+            "aud",
+            "iss",
+            "exp",
+            "iat",
+            "auth_time",
+            "nonce",
+            "email",
+            "email_verified",
+            "phone_number",
+            "phone_number_verified",
+            "name",
+            "picture",
+            "preferred_username",
+            "updated_at",
+          ],
+          code_challenge_methods_supported: ["S256", "plain"],
+        });
+      }
+      if (url === `${issuer}/oauth/clients/register`) {
+        seen.authMethods.push(JSON.parse(String(init?.body)).token_endpoint_auth_method);
+        return Response.json({ client_id: "boavoz-client", token_endpoint_auth_method: "none" }, { status: 201 });
+      }
+      if (url === `${issuer}/oauth/token`) {
+        const form = new URLSearchParams(String(init?.body));
+        const verified =
+          createHash("sha256")
+            .update(form.get("code_verifier") ?? "")
+            .digest("base64url") === seen.challenge;
+        if (!verified || form.get("resource") !== boavoz)
+          return Response.json({ error: "invalid_grant" }, { status: 400 });
+        return Response.json({
+          access_token: "boavoz-at",
+          refresh_token: "boavoz-rt",
+          token_type: "bearer",
+          expires_in: 3600,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }) as unknown as typeof fetch;
+    const connect: McpConnect = async (_connection, headers) => {
+      seen.bearer.push(headers.authorization);
+      const server = new McpServer({ name: "boavoz", version: "1.0.0" });
+      server.registerTool(
+        "whoami",
+        {
+          description:
+            "A conta do BoaVoz desta conexão (id e nome), as permissões, o escopo e os chatbots que ela alcança.",
+          inputSchema: {},
+          annotations: { readOnlyHint: true, openWorldHint: false },
+        },
+        async () => ({
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                account: { id: "8b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d", name: "Agência Exemplo" },
+                connection: {
+                  name: "agentes.chat",
+                  kind: "oauth",
+                  permissions: ["messages", "conversations"],
+                  scope: "account",
+                },
+                chatbots: [{ bot_id: "bot_7c9e6679-7425-40de-944b-e07fc1f90ae7", name: "Loja do Zé", status: "live" }],
+                docs: "https://www.boavoz.com/docs/api",
+              }),
+            },
+          ],
+        }),
+      );
+      const [client, transport] = InMemoryTransport.createLinkedPair();
+      await server.connect(transport);
+      return mcpSessionOver(client);
+    };
+    const deps = depsOf(f, { http, connect, resolveHost: async () => ["93.184.216.34"] });
+    const started = await connectCustomServer(deps, f.owner.id, f.org.id, { serverUrl: boavoz, label: "BoaVoz" });
+    if (started.status !== "oauth") throw new Error(`expected oauth, got ${started.status}`);
+    const url = new URL(started.authorizeUrl);
+    expect(url.origin + url.pathname).toBe(`${issuer}/oauth/authorize`);
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({
+      client_id: "boavoz-client",
+      code_challenge_method: "S256",
+      resource: boavoz,
+    });
+    // BoaVoz lists no scope (the scope and permissions are picked on its consent screen): the server's defaults.
+    expect(url.searchParams.get("scope")).toBeNull();
+    expect(seen.authMethods).toEqual(["none"]);
+    seen.challenge = url.searchParams.get("code_challenge") ?? "";
+    const { connection } = await completeOAuth(
+      deps,
+      { id: f.owner.id },
+      { state: url.searchParams.get("state") ?? "", code: "code-1" },
+    );
+    expect(seen.bearer).toContain("Bearer boavoz-at");
+    expect(connection).toMatchObject({
+      label: "BoaVoz (Agência Exemplo)",
+      accountId: "8b1f2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      accountLabel: "Agência Exemplo",
+    });
+  });
+
   test("offline_access goes with the scopes asked for when the authorization server lists it (Vercel asks only openid), never alone", async () => {
     f = await setup();
     const vercel = oauthServer({ scopes: ["openid"], serverScopes: ["openid", "email", "profile", "offline_access"] });

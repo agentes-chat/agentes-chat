@@ -13160,6 +13160,11 @@ export const en = {
         "2": "Create message templates",
         ask: "Sending messages always asks for your approval",
       },
+      boavoz: {
+        "1": "See conversations, contacts and leads",
+        "2": "Reply, pause the AI and send campaigns",
+        ask: "Sending, deleting and paying always asks for your approval",
+      },
       database: { "1": "See the tables", "2": "Query the data to answer", "3": "Never changes anything" },
     },
     connectedList: "Connected",
@@ -13315,6 +13320,7 @@ export const en = {
       pinterest: "Pinterest pins, boards and analytics.",
       reddit: "Reddit posts, comments and communities.",
       whatsapp: "WhatsApp Business messages and templates.",
+      boavoz: "AI customer service on WhatsApp, Instagram and website chat: conversations, leads and campaigns.",
     },
   },
   toolNames: {

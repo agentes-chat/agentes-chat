@@ -12428,6 +12428,11 @@
         "2": "메시지 템플릿 만들기",
         "ask": "메시지 보내기는 항상 승인을 요청해요"
       },
+      "boavoz": {
+        "1": "대화, 연락처, 리드 보기",
+        "2": "답장, AI 일시 중지, 캠페인 보내기",
+        "ask": "보내기, 삭제, 결제는 항상 승인을 요청해요"
+      },
       "database": {
         "1": "테이블 보기",
         "2": "데이터를 조회해 답변하기",
@@ -12574,7 +12579,8 @@
       "youtube": "YouTube 채널의 동영상, 댓글, 재생목록, 분석.",
       "pinterest": "Pinterest 핀, 보드, 분석.",
       "reddit": "Reddit 게시물, 댓글, 커뮤니티.",
-      "whatsapp": "WhatsApp Business 메시지와 템플릿."
+      "whatsapp": "WhatsApp Business 메시지와 템플릿.",
+      "boavoz": "WhatsApp, Instagram, 웹사이트 채팅의 AI 고객 상담: 대화, 리드, 캠페인."
     }
   },
   "toolNames": {

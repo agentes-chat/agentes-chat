@@ -1268,6 +1268,19 @@ export const MCP_PRESETS: readonly McpPreset[] = [
       ],
     },
   },
+  {
+    id: "boavoz",
+    category: "support",
+    label: "BoaVoz",
+    description:
+      "BoaVoz AI customer service on WhatsApp, Instagram and website chat: conversations, contacts, leads and campaigns.",
+    icon: "boavoz",
+    serverUrl: "https://www.boavoz.com/mcp",
+    // Checked 2026-11-16: its authorization server is Supabase Auth at a path (`/auth/v1`, RFC 8414 path insertion),
+    // with registration and PKCE S256. A sign-in reaches the one BoaVoz account of the person who signs in (scope and
+    // permissions are picked on BoaVoz's consent screen), which `whoami` names.
+    account: { tool: "whoami", id: ["account.id"], name: "account.name" },
+  },
 ];
 
 export const mcpPreset = (id: string) => MCP_PRESETS.find((p) => p.id === id) ?? null;

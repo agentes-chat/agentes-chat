@@ -12998,6 +12998,11 @@
         "2": "Berichtsjablonen maken",
         "ask": "Berichten versturen vraagt altijd om jouw goedkeuring"
       },
+      "boavoz": {
+        "1": "Gesprekken, contacten en leads bekijken",
+        "2": "Antwoorden, de AI pauzeren en campagnes versturen",
+        "ask": "Versturen, verwijderen en betalen vraagt altijd om jouw goedkeuring"
+      },
       "database": {
         "1": "De tabellen bekijken",
         "2": "De data bevragen om te antwoorden",
@@ -13149,7 +13154,8 @@
       "youtube": "Video's, reacties, afspeellijsten en statistieken van het YouTube-kanaal.",
       "pinterest": "Pins, borden en statistieken op Pinterest.",
       "reddit": "Posts, reacties en community's op Reddit.",
-      "whatsapp": "Berichten en sjablonen van WhatsApp Business."
+      "whatsapp": "Berichten en sjablonen van WhatsApp Business.",
+      "boavoz": "AI-klantenservice op WhatsApp, Instagram en de websitechat: gesprekken, leads en campagnes."
     }
   },
   "toolNames": {
