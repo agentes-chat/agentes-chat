@@ -171,6 +171,30 @@ describe("the key, saved and read", () => {
     expect(await f.db.select().from(schema.instanceSecrets)).toEqual([]);
   });
 
+  test("with the opt-in flag off, the origin the server sets is accepted when named, and nothing is stored for it", async () => {
+    f = await setup();
+    const operator = "https://operator.example";
+    const ts = typesafe(200);
+    const key = jevKey(ts.fetch, undefined, operator);
+    await key.save("ts_operator_origin_key_1", f.owner.id, operator);
+    expect(ts.urls).toEqual([`${operator}/v1/systemone`]);
+    expect(key.baseURL()).toBe(operator);
+    expect(key.baseURLSource()).toBe("env");
+    const [saved] = await f.db.select().from(schema.instanceSecrets);
+    expect(saved?.baseUrl).toBeNull();
+  });
+
+  test("with the opt-in flag off, TypeSafe is refused when the server sets another origin", async () => {
+    f = await setup();
+    const ts = typesafe(200);
+    const key = jevKey(ts.fetch, undefined, "https://operator.example");
+    await expect(key.save("ts_typesafe_override_1", f.owner.id, "https://api.typesafe.ai")).rejects.toMatchObject({
+      code: "jev_other_provider_disabled",
+    });
+    expect(ts.urls).toEqual([]);
+    expect(await f.db.select().from(schema.instanceSecrets)).toEqual([]);
+  });
+
   test("a previously saved custom origin is ignored when the opt-in flag is off", async () => {
     f = await setup();
     const selected = jevKey(typesafe(200).fetch, undefined, undefined, true);

@@ -305,6 +305,23 @@ test("a disabled provider flag rejects a TypeSafe override of the operator origi
   expect(ts.urls).toEqual([]);
 });
 
+test("with JEV_BASE_URL set and the flag off, that origin is accepted when named, and TypeSafe is refused", async () => {
+  const operator = "https://operator.jevt.example";
+  const { t, owner, ts } = await server({ env: { JEV_BASE_URL: operator } });
+  const accepted = await owner("/api/app/jev", { method: "PUT", json: { apiKey: SECRET_KEY, baseURL: operator } });
+  expect(accepted.status).toBe(200);
+  expect(ts.urls).toEqual([`${operator}/v1/systemone`]);
+  const [row] = await t.db.select().from(schema.instanceSecrets);
+  expect(row?.baseUrl).toBeNull();
+  const refused = await owner("/api/app/jev", {
+    method: "PUT",
+    json: { apiKey: SECRET_KEY, baseURL: "https://api.typesafe.ai" },
+  });
+  expect(refused.status).toBe(400);
+  expect(((await refused.json()) as { error: { code: string } }).error.code).toBe("jev_other_provider_disabled");
+  expect(ts.urls).toHaveLength(1);
+});
+
 test("an owner key with no origin chosen calls the operator's JEV_BASE_URL in the composed server", async () => {
   const operator = "https://operator.jevt.example";
   const io = jevCompositionFetch();

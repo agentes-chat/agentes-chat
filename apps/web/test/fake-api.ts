@@ -55,7 +55,6 @@ import type {
   InviteLink,
   IssuesView,
   JevKey,
-  JevKeyInput,
   JoinApproval,
   JoinClaim,
   JoinRequest,
@@ -1462,7 +1461,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         return { ...offer, state: decision === "send" ? "sent" : "dismissed", decidedAt: new Date().toISOString() };
       },
       jev: async () => state.jev ?? null,
-      saveJev: async (input: JevKeyInput) => {
+      saveJev: async (input) => {
         log("system.saveJev", input);
         if (!state.jev) throw new ApiError(404, "not_found", "Not found");
         // The workspace's own OpenRouter key: a key ending like that credential's.
@@ -1471,7 +1470,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
             ? input.apiKey
             : `sk-or-v1-${state.credentials.find((c) => c.id === input.credentialId)?.keyHint ?? "0000"}`;
         const verdict = state.jevVerdicts?.[apiKey];
-        if (verdict === "invalid") throw new ApiError(422, "jev_key_invalid", "The provider didn't accept this key.");
+        if (verdict === "invalid") throw new ApiError(422, "jev_key_invalid", "TypeSafe didn't accept this key.");
         if (verdict === "rate_limited") {
           delete state.jevVerdicts?.[apiKey];
           throw new ApiError(429, "rate_limited", "Too many tries. Wait a minute.");

@@ -526,6 +526,21 @@ describe("Jev through OpenRouter (ADR 0073 §9)", () => {
     expect(card().textContent).toContain("Termina em 7a1e");
   });
 
+  test("an OpenRouter key has no origin to choose: a prefilled origin is hidden and Save needs only the key", async () => {
+    const { state } = await open({ jev: { ...OFF, baseURL: "http://jev.example:3425", baseURLSource: "settings" } });
+    await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
+    // TypeSafe's steps first: a custom origin is offered there.
+    expect(within(card()).getByLabelText("URL de base do Jev")).toBeTruthy();
+
+    await click(radio("OpenRouter"));
+    expect(within(card()).queryByLabelText("URL de base do Jev")).toBeNull();
+    expect(within(card()).queryByRole("combobox", { name: "Provedor do Jev" })).toBeNull();
+    await type(field(), OPENROUTER_PASTED);
+    expect(within(card()).getByRole("button", { name: "Salvar chave" }).hasAttribute("disabled")).toBe(false);
+    await click(within(card()).getByRole("button", { name: "Salvar chave" }), 6);
+    expect(calls(state, "system.saveJev")).toEqual([[{ apiKey: OPENROUTER_PASTED }]]);
+  });
+
   test("a key OpenRouter refuses is said in OpenRouter's words", async () => {
     await open({ jev: OFF, jevVerdicts: { [OPENROUTER_PASTED]: "invalid" } });
     await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));

@@ -338,13 +338,17 @@ export function createJevKey(deps: {
       if (env) throw envError();
       const key = apiKey.trim();
       if (!KEY_SHAPE.test(key)) throw invalidError(key);
-      if (selectedBaseURL && selectedBaseURL !== "https://api.typesafe.ai" && !customOriginEnabled) {
+      // With the opt-in flag off the only origin is the effective one (the server's own, else TypeSafe's); the route
+      // has no check of its own, so this is the one place that refuses.
+      if (selectedBaseURL && !customOriginEnabled && selectedBaseURL !== effectiveBaseURL()) {
         throw new ValidationError("Other Jev providers are disabled on this server.", "jev_other_provider_disabled");
       }
       const candidateBaseURL = selectedBaseURL ?? effectiveBaseURL();
       const checked = await checkJevKey(key, { ...tsa, baseURL: candidateBaseURL });
       if (checked === "invalid") throw invalidError(key);
-      const baseUrl = selectedBaseURL ?? saved?.baseURL ?? null;
+      // An origin named while the flag is off is the server's own, so it is not kept as the owner's choice. A stored
+      // one is left alone and is used again only once the flag is on.
+      const baseUrl = selectedBaseURL && customOriginEnabled ? selectedBaseURL : (saved?.baseURL ?? null);
       const values = {
         ...(await sealSecret(deps.keyWrapper, key, AAD)),
         keyHint: key.slice(-4),

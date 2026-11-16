@@ -138,8 +138,9 @@ export function JevSteps({
   const key = value.trim();
   // The way on is the first button until a key is typed.
   const first = key === "";
-  const other = provider === "other";
   const openRouter = via === "openrouter";
+  // An OpenRouter key always goes to OpenRouter's endpoint, so no origin is offered for it or required.
+  const other = provider === "other" && !openRouter;
   const validOrigin = other && isJevOrigin(baseURL);
   const canSave = key.length >= JEV_KEY_MIN && (!other || validOrigin);
   const n = replace || openRouter ? 0 : 1;
@@ -563,7 +564,7 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
       : null;
   const facts = [
     view.hint && t("settings.keyEndsIn", { hint: view.hint }),
-    !isTypesafe && view.baseURL,
+    !isTypesafe && !openRouter && view.baseURL,
     view.month.decisions > 0 &&
       t("jev.month", { count: view.month.decisions, cost: formatUsd(i18n.language, view.month.costUsd) }),
   ].filter(Boolean);
