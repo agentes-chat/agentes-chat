@@ -46,9 +46,11 @@ export interface JevKey {
   month: { decisions: number; costUsd: number };
 }
 
+/** Jev's key to save: one pasted, checked at the System One origin it is given (else the current one), or the workspace's own OpenRouter key. */
 export type JevKeyInput = { apiKey: string; baseURL?: string } | { orgId: string; credentialId: string };
 
-/** The installation's GIPHY key, for its pinned owner on a server that isn't agentes.chat's own (`GET
+/**
+ * The installation's GIPHY key, for its pinned owner on a server that isn't agentes.chat's own (`GET
  * /api/app/gif-key`, ADR 0091): with it, every workspace has GIFs (`OrgSettings.gifsAvailable`).
  */
 export interface GifKey {

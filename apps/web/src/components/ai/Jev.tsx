@@ -53,6 +53,7 @@ const TYPESAFE_ORIGIN = "https://api.typesafe.ai";
 /** OpenRouter's pages for Jev through it: where its keys are made, and where credit is added. */
 const OPENROUTER_KEYS = "https://openrouter.ai/keys";
 const OPENROUTER_CREDITS = "https://openrouter.ai/settings/credits";
+
 type JevProvider = "typesafe" | "other";
 /** Where Jev is called and paid: TypeSafe itself, or OpenRouter with an OpenRouter key. */
 type JevVia = NonNullable<JevKey["via"]>;

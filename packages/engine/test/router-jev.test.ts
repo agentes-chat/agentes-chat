@@ -138,12 +138,12 @@ function fakeJev(
     | Error,
 ) {
   const requests: { url: string; headers: Headers; body: Record<string, unknown> }[] = [];
-  const fetcher = (async (url: string | URL | Request, init: RequestInit) => {
+  const fetcher = (async (url: string, init: RequestInit) => {
     const body = JSON.parse(String(init.body)) as {
       state: Record<string, unknown>;
       questions: Record<string, { instructions: { agent?: { handle: string } } }>;
     };
-    requests.push({ url: String(url), headers: new Headers(init.headers), body });
+    requests.push({ url, headers: new Headers(init.headers), body });
     const r = script(body.state);
     if (r instanceof Error) return new Response("boom", { status: 529 });
     const answers: Record<string, unknown> = { needs_agent: { type: "noul", noul: r.needs } };

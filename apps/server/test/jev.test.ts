@@ -22,8 +22,8 @@ const SECRET_KEY = "ts_live_do_not_leak_9f2c";
 function jevCompositionFetch() {
   const urls: string[] = [];
   const keys: string[] = [];
-  const fetch = (async (url: string | URL | Request, init: RequestInit) => {
-    urls.push(String(url));
+  const fetch = (async (url: string, init: RequestInit) => {
+    urls.push(url);
     keys.push(new Headers(init.headers).get("authorization") ?? "");
     const body = JSON.parse(String(init.body)) as { questions?: Record<string, unknown> };
     const answers = Object.fromEntries(
@@ -56,9 +56,9 @@ async function routerConversation(t: TestServer) {
 function typesafe(status = 200) {
   const calls: string[] = [];
   const urls: string[] = [];
-  const fetch = (async (url: string | URL | Request, init: RequestInit) => {
+  const fetch = (async (url: string, init: RequestInit) => {
     calls.push(new Headers(init.headers).get("authorization") ?? "");
-    urls.push(String(url));
+    urls.push(url);
     return Response.json(status < 300 ? { answers: { ok: { noul: 1 } } } : { detail: {} }, { status });
   }) as unknown as typeof globalThis.fetch;
   return { fetch, calls, urls };

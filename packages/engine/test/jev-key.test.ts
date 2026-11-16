@@ -28,8 +28,8 @@ type Answer = number | "down" | "late" | { status: number; body?: unknown; retry
 function typesafe(...answers: Answer[]) {
   const keys: string[] = [];
   const urls: string[] = [];
-  const fetch = (async (url: string | URL | Request, init: RequestInit) => {
-    urls.push(String(url));
+  const fetch = (async (url: string, init: RequestInit) => {
+    urls.push(url);
     keys.push(new Headers(init.headers).get("authorization")?.replace("Bearer ", "") ?? "");
     const a = answers[Math.min(keys.length - 1, answers.length - 1)] ?? 200;
     if (a === "down") throw new TypeError("fetch failed");

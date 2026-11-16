@@ -1465,12 +1465,11 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       saveJev: async (input: JevKeyInput) => {
         log("system.saveJev", input);
         if (!state.jev) throw new ApiError(404, "not_found", "Not found");
+        // The workspace's own OpenRouter key: a key ending like that credential's.
         const apiKey =
-          typeof input === "string"
-            ? input
-            : "apiKey" in input
-              ? input.apiKey
-              : `sk-or-v1-${state.credentials.find((c) => c.id === input.credentialId)?.keyHint ?? "0000"}`;
+          "apiKey" in input
+            ? input.apiKey
+            : `sk-or-v1-${state.credentials.find((c) => c.id === input.credentialId)?.keyHint ?? "0000"}`;
         const verdict = state.jevVerdicts?.[apiKey];
         if (verdict === "invalid") throw new ApiError(422, "jev_key_invalid", "The provider didn't accept this key.");
         if (verdict === "rate_limited") {
@@ -1483,9 +1482,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           via: apiKey.startsWith("sk-or-") ? "openrouter" : "typesafe",
           hint: apiKey.slice(-4),
           state: verdict ?? "ok",
-          ...(typeof input !== "string" && "apiKey" in input && input.baseURL
-            ? { baseURL: input.baseURL, baseURLSource: "settings" as const }
-            : {}),
+          ...("apiKey" in input && input.baseURL ? { baseURL: input.baseURL, baseURLSource: "settings" as const } : {}),
         };
         return state.jev;
       },
