@@ -59,7 +59,7 @@ services:
       - ALL
 
   agentes:
-    image: "${AGENTES_IMAGE:-ghcr.io/agentes-chat/agentes:latest}"
+    image: "${AGENTES_IMAGE:-ghcr.io/gabedsam01/agentes-chat:latest}"
     env_file: .env
     environment:
       DATABASE_URL: "postgres://agentes:${POSTGRES_PASSWORD}@postgres:5432/agentes"
@@ -72,7 +72,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    networks: [default, speech, embeddings]
+    networks: [default, speech, embeddings, decision]
     restart: unless-stopped
     # What the app may take from the machine it shares with Postgres (and the speech server). Over it, the kernel
     # stops this container alone and it restarts, instead of the machine swapping until something else is killed.
@@ -169,6 +169,29 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+
+  decision:
+    # The local decision model (ADR 0188): Laya, a 421M-parameter decision model served by llama.cpp through the same
+    # typed-question API Jev speaks. On with decision in COMPOSE_PROFILES and DECISION_MODEL_URL=http://decision:8080:
+    # SELF_HOSTING.md, Decision model. Its first start downloads about 0.5 GB from Hugging Face into its volume, then
+    # loads it, using about 2 GB of RAM. Nothing waits for it: the switch's install job watches until it answers and
+    # the right hand tells the owner.
+    image: "${AGENTES_DECISION_IMAGE:-ghcr.io/ggml-org/llama.cpp:server}"
+    profiles: ["decision"]
+    command: ["-hf", "ggml-org/Laya-GGUF:Q8_0", "--alias", "laya", "--host", "0.0.0.0", "--port", "8080", "-c", "4096", "-np", "1"]
+    volumes:
+      - decision:/root/.cache/llama.cpp
+    # It reaches the internet once, for the model, and the app on its own network.
+    networks: [default, decision]
+    cpus: "${DECISION_CPUS:-2}"
+    mem_limit: "${DECISION_MEMORY:-2g}"
+    memswap_limit: "${DECISION_MEMORY:-2g}"
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   tailscale:
     image: tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
@@ -440,10 +463,13 @@ networks:
     internal: true
   # The embeddings service's: the app reaches it there, and it reaches the internet for its model.
   embeddings:
+  # The decision service's: the app reaches it there, and it reaches the internet for Laya on its first start.
+  decision:
 
 volumes:
   pgdata:
   files:
   embeddings-models:
+  decision:
   caddy-data:
   tailscale-state:
