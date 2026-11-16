@@ -418,6 +418,11 @@ const PLAIN_LINE = new Set([
   "action_card.not_requester",
   "action_card.unknown",
   "action_card.yours",
+  // A decision model's settings are pasted by the owner, who sees the field; the server's plain line says what to fix.
+  "decision_model_base_url",
+  "decision_model_key_shape",
+  "decision_model_model",
+  "decision_model_provider",
   // Every "Responde a" picker and drag offers only what `mayReportTo` allows, the server's own rules.
   "agent.reports_to",
   "agent_proposal.yours",

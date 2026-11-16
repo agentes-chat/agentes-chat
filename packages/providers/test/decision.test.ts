@@ -23,6 +23,7 @@ const call = (model: string, extra: Record<string, unknown> = {}) => ({
 
 describe("OpenAI Decisions", () => {
   test("predicate, choices and levels, answers by name", async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: the fake transport's request body is JSON, read field by field.
     let seen: { url: string; auth: string | null; body: any } | null = null;
     const http = (async (url: string, init: RequestInit) => {
       seen = { url, auth: new Headers(init.headers).get("authorization"), body: JSON.parse(String(init.body)) };
@@ -73,6 +74,7 @@ describe("OpenAI Decisions", () => {
   });
 
   test("a picture rides as a data URL, a refused key is invalid", async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: the fake transport's request body is JSON, read field by field.
     let body: any = null;
     const http = (async (_url: string, init: RequestInit) => {
       body = JSON.parse(String(init.body));
@@ -93,6 +95,7 @@ describe("OpenAI Decisions", () => {
 
 describe("Gemini Decisions", () => {
   test("noul criteria use true/false descriptions, input is multimodal, answers by id", async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: the fake transport's request body is JSON, read field by field.
     let seen: { url: string; key: string | null; body: any } | null = null;
     const http = (async (url: string, init: RequestInit) => {
       seen = { url, key: new Headers(init.headers).get("x-goog-api-key"), body: JSON.parse(String(init.body)) };
@@ -123,6 +126,7 @@ describe("Gemini Decisions", () => {
 
 describe("System One", () => {
   test("assets for a Jev-compatible runtime, images for llama.cpp, box and float scores", async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: the fake transport's request body is JSON, read field by field.
     let body: any = null;
     const http = (async (_url: string, init: RequestInit) => {
       body = JSON.parse(String(init.body));
