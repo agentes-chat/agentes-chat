@@ -24,7 +24,7 @@ import { computerName } from "@agenteschat/client/lib/computer";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { formatPercent, formatUsd, relativeTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { STATUS_ICON } from "@agenteschat/client/lib/issues";
+import { cardState, cardStateText, STATUS_ICON } from "@agenteschat/client/lib/issues";
 import { can } from "@agenteschat/client/lib/permissions";
 import { usageShown } from "@agenteschat/client/lib/plan-usage";
 import { agentFaceWord } from "@agenteschat/client/lib/presence";
@@ -47,6 +47,7 @@ import { StatusLine } from "@/components/Presence";
 import { RightHandMineRow, useRightHandMineHint } from "@/components/RightHandSettings";
 import { SidePanel } from "@/components/SidePanel";
 import { AgentCover, colorOf } from "@/components/Sky";
+import { useTaskLive } from "@/components/TaskConversation";
 import { useAgentThinks } from "@/hooks/useAgentThinks";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useEscClose } from "@/hooks/useEscClose";
@@ -467,6 +468,8 @@ function TasksSection({ agent }: { agent: Agent }) {
 function TaskLine({ issue }: { issue: Issue }) {
   const { t } = useTranslation();
   const { org } = useOrg();
+  // What the board's card says beside the status: "In progress" with nobody on it reads "stalled", not active work.
+  const state = cardState(issue, useTaskLive(issue));
   return (
     <li>
       <Link
@@ -479,7 +482,10 @@ function TaskLine({ issue }: { issue: Issue }) {
         </span>
         <span className="dm-side__text">
           <b>{issue.title}</b>
-          <span>{t(`issues.status.${issue.status}`)}</span>
+          <span>
+            {t(`issues.status.${issue.status}`)}
+            {state ? ` · ${cardStateText(t, state)}` : ""}
+          </span>
         </span>
       </Link>
     </li>

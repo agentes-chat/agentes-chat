@@ -507,7 +507,7 @@ describe("issues", () => {
     for (const title of ["Já feito", "Desistimos", "Do QA", "Cofre aberto"]) expect(reading).not.toContain(title);
     await grantScopes(f.db, f.org.id, f.agent.id, ISSUES);
     expect(await ask("@dev e agora?")).toContain(
-      `${listed}\nWhen what you're doing belongs to one of them, keep that task updated as you go: a short progress comment (\`comment_issue\`) and each criterion as you meet it (\`update_issue\`); its status moves on its own.`,
+      `${listed}\nWhen what you're doing belongs to one of them, keep that task updated as you go: a short progress comment (\`comment_issue\`) and each criterion as you meet it (\`update_issue\`); a task still to do moves to in progress on its own. That also ties your run to it, so the team sees you working on it. When the work is finished, set its status yourself (\`update_issue\`: done, or in_review when someone should check it): nothing moves it there for you.`,
     );
     // A routine's run keeps to its own task.
     const [run] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.triggerMessageId, asked));
