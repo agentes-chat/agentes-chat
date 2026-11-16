@@ -85,6 +85,8 @@ test("command line: headless stream-json in the sandbox; work takes edits, plan 
   const chat = antigravityTurnArgs({ prompt: "oi", locked: true }).join(" ");
   expect(chat).toContain(`--agent ${AGY_CHAT_AGENT}`);
   expect(chat).not.toContain("accept-edits");
+  const stdin = antigravityTurnArgs({ prompt: "a".repeat(40_000), stdin: true });
+  expect(stdin.slice(0, 6)).toEqual(["-p", "", "--input-format", "stream-json", "--output-format", "stream-json"]);
 });
 
 test("the account's home: what a turn planted goes, our settings, our server alone and Lodi's agent; the sign-in stays", () => {
