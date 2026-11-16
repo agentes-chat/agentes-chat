@@ -13,7 +13,7 @@ import { Glob } from "bun";
 const SRC = join(import.meta.dir, "../src");
 const TAURI = join(import.meta.dir, "../src-tauri");
 const CAPABILITIES = join(TAURI, "capabilities");
-const read = (file: string) => readFileSync(file, "utf8");
+const read = (file: string) => readFileSync(file, "utf8").replaceAll("\r\n", "\n");
 
 const capabilities = readdirSync(CAPABILITIES).map(
   (file) =>
@@ -90,11 +90,11 @@ const SCREENS: Record<string, string> = {
 const ROUTER = "WindowView.tsx#WindowView";
 
 /** The windows' bundle, without the in-browser fake (`bun run dev`), the bridge itself, the strings and the cover. */
-const FILES = [...new Glob("**/*.{ts,tsx}").scanSync(SRC)].filter(
-  (file) => !/^(dev|i18n|cover)\//.test(file) && file !== "host/fake.ts" && file !== "host/tauri.ts",
-);
+const FILES = [...new Glob("**/*.{ts,tsx}").scanSync(SRC)]
+  .map((file) => file.replaceAll("\\", "/"))
+  .filter((file) => !/^(dev|i18n|cover)\//.test(file) && file !== "host/fake.ts" && file !== "host/tauri.ts");
 const resolve = (from: string, spec: string) => {
-  const base = join(dirname(from), spec);
+  const base = join(dirname(from), spec).replaceAll("\\", "/");
   return [base, `${base}.ts`, `${base}.tsx`].find((file) => FILES.includes(file));
 };
 
@@ -200,7 +200,7 @@ describe("each window may call every app command its code calls", () => {
   });
 
   test("every window with a capability has its screen here", () => {
-    expect(capabilities.flatMap((c) => c.windows ?? []).sort()).toEqual(Object.keys(SCREENS).sort());
+    expect([...new Set(capabilities.flatMap((c) => c.windows ?? []))].sort()).toEqual(Object.keys(SCREENS).sort());
     for (const screen of Object.values(SCREENS))
       expect({ screen, found: units.has(screen) }).toEqual({ screen, found: true });
   });
