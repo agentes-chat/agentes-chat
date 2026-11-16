@@ -143,6 +143,8 @@ import { useToast } from "@/lib/toast";
 import { offersNewWorkspace, type WorkspaceGroup } from "@/lib/workspaces";
 import type { SettingsSection } from "@/pages/settings-sections";
 import { useStreams } from "@/realtime/context";
+import { joinVoice } from "@/voice/call";
+import { SidebarVoiceMembers, useVoiceCall, useVoiceRooms, VoiceDock, VoiceIcon } from "@/voice/VoiceUI";
 import { EmailDialog, ProfileDialog } from "./AccountSettings";
 import { AddPasswordDialog } from "./AddPassword";
 import { AgentAvatar, PersonAvatar } from "./AgentAvatar";
@@ -1026,6 +1028,7 @@ export function Sidebar() {
           {/* The full sidebar creates from the Agentes header's + (always shown on touch screens); the rail has no
               headers. */}
           {rail && createAgentItem.length > 0 && <CreateAgentTile onOpen={newAgent} />}
+          {!rail && <VoiceDock orgId={orgId} />}
           <div className="sidebar__me">
             <AccountMenu />
             {bell}
@@ -1263,6 +1266,9 @@ function SidebarChannels({
   // VPS Zen: who is in each channel, in place of its "#" (Preferências, "Rostos nos canais").
   const facesOn = useSyncExternalStore(onSidebarFacesChange, sidebarFacesOn, sidebarFacesOn);
   const facesDir = useDirectory(orgId);
+  // VPS Zen: voice channels, who is in each room under its row, and a headset on hover to join.
+  const voice = useVoiceRooms(orgId);
+  const call = useVoiceCall();
   const place = usePlaceChannel(orgId);
   const placeCategory = usePlaceChannelCategory(orgId);
   const removeCategory = useDeleteChannelCategory(orgId);
@@ -1475,8 +1481,20 @@ function SidebarChannels({
     return actions;
   };
 
-  // A pinned row stays put: it doesn't drag, and nothing drops on it.
+  // VPS Zen: a channel's row and, under it, who is in its voice room.
   const row = (c: Channel, top = false) => {
+    const el = channelRow(c, top);
+    const people = voice.byChannel.get(c.id) ?? [];
+    if (people.length === 0) return el;
+    return (
+      <Fragment key={c.id}>
+        {el}
+        <SidebarVoiceMembers people={people} />
+      </Fragment>
+    );
+  };
+  // A pinned row stays put: it doesn't drag, and nothing drops on it.
+  const channelRow = (c: Channel, top = false) => {
     // Discord's marks: something new lights the row (a pill on its left edge, the name in full ink) with how many
     // messages wait, in a quiet count; only a mention of me gets the red one. Muted, it rests dim whatever comes, but a
     // mention still shows.
@@ -1527,6 +1545,11 @@ function SidebarChannels({
           {channelInitials(c.name)}
         </span>
         <span className="sidebar__item-label">{c.name}</span>
+        {(voice.byChannel.get(c.id)?.length ?? 0) > 0 && (
+          <span className="sidebar__voice-mark" aria-hidden="true">
+            <VoiceIcon name="speaker" size={14} />
+          </span>
+        )}
         {mentions > 0 ? (
           <UnreadCount count={mentions} mentions />
         ) : unread ? (
@@ -1536,16 +1559,29 @@ function SidebarChannels({
         )}
       </Link>
     );
+    const voiceAct =
+      voice.enabled && c.isMember && !(call.channelId === c.id && call.status !== "idle") ? (
+        <RowAction icon="volume" label={t("voiceRooms.join")} onClick={() => void joinVoice(orgId, c.id, c.name)} />
+      ) : null;
     // On hover or focus, like Discord's invite and settings: who manages the channel adds members or opens its details.
-    if (!mayChange(c)) return link;
+    if (!mayChange(c))
+      return voiceAct ? (
+        <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={1}>
+          {link}
+          <span className="sidebar__row-acts">{voiceAct}</span>
+        </div>
+      ) : (
+        link
+      );
     const open = (ask: "details" | "add") => () => {
       requestChannelDetails(c.id, ask);
       void navigate({ to: "/org/$orgId/c/$channelId", params: { orgId, channelId: c.id } });
     };
     return (
-      <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={2}>
+      <div key={c.id} className="sidebar__row" data-unread={unread} data-acts={voiceAct ? 3 : 2}>
         {link}
         <span className="sidebar__row-acts">
+          {voiceAct}
           <RowAction icon="personAdd" label={t("shell.sidebarMenu.addMembers")} onClick={open("add")} />
           <RowAction icon="cog" label={t("shell.sidebarMenu.channelSettings")} onClick={open("details")} />
         </span>

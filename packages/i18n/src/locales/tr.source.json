@@ -5855,6 +5855,102 @@
       "other": "{{count}} agents working"
     }
   },
+  "voiceRooms.inVoice": {
+    "value": {
+      "one": "{{count}} in voice",
+      "other": "{{count}} in voice"
+    }
+  },
+  "voiceRooms.live": {
+    "value": "Live"
+  },
+  "voiceRooms.join": {
+    "value": "Join voice"
+  },
+  "voiceRooms.leave": {
+    "value": "Disconnect"
+  },
+  "voiceRooms.connected": {
+    "value": "Voice connected"
+  },
+  "voiceRooms.connecting": {
+    "value": "Connecting…"
+  },
+  "voiceRooms.reconnecting": {
+    "value": "Reconnecting…"
+  },
+  "voiceRooms.dismiss": {
+    "value": "Dismiss"
+  },
+  "voiceRooms.allowAudio": {
+    "value": "Click to turn on the sound"
+  },
+  "voiceRooms.mute": {
+    "value": "Mute"
+  },
+  "voiceRooms.unmute": {
+    "value": "Unmute"
+  },
+  "voiceRooms.deafen": {
+    "value": "Deafen"
+  },
+  "voiceRooms.undeafen": {
+    "value": "Undeafen"
+  },
+  "voiceRooms.cameraOn": {
+    "value": "Turn on camera"
+  },
+  "voiceRooms.cameraOff": {
+    "value": "Turn off camera"
+  },
+  "voiceRooms.screenOn": {
+    "value": "Share your screen"
+  },
+  "voiceRooms.screenOff": {
+    "value": "Stop sharing"
+  },
+  "voiceRooms.joinNow": {
+    "value": "Join"
+  },
+  "voiceRooms.sharingNow": {
+    "value": "{{name}} is sharing the screen"
+  },
+  "voiceRooms.callIn": {
+    "value": "Call in #{{name}}"
+  },
+  "voiceRooms.showChat": {
+    "value": "Show the chat"
+  },
+  "voiceRooms.expand": {
+    "value": "Bigger call"
+  },
+  "voiceRooms.fullscreen": {
+    "value": "Full screen"
+  },
+  "voiceRooms.you": {
+    "value": "you"
+  },
+  "voiceRooms.sharing": {
+    "value": "Screen"
+  },
+  "voiceRooms.errors.off": {
+    "value": "Voice calls aren't set up yet."
+  },
+  "voiceRooms.errors.forbidden": {
+    "value": "You can't join this channel's call."
+  },
+  "voiceRooms.errors.failed": {
+    "value": "Couldn't connect to the call. Try again."
+  },
+  "voiceRooms.errors.mic": {
+    "value": "The browser didn't let us use your microphone."
+  },
+  "voiceRooms.errors.camera": {
+    "value": "The browser didn't let us use your camera."
+  },
+  "voiceRooms.errors.screen": {
+    "value": "Couldn't share the screen."
+  },
   "channel.settingsNav.label": {
     "value": "Channel settings"
   },

@@ -66,6 +66,7 @@ import { telemetryRoutes } from "./routes/app/telemetry";
 import { threadRoutes } from "./routes/app/threads";
 import { vaultRoutes } from "./routes/app/vault";
 import { speechKeyRoutes, voiceRoutes } from "./routes/app/voice";
+import { voiceRoomRoutes } from "./routes/app/voice-rooms";
 import { waitingRoutes } from "./routes/app/waiting";
 import { wikiRoutes } from "./routes/app/wiki";
 import {
@@ -230,6 +231,8 @@ export function createApp(options: AppOptions) {
     api.route("/app", gifKeyRoutes(deps));
     api.route("/app", speechKeyRoutes(deps));
     api.route("/app", voiceRoutes(deps));
+    // VPS Zen: voice channels.
+    api.route("/app", voiceRoomRoutes(deps));
     api.route("/app", webhookAdminRoutes(deps));
     api.route("/app", githubAppRoutes(deps));
     registerOauthRoutes(api, deps, { version, fetchDocument: options.appsFetchDocument });

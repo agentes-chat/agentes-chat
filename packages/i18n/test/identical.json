@@ -989,6 +989,7 @@
       "storage.connect.awsRegion.eu-north-1"
     ],
     "de": [
+      "voiceRooms.live",
       "devices.iphone.steps.account",
       "devices.workspace",
       "devices.cpus",
@@ -1821,6 +1822,7 @@
       "storage.connect.provider.b2"
     ],
     "nl": [
+      "voiceRooms.live",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
       "devices.filter.computers",

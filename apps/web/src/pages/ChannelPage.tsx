@@ -429,6 +429,7 @@ import {
   useStreams,
   useTypingSender,
 } from "@/realtime/context";
+import { VoiceStage } from "@/voice/VoiceUI";
 import { ThreadPage } from "./ThreadPage";
 
 /** One clock for every "· 12 s" on screen: the block and the card above the box never differ by a second. */
@@ -2561,6 +2562,10 @@ function ChannelView({
                       composer.current?.focus();
                     }}
                   >
+                    {/* VPS Zen: the channel's voice call, or who is in it with a Join. */}
+                    {isMember && !chrome?.panel && (
+                      <VoiceStage orgId={org.id} channelId={channel.id} channelName={channel.name} />
+                    )}
                     {isMember && (
                       <ChannelPinnedBar
                         channelId={channel.id}
