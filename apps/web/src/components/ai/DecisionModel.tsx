@@ -1,9 +1,10 @@
-import type { DecisionHost, DecisionModel, DecisionProvider } from "@agenteschat/client";
+import type { AiRouting, DecisionHost, DecisionModel, DecisionProvider } from "@agenteschat/client";
 import {
   useCancelDecisionInstall,
   useCheckDecisionModel,
   useDecisionHost,
   useDecisionModel,
+  useJevKey,
   useRemoveDecisionModel,
   useSaveDecisionModel,
 } from "@agenteschat/client";
@@ -28,11 +29,17 @@ import {
 } from "@agenteschat/ui";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { HelpLink } from "@/components/HelpLink";
+import { CHIP, JevSettings } from "./Jev";
 
 /**
- * Settings › AI and usage, after Jev: the installation's optional decision model (ADR 0188). The switch is off
- * until its owner turns it on; the install runs in the background and the right hand tells the owner how it ended.
+ * Settings › AI and usage: who decides, as one list (ADR 0188). Jev is the default and keeps its key; the other three
+ * replace it, and each row is the same row — a name, what it is, its state, and, once chosen, its settings under it.
+ * Choosing another while one is on asks first: the current model is removed and the new one may take a while.
  */
+
+/** Every provider a person can choose from, in the order the list shows them. */
+type Chosen = "jev" | DecisionProvider;
 
 const CLOUD: Record<"openai" | "gemini", string> = { openai: "gpt-6-luna", gemini: "gemini-decision-1" };
 
@@ -47,73 +54,208 @@ const STATE: Record<DecisionModel["state"], { icon?: IconName; tone?: ChipTone }
   unreachable: { icon: "alert", tone: "waiting" },
 };
 
-export function DecisionModelSection() {
+export function DecisionModelSection({
+  routing,
+  line,
+  reflectionOff,
+}: {
+  routing?: AiRouting["by"];
+  /** The line that says who decides now ("O Jev escolhe…"), from the workspace's status. */
+  line: { key: string; params?: Record<string, unknown> } | null;
+  reflectionOff: boolean;
+}) {
   const view = useDecisionModel();
-  const local = view.data?.provider === "local" || (!view.data?.provider && !view.data?.enabled);
-  const host = useDecisionHost(local);
-  if (!view.data) return null;
-  return <DecisionModelCard model={view.data} host={host.data} />;
+  const host = useDecisionHost(true);
+  // A server that has never turned it on answers the off shape; Jev's rows show either way.
+  const model: DecisionModel = view.data ?? {
+    source: null,
+    enabled: false,
+    provider: null,
+    model: null,
+    baseURL: null,
+    runtime: null,
+    hint: null,
+    state: "off",
+    capabilities: { inputs: ["text"] },
+    timeoutMs: 3000,
+    install: null,
+  };
+  return (
+    <DecisionModelCard routing={routing} line={line} reflectionOff={reflectionOff} model={model} host={host.data} />
+  );
 }
 
-function DecisionModelCard({ model, host }: { model: DecisionModel; host?: DecisionHost }) {
+function DecisionModelCard({
+  model,
+  host,
+  routing,
+  line,
+  reflectionOff,
+}: {
+  model: DecisionModel;
+  host?: DecisionHost;
+  routing?: AiRouting["by"];
+  line: { key: string; params?: Record<string, unknown> } | null;
+  reflectionOff: boolean;
+}) {
   const { t, i18n } = useTranslation();
+  const jev = useJevKey();
   const save = useSaveDecisionModel();
   const check = useCheckDecisionModel();
   const remove = useRemoveDecisionModel();
   const cancel = useCancelDecisionInstall();
   const keyId = useId();
-  const [provider, setProvider] = useState<DecisionProvider>(model.provider ?? "local");
+  const [draft, setDraft] = useState<DecisionProvider | null>(null);
   const [apiKey, setApiKey] = useState("");
-  const [editing, setEditing] = useState(false);
-  const [confirm, setConfirm] = useState(false);
-  const [switchConfirm, setSwitchConfirm] = useState(false);
+  const [confirm, setConfirm] = useState<DecisionProvider | null>(null);
+  const [removing, setRemoving] = useState(false);
   const installing = Boolean(model.install && ACTIVE.includes(model.install.state));
   const installState = model.install?.state ?? "idle";
   const error = save.error ?? check.error ?? remove.error ?? cancel.error;
-  const modelId = provider === "local" ? "laya" : CLOUD[provider];
-  const active = model.enabled;
-  const setup = !installing && (editing || !active);
-  const recommended = host?.recommended?.id === "laya";
-  const shownProvider = model.provider ?? provider;
-  const shownProviderLabel =
-    shownProvider === "openai" ? "OpenAI" : shownProvider === "gemini" ? "Gemini" : t("decision.providers.local");
-  const subtitle =
-    active || installing ? t("decision.onHint") : editing ? t("decision.setupHint") : t("decision.offHint");
+  // The row in use: Jev while the switch is off, else the model that was chosen.
+  const chosen: Chosen = model.enabled && model.provider ? model.provider : "jev";
+  // What the person picked that isn't in use yet (its settings show, and its button turns it on).
+  const picked: Chosen = draft ?? chosen;
+  const shown = picked === "jev" ? chosen === "jev" : picked === chosen;
+  const cloud = picked === "openai" || picked === "gemini";
 
-  const turnOn = (on: boolean) => {
-    if (on) {
-      setEditing(true);
+  const subtitle = chosen === "jev" ? t("decision.offHint") : t("decision.onHint", { model: model.model ?? "" });
+
+  const pick = (next: Chosen) => {
+    setDraft(null);
+    if (next === chosen) return;
+    // Jev: stop using the model. Its key's card is untouched.
+    if (next === "jev") {
+      save.mutate({ enabled: false });
       return;
     }
-    // Off while configuring just closes the steps; off while on stops using the model now.
-    if (active) save.mutate({ enabled: false });
-    setEditing(false);
-    setSwitchConfirm(false);
+    // Another model while one is on: the current one is removed, so ask first.
+    if (model.enabled) {
+      setConfirm(next);
+      return;
+    }
+    setDraft(next);
   };
-  const activateNow = () =>
+
+  const activate = (provider: DecisionProvider) =>
     save.mutate(
       {
         enabled: true,
         provider,
-        model: modelId,
+        model: provider === "local" ? "laya" : CLOUD[provider],
         ...(provider === "local" ? {} : apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
       },
       {
         onSuccess: () => {
-          setEditing(false);
-          setSwitchConfirm(false);
+          setDraft(null);
+          setApiKey("");
+          setConfirm(null);
         },
       },
     );
-  const activate = () => {
-    // Replacing a model already on asks first: it is removed, and the new one may take a while to answer.
-    if (active && (provider !== model.provider || modelId !== model.model)) {
-      setSwitchConfirm(true);
-      return;
-    }
-    activateNow();
+
+  const row = (id: Chosen, extra: { title: string; description: string; logo?: string; icon?: IconName }) => ({
+    value: id,
+    leading: extra.logo ? <ProviderLogo id={extra.logo} size="sm" /> : <Icon name={extra.icon ?? "agent"} size={20} />,
+    title: extra.title,
+    description: extra.description,
+    // The one in use says so. Jev's chip is its key's state: the same chip its card showed.
+    ...(id === chosen
+      ? id === "jev"
+        ? {
+            tag: (
+              <Chip icon={CHIP[jev.data?.state ?? "off"].icon} tone={CHIP[jev.data?.state ?? "off"].tone}>
+                {t(`jev.state.${CHIP[jev.data?.state ?? "off"].word}`)}
+              </Chip>
+            ),
+          }
+        : {
+            tag: (
+              <Chip icon={STATE[model.state].icon} tone={STATE[model.state].tone}>
+                {t(`decision.state.${model.state}`)}
+              </Chip>
+            ),
+          }
+      : {}),
+  });
+
+  const settings = () => {
+    if (picked === "jev") return <JevSettings routing={routing} />;
+    const provider = picked as DecisionProvider;
+    return (
+      <>
+        {provider === "local" ? (
+          host ? (
+            <>
+              <SettingNote icon="info">
+                {t("decision.host", {
+                  cpus: formatDecimal(i18n.language, host.cpus),
+                  memory: formatDecimal(i18n.language, host.memoryGb),
+                  disk: formatDecimal(i18n.language, host.diskFreeGb),
+                })}
+              </SettingNote>
+              {host.recommended && (
+                <SettingNote icon="check" live>
+                  {t("decision.recommended", { model: host.recommended.label })}
+                </SettingNote>
+              )}
+              <SettingNote icon="info" quiet>
+                {t("decision.localHint")}
+              </SettingNote>
+              <SettingNote icon="info" quiet>
+                {t("decision.note")}
+              </SettingNote>
+            </>
+          ) : (
+            <SettingNote icon="info">{t("decision.hostLoading")}</SettingNote>
+          )
+        ) : (
+          <>
+            <label className="ac-field" htmlFor={keyId}>
+              <span>{t("decision.key")}</span>
+              <Input
+                id={keyId}
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={provider === "openai" ? "sk-…" : "AQ.…"}
+                autoComplete="off"
+                invalid={Boolean(error)}
+              />
+            </label>
+            <p className="jev-steps__below ac-field__example">{t("decision.keyHint")}</p>
+          </>
+        )}
+        {!shown && (
+          <span className="ac-acts">
+            <Button
+              variant="primary"
+              onClick={() => activate(provider)}
+              disabled={save.isPending || (cloud && apiKey.trim().length === 0)}
+              loading={save.isPending}
+            >
+              {provider === "local" ? t("decision.activateLocal") : t("decision.activate")}
+            </Button>
+            {draft && (
+              <Button variant="ghost" onClick={() => setDraft(null)}>
+                {t("common.cancel")}
+              </Button>
+            )}
+          </span>
+        )}
+        {shown && (
+          <span className="ac-acts">
+            <Button size="sm" variant="ghost" onClick={() => check.mutate(undefined)} disabled={check.isPending}>
+              {t("decision.check")}
+            </Button>
+            <Button size="sm" variant="ghost" className="ac-btn--danger" onClick={() => setRemoving(true)}>
+              {t("decision.remove")}
+            </Button>
+          </span>
+        )}
+      </>
+    );
   };
-  const cloud = provider !== "local";
 
   return (
     <>
@@ -121,19 +263,58 @@ function DecisionModelCard({ model, host }: { model: DecisionModel; host?: Decis
         <CardHeader
           id="sec-decision"
           icon="agent"
-          title={t("decision.title")}
-          subtitle={subtitle}
+          title={t("routing.title")}
+          subtitle={line ? String(t(line.key as never, line.params as never)) : subtitle}
           action={
             <Switch
-              checked={active || editing || installing}
-              onCheckedChange={turnOn}
+              checked={chosen !== "jev"}
+              onCheckedChange={(on) => {
+                if (!on) {
+                  pick("jev");
+                  return;
+                }
+                setDraft(model.provider ?? "local");
+              }}
               disabled={installing || save.isPending}
               aria-label={t("decision.title")}
             />
           }
         />
         <div className="jev">
+          {reflectionOff && <p className="who-line">{t("routing.reflectionOff")}</p>}
           <List>
+            <div className="ac-list__row jev__body">
+              <OptionList
+                attached
+                className="decision-providers"
+                aria-label={t("decision.providersLabel")}
+                value={picked}
+                onValueChange={(v) => pick(v as Chosen)}
+                options={[
+                  row("jev", {
+                    title: t("jev.title"),
+                    description: t("jev.lead"),
+                    logo: "typesafe",
+                  }),
+                  row("local", {
+                    title: t("decision.providers.local"),
+                    description: t("decision.providers.localText"),
+                    icon: "agent",
+                  }),
+                  row("openai", {
+                    title: t("decision.providers.openai"),
+                    description: t("decision.providers.openaiText"),
+                    logo: "openai",
+                  }),
+                  row("gemini", {
+                    title: t("decision.providers.gemini"),
+                    description: t("decision.providers.geminiText"),
+                    logo: "gemini",
+                  }),
+                ].map((option) => ({ ...option, children: picked === option.value ? settings() : undefined }))}
+              />
+            </div>
+
             {installing && (
               <div className="ac-list__row jev__body">
                 <SettingNote icon="info" live>
@@ -143,125 +324,6 @@ function DecisionModelCard({ model, host }: { model: DecisionModel; host?: Decis
                   {t("decision.cancel")}
                 </Button>
               </div>
-            )}
-
-            {active && !editing && !installing && (
-              <div className="ac-list__row jev__key">
-                <span className="list-col">
-                  <span className="ai-accounts__name">{shownProviderLabel}</span>
-                  <span className="small muted">{model.model}</span>
-                  <span className="ac-iconline">
-                    <Chip icon={STATE[model.state].icon} tone={STATE[model.state].tone}>
-                      {t(`decision.state.${model.state}`)}
-                    </Chip>
-                  </span>
-                </span>
-                <span className="ac-acts">
-                  <Button size="sm" variant="ghost" onClick={() => check.mutate(undefined)} disabled={check.isPending}>
-                    {t("decision.check")}
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-                    {t("decision.change")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="ac-btn--danger"
-                    onClick={() => setConfirm(true)}
-                    disabled={remove.isPending}
-                  >
-                    {t("decision.remove")}
-                  </Button>
-                </span>
-              </div>
-            )}
-
-            {setup && (
-              <>
-                <div className="ac-list__row jev__body">
-                  <OptionList
-                    attached
-                    value={provider}
-                    onValueChange={(v) => setProvider(v as DecisionProvider)}
-                    className="decision-providers"
-                    aria-label={t("decision.providersLabel")}
-                    options={(["local", "openai", "gemini"] as const).map((id) => ({
-                      value: id,
-                      title: t(`decision.providers.${id}`),
-                      description: t(`decision.providers.${id}Text`),
-                      leading:
-                        id === "local" ? (
-                          <span className="ac-card__key">
-                            <Icon name="agent" size={16} />
-                          </span>
-                        ) : (
-                          <ProviderLogo id={id} size="sm" />
-                        ),
-                      ...(id === "local" && recommended ? { tag: t("decision.recommendedTag") } : {}),
-                      // The chosen card's settings, under all of them: the host for Laya, the key for a cloud.
-                      children:
-                        id === "local" ? (
-                          host ? (
-                            <>
-                              <SettingNote icon="info">
-                                {t("decision.host", {
-                                  cpus: formatDecimal(i18n.language, host.cpus),
-                                  memory: formatDecimal(i18n.language, host.memoryGb),
-                                  disk: formatDecimal(i18n.language, host.diskFreeGb),
-                                })}
-                              </SettingNote>
-                              {host.recommended && (
-                                <SettingNote icon="check" live>
-                                  {t("decision.recommended", { model: host.recommended.label })}
-                                </SettingNote>
-                              )}
-                              <SettingNote icon="info" quiet>
-                                {t("decision.localHint")}
-                              </SettingNote>
-                              <SettingNote icon="info" quiet>
-                                {t("decision.note")}
-                              </SettingNote>
-                            </>
-                          ) : (
-                            <SettingNote icon="info">{t("decision.hostLoading")}</SettingNote>
-                          )
-                        ) : (
-                          <>
-                            <label className="ac-field" htmlFor={keyId}>
-                              <span>{t("decision.key")}</span>
-                              <Input
-                                id={keyId}
-                                type="password"
-                                value={apiKey}
-                                onChange={(e) => setApiKey(e.target.value)}
-                                placeholder={provider === "openai" ? "sk-…" : "AQ.…"}
-                                autoComplete="off"
-                                invalid={Boolean(error)}
-                              />
-                            </label>
-                            <p className="jev-steps__below ac-field__example">{t("decision.keyHint")}</p>
-                          </>
-                        ),
-                    }))}
-                  />
-                </div>
-
-                <div className="ac-list__row jev__body">
-                  <Button
-                    variant="primary"
-                    onClick={activate}
-                    disabled={save.isPending || (cloud && apiKey.trim().length === 0)}
-                    loading={save.isPending}
-                  >
-                    {provider === "local" ? t("decision.activateLocal") : t("decision.activate")}
-                  </Button>
-                  {active && (
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
-                      {t("decision.cancel")}
-                    </Button>
-                  )}
-                </div>
-              </>
             )}
 
             {model.install?.state === "failed" && (
@@ -276,33 +338,15 @@ function DecisionModelCard({ model, host }: { model: DecisionModel; host?: Decis
               </div>
             )}
           </List>
+          <p className="jev__foot">
+            <HelpLink slug="who-answers">{t("routing.how")}</HelpLink>
+          </p>
         </div>
       </Card>
 
       <Dialog
-        open={confirm}
-        onOpenChange={setConfirm}
-        title={t("decision.removeAsk")}
-        description={t("decision.removeText")}
-        closeLabel={t("common.close")}
-        width={440}
-      >
-        <DialogFooter>
-          <Button onClick={() => setConfirm(false)}>{t("common.cancel")}</Button>
-          <Button
-            variant="danger"
-            disabled={remove.isPending}
-            loading={remove.isPending}
-            onClick={() => remove.mutate(undefined, { onSuccess: () => setConfirm(false) })}
-          >
-            {t("decision.removeYes")}
-          </Button>
-        </DialogFooter>
-      </Dialog>
-
-      <Dialog
-        open={switchConfirm}
-        onOpenChange={setSwitchConfirm}
+        open={confirm !== null}
+        onOpenChange={(open) => !open && setConfirm(null)}
         title={t("decision.switchAsk")}
         closeLabel={t("common.close")}
         width={440}
@@ -310,9 +354,44 @@ function DecisionModelCard({ model, host }: { model: DecisionModel; host?: Decis
         <p>{t("decision.switchCurrent")}</p>
         <p>{t("decision.switchSlow")}</p>
         <DialogFooter>
-          <Button onClick={() => setSwitchConfirm(false)}>{t("common.cancel")}</Button>
-          <Button variant="primary" disabled={save.isPending} loading={save.isPending} onClick={activateNow}>
+          <Button onClick={() => setConfirm(null)}>{t("common.cancel")}</Button>
+          <Button
+            variant="primary"
+            disabled={save.isPending}
+            loading={save.isPending}
+            onClick={() => {
+              const next = confirm;
+              setConfirm(null);
+              // The chosen model's key is pasted now, on its own settings.
+              if (!next) return;
+              setDraft(next);
+              // A cloud model needs its key, which is pasted on the row that just opened.
+              if (next !== "local" && apiKey.trim() === "") return;
+              activate(next);
+            }}
+          >
             {t("decision.switchConfirm")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      <Dialog
+        open={removing}
+        onOpenChange={setRemoving}
+        title={t("decision.removeAsk")}
+        description={t("decision.removeText")}
+        closeLabel={t("common.close")}
+        width={440}
+      >
+        <DialogFooter>
+          <Button onClick={() => setRemoving(false)}>{t("common.cancel")}</Button>
+          <Button
+            variant="danger"
+            disabled={remove.isPending}
+            loading={remove.isPending}
+            onClick={() => remove.mutate(undefined, { onSuccess: () => setRemoving(false) })}
+          >
+            {t("decision.removeYes")}
           </Button>
         </DialogFooter>
       </Dialog>
