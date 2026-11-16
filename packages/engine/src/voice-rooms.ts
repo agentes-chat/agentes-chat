@@ -1,5 +1,10 @@
 import { createHmac } from "node:crypto";
-import { and, type Database, eq, inArray, isNull, schema } from "@agenteschat/db";
+import type { PubSub } from "@agenteschat/adapters";
+import { and, type Database, eq, inArray, isNull, rowsOf, schema, sql } from "@agenteschat/db";
+import { managesChannel } from "./channels";
+import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
+import { publishChannelsChanged } from "./events";
+import { requireActiveMembership } from "./organizations";
 
 const { channelMembers, channels, users } = schema;
 
@@ -244,4 +249,72 @@ export async function listVoiceRooms(
     });
   }
   return out;
+}
+
+// ── Voice-only channels ──────────────────────────────────────────────────────
+
+/*
+ * A channel made for voice alone (Discord's voice channel): the sidebar draws it with a speaker, a click on it joins
+ * the call, and its page is the room itself (who is in the call, who of its members is online or offline), the chat
+ * one click away. Kept in a table of its own, created on first use outside the migrations (`vps_zen_` prefix), so a
+ * merge of the official version never meets it: a channel's row is never touched, and deleting the channel drops it.
+ */
+
+const ensured = new WeakMap<Database, Promise<void>>();
+
+function ensureVoiceChannels(db: Database) {
+  let ready = ensured.get(db);
+  if (!ready) {
+    ready = db
+      .execute(
+        sql`create table if not exists vps_zen_voice_channels (
+          channel_id uuid primary key references channels(id) on delete cascade,
+          org_id uuid not null,
+          created_by text,
+          created_at timestamptz not null default now()
+        )`,
+      )
+      .then(() => undefined);
+    ready.catch(() => ensured.delete(db));
+    ensured.set(db, ready);
+  }
+  return ready;
+}
+
+/** The workspace's voice-only channels (archived ones too: nothing lists those anyway). */
+export async function voiceChannelIds(db: Database, orgId: string): Promise<string[]> {
+  await ensureVoiceChannels(db);
+  const rows = rowsOf<{ channel_id: string }>(
+    await db.execute(sql`select channel_id from vps_zen_voice_channels where org_id = ${orgId}::uuid`),
+  );
+  return rows.map((r) => r.channel_id);
+}
+
+/** Makes a channel voice-only, or a text channel again: who manages the channel (its creator or an admin). */
+export async function setVoiceChannel(
+  db: Database,
+  actorId: string,
+  orgId: string,
+  channelId: string,
+  on: boolean,
+  options: { pubsub?: PubSub } = {},
+) {
+  const membership = await requireActiveMembership(db, actorId, orgId);
+  const [channel] = await db
+    .select()
+    .from(channels)
+    .where(and(eq(channels.id, channelId), eq(channels.orgId, orgId), isNull(channels.archivedAt)));
+  if (!channel) throw new NotFoundError("Channel not found");
+  if (channel.kind !== "channel") throw new ValidationError("Only a channel can be voice-only");
+  if (!(await managesChannel(db, membership, actorId, channel)))
+    throw new ForbiddenError("Only the channel's creator or an admin can change it");
+  await ensureVoiceChannels(db);
+  if (on)
+    await db.execute(
+      sql`insert into vps_zen_voice_channels (channel_id, org_id, created_by)
+        values (${channelId}::uuid, ${orgId}::uuid, ${actorId}) on conflict (channel_id) do nothing`,
+    );
+  else await db.execute(sql`delete from vps_zen_voice_channels where channel_id = ${channelId}::uuid`);
+  await publishChannelsChanged(options.pubsub, orgId);
+  return { channelId, voiceOnly: on };
 }

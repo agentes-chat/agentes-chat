@@ -14,10 +14,11 @@ import {
   toggleCamera,
   toggleDeafen,
   toggleMic,
-  toggleScreen,
   type VoiceMember,
   voiceSnapshot,
 } from "./call";
+import { DeviceMenu, ScreenShareMenu, VoiceSettingsDialog } from "./VoiceSettings";
+import { showVoiceView } from "./views";
 import "./voice.css";
 
 /*
@@ -40,9 +41,11 @@ export interface RoomPerson {
 interface RoomsAnswer {
   enabled: boolean;
   rooms: { channelId: string; participants: RoomPerson[] }[];
+  /** Channels made for voice only (a room first, the chat beside it). */
+  voiceChannels?: string[];
 }
 
-const roomsKey = (orgId: string) => ["vps-zen", "voice-rooms", orgId];
+export const roomsKey = (orgId: string) => ["vps-zen", "voice-rooms", orgId];
 
 /** Who is in each voice room of my channels: read every 5 s (3 s while I'm in a call), only while the tab shows. */
 export function useVoiceRooms(orgId: string) {
@@ -51,7 +54,7 @@ export function useVoiceRooms(orgId: string) {
     queryKey: roomsKey(orgId),
     queryFn: async (): Promise<RoomsAnswer> => {
       const res = await fetch(`/api/app/organizations/${orgId}/voice-rooms`, { credentials: "same-origin" });
-      if (!res.ok) return { enabled: false, rooms: [] };
+      if (!res.ok) return { enabled: false, rooms: [], voiceChannels: [] };
       return res.json();
     },
     refetchInterval: call.status === "connected" ? 3000 : 5000,
@@ -72,7 +75,7 @@ export function useVoiceRooms(orgId: string) {
         speaking: m.speaking,
       })),
     );
-  return { enabled: q.data?.enabled ?? false, byChannel };
+  return { enabled: q.data?.enabled ?? false, byChannel, voiceChannels: new Set(q.data?.voiceChannels ?? []) };
 }
 
 /** After a join or a leave, the sidebar reads again at once. */
@@ -149,6 +152,18 @@ const paths: Record<string, ReactNode> = {
   ),
   expand: <path d="M3.5 7.5v-4h4M12.5 3.5h4v4M16.5 12.5v4h-4M7.5 16.5h-4v-4" />,
   shrink: <path d="M7.5 3.5v4h-4M16.5 7.5h-4v-4M12.5 16.5v-4h4M3.5 12.5h4v4" />,
+  gear: (
+    <>
+      <circle cx="10" cy="10" r="2.5" />
+      <path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" />
+    </>
+  ),
+  room: (
+    <>
+      <path d="M3.5 8h2.5l4-3.5v11L6 12H3.5z" />
+      <path d="M13 7.5a3.5 3.5 0 0 1 0 5" />
+    </>
+  ),
   chat: <path d="M4 4.5h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H9l-3.5 3v-3H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z" />,
 };
 
@@ -266,41 +281,76 @@ export function VoiceDock({ orgId }: { orgId: string }) {
           {t("voiceRooms.allowAudio")}
         </button>
       )}
-      <div className="voice-dock__acts">
+      {call.talking && <span className="voice-dock__ptt">{t("voiceRooms.settings.talking")}</span>}
+      <CallControls live={live} />
+    </section>
+  );
+}
+
+const canShareScreen = () => typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia);
+
+/**
+ * The call's buttons, in the dock and on the stage: the microphone and the headset each with ⌃ for its device and
+ * volume, the camera, the screen (its quality first) and the gear for the rest of Voz e vídeo.
+ */
+function CallControls({ live, big }: { live: boolean; big?: boolean }) {
+  const { t } = useTranslation();
+  const call = useVoiceCall();
+  const [settings, setSettings] = useState(false);
+  const open = () => setSettings(true);
+  return (
+    <div className={cx("voice-dock__acts", big && "voice-controls--big")}>
+      <span className="voice-split">
         <DockButton
+          big={big}
           label={call.micOn ? t("voiceRooms.mute") : t("voiceRooms.unmute")}
           icon={call.micOn ? "mic" : "micOff"}
           off={!call.micOn}
           disabled={!live}
           onClick={() => void toggleMic()}
         />
+        <DeviceMenu kind="input" onSettings={open} big={big} />
+      </span>
+      <span className="voice-split">
         <DockButton
+          big={big}
           label={call.deafened ? t("voiceRooms.undeafen") : t("voiceRooms.deafen")}
           icon={call.deafened ? "headsetOff" : "headset"}
           off={call.deafened}
           disabled={!live}
           onClick={() => void toggleDeafen()}
         />
-        <DockButton
-          label={call.cameraOn ? t("voiceRooms.cameraOff") : t("voiceRooms.cameraOn")}
-          icon={call.cameraOn ? "camera" : "cameraOff"}
-          on={call.cameraOn}
-          disabled={!live}
-          onClick={() => void toggleCamera()}
-        />
-        <DockButton
-          label={call.screenOn ? t("voiceRooms.screenOff") : t("voiceRooms.screenOn")}
-          icon="screen"
-          on={call.screenOn}
-          disabled={!live || !canShareScreen()}
-          onClick={() => void toggleScreen()}
-        />
-      </div>
-    </section>
+        <DeviceMenu kind="output" onSettings={open} big={big} />
+      </span>
+      <DockButton
+        big={big}
+        label={call.cameraOn ? t("voiceRooms.cameraOff") : t("voiceRooms.cameraOn")}
+        icon={call.cameraOn ? "camera" : "cameraOff"}
+        on={call.cameraOn}
+        disabled={!live}
+        onClick={() => void toggleCamera()}
+      />
+      <ScreenShareMenu
+        sharing={call.screenOn}
+        disabled={!live || !canShareScreen()}
+        trigger={({ label, disabled }) => (
+          <button
+            type="button"
+            className={cx("voice-btn", big && "voice-btn--big")}
+            data-on={call.screenOn || undefined}
+            aria-label={label}
+            title={label}
+            disabled={disabled}
+          >
+            <VoiceIcon name="screen" size={big ? 22 : 18} />
+          </button>
+        )}
+      />
+      <DockButton big={big} label={t("voiceRooms.settings.open")} icon="gear" onClick={open} />
+      <VoiceSettingsDialog open={settings} onClose={() => setSettings(false)} />
+    </div>
   );
 }
-
-const canShareScreen = () => typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia);
 
 function DockButton({
   label,
@@ -352,8 +402,21 @@ export function VoiceHeaderButton({
 }) {
   const { t } = useTranslation();
   const call = useVoiceCall();
-  const { enabled, byChannel } = useVoiceRooms(orgId);
+  const { enabled, byChannel, voiceChannels } = useVoiceRooms(orgId);
   if (!enabled) return null;
+  // A voice-only channel's chat: the way back to its room.
+  if (voiceChannels.has(channelId))
+    return (
+      <button
+        type="button"
+        className="ac-btn ac-btn--ghost ac-btn--icon channel__icon voice-head"
+        aria-label={t("voiceRooms.room.backToRoom")}
+        title={t("voiceRooms.room.backToRoom")}
+        onClick={() => showVoiceView(channelId, "room")}
+      >
+        <VoiceIcon name="room" />
+      </button>
+    );
   const here = call.channelId === channelId && call.status !== "idle";
   const count = byChannel.get(channelId)?.length ?? 0;
   const label = here ? t("voiceRooms.leave") : t("voiceRooms.join");
@@ -384,10 +447,13 @@ export function VoiceStage({
   orgId,
   channelId,
   channelName,
+  room,
 }: {
   orgId: string;
   channelId: string;
   channelName: string;
+  /** A voice-only channel's page: the stage fills it, no chat under it to grow over. */
+  room?: boolean;
 }) {
   const { t } = useTranslation();
   const call = useVoiceCall();
@@ -447,7 +513,7 @@ export function VoiceStage({
   return (
     <section
       ref={stage}
-      className="voice-stage"
+      className={cx("voice-stage", room && "voice-stage--room")}
       data-tall={tall || undefined}
       aria-label={t("voiceRooms.callIn", { name: channelName })}
     >
@@ -462,15 +528,17 @@ export function VoiceStage({
           )}
         </span>
         <span className="voice-stage__tools">
-          <button
-            type="button"
-            className="voice-stage__tool"
-            title={tall ? t("voiceRooms.showChat") : t("voiceRooms.expand")}
-            aria-label={tall ? t("voiceRooms.showChat") : t("voiceRooms.expand")}
-            onClick={() => setTall((v) => !v)}
-          >
-            <VoiceIcon name={tall ? "chat" : "expand"} size={16} />
-          </button>
+          {!room && (
+            <button
+              type="button"
+              className="voice-stage__tool"
+              title={tall ? t("voiceRooms.showChat") : t("voiceRooms.expand")}
+              aria-label={tall ? t("voiceRooms.showChat") : t("voiceRooms.expand")}
+              onClick={() => setTall((v) => !v)}
+            >
+              <VoiceIcon name={tall ? "chat" : "expand"} size={16} />
+            </button>
+          )}
           <button
             type="button"
             className="voice-stage__tool"
@@ -510,38 +578,7 @@ export function VoiceStage({
         </button>
       )}
       <div className="voice-stage__bar">
-        <DockButton
-          big
-          label={call.cameraOn ? t("voiceRooms.cameraOff") : t("voiceRooms.cameraOn")}
-          icon={call.cameraOn ? "camera" : "cameraOff"}
-          on={call.cameraOn}
-          disabled={!live}
-          onClick={() => void toggleCamera()}
-        />
-        <DockButton
-          big
-          label={call.screenOn ? t("voiceRooms.screenOff") : t("voiceRooms.screenOn")}
-          icon={call.screenOn ? "screenOff" : "screen"}
-          on={call.screenOn}
-          disabled={!live || !canShareScreen()}
-          onClick={() => void toggleScreen()}
-        />
-        <DockButton
-          big
-          label={call.micOn ? t("voiceRooms.mute") : t("voiceRooms.unmute")}
-          icon={call.micOn ? "mic" : "micOff"}
-          off={!call.micOn}
-          disabled={!live}
-          onClick={() => void toggleMic()}
-        />
-        <DockButton
-          big
-          label={call.deafened ? t("voiceRooms.undeafen") : t("voiceRooms.deafen")}
-          icon={call.deafened ? "headsetOff" : "headset"}
-          off={call.deafened}
-          disabled={!live}
-          onClick={() => void toggleDeafen()}
-        />
+        <CallControls live={live} big />
         <DockButton big danger label={t("voiceRooms.leave")} icon="leave" onClick={() => void leaveVoice()} />
       </div>
     </section>

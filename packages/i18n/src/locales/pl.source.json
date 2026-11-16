@@ -5951,6 +5951,228 @@
   "voiceRooms.errors.screen": {
     "value": "Couldn't share the screen."
   },
+  "voiceRooms.errors.device": {
+    "value": "Couldn't switch the device. Check that it is connected."
+  },
+  "voiceRooms.settings.title": {
+    "value": "Voice and video"
+  },
+  "voiceRooms.settings.open": {
+    "value": "Voice and video settings"
+  },
+  "voiceRooms.settings.input": {
+    "value": "Microphone"
+  },
+  "voiceRooms.settings.output": {
+    "value": "Sound output"
+  },
+  "voiceRooms.settings.camera": {
+    "value": "Camera"
+  },
+  "voiceRooms.settings.inputMenu": {
+    "value": "Microphone and volume"
+  },
+  "voiceRooms.settings.outputMenu": {
+    "value": "Sound output and volume"
+  },
+  "voiceRooms.settings.systemDefault": {
+    "value": "System default"
+  },
+  "voiceRooms.settings.unnamed": {
+    "value": "Device {{n}}"
+  },
+  "voiceRooms.settings.allowNames": {
+    "value": "Show device names"
+  },
+  "voiceRooms.settings.allowNamesHint": {
+    "value": "The browser shows the names of microphones, outputs and cameras only after you allow the microphone once."
+  },
+  "voiceRooms.settings.allow": {
+    "value": "Allow"
+  },
+  "voiceRooms.settings.outputUnsupported": {
+    "value": "This browser doesn't let you pick the output. Sound plays on the system default."
+  },
+  "voiceRooms.settings.inputVolume": {
+    "value": "Microphone volume"
+  },
+  "voiceRooms.settings.outputVolume": {
+    "value": "Voice volume"
+  },
+  "voiceRooms.settings.testSound": {
+    "value": "Test sound"
+  },
+  "voiceRooms.settings.testMic": {
+    "value": "Test microphone"
+  },
+  "voiceRooms.settings.stopTest": {
+    "value": "Stop test"
+  },
+  "voiceRooms.settings.hearMe": {
+    "value": "Hear myself"
+  },
+  "voiceRooms.settings.meterLabel": {
+    "value": "Microphone level"
+  },
+  "voiceRooms.settings.detect": {
+    "value": "Input mode"
+  },
+  "voiceRooms.settings.detectVoice": {
+    "value": "Voice activity"
+  },
+  "voiceRooms.settings.detectPtt": {
+    "value": "Push to talk"
+  },
+  "voiceRooms.settings.autoSensitivity": {
+    "value": "Automatic sensitivity"
+  },
+  "voiceRooms.settings.autoSensitivityHint": {
+    "value": "Follows the room's noise and opens the microphone only when your voice rises above it. Turn it off to set the point yourself."
+  },
+  "voiceRooms.settings.autoNote": {
+    "value": "The mark follows the room's noise. The bar turns green when the microphone opens."
+  },
+  "voiceRooms.settings.sensitivity": {
+    "value": "Sensitivity"
+  },
+  "voiceRooms.settings.sensitivityHint": {
+    "value": "Drag the mark. The microphone opens only when the bar passes it, so keep it a little below your voice and above the noise."
+  },
+  "voiceRooms.settings.pttKey": {
+    "value": "Push to talk key"
+  },
+  "voiceRooms.settings.pttPress": {
+    "value": "Press a key…"
+  },
+  "voiceRooms.settings.pttChange": {
+    "value": "Change the push to talk key"
+  },
+  "voiceRooms.settings.pttRelease": {
+    "value": "Release delay"
+  },
+  "voiceRooms.settings.pttHint": {
+    "value": "Hold the key to talk, with this tab in front. Letters don't count while you type in a text box."
+  },
+  "voiceRooms.settings.keySpace": {
+    "value": "Space"
+  },
+  "voiceRooms.settings.keyLeft": {
+    "value": "left"
+  },
+  "voiceRooms.settings.keyRight": {
+    "value": "right"
+  },
+  "voiceRooms.settings.noiseSuppression": {
+    "value": "Noise suppression"
+  },
+  "voiceRooms.settings.noiseSuppressionHint": {
+    "value": "Removes fans, typing and background noise before your voice is sent."
+  },
+  "voiceRooms.settings.echoCancellation": {
+    "value": "Echo cancellation"
+  },
+  "voiceRooms.settings.autoGainControl": {
+    "value": "Automatic gain"
+  },
+  "voiceRooms.settings.talking": {
+    "value": "Talking"
+  },
+  "voiceRooms.screen.default": {
+    "value": "Screen quality"
+  },
+  "voiceRooms.screen.quality": {
+    "value": "Quality"
+  },
+  "voiceRooms.screen.sharingTitle": {
+    "value": "Screen sharing"
+  },
+  "voiceRooms.screen.text": {
+    "value": "Sharp text"
+  },
+  "voiceRooms.screen.textHint": {
+    "value": "code and documents"
+  },
+  "voiceRooms.screen.balanced": {
+    "value": "Balanced"
+  },
+  "voiceRooms.screen.balancedHint": {
+    "value": "for almost anything"
+  },
+  "voiceRooms.screen.smooth": {
+    "value": "Smooth motion"
+  },
+  "voiceRooms.screen.smoothHint": {
+    "value": "videos and animation"
+  },
+  "voiceRooms.screen.weak": {
+    "value": "Weak connection"
+  },
+  "voiceRooms.screen.weakHint": {
+    "value": "barely uses bandwidth"
+  },
+  "voiceRooms.screen.custom": {
+    "value": "Custom"
+  },
+  "voiceRooms.screen.customHint": {
+    "value": "You pick the resolution and frames per second"
+  },
+  "voiceRooms.screen.resolution": {
+    "value": "Resolution"
+  },
+  "voiceRooms.screen.native": {
+    "value": "Original"
+  },
+  "voiceRooms.screen.fps": {
+    "value": "Frames per second"
+  },
+  "voiceRooms.screen.audio": {
+    "value": "Share sound"
+  },
+  "voiceRooms.screen.upload": {
+    "value": "Uses up to {{mbps}} Mbps of upload."
+  },
+  "voiceRooms.screen.start": {
+    "value": "Share"
+  },
+  "voiceRooms.screen.apply": {
+    "value": "Apply"
+  },
+  "voiceRooms.room.kind": {
+    "value": "Type"
+  },
+  "voiceRooms.room.kindText": {
+    "value": "Text"
+  },
+  "voiceRooms.room.kindVoice": {
+    "value": "Voice"
+  },
+  "voiceRooms.room.kindVoiceHint": {
+    "value": "A voice room: it opens on the call, shows who is in the room, online and offline, and the chat is one click away."
+  },
+  "voiceRooms.room.join": {
+    "value": "Join the room"
+  },
+  "voiceRooms.room.empty": {
+    "value": "Nobody in the room right now."
+  },
+  "voiceRooms.room.people": {
+    "value": "Channel people"
+  },
+  "voiceRooms.room.inRoom": {
+    "value": "In the room"
+  },
+  "voiceRooms.room.openChat": {
+    "value": "Chat"
+  },
+  "voiceRooms.room.backToRoom": {
+    "value": "Back to the voice room"
+  },
+  "voiceRooms.room.makeText": {
+    "value": "Turn into a text channel"
+  },
+  "voiceRooms.room.changeFailed": {
+    "value": "Couldn't change the channel's type."
+  },
   "channel.settingsNav.label": {
     "value": "Channel settings"
   },

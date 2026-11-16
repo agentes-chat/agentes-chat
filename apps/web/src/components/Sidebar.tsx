@@ -1500,6 +1500,8 @@ function SidebarChannels({
     // mention still shows.
     const unread = looksUnread(c);
     const mentions = c.mentionCount ?? 0;
+    // VPS Zen: a voice-only channel, Discord's: a speaker for its mark, and a click opens its room and joins it.
+    const voiceOnly = voice.voiceChannels.has(c.id);
     const link = (
       <Link
         key={c.id}
@@ -1522,10 +1524,19 @@ function SidebarChannels({
             })}
         onMouseEnter={() => onPrefetch(c.id)}
         onFocus={() => onPrefetch(c.id)}
-        onClick={() => markOpen(c.id)}
+        onClick={() => {
+          markOpen(c.id);
+          if (voiceOnly && c.isMember && !(call.channelId === c.id && call.status !== "idle"))
+            void joinVoice(orgId, c.id, c.name);
+        }}
+        data-voice-only={voiceOnly || undefined}
         {...channelMenu(c)}
       >
-        {facesOn && (c.faces?.length ?? 0) > 0 ? (
+        {voiceOnly ? (
+          <span className="sidebar__channel-icon sidebar__voice-icon" aria-hidden="true">
+            <VoiceIcon name="speaker" size={16} />
+          </span>
+        ) : facesOn && (c.faces?.length ?? 0) > 0 ? (
           <AvatarStack className="sidebar__channel-icon sidebar__faces" aria-hidden="true">
             {(c.faces ?? []).map((f) =>
               f.type === "agent" ? (
@@ -1545,7 +1556,7 @@ function SidebarChannels({
           {channelInitials(c.name)}
         </span>
         <span className="sidebar__item-label">{c.name}</span>
-        {(voice.byChannel.get(c.id)?.length ?? 0) > 0 && (
+        {!voiceOnly && (voice.byChannel.get(c.id)?.length ?? 0) > 0 && (
           <span className="sidebar__voice-mark" aria-hidden="true">
             <VoiceIcon name="speaker" size={14} />
           </span>
@@ -1560,7 +1571,7 @@ function SidebarChannels({
       </Link>
     );
     const voiceAct =
-      voice.enabled && c.isMember && !(call.channelId === c.id && call.status !== "idle") ? (
+      voice.enabled && c.isMember && !voiceOnly && !(call.channelId === c.id && call.status !== "idle") ? (
         <RowAction icon="volume" label={t("voiceRooms.join")} onClick={() => void joinVoice(orgId, c.id, c.name)} />
       ) : null;
     // On hover or focus, like Discord's invite and settings: who manages the channel adds members or opens its details.

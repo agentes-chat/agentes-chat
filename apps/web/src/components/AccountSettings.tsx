@@ -74,6 +74,7 @@ import {
 import { STORAGE_KEYS, sessionStore } from "@/lib/storage";
 import { type ThemePreference, useTheme } from "@/lib/theme";
 import { useToast } from "@/lib/toast";
+import { VoiceVideoSettings } from "@/voice/VoiceSettings";
 import { LanguageSelect } from "./LanguageSelect";
 
 /**
@@ -321,6 +322,8 @@ export function AccountSection() {
         </div>
         <AppIconDialog open={iconPicker} onClose={() => setIconPicker(false)} />
       </Card>
+      {/* VPS Zen: microphone, speakers, camera, voice detection and screen quality for calls. */}
+      <VoiceVideoSettings />
       <Card aria-labelledby="account-delete" className="settings-danger">
         <CardHeader
           id="account-delete"

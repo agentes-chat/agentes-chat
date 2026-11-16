@@ -429,7 +429,9 @@ import {
   useStreams,
   useTypingSender,
 } from "@/realtime/context";
-import { VoiceStage } from "@/voice/VoiceUI";
+import { VoiceChannelRoom } from "@/voice/VoiceRoom";
+import { useVoiceRooms, VoiceStage } from "@/voice/VoiceUI";
+import { useVoiceView } from "@/voice/views";
 import { ThreadPage } from "./ThreadPage";
 
 /** One clock for every "· 12 s" on screen: the block and the card above the box never differ by a second. */
@@ -682,20 +684,32 @@ export function ChannelPage({
     );
   }
   return (
-    // "Arquivos", "Ver plano", "Ver no arquivo": any mission card here opens the same files panel.
-    <MissionPanelProvider>
-      {/* A routine or a task an agent names here opens in its dialog over the conversation; leaving it closes it. */}
-      <InPlaceProvider key={`${channel.id}:${thread?.id ?? ""}:${adjustThreadId ?? ""}`}>
-        <ChannelView
-          channel={channel}
-          chrome={chrome}
-          focusMessageId={focusMessageId}
-          adjustThreadId={adjustThreadId}
-          thread={thread}
-        />
-      </InPlaceProvider>
-    </MissionPanelProvider>
+    <VoiceOnlyRoom channel={channel} plain={!chrome && !thread && !adjustThreadId && !focusMessageId}>
+      {/* "Arquivos", "Ver plano", "Ver no arquivo": any mission card here opens the same files panel. */}
+      <MissionPanelProvider>
+        {/* A routine or a task an agent names here opens in its dialog over the conversation; leaving it closes it. */}
+        <InPlaceProvider key={`${channel.id}:${thread?.id ?? ""}:${adjustThreadId ?? ""}`}>
+          <ChannelView
+            channel={channel}
+            chrome={chrome}
+            focusMessageId={focusMessageId}
+            adjustThreadId={adjustThreadId}
+            thread={thread}
+          />
+        </InPlaceProvider>
+      </MissionPanelProvider>
+    </VoiceOnlyRoom>
   );
+}
+
+/** VPS Zen: a voice-only channel opens on its room; "Chat" shows the conversation, as any channel's. */
+function VoiceOnlyRoom({ channel, plain, children }: { channel: Channel; plain: boolean; children: ReactNode }) {
+  const { org } = useOrg();
+  const { voiceChannels } = useVoiceRooms(org.id);
+  const view = useVoiceView(channel.id);
+  if (plain && channel.isMember && voiceChannels.has(channel.id) && view === "room")
+    return <VoiceChannelRoom channel={channel} />;
+  return <>{children}</>;
 }
 
 /**

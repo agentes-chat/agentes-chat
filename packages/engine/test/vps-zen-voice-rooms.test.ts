@@ -1,10 +1,14 @@
 // VPS Zen: voice channels on LiveKit (`voice-rooms.ts`): tokens, and who is in each room of the channels a person sees.
 import { afterEach, describe, expect, test } from "bun:test";
 import { createHmac } from "node:crypto";
+import { archiveChannel, createChannel } from "../src/channels";
+import { ForbiddenError, NotFoundError } from "../src/errors";
 import {
   forgetVoiceRooms,
   listVoiceRooms,
   participantOf,
+  setVoiceChannel,
+  voiceChannelIds,
   voiceJoinToken,
   voiceRoomName,
   voiceRoomsConfig,
@@ -108,5 +112,27 @@ describe("voice rooms", () => {
     expect(calls.length).toBe(before);
     // Bia isn't a member of #general here: she sees nothing.
     expect(await listVoiceRooms(db, lk, { orgId: org.id, userId: other.id }, send)).toEqual([]);
+  });
+
+  test("a voice-only channel: made by who manages it, listed per workspace, undone, gone when archived", async () => {
+    f = await setup();
+    const { db, org, owner } = f;
+    const bia = await addMember(db, org.id, "member", "Bia");
+    const sala = await createChannel(db, owner.id, org.id, { name: "sala" });
+    expect(await voiceChannelIds(db, org.id)).toEqual([]);
+    expect(await setVoiceChannel(db, owner.id, org.id, sala.id, true)).toEqual({ channelId: sala.id, voiceOnly: true });
+    // Twice is the same.
+    await setVoiceChannel(db, owner.id, org.id, sala.id, true);
+    expect(await voiceChannelIds(db, org.id)).toEqual([sala.id]);
+    // Only its creator or an admin changes it.
+    await expect(setVoiceChannel(db, bia.id, org.id, sala.id, false)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(
+      setVoiceChannel(db, owner.id, org.id, "0193eeee-0000-4000-8000-000000000099", true),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    await setVoiceChannel(db, owner.id, org.id, sala.id, false);
+    expect(await voiceChannelIds(db, org.id)).toEqual([]);
+    await setVoiceChannel(db, owner.id, org.id, sala.id, true);
+    await archiveChannel(db, owner.id, org.id, sala.id);
+    await expect(setVoiceChannel(db, owner.id, org.id, sala.id, false)).rejects.toBeInstanceOf(NotFoundError);
   });
 });

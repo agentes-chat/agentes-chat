@@ -33,7 +33,12 @@ test("without LiveKit, voice is off: no rooms and no token", async () => {
   const { owner, orgId, channelId } = await start();
   const rooms = await owner(`/api/app/organizations/${orgId}/voice-rooms`);
   expect(rooms.status).toBe(200);
-  expect(await rooms.json()).toEqual({ enabled: false, rooms: [] });
+  expect(await rooms.json()).toEqual({ enabled: false, rooms: [], voiceChannels: [] });
+  const only = await owner(`/api/app/organizations/${orgId}/channels/${channelId}/voice-only`, {
+    method: "PUT",
+    json: { on: true },
+  });
+  expect(only.status).toBe(404);
   const join = await owner(`/api/app/organizations/${orgId}/channels/${channelId}/voice-token`, { json: {} });
   expect(join.status).toBe(404);
   expect(((await join.json()) as { error: { code: string } }).error.code).toBe("voice.off");
@@ -55,4 +60,27 @@ test("a member gets a token for that channel's room; someone outside the workspa
   const denied = await stranger(`/api/app/organizations/${orgId}/channels/${channelId}/voice-token`, { json: {} });
   expect([403, 404]).toContain(denied.status);
   expect((await stranger(`/api/app/organizations/${orgId}/voice-rooms`)).status).toBeGreaterThanOrEqual(403);
+});
+
+test("a channel made voice-only is listed for the workspace, and back to text; not by someone outside", async () => {
+  const { owner, stranger, orgId } = await start(LK);
+  const made = await owner(`/api/app/organizations/${orgId}/channels`, { json: { name: "sala" } });
+  expect(made.status).toBeLessThan(300);
+  const sala = (await made.json()) as { channel?: { id: string }; id?: string };
+  const id = (sala.channel?.id ?? sala.id) as string;
+  const put = (who: typeof owner, on: boolean) =>
+    who(`/api/app/organizations/${orgId}/channels/${id}/voice-only`, { method: "PUT", json: { on } });
+  const on = await put(owner, true);
+  expect(on.status).toBe(200);
+  expect(await on.json()).toEqual({ channelId: id, voiceOnly: true });
+  const list = (await (await owner(`/api/app/organizations/${orgId}/voice-rooms`)).json()) as {
+    voiceChannels: string[];
+  };
+  expect(list.voiceChannels).toEqual([id]);
+  expect((await put(stranger, false)).status).toBeGreaterThanOrEqual(403);
+  expect((await put(owner, false)).status).toBe(200);
+  const after = (await (await owner(`/api/app/organizations/${orgId}/voice-rooms`)).json()) as {
+    voiceChannels: string[];
+  };
+  expect(after.voiceChannels).toEqual([]);
 });
