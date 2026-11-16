@@ -29,6 +29,7 @@ import { RemoveMemberProvider } from "@/components/RemoveMember";
 import { Sidebar } from "@/components/Sidebar";
 import { BootSplash } from "@/components/Sky";
 import { DeletingBanner, HoldBanner, SuspendedScreen } from "@/components/Standing";
+import { TabBar } from "@/components/TabBar";
 import { useWebPushClear, useWebPushRefresh } from "@/components/WebPush";
 import { ComputerSetupNotice } from "@/components/WorkspaceComputer";
 import { HeaderSearchProvider } from "@/hooks/useWorkspaceSearch";
@@ -162,6 +163,7 @@ function OrgLayout() {
                             </ComputerDialogProvider>
                           </div>
                         </div>
+                        {!focused && <TabBar />}
                       </div>
                     </NewAgentProvider>
                   </ConnectAiProvider>

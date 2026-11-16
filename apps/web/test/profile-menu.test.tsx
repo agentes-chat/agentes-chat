@@ -303,7 +303,7 @@ describe("the account menu", () => {
   test("on a phone, with no room beside it, how I appear is in the menu itself", async () => {
     onPhone();
     await go();
-    await click(screen().getAllByRole("button", { name: "Abrir menu" })[0] as HTMLElement);
+    await click(screen().getByRole("button", { name: "Conversas" }));
     const menu = await openMenu();
     expect(within(menu).queryByRole("menuitem", { name: "Definir status" })).toBeNull();
     expect(names(within(menu).getAllByRole("menuitemradio"))).toEqual([

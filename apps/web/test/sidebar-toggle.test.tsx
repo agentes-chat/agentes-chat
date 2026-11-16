@@ -128,7 +128,7 @@ describe("the sidebar's toggle stays in one place at every width", () => {
     media?.mockRestore();
     widthIs(COMPACT_QUERY);
     await open();
-    await click(screen().getAllByRole("button", { name: "Abrir menu" })[0] as HTMLElement);
+    await click(screen().getByRole("button", { name: "Conversas" }));
     expect(nav().dataset.open).toBe("true");
     expect(place()).toEqual(expanded);
     await click(toggle());

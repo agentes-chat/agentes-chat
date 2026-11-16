@@ -3,15 +3,16 @@
  * same numbers in @agenteschat/ui components.css and in COMPACT_QUERY
  * (components/NavDrawer.tsx):
  *   phone   ≤ 640px    single columns, dialogs are bottom sheets
- *   compact ≤ 760px    the sidebar is a drawer behind a menu button; side panels go full screen
- *   tablet  761–1199px the sidebar is an icon rail (layout.css `data-rail`; on desktop, when collapsed)
+ *   compact ≤ 760px    tabs at the bottom (TabBar.tsx); the sidebar is a sheet behind Conversas; side panels go full screen
+ *   tablet  761–1199px the sidebar is an icon rail, its toggle opens it over the page (layout.css `data-rail`,
+ *                      `data-float`; on desktop, when collapsed)
  *   desktop ≥ 1200px
  * Touch is about the pointer, not the width: `(pointer: coarse)` grows hit
  * areas to 40px. Nothing scrolls the page sideways: wide things (tables, the
  * issue board, code) scroll inside their own box.
  */
 
-/* ── Shell: bar + page; the sidebar slides in over it ── */
+/* ── Shell: bar + page + tabs; the sidebar rises over them as a sheet ── */
 @media (max-width: 760px) {
   .shell {
     flex-direction: column;
@@ -53,7 +54,7 @@
     padding-top: env(safe-area-inset-top, 0px);
   }
 
-  /* Menu, the workspace, search. Chat pages put the menu in their own header instead. */
+  /* The workspace's name. Chat pages have their own header on top instead. */
   .shell__bar {
     display: flex;
     flex: none;
@@ -83,39 +84,55 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .nav-toggle {
-    flex: none;
-  }
 
-  /* The drawer: same sidebar, off-canvas. Hidden (and out of the tab order) while closed.
-     It floats 8px off the edges with round corners: in a phone's browser the strip
-     above the page (clock, battery) takes one colour across its whole width, the
-     scrim's, so a drawer flush with the top looked cut under it. Floating, that
-     strip reads as part of the dimmed page around the drawer. */
+  /* The sheet: same sidebar, below the screen while closed (hidden, out of the tab order). It rises from the
+     bottom, where Conversas sits, and goes back down the same way, by the tab, the scrim, Esc or a pull down
+     (NavDrawer.tsx follows the finger and leaves the rest to this transition). It floats 8px off the edges with round
+     corners and stops short of the top, so the dimmed page shows above it, as an iOS sheet does. The curve is the iOS
+     sheet's: steep at first, a soft landing. No browser panning on it but in its list: a pull down is the sheet's. */
   .shell .sidebar {
     position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 8px);
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
-    left: calc(env(safe-area-inset-left, 0px) + 8px);
+    top: auto;
+    right: calc(env(safe-area-inset-right, 0px) + var(--space-2));
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--space-2));
+    left: calc(env(safe-area-inset-left, 0px) + var(--space-2));
     z-index: var(--z-scrim);
     flex: none;
-    width: min(304px, calc(100vw - 56px));
+    width: auto;
     min-width: 0;
-    height: auto;
-    padding: 14px 12px;
+    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 56px);
+    padding: var(--space-2) var(--space-3) 14px;
     border-radius: var(--radius-section);
     box-shadow: var(--e3);
     overscroll-behavior: contain;
-    transform: translateX(calc(-100% - 8px - env(safe-area-inset-left, 0px)));
+    touch-action: none;
+    transform: translateY(calc(100% + var(--space-2) + env(safe-area-inset-bottom, 0px)));
     visibility: hidden;
     transition:
-      transform 0.24s var(--out),
-      visibility 0s linear 0.24s;
+      transform 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+      visibility 0s linear 0.5s;
+  }
+  .shell .sidebar .sidebar__scroll {
+    touch-action: pan-y;
+  }
+  /* The grabber: says the sheet comes down. */
+  .shell .sidebar::before {
+    content: "";
+    flex: none;
+    align-self: center;
+    width: 36px;
+    height: 5px;
+    margin-bottom: var(--space-1);
+    border-radius: 3px;
+    background: var(--line2);
   }
   .shell .sidebar[data-open="true"] {
     transform: none;
     visibility: visible;
-    transition: transform 0.24s var(--out);
+    transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .shell .sidebar[data-dragging] {
+    transition: none;
   }
   .shell__scrim {
     display: block;
@@ -131,9 +148,96 @@
 .sidebar:focus {
   outline: none;
 }
-@media (min-width: 761px) {
-  .nav-toggle {
-    display: none;
+
+/* ── The phone's tabs (TabBar.tsx): one glass capsule under the page and its composer, as iOS 26 draws its tab bar.
+   Each tab its icon over its name, the current one on a plate. The capsule keeps clear of the home bar itself, so the
+   composer above it loses that room. ── */
+.tabbar {
+  display: none;
+}
+@media (max-width: 760px) {
+  .tabbar {
+    display: block;
+    flex: none;
+    padding: var(--space-1) var(--space-2) max(var(--space-2), env(safe-area-inset-bottom, 0px));
+    background: var(--pane);
+  }
+  .tabbar__list {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    gap: var(--space-1);
+    max-width: 440px;
+    margin: 0 auto;
+    padding: var(--space-1);
+    list-style: none;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    box-shadow: var(--e2);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    backdrop-filter: blur(20px) saturate(1.5);
+  }
+  .tabbar__tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    width: 100%;
+    height: 52px;
+    padding: 0 2px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color var(--dur-base) var(--out),
+      color var(--dur-base) var(--out),
+      scale var(--dur-base) var(--out);
+  }
+  .tabbar__tab[data-status="active"] {
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+    color: var(--ink);
+  }
+  .tabbar__tab:active {
+    scale: 0.95;
+  }
+  .tabbar__tab:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring-inset);
+  }
+  .tabbar__icon {
+    position: relative;
+    display: flex;
+  }
+  .tabbar__badge {
+    position: absolute;
+    top: -6px;
+    left: calc(100% - 8px);
+  }
+  .tabbar__label {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  /* The tabs keep the home bar's room: the page and the composer above them don't. */
+  .shell:has(> .tabbar) .shell__main {
+    padding-bottom: 0;
+  }
+  .shell:has(> .tabbar) .channel__composer {
+    padding-bottom: var(--space-2);
+  }
+}
+@media (hover: hover) and (pointer: fine) and (max-width: 760px) {
+  .tabbar__tab:not([data-status="active"]):hover {
+    color: var(--ink);
   }
 }
 @media (max-width: 760px) and (prefers-reduced-motion: no-preference) {
@@ -143,8 +247,12 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .shell .sidebar,
-  .shell .sidebar[data-open="true"] {
+  .shell .sidebar[data-open="true"],
+  .tabbar__tab {
     transition: none;
+  }
+  .tabbar__tab:active {
+    scale: none;
   }
 }
 

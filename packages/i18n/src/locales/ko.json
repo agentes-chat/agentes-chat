@@ -2050,7 +2050,11 @@
     "unreadMark": "읽지 않음",
     "unreadMentions_other": "나를 언급한 메시지 {{count}}개",
     "unreadThreads_other": "스레드: 읽지 않은 답글이 있는 스레드 {{count}}개",
-    "unreadNotifications_other": "읽지 않은 알림 {{count}}개"
+    "unreadNotifications_other": "읽지 않은 알림 {{count}}개",
+    "tabs": "기본 탭",
+    "tabChats": "채팅",
+    "tabActivity": "활동",
+    "tabSearch": "검색"
   },
   "agentGroups": {
     "group": "부서",
@@ -9931,10 +9935,10 @@
       "copies_other": "에이전트가 없는 이 계정의 로그인이 {{count}}개 더 있어요.",
       "removeCopies": "삭제",
       "copiesRemoved_other": "쓰지 않는 로그인 {{count}}개를 삭제했어요.",
-      "removeAllDone": "Grok 로그인 {{n}}개를 제거했습니다.",
-      "removeAllText": "{{computers}}에서 각자의 에이전트를 위해 생각하지 않게 됩니다. 다른 사람의 로그인은 그대로 둡니다.",
-      "removeAllTitle": "Grok 로그인 {{n}}개를 모두 제거할까요?",
       "removeAllGrok": "Grok 로그인 모두 제거",
+      "removeAllTitle": "Grok 로그인 {{n}}개를 모두 제거할까요?",
+      "removeAllText": "{{computers}}에서 각자의 에이전트를 위해 생각하지 않게 됩니다. 다른 사람의 로그인은 그대로 둡니다.",
+      "removeAllDone": "Grok 로그인 {{n}}개를 제거했습니다.",
       "disconnect": "연결 해제",
       "renameTitle": "{{label}} 이름 바꾸기",
       "nameLabel": "이름",

@@ -2108,7 +2108,11 @@
     "unreadThreads_one": "Threads: {{count}} mit ungelesenen Antworten",
     "unreadThreads_other": "Threads: {{count}} mit ungelesenen Antworten",
     "unreadNotifications_one": "{{count}} ungelesene Benachrichtigung",
-    "unreadNotifications_other": "{{count}} ungelesene Benachrichtigungen"
+    "unreadNotifications_other": "{{count}} ungelesene Benachrichtigungen",
+    "tabs": "Hauptregisterkarten",
+    "tabChats": "Chats",
+    "tabActivity": "Aktivität",
+    "tabSearch": "Suchen"
   },
   "agentGroups": {
     "group": "Abteilung",
@@ -10348,10 +10352,10 @@
       "removeCopies": "Entfernen",
       "copiesRemoved_one": "{{count}} ungenutzte Anmeldung entfernt.",
       "copiesRemoved_other": "{{count}} ungenutzte Anmeldungen entfernt.",
-      "removeAllDone": "{{n}} Grok-Anmeldungen entfernt.",
-      "removeAllText": "Sie denken dann für ihre Agenten auf {{computers}} nicht mehr mit. Anmeldungen anderer Personen bleiben unangetastet.",
-      "removeAllTitle": "Alle {{n}} Grok-Anmeldungen entfernen?",
       "removeAllGrok": "Alle Grok-Anmeldungen entfernen",
+      "removeAllTitle": "Alle {{n}} Grok-Anmeldungen entfernen?",
+      "removeAllText": "Sie denken dann für ihre Agenten auf {{computers}} nicht mehr mit. Anmeldungen anderer Personen bleiben unangetastet.",
+      "removeAllDone": "{{n}} Grok-Anmeldungen entfernt.",
       "disconnect": "Trennen",
       "renameTitle": "{{label}} umbenennen",
       "nameLabel": "Name",

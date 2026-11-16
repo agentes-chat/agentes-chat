@@ -2108,7 +2108,11 @@
     "unreadThreads_one": "Threads: {{count}} met ongelezen antwoorden",
     "unreadThreads_other": "Threads: {{count}} met ongelezen antwoorden",
     "unreadNotifications_one": "{{count}} ongelezen melding",
-    "unreadNotifications_other": "{{count}} ongelezen meldingen"
+    "unreadNotifications_other": "{{count}} ongelezen meldingen",
+    "tabs": "Hoofdtabbladen",
+    "tabChats": "Chats",
+    "tabActivity": "Activiteit",
+    "tabSearch": "Zoeken"
   },
   "agentGroups": {
     "group": "Afdeling",
@@ -10401,10 +10405,10 @@
       "removeCopies": "Verwijderen",
       "copiesRemoved_one": "{{count}} ongebruikte login verwijderd.",
       "copiesRemoved_other": "{{count}} ongebruikte logins verwijderd.",
-      "removeAllDone": "{{n}} Grok-aanmeldingen verwijderd.",
-      "removeAllText": "Ze denken niet meer voor hun agenten op {{computers}}. Aanmeldingen van anderen blijven staan.",
-      "removeAllTitle": "Alle {{n}} Grok-aanmeldingen verwijderen?",
       "removeAllGrok": "Alle Grok-aanmeldingen verwijderen",
+      "removeAllTitle": "Alle {{n}} Grok-aanmeldingen verwijderen?",
+      "removeAllText": "Ze denken niet meer voor hun agenten op {{computers}}. Aanmeldingen van anderen blijven staan.",
+      "removeAllDone": "{{n}} Grok-aanmeldingen verwijderd.",
       "disconnect": "Ontkoppelen",
       "renameTitle": "{{label}} hernoemen",
       "nameLabel": "Naam",

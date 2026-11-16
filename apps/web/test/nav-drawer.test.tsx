@@ -44,20 +44,32 @@ const go = async (path: string) => {
   return r;
 };
 const nav = () => screen().getByRole("navigation", { name: "Navegação do workspace" });
-const menuButton = () => screen().getAllByRole("button", { name: "Abrir menu" })[0] as HTMLElement;
+const tabs = () => screen().getByRole("navigation", { name: "Abas principais" });
+const menuButton = () => within(tabs()).getByRole("button", { name: "Conversas" });
 
-describe("the sidebar on a phone (drawer)", () => {
-  test("wide screens have no menu button: the sidebar is always there", async () => {
+describe("the sidebar on a phone (a sheet behind the Conversas tab)", () => {
+  test("wide screens have no tabs: the sidebar is always there", async () => {
     await go(`c/${GENERAL_ID}`);
-    expect(screen().queryByRole("button", { name: "Abrir menu" })).toBeNull();
+    expect(screen().queryByRole("navigation", { name: "Abas principais" })).toBeNull();
     expect(nav().getAttribute("data-open")).toBe("false");
   });
 
-  test("the menu button in the channel header opens it; Esc closes it and focus goes back", async () => {
+  test("the tabs are Início, Conversas, Threads, Atividade and Buscar, Conversas the current one in a channel", async () => {
     onPhone();
     await go(`c/${GENERAL_ID}`);
-    const header = document.querySelector(".channel__header") as HTMLElement;
-    const button = within(header).getByRole("button", { name: "Abrir menu" });
+    const names = within(tabs())
+      .getAllByRole("listitem")
+      .map((li) => li.textContent);
+    expect(names).toEqual(["Início", "Conversas", "Threads", "Atividade", "Buscar"]);
+    expect(menuButton().getAttribute("data-status")).toBe("active");
+    // The hamburger is gone from the header: the tab bar opens the sheet.
+    expect(screen().queryByRole("button", { name: "Abrir menu" })).toBeNull();
+  });
+
+  test("Conversas opens it; Esc closes it and focus goes back", async () => {
+    onPhone();
+    await go(`c/${GENERAL_ID}`);
+    const button = menuButton();
     expect(button.getAttribute("aria-controls")).toBe(nav().id);
     expect(button.getAttribute("aria-expanded")).toBe("false");
 
@@ -89,7 +101,37 @@ describe("the sidebar on a phone (drawer)", () => {
     expect(document.querySelector(".shell__scrim")).toBeNull();
   });
 
-  test("following a link closes it, and the new page has the menu in its top bar", async () => {
+  test("a pull down follows the finger, then closes it", async () => {
+    // How far or fast is enough needs a laid-out sheet and real event times, which this DOM has neither of.
+    onPhone();
+    await go(`c/${GENERAL_ID}`);
+    await click(menuButton());
+    await act(async () => {
+      const el = nav();
+      fireEvent.touchStart(el, { touches: [{ clientX: 100, clientY: 10 }] });
+      fireEvent.touchMove(el, { touches: [{ clientX: 100, clientY: 130 }] });
+      expect(el.style.transform).toBe("translateY(120px)");
+      fireEvent.touchEnd(el, { changedTouches: [{ clientX: 100, clientY: 130 }] });
+      // Released: back to the stylesheet's transition, from where the finger left it.
+      expect(el.style.transform).toBe("");
+    });
+    expect(nav().getAttribute("data-open")).toBe("false");
+  });
+
+  test("a sideways swipe is not a pull", async () => {
+    onPhone();
+    await go(`c/${GENERAL_ID}`);
+    await click(menuButton());
+    await act(async () => {
+      const el = nav();
+      fireEvent.touchStart(el, { touches: [{ clientX: 100, clientY: 10 }] });
+      fireEvent.touchMove(el, { touches: [{ clientX: 220, clientY: 30 }] });
+      fireEvent.touchEnd(el, { changedTouches: [{ clientX: 220, clientY: 30 }] });
+    });
+    expect(nav().getAttribute("data-open")).toBe("true");
+  });
+
+  test("following a link closes it, and the new page has the workspace in its top bar", async () => {
     onPhone();
     const { router } = await go(`c/${GENERAL_ID}`);
     await click(menuButton());
@@ -98,10 +140,10 @@ describe("the sidebar on a phone (drawer)", () => {
     await settle(6);
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/drive`);
     expect(nav().getAttribute("data-open")).toBe("false");
-    // Not a chat page: the shell's bar carries the menu, the workspace and search.
+    // Not a chat page: the shell's bar carries the workspace; the tabs stay at the bottom.
     const bar = document.querySelector(".shell__bar") as HTMLElement;
-    expect(within(bar).getByRole("button", { name: "Abrir menu" })).toBeTruthy();
     expect(bar.textContent).toContain("Acme");
+    expect(menuButton().getAttribute("data-status")).toBeNull();
   });
 
   test("a link to the page already open closes it too", async () => {

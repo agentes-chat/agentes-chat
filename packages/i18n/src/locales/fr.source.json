@@ -5240,6 +5240,18 @@
       "other": "{{count}} unread notifications"
     }
   },
+  "shell.tabs": {
+    "value": "Main tabs"
+  },
+  "shell.tabChats": {
+    "value": "Chats"
+  },
+  "shell.tabActivity": {
+    "value": "Activity"
+  },
+  "shell.tabSearch": {
+    "value": "Search"
+  },
   "agentGroups.group": {
     "value": "Department"
   },

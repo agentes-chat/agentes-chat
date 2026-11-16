@@ -1,5 +1,5 @@
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
-import { Button, OPEN_LAYER } from "@agenteschat/ui";
+import { OPEN_LAYER } from "@agenteschat/ui";
 import { useRouterState } from "@tanstack/react-router";
 import {
   createContext,
@@ -14,14 +14,13 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { openPalette } from "./CommandMenu";
 import { useOrg } from "./org-context";
 import { MyFace, OrgMark } from "./ProfilePhoto";
 
 /**
  * Breakpoints (layout.css keeps the same numbers):
- * phone ≤ 640px · compact ≤ 760px (sidebar = drawer, panels = full-screen sheets)
- * · tablet 761–1199px (sidebar = icon rail) · desktop ≥ 1200px.
+ * phone ≤ 640px · compact ≤ 760px (tabs at the bottom, the sidebar a sheet behind Conversas, panels full-screen sheets)
+ * · tablet 761–1199px (sidebar = icon rail, its toggle opens it over the page) · desktop ≥ 1200px.
  */
 export const PHONE_QUERY = "(max-width: 640px)";
 export const COMPACT_QUERY = "(max-width: 760px)";
@@ -55,13 +54,14 @@ interface NavDrawer {
   /** `restoreFocus`: back to the button that opened it (Esc, the scrim), not after navigating. */
   close: (options?: { restoreFocus?: boolean }) => void;
   toggle: () => void;
-  /** Handlers for the sidebar: a link closes it; swiping left closes it. */
+  /** Handlers for the sidebar: a link closes it; dragging it down closes it. */
   navProps: {
     id: string;
     "data-open": boolean;
     tabIndex: -1;
     onClick: (e: { target: EventTarget }) => void;
     onTouchStart: (e: TouchEvent) => void;
+    onTouchMove: (e: TouchEvent) => void;
     onTouchEnd: (e: TouchEvent) => void;
   };
 }
@@ -71,19 +71,23 @@ const NavDrawerContext = createContext<NavDrawer | null>(null);
 /** The drawer state, or null outside the workspace shell. */
 export const useNavDrawer = () => useContext(NavDrawerContext);
 
-/** Swipes shorter than this (px) don't close the drawer. */
-const SWIPE = 48;
+/** A drag past this share of the sheet's height, or a flick faster than this (px/ms), closes it. */
+const CLOSE_SHARE = 0.3;
+const CLOSE_SPEED = 0.5;
 
 /**
- * The workspace navigation on narrow screens: the sidebar slides in over the
- * page. Closes on Esc, on the scrim, on a swipe to the left and whenever the
- * page changes; the page behind is inert while it's open.
+ * The workspace navigation on narrow screens: the sidebar rises over the page
+ * as a sheet (the Conversas tab, TabBar.tsx). Closes on Esc, on the scrim, when
+ * dragged down and whenever the page changes; the page behind is inert while
+ * it's open. The drag follows the finger itself (no transition), the scrim fading
+ * with it, and on release the sheet goes on from where the finger left it.
  */
 export function NavDrawerProvider({ children }: { children: ReactNode }) {
   const compact = useMediaQuery(COMPACT_QUERY);
   const [open, setOpen] = useState(false);
   const opener = useRef<HTMLElement | null>(null);
-  const touch = useRef<{ x: number; y: number } | null>(null);
+  // The drag: where it started, how far it is and how fast it last moved. `on` once it reads as a pull down.
+  const drag = useRef<{ x: number; y: number; t: number; dy: number; v: number; on: boolean } | null>(null);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // Where focus goes once the page behind is reachable again.
@@ -165,40 +169,54 @@ export function NavDrawerProvider({ children }: { children: ReactNode }) {
         },
         onTouchStart: (e) => {
           const t = e.touches[0];
-          touch.current = t ? { x: t.clientX, y: t.clientY } : null;
+          // Inside the list only from its top: further down, a pull down scrolls it.
+          const list = e.target instanceof Element ? e.target.closest(".sidebar__scroll") : null;
+          drag.current =
+            open && t && !(list && list.scrollTop > 0)
+              ? { x: t.clientX, y: t.clientY, t: e.timeStamp, dy: 0, v: 0, on: false }
+              : null;
+        },
+        onTouchMove: (e) => {
+          const d = drag.current;
+          const t = e.touches[0];
+          if (!d || !t) return;
+          const dy = t.clientY - d.y;
+          if (!d.on) {
+            if (Math.abs(dy) < 6 && Math.abs(t.clientX - d.x) < 6) return;
+            // Sideways or up first: not ours (a row's own drag, a scroll).
+            if (dy <= 0 || Math.abs(t.clientX - d.x) > dy) {
+              drag.current = null;
+              return;
+            }
+            d.on = true;
+          }
+          const sheet = e.currentTarget as HTMLElement;
+          d.v = (dy - d.dy) / Math.max(1, e.timeStamp - d.t);
+          d.t = e.timeStamp;
+          d.dy = dy;
+          // Above where it opened it gives a fifth of the pull, so its top edge reads as an edge.
+          sheet.dataset.dragging = "";
+          sheet.style.transform = `translateY(${dy < 0 ? dy * 0.2 : dy}px)`;
+          const scrim = document.querySelector<HTMLElement>(".shell__scrim");
+          if (scrim) scrim.style.opacity = String(Math.max(0, 1 - dy / sheet.offsetHeight));
         },
         onTouchEnd: (e) => {
-          const start = touch.current;
-          const t = e.changedTouches[0];
-          touch.current = null;
-          if (!open || !start || !t) return;
-          const dx = t.clientX - start.x;
-          if (dx < -SWIPE && Math.abs(dx) > Math.abs(t.clientY - start.y)) close();
+          const d = drag.current;
+          drag.current = null;
+          if (!d?.on) return;
+          const sheet = e.currentTarget as HTMLElement;
+          // Back to the stylesheet: its transition takes the sheet on (or back) from where the finger left it.
+          delete sheet.dataset.dragging;
+          sheet.style.transform = "";
+          const scrim = document.querySelector<HTMLElement>(".shell__scrim");
+          if (scrim) scrim.style.opacity = "";
+          if (d.dy > sheet.offsetHeight * CLOSE_SHARE || d.v > CLOSE_SPEED) close();
         },
       },
     }),
     [compact, open, show, close, toggle],
   );
   return <NavDrawerContext.Provider value={value}>{children}</NavDrawerContext.Provider>;
-}
-
-/** "Abrir menu": only on narrow screens (the sidebar is always there otherwise). */
-export function NavToggle({ className }: { className?: string }) {
-  const { t } = useTranslation();
-  const drawer = useNavDrawer();
-  if (!drawer?.compact) return null;
-  return (
-    <Button
-      variant="ghost"
-      iconOnly
-      icon="menu"
-      className={className ? `nav-toggle ${className}` : "nav-toggle"}
-      aria-label={t("shell.openNav")}
-      aria-controls={NAV_ID}
-      aria-expanded={drawer.open}
-      onClick={drawer.toggle}
-    />
-  );
 }
 
 /** Behind the open drawer: dims the page; a tap closes the drawer. */
@@ -218,23 +236,20 @@ export function NavScrim() {
 }
 
 /**
- * The top bar on narrow screens: menu, workspace, search. Chat pages hide it
- * (their header carries the menu button instead; see layout.css). A personal
- * workspace shows the person, as its sidebar does on top (ADR 0159).
+ * The top bar on narrow screens: the workspace's name (the tabs at the bottom carry the rest, TabBar.tsx). Chat pages
+ * hide it (their header is the top there; see responsive.css). A personal workspace shows the person, as its sidebar
+ * does on top (ADR 0159).
  */
 export function ShellBar() {
-  const { t } = useTranslation();
   const { org, me } = useOrg();
   const drawer = useNavDrawer();
   if (!drawer?.compact) return null;
   return (
     <header className="shell__bar">
-      <NavToggle />
       <span className="shell__bar-org">
         {isPersonal(org) ? <MyFace size="sm" /> : <OrgMark logo={org.logo} size={22} />}
         <span className="shell__bar-name">{isPersonal(org) ? me.user.name : org.name}</span>
       </span>
-      <Button variant="ghost" iconOnly icon="search" aria-label={t("palette.jump")} onClick={openPalette} />
     </header>
   );
 }

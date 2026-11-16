@@ -2050,7 +2050,11 @@
     "unreadMark": "未読",
     "unreadMentions_other": "あなたへのメンション {{count}} 件",
     "unreadThreads_other": "スレッド: 未読の返信あり {{count}} 件",
-    "unreadNotifications_other": "{{count}}件の未読の通知"
+    "unreadNotifications_other": "{{count}}件の未読の通知",
+    "tabs": "メインタブ",
+    "tabChats": "チャット",
+    "tabActivity": "アクティビティ",
+    "tabSearch": "検索"
   },
   "agentGroups": {
     "group": "部署",
@@ -9937,10 +9941,10 @@
       "copies_other": "エージェントのいない、このアカウントのログインがあと{{count}}件あります。",
       "removeCopies": "削除",
       "copiesRemoved_other": "使われていないログインを{{count}}件削除しました。",
-      "removeAllDone": "Grok のログインを {{n}} 件削除しました。",
-      "removeAllText": "{{computers}} でそれぞれのエージェントのために考えなくなります。他の人のログインはそのまま残ります。",
-      "removeAllTitle": "Grok のログイン {{n}} 件をすべて削除しますか？",
       "removeAllGrok": "Grok のログインをすべて削除",
+      "removeAllTitle": "Grok のログイン {{n}} 件をすべて削除しますか？",
+      "removeAllText": "{{computers}} でそれぞれのエージェントのために考えなくなります。他の人のログインはそのまま残ります。",
+      "removeAllDone": "Grok のログインを {{n}} 件削除しました。",
       "disconnect": "接続を解除",
       "renameTitle": "{{label}}の名前を変更",
       "nameLabel": "名前",

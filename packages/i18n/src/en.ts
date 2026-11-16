@@ -2258,6 +2258,11 @@ export const en = {
     unreadThreads_other: "Threads: {{count}} with unread replies",
     unreadNotifications_one: "{{count}} unread notification",
     unreadNotifications_other: "{{count}} unread notifications",
+    /** The phone's tabs at the bottom (TabBar.tsx): the bar's name, then the tabs with no name of their own here. */
+    tabs: "Main tabs",
+    tabChats: "Chats",
+    tabActivity: "Activity",
+    tabSearch: "Search",
   },
   agentGroups: {
     group: "Department",
