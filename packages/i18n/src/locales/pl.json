@@ -13352,6 +13352,7 @@
       "lead": "Dzięki niej agenci widnieją w GitHub jako aplikacja, a nie jako czyjeś konto.",
       "without": "GitHub tworzy aplikację na twoim koncie ze wszystkim wypełnionym i wraca tutaj. Aby należała do organizacji, przenieś ją potem w GitHub.",
       "create": "Utwórz aplikację w GitHub",
+      "local": "GitHub tworzy aplikację tylko dla serwera, do którego dociera przez internet, a adres tego serwera nie jest publiczny. Zamiast tego połącz GitHub w Konektorach osobistym tokenem dostępu: agenci mają te same narzędzia.",
       "state": {
         "off": "Wyłączona",
         "on": "Włączona",

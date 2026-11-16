@@ -12896,6 +12896,7 @@
       "lead": "Con questa, gli agenti compaiono su GitHub come l'app, non come l'account di qualcuno.",
       "without": "GitHub crea l'app nel tuo account con tutto già compilato e torna qui. Per tenerla in un'organizzazione, trasferiscila poi su GitHub.",
       "create": "Crea l'app su GitHub",
+      "local": "GitHub crea l'app solo per un server che raggiunge via internet, e l'indirizzo di questo non è pubblico. Collega GitHub in Connettori con un token di accesso personale: gli agenti hanno gli stessi strumenti.",
       "state": {
         "off": "Disattivata",
         "on": "Attivata",

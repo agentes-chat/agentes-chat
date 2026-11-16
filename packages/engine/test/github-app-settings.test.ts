@@ -9,6 +9,7 @@ import {
   createLocalKeyWrapper,
   type GitHubAppConfig,
   githubAppManifest,
+  githubReachable,
   issueManifestState,
   missingGitHubAppEvents,
   readManifestState,
@@ -206,6 +207,38 @@ describe("GitHub's manifest flow", () => {
     // GitHub can't deliver to plain http; a long host keeps the name within GitHub's 34 characters.
     expect(githubAppManifest("http://192.168.0.10:3000").hook_attributes.active).toBe(false);
     expect(githubAppManifest("https://agents.a-very-long-company-name.example").name.length).toBeLessThanOrEqual(34);
+  });
+
+  test("GitHub reaches only a public address: localhost, private addresses and local-only names aren't", async () => {
+    const dns: Record<string, string[]> = {
+      "chat.example.com": ["93.184.216.34"],
+      "host.tail1234.ts.net": ["100.101.1.2"],
+    };
+    const resolve = async (host: string) => {
+      const found = dns[host];
+      if (!found) throw new Error("ENOTFOUND");
+      return found;
+    };
+    // A public name, a public address, and a name whose lookup failed for now (not hidden for a passing DNS error).
+    for (const url of [
+      "https://chat.example.com",
+      "http://8.8.8.8:3000",
+      "https://[2606:4700::1111]",
+      "https://chat.example.com.",
+      "https://gone.example.org",
+    ])
+      expect(await githubReachable(url, resolve)).toBe(true);
+    for (const url of [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "http://192.168.0.10:3000",
+      "http://[::1]:3000",
+      "https://agentes.local",
+      "http://agentes",
+      // A public-looking name that resolves to a private address (Tailscale's MagicDNS, split DNS).
+      "https://host.tail1234.ts.net",
+    ])
+      expect(await githubReachable(url, resolve)).toBe(false);
   });
 
   test("an app made without the events agents hear says which to tick, and where on GitHub", async () => {

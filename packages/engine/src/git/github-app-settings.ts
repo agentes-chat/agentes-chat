@@ -1,9 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { isIP } from "node:net";
 import type { KeyWrapper } from "@agenteschat/adapters";
 import { type Database, type Executor, eq, schema } from "@agenteschat/db";
 import { type AuditEntry, auditEveryOrg } from "../audit";
 import { deriveSecret, openSecret, sealSecret } from "../crypto";
 import { ConflictError, ValidationError } from "../errors";
+import { isPublicHostName, publicHostAddress, type ResolveHost, resolveHostDns } from "../net-guard";
 import {
   appRegistration,
   forgetAllInstallationTokens,
@@ -239,6 +241,19 @@ export async function missingGitHubAppEvents(app: GitHubAppConfig, http: GitHubH
       ? `https://github.com/organizations/${encodeURIComponent(registered.owner.login)}/settings/apps/${slug}/permissions`
       : `https://github.com/settings/apps/${slug}/permissions`;
   return { missing: [...missing], url };
+}
+
+/**
+ * Whether GitHub can reach this server at its `PUBLIC_URL`: GitHub refuses to make an app whose addresses aren't on the
+ * public internet (localhost, a private address, a local-only name, a name that resolves to a private address), so on
+ * such a server the manifest flow isn't offered and the owner is pointed to a token connection instead. A failed
+ * lookup counts as reachable: a passing DNS error doesn't hide the way to make the app.
+ */
+export async function githubReachable(publicUrl: string, resolve: ResolveHost = resolveHostDns): Promise<boolean> {
+  const host = new URL(publicUrl).hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  if (!isIP(host) && !isPublicHostName(host)) return false;
+  const resolved = await publicHostAddress(host, resolve);
+  return resolved.ok || resolved.reason === "unreachable";
 }
 
 /**
