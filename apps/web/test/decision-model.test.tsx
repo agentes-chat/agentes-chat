@@ -67,8 +67,9 @@ describe("the decision model card", () => {
     const { state } = await open({}, ON);
     expect(card().textContent).toContain("Ligado");
     await click(within(card()).getByText("Remover"));
-    expect(card().textContent).toContain("Remover o modelo de decisão?");
-    await click(card().querySelector(".ac-btn--danger") as Element);
+    const dialog = domScreen.getByRole("dialog");
+    expect(dialog.textContent).toContain("Remover o modelo de decisão?");
+    await click(within(dialog).getByRole("button", { name: "Remover" }));
     expect(calls(state, "system.removeDecisionModel")).toHaveLength(1);
   });
 });
