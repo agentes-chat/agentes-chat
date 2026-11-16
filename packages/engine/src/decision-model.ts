@@ -4,20 +4,17 @@ import {
   checkDecisionModel,
   DECISION_PROVIDERS,
   type DecisionCapabilities,
-  type DecisionModality,
   type DecisionModelInfo,
   type DecisionProviderId,
   type DecisionRuntime,
   type DecisionState,
-  decisionModelLabel,
   detectRuntime,
   gbOf,
-  listDecisionModels,
   recommendLocalModel,
 } from "@agenteschat/providers";
 import { auditEveryOrg } from "./audit";
 import { openSecret, sealSecret } from "./crypto";
-import { ConflictError, ValidationError } from "./errors";
+import { ValidationError } from "./errors";
 import { enqueue } from "./outbox";
 
 const { instanceDecisionModel } = schema;
@@ -370,7 +367,8 @@ export function createDecisionModel(deps: {
     },
     async pending(token) {
       const [r] = await deps.db.select().from(instanceDecisionModel).where(eq(instanceDecisionModel.id, ID));
-      if (!r || !r.installToken || r.installToken !== token) return null;
+      if (!r) return null;
+      if (r.installToken !== token) return null;
       const sealed =
         r.ciphertext && r.wrappedDataKey && r.kekId
           ? { ciphertext: r.ciphertext, wrappedDataKey: r.wrappedDataKey, kekId: r.kekId }

@@ -1,5 +1,5 @@
 import { and, asc, type Database, eq, schema } from "@agenteschat/db";
-import { checkDecisionModel, type DecisionCapabilities, decisionModelLabel } from "@agenteschat/providers";
+import { checkDecisionModel, type DecisionProviderId, decisionModelLabel } from "@agenteschat/providers";
 import type { DecisionModel } from "./decision-model";
 import type { JobDeps } from "./jobs";
 import { notify } from "./notifications";
@@ -34,7 +34,7 @@ async function tell(deps: JobDeps, model: { provider: string; model: string }, o
   if (!ownerId) return;
   const at = await ownerOrg(deps.db, ownerId);
   if (!at) return;
-  const label = decisionModelLabel(model.provider as never, model.model);
+  const label = decisionModelLabel(model.provider as DecisionProviderId, model.model);
   await notify(
     { db: deps.db, pubsub: deps.pubsub },
     {
