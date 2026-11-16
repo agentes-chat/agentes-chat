@@ -19,7 +19,7 @@ import { AskButtons, AskCard, AskFoot, ExpiryLine, useAskStore } from "../chat/a
 import { openComputer } from "../computer/AgentComputerRow";
 import { IconTile } from "../connectors/ConnectorIcon";
 import { useColors, useDirectory, useMeId, useOrgId, useWhen } from "../shared/hooks";
-import { genderOf } from "../shared/logic";
+import { agentLook, genderOf } from "../shared/logic";
 import { PromptForm } from "../shared/PromptForm";
 import { useSurface } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
@@ -156,7 +156,11 @@ function HandoffAsk({
   };
 
   // `Button` gives the press's haptic: none more here, or a press taps twice.
+  // One at a time: a second tap while it takes the control would push the screen twice.
+  const taking = useRef(false);
   const take = async () => {
+    if (taking.current) return;
+    taking.current = true;
     onOpened(true);
     try {
       await actions.takeControl(h.id);
@@ -164,6 +168,8 @@ function HandoffAsk({
       if (opensScreen) openComputer(h.agentId, h.seat);
     } catch (err) {
       failed(err);
+    } finally {
+      taking.current = false;
     }
   };
   // A push or the inbox opened this request: it takes the control once (first one wins), when it is the person's.
@@ -194,7 +200,12 @@ function HandoffAsk({
         tile: <IconTile name={desktop ? "laptop" : "globe"} size={20} bare />,
         title: name,
         detail: null,
-        more: desktop ? null : { label: t("ask.seeScreen"), content: <ScreenPeek agentId={h.agentId} /> },
+        more: desktop
+          ? null
+          : {
+              label: t("ask.seeScreen"),
+              content: <ScreenPeek agentId={h.agentId} name={name} color={agentLook(agent).color} />,
+            },
       }}
       expiry={h.expiresAt ? <ExpiryLine createdAt={h.createdAt} expiresAt={h.expiresAt} /> : null}
       foot={
@@ -213,15 +224,26 @@ function HandoffAsk({
   );
 }
 
-/** The agent's page as it is now, to look at before taking it (watching only: taps do nothing). */
-function ScreenPeek({ agentId }: { agentId: string }) {
+/** The agent's page as it is now, with its pointer, to look at before taking it (watching only: taps do nothing). */
+function ScreenPeek({ agentId, name, color }: { agentId: string; name: string; color: string | undefined }) {
   const c = useColors();
   // A small look before taking it: a frame a second is enough (ADR 0040 §7.1).
   const live = useLiveConnection(agentId, true, BROWSER_FPS.preview);
   return (
     <View style={[styles.peek, { backgroundColor: c.sunken }]}>
       {live.frame ? (
-        <FrameView frame={live.frame} enabled={false} onInput={live.sendInput} />
+        <FrameView
+          frame={live.frame}
+          enabled={false}
+          onInput={live.sendInput}
+          edge={styles.peek.borderRadius}
+          cursor={{
+            agentId,
+            name,
+            color,
+            pointer: (live.handoff?.controllerUserId ?? live.controllerUserId) ? null : live.pointer,
+          }}
+        />
       ) : (
         <View style={styles.center}>
           <ActivityIndicator color={c.muted} />

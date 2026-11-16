@@ -1,13 +1,15 @@
-import type { AiAccounts, PlanAccountInfo, PlanAccountUsage, PlanServes } from "@agenteschat/client";
+import type { AiAccounts, PlanAccountInfo, PlanAccountUsage, PlanServes, PlanUseKind } from "@agenteschat/client";
 import { keys, useAiAccounts, useApi, useModels, usePlanUsage } from "@agenteschat/client";
 import { removableLogins } from "@agenteschat/client/lib/ai-accounts";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatPercent, formatTokensShort, formatUsd, joinNames } from "@agenteschat/client/lib/format";
+import { accountKinds, kindFacts } from "@agenteschat/client/lib/plan-usage";
 import { planName } from "@agenteschat/client/lib/plans";
 import { AUTO, apiProviderOf } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
+  Alert,
   agentGradient,
   Button,
   Card,
@@ -208,8 +210,12 @@ function AccountRow({
   const [held, setHeld] = useState(open);
   const body = useId();
   const shares = accountShares(account);
+  const window = shares.window ? text.short(shares.window) : null;
   const list = shares.shown.length > 0 && (
-    <AgentShares shares={shares} window={shares.window ? text.short(shares.window) : null} />
+    <>
+      <AgentShares shares={shares} window={window} />
+      <KindShares account={account} window={window} />
+    </>
   );
   // Whose it is, who uses it and how many logins it stands for: each moves to the next line whole.
   const facts = [accountOwner(t, account), servesText(t, account), loginsText(t, account)].filter((f): f is string =>
@@ -423,6 +429,50 @@ function AgentShares({ shares, window }: { shares: ReturnType<typeof accountShar
         </button>
       )}
     </div>
+  );
+}
+
+const KIND_ICONS = { handoffs: "swap", people: "person", routines: "routines" } as const satisfies Record<
+  PlanUseKind,
+  string
+>;
+
+/**
+ * Under the agents, what the account's use was for ("Handoffs between agents · week 37% · 6.9M tokens"), and when
+ * handoffs led the week, a hint to ask the agent that took most of them directly.
+ */
+function KindShares({ account, window }: { account: PlanAccountUsage; window: string | null }) {
+  const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const kinds = accountKinds(account);
+  const target = account.hint ? dir.agentById.get(account.hint.agentId) : undefined;
+  if (kinds.length === 0) return null;
+  return (
+    <>
+      <p className="plan-kinds__label">{t("usage.kinds.label")}</p>
+      <div className="plan-shares plan-kinds">
+        {kinds.map((k) => (
+          <div key={k.kind} className="plan-shares__row">
+            <span className="plan-kinds__icon">
+              <Icon name={KIND_ICONS[k.kind]} size={16} />
+            </span>
+            <span>
+              <b>{t(`usage.kinds.${k.kind}`)}</b>
+              {kindFacts(t, i18n.language, window, k)}
+            </span>
+          </div>
+        ))}
+      </div>
+      {target && (
+        <Alert tone="neutral" icon="info" className="plan-kinds__hint">
+          {t("usage.hint.handoffs")}{" "}
+          <Link className="ac-link" to="/org/$orgId/dm/agent/$agentId" params={{ orgId: org.id, agentId: target.id }}>
+            {t("usage.hint.message", { name: target.name })}
+          </Link>
+        </Alert>
+      )}
+    </>
   );
 }
 

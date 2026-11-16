@@ -8,7 +8,7 @@ import {
   useTeamAnswered,
 } from "@agenteschat/client";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { aiStateOf, noAiCardOf } from "@agenteschat/client/lib/no-ai";
+import { aiStateOf, noAiCardShown } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import {
   introCards,
@@ -74,7 +74,7 @@ export function RightHandIntro({ agent, channelId, waveFrom }: { agent: Agent; c
     aiKnown,
     askStyle: org?.agentStyle === null,
     held,
-    noAiCard: messages?.some((m) => noAiCardOf(m.meta)),
+    noAiCard: messages?.some((m) => noAiCardShown(m.meta)),
     checklist,
     answered: useTeamAnswered(orgId, team),
     welcomed,

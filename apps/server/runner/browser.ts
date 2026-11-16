@@ -9,6 +9,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   statSync,
 } from "node:fs";
 import { chmod, mkdir, readFile, readlink, rename, rm, writeFile } from "node:fs/promises";
@@ -73,7 +74,8 @@ import {
   typingDelays,
 } from "./human-input";
 import { GOOGLE_CHROME_LINUX, SYSTEM_BROWSER_DIR } from "./install-script";
-import { readJson, writeJson } from "./json-file";
+import { readJson, readSmallJson, writeJson } from "./json-file";
+import { bootId } from "./lock";
 import { CRASH_WORDS, pageLocale } from "./page-words";
 import { agentFolderName, isInside, ownedSafely } from "./paths";
 import type { Spawn } from "./scope-gate";
@@ -683,7 +685,8 @@ function secretStoreArgs(platform: string): string[] {
  * The whole command line for the agent's Chrome (`version`: the one on disk):
  * our flags, headless or headed (on its desktop), its own port (0: Chrome
  * picks), its profile, the page it opens (`startPage`, the agent's own start
- * page file, in place of a blank one).
+ * page file, in place of a blank one), or the tabs it opens again, the first
+ * one in front.
  */
 export function chromeLaunchArgs(
   version: string | null,
@@ -691,7 +694,7 @@ export function chromeLaunchArgs(
   platform: string = process.platform,
   lang: string | null = osLang(),
   headed = false,
-  page = "about:blank",
+  page: string | readonly string[] = "about:blank",
   debuggingPort = 0,
   startPage?: string,
   privateNetwork = false,
@@ -706,7 +709,7 @@ export function chromeLaunchArgs(
     ...(ua ? [`--user-agent=${ua}`] : []),
     ...(lang ? [`--lang=${lang}`] : []),
     ...(privateNetwork ? ["--force-webrtc-ip-handling-policy=disable_non_proxied_udp"] : []),
-    startPage && page === "about:blank" ? pathToFileURL(startPage).href : page,
+    ...(typeof page === "string" ? [startPage && page === "about:blank" ? pathToFileURL(startPage).href : page] : page),
   ];
 }
 
@@ -811,8 +814,8 @@ export function prepareProfile(profile: string) {
 
 /**
  * Before every start: the tabs Chrome saved go (`--restore-last-session` would open them again beside the page it
- * starts on, more of them at each restart), so the agent's browser starts on one page, as it always did. Its
- * cookies stay.
+ * starts on, more of them at each restart), so the agent's browser starts on one page, or on the tabs the runner kept
+ * for a computer that restarted or moved (`reopenedTabs`), never on Chrome's own pile. Its cookies stay.
  */
 export function forgetTabs(profile: string) {
   return rm(path.join(profile, "Default", "Sessions"), { recursive: true, force: true }).catch(() => undefined);
@@ -1083,6 +1086,19 @@ const POINTER_ACTS: Record<string, AgentPointerAct> = {
   dblclick: "double",
   fill: "type",
   type: "type",
+};
+/**
+ * Where a page change starts in Chrome's toolbar on the agent's desktop, from the page's top left corner there: the
+ * toolbar's row 24 px above the page, the back, forward and reload buttons from its left, the address bar after them.
+ * Chrome at scale 1, as it draws on the agent's desktop.
+ */
+const TOOLBAR = { y: -24, back: 23, forward: 58, reload: 95, address: 200 } as const;
+/** What the pointer does on the toolbar for each page change: an address is typed, a button clicked. */
+const TOOLBAR_GOES: Record<string, { at: Exclude<keyof typeof TOOLBAR, "y">; act: AgentPointerAct }> = {
+  ...Object.fromEntries([...NAVIGATIONS].map((c) => [c, { at: "address", act: "type" } as const])),
+  back: { at: "back", act: "click" },
+  forward: { at: "forward", act: "click" },
+  reload: { at: "reload", act: "click" },
 };
 /** Agent commands that may leave a mouse button down when a person's taking control cuts them off. */
 const POINTER_COMMANDS = new Set([...HUMAN_COMMANDS, "mouse", "drag"]);
@@ -1660,6 +1676,8 @@ export interface BrowserManagerOptions {
    */
   kept?: (agentId: string) => boolean;
   now?: () => number;
+  /** Tests: this boot of the computer (default: `bootId`). */
+  bootId?: () => string;
   /** Tests: opens the session's stream socket. */
   connectStream?: (url: string) => StreamSocket;
   /** Tests: opens a tab's own DevTools socket, where a person's input goes (`PageLink`). */
@@ -1846,6 +1864,8 @@ interface Session {
   keptTabs?: Set<string>;
   /** What a tidy closed that the agent hasn't heard of yet (`tabLabel`). */
   tabsClosed?: string[];
+  /** The tabs `recordTabs` last wrote, as written. */
+  tabsRecorded?: string;
   /** When a sweep last tidied its tabs while it was kept and idle. */
   tidiedAt?: number;
 }
@@ -1897,6 +1917,27 @@ export function tabLabel(url: string): string {
   if (isEmptyTab(url)) return "blank";
   return pageHost(url) ?? url.split(":")[0]?.slice(0, 20) ?? "";
 }
+
+/**
+ * The tabs a computer that restarted or moved opens again, from its tabs in order (the one in front first): web pages
+ * only (no start page, new tab or blank one), each address once, `BROWSER_TABS_KEPT` at most. An address longer than
+ * `TAB_URL_CHARS` (state kept in its fragment) is left out, so the rest always fit in the record and on Chrome's
+ * command line.
+ */
+export function tabsToReopen(urls: readonly unknown[]): string[] {
+  const pages = urls.filter(
+    (u): u is string => typeof u === "string" && u.length <= TAB_URL_CHARS && pageHost(u) !== null,
+  );
+  return [...new Set(pages.map((u) => new URL(u).href))].slice(0, BROWSER_TABS_KEPT);
+}
+
+/**
+ * Where `recordTabs` keeps the agent's tabs: in its Chrome's profile, which the agent's tools never read
+ * (`AGENT_BROWSER_PROFILE` in the command policy), like its cookies.
+ */
+const TABS_FILE = "agentes-tabs.json";
+const TABS_FILE_BYTES = 64 * 1024;
+const TAB_URL_CHARS = 2048;
 
 /** `https://app.acme.example/trips` → `app.acme.example`; null for anything that isn't a web page. */
 export function pageHost(url: string): string | null {
@@ -2024,6 +2065,10 @@ export class BrowserManager {
   private closed = false;
   /** Every `closeAll` still running; a new session starts only after them. */
   private closing: Promise<void> = Promise.resolve();
+  /** Goes up with every `closeAll`: a session that was opening meanwhile isn't kept (its Chrome would outlive it). */
+  private closes = 0;
+  /** Goes up each time the server's connection drops (`stopStreams`): a stream opening for the old one doesn't stay. */
+  private streamTurn = 0;
   /** `<runner home>/browser/chromes.json`: the Chromes this runner home started (pid and profile). */
   private readonly pidFile: string;
   /** What each running Chrome sends and receives (protocol 23). */
@@ -2754,6 +2799,7 @@ export class BrowserManager {
       if (POINTER_COMMANDS.has(command)) await this.run(session, ["mouse", "up"], { timeoutMs: QUICK_TIMEOUT_MS });
       return TOOK_OVER;
     }
+    if (!human) await this.toolbarGoes(session, command, stops);
     const plain =
       human ??
       // `--human`: its drag goes along an eased curve from where the pointer is, slower than a script's.
@@ -2799,6 +2845,27 @@ export class BrowserManager {
     this.opts.send({ type: "browser.pointer", agentId, x: to.x, y: to.y, ...session.pointerView, act });
     if (!corner) return;
     this.opts.send({ type: "desktop.pointer", agentId, x: corner.x + to.x, y: corner.y + to.y, ...DESKTOP_SIZE, act });
+  }
+
+  /**
+   * A page change by its address or by Chrome's own buttons (`TOOLBAR_GOES`), in its window on the agent's desktop:
+   * the pointer goes to the address bar or to that button as it starts, so whoever watches the desktop sees the agent
+   * go somewhere, as they see its clicks; a search that only opens pages would show no pointer at all. Not for a
+   * browser card, whose picture is the page without the bar.
+   */
+  private async toolbarGoes(session: Session, command: string, signal?: AbortSignal) {
+    const goes = TOOLBAR_GOES[command];
+    if (!goes || !session.headed) return;
+    const seen = await this.run(session, ["eval", VIEWPORT_ON_SCREEN], {
+      timeoutMs: QUICK_TIMEOUT_MS,
+      ...(signal ? { signal } : {}),
+    });
+    const corner = screenCorner(((isRecord(seen.data) && seen.data.result) || []) as unknown[]);
+    if (!corner) return;
+    const x = corner.x + TOOLBAR[goes.at];
+    const y = corner.y + TOOLBAR.y;
+    if (x < 0 || y < 0 || x > DESKTOP_SIZE.width || y > DESKTOP_SIZE.height) return;
+    this.opts.send({ type: "desktop.pointer", agentId: session.agentId, x, y, ...DESKTOP_SIZE, act: goes.act });
   }
 
   /**
@@ -3065,6 +3132,7 @@ export class BrowserManager {
   }
 
   private async openSession(agentId: string, agent: AgentScope, folder: string): Promise<Session> {
+    const closes = this.closes;
     const live = this.liveSessions();
     if (live.length >= this.maxSessions) {
       throw new RunnerError(
@@ -3097,6 +3165,10 @@ export class BrowserManager {
       crashes: new Map(),
       calls: new Set(),
     };
+    // Every browser closed while this one opened (the switch went off, the runner stops): it doesn't open after all.
+    if (closes !== this.closes) {
+      throw new RunnerError("browser_unavailable", "The browser was closed while it opened. Try again.");
+    }
     this.sessions.set(agentId, session);
     this.sweepTimer ??= setInterval(() => void this.sweep(), SWEEP_MS);
     (this.sweepTimer as { unref?: () => void }).unref?.();
@@ -3178,6 +3250,8 @@ export class BrowserManager {
       }
       const start = this.opts.startChrome ?? launchChrome;
       await this.clearStaleLock(profile);
+      // A Chrome that only restarts or moves to or from the desktop keeps to its one page.
+      const reopened = running || profileSession ? null : this.reopenedTabs(profile, allowed);
       const launch = async (on: ChromeDisplay | null) => {
         prepareProfile(profile);
         const startPage = this.opts.startPageDirectory
@@ -3190,7 +3264,7 @@ export class BrowserManager {
           process.platform,
           undefined,
           on !== null,
-          page,
+          reopened ?? page,
           this.opts.fixedPorts?.cdp ?? 0,
           startPage,
           this.opts.privateNetwork?.(),
@@ -3262,6 +3336,8 @@ export class BrowserManager {
       session.startFails = 0;
       session.startCooling = undefined;
       session.chrome = chrome;
+      // Opened again once; a start that failed keeps the record for the next one.
+      if (reopened) this.dropTabs(session);
       session.version = version ?? undefined;
       session.outdatedAt = undefined;
       session.headed = chrome.display !== undefined;
@@ -3411,6 +3487,9 @@ export class BrowserManager {
     session.chrome = undefined;
     session.aliveAt = null;
     if (!chrome) return;
+    // Closed while the runner runs (idle, stopped, reclaimed), it starts on its one page next time, on any boot. A
+    // runner that is stopping (a reboot stops both at once) keeps its tabs for the next boot.
+    if (!this.closed) this.dropTabs(session);
     const counter = this.counters.get(chrome);
     if (counter) {
       counter.quit();
@@ -3881,6 +3960,7 @@ export class BrowserManager {
       session.tabsClosed = [...(session.tabsClosed ?? []), tabLabel(p.url)];
     }
     const open = pages.filter((p) => !closed.has(p.id));
+    this.recordTabs(session, open);
     const own = open.findIndex((p) => p.url === current);
     return {
       count: open.length,
@@ -3890,6 +3970,55 @@ export class BrowserManager {
         ...(i === own ? { current: true } : {}),
       })),
     };
+  }
+
+  /**
+   * The agent's tabs as they are now (`tabsToReopen`), kept in its profile with the computer's boot, for a start
+   * after the computer restarted or moved (`reopenedTabs`). Never a popup or a tab a person opened (`keptTabs`), nor a
+   * shared profile's. Written when they changed; the addresses never go in the log. A Chrome the runner closes itself
+   * forgets them (`stopChrome`), as a start on the same boot would.
+   */
+  private recordTabs(session: Session, open: readonly { id: string; url: string }[]) {
+    if (isProfileKey(session.agentId)) return;
+    const urls = tabsToReopen(open.filter((p) => !session.keptTabs?.has(p.id)).map((p) => p.url));
+    const text = JSON.stringify(urls);
+    if (text === session.tabsRecorded) return;
+    try {
+      const profile = path.join(session.folder, AGENT_BROWSER_PROFILE);
+      mkdirSync(profile, { recursive: true, mode: 0o700 });
+      writeJson(path.join(profile, TABS_FILE), { urls, boot: this.bootId() });
+      session.tabsRecorded = text;
+    } catch {
+      // the next answer writes it
+    }
+  }
+
+  /**
+   * The tabs `recordTabs` kept on another boot of the computer (it restarted, or the agent's folder moved to another
+   * one), those the agent may reach. Null on a start on the same boot (a first one, one after an idle stop or a crash),
+   * where the boot can't be told (`bootId` is empty), or with nothing kept: Chrome starts on its one page.
+   */
+  private reopenedTabs(profile: string, allowed: readonly string[]): string[] | null {
+    const kept = readSmallJson(path.join(profile, TABS_FILE), TABS_FILE_BYTES);
+    if (!isRecord(kept) || typeof kept.boot !== "string" || !Array.isArray(kept.urls)) return null;
+    const boot = this.bootId();
+    if (!kept.boot || !boot || kept.boot === boot) return null;
+    const urls = tabsToReopen(kept.urls).filter((u) => domainAllowed(u, allowed));
+    return urls.length > 0 ? urls : null;
+  }
+
+  /** What `recordTabs` kept goes. */
+  private dropTabs(session: Session) {
+    session.tabsRecorded = undefined;
+    try {
+      rmSync(path.join(session.folder, AGENT_BROWSER_PROFILE, TABS_FILE), { force: true });
+    } catch {
+      // the next tidy writes it again, on this boot
+    }
+  }
+
+  private bootId() {
+    return (this.opts.bootId ?? bootId)();
   }
 
   /** The active tab's address, or null when the browser can't say. */
@@ -4464,6 +4593,7 @@ export class BrowserManager {
 
   /** Every browser of this runner home closes (the switch went off, the runner stops, or it just started). */
   async closeAll() {
+    this.closes++;
     const sessions = [...this.sessions.values()];
     for (const s of sessions) this.endStream(s, "closed");
     this.sessions.clear();
@@ -4500,6 +4630,7 @@ export class BrowserManager {
     const session = this.sessions.get(String(agent.id ?? ""));
     if (!session) throw new RunnerError("browser_closed", "The agent's browser isn't open");
     session.lastUsed = this.now();
+    const turn = this.streamTurn;
     // Before the wait: opening a stream queues behind the very command this stops.
     if (mode === "control") this.takeOver(session);
     // One socket per session: a start while another opens waits for it, then only changes the mode.
@@ -4519,7 +4650,7 @@ export class BrowserManager {
       void this.firstFrame(session, session.stream);
       return { mode };
     }
-    const opening = this.openStream(agent, session, mode);
+    const opening = this.openStream(agent, session, mode, turn);
     session.streamOpening = opening;
     try {
       await opening;
@@ -4529,7 +4660,7 @@ export class BrowserManager {
     return { mode };
   }
 
-  private async openStream(agent: AgentScope, session: Session, mode: BrowserStreamMode): Promise<void> {
+  private async openStream(agent: AgentScope, session: Session, mode: BrowserStreamMode, turn: number): Promise<void> {
     const port = await this.enqueue(session, async () => {
       // Closed anyway while a person's help is asked for (Chrome crashed or was quit, or `agent-browser` let go of
       // it): open again where it was, when that page is still on the agent's allowed sites.
@@ -4604,6 +4735,12 @@ export class BrowserManager {
         reject(new RunnerError("internal", "The browser's live view didn't open"));
       };
     });
+    // The server's connection dropped while this opened (`stopStreams` found no stream yet): its frames have nowhere
+    // to go, and a stream kept here would hold the browser open. The server asks again when it is back.
+    if (turn !== this.streamTurn) {
+      socket.close();
+      throw new RunnerError("browser_closed", "The live view was stopped while it opened");
+    }
     // Never two sockets: one left over (it shouldn't be) is closed quietly.
     const old = session.stream;
     if (old) {
@@ -4899,6 +5036,7 @@ export class BrowserManager {
 
   /** The connection to the server dropped: frames have nowhere to go; the server asks again when it is back. */
   stopStreams() {
+    this.streamTurn++;
     for (const s of this.sessions.values()) {
       if (!s.stream) continue;
       s.stream.closing = true;

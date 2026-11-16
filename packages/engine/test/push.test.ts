@@ -893,6 +893,35 @@ describe("web push delivery", () => {
     });
   });
 
+  test("a push not delivered carries its sender's status only when that is its one failure", async () => {
+    f = await setup();
+    const { bia, webPush } = await withBrowser({ failing: [BROWSER] });
+    await registerPushDevice(f.db, bia.id, { token: TOKEN_BIA, platform: "ios", locale: "pt-BR" });
+    const [n] = await notify(deps(), {
+      orgId: f.org.id,
+      userIds: [bia.id],
+      kind: "dm",
+      groupKey: "dm:status",
+      actor: { type: "user", id: f.owner.id },
+      source: { channelId: f.general.id },
+      latest: { text: "oi" },
+    });
+    const refused: PushSender = {
+      id: "refused",
+      send: async () => {
+        throw new PushError("refused", false, 403);
+      },
+    };
+    await expect(deliverPush({ db: f.db, push: refused }, n?.id ?? "")).rejects.toMatchObject({
+      retryable: false,
+      status: 403,
+    });
+    // The browser failed beside it, another way: no one number says how this push failed.
+    const both = await deliverPush({ db: f.db, push: refused, webPush }, n?.id ?? "").catch((error: unknown) => error);
+    expect(both).toBeInstanceOf(PushError);
+    expect((both as PushError).status).toBeUndefined();
+  });
+
   test("someone with the app open: a mention waits 45 s and goes only if still unread", async () => {
     f = await setup();
     const { bia, webPush } = await withBrowser();

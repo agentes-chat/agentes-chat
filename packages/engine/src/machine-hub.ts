@@ -505,10 +505,12 @@ export interface MachineMissionHooks {
 export interface MachineBrowserHooks {
   frame?(machineId: string, frame: Extract<RunnerFrame, { type: "browser.frame" }>): void;
   streamEnded?(machineId: string, frame: Extract<RunnerFrame, { type: "browser.stream.ended" }>): void;
-  /** Where the agent's pointer goes on the page (ADR 0040 §7.2): to whoever watches, never stored. */
+  /** Where the agent's pointer goes on the page (ADR 0040 §7.2): to whoever watches; the newest kept in memory. */
   pointer?(machineId: string, frame: Extract<RunnerFrame, { type: "browser.pointer" }>): void;
   /** The same on its desktop (ADR 0062): to whoever has that screen open. */
   desktopPointer?(machineId: string, frame: Extract<RunnerFrame, { type: "desktop.pointer" }>): void;
+  /** This socket's computer is asked to end a desktop (`desktop.session.stop`), named by its screen's id. */
+  desktopStopped?(machineId: string, screenId: string): void;
   closed?(machineId: string): void;
   /** A runner on protocol 12+ said hello here: what it should know again (open handoffs). */
   connected?(machineId: string): void;
@@ -1156,6 +1158,9 @@ export function createMachineHub(deps: MachineHubDeps) {
       // Its socket closed while the caller awaited (`hub.call`'s checks): `closeConn` already failed what it had,
       // and this would never be sent or answered. Never sent, so offline: `callWhenBack` may send it again.
       if (conn.closed) return reject(new MachineOfflineError(conn.name, conn.kind));
+      if (request.op === "desktop.session.stop" && request.agent && conn.machineId) {
+        browserHooks.desktopStopped?.(conn.machineId, request.agent.id);
+      }
       const id = crypto.randomUUID();
       const timeoutMs = options.timeoutMs ?? requestTimeoutMs(request);
       const turn = request.op === "brain.turn" ? (request as Extract<MachineRequest, { op: "brain.turn" }>) : null;

@@ -856,7 +856,7 @@ export function PlanWithoutAgent({
               </Button>
             </span>
           )}
-          {elsewhere && mayAddKey && (
+          {elsewhere && mayAddKey && keyFitsPlan(kindOf(choice)) && (
             <span>
               <Button size="sm" onClick={onKey}>
                 {t("connectAi.wait.useKey")}
@@ -1619,6 +1619,12 @@ export function PlanHold({ hold }: { hold: BillingHold }) {
 }
 
 /**
+ * Whether "Use an API key now" fits a plan's panel: the key row adds workspace API keys, and OpenCode's key is an
+ * account kept on the computer for its CLI (`provider: "zen"`), which that row can't take.
+ */
+const keyFitsPlan = (kind: MachineAccountKind) => kind !== "opencode";
+
+/**
  * Why a plan's panel waits or can't sign in there (`PlanGate`), with the way on: the computer's wait, a key now, a
  * computer to connect. Nothing once it's ready.
  */
@@ -1657,12 +1663,12 @@ function GateWait({
   const machines = useMachines(org.id, edition !== null);
   const preparing = gate.state === "preparing" ? gate.view : null;
   const { eta, email } = useSetupWait(preparing, reader.held);
-  const keyButton = (
+  const keyButton = keyFitsPlan(kind) ? (
     <Button size="sm" onClick={onKey}>
       {t("connectAi.wait.useKey")}
     </Button>
-  );
-  const useKey = <span>{keyButton}</span>;
+  ) : null;
+  const useKey = keyButton && <span>{keyButton}</span>;
   const line = (lead: ReactNode, text: string) => (
     <p className="setup-line ac-iconline" role="status">
       {lead}

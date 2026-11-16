@@ -66,7 +66,7 @@ import { playSound } from "../lib/sounds";
 import type { TeamWeekAct } from "../lib/team-week";
 import { threadStartOf } from "../lib/threads";
 import { upsertMessage, withLocalCopies } from "../lib/timeline";
-import { voiceOf } from "../lib/voice";
+import { listedText } from "../lib/voice";
 import type { AudienceChoice } from "../lib/who-sees";
 import type { WikiAccess } from "../lib/wiki";
 import type { RealtimeConnection } from "../realtime/connection";
@@ -77,6 +77,7 @@ import { ApiError, type UploadOptions } from "./http";
 import { keys, ME_HASH } from "./keys";
 import { keepSending, outbox } from "./outbox";
 import type {
+  Actor,
   AdminAsk,
   Agent,
   AgentAction,
@@ -1896,6 +1897,8 @@ export function dropLocalVoice(qc: QueryClient, orgId: string, channelId: string
  * Sends a recording (ADR 0100): its bubble appears at once and stays until the server's message replaces it (same
  * `clientId`). Without a connection the recording waits in memory and goes when it comes back, with the same
  * `clientId`, so a send whose answer was lost is stored once. `onRefused`: the server said no, and the bubble went.
+ * `text` and the files in `meta.artifacts` (as `localMeta` writes them) go in the same message. Resolves false when
+ * the server refused it, so the caller can give the text and the files back.
  */
 export function useSendVoice(
   orgId: string,
@@ -1916,8 +1919,11 @@ export function useSendVoice(
       replyTo: string | null;
       language: string | null;
       meta?: Record<string, unknown>;
-    }) => {
+      text?: string;
+    }): Promise<boolean> => {
       const { blob, durationMs, peaks, threadId, replyTo, language, meta } = input;
+      const text = input.text?.trim() ?? "";
+      const attachments = artifactRefs(meta).map((r) => r.id);
       const clientId = newClientId();
       voiceLocal.set(clientId, URL.createObjectURL(blob));
       const local: Message = {
@@ -1925,10 +1931,10 @@ export function useSendVoice(
         channelId,
         threadId,
         author: { type: "person", id: latest.current.me.id },
-        body: "",
+        body: text,
         mentionedAgentIds: [],
         agentRunId: null,
-        meta: { ...meta, voice: { clipId: "", durationMs, peaks } },
+        meta: { ...meta, voice: { clipId: "", durationMs, peaks, ...(text ? { text } : {}) } },
         clientId,
         local: "pending",
         createdAt: new Date().toISOString(),
@@ -1943,14 +1949,24 @@ export function useSendVoice(
         );
       for (let attempt = 0; ; attempt++) {
         try {
-          await api.voice.send(orgId, channelId, { blob, durationMs, peaks, clientId, threadId, replyTo, language });
+          await api.voice.send(orgId, channelId, {
+            blob,
+            durationMs,
+            peaks,
+            clientId,
+            threadId,
+            replyTo,
+            language,
+            ...(text ? { text } : {}),
+            ...(attachments.length > 0 ? { attachments } : {}),
+          });
           waiting(false);
-          return;
+          return true;
         } catch (error) {
           if (!sendWaits(error)) {
             dropLocalVoice(qc, orgId, channelId, clientId);
             latest.current.onRefused?.(error);
-            return;
+            return false;
           }
           waiting(true);
           await voiceRetryWait(attempt);
@@ -4504,19 +4520,30 @@ export function useIssueAction(orgId: string) {
 
 /**
  * An agent picked for a task starts on it ("Pedir"). When it can't, the agent stays the task's, as the person picked
- * it, and the call rejects with why: the caller says it with the task's own words and offers to ask again, so it's
- * silent here (no second toast).
+ * it (first among `assignees`, the ones the task has), and the call rejects with why: the caller says it with the
+ * task's own words and offers to ask again, so it's silent here (no second toast).
  */
 export function useStartAgentOnTask(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
     meta: { silent: true },
-    mutationFn: async ({ issueId, agentId }: { issueId: string; agentId: string }) => {
+    mutationFn: async ({
+      issueId,
+      agentId,
+      assignees = [],
+    }: {
+      issueId: string;
+      agentId: string;
+      assignees?: Actor[];
+    }) => {
       try {
         return await api.issues.askAgent(orgId, issueId, agentId);
       } catch (error) {
-        await api.issues.update(orgId, issueId, { assignee: { type: "agent", id: agentId } }).catch(() => {});
+        const others = assignees.filter((a) => !(a.type === "agent" && a.id === agentId));
+        await api.issues
+          .update(orgId, issueId, { assignees: [{ type: "agent", id: agentId }, ...others] })
+          .catch(() => {});
         throw error;
       }
     },
@@ -5701,7 +5728,7 @@ export function cachedThreadInfo(qc: QueryClient, orgId: string, threadId: strin
     channelName: channel?.name ?? "",
     channelKind: channel ? "channel" : "dm",
     title: null,
-    rootText: voiceOf(root.meta) ? "" : root.body.replace(/\s+/g, " ").trim(),
+    rootText: listedText(root.body, root.meta).replace(/\s+/g, " ").trim(),
     rootAuthor: author,
     state: "open",
     createdBy: null,
@@ -6406,12 +6433,48 @@ function part<
   return value as NonNullable<ApiClient[K]>;
 }
 
+/**
+ * A read that didn't reach the server (the network dropped, the server restarting) goes again: nothing else would
+ * send it until the conversation's next message, and its mark would stay meanwhile. A refusal is final.
+ */
+const retryRead = (count: number, error: unknown) => !(error instanceof ApiError && error.status < 500) && count < 3;
+
+/** Replies heard in each conversation's threads since this app started, per query client (`useThreadActivity`). */
+const threadActivity = new WeakMap<QueryClient, { counts: Map<string, number>; heard: Set<() => void> }>();
+
+function threadActivityOf(qc: QueryClient) {
+  const found = threadActivity.get(qc);
+  if (found) return found;
+  const made = { counts: new Map<string, number>(), heard: new Set<() => void>() };
+  threadActivity.set(qc, made);
+  return made;
+}
+
+/**
+ * Changes each time a thread of this conversation gets a reply that counts as unread for me (the server tells only
+ * a thread's followers and the people it mentions). Such a reply counts in the conversation's own mark too, and is
+ * no new message of its timeline: the screen showing the conversation reads it again on this.
+ */
+export function useThreadActivity(orgId: string, channelId: string): number {
+  const store = threadActivityOf(useQueryClient());
+  const subscribe = useCallback(
+    (heard: () => void) => {
+      store.heard.add(heard);
+      return () => void store.heard.delete(heard);
+    },
+    [store],
+  );
+  const read = () => store.counts.get(`${orgId}:${channelId}`) ?? 0;
+  return useSyncExternalStore(subscribe, read, read);
+}
+
 /** Marks a channel or DM read now; the channel and DM lists show it with no unread at once. */
 export function useMarkChannelRead(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
     meta: { silent: true },
+    retry: retryRead,
     mutationFn: (channelId: string) => api.dms.markRead(orgId, channelId),
     onMutate: (channelId) => clearUnread(qc, orgId, channelId),
     onSettled: () => {
@@ -6491,6 +6554,7 @@ export function useMarkThreadRead(orgId: string) {
   const qc = useQueryClient();
   return useMutation({
     meta: { silent: true },
+    retry: retryRead,
     // A client without reads (a test's fake) has nothing to mark.
     mutationFn: async (threadId: string) => api.reads?.markThreadRead(orgId, threadId),
     onMutate: (threadId) => clearThreadUnread(qc, orgId, threadId),
@@ -6502,10 +6566,14 @@ function clearThreadUnread(qc: QueryClient, orgId: string, threadId: string) {
   qc.setQueryData<ThreadInfo>(keys.threadInfo(orgId, threadId), (t) => (t ? { ...t, unread: 0 } : t));
 }
 
-/** The thread lists, the Threads mark, the channels (a thread's replies count there too) and the tasks read again. */
+/**
+ * The thread lists, the Threads mark, the channels and DMs (a thread's replies count there too) and the tasks read
+ * again.
+ */
 function refreshThreadUnread(qc: QueryClient, orgId: string) {
   void qc.invalidateQueries({ queryKey: keys.threads(orgId), predicate: (q) => q.queryKey[3] !== "one" });
   void qc.invalidateQueries({ queryKey: keys.channels(orgId) });
+  void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
   void qc.invalidateQueries({ queryKey: keys.unreadTasks(orgId) });
 }
 
@@ -6602,11 +6670,16 @@ export function applyUnreadEvent(qc: QueryClient, orgId: string, event: { type: 
       void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", e.channelId], refetchType: "none" });
     if (e.dm) readOncePerBurst(`${orgId}:dms`, () => void qc.invalidateQueries({ queryKey: keys.dms(orgId) }));
     else readOncePerBurst(`${orgId}:channels`, () => void qc.invalidateQueries({ queryKey: keys.channels(orgId) }));
-    if (e.threadId)
+    if (e.threadId) {
+      const store = threadActivityOf(qc);
+      const key = `${orgId}:${e.channelId}`;
+      store.counts.set(key, (store.counts.get(key) ?? 0) + 1);
+      for (const heard of store.heard) heard();
       readOncePerBurst(
         `${orgId}:threads`,
         () => void qc.invalidateQueries({ queryKey: keys.threads(orgId), predicate: (q) => q.queryKey[3] !== "one" }),
       );
+    }
   } else if (e.type === "channel.read") {
     clearUnread(qc, orgId, e.channelId);
     void qc.invalidateQueries({ queryKey: keys.channels(orgId) });

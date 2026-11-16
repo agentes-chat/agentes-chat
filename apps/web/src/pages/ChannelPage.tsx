@@ -69,6 +69,7 @@ import {
   useSettings,
   usesBrowser,
   useTaskManager,
+  useThreadActivity,
   useThreadInfo,
   useThreadMessages,
   useThreadMission,
@@ -172,7 +173,7 @@ import { contextMarks, hiddenByThreads, rangeCandidates, threadStartOf } from "@
 import { buildTimeline, lastPostedId, mergeTimeline, type TimelineItem } from "@agenteschat/client/lib/timeline";
 import { usageWaitOf } from "@agenteschat/client/lib/usage-pause";
 import { appVia } from "@agenteschat/client/lib/via";
-import { voiceOf } from "@agenteschat/client/lib/voice";
+import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
 import { waitingAway, waitingNotification } from "@agenteschat/client/lib/waiting";
 import { barStep, makingImage, showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
 import {
@@ -1204,6 +1205,9 @@ function ChannelView({
   const screenThread = thread?.id ?? null;
   useEffect(() => holdOnScreen({ channelId: channel.id, threadId: screenThread }), [channel.id, screenThread]);
   const lastId = lastPostedId(channelMessages.data);
+  // A reply in one of its threads counts in the channel's mark and is no message of this timeline: read again on it.
+  const threadReplies = useThreadActivity(org.id, channel.id);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a thread's reply marks the channel read again
   useEffect(() => {
     if (!isMember || !lastId) return;
     const mark = () => {
@@ -1212,7 +1216,7 @@ function ChannelView({
     mark();
     document.addEventListener("visibilitychange", mark);
     return () => document.removeEventListener("visibilitychange", mark);
-  }, [markChannelRead, channel.id, isMember, lastId]);
+  }, [markChannelRead, channel.id, isMember, lastId, threadReplies]);
   // A thread open in view: its replies are read (its unread and the Threads mark clear, on every device).
   const markThreadRead = useMarkThreadRead(org.id).mutate;
   const threadId = thread?.id;
@@ -1739,7 +1743,12 @@ function ChannelView({
   const asksOut = useAsksOutOfView(scroller, askRegistry, isMember);
   // …and all of them, in view or not: the bar says a hand-off waits on me from them.
   const pendingAsks = usePendingAsks(askRegistry);
-  const seeAsk = (id: string) => showRequest(scroller.current, id, !reducedMotion);
+  // "See" on the bar: the view stops following the end first (as `jumpTo` does), or the next row that grows while an
+  // agent writes pins it back down before it ever reaches the card.
+  const seeAsk = (id: string) => {
+    letGo();
+    showRequest(scroller.current, id, !reducedMotion);
+  };
   // …and what waits on me here with its card not loaded (older, or in a thread): the line counts it and goes to the
   // oldest (ADR 0172).
   const waitingOnMe = useWaitingOnMe(org.id).data?.items;
@@ -2120,7 +2129,8 @@ function ChannelView({
   const sendMedia = useCallback((media: MessageMedia) => sendMediaNow.current(media), []);
   const mediaTabs = useMediaTabs(sendMedia);
   // Voice messages (ADR 0100), where this person can write and the workspace has them; a reply to a mission goes in
-  // text, to the mission. The recording goes in the box's thread, and the box stays as it was.
+  // text, to the mission. The recording goes in the box's thread with what was typed and the finished files, in one
+  // message. A key pasted in the text stays in the box for the person to choose (`KeyGuardDialog`).
   const voiceSettings = useSettings(org.id);
   const voiceOn = Boolean(voiceSettings.data?.voiceAvailable && voiceSettings.data.voiceMessages);
   const voice: ComposerVoice | undefined =
@@ -2136,8 +2146,14 @@ function ChannelView({
           // message comes); the throttle makes it one frame every 3 s, and holds the upload's while they write.
           onRecording: () => sendTyping(undefined, "voice"),
           onTake: ({ blob, durationMs, peaks }) => {
+            const typed = draft.trim();
+            const key = looksLikeApiKey(typed);
+            const text = key ? "" : typed;
             toBottom(true);
             setQuote(null);
+            if (key) setKeyAsk({ text: typed, key });
+            else if (text) setDraft("");
+            const sentFiles = files.filter((f) => f.status === "done" && f.ref);
             const uploading = setInterval(() => sendTyping(undefined, "voice", true), 1000);
             void sendVoice({
               blob,
@@ -2146,7 +2162,18 @@ function ChannelView({
               threadId: thread ? thread.id : null,
               replyTo: quote?.id ?? null,
               language: i18n.language.split("-")[0] ?? null,
-            }).finally(() => clearInterval(uploading));
+              text,
+              meta: localMeta(quote, quote ? dir.authorName(quote.author) : "", attached),
+            })
+              .then((went) => {
+                // Refused: what was typed and attached comes back to the box (thumbnails as icons: theirs are freed).
+                if (went) return;
+                if (text) setDraft((now) => joinDrafts(text, now));
+                if (sentFiles.length > 0)
+                  setFiles((now) => [...sentFiles.map((f) => ({ ...f, preview: undefined })), ...now]);
+              })
+              .finally(() => clearInterval(uploading));
+            if (sentFiles.length > 0) dropFiles((f) => !sentFiles.includes(f));
           },
           onNotice: (notice: VoiceNotice) => {
             if (notice === "blocked") {
@@ -2174,6 +2201,9 @@ function ChannelView({
             keysHold: t("voice.keysHold"),
             keysPaused: t("voice.keysPaused"),
             left: (seconds) => t("voice.left", { seconds }),
+            askDiscard: t("voice.askDiscard"),
+            askDelete: t("voice.askDelete"),
+            askKeep: t("voice.askKeep"),
           },
         }
       : undefined;
@@ -4317,7 +4347,8 @@ export const TimelineMessage = memo(function TimelineMessage({
     () => splitCanceled(serverBody(t, m.body, m.meta, i18n.language), m.meta),
     [t, m.body, m.meta, i18n.language],
   );
-  const said = reminderBody(stopped.body, m.meta);
+  // A voice message's own text is what was typed beside its recording: its words are in the player.
+  const said = reminderBody(listedText(stopped.body, m.meta), m.meta);
   // A long work's anchor once it's over: no promise left, and dimmed (its line says how it ended).
   const body = m.longWork ? workAnchorBody(t, said, m.meta, m.longWork) : said;
   const workOver = Boolean(m.longWork && workIsOver(m.longWork));
@@ -4403,7 +4434,7 @@ export const TimelineMessage = memo(function TimelineMessage({
   const artifacts = artifactRefs(meta);
   // A GIF or a sticker (ADR 0091); with no words, the message is the picture alone.
   const media = useMemo(() => messageMediaOf(m.meta), [m.meta]);
-  // A voice message is its recording: the player, and no text (ADR 0100).
+  // A voice message is its recording: the player, under the text typed beside it if any (ADR 0100).
   const voice = useMemo(() => voiceOf(m.meta), [m.meta]);
   // The one an agent adds after its own reply: a message of its own, not a reply (no feedback, no run's cards).
   const mediaAfter = isMediaAfterReply(m.meta);
@@ -4507,7 +4538,7 @@ export const TimelineMessage = memo(function TimelineMessage({
       !(actionCard && !weekCard) &&
       // A question's card already says it: its own text isn't repeated above.
       !(question && body.trim() === question.text.trim()) &&
-      !voice &&
+      !(voice && !body.trim()) &&
       !choiceReply &&
       Boolean(body.trim() || (!card && !stopped.canceled && artifacts.length === 0 && !media));
   // People see name, time and text; the date, model and tokens wait behind the time. An agent's sticker after its

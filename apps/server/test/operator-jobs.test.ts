@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { EmailError } from "@agenteschat/adapters";
 import { eq, schema, sql } from "@agenteschat/db";
+import { completeJob, failJob, type OutboxJob, rethrowEmailError } from "@agenteschat/engine";
 import { createLogger } from "../src/logger";
 import { createOperatorApp } from "../src/operator/app";
 import { createTestServer, planOfLast, type TestServer } from "./harness";
@@ -445,6 +447,7 @@ test("jobs: newest first without their payloads; by workspace, kind, status, run
     lockedBy: "worker-2",
     // Cut, with the address's password masked.
     lastError: expect.stringMatching(/^connect failed: postgres:\/\/\*\*\*@db\.example\.com\/main( and again)+/),
+    lastErrorStatus: null,
     runId: RUN,
     cause: "approval",
     createdAt: day(3).toISOString(),
@@ -792,4 +795,42 @@ test("the OpenAPI document lists the reads", async () => {
   for (const path of ["/jobs", "/usage", "/machines/{machineId}", "/orgs/{orgId}/machines"]) {
     expect({ path, get: Boolean(doc.paths[path]?.get) }).toEqual({ path, get: true });
   }
+});
+
+test("a job that failed says the status its error carried, never its words; one that then worked says none", async () => {
+  type Job = Record<string, unknown> & { id: string };
+  /** A job a worker holds, as a claim leaves it. */
+  const claimed = async (n: number) => {
+    const values = { id: job(n), orgId: ADA, kind: "test.refused", payload: { to: ["canary@example.com"] } };
+    const [row] = await t.db
+      .insert(schema.outbox)
+      .values({ ...values, status: "processing", attempts: 1, lockedBy: "worker-9" })
+      .returning();
+    return row as OutboxJob;
+  };
+  const told = async (n: number) =>
+    (await ok<{ jobs: Job[] }>(await get("/jobs?kind=test.refused"))).jobs.find((j) => j.id === job(n));
+  // What the email job throws on a provider's final refusal.
+  const refused = (() => {
+    try {
+      return rethrowEmailError(new EmailError("refused the email (422 canary_error): canary words", false, 422));
+    } catch (error) {
+      return error;
+    }
+  })();
+  await failJob(t.db, await claimed(21), refused, { retryable: false });
+  expect(await told(21)).toMatchObject({ status: "failed", lastErrorStatus: 422, lastError: expect.any(String) });
+  await failJob(t.db, await claimed(22), new Error("canary: it broke"), { retryable: false });
+  expect(await told(22)).toMatchObject({ status: "failed", lastErrorStatus: null });
+  // Tried again and done: neither the error nor its status stays.
+  const busy = await claimed(23);
+  await failJob(t.db, busy, new EmailError("busy", true, 429), { retryable: true });
+  expect(await told(23)).toMatchObject({ status: "pending", lastErrorStatus: 429 });
+  await t.db.update(schema.outbox).set({ status: "processing" }).where(eq(schema.outbox.id, busy.id));
+  expect(await completeJob(t.db, busy)).toBe(true);
+  expect(await told(23)).toMatchObject({ status: "done", lastErrorStatus: null, lastError: null });
+  // A run's trace lists its jobs the same way.
+  await t.db.update(schema.outbox).set({ lastErrorStatus: 503 }).where(eq(schema.outbox.id, J_WOKE));
+  const trace = await ok<{ jobs: Job[] }>(await get(`/runs/${RUN}/trace`));
+  expect(trace.jobs.find((j) => j.id === J_WOKE)).toMatchObject({ lastErrorStatus: 503 });
 });

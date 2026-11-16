@@ -433,6 +433,10 @@ export interface ApiClient {
         threadId?: string | null;
         replyTo?: string | null;
         language?: string | null;
+        /** Typed beside the take: one message carries both. */
+        text?: string | null;
+        /** Files (artifact ids) sent with the take. */
+        attachments?: string[];
       },
     ): Promise<{ clipId: string }>;
   };

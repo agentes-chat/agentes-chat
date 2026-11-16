@@ -59,6 +59,7 @@ import {
   haptics,
   Icon,
   IconButton,
+  PictureEdge,
   PressScale,
   type SendHow,
   Text,
@@ -799,10 +800,13 @@ export function AgentScreen({
                   onGone={() => {
                     setReady(false);
                     setSession(null);
+                    // The page that said "live" is gone: the new one starts over, so its cover and the wait for it do.
+                    setPage("connecting");
                     setLife((n) => n + 1);
                   }}
                 />
               </Animated.View>
+              {inControl || wide ? null : <PictureEdge radius={styles.box.borderRadius} />}
               {/* The agent's own pointer, while the person watches its screen live (theirs is drawn in control). */}
               <DesktopAgentPointer
                 agentId={agentId}

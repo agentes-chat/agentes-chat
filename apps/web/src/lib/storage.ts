@@ -116,6 +116,8 @@ export const STORAGE_KEYS = {
   sounds: "agentes.sounds",
   /** In `sessionStore`, this tab's id; in `storage`, the tab the person used last (it plays sounds while hidden). */
   soundTab: "agentes.sounds.tab",
+  /** The speed voice messages play at in this browser: "1" (default), "1.5" or "2" (lib/voice-speed.ts). */
+  voiceSpeed: "agentes.voice.speed",
   /** How many times our notifications ask showed by itself in this browser (`usePushAsk`, ADR 0071). */
   pushOffers: "agentes.push.offers",
   /** In `sessionStore`: when the boot last reloaded because the app's files didn't load (index.html keeps a copy). */

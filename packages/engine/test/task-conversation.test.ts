@@ -49,7 +49,7 @@ describe("a task's conversation is a DM with the task's agent", () => {
     const byDev = { type: "agent" as const, agentId: f.agent.id, channelId: f.general.id };
     const issue = await createIssue(deps, byDev, f.org.id, {
       title: "Estorno do pedido",
-      assignee: { type: "person", id: f.owner.id },
+      assignees: [{ type: "person", id: f.owner.id }],
     });
     const at = await openTaskConversation(f.db, person(f.owner.id), f.org.id, issue.id);
     const m = await postPersonMessage(deps, f.owner.id, f.org.id, at.channelId, {
@@ -82,7 +82,7 @@ describe("a task's conversation is a DM with the task's agent", () => {
     const byDev = { type: "agent" as const, agentId: f.agent.id, channelId: f.general.id };
     const issue = await createIssue(deps, byDev, f.org.id, {
       title: "Revisar",
-      assignee: { type: "agent", id: qa.id },
+      assignees: [{ type: "agent", id: qa.id }],
     });
     const at = await openTaskConversation(f.db, person(f.owner.id), f.org.id, issue.id);
     // A conversation made before the task's agent was let in.

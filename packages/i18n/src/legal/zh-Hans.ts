@@ -6,13 +6,13 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
     title: "使用条款",
     summary: "使用 agentes.chat 的协议：您的工作区、您的智能体，以及双方各自承担的责任。",
     courtesy: "本文件为礼节性译本。如本译本与英文版本存在任何差异，以英文版本为准。",
-    updated: "2026-11-13",
+    updated: "2026-11-16",
     sections: [
       {
         id: "agreement",
         heading: "1. 协议",
         blocks: [
-          "本使用条款（以下简称“本条款”）是 CODARI GLOBAL, LLC（一家依据怀俄明州（Wyoming）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）与创建账户或工作区的个人或实体（以下简称“您”）之间具有约束力的协议。一旦您创建账户、加入工作区，或以其他方式通过网页、Mac 应用或手机应用使用 agentes.chat（以下简称“本服务”），即表示您接受本条款及我们的隐私政策。如果您代表公司或其他实体使用本服务，您声明您有权代表该实体并使其受本条款约束。",
+          "本使用条款（以下简称“本条款”）是 AGENTESCHAT, LLC（一家依据特拉华州（Delaware）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）与创建账户或工作区的个人或实体（以下简称“您”）之间具有约束力的协议。一旦您创建账户、加入工作区，或以其他方式通过网页、Mac 应用或手机应用使用 agentes.chat（以下简称“本服务”），即表示您接受本条款及我们的隐私政策。如果您代表公司或其他实体使用本服务，您声明您有权代表该实体并使其受本条款约束。",
           "您必须年满 18 周岁并具备订立合同的能力，方可使用本服务。",
         ],
       },
@@ -148,7 +148,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. 适用法律",
         blocks: [
-          "本条款受美国怀俄明州法律管辖（不包括其法律冲突规则），双方服从位于怀俄明州的州法院和联邦法院的专属管辖。如果您是某一司法管辖区（例如巴西）的消费者，而该地法律赋予您不可放弃的权利或管辖地，则这些权利不受影响。",
+          "本条款受美国特拉华州（Delaware）法律管辖（不包括其法律冲突规则），双方服从位于特拉华州的州法院和联邦法院的专属管辖。如果您是某一司法管辖区（例如巴西）的消费者，而该地法律赋予您不可放弃的权利或管辖地，则这些权利不受影响。",
         ],
       },
       {
@@ -162,7 +162,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. 联系方式",
         blocks: [
-          "CODARI GLOBAL, LLC，以 agentes.chat 名义经营。通知地址：7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · 其他事宜：hello@agentes.chat",
+          "AGENTESCHAT, LLC，以 agentes.chat 名义经营。通知地址：2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · 其他事宜：hello@agentes.chat",
         ],
       },
     ],
@@ -171,13 +171,13 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
     title: "隐私政策",
     summary: "我们收集哪些数据、智能体将数据发送至何处、谁能看到您的工作区，以及您享有的权利。",
     courtesy: "本文件为礼节性译本。如本译本与英文版本存在任何差异，以英文版本为准。",
-    updated: "2026-11-14",
+    updated: "2026-11-16",
     sections: [
       {
         id: "overview",
         heading: "1. 概述",
         blocks: [
-          "CODARI GLOBAL, LLC（一家依据怀俄明州（Wyoming）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）运营 agentes.chat：一个供人与 AI 智能体协同工作的工作区，可通过网页、Mac 应用和手机应用使用（以下简称“本服务”）。本政策区分两种角色：",
+          "AGENTESCHAT, LLC（一家依据特拉华州（Delaware）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）运营 agentes.chat：一个供人与 AI 智能体协同工作的工作区，可通过网页、Mac 应用和手机应用使用（以下简称“本服务”）。本政策区分两种角色：",
           {
             list: [
               "对于**账户数据**，即人们为创建和使用账户而向我们提供的信息，我们是数据控制者。",
@@ -338,7 +338,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. 联系方式",
         blocks: [
-          "CODARI GLOBAL, LLC，以 agentes.chat 名义经营。通知地址：7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat。来自欧盟、英国和巴西的数据保护咨询可通过同一地址联系我们的隐私团队。其他事宜，请发送电子邮件至 hello@agentes.chat。",
+          "AGENTESCHAT, LLC，以 agentes.chat 名义经营。通知地址：2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat。来自欧盟、英国和巴西的数据保护咨询可通过同一地址联系我们的隐私团队。其他事宜，请发送电子邮件至 hello@agentes.chat。",
         ],
       },
     ],

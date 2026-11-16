@@ -79,3 +79,22 @@ describe("Uso por pessoa's amounts on plans (#24)", () => {
     expect(list).not.toContain("data.plansOnly");
   });
 });
+
+describe("an account's use by kind on the phone (the web's KindShares)", () => {
+  const screen = readFileSync(join(import.meta.dir, "../../src/features/usage/UsageScreen.tsx"), "utf8");
+
+  test("the kind rows sit under the agents, from the shared order and whole facts", () => {
+    expect(screen).toMatch(
+      /<AgentShares shares=\{shares\} window=\{window\} \/>\s*<KindShares account=\{account\} window=\{window\} \/>/,
+    );
+    expect(screen).toContain("accountKinds(account)");
+    expect(screen).toContain("kindFacts(t, i18n.language, window, k)");
+    expect(screen).toContain('t("usage.kinds.label")');
+  });
+
+  test("the hint's action ends its sentence and opens the DM with that agent, ready to type", () => {
+    expect(screen).toMatch(/t\("usage\.hint\.handoffs"\)\}\{" "\}\s*<Text/);
+    expect(screen).toContain("openDm({ agentId: target.id }, { compose: true })");
+    expect(screen).toContain('t("usage.hint.message", { name: target.name })');
+  });
+});

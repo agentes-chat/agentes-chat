@@ -2738,6 +2738,13 @@
   "rightHand": {
     "label": "votre bras droit",
     "labelCapitalized": "Votre bras droit",
+    "unusable": {
+      "title": "Ne peut pas penser pour {{name}} pour l'instant",
+      "computerOnly": "Connecté sur {{computer}} uniquement. {{name}} pense avec un forfait connecté en tant que compte.",
+      "away": "À {{owner}}, sur {{computer}}, qui est absent.",
+      "awayYours": "À vous, sur {{computer}}, qui est absent.",
+      "connect": "Connecter un ordinateur"
+    },
     "newDot": "Nouveau",
     "actsAsYou": "agit avec vos permissions",
     "composerHint": "rien ne change sans vous",
@@ -7985,7 +7992,8 @@
     "table": {
       "task": "Tâche",
       "github": "GitHub",
-      "sortBy": "Trier par {{column}}"
+      "sortBy": "Trier par {{column}}",
+      "resize": "Redimensionner la colonne {{column}}"
     },
     "fold": {
       "open": "Ouvrir {{name}}",
@@ -8070,6 +8078,7 @@
       "canceled": "La #{{number}} est revenue à sa place.",
       "assigned": "La #{{number}} est maintenant confiée à {{name}}.",
       "unassigned": "La #{{number}} n'a plus de responsable.",
+      "removed": "La #{{number}} n'est plus confiée à {{name}}.",
       "prioritized": "La #{{number}} a maintenant une priorité {{priority}}."
     },
     "canceledColumn": "Annulées",
@@ -8231,6 +8240,10 @@
       "high": "haute"
     },
     "noAssignee": "Aucun responsable",
+    "assignees": {
+      "people": "Personnes et agents",
+      "done": "Terminé"
+    },
     "agentRole": "Agent · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -8378,7 +8391,9 @@
       "status_changed": "a changé le statut en {{status}}",
       "priority_changed": "a changé la priorité en {{priority}}",
       "assigned": "a attribué la tâche",
-      "unassigned": "a retiré le responsable",
+      "unassigned": "a retiré un responsable",
+      "assigned_named": "a attribué la tâche à {{name}}",
+      "unassigned_named": "a retiré {{name}} de la tâche",
       "due_date_set": "a fixé l'échéance au {{date}}",
       "due_date_removed": "a retiré l'échéance",
       "pr_linked": "a lié la PR #{{number}}",
@@ -10738,10 +10753,10 @@
       "copiesRemoved_one": "{{count}} connexion inutilisée supprimée.",
       "copiesRemoved_many": "{{count}} connexions inutilisées supprimées.",
       "copiesRemoved_other": "{{count}} connexions inutilisées supprimées.",
-      "removeAllDone": "{{n}} connexions Grok supprimées.",
-      "removeAllText": "Elles cessent de réfléchir pour leurs agents sur {{computers}}. Les connexions des autres personnes ne sont pas touchées.",
-      "removeAllTitle": "Supprimer les {{n}} connexions Grok ?",
       "removeAllGrok": "Supprimer toutes les connexions Grok",
+      "removeAllTitle": "Supprimer les {{n}} connexions Grok ?",
+      "removeAllText": "Elles cessent de réfléchir pour leurs agents sur {{computers}}. Les connexions des autres personnes ne sont pas touchées.",
+      "removeAllDone": "{{n}} connexions Grok supprimées.",
       "disconnect": "Déconnecter",
       "renameTitle": "Renommer {{label}}",
       "nameLabel": "Nom",
@@ -10978,6 +10993,9 @@
     "keys": "Entrée envoie · Échap supprime",
     "keysHold": "Relâchez pour envoyer · Échap supprime",
     "keysPaused": "En pause · Espace écoute · Entrée envoie · Échap supprime",
+    "askDiscard": "Supprimer l’audio ? Votre texte reste.",
+    "askDelete": "Supprimer",
+    "askKeep": "Garder",
     "pausePlay": "Mettre en pause",
     "seek": "Position dans l'audio",
     "speedAt": "Vitesse {{speed}}×",
@@ -17037,11 +17055,11 @@
       "rolesPersonal": "Ce que chaque personne ici peut faire. Les propriétaires peuvent tout faire."
     },
     "about": {
-      "basedOn": "Basé sur <site>agentes.chat</site> de Codari Global, LLC",
+      "basedOn": "Basé sur <site>agentes.chat</site> de AGENTESCHAT, LLC",
       "version": "Version",
       "license": "Logiciel libre sous la <license>GNU Affero General Public License v3</license>, sans garantie.",
       "source": "Code source",
-      "copyright": "Copyright © 2026 Codari Global, LLC et contributeurs"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC et contributeurs"
     },
     "title": "Paramètres",
     "account": {
@@ -17489,6 +17507,18 @@
       "see": "Voir son utilisation"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "Par type",
+      "handoffs": "Transmissions entre agents",
+      "people": "Conversations avec des personnes",
+      "routines": "Routines"
+    },
+    "hint": {
+      "handoffs": "Cette semaine, l’essentiel de l’utilisation vient d’agents qui se transmettent du travail. Pour un travail long, demandez directement à l’agent.",
+      "message": "Écrire à {{name}}"
+    }
+  },
   "usageViews": {
     "signedOut": "Déconnecté",
     "whose": "De {{name}}",
@@ -17683,6 +17713,14 @@
     "speedFallback": {
       "text": "ChatGPT a refusé la vitesse Rapide pour ce compte ou ce modèle, cette réponse est donc arrivée en standard.",
       "action": "Ouvrir l'agent"
+    },
+    "standIn": {
+      "needsComputer": "Répondu avec {{via}} : {{plan}} a besoin d'un ordinateur.",
+      "away": "Répondu avec {{via}} : l'ordinateur de {{plan}} est absent.",
+      "notShared": "Répondu avec {{via}} : {{plan}} ne sert que la personne qui l'a connecté.",
+      "limit": "Répondu avec {{via}} : {{plan}} a atteint sa limite.",
+      "cant": "Répondu avec {{via}} : {{plan}} ne peut pas penser pour l'instant.",
+      "change": "Changer"
     },
     "modelStandIn": {
       "text": "{{plan}} a refusé {{from}} avec cette clé. J'ai répondu avec {{to}}, qui fonctionne avec elle.",

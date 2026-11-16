@@ -1592,6 +1592,33 @@
   "prefs.general.notchDesc": {
     "value": "On MacBooks with a notch: who is working shows around the camera."
   },
+  "prefs.general.compatTitle": {
+    "value": "Compatibility mode"
+  },
+  "prefs.general.compatDesc": {
+    "value": "Draws the window without the graphics card. It's slower but works on any computer. Use it if the window goes black, gets cut off or freezes."
+  },
+  "prefs.general.compatReopen": {
+    "value": "Takes effect when the app reopens."
+  },
+  "prefs.general.reopenNow": {
+    "value": "Reopen now"
+  },
+  "prefs.general.compatFellBack": {
+    "value": "The window didn't open with the graphics card, so it opened in compatibility mode."
+  },
+  "prefs.general.compatTryCard": {
+    "value": "Try the graphics card again"
+  },
+  "prefs.general.compatOwn": {
+    "value": "WEBKIT_DISABLE_DMABUF_RENDERER decides this now. To choose here, quit the app and open it without that variable."
+  },
+  "prefs.general.reopenTitle": {
+    "value": "Reopen agentes.chat?"
+  },
+  "prefs.general.reopenBody": {
+    "value": "Agents can't use this computer until the app opens again. What is already running finishes first."
+  },
   "prefs.thisMac.agents": {
     "value": "Agents"
   },

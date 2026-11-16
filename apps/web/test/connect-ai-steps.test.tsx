@@ -916,6 +916,24 @@ describe("Conectar uma IA: one picker, plans first", () => {
     expect(payWith(dialog, "Com chave de API").getAttribute("aria-checked")).toBe("true");
   });
 
+  test("OpenCode not installed on its computer: said so, with no API key offered, since the key row can't take OpenCode's", async () => {
+    const { dialog, choose } = await connect({
+      computers: [{ ...MAC, keys: false, brains: { claude_code: true, codex: true, opencode: false } }],
+      brain: {
+        options: [
+          ...fakeAgentBrain(ADA_ID).options,
+          { kind: "opencode", available: false, reason: "not_installed", models: [], defaultModel: null },
+        ],
+      },
+    });
+    await choose("OpenCode");
+    expect(dialog.textContent).toContain("O OpenCode não está instalado no MacBook.");
+    expect(within(dialog).queryByRole("button", { name: "Usar uma chave de API agora" })).toBeNull();
+    // Another plan its computer can't take keeps the key one click away.
+    await choose("Kimi Code");
+    expect(within(dialog).getByRole("button", { name: "Usar uma chave de API agora" })).toBeTruthy();
+  });
+
   test("a program not on the computer: one line, the Claude app told apart behind an ⓘ, installed or looked for from here", async () => {
     const options = fakeAgentBrain(ADA_ID).options.map((o) =>
       o.kind === "claude_code" ? { ...o, available: false, reason: "not_installed" as const } : o,

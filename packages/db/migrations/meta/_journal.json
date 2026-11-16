@@ -1926,6 +1926,27 @@
       "when": 1794757200000,
       "tag": "0278_workspace_approvals_level",
       "breakpoints": true
+    },
+    {
+      "idx": 277,
+      "version": "7",
+      "when": 1794757300000,
+      "tag": "0279_voice_clip_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 278,
+      "version": "7",
+      "when": 1794780937391,
+      "tag": "0280_outbox_last_error_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 279,
+      "version": "7",
+      "when": 1794790937391,
+      "tag": "0281_issue_assignees",
+      "breakpoints": true
     }
   ]
 }
