@@ -1,6 +1,6 @@
 import type { ControlConfig, ControlConfigPatch } from "@agenteschat/adapters/runner-control";
 import { Button, Segmented } from "@agenteschat/ui";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHost, useSnapshot, useStore } from "../../app";
 import type { Platform } from "../../control/platform";
@@ -31,34 +31,71 @@ export function Advanced() {
   const snap = useSnapshot();
   const toast = useToast();
   const homes = pairedHomes(snap);
-  const first = homes[0]?.homeId;
-  const [config, setConfig] = useState<ControlConfig | null>(null);
+  const ids = homes.map((h) => h.homeId).join(" ");
+  // Each workspace's own limits, read from every one: they can differ, and a save goes to all of them (#577).
+  const [configs, setConfigs] = useState<Record<string, ControlConfig>>({});
 
+  // The workspaces paired now, also for a read a save started before one was paired.
+  const paired = useRef(ids);
+  paired.current = ids;
+
+  // Only the latest read lands (a quick second change, or leaving the tab, drops an older one), and a workspace that
+  // didn't answer shows the value it last confirmed, never one only shown while saving.
+  const reads = useRef(0);
+  const confirmed = useRef<Record<string, ControlConfig>>({});
+  const reload = useCallback(async () => {
+    const n = ++reads.current;
+    const read = await Promise.all(
+      paired.current
+        .split(" ")
+        .filter(Boolean)
+        .map((id) =>
+          store
+            .request(id, { type: "config.get" })
+            .then((c) => [id, c] as const)
+            .catch(() => null),
+        ),
+    );
+    if (n !== reads.current) return;
+    confirmed.current = { ...confirmed.current, ...Object.fromEntries(read.filter((r) => r !== null)) };
+    setConfigs(confirmed.current);
+  }, [store]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: read again when the paired workspaces change
   useEffect(() => {
-    if (!first) return;
-    let live = true;
-    store
-      .request(first, { type: "config.get" })
-      .then((c) => live && setConfig(c))
-      .catch(() => {});
+    void reload();
     return () => {
-      live = false;
+      reads.current++;
     };
-  }, [store, first]);
+  }, [reload, ids]);
 
   const defaults = defaultLimits(host.platform);
   const idle = idleChoices(host.platform);
-  const limits = { ...defaults, ...(config ?? {}) };
+  const limitsOf = (homeId: string | undefined) => ({ ...defaults, ...((homeId && configs[homeId]) || {}) });
+  const read = homes.filter((h) => configs[h.homeId]);
+  const limits = limitsOf(read[0]?.homeId);
 
-  // Limits apply to each organization: the same numbers go to every one.
+  /** Under a limit the workspaces don't share, each one's own value, so the control's number isn't read as everyone's. */
+  const split = (key: keyof typeof defaults, show: (v: number) => string) => {
+    const each = read.map((h) => [orgName(h), limitsOf(h.homeId)[key]] as const);
+    if (new Set(each.map(([, v]) => v)).size < 2) return undefined;
+    return each.map(([name, v]) => `${name} ${show(v)}`).join(" · ");
+  };
+  const hours = (s: number) => t("desktop.common.hours", { count: s / 3600 });
+  const minutes = (m: number) => t("desktop.common.minutes", { count: m });
+
+  // Limits apply to each organization: the same numbers go to every one. Read back after, so a workspace that didn't
+  // take the change still shows its own value.
   const change = async (patch: ControlConfigPatch, done?: string) => {
-    setConfig((c) => (c ? { ...c, ...patch } : c));
+    reads.current++;
+    setConfigs((all) => Object.fromEntries(Object.entries(all).map(([id, c]) => [id, { ...c, ...patch }])));
     try {
       await store.requestAll({ type: "config.set", patch });
       if (done) toast(done);
     } catch {
       toast(t("desktop.common.error"), "alert");
     }
+    await reload();
   };
 
   const disabled = homes.length === 0;
@@ -84,6 +121,7 @@ export function Advanced() {
         <PrefRow
           title={t("desktop.prefs.advanced.concurrent")}
           hint={hintFor(t, t("desktop.prefs.advanced.concurrent"), t("desktop.prefs.advanced.concurrentDesc"))}
+          desc={split("maxConcurrentTasks", String)}
           end={
             <Stepper
               label={t("desktop.prefs.advanced.concurrent")}
@@ -97,6 +135,7 @@ export function Advanced() {
         <PrefRow
           title={t("desktop.prefs.advanced.maxTime")}
           hint={hintFor(t, t("desktop.prefs.advanced.maxTime"), t("desktop.prefs.advanced.maxTimeDesc"))}
+          desc={split("taskMaxSeconds", hours)}
           end={
             <Segmented
               size="sm"
@@ -109,7 +148,7 @@ export function Advanced() {
               onValueChange={(v) => void change({ taskMaxSeconds: Number(v) })}
               options={TASK_MAX.map((s) => ({
                 value: s as string,
-                label: t("desktop.common.hours", { count: Number(s) / 3600 }),
+                label: hours(Number(s)),
               }))}
             />
           }
@@ -121,6 +160,7 @@ export function Advanced() {
         <PrefRow
           title={t("desktop.prefs.advanced.brainMax")}
           hint={hintFor(t, t("desktop.prefs.advanced.brainMax"), t("desktop.prefs.advanced.brainMaxDesc"))}
+          desc={split("brainMaxProcesses", String)}
           end={
             <Stepper
               label={t("desktop.prefs.advanced.brainMax")}
@@ -133,6 +173,7 @@ export function Advanced() {
         />
         <PrefRow
           title={t("desktop.prefs.advanced.brainIdle")}
+          desc={split("brainIdleMinutes", minutes)}
           end={
             <Segmented
               size="sm"
@@ -141,7 +182,7 @@ export function Advanced() {
               onValueChange={(v) => void change({ brainIdleMinutes: Number(v) })}
               options={idle.map((m) => ({
                 value: m,
-                label: t("desktop.common.minutes", { count: Number(m) }),
+                label: minutes(Number(m)),
               }))}
             />
           }

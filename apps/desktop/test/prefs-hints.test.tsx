@@ -84,6 +84,8 @@ const rows = (root: ParentNode) =>
       line: row.querySelector(".dk-crow__text > small")?.textContent ?? null,
     };
   });
+/** A fake runner's limits, which a test sets before the tab reads them. */
+type Limits = { config: { maxConcurrentTasks: number } };
 const row = (root: ParentNode, title: string) => rows(root).find((r) => r.title === title);
 const buttonIn = (root: ParentNode, text: string) =>
   [...root.querySelectorAll("button")].find((b) => b.textContent === text);
@@ -586,6 +588,28 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
           "One folder per workspace, with a folder for each agent.",
         );
         for (const r of rows(folders as HTMLElement)) expect(r.line).not.toContain("One folder per workspace");
+      },
+    ));
+
+  test("Advanced: a limit the workspaces don't share shows each one's value, and a change sets it on both (#577)", () =>
+    pane(
+      "selfhost",
+      <Advanced />,
+      (el) => row(el, "At the same time")?.line,
+      async (el, host) => {
+        expect(row(el, "At the same time")?.line).toBe("Acme 3 · Horizonte 7");
+        expect(row(el, "Open conversations")?.line).toBeNull();
+        expect(el.querySelector('[aria-label="At the same time"] output')?.textContent).toBe("3");
+        const more = el.querySelector<HTMLButtonElement>('[aria-label="At the same time"] button:last-child');
+        await act(async () => more?.click());
+        await until(() => row(el, "At the same time")?.line === null);
+        const limits = [...host.runners.values()].map((r) => (r as unknown as Limits).config.maxConcurrentTasks);
+        expect(limits).toEqual([4, 4]);
+      },
+      {
+        host: (h) => {
+          (h.runners.get("e5f6a7b8") as unknown as Limits).config.maxConcurrentTasks = 7;
+        },
       },
     ));
 
