@@ -102,7 +102,7 @@ export const LEGACY_REDIRECTS = [
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: variant === "production" ? "agentes" : `agentes ${variant}`,
+  name: variant === "production" ? "Tich Rooms" : `Tich Rooms ${variant}`,
   slug: "agentes",
   scheme: "agenteschat",
   version: "0.1.0",
@@ -251,7 +251,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       // extension takes the app's name and shares its URL scheme; it reaches phones only with a new native build.
       "expo-share-intent",
       {
-        iosShareExtensionName: variant === "production" ? "agentes" : `agentes ${variant}`,
+        iosShareExtensionName: variant === "production" ? "Tich Rooms" : `Tich Rooms ${variant}`,
         iosActivationRules: {
           NSExtensionActivationSupportsText: true,
           NSExtensionActivationSupportsWebURLWithMaxCount: 1,

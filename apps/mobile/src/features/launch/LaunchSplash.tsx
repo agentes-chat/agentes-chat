@@ -224,7 +224,7 @@ export function LaunchSplash({
       onLayout={onLayout}
       // One element for screen readers, except while it waits on the person: then its buttons are reachable.
       accessible={!asking}
-      accessibilityLabel={lineText ? `agentes.chat. ${lineText}` : "agentes.chat"}
+      accessibilityLabel={lineText ? `Tich Rooms. ${lineText}` : "Tich Rooms"}
       accessibilityLiveRegion="polite"
     >
       {reduced ? null : <LaunchSky width={width} height={height} level={level} floor={floor} tones={tones} />}
@@ -238,10 +238,7 @@ export function LaunchSplash({
         {fontsReady ? (
           <Animated.View style={[styles.name, reduced ? styles.still : nameStyle]}>
             <RNText allowFontScaling={false} style={[styles.word, { color: c.ink }]}>
-              agentes
-              <RNText allowFontScaling={false} style={styles.dot}>
-                .chat
-              </RNText>
+              Tich Rooms
             </RNText>
           </Animated.View>
         ) : null}
