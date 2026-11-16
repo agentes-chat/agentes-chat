@@ -1,12 +1,8 @@
 import {
-  type InvitationWithStatus,
   type Person,
   type RemovalPreview,
-  useAllInvitations,
   useApi,
   useCancelSuggestion,
-  useJoinRequests,
-  useMe,
   useMySuggestions,
   usePeople,
   useRemoveMember,
@@ -20,7 +16,6 @@ import { removalLines } from "@agenteschat/client/lib/removal";
 import { isBelow, leaves, removes } from "@agenteschat/client/lib/roles";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
@@ -34,35 +29,14 @@ import { chooseAction } from "../settings/parts";
 import { Face } from "../shared/Face";
 import { useColors, useMeId } from "../shared/hooks";
 import { errorHaptic, Loaded, successHaptic } from "../shared/parts";
-import { SheetHostProvider, useSheet } from "../shared/SheetHost";
-import { InvitationSheet } from "./InviteSheets";
-import {
-  invitationLine,
-  invitationSender,
-  invitersOf,
-  memberActions,
-  memberLine,
-  membersByName,
-  pendingInvitations,
-  waitingLine,
-  whenWords,
-} from "./logic";
-import { MembersFullNote } from "./MembersFullNote";
+import { invitersOf, memberActions, memberLine, membersByName, whenWords } from "./logic";
 
 /**
- * Membros e convites (ADR 0090), one page: whoever may invite gets "Convidar pessoas" on top (the workspace's link
- * lives on that screen), then what waits on them and the invitations sent; a member who may not invite suggests
- * someone. Then the people, each with their roles (ADR 0085).
+ * Membros (ADR 0090): whoever may invite gets "Convidar pessoas" on top (what waits on them, the links and the
+ * invitations sent are Convites', its own screen beside this one); a member who may not invite suggests someone.
+ * Then the people, each with their roles (ADR 0085).
  */
 export function MembersPage() {
-  return (
-    <SheetHostProvider>
-      <Members />
-    </SheetHostProvider>
-  );
-}
-
-function Members() {
   const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
   const c = useColors();
@@ -96,13 +70,9 @@ function Members() {
       <View style={styles.gap} />
       <Locked when={frozen} readable>
         {invites ? (
-          <>
-            <GroupedList>
-              <GroupedRow icon="plus" label={t("members.inviteTitle")} onPress={() => router.push("/invite-people")} />
-            </GroupedList>
-            <WaitingYou />
-            <SentInvitations />
-          </>
+          <GroupedList>
+            <GroupedRow icon="plus" label={t("members.inviteTitle")} onPress={() => router.push("/invite-people")} />
+          </GroupedList>
         ) : (
           <Suggestions />
         )}
@@ -226,80 +196,6 @@ export function useRemoveFlow() {
       ],
     );
   };
-}
-
-/** Esperando você: who asked through the link and whom members suggested, each opening the review (ADR 0068, 0090). */
-function WaitingYou() {
-  const { t, i18n } = useTranslation();
-  const { orgId } = useOrg();
-  const requests = useJoinRequests(orgId).data ?? [];
-  if (requests.length === 0) return null;
-  return (
-    <>
-      <GroupedHeader>{`${t("members.waitingTitle")} · ${requests.length}`}</GroupedHeader>
-      <GroupedList>
-        {requests.map((r) => (
-          <GroupedRow
-            key={r.id}
-            leading={<PersonAvatar name={r.name} size={30} />}
-            label={r.name}
-            sub={waitingLine(t, i18n.language, r)}
-            subLines={2}
-            media
-            chevron
-            onPress={() => router.push({ pathname: "/join-requests", params: { request: r.id } })}
-          />
-        ))}
-      </GroupedList>
-      <MembersFullNote />
-    </>
-  );
-}
-
-/** Convites enviados: those still waiting, each opening its actions (ADR 0090). */
-function SentInvitations() {
-  const { t, i18n } = useTranslation();
-  const { orgId } = useOrg();
-  const sheet = useSheet();
-  const me = useMe().data?.user.name;
-  const list = pendingInvitations(useAllInvitations(orgId).data ?? []);
-  const roles = useRoles(orgId).data?.roles ?? [];
-  // Sent again from here: until when it works now.
-  const [resent, setResent] = useState<Record<string, string>>({});
-  if (list.length === 0) return null;
-  const open = (inv: InvitationWithStatus) =>
-    sheet.open(
-      <InvitationSheet
-        invitation={inv}
-        line={invitationLine(t, i18n.language, inv, roles, {
-          resentUntil: resent[inv.id],
-          sender: invitationSender(t, inv, me),
-        })}
-        resent={Boolean(resent[inv.id])}
-        onResent={(id, until) => setResent((all) => ({ ...all, [id]: until }))}
-      />,
-      { solid: true },
-    );
-  return (
-    <>
-      <GroupedHeader>{`${t("members.invitations.title")} · ${list.length}`}</GroupedHeader>
-      <GroupedList>
-        {list.map((inv) => (
-          <GroupedRow
-            key={inv.id}
-            leading={<PersonAvatar name={inv.email} size={30} />}
-            label={inv.email}
-            labelLines={2}
-            sub={invitationLine(t, i18n.language, inv, roles, { resentUntil: resent[inv.id] })}
-            subLines={2}
-            media
-            more
-            onPress={() => open(inv)}
-          />
-        ))}
-      </GroupedList>
-    </>
-  );
 }
 
 /**

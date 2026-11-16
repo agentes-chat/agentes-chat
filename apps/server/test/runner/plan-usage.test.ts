@@ -9,8 +9,10 @@ import {
   parsePlanUsage,
   parseRunnerFrame,
 } from "@agenteschat/adapters/machine-protocol";
+import { planState } from "@agenteschat/ui/plan-state";
 import { AccountManager, type AccountManagerOptions } from "../../runner/accounts";
 import {
+  antigravityUsage,
   CLAUDE_PROBE_ARGS,
   CLAUDE_TOKEN_CHECK_ARGS,
   checkClaudeToken,
@@ -201,6 +203,56 @@ test("Codex's rate limits: windows told apart by their length, else primary is t
     { kind: "seven_day", usedPercent: 100 },
   ]);
   expect(codexUsage({ primary: null, secondary: null }, "turn", NOW)).toBeNull();
+});
+
+/** Google's usage panel for an Antigravity sign-in, line by line: every percentage is what is left. */
+const agyPanel = (gemini: { week: number; five: number }, argon = 100, info = "", color = (s: string) => s) =>
+  [
+    color("Gemini Models"),
+    `Weekly Limit Remaining${info}`,
+    color(`${gemini.week}%`),
+    `Five Hour Limit Remaining${info}`,
+    color(`${gemini.five}%`),
+    "",
+    color(`Claude and GPT models${info}`),
+    `Weekly Limit Remaining${info}`,
+    color("100%"),
+    `Five Hour Limit Remaining${info}`,
+    color("100%"),
+    "",
+    color(`Gemini 4 Argon${info}`),
+    `Gemini 4 Argon Weekly Limit${info}`,
+    color(`${argon}%`),
+  ].join("\n");
+const ansi = (s: string) => `\u001b[1;36m${s}\u001b[0m`;
+
+test("Antigravity's panel: every percentage is what is left; only Gemini's group is the plan's, the others are named", () => {
+  for (const text of [agyPanel({ week: 100, five: 100 }), agyPanel({ week: 100, five: 100 }, 100, " ⓘ", ansi)]) {
+    const usage = antigravityUsage(text, "probe", NOW);
+    expect(usage?.windows).toEqual([
+      { kind: "seven_day", usedPercent: 0 },
+      { kind: "five_hour", usedPercent: 0 },
+      { kind: "other", label: "Claude and GPT models · 7d", usedPercent: 0 },
+      { kind: "other", label: "Claude and GPT models · 5h", usedPercent: 0 },
+      { kind: "other", label: "Gemini 4 Argon · 7d", usedPercent: 0 },
+    ]);
+    expect(planState(usage as PlanUsage, NOW).state).toBe("ok");
+  }
+  // Gemini's week spent: the plan is at its limit.
+  const spent = antigravityUsage(agyPanel({ week: 0, five: 100 }, 100, " ⓘ", ansi), "probe", NOW) as PlanUsage;
+  expect(spent.windows[0]).toEqual({ kind: "seven_day", usedPercent: 100 });
+  expect(planState(spent, NOW).state).toBe("limited");
+  // Argon's own week spent: shown under its name, never the plan's limit.
+  const argon = antigravityUsage(agyPanel({ week: 80, five: 100 }, 0), "probe", NOW) as PlanUsage;
+  expect(argon.windows.at(-1)).toEqual({ kind: "other", label: "Gemini 4 Argon · 7d", usedPercent: 100 });
+  expect(planState(argon, NOW)).toEqual({ state: "ok", until: null, used: 20 });
+  // One line per limit, and a line that says "used" counts up.
+  expect(
+    antigravityUsage("Gemini Models\nWeekly Limit: 30% used\nFive Hour Limit Remaining 90%", "probe", NOW)?.windows,
+  ).toEqual([
+    { kind: "seven_day", usedPercent: 30 },
+    { kind: "five_hour", usedPercent: 10 },
+  ]);
 });
 
 test("people hear at once only when a limit is hit or cleared or a window crosses 80, 90 (its bar turns red) or 100", () => {

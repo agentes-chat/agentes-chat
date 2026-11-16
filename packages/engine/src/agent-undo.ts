@@ -56,7 +56,7 @@ export function issueSnapshot(i: IssueView): Record<string, unknown> {
     description: i.description,
     status: i.status,
     priority: i.priority,
-    assignee: i.assignee ? { type: i.assignee.type, id: i.assignee.id } : null,
+    assignees: i.assignees.map((a) => ({ type: a.type, id: a.id })),
     labels: i.labels,
     project: i.project?.id ?? null,
     dueDate: i.dueDate,
@@ -97,7 +97,7 @@ async function applyIssueFields(
   if ("description" in values) patch.description = String(values.description ?? "");
   if ("status" in values) patch.status = values.status as IssueView["status"];
   if ("priority" in values) patch.priority = values.priority as IssueView["priority"];
-  if ("assignee" in values) patch.assignee = (values.assignee as WorkActor | null) ?? null;
+  if ("assignees" in values) patch.assignees = (values.assignees as WorkActor[] | null) ?? [];
   if ("labels" in values) patch.labels = (values.labels as string[]) ?? [];
   if ("project" in values) patch.projectId = (values.project as string | null) ?? null;
   if ("dueDate" in values) patch.dueDate = (values.dueDate as string | null) ?? null;

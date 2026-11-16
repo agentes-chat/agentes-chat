@@ -943,11 +943,13 @@ async function views(
     const lastRuns = recent.get(r.id) ?? [];
     const runs = recentViews(lastRuns, details, right.reads);
     // Its runs in progress: queued or being started (held emails are left out above), or whose agent run
-    // still works or waits (also after handing off).
+    // still works or waits. A run that already handed off is not at work: its report is out and the turn
+    // left of it (its own record) says nothing new for the routine, so only a wait of it shows.
     const open = lastRuns.filter((run) => {
       if (run.status === "queued" || run.status === "starting") return true;
       if (run.status !== "started" && run.status !== "reported") return false;
       const agentRun = run.agentRunId ? details.agentRuns.get(run.agentRunId) : undefined;
+      if (run.status === "reported") return agentWaiting(agentRun) || usageWaiting(agentRun);
       return AGENT_ACTIVE.has(agentRun?.status ?? "");
     });
     const openAgents = open.flatMap((run) => {

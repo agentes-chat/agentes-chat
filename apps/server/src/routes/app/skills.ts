@@ -65,6 +65,10 @@ const Skill = z
       .uuid()
       .nullable()
       .openapi({ description: "An agent-made skill's agent (the only one that changes it)." }),
+    ownerUserId: z.string().nullable().openapi({
+      description:
+        "A personal skill's person: only they read and change it, and agents use it only on runs that person is behind. Null: the team's.",
+    }),
     locked: z.boolean().openapi({ description: "Agents can't change it; never archived for disuse." }),
     useCount: z.number(),
     lastUsedAt: z.string().nullable(),
@@ -177,12 +181,16 @@ const SkillListItem = Skill.extend({
   agentsCount: z.number().openapi({ description: "Active agents with this skill turned on." }),
 }).openapi("SkillListItem");
 
+const Personal = z.boolean().optional().openapi({
+  description: "The person's own skill, which any member adds, instead of the team's (who manages agents).",
+});
+
 /** Reading a link downloads the repository's archive (up to 50 MB): to list its skills, install or update one. */
 const LINK_READS = { limit: 60, windowMs: 3600_000 };
 
 /**
  * Skills in Markdown (`SKILL.md`, ADR 0020): install by zip, GitHub URL or by
- * hand (admins, `manage_agents`), and turn them on per agent. No code runs:
+ * hand (the team's by who manages agents, a personal one by any member), and turn them on per agent. No code runs:
  * scripts are listed as ignored.
  */
 export function skillRoutes(deps: AppDeps) {
@@ -226,10 +234,13 @@ export function skillRoutes(deps: AppDeps) {
       tags,
       security,
       summary: "The organization's skills",
+      description:
+        "The team's skills and the person's own personal ones. For who manages agents, also everyone else's personal skills, with only their name, person and agents.",
       request: { params: OrgParams },
       responses: { 200: json(z.object({ skills: z.array(SkillListItem) })), ...errors },
     }),
-    async (c) => c.json({ skills: await listSkills(db, c.get("user").id, c.req.valid("param").orgId) }, 200),
+    async (c) =>
+      c.json({ skills: await listSkills(db, c.get("user").id, c.req.valid("param").orgId, { others: true }) }, 200),
   );
 
   const SkillSettings = z
@@ -277,12 +288,17 @@ export function skillRoutes(deps: AppDeps) {
         params: OrgParams,
         body: body(
           z.union([
-            z.object({ markdown: z.string().max(250_000), defaultForNewAgents: z.boolean().optional() }),
+            z.object({
+              markdown: z.string().max(250_000),
+              defaultForNewAgents: z.boolean().optional(),
+              personal: Personal,
+            }),
             z.object({
               name: z.string().max(64),
               description: z.string().max(1024),
               body: z.string().max(200_000),
               defaultForNewAgents: z.boolean().optional(),
+              personal: Personal,
             }),
           ]),
         ),
@@ -299,6 +315,7 @@ export function skillRoutes(deps: AppDeps) {
         ...parsed,
         source: "manual",
         defaultForNewAgents: input.defaultForNewAgents,
+        owner: input.personal ? c.get("user").id : null,
       });
       return c.json(saved, 201);
     },
@@ -333,6 +350,7 @@ export function skillRoutes(deps: AppDeps) {
                 description:
                   "The agent whose card (`offer_install_skill`) opened the install: what installs goes on for it when the installer may change its skills, else the install stands alone.",
               }),
+              personal: Personal,
             }),
             z.object({
               zipBase64: z
@@ -341,6 +359,7 @@ export function skillRoutes(deps: AppDeps) {
                 .openapi({
                   description: `The skill folder as a zip, base64 (≤ ${SKILL_LIMITS.maxBytes / 1024 / 1024} MB of text and scripts and ${SKILL_LIMITS.assetBytes / 1024 / 1024} MB of other files unzipped).`,
                 }),
+              personal: Personal,
             }),
           ]),
         ),
@@ -368,12 +387,19 @@ export function skillRoutes(deps: AppDeps) {
       const actor = c.get("user").id;
       if ("url" in input) {
         if (!(await linkReadAllowed(actor))) return apiError(c, 429, "rate_limited", tooManyReads);
-        const forAgentId = input.forAgentId;
+        const { forAgentId, personal } = input;
         if (input.paths) {
-          const installed = await importPickedSkills(skills(), actor, orgId, input.url, input.paths, { forAgentId });
+          const installed = await importPickedSkills(skills(), actor, orgId, input.url, input.paths, {
+            forAgentId,
+            personal,
+          });
           return c.json({ skills: installed }, 201);
         }
-        const result = await importSkillFromUrl(skills(), actor, orgId, input.url, { list: input.list, forAgentId });
+        const result = await importSkillFromUrl(skills(), actor, orgId, input.url, {
+          list: input.list,
+          forAgentId,
+          personal,
+        });
         return "choices" in result ? c.json(result, 200) : c.json(result, 201);
       }
       let zip: Uint8Array;
@@ -382,7 +408,7 @@ export function skillRoutes(deps: AppDeps) {
       } catch {
         throw new ValidationError("zipBase64 is not valid base64");
       }
-      return c.json(await importSkillZip(skills(), actor, orgId, zip), 201);
+      return c.json(await importSkillZip(skills(), actor, orgId, zip, { personal: input.personal }), 201);
     },
   );
 

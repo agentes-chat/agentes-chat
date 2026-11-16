@@ -19,7 +19,7 @@ import {
 } from "@agenteschat/client";
 import { computerName, setupView } from "@agenteschat/client/lib/computer";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { firstName, joinNames } from "@agenteschat/client/lib/format";
+import { firstName, formatTime, joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
   allowedFolders,
@@ -254,7 +254,7 @@ export function MachineScreen({ machineId }: { machineId: string }) {
         {managed && m.networkTransition && (
           <Text variant="small" tone="muted" style={styles.center}>
             {t(m.networkTransition.state === "draining" ? "machines.egress.draining" : "machines.egress.restart", {
-              when: new Date(m.networkTransition.deadline).toLocaleTimeString(),
+              when: formatTime(i18n.language, m.networkTransition.deadline),
             })}
           </Text>
         )}

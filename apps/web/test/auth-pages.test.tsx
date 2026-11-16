@@ -156,11 +156,14 @@ describe("Entrar (e-mail primeiro)", () => {
     const { auth } = createFakeAuth({ onSignIn: () => (state.me = signedIn) });
     const { api } = authApi(ACCOUNT, { state });
     const target = `/org/${ORG_ID}/agents/${ADA_ID}?tab=settings&sec=budget`;
+    // Signed out by hand before: any sign-in here takes that mark away.
+    storage.set(STORAGE_KEYS.signedOut, "1");
     const { router } = await renderApp(`/login?redirect=${encodeURIComponent(target)}`, { api, auth });
     await type("E-mail", "marina@acme.com.br");
     await press(/^Continuar(?! com)/);
     await type("Senha", "correct horse");
     await press(/^Entrar/);
+    expect(storage.get(STORAGE_KEYS.signedOut)).toBeNull();
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/agents/${ADA_ID}`);
     expect(router.state.location.search).toEqual({ tab: "settings", sec: "budget" });
   });
@@ -1448,6 +1451,9 @@ describe("Onboarding: the workspace's name", () => {
     await click(screen().getByRole("menuitem", { name: "Sair" }), 6);
     expect(authCalls.map((c) => c.method)).toEqual(["signOut"]);
     expect(router.state.location.pathname).toBe("/login");
+    // By hand: the desktop app's own server waits for its owner's click instead of signing them in again.
+    expect(storage.get(STORAGE_KEYS.signedOut)).toBe("1");
+    storage.remove(STORAGE_KEYS.signedOut);
   });
 
   test("where new workspaces take an invitation: says so, with whom to ask, and doesn't continue", async () => {

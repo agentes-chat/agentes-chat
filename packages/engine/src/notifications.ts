@@ -275,6 +275,14 @@ export const NOTIFICATION_KINDS = [
    */
   "device.cli_request",
   /**
+   * An agent waits for a folder on this person's computer (`request_folder_access`): its owner, waiting, one row per
+   * request (`device-folder:<requestId>`), the agent as actor, the computer in `source.machineId` with its name in
+   * `source.label`, the folder in `latest.title` and the agent's reason in `latest.text`. The person answers it on the
+   * computer itself (folders are never granted from the server), so the row has no button; done once the machine
+   * reports the decision (`access.decided`).
+   */
+  "device.folder_request",
+  /**
    * "Pedir a um admin" (`POST …/admin-asks`, `admin-asks.ts`): to whoever may do it, the asker as actor, what in
    * `latest.reason` (`channel_agent`, `create_agents`, `webhook` with the service in `latest.title`). `channel_agent`
    * names `source.channelId` (its name in `label`) and `agentId`, waits, and is done once the agent is added.
@@ -1305,8 +1313,13 @@ export async function markNotificationRead(
   const row = await mine(deps, userId, orgId, id);
   const updated = await change(deps, row, { readAt: read ? (row.readAt ?? nowOf(deps)) : null });
   const view = notificationView(updated);
+  // The person's own change (an undo too) is not news: no island, sound or banner.
   if (!updated.doneAt) {
-    await publishUserEvent(deps.pubsub, orgId, userId, { type: "notification.upserted", notification: view });
+    await publishUserEvent(deps.pubsub, orgId, userId, {
+      type: "notification.upserted",
+      notification: view,
+      alert: false,
+    });
   }
   await publishCounts(deps, orgId, userId);
   return view;
@@ -1337,7 +1350,8 @@ export async function markNotificationDone(
     userId,
     updated.doneAt
       ? { type: "notification.removed", id: row.id }
-      : { type: "notification.upserted", notification: view },
+      : // Back by the person's hand ("Mover de volta", an undo): not news, so no island, sound or banner.
+        { type: "notification.upserted", notification: view, alert: false },
   );
   await publishCounts(deps, orgId, userId);
   return view;
@@ -1358,8 +1372,13 @@ export async function snoozeNotification(
     const row = await mine(deps, userId, orgId, id);
     const updated = await change(deps, row, { snoozedUntil: null });
     const view = notificationView(updated);
+    // Undone by the person: not news, so no island, sound or banner.
     if (!updated.doneAt) {
-      await publishUserEvent(deps.pubsub, orgId, userId, { type: "notification.upserted", notification: view });
+      await publishUserEvent(deps.pubsub, orgId, userId, {
+        type: "notification.upserted",
+        notification: view,
+        alert: false,
+      });
     }
     await publishCounts(deps, orgId, userId);
     return view;
@@ -1394,6 +1413,30 @@ export async function markAllNotificationsRead(
     .set({ readAt: now })
     .where(and(visible(orgId, userId, now), filterSql(filter), isNull(notifications.readAt)))
     .returning({ id: notifications.id });
+  if (rows.length > 0) await publishCounts(deps, orgId, userId);
+  return { ids: rows.map((r) => r.id) };
+}
+
+/**
+ * "Concluir todas" (in a filter): each row goes to "Concluídas" as with "Concluir". What waits on the person (an
+ * approval, a question) stays until it is answered. The ids changed, for the undo (`markNotificationDone(…, false)`).
+ */
+export async function markAllNotificationsDone(
+  deps: NotificationDeps,
+  userId: string,
+  orgId: string,
+  filter: NotificationFilter = "all",
+): Promise<{ ids: string[] }> {
+  await requirePermission(deps.db, userId, orgId, "read");
+  if (!NOTIFICATION_FILTERS.includes(filter)) throw new ValidationError("Unknown filter");
+  if (filter === "done" || filter === "waiting") return { ids: [] };
+  const now = nowOf(deps);
+  const rows = await deps.db
+    .update(notifications)
+    .set({ doneAt: now, doneByUser: true })
+    .where(and(visible(orgId, userId, now), filterSql(filter), eq(notifications.waiting, false)))
+    .returning({ id: notifications.id });
+  for (const r of rows) await publishUserEvent(deps.pubsub, orgId, userId, { type: "notification.removed", id: r.id });
   if (rows.length > 0) await publishCounts(deps, orgId, userId);
   return { ids: rows.map((r) => r.id) };
 }

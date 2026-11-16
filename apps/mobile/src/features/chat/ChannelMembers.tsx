@@ -15,12 +15,14 @@ import { listsAgent, opensDetails } from "@agenteschat/client/lib/audience";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
+import { isConnected, sheetGroups } from "@agenteschat/client/lib/member-groups";
 import { can, leavesChannel, makesAgents, managesChannel, setsAutoReply } from "@agenteschat/client/lib/permissions";
+import { agentMemberLine, agentStatusShort, agentWhyKey, isAgentOff, liveLine } from "@agenteschat/client/lib/presence";
 import { joinsChannels } from "@agenteschat/client/lib/right-hand";
 import { picksForMe, replyAloneKey } from "@agenteschat/client/lib/routing";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
@@ -32,6 +34,7 @@ import { SheetTitle } from "../shared/PromptForm";
 import { ActionList, successHaptic, Tile, tapHaptic } from "../shared/parts";
 import { useSheet } from "../shared/SheetHost";
 import { usePresenceOf } from "../status/hooks";
+import { lineText } from "../status/logic";
 
 /** Above this many members the list gets a search field (as the web's channel details). */
 const SEARCH_FROM = 8;
@@ -115,9 +118,31 @@ export function ChannelMembersSheet({ channelId, channelName }: { channelId: str
   // The right hand (ADR 0137) is in no channel and isn't listed as a member: an @mention reaches it anywhere.
   const needle = q.trim().toLowerCase();
   const shown = all.filter((w) => !needle || `${w.name} ${w.handle} ${w.email}`.toLowerCase().includes(needle));
-  const agents = shown.filter((w) => w.kind === "agent");
-  const people = shown.filter((w) => w.kind === "person");
-  const agentCount = all.filter((w) => w.kind === "agent").length;
+  // Off for now, as on the web: an agent out of office, held or with no AI, a person not here.
+  const off = (w: Who) => {
+    if (w.kind === "person") {
+      const p = presence.person(w.id);
+      return p !== null && !isConnected(p.presence);
+    }
+    const a = presence.agent(w.id);
+    return a !== null && isAgentOff(a.presence);
+  };
+  const groups = sheetGroups(all, shown, off);
+  const label = {
+    agents: t("channelMembers.agents"),
+    people: t("channelMembers.people"),
+    offline: t("presence.offline"),
+  };
+  /** An off agent's line as the web's column (`agentMemberLine`), else its work and how it answers here. */
+  const subtitleOf = (w: Who) => {
+    if (w.kind === "person") return lineOf(t, w, routing);
+    const a = presence.agent(w.id);
+    const why = a ? agentWhyKey(a.presence, a.noAi) : null;
+    if (!a || !why) return [workText(w.id), lineOf(t, w, routing)].filter(Boolean).join("\n");
+    const own = liveLine(a.noAi ? null : a.status?.status, now);
+    const under = agentMemberLine(workText(w.id), own && agentStatusShort(t, own, i18n.language), why);
+    return under?.work ?? (under?.line ? lineText(under.line) : t(`presence.agentWhy.${why}`));
+  };
 
   const open = (w: Who) =>
     sheet.open(<MemberOptions channelId={channelId} channelName={channelName} who={w} removable={editable} />);
@@ -144,12 +169,9 @@ export function ChannelMembersSheet({ channelId, channelName }: { channelId: str
                 key={`${w.kind}:${w.id}`}
                 leading={<Face who={{ type: w.kind, id: w.id }} size={30} live={false} presence ring={c.raised} />}
                 title={mine ? `${w.name}${t("common.youSuffix")}` : w.name}
-                subtitle={
-                  w.kind === "agent"
-                    ? [workText(w.id), lineOf(t, w, routing)].filter(Boolean).join("\n")
-                    : lineOf(t, w, routing)
-                }
+                subtitle={subtitleOf(w)}
                 subtitleLines={w.kind === "agent" ? 2 : 1}
+                faded={off(w)}
                 // Not on my own row: taking myself out of my own list reads as a mistake (as on the web).
                 {...((editable && !mine) || w.setsReply
                   ? {
@@ -188,10 +210,7 @@ export function ChannelMembersSheet({ channelId, channelName }: { channelId: str
           {t("channel.detailsEmpty", { q })}
         </Text>
       ) : (
-        <>
-          {group(t("channelMembers.agents"), agentCount, agents)}
-          {group(t("channelMembers.people"), all.filter((w) => w.kind === "person").length, people)}
-        </>
+        groups.map((g) => <Fragment key={g.key}>{group(label[g.key], g.count, g.rows)}</Fragment>)
       )}
       {editable && !needle ? (
         <ActionList

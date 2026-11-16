@@ -74,6 +74,7 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "从其他设备登录",
         blocks: [
           "所有者一开始没有密码：在这台电脑上，应用会帮你登录。要在另一台电脑的浏览器中登录，请在 **设置\u00a0›\u00a0你的账号** 中添加密码。在你添加之前，**偏好设置\u00a0›\u00a0服务器** 会提醒你，点 **添加密码** 就会打开那个页面。手机应用扫描 **偏好设置\u00a0›\u00a0服务器** 中 **在你的手机上** 下方的二维码即可连接。这需要开启 **从你的手机和队友那里访问**。",
+          "所有者在 **设置\u00a0›\u00a0你的账号** 中删除账号后，账号会在 7 天后彻底删除，只有所有者一人的工作区也会随之删除。在此之前，登录并点按 **恢复账号** 即可恢复。删除后，如果一个账号都不剩，应用会打开欢迎窗口来创建新的所有者。如果其他人还有账号，每个人用自己的邮箱登录。",
         ],
       },
       {
@@ -89,6 +90,25 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
         blocks: [
           "在 **偏好设置\u00a0›\u00a0服务器** 中开启 **每晚备份** 后（应用 0.8.1 及以上版本），应用每晚 3:00 会把数据库、文件和 `.env` 保存到你主文件夹的 `.agentes/backups` 中。那时处于睡眠的电脑会在醒来后备份。**立即备份** 会马上做同样的事。每次备份都会让服务器暂停片刻，并保留最新的两份。",
           "**复制到** 会把每份新备份也放进你选的文件夹，比如 U 盘或 iCloud 云盘，那里同样保留最新的两份。里面有你的密钥：请妥善保管，不要给别人。**恢复…** 会把 agentes.chat 恢复到某份备份：消息、文件和设置。它会停止一分钟左右，之前的内容会留在备份文件夹中。",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "重新开始或卸载",
+        blocks: [
+          "agentes.chat 在这台电脑上保存的所有内容都在你主文件夹的文件夹里，而不在应用里面。所以把应用移到废纸篓不会删除其中任何内容，也不会停止正在运行的 agentes.chat。",
+          "要重新开始，请在 **偏好设置\u00a0›\u00a0服务器** 中点按 **清除并重新开始…**。这台电脑上的 agentes.chat 会停止，里面的所有内容会移到你主文件夹中的一个新文件夹（名为 `agentes.chat erased` 加上当天日期），并留在那里，直到你删除它。它的智能体在这台电脑上保存的内容，比如它们的浏览器和登录信息，会从 `.agentes-runner` 中删除。它的工作区会对所有使用者消失。之后欢迎窗口会打开，你用新的所有者账号重新设置。智能体的文件在你主文件夹的 `agentes` 中，会留在原处。",
+          "以后要恢复它，请退出应用，如果有更新的 `.agentes` 文件夹就先把它移开，把 `agentes.chat erased` 文件夹重新命名为 `.agentes`，然后打开应用，在这台电脑上重新设置。它会带着原来的工作区和所有者启动。它的智能体在这台电脑上保存的内容不会恢复，所以它们需要重新登录。",
+          "要把 agentes.chat 从这台电脑上彻底移除：",
+          {
+            list: [
+              "在 **偏好设置\u00a0›\u00a0通用** 中关闭 **登录时打开**。",
+              "退出应用。只关闭窗口是不够的。在 Mac 上，点按它在程序坞中的图标，然后在屏幕顶部的 agentes.chat 菜单中选择 **退出 agentes.chat**，或按 ⌘Q。在 Windows 和 Linux 上，点按时钟旁的 agentes.chat 图标，选择 **退出 agentes.chat**。如果它询问 **退出 agentes.chat？**，点按 **退出**。",
+              "删除应用。在 Mac 上，把它移到废纸篓。在 Windows 和 Linux 上，像卸载其他应用一样卸载它。",
+              "删除你主文件夹中的这些文件夹。它们保存着你的数据，删除后无法恢复，所以如果以后可能还需要，请先在别处留一份备份：`.agentes`（消息、文件、账号、设置和备份）、每个 `agentes.chat erased` 文件夹、`.agentes-runner`（智能体在这台电脑上保存的内容，比如它们的浏览器和登录信息）以及 `agentes`（智能体的文件）。名称以点开头的文件夹是隐藏的。在 Mac 上，在访达中打开你的主文件夹，按 ⇧⌘.（Shift、Command 和句点键）即可显示。",
+              "删除应用自己的文件夹。里面只有它的设置、窗口的登录信息和日志。在 Mac 上：`~/Library` 中 Application Support、Caches、HTTPStorages、Logs、Preferences 和 WebKit 文件夹里名称以 `chat.agentes.desktop` 开头的所有内容，以及 `~/Library/LaunchAgents` 中的 `agentes.chat.plist`。在 Windows 上：`%APPDATA%\\chat.agentes.desktop` 和 `%LOCALAPPDATA%\\chat.agentes.desktop`。在 Linux 上：`~/.config/chat.agentes.desktop` 和 `~/.local/share/chat.agentes.desktop`。在 Mac 上，要打开其中一个文件夹，请在访达中按 ⇧⌘G，然后输入它的路径，比如 `~/Library/Caches`。",
+            ],
+          },
         ],
       },
       {
@@ -460,7 +480,7 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "由 agentes.chat 托管你的工作区时，Jev 已包含在内。在你自己运行的服务器上，它使用所有者的 TypeSafe 密钥，每条消息约 0.0001 美元：[设置 Jev](/help/jev#setup)。",
+          "由 agentes.chat 托管你的工作区时，Jev 已包含在内。在你自己运行的服务器上，它使用所有者的 TypeSafe 或 OpenRouter 密钥，每条消息约 0.0001 美元：[设置 Jev](/help/jev#setup)。",
         ],
       },
       {
@@ -519,6 +539,7 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
               "在 agentes.chat 中打开 **设置 › AI 和用量**，把它粘贴到 **Jev** 下面。只有设置这台服务器的人能看到它。",
             ],
           },
+          "已经在用 OpenRouter？在 **Jev** 下选择 **OpenRouter**，粘贴 https://openrouter.ai/keys 的密钥，或一键用工作区的 OpenRouter 密钥开启 Jev。还是同一个 Jev，以同样的价格通过 OpenRouter 计费。",
           "在用 Docker 运行的服务器上，你也可以把密钥写进 `.env` 的 `TYPESAFE_API_KEY`。它优先于设置中的密钥。",
         ],
       },
@@ -553,6 +574,7 @@ export const helpZhHans: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe 在美国运行 Jev，不会用你发送的内容训练它的模型。它只在提供服务所需的时间内保留数据。它的企业版套餐提供零数据保留。",
           "TypeSafe 的隐私政策：https://typesafe.ai/legal/privacy-policy 。它的数据处理协议：https://typesafe.ai/legal/data-processing 。",
+          "使用 OpenRouter 密钥时，同样的请求会经由 OpenRouter 发往 TypeSafe，适用 OpenRouter 的条款和你在那里的隐私设置：https://openrouter.ai/privacy。",
         ],
       },
       {

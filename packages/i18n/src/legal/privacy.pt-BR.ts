@@ -3,13 +3,13 @@ import type { LegalDocument } from "./types";
 export const privacyPtBR: LegalDocument = {
   title: "Política de privacidade",
   summary: "O que coletamos, o que os agentes enviam e para onde, quem pode ver o seu workspace e os seus direitos.",
-  updated: "2026-11-13",
+  updated: "2026-11-16",
   sections: [
     {
       id: "overview",
       heading: "1. Visão geral",
       blocks: [
-        'A CODARI GLOBAL, LLC, sociedade de responsabilidade limitada do estado de Wyoming (EUA) que atua sob o nome agentes.chat ("agentes.chat", "nós"), opera o agentes.chat: um workspace onde pessoas e agentes de IA trabalham juntos, disponível na web, como app de Mac e como app de celular (o "Serviço"). Esta política distingue dois papéis:',
+        'A AGENTESCHAT, LLC, sociedade de responsabilidade limitada do estado de Delaware (EUA) que atua sob o nome agentes.chat ("agentes.chat", "nós"), opera o agentes.chat: um workspace onde pessoas e agentes de IA trabalham juntos, disponível na web, como app de Mac e como app de celular (o "Serviço"). Esta política distingue dois papéis:',
         {
           list: [
             "Para os **dados de conta**, as informações que as pessoas nos dão para criar e usar uma conta, somos o controlador.",
@@ -59,7 +59,7 @@ export const privacyPtBR: LegalDocument = {
         {
           list: [
             "**Entre os aparelhos e os nossos servidores.** Tudo o que trafega entre os nossos servidores e os navegadores, apps e computadores que se conectam a eles, inclusive o Conteúdo do Workspace, passa pelo nosso provedor de rede, que protege o Serviço contra ataques. Para isso, o provedor de rede decifra esse tráfego no data center dele mais próximo de cada aparelho, e o trata em nosso nome.",
-            "**Para responder.** Quando um agente trabalha, ele envia o contexto de que precisa (o contexto do workspace, as instruções do agente, a conversa, a memória relevante e os resultados das ferramentas) ao provedor de modelo escolhido para esse agente. Com uma chave de API que o workspace adicionou, a chamada é feita na conta do próprio workspace e sob o contrato dele com esse provedor. Com um plano de IA, como o do Claude ou o do ChatGPT, conectado a um agente, o agente trabalha na conta da pessoa que conectou o plano e sob os termos do provedor.",
+            "**Para responder.** Quando um agente trabalha, ele envia o contexto de que precisa (o contexto do workspace, as instruções do agente, a conversa, a memória relevante e os resultados das ferramentas) ao provedor de modelo escolhido para esse agente. Com uma chave de API que o workspace adicionou, a chamada é feita na conta do próprio workspace e sob o contrato dele com esse provedor. Alguns provedores repassam a chamada à empresa que faz ou hospeda o modelo, que também a trata sob os termos desse provedor. Com um plano de IA, como o do Claude ou o do ChatGPT, conectado a um agente, o agente trabalha na conta da pessoa que conectou o plano e sob os termos do provedor.",
             "**Para decidir quem responde.** Um modelo de roteamento lê a mensagem nova, os nomes e funções dos agentes do workspace e a conversa recente para decidir qual agente deve responder, se algum. Ele roda na TypeSafe ou, como alternativa, no provedor de modelo do workspace. O roteamento nunca dá permissão nenhuma a um agente.",
             "**Memória.** Os agentes guardam memória das conversas (resumos, fatos e lições) para melhorar com o tempo. Algumas avaliações sobre a memória (se algo vale ser guardado, ou se contradiz o que o agente já sabe) são feitas pela TypeSafe. A memória pode ser vista e apagada na página do agente, e é apagada junto com o workspace.",
             "**Busca.** Para encontrar mensagens e documentos relacionados, o texto pode ser transformado em vetores (embeddings) pela Voyage AI.",
@@ -114,7 +114,7 @@ export const privacyPtBR: LegalDocument = {
       id: "transfers",
       heading: "9. Transferências internacionais",
       blocks: [
-        "A nossa aplicação e o banco de dados rodam nos Estados Unidos, e os provedores citados nesta política tratam dados nos Estados Unidos. Os computadores dos workspaces rodam na União Europeia ou nos Estados Unidos, e o nosso provedor de rede trata o tráfego no data center dele mais próximo de cada aparelho, nos Estados Unidos ou em outro país. Para dados sujeitos à LGPD, usamos as garantias contratuais do artigo 33. Quando dados pessoais sujeitos ao GDPR ou ao UK GDPR são transferidos para um terceiro país, usamos as Cláusulas Contratuais Padrão da Comissão Europeia e o Adendo do Reino Unido.",
+        "A nossa aplicação e o banco de dados rodam nos Estados Unidos, e os provedores citados nesta política tratam dados nos Estados Unidos, exceto os provedores de modelo e os serviços conectados que um workspace escolhe, e as empresas para as quais eles repassam chamadas, que podem tratar dados em outros países sob os seus próprios termos. Os computadores dos workspaces rodam na União Europeia ou nos Estados Unidos, e o nosso provedor de rede trata o tráfego no data center dele mais próximo de cada aparelho, nos Estados Unidos ou em outro país. Para dados sujeitos à LGPD, usamos as garantias contratuais do artigo 33. Quando dados pessoais sujeitos ao GDPR ou ao UK GDPR são transferidos para um terceiro país, usamos as Cláusulas Contratuais Padrão da Comissão Europeia e o Adendo do Reino Unido.",
       ],
     },
     {
@@ -170,7 +170,7 @@ export const privacyPtBR: LegalDocument = {
       id: "contact",
       heading: "17. Contato",
       blocks: [
-        "CODARI GLOBAL, LLC, que atua sob o nome agentes.chat. Endereço para notificações: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, EUA · privacy@agentes.chat. Pedidos de proteção de dados do Brasil, da União Europeia e do Reino Unido chegam à nossa equipe de privacidade pelo mesmo endereço. Para o resto, escreva para hello@agentes.chat.",
+        "AGENTESCHAT, LLC, que atua sob o nome agentes.chat. Endereço para notificações: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, EUA · privacy@agentes.chat. Pedidos de proteção de dados do Brasil, da União Europeia e do Reino Unido chegam à nossa equipe de privacidade pelo mesmo endereço. Para o resto, escreva para hello@agentes.chat.",
       ],
     },
   ],

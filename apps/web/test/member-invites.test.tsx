@@ -367,6 +367,25 @@ describe("the invite dialog, one screen", () => {
     expect(text()).toContain("Convite enviado para nova@example.com.");
   });
 
+  test("an agent refused with no name left: the marked one is the one to take out", async () => {
+    const state = withSupport();
+    state.inviteManyError = new ApiError(400, "invitation.agent", "One of these agents can't go", {
+      agentId: MAX_ID,
+      name: null,
+      why: "gone",
+    });
+    await members(state);
+    await openInvite();
+    await address("nova@example.com");
+    await pickRoles("Suporte");
+    await click(within(dialog()).getByRole("button", { name: "Convidar 1 pessoa" }));
+    await settle(6);
+    expect(dialog().textContent).toContain("Um dos agentes saiu do time. Tire o marcado para enviar.");
+    expect((within(dialog()).getByText("Max").closest(".ac-token") as HTMLElement).getAttribute("data-state")).toBe(
+      "invalid",
+    );
+  });
+
   test("Link: the workspace's link at the defaults, renewed; any choice empties it until Criar link makes one", async () => {
     const state = withSupport();
     state.inviteLinks = [link({ id: "link-plain" })];
@@ -816,6 +835,70 @@ describe("People › Convites", () => {
       "inv-sup",
       { roleIds: [] },
     ]);
+  });
+
+  test("Editar convite: taking out the cargo that lets the person talk to agents takes their agents out too", async () => {
+    const state = withSupport();
+    // Todos doesn't talk to agents here; Suporte does.
+    state.roles = (state.roles ?? []).map((r) =>
+      r.kind === "everyone"
+        ? { ...r, permissions: r.permissions.filter((p) => p !== "talk_to_agents") }
+        : r.id === SUPORTE
+          ? { ...r, permissions: [...r.permissions, "talk_to_agents"] }
+          : r,
+    );
+    state.invitations.push(
+      invitation({ id: "inv-max", email: "max@example.com", roleIds: [SUPORTE], channelIds: [], agentIds: [MAX_ID] }),
+    );
+    await members(state, "invites");
+    await openFrom(
+      within(screen().getByRole("group", { name: "Convite para max@example.com" })).getByRole("button", {
+        name: "Mais ações para max@example.com",
+      }),
+    );
+    await click(screen().getByRole("menuitem", { name: "Editar" }));
+    await settle(4);
+    const edit = screen().getByRole("dialog", { name: "Convite de max@example.com" });
+    await openFrom(within(edit).getByRole("button", { name: /^Cargo/ }));
+    await click(screen().getByRole("menuitemcheckbox", { name: /^Suporte/ }));
+    await act(async () => fireEvent.keyDown(screen().getByRole("menu"), { key: "Escape" }));
+    await settle(2);
+    expect(edit.textContent).toContain("Com esse cargo, a pessoa não conversa com agentes.");
+    await click(within(edit).getByRole("button", { name: "Salvar" }));
+    await settle(6);
+    expect(state.calls.find((c) => c.method === "orgs.updateInvitation")?.args).toEqual([
+      ORG_ID,
+      "inv-max",
+      { roleIds: [], agentIds: [] },
+    ]);
+  });
+
+  test("Editar convite while the cargos load: taking out a channel sends that alone, the agents stay", async () => {
+    const state = withSupport();
+    state.invitations.push(
+      invitation({ id: "inv-sup", email: "sup@example.com", channelIds: [SUPORTE_CH], agentIds: [MAX_ID] }),
+    );
+    const api = createFakeApi(state);
+    const roles = hold(api.roles.list);
+    api.roles.list = roles.run;
+    await members(state, "invites", api);
+    await openFrom(
+      within(screen().getByRole("group", { name: "Convite para sup@example.com" })).getByRole("button", {
+        name: "Mais ações para sup@example.com",
+      }),
+    );
+    await click(screen().getByRole("menuitem", { name: "Editar" }));
+    await settle(4);
+    const edit = screen().getByRole("dialog", { name: "Convite de sup@example.com" });
+    await click(within(edit).getByRole("button", { name: "Remover #suporte" }));
+    await click(within(edit).getByRole("button", { name: "Salvar" }));
+    await settle(6);
+    expect(state.calls.find((c) => c.method === "orgs.updateInvitation")?.args).toEqual([
+      ORG_ID,
+      "inv-sup",
+      { channelIds: [] },
+    ]);
+    await roles.release();
   });
 
   test("past 8 rows: a search by e-mail or cargo and the kind of row; nothing open says so with a way to invite", async () => {

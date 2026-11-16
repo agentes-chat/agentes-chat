@@ -88,8 +88,11 @@ export async function continueRun(
   if (skipped && !(Date.now() - Date.parse(ended.closed?.at ?? "") < ANSWER_ANYWAY_MS)) throw notContinuable();
 
   // The new run answers where the stopped reply is: its thread, or (flat: a DM) the reply itself. Long work (ADR 0121)
-  // goes on in its own thread, as the same work.
-  const threadRootId = (work ? updatesThreadOf(work) : null) ?? reply.threadId ?? reply.id;
+  // goes on in its own thread, as the same work; a handed one where it was handed the work, not where it reports.
+  const threadRootId =
+    work?.how === "handed"
+      ? stopped.threadRootId
+      : ((work ? updatesThreadOf(work) : null) ?? reply.threadId ?? reply.id);
   const roots = [...new Set([stopped.threadRootId, threadRootId])];
   // A DM is one conversation; a channel's are its threads.
   const inConversation = row.channelKind === "dm" ? undefined : inArray(agentRuns.threadRootId, roots);

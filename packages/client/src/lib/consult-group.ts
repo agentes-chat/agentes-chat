@@ -344,6 +344,55 @@ export function foldsNotice(meta: Record<string, unknown> | undefined, shown: Re
   return Boolean(id && shown.has(id));
 }
 
+/** One agent a group's row stands for, as its dialog offers it: the question that opens its exchange, and its state. */
+export interface ConsultChoice {
+  agentId: string;
+  /** The first of its questions still out, else its first. */
+  opens: string;
+  /** Where its questions stand, the one still out first. */
+  state: ConsultLineState;
+  item: ConsultPairItem;
+}
+
+/**
+ * The agents a row of several asked, each once, in the order asked (the row's faces), so its dialog reaches every
+ * exchange. `askerId`: the row's asker; in an exchange the other agent may have asked too.
+ */
+export function consultChoices(group: readonly ConsultPairItem[], now: number, askerId?: string): ConsultChoice[] {
+  const out = new Map<string, ConsultChoice>();
+  const closed = (s: ConsultLineState) => s === "answered" || s === "failed" || s === "expired";
+  // The asker's own questions come first, so the exchange opens on one it asked and its dialog keeps naming it.
+  const rank = (c: ConsultPairItem, s: ConsultLineState) =>
+    (askerId && c.agentId && c.agentId !== askerId ? 2 : 0) + (closed(s) ? 1 : 0);
+  for (const c of group) {
+    const agentId = askerId && c.agentId && c.consultedAgentId === askerId ? c.agentId : c.consultedAgentId;
+    const state = consultLineState(c, now);
+    const had = out.get(agentId);
+    if (!had || rank(c, state) < rank(had.item, had.state)) out.set(agentId, { agentId, opens: c.id, state, item: c });
+  }
+  return [...out.values()];
+}
+
+/** The choice a question of the group belongs to: the agent it was asked of, or that asked it back. */
+export function consultChoiceOf(choices: readonly ConsultChoice[], group: readonly ConsultPairItem[], id: string) {
+  const c = group.find((x) => x.id === id);
+  return choices.find(
+    (ch) => ch.opens === id || (c !== undefined && (c.consultedAgentId === ch.agentId || c.agentId === ch.agentId)),
+  );
+}
+
+/**
+ * A choice's short word: "respondeu", "trabalhando", "esperando aprovação", "não respondeu". The word sits beside the
+ * asked agent's own name, where "perguntando" would read as that agent asking.
+ */
+export function consultChoiceKey(state: ConsultLineState, c: ConsultPairItem) {
+  if (state === "answered") return "chat.consultPair.answered" as const;
+  if (state === "failed" || state === "expired")
+    return isNote(c) ? ("chat.consultPair.notFinished" as const) : ("chat.consultPair.noAnswer" as const);
+  const key = pairOpenKey(state, c);
+  return key === "chat.consultPair.asking" ? ("chat.consultPair.working" as const) : key;
+}
+
 /**
  * How many rows away the reply that asked may sit and still stand in for the rest: an answer's notice that close
  * to it folds away, and with it among the last rows the working line doesn't repeat its questions. About what a

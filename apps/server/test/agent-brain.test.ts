@@ -314,19 +314,19 @@ test("the agent list says who thinks: the brain, its model's label, the computer
   // Its owner connected the computer, so the computer's own sign-in thinks for it (named by its plan, not known yet).
   expect((await listed(api))?.brain).toEqual({
     kind: "claude_code",
-    model: "Sonnet",
+    model: "Sonnet 5.5",
     computer: "mac",
     account: "Claude",
   });
   // A member: the brain and its model, not the computer.
-  expect((await listed(asBia))?.brain).toEqual({ kind: "claude_code", model: "Sonnet", account: "Claude" });
+  expect((await listed(asBia))?.brain).toEqual({ kind: "claude_code", model: "Sonnet 5.5", account: "Claude" });
   await api(`/agents/${agentId}/brain`, { method: "PUT", json: { model: "opus" } });
-  expect((await listed(api))?.brain?.model).toBe("Opus");
+  expect((await listed(api))?.brain?.model).toBe("Opus 5.5");
   // An edit answers with it too.
   const edited = (await (
     await api(`/agents/${agentId}`, { method: "PATCH", json: { role: "Marketing" } })
   ).json()) as Listed;
-  expect(edited.brain).toEqual({ kind: "claude_code", model: "Opus", computer: "mac", account: "Claude" });
+  expect(edited.brain).toEqual({ kind: "claude_code", model: "Opus 5.5", computer: "mac", account: "Claude" });
 });
 
 test("the agent list carries a plan agent's account and its last windows, for everyone (ADR 0063 §5)", async () => {

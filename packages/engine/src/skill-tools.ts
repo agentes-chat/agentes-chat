@@ -75,6 +75,7 @@ async function notYours(ctx: ToolContext, name: string): Promise<ToolOutput> {
         eq(schema.skills.orgId, ctx.orgId),
         eq(schema.skills.slug, name.trim().toLowerCase()),
         isNull(schema.skills.deletedAt),
+        isNull(schema.skills.ownerUserId),
       ),
     );
   return {
@@ -167,7 +168,7 @@ export function createSkillToolSource(
       },
       async execute(input, ctx) {
         try {
-          const skill = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, str(input.name));
+          const skill = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, str(input.name), ctx.runId);
           if (!skill) return notYours(ctx, str(input.name));
           // Use keeps an agent-made skill from being archived for disuse (ADR 0120).
           await ctx.db
@@ -200,7 +201,7 @@ export function createSkillToolSource(
       },
       async execute(input, ctx) {
         try {
-          const skill = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, str(input.name));
+          const skill = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, str(input.name), ctx.runId);
           if (!skill) return notYours(ctx, str(input.name));
           const path = str(input.path);
           if (path.endsWith("/")) {
@@ -374,9 +375,12 @@ export function createSkillToolSource(
             name: str(input.name),
             description: str(input.description),
             body: str(input.body),
+            person,
           });
           return {
-            content: `Created the skill ${skill.name}, on for you now. It shows in your skills and in Settings › Skills, where people undo it or give it to other agents. Load it with load_skill when a task matches.`,
+            content: skill.ownerUserId
+              ? `Created the skill ${skill.name}, the personal skill of the person who asked: you use it only when they ask. It shows in their Skills under Personal, where they undo it. Load it with load_skill when a task matches.`
+              : `Created the skill ${skill.name}, on for you now. It shows in your skills and in Settings › Skills, where people undo it or give it to other agents. Load it with load_skill when a task matches.`,
             data: { skill: { id: skill.id, name: skill.name, version: skill.version } },
           };
         } catch (error) {
@@ -430,10 +434,11 @@ export function createSkillToolSource(
                 eq(schema.skills.orgId, ctx.orgId),
                 eq(schema.skills.sourceUrl, url),
                 isNull(schema.skills.deletedAt),
+                isNull(schema.skills.ownerUserId),
               ),
             );
           if (installed) {
-            const on = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, installed.name);
+            const on = await agentSkillByName(ctx.db, ctx.orgId, ctx.agentId, installed.name, ctx.runId);
             return {
               content: `That link is already installed as the skill ${installed.name}, ${on ? "on for you. To bring it up to date, use update_skill_from_source." : `not on for you: ${ASK_FOR_SKILL}`}`,
               isError: true,
@@ -500,6 +505,7 @@ export function createSkillToolSource(
               and(
                 eq(schema.skills.orgId, ctx.orgId),
                 isNull(schema.skills.deletedAt),
+                isNull(schema.skills.ownerUserId),
                 isNotNull(schema.skills.sourceUrl),
                 all ? undefined : eq(schema.skills.slug, name),
               ),

@@ -45,7 +45,7 @@ async function mentionRun(options: { askAgent?: boolean } = {}) {
     const said = await postPersonMessage(deps, f.owner.id, f.org.id, secret.id, { body: `Cofre ${n}` });
     const issue = await issueFromMessage(deps, f.owner.id, f.org.id, said.id);
     await updateIssue(deps, { type: "person", userId: f.owner.id }, f.org.id, issue.id, {
-      assignee: { type: "agent", id: f.agent.id },
+      assignees: [{ type: "agent", id: f.agent.id }],
     });
   }
   enableCaches();

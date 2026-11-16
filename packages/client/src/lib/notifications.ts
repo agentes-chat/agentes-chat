@@ -45,6 +45,20 @@ export const isSnoozed = (n: Pick<AppNotification, "snoozedUntil">, now = Date.n
 export const isVisible = (n: Pick<AppNotification, "doneAt" | "snoozedUntil">, now = Date.now()) =>
   !n.doneAt && !isSnoozed(n, now);
 
+/**
+ * Whether "Concluir todas" has anything to move in a filter: what waits on the person stays. A filter's count holds
+ * what waits too; the list puts waiting rows first, so the loaded waiting rows stand for all of them.
+ */
+export function canClearAll(
+  filter: NotificationFilter,
+  counts: NotificationCounts | undefined,
+  loaded: readonly Pick<AppNotification, "waiting">[],
+): boolean {
+  if (!counts || filter === "done" || filter === "waiting") return false;
+  if (filter === "all") return counts.all > counts.waiting;
+  return counts[filter] > loaded.filter((n) => n.waiting).length;
+}
+
 export function matchesFilter(n: AppNotification, filter: NotificationFilter, now = Date.now()) {
   if (filter === "done") return !!n.doneAt;
   if (!isVisible(n, now)) return false;

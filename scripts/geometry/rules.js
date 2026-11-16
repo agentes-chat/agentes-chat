@@ -956,15 +956,21 @@
         }
       }
     },
-    /** A quiet line across the conversation sitting on a bubble above or under it, with no gap between them. */
+    /**
+     * A quiet line across the conversation sitting on a bubble above or under it, with no gap between them. Within one
+     * layer only: a dialog's line lies over the bubbles of the page behind it and touches none of them.
+     */
     quiet(out) {
+      const layer = (el) => el.closest("[role=dialog],[role=alertdialog]");
       const bubbles = [...document.querySelectorAll(".ac-msg__text")].filter(
         (b) => seen(b) && painted(style(b).backgroundColor),
       );
       for (const line of document.querySelectorAll(".consult-pair,.ac-divider,.channel__unread")) {
         if (!seen(line)) continue;
         const l = line.getBoundingClientRect();
+        const own = layer(line);
         for (const b of bubbles) {
+          if (layer(b) !== own) continue;
           const r = b.getBoundingClientRect();
           if (Math.min(l.right, r.right) - Math.max(l.left, r.left) <= 0) continue;
           const gap = Math.max(r.top - l.bottom, l.top - r.bottom);

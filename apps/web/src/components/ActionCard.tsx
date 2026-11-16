@@ -258,13 +258,14 @@ function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
 
 /**
  * "Install a skill" (`offer_install_skill`) as a waiting pill, its why and link under it: "Install" opens Install
- * skill with the link read, its skills listed to pick; who manages agents installs there, and its box turns what
- * installs on for the agent that posted the card (`agentId`). Done once the library has a skill from that link.
+ * skill with the link read, its skills listed to pick; its box turns what installs on for the agent that posted the
+ * card (`agentId`). Who manages agents installs it for the team or for themselves, anyone else as their own personal
+ * skill. Done once the library has a skill from that link.
  */
 function InstallSkillCardView({ card, agentId }: { card: InstallSkillCard; agentId?: string | null }) {
   const { t } = useTranslation();
   const { org } = useOrg();
-  const may = can(org, "manage_agents");
+  const admin = can(org, "manage_agents");
   const skills = useSkills(org.id);
   const [open, setOpen] = useState(false);
   const title = t("actionCard.install_skill.title");
@@ -278,22 +279,20 @@ function InstallSkillCardView({ card, agentId }: { card: InstallSkillCard; agent
   return (
     <>
       <RequestOpen
-        mine={may}
+        mine
         icon="book"
         label={title}
         action={
-          may ? (
-            <EventPillAction
-              primary
-              onClick={() => {
-                // Kept for the way back from connecting GitHub on its site (SkillsSection).
-                if (agentId) sessionStore.set(STORAGE_KEYS.skillInstallFor, JSON.stringify({ url: card.url, agentId }));
-                setOpen(true);
-              }}
-            >
-              {t("actionCard.install_skill.open")}
-            </EventPillAction>
-          ) : undefined
+          <EventPillAction
+            primary
+            onClick={() => {
+              // Kept for the way back from connecting GitHub on its site (SkillsSection).
+              if (agentId) sessionStore.set(STORAGE_KEYS.skillInstallFor, JSON.stringify({ url: card.url, agentId }));
+              setOpen(true);
+            }}
+          >
+            {t("actionCard.install_skill.open")}
+          </EventPillAction>
         }
         below={
           <>
@@ -301,21 +300,19 @@ function InstallSkillCardView({ card, agentId }: { card: InstallSkillCard; agent
             <p>
               <code>{card.url}</code>
             </p>
-            {!may && <p>{t("actionCard.install_skill.adminOnly")}</p>}
           </>
         }
       >
         {title}
       </RequestOpen>
-      {may && (
-        <InstallSkillDialog
-          open={open}
-          onOpenChange={setOpen}
-          onInstalled={() => {}}
-          initialUrl={open ? card.url : undefined}
-          forAgentId={agentId ?? undefined}
-        />
-      )}
+      <InstallSkillDialog
+        open={open}
+        onOpenChange={setOpen}
+        onInstalled={() => {}}
+        initialUrl={open ? card.url : undefined}
+        forAgentId={agentId ?? undefined}
+        scope={admin ? undefined : "personal"}
+      />
     </>
   );
 }

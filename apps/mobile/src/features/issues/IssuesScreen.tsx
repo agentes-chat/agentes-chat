@@ -1,6 +1,7 @@
 import { type Issue, useIssueColumns, useIssueProjects, useIssues } from "@agenteschat/client";
 import { dueLabel } from "@agenteschat/client/lib/format";
 import { liveProjectFilter, NO_PROJECT, projectFilterRows } from "@agenteschat/client/lib/issue-projects";
+import { assigneeNames } from "@agenteschat/client/lib/issues";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { Fragment, type ReactNode, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -43,6 +44,7 @@ import { ActionList, FocusLive, PushedHeader } from "../shared/parts";
 import { SheetHostProvider, useSheet } from "../shared/SheetHost";
 import { type BoardColumn, issueBoard, taskListSections } from "./logic";
 import {
+  AssigneeFace,
   BoardCard,
   ColumnHeader,
   ProjectDot,
@@ -270,7 +272,13 @@ function TaskRow({
   const { state, words } = useCardState(i);
   const done = i.status === "done";
   const running = state?.kind === "running";
-  const who = i.assignee ? dir.nameOf(i.assignee) : t("mobile.issues.nobody");
+  const who =
+    i.assignees.length > 0
+      ? assigneeNames(
+          t,
+          i.assignees.map((a) => dir.nameOf(a)),
+        )
+      : t("mobile.issues.nobody");
   const due = i.dueDate && !done ? dueLabel(t, i18n.language, i.dueDate) : null;
   const axis = mediaRowAxis(16, textLineOf("subhead", useFontScale()));
   return (
@@ -285,9 +293,13 @@ function TaskRow({
       sub={
         <View style={styles.subLine}>
           <View style={styles.person}>
-            {i.assignee ? (
+            {i.assignees.length > 1 ? (
               <View style={{ marginTop: axis.face }}>
-                <Face who={i.assignee} size={16} live={live} mode={running ? "run" : "idle"} />
+                <AssigneeFace issue={i} size={20} live={live} ring={c.bg} />
+              </View>
+            ) : i.assignees[0] ? (
+              <View style={{ marginTop: axis.face }}>
+                <Face who={i.assignees[0]} size={16} live={live} mode={running ? "run" : "idle"} />
               </View>
             ) : null}
             <Text variant="subhead" tone="muted" style={[styles.shrink, { paddingTop: axis.words }]}>

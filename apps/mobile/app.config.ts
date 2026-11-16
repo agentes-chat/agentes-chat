@@ -60,6 +60,7 @@ export const APP_LINK_PATTERNS = [
   "/org/*/settings/apps",
   "/org/*/settings/general",
   "/org/*/settings/members",
+  "/org/*/settings/invites",
   "/org/*/settings/audit",
   "/org/*/settings/access",
   "/org/*/settings/connectors",

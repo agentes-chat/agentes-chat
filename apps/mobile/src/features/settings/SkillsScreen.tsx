@@ -13,6 +13,8 @@ import {
   useAgents,
   useCatalog,
   useGitHubRepos,
+  useMe,
+  useMembers,
   useSkill,
   useSkillAction,
   useSkillSettings,
@@ -45,12 +47,15 @@ import {
   skillPickOf,
   skillRefusalText,
   skillRemovalText,
+  skillScopes,
   skillSourceViaText,
+  skillsSplit,
   skillUpdateErrorText,
   skillUpdateWords,
   skillViaText,
   skippedSkillText,
 } from "@agenteschat/client/lib/skills";
+import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { diffLines } from "@agenteschat/ui/diff";
 import { useQueryClient } from "@tanstack/react-query";
 import * as DocumentPicker from "expo-document-picker";
@@ -90,30 +95,77 @@ import { confirmAction, Gap, SettingsPage } from "./parts";
 /** Opens a skill of the library (its page). */
 const openSkill = (id: string) => router.push(`/settings/skills/${id}`);
 
+type SkillScope = "team" | "personal";
+
+/** Whether skills split into Equipe and Pessoal here, and the person's own id (`skillsSplit`, as the web's). */
+function useSkillScopes(orgId: string) {
+  const members = useMembers(orgId);
+  const skills = useSkills(orgId);
+  const me = useMe().data?.user.id ?? "";
+  const all = skills.data ?? [];
+  return { skills, me, split: skillsSplit(members.data?.length ?? 0, all), ...skillScopes(all, me) };
+}
+
 /**
- * Skills (admins), as the web's: the workspace's library, each skill with what it is for, where it came from, its
- * version and how many agents use it; "Instalar skill" first, a search once the list is long. A skill opens its page.
+ * Skills, as the web's, for every member: the team's library (who manages agents changes it) and, where the
+ * workspace has more than one person, "Equipe | Pessoal" as the Vault has (ADR 0144). Each skill with what it is for,
+ * where it came from, its version and how many agents use it; "Instalar skill" first, a search once the list is long.
+ * Who manages agents also sees others' personal skills under the team's, name and person only, to remove.
  */
 export function SkillsScreen() {
   const { t } = useTranslation();
   const c = useColors();
   const { orgId, org } = useOrg();
   const admin = can(org, "manage_agents");
-  const skills = useSkills(orgId, admin);
-  const list = skills.data ?? [];
+  const { skills, split, team, mine, others } = useSkillScopes(orgId);
+  const [picked, setPicked] = useState<SkillScope | null>(null);
+  const scope: SkillScope = !split ? "team" : (picked ?? (admin ? "team" : "personal"));
+  const list = scope === "team" ? team : mine;
   const usage = useSkillUsage(orgId, admin && list.length > 0);
   const settings = useSkillSettings(orgId, admin);
   const action = useSkillAction(orgId);
   const failed = useErrorToast();
+  const toast = useToast();
+  const dir = useDirectory();
   const [q, setQ] = useState("");
   const unavailable = skills.isError && (skills.error as { status?: number }).status === 404;
   const shown = searchSkills(list, q);
   const none = skills.isSuccess && list.length === 0;
-  const install = () => router.push("/settings/skills/new");
+  const mayInstall = admin || scope === "personal";
+  const install = () => router.push({ pathname: "/settings/skills/new", params: split ? { scope } : {} });
+  const removeOthers = (id: string, name: string) =>
+    confirmAction({
+      title: t("skills.removeTitle", { name }),
+      text: skillRemovalText(t, []),
+      action: t("skills.remove"),
+      cancel: t("common.cancel"),
+      onConfirm: () =>
+        action.mutate(
+          { type: "remove", id },
+          { onSuccess: () => toast({ title: t("skills.removed", { name }), icon: "check" }), onError: failed },
+        ),
+    });
   return (
     <SettingsPage title={t("skills.title")}>
       <GroupedFooter>{t("settings.sectionText.skills")}</GroupedFooter>
-      {!admin ? (
+      {split && skills.isSuccess ? (
+        <View style={styles.tabs}>
+          <Segmented
+            items={[
+              { key: "team", label: t(modeKey(org, "vault.tab.team")), count: team.length },
+              { key: "personal", label: t("vault.tab.personal"), count: mine.length },
+            ]}
+            value={scope}
+            onChange={(k) => setPicked(k as SkillScope)}
+          />
+        </View>
+      ) : null}
+      {scope === "personal" && list.length > 0 ? (
+        <View style={styles.note}>
+          <Note icon="lock">{t("skills.personal.note")}</Note>
+        </View>
+      ) : null}
+      {!mayInstall && none ? (
         <View style={styles.note}>
           <Note icon="lock">{t("settings.readOnly")}</Note>
         </View>
@@ -123,7 +175,7 @@ export function SkillsScreen() {
         </View>
       ) : (
         <>
-          {none ? null : (
+          {none || !mayInstall ? null : (
             <>
               <Gap />
               <GroupedList>
@@ -131,7 +183,7 @@ export function SkillsScreen() {
               </GroupedList>
             </>
           )}
-          {settings.data ? (
+          {scope === "team" && settings.data ? (
             <>
               <Gap />
               <GroupedList>
@@ -172,7 +224,16 @@ export function SkillsScreen() {
               <Note icon="x">{t("common.loadFailed")}</Note>
             </View>
           ) : null}
-          {none ? <FirstUse place="skills" size="panel" acts label={t("skills.install")} onPress={install} /> : null}
+          {none && scope === "personal" ? (
+            <EmptyState
+              size="panel"
+              title={t("skills.personal.emptyTitle")}
+              subtitle={t("skills.personal.emptyText")}
+              action={<Button variant="primary" label={t("skills.install")} onPress={install} />}
+            />
+          ) : none ? (
+            <FirstUse place="skills" size="panel" acts label={t("skills.install")} onPress={install} />
+          ) : null}
           {list.length > 0 && shown.length === 0 ? (
             <EmptyState
               size="inline"
@@ -201,6 +262,31 @@ export function SkillsScreen() {
               ))}
             </GroupedList>
           ) : null}
+          {scope === "team" && others.length > 0 ? (
+            <>
+              <GroupedHeader>{`${t("skills.personal.others")} · ${others.length}`}</GroupedHeader>
+              <GroupedList>
+                {others.map((s) => (
+                  <GroupedRow
+                    key={s.id}
+                    icon="lock"
+                    label={s.name}
+                    sub={t("skills.personal.of", {
+                      name: dir.memberById.get(s.ownerUserId ?? "")?.name ?? t("channel.unknownPerson"),
+                    })}
+                    below={
+                      <Text variant="caption" tone="faint" numberOfLines={1}>
+                        {t("skills.usedBy", { count: s.agentsCount ?? 0 })}
+                      </Text>
+                    }
+                    value={t("skills.remove")}
+                    disabled={action.isPending}
+                    onPress={() => removeOthers(s.id, s.name)}
+                  />
+                ))}
+              </GroupedList>
+            </>
+          ) : null}
         </>
       )}
     </SettingsPage>
@@ -218,10 +304,13 @@ export function SkillScreen({ id }: { id: string }) {
   const toast = useToast();
   const { orgId, org } = useOrg();
   const admin = can(org, "manage_agents");
+  const meId = useMe().data?.user.id;
   const skill = useSkill(orgId, id || null);
   const action = useSkillAction(orgId);
   const usage = useSkillUsage(orgId, admin);
   const s = skill.data;
+  // A personal skill is its person's to change; a team one, who manages agents'. Everyone else reads it.
+  const manages = s ? (s.ownerUserId ? s.ownerUserId === meId : admin) : false;
   const users = usage.get(id) ?? [];
   const via = s ? skillSourceViaText(t, s) : null;
   const subtitle = s
@@ -293,8 +382,8 @@ export function SkillScreen({ id }: { id: string }) {
               <Note icon={<SocialMark provider="github" color={c.muted} size={15} />}>{via}</Note>
             </View>
           ) : null}
-          {admin ? <SourceUpdate skill={s} /> : null}
-          {admin ? <AgentImprove skill={s} /> : null}
+          {manages ? <SourceUpdate skill={s} /> : null}
+          {manages ? <AgentImprove skill={s} /> : null}
           <Gap />
           <GroupedList>
             <View style={styles.page}>
@@ -314,7 +403,7 @@ export function SkillScreen({ id }: { id: string }) {
               </GroupedList>
             </>
           ) : null}
-          {admin ? (
+          {manages ? (
             <>
               <Gap />
               <GroupedList>
@@ -657,19 +746,36 @@ const REPOS_SHOWN = 30;
  * connection read it; when none can, "Conectar o GitHub" opens the connect sheet over it (or it says whom to ask),
  * and the link is read again once GitHub is connected.
  */
-export function InstallSkillScreen({ initialUrl, forAgentId }: { initialUrl?: string; forAgentId?: string }) {
+export function InstallSkillScreen({
+  initialUrl,
+  forAgentId,
+  scope,
+}: {
+  initialUrl?: string;
+  forAgentId?: string;
+  scope?: SkillScope;
+}) {
   return (
     <SheetHostProvider>
-      <InstallSkill initialUrl={initialUrl} forAgentId={forAgentId} />
+      <InstallSkill initialUrl={initialUrl} forAgentId={forAgentId} startScope={scope} />
     </SheetHostProvider>
   );
 }
 
 /**
  * `forAgentId`: opened from that agent's card, a row (on by default) turns what installs on for it, as on the web, only
- * from the card's own link: one typed over it or a repository picked instead goes on for nobody.
+ * from the card's own link: one typed over it or a repository picked instead goes on for nobody. Where skills split
+ * into the team's and each person's, "Para quem" starts at `startScope` (Equipe only for who manages agents).
  */
-function InstallSkill({ initialUrl, forAgentId }: { initialUrl?: string; forAgentId?: string }) {
+function InstallSkill({
+  initialUrl,
+  forAgentId,
+  startScope,
+}: {
+  initialUrl?: string;
+  forAgentId?: string;
+  startScope?: SkillScope;
+}) {
   const { t, i18n } = useTranslation();
   const c = useColors();
   const toast = useToast();
@@ -677,6 +783,11 @@ function InstallSkill({ initialUrl, forAgentId }: { initialUrl?: string; forAgen
   const sheet = useSheet();
   const { orgId, org } = useOrg();
   const action = useSkillAction(orgId);
+  const admin = can(org, "manage_agents");
+  const { split } = useSkillScopes(orgId);
+  const [scope, setScope] = useState<SkillScope>(startScope ?? (admin ? "team" : "personal"));
+  // Who doesn't manage agents is in a workspace of more than one person: theirs is always personal.
+  const mine = scope === "personal" && (split || !admin) ? { personal: true } : {};
   const repos = useGitHubRepos(orgId);
   const catalog = useCatalog();
   const github = catalog.data?.connectors.find((d) => d.id === "github");
@@ -735,7 +846,9 @@ function InstallSkill({ initialUrl, forAgentId }: { initialUrl?: string; forAgen
     action.mutate(
       {
         type: "import",
-        input: list ? { url: link, list } : { url: link, ...(forAgent ? { forAgentId: forAgent } : {}) },
+        input: list
+          ? { url: link, list, ...mine }
+          : { url: link, ...(forAgent ? { forAgentId: forAgent } : {}), ...mine },
       },
       {
         onSuccess: (result) => {
@@ -818,7 +931,10 @@ function InstallSkill({ initialUrl, forAgentId }: { initialUrl?: string; forAgen
         toast({ title: t("skills.installedMany", { count: list.length }), icon: "check" });
         goBack();
       };
-      action.mutate({ type: "importPicked", url: url.trim(), paths, forAgentId: sendFor(url) }, { onSuccess, onError });
+      action.mutate(
+        { type: "importPicked", url: url.trim(), paths, forAgentId: sendFor(url), ...mine },
+        { onSuccess, onError },
+      );
       return;
     }
     if (tab === "zip") {
@@ -843,7 +959,7 @@ function InstallSkill({ initialUrl, forAgentId }: { initialUrl?: string; forAgen
         return;
       }
       action.mutate(
-        { type: "import", input: { zipBase64 }, upload: { signal: stopper.signal, onProgress: setSending } },
+        { type: "import", input: { zipBase64, ...mine }, upload: { signal: stopper.signal, onProgress: setSending } },
         {
           onSuccess: done,
           onError: (e) => {
@@ -859,7 +975,10 @@ function InstallSkill({ initialUrl, forAgentId }: { initialUrl?: string; forAgen
       return;
     }
     action.mutate(
-      { type: "create", input: { name: form.name.trim(), description: form.description.trim(), body: form.body } },
+      {
+        type: "create",
+        input: { name: form.name.trim(), description: form.description.trim(), body: form.body, ...mine },
+      },
       { onSuccess: done, onError },
     );
   };
@@ -892,6 +1011,28 @@ function InstallSkill({ initialUrl, forAgentId }: { initialUrl?: string; forAgen
           }}
         />
       </View>
+      {split && admin ? (
+        <>
+          <GroupedHeader>{t("skills.personal.forWhom")}</GroupedHeader>
+          <View style={styles.tabs}>
+            <Segmented
+              items={[
+                { key: "personal", label: t("vault.tab.personal") },
+                { key: "team", label: t(modeKey(org, "vault.tab.team")) },
+              ]}
+              value={scope}
+              onChange={(k) => {
+                setScope(k as SkillScope);
+                setChoices(null);
+              }}
+            />
+          </View>
+        </>
+      ) : split ? (
+        <View style={styles.note}>
+          <Note icon="lock">{t("skills.personal.note")}</Note>
+        </View>
+      ) : null}
       {tab === "github" ? (
         <>
           <GroupedHeader
@@ -970,7 +1111,7 @@ function InstallSkill({ initialUrl, forAgentId }: { initialUrl?: string; forAgen
                 <GroupedRow key={s.path} label={s.path} sub={skippedSkillText(t, s)} subLines={3} disabled />
               ))}
             </GroupedList>
-          ) : repos.data?.connected ? (
+          ) : admin && repos.data?.connected ? (
             <>
               <GroupedHeader>{t("skills.connectedRepos")}</GroupedHeader>
               {total > SKILLS_INLINE ? (

@@ -2280,6 +2280,9 @@ test("the start-page language follows the responsible person and changes reach t
   await setMyLocale(f.db, f.owner.id, "pt-BR", false, f.pubsub);
   expect((await machineAgents(f.db, f.org.id, paired.machineId)).find((a) => a.id === agent.id)?.locale).toBe("pt-BR");
   expect(signals).toContainEqual({ type: "machine.agents", orgId: f.org.id });
+  // Every app language reaches the runner, not only Portuguese and English.
+  await setMyLocale(f.db, f.owner.id, "ja", false, f.pubsub);
+  expect((await machineAgents(f.db, f.org.id, paired.machineId)).find((a) => a.id === agent.id)?.locale).toBe("ja");
   await setMyLocale(f.db, f.owner.id, "en", false, f.pubsub);
   expect((await machineAgents(f.db, f.org.id, paired.machineId)).find((a) => a.id === agent.id)?.locale).toBe("en");
 });

@@ -61,6 +61,10 @@ export const STORAGE_KEYS = {
    * filled in again when the dialog comes back.
    */
   emailChangeAsk: "agentes.emailChangeAsk",
+  /** sessionStorage: when this tab's window last traded the desktop app's sign-in (ms), for a deletion's proof. */
+  thisMacSignedInAt: "agentes.thisMac.signedInAt",
+  /** sessionStorage (JSON `{ to, at }`): the page to come back to after the desktop app signs the window in again. */
+  thisMacReturn: "agentes.thisMac.return",
   /** "0" when the person switched off the picture viewer's hover lens (on by default). */
   imageLens: "agentes.image.lens",
   /** The Drive's view: "grid" (default) or "list". */
@@ -112,6 +116,8 @@ export const STORAGE_KEYS = {
   sounds: "agentes.sounds",
   /** In `sessionStore`, this tab's id; in `storage`, the tab the person used last (it plays sounds while hidden). */
   soundTab: "agentes.sounds.tab",
+  /** The speed voice messages play at in this browser: "1" (default), "1.5" or "2" (lib/voice-speed.ts). */
+  voiceSpeed: "agentes.voice.speed",
   /** How many times our notifications ask showed by itself in this browser (`usePushAsk`, ADR 0071). */
   pushOffers: "agentes.push.offers",
   /** In `sessionStore`: when the boot last reloaded because the app's files didn't load (index.html keeps a copy). */

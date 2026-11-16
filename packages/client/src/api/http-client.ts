@@ -51,6 +51,7 @@ import type {
   Approval,
   ApprovalCovers,
   ApprovalRule,
+  ApprovalsLevel,
   AppsList,
   ArchivedChannel,
   Artifact,
@@ -591,7 +592,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           })
         ).offer,
       jev: () => nullOn(404, () => request<JevKey>("/api/app/jev")),
-      saveJev: (apiKey) => request<JevKey>("/api/app/jev", { method: "PUT", json: { apiKey } }),
+      saveJev: (input) =>
+        request<JevKey>("/api/app/jev", { method: "PUT", json: typeof input === "string" ? { apiKey: input } : input }),
       checkJev: () => request<JevKey>("/api/app/jev/check", { method: "POST" }),
       removeJev: () => request<JevKey>("/api/app/jev", { method: "DELETE" }),
       gifKey: () => nullOn(404, () => request<GifKey>("/api/app/gif-key")),
@@ -731,6 +733,11 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       settings: (orgId) => request<OrgSettings>(`${org(orgId)}/settings`),
       updateSettings: (orgId, input) =>
         request<OrgSettings>(`${org(orgId)}/settings`, { method: "PATCH", json: input }),
+      setApprovalsLevel: (orgId, input) =>
+        request<{ level: ApprovalsLevel; ownAgents: number }>(`${org(orgId)}/approvals-level`, {
+          method: "PUT",
+          json: input,
+        }),
       overview: (orgId) => request<OrgOverview>(`${org(orgId)}/overview`),
       people: async (orgId) => (await request<{ people: Person[] }>(`${org(orgId)}/people`)).people,
       allInvitations: async (orgId) =>
@@ -916,6 +923,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         }),
       makeDefaultCredential: (orgId, id) =>
         request<Credential>(`${org(orgId)}/credentials/${enc(id)}/make-default`, { json: {} }),
+      removeCredentialCopies: (orgId, id) =>
+        request<{ removed: number }>(`${org(orgId)}/credentials/${enc(id)}/remove-copies`, { json: {} }),
       checkCredential: (orgId, id) =>
         request<{ check: "ok" | "unchecked" }>(`${org(orgId)}/credentials/${enc(id)}/check`, { json: {} }),
       platformKeyAvailable: async (orgId) =>
@@ -1028,6 +1037,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         if (input.threadId) form.set("threadId", input.threadId);
         if (input.replyTo) form.set("replyTo", input.replyTo);
         if (input.language) form.set("language", input.language);
+        if (input.text?.trim()) form.set("text", input.text);
+        if (input.attachments?.length) form.set("attachments", JSON.stringify(input.attachments));
         return files.upload<{ clipId: string }>(`${org(orgId)}/channels/${enc(channelId)}/voice`, form);
       },
     },
@@ -1415,10 +1426,10 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           signal: upload?.signal,
           onUploadProgress: upload?.onProgress,
         }),
-      importPicked: async (orgId, url, paths, forAgentId) =>
+      importPicked: async (orgId, url, paths, forAgentId, personal) =>
         (
           await request<{ skills: SkillDetail[] }>(`${org(orgId)}/skills/import`, {
-            json: { url, paths, ...(forAgentId ? { forAgentId } : {}) },
+            json: { url, paths, ...(forAgentId ? { forAgentId } : {}), ...(personal ? { personal } : {}) },
           })
         ).skills,
       update: (orgId, id, patch) =>
@@ -1860,6 +1871,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<AppNotification>(`${org(orgId)}/notifications/${enc(id)}/snooze`, { json: { until } }),
       readAll: (orgId, filter) =>
         request<{ ids: string[] }>(`${org(orgId)}/notifications/read-all`, { json: filter ? { filter } : {} }),
+      doneAll: (orgId, filter) =>
+        request<{ ids: string[] }>(`${org(orgId)}/notifications/done-all`, { json: filter ? { filter } : {} }),
       prefs: (orgId) => request<NoticePrefs>(`${org(orgId)}/notification-prefs`),
       setPref: (orgId, category, on) =>
         request<NoticePrefs>(`${org(orgId)}/notification-prefs`, { method: "PUT", json: { category, on } }),

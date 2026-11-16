@@ -12,6 +12,7 @@ import type { IconName } from "@agenteschat/ui";
 export type SettingsSection =
   | "account"
   | "notifications"
+  | "download"
   | "approvals"
   | "apps"
   | "general"
@@ -45,6 +46,8 @@ export const SETTINGS_SECTIONS: {
   { id: "account", icon: "person", allowed: () => true },
   // What reaches my devices as a notification here (ADR 0071 §8).
   { id: "notifications", icon: "bell", allowed: () => true },
+  // The desktop app for this computer and the phone apps, for everyone: a tab of Your account.
+  { id: "download", icon: "download", allowed: () => true },
   // Who approves for me, and whom I approve for (ADR 0139).
   { id: "approvals", icon: "approve", allowed: () => true },
   // AI apps (ADR 0119): each person connects their own, in this workspace.
@@ -69,7 +72,8 @@ export const SETTINGS_SECTIONS: {
   // Only where a billing service runs (ADR 0079), for who may open it.
   { id: "billing", icon: "coin", allowed: (o, server) => !!server?.billingUrl && can(o, "manage_billing") },
   { id: "connectors", icon: "plug", allowed: () => true },
-  { id: "skills", icon: "bulb", allowed: (o) => can(o, "manage_agents") },
+  // Every member keeps skills of their own there; the team's library is changed by who manages agents.
+  { id: "skills", icon: "bulb", allowed: () => true },
   // Every member keeps their own logins, keys and contacts there; team items show to who they're shared with (ADR 0144).
   { id: "vault", icon: "lock", allowed: () => true },
   { id: "access", icon: "agent", allowed: (o) => can(o, "manage_agents") },
@@ -122,7 +126,7 @@ export function settingsNavEntry(
  * `?connected=github` (back from OAuth), `?review=1` (a custom MCP server to
  * classify), `?mail=connected|failed&account={id}` (back from Gmail/Outlook),
  * `?request={id}&do=approve|deny` (a request to join, from the admins' email),
- * `?delete=1` (Geral's dialog that deletes the workspace), `?create=1` (Cargos' Criar cargo, from ⌘K), `?install={link}` (Skills, back from connecting GitHub
+ * `?delete=1` (the dialog that deletes the workspace, from Geral or Sua conta), `?create=1` (Cargos' Criar cargo, from ⌘K), `?install={link}` (Skills, back from connecting GitHub
  * in Instalar skill: the link to read again, with `agent` when an agent's card opened it) and `?agent={id}`
  * (Auditoria filtered to that agent).
  */

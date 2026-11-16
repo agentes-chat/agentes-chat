@@ -21,7 +21,7 @@ interface ProviderEntry {
   masculine?: boolean;
   /** Its free tier lets the provider use what is sent: billing should be on. */
   billing?: boolean;
-  /** It passes what is sent on to other providers, as the account's privacy settings at it allow. */
+  /** It passes what is sent on to the company that makes or hosts the model, under its own privacy terms. */
   privacy?: boolean;
 }
 
@@ -97,6 +97,14 @@ export const PROVIDERS = [
     site: "platform.minimax.io/user-center/basic-information/interface-key",
     plans: true,
   },
+  {
+    id: "commandcode",
+    label: "Command Code",
+    placeholder: "user_…",
+    pattern: /^user_[A-Za-z0-9_-]{16,}$/,
+    site: "commandcode.ai/settings/keys",
+    privacy: true,
+  },
 ] as const satisfies readonly ProviderEntry[];
 
 export type ProviderId = (typeof PROVIDERS)[number]["id"];
@@ -123,12 +131,25 @@ export const keySource = (key: NamedKey) =>
  * or only "termina em 1a2b" when its name is already the provider's (a key named after nothing else, as most are),
  * never "Claude" over "Claude · …". A key-less endpoint (a local server) says only where it is.
  */
-export const keyLine = (t: TFunction, key: NamedKey & Pick<Credential, "keyHint">) =>
-  !key.keyHint && key.endpoint
-    ? keySource(key)
-    : keyNamedAfterProvider(key)
-      ? t("vault.item.endsIn", { hint: key.keyHint })
-      : t("newAgent.otherKeyDesc", { provider: keySource(key), hint: key.keyHint });
+export const keyLine = (t: TFunction, key: NamedKey & Pick<Credential, "keyHint" | "copies">) =>
+  [
+    !key.keyHint && key.endpoint
+      ? keySource(key)
+      : keyNamedAfterProvider(key)
+        ? t("vault.item.endsIn", { hint: key.keyHint })
+        : t("newAgent.otherKeyDesc", { provider: keySource(key), hint: key.keyHint }),
+    keyCopiesLine(t, key),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+/** "4 cópias iguais" on the row that stands for a key saved more than once (`copies` others), else nothing. */
+export const keyCopiesLine = (t: TFunction, key: Pick<Credential, "copies">) =>
+  key.copies ? t("settings.keyCopies", { count: key.copies + 1 }) : "";
+
+/** The keys a list shows: live ones, a key saved more than once as its one row (`copyOf` rows left out). */
+export const shownKeys = <K extends Pick<Credential, "revokedAt" | "copyOf">>(keys: readonly K[]) =>
+  keys.filter((k) => !k.revokedAt && !k.copyOf);
 
 /**
  * A saved key can think: a provider's once saved (the save tried it), an endpoint's once one of its models answered a
@@ -175,7 +196,8 @@ export function providerGuess(key: string | undefined, asked?: string): Provider
 
 /**
  * The ⓘ on the key panel's first step, web and phone: for a maker that also sells coding plans, where a plan's key
- * goes; for one whose free tier may use what is sent, to turn on billing; for a router, who may keep what is sent.
+ * goes; for one whose free tier may use what is sent, to turn on billing; for one that passes calls on, who it
+ * passes them to (that text takes `{ provider: label }`).
  */
 export const keyStepHint = (p: ProviderEntry) =>
   p.plans

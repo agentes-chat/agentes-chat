@@ -2815,6 +2815,59 @@ test("bridged side effects reach the engine: a bridged react ends the turn silen
   expect(JSON.stringify(run?.transcript)).not.toContain("bridgeEffects");
 });
 
+test("a bridged call the brain doesn't replay still counts as executed", async () => {
+  const fx = effectTools(() => f as Fixture);
+  f = await setup({ toolSources: [fx.source] });
+  const fixture = f;
+  const machineId = await computerAgent(f);
+  const { brain } = scriptedComputerBrain(async function* (_n, turn) {
+    await executeToolForRun(
+      fixture.jobDeps,
+      { orgId: turn.orgId, agentId: turn.agentId, runId: turn.runId, machineId },
+      { id: "check-1", name: "check_env", input: {} },
+    );
+    // Codex app-server calls our bridge directly and doesn't replay it as a tool_call event.
+    yield { type: "done", text: "go: not found" };
+  });
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev confere o ambiente");
+  await drainOutbox(f.db, handlers);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect((run?.transcript as { executedCalls?: number } | null)?.executedCalls).toBe(1);
+  expect(run?.transcript).not.toHaveProperty("bridgeCalls");
+  const reply = (await timeline(f)).at(-1);
+  expect(reply?.body).toBe("go: not found");
+});
+
+test("a bridged call replayed with another id is counted once", async () => {
+  const fx = effectTools(() => f as Fixture);
+  f = await setup({ toolSources: [fx.source] });
+  const fixture = f;
+  const machineId = await computerAgent(f);
+  const { brain } = scriptedComputerBrain(async function* (_n, turn) {
+    const result = await executeToolForRun(
+      fixture.jobDeps,
+      { orgId: turn.orgId, agentId: turn.agentId, runId: turn.runId, machineId },
+      { id: "check-1", name: "check_env", input: {} },
+    );
+    yield { type: "tool_call", id: "different-replay-id", name: "check_env", input: {}, executed: result };
+    yield { type: "done", text: "go: not found" };
+  });
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  await post(f, "@dev confere o ambiente");
+  await drainOutbox(f.db, handlers);
+  const [run] = await f.db.select().from(schema.agentRuns);
+  expect((run?.transcript as { executedCalls?: number } | null)?.executedCalls).toBe(1);
+});
+
 test("a bridged react followed by the emoji as text posts nothing (no 👍 message); a real reply still posts", async () => {
   const fx = effectTools(() => f);
   f = await setup({ toolSources: [fx.source] });
@@ -2954,6 +3007,7 @@ test("a computer brain that fails after a bridged tool ran: no fallback, what it
   expect(checks).toBe(1);
   const [run] = await f.db.select().from(schema.agentRuns);
   expect(run?.status).toBe("done");
+  expect((run?.transcript as { executedCalls?: number } | null)?.executedCalls).toBe(1);
   // The model brain never redid the turn.
   const usage = await f.db
     .select()
@@ -3233,7 +3287,8 @@ test("a short line before a bridged approval is never posted: the card says it",
   expect((await timeline(f)).some((m) => m.body.includes("Vou pedir"))).toBe(false);
 });
 
-test("a long line said before a bridged approval goes right after its card, below what came meanwhile", async () => {
+/** A computer brain that writes a long line, asks for the merge's approval and says the line again; `post` writes first. */
+async function bridgedMergeWithLine(meanwhile: "before" | "after") {
   const gh = fakeGithub();
   f = await setup({ toolSources: [gh.source] });
   await grantScopes(f.db, f.org.id, f.agent.id, ALL_GITHUB_SCOPES);
@@ -3245,9 +3300,9 @@ test("a long line said before a bridged approval goes right after its card, belo
       return;
     }
     yield { type: "text_delta", text: said };
-    // Someone writes while it writes, before it asks.
+    // Someone writes while it writes: before it asks, or once its card is up.
     await Bun.sleep(5);
-    await post(f, "manda ver");
+    if (meanwhile === "before") await post(f, "manda ver");
     await Bun.sleep(5);
     const id = { orgId: turn.orgId, agentId: turn.agentId, runId: turn.runId, machineId };
     await executeToolForRun(f.jobDeps, id, {
@@ -3255,6 +3310,7 @@ test("a long line said before a bridged approval goes right after its card, belo
       name: "github_merge_pr",
       input: { repo: "acme/app", pr: 42, why: "CI passed on the PR and it was reviewed: merging ships the fix." },
     });
+    if (meanwhile === "after") await post(f, "manda ver");
     yield { type: "done", text: said };
   });
   const handlers = createJobHandlers({
@@ -3265,16 +3321,28 @@ test("a long line said before a bridged approval goes right after its card, belo
   const events = f.listen(f.general.id);
   await post(f, "@dev faz o merge do PR 42");
   await drainOutbox(f.db, handlers);
-
   expect(events.some((e) => e.type === "agent.typing")).toBe(true);
   const main = await timeline(f);
-  const meanwhile = main.findIndex((m) => m.body === "manda ver");
-  const card = main.findIndex((m) => typeof m.meta.approvalId === "string");
-  const lead = main.findIndex((m) => m.body.startsWith("Revisei o PR 42"));
+  return {
+    meanwhile: main.findIndex((m) => m.body === "manda ver"),
+    card: main.findIndex((m) => typeof m.meta.approvalId === "string"),
+    lead: main.findIndex((m) => m.body.startsWith("Revisei o PR 42")),
+  };
+}
+
+test("a long line said with a bridged approval reads right before its card, below what came meanwhile", async () => {
+  const { meanwhile, card, lead } = await bridgedMergeWithLine("before");
   expect(meanwhile).toBeGreaterThan(0);
-  // The bridge posted the card when it asked: what the agent said reads right after it.
-  expect(card).toBeGreaterThan(meanwhile);
-  expect(lead).toBe(card + 1);
+  // The bridge posted the card when it asked; what the agent said about it goes just before it, so it reads first.
+  expect(lead).toBeGreaterThan(meanwhile);
+  expect(card).toBe(lead + 1);
+});
+
+test("a long line said with a bridged approval goes after its card when someone wrote after the card", async () => {
+  const { meanwhile, card, lead } = await bridgedMergeWithLine("after");
+  // A reply takes no place before what people sent while it worked (ADR 0010).
+  expect(meanwhile).toBeGreaterThan(card);
+  expect(lead).toBeGreaterThan(meanwhile);
 });
 
 test("stopped between calls: the stopped reply keeps the stretch it was on, never the working text before a call", async () => {

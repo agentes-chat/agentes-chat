@@ -84,6 +84,7 @@ describe("finding the settings", () => {
     expect(within(menu).getAllByRole("menuitem").map(itemName)).toEqual([
       "Membros",
       "Conectores e MCPs",
+      "Skills",
       "Configurações do workspace",
     ]);
   });
@@ -138,7 +139,7 @@ describe("finding the settings", () => {
     await go("settings/about", state);
     expect(screen().getAllByRole("heading", { level: 2, name: "Sobre o agentes.chat" }).length).toBeGreaterThan(0);
     const site = screen().getByRole("link", { name: "agentes.chat" });
-    expect(site.closest("h2")?.textContent).toBe("Baseado no agentes.chat da Codari Global, LLC");
+    expect(site.closest("h2")?.textContent).toBe("Baseado no agentes.chat da AGENTESCHAT, LLC");
     expect(site.getAttribute("href")).toBe("https://agentes.chat");
     expect(screen().getByText("2026.11.06.1")).toBeTruthy();
     expect(screen().getByRole("link", { name: "GNU Affero General Public License v3" }).getAttribute("href")).toBe(
@@ -149,7 +150,7 @@ describe("finding the settings", () => {
         .getByRole("link", { name: /git\.example\.com\/fork/ })
         .getAttribute("href"),
     ).toBe("https://git.example.com/fork");
-    expect(screen().getByText("Copyright © 2026 Codari Global, LLC e colaboradores")).toBeTruthy();
+    expect(screen().getByText("Copyright © 2026 AGENTESCHAT, LLC e colaboradores")).toBeTruthy();
   });
 
   test("Sobre o agentes.chat only on a self-hosted server: agentes.chat Cloud lists it nowhere, its link opens Sua conta", async () => {
@@ -178,9 +179,9 @@ describe("finding the settings", () => {
   test("a section the person's role doesn't open says so where it lands, never silently on Sua conta", async () => {
     const state = seedState();
     if (state.me?.organizations[0]) state.me.organizations[0].role = "member";
-    await go("settings/skills", state);
+    await go("settings/access", state);
     expect(screen().getByText(/não abre com o seu cargo/).textContent).toBe(
-      "Skills não abre com o seu cargo neste workspace. Quem gerencia os cargos pode liberar para você.",
+      "Agentes e acesso não abre com o seu cargo neste workspace. Quem gerencia os cargos pode liberar para você.",
     );
     cleanup();
     // Opened from its own nav, the section says nothing more.

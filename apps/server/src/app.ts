@@ -403,10 +403,15 @@ export function createApp(options: AppOptions) {
     });
     // Hashed build files never change: the browser (and the Mac app's window) opens them from disk.
     // index.html is always revalidated, so a new deploy shows on the next open.
+    // No page of the app belongs in a search engine's index, whatever its status: sign-in pages and made-up
+    // addresses all answer with the same page. A header, never a robots.txt: a crawler kept out can't read it.
     app.use("/*", async (c, next) => {
       await next();
-      if (isApi(c.req.path) || !c.res.ok || c.res.headers.has("cache-control")) return;
-      if (c.res.headers.get("content-type")?.startsWith("text/html")) c.res.headers.set("cache-control", "no-cache");
+      if (isApi(c.req.path)) return;
+      const html = c.res.headers.get("content-type")?.startsWith("text/html");
+      if (html) c.res.headers.set("x-robots-tag", "noindex");
+      if (!c.res.ok || c.res.headers.has("cache-control")) return;
+      if (html) c.res.headers.set("cache-control", "no-cache");
       else if (c.req.path.startsWith("/assets/"))
         c.res.headers.set("cache-control", "public, max-age=31536000, immutable");
     });
@@ -414,6 +419,22 @@ export function createApp(options: AppOptions) {
     // A build file that isn't here (asked by a page from before a deploy) is a 404, never index.html: the boot fallback
     // and `vite:preloadError` then load the new version. No CDN keeps the 404.
     app.get("/assets/*", (c) => c.text("Not found", 404, { "cache-control": "no-store" }));
+    // Files crawlers and agents ask every site for: one this build doesn't ship is a 404, never index.html with a 200.
+    // Exact addresses at the root, never a pattern: an address inside a workspace may end like a file (a wiki page's
+    // slug), and the router tests a pattern against the rest of the path, not one segment.
+    const crawlerFiles = [
+      "/robots.txt",
+      "/llms.txt",
+      "/llms-full.txt",
+      "/ads.txt",
+      "/app-ads.txt",
+      "/humans.txt",
+      "/security.txt",
+      "/sitemap.xml",
+      "/sitemap_index.xml",
+      "/sitemap-index.xml",
+    ];
+    app.on("GET", crawlerFiles, (c) => c.text("Not found", 404));
     app.get("/*", (c, next) => (isApi(c.req.path) ? next() : spa(c, next)));
   }
 

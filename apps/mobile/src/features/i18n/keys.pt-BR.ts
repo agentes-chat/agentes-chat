@@ -920,6 +920,9 @@ export const featureKeysPtBR = {
     /** The toast after a swipe marked an item done, with the way back. */
     doneToast: "Feito",
     undo: "Desfazer",
+    /** The toast after "Clear all" (named after the Done pill), with the way back. */
+    doneAllToast_one: "{{count}} movida para Feitas",
+    doneAllToast_other: "{{count}} movidas para Feitas",
     day: {
       today: "Hoje",
       yesterday: "Ontem",
@@ -1241,6 +1244,7 @@ export const featureKeysPtBR = {
       "Você é a única pessoa dona de {{names}}. No site, em Pessoas, torne outra pessoa dona e depois volte aqui.",
     addPasswordFirst: "Adicione uma senha à sua conta no site antes, e digite ela aqui.",
     addPasswordWeb: "Adicionar senha no site",
+    onThisComputer: "Apague pelo app do agentes.chat no computador onde este servidor roda.",
     otherAccount: "Você entrou em outra conta. Nada foi apagado.",
     hold: "Segure para apagar",
   },
@@ -2049,6 +2053,7 @@ export const featureKeysPtBR = {
       waitingFor: "{{names}} está esperando o {{device}} para {{person}}",
       tool_request: "{{names}} pede para ligar {{tool}} no seu {{device}}",
       cli_request: "{{names}} pede para instalar {{tool}} no seu {{device}}",
+      folder_request: "{{names}} pede a pasta {{path}} no seu {{device}}",
       allowOnce: "Permitir uma vez",
       always: "Sempre permitir {{name}}",
       no: "Não",
@@ -2182,8 +2187,6 @@ export const featureKeysPtBR = {
   },
   joinRequests: {
     share: "Compartilhar o link",
-    roles: "Cargos",
-    rolesHint: "A pessoa entra com os cargos ligados. Sem nenhum, ela pode o mesmo que Todos.",
   },
   humanCheck: {
     title: "Verificação rápida",
@@ -2191,16 +2194,9 @@ export const featureKeysPtBR = {
   },
   /** Convidar pessoas and the sent invitations' sheet (ADR 0090); the other words are the shared `members.*`. */
   invitePeople: {
-    emailsHelp: "Cole uma lista ou digite. Cada pessoa recebe um e-mail e entra direto.",
-    here: "Já está aqui",
-    invited: "Já convidado",
-    fix: "Confira",
-    channels: "Canais",
     optional: "Opcional",
     ok: "OK",
     noteHelp: "Aparece no e-mail com o seu nome. Até {{max}} letras.",
-    roleHelp: "Muda o que a pessoa recebe ao entrar.",
-    remove: "Tirar da lista",
     sendAgain: "Mandar de novo",
     cancelTitle: "Cancelar o convite de {{email}}?",
     cancelText: "O link dele para de abrir.",

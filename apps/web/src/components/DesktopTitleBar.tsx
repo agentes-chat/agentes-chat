@@ -4,8 +4,8 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { AgoraButton } from "./Agora";
 import { openPalette } from "./CommandMenu";
-import { useMediaQuery } from "./NavDrawer";
-import { TABLET_QUERY, useSidebarCollapsed } from "./Sidebar";
+import { useNavDrawer } from "./NavDrawer";
+import { useSidebarCollapsed } from "./Sidebar";
 import { WorkspaceSky } from "./Sky";
 
 /**
@@ -21,8 +21,13 @@ export function DesktopTitleBar() {
   const { t } = useTranslation();
   const router = useRouter();
   const [collapsed, toggleSidebar] = useSidebarCollapsed();
-  // Tablet widths always show the icon rail: nothing to toggle.
-  const tablet = useMediaQuery(TABLET_QUERY);
+  // A window narrow enough for the drawer (the app's minimum is under it): the same button opens and closes it.
+  const drawer = useNavDrawer();
+  const inDrawer = !!drawer?.compact;
+  const shown = inDrawer ? drawer.open : !collapsed;
+  const navLabel = inDrawer
+    ? t(drawer.open ? "shell.closeNav" : "shell.openNav")
+    : t(collapsed ? "shell.expandNav" : "shell.collapseNav");
 
   // ⌘[ and ⌘], as in every Mac app.
   useEffect(() => {
@@ -40,20 +45,19 @@ export function DesktopTitleBar() {
   return (
     <header className="titlebar" data-tauri-drag-region="deep">
       {/* Over the sidebar, the workspace's sky goes on up behind the window's buttons (one sky with its header). */}
-      <WorkspaceSky part="bar" rail={collapsed || tablet} />
+      <WorkspaceSky part="bar" rail={collapsed} />
       <nav className="titlebar__nav">
-        {!tablet && (
-          <Button
-            variant="ghost"
-            size="sm"
-            iconOnly
-            icon="sidebar"
-            aria-label={collapsed ? t("shell.expandNav") : t("shell.collapseNav")}
-            title={collapsed ? t("shell.expandNav") : t("shell.collapseNav")}
-            aria-expanded={!collapsed}
-            onClick={toggleSidebar}
-          />
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          icon="sidebar"
+          data-sidebar-toggle=""
+          aria-label={navLabel}
+          title={navLabel}
+          aria-expanded={shown}
+          onClick={inDrawer ? drawer.toggle : toggleSidebar}
+        />
         <Button
           variant="ghost"
           size="sm"

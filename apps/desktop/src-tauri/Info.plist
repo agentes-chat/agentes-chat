@@ -25,6 +25,8 @@
   </array>
   <key>CFBundleAllowMixedLocalizations</key>
   <true/>
+  <!-- The usage descriptions below are English; every other language's are in locales/<lang>.lproj/InfoPlist.strings,
+       copied into the bundle by tauri.macos.conf.json. A change here goes there too. -->
   <!-- Voice messages: what the Mac says when the site first asks for the microphone. -->
   <key>NSMicrophoneUsageDescription</key>
   <string>agentes.chat uses the microphone to record voice messages.</string>

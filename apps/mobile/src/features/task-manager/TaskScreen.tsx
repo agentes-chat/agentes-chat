@@ -1,5 +1,5 @@
 import type { EndedTask, ManagedTask } from "@agenteschat/client";
-import { endedState, linePlace, taskState, taskTitle } from "@agenteschat/client/lib/task-manager";
+import { endedState, endedText, linePlace, taskState, taskTitle } from "@agenteschat/client/lib/task-manager";
 import { formatDuration } from "@agenteschat/client/lib/work";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,7 +26,7 @@ import { agentLook } from "../shared/logic";
 import { PushedHeader } from "../shared/parts";
 import { SheetHostProvider } from "../shared/SheetHost";
 import { askToStop, useStopper, useTasksToday } from "./hooks";
-import { endedText, rowState, taskHref, taskSubline } from "./logic";
+import { rowState, taskHref, taskSubline } from "./logic";
 import { StateLine } from "./parts";
 
 /**
@@ -102,6 +102,7 @@ function Live({ task }: { task: ManagedTask }) {
 function Ended({ task }: { task: EndedTask }) {
   const { t } = useTranslation();
   const meId = useMeId();
+  const dir = useDirectory();
   const state = endedState(task);
   const title = taskTitle(t, task);
   const took = Date.parse(task.finishedAt) - Date.parse(task.startedAt ?? task.finishedAt);
@@ -119,7 +120,7 @@ function Ended({ task }: { task: EndedTask }) {
             <PixelStopped size={10} />
           )}
           <Text variant="footnote" tone="ink2" numberOfLines={1} style={[styles.semibold, styles.shrink]}>
-            {endedText(t, task, meId)}
+            {endedText(t, task, meId, (id) => dir.anyAgent(id)?.name)}
           </Text>
           <Text variant="footnote" tone="faint" style={styles.num}>
             {`· ${formatDuration(t, took)}`}

@@ -213,7 +213,7 @@ export {
 } from "./components/FilterChip";
 export { FoldRow } from "./components/FoldRow";
 export { GroupHeading } from "./components/GroupHeading";
-export { type Hosting, HostingScene } from "./components/HostingScene";
+export { type Hosting, HostingScene, type Place, PlaceScene } from "./components/HostingScene";
 export { HintLine, type HintLineProps, InfoHint, type InfoHintProps } from "./components/InfoHint";
 export { isApple, Kbd, modKey, shortcut } from "./components/Kbd";
 export { Logo, LogoMark, type LogoProps } from "./components/Logo";
@@ -420,6 +420,7 @@ export { WorkLine, WorkLineAction, type WorkLineTone, WorkPlan } from "./compone
 export { COMPUTER_GRID, COMPUTER_KINDS, COMPUTER_STATES, drawComputer, PHONE_KINDS } from "./computer/portrait.js";
 export { cx } from "./cx";
 export {
+  composes,
   focusAtEnd,
   focusIdle,
   hoverPointer,
@@ -439,6 +440,7 @@ export {
   emojiEntry,
   searchEmoji,
 } from "./emoji-data";
+export { placeList } from "./floating";
 export {
   applyFormat,
   codeBlock,
@@ -540,6 +542,7 @@ export {
   workspaceInk,
   workspaceTones,
 } from "./sky/workspace";
+export { onThemeChange, switchTheme, THEME_SWITCHING_ATTR, type Theme } from "./theme";
 export {
   allZones,
   cityOf,

@@ -469,11 +469,11 @@ describe("a JSON block", () => {
 });
 
 describe("an agent's offer card is done for everyone once it's done", () => {
-  test("the skill library is read whatever the viewer may do: only the button asks for managing agents", () => {
+  test("the skill library is read whatever the viewer may do, and anyone installs (a member as their own)", () => {
     const offer = readFileSync(join(import.meta.dir, "../../src/features/ai/OfferCard.tsx"), "utf8");
     const install = offer.slice(offer.indexOf("function InstallSkill("), offer.indexOf("\nfunction UpdateSkills("));
     expect(install).toContain("useSkills(orgId)");
-    expect(install).toContain('action={may ? t("actionCard.install_skill.open") : null}');
+    expect(install).toContain('action={t("actionCard.install_skill.open")}');
     // Its screen's row turns what installs on for the agent that posted it, as on the web.
     expect(install).toContain("openedFromCard({ url: card.url, agentId })");
     expect(install).toContain("&agent=");
@@ -491,12 +491,11 @@ describe("an agent's offer card is done for everyone once it's done", () => {
     expect(routeAgent(link, undefined)).toBeUndefined();
     // The route hands the screen only what `routeAgent` keeps.
     const route = readFileSync(join(import.meta.dir, "../../app/(app)/settings/skills/new.tsx"), "utf8");
-    expect(route).toContain("<InstallSkillScreen initialUrl={url} forAgentId={routeAgent(url, agent)} />");
+    expect(route).toContain("forAgentId={routeAgent(url, agent)}");
     // The screen sends it only on an install from the card's link with its row checked, never on a read.
     const screen = readFileSync(join(import.meta.dir, "../../src/features/settings/SkillsScreen.tsx"), "utf8");
-    expect(screen).toContain(
-      "input: list ? { url: link, list } : { url: link, ...(forAgent ? { forAgentId: forAgent } : {}) }",
-    );
+    expect(screen).toContain("? { url: link, list, ...mine }");
+    expect(screen).toContain(": { url: link, ...(forAgent ? { forAgentId: forAgent } : {}), ...mine }");
     expect(screen).toContain("forAgentId: sendFor(url)");
     // Its row only for a live agent the server would turn it on for: not archived or gone.
     expect(screen).toContain("const forName = forAgentId ? dir.agentById.get(forAgentId)?.name : undefined;");

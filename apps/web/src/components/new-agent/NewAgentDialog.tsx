@@ -17,6 +17,7 @@ import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useHeldWhile } from "@agenteschat/client/lib/hold";
 import { addsAgentsTo, can } from "@agenteschat/client/lib/permissions";
 import { connectorName, scopeText } from "@agenteschat/client/lib/scopes";
+import { skillsToGive } from "@agenteschat/client/lib/skills";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
   type AgentAppearance,
@@ -129,6 +130,8 @@ export interface NewAgentRequest {
   channelId?: string | null;
   /** Back from connecting an app elsewhere (OAuth): the card as it was, and the app that just connected. */
   resume?: { sel: Pick; drafts: Partial<Record<Pick, Draft>>; connected: string | null };
+  /** A plan account of the person's own just connected ("Criar um agente com este plano"): it thinks with that one. */
+  accountId?: string;
 }
 
 /**
@@ -223,7 +226,7 @@ export function NewAgentProvider({ children }: { children: ReactNode }) {
   );
   const value = useMemo(() => ({ open }), [open]);
   useEffect(() => {
-    const onAsk = () => open();
+    const onAsk = (e: Event) => open((e as CustomEvent<NewAgentRequest | null>).detail ?? undefined);
     window.addEventListener(NEW_AGENT_EVENT, onAsk);
     return () => window.removeEventListener(NEW_AGENT_EVENT, onAsk);
   }, [open]);
@@ -282,7 +285,10 @@ export function CreateAgentLink() {
   );
 }
 
-/** The Mac menu bar's New agent (`MenuBarActions`, mounted outside the dialog's provider) asks through this event. */
+/**
+ * Who sits outside the dialog's provider asks through this event: the Mac menu bar's New agent (`MenuBarActions`), and
+ * Connect AI's "Criar um agente com este plano" (a `CustomEvent` whose `detail` is the request).
+ */
 export const NEW_AGENT_EVENT = "agentes:new-agent";
 
 /** The ready-made words of a starting point: a personal starter's (`teamTemplates.agents`) or a role's. */
@@ -369,7 +375,7 @@ function NewAgentDialog({
   const dms = useDms(org.id);
   const library = useSkills(org.id);
   const create = useCreateAgent(org.id);
-  const brain = useNewAgentBrain();
+  const brain = useNewAgentBrain(request.accountId);
   const connectAi = useConnectAi();
   const qc = useQueryClient();
 
@@ -476,7 +482,7 @@ function NewAgentDialog({
 
   // Its skills: what its starting point suggests that the library has, and the ones on for new agents; hidden where
   // the library is empty or this server has none.
-  const lib = library.data ?? [];
+  const lib = skillsToGive(library.data ?? [], me.user.id);
   const skillsShown = library.isSuccess && lib.length > 0;
   const suggestedSkills = (pick: Pick) => {
     const titles = (SKILL_SUGGESTIONS[pick] ?? []).flatMap((k) => [k, norm(tt(`teamTemplates.skills.${k}.name`))]);

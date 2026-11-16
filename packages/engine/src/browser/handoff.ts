@@ -1181,7 +1181,7 @@ export function createBrowserHandoffToolSource(
       "browser",
       BROWSER_SCOPE,
       BROWSER_TOOL_INFO.browser_ask_person.label,
-      "Hand a person the step only they can do in your browser (sign in, scan a QR code with their phone, type a code sent to them, solve a captcha, confirm on their phone) and wait until they're done. Open the page and get to that step first, so it is ready for them, and call it as soon as the task reaches it: it is never a reason to stop or to say you can't. Write what to do in one short sentence in the language the people use. Before asking, try what you can yourself (a password you were given through request_secret goes in with browser_type_secret). End your turn after calling it: you are woken with the result, then read the page again and check.",
+      "Hand a person the step only they can do in your browser (sign in, scan a QR code with their phone, type a code sent to them, solve a captcha, confirm on their phone) and wait until they're done. Open the page and get to that step first, so it is ready for them, and call it as soon as the task reaches it: it is never a reason to stop or to say you can't. Write what to do in one short sentence in the language the people use. Before asking, try what you can yourself (a password you were given through request_secret goes in with browser_type_secret; a link or a code the site sent to a mailbox you can read, you get there yourself). End your turn after calling it: you are woken with the result, then read the page again and check.",
     ),
     desktop: tool(
       "desktop",
@@ -1906,6 +1906,8 @@ export async function openPageInControl(
         ...(agent.browserAllowedDomains ? { allowedDomains: agent.browserAllowedDomains } : {}),
         link: agentBrowserLink(orgId, agentId),
         ...(desktop ? { desktop: true } : {}),
+        // The person in control's own move: it runs while they drive (anything else waits for them).
+        person: true,
       },
       { timeoutMs: (OPEN_PAGE_SECONDS + 30) * 1000 },
     );

@@ -16,7 +16,8 @@ describe("a long text field never cuts what is pasted or dictated", () => {
     "features/agents/AgentEditScreen.tsx",
     "features/agents/NewAgentScreen.tsx",
     "features/issues/NewIssueForm.tsx",
-    "features/members/InvitePeople.tsx",
+    // Recado no e-mail, pushed over Convidar pessoas.
+    "features/members/InvitePickers.tsx",
     "features/members/SuggestPerson.tsx",
     "features/members/JoinRequestsSheet.tsx",
     "features/routines/RoutineForm.tsx",

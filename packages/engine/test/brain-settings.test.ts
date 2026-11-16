@@ -9,6 +9,7 @@ import {
   SPEED_PROTOCOL,
 } from "@agenteschat/adapters";
 import { eq, schema } from "@agenteschat/db";
+import { MODEL_CATALOG } from "@agenteschat/providers";
 import { CODING_PLANS, learnPlanModels, planOf } from "@agenteschat/providers/plans";
 import {
   ConflictError,
@@ -30,6 +31,7 @@ import {
   brainModelOptions,
   brainOf,
   brainOptions,
+  CLAUDE_CODE_MODELS,
   defaultBrainModel,
   executorBrain,
   normalizeBrainModel,
@@ -53,7 +55,7 @@ const mac = (patch: Record<string, unknown> = {}) => ({
 
 describe("brain settings", () => {
   test("a coding plan's models: any of them by id, its aliases named after what they run there", () => {
-    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Opus", "Sonnet", "Haiku"]);
+    expect(brainModelOptions("claude_code").map((o) => o.label)).toEqual(["Opus 5.5", "Sonnet 5.5", "Haiku 5.5"]);
     expect(brainModelOptions("codex").every((o) => o.modelId?.startsWith("gpt"))).toBe(true);
     // Codex offers the catalog's OpenAI rows, GPT-6.1 Terra and GPT-6 Astra among them; GPT-6.1 Sol stays its default.
     expect(brainModelOptions("codex").map((o) => o.label)).toEqual([
@@ -72,15 +74,24 @@ describe("brain settings", () => {
     // An alias the plan leaves out, or "Automático", is its main model; the value stays an alias.
     expect(brainModelLabel("claude_code", "opus", "zai")).toBe("GLM-5.3");
     expect(brainModelLabel("claude_code", "auto", "minimax")).toBe("MiniMax M3.1 Flash");
-    expect(brainModelLabel("claude_code", "opus")).toBe("Opus");
+    expect(brainModelLabel("claude_code", "opus")).toBe("Opus 5.5");
     expect(normalizeBrainModel("claude_code", "haiku")).toBe("haiku");
     // One of a plan's other models is stored by its id and named after it there; while Claude thinks it runs Sonnet.
     expect(normalizeBrainModel("claude_code", "deepseek-v4.1-flash")).toBe("deepseek-v4.1-flash");
     expect(normalizeBrainModel("claude_code", "k3-256k")).toBe("k3-256k");
     expect(brainModelLabel("claude_code", "deepseek-v4.1-flash", "opencode")).toBe("DeepSeek V4.1 Flash");
     expect(brainModelLabel("claude_code", "deepseek-v4.1-flash", "kimi")).toBe("Kimi for Coding");
-    expect(brainModelLabel("claude_code", "deepseek-v4.1-flash")).toBe("Sonnet");
+    expect(brainModelLabel("claude_code", "deepseek-v4.1-flash")).toBe("Sonnet 5.5");
     expect(brainModelLabel("claude_code", "auto")).toBe("auto");
+  });
+
+  test("a Claude alias is named with its version from the catalog row it runs, so a new row renames it", () => {
+    for (const o of CLAUDE_CODE_MODELS) {
+      const row = MODEL_CATALOG[o.modelId ?? ""];
+      expect(row?.provider).toBe("anthropic");
+      expect(`Claude ${o.label}`).toBe(row?.label ?? "");
+      expect(o.label).toMatch(/^[A-Z][a-z]+ \d+(\.\d+)*$/);
+    }
   });
 
   test("stored values read back; executors map to brains", () => {
@@ -212,6 +223,10 @@ describe("brain settings", () => {
       ["claude_code", false, "not_installed"],
       ["codex", false, "outdated"],
     ]);
+    expect(brainOptions(oldCodex).find((o) => o.kind === "codex")?.codexVersion).toEqual({
+      detected: "0.100.0",
+      minimum: "0.163.0",
+    });
     // There and failing to start: said as that, never "not installed".
     const broken = mac({ executors: { codex: { version: "0.170.0" }, broken: { claude: "boom" }, detectedAt: "x" } });
     expect(reasons(broken).slice(1, 3)).toEqual([
@@ -228,6 +243,19 @@ describe("brain settings", () => {
       ["claude_code", false, "tool_off"],
       ["codex", true, null],
     ]);
+    // Not installed stays "not_installed" even when its toggle is off in the app's Tools.
+    const uninstalledOff = mac({
+      ...both,
+      protocol: OPENCODE_ACP_PROTOCOL,
+      executors: { detectedAt: "2026-01-01T00:00:00Z" },
+      access: { tools: { claude: false, codex: false, opencode: false, cursor: false } },
+    });
+    expect(reasons(uninstalledOff).slice(1, 3)).toEqual([
+      ["claude_code", false, "not_installed"],
+      ["codex", false, "not_installed"],
+    ]);
+    expect(brainOptions(uninstalledOff).find((o) => o.kind === "opencode")?.reason).toBe("not_installed");
+    expect(brainOptions(uninstalledOff).find((o) => o.kind === "cursor")?.reason).toBe("not_installed");
     expect(reasons(mac({ access: { tools: { claude: true } } }))[1]).toEqual(["claude_code", true, null]);
     // Commands off (the app's default for a new workspace) with Claude Code on: the plan still thinks there, as the
     // runner runs it; "no permission to run programs" is only for a runner that reports no tools.

@@ -1,11 +1,20 @@
-import { type Message, useExchangeConversation } from "@agenteschat/client";
-import { consultLineState, consultOriginKey } from "@agenteschat/client/lib/consult-group";
+import { type Message, useConsultations, useExchangeConversation } from "@agenteschat/client";
+import {
+  type ConsultLineState,
+  type ConsultPairItem,
+  consultChoiceKey,
+  consultChoiceOf,
+  consultChoices,
+  consultLineState,
+  consultOriginKey,
+  openableConsultation,
+} from "@agenteschat/client/lib/consult-group";
 import { consultSubject } from "@agenteschat/client/lib/consultations";
-import { dayLabel, formatTime } from "@agenteschat/client/lib/format";
+import { dayLabel, formatTime, joinNames, namesText } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { buildTimeline } from "@agenteschat/client/lib/timeline";
-import { AvatarStack, Button, DayDivider, Dialog, DialogFooter, Icon, PixelSpinner } from "@agenteschat/ui";
-import { Fragment, type ReactNode, useMemo, useRef } from "react";
+import { AvatarStack, Button, DayDivider, Dialog, DialogFooter, Icon, PixelSpinner, Segmented } from "@agenteschat/ui";
+import { Fragment, type ReactNode, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageBody } from "@/chat/MessageBody";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -23,12 +32,14 @@ import { useDirectory } from "@/hooks/useDirectory";
  * wrote, and the cards it posted here (an approval, a question, a secret request), drawn as the conversation draws
  * them (`renderMessage`). Read only: people don't write in the agents' DM; to change course they talk to the agent
  * that asked (`onTalk` puts its handle in the composer). The DM sends this page no events: it reloads while the
- * question is out.
+ * question is out. Opened from a row of several asked agents (`group`), it is named as the row is ("Theo ⇄ Atlas e
+ * mais 1") and offers one choice per agent, saying where each stands, to read each exchange in turn.
  */
 export function ConsultationDialog({
   channelId,
   channelName,
-  consultationId,
+  consultationId: opened,
+  group,
   onClose,
   onTalk,
   onAnswer,
@@ -39,6 +50,8 @@ export function ConsultationDialog({
   /** Its name; null in a DM, where the dialog names no channel. */
   channelName: string | null;
   consultationId: string;
+  /** The questions of the row that opened it, when it stands for several agents. */
+  group?: readonly ConsultPairItem[];
   onClose: () => void;
   /** "Falar com o Theo": closes the dialog and mentions the agent that asked. */
   onTalk: (handle: string) => void;
@@ -49,13 +62,31 @@ export function ConsultationDialog({
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
+  // The row's questions as the conversation's list has them now: an answer arriving shows on its choice.
+  const listed = useConsultations(org.id, channelId, Boolean(group && group.length > 1));
+  const items = useMemo(
+    () => (group ?? []).map((g) => listed.data?.find((c) => c.id === g.id) ?? g),
+    [group, listed.data],
+  );
+  // On the opened agent's own exchange as its asker asked it, so the title and "Falar com" stay on the asker.
+  const [pick, setPick] = useState(() =>
+    group && group.length > 1
+      ? (consultChoiceOf(consultChoices(group, Date.now(), group[0]?.agentId), group, opened)?.opens ?? opened)
+      : opened,
+  );
+  const consultationId = pick;
   // The whole exchange its row stands for: the other questions between the same two agents come in it too.
   const query = useExchangeConversation(org.id, channelId, consultationId);
   const c = query.data?.consultation;
   const list = query.data?.messages;
-  const now = useNow(c?.status === "open");
-  const items = useMemo(() => buildTimeline(list ?? [], [], []), [list]);
-  const asker = c ? dir.agentById.get(c.agentId) : undefined;
+  const now = useNow(c?.status === "open" || items.some((i) => i.status === "open"));
+  const askerOf = items[0]?.agentId;
+  const choices = consultChoices(items, now, askerOf).filter((ch) => openableConsultation(ch.opens));
+  const several = choices.length > 1;
+  const picked = consultChoiceOf(choices, items, pick) ?? choices[0];
+  const timeline = useMemo(() => buildTimeline(list ?? [], [], []), [list]);
+  // While a chosen exchange loads, the row's asker still names the dialog.
+  const asker = dir.agentById.get(c?.agentId ?? askerOf ?? "");
   const consulted = c ? dir.agentById.get(c.consultedAgentId) : undefined;
   const from = agentGrammar(asker?.name ?? t("channel.unknownAgent"));
   const to = agentGrammar(consulted?.name ?? t("channel.unknownAgent"));
@@ -64,6 +95,7 @@ export function ConsultationDialog({
     to: to.name,
   });
   const subject = consultSubject(c?.question);
+  const nameOf = (id: string) => dir.agentById.get(id)?.name ?? t("channel.unknownAgent");
   const state = c ? consultLineState(c, now) : null;
   // The cards keep their buttons (a question answers in its own field); nothing else acts
   // here: no reply, no thread, no quote (the messages live in the agents' DM). Stable: rows don't redraw for it.
@@ -95,7 +127,7 @@ export function ConsultationDialog({
     </span>
   );
   const rows: ReactNode[] = [];
-  for (const item of items) {
+  for (const item of timeline) {
     if (item.kind === "day") rows.push(<DayDivider key={item.key}>{dayLabel(t, i18n.language, item.iso)}</DayDivider>);
     else if (item.kind === "message")
       rows.push(<Fragment key={item.key}>{renderMessage(item.message, item.grouped)}</Fragment>);
@@ -110,7 +142,13 @@ export function ConsultationDialog({
           <span className="consult-title">
             {from.name}
             <Icon name="swap" size={16} label={t("newAgent.and")} inline />
-            {to.name}
+            {several
+              ? namesText(
+                  t,
+                  choices.map((ch) => nameOf(ch.agentId)),
+                  1,
+                )
+              : to.name}
           </span>
         }
         subtitle={
@@ -133,12 +171,21 @@ export function ConsultationDialog({
           c && (
             <AvatarStack>
               <AgentAvatar agentId={c.agentId} size="sm" name={from.name} state="idle" />
-              <AgentAvatar
-                agentId={c.consultedAgentId}
-                size="sm"
-                name={to.name}
-                state={state === "working" ? "thinking" : state === "waiting" ? "waiting" : "idle"}
-              />
+              {several ? (
+                choices
+                  .slice(0, 3)
+                  .map((ch) => (
+                    <AgentAvatar
+                      key={ch.agentId}
+                      agentId={ch.agentId}
+                      size="sm"
+                      name={nameOf(ch.agentId)}
+                      state={faceState(ch.state)}
+                    />
+                  ))
+              ) : (
+                <AgentAvatar agentId={c.consultedAgentId} size="sm" name={to.name} state={faceState(state)} />
+              )}
             </AvatarStack>
           )
         }
@@ -146,6 +193,28 @@ export function ConsultationDialog({
         width={620}
         className="consult-dialog"
       >
+        {several && picked && (
+          <Segmented
+            size="sm"
+            block
+            className="consult-dialog__choice"
+            label={t("chat.consultPair.labelMany", {
+              from: from.name,
+              to: joinNames(
+                choices.map((ch) => nameOf(ch.agentId)),
+                t,
+              ),
+            })}
+            value={picked.agentId}
+            onValueChange={(agentId) => setPick(choices.find((ch) => ch.agentId === agentId)?.opens ?? pick)}
+            options={choices.map((ch) => ({
+              value: ch.agentId,
+              mark: <AgentAvatar agentId={ch.agentId} size="xs" name={nameOf(ch.agentId)} state="idle" />,
+              label: nameOf(ch.agentId),
+              hint: t(consultChoiceKey(ch.state, ch.item)),
+            }))}
+          />
+        )}
         <section className="channel__messages consult-dialog__list" aria-label={label}>
           {query.isLoading && <LoadingConversation />}
           {query.isError && !query.data && <ErrorState error={query.error} onRetry={() => void query.refetch()} />}
@@ -197,3 +266,7 @@ export function ConsultationDialog({
     </ChannelActionsContext.Provider>
   );
 }
+
+/** A consulted agent's face by where its question stands: thinking at work, waiting on someone. */
+const faceState = (state: ConsultLineState | null) =>
+  state === "working" ? "thinking" : state === "waiting" ? "waiting" : "idle";

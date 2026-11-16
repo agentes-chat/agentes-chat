@@ -1,8 +1,7 @@
 import { type Message, useAiAccounts, useStopReason } from "@agenteschat/client";
 import { seesDetails } from "@agenteschat/client/lib/audience";
 import { mayPickModel } from "@agenteschat/client/lib/brain-picker";
-import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import type { StoppedNotice } from "@agenteschat/client/lib/notices";
+import { type StoppedNotice, stopLine, stopperOf } from "@agenteschat/client/lib/notices";
 import { can } from "@agenteschat/client/lib/permissions";
 import { modelStandInKey } from "@agenteschat/client/lib/plan-usage";
 import { planOf } from "@agenteschat/client/lib/plans";
@@ -19,17 +18,19 @@ import { useQuietInset } from "./look";
 import { useStoppedRun } from "./stopped-runs";
 
 /**
- * A stopped task as one pill (ADR 0128): "You stopped Ada" (with the reason once said), the stop's time, and its
- * actions: Continue (`cont`, where the task can pick up again) and, for who stopped it while it has no reason, "Add a
- * reason", which opens a short field under the pill; the agent reads it on its next turn. `fallback`: its words when
- * no person stopped it (the step limit, stuck) or nobody is known. Under the stopped reply when it is in the
- * conversation, else in the notice's place (`StoppedLine`).
+ * A stopped task as one pill (ADR 0128): "You stopped Ada" only for who stopped it, "Ana stopped Ada" for anyone else,
+ * "Lodi stopped Ada" when the right hand did at someone's word (with the reason once said), the stop's time, and its
+ * actions: Continue (`cont`, where the task can pick up again) and, for who stopped it (or asked for it) while it has
+ * no reason, "Add a reason", which opens a short field under the pill; the agent reads it on its next turn.
+ * `fallback`: its words when no person stopped it (the step limit, stuck, its cause) or nobody is known. Under the
+ * stopped reply when it is in the conversation, else in the notice's place (`StoppedLine`).
  */
 export function StopPill({
   agent,
   notice,
   at,
   byUserId,
+  byAgentId,
   fallback,
   cont,
 }: {
@@ -41,6 +42,8 @@ export function StopPill({
   at?: string | null;
   /** Without a notice: the person in the reply's meta. */
   byUserId?: string | null;
+  /** Without a notice: the agent that stopped it at that person's word (the right hand). */
+  byAgentId?: string | null;
   fallback: string;
   cont?: ReactNode;
 }) {
@@ -57,16 +60,15 @@ export function StopPill({
   // Sent from here: shown at once, before the notice itself comes back with it.
   const [sent, setSent] = useState<string | null>(null);
   const by = notice?.byUserId || byUserId || null;
-  const mine = Boolean(meId) && by === meId;
+  const stopper = stopperOf({ byUserId: by, byAgentId: notice?.byAgentId || byAgentId }, meId);
   const reason = notice?.reason ?? sent;
-  const stopper = notice?.byName || (by ? dir.nameOf({ type: "person", id: by }) : "");
-  const { context } = agentGrammar(agent);
-  const sentence = mine
-    ? t("taskManager.stopped.line", { agent, context })
-    : stopper
-      ? t("taskManager.stopped.lineBy", { name: stopper, agent, context })
-      : fallback;
-  const sayWhy = Boolean(notice) && mine && !reason && !writing;
+  const sentence =
+    stopLine(t, agent, stopper, {
+      agent: (id) => notice?.byAgentName || dir.nameOf({ type: "agent", id }),
+      person: (id) => notice?.byName || dir.nameOf({ type: "person", id }),
+    }) ?? fallback;
+  // The person it was stopped for says why, also when the right hand did it at their word.
+  const sayWhy = Boolean(notice) && Boolean(meId) && by === meId && !reason && !writing;
   const send = () => {
     const text = why.trim();
     if (!text || !notice) return;

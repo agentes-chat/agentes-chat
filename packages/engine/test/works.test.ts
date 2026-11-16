@@ -186,7 +186,7 @@ test("work_in_background: the anchor in the timeline, updates in its thread, the
     title: "Migrar a cobrança",
     status: "done",
     channelId: f.general.id,
-    assignee: { type: "agent", id: f.agent.id },
+    assignees: [{ type: "agent", id: f.agent.id }],
     blocked: null,
   });
   expect(issues[0]?.backgroundWork?.plan.map((p) => p.state)).toEqual(["done", "doing", "todo"]);
@@ -640,7 +640,7 @@ test("cards: none for a quick run nor a short auto work; card: true makes one; a
   const existing = await createIssue(deps(), { type: "person", userId: f.owner.id }, f.org.id, {
     title: "Cobrança nova",
     criteria: ["Sem perda de dados"],
-    assignee: { type: "agent", id: f.agent.id },
+    assignees: [{ type: "agent", id: f.agent.id }],
     channelId: f.general.id,
   });
   const reuse = await working("@dev pega a #1");
@@ -679,6 +679,19 @@ test("cards: none for a quick run nor a short auto work; card: true makes one; a
   expect(end?.meta.workEnd).toMatchObject({ status: "canceled", byUserId: f.owner.id });
   // Stopped: by whom, in the person's words.
   expect(end?.meta.bodyParams).toMatchObject({ byName: f.owner.name });
+  expect(await workView(f.db, f.org.id, named.work.id)).toMatchObject({
+    canceledByUserId: f.owner.id,
+    canceledByAgentId: null,
+  });
+  // The right hand's stop at the person's word: the view names both, so its line names the right hand.
+  await f.db
+    .update(schema.agentRuns)
+    .set({ error: `canceled_by:${f.owner.id}|agent:agent-lodi` })
+    .where(eq(schema.agentRuns.id, reuse.id));
+  expect(await workView(f.db, f.org.id, named.work.id)).toMatchObject({
+    canceledByUserId: f.owner.id,
+    canceledByAgentId: "agent-lodi",
+  });
 });
 
 test("a work 15 minutes old gets its card at its check-in", async () => {
@@ -748,7 +761,7 @@ test("card_issue: only a card the asker reads, here or workspace-wide; elsewhere
   const elsewhere = await createIssue(deps(), { type: "person", userId: f.owner.id }, f.org.id, {
     title: "Fechamento",
     channelId: finance.id,
-    assignee: { type: "agent", id: f.agent.id },
+    assignees: [{ type: "agent", id: f.agent.id }],
   });
   const dm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
   const run = await working("pega a #1", undefined, dm.id);

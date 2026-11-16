@@ -65,7 +65,7 @@ What doesn't change: who may wake whom. The limit of a routine's creator and an 
 ## Addendum (2026-11-05): an ask that doesn't move ends, and a held one isn't lost
 
 - **The loss.** A note the brakes deferred for room (ADR 0131 §7, `LATER_JOB`) had no run, so the sweep closed it after 15 minutes as "never got to it" while its wake kept looking for up to a day. The sender said the note hadn't arrived and sent it again, and the first one later woke a run whose answer went nowhere. Now a row whose wake still waits (`LATER_JOB`, `INBOX_JOB`) stays open like one with a run, and the tool's result says it waits for room.
-- **The limit.** Past `CONSULTATION_HUNG_MS` (2 hours) without moving, a row ends `failed` with why: its colleague never started, or sat in its computer's line, on a computer that's away, on its plan or budget, or on its provider. Its run or its wake goes with it, so no work lands where nobody reads it. The clock is the wait's own (`roomWaitSince`, `waitingForBrain.since`, `outage.since`), not the ask's: hours of work before one refused turn don't count. A colleague at work has no limit. One waiting on a person has none either: its card has its own 24-hour deadline (`QUESTION_TTL_MS`, `APPROVAL_TTL_MS`), after which the run goes on and answers.
+- **The limit.** Past `CONSULTATION_HUNG_MS` (2 hours) without moving, a row ends `failed` with why: its colleague never started, or sat in its computer's line, on a computer that's away, on its plan or budget, or on its provider. A wait that ends by itself holds it longer, never past `CONSULTATION_KNOWN_WAIT_MS` (24 hours): a line on a computer that is online, a plan's limit (with a known reset, until its run's turn to resume in the plan's line (`waitingForBrain.until`) and 30 minutes, at least 2 hours; 24 hours when no reset is known). Its run or its wake goes with it, so no work lands where nobody reads it. The clock is the wait's own (`roomWaitSince`, `waitingForBrain.since`, `outage.since`), not the ask's: hours of work before one refused turn don't count. A colleague at work has no limit. One waiting on a person has none either: its card has its own 24-hour deadline (`QUESTION_TTL_MS`, `APPROVAL_TTL_MS`), after which the run goes on and answers.
 - **The row's time** runs from the ask to what came back, waits included. It reads in hours past the first, and "levou 6 h" once closed.
 
 ## Addendum (2026-11-10): one row for an exchange
@@ -86,3 +86,10 @@ A few questions and notes between the same two agents within minutes drew one ro
   aprovação", the pulsing wait mark in the arrows' place), before the list hears the run park. Waiting on someone else,
   its words are quiet and the arrows still.
 
+
+## Addendum (2026-11-15): no relay wake for work that reported home itself
+
+A hand-off whose run became a handed work (ADR 0121 addendum 2026-11-15) already posted its updates, questions and report where the person asked. Waking the sender to relay it repeated it, and with several delegates woke it once per reply.
+
+- `reportHandOffs` still claims the turn's closed notes together, but writes each as a notice that wakes nobody when its handed work posted its result home (`agent_works.consultation_id` with `result_message_id` set). It wakes the sender once, at most, and only when one of the claimed notes ended with nothing posted home (failed or expired without a work, a heads-up). What came back stays on the record for the sender's next turn.
+- A delegate waiting on a person still lets the others' results be claimed (the claim decides the wake as above).

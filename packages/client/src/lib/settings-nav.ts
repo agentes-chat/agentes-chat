@@ -8,6 +8,7 @@
 export const SETTINGS_PARTS: Readonly<Record<string, string>> = {
   invites: "members",
   notifications: "account",
+  download: "account",
   approvals: "account",
   apps: "account",
   media: "general",

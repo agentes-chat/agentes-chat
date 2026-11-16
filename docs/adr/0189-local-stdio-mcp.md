@@ -1,4 +1,4 @@
-# ADR 0186: Local MCP programs alongside remote connectors
+# ADR 0189: Local MCP programs alongside remote connectors
 
 Status: proposed
 

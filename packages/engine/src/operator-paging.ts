@@ -64,6 +64,9 @@ export const orgExists = async (db: Database, orgId: string) =>
 export const CODE = /^[A-Za-z][\w.:/-]{0,99}$/;
 export const codeOf = (v: unknown) => (typeof v === "string" && CODE.test(v) ? v : null);
 export const uuidOf = (v: unknown) => (typeof v === "string" && UUID.test(v) ? v : null);
+/** A word, when a list written in the code holds it: its shape alone would let any one word through as a fact. */
+export const listedOf = <T extends string>(list: readonly T[], v: unknown): T | null =>
+  list.find((word) => word === v) ?? null;
 /** An id or a name that may start with a digit (an account's id, a time zone, `owner/repository`): one word of it. */
 const WORD = /^[\w.:/+-]{1,200}$/;
 export const wordOf = (v: unknown) => (typeof v === "string" && WORD.test(v) ? v : null);

@@ -1,19 +1,14 @@
 import type { Agent, BatchInviteResult, Channel, InviteBatch, InviteLinkMade } from "@agenteschat/client";
-import {
-  ApiError,
-  keys,
-  useAllInvitations,
-  useApi,
-  useAuthConfig,
-  useChannels,
-  useWorkspaceLimits,
-} from "@agenteschat/client";
+import { keys, useAllInvitations, useApi, useAuthConfig, useChannels, useWorkspaceLimits } from "@agenteschat/client";
 import { errorText, noAnswer } from "@agenteschat/client/lib/errors";
 import { formatShortDate } from "@agenteschat/client/lib/format";
 import {
+  INVITE_LINK_DEFAULTS,
   INVITE_LINK_MAX_USES,
   INVITE_LINK_TTL,
   INVITE_LINK_TTLS,
+  type InviteRefusal,
+  inviteRefusal,
   type LinkChoices,
   plainLink,
   sameChoices,
@@ -75,8 +70,6 @@ import {
   ChannelsField,
   channelsToSend,
   FieldLine,
-  type RefusedAgent,
-  type RefusedChannel,
   RoleField,
   rolesToSend,
   useInviteChoices,
@@ -164,28 +157,7 @@ export function InviteDialogProvider({ children }: { children: ReactNode }) {
 }
 
 /** Why the last send didn't go: no answer, or a channel, an agent or a cargo the sender may no longer give. */
-type Failure =
-  | { kind: "offline" }
-  | { kind: "channel"; channel: RefusedChannel }
-  | { kind: "agent"; agent: RefusedAgent }
-  | { kind: "role" };
-
-/** The server's refusal of a send, in the dialog's terms (`invitation.channel`, `invitation.agent`, a cargo's). */
-function failureOf(error: unknown): Failure | null {
-  if (noAnswer(error)) return { kind: "offline" };
-  if (!(error instanceof ApiError)) return null;
-  const p = error.params ?? {};
-  const name = typeof p.name === "string" ? p.name : null;
-  if (error.code === "invitation.channel" && typeof p.channelId === "string") {
-    const why = p.why === "archived" || p.why === "left" ? p.why : "gone";
-    return { kind: "channel", channel: { id: p.channelId, name, why } };
-  }
-  if (error.code === "invitation.agent" && typeof p.agentId === "string")
-    return { kind: "agent", agent: { id: p.agentId, name, why: p.why === "locked" ? "locked" : "gone" } };
-  if (error.code === "role.unknown" || error.code === "role.above_you" || error.code === "role.grant_forbidden")
-    return { kind: "role" };
-  return null;
-}
+type Failure = { kind: "offline" } | InviteRefusal;
 
 function InviteDialog({ request, open, onClose }: { request: InviteRequest; open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
@@ -278,7 +250,7 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
         ...(note?.trim() ? { note: note.trim() } : {}),
       });
     } catch (e) {
-      const said = failureOf(e);
+      const said: Failure | null = noAnswer(e) ? { kind: "offline" } : inviteRefusal(e);
       if (said) setFailure(said);
       else toast.show(errorText(t, e), "error");
       return;
@@ -417,13 +389,13 @@ function InviteDialog({ request, open, onClose }: { request: InviteRequest; open
                   choices={choices}
                   id="invite-channels"
                   fromChannelId={request.channelId}
-                  refused={failure?.kind === "channel" ? failure.channel : null}
+                  refused={failure?.kind === "channel" ? failure : null}
                 />
                 <AgentsField
                   choices={choices}
                   id="invite-agents"
                   live={open}
-                  refused={failure?.kind === "agent" ? failure.agent : null}
+                  refused={failure?.kind === "agent" ? failure : null}
                   onGo={goTo}
                 />
                 {failure?.kind === "role" && (
@@ -545,10 +517,7 @@ function LinkForm({
   useEffect(() => {
     if (!plain || asked.current) return;
     asked.current = true;
-    mutate(
-      { roleIds: [], channelIds: [], agentIds: [], expiresIn: INVITE_LINK_TTL, maxUses: null },
-      { onSuccess: setWorkspace, onError: (e) => setError(errorText(t, e)) },
-    );
+    mutate(INVITE_LINK_DEFAULTS, { onSuccess: setWorkspace, onError: (e) => setError(errorText(t, e)) });
   }, [plain, mutate, t]);
   const shown = plain ? workspace : made && sameChoices(made.choices, now) ? made.link : null;
   const create = () => {

@@ -9,7 +9,6 @@ import {
   INSTALL_COMMAND,
   linkView,
   ownAddresses,
-  ownServerScreen,
   PROBLEM_TEXT,
   terminalStartCommand,
   typedServer,
@@ -37,12 +36,6 @@ const ok = (server: string, over: Record<string, unknown> = {}): ServerCheck =>
 const down = (server: string): ServerCheck => ({ ok: false, server, problem: "unreachable" });
 
 describe("which screen", () => {
-  test("your own server: the two ways where both exist, else straight to Connect", () => {
-    expect(ownServerScreen(true)).toBe("own");
-    // A build without the server (development): no card that can't work.
-    expect(ownServerScreen(false)).toBe("connect");
-  });
-
   test("the system from the web view's own user agent", () => {
     expect(platformOf("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15")).toBe("mac");
     expect(platformOf("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Edg/130.0")).toBe("windows");

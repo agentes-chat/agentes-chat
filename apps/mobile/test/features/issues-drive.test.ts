@@ -36,7 +36,7 @@ function issue(over: Partial<Issue> & { number: number }): Issue {
     description: "",
     status: "todo",
     priority: "normal",
-    assignee: null,
+    assignees: [],
     labels: [],
     dueDate: null,
     criteria: [],
@@ -106,18 +106,23 @@ describe("issue filters and sections", () => {
       number: 134,
       status: "in_progress",
       priority: "high",
-      assignee: { type: "agent", id: "a1" },
+      assignees: [{ type: "agent", id: "a1" }],
       work: work("running"),
     }),
     issue({
       number: 131,
       status: "in_review",
-      assignee: { type: "agent", id: "a2" },
+      assignees: [{ type: "agent", id: "a2" }],
       pullRequests: [{ number: 212, url: "https://x", openedBy: null }],
     }),
-    issue({ number: 129, status: "in_progress", assignee: { type: "agent", id: "a3" }, work: work("waiting_input") }),
-    issue({ number: 127, dueDate: "2026-10-23", assignee: { type: "agent", id: "a4" } }),
-    issue({ number: 126, assignee: { type: "person", id: "me" } }),
+    issue({
+      number: 129,
+      status: "in_progress",
+      assignees: [{ type: "agent", id: "a3" }],
+      work: work("waiting_input"),
+    }),
+    issue({ number: 127, dueDate: "2026-10-23", assignees: [{ type: "agent", id: "a4" }] }),
+    issue({ number: 126, assignees: [{ type: "person", id: "me" }] }),
     issue({ number: 120, status: "done", updatedAt: at(5, NOW) }),
     issue({ number: 119, status: "canceled", updatedAt: at(50, NOW) }),
   ];
@@ -129,6 +134,26 @@ describe("issue filters and sections", () => {
     expect(nums("mine")).toEqual([129, 126]);
     expect(nums("agents")).toEqual([134, 131, 129, 127]);
     expect(nums("done")).toEqual([120, 119]);
+  });
+
+  test("a task several have is mine when I am one of them, and an agent's when one of them is an agent", () => {
+    const shared = issue({
+      number: 140,
+      assignees: [
+        { type: "person", id: "u2" },
+        { type: "agent", id: "a1" },
+        { type: "person", id: "me" },
+      ],
+    });
+    const people = issue({
+      number: 141,
+      assignees: [
+        { type: "person", id: "u2" },
+        { type: "person", id: "u3" },
+      ],
+    });
+    expect([shared, people].map((i) => passesFilter(i, "mine", "me"))).toEqual([true, false]);
+    expect([shared, people].map((i) => passesFilter(i, "agents", "me"))).toEqual([true, false]);
   });
 
   test("the board: always four columns in the web's order, what waits first, canceled under Feito", () => {
@@ -596,7 +621,7 @@ describe("a task's number and title on one row; its conversation on the card", (
       '<GroupedRow icon="circle" label={t("issues.column")} sub={columnLabel(column)} subLines={0} />',
     );
     expect(form).toMatch(
-      /if \(column && who\?\.type !== "agent" && columnOfIssue\(issue, columns\.data \?\? \[\]\)\?\.id !== column\.id\)\s*action\.mutate\(\{ type: "update", id: issue\.id, patch: \{ columnId: column\.id \} \}\);/,
+      /if \(column && !starter && columnOfIssue\(issue, columns\.data \?\? \[\]\)\?\.id !== column\.id\)\s*action\.mutate\(\{ type: "update", id: issue\.id, patch: \{ columnId: column\.id \} \}\);/,
     );
   });
 
@@ -673,8 +698,15 @@ describe("a task's GitHub link", () => {
 describe("an agent picked for a task that couldn't start", () => {
   test("Nova tarefa and Responsável start it through one hook, which says why with Pedir de novo", () => {
     const src = (f: string) => readFileSync(join(import.meta.dir, "../../src/features/issues", f), "utf8");
-    expect(src("NewIssueForm.tsx")).toContain("start.run(issue, who.id, { created: true })");
-    expect(src("IssueScreen.tsx")).toContain('start.run(i, who.id, { done: t("mobile.issues.changed") })');
+    // The first agent picked for a new task; on a task, the first agent it gets (the others it has stay).
+    expect(src("NewIssueForm.tsx")).toContain("start.run(issue, starter.id, { created: true })");
+    expect(src("NewIssueForm.tsx")).toContain('const starter = who.find((a) => a.type === "agent");');
+    expect(src("IssueScreen.tsx")).toContain(
+      'start.run({ ...i, assignees }, agentId, { done: t("mobile.issues.changed") })',
+    );
+    expect(src("IssueScreen.tsx")).toContain(
+      'if (who.type === "agent" && !list.some((a) => a.type === "agent")) return onStart(who.id, list);',
+    );
     const hook = src("useStartAgent.ts");
     for (const piece of [
       "useStartAgentOnTask(",
@@ -700,10 +732,10 @@ describe("Tarefas as one list", () => {
     const agent = { type: "agent" as const, id: "a1" };
     const me = { type: "person" as const, id: "me" };
     const list = [
-      issue({ number: 1, status: "in_progress", assignee: agent, work: work("running") }),
-      issue({ number: 2, status: "in_progress", assignee: agent, work: work("waiting_input") }),
-      issue({ number: 3, status: "todo", assignee: me }),
-      issue({ number: 4, status: "in_review", assignee: agent }),
+      issue({ number: 1, status: "in_progress", assignees: [agent], work: work("running") }),
+      issue({ number: 2, status: "in_progress", assignees: [agent], work: work("waiting_input") }),
+      issue({ number: 3, status: "todo", assignees: [me] }),
+      issue({ number: 4, status: "in_review", assignees: [agent] }),
       issue({ number: 5, status: "todo" }),
       issue({ number: 6, status: "done", updatedAt: at(30, NOW) }),
       issue({ number: 7, status: "done", updatedAt: new Date(2026, 9, 15, 10, 0).toISOString() }),

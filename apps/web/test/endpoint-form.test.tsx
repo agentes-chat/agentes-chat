@@ -79,6 +79,28 @@ describe("Outro provedor in Settings › Chaves de IA", () => {
     return { add, api };
   };
 
+  test("the same endpoint and key saved again: the saved one is updated, and the results say so", async () => {
+    const saved = {
+      id: "cred-gw",
+      provider: "custom",
+      label: "OpenGateway",
+      keyHint: "4567",
+      endpoint: { style: "openai" as const, baseURL: "https://gw.example/v1", models: [{ id: "m-1" }] },
+      createdAt: "2026-11-01T10:00:00.000Z",
+      revokedAt: null,
+    };
+    const state = seedState({ credentials: [saved] });
+    const { add } = await openForm(state);
+    await type(within(add).getByLabelText("Nome"), "OpenGateway");
+    await type(within(add).getByLabelText("Endereço"), "https://gw.example/v1");
+    await type(within(add).getByLabelText("Chave de API"), "gw-key-1234567");
+    await type(within(add).getByLabelText("Adicionar um modelo"), "m-1");
+    await click(within(add).getByRole("button", { name: "Adicionar" }));
+    await click(within(add).getByRole("button", { name: "Salvar e testar" }));
+    expect(add.textContent).toContain("Essa chave já estava salva. Atualizei os dados.");
+    expect(state.credentials.map((c) => c.id)).toEqual(["cred-gw"]);
+  });
+
   test("laid out as a dialog: its fields in the body, Buscar modelos on the label's line, Cancelar then the save in the footer", async () => {
     const { add } = await openForm();
     const body = add.querySelector(".ac-dialog__body") as HTMLElement;

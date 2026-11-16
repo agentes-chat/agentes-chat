@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { PROVIDER_IDS } from "@agenteschat/providers";
+import { MODEL_CATALOG, PROVIDER_IDS } from "@agenteschat/providers";
 import type { TFunction } from "i18next";
 import {
   apiModelName,
@@ -9,10 +9,12 @@ import {
   keyName,
   keyStepHint,
   keyThinks,
+  modelChoices,
   PROVIDERS,
   providerGuess,
   providerOf,
   providersForKey,
+  shownKeys,
 } from "../src/lib/providers";
 
 const ids = (key: string) => providersForKey(key).map((p) => p.id);
@@ -56,7 +58,7 @@ describe("whose key is it", () => {
     expect(providerOf("openrouter")).toMatchObject({ label: "OpenRouter", site: "openrouter.ai/keys" });
   });
 
-  test("the key panel's first step: where a plan's key goes, billing, OpenRouter's privacy; nothing for the others", () => {
+  test("the key panel's first step: where a plan's key goes, billing, who passes calls on; nothing for the others", () => {
     const hint = (id: string) => {
       const p = providerOf(id);
       return p && keyStepHint(p);
@@ -65,8 +67,37 @@ describe("whose key is it", () => {
     expect(hint("gemini")).toBe("connectAi.key.billing");
     expect(hint("anthropic")).toBeUndefined();
     expect(hint("openai")).toBeUndefined();
-    // OpenRouter passes what is sent on to other providers: its own privacy settings say who may keep it.
+    // Both pass what is sent on to the model's maker or host.
     expect(hint("openrouter")).toBe("connectAi.key.privacy");
+    expect(hint("commandcode")).toBe("connectAi.key.privacy");
+  });
+});
+
+describe("Command Code", () => {
+  // Joined at run time: a literal key shape reads as a real key to the secret scan.
+  const key = (n: number) => ["user", "x".repeat(n)].join("_");
+  test("a key is user_ and at least 16 characters", () => {
+    expect(keyLooksValid("commandcode", key(16))).toBe(true);
+    expect(keyLooksValid("commandcode", key(15))).toBe(false);
+    expect(ids(key(16))).toContain("commandcode");
+  });
+
+  test("its models show only to a workspace with its key, all 24 and choosable", () => {
+    const models = Object.entries(MODEL_CATALOG).map(([id, m]) => ({
+      id,
+      label: m.label,
+      provider: m.provider,
+      inputUsdPerMTok: 0,
+      outputUsdPerMTok: 0,
+      ...(m.pick !== undefined ? { pick: m.pick } : {}),
+    }));
+    const group = (credentials: { id: string; provider: string }[]) =>
+      modelChoices(models, credentials, true).find(([g]) => g === "commandcode")?.[1];
+    expect(group([])).toBeUndefined();
+    expect(group([{ id: "k0", provider: "anthropic" }])).toBeUndefined();
+    const withKey = group([{ id: "k1", provider: "commandcode" }]);
+    expect(withKey).toHaveLength(24);
+    expect(withKey?.every((c) => c.available)).toBe(true);
   });
 });
 
@@ -93,6 +124,15 @@ describe("a saved key's line", () => {
     // A local server with no key: only where it is, with its port.
     const local = { ...cc, keyHint: "", endpoint: { ...endpoint, baseURL: "http://127.0.0.1:11434/v1" } };
     expect(keyLine(t, local)).toBe("127.0.0.1:11434");
+  });
+
+  test("a key saved more than once: one row, its line counting every copy", () => {
+    expect(keyLine(t, { label: "Claude", provider: "anthropic", keyHint: "0000", copies: 3 })).toBe(
+      'vault.item.endsIn {"hint":"0000"} · settings.keyCopies {"count":4}',
+    );
+    const row = { revokedAt: null, id: "a", copies: 1 };
+    const keys = [row, { revokedAt: null, id: "b", copyOf: "a" }, { revokedAt: "2026-11-01", id: "c" }];
+    expect(shownKeys(keys)).toEqual([row]);
   });
 
   test("a key thinks once saved; an endpoint's once one of its models answered a test, tools or not", () => {

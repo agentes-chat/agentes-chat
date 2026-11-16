@@ -888,14 +888,11 @@
   font-size: 13.5px;
   font-weight: 600;
   line-height: 20px;
-  transition:
-    background-color 0.12s,
-    transform 0.18s var(--spring);
+  transition: background-color 0.12s;
 }
 @media (hover: hover) {
   .nac__idea:hover {
     background: color-mix(in srgb, var(--ink) 11%, transparent);
-    transform: translateY(-1px);
   }
 }
 .nac__dice {

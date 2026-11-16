@@ -109,7 +109,7 @@ export function RoleChoices({
           checked={value.includes(r.id)}
           disabled={disabled || (!r.givable && !value.includes(r.id))}
           leading={<RoleMark color={r.color} icon={r.icon} size={18} />}
-          hint={r.givable ? undefined : t("rolesPage.aboveYou")}
+          description={r.givable ? undefined : t("rolesPage.aboveYou")}
           onCheckedChange={(on) => toggle(r.id, on)}
         >
           {r.name}

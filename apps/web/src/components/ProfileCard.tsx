@@ -29,7 +29,7 @@ import { errorText } from "@agenteschat/client/lib/errors";
 import { clockHour, formatMonthYear, formatPercent, relativeTime, shortModel } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { can } from "@agenteschat/client/lib/permissions";
-import { agentFaceWord, isOutOfOffice, statusEndNote } from "@agenteschat/client/lib/presence";
+import { agentFaceWord, agentWhyKey, isOutOfOffice, statusEndNote } from "@agenteschat/client/lib/presence";
 import { apiModelName, autoMakerOf } from "@agenteschat/client/lib/providers";
 import { isRightHand, tellsNameStory } from "@agenteschat/client/lib/right-hand";
 import { rolesOf } from "@agenteschat/client/lib/roles";
@@ -820,8 +820,8 @@ function AudienceEdit({ agent }: { agent: Agent }) {
  * 00:32").
  */
 function agentWhy(t: TFunction, shown: AgentShown, names: WorkPlaceNames, locale: string): string | null {
-  if (shown.noAi) return t("presence.agentWhy.noAi");
-  if (shown.presence === "out" || shown.presence === "offline") return t(`presence.agentWhy.${shown.presence}`);
+  const key = agentWhyKey(shown.presence, shown.noAi);
+  if (key) return t(`presence.agentWhy.${key}`);
   if (shown.presence === "online" && shown.work?.state !== "later") return null;
   return workDetail(t, shown.work, names, locale);
 }

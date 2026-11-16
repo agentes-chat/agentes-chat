@@ -906,6 +906,9 @@
     },
     "doneToast": "Fatto",
     "undo": "Annulla",
+    "doneAllToast_one": "{{count}} spostata in Completate",
+    "doneAllToast_many": "{{count}} spostate in Completate",
+    "doneAllToast_other": "{{count}} spostate in Completate",
     "day": {
       "today": "Oggi",
       "yesterday": "Ieri",
@@ -1267,6 +1270,7 @@
     "blocked": "Sei l'unico proprietario di {{names}}. Sul sito, in Persone, rendi proprietario qualcun altro, poi torna qui.",
     "addPasswordFirst": "Prima aggiungi una password al tuo account sul sito, poi scrivila qui.",
     "addPasswordWeb": "Aggiungi una password sul sito",
+    "onThisComputer": "Eliminalo nell'app agentes.chat sul computer su cui gira questo server.",
     "otherAccount": "Hai fatto l'accesso con un altro account. Non è stato eliminato nulla.",
     "hold": "Tieni premuto per eliminare"
   },
@@ -2105,6 +2109,7 @@
       "waitingFor": "{{names}} sta aspettando {{device}} per {{person}}",
       "tool_request": "{{names}} ti chiede di attivare {{tool}} sul tuo {{device}}",
       "cli_request": "{{names}} ti chiede di installare {{tool}} sul tuo {{device}}",
+      "folder_request": "{{names}} ti chiede la cartella {{path}} sul tuo {{device}}",
       "allowOnce": "Consenti una volta",
       "always": "Consenti sempre a {{name}}",
       "no": "No",
@@ -2235,25 +2240,16 @@
     }
   },
   "joinRequests": {
-    "share": "Condividi il link",
-    "roles": "Ruoli",
-    "rolesHint": "Entrano con i ruoli attivi. Senza nessuno, possono fare quello che può fare Tutti."
+    "share": "Condividi il link"
   },
   "humanCheck": {
     "title": "Verifica rapida",
     "blocked": "La verifica non si è caricata. Prova un'altra rete."
   },
   "invitePeople": {
-    "emailsHelp": "Incolla un elenco o scrivi. Ogni persona riceve un'email ed entra subito.",
-    "here": "Già qui",
-    "invited": "Già invitato",
-    "fix": "Controlla questo",
-    "channels": "Canali",
     "optional": "Facoltativo",
     "ok": "OK",
     "noteHelp": "Compare nell'email con il tuo nome. Fino a {{max}} caratteri.",
-    "roleHelp": "Cambia quello che la persona ottiene entrando.",
-    "remove": "Togli dall'elenco",
     "sendAgain": "Invia di nuovo",
     "cancelTitle": "Annullare l'invito a {{email}}?",
     "cancelText": "Il suo link smette di aprirsi.",

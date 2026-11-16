@@ -200,6 +200,7 @@ export function RequestCard({
   mine: waitsOnMe,
   waitingFor,
   who,
+  asker,
   source,
   lead,
   headless = false,
@@ -211,6 +212,7 @@ export function RequestCard({
   body,
   actions,
   end,
+  under,
   what,
   onSubmit,
   muted = false,
@@ -231,6 +233,8 @@ export function RequestCard({
   waitingFor?: string;
   /** Who asks, before the kind ("Ada · Pergunta"), where the card stands away from its conversation. */
   who?: ReactNode;
+  /** Another agent than the conversation's own asks here (work handed to it): "Atlas asks you". */
+  asker?: string;
   /** Where it was asked, after the kind ("Thread · #eng"), where the card stands away from its conversation. */
   source?: ReactNode;
   /** The agent's own words: what it asks. None on a card whose object says it all (one of a summary's). */
@@ -255,6 +259,8 @@ export function RequestCard({
   actions?: ReactNode;
   /** The footer's right end: the fuse and its time left. */
   end?: ReactNode;
+  /** A quiet link on its own line under the footer's decision ("Mudar quando perguntar"). */
+  under?: ReactNode;
   /** The object's short title, for the bar ("Enviar e-mail"). */
   what: string;
   /** Its field and footer are a form (a secret): Enter sends it. */
@@ -331,6 +337,7 @@ export function RequestCard({
       <div className="rq__foot">
         {actions}
         {end && <span className="rq__end">{end}</span>}
+        {under && <span className="rq__under">{under}</span>}
       </div>
     )
   );
@@ -354,7 +361,7 @@ export function RequestCard({
                   {" · "}
                 </>
               )}
-              {askKindWords(t, kind, Boolean(mine))}
+              {asker && mine ? t("chat.request.asksYou", { name: asker }) : askKindWords(t, kind, Boolean(mine))}
               {source && <span className="rq__source"> · {source}</span>}
             </span>
           )}

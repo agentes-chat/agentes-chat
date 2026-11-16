@@ -25,6 +25,7 @@ export function SettingsPage({
   title,
   subtitle,
   action,
+  right,
   busy = false,
   locked = false,
   frozen = false,
@@ -34,6 +35,8 @@ export function SettingsPage({
   title: string;
   subtitle?: string | undefined;
   action?: HeaderWordAction;
+  /** An icon button on the bar's right in place of a word (Convites' "+"). */
+  right?: ReactNode;
   /** The action's word is saving: a spinner in its place, the page locked under it. */
   busy?: boolean;
   /** The page's form is sending: its controls are off, the page still scrolls. */
@@ -53,7 +56,7 @@ export function SettingsPage({
         {...(subtitle ? { subtitle } : {})}
         solid={false}
         grouped
-        {...(busy ? { right: <ActivityIndicator color={c.muted} /> } : action ? { action } : {})}
+        {...(busy ? { right: <ActivityIndicator color={c.muted} /> } : action ? { action } : right ? { right } : {})}
       />
       <ScrollView
         style={styles.fill}

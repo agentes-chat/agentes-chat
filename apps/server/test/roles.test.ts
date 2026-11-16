@@ -49,6 +49,7 @@ test("GET /me: an owner may do everything; a member what the base role gives", a
     "read",
     "talk_to_agents",
     "upload_files",
+    "view_all_agents",
   ]);
 });
 

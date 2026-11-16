@@ -16,10 +16,10 @@ import {
 } from "@agenteschat/client";
 import { errorCode } from "@agenteschat/client/lib/errors";
 import { formatShortDate, joinNames, relativeTime, timeLeft } from "@agenteschat/client/lib/format";
-import { linkFull } from "@agenteschat/client/lib/invite-start";
+import { approvalCargos, linkNeedsAttention } from "@agenteschat/client/lib/invite-start";
 import { approvalNews, JOIN_REASON_MAX, sendsEmail } from "@agenteschat/client/lib/join-requests";
 import { membersFull } from "@agenteschat/client/lib/limits";
-import { isEveryone, sortRoles } from "@agenteschat/client/lib/roles";
+import { sortRoles } from "@agenteschat/client/lib/roles";
 import {
   Alert,
   Avatar,
@@ -291,7 +291,11 @@ function WaitingRequests({
   const approve = useApproveJoinRequest(org.id);
   const deny = useDenyJoinRequest(org.id);
   const full = membersFull(useWorkspaceLimits(org.id).data) !== null;
-  const orgRoles = useRoles(org.id).data?.roles ?? [];
+  const cargos = useRoles(org.id);
+  const orgRoles = cargos.data?.roles ?? [];
+  // A request starts on the link's cargos the approver may give: until those load it would read as none. A failed
+  // refetch keeps the cargos already loaded (and marks the query failed), so it's their presence that counts.
+  const cargosLoaded = cargos.data !== undefined;
   const [roles, setRoles] = useState<Record<string, string[]>>({});
   const [denying, setDenying] = useState<JoinRequest | null>(null);
   const [reason, setReason] = useState("");
@@ -304,7 +308,7 @@ function WaitingRequests({
   const shown = useShown(requests);
 
   useEffect(() => {
-    if (!focus || opened.current === focus || !list.data) return;
+    if (!focus || opened.current === focus || !list.data || !cargosLoaded) return;
     opened.current = focus;
     const request = list.data.find((r) => r.id === focus);
     if (!request) return setGone(true);
@@ -315,12 +319,10 @@ function WaitingRequests({
     const button = approveButtons.current.get(request.id);
     button?.scrollIntoView({ block: "center" });
     button?.focus();
-  }, [focus, action, list.data]);
+  }, [focus, action, list.data, cargosLoaded]);
 
   // Approving gives what the approver picks (ADR 0184 §8): a link's cargo above theirs starts out, and the row says so.
-  const givable = (r: JoinRequest) =>
-    (r.link?.roleIds ?? []).filter((id) => orgRoles.some((x) => x.id === id && x.givable));
-  const rolesOf = (r: JoinRequest) => roles[r.id] ?? givable(r);
+  const rolesOf = (r: JoinRequest) => roles[r.id] ?? approvalCargos(orgRoles, r.link?.roleIds ?? []).given;
   const approveOne = (r: JoinRequest) =>
     approve.mutate(
       { id: r.id, roleIds: rolesOf(r) },
@@ -373,9 +375,7 @@ function WaitingRequests({
               const link = r.link;
               const gives = link ? givesText(t, link, { ...look, general: false }) : "";
               const linkIsFull = link?.full === true;
-              const above = sortRoles(
-                orgRoles.filter((x) => (link?.roleIds ?? []).includes(x.id) && !isEveryone(x) && !x.givable),
-              ).map((x) => x.name);
+              const above = approvalCargos(orgRoles, link?.roleIds ?? []).leftOut;
               return (
                 // biome-ignore lint/a11y/useSemanticElements: a row of the list, named for who it is about
                 <div
@@ -405,7 +405,7 @@ function WaitingRequests({
                       value={rolesOf(r)}
                       onChange={(ids) => setRoles((prev) => ({ ...prev, [r.id]: ids }))}
                       label={t("members.requests.roleOf", { name: r.name })}
-                      disabled={answering}
+                      disabled={answering || !cargosLoaded}
                     />
                     <Button
                       ref={(el) => {
@@ -414,7 +414,7 @@ function WaitingRequests({
                       }}
                       size="sm"
                       variant="primary"
-                      disabled={answering || full || linkIsFull}
+                      disabled={answering || full || linkIsFull || !cargosLoaded}
                       loading={approve.isPending && approve.variables?.id === r.id}
                       onClick={() => approveOne(r)}
                     >
@@ -547,8 +547,7 @@ function InviteLinks({ links, look }: { links: readonly InviteLink[]; look: Look
           const cargos = sortRoles(look.roles.filter((r) => (l.roleIds ?? []).includes(r.id))).map((r) => r.name);
           const title = cargos.length ? joinNames(cargos, t) : t("roles.member");
           const left = l.neverExpires ? null : timeLeft(t, l.expiresAt);
-          const isFull = linkFull(l);
-          const soon = isFull || (!l.neverExpires && new Date(l.expiresAt).getTime() - Date.now() < 86_400_000);
+          const soon = linkNeedsAttention(l);
           const uses = l.uses ?? 0;
           const mine = l.createdByUserId ? l.createdByUserId === me.user.id : l.createdBy === me.user.name;
           const state = [

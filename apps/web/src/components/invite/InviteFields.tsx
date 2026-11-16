@@ -1,16 +1,19 @@
 import type { Agent, Channel, OrgRole } from "@agenteschat/client";
 import { channelMembersQuery, useApi, useChannelCategories, useChannels, useRoles } from "@agenteschat/client";
-import { sameList } from "@agenteschat/client/lib/agent-edit";
 import { EVERYONE_AUDIENCE, listsAgent } from "@agenteschat/client/lib/audience";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import {
+  changedLists,
   type InviteAgentCase,
+  type InviteLists,
+  type InviteRefusal,
   type InviteStart,
   invitableChannels,
   inviteAgentCase,
   invitePickable,
   inviteReach,
+  inviteRefusalText,
   inviteStart,
 } from "@agenteschat/client/lib/invite-start";
 import { can } from "@agenteschat/client/lib/permissions";
@@ -49,19 +52,12 @@ const NONE: InviteStart = { channelIds: [], agentIds: [] };
 /** The role picker's value for no cargo in a personal workspace: a member, who uses the agents. */
 export const MEMBER = "member";
 
-/** What the fields start on: the cargos, and the channels and agents besides #general and the right hand. */
-export interface ChoicesStart {
-  roleIds: string[];
-  channelIds: string[];
-  agentIds: string[];
-}
-
 /**
  * The fields' state. A picked cargo brings its own channels and agents (`inviteStart`); what the person takes out
  * stays out, and what they add stays in, whatever cargo comes or goes. `exact`: the lists are what an existing link or
  * invitation gives, so a cargo's own channel it left out starts out.
  */
-export function useInviteChoices(start: ChoicesStart, { exact = false }: { exact?: boolean } = {}) {
+export function useInviteChoices(start: InviteLists, { exact = false }: { exact?: boolean } = {}) {
   const { org } = useOrg();
   const roles = useRoles(org.id).data?.roles ?? [];
   const [roleIds, setRoleIds] = useState(start.roleIds);
@@ -193,12 +189,8 @@ export function RoleField({ choices, id }: { choices: InviteChoices; id: string 
   );
 }
 
-/** A channel refused when sending: its token turns invalid and its line says why (`invitation.channel`). */
-export interface RefusedChannel {
-  id: string;
-  name: string | null;
-  why: "archived" | "left" | "gone";
-}
+/** A channel refused when sending (`inviteRefusal`): its token turns invalid and its line says why. */
+type RefusedChannel = Extract<InviteRefusal, { kind: "channel" }>;
 
 /**
  * Canais: #general first, fixed; then the cargo's channels and the ones added. The list floats under the field: the
@@ -339,23 +331,15 @@ export function ChannelsField({
       />
       {refused && (
         <FieldLine id={lineId} tone="danger">
-          {refused.why === "gone"
-            ? t("invites.refused.channelGone")
-            : t(refused.why === "archived" ? "invites.refused.channelArchived" : "invites.refused.channelLeft", {
-                channel: refused.name ?? "",
-              })}
+          {inviteRefusalText(t, refused)}
         </FieldLine>
       )}
     </Field>
   );
 }
 
-/** An agent refused when sending (`invitation.agent`): it left the team, or the viewer may no longer open it. */
-export interface RefusedAgent {
-  id: string;
-  name: string | null;
-  why: "gone" | "locked";
-}
+/** An agent refused when sending (`inviteRefusal`): it left the team, or the viewer may no longer open it. */
+type RefusedAgent = Extract<InviteRefusal, { kind: "agent" }>;
 
 /** The order the list shows agents in: the ones that go first, then why the others don't. */
 const CASE_ORDER: Record<InviteAgentCase, number> = { cargo: 0, everyone: 1, opens: 2, locked: 3, mailbox: 4, plan: 5 };
@@ -527,10 +511,7 @@ export function AgentsField({
       />
       {refused ? (
         <FieldLine id={lineId} tone="danger">
-          {t(
-            refused.why === "gone" ? "invites.refused.agentGone" : "invites.refused.agentLocked",
-            agentGrammar(refused.name ?? "", refused.name ?? ""),
-          )}
+          {inviteRefusalText(t, refused)}
         </FieldLine>
       ) : !reach.talks ? (
         <FieldLine id={lineId}>{t("invites.noTalk")}</FieldLine>
@@ -559,17 +540,17 @@ export function channelsToSend(choices: InviteChoices, channels: readonly Channe
 }
 
 /**
- * What Editar sends of a link's or an invitation's choices: only the lists changed from `was`. The server checks every
- * id it gets for whoever edits, so one left as someone higher made it (a cargo above theirs, a channel they aren't in)
- * stays as it is instead of refusing the save or dropping out of it.
+ * What Editar sends of a link's or an invitation's choices: only the lists changed from `was` (`changedLists`). The
+ * agents compare as sent (none when the person won't talk to agents) and stay as they are while the cargos load. The
+ * channels compare as the fields hold them, so one the editor can't see never counts as a change.
  */
-export function changedChoices(choices: InviteChoices, channels: readonly Channel[], was: ChoicesStart) {
-  const roleIds = rolesToSend(choices);
-  return {
-    ...(sameList(roleIds, was.roleIds) ? {} : { roleIds }),
-    ...(sameList(choices.start.channelIds, was.channelIds) ? {} : { channelIds: channelsToSend(choices, channels) }),
-    ...(sameList(choices.start.agentIds, was.agentIds) ? {} : { agentIds: agentsToSend(choices) }),
-  };
+export function changedChoices(choices: InviteChoices, channels: readonly Channel[], was: InviteLists) {
+  const changed = changedLists(was, {
+    roleIds: rolesToSend(choices),
+    channelIds: choices.start.channelIds,
+    agentIds: choices.roles.length ? agentsToSend(choices) : was.agentIds,
+  });
+  return changed.channelIds ? { ...changed, channelIds: channelsToSend(choices, channels) } : changed;
 }
 
 /** A role's mark for a row or a link: the first cargo's, or Todos' for a member. */

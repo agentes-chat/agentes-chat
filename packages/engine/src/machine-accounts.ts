@@ -38,6 +38,7 @@ import {
   SHARED_ACCOUNTS_PROTOCOL,
   SHARED_CODEX_PROTOCOL,
   SHARED_GEMINI_PROTOCOL,
+  SHARED_GROK_PROTOCOL,
   TOKEN_RECHECK_MS,
 } from "@agenteschat/adapters";
 import {
@@ -63,7 +64,7 @@ import {
   SHARED_SIGN_INS,
   sharedSignIn,
 } from "@agenteschat/providers/plans";
-import { PLAN_PAUSE, planCheckedAt, planState, planWindows } from "@agenteschat/ui/plan-state";
+import { PLAN_PAUSE, planCheckedAt, planFull, planState } from "@agenteschat/ui/plan-state";
 import { recordAudit } from "./audit";
 import { liveModelLimits } from "./brains/select";
 import { BRAIN_PLAN_NAMES } from "./brains/types";
@@ -675,7 +676,7 @@ function accountReading(provider: string | null, prev: PlanUsage | null | undefi
   const perModel = planOf(provider)?.limitsPerModel === true;
   return {
     ...rest,
-    ...(limited && !(perModel && !planWindows(next).some((w) => w.used >= 100)) ? { limited } : {}),
+    ...(limited && !(perModel && !planFull(next)) ? { limited } : {}),
     ...(models ? { models } : {}),
     ...(perModel && prev?.answered ? { answered: prev.answered } : {}),
   };
@@ -1000,12 +1001,19 @@ export async function recheckStuckPlans(deps: Pick<MachineAccountHubDeps, "db" |
 
 /** The runner protocol from which a sign-in of that kind can be made for all agents where each is its own OS user. */
 const sharedSignInProtocol = (kind: string) =>
-  kind === "codex" ? SHARED_CODEX_PROTOCOL : kind === "antigravity" ? SHARED_GEMINI_PROTOCOL : SHARED_ACCOUNTS_PROTOCOL;
+  kind === "codex"
+    ? SHARED_CODEX_PROTOCOL
+    : kind === "antigravity"
+      ? SHARED_GEMINI_PROTOCOL
+      : kind === "grok"
+        ? SHARED_GROK_PROTOCOL
+        : SHARED_ACCOUNTS_PROTOCOL;
 
 /**
  * Whether a new sign-in of that kind on the computer thinks for all of its owner's agents there (protocol 29):
  * every one where the agents are the runner's own user; where each is its own OS user (system mode), as
- * `SHARED_SIGN_INS` says (ChatGPT's from protocol 38, Gemini's from 58, never Cursor's yet).
+ * `SHARED_SIGN_INS` says (ChatGPT's from protocol 38, Gemini's from 58, Grok Build's from 67, never Cursor's nor
+ * OpenCode's).
  */
 export function sharesSignIns(
   machine: Pick<MachineRow, "protocol" | "executors">,
@@ -1013,7 +1021,7 @@ export function sharesSignIns(
 ): boolean {
   if (machine.protocol < SHARED_ACCOUNTS_PROTOCOL) return false;
   if (machine.executors?.mode !== "system") return true;
-  if (which === "cursor" || which === "opencode" || which === "grok") return false;
+  if (which === "cursor" || which === "opencode") return false;
   return machine.protocol >= sharedSignInProtocol(which) && SHARED_SIGN_INS[which];
 }
 

@@ -111,6 +111,19 @@ describe("Button", () => {
     const link = body().getByRole("link", { name: "Entrar" });
     expect(link.className).toContain("ac-btn--primary");
   });
+
+  test("asChild and disabled: the link takes no click and no Tab stop, as a button that is off", () => {
+    render(
+      <Button asChild disabled>
+        <a href="/x">Entrar</a>
+      </Button>,
+    );
+    const link = body().getByRole("link", { name: "Entrar" });
+    expect(link.getAttribute("aria-disabled")).toBe("true");
+    expect(link.tabIndex).toBe(-1);
+    // False: the click's own effect (following the link) was called off.
+    expect(fireEvent.click(link)).toBe(false);
+  });
 });
 
 describe("Avatar", () => {
@@ -1231,6 +1244,28 @@ describe("Message aside and foot", () => {
     expect(value(".ac-msg--grouped > .ac-msg__body > .ac-msg__actions", "top")).toBe(value(bar, "top"));
     expect(value(".ac-receipt__check", "padding")).toBe("0 2px");
     expect(value(".ac-receipt__check .ac-icon", "width")).toBe("16px");
+  });
+
+  test("a grouped row's time in its gutter is the short clock, on one line in every gutter", async () => {
+    const { container } = render(
+      <Message author="João" time="11:43 PM" gutterTime="11:43" grouped aside={<span>✓✓</span>}>
+        <MessageText>de novo</MessageText>
+      </Message>,
+    );
+    expect(container.querySelector(".ac-msg__gutter-time")?.textContent).toBe("11:43");
+    // The hidden header, read by screen readers, keeps the whole time.
+    expect(container.querySelector(".ac-msg__body > .ac-visually-hidden")?.textContent).toContain("11:43 PM");
+    const css = (await Bun.file(new URL("../src/styles/components.css", import.meta.url).pathname).text()).replace(
+      /\/\*[\s\S]*?\*\//g,
+      "",
+    );
+    // A time allowed to wrap in a face-wide gutter broke where the browser found a break ("13:" over "32").
+    const gutterTimes = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(([, s = ""]) => s.includes("gutter-time"));
+    expect(
+      gutterTimes.some(([, s = "", b = ""]) => s.trim() === ".ac-msg__gutter-time" && /white-space:\s*nowrap/.test(b)),
+    ).toBe(true);
+    for (const [, , body = ""] of gutterTimes)
+      expect(body).not.toMatch(/white-space:(?!\s*nowrap)|min-content|word-break/);
   });
 
   test("an aside or a foot with nothing in it takes no room, in a stacked body too", async () => {

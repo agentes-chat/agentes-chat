@@ -147,7 +147,10 @@ export function PrefRow({
   hint?: ReactNode;
   /** What must stay in sight under the name: why the control is off, what it waits on, what the line opens to. */
   status?: ReactNode;
-  /** A value before the control (a plan's logo and name, a card's day and hour selects, who a switch is for). */
+  /**
+   * A value before the control (a plan's logo and name, a card's day and hour selects, who a switch is for). A line
+   * that opens something says its state in `status`: beside the name, a long one sends the chevron to a line of its own.
+   */
   value?: ReactNode;
   control?: ReactNode;
   /** In place of `control`: several controls or buttons, which wrap under the words rather than keep their place. */

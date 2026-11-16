@@ -80,7 +80,7 @@ test("Lodi's old settings address opens Lodi's page: three groups, the face open
   // The value is under the row's name, the chevron at its end: no button of its own, nothing floating right.
   const ai = row(/^IA de quem não tem plano próprio/);
   expect(ai.matches(".settings-row--open")).toBe(true);
-  expect(ai.querySelector(".settings-row__status")?.textContent).toBe("Plano Trabalho · Sonnet");
+  expect(ai.querySelector(".settings-row__status")?.textContent).toBe("Plano Trabalho · Sonnet 5.5");
   expect(ai.querySelector(".settings-row__status .ac-provider-logo, .settings-row__status svg")).toBeTruthy();
   expect(ai.querySelector(".settings-row__chevron")).toBeTruthy();
   expect(ai.querySelector(".settings-row__value")).toBeNull();
@@ -166,7 +166,7 @@ test("Sua IA on a plan of mine: the dialog goes back to the workspace's AI, and 
   };
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
   await settle(8);
-  expect(row(/^Sua IA/).querySelector(".settings-row__status")?.textContent).toBe("Trabalho · seu plano · Sonnet");
+  expect(row(/^Sua IA/).querySelector(".settings-row__status")?.textContent).toBe("Trabalho · seu plano · Sonnet 5.5");
   await act(async () => fireEvent.click(row(/^Sua IA/)));
   await settle(4);
   const dialog = screen().getByRole("dialog", { name: "Quem pensa pelo Lodi para você" });
@@ -208,8 +208,8 @@ test("a plan's model is a line that opens its list, in Sua IA and in the workspa
   await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
   await settle(8);
   for (const [name, scope, before] of [
-    [/^Sua IA/, "mine", "Trabalho · seu plano · Sonnet"],
-    [/^IA de quem não tem plano próprio/, "workspace", "Plano Trabalho · Sonnet"],
+    [/^Sua IA/, "mine", "Trabalho · seu plano · Sonnet 5.5"],
+    [/^IA de quem não tem plano próprio/, "workspace", "Plano Trabalho · Sonnet 5.5"],
   ] as const) {
     expect(row(name).querySelector(".settings-row__status")?.textContent).toBe(before);
     await act(async () => fireEvent.click(row(name)));
@@ -302,7 +302,7 @@ test("the worst case keeps its shape: a very long account and owner name stay un
   await settle(8);
   const ai = row(/^IA de quem não tem plano próprio/);
   const value = ai.querySelector(".settings-row__status .rh-value") as HTMLElement;
-  expect(value.textContent).toBe(`Plano ${long} · conta de Maximiliana-Bernardette · Sonnet`);
+  expect(value.textContent).toBe(`Plano ${long} · conta de Maximiliana-Bernardette · Sonnet 5.5`);
   // Under the name, in the words' column: never a second column squeezing the name, never cut.
   expect(value.closest(".settings-row__text")).toBeTruthy();
   const css = await Bun.file(new URL("../src/layout.css", import.meta.url).pathname).text();

@@ -183,6 +183,7 @@ export function EditInvitationDialog({
       closeLabel={t("common.close")}
       unsaved={save.isPending}
       width={600}
+      className="invite-edit"
     >
       <Locked when={save.isPending}>
         <DialogBody className="invite-dialog">

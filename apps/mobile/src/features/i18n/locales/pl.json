@@ -930,6 +930,10 @@
     },
     "doneToast": "Gotowe",
     "undo": "Cofnij",
+    "doneAllToast_one": "Przeniesiono {{count}} do Zakończonych",
+    "doneAllToast_few": "Przeniesiono {{count}} do Zakończonych",
+    "doneAllToast_many": "Przeniesiono {{count}} do Zakończonych",
+    "doneAllToast_other": "Przeniesiono {{count}} do Zakończonych",
     "day": {
       "today": "Dzisiaj",
       "yesterday": "Wczoraj",
@@ -1347,6 +1351,7 @@
     "blocked": "Jesteś jedynym właścicielem: {{names}}. Na stronie, w sekcji Osoby, nadaj komuś rolę właściciela i wróć tutaj.",
     "addPasswordFirst": "Najpierw dodaj hasło do konta na stronie, a potem wpisz je tutaj.",
     "addPasswordWeb": "Dodaj hasło na stronie",
+    "onThisComputer": "Usuń to w aplikacji agentes.chat na komputerze, na którym działa ten serwer.",
     "otherAccount": "Zalogowano się na inne konto. Nic nie zostało usunięte.",
     "hold": "Przytrzymaj, aby usunąć"
   },
@@ -2208,6 +2213,7 @@
       "waitingFor": "{{names}} czeka na urządzenie {{device}} dla {{person}}",
       "tool_request": "{{names}} prosi Cię o włączenie: {{tool}} na {{device}}",
       "cli_request": "{{names}} prosi o zainstalowanie {{tool}} na Twoim {{device}}",
+      "folder_request": "{{names}} prosi Cię o folder {{path}} na {{device}}",
       "allowOnce": "Zezwól raz",
       "always": "Zawsze zezwalaj: {{name}}",
       "no": "Nie",
@@ -2343,25 +2349,16 @@
     }
   },
   "joinRequests": {
-    "share": "Udostępnij link",
-    "roles": "Role",
-    "rolesHint": "Dołączają z włączonymi rolami. Bez żadnej mogą robić to, co Wszyscy."
+    "share": "Udostępnij link"
   },
   "humanCheck": {
     "title": "Szybka weryfikacja",
     "blocked": "Weryfikacja się nie wczytała. Spróbuj innej sieci."
   },
   "invitePeople": {
-    "emailsHelp": "Wklej listę albo wpisz. Każda osoba dostanie e-mail i od razu dołączy.",
-    "here": "Już tutaj są",
-    "invited": "Już zaproszeni",
-    "fix": "Sprawdź to",
-    "channels": "Kanały",
     "optional": "Opcjonalnie",
     "ok": "OK",
     "noteHelp": "Pojawi się w e-mailu z twoim imieniem. Maksymalnie {{max}} znaków.",
-    "roleHelp": "Zmienia to, co osoba dostaje po dołączeniu.",
-    "remove": "Usuń z listy",
     "sendAgain": "Wyślij ponownie",
     "cancelTitle": "Anulować zaproszenie dla {{email}}?",
     "cancelText": "Jego link przestanie działać.",

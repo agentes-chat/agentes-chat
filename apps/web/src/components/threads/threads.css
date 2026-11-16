@@ -138,8 +138,9 @@ html:not([data-pointer]) .thread-marker__open:focus-visible {
   margin: 0;
   padding: 8px;
 }
+/* The popover takes the window's height (`.ac-popover`): the list gives way under the head and scrolls past it. */
 .thread-pop__list {
-  max-height: min(420px, 60vh);
+  min-height: 0;
   overflow-y: auto;
 }
 /* A MediaRow: a face or a kind tile (32), the name with its time or state at the line's end, what it says under them,
@@ -258,6 +259,12 @@ html:not([data-pointer]) .pins-pop__item:has(> .thread-pop__row:focus-visible) {
   flex: 0 1 auto;
   min-height: 120px;
   padding-top: 4px;
+}
+/* A row of several asked agents: one choice each, between the dialog's head and the chosen exchange, on its sides. */
+.consult-dialog__choice {
+  flex: none;
+  width: auto;
+  margin: 0 var(--dialog-pad) var(--space-1);
 }
 /* The answer on its own, when the consulted agent's words in the DM are left out: under the messages, at their text. */
 .consult-answer {

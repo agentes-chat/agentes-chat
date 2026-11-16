@@ -8,6 +8,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { setNavigateAway } from "@/lib/navigate";
 import { ADA_ID, createFakeApi, ENG_ID, ORG_ID, seedState, withRightHand } from "./fake-api";
+import { createFakeAuth } from "./fake-auth";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
@@ -357,5 +358,56 @@ describe("suspended: a screen of its own", () => {
     await set({ state: "active", reason: null });
     expect(screen().queryByRole("heading", { name: "Acme está indisponível" })).toBeNull();
     expect(screen().getByRole("combobox", { name: "Mensagem para #eng" })).toBeTruthy();
+  });
+
+  // Sair marks this browser as signed out by hand: the next app starts without it.
+  afterEach(() => localStorage.removeItem("agentes.signedOut"));
+
+  /** Acme suspended, with Beta to go to. */
+  const suspended = () => {
+    const state = seedState();
+    if (state.me) {
+      state.me.organizations = [
+        { id: ORG_ID, name: "Acme", role: "owner", standing: { state: "suspended", reason: null } },
+        { id: OTHER_ID, name: "Beta", role: "member" },
+      ];
+    }
+    return state;
+  };
+
+  test("Sair there is a sign-out by hand: this browser is marked so, then the sign-in", async () => {
+    const state = suspended();
+    const { auth } = createFakeAuth({ onSignOut: () => (state.me = null) });
+    const { router } = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state), auth });
+    await settle(8);
+    await act(async () => fireEvent.click(screen().getByRole("button", { name: "Sair" })));
+    await settle(8);
+    expect(localStorage.getItem("agentes.signedOut")).toBe("1");
+    expect(router.state.location.pathname).toBe("/login");
+    expect(screen().getByLabelText("E-mail")).toBeTruthy();
+  });
+
+  test("while Sair runs it shows as working, and the way to another workspace can't be taken", async () => {
+    const state = suspended();
+    const { auth } = createFakeAuth();
+    let answer = () => {};
+    auth.signOut = () =>
+      new Promise<void>((done) => {
+        answer = done;
+      });
+    const { router } = await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api: createFakeApi(state), auth });
+    await settle(8);
+    const out = screen().getByRole("button", { name: "Sair" });
+    await act(async () => fireEvent.click(out));
+    expect(out.getAttribute("aria-busy")).toBe("true");
+    expect(out.hasAttribute("disabled")).toBe(true);
+    const here = router.state.location.pathname;
+    await act(async () => fireEvent.click(screen().getByRole("link", { name: "Beta" })));
+    await settle(8);
+    expect(router.state.location.pathname).toBe(here);
+    state.me = null;
+    await act(async () => answer());
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/login");
   });
 });

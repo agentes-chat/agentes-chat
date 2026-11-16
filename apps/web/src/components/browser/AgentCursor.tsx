@@ -1,50 +1,19 @@
-import type { BrowserPointer } from "@agenteschat/client";
+import {
+  AGENT_ARROW,
+  type CountedPointer,
+  CURSOR_FLIP_AT,
+  CURSOR_IDLE_MS,
+  type CursorSpot,
+  cursorTagLifts,
+  glideMs,
+  glidePoint,
+  glideStart,
+  pointerAtRest,
+} from "@agenteschat/client";
 import { gradientOf } from "@agenteschat/ui";
 import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
-
-/** The arrow, one character a pixel: `X` its edge, `o` its body in the agent's color. */
-const ARROW = [
-  "X.......",
-  "XX......",
-  "XoX.....",
-  "XooX....",
-  "XoooX...",
-  "XooooX..",
-  "XoooooX.",
-  "XooooooX",
-  "XoooXXXX",
-  "XoXoX...",
-  "XX.XoX..",
-  "....XX..",
-];
-
-/** After this long with no gesture the cursor fades; the next one brings it back where it was. */
-export const CURSOR_IDLE_MS = 4000;
-/** Past this share of the width the name opens to the arrow's left, so the picture's edge never cuts it. */
-const FLIP_AT = 0.74;
-
-type Spot = { x: number; y: number };
-
-/** How long the cursor takes to cross `dist` (a share of the picture's width): 0.28 s to 0.64 s. */
-export const glideMs = (dist: number) => Math.min(640, 280 + dist * 620);
-
-/**
- * Where the cursor is `t` (0 to 1) of the way from `from` to `to`, both as shares of the picture: eased, on a
- * slight arc. `ratio` is the picture's height over its width, so the arc bends the same on any shape.
- */
-export function glidePoint(from: Spot, to: Spot, t: number, ratio: number): Spot {
-  const e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
-  const dx = to.x - from.x;
-  const dy = (to.y - from.y) * ratio;
-  const dist = Math.hypot(dx, dy) || 1;
-  const arc = Math.sin(Math.PI * e) * dist * 0.14 * (dx >= 0 ? 1 : -1);
-  return {
-    x: from.x + dx * e - (dy / dist) * arc,
-    y: from.y + (to.y - from.y) * e + ((dx / dist) * arc) / ratio,
-  };
-}
 
 interface AgentCursorProps {
   agentId: string;
@@ -52,24 +21,32 @@ interface AgentCursorProps {
   /** The agent's color (its name in the palette). */
   color: string | undefined;
   /** Where its pointer last went; `n` changes with every gesture. Null draws nothing. */
-  pointer: (BrowserPointer & { n: number }) | null;
+  pointer: CountedPointer | null;
 }
 
 /**
  * The agent's cursor over the picture of its page (ADR 0040 §7.2): a pixel arrow in the agent's color carrying
- * its avatar and name, going to each point the computer says as the gesture starts. The page has no pointer of
+ * its avatar and name, going to each point the computer says as the gesture starts, dimmed where it rests after a
+ * quiet while (a gesture already over when shown is placed there at once). The page has no pointer of
  * its own (the agent's input goes straight to it), so this is drawn here, the same size whatever the picture's
  * scale. Decoration: the steps beside it say what the agent does.
  */
 export function AgentCursor({ agentId, name, color, pointer }: AgentCursorProps) {
   const reduced = usePrefersReducedMotion();
   const cursor = useRef<HTMLSpanElement>(null);
-  const at = useRef<Spot | null>(null);
+  const at = useRef<CursorSpot | null>(null);
   const [rings, setRings] = useState<{ key: number; x: number; y: number }[]>([]);
-  const [look, setLook] = useState({ press: false, quiet: false, idle: false, flip: false });
+  const [look, setLook] = useState({
+    press: false,
+    quiet: false,
+    idle: false,
+    placed: false,
+    flip: false,
+    lift: false,
+  });
   const ratio = pointer ? pointer.height / pointer.width : 1;
 
-  const place = (p: Spot) => {
+  const place = (p: CursorSpot) => {
     at.current = p;
     const el = cursor.current;
     if (!el) return;
@@ -81,11 +58,18 @@ export function AgentCursor({ agentId, name, color, pointer }: AgentCursorProps)
   useLayoutEffect(() => {
     if (!pointer) return;
     const to = { x: pointer.x / pointer.width, y: pointer.y / pointer.height };
-    // Its first gesture comes in from a little off the point, not from a corner it never was in.
-    const from = at.current ?? { x: Math.min(1, to.x + 0.1), y: Math.min(1, to.y + 0.14) };
+    const tall = cursor.current?.parentElement?.clientHeight ?? 0;
+    const edges = { flip: to.x > CURSOR_FLIP_AT, lift: cursorTagLifts(to.y * tall, tall) };
+    if (pointerAtRest(pointer, Date.now())) {
+      place(to);
+      // Measuring its frame computed its style at full strength: `placed` keeps it from fading down from there.
+      setLook({ press: false, quiet: pointer.act === "type", idle: true, placed: true, ...edges });
+      return;
+    }
+    const from = glideStart(at.current, to);
     const timers: ReturnType<typeof setTimeout>[] = [];
     let frame = 0;
-    setLook({ press: false, quiet: false, idle: false, flip: to.x > FLIP_AT });
+    setLook({ press: false, quiet: false, idle: false, placed: false, ...edges });
     const arrived = () => {
       place(to);
       const ring = (delay: number) =>
@@ -149,13 +133,15 @@ export function AgentCursor({ agentId, name, color, pointer }: AgentCursorProps)
             look.press && "is-press",
             look.quiet && "is-quiet",
             look.idle && "is-idle",
+            look.placed && "is-placed",
             look.flip && "is-flip",
+            look.lift && "is-lift",
           ]
             .filter(Boolean)
             .join(" ")}
         >
           <svg width="16" height="24" viewBox="0 0 8 12" shapeRendering="crispEdges" role="presentation">
-            {ARROW.flatMap((row, y) =>
+            {AGENT_ARROW.flatMap((row, y) =>
               [...row].map((c, x) =>
                 c === "." ? null : (
                   <rect

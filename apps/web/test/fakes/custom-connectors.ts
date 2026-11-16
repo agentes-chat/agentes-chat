@@ -2,10 +2,11 @@
  * Test fake — custom MCP servers ("Outro servidor MCP" in "Adicionar conector").
  * Mirrors these endpoints:
  * - GET    /api/app/organizations/{orgId}/connectors/custom
- * - POST   /api/app/organizations/{orgId}/connectors/custom { serverUrl, apiKey?, label?, returnTo, connectionId? }
+ * - POST   /api/app/organizations/{orgId}/connectors/custom { serverUrl, apiKey?, label?, returnTo, connectionId?, headers? }
  *          → { status: "connected", server, outcome } | { status: "oauth", authorizeUrl } | { status: "needs_key" }
  *          (the same address again is another account, "Name 2", which no agent uses; `connectionId`
- *          reconnects that account in place)
+ *          reconnects that account in place; `headers` alone connect, are refused with a sign-in, and on a
+ *          reconnect stay when absent, go with `[]` and are replaced by a list)
  * - POST   /api/app/organizations/{orgId}/connectors/custom/{id}/refresh (re-list tools)
  * - PUT    /api/app/organizations/{orgId}/connectors/custom/{id}/tools { label, tools: [{ name, access, label, confirmed? }] }
  *          (`access`: read | write | approval | off; sensitive tools only approval | off)
@@ -16,7 +17,7 @@
  * (annotations, the verb; `close_ticket` is ambiguous: the judge suggests
  * "write" and it waits for a decision; `delete_customer` is sensitive).
  */
-import type { ApiClient, CustomServer, CustomTool, ToolAccess } from "@agenteschat/client";
+import { type ApiClient, ApiError, type CustomServer, type CustomTool, type ToolAccess } from "@agenteschat/client";
 import { partsOf } from "@agenteschat/client/lib/tool-review";
 import { clone, type MockContext, MockNotFoundError, mockId } from "./context";
 
@@ -88,16 +89,26 @@ export function createMockCustomConnectors(
     transports: async () => ({ stdio: false }),
     list: async (orgId) => clone(list(orgId)),
     connect: async (orgId, input) => {
-      log("customConnectors.connect", orgId, { ...input, apiKey: input.apiKey ? "[redacted]" : undefined });
+      log("customConnectors.connect", orgId, {
+        ...input,
+        apiKey: input.apiKey ? "[redacted]" : undefined,
+        ...(input.headers ? { headers: input.headers.map((h) => ({ name: h.name, value: "[redacted]" })) } : {}),
+      });
       // Through Composio: its page signs in, back to the callback.
       const serverUrl = input.serverUrl ?? `stdio://${mockId("local-mcp")}`;
       if (serverUrl.startsWith("https://backend.composio.dev/")) {
         return { status: "oauth", authorizeUrl: "https://composio.example/connect/ca_1?state=s" };
       }
       const oauth = serverUrl.includes("oauth");
-      if (!input.stdio && !oauth && !input.apiKey) return { status: "needs_key" };
-      if (input.connectionId) {
-        return { status: "connected", server: clone(find(orgId, input.connectionId)), outcome: "reconnected" };
+      const target = input.connectionId ? find(orgId, input.connectionId) : null;
+      const headerNames = input.headers?.map((h) => h.name) ?? target?.headerNames ?? [];
+      if (oauth && !input.apiKey && headerNames.length > 0) {
+        throw new ApiError(400, "connector.headers_with_sign_in", "This server asks for a sign-in");
+      }
+      if (!input.stdio && !oauth && !input.apiKey && headerNames.length === 0) return { status: "needs_key" };
+      if (target) {
+        target.headerNames = headerNames;
+        return { status: "connected", server: clone(target), outcome: "reconnected" };
       }
       const now = ctx.now();
       const base = input.label?.trim() || new URL(serverUrl).hostname;
@@ -110,6 +121,7 @@ export function createMockCustomConnectors(
         label,
         accountLabel: null,
         authType: input.stdio ? "stdio" : oauth ? "oauth" : "api_key",
+        headerNames,
         tools: TOOLS.map((t) => tool(t, now)),
         reviewedAt: null,
         createdAt: now.toISOString(),

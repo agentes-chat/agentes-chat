@@ -13,8 +13,9 @@ afterEach(() => cleanup());
 /**
  * The invite dialog and People › Convites with what breaks them (break-ui): a workspace name of 74 letters, a cargo of
  * 40, an address of 64 with no break, 40 addresses pasted at once, 30 channels with long names, an agent with a long
- * name and job, a request with a long note, a link with three cargos and an invitation to the long address. CI's
- * geometry check lays out every screen these tests reach at 1280 and 320.
+ * name and job, a request with a long note, a link with three cargos and an invitation to the long address, and a
+ * cargo the viewer can't give on both (the request's left-out line, the Cargo menu's mark). CI's geometry check lays
+ * out every screen these tests reach at 1280 and 320.
  */
 const ORG = "Cooperativa Agroindustrial dos Produtores Rurais do Vale do Jequitinhonha";
 const CARGO = "Coordenação de Atendimento ao Cliente Sul";
@@ -116,8 +117,9 @@ describe("the invite dialog, worst case", () => {
 });
 
 describe("People › Convites, worst case", () => {
-  test("a long name and note, a link with three cargos, a 64-letter address: rows wrap whole, actions keep their place", async () => {
+  test("a long name and note, a link with three cargos, a 64-letter address, a cargo above yours: rows wrap whole", async () => {
     const state = worst();
+    state.roles = (state.roles ?? []).map((r) => (r.id === "role-fin" ? { ...r, givable: false } : r));
     const request: JoinRequest = {
       id: "r-long",
       name: "Maria Eduarda Albuquerque de Vasconcelos Figueiredo Sobrinho",
@@ -157,7 +159,7 @@ describe("People › Convites, worst case", () => {
       id: "inv-long",
       email: LONG_EMAIL,
       role: "member",
-      roleIds: ["role-long"],
+      roleIds: ["role-long", "role-fin"],
       channelIds: ["ch-0"],
       agentIds: ["agent-long"],
       status: "pending",
@@ -177,7 +179,23 @@ describe("People › Convites, worst case", () => {
     );
     const waiting = screen().getByRole("region", { name: "Esperando você" });
     expect(waiting.textContent).toContain("Com o link:");
+    expect(waiting.textContent).toContain("Financeiro fica de fora: está acima do seu cargo.");
     const emails = screen().getByRole("region", { name: "Convites por e-mail" });
-    expect(within(emails).getByRole("group", { name: `Convite para ${LONG_EMAIL}` })).toBeTruthy();
+    const long = within(emails).getByRole("group", { name: `Convite para ${LONG_EMAIL}` });
+    // Editar convite with its Cargo menu open: the long cargo, and Financeiro checked with why it can only go.
+    const more = within(long).getByRole("button", { name: `Mais ações para ${LONG_EMAIL}` });
+    more.focus();
+    await act(async () => fireEvent.keyDown(more, { key: "Enter" }));
+    await click(screen().getByRole("menuitem", { name: "Editar" }));
+    await settle(4);
+    const edit = screen().getByRole("dialog", { name: `Convite de ${LONG_EMAIL}` });
+    const cargo = within(edit).getByRole("button", { name: /^Cargo/ });
+    cargo.focus();
+    await act(async () => fireEvent.keyDown(cargo, { key: "Enter" }));
+    await settle(2);
+    const fin = screen().getByRole("menuitemcheckbox", { name: /^Financeiro/ });
+    expect(fin.getAttribute("aria-checked")).toBe("true");
+    expect(fin.querySelector(".ac-menu__desc")?.textContent).toBe("Acima do seu cargo");
+    expect(screen().getByRole("menuitemcheckbox", { name: CARGO }).getAttribute("aria-checked")).toBe("true");
   });
 });

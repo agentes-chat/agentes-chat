@@ -61,9 +61,14 @@ export const chatHref = (channelId: string, threadId?: string | null, messageId?
   return params.length ? `/chat/${channelId}?${params.join("&")}` : `/chat/${channelId}`;
 };
 
-/** Two agents' conversation for a question asked in a conversation, read only. */
-export const consultationHref = (consultationId: string, channelId: string): AppHref =>
-  `/consultation/${consultationId}?channel=${channelId}`;
+/**
+ * Two agents' conversation for a question asked in a conversation, read only. `group`: the questions of a row of
+ * several asked agents, so the screen reaches each one's exchange.
+ */
+export const consultationHref = (consultationId: string, channelId: string, group?: readonly string[]): AppHref =>
+  group && group.length > 1
+    ? `/consultation/${consultationId}?channel=${channelId}&group=${group.join(",")}`
+    : `/consultation/${consultationId}?channel=${channelId}`;
 
 /** A routine's screen, or Rotinas when the id isn't one. */
 export const routineHref = (routineId: unknown): AppHref =>

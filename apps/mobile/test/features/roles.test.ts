@@ -61,8 +61,16 @@ const AREAS: OrgRoles["areas"] = [
   },
   {
     id: "agents",
-    use: ["talk_to_agents", "assign_work", "manage_routines"],
-    keys: ["talk_to_agents", "assign_work", "manage_routines", "approve_actions", "create_agents", "manage_agents"],
+    use: ["talk_to_agents", "view_all_agents", "assign_work", "manage_routines"],
+    keys: [
+      "talk_to_agents",
+      "view_all_agents",
+      "assign_work",
+      "manage_routines",
+      "approve_actions",
+      "create_agents",
+      "manage_agents",
+    ],
   },
   {
     id: "tools",
@@ -97,6 +105,7 @@ const DEFAULTS = [
   "post",
   "create_channels",
   "talk_to_agents",
+  "view_all_agents",
   "assign_work",
   "pair_computers",
   "own_computers",
@@ -186,7 +195,7 @@ describe("What a cargo adds (P2, P3)", () => {
     const t = await translator("pt-BR");
     expect(reachLine(t, suporte, everyone, AREAS)).toBe("+3 permissões · +2 canais · +1 agente");
     expect(reachLine(t, fin, everyone, AREAS)).toBe("+2 permissões · +1 canal · +1 agente");
-    expect(reachLine(t, everyone, everyone, AREAS)).toBe("8 permissões · 4 canais · 3 agentes");
+    expect(reachLine(t, everyone, everyone, AREAS)).toBe("9 permissões · 4 canais · 3 agentes");
     expect(reachLine(t, admin, everyone, AREAS)).toBe("Pode tudo");
     // What Todos already gives adds nothing.
     expect(reachLine(t, role({ id: "x", permissions: ["post"] }), everyone, AREAS)).toBe("Só o que Todos podem");
@@ -204,7 +213,7 @@ describe("What a cargo adds (P2, P3)", () => {
     expect(glanceLine(t, suporte, everyone, AREAS, 3)).toBe("3 pessoas · +3 permissões · +2 canais · +1 agente");
     expect(glanceLine(t, suporte, everyone, AREAS, 0)).toBe("Ninguém · +3 permissões · +2 canais · +1 agente");
     expect(tabValues(t, suporte, everyone, AREAS)).toEqual({ permissions: "+3", channels: "+2", agents: "+1" });
-    expect(tabValues(t, everyone, everyone, AREAS)).toEqual({ permissions: "8", channels: "4", agents: "3" });
+    expect(tabValues(t, everyone, everyone, AREAS)).toEqual({ permissions: "9", channels: "4", agents: "3" });
     expect(tabValues(t, role({ id: "x" }), everyone, AREAS)).toEqual({ permissions: "", channels: "", agents: "" });
     expect(tabValues(t, admin, everyone, AREAS).permissions).toBe("Pode tudo");
   });
@@ -243,6 +252,11 @@ describe("Permissões (P4): the Todos trap is gone", () => {
     const routines = groups[1]?.rows.find((r) => r.row === "manage_routines");
     expect(routines?.holders.map((r) => r.name)).toEqual(["Admin", "Suporte"]);
     expect(groups[0]?.rows.find((r) => r.row === "post")?.fromEveryone).toBe(false);
+    // On for Todos by default: turning it off is what narrows Equipe to the agents that answer each person.
+    expect(groups[1]?.rows.find((r) => r.row === "view_all_agents")).toMatchObject({
+      title: "Ver todos os agentes",
+      own: 1,
+    });
   });
 
   test("an Administrador cargo shows only Avançado; search finds a title, an ⓘ's words or a group, accents aside", async () => {
@@ -652,20 +666,19 @@ describe("The order (P2's Ordenar), people and new cargos", () => {
     });
   });
 
-  test("Membros: a person's sheet offers Cargos; Convidar com este cargo gives new addresses the cargo", () => {
+  test("Membros: a person's sheet offers Cargos; Convidar com este cargo gives every address the cargo", () => {
     expect(memberActions(false, true, true)).toEqual(["dm", "roles", "remove"]);
     expect(memberActions(true, true, true)).toEqual(["roles", "leave"]);
     expect(memberActions(false, false)).toEqual(["dm"]);
-    expect(withAddresses([], "ana@example.com", "suporte")).toEqual([
-      { email: "ana@example.com", valid: true, roleId: "suporte" },
-    ]);
+    expect(withAddresses([], "ana@example.com")).toEqual([{ email: "ana@example.com", valid: true }]);
     expect(read("features/members/MembersPage.tsx")).toContain("roles: () => router.push(rolesHref.person(m.userId))");
     expect(read("features/roles/RoleScreen.tsx")).toContain("params: { role: role.id }");
     const invite = read("features/members/InvitePeople.tsx");
-    expect(invite).toContain("withAddresses(d.addresses, text, d.roleId ?? null)");
-    // The docked button sends what is still in the field (the keyboard up): it gets the cargo too.
-    expect(invite).toContain("const all = withAddresses(draft.addresses, typed, draft.roleId ?? null);");
-    expect(invite).not.toMatch(/withAddresses\(draft\.addresses, typed\)/);
+    // The form starts on the cargo, which brings its channels and agents; every address in the send gets it, the one
+    // still in the field (the docked button is pressed with the keyboard up) too.
+    expect(invite).toContain("roleIds: role ? [role] : [],");
+    expect(invite).toContain("const all = withAddresses(draft.addresses, typed);");
+    expect(invite).toContain("emails: ready.map((a) => a.email),");
   });
 
   test("giving a cargo asks about mailboxes first and sends what was asked; taking one has Desfazer", () => {
@@ -726,7 +739,7 @@ describe("RoleMark: the web's mark on the phone", () => {
       "features/files/ShareSheet.tsx",
       "features/devices/AudienceScreen.tsx",
       "features/agents/setup/SetupStepScreen.tsx",
-      "features/members/JoinRequestsSheet.tsx",
+      "features/roles/parts.tsx",
     ])
       expect({ file, icon: /RoleMark color=\{\w+\.color\} icon=\{\w+\.icon\}/.test(read(file)) }).toEqual({
         file,

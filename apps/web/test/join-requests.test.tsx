@@ -881,6 +881,71 @@ describe("People › Convites › Esperando você", () => {
     expect(within(bruno).getByRole("button", { name: "Aprovar" }).hasAttribute("disabled")).toBe(true);
   });
 
+  test("Aprovar and the request's cargos wait for the cargos: before them it would approve with none", async () => {
+    setSystemTime(MIDDAY);
+    const link = { id: "link-adm", createdBy: "Marina Alves", roleIds: [ADMIN_ROLE_ID], channelIds: [], agentIds: [] };
+    const state = seedState({ joinRequests: [{ ...(requests()[0] as JoinRequest), link: { ...link, full: false } }] });
+    const api = createFakeApi(state);
+    const list = api.roles.list;
+    let release = () => {};
+    api.roles.list = async (...args) => {
+      await new Promise<void>((r) => {
+        release = r;
+      });
+      return list(...args);
+    };
+    await renderApp(`/org/${ORG_ID}/settings/invites`, { api });
+    await settle(6);
+    const ana = card("Ana Souza");
+    const approve = within(ana).getByRole("button", { name: "Aprovar" }) as HTMLButtonElement;
+    const picker = within(ana).getByRole("button", { name: "Cargos para Ana Souza" }) as HTMLButtonElement;
+    expect([approve.disabled, picker.disabled]).toEqual([true, true]);
+    await act(async () => release());
+    await settle(4);
+    expect([approve.disabled, picker.disabled]).toEqual([false, false]);
+    expect(picker.textContent).toBe("Admin");
+    await click(approve);
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "joinRequests.approve")?.args).toEqual([ORG_ID, "r1", [ADMIN_ROLE_ID]]);
+  });
+
+  test("a failed refetch of the cargos keeps the ones loaded: Aprovar stays on", async () => {
+    setSystemTime(MIDDAY);
+    const link = { id: "link-adm", createdBy: "Marina Alves", roleIds: [ADMIN_ROLE_ID], channelIds: [], agentIds: [] };
+    const state = seedState({ joinRequests: [{ ...(requests()[0] as JoinRequest), link: { ...link, full: false } }] });
+    const api = createFakeApi(state);
+    const { services } = await renderApp(`/org/${ORG_ID}/settings/invites`, { api });
+    await settle(6);
+    api.roles.list = async () => {
+      throw new ApiError(503, "server.unavailable", "down");
+    };
+    await act(() => services.queryClient.invalidateQueries({ queryKey: keys.roles(ORG_ID) }));
+    await settle(4);
+    const ana = card("Ana Souza");
+    expect((within(ana).getByRole("button", { name: "Aprovar" }) as HTMLButtonElement).disabled).toBe(false);
+    expect((within(ana).getByRole("button", { name: "Cargos para Ana Souza" }) as HTMLButtonElement).disabled).toBe(
+      false,
+    );
+  });
+
+  test("the admins' e-mail link focuses Aprovar once the cargos are in", async () => {
+    setSystemTime(MIDDAY);
+    const api = createFakeApi(seedState({ joinRequests: requests() }));
+    const list = api.roles.list;
+    let release = () => {};
+    api.roles.list = async (...args) => {
+      await new Promise<void>((r) => {
+        release = r;
+      });
+      return list(...args);
+    };
+    await renderApp(`/org/${ORG_ID}/settings/invites?request=r1&do=approve`, { api });
+    await settle(6);
+    await act(async () => release());
+    await settle(4);
+    expect(document.activeElement === within(card("Ana Souza")).getByRole("button", { name: "Aprovar" })).toBe(true);
+  });
+
   test("a link's cargo above yours starts out of the approval, said on the row; while Aprovar runs its cargos wait too", async () => {
     setSystemTime(MIDDAY);
     const [admin, everyone] = seedRoles() as [OrgRole, OrgRole];

@@ -123,6 +123,9 @@ export const ChatPrefs = z
       .enum(CHAT_TEXT_SIZES)
       .optional()
       .openapi({ description: "Tamanho do texto of the messages, smallest first; absent: `md`." }),
+    fullMessages: z.boolean().optional().openapi({
+      description: "Show messages in full without See more; absent: long messages are folded.",
+    }),
     feedbackAuto: z.boolean().optional().openapi({
       description:
         "Always send: a report an agent offers about the app goes with its reply, without asking; absent: it asks.",
@@ -293,6 +296,18 @@ export const Credential = z
       .enum(["ok", "unchecked"])
       .optional()
       .openapi({ description: "On a key just saved: `ok` a real call passed, `unchecked` the provider didn't say." }),
+    reused: z.boolean().optional().openapi({
+      description: "On a key just saved: the workspace already had it, so that key was updated, not copied.",
+    }),
+    copies: z
+      .number()
+      .int()
+      .optional()
+      .openapi({ description: "In a list of keys: how many other saved keys are this same key (`remove-copies`)." }),
+    copyOf: z
+      .uuid()
+      .optional()
+      .openapi({ description: "In a list of keys: the key this one is a copy of, the row to show for both." }),
     createdAt: z.string(),
     revokedAt: z.string().nullable(),
   })
@@ -483,6 +498,10 @@ export const Agent = z
         "It may send a sticker or a GIF (ADR 0091): when someone asks for one, and after a light reply as often as the workspace's `agentMedia` allows.",
     }),
     approvalsLevel: ApprovalsLevel,
+    approvalsLevelOwn: z.boolean().optional().openapi({
+      description:
+        "Whether `approvalsLevel` is the agent's own choice. False: it follows the workspace's (`approvalsLevel` in the workspace's settings) and changes with it.",
+    }),
     builtin: z.enum(["right_hand"]).nullable().openapi({
       description:
         "A built-in agent the product ships (ADR 0137): `right_hand`, the team's right hand, one per workspace, never archived, deleted or exported. Null for the agents people make.",
@@ -673,7 +692,9 @@ export const WorkView = z
       .enum(["working", "waiting_approval", "waiting_input", "paused", "waiting_computer", "queued"])
       .nullable()
       .openapi({ description: "While live: what its run does now." }),
-    how: z.enum(["agent", "auto"]),
+    how: z.enum(["agent", "auto", "handed"]).openapi({
+      description: "`handed`: another agent handed it over; it reports where the person asked.",
+    }),
     anchorMessageId: z.uuid(),
     threadId: z.uuid().nullable().openapi({ description: "Where its updates are." }),
     homeThreadId: z.uuid().nullable().openapi({ description: "Where it was asked (its report goes there)." }),
@@ -698,7 +719,24 @@ export const WorkView = z
     queuePosition: z.number().nullable(),
     pausedUntil: z.string().nullable(),
     canceledByUserId: z.string().nullable(),
+    canceledByAgentId: z.string().nullable(),
     errorCode: z.string().nullable(),
+    handedBy: z
+      .object({ agentId: z.uuid(), consultationId: z.uuid() })
+      .nullable()
+      .openapi({ description: "Handed over by another agent: that agent and its hand-off." }),
+    askerRunId: z
+      .uuid()
+      .nullable()
+      .openapi({ description: "A handed work: the run that handed it; its line goes under that run's last message." }),
+    planStep: z
+      .object({ current: z.number(), total: z.number() })
+      .nullable()
+      .openapi({ description: "The first step of its plan not done, 1-based, never past the last." }),
+    result: z
+      .object({ text: z.string(), messageId: z.uuid() })
+      .nullable()
+      .openapi({ description: "Done: the first line of its report." }),
   })
   .openapi("WorkView");
 
@@ -826,6 +864,9 @@ const MessageBase = z.object({
   longWork: WorkView.optional().openapi({
     description: "A long work's anchor (`meta.longWork`, ADR 0121): its line; live via `agent.work`.",
   }),
+  handedWorks: z.array(WorkView).optional().openapi({
+    description: "On a run's last message here: the works it handed over to other agents, each with its line.",
+  }),
   createdAt: z.string(),
 });
 
@@ -918,11 +959,16 @@ export const BrainUnavailable = z.enum([
   "cant_start",
 ]);
 
+export const CodexVersionRequirement = z
+  .object({ detected: z.string(), minimum: z.string() })
+  .openapi("CodexVersionRequirement");
+
 export const BrainOption = z
   .object({
     kind: BrainKind,
     available: z.boolean(),
     reason: BrainUnavailable.optional().openapi({ description: "Why it can't be chosen now (computer brains)." }),
+    codexVersion: CodexVersionRequirement.optional(),
     models: z.array(
       z.object({
         value: z.string().openapi({ description: "What is stored and passed to the CLI (`opus`, `gpt-…`)." }),
@@ -1043,8 +1089,14 @@ export const AgentBrain = z
           "The team's right hand: the workspace's AI, `model` for an API key (`key`, by its provider and name; null with none), else the plan's brain and owner; `servesYou`, it thinks for the caller (a key, a plan whose owner lets it serve everyone, or theirs).",
       }),
     brain: BrainKind,
-    model: z.string().nullable().openapi({ description: "As stored; null = the brain's default." }),
-    effectiveModel: z.string().nullable(),
+    model: z.string().nullable().openapi({
+      description:
+        "As stored; null = the brain's default. Always null for the `model` brain: an agent on an API key or a workspace endpoint keeps its model in the agent's own `model` (`GET …/agents/{agentId}`).",
+    }),
+    effectiveModel: z.string().nullable().openapi({
+      description:
+        'What a computer brain runs with (`model` or its default). Null for the `model` brain, which is not "no model": read the agent\'s `model` and `credentialId`.',
+    }),
     fallback: z
       .boolean()
       .openapi({ description: "When the computer can't answer, answer through the API (agent's budget)." }),
