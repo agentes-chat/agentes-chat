@@ -4424,6 +4424,9 @@
   "devices.reason.xcode_too_old": {
     "value": "Xcode is too old for this iPhone"
   },
+  "devices.reason.ios_behind_xcode": {
+    "value": "Update this iPhone's iOS"
+  },
   "devices.reason.device_support": {
     "value": "The Mac is preparing this iPhone"
   },

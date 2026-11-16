@@ -344,6 +344,28 @@ beforeAll(async () => {
     code: "run.provider_rate_limit",
     message: "canary-error message",
   });
+  // What the reads work facts out of: a failed result with a status, a pause's reading, a hand-on. Each holds words
+  // where a number, a listed word or an id belongs.
+  await addRunStep(db, run, "tool_call", { toolUseId: "call-3", name: "get_issue", input: "canary-input words" });
+  await addRunStep(db, run, "tool_result", {
+    toolUseId: "call-3",
+    name: "get_issue",
+    isError: true,
+    content: "Tool failed: canary-failure words",
+    data: { code: "tool.failed", status: "canary-status" },
+  });
+  await addRunStep(db, run, "error", {
+    reason: "usage_wait",
+    code: "usage_pause",
+    message: "canary-pause words",
+    pause: { source: "plan", used: "canary-used", window: "canary-window" },
+  });
+  await addRunStep(db, run, "error", { reason: "no_ai", code: "canary_reason" });
+  await addRunStep(db, run, "context", {
+    redispatchedMessageIds: [look],
+    reason: "canary_reason",
+    toRunId: "canary-run",
+  });
   // A run parked on its plan's limit. An error's first characters are returned by design: a credential in them never.
   const failed = "connect failed: postgres://app:canary-pass@db.example.com/main";
   await db.update(schema.routingDecisions).set({ error: failed });
@@ -364,6 +386,7 @@ beforeAll(async () => {
         machineId: "",
         code: "usage_pause",
         source: "plan",
+        waitKey: "plan:canary-computer:claude_code:canary-account",
         resetsAt: new Date(Date.now() + 3600_000).toISOString(),
         plan: "canary-plan words",
         model: "canary-model",
@@ -396,6 +419,33 @@ beforeAll(async () => {
     targetId: "lookup",
     details: { input: { q: "canary audit details" } },
   });
+  // The three actions whose details the audit read looks into: words in every place it reads, and beside them.
+  const changed = { orgId, actorType: "system" as const, targetType: "agent", targetId: agentId };
+  await db.insert(schema.auditLog).values([
+    {
+      ...changed,
+      action: "agent.audience_changed",
+      details: {
+        from: { mode: "canary-mode", userIds: ["canary-person"], roleIds: [] },
+        to: { mode: "people", userIds: ["canary-other-person"], roleIds: ["canary-role"] },
+        planOwner: "canary-owner",
+        via: "canary-via",
+      },
+    },
+    {
+      ...changed,
+      action: "connector.tool_definitions_changed",
+      details: {
+        connection: "canary-connection",
+        tools: [{ tool: "canary_tool", descriptionBefore: "canary-before", descriptionAfter: "canary-after" }],
+      },
+    },
+    {
+      ...changed,
+      action: "run.canceled",
+      details: { agentId: "canary-agent", from: "canary-status", reason: "canary-reason words" },
+    },
+  ]);
   const sealed = { secretCiphertext: "canary-ciphertext", wrappedDataKey: "canary-wrapped", kekId: "local:v1" };
   await db
     .insert(schema.providerCredentials)

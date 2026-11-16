@@ -33,11 +33,13 @@ import {
   gateDims,
   gateLine,
   gateRechecks,
+  isStandInLine,
   keptCardState,
   kindOf,
   mayConnectAi,
   type NoAiCard,
   noAiCardOf,
+  noAiCardShown,
   noAiLineKey,
   noAiStatusKey,
   onlyOwnerReplies,
@@ -55,6 +57,7 @@ import {
   planOfKind,
   planPickText,
   plansNotYoursOf,
+  rightHandUnusable,
   signInAgainPlan,
   signsInOnce,
   signsInPerAgent,
@@ -1079,5 +1082,54 @@ describe("a notification of a body the server wrote", () => {
     );
     expect(latestText(instance.t, { text: "olha isso" })).toBe("olha isso");
     expect(latestText(instance.t, {})).toBeUndefined();
+  });
+});
+
+describe("the right hand's stand-in line (ADR 0137 §7, amended 2026-11-15)", () => {
+  const line = {
+    bodyCode: "right_hand_stand_in",
+    bodyParams: { via: "Acme OpenAI", plan: "Claude Max", why: "needsComputer" },
+    noAi: {
+      agentId: "lodi",
+      forUserId: "walter",
+      reason: "no_computer",
+      standIn: { via: "Acme OpenAI", plan: "Claude Max", why: "needsComputer" },
+      runId: "r",
+    },
+  };
+  test("is a line, never a no-AI card: no banner, no Connect", () => {
+    expect(isStandInLine(line)).toBe(true);
+    expect(noAiCardOf(line)).toEqual({
+      agentId: "lodi",
+      forUserId: null,
+      intent: "task",
+      standIn: { via: "Acme OpenAI", plan: "Claude Max", why: "needsComputer" },
+    });
+    expect(noAiCardShown(line)).toBeNull();
+    const card = { bodyCode: "no_ai", noAi: { agentId: "lodi", reason: "no_key" } };
+    expect(isStandInLine(card)).toBe(false);
+    expect(noAiCardShown(card)).not.toBeNull();
+    // An unknown reason still reads as a line.
+    expect(noAiCardOf({ noAi: { agentId: "lodi", standIn: { via: "K", plan: "P", why: "??" } } })?.standIn?.why).toBe(
+      "cant",
+    );
+  });
+  test("its words in the reader's language, in previews too", () => {
+    expect(serverBody(enT, "Answered…", line, "en")).toBe("Answered with Acme OpenAI: Claude Max needs a computer.");
+  });
+  test("the plans it can't think with: a computer's own sign-in, and an account on a computer that is away", () => {
+    const mac = { machineId: "mac", name: "MacBook", online: true, own: { claude_code: { plan: "max" } } };
+    const laptop = { machineId: "lap", name: "Laptop", online: false };
+    const acct = (id: string, machineId: string, status = "active") =>
+      ({ id, machineId, computer: machineId, status, kind: "claude_code" }) as never;
+    const out = rightHandUnusable({
+      computers: [mac, laptop] as AiComputer[],
+      accounts: [acct("on-mac", "mac"), acct("on-lap", "lap"), acct("out", "lap", "signed_out")],
+    });
+    expect(out.map((u) => [u.id, u.why])).toEqual([
+      ["mac:claude_code", "computerOnly"],
+      ["on-lap", "away"],
+    ]);
+    expect(rightHandUnusable(undefined)).toEqual([]);
   });
 });

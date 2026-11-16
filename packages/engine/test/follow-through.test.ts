@@ -490,7 +490,7 @@ test("in a task's conversation, read by people who are never its members, a foll
   const asBia = { type: "person" as const, userId: bia.id };
   const issue = await createIssue({ db: f.db, pubsub: f.pubsub }, asBia, f.org.id, {
     title: "Migrate the build cache",
-    assignee: { type: "agent", id: f.agent.id },
+    assignees: [{ type: "agent", id: f.agent.id }],
   });
   const at = await openTaskConversation(f.db, asBia, f.org.id, issue.id);
   await postPersonMessage({ db: f.db, pubsub: f.pubsub }, bia.id, f.org.id, at.channelId, {

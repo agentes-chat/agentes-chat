@@ -1897,6 +1897,7 @@
       "ui_automation_off": "L'automazione UI è disattivata",
       "xcode_missing": "Il Mac ha bisogno di Xcode",
       "xcode_too_old": "Xcode è troppo vecchio per questo iPhone",
+      "ios_behind_xcode": "Aggiorna l'iOS di questo iPhone",
       "device_support": "Il Mac sta preparando questo iPhone",
       "helper_missing": "L'app di test non è ancora configurata",
       "helper_expired": "L'app di test va rinnovata",

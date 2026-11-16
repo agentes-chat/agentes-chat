@@ -6,6 +6,7 @@ import { accountablePerson, runAuthorityById } from "./authority";
 import { autonomyNoteFor, proposalCardOf } from "./brakes";
 import { readableChannelIds } from "./channels";
 import { threadFollowChoices } from "./follows";
+import { type Assignee, assigneesOfIssue } from "./issue-assignees";
 import { type TaskEnd, taskEndLine } from "./machine-task-text";
 import { isMediaAfterReply } from "./media";
 import { type PreviewMeta, previewMediaKind, previewMeta, readableBody } from "./message-preview";
@@ -591,9 +592,10 @@ export async function notifyNewcomers(deps: NotificationDeps, row: ApprovalRow) 
 
 // ── Issues ────────────────────────────────────────────────────────────────────
 
-/** Who follows an issue: its author, its assignee, and the people who acted on it or wrote in its conversation. */
+/** Who follows an issue: its author, its assignees, and the people who acted on it or wrote in its conversation. */
 async function issueFollowers(deps: NotificationDeps, issue: IssueRow) {
-  const [acted, wrote] = await Promise.all([
+  const [assigned, acted, wrote] = await Promise.all([
+    assigneesOfIssue(deps.db, issue.id),
     deps.db
       .selectDistinct({ userId: issueActivity.authorId })
       .from(issueActivity)
@@ -613,7 +615,7 @@ async function issueFollowers(deps: NotificationDeps, issue: IssueRow) {
   ]);
   const ids = new Set<string>([...acted.map((a) => a.userId), ...wrote.flatMap((w) => (w.userId ? [w.userId] : []))]);
   if (issue.createdByType === "person") ids.add(issue.createdById);
-  if (issue.assigneeType === "person" && issue.assigneeId) ids.add(issue.assigneeId);
+  for (const a of assigned) if (a.type === "person") ids.add(a.id);
   return taskReadersAmong(deps.db, issue.id, [...ids]);
 }
 
@@ -632,28 +634,31 @@ const issueActor = (a: IssueNotifyActor): NotificationActor =>
 export const issueStatusGroup = (issueId: string, at: number) => `issue_status:${issueId}:${at}`;
 
 /**
- * After an issue changed: a new person assignee hears it (and the previous
- * one's "assigned to you" resolves); a status change reaches the followers.
+ * After an issue changed: each person put on it hears it (and the "assigned to you" of each one taken off it
+ * resolves); a status change reaches the followers.
  */
 export async function notifyIssueChanged(
   deps: NotificationDeps,
   actor: IssueNotifyActor,
-  before: Pick<IssueRow, "status" | "assigneeType" | "assigneeId"> | null,
+  before: Pick<IssueRow, "status"> | null,
   issue: IssueRow,
+  /** Who was put on the task and who was taken off it by this change. */
+  assignees: { added: readonly Assignee[]; removed: readonly Assignee[] } = { added: [], removed: [] },
 ) {
   const at = issue.updatedAt.getTime();
-  const prevPerson = before?.assigneeType === "person" ? before.assigneeId : null;
-  const nowPerson = issue.assigneeType === "person" ? issue.assigneeId : null;
-  if (prevPerson && prevPerson !== nowPerson) {
+  const people = (list: readonly Assignee[]) => list.filter((a) => a.type === "person").map((a) => a.id);
+  const left = people(assignees.removed);
+  const joined = people(assignees.added);
+  if (left.length > 0) {
     await resolveNotifications(deps, issue.orgId, {
       groupKeyPrefix: `issue_assigned:${issue.id}:`,
-      userIds: [prevPerson],
+      userIds: left,
     });
   }
-  if (nowPerson && nowPerson !== prevPerson) {
+  if (joined.length > 0) {
     await notify(deps, {
       orgId: issue.orgId,
-      userIds: await taskReadersAmong(deps.db, issue.id, [nowPerson]),
+      userIds: await taskReadersAmong(deps.db, issue.id, joined),
       kind: "issue_assigned",
       groupKey: `issue_assigned:${issue.id}:${at}`,
       actor: issueActor(actor),

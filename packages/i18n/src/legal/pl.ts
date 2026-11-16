@@ -8,13 +8,13 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
       "Umowa dotycząca korzystania z agentes.chat: Twój obszar roboczy, Twoi agenci oraz zakres odpowiedzialności każdej ze stron.",
     courtesy:
       "Niniejszy dokument jest tłumaczeniem grzecznościowym. W przypadku rozbieżności z wersją angielską pierwszeństwo ma wersja angielska.",
-    updated: "2026-11-13",
+    updated: "2026-11-16",
     sections: [
       {
         id: "agreement",
         heading: "1. Umowa",
         blocks: [
-          "Niniejsze Warunki korzystania („Warunki”) stanowią wiążącą umowę między CODARI GLOBAL, LLC, spółką z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Wyoming, prowadzącą działalność pod nazwą agentes.chat („agentes.chat”, „my”, „nas”), a osobą lub podmiotem, który zakłada konto lub obszar roboczy („Ty”). Zakładając konto, dołączając do obszaru roboczego lub w inny sposób korzystając z agentes.chat w przeglądarce, w aplikacji na komputery Mac lub w aplikacji na telefon („Usługa”), akceptujesz niniejsze Warunki oraz naszą Politykę prywatności. Jeżeli korzystasz z Usługi w imieniu spółki lub innego podmiotu, oświadczasz, że jesteś umocowany do zaciągania w jego imieniu zobowiązań.",
+          "Niniejsze Warunki korzystania („Warunki”) stanowią wiążącą umowę między AGENTESCHAT, LLC, spółką z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Delaware, prowadzącą działalność pod nazwą agentes.chat („agentes.chat”, „my”, „nas”), a osobą lub podmiotem, który zakłada konto lub obszar roboczy („Ty”). Zakładając konto, dołączając do obszaru roboczego lub w inny sposób korzystając z agentes.chat w przeglądarce, w aplikacji na komputery Mac lub w aplikacji na telefon („Usługa”), akceptujesz niniejsze Warunki oraz naszą Politykę prywatności. Jeżeli korzystasz z Usługi w imieniu spółki lub innego podmiotu, oświadczasz, że jesteś umocowany do zaciągania w jego imieniu zobowiązań.",
           "Aby korzystać z Usługi, musisz mieć ukończone co najmniej 18 lat i posiadać zdolność do zawarcia umowy.",
         ],
       },
@@ -150,7 +150,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Prawo właściwe",
         blocks: [
-          "Niniejsze Warunki podlegają prawu stanu Wyoming (USA), z wyłączeniem jego norm kolizyjnych, a strony poddają się wyłącznej jurysdykcji sądów stanowych i federalnych z siedzibą w stanie Wyoming. Jeżeli jesteś konsumentem w jurysdykcji, której prawo przyznaje Ci prawa lub właściwość sądu, których nie można się zrzec, jak na przykład w Brazylii, prawa te pozostają nienaruszone.",
+          "Niniejsze Warunki podlegają prawu stanu Delaware (USA), z wyłączeniem jego norm kolizyjnych, a strony poddają się wyłącznej jurysdykcji sądów stanowych i federalnych z siedzibą w stanie Delaware. Jeżeli jesteś konsumentem w jurysdykcji, której prawo przyznaje Ci prawa lub właściwość sądu, których nie można się zrzec, jak na przykład w Brazylii, prawa te pozostają nienaruszone.",
         ],
       },
       {
@@ -164,7 +164,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Kontakt",
         blocks: [
-          "CODARI GLOBAL, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Wszystkie pozostałe sprawy: hello@agentes.chat",
+          "AGENTESCHAT, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Wszystkie pozostałe sprawy: hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +175,13 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
       "Jakie dane zbieramy, co i dokąd wysyłają agenci, kto może widzieć Twój obszar roboczy oraz jakie przysługują Ci prawa.",
     courtesy:
       "Niniejszy dokument jest tłumaczeniem grzecznościowym. W przypadku rozbieżności z wersją angielską pierwszeństwo ma wersja angielska.",
-    updated: "2026-11-14",
+    updated: "2026-11-16",
     sections: [
       {
         id: "overview",
         heading: "1. Informacje ogólne",
         blocks: [
-          "CODARI GLOBAL, LLC, spółka z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Wyoming, prowadząca działalność pod nazwą agentes.chat („agentes.chat”, „my”), prowadzi agentes.chat: obszar roboczy, w którym ludzie i agenci AI pracują wspólnie, dostępny w przeglądarce, jako aplikacja na komputery Mac oraz jako aplikacja na telefon („Usługa”). Niniejsza polityka rozróżnia dwie role:",
+          "AGENTESCHAT, LLC, spółka z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Delaware, prowadząca działalność pod nazwą agentes.chat („agentes.chat”, „my”), prowadzi agentes.chat: obszar roboczy, w którym ludzie i agenci AI pracują wspólnie, dostępny w przeglądarce, jako aplikacja na komputery Mac oraz jako aplikacja na telefon („Usługa”). Niniejsza polityka rozróżnia dwie role:",
           {
             list: [
               "W odniesieniu do **danych konta**, czyli informacji, które ludzie nam przekazują, aby założyć konto i z niego korzystać, jesteśmy administratorem danych.",
@@ -342,7 +342,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Kontakt",
         blocks: [
-          "CODARI GLOBAL, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Zapytania dotyczące ochrony danych z UE, Wielkiej Brytanii i Brazylii trafiają do naszego zespołu ds. prywatności pod tym samym adresem. We wszystkich innych sprawach napisz na adres hello@agentes.chat.",
+          "AGENTESCHAT, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Zapytania dotyczące ochrony danych z UE, Wielkiej Brytanii i Brazylii trafiają do naszego zespołu ds. prywatności pod tym samym adresem. We wszystkich innych sprawach napisz na adres hello@agentes.chat.",
         ],
       },
     ],

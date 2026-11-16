@@ -574,6 +574,13 @@ describe("the no-AI banner above the box", () => {
     expect(endsOnNoAiCard([message({ id: "m" }), card])).toBe(true);
     expect(endsOnNoAiCard([card, message({ id: "m" })])).toBe(false);
     expect(endsOnNoAiCard([])).toBe(false);
+    // The right hand's stand-in line under its reply is no such card: it answered.
+    const line = message({
+      id: "l",
+      author: { type: "agent", id: "lodi" },
+      meta: { noAi: { agentId: "lodi", standIn: { via: "Acme OpenAI", plan: "Claude Max", why: "needsComputer" } } },
+    });
+    expect(endsOnNoAiCard([message({ id: "m" }), line])).toBe(false);
   });
 });
 

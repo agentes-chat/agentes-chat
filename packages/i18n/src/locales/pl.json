@@ -2832,6 +2832,13 @@
   "rightHand": {
     "label": "twoja prawa ręka",
     "labelCapitalized": "Twoja prawa ręka",
+    "unusable": {
+      "title": "Nie może teraz myśleć za {{name}}",
+      "computerOnly": "Zalogowany tylko na {{computer}}. {{name}} myśli planem zalogowanym jako konto.",
+      "away": "Należy do {{owner}}, na {{computer}}, który jest nieobecny.",
+      "awayYours": "Twój, na {{computer}}, który jest nieobecny.",
+      "connect": "Połącz komputer"
+    },
     "newDot": "Nowe",
     "actsAsYou": "działa z twoimi uprawnieniami",
     "composerHint": "nic się nie zmienia bez ciebie",
@@ -2937,6 +2944,7 @@
     "sharedName": "{{name}} (wspólne)",
     "sharedPlace": "Używane w kanałach i w pracy, która działa sama. Cała przestrzeń robocza dzieli to miejsce. Nie trzymaj tu niczego prywatnego.",
     "computerNoHome": "Jeszcze bez komputera. Pojawi się, gdy ta przestrzeń robocza będzie miała własny komputer.",
+    "computerNoHomeServer": "Na razie bez przeglądarki. Skonfiguruj <guide>ten serwer jako komputer agentów</guide>, aby ją dostał.",
     "addComputer": "Dodaj komputer",
     "computerOneUser": "Tutaj nie ma komputera. Komputer przestrzeni roboczej uruchamia wszystkich agentów jako jednego użytkownika, więc nie może rozdzielić miejsc poszczególnych osób. Serwer Linux zainstalowany z opcją --system instalatora to potrafi.",
     "powers": {
@@ -3124,6 +3132,16 @@
       "invite_people_sent_many": "Zaproszenia wysłane do <b>{{emails}}</b>.",
       "invite_people_sent_other": "Zaproszenia wysłane do <b>{{emails}}</b>.",
       "remove_ai_key": "Usuń klucz API „{{name}}”."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Potrzebny komputer",
+        "computerOnly": "Należy do {{owner}}, zalogowany tylko na {{computer}}. Lodi myśli z planem zalogowanym jako konto.",
+        "noComputer": "Należy do {{owner}}. Potrzebny jest komputer, a workspace nie ma żadnego podłączonego.",
+        "away": "Należy do {{owner}}, na {{computer}}, który jest niedostępny.",
+        "connect": "Podłącz komputer",
+        "plans": "Zobacz plany"
+      }
     }
   },
   "teamWeek": {
@@ -3499,7 +3517,7 @@
       "gemini": {
         "title": "Twój plan Gemini",
         "tiers": "Google AI Pro, Google AI Ultra lub Gemini Enterprise",
-        "warning": "Google twierdzi, że korzystanie z prywatnego planu Gemini w innych aplikacjach może skończyć się zawieszeniem konta."
+        "warning": "Google twierdzi, że korzystanie z prywatnego planu Gemini w innych aplikacjach może skończyć się zawieszeniem konta. Aby uniknąć tego ryzyka, użyj klucza API Gemini lub Gemini Enterprise."
       },
       "zen": {
         "title": "OpenCode",
@@ -4470,6 +4488,7 @@
     "seeNewer": "Zobacz nowsze żądanie",
     "computerAway": "Komputer nie odpowiada teraz ({{agent}}). To żądanie pozostaje otwarte do {{time}}. Spróbuj ponownie za chwilę.",
     "computerPaused": "Właściciel wstrzymał komputer ({{agent}}). To żądanie pozostaje otwarte do {{time}}.",
+    "insecureContext": "Ta strona nie jest otwarta przez https, więc przeglądarka nie zablokuje klucza. Otwórz ją pod adresem https:// (lub localhost).",
     "failed": "Nie udało się dostarczyć. Czy komputer agenta jest włączony?",
     "changed": "Ta prośba zmieniła się w trakcie odpowiedzi. Nic nie wysłano. Wyślij ponownie.",
     "empty": "Wpisz wartość.",
@@ -8240,7 +8259,8 @@
     "table": {
       "task": "Zadanie",
       "github": "GitHub",
-      "sortBy": "Sortuj według: {{column}}"
+      "sortBy": "Sortuj według: {{column}}",
+      "resize": "Zmień szerokość kolumny {{column}}"
     },
     "fold": {
       "open": "Otwórz: {{name}}",
@@ -8326,6 +8346,7 @@
       "canceled": "#{{number}} wróciło na miejsce.",
       "assigned": "#{{number}} jest teraz u: {{name}}.",
       "unassigned": "#{{number}} nie ma teraz przypisanej osoby.",
+      "removed": "#{{number}} nie jest już u: {{name}}.",
       "prioritized": "#{{number}} ma teraz priorytet {{priority}}."
     },
     "canceledColumn": "Anulowane",
@@ -8462,7 +8483,10 @@
         "failed": "Ostatnie uruchomienie się nie powiodło.",
         "canceled": "Ktoś zatrzymał uruchomienie.",
         "budget": "Skończył się miesięczny budżet agenta."
-      }
+      },
+      "finishedTitle": "{{name}}: zrobione",
+      "finishedMeta": "{{when}} · przekazane przez {{name}}",
+      "answer": "Odpowiedz"
     },
     "status": {
       "todo": "Do zrobienia",
@@ -8489,6 +8513,10 @@
       "high": "wysoki"
     },
     "noAssignee": "Brak przypisanej osoby",
+    "assignees": {
+      "people": "Osoby i agenci",
+      "done": "Gotowe"
+    },
     "agentRole": "Agent · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -8638,7 +8666,9 @@
       "status_changed": "zmienił(a) status na {{status}}",
       "priority_changed": "zmienił(a) priorytet na {{priority}}",
       "assigned": "przypisał(a) zadanie",
-      "unassigned": "usunął(ęła) przypisaną osobę",
+      "unassigned": "usunął(ęła) jedną z przypisanych osób",
+      "assigned_named": "przypisał(a) zadanie do: {{name}}",
+      "unassigned_named": "usunął(ęła) z zadania: {{name}}",
       "due_date_set": "ustawił(a) termin na {{date}}",
       "due_date_removed": "usunął(ęła) termin",
       "pr_linked": "powiązał(a) PR #{{number}}",
@@ -8652,7 +8682,10 @@
       "criterion_checked": "zaznaczył(a) kryterium „{{text}}”",
       "criterion_unchecked": "odznaczył(a) kryterium „{{text}}”",
       "agent_asked": "poprosił(a) o wykonanie: {{name}}"
-    }
+    },
+    "handedBy": "przekazane przez <0/>{{name}}",
+    "fromDm": "z <0>twojej rozmowy z {{name}}</0>",
+    "fromDmText": "z twojej rozmowy z {{name}}"
   },
   "routines": {
     "filters": "Filtruj rutyny",
@@ -11102,10 +11135,10 @@
       "copiesRemoved_few": "Usunięto {{count}} nieużywane logowania.",
       "copiesRemoved_many": "Usunięto {{count}} nieużywanych logowań.",
       "copiesRemoved_other": "Usunięto {{count}} nieużywanego logowania.",
-      "removeAllDone": "Usunięto {{n}} logowań Grok.",
-      "removeAllText": "Przestaną myśleć za swoje agenty na {{computers}}. Logowania innych osób zostają.",
-      "removeAllTitle": "Usunąć wszystkie {{n}} logowań Grok?",
       "removeAllGrok": "Usuń wszystkie logowania Grok",
+      "removeAllTitle": "Usunąć wszystkie {{n}} logowań Grok?",
+      "removeAllText": "Przestaną myśleć za swoje agenty na {{computers}}. Logowania innych osób zostają.",
+      "removeAllDone": "Usunięto {{n}} logowań Grok.",
       "disconnect": "Rozłącz",
       "renameTitle": "Zmień nazwę: {{label}}",
       "nameLabel": "Nazwa",
@@ -16446,6 +16479,7 @@
       "ui_automation_off": "Automatyzacja UI jest wyłączona",
       "xcode_missing": "Na Macu nie ma Xcode",
       "xcode_too_old": "Xcode jest za stary dla tej wersji iOS",
+      "ios_behind_xcode": "iOS tego iPhone'a jest starszy niż ten dla Xcode",
       "device_support": "Mac pobiera narzędzia dla iPhone'a",
       "helper_missing": "Pomocnik testowy nie jest jeszcze skonfigurowany",
       "helper_expired": "Pomocnik testowy wymaga odnowienia",
@@ -16474,6 +16508,7 @@
       "ui_automation_off": "Włącz automatyzację UI",
       "xcode_missing": "Zainstaluj Xcode",
       "xcode_too_old": "Zaktualizuj Xcode",
+      "ios_behind_xcode": "Zaktualizuj iPhone'a",
       "device_support": "Nie wyłączaj Maca",
       "helper_missing": "Otwórz aplikację na Macu",
       "helper_expired": "Otwórz aplikację na Macu",
@@ -16797,6 +16832,7 @@
       "helperText": "Mac go buduje i odnawia co 7 dni. Wystarczy bezpłatne konto Apple Account w Xcode.",
       "helperUntrustedText": "Stuknij nazwę dewelopera, a potem Zaufaj.",
       "teamLimitText": "Usuń z iPhone'a jedną własną aplikację: bezpłatne konto Apple Account pozwala na 3.",
+      "iosBehind": "Ten iPhone ma iOS {{ios}}, a Xcode na tym Macu jest dla iOS {{sdk}}. Zaktualizuj iPhone'a: Ustawienia › Ogólne › Uaktualnienia.",
       "xcodeOld": "{{name}} ma iOS {{version}}, a Xcode na {{mac}} zna najwyżej iOS {{sdk}}. Zainstaluj Xcode {{major}}, a potem uruchom to w Terminalu.",
       "xcodeOldAny": "{{name}} ma iOS {{version}}, nowszy niż zna Xcode na {{mac}}. Zainstaluj Xcode {{major}}, a potem uruchom to w Terminalu.",
       "uiRefusedText": "iPhone odrzucił stuknięcia pomocnika testowego. Odblokuj go i wpisz jego kod, jeśli poprosi. Jeśli to się powtarza, wyłącz i włącz Ustawienia › Deweloper › Włącz automatyzację UI.",
@@ -17559,11 +17595,11 @@
       "rolesPersonal": "Co może robić każda osoba tutaj. Właściciel może wszystko."
     },
     "about": {
-      "basedOn": "Oparte na <site>agentes.chat</site> od Codari Global, LLC",
+      "basedOn": "Oparte na <site>agentes.chat</site> od AGENTESCHAT, LLC",
       "version": "Wersja",
       "license": "Wolne oprogramowanie na licencji <license>GNU Affero General Public License v3</license>, bez gwarancji.",
       "source": "Kod źródłowy",
-      "copyright": "Copyright © 2026 Codari Global, LLC i współtwórcy"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC i współtwórcy"
     },
     "title": "Ustawienia",
     "account": {
@@ -18021,6 +18057,18 @@
       "see": "Zobacz użycie"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "Według rodzaju",
+      "handoffs": "Przekazania między agentami",
+      "people": "Rozmowy z ludźmi",
+      "routines": "Rutyny"
+    },
+    "hint": {
+      "handoffs": "Większość użycia w tym tygodniu pochodziła z agentów przekazujących sobie pracę. Długą pracę zlecaj bezpośrednio agentowi.",
+      "message": "Napisz do: {{name}}"
+    }
+  },
   "usageViews": {
     "signedOut": "Wylogowane",
     "whose": "Należy do: {{name}}",
@@ -18209,12 +18257,35 @@
       "failed": "Zablokowane · nie zakończono",
       "failedWhy": "Zablokowane · nie zakończono: {{why}}"
     },
-    "working": "W tle"
+    "working": "W tle",
+    "handed": {
+      "lead": "Przekazane: <0/>{{name}}",
+      "working": "w toku",
+      "done": "gotowe w {{duration}}",
+      "waitingYou": "czeka na twoją odpowiedź",
+      "waiting": "czeka na odpowiedź",
+      "waitingApprovalYou": "czeka na twoją zgodę",
+      "waitingApproval": "czeka na zgodę",
+      "waitingComputer": "czeka na komputer",
+      "paused": "wstrzymane na limicie planu",
+      "queued": "w kolejce",
+      "failed": "nie skończone",
+      "stopped": "zatrzymane",
+      "step": "krok {{current}} z {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
       "text": "ChatGPT odrzucił szybkość Szybka dla tego konta lub modelu, więc ta odpowiedź przyszła ze standardową szybkością.",
       "action": "Otwórz agenta"
+    },
+    "standIn": {
+      "needsComputer": "Odpowiedziałem przez {{via}}: {{plan}} potrzebuje komputera.",
+      "away": "Odpowiedziałem przez {{via}}: komputer z {{plan}} jest nieobecny.",
+      "notShared": "Odpowiedziałem przez {{via}}: {{plan}} służy tylko osobie, która go połączyła.",
+      "limit": "Odpowiedziałem przez {{via}}: {{plan}} osiągnął limit.",
+      "cant": "Odpowiedziałem przez {{via}}: {{plan}} nie może teraz myśleć.",
+      "change": "Zmień"
     },
     "modelStandIn": {
       "text": "{{plan}} odrzucił {{from}} z tym kluczem. Odpowiedziałem przez {{to}}, który z nim działa.",
@@ -18824,6 +18895,9 @@
       "interrupted": "Przerwane przez restart serwera. Poproś ponownie, żeby kontynuować.",
       "step_limit": "Skończył mi się limit kroków przed zakończeniem.",
       "stuck": "Praca utknęła i została przerwana przed zakończeniem."
+    },
+    "request": {
+      "asksYou": "{{name}} pyta cię"
     }
   },
   "builtinTools": {

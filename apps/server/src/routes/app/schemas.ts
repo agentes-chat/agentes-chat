@@ -692,7 +692,9 @@ export const WorkView = z
       .enum(["working", "waiting_approval", "waiting_input", "paused", "waiting_computer", "queued"])
       .nullable()
       .openapi({ description: "While live: what its run does now." }),
-    how: z.enum(["agent", "auto"]),
+    how: z.enum(["agent", "auto", "handed"]).openapi({
+      description: "`handed`: another agent handed it over; it reports where the person asked.",
+    }),
     anchorMessageId: z.uuid(),
     threadId: z.uuid().nullable().openapi({ description: "Where its updates are." }),
     homeThreadId: z.uuid().nullable().openapi({ description: "Where it was asked (its report goes there)." }),
@@ -719,6 +721,22 @@ export const WorkView = z
     canceledByUserId: z.string().nullable(),
     canceledByAgentId: z.string().nullable(),
     errorCode: z.string().nullable(),
+    handedBy: z
+      .object({ agentId: z.uuid(), consultationId: z.uuid() })
+      .nullable()
+      .openapi({ description: "Handed over by another agent: that agent and its hand-off." }),
+    askerRunId: z
+      .uuid()
+      .nullable()
+      .openapi({ description: "A handed work: the run that handed it; its line goes under that run's last message." }),
+    planStep: z
+      .object({ current: z.number(), total: z.number() })
+      .nullable()
+      .openapi({ description: "The first step of its plan not done, 1-based, never past the last." }),
+    result: z
+      .object({ text: z.string(), messageId: z.uuid() })
+      .nullable()
+      .openapi({ description: "Done: the first line of its report." }),
   })
   .openapi("WorkView");
 
@@ -845,6 +863,9 @@ const MessageBase = z.object({
   }),
   longWork: WorkView.optional().openapi({
     description: "A long work's anchor (`meta.longWork`, ADR 0121): its line; live via `agent.work`.",
+  }),
+  handedWorks: z.array(WorkView).optional().openapi({
+    description: "On a run's last message here: the works it handed over to other agents, each with its line.",
   }),
   createdAt: z.string(),
 });

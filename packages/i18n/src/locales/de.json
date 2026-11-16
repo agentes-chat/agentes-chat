@@ -2640,6 +2640,13 @@
   "rightHand": {
     "label": "deine rechte Hand",
     "labelCapitalized": "Deine rechte Hand",
+    "unusable": {
+      "title": "Kann gerade nicht für {{name}} denken",
+      "computerOnly": "Nur auf {{computer}} angemeldet. {{name}} denkt mit einem Plan, der als Konto angemeldet ist.",
+      "away": "Von {{owner}}, auf {{computer}}, der gerade nicht erreichbar ist.",
+      "awayYours": "Deiner, auf {{computer}}, der gerade nicht erreichbar ist.",
+      "connect": "Computer verbinden"
+    },
     "newDot": "Neu",
     "actsAsYou": "handelt mit deinen Berechtigungen",
     "composerHint": "nichts ändert sich ohne dich",
@@ -2745,6 +2752,7 @@
     "sharedName": "{{name}} (geteilt)",
     "sharedPlace": "Wird in Kanälen und bei Arbeit genutzt, die von selbst läuft. Der ganze Workspace teilt sich diesen Platz. Bewahre hier nichts Privates auf.",
     "computerNoHome": "Noch kein Computer. Es gibt einen, sobald dieser Workspace einen eigenen Computer hat.",
+    "computerNoHomeServer": "Noch kein Browser. Richte <guide>diesen Server als Computer der Agenten</guide> ein, damit er einen bekommt.",
     "addComputer": "Computer hinzufügen",
     "computerOneUser": "Hier kein Computer. Der Computer des Workspace führt alle Agenten als einen einzigen Benutzer aus und kann den Platz jeder Person nicht getrennt halten. Ein Linux-Server, der mit der Option --system des Installers eingerichtet wurde, kann das.",
     "powers": {
@@ -2912,6 +2920,16 @@
       "invite_people_sent_one": "Einladung an <b>{{emails}}</b> gesendet.",
       "invite_people_sent_other": "Einladungen an <b>{{emails}}</b> gesendet.",
       "remove_ai_key": "API-Schlüssel „{{name}}“ löschen."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Braucht einen Computer",
+        "computerOnly": "Von {{owner}}, nur auf {{computer}} angemeldet. Lodi denkt mit einem Plan, der als Konto angemeldet ist.",
+        "noComputer": "Von {{owner}}. Braucht einen Computer, und der Workspace hat keinen verbunden.",
+        "away": "Von {{owner}}, auf {{computer}}, der gerade weg ist.",
+        "connect": "Computer verbinden",
+        "plans": "Pläne ansehen"
+      }
     }
   },
   "teamWeek": {
@@ -3263,7 +3281,7 @@
       "gemini": {
         "title": "Dein Gemini-Abo",
         "tiers": "Google AI Pro, Google AI Ultra oder Gemini Enterprise",
-        "warning": "Google sagt, dass die Nutzung eines privaten Gemini-Abos in anderen Apps zur Sperrung des Kontos führen kann."
+        "warning": "Google sagt, dass die Nutzung eines privaten Gemini-Abos in anderen Apps zur Sperrung des Kontos führen kann. Um dieses Risiko zu vermeiden, nutze einen Gemini-API-Schlüssel oder Gemini Enterprise."
       },
       "zen": {
         "title": "OpenCode",
@@ -4207,6 +4225,7 @@
     "seeNewer": "Neuere Anfrage ansehen",
     "computerAway": "Der Computer von {{agent}} antwortet gerade nicht. Diese Anfrage bleibt bis {{time}} offen. Versuche es gleich noch einmal.",
     "computerPaused": "Der Computer von {{agent}} wurde von seinem Besitzer pausiert. Diese Anfrage bleibt bis {{time}} offen.",
+    "insecureContext": "Diese Seite ist nicht über https geöffnet, daher verschließt der Browser den Schlüssel nicht. Öffne sie unter https:// (oder localhost).",
     "failed": "Konnte es nicht übermitteln. Ist der Computer des Agenten eingeschaltet?",
     "changed": "Diese Anfrage hat sich geändert, während du geantwortet hast. Nichts wurde gesendet. Sende sie noch einmal.",
     "empty": "Gib den Wert ein.",
@@ -7714,7 +7733,8 @@
     "table": {
       "task": "Aufgabe",
       "github": "GitHub",
-      "sortBy": "Nach {{column}} sortieren"
+      "sortBy": "Nach {{column}} sortieren",
+      "resize": "Spalte {{column}} in der Breite ändern"
     },
     "fold": {
       "open": "{{name}} öffnen",
@@ -7798,6 +7818,7 @@
       "canceled": "#{{number}} ist wieder an ihrem Platz.",
       "assigned": "#{{number}} liegt jetzt bei {{name}}.",
       "unassigned": "#{{number}} ist jetzt niemandem zugewiesen.",
+      "removed": "#{{number}} liegt nicht mehr bei {{name}}.",
       "prioritized": "#{{number}} hat jetzt Priorität {{priority}}."
     },
     "canceledColumn": "Abgebrochen",
@@ -7920,7 +7941,10 @@
         "failed": "Die letzte Ausführung ist fehlgeschlagen.",
         "canceled": "Jemand hat die Ausführung gestoppt.",
         "budget": "Das Monatsbudget des Agenten ist aufgebraucht."
-      }
+      },
+      "finishedTitle": "{{name}} hat es erledigt",
+      "finishedMeta": "{{when}} · übergeben von {{name}}",
+      "answer": "Antworten"
     },
     "status": {
       "todo": "Zu erledigen",
@@ -7947,6 +7971,10 @@
       "high": "hoch"
     },
     "noAssignee": "Nicht zugewiesen",
+    "assignees": {
+      "people": "Personen und Agenten",
+      "done": "Fertig"
+    },
     "agentRole": "Agent · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -8086,7 +8114,9 @@
       "status_changed": "hat den Status auf {{status}} geändert",
       "priority_changed": "hat die Priorität auf {{priority}} geändert",
       "assigned": "hat die Aufgabe zugewiesen",
-      "unassigned": "hat die Zuständigkeit entfernt",
+      "unassigned": "hat eine zuständige Person entfernt",
+      "assigned_named": "hat die Aufgabe {{name}} zugewiesen",
+      "unassigned_named": "hat {{name}} von der Aufgabe entfernt",
       "due_date_set": "hat das Fälligkeitsdatum auf {{date}} gesetzt",
       "due_date_removed": "hat das Fälligkeitsdatum entfernt",
       "pr_linked": "hat PR #{{number}} verknüpft",
@@ -8100,7 +8130,10 @@
       "criterion_checked": "hat das Kriterium „{{text}}“ abgehakt",
       "criterion_unchecked": "hat das Kriterium „{{text}}“ wieder geöffnet",
       "agent_asked": "hat {{name}} gebeten, sie zu erledigen"
-    }
+    },
+    "handedBy": "übergeben von <0/>{{name}}",
+    "fromDm": "aus <0>deiner DM mit {{name}}</0>",
+    "fromDmText": "aus deiner DM mit {{name}}"
   },
   "routines": {
     "filters": "Routinen filtern",
@@ -10348,10 +10381,10 @@
       "removeCopies": "Entfernen",
       "copiesRemoved_one": "{{count}} ungenutzte Anmeldung entfernt.",
       "copiesRemoved_other": "{{count}} ungenutzte Anmeldungen entfernt.",
-      "removeAllDone": "{{n}} Grok-Anmeldungen entfernt.",
-      "removeAllText": "Sie denken dann für ihre Agenten auf {{computers}} nicht mehr mit. Anmeldungen anderer Personen bleiben unangetastet.",
-      "removeAllTitle": "Alle {{n}} Grok-Anmeldungen entfernen?",
       "removeAllGrok": "Alle Grok-Anmeldungen entfernen",
+      "removeAllTitle": "Alle {{n}} Grok-Anmeldungen entfernen?",
+      "removeAllText": "Sie denken dann für ihre Agenten auf {{computers}} nicht mehr mit. Anmeldungen anderer Personen bleiben unangetastet.",
+      "removeAllDone": "{{n}} Grok-Anmeldungen entfernt.",
       "disconnect": "Trennen",
       "renameTitle": "{{label}} umbenennen",
       "nameLabel": "Name",
@@ -15425,6 +15458,7 @@
       "ui_automation_off": "Die UI-Automatisierung ist aus",
       "xcode_missing": "Xcode ist auf dem Mac nicht installiert",
       "xcode_too_old": "Xcode ist zu alt für dieses iOS",
+      "ios_behind_xcode": "Das iOS dieses iPhones ist älter als das von Xcode",
       "device_support": "Der Mac lädt die iPhone-Tools",
       "helper_missing": "Die Test-App ist noch nicht eingerichtet",
       "helper_expired": "Die Test-App muss erneuert werden",
@@ -15453,6 +15487,7 @@
       "ui_automation_off": "Schalte die UI-Automatisierung ein",
       "xcode_missing": "Installiere Xcode",
       "xcode_too_old": "Aktualisiere Xcode",
+      "ios_behind_xcode": "iPhone aktualisieren",
       "device_support": "Lass den Mac eingeschaltet",
       "helper_missing": "Öffne die App auf dem Mac",
       "helper_expired": "Öffne die App auf dem Mac",
@@ -15772,6 +15807,7 @@
       "helperText": "Wird vom Mac erstellt und alle 7 Tage erneuert. Ein kostenloser Apple Account in Xcode reicht.",
       "helperUntrustedText": "Tippe auf den Namen des Entwicklers und dann auf Vertrauen.",
       "teamLimitText": "Entferne eine selbst erstellte App vom iPhone: Ein kostenloser Apple Account erlaubt 3.",
+      "iosBehind": "Dieses iPhone hat iOS {{ios}} und Xcode auf diesem Mac ist für iOS {{sdk}}. Aktualisiere das iPhone: Einstellungen › Allgemein › Softwareupdate.",
       "xcodeOld": "{{name}} läuft mit iOS {{version}}, Xcode auf {{mac}} kennt höchstens iOS {{sdk}}. Installiere Xcode {{major}} und führe dann das hier im Terminal aus.",
       "xcodeOldAny": "{{name}} läuft mit iOS {{version}}, neuer als Xcode auf {{mac}} kennt. Installiere Xcode {{major}} und führe dann das hier im Terminal aus.",
       "uiRefusedText": "Das iPhone hat die Eingaben der Test-App abgelehnt. Entsperre es und gib seinen Code ein, wenn es danach fragt. Passiert es wieder, schalte Einstellungen › Entwickler › UI-Automatisierung aktivieren aus und wieder ein.",
@@ -16505,11 +16541,11 @@
       "rolesPersonal": "Was jede Person hier tun kann. Inhaber können alles."
     },
     "about": {
-      "basedOn": "Basiert auf <site>agentes.chat</site> von Codari Global, LLC",
+      "basedOn": "Basiert auf <site>agentes.chat</site> von AGENTESCHAT, LLC",
       "version": "Version",
       "license": "Freie Software unter der <license>GNU Affero General Public License v3</license>, ohne Gewährleistung.",
       "source": "Quellcode",
-      "copyright": "Copyright © 2026 Codari Global, LLC und Mitwirkende"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC und Mitwirkende"
     },
     "title": "Einstellungen",
     "account": {
@@ -16947,6 +16983,18 @@
       "see": "Nutzung ansehen"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "Nach Art",
+      "handoffs": "Übergaben zwischen Agenten",
+      "people": "Gespräche mit Menschen",
+      "routines": "Routinen"
+    },
+    "hint": {
+      "handoffs": "Der Großteil der Nutzung dieser Woche kam von Agenten, die einander Arbeit übergeben. Für lange Aufgaben frag den Agenten direkt.",
+      "message": "{{name}} schreiben"
+    }
+  },
   "usageViews": {
     "signedOut": "Abgemeldet",
     "whose": "von {{name}}",
@@ -17129,12 +17177,35 @@
       "failed": "Blockiert · nicht fertig geworden",
       "failedWhy": "Blockiert · nicht fertig geworden: {{why}}"
     },
-    "working": "Im Hintergrund"
+    "working": "Im Hintergrund",
+    "handed": {
+      "lead": "Übergeben an <0/>{{name}}",
+      "working": "arbeitet daran",
+      "done": "fertig in {{duration}}",
+      "waitingYou": "wartet auf deine Antwort",
+      "waiting": "wartet auf eine Antwort",
+      "waitingApprovalYou": "wartet auf deine Freigabe",
+      "waitingApproval": "wartet auf Freigabe",
+      "waitingComputer": "wartet auf den Computer",
+      "paused": "pausiert am Limit des Plans",
+      "queued": "in der Warteschlange",
+      "failed": "nicht fertig geworden",
+      "stopped": "gestoppt",
+      "step": "Schritt {{current}} von {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
       "text": "ChatGPT hat die schnelle Geschwindigkeit für dieses Konto oder Modell abgelehnt. Diese Antwort kam deshalb in Standardgeschwindigkeit.",
       "action": "Agent öffnen"
+    },
+    "standIn": {
+      "needsComputer": "Mit {{via}} geantwortet: {{plan}} braucht einen Computer.",
+      "away": "Mit {{via}} geantwortet: Der Computer von {{plan}} ist nicht erreichbar.",
+      "notShared": "Mit {{via}} geantwortet: {{plan}} ist nur für die Person, die ihn verbunden hat.",
+      "limit": "Mit {{via}} geantwortet: {{plan}} hat sein Limit erreicht.",
+      "cant": "Mit {{via}} geantwortet: {{plan}} kann gerade nicht denken.",
+      "change": "Ändern"
     },
     "modelStandIn": {
       "text": "{{plan}} hat {{from}} mit diesem Schlüssel abgelehnt. Ich habe mit {{to}} geantwortet, das damit funktioniert.",
@@ -17716,6 +17787,9 @@
       "interrupted": "Durch einen Neustart des Servers unterbrochen. Frag noch einmal, um weiterzumachen.",
       "step_limit": "Mir sind die Schritte ausgegangen, bevor ich fertig war.",
       "stuck": "Ich bin hängen geblieben und habe aufgehört, bevor ich fertig war."
+    },
+    "request": {
+      "asksYou": "{{name}} fragt dich"
     }
   },
   "builtinTools": {

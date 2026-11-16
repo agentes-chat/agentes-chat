@@ -3142,6 +3142,54 @@ test("a CLI whose sandbox can't start fails the run at once with that cause, whe
   }
 });
 
+test("a sign-in that never answered fails at once on its CLI's own error, noted on it; one that answered before waits it out", async () => {
+  const said = "Grok Build exited with code 1: error: unexpected response from the model endpoint";
+  for (const worked of [false, true]) {
+    if (worked) await f.close();
+    f = await setup();
+    const machineId = await computerAgent(f, { brainFallback: false });
+    const account = crypto.randomUUID();
+    await f.db.insert(schema.machineAccounts).values({
+      id: account,
+      orgId: f.org.id,
+      machineId,
+      kind: "claude_code",
+      label: "Work",
+      status: "active",
+      createdBy: f.owner.id,
+      ...(worked ? { lastUsedAt: new Date(), lastSuccessAt: new Date() } : {}),
+    });
+    await f.db.update(schema.agents).set({ brainAccountId: account }).where(eq(schema.agents.id, f.agent.id));
+    const { brain, seen } = scriptedComputerBrain(() => [
+      { type: "error", code: "grok_failed", message: said, retryable: true },
+    ]);
+    const handlers = createJobHandlers({
+      ...f.jobDeps,
+      brains: { claude_code: () => brain },
+      machines: { status: async (id) => statusOf(id, { protocol: ACCOUNTS_PROTOCOL }) },
+    });
+    await post(f, "@dev roda os testes");
+    await drainOutbox(f.db, handlers);
+    await runJobsDue(f);
+    await drainOutbox(f.db, handlers);
+
+    const [run] = await f.db.select().from(schema.agentRuns);
+    const [row] = await f.db.select().from(schema.machineAccounts).where(eq(schema.machineAccounts.id, account));
+    if (worked) {
+      expect(seen.length).toBe(2);
+      expect(run?.status).toBe("running");
+      expect(row?.lastFailureCause).toBeNull();
+    } else {
+      expect(seen.length).toBe(1);
+      expect([run?.status, run?.error]).toEqual([
+        "failed",
+        "cli_failed: Grok Build: unexpected response from the model endpoint",
+      ]);
+      expect([row?.lastFailureCause, Boolean(row?.lastFailureAt)]).toEqual(["unknown", true]);
+    }
+  }
+});
+
 test("woken before its resume, a run parked on its CLI's failure keeps one resume; a sign-in that never answered isn't woken by its computer", async () => {
   f = await setup();
   const machineId = await computerAgent(f, { brainFallback: false });
@@ -3287,7 +3335,8 @@ test("a short line before a bridged approval is never posted: the card says it",
   expect((await timeline(f)).some((m) => m.body.includes("Vou pedir"))).toBe(false);
 });
 
-test("a long line said before a bridged approval goes right after its card, below what came meanwhile", async () => {
+/** A computer brain that writes a long line, asks for the merge's approval and says the line again; `post` writes first. */
+async function bridgedMergeWithLine(meanwhile: "before" | "after") {
   const gh = fakeGithub();
   f = await setup({ toolSources: [gh.source] });
   await grantScopes(f.db, f.org.id, f.agent.id, ALL_GITHUB_SCOPES);
@@ -3299,9 +3348,9 @@ test("a long line said before a bridged approval goes right after its card, belo
       return;
     }
     yield { type: "text_delta", text: said };
-    // Someone writes while it writes, before it asks.
+    // Someone writes while it writes: before it asks, or once its card is up.
     await Bun.sleep(5);
-    await post(f, "manda ver");
+    if (meanwhile === "before") await post(f, "manda ver");
     await Bun.sleep(5);
     const id = { orgId: turn.orgId, agentId: turn.agentId, runId: turn.runId, machineId };
     await executeToolForRun(f.jobDeps, id, {
@@ -3309,6 +3358,7 @@ test("a long line said before a bridged approval goes right after its card, belo
       name: "github_merge_pr",
       input: { repo: "acme/app", pr: 42, why: "CI passed on the PR and it was reviewed: merging ships the fix." },
     });
+    if (meanwhile === "after") await post(f, "manda ver");
     yield { type: "done", text: said };
   });
   const handlers = createJobHandlers({
@@ -3319,16 +3369,28 @@ test("a long line said before a bridged approval goes right after its card, belo
   const events = f.listen(f.general.id);
   await post(f, "@dev faz o merge do PR 42");
   await drainOutbox(f.db, handlers);
-
   expect(events.some((e) => e.type === "agent.typing")).toBe(true);
   const main = await timeline(f);
-  const meanwhile = main.findIndex((m) => m.body === "manda ver");
-  const card = main.findIndex((m) => typeof m.meta.approvalId === "string");
-  const lead = main.findIndex((m) => m.body.startsWith("Revisei o PR 42"));
+  return {
+    meanwhile: main.findIndex((m) => m.body === "manda ver"),
+    card: main.findIndex((m) => typeof m.meta.approvalId === "string"),
+    lead: main.findIndex((m) => m.body.startsWith("Revisei o PR 42")),
+  };
+}
+
+test("a long line said with a bridged approval reads right before its card, below what came meanwhile", async () => {
+  const { meanwhile, card, lead } = await bridgedMergeWithLine("before");
   expect(meanwhile).toBeGreaterThan(0);
-  // The bridge posted the card when it asked: what the agent said reads right after it.
-  expect(card).toBeGreaterThan(meanwhile);
-  expect(lead).toBe(card + 1);
+  // The bridge posted the card when it asked; what the agent said about it goes just before it, so it reads first.
+  expect(lead).toBeGreaterThan(meanwhile);
+  expect(card).toBe(lead + 1);
+});
+
+test("a long line said with a bridged approval goes after its card when someone wrote after the card", async () => {
+  const { meanwhile, card, lead } = await bridgedMergeWithLine("after");
+  // A reply takes no place before what people sent while it worked (ADR 0010).
+  expect(meanwhile).toBeGreaterThan(card);
+  expect(lead).toBeGreaterThan(meanwhile);
 });
 
 test("stopped between calls: the stopped reply keeps the stretch it was on, never the working text before a call", async () => {

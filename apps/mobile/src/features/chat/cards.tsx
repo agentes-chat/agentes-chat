@@ -722,7 +722,7 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
  * answered, the same card with the answer where the choices were. Anyone in the conversation may answer, unless it is for one person: then
  * everyone else reads who it waits for, and nothing to press.
  */
-export function QuestionCard({ question }: { question: AgentQuestion }) {
+export function QuestionCard({ question, asker }: { question: AgentQuestion; asker?: string }) {
   const { t, i18n } = useTranslation();
   const api = useApi();
   const orgId = useOrgId();
@@ -829,6 +829,7 @@ export function QuestionCard({ question }: { question: AgentQuestion }) {
       id={q.id}
       kind="question"
       agentId={q.agentId}
+      asker={asker}
       waitsFor="you"
       lead={q.text}
       foot={

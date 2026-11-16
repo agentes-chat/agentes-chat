@@ -1,6 +1,6 @@
 import type { Issue, IssueColumn, IssueConversationRef, IssueStatus, IssueWork } from "@agenteschat/client";
 import { toYmd } from "@agenteschat/client/lib/format";
-import { BOARD, isOpen, STATUSES } from "@agenteschat/client/lib/issues";
+import { BOARD, isAssignee, isOpen, STATUSES } from "@agenteschat/client/lib/issues";
 import { foldSteps, stepPhrase } from "@agenteschat/client/lib/work";
 import type { TFunction } from "i18next";
 import { chatHref } from "../links/logic";
@@ -46,7 +46,7 @@ export const waitsOnYou = (i: Pick<Issue, "status" | "work">) => issueState(i) =
 export type IssueFilter = "open" | "mine" | "agents" | "done";
 
 export function passesFilter(
-  i: Pick<Issue, "status" | "work" | "assignee">,
+  i: Pick<Issue, "status" | "work" | "assignees">,
   filter: IssueFilter,
   meId: string | null,
 ): boolean {
@@ -54,9 +54,9 @@ export function passesFilter(
     case "open":
       return isOpen(i);
     case "mine":
-      return isOpen(i) && ((i.assignee?.type === "person" && meId !== null && i.assignee.id === meId) || waitsOnYou(i));
+      return isOpen(i) && ((meId !== null && isAssignee(i, "person", meId)) || waitsOnYou(i));
     case "agents":
-      return isOpen(i) && i.assignee?.type === "agent";
+      return isOpen(i) && i.assignees.some((a) => a.type === "agent");
     case "done":
       return !isOpen(i);
   }

@@ -1888,6 +1888,7 @@ export const featureKeysEn = {
       ui_automation_off: "UI Automation is off",
       xcode_missing: "The Mac needs Xcode",
       xcode_too_old: "Xcode is too old for this iPhone",
+      ios_behind_xcode: "Update this iPhone's iOS",
       device_support: "The Mac is preparing this iPhone",
       helper_missing: "The test helper isn't set up yet",
       helper_expired: "The test helper needs renewing",

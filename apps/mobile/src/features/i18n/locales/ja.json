@@ -1706,6 +1706,7 @@
       "ui_automation_off": "UIオートメーションがオフです",
       "xcode_missing": "MacにXcodeが必要です",
       "xcode_too_old": "このiPhoneにはXcodeが古すぎます",
+      "ios_behind_xcode": "この iPhone の iOS をアップデート",
       "device_support": "MacがこのiPhoneを準備しています",
       "helper_missing": "テストヘルパーがまだ設定されていません",
       "helper_expired": "テストヘルパーの更新が必要です",

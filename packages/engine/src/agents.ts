@@ -665,6 +665,9 @@ export async function archiveAgent(
     // What waits on its plan or budget won't run: its notes say so now. Loaded here: the usage pause loads agents.
     const { stopAgentUsageWaits } = await import("./usage-pause");
     await stopAgentUsageWaits({ db, pubsub }, orgId, agentId).catch(() => null);
+    // It leaves every task it was on (ADR 0188): an archived agent answers no task's conversation and starts no work.
+    const { unassignGone } = await import("./issues");
+    await unassignGone({ db, pubsub }, orgId, { type: "agent", id: agentId }).catch(() => null);
   }
   caches.agents.delete(`${orgId}:${agentId}`);
   caches.agents.delete(`${orgId}:team`);

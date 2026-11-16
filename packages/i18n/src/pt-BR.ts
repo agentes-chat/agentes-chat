@@ -2710,8 +2710,27 @@ export const ptBR = {
    * dos admins (`{{name}}`); "Lodi" só por padrão.
    */
   rightHand: {
+    brain: {
+      unusable: {
+        title: "Precisa de um computador",
+        computerOnly: "De {{owner}}, conectado só em {{computer}}. O Lodi pensa com um plano conectado como conta.",
+        noComputer: "De {{owner}}. Precisa de um computador, e o workspace não tem nenhum conectado.",
+        away: "De {{owner}}, em {{computer}}, que está ausente.",
+        connect: "Conectar um computador",
+        plans: "Ver planos",
+      },
+    },
     label: "seu braço direito",
     labelCapitalized: "Seu braço direito",
+    unusable: {
+      title: "Não pensa pelo {{name}} agora",
+      title_female: "Não pensa pela {{name}} agora",
+      computerOnly: "Conectado só em {{computer}}. O {{name}} pensa com um plano conectado como conta.",
+      computerOnly_female: "Conectado só em {{computer}}. A {{name}} pensa com um plano conectado como conta.",
+      away: "De {{owner}}, em {{computer}}, que está ausente.",
+      awayYours: "Seu, em {{computer}}, que está ausente.",
+      connect: "Conectar um computador",
+    },
     newDot: "Novo",
     actsAsYou: "age com as suas permissões",
     composerHint: "nada muda sem você",
@@ -2853,6 +2872,9 @@ export const ptBR = {
       "Usado em canais e em trabalhos que rodam sozinhos. Todo o workspace compartilha este espaço. Não guarde nada privado aqui.",
     /** The row where it has none for anyone: the workspace has no computer of its own. */
     computerNoHome: "Ainda sem computador. Passa a ter um quando este workspace tiver um computador próprio.",
+    /** The same row on a self-hosted server: this server made the agents' computer gives it one. `guide`: the setup guide. */
+    computerNoHomeServer:
+      "Ainda sem navegador. Configure <guide>este servidor como o computador dos agentes</guide> para ele ter um.",
     addComputer: "Adicionar um computador",
     /** The row where the workspace's computer runs every agent as one OS user. */
     computerOneUser:
@@ -3443,7 +3465,8 @@ export const ptBR = {
       gemini: {
         title: "Seu plano do Gemini",
         tiers: "Google AI Pro, Google AI Ultra ou Gemini Enterprise",
-        warning: "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta.",
+        warning:
+          "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta. Para não correr esse risco, use uma chave de API do Gemini ou o Gemini Enterprise.",
       },
       zen: { title: "OpenCode", tiers: "Modelos grátis, ou a sua chave do OpenCode" },
       zai: { tiers: "Lite, Pro ou Max" },
@@ -4436,6 +4459,8 @@ export const ptBR = {
     computerAway:
       "O computador de {{agent}} não está respondendo agora. O pedido continua aberto até {{time}}. Tente de novo em instantes.",
     computerPaused: "O dono pausou o computador de {{agent}}. O pedido continua aberto até {{time}}.",
+    insecureContext:
+      "Esta página não está aberta em https, então o navegador não tranca a chave. Abra pelo endereço https:// (ou localhost).",
     failed: "Não deu para entregar. O computador do agente está ligado?",
     changed: "Este pedido mudou enquanto você respondia. Nada foi enviado. Envie de novo.",
     empty: "Digite o valor.",
@@ -8107,6 +8132,9 @@ export const ptBR = {
     },
   },
   issues: {
+    handedBy: "passada por <0/>{{name}}",
+    fromDm: "da <0>sua DM com {{name}}</0>",
+    fromDmText: "da sua DM com {{name}}",
     delete: {
       action: "Excluir tarefa",
       title: "Excluir a tarefa #{{number}}?",
@@ -8120,7 +8148,12 @@ export const ptBR = {
     assigneeFilter: "Responsável",
     priorityFilter: "Prioridade",
     labelFilter: "Rótulo",
-    table: { task: "Tarefa", github: "GitHub", sortBy: "Ordenar por {{column}}" },
+    table: {
+      task: "Tarefa",
+      github: "GitHub",
+      sortBy: "Ordenar por {{column}}",
+      resize: "Redimensionar a coluna {{column}}",
+    },
     fold: { open: "Abrir {{name}}", close: "Recolher {{name}}", column: "Recolher coluna" },
     title: "Tarefas",
     summary: "{{open}} em aberto · {{agents}} com agentes",
@@ -8186,6 +8219,8 @@ export const ptBR = {
       canceled: "A #{{number}} voltou para o lugar.",
       assigned: "#{{number}} agora está com {{name}}.",
       unassigned: "#{{number}} ficou sem responsável.",
+      /** Dragged off one of several who have it: the others still do. */
+      removed: "#{{number}} não está mais com {{name}}.",
       prioritized: "#{{number}} agora tem prioridade {{priority}}.",
     },
     canceledColumn: "Canceladas",
@@ -8291,6 +8326,9 @@ export const ptBR = {
       stoppedOn: "Parou em {{date}}",
     },
     work: {
+      finishedTitle: "{{name}} terminou",
+      finishedMeta: "{{when}} · passada por {{name}}",
+      answer: "Responder",
       label: "Trabalho do {{name}}",
       label_female: "Trabalho da {{name}}",
       runningTitle: "O {{name}} está trabalhando nisso",
@@ -8334,6 +8372,8 @@ export const ptBR = {
     priority: { low: "Baixa", normal: "Normal", high: "Alta" },
     priorityLower: { low: "baixa", normal: "normal", high: "alta" },
     noAssignee: "Sem responsável",
+    /** The dialog that picks who has a task: the list's name over it, and the button that closes it. */
+    assignees: { people: "Pessoas e agentes", done: "Pronto" },
     agentRole: "Agente · {{role}}",
     pr: "PR #{{number}}",
     open: "#{{number}} {{title}}",
@@ -8477,7 +8517,10 @@ export const ptBR = {
       status_changed: "mudou o status para {{status}}",
       priority_changed: "mudou a prioridade para {{priority}}",
       assigned: "atribuiu a tarefa",
-      unassigned: "removeu o responsável",
+      unassigned: "removeu um responsável",
+      /** With who it was (`name`), when the event says. */
+      assigned_named: "atribuiu a tarefa a {{name}}",
+      unassigned_named: "tirou {{name}} da tarefa",
       due_date_set: "definiu o prazo para {{date}}",
       due_date_removed: "removeu o prazo",
       pr_linked: "ligou o PR #{{number}}",
@@ -15611,6 +15654,7 @@ export const ptBR = {
       ui_automation_off: "A Automação de UI está desligada",
       xcode_missing: "O Xcode não está instalado no Mac",
       xcode_too_old: "O Xcode é antigo demais para este iOS",
+      ios_behind_xcode: "O iOS deste iPhone é mais antigo que o do Xcode",
       device_support: "O Mac está baixando as ferramentas do iPhone",
       helper_missing: "O assistente de testes ainda não foi preparado",
       helper_expired: "O assistente de testes precisa ser renovado",
@@ -15639,6 +15683,7 @@ export const ptBR = {
       ui_automation_off: "Ative a Automação de UI",
       xcode_missing: "Instale o Xcode",
       xcode_too_old: "Atualize o Xcode",
+      ios_behind_xcode: "Atualize o iPhone",
       device_support: "Deixe o Mac ligado",
       helper_missing: "Abra o app no Mac",
       helper_expired: "Abra o app no Mac",
@@ -15980,6 +16025,8 @@ export const ptBR = {
       helperText: "Criado e renovado pelo Mac a cada 7 dias. Uma Conta Apple gratuita no Xcode basta.",
       helperUntrustedText: "Toque no nome do desenvolvedor e em Confiar.",
       teamLimitText: "Remova do iPhone um app que você mesmo criou: a Conta Apple gratuita permite 3.",
+      iosBehind:
+        "Este iPhone está no iOS {{ios}} e o Xcode deste Mac é para o iOS {{sdk}}. Atualize o iPhone: Ajustes › Geral › Atualização de Software.",
       xcodeOld:
         "{{name}} usa o iOS {{version}} e o Xcode em {{mac}} conhece no máximo o iOS {{sdk}}. Instale o Xcode {{major}} e rode isto no Terminal.",
       xcodeOldAny:
@@ -16733,11 +16780,11 @@ export const ptBR = {
       rolesPersonal: "O que cada pessoa daqui pode fazer. Quem é dono pode tudo.",
     },
     about: {
-      basedOn: "Baseado no <site>agentes.chat</site> da Codari Global, LLC",
+      basedOn: "Baseado no <site>agentes.chat</site> da AGENTESCHAT, LLC",
       version: "Versão",
       license: "Software livre sob a <license>GNU Affero General Public License v3</license>, sem garantia.",
       source: "Código-fonte",
-      copyright: "Copyright © 2026 Codari Global, LLC e colaboradores",
+      copyright: "Copyright © 2026 AGENTESCHAT, LLC e colaboradores",
     },
     title: "Configurações",
     account: {
@@ -17157,6 +17204,19 @@ export const ptBR = {
     },
     actions: { raise: "Aumentar para {{amount}} este mês", refuse: "Recusar", see: "Ver o uso" },
   },
+  usage: {
+    kinds: {
+      label: "Por tipo",
+      handoffs: "Repasses entre agentes",
+      people: "Conversas com pessoas",
+      routines: "Rotinas",
+    },
+    hint: {
+      handoffs:
+        "A maior parte do uso desta semana veio de agentes passando trabalho uns aos outros. Para trabalhos longos, peça direto ao agente.",
+      message: "Mandar mensagem para {{name}}",
+    },
+  },
   usageViews: {
     signedOut: "Saiu da conta",
     whose: "de {{name}}",
@@ -17276,6 +17336,21 @@ export const ptBR = {
     tomorrowAt: "amanhã {{time}}",
   },
   work: {
+    handed: {
+      lead: "Passado para <0/>{{name}}",
+      working: "trabalhando nisso",
+      done: "pronto em {{duration}}",
+      waitingYou: "esperando sua resposta",
+      waiting: "esperando uma resposta",
+      waitingApprovalYou: "esperando sua aprovação",
+      waitingApproval: "esperando aprovação",
+      waitingComputer: "esperando o computador",
+      paused: "pausado no limite do plano",
+      queued: "na fila",
+      failed: "não terminou",
+      stopped: "parado",
+      step: "etapa {{current}} de {{total}}",
+    },
     duration: {
       minutes_one: "{{count}} min",
       minutes_other: "{{count}} min",
@@ -17364,10 +17439,19 @@ export const ptBR = {
     working: "Em segundo plano",
   },
   chat: {
+    request: { asksYou: "{{name}} pergunta a você" },
     /** Under a reply that came at standard speed because Fast was refused (`meta.speedFallback`, ADR 0149). */
     speedFallback: {
       text: "O ChatGPT recusou a velocidade Rápida nesta conta ou neste modelo, então esta resposta veio no padrão.",
       action: "Abrir agente",
+    },
+    standIn: {
+      needsComputer: "Respondi com {{via}}: {{plan}} precisa de um computador.",
+      away: "Respondi com {{via}}: o computador do {{plan}} está ausente.",
+      notShared: "Respondi com {{via}}: {{plan}} atende só quem o conectou.",
+      limit: "Respondi com {{via}}: {{plan}} chegou ao limite.",
+      cant: "Respondi com {{via}}: {{plan}} não consegue pensar agora.",
+      change: "Trocar",
     },
     /** Under a reply "Automático" gave with another model because the plan refused the one it maps to (`meta.modelStandIn`). */
     modelStandIn: {

@@ -1495,7 +1495,7 @@ function unreadReplySql(orgId: string, userId: string, root: SQL, joinedAt: SQL)
     and (ur.author_user_id is null or ur.author_user_id <> ${userId})
     and not ${quietNoticeSql(sql`ur.meta`)} and ur.meta->>'mediaAfter' is null
     and ${landedAfterSql({ createdAt: sql`ur.created_at`, id: sql`ur.id` }, sql`greatest(${joinedAt}, ${threadReadAtSql(userId, root)})`)}
-    and not exists (select 1 from ${threads} mt where mt.root_message_id = ${root}
+    and not exists (select 1 from ${threads} mt where mt.org_id = ${orgId}::uuid and mt.root_message_id = ${root}
       and ur.id = any(mt.context_moved_message_ids))`;
 }
 

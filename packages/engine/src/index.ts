@@ -158,6 +158,7 @@ export * from "./id-refs";
 export * from "./imports";
 export * from "./invite-choices";
 export * from "./invite-requests";
+export * from "./issue-assignees";
 export * from "./issue-columns";
 export * from "./issue-deletion";
 export * from "./issue-projects";

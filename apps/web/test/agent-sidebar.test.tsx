@@ -338,7 +338,7 @@ describe("what the viewer sees", () => {
       prepare: async (api) => {
         await api.issues.create(ORG_ID, {
           title: "Relatório de faltas",
-          assignee: { type: "agent", id: ADA_ID },
+          assignees: [{ type: "agent", id: ADA_ID }],
         } as never);
       },
     });

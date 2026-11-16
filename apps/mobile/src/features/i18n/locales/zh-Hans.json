@@ -1706,6 +1706,7 @@
       "ui_automation_off": "UI 自动化已关闭",
       "xcode_missing": "Mac 需要安装 Xcode",
       "xcode_too_old": "Xcode 版本太旧，不支持这台 iPhone",
+      "ios_behind_xcode": "更新此 iPhone 的 iOS",
       "device_support": "Mac 正在为这台 iPhone 做准备",
       "helper_missing": "测试助手还没有设置好",
       "helper_expired": "测试助手需要续期",

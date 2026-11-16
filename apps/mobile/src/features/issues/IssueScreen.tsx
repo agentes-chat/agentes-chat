@@ -9,6 +9,7 @@ import {
   useAiStatus,
   useApi,
   useChannels,
+  useDms,
   useIssue,
   useIssueAction,
   useIssueColumns,
@@ -20,6 +21,7 @@ import { githubLinkLabel, isGithubLink } from "@agenteschat/client/lib/github-li
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { webUrl } from "@agenteschat/client/lib/guards";
 import {
+  assigneeNames,
   canDeleteIssue,
   conversationLine,
   deleteIssueText,
@@ -30,6 +32,7 @@ import {
 import { aiStateOf } from "@agenteschat/client/lib/no-ai";
 import { shownSteps } from "@agenteschat/client/lib/work";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -97,7 +100,7 @@ import {
   taskConversationHref,
   workLines,
 } from "./logic";
-import { GithubChip, ProjectDot, PropChip, useColumnLabel, useProjectItems, useStepText } from "./parts";
+import { AssigneeFace, GithubChip, ProjectDot, PropChip, useColumnLabel, useProjectItems, useStepText } from "./parts";
 import { useStartAgent } from "./useStartAgent";
 
 /**
@@ -276,18 +279,28 @@ function ConversationRow({ issue, onOpen }: { issue: Issue; onOpen: () => void }
  */
 function Head({ issue: i }: { issue: Issue }) {
   const { t, i18n } = useTranslation();
+  const c = useColors();
   const dir = useDirectory();
   const orgId = useOrgId();
   const channels = useChannels(orgId);
   const channel = i.channelId ? channels.data?.find((x) => x.id === i.channelId) : undefined;
+  // Handed from a DM with an agent: that DM, for whoever reads it.
+  const dms = useDms(orgId);
+  const source = i.source;
+  const dm =
+    source.type === "agent"
+      ? dms.data?.find((d) => d.channelId === source.channelId && d.with.type === "agent")
+      : undefined;
   const from =
     i.source.type === "message"
       ? t("mobile.issues.fromMessage")
-      : i.source.type === "agent"
-        ? t("mobile.issues.fromAgent")
-        : i.source.type === "webhook"
-          ? t("mobile.issues.fromWebhook", { provider: i.source.provider })
-          : null;
+      : dm
+        ? t("issues.fromDmText", { name: dm.with.name })
+        : i.source.type === "agent"
+          ? t("mobile.issues.fromAgent")
+          : i.source.type === "webhook"
+            ? t("mobile.issues.fromWebhook", { provider: i.source.provider })
+            : null;
   const creator = dir.nameOf(i.createdBy);
   // It starts the line now, under the title.
   const line = capitalize(
@@ -299,7 +312,6 @@ function Head({ issue: i }: { issue: Issue }) {
       .join(" · "),
     i18n.language,
   );
-  const assignee = i.assignee;
   const whoSees = useWhoSeesLabel();
   const pickers = useIssuePickers(i);
   const audience = i.audience ?? { mode: "everyone" as const };
@@ -331,8 +343,12 @@ function Head({ issue: i }: { issue: Issue }) {
         />
         <PropChip
           label={t("issues.form.assignee")}
-          value={assignee ? dir.nameOf(assignee) : t("issues.noAssignee")}
-          {...(assignee ? { leading: <Face who={assignee} size={20} live={false} /> } : { icon: "person" as const })}
+          value={whoText(t, dir, i) ?? t("issues.noAssignee")}
+          {...(i.assignees.length > 1
+            ? { leading: <AssigneeFace issue={{ assignees: i.assignees }} size={24} live={false} ring={c.sunken} /> }
+            : i.assignees[0]
+              ? { leading: <Face who={i.assignees[0]} size={20} live={false} /> }
+              : { icon: "person" as const })}
           onPress={pickers.pickAssignee}
         />
         <PropChip
@@ -458,10 +474,10 @@ function WorkCard({ issue: i }: { issue: Issue }) {
   const ai = useAiStatus(orgId);
   const reduced = useReducedMotion();
   const w = i.work;
-  if (!w || i.assignee?.type !== "agent" || !isOpen(i)) return null;
+  if (!w || !isOpen(i)) return null;
   // Stopped because the agent has nothing to think with: say so, and the way out is connecting one.
   const noAi = aiStateOf(ai.data, w.agentId) === "no_ai";
-  const agent = dir.agentById.get(i.assignee.id);
+  const agent = dir.agentById.get(w.agentId);
   const name = agent?.name ?? "";
   const color = agentLook(agent).color;
   const state = issueState(i);
@@ -481,7 +497,11 @@ function WorkCard({ issue: i }: { issue: Issue }) {
   return (
     <View style={[styles.work, surface]}>
       <View style={styles.workHead}>
-        <Face who={i.assignee} size={24} mode={state === "running" ? "run" : state === "stalled" ? "rest" : "idle"} />
+        <Face
+          who={{ type: "agent", id: w.agentId }}
+          size={24}
+          mode={state === "running" ? "run" : state === "stalled" ? "rest" : "idle"}
+        />
         <Text variant="body" numberOfLines={1} style={[styles.bold, styles.shrink]}>
           {name}
         </Text>
@@ -700,6 +720,20 @@ function Linked({ issue: i }: { issue: Issue }) {
   const orgId = useOrgId();
   const channels = useChannels(orgId);
   const rows: { key: string; icon: IconName; label: string; onPress: () => void }[] = [];
+  const dms = useDms(orgId);
+  const source = i.source;
+  const dm =
+    source.type === "agent"
+      ? dms.data?.find((d) => d.channelId === source.channelId && d.with.type === "agent")
+      : undefined;
+  if (dm && source.type === "agent") {
+    rows.push({
+      key: "source",
+      icon: "chat",
+      label: t("issues.fromDmText", { name: dm.with.name }),
+      onPress: () => router.push(chatHref(dm.channelId, null, source.messageId ?? null)),
+    });
+  }
   if (i.source.type === "message") {
     const { channelId } = i.source;
     const channel = channels.data?.find((x) => x.id === channelId);
@@ -841,16 +875,90 @@ function ColumnPicker({
   );
 }
 
+/** Who has a task, as a short list of names; nobody: nothing. */
+const whoText = (t: TFunction, dir: { nameOf: (who: Actor) => string }, i: Pick<Issue, "assignees">) =>
+  i.assignees.length > 0
+    ? assigneeNames(
+        t,
+        i.assignees.map((a) => dir.nameOf(a)),
+      )
+    : null;
+
+/**
+ * Who does it, in a sheet: the agents that answer me, me and whoever has the task already, with a check on each one
+ * that has it. A tap gives it to one more or takes one off and saves at once, the sheet staying open for the next;
+ * "Nobody" takes everyone off. The first agent a task gets is asked and starts on it, as a single pick always did
+ * (`onStart`, which closes the sheet); with an agent on it already, another one only gets the task.
+ */
+function AssigneePicker({
+  issue: i,
+  onStart,
+}: {
+  issue: Issue;
+  onStart: (agentId: string, assignees: Actor[]) => void;
+}) {
+  const { t } = useTranslation();
+  const dir = useDirectory();
+  const meId = useMeId();
+  const toast = useToast();
+  const action = useIssueAction(useOrgId());
+  // What the sheet shows is what was tapped: the task itself comes back with it a moment later.
+  const [list, setList] = useState<Actor[]>(i.assignees);
+  const has = (who: Actor) => list.some((a) => a.type === who.type && a.id === who.id);
+  const save = (assignees: Actor[]) => {
+    const was = list;
+    setList(assignees);
+    action.mutate(
+      { type: "update", id: i.id, patch: { assignees } },
+      {
+        onError: () => {
+          setList(was);
+          toast({ title: t("mobile.app.failed"), icon: "x" });
+        },
+      },
+    );
+  };
+  const toggle = (who: Actor) => {
+    if (has(who)) return save(list.filter((a) => !(a.type === who.type && a.id === who.id)));
+    if (who.type === "agent" && !list.some((a) => a.type === "agent")) return onStart(who.id, list);
+    save([...list, who]);
+  };
+  const offered: Actor[] = [
+    ...dir.agents.filter((a) => a.canTalk !== false).map((a) => ({ type: "agent" as const, id: a.id })),
+    ...(meId ? [{ type: "person" as const, id: meId }] : []),
+  ];
+  const people = [...offered, ...i.assignees.filter((a) => !offered.some((o) => o.type === a.type && o.id === a.id))];
+  const checked = (on: boolean) => (on ? { trailing: <Icon name="check" size={18} /> } : {});
+  return (
+    <ActionList
+      items={[
+        ...people.map((who) => ({
+          key: `${who.type}:${who.id}`,
+          label: who.type === "person" && who.id === meId ? t("mobile.issues.you") : dir.nameOf(who),
+          leading: <Face who={who} size={OPTION_ROW.face} live={false} />,
+          ...checked(has(who)),
+          onPress: () => toggle(who),
+        })),
+        {
+          key: "nobody",
+          icon: "circle" as const,
+          label: t("mobile.issues.nobody"),
+          ...checked(list.length === 0),
+          onPress: () => list.length > 0 && save([]),
+        },
+      ]}
+    />
+  );
+}
+
 /**
  * What changes a task's fields, one sheet each: its project, its column (or its stage while the board's columns load), who does
- * it (an agent is asked and starts), its priority, its due date and who sees it. The head's strip and "…" share them.
+ * it (`AssigneePicker`), its priority, its due date and who sees it. The head's strip and "…" share them.
  */
 function useIssuePickers(i: Issue) {
   const { t } = useTranslation();
   const sheet = useSheet();
   const orgId = useOrgId();
-  const dir = useDirectory();
-  const meId = useMeId();
   const action = useIssueAction(orgId);
   const start = useStartAgent();
   const columns = useIssueColumns(orgId);
@@ -864,13 +972,6 @@ function useIssuePickers(i: Issue) {
       onError: failed,
     });
   };
-  const assign = (who: Actor | null) => {
-    if (who?.type === "agent") {
-      sheet.close();
-      start.run(i, who.id, { done: t("mobile.issues.changed") });
-    } else update({ type: "update", id: i.id, patch: { assignee: who } });
-  };
-  const same = (a: Actor | null, b: Actor | null) => (a?.type ?? null) === (b?.type ?? null) && a?.id === b?.id;
   const pick = (items: ActionItem[]) => sheet.open(<ActionList items={items} />);
   const checked = (on: boolean) => (on ? { trailing: <Icon name="check" size={18} /> } : {});
   const statusItems = (): ActionItem[] =>
@@ -880,10 +981,6 @@ function useIssuePickers(i: Issue) {
       ...checked(s === i.status),
       onPress: () => update({ type: "update", id: i.id, patch: { status: s } }),
     }));
-  const people: Actor[] = [
-    ...dir.agents.filter((a) => a.canTalk !== false).map((a) => ({ type: "agent" as const, id: a.id })),
-    ...(meId ? [{ type: "person" as const, id: meId }] : []),
-  ];
   const board = columns.data ?? [];
   const column = columnOfIssue(i, board);
   const projectItems = useProjectItems();
@@ -907,22 +1004,15 @@ function useIssuePickers(i: Issue) {
           )
         : pick(statusItems()),
     pickAssignee: () =>
-      pick([
-        ...people.map((who) => ({
-          key: `${who.type}:${who.id}`,
-          label: who.type === "person" && who.id === meId ? t("mobile.issues.you") : dir.nameOf(who),
-          leading: <Face who={who} size={OPTION_ROW.face} live={false} />,
-          ...checked(same(who, i.assignee)),
-          onPress: () => assign(who),
-        })),
-        {
-          key: "nobody",
-          icon: "circle" as const,
-          label: t("mobile.issues.nobody"),
-          ...checked(i.assignee === null),
-          onPress: () => assign(null),
-        },
-      ]),
+      sheet.open(
+        <AssigneePicker
+          issue={i}
+          onStart={(agentId, assignees) => {
+            sheet.close();
+            start.run({ ...i, assignees }, agentId, { done: t("mobile.issues.changed") });
+          }}
+        />,
+      ),
     pickProject: () =>
       pick(projectItems(i.project, (projectId) => update({ type: "update", id: i.id, patch: { projectId } }))),
     pickPriority: () =>
@@ -1007,11 +1097,11 @@ function IssueMenu({ issue: i }: { issue: Issue }) {
     {
       key: "assignee",
       // Who it is, by their face, as a select shows its choice; a glyph only while nobody is.
-      ...(i.assignee
-        ? { leading: <Face who={i.assignee} size={OPTION_ROW.face} live={false} /> }
+      ...(i.assignees[0]
+        ? { leading: <Face who={i.assignees[0]} size={OPTION_ROW.face} live={false} /> }
         : { icon: "agent" as const }),
       label: t("mobile.issues.actions.assignee"),
-      hint: i.assignee ? dir.nameOf(i.assignee) : t("mobile.issues.nobody"),
+      hint: whoText(t, dir, i) ?? t("mobile.issues.nobody"),
       onPress: pickers.pickAssignee,
     },
     {
@@ -1072,7 +1162,7 @@ function IssueMenu({ issue: i }: { issue: Issue }) {
       label: t("issues.delete.action"),
       onPress: () => {
         sheet.close();
-        const working = i.work && i.work.state !== "stalled" && i.assignee ? dir.nameOf(i.assignee) : null;
+        const working = i.work && i.work.state !== "stalled" ? dir.nameOf({ type: "agent", id: i.work.agentId }) : null;
         confirmAction({
           title: t("issues.delete.title", { number: i.number }),
           text: deleteIssueText(t, i, working),

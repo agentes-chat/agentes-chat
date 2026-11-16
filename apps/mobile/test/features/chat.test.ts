@@ -182,7 +182,7 @@ describe("timeline", () => {
   test("reading marks read up to the message posted last, wherever its place, and counts a reply placed above as new", async () => {
     const screen = await source("features/chat/ChatScreen.tsx");
     expect(screen).toContain("const postedNow = useMemo(() => lastPostedId(list), [list]);");
-    expect(screen).toContain("if (peeking || !member || !postedNow) return;");
+    expect(screen).toContain("if (peeking || !focused || !inFront || !member || !postedNow) return;");
     expect(screen).toContain("unseenBelow(scrollRows, seenKey, seenPostedId)");
   });
 
@@ -396,8 +396,18 @@ describe("working line", () => {
     const lines = await source("features/chat/LiveRows.tsx");
     const line = lines.slice(lines.indexOf("export function WorkingLine("), lines.indexOf("type LinePiece"));
     expect(line).toContain(
-      "{color || !someoneTypes(entries) || bothAtIt(entries) ? null : <TypingDots color={c.muted} />}",
+      "{lead || !someoneTypes(entries) || bothAtIt(entries) ? null : <TypingDots color={c.muted} />}",
     );
+    // A bare line on the conversation's ground: no glass pill, no band sweeping behind it, the faces' plates the
+    // ground's own color.
+    expect(line).not.toContain("<Dither");
+    expect(line).not.toContain("glassSolid");
+    expect(line).toContain("const plate = [styles.tok, { backgroundColor: c.bg }];");
+    // The requests' lines that take its place are as bare.
+    const asks = await source("features/chat/asks.tsx");
+    const askLines = asks.slice(asks.indexOf("export function AskBar("), asks.indexOf("const styles"));
+    expect(askLines).not.toContain("glassSolid");
+    expect(askLines).not.toContain("<Sky");
     expect(line).toContain("{faces.length > 0 ? (");
     expect(line).toContain('faces={{ typing: groupFaces("typing"), voice: groupFaces("recordingVoice") }}');
     const words = lines.slice(lines.indexOf("function BarWords("), lines.indexOf("function TypingDots("));
@@ -1477,6 +1487,34 @@ describe("reading a conversation", () => {
   test("a thread view marks only its thread read, never its channel", () => {
     expect(readMark("c1", "t1")).toEqual({ kind: "thread", id: "t1" });
     expect(readMark("c1", null)).toEqual({ kind: "channel", id: "c1" });
+  });
+
+  test("only the screen in view reads: under another screen or with the app in the background nothing is marked, and coming back marks it", async () => {
+    const screen = await source("features/chat/ChatScreen.tsx");
+    const reading = screen.slice(
+      screen.indexOf("const peeking = useIsPreview();"),
+      screen.indexOf("// ── Older pages (channel view) ──"),
+    );
+    expect(reading).toContain("const focused = useIsFocused();");
+    expect(reading).toContain("const inFront = useAppActive();");
+    expect(reading).toContain("if (peeking || !focused || !inFront || !member || !postedNow) return;");
+    // Both are among what the effect runs again on: back on the screen, or back in the app, it reads.
+    const again = reading.slice(reading.lastIndexOf("}, ["));
+    expect(again).toContain("focused, inFront,");
+    // In front means the app's state is "active", and it follows every change of it.
+    const active = await source("lib/useAppActive.ts");
+    expect(active).toContain('useState(AppState.currentState === "active")');
+    expect(active).toContain('AppState.addEventListener("change", (s) => setActive(s === "active"))');
+  });
+
+  test("a reply in one of the conversation's threads marks it read again", async () => {
+    const screen = await source("features/chat/ChatScreen.tsx");
+    const reading = screen.slice(
+      screen.indexOf("const peeking = useIsPreview();"),
+      screen.indexOf("// ── Older pages (channel view) ──"),
+    );
+    expect(reading).toContain("const threadReplies = useThreadActivity(orgId, channelId);");
+    expect(reading.slice(reading.lastIndexOf("}, ["))).toContain("postedNow, threadReplies]);");
   });
 });
 

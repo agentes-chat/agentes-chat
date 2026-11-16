@@ -20,6 +20,9 @@
 
 <div class="bad-clipped" style="width: 60px; overflow: hidden; white-space: nowrap">Um texto bem mais longo que a caixa dele</div>
 <div class="good-clipped" style="width: 60px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis">Um texto bem mais longo que a caixa dele</div>
+<!-- A kit button's words sit in its label: cut by a box around the button, the button is the one named; ended by the label's own "…", nothing is. -->
+<div style="width: 60px; overflow: hidden"><button type="button" class="ac-btn bad-clipped--label"><span class="ac-btn__label">Um texto bem mais longo que a caixa dele</span></button></div>
+<div style="width: 120px; display: flex"><button type="button" class="ac-btn good-clipped--label" style="max-width: 100%"><span class="ac-btn__label" style="min-width: 0; overflow: hidden; text-overflow: ellipsis">Um texto bem mais longo que a caixa dele</span></button></div>
 <div class="bad-clipped--fold" style="width: 120px; max-height: 40px; overflow: hidden; line-height: 20px">Um texto bem mais longo que a caixa dele, cortado no meio de uma linha</div>
 <div class="good-clipped--fold" style="width: 120px; max-height: 40px; overflow: hidden; line-height: 20px; mask-image: linear-gradient(#000 55%, transparent)">Um texto bem mais longo que a caixa dele, que some sob um degradê</div>
 
@@ -64,6 +67,9 @@
 
 <div style="width: 400px"><div class="ac-msg__text" style="background: #eee; padding: 8px">Uma bolha</div><div class="consult-pair bad-quiet" style="height: 26px">Lodi e Theo</div></div>
 <div style="width: 400px"><div class="ac-msg__text" style="background: #eee; padding: 8px">Uma bolha</div><div class="consult-pair good-quiet" style="height: 26px; margin-top: 16px">Lodi e Theo</div></div>
+<!-- A dialog's line over a bubble of the page behind it: two layers, nothing touches. In one dialog, it does. -->
+<div style="position: relative; width: 400px; height: 60px; margin-top: 16px"><div class="ac-msg__text" style="background: #eee; padding: 8px">Uma bolha</div><div role="dialog" aria-label="Conversa" style="position: absolute; inset: 0; background: #fff"><div class="consult-pair good-quiet--layers" style="height: 26px">Lodi e Theo</div></div></div>
+<div role="dialog" aria-label="Conversa" style="width: 400px"><div class="ac-msg__text" style="background: #eee; padding: 8px">Uma bolha</div><div class="consult-pair bad-quiet--dialog" style="height: 26px">Lodi e Theo</div></div>
 
 <div class="inline" style="gap: 10px; width: 400px"><span class="bad-touch">#2</span><div style="flex: 1; cursor: text; margin-left: -10px; padding-left: 10px">Subir app iOS</div></div>
 <div class="inline" style="gap: 8px; width: 400px"><span class="good-touch">#2</span><div style="flex: 1; cursor: text; padding-left: 8px">Subir app iOS</div></div>

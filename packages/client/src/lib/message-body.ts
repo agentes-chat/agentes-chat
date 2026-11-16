@@ -167,6 +167,9 @@ export function serverBody(t: TFunction, body: string, meta: Meta, locale?: stri
           })
       : body;
   // Long work's own update of a silent work (ADR 0121): what it does now, in the reader's words.
+  // The right hand answered with another AI than its plan (`postStandInLine`): its line in the reader's words.
+  if (code === "right_hand_stand_in" && typeof params.why === "string")
+    return t(`chat.standIn.${params.why}`, { via: params.via, plan: params.plan, defaultValue: body });
   if (code === "work_auto_update") return autoUpdateText(t, params);
   // The autonomy brakes (ADR 0131): a working agent's status line, a proposal of costly work, the noise digest.
   if (code === "talker_status") return talkerStatusText(t, params, locale);

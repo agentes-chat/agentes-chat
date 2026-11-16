@@ -6,6 +6,7 @@ import { caches } from "./cache";
 import { sha256 } from "./crypto";
 import { NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishUserEvent } from "./events";
+import { followsThreadSql, threadReadAtSql } from "./follows";
 import { landedAfterSql } from "./message-place";
 import { type PreviewMeta, previewMediaKind, previewMeta, readableBody } from "./message-preview";
 import { quietNoticeSql } from "./notices";
@@ -379,6 +380,11 @@ export async function listDms(db: Database, actorId: string, orgId: string, only
           sql`(${messages.authorUserId} is null or ${messages.authorUserId} <> ${actorId})`,
           sql`not ${quietNoticeSql(sql`${messages.meta}`)}`,
           landedAfterSql(messages, sql`coalesce(${channelReads.lastReadAt}, 'epoch'::timestamptz)`),
+          // A thread's reply by the channels' rule: only in one I follow or that mentions me, and haven't read there
+          // (reading the thread clears it here too).
+          sql`(${messages.threadId} is null or ((${actorId} = any(${messages.mentionedUserIds})
+              or ${followsThreadSql(orgId, actorId, sql`${messages.threadId}`)})
+            and ${landedAfterSql(messages, threadReadAtSql(actorId, sql`${messages.threadId}`))}))`,
           // Nor one more unread (ADR 0091): it is silent.
           sql`${messages.meta}->>'mediaAfter' is null`,
         ),

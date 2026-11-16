@@ -725,6 +725,8 @@ export type PhoneReason =
   /** iPhone: no Xcode on the Mac, or its iPhone SDK is older than the phone's iOS (`xcode_too_old`). */
   | "xcode_missing"
   | "xcode_too_old"
+  /** iPhone: its iOS is older than the Mac's iPhone SDK and the test helper is stuck: the iPhone needs an update. */
+  | "ios_behind_xcode"
   /** iPhone: the Mac is preparing the phone (device support download, needs internet). */
   | "device_support"
   /** iPhone: the test helper isn't built yet, or its free signature ran out (`helper_expired`). */

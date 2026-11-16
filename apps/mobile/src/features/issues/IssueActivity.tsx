@@ -43,7 +43,7 @@ export function IssueActivityFeed({ issue }: { issue: Issue }) {
                 <Text variant="small" tone="ink2" style={styles.bold}>
                   {dir.nameOf(a.author)}
                 </Text>
-                {` ${issueEventText(t, a)} · ${when(a.createdAt)}`}
+                {` ${issueEventText(t, a, (who) => dir.nameOf(who))} · ${when(a.createdAt)}`}
               </Text>
               {a.auto ? <Chip label={t("issues.auto")} /> : null}
             </Animated.View>

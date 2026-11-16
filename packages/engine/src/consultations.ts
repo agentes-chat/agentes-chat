@@ -7,6 +7,7 @@ import {
   eq,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lt,
   ne,
@@ -46,9 +47,10 @@ import { noAgentText } from "./team";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
 import { untrustedBlock } from "./untrusted";
 import { USAGE_WAIT_CODES } from "./usage-pause";
+import { handOverWork } from "./works";
 import { inWorkspaceWords } from "./workspace-mode";
 
-const { agentConsultations, agentRuns, agents, channels, machines, messages, outbox, users } = schema;
+const { agentConsultations, agentRuns, agentWorks, agents, channels, machines, messages, outbox, users } = schema;
 
 export const ASK_AGENT_TOOL = "ask_agent";
 export const TELL_AGENT_TOOL = "tell_agent";
@@ -407,6 +409,13 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
           };
         }
       }
+      // The person sees it worked on where they asked: its updates, questions and report (F1, ADR 0121 addendum).
+      // A note that joined the work this run already handed that agent rides on it: the same work reports it.
+      const handedWork =
+        !headsUp && !waitsForRoom
+          ? Boolean(await handOverWork({ db, pubsub: deps.pubsub }, sent.consultationId).catch(() => null)) ||
+            (await handedHomeOf(db, ctx.orgId, [sent.consultationId], false)).size > 0
+          : false;
       await publishChannelEvent(deps.pubsub, {
         type: "agent.consulting",
         channelId: ctx.channelId,
@@ -422,7 +431,9 @@ function createTellAgentTool(deps: { pubsub?: PubSub; ai?: AiCheck; judge?: Judg
           ? `Told @${handle}. Your answer goes back without waiting for it: do your own part now, then end your turn.`
           : here && isAgentOnlyDm(here)
             ? `Handed to @${handle}. Your answer goes back once @${handle} is done, together with what came of it: do your own part now, then end your turn saying what you handed on.`
-            : `Handed to @${handle}; it's on it, and the people here can see that. What comes of it reaches you here by itself once everything you handed off this turn is back. Tell the people in a line who has it, without promising a time, then do your own part or end your turn.`;
+            : handedWork
+              ? `Handed to @${handle}; it's on it. The people here follow its progress, its questions and its result from @${handle} itself, under your reply: you are not woken to relay what comes of it. Tell the people in a line who has it, without promising a time or to report back, then do your own part or end your turn.`
+              : `Handed to @${handle}; it's on it, and the people here can see that. What comes of it reaches you here by itself once everything you handed off this turn is back. Tell the people in a line who has it, without promising a time, then do your own part or end your turn.`;
       return {
         content: waitsForRoom
           ? `${handed} @${handle} hasn't started yet: its computer is full, so your note waits and starts once there's room. It isn't lost: don't send it again.`
@@ -1269,9 +1280,17 @@ export async function reportHandOffs(deps: Pick<Deps, "db" | "pubsub">, asker: A
       );
     const pending = waiting.map((w) => `@${w.handle}`).join(", ");
     claimed.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || (a.id < b.id ? -1 : 1));
+    // A hand-off whose work already reported to the person (`handOverWork`) is only written down: relaying it would
+    // repeat it. The asker wakes once, at most, and only for one that ended with nothing posted home.
+    const home = await handedHomeOf(
+      tx,
+      asker.orgId,
+      claimed.map((c) => c.id),
+    );
+    const wakes = claimed.some((c) => !home.has(c.id));
     const out: Awaited<ReturnType<typeof deliverNoticeToRun>>[] = [];
     for (const [i, row] of claimed.entries()) {
-      const wake = i === claimed.length - 1;
+      const wake = wakes && i === claimed.length - 1;
       const handle = await handleOf(tx, row.orgId, row.targetAgentId);
       const notice = consultationNotice(row, handle, {
         wake,
@@ -1304,6 +1323,29 @@ export async function reportHandOffs(deps: Pick<Deps, "db" | "pubsub">, asker: A
   });
   for (const d of delivered) await publishDelivery(deps.pubsub, d).catch(() => {});
   return delivered;
+}
+
+/**
+ * Of these hand-offs, the ones a handed work carries to the person: the work it started, or the one at work on the
+ * run it joined, handed by the same run (`handOverWork`). `reported`: only once that work posted its report home.
+ */
+async function handedHomeOf(db: Executor, orgId: string, ids: string[], reported = true) {
+  if (ids.length === 0) return new Set<string>();
+  const rows = await db
+    .select({ id: agentConsultations.id })
+    .from(agentConsultations)
+    .innerJoin(agentRuns, eq(agentRuns.id, agentConsultations.targetRunId))
+    .innerJoin(agentWorks, and(eq(agentWorks.id, agentRuns.workId), eq(agentWorks.how, "handed")))
+    .where(
+      and(
+        eq(agentConsultations.orgId, orgId),
+        inArray(agentConsultations.id, ids),
+        reported ? isNotNull(agentWorks.resultMessageId) : undefined,
+        sql`exists (select 1 from ${agentConsultations} h where h.id = ${agentWorks.consultationId}
+          and h.asker_run_id = ${agentConsultations.askerRunId})`,
+      ),
+    );
+  return new Set(rows.map((r) => r.id));
 }
 
 /**

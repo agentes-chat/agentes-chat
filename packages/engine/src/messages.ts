@@ -103,6 +103,8 @@ export interface MessageView {
   actions?: AgentActionView[];
   /** On a long work's anchor (`meta.longWork`, ADR 0121): its line, live via `agent.work`. */
   longWork?: WorkView;
+  /** On the last message here of a run that handed work over (`handOverWork`): each work's line, live via `agent.work`. */
+  handedWorks?: WorkView[];
   createdAt: string;
 }
 
@@ -1929,6 +1931,45 @@ const longWorkOf = (m: Message, works: Map<string, WorkView>) => {
   return view ? { longWork: view } : {};
 };
 
+/**
+ * The works runs in this list handed over, on each run's last message here (one read for the page's runs, as
+ * `longWorkOf`'s): the line under the reply that handed it, "Handed to Atlas · working on it".
+ */
+async function handedWorksOf(db: Database, orgId: string, list: Message[]): Promise<Map<string, WorkView[]>> {
+  const out = new Map<string, WorkView[]>();
+  const last = new Map<string, Message>();
+  for (const m of list) {
+    if (m.authorType !== "agent" || !m.agentRunId) continue;
+    const seen = last.get(m.agentRunId);
+    if (!seen || seen.createdAt <= m.createdAt) last.set(m.agentRunId, m);
+  }
+  if (last.size === 0) return out;
+  const rows = await db
+    .select({ id: schema.agentWorks.id })
+    .from(schema.agentWorks)
+    .innerJoin(schema.agentConsultations, eq(schema.agentConsultations.id, schema.agentWorks.consultationId))
+    .where(
+      and(
+        eq(schema.agentWorks.orgId, orgId),
+        eq(schema.agentConsultations.orgId, orgId),
+        inArray(schema.agentConsultations.askerRunId, [...last.keys()]),
+      ),
+    );
+  if (rows.length === 0) return out;
+  const views = await workViews(
+    db,
+    orgId,
+    rows.map((r) => r.id),
+  );
+  for (const v of [...views.values()].sort((a, b) => a.startedAt.localeCompare(b.startedAt))) {
+    const m = v.askerRunId ? last.get(v.askerRunId) : undefined;
+    // Only where the work reports: the reply that handed it, in the person's conversation.
+    if (!m || m.channelId !== v.channelId) continue;
+    out.set(m.id, [...(out.get(m.id) ?? []), v]);
+  }
+  return out;
+}
+
 /** Message views with what lists carry: receipts, usage, reactions, memory marks, pins, wiki links. */
 export const withMessageDetails = (db: Database, orgId: string, list: Message[]) => withReceipts(db, orgId, list);
 
@@ -1938,7 +1979,7 @@ async function withReceipts(db: Database, orgId: string, list: Message[]): Promi
     const id = (m.meta.longWork as { id?: unknown } | undefined)?.id;
     return typeof id === "string" ? [id] : [];
   });
-  const [receipts, usage, reactions, memories, pinned, actions, works] = await Promise.all([
+  const [receipts, usage, reactions, memories, pinned, actions, works, handed] = await Promise.all([
     // A person's message, and an agent's that mentions agents (whom it handed work to, ADR 0089).
     receiptsFor(
       db,
@@ -1955,6 +1996,7 @@ async function withReceipts(db: Database, orgId: string, list: Message[]): Promi
     pinnedOf(db, orgId, list),
     actionsFor(db, orgId, agentMessageIds),
     workIds.length ? workViews(db, orgId, workIds) : Promise.resolve(new Map<string, WorkView>()),
+    handedWorksOf(db, orgId, list),
   ]);
   const views = list.map((m) => {
     const runUsage = m.agentRunId ? usage.get(m.agentRunId) : undefined;
@@ -1968,6 +2010,7 @@ async function withReceipts(db: Database, orgId: string, list: Message[]): Promi
       ...(pinned.has(m.id) ? { pinned: true } : {}),
       ...(actions.has(m.id) ? { actions: actions.get(m.id) } : {}),
       ...longWorkOf(m, works),
+      ...(handed.has(m.id) ? { handedWorks: handed.get(m.id) } : {}),
     };
   });
   return withGoneQuotes(db, orgId, await withDeletedArtifacts(db, orgId, await withWikiLinks(db, orgId, views)));

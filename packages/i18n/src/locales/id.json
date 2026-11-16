@@ -2546,6 +2546,13 @@
   "rightHand": {
     "label": "tangan kanan Anda",
     "labelCapitalized": "Tangan kanan Anda",
+    "unusable": {
+      "title": "Tidak bisa berpikir untuk {{name}} sekarang",
+      "computerOnly": "Hanya masuk di {{computer}}. {{name}} berpikir dengan paket yang masuk sebagai akun.",
+      "away": "Milik {{owner}}, di {{computer}}, yang sedang tidak aktif.",
+      "awayYours": "Milik Anda, di {{computer}}, yang sedang tidak aktif.",
+      "connect": "Hubungkan komputer"
+    },
     "newDot": "Baru",
     "actsAsYou": "bertindak dengan izin Anda",
     "composerHint": "tak ada yang berubah tanpa Anda",
@@ -2651,6 +2658,7 @@
     "sharedName": "{{name}} (bersama)",
     "sharedPlace": "Dipakai di kanal dan untuk pekerjaan yang berjalan sendiri. Seluruh workspace berbagi tempat ini. Jangan simpan apa pun yang pribadi di sini.",
     "computerNoHome": "Belum ada komputer. Komputer tersedia setelah workspace ini punya komputer sendiri.",
+    "computerNoHomeServer": "Belum ada browser. Siapkan <guide>server ini sebagai komputer para agen</guide> agar ia punya satu.",
     "addComputer": "Tambahkan komputer",
     "computerOneUser": "Tidak ada komputer di sini. Komputer workspace menjalankan semua agen sebagai satu pengguna, jadi tidak bisa memisahkan tempat tiap orang. Server Linux yang dipasang dengan opsi --system dari penginstal bisa.",
     "powers": {
@@ -2808,6 +2816,16 @@
       "invite_roles_other": "Dengan peran {{roles}}.",
       "invite_people_sent_other": "Undangan terkirim ke <b>{{emails}}</b>.",
       "remove_ai_key": "Hapus kunci API \"{{name}}\"."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Butuh komputer",
+        "computerOnly": "Milik {{owner}}, masuk hanya di {{computer}}. Lodi berpikir dengan paket yang masuk sebagai akun.",
+        "noComputer": "Milik {{owner}}. Butuh komputer, dan workspace belum menghubungkan satu pun.",
+        "away": "Milik {{owner}}, di {{computer}}, yang sedang tidak aktif.",
+        "connect": "Hubungkan komputer",
+        "plans": "Lihat paket"
+      }
     }
   },
   "teamWeek": {
@@ -3145,7 +3163,7 @@
       "gemini": {
         "title": "Paket Gemini-mu",
         "tiers": "Google AI Pro, Google AI Ultra, atau Gemini Enterprise",
-        "warning": "Google menyatakan bahwa memakai paket Gemini pribadi di dalam aplikasi lain bisa membuat akun ditangguhkan."
+        "warning": "Google menyatakan bahwa memakai paket Gemini pribadi di dalam aplikasi lain bisa membuat akun ditangguhkan. Untuk menghindari risiko itu, pakai kunci API Gemini atau Gemini Enterprise."
       },
       "zen": {
         "title": "OpenCode",
@@ -4076,6 +4094,7 @@
     "seeNewer": "Lihat permintaan yang lebih baru",
     "computerAway": "Komputer {{agent}} tidak merespons saat ini. Permintaan ini tetap terbuka sampai {{time}}. Coba lagi sebentar lagi.",
     "computerPaused": "Komputer {{agent}} dijeda oleh pemiliknya. Permintaan ini tetap terbuka sampai {{time}}.",
+    "insecureContext": "Halaman ini tidak dibuka lewat https, jadi browser tidak mengunci kuncinya. Buka di https:// (atau localhost).",
     "failed": "Tidak bisa dikirim. Apakah komputer agen menyala?",
     "changed": "Permintaan ini berubah saat kamu menjawab. Tidak ada yang terkirim. Kirim lagi.",
     "empty": "Ketik nilainya.",
@@ -7461,7 +7480,8 @@
     "table": {
       "task": "Tugas",
       "github": "GitHub",
-      "sortBy": "Urutkan menurut {{column}}"
+      "sortBy": "Urutkan menurut {{column}}",
+      "resize": "Ubah lebar kolom {{column}}"
     },
     "fold": {
       "open": "Buka {{name}}",
@@ -7544,6 +7564,7 @@
       "canceled": "#{{number}} kembali ke tempatnya.",
       "assigned": "#{{number}} sekarang dipegang {{name}}.",
       "unassigned": "#{{number}} sekarang tanpa penanggung jawab.",
+      "removed": "#{{number}} tidak lagi dipegang {{name}}.",
       "prioritized": "#{{number}} sekarang berprioritas {{priority}}."
     },
     "canceledColumn": "Dibatalkan",
@@ -7664,7 +7685,10 @@
         "failed": "Proses terakhir gagal.",
         "canceled": "Seseorang menghentikan prosesnya.",
         "budget": "Anggaran bulanan agen sudah habis."
-      }
+      },
+      "finishedTitle": "{{name}} menyelesaikannya",
+      "finishedMeta": "{{when}} · diserahkan oleh {{name}}",
+      "answer": "Jawab"
     },
     "status": {
       "todo": "Akan dikerjakan",
@@ -7691,6 +7715,10 @@
       "high": "tinggi"
     },
     "noAssignee": "Tanpa penanggung jawab",
+    "assignees": {
+      "people": "Orang dan agen",
+      "done": "Selesai"
+    },
     "agentRole": "Agen · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -7830,7 +7858,9 @@
       "status_changed": "mengubah status menjadi {{status}}",
       "priority_changed": "mengubah prioritas menjadi {{priority}}",
       "assigned": "menugaskan tugas",
-      "unassigned": "menghapus penanggung jawab",
+      "unassigned": "menghapus satu penanggung jawab",
+      "assigned_named": "menugaskan tugas kepada {{name}}",
+      "unassigned_named": "melepas {{name}} dari tugas",
       "due_date_set": "mengatur tenggat ke {{date}}",
       "due_date_removed": "menghapus tenggat",
       "pr_linked": "menautkan PR #{{number}}",
@@ -7844,7 +7874,10 @@
       "criterion_checked": "mencentang kriteria \"{{text}}\"",
       "criterion_unchecked": "menghapus centang kriteria \"{{text}}\"",
       "agent_asked": "meminta {{name}} mengerjakannya"
-    }
+    },
+    "handedBy": "diserahkan oleh <0/>{{name}}",
+    "fromDm": "dari <0>DM kamu dengan {{name}}</0>",
+    "fromDmText": "dari DM kamu dengan {{name}}"
   },
   "routines": {
     "filters": "Saring rutinitas",
@@ -9986,10 +10019,10 @@
       "copies_other": "{{count}} login lain dari akun ini, tanpa agen.",
       "removeCopies": "Hapus",
       "copiesRemoved_other": "{{count}} login yang tidak dipakai dihapus.",
-      "removeAllDone": "{{n}} login Grok dihapus.",
-      "removeAllText": "Mereka berhenti berpikir untuk agennya di {{computers}}. Login orang lain tidak disentuh.",
-      "removeAllTitle": "Hapus semua {{n}} login Grok?",
       "removeAllGrok": "Hapus semua login Grok",
+      "removeAllTitle": "Hapus semua {{n}} login Grok?",
+      "removeAllText": "Mereka berhenti berpikir untuk agennya di {{computers}}. Login orang lain tidak disentuh.",
+      "removeAllDone": "{{n}} login Grok dihapus.",
       "disconnect": "Putuskan",
       "renameTitle": "Ganti nama {{label}}",
       "nameLabel": "Nama",
@@ -14937,6 +14970,7 @@
       "ui_automation_off": "Otomatisasi UI mati",
       "xcode_missing": "Xcode belum terpasang di Mac",
       "xcode_too_old": "Xcode terlalu lama untuk iOS ini",
+      "ios_behind_xcode": "iOS iPhone ini lebih lama dari iOS untuk Xcode",
       "device_support": "Mac sedang mengambil alat untuk iPhone",
       "helper_missing": "Helper pengujian belum disiapkan",
       "helper_expired": "Helper pengujian perlu diperbarui",
@@ -14965,6 +14999,7 @@
       "ui_automation_off": "Nyalakan Otomatisasi UI",
       "xcode_missing": "Pasang Xcode",
       "xcode_too_old": "Perbarui Xcode",
+      "ios_behind_xcode": "Perbarui iPhone",
       "device_support": "Biarkan Mac tetap menyala",
       "helper_missing": "Buka aplikasinya di Mac",
       "helper_expired": "Buka aplikasinya di Mac",
@@ -15282,6 +15317,7 @@
       "helperText": "Dibuat dan diperbarui oleh Mac setiap 7 hari. Apple Account gratis di Xcode sudah cukup.",
       "helperUntrustedText": "Ketuk nama developernya, lalu Percayai.",
       "teamLimitText": "Hapus dari iPhone satu aplikasi buatan sendiri: Apple Account gratis hanya mengizinkan 3.",
+      "iosBehind": "iPhone ini menjalankan iOS {{ios}} dan Xcode di Mac ini untuk iOS {{sdk}}. Perbarui iPhone: Pengaturan › Umum › Pembaruan Perangkat Lunak.",
       "xcodeOld": "{{name}} memakai iOS {{version}}, sedangkan Xcode di {{mac}} paling tinggi mengenal iOS {{sdk}}. Instal Xcode {{major}}, lalu jalankan ini di Terminal.",
       "xcodeOldAny": "{{name}} memakai iOS {{version}}, lebih baru dari yang dikenal Xcode di {{mac}}. Instal Xcode {{major}}, lalu jalankan ini di Terminal.",
       "uiRefusedText": "iPhone menolak ketukan helper pengujian. Buka kuncinya dan masukkan kode sandinya jika diminta. Jika terus terjadi, matikan lalu nyalakan lagi Pengaturan › Pengembang › Aktifkan Otomatisasi UI.",
@@ -16001,11 +16037,11 @@
       "rolesPersonal": "Apa yang bisa dilakukan setiap orang di sini. Pemilik bisa melakukan semuanya."
     },
     "about": {
-      "basedOn": "Berdasarkan <site>agentes.chat</site> oleh Codari Global, LLC",
+      "basedOn": "Berdasarkan <site>agentes.chat</site> oleh AGENTESCHAT, LLC",
       "version": "Versi",
       "license": "Perangkat lunak bebas di bawah <license>GNU Affero General Public License v3</license>, tanpa jaminan.",
       "source": "Kode sumber",
-      "copyright": "Copyright © 2026 Codari Global, LLC dan para kontributor"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC dan para kontributor"
     },
     "title": "Pengaturan",
     "account": {
@@ -16433,6 +16469,18 @@
       "see": "Lihat pemakaian"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "Menurut jenis",
+      "handoffs": "Serah terima antaragen",
+      "people": "Percakapan dengan orang",
+      "routines": "Rutinitas"
+    },
+    "hint": {
+      "handoffs": "Sebagian besar penggunaan minggu ini berasal dari agen yang saling menyerahkan pekerjaan. Untuk pekerjaan panjang, minta langsung ke agennya.",
+      "message": "Kirim pesan ke {{name}}"
+    }
+  },
   "usageViews": {
     "signedOut": "Sudah keluar",
     "whose": "Milik {{name}}",
@@ -16609,12 +16657,35 @@
       "failed": "Terhambat · tidak selesai",
       "failedWhy": "Terhambat · tidak selesai: {{why}}"
     },
-    "working": "Di latar belakang"
+    "working": "Di latar belakang",
+    "handed": {
+      "lead": "Diserahkan ke <0/>{{name}}",
+      "working": "sedang dikerjakan",
+      "done": "selesai dalam {{duration}}",
+      "waitingYou": "menunggu jawabanmu",
+      "waiting": "menunggu jawaban",
+      "waitingApprovalYou": "menunggu persetujuanmu",
+      "waitingApproval": "menunggu persetujuan",
+      "waitingComputer": "menunggu komputer",
+      "paused": "dijeda di batas paket",
+      "queued": "dalam antrean",
+      "failed": "tidak selesai",
+      "stopped": "dihentikan",
+      "step": "langkah {{current}} dari {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
       "text": "ChatGPT menolak kecepatan Cepat untuk akun atau model ini, jadi jawaban ini memakai kecepatan standar.",
       "action": "Buka agen"
+    },
+    "standIn": {
+      "needsComputer": "Dijawab dengan {{via}}: {{plan}} perlu komputer.",
+      "away": "Dijawab dengan {{via}}: komputer {{plan}} sedang tidak aktif.",
+      "notShared": "Dijawab dengan {{via}}: {{plan}} hanya melayani pemiliknya.",
+      "limit": "Dijawab dengan {{via}}: {{plan}} sudah mencapai batasnya.",
+      "cant": "Dijawab dengan {{via}}: {{plan}} tidak bisa berpikir sekarang.",
+      "change": "Ubah"
     },
     "modelStandIn": {
       "text": "{{plan}} menolak {{from}} dengan kunci ini. Aku menjawab dengan {{to}}, yang berfungsi dengannya.",
@@ -17188,6 +17259,9 @@
       "interrupted": "Terputus karena server dimulai ulang. Minta lagi untuk melanjutkan.",
       "step_limit": "Langkahku habis sebelum selesai.",
       "stuck": "Aku macet dan berhenti sebelum selesai."
+    },
+    "request": {
+      "asksYou": "{{name}} bertanya padamu"
     }
   },
   "builtinTools": {

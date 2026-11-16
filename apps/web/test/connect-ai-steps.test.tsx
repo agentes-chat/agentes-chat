@@ -569,7 +569,8 @@ describe("Conectar uma IA: one picker, plans first", () => {
     await choose("Gemini");
     const panel = within(dialog).getByRole("region", { name: "Seu plano do Gemini" });
     expect(panel.textContent).toContain("Google AI Pro, Google AI Ultra ou Gemini Enterprise");
-    const warning = "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta.";
+    const warning =
+      "O Google diz que usar um plano pessoal do Gemini dentro de outros apps pode suspender a conta. Para não correr esse risco, use uma chave de API do Gemini ou o Gemini Enterprise.";
     expect(shownText(panel)).toContain(warning);
     await click(within(panel).getByRole("button", { name: "Usar o Gemini Enterprise" }));
     expect(shownText(panel)).not.toContain(warning);

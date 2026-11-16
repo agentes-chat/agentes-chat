@@ -356,6 +356,11 @@ export function phoneReasonText(
         text: `${phone} runs an iOS newer than Xcode on ${host} can drive. Ask the person to install the Xcode matching the iPhone's iOS (27 for iOS 27), then run \`xcrun devicectl manage ddis update\`.`,
         byItself: false,
       };
+    case "ios_behind_xcode":
+      return {
+        text: `${phone} runs an iOS older than the one Xcode on ${host} is for. Ask the person to update the iPhone: Settings → General → Software Update.`,
+        byItself: false,
+      };
     case "helper_missing":
       return {
         text: `${host} is still setting up the test helper on ${phone} (a few minutes the first time).`,

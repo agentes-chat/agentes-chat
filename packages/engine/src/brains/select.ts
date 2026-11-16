@@ -11,7 +11,7 @@ import {
   type PlanUsage,
 } from "@agenteschat/adapters";
 import { and, desc, type Executor, eq, isNotNull, ne, or, schema, sql } from "@agenteschat/db";
-import { isAutoModel } from "@agenteschat/providers";
+import { AUTO_MODEL, isAutoModel } from "@agenteschat/providers";
 import {
   autoPlanModel,
   claudeCodeModel,
@@ -24,10 +24,18 @@ import {
 } from "@agenteschat/providers/plans";
 import { planFull, planState } from "@agenteschat/ui/plan-state";
 import type { Agent } from "../agents";
+import type { ModelGateway } from "../gateway";
 import type { MachineStatus } from "../machine-hub";
 import { pausedMessage } from "../machines";
 import { missionTurnFor } from "../missions-engine";
-import { isRightHand, rightHandPerson, rightHandPlanRefusal, thinkingAgent } from "../right-hand";
+import {
+  isRightHand,
+  type RightHandStandIn,
+  rightHandPerson,
+  rightHandPlanRefusal,
+  rightHandStandIn,
+  thinkingAgent,
+} from "../right-hand";
 import { runnerUpdateWay } from "../runner-update";
 import type { AgentRun } from "../runs";
 import { accountUnavailable, brainSessionId, claudeCodeAvailability, cliMissingMessage, toolOff } from "./claude-code";
@@ -519,6 +527,8 @@ export interface BrainPlan {
   usage?: PlanUsage;
   /** A mission's main session goes on although the agent's `promptKey` changed since its last run there. */
   settingsChanged?: boolean;
+  /** The right hand's own plan can't think now: this thinks for it (`rightHandStandIn`), and its reply says so. */
+  standIn?: RightHandStandIn;
 }
 
 /** What a Claude Code brain's model is when nobody chose one (Codex: its own default). */
@@ -766,6 +776,8 @@ export async function resolveBrain(
   deps: {
     db: Executor;
     machines?: { status(machineId: string): Promise<MachineStatus | null> };
+    /** The API key's check, for the right hand's stand-in on it (`rightHandStandIn`); absent: no key stands in. */
+    gateway?: Pick<ModelGateway, "hasModelCredential">;
   },
   given: Agent,
   run: AgentRun,
@@ -774,11 +786,12 @@ export async function resolveBrain(
    * `fresh`: a new computer session whatever the conversation had (routine runs). `promptKey`: the run's
    * (`Transcript.promptKey`); the conversation's session is picked up only when it started with the same.
    */
-  options: { fresh?: boolean; now?: Date; promptKey?: string } = {},
+  options: { fresh?: boolean; now?: Date; promptKey?: string; thinker?: Agent } = {},
 ): Promise<BrainPlan> {
   const mission: MissionTurn | null = await missionTurnFor(deps.db, run).catch(() => null);
   // The right hand: the AI of the person whose DM this is, else the workspace's; on a plan, its computer and owner.
-  const agent = await thinkingAgent(deps.db, given, await rightHandPerson(deps.db, given, run));
+  const person = await rightHandPerson(deps.db, given, run);
+  const agent = options.thinker ?? (await thinkingAgent(deps.db, given, person));
   const kind = brainFor(agent, run, mission);
   const base = mission ? { missionId: mission.missionId } : {};
   if (kind === "model") {
@@ -801,7 +814,7 @@ export async function resolveBrain(
     kind === "claude_code" && model && !isAutoModel(model) ? claudeCodeModel(planOf(account?.provider), model) : model;
   const effort = brainEffortFor(agent, kind);
   const unavailable =
-    (isRightHand(agent) ? await rightHandPlanRefusal(deps.db, agent, run, status) : null) ??
+    (isRightHand(agent) && agent.brainAccountId ? await rightHandPlanRefusal(deps.db, agent, run, status) : null) ??
     (machineId && !deps.machines
       ? null
       : computerBrainUnavailable(
@@ -815,6 +828,34 @@ export async function resolveBrain(
           // "Automático" runs another model where the one it maps to is held (`autoPlanModel`).
           isAutoModel(runs) ? autoPlanModel(account?.provider, runs, usage) : runs,
         ));
+  // The right hand's plan can't think now: another plan or the workspace's key thinks for it (ADR 0137 §7, amended
+  // 2026-11-15). Not while its computer is coming back (`computerBackSoon` waits for it, as `agentAiState` says):
+  // one in standby, which the run wakes, or one gone less than the outage grace (a server restart, its runner redialing).
+  const gone = status?.lastSeenAt ? Date.now() - Date.parse(status.lastSeenAt) : Number.POSITIVE_INFINITY;
+  const backSoon =
+    status?.standby ||
+    (unavailable?.code === "machine_offline" && gone < (await import("../machine-tasks")).TASK_OFFLINE_GRACE_MS);
+  if (unavailable && isRightHand(agent) && !mission && !options.thinker && !backSoon) {
+    let standIn = await rightHandStandIn(deps, agent, person, unavailable.code).catch(() => null);
+    if (standIn?.brainAccountId) {
+      const thinker: Agent = {
+        ...agent,
+        brain: standIn.brain,
+        brainModel: AUTO_MODEL,
+        brainEffort: null,
+        brainAccountId: standIn.brainAccountId,
+        brainAccountLentBy: null,
+        machineId: standIn.machineId ?? null,
+        ownerUserId: standIn.ownerUserId ?? null,
+        planForOthers: true,
+      };
+      const there = await resolveBrain(deps, given, run, conversation, { ...options, thinker });
+      if (!there.unavailable) return { ...there, standIn };
+      // That plan can't think either (a runner too old there, say): only the key is left.
+      standIn = await rightHandStandIn(deps, agent, person, unavailable.code, { keyOnly: true }).catch(() => null);
+    }
+    if (standIn?.brain === "model") return { kind: "model", standIn };
+  }
   // A mission's main session stays (its decisions, inbox and items point at it): `settingsChanged` brings the edit.
   const settingsChanged =
     mission?.session?.resume && options.promptKey !== undefined

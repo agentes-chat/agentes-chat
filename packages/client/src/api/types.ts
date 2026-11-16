@@ -1429,6 +1429,8 @@ export interface Message {
   actions?: AgentAction[];
   /** A long work's anchor (`meta.longWork`, ADR 0121): its line; live via `agent.work`. */
   longWork?: WorkView;
+  /** On a run's last message here: the works it handed over to other agents, each with its line; live via `agent.work`. */
+  handedWorks?: WorkView[];
   /** Client only: an optimistic message waiting for the server, or one that failed to send. */
   local?: "pending" | "failed";
   /** Client only, on a `failed` one the server refused: why (`sendFailureText`). */
@@ -2641,7 +2643,7 @@ export interface WorkView {
   status: "queued" | "live" | "done" | "failed" | "canceled";
   /** While live: what its run does now. */
   state: "working" | "waiting_approval" | "waiting_input" | "paused" | "waiting_computer" | "queued" | null;
-  how: "agent" | "auto";
+  how: "agent" | "auto" | "handed";
   anchorMessageId: string;
   /** Where its updates are. */
   threadId: string | null;
@@ -2664,6 +2666,14 @@ export interface WorkView {
   /** The right hand that made that stop at their word. */
   canceledByAgentId?: string | null;
   errorCode: string | null;
+  /** Handed over by another agent (absent: an older server). */
+  handedBy?: { agentId: string; consultationId: string } | null;
+  /** A handed work: the run that handed it; its line goes under that run's last message. */
+  askerRunId?: string | null;
+  /** The first step of its plan not done, 1-based, never past the last. */
+  planStep?: { current: number; total: number } | null;
+  /** Done: the first line of its report. */
+  result?: { text: string; messageId: string } | null;
 }
 
 /** `GET …/agent-status`: one agent's presence and its line. */
@@ -3272,9 +3282,11 @@ export interface AgentActionTarget {
  * Values for the sentence, by kind:
  * - `issue.created`: `number`, `title`
  * - `issue.updated`: `number`, `title`, `fields` (any of title, description, status, priority,
- *   assignee, labels, dueDate, criteria) and the new `status`, `priority`, `dueDate`, `labels`,
- *   `assigneeType`/`assigneeId`/`assigneeName`/`assigneeIsSelf` for the fields that changed
- * - `issue.assigned`: `number`, `title`, `assigneeType`, `assigneeId`, `assigneeName`, `assigneeIsSelf`
+ *   assignees, labels, dueDate, criteria) and the new `status`, `priority`, `dueDate`, `labels`,
+ *   `assigneeName`/`assigneeIsSelf`/`assigneeNames` for the fields that changed
+ * - `issue.assigned`: `number`, `title`, `assigneeName` (who was given it, several joined; null when people only
+ *   left it), `assigneeIsSelf`, `assigneeNames` (everyone who has it now); an older server sends `assigneeType` and
+ *   `assigneeId` of the one assignee
  * - `memory.saved`: `text` (and `previousText` when it replaced one); `memory.updated`: `text`, `previousText`;
  *   `memory.forgotten`: `text`
  * - `routine.created`: `name`, `rule` (an `ApiRule`, said in the person's language), `schedule` (the server's
@@ -3876,7 +3888,8 @@ export interface Issue {
   priority: IssuePriority;
   /** Its one project, or none (a server from before projects sends nothing). */
   project?: IssueProjectRef | null;
-  assignee: Actor | null;
+  /** Who does it, people and agents, in order; empty when nobody. */
+  assignees: Actor[];
   labels: string[];
   /** Day only, `YYYY-MM-DD`. */
   dueDate: string | null;
@@ -3886,7 +3899,7 @@ export interface Issue {
   source:
     | { type: "manual" }
     | { type: "message"; channelId: string; messageId: string }
-    | { type: "agent"; agentId: string }
+    | { type: "agent"; agentId: string; workId?: string; channelId?: string; messageId?: string }
     | { type: "webhook"; provider: string };
   /** The channel it lives in (from a message, or chosen). */
   channelId: string | null;
@@ -3909,7 +3922,7 @@ export interface Issue {
   /** The issue this one is a sub-issue of. */
   parentIssueId?: string | null;
   /** On the detail: its sub-issues. */
-  subIssues?: { id: string; number: number; title: string; status: IssueStatus; assignee: Actor | null }[];
+  subIssues?: { id: string; number: number; title: string; status: IssueStatus; assignees: Actor[] }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -3937,6 +3950,8 @@ export interface IssueActivity {
   text: string;
   /** Machine form of an event (`status_changed`, `assigned`, `agent_asked`, …). */
   event?: string;
+  /** An `assigned` event: who was put on the task, or taken off it (`textCode` `unassigned`). */
+  assignee?: Actor;
   /** The event in the app's words: `issues.event.{textCode}` with `textParams`. */
   textCode?: string;
   textParams?: Record<string, string>;
@@ -3951,7 +3966,7 @@ export interface IssueInput {
   title: string;
   description?: string;
   criteria?: string[];
-  assignee?: Actor | null;
+  assignees?: Actor[];
   priority?: IssuePriority;
   dueDate?: string | null;
   labels?: string[];
@@ -3966,7 +3981,7 @@ export interface IssueInput {
 export type IssuePatch = Partial<
   Pick<
     Issue,
-    "title" | "description" | "status" | "priority" | "assignee" | "dueDate" | "labels" | "boardRank" | "githubUrl"
+    "title" | "description" | "status" | "priority" | "assignees" | "dueDate" | "labels" | "boardRank" | "githubUrl"
   >
 > & {
   /** Move to a board column: the issue takes that column's stage. */
@@ -4424,7 +4439,7 @@ export interface CalendarRange {
   /** Pending reminders the viewer may see (absent on an older server). */
   reminders?: CalendarReminder[];
   /** Issues due in the range (all-day), with who has each (absent on an older server). */
-  deadlines: { issueId: string; number: number; title: string; date: string; assignee?: Actor | null }[];
+  deadlines: { issueId: string; number: number; title: string; date: string; assignees?: Actor[] }[];
   proposals: CalendarProposal[];
 }
 
@@ -7105,7 +7120,7 @@ export interface IssuesView {
   sort: "manual" | "priority" | "due" | "updated";
   /** What the cards show besides their number and title. */
   fields: Record<IssueCardField, boolean>;
-  /** Only tasks with one of these assignees: `agent:<id>`, `person:<id>` or `none` (empty: every task). */
+  /** Only tasks one of these has: `agent:<id>`, `person:<id>`, or `none` for a task nobody has (empty: every task). */
   assignees: string[];
   /** Only tasks with one of these priorities (empty: every task). */
   priorities: IssuePriority[];
@@ -7118,8 +7133,15 @@ export interface IssuesView {
   hideEmpty: boolean;
   /** The groups folded to their name and count: column ids, assignee keys or priorities. */
   collapsed: string[];
+  /**
+   * The list's columns I gave a width, in pixels (`ISSUE_COLUMN_WIDTHS` holds each one's least and most); a column
+   * not named has its own width.
+   */
+  widths: Partial<Record<IssueListColumn, number>>;
 }
 export type IssueCardField = "project" | "assignee" | "priority" | "due" | "criteria" | "pullRequest" | "label";
+/** A column of the list a person can give a width: the task's title, or a card field's. */
+export type IssueListColumn = "title" | IssueCardField;
 
 export interface NotificationCount {
   unread: number;
@@ -7788,12 +7810,22 @@ export interface PlanAccountInfo {
   logins?: number;
 }
 
+/** What a plan's use was for: work handed between agents, people's conversations, routines. */
+export type PlanUseKind = "handoffs" | "people" | "routines";
+
 export interface PlanAccountUsage extends PlanAccountInfo {
   /** Its windows as last reported, each with the agents' parts; null: not known yet. */
   usage: (Omit<PlanUsage, "windows"> & { windows: PlanWindowParts[] }) | null;
   /** This month per agent; `now`: it thinks with this account today. */
   agents: { agentId: string; name: string; tokens: number; now: boolean }[];
   monthTokens: number;
+  /**
+   * This month's tokens by what they were for, each with its estimated part of the window the agents' list splits
+   * (null: none has parts). Absent: an older server.
+   */
+  kinds?: { kind: PlanUseKind; tokens: number; percent: number | null }[];
+  /** Handoffs led the week: the agent that took most of that work, to ask directly. Absent: an older server. */
+  hint?: { kind: "handoffs"; agentId: string } | null;
   /** `view_usage` only: what the month's tokens would cost through the API (null: no price). */
   equivalentUsd?: number | null;
 }

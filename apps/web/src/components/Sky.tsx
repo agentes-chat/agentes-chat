@@ -401,27 +401,6 @@ export function DownloadSky({ clear }: { clear?: Clear }) {
 
 /* ---------- Small moments ---------- */
 
-/** A thin dithered strip sweeping in the agent's color behind the activity bar ("Theo está pensando…"). */
-export function ActivitySky({ color }: { color: AgentColor }) {
-  return (
-    <span className="ac-typing__sky" aria-hidden="true">
-      <PixelSky
-        options={{
-          pixel: 3,
-          surface: "--raised",
-          palette: (bg) => softTones(color, bg),
-          light: 0,
-          base: (u, _v, tt) => {
-            const c = ((tt * 0.32) % 1.6) - 0.3;
-            const d = u - c;
-            return 0.08 + 0.5 * Math.exp(-(d * d) / 0.035);
-          },
-        }}
-      />
-    </span>
-  );
-}
-
 /**
  * Where a picture an agent is making will show (`ImageMaking`): the picture forming out of the agent's sky, in its
  * soft tones over the conversation's background (`formingField`); whole and still with reduced motion.

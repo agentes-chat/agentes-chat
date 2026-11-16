@@ -8,13 +8,13 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
       "agentes.chat'in kullanımına ilişkin sözleşme: çalışma alanınız, ajanlarınız ve her bir tarafın neden sorumlu olduğu.",
     courtesy:
       "Bu metin bir nezaket çevirisidir. İngilizce sürümden farklılık göstermesi hâlinde İngilizce sürüm esas alınır.",
-    updated: "2026-11-13",
+    updated: "2026-11-16",
     sections: [
       {
         id: "agreement",
         heading: "1. Sözleşme",
         blocks: [
-          'İşbu Kullanım Koşulları ("Koşullar"), agentes.chat ticari adıyla faaliyet gösteren Wyoming eyaleti limited şirketi CODARI GLOBAL, LLC ("agentes.chat", "biz") ile bir hesap veya çalışma alanı oluşturan gerçek ya da tüzel kişi ("siz") arasında bağlayıcı bir sözleşmedir. Bir hesap oluşturarak, bir çalışma alanına katılarak veya agentes.chat\'i web üzerinde, Mac uygulamasında ya da telefon uygulamasında ("Hizmet") başka herhangi bir şekilde kullanarak işbu Koşulları ve Gizlilik Politikamızı kabul etmiş olursunuz. Hizmeti bir şirket veya başka bir kuruluş adına kullanıyorsanız, o kuruluşu bağlamaya yetkili olduğunuzu beyan etmiş olursunuz.',
+          'İşbu Kullanım Koşulları ("Koşullar"), agentes.chat ticari adıyla faaliyet gösteren Delaware eyaleti limited şirketi AGENTESCHAT, LLC ("agentes.chat", "biz") ile bir hesap veya çalışma alanı oluşturan gerçek ya da tüzel kişi ("siz") arasında bağlayıcı bir sözleşmedir. Bir hesap oluşturarak, bir çalışma alanına katılarak veya agentes.chat\'i web üzerinde, Mac uygulamasında ya da telefon uygulamasında ("Hizmet") başka herhangi bir şekilde kullanarak işbu Koşulları ve Gizlilik Politikamızı kabul etmiş olursunuz. Hizmeti bir şirket veya başka bir kuruluş adına kullanıyorsanız, o kuruluşu bağlamaya yetkili olduğunuzu beyan etmiş olursunuz.',
           "Hizmeti kullanabilmek için en az 18 yaşında olmanız ve sözleşme yapma ehliyetine sahip olmanız gerekir.",
         ],
       },
@@ -150,7 +150,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Uygulanacak hukuk",
         blocks: [
-          "İşbu Koşullar, kanunlar ihtilafı kuralları hariç olmak üzere ABD'nin Wyoming eyaleti kanunlarına tabidir ve taraflar Wyoming'de bulunan eyalet ve federal mahkemelerin münhasır yargı yetkisini kabul eder. Brezilya gibi, kanunu size feragat edilemeyen haklar veya yetkili mahkeme hakkı tanıyan bir yargı bölgesinde tüketiciyseniz, bu haklarınız saklıdır.",
+          "İşbu Koşullar, kanunlar ihtilafı kuralları hariç olmak üzere ABD'nin Delaware eyaleti kanunlarına tabidir ve taraflar Delaware'de bulunan eyalet ve federal mahkemelerin münhasır yargı yetkisini kabul eder. Brezilya gibi, kanunu size feragat edilemeyen haklar veya yetkili mahkeme hakkı tanıyan bir yargı bölgesinde tüketiciyseniz, bu haklarınız saklıdır.",
         ],
       },
       {
@@ -164,7 +164,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. İletişim",
         blocks: [
-          "CODARI GLOBAL, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Diğer tüm konular: hello@agentes.chat",
+          "AGENTESCHAT, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Diğer tüm konular: hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +175,13 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
       "Neleri topladığımız, ajanların neyi nereye gönderdiği, çalışma alanınızı kimlerin görebildiği ve sahip olduğunuz haklar.",
     courtesy:
       "Bu metin bir nezaket çevirisidir. İngilizce sürümden farklılık göstermesi hâlinde İngilizce sürüm esas alınır.",
-    updated: "2026-11-14",
+    updated: "2026-11-16",
     sections: [
       {
         id: "overview",
         heading: "1. Genel bakış",
         blocks: [
-          'agentes.chat ticari adıyla faaliyet gösteren Wyoming eyaleti limited şirketi CODARI GLOBAL, LLC ("agentes.chat", "biz"), insanların ve yapay zekâ ajanlarının birlikte çalıştığı, web üzerinde, Mac uygulaması olarak ve telefon uygulaması olarak sunulan bir çalışma alanı olan agentes.chat\'i ("Hizmet") işletir. Bu politika iki rolü birbirinden ayırır:',
+          'agentes.chat ticari adıyla faaliyet gösteren Delaware eyaleti limited şirketi AGENTESCHAT, LLC ("agentes.chat", "biz"), insanların ve yapay zekâ ajanlarının birlikte çalıştığı, web üzerinde, Mac uygulaması olarak ve telefon uygulaması olarak sunulan bir çalışma alanı olan agentes.chat\'i ("Hizmet") işletir. Bu politika iki rolü birbirinden ayırır:',
           {
             list: [
               "Kişilerin bir hesap oluşturmak ve kullanmak için bize verdiği bilgiler olan **hesap verileri** bakımından veri sorumlusu biziz.",
@@ -342,7 +342,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. İletişim",
         blocks: [
-          "CODARI GLOBAL, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. AB, Birleşik Krallık ve Brezilya'ya ilişkin veri koruma soruları da aynı adresten gizlilik ekibimize ulaşır. Diğer tüm konular için hello@agentes.chat adresine yazın.",
+          "AGENTESCHAT, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. AB, Birleşik Krallık ve Brezilya'ya ilişkin veri koruma soruları da aynı adresten gizlilik ekibimize ulaşır. Diğer tüm konular için hello@agentes.chat adresine yazın.",
         ],
       },
     ],

@@ -41,6 +41,7 @@ import { isMediaAfterReply, messageMediaOf } from "@agenteschat/client/lib/media
 import { memberRoleColor } from "@agenteschat/client/lib/member-groups";
 import { serverBody } from "@agenteschat/client/lib/message-body";
 import { missionSetupOf } from "@agenteschat/client/lib/missions";
+import { isStandInLine } from "@agenteschat/client/lib/no-ai";
 import { isTalkerReply, routineReportText, talkerWaited } from "@agenteschat/client/lib/notices";
 import { can } from "@agenteschat/client/lib/permissions";
 import { modelStandInText } from "@agenteschat/client/lib/plan-usage";
@@ -148,7 +149,7 @@ import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { TeamChecks } from "./TeamChecks";
 import { SavedTools, TurnTools } from "./ToolCalls";
 import { recentTurn, stepLimitOf, stoppedOf, turnOpener } from "./turn";
-import { MessageWorkLine } from "./WorkLine";
+import { HandedWorkLines, MessageWorkLine } from "./WorkLine";
 
 /** A run's message asks whether a take over still holds its browser only this recently (older: events only). */
 const TRAIL_RECENT_MS = 12 * 60 * 60_000;
@@ -249,7 +250,8 @@ export const MessageRow = memo(function MessageRow({
     ? ""
     : reminderBody(splitCanceled(serverBody(t, listedText(m.body, meta), meta, i18n.language, names), meta).body, meta);
   // A long work's anchor once it's over: no promise left, and dimmed (its line says how it ended).
-  const body = m.longWork ? workAnchorBody(t, said, meta, m.longWork) : said;
+  // The right hand's stand-in line is its pill's sentence (`NoAiCard`): no text above it too.
+  const body = isStandInLine(meta) ? "" : m.longWork ? workAnchorBody(t, said, meta, m.longWork) : said;
   const workOver = Boolean(m.longWork && workIsOver(m.longWork));
   // The person's pick on a choice card (ADR 0124): one compact line, not a bubble.
   const choiceReply = meta?.choiceReply && body ? <ChoiceReply text={choiceReplyLine(body)} /> : null;
@@ -283,9 +285,11 @@ export const MessageRow = memo(function MessageRow({
     consulted,
     reached,
   );
+  // Work it handed over that reports here: its line under this reply says what the pair row would.
+  const paired = consults.filter((c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id));
   const pair =
-    isAgent && m.author.id && consults.length > 0 ? (
-      <ConsultPairRow askerId={m.author.id} channelId={m.channelId} items={consults} />
+    isAgent && m.author.id && paired.length > 0 ? (
+      <ConsultPairRow askerId={m.author.id} channelId={m.channelId} items={paired} />
     ) : null;
   const grouped = groupedIn && !pair;
   // A question to another agent (in their DM) carries the asking run: its work shows on that run's reply.
@@ -620,7 +624,7 @@ export const MessageRow = memo(function MessageRow({
         (inBubble || compact || !words) && styles.whoTight,
       ]}
     >
-      {!inBubble || look.names ? (
+      {!inBubble || look.names || helping ? (
         <Text
           variant="footnote"
           tone="ink2"
@@ -880,6 +884,7 @@ export const MessageRow = memo(function MessageRow({
             {isAgent ? <ReachLines message={m} /> : null}
             {isAgent ? <FeedbackOfferRow message={m} /> : null}
             {isAgent && m.longWork ? <MessageWorkLine message={m} threaded={Boolean(thread)} /> : null}
+            {isAgent && !m.local ? <HandedWorkLines message={m} /> : null}
             {files.length > 0 ? <MessageFiles files={files} /> : null}
             {trails && m.author.id && trails.browser.length > 0 ? (
               <TrailCard
@@ -910,7 +915,7 @@ export const MessageRow = memo(function MessageRow({
                 done
                 settled
               />
-            ) : steps && m.agentRunId ? (
+            ) : steps && m.agentRunId && !meta?.workUpdate ? (
               <SavedTools
                 runId={m.agentRunId}
                 meta={meta}
@@ -936,7 +941,13 @@ export const MessageRow = memo(function MessageRow({
             {isAgent ? <TeamWeek message={m} /> : null}
             {approvalId ? <ApprovalInline approvalId={approvalId} messageId={m.id} /> : null}
             {handoff ? <HandoffCard handoff={handoff} /> : null}
-            {question ? <QuestionCard key={`${question.id}:${question.status}`} question={question} /> : null}
+            {question ? (
+              <QuestionCard
+                key={`${question.id}:${question.status}`}
+                question={question}
+                asker={helping ? (agent?.name ?? name) : undefined}
+              />
+            ) : null}
             {secret ? <SecretCard key={`${secret.id}:${secret.status}`} request={secret} /> : null}
             {missionDecision}
             {foot}

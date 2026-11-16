@@ -1706,6 +1706,7 @@
       "ui_automation_off": "UI 자동화가 꺼져 있어요",
       "xcode_missing": "Mac에 Xcode가 필요해요",
       "xcode_too_old": "Xcode가 이 iPhone을 지원하기에는 너무 오래됐어요",
+      "ios_behind_xcode": "이 iPhone의 iOS 업데이트",
       "device_support": "Mac이 이 iPhone을 준비하는 중이에요",
       "helper_missing": "테스트 도우미가 아직 설정되지 않았어요",
       "helper_expired": "테스트 도우미를 갱신해야 해요",

@@ -13,6 +13,7 @@ import {
   desc,
   type Executor,
   eq,
+  gt,
   inArray,
   isNull,
   ne,
@@ -227,6 +228,7 @@ import {
 } from "./key-line";
 import { answerNoTurn, deliverLive, listenLiveSteering, renderSteered } from "./live-steer";
 import {
+  accountEverWorked,
   accountFailureCause,
   noteAccountFailure,
   publishAccountsChanged,
@@ -236,6 +238,7 @@ import { computerBackSoon, type MachineCaller } from "./machine-hub";
 import { TASK_OFFLINE_GRACE_MS } from "./machine-tasks";
 import { getMachine } from "./machines";
 import { MEDIA_TOOLS } from "./media";
+import { PLACE_KEPT_MS } from "./message-place";
 import {
   getMessage,
   insertMessage,
@@ -246,7 +249,7 @@ import {
   unreachedPeople,
 } from "./messages";
 import { missionAsksPerson, missionReportSince, scheduleKeepGoing } from "./missions-engine";
-import { type NoAiCardReason, postNoAiCard } from "./no-ai";
+import { type NoAiCardReason, postNoAiCard, postStandInLine } from "./no-ai";
 import {
   notifyCatchUpClosed,
   notifyCatchUpClosedAsker,
@@ -274,8 +277,10 @@ import { routineCreatorOf, wikiPersonOf } from "./requester";
 import {
   isRightHand,
   RIGHT_HAND_AUTO,
+  type RightHandStandIn,
   rightHandNoAiReason,
   rightHandPerson,
+  rightHandStandIn,
   scrubRightHandReply,
   withPersonalBrain,
 } from "./right-hand";
@@ -647,7 +652,8 @@ export interface Transcript {
    */
   request?: string;
   /** The computer brain couldn't answer and the model brain did (ADR 0032 §5): the reply carries a quiet note. */
-  fallback?: { from: BrainKind; code: string; message: string; resetsAt?: string };
+  /** `quiet`: the right hand's stand-in, whose own line says it (`postStandInLine`), not the reply's note. */
+  fallback?: { from: BrainKind; code: string; message: string; resetsAt?: string; quiet?: true };
   /**
    * The key that stood in for the computer brain was refused (no credit, a wrong key) before it answered a turn: the
    * run went back to its own brain, and no key stands in for it again.
@@ -742,6 +748,12 @@ export interface Transcript {
    */
   mootRequests?: Record<string, string>;
   requestMoot?: true;
+  /**
+   * Its own newer run here withdrew what it waited on (`withdraw_request`) and answers the person: the calls this one
+   * had made by then. Woken with no call made since, its words would only answer them a second time, so it ends
+   * without them (a person's message to it since makes it owe an answer again).
+   */
+  takenOver?: number;
   /** Time spent working before this claim (ms), without its waits: the long-work safety net counts it (ADR 0121). */
   activeMs?: number;
   /** The "unavailable" note already posted in this run (its code): not repeated while it waits. */
@@ -1373,6 +1385,8 @@ async function executeRunInner(
   let transcript = run.transcript as unknown as Transcript | null;
   /** Who thinks for this run (set before the first turn). */
   let brainPlan: BrainPlan | null = null;
+  /** What thought for the right hand in place of its own plan (`rightHandStandIn`): its reply gets one line saying so. */
+  let standInUsed: RightHandStandIn | null = null;
   /** How its last turn ended (`decideTurnEnd`); every other way to `done` is recorded as `ended` (I2). */
   let turnEnd: TurnEndDecision | null = null;
   /** A failure's own code when the run error's prefix is too broad (`brain_unavailable: …`), and the plan it names. */
@@ -1415,6 +1429,13 @@ async function executeRunInner(
     if (brainPlan && brainPlan.kind !== "model") await revokeRunToolTokens(db, { runId: run.id }).catch(() => {});
     if (status === "done" || status === "failed" || status === "canceled")
       await deps.releaseRunPhones?.(run).catch(() => {});
+    if (status === "done" && standInUsed && !run.background) {
+      const line = standInUsed;
+      standInUsed = null;
+      await postStandInLine({ db, pubsub: deps.pubsub }, run, line).catch((error) =>
+        addRunStep(db, run, "error", { reason: "stand_in_line", message: String(error) }),
+      );
+    }
     await publishChannelEvent(deps.pubsub, { type: "agent.idle", ...where, ...bg });
     await publishChannelEvent(deps.pubsub, {
       type: "run.finished",
@@ -1598,7 +1619,11 @@ async function executeRunInner(
     await deferred;
     const plan = brainPlan && isComputerBrain(brainPlan.kind) ? BRAIN_PLAN_NAMES[brainPlan.kind] : undefined;
     failCause = { ...(ledger ? { code: ledger.code } : {}), ...(plan ? { plan } : {}) };
-    await addRunStep(db, run, "error", { reason });
+    // With `no_ai`, why (`failNoAi`): the run's own error says only that, and the card that says more may not be posted.
+    await addRunStep(db, run, "error", {
+      reason,
+      ...(reason === NO_AI && ledger?.detail ? { code: ledger.detail } : {}),
+    });
     const failed = await transitionRun(db, run.id, "running", "failed", {
       error: reason,
       ...(brainFailure ? { failure: brainFailure } : {}),
@@ -1746,11 +1771,10 @@ async function executeRunInner(
   /** What the run's policy refused of the tools the agent's scopes grant: who is behind it held them back. */
   const heldBack: string[] = [];
   const stored = await getAgentCached(db, run.orgId, run.agentId);
+  /** Whose AI the right hand's run thinks with (ADR 0137 §11); null for any other agent. */
+  const thinksFor = stored ? await rightHandPerson(db, stored, run) : null;
   // The right hand thinks with the AI of the person whose DM this is, when they chose their own (ADR 0137 §11).
-  const agent =
-    stored && isRightHand(stored)
-      ? (await withPersonalBrain(db, stored, await rightHandPerson(db, stored, run))).agent
-      : stored;
+  const agent = stored && isRightHand(stored) ? (await withPersonalBrain(db, stored, thinksFor)).agent : stored;
   // Claude Code defers our tools itself (its ToolSearch): a new run lists every tool the agent has, the same in every
   // run, instead of the groups a judge picks, so its cached prefix holds across runs and sessions (ADR 0043).
   if (needsContext && deps.toolsOnDemand && agent && brainOf(agent.brain) === "claude_code") {
@@ -2905,6 +2929,18 @@ async function executeRunInner(
     fresh: Boolean(viaRoutine) || run.background,
     promptKey: transcript.promptKey,
   });
+  if (brainPlan.standIn) {
+    standInUsed = brainPlan.standIn;
+    const fallback = {
+      from: brainOf(agent.brain),
+      code: brainPlan.standIn.code,
+      message: `${brainPlan.standIn.via} stood in`,
+      quiet: true as const,
+    };
+    // On the key it keeps the key when it resumes, as a fallback does: its transcript is the model's.
+    if (brainPlan.kind === "model") transcript.fallback = fallback;
+    await addRunStep(db, run, "context", { brainFallback: fallback });
+  }
   // The agent's model left its plan's live list, so this turn runs another: its owner hears it, never silently.
   const dropped =
     brainPlan.kind === "claude_code" && !brainPlan.missionId && agent.brain === "claude_code"
@@ -3301,9 +3337,25 @@ async function executeRunInner(
       if (back === null) return "canceled";
       if (back) return "back";
     }
-    // The team's right hand on a plan (ADR 0137 §7): one line says why, with the way to an API key; it never stands
-    // in on a key nor waits for the computer. Only waiting its turn for room stays a wait.
-    if (isRightHand(agent) && u.code !== "busy" && !u.queued) {
+    // Tools already ran in a turn cut off by its computer: only that computer may finish it (the model
+    // brain would redo them), so the run waits for it. A turn the plan cut after it worked parks with no
+    // executed tools when the runner can't name them (Claude Code's own tools, an older runner): the same.
+    const onlyThisComputer = (t.interruptedTurn?.executed.length ?? 0) > 0 || t.interruptedTurn?.cause === "plan_limit";
+    // The team's right hand on a plan (ADR 0137 §7, amended 2026-11-15): the workspace's key takes the turn over when it
+    // can (its reply gets one line saying so); else one line says why. Only waiting its turn for room stays a wait.
+    const rightHandKey =
+      isRightHand(agent) &&
+      u.code !== "busy" &&
+      // Its CLI killed for tools of its own: the turn stops there, nothing takes it over.
+      u.code !== "tools_not_locked" &&
+      !u.queued &&
+      !onlyThisComputer &&
+      !t.standInRefused
+        ? await rightHandStandIn({ db, gateway: deps.gateway }, agent, thinksFor, u.code, { keyOnly: true }).catch(
+            () => null,
+          )
+        : null;
+    if (isRightHand(agent) && u.code !== "busy" && !u.queued && !rightHandKey) {
       const ownModel = u.scope ? ownLimitsModel(plan.account?.provider, plan.model) : null;
       const line = rightHandNoAiReason(u.code, ownModel ? u.scope : undefined);
       // What the plan's CLI or its computer said is kept in the run and reported, as any agent's CLI failure is, and the
@@ -3316,10 +3368,6 @@ async function executeRunInner(
       await failNoAi(line, undefined, ownModel?.label, said || undefined);
       return "failed";
     }
-    // Tools already ran in a turn cut off by its computer: only that computer may finish it (the model
-    // brain would redo them), so the run waits for it. A turn the plan cut after it worked parks with no
-    // executed tools when the runner can't name them (Claude Code's own tools, an older runner): the same.
-    const onlyThisComputer = (t.interruptedTurn?.executed.length ?? 0) > 0 || t.interruptedTurn?.cause === "plan_limit";
     // A background run never stands in on the model brain (`mayFallBack`): it waits for its computer.
     // Behind others in the computer's line (`roomGate`) is no refusal: it waits its turn.
     if (
@@ -3327,12 +3375,18 @@ async function executeRunInner(
       !u.queued &&
       // A key refused in this run already (`backToOwnBrain`) would be refused again.
       !t.standInRefused &&
-      mayFallBack(agent, run) &&
+      (mayFallBack(agent, run) || rightHandKey) &&
       (await deps.gateway.hasModelCredential(thinker).catch(() => false))
     ) {
       await leaveLine();
       standIn = { plan, brain, toolGroups: t.toolGroups, loadedGroups: ctx.loadedGroups };
-      t.fallback = { from, code: u.code, message: u.message, ...(u.resetsAt ? { resetsAt: u.resetsAt } : {}) };
+      t.fallback = {
+        from,
+        code: u.code,
+        message: u.message,
+        ...(u.resetsAt ? { resetsAt: u.resetsAt } : {}),
+        ...(rightHandKey ? { quiet: true as const } : {}),
+      };
       // On "Automático" the API answers with the model and effort chosen for this run.
       const autoEffort = isAutoModel(agent.model) ? t.autoModel?.effort : undefined;
       plan = {
@@ -3346,6 +3400,7 @@ async function executeRunInner(
       await recordRunBrain(db, run.id, "model");
       run = { ...run, brain: "model" };
       await addRunStep(db, run, "context", { brainFallback: { from, code: u.code, message: u.message } });
+      if (rightHandKey) standInUsed = rightHandKey;
       return "fallback";
     }
     // Signed out, the command-line tool missing, no computer: nothing signals that it's fixed (only the
@@ -3551,6 +3606,50 @@ async function executeRunInner(
   };
 
   /**
+   * When the first secret or approval card a computer brain's bridged call posted in this run went up: the brain asks
+   * mid-turn and writes after the call what the card is for ("I left a secure field here for the key"), so that text
+   * is placed just before the card and reads first. A card another run posted (an approval joining an older card),
+   * one older than a place can be kept (`PLACE_KEPT_MS`), or one someone else wrote after (a reply takes no place
+   * before what people sent while it worked, ADR 0010): null, and the text goes at the end as before.
+   */
+  const bridgedCardAt = async (t: Transcript): Promise<Date | null> => {
+    const calls = (t.pending?.calls ?? []).filter((c) => c.bridged);
+    const secretIds = calls.flatMap((c) => (c.secretRequestId ? [c.secretRequestId] : []));
+    const approvalIds = calls.flatMap((c) => (c.approvalId ? [c.approvalId] : []));
+    const cards = [
+      ...(secretIds.length > 0
+        ? await db
+            .select({ at: messages.createdAt, channelId: messages.channelId })
+            .from(secretRequests)
+            .innerJoin(messages, and(eq(messages.id, secretRequests.messageId), eq(messages.agentRunId, run.id)))
+            .where(inArray(secretRequests.id, secretIds))
+        : []),
+      ...(approvalIds.length > 0
+        ? await db
+            .select({ at: messages.createdAt, channelId: messages.channelId })
+            .from(approvals)
+            .innerJoin(messages, and(eq(messages.id, approvals.messageId), eq(messages.agentRunId, run.id)))
+            .where(inArray(approvals.id, approvalIds))
+        : []),
+    ];
+    const first = cards.reduce<(typeof cards)[number] | null>((a, c) => (a && a.at <= c.at ? a : c), null);
+    if (!first || Date.now() - first.at.getTime() >= PLACE_KEPT_MS) return null;
+    const [after] = await db
+      .select({ id: messages.id })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.orgId, run.orgId),
+          eq(messages.channelId, first.channelId),
+          gt(messages.createdAt, first.at),
+          or(isNull(messages.agentRunId), ne(messages.agentRunId, run.id)),
+        ),
+      )
+      .limit(1);
+    return after ? null : first.at;
+  };
+
+  /**
    * A computer brain's call through the bridge paused the run during the turn
    * (`suspendRunForTool` posted the card and moved it to `waiting_*`): keep the
    * pending calls it recorded, post what the brain said if it says more than the card, and stop here.
@@ -3577,6 +3676,10 @@ async function executeRunInner(
     if (asked && textBefore) {
       text = stripSentinel(textBefore(asked.askedAt, ASKED_GRACE_MS));
       at = new Date(asked.cardAt.getTime() - 1);
+    } else if (text) {
+      // A secret or an approval: what it wrote says what the card is for, so it reads before the card.
+      const cardAt = await bridgedCardAt(t);
+      if (cardAt) at = new Date(cardAt.getTime() - 1);
     }
     // A background run never posts by itself (ADR 0053 §5): its cards speak for it.
     if (run.background || repeatsLastPost(text)) text = "";
@@ -4879,8 +4982,28 @@ async function executeRunInner(
         // A CLI's failure says who failed it and what it said; the computer only ran it. One that refused to start
         // would fail every retry the same way: it ends here too.
         // A code the apps don't word (a runner's `unsupported`) reads as that brain's program's error, never bare.
+        // A sign-in that never answered a turn, with nothing to stand in: its CLI's own failure is how it is set up,
+        // not an outage that passes, so the run ends now on what the CLI said instead of waiting it out for a day.
+        const signIn = turnPlan.kind !== "model" ? turnPlan.account : undefined;
+        const neverWorked =
+          error instanceof BrainFailure &&
+          error.retryable &&
+          signIn !== undefined &&
+          computerTurns === 0 &&
+          "brain" in (cliFailureOf(error, signIn) ?? {}) &&
+          !(await accountEverWorked(db, run.orgId, signIn.id).catch(() => true));
+        // Not noted above (only a Claude Code sign-in with a known cause is): noted here, so its row says it failed.
+        if (neverWorked && signIn && !(turnPlan.kind === "claude_code" && brainFailure?.cause)) {
+          const failure = {
+            orgId: run.orgId,
+            accountId: signIn.id,
+            code: error.code,
+            cause: brainFailure?.cause ?? "unknown",
+          };
+          later(() => noteAccountFailure(db, failure));
+        }
         const cli =
-          error instanceof BrainFailure && (!error.retryable || cliRefusedStart(error))
+          error instanceof BrainFailure && (!error.retryable || cliRefusedStart(error) || neverWorked)
             ? (cliFailureText(error, turnPlan.account) ??
               (!error.retryable && isComputerBrain(turnPlan.kind) ? brainFailureText(error, turnPlan.kind) : null))
             : null;
@@ -5281,6 +5404,10 @@ async function executeRunInner(
         !transcript.reacted &&
         !transcript.mediaSent &&
         (transcript.passed ||
+          (transcript.takenOver !== undefined &&
+            (transcript.executedCalls ?? 0) <= transcript.takenOver &&
+            updates.length === 0 &&
+            !saved) ||
           (!anythingPosted && (wantsQuiet || !said) && updates.length === 0 && !saved && !transcript.reported))
       ) {
         const how = transcript.passed ? "pass" : wantsQuiet ? "sentinel" : "empty";
@@ -6384,10 +6511,10 @@ const withCode = (meta: Record<string, unknown> | undefined, code: ReturnType<ty
  * Fast was refused and it came at standard speed (`meta.speedFallback`, the apps say so under the reply).
  */
 const withFallback = (t: Transcript, meta: Record<string, unknown> | undefined) =>
-  t.fallback || t.speedFallback || t.modelStandIn
+  (t.fallback && !t.fallback.quiet) || t.speedFallback || t.modelStandIn
     ? {
         ...(meta ?? {}),
-        ...(t.fallback ? { brainFallback: t.fallback } : {}),
+        ...(t.fallback && !t.fallback.quiet ? { brainFallback: t.fallback } : {}),
         ...(t.speedFallback ? { speedFallback: true } : {}),
         ...(t.modelStandIn ? { modelStandIn: t.modelStandIn } : {}),
       }

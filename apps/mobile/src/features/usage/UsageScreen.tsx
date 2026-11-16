@@ -1,4 +1,4 @@
-import type { OrgPlanUsage, PlanAccountUsage, PlanServes } from "@agenteschat/client";
+import type { OrgPlanUsage, PlanAccountUsage, PlanServes, PlanUseKind } from "@agenteschat/client";
 import {
   keys,
   useAiAccounts,
@@ -15,11 +15,13 @@ import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { formatPercent, formatShortDate, formatTokensShort, formatUsd } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
 import {
+  accountKinds,
   accountName,
   accountOwner,
   accountShares,
   brandOf,
   groupUsageAccounts,
+  kindFacts,
   loginsText,
   noWindowsText,
   planMeterText,
@@ -55,7 +57,8 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { LOGO_SIZES } from "@/ui/provider-marks";
-import { PlanHoldNote, usePlanHold } from "../ai/parts";
+import { Note, PlanHoldNote, usePlanHold } from "../ai/parts";
+import { useOpenDm } from "../new/useOpenDm";
 import { AgentFace } from "../shared/Face";
 import { FirstUse } from "../shared/FirstUse";
 import { useColors, useDirectory, useErrorToast } from "../shared/hooks";
@@ -249,9 +252,13 @@ function AccountRow({
   const [open, setOpen] = useState(line != null && line.state !== "ok");
   const tone = c[PLAN_TONE[planLevel(line?.top?.used ?? 0, line?.state === "limited")]];
   const shares = accountShares(account);
+  const window = shares.window ? text.short(shares.window) : null;
   const list =
     shares.shown.length > 0 ? (
-      <AgentShares shares={shares} window={shares.window ? text.short(shares.window) : null} />
+      <>
+        <AgentShares shares={shares} window={window} />
+        <KindShares account={account} window={window} />
+      </>
     ) : null;
   const owner = [accountOwner(t, account), servesText(t, account), loginsText(t, account)].filter(Boolean).join(" · ");
   return (
@@ -450,6 +457,63 @@ function AgentShares({ shares, window }: { shares: ReturnType<typeof accountShar
   );
 }
 
+// The web's swap, person and routines; a routine is a clock on the phone (`intent.ts`).
+const KIND_ICONS = { handoffs: "swap", people: "person", routines: "clock" } as const satisfies Record<
+  PlanUseKind,
+  string
+>;
+
+/**
+ * Under the agents, what the account's use was for, and when handoffs led the week a line that ends with "Message
+ * Ada": the web's `KindShares`.
+ */
+function KindShares({ account, window }: { account: PlanAccountUsage; window: string | null }) {
+  const { t, i18n } = useTranslation();
+  const dir = useDirectory();
+  const c = useColors();
+  const openDm = useOpenDm();
+  const kinds = accountKinds(account);
+  const target = account.hint ? dir.agentById.get(account.hint.agentId) : undefined;
+  if (kinds.length === 0) return null;
+  const divided = { borderTopColor: c.line, borderTopWidth: StyleSheet.hairlineWidth };
+  return (
+    <View style={styles.kinds}>
+      <Text variant="small" tone="muted" style={styles.bold}>
+        {t("usage.kinds.label")}
+      </Text>
+      <View>
+        {kinds.map((k, i) => (
+          <View key={k.kind} style={[styles.kindRow, i > 0 && divided]}>
+            <View style={styles.face}>
+              <Icon name={KIND_ICONS[k.kind]} size={16} color={c.muted} />
+            </View>
+            <Text variant="small" tone="muted" style={[styles.grow, styles.tabular]}>
+              <Text variant="small" tone="ink" style={styles.bold}>
+                {t(`usage.kinds.${k.kind}`)}
+              </Text>
+              {kindFacts(t, i18n.language, window, k)}
+            </Text>
+          </View>
+        ))}
+      </View>
+      {target ? (
+        <Note icon="info">
+          {t("usage.hint.handoffs")}{" "}
+          <Text
+            variant="small"
+            tone="ink"
+            style={[styles.bold, styles.link]}
+            accessibilityRole="link"
+            onPress={() => void openDm({ agentId: target.id }, { compose: true })}
+          >
+            {t("usage.hint.message", { name: target.name })}
+          </Text>
+        </Note>
+      ) : null}
+    </View>
+  );
+}
+
 /** The API per agent: its tokens, its share of its budget and (with money) what it spent of it. */
 function ApiCard({ data }: { data: OrgPlanUsage }) {
   const { t, i18n } = useTranslation();
@@ -594,7 +658,11 @@ const styles = StyleSheet.create({
   rowBody: { gap: 12, paddingBottom: 12 },
   // An account's agents: a face, then one line of words. The rows open an agent: a finger's 44 points.
   share: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 44 },
-  face: { width: 18 },
+  face: { width: 18, alignItems: "center" },
+  // The use by kind: its label 8 above the rows, rows a small control tall (not pressable).
+  kinds: { gap: 8 },
+  kindRow: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 36 },
+  link: { textDecorationLine: "underline" },
   // Narrower than the web's row: the tokens and the budget's share on one line under the name, the spend under it.
   api: { paddingVertical: 10 },
   kind: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10 },

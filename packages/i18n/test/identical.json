@@ -555,6 +555,7 @@
       "storage.connect.awsRegion.il-central-1"
     ],
     "fr": [
+      "usage.kinds.routines",
       "channel.tooLong.fileName",
       "calendar.moreRuns",
       "devices.cpus",
@@ -1821,6 +1822,7 @@
       "storage.connect.provider.b2"
     ],
     "nl": [
+      "usage.kinds.routines",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
       "devices.filter.computers",
