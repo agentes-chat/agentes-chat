@@ -1,3 +1,4 @@
+import { existsSync, readdirSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { commandParts, ruleMatches } from "./machine-protocol";
 import { type OutboundCode, outboundUrlProblem } from "./outbound-url";
@@ -60,6 +61,12 @@ export interface CommandScope {
   home?: string;
   /** The runner's own home wherever it is (`AGENTES_RUNNER_HOME`): its accounts, tokens and settings are secrets. */
   runnerHome?: string;
+  /**
+   * Folders a turn's own CLI keeps for its model inside a home that is otherwise a secret: Codex's skills and the
+   * pictures it made (`CODEX_HOME/skills`, `CODEX_HOME/generated_images`). Read like any folder; never their
+   * siblings (the sign-in beside them), nor through a link that leaves them.
+   */
+  readable?: string[];
 }
 
 type Word = { text: string; op?: undefined } | { text: string; op: "pipe" | "list" | "redirect" | "input" };
@@ -424,9 +431,45 @@ const SECRET_PATH = new RegExp(
 /** Whether a path, as written or relative to a folder, is one of those. */
 export const isSecretRead = (p: string) => SECRET_PATH.test(p);
 
+/** The path with its links followed: those of its nearest folder that exists, plus the rest as written. */
+const realOrSelf = (p: string): string => {
+  try {
+    return realpathSync(p);
+  } catch {
+    const up = path.dirname(p);
+    return up === p ? p : path.join(realOrSelf(up), path.basename(p));
+  }
+};
+
+/** No link anywhere in the folder, the folder itself included: a glob or a recursive read can't follow one out. */
+function linkFree(root: string) {
+  // Not there yet: nothing in it to follow.
+  if (!existsSync(root)) return true;
+  try {
+    if (realOrSelf(root) !== path.join(realOrSelf(path.dirname(root)), path.basename(root))) return false;
+    return !readdirSync(root, { recursive: true, withFileTypes: true }).some((e) => e.isSymbolicLink());
+  } catch {
+    // A folder in it it can't read could hide one.
+    return false;
+  }
+}
+
+/**
+ * Inside one of the scope's `readable` folders, as written (no glob: a pattern's matches aren't known here), with no
+ * link in that folder, and not a secret by its own name.
+ */
+function inReadable(scope: CommandScope, p: string, r: string) {
+  if (/[*?[\]{}]/.test(p)) return false;
+  return (scope.readable ?? []).some((f) => {
+    const root = path.resolve(f);
+    return under(r, root) && !SECRET_PATH.test(path.relative(root, r)) && linkFree(root);
+  });
+}
+
 function secretPath(scope: CommandScope, p: string) {
   const r = resolveIn(scope, p);
   const home = scope.home;
+  if (r !== null && inReadable(scope, p, r)) return false;
   return (
     r === null ||
     SECRET_PATH.test(r) ||
@@ -452,9 +495,10 @@ const bareWord = (w: string) => {
  * A path or pattern names a secret (resolved in the scope when there is one, if it can leave the folder it
  * runs in; a bare one is tested as written).
  */
-const namesSecret = (p: string, scope?: CommandScope) =>
-  SECRET_PATH.test(p) ||
-  (scope !== undefined && (p.startsWith("/") || p.startsWith("~") || p.includes("..")) && secretPath(scope, p));
+const namesSecret = (p: string, scope?: CommandScope) => {
+  const full = scope !== undefined && (p.startsWith("/") || p.startsWith("~") || p.includes(".."));
+  return full ? secretPath(scope, p) : SECRET_PATH.test(p);
+};
 
 /** Claude Code's own tools that read files, and the arguments that say where (Grep's `pattern` is a search, not a path). */
 const FILE_READ_TOOLS: Record<string, readonly string[]> = {

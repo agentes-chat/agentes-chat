@@ -20,6 +20,7 @@ import {
   codexContextOverride,
   codexEffort,
   codexFileChangeCall,
+  codexHomeOf,
   codexProblem,
   codexSandbox,
   codexThreadKey,
@@ -686,6 +687,9 @@ export function approvalCalls(
   }
   return null;
 }
+
+/** What Codex keeps in its home for the model to read: its skills (`skills/.system/imagegen`) and its images. */
+export const codexReadable = (home: string) => [path.join(home, "skills"), path.join(home, "generated_images")];
 
 /** `accept` only when the policy allows every call of the approval (`permissionPrompt`, as Claude Code's prompt). */
 export async function decideApproval(
@@ -1384,6 +1388,8 @@ export class CodexAppServers implements CodexAppRunner {
         // Windows has no HOME, as a rule (the home is USERPROFILE): without one, `~` would read as the agent's folder.
         home: process.env.HOME || homedir(),
         ...(opts.runnerHome ? { runnerHome: opts.runnerHome } : {}),
+        // Codex's own skills and the pictures it made: the account folder around them stays a secret.
+        readable: codexReadable(input.account?.home ?? (opts.env?.CODEX_HOME || codexHomeOf())),
       };
       const windows = (opts.platform ?? process.platform) === "win32";
       client.onRequest((method, params) => {

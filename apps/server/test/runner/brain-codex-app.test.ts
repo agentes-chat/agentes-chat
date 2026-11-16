@@ -764,6 +764,32 @@ test.skipIf(!posix)(
   },
 );
 
+test.skipIf(!posix)(
+  "Codex's own skills and images in a secret home are read without asking; its sign-in beside them is not",
+  async () => {
+    const asked: unknown[] = [];
+    const t = await setup({
+      ask: async (_process, tool, args): Promise<IpcReply> => {
+        asked.push({ tool, args });
+        return { ok: true, text: JSON.stringify({ behavior: "allow" }) };
+      },
+    });
+    // Its home inside the runner's (as an account folder is): a secret but for those two folders.
+    const codexHome = path.join(t.home, "accounts", "codex", "a1");
+    process.env.CODEX_HOME = codexHome;
+    const skill = start(t.ctx, request(1, `APPROVE cat ${codexHome}/skills/.system/imagegen/SKILL.md`));
+    await skill.done;
+    expect(answerOf(skill.events)).toBe("decision: accept");
+    const images = start(t.ctx, request(2, `APPROVE ls -lt ${codexHome}/generated_images`));
+    await images.done;
+    expect(answerOf(images.events)).toBe("decision: accept");
+    const signIn = start(t.ctx, request(3, `APPROVE cat ${codexHome}/auth.json`));
+    await signIn.done;
+    expect(answerOf(signIn.events)).toBe("decision: decline");
+    expect(asked).toEqual([]);
+  },
+);
+
 test.skipIf(!posix)("a plan turn's approvals are refused on the computer, never asked of anyone", async () => {
   const asked: unknown[] = [];
   const t = await setup({
