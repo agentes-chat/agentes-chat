@@ -16,14 +16,16 @@ import {
 } from "@agenteschat/client";
 import { accountAbout, accountChoices, accountTitle, ownSignInTitle } from "@agenteschat/client/lib/ai-accounts";
 import { audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
+import { effortOf } from "@agenteschat/client/lib/brain-advanced";
 import { modelInput, modelRows } from "@agenteschat/client/lib/brain-picker";
+import { contextChoices, isContextLimit } from "@agenteschat/client/lib/context-limits";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { handleAfterRename } from "@agenteschat/client/lib/new-agent";
 import { rightHandUnusable } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
-import { brainPlan } from "@agenteschat/client/lib/plans";
-import { AUTO, modelChoices } from "@agenteschat/client/lib/providers";
+import { brainPlan, planModel } from "@agenteschat/client/lib/plans";
+import { AUTO, isAuto, modelChoices } from "@agenteschat/client/lib/providers";
 import { mineStatus, RIGHT_HAND_POWERS, rightHandNoComputer } from "@agenteschat/client/lib/right-hand";
 import {
   type LodiPrefs,
@@ -65,7 +67,12 @@ import { useOpenComputer } from "@/components/computer/open";
 import { LoadingLine } from "@/components/Loading";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
-import { RightHandBrainDialog, type RightHandLink, type RightHandModel } from "@/components/RightHandBrainDialog";
+import {
+  RightHandBrainDialog,
+  type RightHandLink,
+  type RightHandModel,
+  type RightHandThinks,
+} from "@/components/RightHandBrainDialog";
 import { TeamWeekSchedule } from "@/components/TeamWeekSchedule";
 import { useComputerEdition } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -144,6 +151,38 @@ function planModelOf(t: TFunction, view: AgentBrain, onChange: (input: AgentBrai
     value,
     options: rows.map((r) => ({ value: r.value, label: r.label, description: r.sub, hint: r.note })),
     onPick: (next) => onChange(modelInput(next, view)),
+  };
+}
+
+/**
+ * The effort and context window of what a view thinks with, as any agent's "Mais opções": a plan's, or on the
+ * workspace's key its model (`keyModel`, kept on the agent's row). The limits offered are those under the model's
+ * window ("Automático": any of its line).
+ */
+function thinksOf(
+  view: AgentBrain,
+  onSave: RightHandThinks["onSave"],
+  keyModel?: { id: string; contextWindow?: number },
+): RightHandThinks {
+  const plan = brainPlan(view);
+  const option = view.options.find((o) => o.kind === view.brain);
+  const model = view.brain === "model" ? keyModel?.id : (view.effectiveModel ?? option?.defaultModel);
+  const autoModel = !model || isAuto(model);
+  return {
+    kind: view.brain,
+    autoModel,
+    effort: effortOf(view.brain, view.effort),
+    contextTokens: isContextLimit(view.contextTokens) ? view.contextTokens : null,
+    contextOptions: contextChoices(
+      autoModel
+        ? undefined
+        : view.brain === "model"
+          ? keyModel
+          : plan
+            ? { modelId: planModel(plan, model).id }
+            : option?.models.find((m) => m.value === model),
+    ),
+    onSave,
   };
 }
 
@@ -292,6 +331,7 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
         current={current}
         empty={t(held ? "agentSetup.firstRun.afterPlan" : "rightHand.settings.mineNobody")}
         model={own && view ? planModelOf(t, view, (input) => setMine(input)) : null}
+        thinks={own && view ? thinksOf(view, (input) => setMine(input)) : null}
         links={links}
         busy={busy}
       />
@@ -684,6 +724,10 @@ function RightHandForm({ agent }: { agent: Agent }) {
         }
         current={current}
         model={model}
+        thinks={
+          view &&
+          thinksOf(view, setWorkspace, models.data?.models.find((m) => m.id === agent.model) ?? { id: agent.model })
+        }
         accounts={{
           items: others,
           onPick: pick,
