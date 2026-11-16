@@ -877,6 +877,7 @@ describe("Preferences › General: Compatibility mode (Linux)", () => {
 });
 
 describe("Preferences › General: Lightweight mode (Windows)", () => {
+  const toast = () => document.querySelector(".dk-toast");
   const ready = (el: HTMLElement) => {
     const sw = el.querySelector<HTMLButtonElement>("#light-mode");
     return sw && !sw.disabled;
@@ -942,6 +943,48 @@ describe("Preferences › General: Lightweight mode (Windows)", () => {
       {
         host: (host) => {
           void host.setLightMode(true);
+        },
+      },
+    ));
+
+  test("asks before reopening while agents use this computer", () =>
+    pane(
+      "selfhost",
+      <General />,
+      (el) => row(el, "Name") && ready(el),
+      async (el, host) => {
+        let reopened = 0;
+        host.reopen = async () => {
+          reopened++;
+        };
+        await act(async () => el.querySelector<HTMLButtonElement>("#light-mode")?.click());
+        await until(() => buttonIn(toast() as HTMLElement, "Reopen now"));
+        await act(async () => buttonIn(toast() as HTMLElement, "Reopen now")?.click());
+        await until(() => document.querySelector('[role="dialog"]'));
+        const dialog = document.querySelector('[role="dialog"]') as HTMLElement;
+        expect(dialog.textContent).toContain("Agents can't use this computer until the app opens again.");
+        expect(reopened).toBe(0);
+        await act(async () => buttonIn(dialog, "Cancel")?.click());
+        expect(reopened).toBe(0);
+        expect(await host.lightMode()).toBe(true);
+      },
+      { host: (host) => Object.assign(host, { platform: "windows" }) },
+    ));
+
+  test("leaves the switch disabled when the saved setting cannot be read", () =>
+    pane(
+      "windows",
+      <General />,
+      () => toast(),
+      (el) => {
+        expect(el.querySelector<HTMLButtonElement>("#light-mode")?.disabled).toBe(true);
+        expect(buttonIn(toast() as HTMLElement, "Reopen now")).toBeUndefined();
+      },
+      {
+        host: (host) => {
+          host.lightMode = async () => {
+            throw new Error("unavailable");
+          };
         },
       },
     ));

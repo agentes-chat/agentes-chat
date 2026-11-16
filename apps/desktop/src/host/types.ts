@@ -154,10 +154,10 @@ export interface Host {
   hideWindow(name: WindowName): Promise<void>;
   quit(): Promise<void>;
   appInfo(): Promise<AppInfo>;
-  /** Linux: Compatibility mode as the next opening will have it. */
   /** Windows: Lightweight mode as the next opening will have it. */
   lightMode(): Promise<boolean>;
   setLightMode(on: boolean): Promise<void>;
+  /** Linux: Compatibility mode as the next opening will have it. */
   compatMode(): Promise<CompatMode>;
   setCompatMode(on: boolean): Promise<void>;
   /** Quits and opens the app again, for a setting read only when it starts. */
