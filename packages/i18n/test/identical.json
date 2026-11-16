@@ -592,7 +592,15 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ],
     "fr": [
       "usage.kinds.routines",
@@ -1067,7 +1075,15 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1567,7 +1583,15 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ],
     "it": [
       "shell.email.label",
@@ -1979,7 +2003,15 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ],
     "nl": [
       "usage.kinds.routines",
@@ -2628,7 +2660,15 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -2840,7 +2880,15 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ],
     "ko": [
       "channel.tooLong.fileName",
@@ -3046,7 +3094,15 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -3243,7 +3299,15 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ],
     "id": [
       "shell.email.label",
@@ -3593,7 +3657,15 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ],
     "tr": [
       "devices.cpus",
@@ -3824,7 +3896,15 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ],
     "pl": [
       "devices.cpus",
@@ -4165,7 +4245,15 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ],
     "ru": [
       "channel.tooLong.fileName",
@@ -4362,22 +4450,67 @@
       "decision.install.ready",
       "decision.install.failed",
       "decision.install.cancelled",
-      "routing.by.decision"
+      "routing.by.decision",
+      "decision.setupHint",
+      "decision.providersLabel",
+      "decision.recommendedTag",
+      "decision.removeText",
+      "decision.switchAsk",
+      "decision.switchCurrent",
+      "decision.switchSlow",
+      "decision.switchConfirm"
     ]
   },
   "mobile-base": {
-    "pt-BR": ["push.ask.minutes"],
-    "es": ["push.ask.minutes"],
-    "fr": ["a11y.agent", "a11y.agentPlain", "push.ask.minutes"],
-    "de": ["a11y.agentPlain", "auth.connect.on", "auth.server.line"],
-    "it": ["auth.connect.on", "auth.server.line", "push.ask.minutes"],
-    "nl": ["a11y.agent", "a11y.agentPlain", "auth.connect.on", "auth.server.line", "push.ask.minutes"],
-    "ja": ["auth.server.placeholder"],
-    "ko": ["auth.server.placeholder"],
-    "zh-Hans": ["auth.server.placeholder"],
-    "id": ["auth.connect.on", "auth.server.line"],
-    "pl": ["a11y.agent", "a11y.agentPlain", "push.ask.minutes"],
-    "ru": ["auth.server.placeholder"]
+    "pt-BR": [
+      "push.ask.minutes"
+    ],
+    "es": [
+      "push.ask.minutes"
+    ],
+    "fr": [
+      "a11y.agent",
+      "a11y.agentPlain",
+      "push.ask.minutes"
+    ],
+    "de": [
+      "a11y.agentPlain",
+      "auth.connect.on",
+      "auth.server.line"
+    ],
+    "it": [
+      "auth.connect.on",
+      "auth.server.line",
+      "push.ask.minutes"
+    ],
+    "nl": [
+      "a11y.agent",
+      "a11y.agentPlain",
+      "auth.connect.on",
+      "auth.server.line",
+      "push.ask.minutes"
+    ],
+    "ja": [
+      "auth.server.placeholder"
+    ],
+    "ko": [
+      "auth.server.placeholder"
+    ],
+    "zh-Hans": [
+      "auth.server.placeholder"
+    ],
+    "id": [
+      "auth.connect.on",
+      "auth.server.line"
+    ],
+    "pl": [
+      "a11y.agent",
+      "a11y.agentPlain",
+      "push.ask.minutes"
+    ],
+    "ru": [
+      "auth.server.placeholder"
+    ]
   },
   "mobile-features": {
     "pt-BR": [

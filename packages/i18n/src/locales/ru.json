@@ -21352,7 +21352,7 @@
     "key": "API key",
     "keyHint": "The key is encrypted on the server and never returned to the browser.",
     "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
-    "recommended": "Recommended for this server: {{model}}. {{why}}",
+    "recommended": "Recommended for this server: {{model}}.",
     "hostLoading": "Reading this server's size...",
     "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
     "activate": "Turn on",
@@ -21361,7 +21361,7 @@
     "check": "Check",
     "change": "Change",
     "remove": "Remove",
-    "removeAsk": "Remove the decision model? Jev decides again.",
+    "removeAsk": "Remove the decision model?",
     "removeYes": "Remove",
     "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
     "failed": "The model could not be prepared: {{error}}",
@@ -21382,6 +21382,14 @@
       "ready": "Ready",
       "failed": "Failed",
       "cancelled": "Canceled"
-    }
+    },
+    "setupHint": "Choose where it runs, then turn it on. Jev decides until then.",
+    "providersLabel": "Where the decision model runs",
+    "recommendedTag": "Recommended",
+    "removeText": "Jev decides again.",
+    "switchAsk": "Switch the decision model?",
+    "switchCurrent": "The current model will be removed.",
+    "switchSlow": "The new model may take a while to be fully configured.",
+    "switchConfirm": "Switch and prepare"
   }
 }

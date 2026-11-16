@@ -233,18 +233,20 @@ export function WhoPicksSection() {
   const line = admin ? routingLineOf(status.data, modelLabel) : null;
   if (!line && !jev.data && !decision.data) return null;
   return (
-    <Card aria-labelledby="sec-routing" className="who-card">
-      <CardHeader
-        id="sec-routing"
-        icon="agent"
-        title={t("routing.title")}
-        action={<HelpLink slug="who-answers">{t("routing.how")}</HelpLink>}
-      />
-      {line && <p className="who-line">{t(line.key, line.params)}</p>}
-      {line && status.data?.reflection === false && <p className="who-line">{t("routing.reflectionOff")}</p>}
-      {jev.data && <JevCard routing={status.data?.routing?.by} />}
+    <>
+      <Card aria-labelledby="sec-routing" className="who-card">
+        <CardHeader
+          id="sec-routing"
+          icon="agent"
+          title={t("routing.title")}
+          action={<HelpLink slug="who-answers">{t("routing.how")}</HelpLink>}
+        />
+        {line && <p className="who-line">{t(line.key, line.params)}</p>}
+        {line && status.data?.reflection === false && <p className="who-line">{t("routing.reflectionOff")}</p>}
+        {jev.data && <JevCard routing={status.data?.routing?.by} />}
+      </Card>
       <DecisionModelSection />
-    </Card>
+    </>
   );
 }
 

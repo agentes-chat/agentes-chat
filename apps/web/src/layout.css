@@ -14275,6 +14275,12 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
     align-self: stretch;
   }
 }
+/* The decision model's provider rows carry their settings under the chosen one: the list keeps its
+   content's height, not the tab panel's. */
+.decision-providers {
+  height: auto;
+  align-self: flex-start;
+}
 /* Why Jev helps: an icon, the reason in bold and its few words, a line each. */
 .jev-why {
   display: flex;
