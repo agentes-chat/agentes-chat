@@ -1087,6 +1087,19 @@ const POINTER_ACTS: Record<string, AgentPointerAct> = {
   fill: "type",
   type: "type",
 };
+/**
+ * Where a page change starts in Chrome's toolbar on the agent's desktop, from the page's top left corner there: the
+ * toolbar's row 24 px above the page, the back, forward and reload buttons from its left, the address bar after them.
+ * Chrome at scale 1, as it draws on the agent's desktop.
+ */
+const TOOLBAR = { y: -24, back: 23, forward: 58, reload: 95, address: 200 } as const;
+/** What the pointer does on the toolbar for each page change: an address is typed, a button clicked. */
+const TOOLBAR_GOES: Record<string, { at: Exclude<keyof typeof TOOLBAR, "y">; act: AgentPointerAct }> = {
+  ...Object.fromEntries([...NAVIGATIONS].map((c) => [c, { at: "address", act: "type" } as const])),
+  back: { at: "back", act: "click" },
+  forward: { at: "forward", act: "click" },
+  reload: { at: "reload", act: "click" },
+};
 /** Agent commands that may leave a mouse button down when a person's taking control cuts them off. */
 const POINTER_COMMANDS = new Set([...HUMAN_COMMANDS, "mouse", "drag"]);
 /** What `agent-browser` answers to each when the runner did it itself. */
@@ -2786,6 +2799,7 @@ export class BrowserManager {
       if (POINTER_COMMANDS.has(command)) await this.run(session, ["mouse", "up"], { timeoutMs: QUICK_TIMEOUT_MS });
       return TOOK_OVER;
     }
+    if (!human) await this.toolbarGoes(session, command, stops);
     const plain =
       human ??
       // `--human`: its drag goes along an eased curve from where the pointer is, slower than a script's.
@@ -2831,6 +2845,27 @@ export class BrowserManager {
     this.opts.send({ type: "browser.pointer", agentId, x: to.x, y: to.y, ...session.pointerView, act });
     if (!corner) return;
     this.opts.send({ type: "desktop.pointer", agentId, x: corner.x + to.x, y: corner.y + to.y, ...DESKTOP_SIZE, act });
+  }
+
+  /**
+   * A page change by its address or by Chrome's own buttons (`TOOLBAR_GOES`), in its window on the agent's desktop:
+   * the pointer goes to the address bar or to that button as it starts, so whoever watches the desktop sees the agent
+   * go somewhere, as they see its clicks; a search that only opens pages would show no pointer at all. Not for a
+   * browser card, whose picture is the page without the bar.
+   */
+  private async toolbarGoes(session: Session, command: string, signal?: AbortSignal) {
+    const goes = TOOLBAR_GOES[command];
+    if (!goes || !session.headed) return;
+    const seen = await this.run(session, ["eval", VIEWPORT_ON_SCREEN], {
+      timeoutMs: QUICK_TIMEOUT_MS,
+      ...(signal ? { signal } : {}),
+    });
+    const corner = screenCorner(((isRecord(seen.data) && seen.data.result) || []) as unknown[]);
+    if (!corner) return;
+    const x = corner.x + TOOLBAR[goes.at];
+    const y = corner.y + TOOLBAR.y;
+    if (x < 0 || y < 0 || x > DESKTOP_SIZE.width || y > DESKTOP_SIZE.height) return;
+    this.opts.send({ type: "desktop.pointer", agentId: session.agentId, x, y, ...DESKTOP_SIZE, act: goes.act });
   }
 
   /**
