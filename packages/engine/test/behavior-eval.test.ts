@@ -226,7 +226,7 @@ test("act with undo: the issue is a receipt on the reply while the merge waits f
     {
       chunks: [],
       toolUses: [
-        { name: "create_issue", input: { title: "Preço do plano anual", assignee: "me" } },
+        { name: "create_issue", input: { title: "Preço do plano anual", assignees: ["me"] } },
         { name: "github_merge_pull_request", input: { owner: "lumen", repo: "api", pullNumber: 70, why: MERGE_WHY } },
       ],
     },

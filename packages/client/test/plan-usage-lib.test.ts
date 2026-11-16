@@ -2,9 +2,11 @@ import { describe, expect, test } from "bun:test";
 import type { TFunction } from "i18next";
 import type { AgentBrainLine, AiAccounts, AiComputer, AiStatus, PlanAccountUsage, PlanUsage } from "../src/api/types";
 import {
+  accountKinds,
   accountOwner,
   accountShares,
   groupUsageAccounts,
+  kindFacts,
   loginsText,
   notSharedText,
   ownPlanLines,
@@ -543,5 +545,37 @@ describe("the quota per model of a plan whose models have limits of their own", 
     expect(notSharedText(t, "opencode")).toBeNull();
     expect(notSharedText(t, null)).toBeNull();
     expect(planModelUsage(t, "en", withModels({ "glm-5.3": { at: NOW.toISOString() } }), null, NOW)).toEqual([]);
+  });
+});
+
+describe("an account's use by kind", () => {
+  const t = ((key: string, o?: Record<string, string>) =>
+    `${key}${o ? `(${Object.values(o).join(" ")})` : ""}`) as unknown as TFunction;
+
+  test("handoffs, people, routines, in that order whatever the server's; kinds with no tokens left out", () => {
+    const kinds = accountKinds({
+      kinds: [
+        { kind: "routines", tokens: 1_400_000, percent: 7 },
+        { kind: "people", tokens: 0, percent: 0 },
+        { kind: "handoffs", tokens: 6_900_000, percent: 37 },
+      ],
+    });
+    expect(kinds.map((k) => k.kind)).toEqual(["handoffs", "routines"]);
+    expect(accountKinds({})).toEqual([]);
+  });
+
+  test("a kind with a share of the week but no tokens this month (a week that began last month) stays listed", () => {
+    const kinds = accountKinds({ kinds: [{ kind: "handoffs", tokens: 0, percent: 37 }] });
+    expect(kinds.map((k) => k.kind)).toEqual(["handoffs"]);
+    expect(kindFacts(t, "en", "week", { percent: 37, tokens: 0 })).toBe(" · week\u00a037%");
+  });
+
+  test("each fact stays whole: no breaking space inside one, a plain space around the dots", () => {
+    const facts = kindFacts(t, "en", "week", { percent: 37, tokens: 6_900_000 });
+    expect(facts.startsWith(" · week\u00a037")).toBe(true);
+    const [, share, tokens] = facts.split(" · ");
+    expect(share).not.toContain(" ");
+    expect(tokens).not.toContain(" ");
+    expect(kindFacts(t, "en", null, { percent: null, tokens: 0 })).toBe("");
   });
 });

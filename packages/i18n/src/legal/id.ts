@@ -8,13 +8,13 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Perjanjian untuk menggunakan agentes.chat: ruang kerja Anda, agen Anda, dan apa yang menjadi tanggung jawab masing-masing pihak.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-13",
+    updated: "2026-11-16",
     sections: [
       {
         id: "agreement",
         heading: "1. Perjanjian",
         blocks: [
-          'Ketentuan Penggunaan ini ("Ketentuan") merupakan perjanjian yang mengikat antara CODARI GLOBAL, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Wyoming yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), dan orang atau entitas yang membuat akun atau ruang kerja ("Anda"). Dengan membuat akun, bergabung dengan ruang kerja, atau dengan cara lain menggunakan agentes.chat di web, aplikasi Mac, atau aplikasi ponsel ("Layanan"), Anda menerima Ketentuan ini dan Kebijakan Privasi kami. Apabila Anda menggunakan Layanan atas nama perusahaan atau entitas lain, Anda menyatakan bahwa Anda berwenang untuk mengikat entitas tersebut.',
+          'Ketentuan Penggunaan ini ("Ketentuan") merupakan perjanjian yang mengikat antara AGENTESCHAT, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Delaware yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), dan orang atau entitas yang membuat akun atau ruang kerja ("Anda"). Dengan membuat akun, bergabung dengan ruang kerja, atau dengan cara lain menggunakan agentes.chat di web, aplikasi Mac, atau aplikasi ponsel ("Layanan"), Anda menerima Ketentuan ini dan Kebijakan Privasi kami. Apabila Anda menggunakan Layanan atas nama perusahaan atau entitas lain, Anda menyatakan bahwa Anda berwenang untuk mengikat entitas tersebut.',
           "Anda harus berusia sekurang-kurangnya 18 tahun dan cakap untuk membuat kontrak agar dapat menggunakan Layanan.",
         ],
       },
@@ -150,7 +150,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Hukum yang berlaku",
         blocks: [
-          "Ketentuan ini diatur oleh hukum Negara Bagian Wyoming, Amerika Serikat, tidak termasuk kaidah hukum perdata internasionalnya (conflict-of-law rules), dan para pihak tunduk pada yurisdiksi eksklusif pengadilan negara bagian dan federal yang berkedudukan di Wyoming. Apabila Anda adalah konsumen di yurisdiksi yang hukumnya memberikan hak atau forum yang tidak dapat dikesampingkan, seperti Brasil, hak tersebut tidak terpengaruh.",
+          "Ketentuan ini diatur oleh hukum Negara Bagian Delaware, Amerika Serikat, tidak termasuk kaidah hukum perdata internasionalnya (conflict-of-law rules), dan para pihak tunduk pada yurisdiksi eksklusif pengadilan negara bagian dan federal yang berkedudukan di Delaware. Apabila Anda adalah konsumen di yurisdiksi yang hukumnya memberikan hak atau forum yang tidak dapat dikesampingkan, seperti Brasil, hak tersebut tidak terpengaruh.",
         ],
       },
       {
@@ -164,7 +164,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Kontak",
         blocks: [
-          "CODARI GLOBAL, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Hal lainnya: hello@agentes.chat",
+          "AGENTESCHAT, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Hal lainnya: hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +175,13 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Apa yang kami kumpulkan, apa yang dikirim agen dan ke mana, siapa yang dapat melihat ruang kerja Anda, dan hak-hak yang Anda miliki.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-14",
+    updated: "2026-11-16",
     sections: [
       {
         id: "overview",
         heading: "1. Ikhtisar",
         blocks: [
-          'CODARI GLOBAL, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Wyoming yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), mengoperasikan agentes.chat: ruang kerja tempat manusia dan agen AI bekerja bersama, yang tersedia di web, sebagai aplikasi Mac, dan sebagai aplikasi ponsel ("Layanan"). Kebijakan ini membedakan dua peran:',
+          'AGENTESCHAT, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Delaware yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), mengoperasikan agentes.chat: ruang kerja tempat manusia dan agen AI bekerja bersama, yang tersedia di web, sebagai aplikasi Mac, dan sebagai aplikasi ponsel ("Layanan"). Kebijakan ini membedakan dua peran:',
           {
             list: [
               "Untuk **data akun**, yaitu informasi yang diberikan orang kepada kami untuk membuat dan menggunakan akun, kami adalah pengendali data.",
@@ -342,7 +342,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Kontak",
         blocks: [
-          "CODARI GLOBAL, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Pertanyaan pelindungan data dari UE, Inggris, dan Brasil akan diterima oleh tim privasi kami di alamat yang sama. Untuk hal lainnya, kirimkan email ke hello@agentes.chat.",
+          "AGENTESCHAT, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Pertanyaan pelindungan data dari UE, Inggris, dan Brasil akan diterima oleh tim privasi kami di alamat yang sama. Untuk hal lainnya, kirimkan email ke hello@agentes.chat.",
         ],
       },
     ],

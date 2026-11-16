@@ -24,7 +24,7 @@ import { computerName } from "@agenteschat/client/lib/computer";
 import { ErrorBoundary } from "@agenteschat/client/lib/error-boundary";
 import { formatPercent, formatUsd, relativeTime } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { STATUS_ICON } from "@agenteschat/client/lib/issues";
+import { isAssignee, STATUS_ICON } from "@agenteschat/client/lib/issues";
 import { can } from "@agenteschat/client/lib/permissions";
 import { usageShown } from "@agenteschat/client/lib/plan-usage";
 import { agentFaceWord } from "@agenteschat/client/lib/presence";
@@ -442,7 +442,7 @@ function TasksSection({ agent }: { agent: Agent }) {
   const { org } = useOrg();
   const issues = useIssues(org.id);
   const recent = (issues.data ?? [])
-    .filter((i) => i.assignee?.type === "agent" && i.assignee.id === agent.id)
+    .filter((i) => isAssignee(i, "agent", agent.id))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, ROWS);
   if (recent.length === 0) return null;

@@ -43,7 +43,8 @@ export const ACTIVE_RUN_STATUSES = ["queued", "running", "waiting_approval", "wa
  * Why a run's unread messages were handed on (kept on the run's trail). `held`: the run waits on
  * something a message can't move (an approval, a secret, a mission's decision: `holdsMessages`).
  */
-export type ReleaseReason = "done" | "failed" | "canceled" | "interrupted" | "swept" | "held";
+export const RELEASE_REASONS = ["done", "failed", "canceled", "interrupted", "swept", "held"] as const;
+export type ReleaseReason = (typeof RELEASE_REASONS)[number];
 
 /**
  * The message a person stopped this run to send ("Parar e mandar" to a computer brain, whose turn can't be cut

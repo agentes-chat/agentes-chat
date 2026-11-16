@@ -4,6 +4,7 @@ import {
   type AgentBrainInput,
   keys,
   useAgentBrain,
+  useAiAccounts,
   useApi,
   useModelLabel,
   usePlatformKey,
@@ -15,12 +16,14 @@ import {
   useUpdateSettings,
   useWorkspaceUsesApi,
 } from "@agenteschat/client";
+import { accountTitle, ownSignInTitle } from "@agenteschat/client/lib/ai-accounts";
 import { agentsReach, audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
 import { modelRows } from "@agenteschat/client/lib/brain-picker";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { rightHandUnusable } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { brainPlan } from "@agenteschat/client/lib/plans";
-import { AUTO } from "@agenteschat/client/lib/providers";
+import { AUTO, isAuto } from "@agenteschat/client/lib/providers";
 import { mineStatus, RIGHT_HAND_POWERS, rightHandNoComputer, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { type LodiPrefsPatch, type LodiSwitch, teamWeekOn } from "@agenteschat/client/lib/right-hand-prefs";
 import { dayText, hourText } from "@agenteschat/client/lib/team-week";
@@ -45,6 +48,7 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { openAgentEdit } from "../agents/AgentEditScreen";
+import { openAgentAdvanced } from "../ai/AgentAdvancedScreen";
 import { openAgentAi, openAgentModel } from "../ai/AgentAiScreen";
 import { openConnectAi } from "../ai/NoAiCard";
 import { PlanHoldNote, usePlanHold } from "../ai/parts";
@@ -54,7 +58,7 @@ import { useFailed } from "../routines/hooks";
 import { usePersonalView } from "../settings/hooks";
 import { Gap, SettingsPage } from "../settings/parts";
 import { AgentFace } from "../shared/Face";
-import { type Directory, useColors, useDirectory, useMeId } from "../shared/hooks";
+import { type Directory, useColors, useDirectory, useEdition, useMeId } from "../shared/hooks";
 import { type PickLeading, pickOne } from "../shared/PickerSheet";
 import { RightHandApprovalsGroup } from "./Approvals";
 
@@ -165,9 +169,10 @@ function Computer({ agentId }: { agentId: string }) {
 const planModelLabel = (t: TFunction, view: AgentBrain) =>
   modelRows(t, view, brainPlan(view)).find((r) => r.checked)?.label ?? view.effectiveModel ?? undefined;
 
-/** The choices of "Sua IA": the person's own plan, connecting another one, the workspace's AI. */
+/** The choices of "Sua IA": the person's own plan, its model, its effort and window, another plan, the workspace's AI. */
 const MINE = "mine";
 const MODEL = "model";
+const ADVANCED = "advanced";
 const OTHER = "other";
 const WORKSPACE = "workspace";
 
@@ -234,6 +239,12 @@ export function RightHandMine({ agent }: { agent: Agent }) {
         ? (status.label ?? t("rightHand.settings.mineKeyName"))
         : t(`aiAccounts.connect.${status.brain}`);
   const model = own && view ? planModelLabel(t, view) : undefined;
+  // What "Mais opções" holds: the effort with a fixed model, the context window always.
+  const moreLine = t(
+    view && isAuto(view.effectiveModel)
+      ? "agentPage.work.brain.advanced.contents.model"
+      : "agentPage.work.brain.advanced.contents.modelFixed",
+  );
   const sub =
     status.kind === "own"
       ? status.ownerId
@@ -254,6 +265,12 @@ export function RightHandMine({ agent }: { agent: Agent }) {
               sub: model,
               leading: { kind: "icon", name: "brain" },
             },
+            {
+              key: ADVANCED,
+              label: t("agentPage.work.brain.v2.more"),
+              sub: moreLine,
+              leading: { kind: "icon", name: "target" },
+            },
             { key: OTHER, label: t("agentPage.work.brain.connectPlan"), leading: { kind: "icon", name: "plus" } },
             { key: WORKSPACE, label: t("rightHand.settings.useWorkspace"), leading: { kind: "icon", name: "members" } },
           ]
@@ -263,6 +280,7 @@ export function RightHandMine({ agent }: { agent: Agent }) {
           ],
     });
     if (picked === MODEL) openAgentModel(agent.id);
+    else if (picked === ADVANCED) openAgentAdvanced(agent.id, "mine");
     else if (picked === OTHER || (picked === MINE && !own)) connect();
     else if (picked === WORKSPACE && own) back();
   };
@@ -298,6 +316,8 @@ function WorkspaceAi({ agent, dir }: { agent: Agent; dir: Directory }) {
   const failed = useFailed();
   const meId = useMeId();
   const modelLabel = useModelLabel();
+  const aiAccounts = useAiAccounts(orgId).data;
+  const edition = useEdition();
   const view = useAgentBrain(orgId, agent.id, true, false, "workspace").data;
   const kind = agent.brain && agent.brain.kind !== "model" ? agent.brain.kind : null;
   const signIn = view?.accounts.find((a) => a.id === view.account);
@@ -320,8 +340,13 @@ function WorkspaceAi({ agent, dir }: { agent: Agent; dir: Directory }) {
   const theirs = (id: string | null | undefined) =>
     id && id !== meId ? dir.memberById.get(id)?.name.split(" ")[0] : undefined;
   const plans = (view?.accounts ?? []).filter((a) => a.status === "active");
+  // Plans it can't think with now, under the choice with why, as on the web: it stands in on what can meanwhile.
+  const cant = rightHandUnusable(aiAccounts).filter((u) => u.id !== view?.account);
+  const away = new Set(cant.map((u) => u.id));
   // A plan in use that is no longer active stays listed, so the choice never opens with nothing checked.
-  const listed = signIn && !plans.some((p) => p.id === signIn.id) ? [signIn, ...plans] : plans;
+  const listed = (signIn && !plans.some((p) => p.id === signIn.id) ? [signIn, ...plans] : plans).filter(
+    (p) => !away.has(p.id),
+  );
   const choose = async () => {
     const picked = await pickOne({
       title: t("rightHand.settings.workspace"),
@@ -405,6 +430,48 @@ function WorkspaceAi({ agent, dir }: { agent: Agent; dir: Directory }) {
         <PlanHoldNote org={org} />
       ) : plans.length === 0 ? (
         <GroupedFooter>{t("rightHand.settings.noPlans", g)}</GroupedFooter>
+      ) : null}
+      {!hold && cant.length > 0 ? (
+        <>
+          <GroupedHeader>{t("rightHand.unusable.title", g)}</GroupedHeader>
+          <GroupedList>
+            {cant.map((u) => {
+              if (u.why === "computerOnly")
+                return (
+                  <GroupedRow
+                    key={u.id}
+                    leading={<ProviderLogo id={u.own.kind} size="sm" />}
+                    label={ownSignInTitle(t, u.own)}
+                    sub={t("rightHand.unusable.computerOnly", { ...g, computer: u.own.computer })}
+                    subLines={0}
+                  />
+                );
+              const owner = theirs(u.account.ownerId);
+              return (
+                <GroupedRow
+                  key={u.id}
+                  leading={<ProviderLogo id={u.account.provider ?? u.account.kind} size="sm" />}
+                  label={accountTitle(u.account)}
+                  sub={
+                    owner
+                      ? t("rightHand.unusable.away", { owner, computer: u.account.computer })
+                      : t("rightHand.unusable.awayYours", { computer: u.account.computer })
+                  }
+                  subLines={0}
+                />
+              );
+            })}
+            {/* Connecting one is self-host's way out: Cloud's own computer is always on. */}
+            {can(org, "pair_computers") && edition !== "cloud" && cant.some((u) => u.why === "away") ? (
+              <GroupedRow
+                icon="plus"
+                label={t("rightHand.unusable.connect")}
+                chevron
+                onPress={() => router.push("/settings/devices")}
+              />
+            ) : null}
+          </GroupedList>
+        </>
       ) : null}
     </>
   );

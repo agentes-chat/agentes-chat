@@ -103,8 +103,9 @@ export const idleAgentSql = (since: Date) => sql`(
     and r.created_at >= ${since.toISOString()}::timestamptz)
   and not exists (select 1 from routines ro where ro.org_id = a.org_id and ro.agent_id = a.id
     and ro.active and ro.deleted_at is null)
-  and not exists (select 1 from issues i where i.org_id = a.org_id and i.assignee_type = 'agent'
-    and i.assignee_id = a.id::text and i.status not in ('done', 'canceled')))`;
+  and not exists (select 1 from issues i join issue_assignees ia on ia.issue_id = i.id
+    where ia.org_id = a.org_id and ia.assignee_type = 'agent' and ia.assignee_id = a.id::text
+      and i.status not in ('done', 'canceled')))`;
 export const LIGHT_WORK_REASON = "Its work is light enough for a smaller model.";
 /** The reasons the server writes itself: the agent reads them as they are, people through `whyCode`, in their language. */
 export const SERVER_REASONS: Record<string, "asked" | "budget" | "no_channel" | "idle" | "light_work"> = {

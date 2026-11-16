@@ -42,6 +42,7 @@ const jobColumns = {
   lockedUntil: outbox.lockedUntil,
   lockedBy: outbox.lockedBy,
   lastError: outbox.lastError,
+  lastErrorStatus: outbox.lastErrorStatus,
   dedupe: outbox.dedupeKey,
   createdAt: ms(outbox.createdAt),
   completedAt: outbox.completedAt,

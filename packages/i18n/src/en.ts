@@ -2816,6 +2816,17 @@ export const en = {
     label: "your right hand",
     /** The same where it starts a line: under its name on its page and side panel, and on its phone settings row. */
     labelCapitalized: "Your right hand",
+    /**
+     * In the dialog that picks its AI: plans it can't think with now, dimmed, each with why. `name` is the right
+     * hand's; `owner` a first name.
+     */
+    unusable: {
+      title: "Can't think for {{name}} now",
+      computerOnly: "Signed in on {{computer}} only. {{name}} thinks with a plan signed in as an account.",
+      away: "{{owner}}'s, on {{computer}}, which is away.",
+      awayYours: "Yours, on {{computer}}, which is away.",
+      connect: "Connect a computer",
+    },
     /** The one-time dot on its row until it is first opened. */
     newDot: "New",
     /** In its DM's header, after the label. */
@@ -8158,7 +8169,13 @@ export const en = {
     assigneeFilter: "Assignee",
     priorityFilter: "Priority",
     labelFilter: "Label",
-    table: { task: "Task", github: "GitHub", sortBy: "Sort by {{column}}" },
+    table: {
+      task: "Task",
+      github: "GitHub",
+      sortBy: "Sort by {{column}}",
+      /** The name of the handle at a column's end in the task list: dragging it changes that column's width. */
+      resize: "Resize column {{column}}",
+    },
     fold: { open: "Open {{name}}", close: "Fold {{name}}", column: "Fold column" },
     title: "Tasks",
     summary: "{{open}} open · {{agents}} with agents",
@@ -8224,6 +8241,8 @@ export const en = {
       canceled: "#{{number}} went back to its place.",
       assigned: "#{{number}} is now with {{name}}.",
       unassigned: "#{{number}} has no assignee now.",
+      /** Dragged off one of several who have it: the others still do. */
+      removed: "#{{number}} is no longer with {{name}}.",
       prioritized: "#{{number}} now has {{priority}} priority.",
     },
     canceledColumn: "Canceled",
@@ -8368,6 +8387,8 @@ export const en = {
     priority: { low: "Low", normal: "Normal", high: "High" },
     priorityLower: { low: "low", normal: "normal", high: "high" },
     noAssignee: "No assignee",
+    /** The dialog that picks who has a task: the list's name over it, and the button that closes it. */
+    assignees: { people: "People and agents", done: "Done" },
     agentRole: "Agent · {{role}}",
     pr: "PR #{{number}}",
     open: "#{{number}} {{title}}",
@@ -8509,7 +8530,10 @@ export const en = {
       status_changed: "changed the status to {{status}}",
       priority_changed: "changed the priority to {{priority}}",
       assigned: "assigned the task",
-      unassigned: "removed the assignee",
+      unassigned: "removed an assignee",
+      /** With who it was (`name`), when the event says. */
+      assigned_named: "assigned the task to {{name}}",
+      unassigned_named: "took {{name}} off the task",
       due_date_set: "set the due date to {{date}}",
       due_date_removed: "removed the due date",
       pr_linked: "linked PR #{{number}}",
@@ -16890,14 +16914,14 @@ export const en = {
     },
     /**
      * The license's required attribution (AGPL-3.0 section 7(b), see NOTICE): translate it, but keep
-     * "agentes.chat" and "Codari Global, LLC" and its meaning.
+     * "agentes.chat" and "AGENTESCHAT, LLC" and its meaning.
      */
     about: {
-      basedOn: "Based on <site>agentes.chat</site> by Codari Global, LLC",
+      basedOn: "Based on <site>agentes.chat</site> by AGENTESCHAT, LLC",
       version: "Version",
       license: "Free software under the <license>GNU Affero General Public License v3</license>, with no warranty.",
       source: "Source code",
-      copyright: "Copyright © 2026 Codari Global, LLC and contributors",
+      copyright: "Copyright © 2026 AGENTESCHAT, LLC and contributors",
     },
     title: "Settings",
     account: {
@@ -17323,6 +17347,23 @@ export const en = {
     },
     actions: { raise: "Raise to {{amount}} this month", refuse: "Decline", see: "See their usage" },
   },
+  /** Settings › AI and usage: what a plan's use was for, under an account's agents. */
+  usage: {
+    kinds: {
+      label: "By kind",
+      /** Runs one agent started by handing work to another (tell_agent, ask_agent). */
+      handoffs: "Handoffs between agents",
+      people: "Conversations with people",
+      routines: "Routines",
+    },
+    hint: {
+      /** Shown when handoffs led the week's use; followed by the `message` link. */
+      handoffs:
+        "Most of this week's use came from agents handing work to each other. Ask the agent directly for long work.",
+      /** Opens the DM with the agent that took most of the handed work. */
+      message: "Message {{name}}",
+    },
+  },
   usageViews: {
     signedOut: "Signed out",
     whose: "{{name}}'s",
@@ -17527,6 +17568,18 @@ export const en = {
     speedFallback: {
       text: "ChatGPT refused Fast speed on this account or model, so this reply came at standard speed.",
       action: "Open agent",
+    },
+    /**
+     * Under the right hand's reply when another AI answered for its plan (`meta.noAi.standIn`): `via` is what answered
+     * (a key's or a plan's name, "Acme OpenAI"), `plan` the plan that couldn't ("Claude Max"). "Change" opens its page.
+     */
+    standIn: {
+      needsComputer: "Answered with {{via}}: {{plan}} needs a computer.",
+      away: "Answered with {{via}}: the computer {{plan}} is on is away.",
+      notShared: "Answered with {{via}}: {{plan}} serves only its owner.",
+      limit: "Answered with {{via}}: {{plan}} reached its limit.",
+      cant: "Answered with {{via}}: {{plan}} can't think right now.",
+      change: "Change",
     },
     /** Under a reply "Automático" gave with another model because the plan refused the one it maps to (`meta.modelStandIn`). */
     modelStandIn: {

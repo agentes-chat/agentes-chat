@@ -1199,7 +1199,7 @@ export async function sendQueuedEmail(sender: EmailSender, payload: Record<strin
 
 /** A provider's refusal that a retry won't change fails the job for good; anything else is retried. */
 export function rethrowEmailError(error: unknown): never {
-  if (error instanceof EmailError && !error.retryable) throw new PermanentJobError(error.message);
+  if (error instanceof EmailError && !error.retryable) throw new PermanentJobError(error.message, error.status);
   throw error;
 }
 

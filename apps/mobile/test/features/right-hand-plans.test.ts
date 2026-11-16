@@ -71,6 +71,26 @@ test("Sua IA is one row that opens its choice: what answers me, by its logo and 
   );
 });
 
+test("Sua IA's Mais opções reaches the effort and the context window, on the person's own AI", () => {
+  const screen = readFileSync(join(import.meta.dir, "../../src/features/right-hand/SettingsScreen.tsx"), "utf8");
+  // The sheet's row, under the model, opening the advanced screen on the person's own AI.
+  expect(screen).toContain('const ADVANCED = "advanced";');
+  expect(screen).toContain('label: t("agentPage.work.brain.v2.more")');
+  expect(screen).toContain("sub: moreLine");
+  expect(screen).toContain('if (picked === ADVANCED) openAgentAdvanced(agent.id, "mine");');
+  // The advanced screen takes a scope; the person's own AI has no audience or fallback of its own.
+  const advanced = readFileSync(join(import.meta.dir, "../../src/features/ai/AgentAdvancedScreen.tsx"), "utf8");
+  expect(advanced).toContain(
+    "export function AgentAdvancedScreen({ agentId, scope }: { agentId: string; scope?: BrainScope })",
+  );
+  expect(advanced).toContain("const brain = useAgentBrain(orgId, agentId, true, false, scope);");
+  expect(advanced).toContain("{ ...(scope ? { scope } : {}), ...input }");
+  expect(advanced).toContain('{kind && scope !== "mine" ? (');
+  // The route reads it, as the model's does.
+  const route = readFileSync(join(import.meta.dir, "../../app/(app)/agent-advanced/[id].tsx"), "utf8");
+  expect(route).toContain('scope === "mine" || scope === "workspace"');
+});
+
 test("Lodi's settings: the workspace's plan has no lending switch, since a plan serves the whole workspace", () => {
   const screen = readFileSync(join(import.meta.dir, "../../src/features/right-hand/SettingsScreen.tsx"), "utf8");
   // The workspace's AI is read and saved as such; the look opens from the row, with no "Mudar visual" on it.
@@ -109,4 +129,21 @@ test("Connect is everyone's for Lodi, and its own AI has no Atende outras pessoa
   const steps = source("ConnectAiSteps.tsx");
   expect(steps).toContain('gates.view?.scope === "mine" ? null : (');
   expect(steps).toContain('t("noAi.lockedOwner")');
+});
+
+test("another AI answered for its plan: a quiet pill with Change, and its dimmed plans with why (ADR 0137 §7, amended)", () => {
+  const card = source("NoAiCard.tsx");
+  // The stand-in line: neutral (never `waiting`), its words in the reader's language, Change opens its settings.
+  expect(card).toContain("if (card.standIn) return <StandInLine standIn={card.standIn} />;");
+  expect(card).toContain("t(standInKey(standIn.why), { via: standIn.via, plan: standIn.plan })");
+  expect(card).toContain('router.push("/settings/right-hand" as never)');
+  const row = readFileSync(join(import.meta.dir, "../../src/features/chat/MessageRow.tsx"), "utf8");
+  expect(row).toContain('isStandInLine(meta) ? ""');
+  const screen = readFileSync(join(import.meta.dir, "../../src/features/right-hand/SettingsScreen.tsx"), "utf8");
+  expect(screen).toContain("rightHandUnusable(aiAccounts)");
+  expect(screen).toContain('t("rightHand.unusable.title", g)');
+  expect(screen).toContain('t("rightHand.unusable.computerOnly"');
+  // The way out is the workspace's computers, for who may connect one: no button of Lodi's own.
+  expect(screen).toContain('can(org, "pair_computers") && edition !== "cloud" && cant.some((u) => u.why === "away")');
+  expect(`${card}${screen}`).not.toContain("Give Lodi a computer");
 });

@@ -6,13 +6,13 @@ export const legalKo: Partial<Record<LegalKind, LegalDocument>> = {
     title: "이용약관",
     summary: "agentes.chat 이용에 관한 계약: 귀하의 워크스페이스, 귀하의 에이전트, 그리고 각 당사자가 책임지는 사항.",
     courtesy: "본 문서는 편의를 위한 번역본이며, 영어 원문과 내용이 다를 경우 영어 원문이 우선합니다.",
-    updated: "2026-11-13",
+    updated: "2026-11-16",
     sections: [
       {
         id: "agreement",
         heading: "1. 계약",
         blocks: [
-          '본 이용약관(이하 "본 약관")은 agentes.chat이라는 상호로 사업을 영위하는 미국 와이오밍(Wyoming)주 유한책임회사 CODARI GLOBAL, LLC(이하 "agentes.chat", "당사")와 계정 또는 워크스페이스를 생성하는 개인 또는 단체(이하 "귀하") 사이의 구속력 있는 계약입니다. 계정을 생성하거나, 워크스페이스에 참여하거나, 기타 방식으로 웹, Mac 앱 또는 휴대전화 앱에서 agentes.chat(이하 "본 서비스")을 이용함으로써 귀하는 본 약관 및 당사의 개인정보처리방침에 동의합니다. 귀하가 회사 또는 기타 단체를 대리하여 본 서비스를 이용하는 경우, 귀하는 해당 단체를 구속할 권한이 있음을 진술합니다.',
+          '본 이용약관(이하 "본 약관")은 agentes.chat이라는 상호로 사업을 영위하는 미국 델라웨어(Delaware)주 유한책임회사 AGENTESCHAT, LLC(이하 "agentes.chat", "당사")와 계정 또는 워크스페이스를 생성하는 개인 또는 단체(이하 "귀하") 사이의 구속력 있는 계약입니다. 계정을 생성하거나, 워크스페이스에 참여하거나, 기타 방식으로 웹, Mac 앱 또는 휴대전화 앱에서 agentes.chat(이하 "본 서비스")을 이용함으로써 귀하는 본 약관 및 당사의 개인정보처리방침에 동의합니다. 귀하가 회사 또는 기타 단체를 대리하여 본 서비스를 이용하는 경우, 귀하는 해당 단체를 구속할 권한이 있음을 진술합니다.',
           "본 서비스를 이용하려면 만 18세 이상이어야 하며 계약을 체결할 능력이 있어야 합니다.",
         ],
       },
@@ -148,7 +148,7 @@ export const legalKo: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. 준거법",
         blocks: [
-          "본 약관은 저촉법 규정을 제외한 미국 와이오밍(Wyoming)주 법률에 따라 규율되며, 당사자들은 와이오밍주에 소재한 주 법원 및 연방 법원의 전속 관할에 따릅니다. 귀하가 브라질과 같이 포기할 수 없는 권리 또는 재판적을 부여하는 법률이 적용되는 관할의 소비자인 경우, 그러한 권리는 영향을 받지 않습니다.",
+          "본 약관은 저촉법 규정을 제외한 미국 델라웨어(Delaware)주 법률에 따라 규율되며, 당사자들은 델라웨어주에 소재한 주 법원 및 연방 법원의 전속 관할에 따릅니다. 귀하가 브라질과 같이 포기할 수 없는 권리 또는 재판적을 부여하는 법률이 적용되는 관할의 소비자인 경우, 그러한 권리는 영향을 받지 않습니다.",
         ],
       },
       {
@@ -162,7 +162,7 @@ export const legalKo: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. 연락처",
         blocks: [
-          "CODARI GLOBAL, LLC, agentes.chat이라는 상호로 사업 영위. 통지: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · 기타 문의: hello@agentes.chat",
+          "AGENTESCHAT, LLC, agentes.chat이라는 상호로 사업 영위. 통지: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · 기타 문의: hello@agentes.chat",
         ],
       },
     ],
@@ -172,13 +172,13 @@ export const legalKo: Partial<Record<LegalKind, LegalDocument>> = {
     summary:
       "당사가 수집하는 정보, 에이전트가 무엇을 어디로 보내는지, 누가 귀하의 워크스페이스를 볼 수 있는지, 그리고 귀하가 가진 권리.",
     courtesy: "본 문서는 편의를 위한 번역본이며, 영어 원문과 내용이 다를 경우 영어 원문이 우선합니다.",
-    updated: "2026-11-14",
+    updated: "2026-11-16",
     sections: [
       {
         id: "overview",
         heading: "1. 개요",
         blocks: [
-          'agentes.chat이라는 상호로 사업을 영위하는 미국 와이오밍(Wyoming)주 유한책임회사 CODARI GLOBAL, LLC(이하 "agentes.chat", "당사")는 사람과 AI 에이전트가 함께 일하는 워크스페이스로서 웹, Mac 앱 및 휴대전화 앱으로 제공되는 agentes.chat(이하 "본 서비스")을 운영합니다. 본 방침은 다음 두 가지 역할을 구분합니다.',
+          'agentes.chat이라는 상호로 사업을 영위하는 미국 델라웨어(Delaware)주 유한책임회사 AGENTESCHAT, LLC(이하 "agentes.chat", "당사")는 사람과 AI 에이전트가 함께 일하는 워크스페이스로서 웹, Mac 앱 및 휴대전화 앱으로 제공되는 agentes.chat(이하 "본 서비스")을 운영합니다. 본 방침은 다음 두 가지 역할을 구분합니다.',
           {
             list: [
               "**계정 데이터**, 즉 사람들이 계정을 생성하고 이용하기 위하여 당사에 제공하는 정보에 대하여 당사는 데이터 컨트롤러(controller)입니다.",
@@ -339,7 +339,7 @@ export const legalKo: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. 연락처",
         blocks: [
-          "CODARI GLOBAL, LLC, agentes.chat이라는 상호로 사업 영위. 통지: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. EU, 영국 및 브라질의 데이터 보호 관련 문의는 동일한 주소로 당사 개인정보 팀에 전달됩니다. 그 밖의 사항은 hello@agentes.chat으로 연락하여 주십시오.",
+          "AGENTESCHAT, LLC, agentes.chat이라는 상호로 사업 영위. 통지: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. EU, 영국 및 브라질의 데이터 보호 관련 문의는 동일한 주소로 당사 개인정보 팀에 전달됩니다. 그 밖의 사항은 hello@agentes.chat으로 연락하여 주십시오.",
         ],
       },
     ],

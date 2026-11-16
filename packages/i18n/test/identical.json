@@ -603,6 +603,7 @@
       "decision.switchConfirm"
     ],
     "fr": [
+      "usage.kinds.routines",
       "channel.tooLong.fileName",
       "calendar.moreRuns",
       "devices.cpus",
@@ -2013,6 +2014,7 @@
       "decision.switchConfirm"
     ],
     "nl": [
+      "usage.kinds.routines",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
       "devices.filter.computers",

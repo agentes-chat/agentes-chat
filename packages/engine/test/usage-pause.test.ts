@@ -30,7 +30,9 @@ import {
   type MachineStatus,
   nextMonthStart,
   noticeCategoryOf,
+  operatorRuns,
   overruledHere,
+  planOfWaitKey,
   postPersonMessage,
   REPARK_STEADY_MS,
   RESUME_AFTER_MS,
@@ -594,6 +596,46 @@ test("a routine waiting on the plan says so in Rotinas, not running, and its peo
   expect((await runs(f))[0]?.status).toBe("waiting_input");
   expect((await heard())[0]?.count ?? 1).toBe(1);
   expect(await heard()).toHaveLength(1);
+});
+
+test("a parked run its routine's next firing replaces still says what it waited on, and what stopped it", async () => {
+  f = await setup({ reply: () => ({ chunks: ["pela API"] }) });
+  const machineId = await computerAgent(f);
+  const { brain } = scripted(() => [
+    { type: "limit", resetsAt: later(3600_000).toISOString() },
+    { type: "error", code: "plan_limit", message: "You've hit your session limit", worked: false },
+  ]);
+  const handlers = handlersWith(f, brain);
+  const deps = { db: f.db, pubsub: f.pubsub, context: f.context };
+  const routine = await createRoutine(deps, f.owner.id, f.org.id, {
+    name: "Deploys",
+    agentId: f.agent.id,
+    prompt: "Check the deploys.",
+    target: { type: "channel", channelId: f.general.id },
+    trigger: { type: "schedule", phrase: "todo dia às 8h" },
+  });
+  await runRoutineNow(deps, f.owner.id, f.org.id, routine.id);
+  await drainOutbox(f.db, handlers);
+  const [parked] = await runs(f);
+  expect(parked?.status).toBe("waiting_input");
+  // Its next firing takes the slot: the run that waited on the plan is stopped for it.
+  await runRoutineNow(deps, f.owner.id, f.org.id, routine.id);
+  await drainOutbox(f.db, handlers);
+  const [stopped] = await runs(f);
+  expect([stopped?.id, stopped?.status, stopped?.error]).toEqual([parked?.id, "canceled", "routine_waiting_plan"]);
+
+  const told = (await operatorRuns(f.db, f.org.id, { limit: 10 }))?.runs.find((r) => r.id === parked?.id);
+  expect(told).toMatchObject({
+    status: "canceled",
+    // What it waited on when it ended: the plan of its computer's own sign-in.
+    waitCode: "plan_limit",
+    waitAccountId: null,
+    waitAccountMachineId: machineId,
+    canceled: { by: "system", userId: null, agentId: null, reason: "routine_waiting_plan" },
+    errorCode: "run.canceled",
+    error: "routine_waiting_plan",
+  });
+  expect(told?.waitResetsAt).toBeInstanceOf(Date);
 });
 
 test("a routine slot that waited on the plan past 12 hours is missed for the plan; one cut mid-work isn't", async () => {
@@ -2220,4 +2262,20 @@ describe("a model its plan's live list dropped", () => {
     expect(seen.map((turn) => turn.model)).toEqual(["hy3"]);
     expect(await dropped(f)).toEqual([]);
   });
+});
+
+test("a plan's wait key reads back as its computer and its account; a budget's, or anything else, as nothing", () => {
+  const machineId = crypto.randomUUID();
+  const accountId = crypto.randomUUID();
+  const plan = (account?: string) =>
+    planOfWaitKey(usageWaitKey({ code: "plan_limit", machineId, kind: "claude_code", accountId: account }));
+  expect(plan(accountId)).toEqual({ machineId, accountId });
+  // The computer's own sign-in: no account.
+  expect(plan()).toEqual({ machineId, accountId: null });
+  expect(planOfWaitKey(usageWaitKey({ code: "budget", agentId: crypto.randomUUID() }))).toBeNull();
+  for (const other of [null, undefined, 7, "", "plan", `plan:${machineId}:codex`, `plan:${machineId}:codex:own:more`]) {
+    expect(planOfWaitKey(other)).toBeNull();
+  }
+  // Only ids come out of it.
+  expect(planOfWaitKey("plan:some words:codex:more words")).toEqual({ machineId: null, accountId: null });
 });

@@ -110,6 +110,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "agentPage.work.browserDialog.noComputer",
     "agentPage.work.computer.connect",
     "aiAccounts.connect.addComputer",
+    // The way out for the right hand's plan on a computer that is away: Cloud's own computer is always on.
+    "rightHand.unusable.connect",
     "aiAccounts.connect.noComputer",
     "brain.reasons.no_computer",
     "browser.inCard.noComputer",
