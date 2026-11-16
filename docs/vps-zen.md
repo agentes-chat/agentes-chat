@@ -19,7 +19,7 @@ This server runs `vps-zen`, the official `main` plus the patches below. Each one
 | Voice channels and screen sharing, Discord's way | `packages/engine/src/voice-rooms.ts`, `apps/server/src/routes/app/voice-rooms.ts`, `apps/web/src/voice/`, hooks in `Sidebar.tsx`, `ChannelHeader.tsx`, `ChannelPage.tsx`; `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` | Team calls inside the workspace. Every channel has a voice room on LiveKit (`agentes_<org>_<channel>`): the headset in the channel's header or the sidebar row joins it, the sidebar lists who is in each room (speaking, muted, camera, live), the foot shows "Voz conectada" with mic, deafen, camera and screen, and the channel page holds the call: tiles, a shared screen in focus, full screen. The server only signs join tokens (members only, never a task) and reads who is in each room; media goes browser to LiveKit. No migration, no new channel kind. Off while the three variables are unset. |
 
 Outside the repository: `deploy/vps-zen/` holds the keepalive (a root timer every minute: the app's containers up,
-the runner's service up, Chrome first in line for the OOM killer) and `agentes-deploy` (waits for the agents to be
-idle, swaps the image, checks health and the runner, and rolls back by itself when the new image doesn't come up).
+the runner's service up, Chrome first in line for the OOM killer) and `agentes-deploy` (goes on at once: the agents keep running in the runner and a cut tool call resumes; `--wait` waits for
+idle; swaps the image, checks health and the runner, and rolls back by itself when the new image doesn't come up).
 The Discord feed (`/opt/aurevia-agentes-feed`, reads Postgres) and the runner's
 systemd drop-in with `AGENTES_RUNNER_FULL_ACCESS=1`.

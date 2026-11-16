@@ -1,14 +1,15 @@
 #!/bin/bash
 # VPS Zen: deploy an agentes.chat image without anyone bringing anything up by hand.
-#   agentes-deploy <image> [--now]     e.g. agentes-deploy agentes-local:a160acc56
+#   agentes-deploy <image> [--wait]    e.g. agentes-deploy agentes-local:a160acc56
 # Runs detached (systemd-run), so the agent or shell that started it may go away with the restart. It:
 #   1. holds /run/agentes-deploy.lock (the keepalive stays out of the way meanwhile);
-#   2. waits up to 15 min for no run to be mid-turn (--now skips it; a run cut anyway is resumed by the app);
+#   2. goes on at once: the agents' Claude processes live in the runner, not in the app, so they keep running and
+#      the runner reconnects; a tool call cut by the restart is resumed by the app. --wait waits up to 15 min for idle;
 #   3. backs up the database (pg_dump) and the .env, switches AGENTES_IMAGE and runs docker compose up -d agentes;
 #   4. waits up to 5 min for /api/health; not healthy: puts the previous image back and brings that up instead;
 #   5. checks the runner reconnected (restarts its service if not) and logs everything to /var/log/agentes-deploy.log.
 set -u
-IMAGE=${1:?usage: agentes-deploy <image> [--now]}
+IMAGE=${1:?usage: agentes-deploy <image> [--wait]}
 NOW=${2:-}
 if [ -z "${AGENTES_DEPLOY_DETACHED:-}" ]; then
   unit="agentes-deploy-$(date +%Y%m%d%H%M%S)"
@@ -25,7 +26,7 @@ flock -w 600 9 || { log "another deploy holds the lock: giving up"; exit 1; }
 docker image inspect "$IMAGE" >/dev/null 2>&1 || { log "no image $IMAGE"; exit 1; }
 PREV=$(grep -E '^AGENTES_IMAGE=' "$DIR/.env" | cut -d= -f2-)
 log "deploy $IMAGE (was $PREV)"
-if [ "$NOW" != "--now" ]; then
+if [ "$NOW" = "--wait" ]; then
   for i in $(seq 1 90); do
     busy=$(psql "select count(*) from agent_runs where status='running'")
     [ "$busy" = "0" ] && break
