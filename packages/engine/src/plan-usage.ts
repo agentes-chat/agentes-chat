@@ -613,12 +613,32 @@ export async function agentPlanUsage(
   now = new Date(),
 ): Promise<AgentPlanUsageView> {
   await requirePermission(db, userId, orgId, "read");
-  return (await agentUsageFor(db, userId, orgId, agentId, now)).view;
+  return (await agentUsageFor(db, userId, orgId, agentId, now, await rightHandThinksAs(db, orgId, agentId, userId)))
+    .view;
+}
+
+/**
+ * What the right hand thinks with for `person` (ADR 0137 §11), as a turn of theirs resolves it (`thinkingAgent`), never
+ * its own row's: `agentUsageFor`'s `thinksAs`. Undefined for any other agent.
+ */
+export async function rightHandThinksAs(db: Database, orgId: string, agentId: string, person: string | null) {
+  const { getAgentCached } = await import("./agents");
+  const { isRightHand, thinkingAgent } = await import("./right-hand");
+  const agent = await getAgentCached(db, orgId, agentId);
+  if (!agent || !isRightHand(agent)) return undefined;
+  const thinking = await thinkingAgent(db, agent, person);
+  return {
+    brain: thinking.brain ?? "model",
+    machineId: thinking.machineId,
+    accountId: thinking.brainAccountId,
+    ownerId: thinking.ownerUserId ?? null,
+  };
 }
 
 /**
  * The agent's "Uso" tab as `viewer` sees it (null: nobody, so no money), with the brain it thinks with and its API
- * month against its budget (null: an archived agent has none). The caller checks the viewer may read.
+ * month against its budget (null: an archived agent has none). The caller checks the viewer may read. `thinksAs`: the
+ * brain, computer, account and owner it thinks with on this call, where its row doesn't say (the right hand's).
  */
 export async function agentUsageFor(
   db: Database,
@@ -626,6 +646,7 @@ export async function agentUsageFor(
   orgId: string,
   agentId: string,
   now = new Date(),
+  thinksAs?: { brain: string; machineId: string | null; accountId: string | null; ownerId: string | null },
 ): Promise<{ view: AgentPlanUsageView; brain: string; api: ApiAgentUsage | null }> {
   const since = monthStartUtc(now);
   const [ctx, money, rows, budgets] = await Promise.all([
@@ -634,7 +655,10 @@ export async function agentUsageFor(
     readUsage(db, orgId, since, { agentId }),
     agentBudgetsThisMonth(db, orgId, now),
   ]);
-  if (!ctx.agents.has(agentId)) throw new NotFoundError("Agent not found");
+  const own = ctx.agents.get(agentId);
+  if (!own) throw new NotFoundError("Agent not found");
+  // The right hand's row says nothing of what it thinks with: that is the person's it answers (ADR 0137 §11).
+  if (thinksAs) ctx.agents.set(agentId, { ...own, ...thinksAs });
 
   const total = rows.reduce((s, r) => s + tokensOf(r), 0);
   const curKey = currentKey(ctx, agentId);

@@ -6,6 +6,7 @@ import {
   createAgent,
   createAgentRuns,
   createUsageToolSource,
+  ensureRightHand,
   insertMessage,
   recordPlanUsage,
   type ToolContext,
@@ -153,6 +154,25 @@ test("on a plan: a member and a routine's run see the same limits and tokens, ne
   const routine = await check(await runFor(f.agent.id, f.owner.id, true));
   expect(routine).toContain("- 5 hours: 60% used, resets ");
   expect(routine).not.toMatch(money);
+});
+
+test("the right hand on a person's own plan reads that plan, not the API its row says", async () => {
+  await onPlan();
+  const lodi = await ensureRightHand(f.db, f.org.id);
+  if (!lodi) throw new Error("no right hand");
+  // Its row stays on the model brain; the owner chose their own plan for their DM with it (ADR 0137 §11).
+  await f.db.insert(schema.rightHandBrains).values({
+    orgId: f.org.id,
+    userId: f.owner.id,
+    brain: "claude_code",
+    brainAccountId: PESSOAL,
+  });
+  const text = await check(await runFor(lodi, f.owner.id));
+  expect(text).toContain(`You think with Claude plan "Pessoal" (Max)`);
+  expect(text).toContain("- 5 hours: 60% used");
+  expect(text).not.toContain("You think through the API");
+  // Its Usage tab shows the owner the same plan.
+  expect((await agentPlanUsage(f.db, f.owner.id, f.org.id, lodi)).current?.accountId).toBe(PESSOAL);
 });
 
 test("at the limit: the plan says until when; unknown windows say so instead of 0%", async () => {

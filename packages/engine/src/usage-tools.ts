@@ -1,10 +1,18 @@
 import { planState, planWindows } from "@agenteschat/ui/plan-state";
+import { getAgentCached } from "./agents";
 import { ago, zoneOf } from "./context";
 import { defaultAccountLabel } from "./machine-accounts";
-import { type AgentPlanUsageView, type ApiAgentUsage, agentUsageFor, type PlanAccountUsage } from "./plan-usage";
+import {
+  type AgentPlanUsageView,
+  type ApiAgentUsage,
+  agentUsageFor,
+  type PlanAccountUsage,
+  rightHandThinksAs,
+} from "./plan-usage";
 import { personBehindCall } from "./requester";
+import { rightHandPerson } from "./right-hand";
 import { describeWhen } from "./schedule";
-import type { ToolDefinition, ToolSource } from "./tools/types";
+import type { ToolContext, ToolDefinition, ToolSource } from "./tools/types";
 
 export const USAGE_TOOL = "get_my_usage";
 
@@ -77,6 +85,16 @@ function budgetText(api: ApiAgentUsage, zone: string, now: Date) {
   return `API budget this month: ${api.budgetPercent}% used. It resets ${resets}.`;
 }
 
+/** The person the right hand's run thinks for (`rightHandPerson`); null for any other agent's. */
+async function thinksFor(ctx: ToolContext) {
+  const agent = await getAgentCached(ctx.db, ctx.orgId, ctx.agentId);
+  return rightHandPerson(ctx.db, agent ?? {}, {
+    orgId: ctx.orgId,
+    id: ctx.runId,
+    triggerMessageId: ctx.triggerMessageId,
+  });
+}
+
 /**
  * `get_my_usage`: the agent's own usage as its page's Uso tab shows it (ADR 0063 §6): the windows of the plan it
  * thinks with and its part of each, its tokens this month, and how much of its API budget it used where it thinks
@@ -95,7 +113,14 @@ export function createUsageToolSource(): ToolSource {
       const now = new Date();
       const person = await personBehindCall(ctx);
       const [{ view, brain, api }, zone] = await Promise.all([
-        agentUsageFor(ctx.db, null, ctx.orgId, ctx.agentId, now),
+        agentUsageFor(
+          ctx.db,
+          null,
+          ctx.orgId,
+          ctx.agentId,
+          now,
+          await rightHandThinksAs(ctx.db, ctx.orgId, ctx.agentId, await thinksFor(ctx)),
+        ),
         zoneOf(ctx.db, ctx.orgId, person),
       ]);
       const onApi = brain === "model";
