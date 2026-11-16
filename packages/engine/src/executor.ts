@@ -13,6 +13,7 @@ import {
   desc,
   type Executor,
   eq,
+  gt,
   inArray,
   isNull,
   ne,
@@ -236,6 +237,7 @@ import { computerBackSoon, type MachineCaller } from "./machine-hub";
 import { TASK_OFFLINE_GRACE_MS } from "./machine-tasks";
 import { getMachine } from "./machines";
 import { MEDIA_TOOLS } from "./media";
+import { PLACE_KEPT_MS } from "./message-place";
 import {
   getMessage,
   insertMessage,
@@ -745,6 +747,12 @@ export interface Transcript {
    */
   mootRequests?: Record<string, string>;
   requestMoot?: true;
+  /**
+   * Its own newer run here withdrew what it waited on (`withdraw_request`) and answers the person: the calls this one
+   * had made by then. Woken with no call made since, its words would only answer them a second time, so it ends
+   * without them (a person's message to it since makes it owe an answer again).
+   */
+  takenOver?: number;
   /** Time spent working before this claim (ms), without its waits: the long-work safety net counts it (ADR 0121). */
   activeMs?: number;
   /** The "unavailable" note already posted in this run (its code): not repeated while it waits. */
@@ -3597,6 +3605,50 @@ async function executeRunInner(
   };
 
   /**
+   * When the first secret or approval card a computer brain's bridged call posted in this run went up: the brain asks
+   * mid-turn and writes after the call what the card is for ("I left a secure field here for the key"), so that text
+   * is placed just before the card and reads first. A card another run posted (an approval joining an older card),
+   * one older than a place can be kept (`PLACE_KEPT_MS`), or one someone else wrote after (a reply takes no place
+   * before what people sent while it worked, ADR 0010): null, and the text goes at the end as before.
+   */
+  const bridgedCardAt = async (t: Transcript): Promise<Date | null> => {
+    const calls = (t.pending?.calls ?? []).filter((c) => c.bridged);
+    const secretIds = calls.flatMap((c) => (c.secretRequestId ? [c.secretRequestId] : []));
+    const approvalIds = calls.flatMap((c) => (c.approvalId ? [c.approvalId] : []));
+    const cards = [
+      ...(secretIds.length > 0
+        ? await db
+            .select({ at: messages.createdAt, channelId: messages.channelId })
+            .from(secretRequests)
+            .innerJoin(messages, and(eq(messages.id, secretRequests.messageId), eq(messages.agentRunId, run.id)))
+            .where(inArray(secretRequests.id, secretIds))
+        : []),
+      ...(approvalIds.length > 0
+        ? await db
+            .select({ at: messages.createdAt, channelId: messages.channelId })
+            .from(approvals)
+            .innerJoin(messages, and(eq(messages.id, approvals.messageId), eq(messages.agentRunId, run.id)))
+            .where(inArray(approvals.id, approvalIds))
+        : []),
+    ];
+    const first = cards.reduce<(typeof cards)[number] | null>((a, c) => (a && a.at <= c.at ? a : c), null);
+    if (!first || Date.now() - first.at.getTime() >= PLACE_KEPT_MS) return null;
+    const [after] = await db
+      .select({ id: messages.id })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.orgId, run.orgId),
+          eq(messages.channelId, first.channelId),
+          gt(messages.createdAt, first.at),
+          or(isNull(messages.agentRunId), ne(messages.agentRunId, run.id)),
+        ),
+      )
+      .limit(1);
+    return after ? null : first.at;
+  };
+
+  /**
    * A computer brain's call through the bridge paused the run during the turn
    * (`suspendRunForTool` posted the card and moved it to `waiting_*`): keep the
    * pending calls it recorded, post what the brain said if it says more than the card, and stop here.
@@ -3623,6 +3675,10 @@ async function executeRunInner(
     if (asked && textBefore) {
       text = stripSentinel(textBefore(asked.askedAt, ASKED_GRACE_MS));
       at = new Date(asked.cardAt.getTime() - 1);
+    } else if (text) {
+      // A secret or an approval: what it wrote says what the card is for, so it reads before the card.
+      const cardAt = await bridgedCardAt(t);
+      if (cardAt) at = new Date(cardAt.getTime() - 1);
     }
     // A background run never posts by itself (ADR 0053 §5): its cards speak for it.
     if (run.background || repeatsLastPost(text)) text = "";
@@ -5327,6 +5383,10 @@ async function executeRunInner(
         !transcript.reacted &&
         !transcript.mediaSent &&
         (transcript.passed ||
+          (transcript.takenOver !== undefined &&
+            (transcript.executedCalls ?? 0) <= transcript.takenOver &&
+            updates.length === 0 &&
+            !saved) ||
           (!anythingPosted && (wantsQuiet || !said) && updates.length === 0 && !saved && !transcript.reported))
       ) {
         const how = transcript.passed ? "pass" : wantsQuiet ? "sentinel" : "empty";

@@ -1743,7 +1743,12 @@ function ChannelView({
   const asksOut = useAsksOutOfView(scroller, askRegistry, isMember);
   // …and all of them, in view or not: the bar says a hand-off waits on me from them.
   const pendingAsks = usePendingAsks(askRegistry);
-  const seeAsk = (id: string) => showRequest(scroller.current, id, !reducedMotion);
+  // "See" on the bar: the view stops following the end first (as `jumpTo` does), or the next row that grows while an
+  // agent writes pins it back down before it ever reaches the card.
+  const seeAsk = (id: string) => {
+    letGo();
+    showRequest(scroller.current, id, !reducedMotion);
+  };
   // …and what waits on me here with its card not loaded (older, or in a thread): the line counts it and goes to the
   // oldest (ADR 0172).
   const waitingOnMe = useWaitingOnMe(org.id).data?.items;
