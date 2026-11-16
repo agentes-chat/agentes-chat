@@ -82,6 +82,7 @@ import type { MachineCaller } from "./machine-hub";
 import {
   checkCutTaskStart,
   interruptOfflineMachineTasks,
+  MACHINE_QUEUE_RETRY_JOB,
   startMachineTask,
   type TaskCall,
   wakeConversationForTask,
@@ -1054,6 +1055,10 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
       // A slot on that computer is free: queued mission items may start (ADR 0044). The one walk of the
       // machine's queue per task end (also kicked for a resumed item queued with this job, its own id).
       await afterMachineTaskEnded(missions, String(job.payload.taskId)).catch(() => 0);
+    },
+    // A queued task was put back because its computer's link was full (`isLinkBusy`): its queue is walked again.
+    [MACHINE_QUEUE_RETRY_JOB]: async (job) => {
+      await startQueuedMissionTasks(missions, String(job.payload.machineId));
     },
     // The `.agentes/` files of a mission changed (debounced): written to its machine.
     "mission.sync_files": async (job) => {
