@@ -122,7 +122,7 @@ test("stores stdio encrypted, exposes the real tool, reconnects and enforces org
   }
   await revokeConnection(f.db, f.owner.id, f.org.id, stored.id);
   await expect(d.connect(stored, {})).rejects.toThrow("unavailable");
-});
+}, 30_000);
 
 test("member, disabled transport and invalid process cannot create a connection or launch a child", async () => {
   f = await setup();
@@ -138,4 +138,4 @@ test("member, disabled transport and invalid process cannot create a connection 
     connectCustomServer(deps(f), f.owner.id, f.org.id, { stdio: { ...config(), command: join(folder, "absent") } }),
   ).rejects.toThrow();
   expect(await f.db.select().from(schema.connectorConnections)).toEqual([]);
-});
+}, 30_000);

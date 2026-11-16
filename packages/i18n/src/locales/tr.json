@@ -2634,6 +2634,16 @@
     }
   },
   "rightHand": {
+    "brain": {
+      "unusable": {
+        "title": "Bir bilgisayar gerekiyor",
+        "computerOnly": "{{owner}} kişisine ait, yalnızca {{computer}} üzerinde oturum açık. Lodi, hesap olarak oturum açılmış bir planla düşünür.",
+        "noComputer": "{{owner}} kişisine ait. Bir bilgisayar gerekiyor ve çalışma alanında bağlı hiç yok.",
+        "away": "{{owner}} kişisine ait, {{computer}} üzerinde, şu an ulaşılamıyor.",
+        "connect": "Bilgisayar bağla",
+        "plans": "Planları gör"
+      }
+    },
     "label": "sağ kolun",
     "labelCapitalized": "Sağ kolun",
     "unusable": {
@@ -2915,16 +2925,6 @@
       "invite_people_sent_one": "<b>{{emails}}</b> adresine davet gönderildi.",
       "invite_people_sent_other": "<b>{{emails}}</b> adreslerine davet gönderildi.",
       "remove_ai_key": "\"{{name}}\" API anahtarını sil."
-    },
-    "brain": {
-      "unusable": {
-        "title": "Bir bilgisayar gerekiyor",
-        "computerOnly": "{{owner}} kişisine ait, yalnızca {{computer}} üzerinde oturum açık. Lodi, hesap olarak oturum açılmış bir planla düşünür.",
-        "noComputer": "{{owner}} kişisine ait. Bir bilgisayar gerekiyor ve çalışma alanında bağlı hiç yok.",
-        "away": "{{owner}} kişisine ait, {{computer}} üzerinde, şu an ulaşılamıyor.",
-        "connect": "Bilgisayar bağla",
-        "plans": "Planları gör"
-      }
     }
   },
   "teamWeek": {
@@ -7676,6 +7676,9 @@
     }
   },
   "issues": {
+    "handedBy": "devreden: <0/>{{name}}",
+    "fromDm": "<0>{{name}} ile DM'inden</0>",
+    "fromDmText": "{{name}} ile DM'inden",
     "delete": {
       "action": "Görevi sil",
       "title": "#{{number}} görevi silinsin mi?",
@@ -7884,6 +7887,9 @@
       "label": "{{name}} çalışması",
       "runningTitle": "{{name}} bunun üzerinde çalışıyor",
       "waitingTitle": "{{name}} sizi bekliyor",
+      "finishedTitle": "{{name}} bitirdi",
+      "finishedMeta": "{{when}} · devreden: {{name}}",
+      "answer": "Yanıtla",
       "stalledTitle": "{{name}} durdu: {{when}}",
       "stalledText": "Görev hâlâ {{name}} üzerinde ama süren bir çalıştırma yok.",
       "started": "başladı: {{when}}",
@@ -7900,10 +7906,7 @@
         "failed": "Son çalıştırma başarısız oldu.",
         "canceled": "Biri çalıştırmayı durdurdu.",
         "budget": "Ajanın aylık bütçesi bitti."
-      },
-      "finishedTitle": "{{name}} bitirdi",
-      "finishedMeta": "{{when}} · devreden: {{name}}",
-      "answer": "Yanıtla"
+      }
     },
     "status": {
       "todo": "Yapılacak",
@@ -8089,10 +8092,7 @@
       "criterion_checked": "\"{{text}}\" kriterini işaretledi",
       "criterion_unchecked": "\"{{text}}\" kriterinin işaretini kaldırdı",
       "agent_asked": "{{name}} ajanından yapmasını istedi"
-    },
-    "handedBy": "devreden: <0/>{{name}}",
-    "fromDm": "<0>{{name}} ile DM'inden</0>",
-    "fromDmText": "{{name}} ile DM'inden"
+    }
   },
   "routines": {
     "filters": "Rutinleri filtrele",
@@ -13946,6 +13946,27 @@
     "agentSub": "Bağlayıcıya ve konuya göre. Varsayılan olarak hassas eylemler onay ister."
   },
   "connectFlow": {
+    "local": {
+      "transport": "MCP taşıması",
+      "tab": "Local · stdio",
+      "where": "agentes.chat'in kurulu olduğu yerde çalışır: masaüstü kurulumunda bilgisayarınızda, Docker'da kapsayıcının içinde. Başka bir sunucuya bağlı bilgisayar burada kullanılmaz.",
+      "checking": "Yerel MCP programlarının desteklenip desteklenmediği denetleniyor…",
+      "checkFailed": "Yerel MCP desteği denetlenemedi. Yeniden denemek için bu pencereyi tekrar açın.",
+      "disabled": "Yerel programlar burada kapalı. Yalnızca güvenilir, kendi barındırdığı ve herkese açık kayda kapalı bir sunucuyu yöneten kişi MCP_STDIO_ENABLED ayarını açabilir.",
+      "command": "Çalıştırılabilir dosya",
+      "commandExample": "node",
+      "commandHelp": "Program adı veya mutlak yol. Argümanlar aşağıya yazılır ve hiçbir kabuk komutu yorumlanmaz.",
+      "args": "Argümanlar (JSON dizisi)",
+      "argsHelp": "Her argüman için bir metin, örneğin [\"server.js\", \"mcp\"]. Boşluk içeren yollar tek bir metinde kalır.",
+      "cwd": "Çalışma dizini (isteğe bağlı)",
+      "cwdHelp": "Sunucudaki mutlak yol. Docker'da bu yol kapsayıcının içinde bulunmalıdır.",
+      "environment": "Ortam değişkenleri",
+      "env": "Ortam (JSON nesnesi)",
+      "envHelp": "Örneğin {\"API_KEY\":\"…\"}. Şifrelenmiş olarak saklanır ve sunucunun kendi gizli değerleri devralınmaz.",
+      "invalid": "Bir çalıştırılabilir dosya, metin argümanlardan oluşan bir JSON dizisi ve metin ortam değerlerinden oluşan bir JSON nesnesi girin.",
+      "failed": "Yerel MCP bağlanamadı. agentes.chat'in çalıştığı makinedeki çalıştırılabilir dosyayı ve yolları, ayrıca programın MCP'yi stdio üzerinden konuşup konuşmadığını denetleyin.",
+      "permissions": "Sunucunun işletim sistemi kullanıcısı olarak çalışır. Araç erişimi ve onaylar sonraki adımlarda yönetilir."
+    },
     "steps": "Adımlar",
     "step": {
       "0": "Bağla",
@@ -17029,6 +17050,21 @@
     "tomorrowAt": "yarın {{time}}"
   },
   "work": {
+    "handed": {
+      "lead": "Devredildi: <0/>{{name}}",
+      "working": "üzerinde çalışıyor",
+      "done": "{{duration}} içinde bitti",
+      "waitingYou": "yanıtını bekliyor",
+      "waiting": "bir yanıt bekliyor",
+      "waitingApprovalYou": "onayını bekliyor",
+      "waitingApproval": "onay bekliyor",
+      "waitingComputer": "bilgisayarı bekliyor",
+      "paused": "plan sınırında duraklatıldı",
+      "queued": "sırada",
+      "failed": "bitmedi",
+      "stopped": "durduruldu",
+      "step": "adım {{current}}/{{total}}"
+    },
     "duration": {
       "minutes_one": "{{count}} dk",
       "minutes_other": "{{count}} dk",
@@ -17104,24 +17140,12 @@
       "failed": "Engellendi · bitmedi",
       "failedWhy": "Engellendi · bitmedi: {{why}}"
     },
-    "working": "Arka planda",
-    "handed": {
-      "lead": "Devredildi: <0/>{{name}}",
-      "working": "üzerinde çalışıyor",
-      "done": "{{duration}} içinde bitti",
-      "waitingYou": "yanıtını bekliyor",
-      "waiting": "bir yanıt bekliyor",
-      "waitingApprovalYou": "onayını bekliyor",
-      "waitingApproval": "onay bekliyor",
-      "waitingComputer": "bilgisayarı bekliyor",
-      "paused": "plan sınırında duraklatıldı",
-      "queued": "sırada",
-      "failed": "bitmedi",
-      "stopped": "durduruldu",
-      "step": "adım {{current}}/{{total}}"
-    }
+    "working": "Arka planda"
   },
   "chat": {
+    "request": {
+      "asksYou": "{{name}} soruyor"
+    },
     "speedFallback": {
       "text": "ChatGPT bu hesap veya model için Hızlı hızı reddetti, bu yüzden bu yanıt standart hızda geldi.",
       "action": "Ajanı aç"
@@ -17714,9 +17738,6 @@
       "interrupted": "Sunucu yeniden başlatıldığı için kesildi. Devam etmek için yeniden sorun.",
       "step_limit": "Bitirmeden adımlarım tükendi.",
       "stuck": "Takıldım ve bitirmeden durdum."
-    },
-    "request": {
-      "asksYou": "{{name}} soruyor"
     }
   },
   "builtinTools": {

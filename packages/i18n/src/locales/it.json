@@ -2731,6 +2731,16 @@
     }
   },
   "rightHand": {
+    "brain": {
+      "unusable": {
+        "title": "Serve un computer",
+        "computerOnly": "Di {{owner}}, collegato solo su {{computer}}. Lodi pensa con un piano collegato come account.",
+        "noComputer": "Di {{owner}}. Serve un computer, e il workspace non ne ha nessuno collegato.",
+        "away": "Di {{owner}}, su {{computer}}, che non è raggiungibile.",
+        "connect": "Collega un computer",
+        "plans": "Vedi i piani"
+      }
+    },
     "label": "il tuo braccio destro",
     "labelCapitalized": "Il tuo braccio destro",
     "unusable": {
@@ -3022,16 +3032,6 @@
       "invite_people_sent_many": "Inviti inviati a <b>{{emails}}</b>.",
       "invite_people_sent_other": "Inviti inviati a <b>{{emails}}</b>.",
       "remove_ai_key": "Elimina la chiave API «{{name}}»."
-    },
-    "brain": {
-      "unusable": {
-        "title": "Serve un computer",
-        "computerOnly": "Di {{owner}}, collegato solo su {{computer}}. Lodi pensa con un piano collegato come account.",
-        "noComputer": "Di {{owner}}. Serve un computer, e il workspace non ne ha nessuno collegato.",
-        "away": "Di {{owner}}, su {{computer}}, che non è raggiungibile.",
-        "connect": "Collega un computer",
-        "plans": "Vedi i piani"
-      }
     }
   },
   "teamWeek": {
@@ -7993,6 +7993,9 @@
     }
   },
   "issues": {
+    "handedBy": "passata da <0/>{{name}}",
+    "fromDm": "dalla <0>tua DM con {{name}}</0>",
+    "fromDmText": "dalla tua DM con {{name}}",
     "delete": {
       "action": "Elimina attività",
       "title": "Eliminare l'attività #{{number}}?",
@@ -8213,6 +8216,9 @@
       "runningTitle_female": "{{name}} ci sta lavorando",
       "waitingTitle": "{{name}} ti sta aspettando",
       "waitingTitle_female": "{{name}} ti sta aspettando",
+      "finishedTitle": "{{name}} l'ha finita",
+      "finishedMeta": "{{when}} · passata da {{name}}",
+      "answer": "Rispondi",
       "stalledTitle": "{{name}} si è fermato {{when}}",
       "stalledTitle_female": "{{name}} si è fermata {{when}}",
       "stalledText": "L'attività è ancora di {{name}}, ma non c'è nessuna esecuzione in corso.",
@@ -8231,10 +8237,7 @@
         "failed": "L'ultima esecuzione non è riuscita.",
         "canceled": "Qualcuno ha fermato l'esecuzione.",
         "budget": "Il budget mensile dell'agente è esaurito."
-      },
-      "finishedTitle": "{{name}} l'ha finita",
-      "finishedMeta": "{{when}} · passata da {{name}}",
-      "answer": "Rispondi"
+      }
     },
     "status": {
       "todo": "Da fare",
@@ -8428,10 +8431,7 @@
       "criterion_checked": "ha spuntato il criterio \"{{text}}\"",
       "criterion_unchecked": "ha tolto la spunta al criterio \"{{text}}\"",
       "agent_asked": "ha chiesto a {{name}} di farla"
-    },
-    "handedBy": "passata da <0/>{{name}}",
-    "fromDm": "dalla <0>tua DM con {{name}}</0>",
-    "fromDmText": "dalla tua DM con {{name}}"
+    }
   },
   "routines": {
     "filters": "Filtra routine",
@@ -14506,6 +14506,27 @@
     "agentSub": "Per connettore e argomento. Di norma le azioni sensibili chiedono l'approvazione."
   },
   "connectFlow": {
+    "local": {
+      "transport": "Trasporto MCP",
+      "tab": "Local · stdio",
+      "where": "Viene eseguito dove agentes.chat è installato: sul tuo computer nell’installazione desktop, nel contenitore con Docker. Un computer collegato a un altro server non viene usato qui.",
+      "checking": "Verifica del supporto ai programmi MCP locali…",
+      "checkFailed": "Non è stato possibile verificare il supporto MCP locale. Riapri questa finestra per riprovare.",
+      "disabled": "I programmi locali sono disattivati qui. Solo chi gestisce un server self-hosted affidabile, chiuso alla registrazione pubblica, può attivare MCP_STDIO_ENABLED.",
+      "command": "Eseguibile",
+      "commandExample": "node",
+      "commandHelp": "Nome del programma o percorso assoluto. Gli argomenti vanno sotto, e nessun comando di shell viene interpretato.",
+      "args": "Argomenti (array JSON)",
+      "argsHelp": "Una stringa per argomento, per esempio [\"server.js\", \"mcp\"]. I percorsi con spazi restano in un’unica stringa.",
+      "cwd": "Directory di lavoro (facoltativa)",
+      "cwdHelp": "Percorso assoluto sul server. In Docker, questo percorso deve esistere nel contenitore.",
+      "environment": "Variabili d’ambiente",
+      "env": "Ambiente (oggetto JSON)",
+      "envHelp": "Per esempio {\"API_KEY\":\"…\"}. Salvato cifrato, e i segreti propri del server non vengono ereditati.",
+      "invalid": "Indica un eseguibile, un array JSON di argomenti testuali e un oggetto JSON con valori d’ambiente testuali.",
+      "failed": "Non è stato possibile collegare l’MCP locale. Controlla l’eseguibile e i percorsi sulla macchina dove gira agentes.chat, e se il programma parla MCP via stdio.",
+      "permissions": "Viene eseguito come utente di sistema del server. L’accesso agli strumenti e le approvazioni si gestiscono nei passaggi successivi."
+    },
     "steps": "Passaggi",
     "step": {
       "0": "Collega",
@@ -17639,6 +17660,21 @@
     "tomorrowAt": "domani {{time}}"
   },
   "work": {
+    "handed": {
+      "lead": "Passato a <0/>{{name}}",
+      "working": "ci sta lavorando",
+      "done": "fatto in {{duration}}",
+      "waitingYou": "aspetta la tua risposta",
+      "waiting": "aspetta una risposta",
+      "waitingApprovalYou": "aspetta la tua approvazione",
+      "waitingApproval": "aspetta un'approvazione",
+      "waitingComputer": "aspetta il computer",
+      "paused": "in pausa al limite del piano",
+      "queued": "in coda",
+      "failed": "non ha finito",
+      "stopped": "fermato",
+      "step": "passo {{current}} di {{total}}"
+    },
     "duration": {
       "minutes_one": "{{count}} min",
       "minutes_many": "{{count}} min",
@@ -17716,24 +17752,12 @@
       "failed": "Bloccato · non terminato",
       "failedWhy": "Bloccato · non terminato: {{why}}"
     },
-    "working": "In background",
-    "handed": {
-      "lead": "Passato a <0/>{{name}}",
-      "working": "ci sta lavorando",
-      "done": "fatto in {{duration}}",
-      "waitingYou": "aspetta la tua risposta",
-      "waiting": "aspetta una risposta",
-      "waitingApprovalYou": "aspetta la tua approvazione",
-      "waitingApproval": "aspetta un'approvazione",
-      "waitingComputer": "aspetta il computer",
-      "paused": "in pausa al limite del piano",
-      "queued": "in coda",
-      "failed": "non ha finito",
-      "stopped": "fermato",
-      "step": "passo {{current}} di {{total}}"
-    }
+    "working": "In background"
   },
   "chat": {
+    "request": {
+      "asksYou": "{{name}} ti chiede"
+    },
     "speedFallback": {
       "text": "ChatGPT ha rifiutato la velocità Rapida per questo account o modello, quindi questa risposta è arrivata a velocità standard.",
       "action": "Apri agente"
@@ -18346,9 +18370,6 @@
       "interrupted": "Interrotto da un riavvio del server. Chiedi di nuovo per continuare.",
       "step_limit": "Ho esaurito i passaggi prima di finire.",
       "stuck": "Mi sono bloccato e mi sono fermato prima di finire."
-    },
-    "request": {
-      "asksYou": "{{name}} ti chiede"
     }
   },
   "builtinTools": {

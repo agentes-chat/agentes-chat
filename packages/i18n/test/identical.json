@@ -298,7 +298,9 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -552,7 +554,9 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "fr": [
       "usage.kinds.routines",
@@ -987,7 +991,9 @@
       "storage.connect.awsRegion.eu-central-2",
       "storage.connect.awsRegion.eu-west-3",
       "storage.connect.awsRegion.eu-south-1",
-      "storage.connect.awsRegion.eu-north-1"
+      "storage.connect.awsRegion.eu-north-1",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1447,7 +1453,9 @@
       "storage.connect.theirName.s3Secret",
       "storage.connect.theirName.b2Key",
       "storage.connect.theirName.b2Secret",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "it": [
       "shell.email.label",
@@ -1819,7 +1827,9 @@
       "appsDownload.computer",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "nl": [
       "usage.kinds.routines",
@@ -2428,7 +2438,9 @@
       "storage.connect.theirName.s3Key",
       "storage.connect.theirName.s3Secret",
       "storage.connect.theirName.b2Key",
-      "storage.connect.theirName.b2Secret"
+      "storage.connect.theirName.b2Secret",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -2600,7 +2612,9 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "ko": [
       "channel.tooLong.fileName",
@@ -2766,7 +2780,9 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "zh-Hans": [
       "channel.tooLong.fileName",
@@ -2923,7 +2939,9 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "id": [
       "shell.email.label",
@@ -3233,7 +3251,9 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "tr": [
       "devices.cpus",
@@ -3424,7 +3444,9 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "pl": [
       "devices.cpus",
@@ -3725,7 +3747,9 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.region"
+      "storage.connect.region",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ],
     "ru": [
       "channel.tooLong.fileName",
@@ -3882,7 +3906,9 @@
       "appsDownload.googlePlay",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "connectFlow.local.tab",
+      "connectFlow.local.commandExample"
     ]
   },
   "mobile-base": {

@@ -131,7 +131,7 @@ export function ConnectStdio({
               <Input
                 value={command}
                 onChange={(e) => change("command", e.target.value)}
-                placeholder="node"
+                placeholder={t("connectFlow.local.commandExample")}
                 autoComplete="off"
                 spellCheck={false}
               />

@@ -885,6 +885,35 @@ describe("the connect flow: conectar → conectado; Ajustar → o que faz → qu
     expect(section().textContent).toContain("Os servidores MCP que você conectar pelo endereço aparecem aqui.");
   });
 
+  test("a local stdio program is a connection like any other: its name, never the stdio:// address, and Desconectar removes it", async () => {
+    const state = seedState({ connections: [] });
+    const api = createFakeApi(state);
+    api.customConnectors.transports = async () => ({ stdio: true });
+    const res = await api.customConnectors.connect(ORG_ID, {
+      label: "Local MCP",
+      returnTo: "/",
+      stdio: { command: "node", args: ["server.js"], env: {} },
+    });
+    if (res.status !== "connected") throw new Error("expected connected");
+    expect(res.server.authType).toBe("stdio");
+    await api.customConnectors.saveTools(ORG_ID, res.server.id, {
+      label: "Local MCP",
+      tools: res.server.tools.map((x) => ({ name: x.name, access: x.sensitive ? "off" : "read", label: x.name })),
+    });
+    await renderApp(`/org/${ORG_ID}/settings/connectors`, { api });
+    await settle(8);
+    await openConnected();
+    const section = () => screen().getByRole("region", { name: "MCPs" });
+    expect(section().textContent).toContain("Local MCP");
+    // The address a stdio connection carries identifies it and means nothing to people.
+    expect(section().textContent).not.toContain("stdio://");
+    await click(within(await rowMenu("Local MCP")).getByRole("menuitem", { name: "Desconectar" }));
+    const confirm = screen().getByRole("dialog", { name: "Desconectar Local MCP?" });
+    await click(within(confirm).getByRole("button", { name: "Desconectar" }));
+    await settle(4);
+    expect(state.calls.find((c) => c.method === "customConnectors.disconnect")?.args).toEqual([ORG_ID, res.server.id]);
+  });
+
   test("MCPs: a section of its own with Adicionar MCP, which opens connecting by address; the catalog's stay above", async () => {
     const state = seedState();
     const api = createFakeApi(state);

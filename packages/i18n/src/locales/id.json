@@ -2544,6 +2544,16 @@
     }
   },
   "rightHand": {
+    "brain": {
+      "unusable": {
+        "title": "Butuh komputer",
+        "computerOnly": "Milik {{owner}}, masuk hanya di {{computer}}. Lodi berpikir dengan paket yang masuk sebagai akun.",
+        "noComputer": "Milik {{owner}}. Butuh komputer, dan workspace belum menghubungkan satu pun.",
+        "away": "Milik {{owner}}, di {{computer}}, yang sedang tidak aktif.",
+        "connect": "Hubungkan komputer",
+        "plans": "Lihat paket"
+      }
+    },
     "label": "tangan kanan Anda",
     "labelCapitalized": "Tangan kanan Anda",
     "unusable": {
@@ -2815,16 +2825,6 @@
       "invite_roles_other": "Dengan peran {{roles}}.",
       "invite_people_sent_other": "Undangan terkirim ke <b>{{emails}}</b>.",
       "remove_ai_key": "Hapus kunci API \"{{name}}\"."
-    },
-    "brain": {
-      "unusable": {
-        "title": "Butuh komputer",
-        "computerOnly": "Milik {{owner}}, masuk hanya di {{computer}}. Lodi berpikir dengan paket yang masuk sebagai akun.",
-        "noComputer": "Milik {{owner}}. Butuh komputer, dan workspace belum menghubungkan satu pun.",
-        "away": "Milik {{owner}}, di {{computer}}, yang sedang tidak aktif.",
-        "connect": "Hubungkan komputer",
-        "plans": "Lihat paket"
-      }
     }
   },
   "teamWeek": {
@@ -7464,6 +7464,9 @@
     }
   },
   "issues": {
+    "handedBy": "diserahkan oleh <0/>{{name}}",
+    "fromDm": "dari <0>DM kamu dengan {{name}}</0>",
+    "fromDmText": "dari DM kamu dengan {{name}}",
     "delete": {
       "action": "Hapus tugas",
       "title": "Hapus tugas #{{number}}?",
@@ -7666,6 +7669,9 @@
       "runningTitle_female": "{{name}} sedang mengerjakannya",
       "waitingTitle": "{{name}} sedang menunggumu",
       "waitingTitle_female": "{{name}} sedang menunggumu",
+      "finishedTitle": "{{name}} menyelesaikannya",
+      "finishedMeta": "{{when}} · diserahkan oleh {{name}}",
+      "answer": "Jawab",
       "stalledTitle": "{{name}} berhenti {{when}}",
       "stalledTitle_female": "{{name}} berhenti {{when}}",
       "stalledText": "Tugas ini masih dipegang {{name}}, tapi tidak ada proses yang berjalan.",
@@ -7684,10 +7690,7 @@
         "failed": "Proses terakhir gagal.",
         "canceled": "Seseorang menghentikan prosesnya.",
         "budget": "Anggaran bulanan agen sudah habis."
-      },
-      "finishedTitle": "{{name}} menyelesaikannya",
-      "finishedMeta": "{{when}} · diserahkan oleh {{name}}",
-      "answer": "Jawab"
+      }
     },
     "status": {
       "todo": "Akan dikerjakan",
@@ -7873,10 +7876,7 @@
       "criterion_checked": "mencentang kriteria \"{{text}}\"",
       "criterion_unchecked": "menghapus centang kriteria \"{{text}}\"",
       "agent_asked": "meminta {{name}} mengerjakannya"
-    },
-    "handedBy": "diserahkan oleh <0/>{{name}}",
-    "fromDm": "dari <0>DM kamu dengan {{name}}</0>",
-    "fromDmText": "dari DM kamu dengan {{name}}"
+    }
   },
   "routines": {
     "filters": "Saring rutinitas",
@@ -13543,6 +13543,27 @@
     "agentSub": "Per konektor dan topik. Secara default, tindakan sensitif minta persetujuan."
   },
   "connectFlow": {
+    "local": {
+      "transport": "Transport MCP",
+      "tab": "Local · stdio",
+      "where": "Berjalan di tempat agentes.chat dipasang: di komputer Anda pada instalasi desktop, di dalam kontainer pada Docker. Komputer yang tersambung ke server lain tidak dipakai di sini.",
+      "checking": "Memeriksa apakah program MCP lokal didukung…",
+      "checkFailed": "Tidak dapat memeriksa dukungan MCP lokal. Buka kembali jendela ini untuk mencoba lagi.",
+      "disabled": "Program lokal dinonaktifkan di sini. Hanya pengelola server milik sendiri yang tepercaya dan tertutup untuk pendaftaran publik yang dapat mengaktifkan MCP_STDIO_ENABLED.",
+      "command": "Berkas yang dapat dijalankan",
+      "commandExample": "node",
+      "commandHelp": "Nama program atau jalur absolut. Argumen ada di bawah, dan tidak ada perintah shell yang dijalankan.",
+      "args": "Argumen (larik JSON)",
+      "argsHelp": "Satu teks per argumen, misalnya [\"server.js\", \"mcp\"]. Jalur dengan spasi tetap dalam satu teks.",
+      "cwd": "Direktori kerja (opsional)",
+      "cwdHelp": "Jalur absolut di server. Di Docker, jalur ini harus ada di dalam kontainer.",
+      "environment": "Variabel lingkungan",
+      "env": "Lingkungan (objek JSON)",
+      "envHelp": "Misalnya {\"API_KEY\":\"…\"}. Disimpan terenkripsi, dan rahasia milik server tidak diwarisi.",
+      "invalid": "Isi berkas yang dapat dijalankan, larik JSON berisi argumen teks, dan objek JSON berisi nilai lingkungan teks.",
+      "failed": "Tidak dapat menghubungkan MCP lokal. Periksa berkas yang dapat dijalankan dan jalur di mesin tempat agentes.chat berjalan, serta apakah program itu berbicara MCP lewat stdio.",
+      "permissions": "Berjalan sebagai pengguna sistem server. Akses alat dan persetujuan diatur pada langkah berikutnya."
+    },
     "steps": "Langkah",
     "step": {
       "0": "Hubungkan",
@@ -16580,6 +16601,21 @@
     "tomorrowAt": "besok {{time}}"
   },
   "work": {
+    "handed": {
+      "lead": "Diserahkan ke <0/>{{name}}",
+      "working": "sedang dikerjakan",
+      "done": "selesai dalam {{duration}}",
+      "waitingYou": "menunggu jawabanmu",
+      "waiting": "menunggu jawaban",
+      "waitingApprovalYou": "menunggu persetujuanmu",
+      "waitingApproval": "menunggu persetujuan",
+      "waitingComputer": "menunggu komputer",
+      "paused": "dijeda di batas paket",
+      "queued": "dalam antrean",
+      "failed": "tidak selesai",
+      "stopped": "dihentikan",
+      "step": "langkah {{current}} dari {{total}}"
+    },
     "duration": {
       "minutes_other": "{{count}} mnt",
       "hours_other": "{{count}} j",
@@ -16653,24 +16689,12 @@
       "failed": "Terhambat · tidak selesai",
       "failedWhy": "Terhambat · tidak selesai: {{why}}"
     },
-    "working": "Di latar belakang",
-    "handed": {
-      "lead": "Diserahkan ke <0/>{{name}}",
-      "working": "sedang dikerjakan",
-      "done": "selesai dalam {{duration}}",
-      "waitingYou": "menunggu jawabanmu",
-      "waiting": "menunggu jawaban",
-      "waitingApprovalYou": "menunggu persetujuanmu",
-      "waitingApproval": "menunggu persetujuan",
-      "waitingComputer": "menunggu komputer",
-      "paused": "dijeda di batas paket",
-      "queued": "dalam antrean",
-      "failed": "tidak selesai",
-      "stopped": "dihentikan",
-      "step": "langkah {{current}} dari {{total}}"
-    }
+    "working": "Di latar belakang"
   },
   "chat": {
+    "request": {
+      "asksYou": "{{name}} bertanya padamu"
+    },
     "speedFallback": {
       "text": "ChatGPT menolak kecepatan Cepat untuk akun atau model ini, jadi jawaban ini memakai kecepatan standar.",
       "action": "Buka agen"
@@ -17255,9 +17279,6 @@
       "interrupted": "Terputus karena server dimulai ulang. Minta lagi untuk melanjutkan.",
       "step_limit": "Langkahku habis sebelum selesai.",
       "stuck": "Aku macet dan berhenti sebelum selesai."
-    },
-    "request": {
-      "asksYou": "{{name}} bertanya padamu"
     }
   },
   "builtinTools": {

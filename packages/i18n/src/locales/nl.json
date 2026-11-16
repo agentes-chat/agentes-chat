@@ -2637,6 +2637,16 @@
     }
   },
   "rightHand": {
+    "brain": {
+      "unusable": {
+        "title": "Heeft een computer nodig",
+        "computerOnly": "Van {{owner}}, alleen aangemeld op {{computer}}. Lodi denkt met een plan dat als account is aangemeld.",
+        "noComputer": "Van {{owner}}. Er is een computer nodig, en de workspace heeft er geen verbonden.",
+        "away": "Van {{owner}}, op {{computer}}, die weg is.",
+        "connect": "Een computer verbinden",
+        "plans": "Plannen bekijken"
+      }
+    },
     "label": "je rechterhand",
     "labelCapitalized": "Je rechterhand",
     "unusable": {
@@ -2918,16 +2928,6 @@
       "invite_people_sent_one": "Uitnodiging verstuurd naar <b>{{emails}}</b>.",
       "invite_people_sent_other": "Uitnodigingen verstuurd naar <b>{{emails}}</b>.",
       "remove_ai_key": "API-sleutel \"{{name}}\" verwijderen."
-    },
-    "brain": {
-      "unusable": {
-        "title": "Heeft een computer nodig",
-        "computerOnly": "Van {{owner}}, alleen aangemeld op {{computer}}. Lodi denkt met een plan dat als account is aangemeld.",
-        "noComputer": "Van {{owner}}. Er is een computer nodig, en de workspace heeft er geen verbonden.",
-        "away": "Van {{owner}}, op {{computer}}, die weg is.",
-        "connect": "Een computer verbinden",
-        "plans": "Plannen bekijken"
-      }
     }
   },
   "teamWeek": {
@@ -7756,6 +7756,9 @@
     }
   },
   "issues": {
+    "handedBy": "overgedragen door <0/>{{name}}",
+    "fromDm": "uit <0>je DM met {{name}}</0>",
+    "fromDmText": "uit je DM met {{name}}",
     "delete": {
       "action": "Taak verwijderen",
       "title": "Taak #{{number}} verwijderen?",
@@ -7967,6 +7970,9 @@
       "runningTitle_female": "{{name}} werkt eraan",
       "waitingTitle": "{{name}} wacht op jou",
       "waitingTitle_female": "{{name}} wacht op jou",
+      "finishedTitle": "{{name}} heeft het afgerond",
+      "finishedMeta": "{{when}} · overgedragen door {{name}}",
+      "answer": "Antwoorden",
       "stalledTitle": "{{name}} is gestopt {{when}}",
       "stalledTitle_female": "{{name}} is gestopt {{when}}",
       "stalledText": "De taak ligt nog bij {{name}}, maar er loopt geen run.",
@@ -7985,10 +7991,7 @@
         "failed": "De laatste run is mislukt.",
         "canceled": "Iemand heeft de run gestopt.",
         "budget": "Het maandbudget van de agent is op."
-      },
-      "finishedTitle": "{{name}} heeft het afgerond",
-      "finishedMeta": "{{when}} · overgedragen door {{name}}",
-      "answer": "Antwoorden"
+      }
     },
     "status": {
       "todo": "Te doen",
@@ -8178,10 +8181,7 @@
       "criterion_checked": "heeft het criterium \"{{text}}\" aangevinkt",
       "criterion_unchecked": "heeft het criterium \"{{text}}\" uitgevinkt",
       "agent_asked": "heeft {{name}} gevraagd het te doen"
-    },
-    "handedBy": "overgedragen door <0/>{{name}}",
-    "fromDm": "uit <0>je DM met {{name}}</0>",
-    "fromDmText": "uit je DM met {{name}}"
+    }
   },
   "routines": {
     "filters": "Routines filteren",
@@ -14073,6 +14073,27 @@
     "agentSub": "Per connector en onderwerp. Standaard vragen gevoelige acties om goedkeuring."
   },
   "connectFlow": {
+    "local": {
+      "transport": "MCP-transport",
+      "tab": "Local · stdio",
+      "where": "Draait waar agentes.chat is geïnstalleerd: op je computer bij de desktopinstallatie, in de container bij Docker. Een computer die aan een andere server hangt, wordt hier niet gebruikt.",
+      "checking": "Er wordt gecontroleerd of lokale MCP-programma’s worden ondersteund…",
+      "checkFailed": "De lokale MCP-ondersteuning kon niet worden gecontroleerd. Open dit venster opnieuw om het nog eens te proberen.",
+      "disabled": "Lokale programma’s staan hier uit. Alleen wie een vertrouwde, zelf gehoste server zonder openbare registratie beheert, kan MCP_STDIO_ENABLED aanzetten.",
+      "command": "Uitvoerbaar bestand",
+      "commandExample": "node",
+      "commandHelp": "Programmanaam of absoluut pad. De argumenten staan eronder, en er wordt geen shell-opdracht uitgevoerd.",
+      "args": "Argumenten (JSON-array)",
+      "argsHelp": "Eén tekst per argument, bijvoorbeeld [\"server.js\", \"mcp\"]. Paden met spaties blijven in één tekst.",
+      "cwd": "Werkmap (optioneel)",
+      "cwdHelp": "Absoluut pad op de server. In Docker moet dit pad in de container bestaan.",
+      "environment": "Omgevingsvariabelen",
+      "env": "Omgeving (JSON-object)",
+      "envHelp": "Bijvoorbeeld {\"API_KEY\":\"…\"}. Versleuteld opgeslagen, en de eigen geheimen van de server worden niet overgenomen.",
+      "invalid": "Geef een uitvoerbaar bestand, een JSON-array met tekstargumenten en een JSON-object met tekstwaarden voor de omgeving op.",
+      "failed": "De lokale MCP kon niet worden verbonden. Controleer het uitvoerbare bestand en de paden op de machine waar agentes.chat draait, en of het programma MCP via stdio spreekt.",
+      "permissions": "Draait als de systeemgebruiker van de server. Toegang tot tools en goedkeuringen worden in de volgende stappen geregeld."
+    },
     "steps": "Stappen",
     "step": {
       "0": "Koppelen",
@@ -17156,6 +17177,21 @@
     "tomorrowAt": "morgen {{time}}"
   },
   "work": {
+    "handed": {
+      "lead": "Overgedragen aan <0/>{{name}}",
+      "working": "bezig",
+      "done": "klaar in {{duration}}",
+      "waitingYou": "wacht op jouw antwoord",
+      "waiting": "wacht op een antwoord",
+      "waitingApprovalYou": "wacht op jouw goedkeuring",
+      "waitingApproval": "wacht op goedkeuring",
+      "waitingComputer": "wacht op de computer",
+      "paused": "gepauzeerd op de limiet van het plan",
+      "queued": "in de wachtrij",
+      "failed": "niet afgemaakt",
+      "stopped": "gestopt",
+      "step": "stap {{current}} van {{total}}"
+    },
     "duration": {
       "minutes_one": "{{count}} min",
       "minutes_other": "{{count}} min",
@@ -17231,24 +17267,12 @@
       "failed": "Geblokkeerd · niet afgemaakt",
       "failedWhy": "Geblokkeerd · niet afgemaakt: {{why}}"
     },
-    "working": "Op de achtergrond",
-    "handed": {
-      "lead": "Overgedragen aan <0/>{{name}}",
-      "working": "bezig",
-      "done": "klaar in {{duration}}",
-      "waitingYou": "wacht op jouw antwoord",
-      "waiting": "wacht op een antwoord",
-      "waitingApprovalYou": "wacht op jouw goedkeuring",
-      "waitingApproval": "wacht op goedkeuring",
-      "waitingComputer": "wacht op de computer",
-      "paused": "gepauzeerd op de limiet van het plan",
-      "queued": "in de wachtrij",
-      "failed": "niet afgemaakt",
-      "stopped": "gestopt",
-      "step": "stap {{current}} van {{total}}"
-    }
+    "working": "Op de achtergrond"
   },
   "chat": {
+    "request": {
+      "asksYou": "{{name}} vraagt je"
+    },
     "speedFallback": {
       "text": "ChatGPT weigerde de snelheid Snel voor dit account of model, dus dit antwoord kwam op standaardsnelheid.",
       "action": "Agent openen"
@@ -17853,9 +17877,6 @@
       "interrupted": "Onderbroken door een herstart van de server. Vraag het opnieuw om verder te gaan.",
       "step_limit": "Mijn stappen waren op voordat ik klaar was.",
       "stuck": "Ik liep vast en stopte voordat ik klaar was."
-    },
-    "request": {
-      "asksYou": "{{name}} vraagt je"
     }
   },
   "builtinTools": {

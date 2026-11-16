@@ -6563,6 +6563,24 @@
   "receipts.by.default": {
     "value": "Nobody was called, so {{name}} answered"
   },
+  "rightHand.brain.unusable.title": {
+    "value": "Needs a computer"
+  },
+  "rightHand.brain.unusable.computerOnly": {
+    "value": "{{owner}}'s, signed in on {{computer}} only. Lodi thinks with a plan signed in as an account."
+  },
+  "rightHand.brain.unusable.noComputer": {
+    "value": "{{owner}}'s. It needs a computer, and the workspace has none connected."
+  },
+  "rightHand.brain.unusable.away": {
+    "value": "{{owner}}'s, on {{computer}}, which is away."
+  },
+  "rightHand.brain.unusable.connect": {
+    "value": "Connect a computer"
+  },
+  "rightHand.brain.unusable.plans": {
+    "value": "See plans"
+  },
   "rightHand.label": {
     "value": "your right hand"
   },
@@ -18703,6 +18721,15 @@
   "scopes.custom_write.description": {
     "value": "Use the write tools. Those marked sensitive always ask for approval."
   },
+  "issues.handedBy": {
+    "value": "handed by <0/>{{name}}"
+  },
+  "issues.fromDm": {
+    "value": "from <0>your DM with {{name}}</0>"
+  },
+  "issues.fromDmText": {
+    "value": "from your DM with {{name}}"
+  },
   "issues.delete.action": {
     "value": "Delete task"
   },
@@ -19227,6 +19254,15 @@
   },
   "issues.work.waitingTitle": {
     "value": "{{name}} is waiting for you"
+  },
+  "issues.work.finishedTitle": {
+    "value": "{{name}} finished it"
+  },
+  "issues.work.finishedMeta": {
+    "value": "{{when}} · handed by {{name}}"
+  },
+  "issues.work.answer": {
+    "value": "Answer"
   },
   "issues.work.stalledTitle": {
     "value": "{{name}} stopped {{when}}"
@@ -34441,6 +34477,63 @@
   "toolReview.agentSub": {
     "value": "By connector and subject. By default, sensitive actions ask for approval."
   },
+  "connectFlow.local.transport": {
+    "value": "MCP transport"
+  },
+  "connectFlow.local.tab": {
+    "value": "Local · stdio"
+  },
+  "connectFlow.local.where": {
+    "value": "Runs where agentes.chat is installed: on your computer in the desktop installation, inside the container in Docker. A computer connected to another server is not used here."
+  },
+  "connectFlow.local.checking": {
+    "value": "Checking whether local MCP programs are supported…"
+  },
+  "connectFlow.local.checkFailed": {
+    "value": "Could not check local MCP support. Reopen this dialog to try again."
+  },
+  "connectFlow.local.disabled": {
+    "value": "Local programs are disabled here. Only the operator of a trusted, self-hosted server, closed to public sign-up, can enable MCP_STDIO_ENABLED."
+  },
+  "connectFlow.local.command": {
+    "value": "Executable"
+  },
+  "connectFlow.local.commandExample": {
+    "value": "node"
+  },
+  "connectFlow.local.commandHelp": {
+    "value": "Program name or absolute path. Arguments go below, and no shell command is evaluated."
+  },
+  "connectFlow.local.args": {
+    "value": "Arguments (JSON array)"
+  },
+  "connectFlow.local.argsHelp": {
+    "value": "One string per argument, for example [\"server.js\", \"mcp\"]. Paths with spaces stay in a single string."
+  },
+  "connectFlow.local.cwd": {
+    "value": "Working directory (optional)"
+  },
+  "connectFlow.local.cwdHelp": {
+    "value": "Absolute path on the server. In Docker, this path must exist inside the container."
+  },
+  "connectFlow.local.environment": {
+    "value": "Environment variables"
+  },
+  "connectFlow.local.env": {
+    "value": "Environment (JSON object)"
+  },
+  "connectFlow.local.envHelp": {
+    "value": "For example {\"API_KEY\":\"…\"}. Stored encrypted, and the server’s own secrets are not inherited."
+  },
+  "connectFlow.local.invalid": {
+    "value": "Enter an executable, a JSON array of string arguments and a JSON object of string environment values."
+  },
+  "connectFlow.local.failed": {
+    "value": "Could not connect the local MCP. Check the executable and the paths on the machine where agentes.chat runs, and whether the program speaks MCP over stdio."
+  },
+  "connectFlow.local.permissions": {
+    "value": "Runs as the server's OS user. Tool access and approvals are managed in the next steps."
+  },
   "connectFlow.steps": {
     "value": "Steps"
   },
@@ -42040,6 +42133,45 @@
   "format.tomorrowAt": {
     "value": "tomorrow {{time}}"
   },
+  "work.handed.lead": {
+    "value": "Handed to <0/>{{name}}"
+  },
+  "work.handed.working": {
+    "value": "working on it"
+  },
+  "work.handed.done": {
+    "value": "done in {{duration}}"
+  },
+  "work.handed.waitingYou": {
+    "value": "waiting for your answer"
+  },
+  "work.handed.waiting": {
+    "value": "waiting for an answer"
+  },
+  "work.handed.waitingApprovalYou": {
+    "value": "waiting for your approval"
+  },
+  "work.handed.waitingApproval": {
+    "value": "waiting for approval"
+  },
+  "work.handed.waitingComputer": {
+    "value": "waiting for the computer"
+  },
+  "work.handed.paused": {
+    "value": "paused at the plan's limit"
+  },
+  "work.handed.queued": {
+    "value": "in line"
+  },
+  "work.handed.failed": {
+    "value": "didn't finish"
+  },
+  "work.handed.stopped": {
+    "value": "stopped"
+  },
+  "work.handed.step": {
+    "value": "step {{current}} of {{total}}"
+  },
   "work.duration.minutes": {
     "value": {
       "one": "{{count}} min",
@@ -42237,6 +42369,9 @@
   },
   "work.working": {
     "value": "In the background"
+  },
+  "chat.request.asksYou": {
+    "value": "{{name}} asks you"
   },
   "chat.speedFallback.text": {
     "value": "ChatGPT refused Fast speed on this account or model, so this reply came at standard speed."
@@ -49270,83 +49405,5 @@
   },
   "feedback.offer.askFirst": {
     "value": "Ask before sending"
-  },
-  "rightHand.brain.unusable.title": {
-    "value": "Needs a computer"
-  },
-  "rightHand.brain.unusable.computerOnly": {
-    "value": "{{owner}}'s, signed in on {{computer}} only. Lodi thinks with a plan signed in as an account."
-  },
-  "rightHand.brain.unusable.noComputer": {
-    "value": "{{owner}}'s. It needs a computer, and the workspace has none connected."
-  },
-  "rightHand.brain.unusable.away": {
-    "value": "{{owner}}'s, on {{computer}}, which is away."
-  },
-  "rightHand.brain.unusable.connect": {
-    "value": "Connect a computer"
-  },
-  "rightHand.brain.unusable.plans": {
-    "value": "See plans"
-  },
-  "issues.handedBy": {
-    "value": "handed by <0/>{{name}}"
-  },
-  "issues.fromDm": {
-    "value": "from <0>your DM with {{name}}</0>"
-  },
-  "issues.fromDmText": {
-    "value": "from your DM with {{name}}"
-  },
-  "issues.work.finishedTitle": {
-    "value": "{{name}} finished it"
-  },
-  "issues.work.finishedMeta": {
-    "value": "{{when}} · handed by {{name}}"
-  },
-  "issues.work.answer": {
-    "value": "Answer"
-  },
-  "work.handed.lead": {
-    "value": "Handed to <0/>{{name}}"
-  },
-  "work.handed.working": {
-    "value": "working on it"
-  },
-  "work.handed.done": {
-    "value": "done in {{duration}}"
-  },
-  "work.handed.waitingYou": {
-    "value": "waiting for your answer"
-  },
-  "work.handed.waiting": {
-    "value": "waiting for an answer"
-  },
-  "work.handed.waitingApprovalYou": {
-    "value": "waiting for your approval"
-  },
-  "work.handed.waitingApproval": {
-    "value": "waiting for approval"
-  },
-  "work.handed.waitingComputer": {
-    "value": "waiting for the computer"
-  },
-  "work.handed.paused": {
-    "value": "paused at the plan's limit"
-  },
-  "work.handed.queued": {
-    "value": "in line"
-  },
-  "work.handed.failed": {
-    "value": "didn't finish"
-  },
-  "work.handed.stopped": {
-    "value": "stopped"
-  },
-  "work.handed.step": {
-    "value": "step {{current}} of {{total}}"
-  },
-  "chat.request.asksYou": {
-    "value": "{{name}} asks you"
   }
 }

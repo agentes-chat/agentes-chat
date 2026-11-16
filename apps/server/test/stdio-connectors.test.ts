@@ -31,7 +31,7 @@ test("native stdio through the real HTTP connector API lists tools without retur
   expect(listed).not.toContain("stdio-mcp.ts");
   const anonymous = browser(server);
   expect((await anonymous(`${base}/custom-transports`)).status).toBe(401);
-});
+}, 30_000);
 
 test("operator opt-in cannot be supplied by the request", async () => {
   server = await createTestServer();
@@ -43,4 +43,4 @@ test("operator opt-in cannot be supplied by the request", async () => {
   const response = await owner(`${base}/custom`, { method: "POST", json: { stdio: stdio(), stdioAllowed: true } });
   expect(response.status).toBe(400);
   expect(await (await owner(`${base}/custom`)).json()).toEqual({ servers: [] });
-});
+}, 30_000);

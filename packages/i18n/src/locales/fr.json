@@ -2736,6 +2736,16 @@
     }
   },
   "rightHand": {
+    "brain": {
+      "unusable": {
+        "title": "Besoin d'un ordinateur",
+        "computerOnly": "De {{owner}}, connecté seulement sur {{computer}}. Lodi réfléchit avec un forfait connecté en tant que compte.",
+        "noComputer": "De {{owner}}. Il faut un ordinateur, et l'espace de travail n'en a aucun de connecté.",
+        "away": "De {{owner}}, sur {{computer}}, qui est absent.",
+        "connect": "Connecter un ordinateur",
+        "plans": "Voir les forfaits"
+      }
+    },
     "label": "votre bras droit",
     "labelCapitalized": "Votre bras droit",
     "unusable": {
@@ -3027,16 +3037,6 @@
       "invite_people_sent_many": "Invitations envoyées à <b>{{emails}}</b>.",
       "invite_people_sent_other": "Invitations envoyées à <b>{{emails}}</b>.",
       "remove_ai_key": "Supprimer la clé API « {{name}} »."
-    },
-    "brain": {
-      "unusable": {
-        "title": "Besoin d'un ordinateur",
-        "computerOnly": "De {{owner}}, connecté seulement sur {{computer}}. Lodi réfléchit avec un forfait connecté en tant que compte.",
-        "noComputer": "De {{owner}}. Il faut un ordinateur, et l'espace de travail n'en a aucun de connecté.",
-        "away": "De {{owner}}, sur {{computer}}, qui est absent.",
-        "connect": "Connecter un ordinateur",
-        "plans": "Voir les forfaits"
-      }
     }
   },
   "teamWeek": {
@@ -7986,6 +7986,9 @@
     }
   },
   "issues": {
+    "handedBy": "confiée par <0/>{{name}}",
+    "fromDm": "depuis <0>ta DM avec {{name}}</0>",
+    "fromDmText": "depuis ta DM avec {{name}}",
     "delete": {
       "action": "Supprimer la tâche",
       "title": "Supprimer la tâche #{{number}} ?",
@@ -8206,6 +8209,9 @@
       "runningTitle_female": "{{name}} y travaille",
       "waitingTitle": "{{name}} vous attend",
       "waitingTitle_female": "{{name}} vous attend",
+      "finishedTitle": "{{name}} l'a terminée",
+      "finishedMeta": "{{when}} · confiée par {{name}}",
+      "answer": "Répondre",
       "stalledTitle": "{{name}} s'est arrêté {{when}}",
       "stalledTitle_female": "{{name}} s'est arrêtée {{when}}",
       "stalledText": "La tâche est toujours confiée à {{name}}, mais aucune exécution n'est en cours.",
@@ -8224,10 +8230,7 @@
         "failed": "La dernière exécution a échoué.",
         "canceled": "Quelqu'un a arrêté l'exécution.",
         "budget": "Le budget mensuel de l'agent est épuisé."
-      },
-      "finishedTitle": "{{name}} l'a terminée",
-      "finishedMeta": "{{when}} · confiée par {{name}}",
-      "answer": "Répondre"
+      }
     },
     "status": {
       "todo": "À faire",
@@ -8421,10 +8424,7 @@
       "criterion_checked": "a coché le critère « {{text}} »",
       "criterion_unchecked": "a décoché le critère « {{text}} »",
       "agent_asked": "a demandé à {{name}} de la faire"
-    },
-    "handedBy": "confiée par <0/>{{name}}",
-    "fromDm": "depuis <0>ta DM avec {{name}}</0>",
-    "fromDmText": "depuis ta DM avec {{name}}"
+    }
   },
   "routines": {
     "filters": "Filtrer les routines",
@@ -14494,6 +14494,27 @@
     "agentSub": "Par connecteur et par sujet. Par défaut, les actions sensibles demandent une approbation."
   },
   "connectFlow": {
+    "local": {
+      "transport": "Transport MCP",
+      "tab": "Local · stdio",
+      "where": "S’exécute là où agentes.chat est installé : sur votre ordinateur dans l’installation de bureau, dans le conteneur avec Docker. Un ordinateur relié à un autre serveur n’est pas utilisé ici.",
+      "checking": "Vérification de la prise en charge des programmes MCP locaux…",
+      "checkFailed": "Impossible de vérifier la prise en charge du MCP local. Rouvrez cette fenêtre pour réessayer.",
+      "disabled": "Les programmes locaux sont désactivés ici. Seul l’exploitant d’un serveur auto-hébergé de confiance, fermé à l’inscription publique, peut activer MCP_STDIO_ENABLED.",
+      "command": "Exécutable",
+      "commandExample": "node",
+      "commandHelp": "Nom du programme ou chemin absolu. Les arguments vont en dessous, et aucune commande shell n’est évaluée.",
+      "args": "Arguments (tableau JSON)",
+      "argsHelp": "Une chaîne par argument, par exemple [\"server.js\", \"mcp\"]. Les chemins avec des espaces restent dans une seule chaîne.",
+      "cwd": "Répertoire de travail (facultatif)",
+      "cwdHelp": "Chemin absolu sur le serveur. Avec Docker, ce chemin doit exister dans le conteneur.",
+      "environment": "Variables d’environnement",
+      "env": "Environnement (objet JSON)",
+      "envHelp": "Par exemple {\"API_KEY\":\"…\"}. Stocké chiffré, et les secrets propres au serveur ne sont pas hérités.",
+      "invalid": "Indiquez un exécutable, un tableau JSON d’arguments textuels et un objet JSON de valeurs d’environnement textuelles.",
+      "failed": "Impossible de connecter le MCP local. Vérifiez l’exécutable et les chemins sur la machine où agentes.chat s’exécute, et si le programme parle MCP via stdio.",
+      "permissions": "S’exécute en tant qu’utilisateur système du serveur. L’accès aux outils et les approbations se règlent aux étapes suivantes."
+    },
     "steps": "Étapes",
     "step": {
       "0": "Connexion",
@@ -17633,6 +17654,21 @@
     "tomorrowAt": "demain à {{time}}"
   },
   "work": {
+    "handed": {
+      "lead": "Confié à <0/>{{name}}",
+      "working": "en cours",
+      "done": "terminé en {{duration}}",
+      "waitingYou": "attend ta réponse",
+      "waiting": "attend une réponse",
+      "waitingApprovalYou": "attend ton approbation",
+      "waitingApproval": "attend une approbation",
+      "waitingComputer": "attend l'ordinateur",
+      "paused": "en pause à la limite du forfait",
+      "queued": "en file d'attente",
+      "failed": "n'a pas abouti",
+      "stopped": "arrêté",
+      "step": "étape {{current}} sur {{total}}"
+    },
     "duration": {
       "minutes_one": "{{count}} min",
       "minutes_many": "{{count}} min",
@@ -17710,24 +17746,12 @@
       "failed": "Bloqué · pas terminé",
       "failedWhy": "Bloqué · pas terminé : {{why}}"
     },
-    "working": "En arrière-plan",
-    "handed": {
-      "lead": "Confié à <0/>{{name}}",
-      "working": "en cours",
-      "done": "terminé en {{duration}}",
-      "waitingYou": "attend ta réponse",
-      "waiting": "attend une réponse",
-      "waitingApprovalYou": "attend ton approbation",
-      "waitingApproval": "attend une approbation",
-      "waitingComputer": "attend l'ordinateur",
-      "paused": "en pause à la limite du forfait",
-      "queued": "en file d'attente",
-      "failed": "n'a pas abouti",
-      "stopped": "arrêté",
-      "step": "étape {{current}} sur {{total}}"
-    }
+    "working": "En arrière-plan"
   },
   "chat": {
+    "request": {
+      "asksYou": "{{name}} te demande"
+    },
     "speedFallback": {
       "text": "ChatGPT a refusé la vitesse Rapide pour ce compte ou ce modèle, cette réponse est donc arrivée en standard.",
       "action": "Ouvrir l'agent"
@@ -18340,9 +18364,6 @@
       "interrupted": "Interrompu par un redémarrage du serveur. Redemandez pour continuer.",
       "step_limit": "Je n'avais plus d'étapes avant de terminer.",
       "stuck": "J'ai été bloqué et je me suis arrêté avant de terminer."
-    },
-    "request": {
-      "asksYou": "{{name}} te demande"
     }
   },
   "builtinTools": {

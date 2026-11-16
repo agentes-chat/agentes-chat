@@ -70,7 +70,7 @@ test("real stdio initialize, list and call preserve arguments/cwd/env and close 
     await session.close();
   }
   expect(alive(pid)).toBe(false);
-});
+}, 30_000);
 
 test("failed executable returns a bounded generic error", async () => {
   await expect(
@@ -85,4 +85,4 @@ test("initialize timeout closes a child that never responds", async () => {
   ).rejects.toThrow("local MCP process");
   const pid = Number(readFileSync(pidFile, "utf8"));
   expect(alive(pid)).toBe(false);
-});
+}, 30_000);

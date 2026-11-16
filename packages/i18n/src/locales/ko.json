@@ -2544,6 +2544,16 @@
     }
   },
   "rightHand": {
+    "brain": {
+      "unusable": {
+        "title": "컴퓨터가 필요해요",
+        "computerOnly": "{{owner}}의 것, {{computer}}에서만 로그인됨. Lodi는 계정으로 로그인한 플랜으로 생각해요.",
+        "noComputer": "{{owner}}의 것. 컴퓨터가 필요한데 워크스페이스에 연결된 컴퓨터가 없어요.",
+        "away": "{{owner}}의 것, {{computer}}에 있지만 자리를 비웠어요.",
+        "connect": "컴퓨터 연결",
+        "plans": "플랜 보기"
+      }
+    },
     "label": "당신의 오른팔",
     "labelCapitalized": "당신의 오른팔",
     "unusable": {
@@ -2815,16 +2825,6 @@
       "invite_roles_other": "{{roles}} 역할로 초대해요.",
       "invite_people_sent_other": "<b>{{emails}}</b>에게 초대를 보냈어요.",
       "remove_ai_key": "API 키 \"{{name}}\"을(를) 삭제합니다."
-    },
-    "brain": {
-      "unusable": {
-        "title": "컴퓨터가 필요해요",
-        "computerOnly": "{{owner}}의 것, {{computer}}에서만 로그인됨. Lodi는 계정으로 로그인한 플랜으로 생각해요.",
-        "noComputer": "{{owner}}의 것. 컴퓨터가 필요한데 워크스페이스에 연결된 컴퓨터가 없어요.",
-        "away": "{{owner}}의 것, {{computer}}에 있지만 자리를 비웠어요.",
-        "connect": "컴퓨터 연결",
-        "plans": "플랜 보기"
-      }
     }
   },
   "teamWeek": {
@@ -7433,6 +7433,9 @@
     }
   },
   "issues": {
+    "handedBy": "<0/>{{name}}이(가) 넘김",
+    "fromDm": "<0>{{name}}와(과)의 DM</0>에서",
+    "fromDmText": "{{name}}와(과)의 DM에서",
     "delete": {
       "action": "작업 삭제",
       "title": "작업 #{{number}}을(를) 삭제할까요?",
@@ -7632,6 +7635,9 @@
       "label": "{{name}}의 작업",
       "runningTitle": "{{name}}이(가) 작업 중이에요",
       "waitingTitle": "{{name}}이(가) 나를 기다리고 있어요",
+      "finishedTitle": "{{name}}이(가) 마쳤어요",
+      "finishedMeta": "{{when}} · {{name}}이(가) 넘김",
+      "answer": "답하기",
       "stalledTitle": "{{name}}이(가) {{when}} 멈췄어요",
       "stalledText": "작업은 아직 {{name}}에게 있지만 진행 중인 실행이 없어요.",
       "started": "{{when}} 시작",
@@ -7648,10 +7654,7 @@
         "failed": "마지막 실행이 실패했어요.",
         "canceled": "누군가 실행을 중지했어요.",
         "budget": "에이전트의 월 예산이 떨어졌어요."
-      },
-      "finishedTitle": "{{name}}이(가) 마쳤어요",
-      "finishedMeta": "{{when}} · {{name}}이(가) 넘김",
-      "answer": "답하기"
+      }
     },
     "status": {
       "todo": "할 일",
@@ -7833,10 +7836,7 @@
       "criterion_checked": "조건 \"{{text}}\"을(를) 체크했어요",
       "criterion_unchecked": "조건 \"{{text}}\"의 체크를 해제했어요",
       "agent_asked": "{{name}}에게 맡겼어요"
-    },
-    "handedBy": "<0/>{{name}}이(가) 넘김",
-    "fromDm": "<0>{{name}}와(과)의 DM</0>에서",
-    "fromDmText": "{{name}}와(과)의 DM에서"
+    }
   },
   "routines": {
     "filters": "루틴 필터",
@@ -13483,6 +13483,27 @@
     "agentSub": "커넥터와 주제별이에요. 기본적으로 민감한 작업은 승인을 요청해요."
   },
   "connectFlow": {
+    "local": {
+      "transport": "MCP 전송",
+      "tab": "Local · stdio",
+      "where": "agentes.chat가 설치된 곳에서 실행됩니다. 데스크톱 설치에서는 내 컴퓨터에서, Docker에서는 컨테이너 안에서 실행됩니다. 다른 서버에 연결한 컴퓨터는 여기서 사용하지 않습니다.",
+      "checking": "로컬 MCP 프로그램을 지원하는지 확인하는 중…",
+      "checkFailed": "로컬 MCP 지원을 확인하지 못했습니다. 이 창을 다시 열어 한 번 더 시도하세요.",
+      "disabled": "로컬 프로그램은 여기서 꺼져 있습니다. 공개 가입을 닫은 신뢰하는 자체 호스팅 서버의 운영자만 MCP_STDIO_ENABLED를 켤 수 있습니다.",
+      "command": "실행 파일",
+      "commandExample": "node",
+      "commandHelp": "프로그램 이름 또는 절대 경로. 인수는 아래에 넣고, 셸 명령은 해석하지 않습니다.",
+      "args": "인수(JSON 배열)",
+      "argsHelp": "인수마다 문자열 하나, 예: [\"server.js\", \"mcp\"]. 공백이 있는 경로는 한 문자열로 둡니다.",
+      "cwd": "작업 디렉터리(선택)",
+      "cwdHelp": "서버의 절대 경로. Docker에서는 이 경로가 컨테이너 안에 있어야 합니다.",
+      "environment": "환경 변수",
+      "env": "환경(JSON 객체)",
+      "envHelp": "예: {\"API_KEY\":\"…\"}. 암호화해 저장하며, 서버 자체의 비밀은 상속하지 않습니다.",
+      "invalid": "실행 파일, 문자열 인수의 JSON 배열, 문자열 환경 값의 JSON 객체를 입력하세요.",
+      "failed": "로컬 MCP에 연결하지 못했습니다. agentes.chat가 실행되는 컴퓨터의 실행 파일과 경로, 그리고 그 프로그램이 stdio로 MCP를 말하는지 확인하세요.",
+      "permissions": "서버의 OS 사용자로 실행됩니다. 도구 접근과 승인은 다음 단계에서 설정합니다."
+    },
     "steps": "단계",
     "step": {
       "0": "연결",
@@ -16518,6 +16539,21 @@
     "tomorrowAt": "내일 {{time}}"
   },
   "work": {
+    "handed": {
+      "lead": "<0/>{{name}}에게 넘김",
+      "working": "작업 중",
+      "done": "{{duration}} 만에 끝남",
+      "waitingYou": "내 답변 대기 중",
+      "waiting": "답변 대기 중",
+      "waitingApprovalYou": "내 승인 대기 중",
+      "waitingApproval": "승인 대기 중",
+      "waitingComputer": "컴퓨터 대기 중",
+      "paused": "요금제 한도로 일시 중지",
+      "queued": "대기 중",
+      "failed": "끝내지 못했어요",
+      "stopped": "중지됨",
+      "step": "{{total}}단계 중 {{current}}단계"
+    },
     "duration": {
       "minutes_other": "{{count}}분",
       "hours_other": "{{count}}시간",
@@ -16591,24 +16627,12 @@
       "failed": "막힘 · 끝내지 못함",
       "failedWhy": "막힘 · 끝내지 못함: {{why}}"
     },
-    "working": "백그라운드",
-    "handed": {
-      "lead": "<0/>{{name}}에게 넘김",
-      "working": "작업 중",
-      "done": "{{duration}} 만에 끝남",
-      "waitingYou": "내 답변 대기 중",
-      "waiting": "답변 대기 중",
-      "waitingApprovalYou": "내 승인 대기 중",
-      "waitingApproval": "승인 대기 중",
-      "waitingComputer": "컴퓨터 대기 중",
-      "paused": "요금제 한도로 일시 중지",
-      "queued": "대기 중",
-      "failed": "끝내지 못했어요",
-      "stopped": "중지됨",
-      "step": "{{total}}단계 중 {{current}}단계"
-    }
+    "working": "백그라운드"
   },
   "chat": {
+    "request": {
+      "asksYou": "{{name}}의 질문"
+    },
     "speedFallback": {
       "text": "ChatGPT가 이 계정이나 모델에서 빠른 속도를 거부해서 이 답변은 표준 속도로 왔어요.",
       "action": "에이전트 열기"
@@ -17193,9 +17217,6 @@
       "interrupted": "서버 재시작으로 중단됐어요. 계속하려면 다시 요청하세요.",
       "step_limit": "끝내기 전에 단계를 모두 썼어요.",
       "stuck": "막혀서 끝내기 전에 멈췄어요."
-    },
-    "request": {
-      "asksYou": "{{name}}의 질문"
     }
   },
   "builtinTools": {

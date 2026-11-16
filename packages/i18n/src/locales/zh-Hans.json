@@ -2543,6 +2543,16 @@
     }
   },
   "rightHand": {
+    "brain": {
+      "unusable": {
+        "title": "需要一台电脑",
+        "computerOnly": "属于 {{owner}}，仅在 {{computer}} 上登录。Lodi 使用以账号登录的方案思考。",
+        "noComputer": "属于 {{owner}}。需要一台电脑，而工作区还没有连接任何电脑。",
+        "away": "属于 {{owner}}，在 {{computer}} 上，该电脑当前离线。",
+        "connect": "连接电脑",
+        "plans": "查看方案"
+      }
+    },
     "label": "你的得力助手",
     "labelCapitalized": "你的得力助手",
     "unusable": {
@@ -2814,16 +2824,6 @@
       "invite_roles_other": "角色为 {{roles}}。",
       "invite_people_sent_other": "已向 <b>{{emails}}</b> 发送邀请。",
       "remove_ai_key": "删除 API 密钥“{{name}}”。"
-    },
-    "brain": {
-      "unusable": {
-        "title": "需要一台电脑",
-        "computerOnly": "属于 {{owner}}，仅在 {{computer}} 上登录。Lodi 使用以账号登录的方案思考。",
-        "noComputer": "属于 {{owner}}。需要一台电脑，而工作区还没有连接任何电脑。",
-        "away": "属于 {{owner}}，在 {{computer}} 上，该电脑当前离线。",
-        "connect": "连接电脑",
-        "plans": "查看方案"
-      }
     }
   },
   "teamWeek": {
@@ -7475,6 +7475,9 @@
     }
   },
   "issues": {
+    "handedBy": "由 <0/>{{name}} 移交",
+    "fromDm": "来自<0>你与 {{name}} 的私信</0>",
+    "fromDmText": "来自你与 {{name}} 的私信",
     "delete": {
       "action": "删除任务",
       "title": "删除任务 #{{number}}？",
@@ -7677,6 +7680,9 @@
       "runningTitle_female": "{{name}} 正在处理",
       "waitingTitle": "{{name}} 在等你",
       "waitingTitle_female": "{{name}} 在等你",
+      "finishedTitle": "{{name}} 已完成",
+      "finishedMeta": "{{when}} · 由 {{name}} 移交",
+      "answer": "回答",
       "stalledTitle": "{{name}} 于 {{when}} 停止",
       "stalledTitle_female": "{{name}} 于 {{when}} 停止",
       "stalledText": "任务仍由 {{name}} 负责，但目前没有运行。",
@@ -7695,10 +7701,7 @@
         "failed": "上次运行失败了。",
         "canceled": "有人停止了运行。",
         "budget": "智能体的月度预算已用完。"
-      },
-      "finishedTitle": "{{name}} 已完成",
-      "finishedMeta": "{{when}} · 由 {{name}} 移交",
-      "answer": "回答"
+      }
     },
     "status": {
       "todo": "待办",
@@ -7884,10 +7887,7 @@
       "criterion_checked": "勾选了标准“{{text}}”",
       "criterion_unchecked": "取消勾选了标准“{{text}}”",
       "agent_asked": "请 {{name}} 来完成"
-    },
-    "handedBy": "由 <0/>{{name}} 移交",
-    "fromDm": "来自<0>你与 {{name}} 的私信</0>",
-    "fromDmText": "来自你与 {{name}} 的私信"
+    }
   },
   "routines": {
     "filters": "筛选例行工作",
@@ -13553,6 +13553,27 @@
     "agentSub": "按连接器和主题分类。默认情况下，敏感操作需要审批。"
   },
   "connectFlow": {
+    "local": {
+      "transport": "MCP 传输",
+      "tab": "Local · stdio",
+      "where": "在安装 agentes.chat 的位置运行：桌面版在您的电脑上，Docker 中在容器内。连接到其他服务器的电脑不会在这里使用。",
+      "checking": "正在检查是否支持本地 MCP 程序…",
+      "checkFailed": "无法检查本地 MCP 支持。请重新打开此窗口再试一次。",
+      "disabled": "本地程序在此已停用。只有可信、自托管且关闭公开注册的服务器的负责人才能启用 MCP_STDIO_ENABLED。",
+      "command": "可执行文件",
+      "commandExample": "node",
+      "commandHelp": "程序名或绝对路径。参数填在下方，不会解析任何 shell 命令。",
+      "args": "参数（JSON 数组）",
+      "argsHelp": "每个参数一个字符串，例如 [\"server.js\", \"mcp\"]。含空格的路径放在同一个字符串里。",
+      "cwd": "工作目录（可选）",
+      "cwdHelp": "服务器上的绝对路径。在 Docker 中，该路径必须存在于容器内。",
+      "environment": "环境变量",
+      "env": "环境（JSON 对象）",
+      "envHelp": "例如 {\"API_KEY\":\"…\"}。加密保存，且不会继承服务器自身的密钥。",
+      "invalid": "请填写可执行文件、字符串参数的 JSON 数组，以及字符串环境值的 JSON 对象。",
+      "failed": "无法连接本地 MCP。请检查运行 agentes.chat 的机器上的可执行文件和路径，以及该程序是否通过 stdio 使用 MCP。",
+      "permissions": "以服务器的操作系统用户身份运行。工具访问和审批在后续步骤中设置。"
+    },
     "steps": "步骤",
     "step": {
       "0": "连接",
@@ -16584,6 +16605,21 @@
     "tomorrowAt": "明天 {{time}}"
   },
   "work": {
+    "handed": {
+      "lead": "已移交给 <0/>{{name}}",
+      "working": "进行中",
+      "done": "用时 {{duration}} 完成",
+      "waitingYou": "等待你的回答",
+      "waiting": "等待回答",
+      "waitingApprovalYou": "等待你的批准",
+      "waitingApproval": "等待批准",
+      "waitingComputer": "等待电脑",
+      "paused": "已在方案限额处暂停",
+      "queued": "排队中",
+      "failed": "未完成",
+      "stopped": "已停止",
+      "step": "第 {{current}} 步，共 {{total}} 步"
+    },
     "duration": {
       "minutes_other": "{{count}} 分钟",
       "hours_other": "{{count}} 小时",
@@ -16657,24 +16693,12 @@
       "failed": "已阻塞 · 未完成",
       "failedWhy": "已阻塞 · 未完成：{{why}}"
     },
-    "working": "后台进行中",
-    "handed": {
-      "lead": "已移交给 <0/>{{name}}",
-      "working": "进行中",
-      "done": "用时 {{duration}} 完成",
-      "waitingYou": "等待你的回答",
-      "waiting": "等待回答",
-      "waitingApprovalYou": "等待你的批准",
-      "waitingApproval": "等待批准",
-      "waitingComputer": "等待电脑",
-      "paused": "已在方案限额处暂停",
-      "queued": "排队中",
-      "failed": "未完成",
-      "stopped": "已停止",
-      "step": "第 {{current}} 步，共 {{total}} 步"
-    }
+    "working": "后台进行中"
   },
   "chat": {
+    "request": {
+      "asksYou": "{{name}} 问你"
+    },
     "speedFallback": {
       "text": "ChatGPT 拒绝了此账号或模型的快速模式，因此这条回复以标准速度发送。",
       "action": "打开智能体"
@@ -17271,9 +17295,6 @@
       "interrupted": "因服务器重启而中断。请再问一次以继续。",
       "step_limit": "完成前步骤已用完。",
       "stuck": "我卡住了，在完成前停了下来。"
-    },
-    "request": {
-      "asksYou": "{{name}} 问你"
     }
   },
   "builtinTools": {
