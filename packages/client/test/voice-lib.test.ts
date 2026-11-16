@@ -5,7 +5,15 @@ import { createHttpApi } from "../src/index";
 import { quoteText, textOrMedia } from "../src/lib/media";
 import { previewBody } from "../src/lib/message-body";
 import { localMeta } from "../src/lib/reply";
-import { listedText, voiceAudioGone, voiceClock, voiceExpired, voiceOf, voiceParts } from "../src/lib/voice";
+import {
+  listedText,
+  voiceAudioGone,
+  voiceClock,
+  voiceExpired,
+  voiceOf,
+  voiceParts,
+  voiceSpeedOf,
+} from "../src/lib/voice";
 
 const t = ((key: string, params?: { time?: string }) =>
   key === "voice.wordTime" ? `Voz · ${params?.time}` : key === "voice.word" ? "Voz" : key) as unknown as TFunction;
@@ -40,6 +48,11 @@ describe("voice messages' helpers (ADR 0100)", () => {
     const quote = { id: "m1", threadId: null, author: { type: "person", id: "u" }, body: "words", meta: { voice } };
     const meta = localMeta(quote as unknown as Message, "Ana", []);
     expect(meta.replyTo).toMatchObject({ excerpt: "", media: "voice" });
+  });
+
+  test("a kept speed counts only when it is one the player offers: anything else plays at 1x", () => {
+    expect([voiceSpeedOf("1"), voiceSpeedOf("1.5"), voiceSpeedOf("2")]).toEqual([1, 1.5, 2]);
+    for (const kept of [null, "", "3", "0.5", "1.50x", "fast", "NaN"]) expect(voiceSpeedOf(kept)).toBe(1);
   });
 
   test("voiceParts: the typed part above the player, the words alone in its transcript", () => {

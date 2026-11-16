@@ -18,6 +18,15 @@ export const VOICE_MIN_MS = 700;
 /** Bars of the wave sent with a recording. */
 export const VOICE_PEAKS = 48;
 
+/** The speeds a voice message plays at, 1x first (the kit's VoicePlayer offers the same). */
+export const VOICE_SPEEDS = [1, 1.5, 2] as const;
+
+/** A speed as a device kept it: one of `VOICE_SPEEDS`, anything else 1x. */
+export function voiceSpeedOf(kept: string | null): number {
+  const n = Number(kept);
+  return VOICE_SPEEDS.find((s) => s === n) ?? 1;
+}
+
 /** A message's voice recording, read the way the server writes it; null for any other message. */
 export function voiceOf(meta: Meta): MessageVoice | null {
   const v = meta?.voice;

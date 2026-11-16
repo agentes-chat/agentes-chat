@@ -3973,6 +3973,186 @@ test.if(posix)(
 );
 
 test.if(posix)(
+  "after the computer restarted or moved, Chrome opens the agent's tidy tabs again: no empty page, copy or popup, 8 at most, its active one first, the old pile still gone",
+  async () => {
+    const devtools = fakeDevtools([]);
+    try {
+      let boot = "boot-a";
+      const logs: string[] = [];
+      const json = jsonTargets([{ id: "CUR", url: "https://shop.example.com/cart" }]);
+      const chromes = chromesAt(devtools);
+      const t = setup({
+        startChrome: chromes.start,
+        fetch: json.fetch,
+        bootId: () => boot,
+        log: (l) => logs.push(l),
+      });
+      await t.act("open", ["https://shop.example.com/cart"]);
+      devtools.attach(0, { targetId: "POPUP", openerId: "CUR", canAccessOpener: true });
+      await Bun.sleep(50);
+      const sites = Array.from({ length: 9 }, (_, i) => ({ id: `S${i}`, url: `https://site${i}.example/a?step=${i}` }));
+      json.targets.push(
+        { id: "BLANK", url: "about:blank" },
+        { id: "NEW", url: "chrome://newtab/" },
+        { id: "START", url: "file:///home/dev/.agentes/start/agentes-start.html" },
+        { id: "COPY", url: "https://shop.example.com/cart" },
+        { id: "POPUP", url: "https://accounts.example.com/signin" },
+        ...sites,
+      );
+      // Only listed: the tabs as they are now are kept for a computer that restarts.
+      await t.act("tab", []);
+      // The computer goes down under the runner: its Chrome is gone without the runner closing it.
+      chromes.started[0]?.close();
+      await Bun.sleep(20);
+      const profile = chromes.started[0]?.profile ?? "";
+      mkdirSync(path.join(profile, "Default", "Sessions"), { recursive: true });
+      writeFileSync(path.join(profile, "Default", "Sessions", "tabs.json"), JSON.stringify(["https://pile.example/"]));
+
+      boot = "boot-b";
+      await t.act("open", ["https://shop.example.com/cart"]);
+      const tidy = ["https://shop.example.com/cart", ...sites.slice(0, 7).map((s) => s.url)];
+      const args = chromes.started[1]?.args ?? [];
+      expect(args.slice(-8)).toEqual(tidy);
+      expect(args.at(-9)).toStartWith("--");
+      // The tabs Chrome saved itself never come back beside them.
+      expect(chromes.started[1]?.tabs).toEqual(tidy.slice(-1));
+      expect(logs.join("\n")).not.toContain("site0.example");
+
+      // Opened again once: the next start on this boot is the start page, as always.
+      chromes.started[1]?.close();
+      await Bun.sleep(20);
+      json.targets.splice(0);
+      await t.act("open", ["https://shop.example.com/"]);
+      expect(chromes.started[2]?.args.at(-1)).toMatch(/^file:\/\/.+\/agentes-start\.html$/);
+      expect(chromes.started[2]?.args).not.toContain("https://site0.example/a?step=0");
+    } finally {
+      devtools.stop();
+    }
+  },
+);
+
+test.if(posix)(
+  "on the same boot an idle restart and a fresh start open the start page, and a Chrome update the last page, tabs kept or not",
+  async () => {
+    const devtools = fakeDevtools([]);
+    try {
+      let now = 1_000_000;
+      let version = CHROME_VERSION;
+      const json = jsonTargets([{ id: "CUR", url: "https://heavy.example/" }]);
+      const chromes = chromesAt(devtools);
+      const t = setup({
+        startChrome: chromes.start,
+        fetch: json.fetch,
+        bootId: () => "boot-a",
+        now: () => now,
+        idleMs: 60_000,
+        chromeVersion: () => version,
+      });
+      await t.act("open", ["https://heavy.example/"]);
+      json.targets.push({ id: "OTHER", url: "https://other.example/" });
+      await t.act("tab", []);
+      now += 61_000;
+      await t.manager.sweep();
+      expect(chromes.started[0]?.killed || chromes.started[0]?.closed).toBe(true);
+
+      await t.act("open", ["https://heavy.example/"]);
+      expect(chromes.started[1]?.args.at(-1)).toMatch(/^file:\/\/.+\/agentes-start\.html$/);
+      expect(chromes.started[1]?.args).not.toContain("https://other.example/");
+
+      await waitFor(() => devtools.asked.includes("Network.enable page-1"));
+      version = "157.0.8100.10";
+      devtools.crash(1);
+      await waitFor(() => chromes.started.length === 3);
+      expect(chromes.started[2]?.args.at(-1)).toBe("https://heavy.example/");
+      expect(chromes.started[2]?.args).not.toContain("https://other.example/");
+    } finally {
+      devtools.stop();
+    }
+  },
+);
+
+test.if(posix)("a browser the runner closed as idle starts on its one page after a restart too", async () => {
+  const devtools = fakeDevtools([]);
+  try {
+    let now = 1_000_000;
+    let boot = "boot-a";
+    const json = jsonTargets([{ id: "CUR", url: "https://heavy.example/" }]);
+    const chromes = chromesAt(devtools);
+    const t = setup({
+      startChrome: chromes.start,
+      fetch: json.fetch,
+      bootId: () => boot,
+      now: () => now,
+      idleMs: 60_000,
+    });
+    await t.act("open", ["https://heavy.example/"]);
+    await t.act("tab", []);
+    const record = path.join(chromes.started[0]?.profile ?? "", "agentes-tabs.json");
+    expect(existsSync(record)).toBe(true);
+    now += 61_000;
+    await t.manager.sweep();
+    expect(existsSync(record)).toBe(false);
+
+    boot = "boot-b";
+    await t.act("open", ["https://heavy.example/"]);
+    expect(chromes.started[1]?.args.at(-1)).toMatch(/^file:\/\/.+\/agentes-start\.html$/);
+  } finally {
+    devtools.stop();
+  }
+});
+
+test.if(posix)(
+  "after a restart, nothing kept opens the start page; a garbled record opens only its web pages, an overlong one left out; a failed start keeps it",
+  async () => {
+    const devtools = fakeDevtools([]);
+    try {
+      let boot = "boot-a";
+      let failing = false;
+      const chromes = chromesAt(devtools);
+      const t = setup({
+        // Chrome's tab list never answers, so nothing writes the record again after a start.
+        fetch: (async () => new Response("{}")) as unknown as typeof globalThis.fetch,
+        startChrome: async (exe, args, profile) => {
+          if (failing) throw new ChromeStartError("Chrome closed while starting", "");
+          return chromes.start(exe, args, profile);
+        },
+        bootId: () => boot,
+      });
+      await t.act("open", ["https://shop.example.com/"]);
+      await t.manager.stop(dev);
+      const profile = chromes.started[0]?.profile ?? "";
+      const record = path.join(profile, "agentes-tabs.json");
+      expect(existsSync(record)).toBe(false);
+
+      boot = "boot-b";
+      await t.act("open", ["https://shop.example.com/"]);
+      expect(chromes.started[1]?.args.at(-1)).toMatch(/^file:\/\/.+\/agentes-start\.html$/);
+      await t.manager.stop(dev);
+
+      const long = `https://long.example/#${"x".repeat(5000)}`;
+      writeFileSync(
+        record,
+        JSON.stringify({
+          urls: ["javascript:alert(1)", "data:text/html,x", "file:///etc/passwd", 42, long, "https://ok.example/"],
+          boot: "boot-b",
+        }),
+      );
+      boot = "boot-c";
+      failing = true;
+      expect(await errorCode(() => t.act("open", ["https://shop.example.com/"]))).toBe("browser_unavailable");
+      expect(existsSync(record)).toBe(true);
+      failing = false;
+      await t.act("open", ["https://shop.example.com/"]);
+      expect(chromes.started[2]?.args.at(-2)).toStartWith("--");
+      expect(chromes.started[2]?.args.at(-1)).toBe("https://ok.example/");
+      expect(existsSync(record)).toBe(false);
+    } finally {
+      devtools.stop();
+    }
+  },
+);
+
+test.if(posix)(
   "a Chrome the profile's lock names is judged by its recorded start time: a reused pid is not stopped",
   async () => {
     let reusedPid = 0;

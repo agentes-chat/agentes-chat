@@ -285,7 +285,14 @@ describe("calendar", () => {
     await expect(dismissCalendarProposal(deps, bia.id, f.org.id, proposal?.id ?? "")).rejects.toBeInstanceOf(
       ForbiddenError,
     );
-    const event = await confirmCalendarProposal(deps, f.owner.id, f.org.id, proposal?.id ?? "");
+    // Confirmed twice at once (a double tap, two screens): one event, and the other answer is refused.
+    const confirm = () => confirmCalendarProposal(deps, f.owner.id, f.org.id, proposal?.id ?? "");
+    const [first, second] = await Promise.allSettled([confirm(), confirm()]);
+    const won = first.status === "fulfilled" ? first : second;
+    if (won?.status !== "fulfilled") throw new Error("no confirmation went through");
+    expect([first.status, second.status].sort()).toEqual(["fulfilled", "rejected"]);
+    expect(await f.db.select().from(schema.calendarEvents)).toHaveLength(1);
+    const event = won.value;
     expect(event.participants.map((p) => p.id).sort()).toEqual([f.owner.id, bia.id, f.agent.id].sort());
     const [after] = await f.db
       .select()

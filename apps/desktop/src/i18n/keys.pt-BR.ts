@@ -627,6 +627,18 @@ export const desktopPtBR = {
       menuBarTitle: "Mostrar na barra de menus",
       notchTitle: "Mostrar os agentes no notch",
       notchDesc: "Em MacBooks com notch: quem está trabalhando aparece em volta da câmera.",
+      compatTitle: "Modo compatível",
+      compatDesc:
+        "Desenha a janela sem a placa de vídeo. É mais lento, mas funciona em qualquer computador. Use se a janela ficar preta, cortada ou travada.",
+      compatReopen: "Vale ao reabrir o app.",
+      reopenNow: "Reabrir agora",
+      compatFellBack: "A janela não abriu com a placa de vídeo. Ela abriu no modo compatível.",
+      compatTryCard: "Tentar a placa de novo",
+      compatOwn:
+        "Quem decide agora é a variável WEBKIT_DISABLE_DMABUF_RENDERER. Para escolher aqui, saia do app e abra sem ela.",
+      reopenTitle: "Reabrir o agentes.chat?",
+      reopenBody:
+        "Os agentes não podem usar este computador até o app abrir de novo. O que já está rodando termina antes.",
     },
     thisMac: {
       agents: "Agentes",

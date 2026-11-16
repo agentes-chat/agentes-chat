@@ -445,6 +445,7 @@ export function BrowserCard({
             setPageState(state);
             screen.report(state);
           }}
+          radius={CARD - PAGE_INSET}
           style={[styles.screen, !mine && !helper && steps.length === 0 && styles.pageLast]}
         />
       ) : null}
@@ -468,6 +469,7 @@ export function BrowserCard({
                   enabled={mine}
                   onInput={live.sendInput}
                   cursor={{ agentId, name, color, pointer: controller ? null : live.pointer }}
+                  edge={styles.page.borderRadius}
                 />
               ) : null}
               {live.frame?.metadata.emulated ? (
@@ -656,7 +658,7 @@ const styles = StyleSheet.create({
   flip: { transform: [{ rotate: "180deg" }] },
   page: { aspectRatio: 16 / 10, marginHorizontal: PAGE_INSET, borderRadius: CARD - PAGE_INSET, overflow: "hidden" },
   // The whole screen, its own shape (ScreenWatch sets it): never cropped.
-  screen: { marginHorizontal: PAGE_INSET, borderRadius: CARD - PAGE_INSET },
+  screen: { marginHorizontal: PAGE_INSET },
   pageLast: { marginBottom: PAGE_INSET },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
   lines: { alignItems: "center", gap: 8 },

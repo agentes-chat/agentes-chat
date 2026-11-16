@@ -1210,17 +1210,30 @@ function Chat({
     }
     return results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
   };
+  const sendingFiles = useRef(false);
   const sendWithFiles = async (text: string, how: SendHow, files: PendingFile[] = pending) => {
-    const refs = await uploadPending(files);
-    if (!refs) {
-      // The caption comes back to try again.
+    // One send at a time: a second tap while these upload would send them again. Its words come back to the field.
+    if (sendingFiles.current) {
       if (text) setCaptionBack({ text, at: Date.now() });
       return;
     }
-    const meta = takeQuote(refs);
-    send(text, threadId, how === "now" ? { ...meta, steer: "now" } : meta);
-    setPending([]);
-    toEnd();
+    sendingFiles.current = true;
+    try {
+      const refs = await uploadPending(files);
+      if (!refs) {
+        // The caption comes back to try again.
+        if (text) setCaptionBack({ text, at: Date.now() });
+        return;
+      }
+      const meta = takeQuote(refs);
+      send(text, threadId, how === "now" ? { ...meta, steer: "now" } : meta);
+      // Only what went: one picked while these uploaded waits for the next send.
+      const sent = new Set(files.map((f) => f.id));
+      setPending((now) => now.filter((f) => !sent.has(f.id)));
+      toEnd();
+    } finally {
+      sendingFiles.current = false;
+    }
   };
   // What another app shared ("Compartilhar com…" picked this agent): it goes at once, through this conversation's own
   // sending, so the photos show in the strip while they upload and the agent starts reading as soon as it lands.
