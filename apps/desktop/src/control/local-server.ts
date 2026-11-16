@@ -85,9 +85,13 @@ export function tailscaleFrom(platform: Platform, tailnet: Tailnet | null): "app
   return tailnet?.state === "off" && !tailnet.app ? "terminal" : "app";
 }
 const COVER_TAILNET = { app: "openTailscale", tray: "tailnetTray", terminal: "tailnetUp" } as const;
-/** After the cover's "Connect Tailscale on this {{device}}…": the Open Tailscale button, or how it connects. */
+/**
+ * After the cover's "Connect Tailscale on this {{device}}…": the Open Tailscale button, or how it connects. Tailscale
+ * connected here while its address doesn't answer is no connecting to do: most often this computer can't resolve the
+ * tailnet's name (Tailscale's DNS off), so the cover says that instead (`tailnetDns`).
+ */
 export const coverTailnet = (platform: Platform, tailnet: Tailnet | null) =>
-  COVER_TAILNET[tailscaleFrom(platform, tailnet)];
+  tailnet?.state === "on" ? "tailnetDns" : COVER_TAILNET[tailscaleFrom(platform, tailnet)];
 /**
  * Why reach didn't turn on: HTTPS off in the tailnet, Tailscale's permission (Linux), Tailscale missing or refusing,
  * Tailscale installed but not connected here (`app`: its Mac app is there to open), the person stopped waiting for

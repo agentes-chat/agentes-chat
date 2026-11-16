@@ -838,6 +838,7 @@
     "tailnetOff": "Подключите Tailscale на этом {{device}}, чтобы открыть agentes.chat.",
     "tailnetUp": "В терминале: sudo tailscale up",
     "tailnetTray": "Откройте его через значок возле часов.",
+    "tailnetDns": "Tailscale подключён, но этот {{device}} не может достучаться до {{host}}. Скорее всего, его имя здесь не разрешается: включите Use Tailscale DNS в Tailscale.",
     "onlyHere": "Использовать только на этом {{device}}",
     "start": "Запустить",
     "copy": "Скопировать подробности",

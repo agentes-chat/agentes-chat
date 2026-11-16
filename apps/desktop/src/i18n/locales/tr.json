@@ -828,6 +828,7 @@
     "tailnetOff": "agentes.chat'i açmak için bu {{device}} üzerinde Tailscale'i bağlayın.",
     "tailnetUp": "Terminalde: sudo tailscale up",
     "tailnetTray": "Saatin yanındaki simgesinden açın.",
+    "tailnetDns": "Tailscale bağlı, ancak bu {{device}} {{host}} adresine ulaşamıyor. Büyük olasılıkla adı burada çözümlenemiyor: Tailscale'de Use Tailscale DNS'i açın.",
     "onlyHere": "Yalnızca bu {{device}} üzerinde kullan",
     "start": "Başlat",
     "copy": "Ayrıntıları kopyala",

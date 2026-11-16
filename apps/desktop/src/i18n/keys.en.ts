@@ -913,6 +913,9 @@ export const desktopEn = {
     tailnetOff: "Connect Tailscale on this {{device}} to open agentes.chat.",
     tailnetUp: "In the terminal: sudo tailscale up",
     tailnetTray: "Open it from its icon by the clock.",
+    /** Tailscale connected here, yet its address ({{host}}) doesn't answer: most often its name doesn't resolve. */
+    tailnetDns:
+      "Tailscale is connected, but this {{device}} can't reach {{host}}. Its name most likely doesn't resolve here: turn on Use Tailscale DNS in Tailscale.",
     onlyHere: "Use only on this {{device}}",
     start: "Start it",
     copy: "Copy details",

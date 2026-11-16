@@ -828,6 +828,7 @@
     "tailnetOff": "Verbinde Tailscale auf diesem {{device}}, um agentes.chat zu öffnen.",
     "tailnetUp": "Im Terminal: sudo tailscale up",
     "tailnetTray": "Öffne es über sein Symbol neben der Uhr.",
+    "tailnetDns": "Tailscale ist verbunden, aber dieser {{device}} erreicht {{host}} nicht. Wahrscheinlich wird der Name hier nicht aufgelöst: Schalte in Tailscale Use Tailscale DNS ein.",
     "onlyHere": "Nur auf diesem {{device}} nutzen",
     "start": "Starten",
     "copy": "Details kopieren",

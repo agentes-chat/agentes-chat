@@ -2255,6 +2255,9 @@
   "cover.tailnetTray": {
     "value": "Open it from its icon by the clock."
   },
+  "cover.tailnetDns": {
+    "value": "Tailscale is connected, but this {{device}} can't reach {{host}}. Its name most likely doesn't resolve here: turn on Use Tailscale DNS in Tailscale."
+  },
   "cover.onlyHere": {
     "value": "Use only on this {{device}}"
   },
