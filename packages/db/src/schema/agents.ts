@@ -456,6 +456,8 @@ export const rightHandBrains = pgTable(
     /** Someone else's plan, given with `use_others_plans`: who gave it (themselves); its owner may take it back. */
     brainAccountLentBy: text().references(() => users.id, { onDelete: "set null" }),
     brainEffort: text(),
+    /** One of `CONTEXT_LIMITS`, or null for the model's window: theirs, as any agent's `contextTokens`. */
+    contextTokens: integer(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

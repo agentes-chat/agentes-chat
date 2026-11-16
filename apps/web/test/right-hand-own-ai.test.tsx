@@ -363,3 +363,50 @@ describe("the agent's page beside its conversation", () => {
     expect(panel()).toBeNull();
   });
 });
+
+test("Mais opções under the model, in Sua IA and in the workspace's AI: the effort with a fixed model and the context window, as any agent's", async () => {
+  const state = withRightHand(seedState(), { brain: { kind: "claude_code", model: "Sonnet" } });
+  const api = createFakeApi(state);
+  api.agents.brain = async (_org, id, scope) =>
+    fakeAgentBrain(id, {
+      scope: scope ?? "mine",
+      brain: "claude_code",
+      account: "acc-ana",
+      effectiveModel: "opus",
+      effort: "medium",
+      accounts: [planOf(state.me?.user.id)],
+      canUsePlans: true,
+      canEdit: true,
+    });
+  const sent: unknown[] = [];
+  api.agents.setBrain = async (_org, id, input) => {
+    sent.push(input);
+    return fakeAgentBrain(id);
+  };
+  await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
+  await settle(8);
+  const dialog = () => screen().getByRole("dialog");
+  const press = async (el: HTMLElement, rounds = 3) => {
+    await act(async () => fireEvent.click(el));
+    await settle(rounds);
+  };
+  for (const [name, scope] of [
+    [/^Sua IA/, "mine"],
+    [/^IA de quem não tem plano próprio/, "workspace"],
+  ] as const) {
+    await press(row(name), 4);
+    const more = within(dialog()).getByRole("button", { name: /^Mais opções/ });
+    // No Velocidade and no "who it answers": its effort and its window.
+    expect(more.textContent).toContain("Esforço e janela de contexto");
+    await press(more);
+    await press(within(dialog()).getByRole("button", { name: /^Esforço/ }));
+    const effort = within(dialog()).getByRole("slider", { name: "Esforço" });
+    expect(effort.getAttribute("aria-valuetext")).toBe("Médio");
+    await act(async () => fireEvent.keyDown(effort, { key: "ArrowRight" }));
+    await press(within(dialog()).getByRole("button", { name: /^Janela de contexto/ }));
+    await press(within(dialog()).getByRole("radio", { name: "200K" }));
+    await press(within(dialog()).getByRole("button", { name: "Concluído" }), 8);
+    expect(sent.at(-1)).toEqual({ scope, effort: "high", contextTokens: 200_000 });
+    await press(within(dialog()).getByRole("button", { name: "Fechar" }), 4);
+  }
+});

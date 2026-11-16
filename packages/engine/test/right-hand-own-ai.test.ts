@@ -752,3 +752,24 @@ test("a model the person chose for their own DM wins over the right hand's", asy
     .where(eq(schema.agents.id, lodi.id));
   expect((await runIn(bia.id)).model).toBe("glm-5.3");
 });
+
+test("a person's effort and context window for their own DM: saved, shown, kept through a model change, and used", async () => {
+  const { fx, deps, bia, lodi } = await world();
+  const set = (input: Parameters<typeof setAgentBrain>[4]) =>
+    setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", ...input });
+  await set({ brain: "claude_code", account: BIAS });
+  const view = await set({ model: "opus", effort: "high", contextTokens: 200_000 });
+  expect(view).toMatchObject({ scope: "mine", effort: "high", contextTokens: 200_000 });
+  expect(await getAgentBrain(deps, bia.id, fx.org.id, lodi.id, "mine")).toMatchObject({ contextTokens: 200_000 });
+  // The model alone changes: the window stays.
+  expect(await set({ model: "sonnet" })).toMatchObject({ effort: "high", contextTokens: 200_000 });
+  expect(await codeOf(set({ contextTokens: 123 }))).toBe("brain.invalid_context");
+  // Her turns think with them; the workspace's row is untouched.
+  const [stored] = await fx.db.select().from(schema.agents).where(eq(schema.agents.id, lodi.id));
+  if (!stored) throw new Error("no right hand");
+  expect(stored.contextTokens).toBeNull();
+  const { agent } = await withPersonalBrain(fx.db, stored, bia.id);
+  expect(agent).toMatchObject({ brainEffort: "high", contextTokens: 200_000 });
+  // Back to the model's window.
+  expect(await set({ contextTokens: null })).toMatchObject({ contextTokens: null });
+});

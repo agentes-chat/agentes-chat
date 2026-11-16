@@ -18,12 +18,13 @@ import {
 } from "@agenteschat/client";
 import { accountTitle, ownSignInTitle } from "@agenteschat/client/lib/ai-accounts";
 import { agentsReach, audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
+import { advancedContents } from "@agenteschat/client/lib/brain-advanced";
 import { modelRows } from "@agenteschat/client/lib/brain-picker";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { rightHandUnusable } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { brainPlan } from "@agenteschat/client/lib/plans";
-import { AUTO } from "@agenteschat/client/lib/providers";
+import { AUTO, isAuto } from "@agenteschat/client/lib/providers";
 import { mineStatus, RIGHT_HAND_POWERS, rightHandNoComputer, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { type LodiPrefsPatch, type LodiSwitch, teamWeekOn } from "@agenteschat/client/lib/right-hand-prefs";
 import { dayText, hourText } from "@agenteschat/client/lib/team-week";
@@ -48,6 +49,7 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { openAgentEdit } from "../agents/AgentEditScreen";
+import { openAgentAdvanced } from "../ai/AgentAdvancedScreen";
 import { openAgentAi, openAgentModel } from "../ai/AgentAiScreen";
 import { openConnectAi } from "../ai/NoAiCard";
 import { PlanHoldNote, usePlanHold } from "../ai/parts";
@@ -171,6 +173,7 @@ const planModelLabel = (t: TFunction, view: AgentBrain) =>
 /** The choices of "Sua IA": the person's own plan, connecting another one, the workspace's AI. */
 const MINE = "mine";
 const MODEL = "model";
+const MORE = "more";
 const OTHER = "other";
 const WORKSPACE = "workspace";
 
@@ -257,6 +260,13 @@ export function RightHandMine({ agent }: { agent: Agent }) {
               sub: model,
               leading: { kind: "icon", name: "brain" },
             },
+            {
+              key: MORE,
+              label: t("agentPage.work.brain.advanced.title"),
+              // No "who it answers" here: the words a key's agent's row says.
+              sub: advancedContents(t, { kind: "model", autoModel: isAuto(view?.effectiveModel) }),
+              leading: { kind: "icon", name: "more" },
+            },
             { key: OTHER, label: t("agentPage.work.brain.connectPlan"), leading: { kind: "icon", name: "plus" } },
             { key: WORKSPACE, label: t("rightHand.settings.useWorkspace"), leading: { kind: "icon", name: "members" } },
           ]
@@ -266,6 +276,7 @@ export function RightHandMine({ agent }: { agent: Agent }) {
           ],
     });
     if (picked === MODEL) openAgentModel(agent.id);
+    else if (picked === MORE) openAgentAdvanced(agent.id);
     else if (picked === OTHER || (picked === MINE && !own)) connect();
     else if (picked === WORKSPACE && own) back();
   };
@@ -410,6 +421,19 @@ function WorkspaceAi({ agent, dir }: { agent: Agent; dir: Directory }) {
             onPress={() => openAgentAi(agent.id)}
           />
         )}
+        {view ? (
+          <GroupedRow
+            icon="more"
+            label={t("agentPage.work.brain.advanced.title")}
+            sub={advancedContents(t, {
+              kind: "model",
+              autoModel: isAuto(kind ? view.effectiveModel : agent.model),
+            })}
+            chevron
+            disabled={hold}
+            onPress={() => openAgentAdvanced(agent.id, "workspace")}
+          />
+        ) : null}
       </GroupedList>
       {hold ? (
         <PlanHoldNote org={org} />

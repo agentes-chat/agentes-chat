@@ -320,6 +320,7 @@ export const RIGHT_HAND_TURN = { mode: "chat" } as const;
 
 type ThinkingAgent = Pick<Agent, "orgId" | "brainAccountId" | "machineId"> &
   Partial<Pick<Agent, "builtin" | "ownerUserId" | "brain" | "brainModel" | "brainEffort" | "brainAccountLentBy">> &
+  Partial<Pick<Agent, "contextTokens">> &
   Partial<Pick<Agent, "planForOthers" | "brainFallback" | "brainExtraUsage" | "credentialId">>;
 
 /** A person's own AI for the right hand (§11): their row, null when their DM thinks with the workspace's. */
@@ -365,6 +366,7 @@ const planBrain = (p: { kind: string; id: string }) => ({
   brain: p.kind,
   brainModel: AUTO_MODEL,
   brainEffort: null,
+  contextTokens: null,
   brainAccountId: p.id,
   brainAccountLentBy: null,
 });
@@ -582,6 +584,7 @@ export async function withPersonalBrain<T extends ThinkingAgent>(
       brain: own.brain,
       brainModel: personalModel(own, agent),
       brainEffort: own.brainEffort,
+      contextTokens: own.contextTokens,
       brainAccountId: own.brainAccountId,
       brainAccountLentBy: own.brainAccountLentBy,
       brainFallback: false,

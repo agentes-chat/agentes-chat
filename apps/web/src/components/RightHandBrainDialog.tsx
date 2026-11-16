@@ -1,11 +1,20 @@
-import type { Agent } from "@agenteschat/client";
+import type { Agent, AgentBrainInput, BrainKind } from "@agenteschat/client";
+import {
+  advancedContents,
+  type EffortLevel,
+  effortLevelsOf,
+  effortTextOf,
+} from "@agenteschat/client/lib/brain-advanced";
+import { type ContextLimit, contextSize } from "@agenteschat/client/lib/context-limits";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { Button, Dialog, DialogBody, DialogFooter, Icon, type IconName } from "@agenteschat/ui";
+import { AUTO } from "@agenteschat/client/lib/providers";
+import { Button, Dialog, DialogBody, DialogFooter, EffortPixels, Icon, type IconName } from "@agenteschat/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { type HaveItem, HaveList, HaveOffRow, HaveRow } from "@/components/arrival/ConnectHave";
 import { TeamScene } from "@/components/arrival/TeamScene";
-import { BrainLine, PickList, type PickOption } from "@/pages/agent/brain/pieces";
+import { fullLook, lookOf } from "@/lib/look";
+import { BrainLine, ContextField, Fold, PickList, type PickOption } from "@/pages/agent/brain/pieces";
 import "@/pages/agent/brain/brain-dialog.css";
 
 /** The model of the account in use: its name on the first screen, and the list its line opens. */
@@ -17,6 +26,22 @@ export interface RightHandModel {
   /** The search's words, for a long list (the API's models). */
   search?: string;
   onPick: (value: string) => void;
+}
+
+/**
+ * How the AI in use thinks, as any agent's "Mais opções" (ADR 0086): the effort (picked per turn under Automático) and
+ * the context window. No speed (ADR 0149 leaves the right hand out) and no "who it answers", which is its own switch.
+ */
+export interface RightHandThinks {
+  kind: BrainKind;
+  autoModel: boolean;
+  /** Null only on an API key with none chosen: the provider's own default. */
+  effort: EffortLevel | null;
+  contextTokens: ContextLimit | null;
+  /** The limits under the model's window (`contextChoices`). */
+  contextOptions: readonly ContextLimit[];
+  /** Only what changed, never empty. */
+  onSave: (input: Pick<AgentBrainInput, "effort" | "contextTokens">) => void;
 }
 
 /** A line under the model that leads somewhere else: connecting another AI, going back to the workspace's. */
@@ -43,6 +68,7 @@ export function RightHandBrainDialog({
   current,
   empty,
   model,
+  thinks,
   accounts,
   links = [],
   unusable = [],
@@ -62,6 +88,7 @@ export function RightHandBrainDialog({
   current: HaveItem | null;
   empty?: string;
   model?: RightHandModel | null;
+  thinks?: RightHandThinks | null;
   /** The other accounts it may think with, the one in use left out; `empty`: what to do when there is none. */
   accounts?: {
     items: readonly HaveItem[];
@@ -79,9 +106,12 @@ export function RightHandBrainDialog({
 }) {
   const { t } = useTranslation();
   const g = agentGrammar(agent.name);
-  const [screen, setScreen] = useState<"glance" | "switch" | "model">("glance");
+  const [screen, setScreen] = useState<"glance" | "switch" | "model" | "more">("glance");
   const [account, setAccount] = useState<string>();
   const [picked, setPicked] = useState<string>();
+  const [effort, setEffort] = useState<EffortLevel | null>(null);
+  const [context, setContext] = useState<ContextLimit | null>(null);
+  const [fold, setFold] = useState<"effort" | "context" | null>(null);
   // Each opening starts on the first screen, with nothing picked.
   useEffect(() => {
     if (!open) return;
@@ -89,13 +119,34 @@ export function RightHandBrainDialog({
     setAccount(undefined);
     setPicked(undefined);
   }, [open]);
+  const openMore = () => {
+    if (!thinks) return;
+    setEffort(thinks.effort);
+    setContext(thinks.contextTokens);
+    setFold(null);
+    setScreen("more");
+  };
+  // What "Voltar ao padrão" puts back: medium on a plan (the provider's own on a key) and the model's window.
+  const defaultEffort: EffortLevel | null = thinks?.kind === "model" ? null : "medium";
+  const shownContext = context !== null && thinks?.contextOptions.includes(context) ? context : null;
   const glance = () => setScreen("glance");
+  const saveMore = () => {
+    if (!thinks) return;
+    const input: Pick<AgentBrainInput, "effort" | "contextTokens"> = {};
+    // Automático picks its own effort; on a key none is the provider's default, saved as `auto`.
+    if (!thinks.autoModel && effort !== thinks.effort) input.effort = effort ?? AUTO;
+    if (context !== thinks.contextTokens) input.contextTokens = context;
+    if (Object.keys(input).length > 0) thinks.onSave(input);
+    glance();
+  };
   const shown =
     screen === "switch"
       ? t("agentPage.work.brain.v2.switchTitle", g)
       : screen === "model"
         ? t("agentPage.work.brain.v2.modelTitle", g)
-        : title;
+        : screen === "more"
+          ? t("agentPage.work.brain.v2.moreTitle", g)
+          : title;
   const modelValue = picked ?? model?.value ?? "";
   const modelLabel = model?.options.find((o) => o.value === modelValue)?.label ?? "";
   const accountLabel = accounts?.items.find((i) => i.id === account)?.title ?? "";
@@ -151,14 +202,24 @@ export function RightHandBrainDialog({
                   <p className="arrival-opts__label">{t("agentPage.work.brain.account")}</p>
                   {current ? <HaveRow item={current} checked still /> : <p className="muted">{empty}</p>}
                 </div>
-                {model && (
+                {(model || thinks) && (
                   <div className="bd-lines">
-                    <BrainLine
-                      label={t("agentPage.work.brain.planModel")}
-                      lead={model.lead}
-                      value={model.label}
-                      onOpen={stays ? undefined : () => setScreen("model")}
-                    />
+                    {model && (
+                      <BrainLine
+                        label={t("agentPage.work.brain.planModel")}
+                        lead={model.lead}
+                        value={model.label}
+                        onOpen={stays ? undefined : () => setScreen("model")}
+                      />
+                    )}
+                    {thinks && (
+                      <BrainLine
+                        label={t("agentPage.work.brain.v2.more")}
+                        // No "who it answers" here: the words a key's agent's line says.
+                        value={advancedContents(t, { kind: "model", autoModel: thinks.autoModel })}
+                        onOpen={stays ? undefined : openMore}
+                      />
+                    )}
                   </div>
                 )}
                 {links.map((link) => (
@@ -219,8 +280,73 @@ export function RightHandBrainDialog({
                 {...(model.search ? { searchLabel: model.search } : {})}
               />
             )}
+            {screen === "more" && thinks && (
+              <div className="bd-lines">
+                <BrainLine
+                  label={t("agentPage.work.brain.effort")}
+                  value={
+                    thinks.autoModel ? t("brain.auto.label") : t(`agentPage.work.brain.efforts.${effort ?? "none"}`)
+                  }
+                  folds
+                  open={fold === "effort"}
+                  controls="rh-fold-effort"
+                  onOpen={() => setFold(fold === "effort" ? null : "effort")}
+                />
+                <Fold id="rh-fold-effort" open={fold === "effort"}>
+                  {thinks.autoModel ? (
+                    // "Automático" picks the effort too: said where the ramp would be.
+                    <p className="bd-fold__hint">{t("agentPage.work.brain.effortText.auto")}</p>
+                  ) : (
+                    <EffortPixels
+                      label={t("agentPage.work.brain.effort")}
+                      value={effort}
+                      onValueChange={setEffort}
+                      color={fullLook(lookOf(agent)).color}
+                      steps={effortLevelsOf(thinks.kind).map((e) => ({
+                        value: e,
+                        label: t(`agentPage.work.brain.efforts.${e}`),
+                      }))}
+                      hint={(e) => t(`agentPage.work.brain.effortText.${effortTextOf(thinks.kind, e)}`)}
+                      unset={t("agentPage.work.brain.efforts.none")}
+                    />
+                  )}
+                </Fold>
+                <BrainLine
+                  label={t("agentPage.work.brain.context")}
+                  value={shownContext ? contextSize(shownContext) : t("brain.auto.label")}
+                  folds
+                  open={fold === "context"}
+                  controls="rh-fold-context"
+                  onOpen={() => setFold(fold === "context" ? null : "context")}
+                />
+                <Fold id="rh-fold-context" open={fold === "context"}>
+                  <ContextField
+                    value={context}
+                    options={thinks.contextOptions}
+                    kind={thinks.kind}
+                    onChange={setContext}
+                  />
+                </Fold>
+              </div>
+            )}
           </DialogBody>
         </div>
+        {screen === "more" && thinks && (
+          <DialogFooter className="bd-foot bd-foot--two" note={note}>
+            <Button
+              disabled={stays || ((thinks.autoModel || effort === defaultEffort) && context === null)}
+              onClick={() => {
+                if (!thinks.autoModel) setEffort(defaultEffort);
+                setContext(null);
+              }}
+            >
+              {t("agentPage.work.brain.advanced.defaults")}
+            </Button>
+            <Button variant="primary" disabled={stays} loading={busy} onClick={saveMore}>
+              {t("agentPage.work.brain.v2.finish")}
+            </Button>
+          </DialogFooter>
+        )}
         {screen === "glance" && (
           <DialogFooter className={accounts ? "bd-foot bd-foot--two" : "bd-foot"} note={note}>
             {accounts && (

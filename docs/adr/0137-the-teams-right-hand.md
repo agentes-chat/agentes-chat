@@ -571,3 +571,20 @@ seat (a stored id the computer takes for an agent's), with its own Linux user, h
 - This replaces "It never stands in on an API key" in §7's 2026-11-04 amendment, and §11's "a person's plan on a computer that is away doesn't fall to the workspace's": a person whose own plan can't think is answered by what can, with the line saying so.
 - An API key may now be spent for the right hand without anyone choosing it, only while its plan can't think, and the line says so each time it starts. Its budget stops it as any agent's does.
 - `mayFallBack` still excludes it: other agents' fallback rules are unchanged.
+
+## Amendment (2026-11-16): its effort and context window, as any agent's (§1, §11)
+
+### Context
+
+Lodi's AI dialogs offered the account and the model, but not the effort or the context window that every other agent has under "Mais opções" (ADR 0086). Effort was already stored for each person (`right_hand_brains.brain_effort`) and accepted by `PUT …/brain`, but no screen set it: a fixed model started at Médio with no way to change it. The context window had nowhere to live for a person's own AI. People want Lodi to work like their other agents, and to choose its model, effort and window for what they use it for.
+
+### Decision
+
+- **"Mais opções" under the model**, in "Sua IA" and in the workspace's AI, on the web (`RightHandBrainDialog`, `RightHandThinks`) and the phone (`AgentAdvancedScreen` with `scope`, a row in Settings › Lodi): the effort ramp with a fixed model ("Automático" still picks it per turn) and the context window under the model's window. No Velocidade (ADR 0149) and no "Atende outras pessoas" there: that stays its own switch. "Voltar ao padrão" puts back Médio on a plan (none on a key) and the model's window.
+- **A person's window is theirs.** `right_hand_brains.context_tokens` (migration `right_hand_brain_context`), set by `setPersonalBrain` (kept through a change of model or plan, as any agent's) and put over the agent's by `withPersonalBrain`, so the turn's `contextTokens` is the person's. The workspace's AI keeps `agents.context_tokens`, which `setAgentBrain` already took. A plan standing in for someone with none of their own (`servingPlanFor`) thinks with the model's window.
+- §1's list of what changes on it gains its effort and context window.
+
+### Consequences
+
+- The right hand's settings read as any agent's: one place for its model, effort and window, per person and for the workspace.
+- A person who picks a large window or a high effort spends more of their own plan; the workspace's settings spend the workspace's.
