@@ -58,6 +58,7 @@ import {
   withSignIn,
   yieldRoute,
 } from "./accounts";
+import { coAuthorLines } from "./co-authors";
 import { ownBranches } from "./command-gate";
 import { DELEGATED_RESULT_CHARS, type DelegatedBridge } from "./delegated-tools";
 import { RunnerError } from "./errors";
@@ -392,9 +393,12 @@ export class ClaudeStreamParser {
   failure: ProviderFailure = {};
   /** Uncached input of each API call of the turn, by message id (Claude Code repeats a message per content block). */
   private uncached = new Map<string, number>();
+  /** Each API call's whole input (cache included), by message id: the largest is the turn's biggest step. */
+  private context = new Map<string, number>();
 
   beginTurn() {
     this.uncached.clear();
+    this.context.clear();
     this.tools.clear();
     this.sawDelta = false;
     this.streamedMessage = null;
@@ -478,8 +482,14 @@ export class ClaudeStreamParser {
           this.failure = {};
         }
         const messageId = isObj(ev.message) ? str(ev.message.id) : "";
-        if (messageId && isObj(ev.message) && isObj(ev.message.usage))
-          this.uncached.set(messageId, num(ev.message.usage.input_tokens));
+        if (messageId && isObj(ev.message) && isObj(ev.message.usage)) {
+          const u = ev.message.usage;
+          this.uncached.set(messageId, num(u.input_tokens));
+          this.context.set(
+            messageId,
+            num(u.input_tokens) + num(u.cache_read_input_tokens) + num(u.cache_creation_input_tokens),
+          );
+        }
         const streamed = this.sawDelta || (messageId !== "" && messageId === this.streamedMessage);
         const events: WireBrainEvent[] = [];
         // A turn's first reply names the messages that started it (a steered one the CLI read after a result).
@@ -565,10 +575,11 @@ export class ClaudeStreamParser {
     const input = num(usage.input_tokens) + cacheRead + cacheWrite;
     const output = num(usage.output_tokens);
     const models = isObj(ev.modelUsage) ? Object.keys(ev.modelUsage) : [];
-    // `usage` adds up every API call of the turn: how many there were, and the largest uncached one, tell more calls
-    // from bigger ones.
+    // `usage` adds up every API call of the turn: how many there were, and the largest ones (uncached, and whole),
+    // tell more calls from bigger ones.
     const calls = num(ev.num_turns);
     const maxUncached = Math.max(0, ...this.uncached.values());
+    const maxContext = Math.max(0, ...this.context.values());
     if (input > 0 || output > 0) {
       events.push({
         type: "usage",
@@ -580,6 +591,7 @@ export class ClaudeStreamParser {
         ...(cacheWrite > 0 ? { cacheWrite } : {}),
         ...(calls > 0 ? { calls } : {}),
         ...(maxUncached > 0 ? { maxUncached } : {}),
+        ...(maxContext > 0 ? { maxContext } : {}),
       });
     }
     this.tools.clear();
@@ -692,6 +704,13 @@ export const tokenShapeTail = (text: string) => /s(?:k(?:-[A-Za-z0-9_-]*)?)?$/.e
 export const SHELLS_KEPT = 4096;
 
 const REFUSED_CONTROL = "Not allowed with this sign-in.";
+/**
+ * An elicitation is the one control request where a person's answer is the whole point (an MCP write tool asking for
+ * a form or a confirmation). Nobody is shown it, and the CLI reports the refusal as "user rejected MCP tool call" —
+ * the person rejected nothing, they were never asked. The model is told so it can ask in the thread itself.
+ */
+const REFUSED_ELICITATION =
+  "Not allowed with this sign-in, and nobody was shown the form it wanted: ask the person for it in the thread yourself.";
 export const PERSONAL_MCP_REFUSED =
   "Your own MCP servers don't work with this Claude sign-in. Turn them off for this agent or use another sign-in.";
 
@@ -989,6 +1008,8 @@ export class ClaudeProcess {
   stderr = "";
   /** Claude Code said `system` `init` (its version, when it has one, is known from then on). */
   initSeen = false;
+  /** When Claude Code said `system/init`: how long a cold start took. */
+  initAt: number | null = null;
   /** Claude Code's version, from its `system` `init` line (absent: not said yet, or an old CLI). Logs only. */
   cliVersion?: string;
   /** What it can do (`system` `init` `capabilities`): live steering is decided by these (`steerSupport`). */
@@ -1082,6 +1103,7 @@ export class ClaudeProcess {
       const ev = JSON.parse(line) as Record<string, unknown>;
       if (ev.type !== "system" || ev.subtype !== "init") return;
       this.initSeen = true;
+      this.initAt ??= Date.now();
       if (typeof ev.claude_code_version === "string") this.cliVersion = ev.claude_code_version.slice(0, 40);
       this.capabilities = claudeCapabilities(ev);
       if (!this.lock) return;
@@ -1115,10 +1137,21 @@ export class ClaudeProcess {
       const ev = JSON.parse(line) as Record<string, unknown>;
       if (ev.type !== "control_request") return false;
       const request_id = str(ev.request_id);
+      const subtype = isObj(ev.request) ? str(ev.request.subtype) : "";
+      const elicited = subtype === "elicitation";
       this.write(
-        `${JSON.stringify({ type: "control_response", response: { subtype: "error", request_id, error: REFUSED_CONTROL } })}\n`,
+        `${JSON.stringify({
+          type: "control_response",
+          response: { subtype: "error", request_id, error: elicited ? REFUSED_ELICITATION : REFUSED_CONTROL },
+        })}\n`,
       );
-      this.onControl?.(isObj(ev.request) ? str(ev.request.subtype) : "");
+      this.onControl?.(subtype);
+      // After the answer, so the turn reads it as the reason its tool failed and the reply says so instead of
+      // "user rejected": a written message goes in as a later turn input, before a model's next move.
+      if (elicited) {
+        this.write(userMessageLine(REFUSED_ELICITATION, { uuid: crypto.randomUUID(), priority: "next" }));
+        if (!this.turn) this.ownTurnDue = true;
+      }
       return true;
     } catch {
       return false;
@@ -1932,6 +1965,8 @@ export class BrainManager {
       effort: isBrainEffort(req.effort) ? req.effort : null,
       // Another context limit: a new process (resumed), started with it.
       context: isContextTokens(req.contextTokens) ? req.contextTokens : null,
+      // Its commits' lines are in its env (`co-authors.ts`): turned off or the agent renamed, a new one (resumed).
+      coAuthors: coAuthorLines(ctx.agent),
     });
   }
 
@@ -1943,9 +1978,36 @@ export class BrainManager {
     ctx: BrainTurnContext,
   ): Promise<WireBrainEvent> {
     if (ctx.signal?.aborted) return errorEvent("canceled", "The turn was canceled.", false);
+    // The turn's own timings go back on its `done` (the engine stores them with the run's profile).
+    const startedAt = Date.now();
+    let firstEventMs: number | undefined;
+    const emit = ctx.emit;
+    ctx = {
+      ...ctx,
+      emit: (e) => {
+        firstEventMs ??= Date.now() - startedAt;
+        emit(e);
+      },
+    };
+    let warm = false;
+    let started: Live | undefined;
+    const timed = (final: WireBrainEvent): WireBrainEvent => {
+      if (final.type !== "done") return final;
+      const initAt = started?.proc.initAt;
+      return {
+        ...final,
+        timings: {
+          warm,
+          ...(initAt != null && initAt >= startedAt ? { initMs: initAt - startedAt } : {}),
+          ...(firstEventMs !== undefined ? { firstEventMs } : {}),
+        },
+      };
+    };
     // A route on this sign-in stops first: two processes on one sign-in race on its refresh token. Kept right
     // before the process starts, since a route may begin during any await before it.
     await yieldRoute("claude_code", ctx.accountHome);
+    // The runner began to stop during the awaits since the turn came in: `close` wouldn't reach a process started now.
+    if (this.closed) return errorEvent("runner_stopping", "The runner is stopping.", true);
     const sig = this.signature(cwd, req, ctx);
     let live = this.live.get(key);
     // A turn Claude Code runs by itself there (or one due): its output would read as this turn's. Wait for
@@ -1956,17 +2018,19 @@ export class BrainManager {
       live = undefined;
     }
     const keepAlive = req.keepAlive !== false;
+    warm = Boolean(live);
     if (!live && keepAlive) {
       if (this.alive(ctx.agent.id) >= this.max) this.closeIdle(this.lruIdle(ctx.agent.id));
       // Over the cap when every process is busy or holds work: the turn still gets its own (the agent works on
       // several conversations at once); `trim` closes the extra as turns end.
       live = await this.spawn(key, session, cwd, req, ctx, sig, true, this.resumeFor(cwd, session, req, ctx));
+      started = live;
     }
     if (live) {
       const out = await this.onLive(live, req, ctx);
       // A background turn (a routine's run): nothing stays alive for it afterwards, not even a process it found.
       if (!keepAlive) this.drop(live);
-      if (out.final) return out.final;
+      if (out.final) return timed(out.final);
       // Died mid-turn: the same turn again, one-shot, resuming the session. Why it died is logged, and kept for the
       // error should the one-shot die without a word.
       const line = redactedLine(live.proc.stderr, ctx);

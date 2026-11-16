@@ -60,6 +60,7 @@ export function createFakeSite(
       memoryGb: 36,
       ownerUserId: "u_sam",
       belongsToWorkspace: false,
+      spill: { own: true, others: false },
       systemMode: false,
       audience: ONLY_ME,
       status: { kind: "ready" },

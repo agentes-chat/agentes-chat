@@ -1,6 +1,7 @@
 # 0144. The Vault: logins, keys and contacts agents use, personal or the team's, from any source
 
 - Status: Accepted (built: the server, the runner, the web and the phone app)
+- Amended 2026-11-12: §2, a routine's own run uses the keys its creator allowed for it
 - Addendum, 2026-11-10: §9, logins agents save in a connected password manager (sources may write)
 - Addendum, 2026-11-11: §11, keys from a .env file, and moving an item between Personal and Team
 - Date: 2026-11-03
@@ -68,6 +69,20 @@ Two narrower rules:
   report or work woke) never sends a credential, and a command holding a key could send it anywhere, so `run_code`
   with `keys` is refused there ("A routine can't use Vault keys in commands…"). A saved login it may still type in
   the browser: that value never reaches the model or a command.
+
+  *Amended 2026-11-12:* a routine's own run may put a key in a command when its creator allowed that key for it, the
+  same way its connected-app actions are its own (ADR 0053 §2 addendum of 2026-11-03). The allowed keys are kept with
+  its own actions as `vault:NAME` (`routines.own_actions`, no migration): set by `create_routine`/`update_routine`'s
+  `keys` (who decides the agent's approvals, as for `own_actions`), or kept from a card by "Sempre nesta rotina". A
+  key it wasn't given asks a person first: the Tool Gateway opens the card for that command (`routineKeysAllowed`,
+  `routineKeysKind`), the run waits, "Permitir" runs that one command with the keys and "Sempre nesta rotina" adds them
+  to the routine. At "Nunca perguntar" (ADR 0173) any key its creator may use goes without a card; at "Sempre
+  perguntar" every key asks. `vaultKeysFor` checks again (the last line): the creator still decides the agent's
+  approvals and every key is listed, or a person approved this command. Values go as before: released for the
+  routine's creator, sealed to one command, redacted, its use recorded. A run that what a routine read woke (an
+  inbound email, a webhook, a report) still gets none, now with one way out ("Ask for it in the routine's
+  conversation"). The routine's page lists its keys ("Chaves do Vault que usa", web and phone), each taken out with
+  its ×.
 - **A shared browser profile (ADR 0110) takes only what all its agents may use, for anyone.** A session signed in
   there is every granted agent's, whoever each one works for, so a personal login is never typed in one, nor a team
   login open only to some people or roles; a team login open to everyone, only when it is shared with all agents or

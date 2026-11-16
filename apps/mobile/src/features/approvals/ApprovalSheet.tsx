@@ -54,6 +54,7 @@ import {
   useConnectorNamer,
   useOriginShort,
 } from "./parts";
+import { useWhenAsks } from "./when-asks";
 
 /** A value longer than this goes under its label, whole, instead of squeezed at the row's end. */
 const SHORT_VALUE = 22;
@@ -90,6 +91,7 @@ export function ApprovalSheet({
   const [reason, setReason] = useState("");
   const [always, setAlways] = useState(false);
   const a = approval.data;
+  const when = useWhenAsks(a);
   const nameOf = useConnectorNamer({ connector: a?.connector ?? null });
   const agent = a ? dir.agentById.get(a.agentId) : undefined;
   const name = agent?.name ?? "";
@@ -244,22 +246,33 @@ export function ApprovalSheet({
           </GroupedList>
           {foot ? <GroupedFooter>{foot}</GroupedFooter> : null}
         </View>
-        {pending && a.canDecide && approveAlwaysOffered(a) ? (
+        {pending && a.canDecide && (approveAlwaysOffered(a) || when.shown) ? (
           <View>
             <GroupedHeader>{t("mobile.approval.sheet.nextTime")}</GroupedHeader>
             <GroupedList>
               {/* What it covers behind its ⓘ: the sheet ends on its buttons, not on a paragraph. */}
-              <GroupedRow
-                label={approveAlwaysLabel(t, a)}
-                labelLines={2}
-                toggle={always}
-                disabled={decide.isPending}
-                onPress={() => setAlways((on) => !on)}
-                hint={{
-                  name: t("common.about", { label: approveAlwaysLabel(t, a) }),
-                  text: approveAlwaysHint(t, a, name || t("channel.unknownAgent")),
-                }}
-              />
+              {approveAlwaysOffered(a) ? (
+                <GroupedRow
+                  label={approveAlwaysLabel(t, a)}
+                  labelLines={2}
+                  toggle={always}
+                  disabled={decide.isPending}
+                  onPress={() => setAlways((on) => !on)}
+                  hint={{
+                    name: t("common.about", { label: approveAlwaysLabel(t, a) }),
+                    text: approveAlwaysHint(t, a, name || t("channel.unknownAgent")),
+                  }}
+                />
+              ) : null}
+              {when.shown ? (
+                <GroupedRow
+                  label={t("approvalsLevel.change")}
+                  labelLines={2}
+                  chevron
+                  disabled={decide.isPending || when.pending}
+                  onPress={when.open}
+                />
+              ) : null}
             </GroupedList>
           </View>
         ) : null}

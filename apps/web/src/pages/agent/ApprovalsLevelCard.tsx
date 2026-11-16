@@ -1,17 +1,19 @@
-import { type ApprovalsLevel, useUpdateAgent } from "@agenteschat/client";
-import { APPROVALS_LEVELS, shownApprovalsLevel } from "@agenteschat/client/lib/approvals-level";
+import { useUpdateAgent } from "@agenteschat/client";
+import { followsWorkspace, shownApprovalsLevel } from "@agenteschat/client/lib/approvals-level";
 import { can } from "@agenteschat/client/lib/permissions";
-import { Card, Dialog, DialogBody, OptionList } from "@agenteschat/ui";
+import { Card } from "@agenteschat/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ApprovalsLevelDialog } from "@/components/ApprovalsLevelDialog";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
 import { useAgentEdit } from "./context";
 
 /**
  * Ferramentas e acesso → Aprovações (ADR 0173): how much the agent asks before acting, as one line with the choice
- * in sight. Whoever manages agents opens the three choices from it. A choice saves at once, outside the page's save
- * bar, and closes the dialog. Anyone else reads the line.
+ * in sight under its name, "Segue o workspace" while it has no choice of its own. Whoever manages agents opens the
+ * three choices from it. A choice saves at once, outside the page's save bar, and closes the dialog. Anyone else
+ * reads the line.
  */
 export function ApprovalsLevelCard() {
   const { t } = useTranslation();
@@ -28,32 +30,22 @@ export function ApprovalsLevelCard() {
           id="agent-approvals-level"
           icon="shield"
           label={title}
-          value={t(`approvalsLevel.${level}.title`)}
+          status={
+            followsWorkspace(agent) && !update.isPending
+              ? t("approvalsLevel.follows")
+              : t(`approvalsLevel.${level}.title`)
+          }
           onOpen={can(org, "manage_agents") ? () => setOpen(true) : undefined}
         />
       </div>
-      <Dialog
+      <ApprovalsLevelDialog
         open={open}
         onOpenChange={setOpen}
-        title={title}
         description={t("approvalsLevel.lead", { name: agent.name })}
-        closeLabel={t("common.close")}
-        width={480}
-      >
-        <DialogBody>
-          <OptionList<ApprovalsLevel>
-            aria-label={title}
-            value={level}
-            disabled={update.isPending}
-            onValueChange={(next) => update.mutate({ approvalsLevel: next }, { onSuccess: () => setOpen(false) })}
-            options={APPROVALS_LEVELS.map((value) => ({
-              value,
-              title: t(`approvalsLevel.${value}.title`),
-              description: t(`approvalsLevel.${value}.text`),
-            }))}
-          />
-        </DialogBody>
-      </Dialog>
+        value={level}
+        saving={update.isPending}
+        onChoose={(next) => update.mutate({ approvalsLevel: next }, { onSuccess: () => setOpen(false) })}
+      />
     </Card>
   );
 }

@@ -836,6 +836,20 @@ describe("an agent's card to install or update a skill", () => {
     });
   });
 
+  test("a member who doesn't manage agents installs it as their own personal skill", async () => {
+    const state = seedState();
+    meWithRole(state, []);
+    const link = "https://github.com/acme/skills/tree/main/deploy";
+    state.messages.push(offer("c-skill", "install_skill", { url: link, why: "Faz deploys." }));
+    await open(state);
+    await click(within(cardRow("Instalar uma skill")).getByRole("button", { name: "Instalar" }), 8);
+    const install = dialog("Instalar skill") as HTMLElement;
+    expect(install.textContent).toContain("Só quem gerencia agentes adiciona skills da equipe.");
+    expect(state.calls.filter((c) => c.method === "skills.import").map((c) => c.args[1])).toEqual([
+      { url: link, list: true, personal: true },
+    ]);
+  });
+
   test("done for everyone once the library has it, a member who doesn't manage agents too", async () => {
     const state = seedState();
     meWithRole(state, []);

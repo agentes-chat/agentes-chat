@@ -218,7 +218,7 @@ const noAiForBuild = (reason: string | null, person: string) =>
       ? `your AI needs a computer and you have none. Tell ${person} to give you one on your page`
       : reason === "cli_missing"
         ? `your AI's program isn't installed on your computer. Tell ${person} to install it there`
-        : reason === "plan_not_shared"
+        : reason === "plan_not_shared" || reason === "plans_not_yours"
           ? `your plan serves only its owner, and nobody asks for a widget's updates. Tell ${person} that an API key on your page builds it`
           : `you have no AI to think with. Tell ${person} to connect one on your page`;
 
@@ -446,7 +446,8 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
           alert: { enabled: alertOn, condition: str(input.alert), userId: alertOn ? person.userId : null },
           spec,
           sources: strings(input.sources),
-          createdByUserId: null,
+          // The person behind the run, when one is: whose widget it is (an agent stays its author, `createdByRunId`).
+          createdByUserId: maker.personId,
           createdByRunId: ctx.runId,
           routineCreatorUserId: person.userId,
         });

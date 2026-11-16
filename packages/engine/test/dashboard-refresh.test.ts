@@ -418,6 +418,31 @@ describe("the refresh run", () => {
     expect((await routineRow(f, routineId)).failuresInRow).toBe(1);
   });
 
+  test("the fifth failure in a row stops it: the widget says it stopped, and what the last failure was", async () => {
+    await setupWidgets(() => ({ chunks: ["Ok."] }));
+    const b = await board();
+    const w = await shownWidget(b.id, { schedule: "hour" });
+    const routineId = w.routineId ?? "";
+    await f.db.update(schema.routines).set({ failuresInRow: 4 }).where(eq(schema.routines.id, routineId));
+    const last = await fireWidget(routineId);
+    await closeRoutineRun({ db: f.db, pubsub: f.pubsub }, await agentRunRow(f, last.agentRunId), {
+      status: "failed",
+      code: "no_ai",
+    });
+    expect(await routineRow(f, routineId)).toMatchObject({ active: false, pausedReason: "failing" });
+    expect(await widgetOf(w.id)).toMatchObject({ status: "failed", failureCode: "failing" });
+    expect((await getWidget(dash(), f.owner.id, f.org.id, w.id)).failure).toMatchObject({
+      code: "failing",
+      cause: "missing_credential",
+    });
+    // A failure that didn't stop it names no other.
+    await f.db
+      .update(schema.dashboardWidgets)
+      .set({ failureCode: "timeout" })
+      .where(eq(schema.dashboardWidgets.id, w.id));
+    expect((await getWidget(dash(), f.owner.id, f.org.id, w.id)).failure).toEqual({ code: "timeout", detail: null });
+  });
+
   test("a run that ends without update_widget is told once that only update_widget answers, then builds", async () => {
     const nudged: boolean[] = [];
     await setupWidgets((req, call) => {
@@ -899,6 +924,7 @@ describe("changes, Resolve and the routine's life", () => {
     });
     const b = await board();
     const w = await shownWidget(b.id);
+    await f.db.update(schema.dashboardWidgets).set({ createdByUserId: null });
     const view = await askWidgetChange(dash(), f.owner.id, f.org.id, w.id, "Separa por canal, em barras");
     expect(view.status).toBe("updating");
     await drainOutbox(f.db, f.handlers);
@@ -910,6 +936,8 @@ describe("changes, Resolve and the routine's life", () => {
       format: "bars",
       title: "Vendas por canal",
       prompt: "Vendas de hoje por canal.",
+      // Instructions the change rewrote are its asker's from then on.
+      createdByUserId: f.owner.id,
     });
     expect((await historyOf(w.id))[0]?.change).toBe("Separa por canal, em barras");
     expect(await routineRow(f, row.routineId ?? "")).toMatchObject({

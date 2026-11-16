@@ -38,8 +38,23 @@ export const ARCHIVE_PATH = /\.(zip|tar\.gz|tgz|tar)$/i;
 /** The text files the formats use: the only ones read. */
 export const TEXT_PATH = /\.(md|markdown|json|json5|yaml|yml|txt)$/i;
 
+/**
+ * The limit a read went past, with the numbers the person sees: kept files in an archive (`files`), the archive's own
+ * bytes (`bytes`), what its kept files unpack to (`unpacked`), the text one import reads in all (`text`), or one file
+ * (`file`, with its `name`). Sizes in bytes.
+ */
+export interface ImportLimit {
+  kind: "files" | "bytes" | "unpacked" | "text" | "file";
+  have: number;
+  max: number;
+  name?: string;
+}
+
 export class ImportError extends Error {
-  constructor(readonly code: ImportErrorCode) {
+  constructor(
+    readonly code: ImportErrorCode,
+    readonly limit?: ImportLimit,
+  ) {
     super(code);
     this.name = "ImportError";
   }
@@ -54,8 +69,18 @@ export interface ParseOptions {
   junk?: string[];
 }
 
-/** OpenMausBot's limit for a package (PACKAGE_MAX_BYTES); no file we read is larger. */
+/** OpenMausBot's limit for a package (PACKAGE_MAX_BYTES): the cap for one file, except a whole-team export. */
 export const IMPORT_MAX_BYTES = 4 * 1024 * 1024;
+/** What one import may send (IMPORT_LIMITS.bodyBytes in packages/engine/src/imports.ts): the cap for a whole-team export. */
+export const IMPORT_TEXT_MAX_BYTES = 32 * 1024 * 1024;
+/** The name the import gives pasted text. */
+export const PASTED = "pasted";
+/** One JSON with a whole team in it (OpenBot.run's, OpenMausBot's, ours): its memories can run past `IMPORT_MAX_BYTES`. */
+const MANIFEST_PATH =
+  /(^|\/)(openbot-import\.json|openbot-transfer\.json|agentes-chat-export\.json|[^/]*\.openmaus\.json)$/i;
+/** The most of one file the import reads. */
+export const importFileCap = (path: string) =>
+  path === PASTED || MANIFEST_PATH.test(path) ? IMPORT_TEXT_MAX_BYTES : IMPORT_MAX_BYTES;
 /** Our note limit (`FIELD.note` in packages/engine/src/imports.ts): longer memory is split, never cut. */
 const NOTE_MAX = 8000;
 

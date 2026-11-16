@@ -11,7 +11,15 @@ import {
 } from "@agenteschat/client";
 import { questionWaitsOn } from "@agenteschat/client/lib/agent-questions";
 import {
+  threadWorkState,
+  threadWorkTone,
+  threadWorkWord,
+  WORK_TICK_MS,
+  workTime,
+} from "@agenteschat/client/lib/agent-work";
+import {
   approvalCardItems,
+  approvalLine,
   approvalRuns,
   approveAllScope,
   approveAlwaysAlso,
@@ -19,6 +27,7 @@ import {
   asOfNow,
   cardDeadline,
   itemOwnWords,
+  type LinePlace,
   runKeys,
 } from "@agenteschat/client/lib/approval-card";
 import { aheadPhase } from "@agenteschat/client/lib/approval-kind";
@@ -28,26 +37,29 @@ import {
   approvalAskLine,
   approvalDetail,
   approvalGroupWaitsFor,
+  approvalLetter,
   approvalSummary,
   approvalWaitsFor,
   decisionOutcome,
   requesterDecidesLine,
 } from "@agenteschat/client/lib/approval-words";
-import { nextLabel, whenAt } from "@agenteschat/client/lib/format";
+import { formatTime, nextLabel, whenAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
+import { MAX_MESSAGE_LENGTH } from "@agenteschat/client/lib/message-length";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
-import { ACT_LINE, Button, Count, HoldButton, Icon, Text, useReducedMotion, useToast } from "@/ui";
+import { ACT_LINE, Button, Count, HoldButton, Icon, PixelOrbit, Text, useReducedMotion, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { approvalAction, approvalRisk, approveAlwaysToast } from "../approvals/logic";
 import {
   ApprovalAheadLine,
   ApprovalDetails,
   ApprovalEmailLetter,
+  ApprovalLetter,
   ApprovalMark,
   ApprovalPreview,
   ApprovalTraits,
@@ -62,9 +74,10 @@ import {
   useOriginShort,
   useRefuseApproval,
 } from "../approvals/parts";
+import { WhenAsksLink } from "../approvals/when-asks";
 import { chatHref } from "../links/logic";
 import { Face } from "../shared/Face";
-import { useColors, useDirectory, useMeId, useOrgId, useWhen } from "../shared/hooks";
+import { useColors, useDirectory, useMeId, useNow, useOrgId, useWhen } from "../shared/hooks";
 import { agentLook, genderOf } from "../shared/logic";
 import { PromptForm } from "../shared/PromptForm";
 import { successHaptic, tapHaptic, useSurface } from "../shared/parts";
@@ -72,6 +85,7 @@ import { useSheet } from "../shared/SheetHost";
 import { type AskAnswer, AskCard, AskFoot, ExpiryLine, useAskStore } from "./asks";
 import { markName, parseInline, threadFaces } from "./logic";
 import { Spans } from "./MessageSpans";
+import { WaitMark } from "./WaitMark";
 
 /**
  * The cards inside a message: the approval it asks for, an agent's question and a change
@@ -184,9 +198,11 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
   const owner = approvalGroupWaitsFor(items, ownerId ? dir.memberById.get(ownerId)?.name : undefined);
   const deadline = cardDeadline(items);
   const leadItem = waiting[0] ?? first;
+  const decider = waiting.find((a) => a.canDecide);
   const always = approveAlwaysOn(items);
   const runs = approvalRuns(items);
   const keys = runKeys(runs);
+  const line = approvalLine(items);
   const [only] = runs;
   const single = runs.length === 1 && only && only.length > 1 ? only : null;
   const busy = one.isPending || all.isPending;
@@ -245,6 +261,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
       lead={leadItem}
       name={name}
       always={!inRun && always.has(a.id)}
+      place={line.get(a.id)}
       busy={busy}
       onApprove={() => approveOne(a)}
       onAlways={() => approveAlways(a)}
@@ -399,6 +416,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
       foot={
         <AskFoot>
           {single ? decide(single, t("approval.run.approve"), true) : decide(items, t("approval.all.approve"), false)}
+          {decider ? <WhenAsksLink approval={decider} /> : null}
         </AskFoot>
       }
     />
@@ -416,6 +434,7 @@ function ApprovalGroupItem({
   lead,
   name,
   always,
+  place,
   busy,
   onApprove,
   onAlways,
@@ -426,6 +445,8 @@ function ApprovalGroupItem({
   lead: Approval;
   name: string;
   always: boolean;
+  /** Where it stands on the card: an approved one runs after what the agent asked before it (`approvalLine`). */
+  place: LinePlace | undefined;
   busy: boolean;
   onApprove: () => void;
   onAlways: () => void;
@@ -446,8 +467,34 @@ function ApprovalGroupItem({
       : [source.name, approvalSummary(a, i18n.language)].filter(Boolean).join(" · ");
   const own = itemOwnWords(a, lead);
   const scheduled = aheadPhase(a) === "scheduled" && a.runAt;
+  const letter = approvalLetter(a);
   // "Recusar" asks once, in the system's alert, as the card of one request does.
   const { refuse, pending: refusing } = useRefuseApproval(a);
+  // Replaced by the agent's newer request for the same action, on the card under it: one quiet line.
+  if (a.status === "canceled" && a.supersededById) {
+    return (
+      <View style={[styles.item, divider && [styles.divided, { borderTopColor: c.line2 }], styles.itemDone]}>
+        <View style={styles.itemRow}>
+          <View style={styles.itemMark}>
+            <ApprovalMark approval={a} size={20} bare />
+          </View>
+          <View style={ACT_LINE.text}>
+            <Text variant="subhead" tone="muted">
+              {approvalTitleText(t, a)}
+            </Text>
+            <Text variant="footnote" tone="muted">
+              {[
+                decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name),
+                a.decidedAt && formatTime(i18n.language, a.decidedAt),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
   return (
     <ApproveAlwaysInfo approval={pending && a.canDecide && always ? a : undefined} name={name}>
       {(info) => (
@@ -469,6 +516,11 @@ function ApprovalGroupItem({
                   <Text variant="footnote" tone="muted">
                     <Spans inline={parseInline(detail)} />
                   </Text>
+                ) : null}
+                {letter ? (
+                  <View style={[styles.itemLetter, { backgroundColor: c.sunken, borderColor: c.line2 }]}>
+                    <ApprovalLetter letter={letter} />
+                  </View>
                 ) : null}
                 {own.why ? (
                   <Text variant="footnote" tone="ink">
@@ -522,6 +574,12 @@ function ApprovalGroupItem({
                 {[
                   decisionOutcome(t, a, meId, (id) => dir.memberById.get(id)?.name),
                   scheduled && t("approval.ahead.scheduled", { when: nextLabel(i18n.language, scheduled) }),
+                  place?.waitsOn
+                    ? t("approval.line.after", {
+                        // With its place on the card: two requests of one kind tell apart by it ("1 de 2").
+                        title: `${approvalTitleText(t, place.waitsOn)} (${t("approvals.position", { n: place.waitsOnAt, total: place.count })})`,
+                      })
+                    : a.result?.notRunAfter && t("approval.line.notRun"),
                 ]
                   .filter(Boolean)
                   .join(" · ")}
@@ -649,6 +707,7 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
               {t("approval.waitingAdmin")}
             </Text>
           )}
+          <WhenAsksLink approval={a} />
         </AskFoot>
       }
     />
@@ -749,6 +808,7 @@ export function QuestionCard({ question }: { question: AgentQuestion }) {
         title={q.text}
         placeholder={t("mobile.chat.question.placeholder")}
         submitLabel={t("mobile.app.send")}
+        limit={{ max: MAX_MESSAGE_LENGTH, fix: t("mobile.choices.tooLongFix") }}
         onSubmit={(text) => answer({ text }).then(() => sheet.close())}
       />,
     );
@@ -841,11 +901,18 @@ export function QuestionCard({ question }: { question: AgentQuestion }) {
 
 /** "3 respostas" with who wrote; opens the thread. */
 export function ThreadLink({ thread }: { thread: ThreadInfo }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const c = useColors();
+  const dir = useDirectory();
   const surface = useSurface();
   const when = useWhen();
+  const now = useNow(WORK_TICK_MS);
   const faces = threadFaces(thread.participants, 2);
+  // How its work stands, as the web's chip says it (ADR 0084 addendum): one state, and how long in place of the time.
+  const state = thread.state === "open" ? threadWorkState(thread) : null;
+  const tone = state ? threadWorkTone(state) : null;
+  // A return says when it comes ("Retorno às 00:32"), never for how long.
+  const held = state && state !== "later" ? workTime(i18n.language, thread.since, now) : null;
   return (
     <Pressable
       onPress={() => router.push(chatHref(thread.channelId, thread.id))}
@@ -874,8 +941,32 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
           {t("mobile.chat.thread")}
         </Text>
       )}
+      {state ? (
+        <View style={styles.tstate}>
+          {tone === "working" ? (
+            <PixelOrbit color={agentLook(dir.agentById.get(thread.worker ?? "")).color} size={14} />
+          ) : tone === "you" ? (
+            <WaitMark size={8} still />
+          ) : (
+            <Icon name="clock" size={14} color={c.faint} />
+          )}
+          <Text
+            variant="small"
+            numberOfLines={1}
+            style={[styles.bold, { color: tone === "working" ? c.agent : tone === "you" ? c.amberInk : c.muted }]}
+          >
+            {threadWorkWord(t, state, { at: thread.laterAt, locale: i18n.language, now })}
+          </Text>
+        </View>
+      ) : null}
       <Text variant="small" tone="faint" numberOfLines={1} style={styles.shrink}>
-        {thread.state === "closed" ? ` · ${t("mobile.chat.closed")}` : ` · ${when.short(thread.lastActivityAt)}`}
+        {thread.state === "closed"
+          ? ` · ${t("mobile.chat.closed")}`
+          : state
+            ? held
+              ? ` · ${held}`
+              : ""
+            : ` · ${when.short(thread.lastActivityAt)}`}
       </Text>
       <Icon name="right" size={15} color={c.faint} />
     </Pressable>
@@ -886,6 +977,8 @@ const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
   shrink: { flexShrink: 1 },
   bold: { fontWeight: "600" },
+  // A thread's state beside its count: the mark centred on the words' line, 4 apart.
+  tstate: { flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 },
   flip: { transform: [{ rotate: "180deg" }] },
   pressed: { opacity: 0.85 },
   origin: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
@@ -897,6 +990,14 @@ const styles = StyleSheet.create({
   item: { gap: 8 },
   divided: { paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth },
   itemDone: { opacity: 0.7 },
+  itemLetter: {
+    alignSelf: "stretch",
+    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   // The mark beside the title's first line.
   itemRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   itemMark: { width: 20, paddingTop: 1, alignItems: "center" },

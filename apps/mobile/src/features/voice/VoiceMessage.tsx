@@ -11,8 +11,9 @@ import { appHeaders, authedFetch, lastCookie } from "@/lib/auth";
 import { serverUrl } from "@/lib/server";
 import { Icon, PressScale, Text } from "@/ui";
 import { useColors, useOrgId } from "../shared/hooks";
-import { hasWords, nextSpeed } from "./logic";
+import { nextSpeed, spokenWords, waveAt } from "./logic";
 import { playingId, seekPlayback, setPlaybackSpeed, startPlayback, stopPlayback, subscribePlayback } from "./playback";
+import { setVoiceSpeed, subscribeVoiceSpeed, voiceSpeed } from "./speed";
 import { PixelWave, wavePaths } from "./VoiceBars";
 
 /** Six rows of the sky's cells. */
@@ -23,7 +24,8 @@ const ONE_LINE = 40;
 const opened = new Set<string>();
 const positions = new Map<string, number>();
 const expired = new Set<string>();
-let speed = 1;
+/** The last tap on a play button, of any row. */
+let asked = 0;
 
 /**
  * A voice message: the audio is the message, with one line of its words under the wave, in the same card, and nowhere
@@ -43,9 +45,10 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
   const edge = useSharedValue(Skia.Path.Make());
   const [width, setWidth] = useState(0);
   const [time, setTime] = useState(durationMs);
-  const [rate, setRate] = useState(speed);
+  const rate = useSyncExternalStore(subscribeVoiceSpeed, voiceSpeed);
   const [gone, setGone] = useState(() => expired.has(clipId) || Boolean(voice && voiceExpired(voice)));
   const [open, setOpen] = useState(() => opened.has(message.id));
+  const [broken, setBroken] = useState(false);
   const lastSecond = useRef(-1);
 
   // A recycled row takes on another message.
@@ -55,7 +58,12 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
     setTime(durationMs);
     setGone(expired.has(clipId) || Boolean(voice && voiceExpired(voice)));
     setOpen(opened.has(message.id));
+    setBroken(false);
   }, [clipId, message.id]);
+  // A speed picked on any row, or while this one was still starting, reaches it where it plays.
+  useEffect(() => {
+    if (playing) setPlaybackSpeed(clipId, rate);
+  }, [playing, rate, clipId]);
   useEffect(() => {
     if (width <= 0 || !voice) return;
     const wave = wavePaths(voice.peaks, width, WAVE);
@@ -86,31 +94,32 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
       stopPlayback();
       return;
     }
+    setBroken(false);
     // A player says nothing of why a file failed: the server is asked first.
     const url = voiceAudioUrl(orgId, clipId, serverUrl());
+    const mine = ++asked;
     if (await voiceAudioGone(url, authedFetch as typeof fetch)) {
       lose();
       return;
     }
+    // Another recording was tapped while the server answered: the last tap plays, not the last answer.
+    if (mine !== asked) return;
     await startPlayback({
       id: clipId,
       source: { uri: url, headers: appHeaders(lastCookie()) },
       durationMs,
       from: positions.get(clipId) ?? 0,
-      speed,
+      speed: voiceSpeed(),
       onProgress: report,
       onEnd: ended,
-    });
+      onError: () => setBroken(true),
+    }).catch(() => setBroken(true));
   };
   const seek = (at: number) => {
     report(at);
     seekPlayback(clipId, at);
   };
-  const cycle = () => {
-    speed = nextSpeed(speed);
-    setRate(speed);
-    setPlaybackSpeed(clipId, speed);
-  };
+  const cycle = () => setVoiceSpeed(nextSpeed(rate));
   const flip = () => {
     if (open) opened.delete(message.id);
     else opened.add(message.id);
@@ -124,7 +133,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
     failOffsetY: [-12, 12],
     onUpdate: (e) => {
       "worklet";
-      if (width > 0) progress.value = Math.max(0, Math.min(0.999, e.x / width));
+      if (width > 0) progress.value = waveAt(e.x, width);
     },
     onDeactivate: () => {
       "worklet";
@@ -135,18 +144,18 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
     enabled: canPlay,
     onDeactivate: (e) => {
       "worklet";
-      if (width > 0) scheduleOnRN(seek, Math.max(0, Math.min(0.999, e.x / width)));
+      if (width > 0) scheduleOnRN(seek, waveAt(e.x, width));
     },
   });
   const scrub = useExclusiveGestures(pan, tap);
 
-  const words = useMemo(() => hasWords(message), [message]);
+  const words = useMemo(() => spokenWords(message), [message]);
   // The speed as the language writes it ("1,5×" in Portuguese).
   const speedFormat = useMemo(
     () => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }),
     [i18n.language],
   );
-  const more = words && !open && (message.body.length > ONE_LINE || message.body.includes("\n"));
+  const more = words && !open && (words.length > ONE_LINE || words.includes("\n"));
   if (!voice) return null;
   return (
     <View style={styles.box}>
@@ -214,7 +223,7 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
             style={styles.words}
           >
             <Text variant="small" tone="muted" numberOfLines={open ? undefined : 1} selectable={open}>
-              {message.body}
+              {words}
             </Text>
             {more ? (
               <Text variant="footnote" tone="faint" numberOfLines={1}>
@@ -224,6 +233,22 @@ export const VoiceMessage = memo(function VoiceMessage({ message }: { message: M
           </Pressable>
         ) : null}
       </View>
+      {broken ? (
+        // Like a message that didn't go (MessageRow): why, then the way out.
+        <Pressable
+          onPress={() => void toggle()}
+          accessibilityRole="button"
+          hitSlop={14}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <Text variant="caption" tone="danger">
+            {t("voice.cantPlay")}
+          </Text>
+          <Text variant="caption" tone="ink" style={styles.retry}>
+            {t("common.retry")}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 });
@@ -257,6 +282,7 @@ const styles = StyleSheet.create({
   },
   speedText: { fontVariant: ["tabular-nums"], fontWeight: "600" },
   pressed: { opacity: 0.6 },
+  retry: { fontWeight: "600", textDecorationLine: "underline" },
   // Under the wave, past the play button; "Ver tudo" on its own line below the words.
   words: { paddingLeft: 38, paddingBottom: 2, gap: 2 },
 });

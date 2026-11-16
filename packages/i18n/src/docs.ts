@@ -9,3 +9,6 @@ const FOLDER: Partial<Record<AppLocale, string>> = { en: "", "pt-BR": "pt/", "zh
 /** A docs page (the index without `slug`) in `locale`, at a section. */
 export const docsUrl = (locale: AppLocale, slug?: string, section?: string) =>
   `${DOCS_SITE}/${FOLDER[locale] ?? `${locale}/`}docs${slug ? `/${slug}` : ""}${section ? `#${section}` : ""}`;
+
+/** The desktop app's download page on the public site (the landing). */
+export const DOWNLOAD_URL = `${DOCS_SITE}/download`;

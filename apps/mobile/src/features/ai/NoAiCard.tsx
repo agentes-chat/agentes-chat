@@ -12,7 +12,9 @@ import {
   planLineKey,
   planLinePasses,
   planOfKind,
+  type StandIn,
   signInAgainPlan,
+  standInKey,
 } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
@@ -21,7 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { paysHere } from "@/lib/store";
 import { useOrg } from "@/providers/org";
-import { Button, EventPillAction, EventPillText, Text } from "@/ui";
+import { Button, EventPill, EventPillAction, EventPillText, Text } from "@/ui";
 import { router } from "@/ui/navigation";
 import { AskButtons, AskDone, AskFoot, AskNote, AskWaiting } from "../chat/asks";
 import { TeamTemplatesSheet } from "../right-hand/TeamCard";
@@ -56,6 +58,27 @@ export const openConnectAi = (
 };
 
 /**
+ * The right hand answered with another AI than its plan (ADR 0137 §7, amended 2026-11-15), as the web's: a quiet pill
+ * saying with what and why, and "Change", which opens its settings (each person's own AI, and the workspace's).
+ */
+function StandInLine({ standIn }: { standIn: StandIn }) {
+  const { t } = useTranslation();
+  return (
+    <EventPill
+      mark="info"
+      actions={
+        <EventPillAction
+          label={t("chat.standIn.change")}
+          onPress={() => router.push("/settings/right-hand" as never)}
+        />
+      }
+    >
+      {t(standInKey(standIn.why), { via: standIn.via, plan: standIn.plan })}
+    </EventPill>
+  );
+}
+
+/**
  * The web's no-AI request under an agent's "I have no AI" reply (`meta.noAi`), as a waiting pill: Connect (tinted, for
  * who may connect) opens the key sheet; anyone else reads who can. Once the agent has an AI, a decided request's pill
  * with "Answer now" has it answer what it couldn't (who asked, its owner or an admin).
@@ -71,6 +94,7 @@ export function NoAiCard({ message: m }: { message: Message }) {
   const hold = usePlanHold(orgId, org);
   const card = noAiCardOf(m.meta);
   if (!card || m.author.type !== "agent") return null;
+  if (card.standIn) return <StandInLine standIn={card.standIn} />;
   // Any card on a billing hold is the wall: a Connect or a key from before it leads nowhere until the plan.
   if (card.held || hold) return <KeptCard message={m} card={card} hold={hold} />;
   const agent = dir.agentById.get(card.agentId);
@@ -98,7 +122,13 @@ export function NoAiCard({ message: m }: { message: Message }) {
   const title = answering
     ? t("noAi.card.answering", { name })
     : planLine
-      ? t(planLineKey(planLine, card.why), { name, model: card.model, why: card.why })
+      ? t(planLineKey(planLine, card.why), {
+          name,
+          model: card.model,
+          why: card.why,
+          owner: card.owner,
+          plan: card.plan,
+        })
       : ready
         ? t("noAi.card.connected", { name })
         : answer === "still_missing"

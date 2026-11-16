@@ -278,7 +278,8 @@ function Title({ n, lines }: { n: AppNotification; lines: number }) {
 
 const useLine = (n: AppNotification) => {
   const { t } = useTranslation();
-  return noticeLine(n, (kind) => mediaWord(t, kind));
+  // What the right hand found is its headline: nothing under it says it again.
+  return n.kind === "team_watch" ? "" : noticeLine(n, (kind) => mediaWord(t, kind));
 };
 
 /** Closed: the face, who did what and the line; how many more; "Ver" (where it happened) at its end. */
@@ -312,7 +313,7 @@ function Pill({
       accessibilityLabel={[title, line].filter(Boolean).join(", ")}
       accessibilityHint={t("island.expand")}
     >
-      <IslandFace n={item.n} size={40} />
+      <IslandFace n={item.n} size={40} round />
       <View style={styles.grow}>
         <Title n={item.n} lines={1} />
         {line ? (
@@ -379,7 +380,7 @@ function SmallIsland({
       accessibilityLabel={title}
       accessibilityHint={t("island.expand")}
     >
-      <IslandFace n={item.n} size={SMALL_FACE} />
+      <IslandFace n={item.n} size={SMALL_FACE} round />
       <Text variant="footnote" numberOfLines={1} style={styles.smallLabel}>
         {others > 0 ? `${label} +${others}` : label}
       </Text>
@@ -578,13 +579,15 @@ const faceOf = (n: AppNotification) => {
 
 /**
  * Who it is from; with nobody behind it (the workspace itself), what it is about as
- * an icon on a soft tile, never an unknown face.
+ * an icon on a soft tile, never an unknown face. `round` at the closed pill's end, so it follows the curve: the open
+ * list keeps the tile.
  */
-function IslandFace({ n, size }: { n: AppNotification; size: number }) {
+function IslandFace({ n, size, round = false }: { n: AppNotification; size: number; round?: boolean }) {
   const who = faceOf(n);
-  if (who) return <Face who={who} size={size} />;
+  const radius = round ? size / 2 : undefined;
+  if (who) return <Face who={who} size={size} radius={radius} />;
   return (
-    <View style={[styles.sysFace, { width: size, height: size, borderRadius: size * 0.3 }]}>
+    <View style={[styles.sysFace, { width: size, height: size, borderRadius: radius ?? size * 0.3 }]}>
       <Icon name="bell" size={Math.round(size * 0.48)} color={WHITE} />
     </View>
   );

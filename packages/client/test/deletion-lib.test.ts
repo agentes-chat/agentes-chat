@@ -148,6 +148,14 @@ test("the proof: a code where the server sends email, else the password, which a
   expect(deletionProof({ passwordReset: false }, false)).toBe("addPassword");
 });
 
+test("the desktop app's owner on its own server: a fresh sign-in on this Mac, never where the server sends email", () => {
+  expect(deletionProof({ passwordReset: false }, false, true)).toBe("thisMac");
+  // A password they added doesn't change it: signing in again on this Mac is still the proof.
+  expect(deletionProof({ passwordReset: false }, true, true)).toBe("thisMac");
+  expect(deletionProof({ passwordReset: true }, false, true)).toBe("code");
+  expect(deletionProof({ passwordReset: false }, false, false)).toBe("addPassword");
+});
+
 test("what the proof sends: all six digits once a code went out, or a typed password; nothing to add a password", () => {
   const typed = { sent: true, code: "48291", password: "" };
   expect(proofToSend("code", typed)).toEqual({ input: { code: "48291" }, ready: false });
@@ -156,6 +164,8 @@ test("what the proof sends: all six digits once a code went out, or a typed pass
   expect(proofToSend("password", { ...typed, password: "pw" })).toEqual({ input: { password: "pw" }, ready: true });
   expect(proofToSend("password", typed).ready).toBe(false);
   expect(proofToSend("addPassword", { ...typed, password: "pw" })).toEqual({ input: {}, ready: false });
+  expect(proofToSend("thisMac", { ...typed, fresh: true })).toEqual({ input: {}, ready: true });
+  expect(proofToSend("thisMac", { ...typed, password: "pw", fresh: false })).toEqual({ input: {}, ready: false });
 });
 
 describe("a workspace being deleted, in words", () => {

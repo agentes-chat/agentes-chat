@@ -192,9 +192,11 @@ people than asked.
     forbids arithmetic and waiting in a shell.
 20. **No build starts that is sure to fail.** A widget whose agent has no AI to think with for background work (no
     key for its model, a computer brain signed out, missing or with no computer: `backgroundAiState`, never standing
-    in on the model brain) gets no run. The right hand's background work thinks with the workspace's own AI, as its run
-    would: a plan that serves only its owner takes none of it (nobody is behind a build: `plan_not_shared`, which its
-    run calls `plan_unattended`), and since it never waits for its plan (ADR 0137 §7), that plan's computer away or at
+    in on the model brain) gets no run. The right hand's build thinks for a person, as its run will (`widgetAi`, ADR
+    0137 §11 as amended 2026-11-12): who asked the change it carries, then the widget's person, then its routine's
+    creator, the first still seeing the board whose AI can think, else the workspace's own AI for nobody. A plan
+    that serves only its owner takes no work of anyone else's (`plan_not_shared`, which its run calls
+    `plan_unattended` when nobody set the work up), and since it never waits for its plan (ADR 0137 §7), that plan's computer away or at
     its limit is no AI either (its plan line: `computer_away`, `plan_limit`…), unless the computer is only asleep,
     which its run wakes. On create, a test, Update now, Resolve, a change request or a scheduled slot, it waits for
     one instead, `failed` with `missing_credential` and the reason as its detail (`no_key`, `not_signed_in`,
@@ -205,7 +207,9 @@ people than asked.
     whose words point to the widget, which says the cause); a slot is `skipped` (`no_ai`), never a failure, so the
     routine doesn't tire and pause. The AI status says, per agent, what its background work thinks with where that
     differs from what it shows (`background`: a computer brain ready only through the fallback, the right hand shown
-    with the viewer's own AI), and the apps read that. They show the widget as waiting for an AI with its real cause,
+    with the viewer's own AI), and for the right hand's widgets, which of those waiting or stopped for the lack of
+    an AI can build now (`widgetsReady`), and the apps read both. One that stopped after failing in a row for the
+    lack of an AI starts by nobody's ask: it shows Connect while there is none, then Resolve. They show the widget as waiting for an AI with its real cause,
     and Connect in place of Resolve for whoever may set the agent's AI (the workspace's, for the right hand, opening on
     a key where its plan can't take a build); anyone else reads who can. They start the build by themselves once the
     agent has one, by an AI status read after the widget started waiting (one read before may still call it ready),

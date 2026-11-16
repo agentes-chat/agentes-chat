@@ -10,6 +10,7 @@ import {
   CURSOR_PROTOCOL,
   GROK_PROTOCOL,
   LOCKED_BRAIN_PROTOCOL,
+  OPENCODE_ACP_PROTOCOL,
   OPENCODE_PROTOCOL,
   type PubSub,
   parseBrainEvent,
@@ -242,6 +243,7 @@ const OPENCODE_CLI: CliBrainSpec = {
   kind: "opencode",
   name: "OpenCode",
   protocol: OPENCODE_PROTOCOL,
+  windowsProtocol: OPENCODE_ACP_PROTOCOL,
   check: ({ opencode }) =>
     opencode
       ? null
@@ -415,7 +417,7 @@ export class CodexBrain implements Brain {
       mcp: { ...mcp, tools: toolNames.join(" ") },
       ...(agent ? { agent } : {}),
       ...accountFields(status.protocol, turn),
-      ...contextFields(status.protocol, turn),
+      ...contextFields(status.protocol, turn, this.kind),
       ...speedFields(status.protocol, turn),
       ...(permissions ? { permissions } : {}),
       ...(this.deps.keepAlive === false ? { keepAlive: false } : {}),
@@ -498,8 +500,9 @@ export class CursorBrain extends CodexBrain {
 
 /**
  * The OpenCode brain (ADR 0132): OpenCode's CLI on the agent's computer, on OpenCode's free tier or a person's OpenCode
- * key, through the same `brain.turn` as Codex (`kind: "opencode"`, runner protocol 39, `brain-opencode.ts` there). A
- * person's messages wait for the turn's end: the runner answers `brain.steer` with `unsupported`.
+ * key, through the same `brain.turn` as Codex (`kind: "opencode"`, runner protocol 39, `brain-opencode.ts` there; over
+ * ACP and on Windows since protocol 64). OpenCode 2 takes a person's messages mid-turn (`brain.steer`); with 1.x they
+ * wait for the turn's end (the runner answers `unsupported`).
  */
 export class OpencodeBrain extends CodexBrain {
   constructor(deps: CodexBrainDeps) {

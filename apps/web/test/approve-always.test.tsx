@@ -266,9 +266,9 @@ describe("Ferramentas e acesso: Aprovado sempre", () => {
     cleanup();
 
     await page();
-    expect(document.body.textContent).toContain(
-      "Merge, deploy e rollback pedem aprovação no chat, a não ser que o agente nunca pergunte.",
-    );
+    // The tab is up (its Aprovações row), with no card and no note beside it.
+    expect(screen().getByRole("region", { name: "Aprovações" })).toBeTruthy();
+    expect(document.querySelector(".newag__note")).toBeNull();
     expect(card()).toBeNull();
   });
 });

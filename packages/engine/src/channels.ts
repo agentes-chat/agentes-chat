@@ -14,6 +14,7 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
+import { resolveChannelAgentAsks } from "./admin-asks";
 import { caches } from "./cache";
 import { endOfCategory, requireCategoryInOrg } from "./channel-categories";
 import { ConflictError, ForbiddenError, isUniqueViolation, NotFoundError, ValidationError } from "./errors";
@@ -824,6 +825,7 @@ export async function addChannelMember(
     member: { type: "agent", id: member.agentId, autoReply },
   });
   await publishChannelsChanged(options.pubsub, orgId);
+  await resolveChannelAgentAsks({ db, pubsub: options.pubsub }, orgId, channelId, member.agentId);
 }
 
 /**

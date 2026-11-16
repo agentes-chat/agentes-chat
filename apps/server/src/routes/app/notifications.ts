@@ -1,6 +1,8 @@
 import { SCREEN_KINDS } from "@agenteschat/adapters";
 import {
+  askAdmins,
   listNotifications,
+  markAllNotificationsDone,
   markAllNotificationsRead,
   markNotificationDone,
   markNotificationRead,
@@ -134,6 +136,10 @@ const Notification = z
         description:
           "`org_standing` on agentes.chat Cloud: the apps read `text` as the restriction, with how to contest it.",
       }),
+      still: z.number().optional().openapi({
+        description:
+          "A reminder of what the person left unread in the waiting inbox: how many things still wait, this one included.",
+      }),
     }),
     readAt: z.string().nullable(),
     doneAt: z.string().nullable(),
@@ -237,6 +243,25 @@ export function notificationRoutes(deps: AppDeps) {
   app.openapi(
     createRoute({
       method: "post",
+      path: "/organizations/{orgId}/notifications/done-all",
+      tags,
+      security,
+      summary: "Done for everything (in a filter) but what waits on you; returns the ids changed, for the undo",
+      description:
+        "Each leaves the inbox as with `POST …/{notificationId}/done` (undo it there with `done: false`). Approvals and questions waiting on you stay until answered; `waiting` and `done` change nothing.",
+      request: { params: OrgParams, body: body(z.object({ filter: Filter.optional() })) },
+      responses: { 200: json(z.object({ ids: z.array(z.uuid()) })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const { filter } = c.req.valid("json");
+      return c.json(await markAllNotificationsDone(nd, c.get("user").id, orgId, filter), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
       path: "/organizations/{orgId}/notifications/{notificationId}/read",
       tags,
       security,
@@ -324,6 +349,30 @@ export function notificationRoutes(deps: AppDeps) {
       const { category, on } = c.req.valid("json");
       return c.json(await setNoticePref(db, orgId, c.get("user").id, category, on), 200);
     },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/admin-asks",
+      tags,
+      security,
+      summary: '"Pedir a um admin": an inbox row for whoever may do it, which does it or opens where it is done',
+      description:
+        "`channel_agent` (`channelId`, `agentId`): who manages channels, an Adicionar on the row, done once the agent is added. `create_agents`: who gives roles. `webhook` (`provider`): who sets up connectors. Refused: `admin_ask.self` (409) to someone who may do it.",
+      request: {
+        params: OrgParams,
+        body: body(
+          z.discriminatedUnion("what", [
+            z.object({ what: z.literal("channel_agent"), channelId: z.uuid(), agentId: z.uuid() }),
+            z.object({ what: z.literal("create_agents") }),
+            z.object({ what: z.literal("webhook"), provider: z.enum(["github", "sentry"]) }),
+          ]),
+        ),
+      },
+      responses: { 200: json(z.object({ sent: z.number().int() })), ...errors },
+    }),
+    async (c) => c.json(await askAdmins(nd, c.get("user").id, c.req.valid("param").orgId, c.req.valid("json")), 200),
   );
 
   return app;

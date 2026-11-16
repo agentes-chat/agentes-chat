@@ -8,13 +8,13 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
       "De overeenkomst voor het gebruik van agentes.chat: uw werkruimte, uw agents en waarvoor elke partij verantwoordelijk is.",
     courtesy:
       "Dit is een vertaling die uitsluitend ter informatie wordt verstrekt. Indien deze afwijkt van de Engelse versie, prevaleert de Engelse versie.",
-    updated: "2026-11-06",
+    updated: "2026-11-16",
     sections: [
       {
         id: "agreement",
         heading: "1. Overeenkomst",
         blocks: [
-          'Deze Gebruiksvoorwaarden (de "Voorwaarden") vormen een bindende overeenkomst tussen CODARI GLOBAL, LLC, een limited liability company naar het recht van Wyoming die handelt onder de naam agentes.chat ("agentes.chat", "wij", "ons"), en de persoon of entiteit die een account of een werkruimte aanmaakt ("u"). Door een account aan te maken, lid te worden van een werkruimte of agentes.chat anderszins te gebruiken via het web, de Mac-app of de telefoonapp (de "Dienst"), aanvaardt u deze Voorwaarden en ons Privacybeleid. Indien u de Dienst gebruikt namens een bedrijf of andere entiteit, verklaart u bevoegd te zijn deze te binden.',
+          'Deze Gebruiksvoorwaarden (de "Voorwaarden") vormen een bindende overeenkomst tussen AGENTESCHAT, LLC, een limited liability company naar het recht van Delaware die handelt onder de naam agentes.chat ("agentes.chat", "wij", "ons"), en de persoon of entiteit die een account of een werkruimte aanmaakt ("u"). Door een account aan te maken, lid te worden van een werkruimte of agentes.chat anderszins te gebruiken via het web, de Mac-app of de telefoonapp (de "Dienst"), aanvaardt u deze Voorwaarden en ons Privacybeleid. Indien u de Dienst gebruikt namens een bedrijf of andere entiteit, verklaart u bevoegd te zijn deze te binden.',
           "Om de Dienst te gebruiken, moet u ten minste 18 jaar oud zijn en bevoegd zijn een overeenkomst aan te gaan.",
         ],
       },
@@ -150,7 +150,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Toepasselijk recht",
         blocks: [
-          "Op deze Voorwaarden is het recht van de staat Wyoming, VS, van toepassing, met uitsluiting van de conflictregels daarvan, en de partijen onderwerpen zich aan de exclusieve bevoegdheid van de staats- en federale rechtbanken in Wyoming. Indien u een consument bent in een rechtsgebied waarvan het recht u rechten of een bevoegde rechter toekent waarvan niet kan worden afgeweken, zoals Brazilië, blijven die rechten onverlet.",
+          "Op deze Voorwaarden is het recht van de staat Delaware, VS, van toepassing, met uitsluiting van de conflictregels daarvan, en de partijen onderwerpen zich aan de exclusieve bevoegdheid van de staats- en federale rechtbanken in Delaware. Indien u een consument bent in een rechtsgebied waarvan het recht u rechten of een bevoegde rechter toekent waarvan niet kan worden afgeweken, zoals Brazilië, blijven die rechten onverlet.",
         ],
       },
       {
@@ -164,7 +164,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Contact",
         blocks: [
-          "CODARI GLOBAL, LLC, handelend onder de naam agentes.chat. Kennisgevingen: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Al het overige: hello@agentes.chat",
+          "AGENTESCHAT, LLC, handelend onder de naam agentes.chat. Kennisgevingen: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Al het overige: hello@agentes.chat",
         ],
       },
     ],
@@ -174,13 +174,13 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
     summary: "Wat wij verzamelen, wat agents waarheen sturen, wie uw werkruimte kan zien en welke rechten u hebt.",
     courtesy:
       "Dit is een vertaling die uitsluitend ter informatie wordt verstrekt. Indien deze afwijkt van de Engelse versie, prevaleert de Engelse versie.",
-    updated: "2026-11-12",
+    updated: "2026-11-16",
     sections: [
       {
         id: "overview",
         heading: "1. Overzicht",
         blocks: [
-          'CODARI GLOBAL, LLC, een limited liability company naar het recht van Wyoming die handelt onder de naam agentes.chat ("agentes.chat", "wij"), exploiteert agentes.chat: een werkruimte waarin mensen en AI-agents samenwerken, beschikbaar via het web, als Mac-app en als telefoonapp (de "Dienst"). Dit beleid onderscheidt twee rollen:',
+          'AGENTESCHAT, LLC, een limited liability company naar het recht van Delaware die handelt onder de naam agentes.chat ("agentes.chat", "wij"), exploiteert agentes.chat: een werkruimte waarin mensen en AI-agents samenwerken, beschikbaar via het web, als Mac-app en als telefoonapp (de "Dienst"). Dit beleid onderscheidt twee rollen:',
           {
             list: [
               "Voor **accountgegevens**, de informatie die personen ons verstrekken om een account aan te maken en te gebruiken, zijn wij de verwerkingsverantwoordelijke.",
@@ -230,7 +230,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
           {
             list: [
               "**Tussen apparaten en onze servers.** Alles wat tussen onze servers en de browsers, apps en computers die daarmee verbinding maken wordt verzonden, Werkruimte-inhoud inbegrepen, gaat via onze netwerkaanbieder, die de Dienst tegen aanvallen beschermt. Daartoe ontsleutelt de netwerkaanbieder dit verkeer in zijn datacenter dat het dichtst bij elk apparaat ligt, en verwerkt hij dit namens ons.",
-              "**Antwoorden.** Wanneer een agent werkt, stuurt hij de context die hij nodig heeft (de context van de werkruimte, de instructies van de agent, het gesprek, relevant geheugen en de resultaten van zijn tools) naar de modelaanbieder die voor die agent is gekozen. Met een API-sleutel die de werkruimte heeft toegevoegd, wordt de aanroep gedaan onder het eigen account van de werkruimte en haar eigen overeenkomst met die aanbieder. Met een AI-abonnement, zoals Claude of ChatGPT, dat aan een agent is gekoppeld, werkt de agent onder het account van de persoon die het abonnement heeft gekoppeld en onder de voorwaarden van de aanbieder.",
+              "**Antwoorden.** Wanneer een agent werkt, stuurt hij de context die hij nodig heeft (de context van de werkruimte, de instructies van de agent, het gesprek, relevant geheugen en de resultaten van zijn tools) naar de modelaanbieder die voor die agent is gekozen. Met een API-sleutel die de werkruimte heeft toegevoegd, wordt de aanroep gedaan onder het eigen account van de werkruimte en haar eigen overeenkomst met die aanbieder. Sommige aanbieders sturen de aanroep door naar het bedrijf dat het model maakt of host, dat hem dan ook verwerkt onder de voorwaarden van die aanbieder. Met een AI-abonnement, zoals Claude of ChatGPT, dat aan een agent is gekoppeld, werkt de agent onder het account van de persoon die het abonnement heeft gekoppeld en onder de voorwaarden van de aanbieder.",
               "**Bepalen wie antwoordt.** Een routeringsmodel leest een nieuw bericht, de namen en rollen van de agents van de werkruimte en het recente gesprek om te bepalen welke agent, indien van toepassing, moet antwoorden. Het draait bij TypeSafe of, als terugvaloptie, bij de modelaanbieder van de werkruimte. Routering verleent een agent nooit enige machtiging.",
               "**Geheugen.** Agents bewaren geheugen uit gesprekken (samenvattingen, feiten en lessen) zodat zij in de loop van de tijd beter worden. Sommige oordelen over het geheugen (of iets het bewaren waard is, of strijdig is met wat een agent al weet) worden door TypeSafe gemaakt. Het geheugen kan op de pagina van de agent worden bekeken en verwijderd, en wordt samen met de werkruimte verwijderd.",
               "**Zoeken.** Om verwante berichten en documenten te vinden, kan tekst door Voyage AI worden omgezet in vectoren (embeddings).",
@@ -285,14 +285,14 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Internationale doorgiften",
         blocks: [
-          "Onze applicatie en de bijbehorende database draaien in de Verenigde Staten, en de in dit beleid genoemde aanbieders verwerken gegevens in de Verenigde Staten. De computers van de werkruimten draaien in de Europese Unie of de Verenigde Staten, en onze netwerkaanbieder verwerkt verkeer in zijn datacenter dat het dichtst bij elk apparaat ligt, in de Verenigde Staten of elders. Wanneer persoonsgegevens die onder de AVG of de UK GDPR vallen naar een derde land worden doorgegeven, baseren wij ons op de modelcontractbepalingen (Standard Contractual Clauses) van de Europese Commissie en het UK Addendum. Voor gegevens die onder de LGPD vallen, baseren wij ons op de contractuele waarborgen van artikel 33.",
+          "Onze applicatie en de bijbehorende database draaien in de Verenigde Staten, en de in dit beleid genoemde aanbieders verwerken gegevens in de Verenigde Staten, behalve de modelaanbieders en gekoppelde diensten die een werkruimte kiest, en de bedrijven waarnaar zij aanroepen doorsturen, die gegevens in andere landen kunnen verwerken onder hun eigen voorwaarden. De computers van de werkruimten draaien in de Europese Unie of de Verenigde Staten, en onze netwerkaanbieder verwerkt verkeer in zijn datacenter dat het dichtst bij elk apparaat ligt, in de Verenigde Staten of elders. Wanneer persoonsgegevens die onder de AVG of de UK GDPR vallen naar een derde land worden doorgegeven, baseren wij ons op de modelcontractbepalingen (Standard Contractual Clauses) van de Europese Commissie en het UK Addendum. Voor gegevens die onder de LGPD vallen, baseren wij ons op de contractuele waarborgen van artikel 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. Telefoon- en Mac-apps",
         blocks: [
-          "De telefoonapp verstuurt meldingen via Expo, Apple en Google. Een melding kan de naam tonen van degene die heeft geschreven en het begin van het bericht, en u kiest welke meldingen u ontvangt. De Mac-app en gekoppelde computers bewaren hun aanmelding op het apparaat. Het verwijderen van uw account (ook mogelijk in de apps) meldt elk apparaat af.",
+          "De telefoonapp verstuurt meldingen via Apple en Google. Een melding kan de naam tonen van degene die heeft geschreven en het begin van het bericht, en u kiest welke meldingen u ontvangt. De Mac-app en gekoppelde computers bewaren hun aanmelding op het apparaat. Het verwijderen van uw account (ook mogelijk in de apps) meldt elk apparaat af.",
         ],
       },
       {
@@ -341,7 +341,7 @@ export const legalNl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Contact",
         blocks: [
-          "CODARI GLOBAL, LLC, handelend onder de naam agentes.chat. Kennisgevingen: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Vragen over gegevensbescherming uit de EU, het Verenigd Koninkrijk en Brazilië bereiken ons privacyteam via hetzelfde adres. Voor al het overige kunt u schrijven naar hello@agentes.chat.",
+          "AGENTESCHAT, LLC, handelend onder de naam agentes.chat. Kennisgevingen: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Vragen over gegevensbescherming uit de EU, het Verenigd Koninkrijk en Brazilië bereiken ons privacyteam via hetzelfde adres. Voor al het overige kunt u schrijven naar hello@agentes.chat.",
         ],
       },
     ],

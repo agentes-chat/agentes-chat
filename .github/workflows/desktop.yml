@@ -92,7 +92,9 @@ jobs:
           fi
           PREV=$(git describe --tags --abbrev=0 --match 'desktop-v*' 2>/dev/null || true)
           if [ -z "$NOTES" ]; then
-            NOTES=$(git log --no-merges --format='- %s' ${PREV:+"$PREV"..HEAD} | head -40)
+            # -n, not `| head`: with more than 40 commits head closes the pipe, git log dies of it and
+            # pipefail ends the step (exit 141).
+            NOTES=$(git log -n 40 --no-merges --format='- %s' ${PREV:+"$PREV"..HEAD})
           fi
           # Only the version line changes (jq would reformat the whole file).
           for f in apps/desktop/src-tauri/tauri.conf.json apps/desktop/package.json; do
@@ -480,7 +482,7 @@ jobs:
         working-directory: apps/desktop
         run: |
           bun scripts/icons.ts
-          bun run tauri icon app-icon.png
+          bun run tauri icon app-icon-tile.png
           bun scripts/installer-art.ts
 
       # The cached target may keep an older build's installer (another version): only this build's may be there.
@@ -625,7 +627,7 @@ jobs:
         working-directory: apps/desktop
         run: |
           bun scripts/icons.ts
-          bun run tauri icon app-icon.png
+          bun run tauri icon app-icon-tile.png
 
       - name: Build the app (AppImage, deb)
         uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2

@@ -13,10 +13,11 @@ live in GitHub's secrets or the stores.
 ## Android on GitHub Actions
 
 Run **Android build** (Actions → Run workflow) with `preview` (an arm64 APK to install directly, kept as the run's
-artifact) or `production` (an app bundle with every architecture; with `PLAY_SERVICE_ACCOUNT_JSON` set it also goes
-to the Play Store's internal track as a draft). It runs `expo prebuild --platform android --clean` and Gradle on a
-CI runner; `plugins/with-android-release-signing.js` signs the release with the upload key from the
-environment. Nothing goes through EAS.
+artifact) or `production` (an app bundle for arm64 and 32-bit ARM phones; with `PLAY_SERVICE_ACCOUNT_JSON` set it also
+goes to the Play Store's internal track as a draft). It runs `expo prebuild --platform android --clean` and Gradle on
+GitHub's standard runner (or `CI_RUNNER_XLARGE`), with extra swap and two Gradle workers so it fits in 16 GB;
+`plugins/with-android-release-signing.js` signs the release with the upload key from the environment. Nothing goes
+through EAS.
 
 One time, in GitHub → Settings → Secrets and variables → Actions:
 1. The upload key: make one once (`keytool -genkeypair -v -storetype PKCS12 -keystore upload.keystore -alias upload
@@ -29,9 +30,10 @@ One time, in GitHub → Settings → Secrets and variables → Actions:
    file must list the variant's package (`chat.agentes.app`, `chat.agentes.app.preview`); otherwise that build is
    made without push and the run says so. The server sends those pushes to Firebase itself, with a service account of
    the same Firebase project (`FIREBASE_SERVICE_ACCOUNT`); other servers send through its push relay (ADR 0152).
-3. Optional: `PLAY_SERVICE_ACCOUNT_JSON` (a Play Console service account allowed to release; Play takes API uploads
-   only after the app's first bundle was uploaded by hand), and the variable `ANDROID_VERSION_CODE_BASE` (added to
-   the run number) above the last version code on Play, if any.
+3. The variable `ANDROID_VERSION_CODE_BASE` (Variables tab, not Secrets), added to the run number: the last version
+   code on Play, or `0` before the first upload. A production build stops at once without it.
+4. Optional: `PLAY_SERVICE_ACCOUNT_JSON` (a Play Console service account allowed to release; Play takes API uploads
+   only after the app's first bundle was uploaded by hand).
 
 A preview APK installs over an earlier one only when both were signed with the same key.
 
@@ -78,7 +80,7 @@ on expo.dev (EAS environment variables) for EAS:
 | Variable | What | Default |
 | --- | --- | --- |
 | `EXPO_PUBLIC_API_URL` | The default server. **Must be the server's `PUBLIC_URL` host** (see below). | `https://app.agentes.chat` |
-| `EAS_PROJECT_ID` | EAS project, for the iPhone's Expo push tokens. | ours (`8514d5b3-…`) |
+| `EAS_PROJECT_ID` | EAS project, for those who build with EAS. | ours (`8514d5b3-…`) |
 | `GOOGLE_SERVICES_JSON` | Path to Firebase's `google-services.json` (the Android workflow writes it from a secret): push on Android (FCM). | none |
 | `ANDROID_VERSION_CODE` | The build's version code (the Android workflow's run). | from the config |
 | `APPLE_TEAM_ID` | The Apple team that signs the iOS app and its share extension (the iOS workflow's secret). | none |
@@ -94,8 +96,14 @@ People can point the app at their own server ("Servidor: agentes.chat · Trocar"
 app's "Abrir no celular", or an `agenteschat://connect?server=…` link). The app checks `GET /api/instance` first and,
 for the same reason, uses the address the server gives there (its `PUBLIC_URL`); when that address doesn't answer from
 the phone, the server is refused with that host in the message. Switching signs out of the previous server. Pushes from
-a self-hosted server reach the iPhone app only while the Expo project keeps "enhanced push security" off, and the
-Android app through agentes.chat's push relay (`PUSH_SENDER`, ADR 0152).
+a self-hosted server reach the app from the stores, on Android and on the iPhone, through agentes.chat's push relay
+(`PUSH_SENDER`, ADR 0152, ADR 0178).
+
+Push on the iPhone comes straight from Apple (APNs), with no Expo service in between: the app registers the system's
+own device token, its bundle id and whether the build gets its pushes from Apple's sandbox, read from the profile
+that signs it (`src/lib/push.ts`). The server sends with an APNs auth key of the team that signs the app (`APNS_KEY`,
+`APNS_KEY_ID`, `APNS_TEAM_ID`, and the bundle ids in `APNS_APP_IDS`); the bundle id needs the Push Notifications
+capability, and a build made by your own team is pushed by your own server's key.
 
 Server side (not in this folder): Better Auth's Expo plugin trusts `agenteschat://`; Sign in with Apple needs
 `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, and the native iOS button sends an ID

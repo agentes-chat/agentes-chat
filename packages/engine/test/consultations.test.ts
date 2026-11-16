@@ -9,6 +9,7 @@ import {
   answerNow,
   answerQuestion,
   CONSULTATION_HUNG_MS,
+  CONSULTATION_KNOWN_WAIT_MS,
   CONSULTATION_TTL_MS,
   cancelRun,
   consultationConversation,
@@ -64,7 +65,12 @@ const inAgentDm = (req: ModelRequest) => systemText(req.system).includes("A priv
 const post = (body: string) =>
   postPersonMessage({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, f.general.id, { body });
 
-const consultations = () => f.db.select().from(schema.agentConsultations);
+/** In the order they were asked: a table read with no order follows where its rows happen to sit. */
+const consultations = () =>
+  f.db
+    .select()
+    .from(schema.agentConsultations)
+    .orderBy(asc(schema.agentConsultations.createdAt), asc(schema.agentConsultations.id));
 const runs = () => f.db.select().from(schema.agentRuns);
 
 async function addInfra() {
@@ -1065,6 +1071,83 @@ describe("ask_agent", () => {
     expect((await runs()).find((r) => r.id === target.id)?.status).toBe("waiting_input");
   });
 
+  test("a plan wait with a known reset stays open past the limit, until the reset and a margin", async () => {
+    f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
+    const { handlers, target } = await asked();
+    const now = Date.now();
+    const resetsAt = new Date(now + 5 * 3600_000).toISOString();
+    const wait = { kind: "claude_code", machineId: "", code: "plan_limit", waitId: "w", since: now, resetsAt };
+    await park(target.id, { waitingForBrain: wait });
+    expect(await expireConsultations({ db: f.db }, new Date(now + CONSULTATION_HUNG_MS + CONSULTATION_TTL_MS))).toBe(0);
+    expect((await consultations())[0]?.status).toBe("open");
+    expect((await runs()).find((r) => r.id === target.id)?.status).toBe("waiting_input");
+    expect(await expireConsultations({ db: f.db }, new Date(Date.parse(resetsAt) + 31 * 60_000))).toBe(1);
+    expect((await consultations())[0]?.answer).toContain("it stayed at its plan's or budget's limit for over 5 hours");
+    await drainOutbox(f.db, handlers);
+    expect(lastText(f.provider.calls.at(-1)?.request as ModelRequest)).toContain("plan's or budget's limit");
+  });
+
+  test("deep in its plan's line, the wait holds until its own turn to resume, not just the reset", async () => {
+    f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
+    const { target } = await asked();
+    const now = Date.now();
+    const reset = now + 5 * 3600_000;
+    const resetsAt = new Date(reset).toISOString();
+    const until = new Date(reset + 40 * 60_000).toISOString();
+    const wait = { kind: "claude_code", machineId: "", code: "plan_limit", waitId: "w", since: now, resetsAt, until };
+    await park(target.id, { waitingForBrain: wait });
+    expect(await expireConsultations({ db: f.db }, new Date(reset + 31 * 60_000))).toBe(0);
+    expect((await runs()).find((r) => r.id === target.id)?.status).toBe("waiting_input");
+    expect(await expireConsultations({ db: f.db }, new Date(Date.parse(until) + 31 * 60_000))).toBe(1);
+    expect((await consultations())[0]?.answer).toContain("it stayed at its plan's or budget's limit for over 6 hours");
+  });
+
+  test("a plan wait whose reset was never said ends after a day", async () => {
+    f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
+    const { target } = await asked();
+    const now = Date.now();
+    await park(target.id, { waitingForBrain: { kind: "claude_code", machineId: "", code: "plan_limit", since: now } });
+    expect(await expireConsultations({ db: f.db }, new Date(now + CONSULTATION_HUNG_MS + CONSULTATION_TTL_MS))).toBe(0);
+    expect(await expireConsultations({ db: f.db }, new Date(now + CONSULTATION_KNOWN_WAIT_MS + 60_000))).toBe(1);
+    expect((await consultations())[0]?.answer).toContain("plan's or budget's limit for over 24 hours");
+  });
+
+  test("a plan reset days away holds it no longer than a day", async () => {
+    f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
+    const { target } = await asked();
+    const now = Date.now();
+    const resetsAt = new Date(now + 3 * CONSULTATION_KNOWN_WAIT_MS).toISOString();
+    await park(target.id, {
+      waitingForBrain: { kind: "claude_code", machineId: "", code: "plan_limit", since: now, resetsAt },
+    });
+    expect(await expireConsultations({ db: f.db }, new Date(now + CONSULTATION_KNOWN_WAIT_MS + 60_000))).toBe(1);
+    expect((await consultations())[0]?.answer).toContain("plan's or budget's limit for over 24 hours");
+  });
+
+  test("in line on a computer that is online it stays open past the limit; a day in line still ends it", async () => {
+    f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
+    const { target } = await asked();
+    const [machine] = await f.db.insert(schema.machines).values({ orgId: f.org.id, name: "Mac" }).returning();
+    if (!machine) throw new Error("no machine");
+    const now = Date.now();
+    const busy = { kind: "claude_code", machineId: machine.id, code: "busy", waitId: Bun.randomUUIDv7() };
+    await park(target.id, { waitingForBrain: busy, roomWaitSince: now });
+    await f.db.update(schema.agentRuns).set({ waitingMachineId: machine.id }).where(eq(schema.agentRuns.id, target.id));
+    const sweepAt = async (at: Date) => {
+      await f.db
+        .update(schema.machines)
+        .set({ online: true, lastSeenAt: at })
+        .where(eq(schema.machines.id, machine.id));
+      return expireConsultations({ db: f.db }, at);
+    };
+    expect(await sweepAt(new Date(now + CONSULTATION_HUNG_MS + CONSULTATION_TTL_MS))).toBe(0);
+    expect((await consultations())[0]?.status).toBe("open");
+    expect(await sweepAt(new Date(now + CONSULTATION_KNOWN_WAIT_MS + 60_000))).toBe(1);
+    expect((await consultations())[0]?.answer).toContain(
+      "it stayed in line for room on its computer for over 24 hours",
+    );
+  });
+
   test("stopping a helper alone: its asker wakes knowing who stopped it and not to ask again", async () => {
     f = await setup({ askAgent: true, reply: consultReply(() => answer("never sent")) });
     const { handlers, target, asker } = await asked();
@@ -1348,12 +1431,12 @@ describe("tell_agent: what comes of work handed off comes back by itself (ADR 00
     threadRootId: run.threadRootId,
     triggerMessageId: run.triggerMessageId,
   });
-  const tell = (run: AgentRun, agent: string, message: string) => {
+  const tell = (run: AgentRun, agent: string, message: string, more: Record<string, unknown> = {}) => {
     if (!f.tools) throw new Error("no tools");
     return f.tools.invoke(ctxOf(run), {
       toolUseId: `tu_${crypto.randomUUID()}`,
       name: "tell_agent",
-      input: { agent, message },
+      input: { agent, message, ...more },
     });
   };
   /** The run another agent's note started (or joined). */
@@ -1734,6 +1817,64 @@ describe("tell_agent: what comes of work handed off comes back by itself (ADR 00
       answer: "Deploy feito; passei a fila ao Ops.\n\n[@ops, to whom @infra handed part of it]: Fila limpa.",
     });
     expect(await notesBack()).toHaveLength(1);
+  });
+
+  test("a heads-up to an agent outside the request neither holds the verdict going up nor joins it", async () => {
+    f = await setup({ askAgent: true, judge: notesMatter });
+    const infra = await addInfra();
+    const qa = await addAgent("QA");
+    const ops = await addAgent("Ops");
+    const dev = await devRun("@dev pede ao infra para revisar o PR");
+    await ended(dev.id);
+    await tell(dev, "@infra", "Revisa o PR 7 com o QA.");
+    const toInfra = (await consultations())[0];
+    const infraRun = await runFor(toInfra);
+    await tell(infraRun, "@qa", "Revisa o PR 7.");
+    await endsWith(infraRun, "Pedi a revisão ao QA.");
+    await endHook(infraRun);
+    const toQa = (await consultations()).find((c) => c.targetAgentId === qa.id);
+    const qaRun = await runFor(toQa);
+    const told = await tell(qaRun, "@ops", "O PR 7 foi aprovado.", { heads_up: true });
+    expect(JSON.stringify(told)).toContain("without waiting for it");
+    await answered(qaRun, "Aprovado.");
+
+    expect((await consultations()).find((c) => c.targetAgentId === ops.id)?.status).toBe("open");
+    expect((await consultations()).find((c) => c.id === toInfra?.id)).toMatchObject({
+      status: "answered",
+      answer: "Pedi a revisão ao QA.\n\n[@qa, to whom @infra handed part of it]: Aprovado.",
+    });
+    expect((await notesBack()).map((m) => [m.channelId, refsOf(m).agentId])).toEqual([[f.general.id, infra.id]]);
+
+    const toOps = (await consultations()).find((c) => c.targetAgentId === ops.id);
+    await answered(await runFor(toOps), "Anotado, vou avisar a equipe.");
+    expect((await consultations()).find((c) => c.id === toQa?.id)?.answer).toBe("Aprovado.");
+    expect((await consultations()).find((c) => c.id === toInfra?.id)?.answer).not.toContain("Anotado");
+    // Ops's reply stays where QA asked, for the record, waking nobody; the people's conversation got one result.
+    const back = await notesBack();
+    expect(back.filter((m) => m.channelId === f.general.id)).toHaveLength(1);
+    const record = back.find((m) => m.channelId === qaRun.channelId);
+    expect(record && refsOf(record)).toMatchObject({ agentId: ops.id });
+    expect(record && refsOf(record).wake).toBeUndefined();
+    expect(await runsOf(qa.id)).toHaveLength(1);
+  });
+
+  test("without heads_up, a note from a run answering another agent is part of its answer", async () => {
+    f = await setup({ askAgent: true, judge: notesMatter });
+    await addInfra();
+    const ops = await addAgent("Ops");
+    const dev = await devRun("@dev pede ao infra");
+    await ended(dev.id);
+    await tell(dev, "@infra", "Cuida do deploy.");
+    const toInfra = (await consultations())[0];
+    const infraRun = await runFor(toInfra);
+    await tell(infraRun, "@ops", "O deploy saiu.");
+    await answered(infraRun, "Deploy feito.");
+    expect((await consultations()).find((c) => c.id === toInfra?.id)?.status).toBe("open");
+    await answered(await runFor((await consultations()).find((c) => c.targetAgentId === ops.id)), "Anotado.");
+    expect((await consultations()).find((c) => c.id === toInfra?.id)).toMatchObject({
+      status: "answered",
+      answer: "Deploy feito.\n\n[@ops, to whom @infra handed part of it]: Anotado.",
+    });
   });
 
   test("two parts handed on that come back at once both join the answer", async () => {

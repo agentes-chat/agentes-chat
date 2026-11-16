@@ -2,6 +2,7 @@ import type { PlanUsage, PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, type Executor, eq, inArray, type SQL, schema, sql } from "@agenteschat/db";
 import { extraUsageLeft, PLAN_PAUSE, planBinding, planState } from "@agenteschat/ui/plan-state";
 import { recordAudit } from "./audit";
+import { UUID } from "./authority";
 import { forgetPlanLimit, storedPlanUsage } from "./brains/select";
 import type { BrainKind } from "./brains/types";
 import { mayStopRun, runRequester } from "./cancel";
@@ -51,6 +52,16 @@ export const usageWaitKey = (
     | { code: "plan_limit"; machineId: string; kind: BrainKind; accountId?: string }
     | { code: "budget"; agentId: string },
 ) => (w.code === "budget" ? `budget:${w.agentId}` : `plan:${w.machineId}:${w.kind}:${w.accountId ?? "own"}`);
+
+/**
+ * A plan's `usageWaitKey` read back: the computer its sign-in is on and, when the sign-in is an account's, that
+ * account (null: the computer's own). Null for a budget's key and for anything else.
+ */
+export function planOfWaitKey(key: unknown): { machineId: string | null; accountId: string | null } | null {
+  const [plan, machineId = "", kind, accountId = "", ...more] = typeof key === "string" ? key.split(":") : [];
+  if (plan !== "plan" || !kind || !accountId || more.length > 0) return null;
+  return { machineId: UUID.test(machineId) ? machineId : null, accountId: UUID.test(accountId) ? accountId : null };
+}
 
 /** A run in a usage line: people's conversations (0), then long work (1), then routines (2). */
 const lineRank = (r: { background: boolean; workId: string | null }) => (r.background ? 2 : r.workId ? 1 : 0);

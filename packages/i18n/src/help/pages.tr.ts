@@ -9,6 +9,13 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
       "agentes.chat uygulaması, agentes.chat'in kendisini de bir Mac, PC ya da Linux bilgisayarda, sizin ya da küçük bir ekip için çalıştırabilir.",
     sections: [
       {
+        id: "download",
+        heading: "Uygulamayı indirin",
+        blocks: [
+          "Mac, PC veya Linux bilgisayarınız için [agentes.chat uygulamasını indirin](/download) ve açın. **Kendi sunucunuzda** seçeneğini seçin, **Kendi sunucumla devam et**'e ve ardından **agentes.chat'i bu bilgisayar üzerinde çalıştır**'a basın.",
+        ],
+      },
+      {
         id: "how",
         heading: "Nasıl çalışır",
         blocks: [
@@ -68,6 +75,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Diğer cihazlardan giriş",
         blocks: [
           "Sahibin başta bir şifresi yoktur: uygulama bu bilgisayarda sizin yerinize oturum açar. Başka bir bilgisayardaki tarayıcıdan giriş yapmak için **Ayarlar\u00a0›\u00a0Hesabınız** bölümünden bir şifre ekleyin. Eklemediğiniz sürece **Tercihler\u00a0›\u00a0Sunucular** bunu hatırlatır ve **Parola ekle** o sayfayı açar. Telefon uygulaması, **Tercihler\u00a0›\u00a0Sunucular** içindeki **Telefonunuzda** altında bulunan QR kodunu tarayarak bağlanır. Bunun için **Telefonunuzdan ve ekip arkadaşlarınızdan erişin** açık olmalıdır.",
+          "Sahip, **Ayarlar\u00a0›\u00a0Hesabınız** bölümünden hesabını sildiğinde hesap 7 gün sonra tamamen silinir ve yalnızca onun bulunduğu çalışma alanları da onunla gider. O zamana kadar oturum açıp **Hesabı geri yükle** düğmesine basarak hesabı geri getirebilirsiniz. Hesap silindikten sonra hiç hesap kalmadıysa uygulama yeni bir sahip oluşturmak için karşılama penceresini açar. Başkalarının hâlâ hesabı varsa her biri kendi e-postasıyla giriş yapar.",
         ],
       },
       {
@@ -83,6 +91,25 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         blocks: [
           "**Tercihler\u00a0›\u00a0Sunucular** içinde **Her gece yedekle** açıksa (uygulama 0.8.1 ve sonrası), uygulama her gece saat 3:00'te veritabanını, dosyaları ve `.env` dosyasını ana klasörünüzdeki `.agentes/backups` içine kaydeder. O saatte uykuda olan bir bilgisayar uyandığında yedekler. **Şimdi yedekle** aynısını hemen yapar. Her yedekleme sunucuyu kısa bir süre durdurur ve en yeni iki yedek kalır.",
           "**Şuraya kopyala**, her yeni yedeği seçtiğiniz bir klasöre de koyar, örneğin bir USB belleğe ya da iCloud Drive'a, ve orada da en yeni iki yedek kalır. İçlerinde anahtarlarınız var: onları gizli tutun. **Geri yükle…** agentes.chat'i bir yedeğe döndürür: mesajlar, dosyalar ve ayarlar. Bir dakikalığına durur ve önceden orada olanlar yedek klasöründe kalır.",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "Baştan başlamak veya kaldırmak",
+        blocks: [
+          "agentes.chat'in bu bilgisayarda tuttuğu her şey uygulamanın içinde değil, ana klasörünüzdeki klasörlerdedir. Bu yüzden uygulamayı Çöp Sepeti'ne taşımak bunların hiçbirini silmez ve çalışıyorsa agentes.chat'i durdurmaz.",
+          "Baştan başlamak için **Tercihler\u00a0›\u00a0Sunucular** içindeki **Sil ve baştan başla…** düğmesine basın. Buradaki agentes.chat durur ve içindeki her şey ana klasörünüzde `agentes.chat erased` ve günün tarihiyle adlandırılan yeni bir klasöre taşınır, siz silene kadar orada kalır. Ajanlarının bu bilgisayarda tuttukları, örneğin tarayıcıları ve oturumları, `.agentes-runner` içinden silinir. Çalışma alanları, onları kullanan herkes için kaybolur. Sonra karşılama penceresi açılır ve onu yeni bir sahip hesabıyla yeniden kurarsınız. Ajanların ana klasörünüzdeki `agentes` içinde bulunan dosyaları oldukları yerde kalır.",
+          "Sonradan geri getirmek için uygulamadan çıkın, varsa daha yeni bir `.agentes` klasörünü kenara alın, `agentes.chat erased` klasörünün adını `.agentes` olarak değiştirin, sonra uygulamayı açıp onu bu bilgisayarda yeniden kurun. Çalışma alanları ve sahibiyle, bıraktığınız gibi açılır. Ajanlarının bu bilgisayarda tuttukları geri gelmez, bu yüzden yeniden oturum açmaları gerekir.",
+          "agentes.chat'i bu bilgisayardan tamamen kaldırmak için:",
+          {
+            list: [
+              "**Tercihler\u00a0›\u00a0Genel** içinde **Oturum açılınca başlat** seçeneğini kapatın.",
+              "Uygulamadan çıkın. Penceresini kapatmak yetmez. Mac'te Dock'taki simgesine tıklayın, sonra ekranın üstündeki agentes.chat menüsünden **agentes.chat'ten çık** seçeneğini seçin ya da ⌘Q tuşlarına basın. Windows ve Linux'ta saatin yanındaki agentes.chat simgesine tıklayın ve **agentes.chat'ten çık** seçeneğini seçin. **agentes.chat'ten çıkılsın mı?** diye sorarsa **Çık** düğmesine basın.",
+              "Uygulamayı silin. Mac'te Çöp Sepeti'ne taşıyın. Windows ve Linux'ta diğer uygulamalar gibi kaldırın.",
+              "Ana klasörünüzdeki şu klasörleri silin. Verileriniz bunlardadır ve silindikten sonra geri gelmez, bu yüzden ileride isteyebilirseniz önce başka bir yerde yedek alın: `.agentes` (mesajlar, dosyalar, hesaplar, ayarlar ve yedekler), her `agentes.chat erased` klasörü, `.agentes-runner` (ajanların bu bilgisayarda tuttukları, örneğin tarayıcıları ve oturumları) ve `agentes` (ajanların dosyaları). Adı nokta ile başlayan klasörler gizlidir. Mac'te ana klasörünüzü Finder'da açın ve göstermek için ⇧⌘. (Shift, Command ve nokta tuşu) tuşlarına basın.",
+              "Uygulamanın kendi klasörlerini silin. Bunlarda yalnızca ayarları, penceresinin oturumları ve günlükleri bulunur. Mac'te: `~/Library` içindeki Application Support, Caches, HTTPStorages, Logs, Preferences ve WebKit klasörlerinde adı `chat.agentes.desktop` ile başlayan her şey ve `~/Library/LaunchAgents` içindeki `agentes.chat.plist`. Windows'ta: `%APPDATA%\\chat.agentes.desktop` ve `%LOCALAPPDATA%\\chat.agentes.desktop`. Linux'ta: `~/.config/chat.agentes.desktop` ve `~/.local/share/chat.agentes.desktop`. Mac'te bu klasörlerden birini açmak için Finder'da ⇧⌘G tuşlarına basıp yolunu yazın, örneğin `~/Library/Caches`.",
+            ],
+          },
         ],
       },
       {
@@ -177,6 +204,15 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
           "Aynı uygulamada her çalışma alanında oturum açın ve her biri için **İzin ver** düğmesine basın. agentes.chat Cloud'daki ve kendi sunucularınızdaki çalışma alanları aynı bilgisayarı paylaşabilir (uygulama 0.6.1 ve sonrası). Her birinin orada kendi ajanları ve klasörleri olur ve birinin bağlantısını kesmek diğerlerini etkilemez.",
           "Uygulamanın bu bilgisayarda çalıştırdığı bir sunucu zaten bağlıdır ve hiçbir şey gerektirmez. Bu bilgisayarı başka bir yerdeki bir çalışma alanına da açmak için [Başka bir çalışma alanına da açın](/help/run-on-your-computer#another-workspace) bölümüne bakın.",
           "Uygulamayı bir dizüstünde yalnızca çalışma alanınıza açılan bir pencere olarak mı kullanıyorsunuz? Ajanların dizüstünü kullanması için izin istediğinde **Şimdi değil** derseniz uygulama sade bir pencere olarak kalır.",
+          "Terminal satırıyla bağlanan bir sunucu tek bir çalışma alanı için çalışır. Onu başka bir çalışma alanından bağlamak sunucuyu o alana taşır ve ilki artık ona ulaşamaz. Bir bilgisayarda birden çok çalışma alanı için uygulamayı kullanın.",
+        ],
+      },
+      {
+        id: "line",
+        heading: "Ajanlar sırada beklediğinde",
+        blocks: [
+          "Bir ajanın her işi bilgisayarın belleğini kullanır. Boş bellek azaldığında sıradaki iş, bir başkası bitene kadar sırada bekler. Önce insanlar gelir. CPU sayısı bunu değiştirmez.",
+          "4 GB belleği olan bir bilgisayar aynı anda iki ya da üç iş çalıştırır, 8 GB olan yaklaşık dokuz. Bir Mac ya da PC en fazla sekiz iş çalıştırır. Ajanların açık bıraktığı tarayıcılar ve masaüstleri de bellek kullanır. Daha kısa bir sıra için daha fazla belleği olan bir bilgisayar kullanın ya da bir tane daha bağlayıp ajanları aralarında paylaştırın. Bir bilgisayarı paylaşan çalışma alanları belleğini de paylaşır.",
         ],
       },
       {
@@ -458,7 +494,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Çalışma alanınızı agentes.chat barındırıyorsa Jev dahildir. Kendi çalıştırdığınız bir sunucuda sahibin TypeSafe anahtarını kullanır, mesaj başına yaklaşık US$ 0,0001: [Jev'i kurun](/help/jev#setup).",
+          "Çalışma alanınızı agentes.chat barındırıyorsa Jev dahildir. Kendi çalıştırdığınız bir sunucuda sahibin TypeSafe ya da OpenRouter anahtarını kullanır, mesaj başına yaklaşık US$ 0,0001: [Jev'i kurun](/help/jev#setup).",
         ],
       },
       {
@@ -520,6 +556,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
               "agentes.chat'te **Ayarlar › Yapay zeka ve kullanım** bölümünü açın ve anahtarı **Jev** altına yapıştırın. Onu yalnızca bu sunucuyu kuran kişi görür.",
             ],
           },
+          "Zaten OpenRouter mı kullanıyorsunuz? **Jev** altında **OpenRouter**'ı seçip https://openrouter.ai/keys adresinden bir anahtar yapıştırın ya da çalışma alanının OpenRouter anahtarıyla Jev'i tek tıkla açın. Aynı Jev, aynı fiyatla OpenRouter üzerinden faturalanır.",
           "Docker ile çalıştırdığınız bir sunucuda anahtarı bunun yerine `.env` dosyasına `TYPESAFE_API_KEY` olarak koyabilirsiniz. Bu anahtar, Ayarlar'dakinin önüne geçer.",
         ],
       },
@@ -554,6 +591,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe, Jev'i Amerika Birleşik Devletleri'nde çalıştırır ve modellerini gönderdiklerinizle eğitmez. Verileri hizmeti sürdürmek için gerektiği kadar saklar. Kurumsal planlarında sıfır saklama seçeneği vardır.",
           "TypeSafe'in gizlilik politikası: https://typesafe.ai/legal/privacy-policy. Veri işleme sözleşmesi: https://typesafe.ai/legal/data-processing.",
+          "OpenRouter anahtarıyla aynı istekler TypeSafe'e giderken OpenRouter'dan geçer; OpenRouter'ın koşulları ve oradaki gizlilik ayarlarınız geçerli olur: https://openrouter.ai/privacy.",
         ],
       },
       {
@@ -745,7 +783,7 @@ export const helpTr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "email",
         heading: "E-posta",
         blocks: [
-          "E-posta yoksa agentes.chat her e-postayı göndermek yerine günlüğüne yazar, böylece bir davet bağlantısını oradan kopyalayabilirsiniz. Parola sıfırlama kapalı kalır.",
+          "E-posta yoksa agentes.chat her e-postayı göndermek yerine günlüğüne yazar, böylece bir davet bağlantısını oradan kopyalayabilirsiniz. Parola sıfırlama kapalı kalır ve bir hesabın yeni e-postası kod ya da bağlantı olmadan hemen geçerli olur.",
           {
             code: "docker compose logs agentes | grep 'email (not sent'",
           },

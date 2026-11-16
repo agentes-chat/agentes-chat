@@ -180,11 +180,15 @@ function AgentMailLevel({ agentId, accountId, leading }: { agentId: string; acco
     <GroupedRow
       leading={leading}
       label={agent?.name ?? ""}
+      {...(agent?.role ? { sub: agent.role } : {})}
       {...(account && onlyForOwner(account, agent, meId)
-        ? { sub: t("mail.agent.onlyYou", { name: agent?.name ?? "" }), subLines: 2 }
-        : agent?.role
-          ? { sub: agent.role }
-          : {})}
+        ? {
+            hint: {
+              name: t("common.about", { label: agent?.name ?? "" }),
+              text: t("mail.agent.onlyYou", { name: agent?.name ?? "" }),
+            },
+          }
+        : {})}
       value={t(`access.level.${current}`)}
       // The value changes in its row, through the app's picker: its mark, not a chevron to a screen.
       menu={mayChange}

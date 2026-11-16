@@ -112,13 +112,18 @@ export type CodexBrainEvent =
       model?: string;
       cacheRead?: number;
       cacheWrite?: number;
+      /** App-server only: the model requests of the turn, and the most input one read (its context then). */
+      calls?: number;
+      maxContext?: number;
     }
   | { type: "limit"; resetsAt?: string }
   | { type: "done"; text: string; session?: { id: string } }
   | { type: "error"; code: string; message: string; retryable?: boolean; worked?: boolean }
   /** Protocol 15 (app-server only): messages handed with `brain.steer` that the turn read. */
   | { type: "steer_read"; uuids: string[] }
-  | { type: "speed_fallback"; message: string };
+  | { type: "speed_fallback"; message: string }
+  /** A file a tool of Codex's own made (an image), kept in the agent's folder: the server shows it with the reply. */
+  | { type: "file"; path: string };
 
 /** `brain.turn` with `kind: "codex"` (contract: "Runner"). */
 export interface CodexBrainTurnRequest {
@@ -176,18 +181,23 @@ export const CODEX_CHAT_OFF = [
 ] as const;
 
 /**
+ * Our bridge's tools offered to the model directly. Codex's catalog makes its models `code_mode_only` (gpt-5.6 and
+ * gpt-6 in 0.164.0), which otherwise hides every MCP tool inside `exec`; some runners have no code-mode host for that
+ * `exec` to call, so the tool fails before it reaches our bridge.
+ */
+export const CODEX_DIRECT_MCP_CONFIG = `features.code_mode.direct_only_tool_namespaces=${JSON.stringify([`mcp__${CODEX_MCP_SERVER}`])}`;
+
+/**
  * A `chat` turn's `-c` overrides: no approvals (`exec` forces it anyway), no web search, no `AGENTS.md`, and our
- * bridge's tools offered to the model directly. Codex's catalog makes its models `code_mode_only` (gpt-5.6 and
- * gpt-6 in 0.164.0), which hides every MCP tool inside `exec`; with the host off that left the turn no tool at all.
- * `agents.enabled=false` drops the `collaboration` tools the catalog turns on for gpt-6 although `multi_agent_v2` is
- * off: a `spawn_agent` emits no item, and the sub-agent it starts calls our bridge unseen by the kill.
- * Codex 0.164.0 refuses an unknown value for each of these keys.
+ * bridge's tools offered to the model directly. `agents.enabled=false` drops the `collaboration` tools the catalog
+ * turns on for gpt-6 although `multi_agent_v2` is off: a `spawn_agent` emits no item, and the sub-agent it starts
+ * calls our bridge unseen by the kill. Codex 0.164.0 refuses an unknown value for each of these keys.
  */
 export const CODEX_CHAT_CONFIG = [
   'approval_policy="never"',
   'web_search="disabled"',
   "project_doc_max_bytes=0",
-  `features.code_mode.direct_only_tool_namespaces=${JSON.stringify([`mcp__${CODEX_MCP_SERVER}`])}`,
+  CODEX_DIRECT_MCP_CONFIG,
   "agents.enabled=false",
 ];
 
@@ -497,7 +507,12 @@ export function codexTurnArgs(input: {
       : []),
     ...(input.windows && !input.chat ? CODEX_WINDOWS_CONFIG.flatMap((c) => ["-c", c]) : []),
     ...(instructions && !input.thread ? ["-c", `developer_instructions=${JSON.stringify(instructions)}`] : []),
-    ...(input.mcp ? codexBridgeOverrides({ runId: input.runId, ...input.mcp }).flatMap((o) => ["-c", o]) : []),
+    ...(input.mcp
+      ? [
+          ...(input.chat ? [] : ["-c", CODEX_DIRECT_MCP_CONFIG]),
+          ...codexBridgeOverrides({ runId: input.runId, ...input.mcp }).flatMap((o) => ["-c", o]),
+        ]
+      : []),
     ...(isBrainEffort(input.effort)
       ? ["-c", `model_reasoning_effort=${JSON.stringify(codexEffort(input.effort))}`]
       : []),

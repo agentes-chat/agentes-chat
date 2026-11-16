@@ -287,6 +287,22 @@ function appServer() {
             additionalDetails: null,
           });
         }
+        if (/\bIMAGE\b/.test(prompt)) {
+          // Its own image tool: started, then done with the picture's bytes and a saved file this process can't read.
+          const ig = { type: "imageGeneration", id: "ig_1", status: "inProgress", revisedPrompt: null, result: "" };
+          item("item/started", ig);
+          item("item/completed", {
+            ...ig,
+            status: "completed",
+            revisedPrompt: "A lighthouse at dusk",
+            result: Buffer.from("png bytes").toString("base64"),
+            failure: null,
+            savedPath: "/nowhere/generated_images/ig_1.png",
+          });
+          message("m-img", "Here it is.", true);
+          usage(100, 0, 10);
+          return complete("completed");
+        }
         if (/\bTOOLS\b/.test(prompt)) {
           message("m-1", "I’ll check the folder now.", false);
           const cmd = {

@@ -360,9 +360,9 @@ describe("the agent page's cards and the chat's", () => {
     expect(value(css, ".agp-card.ac-card", "padding-block")).toBe("var(--agp-card-py)");
     // Only a head with a button (32px) reaches into the padding; a title alone (22px) stays 12px in.
     expect(declarations(css, ".agp-card>.ac-card__head:first-child")).toEqual([]);
-    expect(value(css, ".agp-card>.ac-card__head:first-child:has(.ac-card__action .ac-btn)", "margin-block")).toBe(
-      "calc(var(--action-clear) - var(--agp-card-py)) -2px",
-    );
+    expect(
+      value(css, ".agp-card>.ac-card__head:first-child:has(.ac-card__action :is(.ac-btn, .ac-seg))", "margin-block"),
+    ).toBe("calc(var(--action-clear) - var(--agp-card-py)) calc(-1 * var(--space-1))");
     // The foot reaches the card's bottom edge (12px), not past it (--card-pad is 16px).
     expect(value(css, ".agp-card>.ac-card__foot", "margin-bottom")).toBe("-12px");
   });
@@ -370,12 +370,10 @@ describe("the agent page's cards and the chat's", () => {
   test("the cards beside them use the same 12px", async () => {
     const css = await sheet(
       "apps/web/src/pages/approvals.css",
-      "apps/web/src/pages/wiki.css",
       "apps/web/src/pages/drive.css",
       "apps/web/src/components/computer/computer.css",
     );
     expect(value(css, ".ap-waiters", "padding")).toBe("12px 16px");
-    expect(value(css, ".wiki-import-card", "padding")).toBe("12px");
     expect(value(css, ".drive-note", "padding")).toBe("12px 14px");
     expect(value(css, ".cmp-entry__row", "padding")).toBe("12px 14px");
   });

@@ -159,6 +159,21 @@ export function videoClock(seconds: number): string {
 /** A lone picture's height for `width`: one box (4:3), the picture whole inside it, for the video's reason. */
 export const singleImageHeight = (width: number) => Math.round(width * 0.75);
 
+/** The tallest a lone picture of known shape gets (a portrait one narrows to fit). */
+export const MAX_PICTURE_HEIGHT = 400;
+
+/**
+ * A lone picture's box at most `width` wide: in its own proportions when its size is known (`ratio`, as the web's
+ * `[data-ratio]` tile), no taller than `MAX_PICTURE_HEIGHT`; else the one 4:3 box.
+ */
+export function singleImageBox(width: number, ratio: number | undefined): { width: number; height: number } {
+  if (!ratio) return { width, height: singleImageHeight(width) };
+  const height = Math.round(width / ratio);
+  return height <= MAX_PICTURE_HEIGHT
+    ? { width, height }
+    : { width: Math.round(MAX_PICTURE_HEIGHT * ratio), height: MAX_PICTURE_HEIGHT };
+}
+
 /**
  * A safe file name for a copy in the cache (and the name the share sheet shows): no folders, no
  * characters iOS or other apps refuse, not empty, not too long (the extension is kept).

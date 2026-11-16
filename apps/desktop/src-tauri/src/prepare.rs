@@ -273,6 +273,7 @@ fn pane_url(pane: &str) -> Option<String> {
         "screen" => "Privacy_ScreenCapture",
         "disk" => "Privacy_AllFiles",
         "network" => "Privacy_LocalNetwork",
+        "microphone" => "Privacy_Microphone",
         _ => return None,
     };
     Some(format!("x-apple.systempreferences:com.apple.preference.security?{anchor}"))
@@ -334,7 +335,7 @@ mod tests {
     }
 
     #[test]
-    fn only_the_three_privacy_panes_open() {
+    fn only_the_known_privacy_panes_open() {
         assert_eq!(
             pane_url("screen").as_deref(),
             Some("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
@@ -346,6 +347,10 @@ mod tests {
         assert_eq!(
             pane_url("network").as_deref(),
             Some("x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork")
+        );
+        assert_eq!(
+            pane_url("microphone").as_deref(),
+            Some("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
         );
         assert_eq!(pane_url("files"), None);
         assert_eq!(pane_url("x-apple.systempreferences:com.apple.Accounts"), None);

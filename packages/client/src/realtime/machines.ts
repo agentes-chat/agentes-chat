@@ -88,6 +88,12 @@ function patchTargets(
  * Returns whether the event was one of these.
  */
 export function applyMachineEvent(qc: QueryClient, orgId: string, event: { type: string }): boolean {
+  // What an agent keeps running (ADR 0176): only its list, nothing else about the computer changed.
+  if (event.type === "machine.holds") {
+    const agentId = (event as { agentId?: unknown }).agentId;
+    if (typeof agentId === "string") void qc.invalidateQueries({ queryKey: keys.agentHolds(orgId, agentId) });
+    return true;
+  }
   if (!isMachineEvent(event.type)) return false;
   // The devices list (`devices.changed`, and every computer's state, pause or name in it) is read again.
   void qc.invalidateQueries({ queryKey: keys.devices(orgId) });
@@ -333,7 +339,21 @@ export function applyMembershipEvent(qc: QueryClient, orgId: string, event: Chan
 export function applyConversationEvent(qc: QueryClient, orgId: string, event: ChannelEvent): boolean {
   const type: string = event.type;
   if (type === "artifact.created" || type === "artifact.updated" || type === "artifact.deleted") {
-    void qc.invalidateQueries({ queryKey: keys.artifacts(orgId) });
+    const e = event as { artifact?: { id?: unknown }; artifactId?: unknown };
+    const id = typeof e.artifact?.id === "string" ? e.artifact.id : e.artifactId;
+    // That file's own queries (its card, versions, bytes) and the lists it may sit in. Not every other file on the
+    // screen: each save used to read all their cards again and download all their previews again.
+    void qc.invalidateQueries(
+      typeof id === "string"
+        ? {
+            predicate: ({ queryKey: k }) =>
+              k[0] === "org" &&
+              k[1] === orgId &&
+              k[2] === "artifacts" &&
+              (k[3] === "list" || k[3] === "trash" || k[4] === id),
+          }
+        : { queryKey: keys.artifacts(orgId) },
+    );
     const channelId = (event as { channelId?: unknown }).channelId;
     if (type === "artifact.deleted" && typeof channelId === "string")
       void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", channelId] });
@@ -488,8 +508,11 @@ export function applyWorkspaceEvent(qc: QueryClient, orgId: string, event: { typ
     void qc.invalidateQueries({ queryKey: keys.people(orgId) });
     return true;
   }
+  // An agent's run started, parked, came back or ended: its face and line follow, and so does "Trabalhando agora"
+  // (work handed off in two agents' DM reaches no conversation's events).
   if (event.type === "agent.status") {
     void qc.invalidateQueries({ queryKey: keys.agentStatus(orgId) });
+    void qc.invalidateQueries({ queryKey: keys.working(orgId) });
     return true;
   }
   // A routine's run was queued, started or ended, or a routine was made, changed or deleted: Rotinas follows.

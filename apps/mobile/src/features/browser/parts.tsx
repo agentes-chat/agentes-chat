@@ -3,11 +3,14 @@ import {
   type BrowserFrame,
   type BrowserInputEvent,
   browserFrameDataUrl,
+  type CountedPointer,
   createBrowserLiveConnection,
   createTouchInput,
   frameMetadata,
+  frameView,
   inputProblem,
   keyEvents,
+  nextPointer,
   PASTE_MAX_BYTES,
   pasteBytes,
   pasteEvents,
@@ -19,8 +22,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Image, type LayoutChangeEvent, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { GestureDetector, GestureStateManager, type TouchData, useManualGesture } from "react-native-gesture-handler";
+import { useDerivedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { fieldText, Icon, Locked, Text } from "@/ui";
+import { fieldText, Icon, Locked, PictureEdge, Text } from "@/ui";
+import { AgentPointer } from "../computer/AgentPointer";
 import { useColors, useConnection } from "../shared/hooks";
 import { tapHaptic, useSurface } from "../shared/parts";
 import { keyPastDraft, LIVE_KEYS, type LiveKey, type PageGap, touchOnPage } from "./logic";
@@ -37,16 +42,28 @@ export function FrameView({
   frame,
   enabled,
   onInput,
+  cursor,
+  edge,
 }: {
   frame: BrowserFrame;
   enabled: boolean;
   onInput: (events: BrowserInputEvent[]) => void;
+  /** The agent's cursor over its page (null `pointer`: none, as while someone is in control). */
+  cursor?: { agentId: string; name: string; color: string | undefined; pointer: CountedPointer | null };
+  /** The radius of the box that clips the picture: its hairline, over the picture and under the cursor. */
+  edge?: number;
 }) {
   const { t } = useTranslation();
   const raised = useSurface("e2");
   const [view, setView] = useState({ width: 0, height: 0 });
   const [sliding, setSliding] = useState(false);
   const meta = useMemo(() => frameMetadata(frame), [frame]);
+  const { deviceWidth, deviceHeight } = meta;
+  const drawn = useMemo(
+    () => ({ ...frameView(view, { deviceWidth, deviceHeight }), boxWidth: view.width, boxHeight: view.height }),
+    [view, deviceWidth, deviceHeight],
+  );
+  const pointerView = useDerivedValue(() => drawn);
   const now = useRef({ meta, view, enabled, onInput });
   now.current = { meta, view, enabled, onInput };
   const [{ down, move, up, cancel }] = useState(() => {
@@ -109,6 +126,8 @@ export function FrameView({
           resizeMode="contain"
           fadeDuration={0}
         />
+        {edge === undefined ? null : <PictureEdge radius={edge} />}
+        {cursor ? <AgentPointer {...cursor} view={pointerView} /> : null}
         {sliding ? (
           <View pointerEvents="none" style={styles.hintRow}>
             <View style={[styles.hint, raised]}>
@@ -355,6 +374,8 @@ export function AddressBar({
 export interface LiveState {
   frame: BrowserFrame | null;
   unavailable: Unavailable;
+  /** The computer's own words with `unavailable` (why it couldn't start the browser). */
+  message: string | null;
   controllerUserId: string | null;
   /** The handoff the last status carried (undefined until a status arrives). */
   handoff: { controllerUserId: string | null } | null | undefined;
@@ -367,6 +388,8 @@ export interface LiveState {
   online: boolean;
   /** The last of a person's clicks or keys that didn't reach the page: a new object each time. */
   lost: { words: NonNullable<ReturnType<typeof inputProblem>> } | null;
+  /** Where the agent's pointer last went on the page; `n` counts its gestures. */
+  pointer: CountedPointer | null;
 }
 
 /**
@@ -380,11 +403,13 @@ export function useLiveConnection(agentId: string, enabled: boolean, maxFps?: nu
   const connection = useConnection();
   const [frame, setFrame] = useState<BrowserFrame | null>(null);
   const [unavailable, setUnavailable] = useState<Unavailable>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [controllerUserId, setControllerUserId] = useState<string | null>(null);
   const [handoff, setHandoff] = useState<{ controllerUserId: string | null } | null | undefined>(undefined);
   const [hidden, setHidden] = useState(false);
   const [online, setOnline] = useState(false);
   const [lost, setLost] = useState<LiveState["lost"]>(null);
+  const [pointer, setPointer] = useState<CountedPointer | null>(null);
   const liveRef = useRef<ReturnType<typeof createBrowserLiveConnection> | null>(null);
   // The rate when the watch starts; a change later goes through `setMaxFps` (never a new watch).
   const fps = useRef(maxFps);
@@ -412,7 +437,11 @@ export function useLiveConnection(agentId: string, enabled: boolean, maxFps?: nu
         // What the person in control does isn't ours to keep on screen either.
         if (st.hidden) setFrame(null);
       },
-      onUnavailable: (reason) => setUnavailable(reason),
+      onPointer: (p) => setPointer((was) => nextPointer(was, p)),
+      onUnavailable: (reason, words) => {
+        setUnavailable(reason);
+        setMessage(words ?? null);
+      },
       onEnded: () => setUnavailable("ended"),
       onError: (code) => {
         if (code === "forbidden" || code === "not_found") setUnavailable("forbidden");
@@ -446,6 +475,7 @@ export function useLiveConnection(agentId: string, enabled: boolean, maxFps?: nu
       setControllerUserId(null);
       setHandoff(undefined);
       setHidden(false);
+      setPointer(null);
     };
   }, [connection, agentId, enabled]);
 
@@ -457,7 +487,7 @@ export function useLiveConnection(agentId: string, enabled: boolean, maxFps?: nu
     liveRef.current?.sendInput(events);
   }, []);
   const retry = useCallback(() => liveRef.current?.retry(), []);
-  return { frame, unavailable, controllerUserId, handoff, hidden, sendInput, retry, online, lost };
+  return { frame, unavailable, message, controllerUserId, handoff, hidden, sendInput, retry, online, lost, pointer };
 }
 
 /** The field's height and its round buttons: the send button sits concentric in its pill end. */

@@ -8,13 +8,13 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
       "Umowa dotycząca korzystania z agentes.chat: Twój obszar roboczy, Twoi agenci oraz zakres odpowiedzialności każdej ze stron.",
     courtesy:
       "Niniejszy dokument jest tłumaczeniem grzecznościowym. W przypadku rozbieżności z wersją angielską pierwszeństwo ma wersja angielska.",
-    updated: "2026-11-06",
+    updated: "2026-11-16",
     sections: [
       {
         id: "agreement",
         heading: "1. Umowa",
         blocks: [
-          "Niniejsze Warunki korzystania („Warunki”) stanowią wiążącą umowę między CODARI GLOBAL, LLC, spółką z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Wyoming, prowadzącą działalność pod nazwą agentes.chat („agentes.chat”, „my”, „nas”), a osobą lub podmiotem, który zakłada konto lub obszar roboczy („Ty”). Zakładając konto, dołączając do obszaru roboczego lub w inny sposób korzystając z agentes.chat w przeglądarce, w aplikacji na komputery Mac lub w aplikacji na telefon („Usługa”), akceptujesz niniejsze Warunki oraz naszą Politykę prywatności. Jeżeli korzystasz z Usługi w imieniu spółki lub innego podmiotu, oświadczasz, że jesteś umocowany do zaciągania w jego imieniu zobowiązań.",
+          "Niniejsze Warunki korzystania („Warunki”) stanowią wiążącą umowę między AGENTESCHAT, LLC, spółką z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Delaware, prowadzącą działalność pod nazwą agentes.chat („agentes.chat”, „my”, „nas”), a osobą lub podmiotem, który zakłada konto lub obszar roboczy („Ty”). Zakładając konto, dołączając do obszaru roboczego lub w inny sposób korzystając z agentes.chat w przeglądarce, w aplikacji na komputery Mac lub w aplikacji na telefon („Usługa”), akceptujesz niniejsze Warunki oraz naszą Politykę prywatności. Jeżeli korzystasz z Usługi w imieniu spółki lub innego podmiotu, oświadczasz, że jesteś umocowany do zaciągania w jego imieniu zobowiązań.",
           "Aby korzystać z Usługi, musisz mieć ukończone co najmniej 18 lat i posiadać zdolność do zawarcia umowy.",
         ],
       },
@@ -150,7 +150,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Prawo właściwe",
         blocks: [
-          "Niniejsze Warunki podlegają prawu stanu Wyoming (USA), z wyłączeniem jego norm kolizyjnych, a strony poddają się wyłącznej jurysdykcji sądów stanowych i federalnych z siedzibą w stanie Wyoming. Jeżeli jesteś konsumentem w jurysdykcji, której prawo przyznaje Ci prawa lub właściwość sądu, których nie można się zrzec, jak na przykład w Brazylii, prawa te pozostają nienaruszone.",
+          "Niniejsze Warunki podlegają prawu stanu Delaware (USA), z wyłączeniem jego norm kolizyjnych, a strony poddają się wyłącznej jurysdykcji sądów stanowych i federalnych z siedzibą w stanie Delaware. Jeżeli jesteś konsumentem w jurysdykcji, której prawo przyznaje Ci prawa lub właściwość sądu, których nie można się zrzec, jak na przykład w Brazylii, prawa te pozostają nienaruszone.",
         ],
       },
       {
@@ -164,7 +164,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Kontakt",
         blocks: [
-          "CODARI GLOBAL, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Wszystkie pozostałe sprawy: hello@agentes.chat",
+          "AGENTESCHAT, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Wszystkie pozostałe sprawy: hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +175,13 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
       "Jakie dane zbieramy, co i dokąd wysyłają agenci, kto może widzieć Twój obszar roboczy oraz jakie przysługują Ci prawa.",
     courtesy:
       "Niniejszy dokument jest tłumaczeniem grzecznościowym. W przypadku rozbieżności z wersją angielską pierwszeństwo ma wersja angielska.",
-    updated: "2026-11-12",
+    updated: "2026-11-16",
     sections: [
       {
         id: "overview",
         heading: "1. Informacje ogólne",
         blocks: [
-          "CODARI GLOBAL, LLC, spółka z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Wyoming, prowadząca działalność pod nazwą agentes.chat („agentes.chat”, „my”), prowadzi agentes.chat: obszar roboczy, w którym ludzie i agenci AI pracują wspólnie, dostępny w przeglądarce, jako aplikacja na komputery Mac oraz jako aplikacja na telefon („Usługa”). Niniejsza polityka rozróżnia dwie role:",
+          "AGENTESCHAT, LLC, spółka z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Delaware, prowadząca działalność pod nazwą agentes.chat („agentes.chat”, „my”), prowadzi agentes.chat: obszar roboczy, w którym ludzie i agenci AI pracują wspólnie, dostępny w przeglądarce, jako aplikacja na komputery Mac oraz jako aplikacja na telefon („Usługa”). Niniejsza polityka rozróżnia dwie role:",
           {
             list: [
               "W odniesieniu do **danych konta**, czyli informacji, które ludzie nam przekazują, aby założyć konto i z niego korzystać, jesteśmy administratorem danych.",
@@ -231,7 +231,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
           {
             list: [
               "**Między urządzeniami a naszymi serwerami.** Wszystko, co jest przesyłane między naszymi serwerami a przeglądarkami, aplikacjami i komputerami, które się z nimi łączą, w tym Treści Obszaru Roboczego, przechodzi przez naszego dostawcę usług sieciowych, który chroni Usługę przed atakami. W tym celu dostawca usług sieciowych odszyfrowuje ten ruch w swoim centrum danych położonym najbliżej każdego urządzenia i obsługuje go w naszym imieniu.",
-              "**Udzielanie odpowiedzi.** Gdy agent pracuje, wysyła potrzebny mu kontekst (kontekst obszaru roboczego, instrukcje agenta, rozmowę, odpowiednią pamięć i wyniki swoich narzędzi) do dostawcy modelu wybranego dla tego agenta. W przypadku klucza API dodanego przez obszar roboczy wywołanie odbywa się w ramach własnego konta obszaru roboczego i jego umowy z tym dostawcą. W przypadku planu AI, takiego jak Claude lub ChatGPT, podłączonego do agenta, agent pracuje w ramach konta osoby, która podłączyła plan, i na warunkach dostawcy.",
+              "**Udzielanie odpowiedzi.** Gdy agent pracuje, wysyła potrzebny mu kontekst (kontekst obszaru roboczego, instrukcje agenta, rozmowę, odpowiednią pamięć i wyniki swoich narzędzi) do dostawcy modelu wybranego dla tego agenta. W przypadku klucza API dodanego przez obszar roboczy wywołanie odbywa się w ramach własnego konta obszaru roboczego i jego umowy z tym dostawcą. Niektórzy dostawcy przekazują wywołanie firmie, która tworzy lub hostuje model, a ta również przetwarza je na warunkach tego dostawcy. W przypadku planu AI, takiego jak Claude lub ChatGPT, podłączonego do agenta, agent pracuje w ramach konta osoby, która podłączyła plan, i na warunkach dostawcy.",
               "**Decydowanie, kto odpowiada.** Model routingu odczytuje nową wiadomość, nazwy i role agentów obszaru roboczego oraz ostatnią część rozmowy, aby zdecydować, który agent, jeżeli którykolwiek, powinien odpowiedzieć. Działa on w TypeSafe lub, awaryjnie, u dostawcy modelu obszaru roboczego. Routing nigdy nie nadaje agentowi żadnych uprawnień.",
               "**Pamięć.** Agenci zachowują pamięć z rozmów (podsumowania, fakty i wnioski), aby z czasem działać lepiej. Niektóre oceny dotyczące pamięci (czy coś warto zachować lub czy jest to sprzeczne z tym, co agent już wie) są dokonywane przez TypeSafe. Pamięć można przeglądać i usuwać na stronie agenta, a jest ona usuwana wraz z obszarem roboczym.",
               "**Wyszukiwanie.** Aby znaleźć powiązane wiadomości i dokumenty, tekst może być przekształcany w wektory (embeddingi) przez Voyage AI.",
@@ -286,14 +286,14 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Przekazywanie danych za granicę",
         blocks: [
-          "Nasza aplikacja i jej baza danych działają w Stanach Zjednoczonych, a dostawcy wymienieni w niniejszej polityce przetwarzają dane w Stanach Zjednoczonych. Komputery obszarów roboczych działają w Unii Europejskiej lub w Stanach Zjednoczonych, a nasz dostawca usług sieciowych obsługuje ruch w swoim centrum danych położonym najbliżej każdego urządzenia, w Stanach Zjednoczonych lub gdzie indziej. Gdy dane osobowe podlegające RODO lub brytyjskiemu RODO (UK GDPR) są przekazywane do państwa trzeciego, opieramy się na standardowych klauzulach umownych Komisji Europejskiej oraz na brytyjskim aneksie (UK Addendum). W przypadku danych podlegających LGPD opieramy się na zabezpieczeniach umownych przewidzianych w art. 33.",
+          "Nasza aplikacja i jej baza danych działają w Stanach Zjednoczonych, a dostawcy wymienieni w niniejszej polityce przetwarzają dane w Stanach Zjednoczonych, z wyjątkiem dostawców modeli i podłączonych usług wybranych przez obszar roboczy oraz firm, którym przekazują one wywołania, a wszystkie te podmioty mogą przetwarzać dane w innych krajach na własnych warunkach. Komputery obszarów roboczych działają w Unii Europejskiej lub w Stanach Zjednoczonych, a nasz dostawca usług sieciowych obsługuje ruch w swoim centrum danych położonym najbliżej każdego urządzenia, w Stanach Zjednoczonych lub gdzie indziej. Gdy dane osobowe podlegające RODO lub brytyjskiemu RODO (UK GDPR) są przekazywane do państwa trzeciego, opieramy się na standardowych klauzulach umownych Komisji Europejskiej oraz na brytyjskim aneksie (UK Addendum). W przypadku danych podlegających LGPD opieramy się na zabezpieczeniach umownych przewidzianych w art. 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. Aplikacje na telefon i na komputery Mac",
         blocks: [
-          "Aplikacja na telefon wysyła powiadomienia za pośrednictwem Expo, Apple i Google. Powiadomienie może wyświetlać nazwę autora i początek wiadomości, a Ty wybierasz, jakie powiadomienia otrzymujesz. Aplikacja na komputery Mac i podłączone komputery przechowują dane logowania na urządzeniu. Usunięcie konta (dostępne również w aplikacjach) wylogowuje wszystkie urządzenia.",
+          "Aplikacja na telefon wysyła powiadomienia za pośrednictwem Apple i Google. Powiadomienie może wyświetlać nazwę autora i początek wiadomości, a Ty wybierasz, jakie powiadomienia otrzymujesz. Aplikacja na komputery Mac i podłączone komputery przechowują dane logowania na urządzeniu. Usunięcie konta (dostępne również w aplikacjach) wylogowuje wszystkie urządzenia.",
         ],
       },
       {
@@ -342,7 +342,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Kontakt",
         blocks: [
-          "CODARI GLOBAL, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Zapytania dotyczące ochrony danych z UE, Wielkiej Brytanii i Brazylii trafiają do naszego zespołu ds. prywatności pod tym samym adresem. We wszystkich innych sprawach napisz na adres hello@agentes.chat.",
+          "AGENTESCHAT, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Zapytania dotyczące ochrony danych z UE, Wielkiej Brytanii i Brazylii trafiają do naszego zespołu ds. prywatności pod tym samym adresem. We wszystkich innych sprawach napisz na adres hello@agentes.chat.",
         ],
       },
     ],

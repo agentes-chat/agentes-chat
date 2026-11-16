@@ -138,6 +138,11 @@ export interface ToolDefinition {
    */
   looksOnly?(input: Record<string, unknown>): boolean;
   /**
+   * A `sensitive` tool's call with this input asks nobody, and needs no `why`: it runs nothing a person guards
+   * (`keep_running` listing the agent's holds or ending one).
+   */
+  asksNobody?(input: Record<string, unknown>): boolean;
+  /**
    * A call that carries `why` (in the tool's own schema) asks a person's approval first: how an agent asks for
    * a command the computer held for a person (ADR 0053 §3, amended 2026-10-30).
    */

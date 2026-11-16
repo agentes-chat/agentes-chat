@@ -54,6 +54,7 @@ import {
   yieldRoute,
 } from "./accounts";
 import { codexThreadKey, unwrapShell } from "./brain-codex";
+import { coAuthorLines } from "./co-authors";
 import { commandApproval, ownBranches } from "./command-gate";
 import { RunnerError } from "./errors";
 import { shellCommand, windowsTaskkill } from "./exec";
@@ -188,6 +189,8 @@ interface Entry {
   /** Protocol 14: commit what changed at the end with this message; `HEAD` when it started. */
   commit?: string;
   startSha?: string;
+  /** Protocol 63: the lines its commits end with (`AgentScope.coAuthors`), for that commit and a start again. */
+  coAuthors?: string[];
   /** Protocol 31: the agent's account its CLI signs in with (absent: the computer's own sign-in). */
   account?: string;
   /** Its CLI is root's: there is no wrapper, and `pid` is this worker's own, never one to signal. */
@@ -197,6 +200,13 @@ interface Entry {
   /** Why the runner canceled it: what its agent reads first in the result. */
   canceledWhy?: string;
 }
+
+/** The task's agent as its start named it, for what its commits get (`agentSecrets`). */
+const scopeOf = (t: Entry): AgentScope => ({
+  id: t.agentId,
+  handle: t.agentHandle,
+  ...(t.coAuthors ? { coAuthors: t.coAuthors } : {}),
+});
 
 interface Journal {
   tasks: Entry[];
@@ -1360,6 +1370,7 @@ export class TaskManager {
     }
     // An allowed folder outside the agent's own (protocol 10) is reported by its absolute path.
     const rel = isInside(folder, cwd) ? path.relative(folder, cwd).split(path.sep).join("/") : cwd;
+    const coAuthors = coAuthorLines(agent);
     const entry: Entry = {
       taskId,
       agentId: String(agent.id),
@@ -1376,6 +1387,7 @@ export class TaskManager {
       ...(mcpToken ? { mcpToken } : {}),
       ...(mcpToken && isRunToolToken(req.mission?.mcpToken) ? { serverToken: req.mission.mcpToken } : {}),
       ...(commitMessage && startSha ? { commit: commitMessage, startSha } : {}),
+      ...(coAuthors.length > 0 ? { coAuthors } : {}),
       ...(signIn ? { account: signIn.account } : {}),
       ...(hosted ? { account: String(req.account), hosted: true as const } : {}),
       ...(plan && signIn?.planKey ? { planKey: true } : {}),
@@ -1706,7 +1718,7 @@ export class TaskManager {
       });
       for (const f of ["exit.json", "alive", "child.pid", "cancel"]) rmSync(path.join(dir, f), { force: true });
       for (const f of ["stdout.log", "stderr.log"]) writeFileSync(path.join(dir, f), "", { mode: 0o600 });
-      const secrets = (await this.opts.secrets?.({ id: t.agentId, handle: t.agentHandle }).catch(() => null)) ?? null;
+      const secrets = (await this.opts.secrets?.(scopeOf(t)).catch(() => null)) ?? null;
       const env = launch?.env ?? (secrets ? { ...process.env, ...secrets.env } : process.env);
       const child = this.spawnWrapper(dir, env, t.executor, launch?.token);
       (child as unknown as EventEmitter).on("error", () => {});
@@ -1740,7 +1752,7 @@ export class TaskManager {
     const ok = exit !== null && exit.exitCode === 0 && !exit.reason;
     const message = ok ? t.commit : `${t.commit} (stopped)`;
     void (async () => {
-      const secrets = await this.opts.secrets?.({ id: t.agentId, handle: t.agentHandle }).catch(() => null);
+      const secrets = await this.opts.secrets?.(scopeOf(t)).catch(() => null);
       let commit: { startSha: string; endSha: string; error?: string };
       try {
         commit = await commitChanges(t.cwd, message, {

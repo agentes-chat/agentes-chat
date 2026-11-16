@@ -15,14 +15,19 @@ import type { ToolDefinition } from "./types";
  *   refuses on its own when nobody is behind the run.
  * - `unattended` that a routine's report or work woke (`fedByRoutine`): what the routine read (inbound mail, a
  *   webhook) feeds it, so it keeps the routine's bounds (below), plus the reply where it is (`here`), never
- *   `hand_off` nor a mission's tools; every write to a connected app asks a person.
+ *   `hand_off` nor a mission's tools; every write to a connected app asks a person, except, on the run its report
+ *   or a teammate's answer to its question woke while that is all it read, the routine's own actions (`onOwnJob`,
+ *   ADR 0053 addendum 2026-11-13).
  * - `routine`: nothing that speaks for someone (reactions, GIFs and stickers, questions, reminders,
  *   routines, events, channels, secrets, permissions). It reports through `hand_off`, whose message may carry a GIF
  *   (its `gif`, as `post_message`'s, ADR 0091 addendum 2026-11-09). Otherwise it
  *   works as the agent (ADR 0109: one permission model, the agent's own): reads, the web and the browser,
  *   internal changes people can undo (issues, memory, wiki, Drive, Vault contacts, its own branches and pull
- *   requests, its computer); every write to a connected app asks a person, except the actions its creator allowed for its job
- *   (`routines.own_actions`: the gateway lets those through, `ownJobCovers`). It reaches other agents (`ask_agent`,
+ *   requests, its computer). At `risky`, while its creator still decides the agent's approvals (`creatorDecides`), it
+ *   writes to connected apps as a person's run does: what the tool marks as asking (a send, a delete, a payment, an
+ *   invite, a tool an admin set to ask, merge, deploy and rollback) asks. Otherwise every write to a connected app
+ *   asks a person, except the actions its creator allowed for its job (`routines.own_actions`: the gateway lets those
+ *   through, `ownJobCovers`). It reaches other agents (`ask_agent`,
  *   `tell_agent`) and posts where its creator can post (`post_message`, `send_dm` to its creator): the
  *   tools hold it to its creator's rooms and agents (ADR 0053 §2, amended 2026-10-31).
  * - `routine` redoing a widget (its brief's `widget`, ADR 0135 §5): it only reads (built-in reads, connected apps'
@@ -255,6 +260,7 @@ const INTERNAL_BY_NAME: Readonly<Record<string, InternalArea>> = {
   // Their scope only says the agent may read skills: these rewrite one.
   update_skill: "skills",
   update_skill_from_source: "skills",
+  create_skill: "skills",
   // Boards and widgets for the person behind the run (ADR 0135 §10): private until the person widens them.
   create_dashboard: "dashboards",
   create_widget: "dashboards",
@@ -315,6 +321,7 @@ export function toolKind(tool: PolicyTool): ToolKind {
     tool.name === "set_status" ||
     tool.name === "withdraw_request" ||
     tool.name === "set_reply_style" ||
+    tool.name === "commit_co_author" ||
     tool.name === "wait_for_device"
   )
     return { kind: "self" };
@@ -391,6 +398,8 @@ export function toolPolicy(
   authority: RunAuthority,
   tool: PolicyTool,
   level: ApprovalsLevel = DEFAULT_APPROVALS_LEVEL,
+  /** A routine's own run whose creator still decides its agent's approvals (the gateway reads it fresh). */
+  creatorDecides = false,
 ): PolicyDecision {
   const what = toolKind(tool);
   const asks = level === "always" && asksAtAlways(what, tool);
@@ -422,7 +431,7 @@ export function toolPolicy(
     case "internal":
       return asks ? APPROVE : ALLOW;
     case "external":
-      return APPROVE;
+      return !fed && creatorDecides && level === "risky" ? ALLOW : APPROVE;
     case "mission":
       return refuse(fed ? REFUSALS.fedMission : REFUSALS.missionOnly);
     case "unknown":

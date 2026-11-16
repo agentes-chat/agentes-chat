@@ -289,6 +289,24 @@ export async function deliverParked(
   });
 }
 
+/** The agent has no run left in its computer's line: its parked wakes look now, not at their next `INBOX_LOOK_MS`. */
+export async function kickParkedWakes(db: Executor, orgId: string, agentId: string) {
+  if ((await agentLineRank(db, orgId, agentId)) !== null) return;
+  const now = new Date();
+  await db
+    .update(outbox)
+    .set({ nextAttemptAt: now })
+    .where(
+      and(
+        eq(outbox.orgId, orgId),
+        eq(outbox.kind, INBOX_JOB),
+        eq(outbox.status, "pending"),
+        sql`${outbox.payload}->>'agentId' = ${agentId}`,
+        sql`${outbox.nextAttemptAt} > ${now}`,
+      ),
+    );
+}
+
 /**
  * The question or note posted as `messageId` that no run took yet now waits on `runId`; with none, it waits on, its
  * deadline moved on (a parked wake's look).

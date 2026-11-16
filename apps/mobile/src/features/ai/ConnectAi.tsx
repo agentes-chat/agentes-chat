@@ -17,7 +17,7 @@ import {
   noAiLockedLine,
   PLAN_CHOICES,
 } from "@agenteschat/client/lib/no-ai";
-import { can } from "@agenteschat/client/lib/permissions";
+import { can, makesAgents } from "@agenteschat/client/lib/permissions";
 import {
   keyLooksValid,
   type ProviderId,
@@ -25,7 +25,13 @@ import {
   providerLabel,
   providerOf,
 } from "@agenteschat/client/lib/providers";
-import { isRightHand, rightHandOnKey, thinksWithLine } from "@agenteschat/client/lib/right-hand";
+import {
+  isRightHand,
+  rightHandOnKey,
+  type SavedKey,
+  settleSavedKey,
+  thinksWithLine,
+} from "@agenteschat/client/lib/right-hand";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, usePreventRemove } from "expo-router";
 import { useCallback, useState } from "react";
@@ -51,6 +57,7 @@ export function useConnectKey(orgId: string, asked?: string) {
   const { t } = useTranslation();
   const api = useApi();
   const qc = useQueryClient();
+  const toast = useToast();
   const [provider, setProvider] = useState<ProviderId>(() => providerGuess(undefined, asked));
   // "Outro provedor" (ADR 0146): its own form, saved by its own button (a sheet only: the first run saves a key).
   const [custom, setCustom] = useState(asked === CUSTOM_PROVIDER);
@@ -59,6 +66,25 @@ export function useConnectKey(orgId: string, asked?: string) {
   const [failed, setFailed] = useState(false);
   const [refused, setRefused] = useState<ReturnType<typeof keyRefusal>>(null);
   const [savedNote, setSavedNote] = useState<string>();
+  // The workspace already had this key: the save updated it instead of adding a copy.
+  const [resaved, setResaved] = useState(false);
+  // What the save came to (`settleSavedKey`), and "Usar esta chave para todos" while it runs.
+  const [settled, setSettled] = useState<{ key: Credential; outcome: SavedKey }>();
+  const [makingDefault, setMakingDefault] = useState(false);
+  const forAll = async () => {
+    if (!settled || makingDefault) return;
+    setMakingDefault(true);
+    try {
+      await api.agents.makeDefaultCredential(orgId, settled.key.id);
+      setSettled({ ...settled, outcome: { kind: "all" } });
+      void qc.invalidateQueries({ queryKey: keys.settings(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.aiStatus(orgId) });
+    } catch (error) {
+      toast({ title: errorText(t, error), icon: "x" });
+    } finally {
+      setMakingDefault(false);
+    }
+  };
   const clean = key.trim();
   const looksRight = clean.length === 0 || keyLooksValid(provider, clean);
   // A pasted key says whose it is when only one provider's keys look like it.
@@ -76,6 +102,7 @@ export function useConnectKey(orgId: string, asked?: string) {
     try {
       const entry = providerOf(provider);
       const saved = await api.agents.addCredential(orgId, { provider, label: entry?.label ?? provider, apiKey: clean });
+      setResaved(saved.reused === true);
       if (saved.check === "unchecked")
         setSavedNote(t("connectAi.key.savedUnchecked", { provider: providerLabel(provider) }));
       // `aiStatus` lives under `credentials`: both refresh.
@@ -104,6 +131,11 @@ export function useConnectKey(orgId: string, asked?: string) {
     refused,
     savedNote,
     setSavedNote,
+    resaved,
+    settled,
+    setSettled,
+    makingDefault,
+    forAll,
     save,
   };
 }
@@ -167,12 +199,28 @@ export function ConnectAiSheet() {
   // Opened for one agent: its name in the title.
   const one = named?.length === 1 ? dir.agentById.get(named[0] ?? "") : undefined;
   const rightHand = isRightHand(one);
+  // Opened for one agent (the right hand aside): a key saved here goes on it. Else it is for every agent.
+  const keyAgent = one && !rightHand ? one : undefined;
+  const settleKey = async (key: Credential) => {
+    try {
+      const agent = keyAgent && { ...keyAgent, brain: keyAgent.brain?.kind };
+      form.setSettled({ key, outcome: await settleSavedKey(api, orgId, key, agent, models.data?.models ?? []) });
+      void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+      void qc.invalidateQueries({ queryKey: keys.settings(orgId) });
+      if (keyAgent) void qc.invalidateQueries({ queryKey: keys.agentBrain(orgId, keyAgent.id) });
+    } catch (error) {
+      toast({ title: errorText(t, error), icon: "x" });
+    }
+  };
   // No agent of theirs yet, and it isn't opened for someone else's: a plan signs in for the agents they create.
   const bare = !named && agents.length === 0;
   const [accountAdded, setAccountAdded] = useState(false);
   // Or one of that plan they already have, which the plan's page says is connected.
   const ai = useAiAccounts(orgId, bare);
-  const hasPlan = bare && view.page === "plan" && freePlanAccount(ai.data?.accounts, view.choice) !== undefined;
+  const planAccount = bare && view.page === "plan" ? freePlanAccount(ai.data?.accounts, view.choice) : undefined;
+  const hasPlan = planAccount !== undefined;
+  // That plan's next step is an agent that thinks with it, for whoever may make one (never over one being made).
+  const makeWith = planAccount && params.forNew !== "1" && makesAgents(org) ? planAccount : undefined;
   // Someone else's agent: who connects a plan instead.
   const owner = one?.ownerUserId ? dir.memberById.get(one.ownerUserId)?.name : undefined;
   const locked =
@@ -263,11 +311,17 @@ export function ConnectAiSheet() {
                     form.setSavedNote(thinksWithLine(t, "workspace", one.name, key.label));
                   void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
                   void qc.invalidateQueries({ queryKey: keys.agentBrain(orgId, one.id) });
-                }
+                } else await settleKey(key);
                 setKeySaved(true);
                 answer();
               })
             }
+            onEndpointSaved={async (key) => {
+              await settleKey(key);
+              setKeySaved(true);
+              answer();
+            }}
+            {...(keyAgent ? { keyForLine: t("connectAi.key.forAgent", { agent: keyAgent.name }) } : {})}
             // Computers live in the app: no site opens for one.
             onComputer={() => router.push("/computer-setup" as never)}
             onPlanDone={(id) => {
@@ -280,7 +334,15 @@ export function ConnectAiSheet() {
       {done ? (
         // The last step's one button, at the screen's foot.
         <View style={[styles.foot, { paddingBottom: Math.max(insets.bottom, 12), backgroundColor: c.grouped }]}>
-          <Button variant="primary" wide label={t("connectAi.done")} onPress={close} />
+          {makeWith ? (
+            <Button
+              variant="primary"
+              wide
+              label={t("connectAi.makeAgent")}
+              onPress={() => router.replace(`/new-agent?account=${encodeURIComponent(makeWith.id)}` as never)}
+            />
+          ) : null}
+          <Button variant={makeWith ? "secondary" : "primary"} wide label={t("connectAi.done")} onPress={close} />
         </View>
       ) : null}
     </View>
@@ -292,5 +354,5 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingTop: 4 },
   head: { gap: 2, paddingHorizontal: 4, paddingTop: 10, paddingBottom: 16 },
   loading: { marginTop: 24 },
-  foot: { paddingHorizontal: 16, paddingTop: 12 },
+  foot: { gap: 8, paddingHorizontal: 16, paddingTop: 12 },
 });

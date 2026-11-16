@@ -10,7 +10,7 @@ import { exposedToolName } from "./connectors/mcp";
 import { sha256 } from "./crypto";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { can, requirePermission } from "./organizations";
-import { isRightHand, isRightHandId, RIGHT_HAND_GRANTS } from "./right-hand";
+import { isRightHand, isRightHandId, RIGHT_HAND_COMPUTER_GRANTS, RIGHT_HAND_GRANTS } from "./right-hand";
 import { isSensitive } from "./tools/gateway";
 import {
   type AccessState,
@@ -20,6 +20,7 @@ import {
   freshGrantedKeys,
   grantKey,
   impliedByWrite,
+  isAllowed,
   isBuiltinScope,
   mailConnectionIds,
   NOT_IN_ALL,
@@ -47,7 +48,14 @@ export const BUILTIN_TOOLS: Record<string, string[]> = {
   "issues:write": ["create_issue", "update_issue", "comment_issue"],
   "calendar:read": ["list_events", "find_free_time"],
   "calendar:write": ["propose_event"],
-  "skills:read": ["load_skill", "read_skill_file", "update_skill", "offer_install_skill", "update_skill_from_source"],
+  "skills:read": [
+    "load_skill",
+    "read_skill_file",
+    "update_skill",
+    "create_skill",
+    "offer_install_skill",
+    "update_skill_from_source",
+  ],
   "schedule:write": [
     "schedule_reminder",
     "create_routine",
@@ -99,6 +107,15 @@ const UNLISTED_TOOLS: Record<string, string[]> = {
   "context:read": ["read_conversation"],
   "schedule:write": ["delete_routine", "run_routine_now"],
 };
+
+/**
+ * Whether any tool of a computer (commands, the browser, the desktop) is on with these grants: through its scope, or
+ * turned on by name with the rest of its scope off.
+ */
+const usesComputer = (granted: Set<string>) =>
+  RIGHT_HAND_COMPUTER_GRANTS.some((scope) =>
+    (BUILTIN_TOOLS[scope] ?? []).some((name) => isAllowed(toolAccess(granted, { name, scope }))),
+  );
 
 /** Setting the workspace up is the right hand's job (ADR 0137): never an area to turn off, so its page has no row for it. */
 const RIGHT_HAND_ALWAYS = "setup:write";
@@ -170,6 +187,10 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
   load_skill: { label: "Load skill", description: "Loads a skill's instructions." },
   read_skill_file: { label: "Read skill file", description: "Reads a reference file of a skill." },
   update_skill: { label: "Fix skill", description: "Fixes a skill it loaded. A person's skill becomes a proposal." },
+  create_skill: {
+    label: "Create skill",
+    description: "Turns what it did into a skill of its own when a person asks. Shows in Skills, with Undo.",
+  },
   offer_install_skill: {
     label: "Offer to install a skill",
     description: "Posts a card whose button opens the install dialog with the skill's link filled in.",
@@ -426,8 +447,7 @@ function builtinInfo(name: string, scope: string): Omit<AccessTool, "state"> {
 }
 
 /**
- * `rightHand`: its tree, which leaves out what only a computer of its own would give it and the setup tools it
- * always has.
+ * `rightHand`: its tree, which leaves out the setup tools it always has.
  */
 function treeFor(
   granted: Set<string>,
@@ -435,7 +455,7 @@ function treeFor(
   rightHand = false,
 ): AccessTree {
   const builtins: AccessScope[] = Object.entries(BUILTIN_TOOLS)
-    .filter(([scope]) => !(rightHand && (NOT_IN_ALL.has(scope) || scope === RIGHT_HAND_ALWAYS)))
+    .filter(([scope]) => !(rightHand && scope === RIGHT_HAND_ALWAYS))
     .map(([scope, names]) => ({
       scope,
       label: scope === "" ? "Ask the person" : (BUILTIN_SCOPES[scope]?.label ?? scope),
@@ -550,6 +570,12 @@ export async function setAgentAccess(
     throw new ForbiddenError("Only an admin can give an agent new access. Its owner can only take access away.");
   }
   await db.transaction(async (tx) => {
+    // The right hand's shared seat on the workspace's computer (ADR 0175) goes with its last computer grant: the
+    // computer stops what runs there, and a grant given again starts an empty one. A tool left on by name is a grant.
+    if (isRightHand(agent) && !usesComputer(new Set(unique.keys()))) {
+      const { removeSeat, SHARED_SEAT } = await import("./right-hand-seats");
+      await removeSeat(tx, orgId, SHARED_SEAT);
+    }
     // Mailbox grants are managed by the mail API (ADR 0038): kept as they are.
     await tx
       .delete(agentScopes)

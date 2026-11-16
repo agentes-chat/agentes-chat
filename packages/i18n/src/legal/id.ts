@@ -8,13 +8,13 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Perjanjian untuk menggunakan agentes.chat: ruang kerja Anda, agen Anda, dan apa yang menjadi tanggung jawab masing-masing pihak.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-06",
+    updated: "2026-11-16",
     sections: [
       {
         id: "agreement",
         heading: "1. Perjanjian",
         blocks: [
-          'Ketentuan Penggunaan ini ("Ketentuan") merupakan perjanjian yang mengikat antara CODARI GLOBAL, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Wyoming yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), dan orang atau entitas yang membuat akun atau ruang kerja ("Anda"). Dengan membuat akun, bergabung dengan ruang kerja, atau dengan cara lain menggunakan agentes.chat di web, aplikasi Mac, atau aplikasi ponsel ("Layanan"), Anda menerima Ketentuan ini dan Kebijakan Privasi kami. Apabila Anda menggunakan Layanan atas nama perusahaan atau entitas lain, Anda menyatakan bahwa Anda berwenang untuk mengikat entitas tersebut.',
+          'Ketentuan Penggunaan ini ("Ketentuan") merupakan perjanjian yang mengikat antara AGENTESCHAT, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Delaware yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), dan orang atau entitas yang membuat akun atau ruang kerja ("Anda"). Dengan membuat akun, bergabung dengan ruang kerja, atau dengan cara lain menggunakan agentes.chat di web, aplikasi Mac, atau aplikasi ponsel ("Layanan"), Anda menerima Ketentuan ini dan Kebijakan Privasi kami. Apabila Anda menggunakan Layanan atas nama perusahaan atau entitas lain, Anda menyatakan bahwa Anda berwenang untuk mengikat entitas tersebut.',
           "Anda harus berusia sekurang-kurangnya 18 tahun dan cakap untuk membuat kontrak agar dapat menggunakan Layanan.",
         ],
       },
@@ -150,7 +150,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Hukum yang berlaku",
         blocks: [
-          "Ketentuan ini diatur oleh hukum Negara Bagian Wyoming, Amerika Serikat, tidak termasuk kaidah hukum perdata internasionalnya (conflict-of-law rules), dan para pihak tunduk pada yurisdiksi eksklusif pengadilan negara bagian dan federal yang berkedudukan di Wyoming. Apabila Anda adalah konsumen di yurisdiksi yang hukumnya memberikan hak atau forum yang tidak dapat dikesampingkan, seperti Brasil, hak tersebut tidak terpengaruh.",
+          "Ketentuan ini diatur oleh hukum Negara Bagian Delaware, Amerika Serikat, tidak termasuk kaidah hukum perdata internasionalnya (conflict-of-law rules), dan para pihak tunduk pada yurisdiksi eksklusif pengadilan negara bagian dan federal yang berkedudukan di Delaware. Apabila Anda adalah konsumen di yurisdiksi yang hukumnya memberikan hak atau forum yang tidak dapat dikesampingkan, seperti Brasil, hak tersebut tidak terpengaruh.",
         ],
       },
       {
@@ -164,7 +164,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Kontak",
         blocks: [
-          "CODARI GLOBAL, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Hal lainnya: hello@agentes.chat",
+          "AGENTESCHAT, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Hal lainnya: hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +175,13 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Apa yang kami kumpulkan, apa yang dikirim agen dan ke mana, siapa yang dapat melihat ruang kerja Anda, dan hak-hak yang Anda miliki.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-12",
+    updated: "2026-11-16",
     sections: [
       {
         id: "overview",
         heading: "1. Ikhtisar",
         blocks: [
-          'CODARI GLOBAL, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Wyoming yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), mengoperasikan agentes.chat: ruang kerja tempat manusia dan agen AI bekerja bersama, yang tersedia di web, sebagai aplikasi Mac, dan sebagai aplikasi ponsel ("Layanan"). Kebijakan ini membedakan dua peran:',
+          'AGENTESCHAT, LLC, sebuah perusahaan dengan tanggung jawab terbatas (limited liability company) Delaware yang menjalankan usaha dengan nama agentes.chat ("agentes.chat", "kami"), mengoperasikan agentes.chat: ruang kerja tempat manusia dan agen AI bekerja bersama, yang tersedia di web, sebagai aplikasi Mac, dan sebagai aplikasi ponsel ("Layanan"). Kebijakan ini membedakan dua peran:',
           {
             list: [
               "Untuk **data akun**, yaitu informasi yang diberikan orang kepada kami untuk membuat dan menggunakan akun, kami adalah pengendali data.",
@@ -231,7 +231,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
           {
             list: [
               "**Antara perangkat dan server kami.** Segala sesuatu yang dikirim antara server kami dan peramban, aplikasi, serta komputer yang terhubung dengannya, termasuk Konten Ruang Kerja, melewati penyedia jaringan kami, yang melindungi Layanan dari serangan. Untuk itu, penyedia jaringan tersebut mendekripsi lalu lintas ini di pusat datanya yang terdekat dengan setiap perangkat, dan menanganinya atas nama kami.",
-              "**Menjawab.** Ketika agen bekerja, agen mengirimkan konteks yang dibutuhkannya (konteks ruang kerja, instruksi agen, percakapan, memori yang relevan, dan hasil alat-alatnya) kepada penyedia model yang dipilih untuk agen tersebut. Dengan kunci API yang ditambahkan oleh ruang kerja, pemanggilan dilakukan di bawah akun dan perjanjian ruang kerja itu sendiri dengan penyedia tersebut. Dengan paket AI, seperti Claude atau ChatGPT, yang dihubungkan ke suatu agen, agen bekerja di bawah akun orang yang menghubungkan paket tersebut dan berdasarkan ketentuan penyedia.",
+              "**Menjawab.** Ketika agen bekerja, agen mengirimkan konteks yang dibutuhkannya (konteks ruang kerja, instruksi agen, percakapan, memori yang relevan, dan hasil alat-alatnya) kepada penyedia model yang dipilih untuk agen tersebut. Dengan kunci API yang ditambahkan oleh ruang kerja, pemanggilan dilakukan di bawah akun dan perjanjian ruang kerja itu sendiri dengan penyedia tersebut. Beberapa penyedia meneruskan pemanggilan kepada perusahaan yang membuat atau menghosting model, yang kemudian juga memprosesnya berdasarkan ketentuan penyedia tersebut. Dengan paket AI, seperti Claude atau ChatGPT, yang dihubungkan ke suatu agen, agen bekerja di bawah akun orang yang menghubungkan paket tersebut dan berdasarkan ketentuan penyedia.",
               "**Menentukan siapa yang membalas.** Model perutean membaca pesan baru, nama dan peran agen ruang kerja, serta percakapan terbaru untuk menentukan agen mana, jika ada, yang harus membalas. Model ini berjalan di TypeSafe atau, sebagai cadangan, di penyedia model ruang kerja. Perutean tidak pernah memberikan izin apa pun kepada agen.",
               "**Memori.** Agen menyimpan memori dari percakapan (ringkasan, fakta, dan pelajaran) agar semakin baik dari waktu ke waktu. Sebagian penilaian tentang memori (apakah sesuatu layak disimpan, atau bertentangan dengan apa yang sudah diketahui agen) dilakukan oleh TypeSafe. Memori dapat dilihat dan dihapus di halaman agen, dan dihapus bersama ruang kerja.",
               "**Pencarian.** Untuk menemukan pesan dan dokumen terkait, teks dapat diubah menjadi vektor (embedding) oleh Voyage AI.",
@@ -286,14 +286,14 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Transfer internasional",
         blocks: [
-          "Aplikasi kami dan basis datanya berjalan di Amerika Serikat, dan penyedia yang disebutkan dalam kebijakan ini memproses data di Amerika Serikat. Komputer ruang kerja berjalan di Uni Eropa atau di Amerika Serikat, dan penyedia jaringan kami menangani lalu lintas di pusat datanya yang terdekat dengan setiap perangkat, di Amerika Serikat atau di tempat lain. Apabila data pribadi yang tunduk pada GDPR atau UK GDPR ditransfer ke negara ketiga, kami mengandalkan Klausul Kontrak Standar Komisi Eropa dan Adendum Inggris (UK Addendum). Untuk data yang tunduk pada LGPD, kami mengandalkan pengamanan kontraktual Pasal 33.",
+          "Aplikasi kami dan basis datanya berjalan di Amerika Serikat, dan penyedia yang disebutkan dalam kebijakan ini memproses data di Amerika Serikat, kecuali penyedia model dan layanan yang terhubung yang dipilih oleh ruang kerja, serta perusahaan tempat mereka meneruskan pemanggilan, yang dapat memproses data di negara lain berdasarkan ketentuannya sendiri. Komputer ruang kerja berjalan di Uni Eropa atau di Amerika Serikat, dan penyedia jaringan kami menangani lalu lintas di pusat datanya yang terdekat dengan setiap perangkat, di Amerika Serikat atau di tempat lain. Apabila data pribadi yang tunduk pada GDPR atau UK GDPR ditransfer ke negara ketiga, kami mengandalkan Klausul Kontrak Standar Komisi Eropa dan Adendum Inggris (UK Addendum). Untuk data yang tunduk pada LGPD, kami mengandalkan pengamanan kontraktual Pasal 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. Aplikasi ponsel dan Mac",
         blocks: [
-          "Aplikasi ponsel mengirim notifikasi melalui Expo, Apple, dan Google. Notifikasi dapat menampilkan nama penulis dan awal pesan, dan Anda memilih notifikasi mana yang Anda terima. Aplikasi Mac dan komputer yang terhubung menyimpan sesi masuknya di perangkat. Menghapus akun Anda (juga tersedia di aplikasi) mengeluarkan semua perangkat dari sesi masuk.",
+          "Aplikasi ponsel mengirim notifikasi melalui Apple dan Google. Notifikasi dapat menampilkan nama penulis dan awal pesan, dan Anda memilih notifikasi mana yang Anda terima. Aplikasi Mac dan komputer yang terhubung menyimpan sesi masuknya di perangkat. Menghapus akun Anda (juga tersedia di aplikasi) mengeluarkan semua perangkat dari sesi masuk.",
         ],
       },
       {
@@ -342,7 +342,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Kontak",
         blocks: [
-          "CODARI GLOBAL, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Pertanyaan pelindungan data dari UE, Inggris, dan Brasil akan diterima oleh tim privasi kami di alamat yang sama. Untuk hal lainnya, kirimkan email ke hello@agentes.chat.",
+          "AGENTESCHAT, LLC, yang menjalankan usaha dengan nama agentes.chat. Pemberitahuan: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Pertanyaan pelindungan data dari UE, Inggris, dan Brasil akan diterima oleh tim privasi kami di alamat yang sama. Untuk hal lainnya, kirimkan email ke hello@agentes.chat.",
         ],
       },
     ],

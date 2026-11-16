@@ -5,7 +5,7 @@ import {
   useHomeDashboard,
   useRoles,
   type Widget,
-  widgetFailureKey,
+  widgetFailureText,
   widgetWaiting,
   widgetWaitText,
 } from "@agenteschat/client";
@@ -70,8 +70,7 @@ export function useWidgetWords() {
     (w: Pick<Widget, "failure" | "agentId">) => {
       if (!w.failure) return "";
       const name = dir.anyAgent(w.agentId)?.name ?? "";
-      if (w.failure.code === "agent_reported") return w.failure.detail || t("widgets.failure.error");
-      return t(widgetFailureKey(w.failure.code, w.failure.detail), { name, detail: w.failure.detail ?? "" });
+      return widgetFailureText(t, w.failure, name);
     },
     [t, dir],
   );
@@ -89,9 +88,9 @@ export function useWidgetWords() {
 
 /**
  * What a widget waiting for an AI offers this person (its screen, its card's footer, New widget's test), as the web's:
- * Connect to whoever may set its agent's AI (for the right hand the workspace's, since a build thinks with nobody's
- * own; on a plan that can't take it, `reason` a plan line, a key: `planKeyIntent`), else who can. Nothing on a billing
- * hold: an AI comes after the plan.
+ * Connect to whoever may set its agent's AI (for the right hand the workspace's, which a build falls back to when the
+ * AI of whoever made the widget can't think; on a plan that can't take it, `reason` a plan line, a key:
+ * `planKeyIntent`), else who can. Nothing on a billing hold: an AI comes after the plan.
  */
 export function useWidgetAiWay(
   agentId: string | null | undefined,

@@ -15,8 +15,8 @@ test("the action line: words on their one-line width, actions beside them only w
   expect(rule(".ac-actline > :is(span, div):empty")).toContain("display: none");
 });
 
-test("a card's head keeps a lone switch at its end, the words wrapping beside it", () => {
-  const head = ".ac-card__head:has(> .ac-card__action > .ac-switch:only-child)";
+test("a card's head keeps a lone switch or quiet link at its end, the words wrapping beside it", () => {
+  const head = ".ac-card__head:has(> .ac-card__action > :is(.ac-switch, .ac-link--action):only-child)";
   expect(rule(head)).toContain("flex-wrap: nowrap");
   expect(rule(`${head} > .ac-card__lead`)).toContain("flex: 1 1 0%");
   expect(rule(`${head} > .ac-card__action`)).toContain("margin-inline-start: 0");

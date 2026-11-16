@@ -12,17 +12,20 @@ import * as paperclip from "./paperclip";
 import {
   Draft,
   holdsKey,
-  IMPORT_MAX_BYTES,
   ImportError,
   type ImportFile,
+  type ImportLimit,
+  importFileCap,
   isSecretPath,
   type LeftOut,
   type LeftOutKind,
   normalizePath,
+  PASTED,
   type ParseOptions,
   scrubSecrets,
   slug,
   splitNote,
+  TEXT_PATH,
 } from "./shared";
 
 /**
@@ -37,11 +40,15 @@ export { EXPORT_PROMPT } from "./agenteschat";
 export { interpolateEnv } from "./openbot";
 export {
   IMPORT_MAX_BYTES,
+  IMPORT_TEXT_MAX_BYTES,
   ImportError,
   type ImportErrorCode,
   type ImportFile,
+  type ImportLimit,
+  importFileCap,
   type LeftOut,
   type LeftOutKind,
+  PASTED,
   type ParseOptions,
   scrubSecrets,
   uniqueHandle,
@@ -156,15 +163,30 @@ export function parsePackage(
   options: ParseOptions = {},
 ): { bundle: MigrationBundle; files: AgentFile[] } {
   const all = prepare(files);
-  if (
-    all.some((f) => f.text.length > IMPORT_MAX_BYTES || new TextEncoder().encode(f.text).byteLength > IMPORT_MAX_BYTES)
-  ) {
-    throw new ImportError("tooLarge");
+  for (const f of all) {
+    const max = importFileCap(f.name);
+    const have = f.text.length > max ? f.text.length : new TextEncoder().encode(f.text).byteLength;
+    if (have > max)
+      throw new ImportError("tooLarge", { kind: f.name === PASTED ? "text" : "file", have, max, name: f.name });
   }
   const usable = readable(all);
-  if (usable.length === 0) throw new ImportError("empty");
-  const source = DETECTION.find((id) => PARSERS[id].detect(usable));
-  if (!source) throw new ImportError("unknown");
+  const source = usable.length > 0 ? DETECTION.find((id) => PARSERS[id].detect(usable)) : undefined;
+  if (!source) {
+    // A format's text file the reader left unread for its size explains an empty or unknown read better.
+    const skipped = all.find(
+      (f) => !f.text && TEXT_PATH.test(f.name) && !isSecretPath(f.name) && (f.size ?? 0) > importFileCap(f.name),
+    );
+    if (skipped) {
+      const limit: ImportLimit = {
+        kind: "file",
+        have: skipped.size ?? 0,
+        max: importFileCap(skipped.name),
+        name: skipped.name,
+      };
+      throw new ImportError("tooLarge", limit);
+    }
+    throw new ImportError(usable.length === 0 ? "empty" : "unknown");
+  }
   const d = new Draft(usable, options);
   PARSERS[source].parse(usable, d);
   return finish(d, source, all);

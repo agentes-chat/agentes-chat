@@ -7,6 +7,7 @@ import {
   type EmbeddingResult,
   type Endpoint,
   embeddingCostNanoUsd,
+  endpointKeyCheck,
   ensureOpenRouterModels,
   estimateTokens,
   isCustomModel,
@@ -43,7 +44,7 @@ import { publishUserEvent } from "./events";
 import { maySql, type RolePermission } from "./permissions";
 import { addPersonSpend, assertPersonUnderLimit, personSpendAdded } from "./person-usage";
 import { assertCanWork, standingRefusal } from "./standing";
-import { redactCredentials } from "./tool-detail";
+import { maskValues, redactCredentials } from "./tool-detail";
 import { budgetPercent, monthStartUtc, withEffectiveBudget } from "./usage";
 
 const {
@@ -177,7 +178,7 @@ export type KeyCheck =
 const periodOf = (now: Date) => monthStartUtc(now).toISOString().slice(0, 10);
 
 /** The call's own key first: a key of an unusual shape is one no pattern knows. */
-const withoutKey = (text: string, apiKey: string) => redactCredentials(apiKey ? text.replaceAll(apiKey, "••••") : text);
+const withoutKey = (text: string, apiKey: string) => redactCredentials(maskValues(text, [apiKey]));
 
 /**
  * A provider failure as it leaves the gateway: its words (a refused request keeps the API's) with credentials masked,
@@ -979,7 +980,14 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       const credential = await decryptCredential(db, deps.keyWrappers, orgId, credentialId);
       if (!credential) return null;
       const { provider, apiKey, workspaceId, options } = credential;
-      if (provider === "custom") return { provider, result: { state: "unchecked" } as KeyCheck };
+      // A workspace endpoint has no cheap catalog model to test its key with (`keyCheckRequest`): what its own models'
+      // last tests said of it is the answer (`endpointKeyCheck`), so a saved endpoint key isn't reported as unchecked.
+      if (provider === "custom") {
+        const checked = endpointKeyCheck((options?.endpoint?.models ?? []).map((m) => m.check)) === "ok";
+        // No call is made here, so there is no usage to record.
+        const result: KeyCheck = checked ? { state: "ok", record: async () => {} } : { state: "unchecked" };
+        return { provider, result };
+      }
       const key = {
         apiKey,
         ...(workspaceId ? { workspaceId } : {}),
