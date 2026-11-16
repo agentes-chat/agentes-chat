@@ -2960,7 +2960,8 @@
       "plans": "각 요금제는 소유자의 메시지에 대해서만 에이전트를 골라요.",
       "rules": "에이전트는 멘션, 답장, 이어지는 대화에 답해요.",
       "off": "에이전트는 멘션될 때만 답해요.",
-      "noSmall": "{{provider}}에는 이 용도의 소형 모델이 없어요. 에이전트는 멘션, 답장, 이어지는 대화에 답해요."
+      "noSmall": "{{provider}}에는 이 용도의 소형 모델이 없어요. 에이전트는 멘션, 답장, 이어지는 대화에 답해요.",
+      "decision": "{{model}} picks who answers each message without a mention."
     }
   },
   "noAi": {
@@ -4886,6 +4887,8 @@
       "planModelDropped": "{{model}} 모델이 {{plan}}에서 빠졌어요. 다른 모델을 고를 때까지 <b>{{name}}</b>은(는) {{runs}}을(를) 써요.",
       "routineWaitingPlan": "<b>{{name}}</b>이(가) 루틴을 실행하려고 요금제 한도가 초기화되기를 기다리고 있어요",
       "planResetUnknown": "{{plan}}이(가) 한도 초기화 시점을 알려 주지 않았어요. <b>{{name}}</b>의 작업은 계속 대기 중이에요.",
+      "credentialEfforts": "<b>{{name}}</b> 님이 {{label}} 의 노력 수준 확인을 마쳤습니다",
+      "credentialEffortsFailed": "<b>{{name}}</b> 님이 {{label}} 의 노력 수준을 확인하지 못했습니다",
       "catchUpClosed_other": "<b>{{name}}</b>이(가) 돌아와서 답할 필요가 없었던 대화 {{count}}개를 건너뛰었어요",
       "catchUpClosedAsker": "<b>{{name}}</b>이(가) {{label}}에서 답하지 않았어요. {{who}}님이 이미 처리했어요",
       "catchUpClosedAskerAny": "<b>{{name}}</b>이(가) 답하지 않았어요. {{who}}님이 이미 처리했어요",
@@ -5318,25 +5321,33 @@
         "efforts": {
           "auto": "자동",
           "none": "모델 기본값",
+          "noneLevel": "없음",
           "low": "낮음",
+          "minimal": "최소",
           "medium": "중간",
           "high": "높음",
+          "xhigh": "매우 높음",
           "max": "최대"
         },
+        "effortsUntested": "이 모델의 노력 수준은 아직 확인되지 않았습니다. 키의 모델에서 확인하세요.",
         "effortsLower": {
           "auto": "자동",
           "low": "낮음",
+          "minimal": "최소",
           "medium": "중간",
           "high": "높음",
+          "xhigh": "매우 높음",
           "max": "최대"
         },
         "effortText": {
           "auto": "자동 모델이 작업마다 사고 수준을 골라요. 사고 수준을 정하려면 모델을 고르세요.",
           "low": "빠르게 답해요. 간단한 질문에 좋아요.",
+          "minimal": "답하기 전에 아주 조금만 생각합니다. 가장 빠른 설정입니다.",
           "medium": "기본값이에요. 대부분 충분히 생각해요.",
           "mediumKey": "대부분 충분히 생각해요.",
           "none": "모델이 평소만큼 생각해요. 수준을 고르면 고정할 수 있어요.",
           "high": "어려운 작업에서 더 생각해요. 더 느리고 비용이 더 들어요.",
+          "xhigh": "높음보다 더 생각하지만 최대는 아닙니다. 더 느려집니다.",
           "max": "최대한 생각해요. 훨씬 느리고 비용도 더 들어요."
         },
         "speed": "속도",
@@ -9335,6 +9346,8 @@
     "save": "저장하고 테스트",
     "saveModels": "저장하고 다시 테스트",
     "testing": "각 모델을 테스트하는 중…",
+    "effortsAsk": "이 제공자는 모든 노력 수준을 지원하지 않을 수 있습니다. 선택한 각 모델을 백그라운드에서 수준마다 짧게 호출해 확인하고, 지원하는 수준만 표시할 수 있습니다. 끝나면 어시스턴트가 알려 줍니다.",
+    "effortsListOnly": "모델만 나열",
     "results": "각 모델의 테스트",
     "check": {
       "ok": "작동함, 도구 사용 가능",
@@ -19597,5 +19610,60 @@
       "alwaysOn": "이제부터 이런 보고는 묻지 않고 보내요.",
       "askFirst": "보내기 전에 묻기"
     }
+  },
+  "decision": {
+    "title": "Decision model",
+    "offHint": "Off. Jev decides when it has a key. Otherwise, the small model on your key.",
+    "onHint": "On. This model decides before Jev, which keeps images and boxes and takes over if it fails.",
+    "providers": {
+      "local": "On this server",
+      "localText": "Laya, a small decision model that runs on this server.",
+      "openai": "OpenAI",
+      "openaiText": "GPT-6 Luna through OpenAI's Decisions API.",
+      "gemini": "Gemini",
+      "geminiText": "Gemini Decision 1, with text, image, audio, video and PDF."
+    },
+    "key": "API key",
+    "keyHint": "The key is encrypted on the server and never returned to the browser.",
+    "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
+    "recommended": "Recommended for this server: {{model}}.",
+    "hostLoading": "Reading this server's size...",
+    "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
+    "activate": "Turn on",
+    "activateLocal": "Turn on and download Laya",
+    "cancel": "Cancel",
+    "check": "Check",
+    "change": "Change",
+    "remove": "Remove",
+    "removeAsk": "Remove the decision model?",
+    "removeYes": "Remove",
+    "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
+    "failed": "The model could not be prepared: {{error}}",
+    "state": {
+      "off": "Off",
+      "ok": "On",
+      "invalid": "Key refused",
+      "no_credit": "No credit",
+      "unreachable": "No answer"
+    },
+    "install": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "checking": "Checking",
+      "deleting": "Switching the model",
+      "downloading": "Downloading",
+      "configuring": "Configuring",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Canceled"
+    },
+    "setupHint": "Choose where it runs, then turn it on. Jev decides until then.",
+    "providersLabel": "Where the decision model runs",
+    "recommendedTag": "Recommended",
+    "removeText": "Jev decides again.",
+    "switchAsk": "Switch the decision model?",
+    "switchCurrent": "The current model will be removed.",
+    "switchSlow": "The new model may take a while to be fully configured.",
+    "switchConfirm": "Switch and prepare"
   }
 }

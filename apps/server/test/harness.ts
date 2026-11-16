@@ -96,6 +96,8 @@ export async function createTestServer(
     emailArt?: EmailArt;
     /** Fake TypeSafe (checks of the Jev key). */
     jevFetch?: typeof fetch;
+    /** Fake OpenAI, Gemini and local decision transport (the installed decision model). */
+    decisionFetch?: typeof fetch;
     /** The bot check (`turnstileCheck`); absent or null = none, as without its keys. */
     humanCheck?: HumanCheck | null;
     /** The server's own file store's kind (`disk`, `postgres`, `s3`); it keeps files in memory either way. */
@@ -188,10 +190,12 @@ export async function createTestServer(
     toolsOnDemand: false,
     emailArt: options.emailArt,
     jevFetch: options.jevFetch,
+    decisionFetch: options.decisionFetch,
     routerQuietMs: 0,
   });
   // As at boot: the saved Jev and GIPHY keys and GitHub App are read before anything serves.
   await engine.jevKey.ready();
+  await engine.decisionModel.ready();
   await gifKey.ready();
   await engine.githubApp.ready();
   const { handlers } = engine;

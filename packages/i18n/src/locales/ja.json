@@ -2960,7 +2960,8 @@
       "plans": "各プランは、そのオーナーのメッセージに対してだけ選びます。",
       "rules": "エージェントはメンション、返信、続きの会話に回答します。",
       "off": "エージェントはメンションされたときだけ回答します。",
-      "noSmall": "{{provider}}にはこの用途の小型モデルがありません。エージェントはメンション、返信、続きの会話に回答します。"
+      "noSmall": "{{provider}}にはこの用途の小型モデルがありません。エージェントはメンション、返信、続きの会話に回答します。",
+      "decision": "{{model}} picks who answers each message without a mention."
     }
   },
   "noAi": {
@@ -4888,6 +4889,8 @@
       "planModelDropped": "{{model}}が{{plan}}から外れました。別のモデルを選ぶまで、<b>{{name}}</b>は{{runs}}を使います。",
       "routineWaitingPlan": "<b>{{name}}</b>はルーティンを実行するため、プランのリセットを待っています",
       "planResetUnknown": "{{plan}}は上限がいつリセットされるかを伝えませんでした。<b>{{name}}</b>の作業はまだ待機中です。",
+      "credentialEfforts": "<b>{{name}}</b> が {{label}} のエフォートレベルの確認を終えました",
+      "credentialEffortsFailed": "<b>{{name}}</b> は {{label}} のエフォートレベルを確認できませんでした",
       "catchUpClosed_other": "<b>{{name}}</b>が再開し、返信が不要だった会話{{count}}件をスキップしました",
       "catchUpClosedAsker": "<b>{{name}}</b>は{{label}}で返信しませんでした。{{who}}がすでに対応済みです",
       "catchUpClosedAskerAny": "<b>{{name}}</b>は返信しませんでした。{{who}}がすでに対応済みです",
@@ -5320,25 +5323,33 @@
         "efforts": {
           "auto": "自動",
           "none": "モデルのデフォルト",
+          "noneLevel": "なし",
           "low": "低",
+          "minimal": "最小",
           "medium": "中",
           "high": "高",
+          "xhigh": "超高",
           "max": "最大"
         },
+        "effortsUntested": "このモデルのエフォートレベルはまだ確認されていません。キーのモデルで確認してください。",
         "effortsLower": {
           "auto": "自動",
           "low": "低",
+          "minimal": "最小",
           "medium": "中",
           "high": "高",
+          "xhigh": "超高",
           "max": "最大"
         },
         "effortText": {
           "auto": "自動のモデルはタスクごとに思考レベルを選びます。思考レベルを固定するにはモデルを選んでください。",
           "low": "すばやく返信します。簡単な質問に向いています。",
+          "minimal": "答える前に少しだけ考えます。いちばん速い設定です。",
           "medium": "デフォルトです。たいていは十分に考えます。",
           "mediumKey": "たいていは十分に考えます。",
           "none": "モデルはいつもどおりに考えます。レベルを選ぶと固定できます。",
           "high": "難しいタスクでより深く考えます。時間とコストがかかります。",
+          "xhigh": "高より多く考えますが、最大まではいきません。さらに遅くなります。",
           "max": "できる限り深く考えます。かなり時間とコストがかかります。"
         },
         "speed": "速度",
@@ -9341,6 +9352,8 @@
     "save": "保存してテスト",
     "saveModels": "保存してもう一度テスト",
     "testing": "各モデルをテスト中…",
+    "effortsAsk": "このプロバイダーはすべてのエフォートレベルを受け付けない場合があります。選択した各モデルをバックグラウンドで、レベルごとに短い呼び出しで確認し、受け付けたレベルだけを表示できます。終わったらアシスタントが知らせます。",
+    "effortsListOnly": "モデルを一覧表示するだけ",
     "results": "各モデルのテスト",
     "check": {
       "ok": "動作します (ツールあり)",
@@ -19605,5 +19618,60 @@
       "alwaysOn": "今後、このような報告は確認なしで送信されます。",
       "askFirst": "送信前に確認する"
     }
+  },
+  "decision": {
+    "title": "Decision model",
+    "offHint": "Off. Jev decides when it has a key. Otherwise, the small model on your key.",
+    "onHint": "On. This model decides before Jev, which keeps images and boxes and takes over if it fails.",
+    "providers": {
+      "local": "On this server",
+      "localText": "Laya, a small decision model that runs on this server.",
+      "openai": "OpenAI",
+      "openaiText": "GPT-6 Luna through OpenAI's Decisions API.",
+      "gemini": "Gemini",
+      "geminiText": "Gemini Decision 1, with text, image, audio, video and PDF."
+    },
+    "key": "API key",
+    "keyHint": "The key is encrypted on the server and never returned to the browser.",
+    "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
+    "recommended": "Recommended for this server: {{model}}.",
+    "hostLoading": "Reading this server's size...",
+    "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
+    "activate": "Turn on",
+    "activateLocal": "Turn on and download Laya",
+    "cancel": "Cancel",
+    "check": "Check",
+    "change": "Change",
+    "remove": "Remove",
+    "removeAsk": "Remove the decision model?",
+    "removeYes": "Remove",
+    "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
+    "failed": "The model could not be prepared: {{error}}",
+    "state": {
+      "off": "Off",
+      "ok": "On",
+      "invalid": "Key refused",
+      "no_credit": "No credit",
+      "unreachable": "No answer"
+    },
+    "install": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "checking": "Checking",
+      "deleting": "Switching the model",
+      "downloading": "Downloading",
+      "configuring": "Configuring",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Canceled"
+    },
+    "setupHint": "Choose where it runs, then turn it on. Jev decides until then.",
+    "providersLabel": "Where the decision model runs",
+    "recommendedTag": "Recommended",
+    "removeText": "Jev decides again.",
+    "switchAsk": "Switch the decision model?",
+    "switchCurrent": "The current model will be removed.",
+    "switchSlow": "The new model may take a while to be fully configured.",
+    "switchConfirm": "Switch and prepare"
   }
 }

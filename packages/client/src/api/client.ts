@@ -129,6 +129,9 @@ import type {
   DatabaseConnection,
   DatabaseConnectionInput,
   DatabaseTable,
+  DecisionHost,
+  DecisionModel,
+  DecisionModelInput,
   DeletionProofInput,
   DesktopPictureView,
   DesktopRelease,
@@ -245,6 +248,7 @@ import type {
   NotificationCount,
   NotificationFilter,
   NotificationPage,
+  OpenRouterChoice,
   Organization,
   OrgOverview,
   OrgPlanUsage,
@@ -405,6 +409,16 @@ export interface ApiClient {
     saveJev(input: JevKeyInput): Promise<JevKey>;
     checkJev(): Promise<JevKey>;
     removeJev(): Promise<JevKey>;
+    /** The installation's optional decision model (ADR 0188); null unless I am its owner on a self-hosted server. */
+    decisionModel(): Promise<DecisionModel | null>;
+    /** This server's CPUs, memory and disk, and the local model that fits them. */
+    decisionHost(): Promise<DecisionHost>;
+    /** Turn the switch on or off, or change the provider, model or key; the install runs in the background. */
+    saveDecisionModel(input: DecisionModelInput): Promise<DecisionModel>;
+    checkDecisionModel(): Promise<DecisionModel>;
+    retryDecisionInstall(): Promise<DecisionModel>;
+    cancelDecisionInstall(): Promise<DecisionModel>;
+    removeDecisionModel(): Promise<DecisionModel>;
     /** The GIPHY key (ADR 0091): `null` unless I am the installation's owner on a self-hosted server. */
     gifKey(): Promise<GifKey | null>;
     /** Checked with GIPHY first: `gif_key_invalid` (422) when it refuses, `gif_key_env` (409) with an env key. */
@@ -821,6 +835,10 @@ export interface ApiClient {
         projectId?: string | null;
         /** `custom` only: the endpoint's address, API and models (ADR 0146). */
         endpoint?: { style: EndpointStyle; baseURL: string; models: EndpointModel[] };
+        /** `openrouter` only: the models this workspace chooses to use with the key (ADR 0187). */
+        openrouter?: { models: string[] };
+        /** `custom` only: check the models' effort levels in the background (ADR 0187). */
+        syncEfforts?: boolean;
       },
     ): Promise<Credential & { checks?: EndpointCheck[] }>;
     /** What an endpoint lists before it is saved (admins): its address as stored, its models, or why none. */
@@ -833,7 +851,14 @@ export interface ApiClient {
       orgId: string,
       credentialId: string,
       models: EndpointModel[],
+      syncEfforts?: boolean,
     ): Promise<{ models: EndpointModel[]; checks: EndpointCheck[] }>;
+    /** OpenRouter's models, with the key checked when given (admins): the list to choose from (ADR 0187). */
+    openRouterModels(orgId: string, input: { apiKey?: string }): Promise<{ models: OpenRouterChoice[] }>;
+    /** The models an OpenRouter key uses (admins, ADR 0187). */
+    setOpenRouterModels(orgId: string, credentialId: string, models: string[]): Promise<Credential>;
+    /** Checks an endpoint's models' effort levels in the background (admins, ADR 0187). */
+    testEndpointEfforts(orgId: string, credentialId: string): Promise<void>;
     /** Replaces the key, keeping the id (agents keep using it). */
     rotateCredential(
       orgId: string,

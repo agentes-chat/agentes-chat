@@ -14,6 +14,9 @@ export interface EndpointModelDraft {
   on: boolean;
   input: string;
   output: string;
+  /** The effort levels its last check found it takes (ADR 0187); absent: never checked. */
+  efforts?: string[];
+  effortsAt?: string;
 }
 
 export interface EndpointDraft {
@@ -116,6 +119,8 @@ export function draftOfEndpoint(
       on: true,
       input: m.prices ? String(m.prices.input) : "",
       output: m.prices ? String(m.prices.output) : "",
+      ...(m.efforts ? { efforts: m.efforts } : {}),
+      ...(m.effortsAt ? { effortsAt: m.effortsAt } : {}),
     })),
   };
 }

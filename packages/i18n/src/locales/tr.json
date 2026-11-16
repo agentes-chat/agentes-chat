@@ -3072,7 +3072,8 @@
       "plans": "Her plan yalnızca kendi sahibinin mesajları için seçer.",
       "rules": "Ajanlar bahsetmelere, yanıtlara ve devam mesajlarına yanıt verir.",
       "off": "Ajanlar yalnızca kendilerinden bahsedildiğinde yanıt verir.",
-      "noSmall": "{{provider}} bunun için küçük bir model sunmuyor. Ajanlar bahsetmelere, yanıtlara ve devam mesajlarına yanıt verir."
+      "noSmall": "{{provider}} bunun için küçük bir model sunmuyor. Ajanlar bahsetmelere, yanıtlara ve devam mesajlarına yanıt verir.",
+      "decision": "{{model}} picks who answers each message without a mention."
     }
   },
   "noAi": {
@@ -5056,6 +5057,8 @@
       "planModelDropped": "{{model}}, {{plan}} listesinden çıktı. Başka bir model seçene kadar <b>{{name}}</b> {{runs}} kullanıyor.",
       "routineWaitingPlan": "<b>{{name}}</b> bir rutini çalıştırmak için planının sıfırlanmasını bekliyor",
       "planResetUnknown": "{{plan}} sınırının ne zaman sıfırlanacağını söylemedi. <b>{{name}}</b> ajanının işi hâlâ bekliyor.",
+      "credentialEfforts": "<b>{{name}}</b>, {{label}} için efor düzeylerini denetlemeyi bitirdi",
+      "credentialEffortsFailed": "<b>{{name}}</b>, {{label}} için efor düzeylerini denetleyemedi",
       "catchUpClosed_one": "<b>{{name}}</b> döndü ve yanıt gerektirmeyen {{count}} konuşmayı atladı",
       "catchUpClosed_other": "<b>{{name}}</b> döndü ve yanıt gerektirmeyen {{count}} konuşmayı atladı",
       "catchUpClosedAsker": "<b>{{name}}</b> {{label}} içinde yanıt vermedi: {{who}} bununla zaten ilgilendi",
@@ -5501,25 +5504,33 @@
         "efforts": {
           "auto": "Otomatik",
           "none": "Modelin varsayılanı",
+          "noneLevel": "Yok",
           "low": "Düşük",
+          "minimal": "Minimum",
           "medium": "Orta",
           "high": "Yüksek",
+          "xhigh": "Çok yüksek",
           "max": "En yüksek"
         },
+        "effortsUntested": "Bu modelin efor düzeyleri denetlenmedi. Anahtarının modellerinde deneyin.",
         "effortsLower": {
           "auto": "otomatik",
           "low": "düşük",
+          "minimal": "minimum",
           "medium": "orta",
           "high": "yüksek",
+          "xhigh": "çok yüksek",
           "max": "en yüksek"
         },
         "effortText": {
           "auto": "Otomatik model her görevin çabasını seçer. Çabayı sabitlemek için bir model seçin.",
           "low": "Hızlı yanıt verir. Basit sorular için iyidir.",
+          "minimal": "Yanıtlamadan önce çok az düşünür. En hızlısı.",
           "medium": "Varsayılan. Çoğu zaman yeterince düşünür.",
           "mediumKey": "Çoğu zaman yeterince düşünür.",
           "none": "Model her zamanki kadar düşünür. Çabayı sabitlemek için bir seviye seçin.",
           "high": "Zor görevlerde daha çok düşünür. Daha yavaş ve daha pahalıdır.",
+          "xhigh": "Yüksekten fazla, en yüksekten az düşünür. Daha da yavaş.",
           "max": "Olabildiğince çok düşünür. Çok daha yavaş ve daha pahalıdır."
         },
         "speed": "Hız",
@@ -9676,6 +9687,8 @@
     "save": "Kaydet ve test et",
     "saveModels": "Kaydet ve yeniden test et",
     "testing": "Her model test ediliyor…",
+    "effortsAsk": "Bu sağlayıcı her efor düzeyini kabul etmeyebilir. Seçilen her modeli arka planda, düzey başına kısa bir çağrıyla denetleyip yalnızca kabul ettiği düzeyleri gösterebiliriz. Bitince asistan haber verir.",
+    "effortsListOnly": "Yalnızca modelleri listele",
     "results": "Her modelin testi",
     "check": {
       "ok": "Çalışıyor, araçlarla",
@@ -20155,5 +20168,60 @@
       "alwaysOn": "Bundan sonra bu tür bildirimler sormadan gider.",
       "askFirst": "Göndermeden önce sor"
     }
+  },
+  "decision": {
+    "title": "Decision model",
+    "offHint": "Off. Jev decides when it has a key. Otherwise, the small model on your key.",
+    "onHint": "On. This model decides before Jev, which keeps images and boxes and takes over if it fails.",
+    "providers": {
+      "local": "On this server",
+      "localText": "Laya, a small decision model that runs on this server.",
+      "openai": "OpenAI",
+      "openaiText": "GPT-6 Luna through OpenAI's Decisions API.",
+      "gemini": "Gemini",
+      "geminiText": "Gemini Decision 1, with text, image, audio, video and PDF."
+    },
+    "key": "API key",
+    "keyHint": "The key is encrypted on the server and never returned to the browser.",
+    "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
+    "recommended": "Recommended for this server: {{model}}.",
+    "hostLoading": "Reading this server's size...",
+    "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
+    "activate": "Turn on",
+    "activateLocal": "Turn on and download Laya",
+    "cancel": "Cancel",
+    "check": "Check",
+    "change": "Change",
+    "remove": "Remove",
+    "removeAsk": "Remove the decision model?",
+    "removeYes": "Remove",
+    "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
+    "failed": "The model could not be prepared: {{error}}",
+    "state": {
+      "off": "Off",
+      "ok": "On",
+      "invalid": "Key refused",
+      "no_credit": "No credit",
+      "unreachable": "No answer"
+    },
+    "install": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "checking": "Checking",
+      "deleting": "Switching the model",
+      "downloading": "Downloading",
+      "configuring": "Configuring",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Canceled"
+    },
+    "setupHint": "Choose where it runs, then turn it on. Jev decides until then.",
+    "providersLabel": "Where the decision model runs",
+    "recommendedTag": "Recommended",
+    "removeText": "Jev decides again.",
+    "switchAsk": "Switch the decision model?",
+    "switchCurrent": "The current model will be removed.",
+    "switchSlow": "The new model may take a while to be fully configured.",
+    "switchConfirm": "Switch and prepare"
   }
 }

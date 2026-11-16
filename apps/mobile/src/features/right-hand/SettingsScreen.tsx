@@ -23,7 +23,7 @@ import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { rightHandUnusable } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { brainPlan } from "@agenteschat/client/lib/plans";
-import { AUTO } from "@agenteschat/client/lib/providers";
+import { AUTO, isAuto } from "@agenteschat/client/lib/providers";
 import { mineStatus, RIGHT_HAND_POWERS, rightHandNoComputer, rightHandOf } from "@agenteschat/client/lib/right-hand";
 import { type LodiPrefsPatch, type LodiSwitch, teamWeekOn } from "@agenteschat/client/lib/right-hand-prefs";
 import { dayText, hourText } from "@agenteschat/client/lib/team-week";
@@ -48,6 +48,7 @@ import {
 } from "@/ui";
 import { router } from "@/ui/navigation";
 import { openAgentEdit } from "../agents/AgentEditScreen";
+import { openAgentAdvanced } from "../ai/AgentAdvancedScreen";
 import { openAgentAi, openAgentModel } from "../ai/AgentAiScreen";
 import { openConnectAi } from "../ai/NoAiCard";
 import { PlanHoldNote, usePlanHold } from "../ai/parts";
@@ -168,9 +169,10 @@ function Computer({ agentId }: { agentId: string }) {
 const planModelLabel = (t: TFunction, view: AgentBrain) =>
   modelRows(t, view, brainPlan(view)).find((r) => r.checked)?.label ?? view.effectiveModel ?? undefined;
 
-/** The choices of "Sua IA": the person's own plan, connecting another one, the workspace's AI. */
+/** The choices of "Sua IA": the person's own plan, its model, its effort and window, another plan, the workspace's AI. */
 const MINE = "mine";
 const MODEL = "model";
+const ADVANCED = "advanced";
 const OTHER = "other";
 const WORKSPACE = "workspace";
 
@@ -237,6 +239,12 @@ export function RightHandMine({ agent }: { agent: Agent }) {
         ? (status.label ?? t("rightHand.settings.mineKeyName"))
         : t(`aiAccounts.connect.${status.brain}`);
   const model = own && view ? planModelLabel(t, view) : undefined;
+  // What "Mais opções" holds: the effort with a fixed model, the context window always.
+  const moreLine = t(
+    view && isAuto(view.effectiveModel)
+      ? "agentPage.work.brain.advanced.contents.model"
+      : "agentPage.work.brain.advanced.contents.modelFixed",
+  );
   const sub =
     status.kind === "own"
       ? status.ownerId
@@ -257,6 +265,12 @@ export function RightHandMine({ agent }: { agent: Agent }) {
               sub: model,
               leading: { kind: "icon", name: "brain" },
             },
+            {
+              key: ADVANCED,
+              label: t("agentPage.work.brain.v2.more"),
+              sub: moreLine,
+              leading: { kind: "icon", name: "target" },
+            },
             { key: OTHER, label: t("agentPage.work.brain.connectPlan"), leading: { kind: "icon", name: "plus" } },
             { key: WORKSPACE, label: t("rightHand.settings.useWorkspace"), leading: { kind: "icon", name: "members" } },
           ]
@@ -266,6 +280,7 @@ export function RightHandMine({ agent }: { agent: Agent }) {
           ],
     });
     if (picked === MODEL) openAgentModel(agent.id);
+    else if (picked === ADVANCED) openAgentAdvanced(agent.id, "mine");
     else if (picked === OTHER || (picked === MINE && !own)) connect();
     else if (picked === WORKSPACE && own) back();
   };

@@ -6,6 +6,7 @@ import {
   type ModelTier,
   modelForTier,
   modelInfo,
+  nearestTier,
   parseCustomModel,
 } from "@agenteschat/providers";
 import type { Agent } from "./agents";
@@ -249,17 +250,29 @@ export function autoModelFor(
   tier: ModelTier,
   tiers?: Partial<Record<ModelTier, string>>,
   endpoint?: AutoEndpoint | null,
+  /** The models the workspace chose on this line (OpenRouter, ADR 0187); absent or null: all of them. */
+  allowed?: readonly string[] | null,
 ): string | null {
   const own = tiers?.[tier];
   // Another provider's (or another endpoint's) model needs another key: only this line's own pick stands.
-  const ownHere = own
-    ? provider === "custom"
-      ? endpoint?.credentialId === parseCustomModel(own)?.credentialId
-      : modelInfo(own)?.provider === provider
-    : false;
+  const onLine = (id: string) =>
+    provider === "custom"
+      ? endpoint?.credentialId === parseCustomModel(id)?.credentialId
+      : modelInfo(id)?.provider === provider;
+  const ownHere = own ? onLine(own) && (!allowed || allowed.includes(own)) : false;
   if (own && ownHere) return own;
   // An endpoint declares no catalog tiers: its one best model answers for every tier.
   if (provider === "custom") return endpoint ? endpointModelId(endpoint.credentialId, endpoint.models) : null;
+  // The models the workspace chose, by tier; without one of that tier, the nearest with an answer in a schema.
+  if (provider === "openrouter" && allowed) {
+    const ownList = allowed.flatMap((id) => {
+      const info = modelInfo(id);
+      return info ? [[id, info] as const] : [];
+    });
+    const hit = nearestTier(ownList, tier, ([, m]) => m.tier);
+    if (hit) return hit[0];
+    return ownList.find(([, m]) => m.structuredOutput !== false)?.[0] ?? ownList[0]?.[0] ?? null;
+  }
   return modelForTier(provider, tier) ?? (provider === "openrouter" ? null : modelForTier("anthropic", tier));
 }
 
@@ -277,10 +290,11 @@ export function autoApplied(
   provider: string,
   tiers?: Partial<Record<ModelTier, string>>,
   endpoint?: AutoEndpoint | null,
+  allowed?: readonly string[] | null,
 ): AutoApplied {
   const out: AutoApplied = {};
   if (isAutoModel(agent.model)) {
-    const model = choice.apiModel ?? autoModelFor(provider, choice.tier, tiers, endpoint);
+    const model = choice.apiModel ?? autoModelFor(provider, choice.tier, tiers, endpoint, allowed);
     if (model) out.apiModel = model;
   }
   if (plan.kind === "model") {

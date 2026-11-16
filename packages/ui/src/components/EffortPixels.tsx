@@ -8,6 +8,8 @@ import { reduced, token } from "./RunPixels";
 export interface EffortStep<V extends string> {
   value: V;
   label: string;
+  /** Off: the model isn't sold at this level — greyed, and the ramp, the arrows and the drag go past it. */
+  disabled?: boolean;
 }
 
 const hash = (a: number, b: number, c: number) => {
@@ -108,9 +110,19 @@ export function EffortPixels<V extends string>({
   const canvas = useRef<HTMLCanvasElement>(null);
   const n = steps.length;
   const index = steps.findIndex((s) => s.value === value);
+  const on = (i: number) => Boolean(steps[i]) && !steps[i]?.disabled;
+  // The step a position lands on: its nearest one the model is sold at.
+  const landing = (i: number) => {
+    if (on(i)) return i;
+    for (let d = 1; d < n; d++) {
+      if (on(i - d)) return i - d;
+      if (on(i + d)) return i + d;
+    }
+    return i;
+  };
   // While dragging: how far the fill reaches, in steps.
   const [drag, setDrag] = useState<number | null>(null);
-  const shown = drag === null ? index : Math.min(n - 1, Math.max(0, Math.ceil(drag) - 1));
+  const shown = drag === null ? index : landing(Math.min(n - 1, Math.max(0, Math.ceil(drag) - 1)));
   const motion = useRef({ pos: index + 1, target: index + 1 });
   motion.current.target = drag ?? index + 1;
   const still = reduced();
@@ -151,8 +163,12 @@ export function EffortPixels<V extends string>({
     return Math.min(n, Math.max(0.3, ((x - r.left) / r.width) * n));
   };
   const step = (by: number) => {
-    const next = steps[Math.min(n - 1, Math.max(0, index + by))];
-    if (next && next.value !== value) onValueChange(next.value);
+    for (let i = index + by; i >= 0 && i < n; i += by) {
+      const next = steps[i];
+      if (!next || next.disabled) continue;
+      if (next.value !== value) onValueChange(next.value);
+      return;
+    }
   };
   const current = steps[shown];
   return (
@@ -190,9 +206,9 @@ export function EffortPixels<V extends string>({
         }}
         onPointerUp={() => {
           if (drag === null) return;
-          const next = steps[shown];
+          const next = steps[landing(shown)];
           setDrag(null);
-          if (next && next.value !== value) onValueChange(next.value);
+          if (next && !next.disabled && next.value !== value) onValueChange(next.value);
         }}
         onPointerCancel={() => setDrag(null)}
       />
@@ -206,9 +222,10 @@ export function EffortPixels<V extends string>({
             key={s.value}
             type="button"
             tabIndex={-1}
-            disabled={disabled}
+            disabled={disabled || s.disabled}
             data-on={i === shown || undefined}
-            onClick={() => s.value !== value && onValueChange(s.value)}
+            data-off={s.disabled || undefined}
+            onClick={() => !s.disabled && s.value !== value && onValueChange(s.value)}
           >
             {s.label}
           </button>

@@ -43,6 +43,8 @@ import {
   createContextToolSource,
   createDashboardToolSource,
   createDatabaseToolSource,
+  createDecisionJudge,
+  createDecisionModel,
   createDesktopControl,
   createDesktopPointers,
   createDesktopToolSource,
@@ -161,6 +163,8 @@ export interface EngineOptions {
   onTiming?(name: string, ms: number, attrs: Record<string, unknown>): void;
   /** Tests: fake TypeSafe transport. */
   jevFetch?: typeof fetch;
+  /** Tests: fake OpenAI/Gemini/local decision transport. */
+  decisionFetch?: typeof fetch;
   /**
    * Tests: how long a person's message waits for their next one before the router decides, or before the run it
    * started makes its first model call (`ROUTER_QUIET_MS`).
@@ -258,6 +262,14 @@ export function buildEngine(o: EngineOptions) {
     envKey: config.TYPESAFE_API_KEY,
     fetch: o.jevFetch,
   });
+  // The installation's optional decision model (ADR 0188): off until its owner turns it on in Settings.
+  const decisionModel = createDecisionModel({
+    db,
+    keyWrapper: adapters.keyWrapper,
+    keyWrappers,
+    localURL: config.DECISION_MODEL_URL,
+    fetch: o.decisionFetch,
+  });
   // The small model that routes and judges on an organization's keys (ADR 0074): the deployment's own on a
   // Claude or an OpenAI key, the catalog's routing pick on the others.
   const smallModels = { anthropic: config.ROUTER_MODEL, openai: config.OPENAI_CHEAP_MODEL };
@@ -268,7 +280,7 @@ export function buildEngine(o: EngineOptions) {
       gateway,
       resolveModel: (orgId) => smallModelFor({ db, gateway }, orgId, smallModels),
     });
-    context.judge = withJudgeFallback(
+    const jevChain = withJudgeFallback(
       platformCapJudge(
         db,
         createJevJudge({
@@ -282,6 +294,13 @@ export function buildEngine(o: EngineOptions) {
       llmJudge,
       () => jevKey.usable(),
     );
+    // The switch's model answers first; the Jev chain answers pictures it can't read, boxes and any failure.
+    context.judge = createDecisionJudge({
+      model: decisionModel,
+      fallback: jevChain,
+      gateway,
+      http: o.decisionFetch,
+    });
   }
   // Screenshots go only to Jev's vision model: with a fake judge (tests) nothing looks at them.
   const vision = o.judge ? undefined : () => jevKey.usable();
@@ -851,7 +870,11 @@ export function buildEngine(o: EngineOptions) {
       ...((config.ROUTER_STRATEGY ?? "jev") === "jev"
         ? { jev: { key: jevKey, timeoutMs: config.JEV_TIMEOUT_MS, fetch: o.jevFetch } }
         : {}),
+      // The switch's model goes before Jev; it skips itself when off.
+      decision: decisionModel,
     },
+    decision: decisionModel,
+    decisionFetch: o.decisionFetch,
   };
   const handlers = createJobHandlers(jobDeps);
   // A failing block of one of the right hand's lanes is left out of its prompt: it shows here.
@@ -893,6 +916,8 @@ export function buildEngine(o: EngineOptions) {
     talker,
     /** Awaited before the server serves (`ready()`), and the owner's routes read and change it. */
     jevKey,
+    /** The installation's optional decision model (ADR 0188). */
+    decisionModel,
     /** Likewise: the server's GitHub App (ADR 0156). */
     githubApp,
     /** Likewise: the speech engines, read before the first voice message. */

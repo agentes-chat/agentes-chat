@@ -1,15 +1,18 @@
-import type { AgentBrain, AgentBrainInput, BrainSpeed } from "@agenteschat/client";
+import type { AgentBrain, AgentBrainInput, BrainScope, BrainSpeed } from "@agenteschat/client";
 import { keys, useAgentBrain, useAiAccounts, useAiStatus, useApi, useModels } from "@agenteschat/client";
 import { signInPlan } from "@agenteschat/client/lib/ai-accounts";
 import { EVERYONE_AUDIENCE } from "@agenteschat/client/lib/audience";
 import {
   type Advanced,
+  advancedDefaults,
   advancedSummary,
   effortOf,
   isAdvancedDefault,
+  keyEffortScale,
   SPEEDS,
   viewSpeedFits,
 } from "@agenteschat/client/lib/brain-advanced";
+import { effortFamily } from "@agenteschat/client/lib/brain-picker";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
 import {
   autoContextLine,
@@ -19,7 +22,7 @@ import {
   isContextLimit,
 } from "@agenteschat/client/lib/context-limits";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
-import { planOf } from "@agenteschat/client/lib/plans";
+import { brainPlan, levelOfModel, planOf } from "@agenteschat/client/lib/plans";
 import { isAuto } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
@@ -47,14 +50,16 @@ import { Note, PlanReplies } from "./parts";
  * computer is away). Each choice saves at once, like the rest of "Pensa com"; "Voltar ao padrão" puts them all back.
  */
 
-/** Opens an agent's advanced settings. */
-export const openAgentAdvanced = (agentId: string) => router.push(`/agent-advanced/${agentId}` as never);
+/** Opens an agent's advanced settings. `scope`: which of the right hand's two AIs (its own by default). */
+export const openAgentAdvanced = (agentId: string, scope?: BrainScope) =>
+  router.push(`/agent-advanced/${agentId}${scope ? `?scope=${scope}` : ""}` as never);
 
 /** What the agent's view says for the advanced settings (a limit past its model's window reads as none). */
 export const advancedOf = (view: AgentBrain, options?: readonly ContextLimit[]): Advanced => {
   const tokens = isContextLimit(view.contextTokens) ? view.contextTokens : null;
   return {
-    effort: effortOf(view.brain, view.effort),
+    // A model sold at thinking levels (Antigravity) names its effort in its own id.
+    effort: levelOfModel(view.options, view.brain, view.effectiveModel) ?? effortOf(view.brain, view.effort),
     speed: viewSpeedFits(view) ? view.speed : "standard",
     contextTokens: tokens !== null && (!options || options.includes(tokens)) ? tokens : null,
     onlyOwner: view.onlyOwner,
@@ -62,7 +67,7 @@ export const advancedOf = (view: AgentBrain, options?: readonly ContextLimit[]):
   };
 };
 
-export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
+export function AgentAdvancedScreen({ agentId, scope }: { agentId: string; scope?: BrainScope }) {
   const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
   const api = useApi();
@@ -76,7 +81,7 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
   const name = agent?.name ?? "";
   const ownerFirst = agent?.ownerUserId ? dir.memberById.get(agent.ownerUserId)?.name.split(" ")[0] : undefined;
   const g = agentGrammar(name);
-  const brain = useAgentBrain(orgId, agentId);
+  const brain = useAgentBrain(orgId, agentId, true, false, scope);
   const models = useModels();
   const apiKey = useAiStatus(orgId).data?.apiKey !== false;
   const [busy, setBusy] = useState(false);
@@ -101,7 +106,13 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
         );
   const now = view ? advancedOf(view, options) : null;
   const may = !busy && view?.canEdit === true;
-  const effort = useEffortChoice(agentId, now?.effort);
+  const family = view ? effortFamily(view, brainPlan(view)) : undefined;
+  const effort = useEffortChoice(agentId, now?.effort, scope, family ? (level) => family.values[level] : undefined);
+  // A fixed API model's ramp offers only the levels its key checked (ADR 0187).
+  const keyScale =
+    view?.brain === "model"
+      ? keyEffortScale(models.data?.models?.find((m) => m.id === view.effectiveModel))
+      : undefined;
   const speed = useBrainChoice<BrainSpeed>(agentId, now?.speed ?? "standard", (value) => ({ speed: value }));
   const fallbackLabel = t("agentPage.work.brain.fallbackTitle", {
     computer: computerNameOf(t, org?.name ?? "", view?.computer?.name ?? "", isPersonal(org)),
@@ -111,8 +122,8 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
   const save = async (input: AgentBrainInput, done?: string) => {
     setBusy(true);
     try {
-      const next = await api.agents.setBrain(orgId, agentId, input);
-      qc.setQueryData(keys.agentBrain(orgId, agentId), next);
+      const next = await api.agents.setBrain(orgId, agentId, { ...(scope ? { scope } : {}), ...input });
+      qc.setQueryData(scope ? [...keys.agentBrain(orgId, agentId), scope] : keys.agentBrain(orgId, agentId), next);
       const line = advancedSummary(t, i18n.language, {
         kind: next.brain,
         autoModel,
@@ -130,7 +141,13 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
   };
   const putBack = () => {
     if (!view || !now) return;
-    void save(advancedResetInput(view, now, autoModel));
+    const input = advancedResetInput(view, now, autoModel);
+    // Their own AI has no audience or fallback of its own: only how it thinks goes back.
+    void save(
+      scope === "mine"
+        ? { contextTokens: input.contextTokens, ...(input.effort ? { effort: input.effort } : {}) }
+        : input,
+    );
   };
 
   return (
@@ -158,6 +175,11 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
                       chevron={kind !== null}
                       onPress={kind ? () => router.push(`/agent-model/${agentId}` as never) : undefined}
                     />
+                  ) : keyScale === null ? (
+                    <GroupedRow
+                      label={t("agentPage.work.brain.effort")}
+                      sub={t("agentPage.work.brain.effortsUntested")}
+                    />
                   ) : (
                     <View style={styles.ramp}>
                       <EffortRamp
@@ -165,6 +187,7 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
                         onChange={effort.change}
                         color={agentLook(agent).color}
                         kind={view.brain}
+                        levels={family?.levels ?? keyScale}
                         disabled={!view.canEdit}
                       />
                     </View>
@@ -217,7 +240,7 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
                 />
               ))}
             </GroupedList>
-            {kind ? (
+            {kind && scope !== "mine" ? (
               <>
                 <GroupedHeader>{t("agentPage.work.brain.advanced.answers")}</GroupedHeader>
                 {agent?.ownerUserId ? (
@@ -268,7 +291,13 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
               <GroupedList>
                 <GroupedRow
                   label={t("agentPage.work.brain.advanced.defaults")}
-                  disabled={!may || isAdvancedDefault(view.brain, now)}
+                  // Their own AI has no audience or fallback: the defaults are the effort and the window alone.
+                  disabled={
+                    !may ||
+                    (scope === "mine"
+                      ? now.effort === advancedDefaults(view.brain, now).effort && now.contextTokens === null
+                      : isAdvancedDefault(view.brain, now))
+                  }
                   onPress={putBack}
                 />
               </GroupedList>

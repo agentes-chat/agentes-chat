@@ -294,6 +294,10 @@ export function RightHandMineRow({ agent }: { agent: Agent }) {
         model={own && view ? planModelOf(t, view, (input) => setMine(input)) : null}
         links={links}
         busy={busy}
+        locked={held}
+        // Only their own plan: the workspace's key has no row of theirs to save the effort or the window on.
+        view={status.kind === "own" ? view : undefined}
+        onAdvanced={(input) => setMine(input)}
       />
     </>
   );
@@ -695,6 +699,8 @@ function RightHandForm({ agent }: { agent: Agent }) {
         // On a billing hold nothing changes before the plan (ADR 0162).
         busy={busy || update.isPending}
         locked={!!hold}
+        view={view}
+        onAdvanced={(input) => setWorkspace(input)}
       />
       <Dialog
         open={looking}

@@ -210,7 +210,7 @@ export const keyStepHint = (p: ProviderEntry) =>
 
 /** Live keys per provider. */
 /** A workspace key as far as which models it makes usable goes (`AgentBrain.keys` has no `revokedAt`: live ones only). */
-type KeyLike = Pick<Credential, "id" | "provider"> & { revokedAt?: string | null };
+type KeyLike = Pick<Credential, "id" | "provider" | "openrouter"> & { revokedAt?: string | null };
 
 export function providersWithKeys(credentials: readonly KeyLike[]) {
   return new Set(credentials.filter((c) => !c.revokedAt).map((c) => c.provider as string));
@@ -228,11 +228,26 @@ export interface ModelChoice {
  * platform key is on (the only one a server offers). A long list's models the
  * workspace can't use are left out: only its good picks show, to say a key opens them.
  */
-export function modelChoices(models: Model[], credentials: readonly KeyLike[], platform: boolean) {
+export function modelChoices(
+  models: Model[],
+  credentials: readonly KeyLike[],
+  platform: boolean,
+  /** The agent's current model: shown even when the workspace's OpenRouter choice left it out (ADR 0187). */
+  keep?: string | null,
+) {
   const withKey = providersWithKeys(credentials);
   const live = new Set(credentials.filter((c) => !c.revokedAt).map((c) => c.id));
+  // An OpenRouter key with a choice limits the line to those models (the union of the workspace's keys); while none
+  // chose (a key saved before the choice existed), the whole list shows, as before.
+  const chosen = new Set(
+    credentials.flatMap((c) => (c.provider === "openrouter" && !c.revokedAt ? (c.openrouter?.models ?? []) : [])),
+  );
+  const restricted = credentials.some(
+    (c) => c.provider === "openrouter" && !c.revokedAt && (c.openrouter?.models?.length ?? 0) > 0,
+  );
   const groups = new Map<string, ModelChoice[]>();
   for (const model of models) {
+    if (restricted && model.provider === "openrouter" && !chosen.has(model.id) && model.id !== keep) continue;
     // A workspace endpoint's models (ADR 0146), under its name: only this workspace's, only while its key lives.
     const group = model.endpoint?.name ?? model.provider;
     const available =
@@ -240,7 +255,9 @@ export function modelChoices(models: Model[], credentials: readonly KeyLike[], p
       (model.endpoint
         ? live.has(model.endpoint.credentialId)
         : withKey.has(model.provider) || (platform && model.provider === "anthropic"));
-    if ((model.pick === false || model.endpoint) && !available) continue;
+    // Only what this workspace can think with now: other providers' models are not hinted at (ADR 0187); the one an
+    // agent already runs stays, so a removed key doesn't hide its own setting.
+    if (!available && model.id !== keep) continue;
     groups.set(group, [...(groups.get(group) ?? []), { model, available }]);
   }
   return [...groups.entries()];

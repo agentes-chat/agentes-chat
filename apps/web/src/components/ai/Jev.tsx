@@ -3,6 +3,7 @@ import {
   useAiStatus,
   useCheckJevKey,
   useCredentials,
+  useDecisionModel,
   useJevKey,
   useModelLabel,
   useRemoveJevKey,
@@ -17,15 +18,12 @@ import {
   Button,
   Card,
   CardHeader,
-  Chip,
   type ChipTone,
   Dialog,
   DialogFooter,
   Icon,
   type IconName,
-  InfoHint,
   Input,
-  List,
   Locked,
   OptionList,
   ProviderLogo,
@@ -37,6 +35,7 @@ import { useTranslation } from "react-i18next";
 import { HelpLink } from "@/components/HelpLink";
 import { useOrg } from "@/components/org-context";
 import { OpenPage, Step, StepTitle } from "./AddAccountFlow";
+import { DecisionModelSection } from "./DecisionModel";
 
 /*
  * Who picks the agents for a message nobody mentioned (ADR 0074), and Jev on a self-hosted server (ADR 0073):
@@ -224,11 +223,23 @@ export function WhoPicksSection() {
   const { org } = useOrg();
   const admin = can(org, "manage_credentials");
   const jev = useJevKey();
+  const decision = useDecisionModel();
   // The server's owner gets Jev's card where they aren't an admin too, and its reasons follow who picks.
   const status = useAiStatus(org.id, admin || Boolean(jev.data));
   const modelLabel = useModelLabel();
   const line = admin ? routingLineOf(status.data, modelLabel) : null;
-  if (!line && !jev.data) return null;
+  if (!line && !jev.data && !decision.data) return null;
+  // The owner's list of who decides (Jev included, ADR 0188): one card, one row per provider.
+  if (jev.data || decision.data)
+    return (
+      <DecisionModelSection
+        routing={status.data?.routing?.by}
+        line={line ? { key: line.key, params: line.params } : null}
+        reflectionOff={Boolean(line) && status.data?.reflection === false}
+      />
+    );
+  // Everyone else, where the router is on: who decides now, and nothing to choose.
+  if (!line) return null;
   return (
     <Card aria-labelledby="sec-routing" className="who-card">
       <CardHeader
@@ -237,14 +248,13 @@ export function WhoPicksSection() {
         title={t("routing.title")}
         action={<HelpLink slug="who-answers">{t("routing.how")}</HelpLink>}
       />
-      {line && <p className="who-line">{t(line.key, line.params)}</p>}
-      {line && status.data?.reflection === false && <p className="who-line">{t("routing.reflectionOff")}</p>}
-      {jev.data && <JevCard routing={status.data?.routing?.by} />}
+      <p className="who-line">{t(line.key, line.params)}</p>
+      {status.data?.reflection === false && <p className="who-line">{t("routing.reflectionOff")}</p>}
     </Card>
   );
 }
 
-const CHIP: Record<
+export const CHIP: Record<
   JevKey["state"],
   { icon?: IconName; tone?: ChipTone; word: "off" | "on" | "invalid" | "no_credit" }
 > = {
@@ -259,7 +269,14 @@ const CHIP: Record<
  * Setting it up (or replacing it) asks where Jev is paid: TypeSafe, or OpenRouter, where an OpenRouter key the
  * workspace already has turns it on with one press.
  */
-function JevCard({ routing }: { routing?: AiRouting["by"] }) {
+export function JevSettings({
+  routing,
+  foot = true,
+}: {
+  routing?: AiRouting["by"];
+  /** The link to Jev's help: the card that holds these rows has its own. */
+  foot?: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   // Read here rather than handed down: a save or a removal shows its key at once, so focus lands on what stays.
@@ -282,7 +299,7 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
-  const box = useRef<HTMLElement>(null);
+  const box = useRef<HTMLDivElement>(null);
   // The steps open in place of the button pressed and close into the card as it is now: focus goes back to its way in
   // ("Configurar o Jev", "Trocar a chave"), or to the card, never to the page.
   const opener = useRef<HTMLButtonElement>(null);
@@ -301,7 +318,6 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   }, [hash]);
   if (!view) return null;
   const env = view.source === "env";
-  const chip = CHIP[view.state];
   const openRouter = view.via === "openrouter";
   // The workspace's key is offered unless it is the one being replaced (one refused, say).
   const offered = steps === "replace" && workspaceKey?.keyHint === view.hint ? undefined : workspaceKey;
@@ -485,27 +501,8 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   ].filter(Boolean);
 
   return (
-    <section id="jev" ref={box} tabIndex={-1} className="jev" aria-labelledby="jev-title">
-      <List>
-        <div className="ac-list__row jev__head ac-mediarow ac-mediarow--row">
-          <span className="ac-mediarow__face">
-            <ProviderLogo id="typesafe" size="sm" />
-          </span>
-          <span className="ac-mediarow__head">
-            <span className="ac-hintline">
-              <h3 id="jev-title" className="jev__title">
-                {t("jev.title")}
-              </h3>
-              <InfoHint name={t("common.about", { label: t("jev.title") })}>{t("jev.about")}</InfoHint>
-            </span>
-          </span>
-          <span className="ac-mediarow__end">
-            <Chip icon={chip.icon} tone={chip.tone}>
-              {t(`jev.state.${chip.word}`)}
-            </Chip>
-          </span>
-          <span className="ac-mediarow__body small muted">{t("jev.lead")}</span>
-        </div>
+    <section id="jev" ref={box} tabIndex={-1} className="jev" aria-label={t("jev.title")}>
+      <>
         {view.source === null ? (
           <div className="ac-list__row jev__body">
             <JevWhy routing={routing} />
@@ -537,10 +534,12 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
             {steps === "replace" && <div className="ac-list__row jev__body">{chooser(true)}</div>}
           </>
         )}
-      </List>
-      <p className="jev__foot">
-        <HelpLink slug="jev">{t("jev.how")}</HelpLink>
-      </p>
+      </>
+      {foot && (
+        <p className="jev__foot">
+          <HelpLink slug="jev">{t("jev.how")}</HelpLink>
+        </p>
+      )}
       <Dialog
         open={removing}
         onOpenChange={setRemoving}

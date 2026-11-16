@@ -319,7 +319,12 @@ export async function rightHandAwayRun(db: Executor, run: { orgId: string; agent
 export const RIGHT_HAND_TURN = { mode: "chat" } as const;
 
 type ThinkingAgent = Pick<Agent, "orgId" | "brainAccountId" | "machineId"> &
-  Partial<Pick<Agent, "builtin" | "ownerUserId" | "brain" | "brainModel" | "brainEffort" | "brainAccountLentBy">> &
+  Partial<
+    Pick<
+      Agent,
+      "builtin" | "ownerUserId" | "brain" | "brainModel" | "brainEffort" | "brainAccountLentBy" | "contextTokens"
+    >
+  > &
   Partial<Pick<Agent, "planForOthers" | "brainFallback" | "brainExtraUsage" | "credentialId">>;
 
 /** A person's own AI for the right hand (§11): their row, null when their DM thinks with the workspace's. */
@@ -365,6 +370,7 @@ const planBrain = (p: { kind: string; id: string }) => ({
   brain: p.kind,
   brainModel: AUTO_MODEL,
   brainEffort: null,
+  brainContextTokens: null,
   brainAccountId: p.id,
   brainAccountLentBy: null,
 });
@@ -582,6 +588,8 @@ export async function withPersonalBrain<T extends ThinkingAgent>(
       brain: own.brain,
       brainModel: personalModel(own, agent),
       brainEffort: own.brainEffort,
+      // How much their own AI reads: the run's context budget and its turn follow it (ADR 0086).
+      contextTokens: own.brainContextTokens ?? null,
       brainAccountId: own.brainAccountId,
       brainAccountLentBy: own.brainAccountLentBy,
       brainFallback: false,

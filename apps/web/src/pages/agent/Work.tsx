@@ -34,7 +34,7 @@ import {
   planOfAccount,
 } from "@agenteschat/client/lib/no-ai";
 import { can as canDo } from "@agenteschat/client/lib/permissions";
-import { brainModelChoice, brainModelChoices, isPlanId, planOf } from "@agenteschat/client/lib/plans";
+import { brainModelChoice, brainModelChoices, isPlanId, levelOfModel, planOf } from "@agenteschat/client/lib/plans";
 import { apiProviderOf, isAuto } from "@agenteschat/client/lib/providers";
 import { cleanSite, SITE } from "@agenteschat/client/lib/sites";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
@@ -225,7 +225,10 @@ export function WorkCard({
       : [accountWord, planWord(t, i18n.language, usage)].filter(Boolean).join(" · ") || null;
   // Automático picks the effort with the model: only a fixed model says its effort. On a key, only one chosen (none
   // leaves it to the provider).
-  const level = view ? effortOf(kind, view.effort) : null;
+  // A model sold at thinking levels (Antigravity) names its effort in its own id; any other by the stored one.
+  const level = view
+    ? (levelOfModel(view.options, view.brain, view.effectiveModel) ?? effortOf(kind, view.effort))
+    : null;
   const effort =
     level && !isAuto(kind !== "model" ? shownPlanModel : saved.model)
       ? t("agentPage.work.cell.effort", { level: t(`agentPage.work.brain.effortsLower.${level}`) })

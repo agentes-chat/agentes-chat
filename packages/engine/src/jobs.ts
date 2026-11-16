@@ -34,6 +34,10 @@ import { LEARN_JOB, learnRun } from "./context/learn";
 import { REFLECT_DEFAULTS, reflectThread } from "./context/reflect";
 import { judgeOf, summaryModelReady } from "./context/summaries";
 import { reportDroppedMentions, tellWakeSkipped } from "./continuation";
+import { CREDENTIAL_EFFORTS_JOB } from "./credential-efforts";
+import { DECISION_INSTALL_JOB, runDecisionInstall } from "./decision-install";
+import { createDecisionRouterStrategy } from "./decision-judge";
+import type { DecisionModel } from "./decision-model";
 import { DEVICE_WAIT_EXPIRED_JOB, expireDeviceWait } from "./device-waits";
 import {
   deferMentionReport,
@@ -57,6 +61,7 @@ import {
   sendQueuedEmail,
 } from "./email";
 import { forgetCodeEmail } from "./email-codes";
+import { markCredentialEffortsFailed, probeCredentialEfforts } from "./endpoints";
 import { type DecidedBy, publishListChanged, publishRouted } from "./events";
 import { executeRun, type RunExecutorDeps } from "./executor";
 import {
@@ -94,6 +99,7 @@ import { afterMachineTaskEnded, afterMissionRunEnded, startQueuedMissionTasks } 
 import { type MissionDeps, missionOfThread, missionRole, reactivateMission } from "./missions";
 import { KEEP_GOING_JOB, keepMissionGoing, type MissionEngine } from "./missions-engine";
 import { notifyMessage } from "./notification-producers";
+import { notify } from "./notifications";
 import { ORG_FILES_PURGE_ATTEMPTS, ORG_FILES_PURGE_JOB, USER_FILES_PURGE_JOB } from "./organizations";
 import { outOfOfficeIds } from "./out-of-office";
 import { enqueue, type JobHandlers, type OutboxJob, PermanentJobError } from "./outbox";
@@ -103,6 +109,7 @@ import { notifyPersonLimit, PERSON_LIMIT_JOB } from "./person-usage";
 import { deliverPush } from "./push";
 import { reachOf, settleReach } from "./reach";
 import { routineCreatorOf } from "./requester";
+import { rightHandId } from "./right-hand";
 import { considerCard, RIGHT_HAND_DECIDE_JOB } from "./right-hand-approvals";
 import { lodiLaneHandlers } from "./right-hand-lanes";
 import {
@@ -194,6 +201,10 @@ export interface JobDeps extends RunExecutorDeps {
   voice?: VoiceDeps;
   /** The Vault's sources (job `vault.sync`, ADR 0144); absent: connections aren't read again. */
   vault?: VaultDeps;
+  /** The installation's optional decision model (ADR 0188): the switch's model, for its install job. */
+  decision?: DecisionModel;
+  /** Outbound HTTP to OpenAI, Gemini and the local runtime (tests inject a fake). */
+  decisionFetch?: typeof fetch;
   /** Connectors: job `org.delete` revokes a workspace's GitHub OAuth grants at GitHub before its rows go. */
   connectors?: ConnectorDeps;
   /** The server's GitHub App: job `org.delete` uninstalls it from the workspace's GitHub accounts (ADR 0156). */
@@ -225,6 +236,8 @@ export interface JobDeps extends RunExecutorDeps {
     strategy?: RouterStrategy;
     /** TypeSafe Jev as the chain's first step (the installation's key, never per org). */
     jev?: { key: JevKeySource; timeoutMs?: number; fetch?: typeof fetch; baseURL?: string };
+    /** The installation's optional decision model (ADR 0188): the model the switch turned on. */
+    decision?: DecisionModel;
     /**
      * The author's own plan as a step (ADR 0074 §3): the computers it picks on, and this server's address. Off
      * on the Cloud (`isAgentesCloud`), where Jev is ours. Absent: no plan step.
@@ -256,6 +269,10 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
   const jev = router.jev;
   const plans = router.plans && !isAgentesCloud(router.plans.publicUrl) ? router.plans.hub : null;
   const steps = [
+    // The switch's model (ADR 0188) goes first; when it is off the step skips itself without a trace.
+    ...(router.decision
+      ? [createDecisionRouterStrategy({ model: router.decision, gateway: deps.gateway, http: deps.decisionFetch })]
+      : []),
     ...(jev
       ? [
           createJevRouterStrategy({
@@ -291,7 +308,15 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
     hasAi: (orgId) => orgHasAi({ db: deps.db, gateway: deps.gateway, machines: deps.machines }, orgId),
     outOfOffice: (orgId, ids) =>
       outOfOfficeIds(deps.db, orgId, ids, { hasModel: (agent) => deps.gateway.hasModelCredential(agent) }),
-    routing: { jev: () => jevPicks(jev?.key), smallModel, plans },
+    routing: {
+      jev: () => jevPicks(jev?.key),
+      decision: async () => {
+        const current = await router.decision?.current().catch(() => null);
+        return current ? { provider: current.provider, model: current.model } : null;
+      },
+      smallModel,
+      plans,
+    },
     quietMs: router.quietMs,
     quietByTyping: router.quietByTyping,
     pubsub: deps.pubsub,
@@ -1130,6 +1155,51 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         level: job.payload.level === "reached" ? "reached" : "warning",
         period: String(job.payload.period),
       });
+    },
+    // The decision model the switch turned on (ADR 0188): prepared in the background, then the owner hears from the
+    // right hand.
+    [DECISION_INSTALL_JOB]: async (job) => {
+      await runDecisionInstall(deps, job);
+    },
+    // A workspace endpoint's effort check finished (ADR 0187): the person hears from the right hand.
+    [CREDENTIAL_EFFORTS_JOB]: async (job) => {
+      const orgId = orgOf(job);
+      const credentialId = String(job.payload.credentialId);
+      const userId = String(job.payload.userId);
+      if (!credentialId || !userId) return;
+      const [row] = await deps.db
+        .select({ label: schema.providerCredentials.label })
+        .from(schema.providerCredentials)
+        .where(and(eq(schema.providerCredentials.id, credentialId), eq(schema.providerCredentials.orgId, orgId)));
+      if (!row) return;
+      const hand = await rightHandId(deps.db, orgId).catch(() => null);
+      const tell = (statusTo: "done" | "failed", text?: string) =>
+        notify(
+          { db: deps.db, pubsub: deps.pubsub },
+          {
+            orgId,
+            userIds: [userId],
+            kind: "credential_efforts",
+            groupKey: `credential-efforts:${credentialId}`,
+            ...(hand ? { actor: { type: "agent" as const, id: hand } } : {}),
+            source: { label: row.label },
+            latest: { title: row.label, statusTo, ...(text ? { text } : {}) },
+          },
+        );
+      let result: Awaited<ReturnType<typeof probeCredentialEfforts>>;
+      try {
+        result = await probeCredentialEfforts(deps.db, deps.gateway, orgId, credentialId, {
+          force: job.payload.force === true,
+        });
+      } catch (error) {
+        // The outbox retries; its last attempt is the one that tells the person.
+        if (job.attempts + 1 >= job.maxAttempts) {
+          await markCredentialEffortsFailed(deps.db, orgId, credentialId, error).catch(() => {});
+          await tell("failed", error instanceof Error ? error.message : String(error)).catch(() => {});
+        }
+        throw error;
+      }
+      await tell(result.error ? "failed" : "done", result.error);
     },
     // In-app notifications of a message: mentions, thread replies, DMs.
     "notifications.message": async (job) => {

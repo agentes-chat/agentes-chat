@@ -27,7 +27,7 @@ import { organizationMembers, organizations } from "./tenancy";
  * (self-host: derived from AGENTES_SECRET; Cloud: a KMS key, via the
  * `KeyWrapper` adapter). Both ciphertexts are bound to (org_id, id).
  */
-/** A workspace's own model endpoint as its credential keeps it (ADR 0146). Prices in nano-USD per token. */
+/** A workspace's own model endpoint as its credential keeps it (ADR 0146, 0186). Prices in nano-USD per token. */
 export interface StoredEndpoint {
   style: "openai" | "anthropic";
   baseURL: string;
@@ -37,7 +37,13 @@ export interface StoredEndpoint {
     prices?: { input: number; output: number; cacheRead: number; cacheWrite: number };
     /** The last test call: answered and called a tool, answered without calling it, or failed. */
     check?: "ok" | "no_tools" | "failed";
+    /** The effort levels its last check found it takes (low, medium, high); absent: never checked. */
+    efforts?: string[];
+    /** When those levels were checked. */
+    effortsAt?: string;
   }[];
+  /** The effort check in the background: running, done (results on each model), or failed with the server's words. */
+  effortsSync?: { state: "running" | "done" | "failed"; at: string; error?: string };
 }
 
 export const providerCredentials = pgTable(
@@ -66,7 +72,21 @@ export const providerCredentials = pgTable(
      * address, API style and models (`custom`, ADR 0146). Not secret.
      */
     options: jsonb()
-      .$type<{ organization?: string; project?: string; endpoint?: StoredEndpoint }>()
+      .$type<{
+        organization?: string;
+        project?: string;
+        endpoint?: StoredEndpoint;
+        /**
+         * OpenRouter (ADR 0087, 0186): the models this workspace chose to use with the key; absent: all of them. The
+         * effort levels each of those models answered for in the last check, and how that check is going.
+         */
+        openrouter?: {
+          models: string[];
+          efforts?: Record<string, string[]>;
+          effortsAt?: string;
+          effortsSync?: { state: "running" | "done" | "failed"; at: string; error?: string };
+        };
+      }>()
       .notNull()
       .default({}),
     /** Last 4 characters of the key, so people can tell keys apart. */
@@ -456,6 +476,11 @@ export const rightHandBrains = pgTable(
     /** Someone else's plan, given with `use_others_plans`: who gave it (themselves); its owner may take it back. */
     brainAccountLentBy: text().references(() => users.id, { onDelete: "set null" }),
     brainEffort: text(),
+    /**
+     * The most context that person's own AI reads, in tokens (`200000`, `400000`, `1000000`; validated in code), as an
+     * agent's `context_tokens`: null = its model's window. The workspace's AI keeps its own on the right hand's row.
+     */
+    brainContextTokens: integer(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

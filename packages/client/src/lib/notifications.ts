@@ -507,6 +507,8 @@ export function openTarget(n: AppNotification): OpenTarget | null {
       ...(theirs && s.userId ? { search: { person: s.userId } } : {}),
     };
   }
+  // A workspace endpoint's effort check ended: IA e uso, where the key's models and levels are (ADR 0187).
+  if (n.kind === "credential_efforts") return { to: "/org/$orgId/settings/$section", params: { section: "usage" } };
   // The agent's model left its plan's list: its page, with "Quem pensa" open on its model to choose another.
   if (n.kind === "plan_model_dropped" && s.agentId)
     return {

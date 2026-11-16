@@ -11,6 +11,7 @@ import {
   effortOf,
   effortTextOf,
   isAdvancedDefault,
+  keyEffortLevels,
   viewSpeedFits,
 } from "../src/lib/brain-advanced";
 import { autoContextLine } from "../src/lib/context-limits";
@@ -170,17 +171,17 @@ describe("Velocidade (ADR 0149)", () => {
     expect(advancedParts(t, "pt-BR", { kind: "claude_code", autoModel: false, apiKey: true, now: medium })).toEqual([]);
   });
 
-  test("a key offers the levels the API takes: none is the provider's default, a stored max or xhigh is high", () => {
+  test("a key keeps every level it stores: none is the provider's default, xhigh and max are their own", () => {
     expect(effortLevelsOf("model")).toEqual(["low", "medium", "high"]);
-    expect(effortLevelsOf("claude_code")).toEqual(["low", "medium", "high", "max"]);
+    expect(effortLevelsOf("claude_code")).toEqual(["low", "medium", "high", "xhigh", "max"]);
     expect([null, "auto", "low", "medium", "high", "xhigh", "max"].map((e) => effortOf("model", e))).toEqual([
       null,
       null,
       "low",
       "medium",
       "high",
-      "high",
-      "high",
+      "xhigh",
+      "max",
     ]);
     expect([null, "auto", "max"].map((e) => effortOf("codex", e))).toEqual(["medium", "medium", "max"]);
     expect(([null, "medium", "high"] as const).map((e) => effortTextOf("model", e))).toEqual([
@@ -201,5 +202,20 @@ describe("the line under Automático for the context", () => {
     expect(autoContextLine(t, "codex")).toBe("agentPage.work.brain.contextText.autoSummarizes 200K");
     for (const kind of ["model", "cursor", "opencode", "antigravity", null])
       expect(autoContextLine(t, kind)).toBe("agentPage.work.brain.contextText.auto");
+  });
+});
+
+describe("the effort ramp of an API model", () => {
+  test("follows the levels it was checked for; unknown custom and OpenRouter models have none", () => {
+    expect(keyEffortLevels(undefined)).toEqual(["low", "medium", "high"]);
+    expect(keyEffortLevels({ provider: "custom", efforts: ["high"] })).toEqual(["high"]);
+    expect(keyEffortLevels({ provider: "custom" })).toBeNull();
+    expect(keyEffortLevels({ provider: "openrouter", efforts: ["low", "medium", "high", "xhigh", "max"] })).toEqual([
+      "low",
+      "medium",
+      "high",
+    ]);
+    expect(keyEffortLevels({ provider: "openrouter", efforts: [] })).toBeNull();
+    expect(keyEffortLevels({ provider: "openai" })).toEqual(["low", "medium", "high"]);
   });
 });

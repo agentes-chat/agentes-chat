@@ -1,4 +1,11 @@
-import type { AgentBrain, AgentBrainInput, AgentSetup, BrainKind, MachineAccount } from "@agenteschat/client";
+import type {
+  AgentBrain,
+  AgentBrainInput,
+  AgentSetup,
+  BrainEffort,
+  BrainKind,
+  MachineAccount,
+} from "@agenteschat/client";
 import { keys, useAgents, useApi, useSetComputerTarget, useUpdateAgent } from "@agenteschat/client";
 import type { BrainScreen } from "@agenteschat/client/lib/agent-edit";
 import { autonomyWords, setupOutcome } from "@agenteschat/client/lib/agent-setup";
@@ -9,9 +16,11 @@ import {
   type Advanced,
   advancedDefaults,
   advancedParts,
-  effortLevelsOf,
+  effortScaleSteps,
+  effortStepKey,
   effortTextOf,
   isAdvancedDefault,
+  keyEffortScale,
 } from "@agenteschat/client/lib/brain-advanced";
 import { brainModelLine, brainPickText } from "@agenteschat/client/lib/brain-picker";
 import { contextSize } from "@agenteschat/client/lib/context-limits";
@@ -20,7 +29,14 @@ import { namesText, rosterText } from "@agenteschat/client/lib/format";
 import { brainTool, installableCli } from "@agenteschat/client/lib/machines";
 import { type AiChoice, planMark } from "@agenteschat/client/lib/no-ai";
 import { usageWhen } from "@agenteschat/client/lib/plan-usage";
-import { geminiPersonal, isPlanId, planFreeHint, signInProviderOf } from "@agenteschat/client/lib/plans";
+import {
+  familyOfModel,
+  geminiPersonal,
+  isPlanId,
+  modelDisplays,
+  planFreeHint,
+  signInProviderOf,
+} from "@agenteschat/client/lib/plans";
 import { AUTO, isAuto, modelOnKey, providerLabel } from "@agenteschat/client/lib/providers";
 import { sceneTeam } from "@agenteschat/client/lib/right-hand";
 import {
@@ -441,26 +457,31 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
           ...(!s.shownModel || isAuto(s.shownModel) || s.planModels.some((m) => m.value === s.shownModel)
             ? []
             : [{ value: s.shownModel, label: s.shownModel }]),
-          ...s.planModels.map((m) => {
-            const line = brainModelLine(t, s.kind, s.plan, m, cursorPlanSays);
+          ...modelDisplays(s.planModels, s.shownModel, s.effort).map((d) => {
+            const line = brainModelLine(t, s.kind, s.plan, d.choice, cursorPlanSays);
             return {
-              value: m.value,
-              label: m.label,
+              value: d.value,
+              label: d.label,
               ...(line ? { description: line } : {}),
-              ...(m.needs ? { hint: t(`brain.modelNeeds.${m.needs}`) } : {}),
-              ...(m.maker ? { group: providerLabel(m.maker) } : {}),
+              ...(d.choice.needs ? { hint: t(`brain.modelNeeds.${d.choice.needs}`) } : {}),
+              ...(d.choice.maker ? { group: providerLabel(d.choice.maker) } : {}),
             };
           }),
         ];
   const modelChosen = modelOptions.find((o) => o.value === modelValue);
   const needs = s.planModels.find((m) => m.value === modelValue)?.needs;
+  // A model sold at thinking levels (Antigravity): its levels are the effort, and its id for the level is the model.
+  const family = s.kind === "model" ? undefined : familyOfModel(s.planModels, s.shownModel);
+  const modelLevel = family ? s.planModels.find((m) => m.value === s.shownModel)?.level : undefined;
   const saveModel = async () => {
     setBusy(true);
     try {
       if (s.kind === "model") await update.mutateAsync({ model: modelValue });
       else {
-        // An automatic model picks the effort too; a fixed one takes the ramp's level.
-        const next = isAuto(modelValue) ? AUTO : s.effort;
+        // An automatic model picks the effort too; a fixed one takes the ramp's level. A model sold at thinking
+        // levels (Antigravity) runs the id of the level chosen: the picked id already is that level.
+        const level = s.planModels.find((m) => m.value === modelValue)?.level;
+        const next = isAuto(modelValue) ? AUTO : (level ?? s.effort);
         const was = isAuto(view.effort) ? AUTO : s.effort;
         await api.agents.setBrain(org.id, agent.id, {
           brain: s.kind,
@@ -480,7 +501,8 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
 
   // ── how it thinks ──
   const moreNow: MoreDraft = {
-    effort: s.effort,
+    // A model sold at thinking levels names its effort in its own id: the ramp starts at that level.
+    effort: family ? (modelLevel ?? s.effort) : s.effort,
     speed: s.speedOn ? view.speed : "standard",
     contextTokens: s.savedContext,
     onlyOwner: view.onlyOwner,
@@ -497,8 +519,11 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
     const input: AgentBrainInput = {};
     // A fixed model takes the ramp's level, on a key too; "Automático" picks its own. On a key none is the provider's
     // default, saved as `auto` ("Voltar ao padrão", which clears a level kept under "Automático" too).
-    const was = s.kind !== "model" && isAuto(view.effort) ? AUTO : s.effort;
+    const was = s.kind !== "model" && isAuto(view.effort) ? AUTO : family ? (modelLevel ?? s.effort) : s.effort;
     if ((!isAuto(s.modelNow) || m.effort === null) && m.effort !== was) input.effort = m.effort ?? AUTO;
+    // A model sold at thinking levels runs the id of the level chosen, besides being asked for that effort.
+    const levelId = family && m.effort && m.effort !== was ? family.values[m.effort] : undefined;
+    if (levelId && levelId !== s.shownModel) input.model = levelId;
     if (s.kind !== "model") {
       if (s.speedOn && m.speed !== view.speed) input.speed = m.speed;
       if (m.fallback !== view.fallback) input.fallback = m.fallback;
@@ -925,6 +950,13 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
       );
     if (screen === "more") {
       const autoModel = isAuto(s.modelNow);
+      // The draft, not the saved model's level: a model sold at levels changes its id when Concluído saves.
+      const effortShown = m.effort;
+      // An API model whose levels were never checked (or which takes none) gets no ramp: a note says so (ADR 0187).
+      const keyModel =
+        s.kind === "model" ? s.models.find((x) => x.id === (s.shownModel || s.modelNow || "")) : undefined;
+      const keyScale = s.kind === "model" ? keyEffortScale(keyModel) : null;
+      const noEffort = s.kind === "model" && keyScale === null;
       const shownContext =
         m.contextTokens !== null && s.contextOptions.includes(m.contextTokens) ? m.contextTokens : null;
       const line = (key: "effort" | "speed" | "context", label: string, value: string, content: ReactNode) => (
@@ -944,25 +976,48 @@ function BrainFlow({ view, onClose, at }: { view: AgentBrain; onClose: () => voi
       );
       return (
         <div className="bd-lines">
-          {line(
-            "effort",
-            t("agentPage.work.brain.effort"),
-            autoModel ? t("brain.auto.label") : t(`agentPage.work.brain.efforts.${m.effort ?? "none"}`),
-            autoModel ? (
-              // "Automático" picks the effort too: said where the ramp would be.
-              <p className="bd-fold__hint">{t("agentPage.work.brain.effortText.auto")}</p>
-            ) : (
-              <EffortPixels
-                label={t("agentPage.work.brain.effort")}
-                value={m.effort}
-                onValueChange={(e) => setMore({ ...m, effort: e })}
-                color={draft.look.color}
-                steps={effortLevelsOf(s.kind).map((e) => ({ value: e, label: t(`agentPage.work.brain.efforts.${e}`) }))}
-                hint={(e) => t(`agentPage.work.brain.effortText.${effortTextOf(s.kind, e)}`)}
-                unset={t("agentPage.work.brain.efforts.none")}
-              />
-            ),
-          )}
+          {!noEffort &&
+            line(
+              "effort",
+              t("agentPage.work.brain.effort"),
+              autoModel ? t("brain.auto.label") : t(`agentPage.work.brain.efforts.${effortShown ?? "none"}`),
+              autoModel ? (
+                // "Automático" picks the effort too: said where the ramp would be.
+                <p className="bd-fold__hint">{t("agentPage.work.brain.effortText.auto")}</p>
+              ) : (
+                <EffortPixels
+                  label={t("agentPage.work.brain.effort")}
+                  value={effortShown}
+                  onValueChange={(e) => {
+                    if (e === "none" || e === "minimal") return;
+                    setMore({ ...m, effort: e as BrainEffort });
+                  }}
+                  color={draft.look.color}
+                  steps={
+                    family
+                      ? effortScaleSteps(family.levels).map((st) => ({
+                          ...st,
+                          label: t(`agentPage.work.brain.efforts.${effortStepKey(st.value)}`),
+                        }))
+                      : effortScaleSteps(keyScale ?? []).map((st) => ({
+                          ...st,
+                          // The API brain stores no none/minimal: shown, unselectable (like an unsold level).
+                          disabled: st.disabled || st.value === "none" || st.value === "minimal",
+                          label: t(`agentPage.work.brain.efforts.${effortStepKey(st.value)}`),
+                        }))
+                  }
+                  hint={(e) => {
+                    if (family) return t(`agentPage.work.brain.effortText.${!e || e === "none" ? "none" : e}`);
+                    if (e === "xhigh" || e === "max") return t(`agentPage.work.brain.effortText.${e}`);
+                    return t(
+                      `agentPage.work.brain.effortText.${effortTextOf(s.kind, e as Parameters<typeof effortTextOf>[1])}`,
+                    );
+                  }}
+                  unset={t("agentPage.work.brain.efforts.none")}
+                />
+              ),
+            )}
+          {noEffort && <p className="bd-fold__hint">{t("agentPage.work.brain.effortsUntested")}</p>}
           {s.speedOn &&
             line(
               "speed",

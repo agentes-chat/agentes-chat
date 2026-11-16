@@ -1,5 +1,11 @@
 import type { BrainEffort } from "@agenteschat/adapters";
-import { type ModelMessage, modelProvider, type SystemBlock, type ToolSpec } from "@agenteschat/providers";
+import {
+  type ModelMessage,
+  type ModelRequest,
+  modelProvider,
+  type SystemBlock,
+  type ToolSpec,
+} from "@agenteschat/providers";
 import type { Agent } from "../agents";
 import { turnNotes } from "../context";
 import { cutOldToolSteps } from "../context-budget";
@@ -142,9 +148,8 @@ export class ModelBrain implements Brain {
   }
 }
 
-/** A brain effort as the providers take it (`ModelRequest.effort`): `xhigh` and `max` are `high`. */
-export const apiEffort = (effort: BrainEffort): "low" | "medium" | "high" =>
-  effort === "low" || effort === "medium" ? effort : "high";
+/** A brain effort as the providers take it (`ModelRequest.effort`): the gateway takes it to the nearest it takes. */
+export const apiEffort = (effort: BrainEffort): NonNullable<ModelRequest["effort"]> => effort;
 
 /**
  * Callback → async iterator bridge: pushed items are yielded in order; after

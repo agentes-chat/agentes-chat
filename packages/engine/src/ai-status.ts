@@ -5,6 +5,7 @@ import { type AutoLine, autoLine, autoModelFor, autoProvider } from "./auto-mode
 import { brainOf } from "./brain-settings";
 import { brainAccountFor, computerBrainUnavailable, mayFallBack, NO_AI_CODES } from "./brains/select";
 import { BRAIN_PLAN_NAMES, type BrainKind, type ComputerBrainKind, isComputerBrain } from "./brains/types";
+import { openRouterSelection } from "./credentials";
 import type { ModelGateway } from "./gateway";
 import type { MachineStatus } from "./machine-hub";
 import { TASK_OFFLINE_GRACE_MS } from "./machine-tasks";
@@ -107,7 +108,8 @@ export async function modelReady(deps: AiStatusDeps, agent: AiAgent): Promise<bo
   const { provider, endpoint } = await autoLine(deps.db, agent).catch((): AutoLine => ({ provider: "anthropic" }));
   // OpenRouter's line is its list.
   if (provider === "openrouter") await ensureOpenRouterModels();
-  const model = autoModelFor(provider, "medium", undefined, endpoint);
+  const allowed = provider === "openrouter" ? await openRouterSelection(deps.db, agent.orgId).catch(() => null) : null;
+  const model = autoModelFor(provider, "medium", undefined, endpoint, allowed);
   // OpenRouter's list not read: `autoLine` found its key, and a run waits the outage out.
   if (!model) return provider === "openrouter";
   return deps.gateway.hasModelCredential({ ...agent, model });
@@ -335,12 +337,14 @@ export async function orgHasAi(deps: AiStatusDeps, orgId: string): Promise<boole
  * `by` for the workspace, `mine` for the person asking (a plan picks only for its owner's own messages).
  */
 export interface AiRouting {
-  by: "jev" | "model" | "plans" | "rules" | "off";
-  mine: "jev" | "model" | "plan" | "rules" | "off";
-  /** The small model, while it picks. */
+  by: "jev" | "decision" | "model" | "plans" | "rules" | "off";
+  mine: "jev" | "decision" | "model" | "plan" | "rules" | "off";
+  /** The small model, or the decision model's id, while it picks. */
   model: string | null;
   /** With `rules`: the default key's provider, which has no small model (Kimi alone). */
   noSmallModel: string | null;
+  /** With `decision`: the provider that decides (openai, gemini or local). */
+  decisionProvider?: string | null;
 }
 
 /**
@@ -358,11 +362,20 @@ export async function orgRouting(
   const apiKey =
     keys.size > 0 ||
     (claude !== null && (await deps.gateway.hasModelCredential({ orgId, model: claude, credentialId: null })));
-  const of = (by: AiRouting["by"], mine: AiRouting["mine"], model: string | null, noSmallModel: string | null) => ({
-    routing: { by, mine, model, noSmallModel },
+  const of = (
+    by: AiRouting["by"],
+    mine: AiRouting["mine"],
+    model: string | null,
+    noSmallModel: string | null,
+    decisionProvider: string | null = null,
+  ) => ({
+    routing: { by, mine, model, noSmallModel, ...(by === "decision" ? { decisionProvider } : {}) },
     apiKey,
   });
   if (!routing) return of("off", "off", null, null);
+  // The switch's model, when on, answers before Jev (ADR 0188).
+  const chosen = routing.decision ? await routing.decision().catch(() => null) : null;
+  if (chosen) return of("decision", "decision", chosen.model, null, chosen.provider);
   if (await routing.jev()) return of("jev", "jev", null, null);
   const model = await routing.smallModel(orgId);
   if (model) return of("model", "model", model, null);

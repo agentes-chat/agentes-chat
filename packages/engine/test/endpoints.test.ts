@@ -16,6 +16,7 @@ import {
   listEndpoint,
   modelInfoFor,
   pickerModels,
+  probeCredentialEfforts,
   rotateCredential,
   updateAgent,
   updateEndpointModels,
@@ -384,5 +385,26 @@ describe("the test call", () => {
     expect(saved?.endpoint).toMatchObject({ baseURL: "https://gw.example/v1", models: [{ id: "tools" }] });
     expect(saved?.endpoint?.models[0]?.check).toBeUndefined();
     expect(await checkCredential(f.db, f.gateway, f.owner.id, f.org.id, cred.id)).toBe("unchecked");
+  });
+});
+
+describe("an endpoint's effort levels", () => {
+  test("one short call per level and model: what it takes is kept, a 4xx is a level it doesn't", async () => {
+    f = await setup();
+    const key = await addEndpoint(f, [{ id: "llama-4" }]);
+    const probes: string[] = [];
+    const gateway = {
+      complete: async (call: { model: string; effort?: string }) => {
+        probes.push(`${call.model}:${call.effort}`);
+        if (call.effort === "low") throw new ProviderError("provider rejected the request (400)", false, 400);
+        return { content: [], text: "ok", model: call.model } as never;
+      },
+    } as unknown as Parameters<typeof probeCredentialEfforts>[1];
+    const result = await probeCredentialEfforts(f.db, gateway, f.org.id, key.id);
+    expect(result.levels["llama-4"]).toEqual(["medium", "high", "xhigh", "max"]);
+    const id = customModelId(key.id, "llama-4");
+    expect(probes).toEqual([`${id}:low`, `${id}:medium`, `${id}:high`, `${id}:xhigh`, `${id}:max`]);
+    const saved = (await listCredentials(f.db, f.owner.id, f.org.id)).find((k) => k.id === key.id);
+    expect(saved?.endpoint?.models[0]?.efforts).toEqual(["medium", "high", "xhigh", "max"]);
   });
 });

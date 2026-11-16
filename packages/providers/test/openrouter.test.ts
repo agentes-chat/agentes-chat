@@ -93,6 +93,20 @@ describe("OpenRouter's model list", () => {
       expect(models()[id]).toBeUndefined();
   });
 
+  test("a batch variant never counts, even with the same API shape", () => {
+    const base = {
+      id: "openai/gpt-6-luna:batch",
+      name: "OpenAI: GPT-6 Luna (batch)",
+      context_length: 400_000,
+      supported_parameters: ["tools"],
+      endpoints: ["/api/v1/chat/completions"],
+      architecture: { output_modalities: ["text"] },
+      pricing: { prompt: "0.000001", completion: "0.000002" },
+    };
+    expect(parseOpenRouterModels({ data: [base] })).toEqual({});
+    expect(parseOpenRouterModels({ data: [{ ...base, id: "openai/gpt-6-luna" }] })).not.toEqual({});
+  });
+
   test("the picks carry Automático's tiers and the routing, cheap and recommended marks; the rest is the long list", () => {
     const m = models();
     expect(m["~z-ai/glm-latest"]).toMatchObject({

@@ -8,7 +8,7 @@ import {
 } from "@agenteschat/providers/plans";
 import { antigravityModels, brainOptions, defaultBrainModel, isBrainKind } from "../src/brain-settings";
 import { AntigravityBrain, type BrainTurnRequest, type ComputerBrainLink } from "../src/brains/codex";
-import { computerBrainUnavailable, NO_AI_CODES, UNAVAILABLE_CODES } from "../src/brains/select";
+import { antigravityGroupLimit, computerBrainUnavailable, NO_AI_CODES, UNAVAILABLE_CODES } from "../src/brains/select";
 import { BRAIN_NAMES, BRAIN_PLAN_NAMES, type BrainEvent, type BrainTurn, isComputerBrain } from "../src/brains/types";
 import { defaultAccountLabel, sharesSignIns } from "../src/machine-accounts";
 import type { MachineStatus } from "../src/machine-hub";
@@ -132,6 +132,26 @@ test("Quem pensa: Gemini where its runner and CLI are, its models as the CLI lis
   expect(option(machine({ executors: { detectedAt: "x" } }))).toMatchObject({ reason: "not_installed" });
   expect(option(machine({ executors: {} }))).toMatchObject({ reason: "not_reported" });
   expect(antigravityModels([]).map((m) => m.value)).toEqual(ANTIGRAVITY_MODELS.map((m) => m.id));
+  // A model sold at thinking levels: the apps show one row ("Gemini 4 Argon") and offer its levels as the effort.
+  expect(antigravityModels([])[0]).toMatchObject({
+    value: "gemini-4-argon-medium",
+    family: { id: "gemini-4-argon", label: "Gemini 4 Argon" },
+    level: "medium",
+  });
+  expect(antigravityModels([{ id: "gemini-4-hydrogen-xhigh", label: "Gemini 4 Hydrogen (XHigh)" }])[0]).toMatchObject({
+    family: { id: "gemini-4-hydrogen", label: "Gemini 4 Hydrogen" },
+    level: "xhigh",
+  });
+  // A model that names no level (the Orchestrator) is a choice of its own.
+  expect(
+    antigravityModels([{ id: "gemini-pro-orchestrator-g1-pro", label: "Orchestrator (Argon)" }])[0],
+  ).not.toHaveProperty("family");
+  // A slug's level suffix comes off to find its catalog model, "-xhigh" too; one with no catalog row has none.
+  expect(antigravityModels([{ id: "claude-opus-5-5-high" }])[0]).toMatchObject({
+    value: "claude-opus-5-5-high",
+    modelId: "claude-opus-5-5",
+  });
+  expect(antigravityModels([{ id: "gemini-4-hydrogen-xhigh" }])[0]).not.toHaveProperty("modelId");
   expect(defaultBrainModel("antigravity")).toBeNull();
   expect(isBrainKind("antigravity") && isComputerBrain("antigravity")).toBe(true);
   expect([BRAIN_NAMES.antigravity, BRAIN_PLAN_NAMES.antigravity, defaultAccountLabel("antigravity")]).toEqual([
@@ -178,4 +198,37 @@ test("the right hand's reply never carries a Google token, refresh token, key or
   const out = scrubSignIns(`token ${access} refresh ${refresh} key ${key} secret ${secret}`, "[removed]");
   for (const v of [access, refresh, key, secret]) expect(out.text).not.toContain(v);
   expect(out.found).toBe(4);
+});
+
+test("a model group reached its quota: its own models wait, the other models of the plan keep working", () => {
+  // What agy /usage reported (2026-11-15): the plan fine, the Claude and GPT weekly group full, Argon free.
+  const usage = {
+    at: "2026-11-15T20:53:55.287Z",
+    source: "probe" as const,
+    windows: [
+      { kind: "seven_day" as const, usedPercent: 10 },
+      { kind: "five_hour" as const, usedPercent: 0 },
+      {
+        kind: "other" as const,
+        label: "Claude and GPT models · 7d",
+        usedPercent: 100,
+        resetsAt: "2026-11-17T22:42:00.000Z",
+      },
+      { kind: "other" as const, label: "Claude and GPT models · 5h", usedPercent: 0 },
+      { kind: "other" as const, label: "Gemini 4 Argon Gemini 4 Argon · 7d", usedPercent: 0 },
+    ],
+  };
+  const now = Date.parse("2026-11-15T21:00:00Z");
+  // The model that was refused waits for its group; another group and other models are not the plan limit.
+  expect(antigravityGroupLimit(usage, "gemini-4-argon-medium", now)).toMatchObject({ group: "argon", full: false });
+  expect(antigravityGroupLimit(usage, "claude-opus-5-5-high", now)).toMatchObject({
+    group: "claude",
+    full: true,
+    resetsAt: "2026-11-17T22:42:00.000Z",
+  });
+  expect(antigravityGroupLimit(usage, "gpt-oss-120b-medium", now)).toMatchObject({ group: "claude", full: true });
+  // A window whose reset has passed is empty again.
+  expect(antigravityGroupLimit(usage, "claude-opus-5-5-high", Date.parse("2026-11-18T00:00:00Z")).full).toBe(false);
+  // No reading yet: nothing is known, so nothing is called full.
+  expect(antigravityGroupLimit(null, "claude-opus-5-5-high", now)).toMatchObject({ group: "claude", full: false });
 });

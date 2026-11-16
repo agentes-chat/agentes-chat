@@ -3196,7 +3196,8 @@
       "plans": "Chaque abonnement choisit seulement pour les messages de son propriétaire.",
       "rules": "Les agents répondent aux mentions, aux réponses et aux suites de conversation.",
       "off": "Les agents ne répondent que lorsqu'ils sont mentionnés.",
-      "noSmall": "{{provider}} n'a pas de petit modèle pour cela. Les agents répondent aux mentions, aux réponses et aux suites de conversation."
+      "noSmall": "{{provider}} n'a pas de petit modèle pour cela. Les agents répondent aux mentions, aux réponses et aux suites de conversation.",
+      "decision": "{{model}} picks who answers each message without a mention."
     }
   },
   "noAi": {
@@ -5231,6 +5232,8 @@
       "planModelDropped": "{{model}} a quitté {{plan}}. <b>{{name}}</b> utilise {{runs}} jusqu’à ce que tu choisisses un autre modèle.",
       "routineWaitingPlan": "<b>{{name}}</b> attend la réinitialisation de son abonnement pour exécuter une routine",
       "planResetUnknown": "{{plan}} n'a pas indiqué quand sa limite se réinitialise. Le travail de <b>{{name}}</b> attend toujours.",
+      "credentialEfforts": "<b>{{name}}</b> a fini de vérifier les niveaux d'effort de {{label}}",
+      "credentialEffortsFailed": "<b>{{name}}</b> n'a pas pu vérifier les niveaux d'effort de {{label}}",
       "catchUpClosed_one": "<b>{{name}}</b> est de retour et a sauté {{count}} conversation qui n'avait pas besoin de réponse",
       "catchUpClosed_many": "<b>{{name}}</b> est de retour et a sauté {{count}} conversations qui n'avaient pas besoin de réponse",
       "catchUpClosed_other": "<b>{{name}}</b> est de retour et a sauté {{count}} conversations qui n'avaient pas besoin de réponse",
@@ -5709,25 +5712,33 @@
         "efforts": {
           "auto": "Automatique",
           "none": "Par défaut du modèle",
+          "noneLevel": "Aucun",
           "low": "Faible",
+          "minimal": "Minime",
           "medium": "Moyen",
           "high": "Élevé",
+          "xhigh": "Très élevé",
           "max": "Maximal"
         },
+        "effortsUntested": "Les niveaux d'effort de ce modèle n'ont pas été vérifiés. Testez-les dans les modèles de sa clé.",
         "effortsLower": {
           "auto": "automatique",
           "low": "faible",
+          "minimal": "minime",
           "medium": "moyen",
           "high": "élevé",
+          "xhigh": "très élevé",
           "max": "maximal"
         },
         "effortText": {
           "auto": "Le modèle Automatique choisit l'effort de chaque tâche. Choisissez un modèle pour fixer l'effort.",
           "low": "Répond vite. Idéal pour les questions simples.",
+          "minimal": "Réfléchit juste un peu avant de répondre. Le plus rapide qui existe.",
           "medium": "Par défaut. Réfléchit assez la plupart du temps.",
           "mediumKey": "Réfléchit assez la plupart du temps.",
           "none": "Le modèle réfléchit autant que d'habitude. Choisissez un niveau pour fixer l'effort.",
           "high": "Réfléchit davantage sur les tâches difficiles. Plus lent et plus cher.",
+          "xhigh": "Réfléchit plus que le niveau élevé, sans atteindre le maximum. Encore plus lent.",
           "max": "Réfléchit autant que possible. Bien plus lent et plus cher."
         },
         "speed": "Vitesse",
@@ -10096,6 +10107,8 @@
     "save": "Enregistrer et tester",
     "saveModels": "Enregistrer et tester à nouveau",
     "testing": "Test de chaque modèle…",
+    "effortsAsk": "Ce fournisseur n'accepte peut-être pas tous les niveaux d'effort. Nous pouvons vérifier chaque modèle choisi en arrière-plan, avec un court appel par niveau, et n'afficher que les niveaux acceptés. L'assistant vous prévient à la fin.",
+    "effortsListOnly": "Lister seulement les modèles",
     "results": "Test de chaque modèle",
     "check": {
       "ok": "Fonctionne, avec des outils",
@@ -20924,5 +20937,60 @@
       "alwaysOn": "Désormais, les rapports de ce type partent sans demander.",
       "askFirst": "Demander avant d'envoyer"
     }
+  },
+  "decision": {
+    "title": "Decision model",
+    "offHint": "Off. Jev decides when it has a key. Otherwise, the small model on your key.",
+    "onHint": "On. This model decides before Jev, which keeps images and boxes and takes over if it fails.",
+    "providers": {
+      "local": "On this server",
+      "localText": "Laya, a small decision model that runs on this server.",
+      "openai": "OpenAI",
+      "openaiText": "GPT-6 Luna through OpenAI's Decisions API.",
+      "gemini": "Gemini",
+      "geminiText": "Gemini Decision 1, with text, image, audio, video and PDF."
+    },
+    "key": "API key",
+    "keyHint": "The key is encrypted on the server and never returned to the browser.",
+    "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
+    "recommended": "Recommended for this server: {{model}}.",
+    "hostLoading": "Reading this server's size...",
+    "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
+    "activate": "Turn on",
+    "activateLocal": "Turn on and download Laya",
+    "cancel": "Cancel",
+    "check": "Check",
+    "change": "Change",
+    "remove": "Remove",
+    "removeAsk": "Remove the decision model?",
+    "removeYes": "Remove",
+    "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
+    "failed": "The model could not be prepared: {{error}}",
+    "state": {
+      "off": "Off",
+      "ok": "On",
+      "invalid": "Key refused",
+      "no_credit": "No credit",
+      "unreachable": "No answer"
+    },
+    "install": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "checking": "Checking",
+      "deleting": "Switching the model",
+      "downloading": "Downloading",
+      "configuring": "Configuring",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Canceled"
+    },
+    "setupHint": "Choose where it runs, then turn it on. Jev decides until then.",
+    "providersLabel": "Where the decision model runs",
+    "recommendedTag": "Recommended",
+    "removeText": "Jev decides again.",
+    "switchAsk": "Switch the decision model?",
+    "switchCurrent": "The current model will be removed.",
+    "switchSlow": "The new model may take a while to be fully configured.",
+    "switchConfirm": "Switch and prepare"
   }
 }

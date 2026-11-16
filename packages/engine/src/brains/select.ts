@@ -13,6 +13,10 @@ import {
 import { and, desc, type Executor, eq, isNotNull, ne, or, schema, sql } from "@agenteschat/db";
 import { AUTO_MODEL, isAutoModel } from "@agenteschat/providers";
 import {
+  type AntigravityGroup,
+  antigravityGroupLabel,
+  antigravityGroupOf,
+  antigravityGroupOfLabel,
   autoPlanModel,
   claudeCodeModel,
   modelLimitOf,
@@ -22,7 +26,7 @@ import {
   planOf,
   speedFits,
 } from "@agenteschat/providers/plans";
-import { planFull, planState } from "@agenteschat/ui/plan-state";
+import { planFull, planState, planWindows } from "@agenteschat/ui/plan-state";
 import type { Agent } from "../agents";
 import type { ModelGateway } from "../gateway";
 import type { MachineStatus } from "../machine-hub";
@@ -326,6 +330,27 @@ export async function storedPlanUsage(
     .from(machines)
     .where(and(eq(machines.orgId, orgId), eq(machines.id, machineId)));
   return (row?.executors.ownUsage?.[kind] as PlanUsage | undefined) ?? null;
+}
+
+/**
+ * The quota group of the model an Antigravity turn ran, and whether a window of it is full now: `agy /usage` reports
+ * each group's own five-hour and weekly limits, and a full group stops its models only, never the whole plan.
+ */
+export function antigravityGroupLimit(
+  usage: PlanUsage | null | undefined,
+  model: string | null | undefined,
+  now = Date.now(),
+): { group: AntigravityGroup; label: string; full: boolean; resetsAt?: string } {
+  const group = antigravityGroupOf(model);
+  const full = planWindows(usage ?? { windows: [] }, now)
+    .filter((w) => w.kind === "other" && antigravityGroupOfLabel(w.label) === group)
+    .find((w) => w.used >= 100);
+  return {
+    group,
+    label: antigravityGroupLabel(group),
+    full: Boolean(full),
+    ...(full?.resetsAt ? { resetsAt: full.resetsAt } : {}),
+  };
 }
 
 export interface BrainUnavailability {

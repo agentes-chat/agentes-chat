@@ -2960,7 +2960,8 @@
       "plans": "Setiap paket hanya memilih untuk pesan pemiliknya.",
       "rules": "Agen menjawab sebutan, balasan, dan tindak lanjut.",
       "off": "Agen hanya menjawab saat disebut.",
-      "noSmall": "{{provider}} tidak punya model kecil untuk ini. Agen menjawab sebutan, balasan, dan tindak lanjut."
+      "noSmall": "{{provider}} tidak punya model kecil untuk ini. Agen menjawab sebutan, balasan, dan tindak lanjut.",
+      "decision": "{{model}} picks who answers each message without a mention."
     }
   },
   "noAi": {
@@ -4902,6 +4903,8 @@
       "planModelDropped": "{{model}} keluar dari {{plan}}. <b>{{name}}</b> memakai {{runs}} sampai kamu memilih model lain.",
       "routineWaitingPlan": "<b>{{name}}</b> menunggu paketnya direset untuk menjalankan rutinitas",
       "planResetUnknown": "{{plan}} tidak memberi tahu kapan batasnya direset. Pekerjaan <b>{{name}}</b> masih menunggu.",
+      "credentialEfforts": "<b>{{name}}</b> selesai memeriksa tingkat usaha {{label}}",
+      "credentialEffortsFailed": "<b>{{name}}</b> tidak dapat memeriksa tingkat usaha {{label}}",
       "catchUpClosed_other": "<b>{{name}}</b> kembali dan melewati {{count}} percakapan yang tidak perlu dijawab",
       "catchUpClosedAsker": "<b>{{name}}</b> tidak menjawab di {{label}}: {{who}} sudah menanganinya",
       "catchUpClosedAskerAny": "<b>{{name}}</b> tidak menjawab: {{who}} sudah menanganinya",
@@ -5335,25 +5338,33 @@
         "efforts": {
           "auto": "Otomatis",
           "none": "Default model",
+          "noneLevel": "Tidak ada",
           "low": "Rendah",
+          "minimal": "Minim",
           "medium": "Sedang",
           "high": "Tinggi",
+          "xhigh": "Sangat tinggi",
           "max": "Maksimum"
         },
+        "effortsUntested": "Tingkat usaha model ini belum diperiksa. Uji di model kuncinya.",
         "effortsLower": {
           "auto": "otomatis",
           "low": "rendah",
+          "minimal": "minim",
           "medium": "sedang",
           "high": "tinggi",
+          "xhigh": "sangat tinggi",
           "max": "maksimum"
         },
         "effortText": {
           "auto": "Model Otomatis memilih upaya tiap tugas. Pilih model untuk menetapkan upayanya.",
           "low": "Menjawab cepat. Cocok untuk pertanyaan sederhana.",
+          "minimal": "Berpikir sedikit saja sebelum menjawab. Yang tercepat.",
           "medium": "Default. Berpikir cukup hampir setiap saat.",
           "mediumKey": "Berpikir cukup hampir setiap saat.",
           "none": "Model berpikir seperti biasanya. Pilih tingkat untuk menetapkan upaya.",
           "high": "Berpikir lebih banyak untuk tugas sulit. Lebih lambat dan lebih mahal.",
+          "xhigh": "Berpikir lebih dari tinggi, belum maksimal. Lebih lambat lagi.",
           "max": "Berpikir semaksimal mungkin. Jauh lebih lambat dan lebih mahal."
         },
         "speed": "Kecepatan",
@@ -9390,6 +9401,8 @@
     "save": "Simpan dan uji",
     "saveModels": "Simpan dan uji lagi",
     "testing": "Menguji setiap model…",
+    "effortsAsk": "Penyedia ini mungkin tidak menerima semua tingkat usaha. Kami dapat memeriksa setiap model pilihan di latar belakang, satu panggilan singkat per tingkat, dan hanya menampilkan tingkat yang diterima. Asisten memberi tahu saat selesai.",
+    "effortsListOnly": "Cukup daftar modelnya",
     "results": "Uji setiap model",
     "check": {
       "ok": "Berfungsi, dengan alat",
@@ -19707,5 +19720,60 @@
       "alwaysOn": "Mulai sekarang, laporan seperti ini dikirim tanpa bertanya.",
       "askFirst": "Tanya dulu sebelum mengirim"
     }
+  },
+  "decision": {
+    "title": "Decision model",
+    "offHint": "Off. Jev decides when it has a key. Otherwise, the small model on your key.",
+    "onHint": "On. This model decides before Jev, which keeps images and boxes and takes over if it fails.",
+    "providers": {
+      "local": "On this server",
+      "localText": "Laya, a small decision model that runs on this server.",
+      "openai": "OpenAI",
+      "openaiText": "GPT-6 Luna through OpenAI's Decisions API.",
+      "gemini": "Gemini",
+      "geminiText": "Gemini Decision 1, with text, image, audio, video and PDF."
+    },
+    "key": "API key",
+    "keyHint": "The key is encrypted on the server and never returned to the browser.",
+    "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
+    "recommended": "Recommended for this server: {{model}}.",
+    "hostLoading": "Reading this server's size...",
+    "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
+    "activate": "Turn on",
+    "activateLocal": "Turn on and download Laya",
+    "cancel": "Cancel",
+    "check": "Check",
+    "change": "Change",
+    "remove": "Remove",
+    "removeAsk": "Remove the decision model?",
+    "removeYes": "Remove",
+    "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
+    "failed": "The model could not be prepared: {{error}}",
+    "state": {
+      "off": "Off",
+      "ok": "On",
+      "invalid": "Key refused",
+      "no_credit": "No credit",
+      "unreachable": "No answer"
+    },
+    "install": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "checking": "Checking",
+      "deleting": "Switching the model",
+      "downloading": "Downloading",
+      "configuring": "Configuring",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Canceled"
+    },
+    "setupHint": "Choose where it runs, then turn it on. Jev decides until then.",
+    "providersLabel": "Where the decision model runs",
+    "recommendedTag": "Recommended",
+    "removeText": "Jev decides again.",
+    "switchAsk": "Switch the decision model?",
+    "switchCurrent": "The current model will be removed.",
+    "switchSlow": "The new model may take a while to be fully configured.",
+    "switchConfirm": "Switch and prepare"
   }
 }

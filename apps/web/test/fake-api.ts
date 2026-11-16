@@ -32,6 +32,8 @@ import type {
   ConnectorDef,
   ConsultationConversation,
   Credential,
+  DecisionHost,
+  DecisionModel,
   DeviceAccount,
   Edition,
   EmailChange,
@@ -389,6 +391,10 @@ export interface FakeState {
   telemetry?: ServerTelemetry;
   /** `system.jev`: the installation's Jev key; unset = I'm not its owner on a self-hosted server (null). */
   jev?: JevKey;
+  /** `system.decisionModel`: the installation's optional decision model (ADR 0188); unset = null. */
+  decisionModel?: DecisionModel;
+  /** `system.decisionHost`: this server's size and the local model that fits it. */
+  decisionHost?: DecisionHost;
   /**
    * What TypeSafe says of a key `system.saveJev` checks: refused (422, nothing kept) or out of credit; else it works.
    * `rate_limited`: the server's limit answers the first try (429), and the next one goes through.
@@ -1494,6 +1500,64 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         if (!state.jev) throw new ApiError(404, "not_found", "Not found");
         state.jev = { ...state.jev, source: null, via: null, hint: null, state: "off" };
         return state.jev;
+      },
+      decisionModel: async () => state.decisionModel ?? null,
+      decisionHost: async () =>
+        state.decisionHost ?? {
+          cpus: 4,
+          memoryGb: 8,
+          diskGb: 100,
+          diskFreeGb: 50,
+          runtime: null,
+          recommended: null,
+          candidates: [],
+        },
+      saveDecisionModel: async (input) => {
+        log("system.saveDecisionModel", input);
+        state.decisionModel = {
+          source: "settings",
+          enabled: input.enabled !== false,
+          provider: input.provider ?? state.decisionModel?.provider ?? "local",
+          model: input.model ?? state.decisionModel?.model ?? "laya",
+          baseURL: input.baseURL ?? null,
+          runtime: "llamacpp",
+          hint: input.apiKey ? input.apiKey.slice(-4) : (state.decisionModel?.hint ?? null),
+          state: "ok",
+          capabilities: { inputs: ["text"] },
+          timeoutMs: 3000,
+          install: null,
+        };
+        return state.decisionModel;
+      },
+      checkDecisionModel: async () => {
+        log("system.checkDecisionModel");
+        if (!state.decisionModel) throw new ApiError(404, "not_found", "Not found");
+        return state.decisionModel;
+      },
+      retryDecisionInstall: async () => {
+        log("system.retryDecisionInstall");
+        if (!state.decisionModel) throw new ApiError(404, "not_found", "Not found");
+        return state.decisionModel;
+      },
+      cancelDecisionInstall: async () => {
+        log("system.cancelDecisionInstall");
+        if (!state.decisionModel) throw new ApiError(404, "not_found", "Not found");
+        state.decisionModel = { ...state.decisionModel, enabled: false, state: "off", install: null };
+        return state.decisionModel;
+      },
+      removeDecisionModel: async () => {
+        log("system.removeDecisionModel");
+        if (!state.decisionModel) throw new ApiError(404, "not_found", "Not found");
+        state.decisionModel = {
+          ...state.decisionModel,
+          source: null,
+          enabled: false,
+          provider: null,
+          model: null,
+          state: "off",
+          install: null,
+        };
+        return state.decisionModel;
       },
       gifKey: async () => state.gifKey ?? null,
       saveGifKey: async (apiKey) => {
@@ -2661,6 +2725,11 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         ],
       }),
       credentials: async () => [...state.credentials],
+      openRouterModels: async () => ({ models: [] }),
+      setOpenRouterModels: async () => {
+        throw new Error("not in this fake");
+      },
+      testEndpointEfforts: async () => {},
       addCredential: async (orgId, input) => {
         log("agents.addCredential", orgId, { ...input, apiKey: "[redacted]" });
         if (state.keyRefusal)

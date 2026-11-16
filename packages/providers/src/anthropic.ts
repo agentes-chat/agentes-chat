@@ -123,7 +123,8 @@ export function createAnthropicProvider(
       // while the model thinks, so that answer goes without thinking, or unforced on a model that always thinks.
       const thinkingOff = (request.effort === "none" || forced) && info?.leastThinking === "off";
       const asked = thinkingOff && compat ? undefined : request.effort === "none" ? "low" : request.effort;
-      const effort = compat && asked === "medium" ? "high" : asked;
+      // The gateway has already taken it to a level the model takes; Claude's own type lists fewer.
+      const effort = (compat && asked === "medium" ? "high" : asked) as "low" | "medium" | "high" | undefined;
       const partial: PartialUsage = {
         inputTokens: null,
         cacheReadTokens: 0,

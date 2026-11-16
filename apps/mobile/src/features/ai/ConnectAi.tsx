@@ -62,6 +62,8 @@ export function useConnectKey(orgId: string, asked?: string) {
   // "Outro provedor" (ADR 0146): its own form, saved by its own button (a sheet only: the first run saves a key).
   const [custom, setCustom] = useState(asked === CUSTOM_PROVIDER);
   const [key, setKeyRaw] = useState("");
+  // OpenRouter: the models this key uses (ADR 0187), chosen before it is saved.
+  const [models, setModels] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   const [refused, setRefused] = useState<ReturnType<typeof keyRefusal>>(null);
@@ -88,20 +90,33 @@ export function useConnectKey(orgId: string, asked?: string) {
   const clean = key.trim();
   const looksRight = clean.length === 0 || keyLooksValid(provider, clean);
   // A pasted key says whose it is when only one provider's keys look like it.
+  // Another provider means other models: an OpenRouter choice never rides along with another line.
+  const chooseProvider = (next: ProviderId) => {
+    if (next !== provider) setModels([]);
+    setProvider(next);
+  };
   const setKey = (value: string) => {
     setKeyRaw(value);
     setFailed(false);
     setRefused(null);
-    if (value.trim().length > 12) setProvider(providerGuess(value, provider));
+    if (value.trim().length > 12) chooseProvider(providerGuess(value, provider));
   };
-  const save = async (): Promise<Credential | null> => {
+  const save = async (syncEfforts = false): Promise<Credential | null> => {
     if (!clean || saving) return null;
+    // An OpenRouter key is saved with the models it uses: none chosen is nothing to save (ADR 0187).
+    if (provider === "openrouter" && models.length === 0) return null;
     setSaving(true);
     setFailed(false);
     setRefused(null);
     try {
       const entry = providerOf(provider);
-      const saved = await api.agents.addCredential(orgId, { provider, label: entry?.label ?? provider, apiKey: clean });
+      const saved = await api.agents.addCredential(orgId, {
+        provider,
+        label: entry?.label ?? provider,
+        apiKey: clean,
+        ...(provider === "openrouter" ? { openrouter: { models } } : {}),
+        ...(syncEfforts ? { syncEfforts: true } : {}),
+      });
       setResaved(saved.reused === true);
       if (saved.check === "unchecked")
         setSavedNote(t("connectAi.key.savedUnchecked", { provider: providerLabel(provider) }));
@@ -119,7 +134,9 @@ export function useConnectKey(orgId: string, asked?: string) {
   };
   return {
     provider,
-    setProvider,
+    setProvider: chooseProvider,
+    models,
+    setModels,
     custom,
     setCustom,
     key,
@@ -294,8 +311,8 @@ export function ConnectAiSheet() {
             mayAddKey={mayAddKey}
             keyForm={form}
             keySaved={keySaved}
-            onSaveKey={() =>
-              void form.save().then(async (key) => {
+            onSaveKey={(syncEfforts) =>
+              void form.save(syncEfforts).then(async (key) => {
                 if (!key) return;
                 // The right hand asked for a key ("Usar uma chave de API"): the workspace's AI from now on, and the person's
                 // own DM goes back to it.

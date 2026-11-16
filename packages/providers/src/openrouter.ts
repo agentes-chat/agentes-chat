@@ -161,6 +161,8 @@ export function parseOpenRouterModels(body: unknown): Record<string, ModelInfo> 
     if (parsed.length >= MAX_MODELS) break;
     const { id, name, context_length: window } = m;
     if (typeof id !== "string" || id.length > 100 || !ID.test(id) || id.startsWith("openrouter/")) continue;
+    // Its batch variant is the same model sold for asynchronous jobs: not one an agent works with.
+    if (id.endsWith(":batch")) continue;
     if (typeof name !== "string" || !name.trim() || name.length > 120) continue;
     if (typeof window !== "number" || !Number.isInteger(window) || window < MIN_CONTEXT) continue;
     const params = strings(m.supported_parameters);
@@ -198,7 +200,7 @@ export function parseOpenRouterModels(body: unknown): Record<string, ModelInfo> 
         ...(typeof maxOut === "number" && Number.isInteger(maxOut) && maxOut > 0 ? { maxOutputTokens: maxOut } : {}),
         serverSideFallback: false,
         ...(efforts.length > 0 ? { reasoning: true } : {}),
-        ...(Array.isArray(listed) ? { efforts } : {}),
+        ...(listed === null || Array.isArray(listed) ? { efforts } : {}),
         ...(reasoning && !mandatory ? { leastThinking: "off" as const } : {}),
         ...(mandatory && least === "minimal" ? { leastThinking: "minimal" as const } : {}),
         ...(structured ? {} : { structuredOutput: false as const }),
@@ -410,7 +412,14 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
 
 function toBody(request: ModelRequest, compatible: boolean) {
   const claude = !compatible && isClaude(request.model);
-  const reasoning = compatible ? undefined : reasoningFor(request.effort, modelInfo(request.model));
+  // A probe (ADR 0187) sends the level itself; otherwise the nearest one the model takes.
+  const exact =
+    request.exactEffort && request.effort
+      ? request.effort === "none"
+        ? { enabled: false }
+        : { effort: request.effort as Effort }
+      : undefined;
+  const reasoning = compatible ? undefined : (exact ?? reasoningFor(request.effort, modelInfo(request.model)));
   // A workspace endpoint (#432): Chat Completions' own `reasoning_effort`, which OpenAI, vLLM, LiteLLM and most gateways
   // take. `none` is left out, since not every model can turn thinking off, and so is a request with no effort.
   const reasoningEffort = compatible && request.effort && request.effort !== "none" ? request.effort : undefined;

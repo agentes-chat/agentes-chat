@@ -9,7 +9,11 @@ import { providerLabel } from "./providers";
  * agent set to answer on its own can join in (ADR 0074). An older server says nothing: as before, yes.
  */
 export const picksForMe = (routing: AiRouting | undefined) =>
-  !routing || routing.mine === "jev" || routing.mine === "model" || routing.mine === "plan";
+  !routing ||
+  routing.mine === "jev" ||
+  routing.mine === "decision" ||
+  routing.mine === "model" ||
+  routing.mine === "plan";
 
 /** What "On its own" means for this person's messages: the topic, only replies and follow-ups, or only mentions. */
 export const replyAloneKey = (routing: AiRouting | undefined) =>
@@ -30,6 +34,7 @@ export function routingLineOf(status: AiStatus | undefined, modelLabel: (id: str
     const model = routing.model ? modelLabel(routing.model) : null;
     return model ? { key: "routing.by.model" as const, params: { model } } : null;
   }
+  if (routing.by === "decision") return { key: "routing.by.decision" as const, params: { model: routing.model ?? "" } };
   if (routing.by === "rules" && routing.noSmallModel)
     return { key: "routing.by.noSmall" as const, params: { provider: providerLabel(routing.noSmallModel) } };
   return { key: `routing.by.${routing.by}` as const, params: {} };

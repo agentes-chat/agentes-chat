@@ -44,6 +44,63 @@ export interface JevKey {
 /** Jev's key to save: one pasted (TypeSafe's or OpenRouter's), or the workspace's own OpenRouter key. */
 export type JevKeyInput = string | { orgId: string; credentialId: string };
 
+/** A decision provider the installation's switch can use (ADR 0188). */
+export type DecisionProvider = "openai" | "gemini" | "local";
+export type DecisionRuntime = "ollama" | "llamacpp" | "lmstudio" | "custom";
+export type DecisionShownState = "off" | "ok" | "invalid" | "no_credit" | "unreachable";
+export type DecisionInstallState =
+  | "idle"
+  | "queued"
+  | "checking"
+  | "deleting"
+  | "downloading"
+  | "configuring"
+  | "ready"
+  | "failed"
+  | "cancelled";
+
+/** The installation's optional decision model (ADR 0188): off until its owner turns the switch on. */
+export interface DecisionModel {
+  source: "settings" | null;
+  enabled: boolean;
+  provider: DecisionProvider | null;
+  model: string | null;
+  baseURL: string | null;
+  runtime: DecisionRuntime | null;
+  hint: string | null;
+  state: DecisionShownState;
+  capabilities: { inputs: string[] };
+  timeoutMs: number;
+  install: {
+    state: DecisionInstallState;
+    model: string | null;
+    progress: number;
+    detail: string | null;
+    error: string | null;
+  } | null;
+}
+
+export interface DecisionModelInput {
+  enabled?: boolean;
+  provider?: DecisionProvider;
+  model?: string;
+  baseURL?: string;
+  apiKey?: string;
+  timeoutMs?: number;
+}
+
+/** This server's size and the local model that fits it (GET /api/app/decision-model/host). */
+export interface DecisionHost {
+  cpus: number;
+  memoryGb: number;
+  memoryLimitGb?: number;
+  diskGb: number;
+  diskFreeGb: number;
+  runtime: { kind: DecisionRuntime; baseURL: string; reachable: boolean } | null;
+  recommended: { id: string; label: string; sizeGb?: number; why: string } | null;
+  candidates: { id: string; label: string; sizeGb?: number; inputs: string[]; fits: boolean; why: string }[];
+}
+
 /**
  * The installation's GIPHY key, for its pinned owner on a server that isn't agentes.chat's own (`GET
  * /api/app/gif-key`, ADR 0091): with it, every workspace has GIFs (`OrgSettings.gifsAvailable`).
@@ -738,6 +795,8 @@ export interface Credential {
   workspaceIdHint?: string | null;
   /** `custom` (ADR 0146): the endpoint's address, API and models. */
   endpoint?: { style: EndpointStyle; baseURL: string; models: EndpointModel[] };
+  /** OpenRouter (ADR 0187): the models this workspace chose to use with the key; absent: all of them. */
+  openrouter?: { models: string[] };
   /** The agents that think with it, in a list of keys: what removing it would change. */
   usedBy?: { id: string; name: string }[];
   /** On a key just saved: `ok` a real call passed, `unchecked` the provider didn't say. */
@@ -772,6 +831,9 @@ export interface EndpointModel {
   /** Absent: unpriced (its calls cost 0, so no budget limits them). */
   prices?: EndpointPrices;
   check?: EndpointCheckResult;
+  /** The effort levels its check found it takes (ADR 0187); absent: never checked. */
+  efforts?: string[];
+  effortsAt?: string;
 }
 
 export interface EndpointCheck {
@@ -1248,6 +1310,20 @@ export interface Model {
   endpoint?: { credentialId: string; name: string };
   /** No prices known: its calls cost 0, so a budget can't count money for it. */
   unpriced?: boolean;
+  /** The effort levels it takes, when known (ADR 0187). */
+  efforts?: string[];
+  /** It takes a reasoning effort at all (`false`: no effort control on its ramp). */
+  reasoning?: boolean;
+}
+
+/** A model an OpenRouter key can be limited to (ADR 0187): its list, the good picks first. */
+export interface OpenRouterChoice {
+  id: string;
+  label: string;
+  pick: boolean;
+  tier?: ModelTier;
+  efforts?: string[];
+  contextWindow?: number;
 }
 
 export interface AgentUsage {
@@ -1514,10 +1590,12 @@ export type DecidedBy =
  * model while it picks. `noSmallModel`: with `rules`, the default key's provider, which has none (Kimi).
  */
 export interface AiRouting {
-  by: "jev" | "model" | "plans" | "rules" | "off";
-  mine: "jev" | "model" | "plan" | "rules" | "off";
+  by: "jev" | "decision" | "model" | "plans" | "rules" | "off";
+  mine: "jev" | "decision" | "model" | "plan" | "rules" | "off";
   model: string | null;
   noSmallModel: string | null;
+  /** With `decision`: the provider that decides (openai, gemini or local). */
+  decisionProvider?: string | null;
 }
 
 /** What a person who met "no AI" asked for (Jev): a Connect dialog step; `any` and `task` open its first step. */
@@ -5931,6 +6009,12 @@ export interface BrainModelOption {
   inPlan?: boolean;
   /** OpenCode (ADR 0132): a model of OpenCode's free tier (no key, no cost). */
   free?: boolean;
+  /**
+   * A model sold at several thinking levels as separate ids (Antigravity's `gemini-4-hydrogen-xhigh`): the model it
+   * belongs to, shown as one choice, and this id's level, offered as the effort.
+   */
+  family?: { id: string; label: string };
+  level?: BrainEffort;
 }
 
 export interface CodexVersionRequirement {
@@ -6615,6 +6699,8 @@ export type NotificationKind =
   /** A routine's run waits for its agent's plan to reset (once per outage). Opens it in Rotinas. */
   | "routine_waiting_plan"
   | "plan_reset_unknown"
+  /** A workspace endpoint's effort check finished (ADR 0187), from the right hand. */
+  | "credential_efforts"
   /** ADR 0136: an agent back from its plan or budget skipped catch-ups that looked handled (its owner; `count`). */
   | "catch_up_closed"
   /** ADR 0136: who asked, when their catch-up was skipped crediting someone else (`latest.title` who, `latest.reason`). */

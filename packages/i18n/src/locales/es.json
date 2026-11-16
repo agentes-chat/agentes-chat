@@ -3191,7 +3191,8 @@
       "plans": "Cada plan elige solo para los mensajes de su dueño.",
       "rules": "Los agentes responden menciones, respuestas y seguimientos.",
       "off": "Los agentes responden solo cuando se los menciona.",
-      "noSmall": "{{provider}} no tiene un modelo pequeño para esto. Los agentes responden menciones, respuestas y seguimientos."
+      "noSmall": "{{provider}} no tiene un modelo pequeño para esto. Los agentes responden menciones, respuestas y seguimientos.",
+      "decision": "{{model}} picks who answers each message without a mention."
     }
   },
   "noAi": {
@@ -5225,6 +5226,8 @@
       "planModelDropped": "{{model}} salió de {{plan}}. <b>{{name}}</b> usa {{runs}} hasta que elijas otro modelo.",
       "routineWaitingPlan": "<b>{{name}}</b> espera que su plan se renueve para ejecutar una rutina",
       "planResetUnknown": "{{plan}} no dijo cuándo se renueva su límite. El trabajo de <b>{{name}}</b> sigue esperando.",
+      "credentialEfforts": "<b>{{name}}</b> terminó de comprobar los niveles de esfuerzo de {{label}}",
+      "credentialEffortsFailed": "<b>{{name}}</b> no pudo comprobar los niveles de esfuerzo de {{label}}",
       "catchUpClosed_one": "<b>{{name}}</b> volvió y omitió {{count}} conversación que no necesitaba respuesta",
       "catchUpClosed_many": "<b>{{name}}</b> volvió y omitió {{count}} conversaciones que no necesitaban respuesta",
       "catchUpClosed_other": "<b>{{name}}</b> volvió y omitió {{count}} conversaciones que no necesitaban respuesta",
@@ -5683,25 +5686,33 @@
         "efforts": {
           "auto": "Automático",
           "none": "Predeterminado del modelo",
+          "noneLevel": "Ninguno",
           "low": "Bajo",
+          "minimal": "Mínimo",
           "medium": "Medio",
           "high": "Alto",
+          "xhigh": "Muy alto",
           "max": "Máximo"
         },
+        "effortsUntested": "Los niveles de esfuerzo de este modelo no se han comprobado. Pruébalos en los modelos de su clave.",
         "effortsLower": {
           "auto": "automático",
           "low": "bajo",
+          "minimal": "mínimo",
           "medium": "medio",
           "high": "alto",
+          "xhigh": "muy alto",
           "max": "máximo"
         },
         "effortText": {
           "auto": "El modelo Automático elige el esfuerzo de cada tarea. Elige un modelo para fijar el esfuerzo.",
           "low": "Responde rápido. Bueno para preguntas simples.",
+          "minimal": "Piensa solo un poco antes de responder. Lo más rápido que hay.",
           "medium": "El predeterminado. Piensa lo suficiente casi siempre.",
           "mediumKey": "Piensa lo suficiente casi siempre.",
           "none": "El modelo piensa lo que suele pensar. Elige un nivel para fijar el esfuerzo.",
           "high": "Piensa más en las tareas difíciles. Más lento y más caro.",
+          "xhigh": "Piensa más que alto, sin llegar al máximo. Aún más lento.",
           "max": "Piensa todo lo posible. Mucho más lento y caro."
         },
         "speed": "Velocidad",
@@ -10044,6 +10055,8 @@
     "save": "Guardar y probar",
     "saveModels": "Guardar y probar de nuevo",
     "testing": "Probando cada modelo…",
+    "effortsAsk": "Es posible que este proveedor no acepte todos los niveles de esfuerzo. Podemos comprobar cada modelo elegido en segundo plano, con una llamada corta por nivel, y mostrar solo los niveles que acepta. El asistente te avisa cuando termine.",
+    "effortsListOnly": "Solo listar los modelos",
     "results": "Prueba de cada modelo",
     "check": {
       "ok": "Funciona, con herramientas",
@@ -20780,5 +20793,60 @@
       "alwaysOn": "De ahora en adelante, informes como este salen sin preguntar.",
       "askFirst": "Preguntar antes de enviar"
     }
+  },
+  "decision": {
+    "title": "Decision model",
+    "offHint": "Off. Jev decides when it has a key. Otherwise, the small model on your key.",
+    "onHint": "On. This model decides before Jev, which keeps images and boxes and takes over if it fails.",
+    "providers": {
+      "local": "On this server",
+      "localText": "Laya, a small decision model that runs on this server.",
+      "openai": "OpenAI",
+      "openaiText": "GPT-6 Luna through OpenAI's Decisions API.",
+      "gemini": "Gemini",
+      "geminiText": "Gemini Decision 1, with text, image, audio, video and PDF."
+    },
+    "key": "API key",
+    "keyHint": "The key is encrypted on the server and never returned to the browser.",
+    "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
+    "recommended": "Recommended for this server: {{model}}.",
+    "hostLoading": "Reading this server's size...",
+    "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
+    "activate": "Turn on",
+    "activateLocal": "Turn on and download Laya",
+    "cancel": "Cancel",
+    "check": "Check",
+    "change": "Change",
+    "remove": "Remove",
+    "removeAsk": "Remove the decision model?",
+    "removeYes": "Remove",
+    "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
+    "failed": "The model could not be prepared: {{error}}",
+    "state": {
+      "off": "Off",
+      "ok": "On",
+      "invalid": "Key refused",
+      "no_credit": "No credit",
+      "unreachable": "No answer"
+    },
+    "install": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "checking": "Checking",
+      "deleting": "Switching the model",
+      "downloading": "Downloading",
+      "configuring": "Configuring",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Canceled"
+    },
+    "setupHint": "Choose where it runs, then turn it on. Jev decides until then.",
+    "providersLabel": "Where the decision model runs",
+    "recommendedTag": "Recommended",
+    "removeText": "Jev decides again.",
+    "switchAsk": "Switch the decision model?",
+    "switchCurrent": "The current model will be removed.",
+    "switchSlow": "The new model may take a while to be fully configured.",
+    "switchConfirm": "Switch and prepare"
   }
 }

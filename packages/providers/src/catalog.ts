@@ -708,6 +708,42 @@ export function nearestTier<T>(
   return undefined;
 }
 
+/** The efforts a call may ask for, lowest first: the provider layer takes these four. */
+export type RequestEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+export const REQUEST_EFFORTS: readonly RequestEffort[] = ["none", "minimal", "low", "medium", "high", "xhigh", "max"];
+const isRequestEffort = (v: string): v is RequestEffort => (REQUEST_EFFORTS as readonly string[]).includes(v);
+
+/**
+ * The effort a call sends for a model: the nearest one it takes (`ModelInfo.efforts`), among the levels a call
+ * may ask for. No list: the call's own. An empty list: the model was tested and takes none, so none is sent. A
+ * list of other providers' names only (`xhigh`, `max`): the call's own, which the adapter maps.
+ */
+const SAFE_REQUEST_EFFORTS: readonly RequestEffort[] = ["none", "low", "medium", "high"];
+
+export function nearestRequestEffort(
+  effort: RequestEffort | undefined,
+  info: Pick<ModelInfo, "efforts"> | undefined,
+): RequestEffort | undefined {
+  if (!effort) return effort;
+  // Turning thinking off is the adapters' own business (none → least, or reasoning off): never taken to another level.
+  if (effort === "none") return "none";
+  if (!info) return effort;
+  // A model whose levels were never listed takes the four every provider has; xhigh/max only where it says so.
+  const declared = info.efforts;
+  const takes = (declared ?? SAFE_REQUEST_EFFORTS).filter(isRequestEffort);
+  if (declared && declared.length === 0) return undefined;
+  if (takes.length === 0) return effort;
+  const want = REQUEST_EFFORTS.indexOf(effort);
+  let best: RequestEffort = takes[0] ?? effort;
+  for (const e of takes) {
+    const gap = Math.abs(REQUEST_EFFORTS.indexOf(e) - want);
+    const bestGap = Math.abs(REQUEST_EFFORTS.indexOf(best) - want);
+    // A tie goes up: a model sold at low and high with medium asked answers high, as OpenRouter's mapping does.
+    if (gap < bestGap || (gap === bestGap && REQUEST_EFFORTS.indexOf(e) > REQUEST_EFFORTS.indexOf(best))) best = e;
+  }
+  return best;
+}
+
 /** A provider's model for a tier (`nearestTier`); null when the provider has no tiered model. */
 export function modelForTier(provider: string, tier: ModelTier): string | null {
   const own = listedModels().filter(([, m]) => m.provider === provider);

@@ -103,6 +103,7 @@ import {
   usePlanHold,
 } from "@/components/ai/ConnectAiSteps";
 import { EndpointForm } from "@/components/ai/EndpointForm";
+import { OpenRouterModels } from "@/components/ai/OpenRouterModels";
 import { AudienceCard } from "@/components/arrival/AudienceCard";
 import { ConnectChoices } from "@/components/arrival/ConnectChoices";
 import { bestHave, ConnectHave, haveId } from "@/components/arrival/ConnectHave";
@@ -684,6 +685,8 @@ function ConnectAiDialog({
   const [footAt, setFootAt] = useState<HTMLElement | null>(null);
   const day = useDawn((stage || band || team) && connected);
   const [keySaved, setKeySaved] = useState(false);
+  // OpenRouter: the models this key uses (ADR 0187), chosen before it is saved.
+  const [keyModels, setKeyModels] = useState<string[]>([]);
   const [keyNote, setKeyNote] = useState<string>();
   const [refused, setRefused] = useState<ReturnType<typeof keyRefusal>>(null);
   // `connectedNow`: what was connected, when it isn't the choice on screen (an account the person already had).
@@ -759,12 +762,19 @@ function ConnectAiDialog({
       </SettingNote>
     )
   );
-  const saveKey = () => {
+  const saveKey = (syncEfforts = false) => {
     if (draft.provider === CUSTOM_PROVIDER) return;
+    if (draft.provider === "openrouter" && keyModels.length === 0) return;
     setRefused(null);
     const provider = providerLabel(draft.provider);
     add.mutate(
-      { provider: draft.provider, label: provider, apiKey: draft.apiKey.trim() },
+      {
+        provider: draft.provider,
+        label: provider,
+        apiKey: draft.apiKey.trim(),
+        ...(draft.provider === "openrouter" ? { openrouter: { models: keyModels } } : {}),
+        ...(syncEfforts ? { syncEfforts: true } : {}),
+      },
       {
         onError: (error) => {
           setRefused(keyRefusal(t, error));
@@ -822,7 +832,10 @@ function ConnectAiDialog({
     <ProviderKeySelect
       value={draft.provider}
       disabled={add.isPending}
-      onChange={(provider) => setDraft((d) => ({ ...d, provider }))}
+      onChange={(provider) => {
+        setKeyModels([]);
+        setDraft((d) => ({ ...d, provider }));
+      }}
     />
   );
   const panel =
@@ -837,6 +850,16 @@ function ConnectAiDialog({
         refused={refused}
         saving={add.isPending}
         onSave={saveKey}
+        ready={draft.provider !== "openrouter" || keyModels.length > 0}
+        openrouter={
+          <OpenRouterModels
+            orgId={org.id}
+            apiKey={draft.apiKey}
+            value={keyModels}
+            onChange={setKeyModels}
+            disabled={add.isPending}
+          />
+        }
         endpoint={
           <EndpointForm
             orgId={org.id}

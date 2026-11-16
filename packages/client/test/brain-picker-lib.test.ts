@@ -12,16 +12,25 @@ import {
   keyModelFirst,
   keyModelGroups,
   mayPickModel,
+  modelInput,
   modelPickerModels,
   modelPickerSave,
   modelPickerTiles,
   modelPickerUndo,
+  modelRows,
   needsOwnSignIn,
   newPlanAccountOption,
   pickGroups,
   planAccountOptionOf,
 } from "../src/lib/brain-picker";
-import { brainModelChoices, CODING_PLANS, planFreeHint } from "../src/lib/plans";
+import {
+  brainModelChoices,
+  CODING_PLANS,
+  effortPick,
+  familyOfModel,
+  modelDisplays,
+  planFreeHint,
+} from "../src/lib/plans";
 import { AUTO, modelChoices } from "../src/lib/providers";
 
 const t = ((key: string, o?: Record<string, unknown>) => (o ? `${key}${JSON.stringify(o)}` : key)) as TFunction;
@@ -508,5 +517,94 @@ describe("the model picker: the agent's AI changed in place", () => {
       brain: null,
       model: "gpt-6",
     });
+  });
+});
+
+test("a model sold at thinking levels: one row, its levels are the effort, and each level has its id", () => {
+  const antigravity: BrainOption = {
+    kind: "antigravity",
+    available: true,
+    defaultModel: null,
+    models: [
+      {
+        value: "gemini-4-argon-low",
+        label: "Gemini 4 Argon (Low)",
+        family: { id: "gemini-4-argon", label: "Gemini 4 Argon" },
+        level: "low",
+      },
+      {
+        value: "gemini-4-argon-medium",
+        label: "Gemini 4 Argon (Medium)",
+        family: { id: "gemini-4-argon", label: "Gemini 4 Argon" },
+        level: "medium",
+      },
+      {
+        value: "gemini-4-argon-high",
+        label: "Gemini 4 Argon (High)",
+        family: { id: "gemini-4-argon", label: "Gemini 4 Argon" },
+        level: "high",
+      },
+      {
+        value: "gemini-4-hydrogen-high",
+        label: "Gemini 4 Hydrogen (High)",
+        family: { id: "gemini-4-hydrogen", label: "Gemini 4 Hydrogen" },
+        level: "high",
+      },
+      {
+        value: "gemini-4-hydrogen-xhigh",
+        label: "Gemini 4 Hydrogen (XHigh)",
+        family: { id: "gemini-4-hydrogen", label: "Gemini 4 Hydrogen" },
+        level: "xhigh",
+      },
+      { value: "gemini-pro-orchestrator-g1-pro", label: "Orchestrator (Argon)" },
+    ],
+  };
+  const view = {
+    agentId: "a1",
+    brain: "antigravity",
+    model: "gemini-4-argon-medium",
+    effectiveModel: "gemini-4-argon-medium",
+    fallback: true,
+    extraUsage: false,
+    computer: null,
+    options: [antigravity],
+    machines: [],
+    canEdit: true,
+    account: null,
+    effort: "medium",
+    speed: "standard",
+    contextTokens: null,
+    accounts: [],
+    canManageAccounts: false,
+    accountsSupported: false,
+    onlyOwner: true,
+    canUsePlans: true,
+    canUseOthersPlans: true,
+    ownSignIn: false,
+    ownUsage: {},
+  } as never;
+  const rows = modelRows(t, view, undefined);
+  expect(rows.map((r) => r.label)).toEqual([
+    "brain.auto.label",
+    "Gemini 4 Argon",
+    "Gemini 4 Hydrogen",
+    "Orchestrator (Argon)",
+  ]);
+  expect(rows.find((r) => r.checked)?.value).toBe("gemini-4-argon-medium");
+  expect(rows[1]?.family?.levels).toEqual(["low", "medium", "high"]);
+  const choices = brainModelChoices(undefined, antigravity.models);
+  const family = familyOfModel(choices, "gemini-4-argon-high");
+  expect(family?.levels).toEqual(["low", "medium", "high"]);
+  expect(effortPick(family, "high")).toEqual({ model: "gemini-4-argon-high", effort: "high" });
+  // A model it isn't sold at: the nearest one it is.
+  const hydrogen = familyOfModel(choices, "gemini-4-hydrogen-high");
+  expect(modelDisplays(choices, null, "low").find((d) => d.family?.id === "gemini-4-hydrogen")?.value).toBe(
+    "gemini-4-hydrogen-high",
+  );
+  expect(hydrogen?.levels).toEqual(["high", "xhigh"]);
+  // Picking an id saves its level as the effort too.
+  expect(modelInput("gemini-4-hydrogen-xhigh", view)).toEqual({
+    model: "gemini-4-hydrogen-xhigh",
+    effort: "xhigh",
   });
 });

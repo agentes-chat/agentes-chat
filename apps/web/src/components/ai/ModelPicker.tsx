@@ -9,7 +9,15 @@ import {
   usePlatformKey,
   useUpdateAgent,
 } from "@agenteschat/client";
-import { type EffortLevel, effortLevelsOf, effortOf, effortTextOf } from "@agenteschat/client/lib/brain-advanced";
+import {
+  type EffortLevel,
+  type EffortScaleLevel,
+  effortOf,
+  effortScaleSteps,
+  effortStepKey,
+  effortTextOf,
+  keyEffortScale,
+} from "@agenteschat/client/lib/brain-advanced";
 import {
   mayPickModel,
   modelPickerModels,
@@ -21,7 +29,7 @@ import {
 } from "@agenteschat/client/lib/brain-picker";
 import { can } from "@agenteschat/client/lib/permissions";
 import { modelStandInKey, planMeterText } from "@agenteschat/client/lib/plan-usage";
-import { planOf } from "@agenteschat/client/lib/plans";
+import { effortPick, levelOfModel, planOf } from "@agenteschat/client/lib/plans";
 import { modelChoices } from "@agenteschat/client/lib/providers";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import {
@@ -196,7 +204,7 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
   const credentials = useCredentials(org.id, can(org, "manage_credentials"));
   const platform = usePlatformKey(org.id);
   const all = models.data?.models ?? [];
-  const choices = modelChoices(all, credentials.data ?? view.keys ?? [], platform.data ?? false);
+  const choices = modelChoices(all, credentials.data ?? view.keys ?? [], platform.data ?? false, agent.model);
   const tiles = modelPickerTiles(t, view, agent.ownerUserId, choices, agent.model, all);
   const [tileKey, setTileKey] = useState(() => (tiles.find((x) => x.current) ?? tiles[0])?.key);
   const tile = tiles.find((x) => x.key === tileKey) ?? tiles[0];
@@ -207,8 +215,16 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
   const shown = q.trim() ? rows.filter((r) => r.label.toLowerCase().includes(q.trim().toLowerCase())) : rows;
   const [busy, setBusy] = useState(false);
   const checked = rows.find((r) => r.checked);
-  const effortOn = tile?.current && checked && !checked.auto;
-  const effort = effortOf(view.brain, view.effort);
+  // An API model whose levels were never checked (or which takes none): no ramp to offer (ADR 0187).
+  const keyModel = checked && !checked.auto ? all.find((m) => m.id === checked.value) : undefined;
+  const keyScale = checked && !checked.auto ? keyEffortScale(keyModel) : null;
+  const effortOn = tile?.current && checked && !checked.auto && keyScale !== null;
+  // A model sold at thinking levels (Antigravity): its levels are the ramp, the ones it isn't sold at greyed out.
+  const family = checked && !checked.auto ? checked.family : undefined;
+  const modelLevel = family && tile ? levelOfModel(view.options, tile.kind, view.effectiveModel) : undefined;
+  const effort: EffortScaleLevel | EffortLevel | null = family
+    ? (modelLevel ?? (view.effort && view.effort !== "auto" ? view.effort : null))
+    : effortOf(view.brain, view.effort);
 
   const refresh = () => {
     for (const key of [keys.agentBrain(org.id, agent.id), keys.agents(org.id), keys.aiStatus(org.id)])
@@ -252,10 +268,14 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
       refresh();
     }
   };
-  const setEffort = async (e: EffortLevel) => {
-    if (!tile || e === effort) return;
+  const setEffort = async (e: EffortScaleLevel | EffortLevel) => {
+    if (!tile || e === effort || e === "none" || e === "minimal") return;
     try {
-      await api.agents.setBrain(org.id, agent.id, { brain: tile.kind, effort: e });
+      // A model sold at levels runs the id of the level chosen, besides being asked for that effort.
+      await api.agents.setBrain(org.id, agent.id, {
+        brain: tile.kind,
+        ...(family ? effortPick(family, e) : { effort: e }),
+      });
     } catch {
       toast.show(t("agentPage.work.failed"), "error");
     } finally {
@@ -384,8 +404,24 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
             value={effort}
             onValueChange={(e) => void setEffort(e)}
             color={fullLook(lookOf(agent)).color}
-            steps={effortLevelsOf(tile.kind).map((e) => ({ value: e, label: t(`agentPage.work.brain.efforts.${e}`) }))}
-            hint={(e) => t(`agentPage.work.brain.effortText.${effortTextOf(tile.kind, e)}`)}
+            steps={
+              family
+                ? effortScaleSteps(family.levels).map((s) => ({
+                    ...s,
+                    label: t(`agentPage.work.brain.efforts.${effortStepKey(s.value)}`),
+                  }))
+                : effortScaleSteps(keyScale ?? []).map((s) => ({
+                    ...s,
+                    // The API brain stores no none/minimal: shown, unselectable.
+                    disabled: s.disabled || s.value === "none" || s.value === "minimal",
+                    label: t(`agentPage.work.brain.efforts.${effortStepKey(s.value)}`),
+                  }))
+            }
+            hint={(e) => {
+              if (family) return t(`agentPage.work.brain.effortText.${!e || e === "none" ? "none" : e}`);
+              if (e === "xhigh" || e === "max") return t(`agentPage.work.brain.effortText.${e}`);
+              return t(`agentPage.work.brain.effortText.${effortTextOf(tile.kind, e as EffortLevel | null)}`);
+            }}
             unset={t("agentPage.work.brain.efforts.none")}
           />
         </div>

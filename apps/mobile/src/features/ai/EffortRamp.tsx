@@ -1,5 +1,19 @@
-import { type AgentBrainInput, type BrainKind, type BrainScope, keys, useApi } from "@agenteschat/client";
-import { type EffortLevel, effortLevelsOf, effortTextOf } from "@agenteschat/client/lib/brain-advanced";
+import {
+  type AgentBrainInput,
+  type BrainEffort,
+  type BrainKind,
+  type BrainScope,
+  keys,
+  useApi,
+} from "@agenteschat/client";
+import {
+  type EffortLevel,
+  type EffortScaleLevel,
+  effortLevelsOf,
+  effortScaleSteps,
+  effortStepKey,
+  effortTextOf,
+} from "@agenteschat/client/lib/brain-advanced";
 import { AUTO } from "@agenteschat/client/lib/providers";
 import { bodyTones } from "@agenteschat/ui/agent/engine";
 import { Canvas, Fill, Shader, Skia, useClock } from "@shopify/react-native-skia";
@@ -45,21 +59,41 @@ export function EffortRamp({
   onChange,
   color,
   kind,
+  levels,
+  only,
   disabled = false,
 }: {
-  value: EffortLevel | null;
-  onChange: (level: EffortLevel) => void;
+  value: EffortScaleLevel | null;
+  onChange: (level: EffortScaleLevel) => void;
   color: Parameters<typeof bodyTones>[0];
   kind?: BrainKind;
+  /** A model sold at thinking levels (Antigravity): its levels, the rest of the ladder greyed out. */
+  levels?: readonly string[];
+  /** An API model's checked levels (ADR 0187): those steps alone, nothing above or below them. */
+  only?: readonly EffortLevel[];
   disabled?: boolean;
 }) {
-  const levels = effortLevelsOf(kind);
-  const STEPS = levels.length;
+  const steps = levels
+    ? effortScaleSteps(levels)
+    : only
+      ? only.map((level) => ({ value: level as EffortScaleLevel, disabled: false }))
+      : effortLevelsOf(kind).map((level) => ({ value: level as EffortScaleLevel, disabled: false }));
+  const STEPS = steps.length;
   const { t } = useTranslation();
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const paused = useLivePaused();
-  const index = value ? levels.indexOf(value) : -1;
+  const index = value ? steps.findIndex((s) => s.value === value) : -1;
+  const on = (i: number) => Boolean(steps[i]) && !steps[i]?.disabled;
+  /** The step a position lands on: its nearest one the model is sold at. */
+  const landing = (i: number) => {
+    if (on(i)) return i;
+    for (let d = 1; d < STEPS; d++) {
+      if (on(i - d)) return i - d;
+      if (on(i + d)) return i + d;
+    }
+    return i;
+  };
   const [shown, setShown] = useState(index);
   const [width, setWidth] = useState(0);
   const pos = useSharedValue(index + 1);
@@ -78,13 +112,16 @@ export function EffortRamp({
   }, [index, step]);
 
   const stepped = (to: number) => {
-    setShown(to);
+    const at = landing(to);
+    if (at === shown) return;
+    setShown(at);
     haptics.selection();
   };
   const choose = (to: number) => {
-    setShown(to);
-    land(to);
-    const level = levels[to];
+    const at = landing(to);
+    setShown(at);
+    land(at);
+    const level = steps[at]?.value;
     if (level && level !== value) onChange(level);
   };
   const follow = (x: number) => {
@@ -147,12 +184,16 @@ export function EffortRamp({
   const uniforms = useDerivedValue(() => ({ ...base, pos: pos.value, t: moving ? clock.value : 0 }));
 
   const label = t("agentPage.work.brain.effort");
-  const level = levels[shown] ?? null;
-  const name = t(`agentPage.work.brain.efforts.${level ?? "none"}`);
+  const level = steps[shown]?.value ?? null;
+  const name = t(`agentPage.work.brain.efforts.${level ? effortStepKey(level) : "none"}`);
   const onAction = (e: AccessibilityActionEvent) => {
     const by = e.nativeEvent.actionName === "increment" ? 1 : e.nativeEvent.actionName === "decrement" ? -1 : 0;
-    const to = Math.min(STEPS - 1, Math.max(0, index + by));
-    if (!disabled && to !== index) choose(to);
+    if (!by) return;
+    for (let i = index + by; i >= 0 && i < STEPS; i += by) {
+      if (!on(i)) continue;
+      if (!disabled) choose(i);
+      return;
+    }
   };
 
   return (
@@ -193,26 +234,39 @@ export function EffortRamp({
         </Animated.View>
       </GestureDetector>
       <View style={styles.names}>
-        {levels.map((e, i) => (
+        {steps.map((s, i) => (
           <Pressable
-            key={e}
+            key={s.value}
+            disabled={disabled || s.disabled}
             onPress={() => {
-              if (disabled) return;
+              if (disabled || s.disabled) return;
               if (i !== shown) stepped(i);
               choose(i);
             }}
             // 44 pt to the finger: the room under the name, never over the ramp's own drag.
             hitSlop={{ bottom: 16 }}
-            style={({ pressed }) => [styles.name, pressed && i !== shown ? styles.pressed : null]}
+            style={({ pressed }) => [
+              styles.name,
+              pressed && i !== shown ? styles.pressed : null,
+              s.disabled ? styles.offStep : null,
+            ]}
           >
-            <Text variant="caption" tone={i === shown ? "ink" : "faint"} style={i === shown && styles.bold}>
-              {t(`agentPage.work.brain.efforts.${e}`)}
+            <Text
+              variant="caption"
+              tone={i === shown ? "ink" : "faint"}
+              style={[i === shown && styles.bold, s.disabled ? styles.offStep : null]}
+            >
+              {t(`agentPage.work.brain.efforts.${effortStepKey(s.value)}`)}
             </Text>
           </Pressable>
         ))}
       </View>
       <Text variant="footnote" tone="muted" numberOfLines={2} style={styles.hint}>
-        {t(`agentPage.work.brain.effortText.${effortTextOf(kind, level)}`)}
+        {t(
+          `agentPage.work.brain.effortText.${
+            levels ? (level ?? "none") : effortTextOf(kind, level as EffortLevel | null)
+          }`,
+        )}
       </Text>
     </View>
   );
@@ -222,11 +276,21 @@ export function EffortRamp({
  * The ramp's choice, saved when let go: it stays on the ramp while the server answers, and a change made in the
  * meantime goes next, so the last one wins. Only a failure speaks.
  */
-export const useEffortChoice = (agentId: string, saved: EffortLevel | null | undefined, scope?: BrainScope) =>
-  useBrainChoice<EffortLevel | null>(
+export const useEffortChoice = (
+  agentId: string,
+  saved: EffortScaleLevel | null | undefined,
+  scope?: BrainScope,
+  /** A model sold at thinking levels (Antigravity): the id that runs the level chosen, saved with it. */
+  modelFor?: (level: BrainEffort) => string | undefined,
+) =>
+  useBrainChoice<EffortScaleLevel | null>(
     agentId,
     saved === undefined ? "medium" : saved,
-    (effort) => ({ effort: effort ?? AUTO }),
+    (effort) => {
+      const level = effort && effort !== "none" && effort !== "minimal" ? effort : null;
+      const id = level && modelFor ? modelFor(level) : undefined;
+      return { ...(id ? { model: id } : {}), effort: level ?? AUTO };
+    },
     scope,
   );
 
@@ -280,4 +344,6 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.6 },
   // Two lines' room: the words change under the finger and nothing around them moves.
   hint: { minHeight: 36 },
+  // A level the model isn't sold at: greyed out and unpressable.
+  offStep: { opacity: 0.35 },
 });

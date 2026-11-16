@@ -3308,7 +3308,8 @@
       "plans": "Каждый тариф выбирает только для сообщений своего владельца.",
       "rules": "Агенты отвечают на упоминания, ответы и продолжения разговора.",
       "off": "Агенты отвечают, только когда их упоминают.",
-      "noSmall": "У {{provider}} нет для этого маленькой модели. Агенты отвечают на упоминания, ответы и продолжения разговора."
+      "noSmall": "У {{provider}} нет для этого маленькой модели. Агенты отвечают на упоминания, ответы и продолжения разговора.",
+      "decision": "{{model}} picks who answers each message without a mention."
     }
   },
   "noAi": {
@@ -5417,6 +5418,8 @@
       "planModelDropped": "{{model}} больше нет в {{plan}}. <b>{{name}}</b> использует {{runs}}, пока вы не выберете другую модель.",
       "routineWaitingPlan": "<b>{{name}}</b> ждёт обновления лимита своего тарифа, чтобы выполнить регулярную задачу",
       "planResetUnknown": "{{plan}} не сообщил, когда обновится лимит. Работа <b>{{name}}</b> всё ещё ждёт.",
+      "credentialEfforts": "<b>{{name}}</b> завершил проверку уровней усилий {{label}}",
+      "credentialEffortsFailed": "<b>{{name}}</b> не удалось проверить уровни усилий {{label}}",
       "catchUpClosed_one": "<b>{{name}}</b> вернулся и пропустил {{count}} разговор, который не требовал ответа",
       "catchUpClosed_few": "<b>{{name}}</b> вернулся и пропустил {{count}} разговора, которые не требовали ответа",
       "catchUpClosed_many": "<b>{{name}}</b> вернулся и пропустил {{count}} разговоров, которые не требовали ответа",
@@ -5888,25 +5891,33 @@
         "efforts": {
           "auto": "Автоматически",
           "none": "По умолчанию модели",
+          "noneLevel": "Нет",
           "low": "Низкое",
+          "minimal": "Минимальное",
           "medium": "Среднее",
           "high": "Высокое",
+          "xhigh": "Очень высокое",
           "max": "Максимальное"
         },
+        "effortsUntested": "Уровни усилий этой модели не проверены. Проверьте их в моделях её ключа.",
         "effortsLower": {
           "auto": "автоматически",
           "low": "низкое",
+          "minimal": "минимальное",
           "medium": "среднее",
           "high": "высокое",
+          "xhigh": "очень высокое",
           "max": "максимальное"
         },
         "effortText": {
           "auto": "Автоматическая модель выбирает усилие для каждой задачи. Выберите модель, чтобы задать усилие.",
           "low": "Отвечает быстро. Подходит для простых вопросов.",
+          "minimal": "Думает совсем немного перед ответом. Самый быстрый вариант.",
           "medium": "По умолчанию. Обычно думает достаточно.",
           "mediumKey": "Обычно думает достаточно.",
           "none": "Модель думает столько, сколько обычно. Выберите уровень, чтобы задать усилие.",
           "high": "Больше думает над сложными задачами. Медленнее и дороже.",
+          "xhigh": "Думает больше, чем на высоком, но не на максимуме. Ещё медленнее.",
           "max": "Думает как можно больше. Гораздо медленнее и дороже."
         },
         "speed": "Скорость",
@@ -10405,6 +10416,8 @@
     "save": "Сохранить и проверить",
     "saveModels": "Сохранить и проверить снова",
     "testing": "Проверяем каждую модель…",
+    "effortsAsk": "Этот провайдер может принимать не все уровни усилий. Мы можем проверить каждую выбранную модель в фоне, одним коротким вызовом на уровень, и показывать только принимаемые уровни. Ассистент сообщит, когда закончим.",
+    "effortsListOnly": "Только список моделей",
     "results": "Проверка каждой модели",
     "check": {
       "ok": "Работает, с инструментами",
@@ -21391,5 +21404,60 @@
       "alwaysOn": "Теперь такие сообщения уходят без вопроса.",
       "askFirst": "Спрашивать перед отправкой"
     }
+  },
+  "decision": {
+    "title": "Decision model",
+    "offHint": "Off. Jev decides when it has a key. Otherwise, the small model on your key.",
+    "onHint": "On. This model decides before Jev, which keeps images and boxes and takes over if it fails.",
+    "providers": {
+      "local": "On this server",
+      "localText": "Laya, a small decision model that runs on this server.",
+      "openai": "OpenAI",
+      "openaiText": "GPT-6 Luna through OpenAI's Decisions API.",
+      "gemini": "Gemini",
+      "geminiText": "Gemini Decision 1, with text, image, audio, video and PDF."
+    },
+    "key": "API key",
+    "keyHint": "The key is encrypted on the server and never returned to the browser.",
+    "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
+    "recommended": "Recommended for this server: {{model}}.",
+    "hostLoading": "Reading this server's size...",
+    "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
+    "activate": "Turn on",
+    "activateLocal": "Turn on and download Laya",
+    "cancel": "Cancel",
+    "check": "Check",
+    "change": "Change",
+    "remove": "Remove",
+    "removeAsk": "Remove the decision model?",
+    "removeYes": "Remove",
+    "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
+    "failed": "The model could not be prepared: {{error}}",
+    "state": {
+      "off": "Off",
+      "ok": "On",
+      "invalid": "Key refused",
+      "no_credit": "No credit",
+      "unreachable": "No answer"
+    },
+    "install": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "checking": "Checking",
+      "deleting": "Switching the model",
+      "downloading": "Downloading",
+      "configuring": "Configuring",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Canceled"
+    },
+    "setupHint": "Choose where it runs, then turn it on. Jev decides until then.",
+    "providersLabel": "Where the decision model runs",
+    "recommendedTag": "Recommended",
+    "removeText": "Jev decides again.",
+    "switchAsk": "Switch the decision model?",
+    "switchCurrent": "The current model will be removed.",
+    "switchSlow": "The new model may take a while to be fully configured.",
+    "switchConfirm": "Switch and prepare"
   }
 }

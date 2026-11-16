@@ -1,0 +1,1 @@
+ALTER TABLE "right_hand_brains" ADD COLUMN "brain_context_tokens" integer;

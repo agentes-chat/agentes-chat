@@ -1,6 +1,6 @@
 {
-  "id": "eefbf165-a463-4baf-9f94-b3c1e2cdfdc9",
-  "prevId": "b1c7274e-727e-41e8-8e97-370d297741b1",
+  "id": "592206f0-f6c2-4b53-9175-826f9ca9a508",
+  "prevId": "ca914609-8db2-4252-863c-6651f2c41eec",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1044,6 +1044,12 @@
         "brain_effort": {
           "name": "brain_effort",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "brain_context_tokens": {
+          "name": "brain_context_tokens",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -9670,6 +9676,192 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.instance_decision_model": {
+      "name": "instance_decision_model",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base_url": {
+          "name": "base_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "runtime": {
+          "name": "runtime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ciphertext": {
+          "name": "ciphertext",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wrapped_data_key": {
+          "name": "wrapped_data_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kek_id": {
+          "name": "kek_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "key_hint": {
+          "name": "key_hint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "capabilities": {
+          "name": "capabilities",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{\"inputs\":[\"text\"]}'::jsonb"
+        },
+        "timeout_ms": {
+          "name": "timeout_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 3000
+        },
+        "install_token": {
+          "name": "install_token",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "install_state": {
+          "name": "install_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'idle'"
+        },
+        "install_model": {
+          "name": "install_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "install_progress": {
+          "name": "install_progress",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "install_detail": {
+          "name": "install_detail",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "install_error": {
+          "name": "install_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "install_started_at": {
+          "name": "install_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "install_finished_at": {
+          "name": "install_finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "instance_decision_model_updated_by_users_id_fk": {
+          "name": "instance_decision_model_updated_by_users_id_fk",
+          "tableFrom": "instance_decision_model",
+          "tableTo": "users",
+          "columnsFrom": [
+            "updated_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "instance_decision_model_single": {
+          "name": "instance_decision_model_single",
+          "value": "\"instance_decision_model\".\"id\" = 'default'"
+        },
+        "instance_decision_model_provider": {
+          "name": "instance_decision_model_provider",
+          "value": "\"instance_decision_model\".\"provider\" in ('openai', 'gemini', 'local')"
+        },
+        "instance_decision_model_runtime": {
+          "name": "instance_decision_model_runtime",
+          "value": "\"instance_decision_model\".\"runtime\" is null or \"instance_decision_model\".\"runtime\" in ('ollama', 'llamacpp', 'lmstudio', 'custom')"
+        },
+        "instance_decision_model_install": {
+          "name": "instance_decision_model_install",
+          "value": "\"instance_decision_model\".\"install_state\" in ('idle', 'queued', 'checking', 'deleting', 'downloading', 'configuring', 'ready', 'failed', 'cancelled')"
+        },
+        "instance_decision_model_sealed": {
+          "name": "instance_decision_model_sealed",
+          "value": "(\"instance_decision_model\".\"ciphertext\" is null and \"instance_decision_model\".\"wrapped_data_key\" is null and \"instance_decision_model\".\"kek_id\" is null) or (\"instance_decision_model\".\"ciphertext\" is not null and \"instance_decision_model\".\"wrapped_data_key\" is not null and \"instance_decision_model\".\"kek_id\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.instance_secrets": {
       "name": "instance_secrets",
       "schema": "",
@@ -16078,18 +16270,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "consultation_id": {
-          "name": "consultation_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "handed_thread_id": {
-          "name": "handed_thread_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "requested_by_user_id": {
           "name": "requested_by_user_id",
           "type": "text",
@@ -16215,22 +16395,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "agent_works_consultation_id_index": {
-          "name": "agent_works_consultation_id_index",
-          "columns": [
-            {
-              "expression": "consultation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"agent_works\".\"consultation_id\" is not null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -16240,19 +16404,6 @@
           "tableTo": "issues",
           "columnsFrom": [
             "issue_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "agent_works_consultation_id_agent_consultations_id_fk": {
-          "name": "agent_works_consultation_id_agent_consultations_id_fk",
-          "tableFrom": "agent_works",
-          "tableTo": "agent_consultations",
-          "columnsFrom": [
-            "consultation_id"
           ],
           "columnsTo": [
             "id"
@@ -19370,21 +19521,6 @@
           "columns": [
             {
               "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "usage_records_run_id_index": {
-          "name": "usage_records_run_id_index",
-          "columns": [
-            {
-              "expression": "run_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -27146,21 +27282,6 @@
             },
             {
               "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "routine_runs_agent_run_id_index": {
-          "name": "routine_runs_agent_run_id_index",
-          "columns": [
-            {
-              "expression": "agent_run_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

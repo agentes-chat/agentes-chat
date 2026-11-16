@@ -2959,7 +2959,8 @@
       "plans": "每个套餐只为其所有者的消息挑选。",
       "rules": "智能体会回应提及、回复和后续消息。",
       "off": "智能体只在被提及时回答。",
-      "noSmall": "{{provider}} 没有适合做这件事的小模型。智能体会回应提及、回复和后续消息。"
+      "noSmall": "{{provider}} 没有适合做这件事的小模型。智能体会回应提及、回复和后续消息。",
+      "decision": "{{model}} picks who answers each message without a mention."
     }
   },
   "noAi": {
@@ -4891,6 +4892,8 @@
       "planModelDropped": "{{model}} 已从 {{plan}} 下架。在你选择其他模型之前，<b>{{name}}</b> 会使用 {{runs}}。",
       "routineWaitingPlan": "<b>{{name}}</b> 正在等待套餐额度重置后运行例行工作",
       "planResetUnknown": "{{plan}} 没有说明额度何时重置。<b>{{name}}</b> 的工作仍在等待。",
+      "credentialEfforts": "<b>{{name}}</b> 已完成 {{label}} 的努力级别检查",
+      "credentialEffortsFailed": "<b>{{name}}</b> 无法检查 {{label}} 的努力级别",
       "catchUpClosed_other": "<b>{{name}}</b> 已恢复，并跳过了 {{count}} 个无需回复的对话",
       "catchUpClosedAsker": "<b>{{name}}</b> 没有在 {{label}} 中回复：{{who}} 已经处理好了",
       "catchUpClosedAskerAny": "<b>{{name}}</b> 没有回复：{{who}} 已经处理好了",
@@ -5343,25 +5346,33 @@
         "efforts": {
           "auto": "自动",
           "none": "模型默认",
+          "noneLevel": "无",
           "low": "低",
+          "minimal": "极低",
           "medium": "中",
           "high": "高",
+          "xhigh": "极高",
           "max": "最高"
         },
+        "effortsUntested": "尚未检查此模型的努力级别。请在其密钥的模型中测试。",
         "effortsLower": {
           "auto": "自动",
           "low": "低",
+          "minimal": "极低",
           "medium": "中",
           "high": "高",
+          "xhigh": "极高",
           "max": "最高"
         },
         "effortText": {
           "auto": "自动模型会为每项任务选择投入程度。选择一个模型即可固定投入程度。",
           "low": "回复快，适合简单问题。",
+          "minimal": "回答前只稍微思考。这是最快的设置。",
           "medium": "默认设置，大多数时候思考得足够充分。",
           "mediumKey": "大多数时候思考得足够充分。",
           "none": "模型按平时的方式思考。选择一个级别来固定投入程度。",
           "high": "在难题上思考更多，更慢，费用也更高。",
+          "xhigh": "比高多思考一些，但未到最高。更慢。",
           "max": "尽可能深入思考，慢得多，也贵得多。"
         },
         "speed": "速度",
@@ -9386,6 +9397,8 @@
     "save": "保存并测试",
     "saveModels": "保存并重新测试",
     "testing": "正在测试每个模型…",
+    "effortsAsk": "此提供商可能不支持所有努力级别。我们可以在后台检查每个选定的模型，每个级别一次简短调用，只显示它支持的级别。完成后助手会通知你。",
+    "effortsListOnly": "只列出模型",
     "results": "每个模型的测试",
     "check": {
       "ok": "可用，支持工具",
@@ -19784,5 +19797,60 @@
       "alwaysOn": "从现在起，这类报告会直接发送，不再询问。",
       "askFirst": "发送前先询问"
     }
+  },
+  "decision": {
+    "title": "Decision model",
+    "offHint": "Off. Jev decides when it has a key. Otherwise, the small model on your key.",
+    "onHint": "On. This model decides before Jev, which keeps images and boxes and takes over if it fails.",
+    "providers": {
+      "local": "On this server",
+      "localText": "Laya, a small decision model that runs on this server.",
+      "openai": "OpenAI",
+      "openaiText": "GPT-6 Luna through OpenAI's Decisions API.",
+      "gemini": "Gemini",
+      "geminiText": "Gemini Decision 1, with text, image, audio, video and PDF."
+    },
+    "key": "API key",
+    "keyHint": "The key is encrypted on the server and never returned to the browser.",
+    "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
+    "recommended": "Recommended for this server: {{model}}.",
+    "hostLoading": "Reading this server's size...",
+    "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
+    "activate": "Turn on",
+    "activateLocal": "Turn on and download Laya",
+    "cancel": "Cancel",
+    "check": "Check",
+    "change": "Change",
+    "remove": "Remove",
+    "removeAsk": "Remove the decision model?",
+    "removeYes": "Remove",
+    "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
+    "failed": "The model could not be prepared: {{error}}",
+    "state": {
+      "off": "Off",
+      "ok": "On",
+      "invalid": "Key refused",
+      "no_credit": "No credit",
+      "unreachable": "No answer"
+    },
+    "install": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "checking": "Checking",
+      "deleting": "Switching the model",
+      "downloading": "Downloading",
+      "configuring": "Configuring",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Canceled"
+    },
+    "setupHint": "Choose where it runs, then turn it on. Jev decides until then.",
+    "providersLabel": "Where the decision model runs",
+    "recommendedTag": "Recommended",
+    "removeText": "Jev decides again.",
+    "switchAsk": "Switch the decision model?",
+    "switchCurrent": "The current model will be removed.",
+    "switchSlow": "The new model may take a while to be fully configured.",
+    "switchConfirm": "Switch and prepare"
   }
 }

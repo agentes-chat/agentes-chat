@@ -12,6 +12,7 @@ export * from "./catalog";
 export * from "./commandcode";
 export * from "./context-limits";
 export * from "./custom";
+export * from "./decision";
 export * from "./embeddings";
 export * from "./gemini";
 export * from "./key-check";

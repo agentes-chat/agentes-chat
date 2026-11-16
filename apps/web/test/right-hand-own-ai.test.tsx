@@ -185,6 +185,72 @@ test("Sua IA on a plan of mine: the dialog goes back to the workspace's AI, and 
   );
 });
 
+test("Sua IA's Mais opções sets the effort and the context window, as on any agent", async () => {
+  const state = withRightHand(seedState());
+  const api = createFakeApi(state);
+  let effort: string | null = null;
+  let contextTokens: number | null = null;
+  api.agents.brain = async (_org, id, scope) =>
+    fakeAgentBrain(id, {
+      scope: scope ?? "mine",
+      brain: "claude_code",
+      account: "acc-ana",
+      effectiveModel: "sonnet",
+      effort: effort as never,
+      contextTokens,
+      accounts: [planOf(state.me?.user.id)],
+      canUsePlans: true,
+      canEdit: true,
+    });
+  const sent: { scope?: string; effort?: string | null; contextTokens?: number | null }[] = [];
+  api.agents.setBrain = async (_org, id, input) => {
+    sent.push(input);
+    if (input.effort !== undefined) effort = input.effort as string;
+    if (input.contextTokens !== undefined) contextTokens = input.contextTokens as number | null;
+    return fakeAgentBrain(id);
+  };
+  await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
+  await settle(8);
+  await act(async () => fireEvent.click(row(/^Sua IA/)));
+  await settle(4);
+  const dialog = screen().getByRole("dialog", { name: "Quem pensa pelo Lodi para você" });
+  // The line under the model names what it holds, as on any agent's.
+  const more = within(dialog).getByRole("button", { name: /^Mais opções/ });
+  expect(more.textContent).toContain("Esforço e janela de contexto");
+  await act(async () => fireEvent.click(more));
+  await settle(3);
+  // The effort: the ramp at Médio, the four levels a plan takes.
+  const effortLine = within(screen().getByRole("dialog")).getByRole("button", { name: /^Esforço/ });
+  expect(effortLine.textContent).toContain("Médio");
+  await act(async () => fireEvent.click(effortLine));
+  await settle(2);
+  const ramp = within(screen().getByRole("dialog")).getByRole("slider", { name: "Esforço" });
+  expect(ramp.getAttribute("aria-valuemax")).toBe("4");
+  await act(async () => fireEvent.keyDown(ramp, { key: "ArrowRight" }));
+  await settle(2);
+  expect(ramp.getAttribute("aria-valuetext")).toBe("Alto");
+  await act(async () =>
+    fireEvent.click(within(screen().getByRole("dialog")).getByRole("button", { name: "Concluído" })),
+  );
+  await settle(6);
+  expect(sent.at(-1)).toEqual({ scope: "mine", effort: "high" });
+  // The context window, from the same screen: Automático until a size is picked.
+  const again = within(screen().getByRole("dialog")).getByRole("button", { name: /^Mais opções/ });
+  await act(async () => fireEvent.click(again));
+  await settle(3);
+  const contextLine = within(screen().getByRole("dialog")).getByRole("button", { name: /^Janela de contexto/ });
+  expect(contextLine.textContent).toContain("Automático");
+  await act(async () => fireEvent.click(contextLine));
+  await settle(2);
+  await act(async () => fireEvent.click(within(screen().getByRole("dialog")).getByRole("radio", { name: "400K" })));
+  await settle(2);
+  await act(async () =>
+    fireEvent.click(within(screen().getByRole("dialog")).getByRole("button", { name: "Concluído" })),
+  );
+  await settle(6);
+  expect(sent.at(-1)).toEqual({ scope: "mine", contextTokens: 400_000 });
+});
+
 test("a plan's model is a line that opens its list, in Sua IA and in the workspace's AI: picked, then used", async () => {
   const state = withRightHand(seedState(), { brain: { kind: "claude_code", model: "Sonnet" } });
   const api = createFakeApi(state);

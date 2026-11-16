@@ -3191,7 +3191,8 @@
       "plans": "Ogni piano sceglie solo per i messaggi del suo titolare.",
       "rules": "Gli agenti rispondono a menzioni, risposte e seguiti.",
       "off": "Gli agenti rispondono solo quando vengono menzionati.",
-      "noSmall": "{{provider}} non ha un modello piccolo per questo. Gli agenti rispondono a menzioni, risposte e seguiti."
+      "noSmall": "{{provider}} non ha un modello piccolo per questo. Gli agenti rispondono a menzioni, risposte e seguiti.",
+      "decision": "{{model}} picks who answers each message without a mention."
     }
   },
   "noAi": {
@@ -5232,6 +5233,8 @@
       "planModelDropped": "{{model}} è uscito da {{plan}}. <b>{{name}}</b> usa {{runs}} finché non scegli un altro modello.",
       "routineWaitingPlan": "<b>{{name}}</b> aspetta che il suo piano si azzeri per eseguire una routine",
       "planResetUnknown": "{{plan}} non ha detto quando si azzera il limite. Il lavoro di <b>{{name}}</b> è ancora in attesa.",
+      "credentialEfforts": "<b>{{name}}</b> ha finito di verificare i livelli di sforzo di {{label}}",
+      "credentialEffortsFailed": "<b>{{name}}</b> non è riuscito a verificare i livelli di sforzo di {{label}}",
       "catchUpClosed_one": "<b>{{name}}</b> è tornato e ha saltato {{count}} conversazione che non aveva bisogno di risposta",
       "catchUpClosed_many": "<b>{{name}}</b> è tornato e ha saltato {{count}} conversazioni che non avevano bisogno di risposta",
       "catchUpClosed_other": "<b>{{name}}</b> è tornato e ha saltato {{count}} conversazioni che non avevano bisogno di risposta",
@@ -5711,25 +5714,33 @@
         "efforts": {
           "auto": "Automatico",
           "none": "Predefinito del modello",
+          "noneLevel": "Nessuno",
           "low": "Basso",
+          "minimal": "Minimo",
           "medium": "Medio",
           "high": "Alto",
+          "xhigh": "Molto alto",
           "max": "Massimo"
         },
+        "effortsUntested": "I livelli di sforzo di questo modello non sono stati verificati. Provali nei modelli della sua chiave.",
         "effortsLower": {
           "auto": "automatico",
           "low": "basso",
+          "minimal": "minimo",
           "medium": "medio",
           "high": "alto",
+          "xhigh": "molto alto",
           "max": "massimo"
         },
         "effortText": {
           "auto": "Il modello Automatico sceglie l'impegno di ogni attività. Scegli un modello per fissare l'impegno.",
           "low": "Risponde in fretta. Adatto alle domande semplici.",
+          "minimal": "Pensa solo un po' prima di rispondere. Il più veloce che c'è.",
           "medium": "Il predefinito. Ragiona abbastanza quasi sempre.",
           "mediumKey": "Ragiona abbastanza quasi sempre.",
           "none": "Il modello ragiona quanto fa di solito. Scegli un livello per fissare l'impegno.",
           "high": "Ragiona di più sulle attività difficili. Più lento e costa di più.",
+          "xhigh": "Pensa più del livello alto, senza arrivare al massimo. Ancora più lento.",
           "max": "Ragiona il più possibile. Molto più lento e più caro."
         },
         "speed": "Velocità",
@@ -10112,6 +10123,8 @@
     "save": "Salva e prova",
     "saveModels": "Salva e prova di nuovo",
     "testing": "Prova di ogni modello…",
+    "effortsAsk": "Questo provider potrebbe non accettare tutti i livelli di sforzo. Possiamo verificare ogni modello scelto in background, con una chiamata breve per livello, e mostrare solo i livelli accettati. L'assistente ti avvisa quando finisce.",
+    "effortsListOnly": "Elenca solo i modelli",
     "results": "Prova di ogni modello",
     "check": {
       "ok": "Funziona, con gli strumenti",
@@ -20930,5 +20943,60 @@
       "alwaysOn": "D'ora in poi, segnalazioni come questa partono senza chiedere.",
       "askFirst": "Chiedi prima di inviare"
     }
+  },
+  "decision": {
+    "title": "Decision model",
+    "offHint": "Off. Jev decides when it has a key. Otherwise, the small model on your key.",
+    "onHint": "On. This model decides before Jev, which keeps images and boxes and takes over if it fails.",
+    "providers": {
+      "local": "On this server",
+      "localText": "Laya, a small decision model that runs on this server.",
+      "openai": "OpenAI",
+      "openaiText": "GPT-6 Luna through OpenAI's Decisions API.",
+      "gemini": "Gemini",
+      "geminiText": "Gemini Decision 1, with text, image, audio, video and PDF."
+    },
+    "key": "API key",
+    "keyHint": "The key is encrypted on the server and never returned to the browser.",
+    "host": "{{cpus}} CPUs · {{memory}} GB of RAM · {{disk}} GB free on disk",
+    "recommended": "Recommended for this server: {{model}}.",
+    "hostLoading": "Reading this server's size...",
+    "localHint": "The local runtime downloads and loads Laya in the background. Jev decides while that happens.",
+    "activate": "Turn on",
+    "activateLocal": "Turn on and download Laya",
+    "cancel": "Cancel",
+    "check": "Check",
+    "change": "Change",
+    "remove": "Remove",
+    "removeAsk": "Remove the decision model?",
+    "removeYes": "Remove",
+    "note": "Laya needs about 2 GB of RAM and 0.5 GB of disk.",
+    "failed": "The model could not be prepared: {{error}}",
+    "state": {
+      "off": "Off",
+      "ok": "On",
+      "invalid": "Key refused",
+      "no_credit": "No credit",
+      "unreachable": "No answer"
+    },
+    "install": {
+      "idle": "Idle",
+      "queued": "Queued",
+      "checking": "Checking",
+      "deleting": "Switching the model",
+      "downloading": "Downloading",
+      "configuring": "Configuring",
+      "ready": "Ready",
+      "failed": "Failed",
+      "cancelled": "Canceled"
+    },
+    "setupHint": "Choose where it runs, then turn it on. Jev decides until then.",
+    "providersLabel": "Where the decision model runs",
+    "recommendedTag": "Recommended",
+    "removeText": "Jev decides again.",
+    "switchAsk": "Switch the decision model?",
+    "switchCurrent": "The current model will be removed.",
+    "switchSlow": "The new model may take a while to be fully configured.",
+    "switchConfirm": "Switch and prepare"
   }
 }

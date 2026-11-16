@@ -96,6 +96,9 @@ import type {
   CustomServer,
   DatabaseConnection,
   DatabaseTable,
+  DecisionHost,
+  DecisionModel,
+  DecisionModelInput,
   DesktopPictureView,
   DesktopRelease,
   DesktopStatus,
@@ -183,6 +186,7 @@ import type {
   NotificationCount,
   NotificationPage,
   OpenConsult,
+  OpenRouterChoice,
   Organization,
   OrgOverview,
   OrgPlanUsage,
@@ -596,6 +600,14 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<JevKey>("/api/app/jev", { method: "PUT", json: typeof input === "string" ? { apiKey: input } : input }),
       checkJev: () => request<JevKey>("/api/app/jev/check", { method: "POST" }),
       removeJev: () => request<JevKey>("/api/app/jev", { method: "DELETE" }),
+      decisionModel: () => nullOn(404, () => request<DecisionModel>("/api/app/decision-model")),
+      decisionHost: () => request<DecisionHost>("/api/app/decision-model/host"),
+      saveDecisionModel: (input: DecisionModelInput) =>
+        request<DecisionModel>("/api/app/decision-model", { method: "PUT", json: input }),
+      checkDecisionModel: () => request<DecisionModel>("/api/app/decision-model/check", { method: "POST" }),
+      retryDecisionInstall: () => request<DecisionModel>("/api/app/decision-model/install", { method: "POST" }),
+      cancelDecisionInstall: () => request<DecisionModel>("/api/app/decision-model/install", { method: "DELETE" }),
+      removeDecisionModel: () => request<DecisionModel>("/api/app/decision-model", { method: "DELETE" }),
       gifKey: () => nullOn(404, () => request<GifKey>("/api/app/gif-key")),
       saveGifKey: (apiKey) => request<GifKey>("/api/app/gif-key", { method: "PUT", json: { apiKey } }),
       removeGifKey: () => request<GifKey>("/api/app/gif-key", { method: "DELETE" }),
@@ -909,11 +921,21 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
           `${org(orgId)}/credentials/endpoint-models`,
           { json: input },
         ),
-      setEndpointModels: (orgId, id, models) =>
+      setEndpointModels: (orgId, id, models, syncEfforts) =>
         request<{ models: EndpointModel[]; checks: EndpointCheck[] }>(`${org(orgId)}/credentials/${enc(id)}/models`, {
+          method: "PUT",
+          json: { models, ...(syncEfforts ? { syncEfforts } : {}) },
+        }),
+      openRouterModels: (orgId, input) =>
+        request<{ models: OpenRouterChoice[] }>(`${org(orgId)}/credentials/openrouter-models`, { json: input }),
+      setOpenRouterModels: (orgId, id, models) =>
+        request<Credential>(`${org(orgId)}/credentials/${enc(id)}/openrouter-models`, {
           method: "PUT",
           json: { models },
         }),
+      testEndpointEfforts: async (orgId, id) => {
+        await request<{ queued: true }>(`${org(orgId)}/credentials/${enc(id)}/efforts`, { json: {} });
+      },
       rotateCredential: (orgId, id, input) =>
         request<Credential>(`${org(orgId)}/credentials/${enc(id)}/rotate`, { json: input }),
       removeCredential: (orgId, id, purge, release) =>

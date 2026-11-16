@@ -86,6 +86,8 @@ import {
   Button,
   Card,
   Dialog,
+  DialogBody,
+  DialogFooter,
   Icon,
   InfoHint,
   Input,
@@ -1833,11 +1835,17 @@ export function KeyPanel({
   saving,
   onSave,
   endpoint,
+  openrouter,
+  ready = true,
 }: {
   draft: KeyDraft;
   onDraft: (draft: KeyDraft) => void;
   /** The "Outro provedor" form, shown when it is chosen. */
   endpoint?: ReactNode;
+  /** OpenRouter: the models the key uses (ADR 0187), chosen beside it. */
+  openrouter?: ReactNode;
+  /** The save waits for this (an OpenRouter key with no model chosen). */
+  ready?: boolean;
   /** Only an admin adds an API key. */
   locked?: boolean;
   saved?: boolean;
@@ -1848,11 +1856,14 @@ export function KeyPanel({
   /** The provider refused the key on its test call: nothing was kept. */
   refused?: ReturnType<typeof keyRefusal>;
   saving?: boolean;
-  onSave?: () => void;
+  /** Save it; `syncEfforts`: also check its models' effort levels in the background (ADR 0187). */
+  onSave?: (syncEfforts?: boolean) => void;
 }) {
   const { t } = useTranslation();
   const fieldId = useId();
   const [touched, setTouched] = useState(false);
+  // An OpenRouter key's models: whether to check their effort levels, asked before saving (ADR 0187).
+  const [askEffort, setAskEffort] = useState(false);
   const { provider, apiKey } = draft;
   const keyOf = provider === CUSTOM_PROVIDER ? null : provider;
   const maker = keyOf ? providerOf(keyOf) : undefined;
@@ -1861,6 +1872,16 @@ export function KeyPanel({
   const wrong = touched && apiKey.trim().length > 0 && !valid;
   const site = maker ? new URL(`https://${maker.site}`) : null;
   const pick = (next: ProviderId) => onDraft({ provider: next, apiKey });
+  // An OpenRouter key asks first whether to check its models' levels; the save waits on that answer.
+  const attempt = () => {
+    setTouched(true);
+    if (!valid || !ready) return;
+    if (provider === "openrouter") {
+      setAskEffort(true);
+      return;
+    }
+    onSave?.();
+  };
   return (
     <Card as="section" className="ai-panel" aria-label={t("connectAi.key.title")}>
       {keyOf && (
@@ -1917,17 +1938,17 @@ export function KeyPanel({
                   onKeyDown={(e) => {
                     if (e.key !== "Enter" || !onSave) return;
                     e.preventDefault();
-                    setTouched(true);
-                    if (valid) onSave();
+                    attempt();
                   }}
                 />
               </Locked>
               {onSave && apiKey.trim() && (
-                <Button variant="primary" loading={saving} disabled={!valid} onClick={onSave}>
+                <Button variant="primary" loading={saving} disabled={!valid || !ready} onClick={attempt}>
                   {t("settings.saveKey")}
                 </Button>
               )}
             </span>
+            {provider === "openrouter" && openrouter}
             {wrong && (
               <div className="ac-field__error" role="alert">
                 <KeyMismatch provider={keyOf} apiKey={apiKey} onPick={pick} />
@@ -1938,6 +1959,40 @@ export function KeyPanel({
           <SettingNote icon="agent">{forLine ?? t("connectAi.key.forAll")}</SettingNote>
         </>
       ) : null}
+      {provider === "openrouter" && (
+        <Dialog
+          open={askEffort}
+          onOpenChange={setAskEffort}
+          title={t("agentPage.work.brain.effort")}
+          closeLabel={t("common.close")}
+          width={460}
+        >
+          <DialogBody>
+            <p className="small muted" style={{ margin: 0 }}>
+              {t("endpoint.effortsAsk")}
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setAskEffort(false);
+                onSave?.(false);
+              }}
+            >
+              {t("endpoint.effortsListOnly")}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setAskEffort(false);
+                onSave?.(true);
+              }}
+            >
+              {t("connectAi.key.testModels")}
+            </Button>
+          </DialogFooter>
+        </Dialog>
+      )}
     </Card>
   );
 }

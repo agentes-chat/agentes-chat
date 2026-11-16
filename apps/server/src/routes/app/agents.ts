@@ -34,6 +34,7 @@ import {
   denyTeam,
   type EndpointNet,
   endpointOrgsOf,
+  enqueueCredentialEfforts,
   getAgent,
   getAgentBrain,
   getAgentProposal,
@@ -52,6 +53,7 @@ import {
   NotFoundError,
   newAgentBrainMachines,
   oldHandlesByAgent,
+  openRouterChoices,
   orgAiStatus,
   orgRouting,
   pickerEndpoint,
@@ -77,6 +79,7 @@ import {
   updateAgent,
   updateAgentGroup,
   updateEndpointModels,
+  updateOpenRouterModels,
   usageQueue,
   usageSummary,
   useTeamTemplate,
@@ -119,6 +122,7 @@ import {
   EndpointStyle,
   FormerAgent,
   Model,
+  ModelTier,
   NewAgentSetup,
   PlanModelOut,
   ProviderId,
@@ -429,6 +433,8 @@ export function agentRoutes(deps: AppDeps) {
             outputUsdPerMTok: pricesAt(m).output / 1000,
             ...(m.pick !== undefined ? { pick: m.pick } : {}),
             ...(m.tier ? { tier: m.tier } : {}),
+            ...(m.efforts ? { efforts: [...m.efforts] } : {}),
+            ...(m.reasoning !== undefined ? { reasoning: m.reasoning } : {}),
             ...pickerEndpoint(id, m),
           })),
         },
@@ -483,6 +489,15 @@ export function agentRoutes(deps: AppDeps) {
               .object({ style: EndpointStyle, baseURL: z.string().min(1).max(500), models: z.array(EndpointModel) })
               .optional()
               .openapi({ description: "`custom` only: the endpoint's address, API and the models it offers." }),
+            openrouter: z
+              .object({ models: z.array(z.string().min(1).max(200)).min(1).max(100) })
+              .optional()
+              .openapi({
+                description: "`openrouter` only: the models this workspace chooses to use with the key (ADR 0187).",
+              }),
+            syncEfforts: z.boolean().optional().openapi({
+              description: "`custom` only: check each model's effort levels in the background (ADR 0187).",
+            }),
           }),
         ),
       },
@@ -552,6 +567,91 @@ export function agentRoutes(deps: AppDeps) {
 
   app.openapi(
     createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/credentials/openrouter-models",
+      tags,
+      security,
+      summary: "OpenRouter's models, to choose which ones a key uses (admins, ADR 0187)",
+      description:
+        "Reads OpenRouter's public list with no model call; with a key, it is checked first (`provider_key_invalid`, `provider_key_management`). Batch variants (`:batch`) never appear.",
+      request: {
+        params: OrgParams,
+        body: body(z.object({ apiKey: z.string().max(500).optional() })),
+      },
+      responses: {
+        200: json(
+          z.object({
+            models: z.array(
+              z.object({
+                id: z.string(),
+                label: z.string(),
+                pick: z.boolean().openapi({ description: "A good pick of the list: shown first, pre-chosen." }),
+                tier: ModelTier.optional(),
+                efforts: z.array(z.string()).optional(),
+                contextWindow: z.number().int().optional(),
+              }),
+            ),
+          }),
+        ),
+        ...errors,
+      },
+    }),
+    async (c) =>
+      c.json(
+        {
+          models: await openRouterChoices(db, c.get("user").id, c.req.valid("param").orgId, c.req.valid("json").apiKey),
+        },
+        200,
+      ),
+  );
+
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/credentials/{credentialId}/openrouter-models",
+      tags,
+      security,
+      summary: "Choose the models an OpenRouter key uses (admins, ADR 0187)",
+      description:
+        "The pickers and Automático offer those alone. Agents already on another of the list's models keep running it.",
+      request: {
+        params: OrgParams.extend({ credentialId: z.uuid() }),
+        body: body(z.object({ models: z.array(z.string().min(1).max(200)).min(1).max(100) })),
+      },
+      responses: { 200: json(Credential), ...errors },
+    }),
+    async (c) => {
+      const { orgId, credentialId } = c.req.valid("param");
+      const saved = await updateOpenRouterModels(db, c.get("user").id, orgId, credentialId, c.req.valid("json").models);
+      return c.json(credentialOut(saved), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/credentials/{credentialId}/efforts",
+      tags,
+      security,
+      summary: "Check the effort levels of an endpoint's models, in the background (admins, ADR 0187)",
+      description:
+        "One short call per level and model; the key's owner hears from the right hand when it ends. The credential stays usable meanwhile.",
+      request: { params: OrgParams.extend({ credentialId: z.uuid() }) },
+      responses: { 202: json(z.object({ queued: z.literal(true) }), "The check is queued"), ...errors },
+    }),
+    async (c) => {
+      const { orgId, credentialId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const saved = (await listCredentials(db, userId, orgId)).find((k) => k.id === credentialId);
+      if (saved?.provider !== "custom" && saved?.provider !== "openrouter")
+        throw new NotFoundError("Credential not found");
+      await enqueueCredentialEfforts(db, { orgId, credentialId, userId, force: true });
+      return c.json({ queued: true as const }, 202);
+    },
+  );
+
+  app.openapi(
+    createRoute({
       method: "put",
       path: "/organizations/{orgId}/credentials/{credentialId}/models",
       tags,
@@ -559,14 +659,24 @@ export function agentRoutes(deps: AppDeps) {
       summary: "Change an endpoint's models and prices, then test each again (admins, ADR 0146)",
       request: {
         params: OrgParams.extend({ credentialId: z.uuid() }),
-        body: body(z.object({ models: z.array(EndpointModel) })),
+        body: body(
+          z.object({
+            models: z.array(EndpointModel),
+            syncEfforts: z
+              .boolean()
+              .optional()
+              .openapi({ description: "Also check the models' effort levels in the background (ADR 0187)." }),
+          }),
+        ),
       },
       responses: { 200: json(z.object({ models: z.array(EndpointModel), checks: z.array(EndpointCheck) })), ...errors },
     }),
     async (c) => {
       const { orgId, credentialId } = c.req.valid("param");
       const userId = c.get("user").id;
-      await updateEndpointModels(db, userId, orgId, credentialId, c.req.valid("json").models.map(modelIn));
+      const input = c.req.valid("json");
+      await updateEndpointModels(db, userId, orgId, credentialId, input.models.map(modelIn));
+      if (input.syncEfforts) await enqueueCredentialEfforts(db, { orgId, credentialId, userId });
       const checks = await endpointChecks(deps, userId, orgId, credentialId);
       const saved = (await listCredentials(db, userId, orgId)).find((r) => r.id === credentialId);
       return c.json({ models: (saved?.endpoint?.models ?? []).map(modelOut), checks }, 200);
@@ -748,10 +858,11 @@ export function agentRoutes(deps: AppDeps) {
               }),
             ),
             routing: z.object({
-              by: z.enum(["jev", "model", "plans", "rules", "off"]),
-              mine: z.enum(["jev", "model", "plan", "rules", "off"]),
+              by: z.enum(["jev", "decision", "model", "plans", "rules", "off"]),
+              mine: z.enum(["jev", "decision", "model", "plan", "rules", "off"]),
               model: z.string().nullable(),
               noSmallModel: z.string().nullable(),
+              decisionProvider: z.string().nullable().optional(),
             }),
             apiKey: z.boolean(),
             /** Memory reflects on finished conversations: a summary model it can call (ADR 0167). */
