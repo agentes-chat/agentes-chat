@@ -846,7 +846,7 @@ encrypted environment field or a scoped secret-file mount, not in an image layer
 `.env` and additions in a Compose override so installer updates preserve them. No host networking,
 Docker socket, public MCP port or certificate bypass is required for stdio. The working directory
 does not change an MCP tool's own project/cwd argument; follow that server's contract. A selected
-remote computer is not used by this transport (ADR 0189).
+remote computer is not used by this transport (ADR 0190).
 
 **Sign-up.** The first account is allowed unless an owner link or the desktop app's owner key holds
 it (below). After it, with `ALLOW_SIGNUP=false` (the default), only invited people get in: invited by
