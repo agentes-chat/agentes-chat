@@ -627,6 +627,8 @@ export const desktopPtBR = {
       menuBarTitle: "Mostrar na barra de menus",
       notchTitle: "Mostrar os agentes no notch",
       notchDesc: "Em MacBooks com notch: quem está trabalhando aparece em volta da câmera.",
+      lightModeTitle: "Modo leve",
+      lightModeDesc: "Reduz os movimentos decorativos para usar menos CPU. Vale ao reabrir o app.",
       compatTitle: "Modo compatível",
       compatDesc:
         "Desenha a janela sem a placa de vídeo. É mais lento, mas funciona em qualquer computador. Use se a janela ficar preta, cortada ou travada.",

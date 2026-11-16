@@ -595,7 +595,9 @@
       "compatTryCard": "Réessayer la carte graphique",
       "compatOwn": "C'est WEBKIT_DISABLE_DMABUF_RENDERER qui décide pour l'instant. Pour choisir ici, quittez l'app et rouvrez-la sans cette variable.",
       "reopenTitle": "Rouvrir agentes.chat ?",
-      "reopenBody": "Les agents ne peuvent pas utiliser cet ordinateur avant que l'app ne se rouvre. Ce qui tourne déjà se termine d'abord."
+      "reopenBody": "Les agents ne peuvent pas utiliser cet ordinateur avant que l'app ne se rouvre. Ce qui tourne déjà se termine d'abord.",
+      "lightModeTitle": "Mode léger",
+      "lightModeDesc": "Réduit les animations décoratives pour moins solliciter le processeur. Prend effet à la réouverture de l’application."
     },
     "thisMac": {
       "agents": "Agents",

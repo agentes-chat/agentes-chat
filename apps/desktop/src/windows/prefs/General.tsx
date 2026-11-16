@@ -44,6 +44,24 @@ export function General() {
   const [language, setLanguage] = usePref<AppLocale | "auto">(LOCALE_PREF, "auto");
   const [leaving, setLeaving] = useState<Home | null>(null);
   const [busy, setBusy] = useState(false);
+  const windows = host.platform === "windows";
+  const [lightMode, setLightMode] = useState<boolean | null>(null);
+  const [lightSaving, setLightSaving] = useState(false);
+  useEffect(() => {
+    if (!windows) return;
+    let live = true;
+    void host
+      .lightMode()
+      .then((on) => {
+        if (live) setLightMode(on);
+      })
+      .catch(() => {
+        if (live) toast(t("desktop.common.error"), "alert");
+      });
+    return () => {
+      live = false;
+    };
+  }, [host, windows, toast, t]);
   const linux = host.platform === "linux";
   // Linux: Compatibility mode as the next opening will have it; null until read.
   const [compat, setCompat] = useState<boolean | null>(null);
@@ -107,6 +125,22 @@ export function General() {
       toast(t("desktop.common.error"), "alert");
     } finally {
       setCompatSaving(false);
+    }
+  };
+
+  const changeLightMode = async (on: boolean) => {
+    setLightSaving(true);
+    try {
+      await host.setLightMode(on);
+      setLightMode(on);
+      toast(t("desktop.prefs.general.compatReopen"), "info", {
+        label: t("desktop.prefs.general.reopenNow"),
+        run: reopen,
+      });
+    } catch {
+      toast(t("desktop.common.error"), "alert");
+    } finally {
+      setLightSaving(false);
     }
   };
 
@@ -249,6 +283,22 @@ export function General() {
           }
         />
         {!agentsCard && launchRow}
+        {windows && (
+          <PrefRow
+            title={t("desktop.prefs.general.lightModeTitle")}
+            hint={hintFor(t, t("desktop.prefs.general.lightModeTitle"), t("desktop.prefs.general.lightModeDesc"))}
+            htmlFor="light-mode"
+            end={
+              <Switch
+                id="light-mode"
+                aria-describedby="light-mode-hint"
+                checked={lightMode ?? false}
+                disabled={lightMode === null || lightSaving}
+                onCheckedChange={(on) => void changeLightMode(on)}
+              />
+            }
+          />
+        )}
         <PrefRow
           title={t("desktop.prefs.general.notifySiteTitle")}
           hint={hintFor(t, t("desktop.prefs.general.notifySiteTitle"), t("desktop.prefs.general.notifySiteDesc"))}

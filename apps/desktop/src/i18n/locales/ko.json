@@ -585,7 +585,9 @@
       "compatTryCard": "그래픽 카드 다시 시도",
       "compatOwn": "지금은 WEBKIT_DISABLE_DMABUF_RENDERER 변수가 이 설정을 정해요. 여기서 고르려면 앱을 종료하고 그 변수 없이 다시 여세요.",
       "reopenTitle": "agentes.chat을 다시 열까요?",
-      "reopenBody": "앱이 다시 열릴 때까지 에이전트는 이 컴퓨터를 사용할 수 없어요. 이미 실행 중인 작업은 먼저 끝나요."
+      "reopenBody": "앱이 다시 열릴 때까지 에이전트는 이 컴퓨터를 사용할 수 없어요. 이미 실행 중인 작업은 먼저 끝나요.",
+      "lightModeTitle": "경량 모드",
+      "lightModeDesc": "장식 효과의 움직임을 줄여 CPU 사용량을 낮춥니다. 앱을 다시 열면 적용됩니다."
     },
     "thisMac": {
       "agents": "에이전트",

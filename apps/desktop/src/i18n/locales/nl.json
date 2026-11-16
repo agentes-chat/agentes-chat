@@ -590,7 +590,9 @@
       "compatTryCard": "Videokaart opnieuw proberen",
       "compatOwn": "WEBKIT_DISABLE_DMABUF_RENDERER bepaalt dit nu. Om hier te kiezen, sluit je de app af en open je hem zonder die variabele.",
       "reopenTitle": "agentes.chat opnieuw openen?",
-      "reopenBody": "Agents kunnen deze computer niet gebruiken tot de app weer open is. Wat al draait, wordt eerst afgemaakt."
+      "reopenBody": "Agents kunnen deze computer niet gebruiken tot de app weer open is. Wat al draait, wordt eerst afgemaakt.",
+      "lightModeTitle": "Lichte modus",
+      "lightModeDesc": "Vermindert decoratieve bewegingen om minder CPU te gebruiken. Wordt actief wanneer de app opnieuw wordt geopend."
     },
     "thisMac": {
       "agents": "Agents",

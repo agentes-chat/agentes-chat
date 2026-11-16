@@ -585,7 +585,9 @@
       "compatTryCard": "グラフィックカードをもう一度試す",
       "compatOwn": "現在は WEBKIT_DISABLE_DMABUF_RENDERER がこの設定を決めています。ここで選ぶには、アプリを終了し、その変数なしで開き直してください。",
       "reopenTitle": "agentes.chatを開き直しますか？",
-      "reopenBody": "アプリが開き直るまで、エージェントはこのコンピュータを使えません。すでに実行中のものは先に完了します。"
+      "reopenBody": "アプリが開き直るまで、エージェントはこのコンピュータを使えません。すでに実行中のものは先に完了します。",
+      "lightModeTitle": "軽量モード",
+      "lightModeDesc": "装飾的な動きを減らしてCPU使用率を抑えます。アプリを開き直すと適用されます。"
     },
     "thisMac": {
       "agents": "エージェント",

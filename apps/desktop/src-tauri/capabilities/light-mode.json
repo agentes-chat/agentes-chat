@@ -1,0 +1,7 @@
+{
+  "identifier": "light-mode",
+  "description": "Windows Preferences can read and change this computer's Lightweight mode for the next opening.",
+  "platforms": ["windows"],
+  "windows": ["prefs"],
+  "permissions": ["allow-light-mode-get", "allow-light-mode-set"]
+}

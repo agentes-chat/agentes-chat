@@ -70,6 +70,12 @@ pub fn attach(app: &AppHandle, window: &tauri::Window) -> tauri::Result<()> {
             .transparent(!cfg!(target_os = "windows"))
             .background_color(SKY)
             .auto_resize();
+        #[cfg(target_os = "windows")]
+        let cover = if crate::light_mode::active() {
+            cover.additional_browser_args(crate::light_mode::ARG)
+        } else {
+            cover
+        };
         window.add_child(cover, LogicalPosition::new(0.0, 0.0), size)?;
     }
     let mut shown = lock(app);

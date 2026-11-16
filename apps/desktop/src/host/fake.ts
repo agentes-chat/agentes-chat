@@ -163,6 +163,7 @@ export function createFakeHost(
   const signedOut = new Set<string>();
   let tray: TrayState = "idle";
   let autostart = true;
+  let lightMode = false;
   let version = "0.6.0";
   const platform: Platform = scenario === "windows" ? "windows" : scenario === "linux" ? "linux" : "mac";
   const here = options.here ?? {};
@@ -445,6 +446,10 @@ export function createFakeHost(
           ? `agentes.chat ${version} · Linux · Ubuntu 26.04 LTS · wayland (GNOME) · WebKitGTK 2.50.4 · Intel (i915) · CPU (chosen) · AppImage`
           : `agentes.chat ${version} · ${platform === "mac" ? "macOS 15.5" : "Windows"}`,
     }),
+    lightMode: async () => lightMode,
+    setLightMode: async (on) => {
+      lightMode = on;
+    },
     compatMode: async () => {
       const now = { ...host.compat };
       host.compat.fellBack = false;

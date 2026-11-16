@@ -590,7 +590,9 @@
       "compatTryCard": "Ekran kartını yeniden dene",
       "compatOwn": "Şu an bunu WEBKIT_DISABLE_DMABUF_RENDERER belirliyor. Burada seçmek için uygulamadan çıkın ve bu değişken olmadan yeniden açın.",
       "reopenTitle": "agentes.chat yeniden açılsın mı?",
-      "reopenBody": "Uygulama yeniden açılana kadar ajanlar bu bilgisayarı kullanamaz. Zaten çalışanlar önce biter."
+      "reopenBody": "Uygulama yeniden açılana kadar ajanlar bu bilgisayarı kullanamaz. Zaten çalışanlar önce biter.",
+      "lightModeTitle": "Hafif mod",
+      "lightModeDesc": "CPU kullanımını azaltmak için dekoratif hareketleri azaltır. Uygulama yeniden açıldığında etkinleşir."
     },
     "thisMac": {
       "agents": "Ajanlar",

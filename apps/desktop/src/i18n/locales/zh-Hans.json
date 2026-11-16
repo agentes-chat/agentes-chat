@@ -585,7 +585,9 @@
       "compatTryCard": "再试一次显卡",
       "compatOwn": "目前由 WEBKIT_DISABLE_DMABUF_RENDERER 决定。要在这里选择，请退出应用，并在没有该变量的情况下重新打开。",
       "reopenTitle": "重新打开 agentes.chat？",
-      "reopenBody": "在应用重新打开之前，智能体无法使用这台电脑。已在运行的工作会先完成。"
+      "reopenBody": "在应用重新打开之前，智能体无法使用这台电脑。已在运行的工作会先完成。",
+      "lightModeTitle": "轻量模式",
+      "lightModeDesc": "减少装饰性动画以降低 CPU 使用率。重新打开应用后生效。"
     },
     "thisMac": {
       "agents": "智能体",

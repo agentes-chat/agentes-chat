@@ -307,6 +307,12 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         .title_bar_style(tauri::TitleBarStyle::Overlay)
         // The buttons are placed by `place_lights` (on every fit), not with `traffic_light_position`.
         .hidden_title(true);
+    #[cfg(target_os = "windows")]
+    let builder = if crate::light_mode::active() {
+        builder.additional_browser_args(crate::light_mode::ARG)
+    } else {
+        builder
+    };
     let built = builder.build().map_err(|e| e.to_string())?;
     // Linux's side of lib.rs `on_web_content_process_terminate` (macOS only in Tauri): a web process that died
     // leaves the window blank, so the page loads again.
