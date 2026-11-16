@@ -8,6 +8,7 @@ import type {
   PlanAccountInfo,
   PlanAccountUsage,
   PlanUsage,
+  PlanUseKind,
   PlanWindowParts,
 } from "../api/types";
 import { accountTitle, groupPlans, ownSignInName, ownSignIns, ownSignInTitle } from "./ai-accounts";
@@ -482,6 +483,29 @@ export function shareFacts(
     .map((fact) => ` · ${fact}`)
     .join("");
 }
+
+const KIND_ORDER: readonly PlanUseKind[] = ["handoffs", "people", "routines"];
+
+/**
+ * An account's use by kind, in a fixed order (handoffs, people, routines), the kinds with neither tokens this month
+ * nor a part of the window left out: early in a month the week still holds last month's use, as the agents' list does.
+ */
+export const accountKinds = (account: Pick<PlanAccountUsage, "kinds">) =>
+  KIND_ORDER.flatMap(
+    (kind) => account.kinds?.find((k) => k.kind === kind && (k.tokens > 0 || (k.percent ?? 0) > 0)) ?? [],
+  );
+
+/** `shareFacts` for a kind's line, each fact whole ("week\u00a037%"), so a narrow row never parts a number from its unit. */
+export const kindFacts = (
+  t: TFunction,
+  lang: string,
+  window: string | null,
+  row: { percent: number | null; tokens: number },
+) =>
+  shareFacts(t, lang, window, { share: row.percent ?? 0, tokens: row.tokens })
+    .split(" · ")
+    .map((fact) => fact.replaceAll(" ", "\u00a0"))
+    .join(" · ");
 
 /** Whose a plan account is, in words: "de Ana" (the first name); null where the server names no owner. */
 export const accountOwner = (t: TFunction, a: Pick<PlanAccountInfo, "ownerName">) =>

@@ -2545,6 +2545,13 @@
   "rightHand": {
     "label": "你的得力助手",
     "labelCapitalized": "你的得力助手",
+    "unusable": {
+      "title": "现在无法替{{name}}思考",
+      "computerOnly": "仅在{{computer}}上登录。{{name}}使用以账号登录的套餐思考。",
+      "away": "{{owner}}的，在{{computer}}上，当前离开。",
+      "awayYours": "你的，在{{computer}}上，当前离开。",
+      "connect": "连接一台电脑"
+    },
     "newDot": "新",
     "actsAsYou": "以你的权限行事",
     "composerHint": "没有你，什么都不会变",
@@ -7472,7 +7479,8 @@
     "table": {
       "task": "任务",
       "github": "GitHub",
-      "sortBy": "按{{column}}排序"
+      "sortBy": "按{{column}}排序",
+      "resize": "调整“{{column}}”列的宽度"
     },
     "fold": {
       "open": "打开{{name}}",
@@ -7555,6 +7563,7 @@
       "canceled": "#{{number}} 回到了原位。",
       "assigned": "#{{number}} 现在由{{name}}负责。",
       "unassigned": "#{{number}} 现在没有负责人。",
+      "removed": "#{{number}} 不再由{{name}}负责。",
       "prioritized": "#{{number}} 现在是{{priority}}优先级。"
     },
     "canceledColumn": "已取消",
@@ -7702,6 +7711,10 @@
       "high": "高"
     },
     "noAssignee": "无负责人",
+    "assignees": {
+      "people": "成员和智能体",
+      "done": "完成"
+    },
     "agentRole": "智能体 · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -7841,7 +7854,9 @@
       "status_changed": "将状态改为{{status}}",
       "priority_changed": "将优先级改为{{priority}}",
       "assigned": "分配了任务",
-      "unassigned": "移除了负责人",
+      "unassigned": "移除了一位负责人",
+      "assigned_named": "将任务分配给了{{name}}",
+      "unassigned_named": "将{{name}}移出了任务",
       "due_date_set": "将截止日期设为 {{date}}",
       "due_date_removed": "移除了截止日期",
       "pr_linked": "关联了 PR #{{number}}",
@@ -9999,10 +10014,10 @@
       "copies_other": "这个账号还有 {{count}} 个登录，没有任何智能体使用。",
       "removeCopies": "移除",
       "copiesRemoved_other": "已移除 {{count}} 个未使用的登录。",
-      "removeAllDone": "已移除 {{n}} 个 Grok 登录。",
-      "removeAllText": "它们将不再为 {{computers}} 上的代理思考。其他人的登录不会被改动。",
-      "removeAllTitle": "要移除全部 {{n}} 个 Grok 登录吗？",
       "removeAllGrok": "移除所有 Grok 登录",
+      "removeAllTitle": "要移除全部 {{n}} 个 Grok 登录吗？",
+      "removeAllText": "它们将不再为 {{computers}} 上的代理思考。其他人的登录不会被改动。",
+      "removeAllDone": "已移除 {{n}} 个 Grok 登录。",
       "disconnect": "断开连接",
       "renameTitle": "重命名 {{label}}",
       "nameLabel": "名称",
@@ -16020,11 +16035,11 @@
       "rolesPersonal": "这里每个人可以做什么。所有者可以做任何事。"
     },
     "about": {
-      "basedOn": "基于 Codari Global, LLC 的 <site>agentes.chat</site>",
+      "basedOn": "基于 AGENTESCHAT, LLC 的 <site>agentes.chat</site>",
       "version": "版本",
       "license": "依据 <license>GNU Affero General Public License v3</license> 发布的自由软件，不提供任何担保。",
       "source": "源代码",
-      "copyright": "Copyright © 2026 Codari Global, LLC 及贡献者"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC 及贡献者"
     },
     "title": "设置",
     "account": {
@@ -16452,6 +16467,18 @@
       "see": "查看用量"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "按类型",
+      "handoffs": "智能体之间的交接",
+      "people": "与人的对话",
+      "routines": "例行任务"
+    },
+    "hint": {
+      "handoffs": "本周的大部分用量来自智能体之间互相交接工作。长任务请直接交给该智能体。",
+      "message": "给 {{name}} 发消息"
+    }
+  },
   "usageViews": {
     "signedOut": "已退出登录",
     "whose": "{{name}} 的",
@@ -16628,6 +16655,14 @@
     "speedFallback": {
       "text": "ChatGPT 拒绝了此账号或模型的快速模式，因此这条回复以标准速度发送。",
       "action": "打开智能体"
+    },
+    "standIn": {
+      "needsComputer": "已用{{via}}回答：{{plan}}需要一台电脑。",
+      "away": "已用{{via}}回答：{{plan}}所在的电脑当前离开。",
+      "notShared": "已用{{via}}回答：{{plan}}只为连接它的人服务。",
+      "limit": "已用{{via}}回答：{{plan}}已达上限。",
+      "cant": "已用{{via}}回答：{{plan}}现在无法思考。",
+      "change": "更改"
     },
     "modelStandIn": {
       "text": "{{plan}} 用此密钥拒绝了 {{from}}。我改用可用的 {{to}} 回复了。",

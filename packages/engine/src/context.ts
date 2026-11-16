@@ -984,7 +984,7 @@ export async function buildRunContext(
     .join(", ");
 
   // A task's conversation (ADR 0145), or an older work thread in a DM (asked to implement it): the task, read from
-  // the issue now, never shown in the chat. In the conversation the assignee works on it; another agent was called in.
+  // the issue now, never shown in the chat. In the conversation an assignee works on it; another agent was called in.
   const issueWork = root ? issueWorkOf(root.meta) : null;
   const taskHere = root ? taskConversationOf(root.meta) : null;
   const workIssueId = issueWork && issueWork.agentId === agent.id ? issueWork.issueId : null;
@@ -2508,17 +2508,17 @@ export function toTurns(
   return turns.map((t) => ({ role: t.role, content: t.parts.map((p) => p.text).join("\n\n") }));
 }
 
-/** Whether the task is this agent's (its assignee works on it in the task's conversation, ADR 0145). */
+/** Whether the task is this agent's (an assignee works on it in the task's conversation, ADR 0145), alone or not. */
 async function assignedTo(db: Database, orgId: string, issueId: string, agentId: string) {
   const [row] = await db
-    .select({ id: schema.issues.id })
-    .from(schema.issues)
+    .select({ id: schema.issueAssignees.id })
+    .from(schema.issueAssignees)
     .where(
       and(
-        eq(schema.issues.id, issueId),
-        eq(schema.issues.orgId, orgId),
-        eq(schema.issues.assigneeType, "agent"),
-        eq(schema.issues.assigneeId, agentId),
+        eq(schema.issueAssignees.issueId, issueId),
+        eq(schema.issueAssignees.orgId, orgId),
+        eq(schema.issueAssignees.assigneeType, "agent"),
+        eq(schema.issueAssignees.assigneeId, agentId),
       ),
     );
   return Boolean(row);

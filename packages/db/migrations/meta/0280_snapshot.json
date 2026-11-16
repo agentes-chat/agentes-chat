@@ -1,5 +1,5 @@
 {
-  "id": "0acdf5aa-ece4-40d8-9aeb-0a8fc829266d",
+  "id": "0034e02b-3657-470a-975e-547337bb184f",
   "prevId": "3ed711ce-65d1-40e6-b020-c98d8ae7485c",
   "version": "7",
   "dialect": "postgresql",
@@ -9704,12 +9704,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "base_url": {
-          "name": "base_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "updated_by": {
           "name": "updated_by",
           "type": "text",
@@ -18062,6 +18056,12 @@
         "last_error": {
           "name": "last_error",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error_status": {
+          "name": "last_error_status",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },

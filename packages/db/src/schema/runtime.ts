@@ -53,6 +53,8 @@ export const outbox = pgTable(
     lockedUntil: timestamp({ withTimezone: true }),
     lockedBy: text(),
     lastError: text(),
+    /** The HTTP status the error behind `lastError` carried (a provider's refusal), when it carried one. */
+    lastErrorStatus: integer(),
     /** Optional idempotency key: enqueueing the same key twice is a no-op. */
     dedupeKey: text().unique(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

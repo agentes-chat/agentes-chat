@@ -20,6 +20,8 @@ import {
   getRun,
   INVITE_CHOICES_MAX,
   INVITE_NOTE_MAX,
+  ISSUE_COLUMN_WIDTHS,
+  type ISSUE_LIST_COLUMNS,
   ISSUES_DONE,
   ISSUES_GROUPS,
   ISSUES_LAYOUTS,
@@ -143,6 +145,19 @@ const IssueCardFields = z.object({
   label: z.boolean(),
 });
 
+const columnWidth = (column: (typeof ISSUE_LIST_COLUMNS)[number]) =>
+  z.number().int().min(ISSUE_COLUMN_WIDTHS[column].min).max(ISSUE_COLUMN_WIDTHS[column].max).optional();
+const IssueColumnWidths = {
+  title: columnWidth("title"),
+  project: columnWidth("project"),
+  label: columnWidth("label"),
+  priority: columnWidth("priority"),
+  due: columnWidth("due"),
+  criteria: columnWidth("criteria"),
+  pullRequest: columnWidth("pullRequest"),
+  assignee: columnWidth("assignee"),
+} satisfies Record<(typeof ISSUE_LIST_COLUMNS)[number], unknown>;
+
 const IssuesView = z
   .object({
     layout: z.enum(ISSUES_LAYOUTS),
@@ -157,10 +172,12 @@ const IssuesView = z
     showCanceled: z.boolean(),
     hideEmpty: z.boolean().default(false),
     collapsed: z.array(z.string().regex(ISSUES_VIEW_GROUP)).max(ISSUES_VIEW_MAX_COLLAPSED).default([]),
+    // Only the columns the person changed. A column the app doesn't know or a width past its column's ends: refused.
+    widths: z.strictObject(IssueColumnWidths).default({}),
   })
   .openapi("IssuesView", {
     description:
-      "How you look at Tarefas in one workspace: `board` or `list`, grouped by `stage`, `assignee` or `priority`, in `manual` order (the board's), by `priority`, by `due` date or by the last change (`updated`), what the cards show (`fields`), the assignee filter (`agent:<id>`, `person:<id>`, `none`), the priority filter and the label filter (empty: every task), which finished tasks show (`all`, `recent`: changed in the last 7 days, `hidden`), whether canceled tasks show, whether groups with no task show (`hideEmpty`), and the groups folded shut (`collapsed`: column ids, assignee keys or priorities).",
+      "How you look at Tarefas in one workspace: `board` or `list`, grouped by `stage`, `assignee` or `priority`, in `manual` order (the board's), by `priority`, by `due` date or by the last change (`updated`), what the cards show (`fields`), the assignee filter (`agent:<id>`, `person:<id>`, `none`), the priority filter and the label filter (empty: every task), which finished tasks show (`all`, `recent`: changed in the last 7 days, `hidden`), whether canceled tasks show, whether groups with no task show (`hideEmpty`), the groups folded shut (`collapsed`: column ids, assignee keys or priorities), and the widths given to the list's columns in pixels (`widths`: `title` and the card fields; only the ones changed, each between its column's least and most).",
   });
 
 const Settings = z

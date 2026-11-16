@@ -69,6 +69,7 @@ import {
   useSettings,
   usesBrowser,
   useTaskManager,
+  useThreadActivity,
   useThreadInfo,
   useThreadMessages,
   useThreadMission,
@@ -1204,6 +1205,9 @@ function ChannelView({
   const screenThread = thread?.id ?? null;
   useEffect(() => holdOnScreen({ channelId: channel.id, threadId: screenThread }), [channel.id, screenThread]);
   const lastId = lastPostedId(channelMessages.data);
+  // A reply in one of its threads counts in the channel's mark and is no message of this timeline: read again on it.
+  const threadReplies = useThreadActivity(org.id, channel.id);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a thread's reply marks the channel read again
   useEffect(() => {
     if (!isMember || !lastId) return;
     const mark = () => {
@@ -1212,7 +1216,7 @@ function ChannelView({
     mark();
     document.addEventListener("visibilitychange", mark);
     return () => document.removeEventListener("visibilitychange", mark);
-  }, [markChannelRead, channel.id, isMember, lastId]);
+  }, [markChannelRead, channel.id, isMember, lastId, threadReplies]);
   // A thread open in view: its replies are read (its unread and the Threads mark clear, on every device).
   const markThreadRead = useMarkThreadRead(org.id).mutate;
   const threadId = thread?.id;

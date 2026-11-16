@@ -240,7 +240,12 @@ async function resume(db: Database, run: AgentRun, at: SweepTime, ran: string[])
     // a job for one wait for the computer: it would find the run running and do nothing.
     await tx
       .update(outbox)
-      .set({ status: "failed", lockedUntil: null, lastError: "its worker stopped: the run went on in a new job" })
+      .set({
+        status: "failed",
+        lockedUntil: null,
+        lastError: "its worker stopped: the run went on in a new job",
+        lastErrorStatus: null,
+      })
       .where(
         and(
           eq(outbox.kind, "agent_run.execute"),
@@ -315,7 +320,7 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
     // Its job is done for good.
     await tx
       .update(outbox)
-      .set({ status: "failed", lockedUntil: null, lastError: INTERRUPTED_BY_RESTART })
+      .set({ status: "failed", lockedUntil: null, lastError: INTERRUPTED_BY_RESTART, lastErrorStatus: null })
       .where(
         and(
           eq(outbox.kind, "agent_run.execute"),

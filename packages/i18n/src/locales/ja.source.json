@@ -6569,6 +6569,21 @@
   "rightHand.labelCapitalized": {
     "value": "Your right hand"
   },
+  "rightHand.unusable.title": {
+    "value": "Can't think for {{name}} now"
+  },
+  "rightHand.unusable.computerOnly": {
+    "value": "Signed in on {{computer}} only. {{name}} thinks with a plan signed in as an account."
+  },
+  "rightHand.unusable.away": {
+    "value": "{{owner}}'s, on {{computer}}, which is away."
+  },
+  "rightHand.unusable.awayYours": {
+    "value": "Yours, on {{computer}}, which is away."
+  },
+  "rightHand.unusable.connect": {
+    "value": "Connect a computer"
+  },
   "rightHand.newDot": {
     "value": "New"
   },
@@ -18727,6 +18742,9 @@
   "issues.table.sortBy": {
     "value": "Sort by {{column}}"
   },
+  "issues.table.resize": {
+    "value": "Resize column {{column}}"
+  },
   "issues.fold.open": {
     "value": "Open {{name}}"
   },
@@ -18927,6 +18945,9 @@
   },
   "issues.drag.unassigned": {
     "value": "#{{number}} has no assignee now."
+  },
+  "issues.drag.removed": {
+    "value": "#{{number}} is no longer with {{name}}."
   },
   "issues.drag.prioritized": {
     "value": "#{{number}} now has {{priority}} priority."
@@ -19297,6 +19318,12 @@
   },
   "issues.noAssignee": {
     "value": "No assignee"
+  },
+  "issues.assignees.people": {
+    "value": "People and agents"
+  },
+  "issues.assignees.done": {
+    "value": "Done"
   },
   "issues.agentRole": {
     "value": "Agent · {{role}}"
@@ -19669,7 +19696,13 @@
     "value": "assigned the task"
   },
   "issues.event.unassigned": {
-    "value": "removed the assignee"
+    "value": "removed an assignee"
+  },
+  "issues.event.assigned_named": {
+    "value": "assigned the task to {{name}}"
+  },
+  "issues.event.unassigned_named": {
+    "value": "took {{name}} off the task"
   },
   "issues.event.due_date_set": {
     "value": "set the due date to {{date}}"
@@ -40676,7 +40709,7 @@
     "value": "What each person here can do. The owner can do everything."
   },
   "settings.about.basedOn": {
-    "value": "Based on <site>agentes.chat</site> by Codari Global, LLC"
+    "value": "Based on <site>agentes.chat</site> by AGENTESCHAT, LLC"
   },
   "settings.about.version": {
     "value": "Version"
@@ -40688,7 +40721,7 @@
     "value": "Source code"
   },
   "settings.about.copyright": {
-    "value": "Copyright © 2026 Codari Global, LLC and contributors"
+    "value": "Copyright © 2026 AGENTESCHAT, LLC and contributors"
   },
   "settings.title": {
     "value": "Settings"
@@ -41767,6 +41800,24 @@
   "peopleUsage.actions.see": {
     "value": "See their usage"
   },
+  "usage.kinds.label": {
+    "value": "By kind"
+  },
+  "usage.kinds.handoffs": {
+    "value": "Handoffs between agents"
+  },
+  "usage.kinds.people": {
+    "value": "Conversations with people"
+  },
+  "usage.kinds.routines": {
+    "value": "Routines"
+  },
+  "usage.hint.handoffs": {
+    "value": "Most of this week's use came from agents handing work to each other. Ask the agent directly for long work."
+  },
+  "usage.hint.message": {
+    "value": "Message {{name}}"
+  },
   "usageViews.signedOut": {
     "value": "Signed out"
   },
@@ -42216,6 +42267,24 @@
   },
   "chat.speedFallback.action": {
     "value": "Open agent"
+  },
+  "chat.standIn.needsComputer": {
+    "value": "Answered with {{via}}: {{plan}} needs a computer."
+  },
+  "chat.standIn.away": {
+    "value": "Answered with {{via}}: the computer {{plan}} is on is away."
+  },
+  "chat.standIn.notShared": {
+    "value": "Answered with {{via}}: {{plan}} serves only its owner."
+  },
+  "chat.standIn.limit": {
+    "value": "Answered with {{via}}: {{plan}} reached its limit."
+  },
+  "chat.standIn.cant": {
+    "value": "Answered with {{via}}: {{plan}} can't think right now."
+  },
+  "chat.standIn.change": {
+    "value": "Change"
   },
   "chat.modelStandIn.text": {
     "value": "{{plan}} refused {{from}} with this key. I answered with {{to}}, which works with it."

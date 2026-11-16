@@ -2639,6 +2639,13 @@
   "rightHand": {
     "label": "je rechterhand",
     "labelCapitalized": "Je rechterhand",
+    "unusable": {
+      "title": "Kan nu niet voor {{name}} denken",
+      "computerOnly": "Alleen aangemeld op {{computer}}. {{name}} denkt met een abonnement dat als account is aangemeld.",
+      "away": "Van {{owner}}, op {{computer}}, die afwezig is.",
+      "awayYours": "Van jou, op {{computer}}, die afwezig is.",
+      "connect": "Een computer koppelen"
+    },
     "newDot": "Nieuw",
     "actsAsYou": "handelt met jouw rechten",
     "composerHint": "niets verandert zonder jou",
@@ -7754,7 +7761,8 @@
     "table": {
       "task": "Taak",
       "github": "GitHub",
-      "sortBy": "Sorteren op {{column}}"
+      "sortBy": "Sorteren op {{column}}",
+      "resize": "Breedte van kolom {{column}} aanpassen"
     },
     "fold": {
       "open": "{{name}} openen",
@@ -7838,6 +7846,7 @@
       "canceled": "#{{number}} staat weer op zijn plek.",
       "assigned": "#{{number}} ligt nu bij {{name}}.",
       "unassigned": "#{{number}} is nu aan niemand toegewezen.",
+      "removed": "#{{number}} ligt niet meer bij {{name}}.",
       "prioritized": "#{{number}} heeft nu prioriteit {{priority}}."
     },
     "canceledColumn": "Geannuleerd",
@@ -7992,6 +8001,10 @@
       "high": "hoog"
     },
     "noAssignee": "Niet toegewezen",
+    "assignees": {
+      "people": "Mensen en agents",
+      "done": "Klaar"
+    },
     "agentRole": "Agent · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -8135,7 +8148,9 @@
       "status_changed": "heeft de status gewijzigd in {{status}}",
       "priority_changed": "heeft de prioriteit gewijzigd in {{priority}}",
       "assigned": "heeft de taak toegewezen",
-      "unassigned": "heeft de toewijzing verwijderd",
+      "unassigned": "heeft een toewijzing verwijderd",
+      "assigned_named": "heeft de taak toegewezen aan {{name}}",
+      "unassigned_named": "heeft {{name}} van de taak gehaald",
       "due_date_set": "heeft de deadline op {{date}} gezet",
       "due_date_removed": "heeft de deadline verwijderd",
       "pr_linked": "heeft PR #{{number}} gekoppeld",
@@ -10410,10 +10425,10 @@
       "removeCopies": "Verwijderen",
       "copiesRemoved_one": "{{count}} ongebruikte login verwijderd.",
       "copiesRemoved_other": "{{count}} ongebruikte logins verwijderd.",
-      "removeAllDone": "{{n}} Grok-aanmeldingen verwijderd.",
-      "removeAllText": "Ze denken niet meer voor hun agenten op {{computers}}. Aanmeldingen van anderen blijven staan.",
-      "removeAllTitle": "Alle {{n}} Grok-aanmeldingen verwijderen?",
       "removeAllGrok": "Alle Grok-aanmeldingen verwijderen",
+      "removeAllTitle": "Alle {{n}} Grok-aanmeldingen verwijderen?",
+      "removeAllText": "Ze denken niet meer voor hun agenten op {{computers}}. Aanmeldingen van anderen blijven staan.",
+      "removeAllDone": "{{n}} Grok-aanmeldingen verwijderd.",
       "disconnect": "Ontkoppelen",
       "renameTitle": "{{label}} hernoemen",
       "nameLabel": "Naam",
@@ -16578,11 +16593,11 @@
       "rolesPersonal": "Wat ieder hier kan doen. Eigenaren kunnen alles."
     },
     "about": {
-      "basedOn": "Gebaseerd op <site>agentes.chat</site> van Codari Global, LLC",
+      "basedOn": "Gebaseerd op <site>agentes.chat</site> van AGENTESCHAT, LLC",
       "version": "Versie",
       "license": "Vrije software onder de <license>GNU Affero General Public License v3</license>, zonder garantie.",
       "source": "Broncode",
-      "copyright": "Copyright © 2026 Codari Global, LLC en bijdragers"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC en bijdragers"
     },
     "title": "Instellingen",
     "account": {
@@ -17020,6 +17035,18 @@
       "see": "Gebruik bekijken"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "Per soort",
+      "handoffs": "Overdrachten tussen agents",
+      "people": "Gesprekken met mensen",
+      "routines": "Routines"
+    },
+    "hint": {
+      "handoffs": "Het meeste gebruik deze week kwam van agents die elkaar werk overdragen. Vraag lang werk rechtstreeks aan de agent.",
+      "message": "Bericht aan {{name}}"
+    }
+  },
   "usageViews": {
     "signedOut": "Uitgelogd",
     "whose": "Van {{name}}",
@@ -17202,6 +17229,14 @@
     "speedFallback": {
       "text": "ChatGPT weigerde de snelheid Snel voor dit account of model, dus dit antwoord kwam op standaardsnelheid.",
       "action": "Agent openen"
+    },
+    "standIn": {
+      "needsComputer": "Beantwoord met {{via}}: {{plan}} heeft een computer nodig.",
+      "away": "Beantwoord met {{via}}: de computer van {{plan}} is afwezig.",
+      "notShared": "Beantwoord met {{via}}: {{plan}} is alleen voor wie het koppelde.",
+      "limit": "Beantwoord met {{via}}: {{plan}} heeft zijn limiet bereikt.",
+      "cant": "Beantwoord met {{via}}: {{plan}} kan nu niet denken.",
+      "change": "Wijzigen"
     },
     "modelStandIn": {
       "text": "{{plan}} heeft {{from}} met deze sleutel geweigerd. Ik heb geantwoord met {{to}}, dat er wel mee werkt.",

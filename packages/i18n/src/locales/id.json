@@ -2546,6 +2546,13 @@
   "rightHand": {
     "label": "tangan kanan Anda",
     "labelCapitalized": "Tangan kanan Anda",
+    "unusable": {
+      "title": "Tidak bisa berpikir untuk {{name}} sekarang",
+      "computerOnly": "Hanya masuk di {{computer}}. {{name}} berpikir dengan paket yang masuk sebagai akun.",
+      "away": "Milik {{owner}}, di {{computer}}, yang sedang tidak aktif.",
+      "awayYours": "Milik Anda, di {{computer}}, yang sedang tidak aktif.",
+      "connect": "Hubungkan komputer"
+    },
     "newDot": "Baru",
     "actsAsYou": "bertindak dengan izin Anda",
     "composerHint": "tak ada yang berubah tanpa Anda",
@@ -7461,7 +7468,8 @@
     "table": {
       "task": "Tugas",
       "github": "GitHub",
-      "sortBy": "Urutkan menurut {{column}}"
+      "sortBy": "Urutkan menurut {{column}}",
+      "resize": "Ubah lebar kolom {{column}}"
     },
     "fold": {
       "open": "Buka {{name}}",
@@ -7544,6 +7552,7 @@
       "canceled": "#{{number}} kembali ke tempatnya.",
       "assigned": "#{{number}} sekarang dipegang {{name}}.",
       "unassigned": "#{{number}} sekarang tanpa penanggung jawab.",
+      "removed": "#{{number}} tidak lagi dipegang {{name}}.",
       "prioritized": "#{{number}} sekarang berprioritas {{priority}}."
     },
     "canceledColumn": "Dibatalkan",
@@ -7691,6 +7700,10 @@
       "high": "tinggi"
     },
     "noAssignee": "Tanpa penanggung jawab",
+    "assignees": {
+      "people": "Orang dan agen",
+      "done": "Selesai"
+    },
     "agentRole": "Agen · {{role}}",
     "pr": "PR #{{number}}",
     "open": "#{{number}} {{title}}",
@@ -7830,7 +7843,9 @@
       "status_changed": "mengubah status menjadi {{status}}",
       "priority_changed": "mengubah prioritas menjadi {{priority}}",
       "assigned": "menugaskan tugas",
-      "unassigned": "menghapus penanggung jawab",
+      "unassigned": "menghapus satu penanggung jawab",
+      "assigned_named": "menugaskan tugas kepada {{name}}",
+      "unassigned_named": "melepas {{name}} dari tugas",
       "due_date_set": "mengatur tenggat ke {{date}}",
       "due_date_removed": "menghapus tenggat",
       "pr_linked": "menautkan PR #{{number}}",
@@ -9995,10 +10010,10 @@
       "copies_other": "{{count}} login lain dari akun ini, tanpa agen.",
       "removeCopies": "Hapus",
       "copiesRemoved_other": "{{count}} login yang tidak dipakai dihapus.",
-      "removeAllDone": "{{n}} login Grok dihapus.",
-      "removeAllText": "Mereka berhenti berpikir untuk agennya di {{computers}}. Login orang lain tidak disentuh.",
-      "removeAllTitle": "Hapus semua {{n}} login Grok?",
       "removeAllGrok": "Hapus semua login Grok",
+      "removeAllTitle": "Hapus semua {{n}} login Grok?",
+      "removeAllText": "Mereka berhenti berpikir untuk agennya di {{computers}}. Login orang lain tidak disentuh.",
+      "removeAllDone": "{{n}} login Grok dihapus.",
       "disconnect": "Putuskan",
       "renameTitle": "Ganti nama {{label}}",
       "nameLabel": "Nama",
@@ -16010,11 +16025,11 @@
       "rolesPersonal": "Apa yang bisa dilakukan setiap orang di sini. Pemilik bisa melakukan semuanya."
     },
     "about": {
-      "basedOn": "Berdasarkan <site>agentes.chat</site> oleh Codari Global, LLC",
+      "basedOn": "Berdasarkan <site>agentes.chat</site> oleh AGENTESCHAT, LLC",
       "version": "Versi",
       "license": "Perangkat lunak bebas di bawah <license>GNU Affero General Public License v3</license>, tanpa jaminan.",
       "source": "Kode sumber",
-      "copyright": "Copyright © 2026 Codari Global, LLC dan para kontributor"
+      "copyright": "Copyright © 2026 AGENTESCHAT, LLC dan para kontributor"
     },
     "title": "Pengaturan",
     "account": {
@@ -16442,6 +16457,18 @@
       "see": "Lihat pemakaian"
     }
   },
+  "usage": {
+    "kinds": {
+      "label": "Menurut jenis",
+      "handoffs": "Serah terima antaragen",
+      "people": "Percakapan dengan orang",
+      "routines": "Rutinitas"
+    },
+    "hint": {
+      "handoffs": "Sebagian besar penggunaan minggu ini berasal dari agen yang saling menyerahkan pekerjaan. Untuk pekerjaan panjang, minta langsung ke agennya.",
+      "message": "Kirim pesan ke {{name}}"
+    }
+  },
   "usageViews": {
     "signedOut": "Sudah keluar",
     "whose": "Milik {{name}}",
@@ -16624,6 +16651,14 @@
     "speedFallback": {
       "text": "ChatGPT menolak kecepatan Cepat untuk akun atau model ini, jadi jawaban ini memakai kecepatan standar.",
       "action": "Buka agen"
+    },
+    "standIn": {
+      "needsComputer": "Dijawab dengan {{via}}: {{plan}} perlu komputer.",
+      "away": "Dijawab dengan {{via}}: komputer {{plan}} sedang tidak aktif.",
+      "notShared": "Dijawab dengan {{via}}: {{plan}} hanya melayani pemiliknya.",
+      "limit": "Dijawab dengan {{via}}: {{plan}} sudah mencapai batasnya.",
+      "cant": "Dijawab dengan {{via}}: {{plan}} tidak bisa berpikir sekarang.",
+      "change": "Ubah"
     },
     "modelStandIn": {
       "text": "{{plan}} menolak {{from}} dengan kunci ini. Aku menjawab dengan {{to}}, yang berfungsi dengannya.",

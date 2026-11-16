@@ -606,8 +606,8 @@ describe("Preferences: a setting's explanation behind its ⓘ", () => {
       async (el, host) => {
         expect(el.querySelector(".dk-phead .dk-lead")).toBeNull();
         // The license's attribution and legal notices, always at the end.
-        expect(el.textContent).toContain("Based on agentes.chat by Codari Global, LLC");
-        expect(el.textContent).toContain("Copyright © 2026 Codari Global, LLC and contributors");
+        expect(el.textContent).toContain("Based on agentes.chat by AGENTESCHAT, LLC");
+        expect(el.textContent).toContain("Copyright © 2026 AGENTESCHAT, LLC and contributors");
         const acts = el.querySelector(".dk-ver__acts") as HTMLElement;
         expect(acts.textContent).toBe("Update and reopen");
         host.installUpdate = async () => false;

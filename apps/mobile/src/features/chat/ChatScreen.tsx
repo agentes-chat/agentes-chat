@@ -39,6 +39,7 @@ import {
   useRoster,
   useSettings,
   useSteerState,
+  useThreadActivity,
   useThreadInfo,
   useThreadMessages,
   useThreadMission,
@@ -116,6 +117,7 @@ import { StickerStageContext } from "@/agent/StickerCanvas";
 import { createStickerStage } from "@/agent/sticker-stage";
 import { holdOpenConversation } from "@/lib/push";
 import { rightHandSeen } from "@/lib/storage";
+import { useAppActive } from "@/lib/useAppActive";
 import { useOrg } from "@/providers/org";
 import { usePush } from "@/providers/push";
 import { useRealtime } from "@/providers/realtime";
@@ -900,12 +902,19 @@ function Chat({
   const markThreadRead = useMarkThreadRead(orgId).mutate;
   // Peeked at from the list (iOS's long press preview): nothing is read until it is opened.
   const peeking = useIsPreview();
+  // Only in view: under another screen, or with the app in the background, what arrives stays unread, and is read
+  // once the person is back on it.
+  const focused = useIsFocused();
+  const inFront = useAppActive();
+  // A reply in one of its threads counts in the conversation's mark and is no message of this list: read again on it.
+  const threadReplies = useThreadActivity(orgId, channelId);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a thread's reply marks the conversation read again
   useEffect(() => {
-    if (peeking || !member || !postedNow) return;
+    if (peeking || !focused || !inFront || !member || !postedNow) return;
     const mark = readMark(channelId, threadId);
     if (mark.kind === "thread") markThreadRead(mark.id);
     else markRead(mark.id);
-  }, [peeking, markRead, markThreadRead, channelId, threadId, member, postedNow]);
+  }, [peeking, focused, inFront, markRead, markThreadRead, channelId, threadId, member, postedNow, threadReplies]);
 
   // ── Older pages (channel view) ──
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -2082,7 +2091,6 @@ function Chat({
   );
 
   // Pushes about this conversation stay quiet while it is on screen (no banner, no buzz), and so does the island.
-  const focused = useIsFocused();
   useEffect(() => {
     if (!focused) return;
     // The release clears it only if it still holds this screen's conversation (the next screen may have

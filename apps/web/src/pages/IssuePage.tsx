@@ -1,4 +1,4 @@
-import type { Issue, IssueActivity, IssuePatch, IssuePriority } from "@agenteschat/client";
+import type { Actor, Issue, IssueActivity, IssuePatch, IssuePriority } from "@agenteschat/client";
 import {
   ApiError,
   keys,
@@ -48,12 +48,12 @@ import {
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { renderIdRef } from "@/chat/IdRef";
 import { ActorAvatar, AgentAvatar } from "@/components/AgentAvatar";
-import { actorFromKey, actorKey, useActors } from "@/components/actors";
+import { actorKey, useActors } from "@/components/actors";
 import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
 import { IssueWorkBlock } from "@/components/BackgroundWork";
 import { EditInPlace, useFocusAtEnd, useSavedFlash, useSent } from "@/components/EditInPlace";
@@ -83,6 +83,7 @@ import { codeAndBold, Markdown } from "@/lib/markdown";
 import { useOpenParam } from "@/lib/open-param";
 import { useToast } from "@/lib/toast";
 import { useIssueRealtime } from "@/realtime/context";
+import { AssigneeFaces, AssigneesField } from "./IssueAssignees";
 import { IssueDeleteButton, IssueDeleteProvider, useIssueDeleting } from "./IssueDelete";
 import { NEW_PROJECT, ProjectDialog, useProjectOptions } from "./IssueProjects";
 import { PRIORITY_ICON } from "./IssuesToolbar";
@@ -320,7 +321,7 @@ export function IssueDetails({
         <TabPanel value="details">
           <WorkBox issue={i} />
           <IssueWorkBlock issue={i} />
-          {i.assignee?.type !== "agent" && isOpen(i) && <AskAgent issue={i} />}
+          {!i.assignees.some((a) => a.type === "agent") && isOpen(i) && <AskAgent issue={i} />}
           <DetailsSection title={t("issues.description")}>
             <IssueDescription issue={i} hasFiles={createdFiles.length > 0} onSaved={flashSaved} />
             {createdFiles.length > 0 && (
@@ -606,11 +607,15 @@ function IssueSubIssues({ issue: i }: { issue: Issue }) {
             <Link to="/org/$orgId/issues/$number" params={{ orgId: org.id, number: String(s.number) }}>
               <span className="issue-subl__num">#{s.number}</span>
               <span className="issue-subl__tx">{s.title}</span>
-              {s.assignee && (
-                <span className="issue-subl__who">
-                  <ActorAvatar actor={s.assignee} name={actors.name(s.assignee)} size="xs" />
-                  {actors.name(s.assignee)}
-                </span>
+              {s.assignees.length > 1 ? (
+                <AssigneeFaces all={s.assignees} size="xs" />
+              ) : (
+                s.assignees[0] && (
+                  <span className="issue-subl__who">
+                    <ActorAvatar actor={s.assignees[0]} name={actors.name(s.assignees[0])} size="xs" />
+                    {actors.name(s.assignees[0])}
+                  </span>
+                )
               )}
               <Chip icon={STATUS_ICON[s.status]}>{t(`issues.status.${s.status}`)}</Chip>
             </Link>
@@ -621,7 +626,7 @@ function IssueSubIssues({ issue: i }: { issue: Issue }) {
   );
 }
 
-/** The assigned agent's work: live steps (with Parar) or stalled (with "Pedir para continuar"). */
+/** The work of the agent whose run it is (`work.agentId`): live steps (with "Stop") or stalled (with "Ask to continue"). */
 function WorkBox({ issue: i }: { issue: Issue }) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
@@ -637,8 +642,8 @@ function WorkBox({ issue: i }: { issue: Issue }) {
     onSettled: () => void qc.invalidateQueries({ queryKey: keys.issues(org.id) }),
   });
   const w = i.work;
-  if (!w || !i.assignee || i.assignee.type !== "agent") return null;
-  const name = actors.name(i.assignee);
+  if (!w) return null;
+  const name = actors.name({ type: "agent", id: w.agentId });
   const g = agentGrammar(name);
   const stalled = w.state === "stalled";
   const waiting = w.state === "waiting_approval" || w.state === "waiting_input";
@@ -650,7 +655,7 @@ function WorkBox({ issue: i }: { issue: Issue }) {
     <section className={cx("issue-work", stalled && "is-stalled")} aria-label={t("issues.work.label", g)}>
       <div className="issue-work__head ac-iconline">
         <AgentAvatar
-          agentId={i.assignee.id}
+          agentId={w.agentId}
           name={name}
           size="sm"
           running={w.state === "running"}
@@ -693,7 +698,7 @@ function WorkBox({ issue: i }: { issue: Issue }) {
               loading={action.isPending}
               onClick={() =>
                 action.mutate(
-                  { type: "ask", id: i.id, agentId: i.assignee?.id ?? "" },
+                  { type: "ask", id: i.id, agentId: w.agentId },
                   { onSuccess: () => toast.show(t("issues.work.resumed", g)) },
                 )
               }
@@ -788,7 +793,7 @@ function History({ activity, loaded }: { activity: IssueActivity[]; loaded: bool
           <div key={a.id} className="issue-event ac-iconline small muted">
             <Icon name={a.event === "agent_asked" ? "agent" : "waiting"} size={16} />
             <span>
-              <b className="issue-event__who">{actors.name(a.author)}</b> {issueEventText(t, a)}
+              <b className="issue-event__who">{actors.name(a.author)}</b> {issueEventText(t, a, actors.name)}
               {a.auto && (
                 <Chip icon="repeat" className="issue-event__auto" title={t("issues.autoHint")}>
                   {t("issues.auto")}
@@ -829,13 +834,17 @@ function History({ activity, loaded }: { activity: IssueActivity[]; loaded: bool
 function useIssueFields(i: Issue) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
-  const actors = useActors();
   const action = useIssueAction(org.id);
   const columns = useIssueColumns(org.id).data ?? [];
   const title = useColumnTitle();
   const stageName = useStageName();
   const custom = isCustomBoard(columns);
   const update = (patch: IssuePatch) => action.mutate({ type: "update", id: i.id, patch });
+  const [picked, setPicked] = useState<Actor[] | null>(null);
+  const saved = i.assignees.map(actorKey).join(" ");
+  useEffect(() => {
+    if (picked && picked.map(actorKey).join(" ") === saved) setPicked(null);
+  }, [picked, saved]);
   return {
     column: {
       value: columnIdOf(i, columns) ?? undefined,
@@ -854,9 +863,12 @@ function useIssueFields(i: Issue) {
       placeholder: stageName(i.status),
     },
     who: {
-      value: actorKey(i.assignee),
-      options: actors.options(true, actorKey(i.assignee)),
-      onChange: (v: string) => update({ assignee: actorFromKey(v) }),
+      // What was just picked shows until the task comes back with it: each pick saves at once, the next builds on it.
+      value: picked ?? i.assignees,
+      onChange: (assignees: Actor[]) => {
+        setPicked(assignees);
+        action.mutate({ type: "update", id: i.id, patch: { assignees } }, { onError: () => setPicked(null) });
+      },
     },
     priority: {
       value: i.priority,
@@ -938,16 +950,7 @@ function PropsLine({ issue: i }: { issue: Issue }) {
           placeholder={f.column.placeholder}
         />,
       )}
-      {prop(
-        t("issues.form.assignee"),
-        <Select
-          size="sm"
-          aria-label={t("issues.form.assignee")}
-          value={f.who.value}
-          onValueChange={f.who.onChange}
-          options={f.who.options}
-        />,
-      )}
+      {prop(t("issues.form.assignee"), <AssigneesField value={f.who.value} onChange={f.who.onChange} />)}
       {prop(
         t("issues.form.priority"),
         <Select

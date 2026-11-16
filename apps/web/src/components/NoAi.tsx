@@ -19,14 +19,16 @@ import {
   planLinePasses,
   planOfKind,
   type RightHandPlanLine,
+  type StandIn,
   signInAgainPlan,
+  standInKey,
 } from "@agenteschat/client/lib/no-ai";
 import { can } from "@agenteschat/client/lib/permissions";
 import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
-import { Button, Chip, Dialog, DialogFooter, EventPillAction, Icon, InfoHint } from "@agenteschat/ui";
+import { Button, Chip, Dialog, DialogFooter, EventPill, EventPillAction, Icon, InfoHint } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePlanHold } from "@/components/ai/ConnectAiSteps";
@@ -119,6 +121,7 @@ export function NoAiCard({ message }: { message: Message }) {
   const hold = usePlanHold();
   const card = noAiCardOf(message.meta);
   if (!card) return null;
+  if (card.standIn) return <StandInLine agentId={card.agentId} standIn={card.standIn} />;
   // Any card on a billing hold is the wall: a Connect or a key from before it leads nowhere until the plan.
   if (card.held || hold) return <KeptCard message={message} card={card} hold={hold} />;
   if (card.planLine)
@@ -314,6 +317,38 @@ function KeptCard({ message, card, hold }: { message: Message; card: NoAiCardMet
       </RequestNote>
       {noTeam && <TeamTemplatesDialog open={templates} onClose={() => setTemplates(false)} />}
     </>
+  );
+}
+
+/**
+ * The right hand answered with another AI than its plan (ADR 0137 §7, amended 2026-11-15): a quiet pill under its
+ * reply saying with what and why, and "Change", which opens its page where each person sets their own AI and admins
+ * the workspace's.
+ */
+function StandInLine({ agentId, standIn }: { agentId: string; standIn: StandIn }) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const navigate = useNavigate();
+  return (
+    <EventPill
+      className="noai-standin"
+      mark={<Icon name="info" size={14} />}
+      actions={
+        <EventPillAction
+          onClick={() =>
+            void navigate({
+              to: "/org/$orgId/agents/$agentId",
+              params: { orgId: org.id, agentId },
+              search: { tab: "settings" },
+            })
+          }
+        >
+          {t("chat.standIn.change")}
+        </EventPillAction>
+      }
+    >
+      {t(standInKey(standIn.why), { via: standIn.via, plan: standIn.plan })}
+    </EventPill>
   );
 }
 

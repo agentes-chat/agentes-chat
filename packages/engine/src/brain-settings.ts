@@ -752,7 +752,11 @@ async function workspaceAi(db: Database, agent: Agent, userId: string): Promise<
     return { brain: "model", ownerId: null, servesYou: true, key: await workspaceKey(db, agent) };
   const ownerId = await accountOwnerOf(db, agent.orgId, agent.brainAccountId);
   const everyone = await servesEveryone(db, agent.orgId, agent.brainAccountId);
-  return { brain, ownerId, servesYou: everyone || ownerId === userId };
+  if (everyone || ownerId === userId) return { brain, ownerId, servesYou: true };
+  // A plan kept to its owner: the workspace's key answers this person instead (`rightHandStandIn`), so their row names
+  // it rather than saying nobody answers.
+  const key = await workspaceKey(db, agent);
+  return key ? { brain: "model", ownerId: null, servesYou: true, key } : { brain, ownerId, servesYou: false };
 }
 
 async function personalView(db: Database, userId: string, orgId: string, agent: Agent): Promise<AgentBrainView> {
