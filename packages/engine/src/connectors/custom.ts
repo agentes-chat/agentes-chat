@@ -730,17 +730,23 @@ export async function syncCustomTools(deps: CustomDeps, c: ConnectorConnection) 
         })
         .where(eq(customTools.id, old.id));
     } else {
-      await deps.db.insert(customTools).values({
-        orgId: c.orgId,
-        connectionId: c.id,
-        name: tool.name,
-        description,
-        readOnlyHint: tool.readOnlyHint ?? null,
-        destructiveHint: tool.destructiveHint ?? null,
-        ...suggestion,
-        access: null,
-        label: humanize(tool.name).slice(0, 120),
-      });
+      // Two listings of one server can run at once (a boot sync and a refresh): the other one may have stored
+      // this tool between our read above and this insert. Its row is the one that stays, and the tool keeps the
+      // suggestion that row carries; throwing here would lose the rest of this listing and the reclassification.
+      await deps.db
+        .insert(customTools)
+        .values({
+          orgId: c.orgId,
+          connectionId: c.id,
+          name: tool.name,
+          description,
+          readOnlyHint: tool.readOnlyHint ?? null,
+          destructiveHint: tool.destructiveHint ?? null,
+          ...suggestion,
+          access: null,
+          label: humanize(tool.name).slice(0, 120),
+        })
+        .onConflictDoNothing();
     }
   }
   const gone = existing.filter((t) => !seen.has(t.name) && !t.removedAt).map((t) => t.id);

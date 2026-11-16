@@ -940,6 +940,27 @@ describe("custom MCP servers", () => {
     ]);
   });
 
+  test("two listings of one server at once: the tool is stored once, neither listing fails, no warning", async () => {
+    f = await setup();
+    const mcp = ticketsMcp();
+    const warned: string[] = [];
+    const deps = depsOf(f, {
+      connect: mcp.connect,
+      log: { warn: (message) => warned.push(message) },
+    });
+    const id = "0193eeee-0000-4000-8000-0000000000b1";
+    await f.db.execute(sql`insert into connector_connections (id, org_id, connector, label, server_url, auth_type)
+      values (${id}, ${f.org.id}, ${`custom:${id}`}, 'Tickets', ${SERVER}, 'none')`);
+    const [row] = await f.db.select().from(schema.connectorConnections).where(eq(schema.connectorConnections.id, id));
+    if (!row) throw new Error("no connection");
+    // A boot sync and a refresh listing the same server: both read the stored tools before either stores one.
+    await Promise.all([syncCustomTools(deps, row), syncCustomTools(deps, row)]);
+    const stored = await f.db.select().from(schema.customTools).where(eq(schema.customTools.connectionId, id));
+    expect(stored.map((t) => t.name).sort()).toEqual(["close_ticket", "list_tickets"]);
+    expect(stored.every((t) => t.access === null)).toBe(true);
+    expect(warned).toEqual([]);
+  });
+
   test("the migration: today's names kept; duplicates in a workspace numbered, their tool grants with them", async () => {
     f = await setup();
     await f.db.execute(sql`drop index connector_connections_tool_prefix`);
