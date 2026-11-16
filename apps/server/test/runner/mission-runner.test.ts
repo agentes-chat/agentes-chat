@@ -123,9 +123,21 @@ test("detection: the computer's own Codex says whether it is signed in, with Cha
   expect(await codex({ status: 0, stderr: "API key configured - 11838e66***eZ1oL\n" })).toEqual(found(true));
   expect(await codex({ status: 0, stderr: "Logged in using ChatGPT\n" })).toEqual(found(true));
   expect(await codex({ status: 1, stderr: "Not logged in\n" })).toEqual(found(false));
-  // No answer: unknown, never signed out.
-  expect(await codex({ ...TIMED_OUT })).toEqual(found());
+  // Words it doesn't know: unknown, never signed out.
   expect(await codex({ status: 0, stdout: "something else\n" })).toEqual(found());
+  // No answer, or a failure that doesn't say signed out: the last login seen stands, and the look is retried soon.
+  const prev = { codex: { version: "codex-cli 0.169.0", loggedIn: true } };
+  const failing = (login: object) => (c: string, args: string[]) =>
+    c !== "codex"
+      ? { ...NOT_FOUND }
+      : args[0] === "login"
+        ? { status: null, stdout: "", ...login }
+        : { status: 0, stdout: "codex-cli 0.170.0\n" };
+  expect(await detectExecutors(failing({ ...TIMED_OUT }), prev)).toEqual({ found: prev, unsure: true });
+  expect(await detectExecutors(failing({ status: 1, stderr: "error: config.toml\n" }), prev)).toEqual({
+    found: prev,
+    unsure: true,
+  });
 });
 
 const NOT_FOUND = { status: null, stdout: "", error: Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" }) };

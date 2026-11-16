@@ -360,19 +360,19 @@ export const codexSignedIn = (status: number | null, text: string) =>
 
 /**
  * Whether the computer's own Codex is signed in (`codex login status`), with ChatGPT or with an API key. An API key
- * has no plan usage to read, so this is the only way the app learns that Codex can think there. Unknown when the CLI
- * couldn't answer.
+ * has no plan usage to read, so this is the only way the app learns that Codex can think there. Undefined: it answered
+ * in words we don't know. Null: it couldn't answer (timed out, failed), so the last login seen stands.
  */
-export async function codexLoggedIn(run: Run = defaultRun): Promise<boolean | undefined> {
+export async function codexLoggedIn(run: Run = defaultRun): Promise<boolean | undefined | null> {
   try {
     const r = await run("codex", ["login", "status"]);
-    if (r.error || r.status === null) return undefined;
+    if (r.error || r.status === null) return null;
     const text = `${r.stdout}\n${r.stderr ?? ""}`;
     if (codexSignedIn(r.status, text)) return true;
-    // Anything else it says on a good exit isn't an answer.
-    return r.status !== 0 || /not logged in/i.test(text) ? false : undefined;
+    if (/not logged in/i.test(text)) return false;
+    return r.status === 0 ? undefined : null;
   } catch {
-    return undefined;
+    return null;
   }
 }
 
@@ -559,6 +559,7 @@ async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe>
   if (!version) return {};
   if (name !== "claude") {
     const loggedIn = await codexLoggedIn(run);
+    if (loggedIn === null) return { entry: { version }, unsure: true };
     return { entry: { version, ...(loggedIn === undefined ? {} : { loggedIn }) } };
   }
   const auth = await claudeAuth(run);
