@@ -14281,6 +14281,10 @@ html:not([data-pointer]) .ac-typing__see:focus-visible {
   height: auto;
   align-self: flex-start;
 }
+/* Inside a chosen row the main action sits on the text's edge, as the card's own rows do. */
+.decision-providers .ac-optrow__more .ac-acts {
+  align-self: stretch;
+}
 /* Why Jev helps: an icon, the reason in bold and its few words, a line each. */
 .jev-why {
   display: flex;
