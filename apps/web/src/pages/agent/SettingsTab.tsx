@@ -28,7 +28,7 @@ import {
   Select,
   SettingNote,
 } from "@agenteschat/ui";
-import type { CSSProperties, ReactNode } from "react";
+import { type CSSProperties, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AudienceChoice } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -229,6 +229,7 @@ export function SettingsTab({
   const { org, me } = useOrg();
   const edition = useComputerEdition(org.id);
   const { agent, g, viewer, draft, set, can, changes, ownerFirst, openWork } = useAgentEdit();
+  const [editingLook, setEditingLook] = useState(false);
   const admin = viewer === "admin";
   const groups = useAgentGroups(org.id).data ?? [];
   const inGroup = groupOf(groups, agent.id);
@@ -286,15 +287,26 @@ export function SettingsTab({
               }}
               action={
                 can("look") ? (
-                  <Button
-                    size="sm"
-                    icon="shuffle"
-                    onClick={() =>
-                      set("look", { ...BLANK_LOOK, ...randomAppearance(look) } as Required<AgentAppearance>)
-                    }
-                  >
-                    {t("newAgent.shuffle")}
-                  </Button>
+                  editingLook ? (
+                    <span style={{ display: "inline-flex", gap: "var(--space-2)" }}>
+                      <Button
+                        size="sm"
+                        icon="shuffle"
+                        onClick={() =>
+                          set("look", { ...BLANK_LOOK, ...randomAppearance(look) } as Required<AgentAppearance>)
+                        }
+                      >
+                        {t("newAgent.shuffle")}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingLook(false)}>
+                        {t("common.close")}
+                      </Button>
+                    </span>
+                  ) : (
+                    <Button size="sm" icon="edit" onClick={() => setEditingLook(true)}>
+                      {t("onboarding.flow.you.edit")}
+                    </Button>
+                  )
                 ) : undefined
               }
             >
@@ -337,7 +349,7 @@ export function SettingsTab({
               </div>
               {can("look") ? (
                 <>
-                  <LookRows look={look} onChange={(next) => set("look", next)} />
+                  {editingLook && <LookRows look={look} onChange={(next) => set("look", next)} />}
                   <WasLine changeKey="look" />
                 </>
               ) : (

@@ -59,8 +59,10 @@ describe("the agent's look", () => {
     seedDm(state, { type: "agent", id: ADA_ID });
     await renderApp(`/org/${ORG_ID}/agents/${ADA_ID}?tab=settings`, { api: createFakeApi(state) });
     await settle(8);
-    // In place: the colors, then the eyes and what it wears as one sliding row each.
+    // Look controls stay hidden until the user clicks "Editar avatar".
     const page = screen();
+    expect(page.queryByRole("group", { name: "Cor" })).toBeNull();
+    await click(page.getByRole("button", { name: "Editar avatar" }));
     await click(within(page.getByRole("group", { name: "Cor" })).getByRole("button", { name: "Rosa" }));
     await click(within(page.getByRole("group", { name: "Olhos" })).getByRole("button", { name: /Felizes/ }));
     await click(within(page.getByRole("group", { name: "Acessório" })).getByRole("button", { name: /Coroa/ }));
@@ -84,6 +86,7 @@ describe("the agent's look", () => {
     await renderApp(`/org/${ORG_ID}/agents/${ADA_ID}?tab=settings`, { api: createFakeApi(seedState()) });
     await settle(8);
     expect(screen().queryByRole("region", { name: "Alterações não salvas" })).toBeNull();
+    await click(screen().getByRole("button", { name: "Editar avatar" }));
     await click(screen().getByRole("button", { name: "Sortear" }));
     expect(screen().getByRole("region", { name: "Alterações não salvas" }).textContent).toContain("Jeito");
   });
