@@ -2162,6 +2162,11 @@ export const ptBR = {
     unreadThreads_other: "Threads: {{count}} com respostas não lidas",
     unreadNotifications_one: "{{count}} notificação não lida",
     unreadNotifications_other: "{{count}} notificações não lidas",
+    /** The phone's tabs at the bottom (TabBar.tsx): the bar's name, then the tabs with no name of their own here. */
+    tabs: "Abas principais",
+    tabChats: "Conversas",
+    tabActivity: "Atividade",
+    tabSearch: "Buscar",
   },
   agentGroups: {
     group: "Setor",

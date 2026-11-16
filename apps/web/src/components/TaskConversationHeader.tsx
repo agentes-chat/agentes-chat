@@ -3,7 +3,6 @@ import { joinNames, relativeTime } from "@agenteschat/client/lib/format";
 import { AvatarStack, Button, cx, Icon } from "@agenteschat/ui";
 import { useTranslation } from "react-i18next";
 import { useActors } from "@/components/actors";
-import { NavToggle } from "@/components/NavDrawer";
 
 /**
  * The conversation's header in the panel: who is in it, "Conversa da tarefa", "Bruno, Walter e Theo · 5 mensagens
@@ -19,7 +18,6 @@ export function TaskConversationHeader({ thread, onClose }: { thread: ThreadInfo
   );
   return (
     <header className={cx("channel__header thread-head", onClose && "thread-head--panel")}>
-      {!onClose && <NavToggle />}
       <span className="thread-head__who" aria-hidden="true">
         {people.length > 0 ? (
           <AvatarStack>{people.slice(0, 3).map((p) => actors.avatar(p, "sm"))}</AvatarStack>

@@ -301,6 +301,7 @@
       "storage.connect.awsRegion.il-central-1"
     ],
     "es": [
+      "shell.tabChats",
       "devices.iphone.path.general",
       "devices.cpus",
       "devices.memory",
@@ -989,6 +990,7 @@
       "storage.connect.awsRegion.eu-north-1"
     ],
     "de": [
+      "shell.tabChats",
       "devices.iphone.steps.account",
       "devices.workspace",
       "devices.cpus",
@@ -1821,6 +1823,7 @@
       "storage.connect.provider.b2"
     ],
     "nl": [
+      "shell.tabChats",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
       "devices.filter.computers",

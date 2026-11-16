@@ -27,7 +27,6 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { ActorAvatar, AgentAvatar, AgentSpinner } from "@/components/AgentAvatar";
-import { NavToggle } from "@/components/NavDrawer";
 import { useOrg } from "@/components/org-context";
 import { useThreadWhere } from "@/components/threads/ThreadView";
 import { useComputerEdition } from "@/components/WorkspaceComputer";
@@ -123,7 +122,6 @@ export function MissionThreadHeader({ thread, mission: m }: { thread: ThreadInfo
     <header className="channel__header thread-head mh" data-compact={compact || undefined} data-mission={m.id}>
       <div className="mh__row">
         <div className="mh__lead">
-          <NavToggle />
           <Button
             size="sm"
             variant="ghost"

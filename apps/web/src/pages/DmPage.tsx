@@ -17,7 +17,6 @@ import { useAgentPanelShown, useOpenAgentPanel } from "@/components/agent-panel-
 import { ModelPickerButton } from "@/components/ai/ModelPicker";
 import { ComputerButton } from "@/components/computer/ComputerDialog";
 import { ErrorState } from "@/components/Loading";
-import { NavToggle } from "@/components/NavDrawer";
 import { useOrg } from "@/components/org-context";
 import { ProfileTrigger } from "@/components/ProfileCard";
 import { LetMeTalkButton } from "@/components/ReachLines";
@@ -99,7 +98,6 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
     searching: boolean;
   }) => (
     <header className="channel__header">
-      <NavToggle />
       {/* Who it is with and the header's glyphs: the glyphs go under a name that can't keep its line beside them. */}
       <div className="ac-actline channel__line">
         <DmWho agentId={agent?.id} userId={person?.userId} label={t("profile.of", { name })} tip={agentLine}>

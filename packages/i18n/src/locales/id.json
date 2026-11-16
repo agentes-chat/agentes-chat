@@ -2050,7 +2050,11 @@
     "unreadMark": "Belum dibaca",
     "unreadMentions_other": "{{count}} sebutan untuk Anda",
     "unreadThreads_other": "Thread: {{count}} dengan balasan belum dibaca",
-    "unreadNotifications_other": "{{count}} notifikasi belum dibaca"
+    "unreadNotifications_other": "{{count}} notifikasi belum dibaca",
+    "tabs": "Tab utama",
+    "tabChats": "Obrolan",
+    "tabActivity": "Aktivitas",
+    "tabSearch": "Cari"
   },
   "agentGroups": {
     "group": "Departemen",
@@ -9986,10 +9990,10 @@
       "copies_other": "{{count}} login lain dari akun ini, tanpa agen.",
       "removeCopies": "Hapus",
       "copiesRemoved_other": "{{count}} login yang tidak dipakai dihapus.",
-      "removeAllDone": "{{n}} login Grok dihapus.",
-      "removeAllText": "Mereka berhenti berpikir untuk agennya di {{computers}}. Login orang lain tidak disentuh.",
-      "removeAllTitle": "Hapus semua {{n}} login Grok?",
       "removeAllGrok": "Hapus semua login Grok",
+      "removeAllTitle": "Hapus semua {{n}} login Grok?",
+      "removeAllText": "Mereka berhenti berpikir untuk agennya di {{computers}}. Login orang lain tidak disentuh.",
+      "removeAllDone": "{{n}} login Grok dihapus.",
       "disconnect": "Putuskan",
       "renameTitle": "Ganti nama {{label}}",
       "nameLabel": "Nama",

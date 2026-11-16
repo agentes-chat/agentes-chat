@@ -350,7 +350,6 @@ import {
 } from "@/components/missions/MissionCards";
 import { MissionCommandCard } from "@/components/missions/MissionCommandCard";
 import { NewMissionDialog } from "@/components/missions/MissionDialogs";
-import { NavToggle } from "@/components/NavDrawer";
 import { CHANNEL_NAME, ChannelAccessChoice, toChannelName } from "@/components/NewChannelDialog";
 import { FailedRunFix, KeyGuardDialog, NoAiBanner, NoAiCard, useNoAiAutoOpen } from "@/components/NoAi";
 import { useNotificationOpener } from "@/components/NotificationOpen";
@@ -718,7 +717,6 @@ export function ChannelSkeleton({
       <SkeletonGroup label={t("common.loadingMessages")} className="channel__skeleton">
         {dm ? (
           <header className="channel__header">
-            <NavToggle />
             <Skeleton shape={dm === "agent" ? "square" : "circle"} width={36} height={36} />
             <div className="thread-head__text">
               <span className="channel__skeleton-title">
@@ -734,12 +732,7 @@ export function ChannelSkeleton({
           // `ThreadHeader`: back to the channel (as a page), who, the title and its line, ⋯ (and, in the panel,
           // full screen and close).
           <header className={cx("channel__header thread-head", panel && "thread-head--panel")}>
-            {!panel && (
-              <>
-                <NavToggle />
-                <Skeleton shape="block" width={28} height={28} />
-              </>
-            )}
+            {!panel && <Skeleton shape="block" width={28} height={28} />}
             <span className="thread-head__who">
               <Skeleton shape="circle" width={24} height={24} />
             </span>
@@ -758,7 +751,6 @@ export function ChannelSkeleton({
         ) : (
           // `ChannelHeader`'s rows: the # and the name on its line, the glyphs after them.
           <header className="channel__header">
-            <NavToggle />
             <div className="ac-actline channel__line">
               <div className="channel__head-text">
                 <span className="channel__title">

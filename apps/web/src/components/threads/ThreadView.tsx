@@ -11,7 +11,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActorAvatar } from "@/components/AgentAvatar";
 import { useActors } from "@/components/actors";
-import { NavToggle } from "@/components/NavDrawer";
 import { useOrg } from "@/components/org-context";
 import { useDirectory } from "@/hooks/useDirectory";
 import { useToast } from "@/lib/toast";
@@ -162,18 +161,15 @@ export function ThreadHeader({
   return (
     <header className={onClose ? "channel__header thread-head thread-head--panel" : "channel__header thread-head"}>
       {!onClose && (
-        <>
-          <NavToggle />
-          <Button
-            size="sm"
-            variant="ghost"
-            iconOnly
-            icon="chevronLeft"
-            aria-label={t("threads.view.backTo", { where })}
-            title={t("threads.view.backTo", { where })}
-            onClick={() => void navigate({ to: "/org/$orgId/c/$channelId", params: channelParams })}
-          />
-        </>
+        <Button
+          size="sm"
+          variant="ghost"
+          iconOnly
+          icon="chevronLeft"
+          aria-label={t("threads.view.backTo", { where })}
+          title={t("threads.view.backTo", { where })}
+          onClick={() => void navigate({ to: "/org/$orgId/c/$channelId", params: channelParams })}
+        />
       )}
       {onBack && (
         <Button

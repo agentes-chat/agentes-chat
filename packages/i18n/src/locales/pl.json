@@ -2227,7 +2227,11 @@
     "unreadNotifications_one": "{{count}} nieprzeczytane powiadomienie",
     "unreadNotifications_few": "{{count}} nieprzeczytane powiadomienia",
     "unreadNotifications_many": "{{count}} nieprzeczytanych powiadomień",
-    "unreadNotifications_other": "{{count}} nieprzeczytane powiadomienia"
+    "unreadNotifications_other": "{{count}} nieprzeczytane powiadomienia",
+    "tabs": "Główne karty",
+    "tabChats": "Czaty",
+    "tabActivity": "Aktywność",
+    "tabSearch": "Szukaj"
   },
   "agentGroups": {
     "group": "Dział",
@@ -11102,10 +11106,10 @@
       "copiesRemoved_few": "Usunięto {{count}} nieużywane logowania.",
       "copiesRemoved_many": "Usunięto {{count}} nieużywanych logowań.",
       "copiesRemoved_other": "Usunięto {{count}} nieużywanego logowania.",
-      "removeAllDone": "Usunięto {{n}} logowań Grok.",
-      "removeAllText": "Przestaną myśleć za swoje agenty na {{computers}}. Logowania innych osób zostają.",
-      "removeAllTitle": "Usunąć wszystkie {{n}} logowań Grok?",
       "removeAllGrok": "Usuń wszystkie logowania Grok",
+      "removeAllTitle": "Usunąć wszystkie {{n}} logowań Grok?",
+      "removeAllText": "Przestaną myśleć za swoje agenty na {{computers}}. Logowania innych osób zostają.",
+      "removeAllDone": "Usunięto {{n}} logowań Grok.",
       "disconnect": "Rozłącz",
       "renameTitle": "Zmień nazwę: {{label}}",
       "nameLabel": "Nazwa",

@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { ChannelPinsButton } from "@/components/ChannelPins";
 import { QueueButton } from "@/components/ComputerQueue";
 import { useChannelMenu } from "@/components/entity-menus";
-import { NavToggle } from "@/components/NavDrawer";
 import { HeaderSearch } from "@/components/search/HeaderSearch";
 import { ChannelThreadsButton } from "@/components/threads/ThreadLines";
 import { entityMenu } from "@/lib/entity-menu";
@@ -48,7 +47,6 @@ export function ChannelHeader({
   const total = people.length + agents.length;
   return (
     <header className="channel__header">
-      <NavToggle />
       <div className="ac-actline channel__line">
         <div className="channel__head-text" {...entityMenu(() => channelEntries(channel))}>
           <h1 className="channel__title">

@@ -196,12 +196,9 @@ html:not([data-pointer]) .channel__icon.ac-btn:focus-visible {
   .channel__header:has(.channel__head-text) {
     padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
   }
-  /* The nav toggle stays on the name's first row, which is the toggle's 40 (a DM's face is 36). */
+  /* The name's first row on top when it wraps. */
   .channel__header:has(> .channel__line) {
     align-items: flex-start;
-  }
-  .channel__header:has(> .channel__line > .dm-who) > .nav-toggle {
-    margin-top: calc((36px - var(--control-h-md)) / 2);
   }
   .channel__head-text {
     padding-block: calc((var(--control-h-md) - 30px) / 2);

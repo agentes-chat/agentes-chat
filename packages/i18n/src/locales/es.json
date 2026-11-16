@@ -2167,7 +2167,11 @@
     "unreadThreads_other": "Hilos: {{count}} con respuestas sin leer",
     "unreadNotifications_one": "{{count}} notificación sin leer",
     "unreadNotifications_many": "{{count}} notificaciones sin leer",
-    "unreadNotifications_other": "{{count}} notificaciones sin leer"
+    "unreadNotifications_other": "{{count}} notificaciones sin leer",
+    "tabs": "Pestañas principales",
+    "tabChats": "Chats",
+    "tabActivity": "Actividad",
+    "tabSearch": "Buscar"
   },
   "agentGroups": {
     "group": "Departamento",
@@ -10680,10 +10684,10 @@
       "copiesRemoved_one": "{{count}} inicio de sesión sin uso quitado.",
       "copiesRemoved_many": "{{count}} inicios de sesión sin uso quitados.",
       "copiesRemoved_other": "{{count}} inicios de sesión sin uso quitados.",
-      "removeAllDone": "{{n}} inicios de sesión de Grok quitados.",
-      "removeAllText": "Dejan de pensar por sus agentes en {{computers}}. Los inicios de sesión de otras personas no se tocan.",
-      "removeAllTitle": "¿Quitar los {{n}} inicios de sesión de Grok?",
       "removeAllGrok": "Quitar todos los inicios de sesión de Grok",
+      "removeAllTitle": "¿Quitar los {{n}} inicios de sesión de Grok?",
+      "removeAllText": "Dejan de pensar por sus agentes en {{computers}}. Los inicios de sesión de otras personas no se tocan.",
+      "removeAllDone": "{{n}} inicios de sesión de Grok quitados.",
       "disconnect": "Desconectar",
       "renameTitle": "Cambiar el nombre de {{label}}",
       "nameLabel": "Nombre",
