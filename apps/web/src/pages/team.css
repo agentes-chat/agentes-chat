@@ -135,7 +135,7 @@
   text-decoration: none;
   box-shadow: var(--e1);
 }
-.team-node__role {
+.team-tree .team-node__role {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -240,9 +240,7 @@
   background: var(--raised-2);
 }
 /* A supervisor's reports side by side under it, centred, joined by a bar across them and a drop to each: the same
-   strokes as the people's row above (`.team-tree__col`), so one that supervises nests the same way. A card keeps 180 px
-   (a person's column minimum) so a name and its role don't break in a crowded row, and 240 px at most. Below 720 px the
-   reports stack and indent again (the media block below). */
+   strokes as the people's row above (`.team-tree__col`), so one that supervises nests the same way. */
 .team-line {
   display: flex;
   flex-direction: column;
@@ -250,7 +248,9 @@
   gap: 8px;
   min-width: 0;
 }
-.team-line .team-node {
+/* A card is 180 px at least (a person's column minimum, so a name and its role don't break in a full row), 240 at most. */
+.team-line .team-node,
+.team-tree__col > .team-node {
   min-width: 180px;
   max-width: 240px;
 }
@@ -426,11 +426,9 @@
   min-width: 180px;
   padding-top: 20px;
 }
-/* The person's card keeps a card's width (180 to 240 px) over the column, whatever the row of reports beneath is. */
+/* The person's card keeps a card's width over the column, whatever the row of reports beneath is. */
 .team-tree__col > .team-node {
   align-self: center;
-  min-width: 180px;
-  max-width: 240px;
 }
 /* The bar across the columns, and each column's drop to its person. */
 .team-tree__col::before {
