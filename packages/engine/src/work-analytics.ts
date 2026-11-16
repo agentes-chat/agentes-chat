@@ -95,8 +95,8 @@ async function workAnalytics(db: Database, query: { from: string; to: string }, 
   }`;
   const runKey = orgId ? sql`ar.agent_id` : sql`ar.org_id`;
   // Waits for room are steps (`brain_unavailable`, `busy`), written once per wait; it lasts until the run's next step
-  // (`roomFound` when the computer takes the turn), its end or now.
-  const busyStep = sql`s.kind = 'error' and s.data->>'reason' = 'brain_unavailable' and s.data->>'code' = 'busy'`;
+  // (`roomFound` when the computer takes the turn), its end or now. A `context` step, an `error` one on older runs.
+  const busyStep = sql`s.kind in ('error', 'context') and s.data->>'reason' = 'brain_unavailable' and s.data->>'code' = 'busy'`;
 
   // Each claim's stage profile and its computer turns' starts, kept in the run's transcript when it ends (`executeRun`).
   const profiles = sql`select pr.value as p from agent_runs ar,
@@ -205,7 +205,8 @@ async function workAnalytics(db: Database, query: { from: string; to: string }, 
             (select min(n.created_at) from agent_run_steps n where n.run_id = s.run_id and n.seq > s.seq),
             ar.finished_at, now()), ${end}::timestamptz) - s.created_at)::float8 as sec
         from agent_runs ar join agent_run_steps s on s.run_id = ar.id
-        where ${runsIn} and s.kind = 'error' and s.data->>'reason' in ('brain_unavailable', 'provider_outage')
+        where ${runsIn} and (s.kind = 'error' and s.data->>'reason' in ('brain_unavailable', 'provider_outage')
+          or ${busyStep})
       )
       select cause, count(*)::int as waits, ${pct(0.5, "sec")} as "medianSec", ${pct(0.9, "sec")} as "p90Sec"
       from w group by cause order by waits desc, cause`),

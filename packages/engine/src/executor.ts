@@ -3287,7 +3287,7 @@ async function executeRunInner(
    * turn (`busy`) is asked again every `COMPUTER_BUSY_RETRY_MS` until it runs.
    */
   const brainUnavailable = async (
-    u: BrainUnavailability & { queued?: boolean; retryAt?: number },
+    u: BrainUnavailability & { queued?: boolean; retryAt?: number; ahead?: number },
     look?: "first" | "again",
   ): Promise<"fallback" | "waited" | "failed" | "no" | "back" | "canceled"> => {
     const from = plan.kind;
@@ -3454,8 +3454,15 @@ async function executeRunInner(
       waitId: Bun.randomUUIDv7(),
       ...(quietUntil !== null ? { quiet: true } : {}),
     };
+    // Waiting its turn for room is how a busy computer works, not a failure: a `context` step. Older runs kept
+    // it as an `error` step; readers take both.
     if (!stillBusy)
-      await addRunStep(db, run, "error", { reason: "brain_unavailable", code: u.code, message: u.message });
+      await addRunStep(db, run, busy ? "context" : "error", {
+        reason: "brain_unavailable",
+        code: u.code,
+        message: u.message,
+        ...(busy && u.ahead !== undefined ? { ahead: u.ahead } : {}),
+      });
     // Online and full, it sends no "back" signal: ask again soon. Just gone: look again when the grace is over (back
     // before that, `resumeRunsWaitingForMachine` resumes it and this job finds another wait). Queued before the wait
     // is stored, so a crash in between leaves at worst a job that finds another wait and does nothing.
@@ -4436,9 +4443,13 @@ async function executeRunInner(
         if (behind) {
           const handled = await brainUnavailable({
             code: "busy",
-            message: "Waiting in line for the computer.",
+            message:
+              behind.ahead > 0
+                ? `Waiting in line for the computer: ${behind.ahead} ${behind.ahead === 1 ? "run" : "runs"} ahead.`
+                : "Waiting in line for the computer.",
             queued: true,
             retryAt: behind.retryAt,
+            ahead: behind.ahead,
           });
           if (handled === "waited" || handled === "failed") return;
         } else {
