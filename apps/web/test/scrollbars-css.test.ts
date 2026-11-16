@@ -76,6 +76,7 @@ const SIDEWAYS: Record<string, "strip" | "content"> = {
   ".code-card__preview": "content",
   ".level-matrix": "content",
   ".pu-table-card": "content",
+  ".projects-card": "content",
   ".spec-block__table": "content",
   ".machine-command__code": "content",
   ".md__table-scroll": "content",

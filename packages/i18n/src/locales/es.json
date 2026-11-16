@@ -1977,6 +1977,31 @@
       "why": "Incluso con la pestaña cerrada. Cámbialo cuando quieras en <link>Notificaciones</link>."
     }
   },
+  "projectsPage": {
+    "title": "Proyectos",
+    "subtitle": "Repositorio y avance de cada proyecto",
+    "new": "Nuevo proyecto",
+    "columns": {
+      "project": "Proyecto",
+      "repository": "Repositorio",
+      "tasks": "Tareas",
+      "done": "Completadas",
+      "status": "Estado",
+      "actions": "Acciones"
+    },
+    "countsHint": "Cuenta las tareas que puedes ver. Las tareas canceladas no cuentan.",
+    "status": {
+      "active": "Activo",
+      "done": "Completado",
+      "archived": "Archivado"
+    },
+    "noRepo": "Ninguno",
+    "openRepo": "Abrir {{repo}} en GitHub",
+    "openBoard": "Abrir el tablero de {{name}}",
+    "rowActions": "Opciones de {{name}}",
+    "emptyTitle": "Aún no hay proyectos",
+    "empty": "Crea uno para cada cliente o producto y pon sus tareas en él."
+  },
   "shell": {
     "otherChannels": "Otros canales",
     "otherChannelsPersonal": "Otras conversaciones en grupo",
@@ -1992,6 +2017,7 @@
       "proposals": "Lo que los agentes proponen cambiar",
       "threads": "Conversaciones que se ramifican, y misiones",
       "issues": "El trabajo del equipo, para personas y agentes",
+      "projects": "Cada cliente o producto, con su repositorio y avance",
       "wiki": "Lo que sabe el equipo, escrito para todos",
       "drive": "Archivos, informes y tablas",
       "routines": "Lo que los agentes hacen solos, a su hora",
@@ -2003,6 +2029,7 @@
       "proposalsPersonal": "Lo que tus agentes proponen cambiar",
       "threadsPersonal": "Conversaciones aparte, y misiones",
       "issuesPersonal": "Tus tareas y las de tus agentes",
+      "projectsPersonal": "Tus proyectos, con sus repositorios y avance",
       "wikiPersonal": "Notas que tus agentes pueden leer",
       "calendarPersonal": "Tus citas y plazos",
       "teamPersonal": "Tus agentes, y quién más está aquí",
@@ -2109,6 +2136,7 @@
     "approvals": "Aprobaciones",
     "proposals": "Propuestas de mejora",
     "issues": "Tareas",
+    "projects": "Proyectos",
     "missionsWaiting_one": "{{count}} misión te espera",
     "missionsWaiting_many": "{{count}} misiones te esperan",
     "missionsWaiting_other": "{{count}} misiones te esperan",
@@ -8035,7 +8063,12 @@
       "delete": "Eliminar proyecto",
       "deleteTitle": "¿Eliminar el proyecto {{name}}?",
       "deleteBody": "Sus tareas se quedan, sin proyecto.",
-      "empty": "Todavía no hay tareas en este proyecto."
+      "empty": "Todavía no hay tareas en este proyecto.",
+      "description": "Descripción",
+      "descriptionPlaceholder": "¿Para qué sirve este proyecto?",
+      "repository": "Repositorio de GitHub",
+      "repositoryExample": "acme/clinica",
+      "repositoryHint": "El repositorio donde vive el trabajo de este proyecto. Los agentes lo leen junto con el proyecto."
     },
     "columns": {
       "add": "Agregar columna",
@@ -15151,6 +15184,8 @@
       "projectNameTaken": "Ya existe un proyecto con ese nombre.",
       "projectArchived": "Este proyecto está archivado y no recibe tareas nuevas.",
       "projectsFull": "Un workspace tiene como máximo {{max}} proyectos. Elimina uno antes.",
+      "projectBadRepo": "Escribe el repositorio como propietario/nombre o pega su dirección de github.com.",
+      "projectDescriptionTooLong": "La descripción admite como máximo {{max}} caracteres.",
       "stageFull": "Una etapa tiene como máximo {{max}} columnas. Elimina una de sus columnas antes.",
       "deleteForbidden": "Solo quien creó esta tarea o un administrador puede eliminarla.",
       "audienceEmpty": "Elige quién lo ve."
@@ -18268,6 +18303,10 @@
     "list_issues": {
       "label": "Ver tareas",
       "description": "Lista y abre tareas."
+    },
+    "list_projects": {
+      "label": "Ver proyectos",
+      "description": "Lista los proyectos de tareas, para qué sirven y sus repositorios."
     },
     "create_issue": {
       "label": "Crear tarea",

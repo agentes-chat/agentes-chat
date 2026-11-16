@@ -1926,6 +1926,31 @@
       "why": "Auch bei geschlossenem Tab. Ändern kannst du das jederzeit unter <link>Benachrichtigungen</link>."
     }
   },
+  "projectsPage": {
+    "title": "Projekte",
+    "subtitle": "Repository und Fortschritt jedes Projekts",
+    "new": "Neues Projekt",
+    "columns": {
+      "project": "Projekt",
+      "repository": "Repository",
+      "tasks": "Aufgaben",
+      "done": "Erledigt",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "countsHint": "Zählt die Aufgaben, die du sehen kannst. Abgebrochene Aufgaben zählen nicht.",
+    "status": {
+      "active": "Aktiv",
+      "done": "Erledigt",
+      "archived": "Archiviert"
+    },
+    "noRepo": "Keins",
+    "openRepo": "{{repo}} auf GitHub öffnen",
+    "openBoard": "Board von {{name}} öffnen",
+    "rowActions": "Optionen für {{name}}",
+    "emptyTitle": "Noch keine Projekte",
+    "empty": "Lege eines pro Kunde oder Produkt an und ordne ihm seine Aufgaben zu."
+  },
   "shell": {
     "otherChannels": "Weitere Kanäle",
     "otherChannelsPersonal": "Weitere Gruppenunterhaltungen",
@@ -1941,6 +1966,7 @@
       "proposals": "Was Agenten ändern möchten",
       "threads": "Abzweigende Unterhaltungen und Missionen",
       "issues": "Die Arbeit des Teams, für Personen und Agenten",
+      "projects": "Jeder Kunde oder jedes Produkt, mit Repository und Fortschritt",
       "wiki": "Was das Team weiß, für alle aufgeschrieben",
       "drive": "Dateien, Berichte und Tabellen",
       "routines": "Was Agenten selbst erledigen, pünktlich",
@@ -1952,6 +1978,7 @@
       "proposalsPersonal": "Was deine Agenten ändern möchten",
       "threadsPersonal": "Nebengespräche und Missionen",
       "issuesPersonal": "Deine Aufgaben und die deiner Agenten",
+      "projectsPersonal": "Deine Projekte, mit ihren Repositorys und ihrem Fortschritt",
       "wikiPersonal": "Notizen, die deine Agenten lesen können",
       "calendarPersonal": "Deine Termine und Fristen",
       "teamPersonal": "Deine Agenten, und wer sonst noch hier ist",
@@ -2057,6 +2084,7 @@
     "approvals": "Freigaben",
     "proposals": "Verbesserungsvorschläge",
     "issues": "Aufgaben",
+    "projects": "Projekte",
     "missionsWaiting_one": "{{count}} Mission wartet auf dich",
     "missionsWaiting_other": "{{count}} Missionen warten auf dich",
     "threads": "Threads",
@@ -7815,7 +7843,12 @@
       "delete": "Projekt löschen",
       "deleteTitle": "Projekt {{name}} löschen?",
       "deleteBody": "Die Aufgaben bleiben erhalten, ohne Projekt.",
-      "empty": "Noch keine Aufgaben in diesem Projekt."
+      "empty": "Noch keine Aufgaben in diesem Projekt.",
+      "description": "Beschreibung",
+      "descriptionPlaceholder": "Wofür ist dieses Projekt?",
+      "repository": "GitHub-Repository",
+      "repositoryExample": "acme/klinik",
+      "repositoryHint": "Das Repository, in dem die Arbeit dieses Projekts liegt. Agenten lesen es zusammen mit dem Projekt."
     },
     "columns": {
       "add": "Spalte hinzufügen",
@@ -14720,6 +14753,8 @@
       "projectNameTaken": "Ein Projekt mit diesem Namen gibt es schon.",
       "projectArchived": "Dieses Projekt ist archiviert und nimmt keine neuen Aufgaben an.",
       "projectsFull": "Ein Workspace hat höchstens {{max}} Projekte. Lösche zuerst eines.",
+      "projectBadRepo": "Schreib das Repository als Besitzer/Name oder füge seine github.com-Adresse ein.",
+      "projectDescriptionTooLong": "Die Beschreibung darf höchstens {{max}} Zeichen lang sein.",
       "stageFull": "Eine Phase hat höchstens {{max}} Spalten. Lösch zuerst eine ihrer Spalten.",
       "deleteForbidden": "Nur wer diese Aufgabe erstellt hat oder ein Administrator kann sie löschen.",
       "audienceEmpty": "Wähle, wer es sieht."
@@ -17794,6 +17829,10 @@
     "list_issues": {
       "label": "Aufgaben ansehen",
       "description": "Listet Aufgaben auf und öffnet sie."
+    },
+    "list_projects": {
+      "label": "Projekte ansehen",
+      "description": "Listet die Aufgabenprojekte auf, wofür sie da sind und ihre Repositorys."
     },
     "create_issue": {
       "label": "Aufgabe erstellen",

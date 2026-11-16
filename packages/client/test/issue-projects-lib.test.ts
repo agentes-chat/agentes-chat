@@ -6,6 +6,7 @@ import { keys } from "../src/api/keys";
 import type { IssueProject } from "../src/api/types";
 import { knownErrorText } from "../src/lib/errors";
 import {
+  githubRepoUrl,
   liveProjectFilter,
   NO_PROJECT,
   PROJECT_COLORS,
@@ -14,6 +15,7 @@ import {
   projectFilterOf,
   projectFilterRows,
   projectOfFilter,
+  projectStatusOf,
 } from "../src/lib/issue-projects";
 import { ISSUE_CARD_FIELDS, ISSUES_VIEW_DEFAULT, isDefaultIssuesView } from "../src/lib/issues-view";
 
@@ -23,7 +25,11 @@ const project = (n: number, name: string, archived = false): IssueProject => ({
   name,
   color: "teal",
   archived,
+  description: null,
+  githubRepo: null,
   open: n,
+  done: 0,
+  total: n,
 });
 /** Twenty, as the server lists them: by name, the archived last. One name is the longest a project takes. */
 const LONG = "Reestruturação do atendimento ".repeat(4).slice(0, PROJECT_NAME_MAX);
@@ -103,5 +109,20 @@ describe("task projects", () => {
     const t = ((key: string) => key) as unknown as TFunction;
     const taken = new ApiError(400, "issue_project.name_taken", "A project named x already exists", { name: "x" });
     expect(knownErrorText(t, taken)).toBe("errors.issue.projectNameTaken");
+  });
+});
+
+describe("a project's status and repository (ADR 0188)", () => {
+  const stand = (over: Partial<IssueProject>) => ({ ...project(1, "Acme"), ...over });
+
+  test("archived wins; done needs tasks and none open; a project with no task yet is active", () => {
+    expect(projectStatusOf(stand({ archived: true, open: 0, total: 3 }))).toBe("archived");
+    expect(projectStatusOf(stand({ open: 0, done: 3, total: 3 }))).toBe("done");
+    expect(projectStatusOf(stand({ open: 1, done: 2, total: 3 }))).toBe("active");
+    expect(projectStatusOf(stand({ open: 0, done: 0, total: 0 }))).toBe("active");
+  });
+
+  test("a repository links to its page on GitHub", () => {
+    expect(githubRepoUrl("agentes-chat/agentes-chat")).toBe("https://github.com/agentes-chat/agentes-chat");
   });
 });

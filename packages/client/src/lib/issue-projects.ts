@@ -5,6 +5,9 @@ import { isUuid } from "./format";
 /** A project's name holds at most this (mirror of `PROJECT_NAME_MAX`, packages/engine/src/issue-projects.ts). */
 export const PROJECT_NAME_MAX = 80;
 
+/** A project's description holds at most this (mirror of `PROJECT_DESCRIPTION_MAX`, packages/engine/src/issue-projects.ts). */
+export const PROJECT_DESCRIPTION_MAX = 500;
+
 /** The colors a project can take: the roles' (mirror of `ROLE_COLORS`, packages/engine/src/permissions.ts). */
 export const PROJECT_COLORS = AGENT_COLORS.filter((c) => c !== "sky");
 
@@ -39,3 +42,18 @@ export const liveProjectFilter = (projects: IssueProjectRef[], picked: string) =
 /** The project a filter names, when it is one that still exists. */
 export const projectOfFilter = (projects: IssueProject[] | undefined, filter: string | undefined) =>
   filter && filter !== NO_PROJECT ? (projects?.find((p) => p.id === filter) ?? null) : null;
+
+/** Where a project stands, as the projects page says it (ADR 0188). */
+export type ProjectStatus = "active" | "done" | "archived";
+
+/**
+ * Archived when someone archived it; done when it has tasks I see and none is open; else active, which is also what a
+ * project with no task yet is. The counts are mine: another person may see more tasks of the same project.
+ */
+export function projectStatusOf(p: Pick<IssueProject, "archived" | "open" | "total">): ProjectStatus {
+  if (p.archived) return "archived";
+  return p.total > 0 && p.open === 0 ? "done" : "active";
+}
+
+/** The address of a project's repository (`owner/name`) on GitHub. */
+export const githubRepoUrl = (repo: string) => `https://github.com/${repo}`;

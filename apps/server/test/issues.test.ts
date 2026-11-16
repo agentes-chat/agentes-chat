@@ -219,3 +219,46 @@ test("deleting a task: 204, gone from the list and its address; a member who did
   expect(await (await api("/issues")).json()).toMatchObject({ issues: [] });
   expect((await api(`/issues/${created.id}`, { method: "DELETE" })).status).toBe(404);
 });
+
+test("projects API: a description and a repository, refused with their codes, cleared on null, and the counts say done and total (ADR 0188)", async () => {
+  const owner = browser(t);
+  await signUp(owner, "owner@example.com");
+  const { orgId } = await seedOrg(owner);
+  const api = (path: string, init?: Parameters<typeof owner>[1]) =>
+    owner(`/api/app/organizations/${orgId}${path}`, init);
+  type Project = {
+    id: string;
+    description: string | null;
+    githubRepo: string | null;
+    open: number;
+    done: number;
+    total: number;
+  };
+
+  const made = await api("/issue-projects", {
+    json: { name: "Clínica Teo", description: "Agenda e lembretes", githubRepo: "https://github.com/acme/clinica.git" },
+  });
+  expect(made.status).toBe(201);
+  const clinic = (await made.json()) as Project;
+  expect(clinic).toMatchObject({ description: "Agenda e lembretes", githubRepo: "acme/clinica", total: 0 });
+
+  const bad = await api("/issue-projects", { json: { name: "Outro", githubRepo: "acme" } });
+  expect(bad.status).toBe(400);
+  expect(await bad.json()).toMatchObject({ error: { code: "issue_project.bad_repo" } });
+  const long = await api(`/issue-projects/${clinic.id}`, { method: "PATCH", json: { description: "a".repeat(501) } });
+  expect(await long.json()).toMatchObject({ error: { code: "issue_project.description_too_long" } });
+
+  const open = (await (await api("/issues", { json: { title: "Lembrete", projectId: clinic.id } })).json()) as {
+    id: string;
+  };
+  const closed = (await (await api("/issues", { json: { title: "Agenda", projectId: clinic.id } })).json()) as {
+    id: string;
+  };
+  await api(`/issues/${closed.id}`, { method: "PATCH", json: { status: "done" } });
+  expect(open.id).toBeString();
+  const listed = (await (await api("/issue-projects")).json()) as { projects: Project[] };
+  expect(listed.projects[0]).toMatchObject({ open: 1, done: 1, total: 2, githubRepo: "acme/clinica" });
+
+  const cleared = await api(`/issue-projects/${clinic.id}`, { method: "PATCH", json: { githubRepo: null } });
+  expect(await cleared.json()).toMatchObject({ description: "Agenda e lembretes", githubRepo: null });
+});

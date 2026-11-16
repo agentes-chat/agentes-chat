@@ -736,10 +736,21 @@ export function createMockPlanning(
         const open = (id: string | null) =>
           s.issues.filter((i) => (i.project?.id ?? null) === id && i.status !== "done" && i.status !== "canceled")
             .length;
+        const done = (id: string) => s.issues.filter((i) => i.project?.id === id && i.status === "done").length;
         const byName = [...s.projects].sort(
           (a, b) => Number(a.archived) - Number(b.archived) || a.name.localeCompare(b.name),
         );
-        return clone({ projects: byName.map((p) => ({ ...p, open: open(p.id) })), unfiled: open(null) });
+        return clone({
+          projects: byName.map((p) => ({
+            description: null,
+            githubRepo: null,
+            ...p,
+            open: open(p.id),
+            done: done(p.id),
+            total: open(p.id) + done(p.id),
+          })),
+          unfiled: open(null),
+        });
       },
       createProject: async (orgId, input) => {
         record("issues.createProject", input);
@@ -750,9 +761,11 @@ export function createMockPlanning(
           name: input.name.trim(),
           color: input.color ?? "graphite",
           archived: false,
+          description: input.description?.trim() || null,
+          githubRepo: input.githubRepo?.trim() || null,
         };
         s.projects.push(project);
-        return clone({ ...project, open: 0 });
+        return clone({ ...project, open: 0, done: 0, total: 0 });
       },
       updateProject: async (orgId, projectId, patch) => {
         record("issues.updateProject", projectId, patch);
@@ -762,7 +775,7 @@ export function createMockPlanning(
         Object.assign(project, patch);
         // The tasks carry their project as the server sends it.
         for (const i of s.issues) if (i.project?.id === projectId) i.project = { ...project };
-        return clone(project);
+        return clone({ description: null, githubRepo: null, ...project });
       },
       deleteProject: async (orgId, projectId) => {
         record("issues.deleteProject", projectId);
