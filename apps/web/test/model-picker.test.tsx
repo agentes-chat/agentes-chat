@@ -40,9 +40,10 @@ test("the DM header's button opens the tiles and models; a model of another AI s
   await click(within(panel).getByRole("button", { name: "Claude" }));
   expect(state.calls.some((c) => c.method === "agents.setBrain")).toBe(false);
   const models = [...panel.querySelectorAll(".mp__model-name")].map((n) => n.textContent);
-  expect(models).toEqual(["Automático", "Opus", "Sonnet", "Haiku"]);
-  // Automático is marked as the default.
-  expect(panel.querySelector(".mp__model-tag")?.textContent).toBe("padrão");
+  expect(models).toEqual(["Automático", "Opus 5.5", "Sonnet 5.5", "Haiku 5.5"]);
+  // Automático says what it does, with no tag repeating that it is the default.
+  expect(panel.querySelector(".mp__model-tag")).toBeNull();
+  expect(within(panel).getByRole("option", { name: /^Automático/ }).textContent).not.toContain("padrão");
   await click(within(panel).getByRole("option", { name: /Opus/ }));
   const call = state.calls.find((c) => c.method === "agents.setBrain");
   expect(call?.args[2]).toMatchObject({ brain: "claude_code", model: "opus" });
@@ -126,4 +127,14 @@ test("a reply Automático gave with another model: 'Usar o X em todos' opens the
   await settle(4);
   await click(within(line).getByRole("button", { name: "Escolher modelo" }));
   expect(document.querySelector(".mp")).toBeTruthy();
+});
+
+test("on an API key with a fixed model the picker's ramp has the three levels the API takes, none chosen yet", async () => {
+  const { state, panel } = await openPicker();
+  const ramp = within(panel).getByRole("slider", { name: "Esforço" });
+  expect(ramp.getAttribute("aria-valuemax")).toBe("3");
+  expect(ramp.getAttribute("aria-valuetext")).toBe("Padrão do modelo");
+  await act(async () => fireEvent.keyDown(ramp, { key: "ArrowRight" }));
+  await settle(6);
+  expect(state.calls.find((c) => c.method === "agents.setBrain")?.args[2]).toEqual({ brain: "model", effort: "low" });
 });

@@ -7,8 +7,9 @@ import {
   useIssueColumns,
   useIssueProjects,
 } from "@agenteschat/client";
+import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { pickableProjects } from "@agenteschat/client/lib/issue-projects";
-import { PRIORITIES } from "@agenteschat/client/lib/issues";
+import { assigneeNames, PRIORITIES } from "@agenteschat/client/lib/issues";
 import { aiStateOf } from "@agenteschat/client/lib/no-ai";
 import { EVERYONE } from "@agenteschat/client/lib/who-sees";
 import { useLocalSearchParams, usePreventRemove } from "expo-router";
@@ -20,7 +21,7 @@ import { Filters, GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Locked,
 import { Face } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { goBack, PushedHeader, successHaptic } from "../shared/parts";
-import { TextArea } from "../shared/TextArea";
+import { overLimit, TextArea } from "../shared/TextArea";
 import { useWhoSeesDraft, useWhoSeesLabel, WhoSeesRows } from "../shared/WhoSees";
 import { columnOfIssue, DUE_CHOICES, type DueChoice, dueDateOf } from "./logic";
 import { ProjectDot, useColumnLabel } from "./parts";
@@ -28,6 +29,7 @@ import { useStartAgent } from "./useStartAgent";
 
 type Open = "who" | "project" | "priority" | "due" | "sees" | null;
 
+const DESCRIPTION_LIMIT = { max: FIELD_LIMITS.issueDescription };
 const close = () => goBack("/issues");
 
 /**
@@ -56,13 +58,13 @@ export function NewIssueForm() {
   const column = columnId ? columns.data?.find((c) => c.id === columnId) : undefined;
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
-  const [who, setWho] = useState<Actor | null>(null);
+  const [who, setWho] = useState<Actor[]>([]);
   const [priority, setPriority] = useState<IssuePriority>("normal");
   const [due, setDue] = useState<DueChoice>("none");
   const [open, setOpen] = useState<Open>(null);
   const sees = useWhoSeesDraft(EVERYONE);
   const seesLabel = useWhoSeesLabel();
-  const ready = title.trim().length > 0 && !action.isPending && sees.ready;
+  const ready = title.trim().length > 0 && !overLimit(text, DESCRIPTION_LIMIT) && !action.isPending && sees.ready;
   // A back swipe with a task half written asks first, as the web's dialog keeps it from a stray click.
   const done = useRef(false);
   usePreventRemove(title.trim() !== "" || text.trim() !== "", ({ repeat }) => {
@@ -76,7 +78,11 @@ export function NewIssueForm() {
   const agents = dir.agents.filter((a) => a.canTalk !== false);
   const whoName = (a: Actor | null) =>
     !a ? t("mobile.issues.nobody") : a.type === "person" && a.id === meId ? t("mobile.issues.you") : dir.nameOf(a);
-  const whoRole = who?.type === "agent" ? (dir.agentById.get(who.id)?.role ?? "") : "";
+  const [only] = who;
+  const whoRole = who.length === 1 && only?.type === "agent" ? (dir.agentById.get(only.id)?.role ?? "") : "";
+  // The first agent picked starts on the task once it exists; the others it is given to only have it.
+  const starter = who.find((a) => a.type === "agent");
+  const picked = (a: Actor) => who.some((w) => w.type === a.type && w.id === a.id);
 
   const submit = () => {
     if (!ready) return;
@@ -86,7 +92,7 @@ export function NewIssueForm() {
         input: {
           title: title.trim(),
           description: text.trim(),
-          assignee: who?.type === "person" ? who : null,
+          assignees: who.filter((a) => a !== starter),
           priority,
           dueDate: dueDateOf(due),
           ...(project ? { projectId: project.id } : {}),
@@ -97,14 +103,14 @@ export function NewIssueForm() {
         onSuccess: (created) => {
           const issue = created as Issue;
           // New tasks land in A fazer's first column; another one was picked by its "+" (an agent's moves on).
-          if (column && who?.type !== "agent" && columnOfIssue(issue, columns.data ?? [])?.id !== column.id)
+          if (column && !starter && columnOfIssue(issue, columns.data ?? [])?.id !== column.id)
             action.mutate({ type: "update", id: issue.id, patch: { columnId: column.id } });
           // An agent picked here starts right away: assigned, its run linked, in progress (as on the web).
-          if (who?.type === "agent") start.run(issue, who.id, { created: true });
+          if (starter) start.run(issue, starter.id, { created: true });
           successHaptic();
           toast({
             title: t("mobile.issues.form.created", { number: issue.number }),
-            ...(who?.type === "agent" ? { agentId: who.id } : {}),
+            ...(starter ? { agentId: starter.id } : {}),
           });
           done.current = true;
           close();
@@ -114,10 +120,9 @@ export function NewIssueForm() {
     );
   };
 
-  const choices: (Actor | null)[] = [
+  const choices: Actor[] = [
     ...agents.map((a) => ({ type: "agent" as const, id: a.id })),
     ...(meId ? [{ type: "person" as const, id: meId }] : []),
-    null,
   ];
   return (
     <View style={[styles.screen, { backgroundColor: c.grouped }]}>
@@ -151,42 +156,47 @@ export function NewIssueForm() {
             placeholder={t("mobile.issues.form.description")}
             accessibilityLabel={t("mobile.issues.form.description")}
             minHeight={96}
-            maxLength={50_000}
+            limit={DESCRIPTION_LIMIT}
           />
           <View>
             <GroupedHeader>{t("mobile.issues.form.who")}</GroupedHeader>
             <GroupedList>
               <GroupedRow
-                label={whoName(who)}
-                leading={who ? <Face who={who} size={OPTION_ROW.face} live={false} /> : undefined}
-                icon={who ? undefined : "agent"}
+                label={
+                  only
+                    ? assigneeNames(
+                        t,
+                        who.map((a) => whoName(a)),
+                      )
+                    : whoName(null)
+                }
+                leading={only ? <Face who={only} size={OPTION_ROW.face} live={false} /> : undefined}
+                icon={only ? undefined : "agent"}
                 value={whoRole || undefined}
                 chevron
                 onPress={() => toggle("who")}
               />
+              {/* Open, every choice with a check on the picked ones: a tap adds or takes one off, and it stays open. */}
               {open === "who"
-                ? choices
-                    .filter((a) => (a?.type ?? null) !== (who?.type ?? null) || a?.id !== who?.id)
-                    .map((a) => (
-                      <GroupedRow
-                        key={a ? `${a.type}:${a.id}` : "nobody"}
-                        label={whoName(a)}
-                        leading={a ? <Face who={a} size={OPTION_ROW.face} live={false} /> : undefined}
-                        icon={a ? undefined : "circle"}
-                        value={a?.type === "agent" ? (dir.agentById.get(a.id)?.role ?? undefined) : undefined}
-                        onPress={() => {
-                          setWho(a);
-                          setOpen(null);
-                        }}
-                      />
-                    ))
+                ? choices.map((a) => (
+                    <GroupedRow
+                      key={`${a.type}:${a.id}`}
+                      label={whoName(a)}
+                      leading={<Face who={a} size={OPTION_ROW.face} live={false} />}
+                      value={a.type === "agent" ? (dir.agentById.get(a.id)?.role ?? undefined) : undefined}
+                      checked={picked(a)}
+                      onPress={() =>
+                        setWho(picked(a) ? who.filter((w) => !(w.type === a.type && w.id === a.id)) : [...who, a])
+                      }
+                    />
+                  ))
                 : null}
             </GroupedList>
-            {who?.type === "agent" ? (
+            {starter ? (
               <GroupedFooter>
                 {/* "Starts as soon as it's created" isn't true for an agent with no AI: it waits for one. */}
-                {aiStateOf(ai.data, who.id) === "no_ai"
-                  ? t("mobile.ai.taskNoAi", { name: dir.agentById.get(who.id)?.name ?? "" })
+                {aiStateOf(ai.data, starter.id) === "no_ai"
+                  ? t("mobile.ai.taskNoAi", { name: dir.agentById.get(starter.id)?.name ?? "" })
                   : t("mobile.issues.form.agentStarts")}
               </GroupedFooter>
             ) : null}

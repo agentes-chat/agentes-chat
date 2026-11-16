@@ -8,6 +8,7 @@ import {
   useApprovals,
   useChannels,
   useNotificationAction,
+  useNotificationBulkPending,
   useNotificationCount,
   useNotificationReply,
   useNotifications,
@@ -27,6 +28,7 @@ import { latestText } from "@agenteschat/client/lib/message-body";
 import {
   allItems,
   askersOf,
+  canClearAll,
   channelOf,
   groupByDay,
   headlineNames,
@@ -180,8 +182,9 @@ function sourceOf(t: TFunction, n: AppNotification, channelName: (id: string) =>
   else if (n.kind === "approval") [icon, label] = ["shield", t("notifications.source.approval")];
   else if (n.kind === "approval_cover" || n.kind === "right_hand_paused")
     [icon, label] = ["approve", t("settings.section.approvals")];
-  else if (n.kind === "join_request" || n.kind === "invitation_accepted")
-    [icon, label] = ["members", t("notifications.source.members")];
+  // A request opens People › Convites, where it is answered (ADR 0184); someone who joined, Members.
+  else if (n.kind === "join_request") [icon, label] = ["mail", t("settings.section.invites")];
+  else if (n.kind === "invitation_accepted") [icon, label] = ["members", t("notifications.source.members")];
   else if (n.kind === "composio_limit") [icon, label] = ["wallet", t("notifications.source.usage")];
   else if (n.kind === "skill_update") [icon, label] = ["book", t("skills.title")];
   else if (
@@ -527,6 +530,8 @@ interface RowState {
   fresh: boolean;
   pulse: boolean;
   leaving: boolean;
+  /** "Concluir todas" or its undo is under way: the row's own actions wait for it. */
+  busy: boolean;
 }
 
 /**
@@ -544,7 +549,7 @@ function clickRow(e: MouseEvent<HTMLElement>, n: AppNotification, h: RowHandlers
 }
 
 /** The inline actions: a small floating bar on desktop (hover / focus), a row on phones (tap). */
-function RowActions({ n, h }: { n: AppNotification; h: RowHandlers }) {
+function RowActions({ n, h, busy }: { n: AppNotification; h: RowHandlers; busy: boolean }) {
   const { t } = useTranslation();
   const act = (key: string, icon: IconName, label: string, tip: string, short: string, run?: () => void) => (
     <button
@@ -553,6 +558,7 @@ function RowActions({ n, h }: { n: AppNotification; h: RowHandlers }) {
       data-act={key}
       title={tip}
       aria-label={label}
+      disabled={busy && key !== "open"}
       onClick={(e) => {
         e.stopPropagation();
         run?.();
@@ -934,7 +940,7 @@ function Row({
           </>
         )}
       </div>
-      <RowActions n={n} h={h} />
+      <RowActions n={n} h={h} busy={s.busy} />
     </div>
   );
 }
@@ -985,6 +991,7 @@ function WaitCard({
             icon="clock"
             aria-label={t("notifications.snooze")}
             title={t("notifications.snooze")}
+            disabled={s.busy}
           />
         }
       />
@@ -995,6 +1002,7 @@ function WaitCard({
         icon="check"
         aria-label={t("notifications.done")}
         title={t("notifications.doneTip")}
+        disabled={s.busy}
         onClick={(e) => {
           e.stopPropagation();
           h.onDone(n);
@@ -1474,7 +1482,12 @@ export function NotificationsPage({ waitingOnly = false }: { waitingOnly?: boole
     later(finish, LEAVE_MS);
   };
 
+  // Its own observer: a row's read or Feito on the page's `action` must not take over the clear's toast and Desfazer.
+  const bulkAction = useNotificationAction(org.id);
+  const bulk = useNotificationBulkPending(org.id);
+
   const done = (n: AppNotification) => {
+    if (bulk) return;
     if (n.doneAt) {
       leave(n, () => action.mutate({ type: "done", item: n, done: false }));
       toast.show(t("notifications.toast.restored"), "info", {
@@ -1498,6 +1511,7 @@ export function NotificationsPage({ waitingOnly = false }: { waitingOnly?: boole
   };
 
   const snooze = (n: AppNotification, choice: SnoozeChoice) => {
+    if (bulk) return;
     const until = snoozeTimes()[choice].toISOString();
     leave(n, () => action.mutate({ type: "snooze", item: n, until }));
     const title =
@@ -1602,6 +1616,26 @@ export function NotificationsPage({ waitingOnly = false }: { waitingOnly?: boole
       },
     );
   };
+
+  const doneAll = () =>
+    bulkAction.mutate(
+      { type: "doneAll", filter },
+      {
+        onSuccess: (res) => {
+          setCur(null);
+          if (res.ids.length)
+            toast.show(t("notifications.toast.doneAll", { count: res.ids.length }), "info", {
+              label: t("notifications.toast.undo"),
+              run: () =>
+                bulkAction.mutate(
+                  { type: "undoneMany", ids: res.ids },
+                  { onError: (e) => toast.show(errorText(t, e), "error") },
+                ),
+            });
+        },
+        onError: (e) => toast.show(errorText(t, e), "error"),
+      },
+    );
 
   const toggle = (n: AppNotification) => {
     setOpen((s) => {
@@ -1709,6 +1743,7 @@ export function NotificationsPage({ waitingOnly = false }: { waitingOnly?: boole
     fresh: fresh.has(n.id),
     pulse: pulse.has(n.id),
     leaving: leaving.has(n.id),
+    busy: bulk,
   });
 
   const summary = waitingOnly
@@ -1729,8 +1764,10 @@ export function NotificationsPage({ waitingOnly = false }: { waitingOnly?: boole
     <div className="page page--list nt">
       <PageHeader
         title={title}
-        // On the title's row: the counts the sidebar already has show at once, the list's own replace them.
-        count={(list.isSuccess || badge.isSuccess) && summary}
+        // The counts the sidebar already has show at once, the list's own replace them: on the title's row in
+        // Notifications; on "Esperando você" the line under the title, as the Approvals page says what waits.
+        count={waitingOnly ? undefined : (list.isSuccess || badge.isSuccess) && summary}
+        meta={waitingOnly ? ((list.isSuccess || badge.isSuccess) && summary) || undefined : undefined}
         actions={
           <>
             <Menu
@@ -1762,8 +1799,13 @@ export function NotificationsPage({ waitingOnly = false }: { waitingOnly?: boole
               </MenuItem>
             </Menu>
             {!waitingOnly && (
-              <Button disabled={doneView || !counts?.unread || action.isPending} onClick={readAll}>
+              <Button disabled={doneView || !counts?.unread || action.isPending || bulk} onClick={readAll}>
                 {t("notifications.readAll")}
+              </Button>
+            )}
+            {!waitingOnly && (
+              <Button disabled={!canClearAll(filter, counts, items) || action.isPending || bulk} onClick={doneAll}>
+                {t("notifications.doneAll")}
               </Button>
             )}
           </>

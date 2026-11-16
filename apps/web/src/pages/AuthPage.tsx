@@ -2,6 +2,7 @@ import {
   ApiError,
   instanceQuery,
   invitationQuery,
+  meQuery,
   type SignInOptions,
   type SignInProvider,
   useApi,
@@ -37,6 +38,7 @@ import { AuthShell } from "@/components/AuthLayout";
 import { HostingSheet } from "@/components/HostingChoice";
 import { prepareBurst } from "@/components/Sky";
 import { LastUsed, lastSignIn, rememberSignIn, SocialButtons, useSocialProviders } from "@/components/SocialButtons";
+import { announceAccountChange } from "@/lib/accounts";
 import {
   browserSignInUrl,
   challengeOf,
@@ -87,6 +89,13 @@ const STEP_ACTIONS: Partial<Record<Step, HumanAction>> = {
 const REDEEM_EVERY_MS = 2000;
 const REDEEM_FOR_MS = 10 * 60_000;
 
+/**
+ * Continue on this Mac refused for a reason the page can name (`sign_in_window` in the desktop app): the server's
+ * owner deleted their account, or no account is left and the app opened its own window to make the new owner.
+ */
+const ownerRefusal = (e: unknown) =>
+  e === "owner_gone" ? "auth.desktopOwner.gone" : e === "owner_none" ? "auth.desktopOwner.none" : undefined;
+
 /** Help under a new password, live: what's missing, or "Senha ok." */
 export function passwordHelp(t: TFunction, password: string) {
   const state = passwordState(password);
@@ -131,6 +140,7 @@ export function AuthPage({
   email: initialEmail,
   access,
   refused,
+  adding = false,
 }: {
   start: "in" | "up";
   redirect?: string;
@@ -142,6 +152,8 @@ export function AuthPage({
    * words. An unconfirmed password account's comes with its address in `email`, to make a new password from here.
    */
   refused?: string;
+  /** Opened by "Add account" (ADR 0183): someone is signed in and stays so; the page offers the way back to them. */
+  adding?: boolean;
 }) {
   const { t } = useTranslation();
   const api = useApi();
@@ -202,6 +214,8 @@ export function AuthPage({
   // In the app, until it said whether this is its own server: the provider buttons wait, never shown then taken away.
   const [placeKnown, setPlaceKnown] = useState(!desktop);
   const [ownerPending, setOwnerPending] = useState(false);
+  // The server's owner deleted their account: Continue on this Mac signs nobody in, so it is offered no more.
+  const [ownerGone, setOwnerGone] = useState(false);
   // The server the app runs on this computer: its owner signs in with Continue on this Mac, and a provider's sign-in
   // needs an address registered with that provider, which a computer's own server doesn't have.
   const offeredProviders = local || !placeKnown ? [] : allProviders;
@@ -219,23 +233,32 @@ export function AuthPage({
     try {
       // The app moves this window to the sign-in it made; nothing to do here after.
       await thisMac.signIn();
-    } catch {
-      setError(t("common.unknownError"));
+    } catch (e) {
+      setError(t(ownerRefusal(e) ?? "common.unknownError"));
+      setOwnerGone(e === "owner_gone");
       setOwnerPending(false);
     }
   };
   // The owner's session ended (it expired, or this window never had one) on the server the app runs here: the app
   // signs them in again at once, as Continue on this Mac does. Not after Sign out by hand, nor when the page came for
   // something else (an invitation, a provider's refusal, an address to sign in with): the screen waits then.
-  const ownerAgain = local && start === "in" && !refused && !goal && !initialEmail;
+  const ownerAgain = local && start === "in" && !refused && !goal && !initialEmail && !adding;
   const ownerTried = useRef(false);
   useEffect(() => {
     if (!ownerAgain || ownerTried.current || storage.get(STORAGE_KEYS.signedOut) === "1") return;
     ownerTried.current = true;
     setOwnerPending(true);
     // Refused (too soon after another, the server not up yet): the screen stays, its button one click away.
-    void thisMac.signIn().catch(() => setOwnerPending(false));
-  }, [ownerAgain]);
+    void thisMac.signIn().catch((e) => {
+      setOwnerPending(false);
+      const why = ownerRefusal(e);
+      if (why) setError(t(why));
+      setOwnerGone(e === "owner_gone");
+    });
+  }, [ownerAgain, t]);
+
+  // "Add account": whoever is signed in stays so, one click back.
+  const stays = useQuery({ ...meQuery(api), enabled: adding }).data ?? null;
 
   const go = (next: Step) => {
     setError(null);
@@ -248,6 +271,8 @@ export function AuthPage({
   // address, and on a server that emails, a new password is a click away. Never a new confirmation: that would keep
   // the password of whoever made the account (ADR 0006).
   const providerRefused = refusal !== null && error === refusal;
+  // Nor does Continue on this Mac's refusal: no address typed here makes its owner sign in.
+  const ownerRefused = error === t("auth.desktopOwner.gone") || error === t("auth.desktopOwner.none");
   const offerReset = providerRefused && refused === ACCOUNT_NOT_LINKED && canReset && isEmail(email);
 
   const fail = (e: unknown) =>
@@ -283,6 +308,8 @@ export function AuthPage({
   // OAuth callback that waited for this sign-in) is the server's: a full load.
   const enter = async (to: string) => {
     prepareBurst(header.current ?? document.body)();
+    // An account added beside another (ADR 0183): the browser's other tabs were the other one's.
+    if (adding) announceAccountChange();
     qc.clear();
     if (to.startsWith("/api/")) return window.location.assign(to);
     await navigate({ href: to });
@@ -291,7 +318,12 @@ export function AuthPage({
   const signIn = async () => {
     setPending(true);
     setError(null);
-    const result = await withHumanCheck(human.check, (token) => auth.signIn({ email: email.trim(), password }, token));
+    // The e-mail's lookup passed the bot check: its pass stands for this step's (ADR 0075), so nobody is asked twice.
+    const result = await withHumanCheck(
+      human.check,
+      (token) => auth.signIn({ email: email.trim(), password }, token),
+      options?.pass,
+    );
     setPending(false);
     if (!result.ok) {
       setWrong(result.status === 401);
@@ -306,8 +338,11 @@ export function AuthPage({
   const signUp = async () => {
     setPending(true);
     setError(null);
-    const result = await withHumanCheck(human.check, (token) =>
-      auth.signUp({ name: name.trim(), email: email.trim(), password, ...(access ? { access } : {}) }, token),
+    const result = await withHumanCheck(
+      human.check,
+      (token) =>
+        auth.signUp({ name: name.trim(), email: email.trim(), password, ...(access ? { access } : {}) }, token),
+      options?.pass,
     );
     setPending(false);
     if (!result.ok) {
@@ -327,8 +362,14 @@ export function AuthPage({
   const sendReset = async () => {
     setPending(true);
     setError(null);
-    const result = await withHumanCheck(human.check, (token) =>
-      auth.requestPasswordReset({ email: email.trim(), redirectTo: `${window.location.origin}/reset-password` }, token),
+    const result = await withHumanCheck(
+      human.check,
+      (token) =>
+        auth.requestPasswordReset(
+          { email: email.trim(), redirectTo: `${window.location.origin}/reset-password` },
+          token,
+        ),
+      options?.pass,
     );
     setPending(false);
     if (!result.ok) {
@@ -562,7 +603,7 @@ export function AuthPage({
             <Locked when={pending || ownerPending}>
               {who}
 
-              {local && (step === "email" || step === "noPassword") && (
+              {local && !ownerGone && (step === "email" || step === "noPassword") && (
                 <>
                   <Button
                     type="button"
@@ -594,7 +635,7 @@ export function AuthPage({
                     placeholder={t("auth.flow.emailPlaceholder")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    invalid={error !== null && !providerRefused}
+                    invalid={error !== null && !providerRefused && !ownerRefused}
                     autoFocus
                   />
                   {fix && (
@@ -659,7 +700,7 @@ export function AuthPage({
                 <div className="auth-last-host">
                   <Button
                     type="submit"
-                    variant={local && step === "email" ? "default" : "primary"}
+                    variant={local && !ownerGone && step === "email" ? "default" : "primary"}
                     size="lg"
                     block
                     kbd={["↵"]}
@@ -793,6 +834,11 @@ export function AuthPage({
           </div>
         )}
         {serverLine}
+        {stays && (
+          <button type="button" className="auth__quiet" onClick={() => void navigate({ to: "/" })}>
+            {t("auth.flow.backToAccount", { name: stays.user.name })}
+          </button>
+        )}
       </form>
       {!desktop && cloudHere !== undefined && (
         <HostingSheet open={hosting} onOpenChange={setHosting} here={here} cloud={cloudHere} />

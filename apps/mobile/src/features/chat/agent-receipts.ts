@@ -166,6 +166,9 @@ export function markOf(
   seenBy: string | null | undefined,
   receipt: MessageReceipt | undefined,
 ): ReceiptMarkView | null {
+  // Waiting for the agent's next pause: no mark. It was sent, and a spinner or a clock beside its time reads as a
+  // message that never arrived.
+  if (steer?.state === "waiting") return null;
   if (steer) return { kind: "steer", agentId: steer.agentId, state: steer.state, words: steerWords(steer, receipt) };
   if (seenBy) return { kind: "seen", personId: seenBy };
   const line = receiptLine(receipt);

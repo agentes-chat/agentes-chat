@@ -138,6 +138,7 @@ export function BrowserHandoffCard({ handoff }: { handoff: BrowserHandoff }) {
         id={current.id}
         kind={onDesktop ? "desktop" : "browser"}
         agent={agent}
+        runId={current.runId}
         label={groupLabel}
         mine={mine}
         waitingFor={

@@ -80,6 +80,7 @@ const SIDEWAYS: Record<string, "strip" | "content"> = {
   ".machine-command__code": "content",
   ".md__table-scroll": "content",
   ".issues-boardwrap": "content",
+  ".issue-tablewrap": "content",
   ".team-tree": "content",
   ".mi-log": "content",
   ".mi-cmd__line": "content",

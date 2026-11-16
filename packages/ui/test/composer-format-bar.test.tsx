@@ -107,6 +107,9 @@ describe("the composer's row", () => {
         keysHold: "Solte para enviar",
         keysPaused: "Enter envia",
         left: (s: number) => `faltam ${s} s`,
+        askDiscard: "Apagar o áudio? O texto fica.",
+        askDelete: "Apagar",
+        askKeep: "Manter",
       };
       render(<Box voice={{ scope: "c", onTake: () => {}, onNotice: () => {}, labels }} />);
       const row = document.querySelector(".ac-composer__row") as HTMLElement;

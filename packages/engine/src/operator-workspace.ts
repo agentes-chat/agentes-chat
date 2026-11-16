@@ -1,3 +1,4 @@
+import { isObject } from "@agenteschat/adapters";
 import {
   and,
   count,
@@ -13,6 +14,7 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
+import { AUDIENCE_MODES } from "./audience";
 import { connectorKeyOf } from "./connector-usage";
 import { CUSTOM_PREFIX } from "./connectors/custom";
 import { decodeCursor, encodeCursor } from "./cursor";
@@ -21,6 +23,7 @@ import { getOrMake, stringsOf } from "./format";
 import {
   codeOf,
   errorText,
+  listedOf,
   mergedPage,
   micros,
   ms,
@@ -32,22 +35,21 @@ import {
   uuidOf,
   wordOf,
 } from "./operator-paging";
+import { systemStopReason } from "./runs";
 
 /**
  * What a workspace connected, what its audit log recorded, what its agents asked and what its routines did, for the
- * operator API (ADR 0056). Ids, labels, states, codes and times: never a credential, an audit entry's details, what
- * was asked or answered, nor a routine's instructions. Every field is picked by name, and nothing here writes,
+ * operator API (ADR 0056). Ids, labels, states, codes and times: never a credential, an audit entry's details (but
+ * the facts `AUDIT_FACTS` names), what was asked or answered, nor a routine's instructions. Every field is picked by name, and nothing here writes,
  * because a caller holding only the read token reaches all of it.
  */
 
 const {
   agentConsultations,
   agentQuestions,
-  agents,
   approvals,
   auditLog,
   browserHandoffs,
-  channels,
   connectorConnections,
   connectorUsageDays,
   customTools,
@@ -236,10 +238,60 @@ export interface OperatorAuditQuery extends PageQuery {
   to?: Date;
 }
 
+type Details = Record<string, unknown>;
+const partOf = (v: unknown): Details => (isObject(v) ? v : {});
+/** How many ids of `now` were not in `before`. */
+const gained = (before: unknown, now: unknown) => {
+  const had = new Set(stringsOf(before));
+  return new Set(stringsOf(now).filter((id) => !had.has(id))).size;
+};
+
+/** How an audience changed other than by a save of it. */
+const AUDIENCE_VIA = ["invitation"] as const;
+
+/**
+ * The facts an entry's `details` give, for the actions named here and no other: each key is read by its name and
+ * leaves as a listed word, a count or an id, so nothing a person or a connected app wrote (a name, a tool's
+ * description, a list of who) comes with it. Another action is one more entry.
+ */
+const AUDIT_FACTS = {
+  "agent.audience_changed": (d: Details) => {
+    const [from, to] = [partOf(d.from), partOf(d.to)];
+    return {
+      fromMode: listedOf(AUDIENCE_MODES, from.mode),
+      toMode: listedOf(AUDIENCE_MODES, to.mode),
+      peopleAdded: gained(from.userIds, to.userIds),
+      peopleRemoved: gained(to.userIds, from.userIds),
+      rolesAdded: gained(from.roleIds, to.roleIds),
+      rolesRemoved: gained(to.roleIds, from.roleIds),
+      via: listedOf(AUDIENCE_VIA, d.via),
+    };
+  },
+  "connector.tool_definitions_changed": (d: Details) => {
+    const tools = Array.isArray(d.tools) ? d.tools.filter(isObject) : [];
+    return {
+      tools: tools.length,
+      descriptionsChanged: tools.filter((t) => "descriptionBefore" in t).length,
+      inputsChanged: tools.filter((t) => t.inputChanged === true).length,
+    };
+  },
+  "run.canceled": (d: Details) => ({
+    fromStatus: listedOf(schema.agentRunStatusEnum.enumValues, d.from),
+    reason: typeof d.reason === "string" ? systemStopReason(d.reason) : null,
+    agentId: uuidOf(d.agentId),
+  }),
+};
+const auditFactsOf = (action: string, details: unknown) =>
+  Object.hasOwn(AUDIT_FACTS, action)
+    ? AUDIT_FACTS[action as keyof typeof AUDIT_FACTS](
+        partOf(typeof details === "string" ? JSON.parse(details) : details),
+      )
+    : null;
+
 /**
  * A workspace's audit log in a range of dates, newest first, in keyset pages: who did what to what, and how an
- * agent's tool call ended. Never an entry's `details`, which hold a tool's input and what a change was made of.
- * The range is the last 30 days unless said. Null: no such workspace.
+ * agent's tool call ended. Never an entry's `details`, which hold a tool's input and what a change was made of, but
+ * the facts of `AUDIT_FACTS`. The range is the last 30 days unless said. Null: no such workspace.
  */
 export async function operatorAudit(db: Database, orgId: string, query: OperatorAuditQuery, now = new Date()) {
   const after = query.cursor ? decodeCursor(query.cursor, UuidCursor) : null;
@@ -261,6 +313,8 @@ export async function operatorAudit(db: Database, orgId: string, query: Operator
       outcome: sql<string | null>`${auditLog.outcome}`,
       runId: auditLog.runId,
       onBehalfOfUserId: auditLog.onBehalfOfUserId,
+      // Read for the actions whose facts are returned, and for no other entry.
+      details: sql<unknown>`case when ${inArray(auditLog.action, Object.keys(AUDIT_FACTS))} then ${auditLog.details} end`,
     })
     .from(auditLog)
     .where(
@@ -286,7 +340,12 @@ export async function operatorAudit(db: Database, orgId: string, query: Operator
     to,
     // A target is told by its id, or, having none, by the name its workspace knows it by: a tool, a repository
     // (`repository`, `git_repo`), a wiki folder's path. Anything longer than a word in its place reads as absent.
-    events: page.map(({ storedAt, ...e }) => ({ ...e, targetId: wordOf(e.targetId), outcome: codeOf(e.outcome) })),
+    events: page.map(({ storedAt, details, ...e }) => ({
+      ...e,
+      targetId: wordOf(e.targetId),
+      outcome: codeOf(e.outcome),
+      facts: auditFactsOf(e.action, details),
+    })),
     next: last && rows.length > query.limit ? encodeCursor([last.storedAt, last.id]) : null,
   };
 }
@@ -365,7 +424,7 @@ export async function operatorAsks(db: Database, orgId: string, query: OperatorA
   const more = query.limit + 1;
   type Asked = { orgId: unknown; id: unknown; createdAt: unknown; status: unknown };
   /** Where a kind's rows are in the page asked for, and their time as it orders them. */
-  const asked = (kind: AskKind, t: Asked, agent: unknown, run: unknown, reachedBy?: SQL) => {
+  const asked = (kind: AskKind, t: Asked, agent: unknown, run: unknown) => {
     const at = ms(t.createdAt);
     const waiting = sql`${t.status}::text in (${sql.join(
       WAITING[kind].map((s) => sql`${s}`),
@@ -373,7 +432,6 @@ export async function operatorAsks(db: Database, orgId: string, query: OperatorA
     )})`;
     const where = and(
       sql`${t.orgId} = ${orgId}::uuid`,
-      reachedBy,
       query.agentId ? sql`${agent} = ${query.agentId}::uuid` : undefined,
       query.runId ? sql`${run} = ${query.runId}::uuid` : undefined,
       query.open === undefined ? undefined : query.open ? waiting : sql`not ${waiting}`,
@@ -384,22 +442,8 @@ export async function operatorAsks(db: Database, orgId: string, query: OperatorA
     return { at, where, wanted: !query.kind || query.kind === kind };
   };
   const approval = asked("approval", approvals, approvals.agentId, approvals.runId);
-  // No index of these two tables starts with the workspace. Its conversations lead to its questions and its agents
-  // to their requests for a secret, each by an index the table has; the workspace alone would read the table whole.
-  const question = asked(
-    "question",
-    agentQuestions,
-    agentQuestions.agentId,
-    agentQuestions.runId,
-    sql`${agentQuestions.channelId} in (select c.id from ${channels} c where c.org_id = ${orgId}::uuid)`,
-  );
-  const secret = asked(
-    "secret",
-    secretRequests,
-    secretRequests.agentId,
-    secretRequests.runId,
-    sql`${secretRequests.agentId} in (select a.id from ${agents} a where a.org_id = ${orgId}::uuid)`,
-  );
+  const question = asked("question", agentQuestions, agentQuestions.agentId, agentQuestions.runId);
+  const secret = asked("secret", secretRequests, secretRequests.agentId, secretRequests.runId);
   const handoff = asked("handoff", browserHandoffs, browserHandoffs.agentId, browserHandoffs.runId);
   const consultation = asked(
     "consultation",

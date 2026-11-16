@@ -8,13 +8,13 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
       "Le contrat d'utilisation d'agentes.chat : votre espace de travail, vos agents et les responsabilités de chaque partie.",
     courtesy:
       "Ceci est une traduction de courtoisie. En cas de divergence avec la version anglaise, la version anglaise prévaut.",
-    updated: "2026-11-06",
+    updated: "2026-11-16",
     sections: [
       {
         id: "agreement",
         heading: "1. Contrat",
         blocks: [
-          "Les présentes Conditions d'utilisation (les « Conditions ») constituent un contrat ayant force obligatoire entre CODARI GLOBAL, LLC, société à responsabilité limitée (limited liability company) du Wyoming exerçant sous le nom agentes.chat (« agentes.chat », « nous »), et la personne physique ou morale qui crée un compte ou un espace de travail (« vous »). En créant un compte, en rejoignant un espace de travail ou en utilisant de toute autre manière agentes.chat sur le web, l'application Mac ou l'application mobile (le « Service »), vous acceptez les présentes Conditions et notre Politique de confidentialité. Si vous utilisez le Service pour le compte d'une société ou d'une autre entité, vous déclarez être habilité à l'engager.",
+          "Les présentes Conditions d'utilisation (les « Conditions ») constituent un contrat ayant force obligatoire entre AGENTESCHAT, LLC, société à responsabilité limitée (limited liability company) du Delaware exerçant sous le nom agentes.chat (« agentes.chat », « nous »), et la personne physique ou morale qui crée un compte ou un espace de travail (« vous »). En créant un compte, en rejoignant un espace de travail ou en utilisant de toute autre manière agentes.chat sur le web, l'application Mac ou l'application mobile (le « Service »), vous acceptez les présentes Conditions et notre Politique de confidentialité. Si vous utilisez le Service pour le compte d'une société ou d'une autre entité, vous déclarez être habilité à l'engager.",
           "Vous devez être âgé d'au moins 18 ans et avoir la capacité de contracter pour utiliser le Service.",
         ],
       },
@@ -150,7 +150,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Droit applicable",
         blocks: [
-          "Les présentes Conditions sont régies par le droit de l'État du Wyoming (États-Unis), à l'exclusion de ses règles de conflit de lois, et les parties se soumettent à la compétence exclusive des juridictions étatiques et fédérales situées dans le Wyoming. Si vous êtes un consommateur relevant d'une juridiction dont la loi vous accorde des droits ou un for auxquels il ne peut être renoncé, comme le Brésil, ces droits ne sont pas affectés.",
+          "Les présentes Conditions sont régies par le droit de l'État du Delaware (États-Unis), à l'exclusion de ses règles de conflit de lois, et les parties se soumettent à la compétence exclusive des juridictions étatiques et fédérales situées dans le Delaware. Si vous êtes un consommateur relevant d'une juridiction dont la loi vous accorde des droits ou un for auxquels il ne peut être renoncé, comme le Brésil, ces droits ne sont pas affectés.",
         ],
       },
       {
@@ -164,7 +164,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Contact",
         blocks: [
-          "CODARI GLOBAL, LLC, exerçant sous le nom agentes.chat. Notifications : 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Pour tout le reste : hello@agentes.chat",
+          "AGENTESCHAT, LLC, exerçant sous le nom agentes.chat. Notifications : 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Pour tout le reste : hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +175,13 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
       "Ce que nous collectons, ce que les agents envoient et à qui, qui peut voir votre espace de travail, et les droits dont vous disposez.",
     courtesy:
       "Ceci est une traduction de courtoisie. En cas de divergence avec la version anglaise, la version anglaise prévaut.",
-    updated: "2026-11-12",
+    updated: "2026-11-16",
     sections: [
       {
         id: "overview",
         heading: "1. Présentation",
         blocks: [
-          "CODARI GLOBAL, LLC, société à responsabilité limitée (limited liability company) du Wyoming exerçant sous le nom agentes.chat (« agentes.chat », « nous »), exploite agentes.chat : un espace de travail où des personnes et des agents d'IA travaillent ensemble, disponible sur le web, en application Mac et en application mobile (le « Service »). La présente politique distingue deux rôles :",
+          "AGENTESCHAT, LLC, société à responsabilité limitée (limited liability company) du Delaware exerçant sous le nom agentes.chat (« agentes.chat », « nous »), exploite agentes.chat : un espace de travail où des personnes et des agents d'IA travaillent ensemble, disponible sur le web, en application Mac et en application mobile (le « Service »). La présente politique distingue deux rôles :",
           {
             list: [
               "Pour les **données de compte**, c'est-à-dire les informations que les personnes nous fournissent pour créer et utiliser un compte, nous sommes le responsable du traitement.",
@@ -231,7 +231,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
           {
             list: [
               "**Entre les appareils et nos serveurs.** Tout ce qui transite entre nos serveurs et les navigateurs, applications et ordinateurs qui s'y connectent, Contenu de l'Espace de travail compris, passe par notre fournisseur de réseau, qui protège le Service contre les attaques. Pour ce faire, le fournisseur de réseau déchiffre ce trafic dans son centre de données le plus proche de chaque appareil et le traite pour notre compte.",
-              "**Réponses.** Lorsqu'un agent travaille, il envoie le contexte dont il a besoin (le contexte de l'espace de travail, les instructions de l'agent, la conversation, la mémoire pertinente et les résultats de ses outils) au fournisseur de modèle choisi pour cet agent. Avec une clé d'API ajoutée par l'espace de travail, l'appel est effectué sous le compte propre de l'espace de travail et dans le cadre de son contrat avec ce fournisseur. Avec un abonnement d'IA, tel que Claude ou ChatGPT, connecté à un agent, l'agent travaille sous le compte de la personne qui a connecté l'abonnement et selon les conditions du fournisseur.",
+              "**Réponses.** Lorsqu'un agent travaille, il envoie le contexte dont il a besoin (le contexte de l'espace de travail, les instructions de l'agent, la conversation, la mémoire pertinente et les résultats de ses outils) au fournisseur de modèle choisi pour cet agent. Avec une clé d'API ajoutée par l'espace de travail, l'appel est effectué sous le compte propre de l'espace de travail et dans le cadre de son contrat avec ce fournisseur. Certains fournisseurs transmettent l'appel à l'entreprise qui conçoit ou héberge le modèle, laquelle le traite alors elle aussi selon les conditions de ce fournisseur. Avec un abonnement d'IA, tel que Claude ou ChatGPT, connecté à un agent, l'agent travaille sous le compte de la personne qui a connecté l'abonnement et selon les conditions du fournisseur.",
               "**Choix de l'agent qui répond.** Un modèle de routage lit un nouveau message, les noms et rôles des agents de l'espace de travail et la conversation récente afin de décider quel agent, le cas échéant, doit répondre. Il fonctionne chez TypeSafe ou, à titre subsidiaire, chez le fournisseur de modèle de l'espace de travail. Le routage n'accorde jamais aucune autorisation à un agent.",
               "**Mémoire.** Les agents conservent une mémoire des conversations (résumés, faits et enseignements) afin de s'améliorer au fil du temps. Certaines appréciations relatives à la mémoire (savoir si un élément mérite d'être conservé ou s'il contredit ce qu'un agent sait déjà) sont effectuées par TypeSafe. La mémoire peut être consultée et supprimée sur la page de l'agent, et elle est supprimée avec l'espace de travail.",
               "**Recherche.** Pour trouver des messages et documents connexes, du texte peut être converti en vecteurs (embeddings) par Voyage AI.",
@@ -286,14 +286,14 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Transferts internationaux",
         blocks: [
-          "Notre application et sa base de données fonctionnent aux États-Unis, et les fournisseurs nommés dans la présente politique traitent les données aux États-Unis. Les ordinateurs des espaces de travail fonctionnent dans l'Union européenne ou aux États-Unis, et notre fournisseur de réseau traite le trafic dans son centre de données le plus proche de chaque appareil, aux États-Unis ou ailleurs. Lorsque des données à caractère personnel soumises au RGPD ou au RGPD du Royaume-Uni sont transférées vers un pays tiers, nous nous appuyons sur les clauses contractuelles types de la Commission européenne et sur l'Addendum du Royaume-Uni (UK Addendum). Pour les données soumises à la LGPD, nous nous appuyons sur les garanties contractuelles prévues à l'article 33.",
+          "Notre application et sa base de données fonctionnent aux États-Unis, et les fournisseurs nommés dans la présente politique traitent les données aux États-Unis, à l'exception des fournisseurs de modèle et des services connectés qu'un espace de travail choisit, et des entreprises auxquelles ils transmettent les appels, qui peuvent traiter des données dans d'autres pays selon leurs propres conditions. Les ordinateurs des espaces de travail fonctionnent dans l'Union européenne ou aux États-Unis, et notre fournisseur de réseau traite le trafic dans son centre de données le plus proche de chaque appareil, aux États-Unis ou ailleurs. Lorsque des données à caractère personnel soumises au RGPD ou au RGPD du Royaume-Uni sont transférées vers un pays tiers, nous nous appuyons sur les clauses contractuelles types de la Commission européenne et sur l'Addendum du Royaume-Uni (UK Addendum). Pour les données soumises à la LGPD, nous nous appuyons sur les garanties contractuelles prévues à l'article 33.",
         ],
       },
       {
         id: "apps",
         heading: "10. Applications mobile et Mac",
         blocks: [
-          "L'application mobile envoie des notifications par l'intermédiaire d'Expo, d'Apple et de Google. Une notification peut afficher le nom de l'auteur et le début du message, et vous choisissez les notifications que vous recevez. L'application Mac et les ordinateurs connectés conservent leur connexion sur l'appareil. La suppression de votre compte (également disponible dans les applications) déconnecte tous les appareils.",
+          "L'application mobile envoie des notifications par l'intermédiaire d'Apple et de Google. Une notification peut afficher le nom de l'auteur et le début du message, et vous choisissez les notifications que vous recevez. L'application Mac et les ordinateurs connectés conservent leur connexion sur l'appareil. La suppression de votre compte (également disponible dans les applications) déconnecte tous les appareils.",
         ],
       },
       {
@@ -342,7 +342,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Contact",
         blocks: [
-          "CODARI GLOBAL, LLC, exerçant sous le nom agentes.chat. Notifications : 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Les demandes relatives à la protection des données provenant de l'UE, du Royaume-Uni et du Brésil parviennent à notre équipe chargée de la confidentialité à la même adresse. Pour toute autre question, écrivez à hello@agentes.chat.",
+          "AGENTESCHAT, LLC, exerçant sous le nom agentes.chat. Notifications : 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Les demandes relatives à la protection des données provenant de l'UE, du Royaume-Uni et du Brésil parviennent à notre équipe chargée de la confidentialité à la même adresse. Pour toute autre question, écrivez à hello@agentes.chat.",
         ],
       },
     ],

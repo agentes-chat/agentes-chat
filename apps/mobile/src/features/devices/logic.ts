@@ -268,6 +268,8 @@ export const DEVICE_NOTICES = [
   "device.access_request",
   "device.waiting",
   "device.tool_request",
+  "device.cli_request",
+  "device.folder_request",
 ] as const;
 export type DeviceNoticeKind = (typeof DEVICE_NOTICES)[number];
 
@@ -289,8 +291,10 @@ export interface DeviceNotice {
   device: string;
   forUserId: string | null;
   doing: string | null;
-  /** `device.tool_request`: the tool to turn on (`latest.reason`). */
+  /** `device.tool_request`: the tool to turn on (`latest.reason`); `device.cli_request`: the coding CLI to install. */
   tool: MachineTool | null;
+  /** `device.folder_request`: the folder an agent waits for on this computer (`latest.title`). */
+  path: string | null;
 }
 
 export function deviceNoticeOf(
@@ -306,7 +310,11 @@ export function deviceNoticeOf(
     device: str(s.label) ?? n.latest?.title ?? "",
     forUserId: str(s.userId),
     doing: n.latest?.text ?? null,
-    tool: n.kind === "device.tool_request" ? (str(n.latest?.reason) as MachineTool | null) : null,
+    tool:
+      n.kind === "device.tool_request" || n.kind === "device.cli_request"
+        ? (str(n.latest?.reason) as MachineTool | null)
+        : null,
+    path: n.kind === "device.folder_request" ? str(n.latest?.title) : null,
   };
 }
 
@@ -317,8 +325,10 @@ export function deviceNoticeOf(
  */
 export function deviceNoticeTitle(t: TFunction, d: DeviceNotice, names: string, person: string, org: string) {
   if (d.kind === "device.join_request") return t("mobile.devices.notice.join_request", { device: d.device, org });
-  if (d.kind === "device.tool_request")
-    return t("mobile.devices.notice.tool_request", {
+  if (d.kind === "device.folder_request")
+    return t("mobile.devices.notice.folder_request", { names, device: d.device, path: d.path ?? "" });
+  if (d.kind === "device.tool_request" || d.kind === "device.cli_request")
+    return t(`mobile.devices.notice.${d.kind === "device.cli_request" ? "cli_request" : "tool_request"}`, {
       names,
       device: d.device,
       tool: d.tool ? toolWords(t, d.tool) : "",

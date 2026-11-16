@@ -48,7 +48,14 @@ export const BUILTIN_TOOLS: Record<string, string[]> = {
   "issues:write": ["create_issue", "update_issue", "comment_issue"],
   "calendar:read": ["list_events", "find_free_time"],
   "calendar:write": ["propose_event"],
-  "skills:read": ["load_skill", "read_skill_file", "update_skill", "offer_install_skill", "update_skill_from_source"],
+  "skills:read": [
+    "load_skill",
+    "read_skill_file",
+    "update_skill",
+    "create_skill",
+    "offer_install_skill",
+    "update_skill_from_source",
+  ],
   "schedule:write": [
     "schedule_reminder",
     "create_routine",
@@ -180,6 +187,10 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
   load_skill: { label: "Load skill", description: "Loads a skill's instructions." },
   read_skill_file: { label: "Read skill file", description: "Reads a reference file of a skill." },
   update_skill: { label: "Fix skill", description: "Fixes a skill it loaded. A person's skill becomes a proposal." },
+  create_skill: {
+    label: "Create skill",
+    description: "Turns what it did into a skill of its own when a person asks. Shows in Skills, with Undo.",
+  },
   offer_install_skill: {
     label: "Offer to install a skill",
     description: "Posts a card whose button opens the install dialog with the skill's link filled in.",

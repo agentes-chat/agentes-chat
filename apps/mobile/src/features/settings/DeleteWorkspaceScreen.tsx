@@ -160,16 +160,22 @@ export function DeleteWorkspaceScreen() {
           </Locked>
         ) : null}
         {proof === "addPassword" ? (
-          <>
+          me?.user.confirmsOnThisMac ? (
             <Text variant="body" tone="ink2">
-              {t("mobile.delete.addPasswordFirst")}
+              {t("mobile.delete.onThisComputer")}
             </Text>
-            <Button
-              variant="secondary"
-              label={t("mobile.delete.addPasswordWeb")}
-              onPress={() => openWebPath(`/org/${orgId}?account=password`)}
-            />
-          </>
+          ) : (
+            <>
+              <Text variant="body" tone="ink2">
+                {t("mobile.delete.addPasswordFirst")}
+              </Text>
+              <Button
+                variant="secondary"
+                label={t("mobile.delete.addPasswordWeb")}
+                onPress={() => openWebPath(`/org/${orgId}?account=password`)}
+              />
+            </>
+          )
         ) : null}
         {refused ? (
           <Text variant="small" tone="danger" accessibilityLiveRegion="polite">

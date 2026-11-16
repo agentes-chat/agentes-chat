@@ -292,9 +292,14 @@ describe("the right hand elsewhere", () => {
     const none = await page({ available: false, reason: "no_home" });
     expect(none.tagName).toBe("DIV");
     expect(none.textContent).toContain("Ainda sem computador.");
+    // Whoever may add one gets there from the row itself, not from a path in its words.
+    expect(none.textContent).not.toContain("Configurações");
+    const add = [...none.querySelectorAll("a")].find((a) => a.textContent === "Adicionar um computador");
+    expect(add?.getAttribute("href")).toBe(`/org/${ORG_ID}/settings/devices`);
     const oneUser = await page({ available: false, reason: "not_system" });
     expect(oneUser.tagName).toBe("DIV");
     expect(oneUser.textContent).toContain("um só usuário");
+    expect(oneUser.querySelector("a")).toBeNull();
     // Any other state (its computer offline) is its own view's to tell.
     expect((await page({ available: false, reason: "offline" })).tagName).toBe("BUTTON");
   });

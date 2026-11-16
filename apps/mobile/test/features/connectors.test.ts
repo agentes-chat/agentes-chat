@@ -544,6 +544,10 @@ describe("a connection that stopped working", () => {
     const tile = strip.slice(strip.indexOf("function ConnectedTile("), strip.indexOf("const TILE_IN"));
     expect(tile).toContain('t("connectors.composio.needsReconnect")');
     expect(tile).toContain('t("connectors.noToolsNow")');
-    expect(src("ConnectionScreen.tsx")).toContain('t("mobile.connectors.noTools", { name })');
+    const screen = src("ConnectionScreen.tsx");
+    expect(screen).toContain('t("mobile.connectors.noTools", { name })');
+    // Its way out right under it, for whoever manages connectors: read the server's tools again.
+    expect(screen).toContain('label={t("mobile.connectors.readAgain")}');
+    expect(screen).toContain("refresh.mutate(server.id, {");
   });
 });

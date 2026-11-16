@@ -53,9 +53,9 @@ import {
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { ConnectedRow } from "@/components/ConnectedRow";
-import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
+import { ConnectFlow, type FlowState, HeaderNames } from "@/components/ConnectFlow";
 import { ConnectorCatalogDialog, ConnectorIcon } from "@/components/ConnectorCatalog";
 import {
   DatabaseConnectFlow,
@@ -422,6 +422,7 @@ function ServiceRow({
   ].filter(Boolean);
   const adds = reconnectAddsText(t, item);
   const name = itemName(t, item);
+  const sent = item.server?.headerNames ?? [];
   return (
     <ConnectedRow
       icon={<ConnectorIcon def={item.def} image={item.image} label={name} />}
@@ -451,7 +452,12 @@ function ServiceRow({
       }
       using={using}
       total={total}
-      details={[meta.join(" · "), !item.needsReconnect && adds]}
+      details={[
+        meta.join(" · "),
+        // The request headers a server by address is also sent, by name: their values are never shown.
+        sent.length > 0 && <Trans i18nKey="connectors.sendsToo" components={{ names: <HeaderNames names={sent} /> }} />,
+        !item.needsReconnect && adds,
+      ]}
       actions={
         admin && (
           <>

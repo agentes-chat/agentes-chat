@@ -3,10 +3,18 @@ import { useAllowMachineTool, useMachines } from "@agenteschat/client";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { firstName } from "@agenteschat/client/lib/format";
 import { messageToolOff } from "@agenteschat/client/lib/machine-outages";
-import { type ToolOneClick, toolOneClick, toolWords } from "@agenteschat/client/lib/machines";
+import {
+  allowsInApp,
+  type ToolOneClick,
+  toolOnCommand,
+  toolOneClick,
+  toolWords,
+} from "@agenteschat/client/lib/machines";
 import { Button, type ButtonProps, SettingNote } from "@agenteschat/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { TerminalFallback } from "@/components/machine-bits";
+import { OpenPrefsButton, useIsThisMac } from "@/components/ThisMac";
 import { useToast } from "@/lib/toast";
 import { useOrg } from "../org-context";
 
@@ -26,6 +34,7 @@ export function ToolOneClickButton({
   onAllowed,
   size = "sm",
   variant = "primary",
+  disabled,
 }: {
   machineId: string;
   machineName: string;
@@ -36,6 +45,8 @@ export function ToolOneClickButton({
   onAllowed?: () => void;
   size?: ButtonProps["size"];
   variant?: ButtonProps["variant"];
+  /** Turning on waits (its computer offline): the caller says why beside it. Asking never waits. */
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   const { org } = useOrg();
@@ -70,6 +81,7 @@ export function ToolOneClickButton({
       size={size}
       variant={variant}
       loading={allow.isPending}
+      disabled={disabled}
       aria-label={ariaLabel}
       onClick={() =>
         allow.mutate(
@@ -94,19 +106,53 @@ export function useToolOneClick(machine: Machine | null | undefined) {
 }
 
 /**
- * A tool off on a computer, said in a note with its button, where the way out used to be a settings screen. Null where
- * one click can't do it (an app too old, the workspace's own computer): the caller keeps its own steps there.
+ * The way out where a program is off on a computer, under the line that says so (every screen that says it uses this
+ * one): whoever connected it turns it on here, or waits for it to come online, anyone else asks them, an app too old
+ * says to update it there, and in the app on that very computer its Preferences → Ferramentas turn it on instead.
+ * `children`: the screen's other ways on the same line (a key). On a computer that may have no app, the command for
+ * whoever turns it on there.
  */
-export function ToolOffNote({ machine, tool, children }: { machine: Machine; tool: MachineTool; children: ReactNode }) {
+export function ToolOffWayOut({
+  machine,
+  tool,
+  children,
+}: {
+  machine: Machine;
+  tool: MachineTool;
+  children?: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
   const oneClick = useToolOneClick(machine);
-  if (!oneClick || oneClick.kind === "outdated") return null;
+  const here = useIsThisMac(org.id, machine.id);
+  const offline = oneClick?.kind === "allow" && !machine.online;
+  const line = offline
+    ? t("machines.oneClick.offline", { machine: machine.name, tool: toolWords(t, tool) })
+    : oneClick?.kind === "outdated" && !here
+      ? t("machines.oneClick.outdated", { machine: machine.name })
+      : null;
+  // In the app on that very computer its Preferences turn the program on at any app version: no update needed.
+  const button =
+    oneClick?.kind === "allow" || oneClick?.kind === "ask" ? (
+      <MachineToolButton machine={machine} tool={tool} disabled={offline} />
+    ) : here ? (
+      <OpenPrefsButton tab="tools">{t("machines.thisMac.openTools")}</OpenPrefsButton>
+    ) : null;
+  const command =
+    machine.kind === "managed" || oneClick?.kind === "ask" || allowsInApp(machine.os)
+      ? null
+      : toolOnCommand(machine, tool);
   return (
-    <SettingNote icon="computer">
-      {children}
-      <span style={{ display: "block", marginTop: "var(--space-2)" }}>
-        <MachineToolButton machine={machine} tool={tool} />
-      </span>
-    </SettingNote>
+    <>
+      {line && <SettingNote icon="computer">{line}</SettingNote>}
+      {(button || children) && (
+        <div className="ac-acts tool-way">
+          {button}
+          {children}
+        </div>
+      )}
+      <TerminalFallback command={command} />
+    </>
   );
 }
 

@@ -155,7 +155,7 @@ function blockLine(t: TFunction, locale: string, l: ToolLine, logo: ReactNode, p
             output.reduce((n, o) => n + new TextEncoder().encode(o.text).length, 0),
           ),
         })
-      : toolPhrase(t, l);
+      : toolPhrase(t, l, locale);
   const why = toolWhy(t, l, personal);
   // What the tool answered, its own words when it failed: only in the open view, never under the line.
   const answered = l.result ?? why ?? l.why;

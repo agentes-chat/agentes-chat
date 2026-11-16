@@ -36,15 +36,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, Text as RNText, StyleSheet, useWindowDimensions, View } from "react-native";
-import Animated, {
-  FadeIn,
-  LinearTransition,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
 import { Sky } from "@/sky/Sky";
 import {
@@ -82,6 +74,7 @@ import { LineStop } from "./LiveRows";
 import { approvalIdOf, lineStops, markedParts, markName, parseInline, questionOf, workingEntries } from "./logic";
 import { useCardTop, useOwnTop } from "./look";
 import { Spans } from "./MessageSpans";
+import { WaitMark } from "./WaitMark";
 
 /**
  * A request in the conversation (an approval, a secret, a question, help in the agent's browser or on its
@@ -372,24 +365,7 @@ function lookAtAsks(store: AskStore, view: AskView, look: number, latest: () => 
 
 // ── The card ─────────────────────────────────────────────────────────────────
 
-/** The small amber square that breathes while a request waits on the person. */
-export function WaitMark({ size = 8 }: { size?: number }) {
-  const c = useColors();
-  const reduced = useReducedMotion();
-  const fade = useSharedValue(1);
-  useEffect(() => {
-    if (reduced) return;
-    fade.value = withRepeat(withSequence(withTiming(0.55, { duration: 800 }), withTiming(1, { duration: 800 })), -1);
-  }, [reduced, fade]);
-  const style = useAnimatedStyle(() => ({ opacity: fade.value }));
-  return (
-    <Animated.View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-      style={[{ width: size, height: size, borderRadius: 2, backgroundColor: c.amber }, style]}
-    />
-  );
-}
+export { WaitMark };
 
 export interface AskWell {
   /** The app or thing it goes through: its mark alone, 20 points (no tile inside the card). */
@@ -453,6 +429,7 @@ export function AskCard({
   headless = false,
   kindNote,
   agentId,
+  asker,
   waitsFor,
   lead,
   well,
@@ -470,6 +447,8 @@ export function AskCard({
   /** Said after the kind on the top line ("sai da empresa" for a request that leaves the workspace). */
   kindNote?: string | undefined;
   agentId: string;
+  /** Another agent than the conversation's own asks here (work handed to it): "Atlas asks you". */
+  asker?: string;
   waitsFor: "you" | (string & {}) | null;
   lead: string;
   well?: AskWell | null;
@@ -546,7 +525,10 @@ export function AskCard({
         {more.content}
       </Animated.View>
     ) : null;
-  const kindWords = askKindWords(t, kind, waitsFor === "you" && !ended);
+  const kindWords =
+    asker && waitsFor === "you" && !ended
+      ? t("chat.request.asksYou", { name: asker })
+      : askKindWords(t, kind, waitsFor === "you" && !ended);
   return (
     // A plain view the conversation measures (never flattened away), around the card that fades in.
     <View ref={slot} collapsable={false} style={ownTop}>

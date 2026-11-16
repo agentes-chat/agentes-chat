@@ -148,6 +148,7 @@ test("version gate and the app-server command line: our overrides, our bridge pe
   expect(args[args.indexOf("sandbox_workspace_write.network_access=false") - 1]).toBe("-c");
   expect(args.join(" ")).not.toContain("network_access=true");
   expect(args).toContain('sandbox_workspace_write.writable_roots=["/w/shared"]');
+  expect(args).toContain(`features.code_mode.direct_only_tool_namespaces=["mcp__${CODEX_MCP_SERVER}"]`);
   expect(args).toContain(`mcp_servers.${CODEX_MCP_SERVER}.args=["/r/runner.js","mcp","--run","proc-0001"]`);
   expect(args).toContain(`mcp_servers.${CODEX_MCP_SERVER}.default_tools_approval_mode="approve"`);
   expect(args.some((a) => a.startsWith("model_auto_compact_token_limit"))).toBe(false);
@@ -167,7 +168,8 @@ test.skipIf(!posix)(
     expect(deltas(first.events)).toBe("pong");
     // The same usage and answer exec gives for this turn (TURN1 of brain-codex.test.ts).
     expect(notDeltas(first.events)).toEqual([
-      { type: "usage", input: 17806, output: 5, source: "plan", cacheRead: 6912 },
+      // One model request: said twice by Codex, counted once.
+      { type: "usage", input: 17806, output: 5, source: "plan", cacheRead: 6912, calls: 1, maxContext: 17806 },
       { type: "done", text: "pong", session: { id: SESSION } },
     ]);
     const [threadStart] = t.rpcs("thread/start");
@@ -204,7 +206,9 @@ test.skipIf(!posix)(
       '{"type":"turn.completed","usage":{"input_tokens":200,"cached_input_tokens":50,"output_tokens":30}}',
     ].flatMap((l) => exec.line(l));
     const execAll = [...execEvents, ...exec.finish({ exitCode: 0, sessionId: SESSION })];
-    expect(notDeltas(second.events)).toEqual(notDeltas(execAll));
+    // Only the app-server says the turn's model requests and the biggest one.
+    const steps = (e: (typeof execAll)[number]) => (e.type === "usage" ? { ...e, calls: 1, maxContext: 200 } : e);
+    expect(notDeltas(second.events)).toEqual(notDeltas(execAll.map(steps)));
     // Live text: the message that came whole, then the streamed one.
     expect(deltas(second.events)).toBe("I’ll check the folder now.\n\nDone: tests pass.");
     // One process, one thread; model and effort per turn (xhigh and max are high).

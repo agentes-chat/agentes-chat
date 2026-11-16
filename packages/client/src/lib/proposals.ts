@@ -180,7 +180,7 @@ export const appLabel = (t: TFunction, line: ProposalAccessLine) =>
     ? line.label
     : scopeText(t, { id: line.id, label: line.label, description: "", sensitive: false }).label;
 
-/** What one proposal changes, after "propõe ·": "instruções da Ada", "papel do Theo", "contexto da Acme". */
+/** What one proposal changes, after "propõe ·": "instruções da Ada", "função do Theo", "contexto da Acme". */
 export function proposalTarget(
   t: TFunction,
   p: Proposal,
@@ -346,6 +346,9 @@ export function settingLineText(
         return lookWords(t, v);
       case "reports_to":
         return typeof v === "string" ? (label ?? t("rightHand.value.anAgent")) : t("rightHand.value.none");
+      // The server stores its department's name: the card shows it as it is.
+      case "group":
+        return typeof v === "string" ? v : t("rightHand.value.none");
       case "archive":
         return v === true ? t("rightHand.value.archived") : t("rightHand.value.active");
       case "delete":

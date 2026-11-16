@@ -97,10 +97,10 @@ export function AccountSection() {
   const iconName = useAppIconName(icon);
   const [iconPicker, setIconPicker] = useState(false);
   // The e-mail, adding a password and deleting the account: their dialogs are the account button's, kept in the address
-  // so a sign-in again comes back to them.
+  // so a sign-in again comes back to them, as deleting the workspace is (`?delete=1`).
   const [, setAccount] = useOpenParam("account");
   const owner = org.role === "owner";
-  const [deletingOrg, setDeletingOrg] = useState(false);
+  const [deletingOrg, setDeletingOrg] = useOpenParam("delete");
   const mine = dir.memberById.get(me.user.id);
   const zone = mine?.timezone || browserTimezone() || "UTC";
   return (
@@ -306,13 +306,13 @@ export function AccountSection() {
           {owner && (
             <div className="danger-pair__way">
               <p className="small muted">{t("deleteOrg.card.text", { name: org.name })}</p>
-              <Button size="sm" variant="danger" onClick={() => setDeletingOrg(true)}>
+              <Button size="sm" variant="danger" onClick={() => setDeletingOrg(1)}>
                 {t("deleteOrg.card.title")}
               </Button>
             </div>
           )}
         </div>
-        {owner && <DeleteWorkspaceDialog org={org} open={deletingOrg} onClose={() => setDeletingOrg(false)} />}
+        {owner && <DeleteWorkspaceDialog org={org} open={deletingOrg !== null} onClose={() => setDeletingOrg(null)} />}
       </Card>
       <ProfileDialog focus={profile} onClose={() => setProfile(null)} />
       <OpenOnPhoneDialog open={phone} onClose={() => setPhone(false)} />

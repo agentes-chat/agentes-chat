@@ -1,8 +1,9 @@
 import { type NoticeCategory, useNoticePrefs, useSetNoticePref } from "@agenteschat/client";
-import { Card, CardHeader, Chip, Icon, type IconName, InfoHint, Switch } from "@agenteschat/ui";
-import { cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
+import { Button, Card, CardHeader, Chip, Icon, type IconName, InfoHint, Switch } from "@agenteschat/ui";
+import { cloneElement, isValidElement, type ReactElement, type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoadingLine } from "@/components/Loading";
+import { OpenOnPhoneDialog } from "@/components/OpenOnPhone";
 import { useOrg } from "@/components/org-context";
 import { useBrowserNotices } from "@/components/WebPush";
 import { inDesktopApp } from "@/lib/desktop";
@@ -32,6 +33,7 @@ export function NoticePrefsSection() {
   const set = useSetNoticePref(org.id);
   const browser = useBrowserNotices();
   const phones = prefs.data?.phones ?? 0;
+  const [phoneCode, setPhoneCode] = useState(false);
 
   return (
     <>
@@ -68,12 +70,15 @@ export function NoticePrefsSection() {
                   {t("noticePrefs.on")}
                 </Chip>
               ) : (
-                <Chip>{t("noticePrefs.off")}</Chip>
+                <Button size="sm" icon="phone" onClick={() => setPhoneCode(true)}>
+                  {t("shell.openOnPhone")}
+                </Button>
               ))
             }
           />
           <PrefRow id="notice-mac" icon="computerMac" label={t("noticePrefs.mac")} hint={t("noticePrefs.macHelp")} />
         </div>
+        <OpenOnPhoneDialog open={phoneCode} onClose={() => setPhoneCode(false)} />
       </Card>
 
       <Card aria-labelledby="notice-what">
@@ -142,7 +147,10 @@ export function PrefRow({
   hint?: ReactNode;
   /** What must stay in sight under the name: why the control is off, what it waits on, what the line opens to. */
   status?: ReactNode;
-  /** A value before the control (a plan's logo and name, a card's day and hour selects, who a switch is for). */
+  /**
+   * A value before the control (a plan's logo and name, a card's day and hour selects, who a switch is for). A line
+   * that opens something says its state in `status`: beside the name, a long one sends the chevron to a line of its own.
+   */
   value?: ReactNode;
   control?: ReactNode;
   /** In place of `control`: several controls or buttons, which wrap under the words rather than keep their place. */

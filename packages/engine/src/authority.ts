@@ -335,7 +335,8 @@ export async function feedingBrief(
 /**
  * Whether what a routine read feeds this run: a routine's own run, or a run nobody is behind that its report or its
  * work woke. Such text may come from outside (inbound mail, a webhook, the web) through the routine, so the run
- * never sends a credential, its writes to connected apps and its mail sends always ask a person (ADR 0038, 0053 §3).
+ * never sends a credential, its writes to connected apps and its mail sends always ask a person (ADR 0038, 0053 §3),
+ * except the routine's own actions on its own run and on the runs its report or a teammate's answer woke (`onOwnJob`).
  */
 export const fedByRoutine = (authority: RunAuthority | null): boolean =>
   authority?.kind === "routine" || (authority?.kind === "unattended" && authority.reason !== "agent");

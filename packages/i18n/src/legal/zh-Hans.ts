@@ -6,13 +6,13 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
     title: "使用条款",
     summary: "使用 agentes.chat 的协议：您的工作区、您的智能体，以及双方各自承担的责任。",
     courtesy: "本文件为礼节性译本。如本译本与英文版本存在任何差异，以英文版本为准。",
-    updated: "2026-11-06",
+    updated: "2026-11-16",
     sections: [
       {
         id: "agreement",
         heading: "1. 协议",
         blocks: [
-          "本使用条款（以下简称“本条款”）是 CODARI GLOBAL, LLC（一家依据怀俄明州（Wyoming）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）与创建账户或工作区的个人或实体（以下简称“您”）之间具有约束力的协议。一旦您创建账户、加入工作区，或以其他方式通过网页、Mac 应用或手机应用使用 agentes.chat（以下简称“本服务”），即表示您接受本条款及我们的隐私政策。如果您代表公司或其他实体使用本服务，您声明您有权代表该实体并使其受本条款约束。",
+          "本使用条款（以下简称“本条款”）是 AGENTESCHAT, LLC（一家依据特拉华州（Delaware）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）与创建账户或工作区的个人或实体（以下简称“您”）之间具有约束力的协议。一旦您创建账户、加入工作区，或以其他方式通过网页、Mac 应用或手机应用使用 agentes.chat（以下简称“本服务”），即表示您接受本条款及我们的隐私政策。如果您代表公司或其他实体使用本服务，您声明您有权代表该实体并使其受本条款约束。",
           "您必须年满 18 周岁并具备订立合同的能力，方可使用本服务。",
         ],
       },
@@ -148,7 +148,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. 适用法律",
         blocks: [
-          "本条款受美国怀俄明州法律管辖（不包括其法律冲突规则），双方服从位于怀俄明州的州法院和联邦法院的专属管辖。如果您是某一司法管辖区（例如巴西）的消费者，而该地法律赋予您不可放弃的权利或管辖地，则这些权利不受影响。",
+          "本条款受美国特拉华州（Delaware）法律管辖（不包括其法律冲突规则），双方服从位于特拉华州的州法院和联邦法院的专属管辖。如果您是某一司法管辖区（例如巴西）的消费者，而该地法律赋予您不可放弃的权利或管辖地，则这些权利不受影响。",
         ],
       },
       {
@@ -162,7 +162,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. 联系方式",
         blocks: [
-          "CODARI GLOBAL, LLC，以 agentes.chat 名义经营。通知地址：7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · 其他事宜：hello@agentes.chat",
+          "AGENTESCHAT, LLC，以 agentes.chat 名义经营。通知地址：2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · 其他事宜：hello@agentes.chat",
         ],
       },
     ],
@@ -171,13 +171,13 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
     title: "隐私政策",
     summary: "我们收集哪些数据、智能体将数据发送至何处、谁能看到您的工作区，以及您享有的权利。",
     courtesy: "本文件为礼节性译本。如本译本与英文版本存在任何差异，以英文版本为准。",
-    updated: "2026-11-12",
+    updated: "2026-11-16",
     sections: [
       {
         id: "overview",
         heading: "1. 概述",
         blocks: [
-          "CODARI GLOBAL, LLC（一家依据怀俄明州（Wyoming）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）运营 agentes.chat：一个供人与 AI 智能体协同工作的工作区，可通过网页、Mac 应用和手机应用使用（以下简称“本服务”）。本政策区分两种角色：",
+          "AGENTESCHAT, LLC（一家依据特拉华州（Delaware）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）运营 agentes.chat：一个供人与 AI 智能体协同工作的工作区，可通过网页、Mac 应用和手机应用使用（以下简称“本服务”）。本政策区分两种角色：",
           {
             list: [
               "对于**账户数据**，即人们为创建和使用账户而向我们提供的信息，我们是数据控制者。",
@@ -227,7 +227,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
           {
             list: [
               "**设备与我们的服务器之间。** 我们的服务器与连接至其的浏览器、应用和计算机之间发送的一切，包括工作区内容，均经过我们的网络服务提供商，由其保护本服务免受攻击。为此，该网络服务提供商在距离每台设备最近的数据中心解密该流量，并代表我们对其进行处理。",
-              "**作答。** 智能体工作时，会将其所需的上下文（工作区的上下文、智能体的指令、对话、相关记忆及其工具的结果）发送给为该智能体选定的模型提供商。使用工作区添加的 API 密钥时，调用在该工作区自己的账户下、依据其与该提供商之间的协议进行。智能体连接了 AI 套餐（例如 Claude 或 ChatGPT）时，该智能体在连接该套餐之人的账户下、依据该提供商的条款工作。",
+              "**作答。** 智能体工作时，会将其所需的上下文（工作区的上下文、智能体的指令、对话、相关记忆及其工具的结果）发送给为该智能体选定的模型提供商。使用工作区添加的 API 密钥时，调用在该工作区自己的账户下、依据其与该提供商之间的协议进行。部分提供商会将调用转交给开发或托管该模型的公司，该公司也依据该提供商的条款对其进行处理。智能体连接了 AI 套餐（例如 Claude 或 ChatGPT）时，该智能体在连接该套餐之人的账户下、依据该提供商的条款工作。",
               "**决定由谁回复。** 一个路由模型会读取新消息、工作区中智能体的名称和角色以及近期对话，以决定应由哪个智能体回复（如有）。该模型在 TypeSafe 运行，或作为后备在工作区的模型提供商处运行。路由绝不会授予智能体任何权限。",
               "**记忆。** 智能体会从对话中保留记忆（摘要、事实和经验），以便随时间不断改进。有关记忆的部分判断（某项内容是否值得保留，或是否与智能体已知的内容相冲突）由 TypeSafe 作出。记忆可在智能体的页面中查看和移除，并会随工作区一并删除。",
               "**搜索。** 为查找相关的消息和文档，文本可能会由 Voyage AI 转换为向量（嵌入）。",
@@ -282,14 +282,14 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. 国际传输",
         blocks: [
-          "我们的应用程序及其数据库在美国运行，本政策中列明的提供商在美国处理数据。工作区的计算机在欧盟或美国境内运行，我们的网络服务提供商则在距离每台设备最近的数据中心（位于美国或其他地方）处理流量。当受 GDPR 或英国 GDPR 约束的个人数据被传输至第三国时，我们依据欧盟委员会的标准合同条款和英国附录。对于受 LGPD 约束的数据，我们依据第 33 条规定的合同保障措施。",
+          "我们的应用程序及其数据库在美国运行，本政策中列明的提供商在美国处理数据，但工作区选择的模型提供商和已连接的服务，以及它们将调用转交给的公司除外，上述各方可能依据其自身条款在其他国家处理数据。工作区的计算机在欧盟或美国境内运行，我们的网络服务提供商则在距离每台设备最近的数据中心（位于美国或其他地方）处理流量。当受 GDPR 或英国 GDPR 约束的个人数据被传输至第三国时，我们依据欧盟委员会的标准合同条款和英国附录。对于受 LGPD 约束的数据，我们依据第 33 条规定的合同保障措施。",
         ],
       },
       {
         id: "apps",
         heading: "10. 手机和 Mac 应用",
         blocks: [
-          "手机应用通过 Expo、Apple 和 Google 发送通知。通知可能会显示撰写者的姓名和消息的开头部分，您可以选择接收哪些通知。Mac 应用和已连接的计算机将其登录状态保存在设备上。删除您的账户（也可在应用中操作）会使所有设备退出登录。",
+          "手机应用通过 Apple 和 Google 发送通知。通知可能会显示撰写者的姓名和消息的开头部分，您可以选择接收哪些通知。Mac 应用和已连接的计算机将其登录状态保存在设备上。删除您的账户（也可在应用中操作）会使所有设备退出登录。",
         ],
       },
       {
@@ -338,7 +338,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. 联系方式",
         blocks: [
-          "CODARI GLOBAL, LLC，以 agentes.chat 名义经营。通知地址：7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat。来自欧盟、英国和巴西的数据保护咨询可通过同一地址联系我们的隐私团队。其他事宜，请发送电子邮件至 hello@agentes.chat。",
+          "AGENTESCHAT, LLC，以 agentes.chat 名义经营。通知地址：2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat。来自欧盟、英国和巴西的数据保护咨询可通过同一地址联系我们的隐私团队。其他事宜，请发送电子邮件至 hello@agentes.chat。",
         ],
       },
     ],

@@ -319,6 +319,9 @@ describe("pairing from the app", () => {
         const norte = () => pairedHomes(store.getSnapshot()).find((h) => h.status?.org?.id === "o-norte");
         await until(() => norte()?.access?.tools.browser === true);
         expect(norte()?.access?.tools.commands).toBe(true);
+        // Folders come after pairing: one click to Preferences › Folders.
+        await act(async () => button(el, "Add folders")?.click());
+        expect(localStorage.getItem("agentes.desktop.prefsTab")).toBe('"folders"');
       },
       { link: pairLink(FAKE_LINKS.live), macReady: true },
     ));
@@ -360,8 +363,13 @@ describe("pairing from the app", () => {
       "welcome",
       <WindowView name="welcome" />,
       async (el, host) => {
-        await until(() => el.textContent?.includes("This link expired. Make a new one under Settings › Devices."));
+        await until(() => el.textContent?.includes("This link expired. Make a new one in Devices."));
         expect(button(el, "Connect")).toBeUndefined();
+        // Devices on the server that made the link, where a new one is made.
+        const opened: string[] = [];
+        host.openExternal = async (url) => void opened.push(url);
+        await act(async () => button(el, "Open Devices")?.click());
+        expect(opened).toEqual([expect.stringMatching(/\/\?open=devices$/)]);
         expect(host.runners.size).toBe(2);
         // Closed with a server open, the window hides; opened again ("Add a server…"), it starts over.
         await act(async () => button(el, "Close")?.click());

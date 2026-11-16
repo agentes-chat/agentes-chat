@@ -24,7 +24,14 @@ import { type RunPosition, runAround } from "@agenteschat/client/lib/chat";
 import { mineOnRight } from "@agenteschat/client/lib/chat-look";
 import { choiceReplyLine } from "@agenteschat/client/lib/choices";
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
-import { CONTINUE_ERRORS, errorCode, errorText, sendFailureText, sendNeedsEdit } from "@agenteschat/client/lib/errors";
+import {
+  CONTINUE_ERRORS,
+  errorCode,
+  errorText,
+  runErrorText,
+  sendFailureText,
+  sendNeedsEdit,
+} from "@agenteschat/client/lib/errors";
 import { mentionsReader } from "@agenteschat/client/lib/everyone";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { issueWorkOf } from "@agenteschat/client/lib/issues";
@@ -34,6 +41,7 @@ import { isMediaAfterReply, messageMediaOf } from "@agenteschat/client/lib/media
 import { memberRoleColor } from "@agenteschat/client/lib/member-groups";
 import { serverBody } from "@agenteschat/client/lib/message-body";
 import { missionSetupOf } from "@agenteschat/client/lib/missions";
+import { isStandInLine } from "@agenteschat/client/lib/no-ai";
 import { isTalkerReply, routineReportText, talkerWaited } from "@agenteschat/client/lib/notices";
 import { can } from "@agenteschat/client/lib/permissions";
 import { modelStandInText } from "@agenteschat/client/lib/plan-usage";
@@ -41,8 +49,8 @@ import { reachHandoffs } from "@agenteschat/client/lib/reach";
 import { replyOf } from "@agenteschat/client/lib/reply";
 import { isReminderMessage, reminderBody, routineReplyOf } from "@agenteschat/client/lib/routines";
 import { appVia } from "@agenteschat/client/lib/via";
-import { voiceOf } from "@agenteschat/client/lib/voice";
-import { showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
+import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
+import { type ReplyStop, showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { useQueryClient } from "@tanstack/react-query";
 import { memo, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -87,7 +95,7 @@ import { DeviceWait } from "../devices/DeviceWait";
 import { deviceWaitOf } from "../devices/logic";
 import { WaitToolOffAction } from "../devices/ToolOneClick";
 import { MessageFiles } from "../files/MessageFiles";
-import { chatHref, consultationHref, routineHref } from "../links/logic";
+import { consultationHref, routineHref } from "../links/logic";
 import { DecisionCard, MissionCard, PlanCard, ReviewCard, SetupFailedCard } from "../missions/cards";
 import { AwayPill, BrainWait } from "../outages/WaitCard";
 import { SettingsProposals } from "../right-hand/SettingsCard";
@@ -141,7 +149,7 @@ import { useStopMovedOn, useStoppedRun } from "./stopped-runs";
 import { TeamChecks } from "./TeamChecks";
 import { SavedTools, TurnTools } from "./ToolCalls";
 import { recentTurn, stepLimitOf, stoppedOf, turnOpener } from "./turn";
-import { MessageWorkLine } from "./WorkLine";
+import { HandedWorkLines, MessageWorkLine } from "./WorkLine";
 
 /** A run's message asks whether a take over still holds its browser only this recently (older: events only). */
 const TRAIL_RECENT_MS = 12 * 60 * 60_000;
@@ -240,15 +248,16 @@ export const MessageRow = memo(function MessageRow({
   const names = useNamesComputers();
   const said = hidesBody(m)
     ? ""
-    : reminderBody(splitCanceled(serverBody(t, m.body, meta, i18n.language, names), meta).body, meta);
+    : reminderBody(splitCanceled(serverBody(t, listedText(m.body, meta), meta, i18n.language, names), meta).body, meta);
   // A long work's anchor once it's over: no promise left, and dimmed (its line says how it ended).
-  const body = m.longWork ? workAnchorBody(t, said, meta, m.longWork) : said;
+  // The right hand's stand-in line is its pill's sentence (`NoAiCard`): no text above it too.
+  const body = isStandInLine(meta) ? "" : m.longWork ? workAnchorBody(t, said, meta, m.longWork) : said;
   const workOver = Boolean(m.longWork && workIsOver(m.longWork));
   // The person's pick on a choice card (ADR 0124): one compact line, not a bubble.
   const choiceReply = meta?.choiceReply && body ? <ChoiceReply text={choiceReplyLine(body)} /> : null;
   const consulted = isAgent && m.author.id ? consultationsOf(meta) : [];
-  // A long message from one agent to another (ADR 0034): its first paragraph and "Ler tudo", which pushes its
-  // thread's screen with it whole. On that screen, and where it is read only, it stays whole.
+  // A long message from one agent to another (ADR 0034): its first paragraph and "Ver mais", which opens the rest in
+  // place. On its thread's screen, and where it is read only, it stays whole.
   const talk = useMemo(
     () =>
       isAgent &&
@@ -276,9 +285,11 @@ export const MessageRow = memo(function MessageRow({
     consulted,
     reached,
   );
+  // Work it handed over that reports here: its line under this reply says what the pair row would.
+  const paired = consults.filter((c) => !m.handedWorks?.some((w) => w.handedBy?.consultationId === c.id));
   const pair =
-    isAgent && m.author.id && consults.length > 0 ? (
-      <ConsultPairRow askerId={m.author.id} channelId={m.channelId} items={consults} />
+    isAgent && m.author.id && paired.length > 0 ? (
+      <ConsultPairRow askerId={m.author.id} channelId={m.channelId} items={paired} />
     ) : null;
   const grouped = groupedIn && !pair;
   // A question to another agent (in their DM) carries the asking run: its work shows on that run's reply.
@@ -501,13 +512,14 @@ export const MessageRow = memo(function MessageRow({
     );
     // A voice message and a choice's answer lead with their own player or line, so their time stays under them.
     const myBubble = bubbled && Boolean(body) && !voiceOf(meta) && !choiceReply;
-    // A voice message's player, a choice's answer, the bubble, or the GIF or sticker or the files of a message
-    // with no words, leads.
-    const lead = voiceOf(meta) ? (
+    const player = voiceOf(meta) ? (
       <View style={styles.meFiles}>
         <VoiceMessage message={m} />
       </View>
-    ) : choiceReply ? (
+    ) : null;
+    // A choice's answer, the bubble (a voice message's typed words, its player under them), or a voice message's
+    // player, the GIF or sticker or the files of a message with no words, leads.
+    const lead = choiceReply ? (
       <View style={styles.meFiles}>{choiceReply}</View>
     ) : body ? (
       <View
@@ -520,7 +532,7 @@ export const MessageRow = memo(function MessageRow({
       >
         {quote ? <QuotePlate reply={quote} onJump={onQuote} {...(solidInk ? { ink: solidInk } : {})} /> : null}
         <View style={bubbled ? styles.bubbleLine : undefined}>
-          <ClippedMessage name={name} body={body} behind={[(bubbled && look.fill) || c.bubble]} ink={solidInk}>
+          <ClippedMessage id={m.id} behind={[(bubbled && look.fill) || c.bubble]} ink={solidInk}>
             <MessageText
               body={body}
               muted={m.local === "pending"}
@@ -531,9 +543,11 @@ export const MessageRow = memo(function MessageRow({
               {...(solidInk ? { ink: solidInk } : {})}
             />
           </ClippedMessage>
-          {bubbled && !m.local ? stamp : null}
+          {myBubble && !m.local ? stamp : null}
         </View>
       </View>
+    ) : player ? (
+      player
     ) : media ? (
       <View style={styles.meFiles}>
         <ChatMedia media={media} align="end" liveId={m.id} />
@@ -562,12 +576,13 @@ export const MessageRow = memo(function MessageRow({
               </View>
             ) : null}
             {/* With no words there is no bubble to hold it. */}
-            {quote && (!body || voiceOf(meta) || choiceReply) ? (
+            {quote && (!body || choiceReply) ? (
               <View style={styles.meEnd}>
                 <QuotePlate reply={quote} onJump={onQuote} />
               </View>
             ) : null}
             {lead}
+            {body ? player : null}
             {body && media ? (
               <View style={styles.meFiles}>
                 <ChatMedia media={media} align="end" liveId={m.id} />
@@ -609,7 +624,7 @@ export const MessageRow = memo(function MessageRow({
         (inBubble || compact || !words) && styles.whoTight,
       ]}
     >
-      {!inBubble || look.names ? (
+      {!inBubble || look.names || helping ? (
         <Text
           variant="footnote"
           tone="ink2"
@@ -709,6 +724,16 @@ export const MessageRow = memo(function MessageRow({
       everyone={m.meta?.mentionsEveryone === true}
     />
   ) : null;
+  const saying = (text: string) => (
+    <MessageText
+      body={text}
+      muted={m.local === "pending" || workOver}
+      selectable={false}
+      accent={accent}
+      channelRefs={channelRefsOf(m.meta)}
+      everyone={m.meta?.mentionsEveryone === true}
+    />
+  );
   const words = deviceWait ? (
     <DeviceWait message={m} fallback={messageWords} />
   ) : brainWait ? (
@@ -716,15 +741,8 @@ export const MessageRow = memo(function MessageRow({
   ) : choiceReply ? (
     choiceReply
   ) : body ? (
-    <ClippedMessage name={name} body={talk ? talk.lead : body} behind={behindWords}>
-      <MessageText
-        body={talk ? talk.lead : body}
-        muted={m.local === "pending" || workOver}
-        selectable={false}
-        accent={accent}
-        channelRefs={channelRefsOf(m.meta)}
-        everyone={m.meta?.mentionsEveryone === true}
-      />
+    <ClippedMessage id={m.id} behind={behindWords} lead={talk ? saying(talk.lead) : undefined}>
+      {saying(body)}
     </ClippedMessage>
   ) : null;
   // The bubble holds its words, the tags of its name line and, at its end, the time; a row with none keeps its line.
@@ -841,22 +859,6 @@ export const MessageRow = memo(function MessageRow({
                 )}
               </View>
             ) : null}
-            {talk && !brainWait ? (
-              <Pressable
-                onPress={() => router.push(chatHref(m.channelId, m.threadId ?? m.id))}
-                accessibilityRole="button"
-                hitSlop={8}
-                style={({ pressed }) => [styles.talkMore, pressed && styles.pressedDim]}
-              >
-                <Text variant="footnote" tone="muted" style={styles.medium}>
-                  {t("chat.talk.readAll")}
-                </Text>
-                <Text variant="footnote" tone="faint">
-                  · {t("chat.talk.more", { count: talk.more })}
-                </Text>
-                <Icon name="right" size={13} color={c.faint} />
-              </Pressable>
-            ) : null}
             {media ? <ChatMedia media={media} liveId={m.id} /> : null}
             {voiceOf(meta) ? <VoiceMessage message={m} /> : null}
             {isAgent && meta?.speedFallback === true ? <SpeedFallbackLine message={m} /> : null}
@@ -868,6 +870,8 @@ export const MessageRow = memo(function MessageRow({
                 stopped={
                   stopped ?? {
                     byUserId: null,
+                    byAgentId: null,
+                    code: null,
                     continuedRunId: atLimit?.continuedRunId ?? providerCut?.continuedRunId ?? null,
                   }
                 }
@@ -880,6 +884,7 @@ export const MessageRow = memo(function MessageRow({
             {isAgent ? <ReachLines message={m} /> : null}
             {isAgent ? <FeedbackOfferRow message={m} /> : null}
             {isAgent && m.longWork ? <MessageWorkLine message={m} threaded={Boolean(thread)} /> : null}
+            {isAgent && !m.local ? <HandedWorkLines message={m} /> : null}
             {files.length > 0 ? <MessageFiles files={files} /> : null}
             {trails && m.author.id && trails.browser.length > 0 ? (
               <TrailCard
@@ -910,7 +915,7 @@ export const MessageRow = memo(function MessageRow({
                 done
                 settled
               />
-            ) : steps && m.agentRunId ? (
+            ) : steps && m.agentRunId && !meta?.workUpdate ? (
               <SavedTools
                 runId={m.agentRunId}
                 meta={meta}
@@ -936,7 +941,13 @@ export const MessageRow = memo(function MessageRow({
             {isAgent ? <TeamWeek message={m} /> : null}
             {approvalId ? <ApprovalInline approvalId={approvalId} messageId={m.id} /> : null}
             {handoff ? <HandoffCard handoff={handoff} /> : null}
-            {question ? <QuestionCard key={`${question.id}:${question.status}`} question={question} /> : null}
+            {question ? (
+              <QuestionCard
+                key={`${question.id}:${question.status}`}
+                question={question}
+                asker={helping ? (agent?.name ?? name) : undefined}
+              />
+            ) : null}
             {secret ? <SecretCard key={`${secret.id}:${secret.status}`} request={secret} /> : null}
             {missionDecision}
             {foot}
@@ -1023,7 +1034,7 @@ function StoppedLine({
 }: {
   message: Message;
   runId: string;
-  stopped: { byUserId: string | null; continuedRunId: string | null };
+  stopped: ReplyStop & { continuedRunId: string | null };
   /**
    * It ended at its step limit, or because it got stuck, or its long work failed on its AI provider (the end's text
    * already says so, so only Continue shows): nobody stopped it.
@@ -1044,17 +1055,17 @@ function StoppedLine({
   const stop = useStoppedRun(limit ? null : runId);
   // Continued here or on another device (`run.continued`), or already in the message's meta.
   const continued = useContinuedRun(m.id) ?? stopped.continuedRunId;
-  const byMe = Boolean(meId) && (stop?.notice.byUserId || stopped.byUserId) === meId;
-  // Without a notice and a name for whoever stopped it, or nobody did: the words the reply alone can say.
+  const by = limit ? null : stop?.notice.byUserId || stopped.byUserId;
+  const byMe = Boolean(meId) && by === meId;
+  // The pill names whoever it can (`stopLine`); these are its words when it can't: the step limit, stuck, the plain
+  // stop, or its cause when no person stopped it (an archived agent, a closed workspace).
   const fallback = limit
     ? limit === "failed"
       ? null
       : t(limit === "stuck" ? "mobile.chat.stopped.stuck" : "mobile.chat.stopped.limit")
-    : byMe
-      ? t("mobile.chat.stopped.byYou")
-      : stopped.byUserId && dir.nameOf({ type: "person", id: stopped.byUserId })
-        ? t("mobile.chat.stopped.by", { name: dir.nameOf({ type: "person", id: stopped.byUserId }) })
-        : t("mobile.chat.stopped.plain");
+    : by
+      ? t("mobile.chat.stopped.plain")
+      : (runErrorText(t, stopped.code) ?? t("mobile.chat.stopped.plain"));
   const owner = m.author.id ? dir.agentById.get(m.author.id)?.ownerUserId : null;
   const loaded = [
     ...(qc.getQueryData<Message[]>(keys.messages(orgId, m.channelId)) ?? []),
@@ -1069,7 +1080,8 @@ function StoppedLine({
     );
   // The agent works here again, or wrote after the stop: it went on, the stop offers nothing.
   const movedOn = useStopMovedOn(runId);
-  const open = may && !continued && !busy && !movedOn;
+  // Only a stop a person made (also through the right hand) or a run at its limit picks up again: never the system's.
+  const open = Boolean(limit || by) && may && !continued && !busy && !movedOn;
   const onContinue = () => {
     setBusy(true);
     api.agents
@@ -1115,7 +1127,8 @@ function StoppedLine({
         agent={agentName}
         notice={stop?.notice}
         at={stop?.message.createdAt}
-        byUserId={limit ? null : stopped.byUserId}
+        byUserId={by}
+        byAgentId={limit ? null : stopped.byAgentId}
         fallback={fallback}
         cont={
           !continued && (open || busy) ? (
@@ -1405,13 +1418,6 @@ const styles = StyleSheet.create({
   },
   continueIn: { flexGrow: 1, flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 8, paddingRight: 10 },
   medium: { fontWeight: "600" },
-  talkMore: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 4,
-    minHeight: 28,
-  },
   pressedDim: { opacity: 0.6 },
   shrink: { flexShrink: 1 },
   // The chip's own shrink only works if what holds it can shrink too (a long routine name ends in "…").

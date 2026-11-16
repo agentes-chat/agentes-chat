@@ -6,7 +6,7 @@ import {
   type SpeechFetch,
   STREAM_CLOSE,
 } from "@agenteschat/adapters";
-import { type Config, connectorOAuthApps, githubAppConfig } from "@agenteschat/config";
+import { type Config, connectorOAuthApps, githubAppConfig, mcpCallerIdentity } from "@agenteschat/config";
 import type { Database } from "@agenteschat/db";
 import {
   AntigravityBrain,
@@ -43,6 +43,7 @@ import {
   createDashboardToolSource,
   createDatabaseToolSource,
   createDesktopControl,
+  createDesktopPointers,
   createDesktopToolSource,
   createDeviceToolSource,
   createFeedbackToolSource,
@@ -107,6 +108,7 @@ import {
   OpencodeBrain,
   platformCapJudge,
   prepareAgentCode,
+  publishUserEvent,
   queueBudgetEmail,
   type ResolveHost,
   RIGHT_HAND_TURN,
@@ -485,6 +487,7 @@ export function buildEngine(o: EngineOptions) {
         log: o.log,
         judge: context.judge,
         githubApp: githubAppAccess,
+        callerIdentity: mcpCallerIdentity(config),
       }),
       // People's mailboxes (ADR 0038): only when the server has a mail path (Composio, IMAP).
       createMailToolSource({
@@ -580,7 +583,20 @@ export function buildEngine(o: EngineOptions) {
     warm: warmBrowser,
     log: o.log,
   });
-  machineHub.setBrowserHooks(browserLive.hubHooks);
+  // The agent's pointer on its desktop (ADR 0062): to each person who has that screen open, the newest kept here.
+  const desktopPointers = createDesktopPointers({
+    viewers: (screenId, machineId) => streams.desktopViewers(screenId, machineId),
+    send: (viewer, event) => void publishUserEvent(adapters.pubsub, viewer.orgId, viewer.userId, event),
+  });
+  machineHub.setBrowserHooks({
+    ...browserLive.hubHooks,
+    desktopPointer: desktopPointers.report,
+    desktopStopped: desktopPointers.stopped,
+    closed(machineId) {
+      browserLive.hubHooks.closed(machineId);
+      desktopPointers.closed(machineId);
+    },
+  });
   // agentes.chat Cloud reads the screen's text while a person is in control (ADR 0076); a self-hosted server never.
   const sessions = config.SESSION_SCREENING ? createSessionScreening({ db, hub: machineHub, log: o.log }) : null;
   // Agents' desktops and terminals (ADR 0058): each person's stream paired with the runner's data socket for it,
@@ -606,7 +622,10 @@ export function buildEngine(o: EngineOptions) {
     reauthorize: (stream, mode) => reauthorizeStream(db, stream, mode),
     // An agent browser's live view has a data socket of its own too (ADR 0040 §7.1).
     claim: (streamId, machineId, socket) => browserLive.claimView(streamId, machineId, socket),
-    onReady: sessions ? (stream) => sessions.ready(stream) : undefined,
+    onReady: (stream) => {
+      desktopPointers.opened(stream);
+      return sessions?.ready(stream);
+    },
     onClosed: (stream) => Promise.all([streamClosed(db, stream), sessions?.closed(stream)]),
     log: o.log,
   });

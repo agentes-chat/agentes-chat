@@ -99,6 +99,7 @@ const KNOWN = {
   "machine.exec_disabled": "errors.mission.execDisabled",
   budget_exceeded: "agentPage.activity.errors.budget_exceeded",
   "agent_group.not_found": "errors.agentGroup.notFound",
+  "agent_group.ambiguous": "errors.agentGroup.ambiguous",
   "agent_group.too_many": "errors.agentGroup.tooMany",
   "thread.context_not_visible": "errors.thread.contextNotVisible",
   "thread.archived": "errors.thread.archived",
@@ -106,6 +107,7 @@ const KNOWN = {
   "thread.range_has_replies": "errors.thread.rangeHasReplies",
   "thread.move_other_channel": "errors.thread.moveOtherChannel",
   "thread.not_allowed": "errors.thread.notAllowed",
+  "follow_up.not_yours": "errors.followUp.notYours",
   "thread.range_invalid": "errors.thread.rangeInvalid",
   "thread.range_empty": "errors.thread.rangeEmpty",
   "thread.range_too_long": "errors.thread.rangeTooLong",
@@ -191,12 +193,22 @@ const KNOWN = {
   "connector.unfinished": "errors.connector.unfinished",
   "connector.unavailable": "errors.connector.unavailable",
   "connector.misconfigured": "errors.connector.misconfigured",
+  "connector.header_name": "errors.connector.headerName",
+  "connector.header_value": "errors.connector.headerValue",
+  "connector.header_reserved": "errors.connector.headerReserved",
+  "connector.header_twice": "errors.connector.headerTwice",
+  "connector.header_and_key": "errors.connector.headerAndKey",
+  "connector.headers_too_many": "errors.connector.headersTooMany",
+  "connector.headers_with_sign_in": "errors.connector.headersWithSignIn",
+  "connector.headers_unreadable": "errors.connector.headersUnreadable",
   // Facts only (the phone shows this one): the web's onboarding says `standing.createUnpaid` beside the way to pay.
   "org.create_unpaid": "standing.createInactive",
   "credentials.plan_hold": "connectAi.key.closed",
   "machine.managed": "computerSetup.managedNotRemovable",
   "machine.managed_access": "computerSetup.managedAccess",
   "join.link_closed": "errors.join.linkClosed",
+  "join.link_full": "errors.join.linkFull",
+  "join.link_full_approval": "errors.join.linkFullApproval",
   "join.full": "errors.join.full",
   "join.rate_limited": "errors.join.rateLimited",
   "join.link_busy": "errors.join.linkBusy",
@@ -281,6 +293,7 @@ const KNOWN = {
   "skill.too_large": "errors.skill.tooLarge",
   "skill.too_many_files": "errors.skill.tooManyFiles",
   "skill.repo_too_large": "errors.skill.repoTooLarge",
+  "skill.link_too_large": "errors.skill.linkTooLarge",
   "skill.no_frontmatter": "errors.skill.noFrontmatter",
   "skill.body_too_long": "errors.skill.bodyTooLong",
   "skill.no_skill_md_zip": "errors.skill.noSkillMdZip",
@@ -506,6 +519,7 @@ const KNOWN = {
   "wiki.body_too_long": "errors.said.tooLong",
   "account.runner_old": "errors.said.updateComputerApp",
   "machine.access_outdated": "errors.said.updateComputerApp",
+  "machine.cli_outdated": "errors.said.updateComputerApp",
   "machine.outdated": "errors.said.updateComputerApp",
   "machine.updates_itself": "errors.said.computerUpdatesItself",
   "database.disabled": "errors.said.offHere",
@@ -828,6 +842,9 @@ const FIELD_ISSUES = {
 /** The app has its own line for this server code. */
 export const hasWordsFor = (code: string) => Object.hasOwn(KNOWN, code);
 
+/** The server knows no session for this request (401): only signing in again helps. */
+export const sessionEnded = (error: unknown) => error instanceof ApiError && error.status === 401;
+
 /** What the request named isn't there anymore (deleted, archived, or never this person's to see): trying again won't help. */
 export const isGone = (error: unknown) => error instanceof ApiError && (error.status === 404 || error.status === 410);
 
@@ -1009,14 +1026,15 @@ export function vaultConnectRefusal(t: TFunction, kind: string, error: unknown, 
 }
 
 /**
- * A failed request in the person's words: a code the app knows, a file too big, a refusal, no answer (offline or the
- * server out of reach), else `untranslatedText`. Never a raw error's own words ("Failed to fetch", "Bad Gateway").
+ * A failed request in the person's words: a code the app knows, a request too big, a refusal, no answer (offline or
+ * the server out of reach), else `untranslatedText`. Never a raw error's own words ("Failed to fetch", "Bad Gateway").
+ * `maxMb`: the most the caller's request may carry, said when the server or a proxy before it refuses its size.
  */
-export function errorText(t: TFunction, error: unknown, locale?: string): string {
+export function errorText(t: TFunction, error: unknown, locale?: string, { maxMb }: { maxMb?: number } = {}): string {
   if (error instanceof ApiError) {
     const known = knownErrorText(t, error, locale);
     if (known) return known;
-    if (error.status === 413) return t("errors.artifact.fileTooLarge", { max: MAX_UPLOAD_MB });
+    if (error.status === 413) return maxMb ? t("errors.tooLargeMax", { max: maxMb }) : t("errors.tooLarge");
     if (error.status === 403) return forbiddenText(t, error, locale);
   }
   if (noAnswer(error)) return noAnswerText(t);

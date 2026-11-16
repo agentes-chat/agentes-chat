@@ -31,6 +31,7 @@ import {
 } from "../src";
 import { agentAiState, backgroundAiState, orgAiStatus, orgHasAi } from "../src/ai-status";
 import { rightHandWidgetsReady, widgetAi } from "../src/dashboards/refresh-fire";
+import { withPersonalBrain } from "../src/right-hand";
 import { addMember, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 import { routineDeps } from "./routine-fixtures";
@@ -224,6 +225,8 @@ test("someone else's plan: any that serves everyone, never one its owner keeps t
 
 test("the workspace's plan kept to its owner serves only them; the AI status says so per person", async () => {
   const { fx, deps, bia, caio, lodi, runIn } = await world();
+  // No key to stand in for a plan (ADR 0137 §7, amended 2026-11-15; right-hand-stand-in.test.ts has it).
+  await fx.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
   await setAgentBrain(deps, fx.owner.id, fx.org.id, lodi.id, { brain: "claude_code", account: ANAS });
   // Every plan kept to the person who connected it: nothing serves anyone else.
   await setAccountServes(deps, fx.owner.id, fx.org.id, ANAS, "owner");
@@ -419,6 +422,8 @@ async function keyRow(fx: Awaited<ReturnType<typeof world>>["fx"]) {
 
 test("a widget's build thinks with its creator's AI, else its routine's creator's, else the workspace's", async () => {
   const { fx, deps, bia, caio, lodi } = await world();
+  // No key to stand in for a plan (ADR 0137 §7, amended 2026-11-15; right-hand-stand-in.test.ts has it).
+  await fx.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
   // The workspace's plan serves only its owner; Bia and Caio each chose their own.
   await setAgentBrain(deps, fx.owner.id, fx.org.id, lodi.id, { brain: "claude_code", account: ANAS });
   await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: BIAS });
@@ -571,10 +576,12 @@ test("a creator whose own AI can't think: the build takes the next AI that can, 
   await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: BIAS });
   await fx.db.update(schema.machineAccounts).set({ status: "signed_out" }).where(eq(schema.machineAccounts.id, BIAS));
   const { build, end, made } = await sharedWidget(w, bia.id);
-  expect(await build()).toMatchObject({ pick: null, account: ANAS, unavailable: undefined });
+  // Bia's own can't think, so it thinks for her on the plan that stands in for it (ADR 0137 §7, amended 2026-11-15).
+  expect(await build()).toMatchObject({ pick: bia.id, account: ANAS, unavailable: undefined });
   await end();
-  // The workspace's plan serves only its owner, and nobody else has an AI that thinks: a widget of Caio's whose routine
-  // is the owner's builds for the owner, whom that plan answers.
+  // The workspace's plan serves only its owner, and nobody else has an AI that thinks (no key either): a widget of
+  // Caio's whose routine is the owner's builds for the owner, whom that plan answers.
+  await fx.db.update(schema.providerCredentials).set({ revokedAt: new Date() });
   await fx.db.delete(schema.rightHandBrains).where(ne(schema.rightHandBrains.userId, fx.owner.id));
   await fx.db.update(schema.machineAccounts).set({ status: "signed_out" }).where(eq(schema.machineAccounts.id, CAIOS));
   await setAccountServes(deps, fx.owner.id, fx.org.id, ANAS, "owner");
@@ -660,4 +667,88 @@ test("a run a routine's report woke thinks with the AI its firing picked", async
   expect(await resolveBrain({ db: fx.db, machines }, agent, woken, woken.channelId)).toMatchObject({
     account: { id: BIAS },
   });
+});
+
+test("the model saved on the right hand reaches the turn when the person's own AI names none", async () => {
+  const { fx, deps, bia, lodi, runIn } = await world();
+  // Bia picked a plan for her own DM and left the model to the right hand, saved for the same brain.
+  await fx.db.insert(schema.rightHandBrains).values({
+    orgId: fx.org.id,
+    userId: bia.id,
+    brain: "claude_code",
+    brainModel: null,
+    brainAccountId: BIAS,
+  });
+  await fx.db.update(schema.machineAccounts).set({ provider: "opencode" }).where(eq(schema.machineAccounts.id, BIAS));
+  await fx.db
+    .update(schema.agents)
+    .set({ brain: "claude_code", brainModel: "deepseek-v4.1-flash", brainAccountId: BIAS })
+    .where(eq(schema.agents.id, lodi.id));
+  expect(await runIn(bia.id)).toMatchObject({
+    kind: "claude_code",
+    model: "deepseek-v4.1-flash",
+    account: { id: BIAS },
+  });
+  // Her own settings show the model her DM runs.
+  expect(await getAgentBrain(deps, bia.id, fx.org.id, lodi.id, "mine")).toMatchObject({
+    scope: "mine",
+    model: "deepseek-v4.1-flash",
+    effectiveModel: "deepseek-v4.1-flash",
+  });
+});
+
+test("the right hand's API model doesn't follow the person to their own plan", async () => {
+  const { fx, deps, bia, lodi, runIn } = await world();
+  // The right hand as seeded: the API brain with `auto`. Bia's own plan names no model.
+  await fx.db.insert(schema.rightHandBrains).values({
+    orgId: fx.org.id,
+    userId: bia.id,
+    brain: "claude_code",
+    brainModel: null,
+    brainAccountId: BIAS,
+  });
+  await fx.db.update(schema.agents).set({ brain: "model", brainModel: "auto" }).where(eq(schema.agents.id, lodi.id));
+  expect(await runIn(bia.id)).toMatchObject({ kind: "claude_code", model: "sonnet", account: { id: BIAS } });
+  expect(await getAgentBrain(deps, bia.id, fx.org.id, lodi.id, "mine")).toMatchObject({
+    model: null,
+    effectiveModel: "sonnet",
+  });
+});
+
+test("a model saved for one computer brain doesn't follow the person to another", async () => {
+  const { fx, bia, lodi } = await world();
+  // Bia's own DM runs Codex; the right hand is stored on Claude Code with a Claude model. An Opus is no Codex model.
+  await fx.db.insert(schema.rightHandBrains).values({
+    orgId: fx.org.id,
+    userId: bia.id,
+    brain: "codex",
+    brainModel: null,
+    brainAccountId: BIAS,
+  });
+  await fx.db
+    .update(schema.agents)
+    .set({ brain: "claude_code", brainModel: "claude-opus-5-5", brainAccountId: BIAS })
+    .where(eq(schema.agents.id, lodi.id));
+  const [stored] = await fx.db.select().from(schema.agents).where(eq(schema.agents.id, lodi.id));
+  if (!stored) throw new Error("no right hand");
+  const { agent } = await withPersonalBrain(fx.db, stored, bia.id);
+  expect(agent.brain).toBe("codex");
+  expect(agent.brainModel).toBeNull();
+});
+
+test("a model the person chose for their own DM wins over the right hand's", async () => {
+  const { fx, bia, lodi, runIn } = await world();
+  await fx.db.insert(schema.rightHandBrains).values({
+    orgId: fx.org.id,
+    userId: bia.id,
+    brain: "claude_code",
+    brainModel: "glm-5.3",
+    brainAccountId: BIAS,
+  });
+  await fx.db.update(schema.machineAccounts).set({ provider: "opencode" }).where(eq(schema.machineAccounts.id, BIAS));
+  await fx.db
+    .update(schema.agents)
+    .set({ brain: "claude_code", brainModel: "deepseek-v4.1-flash", brainAccountId: BIAS })
+    .where(eq(schema.agents.id, lodi.id));
+  expect((await runIn(bia.id)).model).toBe("glm-5.3");
 });

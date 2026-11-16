@@ -200,6 +200,11 @@ function renderOne(locale: PushLocale, input: PushTextInput): { title: string; b
       return out(s.deviceAccessTitle(actor, input.title?.trim() ?? "", input.label?.trim() ?? ""), s.deviceAccessBody);
     case "device.tool_request":
       return out(s.deviceToolTitle(actor, input.label?.trim() ?? ""), s.deviceToolBody);
+    case "device.cli_request":
+      return out(s.deviceCliTitle(actor, input.label?.trim() ?? ""), s.deviceCliBody);
+    case "device.folder_request":
+      // The folder (`title`) and the computer (`label`): it is allowed there, never from the notification.
+      return out(s.deviceFolderTitle(actor, input.title?.trim() ?? "", input.label?.trim() ?? ""), s.deviceFolderBody);
     case "admin_ask":
       return out(
         s.adminAskTitle(

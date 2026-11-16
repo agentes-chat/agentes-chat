@@ -371,6 +371,48 @@ test("refreshing plan usage: 202, the computer is asked to look the caller's acc
   expect(listed.accounts[0]).toMatchObject({ id: OLD_ACCOUNT, ownerId, usage });
 });
 
+test("AI accounts see Codex become available after an executor update on the same connection", async () => {
+  const { api } = await workspace();
+  const computer = { ...RUNNER, os: "windows", arch: "x64", exec: true };
+  const { token, machineId } = await pairComputer(t, api, computer, { name: "PC" });
+  const hub = t.engine.machineHub;
+  const conn = hub.open({ send() {}, close() {} });
+  const report = (version: string) => ({ codex: { version: `codex-cli ${version}` } });
+  await hub.message(
+    conn,
+    JSON.stringify({
+      type: "hello",
+      token,
+      ...computer,
+      executors: report("0.149.0"),
+      accounts: [{ id: OLD_ACCOUNT, kind: "codex", loggedIn: true }],
+    }),
+  );
+  const read = async () => {
+    const res = await api("/ai-accounts");
+    expect(res.status).toBe(200);
+    return (await res.json()) as { computers: Record<string, unknown>[] };
+  };
+  expect(await read()).toMatchObject({
+    accounts: [{ id: OLD_ACCOUNT, machineId }],
+    computers: [
+      {
+        machineId,
+        brains: { codex: false },
+        off: { codex: "outdated" },
+        codexVersion: { detected: "0.149.0", minimum: "0.163.0" },
+      },
+    ],
+  });
+  await hub.message(conn, JSON.stringify({ type: "executors.changed", executors: report("0.169.0") }));
+  const updated = await read();
+  expect(updated).toMatchObject({
+    accounts: [{ id: OLD_ACCOUNT, machineId }],
+    computers: [{ machineId, brains: { codex: true } }],
+  });
+  expect(updated.computers[0]).not.toHaveProperty("codexVersion");
+});
+
 test("Contas de IA: the caller's own accounts with their computer, and where they can add one; an unknown plan is refused", async () => {
   const { api } = await workspace();
   const mac = await pairComputer(t, api, { ...RUNNER, exec: true }, { name: "mac" });

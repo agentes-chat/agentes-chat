@@ -11,7 +11,7 @@ import {
 import { cx } from "../cx";
 import { Icon } from "../icons/Icon";
 import { claimPlayback, releasePlayback, stopPlayback } from "./media-playback";
-import { drawVoiceWave, useWaveRepaint } from "./voice-wave";
+import { drawVoiceWave, useWaveRepaint, waveAt } from "./voice-wave";
 
 export interface VoicePlayerLabels {
   play: string;
@@ -43,9 +43,14 @@ export interface VoicePlayerProps {
   words?: string | null;
   /** Under the player ("Vai assim que a conexão voltar"). */
   note?: ReactNode;
+  /** The speed, when its caller shares one between players; without it each player keeps its own, from 1x. */
+  speed?: number;
+  /** The speed button picked `speed`. */
+  onSpeed?: (speed: number) => void;
   className?: string;
 }
 
+/** Mirrors `VOICE_SPEEDS` in @agenteschat/client/lib/voice (the kit doesn't depend on it). */
 const SPEEDS = [1, 1.5, 2];
 const clock = (ms: number) => {
   const s = Math.max(0, Math.round(ms / 1000));
@@ -68,6 +73,8 @@ export function VoicePlayer({
   isGone,
   words,
   note,
+  speed: shared,
+  onSpeed,
   className,
 }: VoicePlayerProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -78,7 +85,8 @@ export function VoicePlayer({
   const [gone, setGone] = useState(false);
   const [broken, setBroken] = useState(false);
   const [time, setTime] = useState(0);
-  const [speed, setSpeed] = useState(1);
+  const [own, setOwn] = useState(1);
+  const speed = shared ?? own;
   const [open, setOpen] = useState(false);
   const wordsId = useId();
   const dead = Boolean(expired) || gone;
@@ -88,6 +96,10 @@ export function VoicePlayer({
     [peaks, dead],
   );
   useWaveRepaint(canvas, paint);
+  // A speed picked on another player reaches this one while it plays, without starting over.
+  useEffect(() => {
+    if (audio.current) audio.current.playbackRate = speed;
+  }, [speed]);
 
   const halt = useCallback(() => {
     cancelAnimationFrame(frame.current);
@@ -166,12 +178,8 @@ export function VoicePlayer({
     if (dead) return;
     e.preventDefault();
     const el = e.currentTarget;
-    const at = (x: number) => {
-      const r = el.getBoundingClientRect();
-      seek((x - r.left) / r.width);
-    };
-    at(e.clientX);
-    const move = (ev: globalThis.PointerEvent) => at(ev.clientX);
+    seek(waveAt(el, e.clientX));
+    const move = (ev: globalThis.PointerEvent) => seek(waveAt(el, ev.clientX));
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
@@ -235,8 +243,8 @@ export function VoicePlayer({
                 aria-label={labels.speed(speed)}
                 onClick={() => {
                   const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length] ?? 1;
-                  setSpeed(next);
-                  if (audio.current) audio.current.playbackRate = next;
+                  setOwn(next);
+                  onSpeed?.(next);
                 }}
               >
                 {speed}×

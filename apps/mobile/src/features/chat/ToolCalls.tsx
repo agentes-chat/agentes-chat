@@ -526,7 +526,7 @@ function lineDetail(t: TFunction, l: ToolLine): ReactNode | undefined {
 
 /** A code call's phrase once done ("Rodou 12 linhas de python · saída 1 kB"), else the shared phrase. */
 function lineLabel(t: TFunction, locale: string, l: ToolLine) {
-  if (!l.code || l.state !== "done") return toolPhrase(t, l);
+  if (!l.code || l.state !== "done") return toolPhrase(t, l, locale);
   return t("code.ranSummary", {
     count: l.code.source.split("\n").length,
     language: l.code.language,

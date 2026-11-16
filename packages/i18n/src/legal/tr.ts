@@ -8,13 +8,13 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
       "agentes.chat'in kullanımına ilişkin sözleşme: çalışma alanınız, ajanlarınız ve her bir tarafın neden sorumlu olduğu.",
     courtesy:
       "Bu metin bir nezaket çevirisidir. İngilizce sürümden farklılık göstermesi hâlinde İngilizce sürüm esas alınır.",
-    updated: "2026-11-06",
+    updated: "2026-11-16",
     sections: [
       {
         id: "agreement",
         heading: "1. Sözleşme",
         blocks: [
-          'İşbu Kullanım Koşulları ("Koşullar"), agentes.chat ticari adıyla faaliyet gösteren Wyoming eyaleti limited şirketi CODARI GLOBAL, LLC ("agentes.chat", "biz") ile bir hesap veya çalışma alanı oluşturan gerçek ya da tüzel kişi ("siz") arasında bağlayıcı bir sözleşmedir. Bir hesap oluşturarak, bir çalışma alanına katılarak veya agentes.chat\'i web üzerinde, Mac uygulamasında ya da telefon uygulamasında ("Hizmet") başka herhangi bir şekilde kullanarak işbu Koşulları ve Gizlilik Politikamızı kabul etmiş olursunuz. Hizmeti bir şirket veya başka bir kuruluş adına kullanıyorsanız, o kuruluşu bağlamaya yetkili olduğunuzu beyan etmiş olursunuz.',
+          'İşbu Kullanım Koşulları ("Koşullar"), agentes.chat ticari adıyla faaliyet gösteren Delaware eyaleti limited şirketi AGENTESCHAT, LLC ("agentes.chat", "biz") ile bir hesap veya çalışma alanı oluşturan gerçek ya da tüzel kişi ("siz") arasında bağlayıcı bir sözleşmedir. Bir hesap oluşturarak, bir çalışma alanına katılarak veya agentes.chat\'i web üzerinde, Mac uygulamasında ya da telefon uygulamasında ("Hizmet") başka herhangi bir şekilde kullanarak işbu Koşulları ve Gizlilik Politikamızı kabul etmiş olursunuz. Hizmeti bir şirket veya başka bir kuruluş adına kullanıyorsanız, o kuruluşu bağlamaya yetkili olduğunuzu beyan etmiş olursunuz.',
           "Hizmeti kullanabilmek için en az 18 yaşında olmanız ve sözleşme yapma ehliyetine sahip olmanız gerekir.",
         ],
       },
@@ -150,7 +150,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Uygulanacak hukuk",
         blocks: [
-          "İşbu Koşullar, kanunlar ihtilafı kuralları hariç olmak üzere ABD'nin Wyoming eyaleti kanunlarına tabidir ve taraflar Wyoming'de bulunan eyalet ve federal mahkemelerin münhasır yargı yetkisini kabul eder. Brezilya gibi, kanunu size feragat edilemeyen haklar veya yetkili mahkeme hakkı tanıyan bir yargı bölgesinde tüketiciyseniz, bu haklarınız saklıdır.",
+          "İşbu Koşullar, kanunlar ihtilafı kuralları hariç olmak üzere ABD'nin Delaware eyaleti kanunlarına tabidir ve taraflar Delaware'de bulunan eyalet ve federal mahkemelerin münhasır yargı yetkisini kabul eder. Brezilya gibi, kanunu size feragat edilemeyen haklar veya yetkili mahkeme hakkı tanıyan bir yargı bölgesinde tüketiciyseniz, bu haklarınız saklıdır.",
         ],
       },
       {
@@ -164,7 +164,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. İletişim",
         blocks: [
-          "CODARI GLOBAL, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Diğer tüm konular: hello@agentes.chat",
+          "AGENTESCHAT, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Diğer tüm konular: hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +175,13 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
       "Neleri topladığımız, ajanların neyi nereye gönderdiği, çalışma alanınızı kimlerin görebildiği ve sahip olduğunuz haklar.",
     courtesy:
       "Bu metin bir nezaket çevirisidir. İngilizce sürümden farklılık göstermesi hâlinde İngilizce sürüm esas alınır.",
-    updated: "2026-11-12",
+    updated: "2026-11-16",
     sections: [
       {
         id: "overview",
         heading: "1. Genel bakış",
         blocks: [
-          'agentes.chat ticari adıyla faaliyet gösteren Wyoming eyaleti limited şirketi CODARI GLOBAL, LLC ("agentes.chat", "biz"), insanların ve yapay zekâ ajanlarının birlikte çalıştığı, web üzerinde, Mac uygulaması olarak ve telefon uygulaması olarak sunulan bir çalışma alanı olan agentes.chat\'i ("Hizmet") işletir. Bu politika iki rolü birbirinden ayırır:',
+          'agentes.chat ticari adıyla faaliyet gösteren Delaware eyaleti limited şirketi AGENTESCHAT, LLC ("agentes.chat", "biz"), insanların ve yapay zekâ ajanlarının birlikte çalıştığı, web üzerinde, Mac uygulaması olarak ve telefon uygulaması olarak sunulan bir çalışma alanı olan agentes.chat\'i ("Hizmet") işletir. Bu politika iki rolü birbirinden ayırır:',
           {
             list: [
               "Kişilerin bir hesap oluşturmak ve kullanmak için bize verdiği bilgiler olan **hesap verileri** bakımından veri sorumlusu biziz.",
@@ -231,7 +231,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
           {
             list: [
               "**Cihazlar ile sunucularımız arasında.** Çalışma Alanı İçeriği dahil olmak üzere, sunucularımız ile bunlara bağlanan tarayıcılar, uygulamalar ve bilgisayarlar arasında gönderilen her şey, Hizmeti saldırılara karşı koruyan ağ sağlayıcımız üzerinden geçer. Bunu yapabilmek için ağ sağlayıcımız, bu trafiğin şifresini her cihaza en yakın veri merkezinde çözer ve trafiği bizim adımıza işler.",
-              "**Yanıt verme.** Bir ajan çalışırken, ihtiyaç duyduğu bağlamı (çalışma alanının bağlamı, ajanın talimatları, konuşma, ilgili hafıza ve araçlarının sonuçları) o ajan için seçilen model sağlayıcısına gönderir. Çalışma alanının eklediği bir API anahtarı kullanıldığında çağrı, çalışma alanının o sağlayıcıdaki kendi hesabı ve sözleşmesi altında yapılır. Bir ajana Claude veya ChatGPT gibi bir yapay zekâ planı bağlandığında ajan, planı bağlayan kişinin hesabı altında ve sağlayıcının koşullarına tabi olarak çalışır.",
+              "**Yanıt verme.** Bir ajan çalışırken, ihtiyaç duyduğu bağlamı (çalışma alanının bağlamı, ajanın talimatları, konuşma, ilgili hafıza ve araçlarının sonuçları) o ajan için seçilen model sağlayıcısına gönderir. Çalışma alanının eklediği bir API anahtarı kullanıldığında çağrı, çalışma alanının o sağlayıcıdaki kendi hesabı ve sözleşmesi altında yapılır. Bazı sağlayıcılar çağrıyı modeli geliştiren veya barındıran şirkete iletir ve o şirket de çağrıyı o sağlayıcının koşulları altında işler. Bir ajana Claude veya ChatGPT gibi bir yapay zekâ planı bağlandığında ajan, planı bağlayan kişinin hesabı altında ve sağlayıcının koşullarına tabi olarak çalışır.",
               "**Kimin yanıt vereceğine karar verme.** Bir yönlendirme modeli, hangi ajanın yanıt vermesi gerektiğine (varsa) karar vermek için yeni bir mesajı, çalışma alanının ajanlarının adlarını ve rollerini ve son konuşmaları okur. Bu model TypeSafe'te veya yedek olarak çalışma alanının model sağlayıcısında çalışır. Yönlendirme hiçbir zaman bir ajana herhangi bir izin vermez.",
               "**Hafıza.** Ajanlar zamanla gelişmek için konuşmalardan hafıza (özetler, olgular ve dersler) tutar. Hafızaya ilişkin bazı değerlendirmeler (bir şeyin saklanmaya değer olup olmadığı veya bir ajanın zaten bildikleriyle çelişip çelişmediği) TypeSafe tarafından yapılır. Hafıza ajanın sayfasında görülebilir ve kaldırılabilir. Çalışma alanıyla birlikte silinir.",
               "**Arama.** İlgili mesajları ve belgeleri bulmak için metinler Voyage AI tarafından vektörlere (embedding) dönüştürülebilir.",
@@ -286,14 +286,14 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "transfers",
         heading: "9. Uluslararası aktarımlar",
         blocks: [
-          "Uygulamamız ve veritabanı Amerika Birleşik Devletleri'nde çalışır ve bu politikada adı geçen sağlayıcılar verileri Amerika Birleşik Devletleri'nde işler. Çalışma alanı bilgisayarları Avrupa Birliği'nde veya Amerika Birleşik Devletleri'nde çalışır, ağ sağlayıcımız ise trafiği her cihaza en yakın, Amerika Birleşik Devletleri'nde veya başka bir yerde bulunan veri merkezinde işler. GDPR veya UK GDPR'ye tabi kişisel veriler üçüncü bir ülkeye aktarıldığında, Avrupa Komisyonu'nun Standart Sözleşme Hükümlerine ve Birleşik Krallık Ekine dayanırız. LGPD'ye tabi veriler için 33. maddedeki sözleşmesel güvencelere dayanırız.",
+          "Uygulamamız ve veritabanı Amerika Birleşik Devletleri'nde çalışır ve bu politikada adı geçen sağlayıcılar verileri Amerika Birleşik Devletleri'nde işler, ancak bir çalışma alanının seçtiği model sağlayıcıları ve bağlı hizmetler ile bunların çağrıları ilettiği şirketler, verileri kendi koşulları çerçevesinde başka ülkelerde işleyebilir. Çalışma alanı bilgisayarları Avrupa Birliği'nde veya Amerika Birleşik Devletleri'nde çalışır, ağ sağlayıcımız ise trafiği her cihaza en yakın, Amerika Birleşik Devletleri'nde veya başka bir yerde bulunan veri merkezinde işler. GDPR veya UK GDPR'ye tabi kişisel veriler üçüncü bir ülkeye aktarıldığında, Avrupa Komisyonu'nun Standart Sözleşme Hükümlerine ve Birleşik Krallık Ekine dayanırız. LGPD'ye tabi veriler için 33. maddedeki sözleşmesel güvencelere dayanırız.",
         ],
       },
       {
         id: "apps",
         heading: "10. Telefon ve Mac uygulamaları",
         blocks: [
-          "Telefon uygulaması bildirimleri Expo, Apple ve Google aracılığıyla gönderir. Bir bildirim, yazan kişinin adını ve mesajın başlangıcını gösterebilir ve hangi bildirimleri alacağınızı siz seçersiniz. Mac uygulaması ve bağlı bilgisayarlar oturum bilgilerini cihazda tutar. Hesabınızı silmek (uygulamalarda da mümkündür) tüm cihazlardaki oturumları kapatır.",
+          "Telefon uygulaması bildirimleri Apple ve Google aracılığıyla gönderir. Bir bildirim, yazan kişinin adını ve mesajın başlangıcını gösterebilir ve hangi bildirimleri alacağınızı siz seçersiniz. Mac uygulaması ve bağlı bilgisayarlar oturum bilgilerini cihazda tutar. Hesabınızı silmek (uygulamalarda da mümkündür) tüm cihazlardaki oturumları kapatır.",
         ],
       },
       {
@@ -342,7 +342,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. İletişim",
         blocks: [
-          "CODARI GLOBAL, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. AB, Birleşik Krallık ve Brezilya'ya ilişkin veri koruma soruları da aynı adresten gizlilik ekibimize ulaşır. Diğer tüm konular için hello@agentes.chat adresine yazın.",
+          "AGENTESCHAT, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. AB, Birleşik Krallık ve Brezilya'ya ilişkin veri koruma soruları da aynı adresten gizlilik ekibimize ulaşır. Diğer tüm konular için hello@agentes.chat adresine yazın.",
         ],
       },
     ],

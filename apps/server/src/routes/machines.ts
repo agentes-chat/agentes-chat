@@ -1,10 +1,12 @@
 import { isIP } from "node:net";
-import { limitIp } from "@agenteschat/adapters";
+import { CLI_INSTALL_CAUSES, CLI_INSTALL_STATES, INSTALLABLE_CLIS, limitIp } from "@agenteschat/adapters";
 import {
   ARTIFACT_LIMITS,
   allowMachineTool,
+  askMachineCliInstall,
   askMachineTool,
   authenticateMachine,
+  checkMachineClis,
   computerQueue,
   computerSetup,
   confirmDeviceCode,
@@ -17,6 +19,7 @@ import {
   hostKey,
   listMachineOutages,
   listMachines,
+  machineCliInstall,
   moveAgentsFromMachine,
   NotFoundError,
   openFilePull,
@@ -160,6 +163,14 @@ export const Machine = z
     accessAllow: z.boolean().openapi({
       description:
         "The person who paired it can turn its tools on from here (`POST …/access/allow`); `false`: its app is too old, or it is the workspace's own computer.",
+    }),
+    cliInstall: z.boolean().openapi({
+      description:
+        "Its coding CLIs can be looked for again from here (`POST …/clis/check`) and installed by the person who paired it (`…/cli-install`); `false`: its app is too old, or it is the workspace's own computer.",
+    }),
+    cliErrors: z.record(z.string(), z.string()).nullable().openapi({
+      description:
+        "The coding CLIs there that can't start (`claude`, `codex`…), each with its own last error line; `git_missing`: Claude Code on Windows without Git for Windows. Null unless admin or the person who paired it.",
     }),
     remotePause: z.boolean().openapi({
       description:
@@ -651,6 +662,133 @@ export function machineAppRoutes(deps: AppDeps) {
     },
   );
 
+  const CliTool = z.enum(INSTALLABLE_CLIS).openapi({ description: "`claude` (Claude Code) or `codex` (Codex)." });
+  const CliInstallView = z
+    .object({
+      install: z
+        .object({
+          tool: CliTool,
+          state: z.enum(CLI_INSTALL_STATES),
+          message: z.string().optional().openapi({ description: "`failed`: the installer's own last line." }),
+          cause: z.enum(CLI_INSTALL_CAUSES).optional().openapi({
+            description:
+              "`failed`: `git_missing` (Claude Code on Windows needs Git for Windows; nothing was installed), `still_missing` (the installer ended and the computer still doesn't find the program).",
+          }),
+        })
+        .nullable()
+        .openapi({ description: "Null: no install ran there since its app started." }),
+    })
+    .openapi("CliInstallView");
+  const cliOffline = { 409: errorResponse("The computer is offline (`machine.offline`)") };
+  const cliLimited = async (c: Parameters<typeof apiError>[0], userId: string, what: string) => {
+    const limit = await deps.adapters.rateLimiter.consume(`machine-cli-${what}:user:${userId}`, CLI_LIMIT);
+    return limit.allowed ? null : apiError(c, 429, "rate_limited", "Too many tries. Try again in a few minutes.");
+  };
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/clis/check",
+      tags,
+      security,
+      summary: "Look for the coding CLIs on the computer now, its PATH read again first",
+      description:
+        "Any member: it changes nothing but what the server knows. What it finds is stored at once and comes as `machine.updated`. 400 `machine.cli_outdated` when its app is too old, 403 `machine.managed_access` on the workspace's own computer.",
+      request: { params: MachineParams },
+      responses: {
+        200: json(z.object({ found: z.array(z.string()) })),
+        429: errorResponse("Too many looks"),
+        ...errors,
+        ...cliOffline,
+      },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limited = await cliLimited(c, userId, "check");
+      if (limited) return limited;
+      return c.json(await checkMachineClis({ db, pubsub, hub: hub() }, userId, orgId, machineId), 200);
+    },
+  );
+
+  const cliInstallDoc = {
+    path: "/organizations/{orgId}/machines/{machineId}/cli-install",
+    tags,
+    security,
+    description:
+      "Only the person who paired the computer (anyone else asks with `…/cli-install/ask`): 403 `machine.not_owner`. The computer runs the program's official installer as that person; once it ends it looks for its programs again, so the apps move on by themselves. 400 `machine.cli_outdated` when its app is too old.",
+    responses: { 200: json(CliInstallView), 429: errorResponse("Too many installs"), ...errors, ...cliOffline },
+  } as const;
+  const cliQuery = { params: MachineParams, query: z.object({ tool: CliTool }) };
+
+  app.openapi(
+    createRoute({
+      ...cliInstallDoc,
+      method: "post",
+      summary: "Install a coding CLI on the computer (only the person who paired it)",
+      request: { params: MachineParams, body: body(z.object({ tool: CliTool }).strict()) },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const limited = await cliLimited(c, userId, "install");
+      if (limited) return limited;
+      const { tool } = c.req.valid("json");
+      return c.json(await machineCliInstall({ db, pubsub, hub: hub() }, userId, orgId, machineId, "start", tool), 200);
+    },
+  );
+  app.openapi(
+    createRoute({
+      ...cliInstallDoc,
+      method: "get",
+      summary: "Where an install of a coding CLI on the computer stands",
+      request: cliQuery,
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      const { tool } = c.req.valid("query");
+      return c.json(
+        await machineCliInstall({ db, pubsub, hub: hub() }, c.get("user").id, orgId, machineId, "status", tool),
+        200,
+      );
+    },
+  );
+  app.openapi(
+    createRoute({
+      ...cliInstallDoc,
+      method: "delete",
+      summary: "Stop an install of a coding CLI on the computer",
+      request: cliQuery,
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      const { tool } = c.req.valid("query");
+      return c.json(
+        await machineCliInstall({ db, pubsub, hub: hub() }, c.get("user").id, orgId, machineId, "cancel", tool),
+        200,
+      );
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/machines/{machineId}/cli-install/ask",
+      tags,
+      security,
+      summary: "Ask the person who paired it to install a coding CLI: an inbox row with the install button",
+      request: { params: MachineParams, body: body(z.object({ tool: CliTool }).strict()) },
+      responses: { 200: json(z.object({ ownerId: z.string() })), ...errors },
+    }),
+    async (c) => {
+      const { orgId, machineId } = c.req.valid("param");
+      return c.json(
+        await askMachineCliInstall({ db, pubsub }, c.get("user").id, orgId, machineId, c.req.valid("json").tool),
+        200,
+      );
+    },
+  );
+
   const pauseResponses = {
     200: json(z.object({ paused: MachinePause.nullable() })),
     ...errors,
@@ -936,6 +1074,8 @@ const HostSyncBody = z.object({
 
 /** The server's computer syncs every minute; this leaves room for restarts. */
 const HOST_SYNC_LIMIT = { limit: 30, windowMs: 60_000 };
+/** Looks for a computer's programs, and installs of them, per person. */
+const CLI_LIMIT = { limit: 20, windowMs: 10 * 60_000 };
 
 /**
  * Looking up, confirming and denying connection codes, per person and per address (an office

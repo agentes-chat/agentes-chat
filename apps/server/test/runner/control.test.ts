@@ -156,6 +156,30 @@ const sharedGrant = () => ({ path: expect.stringMatching(/[\\/]shared$/), agents
 
 const stored = (home: string) => JSON.parse(readFileSync(configPath(home), "utf8")) as Record<string, unknown>;
 
+test("checking again publishes the upgraded Codex version on the same connection", async () => {
+  const { home } = pairedHome();
+  let version = "0.149.0";
+  const c = control(home, {
+    executors: undefined,
+    refreshPath: () => {},
+    executorRun: async (bin) =>
+      bin === "codex" ? { status: 0, stdout: `codex-cli ${version}` } : { status: 127, stdout: "" },
+  });
+  const socket = await c.connect();
+  expect(await c.data({ type: "executors.check" })).toMatchObject({
+    executors: { codex: { version: "codex-cli 0.149.0" } },
+  });
+  version = "0.169.0";
+  expect(await c.data({ type: "executors.check" })).toMatchObject({
+    connection: "online",
+    executors: { codex: { version: "codex-cli 0.169.0" } },
+  });
+  await waitFor(() =>
+    socket.of("executors.changed").some((frame) => JSON.stringify(frame).includes("codex-cli 0.169.0")),
+  );
+  expect(c.sockets).toHaveLength(1);
+});
+
 test("hello carries what this computer builds with and the phones it reaches; a phone found after it goes out", async () => {
   const { home } = pairedHome();
   const root = tempDir("phones-");
@@ -313,6 +337,21 @@ test("hello never waits on the CLIs' looks; what a look finds later reaches the 
   expect(JSON.parse(readFileSync(path.join(home, "executors.json"), "utf8"))).toMatchObject({
     claude: { version: "2.1.300 (Claude Code)" },
   });
+});
+
+test("Grok Build's models are the ones a signed-in account listed, not the computer's own signed-out list", async () => {
+  const { home } = pairedHome();
+  const grok = { version: "grok 1.0.70 (3736acbc8658) [stable]", models: [{ id: "grok-4.6" }] };
+  writeFileSync(path.join(home, "executors.json"), JSON.stringify({ grok }));
+  mkdirSync(path.join(home, "accounts"), { recursive: true });
+  writeFileSync(
+    path.join(home, "accounts", "grok-models.json"),
+    JSON.stringify([{ id: "grok-4.7" }, { id: "grok-4.6" }]),
+  );
+  const executorRun = () => new Promise<never>(() => {});
+  const c = control(home, { executors: undefined, executorRun });
+  const s = await c.connect();
+  expect(s.of("hello")[0]?.executors).toEqual({ grok: { ...grok, models: [{ id: "grok-4.7" }, { id: "grok-4.6" }] } });
 });
 
 test("a new install's hello leaves the CLIs out until the first look, then sends what it found", async () => {

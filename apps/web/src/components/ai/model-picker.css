@@ -60,7 +60,6 @@
 .ac-popover.mp {
   width: min(420px, calc(100vw - 32px));
   max-width: min(420px, calc(100vw - 32px));
-  max-height: min(640px, calc(100vh - 96px));
   padding: 0;
   overflow: hidden auto;
   border-radius: var(--radius-lg, 16px);
@@ -153,7 +152,7 @@
   margin-top: var(--space-3);
 }
 
-/* The models: the kit's menu rows (`.ac-menu__item`), Automático first with "padrão", the one it runs checked, a
+/* The models: the kit's menu rows (`.ac-menu__item`), Automático first, the one it runs checked, a
    refused one dimmed. */
 .mp__models {
   display: flex;
@@ -170,12 +169,6 @@
 .mp__model-name {
   overflow-wrap: anywhere;
   white-space: normal;
-}
-.mp__model-tag {
-  flex: none;
-  align-self: center;
-  color: var(--muted);
-  font-size: var(--text-xs);
 }
 
 .mp__effort {

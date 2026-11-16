@@ -10,7 +10,8 @@ import type { DesktopServerWorkspaces } from "./workspaces";
 
 /**
  * The site inside the agentes.chat desktop app (ADR 0036, ADR 0066): the app's main window loads it and
- * sets `window.__agentesDesktop` before it starts. The site gets nothing of the computer; it draws its own
+ * sets `window.__agentesDesktop` before it starts. The site gets nothing of the computer but how it draws
+ * (`renderer`, and on Linux `system`: distribution, session, WebKitGTK, graphics card). It draws its own
  * title bar and sends Google/Apple sign-in to the browser (`apps/desktop/src-tauri/src/main_window.rs`).
  */
 export const inDesktopApp = () =>
@@ -23,6 +24,30 @@ export function desktopPlatform(): DesktopPlatform | null {
   if (!inDesktopApp()) return null;
   const platform = (window as { __agentesDesktop?: { platform?: unknown } }).__agentesDesktop?.platform;
   return platform === "windows" || platform === "linux" ? platform : "mac";
+}
+
+/**
+ * How the app's window paints: "cpu" when every frame is drawn in software (Linux's WebKitGTK without its graphics
+ * card path). Apps from before say nothing, and on Linux they always painted on the CPU.
+ */
+export function desktopRenderer(): "gpu" | "cpu" | null {
+  const platform = desktopPlatform();
+  if (!platform) return null;
+  const renderer = (window as { __agentesDesktop?: { renderer?: unknown } }).__agentesDesktop?.renderer;
+  if (renderer === "gpu" || renderer === "cpu") return renderer;
+  return platform === "linux" ? "cpu" : "gpu";
+}
+
+/** How the desktop app draws on this computer, for the error reports' tags (`desktop_*`); nothing outside the app. */
+export function desktopReportTags(): Record<string, string> {
+  const renderer = desktopRenderer();
+  if (!renderer) return {};
+  const system = (window as { __agentesDesktop?: { system?: unknown } }).__agentesDesktop?.system;
+  const tags: Record<string, string> = { desktop_renderer: renderer };
+  if (system && typeof system === "object")
+    for (const [key, value] of Object.entries(system))
+      if (typeof value === "string" && value) tags[`desktop_${key}`] = value;
+  return tags;
 }
 
 /**
@@ -197,22 +222,37 @@ export function pageReadyAfterPaint() {
 /**
  * Links that open a new window (`target="_blank"`) in the app: the window's `on_new_window` sends them on, a page
  * of this server to the window and anything else to the browser (main_window.rs). The app's shell plugin adds
- * a click listener of its own to every page (on `body`) that takes these links first and asks the app over IPC,
- * which the site may not do, so a click did nothing. This one sits on the React root: after the page's own
- * handlers (one that handled the click itself, a popup, keeps it) and before the plugin's.
+ * a click listener of its own to every page (on `body`, as the page loads) that takes these links, even one whose
+ * click the page handled, and asks the app over IPC, which the site may not do, so a click did nothing. This one
+ * takes the click at the last element under `body` on its way up (the React root, or what the site lays over it in
+ * `body`: a dialog, a popover, a side panel, a toast): after the page's own handlers (one that handled the click
+ * itself, a popup, keeps it) and before the plugin's, which never sees it. React handles the clicks in what it puts
+ * in `body` on `body` itself, after the plugin: a link there that handles its own click does it in `onClickCapture`.
  */
-export function routeNewWindowLinks(root: HTMLElement): () => void {
-  const onClick = (e: MouseEvent) => {
-    if (e.defaultPrevented || e.button !== 0) return;
+export function routeNewWindowLinks(): () => void {
+  const route = (e: MouseEvent) => {
+    if (e.button !== 0) return;
     const link = e.target instanceof Element ? e.target.closest<HTMLAnchorElement>("a[href]") : null;
     if (link?.target !== "_blank" || !/^(https?|mailto|tel):$/.test(link.protocol)) return;
-    e.preventDefault();
     e.stopPropagation();
+    if (e.defaultPrevented) return;
+    e.preventDefault();
     window.open(link.href, "_blank", "noopener");
   };
-  root.addEventListener("click", onClick);
-  return () => root.removeEventListener("click", onClick);
+  // Last on that element, after the page's own listeners there, for this click: one a click stopped on its way left
+  // behind runs for the next click, which it checks like any other.
+  const onClick = (e: MouseEvent) => {
+    const path = e.composedPath();
+    const top = path[path.indexOf(document.body) - 1] as HTMLElement | undefined;
+    top?.removeEventListener("click", route);
+    top?.addEventListener("click", route, { once: true });
+  };
+  document.addEventListener("click", onClick, true);
+  return () => document.removeEventListener("click", onClick, true);
 }
+
+/** The app's Preferences tabs a page may open (`answerThisMac` in apps/desktop control/this-mac.ts). */
+export type PrefsTab = "folders" | "tools" | "updates" | "servers";
 
 export const thisMac = {
   status: () => invoke<ThisMacStatus>({ kind: "status" }),
@@ -224,11 +264,13 @@ export const thisMac = {
     invoke<{ userCode: string | null }>({ kind: "connect", orgId, ...(orgName ? { orgName } : {}) }),
   /** The socket again (this Mac went offline for `orgId`). */
   reconnect: (orgId: string) => invoke<unknown>({ kind: "reconnect", orgId }),
-  openPrefs: (tab: "folders" | "tools" | "updates") => invoke<unknown>({ kind: "prefs", tab }),
+  openPrefs: (tab: PrefsTab) => invoke<unknown>({ kind: "prefs", tab }),
   /** The menu bar's popover, where access requests are answered. */
   showRequests: () => invoke<unknown>({ kind: "requests" }),
   /** System Settings on the microphone's list (a voice message macOS refused); an older app refuses it. */
   openMicrophoneSettings: () => invoke<unknown>({ kind: "privacy", pane: "microphone" }),
+  /** System Settings on the Local Network list (Wi-Fi pairing found no phone); an older app refuses it. */
+  openLocalNetworkSettings: () => invoke<unknown>({ kind: "privacy", pane: "network" }),
   /**
    * The app icon on this computer (ADR 0179): one of the app's ids, or an agent with the Dock's and the windows'
    * pictures drawn here (PNG in base64); the app keeps and shows it, and answers the one kept (nothing asked: reads it).
@@ -259,8 +301,12 @@ export const thisMac = {
   revealFiles: () => invoke<unknown>({ kind: "files" }),
   /** The other servers' workspaces, as the app read them with each one's session (ADR 0154). */
   workspaces: () => invoke<{ servers: DesktopServerWorkspaces[] }>({ kind: "workspaces" }).then((r) => r.servers),
-  /** The window goes to a workspace of another server of the app's list, already signed in there. */
-  openWorkspace: (server: string, orgId: string) => invoke<unknown>({ kind: "openWorkspace", server, orgId }),
+  /**
+   * The window goes to a workspace of another server of the app's list, already signed in there. `account`: which of
+   * that server's accounts it belongs to, when the app read several (ADR 0183).
+   */
+  openWorkspace: (server: string, orgId: string, account?: string) =>
+    invoke<unknown>({ kind: "openWorkspace", server, orgId, ...(account ? { account } : {}) }),
   /** The app's own window to add a workspace: a new one on agentes.chat, or the team's server. */
   addWorkspace: () => invoke<unknown>({ kind: "addWorkspace" }),
   /**

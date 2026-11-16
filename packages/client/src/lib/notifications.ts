@@ -45,6 +45,20 @@ export const isSnoozed = (n: Pick<AppNotification, "snoozedUntil">, now = Date.n
 export const isVisible = (n: Pick<AppNotification, "doneAt" | "snoozedUntil">, now = Date.now()) =>
   !n.doneAt && !isSnoozed(n, now);
 
+/**
+ * Whether "Concluir todas" has anything to move in a filter: what waits on the person stays. A filter's count holds
+ * what waits too; the list puts waiting rows first, so the loaded waiting rows stand for all of them.
+ */
+export function canClearAll(
+  filter: NotificationFilter,
+  counts: NotificationCounts | undefined,
+  loaded: readonly Pick<AppNotification, "waiting">[],
+): boolean {
+  if (!counts || filter === "done" || filter === "waiting") return false;
+  if (filter === "all") return counts.all > counts.waiting;
+  return counts[filter] > loaded.filter((n) => n.waiting).length;
+}
+
 export function matchesFilter(n: AppNotification, filter: NotificationFilter, now = Date.now()) {
   if (filter === "done") return !!n.doneAt;
   if (!isVisible(n, now)) return false;
@@ -394,7 +408,9 @@ export type OpenTarget =
   | { to: "/org/$orgId/settings/computers/$machineId"; params: { machineId: string } }
   | {
       to: "/org/$orgId/settings/$section";
-      params: { section: "computers" | "members" | "usage" | "connectors" | "billing" | "approvals" | "right_hand" };
+      params: {
+        section: "computers" | "members" | "invites" | "usage" | "connectors" | "billing" | "approvals" | "right_hand";
+      };
     }
   | { to: "/org/$orgId/home"; search?: { widget: string } }
   | { to: "/org/$orgId/dashboards" }
@@ -450,8 +466,8 @@ export function openTarget(n: AppNotification): OpenTarget | null {
         : { to: "/org/$orgId/settings/$section", params: { section: "computers" } };
     return found.cause ? { to: "/org/$orgId/settings/$section", params: { section: "connectors" } } : null;
   }
-  // Requests to join are answered in Members (ADR 0068).
-  if (n.kind === "join_request") return { to: "/org/$orgId/settings/$section", params: { section: "members" } };
+  // Requests to join are answered in People › Convites (ADR 0068, 0184).
+  if (n.kind === "join_request") return { to: "/org/$orgId/settings/$section", params: { section: "invites" } };
   // "Pedir a um admin": roles are given in Members, webhooks set up from a routine; an agent is added in its channel.
   if (n.kind === "admin_ask" && n.latest.reason === "create_agents")
     return { to: "/org/$orgId/settings/$section", params: { section: "members" } };

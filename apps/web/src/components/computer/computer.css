@@ -398,6 +398,7 @@
   max-height: none;
   aspect-ratio: 1280 / 900;
   margin: 0;
+  border-radius: 10px;
 }
 /*
  * Under a cover the box is its stage, the line's room too where it has none: the cover's frost or sky never shows the
@@ -452,6 +453,7 @@
   width: min(100cqw, 100cqh * 16 / 10);
   max-height: none;
   margin: 0;
+  border-radius: 10px;
 }
 .cmp-body:has(> .brw-ac.is-control) > .cmp-steps-row {
   display: none;
@@ -481,7 +483,8 @@
   align-items: center;
   gap: 8px 12px;
   padding: 10px 12px;
-  border-radius: 12px;
+  /* Concentric with its button's corner (10 from the top). */
+  border-radius: calc(var(--control-r-sm) + 10px);
   background: var(--sunken);
   box-shadow: inset 0 0 0 1px var(--line);
 }
@@ -793,9 +796,24 @@
   }
 }
 
-/* The DM header's button: its dot in the agent's color while it works, amber while a request waits. */
+/* The DM header's buttons: their dot in the agent's color while it works, amber while a request waits. The icon's dot
+   is its `::before`, since a header icon's `::after` is its touch target; ringed in the header's color. */
 .brw-dm[data-state="live"]::after {
   background: var(--dot, var(--ok));
+}
+.dm-computer[data-state]::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dot, var(--ok));
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.dm-computer[data-state="waiting"]::before {
+  background: var(--warn);
 }
 
 /* ---------- what the agent keeps running (keep_running, ADR 0176) ---------- */

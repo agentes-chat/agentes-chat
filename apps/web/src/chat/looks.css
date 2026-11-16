@@ -414,8 +414,10 @@
 .ac-msg__clock {
   position: absolute;
   top: calc(var(--msg-line) / 2 - 7px);
-  left: 14px;
-  width: 40px;
+  /* Its end 54px in, on one line: a longer time ("11:43 PM") grows into the row's start, never onto a second line. */
+  right: calc(100% - 54px);
+  min-width: 40px;
+  white-space: nowrap;
   font-size: max(11px, calc(var(--msg-text) - 3px));
   line-height: 17px;
   text-align: right;

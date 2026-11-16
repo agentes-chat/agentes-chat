@@ -39,8 +39,8 @@ export function Cover({
       {sky && <ComputerSky color={color} clear={() => [box.current]} />}
       <span className="brw-dim__box" role="status" ref={box}>
         {art}
-        <span className="brw-dim__row ac-iconline">
-          {spinner ? <PixelSpinner size={16} color={color} /> : icon && <Icon name={icon} size={16} />}
+        <span className="brw-dim__row">
+          {spinner ? <PixelSpinner size={16} color={color} /> : icon && <Icon name={icon} size={16} inline />}
           {text}
         </span>
         {help && <small>{help}</small>}

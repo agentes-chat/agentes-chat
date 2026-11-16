@@ -739,9 +739,29 @@ function SourceSteps({
   stepsRef: RefObject<HTMLElement | null>;
 }) {
   const { t } = useTranslation();
+  const orgs = useMe().data?.organizations ?? [];
   const client = mcpClient(card);
+  // Another workspace of this person's on this server: its export one click away, in a tab of its own.
+  const others = card === "agenteschat" ? orgs.filter((o) => o.id !== orgId && can(o, "create_agents")) : [];
+  const other = others.length === 1 ? others[0] : undefined;
   const prompt = isRequestCard(card) ? (
     <OtherApp card={card} />
+  ) : other ? (
+    <p className="imp-tip ac-iconline">
+      <Icon name="info" size={16} />
+      <span className="ac-actline">
+        <span>{t("onboarding.import.whereOther")}</span>
+        <Link
+          className="ac-link"
+          to="/org/$orgId/settings/$section"
+          params={{ orgId: other.id, section: "import" }}
+          search={{}}
+          target="_blank"
+        >
+          {t("onboarding.import.whereOtherLink", { org: other.name })}
+        </Link>
+      </span>
+    </p>
   ) : (
     <p className="imp-tip ac-iconline">
       <Icon name="info" size={16} />

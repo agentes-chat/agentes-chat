@@ -157,8 +157,12 @@ export function AuthFlow({
   };
 
   /** Who is this e-mail: the next step follows from the server's answer. */
+  // One at a time: the offline retry asks again every few seconds, and a late answer to an earlier ask would change
+  // the step and empty the password already being typed.
+  const looking = useRef(false);
   const lookUp = async (value = email) => {
-    if (!isEmail(value)) return;
+    if (!isEmail(value) || looking.current) return;
+    looking.current = true;
     setPending(true);
     setError(null);
     try {
@@ -178,6 +182,7 @@ export function AuthFlow({
       if (e instanceof TypeError && /network|fetch/i.test(e.message)) setOffline(true);
       else if (!(e instanceof CheckCancelled)) setError(lookUpFailureText(t, e));
     } finally {
+      looking.current = false;
       setPending(false);
     }
   };
@@ -228,18 +233,23 @@ export function AuthFlow({
     setError(t(network ? "mobile.auth.errors.network" : "mobile.auth.errors.generic"));
   };
 
+  // The e-mail's lookup passed the bot check: its pass stands for the next step's (ADR 0075), so nobody meets
+  // Cloudflare twice in one sign-in. The widget is asked only when the server no longer takes the pass.
   const signIn = async () => {
     setPending(true);
     setError(null);
     try {
-      const refused = await withHumanCheck(human.check, async (token) =>
-        refusalOf(
-          await authClient().signIn.email({
-            email: email.trim(),
-            password,
-            fetchOptions: { headers: humanCheckHeaders(token) },
-          }),
-        ),
+      const refused = await withHumanCheck(
+        human.check,
+        async (token) =>
+          refusalOf(
+            await authClient().signIn.email({
+              email: email.trim(),
+              password,
+              fetchOptions: { headers: humanCheckHeaders(token) },
+            }),
+          ),
+        options?.pass,
       );
       if (refused) {
         haptics.warning();
@@ -264,15 +274,18 @@ export function AuthFlow({
     setPending(true);
     setError(null);
     try {
-      const refused = await withHumanCheck(human.check, async (token) =>
-        refusalOf(
-          await authClient().signUp.email({
-            name: name.trim(),
-            email: email.trim(),
-            password,
-            fetchOptions: { headers: { ...humanCheckHeaders(token), ...requests.headers } },
-          }),
-        ),
+      const refused = await withHumanCheck(
+        human.check,
+        async (token) =>
+          refusalOf(
+            await authClient().signUp.email({
+              name: name.trim(),
+              email: email.trim(),
+              password,
+              fetchOptions: { headers: { ...humanCheckHeaders(token), ...requests.headers } },
+            }),
+          ),
+        options?.pass,
       );
       if (refused) {
         haptics.warning();
@@ -299,14 +312,17 @@ export function AuthFlow({
     try {
       // The answer is the same whether or not the account exists. Relative: the server resolves it
       // against its own address, so the link opens its web page whatever address the app reached it at.
-      const refused = await withHumanCheck(human.check, async (token) =>
-        refusalOf(
-          await authClient().requestPasswordReset({
-            email: email.trim(),
-            redirectTo: "/reset-password",
-            fetchOptions: { headers: humanCheckHeaders(token) },
-          }),
-        ),
+      const refused = await withHumanCheck(
+        human.check,
+        async (token) =>
+          refusalOf(
+            await authClient().requestPasswordReset({
+              email: email.trim(),
+              redirectTo: "/reset-password",
+              fetchOptions: { headers: humanCheckHeaders(token) },
+            }),
+          ),
+        options?.pass,
       );
       if (refused) return failed(refused);
       haptics.success();

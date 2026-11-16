@@ -3,7 +3,7 @@ import { makesAgents } from "@agenteschat/client/lib/permissions";
 import { useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { type NativeStackNavigationOptions, useNavigation } from "expo-router";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Keyboard, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import Animated, {
@@ -101,7 +101,16 @@ export function ShareScreen() {
   }));
 
   const picked = agents.find((a) => a.id === to) ?? null;
+  // Cancelled or swiped away while the conversation opened: nothing is handed over, nothing replaces the screen.
+  const left = useRef(false);
+  useEffect(() => {
+    left.current = false;
+    return () => {
+      left.current = true;
+    };
+  }, []);
   const cancel = () => {
+    left.current = true;
     Keyboard.dismiss();
     clearShare();
     goBack();
@@ -116,6 +125,7 @@ export function ShareScreen() {
     try {
       const { channelId } = await api.dms.open(orgId, { agentId: picked.id });
       void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
+      if (left.current) return;
       handShare({ channelId, files: shared.files.slice(0, SHARE_MAX_FILES), text: shareMessage(line, shared) });
       clearShare();
       // The catch plays out (it started with the tap), then the conversation: no wait added past a slow network.
@@ -161,7 +171,13 @@ export function ShareScreen() {
           <View style={styles.content}>
             {!shared ? (
               gaveUp ? (
-                <EmptyState size="inline" title={t("mobile.share.nothing")} subtitle={t("mobile.share.nothingHint")} />
+                // The sheet's whole content, not a line of a list: its mark over the words, with room around them.
+                <EmptyState
+                  size="panel"
+                  icon="share"
+                  title={t("mobile.share.nothing")}
+                  subtitle={t("mobile.share.nothingHint")}
+                />
               ) : (
                 <View style={styles.waiting}>
                   <PixelOrbit color="sky" size={16} />

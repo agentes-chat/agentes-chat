@@ -1,6 +1,17 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, statSync, watch, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  watch,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { SYSTEM_RUNNER_HOME } from "@agenteschat/adapters/command-policy";
 import { parseAccess, type RunnerAccess, type RunnerPause } from "@agenteschat/adapters/machine-protocol";
 import { validateNetworkMark } from "./network-mark";
 
@@ -74,6 +85,11 @@ export interface RunnerConfig {
    */
   services?: string[];
   /**
+   * System mode: each agent's /tmp on the system disk (`AGENT_DISK_TMP_ROOT`) instead of in its own tmpfs. An agent
+   * takes it at its first launch after the computer starts, so a change reaches it at the next boot.
+   */
+  agentTmpOnDisk?: true;
+  /**
    * After "leave" (unpair): the token `machineId` had, never used to connect,
    * only sent as proof when pairing again with the same server reconnects
    * that machine (ADR 0036 §5). Dropped by the next pairing.
@@ -117,6 +133,33 @@ export function runnerHome(env: NodeJS.ProcessEnv = process.env): string {
 
 export function configPath(home = runnerHome()) {
   return path.join(home, "config.json");
+}
+
+/**
+ * The homes of the organizations a server's own computer serves (`agentes-runner host`, ADR 0153 §5): one connection
+ * per organization, each in its own home — `<home>/orgs/<orgId>`, or `<home>/host/orgs/<orgId>` where the app keeps
+ * its own on a Mac. Only the homes with a token and a server are connections: a folder an organization left behind
+ * keeps neither, and the machine's own top-level config (the `mode: "system"` this home runs in) never has a token.
+ * The same homes `doctor` reads (`doctor.ts`, `connections`).
+ */
+export function hostOrgHomes(home = runnerHome()): string[] {
+  const inside = (dir: string) => {
+    try {
+      return readdirSync(dir)
+        .sort()
+        .map((name) => path.join(dir, name));
+    } catch {
+      return [];
+    }
+  };
+  return [...new Set([...inside(path.join(home, "orgs")), ...inside(path.join(home, "host", "orgs"))])].filter((h) => {
+    try {
+      const stored = readStoredConfig(h);
+      return Boolean(stored?.token && stored.server);
+    } catch {
+      return false;
+    }
+  });
 }
 
 /** Expands a leading `~` and makes the path absolute. */
@@ -233,8 +276,24 @@ export function normalizeStored(raw: Record<string, unknown>): StoredConfig {
       : {}),
     ...(claudeSharedLogin ? { claudeSharedLogin } : {}),
     ...(services.length ? { services } : {}),
+    ...(raw.agentTmpOnDisk === true ? { agentTmpOnDisk: true as const } : {}),
     ...(text(raw.previousToken, 4000) ? { previousToken: text(raw.previousToken, 4000) } : {}),
   };
+}
+
+/**
+ * `agentTmpOnDisk` in this home's config or the computer's (`system`): each organization's runner on the server's own
+ * computer has a home of its own, while its operator writes the computer's. A config that can't be read keeps /tmp in
+ * memory rather than fail the launch.
+ */
+export function agentTmpOnDisk(home = runnerHome(), system = SYSTEM_RUNNER_HOME): boolean {
+  return [home, system].some((h) => {
+    try {
+      return readStoredConfig(h)?.agentTmpOnDisk === true;
+    } catch {
+      return false;
+    }
+  });
 }
 
 /**

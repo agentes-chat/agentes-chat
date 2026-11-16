@@ -27,7 +27,7 @@ import {
   requireSession,
   security,
 } from "./context";
-import { AccountKind, BrainUnavailable, MachineAccount, PlanUsage } from "./schemas";
+import { AccountKind, BrainUnavailable, CodexVersionRequirement, MachineAccount, PlanUsage } from "./schemas";
 import { SecretBox } from "./secrets";
 
 const tags = ["Connected computers"];
@@ -61,7 +61,7 @@ const AccountLoginStatus = z
     error: z.string().optional().openapi({ description: "`failed`: why, for people." }),
     code: z.enum(ACCOUNT_LOGIN_FAILURES).optional().openapi({
       description:
-        "`failed` or `expired` on the computer: why, for the app to say in its own words. `not_installed`, `no_tty` (no terminal to take the code), `network` (the provider out of reach), `bad_code` (the provider refused the pasted code), `cli_exit` (the CLI stopped with an error of its own), `not_signed_in_after_login` (it finished, but its status says signed out), `status_unknown` (its status didn't answer), `no_token`, `not_kept`, `timeout` (`expired`), `canceled`. An older runner sends none.",
+        "`failed` or `expired` on the computer: why, for the app to say in its own words. `not_installed`, `no_tty` (no terminal to take the code), `network` (the provider out of reach), `bad_code` (the provider refused the pasted code), `cli_exit` (the CLI stopped with an error of its own), `not_signed_in_after_login` (it finished, but its status says signed out), `status_unknown` (its status didn't answer), `no_token`, `not_kept`, `sandbox` (Grok Build signed in, but its sandbox doesn't start there for an agent), `timeout` (`expired`), `canceled`. An older runner sends none.",
     }),
     message: z.string().optional().openapi({
       description: "With `code`: what the CLI itself said (English, credentials masked, at most 300 characters).",
@@ -279,6 +279,7 @@ export function machineAccountRoutes(deps: AppDeps) {
                   off: z
                     .record(z.string(), BrainUnavailable)
                     .openapi({ description: "Why a CLI of `brains` can't think there, by its kind." }),
+                  codexVersion: CodexVersionRequirement.optional(),
                   brains: z
                     .object({
                       claude_code: z.boolean(),

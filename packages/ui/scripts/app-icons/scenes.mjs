@@ -3,9 +3,23 @@
  * avatar and the logo. Each icon is a 1024 scene on a grid of 32 cells (one dither cell of the agent = one cell of
  * its sky), in light and dark, plus its favicon drawn pixel by pixel at 16 and 32 px (a 1024 drawing scaled down
  * blurs there). Layers: `mask`/`color` (see raster.mjs), `bg` for what Android puts on the icon's back layer, and
- * `part` ("agent", "eyes", "moon") for the one-color icon.
+ * `part` ("agent", "eyes", "moon", "accessory") for the one-color icon.
+ *
+ * Besides those, the icons a person makes on their phone (`madeScene`): a sky, a color and either a face or an
+ * accessory, every combination drawn when the phone app is built.
  */
-import { bodyTones, EYE_STYLES, EYE_X, eyeShapes, inBody, toneAt } from "../../src/agent/engine.js";
+import {
+  ACCESSORIES,
+  ACCESSORY_CHECK,
+  ACCESSORY_PALETTE,
+  AGENT_GRADIENTS,
+  bodyTones,
+  EYE_STYLES,
+  EYE_X,
+  eyeShapes,
+  inBody,
+  toneAt,
+} from "../../src/agent/engine.js";
 
 /** The ids, in the order the pickers show them; the first is the icon the apps ship with. */
 export const APP_ICON_IDS = ["night", "moon", "sky", "peekNight", "peekSky"];
@@ -62,11 +76,148 @@ export function inRound(x, y, x0, y0, w, h, r) {
   const cy = Math.min(Math.max(y, y0 + r), y0 + h - r);
   return (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
 }
-/** The agent: its body (the engine's shape, dithered in `tones` or one `solid` color) and its white eyes. */
-function agent({ x, y, s, n, tones, solid, style = "round", pose = {} }) {
+/** A line of `width` through `points`, its ends and corners round (the canvas's round caps and joins). */
+function stroke(points, width) {
+  const r = width / 2;
+  const xs = points.map((p) => p[0]);
+  const ys = points.map((p) => p[1]);
+  const box = [Math.min(...xs) - r, Math.min(...ys) - r, Math.max(...xs) + r, Math.max(...ys) + r];
+  return (X, Y) => {
+    if (X < box[0] || Y < box[1] || X > box[2] || Y > box[3]) return false;
+    for (let i = 1; i < points.length; i++) {
+      const [ax, ay] = points[i - 1];
+      const [bx, by_] = points[i];
+      const dx = bx - ax;
+      const dy = by_ - ay;
+      const len = dx * dx + dy * dy;
+      const k = len ? Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / len)) : 0;
+      if ((X - ax - k * dx) ** 2 + (Y - ay - k * dy) ** 2 <= r * r) return true;
+    }
+    return false;
+  };
+}
+/** The inside of a closed outline. */
+function polygon(points) {
+  const xs = points.map((p) => p[0]);
+  const ys = points.map((p) => p[1]);
+  const box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+  return (X, Y) => {
+    if (X < box[0] || Y < box[1] || X > box[2] || Y > box[3]) return false;
+    let inside = false;
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+      const [xi, yi] = points[i];
+      const [xj, yj] = points[j];
+      if (yi > Y !== yj > Y && X < ((xj - xi) * (Y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  };
+}
+const CURVE = 24;
+/** Points along an ellipse's arc, from angle `a0` to `a1` (y down, as a canvas). */
+const arc = (cx, cy, rx, ry, a0, a1) =>
+  Array.from({ length: CURVE + 1 }, (_, i) => {
+    const a = a0 + ((a1 - a0) * i) / CURVE;
+    return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry];
+  });
+const cubic = ([x0, y0], [x1, y1], [x2, y2], [x3, y3]) =>
+  Array.from({ length: CURVE + 1 }, (_, i) => {
+    const t = i / CURVE;
+    const u = 1 - t;
+    return [
+      u ** 3 * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t ** 3 * x3,
+      u ** 3 * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t ** 3 * y3,
+    ];
+  });
+const quad = ([x0, y0], [x1, y1], [x2, y2]) =>
+  Array.from({ length: CURVE + 1 }, (_, i) => {
+    const t = i / CURVE;
+    const u = 1 - t;
+    return [u * u * x0 + 2 * u * t * x1 + t * t * x2, u * u * y0 + 2 * u * t * y1 + t * t * y2];
+  });
+/**
+ * One eye's shape, as the engine's `drawEyes` draws each kind on a canvas: `e` is its box in the scene's units and
+ * `s` the body's side (the line's width follows it).
+ */
+function eyeMask(e, s) {
+  const { x: ex, y: ey, w, h } = e;
+  const cx = ex + w / 2;
+  const cy = ey + h / 2;
+  const lw = Math.max(1.4, s * 0.055);
+  switch (e.kind) {
+    case "arc":
+      return stroke(arc(cx, ey + h, Math.max(0.5, w / 2 - lw / 2), h, Math.PI, 2 * Math.PI), lw);
+    case "cup":
+      return stroke(arc(cx, ey, Math.max(0.5, w / 2 - lw / 2), h, 0, Math.PI), lw);
+    case "lid":
+      return (X, Y) => Y >= ey && ((X - cx) / (w / 2)) ** 2 + ((Y - ey) / h) ** 2 <= 1;
+    case "heart": {
+      const tip = [cx, ey + h];
+      const dip = [cx, ey + h * 0.3];
+      return polygon([
+        ...cubic(tip, [ex - w * 0.1, ey + h * 0.55], [ex, ey - h * 0.1], dip),
+        ...cubic(dip, [ex + w, ey - h * 0.1], [ex + w * 1.1, ey + h * 0.55], tip),
+      ]);
+    }
+    case "star": {
+      const r = Math.min(w, h) / 2;
+      return polygon(
+        Array.from({ length: 8 }, (_, i) => {
+          const a = (i / 8) * Math.PI * 2 - Math.PI / 2;
+          const rr = i % 2 ? r * 0.32 : r;
+          return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr];
+        }),
+      );
+    }
+    case "cross": {
+      const a = stroke(
+        [
+          [ex + lw / 2, ey + lw / 2],
+          [ex + w - lw / 2, ey + h - lw / 2],
+        ],
+        lw,
+      );
+      const b = stroke(
+        [
+          [ex + w - lw / 2, ey + lw / 2],
+          [ex + lw / 2, ey + h - lw / 2],
+        ],
+        lw,
+      );
+      return (X, Y) => a(X, Y) || b(X, Y);
+    }
+    case "ring":
+      return stroke(arc(cx, cy, Math.max(0.5, w / 2 - lw / 2), Math.max(0.5, h / 2 - lw / 2), 0, 2 * Math.PI), lw);
+    case "slant": {
+      const inner = e.side === 0 ? ex + w : ex;
+      const outer = e.side === 0 ? ex : ex + w;
+      return polygon([
+        [outer, ey],
+        [inner, ey + h * 0.38],
+        ...quad([inner, ey + h - w / 2], [inner, ey + h], [cx, ey + h]),
+        ...quad([cx, ey + h], [outer, ey + h], [outer, ey + h - w / 2]),
+      ]);
+    }
+    default:
+      return (X, Y) => inRound(X, Y, ex, ey, w, h, Math.min(w, h) / 2);
+  }
+}
+/** A layer turned `deg` clockwise around `about`, a point of the scene. */
+function turned(layer, { deg, about: [ax, ay] }) {
+  const cos = Math.cos((deg * Math.PI) / 180);
+  const sin = Math.sin((deg * Math.PI) / 180);
+  const back = (f) => (X, Y) => f(ax + (X - ax) * cos + (Y - ay) * sin, ay - (X - ax) * sin + (Y - ay) * cos);
+  return { ...layer, mask: back(layer.mask), color: back(layer.color) };
+}
+/**
+ * The agent: its body (the engine's shape, dithered in `tones` or one `solid` color) and its white eyes, both leaning
+ * with `turn`.
+ */
+function agent({ x, y, s, n, tones, solid, style = "round", pose = {}, turn }) {
   const c = s / n;
-  const eyes = eyeShapes(style, pose).map((e) => ({ x: x + e.x * s, y: y + e.y * s, w: e.w * s, h: e.h * s }));
-  return [
+  const eyes = eyeShapes(style, pose).map((e) =>
+    eyeMask({ ...e, x: x + e.x * s, y: y + e.y * s, w: e.w * s, h: e.h * s }, s),
+  );
+  const layers = [
     {
       part: "agent",
       mask: (X, Y) => inBody((X - x) / s, (Y - y) / s),
@@ -74,10 +225,11 @@ function agent({ x, y, s, n, tones, solid, style = "round", pose = {} }) {
     },
     {
       part: "eyes",
-      mask: (X, Y) => eyes.some((e) => inRound(X, Y, e.x, e.y, e.w, e.h, Math.min(e.w, e.h) / 2)),
+      mask: (X, Y) => eyes.some((eye) => eye(X, Y)),
       color: () => WHITE,
     },
   ];
+  return turn ? layers.map((l) => turned(l, turn)) : layers;
 }
 
 function nightAt(halo) {
@@ -95,8 +247,11 @@ const dayAt = (i, j, cols) => pick(DAY, Math.floor(((j + 0.5) / cols) * 2.7 + by
 const AG = { x: 224, y: 192, s: 576, n: 18 };
 /** Smaller and to the left, so the moon fits: cells 6..22 × 8..24. */
 const AG_MOON = { x: 192, y: 256, s: 544, n: 17 };
-/** Big, coming up from the bottom edge and looking up: cells 2..29 × 9.. */
-const PEEK = { x: 64, y: 288, s: 896, n: 28, pose: { look: [-0.035, -0.045] } };
+/**
+ * Big, leaning in from the bottom right corner and looking up: 30 cells a side, turned around the middle of its eyes,
+ * so its cells lean with it and no longer sit on the sky's.
+ */
+const PEEK = { x: 170, y: 202, s: 960, n: 30, pose: { look: [-0.035, -0.045] }, turn: { deg: -18, about: [650, 600] } };
 const LOOK_UP_RIGHT = { look: [0.035, -0.05] };
 
 const STARS = [
@@ -118,15 +273,22 @@ const STARS_MOON = [
   [4, 27, "#8cc3ff"],
   [26, 12, "#4693e8"],
 ];
-const STARS_TOP = [
+/** The stars around the leaning agent: over it and down its left side. */
+const STARS_PEEK = [
   [4, 3, "#c6e1ff"],
-  [27, 4, "#8cc3ff"],
+  [24, 1, "#8cc3ff"],
   [16, 2, "#4693e8"],
   [9, 6, "#4693e8"],
-  [23, 7, "#c6e1ff"],
+  [2, 15, "#c6e1ff"],
+  [4, 25, "#8cc3ff"],
 ];
 const CLOUD_A = ["..XX...", ".XXXXX.", "XXXXXXX"];
 const CLOUD_B = [".XXX.", "XXXXX"];
+/** What is behind the leaning agent: the night's stars or the day's clouds, clear of it. */
+const PEEK_BACK = {
+  night: () => [grid(32, nightAt(false)), cells(32, STARS_PEEK)],
+  sky: () => [grid(32, dayAt), shape(32, CLOUD_A, 3, 2, WHITE), shape(32, CLOUD_B, 17, 1, WHITE)],
+};
 const MOON = [
   [25, 5.2, 3.3],
   [26.6, 4.2, 2.7],
@@ -250,8 +412,8 @@ export const SCENES = {
   },
   /** Espiando à noite: the agent big, coming up from the bottom edge and looking up, under the night's stars. */
   peekNight: {
-    light: () => [grid(32, nightAt(false)), cells(32, STARS_TOP), ...agent({ ...PEEK, tones: SKY_T })],
-    dark: () => [fill(BLACK_NIGHT), cells(32, STARS_TOP), ...agent({ ...PEEK, tones: SKY_T })],
+    light: () => [...PEEK_BACK.night(), ...agent({ ...PEEK, tones: SKY_T })],
+    dark: () => [fill(BLACK_NIGHT), cells(32, STARS_PEEK), ...agent({ ...PEEK, tones: SKY_T })],
     favicon: (N) =>
       N === 32
         ? [
@@ -267,13 +429,8 @@ export const SCENES = {
   },
   /** Espiando no céu: the same, in the day sky with clouds, the agent navy. */
   peekSky: {
-    light: () => [
-      grid(32, dayAt),
-      shape(32, CLOUD_A, 3, 2, WHITE),
-      shape(32, CLOUD_B, 22, 4, WHITE),
-      ...agent({ ...PEEK, tones: NAVY_T }),
-    ],
-    dark: () => [grid(32, nightAt(false)), cells(32, STARS_TOP), ...agent({ ...PEEK, tones: SKY_T })],
+    light: () => [...PEEK_BACK.sky(), ...agent({ ...PEEK, tones: NAVY_T })],
+    dark: () => [...PEEK_BACK.night(), ...agent({ ...PEEK, tones: SKY_T })],
     favicon: (N) =>
       N === 32
         ? [
@@ -284,6 +441,69 @@ export const SCENES = {
         : [tile(16, 3.5, "#8cc3ff"), clipped(16, 3.5, body(-1, 5, 18, SPRITE_NAVY)), snapEyes(-1, 5, 18, PEEK.pose)],
   },
 };
+
+/* ---------- The icons a person makes on their phone ---------- */
+
+/** What a made icon is made of. The phone's plugin and the apps' list name the same (tests keep them equal). */
+export const MADE_SKIES = ["night", "sky"];
+export const MADE_COLORS = Object.keys(AGENT_GRADIENTS);
+/** The eye styles, then the expressions that hold as a still picture. */
+export const MADE_FACES = ["round", "dots", "wide", "happy", "sleepy", "wink", "heart", "star", "surprised", "angry"];
+export const MADE_ACCESSORIES = Object.keys(ACCESSORIES);
+/** A face or an accessory, never both: a build carries every combination, and both together would be 1,920 icons. */
+export const MADE_LOOKS = [...MADE_FACES, ...MADE_ACCESSORIES];
+/** Facing, as the shipped icon, or leaning in from the corner as the Peeking ones (a face only: nothing it wears fits). */
+export const MADE_POSES = ["front", "peek"];
+export const madeId = ({ sky, color, look, pose }) => `made-${sky}-${color}-${look}${pose === "peek" ? "-peek" : ""}`;
+export const madeIcons = () =>
+  MADE_POSES.flatMap((pose) =>
+    MADE_SKIES.flatMap((sky) =>
+      MADE_COLORS.flatMap((color) =>
+        (pose === "peek" ? MADE_FACES : MADE_LOOKS).map((look) => ({ sky, color, look, pose })),
+      ),
+    ),
+  );
+
+/** Wearing something, the agent is smaller and lower so it fits: cells 8..23 × 13..28 (as the web draws it). */
+const AG_WEARING = { x: 256, y: 416, s: 512, n: 16 };
+
+/** An accessory on the body's 16 cells (the engine's `drawAccessory`), its antenna's light off. */
+function accessory({ x, y, s }, name) {
+  const a = ACCESSORIES[name];
+  const u = s / 16;
+  const key = (gx, gy) => (gx + 64) * 4096 + gy + 64;
+  const at = new Map();
+  for (const [j, row] of a.rows.entries())
+    for (const [i, raw] of [...row].entries()) {
+      if (raw === " ") continue;
+      const gx = a.ox + i;
+      const gy = a.oy + j;
+      const ch = ACCESSORY_CHECK[raw] ? ACCESSORY_CHECK[raw][(gx + gy) & 1] : raw;
+      at.set(key(gx, gy), ch === "A" ? "#ff6b5e" : (ACCESSORY_PALETTE[ch] ?? "#000000"));
+    }
+  const color = (X, Y) => at.get(key(Math.floor((X - x) / u), Math.floor((Y - y) / u)));
+  return { part: "accessory", mask: (X, Y) => color(X, Y) !== undefined, color };
+}
+
+/**
+ * A made icon's 1024 scene: the Night's sky or the day's, and the agent in its color with its face or accessory,
+ * or leaning in with its face as the Peeking icons' agent.
+ */
+export function madeScene({ sky, color, look, pose = "front" }) {
+  const wears = Object.hasOwn(ACCESSORIES, look);
+  const face = wears ? "round" : look;
+  if (pose === "peek") {
+    const leaning = EYE_STYLES[face] ? { style: face } : { pose: { ...PEEK.pose, expression: face } };
+    return [...PEEK_BACK[sky](), ...agent({ ...PEEK, tones: bodyTones(color), ...leaning })];
+  }
+  const eyes = EYE_STYLES[face] ? { style: face } : { pose: { expression: face } };
+  const at = wears ? AG_WEARING : AG;
+  const back =
+    sky === "night"
+      ? [grid(32, nightAt(true)), cells(32, STARS)]
+      : [grid(32, dayAt), shape(32, CLOUD_A, 3, 2, WHITE), shape(32, CLOUD_B, 26, 12, WHITE)];
+  return [...back, ...agent({ ...at, tones: bodyTones(color), ...eyes }), ...(wears ? [accessory(at, look)] : [])];
+}
 
 /* ---------- The same scene for each place ---------- */
 

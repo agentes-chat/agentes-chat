@@ -232,9 +232,12 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         // refuse them, so the sign-in's other server and Storage's "Show the folder" show only where this says
         // so), that a connector's sign-in and the window's own browser sign-in come back here (`deep_link.rs`,
         // older apps don't take them), that it lists the other servers' workspaces (`workspaces`,
-        // ADR 0154) and that it takes the person's app icon (`appIcon`, ADR 0179); nothing else.
+        // ADR 0154), that it takes the person's app icon (`appIcon`, ADR 0179) and how this computer draws
+        // (`renderer`, and Linux's `system` facts: graphics.rs); nothing else.
         .initialization_script(format!(
-            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, workspaces: true, appIcon: true }});"
+            "window.__agentesDesktop = Object.freeze({{ version: {version:?}, platform: {PLATFORM:?}, servers: true, files: true, connectorReturn: true, workspaces: true, appIcon: true, renderer: {renderer:?}, system: {system} }});",
+            renderer = crate::graphics::renderer(),
+            system = serde_json::to_string(&crate::graphics::system()).unwrap_or_else(|_| "null".into()),
         ))
         .on_navigation(move |url| match route_now(&on_nav, url) {
             Route::Stay => true,
@@ -266,10 +269,13 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
             NewWindowResponse::Deny
         })
         // A whole page loading again (⌘R, macOS ended it, a full navigation): the cover, never a blank window.
-        .on_page_load(move |_, payload| match payload.event() {
+        .on_page_load(move |page, payload| match payload.event() {
             PageLoadEvent::Started => crate::cover::show(&on_load, Duration::ZERO),
             // The page's own sizes follow the zoom (desktop.css), and the bar knows about full screen.
-            PageLoadEvent::Finished => fit_page(&on_load),
+            PageLoadEvent::Finished => {
+                fit_page(&on_load);
+                crate::cover::site_loaded(&on_load, &page);
+            }
         })
         .on_download(move |_, event| match event {
             DownloadEvent::Requested { destination, .. } => match downloads_path(&on_download, destination) {
@@ -302,6 +308,19 @@ pub fn open(app: &AppHandle, url: Option<Url>) -> Result<(), String> {
         // The buttons are placed by `place_lights` (on every fit), not with `traffic_light_position`.
         .hidden_title(true);
     let built = builder.build().map_err(|e| e.to_string())?;
+    // Linux's side of lib.rs `on_web_content_process_terminate` (macOS only in Tauri): a web process that died
+    // leaves the window blank, so the page loads again.
+    #[cfg(target_os = "linux")]
+    {
+        let app = app.clone();
+        let _ = built.with_webview(move |view| {
+            use webkit2gtk::WebViewExt;
+            view.inner().connect_web_process_terminated(move |view, _| {
+                crate::cover::show(&app, Duration::ZERO);
+                view.reload();
+            });
+        });
+    }
     // A new window starts with the bundle's icon on Windows and Linux: the person's pick (ADR 0179).
     crate::app_icon::show(app);
     let window = built.as_ref().window();
@@ -685,7 +704,6 @@ fn front(app: &AppHandle) -> Result<(), String> {
     let window = app.get_window(LABEL).ok_or("window not found")?;
     let _ = window.unminimize();
     window.show().map_err(|e| e.to_string())?;
-    crate::sync_dock(app);
     window.set_focus().map_err(|e| e.to_string())
 }
 
@@ -768,7 +786,15 @@ fn checked(request: &Value) -> Result<Value, String> {
             if servers::origin_of(server).as_deref() != Some(server) {
                 return Err("bad server".into());
             }
-            Ok(json!({ "kind": "openWorkspace", "server": server, "orgId": org()? }))
+            let mut out = json!({ "kind": "openWorkspace", "server": server, "orgId": org()? });
+            // Which of that server's accounts it belongs to (ADR 0183): an id, like the workspace's.
+            if let Some(account) = text("account") {
+                if !crate::workspaces::good_id(account) {
+                    return Err("bad account id".into());
+                }
+                out["account"] = json!(account);
+            }
+            Ok(out)
         }
         // The folder is the app's to know: the page names none.
         Some("files") => Ok(json!({ "kind": "files" })),
@@ -1140,7 +1166,9 @@ pub async fn this_mac(app: AppHandle, webview: tauri::Webview, request: Value) -
             if !servers::get(&app).servers.iter().any(|s| s == server) {
                 return Err("not a server of this app".into());
             }
-            let url: Url = format!("{server}/org/{}", request["orgId"].as_str().unwrap_or_default())
+            // The page there moves the window to that account before it opens (`?as=`, ADR 0183).
+            let account = request["account"].as_str().map(|id| format!("?as={id}")).unwrap_or_default();
+            let url: Url = format!("{server}/org/{}{account}", request["orgId"].as_str().unwrap_or_default())
                 .parse()
                 .map_err(|_| "not a URL")?;
             show_url(&app, url)?;
@@ -1417,6 +1445,7 @@ mod tests {
             json!({ "kind": "openWorkspace", "server": "http://evil.example", "orgId": "o-1" }),
             json!({ "kind": "openWorkspace", "server": "https://agentes.exemplo.com.br", "orgId": "../x" }),
             json!({ "kind": "openWorkspace", "orgId": "o-1" }),
+            json!({ "kind": "openWorkspace", "server": "https://agentes.exemplo.com.br", "orgId": "o-1", "account": "../x" }),
         ] {
             assert!(checked(&bad).is_err(), "{bad}");
         }

@@ -327,3 +327,28 @@ test("someone else's computer: the row names whose it is and Pedir sends them th
   await click(within(row).getByRole("button", { name: "Pedir a Rui" }));
   expect(asked).toEqual(["browser"]);
 });
+
+test("a profile's browser that didn't answer says so at once, with Tentar de novo, instead of opening forever", async () => {
+  const s = withProfiles();
+  const r = await renderApp(`/org/${ORG_ID}/settings/computers/${s.machine.id}`, { api: s.api });
+  await settle(8);
+  const socket = r.sockets.last();
+  await act(async () => socket.open());
+  const card = screen().getByRole("heading", { name: "Perfis do navegador" }).closest(".ac-card") as HTMLElement;
+  const row = card.querySelector(".pf-list > .machine-page__agent-row") as HTMLElement;
+  await click(within(row).getByRole("button", { name: "Fazer login" }));
+  const dialog = screen().getByRole("dialog", { name: "Fazer login no perfil Empresa A" });
+  const cover = () => dialog.querySelector(".brw-dim__box")?.textContent ?? "";
+  await act(async () =>
+    socket.push({
+      type: "browser.unavailable",
+      agentId: "profile:p-free",
+      reason: "unavailable",
+      message: "The browser didn't answer within 15 s",
+    }),
+  );
+  expect(cover()).toContain("O navegador da Empresa A não respondeu.");
+  expect(cover()).toContain("Tentar de novo reinicia o navegador. Os logins continuam salvos.");
+  await click(within(dialog).getByRole("button", { name: "Tentar de novo" }));
+  expect(s.calls.filter((c) => c.method === "takeover").map((c) => c.args)).toEqual([["p-free"], ["p-free"]]);
+});

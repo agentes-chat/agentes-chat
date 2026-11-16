@@ -3,13 +3,16 @@ import {
   BROWSER_DEVICE_SIZES,
   BROWSER_DEVICES,
   BROWSER_FAST_PROTOCOL,
+  BROWSER_TABS_KEPT,
   BROWSER_VIEWPORT_PROTOCOL,
   BROWSER_VIEWPORT_SIDE,
   BROWSER_WARM_PROTOCOL,
   type BrowserBatchCommand,
   type BrowserSetup,
+  type BrowserTabs,
   type BrowserViewport,
   browserSetupOf,
+  browserTabsOf,
   browserViewportOf,
   chromeFailureKind,
   type ErrorReporter,
@@ -416,6 +419,9 @@ export function browserErrorText(error: string) {
  */
 export function runnerFailureText(error: string | undefined, code?: string): string {
   const said = error || "the command failed";
+  if (code === "browser_stuck") {
+    return `${said.replace(/\.$/, "")}. ${NOT_RESPONDING}`;
+  }
   if (code === "get_blocked") {
     return "The page tried to send the password in its address, and the computer stopped that request: nothing was sent. Don't type it on that page again; tell the person the site's sign-in looks wrong.";
   }
@@ -432,6 +438,10 @@ export function runnerFailureText(error: string | undefined, code?: string): str
   if (code && (VAULT_TYPE_REFUSALS as readonly string[]).includes(code)) return browserErrorText(`${code}: ${said}`);
   return browserErrorText(said);
 }
+
+/** After a browser that stopped answering: what the agent does, and doesn't, next. */
+const NOT_RESPONDING =
+  "Don't guess why and don't try again right away: tell the person the browser on that computer isn't responding, and that the agentes app's runner log there says why.";
 
 /** Why a secret can't be typed in the browser. */
 function secretMissingText(name: string, held: { site: string | null; gone?: boolean } | null) {
@@ -491,6 +501,9 @@ function refuseIfOff(error: unknown, status: { machineId: string; machineName: s
     throw new ToolOffError(explain(error, status.machineName), { machineId: status.machineId, tool: "browser" });
 }
 
+/** " within N s", from the hub's timeout words. */
+const secondsIn = (message: string) => / within \d+ s/.exec(message)?.[0] ?? "";
+
 /** Runner refusals → what the agent reads. */
 function explain(error: unknown, machineName: string): string {
   if (error instanceof MachineOfflineError || error instanceof MachinePausedError) return error.message;
@@ -503,7 +516,7 @@ function explain(error: unknown, machineName: string): string {
     case "paused":
       return `The owner paused the computer ${machineName}: nothing new can start there until they resume it. Tell the people.`;
     case "timeout":
-      return `The browser took too long (${error.message}). The page may still be loading: read it again, or wait for something specific with browser_wait.`;
+      return `The computer ${machineName} didn't answer${secondsIn(error.message)} and didn't say why. ${NOT_RESPONDING}`;
     case "canceled":
       return error.message;
     default:
@@ -546,6 +559,31 @@ function emulatedLine(v: NonNullable<BrowserViewport> | undefined): string {
   return v
     ? `\nEvery tab shows as a ${v.device} (${v.width}×${v.height}) until you open with viewport desktop and no size, or your browser closes.`
     : "";
+}
+
+/**
+ * The agent's tabs, when it has more than one or the runner closed some: how many, which one it is on, the others by
+ * title (the sites' words: data) and host.
+ */
+function tabsLine(t: BrowserTabs | undefined): string {
+  if (!t || (t.count <= 1 && !t.closed)) return "";
+  const name = (tab: BrowserTabs["open"][number]) => {
+    const title = neutralizeUntrusted(tab.title).replace(/\s+/g, " ").trim().slice(0, 80);
+    return title ? `"${title}" (${tab.host})` : tab.host;
+  };
+  const own = t.open.find((tab) => tab.current);
+  const others = t.open.filter((tab) => tab !== own).map(name);
+  const more = t.count - t.open.length;
+  const list = [
+    own ? `this one: ${name(own)}` : "",
+    others.length > 0 ? `others: ${others.join(", ")}${more > 0 ? ` and ${more} more` : ""}` : "",
+  ].filter(Boolean);
+  const counts = new Map<string, number>();
+  for (const host of t.closed ?? []) counts.set(host, (counts.get(host) ?? 0) + 1);
+  const closed = [...counts].map(([host, n]) => (n > 1 ? `${host} ×${n}` : host)).join(", ");
+  return `\nTabs open: ${t.count}${list.length > 0 ? ` (${list.join("; ")})` : ""}.${
+    closed ? ` Closed to keep your tabs tidy: ${closed}, so the tab numbers from list changed.` : ""
+  }`;
 }
 
 /** An image a judge can take (Jev: each side 280 to 1568 pixels), or null. */
@@ -792,6 +830,8 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
         profile: { id: string; name: string } | null;
         /** The page size its browser emulated at its last answer (protocol 52); undefined at its own. */
         emulated: () => NonNullable<BrowserViewport> | undefined;
+        /** Its tabs at its last answer; undefined from a runner that doesn't say. */
+        tabs: () => BrowserTabs | undefined;
       }
     | { ok: false; text: string }
   > {
@@ -876,6 +916,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
     const fast = status.protocol >= BROWSER_FAST_PROTOCOL;
     let reached = false;
     let emulated: NonNullable<BrowserViewport> | undefined;
+    let tabs: BrowserTabs | undefined;
     // The live view, take over and Stop follow the computer the browser runs on (a mission's or the agent's own).
     const reachedOnce = async () => {
       if (reached || profileId) return;
@@ -909,6 +950,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
       }
       addSetup(reply);
       emulated = emulatedOf(reply.emulated);
+      tabs = browserTabsOf(reply.tabs);
       await reachedOnce();
       return reply.success ? { ok: true, data: reply.data } : failed(reply.error, reply.code);
     };
@@ -951,6 +993,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
         }
         addSetup(reply);
         emulated = emulatedOf(reply.emulated);
+        tabs = browserTabsOf(reply.tabs);
         await reachedOnce();
         return reply.answers.map((a) => (a.success ? { ok: true, data: a.data } : failed(a.error, a.code)));
       },
@@ -995,6 +1038,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
       setup,
       profile: turn ? { id: turn.profile.id, name: turn.profile.name } : null,
       emulated: () => emulated,
+      tabs: () => tabs,
     };
   }
 
@@ -1011,7 +1055,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
     if (!r.ok) return { content: neutralizeUntrusted(r.text), isError: true };
     const url = urlOf(r.data);
     return {
-      content: `${done(r.data)}${emulatedLine(linked.emulated())}`,
+      content: `${done(r.data)}${emulatedLine(linked.emulated())}${tabsLine(linked.tabs())}`,
       data: { ...(url ? { url } : {}), ...profileData(linked.profile), ...(extra?.(r.data) ?? {}) },
     };
   }
@@ -1206,7 +1250,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
     }
     const f = formatPlanReport(report);
     // Said on every answer while it lasts: a later run, or another agent on a profile, didn't choose it.
-    const summary = `${f.summary}${emulatedLine(linked.emulated())}`;
+    const summary = `${f.summary}${emulatedLine(linked.emulated())}${tabsLine(linked.tabs())}`;
     const content = f.screen ? `${summary}\n${wrapPage(f.screen)}` : summary;
     const url = report.after?.url ?? null;
     const timing = {
@@ -1523,7 +1567,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
     ),
     tool(
       "browser_tabs",
-      `${BROWSER_TOOL_INFO.browser_tabs.description} Links that open a new tab (sign-in windows) show up here: switch to it to read it.`,
+      `${BROWSER_TOOL_INFO.browser_tabs.description} Links that open a new tab (sign-in windows) show up here: switch to it to read it. browser_open and browser_do reuse the tab you are on: add a tab only to keep two sites at once, and close it when done. Your answers list your tabs; past ${BROWSER_TABS_KEPT}, the least recently used closes.`,
       {
         type: "object",
         properties: {

@@ -26,6 +26,7 @@ import { isHttpsUrl, serverCovers } from "./custom-tools";
 import { formatUsd, joinNames } from "./format";
 import { aiStateOf, PLAN_BRAIN } from "./no-ai";
 import type { Permission } from "./permissions";
+import { COMPUTER_KEYS, COMPUTERS_ROW } from "./roles";
 import { type TeamWeekCard, teamWeekCardOf } from "./team-week";
 import { type UsagePauseCard, usagePauseCardOf } from "./usage-pause";
 
@@ -732,7 +733,7 @@ export const actionCardWords = (card: WorkspaceActionCard, t: TFunction): Record
  * role or a channel's exception gives or takes in the permissions' own words ("conversar, dar missões e editar a wiki";
  * "+ editar a wiki, − aprovar ações"), a new name, where a role moves, a channel turned private, a new budget. Empty when
  * the sentence says it all. An invite card's lines are each their own (a line break between them), its roles a
- * sentence ("Com os papéis Vendas e Suporte.").
+ * sentence ("Com os cargos Vendas e Suporte.").
  */
 export function actionCardDetail(card: WorkspaceActionCard, t: TFunction, locale = "en"): string {
   const input = card.params.input;
@@ -750,6 +751,24 @@ export function actionCardDetail(card: WorkspaceActionCard, t: TFunction, locale
       return parts(renamed, change(input.add_permissions, input.remove_permissions));
     case "move_role":
       return `${input.above === true ? "↑" : "↓"} ${card.params.words.other ?? ""}`.trim();
+    case "set_permission_holders": {
+      // Who has it once applied: everyone, then each role named; on the computers' ladder, each with its step, a line
+      // each.
+      const roles = (Array.isArray(input.roles) ? input.roles : []) as { name?: unknown; level?: unknown }[];
+      const holders = [
+        ...(Number(input.everyone) > 0
+          ? [{ name: t("rolesPage.everyoneName") as string, level: Number(input.everyone) }]
+          : []),
+        ...roles.filter((r) => Number(r.level) > 0).map((r) => ({ name: text(r.name), level: Number(r.level) })),
+      ];
+      if (holders.length === 0) return t("rightHand.action.holdersOwnersOnly") as string;
+      return input.row === COMPUTERS_ROW
+        ? holders.map((h) => `${h.name}: ${short(COMPUTER_KEYS[h.level - 1] ?? "")}`).join("\n")
+        : joinNames(
+            holders.map((h) => h.name),
+            t,
+          );
+    }
     case "set_channel_permissions":
       return change(input.allow, input.deny) || (t("channel.perms.clear") as string);
     case "update_channel":

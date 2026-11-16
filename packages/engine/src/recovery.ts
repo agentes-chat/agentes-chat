@@ -40,6 +40,8 @@ export const RESUME_MAX_AGE_MS = 6 * 60 * 60_000;
 type StoredTranscript = {
   messages?: { role: string; content: Parameters<typeof textOf>[0] }[];
   postedUpTo?: number;
+  /** A reply held for its wording (`Transcript.heldWording`): its answer, over what its rewrite wrote since. */
+  heldWording?: string;
 };
 
 /** When the run's worker last said it was alive. */
@@ -224,6 +226,7 @@ async function resume(db: Database, run: AgentRun, at: SweepTime, ran: string[])
         prompt: prev?.prompt ?? t.turnPrompt ?? (await getMessage(tx, run.orgId, run.triggerMessageId))?.body ?? "",
         executed: [...new Set([...(prev?.executed ?? []), ...ran])],
         drops: prev?.drops ?? 0,
+        ...(prev?.early ? { early: prev.early } : {}),
         cause: "restart",
       };
       await tx
@@ -237,7 +240,12 @@ async function resume(db: Database, run: AgentRun, at: SweepTime, ran: string[])
     // a job for one wait for the computer: it would find the run running and do nothing.
     await tx
       .update(outbox)
-      .set({ status: "failed", lockedUntil: null, lastError: "its worker stopped: the run went on in a new job" })
+      .set({
+        status: "failed",
+        lockedUntil: null,
+        lastError: "its worker stopped: the run went on in a new job",
+        lastErrorStatus: null,
+      })
       .where(
         and(
           eq(outbox.kind, "agent_run.execute"),
@@ -262,12 +270,15 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
   const { db } = deps;
   const threadId = replyThreadOf(run);
   const t = (run.transcript ?? {}) as StoredTranscript;
-  const said = (t.messages ?? [])
-    .slice(t.postedUpTo ?? 0)
-    .filter((m) => m.role === "assistant")
-    .map((m) => textOf(m.content).trim())
-    .filter(Boolean)
-    .join("\n\n");
+  // A reply held for its wording is a finished answer: it wins over the working text its rewrite wrote since.
+  const said =
+    t.heldWording ||
+    (t.messages ?? [])
+      .slice(t.postedUpTo ?? 0)
+      .filter((m) => m.role === "assistant")
+      .map((m) => textOf(m.content).trim())
+      .filter(Boolean)
+      .join("\n\n");
   const note = `_${INTERRUPTED_BY_RESTART}. Ask again to continue._`;
   const result = await db.transaction(async (tx) => {
     if (!(await claimStale(tx, run.id, at))) return null;
@@ -309,7 +320,7 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
     // Its job is done for good.
     await tx
       .update(outbox)
-      .set({ status: "failed", lockedUntil: null, lastError: INTERRUPTED_BY_RESTART })
+      .set({ status: "failed", lockedUntil: null, lastError: INTERRUPTED_BY_RESTART, lastErrorStatus: null })
       .where(
         and(
           eq(outbox.kind, "agent_run.execute"),
@@ -356,13 +367,14 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
     runId: run.id,
     status: "failed",
   });
-  // It was answering another agent: the asker hears it now instead of waiting for the question to expire.
-  await onConsultedRunFinished({ db, pubsub: deps.pubsub }, run, "failed", INTERRUPTED_BY_RESTART).catch(() => {});
-  // A work ends before the release, which would drop a reply turn's own message passed on to it (`endWork` keeps it).
+  // A work ends before the release, which would drop a reply turn's own message passed on to it (`endWork` keeps it),
+  // and before the asker hears it: a handed work's end line home is what spares the asker a relay (`reportHandOffs`).
   if (run.workId) {
     const [ended] = await db.select().from(agentRuns).where(eq(agentRuns.id, run.id));
     if (ended) await endWork(deps, ended, "failed").catch(() => null);
   }
+  // It was answering another agent: the asker hears it now instead of waiting for the question to expire.
+  await onConsultedRunFinished({ db, pubsub: deps.pubsub }, run, "failed", INTERRUPTED_BY_RESTART).catch(() => {});
   // What was sent to it and not read gets a run of its own.
   await releaseInbox(db, deps.pubsub, run, { reason: "interrupted" }).catch(() => null);
   return true;

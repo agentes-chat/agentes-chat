@@ -100,7 +100,7 @@ import { enqueue, type JobHandlers, type OutboxJob, PermanentJobError } from "./
 import { checkParkedRun, EARLY_CHECK_JOB, scheduleParkedChecks } from "./parked-asks";
 import { PARTNER_WAITLIST_CONTACT_JOB, savePartnerWaitlistContact } from "./partner-waitlist";
 import { notifyPersonLimit, PERSON_LIMIT_JOB } from "./person-usage";
-import { checkPushReceipts, deliverPush, pushTicketsOf } from "./push";
+import { deliverPush } from "./push";
 import { reachOf, settleReach } from "./reach";
 import { routineCreatorOf } from "./requester";
 import { considerCard, RIGHT_HAND_DECIDE_JOB } from "./right-hand-approvals";
@@ -113,7 +113,7 @@ import {
   routeMessage,
   smallModelFor,
 } from "./router";
-import { createJevRouterStrategy, jevCostNanoUsd, routeChain } from "./router-jev";
+import { createJevRouterStrategy, routeChain } from "./router-jev";
 import { createPlanRouterStrategy } from "./router-plan";
 import { executeRoutineRun } from "./routines";
 import { type AgentRun, NO_AI } from "./runs";
@@ -271,7 +271,7 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
                 model: u.model,
                 inputTokens: u.inputTokens,
                 outputTokens: u.outputTokens,
-                costNanoUsd: jevCostNanoUsd(u.inputTokens),
+                costNanoUsd: u.costNanoUsd,
               });
             },
           }),
@@ -1148,10 +1148,6 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         String(job.payload.notificationId),
         { held: job.payload.held === true },
       );
-    },
-    // Receipts of a push ~15 min later: tokens whose device is gone are deleted.
-    "push.receipts": async (job) => {
-      await checkPushReceipts({ db: deps.db, push: deps.push }, pushTicketsOf(job.payload.tickets));
     },
     // A workspace's skills that update by themselves from their links, once a day.
     [SKILL_UPDATES_JOB]: async (job) => {

@@ -245,22 +245,27 @@ test("parser: partial deltas, our tool calls with results, usage, and the final 
   expect(p.session).toBe(SESSION(1));
 });
 
-test("parser: a turn's usage says how many API calls it made and the most uncached input one read", () => {
+test("parser: a turn's usage says how many API calls it made and the most uncached and whole input one read", () => {
   const p = new ClaudeStreamParser();
   p.beginTurn();
-  const call = (id: string, input: number) =>
+  const call = (id: string, input: number, written = 0) =>
     p.push(
       line({
         type: "assistant",
         parent_tool_use_id: null,
-        message: { id, content: [], usage: { input_tokens: input, cache_read_input_tokens: 9000 } },
+        message: {
+          id,
+          content: [],
+          usage: { input_tokens: input, cache_read_input_tokens: 9000, cache_creation_input_tokens: written },
+        },
       }),
     );
   call("m1", 12);
   call("m2", 3400);
   // The same message said again for its next block.
   call("m2", 3400);
-  call("m3", 40);
+  // The biggest step is not the most uncached one: its context, cache included.
+  call("m3", 40, 5000);
   const end = p.push(
     line({
       type: "result",
@@ -272,7 +277,16 @@ test("parser: a turn's usage says how many API calls it made and the most uncach
     }),
   );
   expect(end.events).toEqual([
-    { type: "usage", input: 30452, output: 30, source: "plan", cacheRead: 27000, calls: 3, maxUncached: 3400 },
+    {
+      type: "usage",
+      input: 30452,
+      output: 30,
+      source: "plan",
+      cacheRead: 27000,
+      calls: 3,
+      maxUncached: 3400,
+      maxContext: 14040,
+    },
   ]);
   // It reaches the server as said.
   expect(parseBrainEvent(end.events[0])).toEqual(end.events[0] as WireBrainEvent);
@@ -1550,6 +1564,23 @@ test.if(posix)(
 );
 
 test.if(posix)(
+  "a session started with no limit takes 200K once, resumed in the same session; later turns keep the process",
+  async () => {
+    const { spawns, turn } = setup();
+    const logged = () => spawns() as unknown as { args: string[]; compactWindow: string | null }[];
+    await turn(1, "first");
+    expect(logged()[0]?.compactWindow).toBeNull();
+    await turn(2, "second", { contextTokens: 200_000 });
+    expect(logged()).toHaveLength(2);
+    expect(logged()[1]?.compactWindow).toBe("200000");
+    expect(logged()[1]?.args.slice(-2)).toEqual(["--resume", SESSION(1)]);
+    // The same limit never starts the process again, however many turns follow.
+    for (const n of [3, 4, 5]) await turn(n, `turn ${n}`, { contextTokens: 200_000 });
+    expect(logged()).toHaveLength(2);
+  },
+);
+
+test.if(posix)(
   "other lines for the agent's commits (turned off, the agent renamed) restart the process, resumed",
   async () => {
     const { spawns, turn } = setup();
@@ -2652,7 +2683,10 @@ test.if(posix)("delegated: root refuses what the CLI asks on stdout, and the tur
   const s = delegatedSetup();
   (s.m as unknown as { log: (l: string) => void }).log = (l) => lines.push(l);
   const r = await s.turn(1, "ASKCONTROL");
-  expect(r.final).toMatchObject({ type: "done", text: "control error: Not allowed with this sign-in." });
+  // An elicitation is refused with a reason that says nobody was asked, never as if the person had declined (#198).
+  const ended = r.events.flatMap((e) => (e.type === "done" ? [e.text] : [])).join("");
+  expect(ended).toContain("nobody was shown the form");
+  expect(ended).toContain("Not allowed with this sign-in");
   expect(lines.join("\n")).toContain("control_request elicitation");
 });
 

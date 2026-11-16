@@ -3,12 +3,21 @@ import { domWindow, setupDom } from "@agenteschat/ui/testing/dom";
 
 setupDom();
 
-import { ApiError, keys, type OrgDeletion, type OrgSummary, type Role } from "@agenteschat/client";
+import {
+  ApiError,
+  keys,
+  type OrgDeletion,
+  type OrgSummary,
+  type Role,
+  useMe,
+  useRestoreAccount,
+} from "@agenteschat/client";
 import { CLOUD_SERVER } from "@agenteschat/client/lib/server";
 import type { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
 import { createFakeApi, ENG_ID, meAsAdmin, ORG_ID, seedState } from "./fake-api";
-import { renderApp, screen, settle } from "./render";
+import { createFakeAuth } from "./fake-auth";
+import { renderApp, renderPage, screen, settle } from "./render";
 
 afterEach(() => cleanup());
 
@@ -409,6 +418,8 @@ describe("the desktop app lists every server's workspaces (ADR 0154)", () => {
       expect.stringContaining("Beta"),
       expect.stringMatching(/Oficina.*4/),
       expect.stringContaining("Adicionar workspace"),
+      // Another account beside this one (ADR 0183).
+      expect.stringContaining("Adicionar conta"),
     ]);
     expect(menu.queryByText("Novo workspace")).toBeNull();
     await click(menu.getAllByRole("menuitem")[2] as Element);
@@ -430,6 +441,7 @@ describe("the desktop app lists every server's workspaces (ADR 0154)", () => {
       "agentes.chat",
       expect.stringMatching(/Oficina.*4/),
       expect.stringContaining("Adicionar workspace"),
+      expect.stringContaining("Adicionar conta"),
     ]);
     await click(menu.getByText("Novo workspace"));
     await settle(4);
@@ -451,6 +463,7 @@ describe("the desktop app lists every server's workspaces (ADR 0154)", () => {
       expect(all.slice(all.indexOf("Seus workspaces") + 1)).toEqual([
         ...servers,
         expect.stringContaining("Adicionar workspace"),
+        expect.stringContaining("Adicionar conta"),
         "Sair",
       ]);
       if (here === OWN) {
@@ -469,6 +482,8 @@ describe("the desktop app lists every server's workspaces (ADR 0154)", () => {
       expect.stringContaining("Acme"),
       expect.stringContaining("Beta"),
       expect.stringContaining("Novo workspace"),
+      // The one thing new in a browser: another account beside this one (ADR 0183).
+      expect.stringContaining("Adicionar conta"),
     ]);
     expect(menu.queryByText("Adicionar workspace")).toBeNull();
   });
@@ -766,6 +781,14 @@ describe("an account waiting for its deletion", () => {
     state.me.organizations = [];
     return state;
   };
+  /** The waiting screen is up. */
+  const waits = () => screen().queryByRole("heading", { name: "Sua conta está sendo apagada" }) !== null;
+  const toasts = () => [...document.querySelectorAll(".ac-toast")].map((t) => t.textContent);
+  /** Signing out ends the session, as the server does: `GET /me` answers nobody after. */
+  const endingSession = (state: ReturnType<typeof seedState>) =>
+    createFakeAuth({ onSignOut: () => (state.me = null) }).auth;
+  // Sair marks this browser as signed out by hand: the next app starts without it.
+  afterEach(() => localStorage.removeItem("agentes.signedOut"));
 
   test("signing in shows one screen in place of the app: when it goes, Restaurar and Sair", async () => {
     const state = waiting(soon(6));
@@ -791,6 +814,145 @@ describe("an account waiting for its deletion", () => {
     expect(screen().queryByRole("button", { name: "Restaurar conta" })).toBeNull();
     expect(screen().getByRole("button", { name: "Sair" })).toBeTruthy();
   });
+
+  // The cache is cleared at every sign-in, sign-out and ended session, which tells nobody who reads `me`.
+  test("the screen follows the account in the cache: cleared, it goes, with no page change", async () => {
+    const state = waiting(soon(6));
+    const { router, services } = await renderApp("/", { api: createFakeApi(state) });
+    await settle(8);
+    expect(waits()).toBe(true);
+    const path = router.state.location.pathname;
+    // Restored from another device meanwhile.
+    if (state.me) {
+      const { deletion: _gone, ...user } = state.me.user;
+      state.me = { ...state.me, user };
+    }
+    await act(async () => services.queryClient.clear());
+    await settle(8);
+    expect(waits()).toBe(false);
+    expect(router.state.location.pathname).toBe(path);
+  });
+
+  test("Sair, from a page outside any workspace, ends on the sign-in with the screen gone", async () => {
+    const state = waiting(soon(6));
+    const { router } = await renderApp("/", { api: createFakeApi(state), auth: endingSession(state) });
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/onboarding");
+    await click(screen().getByRole("button", { name: "Sair" }));
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/login");
+    expect(waits()).toBe(false);
+    expect(screen().getByLabelText("E-mail")).toBeTruthy();
+    // By hand: the desktop app's own server waits for its owner's click.
+    expect(localStorage.getItem("agentes.signedOut")).toBe("1");
+  });
+
+  test("an auth client whose sign-out fails leaves all the same", async () => {
+    const state = waiting(soon(6));
+    const { auth } = createFakeAuth();
+    auth.signOut = async () => {
+      state.me = null;
+      throw new TypeError("Load failed");
+    };
+    const { router } = await renderApp("/", { api: createFakeApi(state), auth });
+    await settle(8);
+    await click(screen().getByRole("button", { name: "Sair" }));
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/login");
+    expect(waits()).toBe(false);
+    expect(screen().getByLabelText("E-mail")).toBeTruthy();
+  });
+
+  test("while Sair runs it shows as working, and neither button can be pressed", async () => {
+    const state = waiting(soon(6));
+    const { auth } = createFakeAuth();
+    let answer = () => {};
+    auth.signOut = () =>
+      new Promise<void>((done) => {
+        answer = done;
+      });
+    await renderApp("/", { api: createFakeApi(state), auth });
+    await settle(8);
+    const out = screen().getByRole("button", { name: "Sair" });
+    await click(out);
+    expect(out.getAttribute("aria-busy")).toBe("true");
+    expect(out.hasAttribute("disabled")).toBe(true);
+    expect(screen().getByRole("button", { name: "Restaurar conta" }).hasAttribute("disabled")).toBe(true);
+    state.me = null;
+    await act(async () => answer());
+    await settle(8);
+    expect(waits()).toBe(false);
+  });
+
+  // Deleting the account ended its sessions: the screen can be up after the one it was drawn with.
+  test("Restaurar after the session ended goes to the sign-in and says why once, in the app's words", async () => {
+    const state = waiting(soon(6));
+    const { router } = await renderApp("/", { api: createFakeApi(state) });
+    await settle(8);
+    state.me = null;
+    await click(screen().getByRole("button", { name: "Restaurar conta" }));
+    await settle(8);
+    expect(state.calls.some((c) => c.method === "account.restore")).toBe(true);
+    expect(router.state.location.pathname).toBe("/login");
+    expect(waits()).toBe(false);
+    expect(screen().getByLabelText("E-mail")).toBeTruthy();
+    expect(toasts()).toEqual(["Sua sessão terminou. Entre de novo para continuar."]);
+    // The sign-in leads back to where the screen was.
+    expect(router.state.location.search).toEqual({ redirect: "/onboarding" });
+    // Nobody signed out by hand.
+    expect(localStorage.getItem("agentes.signedOut")).toBeNull();
+  });
+
+  // Adding an account beside one that waits: the app's own answer to an ended session does nothing at this address.
+  test("Restaurar after the session ended, at the sign-in's address: the sign-in shows, with the same words once", async () => {
+    const state = waiting(soon(6));
+    const { router } = await renderApp("/login?add=1", { api: createFakeApi(state) });
+    await settle(8);
+    expect(waits()).toBe(true);
+    state.me = null;
+    await click(screen().getByRole("button", { name: "Restaurar conta" }));
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/login");
+    expect(waits()).toBe(false);
+    expect(screen().getByLabelText("E-mail")).toBeTruthy();
+    expect(toasts()).toEqual(["Sua sessão terminou. Entre de novo para continuar."]);
+  });
+
+  test("a restore the server refuses for no session leaves nobody signed in, for every screen that reads it", async () => {
+    const state = waiting(soon(6));
+    function Probe() {
+      const restore = useRestoreAccount();
+      return (
+        <button type="button" onClick={() => restore.mutate()}>
+          {useMe().data ? "signed in" : "nobody"}
+        </button>
+      );
+    }
+    const { services } = await renderPage(<Probe />, { api: createFakeApi(state) });
+    await settle(4);
+    const probe = screen().getByRole("button", { name: "signed in" });
+    state.me = null;
+    await click(probe);
+    await settle(4);
+    expect(services.queryClient.getQueryData(keys.me)).toBeNull();
+    expect(probe.textContent).toBe("nobody");
+  });
+
+  test("signing in on the sign-in page as an account that waits shows the screen, not the onboarding", async () => {
+    const state = seedState({ me: null });
+    const { auth } = createFakeAuth({ onSignIn: () => (state.me = waiting(soon(6)).me) });
+    const api = createFakeApi(state);
+    api.account.signInOptions = async () => ({ account: true, password: true, providers: [], canSignUp: false });
+    const { router } = await renderApp("/login", { api, auth });
+    await type(screen().getByLabelText("E-mail"), "ana@example.com");
+    await click(screen().getByRole("button", { name: /^Continuar(?! com)/ }));
+    await settle(4);
+    await type(screen().getByLabelText("Senha"), "correct horse");
+    await click(screen().getByRole("button", { name: /^Entrar/ }));
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/onboarding");
+    expect(waits()).toBe(true);
+  });
 });
 
 describe("an invitation into a workspace being deleted", () => {
@@ -806,5 +968,167 @@ describe("an invitation into a workspace being deleted", () => {
     expect(screen().getByRole("heading", { level: 1 }).textContent).toBe("Este link não funciona mais");
     expect(document.body.textContent).toContain("Peça um novo a quem mandou.");
     expect(screen().queryByLabelText("Seu nome")).toBeNull();
+  });
+});
+
+describe("the desktop app's owner on its own server: a sign-in again on this Mac, no password", () => {
+  const win = () => window as { __agentesDesktop?: unknown; __TAURI_INTERNALS__?: unknown };
+  afterEach(() => {
+    delete win().__agentesDesktop;
+    delete win().__TAURI_INTERNALS__;
+    sessionStorage.clear();
+  });
+  /**
+   * The app around the site: records each request; `signIn` answers the app's sign-in; `local`: this server runs in
+   * this app.
+   */
+  function inTheApp(signIn: () => Promise<unknown> = () => new Promise(() => {}), local = true) {
+    const asked: Record<string, unknown>[] = [];
+    win().__agentesDesktop = { version: "0.6.0" };
+    win().__TAURI_INTERNALS__ = {
+      invoke: async (cmd: string, args: { request: Record<string, unknown> }) => {
+        if (cmd !== "this_mac") return {};
+        asked.push(args.request);
+        if (args.request.kind === "signIn") return signIn();
+        if (args.request.kind === "status") return { orgs: [], local };
+        return {};
+      },
+    };
+    return asked;
+  }
+  const ownerHere = (over: Parameters<typeof seedState>[0] = {}) => {
+    const state = seedState({ authConfig: { passwordReset: false }, ...over });
+    if (!state.me) throw new Error("signed in");
+    state.me.user = { ...state.me.user, hasPassword: false, confirmsOnThisMac: true };
+    return state;
+  };
+  const signedInMinutesAgo = (minutes: number) =>
+    sessionStorage.setItem("agentes.thisMac.signedInAt", String(Date.now() - minutes * 60_000));
+
+  test("signed in through the app just now: the name typed, then it deletes with nothing else", async () => {
+    inTheApp();
+    signedInMinutesAgo(1);
+    const { state } = await open(`/org/${ORG_ID}/settings/general?delete=1`, { state: ownerHere() });
+    const dialog = screen().getByRole("dialog", { name: "Apagar Acme?" });
+    expect(dialog.textContent).not.toContain("Adicione uma senha");
+    expect(within(dialog).queryByLabelText("Sua senha")).toBeNull();
+    const submit = within(dialog).getByRole("button", { name: "Apagar workspace" });
+    expect(submit.hasAttribute("disabled")).toBe(true);
+    await type(within(dialog).getByLabelText("Digite Acme para confirmar"), "Acme");
+    await click(submit);
+    await settle(6);
+    expect(state.calls.find((c) => c.method === "orgs.deleteWorkspace")?.args).toEqual([ORG_ID, {}]);
+  });
+
+  test("an older sign-in: Entrar de novo, which keeps the dialog's place and stays pressed while the app works", async () => {
+    const asked = inTheApp();
+    signedInMinutesAgo(12);
+    const { state } = await open(`/org/${ORG_ID}/settings/general?delete=1`, { state: ownerHere() });
+    const dialog = screen().getByRole("dialog", { name: "Apagar Acme?" });
+    expect(dialog.textContent).toContain("Entre de novo para confirmar que é você.");
+    expect(within(dialog).queryByRole("button", { name: "Apagar workspace" })).toBeNull();
+    const again = within(dialog).getByRole("button", { name: "Entrar de novo" });
+    await click(again);
+    await settle(2);
+    expect(asked).toContainEqual({ kind: "signIn" });
+    expect(JSON.parse(sessionStorage.getItem("agentes.thisMac.return") ?? "{}").to).toBe(
+      `/org/${ORG_ID}/settings/general?delete=1`,
+    );
+    expect(
+      within(dialog)
+        .getByRole("button", { name: /Entrar de novo/ })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(within(dialog).getByLabelText("Digite Acme para confirmar").closest("fieldset")?.disabled).toBe(true);
+    expect(within(dialog).getByRole("button", { name: "Cancelar" }).hasAttribute("disabled")).toBe(true);
+    expect(state.calls.some((c) => c.method === "orgs.deleteWorkspace")).toBe(false);
+  });
+
+  test("a dialog closed after Entrar de novo does not open again once the app signs the window in", async () => {
+    inTheApp();
+    const { router } = await open(`/org/${ORG_ID}/settings/general?delete=1`, { state: ownerHere() });
+    await settle(4);
+    await click(
+      within(screen().getByRole("dialog", { name: "Apagar Acme?" })).getByRole("button", { name: "Entrar de novo" }),
+    );
+    await settle(2);
+    expect(sessionStorage.getItem("agentes.thisMac.return")).not.toBeNull();
+    // The address moves on (Back): the dialog closes with it.
+    await act(() =>
+      router.navigate({ to: "/org/$orgId/settings/$section", params: { orgId: ORG_ID, section: "general" } }),
+    );
+    await settle(6);
+    expect(screen().queryByRole("dialog", { name: "Apagar Acme?" })).toBeNull();
+    expect(sessionStorage.getItem("agentes.thisMac.return")).toBeNull();
+  });
+
+  test("the app refuses to sign in: the dialog says so and the button works again", async () => {
+    inTheApp(async () => {
+      throw new Error("too_soon");
+    });
+    await open(`/org/${ORG_ID}/settings/general?delete=1`, { state: ownerHere() });
+    const dialog = screen().getByRole("dialog", { name: "Apagar Acme?" });
+    await click(within(dialog).getByRole("button", { name: "Entrar de novo" }));
+    await settle(4);
+    expect(dialog.textContent).toContain("Algo deu errado. Tente de novo.");
+    expect(within(dialog).getByRole("button", { name: "Entrar de novo" }).hasAttribute("disabled")).toBe(false);
+    expect(sessionStorage.getItem("agentes.thisMac.return")).toBeNull();
+  });
+
+  test("the server finds the sign-in too old after all: it asks for another, in place of the button", async () => {
+    inTheApp();
+    signedInMinutesAgo(1);
+    const state = ownerHere({
+      deletionError: new ApiError(403, "reauth.sign_in", "Sign in again to confirm it's you"),
+    });
+    await open(`/org/${ORG_ID}/settings/general?delete=1`, { state });
+    const dialog = screen().getByRole("dialog", { name: "Apagar Acme?" });
+    await type(within(dialog).getByLabelText("Digite Acme para confirmar"), "Acme");
+    await click(within(dialog).getByRole("button", { name: "Apagar workspace" }));
+    await settle(6);
+    expect(dialog.textContent).toContain("Entre de novo para confirmar que é você.");
+    expect(within(dialog).getByRole("button", { name: "Entrar de novo" })).toBeTruthy();
+    expect(within(dialog).queryByRole("alert")).toBeNull();
+    expect(sessionStorage.getItem("agentes.thisMac.signedInAt")).toBeNull();
+  });
+
+  test("on that server from another computer's app: their password, as before, since only its own app signs them in", async () => {
+    const asked = inTheApp(undefined, false);
+    const state = ownerHere();
+    if (state.me) state.me.user = { ...state.me.user, hasPassword: true };
+    await open(`/org/${ORG_ID}/settings/general?delete=1`, { state });
+    await settle(4);
+    const dialog = screen().getByRole("dialog", { name: "Apagar Acme?" });
+    expect(asked).toContainEqual({ kind: "status" });
+    expect(within(dialog).getByLabelText("Sua senha")).toBeTruthy();
+    expect(within(dialog).queryByRole("button", { name: "Entrar de novo" })).toBeNull();
+  });
+
+  test("the same owner in a browser adds a password first, as before", async () => {
+    await open(`/org/${ORG_ID}/settings/general?delete=1`, { state: ownerHere() });
+    const dialog = screen().getByRole("dialog", { name: "Apagar Acme?" });
+    expect(dialog.textContent).toContain("Adicione uma senha para confirmar que é você.");
+  });
+
+  test("deleting the account the same way, from Sua conta's second button too", async () => {
+    inTheApp();
+    signedInMinutesAgo(1);
+    const state = ownerHere();
+    await open(`/org/${ORG_ID}/issues?account=delete`, { state, beta: null });
+    const dialog = screen().getByRole("dialog", { name: "Apagar a sua conta inteira?" });
+    const submit = within(dialog).getByRole("button", { name: "Apagar conta" });
+    expect(submit.hasAttribute("disabled")).toBe(false);
+    await click(submit);
+    await settle(8);
+    expect(state.calls.find((c) => c.method === "account.delete")?.args).toEqual([{}]);
+
+    // Sua conta's own button for the workspace is kept in the address, so a sign-in again comes back to it.
+    cleanup();
+    inTheApp();
+    const { router } = await open(`/org/${ORG_ID}/settings/account`, { state: ownerHere() });
+    await click(screen().getByRole("button", { name: "Apagar workspace" }));
+    await settle(4);
+    expect(screen().getByRole("dialog", { name: "Apagar Acme?" })).toBeTruthy();
+    expect(router.state.location.search).toMatchObject({ delete: 1 });
   });
 });

@@ -38,6 +38,23 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     url: `${APP}/invite/T7xQ2mVb9KpL`,
     role: "owner",
   },
+  /** One that gives a cargo, channels and agents (ADR 0184): their names, and its agents first in the picture. */
+  "invitation-starts.en": {
+    kind: "invitation",
+    locale: "en",
+    orgName: "Acme Logística",
+    inviterName: "Carla Dias",
+    inviterEmail: "carla@example.com",
+    crew: [
+      { color: "amber", eyes: "round", accessory: "none" },
+      { color: "sky", eyes: "round", accessory: "none" },
+    ],
+    url: `${APP}/invite/T7xQ2mVb9KpL`,
+    role: "member",
+    roles: ["Suporte"],
+    channels: ["suporte", "chamados-urgentes"],
+    agents: ["Max"],
+  },
   "invite_request.en": {
     kind: "invite_request",
     locale: "en",

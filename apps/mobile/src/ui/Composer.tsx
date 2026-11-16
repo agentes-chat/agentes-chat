@@ -125,16 +125,17 @@ export interface ComposerProps {
   /** The button in the empty field that opens the GIFs and stickers (null where neither can be sent). */
   media?: { label: string; onPress: () => void } | null;
   /**
-   * Voice messages (null where they are off): `mic` in the empty field; while the mic is held, `overlay` covers the
-   * field. Hands free or paused, `bar` takes the field's place in the field's own capsule (same height, radius, ring
-   * and inset), and `leading` is drawn in the "+"'s own plate; `above` sits over the row (the slide-to-cancel hint,
-   * the recording line). The text field stays mounted underneath, so the composer never changes height.
+   * Voice messages (null where they are off): `mic` in a field with no words (files may wait); while the mic is held,
+   * `overlay` covers the field. Hands free or paused, `bar` is the take's row above the field, in the field's own
+   * capsule (same height, radius, ring and inset), the field and the "+" stay usable, and the field's send hands the
+   * words to `send`, which sends them with the take (and the files) as one message. `above` sits over the row (the
+   * slide-to-cancel hint, the recording line).
    */
   voice?: {
     mic: ReactNode | null;
     overlay: ReactNode | null;
     bar: ReactNode | null;
-    leading: { icon: IconName; label: string; onPress: () => void } | null;
+    send: ((text: string) => Promise<boolean>) | null;
     above: ReactNode | null;
     active: boolean;
   } | null;
@@ -224,12 +225,17 @@ export function Composer({
   useEffect(() => {
     if (focusAt) input.current?.focus();
   }, [focusAt]);
-  const has = text.trim().length > 0 || sendEmpty;
+  const typed = text.trim().length > 0;
+  const take = voice?.send ?? null;
+  const has = typed || sendEmpty || Boolean(take);
+  // The mic held: the field is the recording, nothing else shows around it.
+  const holding = Boolean(voice?.overlay);
   const token = focused && mention && mentionAt ? mentionAt(text, caret) : null;
   const stopMode = Boolean(working?.stop) && !has && !voice?.active;
   const button = has || stopMode;
   const mediaButton = media && !has ? media : null;
-  const mic = voice && !has ? voice.mic : null;
+  // Files waiting don't take it away: a take started then goes with them.
+  const mic = voice && !typed ? voice.mic : null;
 
   const put = (next: string, at = next.length) => {
     setText(next);
@@ -239,6 +245,14 @@ export function Composer({
 
   const send = (how: SendHow) => {
     const value = text.trim();
+    if (take) {
+      if (tooLong) return;
+      put("", 0);
+      void take(value).then((sent) => {
+        if (!sent && value) setText((now) => joinDrafts(value, now));
+      });
+      return;
+    }
     if ((!value && !sendEmpty) || tooLong) return;
     onSend(value, working ? how : "join");
     put("", 0);
@@ -262,9 +276,9 @@ export function Composer({
     setTaught(true);
     writeValueSync(STORED.stopSendTaught, "1");
   };
-  const hold = working && has && !tooLong ? { hint: t("mobile.composer.holdToStop"), onHold: holdSend } : null;
+  const hold = working && has && !take && !tooLong ? { hint: t("mobile.composer.holdToStop"), onHold: holdSend } : null;
 
-  const formatting = focused && range.end > range.start && !voice?.active;
+  const formatting = focused && range.end > range.start && !holding;
   const format = (kind: FormatKind) => {
     haptics.selection();
     const next = applyFormat(text, range.start, range.end, kind, { link: t("composer.format.linkText") });
@@ -284,7 +298,7 @@ export function Composer({
   return (
     <View>
       {token && mention ? mention({ query: token.query, sigil: token.sigil, pick }) : null}
-      {suggestions && suggestions.length > 0 && !token && !has && !voice?.active ? (
+      {suggestions && suggestions.length > 0 && !token && !typed && !sendEmpty && !holding ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -345,6 +359,11 @@ export function Composer({
         </View>
       ) : null}
       {voice?.above ?? null}
+      {voice?.bar ? (
+        <View style={[styles.bar, { backgroundColor: colors.raised, boxShadow: FIELD_SHADOW(colors.line2) }]}>
+          {voice.bar}
+        </View>
+      ) : null}
       {formatting ? (
         <Animated.View
           entering={reducedMotion ? undefined : FadeIn.duration(140)}
@@ -384,22 +403,7 @@ export function Composer({
         </Animated.View>
       ) : null}
       <View style={styles.row}>
-        {/* The "+" plate; while a take is held hands free or paused, the same plate holds its trash. */}
-        {voice?.leading ? (
-          <PressScale
-            to={0.9}
-            onPress={voice.leading.onPress}
-            accessibilityRole="button"
-            accessibilityLabel={voice.leading.label}
-            style={[styles.plus, { boxShadow: `0px 0px 0px 0.5px ${colors.line2}, ${shadows.top}` }]}
-          >
-            <Glass style={styles.plusGlass} intensity={50}>
-              <View style={styles.center}>
-                <Icon name={voice.leading.icon} size={22} color={colors.danger} />
-              </View>
-            </Glass>
-          </PressScale>
-        ) : onPlus ? (
+        {onPlus ? (
           <PressScale
             to={0.9}
             onPress={onPlus}
@@ -414,11 +418,6 @@ export function Composer({
             </Glass>
           </PressScale>
         ) : null}
-        {voice?.bar ? (
-          <View style={[styles.bar, { backgroundColor: colors.raised, boxShadow: FIELD_SHADOW(colors.line2) }]}>
-            {voice.bar}
-          </View>
-        ) : null}
         <View
           style={[
             styles.field,
@@ -427,8 +426,6 @@ export function Composer({
               boxShadow: FIELD_SHADOW(colors.line2),
               paddingRight: button || mediaButton || mic ? INSET : 14,
             },
-            // Kept mounted under a take's bar (the words and the keyboard's focus survive it), never drawn.
-            voice?.bar ? styles.hidden : null,
           ]}
         >
           {/* The placeholder is ours, on one line (cut with "…"): a long one wrapped and grew the empty field. */}
@@ -730,17 +727,15 @@ const styles = StyleSheet.create({
     paddingVertical: INSET,
     paddingLeft: 14,
   },
-  // A take's bar: the field's capsule at its one-line height, its 36 controls INSET from every edge.
+  // A take's row above the field: the field's capsule at its one-line height, its 36 controls INSET from every edge.
   bar: {
-    flex: 1,
-    minWidth: 0,
+    marginBottom: 8,
     height: FIELD,
     borderRadius: FIELD / 2,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: INSET,
   },
-  hidden: { display: "none" },
   holdHint: { paddingTop: 8, minHeight: 20, alignItems: "center" },
   sendBox: { width: SEND, height: SEND },
   // Around the button, 4 past it on every side.

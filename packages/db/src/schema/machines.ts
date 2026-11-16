@@ -55,6 +55,8 @@ export interface MachineExecutors {
   grok?: { version: string; models?: { id: string; label?: string }[] };
   /** Google's Antigravity CLI (protocol 44, ADR 0143), and the models it lists. */
   antigravity?: { version: string; models?: { id: string; label?: string }[] };
+  /** A CLI that is there and can't start (`--version` keeps failing), with its own error line; `git_missing`: see `CLI_GIT_MISSING`. */
+  broken?: Partial<Record<"claude" | "codex" | "cursor" | "opencode" | "grok" | "antigravity", string>>;
   /** `hello.browser` (ADR 0040): whether the agent browser can run there; absent = not reported. */
   browser?: {
     available: boolean;
@@ -596,6 +598,10 @@ export const machinePhones = pgTable(
     audienceUserIds: text().array().notNull().default(sql`'{}'::text[]`),
     audienceRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     lastSeenAt: timestamp({ withTimezone: true }),
+    /** Since when `state` and `reason` hold as they are: every report bumps `updated_at`, a change only this. */
+    stateSince: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    /** A setup step that stayed stuck since `state_since` was reported (once): cleared when the state or reason moves. */
+    stuckReportedAt: timestamp({ withTimezone: true }),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp({ withTimezone: true }),

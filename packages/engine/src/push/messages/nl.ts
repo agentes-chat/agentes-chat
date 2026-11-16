@@ -84,6 +84,10 @@ export const strings: Partial<PushStrings> = {
   deviceAccessBody: "Tik om één keer of altijd toe te staan, of om nee te zeggen.",
   deviceToolTitle: (a, d) => `${a} vraagt je een tool aan te zetten op je ${d}`,
   deviceToolBody: "Tik om hem met één klik aan te zetten.",
+  deviceCliTitle: (a, d) => `${a} vraagt je een programma te installeren op je ${d}`,
+  deviceCliBody: "Tik om het met één klik te installeren.",
+  deviceFolderTitle: (a, f, d) => (f ? `${a} vraagt om ${f} op je ${d}` : `${a} vraagt om een map op je ${d}`),
+  deviceFolderBody: "Sta het toe in de app op die computer.",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} vraagt je een agent toe te voegen aan #${l}`

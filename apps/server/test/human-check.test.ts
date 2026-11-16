@@ -3,6 +3,7 @@ import type { HumanAction, HumanCheck } from "@agenteschat/adapters";
 import { ConfigError } from "@agenteschat/config";
 import { schema } from "@agenteschat/db";
 import { checkHumanCheckAtBoot } from "../src/http/human-check";
+import { createHumanPasses } from "../src/http/human-pass";
 import { createLogger } from "../src/logger";
 import {
   type Browser,
@@ -130,6 +131,68 @@ test("with the keys: each guarded form needs a token Cloudflare passes, and noth
   expect(t.email.contacts.filter((c) => c.email === "ana@example.com")).toEqual([]);
 
   expect(await outcomes(await guardedCalls(token, every(passing)))).toEqual(THROUGH);
+});
+
+test("the e-mail's lookup answers with a pass that stands for the check at that address's next step, and nowhere else", async () => {
+  await start(turnstile(fakeCloudflare().fetch));
+  const lookUp = async (email: string, headers: Record<string, string> = passing) =>
+    browser(t)("/api/app/sign-in-options", { json: { email }, headers });
+  const found = (await (await lookUp("owner@example.com")).json()) as { pass?: string };
+  const pass = found.pass ?? "";
+  expect(pass).toStartWith("pass.");
+  const withPass = { "x-captcha-response": pass };
+  const signIn = (email: string, headers: Record<string, string>, password = "correct horse battery") =>
+    browser(t)("/api/auth/sign-in/email", { json: { email, password }, headers });
+  const outcome = async (res: Response) => (res.ok ? res.status : ((await codeOf(res)) ?? res.status));
+
+  // The password after the e-mail: no second token. The address as typed, in any case.
+  expect(await outcome(await signIn("owner@example.com", withPass))).toBe(200);
+  expect(await outcome(await signIn("Owner@Example.com", withPass))).toBe(200);
+  // A wrong password is the sign-in's own answer, not the check's; the reset link goes with it too.
+  expect((await signIn("owner@example.com", withPass, "not the password")).status).toBe(401);
+  expect(
+    await outcome(
+      await browser(t)("/api/auth/request-password-reset", {
+        json: { email: "owner@example.com", redirectTo: "/reset-password" },
+        headers: withPass,
+      }),
+    ),
+  ).toBe(200);
+
+  // Another address, a lookup, a waiting list, a pass somebody changed: each needs its own token.
+  expect(await outcome(await signIn("other@example.com", withPass))).toBe("human_check");
+  expect(await outcome(await lookUp("owner@example.com", withPass))).toBe("human_check");
+  expect(
+    await outcome(await browser(t)("/api/waitlist", { json: { email: "owner@example.com" }, headers: withPass })),
+  ).toBe("human_check");
+  expect(await outcome(await signIn("owner@example.com", { "x-captcha-response": `${pass}x` }))).toBe("human_check");
+  expect(
+    await outcome(
+      await signIn("owner@example.com", { "x-captcha-response": pass.replace(/^pass\.\d+/, "pass.99999999999999") }),
+    ),
+  ).toBe("human_check");
+
+  // A few calls and no more: the fifth is its last.
+  expect(await outcome(await signIn("owner@example.com", withPass))).toBe(200);
+  expect(await outcome(await signIn("owner@example.com", withPass))).toBe("human_check");
+  // A token still passes, and a new lookup gives a new pass.
+  expect(await outcome(await signIn("owner@example.com", passing))).toBe(200);
+});
+
+test("a pass counts for ten minutes, from the network it was given to", () => {
+  let now = 1_000_000;
+  const passes = createHumanPasses("a-secret", () => now);
+  const at = { action: "sign-in" as const, email: "ana@example.com", network: "203.0.113.7" };
+  const pass = passes.issue("ana@example.com", "203.0.113.7");
+  expect(passes.accepts(pass, { ...at, network: "198.51.100.9" })).toBe(false);
+  expect(passes.accepts(pass, { ...at, action: "email-lookup" })).toBe(false);
+  expect(passes.accepts(pass, { ...at, action: "ask-code" })).toBe(false);
+  expect(createHumanPasses("another-secret", () => now).accepts(pass, at)).toBe(false);
+  expect(passes.accepts(pass, at)).toBe(true);
+  now += 10 * 60_000 - 1;
+  expect(passes.accepts(pass, { ...at, action: "sign-up" })).toBe(true);
+  now += 1;
+  expect(passes.accepts(pass, at)).toBe(false);
 });
 
 test("a token made on the landing page counts for its waiting lists only; one made on any other host, for nothing", async () => {

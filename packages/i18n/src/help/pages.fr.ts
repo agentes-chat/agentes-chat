@@ -75,6 +75,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         heading: "Se connecter depuis d’autres appareils",
         blocks: [
           "Le propriétaire commence sans mot de passe\u00a0: l’app vous connecte sur cet ordinateur. Pour vous connecter depuis un navigateur sur un autre ordinateur, ajoutez-en un dans **Paramètres\u00a0›\u00a0Votre compte**. En attendant, **Préférences\u00a0›\u00a0Serveurs** vous le rappelle, et **Ajouter un mot de passe** ouvre cette page. L’app mobile se connecte en scannant le QR code sous **Sur votre téléphone**, dans **Préférences\u00a0›\u00a0Serveurs**. Il faut pour cela que **Y accéder depuis votre téléphone et vos collègues** soit activé.",
+          "Quand le propriétaire supprime son compte, dans **Paramètres\u00a0›\u00a0Votre compte**, il disparaît pour de bon 7 jours plus tard, et les espaces de travail où il était seul partent avec lui. D’ici là, connectez-vous et appuyez sur **Restaurer le compte** pour le récupérer. Une fois le compte disparu, s’il ne reste aucun compte, l’app ouvre sa fenêtre de bienvenue pour créer un nouveau propriétaire. Si d’autres personnes ont encore un compte, chacune se connecte avec son propre e-mail.",
         ],
       },
       {
@@ -90,6 +91,25 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         blocks: [
           "Avec **Sauvegarder chaque nuit** activé (app 0.8.1 et plus récente), dans **Préférences\u00a0›\u00a0Serveurs**, l’app enregistre chaque nuit à 3:00 la base de données, les fichiers et le `.env` dans `.agentes/backups`, dans votre dossier personnel. Un ordinateur en veille à ce moment-là sauvegarde dès qu’il se réveille. **Sauvegarder maintenant** fait la même chose tout de suite. Chaque sauvegarde arrête le serveur un instant, et les deux plus récentes sont gardées.",
           "**Copier dans** place aussi chaque nouvelle sauvegarde dans un dossier de votre choix, comme une clé USB ou iCloud Drive, où les deux plus récentes sont gardées. Elles contiennent vos clés\u00a0: gardez-les privées. **Restaurer…** ramène agentes.chat à une sauvegarde\u00a0: messages, fichiers et réglages. Il s’arrête une minute, et ce qui était là avant est gardé dans le dossier des sauvegardes.",
+        ],
+      },
+      {
+        id: "uninstall",
+        heading: "Recommencer ou désinstaller",
+        blocks: [
+          "Tout ce qu’agentes.chat garde sur cet ordinateur se trouve dans des dossiers de votre dossier personnel, pas dans l’app. Mettre l’app à la corbeille n’en supprime donc rien, et n’arrête pas agentes.chat s’il tourne.",
+          "Pour recommencer, appuyez sur **Effacer et repartir de zéro…** dans **Préférences\u00a0›\u00a0Serveurs**. agentes.chat s’arrête ici et tout ce qu’il contient part dans un nouveau dossier de votre dossier personnel, nommé `agentes.chat erased` suivi de la date du jour, où il reste jusqu’à ce que vous le supprimiez. Ce que ses agents gardaient sur cet ordinateur, comme leurs navigateurs et leurs connexions, est supprimé de `.agentes-runner`. Ses espaces de travail disparaissent pour tous ceux qui les utilisent. Ensuite, la fenêtre de bienvenue s’ouvre et vous le configurez de nouveau avec un nouveau compte propriétaire. Les fichiers des agents, dans `agentes` dans votre dossier personnel, restent où ils sont.",
+          "Pour le retrouver plus tard, quittez l’app, mettez de côté un dossier `.agentes` plus récent s’il y en a un, renommez le dossier `agentes.chat erased` en `.agentes`, puis ouvrez l’app et configurez-le à nouveau sur cet ordinateur. Il revient avec ses espaces de travail et son propriétaire tels qu’ils étaient. Ce que ses agents gardaient sur cet ordinateur ne revient pas : ils doivent se reconnecter.",
+          "Pour retirer complètement agentes.chat de cet ordinateur\u00a0:",
+          {
+            list: [
+              "Désactivez **Ouvrir à la connexion** dans **Préférences\u00a0›\u00a0Général**.",
+              "Quittez l’app. Fermer sa fenêtre ne suffit pas. Sur un Mac, cliquez sur son icône dans le Dock, puis choisissez **Quitter agentes.chat** dans le menu agentes.chat, en haut de l’écran, ou appuyez sur ⌘Q. Sous Windows et Linux, cliquez sur l’icône agentes.chat près de l’horloge et choisissez **Quitter agentes.chat**. S’il demande **Quitter agentes.chat\u00a0?**, appuyez sur **Quitter**.",
+              "Supprimez l’app. Sur un Mac, mettez-la à la corbeille. Sous Windows et Linux, désinstallez-la comme n’importe quelle autre app.",
+              "Supprimez ces dossiers de votre dossier personnel. Ils contiennent vos données, et une fois supprimées elles ne reviennent pas, alors gardez d’abord une sauvegarde ailleurs si vous pourriez en avoir besoin\u00a0: `.agentes` (messages, fichiers, comptes, réglages et sauvegardes), chaque dossier `agentes.chat erased`, `.agentes-runner` (ce que les agents gardent sur cet ordinateur, comme leurs navigateurs et leurs connexions) et `agentes` (les fichiers des agents). Les dossiers dont le nom commence par un point sont masqués. Sur un Mac, ouvrez votre dossier personnel dans le Finder et appuyez sur ⇧⌘. (Maj, Commande et la touche point) pour les afficher.",
+              "Supprimez les dossiers de l’app elle-même. Ils ne contiennent que ses réglages, les connexions de sa fenêtre et ses journaux. Sur un Mac\u00a0: tout ce dont le nom commence par `chat.agentes.desktop` dans les dossiers Application Support, Caches, HTTPStorages, Logs, Preferences et WebKit de `~/Library`, et `agentes.chat.plist` dans `~/Library/LaunchAgents`. Sous Windows\u00a0: `%APPDATA%\\chat.agentes.desktop` et `%LOCALAPPDATA%\\chat.agentes.desktop`. Sous Linux\u00a0: `~/.config/chat.agentes.desktop` et `~/.local/share/chat.agentes.desktop`. Sur un Mac, pour ouvrir l’un de ces dossiers, appuyez sur ⇧⌘G dans le Finder et tapez son chemin, par exemple `~/Library/Caches`.",
+            ],
+          },
         ],
       },
       {
@@ -476,7 +496,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
         id: "jev",
         heading: "Jev",
         blocks: [
-          "Quand agentes.chat héberge votre espace de travail, Jev est inclus. Sur un serveur que vous gérez vous-même, il utilise la clé TypeSafe du propriétaire, environ 0,0001 USD par message : [Configurer Jev](/help/jev#setup).",
+          "Quand agentes.chat héberge votre espace de travail, Jev est inclus. Sur un serveur que vous gérez vous-même, il utilise la clé TypeSafe ou OpenRouter du propriétaire, environ 0,0001 USD par message : [Configurer Jev](/help/jev#setup).",
         ],
       },
       {
@@ -538,6 +558,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
               "Dans agentes.chat, ouvrez **Paramètres › IA et utilisation** et collez-la sous **Jev**. Seule la personne qui a installé ce serveur la voit.",
             ],
           },
+          "Vous payez déjà OpenRouter ? Choisissez **OpenRouter** sous **Jev** et collez une clé de https://openrouter.ai/keys, ou activez Jev en un clic avec la clé OpenRouter de l'espace de travail. C'est le même Jev, facturé via OpenRouter au même prix.",
           "Sur un serveur que vous faites tourner avec Docker, vous pouvez plutôt mettre la clé dans `.env` en tant que `TYPESAFE_API_KEY`. Celle-ci l’emporte sur celle des Paramètres.",
         ],
       },
@@ -572,6 +593,7 @@ export const helpFr: Partial<Record<HelpSlug, HelpDocument>> = {
           },
           "TypeSafe fait tourner Jev aux États-Unis et n’entraîne pas ses modèles sur ce que vous envoyez. Il conserve les données le temps nécessaire au fonctionnement du service. La rétention zéro est disponible dans ses offres entreprise.",
           "Politique de confidentialité de TypeSafe : https://typesafe.ai/legal/privacy-policy. Son accord de traitement des données : https://typesafe.ai/legal/data-processing.",
+          "Avec une clé OpenRouter, les mêmes requêtes passent par OpenRouter avant d'arriver chez TypeSafe, selon les conditions d'OpenRouter et vos réglages de confidentialité chez lui : https://openrouter.ai/privacy.",
         ],
       },
       {

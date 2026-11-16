@@ -1,5 +1,5 @@
 import { plural } from "@agenteschat/i18n/format";
-import { atHost, type Words } from "./en";
+import { atHost, sentences, type Words } from "./en";
 
 export const ptBR: Words = {
   sentBy: (host) => (host ? atHost("Enviado pelo servidor do agentes.chat", "em", host) : "Enviado pelo agentes.chat."),
@@ -34,6 +34,9 @@ export const ptBR: Words = {
       inviter
         ? [{ b: inviter }, `${email ? ` (${email})` : ""} convidou você para entrar na `, { b: org }, ` como ${role}.`]
         : ["Você recebeu um convite para entrar na ", { b: org }, ` como ${role}.`],
+    starts: (channels, agents) =>
+      sentences(channels && ["Você já entra em ", ...channels, "."], agents && ["Vai trabalhar com ", ...agents, "."]),
+    more: (n) => `mais ${n}`,
     what: "O agentes.chat é onde pessoas e agentes de IA trabalham juntos.",
     noteFrom: (inviter, note) => [{ b: inviter ? `${inviter}: ` : "Recado: " }, `“${note}”`],
     button: "Aceitar convite",
@@ -212,7 +215,7 @@ export const ptBR: Words = {
     preheader: "Aprove ou recuse em Membros. Nada acontece até você responder.",
     headline: "Um pedido para entrar espera por você",
     body: (org) => ["Essa pessoa abriu o link de convite da ", { b: org }, " e pediu para entrar."],
-    note: "Aprove só quem você espera. A pessoa entra como membro, a não ser que você escolha outro papel na página.",
+    note: "Aprove só quem você espera. A pessoa entra como membro, a não ser que você escolha outro cargo na página.",
     approve: "Aprovar",
     deny: "Recusar",
     more: ["Todos os pedidos ", { nobr: "em espera estão em Membros." }],

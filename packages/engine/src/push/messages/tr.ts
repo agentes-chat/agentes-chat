@@ -85,6 +85,11 @@ export const strings: Partial<PushStrings> = {
   deviceAccessBody: "Bir kez ya da her zaman izin vermek veya hayır demek için dokunun.",
   deviceToolTitle: (a, d) => `${a}, ${d} cihazınızda bir aracı açmanızı istiyor`,
   deviceToolBody: "Tek tıkla açmak için dokunun.",
+  deviceCliTitle: (a, d) => `${a}, ${d} cihazınıza bir program kurmanızı istiyor`,
+  deviceCliBody: "Tek tıkla kurmak için dokunun.",
+  deviceFolderTitle: (a, f, d) =>
+    f ? `${a}, ${d} cihazınızda ${f} istiyor` : `${a}, ${d} cihazınızda bir klasör istiyor`,
+  deviceFolderBody: "O bilgisayardaki uygulamadan izin verin.",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a}, #${l} kanalına bir ajan eklemenizi istiyor`

@@ -232,6 +232,9 @@ test("its Computador row is always there: it opens the viewer's own place, or sa
   // With none there is nothing to open: no chevron, no press, and the reason under the row.
   expect(screen).toContain('<GroupedRow icon="laptop" label={t("agentComputer.button")} />');
   expect(screen).toContain('<GroupedFooter>{t(none ?? "rightHand.computerYours")}</GroupedFooter>');
+  // No computer of the workspace's own: whoever may add one opens Dispositivos from the row.
+  expect(screen).toContain('const add = none === "rightHand.computerNoHome" && can(org, "pair_computers");');
+  expect(screen).toContain('onPress={() => router.push("/settings/devices")}');
 });
 
 test("Configurações lists no section for it: its settings open from its own profile, on their screen", () => {

@@ -195,6 +195,22 @@ export function HaveRow({
 }
 
 /**
+ * A plan that can't be picked now, with why and its way out (`why`). Only its mark and name are dimmed: the reason
+ * and its link stay readable.
+ */
+export function HaveOffRow({ item, why }: { item: Pick<HaveItem, "title" | "mark">; why: ReactNode }) {
+  return (
+    <div className="arrival-have__row" data-disabled="" data-why="">
+      {item.mark}
+      <span className="arrival-have__text">
+        <span className="arrival-have__title">{item.title}</span>
+        <span className="arrival-have__why">{why}</span>
+      </span>
+    </div>
+  );
+}
+
+/**
  * Rows to pick one from (`HaveItem`): few are grouped (the person's, the workspace's keys, each other owner's); many
  * show the three with most room, each saying whose it is, and `all` lists every one under a search, by owner, those at
  * their limit last. `byAi`: those groups go by AI instead of by owner. `pinned`: a group over the rest whatever their

@@ -20,6 +20,7 @@ import {
   listAgentMemoryRows,
   memoriesFor,
   normalizeSubject,
+  openPersonAgentDm,
   postPersonMessage,
   recordContextUse,
   retrieveForRun,
@@ -346,6 +347,33 @@ describe("agents learn on their own (ADR 0120)", () => {
     expect(on.map((a) => [a.agentId, a.enabled])).toEqual([[f.agent.id, true]]);
     expect((await items())[0]?.status).toBe("archived");
     expect((await receipts()).map((r) => r.kind)).toContain("skill.created");
+  });
+
+  test("how-tos learned only in one person's DMs become that person's skill where the workspace has more", async () => {
+    f = await setup();
+    const member = await addMember(f.db, f.org.id, "member", "walter");
+    const dm = await openPersonAgentDm(f.db, f.org.id, member.id, f.agent.id);
+    const { run } = await personRun();
+    await invoke(run, "save_how_to", {
+      title: "List the Northwind models",
+      key: "List the Northwind models",
+      how: `GET ${MODELS_URL} with the key`,
+    });
+    const [note] = await items();
+    if (!note) throw new Error("no note");
+    await f.db
+      .update(schema.contextItems)
+      .set({ channelIds: [dm.id] })
+      .where(eq(schema.contextItems.id, note.id));
+    for (let i = 0; i < 3; i++) {
+      const { run: used } = await personRun("@dev the northwind models again");
+      await addRunStep(f.db, used, "context", { memoryItems: [note.id] });
+      await recordContextUse(f.db, f.org.id, used.id, [note.id]);
+      await afterTurnDone(f.context, used, { judged: true, signal: "none" });
+    }
+    await consolidateOrg(f.context, f.org.id);
+    const [skill] = await f.db.select().from(schema.skills).where(eq(schema.skills.orgId, f.org.id));
+    expect([skill?.slug, skill?.ownerUserId]).toEqual(["northwind-api", member.id]);
   });
 
   test("a negative outcome on a run that used the how-to keeps it from becoming a skill", async () => {
