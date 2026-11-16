@@ -135,6 +135,12 @@
   text-decoration: none;
   box-shadow: var(--e1);
 }
+.team-node__role {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
 .team-node__text {
   display: flex;
   flex-direction: column;
@@ -175,6 +181,11 @@
 /* A scroller out over the page's side room: a chart wider than the page slides under the page's edges as it scrolls,
    and the room above it keeps the top node's ring and shadow inside it, where they'd be cut at its edge. */
 .team-tree {
+  display: grid;
+  /* One column as wide as the widest row and at least the scroller: the workspace above and the people's row share
+     it, so a chart that fits is centred and one that doesn't scrolls to both ends (centring it by justify-content
+     would push its left half out of the scrollable area), with the workspace's drop on the same axis. */
+  grid-template-columns: minmax(max-content, 1fr);
   overflow-x: auto;
   margin: -4px calc(-1 * var(--page-x)) 0;
   padding: 4px var(--page-x) 8px;

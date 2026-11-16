@@ -89,7 +89,11 @@ function AgentNode({
       <AgentAvatar agentId={agent.id} name={agent.name} size="sm" />
       <span className="team-node__text">
         <b className={agent.role ? "ac-captop" : undefined}>{agent.name}</b>
-        {agent.role && <span className="muted">{agent.role}</span>}
+        {agent.role && (
+          <span className="muted team-node__role" title={agent.role}>
+            {agent.role}
+          </span>
+        )}
       </span>
       <span
         className="team-node__dot"

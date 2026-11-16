@@ -105,6 +105,8 @@ describe("Responde a, by clicking (ADR 0148 addendum)", () => {
     expect(row.getAttribute("aria-label")).toBe("Supervisor: Atlas");
     // The person's card is a direct child of the column, so `.team-tree__col > .team-node` holds it to a card's width.
     expect(document.querySelector(".team-tree__col > .team-node--person")).not.toBeNull();
+    // A role is clamped to two lines in the card, so its whole text stays in the title.
+    for (const r of document.querySelectorAll(".team-node__role")) expect(r.getAttribute("title")).toBe(r.textContent);
     const chip = document.querySelector(".team-lodi-chip") as HTMLElement;
     expect(chip.textContent).toContain("Lodi");
     expect(chip.textContent).toContain("acompanha tudo com você");
