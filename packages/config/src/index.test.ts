@@ -121,6 +121,11 @@ describe("loadConfig", () => {
     );
   });
 
+  test("JEV_OTHER_PROVIDER_ENABLED defaults off and accepts an explicit true setting", () => {
+    expect(loadConfig(valid).JEV_OTHER_PROVIDER_ENABLED).toBe(false);
+    expect(loadConfig({ ...valid, JEV_OTHER_PROVIDER_ENABLED: "true" }).JEV_OTHER_PROVIDER_ENABLED).toBe(true);
+  });
+
   test("JEV_BASE_URL is optional and accepts only an HTTP(S) origin", () => {
     expect(loadConfig(valid).JEV_BASE_URL).toBeUndefined();
     expect(loadConfig({ ...valid, JEV_BASE_URL: "http://jev.example:3425/" }).JEV_BASE_URL).toBe(

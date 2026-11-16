@@ -231,6 +231,8 @@ describe("Canal", () => {
     expect([...(card.querySelector(".rq__foot")?.querySelectorAll("button") ?? [])].map((b) => b.textContent)).toEqual([
       "Aprovar todos",
       "Agora não para todos",
+      // Under the decision, on its own line.
+      "Mudar quando perguntar",
     ]);
     await act(async () => fireEvent.click(within(card).getByRole("button", { name: "Ver cada um" })));
     expect(card.querySelectorAll(".rq__item")).toHaveLength(3);
@@ -342,8 +344,8 @@ describe("Canal", () => {
       "Aprovar sempre",
       "Agora não para todos",
     ]);
-    // Only buttons: what it covers is the button's tip and description.
-    expect([...foot.children].every((el) => el.matches("button, .rq__end"))).toBe(true);
+    // Only buttons, and the quiet link under them: what it covers is the button's tip and description.
+    expect([...foot.children].every((el) => el.matches("button, .rq__end, .rq__under"))).toBe(true);
     expect(within(foot).getByRole("button", { name: "Aprovar sempre" }).getAttribute("aria-description")).toContain(
       "de agora em diante",
     );

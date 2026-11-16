@@ -24,7 +24,7 @@ import { Image, type LayoutChangeEvent, Pressable, StyleSheet, TextInput, View }
 import { GestureDetector, GestureStateManager, type TouchData, useManualGesture } from "react-native-gesture-handler";
 import { useDerivedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { fieldText, Icon, Locked, Text } from "@/ui";
+import { fieldText, Icon, Locked, PictureEdge, Text } from "@/ui";
 import { AgentPointer } from "../computer/AgentPointer";
 import { useColors, useConnection } from "../shared/hooks";
 import { tapHaptic, useSurface } from "../shared/parts";
@@ -43,12 +43,15 @@ export function FrameView({
   enabled,
   onInput,
   cursor,
+  edge,
 }: {
   frame: BrowserFrame;
   enabled: boolean;
   onInput: (events: BrowserInputEvent[]) => void;
   /** The agent's cursor over its page (null `pointer`: none, as while someone is in control). */
   cursor?: { agentId: string; name: string; color: string | undefined; pointer: CountedPointer | null };
+  /** The radius of the box that clips the picture: its hairline, over the picture and under the cursor. */
+  edge?: number;
 }) {
   const { t } = useTranslation();
   const raised = useSurface("e2");
@@ -123,6 +126,7 @@ export function FrameView({
           resizeMode="contain"
           fadeDuration={0}
         />
+        {edge === undefined ? null : <PictureEdge radius={edge} />}
         {cursor ? <AgentPointer {...cursor} view={pointerView} /> : null}
         {sliding ? (
           <View pointerEvents="none" style={styles.hintRow}>

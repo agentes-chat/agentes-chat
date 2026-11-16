@@ -39,7 +39,7 @@ export {
   EventPillText,
 } from "./EventPill";
 export { type FilterItem, Filters, type FiltersProps } from "./Filters";
-export { Glass, type GlassProps } from "./Glass";
+export { Glass, type GlassProps, liquidHere } from "./Glass";
 export {
   GroupedField,
   GroupedFooter,
@@ -83,6 +83,7 @@ export {
 } from "./navigation";
 export { OptionTile } from "./OptionTile";
 export { OPTION_ROW } from "./option-row";
+export { PictureEdge } from "./PictureEdge";
 export { PresenceBadge, type PresenceBadgeProps, WithPresence } from "./PresenceBadge";
 export { PressScale, type PressScaleProps } from "./PressScale";
 export { ProviderLogo, type ProviderLogoProps, ProviderQuad, ProviderStack } from "./ProviderLogo";

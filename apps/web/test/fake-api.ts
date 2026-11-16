@@ -309,6 +309,8 @@ export interface FakeState {
   teamWeek?: Partial<LodiPrefs>;
   /** The workspace's own switches of Lodi; unset: on. */
   lodiSwitches?: { teamWatch?: boolean; welcomePeople?: boolean };
+  /** The workspace's approvals level (ADR 0173); unset: `risky`. */
+  approvalsLevel?: "always" | "risky" | "never";
   memories: Memory[];
   proposals: Proposal[];
   reactions: Record<string, ReactionCount[]>;
@@ -1463,19 +1465,27 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       saveJev: async (input: JevKeyInput) => {
         log("system.saveJev", input);
         if (!state.jev) throw new ApiError(404, "not_found", "Not found");
-        const verdict = state.jevVerdicts?.[input.apiKey];
-        if (verdict === "invalid") throw new ApiError(422, "jev_key_invalid", "TypeSafe didn't accept this key.");
+        const apiKey =
+          typeof input === "string"
+            ? input
+            : "apiKey" in input
+              ? input.apiKey
+              : `sk-or-v1-${state.credentials.find((c) => c.id === input.credentialId)?.keyHint ?? "0000"}`;
+        const verdict = state.jevVerdicts?.[apiKey];
+        if (verdict === "invalid") throw new ApiError(422, "jev_key_invalid", "The provider didn't accept this key.");
         if (verdict === "rate_limited") {
-          delete state.jevVerdicts?.[input.apiKey];
+          delete state.jevVerdicts?.[apiKey];
           throw new ApiError(429, "rate_limited", "Too many tries. Wait a minute.");
         }
         state.jev = {
           ...state.jev,
           source: "settings",
-          hint: input.apiKey.slice(-4),
+          via: apiKey.startsWith("sk-or-") ? "openrouter" : "typesafe",
+          hint: apiKey.slice(-4),
           state: verdict ?? "ok",
-          baseURL: input.baseURL ?? state.jev.baseURL,
-          baseURLSource: "settings",
+          ...(typeof input !== "string" && "apiKey" in input && input.baseURL
+            ? { baseURL: input.baseURL, baseURLSource: "settings" as const }
+            : {}),
         };
         return state.jev;
       },
@@ -1490,6 +1500,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         state.jev = {
           ...state.jev,
           source: null,
+          via: null,
           hint: null,
           state: "off",
           baseURL: "https://api.typesafe.ai",
@@ -1990,11 +2001,21 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         autoModels: state.autoModels ?? {},
         teamWatch: state.lodiSwitches?.teamWatch ?? true,
         welcomePeople: state.lodiSwitches?.welcomePeople ?? true,
+        approvalsLevel: state.approvalsLevel ?? "risky",
         ...mediaSettings(state),
         mode: personalOrg(orgId) ? "personal" : "team",
         // Money: admins only, like the backend.
         ...(seesCost() ? { defaultAgentBudgetUsd: state.defaultAgentBudgetUsd ?? 50 } : {}),
       }),
+      setApprovalsLevel: async (orgId, { level, everyAgent }) => {
+        log("orgs.setApprovalsLevel", orgId, { level, everyAgent });
+        // As the backend: agents that follow the workspace take it, or every agent, their own choices cleared.
+        state.approvalsLevel = level;
+        for (const a of state.agents)
+          if (everyAgent || a.approvalsLevelOwn === false)
+            Object.assign(a, { approvalsLevel: level, approvalsLevelOwn: false });
+        return { level, ownAgents: state.agents.filter((a) => a.approvalsLevelOwn === true).length };
+      },
       updateSettings: async (orgId, input) => {
         log("orgs.updateSettings", orgId, input);
         // A switch of mode (ADR 0159), with the name it may bring: `me` says them at once, as the server's.
@@ -2580,7 +2601,13 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           agent.previousHandles = [...(agent.previousHandles ?? []).filter((h) => h !== input.handle), agent.handle];
         }
         // As the backend: a mailbox given since the person was asked refuses the save.
-        const { mailLossSeen, ...fields } = input;
+        const { mailLossSeen, approvalsLevel, ...fields } = input;
+        // As the backend: a level is the agent's own choice; null follows the workspace's again.
+        if (approvalsLevel !== undefined)
+          Object.assign(agent, {
+            approvalsLevel: approvalsLevel ?? state.approvalsLevel ?? "risky",
+            approvalsLevelOwn: approvalsLevel !== null,
+          });
         if (mailLossSeen && (state.mailLoss?.[agentId] ?? []).some((m) => !mailLossSeen.includes(m.accountId))) {
           throw new ApiError(409, "agent.mail_loss_changed", "It holds a mailbox you weren't asked about");
         }

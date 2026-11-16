@@ -100,6 +100,7 @@ import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { formatPercent } from "@agenteschat/client/lib/format";
 import { isReturnLine } from "@agenteschat/client/lib/notices";
 import { nextMonthIso, usageWhen } from "@agenteschat/client/lib/plan-usage";
+import { useSeat } from "@agenteschat/client/lib/seat-context";
 import { playSound, soundForEvent } from "@agenteschat/client/lib/sounds";
 import { playAgentReaction } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1099,15 +1100,16 @@ export function useBrowserLive(agentId: string, enabled = true, maxFps?: number)
  */
 export function useDesktopPointer(agentId: string, enabled = true) {
   const { connection } = useRealtime();
+  const shared = useSeat(agentId) !== undefined;
   const [pointer, setPointer] = useState<BrowserLiveState["pointer"]>(null);
   useEffect(() => {
     setPointer(null);
     if (!connection || !enabled) return;
     return connection.onUserEvent((event) => {
-      const to = desktopPointerOf(event, agentId);
+      const to = desktopPointerOf(event, agentId, shared);
       if (to) setPointer((was) => nextPointer(was, to));
     });
-  }, [connection, agentId, enabled]);
+  }, [connection, agentId, enabled, shared]);
   return pointer;
 }
 

@@ -166,6 +166,7 @@ import { AgentTasksButton, useDmAgentTasks } from "../task-manager/AgentTasksBut
 import { agentTasksHref, tasksBadge } from "../task-manager/logic";
 import { retryVoice, type VoiceRefusal } from "../voice/outbox";
 import { useVoiceComposer } from "../voice/useVoiceComposer";
+import type { VoiceTarget } from "../voice/useVoiceTake";
 import { AgentReceiptLine, EveryoneLine } from "./AgentReceipts";
 import { AttachmentStrip, MAX_PENDING, type PendingFile } from "./AttachmentStrip";
 import { markRowId, receiptMessageId } from "./agent-receipts";
@@ -1103,6 +1104,19 @@ function Chat({
     setQuote(null);
     toEnd();
   }, [toEnd]);
+  // A take goes with the words typed beside it and the files waiting above the field, in one message. The files that
+  // can't upload keep the take, paused, and the words in the field (the composer puts them back).
+  const withVoice = async (text: string) => {
+    if (pending.length === 0) return { text, artifacts: [] };
+    const artifacts = await uploadPending(pending);
+    if (!artifacts) return null;
+    artifacts.forEach((a, i) => {
+      const file = pending[i];
+      if (file) sentWithVoice.current.set(a.id, file);
+    });
+    setPending([]);
+    return { text, artifacts };
+  };
   const onRecording = useCallback(() => sendTyping(threadId, undefined, "voice"), [sendTyping, threadId]);
   // "gravando áudio…" goes on for the others while my recording uploads here; the server keeps it from then until the
   // message comes.
@@ -1145,6 +1159,16 @@ function Chat({
   // stays, marked, and the caption comes back to the field, so nothing typed is lost.
   const [pending, setPending] = useState<PendingFile[]>([]);
   const [captionBack, setCaptionBack] = useState<{ text: string; at: number; join?: boolean } | null>(null);
+  // The local files a take carried, by their uploaded ids: a refused take puts them back above the field.
+  const sentWithVoice = useRef(new Map<string, PendingFile>());
+  const voiceTakeBack = useCallback(({ text, artifacts }: { text: string; artifacts: ArtifactRef[] }) => {
+    if (text) setCaptionBack({ text, at: Date.now(), join: true });
+    const files = artifacts.flatMap((a) => {
+      const file = sentWithVoice.current.get(a.id);
+      return file ? [{ ...file, state: "waiting" as const }] : [];
+    });
+    if (files.length > 0) setPending((now) => [...files, ...now].slice(0, MAX_PENDING));
+  }, []);
   const addPending = (files: { uri: string; name: string; type: string }[]) => {
     if (files.length === 0) return;
     const at = Date.now();
@@ -1172,19 +1196,27 @@ function Chat({
     });
     return { id: saved.id, version: saved.version, title: saved.title };
   };
-  const sendWithFiles = async (text: string, how: SendHow, files: PendingFile[] = pending) => {
+  /** Uploads what waits above the field; null when one failed (they stay, the failed ones marked). */
+  const uploadPending = async (files: PendingFile[]): Promise<ArtifactRef[] | null> => {
     setPending((now) => now.map((f): PendingFile => ({ ...f, state: "sending" })));
     const results = await Promise.allSettled(files.map(uploadOne));
     const failed = new Set(files.filter((_, i) => results[i]?.status === "rejected").map((f) => f.id));
     if (failed.size > 0) {
-      // Nothing goes half sent: the ones that failed stay marked, the caption comes back to try again.
+      // Nothing goes half sent: the ones that failed stay marked.
       const after = (f: PendingFile): PendingFile["state"] => (failed.has(f.id) ? "failed" : "waiting");
       setPending((now) => now.map((f) => ({ ...f, state: after(f) })));
-      if (text) setCaptionBack({ text, at: Date.now() });
       toast({ title: t("mobile.chat.uploadFailed"), icon: "x" });
+      return null;
+    }
+    return results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+  };
+  const sendWithFiles = async (text: string, how: SendHow, files: PendingFile[] = pending) => {
+    const refs = await uploadPending(files);
+    if (!refs) {
+      // The caption comes back to try again.
+      if (text) setCaptionBack({ text, at: Date.now() });
       return;
     }
-    const refs = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
     const meta = takeQuote(refs);
     send(text, threadId, how === "now" ? { ...meta, steer: "now" } : meta);
     setPending([]);
@@ -1523,16 +1555,16 @@ function Chat({
   const [topDay, setTopDay] = useState<string | null>(null);
   const dayShown = useSharedValue(0);
   const dayTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const showDay = useCallback(() => {
-    clearTimeout(dayTimer.current);
-    dayShown.value = withTiming(1, { duration: 120 });
-  }, [dayShown]);
   const hideDay = useCallback(() => {
     clearTimeout(dayTimer.current);
     dayTimer.current = setTimeout(() => {
       dayShown.value = withTiming(0, { duration: 300 });
     }, DATE_PILL_IDLE_MS);
   }, [dayShown]);
+  const showDay = useCallback(() => {
+    dayShown.value = withTiming(1, { duration: 120 });
+    hideDay();
+  }, [dayShown, hideDay]);
   useEffect(() => () => clearTimeout(dayTimer.current), []);
   const onViewable = useCallback<NonNullable<OnViewableItemsChanged<Row>>>(
     ({ viewableItems }) => {
@@ -2056,6 +2088,7 @@ function Chat({
   // to the next: an agent's work arrives here many times a second, and none of it redraws the field under the
   // person's typing. What it calls reads the conversation as it is at that moment (`useLatest`).
   const sendFromField = useLatest(onSend);
+  const voiceFromField = useLatest(withVoice);
   const plusFromField = useLatest(openPlus);
   const longFromField = useLatest(longAsFile);
   const removeFromStrip = useLatest(removePending);
@@ -2613,6 +2646,8 @@ function Chat({
                     authorId={meId ?? ""}
                     voiceOn={voiceOn}
                     onVoiceSent={afterVoice}
+                    prepareVoice={voiceFromField}
+                    voiceTakeBack={voiceTakeBack}
                     onRecording={onRecording}
                   />
                 ) : (
@@ -2661,6 +2696,8 @@ const ChatComposer = memo(function ChatComposer({
   authorId,
   voiceOn,
   onVoiceSent,
+  prepareVoice,
+  voiceTakeBack,
   onRecording,
   ...composer
 }: Omit<ComposerProps, "voice"> & {
@@ -2674,6 +2711,9 @@ const ChatComposer = memo(function ChatComposer({
   authorId: string;
   voiceOn: boolean;
   onVoiceSent: () => void;
+  /** What goes with a take: the words typed beside it and the files, uploaded (`VoiceTarget.prepare`). */
+  prepareVoice: NonNullable<VoiceTarget["prepare"]>;
+  voiceTakeBack: NonNullable<VoiceTarget["takeBack"]>;
   /** While a take records: the others see "gravando áudio…" (throttled by the caller). */
   onRecording: () => void;
 }) {
@@ -2685,6 +2725,8 @@ const ChatComposer = memo(function ChatComposer({
     replyTo,
     authorId,
     enabled: voiceOn,
+    prepare: prepareVoice,
+    takeBack: voiceTakeBack,
     afterSend: onVoiceSent,
     onRecording,
   });

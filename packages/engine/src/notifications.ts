@@ -275,6 +275,14 @@ export const NOTIFICATION_KINDS = [
    */
   "device.cli_request",
   /**
+   * An agent waits for a folder on this person's computer (`request_folder_access`): its owner, waiting, one row per
+   * request (`device-folder:<requestId>`), the agent as actor, the computer in `source.machineId` with its name in
+   * `source.label`, the folder in `latest.title` and the agent's reason in `latest.text`. The person answers it on the
+   * computer itself (folders are never granted from the server), so the row has no button; done once the machine
+   * reports the decision (`access.decided`).
+   */
+  "device.folder_request",
+  /**
    * "Pedir a um admin" (`POST …/admin-asks`, `admin-asks.ts`): to whoever may do it, the asker as actor, what in
    * `latest.reason` (`channel_agent`, `create_agents`, `webhook` with the service in `latest.title`). `channel_agent`
    * names `source.channelId` (its name in `label`) and `agentId`, waits, and is done once the agent is added.

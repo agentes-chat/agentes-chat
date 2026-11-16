@@ -43,7 +43,11 @@ const mine = {
   },
   assignees: ["none"],
   priorities: ["high"],
+  labels: ["bug"],
+  done: "recent",
   showCanceled: true,
+  hideEmpty: true,
+  collapsed: ["high"],
 };
 
 test("Tarefas' view: each person's own, per workspace, on every device; known parts only", async () => {
@@ -70,6 +74,13 @@ test("Tarefas' view: each person's own, per workspace, on every device; known pa
   const { project: _project, ...older } = mine.fields;
   const fromOlder = await owner(path, { method: "PUT", json: { view: { ...mine, fields: older } } });
   expect(await fromOlder.json()).toEqual({ view: { ...mine, fields: { ...mine.fields, project: true } } });
+  // An app from before the label filter, the finished tasks' choice and the folded groups saves without them: each
+  // goes back to its default.
+  const { labels: _labels, done: _done, hideEmpty: _hideEmpty, collapsed: _collapsed, ...before } = mine;
+  const fromBefore = await owner(path, { method: "PUT", json: { view: before } });
+  expect(await fromBefore.json()).toEqual({
+    view: { ...mine, labels: [], done: "all", hideEmpty: false, collapsed: [] },
+  });
   await owner(path, { method: "PUT", json: { view: mine } });
 
   // A layout, a grouping, an order, a priority or an assignee the app doesn't know, or a part missing: refused, kept.

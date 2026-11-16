@@ -48,7 +48,7 @@ import { reachHandoffs } from "@agenteschat/client/lib/reach";
 import { replyOf } from "@agenteschat/client/lib/reply";
 import { isReminderMessage, reminderBody, routineReplyOf } from "@agenteschat/client/lib/routines";
 import { appVia } from "@agenteschat/client/lib/via";
-import { voiceOf } from "@agenteschat/client/lib/voice";
+import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
 import { type ReplyStop, showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
 import type { AgentColorName } from "@agenteschat/ui/agent/engine";
 import { useQueryClient } from "@tanstack/react-query";
@@ -247,7 +247,7 @@ export const MessageRow = memo(function MessageRow({
   const names = useNamesComputers();
   const said = hidesBody(m)
     ? ""
-    : reminderBody(splitCanceled(serverBody(t, m.body, meta, i18n.language, names), meta).body, meta);
+    : reminderBody(splitCanceled(serverBody(t, listedText(m.body, meta), meta, i18n.language, names), meta).body, meta);
   // A long work's anchor once it's over: no promise left, and dimmed (its line says how it ended).
   const body = m.longWork ? workAnchorBody(t, said, meta, m.longWork) : said;
   const workOver = Boolean(m.longWork && workIsOver(m.longWork));
@@ -508,13 +508,14 @@ export const MessageRow = memo(function MessageRow({
     );
     // A voice message and a choice's answer lead with their own player or line, so their time stays under them.
     const myBubble = bubbled && Boolean(body) && !voiceOf(meta) && !choiceReply;
-    // A voice message's player, a choice's answer, the bubble, or the GIF or sticker or the files of a message
-    // with no words, leads.
-    const lead = voiceOf(meta) ? (
+    const player = voiceOf(meta) ? (
       <View style={styles.meFiles}>
         <VoiceMessage message={m} />
       </View>
-    ) : choiceReply ? (
+    ) : null;
+    // A choice's answer, the bubble (a voice message's typed words, its player under them), or a voice message's
+    // player, the GIF or sticker or the files of a message with no words, leads.
+    const lead = choiceReply ? (
       <View style={styles.meFiles}>{choiceReply}</View>
     ) : body ? (
       <View
@@ -538,9 +539,11 @@ export const MessageRow = memo(function MessageRow({
               {...(solidInk ? { ink: solidInk } : {})}
             />
           </ClippedMessage>
-          {bubbled && !m.local ? stamp : null}
+          {myBubble && !m.local ? stamp : null}
         </View>
       </View>
+    ) : player ? (
+      player
     ) : media ? (
       <View style={styles.meFiles}>
         <ChatMedia media={media} align="end" liveId={m.id} />
@@ -569,12 +572,13 @@ export const MessageRow = memo(function MessageRow({
               </View>
             ) : null}
             {/* With no words there is no bubble to hold it. */}
-            {quote && (!body || voiceOf(meta) || choiceReply) ? (
+            {quote && (!body || choiceReply) ? (
               <View style={styles.meEnd}>
                 <QuotePlate reply={quote} onJump={onQuote} />
               </View>
             ) : null}
             {lead}
+            {body ? player : null}
             {body && media ? (
               <View style={styles.meFiles}>
                 <ChatMedia media={media} align="end" liveId={m.id} />

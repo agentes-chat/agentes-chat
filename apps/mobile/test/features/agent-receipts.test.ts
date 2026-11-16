@@ -390,7 +390,8 @@ describe("the agents' receipt line under a person's message", () => {
     const read = { runId: "r1", agentId: "ada", state: "read" as const };
     expect(markOf(read, null, routed({}).m1)).toEqual({ kind: "steer", agentId: "ada", state: "read", words: "read" });
     const line: MessageReceipt = { routed: true, agents: [["ada", "queued"]] };
-    expect(markOf({ ...read, state: "waiting" }, null, line)).toMatchObject({ state: "waiting", words: "computer" });
+    // Waiting for the next pause: no mark (it was sent; a mark there reads as a message that never arrived).
+    expect(markOf({ ...read, state: "waiting" }, null, line)).toBeNull();
     expect(markOf(null, "u2", undefined)).toEqual({ kind: "seen", personId: "u2" });
     expect(markOf(null, null, undefined)).toBeNull();
   });

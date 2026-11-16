@@ -2697,6 +2697,7 @@
         "ai_account": "割り当てられるのはアカウントの持ち主だけです",
         "name": "エージェントの名前を変えられるのは管理者だけです",
         "look": "見た目を変えられるのは管理者と責任者だけです",
+        "group": "エージェントの部署を変えられるのは管理者だけです",
         "reports_to": "エージェントの報告先を変えられるのは管理者だけです",
         "many": "これらの変更ができるのは管理者だけです"
       }
@@ -2711,6 +2712,7 @@
       "channel": "チャンネル",
       "name": "名前",
       "look": "見た目",
+      "group": "部署",
       "reports_to": "報告先",
       "skill": "スキル「{{name}}」"
     },
@@ -3285,7 +3287,17 @@
     "never": {
       "title": "確認しない",
       "text": "マージ、デプロイ、支払い、ルーティンを含め、一切確認しません。"
-    }
+    },
+    "change": "確認するタイミングを変更",
+    "now": "{{name}} は今後：{{level}}。",
+    "nowEveryAgent": "すべてのエージェントは今後：{{level}}。",
+    "undo": "元に戻す",
+    "everyAgent": "ワークスペースのすべてのエージェントに適用",
+    "follows": "ワークスペースに従う",
+    "edit": "変更",
+    "workspaceLead": "エージェントが動く前に人へ確認するタイミング。",
+    "workspaceHelp": "各エージェントは、誰かがエージェントのページで個別に変更するまでこの設定に従います。",
+    "ownAgents_other": "{{count}} 件のエージェントは個別の設定があり、変わりません。"
   },
   "brakes": {
     "title": "誰も頼んでいない作業",
@@ -7417,6 +7429,17 @@
     },
     "assigneeFilter": "担当者",
     "priorityFilter": "優先度",
+    "labelFilter": "ラベル",
+    "table": {
+      "task": "タスク",
+      "github": "GitHub",
+      "sortBy": "{{column}}で並べ替え"
+    },
+    "fold": {
+      "open": "{{name}}を開く",
+      "close": "{{name}}を折りたたむ",
+      "column": "列を折りたたむ"
+    },
     "title": "タスク",
     "summary": "未完了 {{open}} · エージェント担当 {{agents}}",
     "search": "タスクを検索",
@@ -7458,8 +7481,16 @@
       "order": {
         "manual": "手動",
         "priority": "優先度",
-        "due": "期日"
+        "due": "期日",
+        "updated": "最近"
       },
+      "done": "完了",
+      "doneIs": {
+        "all": "すべて",
+        "recent": "過去{{days}}日間",
+        "hidden": "なし"
+      },
+      "hideEmpty": "空のグループを非表示",
       "field": {
         "project": "プロジェクト",
         "assignee": "担当者",
@@ -8354,6 +8385,7 @@
       "waiting_budget_late": "予定時刻を過ぎました: 予算の更新が遅すぎました",
       "stopped": "誰かが停止しました",
       "stoppedBy": "{{name}}が停止しました",
+      "stalled": "解放しました: 20分間何も進みませんでした",
       "no_report": "結果を伝えずに終了しました",
       "handoff_blocked": "報告できませんでした: ルーティンが一時停止されたか、作成した人がそこに投稿できなくなりました",
       "deleted": "停止: ルーティンが削除されました",
@@ -9734,7 +9766,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "TypeSafeの高速モデルで、すばやい判断のために作られています。agentes.chatは、誰が返信するかといった小さな質問をJevに尋ねます。料金はTypeSafeに直接お支払いください。",
+    "about": "TypeSafeの高速モデルで、すばやい判断のために作られています。agentes.chatは、誰が返信するかといった小さな質問をJevに尋ねます。料金はTypeSafeに直接、またはOpenRouter経由で同じ料金でお支払いください。",
     "lead": "エージェントがチームとして働けるよう手助けします。",
     "how": "Jevのしくみ",
     "why": {
@@ -9760,7 +9792,9 @@
       "key": "キーを作成",
       "openKeys": "APIキーを開く",
       "paste": "ここに貼り付け",
+      "pasteOther": "APIキーをここに貼り付けてください",
       "placeholder": "TypeSafeのキー",
+      "placeholderOther": "APIキー",
       "sealed": "このサーバーで暗号化されます。二度と表示されません。",
       "invalid": "TypeSafeがこのキーを受け付けませんでした。キーのページからもう一度コピーしてください。",
       "savedNoCredit": "保存しました。TypeSafeでクレジットを追加すると、Jevが自動で動き始めます。"
@@ -9781,6 +9815,32 @@
       "envInvalid": "TypeSafeがこのキーを受け付けませんでした。このサーバーの設定（TYPESAFE_API_KEY）で変更してください。"
     },
     "checkAgain": "もう一度確認",
+    "via": {
+      "label": "Jevの支払い先",
+      "typesafe": "TypeSafe",
+      "typesafeText": "TypeSafeのアカウントで、前払いのクレジットを使います。",
+      "openrouter": "OpenRouter",
+      "openrouterText": "OpenRouterのキーで、同じ料金です。",
+      "connected": "キーは接続済み"
+    },
+    "openRouter": {
+      "create": "OpenRouterでキーを作成",
+      "createHint": "OpenRouterのクレジットを使います。料金はTypeSafeと同じで、100万トークンあたりUS$ {{price}}、返信する人の選択1回あたり約US$ {{call}}です。",
+      "open": "OpenRouterを開く",
+      "placeholder": "OpenRouterのキー",
+      "shape": "OpenRouterのキーはsk-or-v1-で始まります。確認してもう一度貼り付けてください。",
+      "invalid": "OpenRouterがこのキーを受け付けませんでした。キーのページからもう一度コピーしてください。",
+      "keyName": "OpenRouterのキー",
+      "same": "プロバイダーのキーにあるもの",
+      "forAll": "このサーバーのすべてのワークスペースの Jev の料金をこのキーで支払います。",
+      "turnOn": "Jevをオンにする",
+      "otherKey": "別のキーを使う",
+      "line": {
+        "invalid": "OpenRouterがこのキーを受け付けませんでした。新しいキーを作成してください。",
+        "no_credit": "OpenRouterでクレジットを追加してください。Jevは自動で再開します。",
+        "envInvalid": "OpenRouterがこのキーを受け付けませんでした。このサーバーの設定（TYPESAFE_API_KEY）で変更してください。"
+      }
+    },
     "remove": {
       "title": "Jevのキーを削除しますか？",
       "text": "キーがなくてもエージェントは動き続けます。"
@@ -9886,6 +9946,10 @@
       "copies_other": "エージェントのいない、このアカウントのログインがあと{{count}}件あります。",
       "removeCopies": "削除",
       "copiesRemoved_other": "使われていないログインを{{count}}件削除しました。",
+      "removeAllGrok": "Grok のログインをすべて削除",
+      "removeAllTitle": "Grok のログイン {{n}} 件をすべて削除しますか？",
+      "removeAllText": "{{computers}} でそれぞれのエージェントのために考えなくなります。他の人のログインはそのまま残ります。",
+      "removeAllDone": "Grok のログインを {{n}} 件削除しました。",
       "disconnect": "接続を解除",
       "renameTitle": "{{label}}の名前を変更",
       "nameLabel": "名前",
@@ -9940,6 +10004,8 @@
       },
       "resetsAt": "{{time}}にリセット",
       "resetsOn": "{{day}} {{time}}にリセット",
+      "allModels": "すべてのモデル",
+      "onlyModels": "{{name}} のみ",
       "almost": "まもなく上限",
       "limited": "上限に達しました",
       "limitedUntil": "{{when}}まで上限に達しています",
@@ -10091,6 +10157,9 @@
     "keys": "Enter で送信 · Esc で削除",
     "keysHold": "離すと送信 · Esc で削除",
     "keysPaused": "一時停止中 · スペースで再生 · Enter で送信 · Esc で削除",
+    "askDiscard": "音声を削除しますか？テキストは残ります。",
+    "askDelete": "削除",
+    "askKeep": "残す",
     "pausePlay": "一時停止",
     "seek": "再生位置",
     "speedAt": "速度 {{speed}}×",
@@ -11104,6 +11173,10 @@
       "cant_start": "{{program}} は {{computer}} にありますが、起動しません。",
       "not_reported": "{{computer}}は、入っているプログラムをまだ確認しています。終わりしだい自動で切り替わります。",
       "outdated": "{{computer}}のバージョンが古くなっています。使うにはCodexをアップデートしてください。",
+      "outdatedCodex": "{{computer}} で Codex CLI {{detected}} が見つかりました。{{minimum}} 以降に更新してください。",
+      "codexUpdateGuide": "Codex CLI の更新方法",
+      "codexRecheckHere": "更新後、環境設定 › ツールの Codex の行で「もう一度確認」を選びます。",
+      "codexRecheckThere": "{{computer}} で Codex CLI を更新してください。デスクトップアプリがある場合は、環境設定 › ツールの Codex の行で「もう一度確認」を選びます。",
       "system": "{{program}}は{{computer}}のシステムではまだ動きません。",
       "no_computerCloud": "{{computer}}の準備ができ次第使えます。"
     },
@@ -12347,6 +12420,7 @@
     "connected": "接続済み",
     "connectedAs": "{{account}}として接続済み",
     "reconnectAdds": "{{name}}を再接続すると、エージェントは{{what}}こともできます。",
+    "sendsToo": "追加で送信: <names/>。変更するには「再接続」を使ってください。",
     "adds": {
       "github_project": "GitHub Projects を使う（ボードを読み、カードを移動する）"
     },
@@ -13435,6 +13509,20 @@
     "needsKey": "このサーバーはOAuthに対応していません。APIキーで接続してください。",
     "notApproved": "{{name}}は承認済みのアプリしかログインを許可しておらず、agentes.chatはまだ承認されていません。APIキーが発行されれば、それで接続できます。",
     "serverSaid": "サーバーの応答: {{detail}}",
+    "headers": {
+      "title": "リクエストヘッダー",
+      "help": "キーを別のヘッダーで送る場合や、サーバーの前にゲートウェイがある場合に使います。ほとんどのサーバーでは不要です。",
+      "value": "値",
+      "nameOf": "ヘッダー{{n}}の名前",
+      "valueOf": "ヘッダー{{n}}の値",
+      "remove": "ヘッダー{{n}}を削除",
+      "add": "ヘッダーを追加",
+      "saved_other": "保存済み: <names/>。新しく入力しない限り、そのまま使われます。",
+      "drop": "削除",
+      "dropping_other": "<names/>は再接続時に削除されます。",
+      "undo": "元に戻す",
+      "refused": "サーバーがこれらのヘッダーを受け付けませんでした。値を確認するか、APIキーで接続してください。"
+    },
     "nothingYet": "ステップ3までは、エージェントは何も使えません。",
     "allCanUse": "接続すると、すべてのエージェントが使えます。あとから調整できます。",
     "replace": "現在のログインを置き換えます。使う人はそのままです。",
@@ -14115,7 +14203,15 @@
       "gone": "そのアカウントはもう接続されていません。",
       "unfinished": "Composioでのログインが完了しませんでした。もう一度お試しください。",
       "unavailable": "このサービスはここでは接続できません。",
-      "misconfigured": "サーバーで{{provider}}との接続が正しく設定されていないため、接続を完了できません。サーバーの運用者がアプリの設定でキーを差し替える必要があります。"
+      "misconfigured": "サーバーで{{provider}}との接続が正しく設定されていないため、接続を完了できません。サーバーの運用者がアプリの設定でキーを差し替える必要があります。",
+      "headerName": "ヘッダーの名前には、X-API-Keyのように英数字とハイフンだけを使ってください。",
+      "headerValue": "{{header}}の値を入力してください。1行で2,000文字まで、半角の英数字と記号だけが使えます。",
+      "headerReserved": "{{header}}はすべてのリクエストで自動的に送信されるため、変更できません。このヘッダーを削除してください。",
+      "headerTwice": "{{header}}がリストに2回あります。どちらかを削除してください。",
+      "headerAndKey": "APIキーはすでにAuthorizationとして送信されます。キーを消すか、このヘッダーを削除してください。",
+      "headersTooMany": "1つのサーバーに設定できるヘッダーは{{max}}個までです。追加するには、どれかを削除してください。",
+      "headersWithSignIn": "このサーバーはログインを求めていますが、ログインではまだヘッダーを送れません。ヘッダーを削除してログインするか、APIキーで接続してください。",
+      "headersUnreadable": "保存済みのヘッダーを読み込めませんでした。もう一度入力するか、削除してください。"
     },
     "wiki": {
       "githubNoNotes": "このリンクにMarkdownノートはありません。",
@@ -14351,7 +14447,8 @@
     },
     "agentGroup": {
       "notFound": "この部署はもうありません。",
-      "tooMany": "このワークスペースにはすでに {{max}} 個の部署があります。先に 1 つ削除してください。"
+      "tooMany": "このワークスペースにはすでに {{max}} 個の部署があります。先に 1 つ削除してください。",
+      "ambiguous": "{{name}} という名前の部署が 2 つあります。どちらかの名前を変えてから、もう一度お試しください。"
     },
     "rightHand": {
       "permanent": "右腕はワークスペースの一部で、チャンネルには入りません。@メンションすれば、どのチャンネルでも呼べます。",
@@ -15221,6 +15318,7 @@
       "waiting": "<b>{{who}}</b>が<b>{{deviceName}}</b>を待っています",
       "toolRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> で{{tool}}をオンにするよう頼んでいます",
       "cliRequest": "<b>{{who}}</b> が <b>{{deviceName}}</b> に {{tool}} をインストールするよう求めています",
+      "folderRequest": "<b>{{who}}</b> があなたの <b>{{deviceName}}</b> でフォルダ {{path}} を求めています",
       "once": "今回のみ許可",
       "always": "常に許可",
       "no": "許可しない",
@@ -15895,6 +15993,8 @@
         "openLatest": "最新のメッセージ",
         "textSize": "文字サイズ",
         "textSizeHelp": "メッセージの文字。すべての会話とあなたのすべてのデバイスに反映されます",
+        "fullMessages": "メッセージを全文表示",
+        "fullMessagesHelp": "長いメッセージを「もっと見る」なしで表示します。すべての会話とあなたのすべてのデバイスに反映されます",
         "textSizePhone": "スマートフォン本体の文字サイズに加えて、アプリ全体に反映されます",
         "textXs": "最小",
         "textSm": "小",

@@ -107,6 +107,25 @@ describe("collapsed details (ADR 0147)", () => {
   });
 });
 
+describe("fenced code", () => {
+  test("a fence line with an info string beyond the language opens a block, never loops", () => {
+    const blocks = parseMarkdown('Antes.\n```xxxxx {"a":1}\nresto\n```\nDepois.');
+    expect(blocks).toEqual([
+      { type: "paragraph", text: "Antes." },
+      { type: "code", lang: "xxxxx", text: "resto" },
+      { type: "paragraph", text: "Depois." },
+    ]);
+  });
+
+  test("an unclosed fence with an info string runs to the end, as any unclosed block does", () => {
+    expect(parseMarkdown('```json {"a":1}\nresto')).toEqual([{ type: "code", lang: "json", text: "resto" }]);
+  });
+
+  test("```ts closes and keeps its language", () => {
+    expect(parseMarkdown("```ts\nconst a = 1;\n```")).toEqual([{ type: "code", lang: "ts", text: "const a = 1;" }]);
+  });
+});
+
 test("a [[link]] to no page reads as a page's name; a bracketed sentence doesn't", () => {
   expect(readsAsPageTitle("Plano de férias")).toBe(true);
   expect(readsAsPageTitle("Processos/Onboarding#Primeiro dia")).toBe(true);

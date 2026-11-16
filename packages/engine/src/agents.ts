@@ -13,7 +13,14 @@ import {
   schema,
   sql,
 } from "@agenteschat/db";
-import { AUTO_MODEL, endpointModelId, isAutoModel, MODEL_CATALOG, parseCustomModel } from "@agenteschat/providers";
+import {
+  AUTO_MODEL,
+  customModelId,
+  endpointModelId,
+  isAutoModel,
+  MODEL_CATALOG,
+  parseCustomModel,
+} from "@agenteschat/providers";
 import { isIdHandle } from "@agenteschat/ui/names";
 import type { AgentAppearance } from "./appearance";
 import { dropAgentRules } from "./approval-rules";
@@ -40,6 +47,7 @@ import {
 } from "./tools/scopes";
 import { orgDefaultAgentBudget, resyncBudgetCounter } from "./usage";
 import { resumeBudgetWaits } from "./usage-pause";
+import { workspaceApprovalsLevel } from "./workspace-approvals";
 import { isPersonalWorkspace } from "./workspace-mode";
 
 const { agents, connectorConnections, importItems, machines, organizationMembers, providerCredentials } = schema;
@@ -96,18 +104,39 @@ export interface AgentInput {
   mediaReplies?: boolean;
   /** Its autonomy brakes (ADR 0131), stored as `autonomySettings` reads them. */
   autonomyBrakes?: Partial<AutonomySettings>;
-  /** How much it asks before acting (ADR 0173). */
-  approvalsLevel?: ApprovalsLevel;
+  /** How much it asks before acting (ADR 0173): its own choice; null follows the workspace's. */
+  approvalsLevel?: ApprovalsLevel | null;
 }
 
-/** Endpoints have no catalog tiers: connecting their key on Automatic pins one of their own models (ADR 0146). */
+/**
+ * Endpoints have no catalog tiers: connecting their key on Automatic pins one of their own models (ADR 0146). A model
+ * named as the endpoint lists it (`llama-4`, not `custom:<key>:llama-4`) becomes its full id, as the picker sends it.
+ */
 async function endpointModel<T extends Partial<AgentInput>>(db: Database, orgId: string, input: T): Promise<T> {
-  if (!isAutoModel(input.model) || !input.credentialId) return input;
+  if (!input.model || !input.credentialId || parseCustomModel(input.model)) return input;
   const credential = await usableCredentialRow(db, orgId, input.credentialId);
   if (credential?.provider !== "custom") return input;
-  const model = endpointModelId(credential.id, credential.options?.endpoint?.models ?? []);
+  const models = credential.options?.endpoint?.models ?? [];
+  if (!isAutoModel(input.model)) {
+    const listed = models.some((m) => m.id === input.model);
+    return listed ? { ...input, model: customModelId(credential.id, input.model) } : input;
+  }
+  const model = endpointModelId(credential.id, models);
   if (!model) throw new ValidationError("An endpoint needs at least one model");
   return { ...input, model };
+}
+
+/** Why a model an endpoint's key can't run was refused: the models it lists, by the ids it takes. */
+async function endpointModelError(db: Database, orgId: string, model: string, credentialId: string | null | undefined) {
+  if (!credentialId) return null;
+  const credential = await usableCredentialRow(db, orgId, credentialId);
+  if (credential?.provider !== "custom") return null;
+  const listed = (credential.options?.endpoint?.models ?? []).map((m) => m.id);
+  return new ValidationError(
+    listed.length > 0
+      ? `The endpoint ${credential.label} has no model ${model}. Its models: ${listed.join(", ")} (or their full id, ${customModelId(credential.id, listed[0] ?? "")})`
+      : `The endpoint ${credential.label} lists no models yet`,
+  );
 }
 
 /** An agent's fields as the API takes them: its handle, model, key (of the model's provider), budget and owner. */
@@ -122,6 +151,8 @@ export async function validateAgentFields(db: Database, orgId: string, input: Pa
   // "auto": each run picks the model from the line of the agent's key (any provider).
   const model = input.model && !isAutoModel(input.model) ? await modelInfoFor(db, input.model, orgId) : undefined;
   if (input.model !== undefined && !isAutoModel(input.model) && !model) {
+    const onEndpoint = await endpointModelError(db, orgId, input.model, input.credentialId);
+    if (onEndpoint) throw onEndpoint;
     throw new ValidationError(
       `model must be ${AUTO_MODEL}, one of: ${Object.keys(MODEL_CATALOG).join(", ")}, or one OpenRouter lists`,
     );
@@ -129,7 +160,7 @@ export async function validateAgentFields(db: Database, orgId: string, input: Pa
   if (input.monthlyBudgetNanoUsd != null && input.monthlyBudgetNanoUsd < 0) {
     throw new ValidationError("budget can't be negative");
   }
-  if (input.approvalsLevel !== undefined && !APPROVALS_LEVELS.includes(input.approvalsLevel)) {
+  if (input.approvalsLevel != null && !APPROVALS_LEVELS.includes(input.approvalsLevel)) {
     throw new ValidationError(`approvalsLevel must be one of: ${APPROVALS_LEVELS.join(", ")}`);
   }
   if (input.credentialId) {
@@ -233,15 +264,19 @@ export async function createAgent(
   options: { remember?: boolean; via?: string; pubsub?: PubSub } = {},
 ): Promise<Agent> {
   const membership = await requirePermission(db, actorId, orgId, "create_agents");
-  const { autonomy, audienceMode, setup, ...fields } = input;
+  const { autonomy, audienceMode, setup, approvalsLevel, ...fields } = input;
   // `create_agents` makes the creator's own agent (ADR 0085 §5): another owner, or none, is for who edits any agent.
   // So whoever gets this far may also set its Autonomia (ADR 0094): an admin or the new agent's owner.
   if (input.ownerUserId !== undefined && input.ownerUserId !== actorId && !can(membership, "manage_agents")) {
     throw new ForbiddenError("Only an admin can create an agent for someone else or with no owner");
   }
   // How much it asks (ADR 0173) is for who edits any agent, at its creation too.
-  if (input.approvalsLevel !== undefined && !can(membership, "manage_agents")) {
+  if (input.approvalsLevel != null && !can(membership, "manage_agents")) {
     throw new ForbiddenError("Only who manages agents can set how much an agent asks");
+  }
+  // So are its brakes (ADR 0131), stored normalized as on an edit.
+  if (input.autonomyBrakes !== undefined && !can(membership, "manage_agents")) {
+    throw new ForbiddenError("Only who manages agents can set an agent's brakes");
   }
   // What one agent may spend beyond the workspace's default is for who edits any agent: a member's new agent takes
   // at most the default.
@@ -256,6 +291,7 @@ export async function createAgent(
     ...fields,
     handle: fields.handle.toLowerCase(),
     model: fields.model ?? defaults.model,
+    ...(fields.autonomyBrakes !== undefined ? { autonomyBrakes: chosenAutonomy(fields.autonomyBrakes) } : {}),
   });
   await validateAgentFields(db, orgId, values);
   const ownerUserId = input.ownerUserId === undefined ? actorId : input.ownerUserId;
@@ -282,6 +318,7 @@ export async function createAgent(
       .values({
         ...values,
         ...brainAuto,
+        ...(await approvalsLevelFields(db, orgId, approvalsLevel)),
         machineId: home,
         orgId,
         ownerUserId,
@@ -440,6 +477,13 @@ async function updateAgentMembership(
   return membership;
 }
 
+/** An agent's stored level: its own choice, or the workspace's (null or none given) while it follows it. */
+async function approvalsLevelFields(db: Executor, orgId: string, level: ApprovalsLevel | null | undefined) {
+  return level == null
+    ? { approvalsLevel: await workspaceApprovalsLevel(db, orgId), approvalsLevelOwn: false }
+    : { approvalsLevel: level, approvalsLevelOwn: true };
+}
+
 export async function updateAgent(
   db: Database,
   actorId: string,
@@ -450,10 +494,26 @@ export async function updateAgent(
 ): Promise<Agent> {
   const membership = await updateAgentMembership(db, actorId, orgId, agentId, patch);
   await refuseRightHandFields(db, orgId, agentId, patch);
+  let current: Promise<Agent | null> | undefined;
+  const currentAgent = () => {
+    current ??= getAgent(db, orgId, agentId);
+    return current;
+  };
+  // A model named as its endpoint lists it, on the agent's endpoint key (or the one sent with it): its full id. A known
+  // model sent alone is a catalog or OpenRouter pick (the picker sends endpoint models by their full id), even when the
+  // endpoint lists the same id, so it moves keys below instead.
+  if (patch.model && !isAutoModel(patch.model) && !parseCustomModel(patch.model)) {
+    const sentKey = patch.credentialId !== undefined;
+    if (sentKey || !(await modelInfoFor(db, patch.model, orgId))) {
+      const credentialId = sentKey ? patch.credentialId : (await currentAgent())?.credentialId;
+      const qualified = await endpointModel(db, orgId, { model: patch.model, credentialId });
+      if (qualified.model !== patch.model) patch = { ...patch, model: qualified.model };
+    }
+  }
   // A model of another provider than the agent's own key (the model picker sends only the model): the key would refuse
   // every turn, so the agent goes on the workspace's default key for the new provider.
   if (patch.credentialId === undefined && patch.model && !isAutoModel(patch.model) && !parseCustomModel(patch.model)) {
-    const current = await getAgent(db, orgId, agentId);
+    const current = await currentAgent();
     if (current?.credentialId) {
       const [key, model] = await Promise.all([
         usableCredentialRow(db, orgId, current.credentialId),
@@ -464,7 +524,7 @@ export async function updateAgent(
   }
   // The connect flow may send only the key when the agent is already on Automatic.
   if (patch.credentialId !== undefined || isAutoModel(patch.model)) {
-    const current = await getAgent(db, orgId, agentId);
+    const current = await currentAgent();
     const selected = await endpointModel(db, orgId, {
       model: patch.model ?? current?.model,
       credentialId: patch.credentialId === undefined ? current?.credentialId : patch.credentialId,
@@ -511,11 +571,13 @@ export async function updateAgent(
           previousHandles: sql`case when ${agents.handle} = ${handle} then ${agents.previousHandles}
             else array_append(array_remove(${agents.previousHandles}, ${handle}::text), ${agents.handle}) end`,
         };
+  const { approvalsLevel, ...stored } = input;
+  const level = approvalsLevel === undefined ? {} : await approvalsLevelFields(db, orgId, approvalsLevel);
   let agent: Agent | undefined;
   try {
     [agent] = await db
       .update(agents)
-      .set({ ...input, ...handover, ...previous, updatedAt: new Date() })
+      .set({ ...stored, ...level, ...handover, ...previous, updatedAt: new Date() })
       .where(and(eq(agents.id, agentId), eq(agents.orgId, orgId), isNull(agents.deletedAt)))
       .returning();
   } catch (error) {
@@ -717,6 +779,8 @@ export const agentView = (a: Agent) => ({
   brakes: autonomySettings(a.autonomyBrakes),
   /** How much it asks before acting (ADR 0173). */
   approvalsLevel: a.approvalsLevel,
+  /** Whether that level is its own choice; false: it follows the workspace's. */
+  approvalsLevelOwn: a.approvalsLevelOwn,
   createdAt: a.createdAt,
 });
 

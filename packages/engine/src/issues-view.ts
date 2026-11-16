@@ -5,15 +5,16 @@ const { organizationMembers } = schema;
 
 /**
  * How a person looks at Tarefas in a workspace (`organization_members.issues_view`): a board or a list, grouped by
- * stage, assignee or priority, the order inside each group, what the cards show, the assignee and priority filters,
- * and whether canceled tasks show. It lives on the server so the web, the desktop app and the phone open the screen
+ * stage, assignee or priority, the order inside each group, what the cards show, the assignee, priority and label
+ * filters, which finished tasks show (and whether canceled ones do), whether empty groups show, and the groups
+ * folded shut. It lives on the server so the web, the desktop app and the phone open the screen
  * the same way; the search text is never kept. Mirrors `ISSUES_VIEW_DEFAULT` in packages/client/src/lib/issues-view.ts.
  */
 export const ISSUES_LAYOUTS = ["board", "list"] as const;
 export type IssuesLayout = (typeof ISSUES_LAYOUTS)[number];
 export const ISSUES_GROUPS = ["stage", "assignee", "priority"] as const;
 export type IssuesGroup = (typeof ISSUES_GROUPS)[number];
-export const ISSUES_SORTS = ["manual", "priority", "due"] as const;
+export const ISSUES_SORTS = ["manual", "priority", "due", "updated"] as const;
 export type IssuesSort = (typeof ISSUES_SORTS)[number];
 /** What a card can show besides its number and title. */
 export const ISSUE_CARD_FIELDS = [
@@ -31,6 +32,15 @@ export const ISSUES_VIEW_PRIORITIES = ["high", "normal", "low"] as const;
 export const ISSUES_VIEW_ASSIGNEE = /^(none|agent:[A-Za-z0-9_-]{1,100}|person:[A-Za-z0-9_-]{1,100})$/;
 /** More than anyone picks by hand: a row never grows past this. */
 export const ISSUES_VIEW_MAX_ASSIGNEES = 50;
+/** Which finished tasks show: every one, the ones touched in the last days (the apps count them), or none. */
+export const ISSUES_DONE = ["all", "recent", "hidden"] as const;
+export type IssuesDone = (typeof ISSUES_DONE)[number];
+/** A label filter is a label as tasks hold them; a view keeps a few. */
+export const ISSUES_VIEW_LABEL_MAX = 60;
+export const ISSUES_VIEW_MAX_LABELS = 20;
+/** A folded group: a board column's id, an assignee filter's key or a priority, whatever the view is grouped by. */
+export const ISSUES_VIEW_GROUP = /^[A-Za-z0-9:_-]{1,120}$/;
+export const ISSUES_VIEW_MAX_COLLAPSED = 100;
 
 /** A type, not an interface: the row's jsonb column takes it as a plain record. */
 export type IssuesView = {
@@ -42,7 +52,14 @@ export type IssuesView = {
   assignees: string[];
   /** Only tasks with one of these priorities (empty: every task). */
   priorities: (typeof ISSUES_VIEW_PRIORITIES)[number][];
+  /** Only tasks with one of these labels (empty: every task). */
+  labels: string[];
+  done: IssuesDone;
   showCanceled: boolean;
+  /** Groups with no task on screen take no room. */
+  hideEmpty: boolean;
+  /** The groups folded to their name and count. */
+  collapsed: string[];
 };
 
 /** What someone who never changed the screen sees: today's board by stage, every field, no filter. */
@@ -53,7 +70,11 @@ export const ISSUES_VIEW_DEFAULT: IssuesView = {
   fields: { project: true, assignee: true, priority: true, due: true, criteria: true, pullRequest: true, label: true },
   assignees: [],
   priorities: [],
+  labels: [],
+  done: "all",
   showCanceled: false,
+  hideEmpty: false,
+  collapsed: [],
 };
 
 const pick = <T extends string>(list: readonly T[], value: unknown, fallback: T): T =>
@@ -71,6 +92,8 @@ export function issuesViewOf(raw: unknown): IssuesView {
   const fields = record(v.fields);
   const assignees = Array.isArray(v.assignees) ? v.assignees : [];
   const priorities = Array.isArray(v.priorities) ? v.priorities : [];
+  const labels = Array.isArray(v.labels) ? v.labels : [];
+  const collapsed = Array.isArray(v.collapsed) ? v.collapsed : [];
   return {
     layout: pick(ISSUES_LAYOUTS, v.layout, ISSUES_VIEW_DEFAULT.layout),
     group: pick(ISSUES_GROUPS, v.group, ISSUES_VIEW_DEFAULT.group),
@@ -82,7 +105,20 @@ export function issuesViewOf(raw: unknown): IssuesView {
       ...new Set(assignees.filter((a): a is string => typeof a === "string" && ISSUES_VIEW_ASSIGNEE.test(a))),
     ].slice(0, ISSUES_VIEW_MAX_ASSIGNEES),
     priorities: ISSUES_VIEW_PRIORITIES.filter((p) => priorities.includes(p)),
+    labels: [
+      ...new Set(
+        labels
+          .filter((l): l is string => typeof l === "string")
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0 && l.length <= ISSUES_VIEW_LABEL_MAX),
+      ),
+    ].slice(0, ISSUES_VIEW_MAX_LABELS),
+    done: pick(ISSUES_DONE, v.done, ISSUES_VIEW_DEFAULT.done),
     showCanceled: typeof v.showCanceled === "boolean" ? v.showCanceled : ISSUES_VIEW_DEFAULT.showCanceled,
+    hideEmpty: typeof v.hideEmpty === "boolean" ? v.hideEmpty : ISSUES_VIEW_DEFAULT.hideEmpty,
+    collapsed: [
+      ...new Set(collapsed.filter((g): g is string => typeof g === "string" && ISSUES_VIEW_GROUP.test(g))),
+    ].slice(0, ISSUES_VIEW_MAX_COLLAPSED),
   };
 }
 

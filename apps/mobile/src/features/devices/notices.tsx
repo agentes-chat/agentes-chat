@@ -32,8 +32,37 @@ export function useNoticePerson(n: Pick<AppNotification, "kind" | "source" | "la
 export function DeviceNoticeCard({ item: n, first }: { item: AppNotification; first: boolean }) {
   const d = deviceNoticeOf(n);
   if (!d) return null;
+  if (d.kind === "device.folder_request") return <FolderNotice n={n} d={d} />;
   if (d.kind === "device.tool_request" || d.kind === "device.cli_request") return <ToolNotice n={n} d={d} />;
   return d.kind === "device.join_request" ? <JoinNotice n={n} d={d} /> : <AccessNotice n={n} d={d} first={first} />;
+}
+
+/**
+ * An agent waits for a folder on the viewer's computer: it is allowed there, in the app on that computer (or with the
+ * runner's command), so the card only says what waits, with no button that would grant it from here.
+ */
+function FolderNotice({ n, d }: { n: AppNotification; d: DeviceNotice }) {
+  const { t } = useTranslation();
+  const when = useWhen();
+  const dir = useDirectory();
+  const agent = n.actors.find((a) => a.type === "agent");
+  const name = dir.nameOf(agent ? { type: "agent", id: agent.id } : null);
+  return (
+    <WaitingCard
+      agentId={agent?.id ?? null}
+      name={name}
+      kind={{ icon: "laptop", label: t("mobile.devices.notice.kind") }}
+      title={deviceNoticeTitle(t, d, name, "", "")}
+      where={when.short(n.updatedAt)}
+      onPress={() => router.push(deviceHref(d))}
+    >
+      {d.doing ? (
+        <Text variant="small" tone="muted">
+          {d.doing}
+        </Text>
+      ) : null}
+    </WaitingCard>
+  );
 }
 
 /** Someone asks the viewer to turn a tool on on their computer: the same one-click button as where it was needed. */

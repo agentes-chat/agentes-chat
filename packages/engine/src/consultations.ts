@@ -2209,6 +2209,47 @@ export async function consultationOrigin(
   return origin;
 }
 
+/**
+ * Whether an agent this run answers speaks in `channelId`: a run up one of the chains of questions and notes it
+ * answers is at work there, or is a routine's that reports there. That agent delivers what this run makes, so a
+ * post of its own there would repeat it (`post_message`). Every chain counts: a second request joins a run still at
+ * work (`startOrJoinRun`), where `consultationOrigin` names the latest alone, for the run's cards. A heads-up is not
+ * one: nobody carries its reply.
+ */
+export async function askerSpeaksIn(db: Executor, orgId: string, runId: string, channelId: string): Promise<boolean> {
+  const seen = new Set([runId]);
+  let targets = [runId];
+  for (let depth = 0; depth < MAX_HANDOFF_LINKS && targets.length > 0; depth++) {
+    const askers = await db
+      .select({
+        id: agentRuns.id,
+        orgId: agentRuns.orgId,
+        channelId: agentRuns.channelId,
+        triggerMessageId: agentRuns.triggerMessageId,
+        background: agentRuns.background,
+      })
+      .from(agentConsultations)
+      .innerJoin(agentRuns, eq(agentRuns.id, agentConsultations.askerRunId))
+      .where(
+        and(
+          eq(agentConsultations.orgId, orgId),
+          inArray(agentConsultations.targetRunId, targets),
+          sql`not ${headsUpSql(sql`${agentConsultations}`)}`,
+        ),
+      );
+    targets = [];
+    for (const asker of askers) {
+      if (seen.has(asker.id)) continue;
+      seen.add(asker.id);
+      const report = asker.background ? (await routineBriefOfRun(db, asker))?.deliverTo : undefined;
+      if ((report?.channelId ?? asker.channelId) === channelId) return true;
+      // A routine's run is where its chain began, as for `consultationOrigin`.
+      if (!report) targets.push(asker.id);
+    }
+  }
+  return false;
+}
+
 /** This run answers a question that began in a routine's or long work's run, through any chain of agents. */
 export async function consultedInBackground(db: Executor, orgId: string, runId: string): Promise<boolean> {
   let current = runId;

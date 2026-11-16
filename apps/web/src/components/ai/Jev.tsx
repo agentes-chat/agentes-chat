@@ -1,15 +1,17 @@
-import type { AiRouting, JevKey } from "@agenteschat/client";
+import type { AiRouting, Credential, JevKey } from "@agenteschat/client";
 import {
   useAiStatus,
   useCheckJevKey,
+  useCredentials,
   useJevKey,
   useModelLabel,
   useRemoveJevKey,
   useSaveJevKey,
 } from "@agenteschat/client";
-import { errorText } from "@agenteschat/client/lib/errors";
+import { errorCode, errorText } from "@agenteschat/client/lib/errors";
 import { formatDecimal, formatUsd } from "@agenteschat/client/lib/format";
 import { can } from "@agenteschat/client/lib/permissions";
+import { keyLooksValid } from "@agenteschat/client/lib/providers";
 import { routingLineOf } from "@agenteschat/client/lib/routing";
 import { isJevOrigin } from "@agenteschat/config/jev-origin";
 import {
@@ -26,6 +28,7 @@ import {
   Input,
   List,
   Locked,
+  OptionList,
   ProviderLogo,
   Select,
   SettingNote,
@@ -39,15 +42,19 @@ import { OpenPage, Step, StepTitle } from "./AddAccountFlow";
 
 /*
  * Who picks the agents for a message nobody mentioned (ADR 0074), and Jev on a self-hosted server (ADR 0073):
- * Settings › AI accounts says who picks now, and the installation's owner sets up Jev's key under it. The setup
- * asks for the same key once, with the same steps.
+ * Settings › AI accounts says who picks now, and the installation's owner sets up Jev's key under it, paid at
+ * TypeSafe or through OpenRouter (§9). The setup asks for the same key once, with the same steps.
  */
 
 /** TypeSafe's console: where an account is made and credit is added, and where its keys are made. */
 const TYPESAFE_CONSOLE = "https://console.typesafe.ai";
 const TYPESAFE_KEYS = `${TYPESAFE_CONSOLE}/keys`;
 const TYPESAFE_ORIGIN = "https://api.typesafe.ai";
+/** OpenRouter's pages for Jev through it: where its keys are made, and where credit is added. */
+const OPENROUTER_KEYS = "https://openrouter.ai/keys";
+const OPENROUTER_CREDITS = "https://openrouter.ai/settings/credits";
 type JevProvider = "typesafe" | "other";
+type JevVia = NonNullable<JevKey["via"]>;
 /** What Jev costs (US$): per million tokens it reads, and about one pick of who answers. */
 const JEV_PRICE = 0.042;
 const JEV_CALL = 0.0001;
@@ -83,10 +90,11 @@ export function JevWhy({ routing }: { routing?: AiRouting["by"] }) {
 
 /**
  * The steps to Jev's key: a TypeSafe account with credit, a key, and the key pasted here. `replace` leaves the first
- * out (an account exists). `onSave` and `onCancel` give the field its own buttons (Settings); the setup's big button
- * saves instead.
+ * out (an account exists). Through OpenRouter (`via`): a key made there, and the key pasted here. `onSave` and
+ * `onCancel` give the field its own buttons (Settings); the setup's big button saves instead.
  */
 export function JevSteps({
+  via = "typesafe",
   replace,
   value,
   onChange,
@@ -94,12 +102,15 @@ export function JevSteps({
   onProviderChange,
   baseURL,
   onBaseURLChange,
+  otherProviderEnabled,
   error,
   saved,
   onSave,
   saving,
   onCancel,
+  focus,
 }: {
+  via?: JevVia;
   replace?: boolean;
   value: string;
   onChange: (value: string) => void;
@@ -107,6 +118,7 @@ export function JevSteps({
   onProviderChange: (value: JevProvider) => void;
   baseURL: string;
   onBaseURLChange: (value: string) => void;
+  otherProviderEnabled: boolean;
   /** Under the field, in place of where the key is kept: why it wasn't saved. */
   error?: string | null;
   /** Saved, with a line to say so (a key whose account has no credit yet). */
@@ -114,6 +126,8 @@ export function JevSteps({
   onSave?: () => void;
   saving?: boolean;
   onCancel?: () => void;
+  /** Whether the field takes the focus when it appears; by default where it has its own Cancel (Settings). */
+  focus?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const id = useId();
@@ -123,27 +137,34 @@ export function JevSteps({
   // The way on is the first button until a key is typed.
   const first = key === "";
   const other = provider === "other";
+  const openRouter = via === "openrouter";
   const validOrigin = other && isJevOrigin(baseURL);
   const canSave = key.length >= JEV_KEY_MIN && (!other || validOrigin);
   const n = replace ? 0 : 1;
+  const price = {
+    price: formatDecimal(i18n.language, JEV_PRICE),
+    call: formatDecimal(i18n.language, JEV_CALL),
+  };
   return (
     <div className="agp-addacct jev-steps">
-      <div className="ac-field">
-        <label className="ac-field__label" htmlFor={`${id}-provider`}>
-          {t("jev.provider")}
-        </label>
-        <Select
-          id={`${id}-provider`}
-          aria-label={t("jev.providerAccessible")}
-          value={provider}
-          onValueChange={onProviderChange}
-          options={[
-            { value: "typesafe", label: t("jev.providerTypesafe") },
-            { value: "other", label: t("endpoint.option") },
-          ]}
-        />
-      </div>
-      {other ? (
+      {otherProviderEnabled && !openRouter && (
+        <div className="ac-field">
+          <label className="ac-field__label" htmlFor={`${id}-provider`}>
+            {t("jev.provider")}
+          </label>
+          <Select
+            id={`${id}-provider`}
+            aria-label={t("jev.providerAccessible")}
+            value={provider}
+            onValueChange={onProviderChange}
+            options={[
+              { value: "typesafe", label: t("jev.providerTypesafe") },
+              { value: "other", label: t("endpoint.option") },
+            ]}
+          />
+        </div>
+      )}
+      {other && (
         <Step n={1}>
           <StepTitle title={t("jev.baseURL")} htmlFor={`${id}-base-url`} />
           <Locked when={Boolean(saving)}>
@@ -163,7 +184,20 @@ export function JevSteps({
             {baseURL.length > 0 && !validOrigin ? t("jev.invalidBaseURL") : " "}
           </p>
         </Step>
-      ) : !replace ? (
+      )}
+      {openRouter && (
+        <Step
+          n={1}
+          side={
+            <OpenPage href={OPENROUTER_KEYS} primary={first}>
+              {t("jev.openRouter.open")}
+            </OpenPage>
+          }
+        >
+          <StepTitle title={t("jev.openRouter.create")} hint={t("jev.openRouter.createHint", price)} />
+        </Step>
+      )}
+      {!replace && !openRouter && !other && (
         <Step
           n={1}
           side={
@@ -172,16 +206,10 @@ export function JevSteps({
             </OpenPage>
           }
         >
-          <StepTitle
-            title={t("jev.steps.account")}
-            hint={t("jev.steps.accountHint", {
-              price: formatDecimal(i18n.language, JEV_PRICE),
-              call: formatDecimal(i18n.language, JEV_CALL),
-            })}
-          />
+          <StepTitle title={t("jev.steps.account")} hint={t("jev.steps.accountHint", price)} />
         </Step>
-      ) : null}
-      {!other && (
+      )}
+      {!openRouter && !other && (
         <Step
           n={n + 1}
           side={
@@ -193,13 +221,8 @@ export function JevSteps({
           <StepTitle title={t("jev.steps.key")} />
         </Step>
       )}
-      {other && (
-        <Step n={2}>
-          <StepTitle title={t("jev.steps.key")} />
-        </Step>
-      )}
-      <Step n={other ? 3 : n + 2}>
-        <StepTitle title={t("jev.steps.paste")} htmlFor={field} />
+      <Step n={other ? 2 : n + 2}>
+        <StepTitle title={t(other ? "jev.steps.pasteOther" : "jev.steps.paste")} htmlFor={field} />
         <span className="agp-addacct__paste">
           <Locked when={Boolean(saving)}>
             <Input
@@ -208,9 +231,15 @@ export function JevSteps({
               value={value}
               autoComplete="off"
               spellCheck={false}
-              placeholder={t("jev.steps.placeholder")}
+              placeholder={t(
+                openRouter
+                  ? "jev.openRouter.placeholder"
+                  : other
+                    ? "jev.steps.placeholderOther"
+                    : "jev.steps.placeholder",
+              )}
               // Settings opens the steps in place of the button pressed: the field takes the focus.
-              autoFocus={Boolean(onCancel)}
+              autoFocus={focus ?? Boolean(onCancel)}
               invalid={Boolean(error)}
               aria-describedby={below}
               onChange={(e) => onChange(e.target.value)}
@@ -284,15 +313,31 @@ const CHIP: Record<
   no_credit: { icon: "alert", tone: "waiting", word: "no_credit" },
 };
 
-/** Jev's key: why it helps and the steps while there's none; the key's last 4, this month's use and its state once set. */
+/**
+ * Jev's key: why it helps and the steps while there's none; the key's last 4, this month's use and its state once set.
+ * Setting it up (or replacing it) asks where Jev is paid: TypeSafe, or OpenRouter, where an OpenRouter key the
+ * workspace already has turns it on with one press.
+ */
 function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   const { t, i18n } = useTranslation();
+  const { org } = useOrg();
   // Read here rather than handed down: a save or a removal shows its key at once, so focus lands on what stays.
   const view = useJevKey().data;
   const save = useSaveJevKey();
   const check = useCheckJevKey();
   const remove = useRemoveJevKey();
+  // The workspace's own OpenRouter key, for whoever may manage its keys: handed to Jev without pasting it again.
+  const admin = can(org, "manage_credentials");
+  const credentials = useCredentials(org.id, admin);
+  const workspaceKey: Credential | undefined = admin
+    ? credentials.data?.find((c) => c.provider === "openrouter" && !c.revokedAt && !c.endpoint)
+    : undefined;
   const [steps, setSteps] = useState<null | "set" | "replace">(null);
+  const [via, setVia] = useState<JevVia>("typesafe");
+  // With the workspace's OpenRouter key on offer: another one pasted instead.
+  const [paste, setPaste] = useState(false);
+  // What opened last takes the focus (its field, or Turn on Jev); moving between the rows with the arrows keeps it there.
+  const [focusIn, setFocusIn] = useState(false);
   const [draft, setDraft] = useState("");
   const [provider, setProvider] = useState<JevProvider>("typesafe");
   const [baseURL, setBaseURL] = useState("");
@@ -318,28 +363,46 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   if (!view) return null;
   const env = view.source === "env";
   const chip = CHIP[view.state];
+  const openRouter = view.via === "openrouter";
+  // The workspace's key is offered unless it is the one being replaced (one refused, say).
+  const offered = steps === "replace" && workspaceKey?.keyHint === view.hint ? undefined : workspaceKey;
   const close = () => {
     setSteps(null);
     setDraft("");
     setError(null);
+    setPaste(false);
     refocus.current = true;
   };
+  const selectedBaseURL = provider === "typesafe" ? TYPESAFE_ORIGIN : baseURL;
   const beginSteps = (mode: "set" | "replace") => {
     const current = view.baseURL;
-    setProvider(current === TYPESAFE_ORIGIN ? "typesafe" : "other");
-    setBaseURL(current === TYPESAFE_ORIGIN ? "" : current);
+    setVia(mode === "replace" ? (view.via ?? "typesafe") : workspaceKey ? "openrouter" : "typesafe");
+    setFocusIn(true);
+    setProvider(view.otherProviderEnabled && current !== TYPESAFE_ORIGIN ? "other" : "typesafe");
+    setBaseURL(view.otherProviderEnabled && current !== TYPESAFE_ORIGIN ? current : "");
     setDraft("");
     setError(null);
     setSteps(mode);
   };
-  const selectedBaseURL = provider === "typesafe" ? TYPESAFE_ORIGIN : baseURL;
-  const submit = () =>
-    save.mutate(
-      { apiKey: draft.trim(), baseURL: selectedBaseURL },
-      { onSuccess: close, onError: (e) => setError(errorText(t, e)) },
-    );
-  const stepsOf = (replace: boolean) => (
+  const failed = (openRouterKey: boolean) => (e: unknown) =>
+    setError(errorCode(e) === "jev_key_invalid" && openRouterKey ? t("jev.openRouter.invalid") : errorText(t, e));
+  const submit = () => {
+    const key = draft.trim();
+    if (via === "openrouter" && !keyLooksValid("openrouter", key)) {
+      setError(t("jev.openRouter.shape"));
+      return;
+    }
+    const input = {
+      apiKey: key,
+      ...(via === "typesafe" && view.otherProviderEnabled ? { baseURL: selectedBaseURL } : {}),
+    };
+    save.mutate(input, { onSuccess: close, onError: failed(key.startsWith("sk-or-")) });
+  };
+  const turnOn = (credential: Credential) =>
+    save.mutate({ orgId: org.id, credentialId: credential.id }, { onSuccess: close, onError: failed(true) });
+  const stepsOf = (replace: boolean, shown: JevVia) => (
     <JevSteps
+      via={shown}
       replace={replace}
       value={draft}
       onChange={(v) => {
@@ -356,18 +419,100 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
         setBaseURL(next);
         setError(null);
       }}
+      otherProviderEnabled={view.otherProviderEnabled}
       error={error}
       onSave={submit}
       saving={save.isPending}
       onCancel={close}
+      focus={focusIn}
+    />
+  );
+  const ready = (credential: Credential) => (
+    <div className="jev-ready">
+      <span className="jev-ready__key">
+        <span className="ai-accounts__name">{t("jev.openRouter.keyName")}</span>
+        <span className="small muted">
+          <span className="jev__fact">{t("settings.keyEndsIn", { hint: credential.keyHint })}</span>
+          {" · "}
+          <span className="jev__fact">{t("jev.openRouter.same")}</span>
+        </span>
+      </span>
+      <SettingNote icon="info">{t("jev.openRouter.forAll")}</SettingNote>
+      {error && (
+        <p className="jev-steps__below ac-field__error" role="alert">
+          {error}
+        </p>
+      )}
+      <span className="ac-acts">
+        <Button
+          size="sm"
+          variant="primary"
+          autoFocus={focusIn}
+          loading={save.isPending}
+          disabled={save.isPending}
+          onClick={() => turnOn(credential)}
+        >
+          {t("jev.openRouter.turnOn")}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            setPaste(true);
+            setError(null);
+            setFocusIn(true);
+          }}
+        >
+          {t("jev.openRouter.otherKey")}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={close}>
+          {t("common.cancel")}
+        </Button>
+      </span>
+    </div>
+  );
+  // Where Jev is paid, each with its own way to a key; `replace` keeps TypeSafe's account step out.
+  const chooser = (replace: boolean) => (
+    <OptionList
+      attached
+      aria-label={t("jev.via.label")}
+      value={via}
+      onValueChange={(v) => {
+        setVia(v);
+        setPaste(false);
+        setError(null);
+        setFocusIn(false);
+      }}
+      options={[
+        {
+          value: "typesafe",
+          leading: <ProviderLogo id="typesafe" size="sm" />,
+          title: t("jev.via.typesafe"),
+          description: t("jev.via.typesafeText"),
+          // Coming from OpenRouter, a TypeSafe account may not exist yet: its first step stays.
+          children: stepsOf(replace && view.via === "typesafe", "typesafe"),
+        },
+        {
+          value: "openrouter",
+          leading: <ProviderLogo id="openrouter" size="sm" />,
+          title: t("jev.via.openrouter"),
+          tag: offered ? t("jev.via.connected") : undefined,
+          description: t("jev.via.openrouterText"),
+          children: offered && !paste ? ready(offered) : stepsOf(replace, "openrouter"),
+        },
+      ]}
     />
   );
   const isTypesafe = view.baseURL === TYPESAFE_ORIGIN;
   const site =
-    isTypesafe && view.state === "invalid" ? (
-      <OpenPage href={TYPESAFE_KEYS}>{t("jev.steps.openKeys")}</OpenPage>
-    ) : isTypesafe && view.state === "no_credit" ? (
-      <OpenPage href={TYPESAFE_CONSOLE}>{t("jev.steps.openSite")}</OpenPage>
+    view.state === "invalid" ? (
+      <OpenPage href={openRouter ? OPENROUTER_KEYS : TYPESAFE_KEYS}>
+        {t(openRouter ? "jev.openRouter.open" : "jev.steps.openKeys")}
+      </OpenPage>
+    ) : view.state === "no_credit" ? (
+      <OpenPage href={openRouter ? OPENROUTER_CREDITS : TYPESAFE_CONSOLE}>
+        {t(openRouter ? "jev.openRouter.open" : "jev.steps.openSite")}
+      </OpenPage>
     ) : null;
   const ghost = (
     label: string,
@@ -407,10 +552,10 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
   );
   const note = env
     ? view.state === "invalid"
-      ? t("jev.line.envInvalid")
+      ? t(openRouter ? "jev.openRouter.line.envInvalid" : "jev.line.envInvalid")
       : t("jev.line.env")
     : view.state === "invalid" || view.state === "no_credit"
-      ? t(`jev.line.${view.state}`)
+      ? t(openRouter ? `jev.openRouter.line.${view.state}` : `jev.line.${view.state}`)
       : null;
   const facts = [
     view.hint && t("settings.keyEndsIn", { hint: view.hint }),
@@ -445,7 +590,7 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
           <div className="ac-list__row jev__body">
             <JevWhy routing={routing} />
             {steps ? (
-              stepsOf(false)
+              chooser(false)
             ) : (
               <Button ref={opener} size="sm" variant="primary" onClick={() => beginSteps("set")}>
                 {t("jev.setUp")}
@@ -456,7 +601,9 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
           <>
             <div className="ac-list__row jev__key">
               <span className="list-col">
-                <span className="ai-accounts__name">{t(isTypesafe ? "jev.keyName" : "jev.keyNameOther")}</span>
+                <span className="ai-accounts__name">
+                  {t(openRouter ? "jev.openRouter.keyName" : isTypesafe ? "jev.keyName" : "jev.keyNameOther")}
+                </span>
                 <span className="small muted">
                   {facts.map((fact, i) => (
                     <Fragment key={String(fact)}>
@@ -469,7 +616,7 @@ function JevCard({ routing }: { routing?: AiRouting["by"] }) {
               </span>
               {actions && <span className="ac-acts ac-captail">{actions}</span>}
             </div>
-            {steps === "replace" && <div className="ac-list__row jev__body">{stepsOf(true)}</div>}
+            {steps === "replace" && <div className="ac-list__row jev__body">{chooser(true)}</div>}
           </>
         )}
       </List>

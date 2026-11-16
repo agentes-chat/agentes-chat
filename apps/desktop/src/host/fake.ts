@@ -43,7 +43,7 @@ import type { ThisMacRequest } from "../control/this-mac";
 import type { TrayState } from "../control/tray";
 import { acmeSeed, FAKE_LINKS, FAKE_SERVER, FakeRunner, horizonteSeed } from "../dev/fake-runner";
 import { createFakeSite, type FakeSite } from "../dev/fake-site";
-import type { AppInfo, Host, RunnerInfo, RunnerStateChange, WindowName } from "./types";
+import type { AppInfo, CompatMode, Host, RunnerInfo, RunnerStateChange, WindowName } from "./types";
 
 export type Scenario = "first" | "windows" | "linux" | "cloud" | "selfhost" | "link" | "here";
 export const SCENARIOS: readonly Scenario[] = ["first", "windows", "linux", "cloud", "selfhost", "link", "here"];
@@ -71,9 +71,13 @@ export interface HereOptions {
 
 const LOCAL_URL = "http://127.0.0.1:4310";
 const TAILNET_URL = "https://ana-mac.tail1234.ts.net";
+const LOCAL_BUNDLE_VERSION = "0.8.5";
+const LOCAL_SERVER_VERSION = "0.1.1";
 
 export interface FakeHost extends Host {
   window: WindowName;
+  /** Linux's Compatibility mode as `compatMode` answers it (`fellBack` once). */
+  compat: CompatMode;
   readonly runners: Map<string, FakeRunner>;
   readonly tray: TrayState;
   readonly list: ServerList;
@@ -185,7 +189,8 @@ export function createFakeHost(
           url: LOCAL_URL,
           publicUrl: here.reach ? TAILNET_URL : LOCAL_URL,
           reach: !!here.reach,
-          version: "1.4.0",
+          installedVersion: LOCAL_BUNDLE_VERSION,
+          serverVersion: running && (here.phase ?? "running") === "running" ? LOCAL_SERVER_VERSION : null,
           backTo: here.back ?? null,
           awake: running,
           eraseTo: "/Users/voce/agentes.chat erased 2026-11-14",
@@ -202,7 +207,6 @@ export function createFakeHost(
         ? {
             installed: "terminal" as const,
             url: LOCAL_URL,
-            version: "1.4.0",
             serving: here.serving !== false,
             claim: here.claim && here.serving !== false ? "b3duZXItY2xhaW0tYWJjZGVmZ2hpamtsbW5vcHFy" : null,
           }
@@ -220,6 +224,7 @@ export function createFakeHost(
   let dropUpdate: (() => void) | null = null;
   const setLocal = (next: Partial<LocalServerStatus>) => {
     local = { ...local, ...next };
+    local.serverVersion = local.phase === "running" ? LOCAL_SERVER_VERSION : null;
     for (const l of localListeners) l(local);
     devChanged();
   };
@@ -284,6 +289,7 @@ export function createFakeHost(
 
   const host: FakeHost = {
     window: initial,
+    compat: { on: true, fellBack: false, own: false },
     fake: true,
     platform,
     runners,
@@ -434,11 +440,22 @@ export function createFakeHost(
       os: platform === "mac" ? "macos" : platform,
       arch: platform === "mac" ? "aarch64" : "x86_64",
       system: platform === "mac" ? "15.5" : null,
-      graphics:
+      details:
         platform === "linux"
-          ? "Ubuntu 26.04 LTS · wayland (GNOME) · WebKitGTK 2.50.4 · Intel (i915) · CPU · AppImage"
-          : null,
+          ? `agentes.chat ${version} · Linux · Ubuntu 26.04 LTS · wayland (GNOME) · WebKitGTK 2.50.4 · Intel (i915) · CPU (chosen) · AppImage`
+          : `agentes.chat ${version} · ${platform === "mac" ? "macOS 15.5" : "Windows"}`,
     }),
+    compatMode: async () => {
+      const now = { ...host.compat };
+      host.compat.fellBack = false;
+      return now;
+    },
+    setCompatMode: async (on) => {
+      host.compat.on = on;
+    },
+    reopen: async () => {
+      console.info("[fake] reopen");
+    },
     autostart: async () => autostart,
     setAutostart: async (on) => {
       autostart = on;
@@ -547,7 +564,7 @@ export function createFakeHost(
         publicUrl: reach ? TAILNET_URL : LOCAL_URL,
         reach,
         usage: choice.usage,
-        version: "1.4.0",
+        installedVersion: LOCAL_BUNDLE_VERSION,
       });
       cancelSetup = null;
       await host.chooseServer(local.publicUrl ?? LOCAL_URL, "/desktop/handover#token=fake");

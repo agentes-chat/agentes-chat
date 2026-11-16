@@ -1916,8 +1916,29 @@
     {
       "idx": 275,
       "version": "7",
-      "when": 1794757000001,
-      "tag": "0277_jev-base-url",
+      "when": 1794757100000,
+      "tag": "0277_mcp_request_headers",
+      "breakpoints": true
+    },
+    {
+      "idx": 276,
+      "version": "7",
+      "when": 1794757200000,
+      "tag": "0278_workspace_approvals_level",
+      "breakpoints": true
+    },
+    {
+      "idx": 277,
+      "version": "7",
+      "when": 1794757300000,
+      "tag": "0279_voice_clip_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 276,
+      "version": "7",
+      "when": 1794757400000,
+      "tag": "0280_jev-base-url",
       "breakpoints": true
     }
   ]

@@ -45,7 +45,7 @@ import { AgentLevelList, DisconnectRow } from "./Access";
 import { ConnectorIcon } from "./ConnectorIcon";
 import { AddressSheet, ConnectSheet } from "./ConnectSheet";
 import { GitHubAppGroup } from "./GitHubApp";
-import { accountActions } from "./logic";
+import { accountActions, headerNamesText } from "./logic";
 import { Problem } from "./Problem";
 import { openTools } from "./ToolsScreen";
 
@@ -57,9 +57,9 @@ export const openConnection = (id: string) => router.push(`/connectors/${id}`);
  * bar reads its name, with "…" for renaming; its mark with the check, its name and its account under it; who uses
  * it (one row per agent, the level as its value, changed in place), what always asks as that group's footer; its
  * tools as one row (what waits on you under it, in amber; a screen of their own); the account (which, Reconectar,
- * another account of an MCP server, each in a sheet); and Desconectar, alone in red, behind the system's
- * confirmation. GitHub also lists its repositories through the agentes.chat app, under who uses it. Connecting a new
- * service stays in its sheet.
+ * another account of an MCP server, each in a sheet, and under them the request headers a server by address also
+ * sends, by name); and Desconectar, alone in red, behind the system's confirmation. GitHub also lists its
+ * repositories through the agentes.chat app, under who uses it. Connecting a new service stays in its sheet.
  */
 export function ConnectionScreen({ id }: { id: string }) {
   return (
@@ -103,6 +103,7 @@ function Connection({ id }: { id: string }) {
             : "";
   const waiting = admin && item ? item.pending : 0;
   const actions = item ? accountActions(item) : [];
+  const sent = item?.server?.headerNames ?? [];
   // "…": renaming, the one thing about the account that isn't a step of its own.
   const more =
     admin && item && actions.includes("rename") ? (
@@ -241,6 +242,10 @@ function Connection({ id }: { id: string }) {
                       />
                     ))}
                 </GroupedList>
+                {/* The request headers a server by address is also sent, by name: their values are never shown. */}
+                {sent.length > 0 ? (
+                  <GroupedFooter>{headerNamesText(t, "connectors.sendsToo", sent)}</GroupedFooter>
+                ) : null}
                 {item.custom && accountUnchecked([item.server]) ? (
                   <GroupedFooter>{t("connectFlow.replaceUnchecked")}</GroupedFooter>
                 ) : null}

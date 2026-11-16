@@ -2697,6 +2697,7 @@
         "ai_account": "계정 주인만 줄 수 있어요",
         "name": "에이전트 이름은 관리자만 바꿀 수 있어요",
         "look": "모습은 관리자와 담당자만 바꿀 수 있어요",
+        "group": "에이전트의 부서는 관리자만 바꿀 수 있어요",
         "reports_to": "에이전트의 보고 대상은 관리자만 바꿀 수 있어요",
         "many": "이 변경은 관리자만 할 수 있어요"
       }
@@ -2711,6 +2712,7 @@
       "channel": "채널",
       "name": "이름",
       "look": "모습",
+      "group": "부서",
       "reports_to": "보고 대상",
       "skill": "스킬 {{name}}"
     },
@@ -3283,7 +3285,17 @@
     "never": {
       "title": "묻지 않기",
       "text": "머지, 배포, 결제, 루틴을 포함해 아무것도 묻지 않습니다."
-    }
+    },
+    "change": "묻는 시점 바꾸기",
+    "now": "{{name}} 이제: {{level}}.",
+    "nowEveryAgent": "모든 에이전트 이제: {{level}}.",
+    "undo": "실행 취소",
+    "everyAgent": "워크스페이스의 모든 에이전트에 적용",
+    "follows": "워크스페이스를 따름",
+    "edit": "변경",
+    "workspaceLead": "에이전트가 실행 전에 사람에게 묻는 경우.",
+    "workspaceHelp": "누군가 에이전트 페이지에서 따로 바꾸기 전까지 각 에이전트는 이 선택을 따릅니다.",
+    "ownAgents_other": "에이전트 {{count}}개는 자체 선택이 있어 바뀌지 않습니다."
   },
   "brakes": {
     "title": "아무도 요청하지 않은 작업",
@@ -7414,6 +7426,17 @@
     },
     "assigneeFilter": "담당자",
     "priorityFilter": "우선순위",
+    "labelFilter": "라벨",
+    "table": {
+      "task": "작업",
+      "github": "GitHub",
+      "sortBy": "{{column}} 기준 정렬"
+    },
+    "fold": {
+      "open": "{{name}} 열기",
+      "close": "{{name}} 접기",
+      "column": "열 접기"
+    },
     "title": "작업",
     "summary": "진행 중 {{open}}개 · 에이전트 담당 {{agents}}개",
     "search": "작업 검색",
@@ -7455,8 +7478,16 @@
       "order": {
         "manual": "수동",
         "priority": "우선순위",
-        "due": "마감일"
+        "due": "마감일",
+        "updated": "최근"
       },
+      "done": "완료",
+      "doneIs": {
+        "all": "전체",
+        "recent": "최근 {{days}}일",
+        "hidden": "없음"
+      },
+      "hideEmpty": "빈 그룹 숨기기",
       "field": {
         "project": "프로젝트",
         "assignee": "담당자",
@@ -8351,6 +8382,7 @@
       "waiting_budget_late": "실행 시간을 놓침: 예산이 너무 늦게 갱신됐어요",
       "stopped": "누군가 중지했어요",
       "stoppedBy": "{{name}}이(가) 중지했어요",
+      "stalled": "놓아줌: 20분 동안 아무것도 진행되지 않았어요",
       "no_report": "결과를 알리지 않고 끝났어요",
       "handoff_blocked": "알리지 못했어요: 루틴이 일시 중지됐거나 만든 사람이 더 이상 그곳에 글을 올릴 수 없어요",
       "deleted": "중지됨: 루틴이 삭제됐어요",
@@ -9728,7 +9760,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "TypeSafe가 만든 빠른 모델로, 빠른 결정을 위해 만들어졌어요. agentes.chat은 누가 답할지 같은 작은 질문을 Jev에게 물어요. 비용은 TypeSafe에 직접 결제해요.",
+    "about": "TypeSafe가 만든 빠른 모델로, 빠른 결정을 위해 만들어졌어요. agentes.chat은 누가 답할지 같은 작은 질문을 Jev에게 물어요. 비용은 TypeSafe에 직접 결제하거나, 같은 가격으로 OpenRouter를 통해 결제해요.",
     "lead": "에이전트들이 팀으로 일하도록 도와요.",
     "how": "Jev 작동 방식",
     "why": {
@@ -9754,7 +9786,9 @@
       "key": "키 만들기",
       "openKeys": "API 키 열기",
       "paste": "여기에 붙여넣기",
+      "pasteOther": "여기에 API 키를 붙여넣으세요",
       "placeholder": "TypeSafe 키",
+      "placeholderOther": "API 키",
       "sealed": "이 서버에 암호화되어 저장돼요. 다시는 표시되지 않아요.",
       "invalid": "TypeSafe가 이 키를 받지 않았어요. 키 페이지에서 다시 복사하세요.",
       "savedNoCredit": "저장했어요. TypeSafe에서 크레딧을 충전하면 Jev가 알아서 시작해요."
@@ -9775,6 +9809,32 @@
       "envInvalid": "TypeSafe가 이 키를 받지 않았어요. 이 서버의 설정(TYPESAFE_API_KEY)에서 바꾸세요."
     },
     "checkAgain": "다시 확인",
+    "via": {
+      "label": "Jev 결제처",
+      "typesafe": "TypeSafe",
+      "typesafeText": "TypeSafe 계정에서 선불 크레딧으로 결제해요.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "OpenRouter 키로, 같은 가격이에요.",
+      "connected": "키가 이미 연결됨"
+    },
+    "openRouter": {
+      "create": "OpenRouter에서 키 만들기",
+      "createHint": "OpenRouter 크레딧으로 결제해요. Jev 가격은 TypeSafe와 같아요. 100만 토큰당 US$ {{price}}이고, 누가 답할지 고르는 데 약 US$ {{call}}이 들어요.",
+      "open": "OpenRouter 열기",
+      "placeholder": "OpenRouter 키",
+      "shape": "OpenRouter 키는 sk-or-v1-로 시작해요. 확인하고 다시 붙여넣으세요.",
+      "invalid": "OpenRouter가 이 키를 받지 않았어요. 키 페이지에서 다시 복사하세요.",
+      "keyName": "OpenRouter 키",
+      "same": "제공업체 키에 있는 키",
+      "forAll": "이 키로 이 서버의 모든 워크스페이스에서 쓰는 Jev 비용을 내요.",
+      "turnOn": "Jev 켜기",
+      "otherKey": "다른 키 사용",
+      "line": {
+        "invalid": "OpenRouter가 이 키를 받지 않았어요. 새 키를 만드세요.",
+        "no_credit": "OpenRouter에서 크레딧을 충전하세요. Jev가 알아서 다시 시작해요.",
+        "envInvalid": "OpenRouter가 이 키를 받지 않았어요. 이 서버의 설정(TYPESAFE_API_KEY)에서 바꾸세요."
+      }
+    },
     "remove": {
       "title": "Jev 키를 삭제할까요?",
       "text": "키가 없어도 에이전트는 계속 일해요."
@@ -9880,6 +9940,10 @@
       "copies_other": "에이전트가 없는 이 계정의 로그인이 {{count}}개 더 있어요.",
       "removeCopies": "삭제",
       "copiesRemoved_other": "쓰지 않는 로그인 {{count}}개를 삭제했어요.",
+      "removeAllGrok": "Grok 로그인 모두 제거",
+      "removeAllTitle": "Grok 로그인 {{n}}개를 모두 제거할까요?",
+      "removeAllText": "{{computers}}에서 각자의 에이전트를 위해 생각하지 않게 됩니다. 다른 사람의 로그인은 그대로 둡니다.",
+      "removeAllDone": "Grok 로그인 {{n}}개를 제거했습니다.",
       "disconnect": "연결 해제",
       "renameTitle": "{{label}} 이름 바꾸기",
       "nameLabel": "이름",
@@ -9934,6 +9998,8 @@
       },
       "resetsAt": "{{time}}에 초기화",
       "resetsOn": "{{day}} {{time}}에 초기화",
+      "allModels": "모든 모델",
+      "onlyModels": "{{name}}만",
       "almost": "한도에 거의 도달",
       "limited": "한도 도달",
       "limitedUntil": "{{when}}까지 한도 도달",
@@ -10085,6 +10151,9 @@
     "keys": "Enter로 보내기 · Esc로 삭제",
     "keysHold": "놓으면 보내기 · Esc로 삭제",
     "keysPaused": "일시정지됨 · 스페이스로 듣기 · Enter로 보내기 · Esc로 삭제",
+    "askDiscard": "오디오를 삭제할까요? 텍스트는 남아요.",
+    "askDelete": "삭제",
+    "askKeep": "유지",
     "pausePlay": "일시정지",
     "seek": "오디오 위치",
     "speedAt": "속도 {{speed}}×",
@@ -11098,6 +11167,10 @@
       "cant_start": "{{program}}이(가) {{computer}}에 있지만 실행되지 않습니다.",
       "not_reported": "{{computer}}에 어떤 프로그램이 있는지 아직 확인하는 중이에요. 끝나면 저절로 바뀌어요.",
       "outdated": "{{computer}}의 버전이 오래됐어요. 사용하려면 Codex를 업데이트하세요.",
+      "outdatedCodex": "{{computer}}에서 Codex CLI {{detected}} 버전을 찾았습니다. {{minimum}} 이상으로 업데이트하세요.",
+      "codexUpdateGuide": "Codex CLI 업데이트 방법",
+      "codexRecheckHere": "업데이트한 뒤 환경설정 › 도구의 Codex 행에서 다시 확인을 선택하세요.",
+      "codexRecheckThere": "{{computer}}에서 Codex CLI를 업데이트하세요. 데스크톱 앱이 있다면 환경설정 › 도구의 Codex 행에서 다시 확인을 선택하세요.",
       "system": "{{program}}은(는) 아직 {{computer}}의 시스템에서 실행되지 않아요.",
       "no_computerCloud": "{{computer}}이(가) 준비되면 바로 쓸 수 있어요."
     },
@@ -12341,6 +12414,7 @@
     "connected": "연결됨",
     "connectedAs": "{{account}}(으)로 연결됨",
     "reconnectAdds": "{{name}}을(를) 다시 연결하면 에이전트가 {{what}} 수도 있어요.",
+    "sendsToo": "함께 보냄: <names/>. 바꾸려면 다시 연결을 사용하세요.",
     "adds": {
       "github_project": "GitHub Projects를 쓸(보드를 읽고 카드를 옮길)"
     },
@@ -13429,6 +13503,20 @@
     "needsKey": "이 서버는 OAuth를 지원하지 않아요. API 키로 연결하세요.",
     "notApproved": "{{name}}은(는) 승인한 앱만 로그인할 수 있는데, agentes.chat은 아직 승인되지 않았어요. API 키를 받을 수 있다면 그 키로 연결하면 돼요.",
     "serverSaid": "서버 응답: {{detail}}",
+    "headers": {
+      "title": "요청 헤더",
+      "help": "키를 다른 헤더로 보내야 하거나 서버 앞에 게이트웨이가 있을 때 써요. 대부분의 서버에는 필요 없어요.",
+      "value": "값",
+      "nameOf": "헤더 {{n}} 이름",
+      "valueOf": "헤더 {{n}} 값",
+      "remove": "헤더 {{n}} 삭제",
+      "add": "헤더 추가",
+      "saved_other": "저장됨: <names/>. 새로 입력하지 않으면 그대로 유지돼요.",
+      "drop": "삭제",
+      "dropping_other": "<names/>: 다시 연결하면 삭제돼요.",
+      "undo": "실행 취소",
+      "refused": "서버가 이 헤더를 받아들이지 않았어요. 값을 확인하거나 API 키로 연결하세요."
+    },
     "nothingYet": "3단계 전까지는 에이전트가 아무것도 사용할 수 없어요.",
     "allCanUse": "연결하면 모든 에이전트가 사용할 수 있어요. 나중에 조정할 수 있어요.",
     "replace": "현재 로그인을 대체해요. 사용하는 대상은 그대로예요.",
@@ -14109,7 +14197,15 @@
       "gone": "그 계정은 더 이상 연결되어 있지 않아요.",
       "unfinished": "Composio 로그인이 끝나지 않았어요. 다시 시도하세요.",
       "unavailable": "이 서비스는 여기서 연결할 수 없어요.",
-      "misconfigured": "서버에서 {{provider}} 연결이 잘못 설정돼서 연결을 끝낼 수 없어요. 서버를 운영하는 사람이 앱 설정에서 키를 바꿔야 해요."
+      "misconfigured": "서버에서 {{provider}} 연결이 잘못 설정돼서 연결을 끝낼 수 없어요. 서버를 운영하는 사람이 앱 설정에서 키를 바꿔야 해요.",
+      "headerName": "헤더 이름에는 X-API-Key처럼 영문자, 숫자, 하이픈만 쓰세요.",
+      "headerValue": "{{header}} 값을 입력하세요. 한 줄로 2,000자까지, 영문자와 숫자, 기호만 쓸 수 있어요.",
+      "headerReserved": "{{header}}: 모든 요청에 이미 자동으로 보내져서 바꿀 수 없어요. 이 헤더를 삭제하세요.",
+      "headerTwice": "{{header}}: 목록에 두 번 있어요. 하나를 삭제하세요.",
+      "headerAndKey": "API 키는 이미 Authorization으로 보내져요. 키를 지우거나 이 헤더를 삭제하세요.",
+      "headersTooMany": "서버 하나에 헤더는 {{max}}개까지예요. 추가하려면 하나를 삭제하세요.",
+      "headersWithSignIn": "이 서버는 로그인을 요구하는데, 로그인으로는 아직 헤더를 보낼 수 없어요. 헤더를 삭제하고 로그인하거나 API 키로 연결하세요.",
+      "headersUnreadable": "저장된 헤더를 읽지 못했어요. 다시 입력하거나 삭제하세요."
     },
     "wiki": {
       "githubNoNotes": "이 링크에는 Markdown 노트가 없어요.",
@@ -14345,7 +14441,8 @@
     },
     "agentGroup": {
       "notFound": "이 부서는 더 이상 없어요.",
-      "tooMany": "이 워크스페이스에는 이미 부서가 {{max}}개 있어요. 먼저 하나를 삭제하세요."
+      "tooMany": "이 워크스페이스에는 이미 부서가 {{max}}개 있어요. 먼저 하나를 삭제하세요.",
+      "ambiguous": "{{name}}(이)라는 부서가 두 개 있어요. 하나의 이름을 바꾼 뒤 다시 시도하세요."
     },
     "rightHand": {
       "permanent": "오른팔은 워크스페이스의 일부라 채널에 들어가지 않아요. @멘션하면 어느 채널에서든 부를 수 있어요.",
@@ -15213,6 +15310,7 @@
       "waiting": "<b>{{who}}</b>이(가) <b>{{deviceName}}</b>을(를) 기다리고 있어요",
       "toolRequest": "<b>{{who}}</b>님이 회원님의 <b>{{deviceName}}</b>에서 {{tool}}을(를) 켜 달라고 요청합니다",
       "cliRequest": "<b>{{who}}</b> 님이 <b>{{deviceName}}</b>에 {{tool}}을(를) 설치해 달라고 요청합니다",
+      "folderRequest": "<b>{{who}}</b>님이 회원님의 <b>{{deviceName}}</b>에서 {{path}} 폴더를 요청합니다",
       "once": "한 번 허용",
       "always": "항상",
       "no": "아니요",
@@ -15887,6 +15985,8 @@
         "openLatest": "가장 최근 메시지",
         "textSize": "글자 크기",
         "textSizeHelp": "메시지 글자예요. 모든 대화와 내 모든 기기에 적용돼요",
+        "fullMessages": "메시지 전체 보기",
+        "fullMessagesHelp": "긴 메시지를 “더 보기” 없이 보여줘요. 모든 대화와 내 모든 기기에 적용돼요",
         "textSizePhone": "휴대폰의 글자 크기 설정에 더해 앱 전체에 적용돼요",
         "textXs": "더 작게",
         "textSm": "작게",

@@ -5,23 +5,27 @@ setupDom();
 
 import type { AiStatus, JevKey } from "@agenteschat/client";
 import { act, cleanup, fireEvent, within } from "@testing-library/react";
-import { createFakeApi, ORG_ID, seedState } from "./fake-api";
+import { createFakeApi, OPENROUTER_KEY, ORG_ID, seedState } from "./fake-api";
 import { renderApp, screen, settle } from "./render";
 
 afterEach(() => cleanup());
 
 const OFF: JevKey = {
   source: null,
+  via: null,
   hint: null,
   state: "off",
+  otherProviderEnabled: true,
   baseURL: "https://api.typesafe.ai",
   baseURLSource: "default",
   month: { decisions: 0, costUsd: 0 },
 };
 const ON: JevKey = {
   source: "settings",
+  via: "typesafe",
   hint: "9f2c",
   state: "ok",
+  otherProviderEnabled: true,
   baseURL: "https://api.typesafe.ai",
   baseURLSource: "default",
   month: { decisions: 1240, costUsd: 0.13 },
@@ -45,7 +49,7 @@ const click = async (el: Element, rounds = 4) => {
   await settle(rounds);
 };
 const type = (el: Element, value: string) => act(async () => fireEvent.change(el, { target: { value } }));
-const field = () => within(card()).getByLabelText("Cole aqui") as HTMLInputElement;
+const field = () => within(card()).getByLabelText(/Cole aqui/) as HTMLInputElement;
 const calls = (state: ReturnType<typeof seedState>, method: string) =>
   state.calls.filter((c) => c.method === method).map((c) => c.args);
 
@@ -236,7 +240,28 @@ describe("Jev's key in Configurações › IA e uso", () => {
     expect(document.body.innerHTML).not.toContain("ts_live_9f2c");
   });
 
-  test("choosing Outro provedor reveals the origin field and saves it with the Jev key", async () => {
+  test("the provider selector is absent when the server disables alternate Jev origins", async () => {
+    await open({ jev: { ...OFF, otherProviderEnabled: false } });
+    await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
+    expect(within(card()).queryByRole("combobox", { name: "Provedor do Jev" })).toBeNull();
+    expect(within(card()).queryByRole("option", { name: "Outro provedor" })).toBeNull();
+  });
+
+  test("Other provider keeps the API-key label and placeholder in English", async () => {
+    const { services } = await open({ jev: OFF });
+    await act(async () => {
+      await services.i18n.changeLanguage("en");
+    });
+    await settle(3);
+    await click(within(card()).getByRole("button", { name: "Set up Jev" }));
+    const provider = within(card()).getByRole("combobox", { name: "Jev provider" });
+    await click(provider);
+    await click(screen().getByRole("option", { name: "Other provider" }));
+    const keyInput = within(card()).getByLabelText("Paste your API key here") as HTMLInputElement;
+    expect(keyInput.getAttribute("placeholder")).toBe("Your API key");
+  });
+
+  test("choosing Outro provedor reveals its origin and sequential setup steps", async () => {
     const { state } = await open({ jev: OFF });
     await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
     const provider = within(card()).getByRole("combobox", { name: "Provedor do Jev" });
@@ -245,6 +270,9 @@ describe("Jev's key in Configurações › IA e uso", () => {
 
     await click(provider);
     await click(screen().getByRole("option", { name: "Outro provedor" }));
+    expect(within(card()).getByLabelText("Cole aqui a chave da API")).toBeTruthy();
+    expect(field().getAttribute("placeholder")).toBe("Sua chave da API");
+    expect([...card().querySelectorAll(".agp-addacct__step > i")].map((n) => n.textContent)).toEqual(["1", "2"]);
     const origin = within(card()).getByLabelText("URL de base do Jev");
     await type(origin, "http://jev.example:3425");
     await type(field(), "ts_custom_9f2c");
@@ -461,5 +489,107 @@ describe("Jev's key in Configurações › IA e uso", () => {
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/settings/usage`);
     expect(router.state.location.hash).toBe("jev");
     expect(document.activeElement === card()).toBe(true);
+  });
+});
+
+describe("Jev through OpenRouter (ADR 0073 §9)", () => {
+  const OPENROUTER_PASTED = `sk-or-v1-${"a".repeat(28)}7a1e`;
+  const radio = (name: string) => within(card()).getByRole("radio", { name: new RegExp(`^${name}`) });
+
+  test("Set up Jev asks where it is paid: TypeSafe's steps, or OpenRouter's two; a key that isn't OpenRouter's is said at once", async () => {
+    const { state } = await open({ jev: OFF });
+    await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
+    expect(within(card()).getByRole("radiogroup", { name: "Onde você paga o Jev" })).toBeTruthy();
+    // No OpenRouter key in the workspace: TypeSafe first, its three steps as before.
+    expect(radio("TypeSafe").getAttribute("aria-checked")).toBe("true");
+    expect(within(card()).getByRole("link", { name: "Abrir a TypeSafe" })).toBeTruthy();
+
+    await click(radio("OpenRouter"));
+    expect(within(card()).queryByRole("link", { name: "Abrir a TypeSafe" })).toBeNull();
+    const site = within(card()).getByRole("link", { name: "Abrir o OpenRouter" });
+    expect(site.getAttribute("href")).toBe("https://openrouter.ai/keys");
+    expect(field().getAttribute("placeholder")).toBe("A sua chave do OpenRouter");
+
+    await type(field(), "ts_live_key_00000000");
+    await click(within(card()).getByRole("button", { name: "Salvar chave" }), 6);
+    expect(document.getElementById(field().getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+      "As chaves do OpenRouter começam com sk-or-v1-. Confira e cole de novo.",
+    );
+    expect(calls(state, "system.saveJev")).toEqual([]);
+
+    await type(field(), OPENROUTER_PASTED);
+    await click(within(card()).getByRole("button", { name: "Salvar chave" }), 6);
+    expect(calls(state, "system.saveJev")).toEqual([[{ apiKey: OPENROUTER_PASTED }]]);
+    expect(card().querySelector(".ac-chip")?.textContent).toBe("Ligado");
+    expect(card().textContent).toContain("Chave do OpenRouter");
+    expect(card().textContent).toContain("Termina em 7a1e");
+  });
+
+  test("a key OpenRouter refuses is said in OpenRouter's words", async () => {
+    await open({ jev: OFF, jevVerdicts: { [OPENROUTER_PASTED]: "invalid" } });
+    await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
+    await click(radio("OpenRouter"));
+    await type(field(), OPENROUTER_PASTED);
+    await click(within(card()).getByRole("button", { name: "Salvar chave" }), 6);
+    expect(document.getElementById(field().getAttribute("aria-describedby") ?? "")?.textContent).toBe(
+      "O OpenRouter não aceitou esta chave. Copie de novo na página de chaves.",
+    );
+  });
+
+  test("the workspace's own OpenRouter key: chosen first, and one press turns Jev on with it", async () => {
+    const seeded = seedState();
+    const { state } = await open({ jev: OFF, credentials: [...seeded.credentials, OPENROUTER_KEY] });
+    await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
+    expect(radio("OpenRouter").getAttribute("aria-checked")).toBe("true");
+    expect(radio("OpenRouter").textContent).toContain("Chave já conectada");
+    expect(card().textContent).toContain("Termina em c0de · A mesma de Chaves de provedor");
+    expect(card().textContent).toContain("Ela paga o Jev de todos os workspaces deste servidor.");
+    expect(document.activeElement === within(card()).getByRole("button", { name: "Ligar o Jev" })).toBe(true);
+    expect(within(card()).queryByLabelText("Cole aqui")).toBeNull();
+
+    // Another key instead: the two steps; Cancel closes it all.
+    await click(within(card()).getByRole("button", { name: "Usar outra chave" }));
+    expect(within(card()).getByLabelText("Cole aqui")).toBeTruthy();
+    await click(within(card()).getByRole("button", { name: "Cancelar" }));
+    expect(within(card()).queryByRole("radiogroup")).toBeNull();
+
+    await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
+    await click(within(card()).getByRole("button", { name: "Ligar o Jev" }), 6);
+    expect(calls(state, "system.saveJev")).toEqual([[{ orgId: ORG_ID, credentialId: OPENROUTER_KEY.id }]]);
+    expect(card().querySelector(".ac-chip")?.textContent).toBe("Ligado");
+    expect(card().textContent).toContain("Chave do OpenRouter");
+  });
+
+  test("a server owner who may not manage this workspace's keys isn't offered its key", async () => {
+    const state = seedState({ jev: OFF });
+    state.credentials = [...state.credentials, OPENROUTER_KEY];
+    if (state.me?.organizations[0]) state.me.organizations[0].role = "member";
+    await renderApp(`/org/${ORG_ID}/settings/keys`, { api: createFakeApi(state) });
+    await settle(5);
+    await click(within(card()).getByRole("button", { name: "Configurar o Jev" }));
+    expect(radio("TypeSafe").getAttribute("aria-checked")).toBe("true");
+    await click(radio("OpenRouter"));
+    expect(within(card()).queryByRole("button", { name: "Ligar o Jev" })).toBeNull();
+    expect(within(card()).getByLabelText("Cole aqui")).toBeTruthy();
+  });
+
+  test("set through OpenRouter: its key's name, and OpenRouter's pages for a refused key or no credit", async () => {
+    await open({ jev: { ...ON, via: "openrouter", state: "no_credit" } });
+    expect(card().textContent).toContain("Chave do OpenRouter");
+    expect(card().textContent).toContain("Adicione crédito no OpenRouter. O Jev volta sozinho.");
+    expect(within(card()).getByRole("link", { name: "Abrir o OpenRouter" }).getAttribute("href")).toBe(
+      "https://openrouter.ai/settings/credits",
+    );
+    cleanup();
+    await open({ jev: { ...ON, via: "openrouter", state: "invalid" } });
+    expect(card().textContent).toContain("O OpenRouter não aceitou esta chave. Crie uma nova.");
+    expect(within(card()).getByRole("link", { name: "Abrir o OpenRouter" }).getAttribute("href")).toBe(
+      "https://openrouter.ai/keys",
+    );
+    // Replacing keeps where it is paid; moving to TypeSafe keeps its account step, there may be no account yet.
+    await click(within(card()).getByRole("button", { name: "Trocar a chave" }));
+    expect(radio("OpenRouter").getAttribute("aria-checked")).toBe("true");
+    await click(radio("TypeSafe"));
+    expect(within(card()).getByRole("link", { name: "Abrir a TypeSafe" })).toBeTruthy();
   });
 });

@@ -140,7 +140,7 @@ It asks only for what it needs and fills in only what's missing, so running it a
   --requirements <all|none|list>      What to install there for the agents when missing, without
                                       asking: ${REQUIREMENTS.join(", ")} (default: asked, yes each)
   --telemetry <on|off>                Send anonymous usage statistics to agentes.chat (default on)
-  --typesafe-key <key>                TypeSafe key for Jev, optional (${TYPESAFE_KEYS})
+  --typesafe-key <key>                TypeSafe key for Jev, or an OpenRouter key (sk-or-…), optional (${TYPESAFE_KEYS})
   --no-start                          Write .env and docker-compose.yml, start nothing
   --timeout <seconds>                 How long each wait may take (default 300)
   --tailscale-status <file|->         Finish from \`tailscale status --json\` (setup inside the image)

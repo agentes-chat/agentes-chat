@@ -2884,6 +2884,7 @@
         "ai_account": "Solo il proprietario dell’account lo assegna",
         "name": "Solo gli admin rinominano un agente",
         "look": "Solo gli admin e il responsabile cambiano il suo aspetto",
+        "group": "Solo gli admin spostano un agente di reparto",
         "reports_to": "Solo gli admin cambiano a chi risponde un agente",
         "many": "Solo gli admin fanno queste modifiche"
       }
@@ -2898,6 +2899,7 @@
       "channel": "Canale",
       "name": "Nome",
       "look": "Aspetto",
+      "group": "Reparto",
       "reports_to": "Risponde a",
       "skill": "Skill {{name}}"
     },
@@ -3533,7 +3535,19 @@
     "never": {
       "title": "Non chiedere mai",
       "text": "Non chiede mai, nemmeno per merge, deploy, pagamenti e routine."
-    }
+    },
+    "change": "Cambia quando chiede",
+    "now": "{{name}} ora: {{level}}.",
+    "nowEveryAgent": "Tutti gli agenti ora: {{level}}.",
+    "undo": "Annulla",
+    "everyAgent": "Per tutti gli agenti del workspace",
+    "follows": "Segue il workspace",
+    "edit": "Cambia",
+    "workspaceLead": "Quando gli agenti chiedono a una persona prima di agire.",
+    "workspaceHelp": "Ogni agente segue questa scelta finché qualcuno non cambia la sua nella pagina dell’agente.",
+    "ownAgents_one": "{{count}} agente ha una scelta propria e non cambia.",
+    "ownAgents_many": "{{count}} agenti hanno una scelta propria e non cambiano.",
+    "ownAgents_other": "{{count}} agenti hanno una scelta propria e non cambiano."
   },
   "brakes": {
     "title": "Lavoro che nessuno ha chiesto",
@@ -7974,6 +7988,17 @@
     },
     "assigneeFilter": "Assegnatario",
     "priorityFilter": "Priorità",
+    "labelFilter": "Etichetta",
+    "table": {
+      "task": "Attività",
+      "github": "GitHub",
+      "sortBy": "Ordina per {{column}}"
+    },
+    "fold": {
+      "open": "Apri {{name}}",
+      "close": "Comprimi {{name}}",
+      "column": "Comprimi colonna"
+    },
     "title": "Attività",
     "summary": "{{open}} aperte · {{agents}} con agenti",
     "search": "Cerca attività",
@@ -8017,8 +8042,16 @@
       "order": {
         "manual": "Manuale",
         "priority": "Priorità",
-        "due": "Scadenza"
+        "due": "Scadenza",
+        "updated": "Recenti"
       },
+      "done": "Completate",
+      "doneIs": {
+        "all": "Tutte",
+        "recent": "Ultimi {{days}} giorni",
+        "hidden": "Nessuna"
+      },
+      "hideEmpty": "Nascondi gruppi vuoti",
       "field": {
         "project": "Progetto",
         "assignee": "Assegnatario",
@@ -8963,6 +8996,7 @@
       "waiting_budget_late": "Ha mancato l'orario: il budget si è rinnovato troppo tardi",
       "stopped": "Fermata da qualcuno",
       "stoppedBy": "Fermata da {{name}}",
+      "stalled": "Liberata: niente si è mosso per 20 minuti",
       "no_report": "Terminata senza riferire il risultato",
       "handoff_blocked": "Non ha potuto riferire: la routine era in pausa o chi l'ha creata non può più scrivere lì",
       "deleted": "Fermata: la routine è stata eliminata",
@@ -10532,7 +10566,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "Un modello veloce di TypeSafe, pensato per decisioni rapide. agentes.chat gli fa piccole domande, come chi deve rispondere. Paghi TypeSafe direttamente.",
+    "about": "Un modello veloce di TypeSafe, pensato per decisioni rapide. agentes.chat gli fa piccole domande, come chi deve rispondere. Paghi TypeSafe direttamente, oppure tramite OpenRouter allo stesso prezzo.",
     "lead": "Aiuta i tuoi agenti a lavorare in team.",
     "how": "Come funziona Jev",
     "why": {
@@ -10558,7 +10592,9 @@
       "key": "Crea una chiave",
       "openKeys": "Apri le chiavi API",
       "paste": "Incollala qui",
+      "pasteOther": "Incolla qui la tua chiave API",
       "placeholder": "La tua chiave TypeSafe",
+      "placeholderOther": "La tua chiave API",
       "sealed": "Cifrata su questo server. Non verrà più mostrata.",
       "invalid": "TypeSafe non ha accettato questa chiave. Copiala di nuovo dalla pagina delle chiavi.",
       "savedNoCredit": "Salvata. Aggiungi credito su TypeSafe e Jev parte da solo."
@@ -10581,6 +10617,32 @@
       "envInvalid": "TypeSafe non ha accettato questa chiave. Cambiala nelle impostazioni di questo server (TYPESAFE_API_KEY)."
     },
     "checkAgain": "Controlla di nuovo",
+    "via": {
+      "label": "Dove paghi Jev",
+      "typesafe": "TypeSafe",
+      "typesafeText": "Un account direttamente su TypeSafe, con credito prepagato.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "Con una chiave OpenRouter, allo stesso prezzo.",
+      "connected": "Chiave già collegata"
+    },
+    "openRouter": {
+      "create": "Crea una chiave su OpenRouter",
+      "createHint": "Con credito su OpenRouter. Jev costa come su TypeSafe: US$ {{price}} per milione di token. Scegliere chi risponde costa circa US$ {{call}}.",
+      "open": "Apri OpenRouter",
+      "placeholder": "La tua chiave OpenRouter",
+      "shape": "Le chiavi OpenRouter iniziano con sk-or-v1-. Controllala e incollala di nuovo.",
+      "invalid": "OpenRouter non ha accettato questa chiave. Copiala di nuovo dalla pagina delle chiavi.",
+      "keyName": "Chiave OpenRouter",
+      "same": "Quella in Chiavi dei provider",
+      "forAll": "Paga Jev per tutti gli spazi di lavoro di questo server.",
+      "turnOn": "Attiva Jev",
+      "otherKey": "Usa un'altra chiave",
+      "line": {
+        "invalid": "OpenRouter non ha accettato questa chiave. Creane una nuova.",
+        "no_credit": "Aggiungi credito su OpenRouter. Jev riparte da solo.",
+        "envInvalid": "OpenRouter non ha accettato questa chiave. Cambiala nelle impostazioni di questo server (TYPESAFE_API_KEY)."
+      }
+    },
     "remove": {
       "title": "Rimuovere la chiave di Jev?",
       "text": "Gli agenti continuano a lavorare anche senza."
@@ -10702,6 +10764,10 @@
       "copiesRemoved_one": "{{count}} accesso inutilizzato rimosso.",
       "copiesRemoved_many": "{{count}} accessi inutilizzati rimossi.",
       "copiesRemoved_other": "{{count}} accessi inutilizzati rimossi.",
+      "removeAllGrok": "Rimuovi tutti gli accessi a Grok",
+      "removeAllTitle": "Rimuovere tutti i {{n}} accessi a Grok?",
+      "removeAllText": "Smettono di pensare per i loro agenti su {{computers}}. Gli accessi di altre persone non vengono toccati.",
+      "removeAllDone": "{{n}} accessi a Grok rimossi.",
       "disconnect": "Scollega",
       "renameTitle": "Rinomina {{label}}",
       "nameLabel": "Nome",
@@ -10769,6 +10835,8 @@
       },
       "resetsAt": "si azzera alle {{time}}",
       "resetsOn": "si azzera {{day}} alle {{time}}",
+      "allModels": "Tutti i modelli",
+      "onlyModels": "Solo {{name}}",
       "almost": "Quasi al limite",
       "limited": "Al limite",
       "limitedUntil": "Al limite fino a {{when}}",
@@ -10936,6 +11004,9 @@
     "keys": "Invio invia · Esc elimina",
     "keysHold": "Rilascia per inviare · Esc elimina",
     "keysPaused": "In pausa · Spazio ascolta · Invio invia · Esc elimina",
+    "askDiscard": "Eliminare l’audio? Il tuo testo resta.",
+    "askDelete": "Elimina",
+    "askKeep": "Tieni",
     "pausePlay": "Pausa",
     "seek": "Posizione nell'audio",
     "speedAt": "Velocità {{speed}}×",
@@ -12024,6 +12095,10 @@
       "cant_start": "{{program}} è su {{computer}}, ma non si avvia.",
       "not_reported": "{{computer}} sta ancora controllando quali programmi ha. Questo cambia da solo quando ha finito.",
       "outdated": "La versione su {{computer}} è vecchia. Aggiorna Codex per usarlo.",
+      "outdatedCodex": "Su {{computer}} è stato rilevato Codex CLI {{detected}}. Aggiornalo alla versione {{minimum}} o successiva.",
+      "codexUpdateGuide": "Come aggiornare Codex CLI",
+      "codexRecheckHere": "Dopo l’aggiornamento, seleziona Controlla di nuovo nella riga di Codex in Preferenze › Strumenti.",
+      "codexRecheckThere": "Aggiorna Codex CLI su {{computer}}. Se è presente l’app desktop, seleziona Controlla di nuovo nella riga di Codex in Preferenze › Strumenti.",
       "system": "{{program}} non funziona ancora sul sistema di {{computer}}.",
       "no_computerCloud": "Pronto appena lo è {{computer}}."
     },
@@ -13322,6 +13397,7 @@
     "connected": "Collegato",
     "connectedAs": "Collegato come {{account}}",
     "reconnectAdds": "Ricollega {{name}} così gli agenti possono anche {{what}}.",
+    "sendsToo": "Invia anche: <names/>. Per cambiare, usa Ricollega.",
     "adds": {
       "github_project": "usare GitHub Projects (leggere le board e spostare le schede)"
     },
@@ -14450,6 +14526,22 @@
     "needsKey": "Questo server non supporta OAuth. Collegalo con una chiave API.",
     "notApproved": "{{name}} consente l'accesso solo alle app che ha approvato, e agentes.chat non è ancora approvato. Se ti fornisce una chiave API, puoi collegarti con quella.",
     "serverSaid": "Il server ha risposto: {{detail}}",
+    "headers": {
+      "title": "Intestazioni della richiesta",
+      "help": "Per una chiave che va in un'altra intestazione, o un gateway davanti al server. La maggior parte dei server non ne ha bisogno.",
+      "value": "Valore",
+      "nameOf": "Nome dell'intestazione {{n}}",
+      "valueOf": "Valore dell'intestazione {{n}}",
+      "remove": "Rimuovi l'intestazione {{n}}",
+      "add": "Aggiungi intestazione",
+      "saved_one": "Salvata: <names/>. Resta, a meno che tu non ne scriva di nuove.",
+      "saved_other": "Salvate: <names/>. Restano, a meno che tu non ne scriva di nuove.",
+      "drop": "Rimuovi",
+      "dropping_one": "<names/> verrà rimossa quando ricolleghi.",
+      "dropping_other": "<names/> verranno rimosse quando ricolleghi.",
+      "undo": "Annulla",
+      "refused": "Il server non ha accettato queste intestazioni. Controlla i valori, oppure collegalo con una chiave API."
+    },
     "nothingYet": "Niente è disponibile per gli agenti fino al passaggio 3.",
     "allCanUse": "Una volta collegato, ogni agente può usarlo. Puoi regolarlo in seguito.",
     "replace": "Sostituisce l'accesso attuale. Chi lo usa resta invariato.",
@@ -15164,7 +15256,15 @@
       "gone": "Quell'account non è più collegato.",
       "unfinished": "L'accesso su Composio non è stato completato. Riprova.",
       "unavailable": "Questo servizio non si può collegare qui.",
-      "misconfigured": "Il collegamento a {{provider}} è configurato male sul server, quindi non può finire. Chi gestisce il server deve sostituire la chiave nelle impostazioni dell'app."
+      "misconfigured": "Il collegamento a {{provider}} è configurato male sul server, quindi non può finire. Chi gestisce il server deve sostituire la chiave nelle impostazioni dell'app.",
+      "headerName": "Usa solo lettere, numeri e trattini nel nome di un'intestazione, come X-API-Key.",
+      "headerValue": "Scrivi un valore per {{header}}: fino a 2.000 caratteri su una sola riga, senza accenti né emoji.",
+      "headerReserved": "{{header}} viene già inviata con ogni richiesta e non si può cambiare. Rimuovi questa intestazione.",
+      "headerTwice": "{{header}} è nell'elenco due volte. Rimuovine una.",
+      "headerAndKey": "La chiave API viene già inviata come Authorization. Cancella la chiave, oppure rimuovi questa intestazione.",
+      "headersTooMany": "Un server accetta al massimo {{max}} intestazioni. Rimuovine una per aggiungerne un'altra.",
+      "headersWithSignIn": "Questo server chiede un accesso, e un accesso non può ancora portare intestazioni. Rimuovi le intestazioni per accedere, oppure collegalo con una chiave API.",
+      "headersUnreadable": "Non è stato possibile leggere le intestazioni salvate. Scrivile di nuovo oppure rimuovile."
     },
     "wiki": {
       "githubNoNotes": "Nessuna nota Markdown in questo link.",
@@ -15402,7 +15502,8 @@
     },
     "agentGroup": {
       "notFound": "Questo reparto non esiste più.",
-      "tooMany": "Questo spazio di lavoro ha già {{max}} reparti. Eliminane prima uno."
+      "tooMany": "Questo spazio di lavoro ha già {{max}} reparti. Eliminane prima uno.",
+      "ambiguous": "Due reparti si chiamano {{name}}. Rinominane uno e riprova."
     },
     "rightHand": {
       "permanent": "Il braccio destro fa parte dello spazio di lavoro e resta fuori dai canali. Una @menzione lo raggiunge in qualsiasi canale.",
@@ -16280,6 +16381,7 @@
       "waiting": "<b>{{who}}</b> sta aspettando <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> ti chiede di attivare {{tool}} sul tuo <b>{{deviceName}}</b>",
       "cliRequest": "<b>{{who}}</b> ti chiede di installare {{tool}} sul tuo <b>{{deviceName}}</b>",
+      "folderRequest": "<b>{{who}}</b> ti chiede la cartella {{path}} sul tuo <b>{{deviceName}}</b>",
       "once": "Consenti una volta",
       "always": "Sempre",
       "no": "No",
@@ -16982,6 +17084,8 @@
         "openLatest": "Messaggio più recente",
         "textSize": "Dimensione del testo",
         "textSizeHelp": "Dei messaggi, in tutte le conversazioni e su tutti i tuoi dispositivi",
+        "fullMessages": "Mostra i messaggi completi",
+        "fullMessagesHelp": "Mostra i messaggi lunghi senza “Mostra altro”, in tutte le conversazioni e su tutti i tuoi dispositivi",
         "textSizePhone": "Vale per tutta l'app, oltre alla dimensione del testo del telefono",
         "textXs": "Più piccolo",
         "textSm": "Piccolo",

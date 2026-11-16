@@ -120,9 +120,11 @@ export async function ensureRightHand(db: Executor, orgId: string): Promise<stri
   if (had) return null;
   const { freeHandle, takenHandles } = await import("./agents");
   const { FIRST_RUN_SETUP } = await import("./setup-checklist");
-  const [taken, [other]] = await Promise.all([
+  const { workspaceApprovalsLevel } = await import("./workspace-approvals");
+  const [taken, [other], approvalsLevel] = await Promise.all([
     takenHandles(db, orgId),
     db.select({ id: agents.id }).from(agents).where(eq(agents.orgId, orgId)).limit(1),
+    workspaceApprovalsLevel(db, orgId),
   ]);
   const handle = taken.has(RIGHT_HAND_DEFAULTS.handle)
     ? freeHandle(RIGHT_HAND_DEFAULTS.handle, taken)
@@ -138,6 +140,7 @@ export async function ensureRightHand(db: Executor, orgId: string): Promise<stri
       brainModel: AUTO_MODEL,
       brainEffort: AUTO_MODEL,
       appearance: { ...RIGHT_HAND_DEFAULTS.appearance },
+      approvalsLevel,
       // A workspace with no agent yet opens on its first-run checklist (ADR 0155 §6).
       ...(other ? {} : { setup: FIRST_RUN_SETUP }),
     })

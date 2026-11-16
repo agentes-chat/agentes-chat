@@ -2015,6 +2015,7 @@
       "waitingFor": "{{names}}, {{person}} için {{device}} cihazını bekliyor",
       "tool_request": "{{names}}, {{device}} cihazınızda {{tool}} açmanızı istiyor",
       "cli_request": "{{names}}, {{device}} cihazınıza {{tool}} kurmanızı istiyor",
+      "folder_request": "{{names}}, {{device}} cihazınızda {{path}} klasörünü istiyor",
       "allowOnce": "Bir kez izin ver",
       "always": "{{name}} için her zaman izin ver",
       "no": "Hayır",

@@ -2109,6 +2109,7 @@
       "waitingFor": "{{names}} está esperando {{device}} para {{person}}",
       "tool_request": "{{names}} te pide activar {{tool}} en tu {{device}}",
       "cli_request": "{{names}} te pide instalar {{tool}} en tu {{device}}",
+      "folder_request": "{{names}} te pide la carpeta {{path}} en tu {{device}}",
       "allowOnce": "Permitir una vez",
       "always": "Permitir siempre a {{name}}",
       "no": "No",

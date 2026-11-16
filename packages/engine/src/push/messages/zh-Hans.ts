@@ -85,6 +85,8 @@ export const strings: Partial<PushStrings> = {
   deviceToolBody: "点按即可一键打开。",
   deviceCliTitle: (a, d) => `${a} 请你在 ${d} 上安装一个程序`,
   deviceCliBody: "点按即可一键安装。",
+  deviceFolderTitle: (a, f, d) => (f ? `${a} 请你在你的 ${d} 上开放 ${f}` : `${a} 请你在你的 ${d} 上开放一个文件夹`),
+  deviceFolderBody: "在那台电脑的 App 里允许它。",
   adminAskTitle: (a, what, l) =>
     what === "channel_agent"
       ? `${a} 请你把一个智能体加入 #${l}`

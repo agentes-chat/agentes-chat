@@ -74,6 +74,7 @@ import {
   useOriginShort,
   useRefuseApproval,
 } from "../approvals/parts";
+import { WhenAsksLink } from "../approvals/when-asks";
 import { chatHref } from "../links/logic";
 import { Face } from "../shared/Face";
 import { useColors, useDirectory, useMeId, useNow, useOrgId, useWhen } from "../shared/hooks";
@@ -197,6 +198,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
   const owner = approvalGroupWaitsFor(items, ownerId ? dir.memberById.get(ownerId)?.name : undefined);
   const deadline = cardDeadline(items);
   const leadItem = waiting[0] ?? first;
+  const decider = waiting.find((a) => a.canDecide);
   const always = approveAlwaysOn(items);
   const runs = approvalRuns(items);
   const keys = runKeys(runs);
@@ -414,6 +416,7 @@ function ApprovalGroupAsk({ items }: { items: Approval[] }) {
       foot={
         <AskFoot>
           {single ? decide(single, t("approval.run.approve"), true) : decide(items, t("approval.all.approve"), false)}
+          {decider ? <WhenAsksLink approval={decider} /> : null}
         </AskFoot>
       }
     />
@@ -704,6 +707,7 @@ function ApprovalAsk({ approval: a }: { approval: Approval }) {
               {t("approval.waitingAdmin")}
             </Text>
           )}
+          <WhenAsksLink approval={a} />
         </AskFoot>
       }
     />

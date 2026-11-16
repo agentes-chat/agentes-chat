@@ -3003,6 +3003,7 @@ export const en = {
         ai_account: "Only the account's owner gives it",
         name: "Only admins rename an agent",
         look: "Only admins and its owner change its look",
+        group: "Only admins move an agent to another department",
         reports_to: "Only admins change who an agent reports to",
         many: "Only admins make these changes",
       },
@@ -3017,6 +3018,7 @@ export const en = {
       channel: "Channel",
       name: "Name",
       look: "Look",
+      group: "Department",
       reports_to: "Reports to",
       skill: "{{name}} skill",
     },
@@ -3691,6 +3693,23 @@ export const en = {
       title: "Never ask",
       text: "Never asks, merge, deploy, payments and routines included.",
     },
+    /** The quiet link on a waiting approval that opens its agent's three choices in place. */
+    change: "Change when it asks",
+    /** The toast after a choice from that link. {{level}}: the choice's title. */
+    now: "{{name}} now: {{level}}.",
+    nowEveryAgent: "Every agent now: {{level}}.",
+    undo: "Undo",
+    /** In that dialog, for who may set the workspace's level: it also clears each agent's own choice. */
+    everyAgent: "For every agent in the workspace",
+    /** An agent's row value while it has no choice of its own. */
+    follows: "Follows the workspace",
+    /** Settings → Approvals: the button that opens the three choices. */
+    edit: "Change",
+    /** Settings → Approvals: the workspace's level. */
+    workspaceLead: "When agents ask a person before acting.",
+    workspaceHelp: "Each agent follows this choice until someone changes its own on the agent's page.",
+    ownAgents_one: "{{count}} agent has its own choice and won't change.",
+    ownAgents_other: "{{count}} agents have their own choice and won't change.",
   },
   /** Agent settings: what it may start that nobody asked for directly, and which agents it may call (ADR 0131). */
   brakes: {
@@ -8119,6 +8138,9 @@ export const en = {
     },
     assigneeFilter: "Assignee",
     priorityFilter: "Priority",
+    labelFilter: "Label",
+    table: { task: "Task", github: "GitHub", sortBy: "Sort by {{column}}" },
+    fold: { open: "Open {{name}}", close: "Fold {{name}}", column: "Fold column" },
     title: "Tasks",
     summary: "{{open}} open · {{agents}} with agents",
     search: "Search tasks",
@@ -8154,7 +8176,10 @@ export const en = {
       saved: "Saved for you in this workspace",
       reset: "Back to default",
       by: { stage: "Stage", assignee: "Assignee", priority: "Priority" },
-      order: { manual: "Manual", priority: "Priority", due: "Due date" },
+      order: { manual: "Manual", priority: "Priority", due: "Due date", updated: "Recent" },
+      done: "Done",
+      doneIs: { all: "All", recent: "Last {{days}} days", hidden: "None" },
+      hideEmpty: "Hide empty groups",
       field: {
         project: "Project",
         assignee: "Assignee",
@@ -9066,6 +9091,7 @@ export const en = {
       waiting_budget_late: "Missed its time: the budget renewed too late",
       stopped: "Stopped by someone",
       stoppedBy: "Stopped by {{name}}",
+      stalled: "Let go: nothing moved in it for 20 minutes",
       no_report: "Finished without telling the result",
       handoff_blocked: "Couldn't tell: the routine was paused or its creator can no longer post there",
       deleted: "Stopped: the routine was deleted",
@@ -10477,7 +10503,7 @@ export const en = {
   jev: {
     title: "Jev",
     about:
-      "A fast model by TypeSafe, made for quick decisions. agentes.chat asks it small questions, like who should answer. You pay TypeSafe directly.",
+      "A fast model by TypeSafe, made for quick decisions. agentes.chat asks it small questions, like who should answer. You pay TypeSafe directly, or through OpenRouter at the same price.",
     lead: "Helps your agents work as a team.",
     how: "How Jev works",
     why: {
@@ -10504,7 +10530,9 @@ export const en = {
       key: "Create a key",
       openKeys: "Open API keys",
       paste: "Paste it here",
+      pasteOther: "Paste your API key here",
       placeholder: "Your TypeSafe key",
+      placeholderOther: "Your API key",
       sealed: "Encrypted on this server. Never shown again.",
       invalid: "TypeSafe didn't accept this key. Copy it again from the keys page.",
       savedNoCredit: "Saved. Add credit at TypeSafe and Jev starts by itself.",
@@ -10526,6 +10554,35 @@ export const en = {
       envInvalid: "TypeSafe didn't accept this key. Change it in this server's settings (TYPESAFE_API_KEY).",
     },
     checkAgain: "Check again",
+    /** Where Jev is called and paid (ADR 0073 §9): the rows under the reasons once "Set up Jev" is pressed. */
+    via: {
+      label: "Where you pay for Jev",
+      typesafe: "TypeSafe",
+      typesafeText: "An account at TypeSafe itself, with prepaid credit.",
+      openrouter: "OpenRouter",
+      openrouterText: "With an OpenRouter key, at the same price.",
+      connected: "Key already connected",
+    },
+    /** Jev through OpenRouter: its steps, the workspace's own key, and the key's lines once saved. */
+    openRouter: {
+      create: "Create a key at OpenRouter",
+      createHint:
+        "With credit at OpenRouter. Jev costs the same as at TypeSafe: US$ {{price}} per million tokens. Picking who answers costs about US$ {{call}}.",
+      open: "Open OpenRouter",
+      placeholder: "Your OpenRouter key",
+      shape: "OpenRouter keys start with sk-or-v1-. Check it and paste it again.",
+      invalid: "OpenRouter didn't accept this key. Copy it again from the keys page.",
+      keyName: "OpenRouter key",
+      same: "The one in Provider keys",
+      forAll: "It pays for Jev in every workspace on this server.",
+      turnOn: "Turn on Jev",
+      otherKey: "Use another key",
+      line: {
+        invalid: "OpenRouter didn't accept this key. Create a new one.",
+        no_credit: "Add credit at OpenRouter. Jev resumes by itself.",
+        envInvalid: "OpenRouter didn't accept this key. Change it in this server's settings (TYPESAFE_API_KEY).",
+      },
+    },
     remove: {
       title: "Remove the Jev key?",
       text: "Agents keep working without it.",
@@ -10647,6 +10704,11 @@ export const en = {
       removeCopies: "Remove",
       copiesRemoved_one: "{{count}} unused login removed.",
       copiesRemoved_other: "{{count}} unused logins removed.",
+      /** Every Grok login the viewer owns at once (issue #319): one sign-in per agent, removed together. */
+      removeAllGrok: "Remove all Grok logins",
+      removeAllTitle: "Remove all {{n}} Grok logins?",
+      removeAllText: "They stop thinking for their agents on {{computers}}. Nobody else's logins are touched.",
+      removeAllDone: "{{n}} Grok logins removed.",
       disconnect: "Disconnect",
       renameTitle: "Rename {{label}}",
       nameLabel: "Name",
@@ -10710,6 +10772,10 @@ export const en = {
       },
       resetsAt: "resets at {{time}}",
       resetsOn: "resets {{day}} at {{time}}",
+      /** The full meter's heading over a plan's own quotas, when some quotas bind only some models. */
+      allModels: "All models",
+      /** The heading over a model group's own quotas ({{name}}: "Claude and GPT", "Gemini 4 Argon"). */
+      onlyModels: "Only {{name}}",
       almost: "Almost at the limit",
       limited: "At the limit",
       limitedUntil: "At the limit until {{when}}",
@@ -10868,6 +10934,10 @@ export const en = {
     keys: "Enter sends · Esc deletes",
     keysHold: "Release to send · Esc deletes",
     keysPaused: "Paused · Space listens · Enter sends · Esc deletes",
+    /** Esc on a take with text typed beside it: the take's row asks in place, before "Delete" and "Keep". */
+    askDiscard: "Delete the audio? Your text stays.",
+    askDelete: "Delete",
+    askKeep: "Keep",
     pausePlay: "Pause",
     seek: "Audio position",
     speedAt: "Speed {{speed}}×",
@@ -11898,6 +11968,11 @@ export const en = {
       /** Its runner hasn't said which CLIs it has yet: nobody knows whether this one is there. */
       not_reported: "{{computer}} is still checking which programs it has. This changes by itself when it's done.",
       outdated: "The version on {{computer}} is old. Update Codex to use it.",
+      outdatedCodex: "Codex CLI {{detected}} was found on {{computer}}. Update it to {{minimum}} or later.",
+      codexUpdateGuide: "How to update Codex CLI",
+      codexRecheckHere: "After updating, choose Check again for Codex in Preferences › Tools.",
+      codexRecheckThere:
+        "Update Codex CLI on {{computer}}. If it runs the desktop app, choose Check again for Codex in Preferences › Tools.",
       /** The runner doesn't run this program on that computer's system (Cursor on Windows, for one). */
       system: "{{program}} doesn't run on {{computer}}'s system yet.",
       no_computerCloud: "Ready as soon as {{computer}} is.",
@@ -13051,6 +13126,8 @@ export const en = {
     connectedAs: "Connected as {{account}}",
     /** A sign-in that lacks scopes the connector asks for now; `what` lists what reconnecting adds (`adds.*`). */
     reconnectAdds: "Reconnect {{name}} so agents can also {{what}}.",
+    /** On a connected server's row: the request headers it also sends (`<names/>`: X-API-Key). Reconnect is the menu item. */
+    sendsToo: "Also sends: <names/>. To change that, use Reconnect.",
     adds: { github_project: "use GitHub Projects (read boards and move cards)" },
     toolsCount_one: "{{count}} tool",
     toolsCount_other: "{{count}} tools",
@@ -14180,6 +14257,29 @@ export const en = {
     notApproved:
       "{{name}} only lets apps it approved sign in, and agentes.chat isn't approved yet. If it gives you an API key, you can connect with that.",
     serverSaid: "The server answered: {{detail}}",
+    /**
+     * A server by address: HTTP request headers an admin types once (a name and a value each), sent with every request
+     * to that server. `{{n}}` is a row's number; `<names/>` is the list of header names, such as X-API-Key.
+     */
+    headers: {
+      title: "Request headers",
+      help: "For a key that goes in another header, or a gateway in front of the server. Most servers need none.",
+      value: "Value",
+      nameOf: "Name of header {{n}}",
+      valueOf: "Value of header {{n}}",
+      remove: "Remove header {{n}}",
+      add: "Add header",
+      /** Reconnecting an account that has headers: their names (the values are never shown again). */
+      saved_one: "Saved: <names/>. It stays unless you type new ones.",
+      saved_other: "Saved: <names/>. They stay unless you type new ones.",
+      /** The link after `saved`: reconnect without them. */
+      drop: "Remove",
+      dropping_one: "<names/> will be removed when you reconnect.",
+      dropping_other: "<names/> will be removed when you reconnect.",
+      undo: "Undo",
+      /** The server said no to a connection that sent headers and no API key. */
+      refused: "The server didn't accept these headers. Check their values, or connect with an API key.",
+    },
     nothingYet: "Nothing is available to agents until step 3.",
     allCanUse: "Once connected, every agent can use it. You can adjust that later.",
     replace: "Replaces the current sign-in. Who uses it stays the same.",
@@ -14837,6 +14937,21 @@ export const en = {
        */
       misconfigured:
         "The connection to {{provider}} is set up wrong on the server, so it can't finish. Whoever runs the server needs to replace the key in the app's settings.",
+      /**
+       * A request header typed for a server by address was refused. `{{header}}` is its name as typed (X-API-Key),
+       * never translated, and so is Authorization.
+       */
+      headerName: "Use only letters, digits and hyphens in a header's name, like X-API-Key.",
+      headerValue:
+        "Type a value for {{header}}: up to 2,000 characters on one line, with no accented letters or emoji.",
+      headerReserved: "{{header}} is already sent with every request and can't be changed. Remove this header.",
+      headerTwice: "{{header}} is in the list twice. Remove one of them.",
+      headerAndKey: "The API key is already sent as Authorization. Clear the key, or remove this header.",
+      headersTooMany: "A server takes at most {{max}} headers. Remove one to add another.",
+      headersWithSignIn:
+        "This server asks for a sign-in, and a sign-in can't carry headers yet. Remove the headers to sign in, or connect with an API key.",
+      /** Reconnecting an account whose saved headers, kept encrypted, could no longer be opened. */
+      headersUnreadable: "The saved headers couldn't be read. Type them again, or remove them.",
     },
     wiki: {
       githubNoNotes: "No Markdown notes in this link.",
@@ -15091,6 +15206,8 @@ export const en = {
     agentGroup: {
       notFound: "This department no longer exists.",
       tooMany: "This workspace already has {{max}} departments. Delete one first.",
+      /** `agent_group.ambiguous`: a card names a department two of them are called; renaming one decides. */
+      ambiguous: "Two departments are called {{name}}. Rename one of them, then try again.",
     },
     /** `agent.right_hand_permanent`: archiving, deleting or adding the right hand to a channel (ADR 0137). */
     rightHand: {
@@ -16040,6 +16157,7 @@ export const en = {
       waiting: "<b>{{who}}</b> is waiting for <b>{{deviceName}}</b>",
       toolRequest: "<b>{{who}}</b> asks you to turn on {{tool}} on your <b>{{deviceName}}</b>",
       cliRequest: "<b>{{who}}</b> asks you to install {{tool}} on your <b>{{deviceName}}</b>",
+      folderRequest: "<b>{{who}}</b> asks for the folder {{path}} on your <b>{{deviceName}}</b>",
       once: "Allow once",
       always: "Always",
       no: "No",
@@ -16754,6 +16872,8 @@ export const en = {
         /** The words of every message, in every look, smallest step first. */
         textSize: "Text size",
         textSizeHelp: "Of messages, in every conversation and on all your devices",
+        fullMessages: "Show full messages",
+        fullMessagesHelp: "Show long messages without “See more”, in every conversation and on all your devices",
         /** On the phone, under the text size slider: the choice sizes the whole app, on top of the system's own setting. */
         textSizePhone: "Applies to the whole app, on top of your phone's text size",
         textXs: "Smaller",

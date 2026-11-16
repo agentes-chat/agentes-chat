@@ -1,4 +1,5 @@
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { composes } from "../device";
 import { stopVoicePlayback } from "./VoicePlayer";
 import { drawVoiceWave, useWaveRepaint, waveAt } from "./voice-wave";
 
@@ -238,6 +239,8 @@ export interface VoiceRecorderOptions {
   onNotice: (notice: VoiceNotice) => void;
   /** Each second it records, never while starting or paused: the others see "gravando áudio…". */
   onRecording?: () => void;
+  /** Sees each key first while there is a recording: true keeps it from the recorder's own (Space, Enter, Esc). */
+  onKey?: (e: KeyboardEvent) => boolean;
 }
 
 /** The microphone's whole life in the composer: recording, pausing, listening back, sending, deleting. */
@@ -390,7 +393,7 @@ export function useVoiceRecorder(options: VoiceRecorderOptions | undefined, wave
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
       const rec = current.current;
-      if (!rec) return;
+      if (!rec || composes(e) || latest.current?.onKey?.(e)) return;
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();

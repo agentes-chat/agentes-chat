@@ -97,10 +97,18 @@ export async function checkLabel(tx: Executor, orgId: string, label: string, con
   return name;
 }
 
-/** The headers a sign-in or a key opens the server with. */
-export function bearerHeaders(secret: ConnectionSecret): Record<string, string> {
-  const token = secret.apiKey ?? secret.accessToken;
-  return token ? { authorization: `Bearer ${token}` } : {};
+/**
+ * What a stored secret sends to its own server, and nowhere else (ADR 0186): the headers a person typed, then the
+ * key's or the sign-in's `authorization` on top. Names go in lower case, as HTTP reads them, so a typed
+ * `Authorization` never travels beside ours.
+ */
+export function secretHeaders(secret: ConnectionSecret, serverUrl: string): Record<string, string> {
+  const sent = new Map<string, string>();
+  for (const [name, value] of Object.entries(secret.headers ?? {})) sent.set(name.toLowerCase(), value);
+  const scheme = presetForServer(serverUrl)?.keyScheme ?? "Bearer";
+  if (secret.apiKey) sent.set("authorization", `${scheme} ${secret.apiKey}`);
+  else if (secret.accessToken) sent.set("authorization", `Bearer ${secret.accessToken}`);
+  return Object.fromEntries(sent);
 }
 
 /**
@@ -148,6 +156,8 @@ export interface ConnectionSecret {
   accessToken?: string;
   refreshToken?: string;
   apiKey?: string;
+  /** A server by address: the request headers a person typed for it, names as typed (ADR 0186). */
+  headers?: Record<string, string>;
 }
 
 export interface ConnectorDeps {
@@ -848,11 +858,8 @@ const refreshing = new Map<string, Promise<ConnectionSecret | null>>();
 export async function connectionHeaders(deps: ConnectorDeps, c: ConnectorConnection): Promise<Record<string, string>> {
   const secret = await openConnectionSecret(deps.keyWrappers, c);
   if (!secret) return {};
-  if (secret.apiKey) {
-    return { authorization: `${presetForServer(c.serverUrl)?.keyScheme ?? "Bearer"} ${secret.apiKey}` };
-  }
   const at = deps.now?.() ?? new Date();
-  if (!expiring(c, secret, at)) return bearer(secret);
+  if (!expiring(c, secret, at)) return secretHeaders(secret, c.serverUrl);
   let pending = refreshing.get(c.id);
   if (!pending) {
     pending = refreshOnce(deps, c.id, at).finally(() => refreshing.delete(c.id));
@@ -860,14 +867,11 @@ export async function connectionHeaders(deps: ConnectorDeps, c: ConnectorConnect
   }
   const fresh = await pending;
   caches.connections.delete(`${c.orgId}:active`);
-  return fresh ? bearer(fresh) : {};
+  return fresh ? secretHeaders(fresh, c.serverUrl) : {};
 }
 
 const expiring = (c: ConnectorConnection, secret: ConnectionSecret, at: Date) =>
   Boolean(secret.refreshToken && c.tokenExpiresAt && c.tokenExpiresAt.getTime() - at.getTime() < 60_000);
-
-const bearer = (secret: ConnectionSecret): Record<string, string> =>
-  secret.accessToken ? { authorization: `Bearer ${secret.accessToken}` } : {};
 
 /**
  * One refresh at a time per connection, across processes: many servers rotate the refresh token, so a second
@@ -952,6 +956,7 @@ async function refreshTokens(
     });
   }
   const next: ConnectionSecret = {
+    ...secret,
     accessToken: token.access_token,
     refreshToken: token.refresh_token ?? secret.refreshToken,
   };

@@ -29,6 +29,8 @@ export interface ChatPrefs {
   dmTone?: ChatTone;
   openAt?: ChatOpenAt;
   textSize?: ChatTextSize;
+  /** Show every message in full, without folding it behind See more. */
+  fullMessages?: boolean;
   /** "Always send": a report an agent offers about the app goes with its reply, without asking me. */
   feedbackAuto?: boolean;
 }

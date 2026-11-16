@@ -2697,6 +2697,7 @@
         "ai_account": "Hanya pemilik akun yang memberikannya",
         "name": "Hanya admin yang mengganti nama agen",
         "look": "Hanya admin dan penanggung jawabnya yang mengubah tampilannya",
+        "group": "Hanya admin yang memindahkan agen ke departemen lain",
         "reports_to": "Hanya admin yang mengubah kepada siapa agen melapor",
         "many": "Hanya admin yang membuat perubahan ini"
       }
@@ -2711,6 +2712,7 @@
       "channel": "Kanal",
       "name": "Nama",
       "look": "Tampilan",
+      "group": "Departemen",
       "reports_to": "Melapor ke",
       "skill": "Skill {{name}}"
     },
@@ -3295,7 +3297,17 @@
     "never": {
       "title": "Jangan pernah tanya",
       "text": "Tidak pernah bertanya, termasuk untuk merge, deploy, pembayaran, dan rutinitas."
-    }
+    },
+    "change": "Ubah kapan bertanya",
+    "now": "{{name}} sekarang: {{level}}.",
+    "nowEveryAgent": "Semua agen sekarang: {{level}}.",
+    "undo": "Urungkan",
+    "everyAgent": "Untuk semua agen di workspace",
+    "follows": "Mengikuti workspace",
+    "edit": "Ubah",
+    "workspaceLead": "Kapan agen bertanya kepada seseorang sebelum bertindak.",
+    "workspaceHelp": "Setiap agen mengikuti pilihan ini sampai seseorang mengubah pilihannya di halaman agen.",
+    "ownAgents_other": "{{count}} agen punya pilihan sendiri dan tidak berubah."
   },
   "brakes": {
     "title": "Pekerjaan yang tidak diminta siapa pun",
@@ -7445,6 +7457,17 @@
     },
     "assigneeFilter": "Penanggung jawab",
     "priorityFilter": "Prioritas",
+    "labelFilter": "Label",
+    "table": {
+      "task": "Tugas",
+      "github": "GitHub",
+      "sortBy": "Urutkan menurut {{column}}"
+    },
+    "fold": {
+      "open": "Buka {{name}}",
+      "close": "Ciutkan {{name}}",
+      "column": "Ciutkan kolom"
+    },
     "title": "Tugas",
     "summary": "{{open}} terbuka · {{agents}} dengan agen",
     "search": "Cari tugas",
@@ -7486,8 +7509,16 @@
       "order": {
         "manual": "Manual",
         "priority": "Prioritas",
-        "due": "Tenggat"
+        "due": "Tenggat",
+        "updated": "Terbaru"
       },
+      "done": "Selesai",
+      "doneIs": {
+        "all": "Semua",
+        "recent": "{{days}} hari terakhir",
+        "hidden": "Tidak ada"
+      },
+      "hideEmpty": "Sembunyikan grup kosong",
       "field": {
         "project": "Proyek",
         "assignee": "Penanggung jawab",
@@ -8391,6 +8422,7 @@
       "waiting_budget_late": "Terlewat waktunya: anggarannya diperbarui terlambat",
       "stopped": "Dihentikan oleh seseorang",
       "stoppedBy": "Dihentikan oleh {{name}}",
+      "stalled": "Dilepas: tidak ada yang bergerak selama 20 menit",
       "no_report": "Selesai tanpa melaporkan hasilnya",
       "handoff_blocked": "Tidak bisa melapor: rutinitasnya dijeda atau pembuatnya sudah tidak bisa memposting di sana",
       "deleted": "Dihentikan: rutinitasnya dihapus",
@@ -9783,7 +9815,7 @@
   },
   "jev": {
     "title": "Jev",
-    "about": "Model cepat dari TypeSafe, dibuat untuk keputusan cepat. agentes.chat mengajukan pertanyaan kecil padanya, seperti siapa yang sebaiknya menjawab. Kamu membayar langsung ke TypeSafe.",
+    "about": "Model cepat dari TypeSafe, dibuat untuk keputusan cepat. agentes.chat mengajukan pertanyaan kecil padanya, seperti siapa yang sebaiknya menjawab. Kamu membayar langsung ke TypeSafe, atau lewat OpenRouter dengan harga yang sama.",
     "lead": "Membantu agen-agenmu bekerja sebagai tim.",
     "how": "Cara kerja Jev",
     "why": {
@@ -9809,7 +9841,9 @@
       "key": "Buat kunci",
       "openKeys": "Buka kunci API",
       "paste": "Tempel di sini",
+      "pasteOther": "Tempelkan kunci API Anda di sini",
       "placeholder": "Kunci TypeSafe-mu",
+      "placeholderOther": "Kunci API Anda",
       "sealed": "Dienkripsi di server ini. Tidak akan ditampilkan lagi.",
       "invalid": "TypeSafe tidak menerima kunci ini. Salin lagi dari halaman kunci.",
       "savedNoCredit": "Tersimpan. Tambahkan saldo di TypeSafe dan Jev mulai dengan sendirinya."
@@ -9830,6 +9864,32 @@
       "envInvalid": "TypeSafe tidak menerima kunci ini. Ubah di pengaturan server ini (TYPESAFE_API_KEY)."
     },
     "checkAgain": "Periksa lagi",
+    "via": {
+      "label": "Tempat kamu membayar Jev",
+      "typesafe": "TypeSafe",
+      "typesafeText": "Akun langsung di TypeSafe, dengan saldo prabayar.",
+      "openrouter": "OpenRouter",
+      "openrouterText": "Dengan kunci OpenRouter, harganya sama.",
+      "connected": "Kunci sudah terhubung"
+    },
+    "openRouter": {
+      "create": "Buat kunci di OpenRouter",
+      "createHint": "Dengan saldo di OpenRouter. Harga Jev sama seperti di TypeSafe: US$ {{price}} per sejuta token. Memilih siapa yang menjawab biayanya sekitar US$ {{call}}.",
+      "open": "Buka OpenRouter",
+      "placeholder": "Kunci OpenRouter-mu",
+      "shape": "Kunci OpenRouter diawali sk-or-v1-. Periksa lalu tempel lagi.",
+      "invalid": "OpenRouter tidak menerima kunci ini. Salin lagi dari halaman kunci.",
+      "keyName": "Kunci OpenRouter",
+      "same": "Yang ada di Kunci penyedia",
+      "forAll": "Kunci ini membayar Jev untuk semua ruang kerja di server ini.",
+      "turnOn": "Nyalakan Jev",
+      "otherKey": "Pakai kunci lain",
+      "line": {
+        "invalid": "OpenRouter tidak menerima kunci ini. Buat yang baru.",
+        "no_credit": "Tambahkan saldo di OpenRouter. Jev lanjut dengan sendirinya.",
+        "envInvalid": "OpenRouter tidak menerima kunci ini. Ubah di pengaturan server ini (TYPESAFE_API_KEY)."
+      }
+    },
     "remove": {
       "title": "Hapus kunci Jev?",
       "text": "Agen tetap bekerja tanpanya."
@@ -9935,6 +9995,10 @@
       "copies_other": "{{count}} login lain dari akun ini, tanpa agen.",
       "removeCopies": "Hapus",
       "copiesRemoved_other": "{{count}} login yang tidak dipakai dihapus.",
+      "removeAllGrok": "Hapus semua login Grok",
+      "removeAllTitle": "Hapus semua {{n}} login Grok?",
+      "removeAllText": "Mereka berhenti berpikir untuk agennya di {{computers}}. Login orang lain tidak disentuh.",
+      "removeAllDone": "{{n}} login Grok dihapus.",
       "disconnect": "Putuskan",
       "renameTitle": "Ganti nama {{label}}",
       "nameLabel": "Nama",
@@ -9989,6 +10053,8 @@
       },
       "resetsAt": "direset pukul {{time}}",
       "resetsOn": "direset {{day}} pukul {{time}}",
+      "allModels": "Semua model",
+      "onlyModels": "Hanya {{name}}",
       "almost": "Hampir mencapai batas",
       "limited": "Mencapai batas",
       "limitedUntil": "Mencapai batas sampai {{when}}",
@@ -10142,6 +10208,9 @@
     "keys": "Enter mengirim · Esc menghapus",
     "keysHold": "Lepas untuk mengirim · Esc menghapus",
     "keysPaused": "Dijeda · Spasi mendengarkan · Enter mengirim · Esc menghapus",
+    "askDiscard": "Hapus audionya? Teks kamu tetap ada.",
+    "askDelete": "Hapus",
+    "askKeep": "Simpan",
     "pausePlay": "Jeda",
     "seek": "Posisi audio",
     "speedAt": "Kecepatan {{speed}}×",
@@ -11157,6 +11226,10 @@
       "cant_start": "{{program}} ada di {{computer}}, tetapi tidak mau berjalan.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
       "outdated": "Versi di {{computer}} sudah lama. Perbarui Codex untuk memakainya.",
+      "outdatedCodex": "Codex CLI {{detected}} ditemukan di {{computer}}. Perbarui ke versi {{minimum}} atau yang lebih baru.",
+      "codexUpdateGuide": "Cara memperbarui Codex CLI",
+      "codexRecheckHere": "Setelah memperbarui, pilih Periksa lagi pada baris Codex di Preferensi › Alat.",
+      "codexRecheckThere": "Perbarui Codex CLI di {{computer}}. Jika komputer itu menjalankan aplikasi desktop, pilih Periksa lagi pada baris Codex di Preferensi › Alat.",
       "system": "{{program}} belum berjalan di sistem {{computer}}.",
       "no_computerCloud": "Siap begitu {{computer}} siap."
     },
@@ -12401,6 +12474,7 @@
     "connected": "Terhubung",
     "connectedAs": "Terhubung sebagai {{account}}",
     "reconnectAdds": "Hubungkan ulang {{name}} agar agen juga bisa {{what}}.",
+    "sendsToo": "Juga mengirim: <names/>. Untuk mengubahnya, pakai Hubungkan ulang.",
     "adds": {
       "github_project": "memakai GitHub Projects (membaca papan dan memindahkan kartu)"
     },
@@ -13489,6 +13563,20 @@
     "needsKey": "Server ini tidak mendukung OAuth. Hubungkan dengan kunci API.",
     "notApproved": "{{name}} hanya mengizinkan aplikasi yang sudah disetujuinya untuk masuk, dan agentes.chat belum disetujui. Kalau {{name}} memberimu kunci API, kamu bisa menghubungkan dengan kunci itu.",
     "serverSaid": "Jawaban server: {{detail}}",
+    "headers": {
+      "title": "Header permintaan",
+      "help": "Untuk kunci yang dikirim di header lain, atau gateway di depan server. Kebanyakan server tidak memerlukannya.",
+      "value": "Nilai",
+      "nameOf": "Nama header {{n}}",
+      "valueOf": "Nilai header {{n}}",
+      "remove": "Hapus header {{n}}",
+      "add": "Tambah header",
+      "saved_other": "Tersimpan: <names/>. Tetap dipakai kecuali kamu mengetik yang baru.",
+      "drop": "Hapus",
+      "dropping_other": "<names/> akan dihapus saat dihubungkan ulang.",
+      "undo": "Urungkan",
+      "refused": "Server tidak menerima header ini. Periksa nilainya, atau hubungkan dengan kunci API."
+    },
     "nothingYet": "Belum ada yang tersedia untuk agen sampai langkah 3.",
     "allCanUse": "Setelah terhubung, semua agen bisa memakainya. Kamu bisa menyesuaikannya nanti.",
     "replace": "Menggantikan sesi masuk saat ini. Siapa yang memakainya tetap sama.",
@@ -14169,7 +14257,15 @@
       "gone": "Akun itu sudah tidak terhubung.",
       "unfinished": "Proses masuk di Composio tidak selesai. Coba lagi.",
       "unavailable": "Layanan ini tidak bisa dihubungkan di sini.",
-      "misconfigured": "Koneksi ke {{provider}} di server salah diatur, jadi tidak bisa selesai. Pengelola server perlu mengganti kunci di pengaturan aplikasi."
+      "misconfigured": "Koneksi ke {{provider}} di server salah diatur, jadi tidak bisa selesai. Pengelola server perlu mengganti kunci di pengaturan aplikasi.",
+      "headerName": "Pakai hanya huruf, angka, dan tanda hubung pada nama header, seperti X-API-Key.",
+      "headerValue": "Ketik nilai untuk {{header}}: maksimal 2.000 karakter dalam satu baris, tanpa huruf beraksen atau emoji.",
+      "headerReserved": "{{header}} sudah dikirim bersama setiap permintaan dan tidak bisa diubah. Hapus header ini.",
+      "headerTwice": "{{header}} ada dua kali dalam daftar. Hapus salah satunya.",
+      "headerAndKey": "Kunci API sudah dikirim sebagai Authorization. Kosongkan kuncinya, atau hapus header ini.",
+      "headersTooMany": "Satu server menerima paling banyak {{max}} header. Hapus satu untuk menambah yang lain.",
+      "headersWithSignIn": "Server ini meminta proses masuk, dan proses masuk belum bisa membawa header. Hapus header untuk masuk, atau hubungkan dengan kunci API.",
+      "headersUnreadable": "Header yang tersimpan tidak bisa dibaca. Ketik lagi, atau hapus."
     },
     "wiki": {
       "githubNoNotes": "Tidak ada catatan Markdown di tautan ini.",
@@ -14405,7 +14501,8 @@
     },
     "agentGroup": {
       "notFound": "Departemen ini sudah tidak ada.",
-      "tooMany": "Ruang kerja ini sudah punya {{max}} departemen. Hapus satu dulu."
+      "tooMany": "Ruang kerja ini sudah punya {{max}} departemen. Hapus satu dulu.",
+      "ambiguous": "Dua departemen bernama {{name}}. Ganti nama salah satunya, lalu coba lagi."
     },
     "rightHand": {
       "permanent": "Tangan kanan adalah bagian dari ruang kerja dan tetap di luar kanal. Sebuah @sebutan menjangkaunya di kanal mana pun.",
@@ -15275,6 +15372,7 @@
       "waiting": "<b>{{who}}</b> sedang menunggu <b>{{deviceName}}</b>",
       "toolRequest": "<b>{{who}}</b> memintamu menyalakan {{tool}} di <b>{{deviceName}}</b> milikmu",
       "cliRequest": "<b>{{who}}</b> meminta kamu memasang {{tool}} di <b>{{deviceName}}</b> kamu",
+      "folderRequest": "<b>{{who}}</b> memintamu membuka folder {{path}} di <b>{{deviceName}}</b> milikmu",
       "once": "Izinkan sekali",
       "always": "Selalu",
       "no": "Tidak",
@@ -15949,6 +16047,8 @@
         "openLatest": "Pesan terbaru",
         "textSize": "Ukuran teks",
         "textSizeHelp": "Untuk pesan, di semua percakapan dan di semua perangkatmu",
+        "fullMessages": "Tampilkan pesan lengkap",
+        "fullMessagesHelp": "Tampilkan pesan panjang tanpa “Lihat selengkapnya”, di semua percakapan dan di semua perangkatmu",
         "textSizePhone": "Berlaku untuk seluruh aplikasi, di atas ukuran teks ponselmu",
         "textXs": "Lebih kecil",
         "textSm": "Kecil",

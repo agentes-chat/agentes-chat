@@ -25,7 +25,7 @@ import {
 import { textOrMedia } from "@agenteschat/client/lib/media";
 import { messagePath } from "@agenteschat/client/lib/message-links";
 import { summaryParts } from "@agenteschat/client/lib/missions";
-import { voiceOf } from "@agenteschat/client/lib/voice";
+import { listedText } from "@agenteschat/client/lib/voice";
 import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { chartBlocksOf } from "@agenteschat/ui/widgets/spec";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -112,8 +112,8 @@ export function useMessageActions(context: MessageActionsContext, close: () => v
   const pills = reactionPills(cached.data ?? m.reactions, meId);
   const agentName = m.author.type === "agent" ? dir.nameOf(m.author) : "";
   const rootId = m.threadId ?? m.id;
-  // A voice message is its audio: no words to preview or copy here.
-  const text = voiceOf(m.meta) ? "" : previewOf(m.body);
+  // Of a voice message only what was typed beside it: its words are the audio's.
+  const text = previewOf(listedText(m.body, m.meta));
   // An agent's charts can be pinned to a dashboard as widgets (ADR 0135).
   const charts = m.local || m.author.type !== "agent" ? [] : chartBlocksOf(m.body);
   const pinChart = () => {

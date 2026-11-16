@@ -103,6 +103,12 @@ export interface TrafficCounter {
   /** Asks Chrome to quit as a person quits it (`Browser.close`): it writes what it holds to its profile first. */
   quit(): void;
   /**
+   * Chrome acts as it would under the computer's own memory pressure (`Memory.simulatePressureNotification`): it drops
+   * caches and garbage in every process, and may discard background tabs, which stay in the strip and load again when
+   * shown.
+   */
+  ease(): void;
+  /**
    * For `ms` from now, fails every request whose address carries one of `values` (raw or encoded) and calls
    * `onBlocked` for each (ADR 0144). Arm it before typing and type once `ready` is true.
    */
@@ -531,6 +537,9 @@ export function countChromeTraffic(
     },
     quit() {
       send("Browser.close", {});
+    },
+    ease() {
+      send("Memory.simulatePressureNotification", { level: "critical" });
     },
     guard(values, ms, onBlocked, readyMs = GUARD_READY_MS) {
       const kept = [...new Set(values.filter((v) => v.length >= 4))];

@@ -129,6 +129,10 @@ export function fallbackTarget(data: PushOpenData): OpenTarget | null {
   // Settings › Computers is Devices now: its old address redirects there.
   if (kind === "machine_connected" || kind === "computer_ready")
     return { to: "/org/$orgId/settings/$section", params: { section: "computers" } };
+  // A folder waits on this person's computer (the agent asked), which is where it is allowed: that computer.
+  // Never the conversation it was asked from, which a push can't tell from a DM.
+  if (kind === "device.folder_request")
+    return { to: "/org/$orgId/settings/$section", params: { section: "computers" } };
   if (kind && ROUTINE_TROUBLE.has(kind as NotificationKind)) return { to: "/org/$orgId/routines" };
   // A board's notice (ADR 0135): its board with the widget open when the push names them, else the boards.
   if (kind && WIDGET_NOTICES.has(kind as NotificationKind))

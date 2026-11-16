@@ -2015,6 +2015,7 @@
       "waitingFor": "{{names}} wartet für {{person}} auf {{device}}",
       "tool_request": "{{names}} bittet dich, {{tool}} auf deinem {{device}} einzuschalten",
       "cli_request": "{{names}} bittet dich, {{tool}} auf deinem {{device}} zu installieren",
+      "folder_request": "{{names}} bittet dich um den Ordner {{path}} auf deinem {{device}}",
       "allowOnce": "Einmal erlauben",
       "always": "{{name}} immer erlauben",
       "no": "Nein",

@@ -2213,6 +2213,7 @@
       "waitingFor": "{{names}} ждёт устройство {{device}} для {{person}}",
       "tool_request": "{{names}} просит вас включить {{tool}} на вашем {{device}}",
       "cli_request": "{{names}} просит установить {{tool}} на вашем {{device}}",
+      "folder_request": "{{names}} просит папку {{path}} на вашем {{device}}",
       "allowOnce": "Разрешить один раз",
       "always": "Всегда разрешать {{name}}",
       "no": "Нет",

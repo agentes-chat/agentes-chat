@@ -384,7 +384,8 @@
     "failingBody": "アプリを開いて、何が起きたかを確認し、もう一度お試しください。",
     "restartedBanner": "この{{device}}のagentes.chatが3回再起動しました",
     "restartedBody": "自動で復帰します。続く場合は、アプリを開いて原因を確認してください。",
-    "version": "バージョン{{version}}、アプリと一緒に更新されます",
+    "installedVersion": "インストール済みパッケージのバージョン",
+    "internalVersion": "サーバーの内部バージョン",
     "updatesWithApp": "アプリを更新すると、この{{device}}のagentes.chatも更新されます。",
     "updateBack": "更新が始まりませんでした。agentes.chatは{{version}}に戻りました。",
     "updateBackBody": "新しいバージョンは、次回のアプリのアップデートで再度試されます。",
@@ -575,7 +576,16 @@
       "notifyBrowserDesc": "リクエストはすでにスマートフォンとサイトに届きます。これをオンにすると、ここでも知らせます。",
       "menuBarTitle": "メニューバーに表示",
       "notchTitle": "ノッチにエージェントを表示",
-      "notchDesc": "ノッチのあるMacBookで、作業中のエージェントをカメラの周りに表示します。"
+      "notchDesc": "ノッチのあるMacBookで、作業中のエージェントをカメラの周りに表示します。",
+      "compatTitle": "互換モード",
+      "compatDesc": "グラフィックカードを使わずにウィンドウを描画します。遅くなりますが、どのコンピューターでも動きます。ウィンドウが黒くなる、切れる、固まるときに使ってください。",
+      "compatReopen": "アプリを開き直すと反映されます。",
+      "reopenNow": "今すぐ開き直す",
+      "compatFellBack": "グラフィックカードではウィンドウが開かなかったため、互換モードで開きました。",
+      "compatTryCard": "グラフィックカードをもう一度試す",
+      "compatOwn": "現在は WEBKIT_DISABLE_DMABUF_RENDERER がこの設定を決めています。ここで選ぶには、アプリを終了し、その変数なしで開き直してください。",
+      "reopenTitle": "agentes.chatを開き直しますか？",
+      "reopenBody": "アプリが開き直るまで、エージェントはこのコンピュータを使えません。すでに実行中のものは先に完了します。"
     },
     "thisMac": {
       "agents": "エージェント",

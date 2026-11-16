@@ -3323,6 +3323,16 @@ html:not([data-pointer]) .ac-tab:focus-visible {
   grid-column: 1 / -1;
   height: 6px;
 }
+/* A section's heading over its first row: whom the quotas below bind ("Todos os modelos", "Só Claude and GPT"). */
+.ac-planmeter__group {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.ac-planmeter__window:has(> .ac-planmeter__group):not(:first-child) {
+  margin-top: 6px;
+}
 .ac-planmeter__pct {
   justify-self: end;
   white-space: nowrap;
@@ -7493,8 +7503,6 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
   font-size: var(--text-sm);
   color: var(--danger);
 }
-/* Voice messages (ADR 0100). The recording sits on the text's first line and hides nothing but the text, which keeps
-   its place: the box never changes height, whatever was typed. */
 .ac-composer__text {
   position: relative;
   display: flex;
@@ -7502,22 +7510,24 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
   flex-direction: column;
   min-width: 0;
 }
+/* Voice messages (ADR 0100). The take is a row of its own above the files, the whole strip wide: the text, its tools
+   and the files stay usable under it. */
 .ac-composer__voice {
-  position: absolute;
-  bottom: 0;
-  left: var(--space-2);
-  right: var(--space-2);
+  flex: 1 1 100%;
+  min-width: 0;
   height: var(--control-h-sm);
-  display: none;
+  display: flex;
   align-items: center;
   gap: 10px;
   container: ac-composer-voice / inline-size;
 }
-.ac-composer[data-voice] .ac-composer__voice {
-  display: flex;
-}
-.ac-composer[data-voice] textarea {
-  visibility: hidden;
+/* Esc with text in the box: the row asks, in place, and its answers follow the words or drop under them. */
+/* Beats `.ac-actline`'s top alignment: one line of words centres on its 32 tall buttons. */
+.ac-composer__voice-ask.ac-actline {
+  flex: 1 1 100%;
+  min-height: var(--control-h-sm);
+  align-items: center;
+  font-size: var(--text-sm);
 }
 .ac-composer[data-voice="rec"] {
   box-shadow:
@@ -7564,15 +7574,11 @@ html:not([data-pointer]) .ac-composer__send:focus-visible {
   width: 28px;
   height: 28px;
 }
-/* The row stays: the send button and the microphone where they were, attach and emoji give way to delete. */
-.ac-composer[data-voice] .ac-composer__tools > :not(.ac-composer__voice-trash, .ac-composer__mic, .ac-composer__send),
-.ac-composer[data-voice] .ac-composer__pills {
-  display: none;
-}
 .ac-composer__voice-trash {
   color: var(--danger);
 }
-/* The keys, after the wave while there is room for both. The last seconds' countdown always shows. */
+/* The keys, after the wave while there is room for both and they are the take's (not the box's, where the focus is
+   with text). The last seconds' countdown always shows. */
 .ac-composer__voice-hint {
   flex: none;
   white-space: nowrap;

@@ -223,6 +223,10 @@ describe("brain settings", () => {
       ["claude_code", false, "not_installed"],
       ["codex", false, "outdated"],
     ]);
+    expect(brainOptions(oldCodex).find((o) => o.kind === "codex")?.codexVersion).toEqual({
+      detected: "0.100.0",
+      minimum: "0.163.0",
+    });
     // There and failing to start: said as that, never "not installed".
     const broken = mac({ executors: { codex: { version: "0.170.0" }, broken: { claude: "boom" }, detectedAt: "x" } });
     expect(reasons(broken).slice(1, 3)).toEqual([

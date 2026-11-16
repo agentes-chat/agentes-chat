@@ -13,7 +13,13 @@ import {
 import { dueLabel, dueTone, namesText, stoppedLine } from "@agenteschat/client/lib/format";
 import { githubLinkLabel } from "@agenteschat/client/lib/github-link";
 import { NO_PROJECT, projectOfFilter } from "@agenteschat/client/lib/issue-projects";
-import { ISSUES_VIEW_DEFAULT, PRIORITY_ORDER, sortIssues } from "@agenteschat/client/lib/issues-view";
+import {
+  ISSUES_VIEW_DEFAULT,
+  type IssuesViewChange,
+  issueInView,
+  PRIORITY_ORDER,
+  sortIssues,
+} from "@agenteschat/client/lib/issues-view";
 import { can } from "@agenteschat/client/lib/permissions";
 import { shownSteps } from "@agenteschat/client/lib/work";
 import {
@@ -41,7 +47,7 @@ import {
 } from "@agenteschat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { type CSSProperties, type ReactNode, useDeferredValue, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useDeferredValue, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { ActorAvatar, ActorWho, AgentAvatar } from "@/components/AgentAvatar";
@@ -157,11 +163,7 @@ export function IssuesPage() {
   const columnsQuery = useIssueColumns(org.id);
   const columns = columnsQuery.data;
   const all = issues.data ?? [];
-  const filtered = all.filter(
-    (i) =>
-      (view.assignees.length === 0 || view.assignees.includes(actorKey(i.assignee))) &&
-      (view.priorities.length === 0 || view.priorities.includes(i.priority)),
-  );
+  const filtered = all.filter((i) => issueInView(i, actorKey(i.assignee), view));
   const noIssues = issues.isSuccess && all.length === 0 && !search && !projectParam;
   const emptyProject = issues.isSuccess && all.length === 0 && !search && Boolean(projectParam);
   // A new task on a project's board starts in it. An archived project takes none, so its board offers none.
@@ -363,7 +365,7 @@ export function IssuesPage() {
                 <Button
                   onClick={() => {
                     setQ("");
-                    changeView({ assignees: [], priorities: [] });
+                    changeView({ assignees: [], priorities: [], labels: [], done: "all" });
                   }}
                 >
                   {copy.clearAll}
@@ -381,8 +383,9 @@ export function IssuesPage() {
               // A project's own board doesn't say its name again on every card.
               view={projectParam ? { ...view, fields: { ...view.fields, project: false } } : view}
               columns={columns}
-              issues={filtered.filter((i) => view.showCanceled || i.status !== "canceled")}
+              issues={filtered}
               all={all}
+              onChange={changeView}
               openNumber={openNumber}
               onOpen={toggle}
               onNew={adds ? (columnId) => setCreating({ columnId }) : undefined}
@@ -435,14 +438,17 @@ function IssuesBody({
   columns,
   issues,
   all,
+  onChange,
   openNumber,
   onOpen,
   onNew,
 }: {
   view: IssuesView;
   columns: IssueColumn[];
-  /** The tasks on screen: filtered, canceled ones only when asked. */
+  /** The tasks on screen: filtered, canceled and finished ones as the view asks. */
   issues: Issue[];
+  /** Folding a group, and the order a column's head asks for. */
+  onChange: (change: IssuesViewChange) => void;
   /** Every task loaded: who has one gets a column when grouped by assignee. */
   all: Issue[];
   openNumber: number | null;
@@ -572,6 +578,8 @@ function IssuesBody({
       canceled: (i) => t("issues.drag.canceled", { number: i.number }),
     },
   });
+  const onFold = (group: string, folded: boolean) =>
+    onChange({ collapsed: folded ? [...view.collapsed, group] : view.collapsed.filter((g) => g !== group) });
   const renderCard = (i: Issue, group: string, state: CardState) => (
     <IssueCard
       issue={i}
@@ -598,6 +606,9 @@ function IssuesBody({
           dnd={dnd}
           renderCard={renderCard}
           onNew={onNew}
+          hideEmpty={view.hideEmpty}
+          collapsed={view.collapsed}
+          onFold={onFold}
         />
       ) : (
         <IssueList
@@ -609,6 +620,10 @@ function IssuesBody({
           onOpen={onOpen}
           fields={view.fields}
           helpId={helpId}
+          sort={view.sort}
+          onSort={(sort) => onChange({ sort })}
+          collapsed={view.collapsed}
+          onFold={onFold}
         />
       )}
     </div>
@@ -985,43 +1000,76 @@ function CardFacts({ issue: i, fields }: { issue: Issue; fields: IssuesView["fie
   return <FactLine className="issue-card__facts" facts={facts} />;
 }
 
-/** The gap between two facts on a line (`.ac-factline`'s). */
-const FACT_GAP = 12;
-/** The widest set of columns the list lays out, and the step their room is counted in (issues.css has one rule each). */
-const FACT_COLUMNS_MAX = 640;
-const FACT_COLUMNS_STEP = 80;
+/** The list's columns after the number and the title, in the row's order (issues.css names a grid line for each). */
+type ListColumn = "project" | "label" | "priority" | "due" | "criteria" | "github" | "who";
 
 /**
- * The list's columns of facts, one for each fact some task shown has (and its view toggle allows), in the facts'
- * order: every row stands its facts in the same columns, so labels, priorities, dates and criteria line up down the
- * list instead of each row packing what it has against its end. Each column is as wide as its fact reads at most;
- * a name longer than its column (a project, a label, a repository) ends in "…". `room`: what the columns take, in
- * steps, which the list needs beside a title before it stands them (issues.css). With more columns than a list ever
- * has room for (every fact at once), none: the rows keep packing their facts.
+ * The columns the list stands as a table: one for each thing some task shown has (and its view toggle allows), so no
+ * column is a blank strip under its name. Labels are one column (the first label and "+2"), GitHub another (the pull
+ * request and the link).
  */
-function listFactColumns(issues: Issue[], fields: IssuesView["fields"]) {
+function listColumns(issues: Issue[], fields: IssuesView["fields"]): ListColumn[] {
   const any = (has: (i: Issue) => unknown) => issues.some((i) => Boolean(has(i)));
-  const columns = (
+  return (
     [
-      ["project", 128, fields.project && any((i) => i.project)],
-      ["label", 104, fields.label && any((i) => i.labels.length > 0)],
-      ["labels", 24, fields.label && any((i) => i.labels.length > 1)],
-      ["priority", 72, fields.priority && any((i) => i.priority !== "normal")],
-      ["due", 80, fields.due && any((i) => i.dueDate && isOpen(i))],
-      ["criteria", 60, fields.criteria && any((i) => i.criteria.length > 0)],
-      ["pr", 88, fields.pullRequest && any((i) => i.pullRequests.length > 0)],
-      ["github", 112, fields.pullRequest && any((i) => i.githubUrl)],
-      // Always: a mention of me shows there with no message counted yet, and a fact with no column of its own would
-      // widen its row alone and push its other facts out of line.
-      ["talk", 56, true],
+      ["project", fields.project && any((i) => i.project)],
+      ["label", fields.label && any((i) => i.labels.length > 0)],
+      ["priority", fields.priority && any((i) => i.priority !== "normal")],
+      ["due", fields.due && any((i) => i.dueDate && isOpen(i))],
+      ["criteria", fields.criteria && any((i) => i.criteria.length > 0)],
+      ["github", fields.pullRequest && any((i) => i.pullRequests.length > 0 || i.githubUrl)],
+      ["who", fields.assignee && any((i) => i.assignee)],
     ] as const
-  ).filter(([, , shown]) => shown);
-  const width = columns.reduce((sum, [, px]) => sum + px, 0) + FACT_GAP * Math.max(0, columns.length - 1);
-  if (columns.length === 0 || width > FACT_COLUMNS_MAX) return null;
-  return {
-    template: columns.map(([name, px]) => `[${name}] ${px}px`).join(" "),
-    room: Math.ceil(width / FACT_COLUMNS_STEP) * FACT_COLUMNS_STEP,
-  };
+  )
+    .filter(([, shown]) => shown)
+    .map(([name]) => name);
+}
+
+/** The columns a click on their name orders the list by, and that order. */
+const COLUMN_SORT: Partial<Record<ListColumn, IssuesView["sort"]>> = { priority: "priority", due: "due" };
+
+/**
+ * The table's line of column names, over every group. "Priority" and "Due date" order the list: a click takes that
+ * order, another gives the board's own back (the same choice as "Sort by" in "Display").
+ */
+function ListHead({
+  columns,
+  sort,
+  onSort,
+}: {
+  columns: ListColumn[];
+  sort: IssuesView["sort"];
+  onSort: (sort: IssuesView["sort"]) => void;
+}) {
+  const { t } = useTranslation();
+  const name = (c: ListColumn) =>
+    c === "github" ? t("issues.table.github") : t(`issues.display.field.${c === "who" ? "assignee" : c}`);
+  return (
+    <div className="issue-table__head">
+      <span data-column="title">{t("issues.table.task")}</span>
+      {columns.map((c) => {
+        const by = COLUMN_SORT[c];
+        return (
+          <span key={c} data-column={c}>
+            {by ? (
+              <button
+                type="button"
+                className="issue-table__sort"
+                aria-pressed={sort === by}
+                title={t("issues.table.sortBy", { column: name(c) })}
+                onClick={() => onSort(sort === by ? "manual" : by)}
+              >
+                {name(c)}
+                <Icon name="arrowDown" size={14} />
+              </button>
+            ) : (
+              name(c)
+            )}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 /**
@@ -1157,8 +1205,10 @@ function IssueCard({
 }
 
 /**
- * The list. Grouped by stage: each stage, then its columns when the board is customized. Otherwise one group per
- * assignee or priority. A group with nothing in it shows only while a card moves, so there is somewhere to drop it.
+ * The list, a table: one line of column names, then the groups, every row's facts in the same columns. Grouped by
+ * stage: each stage, then its columns when the board is customized. Otherwise one group per assignee or priority. A
+ * group with nothing in it shows only while a card moves, so there is somewhere to drop it; a folded one shows its
+ * name and count.
  */
 function IssueList({
   groups,
@@ -1169,6 +1219,10 @@ function IssueList({
   onOpen,
   fields,
   helpId,
+  sort,
+  onSort,
+  collapsed,
+  onFold,
 }: {
   groups: IssueGroup[];
   stages: { stage: IssueStatus; columns: IssueColumn[] }[] | null;
@@ -1178,43 +1232,82 @@ function IssueList({
   onOpen: (n: number) => void;
   fields: IssuesView["fields"];
   helpId: string;
+  sort: IssuesView["sort"];
+  onSort: (sort: IssuesView["sort"]) => void;
+  collapsed: string[];
+  onFold: (group: string, folded: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const stageName = useStageName();
   const title = useColumnTitle();
   const custom = isCustomBoard(columns);
   const byId = new Map(groups.map((g) => [g.id, g]));
-  // One set of fact columns for the whole list, whatever its groups: read by every row (issues.css).
-  const facts = listFactColumns(
-    groups.flatMap((g) => g.items),
-    fields,
+  const head = (
+    <ListHead
+      columns={listColumns(
+        groups.flatMap((g) => g.items),
+        fields,
+      )}
+      sort={sort}
+      onSort={onSort}
+    />
   );
-  const factColumns = {
-    "data-fact-columns": facts?.room,
-    style: facts ? ({ "--issue-facts": facts.template } as CSSProperties) : undefined,
+  /** A group's name as the button that folds and opens it. */
+  const fold = (id: string, name: string, lead: ReactNode) => {
+    const folded = collapsed.includes(id);
+    const words = t(folded ? "issues.fold.open" : "issues.fold.close", { name });
+    return (
+      <button
+        type="button"
+        aria-expanded={!folded}
+        aria-label={words}
+        title={words}
+        onClick={() => onFold(id, !folded)}
+      >
+        <Icon name={folded ? "chevronRight" : "chevronDown"} size={14} />
+        {lead}
+        {name}
+      </button>
+    );
   };
   const zone = (g: IssueGroup, heading?: ReactNode) => (
     <div key={g.id} className={cx("issues-group__col", dnd.over === g.id && "is-over")} data-col>
       {heading}
-      <IssueRows group={g} dnd={dnd} openNumber={openNumber} onOpen={onOpen} fields={fields} helpId={helpId} />
+      <IssueRows
+        group={g}
+        folded={collapsed.includes(g.id)}
+        dnd={dnd}
+        openNumber={openNumber}
+        onOpen={onOpen}
+        fields={fields}
+        helpId={helpId}
+      />
     </div>
   );
   if (stages)
     return (
-      <div className="ac-groups" {...factColumns}>
+      <div className="ac-groups issue-table">
+        {head}
         {stages.map(({ stage, columns: cols }) => {
           const count = cols.reduce((n, c) => n + dnd.count(c.id), 0);
           if (count === 0 && !dnd.active) return null;
+          const only = custom ? undefined : cols[0];
+          const lead = <Icon name={STATUS_ICON[stage]} size={16} />;
           return (
             <section key={stage} className="issues-group" aria-label={stageName(stage)}>
               <GroupHeading
                 title={
-                  <>
-                    <Icon name={STATUS_ICON[stage]} size={16} />
-                    {stageName(stage)}
-                  </>
+                  only ? (
+                    fold(only.id, stageName(stage), lead)
+                  ) : (
+                    <>
+                      {lead}
+                      {stageName(stage)}
+                    </>
+                  )
                 }
                 count={
-                  <span className="tabular" data-count={custom ? undefined : cols[0]?.id}>
+                  <span className="tabular" data-count={only?.id}>
                     {count}
                   </span>
                 }
@@ -1227,7 +1320,7 @@ function IssueList({
                   custom && stage !== "canceled" && (
                     <GroupHeading
                       level={3}
-                      title={title(c)}
+                      title={fold(c.id, title(c), null)}
                       count={
                         <span className="tabular" data-count={c.id}>
                           {dnd.count(c.id)}
@@ -1243,19 +1336,15 @@ function IssueList({
       </div>
     );
   return (
-    <div className="ac-groups" {...factColumns}>
+    <div className="ac-groups issue-table">
+      {head}
       {groups.map((g) => {
         const count = dnd.count(g.id);
         if (count === 0 && !dnd.active) return null;
         return (
           <section key={g.id} className="issues-group" aria-label={g.name}>
             <GroupHeading
-              title={
-                <>
-                  {g.lead}
-                  {g.name}
-                </>
-              }
+              title={fold(g.id, g.name, g.lead)}
               count={
                 <span className="tabular" data-count={g.id}>
                   {count}
@@ -1272,6 +1361,7 @@ function IssueList({
 
 function IssueRows({
   group: g,
+  folded,
   dnd,
   openNumber,
   onOpen,
@@ -1279,6 +1369,8 @@ function IssueRows({
   helpId,
 }: {
   group: IssueGroup;
+  /** Folded: no row but one picked with the keyboard and moved here, so the focus has where to stay. */
+  folded: boolean;
   dnd: IssueDrag<Issue>;
   openNumber: number | null;
   onOpen: (n: number) => void;
@@ -1286,7 +1378,8 @@ function IssueRows({
   helpId: string;
 }) {
   const menuOf = useIssueMenu();
-  const entries = dnd.entries(g.id);
+  const entries = dnd.entries(g.id).filter((e) => !folded || (e.kind === "card" && e.state === "picked"));
+  if (folded && entries.length === 0) return <ul className="issue-list issue-list--folded" data-drop={g.id} />;
   const shown = entries.some((e) => e.kind === "spot" || e.state !== "hidden");
   return (
     <ul className="issue-list" data-drop={g.id}>
@@ -1323,8 +1416,8 @@ function IssueRows({
 }
 
 /**
- * A task in the list, from the card's parts: wide, its number, its title whole, its facts at its end (up to 40% of the
- * row, ending on one right edge) and who has it; narrow, stacked as a card, the number among the facts.
+ * A task in the list, from the card's parts: wide, a table's row (its number, its title on two lines at most, each
+ * fact in its column, who has it); narrow, stacked as a card, the number among the facts.
  */
 function IssueRow({
   issue: i,
@@ -1366,7 +1459,9 @@ function IssueRow({
       <span className="issue-list__num tabular" aria-hidden="true">
         #{i.number}
       </span>
-      <span className="issue-list__title">{codeAndBold(i.title)}</span>
+      <span className="issue-list__title" title={i.title}>
+        {codeAndBold(i.title)}
+      </span>
       <CardFacts issue={i} fields={fields} />
       <CardWho issue={i} state={state} assignee={fields.assignee} />
       <span className="issue-sr">{t(`issues.status.${i.status}`)}</span>

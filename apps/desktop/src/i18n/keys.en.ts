@@ -424,7 +424,8 @@ export const desktopEn = {
     /** It restarted by itself 3 times in a few minutes (a notification). */
     restartedBanner: "agentes.chat restarted 3 times on this {{device}}",
     restartedBody: "It comes back by itself. If it keeps happening, open the app to see why.",
-    version: "Version {{version}}, updated with the app",
+    installedVersion: "Installed package version",
+    internalVersion: "Internal server version",
     updatesWithApp: "Updating the app updates agentes.chat on this {{device}} too.",
     updateBack: "The update didn't start. agentes.chat is back on {{version}}.",
     updateBackBody: "The new version is tried again with the app's next update.",
@@ -651,6 +652,22 @@ export const desktopEn = {
       menuBarTitle: "Show in the menu bar",
       notchTitle: "Show the agents in the notch",
       notchDesc: "On MacBooks with a notch: who is working shows around the camera.",
+      /** Linux: draw the window without the graphics card. */
+      compatTitle: "Compatibility mode",
+      compatDesc:
+        "Draws the window without the graphics card. It's slower but works on any computer. Use it if the window goes black, gets cut off or freezes.",
+      /** Toast after changing Compatibility mode: the drawing mode changes only when the app starts. */
+      compatReopen: "Takes effect when the app reopens.",
+      reopenNow: "Reopen now",
+      /** Toast once, after an opening with the graphics card never painted and the app fell back. */
+      compatFellBack: "The window didn't open with the graphics card, so it opened in compatibility mode.",
+      compatTryCard: "Try the graphics card again",
+      /** Behind the ⓘ while WEBKIT_DISABLE_DMABUF_RENDERER was set when the app started: the switch can't change it. */
+      compatOwn:
+        "WEBKIT_DISABLE_DMABUF_RENDERER decides this now. To choose here, quit the app and open it without that variable.",
+      /** Asked before Reopen now while agents work on this computer or agentes.chat runs here. */
+      reopenTitle: "Reopen agentes.chat?",
+      reopenBody: "Agents can't use this computer until the app opens again. What is already running finishes first.",
     },
     thisMac: {
       agents: "Agents",
@@ -780,7 +797,7 @@ export const desktopEn = {
       installerNote: "Open the downloaded file: it installs the new version over the old one.",
       keepNote: "Your servers and settings stay.",
       whatsNew: "What's new in {{version}}",
-      /** Linux: how this computer draws the app (system, graphics card, renderer), one line to copy. */
+      /** The app's and the system's versions (on Linux also how it draws the app), one line to copy. */
       systemDetails: "System details",
     },
     activity: {
