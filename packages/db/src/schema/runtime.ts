@@ -1136,6 +1136,11 @@ export const machineTasks = pgTable(
      * slot or is back). Cleared when it is claimed to start.
      */
     startRequest: jsonb().$type<Record<string, unknown>>(),
+    /**
+     * The same start once claimed (`start_request` cleared), until the runner answers it: a server that stops before
+     * it sends the start puts this back in the queue (`checkCutTaskStart`) instead of losing what it was asked.
+     */
+    launchRequest: jsonb().$type<Record<string, unknown>>(),
     /** The conversation was woken for its end (the `machine.task_done` job ran). */
     wokeAt: timestamp({ withTimezone: true }),
     startedAt: timestamp({ withTimezone: true }),

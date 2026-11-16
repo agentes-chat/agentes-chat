@@ -1,0 +1,1 @@
+ALTER TABLE "machine_tasks" ADD COLUMN "launch_request" jsonb;

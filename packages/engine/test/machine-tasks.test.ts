@@ -9,6 +9,8 @@ import {
 } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
 import {
+  CLAIMED_START_MS,
+  claimQueuedTask,
   createAgent,
   createMachineHub,
   drainOutbox,
@@ -949,6 +951,86 @@ describe("background tasks (ADR 0029)", () => {
     const runner = taskRunner(f.machineHub as MachineHub);
     await runner.hello(paired.token, { tasks: [] });
     expect(await taskRow(queued.id)).toMatchObject({ status: "queued", endedAt: null });
+  });
+
+  test("a server that stops between taking a task from our queue and starting it sends the same start later (#579)", async () => {
+    f = await setup({ machines: true, reply: () => ({ chunks: ["ok"] }) });
+    const paired = await pairedMachine();
+    const runner = taskRunner(f.machineHub as MachineHub, { journal: () => [] });
+    await runner.hello(paired.token, { tasks: [] });
+    const queue = (title: string) =>
+      queueMachineTask(
+        { db: f.db, pubsub: f.pubsub },
+        {
+          orgId: f.org.id,
+          agent: { id: f.agent.id, handle: "dev" },
+          machineId: paired.machineId,
+          protocol: 4,
+          machineName: "MacBook",
+          channelId: f.general.id,
+          threadRootId: null,
+          runId: null,
+          requestedByUserId: f.owner.id,
+          title,
+          executor: "shell",
+          command: `make ${title}`,
+          maxSeconds: 900,
+        },
+      );
+    const checks = () =>
+      f.db
+        .select()
+        .from(schema.outbox)
+        .where(and(eq(schema.outbox.kind, "machine.task_start_check"), eq(schema.outbox.status, "pending")));
+    /** The grace is over: the claim's start can't still be underway, and its check runs now. */
+    const graceOver = async (taskId: string) => {
+      const old = new Date(Date.now() - CLAIMED_START_MS - 1000);
+      await f.db.update(schema.machineTasks).set({ updatedAt: old }).where(eq(schema.machineTasks.id, taskId));
+      await f.db
+        .update(schema.outbox)
+        .set({ nextAttemptAt: new Date() })
+        .where(and(eq(schema.outbox.kind, "machine.task_start_check"), eq(schema.outbox.status, "pending")));
+      await drainOutbox(f.db, f.handlers);
+    };
+
+    // Taken from the queue, and the server stops before `task.start` goes: what it was asked stays on the row, with
+    // a check due once its start can't still be underway.
+    const build = await queue("build");
+    const claimed = await claimQueuedTask(f.db, paired.machineId);
+    expect(claimed?.row.id).toBe(build.id);
+    expect(await taskRow(build.id)).toMatchObject({
+      status: "queued",
+      startRequest: null,
+      launchRequest: { command: "make build", maxSeconds: 900 },
+    });
+    const [check] = await checks();
+    // Past the longest a `task.start` may wait for its answer.
+    expect((check?.nextAttemptAt.getTime() ?? 0) - Date.now()).toBeGreaterThan(CLAIMED_START_MS - 5000);
+    // A hello within that time decides nothing.
+    await runner.hello(paired.token, { tasks: [] });
+    expect(await taskRow(build.id)).toMatchObject({ status: "queued", endedAt: null });
+    expect(runner.started).toEqual([]);
+
+    // Past it, its computer's journal doesn't have it: back in the queue, started with every option it had.
+    await graceOver(build.id);
+    expect(runner.started).toHaveLength(1);
+    expect(runner.started[0]).toMatchObject({ taskId: build.id, command: "make build", maxSeconds: 900 });
+    expect(await taskRow(build.id)).toMatchObject({ status: "running", startRequest: null, launchRequest: null });
+    // Delivered again (the new claim's own check, a hello): nothing starts twice.
+    await graceOver(build.id);
+    await runner.hello(paired.token, { tasks: [] });
+    expect(runner.started).toHaveLength(1);
+
+    // Canceled meanwhile: it stays canceled.
+    const lint = await queue("lint");
+    await claimQueuedTask(f.db, paired.machineId);
+    await f.db
+      .update(schema.machineTasks)
+      .set({ status: "canceled", endedAt: new Date(), canceledBy: f.owner.id })
+      .where(eq(schema.machineTasks.id, lint.id));
+    await graceOver(lint.id);
+    expect(runner.started).toHaveLength(1);
+    expect(await taskRow(lint.id)).toMatchObject({ status: "canceled", startRequest: null });
   });
 
   test("start_task cut by a drop tells the agent it may have started and not to start it again", async () => {

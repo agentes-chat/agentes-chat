@@ -97,6 +97,20 @@ export const liveTaskSqlAs = (alias: string) =>
 export const isCutStart = (t: Pick<MachineTaskRow, "status" | "startedAt" | "endedAt">) =>
   t.status === "interrupted" && !t.startedAt && !t.endedAt;
 
+/**
+ * Taken from our queue to start (`claimQueuedTask`) and not answered yet: its start may still be on its way, or the
+ * server that took it stopped before sending it (#579). `launch_request` keeps what it was asked meanwhile.
+ */
+export const isClaimedStart = (
+  t: Pick<MachineTaskRow, "status" | "startRequest" | "launchRequest" | "startedAt" | "endedAt">,
+) => t.status === "queued" && !t.startRequest && Boolean(t.launchRequest) && !t.startedAt && !t.endedAt;
+
+/**
+ * How long a claimed start may still be underway: `task.start` waits up to 2 minutes (`requestTimeoutMs`, 10 s more
+ * across replicas), then fails the row, after the sign-in and the mission's token. Its check comes after that.
+ */
+export const CLAIMED_START_MS = 2 * TASK_START_GRACE_MS;
+
 /** `checkCutTaskStart` for this task in `inMs`. */
 const enqueueStartCheck = (db: Executor, row: Pick<MachineTaskRow, "id" | "orgId">, inMs: number) =>
   enqueue(db, {
@@ -496,6 +510,7 @@ export async function launchTask(
       .update(machineTasks)
       .set({
         status: "running",
+        launchRequest: null,
         command: String(started.command ?? row.command).slice(0, TASK_TEXT_LIMITS.command),
         cwd: started.cwd ?? null,
         // A runner answers the branch it made; none when the folder had no git (the item got its own subfolder).
@@ -519,7 +534,7 @@ export async function launchTask(
     if (error instanceof MachineDroppedError) {
       const [cut] = await deps.db
         .update(machineTasks)
-        .set({ status: "interrupted", updatedAt: new Date() })
+        .set({ status: "interrupted", launchRequest: null, updatedAt: new Date() })
         .where(and(eq(machineTasks.id, row.id), eq(machineTasks.status, "queued"), isNull(machineTasks.endedAt)))
         .returning();
       if (cut) await enqueueStartCheck(deps.db, cut, TASK_START_GRACE_MS);
@@ -530,7 +545,7 @@ export async function launchTask(
     if (options.requeue && isWaitError(error)) {
       const [back] = await deps.db
         .update(machineTasks)
-        .set({ startRequest: input as unknown as Record<string, unknown>, updatedAt: new Date() })
+        .set({ startRequest: input as unknown as Record<string, unknown>, launchRequest: null, updatedAt: new Date() })
         .where(and(eq(machineTasks.id, row.id), eq(machineTasks.status, "queued"), isNull(machineTasks.endedAt)))
         .returning();
       if (back) {
@@ -542,6 +557,7 @@ export async function launchTask(
       .update(machineTasks)
       .set({
         status: "failed",
+        launchRequest: null,
         endedAt: new Date(),
         lastLine: (error instanceof Error ? error.message : String(error)).slice(0, TASK_LIMITS.line),
         updatedAt: new Date(),
@@ -579,7 +595,10 @@ export async function queueMachineTask(deps: TaskDeps, input: StartTaskInput) {
  * was queued still runs (that turn may be writing in the folder: the item
  * starts when it ends, `afterMissionRunEnded`; a turn that began after sees
  * the item and only reads). One claim at a time per machine (an advisory
- * lock), so two write items of a mission never start together. Null:
+ * lock), so two write items of a mission never start together. What it
+ * was asked stays on the row (`launch_request`) with a check due once its
+ * start can't still be underway, in the same transaction: a server that
+ * stops before sending it puts it back in the queue then (#579). Null:
  * nothing may start.
  */
 export async function claimQueuedTask(
@@ -610,10 +629,12 @@ export async function claimQueuedTask(
     if (!next?.startRequest) return null;
     const [row] = await tx
       .update(machineTasks)
-      .set({ startRequest: null, updatedAt: new Date() })
+      .set({ startRequest: null, launchRequest: next.startRequest, updatedAt: new Date() })
       .where(and(eq(machineTasks.id, next.id), sql`${machineTasks.startRequest} is not null`))
       .returning();
-    return row ? { row, start: next.startRequest as unknown as QueuedTaskStart } : null;
+    if (!row) return null;
+    await enqueueStartCheck(tx, row, CLAIMED_START_MS);
+    return { row, start: next.startRequest as unknown as QueuedTaskStart };
   });
 }
 
@@ -793,6 +814,7 @@ export async function applyTaskDone(
       .update(machineTasks)
       .set({
         status: statusOfDone(frame),
+        launchRequest: null,
         exitCode: frame.exitCode,
         signal: frame.signal ?? null,
         seconds: frame.seconds,
@@ -873,6 +895,7 @@ export async function settleInterruptedTask(
     .update(machineTasks)
     .set({
       status: "interrupted",
+      launchRequest: null,
       ...(frame ? { seconds: frame.seconds, ...(frame.lastLine ? { lastLine: frame.lastLine } : {}) } : {}),
       ...(frame?.files ? { files: frame.files } : {}),
       ...(frame?.result ? { result: frame.result.slice(0, TASK_LIMITS.result) } : {}),
@@ -1228,6 +1251,11 @@ export async function reconcileMachineTasks(
     if (there) continue;
     // Waiting in our queue (ADR 0044): the runner never had it.
     if (row.status === "queued" && row.startRequest) continue;
+    // Taken from our queue: its own check (due since the claim) asks the journal and puts it back if it never started.
+    if (isClaimedStart(row)) {
+      if (Date.now() - row.updatedAt.getTime() >= CLAIMED_START_MS) await enqueueStartCheck(deps.db, row, 0);
+      continue;
+    }
     // Being started right now (its `task.start` may still be on the way). One from our queue began when it was
     // taken from there, not when it was queued.
     if (row.status === "queued" && Date.now() - row.updatedAt.getTime() < TASK_START_GRACE_MS) continue;
@@ -1242,6 +1270,7 @@ async function markRunning(deps: TaskDeps, row: MachineTaskRow, there: RunnerTas
     .update(machineTasks)
     .set({
       status: "running",
+      launchRequest: null,
       ...(row.startedAt || Number.isNaN(at.getTime()) ? {} : { startedAt: at }),
       lastEventAt: new Date(),
       updatedAt: new Date(),
@@ -1256,7 +1285,8 @@ async function markRunning(deps: TaskDeps, row: MachineTaskRow, there: RunnerTas
  * on the computer says (`task.status`, answered by the process that runs the agent's tasks there): running
  * there is running here; ended there, its `task.done` is on its way; not there, it never started, and it is
  * settled like a task that went away (Claude Code starts with what it was asked, others wake the agent). Its
- * computer away: its next hello asks for this check again.
+ * computer away: its next hello asks for this check again. The same check follows every start taken from our queue
+ * (`isClaimedStart`): not there, it goes back in the queue with what it was asked (`requeueClaimedStart`).
  */
 export async function checkCutTaskStart(
   deps: TaskDeps & {
@@ -1267,7 +1297,11 @@ export async function checkCutTaskStart(
   taskId: string,
 ) {
   const row = await getTask(deps.db, taskId);
-  if (!row || !isCutStart(row)) return;
+  if (!row) return;
+  const claimed = isClaimedStart(row);
+  if (!claimed && !isCutStart(row)) return;
+  // Taken again since (put back, then claimed anew): its start may still be underway; the new claim's check follows.
+  if (claimed && Date.now() - row.updatedAt.getTime() < CLAIMED_START_MS) return;
   const [agent] = await deps.db
     .select({ handle: schema.agents.handle })
     .from(schema.agents)
@@ -1287,7 +1321,36 @@ export async function checkCutTaskStart(
   const there = reply.tasks.find((t) => t.taskId === row.id);
   if (there?.status === "running") return markRunning(deps, row, there);
   if (there) return;
+  if (claimed) return requeueClaimedStart(deps, row);
   await settleInterruptedTask(deps, row);
+}
+
+/**
+ * A start taken from our queue that never reached its computer (the server stopped between the claim and sending
+ * it): back in the queue with what it was asked, and the queue walked. Only while still claimed: one started, ended
+ * or canceled since is left as it is, and a second delivery finds nothing to do.
+ */
+async function requeueClaimedStart(
+  deps: TaskDeps & { startQueued?: (machineId: string) => Promise<unknown> },
+  row: MachineTaskRow,
+) {
+  const [back] = await deps.db
+    .update(machineTasks)
+    .set({ startRequest: row.launchRequest, launchRequest: null, updatedAt: new Date() })
+    .where(
+      and(
+        eq(machineTasks.id, row.id),
+        eq(machineTasks.status, "queued"),
+        isNull(machineTasks.startRequest),
+        isNull(machineTasks.endedAt),
+        isNull(machineTasks.canceledBy),
+        sql`${machineTasks.launchRequest} is not null`,
+      ),
+    )
+    .returning();
+  if (!back) return;
+  await publishTaskEvent(deps.pubsub, back);
+  await deps.startQueued?.(back.machineId);
 }
 
 /**
