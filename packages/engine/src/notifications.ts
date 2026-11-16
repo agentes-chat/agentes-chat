@@ -495,13 +495,8 @@ const MERGING: ReadonlySet<NotificationKind> = new Set([
   "catch_up_closed",
   // The day's decisions the right hand made for the person, one row while unread.
   "right_hand_decided",
-<<<<<<< HEAD
-=======
-  // A key's effort check: a retry or a check again says the latest state on the same row.
-  "credential_efforts",
   // The decision model's install: a retry or a switch says the latest state on the same row.
   "decision_model",
->>>>>>> 09b9641561 (feat: an optional decision model for the installation (ADR 0188))
   // One per person, read or not, until nothing waits on them.
   "proposal_waiting",
 ]);
