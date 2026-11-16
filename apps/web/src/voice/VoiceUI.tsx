@@ -1,4 +1,4 @@
-import { cx } from "@agenteschat/ui";
+import { cx, Icon } from "@agenteschat/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { VideoTrack } from "livekit-client";
@@ -242,7 +242,7 @@ export function VoiceDock({ orgId }: { orgId: string }) {
       <div className="voice-dock voice-dock--error" role="alert">
         <span>{t(`voiceRooms.errors.${call.error}`)}</span>
         <button type="button" className="voice-dock__x" aria-label={t("voiceRooms.dismiss")} onClick={clearVoiceError}>
-          ×
+          <Icon name="close" size={14} />
         </button>
       </div>
     );

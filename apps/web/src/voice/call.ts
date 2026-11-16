@@ -279,6 +279,13 @@ function detachAudio(track: RemoteTrack, key: string, identity: string) {
   unwatchSpeaking(identity);
 }
 
+/** The server said no to a join: voice is off here, or this person may not join; the reason is ours, not its text. */
+class JoinRefused extends Error {
+  constructor(readonly reason: "off" | "forbidden" | "failed") {
+    super(reason);
+  }
+}
+
 async function voiceToken(orgId: string, channelId: string) {
   const res = await fetch(`/api/app/organizations/${orgId}/channels/${channelId}/voice-token`, {
     method: "POST",
@@ -288,7 +295,7 @@ async function voiceToken(orgId: string, channelId: string) {
   });
   if (!res.ok) {
     const code = ((await res.json().catch(() => null)) as { error?: { code?: string } } | null)?.error?.code;
-    throw new Error(code === "voice.off" ? "off" : res.status === 403 ? "forbidden" : "failed");
+    throw new JoinRefused(code === "voice.off" ? "off" : res.status === 403 ? "forbidden" : "failed");
   }
   return (await res.json()) as { url: string; token: string };
 }
@@ -403,8 +410,7 @@ export async function joinVoice(orgId: string, channelId: string, channelName: s
     listenPtt();
     refresh();
   } catch (e) {
-    const code: VoiceError =
-      e instanceof Error && (e.message === "off" || e.message === "forbidden") ? e.message : "failed";
+    const code: VoiceError = e instanceof JoinRefused ? e.reason : "failed";
     const r = room;
     room = null;
     await r?.disconnect().catch(() => {});
