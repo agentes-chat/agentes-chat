@@ -8,7 +8,7 @@ import { messageRoot, runChain, steeredByOthers } from "./authority";
 import { autoLine, autoModelFor, autoProvider, orgAutoModels } from "./auto-model";
 import { isComputerBrain } from "./brains/types";
 import { decideProposal, type SettingsProposalCard, settingsCardOf } from "./context/proposals";
-import { modelInfoFor } from "./credentials";
+import { modelInfoFor, openRouterSelection } from "./credentials";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent } from "./events";
 import type { ModelGateway } from "./gateway";
@@ -427,6 +427,7 @@ async function decideCall(
         "medium",
         (await orgAutoModels(deps.db, rightHand.orgId))[line.provider],
         line.endpoint,
+        line.provider === "openrouter" ? await openRouterSelection(deps.db, rightHand.orgId).catch(() => null) : null,
       )
     : rightHand.model;
   if (!model) return { decision: "pass" as const, reason: "" };

@@ -8,7 +8,7 @@ import {
   signInOf,
 } from "@agenteschat/client/lib/ai-accounts";
 import { brainLine, thinksWith } from "@agenteschat/client/lib/brain";
-import { advancedContents, viewSpeedFits } from "@agenteschat/client/lib/brain-advanced";
+import { advancedContents, keyEffortScale, viewSpeedFits } from "@agenteschat/client/lib/brain-advanced";
 import { effortFamily } from "@agenteschat/client/lib/brain-picker";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -386,6 +386,7 @@ function EffortDock({
   shown: boolean;
   onHeight: (h: number) => void;
 }) {
+  const { t } = useTranslation();
   const { colors, shadows } = useTheme();
   const reduced = useReducedMotion();
   const insets = useSafeAreaInsets();
@@ -393,6 +394,10 @@ function EffortDock({
   const { orgId } = useOrg();
   const view = useAgentBrain(orgId, agentId, true, false, scope).data;
   const family = view ? effortFamily(view, brainPlan(view)) : undefined;
+  // An API model's ramp is the whole ladder, the levels it doesn't take greyed out (ADR 0186); null: no ramp.
+  const models = useModels().data?.models;
+  const apiBrain = view?.brain === "model";
+  const keyScale = apiBrain ? keyEffortScale(models?.find((m) => m.id === view?.effectiveModel)) : undefined;
   const effort = useEffortChoice(
     agentId,
     view ? advancedOf(view).effort : undefined,
@@ -419,13 +424,19 @@ function EffortDock({
       style={[styles.dock, { bottom: insets.bottom + 8, boxShadow: shadows.e2 }, slid]}
     >
       <Glass liquid intensity={70} style={[styles.dockGlass, { borderColor: colors.line2 }]}>
-        <EffortRamp
-          value={effort.value}
-          onChange={effort.change}
-          color={agentLook(dir.agentById.get(agentId)).color}
-          levels={family?.levels}
-          disabled={view?.canEdit !== true}
-        />
+        {keyScale === null ? (
+          <Text variant="footnote" tone="muted" style={styles.untested}>
+            {t("agentPage.work.brain.effortsUntested")}
+          </Text>
+        ) : (
+          <EffortRamp
+            value={effort.value}
+            onChange={effort.change}
+            color={agentLook(dir.agentById.get(agentId)).color}
+            levels={family?.levels ?? keyScale}
+            disabled={view?.canEdit !== true}
+          />
+        )}
       </Glass>
     </Animated.View>
   );
@@ -505,6 +516,7 @@ export function AgentModelScreen({ agentId, scope }: { agentId: string; scope?: 
 }
 
 const styles = StyleSheet.create({
+  untested: { padding: 12 },
   screen: { flex: 1 },
   in: { paddingHorizontal: 16, paddingTop: 8 },
   hero: { alignItems: "center", gap: 10, paddingTop: 6, paddingBottom: 4 },

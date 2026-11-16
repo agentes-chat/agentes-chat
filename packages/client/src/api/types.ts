@@ -738,6 +738,8 @@ export interface Credential {
   workspaceIdHint?: string | null;
   /** `custom` (ADR 0146): the endpoint's address, API and models. */
   endpoint?: { style: EndpointStyle; baseURL: string; models: EndpointModel[] };
+  /** OpenRouter (ADR 0186): the models this workspace chose to use with the key; absent: all of them. */
+  openrouter?: { models: string[] };
   /** The agents that think with it, in a list of keys: what removing it would change. */
   usedBy?: { id: string; name: string }[];
   /** On a key just saved: `ok` a real call passed, `unchecked` the provider didn't say. */
@@ -772,6 +774,9 @@ export interface EndpointModel {
   /** Absent: unpriced (its calls cost 0, so no budget limits them). */
   prices?: EndpointPrices;
   check?: EndpointCheckResult;
+  /** The effort levels its check found it takes (ADR 0186); absent: never checked. */
+  efforts?: string[];
+  effortsAt?: string;
 }
 
 export interface EndpointCheck {
@@ -1248,6 +1253,20 @@ export interface Model {
   endpoint?: { credentialId: string; name: string };
   /** No prices known: its calls cost 0, so a budget can't count money for it. */
   unpriced?: boolean;
+  /** The effort levels it takes, when known (ADR 0186). */
+  efforts?: string[];
+  /** It takes a reasoning effort at all (`false`: no effort control on its ramp). */
+  reasoning?: boolean;
+}
+
+/** A model an OpenRouter key can be limited to (ADR 0186): its list, the good picks first. */
+export interface OpenRouterChoice {
+  id: string;
+  label: string;
+  pick: boolean;
+  tier?: ModelTier;
+  efforts?: string[];
+  contextWindow?: number;
 }
 
 export interface AgentUsage {
@@ -6606,6 +6625,8 @@ export type NotificationKind =
   /** A routine's run waits for its agent's plan to reset (once per outage). Opens it in Rotinas. */
   | "routine_waiting_plan"
   | "plan_reset_unknown"
+  /** A workspace endpoint's effort check finished (ADR 0186), from the right hand. */
+  | "credential_efforts"
   /** ADR 0136: an agent back from its plan or budget skipped catch-ups that looked handled (its owner; `count`). */
   | "catch_up_closed"
   /** ADR 0136: who asked, when their catch-up was skipped crediting someone else (`latest.title` who, `latest.reason`). */

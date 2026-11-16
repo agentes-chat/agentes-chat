@@ -2661,6 +2661,11 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         ],
       }),
       credentials: async () => [...state.credentials],
+      openRouterModels: async () => ({ models: [] }),
+      setOpenRouterModels: async () => {
+        throw new Error("not in this fake");
+      },
+      testEndpointEfforts: async () => {},
       addCredential: async (orgId, input) => {
         log("agents.addCredential", orgId, { ...input, apiKey: "[redacted]" });
         if (state.keyRefusal)

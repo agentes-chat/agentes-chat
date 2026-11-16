@@ -1,5 +1,5 @@
 import type { Credential, EndpointCheck, EndpointStyle } from "@agenteschat/client";
-import { useAddCredential, useEndpointModels, useSetEndpointModels } from "@agenteschat/client";
+import { useAddCredential, useEndpointModels, useSetEndpointModels, useTestEndpointEfforts } from "@agenteschat/client";
 import {
   CHECK_VIEW,
   CUSTOM_PROVIDER,
@@ -24,6 +24,7 @@ import {
   AffixInput,
   Button,
   Checkbox,
+  Dialog,
   DialogBody,
   DialogFooter,
   Field,
@@ -102,12 +103,16 @@ export function EndpointForm({
       { style: draft.style, baseURL: draft.baseURL.trim(), apiKey: draft.apiKey.trim() || undefined },
       { onSuccess: (r) => setDraft((d) => ({ ...withListedModels(d, r.models), baseURL: r.baseURL })) },
     );
-  const save = () => {
+  const effortCheck = useTestEndpointEfforts(orgId);
+  const [askEffort, setAskEffort] = useState(false);
+  const [checkingEfforts, setCheckingEfforts] = useState(false);
+  const saveNow = (syncEfforts: boolean) => {
     const models = endpointModelsOf(draft);
     if (!models) return;
+    if (syncEfforts) setCheckingEfforts(true);
     if (editing && credential) {
       change.mutate(
-        { credentialId: credential.id, models },
+        { credentialId: credential.id, models, ...(syncEfforts ? { syncEfforts } : {}) },
         {
           onSuccess: (r) =>
             setSaved({
@@ -117,6 +122,7 @@ export function EndpointForm({
               },
               checks: r.checks,
             }),
+          onError: () => setCheckingEfforts(false),
         },
       );
       return;
@@ -127,9 +133,22 @@ export function EndpointForm({
         label: draft.name.trim(),
         apiKey: draft.apiKey.trim(),
         endpoint: { style: draft.style, baseURL: draft.baseURL.trim(), models },
+        ...(syncEfforts ? { syncEfforts } : {}),
       },
-      { onSuccess: ({ checks, ...cred }) => setSaved({ cred, checks: checks ?? [] }) },
+      {
+        onSuccess: ({ checks, ...cred }) => setSaved({ cred, checks: checks ?? [] }),
+        onError: () => setCheckingEfforts(false),
+      },
     );
+  };
+  const save = () => {
+    if (endpointModelsOf(draft) === null) return;
+    // Models whose levels were never checked: ask whether to check them in the background (ADR 0186).
+    if (draft.models.some((m) => m.on && !m.efforts)) {
+      setAskEffort(true);
+      return;
+    }
+    saveNow(false);
   };
   const saving = add.isPending || change.isPending;
   const ready = editing ? endpointModelsOf(draft) !== null : endpointReady(draft);
@@ -161,6 +180,11 @@ export function EndpointForm({
               );
             })}
           </ul>
+          {checkingEfforts && (
+            <SettingNote icon="info" live>
+              {t("endpoint.testing")}
+            </SettingNote>
+          )}
         </Body>
         <Foot>
           <Button
@@ -311,7 +335,21 @@ export function EndpointForm({
                 return (
                   <div key={m.id} className="endpoint-model">
                     <Checkbox id={`${ids}-m-${m.id}`} checked={m.on} onCheckedChange={(on) => setModel(m.id, { on })} />
-                    <label htmlFor={`${ids}-m-${m.id}`}>{m.id}</label>
+                    <label htmlFor={`${ids}-m-${m.id}`}>
+                      {m.id}
+                      {m.efforts && m.efforts.length > 0 && (
+                        <span className="ac-field__example">
+                          {" · "}
+                          {m.efforts
+                            .map((e) =>
+                              e === "low" || e === "medium" || e === "high"
+                                ? t(`agentPage.work.brain.effortsLower.${e}`)
+                                : e,
+                            )
+                            .join(" · ")}
+                        </span>
+                      )}
+                    </label>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -364,11 +402,53 @@ export function EndpointForm({
               {t("common.cancel")}
             </Button>
           )}
+          {editing && (
+            <Button
+              variant="link"
+              loading={effortCheck.isPending}
+              disabled={effortCheck.isPending}
+              onClick={() => credential && effortCheck.mutate(credential.id)}
+            >
+              {t("connectAi.key.testModels")}
+            </Button>
+          )}
           <Button variant="primary" loading={saving} disabled={!ready || saving} onClick={save}>
             {t(editing ? "endpoint.saveModels" : "endpoint.save")}
           </Button>
         </Foot>
       )}
+      <Dialog
+        open={askEffort}
+        onOpenChange={setAskEffort}
+        title={t("agentPage.work.brain.effort")}
+        closeLabel={t("common.close")}
+        width={460}
+      >
+        <DialogBody>
+          <p className="small muted" style={{ margin: 0 }}>
+            {t("endpoint.effortsAsk")}
+          </p>
+        </DialogBody>
+        <DialogFooter>
+          <Button
+            onClick={() => {
+              setAskEffort(false);
+              saveNow(false);
+            }}
+          >
+            {t("endpoint.effortsListOnly")}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setAskEffort(false);
+              saveNow(true);
+            }}
+          >
+            {t("connectAi.key.testModels")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </>
   );
 }

@@ -5214,6 +5214,8 @@
       "planModelDropped": "{{model}} è uscito da {{plan}}. <b>{{name}}</b> usa {{runs}} finché non scegli un altro modello.",
       "routineWaitingPlan": "<b>{{name}}</b> aspetta che il suo piano si azzeri per eseguire una routine",
       "planResetUnknown": "{{plan}} non ha detto quando si azzera il limite. Il lavoro di <b>{{name}}</b> è ancora in attesa.",
+      "credentialEfforts": "<b>{{name}}</b> ha finito di verificare i livelli di sforzo di {{label}}",
+      "credentialEffortsFailed": "<b>{{name}}</b> non è riuscito a verificare i livelli di sforzo di {{label}}",
       "catchUpClosed_one": "<b>{{name}}</b> è tornato e ha saltato {{count}} conversazione che non aveva bisogno di risposta",
       "catchUpClosed_many": "<b>{{name}}</b> è tornato e ha saltato {{count}} conversazioni che non avevano bisogno di risposta",
       "catchUpClosed_other": "<b>{{name}}</b> è tornato e ha saltato {{count}} conversazioni che non avevano bisogno di risposta",
@@ -5701,6 +5703,7 @@
           "xhigh": "Molto alto",
           "max": "Massimo"
         },
+        "effortsUntested": "I livelli di sforzo di questo modello non sono stati verificati. Provali nei modelli della sua chiave.",
         "effortsLower": {
           "auto": "automatico",
           "low": "basso",
@@ -10087,6 +10090,8 @@
     "save": "Salva e prova",
     "saveModels": "Salva e prova di nuovo",
     "testing": "Prova di ogni modello…",
+    "effortsAsk": "Questo provider potrebbe non accettare tutti i livelli di sforzo. Possiamo verificare ogni modello scelto in background, con una chiamata breve per livello, e mostrare solo i livelli accettati. L'assistente ti avvisa quando finisce.",
+    "effortsListOnly": "Elenca solo i modelli",
     "results": "Prova di ogni modello",
     "check": {
       "ok": "Funziona, con gli strumenti",

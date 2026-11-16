@@ -5054,6 +5054,8 @@
       "planModelDropped": "{{model}} ist nicht mehr bei {{plan}}. <b>{{name}}</b> nutzt {{runs}}, bis du ein anderes Modell wählst.",
       "routineWaitingPlan": "<b>{{name}}</b> wartet, bis sein Abo zurückgesetzt wird, um eine Routine auszuführen",
       "planResetUnknown": "{{plan}} hat nicht gesagt, wann das Limit zurückgesetzt wird. Die Arbeit von <b>{{name}}</b> wartet noch.",
+      "credentialEfforts": "<b>{{name}}</b> hat die Prüfung der Aufwandsstufen von {{label}} abgeschlossen",
+      "credentialEffortsFailed": "<b>{{name}}</b> konnte die Aufwandsstufen von {{label}} nicht prüfen",
       "catchUpClosed_one": "<b>{{name}}</b> ist zurück und hat {{count}} Unterhaltung übersprungen, die keine Antwort brauchte",
       "catchUpClosed_other": "<b>{{name}}</b> ist zurück und hat {{count}} Unterhaltungen übersprungen, die keine Antwort brauchten",
       "catchUpClosedAsker": "<b>{{name}}</b> hat in {{label}} nicht geantwortet: {{who}} hat sich schon darum gekümmert",
@@ -5508,6 +5510,7 @@
           "xhigh": "Sehr hoch",
           "max": "Maximal"
         },
+        "effortsUntested": "Die Aufwandsstufen dieses Modells wurden nicht geprüft. Prüfe sie bei den Modellen seines Schlüssels.",
         "effortsLower": {
           "auto": "automatisch",
           "low": "niedrig",
@@ -9706,6 +9709,8 @@
     "save": "Speichern und testen",
     "saveModels": "Speichern und erneut testen",
     "testing": "Jedes Modell wird getestet…",
+    "effortsAsk": "Dieser Anbieter nimmt vielleicht nicht jede Aufwandsstufe an. Wir können jedes gewählte Modell im Hintergrund prüfen, mit einem kurzen Aufruf pro Stufe, und nur die angenommenen Stufen zeigen. Der Assistent meldet sich, wenn es fertig ist.",
+    "effortsListOnly": "Nur die Modelle auflisten",
     "results": "Test jedes Modells",
     "check": {
       "ok": "Funktioniert, mit Werkzeugen",

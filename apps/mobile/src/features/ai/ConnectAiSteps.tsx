@@ -11,6 +11,7 @@ import {
   useCredentials,
   useMachines,
   useModels,
+  useOpenRouterModels,
 } from "@agenteschat/client";
 import {
   accountTitle,
@@ -87,6 +88,7 @@ import {
   InfoHint,
   Locked,
   ProviderLogo,
+  SearchField,
   Text,
   useTheme,
   useToast,
@@ -254,7 +256,7 @@ export interface ConnectAiFlowProps {
   /** The key page saves with its own button; without it the caller does (the first run's button). */
   keyButton?: boolean;
   keySaved?: boolean;
-  onSaveKey?: () => void;
+  onSaveKey?: (syncEfforts?: boolean) => void;
   /** An endpoint ("Outro provedor") was saved on the key page, with its models' tests. */
   onEndpointSaved?: (key: Credential) => Promise<void>;
   /** Before saving, whom the key will think for, in place of the usual line. */
@@ -1392,6 +1394,85 @@ function GateWait({
  * The API key's page: whose key (one row that opens the makers; paid per use, straight to its maker), then the web's
  * two numbered steps: create the key on the maker's page, paste it here. Saved by its button.
  */
+/**
+ * The models an OpenRouter key uses (ADR 0186), the web's `OpenRouterModels` on the phone: the list read with the
+ * key checked, the good picks first, a search over it, and the ones chosen. Only those are offered afterwards.
+ */
+function OpenRouterChoices({
+  orgId,
+  apiKey,
+  value,
+  onChange,
+}: {
+  orgId: string;
+  apiKey: string;
+  value: readonly string[];
+  onChange: (models: string[]) => void;
+}) {
+  const { t } = useTranslation();
+  const list = useOpenRouterModels(orgId);
+  const [query, setQuery] = useState("");
+  const seeded = useRef(false);
+  const models = list.data?.models ?? [];
+  const loaded = list.data !== undefined;
+  useEffect(() => {
+    if (!loaded || seeded.current || models.length === 0) return;
+    seeded.current = true;
+    onChange(models.filter((m) => m.pick).map((m) => m.id));
+  }, [loaded, models, onChange]);
+  const words = query.trim().toLocaleLowerCase();
+  const shown = models
+    .filter((m) => !words || m.id.toLocaleLowerCase().includes(words) || m.label.toLocaleLowerCase().includes(words))
+    .slice(0, 120);
+  const chosen = new Set(value);
+  return (
+    <View style={{ gap: 10 }}>
+      {!loaded ? (
+        <Button
+          variant="secondary"
+          wide
+          label={t("endpoint.fetch")}
+          loading={list.isPending}
+          disabled={list.isPending}
+          onPress={() => list.mutate({ ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}) })}
+        />
+      ) : (
+        <>
+          <GroupedHeader>{t("endpoint.choose")}</GroupedHeader>
+          <SearchField
+            value={query}
+            onChangeText={setQuery}
+            placeholder={t("endpoint.search")}
+            accessibilityLabel={t("endpoint.search")}
+            raised
+          />
+          <GroupedList>
+            {shown.map((m) => (
+              <GroupedRow
+                key={m.id}
+                label={m.label}
+                sub={m.id}
+                checked={chosen.has(m.id)}
+                onPress={() => onChange(chosen.has(m.id) ? value.filter((v) => v !== m.id) : [...value, m.id])}
+              />
+            ))}
+          </GroupedList>
+          {shown.length === 0 ? (
+            <Text variant="small" tone="muted">
+              {t("endpoint.noMatch", { query: query.trim() })}
+            </Text>
+          ) : null}
+        </>
+      )}
+      {list.isError ? (
+        <Note icon="x" live>
+          {t("mobile.ai.failed")}
+        </Note>
+      ) : null}
+    </View>
+  );
+}
+
 function KeyPage({
   mayAddKey,
   keyForm: form,
@@ -1407,6 +1488,8 @@ function KeyPage({
   const hold = usePlanHold(orgId, org);
   const [touched, setTouched] = useState(false);
   const [opened, setOpened] = useState(false);
+  // An OpenRouter key asks whether to check its models' levels before saving (ADR 0186).
+  const [askEffort, setAskEffort] = useState(false);
   const { custom } = form;
   const [endpointSaved, setEndpointSaved] = useState(false);
   const maker = providerOf(form.provider);
@@ -1499,7 +1582,9 @@ function KeyPage({
                   secret
                   onSubmit={() => {
                     setTouched(true);
-                    if (valid && keyButton) onSaveKey?.();
+                    if (!valid || !keyButton || (form.provider === "openrouter" && form.models.length === 0)) return;
+                    if (form.provider === "openrouter") setAskEffort(true);
+                    else onSaveKey?.();
                   }}
                 />
               </Locked>
@@ -1530,6 +1615,9 @@ function KeyPage({
               ) : null}
             </Step>
           </StepsCard>
+          {form.provider === "openrouter" ? (
+            <OpenRouterChoices orgId={orgId} apiKey={form.key} value={form.models} onChange={form.setModels} />
+          ) : null}
           {form.refused ? (
             <>
               <Note icon="x" live>
@@ -1544,15 +1632,43 @@ function KeyPage({
           ) : (
             <Note icon="info">{keyForLine ?? t("connectAi.key.forAll")}</Note>
           )}
-          {keyButton ? (
+          {askEffort ? (
+            <View style={{ gap: 10 }}>
+              <Note icon="info">{t("endpoint.effortsAsk")}</Note>
+              <Button
+                variant="primary"
+                wide
+                label={t("connectAi.key.testModels")}
+                loading={form.saving}
+                disabled={form.saving || form.models.length === 0}
+                onPress={() => {
+                  setAskEffort(false);
+                  onSaveKey?.(true);
+                }}
+              />
+              <Button
+                variant="secondary"
+                wide
+                label={t("endpoint.effortsListOnly")}
+                disabled={form.saving}
+                onPress={() => {
+                  setAskEffort(false);
+                  onSaveKey?.(false);
+                }}
+              />
+            </View>
+          ) : keyButton ? (
             <View style={styles.save}>
               <Button
                 variant="primary"
                 wide
                 label={form.saving ? t("mobile.ai.saving") : t("mobile.ai.save")}
                 loading={form.saving}
-                disabled={!valid}
-                onPress={() => onSaveKey?.()}
+                disabled={!valid || (form.provider === "openrouter" && form.models.length === 0)}
+                onPress={() => {
+                  if (form.provider === "openrouter") setAskEffort(true);
+                  else onSaveKey?.();
+                }}
               />
             </View>
           ) : null}

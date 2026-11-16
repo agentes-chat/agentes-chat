@@ -231,7 +231,13 @@ export function createGeminiProvider(
 
 function toBody(request: ModelRequest) {
   const least = MODEL_CATALOG[request.model]?.leastThinking === "minimal" ? "minimal" : "low";
-  const level = request.effort === "none" ? least : request.effort;
+  // Gemini's thinking levels stop at high: xhigh and max ask for the most it has.
+  const level =
+    request.effort === "none"
+      ? least
+      : request.effort === "xhigh" || request.effort === "max"
+        ? "high"
+        : request.effort;
   const system = systemText(request.system);
   return {
     model: request.model,

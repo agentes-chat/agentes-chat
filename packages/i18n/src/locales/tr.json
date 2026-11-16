@@ -5038,6 +5038,8 @@
       "planModelDropped": "{{model}}, {{plan}} listesinden çıktı. Başka bir model seçene kadar <b>{{name}}</b> {{runs}} kullanıyor.",
       "routineWaitingPlan": "<b>{{name}}</b> bir rutini çalıştırmak için planının sıfırlanmasını bekliyor",
       "planResetUnknown": "{{plan}} sınırının ne zaman sıfırlanacağını söylemedi. <b>{{name}}</b> ajanının işi hâlâ bekliyor.",
+      "credentialEfforts": "<b>{{name}}</b>, {{label}} için efor düzeylerini denetlemeyi bitirdi",
+      "credentialEffortsFailed": "<b>{{name}}</b>, {{label}} için efor düzeylerini denetleyemedi",
       "catchUpClosed_one": "<b>{{name}}</b> döndü ve yanıt gerektirmeyen {{count}} konuşmayı atladı",
       "catchUpClosed_other": "<b>{{name}}</b> döndü ve yanıt gerektirmeyen {{count}} konuşmayı atladı",
       "catchUpClosedAsker": "<b>{{name}}</b> {{label}} içinde yanıt vermedi: {{who}} bununla zaten ilgilendi",
@@ -5491,6 +5493,7 @@
           "xhigh": "Çok yüksek",
           "max": "En yüksek"
         },
+        "effortsUntested": "Bu modelin efor düzeyleri denetlenmedi. Anahtarının modellerinde deneyin.",
         "effortsLower": {
           "auto": "otomatik",
           "low": "düşük",
@@ -9651,6 +9654,8 @@
     "save": "Kaydet ve test et",
     "saveModels": "Kaydet ve yeniden test et",
     "testing": "Her model test ediliyor…",
+    "effortsAsk": "Bu sağlayıcı her efor düzeyini kabul etmeyebilir. Seçilen her modeli arka planda, düzey başına kısa bir çağrıyla denetleyip yalnızca kabul ettiği düzeyleri gösterebiliriz. Bitince asistan haber verir.",
+    "effortsListOnly": "Yalnızca modelleri listele",
     "results": "Her modelin testi",
     "check": {
       "ok": "Çalışıyor, araçlarla",

@@ -7,6 +7,7 @@ import {
   advancedSummary,
   effortOf,
   isAdvancedDefault,
+  keyEffortScale,
   SPEEDS,
   viewSpeedFits,
 } from "@agenteschat/client/lib/brain-advanced";
@@ -105,6 +106,11 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
   const may = !busy && view?.canEdit === true;
   const family = view ? effortFamily(view, brainPlan(view)) : undefined;
   const effort = useEffortChoice(agentId, now?.effort, undefined, family ? (level) => family.values[level] : undefined);
+  // A fixed API model's ramp offers only the levels its key checked (ADR 0186).
+  const keyScale =
+    view?.brain === "model"
+      ? keyEffortScale(models.data?.models?.find((m) => m.id === view.effectiveModel))
+      : undefined;
   const speed = useBrainChoice<BrainSpeed>(agentId, now?.speed ?? "standard", (value) => ({ speed: value }));
   const fallbackLabel = t("agentPage.work.brain.fallbackTitle", {
     computer: computerNameOf(t, org?.name ?? "", view?.computer?.name ?? "", isPersonal(org)),
@@ -161,6 +167,11 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
                       chevron={kind !== null}
                       onPress={kind ? () => router.push(`/agent-model/${agentId}` as never) : undefined}
                     />
+                  ) : keyScale === null ? (
+                    <GroupedRow
+                      label={t("agentPage.work.brain.effort")}
+                      sub={t("agentPage.work.brain.effortsUntested")}
+                    />
                   ) : (
                     <View style={styles.ramp}>
                       <EffortRamp
@@ -168,7 +179,7 @@ export function AgentAdvancedScreen({ agentId }: { agentId: string }) {
                         onChange={effort.change}
                         color={agentLook(agent).color}
                         kind={view.brain}
-                        levels={family?.levels}
+                        levels={family?.levels ?? keyScale}
                         disabled={!view.canEdit}
                       />
                     </View>

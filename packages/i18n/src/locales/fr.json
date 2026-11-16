@@ -5213,6 +5213,8 @@
       "planModelDropped": "{{model}} a quitté {{plan}}. <b>{{name}}</b> utilise {{runs}} jusqu’à ce que tu choisisses un autre modèle.",
       "routineWaitingPlan": "<b>{{name}}</b> attend la réinitialisation de son abonnement pour exécuter une routine",
       "planResetUnknown": "{{plan}} n'a pas indiqué quand sa limite se réinitialise. Le travail de <b>{{name}}</b> attend toujours.",
+      "credentialEfforts": "<b>{{name}}</b> a fini de vérifier les niveaux d'effort de {{label}}",
+      "credentialEffortsFailed": "<b>{{name}}</b> n'a pas pu vérifier les niveaux d'effort de {{label}}",
       "catchUpClosed_one": "<b>{{name}}</b> est de retour et a sauté {{count}} conversation qui n'avait pas besoin de réponse",
       "catchUpClosed_many": "<b>{{name}}</b> est de retour et a sauté {{count}} conversations qui n'avaient pas besoin de réponse",
       "catchUpClosed_other": "<b>{{name}}</b> est de retour et a sauté {{count}} conversations qui n'avaient pas besoin de réponse",
@@ -5699,6 +5701,7 @@
           "xhigh": "Très élevé",
           "max": "Maximal"
         },
+        "effortsUntested": "Les niveaux d'effort de ce modèle n'ont pas été vérifiés. Testez-les dans les modèles de sa clé.",
         "effortsLower": {
           "auto": "automatique",
           "low": "faible",
@@ -10071,6 +10074,8 @@
     "save": "Enregistrer et tester",
     "saveModels": "Enregistrer et tester à nouveau",
     "testing": "Test de chaque modèle…",
+    "effortsAsk": "Ce fournisseur n'accepte peut-être pas tous les niveaux d'effort. Nous pouvons vérifier chaque modèle choisi en arrière-plan, avec un court appel par niveau, et n'afficher que les niveaux acceptés. L'assistant vous prévient à la fin.",
+    "effortsListOnly": "Lister seulement les modèles",
     "results": "Test de chaque modèle",
     "check": {
       "ok": "Fonctionne, avec des outils",

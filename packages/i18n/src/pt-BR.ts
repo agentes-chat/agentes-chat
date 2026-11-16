@@ -5320,6 +5320,9 @@ export const ptBR = {
         "O {{model}} saiu do {{plan}}. <b>{{name}}</b> está usando o {{runs}} até você escolher outro modelo.",
       routineWaitingPlan: "<b>{{name}}</b> espera o plano renovar para rodar uma rotina",
       planResetUnknown: "O {{plan}} não disse quando o limite renova. O trabalho de <b>{{name}}</b> segue esperando.",
+      /** A workspace endpoint's effort check ended (`credential_efforts`, ADR 0186). */
+      credentialEfforts: "<b>{{name}}</b> terminou de verificar os níveis de esforço de {{label}}",
+      credentialEffortsFailed: "<b>{{name}}</b> não conseguiu verificar os níveis de esforço de {{label}}",
       catchUpClosed_one: "<b>{{name}}</b> retomou e pulou {{count}} conversa que não precisava de resposta",
       catchUpClosed_other: "<b>{{name}}</b> retomou e pulou {{count}} conversas que não precisavam de resposta",
       catchUpClosedAsker: "<b>{{name}}</b> não respondeu em {{label}}: {{who}} já cuidou disso",
@@ -5808,6 +5811,7 @@ export const ptBR = {
           xhigh: "Muito alto",
           max: "Máximo",
         },
+        effortsUntested: "Os níveis de esforço deste modelo não foram verificados. Teste-os nos modelos da chave dele.",
         effortsLower: {
           auto: "automático",
           low: "baixo",
@@ -10094,6 +10098,9 @@ export const ptBR = {
     save: "Salvar e testar",
     saveModels: "Salvar e testar de novo",
     testing: "Testando cada modelo…",
+    effortsAsk:
+      "Este provedor pode não aceitar todos os níveis de esforço. Podemos testar cada modelo escolhido em segundo plano, com uma chamada curta por nível, e mostrar só os níveis que ele aceita. Você é avisado pelo assistente quando terminar.",
+    effortsListOnly: "Só listar os modelos",
     results: "Teste de cada modelo",
     check: {
       ok: "Funciona, com ferramentas",

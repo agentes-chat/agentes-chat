@@ -125,7 +125,10 @@ export interface ModelRequest {
    * How much reasoning to spend. Providers without the notion ignore it. Default: the provider's.
    * `none`: the least the model allows (its catalog `leastThinking`), else `low`.
    */
-  effort?: "none" | "low" | "medium" | "high";
+  /** How hard it thinks: any level a model is sold at; the gateway takes it to the nearest one it takes. */
+  effort?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+  /** A probe (ADR 0186): send that effort exactly, never the nearest one the model takes. */
+  exactEffort?: boolean;
   /**
    * `1h`: the breakpoints of the stable prefix (stable tools, system blocks marked `cache`) last an hour where the
    * provider offers it (Anthropic's extended TTL, written at 2× the input price); the conversation's tail keeps the

@@ -5436,6 +5436,9 @@ export const en = {
       planModelDropped: "{{model}} left {{plan}}. <b>{{name}}</b> is using {{runs}} until you choose another model.",
       routineWaitingPlan: "<b>{{name}}</b> is waiting for its plan to reset to run a routine",
       planResetUnknown: "{{plan}} didn't say when its limit resets. <b>{{name}}</b>'s work is still waiting.",
+      /** A workspace endpoint's effort check ended (`credential_efforts`, ADR 0186). */
+      credentialEfforts: "<b>{{name}}</b> finished checking the effort levels of {{label}}",
+      credentialEffortsFailed: "<b>{{name}}</b> couldn't check the effort levels of {{label}}",
       catchUpClosed_one: "<b>{{name}}</b> is back and skipped {{count}} conversation that didn't need an answer",
       catchUpClosed_other: "<b>{{name}}</b> is back and skipped {{count}} conversations that didn't need an answer",
       catchUpClosedAsker: "<b>{{name}}</b> didn't answer in {{label}}: {{who}} already took care of it",
@@ -5913,6 +5916,7 @@ export const en = {
           xhigh: "Extra high",
           max: "Maximum",
         },
+        effortsUntested: "This model's effort levels haven't been checked. Test them in its key's models.",
         effortsLower: {
           auto: "automatic",
           low: "low",
@@ -10092,6 +10096,9 @@ export const en = {
     save: "Save and test",
     saveModels: "Save and test again",
     testing: "Testing each model…",
+    effortsAsk:
+      "This provider may not take every effort level. We can check each chosen model in the background, one short call per level, and show only the levels it takes. You hear from the assistant when it ends.",
+    effortsListOnly: "Just list the models",
     results: "Each model's test",
     check: {
       ok: "Works, with tools",

@@ -4884,6 +4884,8 @@
       "planModelDropped": "{{model}} keluar dari {{plan}}. <b>{{name}}</b> memakai {{runs}} sampai kamu memilih model lain.",
       "routineWaitingPlan": "<b>{{name}}</b> menunggu paketnya direset untuk menjalankan rutinitas",
       "planResetUnknown": "{{plan}} tidak memberi tahu kapan batasnya direset. Pekerjaan <b>{{name}}</b> masih menunggu.",
+      "credentialEfforts": "<b>{{name}}</b> selesai memeriksa tingkat usaha {{label}}",
+      "credentialEffortsFailed": "<b>{{name}}</b> tidak dapat memeriksa tingkat usaha {{label}}",
       "catchUpClosed_other": "<b>{{name}}</b> kembali dan melewati {{count}} percakapan yang tidak perlu dijawab",
       "catchUpClosedAsker": "<b>{{name}}</b> tidak menjawab di {{label}}: {{who}} sudah menanganinya",
       "catchUpClosedAskerAny": "<b>{{name}}</b> tidak menjawab: {{who}} sudah menanganinya",
@@ -5325,6 +5327,7 @@
           "xhigh": "Sangat tinggi",
           "max": "Maksimum"
         },
+        "effortsUntested": "Tingkat usaha model ini belum diperiksa. Uji di model kuncinya.",
         "effortsLower": {
           "auto": "otomatis",
           "low": "rendah",
@@ -9365,6 +9368,8 @@
     "save": "Simpan dan uji",
     "saveModels": "Simpan dan uji lagi",
     "testing": "Menguji setiap model…",
+    "effortsAsk": "Penyedia ini mungkin tidak menerima semua tingkat usaha. Kami dapat memeriksa setiap model pilihan di latar belakang, satu panggilan singkat per tingkat, dan hanya menampilkan tingkat yang diterima. Asisten memberi tahu saat selesai.",
+    "effortsListOnly": "Cukup daftar modelnya",
     "results": "Uji setiap model",
     "check": {
       "ok": "Berfungsi, dengan alat",

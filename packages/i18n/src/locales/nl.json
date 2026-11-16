@@ -5057,6 +5057,8 @@
       "planModelDropped": "{{model}} is uit {{plan}} gehaald. <b>{{name}}</b> gebruikt {{runs}} tot je een ander model kiest.",
       "routineWaitingPlan": "<b>{{name}}</b> wacht tot zijn abonnement wordt gereset om een routine uit te voeren",
       "planResetUnknown": "{{plan}} heeft niet gezegd wanneer de limiet wordt gereset. Het werk van <b>{{name}}</b> wacht nog.",
+      "credentialEfforts": "<b>{{name}}</b> is klaar met het controleren van de inspanningsniveaus van {{label}}",
+      "credentialEffortsFailed": "<b>{{name}}</b> kon de inspanningsniveaus van {{label}} niet controleren",
       "catchUpClosed_one": "<b>{{name}}</b> is terug en heeft {{count}} gesprek overgeslagen dat geen antwoord nodig had",
       "catchUpClosed_other": "<b>{{name}}</b> is terug en heeft {{count}} gesprekken overgeslagen die geen antwoord nodig hadden",
       "catchUpClosedAsker": "<b>{{name}}</b> heeft niet geantwoord in {{label}}: {{who}} heeft het al geregeld",
@@ -5531,6 +5533,7 @@
           "xhigh": "Zeer hoog",
           "max": "Maximaal"
         },
+        "effortsUntested": "De inspanningsniveaus van dit model zijn niet gecontroleerd. Test ze bij de modellen van de sleutel.",
         "effortsLower": {
           "auto": "automatisch",
           "low": "laag",
@@ -9752,6 +9755,8 @@
     "save": "Opslaan en testen",
     "saveModels": "Opslaan en opnieuw testen",
     "testing": "Elk model wordt getest…",
+    "effortsAsk": "Deze provider accepteert misschien niet elk inspanningsniveau. We kunnen elk gekozen model op de achtergrond controleren, met één korte aanroep per niveau, en alleen de geaccepteerde niveaus tonen. De assistent laat het weten als het klaar is.",
+    "effortsListOnly": "Alleen de modellen tonen",
     "results": "Test van elk model",
     "check": {
       "ok": "Werkt, met tools",

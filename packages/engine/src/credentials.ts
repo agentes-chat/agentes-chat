@@ -13,6 +13,7 @@ import {
   isOpenRouterModel,
   listedModels,
   type ModelInfo,
+  type ModelTier,
   modelInfo,
   modelProvider,
   PROVIDERS,
@@ -21,6 +22,7 @@ import {
 } from "@agenteschat/providers";
 import { recordAudit } from "./audit";
 import { caches } from "./cache";
+import { enqueueCredentialEfforts } from "./credential-efforts";
 import { openSecret, sealSecret } from "./crypto";
 import {
   cleanEndpointModels,
@@ -54,6 +56,8 @@ export interface CredentialSummary {
   isDefault?: boolean;
   /** A workspace endpoint's address, API style and models (`custom`, ADR 0146). Not secret. */
   endpoint?: StoredEndpoint;
+  /** OpenRouter (ADR 0186): the models this workspace chose to use with the key; absent: all of them. */
+  openrouter?: { models: string[] };
   /** The agents that think with it (`listCredentials`): what removing it would change. */
   usedBy?: { id: string; name: string }[];
   /** On a key just saved: `ok` a real call passed, `unchecked` the provider gave no answer about the key. */
@@ -78,6 +82,7 @@ const summary = (row: typeof providerCredentials.$inferSelect): CredentialSummar
   keyHint: row.keyHint,
   workspaceIdHint: row.workspaceId ? row.workspaceId.slice(-6) : null,
   ...(row.options?.endpoint ? { endpoint: row.options.endpoint } : {}),
+  ...(row.options?.openrouter ? { openrouter: row.options.openrouter } : {}),
   createdAt: row.createdAt,
   revokedAt: row.revokedAt,
 });
@@ -128,6 +133,27 @@ export async function openRouterInUse(db: Executor): Promise<boolean> {
  * A model's entry, for a setting someone picks: OpenRouter's list is read first only while it is in use. A workspace
  * endpoint's model (ADR 0146) is found only for its own organization.
  */
+/**
+ * The models this workspace's OpenRouter keys chose (ADR 0186), the union of every live key's, or null while none
+ * chose (a key saved before the choice existed: the whole list, as before). Cached like credential rows.
+ */
+export async function openRouterSelection(db: Executor, orgId: string): Promise<string[] | null> {
+  return (await caches.credentials.getOrLoad(`${orgId}:openrouter-models`, async () => {
+    const rows = await db
+      .select({ options: providerCredentials.options })
+      .from(providerCredentials)
+      .where(
+        and(
+          eq(providerCredentials.orgId, orgId),
+          eq(providerCredentials.provider, "openrouter"),
+          isNull(providerCredentials.revokedAt),
+        ),
+      );
+    const lists = rows.flatMap((r) => r.options.openrouter?.models ?? []);
+    return lists.length > 0 ? [...new Set(lists)] : null;
+  })) as string[] | null;
+}
+
 export async function modelInfoFor(db: Executor, model: string, orgId?: string): Promise<ModelInfo | undefined> {
   if (isCustomModel(model)) {
     if (!orgId) return undefined;
@@ -142,10 +168,110 @@ export async function modelInfoFor(db: Executor, model: string, orgId?: string):
  * Every model for the pickers: the catalog's, then OpenRouter's (its list read first only while it is in use), then
  * the endpoint models of `orgIds` (ADR 0146).
  */
+/** The levels each OpenRouter model was checked to take, across `orgIds`' keys (ADR 0186). */
+export async function openRouterTestedEfforts(db: Executor, orgIds: readonly string[]): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  if (orgIds.length === 0) return out;
+  const rows = await db
+    .select({ options: schema.providerCredentials.options })
+    .from(schema.providerCredentials)
+    .where(
+      and(
+        inArray(schema.providerCredentials.orgId, [...orgIds]),
+        eq(schema.providerCredentials.provider, "openrouter"),
+        isNull(schema.providerCredentials.revokedAt),
+      ),
+    );
+  for (const row of rows)
+    for (const [id, levels] of Object.entries(row.options.openrouter?.efforts ?? {})) {
+      const before = out.get(id) ?? [];
+      out.set(id, [...new Set([...before, ...levels])]);
+    }
+  return out;
+}
+
+/**
+ * Every model for the pickers: the catalog's, then OpenRouter's (its list read first only while it is in use), then
+ * the endpoint models of `orgIds` (ADR 0146). An OpenRouter model's checked levels replace the list's, so the ramp
+ * offers what its own key answered for (ADR 0186).
+ */
 export async function pickerModels(db: Executor, orgIds: readonly string[] = []): Promise<[string, ModelInfo][]> {
   if (await openRouterInUse(db)) await ensureOpenRouterModels();
   for (const orgId of orgIds) await loadEndpointModels(db, orgId);
-  return [...listedModels(), ...orgIds.flatMap((orgId) => customModelsOf(orgId))];
+  const tested = await openRouterTestedEfforts(db, orgIds);
+  return [
+    ...listedModels().map(([id, m]): [string, ModelInfo] => {
+      const levels = tested.get(id);
+      return [id, levels ? { ...m, efforts: [...levels] } : m];
+    }),
+    ...orgIds.flatMap((orgId) => customModelsOf(orgId)),
+  ];
+}
+
+/** The most models one OpenRouter key may be limited to (ADR 0186). */
+export const MAX_OPENROUTER_MODELS = 100;
+
+/** A model an OpenRouter key can be limited to, as the picker lists it (ADR 0186). */
+export interface OpenRouterChoice {
+  id: string;
+  label: string;
+  /** A good pick of OpenRouter's list (shown first, pre-chosen). */
+  pick: boolean;
+  tier?: ModelTier;
+  efforts?: string[];
+  contextWindow?: number;
+}
+
+/**
+ * The models an OpenRouter key may be limited to (admins, ADR 0186): its public list, read now, with the key checked
+ * when one is given (a refused or management key never gets to choose). Good picks first, as the list orders them.
+ */
+export async function openRouterChoices(
+  db: Database,
+  actorId: string,
+  orgId: string,
+  apiKey?: string,
+): Promise<OpenRouterChoice[]> {
+  await requirePermission(db, actorId, orgId, "manage_credentials");
+  const key = apiKey?.trim();
+  if (key) {
+    const said = await checkOpenRouterKey(key);
+    if (said === "invalid") throw new ValidationError("The provider didn't accept this key.", "provider_key_invalid");
+    if (said === "management")
+      throw new ValidationError("This is a management key. Create a regular API key.", "provider_key_management");
+  }
+  await ensureOpenRouterModels();
+  return listedModels().flatMap(([id, m]) =>
+    m.provider === "openrouter"
+      ? [
+          {
+            id,
+            label: m.label,
+            pick: m.pick === true,
+            ...(m.tier ? { tier: m.tier } : {}),
+            ...(m.efforts ? { efforts: [...m.efforts] } : {}),
+            ...(m.contextWindow ? { contextWindow: m.contextWindow } : {}),
+          },
+        ]
+      : [],
+  );
+}
+
+/**
+ * The models an OpenRouter key may use (ADR 0186): at least one, each one the list still carries. Undefined: the
+ * caller sent none, which keeps the key on every model (the apps always send a choice).
+ */
+async function checkedOpenRouterModels(models: readonly string[] | undefined): Promise<string[] | undefined> {
+  if (models === undefined) return undefined;
+  await ensureOpenRouterModels();
+  const known = new Set(listedModels().flatMap(([id, m]) => (m.provider === "openrouter" ? [id] : [])));
+  const out = [...new Set(models.map((id) => id.trim()).filter(Boolean))];
+  if (out.length === 0) throw new ValidationError("Choose at least one model", "openrouter.no_models");
+  if (out.length > MAX_OPENROUTER_MODELS)
+    throw new ValidationError(`At most ${MAX_OPENROUTER_MODELS} models`, "openrouter.too_many_models");
+  const missing = out.find((id) => !known.has(id));
+  if (missing) throw new ValidationError(`OpenRouter doesn't list ${missing}`, "openrouter.model_unknown");
+  return out;
 }
 
 /**
@@ -203,6 +329,10 @@ export async function createCredential(
     makeDefault?: boolean;
     /** `custom` only, and required there: the endpoint's address, API style and models (ADR 0146). */
     endpoint?: { style: EndpointStyle; baseURL: string; models: EndpointModel[] };
+    /** `openrouter` only: the models this workspace chooses to use with the key (ADR 0186). */
+    openrouter?: { models: string[] };
+    /** `custom` or `openrouter`: check the models' effort levels in the background after saving (ADR 0186). */
+    syncEfforts?: boolean;
   },
   /**
    * Outbound HTTP for the provider's key check (tests: a fake); `net`: how endpoints may be reached; `keyWrappers`:
@@ -225,7 +355,9 @@ export async function createCredential(
     models: cleanEndpointModels(input.endpoint.models),
   };
   await checkKey(input.provider, apiKey, opts.fetch);
-  const options = cleanOptions(input);
+  const openrouter =
+    input.provider === "openrouter" ? await checkedOpenRouterModels(input.openrouter?.models) : undefined;
+  const options = { ...cleanOptions(input), ...(openrouter ? { openrouter: { models: openrouter } } : {}) };
   const workspaceId = cleanWorkspaceId(input.workspaceId);
   const passed = custom
     ? null
@@ -246,7 +378,7 @@ export async function createCredential(
   };
   const [same] = await savedCopies(db, opts.keyWrappers ?? [keyWrapper], orgId, fresh, apiKey);
   const row = same
-    ? await resave(db, actorId, orgId, same, { ...input, endpoint })
+    ? await resave(db, actorId, orgId, same, { ...input, endpoint, options })
     : await db.transaction(async (tx) => {
         const id = crypto.randomUUID();
         const sealed = await sealSecret(keyWrapper, apiKey, aadFor(orgId, id));
@@ -268,6 +400,31 @@ export async function createCredential(
         return r;
       });
   if (!row) throw new Error("credential insert returned nothing");
+  // The effort check (ADR 0186): queued now, and the credential says it is running until the worker says else.
+  const endpointToCheck = row.options.endpoint;
+  const openrouterToCheck = row.options.openrouter;
+  if (input.syncEfforts && (endpointToCheck || openrouterToCheck)) {
+    const at = new Date().toISOString();
+    await db.transaction(async (tx) => {
+      await tx
+        .update(providerCredentials)
+        .set({
+          options: {
+            ...row.options,
+            ...(endpointToCheck
+              ? { endpoint: { ...endpointToCheck, effortsSync: { state: "running" as const, at } } }
+              : {}),
+            ...(openrouterToCheck
+              ? { openrouter: { ...openrouterToCheck, effortsSync: { state: "running" as const, at } } }
+              : {}),
+          },
+        })
+        .where(and(eq(providerCredentials.id, row.id), eq(providerCredentials.orgId, orgId)));
+      await enqueueCredentialEfforts(tx, { orgId, credentialId: row.id, userId: actorId });
+    });
+    caches.credentials.delete(`${orgId}:${row.id}`);
+    caches.credentials.delete(`${orgId}:endpoints`);
+  }
   invalidateDefaults(orgId);
   if (input.provider === "openrouter") {
     caches.credentials.delete(OPENROUTER_IN_USE);
@@ -348,7 +505,13 @@ async function resave(
   actorId: string,
   orgId: string,
   row: CredentialRow,
-  input: { provider: ProviderId; label: string; makeDefault?: boolean; endpoint?: StoredEndpoint | undefined },
+  input: {
+    provider: ProviderId;
+    label: string;
+    makeDefault?: boolean;
+    endpoint?: StoredEndpoint | undefined;
+    options?: Record<string, unknown>;
+  },
 ) {
   const before = row.options.endpoint;
   const endpoint = input.endpoint && {
@@ -359,7 +522,7 @@ async function resave(
   return db.transaction(async (tx) => {
     const [r] = await tx
       .update(providerCredentials)
-      .set({ label, ...(endpoint ? { options: { ...row.options, endpoint } } : {}) })
+      .set({ label, options: { ...row.options, ...(input.options ?? {}), ...(endpoint ? { endpoint } : {}) } })
       .where(and(eq(providerCredentials.id, row.id), eq(providerCredentials.orgId, orgId)))
       .returning();
     if (input.makeDefault) await setDefault(tx, orgId, input.provider, row.id);
@@ -407,6 +570,7 @@ function cleanOptions(input: { organization?: string | null; project?: string | 
 export function invalidateDefaults(orgId: string) {
   caches.credentials.deletePrefix(`${orgId}:default:`);
   caches.credentials.delete(`${orgId}:endpoints`);
+  caches.credentials.delete(`${orgId}:openrouter-models`);
 }
 
 /** Makes a key its provider's default (and the legacy single default), in the caller's transaction. */
@@ -581,6 +745,46 @@ export async function revokeCredential(db: Database, actorId: string, orgId: str
   await auditCredential(db, orgId, actorId, "credential.revoked", row);
   caches.credentials.delete(`${orgId}:${credentialId}`);
   invalidateDefaults(orgId);
+}
+
+/**
+ * The models an OpenRouter key may use (admins, ADR 0186): the pickers and Automático offer those alone. The key
+ * itself keeps calling what an agent already had; the choice is about what is offered, not about what is allowed.
+ */
+export async function updateOpenRouterModels(
+  db: Database,
+  actorId: string,
+  orgId: string,
+  credentialId: string,
+  models: readonly string[],
+): Promise<CredentialSummary> {
+  await requirePermission(db, actorId, orgId, "manage_credentials");
+  const selected = await checkedOpenRouterModels(models);
+  if (!selected) throw new ValidationError("Choose at least one model", "openrouter.no_models");
+  const where = and(
+    eq(providerCredentials.id, credentialId),
+    eq(providerCredentials.orgId, orgId),
+    eq(providerCredentials.provider, "openrouter"),
+    isNull(providerCredentials.revokedAt),
+  );
+  const [row] = await db.select().from(providerCredentials).where(where);
+  if (!row) throw new NotFoundError("Credential not found");
+  const [updated] = await db
+    .update(providerCredentials)
+    .set({ options: { ...row.options, openrouter: { models: selected } } })
+    .where(where)
+    .returning();
+  if (!updated) throw new NotFoundError("Credential not found");
+  await recordAudit(db, {
+    orgId,
+    actor: { type: "person", id: actorId },
+    action: "credential.models_changed",
+    target: { type: "credential", id: credentialId },
+    details: { provider: "openrouter", label: updated.label, models: selected },
+  });
+  caches.credentials.delete(`${orgId}:${credentialId}`);
+  caches.credentials.delete(`${orgId}:openrouter-models`);
+  return summary(updated);
 }
 
 /**

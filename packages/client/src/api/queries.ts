@@ -1113,13 +1113,45 @@ export function useEndpointModels(orgId: string) {
   });
 }
 
+/** OpenRouter's models, with the key checked when given (ADR 0186): the list to choose from. */
+export function useOpenRouterModels(orgId: string) {
+  const api = useApi();
+  return useMutation({
+    mutationFn: (input: { apiKey?: string }) => api.agents.openRouterModels(orgId, input),
+  });
+}
+
+/** The models an OpenRouter key uses (ADR 0186); the pickers follow. */
+export function useSetOpenRouterModels(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { credentialId: string; models: string[] }) =>
+      api.agents.setOpenRouterModels(orgId, input.credentialId, input.models),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.models });
+      return qc.invalidateQueries({ queryKey: keys.credentials(orgId) });
+    },
+  });
+}
+
+/** Checks an endpoint's models' effort levels in the background (ADR 0186). */
+export function useTestEndpointEfforts(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (credentialId: string) => api.agents.testEndpointEfforts(orgId, credentialId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.credentials(orgId) }),
+  });
+}
+
 /** Changes an endpoint's models and prices; its models in the pickers follow. */
 export function useSetEndpointModels(orgId: string) {
   const api = useApi();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { credentialId: string; models: EndpointModel[] }) =>
-      api.agents.setEndpointModels(orgId, input.credentialId, input.models),
+    mutationFn: (input: { credentialId: string; models: EndpointModel[]; syncEfforts?: boolean }) =>
+      api.agents.setEndpointModels(orgId, input.credentialId, input.models, input.syncEfforts),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.models });
       return qc.invalidateQueries({ queryKey: keys.credentials(orgId) });

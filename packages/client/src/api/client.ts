@@ -245,6 +245,7 @@ import type {
   NotificationCount,
   NotificationFilter,
   NotificationPage,
+  OpenRouterChoice,
   Organization,
   OrgOverview,
   OrgPlanUsage,
@@ -821,6 +822,10 @@ export interface ApiClient {
         projectId?: string | null;
         /** `custom` only: the endpoint's address, API and models (ADR 0146). */
         endpoint?: { style: EndpointStyle; baseURL: string; models: EndpointModel[] };
+        /** `openrouter` only: the models this workspace chooses to use with the key (ADR 0186). */
+        openrouter?: { models: string[] };
+        /** `custom` only: check the models' effort levels in the background (ADR 0186). */
+        syncEfforts?: boolean;
       },
     ): Promise<Credential & { checks?: EndpointCheck[] }>;
     /** What an endpoint lists before it is saved (admins): its address as stored, its models, or why none. */
@@ -833,7 +838,14 @@ export interface ApiClient {
       orgId: string,
       credentialId: string,
       models: EndpointModel[],
+      syncEfforts?: boolean,
     ): Promise<{ models: EndpointModel[]; checks: EndpointCheck[] }>;
+    /** OpenRouter's models, with the key checked when given (admins): the list to choose from (ADR 0186). */
+    openRouterModels(orgId: string, input: { apiKey?: string }): Promise<{ models: OpenRouterChoice[] }>;
+    /** The models an OpenRouter key uses (admins, ADR 0186). */
+    setOpenRouterModels(orgId: string, credentialId: string, models: string[]): Promise<Credential>;
+    /** Checks an endpoint's models' effort levels in the background (admins, ADR 0186). */
+    testEndpointEfforts(orgId: string, credentialId: string): Promise<void>;
     /** Replaces the key, keeping the id (agents keep using it). */
     rotateCredential(
       orgId: string,

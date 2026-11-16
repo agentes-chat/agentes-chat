@@ -89,7 +89,8 @@ export function createOpenAIProvider(
                   },
                 }
               : {}),
-            ...(info?.reasoning && effort ? { reasoning: { effort } } : {}),
+            // The gateway has already taken it to a level the model takes; the SDK's type lists fewer.
+            ...(info?.reasoning && effort ? { reasoning: { effort: effort as "low" | "medium" | "high" } } : {}),
           },
           { signal: request.signal },
         );

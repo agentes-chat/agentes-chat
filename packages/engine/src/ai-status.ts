@@ -5,6 +5,7 @@ import { type AutoLine, autoLine, autoModelFor, autoProvider } from "./auto-mode
 import { brainOf } from "./brain-settings";
 import { brainAccountFor, computerBrainUnavailable, mayFallBack, NO_AI_CODES } from "./brains/select";
 import { BRAIN_PLAN_NAMES, type BrainKind, type ComputerBrainKind, isComputerBrain } from "./brains/types";
+import { openRouterSelection } from "./credentials";
 import type { ModelGateway } from "./gateway";
 import type { MachineStatus } from "./machine-hub";
 import { TASK_OFFLINE_GRACE_MS } from "./machine-tasks";
@@ -93,7 +94,8 @@ async function modelReady(deps: AiStatusDeps, agent: AiAgent): Promise<boolean> 
   const { provider, endpoint } = await autoLine(deps.db, agent).catch((): AutoLine => ({ provider: "anthropic" }));
   // OpenRouter's line is its list.
   if (provider === "openrouter") await ensureOpenRouterModels();
-  const model = autoModelFor(provider, "medium", undefined, endpoint);
+  const allowed = provider === "openrouter" ? await openRouterSelection(deps.db, agent.orgId).catch(() => null) : null;
+  const model = autoModelFor(provider, "medium", undefined, endpoint, allowed);
   // OpenRouter's list not read: `autoLine` found its key, and a run waits the outage out.
   if (!model) return provider === "openrouter";
   return deps.gateway.hasModelCredential({ ...agent, model });

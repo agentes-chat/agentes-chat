@@ -189,7 +189,7 @@ import {
   triedCalls,
   verdictRecord,
 } from "./continuation";
-import { modelInfoFor } from "./credentials";
+import { modelInfoFor, openRouterSelection } from "./credentials";
 import { sha256 } from "./crypto";
 import { widgetRunWaitChanged } from "./dashboards/refresh-fire";
 import { WIDGET_FAILURES } from "./dashboards/types";
@@ -2996,7 +2996,9 @@ async function executeRunInner(
     // OpenRouter's line is its list: in place before a tier maps onto it.
     if (provider === "openrouter") await ensureOpenRouterModels();
     const tiers = (await orgAutoModels(db, run.orgId).catch((): AutoModels => ({})))[provider];
-    const applied = autoApplied(agent, brainPlan, choice, provider, tiers, endpoint);
+    // OpenRouter: Automático picks among the models the workspace chose, never the rest of the list (ADR 0186).
+    const allowed = provider === "openrouter" ? await openRouterSelection(db, run.orgId).catch(() => null) : null;
+    const applied = autoApplied(agent, brainPlan, choice, provider, tiers, endpoint, allowed);
     // No model for the tier: OpenRouter's list couldn't be read, or an endpoint offers none (never a call on the
     // wrong provider's line). Waited out like a provider outage, with the choice kept for the next attempt.
     if (brainPlan.kind === "model" && isAutoModel(agent.model) && !applied.apiModel) {

@@ -97,6 +97,7 @@ export * from "./context/scorecard";
 export * from "./context/summaries";
 export * from "./context/tools";
 export * from "./continue-run";
+export * from "./credential-efforts";
 export * from "./credentials";
 export * from "./cron";
 export * from "./crypto";

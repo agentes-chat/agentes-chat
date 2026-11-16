@@ -12360,6 +12360,12 @@
   "notifications.what.planResetUnknown": {
     "value": "{{plan}} didn't say when its limit resets. <b>{{name}}</b>'s work is still waiting."
   },
+  "notifications.what.credentialEfforts": {
+    "value": "<b>{{name}}</b> finished checking the effort levels of {{label}}"
+  },
+  "notifications.what.credentialEffortsFailed": {
+    "value": "<b>{{name}}</b> couldn't check the effort levels of {{label}}"
+  },
   "notifications.what.catchUpClosed": {
     "value": {
       "one": "<b>{{name}}</b> is back and skipped {{count}} conversation that didn't need an answer",
@@ -13553,6 +13559,9 @@
   },
   "agentPage.work.brain.efforts.max": {
     "value": "Maximum"
+  },
+  "agentPage.work.brain.effortsUntested": {
+    "value": "This model's effort levels haven't been checked. Test them in its key's models."
   },
   "agentPage.work.brain.effortsLower.auto": {
     "value": "automatic"
@@ -23619,6 +23628,12 @@
   },
   "endpoint.testing": {
     "value": "Testing each model…"
+  },
+  "endpoint.effortsAsk": {
+    "value": "This provider may not take every effort level. We can check each chosen model in the background, one short call per level, and show only the levels it takes. You hear from the assistant when it ends."
+  },
+  "endpoint.effortsListOnly": {
+    "value": "Just list the models"
   },
   "endpoint.results": {
     "value": "Each model's test"

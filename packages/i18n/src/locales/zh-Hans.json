@@ -4873,6 +4873,8 @@
       "planModelDropped": "{{model}} 已从 {{plan}} 下架。在你选择其他模型之前，<b>{{name}}</b> 会使用 {{runs}}。",
       "routineWaitingPlan": "<b>{{name}}</b> 正在等待套餐额度重置后运行例行工作",
       "planResetUnknown": "{{plan}} 没有说明额度何时重置。<b>{{name}}</b> 的工作仍在等待。",
+      "credentialEfforts": "<b>{{name}}</b> 已完成 {{label}} 的努力级别检查",
+      "credentialEffortsFailed": "<b>{{name}}</b> 无法检查 {{label}} 的努力级别",
       "catchUpClosed_other": "<b>{{name}}</b> 已恢复，并跳过了 {{count}} 个无需回复的对话",
       "catchUpClosedAsker": "<b>{{name}}</b> 没有在 {{label}} 中回复：{{who}} 已经处理好了",
       "catchUpClosedAskerAny": "<b>{{name}}</b> 没有回复：{{who}} 已经处理好了",
@@ -5333,6 +5335,7 @@
           "xhigh": "极高",
           "max": "最高"
         },
+        "effortsUntested": "尚未检查此模型的努力级别。请在其密钥的模型中测试。",
         "effortsLower": {
           "auto": "自动",
           "low": "低",
@@ -9361,6 +9364,8 @@
     "save": "保存并测试",
     "saveModels": "保存并重新测试",
     "testing": "正在测试每个模型…",
+    "effortsAsk": "此提供商可能不支持所有努力级别。我们可以在后台检查每个选定的模型，每个级别一次简短调用，只显示它支持的级别。完成后助手会通知你。",
+    "effortsListOnly": "只列出模型",
     "results": "每个模型的测试",
     "check": {
       "ok": "可用，支持工具",

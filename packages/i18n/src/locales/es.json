@@ -5207,6 +5207,8 @@
       "planModelDropped": "{{model}} salió de {{plan}}. <b>{{name}}</b> usa {{runs}} hasta que elijas otro modelo.",
       "routineWaitingPlan": "<b>{{name}}</b> espera que su plan se renueve para ejecutar una rutina",
       "planResetUnknown": "{{plan}} no dijo cuándo se renueva su límite. El trabajo de <b>{{name}}</b> sigue esperando.",
+      "credentialEfforts": "<b>{{name}}</b> terminó de comprobar los niveles de esfuerzo de {{label}}",
+      "credentialEffortsFailed": "<b>{{name}}</b> no pudo comprobar los niveles de esfuerzo de {{label}}",
       "catchUpClosed_one": "<b>{{name}}</b> volvió y omitió {{count}} conversación que no necesitaba respuesta",
       "catchUpClosed_many": "<b>{{name}}</b> volvió y omitió {{count}} conversaciones que no necesitaban respuesta",
       "catchUpClosed_other": "<b>{{name}}</b> volvió y omitió {{count}} conversaciones que no necesitaban respuesta",
@@ -5673,6 +5675,7 @@
           "xhigh": "Muy alto",
           "max": "Máximo"
         },
+        "effortsUntested": "Los niveles de esfuerzo de este modelo no se han comprobado. Pruébalos en los modelos de su clave.",
         "effortsLower": {
           "auto": "automático",
           "low": "bajo",
@@ -10019,6 +10022,8 @@
     "save": "Guardar y probar",
     "saveModels": "Guardar y probar de nuevo",
     "testing": "Probando cada modelo…",
+    "effortsAsk": "Es posible que este proveedor no acepte todos los niveles de esfuerzo. Podemos comprobar cada modelo elegido en segundo plano, con una llamada corta por nivel, y mostrar solo los niveles que acepta. El asistente te avisa cuando termine.",
+    "effortsListOnly": "Solo listar los modelos",
     "results": "Prueba de cada modelo",
     "check": {
       "ok": "Funciona, con herramientas",

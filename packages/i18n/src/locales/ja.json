@@ -4870,6 +4870,8 @@
       "planModelDropped": "{{model}}が{{plan}}から外れました。別のモデルを選ぶまで、<b>{{name}}</b>は{{runs}}を使います。",
       "routineWaitingPlan": "<b>{{name}}</b>はルーティンを実行するため、プランのリセットを待っています",
       "planResetUnknown": "{{plan}}は上限がいつリセットされるかを伝えませんでした。<b>{{name}}</b>の作業はまだ待機中です。",
+      "credentialEfforts": "<b>{{name}}</b> が {{label}} のエフォートレベルの確認を終えました",
+      "credentialEffortsFailed": "<b>{{name}}</b> は {{label}} のエフォートレベルを確認できませんでした",
       "catchUpClosed_other": "<b>{{name}}</b>が再開し、返信が不要だった会話{{count}}件をスキップしました",
       "catchUpClosedAsker": "<b>{{name}}</b>は{{label}}で返信しませんでした。{{who}}がすでに対応済みです",
       "catchUpClosedAskerAny": "<b>{{name}}</b>は返信しませんでした。{{who}}がすでに対応済みです",
@@ -5310,6 +5312,7 @@
           "xhigh": "超高",
           "max": "最大"
         },
+        "effortsUntested": "このモデルのエフォートレベルはまだ確認されていません。キーのモデルで確認してください。",
         "effortsLower": {
           "auto": "自動",
           "low": "低",
@@ -9316,6 +9319,8 @@
     "save": "保存してテスト",
     "saveModels": "保存してもう一度テスト",
     "testing": "各モデルをテスト中…",
+    "effortsAsk": "このプロバイダーはすべてのエフォートレベルを受け付けない場合があります。選択した各モデルをバックグラウンドで、レベルごとに短い呼び出しで確認し、受け付けたレベルだけを表示できます。終わったらアシスタントが知らせます。",
+    "effortsListOnly": "モデルを一覧表示するだけ",
     "results": "各モデルのテスト",
     "check": {
       "ok": "動作します (ツールあり)",

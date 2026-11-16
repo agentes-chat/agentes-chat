@@ -12,6 +12,7 @@ import {
   useRemoveCredentialCopies,
   useRotateCredential,
   useServerTelemetry,
+  useSetOpenRouterModels,
   useSetServerTelemetry,
   useSettings,
   useUpdateSettings,
@@ -86,6 +87,7 @@ import { AutoModelsRow } from "@/components/AutoModels";
 import { usePlanHold } from "@/components/ai/ConnectAiSteps";
 import { EndpointForm } from "@/components/ai/EndpointForm";
 import { WhoPicksSection } from "@/components/ai/Jev";
+import { OpenRouterModels } from "@/components/ai/OpenRouterModels";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { ConnectorsSection } from "@/components/Connectors";
 import { DeleteWorkspaceDialog } from "@/components/DeleteWorkspace";
@@ -809,6 +811,7 @@ function KeysSection() {
   const updateSettings = useUpdateSettings(org.id);
   const remove = useRemoveCredential(org.id);
   const removeCopies = useRemoveCredentialCopies(org.id);
+  const setOpenRouter = useSetOpenRouterModels(org.id);
   const toast = useToast();
   const [dialog, setDialog] = useState<
     | null
@@ -817,7 +820,10 @@ function KeysSection() {
     | { type: "remove"; cred: Credential }
     | { type: "copies"; cred: Credential }
     | { type: "models"; cred: Credential }
+    | { type: "openrouter"; cred: Credential }
   >(null);
+  // The OpenRouter key whose models are being chosen (its dialog holds them until saved).
+  const [orModels, setOrModels] = useState<string[]>([]);
   const look = useRightHandLook();
   const hold = usePlanHold();
   const plans = useAiAccounts(org.id).data?.accounts.length ?? 0;
@@ -890,6 +896,17 @@ function KeysSection() {
                   </span>
                 </span>
                 <span className="key-row__tail ac-mediarow__end ac-mediarow__end--wrap">
+                  {c.provider === "openrouter" && (
+                    <Button
+                      variant="link"
+                      onClick={() => {
+                        setOrModels(c.openrouter?.models ?? []);
+                        setDialog({ type: "openrouter", cred: c });
+                      }}
+                    >
+                      {t("endpoint.models")}
+                    </Button>
+                  )}
                   {c.endpoint ? (
                     <Button variant="link" onClick={() => setDialog({ type: "models", cred: c })}>
                       {t("endpoint.models")}
@@ -960,6 +977,34 @@ function KeysSection() {
             onDone={() => setDialog(null)}
           />
         )}
+      </Dialog>
+      <Dialog
+        open={dialog?.type === "openrouter"}
+        onOpenChange={(o) => !o && setDialog(null)}
+        title={t("endpoint.modelsTitle", { name: dialog?.type === "openrouter" ? dialog.cred.label : "" })}
+        closeLabel={t("common.close")}
+        width={560}
+      >
+        <DialogBody>
+          {dialog?.type === "openrouter" && <OpenRouterModels orgId={org.id} value={orModels} onChange={setOrModels} />}
+        </DialogBody>
+        <DialogFooter>
+          <Button onClick={() => setDialog(null)}>{t("common.cancel")}</Button>
+          <Button
+            variant="primary"
+            disabled={orModels.length === 0 || setOpenRouter.isPending}
+            loading={setOpenRouter.isPending}
+            onClick={() => {
+              if (dialog?.type !== "openrouter") return;
+              setOpenRouter.mutate(
+                { credentialId: dialog.cred.id, models: orModels },
+                { onSuccess: () => setDialog(null) },
+              );
+            }}
+          >
+            {t("common.save")}
+          </Button>
+        </DialogFooter>
       </Dialog>
       <Dialog
         open={dialog?.type === "remove"}
@@ -1060,11 +1105,17 @@ export function KeyDialog({
   const [custom, setCustom] = useState(false);
   const [workspaceId, setWorkspaceId] = useState("");
   const [touched, setTouched] = useState(false);
+  // OpenRouter: the models this key uses (ADR 0186), chosen before it is saved.
+  const [openrouter, setOpenrouter] = useState<string[]>([]);
+  // Whether to check the chosen models' effort levels in the background, asked when the key is saved.
+  const [askEffort, setAskEffort] = useState(false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset the form each time it opens
   useEffect(() => {
     setLabel("");
     setApiKey(pasted ?? "");
     setWorkspaceId("");
+    setOpenrouter([]);
+    setAskEffort(false);
     setProvider(providerGuess(pasted, suggested ?? cred?.provider));
     setCustom(mode === "add" && suggested === CUSTOM_PROVIDER);
     setTouched(false);
@@ -1094,126 +1145,190 @@ export function KeyDialog({
       />
     </Field>
   );
-  return (
-    <Dialog
-      open={mode !== null}
-      onOpenChange={(o) => !o && onClose()}
-      title={
-        mode === "rotate"
-          ? t("settings.rotateTitle", { label: cred?.label ?? "" })
-          : (title ?? t("settings.addKeyTitle"))
-      }
-      description={mode === "rotate" ? t("settings.rotateHelp") : undefined}
-      closeLabel={t("common.close")}
-      width={440}
-    >
-      {custom && mode === "add" ? (
-        <EndpointForm
-          orgId={org.id}
-          lead={providerSelect}
-          onCancel={onClose}
-          onDone={(saved) => {
-            onAdded?.(saved);
+  const submit = (syncEfforts: boolean) => {
+    setTouched(true);
+    if (!valid) return;
+    // An OpenRouter key is saved with the models it uses: none chosen is nothing to save (ADR 0186).
+    if (mode === "add" && provider === "openrouter" && openrouter.length === 0) return;
+    setRefused(null);
+    if (mode === "rotate" && cred) {
+      rotate.mutate(
+        { id: cred.id, apiKey: apiKey.trim() },
+        {
+          onError: failed,
+          onSuccess: (saved) => {
+            toast.show(t("settings.rotated"));
+            unchecked(saved);
             onClose();
-          }}
-        />
-      ) : (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setTouched(true);
-            if (!valid) return;
-            setRefused(null);
-            if (mode === "rotate" && cred) {
-              rotate.mutate(
-                { id: cred.id, apiKey: apiKey.trim() },
-                {
-                  onError: failed,
-                  onSuccess: (saved) => {
-                    toast.show(t("settings.rotated"));
-                    unchecked(saved);
-                    onClose();
-                  },
-                },
-              );
-            } else {
-              add.mutate(
-                {
-                  provider,
-                  label: label.trim() || providerLabel(provider),
-                  apiKey: apiKey.trim(),
-                  ...(provider === "anthropic" && workspaceId.trim() ? { workspaceId: workspaceId.trim() } : {}),
-                },
-                {
-                  onError: failed,
-                  onSuccess: (saved) => {
-                    if (saved.reused) toast.show(t("settings.keyResaved"));
-                    unchecked(saved);
-                    onAdded?.(saved);
-                    onClose();
-                  },
-                },
-              );
-            }
-          }}
-        >
-          <Locked when={pending}>
-            <DialogBody>
-              {mode === "add" && providerSelect}
-              {mode === "add" && (
-                <Field label={t("settings.keyLabel")} id="key-label">
-                  <Input
-                    value={label}
-                    onChange={(e) => setLabel(e.target.value)}
-                    placeholder={t("settings.keyLabelPlaceholder", { provider: providerLabel(provider) })}
-                  />
-                </Field>
-              )}
-              <Field
-                label={t("settings.keyValue")}
-                id="key-value-set"
-                error={error}
-                example={endpointKey ? undefined : <KeySite provider={provider} />}
-              >
-                <Input
-                  type="password"
-                  autoComplete="off"
-                  placeholder={endpointKey ? undefined : providerOf(provider)?.placeholder}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                />
-              </Field>
-              {refused && <KeyRefused refusal={refused} />}
-              {mode === "add" && provider === "anthropic" && (
+          },
+        },
+      );
+      return;
+    }
+    add.mutate(
+      {
+        provider,
+        label: label.trim() || providerLabel(provider),
+        apiKey: apiKey.trim(),
+        ...(provider === "anthropic" && workspaceId.trim() ? { workspaceId: workspaceId.trim() } : {}),
+        ...(provider === "openrouter" ? { openrouter: { models: openrouter } } : {}),
+        ...(syncEfforts ? { syncEfforts: true } : {}),
+      },
+      {
+        onError: failed,
+        onSuccess: (saved) => {
+          if (saved.reused) toast.show(t("settings.keyResaved"));
+          unchecked(saved);
+          onAdded?.(saved);
+          onClose();
+        },
+      },
+    );
+  };
+  return (
+    <>
+      <Dialog
+        open={mode !== null}
+        onOpenChange={(o) => !o && onClose()}
+        title={
+          mode === "rotate"
+            ? t("settings.rotateTitle", { label: cred?.label ?? "" })
+            : (title ?? t("settings.addKeyTitle"))
+        }
+        description={mode === "rotate" ? t("settings.rotateHelp") : undefined}
+        closeLabel={t("common.close")}
+        width={440}
+      >
+        {custom && mode === "add" ? (
+          <EndpointForm
+            orgId={org.id}
+            lead={providerSelect}
+            onCancel={onClose}
+            onDone={(saved) => {
+              onAdded?.(saved);
+              onClose();
+            }}
+          />
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setTouched(true);
+              if (!valid) return;
+              // An OpenRouter key is saved with the models it uses: none chosen is nothing to save (ADR 0186).
+              if (mode === "add" && provider === "openrouter" && openrouter.length === 0) return;
+              // Its models' effort levels: asked once, then the save goes ahead (ADR 0186).
+              if (mode === "add" && provider === "openrouter") {
+                setAskEffort(true);
+                return;
+              }
+              submit(false);
+            }}
+          >
+            <Locked when={pending}>
+              <DialogBody>
+                {mode === "add" && providerSelect}
+                {mode === "add" && (
+                  <Field label={t("settings.keyLabel")} id="key-label">
+                    <Input
+                      value={label}
+                      onChange={(e) => setLabel(e.target.value)}
+                      placeholder={t("settings.keyLabelPlaceholder", { provider: providerLabel(provider) })}
+                    />
+                  </Field>
+                )}
                 <Field
-                  label={t("onboarding.anthropicWorkspace")}
-                  id="key-ws-set"
-                  hint={{
-                    name: t("common.about", { label: t("onboarding.anthropicWorkspace") }),
-                    text: t("onboarding.anthropicWorkspaceHelp"),
-                  }}
+                  label={t("settings.keyValue")}
+                  id="key-value-set"
+                  error={error}
+                  example={endpointKey ? undefined : <KeySite provider={provider} />}
                 >
                   <Input
-                    value={workspaceId}
-                    onChange={(e) => setWorkspaceId(e.target.value)}
-                    placeholder={t("settings.workspaceIdPlaceholder")}
+                    type="password"
                     autoComplete="off"
+                    placeholder={endpointKey ? undefined : providerOf(provider)?.placeholder}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
                   />
                 </Field>
-              )}
-            </DialogBody>
-          </Locked>
-          <DialogFooter>
-            <Button onClick={onClose} disabled={pending}>
-              {t("common.cancel")}
-            </Button>
-            <Button type="submit" variant="primary" loading={pending}>
-              {mode === "rotate" ? t("settings.rotate") : t("settings.saveKey")}
-            </Button>
-          </DialogFooter>
-        </form>
-      )}
-    </Dialog>
+                {refused && <KeyRefused refusal={refused} />}
+                {mode === "add" && provider === "openrouter" && (
+                  <OpenRouterModels
+                    orgId={org.id}
+                    apiKey={apiKey}
+                    value={openrouter}
+                    onChange={setOpenrouter}
+                    disabled={pending}
+                  />
+                )}
+                {mode === "add" && provider === "anthropic" && (
+                  <Field
+                    label={t("onboarding.anthropicWorkspace")}
+                    id="key-ws-set"
+                    hint={{
+                      name: t("common.about", { label: t("onboarding.anthropicWorkspace") }),
+                      text: t("onboarding.anthropicWorkspaceHelp"),
+                    }}
+                  >
+                    <Input
+                      value={workspaceId}
+                      onChange={(e) => setWorkspaceId(e.target.value)}
+                      placeholder={t("settings.workspaceIdPlaceholder")}
+                      autoComplete="off"
+                    />
+                  </Field>
+                )}
+              </DialogBody>
+            </Locked>
+            <DialogFooter>
+              <Button onClick={onClose} disabled={pending}>
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={pending}
+                disabled={mode === "add" && provider === "openrouter" && openrouter.length === 0}
+              >
+                {mode === "rotate" ? t("settings.rotate") : t("settings.saveKey")}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
+      </Dialog>
+      <Dialog
+        open={askEffort}
+        onOpenChange={setAskEffort}
+        title={t("agentPage.work.brain.effort")}
+        closeLabel={t("common.close")}
+        width={460}
+      >
+        <DialogBody>
+          <p className="small muted" style={{ margin: 0 }}>
+            {t("endpoint.effortsAsk")}
+          </p>
+        </DialogBody>
+        <DialogFooter>
+          <Button
+            onClick={() => {
+              setAskEffort(false);
+              submit(false);
+            }}
+          >
+            {t("endpoint.effortsListOnly")}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setAskEffort(false);
+              submit(true);
+            }}
+          >
+            {t("connectAi.key.testModels")}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </>
   );
 }
 

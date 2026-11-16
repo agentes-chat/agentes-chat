@@ -951,6 +951,8 @@ export const featureKeysEn = {
       older: "Older",
     },
     kind: {
+      credential_efforts_one: "{{names}} checked the effort levels of a key",
+      credential_efforts_other: "{{names}} checked the effort levels of a key",
       proposal_waiting_one: "{{names}} proposes an improvement",
       proposal_waiting_other: "{{names}} propose improvements",
       mention_one: "{{names}} mentioned you",

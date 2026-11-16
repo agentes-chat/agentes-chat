@@ -86,6 +86,11 @@ export const NOTIFICATION_KINDS = [
    */
   "plan_reset_unknown",
   /**
+   * A workspace endpoint's effort check finished (ADR 0186): the key's owner, from the right hand (its actor),
+   * `source.label` the key's name, `latest.statusTo` `done` or `failed` (its words in `latest.text`).
+   */
+  "credential_efforts",
+  /**
    * An agent back from its plan or budget skipped catch-ups that looked handled (ADR 0136): its owner, one row per line
    * (`count` the conversations they can read), opening the latest skipped note. Inbox only (no category, no push).
    */
@@ -490,6 +495,8 @@ const MERGING: ReadonlySet<NotificationKind> = new Set([
   "catch_up_closed",
   // The day's decisions the right hand made for the person, one row while unread.
   "right_hand_decided",
+  // A key's effort check: a retry or a check again says the latest state on the same row.
+  "credential_efforts",
   // One per person, read or not, until nothing waits on them.
   "proposal_waiting",
 ]);

@@ -169,3 +169,23 @@ describe("what an agent on a key thinks with, by name", () => {
     expect(apiModelName(t, "my-model", undefined, undefined)).toBe("my-model");
   });
 });
+
+describe("an OpenRouter key's models", () => {
+  test("a choice hides the rest of the list; the current model stays, and a legacy key shows all", () => {
+    const models = [
+      { id: "openai/gpt-6-luna", label: "GPT-6", provider: "openrouter", inputUsdPerMTok: 1, outputUsdPerMTok: 2 },
+      { id: "z-ai/glm-5.3", label: "GLM", provider: "openrouter", inputUsdPerMTok: 1, outputUsdPerMTok: 2 },
+    ];
+    const chosen = { id: "k", provider: "openrouter", openrouter: { models: ["z-ai/glm-5.3"] } };
+    const ids = (list: ReturnType<typeof modelChoices>) => list.flatMap(([, l]) => l.map((c) => c.model.id));
+    expect(ids(modelChoices(models, [chosen], false))).toEqual(["z-ai/glm-5.3"]);
+    expect(ids(modelChoices(models, [chosen], false, "openai/gpt-6-luna"))).toEqual([
+      "openai/gpt-6-luna",
+      "z-ai/glm-5.3",
+    ]);
+    expect(ids(modelChoices(models, [{ id: "old", provider: "openrouter" }], false))).toEqual([
+      "openai/gpt-6-luna",
+      "z-ai/glm-5.3",
+    ]);
+  });
+});

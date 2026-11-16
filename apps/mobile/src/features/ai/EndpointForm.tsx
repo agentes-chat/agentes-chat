@@ -62,6 +62,9 @@ export function EndpointForm({
   const [listError, setListError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Models whose effort levels were never checked: the save asks whether to check them (ADR 0186).
+  const [askEffort, setAskEffort] = useState(false);
+  const [checkingEfforts, setCheckingEfforts] = useState(false);
   const [saved, setSaved] = useState<{ key: Credential; checks: EndpointCheck[] } | null>(null);
   const [closing, setClosing] = useState(false);
   const [query, setQuery] = useState("");
@@ -102,17 +105,19 @@ export function EndpointForm({
     setDraft(next);
     setTyped("");
   };
-  const save = async () => {
+  const save = async (syncEfforts: boolean) => {
     const models = endpointModelsOf(draft);
     if (!models || saving) return;
     setSaving(true);
     setFailed(false);
+    if (syncEfforts) setCheckingEfforts(true);
     try {
       const { checks, ...key } = await api.agents.addCredential(orgId, {
         provider: CUSTOM_PROVIDER,
         label: draft.name.trim(),
         apiKey: draft.apiKey.trim(),
         endpoint: { style: draft.style, baseURL: draft.baseURL.trim(), models },
+        ...(syncEfforts ? { syncEfforts: true } : {}),
       });
       setSaved({ key, checks: checks ?? [] });
       await qc.invalidateQueries({ queryKey: keys.credentials(orgId) });
@@ -144,6 +149,11 @@ export function EndpointForm({
             />
           ))}
         </GroupedList>
+        {checkingEfforts ? (
+          <Note icon="info" live>
+            {t("endpoint.testing")}
+          </Note>
+        ) : null}
         <Button
           variant="primary"
           wide
@@ -287,6 +297,17 @@ export function EndpointForm({
                   <GroupedRow
                     key={m.id}
                     label={m.id}
+                    sub={
+                      m.efforts && m.efforts.length > 0
+                        ? m.efforts
+                            .map((e) =>
+                              e === "low" || e === "medium" || e === "high"
+                                ? t(`agentPage.work.brain.effortsLower.${e}`)
+                                : e,
+                            )
+                            .join(" · ")
+                        : undefined
+                    }
                     checked={m.on}
                     onPress={() => setModel(m.id, { on: !m.on })}
                     remove={{
@@ -343,14 +364,47 @@ export function EndpointForm({
           {t("mobile.ai.failed")}
         </Note>
       ) : null}
-      <Button
-        variant="primary"
-        wide
-        label={saving ? t("endpoint.testing") : t("endpoint.save")}
-        loading={saving}
-        disabled={!endpointReady(draft) || listing}
-        onPress={() => void save()}
-      />
+      {askEffort ? (
+        <View style={styles.gap}>
+          <Note icon="info">{t("endpoint.effortsAsk")}</Note>
+          <Button
+            variant="primary"
+            wide
+            label={t("connectAi.key.testModels")}
+            loading={saving}
+            disabled={saving}
+            onPress={() => {
+              setAskEffort(false);
+              void save(true);
+            }}
+          />
+          <Button
+            variant="secondary"
+            wide
+            label={t("endpoint.effortsListOnly")}
+            disabled={saving}
+            onPress={() => {
+              setAskEffort(false);
+              void save(false);
+            }}
+          />
+        </View>
+      ) : (
+        <Button
+          variant="primary"
+          wide
+          label={saving ? t("endpoint.testing") : t("endpoint.save")}
+          loading={saving}
+          disabled={!endpointReady(draft) || listing}
+          onPress={() => {
+            if (draft.models.some((m) => m.on && !m.efforts)) {
+              setAskEffort(true);
+              return;
+            }
+            void save(false);
+          }}
+        />
+      )}
     </View>
   );
 }

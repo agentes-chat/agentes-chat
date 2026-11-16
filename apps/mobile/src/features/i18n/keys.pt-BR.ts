@@ -930,6 +930,8 @@ export const featureKeysPtBR = {
       older: "Mais antigas",
     },
     kind: {
+      credential_efforts_one: "{{names}} verificou os níveis de esforço de uma chave",
+      credential_efforts_other: "{{names}} verificou os níveis de esforço de uma chave",
       proposal_waiting_one: "{{names}} propõe uma melhoria",
       proposal_waiting_other: "{{names}} propõem melhorias",
       mention_one: "{{names}} mencionou você",

@@ -254,6 +254,11 @@ export const EndpointModel = z
       .enum(["ok", "no_tools", "failed"])
       .optional()
       .openapi({ description: "The last test call: it called a tool, answered without one, or failed." }),
+    efforts: z
+      .array(z.string())
+      .optional()
+      .openapi({ description: "The effort levels its check found it takes: low, medium and high (ADR 0186)." }),
+    effortsAt: z.string().optional().openapi({ description: "When those levels were checked." }),
   })
   .openapi("EndpointModel");
 
@@ -278,6 +283,10 @@ export const Credential = z
       .object({ style: EndpointStyle, baseURL: z.string(), models: z.array(EndpointModel) })
       .optional()
       .openapi({ description: "A workspace's own endpoint (`custom`, ADR 0146): its address, API and models." }),
+    openrouter: z
+      .object({ models: z.array(z.string()) })
+      .optional()
+      .openapi({ description: "OpenRouter (ADR 0186): the models this workspace chose to use with the key." }),
     keyHint: z.string().openapi({ description: "Last 4 characters of the key. The key itself is never returned." }),
     workspaceIdHint: z
       .string()
@@ -918,6 +927,14 @@ export const Model = z
       .boolean()
       .optional()
       .openapi({ description: "No prices known: its calls cost 0, so a budget can't count money for it." }),
+    efforts: z
+      .array(z.string())
+      .optional()
+      .openapi({ description: "The effort levels it takes, when known (ADR 0186)." }),
+    reasoning: z
+      .boolean()
+      .optional()
+      .openapi({ description: "It takes a reasoning effort at all; `false` leaves its ramp with no control." }),
   })
   .openapi("Model");
 

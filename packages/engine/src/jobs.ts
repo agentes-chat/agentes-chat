@@ -34,6 +34,7 @@ import { LEARN_JOB, learnRun } from "./context/learn";
 import { REFLECT_DEFAULTS, reflectThread } from "./context/reflect";
 import { judgeOf, summaryModelReady } from "./context/summaries";
 import { reportDroppedMentions, tellWakeSkipped } from "./continuation";
+import { CREDENTIAL_EFFORTS_JOB } from "./credential-efforts";
 import { DEVICE_WAIT_EXPIRED_JOB, expireDeviceWait } from "./device-waits";
 import {
   deferMentionReport,
@@ -57,6 +58,7 @@ import {
   sendQueuedEmail,
 } from "./email";
 import { forgetCodeEmail } from "./email-codes";
+import { markCredentialEffortsFailed, probeCredentialEfforts } from "./endpoints";
 import { type DecidedBy, publishListChanged, publishRouted } from "./events";
 import { executeRun, type RunExecutorDeps } from "./executor";
 import {
@@ -94,6 +96,7 @@ import { afterMachineTaskEnded, afterMissionRunEnded, startQueuedMissionTasks } 
 import { type MissionDeps, missionOfThread, missionRole, reactivateMission } from "./missions";
 import { KEEP_GOING_JOB, keepMissionGoing, type MissionEngine } from "./missions-engine";
 import { notifyMessage } from "./notification-producers";
+import { notify } from "./notifications";
 import { ORG_FILES_PURGE_ATTEMPTS, ORG_FILES_PURGE_JOB, USER_FILES_PURGE_JOB } from "./organizations";
 import { outOfOfficeIds } from "./out-of-office";
 import { enqueue, type JobHandlers, type OutboxJob, PermanentJobError } from "./outbox";
@@ -103,6 +106,7 @@ import { notifyPersonLimit, PERSON_LIMIT_JOB } from "./person-usage";
 import { deliverPush } from "./push";
 import { reachOf, settleReach } from "./reach";
 import { routineCreatorOf } from "./requester";
+import { rightHandId } from "./right-hand";
 import { considerCard, RIGHT_HAND_DECIDE_JOB } from "./right-hand-approvals";
 import { lodiLaneHandlers } from "./right-hand-lanes";
 import {
@@ -1130,6 +1134,46 @@ export function createJobHandlers(deps: JobDeps): JobHandlers {
         level: job.payload.level === "reached" ? "reached" : "warning",
         period: String(job.payload.period),
       });
+    },
+    // A workspace endpoint's effort check finished (ADR 0186): the person hears from the right hand.
+    [CREDENTIAL_EFFORTS_JOB]: async (job) => {
+      const orgId = orgOf(job);
+      const credentialId = String(job.payload.credentialId);
+      const userId = String(job.payload.userId);
+      if (!credentialId || !userId) return;
+      const [row] = await deps.db
+        .select({ label: schema.providerCredentials.label })
+        .from(schema.providerCredentials)
+        .where(and(eq(schema.providerCredentials.id, credentialId), eq(schema.providerCredentials.orgId, orgId)));
+      if (!row) return;
+      const hand = await rightHandId(deps.db, orgId).catch(() => null);
+      const tell = (statusTo: "done" | "failed", text?: string) =>
+        notify(
+          { db: deps.db, pubsub: deps.pubsub },
+          {
+            orgId,
+            userIds: [userId],
+            kind: "credential_efforts",
+            groupKey: `credential-efforts:${credentialId}`,
+            ...(hand ? { actor: { type: "agent" as const, id: hand } } : {}),
+            source: { label: row.label },
+            latest: { title: row.label, statusTo, ...(text ? { text } : {}) },
+          },
+        );
+      let result: Awaited<ReturnType<typeof probeCredentialEfforts>>;
+      try {
+        result = await probeCredentialEfforts(deps.db, deps.gateway, orgId, credentialId, {
+          force: job.payload.force === true,
+        });
+      } catch (error) {
+        // The outbox retries; its last attempt is the one that tells the person.
+        if (job.attempts + 1 >= job.maxAttempts) {
+          await markCredentialEffortsFailed(deps.db, orgId, credentialId, error).catch(() => {});
+          await tell("failed", error instanceof Error ? error.message : String(error)).catch(() => {});
+        }
+        throw error;
+      }
+      await tell(result.error ? "failed" : "done", result.error);
     },
     // In-app notifications of a message: mentions, thread replies, DMs.
     "notifications.message": async (job) => {

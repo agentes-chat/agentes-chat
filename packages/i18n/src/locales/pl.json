@@ -5398,6 +5398,8 @@
       "planModelDropped": "{{model}} zniknął z {{plan}}. <b>{{name}}</b> używa {{runs}}, dopóki nie wybierzesz innego modelu.",
       "routineWaitingPlan": "<b>{{name}}</b> czeka na odnowienie limitu planu, by uruchomić rutynę",
       "planResetUnknown": "{{plan}} nie podaje, kiedy odnowi się limit. Praca <b>{{name}}</b> nadal czeka.",
+      "credentialEfforts": "<b>{{name}}</b> zakończył sprawdzanie poziomów wysiłku {{label}}",
+      "credentialEffortsFailed": "<b>{{name}}</b> nie mógł sprawdzić poziomów wysiłku {{label}}",
       "catchUpClosed_one": "<b>{{name}}</b> wrócił i pominął {{count}} rozmowę, która nie wymagała odpowiedzi",
       "catchUpClosed_few": "<b>{{name}}</b> wrócił i pominął {{count}} rozmowy, które nie wymagały odpowiedzi",
       "catchUpClosed_many": "<b>{{name}}</b> wrócił i pominął {{count}} rozmów, które nie wymagały odpowiedzi",
@@ -5897,6 +5899,7 @@
           "xhigh": "Bardzo wysoki",
           "max": "Maksymalny"
         },
+        "effortsUntested": "Poziomy wysiłku tego modelu nie zostały sprawdzone. Sprawdź je w modelach jego klucza.",
         "effortsLower": {
           "auto": "automatyczny",
           "low": "niski",
@@ -10413,6 +10416,8 @@
     "save": "Zapisz i przetestuj",
     "saveModels": "Zapisz i przetestuj ponownie",
     "testing": "Testowanie każdego modelu…",
+    "effortsAsk": "Ten dostawca może nie akceptować wszystkich poziomów wysiłku. Możemy sprawdzić każdy wybrany model w tle, jednym krótkim wywołaniem na poziom, i pokazywać tylko akceptowane poziomy. Asystent powiadomi, gdy skończy.",
+    "effortsListOnly": "Tylko wylistuj modele",
     "results": "Test każdego modelu",
     "check": {
       "ok": "Działa, z narzędziami",

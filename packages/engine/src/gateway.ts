@@ -26,6 +26,7 @@ import {
   maxCostNanoUsd,
   modelInfo,
   modelProvider,
+  nearestRequestEffort,
   openRouterListed,
   outputTokensWithin,
   PROVIDERS,
@@ -142,6 +143,10 @@ export interface OrgCall {
   /** Tools the model may call (an endpoint's test call, ADR 0146); none run here. */
   tools?: ToolSpec[];
   effort?: ModelRequest["effort"];
+  /** The effort as given, not taken to the model's nearest: the effort check probes each level. */
+  rawEffort?: boolean;
+  /** Send that level exactly, even where an adapter would take it to the nearest one the list claims (ADR 0186). */
+  exactEffort?: boolean;
   /** Agent the call is about, if any (recorded, not billed to its budget). */
   agentId?: string | null;
   runId?: string;
@@ -733,6 +738,8 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       const provider = providerFor(providerId);
       const key = await agentKey(agent, providerId);
       const info = await infoFor(agent.orgId, agent.model);
+      // The effort the model takes (`ModelInfo.efforts`): a level it doesn't, the nearest one it does.
+      const effort = call.effort ? nearestRequestEffort(call.effort, info) : undefined;
 
       const request: ModelRequest = {
         model: agent.model,
@@ -740,7 +747,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
         messages: call.messages,
         maxTokens: capOf(call.maxTokens, info),
         tools: call.tools,
-        ...(call.effort ? { effort: call.effort } : {}),
+        ...(effort !== undefined ? { effort } : {}),
         ...(call.cacheTtl ? { cacheTtl: call.cacheTtl } : {}),
         ...(call.notes ? { notes: call.notes } : {}),
         signal: call.signal,
@@ -1012,7 +1019,8 @@ export function createModelGateway(deps: ModelGatewayDeps) {
         maxTokens: capOf(call.maxTokens, info),
         ...(call.tools ? { tools: call.tools } : {}),
         outputSchema: call.outputSchema,
-        effort: call.effort,
+        ...(call.effort ? { effort: call.rawEffort ? call.effort : nearestRequestEffort(call.effort, info) } : {}),
+        ...(call.rawEffort && call.exactEffort ? { exactEffort: true } : {}),
         signal: call.signal,
       };
       const base = {
