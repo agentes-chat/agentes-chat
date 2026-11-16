@@ -2919,6 +2919,16 @@
       "invite_people_sent_one": "Einladung an <b>{{emails}}</b> gesendet.",
       "invite_people_sent_other": "Einladungen an <b>{{emails}}</b> gesendet.",
       "remove_ai_key": "API-Schlüssel „{{name}}“ löschen."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Braucht einen Computer",
+        "computerOnly": "Von {{owner}}, nur auf {{computer}} angemeldet. Lodi denkt mit einem Plan, der als Konto angemeldet ist.",
+        "noComputer": "Von {{owner}}. Braucht einen Computer, und der Workspace hat keinen verbunden.",
+        "away": "Von {{owner}}, auf {{computer}}, der gerade weg ist.",
+        "connect": "Computer verbinden",
+        "plans": "Pläne ansehen"
+      }
     }
   },
   "teamWeek": {
@@ -7929,7 +7939,10 @@
         "failed": "Die letzte Ausführung ist fehlgeschlagen.",
         "canceled": "Jemand hat die Ausführung gestoppt.",
         "budget": "Das Monatsbudget des Agenten ist aufgebraucht."
-      }
+      },
+      "finishedTitle": "{{name}} hat es erledigt",
+      "finishedMeta": "{{when}} · übergeben von {{name}}",
+      "answer": "Antworten"
     },
     "status": {
       "todo": "Zu erledigen",
@@ -8115,7 +8128,10 @@
       "criterion_checked": "hat das Kriterium „{{text}}“ abgehakt",
       "criterion_unchecked": "hat das Kriterium „{{text}}“ wieder geöffnet",
       "agent_asked": "hat {{name}} gebeten, sie zu erledigen"
-    }
+    },
+    "handedBy": "übergeben von <0/>{{name}}",
+    "fromDm": "aus <0>deiner DM mit {{name}}</0>",
+    "fromDmText": "aus deiner DM mit {{name}}"
   },
   "routines": {
     "filters": "Routinen filtern",
@@ -17156,7 +17172,22 @@
       "failed": "Blockiert · nicht fertig geworden",
       "failedWhy": "Blockiert · nicht fertig geworden: {{why}}"
     },
-    "working": "Im Hintergrund"
+    "working": "Im Hintergrund",
+    "handed": {
+      "lead": "Übergeben an <0/>{{name}}",
+      "working": "arbeitet daran",
+      "done": "fertig in {{duration}}",
+      "waitingYou": "wartet auf deine Antwort",
+      "waiting": "wartet auf eine Antwort",
+      "waitingApprovalYou": "wartet auf deine Freigabe",
+      "waitingApproval": "wartet auf Freigabe",
+      "waitingComputer": "wartet auf den Computer",
+      "paused": "pausiert am Limit des Plans",
+      "queued": "in der Warteschlange",
+      "failed": "nicht fertig geworden",
+      "stopped": "gestoppt",
+      "step": "Schritt {{current}} von {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -17751,6 +17782,9 @@
       "interrupted": "Durch einen Neustart des Servers unterbrochen. Frag noch einmal, um weiterzumachen.",
       "step_limit": "Mir sind die Schritte ausgegangen, bevor ich fertig war.",
       "stuck": "Ich bin hängen geblieben und habe aufgehört, bevor ich fertig war."
+    },
+    "request": {
+      "asksYou": "{{name}} fragt dich"
     }
   },
   "builtinTools": {

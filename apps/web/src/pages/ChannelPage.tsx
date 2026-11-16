@@ -274,7 +274,7 @@ import { ArtifactCard } from "@/components/artifacts/ArtifactCard";
 import { ImageSet } from "@/components/artifacts/ArtifactViewer";
 import { objectUrls } from "@/components/artifacts/FileView";
 import { ImageMaking } from "@/components/artifacts/ImageMaking";
-import { MessageWorkLine } from "@/components/BackgroundWork";
+import { HandedWorkLine, MessageWorkLine } from "@/components/BackgroundWork";
 import { HeldBrowserCard, RunBrowserCard, useHeldTakeover } from "@/components/browser/BrowserCard";
 import { BrowserHandoffCard } from "@/components/browser/BrowserHandoffCard";
 import { BrowserTrailCard } from "@/components/browser/BrowserTrailCard";
@@ -4472,10 +4472,16 @@ export const TimelineMessage = memo(function TimelineMessage({
     !live,
     reached,
   );
+  // Work it handed over that reports here: its line under this reply says what the pair row would.
+  const handedWorks = lastOfRun && !m.local ? (m.handedWorks ?? []) : [];
+  const paired = consults.filter((c) => !handedWorks.some((w) => w.handedBy?.consultationId === c.id));
   const pair =
-    m.author.type === "agent" && m.author.id && consults.length > 0 ? (
-      <ConsultPairRow askerId={m.author.id} items={consults} />
+    m.author.type === "agent" && m.author.id && paired.length > 0 ? (
+      <ConsultPairRow askerId={m.author.id} items={paired} />
     ) : null;
+  // Another agent's message in an agent's DM (it helps that agent): its name on its first line, the DM names only one.
+  const look = useContext(MessageLookContext);
+  const helpingLook = useMemo(() => (helping && look ? { ...look, names: true } : null), [helping, look]);
   // Nobody called it: it joined the conversation on its own (`meta.joined`).
   const joined = m.author.type === "agent" && meta.joined === true;
   const joinedTip = joined ? t("chat.joined.tip", agentGrammar(name)) : null;
@@ -4550,7 +4556,7 @@ export const TimelineMessage = memo(function TimelineMessage({
   ]
     .filter(Boolean)
     .join(" · ");
-  return (
+  const row = (
     <>
       {pair}
       <Message
@@ -4873,15 +4879,22 @@ export const TimelineMessage = memo(function TimelineMessage({
               />
             ) : null}
             {/* A question to another agent (in their DM) carries the asking run: its work shows on that run's reply. */}
-            {m.author.type === "agent" && replyRun && !card && !m.local && !keptAll && !m.meta?.consultation && (
-              <SavedTools
-                runId={replyRun}
-                meta={m.meta}
-                agentName={agent?.name ?? name}
-                color={colorOf(agent)}
-                skipScreens={onCards}
-              />
-            )}
+            {m.author.type === "agent" &&
+              replyRun &&
+              !card &&
+              !m.local &&
+              !keptAll &&
+              !m.meta?.consultation &&
+              // A work's updates are steps of one work: the trace stays on its report.
+              !m.meta?.workUpdate && (
+                <SavedTools
+                  runId={replyRun}
+                  meta={m.meta}
+                  agentName={agent?.name ?? name}
+                  color={colorOf(agent)}
+                  skipScreens={onCards}
+                />
+              )}
             {/* What waits for a person's click comes last, after the words and the tools. */}
             {approvalId && (
               <MessageApproval messageId={m.id} approvalId={approvalId} agent={agent} members={dir.memberById} />
@@ -4904,7 +4917,7 @@ export const TimelineMessage = memo(function TimelineMessage({
             ) : (
               usageWait && !usageWait.canceled && !usageWait.ended && <UsageWaitCancel message={m} wait={usageWait} />
             )}
-            {question && <QuestionCard question={question} />}
+            {question && <QuestionCard question={question} asker={helping ? name : undefined} />}
             {secretRequest && <SecretCard request={secretRequest} runId={m.agentRunId} />}
             {browserHandoff && <BrowserHandoffCard handoff={browserHandoff} />}
             {missionDecision && <MissionDecisionCard message={missionDecision} />}
@@ -4921,6 +4934,10 @@ export const TimelineMessage = memo(function TimelineMessage({
                 inThread={!threadsView && (m.threadId ?? m.id) === (m.longWork.threadId ?? m.longWork.anchorMessageId)}
               />
             )}
+            {/* Work this run handed over, reporting here: one line each, under the reply that handed it. */}
+            {handedWorks.map((w) => (
+              <HandedWorkLine key={w.id} work={w} />
+            ))}
             {/* A "Responder" thread went on from here: its line (opens the panel). */}
             {threadLine && <ThreadReplyLine thread={threadLine.thread} count={threadLine.count} />}
             {feedback && (
@@ -4943,6 +4960,7 @@ export const TimelineMessage = memo(function TimelineMessage({
       </Message>
     </>
   );
+  return helpingLook ? <MessageLookContext.Provider value={helpingLook}>{row}</MessageLookContext.Provider> : row;
 });
 
 function isSecretRequest(v: unknown): v is SecretRequest {

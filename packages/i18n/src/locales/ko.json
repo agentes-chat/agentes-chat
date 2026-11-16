@@ -2815,6 +2815,16 @@
       "invite_roles_other": "{{roles}} 역할로 초대해요.",
       "invite_people_sent_other": "<b>{{emails}}</b>에게 초대를 보냈어요.",
       "remove_ai_key": "API 키 \"{{name}}\"을(를) 삭제합니다."
+    },
+    "brain": {
+      "unusable": {
+        "title": "컴퓨터가 필요해요",
+        "computerOnly": "{{owner}}의 것, {{computer}}에서만 로그인됨. Lodi는 계정으로 로그인한 플랜으로 생각해요.",
+        "noComputer": "{{owner}}의 것. 컴퓨터가 필요한데 워크스페이스에 연결된 컴퓨터가 없어요.",
+        "away": "{{owner}}의 것, {{computer}}에 있지만 자리를 비웠어요.",
+        "connect": "컴퓨터 연결",
+        "plans": "플랜 보기"
+      }
     }
   },
   "teamWeek": {
@@ -7637,7 +7647,10 @@
         "failed": "마지막 실행이 실패했어요.",
         "canceled": "누군가 실행을 중지했어요.",
         "budget": "에이전트의 월 예산이 떨어졌어요."
-      }
+      },
+      "finishedTitle": "{{name}}이(가) 마쳤어요",
+      "finishedMeta": "{{when}} · {{name}}이(가) 넘김",
+      "answer": "답하기"
     },
     "status": {
       "todo": "할 일",
@@ -7819,7 +7832,10 @@
       "criterion_checked": "조건 \"{{text}}\"을(를) 체크했어요",
       "criterion_unchecked": "조건 \"{{text}}\"의 체크를 해제했어요",
       "agent_asked": "{{name}}에게 맡겼어요"
-    }
+    },
+    "handedBy": "<0/>{{name}}이(가) 넘김",
+    "fromDm": "<0>{{name}}와(과)의 DM</0>에서",
+    "fromDmText": "{{name}}와(과)의 DM에서"
   },
   "routines": {
     "filters": "루틴 필터",
@@ -16574,7 +16590,22 @@
       "failed": "막힘 · 끝내지 못함",
       "failedWhy": "막힘 · 끝내지 못함: {{why}}"
     },
-    "working": "백그라운드"
+    "working": "백그라운드",
+    "handed": {
+      "lead": "<0/>{{name}}에게 넘김",
+      "working": "작업 중",
+      "done": "{{duration}} 만에 끝남",
+      "waitingYou": "내 답변 대기 중",
+      "waiting": "답변 대기 중",
+      "waitingApprovalYou": "내 승인 대기 중",
+      "waitingApproval": "승인 대기 중",
+      "waitingComputer": "컴퓨터 대기 중",
+      "paused": "요금제 한도로 일시 중지",
+      "queued": "대기 중",
+      "failed": "끝내지 못했어요",
+      "stopped": "중지됨",
+      "step": "{{total}}단계 중 {{current}}단계"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -17161,6 +17192,9 @@
       "interrupted": "서버 재시작으로 중단됐어요. 계속하려면 다시 요청하세요.",
       "step_limit": "끝내기 전에 단계를 모두 썼어요.",
       "stuck": "막혀서 끝내기 전에 멈췄어요."
+    },
+    "request": {
+      "asksYou": "{{name}}의 질문"
     }
   },
   "builtinTools": {

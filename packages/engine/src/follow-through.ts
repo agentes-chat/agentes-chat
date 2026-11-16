@@ -219,7 +219,7 @@ export async function comesBackHere(db: Executor, run: AgentRun) {
               eq(agentWorks.orgId, run.orgId),
               eq(agentWorks.agentId, run.agentId),
               eq(agentWorks.channelId, run.channelId),
-              sql`(case when ${agentWorks.ownThread} then ${agentWorks.anchorMessageId} else ${agentWorks.homeThreadId} end) is not distinct from ${threadId}::uuid`,
+              sql`(case when ${agentWorks.how} = 'handed' then ${agentWorks.handedThreadId} when ${agentWorks.ownThread} then ${agentWorks.anchorMessageId} else ${agentWorks.homeThreadId} end) is not distinct from ${threadId}::uuid`,
               inArray(agentWorks.status, ["queued", "live"]),
             ),
           )

@@ -2915,6 +2915,16 @@
       "invite_people_sent_one": "<b>{{emails}}</b> adresine davet gönderildi.",
       "invite_people_sent_other": "<b>{{emails}}</b> adreslerine davet gönderildi.",
       "remove_ai_key": "\"{{name}}\" API anahtarını sil."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Bir bilgisayar gerekiyor",
+        "computerOnly": "{{owner}} kişisine ait, yalnızca {{computer}} üzerinde oturum açık. Lodi, hesap olarak oturum açılmış bir planla düşünür.",
+        "noComputer": "{{owner}} kişisine ait. Bir bilgisayar gerekiyor ve çalışma alanında bağlı hiç yok.",
+        "away": "{{owner}} kişisine ait, {{computer}} üzerinde, şu an ulaşılamıyor.",
+        "connect": "Bilgisayar bağla",
+        "plans": "Planları gör"
+      }
     }
   },
   "teamWeek": {
@@ -7889,7 +7899,10 @@
         "failed": "Son çalıştırma başarısız oldu.",
         "canceled": "Biri çalıştırmayı durdurdu.",
         "budget": "Ajanın aylık bütçesi bitti."
-      }
+      },
+      "finishedTitle": "{{name}} bitirdi",
+      "finishedMeta": "{{when}} · devreden: {{name}}",
+      "answer": "Yanıtla"
     },
     "status": {
       "todo": "Yapılacak",
@@ -8075,7 +8088,10 @@
       "criterion_checked": "\"{{text}}\" kriterini işaretledi",
       "criterion_unchecked": "\"{{text}}\" kriterinin işaretini kaldırdı",
       "agent_asked": "{{name}} ajanından yapmasını istedi"
-    }
+    },
+    "handedBy": "devreden: <0/>{{name}}",
+    "fromDm": "<0>{{name}} ile DM'inden</0>",
+    "fromDmText": "{{name}} ile DM'inden"
   },
   "routines": {
     "filters": "Rutinleri filtrele",
@@ -17087,7 +17103,22 @@
       "failed": "Engellendi · bitmedi",
       "failedWhy": "Engellendi · bitmedi: {{why}}"
     },
-    "working": "Arka planda"
+    "working": "Arka planda",
+    "handed": {
+      "lead": "Devredildi: <0/>{{name}}",
+      "working": "üzerinde çalışıyor",
+      "done": "{{duration}} içinde bitti",
+      "waitingYou": "yanıtını bekliyor",
+      "waiting": "bir yanıt bekliyor",
+      "waitingApprovalYou": "onayını bekliyor",
+      "waitingApproval": "onay bekliyor",
+      "waitingComputer": "bilgisayarı bekliyor",
+      "paused": "plan sınırında duraklatıldı",
+      "queued": "sırada",
+      "failed": "bitmedi",
+      "stopped": "durduruldu",
+      "step": "adım {{current}}/{{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -17682,6 +17713,9 @@
       "interrupted": "Sunucu yeniden başlatıldığı için kesildi. Devam etmek için yeniden sorun.",
       "step_limit": "Bitirmeden adımlarım tükendi.",
       "stuck": "Takıldım ve bitirmeden durdum."
+    },
+    "request": {
+      "asksYou": "{{name}} soruyor"
     }
   },
   "builtinTools": {

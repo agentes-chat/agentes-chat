@@ -14958,3 +14958,28 @@ html:not([data-pointer]) .rh-set__face-edit:focus-visible {
     min-width: 0;
   }
 }
+
+/* A handed work's line under the reply that handed it (ADR 0121 addendum): the delegate's face inline, the state word
+   in the agent's colour while it works and amber while it waits on someone. */
+/* One text line tall, the face centred in it: the 18px face never makes the first line taller than the mark beside it. */
+.handed-line__who {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  vertical-align: top;
+  margin-inline-end: 4px;
+}
+@supports (top: 1lh) {
+  .handed-line__who {
+    height: 1lh;
+  }
+}
+.handed-line__state {
+  font-weight: 550;
+}
+.ac-workline--working .handed-line__state {
+  color: var(--agent);
+}
+.ac-workline--waiting .handed-line__state {
+  color: var(--warn);
+}

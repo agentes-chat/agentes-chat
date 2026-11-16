@@ -72,7 +72,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { ActorAvatar, ActorWho, AgentAvatar } from "@/components/AgentAvatar";
 import { AskAgentButton } from "@/components/AskAgentButton";
@@ -1000,11 +1000,21 @@ function CardWho({ issue: i, state, assignee }: { issue: Issue; state: TaskState
  * the priority, the due date (in the attention tone today, tomorrow and once late), the criteria, GitHub, and the
  * conversation's count (bold while unread, with the red count of mentions of me).
  */
-function CardFacts({ issue: i, fields }: { issue: Issue; fields: IssuesView["fields"] }) {
+function CardFacts({
+  issue: i,
+  fields,
+  handed = true,
+}: {
+  issue: Issue;
+  fields: IssuesView["fields"];
+  /** "handed by Lodi" among the facts (the list says it after the title instead). */
+  handed?: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const { unread, mentions } = useTaskUnread(org.id, i.id);
   const facts: LineFact[] = [{ key: "number", text: `#${i.number}` }];
+  const handedBy = handed ? i.backgroundWork?.handedBy : null;
   if (fields.project && i.project)
     facts.push({
       key: "project",
@@ -1017,6 +1027,7 @@ function CardFacts({ issue: i, fields }: { issue: Issue; fields: IssuesView["fie
     facts.push({ key: "label", text: label, tone: "label" });
     if (labels.length > 0) facts.push({ key: "labels", text: `+${labels.length}`, title: labels.join(", ") });
   }
+  if (handedBy) facts.push({ key: "handed", text: <HandedBy agentId={handedBy.agentId} /> });
   if (fields.priority && i.priority !== "normal")
     facts.push({
       key: "priority",
@@ -1064,6 +1075,31 @@ function CardFacts({ issue: i, fields }: { issue: Issue; fields: IssuesView["fie
       title: talk > 0 ? t("issues.conversation.messages", { count: talk }) : undefined,
     });
   return <FactLine className="issue-card__facts" facts={facts} />;
+}
+
+/** "handed by [face] Lodi": the agent that handed a task's work over. */
+function HandedBy({ agentId }: { agentId: string }) {
+  const actors = useActors();
+  const name = actors.name({ type: "agent", id: agentId });
+  return (
+    <Trans
+      i18nKey="issues.handedBy"
+      values={{ name }}
+      components={[<AgentAvatar key="face" agentId={agentId} name={name} state="idle" size="xs" />]}
+    />
+  );
+}
+
+/** What came of a finished handed task: its report's first line. */
+function CardResult({ issue: i }: { issue: Issue }) {
+  const result = i.status === "done" ? i.backgroundWork?.result : null;
+  if (!result) return null;
+  return (
+    <span className="issue-card__result">
+      <Icon name="check" size={14} inline />
+      <span>{result.text}</span>
+    </span>
+  );
 }
 
 /** The list's columns after the number and the title, in the row's order (issues.css names a grid line for each). */
@@ -1409,6 +1445,7 @@ function IssueCard({
       {cardWaits(state) && <CardSky color={color(i) ?? "sky"} />}
       <span className="issue-card__title">{codeAndBold(i.title)}</span>
       <CardFacts issue={i} fields={fields} />
+      <CardResult issue={i} />
       <CardWho issue={i} state={state} assignee={fields.assignee} />
       {state?.kind === "running" && <WorkSweep color={color(i) ?? "sky"} />}
       {who}
@@ -1700,8 +1737,13 @@ function IssueRow({
       </span>
       <span className="issue-list__title" title={i.title}>
         {codeAndBold(i.title)}
+        {i.backgroundWork?.handedBy && (
+          <span className="issue-list__from">
+            <HandedBy agentId={i.backgroundWork.handedBy.agentId} />
+          </span>
+        )}
       </span>
-      <CardFacts issue={i} fields={fields} />
+      <CardFacts issue={i} fields={fields} handed={false} />
       <CardWho issue={i} state={state} assignee={fields.assignee} />
       <span className="issue-sr">{t(`issues.status.${i.status}`)}</span>
       {state?.kind === "running" && <WorkSweep color={color(i) ?? "sky"} />}

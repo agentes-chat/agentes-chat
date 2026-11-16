@@ -2815,6 +2815,16 @@
       "invite_roles_other": "{{roles}}のロールで招待します。",
       "invite_people_sent_other": "<b>{{emails}}</b>に招待を送信しました。",
       "remove_ai_key": "APIキー「{{name}}」を削除します。"
+    },
+    "brain": {
+      "unusable": {
+        "title": "コンピューターが必要です",
+        "computerOnly": "{{owner}}のもの。{{computer}}でのみサインインしています。Lodiはアカウントとしてサインインしたプランで考えます。",
+        "noComputer": "{{owner}}のもの。コンピューターが必要ですが、ワークスペースには接続されたものがありません。",
+        "away": "{{owner}}のもの。{{computer}}上にありますが、離席中です。",
+        "connect": "コンピューターを接続",
+        "plans": "プランを見る"
+      }
     }
   },
   "teamWeek": {
@@ -7640,7 +7650,10 @@
         "failed": "前回の実行が失敗しました。",
         "canceled": "誰かが実行を止めました。",
         "budget": "エージェントの月間予算を使い切りました。"
-      }
+      },
+      "finishedTitle": "{{name}}が完了しました",
+      "finishedMeta": "{{when}} · {{name}}から引き継ぎ",
+      "answer": "回答する"
     },
     "status": {
       "todo": "未着手",
@@ -7822,7 +7835,10 @@
       "criterion_checked": "条件「{{text}}」にチェックを入れました",
       "criterion_unchecked": "条件「{{text}}」のチェックを外しました",
       "agent_asked": "{{name}}に作業を頼みました"
-    }
+    },
+    "handedBy": "<0/>{{name}}から引き継ぎ",
+    "fromDm": "<0>{{name}}とのDM</0>から",
+    "fromDmText": "{{name}}とのDMから"
   },
   "routines": {
     "filters": "ルーティンを絞り込む",
@@ -16582,7 +16598,22 @@
       "failed": "ブロック中 · 完了しませんでした",
       "failedWhy": "ブロック中 · 完了しませんでした: {{why}}"
     },
-    "working": "バックグラウンドで作業中"
+    "working": "バックグラウンドで作業中",
+    "handed": {
+      "lead": "<0/>{{name}}に引き継ぎ",
+      "working": "作業中",
+      "done": "{{duration}}で完了",
+      "waitingYou": "あなたの回答待ち",
+      "waiting": "回答待ち",
+      "waitingApprovalYou": "あなたの承認待ち",
+      "waitingApproval": "承認待ち",
+      "waitingComputer": "コンピューター待ち",
+      "paused": "プランの上限で一時停止中",
+      "queued": "順番待ち",
+      "failed": "完了しませんでした",
+      "stopped": "停止しました",
+      "step": "ステップ {{current}}/{{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -17169,6 +17200,9 @@
       "interrupted": "サーバーの再起動で中断されました。続けるにはもう一度依頼してください。",
       "step_limit": "完了する前にステップを使い切りました。",
       "stuck": "行き詰まったため、完了前に停止しました。"
+    },
+    "request": {
+      "asksYou": "{{name}}からの質問"
     }
   },
   "builtinTools": {

@@ -3022,6 +3022,16 @@
       "invite_people_sent_many": "Invitaciones enviadas a <b>{{emails}}</b>.",
       "invite_people_sent_other": "Invitaciones enviadas a <b>{{emails}}</b>.",
       "remove_ai_key": "Eliminar la clave de API «{{name}}»."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Necesita un ordenador",
+        "computerOnly": "De {{owner}}, conectado solo en {{computer}}. Lodi piensa con un plan conectado como cuenta.",
+        "noComputer": "De {{owner}}. Necesita un ordenador y el espacio de trabajo no tiene ninguno conectado.",
+        "away": "De {{owner}}, en {{computer}}, que está ausente.",
+        "connect": "Conectar un ordenador",
+        "plans": "Ver planes"
+      }
     }
   },
   "teamWeek": {
@@ -8161,7 +8171,10 @@
         "failed": "La última ejecución falló.",
         "canceled": "Alguien detuvo la ejecución.",
         "budget": "Se acabó el presupuesto mensual del agente."
-      }
+      },
+      "finishedTitle": "{{name}} la terminó",
+      "finishedMeta": "{{when}} · entregada por {{name}}",
+      "answer": "Responder"
     },
     "status": {
       "todo": "Por hacer",
@@ -8355,7 +8368,10 @@
       "criterion_checked": "marcó el criterio \"{{text}}\"",
       "criterion_unchecked": "desmarcó el criterio \"{{text}}\"",
       "agent_asked": "le pidió a {{name}} que lo hiciera"
-    }
+    },
+    "handedBy": "entregada por <0/>{{name}}",
+    "fromDm": "de <0>tu DM con {{name}}</0>",
+    "fromDmText": "de tu DM con {{name}}"
   },
   "routines": {
     "filters": "Filtrar rutinas",
@@ -17622,7 +17638,22 @@
       "failed": "Bloqueado · no terminó",
       "failedWhy": "Bloqueado · no terminó: {{why}}"
     },
-    "working": "En segundo plano"
+    "working": "En segundo plano",
+    "handed": {
+      "lead": "Entregado a <0/>{{name}}",
+      "working": "trabajando en ello",
+      "done": "listo en {{duration}}",
+      "waitingYou": "esperando tu respuesta",
+      "waiting": "esperando una respuesta",
+      "waitingApprovalYou": "esperando tu aprobación",
+      "waitingApproval": "esperando aprobación",
+      "waitingComputer": "esperando el ordenador",
+      "paused": "en pausa en el límite del plan",
+      "queued": "en cola",
+      "failed": "no terminó",
+      "stopped": "detenido",
+      "step": "paso {{current}} de {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -18225,6 +18256,9 @@
       "interrupted": "Interrumpido por un reinicio del servidor. Vuelve a pedirlo para continuar.",
       "step_limit": "Me quedé sin pasos antes de terminar.",
       "stuck": "Me trabé y me detuve antes de terminar."
+    },
+    "request": {
+      "asksYou": "{{name}} te pregunta"
     }
   },
   "builtinTools": {

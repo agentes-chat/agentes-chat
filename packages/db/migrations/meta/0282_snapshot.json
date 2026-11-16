@@ -1,5 +1,5 @@
 {
-  "id": "3f0a18c0-92d3-49f3-aef4-9187c90ff172",
+  "id": "b1c7274e-727e-41e8-8e97-370d297741b1",
   "prevId": "a39c9ef5-7575-4e38-92e0-cc3f1f6464a5",
   "version": "7",
   "dialect": "postgresql",
@@ -1044,12 +1044,6 @@
         "brain_effort": {
           "name": "brain_effort",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "context_tokens": {
-          "name": "context_tokens",
-          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -16084,6 +16078,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "consultation_id": {
+          "name": "consultation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "handed_thread_id": {
+          "name": "handed_thread_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "requested_by_user_id": {
           "name": "requested_by_user_id",
           "type": "text",
@@ -16209,6 +16215,22 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "agent_works_consultation_id_index": {
+          "name": "agent_works_consultation_id_index",
+          "columns": [
+            {
+              "expression": "consultation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"agent_works\".\"consultation_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -16218,6 +16240,19 @@
           "tableTo": "issues",
           "columnsFrom": [
             "issue_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "agent_works_consultation_id_agent_consultations_id_fk": {
+          "name": "agent_works_consultation_id_agent_consultations_id_fk",
+          "tableFrom": "agent_works",
+          "tableTo": "agent_consultations",
+          "columnsFrom": [
+            "consultation_id"
           ],
           "columnsTo": [
             "id"

@@ -2815,6 +2815,16 @@
       "invite_roles_other": "Dengan peran {{roles}}.",
       "invite_people_sent_other": "Undangan terkirim ke <b>{{emails}}</b>.",
       "remove_ai_key": "Hapus kunci API \"{{name}}\"."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Butuh komputer",
+        "computerOnly": "Milik {{owner}}, masuk hanya di {{computer}}. Lodi berpikir dengan paket yang masuk sebagai akun.",
+        "noComputer": "Milik {{owner}}. Butuh komputer, dan workspace belum menghubungkan satu pun.",
+        "away": "Milik {{owner}}, di {{computer}}, yang sedang tidak aktif.",
+        "connect": "Hubungkan komputer",
+        "plans": "Lihat paket"
+      }
     }
   },
   "teamWeek": {
@@ -7673,7 +7683,10 @@
         "failed": "Proses terakhir gagal.",
         "canceled": "Seseorang menghentikan prosesnya.",
         "budget": "Anggaran bulanan agen sudah habis."
-      }
+      },
+      "finishedTitle": "{{name}} menyelesaikannya",
+      "finishedMeta": "{{when}} · diserahkan oleh {{name}}",
+      "answer": "Jawab"
     },
     "status": {
       "todo": "Akan dikerjakan",
@@ -7859,7 +7872,10 @@
       "criterion_checked": "mencentang kriteria \"{{text}}\"",
       "criterion_unchecked": "menghapus centang kriteria \"{{text}}\"",
       "agent_asked": "meminta {{name}} mengerjakannya"
-    }
+    },
+    "handedBy": "diserahkan oleh <0/>{{name}}",
+    "fromDm": "dari <0>DM kamu dengan {{name}}</0>",
+    "fromDmText": "dari DM kamu dengan {{name}}"
   },
   "routines": {
     "filters": "Saring rutinitas",
@@ -16636,7 +16652,22 @@
       "failed": "Terhambat · tidak selesai",
       "failedWhy": "Terhambat · tidak selesai: {{why}}"
     },
-    "working": "Di latar belakang"
+    "working": "Di latar belakang",
+    "handed": {
+      "lead": "Diserahkan ke <0/>{{name}}",
+      "working": "sedang dikerjakan",
+      "done": "selesai dalam {{duration}}",
+      "waitingYou": "menunggu jawabanmu",
+      "waiting": "menunggu jawaban",
+      "waitingApprovalYou": "menunggu persetujuanmu",
+      "waitingApproval": "menunggu persetujuan",
+      "waitingComputer": "menunggu komputer",
+      "paused": "dijeda di batas paket",
+      "queued": "dalam antrean",
+      "failed": "tidak selesai",
+      "stopped": "dihentikan",
+      "step": "langkah {{current}} dari {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -17223,6 +17254,9 @@
       "interrupted": "Terputus karena server dimulai ulang. Minta lagi untuk melanjutkan.",
       "step_limit": "Langkahku habis sebelum selesai.",
       "stuck": "Aku macet dan berhenti sebelum selesai."
+    },
+    "request": {
+      "asksYou": "{{name}} bertanya padamu"
     }
   },
   "builtinTools": {

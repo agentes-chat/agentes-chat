@@ -239,8 +239,15 @@ export const agentWorks = pgTable(
     issueId: uuid().references(() => issues.id, { onDelete: "set null" }),
     /** `queued` | `live` | `done` | `failed` | `canceled`. */
     status: text().notNull(),
-    /** `agent` (it called work_in_background) | `auto` (the safety net moved it). */
+    /**
+     * `agent` (it called work_in_background) | `auto` (the safety net moved it) | `handed` (another agent handed it
+     * over for a person: it runs in the agents' DM or a task's conversation and reports in the person's, ADR 0121).
+     */
     how: text().notNull(),
+    /** A handed work: the hand-off (note) it came from. */
+    consultationId: uuid().references(() => agentConsultations.id, { onDelete: "set null" }),
+    /** A handed work: the thread of `channelId` its updates and report go to (null: the main timeline). */
+    handedThreadId: uuid(),
     /** The person behind it, for lists and notifications. */
     requestedByUserId: text(),
     updateSeq: integer().notNull().default(0),
@@ -259,6 +266,7 @@ export const agentWorks = pgTable(
     index().on(t.orgId, t.status).where(sql`${t.status} in ('queued', 'live')`),
     index().on(t.agentId, t.status).where(sql`${t.status} in ('queued', 'live')`),
     index().on(t.issueId).where(sql`${t.issueId} is not null`),
+    index().on(t.consultationId).where(sql`${t.consultationId} is not null`),
   ],
 );
 

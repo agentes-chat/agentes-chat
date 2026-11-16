@@ -3131,6 +3131,16 @@
       "invite_people_sent_many": "Zaproszenia wysłane do <b>{{emails}}</b>.",
       "invite_people_sent_other": "Zaproszenia wysłane do <b>{{emails}}</b>.",
       "remove_ai_key": "Usuń klucz API „{{name}}”."
+    },
+    "brain": {
+      "unusable": {
+        "title": "Potrzebny komputer",
+        "computerOnly": "Należy do {{owner}}, zalogowany tylko na {{computer}}. Lodi myśli z planem zalogowanym jako konto.",
+        "noComputer": "Należy do {{owner}}. Potrzebny jest komputer, a workspace nie ma żadnego podłączonego.",
+        "away": "Należy do {{owner}}, na {{computer}}, który jest niedostępny.",
+        "connect": "Podłącz komputer",
+        "plans": "Zobacz plany"
+      }
     }
   },
   "teamWeek": {
@@ -8471,7 +8481,10 @@
         "failed": "Ostatnie uruchomienie się nie powiodło.",
         "canceled": "Ktoś zatrzymał uruchomienie.",
         "budget": "Skończył się miesięczny budżet agenta."
-      }
+      },
+      "finishedTitle": "{{name}}: zrobione",
+      "finishedMeta": "{{when}} · przekazane przez {{name}}",
+      "answer": "Odpowiedz"
     },
     "status": {
       "todo": "Do zrobienia",
@@ -8667,7 +8680,10 @@
       "criterion_checked": "zaznaczył(a) kryterium „{{text}}”",
       "criterion_unchecked": "odznaczył(a) kryterium „{{text}}”",
       "agent_asked": "poprosił(a) o wykonanie: {{name}}"
-    }
+    },
+    "handedBy": "przekazane przez <0/>{{name}}",
+    "fromDm": "z <0>twojej rozmowy z {{name}}</0>",
+    "fromDmText": "z twojej rozmowy z {{name}}"
   },
   "routines": {
     "filters": "Filtruj rutyny",
@@ -18236,7 +18252,22 @@
       "failed": "Zablokowane · nie zakończono",
       "failedWhy": "Zablokowane · nie zakończono: {{why}}"
     },
-    "working": "W tle"
+    "working": "W tle",
+    "handed": {
+      "lead": "Przekazane: <0/>{{name}}",
+      "working": "w toku",
+      "done": "gotowe w {{duration}}",
+      "waitingYou": "czeka na twoją odpowiedź",
+      "waiting": "czeka na odpowiedź",
+      "waitingApprovalYou": "czeka na twoją zgodę",
+      "waitingApproval": "czeka na zgodę",
+      "waitingComputer": "czeka na komputer",
+      "paused": "wstrzymane na limicie planu",
+      "queued": "w kolejce",
+      "failed": "nie skończone",
+      "stopped": "zatrzymane",
+      "step": "krok {{current}} z {{total}}"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -18859,6 +18890,9 @@
       "interrupted": "Przerwane przez restart serwera. Poproś ponownie, żeby kontynuować.",
       "step_limit": "Skończył mi się limit kroków przed zakończeniem.",
       "stuck": "Praca utknęła i została przerwana przed zakończeniem."
+    },
+    "request": {
+      "asksYou": "{{name}} pyta cię"
     }
   },
   "builtinTools": {

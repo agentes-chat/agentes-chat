@@ -1525,7 +1525,10 @@ export function useAddChannelMember(orgId: string) {
  * `clientId`), which always waits in the channel list (a thread may not be loaded yet): a reply's copy is removed
  * from there too, or it would stay "sending…" next to the real one.
  */
-export function cacheMessage(qc: ReturnType<typeof useQueryClient>, orgId: string, message: Message) {
+export function cacheMessage(qc: ReturnType<typeof useQueryClient>, orgId: string, landed: Message) {
+  // A run that handed work over before this message of it came: its lines go under it.
+  const handed = landed.agentRunId ? handedByRun.get(`${orgId}:${landed.agentRunId}`) : undefined;
+  const message = handed && !landed.handedWorks ? { ...landed, handedWorks: handed } : landed;
   const channelKey = keys.messages(orgId, message.channelId);
   const key = message.threadId ? keys.thread(orgId, message.channelId, message.threadId) : channelKey;
   const withoutLocal = (list: Message[] | undefined) =>
@@ -1541,7 +1544,17 @@ export function cacheMessage(qc: ReturnType<typeof useQueryClient>, orgId: strin
   }
   // While that read is on its way, the root stands in as `useThreadMessages` shows it.
   const root = message.threadId ? cachedTopLevel(qc, orgId, message.threadId, message.channelId) : undefined;
-  qc.setQueryData<Message[]>(key, (list) => upsertMessage(withoutLocal(list) ?? (root && [root]), message));
+  qc.setQueryData<Message[]>(key, (list) => {
+    const next = upsertMessage(withoutLocal(list) ?? (root && [root]), message);
+    // The lines move under the run's newest message: one place each.
+    return handed && next
+      ? next.map((m) =>
+          m.id !== message.id && m.agentRunId === message.agentRunId && m.handedWorks
+            ? { ...m, handedWorks: undefined }
+            : m,
+        )
+      : next;
+  });
 }
 
 /**
@@ -3766,6 +3779,24 @@ export function cacheMessageActions(
   });
 }
 
+/** Handed works by the run that handed them (`orgId:runId`), for that run's messages still to come (`cacheMessage`). */
+const handedByRun = new Map<string, WorkView[]>();
+
+/**
+ * A handed work in a cached list: where it already is, else under the last message here of the run that handed it.
+ * Unchanged when that run has no message here yet.
+ */
+export function withHandedWork(list: Message[], work: WorkView): Message[] {
+  const at = list.findIndex((m) => m?.handedWorks?.some((w) => w.id === work.id));
+  if (at >= 0)
+    return list.map((m, i) =>
+      i === at ? { ...m, handedWorks: m.handedWorks?.map((w) => (w.id === work.id ? work : w)) } : m,
+    );
+  const last = list.findLastIndex((m) => m && m.agentRunId === work.askerRunId);
+  if (last < 0) return list;
+  return list.map((m, i) => (i === last ? { ...m, handedWorks: [...(m.handedWorks ?? []), work] } : m));
+}
+
 /** A long work changed (`agent.work`, ADR 0121): its anchor's cached message carries the new view. */
 export function cacheMessageWork(
   qc: ReturnType<typeof useQueryClient>,
@@ -3773,9 +3804,14 @@ export function cacheMessageWork(
   channelId: string,
   work: WorkView,
 ) {
+  if (work.askerRunId) {
+    const key = `${orgId}:${work.askerRunId}`;
+    handedByRun.set(key, [...(handedByRun.get(key) ?? []).filter((w) => w.id !== work.id), work]);
+  }
   qc.setQueriesData({ queryKey: ["org", orgId, "channel", channelId] }, (data: unknown) => {
     if (!Array.isArray(data)) return data;
     const list = data as Message[];
+    if (work.askerRunId) return withHandedWork(list, work);
     if (!list.some((m) => m && m.id === work.anchorMessageId)) return data;
     return list.map((m) => (m.id === work.anchorMessageId ? { ...m, longWork: work } : m));
   });

@@ -2814,6 +2814,16 @@
       "invite_roles_other": "角色为 {{roles}}。",
       "invite_people_sent_other": "已向 <b>{{emails}}</b> 发送邀请。",
       "remove_ai_key": "删除 API 密钥“{{name}}”。"
+    },
+    "brain": {
+      "unusable": {
+        "title": "需要一台电脑",
+        "computerOnly": "属于 {{owner}}，仅在 {{computer}} 上登录。Lodi 使用以账号登录的方案思考。",
+        "noComputer": "属于 {{owner}}。需要一台电脑，而工作区还没有连接任何电脑。",
+        "away": "属于 {{owner}}，在 {{computer}} 上，该电脑当前离线。",
+        "connect": "连接电脑",
+        "plans": "查看方案"
+      }
     }
   },
   "teamWeek": {
@@ -7684,7 +7694,10 @@
         "failed": "上次运行失败了。",
         "canceled": "有人停止了运行。",
         "budget": "智能体的月度预算已用完。"
-      }
+      },
+      "finishedTitle": "{{name}} 已完成",
+      "finishedMeta": "{{when}} · 由 {{name}} 移交",
+      "answer": "回答"
     },
     "status": {
       "todo": "待办",
@@ -7870,7 +7883,10 @@
       "criterion_checked": "勾选了标准“{{text}}”",
       "criterion_unchecked": "取消勾选了标准“{{text}}”",
       "agent_asked": "请 {{name}} 来完成"
-    }
+    },
+    "handedBy": "由 <0/>{{name}} 移交",
+    "fromDm": "来自<0>你与 {{name}} 的私信</0>",
+    "fromDmText": "来自你与 {{name}} 的私信"
   },
   "routines": {
     "filters": "筛选例行工作",
@@ -16640,7 +16656,22 @@
       "failed": "已阻塞 · 未完成",
       "failedWhy": "已阻塞 · 未完成：{{why}}"
     },
-    "working": "后台进行中"
+    "working": "后台进行中",
+    "handed": {
+      "lead": "已移交给 <0/>{{name}}",
+      "working": "进行中",
+      "done": "用时 {{duration}} 完成",
+      "waitingYou": "等待你的回答",
+      "waiting": "等待回答",
+      "waitingApprovalYou": "等待你的批准",
+      "waitingApproval": "等待批准",
+      "waitingComputer": "等待电脑",
+      "paused": "已在方案限额处暂停",
+      "queued": "排队中",
+      "failed": "未完成",
+      "stopped": "已停止",
+      "step": "第 {{current}} 步，共 {{total}} 步"
+    }
   },
   "chat": {
     "speedFallback": {
@@ -17239,6 +17270,9 @@
       "interrupted": "因服务器重启而中断。请再问一次以继续。",
       "step_limit": "完成前步骤已用完。",
       "stuck": "我卡住了，在完成前停了下来。"
+    },
+    "request": {
+      "asksYou": "{{name}} 问你"
     }
   },
   "builtinTools": {

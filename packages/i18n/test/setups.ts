@@ -293,6 +293,8 @@ export const ANYWHERE: readonly string[] = [
   // People connect their own computers and phones in every setup, the Cloud included.
   "devices.",
   "mobile.devices.",
+  // The right hand's plan that needs a computer: the workspace's way out is connecting one, in every setup.
+  "rightHand.brain.unusable.connect",
 ];
 
 /** A key's agent-gender variant (`_female`, ADR 0122) goes where its base key goes. */

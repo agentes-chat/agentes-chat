@@ -15,7 +15,7 @@ import { codeAndBoldParts } from "@agenteschat/client/lib/markdown";
 import { stepPhrase } from "@agenteschat/client/lib/work";
 import { bodyTones } from "@agenteschat/ui/agent/engine";
 import { memo, type ReactNode, useCallback } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Pressable, Text as RNText, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import {
@@ -256,11 +256,13 @@ function CardFacts({
 }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
+  const dir = useDirectory();
   const [label, ...labels] = i.labels;
   const due = i.dueDate && isOpen(i) ? { text: dueLabel(t, i18n.language, i.dueDate), tone: dueTone(i.dueDate) } : null;
   const crit = criteriaProgress(i);
   const pr = latestPr(i);
   const talk = i.conversation?.count ?? 0;
+  const handedBy = i.backgroundWork?.handedBy ? dir.anyAgent(i.backgroundWork.handedBy.agentId)?.name : null;
   // A mark on the first line's middle, for a fact whose words wrap (a repository's name wider than the card).
   const mark = mediaRowAxis(12, textLineOf("caption", useFontScale())).face;
   return (
@@ -273,6 +275,11 @@ function CardFacts({
       {labels.length > 0 ? (
         <Text variant="caption" tone="muted" accessibilityLabel={labels.join(", ")}>
           +{labels.length}
+        </Text>
+      ) : null}
+      {handedBy ? (
+        <Text variant="caption" tone="muted">
+          <Trans i18nKey="issues.handedBy" values={{ name: handedBy }} components={[<Text key="face" />]} />
         </Text>
       ) : null}
       {i.priority !== "normal" ? (
@@ -383,6 +390,11 @@ export const BoardCard = memo(function BoardCard({
       ) : null}
       <TaskTitle title={i.title} variant="callout" style={styles.title} />
       <CardFacts issue={i} mentions={mentions} unread={unread > 0} project={project} />
+      {i.status === "done" && i.backgroundWork?.result ? (
+        <Text variant="caption" tone="ink2">
+          {i.backgroundWork.result.text}
+        </Text>
+      ) : null}
       {who || state ? (
         <View style={styles.who}>
           {who && others.length > 0 ? (

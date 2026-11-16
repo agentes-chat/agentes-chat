@@ -2408,3 +2408,51 @@ html:not([data-pointer]) .task-talk__summary:focus-visible {
   font-size: 12.5px;
   color: var(--muted);
 }
+
+/* A task another agent handed over: who handed it, in the card's facts and after a row's title. */
+.ac-factline__fact[data-fact="handed"] > .ac-avatar,
+.issue-list__from > .ac-avatar {
+  flex: none;
+  margin-inline: 2px;
+  vertical-align: -3px;
+}
+.issue-list__title > .issue-list__from {
+  margin-inline-start: var(--space-2);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
+/* What came of finished handed work: its report's first line, under the facts. */
+.issue-card__result {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ink2);
+  overflow-wrap: anywhere;
+}
+.issue-card__result > .ac-icon {
+  flex: none;
+  margin-block-start: 3px;
+  color: var(--ok);
+}
+.issue-work__result,
+.issue-work__ask {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.issue-work__result {
+  color: var(--ink2);
+}
+.issue-work__ask {
+  color: var(--ink);
+}
+/* A card's lone primary action is full width on a phone. */
+@media (max-width: 640px) {
+  .issue-work__actions > .ac-btn {
+    flex: 1;
+  }
+}

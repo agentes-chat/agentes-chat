@@ -367,13 +367,14 @@ async function failInterrupted(deps: { db: Database; pubsub?: PubSub }, run: Age
     runId: run.id,
     status: "failed",
   });
-  // It was answering another agent: the asker hears it now instead of waiting for the question to expire.
-  await onConsultedRunFinished({ db, pubsub: deps.pubsub }, run, "failed", INTERRUPTED_BY_RESTART).catch(() => {});
-  // A work ends before the release, which would drop a reply turn's own message passed on to it (`endWork` keeps it).
+  // A work ends before the release, which would drop a reply turn's own message passed on to it (`endWork` keeps it),
+  // and before the asker hears it: a handed work's end line home is what spares the asker a relay (`reportHandOffs`).
   if (run.workId) {
     const [ended] = await db.select().from(agentRuns).where(eq(agentRuns.id, run.id));
     if (ended) await endWork(deps, ended, "failed").catch(() => null);
   }
+  // It was answering another agent: the asker hears it now instead of waiting for the question to expire.
+  await onConsultedRunFinished({ db, pubsub: deps.pubsub }, run, "failed", INTERRUPTED_BY_RESTART).catch(() => {});
   // What was sent to it and not read gets a run of its own.
   await releaseInbox(db, deps.pubsub, run, { reason: "interrupted" }).catch(() => null);
   return true;
