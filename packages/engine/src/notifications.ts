@@ -744,6 +744,51 @@ export async function resolveNotifications(
   return rows.length;
 }
 
+/**
+ * Reading a conversation reads what people said to me there: a channel or DM (`threadId` unset) its DMs and
+ * mentions outside threads, a thread its replies and the mentions and DMs in it. Read, not done: they stay in the
+ * inbox, out of the unread count, as the person's own "Marcar como lido" leaves them. Only what landed by `at`,
+ * so a message arriving after the read stays unread.
+ */
+export async function readConversationNotifications(
+  deps: NotificationDeps,
+  orgId: string,
+  userId: string,
+  place: { channelId: string; threadId?: string },
+  at: Date,
+): Promise<number> {
+  const threadId = sql`${notifications.source}->>'threadId'`;
+  const rows = await deps.db
+    .update(notifications)
+    .set({ readAt: at })
+    .where(
+      and(
+        eq(notifications.orgId, orgId),
+        eq(notifications.userId, userId),
+        isNull(notifications.doneAt),
+        isNull(notifications.readAt),
+        lte(notifications.updatedAt, at),
+        sql`${notifications.source}->>'channelId' = ${place.channelId}`,
+        place.threadId
+          ? or(
+              and(inArray(notifications.kind, ["dm", "mention"]), sql`${threadId} = ${place.threadId}`),
+              and(eq(notifications.kind, "thread_reply"), eq(notifications.groupKey, `thread:${place.threadId}`)),
+            )
+          : and(inArray(notifications.kind, ["dm", "mention"]), sql`${threadId} is null`),
+      ),
+    )
+    .returning();
+  for (const r of rows) {
+    await publishUserEvent(deps.pubsub, orgId, userId, {
+      type: "notification.upserted",
+      notification: notificationView(r),
+      alert: false,
+    });
+  }
+  if (rows.length) await publishCounts(deps, orgId, userId);
+  return rows.length;
+}
+
 // ── Failures of one cause ─────────────────────────────────────────────────────
 
 /**
