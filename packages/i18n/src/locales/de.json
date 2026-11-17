@@ -13238,6 +13238,11 @@
         "1": "Zahlungsforderungen und Kunden ansehen",
         "2": "Pix-Zahlungsforderungen erstellen"
       },
+      "acainfe": {
+        "1": "Unternehmen, Produkte, Verkäufe und Rechnungen ansehen",
+        "2": "Rechnungen ausstellen und senden, Kunden und Produkte anlegen",
+        "ask": "Rechnungen stornieren und Verkäufe erstatten fragt immer nach deiner Freigabe"
+      },
       "instagram": {
         "1": "Beiträge, Storys und Statistiken ansehen",
         "2": "Beiträge veröffentlichen und Direktnachrichten lesen",
@@ -13418,6 +13423,7 @@
       "superwall": "Paywalls, Kampagnen und Experimente.",
       "paddle": "Kunden, Abos, Transaktionen und Produkte.",
       "abacatepay": "Pix-Zahlungsforderungen, Kunden und Auszahlungen.",
+      "acainfe": "Brasilianische Dienstleistungsrechnungen (NFS-e): Unternehmen, Produkte, Kunden, Verkäufe und Rechnungen.",
       "instagram": "Instagram-Business- und Creator-Konten: Beiträge, Storys, Statistiken und Direktnachrichten.",
       "facebook": "Facebook-Seiten: Beiträge, Fotos, Videos, Kommentare und Statistiken.",
       "linkedin": "LinkedIn-Beiträge, Videos und Kommentare im Namen des angemeldeten Mitglieds.",

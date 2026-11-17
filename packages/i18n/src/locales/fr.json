@@ -13724,6 +13724,11 @@
         "1": "Voir les paiements demandés et les clients",
         "2": "Créer des demandes de paiement Pix"
       },
+      "acainfe": {
+        "1": "Voir l'entreprise, les produits, les ventes et les factures",
+        "2": "Émettre et envoyer des factures, et enregistrer des clients et des produits",
+        "ask": "L'annulation de factures et le remboursement de ventes demandent toujours votre approbation"
+      },
       "instagram": {
         "1": "Voir les publications, les stories et les statistiques",
         "2": "Publier des posts et lire les messages privés",
@@ -13909,6 +13914,7 @@
       "superwall": "Paywalls, campagnes et expériences.",
       "paddle": "Clients, abonnements, transactions et produits.",
       "abacatepay": "Paiements Pix, clients et retraits.",
+      "acainfe": "Factures de services brésiliennes (NFS-e) : entreprise, produits, clients, ventes et factures.",
       "instagram": "Comptes professionnels et créateur Instagram : publications, stories, statistiques et messages privés.",
       "facebook": "Pages Facebook : publications, photos, vidéos, commentaires et statistiques.",
       "linkedin": "Publications, vidéos et commentaires LinkedIn au nom du membre qui se connecte.",
