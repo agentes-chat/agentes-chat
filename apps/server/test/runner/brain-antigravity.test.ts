@@ -89,6 +89,10 @@ test("command line: headless stream-json in the sandbox; work takes edits, plan 
   const plan = antigravityTurnArgs({ prompt: "oi", profile: "plan" }).join(" ");
   expect(plan).not.toContain("--mode");
   expect(plan).not.toContain("--dangerously-skip-permissions");
+  // The agent's granted folders: in the sandbox and readable headless, never for Lodi's locked agent.
+  const shared = antigravityTurnArgs({ prompt: "oi", addDirs: ["/srv/shared", "/srv/other"] }).join(" ");
+  expect(shared).toContain("--add-dir /srv/shared --add-dir /srv/other");
+  expect(antigravityTurnArgs({ prompt: "oi", locked: true, addDirs: ["/srv/shared"] })).not.toContain("--add-dir");
   const chat = antigravityTurnArgs({ prompt: "oi", locked: true }).join(" ");
   expect(chat).toContain(`--agent ${AGY_CHAT_AGENT}`);
   expect(chat).not.toContain("accept-edits");
@@ -756,4 +760,22 @@ test.skipIf(!posix)(
     expect((await m.list()).find((a) => a.id === offline.id)).toMatchObject({ loggedIn: true, shared: true });
   },
   45_000,
+);
+
+test.skipIf(!posix)(
+  "a turn names the agent's granted folders to the CLI, so the shared folder is in its workspace",
+  async () => {
+    const root = tempDir("brain-agy-grants-");
+    dirs.push(root);
+    const { ctx, accountDir } = turnContext(root);
+    signIn(accountDir);
+    const shared = path.join(root, "shared");
+    mkdirSync(shared, { recursive: true });
+    const log = path.join(root, "agy.log");
+    process.env.FAKE_AGY_LOG = log;
+    await run({ ...ctx, grants: [shared] }, turn());
+    const args = logOf(log)[0]?.args.join(" ") ?? "";
+    expect(args).toContain(`--add-dir ${shared}`);
+    expect(args).not.toContain(`--add-dir ${ctx.folder}`);
+  },
 );

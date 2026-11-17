@@ -24,7 +24,7 @@ import { RunnerError } from "./errors";
 import { killTree } from "./exec";
 import { AGY_BIN, resolveCommand } from "./executors";
 import { CODEX_MCP_ENV, CODEX_MCP_SERVER, redactDeep } from "./mcp";
-import { resolveForAgent } from "./paths";
+import { isInside, resolveForAgent } from "./paths";
 import { resetFromWords } from "./plan-usage";
 import type { Spawn } from "./scope-gate";
 import { agentSecrets } from "./secrets";
@@ -110,6 +110,11 @@ export function antigravityTurnArgs(input: {
   profile?: CommandProfile;
   /** The team's right hand: our server's tools alone. */
   locked?: boolean;
+  /**
+   * Folders the agent may use besides the turn's (`--add-dir` each, as Claude Code's): outside the workspace, the
+   * CLI's sandbox doesn't see them and headless mode refuses reading them.
+   */
+  addDirs?: string[];
 }): string[] {
   const effort = agyEffort(input.effort, input.model);
   return [
@@ -123,6 +128,7 @@ export function antigravityTurnArgs(input: {
     ...(input.model ? ["--model", input.model] : []),
     ...(effort ? ["--effort", effort] : []),
     ...(input.chat ? ["--conversation", input.chat] : []),
+    ...(input.locked ? [] : (input.addDirs ?? []).flatMap((d) => ["--add-dir", d])),
   ];
 }
 
@@ -222,6 +228,8 @@ export interface AntigravityTurnInput {
   profile?: CommandProfile;
   /** The team's right hand (`cwd` its empty `chatFolder`): killed at a tool of the CLI's own. */
   chat?: boolean;
+  /** The agent's own folder when the turn starts in a checkout, and its granted folders (`antigravityTurnArgs`). */
+  addDirs?: string[];
 }
 
 export interface AntigravityTurnOptions {
@@ -287,6 +295,7 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
       ...(input.effort ? { effort: input.effort } : {}),
       profile: input.profile ?? "work",
       ...(input.chat ? { locked: true } : {}),
+      ...(input.addDirs?.length ? { addDirs: input.addDirs } : {}),
     });
     let child: ChildProcess;
     try {
@@ -567,7 +576,11 @@ export async function handleAntigravityBrainTurn(
         mcp: { token: req.mcp.token },
         account: { id: accountId, home: signIn.home },
         profile: codexProfileOf(req),
-        ...(chat ? { chat } : {}),
+        ...(chat
+          ? { chat }
+          : {
+              addDirs: [...(cwd !== folder ? [folder] : []), ...(ctx.grants ?? []).filter((g) => !isInside(g, cwd))],
+            }),
       },
       {
         chats,
