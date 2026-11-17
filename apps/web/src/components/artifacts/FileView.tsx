@@ -4,6 +4,7 @@ import {
   fileIcon,
   formatBytes,
   isJsonFile,
+  isMarkdownFile,
   MAX_PREVIEW_BYTES,
   previewKind,
   previewType,
@@ -14,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useApi } from "@/api/context";
 import { CodeBlock } from "@/components/CodeBlock";
 import { useOrg } from "@/components/org-context";
+import { Markdown } from "@/lib/markdown";
 import { ImageZoom } from "./ImageZoom";
 
 /** Object URLs for blobs (swappable: test DOMs may lack `URL.createObjectURL`). */
@@ -207,7 +209,9 @@ export function FileView({
       {kind !== null && !canPreview && <p className="small muted">{t("files.tooBigToPreview")}</p>}
       {kind === null &&
         content.text !== undefined &&
-        (isJsonFile(content.name, content.contentType) ? (
+        (isMarkdownFile(content.name, content.contentType) ? (
+          <Markdown source={content.text} />
+        ) : isJsonFile(content.name, content.contentType) ? (
           <CodeBlock lang="json" text={content.text} />
         ) : (
           <pre className="file-view__text">
