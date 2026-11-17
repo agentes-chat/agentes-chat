@@ -165,6 +165,8 @@ export interface ConnectionSecret {
 export interface ConnectorDeps {
   /** Explicit operator opt-in on a self-hosted server closed to public sign-up. */
   stdioAllowed?: boolean;
+  /** The MCP sandbox's WebSocket (`MCP_STDIO_SANDBOX_URL`): stdio programs run there, not in this process. */
+  stdioSandbox?: string;
   db: Database;
   /** Current wrapper first (seals), then legacy ones (open only). */
   keyWrappers: KeyWrapper[];

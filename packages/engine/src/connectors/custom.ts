@@ -810,7 +810,7 @@ export async function connectCustomServer(
     if (existing && !isStdioMcp(existing.serverUrl))
       throw new ValidationError("Reconnect with the same MCP transport", "connector.stdio_invalid");
     // Prove initialize and tools/list before persisting a connection or granting access.
-    const session = await connectOverStdio(stdio);
+    const session = await connectOverStdio(stdio, undefined, deps.stdioSandbox);
     try {
       await session.listTools();
     } finally {

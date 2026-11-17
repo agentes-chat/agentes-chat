@@ -3,7 +3,6 @@ import { type Config, connectorOAuthApps } from "@agenteschat/config";
 import type { Database } from "@agenteschat/db";
 import {
   type AiStatusDeps,
-  allowsStdioMcp,
   type ConnectorTriggerDeps,
   closedRefusal,
   composioConnectorsOf,
@@ -16,6 +15,7 @@ import {
   type RoutineHookConfig,
   type RoutineHookDeps,
   requireAgentDetails,
+  stdioOf,
   withComposio,
   withStdioMcp,
 } from "@agenteschat/engine";
@@ -70,7 +70,7 @@ export const routineConnectorDeps = (deps: AppDeps): ConnectorTriggerDeps => {
         {
           db: deps.db,
           keyWrappers: [deps.adapters.keyWrapper, ...deps.adapters.legacyKeyWrappers],
-          stdioAllowed: allowsStdioMcp(deps.config),
+          ...stdioOf(deps.config),
         },
         deps.extras?.mcpConnect ?? connectOverHttp,
       ),

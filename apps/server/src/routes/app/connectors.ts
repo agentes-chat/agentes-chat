@@ -2,7 +2,6 @@ import { connectorOAuthApps } from "@agenteschat/config";
 import {
   abandonComposioOAuth,
   acceptCustomSuggestion,
-  allowsStdioMcp,
   appOAuthRedirect,
   BUILTIN_SCOPES,
   type ConnectorDeps,
@@ -34,6 +33,7 @@ import {
   revokeConnection,
   setAgentScopes,
   startOAuth,
+  stdioOf,
   syncCustomTools,
   uninstallInstallation,
   withComposio,
@@ -172,7 +172,7 @@ export function connectorRoutes(deps: AppDeps) {
     // A sign-in's account is asked of the server before it's stored (two accounts are told apart by it).
     connect: withComposio(
       withStdioMcp(
-        { db, keyWrappers: [adapters.keyWrapper, ...adapters.legacyKeyWrappers], stdioAllowed: allowsStdioMcp(config) },
+        { db, keyWrappers: [adapters.keyWrapper, ...adapters.legacyKeyWrappers], ...stdioOf(config) },
         deps.extras?.mcpConnect ?? connectOverHttp,
       ),
       composio,

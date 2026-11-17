@@ -756,7 +756,13 @@ export const envVars = {
   MCP_STDIO_ENABLED: {
     schema: z.stringbool().default(false),
     description:
-      "Allow workspace administrators to connect local stdio MCP programs in Settings > Connectors. Programs run as the server's OS user (inside its container in Docker), with that user's file and network access. Enable only when every workspace administrator is trusted to run programs on this server. Disabled by default; unavailable on agentes.chat Cloud or with ALLOW_SIGNUP=true. Commands, arguments and explicit environment are stored encrypted; server secrets are not inherited. A connected computer is not the execution host (ADR 0190).",
+      "Allow workspace administrators to connect local stdio MCP programs in Settings > Connectors. Programs run as the server's OS user (inside its container in Docker), with that user's file and network access. Enable only when every workspace administrator is trusted to run programs on this server. Disabled by default; unavailable on agentes.chat Cloud or with ALLOW_SIGNUP=true. Commands, arguments and explicit environment are stored encrypted; server secrets are not inherited. A connected computer is not the execution host (ADR 0190). With MCP_STDIO_SANDBOX_URL, they run in the MCP sandbox instead.",
+    section: "Connectors",
+  },
+  MCP_STDIO_SANDBOX_URL: {
+    schema: z.url({ protocol: /^wss?$/ }).optional(),
+    description:
+      "Where stdio MCP programs run instead of inside this server: the MCP sandbox's WebSocket, `ws://mcp-sandbox:7070` with the compose file's `mcp-sandbox` profile. Its container holds none of this server's secrets, files or database, and has Node (npx), Bun, Python (uvx) and build tools (ADR 0190, addendum).",
     section: "Connectors",
   },
   MCP_CALLER_IDENTITY: {

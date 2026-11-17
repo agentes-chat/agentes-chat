@@ -848,6 +848,13 @@ Docker socket, public MCP port or certificate bypass is required for stdio. The 
 does not change an MCP tool's own project/cwd argument; follow that server's contract. A selected
 remote computer is not used by this transport (ADR 0190).
 
+**The MCP sandbox.** Inside the agentes container a program can read the server's secrets through `/proc`, its files
+and its database. To run programs apart, add `mcp-sandbox` to `COMPOSE_PROFILES` and set
+`MCP_STDIO_SANDBOX_URL=ws://mcp-sandbox:7070`: `docker compose up -d --build` builds it from `deploy/mcp-sandbox`. It
+has Node (`npx`), Bun (`bunx`), Python (`python3`, `pip`, `venv`, `uvx`), `make`, `gcc` and `git`, reaches the
+internet and the app but never Postgres, and keeps downloads in its own volume. Paths in the form are then the
+sandbox's (its home is `/home/node`). Programs there share one user, so one can still read another's environment.
+
 **Sign-up.** The first account is allowed unless an owner link or the desktop app's owner key holds
 it (below). After it, with `ALLOW_SIGNUP=false` (the default), only invited people get in: invited by
 email from **Settings → Members and invitations**. A workspace's invitation link lets nobody in by

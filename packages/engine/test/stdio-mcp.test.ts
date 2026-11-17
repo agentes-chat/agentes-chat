@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { programOf, startBridge } from "../../../deploy/mcp-sandbox/bridge";
 import { allowsStdioMcp, connectOverStdio, parseStdioConfig, requireStdioMcp } from "../src/connectors/stdio";
 
 const fixture = resolve(import.meta.dir, "fixtures/stdio-mcp.ts");
@@ -86,3 +87,55 @@ test("initialize timeout closes a child that never responds", async () => {
   const pid = Number(readFileSync(pidFile, "utf8"));
   expect(alive(pid)).toBe(false);
 }, 30_000);
+
+test("in the MCP sandbox: the same session over its socket, none of the server's variables, the program stopped on close", async () => {
+  const bridge = startBridge(0);
+  const cwd = temporary();
+  process.env.STDIO_PARENT_SECRET = "server-only-secret";
+  let pid = 0;
+  try {
+    const session = await connectOverStdio(
+      {
+        command: process.execPath,
+        args: [fixture, "a path with spaces; $HOME & literal"],
+        cwd,
+        env: { STDIO_VALUE: "v" },
+      },
+      15_000,
+      `ws://127.0.0.1:${bridge.port}`,
+    );
+    try {
+      expect((await session.listTools()).map((tool) => tool.name)).toEqual(["read_context"]);
+      const context = JSON.parse((await session.callTool("read_context", {})).content);
+      pid = context.pid;
+      expect(context).toMatchObject({ cwd, argument: "a path with spaces; $HOME & literal", value: "v" });
+      expect(context.inheritedSecret).toBe(false);
+    } finally {
+      await session.close();
+    }
+    for (let i = 0; i < 50 && alive(pid); i++) await Bun.sleep(50);
+    expect(alive(pid)).toBe(false);
+    await expect(
+      connectOverStdio({ command: join(cwd, "missing"), args: [], env: {} }, 5_000, `ws://127.0.0.1:${bridge.port}`),
+    ).rejects.toThrow("local MCP process");
+  } finally {
+    bridge.stop(true);
+  }
+}, 30_000);
+
+test("the MCP sandbox takes only a program's shape for its first frame", () => {
+  expect(programOf('{"command":"node","args":["a"],"env":{"A":"1"}}')).toEqual({
+    command: "node",
+    args: ["a"],
+    env: { A: "1" },
+  });
+  for (const bad of [
+    "nope",
+    "{}",
+    '{"command":""}',
+    '{"command":"x","args":[1]}',
+    '{"command":"x","env":{"A":2}}',
+    '{"command":"x","cwd":3}',
+  ])
+    expect(programOf(bad)).toBeNull();
+});

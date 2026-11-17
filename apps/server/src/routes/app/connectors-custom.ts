@@ -18,6 +18,7 @@ import {
   revokeConnection,
   saveCustomTools,
   stdioConfigSchema,
+  stdioOf,
   ValidationError,
   withComposio,
   withStdioMcp,
@@ -147,10 +148,10 @@ export function customConnectorRoutes(deps: AppDeps) {
     publicUrl: config.PUBLIC_URL,
     http: deps.extras?.http,
     resolveHost: deps.extras?.resolveHost,
-    stdioAllowed: allowsStdioMcp(config),
+    ...stdioOf(config),
     connect: withComposio(
       withStdioMcp(
-        { db, keyWrappers: [adapters.keyWrapper, ...adapters.legacyKeyWrappers], stdioAllowed: allowsStdioMcp(config) },
+        { db, keyWrappers: [adapters.keyWrapper, ...adapters.legacyKeyWrappers], ...stdioOf(config) },
         deps.extras?.mcpConnect ?? connectOverHttp,
       ),
       composio,

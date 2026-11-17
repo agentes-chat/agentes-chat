@@ -23,3 +23,24 @@ Native desktop/server runs the program on the server's computer. Docker runs it 
 Keep the existing connect → tools → agents journey and remote HTTPS/OAuth behavior. Tests cover real initialize/list/call, literal argv, environment isolation, missing programs, timeout cleanup, encrypted persistence, permissions, reconnection and revocation; DOM tests cover disabled support, validation and submission. Native and Docker acceptance checks are distinct: a native test does not prove Docker execution.
 
 No automatic dependency installation, host networking, docker.sock mount, public MCP listener or shared SSRF relaxation is introduced. Disabling the setting prevents new stdio sessions. Stored rows remain encrypted and revocable; older versions do not execute them.
+
+## Addendum 2026-11-17: the MCP sandbox
+
+Inside the agentes container, a program runs as the server's own OS user, so it can read the server's process
+environment through `/proc` (`AGENTES_SECRET`, `DATABASE_URL`) along with its files, and reach Postgres. Not
+inheriting the environment does not stop that. A per-program user or a namespace sandbox would need capabilities the
+container drops, or user namespaces Docker's seccomp profile refuses.
+
+So with `MCP_STDIO_SANDBOX_URL` set, programs run in a container of their own instead: the compose file's
+`mcp-sandbox` profile, built from `deploy/mcp-sandbox` (Node with npx, Bun, Python with uvx, build tools). Its bridge
+(`deploy/mcp-sandbox/bridge.ts`) takes one WebSocket per session from the app: the first text frame is the program,
+the rest are JSON-RPC messages to its stdin and from its stdout lines, and closing the socket stops its process group.
+The container holds none of the app's secrets, files or database: its network reaches the app and the internet,
+never Postgres; it runs unprivileged, read-only but for `/tmp` and its home volume, with no capabilities and capped
+CPU, memory and processes. The app's side is the same session (`connectOverStdio` with the sandbox's address), so
+checks, approvals, timeouts and cleanup are unchanged.
+
+What it doesn't isolate: programs in the sandbox share its user, its home and its package caches, so one program can
+read another's environment or change what a later `npx` loads. They're one installation's programs, connected by its
+trusted administrators; workspaces that don't trust each other need a sandbox each. The network is the only door to
+the bridge: anything on it may start programs there.
