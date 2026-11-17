@@ -1328,6 +1328,25 @@ extracted to `/usr/local/bin/opencode`; Grok Build with
 also makes `~/.local/bin/agent`, Cursor's name: where both are installed, link Cursor's `agent` last. The Antigravity
 CLI the same way: `sudo mkdir -p /opt/agy/bin`, `sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- -d /opt/agy/bin'`,
 then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/bin/agy /usr/local/bin/agy`.
+Its turns always run commands in its sandbox, which needs user namespaces: on Ubuntu 24.04 and later AppArmor
+restricts them (`kernel.apparmor_restrict_unprivileged_userns = 1`), every command is canceled and the agent answers
+with nothing done (the CLI's log, `~/.gemini/antigravity-cli/log/`, says `Terminal sandbox unavailable`). Allow them
+to the CLI alone, as Ubuntu's own profile does for Chrome:
+
+```sh
+sudo tee /etc/apparmor.d/agy >/dev/null <<'EOF'
+abi <abi/4.0>,
+include <tunables/global>
+profile agy /opt/agy/bin/agy flags=(unconfined) {
+  userns,
+  include if exists <local/agy>
+}
+EOF
+sudo apparmor_parser -r /etc/apparmor.d/agy
+```
+
+The path is the CLI's real file (`readlink -f "$(command -v agy)"`); `sudo apparmor_parser -R /etc/apparmor.d/agy`
+and removing the file undo it.
 Commands run as the user that runs the runner, so give it a dedicated user or a VM.
 `agentes-runner tools disable commands` (or `claude`, `codex`, `cursor`, `opencode`, `grok` or `antigravity`) turns a capability off on that
 computer, and `agentes-runner folders allow <path>` shares a folder besides the agents' own.
