@@ -59,6 +59,8 @@ export const EMBEDDING_CATALOG: Record<string, EmbeddingModel> = {
     asksDimensions: true,
   },
   "BAAI/bge-m3": { provider: "openai", pricePerToken: 10, dimensions: 1024 },
+  // Gemini API's OpenAI-compatible endpoint; 3072 natively, so the request asks for 1024. $0.20/MTok as of 2026-11.
+  "gemini-embedding-2": { provider: "openai", pricePerToken: 200, dimensions: 1024, asksDimensions: true },
   "ibm-granite/granite-embedding-311m-multilingual-r2": { provider: "openai", pricePerToken: 0, dimensions: 768 },
   "fake-embed": { provider: "fake", pricePerToken: 0, dimensions: 1024 },
 };
