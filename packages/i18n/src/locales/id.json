@@ -13634,6 +13634,8 @@
       "share_dashboard": "Bagikan dasbor",
       "create_widget": "Buat widget",
       "update_widget": "Ubah widget",
+      "change_widget": "Minta perubahan widget",
+      "remove_widget": "Hapus widget",
       "load_skill": "Buka skill",
       "read_skill_file": "Baca file skill",
       "update_skill": "Ubah skill",

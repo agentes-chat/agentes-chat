@@ -120,6 +120,11 @@ people than asked.
     as "created by <agent>", and starts private. `create_dashboard` and `share_dashboard` also set who edits (`edit`,
     `edit_roles` by name), at once: editing isn't seeing, so it never waits on the person (§11). New dashboard makes
     an empty board and says an agent builds one when asked in a chat: asking happens there, not in the dialog.
+    `list_dashboards` names each widget with its id. An agent changes a widget it keeps, on a board that person edits,
+    with `change_widget`: the person's "Ask for a change" in their words, which its own update run carries out (§5),
+    so a failing or misnamed widget is redone in place, never made again. `remove_widget` takes one it keeps off its
+    board, as that person's Remove. Both act in the person's name, so only when a person is behind the run: a
+    routine's or unattended run does neither. Neither touches another agent's widget.
 11. **An agent never shows a board to more people by itself.** When it would show a board to more people than whoever
     asked (a wider audience on `create_dashboard` or `share_dashboard`, any widening by a routine's or an unattended
     run), the board keeps its audience and the request waits on the person it was made for: a banner on the board and

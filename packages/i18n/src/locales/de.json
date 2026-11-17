@@ -14106,6 +14106,8 @@
       "share_dashboard": "Dashboard teilen",
       "create_widget": "Widget erstellen",
       "update_widget": "Widget ändern",
+      "change_widget": "Änderung am Widget anfordern",
+      "remove_widget": "Widget entfernen",
       "load_skill": "Skill öffnen",
       "read_skill_file": "Skill-Datei lesen",
       "update_skill": "Skill ändern",

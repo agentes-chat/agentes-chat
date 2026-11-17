@@ -13580,6 +13580,8 @@
       "share_dashboard": "ダッシュボードを共有",
       "create_widget": "ウィジェットを作成",
       "update_widget": "ウィジェットを更新",
+      "change_widget": "ウィジェットの変更を依頼",
+      "remove_widget": "ウィジェットを削除",
       "load_skill": "スキルを開く",
       "read_skill_file": "スキルのファイルを読み取り",
       "update_skill": "スキルを更新",

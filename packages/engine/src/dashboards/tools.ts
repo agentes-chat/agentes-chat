@@ -21,13 +21,14 @@ import { routineBriefOf } from "../routine-brief";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "../tools/types";
 import { dashboardRights, dashboardSeerSql, viewerOf } from "./access";
 import { proposeDashboardAudience } from "./proposals";
-import { applyWidgetUpdate, UPDATE_WIDGET_TOOL } from "./refresh";
+import { applyWidgetUpdate, askWidgetChange, UPDATE_WIDGET_TOOL } from "./refresh";
 import { WIDGET_KIND_MANUAL } from "./refresh-context";
 import { widgetNeedsAi } from "./refresh-ledger";
 import {
   ensureHomeBoard,
   insertDashboard,
   insertWidget,
+  removeWidget,
   setDashboardAudience,
   setDashboardEditors,
   widensDashboardAudience,
@@ -35,6 +36,7 @@ import {
 import {
   type AgentMaker,
   DASHBOARD_ABOUT_MAX,
+  DASHBOARD_ERRORS,
   DASHBOARD_TITLE_MAX,
   type DashboardAudience,
   type DashboardDeps,
@@ -42,6 +44,7 @@ import {
   type DashboardRow,
   WIDGET_AGENT_TITLE_MAX,
   WIDGET_ALERT_CONDITION_MAX,
+  WIDGET_CHANGE_MAX,
   WIDGET_PROMPT_MAX,
 } from "./types";
 
@@ -54,7 +57,7 @@ const { dashboards, dashboardWidgets, messages, orgRoles, users, agents } = sche
  * waits on its person (`proposeDashboardAudience`); narrowing applies at once. A widget's refresh run lists only
  * `update_widget`, its one way to speak.
  *
- * - `list_dashboards`: the boards the person behind the run edits (and their home), with their widgets' titles.
+ * - `list_dashboards`: the boards the person behind the run edits (and their home), with their widgets' titles and ids.
  * - `create_dashboard` `{ title, about?, audience?, roles?, why?, edit?, edit_roles? }`: a board for the person behind
  *   the run (else the accountable person), private; a wider `audience` becomes a proposal to them.
  * - `create_widget` `{ dashboard_id?, title, prompt, kind?, schedule, alert?, size?, data?, sources? }`: on a board
@@ -62,6 +65,10 @@ const { dashboards, dashboardWidgets, messages, orgRoles, users, agents } = sche
  * - `share_dashboard` `{ dashboard_id, audience?, roles?, why?, edit?, edit_roles? }`: narrower applies (on a board
  *   the agent made or the person manages), wider is a proposal; a routine's or unattended run only ever proposes.
  *   Who edits (`edit`, `edit_roles`) applies at once: editing isn't seeing (ADR 0135 §8).
+ * - `change_widget` `{ widget_id, change }`: a widget this agent keeps, on a board that person edits, gets the person's
+ *   "Ask for a change" (`askWidgetChange`): its own update run redoes it with those words, nothing in the chat.
+ * - `remove_widget` `{ widget_id }`: takes a widget this agent keeps off a board that person edits (`removeWidget`).
+ *   Both act in that person's name, so only with a person behind the run: a routine's or unattended run does neither.
  * - `update_widget` `{ data?, summary, sources?, title?, prompt?, alert?, failed? }`: listed only on a widget's refresh
  *   run (its brief's `widget`), once per run.
  */
@@ -115,6 +122,11 @@ type Person = NonNullable<Awaited<ReturnType<typeof personOf>>>;
 
 const NOBODY =
   "Nobody is behind this run to make a dashboard for (no person asked, and your work has no owner). Don't make one.";
+const NOBODY_WIDGET =
+  "Nobody is behind this run (no person asked, and your work has no owner): leave the widget as it is.";
+/** A widget is changed or taken away in a person's name (ADR 0135 §10): a routine's or unattended run does neither. */
+const NOT_ASKED =
+  "Nobody asked for this in a conversation, so you don't change or remove widgets here. Tell the person which one and why; they ask you, or do it on the board.";
 
 /** Who sees a board, in words for the agent. */
 function audienceWords(board: Pick<DashboardRow, "kind" | "audience">, roleNames: string[], owner: string) {
@@ -183,6 +195,16 @@ async function boardById(ctx: ToolContext, id: string) {
   return board ?? null;
 }
 
+/** A widget of the workspace on a board (a person's draft is on none, ADR 0135 §16). */
+async function widgetById(ctx: ToolContext, id: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const [widget] = await ctx.db
+    .select()
+    .from(dashboardWidgets)
+    .where(and(eq(dashboardWidgets.orgId, ctx.orgId), eq(dashboardWidgets.id, id), eq(dashboardWidgets.draft, false)));
+  return widget ?? null;
+}
+
 /** A board the agent may put widgets on for `person`: one they edit, or one this agent made for them. */
 const mayEdit = (board: DashboardRow, person: Person, agentId: string) =>
   dashboardRights(board, person.viewer).edit || (board.ownerAgentId === agentId && board.ownerUserId === person.userId);
@@ -234,7 +256,7 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
   const listDashboards: ToolDefinition = {
     name: "list_dashboards",
     description:
-      "List the dashboards (in Portuguese, painéis) the person you work for can add widgets to, and their Home, with who sees each one and its widgets. Use it before create_widget when they name a dashboard, or to answer what's on them. Read only.",
+      "List the dashboards (in Portuguese, painéis) the person you work for can add widgets to, and their Home, with who sees each one and its widgets, each with its id. Use it before create_widget when they name a dashboard, before change_widget or remove_widget, or to answer what's on them. Read only.",
     scope: "",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     async execute(_input, ctx) {
@@ -256,7 +278,9 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
           ? []
           : await ctx.db
               .select({
+                id: dashboardWidgets.id,
                 dashboardId: dashboardWidgets.dashboardId,
+                agentId: dashboardWidgets.agentId,
                 title: dashboardWidgets.title,
                 schedule: dashboardWidgets.schedule,
                 status: dashboardWidgets.status,
@@ -284,7 +308,9 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
         const pending = b.proposal ? `; waiting on ${person.name} to publish it wider` : "";
         const each = own.map((w) => {
           const when = SCHEDULE_WORDS[w.schedule as WidgetSchedule] ?? w.schedule;
-          return `${w.title} (${when}${w.status === "failed" ? ", failing" : ""})`;
+          const failing = w.status === "failed" ? ", failing" : "";
+          const whose = w.agentId === ctx.agentId ? "" : ", another agent's";
+          return `${w.title} [${w.id}] (${when}${failing}${whose})`;
         });
         const list = own.length === 0 ? "no widgets yet" : `${own.length} widgets: ${each.join("; ")}`;
         lines.push(`${b.id} — ${name}: seen by ${who}${editors}${pending}; ${list}`);
@@ -374,7 +400,7 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
 
   const createWidget: ToolDefinition = {
     name: "create_widget",
-    description: `Add a widget: one number, goal, chart, list or short summary that you keep up to date on a dashboard (or the person's Home), redone in place on a schedule by your own background run, which posts nothing in the chat. Use it when someone asks to "keep this updated", "pin this chart", "put it on my Home", "add to the dashboard", "acompanhar", "fixar", or for a number they want to look at every day. \`prompt\` is what to show, in their words (it is your instructions on every update). \`schedule\`: half (every 30 min, the most often), hour, day (08:00), week (Monday 08:00) or manual (only when asked). \`alert\`: a condition in their words ("drops 20% below yesterday"; "" = when something is off) when they want to hear it: you judge it on each update and it goes to their Waiting on you, never the chat. Give \`data\` when you already have the numbers (it shows at once), else your first update builds it soon. Without \`dashboard_id\` it goes on their Home.`,
+    description: `Add a widget: one number, goal, chart, list or short summary that you keep up to date on a dashboard (or the person's Home), redone in place on a schedule by your own background run, which posts nothing in the chat. Use it when someone asks to "keep this updated", "pin this chart", "put it on my Home", "add to the dashboard", "acompanhar", "fixar", or for a number they want to look at every day. \`prompt\` is what to show, in their words (it is your instructions on every update). \`schedule\`: half (every 30 min, the most often), hour, day (08:00), week (Monday 08:00) or manual (only when asked). \`alert\`: a condition in their words ("drops 20% below yesterday"; "" = when something is off) when they want to hear it: you judge it on each update and it goes to their Waiting on you, never the chat. Give \`data\` when you already have the numbers (it shows at once), else your first update builds it soon. Without \`dashboard_id\` it goes on their Home. A widget of yours that is already there, failing or not, is fixed or redone with change_widget, never made again.`,
     scope: "",
     inputSchema: {
       type: "object",
@@ -559,6 +585,101 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
     },
   };
 
+  const changeWidgetTool: ToolDefinition = {
+    name: "change_widget",
+    description: `Change a widget you keep on a dashboard (or the person's Home), in place: what it shows, its title, its kind, or another try when it is failing. \`change\` says what to change, in the person's words, like their "Ask for a change": your widget's own update run redoes it with them in the background shortly and posts nothing in the chat. Use it when someone wants a widget fixed, renamed or shown another way, instead of a second widget. Get its id from list_dashboards.`,
+    scope: "",
+    inputSchema: {
+      type: "object",
+      properties: {
+        widget_id: { type: "string", maxLength: 36 },
+        change: { type: "string", minLength: 1, maxLength: WIDGET_CHANGE_MAX },
+      },
+      required: ["widget_id", "change"],
+      additionalProperties: false,
+    },
+    async execute(input, ctx) {
+      try {
+        const { maker, routine } = await makerOf(ctx);
+        if (routine) return refusal(NOT_ASKED);
+        const person = await personOf(ctx, maker);
+        if (!person) return refusal(NOBODY_WIDGET);
+        const id = str(input.widget_id).trim();
+        const widget = await widgetById(ctx, id);
+        const board = widget ? await boardById(ctx, widget.dashboardId) : null;
+        if (!widget || !board || !mayEdit(board, person, ctx.agentId)) {
+          return refusal(`No widget ${id} that ${person.name} can change: use list_dashboards.`);
+        }
+        if (widget.agentId !== ctx.agentId) {
+          return refusal(
+            `«${widget.title}» is another agent's widget: ${person.name} asks that agent, or for a change on the board.`,
+          );
+        }
+        try {
+          await askWidgetChange(depsOf(ctx), person.userId, ctx.orgId, widget.id, str(input.change));
+        } catch (error) {
+          if (error instanceof ConflictError && error.code === DASHBOARD_ERRORS.needsAi) {
+            const [held] = await ctx.db
+              .select({ failureDetail: dashboardWidgets.failureDetail })
+              .from(dashboardWidgets)
+              .where(eq(dashboardWidgets.id, widget.id));
+            // The change isn't kept (ADR 0135 §20): once there is an AI, it has to be asked again.
+            return refusal(
+              `Not done: «${widget.title}» can't be redone now, since its updates are background work and there ${noAiForBuild(held?.failureDetail ?? null, person.name)}. The change wasn't kept: once that's fixed, call change_widget again.`,
+            );
+          }
+          throw error;
+        }
+        return {
+          content: `Asked: your update run redoes «${widget.title}» with these words in the background shortly. Don't build it here, and don't post its numbers in the chat. Tell ${person.name} it is on its way.`,
+          data: { widget: { id: widget.id, dashboardId: board.id } },
+        };
+      } catch (error) {
+        if (explained(error)) return failed(error);
+        throw error;
+      }
+    },
+  };
+
+  const removeWidgetTool: ToolDefinition = {
+    name: "remove_widget",
+    description:
+      "Take a widget you keep off its dashboard (or the person's Home), with its history and its updates, when the person you work for asks: a duplicate, or one they no longer want. It can't be undone; whoever sees the board stops seeing it. To fix one, use change_widget instead. Get its id from list_dashboards.",
+    scope: "",
+    inputSchema: {
+      type: "object",
+      properties: { widget_id: { type: "string", maxLength: 36 } },
+      required: ["widget_id"],
+      additionalProperties: false,
+    },
+    async execute(input, ctx) {
+      try {
+        const { maker, routine } = await makerOf(ctx);
+        if (routine) return refusal(NOT_ASKED);
+        const person = await personOf(ctx, maker);
+        if (!person) return refusal(NOBODY_WIDGET);
+        const id = str(input.widget_id).trim();
+        const widget = await widgetById(ctx, id);
+        const board = widget ? await boardById(ctx, widget.dashboardId) : null;
+        if (!widget || !board || !mayEdit(board, person, ctx.agentId)) {
+          return refusal(`No widget ${id} that ${person.name} can remove: use list_dashboards.`);
+        }
+        if (widget.agentId !== ctx.agentId) {
+          return refusal(`«${widget.title}» is another agent's widget: ${person.name} removes it on the board.`);
+        }
+        await removeWidget(depsOf(ctx), person.userId, ctx.orgId, widget.id);
+        const where = board.kind === "home" ? `${person.name}'s Home` : `the dashboard «${board.title}»`;
+        return {
+          content: `Removed «${widget.title}» from ${where}, with its history and its updates.`,
+          data: { widget: { id: widget.id, dashboardId: board.id } },
+        };
+      } catch (error) {
+        if (explained(error)) return failed(error);
+        throw error;
+      }
+    },
+  };
+
   const updateWidget: ToolDefinition = {
     name: UPDATE_WIDGET_TOOL,
     description:
@@ -630,7 +751,7 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
       // A widget's refresh run speaks only through update_widget (ADR 0135 §5); no other run has it.
       const brief = await briefOf(ctx);
       if (brief?.widget) return [updateWidget];
-      return [listDashboards, createDashboard, createWidget, shareDashboard];
+      return [listDashboards, createDashboard, createWidget, changeWidgetTool, removeWidgetTool, shareDashboard];
     },
   };
 }

@@ -1065,7 +1065,15 @@ describe("changes, Resolve and the routine's life", () => {
     const appRead = { name: "github_get_issue", scope: "github:issues.read", connectionId: "x" };
     expect(toolPolicy(widgetRun, appRead).action).toBe("allow");
     expect(toolPolicy(widgetRun, { name: "browser_do", scope: "browser:use" }).action).toBe("allow");
-    for (const name of ["hand_off", "post_message", "create_issue", "react", "create_widget"]) {
+    for (const name of [
+      "hand_off",
+      "post_message",
+      "create_issue",
+      "react",
+      "create_widget",
+      "change_widget",
+      "remove_widget",
+    ]) {
       expect(toolPolicy(widgetRun, { name, scope: name === "create_issue" ? "issues:write" : "" }).action).toBe(
         "refuse",
       );
@@ -1074,6 +1082,14 @@ describe("changes, Resolve and the routine's life", () => {
     expect(toolPolicy(person, { name: "update_widget", scope: "" }).action).toBe("refuse");
     expect(toolPolicy(person, { name: "create_dashboard", scope: "" }).action).toBe("allow");
     expect(toolPolicy(plain, { name: "list_dashboards", scope: "" }).action).toBe("allow");
+    // A routine's run reaches them; they refuse by themselves there (nobody asked in a conversation).
+    expect(toolPolicy(person, { name: "change_widget", scope: "" }).action).toBe("allow");
+    expect(toolPolicy(plain, { name: "change_widget", scope: "" }).action).toBe("allow");
+    expect(toolPolicy(plain, { name: "remove_widget", scope: "" }).action).toBe("allow");
+    // An agent that always asks (ADR 0173) asks before either, like any change it makes.
+    for (const name of ["change_widget", "remove_widget"]) {
+      expect(toolPolicy(person, { name, scope: "" }, "always").action).toBe("approve");
+    }
   });
 
   test("a widget run starts with what it reads with and update_widget in hand, nothing that writes", async () => {

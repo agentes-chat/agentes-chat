@@ -14372,6 +14372,8 @@ export const en = {
       share_dashboard: "Share dashboard",
       create_widget: "Create widget",
       update_widget: "Change widget",
+      change_widget: "Ask a widget for a change",
+      remove_widget: "Remove widget",
       load_skill: "Open skill",
       read_skill_file: "Read skill file",
       update_skill: "Change skill",
