@@ -23,6 +23,7 @@ export const cachesEnabled = () => enabled;
 
 export class TtlCache<V> {
   private readonly entries = new Map<string, { value: V; expires: number }>();
+  private readonly loading = new Map<string, symbol>();
   constructor(
     private readonly ttlMs: number,
     private readonly max = 5000,
@@ -39,6 +40,7 @@ export class TtlCache<V> {
   }
 
   set(key: string, value: V) {
+    this.loading.delete(key);
     if (this.entries.size >= this.max) {
       const oldest = this.entries.keys().next().value;
       if (oldest !== undefined) this.entries.delete(oldest);
@@ -67,9 +69,16 @@ export class TtlCache<V> {
 
   /** An invalidation, here only: another process's, which it already told everyone. */
   apply(op: CacheOp, key: string) {
-    if (op === "clear") this.entries.clear();
-    else if (op === "delete") this.entries.delete(key);
-    else for (const k of this.entries.keys()) if (k.startsWith(key)) this.entries.delete(k);
+    if (op === "clear") {
+      this.entries.clear();
+      this.loading.clear();
+    } else if (op === "delete") {
+      this.entries.delete(key);
+      this.loading.delete(key);
+    } else {
+      for (const k of this.entries.keys()) if (k.startsWith(key)) this.entries.delete(k);
+      for (const k of this.loading.keys()) if (k.startsWith(key)) this.loading.delete(k);
+    }
   }
 
   /** Returns the cached value or loads, caches and returns it (`undefined`/null results are cached too). */
@@ -77,9 +86,15 @@ export class TtlCache<V> {
     if (!enabled) return load();
     const hit = this.entries.get(key);
     if (hit && hit.expires >= Date.now()) return hit.value;
-    const value = await load();
-    this.set(key, value);
-    return value;
+    const pending = Symbol();
+    this.loading.set(key, pending);
+    try {
+      const value = await load();
+      if (enabled && this.loading.get(key) === pending) this.set(key, value);
+      return value;
+    } finally {
+      if (this.loading.get(key) === pending) this.loading.delete(key);
+    }
   }
 }
 
