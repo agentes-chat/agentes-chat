@@ -2910,6 +2910,39 @@
   "me.zone.none": {
     "value": "No time zone by that name"
   },
+  "lock.setting": {
+    "value": "Lock with biometrics"
+  },
+  "lock.unavailable": {
+    "value": "Set up a fingerprint, your face or a screen lock on this phone first."
+  },
+  "lock.confirm": {
+    "value": "Confirm it's you to lock the app"
+  },
+  "lock.prompt": {
+    "value": "Unlock agentes.chat"
+  },
+  "lock.unlock": {
+    "value": "Unlock"
+  },
+  "lock.after": {
+    "value": "When away, lock"
+  },
+  "lock.afterNow": {
+    "value": "Immediately"
+  },
+  "lock.after1m": {
+    "value": "After 1 minute"
+  },
+  "lock.after5m": {
+    "value": "After 5 minutes"
+  },
+  "lock.after30m": {
+    "value": "After 30 minutes"
+  },
+  "lock.after1h": {
+    "value": "After 1 hour"
+  },
   "delete.intro": {
     "value": "There's no undo."
   },

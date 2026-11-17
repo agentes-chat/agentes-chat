@@ -1252,6 +1252,19 @@
       "none": "Aucun fuseau horaire à ce nom"
     }
   },
+  "lock": {
+    "setting": "Verrouiller avec la biométrie",
+    "unavailable": "Configurez d'abord une empreinte, votre visage ou un verrouillage d'écran sur ce téléphone.",
+    "confirm": "Confirmez que c'est vous pour verrouiller l'app",
+    "prompt": "Déverrouiller agentes.chat",
+    "unlock": "Déverrouiller",
+    "after": "Verrouiller en partant",
+    "afterNow": "Immédiatement",
+    "after1m": "Après 1 minute",
+    "after5m": "Après 5 minutes",
+    "after30m": "Après 30 minutes",
+    "after1h": "Après 1 heure"
+  },
   "delete": {
     "intro": "C'est irréversible.",
     "introGrace": "Vous avez 7 jours pour changer d'avis.",

@@ -1252,6 +1252,19 @@
       "none": "Nessun fuso orario con quel nome"
     }
   },
+  "lock": {
+    "setting": "Blocca con la biometria",
+    "unavailable": "Configura prima un'impronta, il tuo volto o un blocco schermo su questo telefono.",
+    "confirm": "Conferma che sei tu per bloccare l'app",
+    "prompt": "Sblocca agentes.chat",
+    "unlock": "Sblocca",
+    "after": "Blocca quando esci",
+    "afterNow": "Subito",
+    "after1m": "Dopo 1 minuto",
+    "after5m": "Dopo 5 minuti",
+    "after30m": "Dopo 30 minuti",
+    "after1h": "Dopo 1 ora"
+  },
   "delete": {
     "intro": "Non si può annullare.",
     "introGrace": "Hai 7 giorni per cambiare idea.",

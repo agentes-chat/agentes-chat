@@ -4,6 +4,7 @@ import { APP_LINK_PATHS, APP_LINK_WEB_QUERIES } from "../../../server/src/app-li
 import { APP_LINK_PATTERNS } from "../../app.config";
 import {
   appLinkFromUrl,
+  appPathOf,
   linkWorkspace,
   ownLinkHref,
   resolveLink,
@@ -199,5 +200,16 @@ describe("the link screen", () => {
     rememberLink("/link?org=o&to=%2F");
     expect(takeLink()).toBe("/link?org=o&to=%2F");
     expect(takeLink()).toBeNull();
+  });
+});
+
+describe("the app's own scheme as a path (ADR 0195: a link held behind the lock)", () => {
+  test("agenteschat:// URLs become the app's path, never a URL the system would open the app with again", () => {
+    expect(appPathOf("agenteschat:///")).toBe("/");
+    expect(appPathOf("agenteschat://")).toBe("/");
+    expect(appPathOf("agenteschat:///chat/abc?x=1")).toBe("/chat/abc?x=1");
+    expect(appPathOf("agenteschat://chat/abc")).toBe("/chat/abc");
+    expect(appPathOf("/activity")).toBe("/activity");
+    expect(appPathOf("activity")).toBe("/activity");
   });
 });

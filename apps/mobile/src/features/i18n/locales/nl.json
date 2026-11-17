@@ -1176,6 +1176,19 @@
       "none": "Geen tijdzone met die naam"
     }
   },
+  "lock": {
+    "setting": "Vergrendelen met biometrie",
+    "unavailable": "Stel eerst een vingerafdruk, je gezicht of een schermvergrendeling in op deze telefoon.",
+    "confirm": "Bevestig dat jij het bent om de app te vergrendelen",
+    "prompt": "agentes.chat ontgrendelen",
+    "unlock": "Ontgrendelen",
+    "after": "Vergrendelen bij weggaan",
+    "afterNow": "Direct",
+    "after1m": "Na 1 minuut",
+    "after5m": "Na 5 minuten",
+    "after30m": "Na 30 minuten",
+    "after1h": "Na 1 uur"
+  },
   "delete": {
     "intro": "Dit kan niet ongedaan worden.",
     "introGrace": "Je hebt 7 dagen om van gedachten te veranderen.",

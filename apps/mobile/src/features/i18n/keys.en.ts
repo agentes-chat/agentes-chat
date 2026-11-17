@@ -1259,6 +1259,24 @@ export const featureKeysEn = {
       none: "No time zone by that name",
     },
   },
+  /** The app lock, for this phone only (ADR 0195). */
+  lock: {
+    setting: "Lock with biometrics",
+    /** Under the setting, turned off, on a phone with no fingerprint, face or screen lock set up. */
+    unavailable: "Set up a fingerprint, your face or a screen lock on this phone first.",
+    /** The system's prompt when turning the lock on. */
+    confirm: "Confirm it's you to lock the app",
+    /** The system's prompt on the lock screen. */
+    prompt: "Unlock agentes.chat",
+    unlock: "Unlock",
+    /** Under the lock, while on: how long away before it asks again. */
+    after: "When away, lock",
+    afterNow: "Immediately",
+    after1m: "After 1 minute",
+    after5m: "After 5 minutes",
+    after30m: "After 30 minutes",
+    after1h: "After 1 hour",
+  },
   delete: {
     intro: "There's no undo.",
     introGrace: "You have 7 days to change your mind.",

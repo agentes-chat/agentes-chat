@@ -1334,6 +1334,19 @@
       "none": "Brak strefy czasowej o tej nazwie"
     }
   },
+  "lock": {
+    "setting": "Blokuj biometrią",
+    "unavailable": "Najpierw skonfiguruj na tym telefonie odcisk palca, twarz lub blokadę ekranu.",
+    "confirm": "Potwierdź, że to ty, żeby zablokować aplikację",
+    "prompt": "Odblokuj agentes.chat",
+    "unlock": "Odblokuj",
+    "after": "Blokuj po wyjściu",
+    "afterNow": "Od razu",
+    "after1m": "Po 1 minucie",
+    "after5m": "Po 5 minutach",
+    "after30m": "Po 30 minutach",
+    "after1h": "Po 1 godzinie"
+  },
   "delete": {
     "intro": "Tego nie da się cofnąć.",
     "introGrace": "Masz 7 dni, żeby zmienić zdanie.",

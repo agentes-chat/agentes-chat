@@ -27,6 +27,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAppLock } from "@/features/lock/store";
 import { lastCookie } from "@/lib/auth";
 import { serverUrl } from "@/lib/server";
 import { createSocketFactory } from "@/lib/socket";
@@ -52,6 +53,11 @@ export function PhoneLive({ phone: p, host }: { phone: PhoneDevice; host: string
   const active = useAppActive();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<DesktopMode>("watch");
+  // The app lock (ADR 0195) closes control: its full-screen window is the system's own, over the lock on Android.
+  const locked = useAppLock().locked;
+  useEffect(() => {
+    if (locked) setMode("watch");
+  }, [locked]);
   const [view, setView] = useState<PhoneScreenState>("connecting");
   const [frame, setFrame] = useState<string | null>(null);
   const [shape, setShape] = useState(PHONE_SHAPE);

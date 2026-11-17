@@ -1,4 +1,5 @@
 import type { DeletionProofInput } from "@agenteschat/client";
+import { forgetAppLock } from "@/features/lock/store";
 import { authClient, authedFetch } from "@/lib/auth";
 import { outboxStoreFor } from "@/lib/outbox";
 import { SIGN_OUT_WAIT_MS, unregisterPush, unregisterPushOn } from "@/lib/push";
@@ -49,7 +50,10 @@ async function forgetServer(server: string, last: boolean) {
   await writeValue(orgValueName(server), null);
   await snapshotStoreFor(server).remove();
   outboxStoreFor(server).write("[]");
-  if (last) await clearStoredValues();
+  if (last) {
+    await clearStoredValues();
+    forgetAppLock();
+  }
 }
 
 /**

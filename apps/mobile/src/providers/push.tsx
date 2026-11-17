@@ -8,6 +8,7 @@ import { AppState } from "react-native";
 import { registerDeviceActions, runDeviceAction } from "@/features/devices/push";
 import { hrefForPush, notificationWebPath, pushAsNotification } from "@/features/links/logic";
 import { openWebPath } from "@/features/links/open-web";
+import { whenUnlocked } from "@/features/lock/store";
 import { openWorkspace } from "@/features/server";
 import { pushOpens } from "@/lib/org-choice";
 import {
@@ -45,6 +46,9 @@ configureForegroundPush();
 
 /** Notifications already opened (the launch one must not reopen when the provider remounts). */
 const opened = new Set<string>();
+
+/** What opens a tapped notification, from the provider mounted now (a tap held by the app lock opens through it). */
+let openTapped: ((response: Notifications.NotificationResponse) => void) | null = null;
 
 /** A tapped push from another server: opened once the app is on that server (ADR 0154). */
 let afterSwitch: Notifications.NotificationResponse | null = null;
@@ -177,18 +181,27 @@ export function PushProvider({ children }: { children: ReactNode }) {
         setTimeout(() => (web ? openWebPath(web) : router.push(href ?? "/activity")), 0);
       });
     };
+    // With the app lock on (ADR 0195), what a tap opens waits until the lock opens and the app is in front, the latest
+    // tap only. It opens through whichever provider is mounted then, so a remount meanwhile doesn't drop it.
+    openTapped = open;
+    const openUnlocked = (response: Notifications.NotificationResponse | null) => {
+      if (response) whenUnlocked(() => openTapped?.(response));
+    };
     if (afterSwitch) {
       const waiting = afterSwitch;
       afterSwitch = null;
-      open(waiting);
+      openUnlocked(waiting);
     }
     try {
-      open(Notifications.getLastNotificationResponse());
+      openUnlocked(Notifications.getLastNotificationResponse());
     } catch {
       // No launch notification.
     }
-    const sub = Notifications.addNotificationResponseReceivedListener(open);
-    return () => sub.remove();
+    const sub = Notifications.addNotificationResponseReceivedListener(openUnlocked);
+    return () => {
+      sub.remove();
+      if (openTapped === open) openTapped = null;
+    };
   }, [ready, api, qc]);
 
   const value = useMemo<PushApi>(() => {

@@ -3,6 +3,7 @@
     "NSPhotoLibraryUsageDescription": "Untuk mengirim gambar di percakapan Anda.",
     "NSCameraUsageDescription": "Untuk mengambil foto bagi percakapan Anda dan memindai kode QR.",
     "NSPhotoLibraryAddUsageDescription": "Untuk menyimpan gambar dari percakapan Anda ke Foto.",
-    "NSMicrophoneUsageDescription": "Untuk merekam pesan suara di percakapan Anda."
+    "NSMicrophoneUsageDescription": "Untuk merekam pesan suara di percakapan Anda.",
+    "NSFaceIDUsageDescription": "Untuk membuka kunci aplikasi dengan Face ID, saat Anda menyalakan kuncinya."
   }
 }

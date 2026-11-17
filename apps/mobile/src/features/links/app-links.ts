@@ -156,6 +156,16 @@ function workspaceScreen(rest: string[], q: Record<string, string>): Record<stri
 }
 
 /**
+ * The app's own path in a URL of its scheme (`agenteschat:///chat/x` or `agenteschat://chat/x` → `/chat/x`), a path
+ * as it is. Navigating to the URL itself would hand it to the system, which opens the app with it again.
+ */
+export function appPathOf(url: string): string {
+  const m = /^[a-z][a-z0-9+.-]*:\/\/\/?(.*)$/i.exec(url);
+  if (!m) return url.startsWith("/") ? url : `/${url}`;
+  return `/${m[1] ?? ""}`;
+}
+
+/**
  * A URL the app was opened with → where it goes. Only the web's addresses (`https://<host>/…`) change: the app's own
  * scheme (`agenteschat://chat/…`) and paths stay as they are (null). A screen of `current` (the workspace on screen)
  * that needs nothing looked up opens straight away; anything else goes through `/link`, which switches workspace or

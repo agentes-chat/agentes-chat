@@ -3,6 +3,7 @@
     "NSPhotoLibraryUsageDescription": "To send pictures in your conversations.",
     "NSCameraUsageDescription": "To take pictures for your conversations and scan QR codes.",
     "NSPhotoLibraryAddUsageDescription": "To save pictures from your conversations to Photos.",
-    "NSMicrophoneUsageDescription": "To record voice messages in your conversations."
+    "NSMicrophoneUsageDescription": "To record voice messages in your conversations.",
+    "NSFaceIDUsageDescription": "To unlock the app with Face ID, when you turn its lock on."
   }
 }

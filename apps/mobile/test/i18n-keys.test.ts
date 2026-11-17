@@ -57,6 +57,10 @@ test("the stores and the system list only ready languages, each with its iOS per
     | [string, { microphonePermission: string }]
     | undefined;
   expect(nativeEn.ios.NSMicrophoneUsageDescription).toBe(audio?.[1].microphonePermission ?? "");
+  const faceId = config.plugins?.find((p) => Array.isArray(p) && p[0] === "expo-local-authentication") as
+    | [string, { faceIDPermission: string }]
+    | undefined;
+  expect(nativeEn.ios.NSFaceIDUsageDescription).toBe(faceId?.[1].faceIDPermission ?? "");
   const keys = (o: object) => leaves(o).sort();
   for (const code of ready)
     expect(keys(JSON.parse(readFileSync(join(import.meta.dir, `../assets/locales/${code}.json`), "utf8")))).toEqual(

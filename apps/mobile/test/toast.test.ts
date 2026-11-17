@@ -9,7 +9,8 @@ describe("toasts", () => {
 
   test("drawn in TrueSheet's overlay, above every sheet, and only while one shows", () => {
     expect(toast).toContain('import { TrueSheetOverlay } from "@lodev09/react-native-true-sheet";');
-    expect(toast).toMatch(/\{toasts\.shown \? \(\s*<ToastLayer>/);
+    // Never over the app lock (ADR 0195).
+    expect(toast).toMatch(/\{toasts\.shown && !lock\.locked && !lock\.covered \? \(\s*<ToastLayer>/);
     // A root of its own for the gestures there, as tall as the toast: a touch elsewhere goes to what is under it.
     expect(toast).toContain(
       '<GestureHandlerRootView pointerEvents="box-none" style={[styles.layer, { top: insets.top + 6 }]}>',

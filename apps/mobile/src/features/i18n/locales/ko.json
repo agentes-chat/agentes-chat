@@ -1097,6 +1097,19 @@
       "none": "그런 이름의 시간대가 없어요"
     }
   },
+  "lock": {
+    "setting": "생체 인증으로 잠금",
+    "unavailable": "먼저 이 휴대폰에 지문, 얼굴 또는 화면 잠금을 설정해 주세요.",
+    "confirm": "앱을 잠그려면 본인인지 확인해 주세요",
+    "prompt": "agentes.chat 잠금 해제",
+    "unlock": "잠금 해제",
+    "after": "나갈 때 잠금",
+    "afterNow": "즉시",
+    "after1m": "1분 후",
+    "after5m": "5분 후",
+    "after30m": "30분 후",
+    "after1h": "1시간 후"
+  },
   "delete": {
     "intro": "되돌릴 수 없어요.",
     "introGrace": "마음을 바꿀 수 있는 시간은 7일이에요.",

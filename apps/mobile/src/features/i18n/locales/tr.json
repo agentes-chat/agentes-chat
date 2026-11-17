@@ -1176,6 +1176,19 @@
       "none": "Bu adla bir saat dilimi yok"
     }
   },
+  "lock": {
+    "setting": "Biyometriyle kilitle",
+    "unavailable": "Önce bu telefonda parmak izi, yüz veya ekran kilidi ayarlayın.",
+    "confirm": "Uygulamayı kilitlemek için siz olduğunuzu doğrulayın",
+    "prompt": "agentes.chat kilidini aç",
+    "unlock": "Kilidi aç",
+    "after": "Çıkınca kilitle",
+    "afterNow": "Hemen",
+    "after1m": "1 dakika sonra",
+    "after5m": "5 dakika sonra",
+    "after30m": "30 dakika sonra",
+    "after1h": "1 saat sonra"
+  },
   "delete": {
     "intro": "Bunun geri dönüşü yok.",
     "introGrace": "Fikrinizi değiştirmek için 7 gününüz var.",

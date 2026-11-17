@@ -24,6 +24,15 @@ export function readValueSync(name: string): string | null {
   }
 }
 
+/** `readValueSync`, but `undefined` when the value couldn't be read, for a value that must fail closed (the app lock). */
+export function readValueSyncOrUnknown(name: string): string | null | undefined {
+  try {
+    return SecureStore.getItem(key(name));
+  } catch {
+    return undefined;
+  }
+}
+
 /** `writeValue` at once, for a value read back in the same render (`readValueSync`). */
 export function writeValueSync(name: string, value: string): void {
   try {
@@ -90,6 +99,10 @@ export const STORED = {
   voiceSpeed: "voice-speed",
   /** The person held the send button to stop an agent and send once: the composer's hint is over ("1"). */
   stopSendTaught: "stop-send-taught",
+  /** The app asks for the phone's biometrics or screen lock to open ("1"; features/lock, ADR 0195). */
+  appLock: "app-lock",
+  /** How long away before the app lock asks again, in milliseconds ("0", "60000"…; features/lock/logic.ts). */
+  appLockAfter: "app-lock-after",
 } as const;
 
 export async function clearStoredValues(): Promise<void> {

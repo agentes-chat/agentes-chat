@@ -3,6 +3,7 @@
     "NSPhotoLibraryUsageDescription": "Aby wysyłać zdjęcia w rozmowach.",
     "NSCameraUsageDescription": "Aby robić zdjęcia do rozmów i skanować kody QR.",
     "NSPhotoLibraryAddUsageDescription": "Aby zapisywać zdjęcia z rozmów w aplikacji Zdjęcia.",
-    "NSMicrophoneUsageDescription": "Aby nagrywać wiadomości głosowe w rozmowach."
+    "NSMicrophoneUsageDescription": "Aby nagrywać wiadomości głosowe w rozmowach.",
+    "NSFaceIDUsageDescription": "Żeby odblokować aplikację przez Face ID, gdy włączysz blokadę."
   }
 }

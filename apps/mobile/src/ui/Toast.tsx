@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { AgentAvatar } from "@/agent/AgentAvatar";
 import { type AgentLookInput, lookOf } from "@/agent/looks";
+import { useAppLock } from "@/features/lock/store";
 import { Glass } from "./Glass";
 import { haptics } from "./haptics";
 import { Icon, type IconName } from "./Icon";
@@ -82,6 +83,7 @@ export function useToast(): ToastFn {
  */
 export function ToastHost({ children }: { children?: ReactNode }) {
   const [toasts, setToasts] = useState<{ shown: Shown | null; next: Shown | null }>({ shown: null, next: null });
+  const lock = useAppLock();
   const counter = useRef(0);
   const toast = useCallback<ToastFn>((input) => {
     counter.current += 1;
@@ -95,7 +97,8 @@ export function ToastHost({ children }: { children?: ReactNode }) {
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      {toasts.shown ? (
+      {/* Never over the app lock (ADR 0195): a toast waits until it opens. */}
+      {toasts.shown && !lock.locked && !lock.covered ? (
         <ToastLayer>
           <ToastView key={toasts.shown.key} item={toasts.shown} replaced={toasts.next !== null} onGone={gone} />
         </ToastLayer>
