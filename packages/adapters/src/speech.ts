@@ -158,10 +158,13 @@ export function cleanTerms(terms: string[], max: number, words: number): string[
 }
 
 const extensionOf = (contentType: string) => {
-  const type = contentType.split(";")[0]?.trim() ?? "";
+  const type = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
   if (type === "audio/webm") return "webm";
   if (type === "audio/wav" || type === "audio/x-wav") return "wav";
   if (type === "audio/mpeg") return "mp3";
+  if (type === "audio/ogg" || type === "application/ogg") return "ogg";
+  if (type === "audio/aac") return "aac";
+  if (type === "audio/flac" || type === "audio/x-flac") return "flac";
   return "m4a";
 };
 
