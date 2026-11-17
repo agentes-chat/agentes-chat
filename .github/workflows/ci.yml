@@ -590,8 +590,12 @@ jobs:
   build:
     name: Image (${{ matrix.slug }})
     needs: [changes, check, test-backend, secrets, compose]
+    # A fork's token cannot write this repository's packages: GHCR answers `permission_denied: The requested
+    # installation does not exist`, and a red run there says nothing about its code. Only the repository that
+    # owns the images builds them, so a fork's push reports on what it can check.
     if: >-
       github.event_name == 'push' && needs.changes.outputs.image == 'true' &&
+      github.repository == 'agentes-chat/agentes-chat' &&
       (github.ref_type == 'tag' || !github.event.repository.private) &&
       !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     strategy:
