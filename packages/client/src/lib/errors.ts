@@ -270,6 +270,13 @@ const KNOWN = {
   PASSWORD_TOO_SHORT: "auth.passwordHelp",
   PASSWORD_TOO_LONG: "auth.passwordTooLong",
   INVALID_PASSWORD: "errors.reauth.password",
+  // The second step of a sign-in (ADR 0194), Better Auth's two-factor plugin's codes.
+  INVALID_CODE: "auth.twoFactor.wrongCode",
+  INVALID_BACKUP_CODE: "auth.twoFactor.wrongRecovery",
+  TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE: "auth.twoFactor.expired",
+  INVALID_TWO_FACTOR_COOKIE: "auth.twoFactor.expired",
+  ACCOUNT_TEMPORARILY_LOCKED: "auth.twoFactor.locked",
+  TWO_FACTOR_REQUIRED: "auth.twoFactor.lead",
   account_not_linked: "auth.unconfirmed",
   // A provider that hasn't confirmed its own address, to a confirmed account here (apps/server auth.ts `authHandler`).
   provider_email_unverified: "auth.providerUnverified",
@@ -588,6 +595,12 @@ const KNOWN = {
 
 /** Better Auth's code when a blocked account tries to sign in (the server's `session.create.before` hook). */
 export const ACCOUNT_BLOCKED = "ACCOUNT_BLOCKED";
+
+/**
+ * A sign-in that waits for a code from the account's authenticator app (ADR 0194; mirrors apps/server two-factor.ts):
+ * the answer of every way of signing in, and the code a provider's return brings back to the sign-in page.
+ */
+export const TWO_FACTOR_REQUIRED = "TWO_FACTOR_REQUIRED";
 
 /** Better Auth's code when an early-access link signs up another address than the one it was sent to. */
 export const EARLY_ACCESS_OTHER_EMAIL = "EARLY_ACCESS_OTHER_EMAIL";

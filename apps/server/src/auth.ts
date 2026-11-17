@@ -71,6 +71,14 @@ import { humanPassesFor } from "./http/human-pass";
 import type { Logger } from "./logger";
 import { ownerSignIn } from "./owner-claim";
 import { phoneBrowserSignIn, phoneFlowStarted } from "./phone-browser-sign-in";
+import {
+  copyOfProvenSession,
+  TWO_FACTOR_OFF_PATHS,
+  twoFactorAfter,
+  twoFactorBefore,
+  twoFactorGate,
+  twoFactorPlugin,
+} from "./two-factor";
 
 /**
  * Sign-in for people, built on Better Auth (ADR 0006):
@@ -169,6 +177,7 @@ export function createAuth(deps: {
       "/multi-session/revoke",
       KEEP_DEVICE_SESSIONS,
       LEAVE_DEVICE_SESSION,
+      ...TWO_FACTOR_OFF_PATHS,
     ],
     // Derived from AGENTES_SECRET so self-hosters manage a single secret.
     secret: deriveSecret(config.AGENTES_SECRET, "sessions"),
@@ -192,6 +201,10 @@ export function createAuth(deps: {
       phoneBrowserSignIn(),
       desktopSignIn(),
       ownerSignIn({ db, config, log, mint: (adapter, userId) => mintSignIn(adapter, `${FOR_USER}${userId}`) }),
+      // A code from an authenticator app as a second step (ADR 0194): `twoFactorGate` holds every way in to it.
+      twoFactorPlugin(
+        isAgentesCloud(config.PUBLIC_URL) ? "agentes.chat" : `agentes.chat (${new URL(config.PUBLIC_URL).host})`,
+      ),
     ],
     database: drizzleAdapter(db, {
       provider: "pg",
@@ -200,6 +213,7 @@ export function createAuth(deps: {
         session: schema.sessions,
         account: schema.accounts,
         verification: schema.verifications,
+        twoFactor: schema.twoFactors,
       },
     }),
     user: {
@@ -350,6 +364,12 @@ export function createAuth(deps: {
         "/phone/redeem": { window: 60, max: 10 },
         "/owner-claim": { window: 60, max: 10 },
         "/owner-key": { window: 60, max: 10 },
+        // Per address, beside the plugin's 5 tries per challenge and its lock on the account (ADR 0194).
+        "/two-factor/verify-totp": { window: 60, max: 10 },
+        "/two-factor/verify-backup-code": { window: 60, max: 10 },
+        "/two-factor/enable": { window: 60, max: 5 },
+        "/two-factor/disable": { window: 60, max: 5 },
+        "/two-factor/generate-backup-codes": { window: 60, max: 5 },
       },
     },
     advanced: {
@@ -415,6 +435,7 @@ export function createAuth(deps: {
           );
           if (refused) throw new APIError("FORBIDDEN", refused);
         }
+        if (ctx.path.startsWith("/two-factor/")) return twoFactorBefore(ctx, { db, rateLimiter });
         if (ctx.path !== "/sign-up/email") return;
         const { email, name, password } = (ctx.body ?? {}) as { email?: unknown; name?: unknown; password?: unknown };
         if (typeof name === "string" && typeof password === "string" && nameIsPassword(name, password)) {
@@ -423,6 +444,14 @@ export function createAuth(deps: {
         if (typeof email !== "string") return;
         await assertSignupAllowed(email, await accessOf(ctx));
       }),
+      after: createAuthMiddleware(async (ctx) =>
+        twoFactorAfter(ctx, signInPageUrl(config.PUBLIC_URL), {
+          db,
+          emailDelivers: emailEnabled,
+          publicUrl: config.PUBLIC_URL,
+          support: config.SUPPORT_EMAIL ?? null,
+        }),
+      ),
     },
     databaseHooks: {
       user: {
@@ -496,7 +525,7 @@ export function createAuth(deps: {
           // A blocked account (ADR 0056 §9) gets no session, whatever the sign-in method. The code also
           // makes a social sign-in's callback send the person back to the sign-in page. On agentes.chat Cloud the
           // body adds the block's kind, never its reason.
-          before: async (session) => {
+          before: async (session, context) => {
             const block = await accountBlock(db, session.userId);
             if (block) {
               throw new APIError("FORBIDDEN", {
@@ -505,6 +534,8 @@ export function createAuth(deps: {
                 ...block,
               });
             }
+            // After the block, which says the real reason: every new session waits for the second step (ADR 0194).
+            return twoFactorGate(db, session, context);
           },
           // Here, not in `before`: the insert may wait for the undo's commit, and only after it can it see the undo.
           after: async (session) => {
@@ -1176,8 +1207,13 @@ const phoneSignIn = {
         }
         if (!user) throw new APIError("UNAUTHORIZED", { message: "This code expired or was already used" });
         // Minted from a session, it signed in when that one did: it proves no fresher sign-in (`signedInLately`).
+        // Minted from a session, it is that session's copy and asks for no second code (ADR 0194); for a person by
+        // id (the owner key's, an approved request's), it does.
+        const userId = user.id;
         const session = signedIn
-          ? await internalAdapter.createSession(user.id, undefined, { createdAt: signedIn }, true)
+          ? await copyOfProvenSession(() =>
+              internalAdapter.createSession(userId, undefined, { createdAt: signedIn }, true),
+            )
           : await internalAdapter.createSession(user.id);
         await setSessionCookie(ctx, { session, user });
         return ctx.json({ user: { id: user.id, name: user.name, email: user.email } });

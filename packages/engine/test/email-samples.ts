@@ -458,6 +458,31 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     support: "help@agentes.chat",
     url: APP,
   },
+  /** Turned on, on a server with a support address. */
+  "two_factor_changed-on.en": {
+    kind: "two_factor_changed",
+    locale: "en",
+    email: "ana@souzabakery.com",
+    change: "on",
+    support: "help@agentes.chat",
+    url: APP,
+  },
+  "two_factor_changed-off.pt-BR": {
+    kind: "two_factor_changed",
+    locale: "pt-BR",
+    email: "ana@padariasouza.com.br",
+    change: "off",
+    support: null,
+    url: APP,
+  },
+  "two_factor_changed-codes.en": {
+    kind: "two_factor_changed",
+    locale: "en",
+    email: "ana@souzabakery.com",
+    change: "codes",
+    support: null,
+    url: APP,
+  },
   "autonomy_report.en": {
     kind: "autonomy_report",
     locale: "en",

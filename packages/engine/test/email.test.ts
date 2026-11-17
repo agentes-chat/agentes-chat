@@ -137,6 +137,7 @@ describe("every email, in both languages", () => {
       workspace_restored: true,
       account_deleted: true,
       account_deleting: true,
+      two_factor_changed: true,
       app_connected: true,
       plan_opened: true,
       plan_lent: true,

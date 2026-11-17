@@ -493,6 +493,47 @@ export const en = {
     noSupport: "If it wasn't you, tell the people who run this server." as Text,
     why: "You got this email because this address had an account on agentes.chat.",
   },
+  twoFactor: {
+    subject: {
+      on: "Two-step sign-in is on for your agentes.chat account",
+      off: "Two-step sign-in is off for your agentes.chat account",
+      codes: "New recovery codes for your agentes.chat account",
+    },
+    preheader: {
+      on: "Signing in now also takes a code from your authenticator app.",
+      off: "Signing in takes your password or provider alone again.",
+      codes: "The recovery codes you had before no longer work.",
+    },
+    headline: {
+      on: "Two-step sign-in is on",
+      off: "Two-step sign-in is off",
+      codes: "You have new recovery codes",
+    },
+    body: {
+      on: (email: string): Text => [
+        "Signing in to ",
+        { b: email },
+        " now also takes a code from an authenticator app. Every other device was signed out.",
+      ],
+      off: (email: string): Text => [
+        "Signing in to ",
+        { b: email },
+        " no longer takes a code from an authenticator app.",
+      ],
+      codes: (email: string): Text => [
+        "New recovery codes were made for ",
+        { b: email },
+        ". The ones made before no longer work.",
+      ],
+    },
+    support: (address: string): Text => [
+      "If it wasn't you, change your password and write to ",
+      { mail: address },
+      ".",
+    ],
+    noSupport: "If it wasn't you, change your password and tell the people who run this server." as Text,
+    why: "You got this email because the sign-in of this address on agentes.chat changed.",
+  },
   autonomy: {
     subject: (day: string, stalls: string, noise: string) => `Agents on ${day}: ${stalls} stalls, ${noise} noise runs`,
     preheader: "Where agents stopped and where they acted for nothing, against the 7 days before.",

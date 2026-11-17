@@ -13,6 +13,7 @@ import { passwordLinkByEmail } from "@agenteschat/engine";
 import { createLogger } from "./logger";
 import { prepareDatabase, startServer } from "./start";
 import { printTelemetry } from "./telemetry";
+import { turnOffTwoFactor } from "./two-factor";
 
 if (process.argv[2] === "setup") {
   const { main } = await import("@agenteschat/setup/src/cli");
@@ -44,6 +45,33 @@ if (process.argv[2] === "password-link") {
   }
   process.stdout.write(`${link.url}\n`);
   process.stderr.write(`Works once, until ${link.expiresAt.toLocaleString()}.\n`);
+  await new Promise((resolve) => process.stdout.write("", resolve));
+  process.exit(0);
+}
+
+// `main.ts two-factor-off <email>` (`docker compose run --rm agentes two-factor-off ana@example.com`, ADR 0194): that
+// account signs in without its authenticator again, for a person who lost it and their recovery codes.
+if (process.argv[2] === "two-factor-off") {
+  const email = process.argv[3] ?? "";
+  const config = loadConfig();
+  const database = createDatabase({ url: config.DATABASE_URL, poolMax: 1 });
+  const done = await turnOffTwoFactor(
+    {
+      db: database.db,
+      emailDelivers: Boolean(config.MILLIONSEND_API_KEY || config.SMTP_URL),
+      publicUrl: config.PUBLIC_URL,
+      support: config.SUPPORT_EMAIL ?? null,
+    },
+    email,
+  );
+  await database.close();
+  if (!done) {
+    process.stderr.write(`No account here uses ${email}.
+`);
+    process.exit(1);
+  }
+  process.stdout.write(`Two-step sign-in is off for ${email}.
+`);
   await new Promise((resolve) => process.stdout.write("", resolve));
   process.exit(0);
 }

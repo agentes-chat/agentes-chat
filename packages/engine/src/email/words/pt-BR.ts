@@ -440,6 +440,39 @@ export const ptBR: Words = {
     noSupport: "Se não foi você, avise quem cuida deste servidor.",
     why: "Você recebeu este e-mail porque este endereço tinha uma conta no agentes.chat.",
   },
+  twoFactor: {
+    subject: {
+      on: "A verificação em duas etapas está ativada na sua conta do agentes.chat",
+      off: "A verificação em duas etapas foi desativada na sua conta do agentes.chat",
+      codes: "Novos códigos de recuperação para a sua conta do agentes.chat",
+    },
+    preheader: {
+      on: "Agora, entrar também pede um código do seu app autenticador.",
+      off: "Entrar volta a pedir só a senha ou o provedor.",
+      codes: "Os códigos de recuperação de antes não valem mais.",
+    },
+    headline: {
+      on: "Verificação em duas etapas ativada",
+      off: "Verificação em duas etapas desativada",
+      codes: "Você tem novos códigos de recuperação",
+    },
+    body: {
+      on: (email) => [
+        "Entrar com ",
+        { b: email },
+        " agora também pede um código de um app autenticador. Todos os outros aparelhos saíram da conta.",
+      ],
+      off: (email) => ["Entrar com ", { b: email }, " não pede mais um código de app autenticador."],
+      codes: (email) => [
+        "Novos códigos de recuperação foram gerados para ",
+        { b: email },
+        ". Os de antes não valem mais.",
+      ],
+    },
+    support: (address) => ["Se não foi você, troque sua senha e escreva para ", { mail: address }, "."],
+    noSupport: "Se não foi você, troque sua senha e avise quem cuida deste servidor.",
+    why: "Você recebeu este e-mail porque a forma de entrar deste endereço no agentes.chat mudou.",
+  },
   autonomy: {
     subject: (day, stalls, noise) => `Agentes em ${day}: ${stalls} travas, ${noise} execuções à toa`,
     preheader: "Onde os agentes pararam e onde agiram à toa, contra os 7 dias anteriores.",

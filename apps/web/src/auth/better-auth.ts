@@ -1,3 +1,4 @@
+import { TWO_FACTOR_REQUIRED } from "@agenteschat/client/lib/errors";
 import {
   earlyAccessHeaders,
   earlyAccessState,
@@ -7,20 +8,28 @@ import {
 import { humanCheckHeaders } from "@agenteschat/client/lib/human-check";
 import { createAuthClient } from "better-auth/client";
 import { announceAccountChange, leaveFor, loadAs } from "@/lib/accounts";
-import type { AuthClient, AuthResult } from "./client";
+import type { AuthClient, AuthResult, TwoFactorSetup } from "./client";
 
 type Refusal = { status?: number; message?: string; code?: string; kind?: unknown; cloud?: unknown } | null;
 
 /** No answer at all (the fetch threw): status 0, which `authErrorText` says as offline or out of reach. */
 const NO_ANSWER: AuthResult = { ok: false, status: 0, code: "network", message: "" };
 
-/** A call's refusal as the pages read it; one that got no answer settles as `NO_ANSWER`, so no page spins forever. */
-async function toResult(call: Promise<{ error?: Refusal }>): Promise<AuthResult> {
+/**
+ * A call's refusal as the pages read it; one that got no answer settles as `NO_ANSWER`, so no page spins forever. A
+ * sign-in that waits for the account's second step (ADR 0194) answers `twoFactorRedirect`, signed in to nothing yet:
+ * a refusal with its code, so no page goes on as if signed in.
+ */
+async function toResult(call: Promise<{ data?: unknown; error?: Refusal }>): Promise<AuthResult> {
   let error: Refusal | undefined;
+  let data: unknown;
   try {
-    ({ error } = await call);
+    ({ data, error } = await call);
   } catch {
     return NO_ANSWER;
+  }
+  if ((data as { twoFactorRedirect?: unknown } | null | undefined)?.twoFactorRedirect === true) {
+    return { ok: false, status: 200, code: TWO_FACTOR_REQUIRED, message: "" };
   }
   return error
     ? {
@@ -33,6 +42,10 @@ async function toResult(call: Promise<{ error?: Refusal }>): Promise<AuthResult>
       }
     : { ok: true };
 }
+
+/** The sign-in page a provider's refusal comes back to, keeping `callbackURL` as where to go once signed in. */
+const loginBack = (callbackURL: string) =>
+  callbackURL === "/" ? "/login" : `/login?${new URLSearchParams({ redirect: callbackURL })}`;
 
 /** A call's data, or `fallback` when it got none (no answer included). */
 const dataOr = async <T, F>(call: Promise<{ data?: T | null }>, fallback: F): Promise<T | F> =>
@@ -76,7 +89,8 @@ export function createBetterAuthClient(origin = window.location.origin, language
       ),
     updateName: (name) => toResult(client.updateUser({ name })),
     sendVerificationEmail: (email) => toResult(client.sendVerificationEmail({ email })),
-    signInSocial: (provider, callbackURL, earlyAccess, errorCallbackURL = "/login") =>
+    // Refused or waiting for the account's code (ADR 0194), the sign-in page keeps where the sign-in was going.
+    signInSocial: (provider, callbackURL, earlyAccess, errorCallbackURL = loginBack(callbackURL)) =>
       toResult(
         client.signIn.social({
           provider,
@@ -131,5 +145,43 @@ export function createBetterAuthClient(origin = window.location.origin, language
         )
       )?.signedIn === true,
     ownerClaim: (input) => toResult(client.$fetch("/owner-claim", { method: "POST", body: input })),
+    verifyTwoFactor: ({ code, recovery }) =>
+      toResult(
+        client.$fetch(recovery ? "/two-factor/verify-backup-code" : "/two-factor/verify-totp", {
+          method: "POST",
+          body: { code: code.trim() },
+        }),
+      ),
+    enableTwoFactor: (password) =>
+      toSetup(
+        client.$fetch<{ totpURI: string; backupCodes: string[] }>("/two-factor/enable", {
+          method: "POST",
+          body: { password },
+        }),
+      ),
+    disableTwoFactor: (password) =>
+      toResult(client.$fetch("/two-factor/disable", { method: "POST", body: { password } })),
+    newRecoveryCodes: (password) =>
+      toSetup(
+        client.$fetch<{ backupCodes: string[] }>("/two-factor/generate-backup-codes", {
+          method: "POST",
+          body: { password },
+        }),
+      ),
   };
+}
+
+/** Turning two-step sign-in on, or new recovery codes: what to show, or the refusal as `toResult` reads it. */
+async function toSetup(
+  call: Promise<{ data?: { totpURI?: string; backupCodes?: string[] } | null; error?: Refusal }>,
+): Promise<TwoFactorSetup> {
+  const kept = call.then(
+    (res) => res,
+    () => ({ data: null, error: undefined }),
+  );
+  const result = await toResult(kept);
+  if (!result.ok) return result;
+  const { data } = await kept;
+  if (!data?.backupCodes) return NO_ANSWER as Extract<AuthResult, { ok: false }>;
+  return { ok: true, totpURI: data.totpURI ?? "", backupCodes: data.backupCodes };
 }

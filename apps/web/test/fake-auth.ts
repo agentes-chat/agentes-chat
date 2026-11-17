@@ -1,4 +1,4 @@
-import type { AuthClient, AuthResult } from "@/auth/client";
+import type { AuthClient, AuthResult, TwoFactorSetup } from "@/auth/client";
 
 /** A call's arguments, with the bot check's token only when one was sent. */
 const withToken = (input: unknown, humanCheck: string | undefined) =>
@@ -16,6 +16,9 @@ export function createFakeAuth(
     claim?: AuthResult;
     verification?: AuthResult;
     updateName?: AuthResult;
+    /** The second step's answer (ADR 0194), and what turning it on or new recovery codes give. */
+    verifyTwoFactor?: AuthResult;
+    twoFactorSetup?: TwoFactorSetup;
     onSignIn?: () => void;
     /** What signing out does to the fake server: ending its session, usually (`state.me = null`). */
     onSignOut?: () => void;
@@ -87,6 +90,26 @@ export function createFakeAuth(
     ownerClaim: async (input) => {
       calls.push({ method: "ownerClaim", args: [input] });
       return options.claim ?? { ok: true };
+    },
+    verifyTwoFactor: async (input) => {
+      calls.push({ method: "verifyTwoFactor", args: [input] });
+      const result = options.verifyTwoFactor ?? { ok: true };
+      if (result.ok) options.onSignIn?.();
+      return result;
+    },
+    enableTwoFactor: async (password) => {
+      calls.push({ method: "enableTwoFactor", args: [password] });
+      return (
+        options.twoFactorSetup ?? { ok: true, totpURI: "otpauth://totp/x?secret=ABC", backupCodes: ["aaaaa-bbbbb"] }
+      );
+    },
+    disableTwoFactor: async (password) => {
+      calls.push({ method: "disableTwoFactor", args: [password] });
+      return { ok: true };
+    },
+    newRecoveryCodes: async (password) => {
+      calls.push({ method: "newRecoveryCodes", args: [password] });
+      return options.twoFactorSetup ?? { ok: true, totpURI: "", backupCodes: ["ccccc-ddddd"] };
     },
   };
   return { auth, calls };

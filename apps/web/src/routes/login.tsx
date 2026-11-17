@@ -1,4 +1,5 @@
 import { authConfigQuery, invitationQuery, meQuery } from "@agenteschat/client";
+import { TWO_FACTOR_REQUIRED } from "@agenteschat/client/lib/errors";
 import { safeRedirect, signInFor } from "@agenteschat/client/lib/guards";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { fallBackToAccount } from "@/lib/accounts";
@@ -24,12 +25,20 @@ export const Route = createFileRoute("/login")({
       goal && "invite" in goal ? context.queryClient.prefetchQuery(invitationQuery(context.api, goal.invite)) : null,
     ]);
     // An OAuth callback that waited for a sign-in (under /api/) is the server's: a full load.
-    if (me && !search.add) {
+    // A provider's return that waits for its account's code (ADR 0194) is another account's sign-in: the page asks.
+    const waitsForCode = search.error === TWO_FACTOR_REQUIRED;
+    if (me && !search.add && !waitsForCode) {
       throw redirect({ href: search.redirect ?? "/", reloadDocument: search.redirect?.startsWith("/api/") });
     }
     // Signed out, with another of the browser's accounts still in (ADR 0183): the app opens as that one. The page
     // is loading again by then, so this one waits.
-    if (!me && !search.add && !config.firstRun && (await fallBackToAccount(context.api, search.redirect ?? "/"))) {
+    if (
+      !me &&
+      !search.add &&
+      !waitsForCode &&
+      !config.firstRun &&
+      (await fallBackToAccount(context.api, search.redirect ?? "/"))
+    ) {
       await new Promise(() => {});
     }
     // A brand-new instance has nobody to sign in: go straight to the first account.

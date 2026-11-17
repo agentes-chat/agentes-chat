@@ -150,6 +150,71 @@ describe("Entrar (e-mail primeiro)", () => {
     expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/drive`);
   });
 
+  test("two-step sign-in (ADR 0194): the password asks for the app's code, a wrong one frowns, a recovery code works", async () => {
+    const state = seedState({ me: null });
+    const signedIn = seedState().me;
+    let codes = 0;
+    const { auth, calls } = createFakeAuth({
+      signIn: { ok: false, status: 200, code: "TWO_FACTOR_REQUIRED", message: "" },
+      onSignIn: () => (state.me = signedIn),
+    });
+    const verify = auth.verifyTwoFactor;
+    auth.verifyTwoFactor = async (input) => {
+      if (++codes > 1) return verify(input);
+      calls.push({ method: "verifyTwoFactor", args: [input] });
+      return { ok: false, status: 401, code: "INVALID_CODE", message: "Invalid code" };
+    };
+    const { api } = authApi(ACCOUNT, { state });
+    const { router } = await renderApp(`/login?redirect=/org/${ORG_ID}/drive`, { api, auth });
+    await type("E-mail", "marina@acme.com.br");
+    await press(/^Continuar(?! com)/);
+    await type("Senha", "correct horse");
+    await press(/^Entrar/);
+    expect(heading()).toBe("Digite o código do seu app autenticador");
+    expect(router.state.location.pathname).toBe("/login");
+    // Only six digits make the button work.
+    await type("Código do app", "12a34");
+    expect((screen().getByLabelText("Código do app") as HTMLInputElement).value).toBe("1234");
+    expect(
+      screen()
+        .getByRole("button", { name: /^Continuar/ })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    await type("Código do app", "123456");
+    await press(/^Continuar/);
+    expect(screen().getByRole("alert").textContent).toContain("Esse código não está certo");
+    await press("Usar um código de recuperação");
+    expect(heading()).toBe("Digite um código de recuperação");
+    await type("Código de recuperação", "abcde-12345");
+    await press(/^Continuar/);
+    expect(calls.filter((c) => c.method === "verifyTwoFactor").map((c) => c.args[0])).toEqual([
+      { code: "123456", recovery: false },
+      { code: "abcde-12345", recovery: true },
+    ]);
+    expect(router.state.location.pathname).toBe(`/org/${ORG_ID}/drive`);
+  });
+
+  test("adding an account with a provider: a refusal or its code comes back to the same Add account", async () => {
+    const { auth, calls } = createFakeAuth();
+    const { api } = authApi(ACCOUNT, { state: seedState() });
+    await renderApp("/login?add=1", { api, auth });
+    await press(/Continuar com GitHub/);
+    expect(calls.find((c) => c.method === "signInSocial")?.args).toEqual([
+      "github",
+      "/",
+      undefined,
+      "/login?redirect=%2F&add=1",
+    ]);
+  });
+
+  test("back from a provider with the account's code to go: the code step, not a refusal", async () => {
+    const { auth } = createFakeAuth();
+    const { api } = authApi(ACCOUNT);
+    await renderApp("/login?error=TWO_FACTOR_REQUIRED", { api, auth });
+    expect(heading()).toBe("Digite o código do seu app autenticador");
+    expect(screen().queryByRole("alert")).toBeNull();
+  });
+
   test("signed in from an email's deep link: back on that page, its query and all", async () => {
     const state = seedState({ me: null });
     const signedIn = seedState().me;

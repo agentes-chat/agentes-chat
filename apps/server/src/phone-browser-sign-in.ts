@@ -1,9 +1,10 @@
 import { randomBytes } from "node:crypto";
 import type { BetterAuthPlugin } from "better-auth";
 import { createAuthEndpoint, createAuthMiddleware, formCsrfMiddleware, getOAuthState } from "better-auth/api";
-import { setSessionCookie } from "better-auth/cookies";
+import { parseSetCookieHeader, setSessionCookie } from "better-auth/cookies";
 import { z } from "zod";
 import { desktopChallenge, KEY } from "./desktop-sign-in";
+import { TWO_FACTOR_CHALLENGE, TWO_FACTOR_CHALLENGE_S } from "./two-factor";
 
 /**
  * The phone app's provider sign-in through the system browser (ADR 0035, addendum 2026-11-11). The browser that runs
@@ -19,6 +20,9 @@ import { desktopChallenge, KEY } from "./desktop-sign-in";
  *
  * App builds from before the challenge get the session in the link, as they always did, while `LEGACY_PHONE_SIGN_IN`
  * is on; the browser keeps no session for them either.
+ *
+ * An account with a second step (ADR 0194) gets no session at the callback, but the challenge for its code: the
+ * code in the link then trades, with the same verifier, for that challenge instead, and the app asks for the code.
  */
 
 /**
@@ -34,7 +38,7 @@ const PHONE_CODE_PREFIX = "phone-code:";
 /** How long the app has to trade the code: it does so as soon as the browser closes. */
 const CODE_TTL_S = 5 * 60;
 
-type CodeRecord = { challenge: string; token: string };
+type CodeRecord = { challenge: string } & ({ token: string } | { twoFactor: string });
 
 function parseRecord(value: string | undefined): Record<string, unknown> | null {
   if (!value) return null;
@@ -91,6 +95,15 @@ export async function phoneFlowStarted(
   );
 }
 
+/** The challenge's id in the cookies the callback set (`name`, signed as `<id>.<signature>`), or null. */
+function challengeIn(setCookie: string | null, name: string) {
+  const value = setCookie ? parseSetCookieHeader(setCookie).get(name)?.value : undefined;
+  if (!value) return null;
+  const signed = decodeURIComponent(value);
+  const dot = signed.lastIndexOf(".");
+  return dot > 0 ? signed.slice(0, dot) : null;
+}
+
 export function phoneBrowserSignIn() {
   return {
     id: "phone-browser-sign-in",
@@ -116,12 +129,17 @@ export function phoneBrowserSignIn() {
             back.searchParams.delete("cookie");
             const challenge = challengeOf(state);
             const token = ctx.context.newSession?.session.token;
+            // No session: the sign-in waits for the account's second step, whose challenge the gate left here.
+            const twoFactor = token
+              ? null
+              : challengeIn(cookies, ctx.context.createAuthCookie(TWO_FACTOR_CHALLENGE).name);
             if (challenge) {
-              if (token) {
+              const kept = token ? { token } : twoFactor ? { twoFactor } : null;
+              if (kept) {
                 const code = randomBytes(32).toString("base64url");
                 await ctx.context.internalAdapter.createVerificationValue({
                   identifier: PHONE_CODE_PREFIX + code,
-                  value: JSON.stringify({ challenge, token } satisfies CodeRecord),
+                  value: JSON.stringify({ challenge, ...kept } satisfies CodeRecord),
                   expiresAt: new Date(Date.now() + CODE_TTL_S * 1000),
                 });
                 // In the shape of a cookie, where the app's sign-in already reads what the link brings: it keeps
@@ -129,7 +147,7 @@ export function phoneBrowserSignIn() {
                 const { name } = ctx.context.createAuthCookie("phone_code");
                 back.searchParams.set("cookie", `${name}=${code}; Max-Age=${CODE_TTL_S}`);
               }
-            } else if (cookies && LEGACY_PHONE_SIGN_IN) back.searchParams.set("cookie", cookies);
+            } else if (cookies && !twoFactor && LEGACY_PHONE_SIGN_IN) back.searchParams.set("cookie", cookies);
             headers.set("location", back.toString());
           }),
         },
@@ -147,9 +165,14 @@ export function phoneBrowserSignIn() {
           // Spent whatever the verifier: a code is tried once.
           const found = await ctx.context.internalAdapter.consumeVerificationValue(PHONE_CODE_PREFIX + code);
           const kept = found && found.expiresAt >= new Date() ? parseRecord(found.value) : null;
-          if (!kept || typeof kept.token !== "string" || kept.challenge !== desktopChallenge(ctx.body.verifier)) {
-            return ctx.json({ signedIn: false });
+          if (!kept || kept.challenge !== desktopChallenge(ctx.body.verifier)) return ctx.json({ signedIn: false });
+          // The account's second step (ADR 0194): the app gets the challenge, and the code it asks for ends it.
+          if (typeof kept.twoFactor === "string") {
+            const twoFactor = ctx.context.createAuthCookie(TWO_FACTOR_CHALLENGE, { maxAge: TWO_FACTOR_CHALLENGE_S });
+            await ctx.setSignedCookie(twoFactor.name, kept.twoFactor, ctx.context.secret, twoFactor.attributes);
+            return ctx.json({ signedIn: false, twoFactor: true });
           }
+          if (typeof kept.token !== "string") return ctx.json({ signedIn: false });
           // The session the callback made, which no browser was given.
           const source = await ctx.context.internalAdapter.findSession(kept.token);
           if (!source || source.session.expiresAt <= new Date()) return ctx.json({ signedIn: false });

@@ -1,5 +1,6 @@
 import type { SignInProvider } from "@agenteschat/client";
 import { expoClient } from "@better-auth/expo/client";
+import { twoFactorClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
 import { getRandomBytes } from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
@@ -24,7 +25,8 @@ const createClient = (server: string, storagePrefix: string) =>
         if (i18n.language) request.headers.set("accept-language", i18n.language);
       },
     },
-    plugins: [expoClient({ scheme: SCHEME, storagePrefix, storage: SecureStore })],
+    // `twoFactorClient`: the second step's answers refresh the session, as a sign-in's do (ADR 0194).
+    plugins: [expoClient({ scheme: SCHEME, storagePrefix, storage: SecureStore }), twoFactorClient()],
   });
 
 type AuthClient = ReturnType<typeof createClient>;
@@ -89,8 +91,28 @@ export async function signInWithBrowser(
     ...request,
     additionalData: { ...request.additionalData, challenge: challengeOf(verifier) },
   });
-  if (!res.error) await client.$fetch("/phone/redeem", { method: "POST", body: { verifier } }).catch(() => null);
-  return res;
+  if (res.error) return { ...res, twoFactor: false };
+  const traded = await client
+    .$fetch<{ signedIn?: boolean; twoFactor?: boolean }>("/phone/redeem", { method: "POST", body: { verifier } })
+    .catch(() => null);
+  // The account's second step (ADR 0194): what came back is its challenge, and the app asks for the code.
+  return { ...res, twoFactor: traded?.data?.twoFactor === true };
+}
+
+/** A sign-in that answered with the account's second step to go (ADR 0194): its code is asked next. */
+export const waitsForCode = (data: unknown) =>
+  (data as { twoFactorRedirect?: unknown } | null | undefined)?.twoFactorRedirect === true;
+
+/**
+ * The second step of a sign-in (ADR 0194): the authenticator app's code, or a `recovery` code, for the challenge the
+ * sign-in left in this place's cookies. Signed in once it is right; else the refusal as `refusalOf` reads it.
+ */
+export async function verifyTwoFactor(code: string, recovery: boolean, place: string = placeKey()) {
+  const res = await authClient(place).$fetch(recovery ? "/two-factor/verify-backup-code" : "/two-factor/verify-totp", {
+    method: "POST",
+    body: { code: code.trim() },
+  });
+  return res.error ? { status: res.error.status, code: (res.error as { code?: string }).code } : null;
 }
 
 const cookies = new Map<string, string>();

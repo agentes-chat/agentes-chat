@@ -163,6 +163,9 @@ const Me = z
       emailVerified: z.boolean().openapi({
         description: "The person opened the link that confirms their email address.",
       }),
+      twoFactorEnabled: z.boolean().openapi({
+        description: "Signing in also takes a code from an authenticator app (ADR 0194).",
+      }),
       confirmsOnThisMac: z.boolean().openapi({
         description:
           "A sign-in in the last 10 minutes is their proof before a deletion, with no password or code: the installation's owner on the desktop app's own server (an owner key, no email), whom the app signs in again with Continue on this Mac.",
@@ -242,6 +245,7 @@ export function accountRoutes(deps: AppDeps) {
         image: account.image,
         hasPassword: password,
         emailVerified: verified,
+        twoFactorEnabled: account.twoFactorEnabled,
         confirmsOnThisMac: onThisMac,
         locale: account.locale,
         localeAuto: account.localeAuto,

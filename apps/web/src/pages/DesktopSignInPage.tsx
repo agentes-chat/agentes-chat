@@ -1,5 +1,5 @@
 import { type SignInProvider, useAuthConfig } from "@agenteschat/client";
-import { signInRefusalText } from "@agenteschat/client/lib/errors";
+import { signInRefusalText, TWO_FACTOR_REQUIRED } from "@agenteschat/client/lib/errors";
 import { Button } from "@agenteschat/ui";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,7 +14,8 @@ import { BROWSER_SIGN_IN_PATH } from "@/lib/desktop";
  * confirm it matches the code on their computer. The hand-over happens only after
  * that explicit confirmation, so a link that jumps straight here signs no one in.
  * A refusal (`error`, the provider's or the server's) comes back here too: why, and
- * back to the app to try again, never the provider once more.
+ * back to the app to try again, never the provider once more. An account with two-step sign-in (ADR 0194) comes back
+ * waiting for its code: the sign-in page asks for it, then comes back here to confirm.
  * `access`: an early-access link's token the app's window had, for the sign-up this makes.
  */
 export function DesktopSignInPage({
@@ -42,6 +43,11 @@ export function DesktopSignInPage({
   useEffect(() => {
     if (started.current) return;
     started.current = true;
+    if (error === TWO_FACTOR_REQUIRED && provider && request) {
+      const back = `${BROWSER_SIGN_IN_PATH}?${new URLSearchParams({ provider, request, done: "1" })}`;
+      window.location.assign(`/login?${new URLSearchParams({ redirect: back, error })}`);
+      return;
+    }
     if (error) {
       setState("refused");
       return;

@@ -5,7 +5,7 @@ import { useLocalSearchParams } from "expo-router";
 import { type ComponentRef, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Linking, type TextInput, View } from "react-native";
-import { authClient } from "@/lib/auth";
+import { authClient, verifyTwoFactor, waitsForCode } from "@/lib/auth";
 import { writeValue } from "@/lib/storage";
 import { AuthField } from "@/ui/auth/AuthField";
 import { AuthScaffold } from "@/ui/auth/AuthScaffold";
@@ -21,7 +21,7 @@ import { rememberConfirmationSent } from "./confirmation";
 import { useHumanCheck } from "./HumanCheck";
 import { CheckCancelled, earlyAccessRequests, refusalOf, refusalText, signUpClosed } from "./human-check";
 import { DidYouMean, ErrorLine, InviteTerms } from "./invite-parts";
-import { type SignInStep, signInStepHref, stepDepth, useSignInStepFlow } from "./sign-in-flow";
+import { type SignInStep, signInStepHref, stepDepth, twoFactorStepHref, useSignInStepFlow } from "./sign-in-flow";
 
 /*
  * The steps after the sign-in's e-mail (`AuthFlow`), each a screen of its own pushed over the one before
@@ -108,18 +108,26 @@ export function PasswordStep() {
     setPending(true);
     setError(null);
     try {
+      let code = false;
       const refused = await withHumanCheck(
         step.human.check,
-        async (token) =>
-          refusalOf(
-            await authClient().signIn.email({
-              email,
-              password,
-              fetchOptions: { headers: humanCheckHeaders(token) },
-            }),
-          ),
+        async (token) => {
+          const res = await authClient().signIn.email({
+            email,
+            password,
+            fetchOptions: { headers: humanCheckHeaders(token) },
+          });
+          code = waitsForCode(res.data);
+          return refusalOf(res);
+        },
         flow?.options?.pass,
       );
+      // The account's second step (ADR 0194): its code, on a screen of its own.
+      if (!refused && code) {
+        void writeValue(LAST_EMAIL, email);
+        router.push(twoFactorStepHref("email") as never);
+        return;
+      }
       if (refused) {
         haptics.warning();
         if (refused.status === 401) {
@@ -178,6 +186,103 @@ export function PasswordStep() {
           <Quiet label={t("auth.forgotPassword")} onPress={() => step.push("forgot", "password")} />
         </Locked>
       ) : null}
+    </AuthScaffold>
+  );
+}
+
+/**
+ * The second step of a sign-in (ADR 0194): the six digits the authenticator app shows, or a recovery code. Right, the
+ * app is signed in (the session arrives with the answer); a challenge that ended (too many tries, ten minutes) goes
+ * back to sign in again.
+ */
+export function TwoFactorStep() {
+  const { t } = useTranslation();
+  const { way } = useLocalSearchParams<{ way?: string }>();
+  const [code, setCode] = useState("");
+  const [recovery, setRecovery] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [wrong, setWrong] = useState(false);
+  const [gone, setGone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ready = !gone && (recovery ? code.trim().length >= 10 : /^\d{6}$/.test(code));
+  const send = async () => {
+    if (!ready || pending) return;
+    setPending(true);
+    setError(null);
+    try {
+      const refused = await verifyTwoFactor(code, recovery);
+      if (refused) {
+        haptics.warning();
+        setWrong(refused.status === 401);
+        setGone(refused.code === "TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE" || refused.code === "INVALID_TWO_FACTOR_COOKIE");
+        setError(refusalText(t, refused));
+        return;
+      }
+      haptics.success();
+      // "Last used" names a way that worked: this one, now that its code did.
+      if (way === "email" || way === "google" || way === "github" || way === "apple") rememberSignIn(way);
+    } catch (e) {
+      const network = e instanceof TypeError && /network|fetch/i.test(e.message);
+      setError(t(network ? "mobile.auth.errors.network" : "mobile.auth.errors.generic"));
+    } finally {
+      setPending(false);
+    }
+  };
+  return (
+    <AuthScaffold
+      title={t(recovery ? "auth.twoFactor.recoveryTitle" : "auth.twoFactor.title")}
+      subtitle={t(recovery ? "auth.twoFactor.recoveryLead" : "auth.twoFactor.lead")}
+      agentMode={pending ? "run" : "idle"}
+      expression={wrong ? "cross" : undefined}
+    >
+      <Locked when={pending} keepKeyboard>
+        <Shake when={wrong}>
+          <AuthField
+            key={recovery ? "recovery" : "app"}
+            value={code}
+            onChangeText={(value) => {
+              setCode(recovery ? value : value.replace(/\D/g, ""));
+              setWrong(false);
+            }}
+            accessibilityLabel={t(recovery ? "auth.twoFactor.recoveryLabel" : "auth.twoFactor.label")}
+            placeholder={recovery ? "xxxxx-xxxxx" : "000000"}
+            autoComplete="one-time-code"
+            textContentType="oneTimeCode"
+            keyboardType={recovery ? "default" : "number-pad"}
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={recovery ? 20 : 6}
+            editable={!gone}
+            code={!recovery}
+            onSubmitEditing={() => void send()}
+            autoFocus
+          />
+        </Shake>
+      </Locked>
+      <ErrorLine error={error} />
+      {gone ? (
+        <Button variant="primary" wide label={t("auth.twoFactor.startOver")} onPress={() => goBack("/sign-in")} />
+      ) : (
+        <>
+          <Button
+            variant="primary"
+            wide
+            label={t("auth.flow.continue")}
+            loading={pending}
+            disabled={!ready}
+            onPress={() => void send()}
+          />
+          <Quiet
+            label={t(recovery ? "auth.twoFactor.useApp" : "auth.twoFactor.useRecovery")}
+            onPress={() => {
+              setRecovery((r) => !r);
+              setCode("");
+              setError(null);
+              setWrong(false);
+            }}
+          />
+        </>
+      )}
     </AuthScaffold>
   );
 }

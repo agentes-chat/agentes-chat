@@ -3,6 +3,7 @@ import type { BetterAuthPlugin } from "better-auth";
 import { APIError, createAuthEndpoint, sessionMiddleware } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import { z } from "zod";
+import { copyOfProvenSession } from "./two-factor";
 
 /**
  * Social sign-in for the Mac app's window (ADR 0036). Google and Apple refuse
@@ -130,11 +131,14 @@ export function desktopSignIn() {
           if (!source || source.session.expiresAt <= new Date()) return ctx.json({ signedIn: false });
           const { user } = source;
           // It signed in when the browser's session did: it proves no fresher sign-in (`signedInLately`).
-          const session = await ctx.context.internalAdapter.createSession(
-            user.id,
-            undefined,
-            { createdAt: source.session.createdAt },
-            true,
+          // A copy of the browser's session, which passed the second step there (ADR 0194).
+          const session = await copyOfProvenSession(() =>
+            ctx.context.internalAdapter.createSession(
+              user.id,
+              undefined,
+              { createdAt: source.session.createdAt },
+              true,
+            ),
           );
           await setSessionCookie(ctx, { session, user });
           return ctx.json({ signedIn: true });

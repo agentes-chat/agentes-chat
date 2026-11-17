@@ -16,6 +16,9 @@ export type AuthResult =
       cloud?: boolean;
     };
 
+/** What turning two-step sign-in on gives (ADR 0194): the authenticator's address and the recovery codes, shown once. */
+export type TwoFactorSetup = { ok: true; totpURI: string; backupCodes: string[] } | Extract<AuthResult, { ok: false }>;
+
 /** `humanCheck` on the email forms: the bot check's token, when the server has one (ADR 0075). */
 export interface AuthClient {
   signIn(input: { email: string; password: string }, humanCheck?: string): Promise<AuthResult>;
@@ -67,4 +70,15 @@ export interface AuthClient {
   signInOneTime(token: string): Promise<AuthResult>;
   /** The installation's owner, from the installer's link (`/owner#claim=`): made once, then signed in. */
   ownerClaim(input: { token: string; name: string; email: string; password: string }): Promise<AuthResult>;
+  /**
+   * The second step of a sign-in that answered `TWO_FACTOR_REQUIRED` (ADR 0194): the authenticator app's code, or a
+   * recovery code. Signed in once it is right. Also confirms turning it on, with the signed-in session.
+   */
+  verifyTwoFactor(input: { code: string; recovery?: boolean }): Promise<AuthResult>;
+  /** Starts turning it on for the signed-in person, with their password; on once `verifyTwoFactor` confirms a code. */
+  enableTwoFactor(password: string): Promise<TwoFactorSetup>;
+  /** Turns it off for the signed-in person, with their password. */
+  disableTwoFactor(password: string): Promise<AuthResult>;
+  /** New recovery codes for the signed-in person, with their password: the old ones stop working. */
+  newRecoveryCodes(password: string): Promise<TwoFactorSetup>;
 }

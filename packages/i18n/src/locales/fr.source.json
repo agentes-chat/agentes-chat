@@ -1487,6 +1487,45 @@
   "auth.earlyAccess.unverified": {
     "value": "Your sign-in provider hasn't confirmed this address. Confirm it there, or sign up with a password."
   },
+  "auth.twoFactor.title": {
+    "value": "Type the code from your authenticator app"
+  },
+  "auth.twoFactor.lead": {
+    "value": "Open the app where you added agentes.chat and type the 6 digits it shows now."
+  },
+  "auth.twoFactor.label": {
+    "value": "Code from the app"
+  },
+  "auth.twoFactor.recoveryTitle": {
+    "value": "Type a recovery code"
+  },
+  "auth.twoFactor.recoveryLead": {
+    "value": "One of the codes you saved when you turned on two-step sign-in. Each one works once."
+  },
+  "auth.twoFactor.recoveryLabel": {
+    "value": "Recovery code"
+  },
+  "auth.twoFactor.useRecovery": {
+    "value": "Use a recovery code"
+  },
+  "auth.twoFactor.useApp": {
+    "value": "Use the authenticator app"
+  },
+  "auth.twoFactor.wrongCode": {
+    "value": "That code isn't right. Check the time on your phone and try the newest one."
+  },
+  "auth.twoFactor.wrongRecovery": {
+    "value": "That recovery code isn't right, or it was already used."
+  },
+  "auth.twoFactor.expired": {
+    "value": "This sign-in expired. Sign in again."
+  },
+  "auth.twoFactor.locked": {
+    "value": "Too many wrong codes. Try again in 15 minutes. If it wasn't you, change your password."
+  },
+  "auth.twoFactor.startOver": {
+    "value": "Sign in again"
+  },
   "auth.flow.email": {
     "value": "Hi. What's your email?"
   },
@@ -5494,6 +5533,81 @@
   },
   "shell.newPasswordReauth": {
     "value": "Sign in again to create a new password."
+  },
+  "shell.twoFactor.row": {
+    "value": "Two-step sign-in"
+  },
+  "shell.twoFactor.rowOff": {
+    "value": "Also ask for a code from an authenticator app when signing in"
+  },
+  "shell.twoFactor.rowOn": {
+    "value": "On: signing in also asks for a code from your authenticator app"
+  },
+  "shell.twoFactor.title": {
+    "value": "Two-step sign-in"
+  },
+  "shell.twoFactor.lead": {
+    "value": "Besides your password, signing in asks for a 6-digit code from an app on your phone, such as Google Authenticator, Microsoft Authenticator or 1Password."
+  },
+  "shell.twoFactor.needsPassword": {
+    "value": "Add a password first: turning two-step sign-in on or off asks for it."
+  },
+  "shell.twoFactor.password": {
+    "value": "Your password"
+  },
+  "shell.twoFactor.start": {
+    "value": "Continue"
+  },
+  "shell.twoFactor.scan": {
+    "value": "Scan this code with your authenticator app, then type the code it shows."
+  },
+  "shell.twoFactor.key": {
+    "value": "Can't scan? Type this key in the app:"
+  },
+  "shell.twoFactor.code": {
+    "value": "Code from the app"
+  },
+  "shell.twoFactor.turnOn": {
+    "value": "Turn on"
+  },
+  "shell.twoFactor.codesTitle": {
+    "value": "Save your recovery codes"
+  },
+  "shell.twoFactor.codesLead": {
+    "value": "If you lose your phone, each of these codes signs you in once. Keep them somewhere safe: they won't be shown again."
+  },
+  "shell.twoFactor.copy": {
+    "value": "Copy the codes"
+  },
+  "shell.twoFactor.copied": {
+    "value": "Codes copied."
+  },
+  "shell.twoFactor.saved": {
+    "value": "I saved them"
+  },
+  "shell.twoFactor.onDone": {
+    "value": "Two-step sign-in is on. Your other devices were signed out."
+  },
+  "shell.twoFactor.onLead": {
+    "value": "Signing in asks for a code from your authenticator app. If you lose your phone, use a recovery code."
+  },
+  "shell.twoFactor.newCodes": {
+    "value": "New recovery codes"
+  },
+  "shell.twoFactor.newCodesLead": {
+    "value": "The recovery codes you have now stop working."
+  },
+  "shell.twoFactor.turnOff": {
+    "value": "Turn off"
+  },
+  "shell.twoFactor.offLead": {
+    "value": "Signing in will take your password or provider alone again."
+  },
+  "shell.twoFactor.offDone": {
+    "value": "Two-step sign-in is off."
+  },
+  "shell.twoFactor.reauth": {
+    "value": "Sign in again to change two-step sign-in."
   },
   "shell.yourWorkspaces": {
     "value": "Your workspaces"

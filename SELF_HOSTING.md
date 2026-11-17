@@ -495,8 +495,11 @@ open http://localhost:3000 and create the owner account.
 `.env` holds three values:
 
 - `AGENTES_SECRET` signs sessions and encrypts every key organizations store (model providers,
-  connectors, mailboxes, databases). Back it up apart from the database: a database restored without
-  it has all of those keys unreadable.
+  connectors, mailboxes, databases) and every account's authenticator app and recovery codes
+  (two-step sign-in). Back it up apart from the database: a database restored without it has all of
+  those keys unreadable. After a new secret, people with two-step sign-in turn it off with
+  `docker compose run --rm agentes two-factor-off <email>` (also for someone who lost both their
+  phone and their recovery codes), and on again in **Settings › Your account**.
 - `POSTGRES_PASSWORD` goes into the database URL the compose file builds, so it stays hex.
 - `PUBLIC_URL`, as above.
 

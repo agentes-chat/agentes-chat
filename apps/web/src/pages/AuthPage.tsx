@@ -14,6 +14,7 @@ import {
   EARLY_ACCESS_OTHER_EMAIL,
   errorText,
   signInRefusalText,
+  TWO_FACTOR_REQUIRED,
 } from "@agenteschat/client/lib/errors";
 import { signInFor } from "@agenteschat/client/lib/guards";
 import { type HumanAction, isHumanCheckRefusal, withHumanCheck } from "@agenteschat/client/lib/human-check";
@@ -59,7 +60,8 @@ import { STORAGE_KEYS, sessionStore, storage } from "@/lib/storage";
  * In the Mac app, Google/GitHub/Apple open in the browser and the window
  * waits for the sign-in to come back ("browser", ADR 0036). On the server the
  * app runs on this computer, its owner has no password: "Continue on this Mac"
- * asks the app, which signs them in (ADR 0060 §6).
+ * asks the app, which signs them in (ADR 0060 §6). An account with two-step sign-in (ADR 0194) then asks for the
+ * authenticator app's code, whichever way it signed in: a provider's return lands here with `TWO_FACTOR_REQUIRED`.
  */
 type Step =
   | "email"
@@ -75,7 +77,9 @@ type Step =
   | "forgotHere"
   | "sent"
   | "browser"
-  | "ownerWaits";
+  | "ownerWaits"
+  /** The second step (ADR 0194): the authenticator app's code, or a recovery code. */
+  | "code";
 
 /** The steps that send something a bot could flood, and what their bot check is for (ADR 0075). */
 const STEP_ACTIONS: Partial<Record<Step, HumanAction>> = {
@@ -161,13 +165,20 @@ export function AuthPage({
   const navigate = useNavigate();
   const qc = useQueryClient();
   const config = useAuthConfig();
-  const [step, setStep] = useState<Step>("email");
+  // Back from a provider with the account's second step to go (ADR 0194): its code is what is left.
+  const needsCode = refused === TWO_FACTOR_REQUIRED;
+  const [step, setStep] = useState<Step>(needsCode ? "code" : "email");
   const [email, setEmail] = useState(initialEmail ?? "");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  // The code step takes a recovery code instead of the app's.
+  const [recovery, setRecovery] = useState(false);
+  // The sign-in the code was for ended (too many tries, expired): only a new one goes on.
+  const [codeGone, setCodeGone] = useState(false);
   const [options, setOptions] = useState<SignInOptions | null>(null);
   const canReset = config.data?.passwordReset === true;
-  const refusal = refused ? signInRefusalText(t, refused, canReset) : null;
+  const refusal = refused && !needsCode ? signInRefusalText(t, refused, canReset) : null;
   const [error, setError] = useState<string | null>(refusal);
   const [wrong, setWrong] = useState(false);
   const [pending, setPending] = useState(false);
@@ -257,6 +268,9 @@ export function AuthPage({
     });
   }, [ownerAgain, t]);
 
+  // "Add account" (ADR 0183): a provider's refusal, or its account's code (ADR 0194), comes back to the same mode.
+  const addingBack = adding ? `/login?${new URLSearchParams({ redirect: redirect ?? "/", add: "1" })}` : undefined;
+
   // "Add account": whoever is signed in stays so, one click back.
   const stays = useQuery({ ...meQuery(api), enabled: adding }).data ?? null;
 
@@ -326,12 +340,35 @@ export function AuthPage({
     );
     setPending(false);
     if (!result.ok) {
+      if (result.code === TWO_FACTOR_REQUIRED) return askCode();
       setWrong(result.status === 401);
       // Checked by code: a refused origin is a 403 too, and its own words tell an admin what to fix.
       setError(result.status === 401 ? null : authErrorText(t, result));
       return;
     }
     rememberSignIn("email");
+    await enter(redirect ?? "/");
+  };
+
+  const askCode = () => {
+    setCode("");
+    setRecovery(false);
+    setCodeGone(false);
+    go("code");
+  };
+
+  /** The second step: signed in once the code is right; a challenge that ended takes a new sign-in. */
+  const sendCode = async () => {
+    setPending(true);
+    setError(null);
+    const result = await auth.verifyTwoFactor({ code, recovery });
+    setPending(false);
+    if (!result.ok) {
+      setWrong(result.status === 401);
+      setCodeGone(result.code === "TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE" || result.code === "INVALID_TWO_FACTOR_COOKIE");
+      setError(authErrorText(t, result));
+      return;
+    }
     await enter(redirect ?? "/");
   };
 
@@ -388,7 +425,9 @@ export function AuthPage({
           ? name.trim().length > 0
           : step === "newPassword"
             ? passwordState(password) === "ok"
-            : false;
+            : step === "code"
+              ? !codeGone && (recovery ? code.trim().length >= 10 : /^\d{6}$/.test(code.trim()))
+              : false;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -403,6 +442,7 @@ export function AuthPage({
       setError(t("auth.flow.nameIsPassword"));
     } else if (step === "newPassword") void signUp();
     else if (step === "forgot") void sendReset();
+    else if (step === "code") void sendCode();
   };
 
   /** The Mac app: the provider in the browser; this window keeps the verifier, shows the code and waits. */
@@ -481,6 +521,9 @@ export function AuthPage({
       t("auth.desktop.browserLead", { provider: browser ? t(`auth.provider.${browser.provider}`) : "" }),
     ],
     ownerWaits: [t("auth.flow.ownerWaits"), t("auth.flow.ownerWaitsLead")],
+    code: recovery
+      ? [t("auth.twoFactor.recoveryTitle"), t("auth.twoFactor.recoveryLead")]
+      : [t("auth.twoFactor.title"), t("auth.twoFactor.lead")],
   };
   // No account yet, and only the installer's owner link makes the first one: nothing to sign in to here.
   const shown: Step = config.data?.ownerClaim ? "ownerWaits" : step;
@@ -489,7 +532,8 @@ export function AuthPage({
   const fix = step === "email" || step === "forgot" ? emailTypoFix(email) : null;
   const help = passwordHelp(t, password);
   const mail = webmailOf(email);
-  const who = step !== "email" && step !== "forgot" && step !== "sent" && (
+  // Back from a provider, the code step knows no address: nothing to show or change there.
+  const who = step !== "email" && step !== "forgot" && step !== "sent" && email.trim() !== "" && (
     <span className="auth__who">
       <Icon name="mail" size={14} />
       <span className="auth__who-email">{email.trim()}</span>
@@ -580,6 +624,7 @@ export function AuthPage({
     name: t("auth.flow.continue"),
     newPassword: t("auth.createAccount"),
     forgot: t("auth.flow.sendLink"),
+    code: t("auth.flow.continue"),
   };
 
   return (
@@ -653,6 +698,29 @@ export function AuthPage({
                 </div>
               )}
 
+              {step === "code" && (
+                <div className="auth__field">
+                  <Input
+                    key={recovery ? "recovery" : "app"}
+                    className="auth__big"
+                    aria-label={t(recovery ? "auth.twoFactor.recoveryLabel" : "auth.twoFactor.label")}
+                    autoComplete="one-time-code"
+                    inputMode={recovery ? "text" : "numeric"}
+                    spellCheck={false}
+                    maxLength={recovery ? 20 : 6}
+                    placeholder={recovery ? "xxxxx-xxxxx" : "000000"}
+                    value={code}
+                    onChange={(e) => {
+                      setCode(recovery ? e.target.value : e.target.value.replace(/\D/g, ""));
+                      setWrong(false);
+                    }}
+                    invalid={wrong}
+                    disabled={codeGone}
+                    autoFocus
+                  />
+                </div>
+              )}
+
               {step === "name" && (
                 <div className="auth__field">
                   <Input
@@ -719,6 +787,7 @@ export function AuthPage({
                   <div className="auth__or">{t("common.or")}</div>
                   <SocialButtons
                     callbackURL={redirect ?? "/"}
+                    errorCallbackURL={addingBack}
                     providers={offeredProviders}
                     onSocial={desktop ? (p) => void signInInBrowser(p) : undefined}
                     earlyAccess={access}
@@ -732,10 +801,31 @@ export function AuthPage({
                 </button>
               )}
 
+              {step === "code" &&
+                (codeGone ? (
+                  <Button type="button" size="lg" block onClick={() => go("email")}>
+                    {t("auth.twoFactor.startOver")}
+                  </Button>
+                ) : (
+                  <button
+                    type="button"
+                    className="auth__quiet"
+                    onClick={() => {
+                      setRecovery((r) => !r);
+                      setCode("");
+                      setError(null);
+                      setWrong(false);
+                    }}
+                  >
+                    {t(recovery ? "auth.twoFactor.useApp" : "auth.twoFactor.useRecovery")}
+                  </button>
+                ))}
+
               {step === "social" && (
                 <>
                   <SocialButtons
                     callbackURL={redirect ?? "/"}
+                    errorCallbackURL={addingBack}
                     providers={linkedProviders}
                     onSocial={desktop ? (p) => void signInInBrowser(p) : undefined}
                   />
