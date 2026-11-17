@@ -86,6 +86,8 @@ export interface VaultItem {
   description: string;
   website: string | null;
   match: VaultMatch;
+  /** Login: the masked text field its owner allowed besides password fields (ADR 0144 §12), or null. */
+  textField: string | null;
   username: string | null;
   keyName: string | null;
   keyHint: string | null;
@@ -187,6 +189,8 @@ export interface VaultItemInput {
   description?: string;
   website?: string;
   match?: VaultMatch;
+  /** Login, `exact` only: also allow the masked text field with this id or name (ADR 0144 §12). */
+  textField?: string;
   username?: string;
   /** Login password or key value. */
   secret?: string;
@@ -200,6 +204,11 @@ export interface VaultItemPatch {
   description?: string;
   website?: string;
   match?: VaultMatch;
+  /**
+   * Login, `exact` only: allow the masked text field with this id or name besides password fields (ADR 0144 §12);
+   * "" takes it back. A new website or match takes it back too, unless this sets it again.
+   */
+  textField?: string;
   username?: string;
   /** A new value; absent keeps the saved one. */
   secret?: string;
@@ -328,6 +337,8 @@ export interface VaultReleasedLogin {
   item: VaultItemForAgent;
   password: string;
   rule: VaultOriginRule;
+  /** The masked text field its owner allowed (ADR 0144 §12), only with an `exact` rule; else null. */
+  textField: string | null;
 }
 
 /** Most items one workspace keeps: what every check loads and filters in code. */
@@ -338,6 +349,7 @@ export const VAULT_LIMITS = {
   description: 300,
   website: 2048,
   username: 200,
+  textField: 200,
   contactField: 300,
   roles: 100,
   people: 500,

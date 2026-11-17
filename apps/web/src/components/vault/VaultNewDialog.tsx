@@ -35,6 +35,7 @@ const EMPTY: ItemDraft = {
   description: "",
   website: "",
   match: DEFAULT_MATCH,
+  textField: "",
   username: "",
   keyName: "",
   contact: {},
@@ -89,6 +90,7 @@ export function VaultNewDialog({
         ? {
             website: vaultOrigin(draft.website) ?? draft.website.trim(),
             match: draft.match,
+            ...(draft.match === "exact" && draft.textField.trim() ? { textField: draft.textField.trim() } : {}),
             username: draft.username.trim() || undefined,
             secret,
           }

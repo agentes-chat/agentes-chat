@@ -80,6 +80,12 @@ export const vaultItems = pgTable(
     website: text(),
     /** Login: `exact` (that origin, the default) or `site` (its registrable domain). */
     match: text().notNull().default("exact"),
+    /**
+     * Login, `exact` only: the id or name of one masked text field (`<input type="text">` hidden by its style, as some
+     * banks do) its owner allowed the password to be typed into on that origin, besides password fields (ADR 0144 §12,
+     * issue #748). Null: password fields only.
+     */
+    textField: text(),
     username: text(),
     /** Key: the environment variable (`UPPER_SNAKE`). */
     keyName: text(),

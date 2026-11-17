@@ -44,6 +44,8 @@ export interface VaultItem {
   /** Login: `https://host[:port]`. */
   website: string | null;
   match: VaultMatch;
+  /** Login, one address only: the masked text field its owner allowed besides password fields (ADR 0144 §12). */
+  textField: string | null;
   username: string | null;
   /** Key: the variable name. */
   keyName: string | null;
@@ -161,6 +163,8 @@ export interface VaultItemInput {
   description?: string;
   website?: string;
   match?: VaultMatch;
+  /** Login, one address only: also allow the masked text field with this id or name (ADR 0144 §12). */
+  textField?: string;
   username?: string;
   /** Login password or key value. */
   secret?: string;
@@ -174,6 +178,8 @@ export interface VaultItemPatch {
   description?: string;
   website?: string;
   match?: VaultMatch;
+  /** Login, one address only: allow this masked text field (its id or name); "" takes it back (ADR 0144 §12). */
+  textField?: string;
   username?: string;
   /** A new value; absent keeps the saved one. */
   secret?: string;

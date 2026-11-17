@@ -4771,6 +4771,10 @@ export const ptBR = {
       match: "Onde os agentes podem digitar",
       username: "Usuário",
       usernamePlaceholder: "E-mail ou usuário",
+      textField: "Campo de texto mascarado (opcional)",
+      textFieldHelp:
+        "Alguns bancos escondem a senha num campo de texto comum em vez de um campo de senha. Coloque aqui o id ou o nome desse campo para os agentes digitarem esta senha nele também, só neste endereço. Enquanto a página está aberta, os scripts dela conseguem ler o que foi digitado ali.",
+      textFieldPlaceholder: "formGeral:senhaAcesso",
       password: "Senha",
       keyName: "Nome da variável",
       keyNameHelp: "Seus agentes usam a chave por este nome num comando.",
@@ -15565,6 +15569,7 @@ export const ptBR = {
       titleRequired: "Dê um nome a ele.",
       tooLong: "Ficou longo demais. O limite é {{max}}.",
       notHttps: "Use um endereço que comece com https://",
+      textFieldExactOnly: "Um campo de texto mascarado só pode ser liberado num login de um endereço só.",
       keyNameInvalid: "Use letras maiúsculas, números e _ no nome, como ACME_API_KEY.",
       keyNameReserved: "Este nome é reservado. Escolha outro.",
       keyNameTaken: "Já existe uma chave com este nome aqui.",

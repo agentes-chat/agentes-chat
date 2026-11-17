@@ -237,7 +237,8 @@ export class VaultOpening {
   ) {}
 
   async open(keyId: string, box: SecretBox, use: VaultUse, label: string): Promise<string> {
-    const purpose = use.kind === "fill" ? `fill:${use.rule}` : `env:${use.name}`;
+    const purpose =
+      use.kind === "fill" ? `fill:${use.rule}${use.textField ? `|text:${use.textField}` : ""}` : `env:${use.name}`;
     const id = `${keyId}|${purpose}|${box.epk}|${box.iv}|${box.ct}`;
     const known = this.values.get(id);
     if (known !== undefined) return known;
@@ -367,17 +368,42 @@ export async function openExecKeys(
 
 // ── The browser: typing a login ──────────────────────────────────────────────
 
-/** `agentes:type_vault [ref, rule, boxJson]`, checked whole: malformed input is `bad_request` with the reason. */
+/** The longest id or name of a masked text field a login's owner may allow (ADR 0144 §12). */
+export const MAX_TEXT_FIELD = 200;
+
+/**
+ * A masked text field's id or name as it travels (ADR 0144 §12): trimmed, one line, at most `MAX_TEXT_FIELD`
+ * characters; null when there is none or it isn't one.
+ */
+export function cleanTextField(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const text = raw.trim();
+  if (!text || text.length > MAX_TEXT_FIELD) return null;
+  for (const ch of text) {
+    const code = ch.charCodeAt(0);
+    if (code < 0x20 || code === 0x7f) return null;
+  }
+  return text;
+}
+
+/**
+ * `agentes:type_vault [ref, rule, boxJson, textField?]`, checked whole: malformed input is `bad_request` with the
+ * reason. The fourth (protocol 68) is the one masked text field the login's owner allowed (ADR 0144 §12).
+ */
 export function parseTypeVault(args: unknown[]): {
   ref: string;
   rule: VaultOriginRule;
   ruleText: string;
   keyId: string;
   box: SecretBox;
+  textField: string | null;
 } {
   const bad = (why: string) => new RunnerError("bad_request", `agentes:type_vault ${why}`);
-  const [rawRef, rawRule, rawBox] = args;
-  if (args.length !== 3) throw bad("takes a ref (@e3), the login's rule and its sealed box");
+  const [rawRef, rawRule, rawBox, rawField] = args;
+  if (args.length !== 3 && args.length !== 4)
+    throw bad("takes a ref (@e3), the login's rule, its sealed box and, if allowed, its masked text field");
+  const textField = args.length === 4 ? cleanTextField(rawField) : null;
+  if (args.length === 4 && textField === null) throw bad("got a masked text field that isn't an id or a name");
   const ref = typeof rawRef === "string" && /^@?e\d{1,6}$/.test(rawRef) ? `@${rawRef.replace(/^@/, "")}` : null;
   if (!ref) throw bad("needs a ref from the page's snapshot (@e3)");
   const ruleText = typeof rawRule === "string" ? rawRule : "";
@@ -393,7 +419,7 @@ export function parseTypeVault(args: unknown[]): {
   if (typeof s.keyId !== "string" || !KEY_ID.test(s.keyId)) throw bad("needs the id vault.key answered");
   const box = parseSecretBox(s.box);
   if (!box) throw bad("got a malformed sealed box");
-  return { ref, rule, ruleText, keyId: s.keyId, box };
+  return { ref, rule, ruleText, keyId: s.keyId, box, textField };
 }
 
 /** `agentes:type_secret`'s fields: one ref, or one per character of a code (protocol 45). */
@@ -428,6 +454,11 @@ export interface VaultFieldFacts {
   ancestors: string[];
   /** `window === top`. */
   top: boolean;
+  /** Its `id` and `name` attributes, as the page has them (ADR 0144 §12). */
+  id?: string;
+  name?: string;
+  /** Its computed `-webkit-text-security` hides what is typed (`disc`, `circle`, `square`). */
+  masked?: boolean;
 }
 
 /** Where a field may be (from the rule and the page's origin the runner read from the browser itself). */
@@ -439,6 +470,12 @@ export interface VaultFieldWant {
   /** The page's own origin (`get url`): the top of the frame tree. */
   top: string;
   field: "password" | "code";
+  /**
+   * A login only: the one text field its owner allowed besides password fields (ADR 0144 §12), by its id or name.
+   * Only an `exact` rule carries one; it lets in an `<input type="text">` with that id or name whose computed style
+   * masks what is typed. Null (the default) keeps password fields only.
+   */
+  textField?: string | null;
 }
 
 export type VaultFieldVerdict = "wrong_site" | "in_frame" | "not_password_field" | "not_code_field" | "get_form";
@@ -516,7 +553,22 @@ export function vaultFieldVerdict(facts: VaultFieldFacts, want: VaultFieldWant):
     const text = type === "text" || type === "tel" || type === "number";
     return text || hasToken(auto, "one-time-code") ? null : "not_code_field";
   }
-  if (type !== "password" && !hasToken(auto, "current-password") && !hasToken(auto, "new-password")) {
+  // The masked text field the owner allowed (ADR 0144 §12): on an exact rule only, a text input that masks what is
+  // typed, named as allowed. A page can lie about all three; what it can't change is the origin checked above.
+  const tf = want.textField;
+  const sameName = (value: unknown): boolean => {
+    if (typeof value !== "string" || typeof tf !== "string" || value.length !== tf.length) return false;
+    for (let k = 0; k < tf.length; k++) if (value[k] !== tf[k]) return false;
+    return true;
+  };
+  const allowedText =
+    want.exact !== null &&
+    typeof tf === "string" &&
+    tf.length > 0 &&
+    type === "text" &&
+    facts.masked === true &&
+    (sameName(facts.id) || sameName(facts.name));
+  if (!allowedText && type !== "password" && !hasToken(auto, "current-password") && !hasToken(auto, "new-password")) {
     return "not_password_field";
   }
   return facts.formMethod === "get" || facts.submitGet === true ? "get_form" : null;
@@ -568,6 +620,13 @@ export function vaultFieldScript(want: VaultFieldWant, mark?: string): string {
       break;
     }
   }
+  // How the field shows what is typed (ADR 0144 §12): a text input masked by its style, as some banks do.
+  let masked = false;
+  try {
+    const css = el ? getComputedStyle(el) : null;
+    const security = css ? String(css.getPropertyValue("-webkit-text-security") || css.webkitTextSecurity || "") : "";
+    masked = security !== "" && security !== "none";
+  } catch (e) {}
   const facts = {
     tag: el ? String(el.tagName || "").toUpperCase() : null,
     type: el && typeof el.type === "string" ? el.type.toLowerCase() : "",
@@ -577,6 +636,9 @@ export function vaultFieldScript(want: VaultFieldWant, mark?: string): string {
     origin: location.origin,
     ancestors: ancestors,
     top: window === top,
+    id: el && typeof el.getAttribute === "function" ? String(el.getAttribute("id") || "") : "",
+    name: el && typeof el.getAttribute === "function" ? String(el.getAttribute("name") || "") : "",
+    masked: masked,
   };
   const refusal = (${vaultFieldVerdict.toString()})(facts, ${JSON.stringify(want)});
   if (refusal !== null) throw new Error(${JSON.stringify(FIELD_REFUSAL_MARK)} + refusal);
@@ -597,13 +659,22 @@ export function fillUnmarkScript(mark: string): string {
 })()`;
 }
 
-/** The want for a rule, on a page whose origin the browser reported (`get url`). */
-export function fieldWant(rule: VaultOriginRule, top: string, field: VaultFieldWant["field"]): VaultFieldWant {
+/**
+ * The want for a rule, on a page whose origin the browser reported (`get url`). `textField`: the masked text field
+ * the login's owner allowed (ADR 0144 §12), kept only on an `exact` rule.
+ */
+export function fieldWant(
+  rule: VaultOriginRule,
+  top: string,
+  field: VaultFieldWant["field"],
+  textField: string | null = null,
+): VaultFieldWant {
   return {
     exact: rule.kind === "exact" ? rule.origin : null,
     domain: rule.kind === "site" ? rule.domain : null,
     top,
     field,
+    textField: field === "password" && rule.kind === "exact" ? textField : null,
   };
 }
 

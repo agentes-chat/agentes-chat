@@ -128,6 +128,24 @@ export function cleanMatch(match: unknown): VaultMatch {
   throw new ValidationError("Unknown match", "vault.invalid");
 }
 
+/**
+ * A masked text field's id or name (ADR 0144 §12): trimmed, one line; "" (none) takes the permission back.
+ */
+export function cleanTextField(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "string") throw new ValidationError("Unknown text field", "vault.invalid");
+  const text = raw.trim();
+  if (!text) return null;
+  const max = VAULT_LIMITS.textField;
+  if (text.length > max)
+    throw new ValidationError("The field's id is too long", "vault.too_long", { field: "textField", max });
+  for (const ch of text) {
+    const code = ch.charCodeAt(0);
+    if (code < 0x20 || code === 0x7f) throw new ValidationError("Unknown text field", "vault.invalid");
+  }
+  return text;
+}
+
 export function cleanKeyName(raw: string | undefined | null): string {
   const name = (raw ?? "").trim();
   if (!SECRET_NAME.test(name)) {
@@ -331,6 +349,7 @@ export async function createVaultItem(
   const description = cleanText(input.description, VAULT_LIMITS.description, "description");
   let website: string | null = null;
   let match: VaultMatch = "exact";
+  let textField: string | null = null;
   let username: string | null = null;
   let keyName: string | null = null;
   let contact: VaultContactFields | null = null;
@@ -338,6 +357,13 @@ export async function createVaultItem(
   if (kind === "login") {
     website = cleanWebsite(input.website);
     match = cleanMatch(input.match);
+    textField = cleanTextField(input.textField);
+    if (textField !== null && match !== "exact") {
+      throw new ValidationError(
+        "A masked text field can only be allowed on a login for one address",
+        "vault.text_field_exact_only",
+      );
+    }
     username = cleanText(input.username, VAULT_LIMITS.username, "username") || null;
     plaintext = input.secret ? cleanSecret(input.secret, kind) : null;
   } else if (kind === "key") {
@@ -366,6 +392,7 @@ export async function createVaultItem(
         description,
         website,
         match,
+        textField,
         username,
         keyName,
         keyHint: kind === "key" && plaintext ? keyHintOf(plaintext) : null,
@@ -383,6 +410,7 @@ export async function createVaultItem(
   return itemView(deps, row, undefined, viewer);
 }
 
+// `textField` isn't one: a login from a password manager is allowed a masked field here, like its access.
 const SOURCE_FIELDS = ["title", "website", "match", "username", "secret", "contact"] as const;
 
 /**
@@ -429,6 +457,23 @@ export async function updateVaultItem(
     if (patch.username !== undefined) {
       set.username = cleanText(patch.username, VAULT_LIMITS.username, "username") || null;
       changed.push("username");
+    }
+  }
+  // The masked text field (ADR 0144 §12) belongs to the address it was allowed on: a new website or match takes it
+  // back unless the same change allows it again, and it stays on `exact` logins only.
+  const placeChanged = changed.includes("website") || changed.includes("match");
+  if (patch.textField !== undefined || (placeChanged && item.textField !== null)) {
+    if (kind !== "login") throw wrongField("textField");
+    const textField = patch.textField !== undefined ? cleanTextField(patch.textField) : null;
+    if (textField !== null && (set.match ?? item.match) !== "exact") {
+      throw new ValidationError(
+        "A masked text field can only be allowed on a login for one address",
+        "vault.text_field_exact_only",
+      );
+    }
+    if (textField !== item.textField) {
+      set.textField = textField;
+      changed.push("textField");
     }
   }
   if (patch.keyName !== undefined) {

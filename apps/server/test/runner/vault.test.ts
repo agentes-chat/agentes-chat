@@ -25,8 +25,10 @@ import { describeRequest, handleRequest, NEW_WORK_OPS, OP_ROUTES, type RequestSc
 import { agentSecrets, dropStoredSiteSecrets, handleSecret, secretValue } from "../../runner/secrets";
 import {
   ARMED_TTL_MS,
+  cleanTextField,
   FILL_MARK_ATTR,
   fieldRefusalOf,
+  fieldWant,
   fillMarkSelector,
   fillUnmarkScript,
   makePassword,
@@ -310,6 +312,105 @@ const input = (type: string, attrs: Record<string, string> = {}, method?: string
   type,
   getAttribute: (n: string) => attrs[n] ?? null,
   form: method === undefined ? null : { getAttribute: (n: string) => (n === "method" ? method : null) },
+});
+
+// ── A masked text field the login's owner allowed (ADR 0144 §12, issue #748) ──────────────────────────────────
+
+const BANK = "https://pj.santandernetibe.com.br";
+const BANK_FIELD = "formGeral:senhaAcesso";
+const bankWant: VaultFieldWant = { exact: BANK, domain: null, top: BANK, field: "password", textField: BANK_FIELD };
+const bankField = (over: Partial<VaultFieldFacts> = {}) =>
+  facts({ type: "text", origin: BANK, id: BANK_FIELD, name: "", masked: true, ...over });
+
+test("a masked text field is typed into only when its owner allowed that one field on that one address", () => {
+  expect(vaultFieldVerdict(bankField(), bankWant)).toBeNull();
+  // By its name too.
+  expect(vaultFieldVerdict(bankField({ id: "", name: BANK_FIELD }), bankWant)).toBeNull();
+  // Not allowed: the rule stays as it was.
+  expect(vaultFieldVerdict(bankField(), { ...bankWant, textField: null })).toBe("not_password_field");
+  expect(vaultFieldVerdict(bankField(), { ...bankWant, textField: undefined })).toBe("not_password_field");
+  // Another field, one that shows what is typed, or not a text input.
+  expect(vaultFieldVerdict(bankField({ id: "formGeral:usuario" }), bankWant)).toBe("not_password_field");
+  expect(vaultFieldVerdict(bankField({ id: `${BANK_FIELD} ` }), bankWant)).toBe("not_password_field");
+  expect(vaultFieldVerdict(bankField({ masked: false }), bankWant)).toBe("not_password_field");
+  expect(vaultFieldVerdict(bankField({ masked: undefined }), bankWant)).toBe("not_password_field");
+  for (const type of ["email", "search", "tel", "hidden"])
+    expect(vaultFieldVerdict(bankField({ type }), bankWant)).toBe("not_password_field");
+  expect(vaultFieldVerdict(bankField({ tag: "TEXTAREA" }), bankWant)).toBe("not_password_field");
+  // Another site, a frame of another site, or a GET form: refused as before.
+  expect(vaultFieldVerdict(bankField({ origin: "https://bank.example" }), bankWant)).toBe("wrong_site");
+  expect(vaultFieldVerdict(bankField({ top: false, ancestors: ["https://ads.test"] }), bankWant)).toBe("wrong_site");
+  expect(vaultFieldVerdict(bankField({ formMethod: "get" }), bankWant)).toBe("get_form");
+  // A password field still is one.
+  expect(vaultFieldVerdict(bankField({ type: "password", masked: false }), bankWant)).toBeNull();
+  // Only an exact rule carries it, and only for a password (never a code).
+  const siteWant: VaultFieldWant = { ...bankWant, exact: null, domain: "santandernetibe.com.br" };
+  expect(vaultFieldVerdict(bankField(), siteWant)).toBe("not_password_field");
+  const exactRule = { kind: "exact" as const, origin: BANK };
+  expect(fieldWant(exactRule, BANK, "password", BANK_FIELD).textField).toBe(BANK_FIELD);
+  expect(fieldWant(exactRule, BANK, "password").textField).toBeNull();
+  expect(fieldWant(exactRule, BANK, "code", BANK_FIELD).textField).toBeNull();
+  expect(
+    fieldWant({ kind: "site", domain: "santandernetibe.com.br" }, BANK, "password", BANK_FIELD).textField,
+  ).toBeNull();
+});
+
+test("the page's script reads the field's id, name and masking, and lets the allowed masked field through", () => {
+  const script = vaultFieldScript(bankWant, "m1");
+  const run = (el: Record<string, unknown>, security: string): Record<string, unknown> => {
+    let marked = null as string | null;
+    const active = { ...el, setAttribute: (_: string, v: string) => (marked = v) };
+    const location = { origin: BANK, ancestorOrigins: [] };
+    const win = {};
+    const style = () => ({ getPropertyValue: (p: string) => (p === "-webkit-text-security" ? security : "") });
+    const f = new Function("document", "location", "window", "top", "getComputedStyle", `return ${script}`);
+    try {
+      return { origin: f({ activeElement: active }, location, win, win, style), marked };
+    } catch (err) {
+      return { refusal: fieldRefusalOf(err instanceof Error ? err.message : String(err)), marked };
+    }
+  };
+  const santander = input("text", { id: BANK_FIELD, autocomplete: "off", style: "-webkit-text-security:disc" });
+  expect(run(santander, "disc")).toEqual({ origin: BANK, marked: "m1" });
+  expect(run(santander, "none")).toEqual({ refusal: "not_password_field", marked: null });
+  expect(run(input("text", { id: "formGeral:usuario" }), "disc")).toEqual({
+    refusal: "not_password_field",
+    marked: null,
+  });
+  // Without getComputedStyle (an odd page), nothing reads as masked.
+  expect(() => runInPage(vaultFieldScript(bankWant), { active: santander, origin: BANK })).toThrow(
+    "agentes-vault:not_password_field",
+  );
+});
+
+test("the allowed masked field travels as a fourth argument and is part of what opens the box", async () => {
+  expect(cleanTextField(` ${BANK_FIELD} `)).toBe(BANK_FIELD);
+  for (const bad of ["", "   ", "a\nb", "x".repeat(201), 7, null]) expect(cleanTextField(bad)).toBeNull();
+  const vault = new RunnerVault();
+  const k = await vault.issueKey(ana.id);
+  const rule = `exact:${BANK}`;
+  const use = { kind: "fill" as const, rule, textField: BANK_FIELD };
+  const box = await sealSecret(k.publicKey, "s3nha-do-banco", vaultAad({ keyId: k.keyId, agentId: ana.id, use }));
+  const json = JSON.stringify({ keyId: k.keyId, box });
+  expect(parseTypeVault(["e4", rule, json, BANK_FIELD])).toMatchObject({ ref: "@e4", textField: BANK_FIELD });
+  expect(parseTypeVault(["e4", rule, json])).toMatchObject({ textField: null });
+  for (const args of [
+    ["e4", rule, json, ""],
+    ["e4", rule, json, "a\u0000b"],
+    ["e4", rule, json, BANK_FIELD, "more"],
+  ])
+    expect(await errorCode(() => parseTypeVault(args))).toBe("bad_request");
+  // Sealed for the field: it doesn't open for the rule alone, nor for another field.
+  expect(await errorCode(() => new VaultOpening(vault, ana.id).open(k.keyId, box, { kind: "fill", rule }, "X"))).toBe(
+    "bad_request",
+  );
+  const k2 = await vault.issueKey(ana.id);
+  const box2 = await sealSecret(k2.publicKey, "s3nha-do-banco", vaultAad({ keyId: k2.keyId, agentId: ana.id, use }));
+  const other = { ...use, textField: "formGeral:outro" };
+  expect(await errorCode(() => new VaultOpening(vault, ana.id).open(k2.keyId, box2, other, "X"))).toBe("bad_request");
+  const k3 = await vault.issueKey(ana.id);
+  const box3 = await sealSecret(k3.publicKey, "s3nha-do-banco", vaultAad({ keyId: k3.keyId, agentId: ana.id, use }));
+  expect(await new VaultOpening(vault, ana.id).open(k3.keyId, box3, use, "VAULT_PASSWORD")).toBe("s3nha-do-banco");
 });
 
 test("the script the page runs answers the frame's origin, or throws the verdict before the fill", () => {

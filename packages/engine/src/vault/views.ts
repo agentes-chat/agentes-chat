@@ -164,6 +164,7 @@ export async function itemView(
     description: item.description,
     website: item.website,
     match: item.match as VaultMatch,
+    textField: item.kind === "login" ? item.textField : null,
     username: item.username,
     keyName: item.keyName,
     keyHint: item.keyHint,

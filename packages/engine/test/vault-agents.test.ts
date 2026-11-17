@@ -169,7 +169,7 @@ describe("releasing a login", () => {
     const released = await releaseVaultLogin(v.deps, run, mine.id, "https://gist.github.com");
     expect(released).toMatchObject({ password: PASSWORD, rule: { kind: "site", domain: "github.com" } });
     expect(released.item).toMatchObject({ id: mine.id, title: "GitHub", username: "ana-acme" });
-    expect(await releaseVaultLogin(v.deps, run, mine.id, null)).toMatchObject({ password: PASSWORD });
+    expect(await releaseVaultLogin(v.deps, run, mine.id, null)).toMatchObject({ password: PASSWORD, textField: null });
 
     const refusal = (work: Promise<unknown>) => work.then(() => null).catch((e: unknown) => e as VaultRefusal);
     const wrong = await refusal(releaseVaultLogin(v.deps, run, mine.id, "https://github.evil.example"));

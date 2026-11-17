@@ -357,6 +357,7 @@ const KNOWN = {
   // `max`: the limit the field passed (characters, or bytes for a value).
   "vault.too_long": "errors.vault.tooLong",
   "vault.not_https": "errors.vault.notHttps",
+  "vault.text_field_exact_only": "errors.vault.textFieldExactOnly",
   "vault.key_name_invalid": "errors.vault.keyNameInvalid",
   "vault.key_name_reserved": "errors.vault.keyNameReserved",
   "vault.key_name_taken": "errors.vault.keyNameTaken",

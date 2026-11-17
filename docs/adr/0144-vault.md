@@ -405,6 +405,29 @@ Team from its page (`POST /vault/items/{id}/move`, `moveVaultItem`):
 Left out: moving several items at once, moving a password manager's item, renaming keys on import, importing a
 `.env` into a password manager, and other file formats (YAML, TOML, a shell script's logic).
 
+### 12. A masked text field its owner allows (issue #748)
+
+Some banks take the password in an `<input type="text">` masked by its style (`-webkit-text-security: disc`), not
+in a password field, so §4.3 refused every saved login there and a person had to type it each time, routines
+included. The rule stays as it is by default. The login's owner (who edits the item: §2) can allow **one** such
+field on its page, by its id or name (`vault_items.text_field`, "Masked text field" under the address on the web):
+
+- Only on a login for one address (`exact`). A `site` rule keeps password fields only (`vault.text_field_exact_only`),
+  and a new address or match takes the field back unless the same change allows it again. A password manager's
+  login can be given one too: like its access, it is a setting here, not a field of its source.
+- The engine sends it, as a fourth argument of `agentes:type_vault`, only to a runner of protocol 68
+  (`VAULT_TEXT_FIELD_PROTOCOL`), and binds it into the box: `fill:<rule>|text:<field>`. A box sealed for the field
+  opens for nothing else, and one sealed without it never opens for it.
+- The runner's check in the page (§4.3) then also lets in an `INPUT` of type `text` whose id or name is that field
+  and whose computed `-webkit-text-security` masks what is typed. Origins, frames and GET forms are checked as for
+  a password field, the guard of §4.4 is armed, and the value is redacted as in §4.5.
+
+What this costs, and why it is the owner's choice: a text field keeps its value readable through the DOM (`.value`)
+while the page is open, where a password field's is at least kept from page text and autofill heuristics. The
+page's own scripts read either anyway (§4.3), and the agent's tools never get the value (§4.1, §4.5); a script of
+the same user reaching Chrome's debugging port could (§5). Left out: hiding the field's value from the page after
+typing, and a field picked on the page instead of typed by its id.
+
 ## Consequences
 
 - Agents find what they need before asking (`vault_list`), and a password typed once in a card can serve the next
