@@ -157,12 +157,12 @@ describe("brain settings", () => {
           .map((o) => [o.kind, o.reason ?? null]),
       );
     // An older Windows runner refuses every OpenCode turn; Cursor and Grok Build don't run on Windows; the Antigravity
-    // CLI only on Linux.
+    // CLI runs on Linux and Windows (not macOS).
     expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL - 1, executors }))).toEqual({
       cursor: "system",
       opencode: "runner_old",
       grok: "system",
-      antigravity: "system",
+      antigravity: null,
     });
     expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL, executors })).opencode).toBeNull();
     expect(reasons(mac({ os: "darwin", protocol: OPENCODE_ACP_PROTOCOL - 1, executors }))).toEqual({
