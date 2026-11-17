@@ -99,7 +99,7 @@ export const LEGACY_REDIRECTS = [
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: variant === "production" ? "agentes" : `agentes ${variant}`,
+  name: "Agentes Learts",
   slug: "agentes",
   scheme: "agenteschat",
   version: "0.1.0",
