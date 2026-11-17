@@ -120,6 +120,10 @@ export const VaultItem = z
     description: z.string(),
     website: z.string().nullable().openapi({ description: "Login: `https://host[:port]`." }),
     match: Match,
+    textField: z.string().nullable().openapi({
+      description:
+        "Login, one address only: the id or name of the masked text field its owner allowed the password to be typed into, besides password fields (ADR 0144 §12).",
+    }),
     username: z.string().nullable(),
     keyName: z.string().nullable().openapi({ description: "Key: the variable name." }),
     keyHint: z.string().nullable().openapi({ description: "Key: its last 4 characters, to tell keys apart." }),
@@ -230,6 +234,9 @@ const ItemInput = z
     description: Description.optional(),
     website: Website.optional(),
     match: Match.optional(),
+    textField: z.string().max(200).optional().openapi({
+      description: "Login, one address only: also allow the masked text field with this id or name (ADR 0144 §12).",
+    }),
     username: Username.optional(),
     secret: SecretValue.optional().openapi({ description: "Login password or key value. Never sent back." }),
     keyName: KeyName.optional(),
@@ -247,6 +254,10 @@ const ItemPatch = z
     description: Description.optional(),
     website: Website.optional(),
     match: Match.optional(),
+    textField: z.string().max(200).optional().openapi({
+      description:
+        "Login, one address only: allow the masked text field with this id or name (ADR 0144 §12); an empty string takes it back. A new website or match takes it back too.",
+    }),
     username: Username.optional(),
     secret: SecretValue.optional().openapi({ description: "A new value; absent keeps the saved one." }),
     keyName: KeyName.optional(),

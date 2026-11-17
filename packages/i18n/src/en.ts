@@ -4895,6 +4895,10 @@ export const en = {
       match: "Where agents may type it",
       username: "Username",
       usernamePlaceholder: "Email or username",
+      textField: "Masked text field (optional)",
+      textFieldHelp:
+        "Some banks hide the password in a plain text field instead of a password field. Put that field's id or name here to let agents type this password into it too, only on this address. While the page is open, its scripts can read what was typed there.",
+      textFieldPlaceholder: "formGeral:senhaAcesso",
       password: "Password",
       keyName: "Variable name",
       keyNameHelp: "Your agents use the key by this name in a command.",
@@ -15608,6 +15612,7 @@ export const en = {
       titleRequired: "Give it a name.",
       tooLong: "That's too long. The limit is {{max}}.",
       notHttps: "Use an address that starts with https://",
+      textFieldExactOnly: "A masked text field can only be allowed on a login for one address.",
       keyNameInvalid: "Use capital letters, digits and _ in the name, like ACME_API_KEY.",
       keyNameReserved: "This name is reserved. Pick another one.",
       keyNameTaken: "A key with this name is already saved here.",

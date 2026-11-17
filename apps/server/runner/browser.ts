@@ -4225,7 +4225,7 @@ export class BrowserManager {
     opening: VaultOpening,
     signal?: AbortSignal,
   ): Promise<BrowserAnswer> {
-    const { ref, rule, ruleText, keyId, box } = parseTypeVault(args);
+    const { ref, rule, ruleText, keyId, box, textField } = parseTypeVault(args);
     const agentId = String(actor.id ?? "");
     if (!agentId || isProfileKey(agentId)) {
       throw new RunnerError("bad_request", "agentes:type_vault needs the agent whose turn it is");
@@ -4244,12 +4244,17 @@ export class BrowserManager {
     }
     let value: string;
     try {
-      value = await opening.open(keyId, box, { kind: "fill", rule: ruleText }, VAULT_PASSWORD);
+      value = await opening.open(
+        keyId,
+        box,
+        { kind: "fill", rule: ruleText, ...(textField ? { textField } : {}) },
+        VAULT_PASSWORD,
+      );
     } catch (err) {
       if (err instanceof VaultRefusal) return refused(err.code, err.message);
       throw err;
     }
-    const want = fieldWant(rule, top, "password");
+    const want = fieldWant(rule, top, "password", textField);
     const guard = await this.guardBeforeTyping(session, value);
     if (!guard) return refused("unguarded", UNGUARDED);
     const result = await this.fillChecked(session, [{ ref, text: value }], want, timeoutMs, signal);
@@ -4268,7 +4273,12 @@ export class BrowserManager {
           );
         case "not_password_field":
         case "not_code_field":
-          return refused("not_password_field", `${ref} isn't a password field. A saved login is only typed into one.`);
+          return refused(
+            "not_password_field",
+            textField
+              ? `${ref} isn't a password field, nor the masked field ${textField} this login's owner allowed. It wasn't typed.`
+              : `${ref} isn't a password field. A saved login is only typed into one.`,
+          );
         case "get_form":
           return refused(
             "get_form",

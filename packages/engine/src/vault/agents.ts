@@ -343,7 +343,9 @@ export async function releaseVaultLogin(
   if (pageOrigin && !vaultRuleMatches(rule, pageOrigin))
     throw refuse.wrongSite(vaultRuleLabel(rule), hostOf(pageOrigin));
   const password = await valueForRun(deps, item, connection, source);
-  return { item: agentView(item, null, placeOf(deps.sources, connection)), password, rule };
+  // A masked text field its owner allowed (ADR 0144 §12) goes with an exact rule only.
+  const textField = rule.kind === "exact" && item.textField ? item.textField : null;
+  return { item: agentView(item, null, placeOf(deps.sources, connection)), password, rule, textField };
 }
 
 /** Prefers the person's own key over the team's, a built-in one over an external one, then the newest. */
@@ -659,7 +661,7 @@ const foldPlace = (text: string) =>
     .trim();
 
 /**
- * Where a new login goes (ADR 0144 §9). The place the person named (`saveIn`: `vault`, or a connected password
+ * Where a new login goes (ADR 0144 §12). The place the person named (`saveIn`: `vault`, or a connected password
  * manager by its name, what it reads, both, or its id), refused when it can't take one. Else the one connected
  * password manager this run uses that takes new logins, since that is where the agent's logins live. Else (none, or
  * more than one) the Vault. `connection` null is the Vault; `why` says what decided, for the tool's answer.

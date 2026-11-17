@@ -35,7 +35,14 @@ export const CONTACT_FIELDS = [
 export type ContactField = (typeof CONTACT_FIELDS)[number];
 
 /** Limits the server checks too (spec of the API): the form stops there instead of failing on Save. */
-export const LIMITS = { title: 120, description: 300, website: 2048, username: 200, contact: 300 } as const;
+export const LIMITS = {
+  title: 120,
+  description: 300,
+  website: 2048,
+  username: 200,
+  textField: 200,
+  contact: 300,
+} as const;
 
 export const KIND_ICON: Record<VaultItemKind, IconName> = { login: "globe", key: "key", contact: "person" };
 

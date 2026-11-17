@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 67;
+export const MACHINE_PROTOCOL_VERSION = 68;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -685,6 +685,13 @@ export const SHARED_GROK_PROTOCOL = 67;
  * runner holds the installers. Older runners answer `bad_request`: the server asks none of them.
  */
 export const CLI_INSTALL_PROTOCOL = 66;
+/**
+ * `agentes:type_vault [ref, rule, boxJson, textField]` (ADR 0144 §12, issue #748): a login whose owner allowed one
+ * masked text field on its exact site (a bank's `<input type="text">` hidden with `-webkit-text-security`) is typed
+ * there too, that field's id or name bound into the box's additional data. Older runners take three arguments only:
+ * the server sends the fourth to none of them, and tells the agent the computer's app needs an update.
+ */
+export const VAULT_TEXT_FIELD_PROTOCOL = 68;
 /** The coding CLIs `cli.install` installs: Claude Code and Codex. */
 export const INSTALLABLE_CLIS = ["claude", "codex"] as const;
 export type InstallableCli = (typeof INSTALLABLE_CLIS)[number];

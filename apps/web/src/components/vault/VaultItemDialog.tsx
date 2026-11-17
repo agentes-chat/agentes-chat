@@ -99,6 +99,8 @@ export interface ItemDraft {
   description: string;
   website: string;
   match: VaultMatch;
+  /** Login, one address only: the masked text field allowed besides password fields (ADR 0144 §12). */
+  textField: string;
   username: string;
   keyName: string;
   contact: VaultContactFields;
@@ -109,6 +111,7 @@ export const draftOf = (i: VaultItem): ItemDraft => ({
   description: i.description,
   website: i.website ?? "",
   match: i.match,
+  textField: i.textField ?? "",
   username: i.username ?? "",
   keyName: i.keyName ?? "",
   contact: { ...(i.contact ?? {}) },
@@ -245,6 +248,27 @@ export function ItemFields({
               : t("vault.match.siteHelp")}
           </span>
         </div>
+        {draft.match === "exact" && filled(draft.textField) && (
+          // ADR 0144 §12: a bank's password box that is a text field masked by its style, allowed by the owner.
+          <Field
+            label={t("vault.field.textField")}
+            hint={{
+              name: t("common.about", { label: t("vault.field.textField") }),
+              text: readOnly ? undefined : t("vault.field.textFieldHelp"),
+            }}
+          >
+            <Input
+              value={draft.textField}
+              maxLength={LIMITS.textField}
+              readOnly={readOnly}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder={readOnly ? undefined : t("vault.field.textFieldPlaceholder")}
+              onChange={(e) => onDraft({ textField: e.target.value })}
+              data-1p-ignore
+            />
+          </Field>
+        )}
         {filled(draft.username, fixed) && (
           <Field label={t("vault.field.username")}>
             <Input
@@ -708,6 +732,11 @@ function ItemDialog({
 function patchOf(item: VaultItem, d: ItemDraft, secret: string | null, external: boolean): VaultItemPatch {
   const p: VaultItemPatch = {};
   if (d.description.trim() !== item.description) p.description = d.description.trim();
+  // The masked text field is set here for a password manager's login too (ADR 0144 §12); only on one address.
+  if (item.kind === "login") {
+    const textField = d.match === "exact" ? d.textField.trim() : "";
+    if (textField !== (item.textField ?? "")) p.textField = textField;
+  }
   if (item.kind === "key" && d.keyName.trim() !== (item.keyName ?? "")) p.keyName = d.keyName.trim();
   if (external) return p;
   // A login with no name goes by its site's, a key by its variable's.

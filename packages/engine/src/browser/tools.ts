@@ -24,6 +24,7 @@ import {
   type PubSub,
   sealSecret,
   VAULT_PROTOCOL,
+  VAULT_TEXT_FIELD_PROTOCOL,
   VAULT_TYPE_REFUSALS,
   vaultAad,
   vaultRuleLabel,
@@ -1113,7 +1114,7 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
    */
   async function vaultLogin(
     ctx: ToolContext,
-    status: { machineId: string; machineName: string },
+    status: { machineId: string; machineName: string; protocol?: number },
     profile: { id: string; name: string } | null,
     id: string,
     field: string,
@@ -1123,29 +1124,42 @@ export function createBrowserToolSource(deps: BrowserToolDeps): ToolSource & { r
     if (!vault || !hub) return "The Vault isn't available on this server.";
     const run = ids(ctx);
     const origin = pageOrigin(url);
-    let sealed: { box: unknown; keyId: string; rule: string; site: string };
+    let sealed: { box: unknown; keyId: string; rule: string; site: string; textField: string | null };
     try {
       // The profile's grants are read again here: one given meanwhile counts before the value is read.
       const released = await releaseVaultLogin(vault, run, id, origin, await vaultProfile(ctx, profile));
       const rule = formatVaultRule(released.rule);
+      // A masked text field its owner allowed (ADR 0144 §12) goes only to a runner that checks it (protocol 68):
+      // an older one would refuse the field anyway, so it is never sent there.
+      const textField =
+        released.textField && (status.protocol ?? 0) >= VAULT_TEXT_FIELD_PROTOCOL ? released.textField : null;
       const agent = await machineScope(hub, ctx, status.machineId);
       const key = await requestVaultKey(hub, status.machineId, agent, "type Vault logins", ctx.signal);
       const box = await sealSecret(
         key.publicKey,
         released.password,
-        vaultAad({ keyId: key.keyId, agentId: agent.id, use: { kind: "fill", rule } }),
+        vaultAad({
+          keyId: key.keyId,
+          agentId: agent.id,
+          use: { kind: "fill", rule, ...(textField ? { textField } : {}) },
+        }),
       ).catch(() => {
         // Never the sealing's own words (they could name the value's size), nor the login's title (ADR 0144 §4).
         throw new Error(`The Vault login ${id} couldn't be prepared for your computer.`);
       });
-      sealed = { box, keyId: key.keyId, rule, site: vaultRuleLabel(released.rule) };
+      sealed = { box, keyId: key.keyId, rule, site: vaultRuleLabel(released.rule), textField };
     } catch (error) {
       return vaultErrorText(error);
     }
     return {
       command: {
         command: "agentes:type_vault",
-        args: [field, sealed.rule, JSON.stringify({ keyId: sealed.keyId, box: sealed.box })],
+        args: [
+          field,
+          sealed.rule,
+          JSON.stringify({ keyId: sealed.keyId, box: sealed.box }),
+          ...(sealed.textField ? [sealed.textField] : []),
+        ],
         timeoutSeconds: COMMAND_SECONDS,
       },
       // The site of its rule, which the engine read from the saved address: never its title (ADR 0144 §4).

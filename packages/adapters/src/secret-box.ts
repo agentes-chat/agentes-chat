@@ -68,10 +68,10 @@ export function secretAad(input: { requestId: string; orgId: string; name: strin
 
 /**
  * What a Vault value is for once it reaches the computer (ADR 0144): typed into a login field on the sites a rule
- * names (`exact:https://host[:port]` or `site:<registrable domain>`, see `vault/site.ts`), or given to one command
- * as one variable.
+ * names (`exact:https://host[:port]` or `site:<registrable domain>`, see `vault/site.ts`), and with `textField` also
+ * into that one masked text field its owner allowed (ADR 0144 §12), or given to one command as one variable.
  */
-export type VaultUse = { kind: "fill"; rule: string } | { kind: "env"; name: string };
+export type VaultUse = { kind: "fill"; rule: string; textField?: string } | { kind: "env"; name: string };
 
 /**
  * What binds a Vault box to one in-memory key of one agent and to one use (ADR 0144). The runner rebuilds it from
@@ -79,7 +79,10 @@ export type VaultUse = { kind: "fill"; rule: string } | { kind: "env"; name: str
  * site rule or variable doesn't open.
  */
 export function vaultAad(input: { keyId: string; agentId: string; use: VaultUse }) {
-  const use = input.use.kind === "fill" ? `fill:${input.use.rule}` : `env:${input.use.name}`;
+  const u = input.use;
+  // A masked text field the login's owner allowed (ADR 0144 §12) is part of the use: a box sealed without it never
+  // opens for that field, and one sealed for it opens for nothing else.
+  const use = u.kind === "fill" ? `fill:${u.rule}${u.textField ? `|text:${u.textField}` : ""}` : `env:${u.name}`;
   return `agentes-vault|v${SECRET_BOX_VERSION}|${input.keyId}|${input.agentId}|${use}`;
 }
 

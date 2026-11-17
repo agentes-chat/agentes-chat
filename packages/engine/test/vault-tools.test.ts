@@ -8,6 +8,7 @@ import {
   sealSecret,
   VAULT_PASSWORD_PROTOCOL,
   VAULT_PROTOCOL,
+  VAULT_TEXT_FIELD_PROTOCOL,
   vaultAad,
 } from "@agenteschat/adapters";
 import { and, eq, schema } from "@agenteschat/db";
@@ -104,15 +105,17 @@ function fakeComputer(at: { machineId: string; orgId: string }) {
     keys.delete(keyId);
     if (!privateKey) throw new Error("key_expired");
     const value = await openSecret(privateKey, box, vaultAad({ keyId, agentId, use }));
-    opened.push({ use: use.kind === "fill" ? `fill:${use.rule}` : `env:${use.name}`, value });
+    const fill = (u: { rule: string; textField?: string }) =>
+      `fill:${u.rule}${u.textField ? `|text:${u.textField}` : ""}`;
+    opened.push({ use: use.kind === "fill" ? fill(use) : `env:${use.name}`, value });
     return value;
   };
   const answer = async (agentId: string, command: string, args: string[]): Promise<Reply> => {
     if (command === "agentes:type_vault") {
-      const [, rule, json] = args as [string, string, string];
+      const [, rule, json, textField] = args as [string, string, string, string | undefined];
       const { keyId, box } = JSON.parse(json) as { keyId: string; box: SecretBox };
       try {
-        await open(keyId, box, agentId, { kind: "fill", rule });
+        await open(keyId, box, agentId, { kind: "fill", rule, ...(textField ? { textField } : {}) });
       } catch (error) {
         const reason = error instanceof Error ? error.message : "key_expired";
         return { success: false, data: null, error: reason, code: "key_expired" };
@@ -494,6 +497,32 @@ test("a login is refused before its value goes out: not shared, another site, an
   expect(old.content).toContain("agentes-runner update");
   expect(keysAsked()).toBe(0);
   expect((await usesOf(v.items.login.id)).filter((u) => u.action === "fill")).toHaveLength(0);
+});
+
+test("a masked text field its owner allowed goes with the login, bound to its box, only to a runner that checks it", async () => {
+  const v = await vaultSetup();
+  const ana = await v.runFor(f.owner.id);
+  const FIELD = "formGeral:senhaAcesso";
+  await updateVaultItem(v.vault, f.owner.id, f.org.id, v.items.login.id, { textField: FIELD });
+  await v.call(ana, "browser_read", {});
+  const typedArgs = () =>
+    v.computer.calls
+      .flatMap((c) => (c.op === "browser.batch" ? c.commands : c.op === "browser.act" ? [c] : []))
+      .filter((c) => c.command === "agentes:type_vault")
+      .map((c) => c.args);
+
+  // An older runner never gets the field: the login goes as before, password fields only.
+  v.computer.s.protocol = VAULT_TEXT_FIELD_PROTOCOL - 1;
+  expect((await v.call(ana, "browser_type_secret", { target: "e2", login: v.items.login.id })).isError).toBeFalsy();
+  expect(typedArgs().at(-1)).toHaveLength(3);
+  expect(v.computer.opened.at(-1)).toEqual({ use: "fill:exact:https://acme.example", value: PASSWORD });
+
+  // From protocol 68 it is the fourth argument, and the box opens only for it.
+  v.computer.s.protocol = VAULT_TEXT_FIELD_PROTOCOL;
+  expect((await v.call(ana, "browser_type_secret", { target: "e2", login: v.items.login.id })).isError).toBeFalsy();
+  expect(typedArgs().at(-1)?.[3]).toBe(FIELD);
+  expect(v.computer.opened.at(-1)).toEqual({ use: `fill:exact:https://acme.example|text:${FIELD}`, value: PASSWORD });
+  expect(JSON.stringify(v.computer.calls)).not.toContain(PASSWORD);
 });
 
 test("the runner's refusals become clear errors, and nothing is recorded", async () => {

@@ -85,6 +85,7 @@ const item = (over: Partial<VaultItem> & { id: string }): VaultItem => ({
   description: "",
   website: "https://github.com",
   match: "exact",
+  textField: null,
   username: "dev@acme.example",
   keyName: null,
   keyHint: null,

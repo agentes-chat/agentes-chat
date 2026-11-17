@@ -47,6 +47,7 @@ function vaultItem(patch: Partial<VaultItem> & Pick<VaultItem, "id" | "kind" | "
     description: "",
     website: null,
     match: "exact",
+    textField: null,
     username: null,
     keyName: null,
     keyHint: null,
@@ -420,6 +421,24 @@ describe("Settings › Vault (ADR 0144)", () => {
     for (const option of within(who).getAllByRole("radio")) expect((option as HTMLButtonElement).disabled).toBe(true);
     expect(within(who).getByRole("radio", { checked: true }).textContent).toContain(t("vault.scope.personal"));
     expect(create.textContent).toContain(t("vault.new.teamLocked"));
+  });
+
+  test("a login for one address takes a masked text field; one for the whole site doesn't offer it", async () => {
+    const { state, t } = await openVault();
+    await click(rows()[0] as HTMLElement);
+    await settle(3);
+    const dialog = screen().getByRole("dialog", { name: "Acme mail" });
+    const field = within(dialog).getByLabelText(t("vault.field.textField")) as HTMLInputElement;
+    expect(field.value).toBe("");
+    await type(field, " formGeral:senhaAcesso ");
+    await click(within(dialog).getByRole("button", { name: t("common.save") }));
+    await settle(3);
+    const update = state.calls.find((c) => c.method === "vault.update");
+    expect(update?.args[2]).toEqual({ textField: "formGeral:senhaAcesso" });
+    // The whole site: no such field.
+    await click(within(dialog).getByRole("radio", { name: t("vault.match.site") }));
+    await settle(1);
+    expect(within(dialog).queryByLabelText(t("vault.field.textField"))).toBeNull();
   });
 
   test("a saved value stays behind its dots: no Show or Copy, Change for who manages it, and why", async () => {

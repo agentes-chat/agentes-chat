@@ -11110,6 +11110,15 @@
   "vault.field.usernamePlaceholder": {
     "value": "Email or username"
   },
+  "vault.field.textField": {
+    "value": "Masked text field (optional)"
+  },
+  "vault.field.textFieldHelp": {
+    "value": "Some banks hide the password in a plain text field instead of a password field. Put that field's id or name here to let agents type this password into it too, only on this address. While the page is open, its scripts can read what was typed there."
+  },
+  "vault.field.textFieldPlaceholder": {
+    "value": "formGeral:senhaAcesso"
+  },
   "vault.field.password": {
     "value": "Password"
   },
@@ -37682,6 +37691,9 @@
   },
   "errors.vault.notHttps": {
     "value": "Use an address that starts with https://"
+  },
+  "errors.vault.textFieldExactOnly": {
+    "value": "A masked text field can only be allowed on a login for one address."
   },
   "errors.vault.keyNameInvalid": {
     "value": "Use capital letters, digits and _ in the name, like ACME_API_KEY."

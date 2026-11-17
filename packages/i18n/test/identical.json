@@ -1,6 +1,7 @@
 {
   "app": {
     "pt-BR": [
+      "vault.field.textFieldPlaceholder",
       "usageViews.logins",
       "chat.wait.said",
       "access.area.skills",
@@ -304,6 +305,7 @@
       "onboarding.import.choose.skill"
     ],
     "es": [
+      "vault.field.textFieldPlaceholder",
       "devices.iphone.path.general",
       "devices.cpus",
       "devices.memory",
@@ -562,6 +564,7 @@
       "settings.account.chat.wallpaper.name.color"
     ],
     "fr": [
+      "vault.field.textFieldPlaceholder",
       "usage.kinds.routines",
       "channel.tooLong.fileName",
       "calendar.moreRuns",
@@ -1004,6 +1007,7 @@
       "orgAccent.sampleMention"
     ],
     "de": [
+      "vault.field.textFieldPlaceholder",
       "devices.iphone.steps.account",
       "devices.workspace",
       "devices.cpus",
@@ -1472,6 +1476,7 @@
       "orgAccent.sampleMention"
     ],
     "it": [
+      "vault.field.textFieldPlaceholder",
       "shell.email.label",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
@@ -1852,6 +1857,7 @@
       "newAgentCard.proposal.routine.lead"
     ],
     "nl": [
+      "vault.field.textFieldPlaceholder",
       "usage.kinds.routines",
       "calendar.moreRuns",
       "devices.iphone.steps.account",
@@ -2471,6 +2477,7 @@
       "orgAccent.sampleMention"
     ],
     "ja": [
+      "vault.field.textFieldPlaceholder",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
@@ -2644,6 +2651,7 @@
       "storage.connect.provider.b2"
     ],
     "ko": [
+      "vault.field.textFieldPlaceholder",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
@@ -2811,6 +2819,7 @@
       "storage.connect.provider.b2"
     ],
     "zh-Hans": [
+      "vault.field.textFieldPlaceholder",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",
@@ -2969,6 +2978,7 @@
       "storage.connect.provider.b2"
     ],
     "id": [
+      "vault.field.textFieldPlaceholder",
       "shell.email.label",
       "devices.cpus",
       "devices.memory",
@@ -3282,6 +3292,7 @@
       "onboarding.import.choose.step.video"
     ],
     "tr": [
+      "vault.field.textFieldPlaceholder",
       "devices.cpus",
       "devices.memory",
       "devices.system.android",
@@ -3475,6 +3486,7 @@
       "onboarding.import.choose.step.video"
     ],
     "pl": [
+      "vault.field.textFieldPlaceholder",
       "devices.cpus",
       "devices.memory",
       "devices.system.android",
@@ -3778,6 +3790,7 @@
       "orgAccent.sampleMention"
     ],
     "ru": [
+      "vault.field.textFieldPlaceholder",
       "channel.tooLong.fileName",
       "devices.system.android",
       "devices.system.ios",

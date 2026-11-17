@@ -263,6 +263,65 @@ describe("changing, showing, deleting", () => {
     expect(audit?.details).toMatchObject({ kind: "login", title: "Status page", fields: expect.any(Array) });
   });
 
+  test("a masked text field (ADR 0144 §12): on one address only, cleared with a new address, set for a manager's login too", async () => {
+    v = await vaultSetup();
+    const FIELD = "formGeral:senhaAcesso";
+    const bank = await createVaultItem(v.deps, v.carla.id, v.f.org.id, {
+      kind: "login",
+      scope: "team",
+      title: "Santander Empresas",
+      website: "https://pj.santandernetibe.com.br",
+      textField: `  ${FIELD} `,
+      secret: PASSWORD,
+    });
+    expect(bank).toMatchObject({ match: "exact", textField: FIELD });
+    expect((await rowOf(bank.id)).textField).toBe(FIELD);
+    // Only on one address.
+    await expect(
+      createVaultItem(v.deps, v.carla.id, v.f.org.id, {
+        kind: "login",
+        scope: "team",
+        title: "Bank",
+        website: "https://bank.example",
+        match: "site",
+        textField: FIELD,
+      }),
+    ).rejects.toMatchObject({ code: "vault.text_field_exact_only" });
+    await expect(
+      updateVaultItem(v.deps, v.carla.id, v.f.org.id, bank.id, { match: "site", textField: FIELD }),
+    ).rejects.toMatchObject({ code: "vault.text_field_exact_only" });
+    // Not for keys; one line, not too long.
+    const key = await createVaultItem(v.deps, v.carla.id, v.f.org.id, {
+      kind: "key",
+      scope: "team",
+      title: "",
+      keyName: "BANK_KEY",
+      secret: KEY,
+    });
+    expect(key.textField).toBeNull();
+    await expect(updateVaultItem(v.deps, v.carla.id, v.f.org.id, key.id, { textField: FIELD })).rejects.toMatchObject({
+      code: "vault.invalid",
+    });
+    await expect(
+      updateVaultItem(v.deps, v.carla.id, v.f.org.id, bank.id, { textField: "x".repeat(201) }),
+    ).rejects.toMatchObject({ code: "vault.too_long" });
+    // Who doesn't manage it can't allow one.
+    await expect(
+      updateVaultItem(v.deps, v.bruno.id, v.f.org.id, bank.id, { textField: "other" }),
+    ).rejects.toMatchObject({ name: "ForbiddenError" });
+    // A new address takes it back unless the same change allows it again; "" takes it back too.
+    const moved = await updateVaultItem(v.deps, v.carla.id, v.f.org.id, bank.id, {
+      website: "https://www.santandernetibe.com.br",
+    });
+    expect(moved.textField).toBeNull();
+    const again = await updateVaultItem(v.deps, v.carla.id, v.f.org.id, bank.id, { textField: FIELD });
+    expect(again.textField).toBe(FIELD);
+    const wide = await updateVaultItem(v.deps, v.carla.id, v.f.org.id, bank.id, { match: "site" });
+    expect(wide).toMatchObject({ match: "site", textField: null });
+    await updateVaultItem(v.deps, v.carla.id, v.f.org.id, bank.id, { match: "exact", textField: FIELD });
+    expect((await updateVaultItem(v.deps, v.carla.id, v.f.org.id, bank.id, { textField: "" })).textField).toBeNull();
+  });
+
   test("a saved value never comes back to a person: their screens learn it is saved, agents' computers get it", async () => {
     v = await vaultSetup();
     const item = await createVaultItem(v.deps, v.carla.id, v.f.org.id, {
