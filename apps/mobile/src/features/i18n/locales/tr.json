@@ -99,7 +99,13 @@
     "agents": "Ajanlar",
     "activity": "Etkinlik",
     "search": "Ara",
-    "withCount": "{{label}}, {{count}}"
+    "withCount": "{{label}}, {{count}}",
+    "manage": "Yönetim"
+  },
+  "manage": {
+    "title": "Yönetim",
+    "approvals": "Onaylar",
+    "usage": "Kullanım ve limitler"
   },
   "home": {
     "greeting": {
@@ -1064,6 +1070,7 @@
     "activityShow": "Ajanların yaptıklarını her yanıtın altında göster",
     "activityHint": "Kullandıkları araçlar ve ne kadar sürdüğü, bu çalışma alanında, burada ve bilgisayarınızda. Onlar çalışırken ne yaptıklarını görmeye devam edersiniz.",
     "activityFailed": "Kaydedilemedi. Tekrar deneyin.",
+    "middleTab": "Orta sekme",
     "sounds": "Sesler",
     "soundsOn": "Uygulama sesleri",
     "soundsOff": "Kapalı",

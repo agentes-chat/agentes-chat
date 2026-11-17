@@ -111,6 +111,12 @@ export const featureKeysPtBR = {
     activity: "Atividade",
     search: "Buscar",
     withCount: "{{label}}, {{count}}",
+    manage: "Gestão",
+  },
+  manage: {
+    title: "Gestão",
+    approvals: "Aprovações",
+    usage: "Uso e cotas",
   },
   home: {
     greeting: {
@@ -1110,6 +1116,7 @@ export const featureKeysPtBR = {
     activityHint:
       "As ferramentas que usaram e quanto tempo levou, neste workspace, aqui e no computador. Enquanto trabalham, você continua vendo o que estão fazendo.",
     activityFailed: "Não deu para salvar. Tente de novo.",
+    middleTab: "Aba do meio",
     sounds: "Sons",
     soundsOn: "Sons no app",
     soundsOff: "Desligados",

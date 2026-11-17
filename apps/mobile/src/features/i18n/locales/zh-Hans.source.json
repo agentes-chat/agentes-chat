@@ -245,6 +245,18 @@
   "tabs.withCount": {
     "value": "{{label}}, {{count}}"
   },
+  "tabs.manage": {
+    "value": "Manage"
+  },
+  "manage.title": {
+    "value": "Manage"
+  },
+  "manage.approvals": {
+    "value": "Approvals"
+  },
+  "manage.usage": {
+    "value": "Usage and limits"
+  },
   "home.greeting.morning": {
     "value": "Good morning, {{name}}"
   },
@@ -2588,6 +2600,9 @@
   },
   "me.activityFailed": {
     "value": "Couldn't save that. Try again."
+  },
+  "me.middleTab": {
+    "value": "Middle tab"
   },
   "me.sounds": {
     "value": "Sounds"

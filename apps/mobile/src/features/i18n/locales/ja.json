@@ -94,7 +94,13 @@
     "agents": "エージェント",
     "activity": "アクティビティ",
     "search": "検索",
-    "withCount": "{{label}}、{{count}}"
+    "withCount": "{{label}}、{{count}}",
+    "manage": "管理"
+  },
+  "manage": {
+    "title": "管理",
+    "approvals": "承認",
+    "usage": "使用量と上限"
   },
   "home": {
     "greeting": {
@@ -991,6 +997,7 @@
     "activityShow": "各返信の下にエージェントの作業内容を表示",
     "activityHint": "使ったツールとかかった時間です。このワークスペースで、ここでもコンピューターでも適用されます。作業中の様子は引き続き表示されます。",
     "activityFailed": "保存できませんでした。もう一度お試しください。",
+    "middleTab": "中央のタブ",
     "sounds": "サウンド",
     "soundsOn": "アプリ内のサウンド",
     "soundsOff": "オフ",

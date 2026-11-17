@@ -546,7 +546,7 @@ describe("dashboards in links, notifications and routines", () => {
     expect(existsSync(join(app, "(tabs)", "dashboards"))).toBe(false);
     expect(pushedByDefault("dashboards")).toBe(true);
     expect(readFileSync(join(app, "(tabs)", "_layout.tsx"), "utf8")).not.toContain("dashboards");
-    expect([...TAB_GLYPHS]).toEqual(["chats", "threads", "agents", "activity", "search"]);
+    expect([...TAB_GLYPHS]).toEqual(["chats", "threads", "manage", "agents", "activity", "search"]);
   });
 
   test("an alert or a failure opens its widget; a request to publish, its board", () => {

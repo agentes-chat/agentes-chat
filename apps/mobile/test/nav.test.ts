@@ -73,8 +73,8 @@ describe("cover parallax", () => {
 });
 
 describe("tab glyphs", () => {
-  test("five tabs: Conversas, Threads, Agentes, Atividade and Buscar", () => {
-    expect([...TAB_GLYPHS]).toEqual(["chats", "threads", "agents", "activity", "search"]);
+  test("five tabs in the bar: Conversas, Threads or Gestão in its place, Agentes, Atividade and Buscar", () => {
+    expect([...TAB_GLYPHS]).toEqual(["chats", "threads", "manage", "agents", "activity", "search"]);
   });
 
   test("every glyph in both states is a 24×24 SVG with finite numbers", () => {

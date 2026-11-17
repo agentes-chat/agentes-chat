@@ -90,6 +90,8 @@ export const STORED = {
   voiceSpeed: "voice-speed",
   /** The person held the send button to stop an agent and send once: the composer's hint is over ("1"). */
   stopSendTaught: "stop-send-taught",
+  /** The tab bar's second place on this phone: "threads" (default) or "manage" (features/manage/middle-tab.ts). */
+  middleTab: "middle-tab",
 } as const;
 
 export async function clearStoredValues(): Promise<void> {

@@ -94,7 +94,13 @@
     "agents": "智能体",
     "activity": "动态",
     "search": "搜索",
-    "withCount": "{{label}}，{{count}}"
+    "withCount": "{{label}}，{{count}}",
+    "manage": "管理"
+  },
+  "manage": {
+    "title": "管理",
+    "approvals": "审批",
+    "usage": "用量和限额"
   },
   "home": {
     "greeting": {
@@ -991,6 +997,7 @@
     "activityShow": "在每条回复下显示智能体做了什么",
     "activityHint": "显示它们使用的工具和耗时，适用于此工作区，包括这里和你的电脑。它们工作时，你仍能看到它们在做什么。",
     "activityFailed": "无法保存，请重试。",
+    "middleTab": "中间标签页",
     "sounds": "声音",
     "soundsOn": "应用内声音",
     "soundsOff": "关闭",

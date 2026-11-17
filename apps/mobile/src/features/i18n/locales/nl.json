@@ -99,7 +99,13 @@
     "agents": "Agents",
     "activity": "Activiteit",
     "search": "Zoeken",
-    "withCount": "{{label}}, {{count}}"
+    "withCount": "{{label}}, {{count}}",
+    "manage": "Beheer"
+  },
+  "manage": {
+    "title": "Beheer",
+    "approvals": "Goedkeuringen",
+    "usage": "Gebruik en limieten"
   },
   "home": {
     "greeting": {
@@ -1064,6 +1070,7 @@
     "activityShow": "Laat onder elk antwoord zien wat agents deden",
     "activityHint": "De tools die ze gebruikten en hoe lang het duurde, in deze werkruimte, hier en op je computer. Terwijl ze werken, zie je nog steeds wat ze doen.",
     "activityFailed": "Opslaan lukte niet. Probeer het opnieuw.",
+    "middleTab": "Middelste tab",
     "sounds": "Geluiden",
     "soundsOn": "Geluiden in de app",
     "soundsOff": "Uit",

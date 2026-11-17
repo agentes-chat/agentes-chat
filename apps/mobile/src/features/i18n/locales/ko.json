@@ -94,7 +94,13 @@
     "agents": "에이전트",
     "activity": "활동",
     "search": "검색",
-    "withCount": "{{label}}, {{count}}"
+    "withCount": "{{label}}, {{count}}",
+    "manage": "관리"
+  },
+  "manage": {
+    "title": "관리",
+    "approvals": "승인",
+    "usage": "사용량 및 한도"
   },
   "home": {
     "greeting": {
@@ -991,6 +997,7 @@
     "activityShow": "답변마다 에이전트가 한 일 보기",
     "activityHint": "사용한 도구와 걸린 시간이에요. 이 워크스페이스에서 여기와 컴퓨터 모두에 적용돼요. 작업하는 동안에는 무엇을 하는지 계속 보여요.",
     "activityFailed": "저장하지 못했어요. 다시 시도해 주세요.",
+    "middleTab": "가운데 탭",
     "sounds": "소리",
     "soundsOn": "앱 소리",
     "soundsOff": "끔",

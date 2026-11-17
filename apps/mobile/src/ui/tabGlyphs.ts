@@ -2,16 +2,16 @@ import { bodyPath, EYE_STYLES, EYE_X } from "@agenteschat/ui/agent/engine";
 import { ICONS } from "./icons.data";
 
 /**
- * The tab bar's own glyphs (Conversas, Threads, Agentes, Atividade, Buscar) as SVG documents, in two states:
+ * The tab bar's own glyphs (Conversas, Threads, Gestão, Agentes, Atividade, Buscar) as SVG documents, in two states:
  * outline (unselected) and filled (selected). They are template images: one opaque color, and the
  * native tab bar tints them by state. 24×24 viewBox, stroke 1.7 with round caps, the line icons'
- * geometry; Threads is a message with a reply branching off it; Agentes is our agent (the engine's body with
- * the cut bottom-left corner and two pill eyes); Buscar is the line icons' magnifier, bolder when selected
+ * geometry; Threads is a message with a reply branching off it; Gestão is four tiles, the places it opens;
+ * Agentes is our agent (the engine's body with the cut bottom-left corner and two pill eyes); Buscar is the line icons' magnifier, bolder when selected
  * (a filled lens reads as a dot, so it never fills, like the system's search tab).
  * Pure: `tabIcons.ts` rasterizes them with Skia.
  */
 
-export const TAB_GLYPHS = ["chats", "threads", "agents", "activity", "search"] as const;
+export const TAB_GLYPHS = ["chats", "threads", "manage", "agents", "activity", "search"] as const;
 export type TabGlyph = (typeof TAB_GLYPHS)[number];
 
 /** A glyph and its state, as one name (the icon "family" of the tab bar takes a single name). */
@@ -55,6 +55,16 @@ const THREAD_REPLY =
 function threadsGlyph(selected: boolean, color: string): string {
   const bubble = selected ? solid : line;
   return `${bubble(THREAD_MESSAGE, color)}${line(THREAD_BRANCH, color)}${bubble(THREAD_REPLY, color)}`;
+}
+
+/** Gestão: four rounded tiles in a square, filled when selected. */
+const MANAGE_TILES = [4, 13.5]
+  .flatMap((y) => [4, 13.5].map((x) => [x, y] as const))
+  .map(([x, y]) => `M${x + 2} ${y}h2.5a2 2 0 0 1 2 2v2.5a2 2 0 0 1-2 2H${x + 2}a2 2 0 0 1-2-2V${y + 2}a2 2 0 0 1 2-2Z`)
+  .join("");
+
+function manageGlyph(selected: boolean, color: string): string {
+  return selected ? solid(MANAGE_TILES, color) : line(MANAGE_TILES, color);
 }
 
 /** A vertical pill (an eye) as a closed path. */
@@ -117,6 +127,9 @@ export function tabGlyphSvg(glyph: TabGlyph, selected: boolean, color = "#000000
       break;
     case "threads":
       body = threadsGlyph(selected, color);
+      break;
+    case "manage":
+      body = manageGlyph(selected, color);
       break;
     case "agents":
       body = agentGlyph(selected, color);

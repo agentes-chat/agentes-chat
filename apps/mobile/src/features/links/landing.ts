@@ -3,8 +3,8 @@
  * helpers (`@/ui/navigation`) and the tests share them. No imports, so anything may use it without a cycle.
  */
 
-/** The tabs' roots: Conversas, Threads, Agentes, Atividade and Buscar. */
-export const TAB_ROOTS = ["/", "/threads", "/agents", "/activity", "/search"] as const;
+/** The tabs' roots: Conversas, Threads (or Gestão in its place), Agentes, Atividade and Buscar. */
+export const TAB_ROOTS = ["/", "/threads", "/manage", "/agents", "/activity", "/search"] as const;
 
 /** The signed-out side's start: like the tabs, it sits at the bottom of its stack. */
 export const SIGN_IN = "/sign-in";

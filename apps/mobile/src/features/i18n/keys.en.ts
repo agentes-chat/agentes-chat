@@ -106,6 +106,12 @@ export const featureKeysEn = {
     activity: "Activity",
     search: "Search",
     withCount: "{{label}}, {{count}}",
+    manage: "Manage",
+  },
+  manage: {
+    title: "Manage",
+    approvals: "Approvals",
+    usage: "Usage and limits",
   },
   home: {
     greeting: {
@@ -1134,6 +1140,7 @@ export const featureKeysEn = {
     activityHint:
       "The tools they used and how long it took, in this workspace, here and on your computer. While they work, you still see what they're doing.",
     activityFailed: "Couldn't save that. Try again.",
+    middleTab: "Middle tab",
     sounds: "Sounds",
     soundsOn: "Sounds in the app",
     soundsOff: "Off",

@@ -94,7 +94,13 @@
     "agents": "Agen",
     "activity": "Aktivitas",
     "search": "Cari",
-    "withCount": "{{label}}, {{count}}"
+    "withCount": "{{label}}, {{count}}",
+    "manage": "Kelola"
+  },
+  "manage": {
+    "title": "Kelola",
+    "approvals": "Persetujuan",
+    "usage": "Penggunaan dan batas"
   },
   "home": {
     "greeting": {
@@ -991,6 +997,7 @@
     "activityShow": "Tampilkan yang dilakukan agen di bawah tiap balasan",
     "activityHint": "Alat yang mereka pakai dan berapa lama, di ruang kerja ini, di sini dan di komputermu. Selagi mereka bekerja, kamu tetap melihat apa yang sedang dikerjakan.",
     "activityFailed": "Tidak bisa menyimpannya. Coba lagi.",
+    "middleTab": "Tab tengah",
     "sounds": "Suara",
     "soundsOn": "Suara di aplikasi",
     "soundsOff": "Mati",

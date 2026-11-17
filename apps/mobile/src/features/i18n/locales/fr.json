@@ -104,7 +104,13 @@
     "agents": "Agents",
     "activity": "Activité",
     "search": "Recherche",
-    "withCount": "{{label}}, {{count}}"
+    "withCount": "{{label}}, {{count}}",
+    "manage": "Gestion"
+  },
+  "manage": {
+    "title": "Gestion",
+    "approvals": "Approbations",
+    "usage": "Utilisation et limites"
   },
   "home": {
     "greeting": {
@@ -1137,6 +1143,7 @@
     "activityShow": "Afficher ce que les agents ont fait sous chaque réponse",
     "activityHint": "Les outils utilisés et le temps que ça a pris, dans cet espace de travail, ici et sur votre ordinateur. Pendant qu'ils travaillent, vous voyez toujours ce qu'ils font.",
     "activityFailed": "Impossible d'enregistrer. Réessayez.",
+    "middleTab": "Onglet central",
     "sounds": "Sons",
     "soundsOn": "Sons dans l'app",
     "soundsOff": "Désactivés",

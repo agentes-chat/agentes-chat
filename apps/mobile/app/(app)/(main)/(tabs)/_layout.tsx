@@ -3,6 +3,8 @@ import { NativeTabs } from "expo-router/native-tabs";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Platform } from "react-native";
+import { tabHidden } from "@/features/manage/logic";
+import { useMiddleTab } from "@/features/manage/middle-tab";
 import { useUnreadConversations, useUnreadThreads, useWaitingCount } from "@/features/shared/queries";
 import { ALONG_STRIP, alongInAccessory } from "@/features/work-along/logic";
 import { AccessoryLine, AlongStrip, useHasWorkAlong } from "@/features/work-along/WorkAlong";
@@ -12,10 +14,12 @@ import { TabFoot, useTheme } from "@/ui";
 import { type TabGlyph, tabGlyphKey } from "@/ui/tabGlyphs";
 import { tabGlyphFamily } from "@/ui/tabIcons";
 
-const TABS: { name: string; glyph: TabGlyph; label: string; role?: "search"; teamOnly?: true }[] = [
+const TABS: { name: string; glyph: TabGlyph; label: string; role?: "search" }[] = [
   { name: "(chats)", glyph: "chats", label: "mobile.tabs.chats" },
   // A conversation that branches is rare for one person: a personal workspace (ADR 0159) opens Threads from You › Work.
-  { name: "threads", glyph: "threads", label: "mobile.tabs.threads", teamOnly: true },
+  { name: "threads", glyph: "threads", label: "mobile.tabs.threads" },
+  // Gestão takes Threads' place on a phone that chose it (Você › Preferências); Threads is then a row of it.
+  { name: "manage", glyph: "manage", label: "mobile.tabs.manage" },
   { name: "agents", glyph: "agents", label: "mobile.tabs.agents" },
   { name: "activity", glyph: "activity", label: "mobile.tabs.activity" },
   // The search role: on iOS 26 the round button apart at the bar's end (like Music); a plain tab on Android.
@@ -40,19 +44,27 @@ const ACCESSORY = alongInAccessory(Platform.OS, Platform.Version);
  * Conversas (the home), Threads (threads and missions), Agentes, Atividade and Buscar in the system tab bar
  * (UITabBarController on iOS, Liquid Glass on iOS 26; Material bottom navigation on Android). Our own glyphs on both platforms (outline, filled when
  * selected), drawn as template images the bar tints. Badges for unread conversations (Conversas: channels
- * and DMs; Threads: its rows, never both) and what waits on you. Every tab holds a stack with a native header. A
+ * and DMs; Threads, or Gestão in its place: Threads' rows, never both) and what waits on you. Every tab holds a stack with a native header. A
  * personal workspace (ADR 0159) leaves Threads out of the bar (`hidden`, the system bar's own way: changing it redraws
- * the tabs from Conversas); its row in You › Work opens the same list, pushed. A tab change is the system's own: no
+ * the tabs from Conversas); its row in You › Work opens the same list, pushed. A phone may put Gestão in Threads' place
+ * (`tabHidden`, Você › Preferências), whose first row opens the same list, pushed. A tab change is the system's own: no
  * animation and no haptic of ours (the system tab bars give none).
  */
 export default function TabsLayout() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const personal = isPersonal(useOrg().org);
+  const middle = useMiddleTab();
   const unread = useUnreadConversations();
   const unreadThreads = useUnreadThreads();
   const waiting = useWaitingCount();
-  const counts: Record<string, number> = { "(chats)": unread, threads: unreadThreads, activity: waiting };
+  // Gestão in Threads' place keeps its badge: Threads is its first row.
+  const counts: Record<string, number> = {
+    "(chats)": unread,
+    threads: unreadThreads,
+    manage: unreadThreads,
+    activity: waiting,
+  };
   // Long work and what waits on you go with you across the tabs, the phone's Agora (iOS 26: the bar's accessory, the
   // system's glass; Android and older iOS: a strip over the bar, on the tab roots). "Esperando você" only where
   // something really waits on me (the home's strip and Atividade read the same list). The layout only knows whether
@@ -97,7 +109,7 @@ export default function TabsLayout() {
             <NativeTabs.Trigger
               key={tab.name}
               name={tab.name}
-              hidden={personal && tab.teamOnly === true}
+              hidden={tabHidden(tab.name, personal, middle)}
               {...(tab.role ? { role: tab.role } : {})}
               accessibilityLabel={badge ? t("mobile.tabs.withCount", { label, count }) : label}
               contentStyle={look.content}

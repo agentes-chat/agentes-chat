@@ -34,6 +34,8 @@ import {
 import { CoverBarBackdrop, CoverParallax, useCoverScroll } from "@/ui/cover";
 import { router } from "@/ui/navigation";
 import { openPage } from "../ai/parts";
+import type { MiddleTab } from "../manage/logic";
+import { setMiddleTab, useMiddleTab } from "../manage/middle-tab";
 import { confirmAction, Uploading } from "../settings/parts";
 import { AgentFace } from "../shared/Face";
 import { useColors, useDirectory, useMeId } from "../shared/hooks";
@@ -172,6 +174,7 @@ export function MeScreen() {
   const photo = usePersonPhoto(mine?.avatarUrl ?? mine?.image ?? me.data?.user.image);
   const { changePhoto, uploading } = useChangePhoto();
   const sounds = useSoundChoice();
+  const middleTab = useMiddleTab();
   const styleLabel = useSoundLabel();
   const startLabel = useStartLabel();
   const withMe = openIssuesWithMe(issues.data, meId);
@@ -284,6 +287,17 @@ export function MeScreen() {
       options: choices.map((choice) => ({ key: choice, label: t(`mobile.theme.${choice}`) })),
     }).then((key) => {
       if (key) theme.setPreference(key as ThemePreference);
+    });
+  };
+  // The tab bar's second place on this phone: Threads, or Gestão with the admin's daily places and the settings.
+  const pickMiddleTab = () => {
+    const choices: MiddleTab[] = ["threads", "manage"];
+    void pickOne({
+      title: t("mobile.me.middleTab"),
+      value: middleTab,
+      options: choices.map((choice) => ({ key: choice, label: t(`mobile.tabs.${choice}`) })),
+    }).then((key) => {
+      if (key) setMiddleTab(key as MiddleTab);
     });
   };
   const confirmSignOut = () =>
@@ -477,6 +491,17 @@ export function MeScreen() {
                 onPress={() => open("/me/agent-style")}
               />
             ) : null}
+            {/* A personal workspace has no second tab (ADR 0159). */}
+            {personal ? null : (
+              <GroupedRow
+                key="middleTab"
+                icon="list"
+                label={t("mobile.me.middleTab")}
+                value={t(`mobile.tabs.${middleTab}`)}
+                menu
+                onPress={pickMiddleTab}
+              />
+            )}
             <GroupedRow
               key="sounds"
               icon="sound"

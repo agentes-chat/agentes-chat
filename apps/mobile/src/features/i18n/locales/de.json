@@ -99,7 +99,13 @@
     "agents": "Agenten",
     "activity": "Aktivität",
     "search": "Suche",
-    "withCount": "{{label}}, {{count}}"
+    "withCount": "{{label}}, {{count}}",
+    "manage": "Verwaltung"
+  },
+  "manage": {
+    "title": "Verwaltung",
+    "approvals": "Freigaben",
+    "usage": "Nutzung und Limits"
   },
   "home": {
     "greeting": {
@@ -1064,6 +1070,7 @@
     "activityShow": "Unter jeder Antwort zeigen, was die Agenten gemacht haben",
     "activityHint": "Welche Tools sie genutzt haben und wie lange es gedauert hat, in diesem Workspace, hier und auf deinem Computer. Während sie arbeiten, siehst du trotzdem, was sie tun.",
     "activityFailed": "Das ließ sich nicht speichern. Versuch es noch einmal.",
+    "middleTab": "Mittlerer Tab",
     "sounds": "Töne",
     "soundsOn": "Töne in der App",
     "soundsOff": "Aus",

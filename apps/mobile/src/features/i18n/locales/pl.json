@@ -109,7 +109,13 @@
     "agents": "Agenci",
     "activity": "Aktywność",
     "search": "Szukaj",
-    "withCount": "{{label}}, {{count}}"
+    "withCount": "{{label}}, {{count}}",
+    "manage": "Zarządzanie"
+  },
+  "manage": {
+    "title": "Zarządzanie",
+    "approvals": "Zatwierdzenia",
+    "usage": "Użycie i limity"
   },
   "home": {
     "greeting": {
@@ -1210,6 +1216,7 @@
     "activityShow": "Pokazuj pod każdą odpowiedzią, co zrobili agenci",
     "activityHint": "Użyte narzędzia i czas pracy, w tej przestrzeni roboczej, tutaj i na komputerze. Podczas pracy agentów nadal widzisz, co robią.",
     "activityFailed": "Nie udało się zapisać. Spróbuj ponownie.",
+    "middleTab": "Środkowa karta",
     "sounds": "Dźwięki",
     "soundsOn": "Dźwięki w aplikacji",
     "soundsOff": "Wyłączone",

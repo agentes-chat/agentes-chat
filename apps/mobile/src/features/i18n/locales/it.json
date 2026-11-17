@@ -104,7 +104,13 @@
     "agents": "Agenti",
     "activity": "Attività recenti",
     "search": "Cerca",
-    "withCount": "{{label}}, {{count}}"
+    "withCount": "{{label}}, {{count}}",
+    "manage": "Gestione"
+  },
+  "manage": {
+    "title": "Gestione",
+    "approvals": "Approvazioni",
+    "usage": "Utilizzo e limiti"
   },
   "home": {
     "greeting": {
@@ -1137,6 +1143,7 @@
     "activityShow": "Mostra cosa hanno fatto gli agenti sotto ogni risposta",
     "activityHint": "Gli strumenti che hanno usato e quanto tempo ci è voluto, in questo spazio di lavoro, qui e sul tuo computer. Mentre lavorano, vedi comunque cosa stanno facendo.",
     "activityFailed": "Non è stato possibile salvare. Riprova.",
+    "middleTab": "Scheda centrale",
     "sounds": "Suoni",
     "soundsOn": "Suoni nell'app",
     "soundsOff": "Disattivati",
