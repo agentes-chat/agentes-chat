@@ -16,6 +16,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import { Dither } from "@/sky/Dither";
 import { softTones } from "@/sky/math";
 import { Glass, haptics, motion, PressScale, Text, useReducedMotion, useTheme } from "@/ui";
+import { pillRoom } from "./headerRoom";
 
 /** The pill's own padding, the face's box and the gaps: the face sits in the capsule's curve. */
 const PAD_LEFT = 6;
@@ -65,7 +66,7 @@ const rollOut: EntryExitAnimationFunction = () => {
  * agent's sky turns into the pixel sweep that crosses the pill while it works (the sidebar's trail).
  * In a DM the face wears its presence badge and the quiet line says how the other side is: an agent's presence
  * and line, a person's status (ADR 0084). A channel shows who is in on the right. Held (`onHold`), it opens the
- * conversation switcher.
+ * conversation switcher (the bar's own switch button opens it with a tap).
  *
  * The bar lays its title out once: the slot keeps the width of the room beside the buttons, and only the pill
  * inside it changes, on the UI thread, so the native bar never lays out again while it moves.
@@ -111,8 +112,7 @@ export function HeaderPill({
   const { colors, shadows } = useTheme();
   const reduced = useReducedMotion();
   const { width: screen } = useWindowDimensions();
-  // The bar's margins, the back and "…" circles and a gap on each side.
-  const room = Math.max(160, screen - 152 - extraActions * 44);
+  const room = pillRoom(screen, extraActions);
 
   const [nameWidth, setNameWidth] = useState<number | null>(null);
   const [lineWidth, setLineWidth] = useState(0);

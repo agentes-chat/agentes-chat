@@ -223,6 +223,7 @@ import { createDockHeight, type DockHeight } from "./dock-height";
 import { EventLine } from "./EventLine";
 import { FirstDay } from "./FirstDay";
 import { HeaderPill } from "./HeaderPill";
+import { facesFit, pillRoom, switchFits } from "./headerRoom";
 import { IssueTakenLine } from "./issue-work";
 import { browsingRuns, WorkingLine } from "./LiveRows";
 import { useChatLive } from "./live";
@@ -2012,6 +2013,7 @@ function Chat({
             mission={mission}
             onMission={() => openNewMission("", info.id)}
             onPins={openPins}
+            onSwitch={() => sheet.close(openSwitcher)}
           />,
         )
       : sheet.open(
@@ -2040,27 +2042,40 @@ function Chat({
                 : undefined
             }
             onSearch={dm && searchPlace ? openSearch : undefined}
+            onSwitch={() => sheet.close(openSwitcher)}
           />,
         );
-  // Holding the pill: "Trocar de conversa". The pick swaps the conversation in place (the route's params; the
+  // Holding the pill or tapping the bar's swap button: "Trocar de conversa". The pick swaps the conversation in place (the route's params; the
   // screen is keyed by them), not a new screen sliding in: the slide made the header's pill jump at its end.
   // The swap waits for the sheet to be gone (it lives in this screen, which the swap remounts): `sheet.close` says when.
   // The params merge, so the message this one opened at (`m`, from a notification) goes too: kept, the next
   // conversation paged back through its history looking for it, then said it couldn't reach it.
-  const hold = {
-    onHold: () => {
-      sheet.open(
-        <ConversationSwitcher
-          channelId={channelId}
-          onPick={(id) => {
-            if (id === channelId) sheet.close();
-            else sheet.close(() => router.setParams({ channelId: id, thread: "", handoff: "", m: "" }));
-          }}
-        />,
-      );
-    },
-    holdHint: t("mobile.chat.switchHint"),
+  const openSwitcher = () => {
+    sheet.open(
+      <ConversationSwitcher
+        channelId={channelId}
+        onPick={(id) => {
+          if (id === channelId) sheet.close();
+          else sheet.close(() => router.setParams({ channelId: id, thread: "", handoff: "", m: "" }));
+        }}
+      />,
+    );
   };
+  const hold = { onHold: openSwitcher, holdHint: t("mobile.chat.switchHint") };
+  // The visible way in, a button beside the pill (holding it was a gesture nobody found). It steps aside on a narrow
+  // phone already crowded by an agent's own buttons (`switchFits`); the hold stays then. The pill gives up its 44.
+  const { width: screenWidth } = useWindowDimensions();
+  // Only what shows counts: the computer button needs a computer's words (never the right hand's), and the queue
+  // button takes its slot.
+  const dmComputer = dmAgentId && !isThread && !rightHand ? { agentId: dmAgentId, onOpen: leavePlace } : undefined;
+  const [computerWords, setComputerWords] = useState<string | null>(null);
+  const barOthers = isThread
+    ? 0
+    : dm
+      ? (dmComputer && (queueShown || computerWords) ? 1 : 0) + (agentTasks ? tasksBadge(agentTasks).room : 0)
+      : (queueShown ? 1 : 0) + (searchPlace ? 1 : 0);
+  const switchShown = switchFits(screenWidth, barOthers);
+  const barExtra = barOthers + (switchShown ? 1 : 0);
   const pill =
     isThread && info ? (
       <HeaderPill
@@ -2068,6 +2083,7 @@ function Chat({
         title={title}
         subtitle={subtitle}
         onPress={openOptions}
+        extraActions={barExtra}
         {...hold}
         label={t("mobile.chat.headerChannel", { who: who(title, subtitle ?? "") })}
       />
@@ -2093,7 +2109,7 @@ function Chat({
         working={Boolean(dmDoing)}
         // Reading far up, only the face stays (the screen is the messages); a new reply opens it again.
         collapsed={far && unseen.messages === 0}
-        extraActions={(dmAgentId ? 1 : 0) + (queueShown ? 1 : 0) + (agentTasks ? tasksBadge(agentTasks).room : 0)}
+        extraActions={barExtra}
         onPress={dmAgentId ? () => router.push(`/agent/${dmAgentId}`) : openOptions}
         {...hold}
         label={
@@ -2110,7 +2126,7 @@ function Chat({
         // The channel's sky in the pill, as an agent's DM: the color of the first agent in it.
         color={agentLook(dir.agentById.get(roster.data?.find((r) => r.type === "agent")?.id ?? "")).color}
         trailing={
-          roster.data && roster.data.length > 0 ? (
+          roster.data && roster.data.length > 0 && facesFit(pillRoom(screenWidth, barExtra)) ? (
             <View style={styles.faces}>
               {roster.data.slice(0, 3).map((r, i) => (
                 // Every face the same size and shape box, ringed in the pill's glass: an agent in its tile
@@ -2131,7 +2147,7 @@ function Chat({
           ) : undefined
         }
         onPress={openMembers}
-        extraActions={(queueShown ? 1 : 0) + (searchPlace ? 1 : 0)}
+        extraActions={barExtra}
         {...hold}
         // A channel's pill opens who is in it, and says so (its "…" holds the options).
         label={t("mobile.chat.headerMembers", { who: who(title, subtitle ?? "") })}
@@ -2140,7 +2156,6 @@ function Chat({
   // An agent's DM also opens its tasks while it has some (ADR 0128), pushed like a thread, and its computer (as the
   // web's DM header) for whoever may watch it: one entry, the line while turns wait for the computer (the way on to
   // it inside), else the computer.
-  const dmComputer = dmAgentId && !isThread && !rightHand ? { agentId: dmAgentId, onOpen: leavePlace } : undefined;
   const right =
     (isThread && info) || dm || channel ? (
       <>
@@ -2168,6 +2183,7 @@ function Chat({
         ) : dmComputer ? (
           <DmComputerButton agentId={dmComputer.agentId} onOpen={leavePlace} />
         ) : null}
+        {switchShown ? <IconButton icon="swap" label={t("mobile.chat.switchTitle")} onPress={openSwitcher} /> : null}
         {/* A DM searches from its "…" (its name and the agent's own buttons keep the room). */}
         {searchPlace && !dm ? (
           <IconButton icon="search" label={t("searchPage.searchHere")} onPress={openSearch} />
@@ -2178,12 +2194,21 @@ function Chat({
   // On iOS the plain buttons (the computer, search, "…") are the system's own bar buttons: UIKit places them and takes
   // the tap anywhere on them, where our views in the bar answered only a still tap right on the icon. A counted button
   // (the agent's tasks, the computer's line) has no system form, so while one shows the bar stays ours (`right`).
-  const [computerWords, setComputerWords] = useState<string | null>(null);
   const counted = Boolean((dmAgentId && agentTasks) || (queueShown && barQueue && queueMachineId));
   const barActions: HeaderAction[] | undefined =
     IOS_BAR && !counted && ((isThread && info) || dm || channel)
       ? [
           ...(dmComputer && computerWords ? [dmComputerAction(dmComputer.agentId, computerWords, leavePlace)] : []),
+          ...(switchShown
+            ? [
+                {
+                  icon: "swap" as const,
+                  sf: "arrow.left.arrow.right" as const,
+                  label: t("mobile.chat.switchTitle"),
+                  onPress: openSwitcher,
+                },
+              ]
+            : []),
           ...(searchPlace && !dm
             ? [
                 {
@@ -2919,7 +2944,7 @@ function Chat({
           solid={false}
           {...(barActions ? { actions: barActions } : { right })}
         />
-        {IOS_BAR && dmComputer ? <DmComputerWords agentId={dmComputer.agentId} onWords={setComputerWords} /> : null}
+        {dmComputer ? <DmComputerWords agentId={dmComputer.agentId} onWords={setComputerWords} /> : null}
         {hasPin ? (
           // The bar is see-through (the conversation runs under it): an open mission's card starts below it. Pinned
           // messages have no bar here: they wait above the first message, revealed by pulling down (`PinnedLines`).
