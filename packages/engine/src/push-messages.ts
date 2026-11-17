@@ -6,7 +6,8 @@
  * Short and friendly. Never internal names (the router's or the judge's
  * model, vendors, tools): only the agent's or the person's own name and what
  * they wrote. A high-risk approval only says to open the app: it is never
- * approved from the notification.
+ * approved from the notification (a low-risk one has Recusar and Aprovar, which
+ * opens its card: `pushCategory` in push.ts).
  */
 
 import { type AppLocale, appLocale } from "@agenteschat/i18n/locale";

@@ -24,6 +24,15 @@ export function readValueSync(name: string): string | null {
   }
 }
 
+/** `readValueSync`, but `undefined` when the value couldn't be read, for a value that must fail closed (the app lock). */
+export function readValueSyncOrUnknown(name: string): string | null | undefined {
+  try {
+    return SecureStore.getItem(key(name));
+  } catch {
+    return undefined;
+  }
+}
+
 /** `writeValue` at once, for a value read back in the same render (`readValueSync`). */
 export function writeValueSync(name: string, value: string): void {
   try {

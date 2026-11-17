@@ -300,6 +300,21 @@ export interface PushDelivery {
   held?: boolean;
 }
 
+/**
+ * The app's notification category for a push (iOS `aps.category`, Android `categoryId`): the buttons it shows on the
+ * lock screen. A device's notice has its own (Stop; Let it join, Deny; Allow once, No), by its kind. An approval that
+ * isn't high risk has Recusar, decided without opening the app, and Aprovar, which opens its card (ADR 0035
+ * addendum); a high-risk one, or one whose risk isn't known, has none.
+ */
+export function pushCategory(kind: string, highRisk: boolean, approvalId?: string | null): string | undefined {
+  if (kind.startsWith("device.")) return kind;
+  if (kind === "approval" && approvalId && !highRisk) return APPROVAL_PUSH_CATEGORY;
+  return undefined;
+}
+
+/** The category of an approval's push the phone answers with its buttons (`apps/mobile/src/features/approvals/push-actions.ts`). */
+export const APPROVAL_PUSH_CATEGORY = "approval";
+
 /** Same rule as the web's approval card: production, irreversible or external actions are high risk. */
 export function approvalIsHighRisk(approval: { tool: string; scope: string }): boolean {
   const text = `${approval.tool} ${approval.scope}`.toLowerCase();
@@ -453,12 +468,16 @@ export async function deliverPush(
   const actor = row.actors[0];
   const name = await actorName(db, row.orgId, actor);
   let highRisk = false;
+  // The buttons follow the risk the Tool Gateway stored with the request (`approvals.high_risk`), and the card's rule
+  // besides; anything unknown has none. The words keep the card's rule alone.
+  let buttonsRisk = true;
   if (row.kind === "approval" && source.approvalId) {
     const [approval] = await db
-      .select({ tool: approvals.tool, scope: approvals.scope })
+      .select({ tool: approvals.tool, scope: approvals.scope, highRisk: approvals.highRisk })
       .from(approvals)
       .where(and(eq(approvals.orgId, row.orgId), eq(approvals.id, source.approvalId)));
     highRisk = approval ? approvalIsHighRisk(approval) : true;
+    buttonsRisk = !approval || approval.highRisk || highRisk;
   }
   const data: Record<string, unknown> = { orgId: row.orgId, kind: row.kind, notificationId: row.id };
   if (deps.server) data.server = deps.server;
@@ -495,6 +514,7 @@ export async function deliverPush(
   let phoneRequestFailed = false;
 
   if (deps.push && phones.length > 0) {
+    const category = pushCategory(row.kind, buttonsRisk, source.approvalId);
     const messages: PushMessage[] = phones.map((d) => ({
       to: d.token,
       platform: d.platform === "ios" ? "ios" : "android",
@@ -505,8 +525,8 @@ export async function deliverPush(
       ...renderPush(pushLocale(d.locale), text),
       data,
       priority: row.waiting ? "high" : "default",
-      // A device's notice has buttons on the lock screen (Stop; Allow once, Always, No), by its kind.
-      ...(row.kind.startsWith("device.") ? { category: row.kind } : {}),
+      // Buttons on the lock screen: a device's notice, and an approval that isn't high risk.
+      ...(category ? { category } : {}),
     }));
     try {
       const results = await deps.push.send(messages);

@@ -5,6 +5,8 @@ import * as Notifications from "expo-notifications";
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppState } from "react-native";
+import { decideFromPush, registerApprovalActions } from "@/features/approvals/push";
+import { pressedButton } from "@/features/approvals/push-actions";
 import { registerDeviceActions, runDeviceAction } from "@/features/devices/push";
 import { hrefForPush, notificationWebPath, pushAsNotification } from "@/features/links/logic";
 import { openWebPath } from "@/features/links/open-web";
@@ -112,9 +114,16 @@ export function PushProvider({ children }: { children: ReactNode }) {
     };
   }, [ready, locale, t]);
 
-  // A device notification's buttons on the lock screen, in the person's language.
+  // A device notification's and an approval's buttons on the lock screen, in the person's language. The approval's
+  // follow the app lock, so they are set again whenever the app leaves the front.
   useEffect(() => {
-    if (ready) void registerDeviceActions(t);
+    if (!ready) return;
+    void registerDeviceActions(t);
+    void registerApprovalActions(t);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "background") void registerApprovalActions(t);
+    });
+    return () => sub.remove();
   }, [ready, t]);
 
   // The system may hand the app a new token while it runs; it's registered again (ADR 0152, ADR 0178).
@@ -138,6 +147,10 @@ export function PushProvider({ children }: { children: ReactNode }) {
       } catch {
         // Nothing kept to clear.
       }
+      // Recusar on an approval's notification: refused where the app is, and nothing opens (ADR 0035 addendum). On
+      // Android the background task may have taken it first. Aprovar goes on as a tap: the request's card opens.
+      const pressed = pressedButton(response);
+      if (pressed && decideFromPush(pressed)) return;
       const data = readPushData(response.notification.request.content.data);
       // From another server this phone is signed in to: the app moves there first, then opens it (ADR 0154). One
       // from a server it left opens nothing.

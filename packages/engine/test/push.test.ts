@@ -16,6 +16,7 @@ import { eq, schema } from "@agenteschat/db";
 import { LOCALE_CODES } from "@agenteschat/i18n/locale";
 import { unplainLeaves } from "../../i18n/test/plain-marks";
 import {
+  APPROVAL_PUSH_CATEGORY,
   addChannelMember,
   approvalIsHighRisk,
   createJobHandlers,
@@ -34,6 +35,7 @@ import {
   openDm,
   PUSH_ACTIVE_DELAY_MS,
   postPersonMessage,
+  pushCategory,
   pushLocale,
   pushQuote,
   pushStrings,
@@ -224,6 +226,15 @@ describe("push text", () => {
     expect(approvalIsHighRisk({ tool: "deploy", scope: "railway:deploy" })).toBe(true);
     expect(approvalIsHighRisk({ tool: "send_email", scope: "gmail:send" })).toBe(true);
     expect(approvalIsHighRisk({ tool: "post_message", scope: "chat:send" })).toBe(false);
+  });
+
+  test("buttons on the lock screen: a device's notice by its kind, an approval only when it isn't high risk", () => {
+    expect(pushCategory("device.join_request", false)).toBe("device.join_request");
+    expect(pushCategory("approval", false, "a1")).toBe(APPROVAL_PUSH_CATEGORY);
+    expect(pushCategory("approval", true, "a1")).toBeUndefined();
+    // No approval to decide: no buttons.
+    expect(pushCategory("approval", false)).toBeUndefined();
+    expect(pushCategory("mention", false)).toBeUndefined();
   });
 });
 
@@ -526,7 +537,51 @@ describe("push delivery", () => {
       to: TOKEN_BIA,
       title: "Dev precisa da sua aprovação",
       body: "Rotina «Revisar PRs»: Toque para ver o pedido.",
+      data: expect.objectContaining({ approvalId: approval.id, orgId: f.org.id }),
     });
+    // The Tool Gateway stored it as high risk (a merge): no buttons on the notification.
+    expect(push.sent[0]?.category).toBeUndefined();
+  });
+
+  test("an approval's buttons follow the risk stored with it and the card's rule, never one alone", async () => {
+    f = await setup();
+    const { bia, push, drain } = await withPhone();
+    const kinds = [
+      { tool: "github.merge_pull_request", scope: "github:merge", highRisk: true },
+      { tool: "npm.publish", scope: "npm:publish", highRisk: true },
+      { tool: "GITHUB_EXECUTE_WORKFLOW", scope: "github:actions", highRisk: true },
+      // Stored as low, but the card's rule calls a deploy high risk.
+      { tool: "deploy", scope: "railway:deploy", highRisk: false },
+      { tool: "linear.create_issue", scope: "linear:write", highRisk: false },
+    ];
+    for (const [i, kind] of kinds.entries()) {
+      const [approval] = await f.db
+        .insert(schema.approvals)
+        .values({
+          orgId: f.org.id,
+          agentId: f.agent.id,
+          channelId: f.general.id,
+          threadRootId: crypto.randomUUID(),
+          toolUseId: `toolu_${i}`,
+          ...kind,
+          params: {},
+          actionHash: `hash-${i}`,
+          title: kind.tool,
+          detail: "{}",
+          expiresAt: new Date(Date.now() + 3600_000),
+        })
+        .returning();
+      if (!approval) throw new Error("no approval");
+      await notifyApproval(deps(), approval, [bia.id]);
+      await drain();
+    }
+    expect(push.sent.map((m) => m.category)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      APPROVAL_PUSH_CATEGORY,
+    ]);
   });
 
   test("an unregistered token is deleted", async () => {

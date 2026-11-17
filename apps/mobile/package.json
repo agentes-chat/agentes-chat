@@ -2,7 +2,7 @@
   "name": "@agenteschat/mobile",
   "version": "0.0.0",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "index.ts",
   "scripts": {
     "start": "expo start --dev-client",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -56,6 +56,7 @@
     "expo-splash-screen": "~58.0.10",
     "expo-status-bar": "~58.0.3",
     "expo-system-ui": "~58.0.6",
+    "expo-task-manager": "~58.0.14",
     "expo-video": "~58.0.13",
     "expo-web-browser": "~58.0.6",
     "i18next": "^26.4.2",

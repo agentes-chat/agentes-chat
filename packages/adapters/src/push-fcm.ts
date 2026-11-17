@@ -58,6 +58,8 @@ export function fcmMessage(m: PushMessage) {
         body: JSON.stringify(m.data),
         channelId: FCM_ANDROID_CHANNEL,
         sound: "default",
+        // The buttons the app registered for this kind of notification (`setNotificationCategoryAsync`).
+        ...(m.category ? { categoryId: m.category } : {}),
       },
     },
   };

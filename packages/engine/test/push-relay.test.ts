@@ -132,7 +132,7 @@ describe("relay sending", () => {
       badge: 9,
     } as unknown as PushMessage;
     const plain = { ...iphone(2), apns: { sandbox: false, extra: "x" } } as unknown as PushMessage;
-    // An Android message's `apns` and `category` are dropped: Firebase gets neither.
+    // An Android message's `apns` is dropped; its `category` is kept: Firebase hands it to the app as `categoryId`.
     const android = msg(3, { apns: { topic: "chat.agentes.app" }, category: "device.join" });
     const results = await relaySend(deps, instance, [full, plain, iphone(4), android]);
     expect(results.map((r) => r.ok)).toEqual([true, true, true, true]);
@@ -140,7 +140,7 @@ describe("relay sending", () => {
       iphone(1, { apns: { topic: "chat.agentes.app.preview", sandbox: true }, category: "device.join" }),
       iphone(2, { apns: {} }),
       iphone(4),
-      msg(3),
+      msg(3, { category: "device.join" }),
     ]);
   });
 

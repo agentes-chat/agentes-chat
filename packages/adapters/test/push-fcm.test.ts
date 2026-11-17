@@ -72,6 +72,13 @@ describe("fcmMessage", () => {
     });
     expect(fcmMessage(msg("tok-1", "high")).message.android.priority).toBe("HIGH");
   });
+
+  test("a notification with buttons names their category as expo-notifications reads it", () => {
+    expect(fcmMessage({ ...msg("tok-1"), category: "approval" }).message.data).toMatchObject({
+      categoryId: "approval",
+    });
+    expect(fcmMessage(msg("tok-1")).message.data).not.toHaveProperty("categoryId");
+  });
 });
 
 describe("fcmResultOf", () => {

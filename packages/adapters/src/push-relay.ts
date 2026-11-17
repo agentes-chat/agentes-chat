@@ -166,9 +166,9 @@ function relayMessageOf(m: PushMessage) {
     body: m.body,
     data: m.data,
     ...(m.priority ? { priority: m.priority } : {}),
-    // An iPhone's app and environment, and the buttons its notification shows (ADR 0178).
+    // An iPhone's app and environment (ADR 0178), and the buttons the notification shows on either phone.
     ...(m.platform === "ios" && m.apns ? { apns: m.apns } : {}),
-    ...(m.platform === "ios" && m.category ? { category: m.category } : {}),
+    ...(m.category ? { category: m.category } : {}),
   };
 }
 

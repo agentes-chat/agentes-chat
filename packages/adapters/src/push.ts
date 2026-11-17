@@ -19,7 +19,7 @@ export interface PushMessage {
   data: Record<string, unknown>;
   /** `high` wakes the device right away (things waiting for the person). */
   priority?: "default" | "high";
-  /** The app's notification category (iOS `aps.category`): the buttons it shows on the lock screen. */
+  /** The app's notification category (iOS `aps.category`, Android `categoryId`): the buttons it shows on the lock screen. */
   category?: string;
   /**
    * iOS: the app the token belongs to (its bundle id, the APNs topic) and whether it is a development build,

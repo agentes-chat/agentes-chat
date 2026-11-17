@@ -143,12 +143,14 @@ function relayMessage(input: unknown, index: number): PushMessage {
     data: data as Record<string, unknown>,
     ...(m.priority ? { priority: m.priority as "default" | "high" } : {}),
   };
-  if (!ios) return message;
-  const apns = relayApns(m.apns, bad);
+  // The buttons the app shows for it, on either phone (Android's `categoryId`, iOS's `aps.category`).
   if (m.category !== undefined && (typeof m.category !== "string" || !APNS_CATEGORY.test(m.category))) {
     throw bad("category must be a notification category's id");
   }
-  return { ...message, ...(apns ? { apns } : {}), ...(m.category ? { category: m.category } : {}) };
+  const category = m.category ? { category: m.category } : {};
+  if (!ios) return { ...message, ...category };
+  const apns = relayApns(m.apns, bad);
+  return { ...message, ...(apns ? { apns } : {}), ...category };
 }
 
 /**

@@ -140,11 +140,11 @@ describe("relay push sender", () => {
     expect(sent.map((m) => m.to)).toEqual([msg(1).to]);
   });
 
-  test("an iPhone's message carries its app, its environment and its buttons", async () => {
+  test("an iPhone's message carries its app, its environment and its buttons; an Android one its buttons", async () => {
     const relay = fakeRelay();
     const sender = createRelayPushSender({ url: RELAY_URL, credentials: memoryCredentials(), fetch: relay.fetch });
     const withButtons = { ...iphone(1), category: "device.join" };
-    // Android has neither: a category there is the app's own business, and never the relay's.
+    // Android has no app or environment, but its notification shows the same buttons (`categoryId`).
     const results = await sender.send([withButtons, iphone(2, {}), { ...msg(3), category: "device.join" }]);
     expect(results.map((r) => r.ok)).toEqual([true, true, true]);
     const sent = relay.calls.filter((c) => c.path === "/send").flatMap((c) => c.body.messages as PushMessage[]);
@@ -172,6 +172,7 @@ describe("relay push sender", () => {
         title: "Oi",
         body: "Tudo certo?",
         data: { orgId: "o", kind: "mention", notificationId: "n3" },
+        category: "device.join",
       },
     ]);
   });
