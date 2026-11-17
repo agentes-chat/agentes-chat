@@ -14128,6 +14128,11 @@
         "1": "Podgląd kampanii i wyników",
         "2": "Tworzenie i dostosowywanie kampanii"
       },
+      "querya": {
+        "1": "Przeglądać raporty, wyszukiwane hasła i pomysły na słowa kluczowe Google Ads",
+        "2": "Przygotowywać zmiany w kampaniach, budżetach, stawkach i słowach kluczowych",
+        "ask": "Wprowadzenie zmiany w Google Ads wymaga Twojej zgody"
+      },
       "google_docs": {
         "1": "Wyszukiwanie i czytanie dokumentów",
         "2": "Tworzenie i edycja dokumentów"
@@ -14395,6 +14400,7 @@
       "amplitude": "Wykresy, dashboardy i eksperymenty.",
       "himetrica": "Odwiedzający, lejki, przychody i ruch z wyszukiwarek.",
       "meta_ads": "Kampanie reklamowe na Facebooku i Instagramie oraz ich wyniki.",
+      "querya": "Raporty Google Ads, badanie słów kluczowych i zmiany w kampaniach, z podglądem i cofaniem.",
       "klaviyo": "Kampanie, przepływy, listy i profile.",
       "millionsend": "Kampanie e-mailowe, listy i kontakty.",
       "semrush": "Dane o słowach kluczowych, domenach i linkach zwrotnych.",

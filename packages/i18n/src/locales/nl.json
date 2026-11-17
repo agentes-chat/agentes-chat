@@ -13210,6 +13210,11 @@
         "1": "Campagnes en resultaten bekijken",
         "2": "Campagnes maken en bijsturen"
       },
+      "querya": {
+        "1": "Google Ads-rapporten, zoektermen en zoekwoordideeën bekijken",
+        "2": "Wijzigingen in campagnes, budgetten, biedingen en zoekwoorden voorbereiden",
+        "ask": "Een wijziging in Google Ads doorvoeren vraagt om je goedkeuring"
+      },
       "google_docs": {
         "1": "Documenten zoeken en lezen",
         "2": "Documenten maken en bewerken"
@@ -13467,6 +13472,7 @@
       "amplitude": "Grafieken, dashboards en experimenten.",
       "himetrica": "Bezoekers, funnels, omzet en zoekverkeer.",
       "meta_ads": "Advertentiecampagnes en resultaten op Facebook en Instagram.",
+      "querya": "Google Ads-rapporten, zoekwoordonderzoek en campagnewijzigingen, met voorbeeld en ongedaan maken.",
       "klaviyo": "Campagnes, flows, lijsten en profielen.",
       "millionsend": "E-mailcampagnes, lijsten en contacten.",
       "semrush": "Data over zoekwoorden, domeinen en backlinks.",

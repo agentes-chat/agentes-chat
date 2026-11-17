@@ -13084,6 +13084,11 @@
         "1": "Kampanyaları ve sonuçları görür",
         "2": "Kampanya oluşturur ve ayarlar"
       },
+      "querya": {
+        "1": "Google Ads raporlarını, arama terimlerini ve anahtar kelime fikirlerini gör",
+        "2": "Kampanyalar, bütçeler, teklifler ve anahtar kelimelerde değişiklik hazırla",
+        "ask": "Google Ads'te bir değişikliği uygulamak onayını ister"
+      },
       "google_docs": {
         "1": "Belgeleri arar ve okur",
         "2": "Belge oluşturur ve düzenler"
@@ -13341,6 +13346,7 @@
       "amplitude": "Grafikler, panolar ve deneyler.",
       "himetrica": "Ziyaretçiler, huniler, gelir ve arama trafiği.",
       "meta_ads": "Facebook ve Instagram reklam kampanyaları ve sonuçları.",
+      "querya": "Google Ads raporları, anahtar kelime araştırması ve kampanya değişiklikleri, önizleme ve geri alma ile.",
       "klaviyo": "Kampanyalar, akışlar, listeler ve profiller.",
       "millionsend": "E-posta kampanyaları, listeler ve kişiler.",
       "semrush": "Anahtar kelime, alan adı ve geri bağlantı verileri.",
