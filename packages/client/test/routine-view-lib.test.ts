@@ -78,6 +78,17 @@ describe("a routine's runs", () => {
       fallback: "routines.outcome.failed",
     });
     expect(say(run({ status: "failed", code: "provider_no_credit" })).key).toBe("routines.outcome.failed");
+    // A CLI's failure names its program and says what it said; without them, the routine's own line for the code.
+    const cli = { brain: "Claude Code", detail: "EAGAIN: resource temporarily unavailable" };
+    expect(say(run({ status: "failed", code: "cli_failed", codeParams: cli }))).toEqual({
+      key: "agentPage.activity.errors.cli_failed",
+      values: cli,
+      fallback: "routines.code.cli_failed",
+    });
+    expect(say(run({ status: "failed", code: "cli_failed", codeParams: { brain: "Codex" } })).key).toBe(
+      "agentPage.activity.errors.cli_stopped",
+    );
+    expect(say(run({ status: "failed", code: "cli_failed" })).key).toBe("routines.code.cli_failed");
     // A run that told people says so, whatever its code (its final text became the report).
     expect(say(run({ status: "reported", code: "auto_report" })).key).toBe("routines.outcome.reported");
     expect(say(run({ status: "silent" })).key).toBe("routines.outcome.silent");

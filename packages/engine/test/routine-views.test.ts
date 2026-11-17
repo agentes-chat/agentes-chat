@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { eq, schema } from "@agenteschat/db";
+import { eq, inArray, schema } from "@agenteschat/db";
 import {
   addChannelMember,
   calendarRange,
@@ -244,6 +244,29 @@ describe("routine views", () => {
     expect(notRead.recentRuns[0]?.code).toBe("provider_error");
     expect(notRead.recentRuns[0]?.codeParams).toBeUndefined();
     await f.db.delete(schema.routineRuns).where(eq(schema.routineRuns.agentRunId, noCredit.id));
+
+    // A CLI's failure names its program and says what it said, to the same reader; an older row's brain code
+    // (`claude_failed`) reads as `cli_failed` for everyone.
+    const spawn = "EAGAIN: resource temporarily unavailable, posix_spawn 'claude'";
+    const cliFailed = await agentRun("failed", { error: `cli_failed: Claude Code: ${spawn}` });
+    await routineRun(routine.id, 0.1, { status: "failed", code: "cli_failed", agentRunId: cliFailed.id });
+    const cut = await agentRun("failed", { error: "brain_interrupted: Cannot fork" });
+    await routineRun(routine.id, 0.2, { status: "failed", code: "claude_failed", agentRunId: cut.id });
+    const cliRead = await getRoutineView(f.db, f.owner.id, f.org.id, routine.id);
+    expect(cliRead.recentRuns[0]).toMatchObject({
+      code: "cli_failed",
+      codeParams: { brain: "Claude Code", detail: spawn },
+    });
+    expect(cliRead.recentRuns[1]).toMatchObject({
+      code: "cli_failed",
+      codeParams: { brain: "Claude Code", detail: "Cannot fork" },
+    });
+    const cliNotRead = await getRoutineView(f.db, bia.id, f.org.id, routine.id);
+    expect(cliNotRead.recentRuns.slice(0, 2).map((r) => [r.code, r.codeParams])).toEqual([
+      ["cli_failed", undefined],
+      ["cli_failed", undefined],
+    ]);
+    await f.db.delete(schema.routineRuns).where(inArray(schema.routineRuns.agentRunId, [cliFailed.id, cut.id]));
 
     // Its agent run answered: no longer waiting; a failure streak shows as failing.
     await f.db.update(schema.agentRuns).set({ status: "done" }).where(eq(schema.agentRuns.id, away.id));

@@ -448,6 +448,22 @@ describe("schedule tools: routines", () => {
         run(2, { status: "skipped", code: "previous_running" }),
         run(3, { status: "reported", summary: "3 erros novos." }),
       ]);
+    // A run its CLI failed: the list says what the code means and what the program said, as outside text.
+    const [asked] = await f.db.select().from(schema.agentRuns).where(eq(schema.agentRuns.id, ctx.runId));
+    if (!asked) throw new Error("no run");
+    const [failed] = await f.db
+      .insert(schema.agentRuns)
+      .values({
+        ...asked,
+        id: Bun.randomUUIDv7(),
+        triggerMessageId: Bun.randomUUIDv7(),
+        status: "failed",
+        error: "cli_failed: Claude Code: EAGAIN: resource temporarily unavailable, posix_spawn 'claude'",
+      })
+      .returning();
+    await f.db
+      .insert(schema.routineRuns)
+      .values(run(4, { status: "failed", code: "cli_failed", agentRunId: failed?.id }));
     await f.db
       .update(schema.routines)
       .set({ active: false, nextRunAt: null, pausedReason: "failing", failuresInRow: 5 })
@@ -456,6 +472,12 @@ describe("schedule tools: routines", () => {
     expect(listed.content).toContain("(paused: failing)");
     expect(listed.content).toContain("next: none");
     expect(listed.content).toContain("failed (provider_error)");
+    expect(listed.content).toContain(
+      "failed (cli_failed): the Claude Code program on the agent's computer stopped with an error. It said:",
+    );
+    expect(listed.content).toMatch(
+      /<external_data source="routine run error">\nEAGAIN: resource temporarily unavailable, posix_spawn 'claude'\n<\/external_data>/,
+    );
     expect(listed.content).toContain("skipped (previous_running)");
     expect(listed.content).toContain("reported");
     expect(listed.content).toContain("Olhe o Sentry.");

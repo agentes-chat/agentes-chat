@@ -155,6 +155,11 @@ export function runOutcome(
   // A provider's failure by its cause, in the words the conversation uses for it.
   if (run.code.startsWith("provider_") && run.codeParams?.provider)
     return { key: `agentPage.activity.errors.${run.code}`, values: run.codeParams, fallback };
+  // A CLI's failure names its program and says what it said, in the same words.
+  if (run.code === "cli_failed" && run.codeParams?.brain) {
+    const key = `agentPage.activity.errors.${run.codeParams.detail ? "cli_failed" : "cli_stopped"}`;
+    return { key, values: run.codeParams, fallback: "routines.code.cli_failed" };
+  }
   if ((RUN_CODES as readonly string[]).includes(run.code))
     return { key: `routines.code.${run.code}`, values: { ...(run.codeParams ?? {}) }, fallback };
   return { key: fallback, values: {} };
