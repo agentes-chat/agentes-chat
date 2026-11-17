@@ -78,7 +78,7 @@ jobs:
           docker buildx build --push --platform linux/amd64,linux/arm64 \
             --provenance=false --sbom=false \
             --cache-from type=local,src=/tmp/agentes-build-cache \
-            --cache-to type=local,dest=/tmp/agentes-build-cache,mode=max \
+            --cache-to type=local,dest=/tmp/agentes-build-cache,mode=min \
             "${APP_TAGS[@]}" .
           docker buildx build --push --platform linux/amd64,linux/arm64 \
             --provenance=false --sbom=false \

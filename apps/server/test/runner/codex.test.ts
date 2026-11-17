@@ -238,11 +238,12 @@ test("Codex model/list parsing, app-server probe, and parseExecutors keep live m
     fakeScript,
     [
       "import readline from 'node:readline';",
-      "const rl = readline.createInterface({ input: process.stdin });",
+      "process.stdin.on('end', () => process.exit(0));",
+      "const rl = readline.createInterface({ input: process.stdin, terminal: false });",
       "rl.on('line', (l) => {",
       "  const m = JSON.parse(l);",
-      `  if (m.id === 1) process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: 1, result: {} }) + '\\n');`,
-      `  if (m.id === 2) process.stdout.write(JSON.stringify(${JSON.stringify(payload)}) + '\\n');`,
+      "  if (m.id === 1) process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: 1, result: {} }) + '\\n');",
+      `  if (m.id === 2) setTimeout(() => process.stdout.write(JSON.stringify(${JSON.stringify(payload)}) + '\\n'), 25);`,
       "});",
     ].join("\n"),
   );

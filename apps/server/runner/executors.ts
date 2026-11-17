@@ -528,7 +528,7 @@ async function detectWithModels(
   };
 }
 
-const CODEX_PROBE_TIMEOUT_MS = 4_000;
+const CODEX_PROBE_TIMEOUT_MS = 8_000;
 
 /** Parses one JSON-RPC response from `codex app-server`'s `model/list` method into `CursorModelInfo[]`. */
 export function parseCodexAppServerModels(msg: unknown): CursorModelInfo[] {
@@ -584,6 +584,7 @@ export function probeCodexModels(
 ): Promise<CursorModelInfo[]> {
   return new Promise((resolve) => {
     let settled = false;
+    let listed = false;
     let buf = "";
     const launch = cliSpawn(command, ["app-server"], env.PATH);
     let child: ReturnType<typeof spawn>;
@@ -602,6 +603,9 @@ export function probeCodexModels(
       settled = true;
       clearTimeout(timer);
       try {
+        child.stdin?.end();
+      } catch {}
+      try {
         child.kill();
       } catch {}
       resolve(models);
@@ -612,6 +616,7 @@ export function probeCodexModels(
     const emitter = child as unknown as EventEmitter;
     emitter.on("error", () => finish([]));
     emitter.on("exit", () => finish([]));
+    child.stderr?.resume();
     child.stdout?.setEncoding("utf8");
     child.stdout?.on("data", (chunk: string) => {
       buf += chunk;
@@ -623,6 +628,17 @@ export function probeCodexModels(
         if (!line) continue;
         try {
           const parsed = JSON.parse(line) as { id?: unknown };
+          if (parsed.id === 1 && !listed) {
+            listed = true;
+            try {
+              child.stdin?.write(
+                `${JSON.stringify({ jsonrpc: "2.0", method: "initialized" })}\n${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "model/list", params: {} })}\n`,
+              );
+            } catch {
+              finish([]);
+            }
+            continue;
+          }
           if (parsed.id === 2) {
             finish(parseCodexAppServerModels(parsed));
             return;
@@ -633,9 +649,8 @@ export function probeCodexModels(
 
     try {
       child.stdin?.write(
-        `${JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { clientInfo: { name: "agentes", version: "1.0" } } })}\n${JSON.stringify({ jsonrpc: "2.0", method: "initialized" })}\n${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "model/list", params: {} })}\n`,
+        `${JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { clientInfo: { name: "agentes", version: "1.0" } } })}\n`,
       );
-      child.stdin?.end();
     } catch {
       finish([]);
     }
