@@ -85,6 +85,7 @@ const REASONS = new Set([
   "ui_automation_off",
   "xcode_missing",
   "xcode_too_old",
+  "ios_behind_xcode",
   "device_support",
   "helper_missing",
   "helper_expired",
@@ -548,6 +549,7 @@ export type IphoneStep = (typeof IPHONE_STEPS)[number];
 const IPHONE_REASON: Record<string, IphoneStep> = {
   xcode_missing: "xcode",
   xcode_too_old: "xcode",
+  ios_behind_xcode: "helper",
   device_support: "tools",
   untrusted: "trust",
   locked: "trust",

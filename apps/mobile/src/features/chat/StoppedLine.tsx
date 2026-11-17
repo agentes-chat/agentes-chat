@@ -102,6 +102,9 @@ export function StopPill({
                 onChange={setWhy}
                 placeholder={t("taskManager.stopped.whyPlaceholder")}
                 autoFocus
+                onSubmit={() => {
+                  if (why.trim() && !say.isPending) send();
+                }}
               />
             </View>
             <Button

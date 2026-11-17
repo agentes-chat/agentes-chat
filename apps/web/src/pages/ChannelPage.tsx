@@ -247,7 +247,7 @@ import { ChatMedia } from "@/chat/ChatMedia";
 import { ChatVoice } from "@/chat/ChatVoice";
 import { ClippedBody } from "@/chat/ClippedBody";
 import { LongDraftNotice } from "@/chat/LongDraftNotice";
-import { useConversationLook } from "@/chat/look";
+import { useConversationLook, useConversationWallpaper } from "@/chat/look";
 import { MessageBody } from "@/chat/MessageBody";
 import { useBrowserOffline } from "@/chat/offline";
 import { readingLanding } from "@/chat/reading";
@@ -297,6 +297,7 @@ import {
   useStopMovedOn,
   useStopNotice,
 } from "@/components/ChatNotices";
+import { ChatWallpaper } from "@/components/ChatWallpaper";
 import { QueueWaitTurns, useAgentsMachineId } from "@/components/ComputerQueue";
 import { ConsultationDialog } from "@/components/ConsultationDialog";
 import {
@@ -376,7 +377,7 @@ import {
 } from "@/components/RequestCard";
 import { ReturnLine } from "@/components/ReturnLine";
 import { SidePanel } from "@/components/SidePanel";
-import { ActivitySky, ChannelWelcome, colorOf } from "@/components/Sky";
+import { ChannelWelcome, colorOf } from "@/components/Sky";
 import { isStoppable, StopButton, useContinueRun, useStopRun, useWasContinued } from "@/components/StopRun";
 import { SearchResultsPanel } from "@/components/search/SearchResultsPanel";
 import { TeamChecks } from "@/components/TeamChecks";
@@ -1801,6 +1802,14 @@ function ChannelView({
     dmAgent ? colorOf(dmAgent) : undefined,
   );
   const namedLook = useMemo(() => ({ ...look, names: true, faces: true }), [look]);
+  // The background behind the column (none in the side panel): "auto" takes the color of the agent a DM is with,
+  // in a thread of that DM too.
+  const dmWithAgent = dmAgent ?? (dmRead?.with.type === "agent" ? dir.agentById.get(dmRead.with.id) : undefined);
+  const wallpaper = useConversationWallpaper(
+    Boolean(chrome?.dmAgentId || chrome?.dmPersonId || thread?.channelKind === "dm"),
+    chrome?.panel ? null : channel.id,
+    dmWithAgent ? colorOf(dmWithAgent) : undefined,
+  );
   // The composer's one pill: the mission this message answers, which can be called off.
   const composerPills = missionReply ? (
     <span className="ac-composer__pill composer-reply">
@@ -2514,7 +2523,8 @@ function ChannelView({
                 )}
                 {/* Under the header: the conversation, and the members beside it (the header spans both, as Discord's). */}
                 <div className="channel__body">
-                  <div className="channel__col">
+                  <div className="channel__col" data-wallpaper={wallpaper?.wallpaper.kind} style={wallpaper?.vars}>
+                    {wallpaper && <ChatWallpaper wallpaper={wallpaper.wallpaper} strength={wallpaper.strength} />}
                     {isMember && (
                       <ChannelPinnedBar
                         channelId={channel.id}
@@ -2579,6 +2589,7 @@ function ChannelView({
                             className="channel__messages"
                             data-look={look.style}
                             data-faces={look.faces ? undefined : "false"}
+                            data-wallpaper={wallpaper?.wallpaper.kind}
                             data-fresh={fresh || undefined}
                             aria-label={t("channel.messages")}
                             aria-live="polite"
@@ -2770,7 +2781,6 @@ function ChannelView({
                             onSeeAsk={seeAsk}
                             waiting={waitingHere}
                             onSeeWaiting={seeWaiting}
-                            stoppable={stopTarget?.runId}
                             consultBlocks={consultGroups.nearEnd}
                             member={isMember}
                           />
@@ -3953,11 +3963,12 @@ function useAsksOutOfView(scroller: { current: HTMLElement | null }, registry: A
 }
 
 /**
- * The bar right above the composer, one for everyone at work here and always one width: a glass pill (in
- * the first agent's color while agents work), their small faces (the typing dots first when only people type)
- * and one line that says it all. An agent whose live row is on screen is left out: the row says its step, its
+ * The bar right above the composer, one for everyone at work here and always one width: a bare line on the
+ * conversation's ground (no glass, no band behind it), their small faces (the typing dots first when only people
+ * type) and one line that says it all. An agent whose live row is on screen is left out: the row says its step, its
  * time and its stop. Its row out of view, or no words of its own yet (there is no thinking row in the conversation),
- * the bar speaks for it: its face, its step, its time, "Ver" once its row is there, and its stop.
+ * the bar speaks for it: its face, its step, its time and "Ver" once its row is there. Stopping it is the composer's
+ * button (and Esc), never a second one here.
  */
 function ActivityBar({
   channelId,
@@ -3970,7 +3981,6 @@ function ActivityBar({
   onSeeAsk,
   waiting,
   onSeeWaiting,
-  stoppable,
   consultBlocks,
   member,
 }: {
@@ -3993,8 +4003,6 @@ function ActivityBar({
   waiting: WaitingItem[];
   /** "Ver" on that count: goes to the oldest one. */
   onSeeWaiting: (item: WaitingItem) => void;
-  /** The run Esc stops (the pill shows its stop). */
-  stoppable?: string;
   /** Runs whose questions a block near the end shows (`ConsultGroup`): the line doesn't say them again. */
   consultBlocks: ReadonlySet<string>;
   /** The reader is in this conversation (may answer here). */
@@ -4051,12 +4059,10 @@ function ActivityBar({
     runs,
     rowInView,
   );
-  const { stop } = useStopRun();
   const active = entries.length > 0;
   const agents = entries.filter((e) => e.type === "agent");
-  // The strip behind the bar (and the orbit) take the color of the first agent at work.
   const firstAgent = agents[0];
-  // The time, "Ver" and the stop are one agent's: with several, the line can't say whose (the composer still stops).
+  // The time and "Ver" are one agent's: with several, the line can't say whose.
   const soloRun = agents.length === 1 && firstAgent ? runs.find((r) => r.agentId === firstAgent.id) : undefined;
   // Only while its row is out of view (a question it asks keeps its phrase here, its row in view or not).
   const soloAway = soloRun && !rowInView(soloRun) ? soloRun : undefined;
@@ -4090,7 +4096,6 @@ function ActivityBar({
     : consult?.id && openTalk
       ? () => openTalk(consult.id as string)
       : undefined;
-  const skyOf = consult ? consult.to : firstAgent?.id;
   const consultTip =
     consult?.kind === "note" && firstAgent
       ? t("chat.consult.handedOff", {
@@ -4133,7 +4138,6 @@ function ActivityBar({
       >
         {ask && (
           <>
-            <ActivitySky color={colorOf(dir.anyAgent(ask.agentId))} />
             <span className="ac-typing__avatars" aria-hidden="true">
               <span className="ac-typing__tok">
                 <AgentAvatar agentId={ask.agentId} size="xs" name={askName} state="waiting" />
@@ -4156,21 +4160,16 @@ function ActivityBar({
             <button type="button" className="ac-typing__see" onClick={() => onSeeAsk(ask.id)}>
               {t("ask.bar.see")}
             </button>
-            {/* An agent still at work keeps its stop at the end; the line stays the request. */}
-            {soloAway && stoppable === soloAway.runId && <StopButton run={soloAway} onStop={stop} place="bar" />}
           </>
         )}
         {away && (
           <>
             {awayAgent && (
-              <>
-                <ActivitySky color={colorOf(awayAgent)} />
-                <span className="ac-typing__avatars" aria-hidden="true">
-                  <span className="ac-typing__tok">
-                    <AgentAvatar agentId={awayAgent.id} size="xs" name={awayAgent.name} state="waiting" />
-                  </span>
+              <span className="ac-typing__avatars" aria-hidden="true">
+                <span className="ac-typing__tok">
+                  <AgentAvatar agentId={awayAgent.id} size="xs" name={awayAgent.name} state="waiting" />
                 </span>
-              </>
+              </span>
             )}
             <WaitMark />
             <span className="ac-typing__text">
@@ -4184,7 +4183,6 @@ function ActivityBar({
         )}
         {pill && (
           <>
-            {skyOf && !consult?.yours && <ActivitySky color={colorOf(dir.agentById.get(skyOf))} />}
             {/* Agents at work: their faces open the pill (their rows are out of view); people only typing: the dots
                 first. Who records has a mark of their own by their words, and so has who types beside them. */}
             {!firstAgent && someoneTypes(entries) && !bothAtIt(entries) && <TypingMark />}
@@ -4230,7 +4228,6 @@ function ActivityBar({
                 </button>
               </>
             )}
-            {soloAway && stoppable === soloAway.runId && <StopButton run={soloAway} onStop={stop} place="bar" />}
           </>
         )}
         {rest && <ReturnLine returns={returns} channelId={channelId} canAnswer={member} />}

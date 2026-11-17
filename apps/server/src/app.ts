@@ -1,4 +1,4 @@
-import { MisconfiguredError, requestLocale } from "@agenteschat/engine";
+import { hostLook, MisconfiguredError, requestLocale } from "@agenteschat/engine";
 import { helpDocsUrl } from "@agenteschat/i18n/help";
 import { appLocale } from "@agenteschat/i18n/locale";
 import type { AgentesModule, Edition, ModuleContext } from "@agenteschat/modules";
@@ -56,6 +56,7 @@ import { personUsageRoutes } from "./routes/app/person-usage";
 import { planUsageRoutes } from "./routes/app/plan-usage";
 import { pushRoutes } from "./routes/app/push";
 import { questionRoutes } from "./routes/app/questions";
+import { referralRoutes } from "./routes/app/referrals";
 import { roleRoutes } from "./routes/app/roles";
 import { routineRoutes } from "./routes/app/routines";
 import { sandboxRoutes } from "./routes/app/sandboxes";
@@ -131,6 +132,7 @@ export interface AppOptions {
  * - `/api/openapi.json`   OpenAPI 3.1 document; `/api/reference` interactive docs
  * - `/install`            the self-host installer, `install.sh` (`curl -fsSL <server>/install | sh`)
  * - `/i/<code>`           a new computer's installer with a connect link baked in (`/i/<code>/ps` for Windows)
+ * - `/migrate.sh`         runs `agentes-runner migrate` once, without installing (`/migrate.ps1` for Windows; ADR 0055)
  * - `/install/docker-compose.yml` the compose file of this release, which the setup downloads
  * - `/sw.js`              the web app's service worker (browser push, ADR 0071)
  * - everything else       web app (single-page app), when built
@@ -207,6 +209,7 @@ export function createApp(options: AppOptions) {
     api.route("/app", roleRoutes(deps));
     api.route("/app", storageRoutes(deps));
     api.route("/app", billingRoutes(deps));
+    api.route("/app", referralRoutes(deps));
     api.route("/app", artifactRoutes(deps));
     api.route("/app", issueRoutes(deps));
     api.route("/app", threadRoutes(deps));
@@ -407,10 +410,18 @@ export function createApp(options: AppOptions) {
     // index.html is always revalidated, so a new deploy shows on the next open.
     // No page of the app belongs in a search engine's index, whatever its status: sign-in pages and made-up
     // addresses all answer with the same page. A header, never a robots.txt: a crawler kept out can't read it.
+    // On a registered host (ADR 0194) the page says so on its <html> before the app knows the host, so index.html's
+    // boot rules hide the product's mark. Every page from WEB_DIR passes here, the SPA fallback included.
+    const db = options.services?.db;
     app.use("/*", async (c, next) => {
       await next();
       if (isApi(c.req.path)) return;
       const html = c.res.headers.get("content-type")?.startsWith("text/html");
+      if (html && db && c.res.ok && c.req.method === "GET" && (await hostLook(db, c.req.header("host")))) {
+        const page = (await c.res.text()).replace("<html", "<html data-host");
+        c.res.headers.delete("content-length");
+        c.res = new Response(page, { status: c.res.status, headers: c.res.headers });
+      }
       if (html) c.res.headers.set("x-robots-tag", "noindex");
       if (!c.res.ok || c.res.headers.has("cache-control")) return;
       if (html) c.res.headers.set("cache-control", "no-cache");

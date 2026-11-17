@@ -20,8 +20,7 @@
     "down": "Aşağı taşı",
     "position": "{{at}} / {{count}}.",
     "channelPosition": "{{at}} / {{count}}.",
-    "itsChannels": "Kanallar",
-    "seeAll": "Tümünü gör"
+    "itsChannels": "Kanallar"
   },
   "blocks": {
     "send": "Gönder",
@@ -188,16 +187,9 @@
       "text": "Sunucu kapalı ya da ağınızın dışında olabilir. Tekrar açıldığında sohbetleriniz kendiliğinden görünür.",
       "kept": "Uygulamada zaten olanlar gösteriliyor."
     },
-    "section": {
-      "agents": "Ajanlar",
-      "channels": "Kanallar",
-      "people": "Kişiler"
-    },
-    "seeAll": {
-      "agents": "Tüm ajanları gör",
-      "channels": "Tüm kanalları gör",
-      "people": "Tüm kişileri gör"
-    },
+    "pinned": "Sabitlenenler",
+    "recent": "Son sohbetler",
+    "seeAll": "Tüm sohbetleri gör",
     "wait": {
       "verb": {
         "approval": "onayınızı bekliyor",
@@ -359,8 +351,15 @@
     "profile": "Profil",
     "here_one": "burada {{count}} kişi",
     "here_other": "burada {{count}} kişi",
+    "membersAdd": "Ekle",
+    "membersAdded_one": "#{{channel}} kanalına {{count}} kişi eklendi",
+    "membersAdded_other": "#{{channel}} kanalına {{count}} kişi eklendi",
+    "memberRemoved": "{{name}} artık #{{channel}} kanalında değil",
+    "muted": "#{{channel}} sessize alındı",
+    "unmuted": "#{{channel}} sesi açıldı",
     "headerAgent": "{{who}}. Profili aç",
     "headerChannel": "{{who}}. Seçenekler",
+    "headerMembers": "{{who}}. Kimlerin burada olduğunu gör",
     "switchHint": "Sohbet değiştirmek için basılı tutun",
     "switchTitle": "Sohbet değiştir",
     "switchSearch": "Sohbetlerde ara",
@@ -443,21 +442,15 @@
     "doubleTapHint": "Çift dokunuş = 👍",
     "react": "Tepki ver",
     "attach": {
-      "more": "Başka bir fotoğraf veya dosya ekle",
       "remove": "{{name}} öğesini kaldır",
       "waiting": "{{name}}, gönderilmeyi bekliyor",
       "sending": "{{name}}, gönderiliyor",
+      "failed": "{{name}}, gönderilemedi: yeniden denemek için gönderin",
+      "preparing": "Dosyalar hazırlanıyor…",
       "tooMany": "Mesaj başına en fazla {{count}} dosya."
     },
     "swipeReply": "Yanıtlamak için sağa kaydırın",
     "intent": {
-      "suggest": {
-        "merge": "Birleştirebilirsin",
-        "review": "Önce {{name}} incelesin",
-        "seeChange": "Neyin değiştiğini göster",
-        "summarize": "3 maddede özetle",
-        "nextStep": "Sonraki adım ne?"
-      },
       "arrived": "{{name}} ekibe katıldı",
       "meet": "{{name}} ile ilk sohbetiniz",
       "roleIntro": "Ekibinizde {{role}}. Sade bir dille isteyin.",
@@ -603,7 +596,6 @@
     "minuteLess": "{{n}} dakika önce",
     "minuteMore": "{{n}} dakika sonra",
     "submit": "Bu saatte hatırlat",
-    "quick": "Hızlı saatleri gör",
     "done": "Hatırlatıcı kuruldu",
     "error": {
       "noAgent": "Buradaki hiçbir ajan size hatırlatamıyor",
@@ -661,6 +653,7 @@
     "title": "Yeni misyon",
     "intro": "Ajan bir plan hazırlar ve yalnızca siz söyleyince başlar.",
     "placeholder": "Ne yapılması gerekiyor?",
+    "who": "Kim yapacak",
     "submit": "Plan iste",
     "created": "{{name}} planı hazırlıyor",
     "noAgents": "Henüz hiçbir ajan misyon yürütemiyor. Web sitesinden bir bilgisayar bağlayın.",
@@ -818,9 +811,6 @@
     "keepEditing": "Düzenlemeye devam et"
   },
   "newAgent": {
-    "leaveTitle": "Oluşturmadan çıkılsın mı?",
-    "leaveText": "Başladığınız ajan oluşturulmayacak.",
-    "keepGoing": "Oluşturmaya devam et",
     "identityQuestion": "Ajan kim?",
     "identityLead": "Adı, sohbette ona nasıl seslenileceği ve yüzü.",
     "handleMention": "Çağırmak için @{{handle}} yazın.",
@@ -846,7 +836,6 @@
       "archive": "Telefon .zip veya .tar.gz dosyalarını açmaz. Dosyalar uygulamasında arşivi açmak için .zip dosyasına dokunun ve içindeki dosyaları seçin ya da bilgisayardan içe aktarın.",
       "privacy": "Bu telefonda okunur. Anahtar ve giriş dosyaları asla açılmaz.",
       "also": "Bunlar da gelir",
-      "change": "Değiştir",
       "arrived_one": "{{name}} geldi",
       "arrived_other": "{{count}} ajan geldi",
       "partial": "{{done}} / {{total}} geldi. Yeniden içe aktarırsanız kalanı da gelir."
@@ -870,7 +859,11 @@
     "taskForM": "{{name}} için görev",
     "taskPlaceholder": "Ne yapılması gerekiyor?",
     "sendTask": "Görevi gönder",
-    "taskSent": "Görev gönderildi"
+    "taskSent": "Görev gönderildi",
+    "brakes": {
+      "forgetTitle": "Bu yanıtlar unutulsun mu?",
+      "forgetText": "{{name}} bu tür işlerden önce yeniden sorar."
+    }
   },
   "activity": {
     "title": "Etkinlik",
@@ -1215,7 +1208,7 @@
       "file": "Dosya"
     },
     "more": "Diğer seçenekler",
-    "send": "Gönder",
+    "sendCopy": "Kopya gönder",
     "savePhotos": "Fotoğraflar'a kaydet",
     "drive": "Drive'da görüntüle",
     "saved": "Fotoğraflar'a kaydedildi",
@@ -1229,6 +1222,7 @@
     "place": "{{index}} / {{count}}",
     "previous": "Önceki görsel",
     "next": "Sonraki görsel",
+    "noPreviewTitle": "Önizleme yok",
     "noPreview": "Bu dosya uygulamada açılmıyor. Açmak için başka bir uygulamaya gönderin.",
     "video": {
       "play": "Oynat",
@@ -1238,7 +1232,8 @@
       "mute": "Sesi kapat",
       "unmute": "Sesi aç",
       "fullscreen": "Tam ekran",
-      "open": "Aç"
+      "open": "Aç",
+      "cantPlay": "Bu video bu telefonda oynatılamıyor."
     }
   },
   "issues": {
@@ -1331,7 +1326,6 @@
   "drive": {
     "title": "Drive",
     "search": "Drive'da ara",
-    "types": "Dosya türleri",
     "type": {
       "all": "Tümü",
       "documents": "Belgeler",
@@ -1352,7 +1346,6 @@
     },
     "by": "{{name}} · {{when}}",
     "noResults": "Bu filtrelerle bir şey yok.",
-    "loadFailed": "Drive yüklenemedi.",
     "more": "Daha fazla göster"
   },
   "constellation": {
@@ -1417,8 +1410,6 @@
     "openExisting": "Sayfayı aç"
   },
   "routines": {
-    "loadFailed": "Rutinler yüklenemedi.",
-    "anyAgent": "Tüm ajanlar",
     "create": "Oluştur",
     "when": {
       "custom": "Size özel",
@@ -1804,6 +1795,7 @@
       "ui_automation_off": "UI Otomasyonu kapalı",
       "xcode_missing": "Mac'in Xcode'a ihtiyacı var",
       "xcode_too_old": "Xcode bu iPhone için çok eski",
+      "ios_behind_xcode": "Bu iPhone'un iOS'unu güncelle",
       "device_support": "Mac bu iPhone'u hazırlıyor",
       "helper_missing": "Test yardımcısı henüz kurulmadı",
       "helper_expired": "Test yardımcısının yenilenmesi gerekiyor",
@@ -2028,7 +2020,9 @@
       "other": "Başka bir cihaz kullan",
       "stop": "Beklemeyi bırak",
       "useInstead": "Bunun yerine {{name}} kullan",
-      "none": "Kullanabileceğiniz başka hazır cihaz yok."
+      "none": "Kullanabileceğiniz başka hazır cihaz yok.",
+      "tried": "{{device}} yeniden deneniyor.",
+      "stopped": "Artık {{device}} beklenmiyor."
     }
   },
   "connectors": {
@@ -2292,7 +2286,6 @@
     "noMatch": "“{{q}}” ile eşleşen rol yok.",
     "tooMany": "Bu çalışma alanında zaten 100 rol var. Yenisini oluşturmak için birini silin.",
     "loadFailed": "Roller yüklenemedi. {{cause}}",
-    "backToList": "Rollere dön",
     "nobody": "Kimse",
     "reach": {
       "permissions_one": "{{count}} izin",
@@ -2669,7 +2662,6 @@
   },
   "dashboards": {
     "homeRow": "Yalnızca siz · kendi widget'larınız",
-    "loadFailed": "Panolar yüklenemedi.",
     "create": "Oluştur",
     "routineTarget": "widget'ı",
     "pin": {

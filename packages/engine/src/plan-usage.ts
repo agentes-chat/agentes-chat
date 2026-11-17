@@ -11,7 +11,7 @@ import { modelLimitOf } from "@agenteschat/providers/plans";
 import { agentIdsWithDetails, canTalkTo, speakerFor } from "./audience";
 import { sha256 } from "./crypto";
 import { NotFoundError } from "./errors";
-import { LISTED_ACCOUNT_STATUSES, type PlanServes, servesOf } from "./machine-accounts";
+import { isDefaultAccountLabel, LISTED_ACCOUNT_STATUSES, type PlanServes, servesOf } from "./machine-accounts";
 import { requirePermission } from "./organizations";
 import { agentBudgetsThisMonth, budgetPercent, canViewCost, monthStartUtc } from "./usage";
 import { WEB_USAGE_PROVIDER } from "./web-tools";
@@ -63,6 +63,8 @@ export interface PlanAccountInfo {
   accountId: string | null;
   /** Null for the computer's own sign-in (the app names it). */
   label: string | null;
+  /** Its owner gave it its name (`isDefaultAccountLabel`); false for the computer's own sign-in. */
+  named: boolean;
   plan: string | null;
   /** A key account's coding plan (`zai`, `kimi`…). */
   provider: string | null;
@@ -169,7 +171,7 @@ async function readUsage(
   // A literal, never a parameter: Postgres must see the same expression in the select and the group by.
   const fmt = sql.raw(opts.hourly ? `'YYYY-MM-DD"T"HH24'` : `'YYYY-MM-DD'`);
   const bucket = sql<string>`to_char(${usageRecords.createdAt} at time zone 'UTC', ${fmt})`;
-  // Literals inline for the same reason as `fmt`. The join is on the runs' primary key.
+  // Literals inline for the same reason as `fmt`. The join is on the runs' primary key, within the org, so only its runs are read.
   const use = sql<UseKind>`case
     when ${usageRecords.runId} is null then 'people'
     when exists (select 1 from ${agentConsultations} where ${agentConsultations.targetRunId} = ${usageRecords.runId}) then 'handoffs'
@@ -192,7 +194,7 @@ async function readUsage(
       cost: sql<string>`sum(${usageRecords.costNanoUsd})`,
     })
     .from(usageRecords)
-    .leftJoin(agentRuns, eq(agentRuns.id, usageRecords.runId))
+    .leftJoin(agentRuns, and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, usageRecords.runId)))
     .where(
       and(
         eq(usageRecords.orgId, orgId),
@@ -366,6 +368,7 @@ function accountOf(ctx: Context, key: string, viewerId: string | null): FoundAcc
         kind,
         accountId: null,
         label: null,
+        named: false,
         plan: kind === "claude_code" ? machine.claudePlan : null,
         provider: null,
         ownerName: machine.pairerName,
@@ -390,6 +393,7 @@ function accountOf(ctx: Context, key: string, viewerId: string | null): FoundAcc
       kind,
       accountId: row.id,
       label: row.label,
+      named: !isDefaultAccountLabel(kind, row.label, row.provider),
       plan: row.plan,
       provider: row.provider,
       ownerName,

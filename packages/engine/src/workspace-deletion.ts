@@ -520,7 +520,7 @@ export async function purgeWorkspace(deps: PurgeDeps, orgId: string, options: { 
   if (!org || keptFromDeletion(org)) return false;
 
   const released = await db.transaction((tx) => releaseOrgAccounts(tx, orgId));
-  await announceReleasedAccounts(deps.pubsub, released);
+  await announceReleasedAccounts(deps, released, { wakeWaits: false });
   await accountsSignedOut(db, orgId, released);
 
   const left = await revokeGrants(deps, orgId);

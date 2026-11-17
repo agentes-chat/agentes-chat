@@ -24,7 +24,7 @@ export * from "./systemone";
 export * from "./types";
 
 /**
- * The decision models an installation may pick (ADR 0188). Jev itself is not here: its key and its two ways of paying
+ * The decision models an installation may pick (ADR 0195). Jev itself is not here: its key and its two ways of paying
  * for it stay in the Jev card and in jev-key.ts, untouched. The models below are the ones this slot can add.
  */
 export const DECISION_MODELS: readonly DecisionModelInfo[] = [
@@ -44,7 +44,7 @@ export const DECISION_MODELS: readonly DecisionModelInfo[] = [
   },
   // Laya is the only local decision model this build offers: 421M parameters, about 0.45 GB, light enough for an
   // old CPU and a small RAM. A llama.cpp server serves it, and the compose decision service downloads it on first
-  // start (ADR 0188).
+  // start (ADR 0195).
   {
     provider: "local",
     id: "laya",
@@ -324,7 +324,7 @@ const GIB = 2 ** 30;
 
 /**
  * The largest local model that fits the host with room for the rest of the server, by title, or the smallest when none
- * does. The recommendation only: any model in the list can still be chosen (ADR 0188).
+ * does. The recommendation only: any model in the list can still be chosen (ADR 0195).
  */
 export function recommendLocalModel(
   host: DecisionHost,

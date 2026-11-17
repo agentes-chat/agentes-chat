@@ -101,6 +101,9 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
   selfhost: [
     // A server that sends no e-mail can't confirm a new address: only there (`email.no_mail`).
     "shell.email.noMail",
+    // Who read a piece of the workspace: off agentes.chat's own servers, whoever runs this one (`details.cloud`).
+    "audit.operatorRead.who.server",
+    "audit.operatorRead.request.operator",
     "auth.owner.",
     "auth.flow.ownerWaits",
     "auth.flow.ownerWaitsLead",
@@ -117,6 +120,8 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "browser.inCard.noComputer",
     "browser.live.noComputer",
     "computers.hostMissing",
+    // Lodi's computer row on a self-hosted server (`rightHandNoComputer` with `selfHosted`).
+    "rightHand.computerNoHomeServer",
     "connectAi.wait.connecting",
     "errors.mission.unavailable",
     // The feedback form's line on who reads it, where the server isn't one of agentes.chat's own (`auth-config.cloud`).
@@ -162,7 +167,7 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     "jev.",
     "onboarding.jev.",
     // The decision model's card, in Settings › AI and usage: only the installation's owner on a self-hosted
-    // server gets it (GET /api/app/decision-model is 404 elsewhere, ADR 0188).
+    // server gets it (GET /api/app/decision-model is 404 elsewhere, ADR 0195).
     "decision.providers.local",
     "decision.providers.localText",
     "decision.recommended",
@@ -215,7 +220,7 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // An address held for an account that just left it (`changeAccountEmail`): only a server that sends e-mail holds it.
     "auth.flow.emailHeld",
   ],
-  apiKey: ["agentPage.work.brain.fallbackTitle"],
+  apiKey: [],
   // A message nobody mentions still gets an agent: routing.mine (the chip and its help line), routing.by (Settings),
   // or the receipt of a message a rule sent to its one candidate.
   routing: [

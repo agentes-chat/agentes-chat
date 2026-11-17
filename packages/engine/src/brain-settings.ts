@@ -35,11 +35,15 @@ import {
   type ContextLimit,
   catalogModelOf,
   contextWindowOf,
+  ensureLiveCatalog,
   isAutoModel,
   isContextLimit,
+  listedModels,
   MODEL_CATALOG,
+  modelInfo,
   modelProvider,
   parseCustomModel,
+  xaiLiveEffortsOf,
 } from "@agenteschat/providers";
 import {
   ANTIGRAVITY_MODELS,
@@ -49,6 +53,7 @@ import {
   claudeCodeModel,
   GROK_BUILD_MODELS,
   isPlanModelId,
+  learnFastModels,
   OPENCODE_FREE_MODELS,
   planModel,
   planModelById,
@@ -106,11 +111,11 @@ import { can, getMembership, requirePermission } from "./organizations";
 import { isRightHand, personalBrain, personalModel } from "./right-hand";
 import { orgModelProvider } from "./router";
 import { readRefusal } from "./standing";
-import { wakeAgentUsageWaits } from "./usage-pause";
+import { agentsMovedOnto, paysExtraUsage, wakeAgentsBrainWaits } from "./usage-pause";
 
 /*
- * "Quem pensa" (ADR 0032 §5): the brain an agent thinks with, its model and
- * the fallback to the API, stored on the agent (`agents.brain*`), and a
+ * "Quem pensa" (ADR 0032 §5): the brain an agent thinks with and its model,
+ * stored on the agent (`agents.brain*`), and a
  * mission's override (`missions.brain*`). This module stores and validates
  * the choice and says what the agent's computer can offer; the engine
  * resolves it per run (`brainFor`).
@@ -157,6 +162,10 @@ export interface BrainModelOption {
    */
   family?: { id: string; label: string };
   level?: BrainEffort;
+  /** Thinking effort levels this model supports on the plan (`["low","medium","high","xhigh","max"]`). */
+  efforts?: BrainEffort[];
+  /** ChatGPT/Codex Fast mode tier supported by this model. */
+  fast?: boolean;
 }
 
 /**
@@ -199,28 +208,46 @@ export const cursorModels = (listed: readonly { id: string; label?: string; inPl
     );
 
 /** Grok Build's models (ADR 0142): what its CLI listed on the agent's computer (`grok models`), else `GROK_BUILD_MODELS`. */
-export const grokModels = (listed: readonly { id: string; label?: string }[] = []): BrainModelOption[] =>
-  (listed.length ? listed : GROK_BUILD_MODELS).map((m) => ({
-    value: m.id,
-    label: m.label || m.id,
-    ...(catalogModelOf(m.id) ? { modelId: m.id } : {}),
-  }));
+export const grokModels = (
+  listed: readonly { id: string; label?: string; efforts?: BrainEffort[] }[] = [],
+): BrainModelOption[] =>
+  (listed.length ? listed : GROK_BUILD_MODELS).map((m) => {
+    const rawEfforts = ("efforts" in m && m.efforts?.length ? m.efforts : undefined) ??
+      xaiLiveEffortsOf(m.id) ?? ["low", "medium", "high"];
+    // Grok CLI itself caps `--effort` at high (`grokEffort` in runner/brain-grok.ts).
+    const efforts = rawEfforts.filter((e): e is BrainEffort => e === "low" || e === "medium" || e === "high");
+    return {
+      value: m.id,
+      label: m.label || m.id,
+      ...(catalogModelOf(m.id) ? { modelId: catalogModelOf(m.id)! } : {}),
+      ...(efforts.length ? { efforts } : { efforts: ["low", "medium", "high"] }),
+    };
+  });
 
 /**
  * The Antigravity CLI's models (ADR 0143): what it listed on the agent's computer (`agy models`), else
  * `ANTIGRAVITY_MODELS`. A slug is a model at one thinking level (`gemini-4-argon-high`): its catalog model is the base,
  * and the family is the model the apps show once, its levels being the effort they offer.
  */
-export const antigravityModels = (listed: readonly { id: string; label?: string }[] = []): BrainModelOption[] =>
+export const antigravityModels = (
+  listed: readonly { id: string; label?: string; efforts?: BrainEffort[] }[] = [],
+): BrainModelOption[] =>
   (listed.length ? listed : ANTIGRAVITY_MODELS).map((m) => {
     const base = antigravityBaseModel(m.id);
     const level = antigravityLevel(m.id);
     const label = m.label || m.id;
+    const rawEfforts = "efforts" in m && m.efforts?.length ? m.efforts : undefined;
+    const baseEfforts = modelInfo(base)?.efforts?.filter(isBrainEffort);
+    const standaloneEfforts =
+      rawEfforts ??
+      (baseEfforts?.length ? baseEfforts : (["low", "medium", "high", "xhigh", "max"] satisfies BrainEffort[]));
     return {
       value: m.id,
       label,
       ...(catalogModelOf(base) ? { modelId: base } : {}),
-      ...(level ? { family: { id: base, label: antigravityFamilyLabel(label) }, level } : {}),
+      ...(level
+        ? { family: { id: base, label: antigravityFamilyLabel(label) }, level }
+        : { efforts: standaloneEfforts }),
     };
   });
 
@@ -234,13 +261,103 @@ export const CLAUDE_CODE_MODELS: readonly BrainModelOption[] = (
     { value: "sonnet", modelId: "claude-sonnet-5-5", recommended: true },
     { value: "haiku", modelId: "claude-haiku-5-5" },
   ] as const
-).map((o) => ({ ...o, label: MODEL_CATALOG[o.modelId]?.label.replace(/^Claude /, "") ?? o.value }));
+).map((o) => {
+  const row = MODEL_CATALOG[o.modelId];
+  const efforts = row?.efforts?.filter(isBrainEffort);
+  return {
+    ...o,
+    label: row?.label.replace(/^Claude /, "") ?? o.value,
+    ...(efforts?.length ? { efforts } : {}),
+  };
+});
 
-/** Codex's models: the OpenAI rows of the catalog (any other name is accepted as typed). */
-export const codexModels = (): BrainModelOption[] =>
-  Object.entries(MODEL_CATALOG)
+/**
+ * Claude Code's live model choices: resolves `opus`, `sonnet`, and `haiku` dynamically to the newest active Anthropic
+ * frontier releases in `listedModels()` (with static `CLAUDE_CODE_MODELS` as fallback) and includes additional active
+ * frontier Claude models (such as Fable) discovered from the live catalog.
+ */
+export function claudeCodeModels(): BrainModelOption[] {
+  const anthropic = listedModels().filter(([, m]) => m.provider === "anthropic");
+  const pickAlias = (
+    alias: "opus" | "sonnet" | "haiku",
+    fallbackId: string,
+    recommended?: boolean,
+  ): BrainModelOption => {
+    const prefix = `claude-${alias}-`;
+    const candidates = anthropic
+      .filter(([id]) => id.startsWith(prefix))
+      .sort((a, b) => (b[1].releaseDate ?? "").localeCompare(a[1].releaseDate ?? ""));
+    const chosen = candidates[0];
+    const id = chosen?.[0] ?? fallbackId;
+    const info = chosen?.[1] ?? modelInfo(id) ?? MODEL_CATALOG[fallbackId];
+    const efforts = info?.efforts?.filter(isBrainEffort);
+    return {
+      value: alias,
+      modelId: id,
+      label: info?.label.replace(/^Claude /, "") ?? alias,
+      ...(recommended ? { recommended: true } : {}),
+      ...(efforts?.length ? { efforts } : { efforts: ["low", "medium", "high", "xhigh", "max"] }),
+    };
+  };
+
+  return [
+    pickAlias("opus", "claude-opus-5-5"),
+    pickAlias("sonnet", "claude-sonnet-5-5", true),
+    pickAlias("haiku", "claude-haiku-5-5"),
+  ];
+}
+
+/**
+ * Codex's models: prefers the models discovered dynamically from `codex app-server` (`model/list`) on the computer,
+ * falling back to active OpenAI entries in the live/static catalog.
+ */
+export const codexModels = (
+  listed: readonly {
+    id: string;
+    label?: string;
+    efforts?: BrainEffort[];
+    fast?: boolean;
+    recommended?: boolean;
+  }[] = [],
+): BrainModelOption[] => {
+  if (listed.length > 0) {
+    learnFastModels(listed.filter((m) => m.fast === true).map((m) => m.id));
+    return listed.map((m) => {
+      const cat = modelInfo(m.id) ?? (catalogModelOf(m.id) ? modelInfo(catalogModelOf(m.id)!) : undefined);
+      const rawEfforts = m.efforts?.length ? m.efforts : cat?.efforts?.filter(isBrainEffort);
+      const efforts = rawEfforts?.length
+        ? rawEfforts
+        : (["low", "medium", "high", "xhigh", "max"] satisfies BrainEffort[]);
+      return {
+        value: m.id,
+        label: m.label || cat?.label || m.id,
+        ...(catalogModelOf(m.id) ? { modelId: catalogModelOf(m.id)! } : cat ? { modelId: m.id } : {}),
+        ...(m.recommended ? { recommended: true } : {}),
+        efforts,
+        ...(m.fast || speedFits({ kind: "codex", model: m.id }) ? { fast: true } : {}),
+      };
+    });
+  }
+  return listedModels()
     .filter(([, m]) => m.provider === "openai")
-    .map(([id, m]) => ({ value: id, label: m.label, modelId: id, ...(m.recommended ? { recommended: true } : {}) }));
+    .sort((a, b) => (b[1].releaseDate ?? "").localeCompare(a[1].releaseDate ?? ""))
+    .map(([id, m]): BrainModelOption => {
+      const parsedEfforts = m.efforts?.filter(isBrainEffort);
+      const efforts = parsedEfforts?.length
+        ? parsedEfforts
+        : m.reasoning
+          ? (["low", "medium", "high", "xhigh", "max"] satisfies BrainEffort[])
+          : (["low", "medium", "high"] satisfies BrainEffort[]);
+      return {
+        value: id,
+        label: m.label,
+        modelId: id,
+        ...(m.recommended ? { recommended: true } : {}),
+        efforts,
+        ...(m.fast || speedFits({ kind: "codex", model: id }) ? { fast: true } : {}),
+      };
+    });
+};
 
 /**
  * The model choices of a brain (none for the model brain: it uses the agent's model). A coding plan's are in its
@@ -256,8 +373,8 @@ export function brainModelOptions(
 }
 
 function modelChoices(kind: BrainKind, machine?: { executors?: schema.MachineExecutors | null } | null) {
-  if (kind === "claude_code") return [...CLAUDE_CODE_MODELS];
-  if (kind === "codex") return codexModels();
+  if (kind === "claude_code") return claudeCodeModels();
+  if (kind === "codex") return codexModels(machine?.executors?.codex?.models);
   if (kind === "cursor") return cursorModels(machine?.executors?.cursor?.models);
   if (kind === "opencode") return opencodeModels(machine?.executors?.opencode?.models);
   if (kind === "grok") return grokModels(machine?.executors?.grok?.models);
@@ -266,10 +383,13 @@ function modelChoices(kind: BrainKind, machine?: { executors?: schema.MachineExe
 }
 
 /** What a computer brain runs with when nobody chose a model (Cursor, OpenCode, Grok, Antigravity: its CLI's own default, null). */
-export function defaultBrainModel(kind: BrainKind): string | null {
+export function defaultBrainModel(
+  kind: BrainKind,
+  machine?: { executors?: schema.MachineExecutors | null } | null,
+): string | null {
   if (kind === "model" || kind === "cursor" || kind === "opencode" || kind === "grok" || kind === "antigravity")
     return null;
-  const options = brainModelOptions(kind);
+  const options = brainModelOptions(kind, machine);
   return (options.find((o) => o.recommended) ?? options[0])?.value ?? (kind === "codex" ? "gpt-6.1-sol" : "sonnet");
 }
 
@@ -300,7 +420,7 @@ export function normalizeBrainModel(kind: BrainKind, value: unknown, stored?: st
   // "Automático": each run picks the tier (`auto-model.ts`).
   if (v.toLowerCase() === AUTO_MODEL) return AUTO_MODEL;
   if (kind === "claude_code") {
-    const alias = CLAUDE_CODE_MODELS.find((o) => o.value === v.toLowerCase() || o.modelId === v);
+    const alias = claudeCodeModels().find((o) => o.value === v.toLowerCase() || o.modelId === v);
     if (alias) return alias.value;
     if (/^claude-[a-z0-9.-]{1,60}$/.test(v) || isPlanModelId(v)) return v;
     throw new ValidationError("Choose Opus, Sonnet, Haiku or one of the plan's models", "brain.invalid_model", {
@@ -403,8 +523,8 @@ export function brainOptions(machine: MachineLike | null): BrainOption[] {
       ...(reason === "outdated" && detected
         ? { codexVersion: { detected: detected.replace(/^codex-cli\s+/i, ""), minimum: CODEX_MIN_VERSION } }
         : {}),
-      models: brainModelOptions(kind),
-      defaultModel: defaultBrainModel(kind),
+      models: brainModelOptions(kind, machine),
+      defaultModel: defaultBrainModel(kind, machine),
     };
   };
   return [
@@ -493,8 +613,12 @@ export interface AgentBrainView {
   model: string | null;
   /** What it runs with (`model ?? defaultModel`), null for the model brain: its model is the agent's own `model`. */
   effectiveModel: string | null;
-  fallback: boolean;
-  /** Long work may go on into the plan's paid extra usage where the provider reports it on (ADR 0118). */
+  /**
+   * Deprecated, read-only: phone builds without the switches' removal still draw them from these, so they say what
+   * happens. Always false: the API never stands in for a computer brain (ADR 0032's 2026-11-15 addendum).
+   */
+  fallback: false;
+  /** Deprecated, read-only (see `fallback`): whether long work may use the plan's paid extra usage (`paysExtraUsage`). */
   extraUsage: boolean;
   computer: BrainComputer | null;
   options: BrainOption[];
@@ -504,6 +628,8 @@ export interface AgentBrainView {
   canEdit: boolean;
   /** The account its computer brain runs with (ADR 0041); null = the computer's own sign-in. */
   account: string | null;
+  /** "Só esta conta" (ADR 0041 §6): at its plan's limit it waits for this account instead of going on with the next. */
+  accountPinned: boolean;
   /** How hard its computer brain thinks; `auto` = picked per run; null = the CLI's default. */
   effort: BrainEffortSetting | null;
   /** How fast it answers in conversations (ADR 0149): kept whatever it thinks with, applied only where it fits. */
@@ -670,13 +796,14 @@ function view(
     brain,
     model: brain === "model" ? null : agent.brainModel,
     effectiveModel: brain === "model" ? null : (agent.brainModel ?? defaultBrainModel(brain)),
-    fallback: agent.brainFallback,
-    extraUsage: agent.brainExtraUsage,
+    fallback: false,
+    extraUsage: paysExtraUsage(agent),
     computer: machine ? { machineId: machine.id, name: machine.name, online: machineOnline(machine) } : null,
     options: brainOptions(machine),
     machines,
     canEdit: true,
     account: agent.brainAccountId,
+    accountPinned: agent.brainAccountPinned,
     effort: isBrainEffortSetting(agent.brainEffort) ? agent.brainEffort : null,
     speed: isBrainSpeed(agent.brainSpeed) ? agent.brainSpeed : "standard",
     contextTokens: isContextLimit(agent.contextTokens) ? agent.contextTokens : null,
@@ -718,8 +845,6 @@ async function personalAgent(db: Database, agent: Agent, userId: string, account
     contextTokens: own ? (own.brainContextTokens ?? null) : agent.contextTokens,
     brainAccountId: own?.brainAccountId ?? null,
     brainAccountLentBy: own?.brainAccountLentBy ?? null,
-    brainFallback: false,
-    brainExtraUsage: false,
     planForOthers: false,
   };
   // ponytail: the computer of their first plan, so plans on a second computer don't list here; loop over their
@@ -935,6 +1060,7 @@ async function setPersonalBrain(
     return released;
   });
   forgetAgents(orgId, released);
+  await wakeAgentsBrainWaits(deps, orgId, released);
   await audit({ brain, model, account: account.id, effort: effort ?? null, contextTokens });
   if (moved) {
     await recordAudit(db, {
@@ -966,6 +1092,7 @@ export async function getAgentBrain(
   /** The team's right hand: `mine` or `workspace` (the default). Ignored for every other agent. */
   scope?: unknown,
 ): Promise<AgentBrainView> {
+  await ensureLiveCatalog();
   const access = await agentBrainAccess(deps.db, userId, orgId, agentId, scope);
   if (access.scope === "mine") return personalView(deps.db, userId, orgId, access.agent);
   const { admin } = access;
@@ -997,6 +1124,7 @@ export async function newAgentBrainMachines(
   userId: string,
   orgId: string,
 ): Promise<BrainMachineOptions[]> {
+  await ensureLiveCatalog();
   const membership = await requirePermission(deps.db, userId, orgId, "create_agents");
   return candidateMachines(deps.db, userId, orgId, can(membership, "manage_agents"), null);
 }
@@ -1007,7 +1135,9 @@ export interface AgentBrainInput {
   brain?: unknown;
   /** Omitted = keep it (or the default when the brain changes); null = the brain's default. */
   model?: unknown;
+  /** Ignored: older apps still send it (the API never stands in for a computer, ADR 0032). */
   fallback?: unknown;
+  /** Ignored: older apps still send it (paid extra usage follows the plan, ADR 0118). */
   extraUsage?: unknown;
   /**
    * "Atende outras pessoas" turned off (ADR 0059 §5): true, only its owner talks
@@ -1025,6 +1155,8 @@ export interface AgentBrainInput {
   account?: unknown;
   /** The account thinks for another agent: take it from that one, which loses it (`releaseAgents`). */
   moveAccount?: unknown;
+  /** "Só esta conta" (ADR 0041 §6). Omitted = keep it. */
+  accountPinned?: unknown;
   /** `low`…`max`, `auto` (picked per run), or null for the CLI's default. Omitted = keep it. */
   effort?: unknown;
   /** `standard` or `fast`, kept through any change of brain, account or model. Omitted = keep it. */
@@ -1079,15 +1211,13 @@ export async function setAgentBrain(
   if (input.brain !== undefined && !isBrainKind(input.brain)) {
     throw new ValidationError("Choose model, claude_code, codex or cursor", "brain.invalid");
   }
-  if (input.fallback !== undefined && typeof input.fallback !== "boolean") {
-    throw new ValidationError("fallback is on or off", "brain.invalid");
-  }
-  if (input.extraUsage !== undefined && typeof input.extraUsage !== "boolean") {
-    throw new ValidationError("extraUsage is on or off", "brain.invalid");
-  }
   if (input.onlyOwner !== undefined && typeof input.onlyOwner !== "boolean") {
     throw new ValidationError("onlyOwner is on or off", "brain.invalid");
   }
+  if (input.accountPinned !== undefined && typeof input.accountPinned !== "boolean") {
+    throw new ValidationError("accountPinned is on or off", "brain.invalid");
+  }
+  const pinned = (input.accountPinned as boolean | undefined) ?? agent.brainAccountPinned;
   const brain = (input.brain as BrainKind | undefined) ?? from;
   const changed = brain !== from;
   const [machine, machines] = await Promise.all([
@@ -1116,9 +1246,8 @@ export async function setAgentBrain(
       : brain === "model" || changed
         ? carried
         : agent.brainModel;
-  const fallback = (input.fallback as boolean | undefined) ?? agent.brainFallback;
-  // The right hand put on a plan starts with that plan's switches off: neither paid extra usage nor "Atende outras
-  // pessoas" is carried over from whoever set them before (an admin while it was on a key, or another plan's owner).
+  // The right hand put on a plan starts with "Atende outras pessoas" off: never carried over from whoever set it before
+  // (an admin while it was on a key, or another plan's owner).
   const newPlan = rightHand && typeof input.account === "string" && input.account !== access.agent.brainAccountId;
   const next = await nextBrainAccount(deps.db, userId, orgId, agent, brain, changed, machine, input.account, {
     move: input.moveAccount === true,
@@ -1147,16 +1276,6 @@ export async function setAgentBrain(
   const planOwner = lentBy && account ? await accountOwnerOf(deps.db, orgId, account) : agent.ownerUserId;
   // The plan changes hands (someone else's given now, or back from one): it starts as on a new plan.
   const ownerSwitch = accountChanged && (lentBy !== null || agent.brainAccountLentBy != null);
-  const extraBefore = newPlan || ownerSwitch ? false : agent.brainExtraUsage;
-  const extraUsage = (input.extraUsage as boolean | undefined) ?? extraBefore;
-  // Paid extra usage bills the plan's owner (the agent's, unless it was lent): an admin picks the account, not this.
-  // A plan that changes hands starts with it off, so only its owner may send it on with that change.
-  if (input.extraUsage !== undefined && extraUsage !== extraBefore && planOwner !== userId) {
-    throw new ForbiddenError(
-      "Only the agent's owner turns its plan's paid extra usage on or off",
-      "brain.extra_owner_only",
-    );
-  }
   if (input.effort !== undefined && input.effort !== null && !isBrainEffortSetting(input.effort)) {
     throw new ValidationError("Choose auto, low, medium, high, xhigh or max", "brain.invalid_effort");
   }
@@ -1204,13 +1323,12 @@ export async function setAgentBrain(
   const thinks =
     changed ||
     model !== agent.brainModel ||
-    fallback !== agent.brainFallback ||
-    extraUsage !== agent.brainExtraUsage ||
     account !== agent.brainAccountId ||
     effort !== agent.brainEffort ||
     speed !== agent.brainSpeed ||
     contextTokens !== agent.contextTokens ||
-    planForOthers !== agent.planForOthers;
+    planForOthers !== agent.planForOthers ||
+    pinned !== agent.brainAccountPinned;
   if (!thinks && !audience) return view(agent, machine, machines, accounts, userId);
   const { row, released } = await deps.db.transaction(async (tx) => {
     // A login made for one agent thinks for one: the check is taken again under its row's lock, so two agents
@@ -1250,14 +1368,17 @@ export async function setAgentBrain(
       .set({
         brain,
         brainModel: model,
-        brainFallback: fallback,
-        brainExtraUsage: extraUsage,
         brainAccountId: account,
         brainAccountLentBy: lentBy,
+        brainAccountPinned: pinned,
         brainEffort: effort,
         brainSpeed: speed,
         contextTokens,
         planForOthers,
+        // Unused here, but the previous release still reads it while a deploy rolls out or after a rollback: a plan
+        // that changes hands keeps it off there too, so that release never spends someone else's extra usage.
+        // Goes with the column (ADR 0118's 2026-11-15 addendum).
+        ...(newPlan || ownerSwitch ? { brainExtraUsage: false } : {}),
         // The people and roles lists stay while it is its owner's only, for when it is let out again.
         ...(audience
           ? {
@@ -1295,6 +1416,7 @@ export async function setAgentBrain(
   caches.agents.delete(`${orgId}:${agentId}`);
   if (audience) caches.agents.delete(`${orgId}:team`);
   forgetAgents(orgId, released);
+  await wakeAgentsBrainWaits(deps, orgId, released);
   // Another model chosen: the note that its model left its plan's list is done.
   if (changed || model !== agent.brainModel || account !== agent.brainAccountId) {
     await resolveNotifications(deps, orgId, {
@@ -1312,14 +1434,13 @@ export async function setAgentBrain(
         from: {
           brain: from,
           model: agent.brainModel,
-          fallback: agent.brainFallback,
-          extraUsage: agent.brainExtraUsage,
           account: agent.brainAccountId,
           effort: agent.brainEffort,
           speed: agent.brainSpeed,
           contextTokens: agent.contextTokens,
+          accountPinned: agent.brainAccountPinned,
         },
-        to: { brain, model, fallback, extraUsage, account, effort, speed, contextTokens },
+        to: { brain, model, account, effort, speed, contextTokens, accountPinned: pinned },
         ...(rightHand ? { planForOthers: { from: agent.planForOthers, to: planForOthers } } : {}),
         ...options.audit,
       },
@@ -1347,10 +1468,9 @@ export async function setAgentBrain(
     ...agent,
     brain,
     brainModel: model,
-    brainFallback: fallback,
-    brainExtraUsage: extraUsage,
     brainAccountId: account,
     brainAccountLentBy: lentBy,
+    brainAccountPinned: pinned,
     brainEffort: effort,
     brainSpeed: speed,
     contextTokens,
@@ -1361,16 +1481,10 @@ export async function setAgentBrain(
   if (thinks && options.remember !== false && !rightHand) {
     await rememberAgentSetup(deps.db, membership, setupOfAgent(saved));
   }
-  // Another AI, account or model, or extra usage on: what waited on the old one's plan or budget goes on now, in its
-  // line's order.
-  if (
-    changed ||
-    model !== agent.brainModel ||
-    account !== agent.brainAccountId ||
-    fallback !== agent.brainFallback ||
-    (extraUsage && !agent.brainExtraUsage)
-  )
-    await wakeAgentUsageWaits(deps.db, orgId, agentId).catch(() => null);
+  // Another AI, account or model: what waited on the old one (its plan, budget or computer) goes on now, in its line's
+  // order. "Só esta conta" changed: a run waiting on its plan may go on with another account now, or comes back to this.
+  if (changed || model !== agent.brainModel || account !== agent.brainAccountId || pinned !== agent.brainAccountPinned)
+    await wakeAgentsBrainWaits(deps, orgId, [agentId]);
   // The account's `usedBy` changed with it.
   // The right hand's row is on no computer: shown as its settings see it again.
   const shown = rightHand ? await settingsAgent(deps.db, saved, userId) : saved;
@@ -1507,6 +1621,7 @@ export async function takeBackPlan(
     lent.map((a) => a.id),
   );
   forgetAgents(orgId, ids);
+  await wakeAgentsBrainWaits(deps, orgId, ids);
   // People's own AI for the right hand (ADR 0137 §11) given this plan: back to the workspace's.
   const rightHand = agentId ? isRightHand(await getAgent(deps.db, orgId, agentId)) : true;
   const personal = rightHand
@@ -1622,6 +1737,8 @@ export async function setAccountServes(
     return { ids: updated.map((u) => u.id), agentIds, people: people.length };
   });
   forgetAgents(orgId, changed.agentIds);
+  const moved = serves === "owner" ? await agentsMovedOnto(deps.db, orgId, changed.ids) : [];
+  await wakeAgentsBrainWaits(deps, orgId, [...changed.agentIds, ...moved]);
   if (changed.people > 0) await publishMachineAgentsChanged(deps.pubsub, orgId);
   for (const id of changed.ids) {
     await recordAudit(deps.db, {
@@ -1692,6 +1809,7 @@ async function missionBrainView(
 
 /** `GET …/missions/{id}/brain`, for whoever reads the mission's conversation. */
 export async function getMissionBrain(deps: MissionDeps, userId: string, orgId: string, missionId: string) {
+  await ensureLiveCatalog();
   const { mission, role } = await requireMission(deps, userId, orgId, missionId);
   return missionBrainView(deps, mission, role);
 }

@@ -155,13 +155,16 @@ export function formatBytes(locale: string, bytes: number) {
     value /= 1024;
     i++;
   }
+  const digits = i === 0 || value >= 10 ? 0 : 1;
+  // Rounded here too: the phone's engine (Hermes on iOS) drops `maximumFractionDigits` for a unit and wrote 38,882 MB.
+  const rounded = Math.round(value * 10 ** digits) / 10 ** digits;
   return new Intl.NumberFormat(locale, {
     style: "unit",
     unit: units[i],
     // English's short byte is "byte" whatever the count ("820 byte"): the long one is plural where it should be.
     unitDisplay: i === 0 ? "long" : "short",
-    maximumFractionDigits: i === 0 || value >= 10 ? 0 : 1,
-  }).format(value);
+    maximumFractionDigits: digits,
+  }).format(rounded);
 }
 
 /** Within the upload limit (checked before sending; the server checks again). */

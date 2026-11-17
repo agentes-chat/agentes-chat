@@ -225,7 +225,7 @@ test("Sua IA's Mais opções sets the effort and the context window, as on any a
   await act(async () => fireEvent.click(effortLine));
   await settle(2);
   const ramp = within(screen().getByRole("dialog")).getByRole("slider", { name: "Esforço" });
-  expect(ramp.getAttribute("aria-valuemax")).toBe("5");
+  expect(ramp.getAttribute("aria-valuemax")).toBe("7");
   await act(async () => fireEvent.keyDown(ramp, { key: "ArrowRight" }));
   await settle(2);
   expect(ramp.getAttribute("aria-valuetext")).toBe("Alto");

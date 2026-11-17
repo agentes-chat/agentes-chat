@@ -26,7 +26,7 @@ describe("a reply's tools sit last", () => {
           "<SavedTools",
           "<NoAiCard message={m} />",
           // The foot is the reply's last part: only the double tap's one-time hint and its 👍 over the row follow it.
-          "{foot}\n          </RowPartContext.Provider>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n});",
+          "{foot}\n          </RowPartContext.Provider>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n}\n",
         ]),
       ),
     ).toBe(true);
@@ -44,7 +44,7 @@ describe("a reply's tools sit last", () => {
     const row = source("MessageRow.tsx");
     const [toolsAt, footAt] = at(row, [
       "<SavedTools\n",
-      "{foot}\n          </RowPartContext.Provider>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n});",
+      "{foot}\n          </RowPartContext.Provider>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n}\n",
     ]);
     const last = row.slice(toolsAt, footAt);
     for (const card of [
@@ -144,7 +144,7 @@ describe("one call is its own line", () => {
     expect(tools).toContain("const one = oneCall(items);");
     expect(tools).toContain("one={one}");
     expect(tools).toContain("const lone = savedOneLine(meta, onCard);");
-    expect(tools).toContain("<Line line={{ ...only.line, detail }} color={color} onToggle={onToggle} />");
+    expect(tools).toContain("<Line line={{ ...only.line, detail }} color={color} onToggle={onToggle} keep={keep} />");
   });
 });
 
@@ -177,7 +177,7 @@ describe("what agents did under each reply: the person's own setting, off by def
   test("Você has the row and its page, and a secret request's card shows without its text", () => {
     const me = readFileSync(join(import.meta.dir, "../../src/features/me/MeScreen.tsx"), "utf8");
     expect(me).toContain('onPress={() => open("/me/activity")}');
-    const route = readFileSync(join(import.meta.dir, "../../app/(app)/me/activity.tsx"), "utf8");
+    const route = readFileSync(join(import.meta.dir, "../../app/(app)/(main)/me/activity.tsx"), "utf8");
     expect(route).toContain("<ActivityPage />");
     expect(source("logic.ts")).toMatch(/hidesBody = [^;]*secretRequestOf\(m\.meta\)/);
   });
@@ -277,46 +277,38 @@ describe("a stretch's pause on the phone (ADR 0089)", () => {
   });
 });
 
-describe("a plan account on the phone (IA e uso › Contas): a row that opens", () => {
+describe("a plan account on the phone (IA e uso › Contas): a row that pushes its own screen", () => {
   const screen = source("../usage/UsageScreen.tsx");
+  const detail = source("../usage/UsageAccountScreen.tsx");
 
-  test("closed: its mark, name, plan and owner, one meter for the fullest window, the alert; it says it opens", () => {
-    const row = screen.slice(...at(screen, ["function AccountRow(", "function AgentShares("]));
-    const head = row.slice(...at(row, ["<Pressable", "</Pressable>"]));
-    expect(head).toContain("accessibilityState={{ expanded: open }}");
+  test("its row: its mark, name, plan and owner, one meter for the fullest window, the alert; it opens a screen", () => {
+    const row = screen.slice(...at(screen, ["function AccountRow(", "/** The API per agent:"]));
     expect(
-      ascending(
-        at(head, ["<ProviderLogo", "accountName(t, account)", "{owner}", "text.short(line.top)", "line.alert"]),
-      ),
+      ascending(at(row, ["<ProviderLogo", "accountName(t, account)", "{owner}", "text.short(line.top)", "line.alert"])),
     ).toBe(true);
-    // Near its limit it starts open; every other one starts closed.
-    expect(row).toContain('useState(line != null && line.state !== "ok")');
-    // Nothing of the open row is drawn while it is closed.
-    expect(row.indexOf("{open ? (")).toBeGreaterThan(row.indexOf("</Pressable>"));
+    expect(row).toContain("onPress={() => openUsageAccount(account.key)}");
+    // Nothing opens in place under it.
+    expect(row).not.toContain("{open ? (");
+    expect(row).not.toContain("expanded");
+    expect(screen).not.toContain("function AgentShares(");
   });
 
-  test("open: bars split by agent, then one list, then when it renews and how old, then the month, then the way to the AI accounts screen", () => {
-    const row = screen.slice(...at(screen, ["function AccountRow(", "function AgentShares("]));
-    const body = row.slice(row.indexOf("{open ? ("));
+  test("its screen: bars split by agent, the month, each agent a row to its usage, then the way to the AI accounts screen", () => {
     expect(
       ascending(
-        at(body, ["brandOf(account)", "usage={splitUsage(", "{list}", "usageViews.monthTokens", "mobile.ai.row"]),
+        at(detail, ["brandOf(account)", "usage={splitUsage(", "{tokens}", 't("shell.agents")', "mobile.ai.row"]),
       ),
     ).toBe(true);
-    // The row already says where the plan stands: the meter doesn't say it again.
-    expect(body).toMatch(/<PlanMeter\s+plain/);
+    // The title says the account: the meter doesn't say where the plan stands again.
+    expect(detail).toMatch(/<PlanMeter\s+plain/);
+    expect(detail).toContain('t("usageViews.monthTokens", {');
     // Only its owner manages it, on the AI accounts screen.
-    expect(body).toContain("account.mine && account.accountId ?");
-    expect(row).not.toContain("account.agents.map");
-    const list = screen.slice(...at(screen, ["function AgentShares(", "/** The API per agent:"]));
-    // One line of words per agent, no column titles over them.
-    expect(list).not.toContain("usageViews.thisMonth");
-    expect(ascending(at(list, ["openAgentUsage(a.agentId)", "usageViews.moreAgents"]))).toBe(true);
-    // "Usa agora" only for an agent using it now, never for the folded row.
-    expect(list).toContain("shareFacts(t, i18n.language, window, a)");
-    expect(list).toContain(
-      "shareFacts(t, i18n.language, window, { share: shares.restShare, tokens: shares.restTokens })",
-    );
+    expect(detail).toContain("account.mine && account.accountId ?");
+    // Every agent, nothing folded, each one's facts on its row and the row to its own usage.
+    expect(detail).toContain("const agents = [...shares.shown, ...shares.rest];");
+    expect(detail).not.toContain("usageViews.moreAgents");
+    expect(detail).toContain("shareFacts(t, i18n.language, window, a)");
+    expect(detail).toMatch(/onPress=\{\(\) => router\.push\(`\/agent-usage\/\$\{a\.agentId\}`/);
     // The renewal moves under the list, once.
     const parts = source("../usage/parts.tsx");
     expect(
@@ -490,7 +482,7 @@ describe("an agent's offer card is done for everyone once it's done", () => {
     expect(routeAgent(link, "a-other")).toBeUndefined();
     expect(routeAgent(link, undefined)).toBeUndefined();
     // The route hands the screen only what `routeAgent` keeps.
-    const route = readFileSync(join(import.meta.dir, "../../app/(app)/settings/skills/new.tsx"), "utf8");
+    const route = readFileSync(join(import.meta.dir, "../../app/(app)/(main)/settings/skills/new.tsx"), "utf8");
     expect(route).toContain("forAgentId={routeAgent(url, agent)}");
     // The screen sends it only on an install from the card's link with its row checked, never on a read.
     const screen = readFileSync(join(import.meta.dir, "../../src/features/settings/SkillsScreen.tsx"), "utf8");

@@ -11,7 +11,7 @@ import {
 } from "./types";
 
 /**
- * The System One wire (ADR 0188): the one Jev answers, and the one decision models on Ollama, llama.cpp and LM Studio
+ * The System One wire (ADR 0195): the one Jev answers, and the one decision models on Ollama, llama.cpp and LM Studio
  * serve locally. A call sends the state, the questions by id and, when the questions look at pictures, the assets.
  * llama.cpp takes the pictures as data URLs under images, the others as Jev's assets map.
  */

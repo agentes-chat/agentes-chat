@@ -57,7 +57,7 @@ const Input = z.object({
 const WRITES = { limit: 10, windowMs: 60_000 };
 const notFound = "404 for everyone but the installation's pinned owner, and on agentes.chat itself.";
 
-/** The installation's optional decision model (ADR 0188): only its owner, and never on agentes.chat's own servers. */
+/** The installation's optional decision model (ADR 0195): only its owner, and never on agentes.chat's own servers. */
 export function decisionModelRoutes(deps: AppDeps) {
   const { db, config } = deps;
   const app = createAppRouter(deps);

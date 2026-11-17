@@ -1,6 +1,6 @@
 import { speedFits } from "@agenteschat/providers/plans";
 import type { TFunction } from "i18next";
-import type { AgentBrain, BrainEffort, BrainKind, BrainSpeed, Model } from "../api/types";
+import type { AgentBrain, BrainEffort, BrainKind, BrainModelOption, BrainSpeed, Model } from "../api/types";
 import { type ContextLimit, contextSize } from "./context-limits";
 import { isAuto } from "./providers";
 
@@ -51,11 +51,40 @@ export const keyEffortScale = (
 };
 
 /**
- * The whole ladder a model can be sold at, lowest first, for a model that names its level in its id (Antigravity's
- * `gemini-4-hydrogen-xhigh`): the apps offer every level, the ones the model isn't sold at greyed out.
+ * The whole ladder a model can be sold at, lowest first (`none < minimal < low < medium < high < xhigh < max`):
+ * the apps offer the ladder, with unsupported steps greyed out.
  */
-export type EffortScaleLevel = "none" | "low" | "minimal" | "medium" | "high" | "xhigh" | "max";
-export const EFFORT_SCALE: readonly EffortScaleLevel[] = ["none", "low", "minimal", "medium", "high", "xhigh", "max"];
+export type EffortScaleLevel = "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+export const EFFORT_SCALE: readonly EffortScaleLevel[] = ["none", "minimal", "low", "medium", "high", "xhigh", "max"];
+
+/**
+ * Resolves the enabled steps on the effort ramp for any brain (`model` API key, Antigravity `family`, or computer
+ * plan model such as Codex / Claude Code / Grok): checks `family.levels`, `planModel.efforts`, or `keyModel.efforts`,
+ * falling back to full `EFFORT_LEVELS` for Codex / Claude Code / Antigravity and `KEY_EFFORT_LEVELS` elsewhere.
+ * Returns `null` only for an untested `model` API key/OpenRouter/custom model with no ramp.
+ */
+export function brainEffortScale(
+  kind: BrainKind | undefined,
+  opts: {
+    planModel?: Pick<BrainModelOption, "efforts" | "modelId"> | null;
+    keyModel?: Pick<Model, "provider" | "efforts" | "reasoning"> | null;
+    family?: { levels: readonly BrainEffort[] } | null;
+  } = {},
+): readonly EffortScaleLevel[] | null {
+  if (kind === "model") return keyEffortScale(opts.keyModel);
+  if (opts.family) return opts.family.levels;
+  if (opts.planModel?.efforts?.length) {
+    const known = new Set<string>(opts.planModel.efforts);
+    const scale = EFFORT_SCALE.filter((l) => known.has(l));
+    if (scale.length > 0) return scale;
+  }
+  if (opts.keyModel?.efforts?.length) {
+    const known = new Set<string>(opts.keyModel.efforts);
+    const scale = EFFORT_SCALE.filter((l) => l !== "none" && l !== "minimal" && known.has(l));
+    if (scale.length > 0) return scale;
+  }
+  return kind === "cursor" || kind === "opencode" || kind === "grok" ? KEY_EFFORT_LEVELS : EFFORT_LEVELS;
+}
 
 /** A model's ramp: the whole ladder, each level off when the model isn't sold at it (undefined: all of them on). */
 export const effortScaleSteps = (levels: readonly string[] | undefined) =>
@@ -68,12 +97,19 @@ export const effortStepKey = (value: EffortScaleLevel) => (value === "none" ? "n
 export const SPEEDS: readonly BrainSpeed[] = ["standard", "fast"];
 
 /** Velocidade means something for what this view thinks with; the right hand (its `scope`) has none. */
-export const viewSpeedFits = (view: Pick<AgentBrain, "brain" | "account" | "accounts" | "effectiveModel" | "scope">) =>
+export const viewSpeedFits = (
+  view: Pick<AgentBrain, "brain" | "account" | "accounts" | "effectiveModel" | "scope"> & {
+    options?: AgentBrain["options"];
+  },
+) =>
   !view.scope &&
   speedFits({
     kind: view.brain,
     provider: view.accounts.find((a) => a.id === view.account)?.provider,
     model: view.effectiveModel,
+    fast:
+      view.options?.find((o) => o.kind === view.brain)?.models.find((m) => m.value === view.effectiveModel)?.fast ===
+      true,
   });
 
 export interface Advanced {
@@ -84,16 +120,16 @@ export interface Advanced {
   contextTokens: ContextLimit | null;
   /** "Atende outras pessoas" off. */
   onlyOwner: boolean;
-  fallback: boolean;
+  /** "Só esta conta" (ADR 0041 §6); absent where the agent's account never moves on. */
+  accountPinned?: boolean;
 }
 
-/** A new agent's: medium effort, its model's window, its owner only on a plan (ADR 0059 §5), the API when away. */
+/** A new agent's: medium effort, its model's window, its owner only on a plan (ADR 0059 §5). */
 export const ADVANCED_DEFAULTS: Advanced = {
   effort: "medium",
   speed: "standard",
   contextTokens: null,
   onlyOwner: true,
-  fallback: true,
 };
 
 /**
@@ -101,11 +137,15 @@ export const ADVANCED_DEFAULTS: Advanced = {
  * effort goes back to none, the provider's default.
  */
 export const advancedDefaults = (kind: BrainKind, now: Advanced): Advanced =>
-  kind === "model" ? { ...now, effort: null, contextTokens: null } : ADVANCED_DEFAULTS;
+  kind === "model"
+    ? { ...now, effort: null, contextTokens: null }
+    : now.accountPinned === undefined
+      ? ADVANCED_DEFAULTS
+      : { ...ADVANCED_DEFAULTS, accountPinned: false };
 export const isAdvancedDefault = (kind: BrainKind, now: Advanced) =>
   JSON.stringify(advancedDefaults(kind, now)) === JSON.stringify(now);
 
-type AdvancedOf = { kind: BrainKind; autoModel: boolean; apiKey: boolean; now: Advanced };
+type AdvancedOf = { kind: BrainKind; autoModel: boolean; now: Advanced };
 
 /** The row's line: what the dialog holds ("Esforço, janela de contexto e quem atende"), the effort only with a fixed model. */
 export function advancedContents(
@@ -120,7 +160,7 @@ export function advancedContents(
 
 /**
  * After a save: "Tudo no padrão", or only what differs ("Esforço alto · Contexto de 400K"). The effort counts only
- * with a fixed model (an automatic one picks it), and the fallback only where answering through the API is possible.
+ * with a fixed model (an automatic one picks it).
  */
 export function advancedSummary(t: TFunction, language: string, o: AdvancedOf): string {
   const parts = advancedParts(t, language, o);
@@ -140,7 +180,7 @@ export function advancedParts(t: TFunction, _language: string, o: AdvancedOf): s
     computer && now.speed === "fast" ? t("agentPage.work.brain.advanced.speed") : null,
     now.contextTokens ? t("agentPage.work.brain.advanced.context", { size: contextSize(now.contextTokens) }) : null,
     computer && !now.onlyOwner ? t("agentPage.work.brain.advanced.sharing") : null,
-    computer && o.apiKey && !now.fallback ? t("agentPage.work.brain.advanced.waits") : null,
+    computer && now.accountPinned ? t("agentPage.work.brain.pinned") : null,
   ].filter((p): p is string => p !== null);
 }
 

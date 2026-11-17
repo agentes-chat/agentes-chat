@@ -19,8 +19,7 @@
     "down": "아래로 이동",
     "position": "{{count}}개 중 {{at}}번째.",
     "channelPosition": "{{count}}개 중 {{at}}번째.",
-    "itsChannels": "채널",
-    "seeAll": "모두 보기"
+    "itsChannels": "채널"
   },
   "blocks": {
     "send": "보내기",
@@ -182,16 +181,9 @@
       "text": "서버가 꺼져 있거나 네트워크 밖에 있을 수 있어요. 다시 켜지면 채팅이 알아서 나타나요.",
       "kept": "앱에 이미 있던 내용을 보여 드리고 있어요."
     },
-    "section": {
-      "agents": "에이전트",
-      "channels": "채널",
-      "people": "사람"
-    },
-    "seeAll": {
-      "agents": "모든 에이전트 보기",
-      "channels": "모든 채널 보기",
-      "people": "모든 사람 보기"
-    },
+    "pinned": "고정됨",
+    "recent": "최근",
+    "seeAll": "모든 채팅 보기",
     "wait": {
       "verb": {
         "approval": "승인을 기다려요",
@@ -345,8 +337,14 @@
     "options": "옵션",
     "profile": "프로필",
     "here_other": "{{count}}명 참여 중",
+    "membersAdd": "추가",
+    "membersAdded_other": "#{{channel}}에 {{count}}명을 추가했어요",
+    "memberRemoved": "{{name}}을(를) #{{channel}}에서 내보냈어요",
+    "muted": "#{{channel}} 알림을 껐어요",
+    "unmuted": "#{{channel}} 알림을 켰어요",
     "headerAgent": "{{who}}. 프로필 열기",
     "headerChannel": "{{who}}. 옵션",
+    "headerMembers": "{{who}}. 참여자 보기",
     "switchHint": "길게 눌러 대화 전환",
     "switchTitle": "대화 전환",
     "switchSearch": "대화 검색",
@@ -428,21 +426,15 @@
     "doubleTapHint": "두 번 탭 = 👍",
     "react": "반응",
     "attach": {
-      "more": "사진이나 파일 추가",
       "remove": "{{name}} 제거",
       "waiting": "{{name}}, 전송 대기 중",
       "sending": "{{name}}, 보내는 중",
+      "failed": "{{name}}, 보내지 못함: 보내기를 눌러 다시 시도",
+      "preparing": "파일을 준비하는 중…",
       "tooMany": "메시지 하나에 파일은 최대 {{count}}개까지예요."
     },
     "swipeReply": "오른쪽으로 밀어서 답장",
     "intent": {
-      "suggest": {
-        "merge": "머지 진행해 줘",
-        "review": "{{name}}에게 먼저 검토 요청해 줘",
-        "seeChange": "무엇이 바뀌었는지 보여 줘",
-        "summarize": "3가지로 요약해 줘",
-        "nextStep": "다음 단계는 뭐야?"
-      },
       "arrived": "{{name}}이(가) 팀에 합류했어요",
       "meet": "{{name}}와(과)의 첫 대화",
       "roleIntro": "팀의 {{role}}이에요. 편하게 말로 요청하세요.",
@@ -588,7 +580,6 @@
     "minuteLess": "{{n}}분 앞으로",
     "minuteMore": "{{n}}분 뒤로",
     "submit": "이 시간에 알려 줘",
-    "quick": "빠른 시간 보기",
     "done": "리마인더 설정됨",
     "error": {
       "noAgent": "여기에는 알려 줄 에이전트가 없어요",
@@ -645,6 +636,7 @@
     "title": "새 미션",
     "intro": "에이전트가 계획을 세우고, 내가 시작하라고 해야 시작해요.",
     "placeholder": "무엇을 해야 하나요?",
+    "who": "담당",
     "submit": "계획 요청",
     "created": "{{name}}이(가) 계획을 세우고 있어요",
     "noAgents": "아직 미션을 실행할 수 있는 에이전트가 없어요. 웹사이트에서 컴퓨터를 연결해 주세요.",
@@ -795,9 +787,6 @@
     "keepEditing": "계속 편집"
   },
   "newAgent": {
-    "leaveTitle": "만들지 않고 나갈까요?",
-    "leaveText": "만들던 에이전트는 생성되지 않아요.",
-    "keepGoing": "계속 만들기",
     "identityQuestion": "에이전트는 누구인가요?",
     "identityLead": "이름, 채팅에서 부르는 방법, 얼굴을 정해요.",
     "handleMention": "부르려면 @{{handle}}을(를) 멘션하세요.",
@@ -823,7 +812,6 @@
       "archive": "휴대폰에서는 .zip이나 .tar.gz 파일을 열 수 없어요. 파일 앱에서 .zip을 탭해 압축을 풀고 안에 있는 파일을 고르거나, 컴퓨터에서 가져오세요.",
       "privacy": "이 휴대폰에서 읽어요. 키와 로그인 파일은 절대 열지 않아요.",
       "also": "함께 가져와요",
-      "change": "변경",
       "arrived_other": "에이전트 {{count}}명이 도착했어요",
       "partial": "{{total}}명 중 {{done}}명이 도착했어요. 다시 가져오면 나머지도 가져와요."
     }
@@ -846,7 +834,11 @@
     "taskForM": "{{name}}에게 맡길 작업",
     "taskPlaceholder": "무엇을 해야 하나요?",
     "sendTask": "작업 보내기",
-    "taskSent": "작업을 보냈어요"
+    "taskSent": "작업을 보냈어요",
+    "brakes": {
+      "forgetTitle": "이 답변들을 잊을까요?",
+      "forgetText": "{{name}}이(가) 이런 작업 전에 다시 물어봐요."
+    }
   },
   "activity": {
     "title": "활동",
@@ -1137,7 +1129,7 @@
       "file": "파일"
     },
     "more": "더 많은 옵션",
-    "send": "보내기",
+    "sendCopy": "사본 보내기",
     "savePhotos": "사진에 저장",
     "drive": "Drive에서 보기",
     "saved": "사진에 저장했어요",
@@ -1151,6 +1143,7 @@
     "place": "{{count}}개 중 {{index}}번째",
     "previous": "이전 사진",
     "next": "다음 사진",
+    "noPreviewTitle": "미리보기 없음",
     "noPreview": "이 파일은 앱에서 열리지 않아요. 다른 앱으로 보내서 여세요.",
     "video": {
       "play": "재생",
@@ -1160,7 +1153,8 @@
       "mute": "음소거",
       "unmute": "음소거 해제",
       "fullscreen": "전체 화면",
-      "open": "열기"
+      "open": "열기",
+      "cantPlay": "이 동영상은 이 휴대폰에서 재생할 수 없습니다."
     }
   },
   "issues": {
@@ -1252,7 +1246,6 @@
   "drive": {
     "title": "Drive",
     "search": "Drive 검색",
-    "types": "파일 형식",
     "type": {
       "all": "전체",
       "documents": "문서",
@@ -1273,7 +1266,6 @@
     },
     "by": "{{name}} · {{when}}",
     "noResults": "이 필터에 맞는 항목이 없어요.",
-    "loadFailed": "Drive를 불러오지 못했어요.",
     "more": "더 보기"
   },
   "constellation": {
@@ -1332,8 +1324,6 @@
     "openExisting": "페이지 열기"
   },
   "routines": {
-    "loadFailed": "루틴을 불러오지 못했어요.",
-    "anyAgent": "모든 에이전트",
     "create": "만들기",
     "when": {
       "custom": "직접 설정",
@@ -1706,6 +1696,7 @@
       "ui_automation_off": "UI 자동화가 꺼져 있어요",
       "xcode_missing": "Mac에 Xcode가 필요해요",
       "xcode_too_old": "Xcode가 이 iPhone을 지원하기에는 너무 오래됐어요",
+      "ios_behind_xcode": "이 iPhone의 iOS 업데이트",
       "device_support": "Mac이 이 iPhone을 준비하는 중이에요",
       "helper_missing": "테스트 도우미가 아직 설정되지 않았어요",
       "helper_expired": "테스트 도우미를 갱신해야 해요",
@@ -1929,7 +1920,9 @@
       "other": "다른 기기 사용",
       "stop": "그만 기다리기",
       "useInstead": "대신 {{name}} 사용",
-      "none": "사용할 수 있는 다른 기기 중 준비된 것이 없어요."
+      "none": "사용할 수 있는 다른 기기 중 준비된 것이 없어요.",
+      "tried": "{{device}}을(를) 다시 시도하고 있어요.",
+      "stopped": "{{device}}을(를) 더 이상 기다리지 않아요."
     }
   },
   "connectors": {
@@ -2187,7 +2180,6 @@
     "noMatch": "“{{q}}”에 맞는 역할이 없어요.",
     "tooMany": "이 워크스페이스에는 이미 역할이 100개 있어요. 새로 만들려면 하나를 삭제하세요.",
     "loadFailed": "역할을 불러오지 못했어요. {{cause}}",
-    "backToList": "역할로 돌아가기",
     "nobody": "없음",
     "reach": {
       "permissions_other": "권한 {{count}}개",
@@ -2552,7 +2544,6 @@
   },
   "dashboards": {
     "homeRow": "나만 · 내 위젯",
-    "loadFailed": "대시보드를 불러오지 못했어요.",
     "create": "만들기",
     "routineTarget": "해당 위젯",
     "pin": {

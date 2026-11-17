@@ -105,9 +105,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: "0.1.0",
   // Upright everywhere (the plugin below); only the agent's screen, in control, lies down (`useSideways`).
   orientation: "default",
-  // The icon the app ships with (ADR 0179); the others a person may pick are added by ./plugins/with-app-icons.
-  // All of them come from packages/ui/scripts/app-icons.mjs.
-  icon: `${ICONS}/night/ios.png`,
+  // The icon the app ships with (ADR 0179): the agent leaning in, Espiando, on the night sky (packages/client's
+  // `PHONE_APP_ICON`); the others a person may pick are added by ./plugins/with-app-icons. All of them come from
+  // packages/ui/scripts/app-icons.mjs.
+  icon: `${ICONS}/peekNight/ios.png`,
   userInterfaceStyle: "automatic",
   ios: {
     bundleIdentifier: `chat.agentes.app${suffix}`,
@@ -115,9 +116,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...(process.env.IOS_BUILD_NUMBER ? { buildNumber: process.env.IOS_BUILD_NUMBER } : {}),
     // Light, dark and tinted (iOS 18).
     icon: {
-      light: `${ICONS}/night/ios.png`,
-      dark: `${ICONS}/night/ios-dark.png`,
-      tinted: `${ICONS}/night/ios-tinted.png`,
+      light: `${ICONS}/peekNight/ios.png`,
+      dark: `${ICONS}/peekNight/ios-dark.png`,
+      tinted: `${ICONS}/peekNight/ios-tinted.png`,
     },
     supportsTablet: false,
     usesAppleSignIn: true,
@@ -133,9 +134,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Two layers (the night sky, the agent), so the launcher's mask and motion cut them like the iOS icon, and the
     // agent alone in one color for Android 13's themed icons.
     adaptiveIcon: {
-      foregroundImage: `${ICONS}/night/android-foreground.png`,
-      backgroundImage: `${ICONS}/night/android-background.png`,
-      monochromeImage: `${ICONS}/night/android-monochrome.png`,
+      foregroundImage: `${ICONS}/peekNight/android-foreground.png`,
+      backgroundImage: `${ICONS}/peekNight/android-background.png`,
+      monochromeImage: `${ICONS}/peekNight/android-monochrome.png`,
       backgroundColor: "#03101f",
     },
     predictiveBackGestureEnabled: false,

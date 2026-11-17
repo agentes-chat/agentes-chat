@@ -20,8 +20,7 @@
     "down": "Omlaag",
     "position": "{{at}} van {{count}}.",
     "channelPosition": "{{at}} van {{count}}.",
-    "itsChannels": "Kanalen",
-    "seeAll": "Alles bekijken"
+    "itsChannels": "Kanalen"
   },
   "blocks": {
     "send": "Versturen",
@@ -188,16 +187,9 @@
       "text": "Misschien is hij offline of buiten je netwerk. Je gesprekken verschijnen vanzelf zodra hij terug is.",
       "kept": "Je ziet wat al in de app stond."
     },
-    "section": {
-      "agents": "Agents",
-      "channels": "Kanalen",
-      "people": "Mensen"
-    },
-    "seeAll": {
-      "agents": "Alle agents bekijken",
-      "channels": "Alle kanalen bekijken",
-      "people": "Alle mensen bekijken"
-    },
+    "pinned": "Vastgezet",
+    "recent": "Recent",
+    "seeAll": "Alle gesprekken bekijken",
     "wait": {
       "verb": {
         "approval": "heeft je akkoord nodig",
@@ -359,8 +351,15 @@
     "profile": "Profiel",
     "here_one": "{{count}} hier",
     "here_other": "{{count}} hier",
+    "membersAdd": "Toevoegen",
+    "membersAdded_one": "{{count}} toegevoegd aan #{{channel}}",
+    "membersAdded_other": "{{count}} toegevoegd aan #{{channel}}",
+    "memberRemoved": "{{name}} zit niet meer in #{{channel}}",
+    "muted": "#{{channel}} gedempt",
+    "unmuted": "#{{channel}} niet meer gedempt",
     "headerAgent": "{{who}}. Open het profiel",
     "headerChannel": "{{who}}. Opties",
+    "headerMembers": "{{who}}. Bekijk wie er is",
     "switchHint": "Ingedrukt houden om van gesprek te wisselen",
     "switchTitle": "Van gesprek wisselen",
     "switchSearch": "Gesprekken zoeken",
@@ -443,21 +442,15 @@
     "doubleTapHint": "Dubbeltik = 👍",
     "react": "Reageren",
     "attach": {
-      "more": "Nog een foto of bestand toevoegen",
       "remove": "{{name}} weghalen",
       "waiting": "{{name}}, wacht op versturen",
       "sending": "{{name}}, wordt verstuurd",
+      "failed": "{{name}}, niet verstuurd: verstuur om het opnieuw te proberen",
+      "preparing": "Bestanden voorbereiden…",
       "tooMany": "Maximaal {{count}} bestanden per bericht."
     },
     "swipeReply": "Veeg naar rechts om te antwoorden",
     "intent": {
-      "suggest": {
-        "merge": "Ga je gang en merge",
-        "review": "Vraag {{name}} om het eerst na te kijken",
-        "seeChange": "Laat me zien wat er veranderd is",
-        "summarize": "Vat het samen in 3 punten",
-        "nextStep": "Wat is de volgende stap?"
-      },
       "arrived": "{{name}} is bij het team gekomen",
       "meet": "Je eerste gesprek met {{name}}",
       "roleIntro": "{{role}} in je team. Vraag het in gewone woorden.",
@@ -603,7 +596,6 @@
     "minuteLess": "{{n}} minuten eerder",
     "minuteMore": "{{n}} minuten later",
     "submit": "Herinner me op dit tijdstip",
-    "quick": "Snelle tijden bekijken",
     "done": "Herinnering ingesteld",
     "error": {
       "noAgent": "Geen agent hier kan je herinneren",
@@ -661,6 +653,7 @@
     "title": "Nieuwe missie",
     "intro": "De agent maakt een plan en begint pas als jij het zegt.",
     "placeholder": "Wat moet er gebeuren?",
+    "who": "Wie het doet",
     "submit": "Om een plan vragen",
     "created": "{{name}} maakt het plan",
     "noAgents": "Nog geen agent kan missies uitvoeren. Verbind een computer via de website.",
@@ -818,9 +811,6 @@
     "keepEditing": "Verder bewerken"
   },
   "newAgent": {
-    "leaveTitle": "Weggaan zonder aan te maken?",
-    "leaveText": "De agent waarmee je begon, wordt niet aangemaakt.",
-    "keepGoing": "Verder met aanmaken",
     "identityQuestion": "Wie is de agent?",
     "identityLead": "Zijn naam, hoe je hem in het gesprek roept en zijn gezicht.",
     "handleMention": "Vermeld @{{handle}} om hem te roepen.",
@@ -846,7 +836,6 @@
       "archive": "De telefoon opent geen .zip- of .tar.gz-bestanden. Tik in de app Bestanden op de .zip om hem uit te pakken en kies de bestanden erin, of importeer op de computer.",
       "privacy": "Gelezen op deze telefoon. Bestanden met sleutels en inloggegevens worden nooit geopend.",
       "also": "Komt ook mee",
-      "change": "Wijzigen",
       "arrived_one": "{{name}} is aangekomen",
       "arrived_other": "{{count}} agents zijn aangekomen",
       "partial": "{{done}} van {{total}} aangekomen. Opnieuw importeren haalt de rest."
@@ -870,7 +859,11 @@
     "taskForM": "Taak voor {{name}}",
     "taskPlaceholder": "Wat moet er gebeuren?",
     "sendTask": "Taak versturen",
-    "taskSent": "Taak verstuurd"
+    "taskSent": "Taak verstuurd",
+    "brakes": {
+      "forgetTitle": "Deze antwoorden vergeten?",
+      "forgetText": "{{name}} vraagt het opnieuw vóór dit soort werk."
+    }
   },
   "activity": {
     "title": "Activiteit",
@@ -1215,7 +1208,7 @@
       "file": "Bestand"
     },
     "more": "Meer opties",
-    "send": "Versturen",
+    "sendCopy": "Kopie versturen",
     "savePhotos": "Bewaren in Foto's",
     "drive": "Bekijken in Drive",
     "saved": "Bewaard in Foto's",
@@ -1229,6 +1222,7 @@
     "place": "{{index}} van {{count}}",
     "previous": "Vorige afbeelding",
     "next": "Volgende afbeelding",
+    "noPreviewTitle": "Geen voorbeeld",
     "noPreview": "Dit bestand opent niet in de app. Stuur het naar een andere app om het te openen.",
     "video": {
       "play": "Afspelen",
@@ -1238,7 +1232,8 @@
       "mute": "Geluid uit",
       "unmute": "Geluid aan",
       "fullscreen": "Volledig scherm",
-      "open": "Openen"
+      "open": "Openen",
+      "cantPlay": "Deze video kan niet op deze telefoon worden afgespeeld."
     }
   },
   "issues": {
@@ -1331,7 +1326,6 @@
   "drive": {
     "title": "Drive",
     "search": "Zoeken in Drive",
-    "types": "Bestandstypen",
     "type": {
       "all": "Alles",
       "documents": "Documenten",
@@ -1352,7 +1346,6 @@
     },
     "by": "{{name}} · {{when}}",
     "noResults": "Niets met deze filters.",
-    "loadFailed": "De Drive kon niet worden geladen.",
     "more": "Meer tonen"
   },
   "constellation": {
@@ -1417,8 +1410,6 @@
     "openExisting": "De pagina openen"
   },
   "routines": {
-    "loadFailed": "De routines konden niet worden geladen.",
-    "anyAgent": "Alle agents",
     "create": "Aanmaken",
     "when": {
       "custom": "Op jouw manier",
@@ -1804,6 +1795,7 @@
       "ui_automation_off": "UI-automatisering staat uit",
       "xcode_missing": "De Mac heeft Xcode nodig",
       "xcode_too_old": "Xcode is te oud voor deze iPhone",
+      "ios_behind_xcode": "Werk de iOS van deze iPhone bij",
       "device_support": "De Mac maakt deze iPhone klaar",
       "helper_missing": "De testhelper is nog niet ingesteld",
       "helper_expired": "De testhelper moet worden vernieuwd",
@@ -2028,7 +2020,9 @@
       "other": "Ander apparaat gebruiken",
       "stop": "Stoppen met wachten",
       "useInstead": "Gebruik {{name}} in plaats daarvan",
-      "none": "Geen ander apparaat dat je kunt gebruiken is klaar."
+      "none": "Geen ander apparaat dat je kunt gebruiken is klaar.",
+      "tried": "{{device}} wordt opnieuw geprobeerd.",
+      "stopped": "Er wordt niet meer op {{device}} gewacht."
     }
   },
   "connectors": {
@@ -2292,7 +2286,6 @@
     "noMatch": "Geen rol komt overeen met “{{q}}”.",
     "tooMany": "Deze werkruimte heeft al 100 rollen. Verwijder er een om een nieuwe te maken.",
     "loadFailed": "De rollen konden niet worden geladen. {{cause}}",
-    "backToList": "Terug naar rollen",
     "nobody": "Niemand",
     "reach": {
       "permissions_one": "{{count}} recht",
@@ -2669,7 +2662,6 @@
   },
   "dashboards": {
     "homeRow": "Alleen jij · je eigen widgets",
-    "loadFailed": "De dashboards konden niet worden geladen.",
     "create": "Maken",
     "routineTarget": "zijn widget",
     "pin": {

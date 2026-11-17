@@ -366,7 +366,6 @@ function NotePick({ draft, change }: PickProps) {
         placeholder={t(modeKey(org, "members.dialog.notePlaceholder"), { org: org?.name ?? "" })}
         accessibilityLabel={t("members.dialog.note")}
         limit={INVITE_NOTE_LIMIT}
-        autoFocus
       />
       <GroupedFooter>{t("mobile.invitePeople.noteHelp", { max: INVITE_NOTE_MAX })}</GroupedFooter>
     </SettingsPage>

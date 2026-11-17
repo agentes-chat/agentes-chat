@@ -361,6 +361,10 @@ export function SecretCard({ request }: { request: SecretRequest }) {
                             autoCapitalize="none"
                             autoCorrect={false}
                             spellCheck={false}
+                            // The card's last field: its return key sends, as the secret's own does.
+                            returnKeyType="send"
+                            onSubmitEditing={() => void send()}
+                            submitBehavior="submit"
                           />
                         </View>
                       ) : null}

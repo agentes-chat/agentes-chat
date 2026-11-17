@@ -1975,6 +1975,62 @@
       "when": 1794854801793,
       "tag": "0285_run_id_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 284,
+      "version": "7",
+      "when": 1794859029901,
+      "tag": "0286_query_sweep",
+      "breakpoints": true
+    },
+    {
+      "idx": 285,
+      "version": "7",
+      "when": 1794867197842,
+      "tag": "0287_confidential_threads",
+      "breakpoints": true
+    },
+    {
+      "idx": 286,
+      "version": "7",
+      "when": 1794867198842,
+      "tag": "0288_confidential_thread_ai",
+      "breakpoints": true
+    },
+    {
+      "idx": 287,
+      "version": "7",
+      "when": 1794867298842,
+      "tag": "0289_next_account_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 288,
+      "version": "7",
+      "when": 1794917194719,
+      "tag": "0290_outside_collaborators",
+      "breakpoints": true
+    },
+    {
+      "idx": 289,
+      "version": "7",
+      "when": 1794917393261,
+      "tag": "0291_workspace_accent",
+      "breakpoints": true
+    },
+    {
+      "idx": 290,
+      "version": "7",
+      "when": 1794933529896,
+      "tag": "0292_support_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 291,
+      "version": "7",
+      "when": 1794942564490,
+      "tag": "0293_brand_hosts",
+      "breakpoints": true
     }
   ]
 }

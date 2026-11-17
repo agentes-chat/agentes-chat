@@ -3,13 +3,12 @@ import { useModels } from "@agenteschat/client";
 import {
   type Advanced,
   advancedDefaults,
+  brainEffortScale,
   type EffortLevel,
-  effortLevelsOf,
   effortOf,
   effortScaleSteps,
   effortStepKey,
   effortTextOf,
-  keyEffortScale,
 } from "@agenteschat/client/lib/brain-advanced";
 import { effortFamily } from "@agenteschat/client/lib/brain-picker";
 import { type ContextLimit, contextChoices, contextSize, isContextLimit } from "@agenteschat/client/lib/context-limits";
@@ -165,12 +164,16 @@ export function RightHandBrainDialog({
     ? option?.models.find((m) => m.value === (advanced?.effectiveModel ?? option?.defaultModel ?? ""))?.level
     : undefined;
   const savedEffort = advanced ? (modelLevel ?? effortOf(advanced.brain, advanced.effort)) : null;
-  // An API model's ramp is the levels it takes (ADR 0187); one never checked, or taking none, gets no ramp.
-  const keyScale =
-    advanced?.brain === "model"
-      ? keyEffortScale(autoModel ? undefined : models.data?.models.find((m) => m.id === agent.model))
-      : null;
-  const noEffort = advanced?.brain === "model" && keyScale === null;
+  // An API model's ramp is the levels it takes (ADR 0187); computer brains follow their plan/model efforts.
+  const modelNow = advanced?.brain === "model" ? agent.model : (advanced?.effectiveModel ?? option?.defaultModel ?? "");
+  const planModel = advanced?.brain === "model" ? undefined : option?.models.find((m) => m.value === modelNow);
+  const keyModel = autoModel
+    ? undefined
+    : models.data?.models.find(
+        (m) => m.id === (advanced?.brain === "model" ? agent.model : (planModel?.modelId ?? "")),
+      );
+  const effortScale = advanced ? brainEffortScale(advanced.brain, { planModel, keyModel, family }) : null;
+  const noEffort = advanced?.brain === "model" && effortScale === null;
   const openMore = () => {
     if (!advanced) return;
     setMore({ effort: savedEffort, contextTokens: savedContext });
@@ -184,7 +187,6 @@ export function RightHandBrainDialog({
       speed: "standard",
       contextTokens: more.contextTokens,
       onlyOwner: true,
-      fallback: true,
     };
     const defaults = advancedDefaults(advanced.brain, now);
     setMore({ effort: defaults.effort, contextTokens: defaults.contextTokens });
@@ -241,17 +243,12 @@ export function RightHandBrainDialog({
                         ...st,
                         label: t(`agentPage.work.brain.efforts.${effortStepKey(st.value)}`),
                       }))
-                    : keyScale
-                      ? effortScaleSteps(keyScale).map((st) => ({
-                          ...st,
-                          // The API brain stores no none/minimal: shown, unselectable (like an untaken level).
-                          disabled: st.disabled || st.value === "none" || st.value === "minimal",
-                          label: t(`agentPage.work.brain.efforts.${effortStepKey(st.value)}`),
-                        }))
-                      : effortLevelsOf(advanced.brain).map((e) => ({
-                          value: e,
-                          label: t(`agentPage.work.brain.efforts.${e}`),
-                        }))
+                    : effortScaleSteps(effortScale ?? []).map((st) => ({
+                        ...st,
+                        // None/minimal stay on the ladder and remain disabled unless supported on an API key or family.
+                        disabled: st.disabled || st.value === "none" || st.value === "minimal",
+                        label: t(`agentPage.work.brain.efforts.${effortStepKey(st.value)}`),
+                      }))
                 }
                 hint={(e) => {
                   if (family) return t(`agentPage.work.brain.effortText.${!e || e === "none" ? "none" : e}`);

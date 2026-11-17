@@ -21,6 +21,7 @@ import { type Agent, listAgents } from "../agents";
 import { audienceError, canTalkTo, speakerOf } from "../audience";
 import { recordAudit } from "../audit";
 import { listChannels, requireChannelAccess } from "../channels";
+import { stubOf, threadIsConfidential } from "../confidential";
 import { consultationWait } from "../consultations";
 import type { ContextDeps } from "../context/summaries";
 import { sha256 } from "../crypto";
@@ -41,7 +42,8 @@ const { agentRuns, appSends, approvals, messages, users, agents, channels } = sc
 /**
  * The tools an AI app gets on `/mcp` (ADR 0119 §3). They act as the person, through the same engine calls the web
  * app makes, so every permission is the person's own. None decides an approval, changes a setting or manages
- * people: approvals stay a human action inside agentes.chat.
+ * people: approvals stay a human action inside agentes.chat. What they answer is read by the app's model, not by
+ * the person, so a confidential message is its stub with nothing attached (`stubOf`, ADR 0190).
  */
 
 export interface AppsToolDeps {
@@ -248,7 +250,8 @@ async function agentMessage(db: Database, orgId: string, run: RunRow) {
   return last ?? null;
 }
 
-function replyOf(deps: AppsToolDeps, orgId: string, m: Message) {
+function replyOf(deps: AppsToolDeps, orgId: string, stored: Message) {
+  const m = stubOf(stored);
   const { text, truncated } = cleanUntrusted(m.body, REPLY_CHARS);
   return {
     id: m.id,
@@ -325,7 +328,9 @@ async function taskState(deps: AppsToolDeps, p: AppPrincipal, message: Message, 
       return {
         status: "failed" as TaskStatus,
         run,
-        ...(run.error ? { error: cleanUntrusted(run.error, 500).text } : {}),
+        ...(run.error && !(await threadIsConfidential(deps.db, p.orgId, run.threadRootId))
+          ? { error: cleanUntrusted(run.error, 500).text }
+          : {}),
       };
   }
 }
@@ -831,6 +836,8 @@ export function buildAppsMcpServer(deps: AppsToolDeps, p: AppPrincipal, version:
       let list: MessageView[];
       try {
         list = await listMessages(deps.db, p.userId, p.orgId, channelId, { threadId, before, limit: args.limit ?? 20 });
+        // `listMessages` reads as the person does, words included: what answers here is read by the app's model.
+        list = list.map(stubOf);
       } catch (error) {
         if (error instanceof ForbiddenError) throw new NotFoundError("No channel with this id that you can read");
         throw error;

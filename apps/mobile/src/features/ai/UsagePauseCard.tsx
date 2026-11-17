@@ -52,7 +52,7 @@ function useDontRun(runId: string | null) {
 }
 
 /**
- * "Don't run it" as words only (a ghost button): put it in `textActs`. Greyed for anyone but the person behind it,
+ * "Don't run it" as words only (a text button): put it in `textActs`. Greyed for anyone but the person behind it,
  * the agent's owner and admins.
  */
 export function DontRunButton({ runId, may, count = 1 }: { runId: string | null; may: boolean; count?: number }) {
@@ -97,7 +97,7 @@ export function AnswerAnywayButton({
   const may = mayAnswerAnyway(closed, meId, owner, can(org, "manage_agents"));
   return (
     <Button
-      variant="ghost"
+      variant="text"
       size="sm"
       label={t("usageCard.answerAnyway")}
       loading={pending}
@@ -168,7 +168,7 @@ export function UsageWaitCancel({ message: m }: { message: Message }) {
         )}
         {m.author.id && sheet ? (
           <Button
-            variant="ghost"
+            variant="text"
             size="sm"
             label={t("queue.see")}
             onPress={() =>
@@ -279,6 +279,6 @@ export function UsagePauseCard({ message: m }: { message: Message }) {
 
 const styles = StyleSheet.create({
   acts: { gap: 2, alignItems: "flex-start" },
-  // Words-only actions: the ghost buttons' own side padding hangs outside, so their words line up with the text.
-  textActs: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", marginLeft: -14 },
+  // Words-only actions: text buttons have no side padding, so the first one's words start where the text above does.
+  textActs: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 16 },
 });

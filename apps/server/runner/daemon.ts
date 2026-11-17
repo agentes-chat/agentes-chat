@@ -539,7 +539,7 @@ export class RunnerDaemon implements RequestObserver {
     // `grok models` and `agy models` are signed out.
     this.executors = () => {
       const found = { ...(exec() ?? {}) };
-      for (const kind of ["grok", "antigravity"] as const) {
+      for (const kind of ["codex", "grok", "antigravity"] as const) {
         const entry = found[kind];
         const models = this.accounts?.listedModels(kind);
         if (entry && models) found[kind] = { ...entry, models };

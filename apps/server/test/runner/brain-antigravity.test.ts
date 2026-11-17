@@ -81,7 +81,7 @@ test("command line: headless stream-json in the sandbox; work takes edits, plan 
   expect(hydrogen.join(" ")).toContain("--model gemini-4-hydrogen-xhigh");
   expect(hydrogen).not.toContain("--effort");
   expect(work.join(" ")).toContain(`--conversation ${FIRST}`);
-  expect(antigravityTurnArgs({ prompt: "oi", effort: "xhigh" }).join(" ")).toContain("--effort high");
+  expect(antigravityTurnArgs({ prompt: "oi", effort: "xhigh" }).join(" ")).toContain("--effort xhigh");
   // A slug with no level of its own (the Orchestrator) takes the ramp's.
   expect(
     antigravityTurnArgs({ prompt: "oi", model: "gemini-pro-orchestrator-g1-pro", effort: "high" }).join(" "),

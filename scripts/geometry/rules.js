@@ -49,7 +49,10 @@
     "overflow-x",
   ];
 
-  const sig = (el) => {
+  /** A kit button's words sit in its label: whatever a rule finds in them, it names and places as the button. */
+  const worded = (el) => (el.matches(".ac-btn > .ac-btn__label") ? el.parentElement : el);
+  const sig = (labelOrEl) => {
+    const el = worded(labelOrEl);
     const classes = (typeof el.className === "string" ? el.className : (el.className?.baseVal ?? ""))
       .split(/\s+/)
       .filter((c) => c && !/^(ac-captop|ac-iconline|ac-actrow|is-|has-)/.test(c))
@@ -63,7 +66,7 @@
   const UTILITY = /^(ac-|row$|stack|small$|muted$|grow$|is-|has-)/;
   const kitOnly = (signature) => !(signature?.match(/\.[\w-]+/g) ?? []).some((c) => !UTILITY.test(c.slice(1)));
   const placeOf = (el) => {
-    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    for (let p = worded(el).parentElement; p && p !== document.body; p = p.parentElement) {
       const classes = typeof p.className === "string" ? p.className.split(/\s+/) : [];
       if (classes.some((c) => c && !UTILITY.test(c))) return sig(p);
     }

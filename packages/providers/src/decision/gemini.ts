@@ -10,7 +10,7 @@ import {
 } from "./types";
 
 /**
- * Gemini's Decisions API (ADR 0188): POST /v1beta/decisions with gemini-decision-1. Shared input is multimodal (text,
+ * Gemini's Decisions API (ADR 0195): POST /v1beta/decisions with gemini-decision-1. Shared input is multimodal (text,
  * pictures, audio, video and PDF), questions are a map by id and answers come back in a map. Its noul criteria name
  * the two sides true_description and false_description. No box/spatial grounding.
  * https://ai.google.dev/api/decisions

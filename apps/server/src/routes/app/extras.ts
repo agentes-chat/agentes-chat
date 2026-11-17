@@ -60,7 +60,7 @@ export interface AppExtras {
   pushRelaySender?: PushSender | null;
   /** The installation's Jev key, for its owner's routes (ADR 0073); absent = those routes answer 404. */
   jevKey?: JevKey;
-  /** The installation's optional decision model, for its owner's routes (ADR 0188); absent = 404. */
+  /** The installation's optional decision model, for its owner's routes (ADR 0195); absent = 404. */
   decisionModel?: DecisionModel;
   /**
    * The installation's GIPHY key, for its owner's routes (ADR 0091, amended 2026-10-31); absent (agentes.chat's own

@@ -8,6 +8,7 @@ import {
   type Endpoint,
   embeddingCostNanoUsd,
   endpointKeyCheck,
+  ensureLiveCatalog,
   ensureOpenRouterModels,
   estimateTokens,
   isCustomModel,
@@ -350,6 +351,7 @@ export function createModelGateway(deps: ModelGatewayDeps) {
       );
     }
     if (isOpenRouterModel(model)) await ensureOpenRouterModels(model);
+    else await ensureLiveCatalog(model);
     const info = modelInfo(model);
     if (info) return info;
     if (!isOpenRouterModel(model)) throw new ValidationError(`Model ${model} is not in the catalog`);

@@ -19,8 +19,7 @@
     "down": "下へ移動",
     "position": "{{count}}中{{at}}番目。",
     "channelPosition": "{{count}}中{{at}}番目。",
-    "itsChannels": "チャンネル",
-    "seeAll": "すべて表示"
+    "itsChannels": "チャンネル"
   },
   "blocks": {
     "send": "送信",
@@ -182,16 +181,9 @@
       "text": "停止しているか、ネットワークの外にある可能性があります。復旧するとチャットが自動で表示されます。",
       "kept": "アプリにすでにあった内容を表示しています。"
     },
-    "section": {
-      "agents": "エージェント",
-      "channels": "チャンネル",
-      "people": "人"
-    },
-    "seeAll": {
-      "agents": "すべてのエージェントを表示",
-      "channels": "すべてのチャンネルを表示",
-      "people": "すべての人を表示"
-    },
+    "pinned": "ピン留め",
+    "recent": "最近",
+    "seeAll": "すべてのチャットを表示",
     "wait": {
       "verb": {
         "approval": "があなたのOKを待っています",
@@ -345,8 +337,14 @@
     "options": "オプション",
     "profile": "プロフィール",
     "here_other": "{{count}}人が参加中",
+    "membersAdd": "追加",
+    "membersAdded_other": "#{{channel}}に{{count}}人を追加しました",
+    "memberRemoved": "{{name}}を#{{channel}}から外しました",
+    "muted": "#{{channel}}をミュートしました",
+    "unmuted": "#{{channel}}のミュートを解除しました",
     "headerAgent": "{{who}}。プロフィールを開く",
     "headerChannel": "{{who}}。オプション",
+    "headerMembers": "{{who}}。参加者を見る",
     "switchHint": "長押しで会話を切り替え",
     "switchTitle": "会話を切り替え",
     "switchSearch": "会話を検索",
@@ -428,21 +426,15 @@
     "doubleTapHint": "ダブルタップ = 👍",
     "react": "リアクション",
     "attach": {
-      "more": "写真やファイルを追加",
       "remove": "{{name}}を外す",
       "waiting": "{{name}}、送信待ち",
       "sending": "{{name}}、送信中",
+      "failed": "{{name}}、送信できませんでした。送信してやり直せます",
+      "preparing": "ファイルを準備しています…",
       "tooMany": "1つのメッセージに添付できるファイルは{{count}}個までです。"
     },
     "swipeReply": "右にスワイプして返信",
     "intent": {
-      "suggest": {
-        "merge": "そのままマージして",
-        "review": "先に{{name}}にレビューを頼んで",
-        "seeChange": "何が変わったか見せて",
-        "summarize": "3つのポイントでまとめて",
-        "nextStep": "次のステップは？"
-      },
       "arrived": "{{name}}がチームに加わりました",
       "meet": "{{name}}との最初の会話",
       "roleIntro": "チームの{{role}}です。普段の言葉で頼んでください。",
@@ -588,7 +580,6 @@
     "minuteLess": "{{n}}分早く",
     "minuteMore": "{{n}}分後",
     "submit": "この時間にリマインド",
-    "quick": "すぐ選べる時間を見る",
     "done": "リマインダーを設定しました",
     "error": {
       "noAgent": "ここにはリマインドできるエージェントがいません",
@@ -645,6 +636,7 @@
     "title": "新しいミッション",
     "intro": "エージェントが計画を立て、あなたの指示があってから始めます。",
     "placeholder": "何をやり遂げる必要がありますか？",
+    "who": "担当",
     "submit": "計画を頼む",
     "created": "{{name}}が計画を立てています",
     "noAgents": "ミッションを実行できるエージェントはまだいません。ウェブサイトでコンピューターを接続してください。",
@@ -795,9 +787,6 @@
     "keepEditing": "編集を続ける"
   },
   "newAgent": {
-    "leaveTitle": "作成せずに終了しますか？",
-    "leaveText": "作成途中のエージェントは作成されません。",
-    "keepGoing": "作成を続ける",
     "identityQuestion": "エージェントはだれですか？",
     "identityLead": "名前、チャットでの呼び方、顔です。",
     "handleMention": "@{{handle}}とメンションすると呼べます。",
@@ -823,7 +812,6 @@
       "archive": "スマートフォンでは.zipや.tar.gzファイルを開けません。「ファイル」アプリで.zipをタップして解凍し、中のファイルを選ぶか、コンピューターで取り込んでください。",
       "privacy": "このスマートフォン上で読み込みます。キーやログイン情報のファイルは開きません。",
       "also": "一緒に移行されるもの",
-      "change": "変更",
       "arrived_other": "{{count}}体のエージェントが到着しました",
       "partial": "{{total}}人中{{done}}人が到着しました。もう一度取り込むと残りも移行されます。"
     }
@@ -846,7 +834,11 @@
     "taskForM": "{{name}}へのタスク",
     "taskPlaceholder": "何をやり遂げる必要がありますか？",
     "sendTask": "タスクを送信",
-    "taskSent": "タスクを送信しました"
+    "taskSent": "タスクを送信しました",
+    "brakes": {
+      "forgetTitle": "これらの回答を忘れますか？",
+      "forgetText": "{{name}}はこの種の作業の前に、もう一度確認します。"
+    }
   },
   "activity": {
     "title": "アクティビティ",
@@ -1137,7 +1129,7 @@
       "file": "ファイル"
     },
     "more": "その他のオプション",
-    "send": "送る",
+    "sendCopy": "コピーを送信",
     "savePhotos": "写真に保存",
     "drive": "Driveで表示",
     "saved": "写真に保存しました",
@@ -1151,6 +1143,7 @@
     "place": "{{index}}/{{count}}",
     "previous": "前の画像",
     "next": "次の画像",
+    "noPreviewTitle": "プレビューなし",
     "noPreview": "このファイルはアプリでは開けません。別のアプリに送って開いてください。",
     "video": {
       "play": "再生",
@@ -1160,7 +1153,8 @@
       "mute": "ミュート",
       "unmute": "ミュート解除",
       "fullscreen": "全画面表示",
-      "open": "開く"
+      "open": "開く",
+      "cantPlay": "この動画はこの端末では再生できません。"
     }
   },
   "issues": {
@@ -1252,7 +1246,6 @@
   "drive": {
     "title": "Drive",
     "search": "Driveを検索",
-    "types": "ファイルの種類",
     "type": {
       "all": "すべて",
       "documents": "ドキュメント",
@@ -1273,7 +1266,6 @@
     },
     "by": "{{name}} · {{when}}",
     "noResults": "この条件に一致するものはありません。",
-    "loadFailed": "Driveを読み込めませんでした。",
     "more": "もっと見る"
   },
   "constellation": {
@@ -1332,8 +1324,6 @@
     "openExisting": "ページを開く"
   },
   "routines": {
-    "loadFailed": "ルーティンを読み込めませんでした。",
-    "anyAgent": "すべてのエージェント",
     "create": "作成",
     "when": {
       "custom": "カスタム",
@@ -1706,6 +1696,7 @@
       "ui_automation_off": "UIオートメーションがオフです",
       "xcode_missing": "MacにXcodeが必要です",
       "xcode_too_old": "このiPhoneにはXcodeが古すぎます",
+      "ios_behind_xcode": "この iPhone の iOS をアップデート",
       "device_support": "MacがこのiPhoneを準備しています",
       "helper_missing": "テストヘルパーがまだ設定されていません",
       "helper_expired": "テストヘルパーの更新が必要です",
@@ -1929,7 +1920,9 @@
       "other": "別のデバイスを使う",
       "stop": "待つのをやめる",
       "useInstead": "代わりに{{name}}を使う",
-      "none": "使える状態のデバイスはほかにありません。"
+      "none": "使える状態のデバイスはほかにありません。",
+      "tried": "{{device}}をもう一度試しています。",
+      "stopped": "{{device}}を待つのをやめました。"
     }
   },
   "connectors": {
@@ -2187,7 +2180,6 @@
     "noMatch": "「{{q}}」に一致するロールはありません。",
     "tooMany": "このワークスペースにはすでに100個のロールがあります。新しく作成するには1つ削除してください。",
     "loadFailed": "ロールを読み込めませんでした。{{cause}}",
-    "backToList": "ロールに戻る",
     "nobody": "なし",
     "reach": {
       "permissions_other": "{{count}}件の権限",
@@ -2552,7 +2544,6 @@
   },
   "dashboards": {
     "homeRow": "あなただけ · 自分のウィジェット",
-    "loadFailed": "ダッシュボードを読み込めませんでした。",
     "create": "作成",
     "routineTarget": "そのウィジェット",
     "pin": {

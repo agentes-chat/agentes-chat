@@ -22,12 +22,12 @@ import Animated, { FadeIn } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
 import {
   Button,
-  Card,
+  GroupedHeader,
+  GroupedList,
+  GroupedRow,
   Icon,
   type IconName,
   InfoHint,
-  Row,
-  SectionHeader,
   Text,
   useReducedMotion,
   useToast,
@@ -422,16 +422,16 @@ function ReceiptsSheet({
   return (
     <>
       <SheetTitle title={t("receipts.popoverTitle")} />
-      <Card>
+      <GroupedList>
         {rows.map((r) => (
-          <Row
+          <GroupedRow
             key={r.agentId}
             leading={<AgentFace agentId={r.agentId} size={30} live={false} />}
-            title={name(r.agentId)}
-            subtitle={t(phaseKey(r.phase, held))}
+            label={name(r.agentId)}
+            sub={t(phaseKey(r.phase, held))}
           />
         ))}
-      </Card>
+      </GroupedList>
       {by ? <Note icon={RULE_ICON[by.rule]}>{by.text}</Note> : null}
       {nobody ? (
         <Note icon="checks">
@@ -441,23 +441,24 @@ function ReceiptsSheet({
         </Note>
       ) : null}
       {callable.length > 0 ? (
-        <>
-          <SectionHeader title={t("channel.callAgent")} />
-          <Card>
+        // The header and its rows as one block of the sheet (its gap goes between blocks).
+        <View>
+          <GroupedHeader>{t("channel.callAgent")}</GroupedHeader>
+          <GroupedList>
             {callable.map((c) => (
-              <Row
+              <GroupedRow
                 key={c.agentId}
                 leading={<AgentFace agentId={c.agentId} size={30} live={false} />}
-                title={name(c.agentId)}
-                subtitle={`@${c.handle}`}
+                label={name(c.agentId)}
+                sub={`@${c.handle}`}
                 onPress={() => {
                   requestComposerText(m.channelId, `@${c.handle} `);
                   sheet.close();
                 }}
               />
             ))}
-          </Card>
-        </>
+          </GroupedList>
+        </View>
       ) : null}
       {mentionNeeded ? (
         <>

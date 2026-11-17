@@ -81,6 +81,7 @@ import {
   OPENCODE_BIN,
   parseAgyModels,
   parseGrokModels,
+  probeCodexModels,
   resolveCommand,
 } from "./executors";
 import { readSmallJson, writeJson } from "./json-file";
@@ -552,6 +553,7 @@ export function watchCodexAuth(home: string, granted: string, send: (auth: strin
  * CLIs whose own listing on the computer is signed out: Grok Build and the Antigravity CLI.
  */
 const LISTED_MODELS = {
+  codex: { file: "codex-models.json", parse: (): CursorModelInfo[] => [] },
   grok: { file: "grok-models.json", parse: parseGrokModels },
   antigravity: { file: "antigravity-models.json", parse: parseAgyModels },
 } as const;
@@ -2547,6 +2549,12 @@ export class AccountManager {
               : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
     if ((kind === "grok" || kind === "antigravity") && status.loggedIn)
       this.keepListedModels(kind, LISTED_MODELS[kind].parse(r.stdout));
+    if (kind === "codex" && status.loggedIn && !this.opts.commands?.codex) {
+      const models = await probeCodexModels(this.command("codex"), this.env("codex", dir)).catch(
+        () => [] as CursorModelInfo[],
+      );
+      this.keepListedModels("codex", models);
+    }
     // Timed out, or didn't start.
     const unknown = r.status === null ? { statusUnknown: true as const } : {};
     return { id, kind, ...status, ...unknown, ...shared };

@@ -1,19 +1,20 @@
 name: Container
 
-# Builds the app image on this repository's self-hosted runner (Settings > Actions > Runners: the
-# labels self-hosted, Linux, X64) and pushes it to this repository's GitHub Container Registry, on
-# every push. Nothing here needs a secret: GITHUB_TOKEN pushes to ghcr.io with packages: write.
+# Builds the app and MCP sandbox multi-arch images (linux/amd64, linux/arm64) on this repository's self-hosted
+# runner (Settings > Actions > Runners: self-hosted, Linux, X64) and pushes them to GitHub Container Registry.
+# Nothing here needs a secret: GITHUB_TOKEN pushes to ghcr.io with packages: write.
 #
-# The image is ghcr.io/<owner>/<repo>:<branch, tag, sha-...> and :latest on the default branch.
-# The package is public, so a server pulls it without signing in.
+# Images:
+#   ghcr.io/<owner>/<repo>:<branch, tag, sha-...> and :latest on the default branch
+#   ghcr.io/<owner>/<repo>-mcp-sandbox:<branch, tag, sha-...> and :latest on the default branch
 #
-# The Docker CLI is used directly, not the Docker actions: on this runner those actions' post steps
-# failed when the runner cleaned its temporary directory. The builder is capped at 1.5 CPUs and
-# 5 GB, so a build cannot take the whole notebook, and its cache lives in /tmp between runs.
+# The Docker CLI is used directly, not the Docker actions: on this runner those actions' post steps failed when the
+# runner cleaned its temporary directory. The builder is capped at 2.5 CPUs / 6 GB so builds finish promptly without
+# saturating the host, and its layer cache lives in /tmp between runs.
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -27,16 +28,21 @@ permissions:
 
 jobs:
   build:
-    name: Build and push
-    # The runner registered for this repository. Change these labels if the runner's differ.
+    name: Build and push (amd64 + arm64)
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Name the image
+      - name: Name the images
         # GHCR wants lowercase: owner and repository, lowercased.
-        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          REPO_NAME="${REPO_NAME,,}"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          echo "SANDBOX_IMAGE=${IMAGE}-mcp-sandbox" >> "$GITHUB_ENV"
+          echo "REPO_NAME=$REPO_NAME" >> "$GITHUB_ENV"
 
       - name: The runner
         run: |
@@ -45,54 +51,65 @@ jobs:
           df -h / | tail -1
           free -h | head -2
           nproc
+          ls /proc/sys/fs/binfmt_misc/qemu-aarch64 >/dev/null 2>&1 || docker run --privileged --rm tonistiigi/binfmt --install arm64 || true
 
       - name: Log in to GitHub Container Registry
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
 
-      - name: Build and push
+      - name: Build and push multi-arch images
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           REF="${GITHUB_REF_NAME//\//-}"
-          TAGS=(-t "$IMAGE:sha-${GITHUB_SHA::7}" -t "$IMAGE:$REF")
+          APP_TAGS=(-t "$IMAGE:sha-${GITHUB_SHA::7}" -t "$IMAGE:$REF")
+          SANDBOX_TAGS=(-t "$SANDBOX_IMAGE:sha-${GITHUB_SHA::7}" -t "$SANDBOX_IMAGE:$REF")
           if [ "$GITHUB_REF_TYPE" = "branch" ] && [ "$GITHUB_REF_NAME" = "$DEFAULT_BRANCH" ]; then
-            TAGS+=(-t "$IMAGE:latest")
+            APP_TAGS+=(-t "$IMAGE:latest")
+            SANDBOX_TAGS+=(-t "$SANDBOX_IMAGE:latest")
           fi
-          # The builder lives on this machine: 1.5 CPUs and 5 GB, so a build cannot take the notebook.
           docker buildx inspect agentes-ci >/dev/null 2>&1 || \
             docker buildx create --name agentes-ci --driver docker-container \
-              --driver-opt memory=5g,memory-swap=6g,cpu-quota=150000,cpu-period=100000
+              --driver-opt memory=6g,memory-swap=8g,cpu-quota=250000,cpu-period=100000
           docker buildx use agentes-ci
           docker buildx inspect --bootstrap
-          docker buildx build --push --platform linux/amd64 \
+          docker buildx build --push --platform linux/amd64,linux/arm64 \
             --provenance=false --sbom=false \
             --cache-from type=local,src=/tmp/agentes-build-cache \
             --cache-to type=local,dest=/tmp/agentes-build-cache,mode=max \
-            "${TAGS[@]}" .
+            "${APP_TAGS[@]}" .
+          docker buildx build --push --platform linux/amd64,linux/arm64 \
+            --provenance=false --sbom=false \
+            --cache-from type=local,src=/tmp/agentes-mcp-sandbox-cache \
+            --cache-to type=local,dest=/tmp/agentes-mcp-sandbox-cache,mode=max \
+            -f deploy/mcp-sandbox/Dockerfile \
+            "${SANDBOX_TAGS[@]}" deploy/mcp-sandbox
 
-      - name: Make the package public
-        # The package is public already; this keeps it so after a rename or a fresh package.
+      - name: Make the packages public
+        # Keep both GHCR packages public so servers can pull them without signing in.
         continue-on-error: true
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          curl -fsS -X PATCH \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/user/packages/container/agentes-chat" \
-            -d '{"visibility":"public"}'
+          for PKG in "$REPO_NAME" "${REPO_NAME}-mcp-sandbox"; do
+            curl -fsS -X PATCH \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/user/packages/container/$PKG" \
+              -d '{"visibility":"public"}' || true
+          done
 
       - name: Summary
         run: |
           {
-            echo "### Container image"
+            echo "### Container images (linux/amd64, linux/arm64)"
             echo '```'
             echo "$IMAGE"
             echo "latest: $(docker buildx imagetools inspect "$IMAGE:latest" 2>/dev/null | awk '/^Digest:/ {print $2; exit}')"
+            echo "$SANDBOX_IMAGE"
+            echo "latest: $(docker buildx imagetools inspect "$SANDBOX_IMAGE:latest" 2>/dev/null | awk '/^Digest:/ {print $2; exit}')"
             echo '```'
-            echo "Pull it with: docker pull $IMAGE:latest"
           } >> "$GITHUB_STEP_SUMMARY"

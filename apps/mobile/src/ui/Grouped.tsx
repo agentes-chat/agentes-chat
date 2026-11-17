@@ -1,11 +1,12 @@
 import { Children, isValidElement, type ReactNode } from "react";
 import { type AccessibilityActionEvent, Pressable, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated";
 import { haptics } from "./haptics";
 import { Icon, type IconName } from "./Icon";
 import { InfoHint, useInfoHint } from "./InfoHint";
 import { MEDIA_ROW } from "./media-row";
-import { GROUPED_ROW } from "./rhythm";
+import { PRESS_DELAY, ROW_PRESS_DELAY } from "./PressScale";
+import { GROUPED_ROW, TOUCH } from "./rhythm";
 import { Text, textLineOf } from "./Text";
 import { ToggleSwitch } from "./Toggle";
 import { useFontScale } from "./text-scale";
@@ -16,7 +17,9 @@ import { leadBox } from "./type-scale";
  * The leading column of a row with a face or a mark: whatever leads is centered in it. As wide as a framed face (36,
  * the smaller of the two framed sizes), so a face never spills into the gap before the text.
  */
-const LEAD = 36;
+const LEAD = GROUPED_ROW.lead;
+/** The remove ×'s glyph, inside its 44-point button. */
+const REMOVE_GLYPH = 16;
 /** A row's icon tile; its corner is 30% of it, as every tile's. */
 // 32 in the 36 column: 18 from the card's side and 10 from the row's top and bottom, so the tile sits square in its
 // corner of the card instead of hugging the top.
@@ -31,10 +34,12 @@ const TREE_ELBOW = GROUPED_ROW.tallPadY + 24;
 /** The branch's curve into the nested row; a `mid` row's trunk carries on from where the curve leaves it. */
 const TREE_CURVE = 6;
 
-/** A row that comes or goes while the list is on screen fades; what is around it slides into place. */
+/**
+ * A row that comes while the list is on screen fades in where it lands. Nothing slides: a card growing and the groups
+ * under it gliding (each view on its own layout transition) jerked the whole form whenever a part of it opened, and a
+ * row leaving faded over what had already taken its place. A choice among many opens its own screen instead.
+ */
 const ROW_IN = FadeIn.duration(motion.fast);
-const ROW_OUT = FadeOut.duration(motion.fast);
-const SLIDE = LinearTransition.duration(motion.base);
 
 /**
  * Whether a row of the list has a leading column (an icon's tile, a face): read off the row itself, or off the row a
@@ -66,17 +71,9 @@ export function GroupedList({ children }: { children?: ReactNode }) {
   return (
     // The rows it opens with appear with the screen, and when the whole group goes its rows go with it: neither fades.
     <LayoutAnimationConfig skipEntering skipExiting>
-      <Animated.View
-        layout={reducedMotion ? undefined : SLIDE}
-        style={[styles.list, { backgroundColor: c.raised, boxShadow: `${shadows.e1}, ${shadows.top}` }]}
-      >
+      <View style={[styles.list, { backgroundColor: c.raised, boxShadow: `${shadows.e1}, ${shadows.top}` }]}>
         {items.map((child, i) => (
-          <Animated.View
-            key={child.key ?? i}
-            entering={reducedMotion ? undefined : ROW_IN}
-            exiting={reducedMotion ? undefined : ROW_OUT}
-            layout={reducedMotion ? undefined : SLIDE}
-          >
+          <Animated.View key={child.key ?? i} entering={reducedMotion ? undefined : ROW_IN}>
             {i > 0 ? (
               <View
                 style={[
@@ -94,7 +91,7 @@ export function GroupedList({ children }: { children?: ReactNode }) {
             {child}
           </Animated.View>
         ))}
-      </Animated.View>
+      </View>
     </LayoutAnimationConfig>
   );
 }
@@ -106,12 +103,8 @@ interface GroupedHeaderProps {
   hint?: { name: string; text: string };
 }
 
-/**
- * The small uppercase header of a group (it slides with the groups when one above grows or shrinks), with `aside`
- * at the end of its line: a small text action.
- */
+/** The small uppercase header of a group, with `aside` at the end of its line: a small text action. */
 export function GroupedHeader({ children, aside, hint }: GroupedHeaderProps) {
-  const { reducedMotion } = useTheme();
   if (hint)
     return (
       <HintedHeader aside={aside} hint={hint}>
@@ -119,21 +112,20 @@ export function GroupedHeader({ children, aside, hint }: GroupedHeaderProps) {
       </HintedHeader>
     );
   return (
-    <Animated.View layout={reducedMotion ? undefined : SLIDE} style={aside ? styles.headerRow : null}>
+    <View style={aside ? styles.headerRow : null}>
       <Text variant="footnote" tone="faint" accessibilityRole="header" style={[styles.header, styles.shrink]}>
         {children.toLocaleUpperCase()}
       </Text>
       {aside ? <View style={styles.headerAside}>{aside}</View> : null}
-    </Animated.View>
+    </View>
   );
 }
 
 /** The header's words and ⓘ on one line, the aside at its end, the hint's text under them inside the header's room. */
 function HintedHeader({ children, aside, hint }: GroupedHeaderProps & { hint: { name: string; text: string } }) {
-  const { reducedMotion } = useTheme();
   const info = useInfoHint({ ...hint, variant: "footnote" });
   return (
-    <Animated.View layout={reducedMotion ? undefined : SLIDE} style={styles.headerRoom}>
+    <View style={styles.headerRoom}>
       <View style={styles.headerLine}>
         <View style={[styles.headerWords, styles.shrink]}>
           <Text variant="footnote" tone="faint" accessibilityRole="header" style={[styles.headerCaps, styles.shrink]}>
@@ -144,7 +136,7 @@ function HintedHeader({ children, aside, hint }: GroupedHeaderProps & { hint: { 
         {aside}
       </View>
       {info.text}
-    </Animated.View>
+    </View>
   );
 }
 
@@ -157,23 +149,20 @@ export function GroupedFooter({
   /** An ⓘ after the footer's one sentence, with the rest of the explanation; its text shows under the sentence. */
   hint?: { name: string; text: string };
 }) {
-  const { reducedMotion } = useTheme();
   if (hint)
     return (
-      <Animated.View layout={reducedMotion ? undefined : SLIDE} style={styles.footer}>
+      <View style={styles.footer}>
         <InfoHint {...hint} variant="footnote">
           <Text variant="footnote" tone="faint">
             {children}
           </Text>
         </InfoHint>
-      </Animated.View>
+      </View>
     );
   return (
-    <Animated.View layout={reducedMotion ? undefined : SLIDE}>
-      <Text variant="footnote" tone="faint" style={styles.footer}>
-        {children}
-      </Text>
-    </Animated.View>
+    <Text variant="footnote" tone="faint" style={styles.footer}>
+      {children}
+    </Text>
   );
 }
 
@@ -200,6 +189,8 @@ export interface GroupedRowProps {
   icon?: IconName;
   /** Anything else on the left (an organization's tile). */
   leading?: ReactNode;
+  /** What `leading` says when it is words (an account's place in an order): VoiceOver reads it before the label. */
+  leadingSaid?: string;
   /** The value on the right, faint ("Ligadas"). */
   value?: string;
   /** A short fact about the value, after it on its line ("Pela API"); a sentence goes in `sub`. */
@@ -281,6 +272,7 @@ function Row({
   belowText,
   icon,
   leading,
+  leadingSaid,
   value,
   valueNote,
   valueLeading,
@@ -447,8 +439,16 @@ function Row({
         </View>
       ) : null}
       {remove ? (
-        <Pressable onPress={remove.onPress} accessibilityRole="button" accessibilityLabel={remove.label} hitSlop={12}>
-          <Icon name="x" size={16} color={c.faint} />
+        // A finger's 44 around the glyph, lit under the finger as the row's other buttons are; it takes the glyph's
+        // place in the row (the circle reaches into the row's padding), so the row keeps its height.
+        <Pressable
+          onPress={remove.onPress}
+          unstable_pressDelay={PRESS_DELAY}
+          accessibilityRole="button"
+          accessibilityLabel={remove.label}
+          style={({ pressed }) => [styles.button, styles.remove, pressed ? { backgroundColor: c.sunken } : null]}
+        >
+          <Icon name="x" size={REMOVE_GLYPH} color={c.faint} />
         </Pressable>
       ) : null}
       {buttons?.length ? (
@@ -458,6 +458,7 @@ function Row({
               key={b.label}
               onPress={b.onPress}
               disabled={b.disabled}
+              unstable_pressDelay={PRESS_DELAY}
               accessibilityRole="button"
               accessibilityLabel={b.label}
               accessibilityState={{ disabled: Boolean(b.disabled) }}
@@ -481,11 +482,12 @@ function Row({
   return (
     <Pressable
       onPress={press}
+      unstable_pressDelay={ROW_PRESS_DELAY}
       // A row of buttons stays enabled with nothing to press itself: VoiceOver still offers its actions.
       disabled={disabled || (!onPress && !actions.length)}
       accessibilityRole={toggle !== undefined ? "switch" : "button"}
       // The row is one element to VoiceOver: its own label stands for every word inside, its small line too.
-      accessibilityLabel={[label, sub, belowText, said, value, valueNote].filter(Boolean).join(", ")}
+      accessibilityLabel={[leadingSaid, label, sub, belowText, said, value, valueNote].filter(Boolean).join(", ")}
       {...(actions.length
         ? {
             accessibilityActions: actions.map(({ name, label }) => ({ name, label })),
@@ -503,6 +505,8 @@ function Row({
         flat ? styles.media : tall ? styles.tall : null,
         tree === "mid" || tree === "end" ? styles.nested : null,
         pressed && onPress ? { backgroundColor: c.sunken } : null,
+        // Off, it looks off: a tap that does nothing never looks like one that should.
+        disabled ? styles.off : null,
       ]}
     >
       {tree ? <TreeLines tree={tree} color={c.line2} /> : null}
@@ -688,6 +692,7 @@ function StackedField({ label, hint, children, onPress }: Omit<GroupedFieldProps
 }
 
 const styles = StyleSheet.create({
+  off: { opacity: 0.4 },
   marked: { fontWeight: "600" },
   list: { borderRadius: 14, overflow: "hidden" },
   divider: { height: StyleSheet.hairlineWidth },
@@ -764,7 +769,11 @@ const styles = StyleSheet.create({
   // The row's own 16 at the end stays: a button's 44 overhangs its glyph by 13 on each side, 2 apart. Into the row's
   // padding it takes 7 above and below, so on the line it is a 30-point mark's height and showing it moves no row.
   buttons: { flexDirection: "row", gap: 2, marginVertical: -GROUPED_ROW.padY + 3, marginRight: -13 },
-  button: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  button: { width: TOUCH, height: TOUCH, borderRadius: TOUCH / 2, alignItems: "center", justifyContent: "center" },
+  // The circle around the ×'s glyph overhangs it by 14 on each side: pulled back by as much above, below and at the
+  // end (into the row's padding) and by the row's 12 gap before it, the glyph stays where it was (16 from the row's
+  // end) and the row stays as tall as a 16-point glyph makes it.
+  remove: { margin: -(TOUCH - REMOVE_GLYPH) / 2, marginLeft: -12 },
   buttonOff: { opacity: 0.3 },
   hint: { paddingHorizontal: GROUPED_ROW.padX },
   hintOpen: { paddingBottom: 12 },

@@ -493,18 +493,18 @@ test.skipIf(!posix)("refuses an old or missing Codex without starting it; bad re
 
 const ACCOUNT = "0193ffff-0000-7000-8000-000000000002";
 
-test("effort: model_reasoning_effort, with xhigh and max as high; nothing for an unknown level", () => {
+test("effort: model_reasoning_effort forwards low through max; nothing for an unknown level", () => {
   expect(["low", "medium", "high", "xhigh", "max"].map((e) => codexEffort(e as never))).toEqual([
     "low",
     "medium",
     "high",
-    "high",
-    "high",
+    "xhigh",
+    "max",
   ]);
   const args = (effort?: string) =>
     codexTurnArgs({ cwd: "/w", lastFile: "/l.txt", runId: RUN, model: "gpt-5.5", effort: effort as never });
   const max = args("max");
-  expect(max[max.indexOf('model_reasoning_effort="high"') - 1]).toBe("-c");
+  expect(max[max.indexOf('model_reasoning_effort="max"') - 1]).toBe("-c");
   expect(args("low")).toContain('model_reasoning_effort="low"');
   expect(args("turbo").some((a) => a.startsWith("model_reasoning_effort"))).toBe(false);
   expect(args().some((a) => a.startsWith("model_reasoning_effort"))).toBe(false);
@@ -744,7 +744,7 @@ test.skipIf(!posix)(
     expect(readFileSync(path.join(fake, "home"), "utf8")).toBe(accountDir);
     // Its sandbox holds the turn, so the agent's containers service isn't named to it (ADR 0169).
     expect(readFileSync(path.join(fake, "containers"), "utf8")).toBe("");
-    expect(readFileSync(path.join(fake, "args"), "utf8").split("\n")).toContain('model_reasoning_effort="high"');
+    expect(readFileSync(path.join(fake, "args"), "utf8").split("\n")).toContain('model_reasoning_effort="xhigh"');
     // The thread is this account's: the machine's own sign-in won't resume it.
     const threads = new CodexThreads(codexThreadsFile(home));
     expect(threads.get(codexThreadKey(SESSION, ACCOUNT))).toBe(THREAD);

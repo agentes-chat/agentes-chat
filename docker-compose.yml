@@ -59,7 +59,7 @@ services:
       - ALL
 
   agentes:
-    image: "${AGENTES_IMAGE:-ghcr.io/gabedsam01/agentes-chat:latest}"
+    image: "${AGENTES_IMAGE:-ghcr.io/gabedsam01/squad-chat:latest}"
     env_file: .env
     environment:
       DATABASE_URL: "postgres://agentes:${POSTGRES_PASSWORD}@postgres:5432/agentes"
@@ -90,13 +90,12 @@ services:
       - /tmp
 
   mcp-sandbox:
-    # Stdio MCP programs (ADR 0190, addendum) in a container of their own: none of the app's secrets, files or
+    # Stdio MCP programs (ADR 0197, addendum) in a container of their own: none of the app's secrets, files or
     # database, so a program can't read them. On with mcp-sandbox in COMPOSE_PROFILES, MCP_STDIO_ENABLED=true and
-    # MCP_STDIO_SANDBOX_URL=ws://mcp-sandbox:7070: SELF_HOSTING.md, Local MCP programs. Built from deploy/mcp-sandbox;
-    # its network reaches the internet (npx and uvx download packages) and the app, never Postgres. Its home, with
-    # those downloads' caches, is its volume.
-    image: "${AGENTES_MCP_SANDBOX_IMAGE:-agentes-mcp-sandbox:local}"
-    build: deploy/mcp-sandbox
+    # MCP_STDIO_SANDBOX_URL=ws://mcp-sandbox:7070: SELF_HOSTING.md, Local MCP programs. Its network reaches the internet
+    # (npx and uvx download packages) and the app, never Postgres. Its home, with those downloads' caches, is its
+    # volume. Built multi-arch via GitHub Actions on dokploy-runner.
+    image: "${AGENTES_MCP_SANDBOX_IMAGE:-ghcr.io/gabedsam01/squad-chat-mcp-sandbox:latest}"
     profiles: ["mcp-sandbox"]
     networks: [mcp-sandbox]
     volumes:
@@ -197,7 +196,7 @@ services:
       - /tmp
 
   decision:
-    # The local decision model (ADR 0188): Laya, a 421M-parameter decision model served by llama.cpp through the same
+    # The local decision model (ADR 0195): Laya, a 421M-parameter decision model served by llama.cpp through the same
     # typed-question API Jev speaks. On with decision in COMPOSE_PROFILES and DECISION_MODEL_URL=http://decision:8080:
     # SELF_HOSTING.md, Decision model. Its first start downloads about 0.5 GB from Hugging Face into its volume, then
     # loads it, using about 2 GB of RAM. Nothing waits for it: the switch's install job watches until it answers and

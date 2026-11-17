@@ -1,4 +1,5 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
+import type { EventEmitter } from "node:events";
 import { accessSync, constants, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join, win32 } from "node:path";
@@ -6,6 +7,7 @@ import {
   CLI_ERROR_MAX,
   CLI_GIT_MISSING,
   type CursorModelInfo,
+  isBrainEffort,
   parseExecutors,
   type RunnerExecutorInfo,
   type RunnerInfo,
@@ -526,12 +528,137 @@ async function detectWithModels(
   };
 }
 
-async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe> {
+const CODEX_PROBE_TIMEOUT_MS = 4_000;
+
+/** Parses one JSON-RPC response from `codex app-server`'s `model/list` method into `CursorModelInfo[]`. */
+export function parseCodexAppServerModels(msg: unknown): CursorModelInfo[] {
+  if (typeof msg !== "object" || msg === null) return [];
+  const root = msg as { result?: { data?: unknown }; data?: unknown };
+  const data = Array.isArray(root.result?.data) ? root.result.data : Array.isArray(root.data) ? root.data : null;
+  if (!data) return [];
+  const out: CursorModelInfo[] = [];
+  for (const item of data) {
+    if (typeof item !== "object" || item === null) continue;
+    const m = item as Record<string, unknown>;
+    if (m.hidden === true) continue;
+    const id = typeof m.id === "string" ? m.id.trim() : "";
+    if (!id || !/^[\w.:/-]{1,80}$/.test(id) || out.some((x) => x.id === id)) continue;
+    const rawLabel = typeof m.displayName === "string" ? m.displayName : typeof m.name === "string" ? m.name : "";
+    const label = rawLabel.replace(/\s+/g, " ").trim().slice(0, 120);
+    const efforts = Array.isArray(m.supportedReasoningEfforts)
+      ? [
+          ...new Set(
+            m.supportedReasoningEfforts
+              .map((e) =>
+                typeof e === "object" && e !== null ? (e as { reasoningEffort?: unknown }).reasoningEffort : e,
+              )
+              .filter(isBrainEffort),
+          ),
+        ]
+      : [];
+    const tiers = [
+      ...(Array.isArray(m.additionalSpeedTiers) ? m.additionalSpeedTiers : []),
+      ...(Array.isArray(m.serviceTiers) ? m.serviceTiers : []),
+    ];
+    const fast = tiers.includes("fast");
+    out.push({
+      id,
+      ...(label ? { label } : {}),
+      ...(efforts.length > 0 ? { efforts } : {}),
+      ...(fast ? { fast: true } : {}),
+      ...(m.isDefault === true ? { recommended: true } : {}),
+    });
+    if (out.length >= 60) break;
+  }
+  return out;
+}
+
+/**
+ * Probes Codex CLI's live model catalog (`codex app-server` `model/list` JSON-RPC) so newly added ChatGPT/Codex
+ * models, supported reasoning efforts, default choice, and Fast mode tiers are discovered automatically.
+ */
+export function probeCodexModels(
+  command: readonly string[] = ["codex"],
+  env: NodeJS.ProcessEnv = process.env,
+  timeoutMs = CODEX_PROBE_TIMEOUT_MS,
+): Promise<CursorModelInfo[]> {
+  return new Promise((resolve) => {
+    let settled = false;
+    let buf = "";
+    const launch = cliSpawn(command, ["app-server"], env.PATH);
+    let child: ReturnType<typeof spawn>;
+    try {
+      child = spawn(launch.file, launch.args, {
+        env: launch.env ? { ...env, ...launch.env } : env,
+        windowsVerbatimArguments: launch.windowsVerbatimArguments,
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+    } catch {
+      resolve([]);
+      return;
+    }
+    const finish = (models: CursorModelInfo[]) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        child.kill();
+      } catch {}
+      resolve(models);
+    };
+    const timer = setTimeout(() => finish([]), timeoutMs);
+    timer.unref?.();
+
+    const emitter = child as unknown as EventEmitter;
+    emitter.on("error", () => finish([]));
+    emitter.on("exit", () => finish([]));
+    child.stdout?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk: string) => {
+      buf += chunk;
+      let nl = buf.indexOf("\n");
+      while (nl >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        nl = buf.indexOf("\n");
+        if (!line) continue;
+        try {
+          const parsed = JSON.parse(line) as { id?: unknown };
+          if (parsed.id === 2) {
+            finish(parseCodexAppServerModels(parsed));
+            return;
+          }
+        } catch {}
+      }
+    });
+
+    try {
+      child.stdin?.write(
+        `${JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { clientInfo: { name: "agentes", version: "1.0" } } })}\n${JSON.stringify({ jsonrpc: "2.0", method: "initialized" })}\n${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "model/list", params: {} })}\n`,
+      );
+      child.stdin?.end();
+    } catch {
+      finish([]);
+    }
+  });
+}
+
+async function detectVersion(
+  run: Run,
+  name: "claude" | "codex",
+  probeCodex?: () => Promise<CursorModelInfo[]>,
+): Promise<Probe> {
   const r = await run(name, ["--version"]);
   if (r.error || r.status !== 0) return versionFailed(r);
   const version = firstLine(r);
   if (!version) return {};
-  if (name !== "claude") return { entry: { version } };
+  if (name === "codex") {
+    const models = probeCodex
+      ? await probeCodex().catch(() => [] as CursorModelInfo[])
+      : run === defaultRun
+        ? await probeCodexModels().catch(() => [] as CursorModelInfo[])
+        : [];
+    return { entry: { version, ...(models.length > 0 ? { models } : {}) } };
+  }
   const auth = await claudeAuth(run);
   return auth ? { entry: { version, ...auth } } : { entry: { version }, unsure: true };
 }
@@ -548,12 +675,13 @@ export async function detectExecutors(
   prev: Executors = {},
   strikes: Partial<Record<string, number>> = {},
   gitMissing: () => boolean = () => false,
+  probeCodex?: () => Promise<CursorModelInfo[]>,
 ): Promise<{ found: Executors; unsure: boolean }> {
   const safe = (p: () => Promise<Probe>) => p().catch((): Probe => ({ unsure: true }));
   const names = ["claude", "codex", "cursor", "opencode", "grok", "antigravity"] as const;
   const probes = await Promise.all([
     safe(() => detectVersion(run, "claude")),
-    safe(() => detectVersion(run, "codex")),
+    safe(() => detectVersion(run, "codex", probeCodex)),
     safe(() => detectCursor(run)),
     safe(() => detectOpencode(run)),
     safe(() => detectGrok(run)),

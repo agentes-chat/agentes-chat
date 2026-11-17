@@ -46,7 +46,16 @@ export interface MachinePlanUsage {
 export interface MachineExecutors {
   /** `loggedIn`/`authMethod`/`plan`: from `claude auth status` (protocol 8; absent = unknown). */
   claude?: { version: string; loggedIn?: boolean; authMethod?: string; plan?: string };
-  codex?: { version: string };
+  codex?: {
+    version: string;
+    models?: {
+      id: string;
+      label?: string;
+      efforts?: ("low" | "medium" | "high" | "xhigh" | "max")[];
+      fast?: boolean;
+      recommended?: boolean;
+    }[];
+  };
   /** Cursor's CLI (protocol 36, ADR 0114) and the models its sign-in lists; `inPlan`: the CLI said the plan includes it. */
   cursor?: { version: string; models?: { id: string; label?: string; inPlan?: boolean }[] };
   /** OpenCode's CLI (protocol 39, ADR 0132) and the models it lists; `free`: OpenCode's free tier. */
@@ -358,6 +367,11 @@ export const machineAccounts = pgTable(
      * `owner`'s. Only the person who connected it changes it, for every login of that account.
      */
     serves: text().notNull().default("everyone"),
+    /**
+     * Its place in the workspace's order of use (ADR 0041 §6): at a plan's limit a run goes on with the next account
+     * that serves its agent, lowest first; null after every numbered one, oldest first.
+     */
+    useOrder: integer(),
     /**
      * How it signs in (protocol 50): `cli_login`, `setup_token` or `api_key`. Set when its sign-in starts and from
      * what the runner reports, never cleared by a report that doesn't say; null: unknown.

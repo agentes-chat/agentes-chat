@@ -252,12 +252,35 @@ export const FAST_MODE_MODELS: readonly string[] = [
   "gpt-5.6-luna",
 ];
 
+/** Models whose live catalog or Codex CLI `model/list` reported `fast` service tier at run time. */
+const dynamicFastModels = new Set<string>();
+
+/** Registers additional models known at run time to support ChatGPT/Codex Fast mode. */
+export function learnFastModels(ids: readonly string[]) {
+  for (const id of ids) {
+    const clean = id.trim();
+    if (clean) dynamicFastModels.add(clean);
+  }
+}
+
+/** Clears learned runtime Fast-mode models (primarily for tests). */
+export function resetLearnedFastModels() {
+  dynamicFastModels.clear();
+}
+
 /**
  * Velocidade (ADR 0149) means something for this brain, sign-in and model: Codex on a ChatGPT sign-in (no key account
- * of a coding plan), with a model on the list. None: Codex's default; `auto`: every model "Automático" picks is on it.
+ * of a coding plan), with a model on the list or reported as fast at run time. None: Codex's default; `auto`: every
+ * model "Automático" picks is on it.
  */
-export const speedFits = (o: { kind: string; provider?: string | null; model?: string | null }) =>
-  o.kind === "codex" && !o.provider && (!o.model || o.model === "auto" || FAST_MODE_MODELS.includes(o.model));
+export const speedFits = (o: { kind: string; provider?: string | null; model?: string | null; fast?: boolean }) =>
+  o.kind === "codex" &&
+  !o.provider &&
+  (!o.model ||
+    o.model === "auto" ||
+    o.fast === true ||
+    FAST_MODE_MODELS.includes(o.model) ||
+    dynamicFastModels.has(o.model));
 
 export type PlanId = keyof typeof CODING_PLANS;
 export const PLAN_IDS = Object.keys(CODING_PLANS) as PlanId[];
@@ -552,6 +575,12 @@ export const SHARED_SIGN_INS: Readonly<Record<"claude_code" | "codex" | "antigra
   grok: true,
   key: true,
 };
+
+/**
+ * The kinds whose subscriptions a run may go on with at a plan's limit, each within its own kind (ADR 0041 §6). Never
+ * Antigravity: Google forbids automating account rotation (ADR 0143). Not Grok, Cursor or OpenCode.
+ */
+export const NEXT_ACCOUNT_KINDS: readonly string[] = ["claude_code", "codex"];
 
 /** Whether a new sign-in of an account (its CLI's kind, and a coding plan's `provider`) is made for all agents. */
 export const sharedSignIn = (kind: string, provider?: string | null) =>

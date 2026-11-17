@@ -16,7 +16,7 @@ import {
 } from "./router";
 
 /**
- * The installation's optional decision model, in front of Jev (ADR 0188). It answers the same typed questions; when
+ * The installation's optional decision model, in front of Jev (ADR 0195). It answers the same typed questions; when
  * it has no picture or no box, the Jev chain answers as before. Any failure is reported on the model's state and the
  * Jev chain takes over, so a provider that is down never leaves a message unanswered.
  */

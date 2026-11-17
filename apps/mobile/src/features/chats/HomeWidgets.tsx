@@ -2,7 +2,7 @@ import { frozenBoard, useHomeBoard, type Widget } from "@agenteschat/client";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
-import { Icon, Text, useTheme } from "@/ui";
+import { Icon, ROW_PRESS_DELAY, Text, useTheme } from "@/ui";
 import { router } from "@/ui/navigation";
 import { newWidgetHref } from "../dashboards/BoardScreen";
 import { HOME, widgetsInOrder } from "../dashboards/logic";
@@ -73,6 +73,8 @@ export function HomeWidgets({ collapsed, onToggle }: { collapsed: boolean; onTog
         </ScrollView>
       ) : canAdd ? (
         <Pressable
+          // A full-width row: it lights a beat after the finger lands, as the list's rows do.
+          unstable_pressDelay={ROW_PRESS_DELAY}
           onPress={add}
           accessibilityRole="button"
           style={({ pressed }) => [

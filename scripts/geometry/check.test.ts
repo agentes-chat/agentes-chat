@@ -119,6 +119,8 @@ describe("geometry check", () => {
     for (const twin of ["bad-wordwrap--row", "good-wordwrap--url"]) expect(fixture).toContain(twin);
     // A dialog's quiet line touches no bubble of the page behind it; on a bubble of its own dialog it does.
     for (const twin of ["good-quiet--layers", "bad-quiet--dialog"]) expect(fixture).toContain(twin);
+    // A kit button's words sit in its label: cut by a box around it the button is named, ended by its own "…" nothing is.
+    for (const twin of ["bad-clipped--label", "good-clipped--label"]) expect(fixture).toContain(twin);
     expect(rules).toContain('".ac-facts__value, .ac-factline__fact"');
     // A word broken at its syllables in a box that hyphenates (a narrow calendar item's title) is no midword.
     expect(fixture).toContain("good-midword--hyphens");

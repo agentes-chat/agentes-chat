@@ -359,7 +359,8 @@ describe("Quem pensa: a coding plan's models", () => {
     expect(rows.map((r) => [r.group, r.title, r.lines[0] ?? null, r.mark])).toEqual([
       ["Em uso", "Plano", "chave …4f2a", "opencode"],
       ["OpenCode Go", "Plano 2", "chave …9f3c", "opencode"],
-      ["Claude", "Pessoal · Max", "Sua", "claude"],
+      // A name its owner gave it, its plan on the line under it.
+      ["Claude", "Pessoal", "Max", "claude"],
       ["Chaves de API", "Chave padrão do workspace", "Claude · termina em 7f2a", "claude"],
     ]);
     // One more key of the same plan: the model it has stays.
@@ -534,7 +535,7 @@ describe("Quem pensa: Automático", () => {
     expect(lineOf(d, "Esforço")).toBe("Médio");
     await toScreen(d, "Esforço");
     const ramp = within(d).getByRole("slider", { name: "Esforço" });
-    expect(ramp.getAttribute("aria-valuemax")).toBe("4");
+    expect(ramp.getAttribute("aria-valuemax")).toBe("7");
     expect(ramp.getAttribute("aria-valuetext")).toBe("Médio");
     await toScreen(d, "Voltar");
     await toScreen(d, "Modelo");
@@ -588,10 +589,10 @@ describe("Quem pensa: Automático", () => {
     expect(lineOf(d, "Esforço")).toBe("Padrão do modelo");
     await toScreen(d, "Esforço");
     const ramp = within(d).getByRole("slider", { name: "Esforço" });
-    // The API takes three levels: Máximo would go as Alto, so it isn't offered.
-    expect(ramp.getAttribute("aria-valuemax")).toBe("3");
+    // Seven-step ladder (none..max); the API key stops or unlocks steps by model support.
+    expect(ramp.getAttribute("aria-valuemax")).toBe("7");
     expect(ramp.getAttribute("aria-valuetext")).toBe("Padrão do modelo");
-    expect(ramp.textContent).not.toContain("Máximo");
+    expect(ramp.textContent).toContain("Máximo");
     expect(d.textContent).toContain("O modelo pensa o quanto costuma.");
     await act(async () => fireEvent.keyDown(ramp, { key: "ArrowRight" }));
     expect(ramp.getAttribute("aria-valuetext")).toBe("Baixo");
@@ -611,10 +612,10 @@ describe("Quem pensa: Automático", () => {
     const api = createFakeApi(state);
     follow(api, fakeAgentBrain(ADA_ID, { effort: "max" }));
     await open(state, api);
-    expect(brainCell().value).toContain("esforço alto");
+    expect(brainCell().value).toContain("esforço máximo");
     const d = await brainDialog();
     await toScreen(d, "Mais opções");
-    expect(lineOf(d, "Esforço")).toBe("Alto");
+    expect(lineOf(d, "Esforço")).toBe("Máximo");
     await act(async () => fireEvent.click(within(d).getByRole("button", { name: "Voltar ao padrão" })));
     expect(lineOf(d, "Esforço")).toBe("Padrão do modelo");
     await done(d);
@@ -680,7 +681,7 @@ describe("Quem pensa: Automático", () => {
     const { state } = await open(seeded);
     const d = await brainDialog();
     await toScreen(d, "Modelo");
-    expect(groupsOf(d)).toEqual(["Claude", "OpenAI", "OpenRouter · Boas escolhas", "OpenRouter"]);
+    expect(groupsOf(d)).toEqual(["Claude", "OpenRouter · Boas escolhas", "OpenRouter"]);
     const search = within(d).getByRole("searchbox", { name: "Buscar modelos" });
     await act(async () => fireEvent.change(search, { target: { value: "glm" } }));
     expect(rowsOf(d)).toEqual([
@@ -715,17 +716,11 @@ describe("Quem pensa: Automático", () => {
     expect(rowsOf(d)).toEqual([]);
   });
 
-  test("without an OpenRouter key its good picks show, each saying a key opens it, and not the rest of its list", async () => {
+  test("without an OpenRouter key other providers are not shown in the model list", async () => {
     await open(seedState({ extraModels: OPENROUTER_MODELS }));
     const d = await brainDialog();
     await toScreen(d, "Modelo");
-    const picks = brainRows(d).filter((r) => r.group === "OpenRouter · Boas escolhas");
-    expect(picks.map((r) => [r.title, ...r.lines, r.off])).toEqual([
-      ["Z.ai: GLM Latest", "Precisa de uma chave de API OpenRouter", true],
-      ["DeepSeek: DeepSeek Flash Latest", "Precisa de uma chave de API OpenRouter", true],
-      ["Claude Sonnet Latest", "Precisa de uma chave de API OpenRouter", true],
-    ]);
-    expect(groupsOf(d)).not.toContain("OpenRouter");
+    expect(groupsOf(d)).toEqual(["Claude"]);
   });
 
   test("Command Code's models show only with its key: choosable, with their prices", async () => {

@@ -148,7 +148,7 @@ describe("endpoint models in the pickers", () => {
     expect(groups.map(([g]) => g)).toEqual(["anthropic", "OpenGateway"]);
     expect(groups[1]?.[1][0]?.available).toBe(true);
     expect(modelChoices(models, [{ ...cred("c1"), revokedAt: "2026-11-04T00:00:00Z" }], false).map(([g]) => g)).toEqual(
-      ["anthropic"],
+      [],
     );
   });
 

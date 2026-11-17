@@ -6,7 +6,7 @@ import type {
   BetaTextBlockParam,
   BetaTool,
 } from "@anthropic-ai/sdk/resources/beta/messages/messages";
-import { MODEL_CATALOG } from "./catalog";
+import { modelInfo } from "./catalog";
 import {
   type ContentBlock,
   deniedError,
@@ -100,7 +100,7 @@ export function createAnthropicProvider(
     id,
     async stream(input, { apiKey, workspaceId, onDelta }): Promise<ModelResult> {
       const request = laidOut(input);
-      const info = MODEL_CATALOG[request.model];
+      const info = modelInfo(request.model);
       const fallback = !compat && info?.serverSideFallback === true;
       const format = compat ? undefined : request.outputSchema;
       const answerSchema = compat ? request.outputSchema : undefined;

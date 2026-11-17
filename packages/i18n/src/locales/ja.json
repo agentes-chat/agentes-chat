@@ -605,6 +605,7 @@
     "termsMiddle": "と",
     "privacy": "プライバシーポリシー",
     "termsAfter": "に同意したものとみなされます。",
+    "poweredBy": "agentes.chat で動いています",
     "signOut": "ログアウト",
     "earlyAccess": {
       "otherEmail": "この招待は別のアドレス宛てです。招待が送られたアドレスで登録してください。",
@@ -1170,6 +1171,108 @@
         "held": "「MCPで接続」は、ワークスペースのプランが有効になると使えます。今はこの方法でエージェントを取り込んでください。",
         "paused": "このワークスペースは一時停止中のため、「MCPで接続」は使えません。今はこの方法でエージェントを取り込んでください。"
       },
+      "haveFileButton": "ファイルかリンクがあります",
+      "sheet": {
+        "title": "{{app}}からチームを移行",
+        "otherTitle": "別のアプリから移行",
+        "workspaceTitle": "別のワークスペースから移行",
+        "fileTitle": "ファイルかリンクから移行",
+        "fileLead": "対応しているアプリのファイルなら、どれでも使えます。自動で判別されます。",
+        "paths": {
+          "lead": "移行の方法を選んでください。作成する前にすべて確認できます。",
+          "best": "最も完全",
+          "safe": "{{app}}のキー、パスワード、セッションは、どの方法でも移行されません。",
+          "command": {
+            "title": "コマンドで",
+            "line": "ファイルやワークフローまで、すべて移行します。コーディングアシスタントかターミナルから"
+          },
+          "mcp": {
+            "title": "{{app}}を接続して",
+            "line": "MCPを通じて、ここにエージェントを作成します。ファイルとワークフローは含まれません"
+          },
+          "prompt": {
+            "title": "{{app}}に頼んで",
+            "line": "知っていることを書き出し、それをここに貼り付けます。ファイルとワークフローは含まれません"
+          }
+        },
+        "useRequest": "リクエストを貼り付けて、返信を持ってくる方法にする",
+        "backToMcp": "MCPに戻る",
+        "waitingMore": "続きを待っています…",
+        "arrivedMore": "{{app}}がまだ作成中かもしれません。あとから届いたエージェントもここに表示されます。",
+        "arrivedMoreAny": "AIアプリがまだ作成中かもしれません。あとから届いたエージェントもここに表示されます。",
+        "readHere": "ブラウザ内で読み込みます。確定するまで、ここでは何も変更されません。",
+        "request": {
+          "grok-bot": {
+            "lead": "ボットが持っているものをすべてJSONで書き出します。それをここに貼り付け、作成する前に確認できます。",
+            "copyStep": "ボットとのチャットに貼り付けてください",
+            "answerStep": "返信全体をここに貼り付けてください",
+            "answerPlaceholder": "ボットが返信したJSON"
+          },
+          "chatgpt-dots": {
+            "lead": "dotが持っているものをすべてファイルに書き出します。それをここにドロップし、作成する前に確認できます。",
+            "copyStep": "新しいチャットに貼り付けてください",
+            "answerStep": "作成されたファイルをここにドロップしてください"
+          },
+          "other": {
+            "copyStep": "もう一方のアプリで新しい会話を開き、貼り付けてください",
+            "answerStep": "返ってきたファイルをドロップするか、返信を貼り付けてください",
+            "answerPlaceholder": "返信、またはGitHubのリンク"
+          },
+          "computer": {
+            "lead": "{{app}}のエージェントが知っていることをファイルに書き出し、作成する前にあなたが確認します。",
+            "copyStep": "{{app}}のエージェントとの会話に、このリクエストを貼り付けてください",
+            "answerStep": "作成されたファイルをドロップするか、返信を貼り付けてください",
+            "answerPlaceholder": "{{app}}からの返信"
+          }
+        },
+        "workspace": {
+          "download": "もう一方のワークスペースのファイルをダウンロードしてください",
+          "where": "そちらで、設定 › インポートとエクスポート › ファイルをダウンロード。",
+          "open": "新しいタブで{{org}}を開く",
+          "drop": ".jsonをここにドロップしてください"
+        },
+        "lead": "アシスタントがこのコンピューターの{{app}}を読み取り、指定した場所にファイルを書き出します。作成する前に、すべて確認できます。",
+        "leadCommand": "コマンドがこのコンピューターの{{app}}を読み取り、指定した場所にファイルを書き出します。作成する前に、すべて確認できます。",
+        "pasteAssistant": "これをコーディングアシスタントに貼り付けてください",
+        "pasteTerminal": "これをターミナルに貼り付けてください",
+        "pastePowerShell": "これをPowerShellに貼り付けてください",
+        "promptLabel": "コーディングアシスタントへのリクエスト",
+        "commandLabel": "コマンド",
+        "copy": "リクエストをコピー",
+        "assistants": "Claude Code、Codex、またはこのコンピューターでコマンドを実行できるほかのアシスタント。",
+        "commandHelp": "保存先を尋ねてから、ファイルを書き出します。何も送信されません。",
+        "useCommand": "自分でコマンドを実行する",
+        "usePrompt": "アシスタントへのリクエストに戻る",
+        "os": {
+          "label": "このコンピューターのOS",
+          "unix": "MacまたはLinux",
+          "windows": "Windows"
+        },
+        "dropStep": "書き出されたファイルをここにドロップしてください",
+        "drop": "ファイルをここにドロップ",
+        "dropHelp": "選んだフォルダにある{{file}}",
+        "safe": "読み取りのみです。{{app}}のキー、パスワード、ログイン情報は読み取りません。",
+        "ready_other": "エージェント{{count}}体を移行できます",
+        "readyOther": "移行の準備ができました",
+        "others_other": "ほかにエージェント{{count}}体",
+        "routines_other": "ルーティン{{count}}件",
+        "notes_other": "メモリ{{count}}件",
+        "skills_other": "スキル{{count}}件",
+        "channels_other": "チャンネル{{count}}件",
+        "files_other": "Driveにコピーするエージェントのファイル{{count}}件",
+        "filesSize": "{{size}}。フォルダはワークスペース全体から見えます。",
+        "after": "あとで、それぞれワンクリックで",
+        "bring_other": "エージェント{{count}}体を移行",
+        "choose": "移行するものを選ぶ",
+        "arrivedTitle": "チームが到着しました",
+        "arrived_other": "{{names}}が到着しました。",
+        "arrivedOther_other": "{{count}}件が届きました。",
+        "copying": "ファイルをDriveにコピーしています",
+        "copyCount": "{{total}}件中{{done}}件",
+        "keepOpen": "完了するまで、このタブを開いたままにしてください。",
+        "missed_other": "{{count}}件は移行されませんでした。それぞれの理由はリストにあります。",
+        "see": "届いたものを見る"
+      },
       "otherName": "別のアプリ",
       "agenteschatName": "agentes.chat",
       "where": {
@@ -1287,13 +1390,105 @@
         "app_other": "{{who}}は{{label}}を使います。",
         "secret_other": "{{who}}は{{label}}を使います。これはファイルに含まれないため、エージェントがチャットで尋ねます。",
         "model_other": "{{who}}は{{label}}を使いますが、ここでは利用できません。",
-        "file_other": "{{who}}は{{label}}を使います。"
+        "file_other": "{{who}}は{{label}}を使います。",
+        "webhook_other": "{{who}}のルーティン{{label}}には、ここで新しいアドレスが割り当てられます。古いアドレスを呼び出していたサイトやアプリで、アドレスを変更してください。"
+      },
+      "say": {
+        "intro": "これは{{app}}から移行したワークフロー「{{title}}」です。",
+        "skillAbout": "{{app}}から移行したワークフロー「{{title}}」を、頼まれたときに実行します。",
+        "asked": "{{app}}では自動で始まっていましたが、ここでは頼まれたときに実行します。",
+        "webhook": "このルーティンのアドレスが呼び出されると始まります。届いた内容があなたへの入力です。",
+        "pr": "GitHubでプルリクエストが開かれると始まります。そのプルリクエストがあなたへの入力です。",
+        "prIn": "GitHubの{{repos}}でプルリクエストが開かれると始まります。そのプルリクエストがあなたへの入力です。別のリポジトリのものなら、何も投稿せずに終了してください。",
+        "text": "次のテキストから始めてください。「{{text}}」",
+        "keep": "（留意点：{{text}}）",
+        "ask": "これまでに得た内容を添えて、@{{handle}}に「{{task}}」と頼み、その回答を使ってください。",
+        "image": "画像を作成してください：{{prompt}}",
+        "video": "動画を作成してください：{{prompt}}",
+        "if": "「{{rule}}」の答えが「はい」なら、先に進んでください。",
+        "otherwise": "そうでなければ：",
+        "stop": "そうでなければ、何も投稿せずにここで終了してください。",
+        "approval": "先に進む前に、チャットであなたの責任者に承認を求めてください。「{{question}}」",
+        "approvalPlain": "先に進む前に、チャットであなたの責任者に承認を求めてください。",
+        "channel": "結果を#{{channel}}に投稿してください。",
+        "notify": "結果をあなたの責任者に送ってください。",
+        "file": "結果をファイルとしてDriveに保存してください。",
+        "githubComment": "結果をGitHubにコメントしてください。",
+        "githubDo": "GitHubで、結果を使って次のことをしてください：{{action}}。",
+        "pass": "終わったら、回答を@{{handle}}に渡してください：{{instruction}}",
+        "passPlain": "終わったら、回答を@{{handle}}に渡してください。"
+      },
+      "choose": {
+        "who": "移行するエージェント",
+        "with": "一緒に移行するもの",
+        "flows": "ワークフロー",
+        "agentOnly": "元のアプリの指示ごと",
+        "same": "同じものがすでにあります",
+        "of": {
+          "routine_other": "ルーティン{{count}}件中{{picked}}件",
+          "skill_other": "スキル{{count}}件中{{picked}}件",
+          "note_other": "メモリ{{count}}件中{{picked}}件",
+          "channel_other": "チャンネル{{count}}件中{{picked}}件"
+        },
+        "files_other": "Driveにコピーするファイル{{count}}件",
+        "paused_other": "{{count}}件は元のアプリと同じく一時停止のまま届きます",
+        "pausedOne": "一時停止のまま届きます",
+        "here_other": "{{count}}件はすでにここにあります",
+        "library": "ライブラリに入り、オンにしたエージェントが使えます",
+        "passes": "回答を{{names}}に渡します",
+        "webhook": "新しいアドレス",
+        "pr": "プルリクエストが開かれたとき",
+        "routine": "ルーティン",
+        "skill": "スキル",
+        "asked": "頼まれたときに実行",
+        "was": {
+          "schedule": "元のアプリのスケジュールは読み取れないため、ここでは頼まれたときに実行",
+          "webhook": "元のアプリではアドレスから起動、ここでは頼まれたときに実行",
+          "message": "元のアプリではメッセージで起動、ここでは頼まれたときに実行",
+          "github": "元のアプリではGitHubから起動、ここでは頼まれたときに実行",
+          "discord": "元のアプリではDiscordから起動、ここでは頼まれたときに実行",
+          "telegram": "元のアプリではTelegramから起動、ここでは頼まれたときに実行",
+          "slack": "元のアプリではSlackから起動、ここでは頼まれたときに実行",
+          "other": "元のアプリでは自動で起動、ここでは頼まれたときに実行"
+        },
+        "flowsLead": "ここでは、ワークフローはルーティンになります。トリガーがルーティンの実行タイミングになり、手順は依頼内容に入ります。",
+        "becomesRoutine": "{{agent}}が実行するルーティンになり、手順はその依頼内容に入ります。",
+        "becomesSkill": "頼まれたときに{{agent}}が使うスキルになり、手順はスキルの中に入ります。",
+        "postsIn": "#{{channel}}に投稿します。",
+        "step": {
+          "when": "ルーティンの実行タイミング",
+          "asked": "頼まれたとき",
+          "text": "テキストから開始",
+          "by": "{{name}}の依頼",
+          "image": "画像",
+          "video": "動画",
+          "if": "条件",
+          "stop": "続行、そうでなければ停止",
+          "else": "続行、そうでなければ：",
+          "approval": "チャットで承認を求める",
+          "channel": "#{{channel}}に投稿",
+          "notify": "結果をあなたに送る",
+          "file": "Driveに保存",
+          "github": "GitHubで",
+          "lost": {
+            "file": "元のアプリのファイル",
+            "slack": "Slackに投稿",
+            "discord": "Discordに投稿",
+            "telegram": "Telegramに投稿",
+            "messaging": "メッセージアプリのチャットに投稿"
+          },
+          "notHere": "移行されません"
+        },
+        "bringWith_other": "エージェント{{count}}体と{{more}}を移行",
+        "more_other": "ほか{{count}}件",
+        "notComing": "メッセージアプリとの接続（{{list}}）は移行されません。ここには接続先がないためです。"
       },
       "needDo": {
         "connection": "接続",
         "app": "接続",
         "model": "モデルを選ぶ",
-        "file": "Driveを開く"
+        "file": "Driveを開く",
+        "webhook": "ルーティンを開く"
       },
       "linkSkipped_other": "リンクの上限を超えたファイル{{count}}件",
       "linkSkippedHelp": "リンクから読み込めるのは200ファイル、8 MBまでです。残りを移行するには、フォルダをダウンロードしてここにドロップしてください。",
@@ -2339,7 +2534,8 @@
     "header": {
       "pins": "ピン留めしたメッセージ",
       "showMembers": "メンバーを表示",
-      "hideMembers": "メンバーを隠す"
+      "hideMembers": "メンバーを隠す",
+      "more": "その他のオプション"
     },
     "membersButton_other": "チャンネルのメンバー（{{count}}）",
     "membersAgents": "エージェント",
@@ -2668,6 +2864,7 @@
     "sharedName": "{{name}}(共有)",
     "sharedPlace": "チャンネルや、自動で動く作業で使われます。この場所はワークスペース全体で共有されます。非公開のものはここに置かないでください。",
     "computerNoHome": "まだコンピューターがありません。このワークスペースに専用のコンピューターが追加されると使えるようになります。",
+    "computerNoHomeServer": "まだブラウザがありません。<guide>このサーバーをエージェントのコンピューターとして</guide>設定すると使えるようになります。",
     "addComputer": "コンピューターを追加",
     "computerOneUser": "ここではコンピューターを使えません。ワークスペースのコンピューターはすべてのエージェントを 1 人のユーザーとして動かすため、人ごとの場所を分けられません。インストーラーの --system オプションでセットアップした Linux サーバーなら分けられます。",
     "powers": {
@@ -3243,6 +3440,13 @@
     "onceHint": "プランの上限はみんなで共有します。",
     "use": "{{label}}を使う",
     "another": "別のアカウント",
+    "which": {
+      "title": "{{name}} が使う {{brand}} アカウントは？",
+      "title_female": "{{name}} が使う {{brand}} アカウントは？",
+      "titleAll": "使う {{brand}} アカウントは？",
+      "mine": "{{computer}} にある {{brand}} アカウント",
+      "other": "別の {{brand}} アカウントでログイン"
+    },
     "reuse": {
       "active": "{{label}}はすでにここにあります。もう一度ログインするか、別のアカウントを使ってください。",
       "signedOut": "{{label}}はここでログアウトしています。もう一度ログインすると、エージェントはそのまま使えます。"
@@ -3381,9 +3585,7 @@
     "dontRunForbidden": "キャンセルできるのは、依頼した人、エージェントのオーナー、管理者だけです",
     "answerAnyway": "それでも返信する",
     "answerAnywayHint": "その後に書かれたことをすべて読んで、いま返信します",
-    "answerAnywayForbidden": "これを頼めるのは、依頼した人、エージェントのオーナー、管理者だけです",
-    "extraTitle": "長い作業で有料の追加使用量を使う場合があります",
-    "extraHint": "プランで追加使用量がオンの場合、長い作業は95%を超えても続きます。オフの場合は95%で一時停止し、プランのリセット後に再開します。"
+    "answerAnywayForbidden": "これを頼めるのは、依頼した人、エージェントのオーナー、管理者だけです"
   },
   "usageQueue": {
     "back": "{{agent}}は{{when}}に戻ります",
@@ -3392,6 +3594,7 @@
     "resuming": "{{agent}}が再開しています",
     "shared_other": "{{agents}}も同じ{{plan}}のプランを使っています。会話はすべて同じ順番待ちに入ります。",
     "about": "順番待ちについて",
+    "chain": "{{plan}} の {{accounts}} 個のアカウントがすべて上限に達しました。",
     "lists": "会話",
     "queuedTab": "順番待ち",
     "skippedTab": "スキップ済み",
@@ -3461,7 +3664,6 @@
       "aiAccount": "{{account}}で考えます",
       "aiModel": "API経由で考えます",
       "aiNone": "AIはまだありません。作成後に接続してください",
-      "reviewTitle": "{{name}}を確認",
       "lines": "{{name}}が受け取るもの",
       "aChannel": "チャンネル",
       "anApp": "アプリ",
@@ -4846,6 +5048,7 @@
       "joinRequest_other": "{{name}}たちが参加をリクエストしています",
       "joinRequestNames": "{{names}}が参加をリクエストしています",
       "joinSuggestion": "{{by}}が{{name}}を提案しました",
+      "joinOutside": "{{name}}が{{outsideOf}}の外部協力者として参加をリクエストしました。プランの席は使いません",
       "doing": {
         "merge": "マージ",
         "deploy": "デプロイ",
@@ -4904,6 +5107,7 @@
       "joinRequest": "<b>{{name}}</b>が参加をリクエストしています",
       "joinRequestMany": "<b>{{names}}</b>が参加をリクエストしています",
       "joinSuggestion": "<b>{{by}}</b>が<b>{{name}}</b>を提案しました",
+      "joinOutside": "<b>{{name}}</b>が<b>{{outsideOf}}</b>の外部協力者として参加をリクエストしました。プランの席は使いません",
       "changeRequest": "<b>{{name}}</b>が<b>{{agent}}</b>の変更を依頼しています",
       "proposalWaiting": "<b>{{names}}</b> からの改善提案",
       "changeRequestAgent": "<b>{{name}}</b>が新しいエージェントを依頼しています：<b>{{agent}}</b>",
@@ -5314,11 +5518,12 @@
         "accountAlso": "{{agents}}も使用中",
         "accountOf": "{{name}}のもの",
         "accountOthers": "workspace 全体で使えるプランには持ち主が表示されます。",
+        "movesOn": "上限に達したら次のアカウントで続けます",
+        "pinned": "このアカウントのみ",
+        "pinnedHint": "上限に達したら、次のアカウントに移らず、このアカウントのリセットを待ちます。",
         "addAccount": "アカウントを追加",
         "signInAgain": "もう一度ログイン",
         "connectPlan": "別のプランを接続",
-        "fallbackTitle": "{{computer}}が応答しなくなったら、API経由で返信する",
-        "fallbackHint": "API経由で返信し、{{name}}の予算から差し引かれます。オフにすると、{{name}}は依頼した人に知らせて、コンピューターが戻るのを待ちます。",
         "effort": "思考レベル",
         "efforts": {
           "auto": "自動",
@@ -5387,8 +5592,7 @@
           "effort": "思考レベル: {{level}}",
           "speed": "速度: 高速",
           "context": "コンテキスト: {{size}}",
-          "sharing": "他の人にも返信します",
-          "waits": "コンピューターを待ちます"
+          "sharing": "他の人にも返信します"
         },
         "copy": {
           "row": "他のエージェントにも使う",
@@ -5526,7 +5730,6 @@
           "wait": "待つ",
           "modelTitle": "{{name}}のモデル",
           "moreTitle": "{{name}}のその他のオプション",
-          "fallback": "プランが止まったらAPIキーを使う",
           "computer": "コンピューター",
           "doneTitle": "完了しました",
           "doneSub": "進行中だった作業は新しいアカウントで続きます。",
@@ -6689,7 +6892,6 @@
     "adminsOnlyPersonal": "エージェントを作成できるよう、ここを管理している人に頼んでください。",
     "proposalClosed": "この提案はすでに決定済みか、期限が切れています。",
     "proposalNoAccess": "この提案を見られるのは、その会話にいる人だけです。",
-    "backToChat": "会話に戻る",
     "and": "と",
     "routine": "ルーティン",
     "routineKeep": "ルーティン{{name}}を作成",
@@ -6864,6 +7066,51 @@
     "otherSkill": "ほかのスキル",
     "namesLead": "たとえば",
     "namesRoll": "ほかの名前",
+    "proposal": {
+      "lead": "{{name}} の提案を調整します。あとで何でも変えられます。",
+      "leadNarrow": "{{name}} の提案：{{why}}",
+      "side": "提案",
+      "from": "{{name}} の提案",
+      "changed": "変更した内容",
+      "changedNone": "まだありません。カードで変えた内容がここに表示され、元に戻せます。",
+      "undo": "元に戻す",
+      "changes": {
+        "changed": "変更",
+        "added": "追加",
+        "removed": "削除",
+        "how": "仕事の進め方"
+      },
+      "firstTask": "最初のタスク",
+      "firstTaskPlaceholder": "最初に頼むこと（任意）",
+      "firstTaskHint": "{{name}} とのチャットに用意されます。送信するだけです。",
+      "firstTaskHintBlank": "このエージェントとのチャットに用意されます。送信するだけです。",
+      "firstTaskNone": "タスクがなければ、チャットは空で開きます。",
+      "after": "作成後",
+      "afterAi": "{{name}} が考えるための AI を接続",
+      "afterAiBlank": "考えるための AI を接続",
+      "afterApp": "{{app}} を接続",
+      "afterNone": "なし。{{name}} は作成されるとすぐに働き始めます。",
+      "afterNoneBlank": "なし。作成されるとすぐに働き始めます。",
+      "discard": "提案を破棄",
+      "otherChannel": "別のチャンネル",
+      "chooseChannels": "チャンネルを選ぶ",
+      "channelsNone": "あなたとのチャットのみ。",
+      "channel": {
+        "lead": "{{name}} が働く場所。",
+        "leadBlank": "働く場所。",
+        "does": "{{name}} は {{channel}} で呼ばれると答え、そこでのやり取りを読みます。",
+        "doesBlank": "{{channel}} で呼ばれると答え、そこでのやり取りを読みます。",
+        "remove": "{{channel}} から外す"
+      },
+      "routine": {
+        "label": "ルーティン",
+        "lead": "{{when}}、{{channel}} で。",
+        "leadDm": "{{when}}、あなたとのチャットで。",
+        "starts": "{{name}} が作成されると始まります。時間と内容は「ルーティン」で変更できます。",
+        "startsBlank": "作成されると始まります。時間と内容は「ルーティン」で変更できます。",
+        "remove": "ルーティンを外す"
+      }
+    },
     "skill": {
       "opens": "{{name}} はその話題が出たときにこの手順書を開きます。編集はスキルから。",
       "opensBlank": "その話題が出たときにこの手順書を開きます。編集はスキルから。",
@@ -6902,6 +7149,10 @@
     "rolesAdd": "ロールを追加",
     "rolesChange": "ロールを変更",
     "moreOf": "{{name}} のその他の操作",
+    "outside": {
+      "chip": "外部",
+      "title": "外部協力者"
+    },
     "passwordLink": {
       "item": "新しいパスワードのリンクを作成",
       "hint": "パスワードを忘れたときに",
@@ -7099,6 +7350,8 @@
       "viaLink": "{{when}}にリンクからリクエスト",
       "suggested": "{{when}}に{{name}}が提案",
       "suggestedLabel": "{{by}}が{{name}}を提案",
+      "outside": "{{when}}に{{outsideOf}}の外部協力者として参加をリクエスト",
+      "outsideSeat": "外部協力者はプランの人数に含まれず、いつでも削除できます。",
       "asked": "{{ago}}にリクエスト",
       "askedNow": "たった今リクエスト",
       "askedOn": "{{date}}にリクエスト",
@@ -8478,7 +8731,7 @@
       "canceledToast": "キャンセルしました。上限がリセットされても実行されません。",
       "continuedToast": "実行を続けています。",
       "forbidden": "今すぐ続けられるのは、ルーティンの作成者、エージェントのオーナー、管理者だけです",
-      "extra_off": "このプランの利用枠を使い切りました。このエージェントの長い作業には有料の追加使用量が使われません。今すぐ続けるにはAI設定でオンにしてください。オフのままならリセット後に再開します",
+      "extra_off": "このプランの利用枠を使い切りました。このエージェントの長い作業にはプランの有料の追加使用量が使われません。リセット後に再開します",
       "extra_used_up": "このプランの利用枠を使い切り、有料の追加使用量も使い切ったか利用できません。リセット後に再開します"
     },
     "pausedRunningToast": "ルーティンを一時停止しました。実行中の処理も停止しました。",
@@ -9883,6 +10136,12 @@
     }
   },
   "aiAccounts": {
+    "unnamed": "名前のないアカウント",
+    "rename": {
+      "action": "{{label}} の名前を変更",
+      "label": "アカウント名",
+      "placeholder": "例: 仕事、個人"
+    },
     "share": {
       "switch": "他の人にも返信する",
       "switchAll": "他の人にも返信する",
@@ -10577,6 +10836,17 @@
     "saved": "ロゴを更新しました。",
     "removed": "ロゴを削除しました。"
   },
+  "orgAccent": {
+    "label": "アクセントカラー",
+    "change": "色を変更",
+    "useDefault": "デフォルトに戻す",
+    "suggested": "おすすめの色",
+    "sampleMention": "@エージェント",
+    "sampleLink": "リンク",
+    "save": "色を保存",
+    "saved": "アクセントカラーを更新しました。",
+    "reset": "デフォルトの色に戻しました。"
+  },
   "look": {
     "previous": "前へ",
     "next": "次へ",
@@ -11252,8 +11522,7 @@
       "cursor": "Cursor · {{model}}",
       "grok": "Grok Build · {{model}}",
       "antigravity": "Antigravity CLI · {{model}}",
-      "opencode": "OpenCode · {{model}}",
-      "noFallback": "{{brain}}、APIへの切り替えなし"
+      "opencode": "OpenCode · {{model}}"
     },
     "mission": {
       "modelLabel": "モデル",
@@ -14175,6 +14444,12 @@
     }
   },
   "errors": {
+    "wallpaper": {
+      "notYours": "その写真はあなたのものではありません。",
+      "invalid": "その背景はありません。",
+      "tooLarge": "写真は2 MBまでです。",
+      "type": "JPEG、PNG、WebPの写真を使ってください。"
+    },
     "tooLarge": "サーバーが受け付けるサイズを超えています。",
     "tooLargeMax": "サーバーが受け付けるサイズを超えています。上限は{{max}} MBです。",
     "passwordLink": {
@@ -14301,7 +14576,8 @@
       "aboveYou": "このロールを変更できるのは、それより上のロールの人だけです。",
       "base": "どのワークスペースにも「全員」ロールは必ずあります。",
       "unknown": "そのロールはもうありません。",
-      "orderIncomplete": "移動中にロールが変更されました。再読み込みしてもう一度お試しください。"
+      "orderIncomplete": "移動中にロールが変更されました。再読み込みしてもう一度お試しください。",
+      "outsideOwner": "外部協力者はオーナーになれません。"
     },
     "teamProposal": {
       "undoExpired": "このチームの作成から1日以上たったため、ここでは取り消せません。各エージェントのページでアーカイブしてください。"
@@ -14419,7 +14695,7 @@
       "takeOverNoAccess": "引き継ぐ前に、ルーティンの会話に参加してください。",
       "agentNotInChannel": "先にエージェントを会話に追加してください。",
       "webhookPaused": "テストするにはルーティンをオンにしてください。",
-      "continueExtraOff": "このプランの利用枠を使い切りました。このエージェントの長い作業には有料の追加利用が使われません。今すぐ続けるにはAI設定で有効にしてください。有効にしない場合は、リセット後に再開します。",
+      "continueExtraOff": "このプランの利用枠を使い切りました。このエージェントの長い作業にはプランの有料の追加利用が使われません。リセット後に再開します。",
       "continueExtraUsedUp": "このプランの利用枠を使い切り、有料の追加利用も使い切ったか利用できません。リセット後に再開します。",
       "actionsNeedApprover": "ルーティンに自動で実行させられるのは、エージェントのオーナーか、そのアクションを承認する人だけです。",
       "editorOnly": "変更できるのは、ルーティンを作成した人、エージェントのオーナー、または管理者だけです。",
@@ -14515,13 +14791,13 @@
     "agent": {
       "ownerOrAdmin": "これができるのは、エージェントのオーナーか管理者だけです。",
       "detailsHidden": "仕組みを見られるのは、{{agentName}} と話す人だけです。",
-      "extraOwnerOnly": "プランの有料の追加使用量をオンまたはオフにできるのは、エージェントのオーナーだけです。",
       "undoForbidden": "元に戻せるのは、エージェントが作業した相手、そのオーナー、または管理者だけです。",
       "undoSkillsAdmins": "エージェントのスキルの変更を元に戻したりやり直したりできるのは管理者だけです。"
     },
     "account": {
       "notRestorable": "このアカウントはもう復元できません。",
-      "notOwner": "これができるのは、このアカウントまたはプランを接続した人だけです。"
+      "notOwner": "これができるのは、このアカウントまたはプランを接続した人だけです。",
+      "orderForbidden": "順番の中での位置を変えられるのは、このアカウントを接続した人か管理者だけです。"
     },
     "channel": {
       "membersForbidden": "メンバーを追加または削除できるのは、チャンネルを作成した人か管理者だけです。"
@@ -14949,6 +15225,7 @@
       "ui_automation_off": "UIオートメーションがオフです",
       "xcode_missing": "MacにXcodeがインストールされていません",
       "xcode_too_old": "このiOSにはXcodeが古すぎます",
+      "ios_behind_xcode": "この iPhone の iOS は Xcode の対象より古い",
       "device_support": "MacがiPhone用のツールを取得しています",
       "helper_missing": "テストヘルパーがまだ設定されていません",
       "helper_expired": "テストヘルパーの更新が必要です",
@@ -14977,6 +15254,7 @@
       "ui_automation_off": "UIオートメーションをオンにする",
       "xcode_missing": "Xcodeをインストール",
       "xcode_too_old": "Xcodeをアップデート",
+      "ios_behind_xcode": "iPhone をアップデート",
       "device_support": "Macの電源を入れたままにする",
       "helper_missing": "Macでアプリを開く",
       "helper_expired": "Macでアプリを開く",
@@ -15294,6 +15572,7 @@
       "helperText": "Macが7日ごとにビルドして更新します。XcodeでApple Account（無料）を使えば十分です。",
       "helperUntrustedText": "デベロッパ名をタップしてから「信頼」をタップします。",
       "teamLimitText": "自分で作ったアプリを1つiPhoneから削除してください（無料のApple Accountでは3つまで）。",
+      "iosBehind": "この iPhone は iOS {{ios}} で、この Mac の Xcode は iOS {{sdk}} 向けです。iPhone をアップデートしてください:設定 › 一般 › ソフトウェアアップデート。",
       "xcodeOld": "{{name}}はiOS {{version}}ですが、{{mac}}のXcodeが対応するのはiOS {{sdk}}までです。Xcode {{major}}をインストールしてから、ターミナルでこれを実行してください。",
       "xcodeOldAny": "{{name}}はiOS {{version}}で、{{mac}}のXcodeより新しいバージョンです。Xcode {{major}}をインストールしてから、ターミナルでこれを実行してください。",
       "uiRefusedText": "iPhoneがテストヘルパーのタップを拒否しました。ロックを解除し、求められたらパスコードを入力してください。続く場合は、設定 › デベロッパ › UIオートメーションを有効にするをオフにしてからオンにしてください。",
@@ -15793,8 +16072,37 @@
     },
     "system": "システム",
     "removed": "削除済み",
+    "operatorRead": {
+      "sentence": "{{who}}が{{what}}を閲覧",
+      "who": {
+        "server": "このサーバーの運用者",
+        "cloud": "agentes.chat サポート"
+      },
+      "what": {
+        "message": "メッセージ",
+        "run_step": "エージェントの作業の1ステップ",
+        "agent": "エージェントの指示",
+        "routine": "ルーティン",
+        "task": "バックグラウンドのタスク",
+        "channel": "チャンネルの名前",
+        "connection": "接続の情報",
+        "support_request": "サポートへの依頼",
+        "direct": "非公開の会話の内容",
+        "other": "ワークスペース内の内容"
+      },
+      "request": {
+        "plain": "{{name}}の依頼による",
+        "app": "{{name}}の依頼による（アプリから送信）",
+        "email": "{{name}}の依頼による（メールで送信）",
+        "operator": "{{name}}の依頼による（このサーバーの運用者が記録）",
+        "support": "{{name}}の依頼による（サポートが記録）"
+      },
+      "fault": "失敗または停止した実行の調査のため",
+      "ai": "AIアシスタントを使用"
+    },
     "change": {
       "mergedWithoutAsking": "{{repo}}で確認なしでマージしました",
+      "accentChanged": "ワークスペースのアクセントカラーを変更",
       "pattern": "{{verb}}: {{area}}",
       "approval": {
         "approved": "リクエストを承認",
@@ -15806,6 +16114,11 @@
         "left": "ワークスペースから退出",
         "role_changed": "メンバーのロールを変更",
         "password_link": "メンバーの新しいパスワードのリンクを作成しました"
+      },
+      "outside": {
+        "approved": "{{outsideOf}}の外部協力者の参加を承認",
+        "removed": "{{outsideOf}}の外部協力者を削除",
+        "left": "{{outsideOf}}の外部協力者としてワークスペースから退出"
       },
       "role": {
         "permission_set": "「{{short}}」ができる人を変更",
@@ -16069,6 +16382,51 @@
           "new3": "あと2件、明日電話します。",
           "new4": "Driveのレポートを更新しました。",
           "newCount": "新着4件"
+        },
+        "wallpaper": {
+          "title": "背景",
+          "help": "あなただけに反映され、すべてのデバイスで同じになります",
+          "rowHelp": "すべての会話の背景で、あなただけに表示されます。会話ごとにメニューから別の背景も選べます。",
+          "rowSub": "あなただけ、すべての会話で",
+          "onlyHere": "{{name}} だけ、あなただけに",
+          "none": "背景なし",
+          "sameAsOthers": "ほかの会話と同じ",
+          "sameShort": "ほかと同じ",
+          "sky": "空",
+          "drawings": "イラスト",
+          "color": "カラー",
+          "photos": "あなたの写真",
+          "choosePhoto": "写真を選ぶ",
+          "skyAutoHelp": "最初のものは会話に合わせて変わります。ダイレクトメッセージではエージェントの色の空、チャンネルではワークスペースの空です。",
+          "skyAutoHelpDms": "最初のものはエージェントの色の空です。",
+          "skyAutoHelpChannels": "最初のものはワークスペースの空です。",
+          "neutral": {
+            "paper": "紙",
+            "mist": "霧",
+            "sand": "砂"
+          },
+          "name": {
+            "skyAuto": "会話の空",
+            "skyAgent": "エージェントの空",
+            "skyWorkspace": "ワークスペースの空",
+            "sky": "空 · {{color}}",
+            "drawingsAuto": "会話のイラスト",
+            "drawingsAgent": "エージェントのイラスト",
+            "drawingsWorkspace": "ワークスペースのイラスト",
+            "drawings": "イラスト · {{color}}",
+            "crowd": "エージェント",
+            "color": "カラー · {{color}}",
+            "photo": "あなたの写真"
+          },
+          "choose": "選ぶ…",
+          "menu": "会話の背景…",
+          "preview": "プレビュー",
+          "usePhoto": "この写真を使う",
+          "dragHint": "写真をドラッグして表示する部分を選びます",
+          "dim": "ダークモードで暗くする",
+          "sending": "写真を送信中…",
+          "failed": "背景を保存できませんでした。もう一度お試しください。",
+          "done": "完了"
         }
       },
       "agentStyle": "エージェントの話し方",
@@ -16460,6 +16818,14 @@
   "usageViews": {
     "signedOut": "ログアウト済み",
     "whose": "{{name}}の",
+    "order": {
+      "title": "{{plan}} · 使用順",
+      "hint": "上限に達すると、エージェントは余裕のある次のアカウントで続け、最初のアカウントがリセットされたら戻ります。",
+      "terms": "複数の{{plan}}アカウントを使うことは、{{plan}}の規約ではグレーゾーンです。",
+      "termsLabel": "{{plan}}の規約",
+      "termsHint": "プランは1人用なので、エージェントが複数のアカウントに頼る前に{{plan}}の規約を確認してください。",
+      "move": "{{name}}を移動（使用順{{n}}番目）"
+    },
     "serves": {
       "everyone": "全員が使う",
       "onlyYou": "あなただけが使う",
@@ -16526,7 +16892,7 @@
       "api": "API",
       "apiMain": "{{name}}はAPIで思考します",
       "apiMain_female": "{{name}}はAPIで思考します",
-      "apiFallback": "プラン外: 簡単な判断と、プランで回答できなかったとき",
+      "apiFallback": "プラン外: 簡単な判断",
       "removed": "削除されたアカウント",
       "removedSub": "どのコンピューターにもありません",
       "old": "{{brand}}（アカウント導入前）",
@@ -17148,6 +17514,7 @@
       "provider_wait_said": "{{provider}}がエラーを返しました（{{detail}}）。もう一度試して、動き次第すぐに返信します。",
       "provider_wait_ours": "あなたのアカウントではなく、こちら側の問題でAIが止まっています。解決し次第すぐに返信します。",
       "provider_back": "AIが戻りました。",
+      "confidential_removed": "削除済み：機密テキストの保存期間は{{days}}日です。",
       "brain_busy": "コンピューターが現在ほかのタスクで埋まっています。空き次第すぐに返信します。",
       "brain_queued": "まだコンピューターの待ち行列にいます。空きメモリができたらすぐに返信します。",
       "brain_interrupted": "{{brain}}が完了前に停止しました。完了済みで繰り返さないもの: {{tools}}。",
@@ -17155,6 +17522,11 @@
       "plan_limit_cut_unknown": "{{plan}}プランの上限で停止しました。リセットされ次第、続きから再開します。",
       "plan_limit_wait": "{{plan}}プランが上限に達しました。リセットされる{{when}}に返信します。{{plan}}側で先に解除されたら、気づいてすぐに返信します。",
       "plan_limit_wait_unknown": "{{plan}}プランが上限に達しました。リセットされ次第、返信します。",
+      "plan_account_moved": "{{from}} アカウントが上限に達しました。{{to}} アカウントで続けます。",
+      "plan_account_moved_line": "{{from}} アカウントが上限に近づいています。{{to}} アカウントで続けます。",
+      "plan_account_moved_extra": "{{from}} アカウントは有料の追加使用量に入ります。{{to}} アカウントで続けます。",
+      "plan_limit_all_wait": "{{plan}} の {{accounts}} 個のアカウントがすべて上限に達しました。最初の1つがリセットされる{{when}}に返信します。",
+      "plan_limit_all_wait_unknown": "{{plan}} の {{accounts}} 個のアカウントがすべて上限に達しました。どれかがリセットされ次第、返信します。",
       "plan_model_limit_wait": "{{model}}は{{plan}}でモデル自体の上限に達しました。プランのほかのモデルはそのまま使えます。{{agent}}のモデルを変えるか、{{when}}のリセットまでお待ちください。",
       "plan_model_limit_wait_unknown": "{{model}}は{{plan}}でモデル自体の上限に達しました。プランのほかのモデルはそのまま使えます。{{agent}}のモデルを変えるか、リセットまでお待ちください。",
       "plan_model_region_wait": "このモデル（{{model}}）を使うには、OpenCodeの「Settings › Privacy」でGlobalリージョンをオンにする必要があります。",
@@ -18103,6 +18475,10 @@
     "seatsPaid_other": "支払い済み {{count}}席",
     "noLimit": "上限なし",
     "ownBucket": "自前のバケットを使用、こちらの上限はありません"
+  },
+  "referrals": {
+    "open": "紹介して特典を獲得",
+    "failed": "今は開けませんでした。少し待ってからもう一度お試しください。"
   },
   "limits": {
     "members": {

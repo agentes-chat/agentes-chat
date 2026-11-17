@@ -361,6 +361,14 @@ test("at the limit, the owner's other free accounts of the same kind and maker, 
   // One made for all of the owner's agents there is offered though another agent thinks with it.
   const all = account("all", { usedBy: ["Infra"], usage: usage(1), shared: true });
   expect(limitOffers([...accounts, all], "claude_code", "now", NOW)[0]?.account.id).toBe("all");
+  // The order of use comes before room: a placed account first, the unplaced after it by room.
+  const placed = account("placed", { usage: usage(60), useOrder: 0 });
+  expect(limitOffers([...accounts, placed], "claude_code", "now", NOW).map((o) => o.account.id)).toEqual([
+    "placed",
+    "calm",
+    "busy",
+    "unknown",
+  ]);
 });
 
 test("a model group's own quota (Antigravity's Claude and GPT week at 0%) binds only its models, never the account", () => {

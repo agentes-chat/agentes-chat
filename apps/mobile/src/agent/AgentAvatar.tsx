@@ -2,6 +2,7 @@ import {
   bodyTones,
   drawAccessory,
   drawAgent,
+  drawnKey,
   drawSleep,
   type Expression,
   EYE_COLOR,
@@ -127,6 +128,9 @@ function AgentAvatarView({
   const { color, eyes, accessory, id } = agent;
   const seed = useMemo(() => seedOf(id ?? `${color}:${eyes}:${accessory ?? ""}`), [id, color, eyes, accessory]);
   const t = useFrameTime(live && !reduced, STILL_T);
+  // By the colors it resolves to: `sky` follows the workspace's accent.
+  const drawn = drawnKey(color);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `drawn` is what `color` draws as now
   const picture = useMemo(() => {
     const frame = agentFrame(
       { color, eyes, accessory },
@@ -141,7 +145,7 @@ function AgentAvatarView({
       { gaze, bodyless },
     );
     return createPicture((canvas) => replay(canvas, frame), { width: size, height: size });
-  }, [color, eyes, accessory, size, mode, t, seed, reduced, tile, dark, expression, gaze, bodyless]);
+  }, [color, drawn, eyes, accessory, size, mode, t, seed, reduced, tile, dark, expression, gaze, bodyless]);
   const label = name
     ? tr(mode === "run" ? "mobile.a11y.agentWorking" : "mobile.a11y.agent", { name })
     : tr("mobile.a11y.agentPlain");

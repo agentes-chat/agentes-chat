@@ -211,10 +211,10 @@ test.skipIf(!posix)(
     expect(notDeltas(second.events)).toEqual(notDeltas(execAll.map(steps)));
     // Live text: the message that came whole, then the streamed one.
     expect(deltas(second.events)).toBe("I’ll check the folder now.\n\nDone: tests pass.");
-    // One process, one thread; model and effort per turn (xhigh and max are high).
+    // One process, one thread; model and effort per turn.
     expect(t.starts()).toHaveLength(1);
     expect(t.rpcs("thread/start")).toHaveLength(1);
-    expect(t.rpcs("turn/start")[1]).toMatchObject({ model: "gpt-5.5", effort: "high" });
+    expect(t.rpcs("turn/start")[1]).toMatchObject({ model: "gpt-5.5", effort: "max" });
     expect(t.app.size).toBe(1);
     // The computer's own sign-in has a process open: a plan's route there waits (`brain-route.ts`).
     expect(t.app.holds(null)).toBe(true);

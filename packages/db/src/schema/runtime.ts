@@ -157,7 +157,7 @@ export const agentRuns = pgTable(
     workingSince: timestamp({ withTimezone: true }),
     /**
      * The computer this run waits for (`waiting_input` with a computer brain
-     * and nothing to fall back on, ADR 0032 §5): queued again when it comes
+     * that can't answer now, ADR 0032 §5): queued again when it comes
      * back (`resumeRunsWaitingForMachine`). Null otherwise.
      */
     waitingMachineId: uuid(),
@@ -176,7 +176,7 @@ export const agentRuns = pgTable(
     background: boolean().notNull().default(false),
     /**
      * The brain this run actually thinks with (`model`, `claude_code`, `codex`): the agent's, a
-     * mission's override or a fallback. Null until its first turn. Shared code reads this, never
+     * mission's override, or the model brain an older release stood in with. Null until its first turn. Shared code reads this, never
      * the agent's stored brain.
      */
     brain: text(),
@@ -204,6 +204,8 @@ export const agentRuns = pgTable(
     index().on(t.issueId, t.createdAt),
     // A stretch's runs, counted before an agent starts another (`stretchStop`).
     index().on(t.orgId, t.stretchId).where(sql`${t.stretchId} is not null`),
+    // A computer brain's session's runs (`resolveBrain`, a cut tool call read back from an earlier run).
+    index().on(t.orgId, t.brainSessionId).where(sql`${t.brainSessionId} is not null`),
     // Runs waiting for a computer, found when it reconnects (only those rows are indexed).
     index("agent_runs_waiting_machine_idx").on(t.waitingMachineId).where(sql`${t.waitingMachineId} is not null`),
     // The task manager's count of today's finished tasks, asked at every poll: only today's rows read, not every run
@@ -339,6 +341,8 @@ export const agentRunSteps = pgTable(
     // A workspace's tool calls in a range of dates, for the operator API (only those steps are indexed). Built
     // concurrently: every step of every run is a row here, and a plain build keeps them all waiting until it ends.
     index("agent_run_steps_tool_calls_idx").on(t.orgId, t.createdAt).where(sql`${t.kind} = 'tool_call'`).concurrently(),
+    // The task list's count of a run's tool calls and its latest one, without reading the run's other steps.
+    index("agent_run_steps_tool_call_run_idx").on(t.runId, t.seq).where(sql`${t.kind} = 'tool_call'`),
   ],
 );
 
@@ -431,6 +435,8 @@ export const agentBudgetPeriods = pgTable(
   (t) => [
     primaryKey({ columns: [t.agentId, t.periodStart] }),
     foreignKey({ columns: [t.orgId, t.agentId], foreignColumns: [agents.orgId, agents.id] }).onDelete("cascade"),
+    // A workspace's month (agents' statuses, the right hand's budget watch): the key starts with the agent.
+    index().on(t.orgId, t.periodStart),
   ],
 );
 
@@ -832,6 +838,8 @@ export const agentScopes = pgTable(
   (t) => [
     foreignKey({ columns: [t.orgId, t.agentId], foreignColumns: [agents.orgId, agents.id] }).onDelete("cascade"),
     unique().on(t.agentId, t.connectionId, t.scope).nullsNotDistinct(),
+    // A connection's grants across agents (a mailbox's or a database's people and agents).
+    index().on(t.connectionId).where(sql`${t.connectionId} is not null`),
   ],
 );
 

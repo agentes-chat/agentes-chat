@@ -592,8 +592,6 @@ export async function withPersonalBrain<T extends ThinkingAgent>(
       contextTokens: own.brainContextTokens ?? null,
       brainAccountId: own.brainAccountId,
       brainAccountLentBy: own.brainAccountLentBy,
-      brainFallback: false,
-      brainExtraUsage: false,
     },
     own: true,
   };

@@ -10,13 +10,13 @@ import {
   useUpdateAgent,
 } from "@agenteschat/client";
 import {
+  brainEffortScale,
   type EffortLevel,
   type EffortScaleLevel,
   effortOf,
   effortScaleSteps,
   effortStepKey,
   effortTextOf,
-  keyEffortScale,
 } from "@agenteschat/client/lib/brain-advanced";
 import {
   mayPickModel,
@@ -215,12 +215,19 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
   const shown = q.trim() ? rows.filter((r) => r.label.toLowerCase().includes(q.trim().toLowerCase())) : rows;
   const [busy, setBusy] = useState(false);
   const checked = rows.find((r) => r.checked);
-  // An API model whose levels were never checked (or which takes none): no ramp to offer (ADR 0187).
-  const keyModel = checked && !checked.auto ? all.find((m) => m.id === checked.value) : undefined;
-  const keyScale = checked && !checked.auto ? keyEffortScale(keyModel) : null;
-  const effortOn = tile?.current && checked && !checked.auto && keyScale !== null;
-  // A model sold at thinking levels (Antigravity): its levels are the ramp, the ones it isn't sold at greyed out.
   const family = checked && !checked.auto ? checked.family : undefined;
+  const planModel =
+    tile && tile.kind !== "model" && checked && !checked.auto
+      ? view.options.find((o) => o.kind === tile.kind)?.models.find((m) => m.value === checked.value)
+      : undefined;
+  // An API model whose levels were never checked (or which takes none): no ramp to offer (ADR 0187).
+  const keyModel =
+    checked && !checked.auto
+      ? all.find((m) => m.id === (tile?.kind === "model" ? checked.value : (planModel?.modelId ?? checked.value)))
+      : undefined;
+  const effortScale =
+    tile && checked && !checked.auto ? brainEffortScale(tile.kind, { planModel, keyModel, family }) : null;
+  const effortOn = Boolean(tile?.current && checked && !checked.auto && effortScale !== null);
   const modelLevel = family && tile ? levelOfModel(view.options, tile.kind, view.effectiveModel) : undefined;
   const effort: EffortScaleLevel | EffortLevel | null = family
     ? (modelLevel ?? (view.effort && view.effort !== "auto" ? view.effort : null))
@@ -410,9 +417,9 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
                     ...s,
                     label: t(`agentPage.work.brain.efforts.${effortStepKey(s.value)}`),
                   }))
-                : effortScaleSteps(keyScale ?? []).map((s) => ({
+                : effortScaleSteps(effortScale ?? []).map((s) => ({
                     ...s,
-                    // The API brain stores no none/minimal: shown, unselectable.
+                    // None/minimal stay on the ladder and remain disabled unless supported on an API key or family.
                     disabled: s.disabled || s.value === "none" || s.value === "minimal",
                     label: t(`agentPage.work.brain.efforts.${effortStepKey(s.value)}`),
                   }))

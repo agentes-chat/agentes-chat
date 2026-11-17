@@ -19,8 +19,7 @@
     "down": "Turunkan",
     "position": "{{at}} dari {{count}}.",
     "channelPosition": "{{at}} dari {{count}}.",
-    "itsChannels": "Kanal",
-    "seeAll": "Lihat semua"
+    "itsChannels": "Kanal"
   },
   "blocks": {
     "send": "Kirim",
@@ -182,16 +181,9 @@
       "text": "Mungkin sedang mati atau di luar jaringanmu. Obrolanmu akan muncul sendiri begitu server kembali.",
       "kept": "Menampilkan yang sudah ada di aplikasi."
     },
-    "section": {
-      "agents": "Agen",
-      "channels": "Kanal",
-      "people": "Orang"
-    },
-    "seeAll": {
-      "agents": "Lihat semua agen",
-      "channels": "Lihat semua kanal",
-      "people": "Lihat semua orang"
-    },
+    "pinned": "Disematkan",
+    "recent": "Terbaru",
+    "seeAll": "Lihat semua obrolan",
     "wait": {
       "verb": {
         "approval": "butuh persetujuanmu",
@@ -345,8 +337,14 @@
     "options": "Opsi",
     "profile": "Profil",
     "here_other": "{{count}} di sini",
+    "membersAdd": "Tambahkan",
+    "membersAdded_other": "{{count}} ditambahkan ke #{{channel}}",
+    "memberRemoved": "{{name}} sudah tidak ada di #{{channel}}",
+    "muted": "#{{channel}} dibisukan",
+    "unmuted": "#{{channel}} tidak lagi dibisukan",
     "headerAgent": "{{who}}. Buka profil",
     "headerChannel": "{{who}}. Opsi",
+    "headerMembers": "{{who}}. Lihat siapa saja di sini",
     "switchHint": "Tahan untuk berganti percakapan",
     "switchTitle": "Ganti percakapan",
     "switchSearch": "Cari percakapan",
@@ -428,21 +426,15 @@
     "doubleTapHint": "Ketuk dua kali = 👍",
     "react": "Beri reaksi",
     "attach": {
-      "more": "Tambah foto atau file lain",
       "remove": "Hapus {{name}}",
       "waiting": "{{name}}, menunggu dikirim",
       "sending": "{{name}}, sedang dikirim",
+      "failed": "{{name}}, belum terkirim: kirim untuk mencoba lagi",
+      "preparing": "Menyiapkan file…",
       "tooMany": "Maksimal {{count}} file per pesan."
     },
     "swipeReply": "Geser ke kanan untuk membalas",
     "intent": {
-      "suggest": {
-        "merge": "Silakan merge",
-        "review": "Minta {{name}} meninjau dulu",
-        "seeChange": "Tunjukkan apa yang berubah",
-        "summarize": "Rangkum dalam 3 poin",
-        "nextStep": "Apa langkah berikutnya?"
-      },
       "arrived": "{{name}} bergabung dengan tim",
       "meet": "Percakapan pertamamu dengan {{name}}",
       "roleIntro": "{{role}} di timmu. Minta dengan kata-kata biasa.",
@@ -588,7 +580,6 @@
     "minuteLess": "{{n}} menit lebih awal",
     "minuteMore": "{{n}} menit lebih lambat",
     "submit": "Ingatkan aku pada waktu ini",
-    "quick": "Lihat waktu cepat",
     "done": "Pengingat dipasang",
     "error": {
       "noAgent": "Tidak ada agen di sini yang bisa mengingatkanmu",
@@ -645,6 +636,7 @@
     "title": "Misi baru",
     "intro": "Agen membuat rencana dan baru mulai saat kamu bilang.",
     "placeholder": "Apa yang perlu diselesaikan?",
+    "who": "Siapa yang mengerjakan",
     "submit": "Minta rencana",
     "created": "{{name}} sedang membuat rencana",
     "noAgents": "Belum ada agen yang bisa menjalankan misi. Hubungkan komputer di situs web.",
@@ -795,9 +787,6 @@
     "keepEditing": "Lanjut mengedit"
   },
   "newAgent": {
-    "leaveTitle": "Keluar tanpa membuat?",
-    "leaveText": "Agen yang kamu mulai tidak akan dibuat.",
-    "keepGoing": "Lanjut membuat",
     "identityQuestion": "Siapa agennya?",
     "identityLead": "Namanya, cara memanggilnya di obrolan, dan wajahnya.",
     "handleMention": "Sebut @{{handle}} untuk memanggilnya.",
@@ -823,7 +812,6 @@
       "archive": "Ponsel tidak bisa membuka file .zip atau .tar.gz. Di aplikasi File, ketuk .zip untuk mengekstraknya lalu pilih file di dalamnya, atau impor di komputer.",
       "privacy": "Dibaca di ponsel ini. File kunci dan login tidak pernah dibuka.",
       "also": "Ikut terbawa juga",
-      "change": "Ganti",
       "arrived_other": "{{count}} agen tiba",
       "partial": "{{done}} dari {{total}} tiba. Impor lagi untuk membawa sisanya."
     }
@@ -846,7 +834,11 @@
     "taskForM": "Tugas untuk {{name}}",
     "taskPlaceholder": "Apa yang perlu diselesaikan?",
     "sendTask": "Kirim tugas",
-    "taskSent": "Tugas terkirim"
+    "taskSent": "Tugas terkirim",
+    "brakes": {
+      "forgetTitle": "Lupakan jawaban ini?",
+      "forgetText": "{{name}} akan bertanya lagi sebelum pekerjaan seperti ini."
+    }
   },
   "activity": {
     "title": "Aktivitas",
@@ -1137,7 +1129,7 @@
       "file": "File"
     },
     "more": "Opsi lainnya",
-    "send": "Kirim",
+    "sendCopy": "Kirim salinan",
     "savePhotos": "Simpan ke Foto",
     "drive": "Lihat di Drive",
     "saved": "Tersimpan di Foto",
@@ -1151,6 +1143,7 @@
     "place": "{{index}} dari {{count}}",
     "previous": "Gambar sebelumnya",
     "next": "Gambar berikutnya",
+    "noPreviewTitle": "Tidak ada pratinjau",
     "noPreview": "File ini tidak bisa dibuka di aplikasi. Kirim ke aplikasi lain untuk membukanya.",
     "video": {
       "play": "Putar",
@@ -1160,7 +1153,8 @@
       "mute": "Bisukan",
       "unmute": "Nyalakan suara",
       "fullscreen": "Layar penuh",
-      "open": "Buka"
+      "open": "Buka",
+      "cantPlay": "Video ini tidak bisa diputar di ponsel ini."
     }
   },
   "issues": {
@@ -1252,7 +1246,6 @@
   "drive": {
     "title": "Drive",
     "search": "Cari di Drive",
-    "types": "Jenis file",
     "type": {
       "all": "Semua",
       "documents": "Dokumen",
@@ -1273,7 +1266,6 @@
     },
     "by": "{{name}} · {{when}}",
     "noResults": "Tidak ada hasil dengan filter ini.",
-    "loadFailed": "Tidak bisa memuat Drive.",
     "more": "Tampilkan lainnya"
   },
   "constellation": {
@@ -1332,8 +1324,6 @@
     "openExisting": "Buka halaman"
   },
   "routines": {
-    "loadFailed": "Tidak bisa memuat rutinitas.",
-    "anyAgent": "Semua agen",
     "create": "Buat",
     "when": {
       "custom": "Caramu sendiri",
@@ -1706,6 +1696,7 @@
       "ui_automation_off": "Otomatisasi UI mati",
       "xcode_missing": "Mac butuh Xcode",
       "xcode_too_old": "Xcode terlalu lama untuk iPhone ini",
+      "ios_behind_xcode": "Perbarui iOS iPhone ini",
       "device_support": "Mac sedang menyiapkan iPhone ini",
       "helper_missing": "Helper pengujian belum disiapkan",
       "helper_expired": "Helper pengujian perlu diperbarui",
@@ -1929,7 +1920,9 @@
       "other": "Pakai perangkat lain",
       "stop": "Berhenti menunggu",
       "useInstead": "Pakai {{name}} saja",
-      "none": "Tidak ada perangkat lain yang bisa kamu pakai yang sedang siap."
+      "none": "Tidak ada perangkat lain yang bisa kamu pakai yang sedang siap.",
+      "tried": "Mencoba {{device}} lagi.",
+      "stopped": "Tidak lagi menunggu {{device}}."
     }
   },
   "connectors": {
@@ -2187,7 +2180,6 @@
     "noMatch": "Tidak ada peran yang cocok dengan “{{q}}”.",
     "tooMany": "Ruang kerja ini sudah punya 100 peran. Hapus satu untuk membuat yang lain.",
     "loadFailed": "Tidak bisa memuat peran. {{cause}}",
-    "backToList": "Kembali ke peran",
     "nobody": "Tidak ada",
     "reach": {
       "permissions_other": "{{count}} izin",
@@ -2552,7 +2544,6 @@
   },
   "dashboards": {
     "homeRow": "Hanya kamu · widget milikmu sendiri",
-    "loadFailed": "Dasbor tidak bisa dimuat.",
     "create": "Buat",
     "routineTarget": "widget-nya",
     "pin": {

@@ -4,6 +4,7 @@ import {
   useAgentBrain,
   useAiAccounts,
   useApi,
+  useAuthConfig,
   useCredentials,
   useModels,
   usePlatformKey,
@@ -14,7 +15,14 @@ import {
   useUpdateSettings,
   useWorkspaceUsesApi,
 } from "@agenteschat/client";
-import { accountAbout, accountChoices, accountTitle, ownSignInTitle } from "@agenteschat/client/lib/ai-accounts";
+import { selfHosted } from "@agenteschat/client/lib/about";
+import {
+  accountAbout,
+  accountChoices,
+  accountTitle,
+  ownSignInTitle,
+  unnamedAccount,
+} from "@agenteschat/client/lib/ai-accounts";
 import { audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
 import { modelInput, modelRows } from "@agenteschat/client/lib/brain-picker";
 import { errorText } from "@agenteschat/client/lib/errors";
@@ -52,16 +60,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { TFunction } from "i18next";
 import { type ReactNode, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { AudienceChoice } from "@/components/AgentAudience";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { LookRows, modelOptions } from "@/components/AgentFields";
 import { RightHandApprovalsCard } from "@/components/ApprovalCover";
 import { PlanHold, usePlanHold } from "@/components/ai/ConnectAiSteps";
-import type { HaveItem } from "@/components/arrival/ConnectHave";
+import { type HaveItem, renameOf } from "@/components/arrival/ConnectHave";
 import { useConnectAi } from "@/components/ConnectAi";
 import { useAgentComputer } from "@/components/computer/facts";
 import { useOpenComputer } from "@/components/computer/open";
+import { HelpLink } from "@/components/HelpLink";
 import { LoadingLine } from "@/components/Loading";
 import { PrefRow } from "@/components/NoticePrefs";
 import { useOrg } from "@/components/org-context";
@@ -70,6 +79,7 @@ import { TeamWeekSchedule } from "@/components/TeamWeekSchedule";
 import { useComputerEdition } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
 import { usePersonalView } from "@/hooks/usePersonalView";
+import { useRenameAccount } from "@/hooks/useRenameAccount";
 import { fullLook, lookOf } from "@/lib/look";
 import { useToast } from "@/lib/toast";
 
@@ -313,15 +323,22 @@ function RightHandComputerRow({ agent }: { agent: Agent }) {
   const { org } = useOrg();
   const view = useAgentComputer(agent);
   const openComputer = useOpenComputer();
+  const auth = useAuthConfig();
   if (!view.ready || view.forbidden || !view.facts) return null;
-  const none = rightHandNoComputer(view.desktop?.reason);
+  const none = rightHandNoComputer(view.desktop?.reason, selfHosted(auth.data));
   if (none)
     return (
       <PrefRow
         id="rh-computer"
         icon="computer"
         label={t("agentComputer.button")}
-        status={t(none)}
+        status={
+          none === "rightHand.computerNoHomeServer" ? (
+            <Trans i18nKey={none} components={{ guide: <HelpLink slug="install-on-a-server" section="computers" /> }} />
+          ) : (
+            t(none)
+          )
+        }
         control={
           none === "rightHand.computerNoHome" &&
           can(org, "pair_computers") && (
@@ -386,6 +403,7 @@ export function useRightHandMineHint(agent: Agent) {
 
 function RightHandForm({ agent }: { agent: Agent }) {
   const { t, i18n } = useTranslation();
+  const renameAccount = useRenameAccount();
   const { org, me } = useOrg();
   const toast = useToast();
   const update = useUpdateAgent(org.id, agent.id);
@@ -478,7 +496,10 @@ function RightHandForm({ agent }: { agent: Agent }) {
     const whose = owner ? t("agentPage.work.brain.accountOf", { name: owner }) : t("connectAi.chat.yours");
     return {
       id: a.id,
-      title: accountTitle(a),
+      title: accountTitle(t, a),
+      unnamed: unnamedAccount(a),
+      // The accounts listed here are on the right hand's computer.
+      rename: renameOf(t, a, view?.computer?.machineId, renameAccount),
       about: accountAbout(t, c, agent.name),
       whose,
       group: owner ? { key: `owner:${a.ownerId}`, label: whose } : mineGroup,
@@ -504,7 +525,7 @@ function RightHandForm({ agent }: { agent: Agent }) {
     const owner = theirs(a.ownerId);
     return {
       id: u.id,
-      item: { title: accountTitle(a), mark: <ProviderLogo id={a.provider ?? a.kind} size="xs" /> },
+      item: { title: accountTitle(t, a), mark: <ProviderLogo id={a.provider ?? a.kind} size="xs" /> },
       why: (
         <>
           {owner
@@ -606,7 +627,12 @@ function RightHandForm({ agent }: { agent: Agent }) {
             label={t("rightHand.settings.workspace")}
             status={
               kind ? (
-                <PlanLine kind={kind} label={signIn?.label} owner={theirs(ownerId)} model={planModel} />
+                <PlanLine
+                  kind={kind}
+                  label={signIn ? accountTitle(t, signIn) : undefined}
+                  owner={theirs(ownerId)}
+                  model={planModel}
+                />
               ) : (
                 <span className="rh-value ac-iconline">
                   {key ? <ProviderLogo id={key.provider} size="xs" /> : <Icon name="key" size={14} />}

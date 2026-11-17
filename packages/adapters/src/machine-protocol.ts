@@ -725,6 +725,8 @@ export type PhoneReason =
   /** iPhone: no Xcode on the Mac, or its iPhone SDK is older than the phone's iOS (`xcode_too_old`). */
   | "xcode_missing"
   | "xcode_too_old"
+  /** iPhone: its iOS is older than the Mac's iPhone SDK and the test helper is stuck: the iPhone needs an update. */
+  | "ios_behind_xcode"
   /** iPhone: the Mac is preparing the phone (device support download, needs internet). */
   | "device_support"
   /** iPhone: the test helper isn't built yet, or its free signature ran out (`helper_expired`). */
@@ -2013,7 +2015,7 @@ export interface RunnerExecutorInfo {
   models?: CursorModelInfo[];
 }
 
-/** A model Cursor's CLI (`agent models`) or OpenCode's (`opencode models`) lists. */
+/** A model Cursor's CLI (`agent models`), OpenCode's (`opencode models`), or Codex (`codex app-server`) lists. */
 export interface CursorModelInfo {
   id: string;
   label?: string;
@@ -2021,6 +2023,12 @@ export interface CursorModelInfo {
   inPlan?: boolean;
   /** OpenCode (protocol 39): a model of OpenCode's free tier (no key, no cost). */
   free?: boolean;
+  /** Supported brain effort levels reported by the CLI (e.g., Codex `app-server` `model/list`). */
+  efforts?: BrainEffort[];
+  /** Codex Fast service tier reported by `model/list` (`additionalSpeedTiers` / `serviceTiers`). */
+  fast?: boolean;
+  /** Marked as the CLI's recommended/default model (`isDefault`). */
+  recommended?: boolean;
 }
 
 /** Most models kept from `agent models`, and their longest id and label. */
@@ -3390,11 +3398,15 @@ export function parseCursorModels(v: unknown): CursorModelInfo[] {
     if (!isObject(m) || !isString(m.id) || !/^[\w.:/-]{1,80}$/.test(m.id)) continue;
     if (out.some((x) => x.id === m.id)) continue;
     const label = isString(m.label) ? m.label.replace(/\s+/g, " ").trim().slice(0, CURSOR_MODEL_LIMITS.label) : "";
+    const efforts = Array.isArray(m.efforts) ? m.efforts.filter(isBrainEffort) : [];
     out.push({
       id: m.id,
       ...(label ? { label } : {}),
       ...(m.inPlan === true ? { inPlan: true } : {}),
       ...(m.free === true ? { free: true } : {}),
+      ...(efforts.length > 0 ? { efforts } : {}),
+      ...(m.fast === true ? { fast: true } : {}),
+      ...(m.recommended === true ? { recommended: true } : {}),
     });
     if (out.length >= CURSOR_MODEL_LIMITS.models) break;
   }
@@ -3419,7 +3431,7 @@ export function parseExecutors(v: Record<string, unknown>): NonNullable<RunnerIn
       ...(authMethod ? { authMethod } : {}),
       ...(plan ? { plan } : {}),
     };
-    const models = name === "claude" || name === "codex" ? [] : parseCursorModels(e.models);
+    const models = name === "claude" ? [] : parseCursorModels(e.models);
     if (models.length) out[name] = { ...out[name], models } as RunnerExecutorInfo;
   }
   if (isObject(v.broken)) {

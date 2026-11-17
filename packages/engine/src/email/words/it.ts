@@ -233,6 +233,11 @@ export const words: EmailWords = {
     preheader: "Approva o rifiuta in Membri. Non succede nulla finché non rispondi.",
     headline: "C’è una richiesta di accesso in attesa",
     body: (org) => ["Una persona ha aperto il link di invito di ", { b: org }, " e ha chiesto di entrare."],
+    outside: (by) => [
+      "Questa persona lavora per ",
+      { b: by },
+      " e chiede di entrare come collaboratore esterno. Non occupa un posto nel tuo piano, e puoi rimuoverla in qualsiasi momento.",
+    ],
     note: "Approva solo le persone che aspetti. Entrano come membro, a meno che tu non scelga un altro ruolo nella pagina.",
     approve: "Approva",
     deny: "Rifiuta",

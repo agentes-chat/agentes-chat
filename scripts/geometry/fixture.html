@@ -20,6 +20,9 @@
 
 <div class="bad-clipped" style="width: 60px; overflow: hidden; white-space: nowrap">Um texto bem mais longo que a caixa dele</div>
 <div class="good-clipped" style="width: 60px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis">Um texto bem mais longo que a caixa dele</div>
+<!-- A kit button's words sit in its label: cut by a box around the button, the button is the one named; ended by the label's own "…", nothing is. -->
+<div style="width: 60px; overflow: hidden"><button type="button" class="ac-btn bad-clipped--label"><span class="ac-btn__label">Um texto bem mais longo que a caixa dele</span></button></div>
+<div style="width: 120px; display: flex"><button type="button" class="ac-btn good-clipped--label" style="max-width: 100%"><span class="ac-btn__label" style="min-width: 0; overflow: hidden; text-overflow: ellipsis">Um texto bem mais longo que a caixa dele</span></button></div>
 <div class="bad-clipped--fold" style="width: 120px; max-height: 40px; overflow: hidden; line-height: 20px">Um texto bem mais longo que a caixa dele, cortado no meio de uma linha</div>
 <div class="good-clipped--fold" style="width: 120px; max-height: 40px; overflow: hidden; line-height: 20px; mask-image: linear-gradient(#000 55%, transparent)">Um texto bem mais longo que a caixa dele, que some sob um degradê</div>
 

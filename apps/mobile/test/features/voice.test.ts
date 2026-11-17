@@ -107,7 +107,7 @@ describe("voice gestures and wave", () => {
   test("speed goes round", () => {
     expect([nextSpeed(1), nextSpeed(1.5), nextSpeed(2)]).toEqual([1.5, 2, 1]);
   });
-  test("a played wave's handle stands flush with its left end before the first column at 0:00, and flush with its right end after the last at the end, as WhatsApp's dot", () => {
+  test("a played wave's handle stands flush with its left end before the first column at 0:00, and flush with its right end after the last at the end", () => {
     // Every room the columns leave over (0 to 5), a width between whole points, and the phones' own.
     for (const width of [180, 181, 182, 183, 184, 185, 233.5, 300]) {
       const { count, start } = playedColumns(width);
@@ -237,7 +237,7 @@ describe("a voice note with typed text and files", () => {
     expect(composer).toContain("const mic = voice && !typed ? voice.mic : null;");
     // The field's send hands its words to the take; a take that didn't go gives them back.
     expect(composer).toMatch(
-      /if \(take\) \{[\s\S]{0,200}take\(value\)\.then\(\(sent\) => \{[\s\S]{0,80}joinDrafts\(value, now\)/,
+      /if \(take\) \{[\s\S]{0,200}take\(value\)\.then\(\(sent\) => \{[\s\S]{0,80}put\(joinDrafts\(value, textRef\.current\)\)/,
     );
     const bar = src("features/voice/useVoiceComposer.tsx");
     expect(bar).toContain('const trash = control("trash", t("voice.delete"), () => void take.cancel(true));');

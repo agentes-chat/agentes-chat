@@ -44,7 +44,7 @@ export interface JevKey {
 /** Jev's key to save: one pasted (TypeSafe's or OpenRouter's), or the workspace's own OpenRouter key. */
 export type JevKeyInput = string | { orgId: string; credentialId: string };
 
-/** A decision provider the installation's switch can use (ADR 0188). */
+/** A decision provider the installation's switch can use (ADR 0195). */
 export type DecisionProvider = "openai" | "gemini" | "local";
 export type DecisionRuntime = "ollama" | "llamacpp" | "lmstudio" | "custom";
 export type DecisionShownState = "off" | "ok" | "invalid" | "no_credit" | "unreachable";
@@ -59,7 +59,7 @@ export type DecisionInstallState =
   | "failed"
   | "cancelled";
 
-/** The installation's optional decision model (ADR 0188): off until its owner turns the switch on. */
+/** The installation's optional decision model (ADR 0195): off until its owner turns the switch on. */
 export interface DecisionModel {
   source: "settings" | null;
   enabled: boolean;
@@ -222,6 +222,8 @@ export interface AuthConfig {
   workspaceComputer?: boolean;
   /** The billing service (ADR 0079): owners and admins open a workspace's plan there; null or absent: no billing. */
   billingUrl?: string | null;
+  /** The referral service (ADR 0192): "Refer and earn" opens it (`account.referralsLink`); null or absent: none. */
+  referralsUrl?: string | null;
   /** One of agentes.chat's own servers (`Instance.cloud`); absent: a self-hosted server too old to say. */
   cloud?: boolean;
   /** The bot check's site key (Cloudflare Turnstile, ADR 0075); null or absent: no check, nothing from Cloudflare. */
@@ -230,6 +232,18 @@ export interface AuthConfig {
   errorReports?: ErrorReportsConfig | null;
   /** The same for the phone app; null or absent (a server from before it): nowhere. */
   mobileErrorReports?: ErrorReportsConfig | null;
+  /**
+   * This address is one the server's operator registered (ADR 0194): the pages before sign-in show its look, and sign-in
+   * is by email alone. Null or absent on any other address.
+   */
+  host?: HostLook | null;
+}
+
+/** A registered host's look (`AuthConfig.host`): `accent` a `#rrggbb` or null, `logoUrl` on that host or null. */
+export interface HostLook {
+  name: string;
+  accent: string | null;
+  logoUrl: string | null;
 }
 
 export interface ErrorReportsConfig {
@@ -369,6 +383,8 @@ export interface OrgSummary {
   rank?: number | null;
   /** The workspace logo (`/api/app/org-logos/…`); null or absent = the agent mark. */
   logo?: string | null;
+  /** The workspace's accent "#rrggbb" (ADR 0193): the apps paint the agent colors from it. Null or absent: the default. */
+  accent?: string | null;
   /** From `GET /me`: when it was made. Absent from older servers. */
   createdAt?: string;
   /** From `GET /me`; absent from older servers (active). Changes come as `org.standing` events. */
@@ -506,6 +522,11 @@ export interface Member {
   /** Their roles (`OrgRole` ids), not `everyone`. */
   roleIds?: string[];
   joinedAt: string;
+  /**
+   * Who the person works for, when they come from outside the workspace (ADR 0191): shown beside their name, and they
+   * never count toward its limit of people. Null (absent on a server from before it) for everyone else.
+   */
+  outsideOf?: string | null;
   /** `@ana`: unique in the organization; mentions resolve by it. */
   handle: string;
   /** IANA zone (the organization's if the person didn't pick one). */
@@ -765,6 +786,11 @@ export interface JoinRequest {
   confirmed: boolean;
   /** The member who suggested this person (their name, ADR 0090): it came through no link. */
   suggestedBy?: string | null;
+  /**
+   * Who the person works for, on a request the server's operator filed for an outside collaborator (ADR 0191):
+   * approving lets them in at once, even into a full workspace.
+   */
+  outsideOf?: string | null;
   /**
    * The link it came through (ADR 0184): who made it, and the cargos, channels and agents an approval starts on.
    * `full`: it took all its people, so approving is refused (`join.link_full_approval`) until its maximum grows.
@@ -1146,6 +1172,10 @@ export interface AgentDraft {
   mail?: { accountId: string; address: string; level: "read" | "write"; ownerUserId: string }[];
   /** A routine of its own, created with it. */
   routine?: ProposedRoutine | null;
+  /** How it introduces itself, in its own voice (ADR 0164): the speech bubble on its card. */
+  hello?: string;
+  /** Catalog apps its job needs that aren't connected yet (preset ids): its chat asks to connect them. */
+  later?: string[];
   ai: SuggestedAi;
 }
 
@@ -2627,6 +2657,8 @@ export interface Person {
   roleIds?: string[];
   joinedAt: string;
   lastSeenAt: string | null;
+  /** Who an outside collaborator works for (ADR 0191), as on `Member`. */
+  outsideOf?: string | null;
   /** Seen as connected: `presence` is online, away or busy. */
   online: boolean;
   /** `hidden` only for yourself; everyone else sees a hidden person as `offline` (ADR 0084). */
@@ -4306,8 +4338,9 @@ export interface Routine {
   waitingFor: { machineId: string; machineName: string; since: string } | null;
   /**
    * Its run waits on its plan or budget (state `usage_paused`, ADR 0118): paused near the limit, or stopped at it
-   * (`limit`: nothing to continue). It picks up at `resetsAt` (null: not known yet); `plan` is the plan's name. `extraOff`: the plan's window is used up and the agent's long work may not use paid
-   * extra usage, so Continuar agora is refused; `extraUsedUp`: the same with the switch on but no extra usage left.
+   * (`limit`: nothing to continue). It picks up at `resetsAt` (null: not known yet); `plan` is the plan's name. `extraOff`: the plan's window is used up and the agent's long work never uses paid
+   * extra usage (a plan lent to it, the team's right hand), so Continuar agora is refused; `extraUsedUp`: the same with
+   * no extra usage left.
    * Who may press it: `canManage`.
    */
   usagePause?: {
@@ -5163,6 +5196,13 @@ export interface UsageQueue {
   resetsAt: string | null;
   /** A plan's line: when its plan was last read or asked about (absent: an older server). */
   checkedAt?: string | null;
+  /**
+   * A plan's line: the account it waits on, another than the agent's own when its run went on with the next account
+   * (ADR 0041 §6); null: the computer's own sign-in, or a budget (absent: an older server).
+   */
+  account?: { id: string; label: string } | null;
+  /** Every account of the order is at its limit: how many (`resetsAt`: when the first resets); null otherwise. */
+  chain?: number | null;
   /** Other agents in the same plan's line. */
   sharedWith: string[];
   rows: UsageQueueRow[];
@@ -5429,7 +5469,15 @@ export interface BundleRoutine {
   prompt: string;
   /** Key of a channel in the bundle; null posts in the importer's DM with the agent. */
   channel: string | null;
-  trigger: { cron: string; timezone: string | null } | { rule: ApiRule } | { at: string };
+  /** A schedule, a call to an address of its own (made new here), or an event this server has. */
+  trigger:
+    | { cron: string; timezone: string | null }
+    | { rule: ApiRule }
+    | { at: string }
+    | { webhook: true }
+    | { event: "github.pr_opened" };
+  /** It was off where it comes from, so it arrives off. Only when it is made: an update keeps it as the person left it. */
+  paused?: boolean;
 }
 
 export interface BundleNote {
@@ -5442,7 +5490,8 @@ export interface BundleNote {
 }
 
 export interface BundleTodo {
-  kind: "connection" | "app" | "secret" | "model" | "file";
+  /** `webhook`: a routine that now has an address of its own here, to give the app that called the old one. */
+  kind: "connection" | "app" | "secret" | "model" | "file" | "webhook";
   label: string;
   url?: string;
   /** Keys of the agents it matters to. */
@@ -6015,6 +6064,10 @@ export interface BrainModelOption {
    */
   family?: { id: string; label: string };
   level?: BrainEffort;
+  /** Thinking effort levels this model supports on the plan. */
+  efforts?: BrainEffort[];
+  /** Codex Fast mode tier supported by this model. */
+  fast?: boolean;
 }
 
 export interface CodexVersionRequirement {
@@ -6059,10 +6112,6 @@ export interface AgentBrain {
   /** As stored; null = the brain's default. */
   model: string | null;
   effectiveModel: string | null;
-  /** If the computer isn't available, answer through the API (counts against the budget). */
-  fallback: boolean;
-  /** Long work may go on into the plan's paid extra usage where the provider reports it on (ADR 0118). */
-  extraUsage: boolean;
   computer: { machineId: string; name: string; online: boolean } | null;
   options: BrainOption[];
   /** Every computer the caller may give the agent, with what each offers ("Vai para o Mac mini"). */
@@ -6070,6 +6119,11 @@ export interface AgentBrain {
   canEdit: boolean;
   /** ADR 0041: the account on the agent's computer it thinks with; null = "Conta deste computador". */
   account: string | null;
+  /**
+   * "Só esta conta" (ADR 0041 §6): at its plan's limit it waits for `account`. Off: the run goes on with the next
+   * account of the order (`accountChain`). Absent: an older server, which never moves.
+   */
+  accountPinned?: boolean;
   /** How much it thinks before answering; `auto` = picked per task; null = the brain's default. */
   effort: BrainEffortSetting | null;
   /** How fast it answers in conversations; kept whatever it thinks with, applied only where `speedFits`. */
@@ -6087,7 +6141,7 @@ export interface AgentBrain {
   accountsSupported: boolean;
   /** Nobody but the agent's owner talks to it ("Atende outras pessoas" off). */
   onlyOwner: boolean;
-  /** The viewer owns the agent: only they connect its plan and turn its paid extra usage on or off. */
+  /** The viewer owns the agent: only they connect its plan. */
   canUsePlans: boolean;
   /**
    * True since plans serve the whole workspace (ADR 0059 §3): `accounts` has every plan on its computer that serves
@@ -6121,6 +6175,8 @@ export interface MachineAccount {
   id: string;
   kind: MachineAccountKind;
   label: string;
+  /** Its owner gave it its name; false or absent (an older server): the automatic one ("Claude 2"), so the apps show the account by its email. */
+  named?: boolean;
   /** Only for its owner. */
   email: string | null;
   /** `pro`, `max`, `ultra`, `team`… from what the CLI says (`planWordOf` names it). */
@@ -6149,6 +6205,25 @@ export interface MachineAccount {
   providerOrgId?: string | null;
   /** Who it thinks for (ADR 0059 §3): everyone in the workspace, or only its owner (absent: an older server). */
   serves?: PlanServes;
+  /**
+   * Its place in the order of use of its computer's accounts of its kind (ADR 0041 §6), 0 first; null: after the
+   * placed ones, oldest first (absent: an older server).
+   */
+  useOrder?: number | null;
+  /**
+   * A run at another account's limit may go on with it: Claude Code's or Codex's own sign-in (never a key), shared
+   * between agents and signed in. Only these have a place in the order of use (absent: an older server).
+   */
+  movable?: boolean;
+}
+
+/** `GET …/ai-accounts/order`: one computer's Claude or ChatGPT accounts in their order of use (ADR 0041 §6). */
+export interface AccountOrderGroup {
+  machineId: string;
+  computer: string;
+  kind: MachineAccountKind;
+  /** First to last. `canMove`: the viewer may move it (its owner or an admin). */
+  accounts: (MachineAccount & { canMove: boolean })[];
 }
 
 /** Who a plan thinks for (ADR 0059 §3): everyone in the workspace, or only the person who connected it. */
@@ -6231,9 +6306,6 @@ export interface AgentBrainInput {
   scope?: BrainScope;
   brain?: BrainKind;
   model?: string | null;
-  fallback?: boolean;
-  /** Off: long work pauses at 95% of the plan even with its paid extra usage on. */
-  extraUsage?: boolean;
   /**
    * "Atende outras pessoas" turned off: false lets in whoever its "who can talk" list allows (everyone with no list).
    */
@@ -6242,6 +6314,8 @@ export interface AgentBrainInput {
   account?: string | null;
   /** The account thinks for another agent: take it from that one. */
   moveAccount?: boolean;
+  /** "Só esta conta". Omitted = keep. */
+  accountPinned?: boolean;
   effort?: BrainEffortSetting | null;
   speed?: BrainSpeed;
   /** 200K, 400K or 1M tokens; null = the model's window; omitted = keep. */
@@ -6262,7 +6336,6 @@ export interface AgentSetup {
   /** Omitted = each agent keeps its own. */
   speed?: BrainSpeed;
   contextTokens?: number | null;
-  fallback?: boolean;
   /** "Atende outras pessoas" off, for the agents that move onto the plan. */
   onlyOwner?: boolean;
   /** Its Autonomia, wherever the caller may set it by hand, whatever the AI takes; omitted = each keeps its own. */
@@ -6305,11 +6378,20 @@ export interface NewAgentSetup {
   /** A computer brain: where it thinks. */
   computer?: { machineId: string; name: string };
   /** Its account there; null = that computer's own sign-in. */
-  account?: { id: string; label: string; provider: string | null; mine: boolean; free: boolean } | null;
+  account?: {
+    id: string;
+    label: string;
+    /** Its owner gave it its name; false or absent (an older server): shown by its email. */
+    named?: boolean;
+    email?: string | null;
+    plan?: string | null;
+    provider: string | null;
+    mine: boolean;
+    free: boolean;
+  } | null;
   /** The computer's own sign-in thinks for the caller's agents there (they connected it). */
   ownSignIn?: boolean;
   effort?: BrainEffortSetting | null;
-  fallback?: boolean;
   /** Its Autonomia; null or absent = the default. */
   autonomy?: CommandApproval | null;
 }
@@ -7001,6 +7083,8 @@ export interface NotificationLatest {
   names?: string[];
   /** `join_request` from a member's suggestion (ADR 0090): who suggested. */
   suggestedBy?: string;
+  /** `join_request` for an outside collaborator (ADR 0191): who they work for, so a row of one says so. */
+  outsideOf?: string;
   /** `computer_disk_full`: the share of the disk in use (0 to 1) and the GB left. */
   diskUse?: number;
   diskFreeGb?: number;
@@ -7262,7 +7346,9 @@ export type UnreadEvent =
   | { type: "channel.activity"; channelId: string; threadId: string | null; dm?: boolean }
   | { type: "channel.read"; channelId: string; userId: string; lastReadAt: string }
   | { type: "channel.muted"; channelId: string; muted: boolean }
-  | { type: "thread.read"; threadId: string; channelId: string; lastReadAt: string };
+  | { type: "thread.read"; threadId: string; channelId: string; lastReadAt: string }
+  /** How my conversations look here, changed on another device (`chatPrefs` as the server keeps it). */
+  | { type: "chat.prefs"; chatPrefs: ChatPrefs };
 
 /** A pinned message (`GET …/channels/{id}/pins`, newest pin first). */
 export interface MessagePin {
@@ -7878,6 +7964,8 @@ export interface PlanAccountInfo {
   /** Null: the computer's own sign-in ("Conta deste computador"). */
   accountId: string | null;
   label: string | null;
+  /** Its owner gave it its name; false or absent (an older server): the automatic one, shown by its email. */
+  named?: boolean;
   plan: string | null;
   /** A key account's coding plan (`zai`, `kimi`…). */
   provider: string | null;

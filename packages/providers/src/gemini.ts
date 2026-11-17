@@ -1,4 +1,4 @@
-import { MODEL_CATALOG } from "./catalog";
+import { modelInfo } from "./catalog";
 import { sseData } from "./sse";
 import {
   type ContentBlock,
@@ -230,14 +230,23 @@ export function createGeminiProvider(
 }
 
 function toBody(request: ModelRequest) {
-  const least = MODEL_CATALOG[request.model]?.leastThinking === "minimal" ? "minimal" : "low";
-  // Gemini's thinking levels stop at high: xhigh and max ask for the most it has.
+  const info = modelInfo(request.model);
+  const least = info?.leastThinking === "minimal" ? "minimal" : "low";
+  const supportsXhigh = info?.efforts?.includes("xhigh") === true;
   const level =
     request.effort === "none"
       ? least
-      : request.effort === "xhigh" || request.effort === "max"
-        ? "high"
-        : request.effort;
+      : request.effort === "max"
+        ? info?.efforts?.includes("max")
+          ? "max"
+          : supportsXhigh
+            ? "xhigh"
+            : "high"
+        : request.effort === "xhigh"
+          ? supportsXhigh
+            ? "xhigh"
+            : "high"
+          : request.effort;
   const system = systemText(request.system);
   return {
     model: request.model,

@@ -640,6 +640,7 @@ export const ptBR = {
     termsMiddle: " e a ",
     privacy: "Política de privacidade",
     termsAfter: ".",
+    poweredBy: "Feito com agentes.chat",
     signOut: "Sair",
     earlyAccess: {
       otherEmail: "Este convite é para outro endereço. Cadastre-se com o endereço que recebeu o convite.",
@@ -1243,6 +1244,116 @@ export const ptBR = {
         paused:
           "Conectar com MCP fica desligado enquanto este workspace está pausado. Por enquanto, traga os agentes por aqui.",
       },
+      haveFileButton: "Tenho um arquivo ou link",
+      sheet: {
+        title: "Trazer o time do {{app}}",
+        otherTitle: "Trazer de outro app",
+        workspaceTitle: "Trazer de outro workspace",
+        fileTitle: "Trazer de um arquivo ou link",
+        fileLead: "O arquivo de qualquer app que a gente conhece. Ele é reconhecido sozinho.",
+        paths: {
+          lead: "Escolha como trazer. Você confere tudo antes de criar.",
+          best: "o mais completo",
+          safe: "Chaves, senhas e sessões do {{app}} nunca vêm, por nenhum caminho.",
+          command: {
+            title: "Com um comando",
+            line: "Traz tudo, até arquivos e workflows. Pelo assistente de código ou terminal",
+          },
+          mcp: {
+            title: "Conectando o {{app}}",
+            line: "Ele cria os agentes aqui pelo MCP. Sem arquivos nem workflows",
+          },
+          prompt: {
+            title: "Pedindo ao {{app}}",
+            line: "Ele escreve o que sabe, você cola aqui. Sem arquivos nem workflows",
+          },
+        },
+        useRequest: "Prefiro colar o pedido e trazer a resposta",
+        backToMcp: "Voltar para o MCP",
+        waitingMore: "Esperando os próximos…",
+        arrivedMore: "O {{app}} ainda pode estar criando. Quem chegar depois aparece aqui.",
+        arrivedMoreAny: "O seu app de IA ainda pode estar criando. Quem chegar depois aparece aqui.",
+        readHere: "Lido no seu navegador. Nada muda aqui até você confirmar.",
+        request: {
+          "grok-bot": {
+            lead: "O bot escreve tudo o que tem num JSON. Você cola aqui e confere antes de criar.",
+            copyStep: "Cole na conversa com o seu bot",
+            answerStep: "Cole aqui a resposta inteira",
+            answerPlaceholder: "O JSON que o bot respondeu",
+          },
+          "chatgpt-dots": {
+            lead: "O seu dot escreve tudo o que tem num arquivo. Você solta aqui e confere antes de criar.",
+            copyStep: "Cole num chat novo",
+            answerStep: "Solte aqui o arquivo que ele criar",
+          },
+          other: {
+            copyStep: "Cole numa conversa nova no outro app",
+            answerStep: "Solte o arquivo que ele devolver, ou cole a resposta",
+            answerPlaceholder: "A resposta, ou um link do GitHub",
+          },
+          computer: {
+            lead: "Um agente do {{app}} escreve o que sabe num arquivo, e você confere antes de criar.",
+            copyStep: "Numa conversa com um agente do {{app}}, cole este pedido",
+            answerStep: "Solte o arquivo que ele criar, ou cole a resposta",
+            answerPlaceholder: "A resposta do {{app}}",
+          },
+        },
+        workspace: {
+          download: "Baixe o arquivo do outro workspace",
+          where: "Lá, em Configurações\u00a0›\u00a0Importar e exportar\u00a0›\u00a0Baixar o arquivo.",
+          open: "Abrir {{org}} numa aba nova",
+          drop: "Solte aqui o .json",
+        },
+        lead: "O seu assistente lê o {{app}} neste computador e grava um arquivo onde você escolher. Você confere tudo antes de criar.",
+        leadCommand:
+          "O comando lê o {{app}} neste computador e grava um arquivo onde você escolher. Você confere tudo antes de criar.",
+        pasteAssistant: "Cole no seu assistente de código",
+        pasteTerminal: "Cole no terminal",
+        pastePowerShell: "Cole no PowerShell",
+        promptLabel: "Pedido para o assistente de código",
+        commandLabel: "Comando",
+        copy: "Copiar o pedido",
+        assistants: "Claude Code, Codex ou outro que rode comandos neste computador.",
+        commandHelp: "Ele pergunta onde salvar e grava um arquivo. Nada é enviado.",
+        useCommand: "Prefiro rodar o comando eu mesmo",
+        usePrompt: "Voltar para o pedido ao assistente",
+        os: { label: "Sistema deste computador", unix: "Mac ou Linux", windows: "Windows" },
+        dropStep: "Solte aqui o arquivo que ele gravar",
+        drop: "Solte o arquivo aqui",
+        dropHelp: "{{file}}, na pasta que você escolheu",
+        safe: "Só leitura. Chaves, senhas e sessões do {{app}} nunca são lidas.",
+        ready_one: "{{count}} agente pronto para vir",
+        ready_other: "{{count}} agentes prontos para vir",
+        readyOther: "Pronto para vir",
+        others_one: "E mais {{count}} agente",
+        others_other: "E mais {{count}} agentes",
+        routines_one: "{{count}} rotina",
+        routines_other: "{{count}} rotinas",
+        notes_one: "{{count}} memória",
+        notes_other: "{{count}} memórias",
+        skills_one: "{{count}} skill",
+        skills_other: "{{count}} skills",
+        channels_one: "{{count}} canal",
+        channels_other: "{{count}} canais",
+        files_one: "{{count}} arquivo dos agentes, copiado para o Drive",
+        files_other: "{{count}} arquivos dos agentes, copiados para o Drive",
+        filesSize: "{{size}}. O workspace inteiro vê as pastas.",
+        after: "Depois, um clique cada",
+        bring_one: "Trazer o agente",
+        bring_other: "Trazer os {{count}} agentes",
+        choose: "Escolher o que vem",
+        arrivedTitle: "O time chegou",
+        arrived_one: "{{names}} já está aqui.",
+        arrived_other: "{{names}} já estão aqui.",
+        arrivedOther_one: "{{count}} item já está aqui.",
+        arrivedOther_other: "{{count}} itens já estão aqui.",
+        copying: "Copiando os arquivos para o Drive",
+        copyCount: "{{done}} de {{total}}",
+        keepOpen: "Deixe esta aba aberta até terminar.",
+        missed_one: "{{count}} item não veio. O motivo está na lista.",
+        missed_other: "{{count}} itens não vieram. O motivo de cada um está na lista.",
+        see: "Ver o que chegou",
+      },
       otherName: "Outro app",
       agenteschatName: "agentes.chat",
       where: {
@@ -1371,12 +1482,116 @@ export const ptBR = {
         model_other: "{{who}} usam o {{label}}, que não está disponível aqui.",
         file_one: "{{who}} usa {{label}}.",
         file_other: "{{who}} usam {{label}}.",
+        webhook_one:
+          "A rotina {{label}}, de {{who}}, ganha um endereço novo aqui: troque no site ou app que chamava o antigo.",
+        webhook_other:
+          "A rotina {{label}}, de {{who}}, ganha um endereço novo aqui: troque no site ou app que chamava o antigo.",
+      },
+      say: {
+        intro: "Este é o workflow “{{title}}”, trazido do {{app}}.",
+        skillAbout: "Roda o workflow “{{title}}”, trazido do {{app}}, quando alguém pede.",
+        asked: "No {{app}} ele começava sozinho. Aqui, roda quando alguém pede.",
+        webhook: "Ele começa quando chamam o endereço desta rotina: o que chega é a sua entrada.",
+        pr: "Ele começa quando abrem um pull request no GitHub: esse pull request é a sua entrada.",
+        prIn: "Ele começa quando abrem um pull request no GitHub em {{repos}}: esse pull request é a sua entrada. Se for de outro repositório, pare sem postar nada.",
+        text: "Comece deste texto: “{{text}}”",
+        keep: "(Leve em conta: {{text}})",
+        ask: "Peça a @{{handle}}: “{{task}}”, com o que você tem até aqui, e use a resposta.",
+        image: "Crie uma imagem: {{prompt}}",
+        video: "Crie um vídeo: {{prompt}}",
+        if: "Se a resposta a “{{rule}}” for sim, siga.",
+        otherwise: "Senão:",
+        stop: "Senão, pare aqui sem postar nada.",
+        approval: "Antes de seguir, peça aprovação a quem cuida de você, no chat: “{{question}}”",
+        approvalPlain: "Antes de seguir, peça aprovação a quem cuida de você, no chat.",
+        channel: "Poste o resultado em #{{channel}}.",
+        notify: "Mande o resultado para quem cuida de você.",
+        file: "Salve o resultado como um arquivo no Drive.",
+        githubComment: "Comente o resultado no GitHub.",
+        githubDo: "No GitHub, faça isto com o resultado: {{action}}.",
+        pass: "Quando terminar, passe a sua resposta para @{{handle}}: {{instruction}}",
+        passPlain: "Quando terminar, passe a sua resposta para @{{handle}}.",
+      },
+      choose: {
+        who: "Quem vem",
+        with: "O que vem com eles",
+        flows: "Os workflows",
+        agentOnly: "Com as instruções de lá",
+        same: "Já está aqui, igual",
+        of: {
+          routine_one: "{{picked}} de {{count}} rotina",
+          routine_other: "{{picked}} de {{count}} rotinas",
+          skill_one: "{{picked}} de {{count}} skill",
+          skill_other: "{{picked}} de {{count}} skills",
+          note_one: "{{picked}} de {{count}} memória",
+          note_other: "{{picked}} de {{count}} memórias",
+          channel_one: "{{picked}} de {{count}} canal",
+          channel_other: "{{picked}} de {{count}} canais",
+        },
+        files_one: "{{count}} arquivo para o Drive",
+        files_other: "{{count}} arquivos para o Drive",
+        paused_one: "Uma chega pausada, como estava lá",
+        paused_other: "{{count}} chegam pausadas, como estavam lá",
+        pausedOne: "chega pausada",
+        here_one: "Uma já existe aqui",
+        here_other: "{{count}} já existem aqui",
+        library: "Da biblioteca, para quem você ligar",
+        passes: "passa a resposta para {{names}}",
+        webhook: "endereço novo",
+        pr: "quando abrem um pull request",
+        routine: "Rotina",
+        skill: "Skill",
+        asked: "roda quando alguém pede",
+        was: {
+          schedule: "lá tinha um horário que não dá para ler, aqui roda quando alguém pede",
+          webhook: "lá começava por um endereço, aqui roda quando alguém pede",
+          message: "lá começava numa mensagem, aqui roda quando alguém pede",
+          github: "lá começava no GitHub, aqui roda quando alguém pede",
+          discord: "lá começava no Discord, aqui roda quando alguém pede",
+          telegram: "lá começava no Telegram, aqui roda quando alguém pede",
+          slack: "lá começava no Slack, aqui roda quando alguém pede",
+          other: "lá começava sozinho, aqui roda quando alguém pede",
+        },
+        flowsLead: "Aqui um workflow vira uma rotina: o gatilho é o quando dela, e os passos vão no pedido.",
+        becomesRoutine: "Vira uma rotina que {{agent}} faz, com os passos no pedido dela.",
+        becomesSkill: "Vira uma skill que {{agent}} usa quando alguém pede, com os passos nela.",
+        postsIn: "Posta em #{{channel}}.",
+        step: {
+          when: "o quando da rotina",
+          asked: "Quando alguém pede",
+          text: "Começa com o texto",
+          by: "a pedido de {{name}}",
+          image: "Imagem",
+          video: "Vídeo",
+          if: "Se",
+          stop: "segue, senão para",
+          else: "segue, senão:",
+          approval: "Pede aprovação no chat",
+          channel: "Posta em #{{channel}}",
+          notify: "Manda o resultado para você",
+          file: "Salva no Drive",
+          github: "No GitHub",
+          lost: {
+            file: "Um arquivo de lá",
+            slack: "Posta no Slack",
+            discord: "Posta no Discord",
+            telegram: "Posta no Telegram",
+            messaging: "Posta numa conversa de mensagens",
+          },
+          notHere: "não vem",
+        },
+        bringWith_one: "Trazer {{count}} agente e {{more}}",
+        bringWith_other: "Trazer {{count}} agentes e {{more}}",
+        more_one: "mais {{count}} item",
+        more_other: "mais {{count}} itens",
+        notComing: "Não vêm as conexões de mensagens ({{list}}): aqui não há onde ligá-las.",
       },
       needDo: {
         connection: "Conectar",
         app: "Conectar",
         model: "Escolher modelo",
         file: "Abrir o Drive",
+        webhook: "Abrir as rotinas",
       },
       linkSkipped_one: "{{count}} arquivo além do limite do link",
       linkSkipped_other: "{{count}} arquivos além do limite do link",
@@ -2472,7 +2687,12 @@ export const ptBR = {
       unpin: "Desafixar a mensagem de {{name}}",
       empty: "Nada fixado aqui ainda",
     },
-    header: { pins: "Mensagens fixadas", showMembers: "Mostrar membros", hideMembers: "Esconder membros" },
+    header: {
+      pins: "Mensagens fixadas",
+      showMembers: "Mostrar membros",
+      hideMembers: "Esconder membros",
+      more: "Mais opções",
+    },
     membersButton_one: "Membros do canal ({{count}})",
     membersButton_other: "Membros do canal ({{count}})",
     membersAgents: "Agentes",
@@ -2872,6 +3092,9 @@ export const ptBR = {
       "Usado em canais e em trabalhos que rodam sozinhos. Todo o workspace compartilha este espaço. Não guarde nada privado aqui.",
     /** The row where it has none for anyone: the workspace has no computer of its own. */
     computerNoHome: "Ainda sem computador. Passa a ter um quando este workspace tiver um computador próprio.",
+    /** The same row on a self-hosted server: this server made the agents' computer gives it one. `guide`: the setup guide. */
+    computerNoHomeServer:
+      "Ainda sem navegador. Configure <guide>este servidor como o computador dos agentes</guide> para ele ter um.",
     addComputer: "Adicionar um computador",
     /** The row where the workspace's computer runs every agent as one OS user. */
     computerOneUser:
@@ -3545,6 +3768,15 @@ export const ptBR = {
     onceHint: "Todos dividem os limites do seu plano.",
     use: "Usar {{label}}",
     another: "Outra conta",
+    /** A plain plan panel's list of the person's accounts of that plan, each by its email (or the name they gave it). */
+    which: {
+      title: "Qual conta do {{brand}} o {{name}} vai usar?",
+      title_female: "Qual conta do {{brand}} a {{name}} vai usar?",
+      titleAll: "Qual conta do {{brand}} eles vão usar?",
+      mine: "Suas contas do {{brand}} no {{computer}}",
+      /** The list's last line, and the title of its sign-in. */
+      other: "Entrar com outra conta do {{brand}}",
+    },
     /** Before a new sign-in, where the person already has an account of that plan on that computer (`reusableAccount`). */
     reuse: {
       active: "Você já tem {{label}} aqui. Entre de novo nela, ou use outra conta.",
@@ -3704,9 +3936,6 @@ export const ptBR = {
     answerAnyway: "Responder mesmo assim",
     answerAnywayHint: "Responde agora, lendo tudo o que veio depois",
     answerAnywayForbidden: "Só quem pediu, o dono do agente ou um admin pode pedir isso",
-    extraTitle: "Trabalho longo pode usar o uso extra pago",
-    extraHint:
-      "Com o uso extra ligado no plano, o trabalho longo segue depois de 95%. Desligado, ele pausa em 95% e retoma quando o plano renovar.",
   },
   /** An agent's line of work waiting on its plan or budget (ADR 0118): the web's dialog, the phone's sheet. */
   usageQueue: {
@@ -3717,6 +3946,7 @@ export const ptBR = {
     shared_one: "{{agents}} usa o mesmo plano do {{plan}}. As conversas dos dois entram na mesma fila.",
     shared_other: "{{agents}} usam o mesmo plano do {{plan}}. As conversas de todos entram na mesma fila.",
     about: "Sobre a fila",
+    chain: "As {{accounts}} contas do {{plan}} chegaram ao limite.",
     lists: "Conversas",
     queuedTab: "Na fila",
     skippedTab: "Puladas",
@@ -3794,7 +4024,6 @@ export const ptBR = {
       aiAccount: "Pensa com {{account}}",
       aiModel: "Pensa pela API",
       aiNone: "Sem IA ainda. Conecte uma depois de criar",
-      reviewTitle: "Revisar {{name}}",
       lines: "O que {{name}} recebe",
       aChannel: "um canal",
       anApp: "um app",
@@ -5286,6 +5515,7 @@ export const ptBR = {
       joinRequest_other: "{{name}} e outras pessoas pedem para entrar",
       joinRequestNames: "{{names}} pedem para entrar",
       joinSuggestion: "{{by}} sugeriu {{name}}",
+      joinOutside: "{{name}} pede para entrar como colaborador externo de {{outsideOf}}, sem ocupar vaga",
       doing: {
         merge: "fazer um merge",
         deploy: "fazer um deploy",
@@ -5360,6 +5590,7 @@ export const ptBR = {
       joinRequest: "<b>{{name}}</b> pede para entrar",
       joinRequestMany: "<b>{{names}}</b> pedem para entrar",
       joinSuggestion: "<b>{{by}}</b> sugeriu <b>{{name}}</b>",
+      joinOutside: "<b>{{name}}</b> pede para entrar como colaborador externo de <b>{{outsideOf}}</b>, sem ocupar vaga",
       changeRequest: "<b>{{name}}</b> pede uma mudança em <b>{{agent}}</b>",
       proposalWaiting: "Propostas de melhoria de <b>{{names}}</b>",
       changeRequestAgent: "<b>{{name}}</b> pede um novo agente: <b>{{agent}}</b>",
@@ -5813,15 +6044,12 @@ export const ptBR = {
         accountOf: "De {{name}}",
         /** Under the accounts when other people's plans are listed (`canUseOthersPlans`). */
         accountOthers: "Os planos que atendem o workspace todo mostram de quem são.",
+        movesOn: "Segue na próxima conta no limite",
+        pinned: "Só esta conta",
+        pinnedHint: "No limite, espera esta conta renovar em vez de seguir na próxima.",
         addAccount: "Adicionar conta",
         signInAgain: "Entrar de novo",
         connectPlan: "Conectar outro plano",
-        fallbackTitle: "Se o {{computer}} parar de responder, responder pela API",
-        /** The switch's ⓘ: the same in both states. */
-        fallbackHint:
-          "Responde pela API e conta no orçamento do {{name}}. Se não, o {{name}} avisa quem chamou e espera o computador voltar.",
-        fallbackHint_female:
-          "Responde pela API e conta no orçamento da {{name}}. Se não, a {{name}} avisa quem chamou e espera o computador voltar.",
         effort: "Esforço",
         efforts: {
           auto: "Automático",
@@ -5896,7 +6124,6 @@ export const ptBR = {
           speed: "Velocidade rápida",
           context: "Contexto de {{size}}",
           sharing: "Atende outras pessoas",
-          waits: "Espera o computador voltar",
         },
         /** "Usar em outros agentes" (ADR 0094): the same setup on the agents picked, each by its own rules. */
         copy: {
@@ -6084,8 +6311,6 @@ export const ptBR = {
           modelTitle_female: "Modelo da {{name}}",
           moreTitle: "Mais opções do {{name}}",
           moreTitle_female: "Mais opções da {{name}}",
-          /** A switch: its ⓘ is `fallbackHint`. */
-          fallback: "Usar a chave de API se o plano parar",
           /** A line under More options where several computers can run it. */
           computer: "Computador",
           doneTitle: "Pronto",
@@ -7354,7 +7579,6 @@ export const ptBR = {
     adminsOnlyPersonal: "Peça a quem cuida daqui para deixar você criar agentes.",
     proposalClosed: "Esta proposta já foi decidida ou expirou.",
     proposalNoAccess: "Só quem está na conversa vê esta proposta.",
-    backToChat: "Voltar para a conversa",
     and: " e ",
     routine: "Rotina",
     routineKeep: "Criar a rotina {{name}}",
@@ -7545,6 +7769,64 @@ export const ptBR = {
     otherSkill: "Outra skill",
     namesLead: "Que tal",
     namesRoll: "Outros nomes",
+    /**
+     * "Edit first" on an agent's proposal: the card filled in with the draft, and in the list's place the proposal
+     * (who proposed it and why, what the person changed, the first task, what is left for after it is created).
+     */
+    proposal: {
+      lead: "Ajuste o que o {{name}} propôs. Dá para mudar tudo depois.",
+      lead_female: "Ajuste o que a {{name}} propôs. Dá para mudar tudo depois.",
+      leadNarrow: "Proposta do {{name}}: {{why}}",
+      leadNarrow_female: "Proposta da {{name}}: {{why}}",
+      side: "A proposta",
+      from: "Proposto pelo {{name}}",
+      from_female: "Proposto pela {{name}}",
+      changed: "O que você mudou",
+      changedNone: "Nada ainda. O que você mudar no cartão aparece aqui, com Desfazer.",
+      undo: "Desfazer",
+      changes: {
+        changed: "mudou",
+        added: "entrou",
+        removed: "saiu",
+        how: "Como trabalha",
+      },
+      firstTask: "Primeira tarefa",
+      firstTaskPlaceholder: "O que pedir primeiro (opcional)",
+      firstTaskHint: "Vai pronta na conversa com o {{name}}. É só enviar.",
+      firstTaskHint_female: "Vai pronta na conversa com a {{name}}. É só enviar.",
+      firstTaskHintBlank: "Vai pronta na conversa com ele. É só enviar.",
+      firstTaskNone: "Sem uma tarefa, a conversa abre em branco.",
+      after: "Depois de criar",
+      afterAi: "Conectar uma IA para o {{name}} pensar",
+      afterAi_female: "Conectar uma IA para a {{name}} pensar",
+      afterAiBlank: "Conectar uma IA para ele pensar",
+      afterApp: "Conectar {{app}}",
+      afterNone: "Nada. O {{name}} começa a trabalhar assim que for criado.",
+      afterNone_female: "Nada. A {{name}} começa a trabalhar assim que for criada.",
+      afterNoneBlank: "Nada. Ele começa a trabalhar assim que for criado.",
+      discard: "Descartar proposta",
+      otherChannel: "Outro canal",
+      chooseChannels: "Escolher canais",
+      channelsNone: "Só na conversa com você.",
+      channel: {
+        lead: "Onde o {{name}} vai trabalhar.",
+        lead_female: "Onde a {{name}} vai trabalhar.",
+        leadBlank: "Onde ele vai trabalhar.",
+        does: "O {{name}} responde quando chamam no {{channel}} e lê o que passa por lá.",
+        does_female: "A {{name}} responde quando chamam no {{channel}} e lê o que passa por lá.",
+        doesBlank: "Ele responde quando chamam no {{channel}} e lê o que passa por lá.",
+        remove: "Tirar do {{channel}}",
+      },
+      routine: {
+        label: "Rotina",
+        lead: "{{when}}, no {{channel}}.",
+        leadDm: "{{when}}, na conversa com você.",
+        starts: "Começa quando o {{name}} for criado. Horário e texto você muda em Rotinas.",
+        starts_female: "Começa quando a {{name}} for criada. Horário e texto você muda em Rotinas.",
+        startsBlank: "Começa quando ele for criado. Horário e texto você muda em Rotinas.",
+        remove: "Tirar a rotina",
+      },
+    },
     /** One skill on the card. */
     skill: {
       opens: "O {{name}} abre este manual quando o assunto aparece. Você edita em Skills.",
@@ -7592,6 +7874,10 @@ export const ptBR = {
     rolesAdd: "Adicionar cargo",
     rolesChange: "Mudar cargos",
     moreOf: "Mais de {{name}}",
+    outside: {
+      chip: "Externo",
+      title: "Colaborador externo",
+    },
     /** On a server that sends no email, an owner's new-password link for a member (ADR 0158). */
     passwordLink: {
       item: "Gerar link de senha nova",
@@ -7820,6 +8106,9 @@ export const ptBR = {
       viaLink: "Pediu pelo link {{when}}",
       suggested: "{{name}} sugeriu {{when}}",
       suggestedLabel: "{{by}} sugeriu {{name}}",
+      outside: "Pediu {{when}} para entrar como colaborador externo de {{outsideOf}}",
+      outsideSeat:
+        "Colaboradores externos não contam nas pessoas do seu plano, e você pode removê-los a qualquer momento.",
       asked: "Pediu {{ago}}",
       askedNow: "Pediu agora",
       askedOn: "Pediu em {{date}}",
@@ -9196,7 +9485,7 @@ export const ptBR = {
       continuedToast: "Execução continuando.",
       forbidden: "Só quem criou a rotina, o dono do agente ou um admin pode continuar agora",
       extra_off:
-        "A janela deste plano acabou e o trabalho longo deste agente não usa o uso extra pago. Ligue isso nas configurações de IA dele para continuar agora, ou ele retoma depois que o limite renovar",
+        "A janela deste plano acabou e o trabalho longo deste agente não usa o uso extra pago do plano. Ele retoma depois que o limite renovar",
       extra_used_up:
         "A janela deste plano acabou e o uso extra pago dele acabou ou não está disponível. Ele retoma depois que o limite renovar",
     },
@@ -10694,6 +10983,14 @@ export const ptBR = {
     },
   },
   aiAccounts: {
+    /** An account of the viewer's that says no email and has no name of theirs yet (Claude's token for all agents). */
+    unnamed: "Conta sem nome",
+    /** The pencil after an account's title, and the field it opens in the row. */
+    rename: {
+      action: "Mudar o nome de {{label}}",
+      label: "Nome da conta",
+      placeholder: "Ex.: Trabalho, Pessoal",
+    },
     share: {
       /** Off by default: the agent answers only its owner while it thinks with their plan. */
       switch: "Atende outras pessoas",
@@ -11445,6 +11742,17 @@ export const ptBR = {
     saved: "Logo atualizado.",
     removed: "Logo removido.",
   },
+  orgAccent: {
+    label: "Cor de destaque",
+    change: "Trocar cor",
+    useDefault: "Usar a padrão",
+    suggested: "Cores sugeridas",
+    sampleMention: "@Agente",
+    sampleLink: "Um link",
+    save: "Salvar cor",
+    saved: "Cor de destaque atualizada.",
+    reset: "De volta à cor padrão.",
+  },
   look: {
     previous: "Anteriores",
     next: "Próximos",
@@ -12166,7 +12474,6 @@ export const ptBR = {
       grok: "Grok Build · {{model}}",
       antigravity: "Antigravity CLI · {{model}}",
       opencode: "OpenCode · {{model}}",
-      noFallback: "{{brain}}, sem reserva pela API",
     },
     mission: {
       modelLabel: "Modelo",
@@ -14953,6 +15260,12 @@ export const ptBR = {
     },
   },
   errors: {
+    wallpaper: {
+      notYours: "Essa foto não é sua.",
+      invalid: "Esse fundo não existe.",
+      tooLarge: "A foto pode ter até 2 MB.",
+      type: "Use uma foto JPEG, PNG ou WebP.",
+    },
     /** A request the server, or a proxy in front of it, refused for its size. */
     tooLarge: "Isto é maior do que o servidor aceita.",
     /** The same, from a screen that knows the most it may send. */
@@ -15098,6 +15411,7 @@ export const ptBR = {
       base: "Todo workspace mantém o cargo Todos.",
       unknown: "Esse cargo não existe mais.",
       orderIncomplete: "A lista de cargos mudou enquanto você mexia. Recarregue e tente de novo.",
+      outsideOwner: "Um colaborador externo não pode ser dono.",
     },
     teamProposal: {
       undoExpired:
@@ -15224,7 +15538,7 @@ export const ptBR = {
       agentNotInChannel: "Adicione o agente à conversa antes.",
       webhookPaused: "Ligue a rotina para testar.",
       continueExtraOff:
-        "A janela deste plano acabou e o trabalho longo deste agente não usa o uso extra pago. Ligue isso nas configurações de IA dele para continuar agora, ou ele retoma depois que o limite renovar.",
+        "A janela deste plano acabou e o trabalho longo deste agente não usa o uso extra pago do plano. Ele retoma depois que o limite renovar.",
       continueExtraUsedUp:
         "A janela deste plano acabou e o uso extra pago dele acabou ou não está disponível. Ele retoma depois que o limite renovar.",
       actionsNeedApprover: "Só o dono do agente ou quem aprova as ações dele pode deixar uma rotina agir sozinha.",
@@ -15330,13 +15644,14 @@ export const ptBR = {
     agent: {
       ownerOrAdmin: "Só o dono do agente ou um admin pode fazer isso.",
       detailsHidden: "Só quem conversa com {{agentName}} vê como funciona.",
-      extraOwnerOnly: "Só o dono do agente liga ou desliga o uso extra pago do plano.",
       undoForbidden: "Só a pessoa para quem o agente trabalhou, o dono dele ou um admin pode desfazer isso.",
       undoSkillsAdmins: "Só um admin desfaz ou refaz uma mudança nas skills de um agente.",
     },
     account: {
       notRestorable: "Esta conta não pode mais ser restaurada.",
       notOwner: "Só quem conectou esta conta ou plano pode fazer isso.",
+      /** `account.order_forbidden`: the order of use of a provider's accounts (ADR 0041 §6). */
+      orderForbidden: "Só quem conectou esta conta ou um admin pode mudar o lugar dela na ordem.",
     },
     channel: {
       membersForbidden: "Só quem criou o canal ou um admin pode adicionar ou remover pessoas.",
@@ -15756,6 +16071,7 @@ export const ptBR = {
       ui_automation_off: "A Automação de UI está desligada",
       xcode_missing: "O Xcode não está instalado no Mac",
       xcode_too_old: "O Xcode é antigo demais para este iOS",
+      ios_behind_xcode: "O iOS deste iPhone é mais antigo que o do Xcode",
       device_support: "O Mac está baixando as ferramentas do iPhone",
       helper_missing: "O assistente de testes ainda não foi preparado",
       helper_expired: "O assistente de testes precisa ser renovado",
@@ -15784,6 +16100,7 @@ export const ptBR = {
       ui_automation_off: "Ative a Automação de UI",
       xcode_missing: "Instale o Xcode",
       xcode_too_old: "Atualize o Xcode",
+      ios_behind_xcode: "Atualize o iPhone",
       device_support: "Deixe o Mac ligado",
       helper_missing: "Abra o app no Mac",
       helper_expired: "Abra o app no Mac",
@@ -16125,6 +16442,8 @@ export const ptBR = {
       helperText: "Criado e renovado pelo Mac a cada 7 dias. Uma Conta Apple gratuita no Xcode basta.",
       helperUntrustedText: "Toque no nome do desenvolvedor e em Confiar.",
       teamLimitText: "Remova do iPhone um app que você mesmo criou: a Conta Apple gratuita permite 3.",
+      iosBehind:
+        "Este iPhone está no iOS {{ios}} e o Xcode deste Mac é para o iOS {{sdk}}. Atualize o iPhone: Ajustes › Geral › Atualização de Software.",
       xcodeOld:
         "{{name}} usa o iOS {{version}} e o Xcode em {{mac}} conhece no máximo o iOS {{sdk}}. Instale o Xcode {{major}} e rode isto no Terminal.",
       xcodeOldAny:
@@ -16658,8 +16977,37 @@ export const ptBR = {
     },
     system: "Sistema",
     removed: "Removido",
+    operatorRead: {
+      sentence: "{{who}} leu {{what}}",
+      who: {
+        server: "Quem cuida deste servidor",
+        cloud: "O suporte do agentes.chat",
+      },
+      what: {
+        message: "uma mensagem",
+        run_step: "uma etapa do trabalho de um agente",
+        agent: "as instruções de um agente",
+        routine: "uma rotina",
+        task: "uma tarefa em segundo plano",
+        channel: "o nome de um canal",
+        connection: "os dados de uma conexão",
+        support_request: "um pedido de suporte",
+        direct: "algo em uma conversa privada",
+        other: "algo no workspace",
+      },
+      request: {
+        plain: "a pedido de {{name}}",
+        app: "a pedido de {{name}}, enviado pelo app",
+        email: "a pedido de {{name}}, enviado por e-mail",
+        operator: "a pedido de {{name}}, registrado por quem cuida deste servidor",
+        support: "a pedido de {{name}}, registrado pelo suporte",
+      },
+      fault: "para diagnosticar uma execução que falhou ou travou",
+      ai: "com um assistente de IA",
+    },
     change: {
       mergedWithoutAsking: "Fez o merge em {{repo}} sem perguntar",
+      accentChanged: "Mudou a cor de destaque do workspace",
       pattern: "{{verb}} {{area}}",
       approval: {
         approved: "Aprovou um pedido",
@@ -16671,6 +17019,11 @@ export const ptBR = {
         left: "Saiu do workspace",
         role_changed: "Mudou o cargo de um membro",
         password_link: "Gerou um link de senha nova para um membro",
+      },
+      outside: {
+        approved: "Deixou entrar um colaborador externo de {{outsideOf}}",
+        removed: "Removeu um colaborador externo de {{outsideOf}}",
+        left: "Saiu do workspace, colaborador externo de {{outsideOf}}",
       },
       role: {
         /** Todos and the roles at once ("Quem pode…"). `short`: the permission (`permissions.*.short`). */
@@ -16939,6 +17292,49 @@ export const ptBR = {
           new3: "Faltam 2, ligo amanhã cedo.",
           new4: "Relatório atualizado no Drive.",
           newCount: "4 novas",
+        },
+        /** A conversation's background (Fundo), mine alone. */
+        wallpaper: {
+          title: "Fundo",
+          help: "Muda só para você, em todos os seus aparelhos",
+          rowHelp: "Atrás de todas as conversas, só para você. Uma conversa pode ter o seu pelo menu dela.",
+          rowSub: "Só para você, em todas as conversas",
+          onlyHere: "Só em {{name}}, só para você",
+          none: "Sem fundo",
+          sameAsOthers: "Igual às outras conversas",
+          sameShort: "Igual às outras",
+          sky: "Céu",
+          drawings: "Desenhos",
+          color: "Cor",
+          photos: "Suas fotos",
+          choosePhoto: "Escolher uma foto",
+          skyAutoHelp:
+            "O primeiro acompanha a conversa: o céu da cor do agente numa DM e o céu do workspace nos canais.",
+          skyAutoHelpDms: "O primeiro é o céu da cor do agente.",
+          skyAutoHelpChannels: "O primeiro é o céu do workspace.",
+          neutral: { paper: "Papel", mist: "Névoa", sand: "Areia" },
+          name: {
+            skyAuto: "Céu da conversa",
+            skyAgent: "Céu do agente",
+            skyWorkspace: "Céu do workspace",
+            sky: "Céu · {{color}}",
+            drawingsAuto: "Desenhos da conversa",
+            drawingsAgent: "Desenhos do agente",
+            drawingsWorkspace: "Desenhos do workspace",
+            drawings: "Desenhos · {{color}}",
+            crowd: "Agentes",
+            color: "Cor · {{color}}",
+            photo: "Sua foto",
+          },
+          choose: "Escolher…",
+          menu: "Fundo da conversa…",
+          preview: "Prévia",
+          usePhoto: "Usar esta foto",
+          dragHint: "Arraste a foto para escolher o pedaço que aparece",
+          dim: "Escurecer no modo escuro",
+          sending: "Enviando a foto…",
+          failed: "Não deu para salvar o fundo. Tente de novo.",
+          done: "Pronto",
         },
       },
       agentStyle: "Como os agentes falam com você",
@@ -17318,6 +17714,16 @@ export const ptBR = {
   usageViews: {
     signedOut: "Saiu da conta",
     whose: "de {{name}}",
+    /** The order of use of a plan's accounts at a limit (ADR 0041 §6). */
+    order: {
+      title: "{{plan}} · Ordem de uso",
+      hint: "No limite, os agentes seguem na próxima conta com folga e voltam para a primeira quando ela renovar.",
+      terms: "Usar várias contas do {{plan}} é uma área cinzenta nos termos do {{plan}}.",
+      termsLabel: "os termos do {{plan}}",
+      termsHint:
+        "Um plano é de uma pessoa, então confira os termos do {{plan}} antes de os seus agentes contarem com várias contas.",
+      move: "Mover {{name}}, número {{n}} na ordem",
+    },
     /** Who uses a plan (ADR 0059 §3): its row's status, and the choice in its details for whoever connected it. */
     serves: {
       everyone: "Todos usam",
@@ -17397,7 +17803,7 @@ export const ptBR = {
       api: "API",
       apiMain: "O {{name}} pensa pela API",
       apiMain_female: "A {{name}} pensa pela API",
-      apiFallback: "Fora do plano: decisões rápidas e quando o plano não pôde responder",
+      apiFallback: "Fora do plano: decisões rápidas",
       removed: "Conta removida",
       removedSub: "Não está mais em nenhum computador",
       old: "{{brand}}, de antes das contas",
@@ -18110,6 +18516,7 @@ export const ptBR = {
         "{{provider}} respondeu com um erro ({{detail}}). Tento de novo e respondo assim que funcionar.",
       provider_wait_ours: "Algo do nosso lado está travando minha IA, não a sua conta. Respondo assim que resolver.",
       provider_back: "Minha IA voltou.",
+      confidential_removed: "Removido: texto confidencial fica guardado por {{days}} dias.",
       brain_busy: "Meu computador está ocupado com outras tarefas agora. Respondo assim que ele estiver livre.",
       brain_queued: "Ainda estou na fila do computador. Respondo assim que ele tiver memória livre.",
       brain_interrupted: "O {{brain}} parou antes de terminar. Já feito, sem repetir: {{tools}}.",
@@ -18118,6 +18525,17 @@ export const ptBR = {
       plan_limit_wait:
         "O plano do {{plan}} chegou ao limite. Respondo {{when}}, quando ele renovar. Se ele for liberado antes no {{plan}}, eu percebo e respondo na hora.",
       plan_limit_wait_unknown: "O plano do {{plan}} chegou ao limite. Respondo assim que ele renovar.",
+      /** The run went on with the next account of the order at its plan's limit (ADR 0041 §6). */
+      plan_account_moved: "A conta {{from}} chegou ao limite. Sigo na conta {{to}}.",
+      /** The same, for long work at the pause line (95%) of its account. */
+      plan_account_moved_line: "A conta {{from}} está perto do limite. Sigo na conta {{to}}.",
+      /** The same, for long work that would go on into its account's paid extra usage. */
+      plan_account_moved_extra: "A conta {{from}} entraria no uso extra pago. Sigo na conta {{to}}.",
+      /** Every account of the order at its limit: `accounts` of them, `when` the first resets. */
+      plan_limit_all_wait:
+        "As {{accounts}} contas do {{plan}} chegaram ao limite. Respondo {{when}}, quando a primeira renovar.",
+      plan_limit_all_wait_unknown:
+        "As {{accounts}} contas do {{plan}} chegaram ao limite. Respondo assim que uma renovar.",
       plan_model_limit_wait:
         "O {{model}} chegou ao limite dele no {{plan}}. Os outros modelos do plano seguem funcionando: troque o modelo de {{agent}} ou espere ele renovar {{when}}.",
       plan_model_limit_wait_unknown:
@@ -19204,6 +19622,12 @@ export const ptBR = {
     seatsPaid_other: "{{count}} vagas pagas",
     noLimit: "Sem limite",
     ownBucket: "No seu próprio bucket, sem limite nosso",
+  },
+  /** The referral service (ADR 0192): this server knows nothing of the program, only the way there. */
+  referrals: {
+    /** In the person's own menu, under Settings. */
+    open: "Indique e ganhe",
+    failed: "Não deu para abrir agora. Tente de novo em instantes.",
   },
   /** A workspace's limits, set by the billing service (ADR 0079): people and files. */
   limits: {

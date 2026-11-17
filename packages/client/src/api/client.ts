@@ -6,6 +6,7 @@ import type { OnboardingStepId } from "../lib/onboarding";
 import type { LegacyPrefsPatch, LodiPrefs, LodiPrefsPatch } from "../lib/right-hand-prefs";
 import type { Seat } from "../lib/seat";
 import type { TeamWeekAct } from "../lib/team-week";
+import type { Wallpaper } from "../lib/wallpaper";
 import type { AudienceChoice } from "../lib/who-sees";
 import type { WikiAccess } from "../lib/wiki";
 import type { WorkAreaAnswer } from "../lib/work-area";
@@ -30,6 +31,7 @@ import type {
   AccountDeletionPlan,
   AccountLoginStart,
   AccountLoginStatus,
+  AccountOrderGroup,
   ActiveRun,
   AdminAsk,
   Agent,
@@ -409,7 +411,7 @@ export interface ApiClient {
     saveJev(input: JevKeyInput): Promise<JevKey>;
     checkJev(): Promise<JevKey>;
     removeJev(): Promise<JevKey>;
-    /** The installation's optional decision model (ADR 0188); null unless I am its owner on a self-hosted server. */
+    /** The installation's optional decision model (ADR 0195); null unless I am its owner on a self-hosted server. */
     decisionModel(): Promise<DecisionModel | null>;
     /** This server's CPUs, memory and disk, and the local model that fits them. */
     decisionHost(): Promise<DecisionHost>;
@@ -455,6 +457,12 @@ export interface ApiClient {
   };
   account: {
     authConfig(): Promise<AuthConfig>;
+    /**
+     * A signed link that opens the referral service as me (ADR 0192). Navigate to it at once and keep it nowhere else:
+     * it lasts 5 minutes and opens once. `referrals.off` 404 on a server without one. `returnTo`: the page it was
+     * opened from, where the service sends me back.
+     */
+    referralsLink(returnTo?: string): Promise<{ url: string; expiresAt: string }>;
     /**
      * Whether the e-mail has an account and how it signs in (rate limited: `rate_limited` 429). `access`: the
      * early-access link's token, when the page has one. `humanCheck`: the bot check's token, when the server has one
@@ -576,6 +584,10 @@ export interface ApiClient {
     /** How agents talk to me here (ADR 0147), for every agent. */
     setAgentStyle(orgId: string, style: AgentStyle): Promise<AgentStyle>;
     setChatPrefs(orgId: string, patch: ChatPrefs): Promise<ChatPrefs>;
+    /** A conversation's own background, for me (null: back to the channels' or DMs'); answers with all my choices. */
+    setConversationWallpaper(orgId: string, channelId: string, wallpaper: Wallpaper | null): Promise<ChatPrefs>;
+    /** A photo for a background, only mine (JSON only: base64), already shrunk; its address goes into a background. */
+    uploadWallpaperPhoto(orgId: string, input: { imageBase64: string; contentType: string }): Promise<{ url: string }>;
     /** Where I put the tools at the top of my sidebar here (only the ones I moved). */
     sidebarItems(orgId: string): Promise<SidebarItems>;
     /** Moves one tool (`null`: back on its default), my others as the server has them. Answers with every choice. */
@@ -608,6 +620,8 @@ export interface ApiClient {
     /** The workspace logo (admins): a square image (JSON only: base64), already cropped. */
     setLogo(orgId: string, input: { imageBase64: string; contentType: string }): Promise<{ logo: string }>;
     removeLogo(orgId: string): Promise<void>;
+    /** The workspace's accent color (admins, ADR 0193): a "#rrggbb", or null for the default. */
+    setAccent(orgId: string, accent: string | null): Promise<{ accent: string | null }>;
     /**
      * A signed link that opens the workspace's plan and billing on the billing service (owners and admins; ADR
      * 0079). Navigate to it at once and keep it nowhere else: it lasts 5 minutes and opens once. `billing.off` 404
@@ -1281,6 +1295,10 @@ export interface ApiClient {
       accountId: string,
       serves: PlanServes,
     ): Promise<{ serves: PlanServes; agentIds: string[] }>;
+    /** "Ordem de uso" (ADR 0041 §6): every computer's Claude and ChatGPT accounts in their order, by computer and kind. */
+    accountOrder(orgId: string): Promise<{ groups: AccountOrderGroup[] }>;
+    /** Moves the account to `index` (0 first) in its order: its owner or an admin (`account.order_forbidden`). */
+    moveAccountInOrder(orgId: string, accountId: string, index: number): Promise<AccountOrderGroup>;
     /** Its owner names it (1 to 40 characters). */
     renameAccount(orgId: string, machineId: string, accountId: string, label: string): Promise<MachineAccount>;
     /** Its owner (or whoever connected the computer) disconnects it; the computer signs it out and deletes it. */

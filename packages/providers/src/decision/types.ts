@@ -1,5 +1,5 @@
 /**
- * The typed-question wire a decision model answers (ADR 0188). The shapes are the ones the judge and the router
+ * The typed-question wire a decision model answers (ADR 0195). The shapes are the ones the judge and the router
  * already speak (noul, choice, score, box); each provider adapter translates them to its own API and back, so the
  * engine never learns a provider's field names.
  */
@@ -115,7 +115,7 @@ export interface DecisionProviderInfo {
 /**
  * A decision model the installation can pick. Cloud models are listed with their key; local models carry the runtime
  * that serves them, an approximate download size and the RAM they need with headroom, so the screen can recommend one
- * from the host's size (ADR 0188).
+ * from the host's size (ADR 0195).
  */
 export interface DecisionModelInfo {
   provider: DecisionProviderId;

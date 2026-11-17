@@ -55,14 +55,23 @@ const ORG_LISTS = new Set([
   "overview",
   "issues-view",
 ]);
-/** `["org", orgId, "channel", channelId, <part>]`: kept for the chats in the snapshot. */
-const CHAT_PARTS = new Set(["messages", "roster", "members"]);
+/**
+ * `["org", orgId, "channel", channelId, <part>]`: kept for the chats in the snapshot. With its messages, what changes
+ * their rows (the agents' questions to each other here, and the threads' links below, `chatThreads`): a chat opened
+ * from the snapshot shows its rows whole, and none grows under the person once the server answers.
+ */
+const CHAT_PARTS = new Set(["messages", "roster", "members", "consultations"]);
 
 const isMe = (key: readonly unknown[]) => key.length === 1 && key[0] === "me";
+/** `["org", orgId, "threads", "channel", channelId, "all"]`: a chat's threads, for the links under their roots. */
+const chatThreads = (key: readonly unknown[]) =>
+  key.length === 6 && key[0] === "org" && key[2] === "threads" && key[3] === "channel" && key[5] === "all"
+    ? { chat: `${key[1]}/${key[4]}`, part: "threads" }
+    : null;
 const chatPart = (key: readonly unknown[]) =>
   key.length === 5 && key[0] === "org" && key[2] === "channel" && CHAT_PARTS.has(key[4] as string)
     ? { chat: `${key[1]}/${key[3]}`, part: key[4] as string }
-    : null;
+    : chatThreads(key);
 const isOrgList = (key: readonly unknown[]) => key.length === 3 && key[0] === "org" && ORG_LISTS.has(key[2] as string);
 /** `["org", orgId, "missions", "list", <query>]`: only the sidebar's count of the missions waiting for me. */
 const WAITING_COUNT = JSON.stringify(MISSIONS_WAITING_COUNT);

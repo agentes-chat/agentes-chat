@@ -56,9 +56,6 @@
   "categories.itsChannels": {
     "value": "Channels"
   },
-  "categories.seeAll": {
-    "value": "See all"
-  },
   "blocks.send": {
     "value": "Send"
   },
@@ -455,23 +452,14 @@
   "chats.serverError.kept": {
     "value": "Showing what was already in the app."
   },
-  "chats.section.agents": {
-    "value": "Agents"
+  "chats.pinned": {
+    "value": "Pinned"
   },
-  "chats.section.channels": {
-    "value": "Channels"
+  "chats.recent": {
+    "value": "Recent"
   },
-  "chats.section.people": {
-    "value": "People"
-  },
-  "chats.seeAll.agents": {
-    "value": "See all agents"
-  },
-  "chats.seeAll.channels": {
-    "value": "See all channels"
-  },
-  "chats.seeAll.people": {
-    "value": "See all people"
+  "chats.seeAll": {
+    "value": "See all chats"
   },
   "chats.wait.verb.approval": {
     "value": "needs your ok"
@@ -860,11 +848,32 @@
       "other": "{{count}} here"
     }
   },
+  "chat.membersAdd": {
+    "value": "Add"
+  },
+  "chat.membersAdded": {
+    "value": {
+      "one": "{{count}} added to #{{channel}}",
+      "other": "{{count}} added to #{{channel}}"
+    }
+  },
+  "chat.memberRemoved": {
+    "value": "{{name}} is out of #{{channel}}"
+  },
+  "chat.muted": {
+    "value": "#{{channel}} muted"
+  },
+  "chat.unmuted": {
+    "value": "#{{channel}} unmuted"
+  },
   "chat.headerAgent": {
     "value": "{{who}}. Open the profile"
   },
   "chat.headerChannel": {
     "value": "{{who}}. Options"
+  },
+  "chat.headerMembers": {
+    "value": "{{who}}. See who is here"
   },
   "chat.switchHint": {
     "value": "Hold to switch conversations"
@@ -1073,9 +1082,6 @@
   "chat.react": {
     "value": "React"
   },
-  "chat.attach.more": {
-    "value": "Add another photo or file"
-  },
   "chat.attach.remove": {
     "value": "Remove {{name}}"
   },
@@ -1085,26 +1091,17 @@
   "chat.attach.sending": {
     "value": "{{name}}, sending"
   },
+  "chat.attach.failed": {
+    "value": "{{name}}, didn't go: send to try again"
+  },
+  "chat.attach.preparing": {
+    "value": "Getting the files ready…"
+  },
   "chat.attach.tooMany": {
     "value": "Up to {{count}} files per message."
   },
   "chat.swipeReply": {
     "value": "Swipe right to reply"
-  },
-  "chat.intent.suggest.merge": {
-    "value": "Go ahead and merge"
-  },
-  "chat.intent.suggest.review": {
-    "value": "Ask {{name}} to review first"
-  },
-  "chat.intent.suggest.seeChange": {
-    "value": "Show me what changed"
-  },
-  "chat.intent.suggest.summarize": {
-    "value": "Sum it up in 3 points"
-  },
-  "chat.intent.suggest.nextStep": {
-    "value": "What's the next step?"
   },
   "chat.intent.arrived": {
     "value": "{{name}} joined the team"
@@ -1400,9 +1397,6 @@
   "remind.submit": {
     "value": "Remind me at this time"
   },
-  "remind.quick": {
-    "value": "See quick times"
-  },
   "remind.done": {
     "value": "Reminder set"
   },
@@ -1543,6 +1537,9 @@
   },
   "newMission.placeholder": {
     "value": "What needs to get done?"
+  },
+  "newMission.who": {
+    "value": "Who does it"
   },
   "newMission.submit": {
     "value": "Ask for a plan"
@@ -1931,15 +1928,6 @@
   "agentEdit.keepEditing": {
     "value": "Keep editing"
   },
-  "newAgent.leaveTitle": {
-    "value": "Leave without creating?"
-  },
-  "newAgent.leaveText": {
-    "value": "The agent you started won't be created."
-  },
-  "newAgent.keepGoing": {
-    "value": "Keep creating"
-  },
   "newAgent.identityQuestion": {
     "value": "Who is the agent?"
   },
@@ -2007,9 +1995,6 @@
   "newAgent.import.also": {
     "value": "Also comes along"
   },
-  "newAgent.import.change": {
-    "value": "Change"
-  },
   "newAgent.import.arrived": {
     "value": {
       "one": "{{name}} arrived",
@@ -2072,6 +2057,13 @@
   },
   "agent.taskSent": {
     "value": "Task sent"
+  },
+  "agent.brakes.forgetTitle": {
+    "value": "Forget these answers?"
+  },
+  "agent.brakes.forgetText": {
+    "value": "{{name}} asks again before this kind of work.",
+    "female": "{{name}} asks again before this kind of work."
   },
   "activity.title": {
     "value": "Activity"
@@ -2993,8 +2985,8 @@
   "files.more": {
     "value": "More options"
   },
-  "files.send": {
-    "value": "Send"
+  "files.sendCopy": {
+    "value": "Send a copy"
   },
   "files.savePhotos": {
     "value": "Save to Photos"
@@ -3035,6 +3027,9 @@
   "files.next": {
     "value": "Next picture"
   },
+  "files.noPreviewTitle": {
+    "value": "No preview"
+  },
   "files.noPreview": {
     "value": "This file doesn't open in the app. Send it to another app to open it."
   },
@@ -3061,6 +3056,9 @@
   },
   "files.video.open": {
     "value": "Open"
+  },
+  "files.video.cantPlay": {
+    "value": "This video can't play on this phone."
   },
   "issues.title": {
     "value": "Tasks"
@@ -3287,9 +3285,6 @@
   "drive.search": {
     "value": "Search the Drive"
   },
-  "drive.types": {
-    "value": "File types"
-  },
   "drive.type.all": {
     "value": "All"
   },
@@ -3331,9 +3326,6 @@
   },
   "drive.noResults": {
     "value": "Nothing with these filters."
-  },
-  "drive.loadFailed": {
-    "value": "Couldn't load the Drive."
   },
   "drive.more": {
     "value": "Show more"
@@ -3502,12 +3494,6 @@
   },
   "wiki.openExisting": {
     "value": "Open the page"
-  },
-  "routines.loadFailed": {
-    "value": "Couldn't load the routines."
-  },
-  "routines.anyAgent": {
-    "value": "All agents"
   },
   "routines.create": {
     "value": "Create"
@@ -4424,6 +4410,9 @@
   "devices.reason.xcode_too_old": {
     "value": "Xcode is too old for this iPhone"
   },
+  "devices.reason.ios_behind_xcode": {
+    "value": "Update this iPhone's iOS"
+  },
   "devices.reason.device_support": {
     "value": "The Mac is preparing this iPhone"
   },
@@ -5002,6 +4991,12 @@
   },
   "devices.wait.none": {
     "value": "No other device you can use is ready."
+  },
+  "devices.wait.tried": {
+    "value": "Trying {{device}} again."
+  },
+  "devices.wait.stopped": {
+    "value": "No longer waiting for {{device}}."
   },
   "connectors.title": {
     "value": "Connectors"
@@ -5626,9 +5621,6 @@
   },
   "roles.loadFailed": {
     "value": "Couldn't load the roles. {{cause}}"
-  },
-  "roles.backToList": {
-    "value": "Back to roles"
   },
   "roles.nobody": {
     "value": "Nobody"
@@ -6551,9 +6543,6 @@
   },
   "dashboards.homeRow": {
     "value": "Only you · your own widgets"
-  },
-  "dashboards.loadFailed": {
-    "value": "Couldn't load the dashboards."
   },
   "dashboards.create": {
     "value": "Create"

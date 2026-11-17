@@ -3,7 +3,7 @@ import { boolean, check, integer, jsonb, pgTable, text, timestamp, uuid } from "
 import { users } from "./auth";
 
 /**
- * The installation's optional decision model (ADR 0188): one row, off until its owner turns it on. It holds the
+ * The installation's optional decision model (ADR 0195): one row, off until its owner turns it on. It holds the
  * provider and model, a sealed key (OpenAI and Gemini; a local runtime may take none) and the progress of the
  * background install that downloads or checks the model. Not a tenant's, so no org_id, as instance_secrets.
  */

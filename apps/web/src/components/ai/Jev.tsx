@@ -229,7 +229,7 @@ export function WhoPicksSection() {
   const modelLabel = useModelLabel();
   const line = admin ? routingLineOf(status.data, modelLabel) : null;
   if (!line && !jev.data && !decision.data) return null;
-  // The owner's list of who decides (Jev included, ADR 0188): one card, one row per provider.
+  // The owner's list of who decides (Jev included, ADR 0195): one card, one row per provider.
   if (jev.data || decision.data)
     return (
       <DecisionModelSection

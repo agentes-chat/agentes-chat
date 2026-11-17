@@ -20,7 +20,7 @@ import { enqueue } from "./outbox";
 const { instanceDecisionModel } = schema;
 
 /**
- * The installation's optional decision model (ADR 0188): one row, off until its owner turns it on. The switch is
+ * The installation's optional decision model (ADR 0195): one row, off until its owner turns it on. The switch is
  * Settings, the key is sealed, and the model itself is prepared by the decision.model.install job so the request that
  * turned it on never waits on a download. Jev keeps its own key and its own two routes, untouched.
  */

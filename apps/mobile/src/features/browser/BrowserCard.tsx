@@ -37,7 +37,7 @@ import {
 } from "react-native";
 import { useAppActive } from "@/lib/useAppActive";
 import { Sky } from "@/sky/Sky";
-import { Button, Fuse, Icon, PixelOrbit, Text, useToast } from "@/ui";
+import { Button, Fuse, Icon, IconButton, PixelOrbit, Text, useToast } from "@/ui";
 import { ScreenWatch, type ScreenWatchHandle } from "../computer/ScreenWatch";
 import { MachineToolButton } from "../devices/ToolOneClick";
 import { useColors, useDirectory, useEdition, useMeId, useNow, useOrgId } from "../shared/hooks";
@@ -411,15 +411,7 @@ export function BrowserCard({
                     />
                   ) : null}
                   {ready && !surface && !profile ? (
-                    <Pressable
-                      onPress={stop}
-                      accessibilityRole="button"
-                      accessibilityLabel={t("mobile.browser.card.stop")}
-                      hitSlop={8}
-                      style={({ pressed }) => [styles.icon, pressed && { backgroundColor: c.sunken }]}
-                    >
-                      <Icon name="stop" size={16} color={c.muted} />
-                    </Pressable>
+                    <IconButton icon="stop" small label={t("mobile.browser.card.stop")} onPress={stop} />
                   ) : null}
                 </>
               ) : null}
@@ -551,28 +543,10 @@ export function BrowserCard({
               {/* A profile goes back to its agents, not to one. A take over asked for nothing: it only hands back. */}
               <View style={styles.ways}>
                 {profile ? null : (
-                  <Pressable
-                    onPress={finishing.leaveNote}
-                    accessibilityRole="button"
-                    hitSlop={8}
-                    style={({ pressed }) => [styles.way, pressed && styles.pressedWord]}
-                  >
-                    <Text variant="small" tone="muted" style={styles.medium}>
-                      {t("browser.inCard.addNote")}
-                    </Text>
-                  </Pressable>
+                  <Button variant="text" size="sm" label={t("browser.inCard.addNote")} onPress={finishing.leaveNote} />
                 )}
                 {handoff?.kind === "ask" ? (
-                  <Pressable
-                    onPress={couldnt}
-                    accessibilityRole="button"
-                    hitSlop={8}
-                    style={({ pressed }) => [styles.way, pressed && styles.pressedWord]}
-                  >
-                    <Text variant="small" tone="muted" style={styles.medium}>
-                      {t("mobile.browser.live.couldnt")}
-                    </Text>
-                  </Pressable>
+                  <Button variant="text" size="sm" label={t("mobile.browser.live.couldnt")} onPress={couldnt} />
                 ) : null}
               </View>
             </View>
@@ -642,9 +616,7 @@ const styles = StyleSheet.create({
   shrink: { flexShrink: 1 },
   subRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
   semibold: { fontWeight: "600" },
-  medium: { fontWeight: "500" },
   acts: { flexDirection: "row", alignItems: "center", gap: 4 },
-  icon: { width: 30, height: 30, borderRadius: 999, alignItems: "center", justifyContent: "center" },
   thumb: {
     width: 96,
     height: 60,
@@ -679,11 +651,9 @@ const styles = StyleSheet.create({
   },
   control: { padding: 10, gap: 8 },
   ways: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 16 },
-  way: { paddingVertical: 4 },
   note: { paddingHorizontal: 12, paddingVertical: 10 },
   log: { paddingHorizontal: 12, paddingVertical: 6 },
   step: { flexDirection: "row", alignItems: "center", paddingVertical: 6 },
   fuse: { marginTop: 0 },
   pressed: { opacity: 0.7 },
-  pressedWord: { opacity: 0.6 },
 });

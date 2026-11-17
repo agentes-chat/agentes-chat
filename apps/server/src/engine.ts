@@ -262,7 +262,7 @@ export function buildEngine(o: EngineOptions) {
     envKey: config.TYPESAFE_API_KEY,
     fetch: o.jevFetch,
   });
-  // The installation's optional decision model (ADR 0188): off until its owner turns it on in Settings.
+  // The installation's optional decision model (ADR 0195): off until its owner turns it on in Settings.
   const decisionModel = createDecisionModel({
     db,
     keyWrapper: adapters.keyWrapper,
@@ -916,7 +916,7 @@ export function buildEngine(o: EngineOptions) {
     talker,
     /** Awaited before the server serves (`ready()`), and the owner's routes read and change it. */
     jevKey,
-    /** The installation's optional decision model (ADR 0188). */
+    /** The installation's optional decision model (ADR 0195). */
     decisionModel,
     /** Likewise: the server's GitHub App (ADR 0156). */
     githubApp,

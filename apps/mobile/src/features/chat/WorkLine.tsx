@@ -52,7 +52,8 @@ function useLine(work: WorkView, inUpdatesThread = false) {
   // As `mayStopRun` decides (who asked, the agent's owner, an admin); the server has the last word, said in a toast.
   const stop = useMutation({
     mutationFn: (runId: string) => api.agents.cancelRun(orgId, runId),
-    onError: () => toast({ title: t("work.stopFailed"), icon: "info" }),
+    // A failure's toast, in the failure's tone (the ×), as every refusal in the app.
+    onError: () => toast({ title: t("work.stopFailed"), icon: "x" }),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["org", orgId, "channel", work.channelId] }),
   });
   const context = {
@@ -288,8 +289,9 @@ export function IssueWorkLine({ issue, style }: { issue: Issue; style?: StylePro
   const progress = work ? workPlanProgress(work) : null;
   return (
     <View style={[styles.block, style]}>
+      {/* A state is its words in the state's color, never a label on a tinted plate. */}
       {blocked ? (
-        <Text variant="small" style={[styles.blocked, { backgroundColor: c.warnSoft, color: c.warn }]}>
+        <Text variant="small" style={[styles.blocked, { color: c.warn }]}>
           {blocked}
         </Text>
       ) : null}
@@ -394,7 +396,7 @@ export function useShareWork(issue: Issue): { share: () => void; pending: boolea
       toast({ title: t("work.shared"), icon: "check" });
       void qc.invalidateQueries({ queryKey: ["org", orgId, "issues"] });
     },
-    onError: () => toast({ title: t("work.shareFailed"), icon: "info" }),
+    onError: () => toast({ title: t("work.shareFailed"), icon: "x" }),
   });
   const work = issue.backgroundWork;
   const mayShare =
@@ -436,14 +438,7 @@ const styles = StyleSheet.create({
   action: { fontWeight: "600" },
   pressed: { opacity: 0.6 },
   block: { gap: 12 },
-  blocked: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    overflow: "hidden",
-    fontWeight: "600",
-  },
+  blocked: { fontWeight: "600" },
   // Under the actions, on the card's text column.
   plan: { gap: 6, marginTop: 8 },
   step: { flexDirection: "row", gap: 8, alignItems: "flex-start" },

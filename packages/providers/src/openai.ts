@@ -6,7 +6,7 @@ import type {
   ResponseOutputItem,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
-import { MODEL_CATALOG } from "./catalog";
+import { modelInfo } from "./catalog";
 import {
   type ContentBlock,
   deniedError,
@@ -65,8 +65,9 @@ export function createOpenAIProvider(
         outputTokens: null,
         outputChars: 0,
       };
-      const info = MODEL_CATALOG[request.model];
-      const effort = request.effort === "none" && info?.leastThinking !== "off" ? "low" : request.effort;
+      const info = modelInfo(request.model);
+      const rawEffort = request.effort === "none" && info?.leastThinking !== "off" ? "low" : request.effort;
+      const effort = rawEffort === "max" && !info?.efforts?.includes("max") ? "xhigh" : rawEffort;
       try {
         const stream = client(apiKey, organization, project).responses.stream(
           {
@@ -89,7 +90,7 @@ export function createOpenAIProvider(
                   },
                 }
               : {}),
-            // The gateway has already taken it to a level the model takes; the SDK's type lists fewer.
+            // The gateway has already taken it to a level the model takes (`xhigh` included); the SDK's type lists fewer.
             ...(info?.reasoning && effort ? { reasoning: { effort: effort as "low" | "medium" | "high" } } : {}),
           },
           { signal: request.signal },

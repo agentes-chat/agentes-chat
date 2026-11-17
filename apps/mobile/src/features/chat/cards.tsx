@@ -52,7 +52,19 @@ import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
-import { ACT_LINE, Button, Count, HoldButton, Icon, PixelOrbit, Text, useReducedMotion, useToast } from "@/ui";
+import {
+  ACT_LINE,
+  Button,
+  Count,
+  HoldButton,
+  Icon,
+  PixelOrbit,
+  PressScale,
+  Text,
+  TOUCH,
+  useReducedMotion,
+  useToast,
+} from "@/ui";
 import { router } from "@/ui/navigation";
 import { approvalAction, approvalRisk, approveAlwaysToast } from "../approvals/logic";
 import {
@@ -750,7 +762,6 @@ export function QuestionCard({ question, asker }: { question: AgentQuestion; ask
     return api.questions
       .answer(orgId, q.id, input)
       .then((res) => {
-        tapHaptic();
         asks?.settle(q.id);
         setAnswered({ ...res, answer: res.answer ?? ("choice" in input ? input.choice : input.text) });
       })
@@ -836,42 +847,38 @@ export function QuestionCard({ question, asker }: { question: AgentQuestion; ask
         <AskFoot>
           {choices.length > 0 ? (
             <View style={styles.opts}>
+              {/* The kit's press: a choice eases down under the finger and taps once (the answer adds none). */}
               {choices.map((choice) => {
                 const on = picking === choice;
                 return (
-                  <Pressable
+                  <PressScale
                     key={choice}
+                    to={0.98}
                     disabled={busy}
                     onPress={() => void answer({ choice })}
                     accessibilityRole="button"
                     accessibilityState={{ selected: on, disabled: busy }}
-                    style={({ pressed }) => [
-                      styles.opt,
-                      { backgroundColor: on ? c.ink : c.sunken },
-                      pressed && styles.optPressed,
-                    ]}
+                    style={[styles.optBox, { backgroundColor: on ? c.ink : c.sunken }]}
+                    contentStyle={styles.opt}
                   >
                     <Text variant="callout" style={[styles.optText, { color: on ? c.bg : c.ink }]}>
                       {choice}
                     </Text>
-                  </Pressable>
+                  </PressScale>
                 );
               })}
-              <Pressable
+              <PressScale
+                to={0.98}
                 disabled={busy}
                 onPress={write}
                 accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.opt,
-                  styles.other,
-                  { borderColor: c.line2 },
-                  pressed && styles.optPressed,
-                ]}
+                style={[styles.optBox, styles.other, { borderColor: c.line2 }]}
+                contentStyle={styles.opt}
               >
                 <Text variant="callout" tone="muted">
                   {t("ask.otherAnswer")}
                 </Text>
-              </Pressable>
+              </PressScale>
             </View>
           ) : (
             <Button
@@ -915,13 +922,16 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
   // A return says when it comes ("Retorno às 00:32"), never for how long.
   const held = state && state !== "later" ? workTime(i18n.language, thread.since, now) : null;
   return (
-    <Pressable
+    <PressScale
       onPress={() => router.push(chatHref(thread.channelId, thread.id))}
       accessibilityRole="button"
       accessibilityLabel={t("mobile.chat.replies", { count: thread.replyCount })}
       // A 36-point link under the message: the slop gives it the 44 a finger needs.
-      hitSlop={{ top: 4, bottom: 4 }}
-      style={({ pressed }) => [styles.tlink, surface, pressed && styles.pressed]}
+      hitSlop={{ top: (TOUCH - THREAD_LINK) / 2, bottom: (TOUCH - THREAD_LINK) / 2 }}
+      // As wide as its words: the press area keeps the link's size.
+      fill={false}
+      style={[styles.tlinkBox, surface]}
+      contentStyle={styles.tlink}
     >
       <View style={styles.faces}>
         {faces.map((f, i) => (
@@ -970,19 +980,20 @@ export function ThreadLink({ thread }: { thread: ThreadInfo }) {
             : ` · ${when.short(thread.lastActivityAt)}`}
       </Text>
       <Icon name="right" size={15} color={c.faint} />
-    </Pressable>
+    </PressScale>
   );
 }
 
+/** The thread's link under a message: 36 drawn, its target grown to 44. */
+const THREAD_LINK = 36;
+
 const styles = StyleSheet.create({
-  grow: { flex: 1, minWidth: 0 },
   shrink: { flexShrink: 1 },
   bold: { fontWeight: "600" },
   // A thread's state beside its count: the mark centred on the words' line, 4 apart.
   tstate: { flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 },
   flip: { transform: [{ rotate: "180deg" }] },
   pressed: { opacity: 0.85 },
-  origin: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   // Requests sharing one card: rows edge to edge across the card, each with a hairline above (never a plate in a
   // card), decided ones quieter.
   items: { marginTop: 2, marginHorizontal: -16 },
@@ -1013,28 +1024,26 @@ const styles = StyleSheet.create({
   opts: { gap: 8 },
   // Under its done line, at the left edge where the line's words start.
   cancelAhead: { alignSelf: "flex-start", marginTop: -4 },
+  // A choice: its box (the color, the corner) and the row inside it, which grows with its words.
+  optBox: { borderRadius: 14 },
   opt: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    minHeight: 44,
+    minHeight: TOUCH,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 14,
   },
   optText: { flexShrink: 1 },
-  optPressed: { transform: [{ scale: 0.98 }] },
   other: { backgroundColor: "transparent", borderWidth: 1 },
+  tlinkBox: { alignSelf: "flex-start", maxWidth: "100%", borderRadius: 10 },
   tlink: {
-    alignSelf: "flex-start",
-    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    minHeight: 36,
+    minHeight: THREAD_LINK,
     paddingLeft: 8,
     paddingRight: 12,
-    borderRadius: 10,
   },
   faces: { flexDirection: "row", marginRight: 2 },
   overlap: { marginLeft: -6 },

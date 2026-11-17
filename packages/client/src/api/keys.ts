@@ -7,7 +7,7 @@ export const keys = {
   instance: ["instance"] as const,
   telemetry: ["telemetry"] as const,
   jev: ["jev"] as const,
-  /** The installation's optional decision model (ADR 0188), like Jev's key. */
+  /** The installation's optional decision model (ADR 0195), like Jev's key. */
   decisionModel: ["decision-model"] as const,
   decisionHost: ["decision-model", "host"] as const,
   /** The installation's GIPHY key (ADR 0091), not a workspace's: it stays when switching organizations. */
@@ -87,6 +87,8 @@ export const keys = {
   /** Every single agent's reads (its page, its brain). */
   agentPages: (orgId: string) => ["org", orgId, "agent"] as const,
   aiAccounts: (orgId: string) => ["org", orgId, "ai-accounts"] as const,
+  /** Under `aiAccounts`: the same `machine.updated` event refetches it. */
+  accountOrder: (orgId: string) => ["org", orgId, "ai-accounts", "order"] as const,
   accountLogin: (orgId: string, machineId: string, loginId: string) =>
     ["org", orgId, "machine", machineId, "account-login", loginId] as const,
   agentChannels: (orgId: string, agentId: string) => ["org", orgId, "agent", agentId, "channels"] as const,

@@ -21,8 +21,7 @@
     "down": "Sposta giù",
     "position": "{{at}} di {{count}}.",
     "channelPosition": "{{at}} di {{count}}.",
-    "itsChannels": "Canali",
-    "seeAll": "Vedi tutti"
+    "itsChannels": "Canali"
   },
   "blocks": {
     "send": "Invia",
@@ -194,16 +193,9 @@
       "text": "Potrebbe essere offline o fuori dalla tua rete. Le chat compaiono da sole appena torna disponibile.",
       "kept": "Mostra quello che era già nell'app."
     },
-    "section": {
-      "agents": "Agenti",
-      "channels": "Canali",
-      "people": "Persone"
-    },
-    "seeAll": {
-      "agents": "Vedi tutti gli agenti",
-      "channels": "Vedi tutti i canali",
-      "people": "Vedi tutte le persone"
-    },
+    "pinned": "Fissati",
+    "recent": "Recenti",
+    "seeAll": "Vedi tutte le chat",
     "wait": {
       "verb": {
         "approval": "ha bisogno del tuo ok",
@@ -373,8 +365,16 @@
     "here_one": "{{count}} qui",
     "here_many": "{{count}} qui",
     "here_other": "{{count}} qui",
+    "membersAdd": "Aggiungi",
+    "membersAdded_one": "{{count}} aggiunto a #{{channel}}",
+    "membersAdded_many": "{{count}} aggiunti a #{{channel}}",
+    "membersAdded_other": "{{count}} aggiunti a #{{channel}}",
+    "memberRemoved": "{{name}} non è più in #{{channel}}",
+    "muted": "#{{channel}} silenziato",
+    "unmuted": "#{{channel}} riattivato",
     "headerAgent": "{{who}}. Apri il profilo",
     "headerChannel": "{{who}}. Opzioni",
+    "headerMembers": "{{who}}. Vedi chi c'è",
     "switchHint": "Tieni premuto per cambiare conversazione",
     "switchTitle": "Cambia conversazione",
     "switchSearch": "Cerca conversazioni",
@@ -458,21 +458,15 @@
     "doubleTapHint": "Doppio tocco = 👍",
     "react": "Reagisci",
     "attach": {
-      "more": "Aggiungi un'altra foto o un file",
       "remove": "Rimuovi {{name}}",
       "waiting": "{{name}}, in attesa di invio",
       "sending": "{{name}}, invio in corso",
+      "failed": "{{name}}, non inviato: invia per riprovare",
+      "preparing": "Preparazione dei file…",
       "tooMany": "Fino a {{count}} file per messaggio."
     },
     "swipeReply": "Scorri a destra per rispondere",
     "intent": {
-      "suggest": {
-        "merge": "Vai avanti e fai il merge",
-        "review": "Chiedi prima a {{name}} di rivedere",
-        "seeChange": "Mostrami cosa è cambiato",
-        "summarize": "Riassumilo in 3 punti",
-        "nextStep": "Qual è il prossimo passo?"
-      },
       "arrived": "{{name}} si è unito al team",
       "meet": "La tua prima conversazione con {{name}}",
       "roleIntro": "{{role}} nel tuo team. Chiedi con parole semplici.",
@@ -618,7 +612,6 @@
     "minuteLess": "{{n}} minuti prima",
     "minuteMore": "{{n}} minuti dopo",
     "submit": "Ricordamelo a quest'ora",
-    "quick": "Vedi orari rapidi",
     "done": "Promemoria impostato",
     "error": {
       "noAgent": "Nessun agente qui può ricordartelo",
@@ -677,6 +670,7 @@
     "title": "Nuova missione",
     "intro": "L'agente prepara un piano e inizia solo quando glielo dici tu.",
     "placeholder": "Cosa bisogna fare?",
+    "who": "Chi la porta avanti",
     "submit": "Chiedi un piano",
     "created": "{{name}} sta preparando il piano",
     "noAgents": "Nessun agente può ancora svolgere missioni. Collega un computer dal sito.",
@@ -841,9 +835,6 @@
     "keepEditing": "Continua a modificare"
   },
   "newAgent": {
-    "leaveTitle": "Uscire senza creare?",
-    "leaveText": "L'agente che hai iniziato non verrà creato.",
-    "keepGoing": "Continua a creare",
     "identityQuestion": "Chi è l'agente?",
     "identityLead": "Il nome, come chiamarlo in chat e il volto.",
     "handleMention": "Menziona @{{handle}} per chiamarlo.",
@@ -869,7 +860,6 @@
       "archive": "Il telefono non apre file .zip o .tar.gz. Nell'app File, tocca il .zip per decomprimerlo e scegli i file al suo interno, oppure importa dal computer.",
       "privacy": "Letto su questo telefono. I file di chiavi e di accesso non vengono mai aperti.",
       "also": "Arriva anche",
-      "change": "Cambia",
       "arrived_one": "{{name}} è arrivato",
       "arrived_many": "Sono arrivati {{count}} agenti",
       "arrived_other": "Sono arrivati {{count}} agenti",
@@ -894,7 +884,11 @@
     "taskForM": "Attività per {{name}}",
     "taskPlaceholder": "Cosa bisogna fare?",
     "sendTask": "Invia attività",
-    "taskSent": "Attività inviata"
+    "taskSent": "Attività inviata",
+    "brakes": {
+      "forgetTitle": "Dimenticare queste risposte?",
+      "forgetText": "{{name}} chiede di nuovo prima di questo tipo di lavoro."
+    }
   },
   "activity": {
     "title": "Attività recenti",
@@ -1290,7 +1284,7 @@
       "file": "File"
     },
     "more": "Altre opzioni",
-    "send": "Invia",
+    "sendCopy": "Invia una copia",
     "savePhotos": "Salva in Foto",
     "drive": "Vedi in Drive",
     "saved": "Salvata in Foto",
@@ -1304,6 +1298,7 @@
     "place": "{{index}} di {{count}}",
     "previous": "Immagine precedente",
     "next": "Immagine successiva",
+    "noPreviewTitle": "Nessuna anteprima",
     "noPreview": "Questo file non si apre nell'app. Invialo a un'altra app per aprirlo.",
     "video": {
       "play": "Riproduci",
@@ -1313,7 +1308,8 @@
       "mute": "Disattiva audio",
       "unmute": "Attiva audio",
       "fullscreen": "Schermo intero",
-      "open": "Apri"
+      "open": "Apri",
+      "cantPlay": "Questo video non può essere riprodotto su questo telefono."
     }
   },
   "issues": {
@@ -1407,7 +1403,6 @@
   "drive": {
     "title": "Drive",
     "search": "Cerca nel Drive",
-    "types": "Tipi di file",
     "type": {
       "all": "Tutti",
       "documents": "Documenti",
@@ -1428,7 +1423,6 @@
     },
     "by": "{{name}} · {{when}}",
     "noResults": "Niente con questi filtri.",
-    "loadFailed": "Non è stato possibile caricare il Drive.",
     "more": "Mostra altro"
   },
   "constellation": {
@@ -1498,8 +1492,6 @@
     "openExisting": "Apri la pagina"
   },
   "routines": {
-    "loadFailed": "Non è stato possibile caricare le routine.",
-    "anyAgent": "Tutti gli agenti",
     "create": "Crea",
     "when": {
       "custom": "A modo tuo",
@@ -1897,6 +1889,7 @@
       "ui_automation_off": "L'automazione UI è disattivata",
       "xcode_missing": "Il Mac ha bisogno di Xcode",
       "xcode_too_old": "Xcode è troppo vecchio per questo iPhone",
+      "ios_behind_xcode": "Aggiorna l'iOS di questo iPhone",
       "device_support": "Il Mac sta preparando questo iPhone",
       "helper_missing": "L'app di test non è ancora configurata",
       "helper_expired": "L'app di test va rinnovata",
@@ -2122,7 +2115,9 @@
       "other": "Usa un altro dispositivo",
       "stop": "Smetti di aspettare",
       "useInstead": "Usa invece {{name}}",
-      "none": "Nessun altro dispositivo che puoi usare è pronto."
+      "none": "Nessun altro dispositivo che puoi usare è pronto.",
+      "tried": "Nuovo tentativo con {{device}}.",
+      "stopped": "Non si aspetta più {{device}}."
     }
   },
   "connectors": {
@@ -2390,7 +2385,6 @@
     "noMatch": "Nessun ruolo corrisponde a “{{q}}”.",
     "tooMany": "Questo spazio di lavoro ha già 100 ruoli. Eliminane uno per crearne un altro.",
     "loadFailed": "Non è stato possibile caricare i ruoli. {{cause}}",
-    "backToList": "Torna ai ruoli",
     "nobody": "Nessuno",
     "reach": {
       "permissions_one": "{{count}} permesso",
@@ -2773,7 +2767,6 @@
   },
   "dashboards": {
     "homeRow": "Solo tu · i tuoi widget",
-    "loadFailed": "Impossibile caricare le dashboard.",
     "create": "Crea",
     "routineTarget": "il suo widget",
     "pin": {

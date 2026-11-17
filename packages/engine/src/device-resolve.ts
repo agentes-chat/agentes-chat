@@ -210,7 +210,14 @@ export async function checkDeviceUse(
       message: `${name} is ${ruleText}, not for ${forWhom}. Nobody can be asked for it: an admin can change who uses it under Settings › Devices. Use another device.`,
     };
   }
-  const requestId = await askDeviceOwner(deps, ctx, target, { owner, requester, why, requesterName: forWhom });
+  // From a confidential thread (ADR 0190) the owner is asked with none of the run's words: they may not be in the
+  // conversation, and neither the request nor its notification goes with the thread's prune.
+  const requestId = await askDeviceOwner(deps, ctx, target, {
+    owner,
+    requester,
+    why: ctx.confidential ? "" : why,
+    requesterName: forWhom,
+  });
   return {
     ok: false,
     requester,
@@ -354,6 +361,11 @@ export function phoneReasonText(
     case "xcode_too_old":
       return {
         text: `${phone} runs an iOS newer than Xcode on ${host} can drive. Ask the person to install the Xcode matching the iPhone's iOS (27 for iOS 27), then run \`xcrun devicectl manage ddis update\`.`,
+        byItself: false,
+      };
+    case "ios_behind_xcode":
+      return {
+        text: `${phone} runs an iOS older than the one Xcode on ${host} is for. Ask the person to update the iPhone: Settings → General → Software Update.`,
         byItself: false,
       };
     case "helper_missing":

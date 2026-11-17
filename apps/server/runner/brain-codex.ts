@@ -75,7 +75,7 @@ import { agentSecrets } from "./secrets";
  * - ADR 0041: a turn with an `account` runs with `CODEX_HOME` set to that
  *   account's folder (missing: `account_missing`, never another account); its
  *   threads are remembered per account. `effort` is `-c model_reasoning_effort`
- *   (`xhigh` and `max` are `high`).
+ *   (`low`, `medium`, `high`, `xhigh`, `max`).
  * - Windows (`codex-windows.ts`): the native `codex.exe`, started directly; a
  *   `plan` or `work` turn only where MXC holds its commands (else
  *   `windows_sandbox`), with it named in `-c` and nothing asked; a thread's
@@ -333,9 +333,9 @@ const ownChatGptSignIn = (opts: Pick<CodexTurnOptions, "bin" | "env" | "platform
 export const codexContextOverride = (tokens: unknown): string[] =>
   isContextTokens(tokens) ? ["-c", `model_auto_compact_token_limit=${tokens}`] : [];
 
-/** Codex's `model_reasoning_effort` for a brain effort (it has no `xhigh` or `max`). */
-export function codexEffort(effort: BrainEffort): "low" | "medium" | "high" {
-  return effort === "low" || effort === "medium" ? effort : "high";
+/** Codex's `model_reasoning_effort` for a brain effort (supports `low` through `max`, including `xhigh`). */
+export function codexEffort(effort: BrainEffort): BrainEffort {
+  return effort;
 }
 
 /** `codex-cli 0.163.0` → true from `CODEX_MIN_VERSION` on. */

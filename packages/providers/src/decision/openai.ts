@@ -9,7 +9,7 @@ import {
 } from "./types";
 
 /**
- * OpenAI's Decisions API (ADR 0188): POST /v1/decisions with gpt-6-luna. Its own field names: predicate instead of
+ * OpenAI's Decisions API (ADR 0195): POST /v1/decisions with gpt-6-luna. Its own field names: predicate instead of
  * noul, choices and levels as arrays, and an answers array keyed by name. Text, pictures and JSON go in the input;
  * files, audio and video are not taken here.
  * https://developers.openai.com/api/docs/guides/decisions

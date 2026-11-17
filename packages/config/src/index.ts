@@ -65,6 +65,15 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   if (config.OPERATOR_API_READ_TOKEN && config.OPERATOR_API_READ_TOKEN === config.OPERATOR_API_TOKEN) {
     throw new ConfigError(["OPERATOR_API_READ_TOKEN must differ from OPERATOR_API_TOKEN"]);
   }
+  if (config.OPERATOR_API_REVEAL_TOKEN && !config.OPERATOR_API_TOKEN) {
+    throw new ConfigError(["OPERATOR_API_REVEAL_TOKEN needs OPERATOR_API_TOKEN"]);
+  }
+  // Equal to either, a token that should open one door would open the other's too.
+  for (const other of ["OPERATOR_API_TOKEN", "OPERATOR_API_READ_TOKEN"] as const) {
+    if (config.OPERATOR_API_REVEAL_TOKEN && config.OPERATOR_API_REVEAL_TOKEN === config[other]) {
+      throw new ConfigError([`OPERATOR_API_REVEAL_TOKEN must differ from ${other}`]);
+    }
+  }
   if (config.MACHINE_PROVISIONING === "external" && config.HOST_COMPUTER_TOKEN) {
     throw new ConfigError([
       "HOST_COMPUTER_TOKEN can't be set with MACHINE_PROVISIONING=external: every workspace gets its own computer, and no other computer joins it",
@@ -72,6 +81,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   }
   if (Boolean(config.BILLING_URL) !== Boolean(config.BILLING_LINK_SECRET)) {
     throw new ConfigError(["BILLING_URL and BILLING_LINK_SECRET go together: set both or neither"]);
+  }
+  // The referral service checks the link with the billing link's secret: without it no link could be signed.
+  if (config.REFERRALS_URL && !config.BILLING_LINK_SECRET) {
+    throw new ConfigError(["REFERRALS_URL needs BILLING_LINK_SECRET, which signs the link to the referral service"]);
   }
   // Only the billing service lifts that hold, through the operator API: without them a new workspace would wait forever.
   if (config.BILLING_HOLD_NEW_WORKSPACES && !(config.BILLING_URL && config.OPERATOR_API_TOKEN)) {

@@ -17,7 +17,7 @@ import { snapshotStoreFor } from "@/lib/snapshot";
 import { hintTouches } from "@/ui/hints";
 import { ToastHost } from "@/ui/Toast";
 import { TextScaleProvider } from "@/ui/text-scale";
-import { ThemeProvider } from "@/ui/theme";
+import { AccentProvider, ThemeProvider } from "@/ui/theme";
 import { setupI18n } from "./i18n";
 import { OrgProvider, useOrgMaybe } from "./org";
 import { PushProvider } from "./push";
@@ -113,5 +113,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
  */
 function AppTextSize({ children }: { children: ReactNode }) {
   const org = useOrgMaybe()?.org;
-  return <TextScaleProvider size={textSizeOf(org?.chatPrefs)}>{children}</TextScaleProvider>;
+  return (
+    <AccentProvider accent={org?.accent}>
+      <TextScaleProvider size={textSizeOf(org?.chatPrefs)}>{children}</TextScaleProvider>
+    </AccentProvider>
+  );
 }

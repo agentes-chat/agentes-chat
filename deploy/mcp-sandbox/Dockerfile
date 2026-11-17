@@ -1,4 +1,4 @@
-# The MCP sandbox (ADR 0190, addendum): the stdio MCP programs a workspace connects run here, apart from the app,
+# The MCP sandbox (ADR 0197, addendum): the stdio MCP programs a workspace connects run here, apart from the app,
 # with Node (npx), Bun (bunx), Python (pip, venv, uvx) and build tools (make, gcc, git), as the unprivileged `node`.
 FROM oven/bun:1.4.4 AS bun
 FROM ghcr.io/astral-sh/uv:0.9.9 AS uv

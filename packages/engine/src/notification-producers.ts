@@ -5,6 +5,7 @@ import { approvalCardThreads, approvalOriginOf, notifiedIds } from "./approvals"
 import { accountablePerson, runAuthorityById } from "./authority";
 import { autonomyNoteFor, proposalCardOf } from "./brakes";
 import { readableChannelIds } from "./channels";
+import { confidentialThreadSql, isConfidential } from "./confidential";
 import { threadFollowChoices } from "./follows";
 import { type Assignee, assigneesOfIssue } from "./issue-assignees";
 import { type TaskEnd, taskEndLine } from "./machine-task-text";
@@ -162,11 +163,13 @@ export async function notifyMessage(deps: NotificationDeps, orgId: string, messa
   const authorUser = message.authorUserId;
   // A reminder's own words, without the English prefix the chat replaces with its own label.
   const said = typeof meta.reminderText === "string" ? meta.reminderText : await quotedBody(deps, orgId, message);
-  const text = notificationSnippet(readableBody(said, meta));
+  // A message of a confidential thread (ADR 0190) is told with no word of it: the inbox, the push and a mail that
+  // quote this say only that there is something to open.
+  const text = isConfidential(meta) ? "" : notificationSnippet(readableBody(said, meta));
   // Only a GIF or a sticker (ADR 0091): the apps and the push say which, in the person's language.
   const media = previewMediaKind(message.body, meta);
   // A body the server wrote: the apps say it in the reader's language, as the conversation lists do.
-  const written = previewMeta(meta);
+  const written = isConfidential(meta) ? null : previewMeta(meta);
   // What the right hand posts by itself with a ring (`postFromLodi`) names its person on the message. Nobody asked,
   // so it is no reply: it rings as a message it sent them. Its stored text is already in their language, so the
   // inbox and the push quote it as it is.
@@ -335,7 +338,9 @@ async function threadTitle(deps: NotificationDeps, orgId: string, rootId: string
     .select({ body: messages.body, meta: messages.meta })
     .from(messages)
     .where(and(eq(messages.orgId, orgId), eq(messages.id, rootId)));
-  return root ? notificationSnippet(readableBody(root.body, root.meta), 80) || undefined : undefined;
+  return root && !isConfidential(root.meta)
+    ? notificationSnippet(readableBody(root.body, root.meta), 80) || undefined
+    : undefined;
 }
 
 const REACTION_EMOJI: Record<string, string> = { "+1": "👍", "-1": "👎" };
@@ -384,7 +389,10 @@ export async function notifyReaction(
       ...(channel?.kind === "dm" ? { dmId: message.channelId } : {}),
       ...(channel?.kind === "channel" ? { label: channel.name } : {}),
     },
-    latest: { emojis, quote: notificationSnippet(readableBody(message.body, message.meta), 140) },
+    latest: {
+      emojis,
+      quote: isConfidential(message.meta) ? "" : notificationSnippet(readableBody(message.body, message.meta), 140),
+    },
   });
 }
 
@@ -414,8 +422,30 @@ export async function notifyQuestion(deps: NotificationDeps, q: QuestionRow) {
       ...(channel?.kind === "channel" ? { label: channel.name } : {}),
       questionId: q.id,
     },
-    latest: { text: notificationSnippet(q.text), suggestions: q.choices ?? undefined },
+    // Asked in a confidential thread (ADR 0190): what the agent typed stays on its card there.
+    latest: (await sealedPlace(deps, q.orgId, q.threadId ?? q.messageId, q.runId))
+      ? { text: "" }
+      : { text: notificationSnippet(q.text), suggestions: q.choices ?? undefined },
   });
+}
+
+/**
+ * Whether a card was asked from a confidential thread: its place (its thread's root, or itself in the main timeline)
+ * is one, or the run that asked answers in one, wherever its card was posted.
+ */
+async function sealedPlace(
+  deps: Pick<NotificationDeps, "db">,
+  orgId: string,
+  rootId: string | null,
+  runId: string | null,
+) {
+  const org = sql`${orgId}::uuid`;
+  const [row] = rowsOf<{ sealed: boolean }>(
+    await deps.db.execute(sql`select (${confidentialThreadSql(org, sql`${rootId}::uuid`)}
+      or exists (select 1 from ${schema.agentRuns} r where r.id = ${runId}::uuid and r.org_id = ${org}
+        and ${confidentialThreadSql(org, sql`r.thread_root_id`)})) as sealed`),
+  );
+  return row?.sealed === true;
 }
 
 /** Answered (by anyone) or expired: out of everyone's inbox. */
@@ -511,13 +541,14 @@ export async function notifyApproval(deps: NotificationDeps, approval: ApprovalR
       ...(approval.missionId ? { missionId: approval.missionId } : {}),
       ...(channel?.kind === "channel" ? { label: channel.name } : {}),
     },
-    latest: approvalLatest(approval),
+    latest: approvalLatest(approval, await sealedPlace(deps, approval.orgId, approval.threadRootId, approval.runId)),
   });
 }
 
-const approvalLatest = (approval: ApprovalRow) => ({
-  title: notificationSnippet(approval.title, 200),
-  text: notificationSnippet(approval.why, 200),
+/** `sealed`: asked in a confidential thread (ADR 0190), so neither its title nor its why leaves its card. */
+const approvalLatest = (approval: ApprovalRow, sealed: boolean) => ({
+  title: sealed ? "" : notificationSnippet(approval.title, 200),
+  text: sealed ? "" : notificationSnippet(approval.why, 200),
   origin: approvalOriginOf(approval.origin) ?? undefined,
   expiresAt: approval.expiresAt.toISOString(),
 });
@@ -546,9 +577,11 @@ export async function resolveApprovalNotifications(
     .orderBy(asc(approvals.createdAt));
   if (waiting.length === 0) return resolveNotifications(deps, approval.orgId, { groupKey });
   const told = await Promise.all(waiting.map(async (a) => new Set(await notifiedIds(deps.db, a))));
+  // The requests of one card share its thread.
+  const sealed = await sealedPlace(deps, approval.orgId, waiting[0]?.threadRootId ?? null, waiting[0]?.runId ?? null);
   await retargetNotifications(deps, approval.orgId, groupKey, (userId) => {
     const next = waiting.find((_, i) => told[i]?.has(userId));
-    return next ? { source: { approvalId: next.id }, latest: approvalLatest(next) } : null;
+    return next ? { source: { approvalId: next.id }, latest: approvalLatest(next, sealed) } : null;
   });
 }
 
@@ -747,8 +780,10 @@ async function notifyTaskMessage(deps: NotificationDeps, message: typeof message
   const author =
     message.authorType === "person" ? message.authorUserId : message.authorAgentId ? message.authorAgentId : null;
   if (!issue || !author) return;
-  const text = readableBody(message.body, message.meta);
-  if (!text.trim()) return;
+  // A message of a confidential thread (ADR 0190) is told with no word of it.
+  const sealed = isConfidential(message.meta);
+  const text = sealed ? "" : readableBody(message.body, message.meta);
+  if (!text.trim() && !sealed) return;
   await notifyIssueComment(deps, { type: message.authorType, id: author }, issue.id, message.id, text, {
     messageId: message.id,
   });

@@ -19,8 +19,7 @@
     "down": "下移",
     "position": "第 {{at}} 个，共 {{count}} 个。",
     "channelPosition": "第 {{at}} 个，共 {{count}} 个。",
-    "itsChannels": "频道",
-    "seeAll": "查看全部"
+    "itsChannels": "频道"
   },
   "blocks": {
     "send": "发送",
@@ -182,16 +181,9 @@
       "text": "它可能已停机，或不在你的网络中。恢复后你的聊天会自动显示。",
       "kept": "正在显示应用中已有的内容。"
     },
-    "section": {
-      "agents": "智能体",
-      "channels": "频道",
-      "people": "成员"
-    },
-    "seeAll": {
-      "agents": "查看所有智能体",
-      "channels": "查看所有频道",
-      "people": "查看所有成员"
-    },
+    "pinned": "已置顶",
+    "recent": "最近",
+    "seeAll": "查看所有聊天",
     "wait": {
       "verb": {
         "approval": "需要你确认",
@@ -345,8 +337,14 @@
     "options": "选项",
     "profile": "资料",
     "here_other": "{{count}} 人在此",
+    "membersAdd": "添加",
+    "membersAdded_other": "已将 {{count}} 位成员添加到 #{{channel}}",
+    "memberRemoved": "已将 {{name}} 移出 #{{channel}}",
+    "muted": "已将 #{{channel}} 设为免打扰",
+    "unmuted": "已取消 #{{channel}} 的免打扰",
     "headerAgent": "{{who}}。打开资料",
     "headerChannel": "{{who}}。选项",
+    "headerMembers": "{{who}}。查看成员",
     "switchHint": "长按以切换对话",
     "switchTitle": "切换对话",
     "switchSearch": "搜索对话",
@@ -428,21 +426,15 @@
     "doubleTapHint": "双击 = 👍",
     "react": "回应",
     "attach": {
-      "more": "再添加照片或文件",
       "remove": "移除 {{name}}",
       "waiting": "{{name}}，等待发送",
       "sending": "{{name}}，正在发送",
+      "failed": "{{name}}，未发送：再次发送即可重试",
+      "preparing": "正在准备文件…",
       "tooMany": "每条消息最多 {{count}} 个文件。"
     },
     "swipeReply": "向右滑动以回复",
     "intent": {
-      "suggest": {
-        "merge": "直接合并吧",
-        "review": "先让 {{name}} 审阅",
-        "seeChange": "给我看看改了什么",
-        "summarize": "用 3 点总结一下",
-        "nextStep": "下一步是什么？"
-      },
       "arrived": "{{name}} 加入了团队",
       "meet": "你和 {{name}} 的第一次对话",
       "roleIntro": "你团队的{{role}}。用平常的话提问就行。",
@@ -588,7 +580,6 @@
     "minuteLess": "提前 {{n}} 分钟",
     "minuteMore": "推后 {{n}} 分钟",
     "submit": "在这个时间提醒我",
-    "quick": "查看快捷时间",
     "done": "提醒已设置",
     "error": {
       "noAgent": "这里没有能提醒你的智能体",
@@ -645,6 +636,7 @@
     "title": "新建专项任务",
     "intro": "智能体会先制定计划，你同意后才开始。",
     "placeholder": "需要完成什么？",
+    "who": "由谁来做",
     "submit": "请求制定计划",
     "created": "{{name}} 正在制定计划",
     "noAgents": "还没有能执行专项任务的智能体。请在网站上连接电脑。",
@@ -795,9 +787,6 @@
     "keepEditing": "继续编辑"
   },
   "newAgent": {
-    "leaveTitle": "不创建就离开？",
-    "leaveText": "你开始创建的智能体将不会被创建。",
-    "keepGoing": "继续创建",
     "identityQuestion": "这个智能体是谁？",
     "identityLead": "名字、聊天中的称呼和头像。",
     "handleMention": "提及 @{{handle}} 即可呼叫。",
@@ -823,7 +812,6 @@
       "archive": "手机无法打开 .zip 或 .tar.gz 文件。请在“文件”应用中点按 .zip 解压，再选择里面的文件，或在电脑上导入。",
       "privacy": "在这台手机上读取。密钥和登录文件永远不会被打开。",
       "also": "一并导入",
-      "change": "更改",
       "arrived_other": "已导入 {{count}} 个智能体",
       "partial": "已导入 {{done}}/{{total}} 个。再次导入可导入其余的。"
     }
@@ -846,7 +834,11 @@
     "taskForM": "给 {{name}} 的任务",
     "taskPlaceholder": "需要完成什么？",
     "sendTask": "发送任务",
-    "taskSent": "任务已发送"
+    "taskSent": "任务已发送",
+    "brakes": {
+      "forgetTitle": "忘记这些回答？",
+      "forgetText": "{{name}} 会在这类工作前再次询问。"
+    }
   },
   "activity": {
     "title": "动态",
@@ -1137,7 +1129,7 @@
       "file": "文件"
     },
     "more": "更多选项",
-    "send": "发送",
+    "sendCopy": "发送副本",
     "savePhotos": "保存到相册",
     "drive": "在 Drive 中查看",
     "saved": "已保存到相册",
@@ -1151,6 +1143,7 @@
     "place": "{{index}}/{{count}}",
     "previous": "上一张图片",
     "next": "下一张图片",
+    "noPreviewTitle": "无预览",
     "noPreview": "这个文件无法在应用里打开。请发送到其他应用打开。",
     "video": {
       "play": "播放",
@@ -1160,7 +1153,8 @@
       "mute": "静音",
       "unmute": "取消静音",
       "fullscreen": "全屏",
-      "open": "打开"
+      "open": "打开",
+      "cantPlay": "此视频无法在这部手机上播放。"
     }
   },
   "issues": {
@@ -1252,7 +1246,6 @@
   "drive": {
     "title": "Drive",
     "search": "搜索 Drive",
-    "types": "文件类型",
     "type": {
       "all": "全部",
       "documents": "文档",
@@ -1273,7 +1266,6 @@
     },
     "by": "{{name}} · {{when}}",
     "noResults": "没有符合这些筛选条件的内容。",
-    "loadFailed": "无法加载 Drive。",
     "more": "显示更多"
   },
   "constellation": {
@@ -1332,8 +1324,6 @@
     "openExisting": "打开页面"
   },
   "routines": {
-    "loadFailed": "无法加载例行工作。",
-    "anyAgent": "所有智能体",
     "create": "创建",
     "when": {
       "custom": "自定义",
@@ -1706,6 +1696,7 @@
       "ui_automation_off": "UI 自动化已关闭",
       "xcode_missing": "Mac 需要安装 Xcode",
       "xcode_too_old": "Xcode 版本太旧，不支持这台 iPhone",
+      "ios_behind_xcode": "更新此 iPhone 的 iOS",
       "device_support": "Mac 正在为这台 iPhone 做准备",
       "helper_missing": "测试助手还没有设置好",
       "helper_expired": "测试助手需要续期",
@@ -1929,7 +1920,9 @@
       "other": "使用其他设备",
       "stop": "停止等待",
       "useInstead": "改用 {{name}}",
-      "none": "没有其他你可以使用的设备处于就绪状态。"
+      "none": "没有其他你可以使用的设备处于就绪状态。",
+      "tried": "正在重试 {{device}}。",
+      "stopped": "已停止等待 {{device}}。"
     }
   },
   "connectors": {
@@ -2187,7 +2180,6 @@
     "noMatch": "没有与“{{q}}”匹配的角色。",
     "tooMany": "这个工作区已有 100 个角色。删除一个才能创建新的。",
     "loadFailed": "无法加载角色。{{cause}}",
-    "backToList": "返回角色",
     "nobody": "无人",
     "reach": {
       "permissions_other": "{{count}} 项权限",
@@ -2552,7 +2544,6 @@
   },
   "dashboards": {
     "homeRow": "仅你自己 · 你自己的小组件",
-    "loadFailed": "无法加载仪表盘。",
     "create": "创建",
     "routineTarget": "它的小组件",
     "pin": {

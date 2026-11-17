@@ -708,6 +708,53 @@ html:not([data-pointer]) .arrival-have__row[data-state="checked"]:has(.ac-radio:
   font-size: 13px;
   line-height: 18px;
 }
+/* The title and, after it, the pencil that names the account (ADR 0059 §4): one line. */
+.arrival-have__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+/* "Unnamed account": quieter than a name or an email, until its owner names it. */
+.arrival-have__title[data-unnamed] {
+  color: var(--ink-muted);
+}
+.arrival-have__edit {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-block: -2px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.arrival-have__edit:hover {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  color: var(--ink);
+}
+html:not([data-pointer]) .arrival-have__edit:focus-visible {
+  outline: none;
+  box-shadow: var(--field-ring);
+}
+/* The row while its name changes: the field and Save where the title stood. */
+.arrival-have__row[data-renaming] {
+  cursor: default;
+}
+.arrival-have__rename {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.arrival-have__rename > :first-child {
+  flex: 1;
+  min-width: 0;
+}
 /* The state is the words; the colour only follows them. */
 .arrival-have__line[data-plan="almost"] {
   color: var(--attention);
@@ -756,7 +803,8 @@ html:not([data-pointer]) .arrival-have__row[data-state="checked"]:has(.ac-radio:
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) 16px;
   gap: 12px;
-  align-items: center;
+  /* A label that wraps on a narrow phone ("Entrar com outra conta do ChatGPT") keeps its marks on its first line. */
+  align-items: start;
   padding: 12px 14px;
   border: 0;
   background: none;
@@ -766,6 +814,15 @@ html:not([data-pointer]) .arrival-have__row[data-state="checked"]:has(.ac-radio:
   font-weight: 600;
   text-align: start;
   cursor: pointer;
+}
+.arrival-have__link > .ac-icon {
+  /* The kit's `.ac-iconline` offset: on the first line's capitals. Browsers without lh: the page's 22px line. */
+  translate: 0 calc(11px - var(--cap-mid) - 50%);
+}
+@supports (top: 1lh) {
+  .arrival-have__link > .ac-icon {
+    translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+  }
 }
 .arrival-have__link:hover {
   color: var(--ink);

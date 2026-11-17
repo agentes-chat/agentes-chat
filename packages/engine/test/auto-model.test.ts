@@ -290,6 +290,39 @@ describe("the maker beside an agent on Automático", () => {
       .where(eq(schema.providerCredentials.id, key.id));
     expect((await line())?.maker).toBe("anthropic");
   });
+
+  test("an endpoint key with no model to call names no maker, as its runs find no AI", async () => {
+    f = await setup();
+    const key = await createCredential(
+      f.db,
+      f.keyWrapper,
+      f.owner.id,
+      f.org.id,
+      {
+        provider: "custom",
+        label: "GW",
+        apiKey: "gw-key-1234567",
+        endpoint: { style: "openai", baseURL: "https://gw.example/v1", models: [{ id: "llama-4" }] },
+      },
+      { net: { allowPrivate: true } },
+    );
+    // Written as the row keeps it: saving Automático on an endpoint key pins one of its models instead.
+    await f.db
+      .update(schema.agents)
+      .set({ model: AUTO_MODEL, credentialId: key.id })
+      .where(eq(schema.agents.id, f.agent.id));
+    const line = async () => {
+      const agent = await getAgent(f.db, f.org.id, f.agent.id);
+      return agent ? (await agentBrainLines(f.db, f.owner.id, f.org.id, [agent])).get(agent.id) : undefined;
+    };
+    expect((await line())?.maker).toBe("custom");
+    await f.db
+      .update(schema.providerCredentials)
+      .set({ options: { endpoint: { style: "openai", baseURL: "https://gw.example/v1", models: [] } } })
+      .where(eq(schema.providerCredentials.id, key.id));
+    expect(await line()).toMatchObject({ kind: "model" });
+    expect((await line())?.maker).toBeUndefined();
+  });
 });
 
 describe("new agents start on Automático", () => {

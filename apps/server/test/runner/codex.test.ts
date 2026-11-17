@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type { RunnerFrame } from "@agenteschat/adapters/machine-protocol";
+import { parseExecutors, type RunnerFrame } from "@agenteschat/adapters/machine-protocol";
+import { detectExecutors, parseCodexAppServerModels, probeCodexModels } from "../../runner/executors";
 import { CODEX_MCP_SERVER, codexMcpOverrides, handleMcpMessage, missionExecutorArgs } from "../../runner/mcp";
 import { agentWorkspace } from "../../runner/paths";
 import { executorCommand, parseOutputLine, TaskManager } from "../../runner/tasks";
@@ -186,3 +187,75 @@ test.skipIf(!posix)(
   },
   20_000,
 );
+
+test("Codex model/list parsing, app-server probe, and parseExecutors keep live models, efforts, and Fast tier", async () => {
+  const payload = {
+    jsonrpc: "2.0",
+    id: 2,
+    result: {
+      data: [
+        {
+          id: "gpt-6.1-terra",
+          displayName: "GPT-6.1 Terra",
+          isDefault: false,
+          hidden: false,
+          additionalSpeedTiers: ["fast"],
+          supportedReasoningEfforts: [
+            { reasoningEffort: "low" },
+            { reasoningEffort: "medium" },
+            { reasoningEffort: "high" },
+            { reasoningEffort: "xhigh" },
+            { reasoningEffort: "max" },
+            { reasoningEffort: "ultra" },
+          ],
+        },
+        {
+          id: "gpt-6.1-sol",
+          displayName: "GPT-6.1 Sol",
+          isDefault: true,
+          supportedReasoningEfforts: [{ reasoningEffort: "high" }],
+        },
+        { id: "hidden-internal", displayName: "Hidden", hidden: true },
+      ],
+    },
+  };
+  const parsed = parseCodexAppServerModels(payload);
+  expect(parsed).toEqual([
+    {
+      id: "gpt-6.1-terra",
+      label: "GPT-6.1 Terra",
+      efforts: ["low", "medium", "high", "xhigh", "max"],
+      fast: true,
+    },
+    { id: "gpt-6.1-sol", label: "GPT-6.1 Sol", efforts: ["high"], recommended: true },
+  ]);
+  expect(parseExecutors({ codex: { version: "codex-cli 0.169.0", models: parsed } }).codex?.models).toEqual(parsed);
+
+  const bin = tempDir("codex-app-");
+  dirs.push(bin);
+  const fakeScript = path.join(bin, "fake-codex.mjs");
+  writeFileSync(
+    fakeScript,
+    [
+      "import readline from 'node:readline';",
+      "const rl = readline.createInterface({ input: process.stdin });",
+      "rl.on('line', (l) => {",
+      "  const m = JSON.parse(l);",
+      `  if (m.id === 1) process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id: 1, result: {} }) + '\\n');`,
+      `  if (m.id === 2) process.stdout.write(JSON.stringify(${JSON.stringify(payload)}) + '\\n');`,
+      "});",
+    ].join("\n"),
+  );
+  const probed = await probeCodexModels([process.execPath, fakeScript]);
+  expect(probed).toEqual(parsed);
+
+  const detected = await detectExecutors(
+    async (_cmd, args) =>
+      args[0] === "--version" ? { status: 0, stdout: "codex-cli 0.169.0\n" } : { status: 1, stdout: "" },
+    {},
+    {},
+    () => false,
+    async () => parsed,
+  );
+  expect(detected.found.codex).toEqual({ version: "codex-cli 0.169.0", models: parsed });
+});

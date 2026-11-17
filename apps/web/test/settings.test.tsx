@@ -406,7 +406,11 @@ describe("Configurações do workspace", () => {
     expect(add.textContent).toContain(
       "O que seus agentes enviam é repassado por OpenRouter à empresa que faz ou hospeda o modelo, sob os termos e as configurações de privacidade de OpenRouter.",
     );
+    await click(within(add).getByRole("button", { name: "Buscar modelos" }));
+    await settle(4);
     await click(within(add).getByRole("button", { name: "Salvar chave" }));
+    await settle(2);
+    await click(screen().getByRole("button", { name: "Só listar os modelos" }));
     await settle(4);
     expect(state.calls.find((c) => c.method === "agents.addCredential")?.args[1]).toMatchObject({
       provider: "openrouter",

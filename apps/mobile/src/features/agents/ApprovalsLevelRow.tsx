@@ -26,8 +26,9 @@ const useLevelOptions = () => {
 
 /**
  * The web's Aprovações (ADR 0173) on the phone: how much the agent asks before acting, one row with the choice in
- * sight, "Segue o workspace" while it has no choice of its own. Whoever manages agents opens the three choices in a
- * sheet, and a pick saves at once. Anyone else reads the row.
+ * sight, "Segue o workspace" while it has no choice of its own. Whoever manages agents opens the three choices in the
+ * app's picker (the value's up-down mark: it changes in its row, no screen opens), and a pick saves at once. Anyone
+ * else reads the row.
  */
 export function ApprovalsLevelRow({ agent }: { agent: Agent }) {
   const { t } = useTranslation();
@@ -57,9 +58,7 @@ export function ApprovalsLevelRow({ agent }: { agent: Agent }) {
             ? t("approvalsLevel.follows")
             : t(`approvalsLevel.${level}.title`)
         }
-        {...(can(org, "manage_agents")
-          ? { chevron: true, disabled: update.isPending, onPress: () => void choose() }
-          : {})}
+        {...(can(org, "manage_agents") ? { menu: true, disabled: update.isPending, onPress: () => void choose() } : {})}
       />
     </GroupedList>
   );
@@ -96,7 +95,7 @@ export function WorkspaceApprovalsRow() {
         label={title}
         hint={{ name: t("common.about", { label: title }), text: t("approvalsLevel.workspaceHelp") }}
         value={t(`approvalsLevel.${level}.title`)}
-        chevron
+        menu
         disabled={set.isPending || !settings.data}
         onPress={() => void choose()}
       />

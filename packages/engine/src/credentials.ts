@@ -6,6 +6,7 @@ import {
   customModelOf,
   customModelsOf,
   type EndpointStyle,
+  ensureLiveCatalog,
   ensureOpenRouterModels,
   isAutoModel,
   isCustomModel,
@@ -196,6 +197,7 @@ export async function openRouterTestedEfforts(db: Executor, orgIds: readonly str
  * offers what its own key answered for (ADR 0187).
  */
 export async function pickerModels(db: Executor, orgIds: readonly string[] = []): Promise<[string, ModelInfo][]> {
+  await ensureLiveCatalog();
   if (await openRouterInUse(db)) await ensureOpenRouterModels();
   for (const orgId of orgIds) await loadEndpointModels(db, orgId);
   const tested = await openRouterTestedEfforts(db, orgIds);

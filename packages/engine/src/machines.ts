@@ -924,7 +924,13 @@ export async function announceRemovedMachine(
       event: { type: "agent.computer", agentId, target: { kind: "none" } },
     });
   }
+  // Lazy: usage-pause's graph reaches task-manager while agent-work, which imports this module's graph, is loading.
+  const { wakeAgentsBrainWaits } = await import("./usage-pause");
+  await wakeAgentsBrainWaits(deps, orgId, freed);
 }
+
+/** How long after a computer move its agent's waits are woken (`setAgentComputerTarget`). */
+export const TARGET_WAKE_DELAY_MS = 10_000;
 
 /** Which computer an agent uses (`GET …/computer` `target`). */
 export type ComputerTarget = { kind: "none" } | { kind: "machine"; machineId: string; name: string; online: boolean };
@@ -961,6 +967,8 @@ export async function setAgentComputerTarget(
   orgId: string,
   agentId: string,
   machineId: string | null,
+  /** false: the caller moves its waiting runs itself (`moveAgentsFromMachine`), or `setAgentBrain` follows. */
+  options: { wakeWaits?: boolean } = {},
 ): Promise<ComputerTarget> {
   const membership = await requirePermission(deps.db, actorId, orgId, "read");
   const agent = await getAgent(deps.db, orgId, agentId);
@@ -1015,5 +1023,11 @@ export async function setAgentComputerTarget(
   });
   // The machine it left and the one it joined list their agents again (protocol 9).
   await publishMachineAgentsChanged(deps.pubsub, orgId);
+  // Later than at once: an account on the new computer is saved next (`setAgentBrain`), and a run claimed between the
+  // two would find no sign-in there. That save's wake shares the job's dedupe key, so the job keeps this later time.
+  if (moved && options.wakeWaits !== false) {
+    const { wakeAgentsBrainWaits } = await import("./usage-pause");
+    await wakeAgentsBrainWaits(deps, orgId, [agentId], { delayMs: TARGET_WAKE_DELAY_MS });
+  }
   return target;
 }

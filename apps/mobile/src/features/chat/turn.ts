@@ -108,6 +108,29 @@ export function recentTurn(runId: string, now: number, maxAgeMs = 8000): TurnSna
   return s && now - s.at <= maxAgeMs && s.items.length > 0 ? s : null;
 }
 
+/** What each reply showed of its run's work (`keptTurn`), by message, the oldest first. */
+const SHOWN = new Map<string, TurnSnapshot>();
+export const SHOWN_MAX = 200;
+
+/**
+ * The work reply `messageId` shows from here (`recentTurn`): what it showed the first time, while the app runs. The
+ * list mounts a row again each time it comes back into view, and a reply that came back later than `recentTurn`
+ * reaches showed its saved work instead: the line it opened with and the messages it read were gone and the row was
+ * shorter, moving the rows around it.
+ */
+export function keptTurn(messageId: string, runId: string, now: number): TurnSnapshot | null {
+  const shown = SHOWN.get(messageId);
+  if (shown) return shown;
+  const s = recentTurn(runId, now);
+  if (!s) return null;
+  SHOWN.set(messageId, s);
+  if (SHOWN.size > SHOWN_MAX) {
+    const oldest = SHOWN.keys().next();
+    if (!oldest.done) SHOWN.delete(oldest.value);
+  }
+  return s;
+}
+
 // ── A stopped reply ──────────────────────────────────────────────────────────
 
 /**

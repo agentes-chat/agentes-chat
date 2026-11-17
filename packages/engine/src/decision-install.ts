@@ -6,7 +6,7 @@ import { notify } from "./notifications";
 import { pinnedOwner } from "./organizations";
 import { rightHandId } from "./right-hand";
 
-/** The background job that prepares a decision model (ADR 0188). */
+/** The background job that prepares a decision model (ADR 0195). */
 export const DECISION_INSTALL_JOB = "decision.model.install";
 
 const WAIT_MS = 10 * 60_000;

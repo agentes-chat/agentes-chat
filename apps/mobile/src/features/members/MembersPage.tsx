@@ -17,19 +17,35 @@ import { isBelow, leaves, removes } from "@agenteschat/client/lib/roles";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
+import { Alert } from "react-native";
 import { useOrg } from "@/providers/org";
 import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, Locked, PersonAvatar, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { openAgentAi } from "../ai/AgentAiScreen";
 import { Page } from "../me/parts";
 import { useOpenDm } from "../new/useOpenDm";
-import { rolesHref } from "../roles/parts";
-import { chooseAction } from "../settings/parts";
+import { RowBones, rolesHref } from "../roles/parts";
+import { chooseAction, Gap } from "../settings/parts";
 import { Face } from "../shared/Face";
+import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useMeId } from "../shared/hooks";
 import { errorHaptic, Loaded, successHaptic } from "../shared/parts";
-import { invitersOf, memberActions, memberLine, membersByName, whenWords } from "./logic";
+import { invitersOf, memberActions, memberLine, membersByName, outsideLine, whenWords } from "./logic";
+
+/** What leads each of a person's actions in their row's menu. */
+const ACT_ICON = { dm: "chat", roles: "shield", leave: "out", remove: "trash" } as const;
+/**
+ * How long a removal's preview (what goes with the person) is reused: it is read as the row's menu opens, so Remove
+ * confirms at once, and it is read again for any later removal.
+ */
+const REMOVAL_FRESH_MS = 30_000;
+
+/** The preview of removing someone, as the confirmation reads it. */
+const removalQuery = (api: ReturnType<typeof useApi>, orgId: string, userId: string) => ({
+  queryKey: ["org", orgId, "removal", userId],
+  queryFn: () => api.orgs.removal(orgId, userId),
+  staleTime: REMOVAL_FRESH_MS,
+});
 
 /**
  * Membros (ADR 0090): whoever may invite gets "Convidar pessoas" on top (what waits on them, the links and the
@@ -40,9 +56,12 @@ export function MembersPage() {
   const { t, i18n } = useTranslation();
   const { orgId, org } = useOrg();
   const c = useColors();
+  const api = useApi();
+  const qc = useQueryClient();
   const meId = useMeId();
   const people = usePeople(orgId);
-  const roles = useRoles(orgId).data?.roles ?? [];
+  const rolesQ = useRoles(orgId);
+  const roles = rolesQ.data?.roles ?? [];
   const invites = can(org, "invite_people");
   const list = people.data;
   const remove = useRemoveFlow();
@@ -66,8 +85,10 @@ export function MembersPage() {
             ? t("settings.section.members")
             : t("members.title")
       }
+      // A pull reads the people and their roles again.
+      onRefresh={() => Promise.allSettled([people.refetch(), rolesQ.refetch()])}
     >
-      <View style={styles.gap} />
+      <Gap />
       <Locked when={frozen} readable>
         {invites ? (
           <GroupedList>
@@ -89,6 +110,8 @@ export function MembersPage() {
                 roles: () => router.push(rolesHref.person(m.userId)),
                 remove: () => void remove(m),
               };
+              const removes = acts.includes("remove") || acts.includes("leave");
+              const outside = outsideLine(t, m);
               return (
                 <GroupedRow
                   key={m.userId}
@@ -97,13 +120,17 @@ export function MembersPage() {
                   }
                   label={m.userId === meId ? `${m.name}${t("common.youSuffix")}` : m.name}
                   sub={memberLine(t, i18n.language, m, roles)}
+                  {...(outside ? { belowText: outside } : {})}
                   {...(acts.length > 0
                     ? {
                         more: true,
-                        onPress: () =>
+                        onPress: () => {
+                          // What goes with them is read while the menu opens: Remove asks at once.
+                          if (removes) void qc.prefetchQuery(removalQuery(api, orgId, m.userId));
                           chooseAction(
                             m.name,
                             acts.map((a) => ({
+                              icon: ACT_ICON[a],
                               label: t(
                                 a === "dm"
                                   ? "profile.dm"
@@ -117,7 +144,8 @@ export function MembersPage() {
                               onPress: run[a === "leave" ? "remove" : a],
                             })),
                             t("common.cancel"),
-                          ),
+                          );
+                        },
                       }
                     : {})}
                 />
@@ -125,8 +153,16 @@ export function MembersPage() {
             })}
           </GroupedList>
         </Loaded>
+      ) : people.isError ? (
+        // A list that didn't load is not a spinner forever: what happened, and the way to ask again (or the pull).
+        <LoadFailed onRetry={() => void people.refetch()} />
       ) : (
-        <ActivityIndicator color={c.muted} style={styles.loading} />
+        // The rows' shape while they load: nothing jumps when they come.
+        <GroupedList>
+          <RowBones />
+          <RowBones name={56} />
+          <RowBones name={34} />
+        </GroupedList>
       )}
     </Page>
   );
@@ -154,11 +190,8 @@ export function useRemoveFlow() {
     let lines: string[];
     let preview: RemovalPreview;
     try {
-      preview = await qc.fetchQuery({
-        queryKey: ["org", orgId, "removal", m.userId],
-        queryFn: () => api.orgs.removal(orgId, m.userId),
-        staleTime: 0,
-      });
+      // Read as the row's menu opened: the confirmation shows at once, and waits only for a read still on its way.
+      preview = await qc.fetchQuery(removalQuery(api, orgId, m.userId));
       lines = removalLines(t, preview, { name: m.name, org: orgName, mine, meId: meId ?? "" });
     } catch (e) {
       return failed(e);
@@ -262,8 +295,3 @@ function Suggestions() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  gap: { height: 14 },
-  loading: { marginVertical: 16 },
-});

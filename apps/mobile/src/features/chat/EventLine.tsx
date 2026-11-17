@@ -3,12 +3,13 @@ import { type ConsultNoticeFold, pairItemOf } from "@agenteschat/client/lib/cons
 import { agentsByAnyHandle } from "@agenteschat/client/lib/directory";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { consultationOfNotice, noticeOf, stoppedNoticeOf } from "@agenteschat/client/lib/notices";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { EventPill, EventPillAction, EventPillText, ProviderLogo, useToast } from "@/ui";
 import { useDirectory, useOrgId, useWhen } from "../shared/hooks";
 import { ConsultPairRow } from "./ConsultGroup";
+import { keepOpen, keptOpen } from "./kept-sizes";
 import { eventLineOf } from "./logic";
 import { useQuietInset } from "./look";
 import { MessageText } from "./MessageText";
@@ -22,12 +23,23 @@ import { StoppedLine } from "./StoppedLine";
  * An answer the reply that asked shows (`ConsultGroup`, `fold`): nothing when that reply is close, the two agents'
  * pair row when it is farther up (a tap opens their conversation).
  * A task a person stopped has its own pill (`StoppedLine`), drawn in the stopped reply's when that reply is here.
+ * Drawn again only when what it shows changes (the conversation redraws its rows when a receipt or a thread changes),
+ * and opened, it comes back open when its row comes back into view (`keptOpen`).
  */
-export function EventLine({ message, fold, gap }: { message: Message; fold?: ConsultNoticeFold; gap: number }) {
+export const EventLine = memo(function EventLine({
+  message,
+  fold,
+  gap,
+}: {
+  message: Message;
+  fold?: ConsultNoticeFold;
+  gap: number;
+}) {
   const { t } = useTranslation();
   const dir = useDirectory();
   const when = useWhen();
-  const [open, setOpen] = useState(false);
+  const keep = `event:${message.id}`;
+  const [open, setOpen] = useState(() => keptOpen(keep));
   const inset = useQuietInset();
   // A person stopped one of the agent's tasks (ADR 0128): its own line, with the reason, or a way to give one.
   const stopped = stoppedNoticeOf(message.meta);
@@ -72,7 +84,10 @@ export function EventLine({ message, fold, gap }: { message: Message; fold?: Con
               key="show"
               label={open ? t("chat.notice.hide") : t("chat.notice.show")}
               expanded={open}
-              onPress={() => setOpen((o) => !o)}
+              onPress={() => {
+                keepOpen(keep, !open);
+                setOpen(!open);
+              }}
             />
           ) : null,
         ]}
@@ -92,7 +107,7 @@ export function EventLine({ message, fold, gap }: { message: Message; fold?: Con
       </EventPill>
     </View>
   );
-}
+});
 
 /**
  * "Pedir resposta" on what someone the agent doesn't answer wrote on GitHub: the agent answers them there, with this

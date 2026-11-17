@@ -5,11 +5,14 @@ import {
   ACCOUNT_FAILURE_EVERY_MS,
   adoptRestoredOperatorEvents,
   applyTaskDone,
+  approveJoinRequest,
   createInvitation,
   createOrganization,
   deleteAccount,
+  denyJoinRequest,
   drainOutbox,
   enableOperatorEvents,
+  endOutsideAccess,
   grantScopes,
   inviteLink,
   listOperatorEvents,
@@ -20,12 +23,14 @@ import {
   recordOperatorEvent,
   recordSession,
   recordSignUp,
+  removeMember,
+  requestOutsideAccess,
   resendInvitation,
   resetAccountFailures,
   type ToolSource,
   ValidationError,
 } from "../src";
-import { addUser, type Fixture, SECRET, setup } from "./fixtures";
+import { addMember, addUser, type Fixture, SECRET, setup } from "./fixtures";
 import { giveMail, imapAccount, mailSetup, runContext } from "./mail-fixtures";
 
 let close: (() => Promise<void>) | undefined;
@@ -379,4 +384,50 @@ test("account failures: one per account and cause every 10 minutes, none while e
     cause: "auth_rejected",
     code: "not_logged_in",
   });
+});
+
+test("outside access (ADR 0191): granted, denied and ended, each with its workspace and the person", async () => {
+  const f = await setup();
+  close = f.close;
+  enableOperatorEvents();
+  const deps = { db: f.db, pubsub: f.pubsub, publicUrl: "https://agentes.test" };
+  const orgId = f.org.id;
+  const ask = async (userId: string) =>
+    (await requestOutsideAccess(deps, { orgId, userId, outsideOf: "Example Consulting" })).id;
+  const letIn = async (userId: string) =>
+    approveJoinRequest(deps, deps.publicUrl, f.owner.id, orgId, await ask(userId));
+  const [ana, bia, cai, dan, eve] = await Promise.all(["ana", "bia", "cai", "dan", "eve"].map((n) => addUser(f.db, n)));
+  if (!ana || !bia || !cai || !dan || !eve) throw new Error("no people");
+
+  await denyJoinRequest(deps, f.owner.id, orgId, await ask(ana.id), null);
+  // Removed by someone in the workspace, and leaving on their own.
+  await letIn(bia.id);
+  await removeMember(f.db, f.owner.id, orgId, bia.id);
+  await letIn(cai.id);
+  await removeMember(f.db, cai.id, orgId, cai.id);
+  // Ended by the operator: while the request waits, and once they are in.
+  await ask(dan.id);
+  await endOutsideAccess(deps, orgId, dan.id);
+  await letIn(dan.id);
+  await endOutsideAccess(deps, orgId, dan.id);
+  // Their account deleted.
+  await letIn(eve.id);
+  await deleteAccount(f.db, eve.id);
+  // An ordinary member coming and going is none of it.
+  const fay = await addMember(f.db, orgId, "member", "fay");
+  await removeMember(f.db, f.owner.id, orgId, fay.id);
+
+  const events = (await allEvents(f.db)).filter((e) => e.type.startsWith("outside_access."));
+  expect(events.map((e) => [e.type, e.orgId, e.data])).toEqual([
+    ["outside_access.denied", orgId, { userId: ana.id }],
+    ["outside_access.granted", orgId, { userId: bia.id }],
+    ["outside_access.ended", orgId, { userId: bia.id }],
+    ["outside_access.granted", orgId, { userId: cai.id }],
+    ["outside_access.ended", orgId, { userId: cai.id }],
+    ["outside_access.ended", orgId, { userId: dan.id }],
+    ["outside_access.granted", orgId, { userId: dan.id }],
+    ["outside_access.ended", orgId, { userId: dan.id }],
+    ["outside_access.granted", orgId, { userId: eve.id }],
+    ["outside_access.ended", orgId, { userId: eve.id }],
+  ]);
 });

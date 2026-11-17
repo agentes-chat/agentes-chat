@@ -15,7 +15,13 @@ import {
 } from "@agenteschat/client/lib/right-hand";
 import { STICKER_STILL_T, WAVE_SECONDS } from "@agenteschat/ui/agent/stickers";
 import { stickerFrame } from "../../src/agent/sticker";
-import { agentStarters, buildConversations, homeLayout, rightHandPin } from "../../src/features/chats/logic";
+import {
+  agentStarters,
+  buildConversations,
+  pinnedRows,
+  recentRows,
+  rightHandPin,
+} from "../../src/features/chats/logic";
 import { SETTINGS_SECTIONS } from "../../src/features/settings/logic";
 import { agent, at } from "./fixtures";
 
@@ -28,12 +34,14 @@ const dm = (a: { id: string; name: string; handle: string }, minutesAgo: number,
   unread,
 });
 
-test("the right hand is its own row, its DM's unread kept, never one of Agentes' sorted rows", () => {
+test("the right hand is its own row, its DM's unread kept, never a row of Recentes nor a face on the strip", () => {
   const rows = buildConversations({ channels: [], dms: [dm(lodi, 1, 2), dm(theo, 5)], threads: [] });
   const { pin, rows: rest } = rightHandPin(rows, rightHandOf([theo, lodi]));
   expect(pin).toMatchObject({ kind: "dm", channelId: "d-a-lodi", unread: 2 });
-  const agents = homeLayout(rest, []).find((s) => s.key === "agents");
-  expect(agents?.rows.map((r) => r.key)).toEqual(["d:d-a-theo"]);
+  expect(recentRows(rest).map((r) => r.key)).toEqual(["d:d-a-theo"]);
+  // Even pinned (on the web), it holds no place on the strip: its field is right above.
+  const pins = { agents: [lodi.id, theo.id], channels: [], people: [] };
+  expect(pinnedRows(rest, agentStarters([theo]), pins).map((r) => r.key)).toEqual(["d:d-a-theo"]);
 });
 
 test("Conversas asks the right hand from its own field under the greeting, never one of Agentes' rows", () => {
@@ -228,10 +236,12 @@ test("on a hold for its first plan the phone's card leads with the plan row: whe
 test("its Computador row is always there: it opens the viewer's own place, or says why it has none", () => {
   const screen = readFileSync(new URL("../../src/features/right-hand/SettingsScreen.tsx", import.meta.url), "utf8");
   expect(screen).toContain("      <Computer agentId={agent.id} />\n");
-  expect(screen).toContain("const none = rightHandNoComputer(view.desktopQ.data?.reason);");
+  expect(screen).toContain("const none = rightHandNoComputer(view.desktopQ.data?.reason, selfHosted(auth.data));");
   // With none there is nothing to open: no chevron, no press, and the reason under the row.
   expect(screen).toContain('<GroupedRow icon="laptop" label={t("agentComputer.button")} />');
-  expect(screen).toContain('<GroupedFooter>{t(none ?? "rightHand.computerYours")}</GroupedFooter>');
+  expect(screen).toContain('t(none ?? "rightHand.computerYours")');
+  // On a self-hosted server with none, the line links to making this server the agents' computer.
+  expect(screen).toContain('none === "rightHand.computerNoHomeServer" ? (');
   // No computer of the workspace's own: whoever may add one opens Dispositivos from the row.
   expect(screen).toContain('const add = none === "rightHand.computerNoHome" && can(org, "pair_computers");');
   expect(screen).toContain('onPress={() => router.push("/settings/devices")}');

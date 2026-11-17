@@ -236,6 +236,11 @@ export const words: EmailWords = {
     preheader: "Keur het goed of weiger het in Leden. Er gebeurt niets tot je antwoordt.",
     headline: "Er wacht een verzoek om lid te worden",
     body: (org) => ["Diegene opende de uitnodigingslink van ", { b: org }, " en vraagt om lid te worden."],
+    outside: (by) => [
+      "Diegene werkt voor ",
+      { b: by },
+      " en vraagt om lid te worden als externe medewerker. Diegene neemt geen plek in je abonnement in, en je kunt diegene altijd verwijderen.",
+    ],
     note: "Keur alleen mensen goed die je verwacht. Ze worden lid, tenzij je op de pagina een andere rol kiest.",
     approve: "Goedkeuren",
     deny: "Weigeren",

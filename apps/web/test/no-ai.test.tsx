@@ -20,6 +20,7 @@ import {
   seedState,
   withRightHand,
 } from "./fake-api";
+import { withNamed } from "./fakes/machines";
 import { hintOf, shownText } from "./hint";
 import { renderApp, screen, settle } from "./render";
 
@@ -969,10 +970,12 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
   const connectAda = async (state: State, brain: Partial<AgentBrain> = {}) => {
     const api = createFakeApi(state);
     const viewOf = api.agents.brain;
+    // Its accounts as the server sends them: whether each name is the automatic one.
+    const ada = brain.accounts ? { ...brain, accounts: brain.accounts.map(withNamed) } : brain;
     api.agents.brain = async (orgId, agentId) => ({
       ...(await viewOf(orgId, agentId)),
       ownSignIn: false,
-      ...(agentId === ADA_ID ? brain : {}),
+      ...(agentId === ADA_ID ? ada : {}),
     });
     await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
     await settle(5);
@@ -1008,18 +1011,18 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     const { box, group } = await connectAda(state, { accounts: [pessoal, plus, team] });
     // Four in all: the three with most room, picked the one used in one click, and the way to every one.
     expect(group().firstElementChild?.textContent).toBe("Com mais folga agora");
-    expect(haveTitles(box)).toEqual(["Claude Team", "Claude Pessoal · Max", "ChatGPT Plus"]);
-    expect(pickedHave(box)).toBe("Claude Team");
+    expect(haveTitles(box)).toEqual(["team@example.com", "Claude Pessoal", "walt@gmail.com"]);
+    expect(pickedHave(box)).toBe("team@example.com");
     await click(within(box).getByRole("button", { name: "Ver as 4 contas" }));
-    expect(haveTitles(box)).toEqual(["Claude Team", "Claude Pessoal · Max", "ChatGPT Plus", "Claude da Acme"]);
+    expect(haveTitles(box)).toEqual(["team@example.com", "Claude Pessoal", "walt@gmail.com", "Claude da Acme"]);
     await click(within(box).getByRole("button", { name: "Voltar" }));
     expect(within(box).getByRole("button", { name: "Conectar outra IA" })).toBeTruthy();
-    await useHave(box, "Claude Team");
+    await useHave(box, "team@example.com");
     expect(calls(state, "agents.setBrain").map((c) => c.args)).toEqual([
       [ORG_ID, ADA_ID, { brain: "claude_code", account: "acct_team" }],
     ]);
     expect(calls(state, "machines.beginAccountLogin")).toHaveLength(0);
-    expect(box.textContent).toContain("Ada agora pensa com Claude Team.");
+    expect(box.textContent).toContain("Ada agora pensa com team@example.com.");
     // On his plan she answers only him until he lets everyone in (ADR 0059 §5).
     expect(within(box).getByRole("switch", { name: "Atende outras pessoas" }).getAttribute("aria-checked")).toBe(
       "false",
@@ -1029,11 +1032,28 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     expect(screen().queryByRole("dialog")).toBeNull();
   });
 
+  test("a 60-plus-character account name: Usar … is the foot's whole name, its words in the label a narrow dialog cuts", async () => {
+    const state = walters(withCard(), ADA_ID);
+    const long = acct({
+      id: "acct_long",
+      label: "Conta compartilhada do time de atendimento ao cliente da Acme",
+      plan: "max",
+    });
+    const { box } = await connectAda(state, { accounts: [long] });
+    const use = within(box).getByRole("button", {
+      name: "Usar Conta compartilhada do time de atendimento ao cliente da Acme",
+    });
+    expect(use.closest(".ac-dialog__foot")).not.toBeNull();
+    expect(use.querySelector(":scope > .ac-btn__label")?.textContent).toBe(
+      "Usar Conta compartilhada do time de atendimento ao cliente da Acme",
+    );
+  });
+
   test("Só algumas pessoas with nobody picked: Atende outras pessoas lets nobody in, so it goes back off and says why", async () => {
     const state = walters(withCard(), ADA_ID);
     for (const a of state.agents) if (a.id === ADA_ID) a.audience = { mode: "people", userIds: [] };
     const { box } = await connectAda(state, { accounts: [team] });
-    await useHave(box, "Claude Team");
+    await useHave(box, "team@example.com");
     const replies = () => within(box).getByRole("switch", { name: "Atende outras pessoas" });
     await click(replies(), 6);
     expect(calls(state, "agents.setBrain").at(-1)?.args).toEqual([ORG_ID, ADA_ID, { onlyOwner: false }]);
@@ -1046,7 +1066,7 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
   test("an account another agent thinks with: used here too, a sign-in of that account for her, its email Claude's hint", async () => {
     const state = walters(withCard(), ADA_ID);
     const { box } = await connectAda(state, { accounts: [pessoal] });
-    await useHave(box, "Claude Pessoal · Max");
+    await useHave(box, "Claude Pessoal");
     expect(calls(state, "agents.setBrain")).toHaveLength(0);
     // Its plan's steps, for her.
     expect(within(box).getByRole("region", { name: "Seu plano do Claude" })).toBeTruthy();
@@ -1060,7 +1080,7 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     const state = walters(withCard(), ADA_ID);
     const forAll = acct({ id: "acct_all", label: "Claude Max", plan: "max", shared: true, usedBy: ["Atlas"] });
     const { box } = await connectAda(state, { accounts: [pessoal, forAll] });
-    await useHave(box, "Claude Pessoal · Max");
+    await useHave(box, "Claude Pessoal");
     expect(within(box).getByRole("region", { name: "Seu plano do Claude" })).toBeTruthy();
     expect(within(box).queryByRole("button", { name: /^Usar Claude Max/ })).toBeNull();
     expect(within(box).queryByRole("button", { name: "Outra conta" })).toBeNull();
@@ -1076,7 +1096,7 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
       accounts: [pessoal],
       computer: { machineId: "machine_1", name: "MacBook", online: false },
     });
-    await useHave(box, "Claude Pessoal · Max");
+    await useHave(box, "Claude Pessoal");
     await click(within(box).getByRole("button", { name: "Usar uma chave de API agora" }));
     expect(within(box).getByRole("region", { name: "Chave de API" })).toBeTruthy();
     expect(aiSelect(box, "Provedor")).toBeTruthy();
@@ -1087,7 +1107,7 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     const out = acct({ id: "acct_out", label: "Claude 08", email: "it@example.org", status: "signed_out" });
     const { api, box } = await connectAda(state, { accounts: [out] });
     const title = haveTitles(box)[0] ?? "";
-    expect(title).toStartWith("Claude 08");
+    expect(title).toStartWith("it@example.org");
     await useHave(box, title);
     expect(within(box).getByRole("region", { name: "Seu plano do Claude" })).toBeTruthy();
     fakeMachinesOf.get(api)?.endLogin("login_1", { state: "done", account: { ...out, status: "active" } });
@@ -1099,7 +1119,7 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
       [ORG_ID, ADA_ID, { brain: "claude_code", account: "acct_out" }],
     ]);
     expect(within(box).getByRole("region", { name: "Seu plano do Claude" }).textContent).toContain(
-      "Ada agora pensa com Claude 08.",
+      "Ada agora pensa com it@example.org.",
     );
   });
 
@@ -1107,13 +1127,13 @@ describe("Conectar uma IA for an agent with no AI: what the person already has, 
     const state = onClaudeCode(walters(withCard(), ADA_ID));
     const { box, group } = await connectAda(state, { brain: "claude_code", accounts: [team] });
     expect(group()).toBeTruthy();
-    expect(pickedHave(box)).toBe("Claude Team");
-    await useHave(box, "Claude Team");
+    expect(pickedHave(box)).toBe("team@example.com");
+    await useHave(box, "team@example.com");
     expect(calls(state, "agents.setBrain").map((c) => c.args)).toEqual([
       [ORG_ID, ADA_ID, { brain: "claude_code", account: "acct_team" }],
     ]);
     expect(calls(state, "machines.beginAccountLogin")).toHaveLength(0);
-    expect(box.textContent).toContain("Ada agora pensa com Claude Team.");
+    expect(box.textContent).toContain("Ada agora pensa com team@example.com.");
   });
 
   test("the workspace's API key: used, she thinks with it on the workspace's model", async () => {

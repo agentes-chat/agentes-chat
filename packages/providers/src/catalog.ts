@@ -128,6 +128,10 @@ export interface ModelInfo {
   unpriced?: true;
   /** A workspace endpoint's name (ADR 0146), which the pickers group its models under. */
   endpoint?: string;
+  /** Release date (`YYYY-MM-DD`) when known from a live catalog, used to rank newer models first. */
+  releaseDate?: string;
+  /** ChatGPT/Codex Fast service tier reported by a live catalog or runner probe. */
+  fast?: boolean;
 }
 
 /** The sizes "Automático" chooses between: a fast cheap model, the everyday one, the strongest. */
@@ -159,6 +163,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 10000, output: 50000, cacheRead: 250, cacheWrite: 12500 },
     contextWindow: 1_000_000,
     serverSideFallback: true,
+    reasoning: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
   },
   "claude-opus-5-5": {
     provider: "anthropic",
@@ -166,6 +172,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 4000, output: 20000, cacheRead: 200, cacheWrite: 5000 },
     contextWindow: 1_000_000,
     serverSideFallback: true,
+    reasoning: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
     tier: "large",
   },
   "claude-sonnet-5-5": {
@@ -174,6 +182,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2500 },
     contextWindow: 1_000_000,
     serverSideFallback: true,
+    reasoning: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
     recommended: true,
     tier: "medium",
   },
@@ -184,6 +194,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     longContext: { aboveInputTokens: 100_000, prices: { input: 500, output: 2500, cacheRead: 50, cacheWrite: 625 } },
     contextWindow: 1_000_000,
     serverSideFallback: false,
+    reasoning: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
     cheap: true,
     router: true,
     leastThinking: "off",
@@ -206,6 +218,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     contextWindow: 1_050_000,
     serverSideFallback: false,
     reasoning: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
   },
   "gpt-6.1-sol": {
     provider: "openai",
@@ -218,6 +231,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     contextWindow: 1_050_000,
     serverSideFallback: false,
     reasoning: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
     recommended: true,
     tier: "medium",
   },
@@ -233,6 +247,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     contextWindow: 1_050_000,
     serverSideFallback: false,
     reasoning: true,
+    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
   },
   "gpt-6-sol": {
     provider: "openai",
@@ -245,6 +260,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     contextWindow: 1_050_000,
     serverSideFallback: false,
     reasoning: true,
+    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
   },
   "gpt-6-luna": {
     provider: "openai",
@@ -254,6 +270,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     contextWindow: 1_050_000,
     serverSideFallback: false,
     reasoning: true,
+    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
     cheap: true,
     router: true,
     leastThinking: "off",
@@ -269,6 +286,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     intro: { until: "2026-12-01", prices: { input: 2000, output: 10000, cacheRead: 100, cacheWrite: 2000 } },
     contextWindow: 1_048_576,
     serverSideFallback: false,
+    reasoning: true,
+    efforts: ["low", "medium", "high"],
     tier: "large",
   },
   "gemini-3.8-flash": {
@@ -278,6 +297,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     intro: { until: "2027-01-01", prices: { input: 750, output: 3750, cacheRead: 75, cacheWrite: 750 } },
     contextWindow: 1_048_576,
     serverSideFallback: false,
+    reasoning: true,
+    efforts: ["low", "medium", "high"],
     recommended: true,
     tier: "medium",
   },
@@ -288,6 +309,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 300, output: 2500, cacheRead: 30, cacheWrite: 300 },
     contextWindow: 1_048_576,
     serverSideFallback: false,
+    reasoning: true,
+    efforts: ["minimal", "low", "medium", "high"],
     cheap: true,
     router: true,
     leastThinking: "minimal",
@@ -302,6 +325,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 300, output: 1200, cacheRead: 6, cacheWrite: 300 },
     contextWindow: 1_000_000,
     serverSideFallback: false,
+    reasoning: true,
+    efforts: ["low", "high", "max"],
     cheap: true,
     router: true,
     leastThinking: "off",
@@ -314,6 +339,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 1320, output: 3960, cacheRead: 44, cacheWrite: 1320 },
     contextWindow: 1_000_000,
     serverSideFallback: false,
+    reasoning: true,
+    efforts: ["low", "high", "max"],
     tier: "large",
   },
   // K3.1 Pro is Kimi's strongest and cheapest; K3 (previous flagship) stays choosable, never picked by "Automático".
@@ -323,6 +350,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 2000, output: 10000, cacheRead: 200, cacheWrite: 2000 },
     contextWindow: 1_048_576,
     serverSideFallback: false,
+    reasoning: true,
+    efforts: ["low", "high", "max"],
     recommended: true,
     tier: "medium",
   },
@@ -332,6 +361,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 3000, output: 15000, cacheRead: 300, cacheWrite: 3000 },
     contextWindow: 1_048_576,
     serverSideFallback: false,
+    reasoning: true,
+    efforts: ["low", "high", "max"],
   },
   "glm-5.3": {
     provider: "zai",
@@ -339,6 +370,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 1400, output: 4400, cacheRead: 260, cacheWrite: 1400 },
     contextWindow: 1_000_000,
     serverSideFallback: false,
+    reasoning: true,
+    efforts: ["low", "high", "max"],
     recommended: true,
     tier: "medium",
   },
@@ -349,6 +382,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 150, output: 500, cacheRead: 30, cacheWrite: 150 },
     contextWindow: 1_000_000,
     serverSideFallback: false,
+    reasoning: true,
+    efforts: ["low", "high", "max"],
     cheap: true,
     router: true,
     tier: "small",
@@ -362,6 +397,7 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     longContext: { aboveInputTokens: 512_000, prices: { input: 600, output: 2400, cacheRead: 120, cacheWrite: 600 } },
     contextWindow: 1_000_000,
     serverSideFallback: false,
+    reasoning: true,
     router: true,
     leastThinking: "off",
     recommended: true,
@@ -373,6 +409,8 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
     prices: { input: 150, output: 600, cacheRead: 15, cacheWrite: 150 },
     contextWindow: 1_000_000,
     serverSideFallback: false,
+    reasoning: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
     cheap: true,
     tier: "small",
   },
@@ -605,6 +643,65 @@ export const MODEL_CATALOG: Record<string, ModelInfo> = {
 /** Models a provider lists at run time (OpenRouter's, `openrouter.ts`), beside the fixed catalog. */
 let listed = new Map<string, ModelInfo>();
 
+/** Active frontier models fetched from `models.dev/api.json` (`live-catalog.ts`), ordered per provider. */
+let liveActiveOrder: [string, ModelInfo][] | null = null;
+/** All non-deprecated live models (plus deprecated fallback entries for resolving `modelInfo(id)`). */
+let liveKnown = new Map<string, ModelInfo>();
+/** Live reasoning efforts for xAI / Grok Build models discovered via `models.dev/api.json`. */
+let liveXaiEfforts = new Map<string, readonly RequestEffort[]>();
+
+/** Merges curated routing/tier/pricing metadata from static `MODEL_CATALOG` over a fresh live entry. */
+function mergeWithStatic(id: string, live: ModelInfo): ModelInfo {
+  const curated = Object.hasOwn(MODEL_CATALOG, id) ? MODEL_CATALOG[id] : undefined;
+  if (!curated) return live;
+  return {
+    ...live,
+    ...(curated.intro ? { intro: curated.intro } : {}),
+    ...(curated.offPeak ? { offPeak: curated.offPeak } : {}),
+    ...(curated.longContext && !live.longContext ? { longContext: curated.longContext } : {}),
+    ...(curated.leastThinking ? { leastThinking: curated.leastThinking } : {}),
+    ...(curated.cheap ? { cheap: curated.cheap } : {}),
+    ...(curated.router ? { router: curated.router } : {}),
+    ...(curated.recommended ? { recommended: curated.recommended } : {}),
+    ...(curated.tier ? { tier: curated.tier } : {}),
+    ...(curated.structuredOutput === false ? { structuredOutput: false as const } : {}),
+    ...(curated.pick !== undefined ? { pick: curated.pick } : {}),
+    serverSideFallback: curated.serverSideFallback,
+    // Keep offline curated efforts only if the live entry did not report any.
+    efforts: live.efforts ?? curated.efforts,
+  };
+}
+
+/** Replaces the live catalog loaded from `models.dev/api.json`; pass `null` to restore static fallback. */
+export function setLiveCatalogModels(
+  active: [string, ModelInfo][] | null,
+  known?: ReadonlyMap<string, ModelInfo>,
+  xaiEfforts?: ReadonlyMap<string, readonly RequestEffort[]>,
+) {
+  if (!active) {
+    liveActiveOrder = null;
+    liveKnown = new Map();
+    liveXaiEfforts = new Map();
+    return;
+  }
+  const nextKnown = new Map<string, ModelInfo>();
+  if (known) {
+    for (const [id, m] of known) nextKnown.set(id, mergeWithStatic(id, m));
+  }
+  const nextActive: [string, ModelInfo][] = [];
+  for (const [id, m] of active) {
+    const merged = mergeWithStatic(id, m);
+    nextActive.push([id, merged]);
+    nextKnown.set(id, merged);
+  }
+  liveActiveOrder = nextActive;
+  liveKnown = nextKnown;
+  liveXaiEfforts = xaiEfforts ? new Map(xaiEfforts) : new Map();
+}
+
+/** Live xAI (`grok-*`) reasoning efforts when discovered from `models.dev/api.json`. */
+export const xaiLiveEffortsOf = (modelId: string): readonly RequestEffort[] | undefined => liveXaiEfforts.get(modelId);
+
 /** Replaces the models listed at run time. A catalog id is never shadowed. */
 export function setListedModels(models: Record<string, ModelInfo>) {
   listed = new Map(Object.entries(models).filter(([id]) => !Object.hasOwn(MODEL_CATALOG, id)));
@@ -669,12 +766,33 @@ export const customModelOf = (orgId: string, id: string) => custom.get(orgId)?.g
  * since, for the cost of a call still running); undefined for any other id.
  */
 export function modelInfo(model: string): ModelInfo | undefined {
+  if (isCustomModel(model)) return lastKnown.get(model);
+  const live = liveKnown.get(model);
+  if (live) return live;
   if (Object.hasOwn(MODEL_CATALOG, model)) return MODEL_CATALOG[model];
-  return isCustomModel(model) ? lastKnown.get(model) : listed.get(model);
+  return listed.get(model);
 }
 
-/** Every model: the catalog's, then the listed ones in their list's order. */
-export const listedModels = (): [string, ModelInfo][] => [...Object.entries(MODEL_CATALOG), ...listed];
+/** Every model: the catalog's (updated by live catalog when loaded), plus new live models and OpenRouter. */
+export const listedModels = (): [string, ModelInfo][] => {
+  if (!liveActiveOrder) return [...Object.entries(MODEL_CATALOG), ...listed];
+  const seen = new Set<string>();
+  const out: [string, ModelInfo][] = [];
+  for (const [id, fallback] of Object.entries(MODEL_CATALOG)) {
+    seen.add(id);
+    out.push([id, liveKnown.get(id) ?? fallback]);
+  }
+  for (const [id, m] of liveActiveOrder) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push([id, m]);
+  }
+  for (const [id, m] of listed) {
+    if (seen.has(id)) continue;
+    out.push([id, m]);
+  }
+  return out;
+};
 
 /**
  * The model a provider's system tasks use (summaries, reflection): its cheap

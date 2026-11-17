@@ -389,6 +389,13 @@ test("a provider refused this server's own OAuth app: what's wrong and who fixes
  * hit goes in `KNOWN` instead.
  */
 const PLAIN_LINE = new Set([
+  // Only the operator API ends an outside collaborator's access (ADR 0191): no person in the apps meets its refusal.
+  "outside_access.member",
+  // Only the operator API registers the hosts a server answers on (ADR 0194): no person in the apps meets these.
+  "host.invalid",
+  "host.own",
+  "host.too_many",
+  "host.needs_https",
   // Only an agent names a project by a name that isn't one, and the pickers offer only projects that exist.
   "issue_project.unknown",
   "issue_project.not_found",
@@ -413,6 +420,8 @@ const PLAIN_LINE = new Set([
   "account.invalid_plan",
   // "Quem usa" offers only Todos and Só eu: another value is a client fault.
   "account.invalid_serves",
+  // An order's place comes from a drag or Move up and Move down, never typed: a bad one is a client fault.
+  "account.invalid_order",
   // A workspace change's card offers Apply, Dismiss and Send on only to whom may (`mayApplyCard`).
   "action_card.not_allowed",
   "action_card.not_requester",
@@ -508,6 +517,10 @@ const PLAIN_LINE = new Set([
   "request_expired",
   "request_unknown",
   "request_used",
+  // Only the operator API's reveal door refuses with these (ADR 0056): no person in the apps meets them.
+  "reveal.limit_minute",
+  "reveal.limit_workspace",
+  "reveal.no_error",
   "right_hand.missing",
   "right_hand_approvals.budget",
   // "Quem pode" sends only the rows and steps the cargo page draws (`areaRows`, `rowMax`): another is a client fault.

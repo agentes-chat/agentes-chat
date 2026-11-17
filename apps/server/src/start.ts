@@ -86,7 +86,12 @@ import {
   widenDmHowTos,
 } from "@agenteschat/engine";
 import { type AgentesModule, type Edition, type ModuleContext, resolveAdapters } from "@agenteschat/modules";
-import { createModelProviders, enableOpenRouterModels } from "@agenteschat/providers";
+import {
+  createModelProviders,
+  enableLiveCatalog,
+  enableOpenRouterModels,
+  ensureLiveCatalog,
+} from "@agenteschat/providers";
 import { createApp } from "./app";
 import { createAuth } from "./auth";
 import { buildEngine } from "./engine";
@@ -373,7 +378,9 @@ async function boot(
   enableCaches();
   // A write in any process (the app, a worker) clears what every process cached of it.
   shareCacheInvalidations(adapters.pubsub);
-  // OpenRouter's public model list (ADR 0087): read only while a workspace has an OpenRouter key.
+  // Live public model catalog (ADR 0198) + OpenRouter's public model list (ADR 0087).
+  enableLiveCatalog(fetch);
+  void ensureLiveCatalog();
   enableOpenRouterModels(fetch);
   applyBootSwitches(config);
   enableAccountContacts(config.PUBLIC_URL, adapters.email);
@@ -626,9 +633,11 @@ async function boot(
         version: release,
         log,
         pubsub: adapters.pubsub,
+        blobs: adapters.platformBlobs,
         hub: engine.machineHub,
         emails: adapters.email.delivers,
         humanCheck: adapters.humanCheck,
+        rateLimiter: adapters.rateLimiter,
         sessions: engine.sessions,
       });
   if (operator) {

@@ -33,7 +33,7 @@ import { HelpLink } from "@/components/HelpLink";
 import { CHIP, JevSettings } from "./Jev";
 
 /**
- * Settings › AI and usage: who decides, as one list (ADR 0188). Jev is the default and keeps its key; the other three
+ * Settings › AI and usage: who decides, as one list (ADR 0195). Jev is the default and keeps its key; the other three
  * replace it, and each row is the same row — a name, what it is, its state, and, once chosen, its settings under it.
  * Choosing another while one is on asks first: the current model is removed and the new one may take a while.
  */

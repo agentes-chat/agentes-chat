@@ -128,7 +128,7 @@ import { createMockCustomConnectors } from "./fakes/custom-connectors";
 import { createFakeDashboards, type FakeDashboards } from "./fakes/dashboards";
 import { createFakeDatabases, type FakeDatabases } from "./fakes/databases";
 import { createFakeDevices, type FakeDevices } from "./fakes/devices";
-import { createFakeMachines, type FakeMachines } from "./fakes/machines";
+import { createFakeMachines, type FakeMachines, withNamed } from "./fakes/machines";
 import { createFakeMail, type FakeMail } from "./fakes/mail";
 import { createFakeMissions } from "./fakes/missions";
 import { createFakeNotifications } from "./fakes/notifications";
@@ -365,8 +365,12 @@ export interface FakeState {
   failPosts?: boolean | ApiError;
   /** `chat.post` waits for this (to see the pending state). */
   holdPosts?: Promise<void>;
+  /** `orgs.setAccent` waits for this (to see the pending state). */
+  setAccentGate?: Promise<void>;
   /** What `orgs.billingLink` throws (default: a link on billing.example.com). */
   billingLinkError?: ApiError;
+  /** What `account.referralsLink` throws (default: a link on refer.example.com). */
+  referralsLinkError?: ApiError;
   /** A new workspace's standing (`orgs.create`): agentes.chat Cloud starts it waiting for its first plan. */
   newWorkspaceStanding?: OrgStanding;
   /** `orgs.limits` (ADR 0079); unset = no limits, the members counted from `members`. */
@@ -391,7 +395,7 @@ export interface FakeState {
   telemetry?: ServerTelemetry;
   /** `system.jev`: the installation's Jev key; unset = I'm not its owner on a self-hosted server (null). */
   jev?: JevKey;
-  /** `system.decisionModel`: the installation's optional decision model (ADR 0188); unset = null. */
+  /** `system.decisionModel`: the installation's optional decision model (ADR 0195); unset = null. */
   decisionModel?: DecisionModel;
   /** `system.decisionHost`: this server's size and the local model that fits it. */
   decisionHost?: DecisionHost;
@@ -662,6 +666,14 @@ export const OPENROUTER_MODELS: Model[] = [
     provider: "openrouter",
     inputUsdPerMTok: 0,
     outputUsdPerMTok: 0,
+    pick: false,
+  },
+  {
+    id: "qwen/qwen3-coder",
+    label: "Qwen: Qwen3 Coder",
+    provider: "openrouter",
+    inputUsdPerMTok: 0.2,
+    outputUsdPerMTok: 0.8,
     pick: false,
   },
 ];
@@ -1611,6 +1623,11 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         firstRun: false,
         ...state.authConfig,
       }),
+      referralsLink: async (returnTo) => {
+        log("account.referralsLink", returnTo);
+        if (state.referralsLinkError) throw state.referralsLinkError;
+        return { url: "https://refer.example.com/link?t=v1", expiresAt: NOW.toISOString() };
+      },
       signInOptions: async (input, humanCheck) => {
         if (humanCheck !== undefined) state.calls.push({ method: "account.signInOptions", args: [input, humanCheck] });
         return state.signInOptions ?? { account: false, password: false, providers: [], canSignUp: true };
@@ -1906,6 +1923,18 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         org.chatPrefs = { ...org.chatPrefs, ...patch };
         return org.chatPrefs;
       },
+      setConversationWallpaper: async (orgId, channelId, wallpaper) => {
+        log("orgs.setConversationWallpaper", orgId, channelId, wallpaper);
+        const org = state.me?.organizations.find((o) => o.id === orgId);
+        if (!org) throw new ApiError(404, "not_found", "Organization not found");
+        const { [channelId]: _old, ...rest } = org.chatPrefs?.wallpapers ?? {};
+        org.chatPrefs = { ...org.chatPrefs, wallpapers: wallpaper ? { ...rest, [channelId]: wallpaper } : rest };
+        return org.chatPrefs;
+      },
+      uploadWallpaperPhoto: async (orgId, input) => {
+        log("orgs.uploadWallpaperPhoto", orgId, input.contentType);
+        return { url: "/api/app/wallpapers/me/0123456789abcdef.jpg" };
+      },
       sidebarItems: async () => structuredClone(state.sidebarItems ?? {}),
       setSidebarItem: async (orgId, item, place) => {
         log("orgs.setSidebarItem", orgId, item, place);
@@ -1972,6 +2001,18 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
       removeLogo: async (orgId) => {
         log("orgs.removeLogo", orgId);
         setOrgLogo(orgId, null);
+      },
+      setAccent: async (orgId, accent) => {
+        log("orgs.setAccent", orgId, accent);
+        if (state.setAccentGate) await state.setAccentGate;
+        if (state.me) {
+          const next = accent?.toLowerCase() ?? null;
+          state.me = {
+            ...state.me,
+            organizations: state.me.organizations.map((o) => (o.id === orgId ? { ...o, accent: next } : o)),
+          };
+        }
+        return { accent: accent?.toLowerCase() ?? null };
       },
       billingLink: async (orgId, from, _returnTo, plan) => {
         log("orgs.billingLink", orgId, from, ...(plan ? [plan] : []));
@@ -2725,7 +2766,14 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         ],
       }),
       credentials: async () => [...state.credentials],
-      openRouterModels: async () => ({ models: [] }),
+      openRouterModels: async () => ({
+        models: OPENROUTER_MODELS.map((m) => ({
+          id: m.id,
+          label: m.label,
+          pick: m.pick === true,
+          ...(m.tier ? { tier: m.tier } : {}),
+        })),
+      }),
       setOpenRouterModels: async () => {
         throw new Error("not in this fake");
       },
@@ -2906,7 +2954,8 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         const agent = state.agents.find((a) => a.id === agentId);
         if (me.organizations[0]?.role === "member" && agent?.ownerUserId !== me.user.id && !agent?.builtin)
           throw new ApiError(403, "agent.not_owner", "Only an admin or the agent's owner");
-        return structuredClone(brainOf(agentId));
+        const view = structuredClone(brainOf(agentId));
+        return { ...view, accounts: view.accounts.map(withNamed) };
       },
       brainMachines: async (orgId) => {
         log("agents.brainMachines", orgId);
@@ -2961,7 +3010,6 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           brain,
           model,
           effectiveModel: brain === "model" ? null : (model ?? option?.defaultModel ?? null),
-          fallback: input.fallback ?? b.fallback,
           // ADR 0041: another brain kind starts on the computer's own account.
           account: input.account !== undefined ? input.account : changed ? null : b.account,
           effort: input.effort !== undefined ? input.effort : b.effort,
@@ -4453,6 +4501,7 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
           kind: a.kind,
           accountId: a.id,
           label: a.label,
+          ...(a.named !== undefined ? { named: a.named } : {}),
           plan: a.plan,
           provider: a.provider,
           ownerName: a.ownerName,
@@ -4489,8 +4538,6 @@ export function fakeAgentBrain(agentId: string, patch: Partial<AgentBrain> = {})
     brain: "model",
     model: null,
     effectiveModel: null,
-    fallback: true,
-    extraUsage: true,
     computer: { machineId: "machine_1", name: "MacBook", online: true },
     options: [
       { kind: "model", available: true, models: [], defaultModel: null },
@@ -4528,6 +4575,8 @@ export function fakeAgentBrain(agentId: string, patch: Partial<AgentBrain> = {})
     ownUsage: {},
     ...patch,
   };
+  // Its accounts as the server sends them: whether each name is the automatic one.
+  brain.accounts = brain.accounts.map(withNamed);
   // The computers the person may give the agent: the MacBook, with what it offers.
   if (patch.machines) return brain;
   const computer = brain.computer ?? { machineId: "machine_1", name: "MacBook", online: true };

@@ -24,7 +24,7 @@ const call = (model: string, extra: Record<string, unknown> = {}) => ({
 describe("OpenAI Decisions", () => {
   test("predicate, choices and levels, answers by name", async () => {
     // biome-ignore lint/suspicious/noExplicitAny: the fake transport's request body is JSON, read field by field.
-    let seen: { url: string; auth: string | null; body: any } | null = null;
+    let seen = null as { url: string; auth: string | null; body: any } | null;
     const http = (async (url: string, init: RequestInit) => {
       seen = { url, auth: new Headers(init.headers).get("authorization"), body: JSON.parse(String(init.body)) };
       return Response.json({
@@ -55,10 +55,10 @@ describe("OpenAI Decisions", () => {
         },
       },
     );
-    expect(seen!.url).toBe("https://api.openai.com/v1/decisions");
-    expect(seen!.auth).toBe("Bearer sk-test");
-    expect(seen!.body.model).toBe("gpt-6-luna");
-    const [yes, kind, urgent] = seen!.body.questions;
+    expect(seen?.url).toBe("https://api.openai.com/v1/decisions");
+    expect(seen?.auth).toBe("Bearer sk-test");
+    expect(seen?.body.model).toBe("gpt-6-luna");
+    const [yes, kind, urgent] = seen?.body.questions ?? [];
     expect(yes).toMatchObject({ type: "predicate", name: "yes" });
     expect(yes.instructions).toContain("Yes: Billing");
     expect(kind.choices).toEqual([
@@ -66,10 +66,10 @@ describe("OpenAI Decisions", () => {
       { value: "technical", description: "errors" },
     ]);
     expect(urgent.levels.map((l: { label: string }) => l.label)).toEqual(["0", "1", "2"]);
-    expect(result.answers.yes!).toEqual({ noul: 0.92 });
-    expect(result.answers.kind!.choice).toBe("billing");
-    expect(result.answers.kind!.probabilities).toEqual({ billing: 0.8 });
-    expect(result.answers.urgent!.score).toBe(1.2);
+    expect(result.answers.yes).toEqual({ noul: 0.92 });
+    expect(result.answers.kind?.choice).toBe("billing");
+    expect(result.answers.kind?.probabilities).toEqual({ billing: 0.8 });
+    expect(result.answers.urgent?.score).toBe(1.2);
     expect(result.usage).toEqual({ inputTokens: 40, outputTokens: 0 });
   });
 
@@ -96,7 +96,7 @@ describe("OpenAI Decisions", () => {
 describe("Gemini Decisions", () => {
   test("noul criteria use true/false descriptions, input is multimodal, answers by id", async () => {
     // biome-ignore lint/suspicious/noExplicitAny: the fake transport's request body is JSON, read field by field.
-    let seen: { url: string; key: string | null; body: any } | null = null;
+    let seen = null as { url: string; key: string | null; body: any } | null;
     const http = (async (url: string, init: RequestInit) => {
       seen = { url, key: new Headers(init.headers).get("x-goog-api-key"), body: JSON.parse(String(init.body)) };
       return Response.json({
@@ -114,12 +114,12 @@ describe("Gemini Decisions", () => {
         },
       }),
     );
-    expect(seen!.url).toBe("https://generativelanguage.googleapis.com/v1beta/decisions");
-    expect(seen!.key).toBe("AQ.test");
-    expect(seen!.body.questions.yes.criteria).toEqual({ true_description: "A greeting", false_description: "Not one" });
-    expect(seen!.body.input.map((b: { type: string }) => b.type)).toEqual(["text", "image", "document"]);
-    expect(seen!.body.input[2]).toMatchObject({ type: "document", mime_type: "application/pdf" });
-    expect(result.answers.yes!).toEqual({ noul: 0.99, confidence: 0.9 });
+    expect(seen?.url).toBe("https://generativelanguage.googleapis.com/v1beta/decisions");
+    expect(seen?.key).toBe("AQ.test");
+    expect(seen?.body.questions.yes.criteria).toEqual({ true_description: "A greeting", false_description: "Not one" });
+    expect(seen?.body.input.map((b: { type: string }) => b.type)).toEqual(["text", "image", "document"]);
+    expect(seen?.body.input[2]).toMatchObject({ type: "document", mime_type: "application/pdf" });
+    expect(result.answers.yes).toEqual({ noul: 0.99, confidence: 0.9 });
     expect(result.usage).toEqual({ inputTokens: 120, outputTokens: 0 });
   });
 });
@@ -154,9 +154,9 @@ describe("System One", () => {
       },
     );
     expect(body.assets.shot).toEqual({ data_base64: "DDDD", format: "png" });
-    expect(result.answers.yes!.noul).toBe(0.7);
-    expect(result.answers.where!.box).toEqual({ top: 0.1, left: 0.2, bottom: 0.5, right: 0.6 });
-    expect(result.answers.level!.score).toBe(1.6);
+    expect(result.answers.yes?.noul).toBe(0.7);
+    expect(result.answers.where?.box).toEqual({ top: 0.1, left: 0.2, bottom: 0.5, right: 0.6 });
+    expect(result.answers.level?.score).toBe(1.6);
 
     await systemOneCall(
       { baseURL: "http://127.0.0.1:8080", runtime: "llamacpp", http },
