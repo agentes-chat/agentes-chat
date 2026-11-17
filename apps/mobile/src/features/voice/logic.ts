@@ -47,7 +47,7 @@ export function columnsIn(width: number): number {
 /**
  * A played wave's columns on `width`: how many, and where the first starts. They leave the handle's width and 2 at
  * both ends, centred on whole points, so at 0:00 the handle stands before the first column and at the end after the
- * last, flush with the wave's ends, as WhatsApp's dot does.
+ * last, flush with the wave's ends: the handle never covers a column at either end.
  */
 export function playedColumns(width: number): { count: number; start: number } {
   const count = columnsIn(width - 2 * (WAVE_HANDLE + 2));

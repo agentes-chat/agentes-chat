@@ -1,5 +1,6 @@
 import { redactCommon } from "@agenteschat/adapters";
 import { and, asc, type Database, eq, inArray, schema, sql } from "@agenteschat/db";
+import { CONFIDENTIAL_NOT_SHOWN, confidentialThreadSql } from "./confidential";
 import { getMessage, type Message } from "./messages";
 import { recordContentViewed } from "./operator-events";
 import { runErrorDetail } from "./runs";
@@ -114,6 +115,7 @@ async function runReview(db: Database, runId: string): Promise<OperatorReview | 
       finishedAt: agentRuns.finishedAt,
       toolCalls: sql<number>`(select count(*) from ${agentRunSteps}
         where ${agentRunSteps.runId} = ${runId} and ${agentRunSteps.kind} = 'tool_call')`.mapWith(Number),
+      confidential: sql<boolean>`${confidentialThreadSql(sql`${agentRuns.orgId}`, sql`${agentRuns.threadRootId}`)}`,
     })
     .from(agentRuns)
     .where(eq(agentRuns.id, runId));
@@ -133,12 +135,19 @@ async function runReview(db: Database, runId: string): Promise<OperatorReview | 
     .filter((s) => s.kind === "tool_call")
     .map((s, i): Part => {
       const result = results.get(s.data.toolUseId);
+      const name = `Tool call ${i + 1}: ${String(s.data.name ?? "?").slice(0, 100)}`;
+      // A run of a confidential thread (ADR 0190): which tools it called and how each ended, never what went in or
+      // came back. Whoever reads this block is outside the thread. Its request and reply are stored as the stub.
+      if (run.confidential) {
+        const ended = result ? (result.isError ? "failed" : "answered") : "no result";
+        return { rank: 3, text: `${name} (${ended})\n${CONFIDENTIAL_NOT_SHOWN}` };
+      }
       const output = result
         ? quoted(result.isError ? "tool error" : "tool result", String(result.content ?? ""), CUT.toolResult)
         : "(no result)";
       return {
         rank: 3,
-        text: `Tool call ${i + 1}: ${String(s.data.name ?? "?").slice(0, 100)}\n${quoted("tool input", inputLines(s.data.input), CUT.toolInput)}\n${output}`,
+        text: `${name}\n${quoted("tool input", inputLines(s.data.input), CUT.toolInput)}\n${output}`,
       };
     });
   const error = runErrorDetail(run.error)?.errorCode;

@@ -150,6 +150,8 @@
       "notifications.source.threadOnly",
       "onboarding.import.groups.skill",
       "onboarding.import.report.kinds.skill",
+      "onboarding.import.sheet.os.windows",
+      "onboarding.import.sheet.skills",
       "onboarding.presets.ada.name",
       "onboarding.presets.ada.role",
       "onboarding.presets.atlas.name",
@@ -298,7 +300,8 @@
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "onboarding.import.choose.skill"
     ],
     "es": [
       "devices.iphone.path.general",
@@ -549,10 +552,14 @@
       "settings.section.roles",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
+      "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "onboarding.import.choose.step.video",
+      "settings.account.chat.wallpaper.color",
+      "settings.account.chat.wallpaper.name.color"
     ],
     "fr": [
       "usage.kinds.routines",
@@ -981,13 +988,18 @@
       "invites.typesCount",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
+      "onboarding.import.sheet.os.windows",
+      "onboarding.import.sheet.routines",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
       "storage.connect.awsRegion.eu-central-2",
       "storage.connect.awsRegion.eu-west-3",
       "storage.connect.awsRegion.eu-south-1",
-      "storage.connect.awsRegion.eu-north-1"
+      "storage.connect.awsRegion.eu-north-1",
+      "onboarding.import.choose.routine",
+      "onboarding.import.choose.step.image",
+      "settings.account.chat.wallpaper.name.crowd"
     ],
     "de": [
       "devices.iphone.steps.account",
@@ -1437,6 +1449,7 @@
       "invites.linkLabel",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
+      "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
@@ -1447,7 +1460,11 @@
       "storage.connect.theirName.s3Secret",
       "storage.connect.theirName.b2Key",
       "storage.connect.theirName.b2Secret",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "onboarding.import.choose.routine",
+      "onboarding.import.choose.skill",
+      "onboarding.import.choose.step.video",
+      "settings.account.chat.wallpaper.neutral.sand"
     ],
     "it": [
       "shell.email.label",
@@ -1817,9 +1834,15 @@
       "appsDownload.appStore",
       "appsDownload.googlePlay",
       "appsDownload.computer",
+      "onboarding.import.sheet.os.windows",
+      "onboarding.import.sheet.routines",
+      "onboarding.import.sheet.skills",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "onboarding.import.choose.routine",
+      "onboarding.import.choose.skill",
+      "onboarding.import.choose.step.video"
     ],
     "nl": [
       "usage.kinds.routines",
@@ -2420,6 +2443,9 @@
       "appsDownload.appStore",
       "appsDownload.googlePlay",
       "appsDownload.computer",
+      "onboarding.import.sheet.os.windows",
+      "onboarding.import.sheet.routines",
+      "onboarding.import.sheet.skills",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
@@ -2428,7 +2454,11 @@
       "storage.connect.theirName.s3Key",
       "storage.connect.theirName.s3Secret",
       "storage.connect.theirName.b2Key",
-      "storage.connect.theirName.b2Secret"
+      "storage.connect.theirName.b2Secret",
+      "onboarding.import.choose.routine",
+      "onboarding.import.choose.skill",
+      "onboarding.import.choose.step.video",
+      "settings.account.chat.wallpaper.name.crowd"
     ],
     "ja": [
       "channel.tooLong.fileName",
@@ -2598,6 +2628,7 @@
       "machines.oneClick.tools.antigravity",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
+      "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2"
@@ -2764,6 +2795,7 @@
       "machines.oneClick.tools.antigravity",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
+      "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2"
@@ -2921,6 +2953,7 @@
       "machines.oneClick.tools.antigravity",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
+      "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2"
@@ -3230,10 +3263,13 @@
       "invites.edit",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
+      "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
-      "storage.connect.awsRegion.il-central-1"
+      "storage.connect.awsRegion.il-central-1",
+      "onboarding.import.choose.skill",
+      "onboarding.import.choose.step.video"
     ],
     "tr": [
       "devices.cpus",
@@ -3422,9 +3458,11 @@
       "machines.oneClick.tools.antigravity",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
+      "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
-      "storage.connect.provider.b2"
+      "storage.connect.provider.b2",
+      "onboarding.import.choose.step.video"
     ],
     "pl": [
       "devices.cpus",
@@ -3722,6 +3760,7 @@
       "invites.linkLabel",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
+      "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2",
@@ -3880,6 +3919,7 @@
       "machines.oneClick.tools.antigravity",
       "appsDownload.appStore",
       "appsDownload.googlePlay",
+      "onboarding.import.sheet.os.windows",
       "storage.connect.provider.r2",
       "storage.connect.provider.s3",
       "storage.connect.provider.b2"
@@ -3990,7 +4030,6 @@
       "chat.options",
       "chat.switchAgents",
       "chats.mission",
-      "chats.section.agents",
       "chats.wait.chip.mission",
       "chats.wait.chip.question",
       "code.label",
@@ -4202,7 +4241,7 @@
       "chat.switchAgents",
       "chat.thread",
       "chat.threadIn",
-      "chats.section.agents",
+      "chats.recent",
       "chats.thread",
       "chats.waitIn",
       "code.label",

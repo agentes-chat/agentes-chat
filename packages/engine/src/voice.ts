@@ -1,6 +1,23 @@
 import type { BlobStoreResolver, PubSub, SpeechEngine } from "@agenteschat/adapters";
 import { firstWords, typingTopic } from "@agenteschat/adapters";
-import { and, asc, count, type Database, desc, eq, gt, gte, isNull, lt, ne, schema, sql } from "@agenteschat/db";
+import {
+  and,
+  asc,
+  count,
+  type Database,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  schema,
+  sql,
+} from "@agenteschat/db";
 import { requireChannelAccess } from "./channels";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { publishTyping, publishUserEvent } from "./events";
@@ -460,6 +477,46 @@ async function dropAudio(deps: Pick<VoiceDeps, "db" | "blobs">, clip: ClipAudio)
   const store = await deps.blobs.forConfig(clip.orgId, clip.storageConfigId);
   await store.delete(clip.blobKey);
   await deps.db.update(voiceClips).set({ audioDeletedAt: new Date() }).where(eq(voiceClips.id, clip.id));
+}
+
+/**
+ * A thread's voice messages lose the words made out of them, and their recordings leave storage where `blobs` says
+ * how (one that can't be deleted now stays for the next call).
+ */
+export async function dropThreadVoice(
+  deps: { db: Database; blobs?: BlobStoreResolver },
+  thread: { orgId: string; channelId: string; rootMessageId: string },
+) {
+  const clips = await deps.db
+    .select({
+      id: voiceClips.id,
+      orgId: voiceClips.orgId,
+      storageConfigId: voiceClips.storageConfigId,
+      blobKey: voiceClips.blobKey,
+      heard: voiceClips.audioDeletedAt,
+    })
+    .from(voiceClips)
+    .where(
+      and(
+        eq(voiceClips.orgId, thread.orgId),
+        eq(voiceClips.channelId, thread.channelId),
+        or(eq(voiceClips.threadId, thread.rootMessageId), eq(voiceClips.messageId, thread.rootMessageId)),
+        or(isNotNull(voiceClips.text), isNull(voiceClips.audioDeletedAt)),
+      ),
+    );
+  if (clips.length === 0) return;
+  await deps.db
+    .update(voiceClips)
+    .set({ text: null })
+    .where(
+      inArray(
+        voiceClips.id,
+        clips.map((c) => c.id),
+      ),
+    );
+  const blobs = deps.blobs;
+  if (!blobs) return;
+  for (const clip of clips) if (!clip.heard) await dropAudio({ db: deps.db, blobs }, clip).catch(() => undefined);
 }
 
 /** A deleted channel's recordings leave storage now, whatever the retention (a failure throws, so its job retries). */

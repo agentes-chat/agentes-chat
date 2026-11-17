@@ -242,6 +242,16 @@ export const EMAIL_SAMPLES: Record<string, EmailTemplate> = {
     url: `${APP}/org/${ORG}/settings/members?request=jr_7&do=approve`,
     denyUrl: `${APP}/org/${ORG}/settings/members?request=jr_7&do=deny`,
   },
+  "join_request-outside.en": {
+    kind: "join_request",
+    locale: "en",
+    orgName: "Alves Studio",
+    name: "Bruno Lima",
+    email: "bruno@example.com",
+    url: `${APP}/org/${ORG}/settings/members?request=jr_8&do=approve`,
+    denyUrl: `${APP}/org/${ORG}/settings/members?request=jr_8&do=deny`,
+    outsideOf: "Northwind Consulting",
+  },
   "join_answer-joined.en": {
     kind: "join_answer",
     locale: "en",

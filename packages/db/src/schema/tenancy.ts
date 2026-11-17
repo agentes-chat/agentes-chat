@@ -179,6 +179,11 @@ export const organizationMembers = pgTable(
      * default. Read through `lodiPrefsOf` and saved by merging (packages/engine/src/right-hand-prefs.ts).
      */
     teamWeek: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    /**
+     * Who the person works for, when they come from outside the workspace (ADR 0191): shown beside their name. Not
+     * null marks an outside collaborator, who never counts toward the workspace's limit of people (`limits.ts`).
+     */
+    outsideOf: text(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -367,6 +372,11 @@ export const organizationJoinRequests = pgTable(
     passwordHash: text(),
     /** sha256 of the key the asking page keeps, traded once for a sign-in after an approval (ADR 0090). */
     claimHash: text(),
+    /**
+     * Who the person works for, on a request the operator API filed for an outside collaborator (ADR 0191): an
+     * approval lets `userId` in with it, past the workspace's limit of people.
+     */
+    outsideOf: text(),
     expiresAt: timestamp({ withTimezone: true }).notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },

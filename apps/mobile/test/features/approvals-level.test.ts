@@ -13,7 +13,9 @@ test("Aprovações on the agent's profile: one row with the level, a sheet only 
   // Each line is a sentence: never cut to one line by a long language or large text.
   expect(row).toContain("subLines: 3");
   expect(read("features/shared/PickerSheet.tsx")).toContain("{ subLines: o.subLines }");
-  expect(row).toMatch(/can\(org, "manage_agents"\)\s*\? \{ chevron: true, disabled: update\.isPending, onPress:/);
+  // The level changes in its row through the picker: the value's up-down mark, never a chevron to a screen.
+  expect(row).toMatch(/can\(org, "manage_agents"\)\s*\? \{ menu: true, disabled: update\.isPending, onPress:/);
+  expect(row).not.toContain("chevron");
   // A failed save says so.
   expect(row).toContain("{ onError: failed }");
   expect(read("features/agents/AgentProfileScreen.tsx")).toContain("<ApprovalsLevelRow agent={agent} />");

@@ -249,6 +249,11 @@ export const words: EmailWords = {
       { b: org },
       " et demande à rejoindre l’espace de travail.",
     ],
+    outside: (by) => [
+      "Cette personne travaille pour ",
+      { b: by },
+      " et demande à rejoindre en tant que collaborateur externe. Elle n’occupe aucune place dans votre offre, et vous pouvez la retirer à tout moment.",
+    ],
     note: "N’approuvez que les personnes que vous attendez. Elles rejoignent l’espace en tant que membre, sauf si vous choisissez un autre rôle sur la page.",
     approve: "Approuver",
     deny: "Refuser",

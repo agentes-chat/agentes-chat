@@ -215,6 +215,11 @@ export const ptBR: Words = {
     preheader: "Aprove ou recuse em Membros. Nada acontece até você responder.",
     headline: "Um pedido para entrar espera por você",
     body: (org) => ["Essa pessoa abriu o link de convite da ", { b: org }, " e pediu para entrar."],
+    outside: (by) => [
+      "Essa pessoa trabalha para ",
+      { b: by },
+      " e pede para entrar como colaborador externo. Não ocupa vaga no seu plano, e você pode removê-la a qualquer momento.",
+    ],
     note: "Aprove só quem você espera. A pessoa entra como membro, a não ser que você escolha outro cargo na página.",
     approve: "Aprovar",
     deny: "Recusar",

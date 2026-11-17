@@ -927,6 +927,9 @@ carries, in the request's `params._meta["chat.agentes/caller"]`, a JWT signed wi
 | `org`, `agent`, `conn` | The ids of the workspace, the agent and the connection |
 | `run` | The run's id (absent for the rare call made outside a run) |
 | `user` | The id of the person the run acts for; absent when nobody is behind it, as in a routine's run |
+| `brain` | What thinks for the run: `model` for a model this server calls, else the kind of the program on a computer (`claude_code`, `codex`, …) |
+| `provider` | With `brain: "model"`, the provider that model is at (`anthropic`, `openai`, …; `custom` for a workspace's own endpoint) |
+| `channel`, `thread` | The ids of the conversation the run answers in and of the root message of its thread |
 | `iat`, `exp`, `jti` | When it was made, 60 seconds later, and an id that is new for every call |
 
 In your server: check the signature with the algorithm pinned to HS256, that `aud` is your host and `iss`
@@ -936,6 +939,19 @@ needing to be reconnected. Listing the tools carries no statement, since no agen
 the tools' names and descriptions free of anything private. A host that isn't listed gets nothing, and
 neither does a server over http or on a port other than 443. [ADR 0181](docs/adr/0181-mcp-caller-identity.md)
 has the rest.
+
+**A listed server can mark an answer as confidential (optional).** When a tool of such a server answers
+with somebody's private text (a secret, a person's record), it can add
+`"_meta": { "chat.agentes/confidential": true }` to that result. The run that read it goes on reading and
+answers in a thread under the message that asked it, and sends nothing elsewhere: no message, mail or
+post in another place, no file, task or memory, no command, browser or web. Outside that thread no agent
+is given the thread's text, and neither is a person's connected AI app or a review through the operator
+API. It is in no search, summary or notification, and it is removed 60 days later.
+A program on a computer (Claude Code, Codex) can't be held to that, so it gets a placeholder in place of
+the answer: check `brain` in the statement above before you hand such text out. The thread's text also
+stays with the `provider` that first read it: an agent named there that thinks with another one stops
+before it reads anything, and says so. A routine's own run that read such an answer delivers no report.
+The same key from a server you did not list changes nothing. [ADR 0190](docs/adr/0190-confidential-results.md) has the rest.
 
 **Deleting workspaces and accounts.** An owner deletes a workspace in **Settings → General**, with a
 code emailed to them (with no email set up, their password instead): it turns read-only for everyone at

@@ -1,7 +1,7 @@
 import type { PlanAccountInfo, PlanUsage } from "@agenteschat/client";
 import {
   accountName,
-  accountOwner,
+  accountWhose,
   brandOf,
   type MeterSegment,
   type MeterWindow,
@@ -227,7 +227,7 @@ export function PlanModels({ usage, provider }: { usage: Pick<PlanUsage, "models
 export function AccountHead({ account, extra }: { account: PlanAccountInfo; extra?: string | null }) {
   const { t } = useTranslation();
   const c = useColors();
-  const whose = account.email ?? accountOwner(t, account);
+  const whose = accountWhose(t, account);
   // The maker's logo, the account and its plan on one line, whose it is under them at the row's width.
   return (
     <View style={styles.acctBox}>
@@ -248,15 +248,15 @@ export function AccountHead({ account, extra }: { account: PlanAccountInfo; extr
   );
 }
 
-/** The small plate beside an account's name (its plan, "saiu da conta"). */
+/**
+ * A word beside an account's name (its plan, "saiu da conta"): only words in their tone, never a plate behind them,
+ * as every state the app names.
+ */
 export function Tag({ text, color }: { text: string; color: string }) {
-  const c = useColors();
   return (
-    <View style={[styles.tag, { backgroundColor: c.plate }]}>
-      <Text variant="caption" style={[styles.heavy, { color }]}>
-        {text}
-      </Text>
-    </View>
+    <Text variant="caption" style={[styles.heavy, { color }]}>
+      {text}
+    </Text>
   );
 }
 
@@ -444,7 +444,6 @@ const styles = StyleSheet.create({
   acct: { flexDirection: "row", alignItems: "center", gap: 12 },
   // The name wraps instead of losing its end, the plan's tag after it, on the next line when there's no room.
   acctName: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 7, rowGap: 4 },
-  tag: { height: 19, paddingHorizontal: 6, borderRadius: 6, borderBottomLeftRadius: 2, justifyContent: "center" },
   card: { borderRadius: 20, padding: 16, gap: 14 },
   cardHead: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   cardFoot: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12 },

@@ -237,6 +237,11 @@ export const words: EmailWords = {
     preheader: "Üyeler sayfasında onaylayın ya da reddedin. Siz yanıt verene kadar hiçbir şey olmaz.",
     headline: "Bir katılma isteği bekliyor",
     body: (org) => ["Biri ", { b: org }, " davet bağlantısını açıp katılmak istedi."],
+    outside: (by) => [
+      "Bu kişi ",
+      { b: by },
+      " için çalışıyor ve harici çalışan olarak katılmak istiyor. Planınızda yer kaplamaz ve istediğiniz zaman çıkarabilirsiniz.",
+    ],
     note: "Yalnızca beklediğiniz kişileri onaylayın. Sayfada başka bir rol seçmezseniz üye olarak katılırlar.",
     approve: "Onayla",
     deny: "Reddet",

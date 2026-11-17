@@ -55,8 +55,13 @@ test("Sua IA is one row that opens its choice: what answers me, by its logo and 
   expect(screen).toContain("openConnectAi({ agentId: agent.id })");
   // On the right hand's profile, and first in its settings, under "Só para você".
   expect(profile).toContain("<RightHandMine agent={agent} />");
-  const mine = screen.indexOf('<GroupTitle>{t("rightHand.settings.groupMine")}</GroupTitle>');
-  const workspace = screen.indexOf('{t("rightHand.settings.groupWorkspace")}</GroupTitle>');
+  // The screen's groups by their names, each the standard section header over its lists (never a title drawn by hand).
+  const mine = screen.indexOf('<SectionHeader title={t("rightHand.settings.groupMine")} />');
+  const workspace = screen.indexOf(
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the screen's source
+    'title={`${t("rightHand.settings.groupWorkspace")} · ${t("rightHand.settings.groupAdmins")}`}',
+  );
+  expect(screen).not.toContain("function GroupTitle(");
   expect(mine).toBeGreaterThan(-1);
   expect(screen.indexOf("<RightHandMine agent={agent} />")).toBeGreaterThan(mine);
   expect(screen.indexOf("<RightHandApprovalsGroup />")).toBeGreaterThan(mine);
@@ -94,8 +99,10 @@ test("Lodi's settings: the workspace's plan has no lending switch, since a plan 
   // On a plan, its model is the row under it (as the key's model is), saved as the workspace's.
   expect(screen).toContain('onPress={() => openAgentModel(agent.id, "workspace")}');
   const model = readFileSync(join(import.meta.dir, "../../src/features/ai/AgentAiScreen.tsx"), "utf8");
+  const saves = readFileSync(join(import.meta.dir, "../../src/features/ai/useSaveBrain.ts"), "utf8");
   expect(model).toContain("const brain = useAgentBrain(orgId, agentId, true, false, scope);");
-  expect(model).toContain("api.agents.setBrain(orgId, agentId, { ...(scope ? { scope } : {}), ...input })");
+  expect(model).toContain("const { pending, save } = useSaveBrain(agentId, scope);");
+  expect(saves).toContain("api.agents.setBrain(orgId, agentId, { ...(scope ? { scope } : {}), ...input })");
   expect(screen).not.toContain("noAi.rightHand.useKey");
   expect(screen).not.toContain("workspacePlan");
   // Any plan's CLI: Claude Code's, Codex's, Cursor's, OpenCode's, Grok Build's or the Antigravity CLI's.

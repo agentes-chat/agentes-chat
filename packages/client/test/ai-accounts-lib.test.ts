@@ -3,16 +3,22 @@ import type { TFunction } from "i18next";
 import type { AiComputer, Credential, MachineAccount, PlanUsage } from "../src/api/types";
 import {
   accountAbout,
+  accountChain,
   accountChoices,
+  accountSub,
   accountTitle,
   agentsToGive,
+  chainHasRoom,
   endsOnClaude,
   existingAi,
   groupPlans,
   identityUnknown,
+  labelTitle,
   lendable,
   listsExisting,
   offersSignInAgain,
+  orderPlaces,
+  orderStep,
   ownSignInListed,
   ownSignInLower,
   ownSignInName,
@@ -23,7 +29,9 @@ import {
   reusableAccount,
   signInOf,
   signInPlan,
+  unnamedAccount,
   unusedCopies,
+  withSub,
 } from "../src/lib/ai-accounts";
 import { accountName, usageSourcePart } from "../src/lib/plan-usage";
 
@@ -337,15 +345,47 @@ describe("the computers' own sign-ins", () => {
     expect(planWordOf(null)).toBeNull();
   });
 
-  test("an account's title says its plan once, after its name", () => {
-    expect(accountTitle({ label: "Claude", plan: "max" })).toBe("Claude · Max");
-    expect(accountTitle({ label: "Claude 2", plan: "ultra" })).toBe("Claude 2 · Ultra");
-    expect(accountTitle({ label: "GLM Coding", plan: null })).toBe("GLM Coding");
+  test("an account read by its name says its plan once, after it", () => {
+    expect(labelTitle({ label: "Claude", plan: "max" })).toBe("Claude · Max");
+    expect(labelTitle({ label: "Claude 2", plan: "ultra" })).toBe("Claude 2 · Ultra");
+    expect(labelTitle({ label: "GLM Coding", plan: null })).toBe("GLM Coding");
     // A server that still names accounts after their plan ("Claude Max 2"): the plan isn't said twice.
-    expect(accountTitle({ label: "Claude Max 2", plan: "max" })).toBe("Claude Max 2");
-    expect(accountTitle({ label: "claude team", plan: "team" })).toBe("claude team");
-    expect(accountTitle({ label: "Claude Max", plan: "ultra" })).toBe("Claude Max · Ultra");
-    expect(accountTitle({ label: "Maxwell", plan: "max" })).toBe("Maxwell · Max");
+    expect(labelTitle({ label: "Claude Max 2", plan: "max" })).toBe("Claude Max 2");
+    expect(labelTitle({ label: "claude team", plan: "team" })).toBe("claude team");
+    expect(labelTitle({ label: "Claude Max", plan: "ultra" })).toBe("Claude Max · Ultra");
+    expect(labelTitle({ label: "Maxwell", plan: "max" })).toBe("Maxwell · Max");
+  });
+
+  test("the viewer's own account reads by the name they gave it, else its email, else as unnamed", () => {
+    const t = ((key: string) => key) as unknown as TFunction;
+    const own = {
+      label: "Claude 2",
+      plan: "team",
+      email: "ana@acme.com",
+      mine: true,
+      named: false,
+      keyHint: null,
+      provider: null,
+    };
+    // The automatic name says nothing: the email is the title, the plan goes under it.
+    expect(accountTitle(t, own)).toBe("ana@acme.com");
+    expect(accountSub(own)).toBe("Team");
+    expect(withSub(own, "Também usada por Infra")).toBe("Team · Também usada por Infra");
+    // A name its owner gave it stands above its email.
+    const named = { ...own, label: "Trabalho", named: true };
+    expect(accountTitle(t, named)).toBe("Trabalho");
+    expect(accountSub(named)).toBe("ana@acme.com · Team");
+    // A sign-in that says no email (Claude's token for all agents) and no name of theirs: unnamed.
+    expect(accountTitle(t, { ...own, email: null })).toBe("aiAccounts.unnamed");
+    expect(unnamedAccount({ ...own, email: null })).toBe(true);
+    expect(unnamedAccount(own)).toBe(false);
+    // An older server that doesn't say: the automatic name, read as such.
+    expect(accountTitle(t, { ...own, named: undefined })).toBe("ana@acme.com");
+    // Someone else's (no email for the viewer) and a key account keep their name with the plan.
+    expect(accountTitle(t, { ...own, mine: false, email: null })).toBe("Claude 2 · Team");
+    expect(accountSub({ ...own, mine: false, email: null })).toBeUndefined();
+    const key = { ...own, label: "GLM Coding", plan: null, provider: "zai", keyHint: "MnOp", email: null };
+    expect(accountTitle(t, key)).toBe("GLM Coding");
   });
 
   test("the plan an agent's sign-in is on: its account's, or with none its computer's own sign-in's", () => {
@@ -372,10 +412,21 @@ describe("the computer's own sign-in by name", () => {
   test("the viewer's own computer: the account their agents share; someone else's: that computer's", () => {
     expect(ownSignInName(t, true, "MacBook")).toBe("The account your agents share");
     expect(ownSignInName(t, false, "MacBook")).toBe("MacBook's account");
-    const own = { label: null, machineName: "MacBook", mine: true, kind: "claude_code" as const };
+    const own = {
+      label: null,
+      named: false,
+      email: null,
+      plan: null,
+      provider: null,
+      machineName: "MacBook",
+      mine: true,
+      kind: "claude_code" as const,
+    };
     expect(accountName(t, own)).toBe("The account your agents share");
     expect(accountName(t, { ...own, mine: false })).toBe("MacBook's account");
-    expect(accountName(t, { ...own, label: "Trabalho" })).toBe("Trabalho");
+    expect(accountName(t, { ...own, label: "Trabalho", named: true })).toBe("Trabalho");
+    // An account with the automatic name: its email.
+    expect(accountName(t, { ...own, label: "Claude 2", email: "ana@acme.com" })).toBe("ana@acme.com");
     const source = (mine: boolean) =>
       ({
         key: "m1:claude_code:computer",
@@ -512,6 +563,99 @@ test("Connect an AI starts with what the person has while the agent has no AI, a
   expect(listsExisting({ builtin: null }, false)).toBe(false);
   expect(listsExisting({ builtin: "right_hand" }, false)).toBe(true);
   expect(listsExisting(undefined, false)).toBe(false);
+});
+
+describe("accountChain: the accounts a run goes through at its plan's limit", () => {
+  /** Claude accounts with the CLI's own sign-in on the Mac, Ana's unless said otherwise. */
+  const claude = (id: string, over: Partial<MachineAccount & { machineId: string }> = {}) =>
+    login(id, { label: id, provider: null, keyHint: null, shared: true, serves: "everyone", useOrder: null, ...over });
+  const walter = { ownerId: "u_walter", ownerName: "Walter", mine: false };
+  const agent = { id: "ag_ada", ownerId: "u_ana", account: "own1" as string | null };
+  const chainOf = (
+    accounts: MachineAccount[],
+    over: Partial<typeof agent & { pinned: boolean; scope: "mine" | "workspace" }> = {},
+  ) => accountChain(accounts, { ...agent, ...over }).map((a) => a.id);
+
+  test("its own account, then its owner's others, then those that serve everyone, each by its place", () => {
+    expect(
+      chainOf([
+        claude("w1", { ...walter, useOrder: 0 }),
+        claude("own1", { useOrder: 3 }),
+        claude("old"),
+        claude("own2", { useOrder: 1 }),
+        claude("w2", { ...walter }),
+        claude("w0", { ...walter, useOrder: 2 }),
+      ]),
+    ).toEqual(["own1", "own2", "old", "w1", "w0", "w2"]);
+  });
+
+  test("never a key, another kind, one signed out, someone's owner-only one or a one-agent login, even an unused one", () => {
+    expect(
+      chainOf([
+        claude("own1"),
+        claude("key", { provider: "zai" }),
+        claude("codex", { kind: "codex" }),
+        claude("out", { status: "signed_out" }),
+        claude("only", { ...walter, serves: "owner" }),
+        claude("solo", { ...walter, shared: false, usedByIds: ["ag_other"] }),
+        claude("mine-only", { serves: "owner" }),
+        claude("free", { ...walter, shared: false, usedByIds: [] }),
+      ]),
+    ).toEqual(["own1", "mine-only"]);
+  });
+
+  test("the right hand: its person's own AI goes on with that person's accounts only, the workspace's never shows a chain", () => {
+    const accounts = [
+      claude("own1", { mine: true }),
+      claude("w1", { ...walter }),
+      claude("mine-only", { mine: true, ownerId: "u_viewer", serves: "owner" }),
+    ];
+    expect(chainOf(accounts, { scope: "mine" })).toEqual(["own1", "mine-only"]);
+    expect(chainOf(accounts, { scope: "workspace" })).toEqual(["own1"]);
+    // Its person's AI on a plan someone else gave them waits for that plan.
+    expect(chainOf(accounts, { scope: "mine", account: "w1" })).toEqual(["w1"]);
+  });
+
+  test("pinned, a key, or a kind that never moves: its own account alone; none without one", () => {
+    const accounts = [claude("own1"), claude("own2")];
+    expect(chainOf(accounts, { pinned: true })).toEqual(["own1"]);
+    expect(chainOf([claude("own1", { provider: "zai" }), claude("own2", { provider: "zai" })])).toEqual(["own1"]);
+    expect(chainOf([claude("own1", { kind: "antigravity" }), claude("own2", { kind: "antigravity" })])).toEqual([
+      "own1",
+    ]);
+    expect(chainOf(accounts, { account: null })).toEqual([]);
+  });
+
+  test("at its own account's limit it waits only when no other account of its chain has room", () => {
+    const limited = new Set(["own1", "own2"]);
+    const full = (a: { id: string }) => limited.has(a.id);
+    expect(chainHasRoom([claude("own1"), claude("own2"), claude("w1", walter)], full)).toBe(true);
+    expect(chainHasRoom([claude("own1"), claude("own2")], full)).toBe(false);
+    expect(chainHasRoom([claude("own1")], full)).toBe(false);
+    expect(chainHasRoom([], full)).toBe(false);
+  });
+
+  test("Subir and Descer: the next place, none at either end", () => {
+    const order = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    expect(orderStep(order, "b", -1)).toBe(0);
+    expect(orderStep(order, "b", 1)).toBe(2);
+    expect(orderStep(order, "a", -1)).toBeNull();
+    expect(orderStep(order, "c", 1)).toBeNull();
+    expect(orderStep(order, "x", 1)).toBeNull();
+  });
+
+  test("a CLI login by API key is never a next account: the server says so with `movable`", () => {
+    expect(chainOf([claude("own1"), claude("cli-key", { movable: false }), claude("own2")])).toEqual(["own1", "own2"]);
+  });
+
+  test("only accounts a run may move to have a place: the others keep their row with no number, and no Subir or Descer", () => {
+    const order = [{ id: "a" }, { id: "solo", movable: false }, { id: "b" }, { id: "out", movable: false }];
+    expect(orderPlaces(order)).toEqual([1, null, 2, null]);
+    expect(orderStep(order, "a", 1)).toBe(1);
+    expect(orderStep(order, "b", -1)).toBe(0);
+    expect(orderStep(order, "b", 1)).toBeNull();
+    expect(orderStep(order, "solo", -1)).toBeNull();
+  });
 });
 
 describe("a batch removal takes only what the viewer may remove (`removableLogins`)", () => {

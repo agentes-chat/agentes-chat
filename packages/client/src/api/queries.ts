@@ -14,7 +14,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { moveInGroups } from "../lib/agent-groups";
 import { type LevelsBefore, levelsBefore } from "../lib/approvals-level";
 import { artifactRefs } from "../lib/artifacts";
@@ -67,6 +67,7 @@ import type { TeamWeekAct } from "../lib/team-week";
 import { threadStartOf } from "../lib/threads";
 import { upsertMessage, withLocalCopies } from "../lib/timeline";
 import { listedText } from "../lib/voice";
+import type { Wallpaper } from "../lib/wallpaper";
 import type { AudienceChoice } from "../lib/who-sees";
 import type { WikiAccess } from "../lib/wiki";
 import type { RealtimeConnection } from "../realtime/connection";
@@ -77,6 +78,7 @@ import { ApiError, type UploadOptions } from "./http";
 import { keys, ME_HASH } from "./keys";
 import { keepSending, outbox } from "./outbox";
 import type {
+  AccountOrderGroup,
   Actor,
   AdminAsk,
   Agent,
@@ -149,6 +151,7 @@ import type {
   MailImapInput,
   Me,
   Message,
+  ModelTier,
   MoveAgentsInput,
   NoticeCategory,
   NoticePrefs,
@@ -1744,12 +1747,17 @@ export function cacheAgentProposal(
 
 /**
  * A new message's `clientId`: sent again with the same one (its answer was lost), it's written only once. A v4 UUID
- * also on a plain-http page, where `crypto.randomUUID` is missing but `getRandomValues` isn't, since some routes take
- * only a UUID.
+ * everywhere, since some routes take only a UUID: on a plain-http page `crypto.randomUUID` is missing but
+ * `getRandomValues` isn't, and the phone's JavaScript engine has no `crypto` at all (reading `crypto.randomUUID` there
+ * threw on every send and closed the app), so its bytes come from `Math.random`: an id that only has to be unique, not
+ * secret.
  */
 export const newClientId = (): string => {
-  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  const b = crypto.getRandomValues(new Uint8Array(16));
+  const c = (globalThis as { crypto?: Partial<Crypto> }).crypto;
+  if (typeof c?.randomUUID === "function") return c.randomUUID();
+  const b = new Uint8Array(16);
+  if (typeof c?.getRandomValues === "function") c.getRandomValues(b);
+  else for (let i = 0; i < b.length; i++) b[i] = Math.floor(Math.random() * 256);
   b[6] = ((b[6] ?? 0) & 0x0f) | 0x40;
   b[8] = ((b[8] ?? 0) & 0x3f) | 0x80;
   const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
@@ -1798,9 +1806,24 @@ function cacheSent(qc: QueryClient, orgId: string, message: Message, { clientId,
  * is replaced by the server's copy (matched by `clientId`, from the response
  * or the WebSocket, whichever comes first), or turns `failed` with a retry.
  * One with no answer from the server waits in the `outbox` instead.
+ *
+ * The component that sends draws the copy in the same render as the send: the cache tells the lists that read it on
+ * its next tick (on the phone, the next frame), so the field emptied first and the message showed a frame or more
+ * later. Drawn again with the send itself, the sender reads the list as the copy left it, and the words leave the field
+ * and land in the conversation together.
  */
 export function usePostMessage(orgId: string, channelId: string, options: PostMessageOptions) {
-  return useMutation(postMessageMutation(useApi(), useQueryClient(), orgId, channelId, options));
+  const [, drawn] = useReducer((n: number) => n + 1, 0);
+  const { onOptimistic } = options;
+  return useMutation(
+    postMessageMutation(useApi(), useQueryClient(), orgId, channelId, {
+      ...options,
+      onOptimistic: (local) => {
+        drawn();
+        onOptimistic?.(local);
+      },
+    }),
+  );
 }
 
 export interface PostMessageOptions {
@@ -2716,13 +2739,57 @@ export const useSettings = (orgId: string) => {
   return useQuery({ queryKey: keys.settings(orgId), queryFn: () => api.orgs.settings(orgId) });
 };
 
-export function useUpdateSettings(orgId: string) {
-  const api = useApi();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: Parameters<ApiClient["orgs"]["updateSettings"]>[1]) => api.orgs.updateSettings(orgId, input),
+/** What `orgs.updateSettings` takes: the settings that change, each optional. */
+export type OrgSettingsInput = Parameters<ApiClient["orgs"]["updateSettings"]>[1];
+
+/**
+ * The workspace's settings with a change shown before the server answers (a model of null is the default's). The
+ * context waits for the answer: the first run reads it to know its step, so it moves on only once the context is saved
+ * (and a refusal never sends it back a step with the words gone).
+ */
+export function settingsWith(settings: OrgSettings, input: OrgSettingsInput): OrgSettings {
+  const { autoModels, ...rest } = input;
+  delete rest.context;
+  if (!autoModels) return { ...settings, ...rest };
+  const models = { ...settings.autoModels };
+  for (const [provider, tiers] of Object.entries(autoModels)) {
+    const own = { ...models[provider] };
+    for (const [tier, model] of Object.entries(tiers ?? {})) {
+      if (model) own[tier as ModelTier] = model;
+      else delete own[tier as ModelTier];
+    }
+    models[provider] = own;
+  }
+  return { ...settings, ...rest, autoModels: models };
+}
+
+/**
+ * `useUpdateSettings`'s mutation, for a `MutationObserver` outside React (tests). The change shows in the settings at
+ * once (a switch moves as it is tapped, not when the server answers; the context once saved, `settingsWith`), and a
+ * refusal puts back what was there. With
+ * several in flight, only the last answer is written (an earlier one would flick a later change back meanwhile), and
+ * once the last one settles the settings are read again, so answers that crossed on the way leave the server's truth.
+ */
+export function updateSettingsMutation(api: ApiClient, qc: QueryClient, orgId: string) {
+  const key = keys.settings(orgId);
+  const mutationKey = ["org", orgId, "settings", "update"] as const;
+  // Counted while this one's own callbacks run: it is still pending then.
+  const alone = () => qc.isMutating({ mutationKey }) <= 1;
+  return mutationOptions({
+    mutationKey,
+    mutationFn: (input: OrgSettingsInput) => api.orgs.updateSettings(orgId, input),
+    onMutate: async (input: OrgSettingsInput) => {
+      // A read on its way would land over the change shown.
+      await qc.cancelQueries({ queryKey: key });
+      const before = qc.getQueryData<OrgSettings>(key);
+      if (before) qc.setQueryData<OrgSettings>(key, settingsWith(before, input));
+      return { before };
+    },
+    onError: (_e, _input, context) => {
+      if (context?.before && alone()) qc.setQueryData(key, context.before);
+    },
     onSuccess: (settings) => {
-      qc.setQueryData(keys.settings(orgId), settings);
+      if (alone()) qc.setQueryData(key, settings);
       void qc.invalidateQueries({ queryKey: keys.me });
       void qc.invalidateQueries({ queryKey: keys.overview(orgId) });
       // The default agent budget moves every percentage that follows it.
@@ -2734,7 +2801,17 @@ export function useUpdateSettings(orgId: string) {
         predicate: (q) => q.queryKey[0] === "org" && q.queryKey[1] === orgId && q.queryKey[4] === "detail",
       });
     },
+    onSettled: () => {
+      if (alone()) void qc.invalidateQueries({ queryKey: key });
+    },
   });
+}
+
+/** The workspace's settings, saved as they change: see `updateSettingsMutation`. */
+export function useUpdateSettings(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation(updateSettingsMutation(api, qc, orgId));
 }
 
 /** Sets the workspace's approvals level: the settings and every agent's level show it at once. */
@@ -2931,6 +3008,46 @@ export function useSetChatPrefs(orgId: string) {
       if (ctx?.before !== undefined) qc.setQueryData(keys.me, ctx.before);
     },
     onSuccess: put,
+  });
+}
+
+/** My choices here as the server answered them (another device's change, or a conversation's background). */
+function putChatPrefs(qc: QueryClient, orgId: string, chatPrefs: ChatPrefs) {
+  qc.setQueryData<Me | null>(keys.me, (me) =>
+    me ? { ...me, organizations: me.organizations.map((o) => (o.id === orgId ? { ...o, chatPrefs } : o)) } : me,
+  );
+}
+
+/**
+ * A conversation's own background, for me (null: it follows the channels' or DMs' again). Shown at once; on a
+ * failure the choice before comes back.
+ */
+export function useSetConversationWallpaper(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ channelId, wallpaper }: { channelId: string; wallpaper: Wallpaper | null }) =>
+      api.orgs.setConversationWallpaper(orgId, channelId, wallpaper),
+    onMutate: async ({ channelId, wallpaper }) => {
+      await qc.cancelQueries({ queryKey: keys.me });
+      const before = qc.getQueryData<Me | null>(keys.me);
+      const prefs = before?.organizations.find((o) => o.id === orgId)?.chatPrefs ?? {};
+      const { [channelId]: _old, ...rest } = prefs.wallpapers ?? {};
+      putChatPrefs(qc, orgId, { ...prefs, wallpapers: wallpaper ? { ...rest, [channelId]: wallpaper } : rest });
+      return { before };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.before !== undefined) qc.setQueryData(keys.me, ctx.before);
+    },
+    onSuccess: (prefs) => putChatPrefs(qc, orgId, prefs),
+  });
+}
+
+/** Sends a photo for a background (already shrunk); its address goes into a background with one of the two above. */
+export function useUploadWallpaperPhoto(orgId: string) {
+  const api = useApi();
+  return useMutation({
+    mutationFn: (input: { imageBase64: string; contentType: string }) => api.orgs.uploadWallpaperPhoto(orgId, input),
   });
 }
 
@@ -3281,17 +3398,39 @@ export const useTeamWeekPrefs = (orgId: string, enabled = true) => {
   return useQuery({ queryKey: keys.teamWeek(orgId), queryFn: () => api.orgs.teamWeek(orgId), enabled });
 };
 
+/**
+ * Saves some of those choices: a switch, an hour or a day shows at once and goes back if the server refuses it. The
+ * saves go one at a time, so the last answer is the last choice, and an earlier answer never undoes a later choice
+ * still on its way (`onMutate` still runs at once for one that waits its turn).
+ */
 export const useSetTeamWeekPrefs = (orgId: string) => {
   const api = useApi();
   const qc = useQueryClient();
+  const mutationKey = ["team-week-prefs", orgId];
   return useMutation({
+    mutationKey,
+    scope: { id: `team-week-prefs:${orgId}` },
     // A server from before the two cards is saved in the words it knows: it would drop these and answer 200.
     mutationFn: (patch: LodiPrefsPatch) =>
       api.orgs.setTeamWeek(
         orgId,
         qc.getQueryData<LodiPrefs>(keys.teamWeek(orgId))?.legacy ? legacyPatch(patch) : patch,
       ),
-    onSuccess: (prefs) => qc.setQueryData(keys.teamWeek(orgId), prefs),
+    onMutate: async (patch) => {
+      await qc.cancelQueries({ queryKey: keys.teamWeek(orgId) });
+      const before = qc.getQueryData<LodiPrefs>(keys.teamWeek(orgId));
+      if (before) qc.setQueryData<LodiPrefs>(keys.teamWeek(orgId), { ...before, ...patch });
+      return { before };
+    },
+    onError: (_error, _patch, context) => {
+      // A later choice still on its way answers with every choice the server keeps: its answer decides.
+      if (qc.isMutating({ mutationKey }) > 1) return;
+      if (context?.before) qc.setQueryData(keys.teamWeek(orgId), context.before);
+      void qc.invalidateQueries({ queryKey: keys.teamWeek(orgId) });
+    },
+    onSuccess: (prefs) => {
+      if (qc.isMutating({ mutationKey }) <= 1) qc.setQueryData(keys.teamWeek(orgId), prefs);
+    },
   });
 };
 
@@ -3442,6 +3581,9 @@ export const useConsultations = (orgId: string, channelId: string, enabled = tru
     queryFn: () => api.agents.consultations(orgId, channelId),
     enabled,
     staleTime: 10_000,
+    // Kept as long as the conversation's messages (`messagesQuery`): they change its rows, so a conversation shown
+    // again at once from memory has them too.
+    gcTime: 30 * 60_000,
     refetchInterval: (q) => (q.state.data?.some((c) => c.status === "open") ? CONSULT_GROUP_POLL_MS : false),
   });
 };
@@ -5159,6 +5301,39 @@ export const useAiAccounts = (orgId: string, enabled = true, pollMs: number | fa
   });
 };
 
+/** "Ordem de uso" (ADR 0041 §6): every computer's Claude and ChatGPT accounts in their order, by computer and kind. */
+export const useAccountOrder = (orgId: string, enabled = true) => {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.accountOrder(orgId),
+    queryFn: () => api.machines.accountOrder(orgId),
+    enabled,
+  });
+};
+
+/**
+ * Moves an account in its order ("Subir", "Descer", a drag): the group the server answers replaces the old one at once.
+ * Every agent's "Quem pensa" lists the accounts with their place, so those refetch too.
+ */
+export function useMoveAccountInOrder(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ accountId, index }: { accountId: string; index: number }) =>
+      api.machines.moveAccountInOrder(orgId, accountId, index),
+    onSuccess: (group) => {
+      qc.setQueryData<{ groups: AccountOrderGroup[] }>(keys.accountOrder(orgId), (old) =>
+        old
+          ? {
+              groups: old.groups.map((g) => (g.machineId === group.machineId && g.kind === group.kind ? group : g)),
+            }
+          : old,
+      );
+      void qc.invalidateQueries({ queryKey: keys.agentPages(orgId) });
+    },
+  });
+}
+
 /**
  * ADR 0041 §2: a sign-in on the computer, asked every 2 s until it ends (done, failed or expired), through failed
  * reads too (`loginRead` says how long they may last).
@@ -5713,6 +5888,8 @@ export const channelThreadsQuery = (api: ApiClient, orgId: string, channelId: st
     queryKey: keys.channelThreads(orgId, channelId, tab),
     queryFn: () => api.threads.inChannel(orgId, channelId, { tab, limit: 100 }),
     staleTime: 30_000,
+    // As long as the conversation's messages (`messagesQuery`): its links are rows of that conversation.
+    gcTime: 30 * 60_000,
   });
 
 export function useChannelThreads(orgId: string, channelId: string, tab: "all" | "archived", enabled = true) {
@@ -6717,6 +6894,7 @@ export function applyUnreadEvent(qc: QueryClient, orgId: string, event: { type: 
     void qc.invalidateQueries({ queryKey: keys.dms(orgId) });
     void qc.invalidateQueries({ queryKey: keys.unreadThreads(orgId) });
   } else if (e.type === "channel.muted") setMuted(qc, orgId, e.channelId, e.muted);
+  else if (e.type === "chat.prefs") putChatPrefs(qc, orgId, e.chatPrefs);
   else if (e.type === "thread.read") {
     clearThreadUnread(qc, orgId, e.threadId);
     refreshThreadUnread(qc, orgId);

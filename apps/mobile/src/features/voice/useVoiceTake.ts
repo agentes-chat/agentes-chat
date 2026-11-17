@@ -288,7 +288,8 @@ export function useVoiceTake(target: VoiceTarget) {
       for (const s of stretches.current) removeFile(s.uri);
       if (notice) {
         haptics.warning();
-        toast({ title: t("voice.deleted"), icon: "x" });
+        // What the person did, not a failure: the trash, in the neutral tone (an × reads as an error).
+        toast({ title: t("voice.deleted"), icon: "trash" });
       }
       reset();
     },

@@ -215,6 +215,18 @@ describe("loadConfig", () => {
     expect(redactConfig(loadConfig(billing)).BILLING_LINK_SECRET).toBe("********");
   });
 
+  test("referrals: an https address, only with the link's secret", () => {
+    expect(loadConfig(valid).REFERRALS_URL).toBeUndefined();
+    const billing = { ...valid, BILLING_URL: "https://billing.example.com", BILLING_LINK_SECRET: "b".repeat(32) };
+    expect(loadConfig({ ...billing, REFERRALS_URL: "https://refer.example.com" }).REFERRALS_URL).toBe(
+      "https://refer.example.com",
+    );
+    expect(() => loadConfig({ ...valid, REFERRALS_URL: "https://refer.example.com" })).toThrow(
+      /REFERRALS_URL needs BILLING_LINK_SECRET/,
+    );
+    expect(() => loadConfig({ ...billing, REFERRALS_URL: "http://refer.example.com" })).toThrow(/REFERRALS_URL/);
+  });
+
   test("session screening is off by default and needs the operator API, its only reader", () => {
     expect(loadConfig(valid).SESSION_SCREENING).toBe(false);
     expect(() => loadConfig({ ...valid, SESSION_SCREENING: "true" })).toThrow(

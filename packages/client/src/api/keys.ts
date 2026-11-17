@@ -84,6 +84,8 @@ export const keys = {
   /** Every single agent's reads (its page, its brain). */
   agentPages: (orgId: string) => ["org", orgId, "agent"] as const,
   aiAccounts: (orgId: string) => ["org", orgId, "ai-accounts"] as const,
+  /** Under `aiAccounts`: the same `machine.updated` event refetches it. */
+  accountOrder: (orgId: string) => ["org", orgId, "ai-accounts", "order"] as const,
   accountLogin: (orgId: string, machineId: string, loginId: string) =>
     ["org", orgId, "machine", machineId, "account-login", loginId] as const,
   agentChannels: (orgId: string, agentId: string) => ["org", orgId, "agent", agentId, "channels"] as const,

@@ -43,8 +43,8 @@ Run **iOS build** (Actions → Run workflow): production only, sent to TestFligh
 an `.ipa` kept as the run's artifact). It runs `expo prebuild --platform ios --clean`, `pod install`, then
 `xcodebuild archive` and `-exportArchive` on a macOS runner. Signing is automatic: with the App Store Connect API
 key, Xcode asks Apple for the certificate and the profiles of the app and its share extension
-(`chat.agentes.app.share-extension`, app group `group.chat.agentes.app`), so no certificate or profile is stored
-anywhere. Nothing goes through EAS.
+(`chat.agentes.app.share-extension`, app group `group.chat.agentes.app`); only the development certificate the archive
+is signed with is kept, as a secret (step 3). Nothing goes through EAS.
 
 One time:
 1. In App Store Connect: the app exists for `chat.agentes.app` (an upload is refused before that), and an API key
@@ -53,7 +53,14 @@ One time:
 2. In GitHub → Settings → Secrets and variables → Actions: `APPLE_TEAM_ID` (the team's id), `ASC_API_KEY_ID` (the
    key's id), `ASC_API_ISSUER_ID` (the issuer id) and `ASC_API_KEY_P8` (the text of the `.p8` file). Without them
    the workflow stops at its first step.
-3. Optional: the variable `IOS_BUILD_NUMBER_BASE` (added to the run number) above the last build number in App
+3. The development certificate the archive is signed with, kept so a run doesn't make a new one (every runner is a
+   fresh machine, so each run made a certificate until the account hit Apple's limit): a key and a CSR
+   (`openssl req -new -newkey rsa:2048 -nodes -keyout ci.key -out ci.csr -subj "/CN=CI"`), a DEVELOPMENT
+   certificate from it (App Store Connect API, or the developer site), then a `.p12` of both with a password
+   (`openssl pkcs12 -export -inkey ci.key -in ci.pem -out ci.p12 -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES
+   -macalg sha1`, which the runner's keychain imports). Secrets: `IOS_DEV_CERT_P12` (the `.p12` in base64) and
+   `IOS_DEV_CERT_PASSWORD`. Without them a run still signs, making a certificate of its own.
+4. Optional: the variable `IOS_BUILD_NUMBER_BASE` (added to the run number) above the last build number in App
    Store Connect, if any.
 
 A build made by your own team needs your own bundle id: Apple gives `chat.agentes.app` to one team only.

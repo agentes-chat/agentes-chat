@@ -23,6 +23,7 @@ import { type AgentsDmReads, agentsDmReads, readerOfRun } from "../agents-dm-rea
 import { runAuthorityById, UUID } from "../authority";
 import { caches } from "../cache";
 import { isChannelMember, peopleAllIn, personReach } from "../channels";
+import { CONFIDENTIAL_STUB, confidentialThreadSql, isConfidential } from "../confidential";
 import { consultationOrigin } from "../consultations";
 import { personAgentDmKey } from "../dms";
 import type { MemoryUpdate } from "../events";
@@ -210,15 +211,23 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
         const theirDm = dm ? await dmWithRunPerson(ctx) : null;
         const kinds = Array.isArray(input.kinds) ? (input.kinds as never[]) : undefined;
         const limit = typeof input.limit === "number" ? input.limit : 8;
+        const wordsOnly = ctx.confidential === true;
         const [found, steps] = await Promise.all([
           (reader
-            ? searchForUser(deps, reader, ctx.orgId, { text: str(input.query), kinds, limit, reach: channels })
+            ? searchForUser(deps, reader, ctx.orgId, {
+                text: str(input.query),
+                kinds,
+                limit,
+                reach: channels,
+                wordsOnly,
+              })
             : searchVisible(deps, {
                 orgId: ctx.orgId,
                 text: str(input.query),
                 visibleChannelIds: theirDm && !channels.includes(theirDm) ? [...channels, theirDm] : channels,
                 kinds,
                 limit,
+                wordsOnly,
               })
           ).then(async (found) => wikiHitsForAgent(ctx.db, await wikiActorOfCall(ctx), found)),
           kinds
@@ -282,7 +291,9 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
             const m = said.get(h.sourceId);
             const theirs = asker && h.channelIds.includes(asker.channelId) ? privateFrom(asker.name) : null;
             const by = m ? ` ${m.who} in ${theirs ?? m.where} ${m.link}` : theirs ? ` from ${theirs}` : "";
-            const text = `${label} id=${h.sourceId} (${h.createdAt.toISOString().slice(0, 10)})${by} ${h.snippet.replace(/\s+/g, " ")}`;
+            // The index's own copy of a message may be older than its thread's mark (ADR 0190).
+            const snippet = isConfidential(m?.meta) ? CONFIDENTIAL_STUB : h.snippet.replace(/\s+/g, " ");
+            const text = `${label} id=${h.sourceId} (${h.createdAt.toISOString().slice(0, 10)})${by} ${snippet}`;
             // Only what came from outside stays in the envelope (ADR 0167): the team's trusted memory, its messages
             // that relay nothing from outside and the wiki read as the team's.
             const inside = item ? item.trust === "low" : m ? m.meta?.readOutside === true : h.kind !== "wiki";
@@ -1790,6 +1801,8 @@ async function ownPastSteps(
           sql`, `,
         )})
         and r.created_at > now() - make_interval(days => ${STEP_DAYS})
+        -- What a run of a confidential thread called may repeat what it read there (ADR 0190).
+        and not ${confidentialThreadSql(sql`r.org_id`, sql`r.thread_root_id`)}
         and s.kind = 'tool_call'
         and coalesce(s.data->>'name', '') not in (${sql.join(
           STEP_NOISE.map((n) => sql`${n}`),

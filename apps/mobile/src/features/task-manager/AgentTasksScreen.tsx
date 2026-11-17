@@ -14,11 +14,11 @@ import Animated, { FadeIn, FadeOut, LayoutAnimationConfig, LinearTransition } fr
 import { EmptyState, haptics, Icon, SCREEN_X, SkeletonList, Text, useReducedMotion } from "@/ui";
 import { router } from "@/ui/navigation";
 import { AgentFace, OpensAgent } from "../shared/Face";
+import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useNow, usePullRefresh } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
 import { SheetHostProvider } from "../shared/SheetHost";
-import { RetryLine } from "../shared/TeamSkyEmpty";
 import { useAgentTasks, useStopper } from "./hooks";
 import { type Place, type RowState, rowState, taskStateWords } from "./logic";
 import { TaskMark, useAgentColor, WaitLines } from "./parts";
@@ -96,7 +96,7 @@ function AgentTasks({ agentId, from }: { agentId: string; from: Place | null }) 
       {query.isLoading ? (
         <SkeletonList rows={4} />
       ) : query.isError && !query.data ? (
-        <RetryLine onRetry={() => void query.refetch()} />
+        <LoadFailed onRetry={() => void query.refetch()} />
       ) : (
         // Loaded, the list fades in over the skeleton; the rows it starts with don't each fade again.
         <Animated.View {...fade}>

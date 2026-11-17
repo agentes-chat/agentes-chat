@@ -289,8 +289,7 @@ export function messageRouter(deps: JobDeps): RouterDeps | null {
       maxHops: deps.maxHops,
     },
     hasAi: (orgId) => orgHasAi({ db: deps.db, gateway: deps.gateway, machines: deps.machines }, orgId),
-    outOfOffice: (orgId, ids) =>
-      outOfOfficeIds(deps.db, orgId, ids, { hasModel: (agent) => deps.gateway.hasModelCredential(agent) }),
+    outOfOffice: (orgId, ids) => outOfOfficeIds(deps.db, orgId, ids),
     routing: { jev: () => jevPicks(jev?.key), smallModel, plans },
     quietMs: router.quietMs,
     quietByTyping: router.quietByTyping,

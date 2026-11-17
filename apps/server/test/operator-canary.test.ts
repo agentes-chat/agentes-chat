@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { type Database, eq, rowsOf, schema, sql, tracingLogger } from "@agenteschat/db";
+import { and, type Database, eq, ne, rowsOf, schema, sql, tracingLogger } from "@agenteschat/db";
 import {
   addRunStep,
   countComposio,
@@ -45,12 +45,13 @@ const KEPT: Record<string, string[]> = {
     "payer_user_id",
     "deletion_hold_reason",
   ],
-  // `role` never comes back as stored: the reads work a member's role out from it.
-  organization_members: ["handle", "role"],
+  // `role` never comes back as stored: the reads work a member's role out from it. `outside_of`, here and on a join
+  // request, is who an outside collaborator works for: only this API writes it, never the workspace (ADR 0191).
+  organization_members: ["handle", "role", "outside_of"],
   // Not returned either: the database holds both to three words, which decide who may talk to an agent.
   channel_permission_overrides: ["allow", "deny"],
   organization_invitations: ["email"],
-  organization_join_requests: ["email", "name", "status"],
+  organization_join_requests: ["email", "name", "status", "outside_of"],
   channels: ["name"],
   agents: [
     "name",
@@ -393,6 +394,20 @@ beforeAll(async () => {
       },
     },
   });
+  // A run of a confidential thread (ADR 0190) that failed on what it read: its error's words are not returned.
+  const confidentialRoot = crypto.randomUUID();
+  await db.insert(schema.confidentialThreads).values({ orgId, channelId, rootMessageId: confidentialRoot });
+  await db.insert(schema.agentRuns).values({
+    orgId,
+    agentId,
+    channelId,
+    threadRootId: confidentialRoot,
+    triggerMessageId: confidentialRoot,
+    trigger: "mention",
+    hop: 1,
+    status: "failed",
+    error: "canary-confidential: what the run read",
+  });
 
   // What the conversation didn't write, each with its canary.
   const [user] = await db
@@ -539,6 +554,20 @@ beforeAll(async () => {
     claimHash: "canary-claim-hash",
     expiresAt: soon,
   });
+  // Outside collaborators (ADR 0191): one waiting for an answer, one in.
+  await db.insert(schema.organizationJoinRequests).values({
+    orgId,
+    userId: ownerId,
+    email: "outside@example.com",
+    name: "Outsider",
+    note: "canary outside note",
+    outsideOf: "Example Consulting",
+    expiresAt: soon,
+  });
+  await db
+    .update(schema.organizationMembers)
+    .set({ outsideOf: "Example Consulting" })
+    .where(and(eq(schema.organizationMembers.orgId, orgId), ne(schema.organizationMembers.userId, ownerId)));
   await db
     .insert(schema.waitlistEntries)
     .values({ email: "waiting@example.com", confirmedAt: new Date(), confirmTokenHash: "canary-confirm-hash" });
@@ -867,6 +896,7 @@ beforeAll(async () => {
     ...orgs.flatMap((id) => [
       `/orgs/${id}`,
       `/orgs/${id}/members?limit=200`,
+      `/orgs/${id}/outside-access`,
       `/orgs/${id}/channels?limit=200`,
       `/orgs/${id}/agents?limit=200`,
       `/orgs/${id}/machines`,
@@ -931,7 +961,9 @@ beforeAll(async () => {
     [`/orgs/${orgId}/timeline`, 400],
     [`/orgs/${orgId}/tool-calls?runId=${UNKNOWN}`, 404],
     [`/orgs/${orgId}/tool-calls?outcome=maybe`, 400],
-    ...["connections", "audit", "asks", "routines"].map((list): Call => [`/orgs/${UNKNOWN}/${list}`, 404]),
+    ...["connections", "audit", "asks", "routines", "outside-access"].map(
+      (list): Call => [`/orgs/${UNKNOWN}/${list}`, 404],
+    ),
     [`/orgs/${orgId}/connections?cursor=nope`, 400],
     [`/orgs/${orgId}/audit?from=yesterday`, 400],
     [`/orgs/${orgId}/asks?kind=wish`, 400],

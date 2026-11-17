@@ -261,6 +261,11 @@ export const words: EmailWords = {
       { b: org },
       " i prosi o dołączenie.",
     ],
+    outside: (by) => [
+      "Ta osoba pracuje dla ",
+      { b: by },
+      " i prosi o dołączenie jako współpracownik zewnętrzny. Nie zajmuje miejsca w twoim planie i możesz ją usunąć w każdej chwili.",
+    ],
     note: "Zatwierdzaj tylko osoby, których się spodziewasz. Ta osoba dołączy jako członek, chyba że wybierzesz na stronie inną rolę.",
     approve: "Zatwierdź",
     deny: "Odrzuć",

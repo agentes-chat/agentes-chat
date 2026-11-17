@@ -39,6 +39,7 @@ import {
   type OutboxJob,
   pollMailWatches,
   postAutonomyDigests,
+  pruneConfidential,
   pruneDeletionCodes,
   pruneEmailChanges,
   pruneJoinRequests,
@@ -178,6 +179,8 @@ export const WORKER_INTERVALS_MS = {
   /** Wiki pages in the trash past 30 days are removed with their history. */
   wikiPurge: 6 * 3600_000,
   voiceExpiry: 24 * 3600_000,
+  /** Confidential threads past their time lose their words (ADR 0190). */
+  confidentialPrune: 24 * 3600_000,
   /** How often watched IMAP folders are looked at (each is checked every `MAIL_POLL_SECONDS`). */
   mailPoll: 30_000,
   /** Composio accounts' state: mailboxes (expired → "Reconnect") and connectors marked to reconnect (working again → active). */
@@ -432,6 +435,11 @@ export function startWorkers(deps: WorkerDeps) {
       if (swept + failed > 0) log.info("expired voice recordings deleted", { swept, failed });
     });
   }
+
+  every("confidentialPrune", WORKER_INTERVALS_MS.confidentialPrune, async () => {
+    const pruned = await pruneConfidential({ db, pubsub: deps.pubsub, blobs: voice?.blobs });
+    if (pruned.sealed + pruned.messages + pruned.runs > 0) log.info("confidential threads pruned", pruned);
+  });
 
   every("notifications", WORKER_INTERVALS_MS.notifications, async () => {
     const woke = await wakeSnoozedNotifications({ db, pubsub: deps.pubsub });

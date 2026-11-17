@@ -30,6 +30,7 @@ import {
   newAgentStart,
   newAgentStartText,
 } from "@agenteschat/client/lib/agent-setup";
+import { accountInLine } from "@agenteschat/client/lib/ai-accounts";
 import { thinksWith } from "@agenteschat/client/lib/brain";
 import {
   type BrainPickOption,
@@ -485,7 +486,7 @@ function NewAgentFlow({
         ? {
             kind: start.brain,
             machineId: start.machineId,
-            ...(start.account ? { accountId: start.account.id, label: start.account.label } : {}),
+            ...(start.account ? { accountId: start.account.id, label: accountInLine(t, start.account) } : {}),
             model: start.input.model ?? AUTO,
           }
         : null,

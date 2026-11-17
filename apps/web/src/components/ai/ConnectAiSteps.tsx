@@ -12,12 +12,15 @@ import {
 import {
   type AccountChoice,
   accountAbout,
+  accountInLine,
   accountTitle,
   existingAi,
   groupPlans,
   ownSignInLower,
   planWordOf,
   signInPlan,
+  unnamedAccount,
+  withSub,
 } from "@agenteschat/client/lib/ai-accounts";
 import { answersOthers, audienceOf } from "@agenteschat/client/lib/audience";
 import type { BillingHold } from "@agenteschat/client/lib/billing";
@@ -92,6 +95,7 @@ import {
   Locked,
   OptionCard,
   ProviderLogo,
+  RadioGroup,
   Segmented,
   Select,
   SettingNote,
@@ -104,6 +108,7 @@ import { Fragment, type ReactNode, useCallback, useEffect, useId, useRef, useSta
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { type HaveItem, HaveRow, renameOf, sortHave } from "@/components/arrival/ConnectHave";
 import { BillingLinkButton } from "@/components/BillingLinkButton";
 import { ToolOffWayOut } from "@/components/devices/ToolOneClick";
 import { useOrg } from "@/components/org-context";
@@ -111,6 +116,7 @@ import { KeyMismatch, KeyRefused, ProviderSelect } from "@/components/ProviderKe
 import { OpenPrefsButton, useIsThisMac } from "@/components/ThisMac";
 import { managedOf, SetupProgress, useSetupWait, useWaitReader } from "@/components/WorkspaceComputer";
 import { useDirectory } from "@/hooks/useDirectory";
+import { useRenameAccount } from "@/hooks/useRenameAccount";
 import { planWord } from "@/lib/plan-usage";
 import { useToast } from "@/lib/toast";
 import { AddAccount, OpenPage, Step, StepTitle } from "./AddAccountFlow";
@@ -273,7 +279,7 @@ export function accountOption(
 ) {
   const a = choice.login;
   return {
-    label: accountTitle(a),
+    label: accountTitle(t, a),
     description:
       [accountAbout(t, choice, agentName), planWord(t, locale, a.usage)].filter(Boolean).join(" · ") || undefined,
     leading: <ProviderLogo id={a.provider ?? a.kind} size="sm" />,
@@ -358,7 +364,7 @@ export function useExistingAi({
         ...(toEveryone ? { onlyOwner: false } : {}),
       });
       return {
-        label: a.label,
+        label: accountInLine(t, a),
         choice: planOfAccount(a),
         account: a,
         onlyOwner: next.onlyOwner,
@@ -759,6 +765,27 @@ export interface PlanPanelProps {
    * computer it reads, must hold from here, though the agents it moves get an AI meanwhile.
    */
   onStart?: () => void;
+  /**
+   * With `plain`: the panel lists the person's accounts of this plan (`accounts`), or signs in another one (`other`,
+   * whose `back` returns to the list), so the dialog's title asks that; null otherwise.
+   */
+  onStage?: (stage: PlanStage | null) => void;
+}
+
+/** Where a plain plan panel is (`PlanPanelProps.onStage`). */
+export interface PlanStage {
+  kind: "accounts" | "other";
+  back?: () => void;
+}
+
+/** Tells the dialog where the panel is while it shows, and that it left once it doesn't. */
+function SayStage({ stage, onStage }: { stage: PlanStage; onStage: ((stage: PlanStage | null) => void) | undefined }) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once per stage; `back` only closes over the panel's setter
+  useEffect(() => {
+    onStage?.(stage);
+    return () => onStage?.(null);
+  }, [stage.kind, onStage]);
+  return null;
 }
 
 /** `usePlanGates` for a person who owns no agent yet: each plan's gate on the computer it would sign in on. */
@@ -1086,6 +1113,7 @@ function PlanSteps({
   onSkip,
   onAssigned,
   onStart,
+  onStage,
 }: PlanPanelProps & {
   forWhom: PlanSetAgent[];
   /** The agent it's for, or the first of "All agents". */
@@ -1117,6 +1145,9 @@ function PlanSteps({
   const [skipped, setSkipped] = useState<string[]>([]);
   const [endWhy, setEndWhy] = useState<string | null>(null);
   const [other, setOther] = useState(false);
+  // The account picked in the list of the person's accounts of this plan (`plain`), before "Usar".
+  const [pickedId, setPickedId] = useState<string>();
+  const rename = useRenameAccount();
   const [ownSaved, setOwnSaved] = useState(false);
   // A sign-in begun here keeps its steps while its computer is offline: they say Reconnecting, and it goes on.
   const [signingIn, setSigningIn] = useState(false);
@@ -1287,9 +1318,9 @@ function PlanSteps({
                   forWhom.filter((a) => a.done || assigned[a.id]).map((a) => a.name),
                   NAMES_SHOWN,
                 ),
-                label: account?.label ?? brand,
+                label: account ? accountInLine(t, account) : brand,
               })
-            : thinksWithLine(t, view?.scope, agent.name, account?.label ?? "")}
+            : thinksWithLine(t, view?.scope, agent.name, account ? accountInLine(t, account) : "")}
         </SettingNote>
         {foot}
       </>
@@ -1321,7 +1352,7 @@ function PlanSteps({
     <div className="ai-panel__row">
       <SettingNote icon="alert" live>
         {t("connectAi.assignFailed", {
-          label: failed.account.label,
+          label: accountInLine(t, failed.account),
           agent: forWhom.find((a) => a.id === failed.agentId)?.name ?? "",
         })}
       </SettingNote>
@@ -1380,6 +1411,27 @@ function PlanSteps({
         ).flatMap((g) => g.logins.slice(0, 1))
       : [];
   const choosing = ownable || existing.length > 0;
+  // `existing` as the list's rows (`plain`): the one with most room first, and picked until the person picks another.
+  const mineRows: (HaveItem & { account: MachineAccount })[] = sortHave(
+    existing.map((a) => ({
+      account: a,
+      id: a.id,
+      title: accountTitle(t, a),
+      unnamed: unnamedAccount(a),
+      about: withSub(
+        a,
+        a.usedBy.length > 0
+          ? t("agentPage.work.brain.accountAlso", { agents: namesText(t, a.usedBy, NAMES_SHOWN) })
+          : null,
+      ),
+      whose: t("connectAi.chat.yours"),
+      group: { key: "mine", label: t("connectAi.chat.mine") },
+      mark: <ProviderLogo id={a.provider ?? a.kind} size="xs" />,
+      usage: a.usage,
+      rename: renameOf(t, a, view?.computer?.machineId, rename),
+    })),
+  );
+  const picked = (mineRows.find((r) => r.id === pickedId) ?? mineRows[0])?.account;
   const otherChosen = ownable && own ? !own.chosen : other;
   const signedOut = !everyone && current?.status === "signed_out" ? current : undefined;
   // One sign-in per agent, in turn: the agent signing in now, and the account the first one signed in as.
@@ -1486,22 +1538,40 @@ function PlanSteps({
       {choice === "gemini" && choosing && !otherChosen && existing.some(geminiPersonal) && (
         <SettingNote icon="alert">{t("connectAi.plan.gemini.warning")}</SettingNote>
       )}
-      {choosing &&
-        plain &&
-        !ownable &&
-        !otherChosen &&
-        actionsAt &&
-        createPortal(
-          <>
-            <Button onClick={() => setOther(true)}>{t("connectAi.another")}</Button>
-            {existing.map((a) => (
-              <Button key={a.id} variant="primary" onClick={() => void (everyone ? assignAll(a) : assign(agent.id, a))}>
-                {t("connectAi.use", { label: accountTitle(a) })}
-              </Button>
+      {choosing && plain && !ownable && !otherChosen && (
+        // The person's accounts of this plan on that computer, each by its email (or the name they gave it), to pick
+        // one and use it from the footer; another sign-in is the list's last line.
+        <>
+          <SayStage stage={{ kind: "accounts" }} onStage={onStage} />
+          <RadioGroup
+            className="arrival-have"
+            aria-label={t("connectAi.which.mine", { brand, computer })}
+            value={picked?.id ?? ""}
+            onValueChange={setPickedId}
+          >
+            <p className="arrival-opts__label">{t("connectAi.which.mine", { brand, computer })}</p>
+            {mineRows.map((i) => (
+              <HaveRow key={i.id} item={i} checked={i.id === picked?.id} />
             ))}
-          </>,
-          actionsAt,
-        )}
+          </RadioGroup>
+          <button type="button" className="arrival-have__link arrival-have__link--other" onClick={() => setOther(true)}>
+            <Icon name="plus" size={16} />
+            <span>{t("connectAi.which.other", { brand })}</span>
+            <Icon name="chevronRight" size={16} />
+          </button>
+          {actionsAt &&
+            picked &&
+            createPortal(
+              <Button variant="primary" onClick={() => void (everyone ? assignAll(picked) : assign(agent.id, picked))}>
+                <span className="ai-panel__use">{t("connectAi.use", { label: accountInLine(t, picked) })}</span>
+              </Button>,
+              actionsAt,
+            )}
+        </>
+      )}
+      {choosing && plain && !ownable && otherChosen && (
+        <SayStage stage={{ kind: "other", back: () => setOther(false) }} onStage={onStage} />
+      )}
       {choosing && !(plain && !ownable) && (
         // Who shares the sign-in: the computer's own, which any of its pairer's agents there thinks with, an account
         // of this plan the person already has there for all of their agents, or another sign-in (ADR 0059 §2). Small
@@ -1518,15 +1588,15 @@ function PlanSteps({
               </span>
             </OptionCard>
           )}
-          {existing.map((a) => (
-            <OptionCard key={a.id} pressed={false} onClick={() => void (everyone ? assignAll(a) : assign(agent.id, a))}>
+          {mineRows.map((r) => (
+            <OptionCard
+              key={r.id}
+              pressed={false}
+              onClick={() => void (everyone ? assignAll(r.account) : assign(agent.id, r.account))}
+            >
               <span className="ac-option__text">
-                <span className="ac-option__title">{t("connectAi.use", { label: accountTitle(a) })}</span>
-                {a.usedBy.length > 0 && (
-                  <span className="ac-option__desc">
-                    {t("agentPage.work.brain.accountAlso", { agents: namesText(t, a.usedBy, NAMES_SHOWN) })}
-                  </span>
-                )}
+                <span className="ac-option__title">{t("connectAi.use", { label: r.title })}</span>
+                {r.about && <span className="ac-option__desc">{r.about}</span>}
               </span>
             </OptionCard>
           ))}

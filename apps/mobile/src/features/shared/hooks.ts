@@ -113,13 +113,41 @@ export function useColors() {
   return useTheme().colors;
 }
 
+/** The formats `useWhen` writes times in, for one language. */
+interface WhenFormats {
+  time: Intl.DateTimeFormat;
+  weekday: Intl.DateTimeFormat;
+  date: Intl.DateTimeFormat;
+  day: Intl.DateTimeFormat;
+}
+
+/**
+ * Made once per language and kept: a format is costly to build (it reads the language's data), and every row of a
+ * list asks for its time through `useWhen`.
+ */
+const whenFormats = new Map<string, WhenFormats>();
+
+function whenFormatsOf(locale: string): WhenFormats {
+  let formats = whenFormats.get(locale);
+  if (!formats) {
+    formats = {
+      time: new Intl.DateTimeFormat(locale, { hour: clockHour(locale), minute: "2-digit" }),
+      weekday: new Intl.DateTimeFormat(locale, { weekday: "short" }),
+      date: new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" }),
+      day: new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }),
+    };
+    whenFormats.set(locale, formats);
+  }
+  return formats;
+}
+
 /** Times as the lists say them: "9:41" today, "Ontem", "seg", "12 out". */
 export function useWhen() {
   const { t, i18n } = useTranslation();
   const locale = i18n.language || "en";
   return useMemo(() => {
-    const time = (iso: string) =>
-      new Intl.DateTimeFormat(locale, { hour: clockHour(locale), minute: "2-digit" }).format(new Date(iso));
+    const formats = whenFormatsOf(locale);
+    const time = (iso: string) => formats.time.format(new Date(iso));
     const short = (iso: string) => {
       switch (whenKind(iso)) {
         case "time":
@@ -127,18 +155,16 @@ export function useWhen() {
         case "yesterday":
           return t("mobile.time.yesterday");
         case "weekday":
-          return new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(iso)).replace(".", "");
+          return formats.weekday.format(new Date(iso)).replace(".", "");
         case "date":
-          return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" })
-            .format(new Date(iso))
-            .replace(".", "");
+          return formats.date.format(new Date(iso)).replace(".", "");
       }
     };
     const day = (iso: string) => {
       const d = daysAgo(iso);
       if (d <= 0) return t("mobile.time.today");
       if (d === 1) return t("mobile.time.yesterday");
-      return new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(new Date(iso));
+      return formats.day.format(new Date(iso));
     };
     return { time, short, day, locale };
   }, [t, locale]);

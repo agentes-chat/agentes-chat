@@ -160,3 +160,18 @@ describe("Auditoria in words (web and phone)", () => {
     expect(auditOutcome(t, row({ action: "routine.created", outcome: null }))).toBeNull();
   });
 });
+
+test("an outside collaborator's approval, removal and leaving say who they work for (ADR 0191)", () => {
+  const person = { type: "person" as const, id: "u1", name: "Bia" };
+  const of = (action: string, details: Record<string, unknown>, actor: AuditRow["actor"] = person) =>
+    auditSentence(t, row({ actor, action, target: { type: "person", id: "u2" }, details }), "en");
+  expect(of("join_request.approved", { outsideOf: "Northwind" }).text).toBe("audit.change.outside.approved(Northwind)");
+  expect(of("member.removed", { outsideOf: "Northwind" }, { type: "system", id: null, name: null })).toEqual({
+    name: null,
+    text: "audit.change.outside.removed(Northwind)",
+  });
+  expect(of("member.left", { outsideOf: "Northwind" }).text).toBe("audit.change.outside.left(Northwind)");
+  // Without it, the sentences as before.
+  expect(of("member.left", {}).text).toBe("audit.change.member.left");
+  expect(of("join_request.approved", {}).text).not.toContain("outside");
+});

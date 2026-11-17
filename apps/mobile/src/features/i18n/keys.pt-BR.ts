@@ -30,7 +30,6 @@ export const featureKeysPtBR = {
     position: "{{at}}ª de {{count}}.",
     channelPosition: "{{at}}º de {{count}}.",
     itsChannels: "Canais",
-    seeAll: "Ver todos",
   },
   blocks: {
     send: "Mandar",
@@ -200,16 +199,12 @@ export const featureKeysPtBR = {
       text: "Ele pode estar fora do ar ou fora da sua rede. Suas conversas aparecem sozinhas quando ele voltar.",
       kept: "Mostrando o que já estava no app.",
     },
-    section: {
-      agents: "Agentes",
-      channels: "Canais",
-      people: "Pessoas",
-    },
-    seeAll: {
-      agents: "Ver todos os agentes",
-      channels: "Ver todos os canais",
-      people: "Ver todas as pessoas",
-    },
+    /** Conversas' strip of what the person pinned (the web sidebar's pins), under Início's widgets. */
+    pinned: "Fixados",
+    /** Conversas' one list: every chat by its latest activity, with no grouping. */
+    recent: "Recentes",
+    /** Under Recentes' first rows: the whole list. */
+    seeAll: "Ver todas as conversas",
     wait: {
       verb: {
         approval: "precisa do seu ok",
@@ -376,8 +371,15 @@ export const featureKeysPtBR = {
     profile: "Perfil",
     here_one: "{{count}} aqui",
     here_other: "{{count}} aqui",
+    membersAdd: "Adicionar",
+    membersAdded_one: "{{count}} adicionado a #{{channel}}",
+    membersAdded_other: "{{count}} adicionados a #{{channel}}",
+    memberRemoved: "{{name}} saiu de #{{channel}}",
+    muted: "#{{channel}} silenciado",
+    unmuted: "#{{channel}} reativado",
     headerAgent: "{{who}}. Abrir o perfil",
     headerChannel: "{{who}}. Opções",
+    headerMembers: "{{who}}. Ver quem está aqui",
     switchHint: "Segure para trocar de conversa",
     switchTitle: "Trocar de conversa",
     switchSearch: "Buscar conversa",
@@ -460,22 +462,16 @@ export const featureKeysPtBR = {
     doubleTapHint: "Toque duplo = 👍",
     react: "Reagir",
     attach: {
-      more: "Mais uma foto ou arquivo",
       remove: "Tirar {{name}}",
       waiting: "{{name}}, esperando para enviar",
       sending: "{{name}}, enviando",
+      failed: "{{name}}, não foi: envie para tentar de novo",
+      preparing: "Preparando os arquivos…",
       tooMany: "Até {{count}} arquivos por mensagem.",
     },
     swipeReply: "Deslize para a direita para responder",
     // intentional: chat
     intent: {
-      suggest: {
-        merge: "Pode fazer o merge",
-        review: "Pede para {{name}} revisar antes",
-        seeChange: "Me mostra o que mudou",
-        summarize: "Resume em 3 pontos",
-        nextStep: "Qual é o próximo passo?",
-      },
       arrived: "{{name}} chegou na equipe",
       meet: "Sua primeira conversa com {{name}}",
       roleIntro: "{{role}} na sua equipe. Peça em palavras simples.",
@@ -625,7 +621,6 @@ export const featureKeysPtBR = {
     minuteLess: "{{n}} minutos antes",
     minuteMore: "{{n}} minutos depois",
     submit: "Lembrar neste horário",
-    quick: "Ver horários rápidos",
     done: "Lembrete marcado",
     error: {
       noAgent: "Nenhum agente aqui pode te lembrar",
@@ -683,6 +678,7 @@ export const featureKeysPtBR = {
     title: "Nova missão",
     intro: "O agente monta um plano e só começa quando você disser.",
     placeholder: "O que precisa ficar pronto?",
+    who: "Quem faz",
     submit: "Pedir um plano",
     created: "{{name}} está montando o plano",
     noAgents: "Nenhum agente pode fazer missões ainda. Conecte um computador pelo site.",
@@ -845,9 +841,6 @@ export const featureKeysPtBR = {
     keepEditing: "Continuar editando",
   },
   newAgent: {
-    leaveTitle: "Sair sem criar?",
-    leaveText: "O agente que você começou não será criado.",
-    keepGoing: "Continuar criando",
     /** The second step asks who the agent is: a question and one line, as the other steps. */
     identityQuestion: "Quem é o agente?",
     identityLead: "Nome, como chamar no chat e o rosto.",
@@ -881,7 +874,6 @@ export const featureKeysPtBR = {
         "O celular não abre .zip nem .tar.gz. No app Arquivos, toque no .zip para descompactar e escolha os arquivos de dentro, ou importe pelo computador.",
       privacy: "Lido neste celular. Arquivos de chaves e logins nunca são abertos.",
       also: "Também vem junto",
-      change: "Trocar",
       arrived_one: "{{name}} chegou",
       arrived_other: "{{count}} agentes chegaram",
       partial: "{{done}} de {{total}} chegaram. Importar de novo traz o resto.",
@@ -906,6 +898,11 @@ export const featureKeysPtBR = {
     taskPlaceholder: "O que precisa ficar pronto?",
     sendTask: "Enviar tarefa",
     taskSent: "Tarefa enviada",
+    brakes: {
+      forgetTitle: "Esquecer essas respostas?",
+      forgetText: "O {{name}} volta a perguntar antes desse tipo de trabalho.",
+      forgetText_female: "A {{name}} volta a perguntar antes desse tipo de trabalho.",
+    },
   },
   activity: {
     title: "Atividade",
@@ -1264,7 +1261,7 @@ export const featureKeysPtBR = {
       file: "Arquivo",
     },
     more: "Mais opções",
-    send: "Enviar",
+    sendCopy: "Enviar cópia",
     savePhotos: "Salvar em Fotos",
     drive: "Ver no Drive",
     saved: "Salvo em Fotos",
@@ -1278,6 +1275,7 @@ export const featureKeysPtBR = {
     place: "{{index}} de {{count}}",
     previous: "Imagem anterior",
     next: "Próxima imagem",
+    noPreviewTitle: "Sem prévia",
     noPreview: "Este arquivo não abre no app. Envie para outro app para abrir.",
     video: {
       play: "Tocar",
@@ -1288,6 +1286,7 @@ export const featureKeysPtBR = {
       unmute: "Ligar o som",
       fullscreen: "Tela cheia",
       open: "Abrir",
+      cantPlay: "Este vídeo não toca neste celular.",
     },
   },
   issues: {
@@ -1374,13 +1373,11 @@ export const featureKeysPtBR = {
   drive: {
     title: "Drive",
     search: "Buscar no Drive",
-    types: "Tipos de arquivo",
     type: { all: "Tudo", documents: "Documentos", images: "Imagens", tables: "Tabelas", diffs: "Diffs" },
     section: { today: "Hoje", week: "Esta semana" },
     kind: { document: "Documento", table: "Tabela", diff: "Diff", image: "Imagem", file: "Arquivo" },
     by: "{{name}} · {{when}}",
     noResults: "Nada com esses filtros.",
-    loadFailed: "Não deu para carregar o Drive.",
     more: "Mostrar mais",
   },
   // Wiki (the rest of its words are the web's, `wiki.*`).
@@ -1448,8 +1445,6 @@ export const featureKeysPtBR = {
 
   // Rotinas (the rest of its words are the web's, `routines.*`).
   routines: {
-    loadFailed: "Não deu para carregar as rotinas.",
-    anyAgent: "Todos os agentes",
     create: "Criar",
     when: {
       custom: "Do seu jeito",
@@ -2068,6 +2063,8 @@ export const featureKeysPtBR = {
       stop: "Parar de esperar",
       useInstead: "Use {{name}} em vez disso",
       none: "Nenhum outro dispositivo que você pode usar está pronto.",
+      tried: "Tentando {{device}} de novo.",
+      stopped: "A espera por {{device}} parou.",
     },
   },
   connectors: {
@@ -2348,7 +2345,6 @@ export const featureKeysPtBR = {
     noMatch: "Nenhum cargo com “{{q}}”.",
     tooMany: "Este workspace já tem 100 cargos. Apague um para criar outro.",
     loadFailed: "Não consegui carregar os cargos. {{cause}}",
-    backToList: "Voltar aos cargos",
     nobody: "Ninguém",
     reach: {
       permissions_one: "{{count}} permissão",
@@ -2727,7 +2723,6 @@ export const featureKeysPtBR = {
   // Dashboards on the phone (ADR 0135); the rest of their words are the web's, `dashboards.*` and `widgets.*`.
   dashboards: {
     homeRow: "Só você · seus próprios widgets",
-    loadFailed: "Não deu para carregar os painéis.",
     create: "Criar",
     routineTarget: "o widget dela",
     pin: {

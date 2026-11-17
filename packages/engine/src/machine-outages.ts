@@ -309,7 +309,7 @@ export async function moveAgentsFromMachine(
       continue;
     }
     try {
-      await setAgentComputerTarget(deps, actorId, orgId, agentId, to.id);
+      await setAgentComputerTarget(deps, actorId, orgId, agentId, to.id, { wakeWaits: false });
       moved.push(agentId);
     } catch (error) {
       if (error instanceof ForbiddenError) skipped.push({ agentId, reason: "forbidden" });

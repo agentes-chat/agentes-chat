@@ -215,6 +215,7 @@ export { FoldRow } from "./components/FoldRow";
 export { GroupHeading } from "./components/GroupHeading";
 export { type Hosting, HostingScene, type Place, PlaceScene } from "./components/HostingScene";
 export { HintLine, type HintLineProps, InfoHint, type InfoHintProps } from "./components/InfoHint";
+export { type Journey, JourneyScene } from "./components/JourneyScene";
 export { isApple, Kbd, modKey, shortcut } from "./components/Kbd";
 export { Logo, LogoMark, type LogoProps } from "./components/Logo";
 export {

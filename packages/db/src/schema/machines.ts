@@ -359,6 +359,11 @@ export const machineAccounts = pgTable(
      */
     serves: text().notNull().default("everyone"),
     /**
+     * Its place in the workspace's order of use (ADR 0041 §6): at a plan's limit a run goes on with the next account
+     * that serves its agent, lowest first; null after every numbered one, oldest first.
+     */
+    useOrder: integer(),
+    /**
      * How it signs in (protocol 50): `cli_login`, `setup_token` or `api_key`. Set when its sign-in starts and from
      * what the runner reports, never cleared by a report that doesn't say; null: unknown.
      */

@@ -736,6 +736,36 @@ export function OnboardingHorizon({ progress, clear }: { progress: number; clear
 }
 
 /**
+ * Behind the onboarding on a wide window, where the rail is a card in the middle of the window (onboarding.css): the
+ * agents' sky as the whole window's horizon, low and in soft tones, with no agents of its own (Lodi stands on the
+ * card's). Hidden below that width, where it draws nothing.
+ */
+export function OnboardingStageSky() {
+  const opts: SkyOptions = {
+    pixel: 4,
+    surface: "--pane",
+    // On a dark window the soft tones climb to the sky's light blue, far louder than in light: there it stops at the
+    // surface's mix at 42%, as quiet as the light one.
+    palette: (bg) => {
+      const tones = softTones("sky", bg);
+      const [r, g, b] = parseColor(bg);
+      return r * 0.3 + g * 0.59 + b * 0.11 < 128 ? tones.slice(0, 4) : tones;
+    },
+    light: 0.04,
+    base: (u, v, tt) => {
+      const s = Math.max(0, (v - 0.05) / 0.95);
+      const e = s * s * (3 - 2 * s);
+      return 0.78 * e + 0.05 * S(u * 9 + tt * 0.3) * e + 0.03 * S(u * 23 - tt * 0.2) * e;
+    },
+  };
+  return (
+    <span className="onb__stage-sky" aria-hidden="true">
+      <PixelSky options={opts} />
+    </span>
+  );
+}
+
+/**
  * The onboarding's progress at the top of the rail: a strip of pixel sky that fills as steps get done, with a pixel
  * agent walking at its front. `progress` is 0..1.
  */
@@ -765,7 +795,8 @@ export function OnboardingProgress({ progress }: { progress: number }) {
     },
     base: (u, v, t) => {
       const now = level.current.now;
-      if (u > now) return 0.12;
+      // What is still to go is the bare track: no dotted fill, and no lit first column before a step is done.
+      if (now < 0.01 || u > now) return 0;
       const head = Math.max(0, 1 - (now - u) * 12);
       return Math.min(1, 0.45 + 0.4 * v + 0.08 * S(u * 22 + t * 1.2) + 0.2 * head);
     },

@@ -359,7 +359,8 @@ describe("Quem pensa: a coding plan's models", () => {
     expect(rows.map((r) => [r.group, r.title, r.lines[0] ?? null, r.mark])).toEqual([
       ["Em uso", "Plano", "chave …4f2a", "opencode"],
       ["OpenCode Go", "Plano 2", "chave …9f3c", "opencode"],
-      ["Claude", "Pessoal · Max", "Sua", "claude"],
+      // A name its owner gave it, its plan on the line under it.
+      ["Claude", "Pessoal", "Max", "claude"],
       ["Chaves de API", "Chave padrão do workspace", "Claude · termina em 7f2a", "claude"],
     ]);
     // One more key of the same plan: the model it has stays.

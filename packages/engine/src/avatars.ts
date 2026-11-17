@@ -109,7 +109,7 @@ export const PORTRAIT_CODE = /^1(\.[A-Za-z0-9]{1,24}){1,48}$/;
  * An uploaded image (base64): JPEG, PNG or WebP up to 2 MB, checked by its
  * bytes, without metadata; named by a hash of its content.
  */
-function readImage(input: { imageBase64: string; contentType: string }, code: "avatar" | "logo") {
+export function readImage(input: { imageBase64: string; contentType: string }, code: "avatar" | "logo" | "wallpaper") {
   const clean = input.imageBase64.replace(/^data:[^;]+;base64,/, "").replace(/\s+/g, "");
   if (!/^[A-Za-z0-9+/]*={0,2}$/.test(clean)) throw new ValidationError("The image isn't base64", `${code}.not_base64`);
   const bytes = new Uint8Array(Buffer.from(clean, "base64"));

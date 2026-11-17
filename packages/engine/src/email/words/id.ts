@@ -220,6 +220,11 @@ export const words: EmailWords = {
     preheader: "Setujui atau tolak di Anggota. Tidak ada yang terjadi sampai kamu menjawab.",
     headline: "Ada permintaan bergabung yang menunggu",
     body: (org) => ["Orang ini membuka tautan undangan ", { b: org }, " dan minta bergabung."],
+    outside: (by) => [
+      "Orang ini bekerja untuk ",
+      { b: by },
+      " dan minta bergabung sebagai kolaborator eksternal. Mereka tidak memakai kursi di paketmu, dan kamu bisa mengeluarkan mereka kapan saja.",
+    ],
     note: "Setujui hanya orang yang kamu kenal. Mereka bergabung sebagai anggota, kecuali kamu memilih peran lain di halaman itu.",
     approve: "Setujui",
     deny: "Tolak",

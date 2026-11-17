@@ -1114,15 +1114,9 @@ function NewAgentDialog({
                               <span className="nac__none">{t("newAgentCard.usesNone")}</span>
                             )}
                             {chosenSkills.map((id) => (
-                              <button
-                                key={id}
-                                type="button"
-                                className="ac-chip nac__app"
-                                onClick={() => setSkillOpen(id)}
-                              >
-                                <Icon name="book" size={14} />
-                                <span className="ac-chip__text">{skillName(id)}</span>
-                              </button>
+                              <ChipButton key={id} className="nac__app" icon="book" onClick={() => setSkillOpen(id)}>
+                                {skillName(id)}
+                              </ChipButton>
                             ))}
                           </span>
                           {addingSkills && skillsLeft.length > 0 && (

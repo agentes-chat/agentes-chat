@@ -236,6 +236,11 @@ export const words: EmailWords = {
     preheader: "Apruébala o recházala en Miembros. No pasa nada hasta que respondas.",
     headline: "Una solicitud para unirse te espera",
     body: (org) => ["Esta persona abrió el enlace de invitación de ", { b: org }, " y pidió unirse."],
+    outside: (by) => [
+      "Esta persona trabaja para ",
+      { b: by },
+      " y pide unirse como colaborador externo. No ocupa plaza en tu plan, y puedes quitarla cuando quieras.",
+    ],
     note: "Aprueba solo a quienes esperas. Entran como miembro, salvo que elijas otro rol en la página.",
     approve: "Aprobar",
     deny: "Rechazar",

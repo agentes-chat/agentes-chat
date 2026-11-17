@@ -243,6 +243,8 @@ export interface OfferAccount {
   usage: PlanMeterUsage | null;
   /** It thinks for every agent its owner gives it on that computer. */
   shared?: boolean;
+  /** Its place in the workspace's order of use; null: after the placed ones. */
+  useOrder?: number | null;
 }
 
 /**
@@ -250,9 +252,9 @@ export interface OfferAccount {
  * same kind and plan maker (another maker's models would think instead),
  * signed in, not at their own limit, and free or made for all of the owner's
  * agents there. A login another agent thinks with is never offered (it serves
- * one agent; moving plans between agents to dodge a limit isn't). Most
- * headroom first, unknown usage last. Shared by the web's and the phone's
- * agent settings.
+ * one agent; moving plans between agents to dodge a limit isn't). In the
+ * order of use, then most headroom first, unknown usage last. Shared by the
+ * web's and the phone's agent settings.
  */
 export function limitOffers<A extends OfferAccount>(
   accounts: readonly A[],
@@ -274,7 +276,11 @@ export function limitOffers<A extends OfferAccount>(
     .map((account) => ({ account, plan: account.usage ? planState(account.usage, now) : null }))
     .filter((o) => o.plan?.state !== "limited")
     .map((o) => ({ account: o.account, used: o.plan?.used ?? null }))
-    .sort((a, b) => (a.used ?? 101) - (b.used ?? 101));
+    .sort(
+      (a, b) =>
+        (a.account.useOrder ?? Number.POSITIVE_INFINITY) - (b.account.useOrder ?? Number.POSITIVE_INFINITY) ||
+        (a.used ?? 101) - (b.used ?? 101),
+    );
 }
 
 /** From here long work pauses until the window resets (ADR 0118); replies to people go on until the limit. */
@@ -292,10 +298,6 @@ const WINDOW_MS: Partial<Record<string, number>> = {
   // A model's own week.
   other: 7 * 86_400_000,
 };
-
-/** The paid extra usage the account has turned on with the provider (only Claude's plans report it). */
-export const extraUsageOn = (usage: { windows: readonly PlanMeterWindow[] } | null | undefined) =>
-  usage?.windows.some((w) => w.kind === "other" && w.label === EXTRA_USAGE_LABEL) ?? false;
 
 /** Extra usage that is on and still has room under its own cap: what long work may go on into. */
 export const extraUsageLeft = (usage: { windows: readonly PlanMeterWindow[] } | null | undefined) =>

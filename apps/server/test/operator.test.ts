@@ -885,6 +885,132 @@ test("limits: set them all, read back with what the workspace uses; any standing
   await body(await put(`/orgs/${orgId}/billing-hold`, { hold: null }));
 });
 
+test("outside collaborators (ADR 0191): asked for here, answered in the workspace, never counted, ended here", async () => {
+  const READ = "operator-read-token-".padEnd(48, "x");
+  const app = createOperatorApp(deps, TOKEN, READ);
+  const call = (method: string, path: string, json?: unknown, authorization: string | null = BEARER) =>
+    app.request(`/api/operator/v1${path}`, {
+      method,
+      headers: {
+        ...(authorization === null ? {} : { authorization }),
+        ...(json === undefined ? {} : { "content-type": "application/json" }),
+      },
+      body: json === undefined ? undefined : JSON.stringify(json),
+    });
+  const refusal = async (res: Response) => [res.status, ((await res.json()) as { error: { code: string } }).error.code];
+  const NONE = "0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b";
+
+  // A workspace of one, full at one person, and an account from outside it.
+  const boss = browser(t);
+  await signUp(boss, "boss@example.com");
+  const { orgId } = await seedOrg(boss);
+  const visitor = browser(t);
+  await signUp(visitor, "consultant@example.com");
+  const idOf = async (email: string) =>
+    (await t.db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email)))[0]?.id ?? "";
+  const [bossId, visitorId] = [await idOf("boss@example.com"), await idOf("consultant@example.com")];
+  const path = `/orgs/${orgId}/outside-access`;
+  const ask = { userId: visitorId, outsideOf: "Example Consulting", note: "Sets up the agents" };
+  const limits = { members: 1, storageBytes: null, uploadBytesPerDay: null, platformUsdPerMonth: null };
+  await body(await put(`/orgs/${orgId}/limits`, limits));
+
+  // Every route needs the token; the read-only one lists and changes nothing.
+  const routes: [method: string, path: string, json?: unknown][] = [
+    ["POST", path, ask],
+    ["GET", path],
+    ["DELETE", `${path}/${visitorId}`],
+  ];
+  for (const [method, to, json] of routes) {
+    expect(await refusal(await call(method, to, json, null))).toEqual([401, "unauthorized"]);
+    if (method === "GET") continue;
+    expect(await refusal(await call(method, to, json, `Bearer ${READ}`))).toEqual([403, "forbidden"]);
+  }
+  expect(await body(await call("GET", path, undefined, `Bearer ${READ}`))).toEqual({ people: [] });
+
+  for (const bad of [{}, { ...ask, outsideOf: "  " }, { ...ask, outsideOf: "x".repeat(81) }, { ...ask, userId: "" }]) {
+    expect({ bad, status: (await call("POST", path, bad)).status }).toEqual({ bad, status: 400 });
+  }
+  expect(await refusal(await call("POST", `/orgs/${NONE}/outside-access`, ask))).toEqual([404, "not_found"]);
+  expect(await refusal(await call("POST", path, { ...ask, userId: "nobody" }))).toEqual([404, "not_found"]);
+  expect(await refusal(await call("GET", `/orgs/${NONE}/outside-access`))).toEqual([404, "not_found"]);
+  expect(await refusal(await call("DELETE", `/orgs/${NONE}/outside-access/${visitorId}`))).toEqual([404, "not_found"]);
+  // Someone already in is the workspace's own: neither let in again nor taken out from here.
+  expect(await refusal(await call("POST", path, { ...ask, userId: bossId }))).toEqual([409, "join.member"]);
+  expect(await refusal(await call("DELETE", `${path}/${bossId}`))).toEqual([409, "outside_access.member"]);
+
+  enableOperatorEvents();
+  try {
+    // Asked, and asked again: one request, which the workspace reads with who they work for.
+    expect(await body(await call("POST", path, ask))).toEqual({ state: "pending" });
+    expect(await body(await call("POST", path, { ...ask, outsideOf: "Another Firm" }))).toEqual({ state: "pending" });
+    expect(await body(await call("GET", path))).toEqual({
+      people: [{ userId: visitorId, outsideOf: "Example Consulting", state: "pending", since: expect.any(String) }],
+    });
+    type Waiting = { requests: { id: string; name: string; outsideOf?: string | null }[] };
+    const { requests } = await body<Waiting>(await boss(`/api/app/organizations/${orgId}/join-requests`));
+    expect(requests.map((r) => [r.name, r.outsideOf])).toEqual([["consultant", "Example Consulting"]]);
+
+    // The workspace is full, and approving lets them in all the same.
+    const approved = await boss(`/api/app/organizations/${orgId}/join-requests/${requests[0]?.id}/approve`, {
+      json: {},
+    });
+    expect(await body(approved)).toEqual({ outcome: "joined" });
+    expect(await body(await call("GET", path))).toEqual({
+      people: [{ userId: visitorId, outsideOf: "Example Consulting", state: "member", since: expect.any(String) }],
+    });
+    type People = { members: { userId: string; outsideOf?: string | null }[] };
+    const { members } = await body<People>(await boss(`/api/app/organizations/${orgId}/members`));
+    expect(members.map((m) => [m.userId, m.outsideOf])).toEqual([
+      [bossId, null],
+      [visitorId, "Example Consulting"],
+    ]);
+    const { people } = await body<{ people: People["members"] }>(await boss(`/api/app/organizations/${orgId}/people`));
+    expect(people.find((p) => p.userId === visitorId)?.outsideOf).toBe("Example Consulting");
+
+    // Two people are in; the plan's count is still one, and the workspace still exactly full for an ordinary person.
+    expect((await body<{ counts: { members: number } }>(await op(`/orgs/${orgId}`))).counts.members).toBe(1);
+    const listed = await body<Page>(await op(`/orgs?q=${orgId}`));
+    expect(listed.orgs.map((o) => o.members)).toEqual([1]);
+    const seats = await body<{ members: { used: number; limit: number } }>(
+      await boss(`/api/app/organizations/${orgId}/limits`),
+    );
+    expect(seats.members).toMatchObject({ used: 1, limit: 1 });
+    const invited = await boss(`/api/app/organizations/${orgId}/invitations`, {
+      json: { email: "hire@example.com", roleIds: [] },
+    });
+    expect(await refusal(invited)).toEqual([409, "org.members_full"]);
+    expect(await refusal(await call("POST", path, ask))).toEqual([409, "join.member"]);
+
+    // Ended from here, twice over: they are out, and nothing is left to end.
+    expect(await body(await call("DELETE", `${path}/${visitorId}`))).toEqual({ state: "none" });
+    expect(await body(await call("DELETE", `${path}/${visitorId}`))).toEqual({ state: "none" });
+    expect(await body(await call("GET", path))).toEqual({ people: [] });
+    expect((await visitor(`/api/app/organizations/${orgId}/members`)).status).toBe(403);
+
+    // A request the workspace denies, and one ended while it waits.
+    await body(await call("POST", path, ask));
+    const again = await body<Waiting>(await boss(`/api/app/organizations/${orgId}/join-requests`));
+    const denied = await boss(`/api/app/organizations/${orgId}/join-requests/${again.requests[0]?.id}/deny`, {
+      json: {},
+    });
+    expect(denied.status).toBe(204);
+    await body(await call("POST", path, ask));
+    expect(await body(await call("DELETE", `${path}/${visitorId}`))).toEqual({ state: "none" });
+
+    const { events } = await body<{ events: { type: string; orgId: string | null; data: unknown }[] }>(
+      await op("/events?limit=1000"),
+    );
+    expect(events.filter((e) => e.type.startsWith("outside_access.")).map((e) => [e.type, e.orgId, e.data])).toEqual([
+      ["outside_access.granted", orgId, { userId: visitorId }],
+      ["outside_access.ended", orgId, { userId: visitorId }],
+      ["outside_access.denied", orgId, { userId: visitorId }],
+      ["outside_access.ended", orgId, { userId: visitorId }],
+    ]);
+  } finally {
+    enableOperatorEvents(false);
+  }
+});
+
 test("early access: every route needs the token, answers in its shape, and refuses with its codes", async () => {
   const app = createOperatorApp({ ...deps, emails: true }, TOKEN);
   const call = (method: string, path: string, json?: unknown, authorization: string | null = BEARER) =>

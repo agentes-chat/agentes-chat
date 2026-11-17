@@ -211,7 +211,7 @@ export const SHOWN_ONLY: Record<Condition, readonly string[]> = {
     // An address held for an account that just left it (`changeAccountEmail`): only a server that sends e-mail holds it.
     "auth.flow.emailHeld",
   ],
-  apiKey: ["agentPage.work.brain.fallbackTitle"],
+  apiKey: [],
   // A message nobody mentions still gets an agent: routing.mine (the chip and its help line), routing.by (Settings),
   // or the receipt of a message a rule sent to its one candidate.
   routing: ["channelMembers.replyAloneHelp", "routing.by.jev", "routing.by.model", "receipts.by.only_agent"],

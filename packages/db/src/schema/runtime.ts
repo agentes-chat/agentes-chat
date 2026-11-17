@@ -157,7 +157,7 @@ export const agentRuns = pgTable(
     workingSince: timestamp({ withTimezone: true }),
     /**
      * The computer this run waits for (`waiting_input` with a computer brain
-     * and nothing to fall back on, ADR 0032 §5): queued again when it comes
+     * that can't answer now, ADR 0032 §5): queued again when it comes
      * back (`resumeRunsWaitingForMachine`). Null otherwise.
      */
     waitingMachineId: uuid(),
@@ -176,7 +176,7 @@ export const agentRuns = pgTable(
     background: boolean().notNull().default(false),
     /**
      * The brain this run actually thinks with (`model`, `claude_code`, `codex`): the agent's, a
-     * mission's override or a fallback. Null until its first turn. Shared code reads this, never
+     * mission's override, or the model brain an older release stood in with. Null until its first turn. Shared code reads this, never
      * the agent's stored brain.
      */
     brain: text(),

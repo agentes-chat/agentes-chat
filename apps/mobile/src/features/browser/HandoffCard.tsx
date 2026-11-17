@@ -12,9 +12,9 @@ import {
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
-import { Button, LineIcon, Text, useToast } from "@/ui";
+import { Button, LineIcon, PressScale, Text, useToast } from "@/ui";
 import { AskButtons, AskCard, AskFoot, ExpiryLine, useAskStore } from "../chat/asks";
 import { openComputer } from "../computer/AgentComputerRow";
 import { IconTile } from "../connectors/ConnectorIcon";
@@ -99,11 +99,15 @@ export function HandoffCard({ handoff: fromMessage }: { handoff: BrowserHandoff 
   }
   if (opensScreen && (state === "mine" || state === "helping")) {
     const helper = h.controllerUserId ? dir.memberById.get(h.controllerUserId)?.name : undefined;
+    // It opens the computer's screen: the press shows, with no haptic (plain navigation), and the chevron says where.
     return (
-      <Pressable
+      <PressScale
+        haptic={false}
+        fill={false}
         onPress={() => openComputer(h.agentId, h.seat)}
         accessibilityRole="button"
-        style={({ pressed }) => [styles.done, surface, pressed && styles.pressed]}
+        style={[styles.card, surface]}
+        contentStyle={styles.done}
       >
         <LineIcon name="laptop" variant="small" size={15} color={c.muted} />
         <Text variant="small" tone="muted" style={styles.grow}>
@@ -111,7 +115,8 @@ export function HandoffCard({ handoff: fromMessage }: { handoff: BrowserHandoff 
             ? t("mobile.browser.live.inControl")
             : t("mobile.browser.live.helping", { name: helper ?? t("channel.unknownPerson") })}
         </Text>
-      </Pressable>
+        <LineIcon name="right" variant="small" size={15} color={c.faint} />
+      </PressScale>
     );
   }
   if (state === "waiting") {
@@ -255,18 +260,11 @@ function ScreenPeek({ agentId, name, color }: { agentId: string; name: string; c
 
 const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
+  card: { borderRadius: 20 },
   // A line that wraps keeps its icon on the first.
-  done: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 20,
-  },
+  done: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   peek: { aspectRatio: 16 / 10, borderRadius: 12, overflow: "hidden" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  pressed: { opacity: 0.85 },
 });
 
 /**

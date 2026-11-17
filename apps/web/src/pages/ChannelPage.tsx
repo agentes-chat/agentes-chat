@@ -247,7 +247,7 @@ import { ChatMedia } from "@/chat/ChatMedia";
 import { ChatVoice } from "@/chat/ChatVoice";
 import { ClippedBody } from "@/chat/ClippedBody";
 import { LongDraftNotice } from "@/chat/LongDraftNotice";
-import { useConversationLook } from "@/chat/look";
+import { useConversationLook, useConversationWallpaper } from "@/chat/look";
 import { MessageBody } from "@/chat/MessageBody";
 import { useBrowserOffline } from "@/chat/offline";
 import { readingLanding } from "@/chat/reading";
@@ -297,6 +297,7 @@ import {
   useStopMovedOn,
   useStopNotice,
 } from "@/components/ChatNotices";
+import { ChatWallpaper } from "@/components/ChatWallpaper";
 import { QueueWaitTurns, useAgentsMachineId } from "@/components/ComputerQueue";
 import { ConsultationDialog } from "@/components/ConsultationDialog";
 import {
@@ -1801,6 +1802,14 @@ function ChannelView({
     dmAgent ? colorOf(dmAgent) : undefined,
   );
   const namedLook = useMemo(() => ({ ...look, names: true, faces: true }), [look]);
+  // The background behind the column (none in the side panel): "auto" takes the color of the agent a DM is with,
+  // in a thread of that DM too.
+  const dmWithAgent = dmAgent ?? (dmRead?.with.type === "agent" ? dir.agentById.get(dmRead.with.id) : undefined);
+  const wallpaper = useConversationWallpaper(
+    Boolean(chrome?.dmAgentId || chrome?.dmPersonId || thread?.channelKind === "dm"),
+    chrome?.panel ? null : channel.id,
+    dmWithAgent ? colorOf(dmWithAgent) : undefined,
+  );
   // The composer's one pill: the mission this message answers, which can be called off.
   const composerPills = missionReply ? (
     <span className="ac-composer__pill composer-reply">
@@ -2514,7 +2523,8 @@ function ChannelView({
                 )}
                 {/* Under the header: the conversation, and the members beside it (the header spans both, as Discord's). */}
                 <div className="channel__body">
-                  <div className="channel__col">
+                  <div className="channel__col" data-wallpaper={wallpaper?.wallpaper.kind} style={wallpaper?.vars}>
+                    {wallpaper && <ChatWallpaper wallpaper={wallpaper.wallpaper} strength={wallpaper.strength} />}
                     {isMember && (
                       <ChannelPinnedBar
                         channelId={channel.id}
@@ -2579,6 +2589,7 @@ function ChannelView({
                             className="channel__messages"
                             data-look={look.style}
                             data-faces={look.faces ? undefined : "false"}
+                            data-wallpaper={wallpaper?.wallpaper.kind}
                             data-fresh={fresh || undefined}
                             aria-label={t("channel.messages")}
                             aria-live="polite"

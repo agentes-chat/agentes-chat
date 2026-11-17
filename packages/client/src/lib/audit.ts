@@ -82,6 +82,10 @@ export function auditPhrase(t: TFunction, row: AuditRow, locale?: string): strin
     const status = (["approved", "refused", "expired"] as const).find((s) => s === rest);
     if (status) return t(`audit.change.approval.${status}`);
   }
+  // An outside collaborator (ADR 0191): who they work for, as it was when it happened.
+  const outsideOf = auditStr(row.details.outsideOf);
+  const outside = OUTSIDE_ACTIONS[row.action];
+  if (outsideOf && outside) return t(`audit.change.outside.${outside}`, { outsideOf });
   if (area === "member") {
     const what = (["joined", "left", "role_changed"] as const).find((s) => s === rest);
     if (what) return t(`audit.change.member.${what}`);
@@ -121,6 +125,13 @@ export function auditSentence(t: TFunction, row: AuditRow, locale: string): { na
   const text = auditPhrase(t, row, locale);
   return { name, text: name ? lowerFirst(text, locale) : text };
 }
+
+/** The actions whose details carry `outsideOf` (ADR 0191), by their sentence. */
+const OUTSIDE_ACTIONS: Record<string, "approved" | "removed" | "left"> = {
+  "join_request.approved": "approved",
+  "member.removed": "removed",
+  "member.left": "left",
+};
 
 /** The Vault's actions (ADR 0144), each with a sentence of its own. */
 const VAULT_ACTIONS = [

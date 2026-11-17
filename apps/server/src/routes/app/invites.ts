@@ -47,6 +47,7 @@ import {
   requireSession,
   security,
 } from "./context";
+import { OutsideOf } from "./schemas";
 
 const tags = ["Organizations"];
 /** Asks from one place (ADR 0068). A link's own count is the engine's (`askToJoin`). */
@@ -142,6 +143,7 @@ const JoinRequest = z.object({
   suggestedBy: z.string().nullable().openapi({
     description: "The member who suggested this person (their name, ADR 0090): no link, no proof.",
   }),
+  outsideOf: OutsideOf,
   link: z
     .object({
       id: z.uuid(),

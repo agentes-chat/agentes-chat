@@ -40,7 +40,10 @@ export type OperatorEventType =
   | "content.viewed"
   | "platform_ai.threshold"
   | "account.failure"
-  | "machine.wake_wanted";
+  | "machine.wake_wanted"
+  | "outside_access.granted"
+  | "outside_access.denied"
+  | "outside_access.ended";
 
 export interface OperatorEvent {
   type: OperatorEventType;

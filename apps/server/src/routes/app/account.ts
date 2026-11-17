@@ -61,6 +61,7 @@ import {
   setMyWorkArea,
   setOrgLogo,
   settleJoinRequests,
+  setWallpaperPhoto,
   signInOptions,
   soleOwnerRefusal,
   toldReason,
@@ -72,6 +73,7 @@ import {
   updateOrganization,
   updateOrgSettings,
   WORKSPACE_MODES,
+  wallpaperPhotoFile,
   workspaceContents,
   workspaceDeletions,
   workspaceMode,
@@ -318,6 +320,7 @@ export function accountRoutes(deps: AppDeps) {
     "/account",
     "/account/*",
     "/avatars/*",
+    "/wallpapers/*",
     "/org-logos/*",
     "/organizations",
     "/organizations/*",
@@ -371,6 +374,10 @@ export function accountRoutes(deps: AppDeps) {
               description:
                 "The billing service (BILLING_URL, ADR 0079): owners and admins open a workspace's plan and billing there through `POST …/billing-link`. Null: no billing.",
             }),
+            referralsUrl: z.string().nullable().openapi({
+              description:
+                "The referral service (REFERRALS_URL, ADR 0192): a signed-in person opens it through `POST /api/app/referrals-link`. Null: no referrals.",
+            }),
             cloud: z.boolean().openapi({
               description:
                 "One of agentes.chat's own servers (`cloud` in `GET /api/instance`): the apps show no About screen there, which every other server shows.",
@@ -412,6 +419,7 @@ export function accountRoutes(deps: AppDeps) {
           passwordReset: deps.adapters.email.delivers === true,
           workspaceComputer: config.MACHINE_PROVISIONING === "external",
           billingUrl: config.BILLING_URL ?? null,
+          referralsUrl: config.REFERRALS_URL ?? null,
           cloud: isAgentesCloud(config.PUBLIC_URL),
           turnstileSiteKey: deps.adapters.humanCheck?.siteKey ?? null,
           errorReports: reportsTo(config.SENTRY_WEB_DSN),
@@ -1234,6 +1242,46 @@ export function accountRoutes(deps: AppDeps) {
     },
   );
 
+  app.openapi(
+    createRoute({
+      method: "put",
+      path: "/organizations/{orgId}/me/wallpaper-photo",
+      tags,
+      security,
+      summary: "Send a photo for a conversation's background (JPEG, PNG or WebP up to 2 MB; metadata is removed)",
+      description:
+        'Only you see it. The answer\'s `url` goes into a background (`{ kind: "photo", url, dim, x, y }`) with `PUT …/me/chat` or `PUT …/channels/{channelId}/wallpaper`; photos none of your backgrounds shows any more are removed when you send one. The apps shrink it first.',
+      request: {
+        params: OrgParams,
+        body: body(
+          z.object({
+            imageBase64: z
+              .string()
+              .min(1)
+              .max(3_000_000)
+              .openapi({ description: "The image bytes in base64 (a data: URL prefix is accepted)." }),
+            contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+          }),
+        ),
+      },
+      responses: {
+        200: json(z.object({ url: z.string() })),
+        429: errorResponse("Too many photos"),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const user = c.get("user");
+      await requirePermission(db, user.id, c.req.valid("param").orgId, "read");
+      const limit = await deps.adapters.rateLimiter.consume(`wallpaper:${user.id}`, { limit: 20, windowMs: 3600_000 });
+      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many photos. Try again later.");
+      return c.json(
+        await setWallpaperPhoto({ db, blobs: deps.adapters.platformBlobs }, user.id, c.req.valid("json")),
+        200,
+      );
+    },
+  );
+
   // The workspace logo: an admin uploads it; every member sees it.
   app.openapi(
     createRoute({
@@ -1297,6 +1345,18 @@ export function accountRoutes(deps: AppDeps) {
         { db, blobs: deps.adapters.platformBlobs },
         c.get("user").id,
         c.req.param("orgId"),
+        c.req.param("file"),
+      ),
+    ),
+  );
+
+  // A background's photo, for its owner only.
+  app.get("/wallpapers/:userId/:file", async (c) =>
+    imageFile(
+      await wallpaperPhotoFile(
+        { db, blobs: deps.adapters.platformBlobs },
+        c.get("user").id,
+        c.req.param("userId"),
         c.req.param("file"),
       ),
     ),

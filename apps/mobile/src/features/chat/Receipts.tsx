@@ -15,13 +15,13 @@ import { useTranslation } from "react-i18next";
 import { type GestureResponderEvent, Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn, LayoutAnimationConfig } from "react-native-reanimated";
 import { useOrg } from "@/providers/org";
-import { CARD_PAD, Card, LineIcon, Text, useReducedMotion, useToast } from "@/ui";
+import { GroupedFooter, Icon, LineIcon, Text, useReducedMotion, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { agoOf } from "../agents/logic";
 import { agoText } from "../agents/work";
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
-import { copyText, tapHaptic } from "../shared/parts";
+import { ActionList, copyText, tapHaptic } from "../shared/parts";
 import { useSheetIfAny } from "../shared/SheetHost";
 import { groupStart, receiptIcon, receiptLayout, targetHref } from "./actions";
 import { DOUBLE_TAP_MS } from "./logic";
@@ -212,7 +212,10 @@ function Sentence({
   );
 }
 
-/** A row's changes whole, one a line, each opening its own thing where the phone has it (no tip on a phone). */
+/**
+ * A row's changes whole, one a line, each opening its own thing where the phone has it (no tip on a phone): the
+ * sheets' own list (`ActionList`), its words wrapping whole, the row's own lines under it as the list's footer.
+ */
 function ChangesSheet({
   row,
   channelId,
@@ -233,48 +236,26 @@ function ChangesSheet({
   return (
     <>
       <SheetTitle title={title} />
-      <Card>
-        {receiptLines(row, t, meId ?? undefined).map((l, i) => {
+      <ActionList
+        items={receiptLines(row, t, meId ?? undefined).map((l) => {
           const href = targetHref(l.action.target, channelId);
-          const body = (pressed: boolean) => (
-            <View
-              style={[
-                styles.change,
-                i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line2 },
-                pressed && { backgroundColor: c.plate },
-              ]}
-            >
-              <LineIcon name={receiptIcon(l.action.kind)} size={15} color={c.muted} />
-              <View style={styles.grow}>
-                <Text variant="body" tone={href ? "ink" : "ink2"}>
-                  {l.text}
-                </Text>
-                {l.files ? (
-                  <Text variant="small" tone="muted">
-                    {l.files}
-                  </Text>
-                ) : null}
-              </View>
-              {href ? <LineIcon name="right" size={15} color={c.faint} /> : null}
-            </View>
-          );
-          if (!href) return <View key={l.action.id}>{body(false)}</View>;
-          return (
-            <Pressable
-              key={l.action.id}
-              onPress={() => close(() => router.push(href))}
-              accessibilityRole="link"
-              accessibilityLabel={l.files ? `${l.text}, ${l.files}` : l.text}
-            >
-              {({ pressed }) => body(pressed)}
-            </Pressable>
-          );
+          return {
+            key: l.action.id,
+            icon: receiptIcon(l.action.kind),
+            label: l.text,
+            ...(l.files ? { hint: l.files } : {}),
+            // A change that opens its own thing says so with the chevron; one with nowhere to go is only read.
+            ...(href
+              ? {
+                  trailing: <Icon name="right" size={15} color={c.faint} />,
+                  onPress: () => close(() => router.push(href)),
+                }
+              : {}),
+          };
         })}
-      </Card>
+      />
       {under.map((line) => (
-        <Text key={line} variant="small" tone="muted" style={styles.sheetUnder}>
-          {line}
-        </Text>
+        <GroupedFooter key={line}>{line}</GroupedFooter>
       ))}
     </>
   );
@@ -340,7 +321,6 @@ function UndoneLine({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
-  grow: { flex: 1, minWidth: 0 },
   // The words in a card as wide as they are: they shrink and wrap where the column ends (`flex: 1` would collapse them).
   fit: { flexShrink: 1, minWidth: 0 },
   bold: { fontWeight: "600" },
@@ -361,9 +341,6 @@ const styles = StyleSheet.create({
   under: { marginTop: 2 },
   copyHook: { alignSelf: "flex-start", marginTop: 6, paddingVertical: 2 },
   group: { overflow: "hidden" },
-  sheetUnder: { paddingHorizontal: CARD_PAD, paddingTop: 10 },
-  // A change in the sheet, a list row's room: its words wrap whole there.
-  change: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingHorizontal: CARD_PAD, paddingVertical: 14 },
   hd: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, paddingHorizontal: 12 },
   it: {
     flexDirection: "row",

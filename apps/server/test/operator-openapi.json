@@ -3,7 +3,7 @@
   "info": {
     "title": "agentes.chat operator API",
     "version": "test",
-    "description": "Workspace and account lookups, what a run did and why a message started one or none, what a workspace connected, recorded, asked and scheduled, what a person was notified of and reaches, the messages no run answered, the job queue, the emails queued to an address and what model calls spent, workspace standing, billing holds and limits (ADR 0079), the events feed and review blocks, the workspaces' computers from an external provisioner, who may sign up (the waiting list and early-access invitations, ADR 0078), how new Claude sign-ins for all agents are made (ADR 0150), and how connectors are used (ADR 0103), for the people who run this instance (ADR 0056)."
+    "description": "Workspace and account lookups, what a run did and why a message started one or none, what a workspace connected, recorded, asked and scheduled, what a person was notified of and reaches, the messages no run answered, the job queue, the emails queued to an address and what model calls spent, workspace standing, billing holds and limits (ADR 0079), outside collaborators (ADR 0191), the events feed and review blocks, the workspaces' computers from an external provisioner, who may sign up (the waiting list and early-access invitations, ADR 0078), how new Claude sign-ins for all agents are made (ADR 0150), and how connectors are used (ADR 0103), for the people who run this instance (ADR 0056)."
   },
   "servers": [
     {
@@ -131,7 +131,8 @@
             "$ref": "#/components/schemas/OperatorStandingState"
           },
           "members": {
-            "type": "integer"
+            "type": "integer",
+            "description": "The people its `members` limit counts: no outside collaborators."
           },
           "agents": {
             "type": "integer",
@@ -195,7 +196,8 @@
             "type": "object",
             "properties": {
               "members": {
-                "type": "integer"
+                "type": "integer",
+                "description": "The people its `members` limit counts: no outside collaborators (ADR 0191)."
               },
               "agents": {
                 "type": "integer",
@@ -324,7 +326,7 @@
             "type": ["integer", "null"],
             "minimum": 1,
             "maximum": 100000,
-            "description": "People in it, blocked accounts included; agents, invitations and requests to join never count."
+            "description": "People in it, blocked accounts included; agents, invitations, requests to join and outside collaborators (ADR 0191) never count."
           },
           "membersMax": {
             "type": ["integer", "null"],
@@ -540,6 +542,40 @@
         "enum": ["payment", "unpaid", "ended", null],
         "description": "`payment`: no plan yet. `unpaid`: its payment failed. `ended`: its plan ended. Agents stop as with any hold; people still read and write."
       },
+      "OperatorOutsideAccessState": {
+        "type": "string",
+        "enum": ["pending", "member"],
+        "description": "`pending`: a request waits for someone in the workspace who may invite people to approve or deny it. `member`: they are in, as an outside collaborator."
+      },
+      "OperatorOutsidePeople": {
+        "type": "object",
+        "properties": {
+          "people": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "userId": {
+                  "type": "string"
+                },
+                "outsideOf": {
+                  "type": "string",
+                  "description": "Who the person works for, shown beside their name in the workspace."
+                },
+                "state": {
+                  "$ref": "#/components/schemas/OperatorOutsideAccessState"
+                },
+                "since": {
+                  "type": "string",
+                  "description": "When the request was filed (`pending`) or they got in (`member`)."
+                }
+              },
+              "required": ["userId", "outsideOf", "state", "since"]
+            }
+          }
+        },
+        "required": ["people"]
+      },
       "OperatorEventPage": {
         "type": "object",
         "properties": {
@@ -568,7 +604,7 @@
           },
           "type": {
             "type": "string",
-            "description": "`user.signed_up`, `session.created`, `user.deletion_requested`, `user.deletion_canceled`, `user.deleted`, `organization.created`, `organization.deletion_requested`, `organization.deletion_canceled`, `organization.deleted`, `invitation.created`, `agent.created`, `agent.deleted`, `mail.sent`, `run.finished`, `run.hop_limit`, `task.finished`, `desktop_control.ended`, `content.viewed`, `platform_ai.threshold` or `account.failure` (ADR 0056 §5 lists each one's `data`). Ignore types you don't know: new ones keep v1."
+            "description": "`user.signed_up`, `session.created`, `user.deletion_requested`, `user.deletion_canceled`, `user.deleted`, `organization.created`, `organization.deletion_requested`, `organization.deletion_canceled`, `organization.deleted`, `invitation.created`, `agent.created`, `agent.deleted`, `mail.sent`, `run.finished`, `run.hop_limit`, `task.finished`, `desktop_control.ended`, `content.viewed`, `platform_ai.threshold`, `account.failure`, `outside_access.granted`, `outside_access.denied` or `outside_access.ended` (ADR 0056 §5 lists each one's `data`; ADR 0191 the last three's). Ignore types you don't know: new ones keep v1."
           },
           "orgId": {
             "type": ["string", "null"],
@@ -3544,7 +3580,7 @@
                 },
                 "model": {
                   "type": "string",
-                  "description": "The API's model: what `model` thinks with, and a CLI's fallback."
+                  "description": "The API's model: what `model` thinks with."
                 },
                 "brainModel": {
                   "type": ["string", "null"],
@@ -3656,7 +3692,7 @@
           },
           "model": {
             "type": "string",
-            "description": "The API's model: what `model` thinks with, and a CLI's fallback."
+            "description": "The API's model: what `model` thinks with."
           },
           "brainModel": {
             "type": ["string", "null"],
@@ -3716,7 +3752,9 @@
           },
           "fallback": {
             "type": "boolean",
-            "description": "When its CLI can't answer, it answers through the API."
+            "enum": [false],
+            "deprecated": true,
+            "description": "Always false: the API never answers for a computer brain (ADR 0032's 2026-11-15 addendum). Kept for v1 callers."
           },
           "provider": {
             "type": ["string", "null"],
@@ -3992,7 +4030,7 @@
           },
           "waitResetsAt": {
             "type": ["string", "null"],
-            "description": "When the limit it waits on resets, when known."
+            "description": "When the limit it waits on resets, when known. With every account of the order at its limit, the first of them."
           },
           "waitAccountId": {
             "type": ["string", "null"],
@@ -4003,6 +4041,11 @@
             "type": ["string", "null"],
             "format": "uuid",
             "description": "The computer that sign-in is on. With `waitAccountId` null and this set: that computer's own sign-in is the plan it waits on."
+          },
+          "accountId": {
+            "type": ["string", "null"],
+            "format": "uuid",
+            "description": "The AI account it went on with at its plan's limit (ADR 0041 §6): its plan waits and usage are that account's. Null: its agent's own (`accountId` on the agent)."
           },
           "waitingMachineId": {
             "type": ["string", "null"],
@@ -4105,6 +4148,7 @@
           "waitResetsAt",
           "waitAccountId",
           "waitAccountMachineId",
+          "accountId",
           "waitingMachineId",
           "canceled",
           "errorCode",
@@ -5076,7 +5120,7 @@
                     },
                     "waitResetsAt": {
                       "type": ["string", "null"],
-                      "description": "When the limit it waits on resets, when known."
+                      "description": "When the limit it waits on resets, when known. With every account of the order at its limit, the first of them."
                     },
                     "waitAccountId": {
                       "type": ["string", "null"],
@@ -5087,6 +5131,11 @@
                       "type": ["string", "null"],
                       "format": "uuid",
                       "description": "The computer that sign-in is on. With `waitAccountId` null and this set: that computer's own sign-in is the plan it waits on."
+                    },
+                    "accountId": {
+                      "type": ["string", "null"],
+                      "format": "uuid",
+                      "description": "The AI account it went on with at its plan's limit (ADR 0041 §6): its plan waits and usage are that account's. Null: its agent's own (`accountId` on the agent)."
                     },
                     "waitingMachineId": {
                       "type": ["string", "null"],
@@ -5191,6 +5240,7 @@
                     "waitResetsAt",
                     "waitAccountId",
                     "waitAccountMachineId",
+                    "accountId",
                     "waitingMachineId",
                     "canceled",
                     "errorCode",
@@ -7422,6 +7472,257 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/outside-access": {
+      "post": {
+        "tags": ["Operator"],
+        "summary": "Ask a workspace to let an account in as an outside collaborator",
+        "description": "Files a request to join that whoever may invite people in the workspace approves or denies like any other, told the same way. Approved, the account joins at once and never counts toward the `members` limit, even in a full workspace. Asking again while the request waits changes nothing. 409 `join.member` when the account is already in the workspace, `join.waiting` while another request to join waits for its address. The events feed tells the answer: `outside_access.granted` or `outside_access.denied`, and `outside_access.ended` when they leave or are removed, each with `data.userId`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "The account to let in. It must exist."
+                  },
+                  "outsideOf": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80,
+                    "description": "Who the person works for, shown beside their name in the workspace."
+                  },
+                  "note": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "Shown with the request to the people who answer it, in the app only."
+                  }
+                },
+                "required": ["userId", "outsideOf"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "$ref": "#/components/schemas/OperatorOutsideAccessState"
+                    }
+                  },
+                  "required": ["state"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused as the workspace stands",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Operator"],
+        "summary": "A workspace's outside collaborators, waiting and in",
+        "description": "The requests still waiting for an answer, then the people in, each oldest first.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorOutsidePeople"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orgs/{orgId}/outside-access/{userId}": {
+      "delete": {
+        "tags": ["Operator"],
+        "summary": "End an account's outside access to a workspace",
+        "description": "Closes its request still waiting, or removes the outside collaborator as anyone removed from a workspace is. With neither, nothing changes. 409 `outside_access.member` for an ordinary member: only someone in the workspace removes one.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": ["none"]
+                    }
+                  },
+                  "required": ["state"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Refused as the workspace stands",
             "content": {
               "application/json": {
                 "schema": {

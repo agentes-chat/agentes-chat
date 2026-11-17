@@ -1159,6 +1159,13 @@ export const envVars = {
     example: "<output of openssl rand -base64 48>",
     secret: true,
   },
+  REFERRALS_URL: {
+    schema: z.url({ protocol: /^https$/ }).optional(),
+    description:
+      "Your referral service's address (ADR 0192). Signed-in people get Refer and earn in their menu, and `/refer`, which open it signed in as them. It shares `BILLING_LINK_SECRET` with this server, which signs the link, so it needs that set. Unset (default): no referrals anywhere.",
+    section: "Operator",
+    example: "https://refer.example.com",
+  },
   BILLING_HOLD_NEW_WORKSPACES: {
     schema: z.stringbool().default(false),
     description:

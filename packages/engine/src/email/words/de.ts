@@ -237,6 +237,11 @@ export const words: EmailWords = {
     preheader: "Gib die Anfrage unter Mitglieder frei oder lehne sie ab. Bis du antwortest, passiert nichts.",
     headline: "Eine Beitrittsanfrage wartet",
     body: (org) => ["Die Person hat den Einladungslink von ", { b: org }, " geöffnet und möchte beitreten."],
+    outside: (by) => [
+      "Diese Person arbeitet für ",
+      { b: by },
+      " und möchte als externe Person beitreten. Sie belegt keinen Platz in deinem Tarif, und du kannst sie jederzeit entfernen.",
+    ],
     note: "Gib nur Personen frei, die du erwartest. Sie treten als Mitglied bei, außer du wählst auf der Seite eine andere Rolle.",
     approve: "Freigeben",
     deny: "Ablehnen",

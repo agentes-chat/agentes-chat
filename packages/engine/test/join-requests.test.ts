@@ -5,6 +5,7 @@ import {
   acceptInvitation,
   approveJoinRequest,
   askToJoin,
+  changeMemberRole,
   createAgent,
   createInvitation,
   createInviteLink,
@@ -13,6 +14,7 @@ import {
   denyJoinRequest,
   type EmailTemplate,
   editInviteLink,
+  endOutsideAccess,
   FILE_JOIN_REQUEST_JOB,
   fileJoinRequest,
   findInviteLink,
@@ -22,20 +24,25 @@ import {
   JOIN_REQUEST_TTL_DAYS,
   joinStatus,
   listInviteLinks,
+  listMembers,
+  listOutsideAccess,
   listWaitingJoinRequests,
   MAX_PENDING_JOIN_REQUESTS,
   memberRoleIds,
+  NotFoundError,
   previewInvitation,
   pruneJoinRequests,
   randomToken,
   removeMember,
   renderEmail,
   renderPush,
+  requestOutsideAccess,
   resendInvitation,
   revokeInvitation,
   settleJoinRequests,
   sha256,
   turnOffInviteLink,
+  ValidationError,
 } from "../src";
 import { addMember, adminRoleId, type Fixture, SECRET, setup } from "./fixtures";
 
@@ -934,6 +941,153 @@ describe("links with choices (ADR 0184)", () => {
     await expect(editInviteLink(f.db, f.owner.id, f.org.id, link.id, { maxUses: 5 }, NOW)).rejects.toMatchObject({
       code: "not_found",
     });
+  });
+});
+
+describe("outside collaborators (ADR 0191)", () => {
+  const outside = (userId: string, outsideOf = "Example Consulting", orgId = f.org.id) =>
+    requestOutsideAccess(
+      { ...deps(), publicUrl: PUBLIC },
+      { orgId, userId, outsideOf, note: " Sets up the agents " },
+      NOW,
+    );
+  const audit = (action: string) => f.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, action));
+
+  test("the operator's request waits and is told like any other; asked again it stays as it is; a member and a waiting ask are refused", async () => {
+    const { token } = await start();
+    const bob = await addMember(f.db, f.org.id, "admin", "bob");
+    // Not confirmed: the operator vouches for the account, so nothing is left for its address to prove.
+    const cai = await person("cai@example.com");
+    const row = await outside(cai.id, "  Example Consulting ");
+    expect(row).toMatchObject({
+      orgId: f.org.id,
+      linkId: null,
+      userId: cai.id,
+      email: "cai@example.com",
+      name: "Cai Lima",
+      note: "Sets up the agents",
+      status: "pending",
+      outsideOf: "Example Consulting",
+      verifiedAt: NOW,
+      expiresAt: later(JOIN_REQUEST_TTL_DAYS),
+    });
+
+    // Whoever may invite hears it the way they hear someone asking through a link: the notice and the hour's email.
+    const told = await notices();
+    expect(told.map((n) => n.userId).sort()).toEqual([f.owner.id, bob.id].sort());
+    for (const n of told) {
+      expect(n).toMatchObject({
+        waiting: true,
+        count: 1,
+        actors: [],
+        latest: { title: "Cai Lima", names: ["Cai Lima"] },
+        source: { label: "Acme" },
+      });
+    }
+    const sent = await joinEmails("join_request");
+    expect(sent.flatMap((e) => e.to).sort()).toEqual([f.owner.email, bob.email].sort());
+    expect(sent[0]?.key).toStartWith(`join-request:${f.org.id}:2026-10-26T10`);
+    expect(sent[0]?.template).toMatchObject({
+      kind: "join_request",
+      orgName: "Acme",
+      name: "Cai Lima",
+      email: "cai@example.com",
+      url: `https://agentes.test/org/${f.org.id}/settings/members?request=${row.id}&do=approve`,
+      denyUrl: `https://agentes.test/org/${f.org.id}/settings/members?request=${row.id}&do=deny`,
+    });
+    expect((await listWaitingJoinRequests(f.db, f.owner.id, f.org.id, NOW)).map((r) => [r.id, r.outsideOf])).toEqual([
+      [row.id, "Example Consulting"],
+    ]);
+    expect(await listOutsideAccess(f.db, f.org.id, NOW)).toEqual([
+      { userId: cai.id, outsideOf: "Example Consulting", state: "pending", since: NOW },
+    ]);
+
+    // Asked again, even in other words: the same request, and nobody is told twice.
+    expect(await outside(cai.id, "Another Firm")).toEqual(row);
+    expect(await rows()).toHaveLength(1);
+    expect((await notices()).map((n) => n.count)).toEqual([1, 1]);
+    expect(await joinEmails("join_request")).toHaveLength(sent.length);
+
+    await expect(outside(bob.id)).rejects.toMatchObject({ name: "ConflictError", code: "join.member" });
+    // Someone who asked through a link is answered as that: the request isn't turned into an outside one.
+    const dan = await person("dan@example.com", { verified: true });
+    await signedIn(token, dan);
+    await expect(outside(dan.id)).rejects.toMatchObject({ name: "ConflictError", code: "join.waiting" });
+    expect((await rows()).find((r) => r.userId === dan.id)?.outsideOf).toBeNull();
+    await expect(outside("user_nobody")).rejects.toBeInstanceOf(NotFoundError);
+    await expect(outside(cai.id, "Example Consulting", crypto.randomUUID())).rejects.toBeInstanceOf(NotFoundError);
+    for (const bad of ["   ", "x".repeat(81)]) {
+      await expect(outside(cai.id, bad)).rejects.toBeInstanceOf(ValidationError);
+    }
+  });
+
+  test("approved, the account is in at once with who it works for, and never an owner", async () => {
+    await start();
+    const cai = await person("cai@example.com");
+    const row = await outside(cai.id);
+    expect(await approveJoinRequest(deps(), PUBLIC, f.owner.id, f.org.id, row.id, [], NOW)).toEqual({
+      outcome: "joined",
+    });
+    expect(await memberOf(cai.id)).toMatchObject({ role: "member", outsideOf: "Example Consulting" });
+    expect((await listMembers(f.db, f.org.id)).map((m) => [m.userId, m.outsideOf])).toEqual([
+      [f.owner.id, null],
+      [cai.id, "Example Consulting"],
+    ]);
+    expect(await listOutsideAccess(f.db, f.org.id, NOW)).toEqual([
+      { userId: cai.id, outsideOf: "Example Consulting", state: "member", since: expect.any(Date) },
+    ]);
+    expect((await audit("join_request.approved")).map((a) => a.details)).toEqual([
+      expect.objectContaining({ joined: true, outsideOf: "Example Consulting" }),
+    ]);
+    // They are told they're in, as anyone approved is.
+    expect((await joinEmails("join_answer")).map((e) => [e.to, e.template])).toEqual([
+      [["cai@example.com"], expect.objectContaining({ outcome: "joined" })],
+    ]);
+
+    await expect(changeMemberRole(f.db, f.owner.id, f.org.id, cai.id, "owner")).rejects.toMatchObject({
+      name: "ConflictError",
+      code: "member.outside_owner",
+    });
+    expect((await memberOf(cai.id))?.role).toBe("member");
+    // An ordinary member still can be.
+    const bob = await addMember(f.db, f.org.id, "member", "bob");
+    await changeMemberRole(f.db, f.owner.id, f.org.id, bob.id, "owner");
+    expect((await memberOf(bob.id))?.role).toBe("owner");
+  });
+
+  test("ended by the operator: a waiting request closes, an outside collaborator is removed by the system, an ordinary member never", async () => {
+    await start();
+    const cai = await person("cai@example.com");
+    await outside(cai.id);
+    expect(await endOutsideAccess(deps(), f.org.id, cai.id, NOW)).toEqual({ closed: true, removed: false });
+    expect((await rows()).map((r) => r.status)).toEqual(["closed"]);
+    expect((await notices()).every((n) => n.doneAt !== null)).toBe(true);
+    expect(await listOutsideAccess(f.db, f.org.id, NOW)).toEqual([]);
+    // Nothing of theirs is left: nothing changes.
+    expect(await endOutsideAccess(deps(), f.org.id, cai.id, NOW)).toEqual({ closed: false, removed: false });
+
+    const row = await outside(cai.id);
+    await approveJoinRequest(deps(), PUBLIC, f.owner.id, f.org.id, row.id, [], NOW);
+    expect(await endOutsideAccess(deps(), f.org.id, cai.id, NOW)).toEqual({ closed: false, removed: true });
+    expect(await memberOf(cai.id)).toBeUndefined();
+    const [removed] = await audit("member.removed");
+    expect(removed).toMatchObject({ actorType: "system", actorId: null, targetId: cai.id });
+    expect(removed?.details).toMatchObject({ role: "member", outsideOf: "Example Consulting", email: cai.email });
+
+    // An ordinary member is the workspace's own to remove; someone who left on their own says who they worked for too.
+    const bob = await addMember(f.db, f.org.id, "member", "bob");
+    await expect(endOutsideAccess(deps(), f.org.id, bob.id, NOW)).rejects.toMatchObject({
+      name: "ConflictError",
+      code: "outside_access.member",
+    });
+    expect(await memberOf(bob.id)).toBeDefined();
+    const again = await outside(cai.id);
+    await approveJoinRequest(deps(), PUBLIC, f.owner.id, f.org.id, again.id, [], NOW);
+    await removeMember(f.db, cai.id, f.org.id, cai.id);
+    expect((await audit("member.left")).map((a) => a.details)).toEqual([
+      expect.objectContaining({ outsideOf: "Example Consulting" }),
+    ]);
+    await expect(endOutsideAccess(deps(), crypto.randomUUID(), cai.id, NOW)).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 

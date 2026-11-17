@@ -46,6 +46,7 @@ import {
   reconcileRuns,
   refreshRepliedThread,
   repliedThread,
+  retargetProvisional,
   runsInChannel,
   type SecretRequest,
   type StreamsState,
@@ -100,20 +101,45 @@ type Action =
   | { type: "dismiss"; runId: string }
   | { type: "sweep"; at: number }
   | { type: "typed"; at: number }
-  | { type: "unavailable"; event: AgentUnavailableEvent };
+  | { type: "unavailable"; event: AgentUnavailableEvent }
+  | { type: "retarget"; from: string; to: string }
+  /** `receipt`: its receipt goes too (it was never sent); else only its "pensando…" (it went into work going on). */
+  | { type: "forget"; messageId: string; receipt: boolean };
 
 /** A "pensando…" the server never confirmed is dropped after this long (the web's `PROVISIONAL_TTL_MS`). */
 export const PROVISIONAL_TTL_MS = 20_000;
+
+/** The id of my message's copy while it is on its way (`usePostMessage`'s optimistic copy). */
+const localIdOf = (clientId: string) => `local-${clientId}`;
+
+/**
+ * My message got its server id: its "pensando…" and its receipt, started on its copy on the way, move there (the web's
+ * `retarget`). The same state when nothing hangs off that copy.
+ */
+function retargeted(state: LiveState, from: string, to: string): LiveState {
+  const guessed = Object.values(state.streams.runs).some((r) => r.provisional && guessedFrom(r) === from);
+  const moving = state.receipts[from];
+  if (!guessed && !moving) return state;
+  let receipts = state.receipts;
+  if (moving) {
+    const { [from]: _moved, ...rest } = state.receipts;
+    receipts = rest[to] ? rest : { ...rest, [to]: moving };
+  }
+  return { ...state, streams: guessed ? retargetProvisional(state.streams, from, to) : state.streams, receipts };
+}
 
 function reduce(state: LiveState, action: Action): LiveState {
   switch (action.type) {
     case "event": {
       const { event } = action;
-      const streams = applyChannelEvent(state.streams, event, action.at);
+      // My message's copy from the server, over the socket before the answer to its request: what hangs off its copy on
+      // the way moves to it in this same update, so its "pensando…" never drops out for the moment between the two.
+      const sent = event.type === "message.created" ? event.message : undefined;
+      const base = sent?.clientId ? retargeted(state, localIdOf(sent.clientId), sent.id) : state;
+      const streams = applyChannelEvent(base.streams, event, action.at);
       const consults = applyConsultEvent(state.consults, event, action.at);
       // A person's new message starts its receipt before the event itself lands on it (as on the web).
-      const seeded =
-        event.type === "message.created" && event.message ? seedReceipt(state.receipts, event.message) : state.receipts;
+      const seeded = sent ? seedReceipt(base.receipts, sent) : base.receipts;
       const receipts = applyReceiptEvent(seeded, event);
       const typing = applyTypingEvent(state.typing, event, action.at);
       // An event that changes none of them doesn't re-render.
@@ -123,6 +149,22 @@ function reduce(state: LiveState, action: Action): LiveState {
         typing === state.typing
         ? state
         : { ...state, streams, consults, receipts, typing };
+    }
+    case "retarget":
+      return retargeted(state, action.from, action.to);
+    case "forget": {
+      const kept = Object.entries(state.streams.runs).filter(
+        ([, r]) => !(r.provisional && guessedFrom(r) === action.messageId),
+      );
+      const dropRuns = kept.length < Object.keys(state.streams.runs).length;
+      const dropReceipt = action.receipt && state.receipts[action.messageId] !== undefined;
+      if (!dropRuns && !dropReceipt) return state;
+      const { [action.messageId]: _gone, ...receipts } = state.receipts;
+      return {
+        ...state,
+        streams: dropRuns ? { ...state.streams, runs: Object.fromEntries(kept) } : state.streams,
+        receipts: dropReceipt ? receipts : state.receipts,
+      };
     }
     // The agent won't answer me: its "pensando…" on that message goes, and the line says why, once per agent.
     case "unavailable": {
@@ -377,6 +419,13 @@ export interface ChatLive {
   receipts: ReceiptsState;
   /** Right after sending: "pensando…" for the agents that will answer (an agent DM), on `messageId`'s receipt too. */
   expect: (threadId: string, agentIds: string[], messageId?: string) => void;
+  /** My message's copy on the way got its server id: what was guessed for it moves there. */
+  retarget: (fromId: string, toId: string) => void;
+  /**
+   * What was guessed for a message of mine goes: its "pensando…" (it went into work going on), and its receipt too with
+   * `receipt` (it was never sent).
+   */
+  forget: (messageId: string, receipt: boolean) => void;
   /** Messages loaded over HTTP: their receipts (`message.receipts`) start or catch up. */
   seed: (messages: readonly Message[]) => void;
   /** My message just sent where agents may pick it up: the clock until the router decides. */
@@ -525,7 +574,17 @@ export function useChatLive(orgId: string, channelId: string, enabled: boolean):
     },
     [channelId],
   );
-  const seed = useCallback((messages: readonly Message[]) => dispatch({ type: "seed", messages }), []);
+  // Only a read that brings what the receipts don't know yet: a dispatch draws the whole conversation again, even one
+  // that changes nothing, and every message that lands is such a read.
+  const seed = useCallback((messages: readonly Message[]) => {
+    if (seedReceipts(stateRef.current.receipts, messages) === stateRef.current.receipts) return;
+    dispatch({ type: "seed", messages });
+  }, []);
+  const retarget = useCallback((from: string, to: string) => dispatch({ type: "retarget", from, to }), []);
+  const forget = useCallback(
+    (messageId: string, receipt: boolean) => dispatch({ type: "forget", messageId, receipt }),
+    [],
+  );
   // My message just sent where agents may pick it up: the clock at once, as the router's own `message.routing` says.
   const picking = useCallback(
     (messageId: string) =>
@@ -561,6 +620,8 @@ export function useChatLive(orgId: string, channelId: string, enabled: boolean):
       consults,
       receipts: state.receipts,
       expect,
+      retarget,
+      forget,
       seed,
       picking,
       stop,
@@ -568,6 +629,19 @@ export function useChatLive(orgId: string, channelId: string, enabled: boolean):
       sendTyping,
       notices: state.notices,
     }),
-    [runs, consults, state.receipts, state.typing, expect, seed, picking, stop, sendTyping, state.notices],
+    [
+      runs,
+      consults,
+      state.receipts,
+      state.typing,
+      expect,
+      retarget,
+      forget,
+      seed,
+      picking,
+      stop,
+      sendTyping,
+      state.notices,
+    ],
   );
 }

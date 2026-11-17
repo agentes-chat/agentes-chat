@@ -33,6 +33,7 @@
     "./sky/horizon": "./src/sky/horizon.ts",
     "./sky/chart": "./src/sky/chart.ts",
     "./sky/avatar": "./src/sky/avatar.ts",
+    "./sky/wallpaper": "./src/sky/wallpaper.ts",
     "./sky/workspace": "./src/sky/workspace.ts",
     "./sky/team": "./src/sky/team.ts",
     "./agent-talk": "./src/agent-talk.ts",

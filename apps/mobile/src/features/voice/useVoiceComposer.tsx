@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { Glass, haptics, Icon, PressScale, Text, useTheme, useToast } from "@/ui";
+import { Glass, haptics, Icon, PressScale, Text, TOUCH, useTheme, useToast } from "@/ui";
 import { withOpacity } from "../chat/turn";
 import { Face } from "../shared/Face";
 import { useColors, useDirectory } from "../shared/hooks";
@@ -38,6 +38,8 @@ import { PixelWave } from "./VoiceBars";
 const MIC = 36;
 /** The microphone under the finger grows to 44 (the ruler's next size up), in ink. */
 const HELD = 44 / MIC;
+/** The 36 microphone takes a finger's 44 from the start, before it grows. */
+const MIC_SLOP = (TOUCH - MIC) / 2;
 /** The "+" plate's size, and the field's height. */
 const LEAD = 48;
 /** How far past the cancel and lock lines the finger still moves the button, less and less. */
@@ -148,6 +150,7 @@ export function useVoiceComposer(
   };
   const pan = usePanGesture({
     activateAfterLongPress: HOLD_MS,
+    hitSlop: MIC_SLOP,
     onActivate: () => {
       "worklet";
       spent.value = false;
@@ -180,6 +183,7 @@ export function useVoiceComposer(
   });
   const tap = useTapGesture({
     maxDuration: HOLD_MS - 20,
+    hitSlop: MIC_SLOP,
     onDeactivate: () => {
       "worklet";
       scheduleOnRN(hint);
@@ -232,6 +236,8 @@ export function useVoiceComposer(
           accessible
           accessibilityRole="button"
           accessibilityLabel={t("voice.holdToRecord")}
+          // The gestures' slop counts only for a touch that reaches this view: on iOS the view's own takes it there.
+          hitSlop={MIC_SLOP}
           style={[styles.button, holding && { backgroundColor: c.ink }, micStyle]}
         >
           <View style={styles.center}>

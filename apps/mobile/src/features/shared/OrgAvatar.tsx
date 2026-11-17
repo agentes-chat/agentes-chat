@@ -1,5 +1,5 @@
+import { Image } from "expo-image";
 import { useMemo } from "react";
-import { Image } from "react-native";
 import { appHeaders, lastCookie } from "@/lib/auth";
 import { photoSource } from "@/lib/photo";
 import { placeKey } from "@/lib/server";
@@ -8,7 +8,8 @@ import { LogoMark } from "@/ui";
 
 /**
  * A workspace's face, as the web's `OrgMark`: its logo in the agent's shape (rounded, the bottom-left corner cut
- * closer), else the agent mark.
+ * closer), else the agent mark. The logo is cached in memory and on disk (its address changes with its content) and
+ * drawn with no fade, as the bars and lists show it again and again.
  */
 export function OrgAvatar({
   logo,
@@ -30,6 +31,10 @@ export function OrgAvatar({
   return (
     <Image
       source={source}
+      cachePolicy="memory-disk"
+      recyclingKey={source.uri}
+      transition={0}
+      contentFit="cover"
       style={{
         width: size,
         height: size,

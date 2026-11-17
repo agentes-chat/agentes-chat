@@ -257,6 +257,12 @@ export const en = {
     preheader: "Approve or deny it in Members. Nothing happens until you answer.",
     headline: "A request to join is waiting",
     body: (org: string): Text => ["They opened ", { b: org }, "'s invitation link and asked to join."],
+    /** In place of `body` for an outside collaborator's request (ADR 0191): `by`, who they work for. */
+    outside: (by: string): Text => [
+      "They ask to join as an outside collaborator for ",
+      { b: by },
+      ". They take no seat in your plan, and you can remove them at any time.",
+    ],
     note: "Approve only people you expect. They join as a member unless you pick another role on the page.",
     approve: "Approve",
     deny: "Deny",

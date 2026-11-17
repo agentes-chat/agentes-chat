@@ -389,6 +389,8 @@ test("a provider refused this server's own OAuth app: what's wrong and who fixes
  * hit goes in `KNOWN` instead.
  */
 const PLAIN_LINE = new Set([
+  // Only the operator API ends an outside collaborator's access (ADR 0191): no person in the apps meets its refusal.
+  "outside_access.member",
   // Only an agent names a project by a name that isn't one, and the pickers offer only projects that exist.
   "issue_project.unknown",
   "issue_project.not_found",
@@ -413,6 +415,8 @@ const PLAIN_LINE = new Set([
   "account.invalid_plan",
   // "Quem usa" offers only Todos and Só eu: another value is a client fault.
   "account.invalid_serves",
+  // An order's place comes from a drag or Move up and Move down, never typed: a bad one is a client fault.
+  "account.invalid_order",
   // A workspace change's card offers Apply, Dismiss and Send on only to whom may (`mayApplyCard`).
   "action_card.not_allowed",
   "action_card.not_requester",

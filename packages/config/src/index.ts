@@ -73,6 +73,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   if (Boolean(config.BILLING_URL) !== Boolean(config.BILLING_LINK_SECRET)) {
     throw new ConfigError(["BILLING_URL and BILLING_LINK_SECRET go together: set both or neither"]);
   }
+  // The referral service checks the link with the billing link's secret: without it no link could be signed.
+  if (config.REFERRALS_URL && !config.BILLING_LINK_SECRET) {
+    throw new ConfigError(["REFERRALS_URL needs BILLING_LINK_SECRET, which signs the link to the referral service"]);
+  }
   // Only the billing service lifts that hold, through the operator API: without them a new workspace would wait forever.
   if (config.BILLING_HOLD_NEW_WORKSPACES && !(config.BILLING_URL && config.OPERATOR_API_TOKEN)) {
     throw new ConfigError([
