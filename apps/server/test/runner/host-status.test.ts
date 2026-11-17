@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { removeDirs, tempDir } from "./helpers";
 
@@ -174,4 +174,15 @@ test("a runner of one's own in system mode is not the server's computer: its tok
   const tools = await runner(home, "tools", "list");
   expect(tools.exit).toBe(0);
   expect(tools.stdout).toContain("desktop   on");
+});
+
+test("simple mode (no top-level config, ADR 0153 §5): still the server's computer, its organization's switches", async () => {
+  const home = hostHome([{ id: "org-a", name: "Acme" }]);
+  rmSync(path.join(home, "config.json"));
+  const status = await runner(home, "status");
+  expect(status.output).toContain('Connected to Acme as "studio-server"');
+  expect(status.output).not.toContain("Not connected");
+  const r = await runner(home, "tools", "disable", "terminal");
+  expect(r.exit).toBe(0);
+  expect(readOrg(home, "org-a").access.tools.terminal).toBe(false);
 });

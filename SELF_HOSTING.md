@@ -1281,8 +1281,8 @@ extracted to `/usr/local/bin/opencode`; Grok Build with
 `sudo env HOME=/opt/grok sh -c 'curl -fsSL https://x.ai/cli/install.sh | bash'`, then
 `sudo chmod -R a+rX /opt/grok` and `sudo ln -sf /opt/grok/.local/bin/grok /usr/local/bin/grok`. Grok's installer
 also makes `~/.local/bin/agent`, Cursor's name: where both are installed, link Cursor's `agent` last. The Antigravity
-CLI the same way: `sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --skip-path'`,
-then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/.local/bin/agy /usr/local/bin/agy`.
+CLI the same way: `sudo mkdir -p /opt/agy/bin`, `sudo env HOME=/opt/agy sh -c 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- -d /opt/agy/bin'`,
+then `sudo chmod -R a+rX /opt/agy` and `sudo ln -sf /opt/agy/bin/agy /usr/local/bin/agy`.
 Commands run as the user that runs the runner, so give it a dedicated user or a VM.
 `agentes-runner tools disable commands` (or `claude`, `codex`, `cursor`, `opencode`, `grok` or `antigravity`) turns a capability off on that
 computer, and `agentes-runner folders allow <path>` shares a folder besides the agents' own.

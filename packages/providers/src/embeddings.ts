@@ -78,8 +78,10 @@ function orderedEmbeddings(data: unknown, count: number): { embedding: number[];
       `the embeddings server returned ${Array.isArray(data) ? data.length : 0} vectors for ${count} texts`,
       false,
     );
-  const ordered = [...data].sort((a, b) => (a?.index ?? -1) - (b?.index ?? -1));
-  if (ordered.some((entry, index) => entry?.index !== index))
+  // A missing index is 0: Gemini's OpenAI-compatible API, like any proto3 JSON, leaves out a field at its zero value.
+  const indexOf = (entry: { index?: number } | null | undefined) => (entry ? (entry.index ?? 0) : -1);
+  const ordered = [...data].sort((a, b) => indexOf(a) - indexOf(b));
+  if (ordered.some((entry, index) => indexOf(entry) !== index))
     throw new ProviderError("the embeddings server returned invalid or duplicate vector indices", false);
   return ordered;
 }
