@@ -232,3 +232,17 @@ test("a model group reached its quota: its own models wait, the other models of 
   // No reading yet: nothing is known, so nothing is called full.
   expect(antigravityGroupLimit(null, "claude-opus-5-5-high", now)).toMatchObject({ group: "claude", full: false });
 });
+
+test("a model Google adds later is one family with the levels its slugs name, from what the CLI lists alone", () => {
+  const options = antigravityModels([
+    { id: "modelo-ficticio-low", label: "Modelo Fictício (Low)" },
+    { id: "modelo-ficticio-max", label: "Modelo Fictício (Max)" },
+    { id: "outro-ficticio", label: "Outro Fictício" },
+  ]);
+  expect(options.map((o) => [o.value, o.family?.id, o.level])).toEqual([
+    ["modelo-ficticio-low", "modelo-ficticio", "low"],
+    ["modelo-ficticio-max", "modelo-ficticio", "max"],
+    ["outro-ficticio", undefined, undefined],
+  ]);
+  expect(options[0]?.family?.label).toBe("Modelo Fictício");
+});

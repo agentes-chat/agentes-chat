@@ -50,6 +50,8 @@ describe("Outro provedor in Settings › Chaves de IA", () => {
     await click(within(add).getByRole("button", { name: "Adicionar" }));
     expect(add.textContent).toContain("Um modelo sem preço não custa nada nos orçamentos");
     await click(save());
+    // Models with unchecked levels: the save asks first whether to check them (ADR 0187 §3).
+    await click(screen().getByRole("button", { name: "Só listar os modelos" }));
     await settle(4);
 
     expect(state.calls.find((c) => c.method === "agents.addCredential")?.args[1]).toEqual({
@@ -97,6 +99,8 @@ describe("Outro provedor in Settings › Chaves de IA", () => {
     await type(within(add).getByLabelText("Adicionar um modelo"), "m-1");
     await click(within(add).getByRole("button", { name: "Adicionar" }));
     await click(within(add).getByRole("button", { name: "Salvar e testar" }));
+    // Models with unchecked levels: the save asks first whether to check them (ADR 0187 §3).
+    await click(screen().getByRole("button", { name: "Só listar os modelos" }));
     expect(add.textContent).toContain("Essa chave já estava salva. Atualizei os dados.");
     expect(state.credentials.map((c) => c.id)).toEqual(["cred-gw"]);
   });
@@ -203,6 +207,8 @@ describe("Outro provedor in Settings › Chaves de IA", () => {
 
     (api.agents as { addCredential: unknown }).addCredential = () => new Promise(() => {});
     await click(within(add).getByRole("button", { name: "Salvar e testar" }));
+    // Models with unchecked levels: the save asks first whether to check them (ADR 0187 §3).
+    await click(screen().getByRole("button", { name: "Só listar os modelos" }));
     expect(add.textContent).toContain("Testando cada modelo…");
     expect(within(add).getByRole("button", { name: "Cancelar" }).hasAttribute("disabled")).toBe(true);
     expect(add.querySelector("fieldset.ac-locked")?.hasAttribute("disabled")).toBe(true);

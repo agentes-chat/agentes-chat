@@ -79,6 +79,7 @@ import {
   GROK_BIN,
   isExecutable,
   OPENCODE_BIN,
+  parseAgyModels,
   parseGrokModels,
   resolveCommand,
 } from "./executors";
@@ -546,8 +547,15 @@ export function watchCodexAuth(home: string, granted: string, send: (auth: strin
   };
 }
 
-/** Beside the account folders: the models Grok Build lists to a signed-in account (`AccountManager.grokModels`). */
-const GROK_MODELS_FILE = "grok-models.json";
+/**
+ * Beside the account folders: the models a CLI lists to a signed-in account (`AccountManager.listedModels`), for the
+ * CLIs whose own listing on the computer is signed out: Grok Build and the Antigravity CLI.
+ */
+const LISTED_MODELS = {
+  grok: { file: "grok-models.json", parse: parseGrokModels },
+  antigravity: { file: "antigravity-models.json", parse: parseAgyModels },
+} as const;
+export type ListedModelsKind = keyof typeof LISTED_MODELS;
 
 /**
  * Grok Build keeps its sign-in in `GROK_HOME/auth.json`, an entry per issuer: the grok.com one under
@@ -2537,35 +2545,34 @@ export class AccountManager {
             : kind === "antigravity"
               ? parseAgyStatus(r.status, `${r.stdout}\n${r.stderr}`, agyAuthOf(dir))
               : parseCodexStatus(r.status, `${r.stdout}\n${r.stderr}`);
-    if (kind === "grok" && status.loggedIn) this.keepGrokModels(parseGrokModels(r.stdout));
+    if ((kind === "grok" || kind === "antigravity") && status.loggedIn)
+      this.keepListedModels(kind, LISTED_MODELS[kind].parse(r.stdout));
     // Timed out, or didn't start.
     const unknown = r.status === null ? { statusUnknown: true as const } : {};
     return { id, kind, ...status, ...unknown, ...shared };
   }
 
-  private grokList: CursorModelInfo[] | undefined;
-  private get grokModelsFile() {
-    return path.join(this.opts.root, GROK_MODELS_FILE);
-  }
+  private listed = new Map<ListedModelsKind, CursorModelInfo[] | undefined>();
 
   /**
-   * The models Grok Build last listed for an account signed in here (its status look runs `grok models` in that
-   * account's folder), kept across restarts: a folder lent to an agent is never looked at again. Undefined before one.
+   * The models a CLI last listed for an account signed in here (its status look runs `grok models` or `agy models` in
+   * that account's folder), kept across restarts: a folder lent to an agent is never looked at again. Undefined
+   * before one.
    */
-  grokModels(): CursorModelInfo[] | undefined {
-    if (this.grokList === undefined) {
-      const kept = readSmallJson(this.grokModelsFile, 64 * 1024);
+  listedModels(kind: ListedModelsKind): CursorModelInfo[] | undefined {
+    if (!this.listed.has(kind)) {
+      const kept = readSmallJson(path.join(this.opts.root, LISTED_MODELS[kind].file), 64 * 1024);
       const list = Array.isArray(kept) ? kept.filter((m): m is CursorModelInfo => typeof m?.id === "string") : [];
-      this.grokList = list.length > 0 ? list : undefined;
+      this.listed.set(kind, list.length > 0 ? list : undefined);
     }
-    return this.grokList;
+    return this.listed.get(kind);
   }
 
-  private keepGrokModels(list: CursorModelInfo[]) {
-    if (list.length === 0 || JSON.stringify(list) === JSON.stringify(this.grokModels())) return;
-    this.grokList = list;
+  private keepListedModels(kind: ListedModelsKind, list: CursorModelInfo[]) {
+    if (list.length === 0 || JSON.stringify(list) === JSON.stringify(this.listedModels(kind))) return;
+    this.listed.set(kind, list);
     try {
-      writeJson(this.grokModelsFile, list);
+      writeJson(path.join(this.opts.root, LISTED_MODELS[kind].file), list);
     } catch {
       // kept in memory until the next look
     }

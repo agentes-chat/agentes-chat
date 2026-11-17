@@ -354,6 +354,22 @@ test("Grok Build's models are the ones a signed-in account listed, not the compu
   expect(s.of("hello")[0]?.executors).toEqual({ grok: { ...grok, models: [{ id: "grok-4.7" }, { id: "grok-4.6" }] } });
 });
 
+test("the Antigravity CLI's models are the ones a signed-in account listed: a new model's levels come with it", async () => {
+  const { home } = pairedHome();
+  const antigravity = { version: "1.5.9" };
+  writeFileSync(path.join(home, "executors.json"), JSON.stringify({ antigravity }));
+  mkdirSync(path.join(home, "accounts"), { recursive: true });
+  const listed = [
+    { id: "modelo-ficticio-low", label: "Modelo Fictício (Low)" },
+    { id: "modelo-ficticio-max", label: "Modelo Fictício (Max)" },
+  ];
+  writeFileSync(path.join(home, "accounts", "antigravity-models.json"), JSON.stringify(listed));
+  const executorRun = () => new Promise<never>(() => {});
+  const c = control(home, { executors: undefined, executorRun });
+  const s = await c.connect();
+  expect(s.of("hello")[0]?.executors).toEqual({ antigravity: { ...antigravity, models: listed } });
+});
+
 test("a new install's hello leaves the CLIs out until the first look, then sends what it found", async () => {
   const { home } = pairedHome();
   let release: () => void = () => {};

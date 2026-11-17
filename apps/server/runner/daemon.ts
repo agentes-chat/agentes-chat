@@ -535,11 +535,16 @@ export class RunnerDaemon implements RequestObserver {
           ? { before: () => this.refreshPath?.(), gitMissing: () => gitBashPath() === null }
           : {}),
       });
-    // Grok Build's models as an account signed in here lists them: the computer's own `grok models` is signed out.
+    // Grok Build's and the Antigravity CLI's models as an account signed in here lists them: the computer's own
+    // `grok models` and `agy models` are signed out.
     this.executors = () => {
-      const found = exec() ?? {};
-      const models = this.accounts?.grokModels();
-      return found.grok && models ? { ...found, grok: { ...found.grok, models } } : found;
+      const found = { ...(exec() ?? {}) };
+      for (const kind of ["grok", "antigravity"] as const) {
+        const entry = found[kind];
+        const models = this.accounts?.listedModels(kind);
+        if (entry && models) found[kind] = { ...entry, models };
+      }
+      return found;
     };
     this.executorsKnown = () => !("known" in exec) || exec.known === true;
     this.executorsFresh = (exec as { fresh?: () => Promise<unknown> }).fresh ?? (async () => this.executors());

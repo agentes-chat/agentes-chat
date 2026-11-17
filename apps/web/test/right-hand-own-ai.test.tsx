@@ -219,13 +219,13 @@ test("Sua IA's Mais opções sets the effort and the context window, as on any a
   expect(more.textContent).toContain("Esforço e janela de contexto");
   await act(async () => fireEvent.click(more));
   await settle(3);
-  // The effort: the ramp at Médio, the four levels a plan takes.
+  // The effort: the ramp at Médio, the five levels a plan takes (low to max, `EFFORT_LEVELS`).
   const effortLine = within(screen().getByRole("dialog")).getByRole("button", { name: /^Esforço/ });
   expect(effortLine.textContent).toContain("Médio");
   await act(async () => fireEvent.click(effortLine));
   await settle(2);
   const ramp = within(screen().getByRole("dialog")).getByRole("slider", { name: "Esforço" });
-  expect(ramp.getAttribute("aria-valuemax")).toBe("4");
+  expect(ramp.getAttribute("aria-valuemax")).toBe("5");
   await act(async () => fireEvent.keyDown(ramp, { key: "ArrowRight" }));
   await settle(2);
   expect(ramp.getAttribute("aria-valuetext")).toBe("Alto");
@@ -249,6 +249,106 @@ test("Sua IA's Mais opções sets the effort and the context window, as on any a
   );
   await settle(6);
   expect(sent.at(-1)).toEqual({ scope: "mine", contextTokens: 400_000 });
+});
+
+test("Sua IA on Antigravity: the ramp is the model's own levels, and a level saves its id", async () => {
+  const state = withRightHand(seedState());
+  const api = createFakeApi(state);
+  const hydrogen = (level: string, label: string) => ({
+    value: `gemini-4-hydrogen-${level}`,
+    label: `Gemini 4 Hydrogen (${label})`,
+    family: { id: "gemini-4-hydrogen", label: "Gemini 4 Hydrogen" },
+    level: level as never,
+  });
+  api.agents.brain = async (_org, id, scope) =>
+    fakeAgentBrain(id, {
+      scope: scope ?? "mine",
+      brain: "antigravity",
+      account: "acc-ana",
+      effectiveModel: "gemini-4-hydrogen-medium",
+      effort: "xhigh",
+      options: [
+        { kind: "model", available: true, models: [], defaultModel: null },
+        {
+          kind: "antigravity",
+          available: true,
+          models: [
+            hydrogen("high", "High"),
+            hydrogen("xhigh", "XHigh"),
+            hydrogen("medium", "Medium"),
+            hydrogen("low", "Low"),
+          ],
+          defaultModel: null,
+        },
+      ],
+      accounts: [{ ...(planOf(state.me?.user.id) as object), kind: "antigravity" } as never],
+      canUsePlans: true,
+      canEdit: true,
+    });
+  const sent: { model?: string | null; effort?: string | null }[] = [];
+  api.agents.setBrain = async (_org, id, input) => {
+    sent.push(input);
+    return fakeAgentBrain(id);
+  };
+  await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
+  await settle(8);
+  await act(async () => fireEvent.click(row(/^Sua IA/)));
+  await settle(4);
+  await act(async () =>
+    fireEvent.click(within(screen().getByRole("dialog")).getByRole("button", { name: /^Mais opções/ })),
+  );
+  await settle(3);
+  // The model's id names its level: Médio, never the stored effort's Muito alto.
+  const effortLine = within(screen().getByRole("dialog")).getByRole("button", { name: /^Esforço/ });
+  expect(effortLine.textContent).toContain("Médio");
+  await act(async () => fireEvent.click(effortLine));
+  await settle(2);
+  // The whole ladder, the levels Hydrogen isn't sold at greyed: none, minimal and max.
+  const ramp = within(screen().getByRole("dialog")).getByRole("slider", { name: "Esforço" });
+  expect(ramp.getAttribute("aria-valuemax")).toBe("7");
+  await act(async () => fireEvent.keyDown(ramp, { key: "ArrowRight" }));
+  await settle(2);
+  expect(ramp.getAttribute("aria-valuetext")).toBe("Alto");
+  await act(async () =>
+    fireEvent.click(within(screen().getByRole("dialog")).getByRole("button", { name: "Concluído" })),
+  );
+  await settle(6);
+  expect(sent.at(-1)).toMatchObject({ effort: "high", model: "gemini-4-hydrogen-high" });
+});
+
+test("the workspace's AI on an API key: the ramp is the levels its model takes (ADR 0187), none for an unchecked one", async () => {
+  const state = withRightHand(seedState(), { model: "deepseek/deepseek-v4" });
+  state.extraModels = [
+    {
+      id: "deepseek/deepseek-v4",
+      label: "DeepSeek V4",
+      provider: "openrouter",
+      inputUsdPerMTok: 1,
+      outputUsdPerMTok: 2,
+      efforts: ["low", "high", "max"],
+    } as never,
+    { id: "acme/unchecked", label: "Unchecked", provider: "custom", inputUsdPerMTok: 0, outputUsdPerMTok: 0 } as never,
+  ];
+  const api = createFakeApi(state);
+  api.agents.brain = async (_org, id, scope) =>
+    fakeAgentBrain(id, { scope: scope ?? "workspace", brain: "model", effort: "high", canEdit: true });
+  await renderApp(`/org/${ORG_ID}/agents/${LODI_ID}`, { api });
+  await settle(8);
+  await act(async () => fireEvent.click(row(/^IA de quem não tem plano próprio/)));
+  await settle(4);
+  await act(async () =>
+    fireEvent.click(within(screen().getByRole("dialog")).getByRole("button", { name: /^Mais opções/ })),
+  );
+  await settle(3);
+  const effortLine = within(screen().getByRole("dialog")).getByRole("button", { name: /^Esforço/ });
+  await act(async () => fireEvent.click(effortLine));
+  await settle(2);
+  // The whole ladder of seven, as on any agent's: medium and xhigh greyed, max open.
+  const ramp = within(screen().getByRole("dialog")).getByRole("slider", { name: "Esforço" });
+  expect(ramp.getAttribute("aria-valuemax")).toBe("7");
+  await act(async () => fireEvent.keyDown(ramp, { key: "ArrowRight" }));
+  await settle(2);
+  expect(ramp.getAttribute("aria-valuetext")).toBe("Máximo");
 });
 
 test("a plan's model is a line that opens its list, in Sua IA and in the workspace's AI: picked, then used", async () => {
