@@ -145,6 +145,23 @@ const byTime = (a: Pick<Message, "createdAt" | "id">, b: Pick<Message, "createdA
   a.createdAt === b.createdAt ? a.id.localeCompare(b.id) : a.createdAt < b.createdAt ? -1 : 1;
 
 /** Top-level messages plus loaded thread replies (agents answer inside the thread of the message that called them). */
+/**
+ * The messages of older pages with their pin as the pins list says (`pins`, once loaded). Those pages live in the
+ * screen's own state, which no cache update reaches: pinned from its menu, an older message kept "Fixar" there and no
+ * mark. Rows whose pin is right stay the same objects, and so does the list when none changes.
+ */
+export function pinnedAsListed(older: Message[], pins: readonly { messageId: string }[] | undefined): Message[] {
+  if (!pins) return older;
+  const ids = new Set(pins.map((p) => p.messageId));
+  let changed = false;
+  const next = older.map((m) => {
+    if (ids.has(m.id) === Boolean(m.pinned)) return m;
+    changed = true;
+    return { ...m, pinned: ids.has(m.id) };
+  });
+  return changed ? next : older;
+}
+
 export function mergeTimeline(topLevel: Message[], threads: (Message[] | undefined)[]): Message[] {
   const seen = new Map<string, Message>();
   for (const m of topLevel) seen.set(m.id, m);
@@ -245,6 +262,36 @@ export function buildRows(messages: Message[], hidden: (m: Message) => boolean =
     prev = m;
   }
   return rows;
+}
+
+/** The same fields holding the same values (each by reference). */
+function shallowSame(a: object, b: object): boolean {
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  return keys.every((k) => (a as Record<string, unknown>)[k] === (b as Record<string, unknown>)[k]);
+}
+
+/**
+ * `next` with each row that holds the same as the row under its key in `prev` swapped for that very row, and `prev`
+ * itself when every row is: a list that compares its items by reference (Legend List) redraws only the rows that
+ * changed, not every row each time the conversation's rows are rebuilt (a message arriving, an agent's run event).
+ */
+export function keepSameRows<T extends { key: string }>(prev: readonly T[], next: readonly T[]): readonly T[] {
+  if (prev.length === 0) return next;
+  const byKey = new Map(prev.map((r) => [r.key, r]));
+  let changed = prev.length !== next.length;
+  const out = next.map((r, i) => {
+    const was = byKey.get(r.key);
+    const kept = was !== undefined && shallowSame(was, r) ? was : r;
+    if (kept !== prev[i]) changed = true;
+    return kept;
+  });
+  return changed ? out : prev;
+}
+
+/** `prev` when `next` holds the same items in the same order (each by reference), else `next`: memos over it keep. */
+export function sameItems<T>(prev: readonly T[], next: readonly T[]): readonly T[] {
+  return prev.length === next.length && next.every((x, i) => x === prev[i]) ? prev : next;
 }
 
 // ── Automatic lines ──────────────────────────────────────────────────────────
@@ -729,6 +776,55 @@ export function tableColumnWidths(
   });
 }
 
+/**
+ * A table's key for its measured columns (`kept-sizes.ts`): what its cells say and how (FNV-1a over each span's kind
+ * and words, a mark between cells), so the same table finds its columns again when its row comes back.
+ */
+export function tableKey(header: Inline[][], rows: Inline[][][]): string {
+  let hash = 0x811c9dc5;
+  const mix = (code: number) => {
+    hash = Math.imul(hash ^ code, 0x01000193);
+  };
+  const cell = (spans: Inline[]) => {
+    for (const span of spans) {
+      for (const ch of `${span.kind}:${span.text}`) mix(ch.codePointAt(0) ?? 0);
+      mix(0x1e);
+    }
+    mix(0x1f);
+  };
+  for (const h of header) cell(h);
+  for (const r of rows) for (const c of r) cell(c);
+  return `${header.length}x${rows.length}:${(hash >>> 0).toString(36)}`;
+}
+
+/**
+ * Whether a table's cells hold spans drawn wider once something loads after they mount: a file, message or id pill (an
+ * icon until its query answers, then its title), a channel's name, a mention. Measured once at the icon, their column
+ * stayed narrow and the title wrapped in it for the rest of the session; such a table keeps measuring.
+ */
+export function tableResolvesLate(header: Inline[][], rows: Inline[][][]): boolean {
+  return [header, ...rows].some((r) =>
+    r.some((cell) =>
+      cell.some((s) => s.kind === "link" || s.kind === "id" || s.kind === "channel" || s.kind === "mention"),
+    ),
+  );
+}
+
+/**
+ * Whether a run is in the conversation a message is sent to (`threadId`: the thread, null for the timeline), as the
+ * server steers a message into a run under way: a thread's reply into that thread's runs (or the one answering its root
+ * in the timeline, whose own thread is its root), a message in the timeline into the timeline's. A run in another
+ * thread of the same DM (a mission's) never takes it, so it doesn't stand for the reply that will come.
+ */
+export function runInConversation(
+  run: Pick<LiveRun, "threadId" | "triggerMessageId">,
+  threadId: string | null,
+): boolean {
+  // Typed as always a thread, but null for a run in the timeline.
+  const own = (run.threadId as string | null) ?? null;
+  return threadId ? own === threadId || (own === null && run.triggerMessageId === threadId) : own === null;
+}
+
 /** Which sides of a table scrolled sideways hide columns (`x`: the scroll, `frame`: the box, `total`: the table). */
 export function tableHidden(x: number, frame: number, total: number): { left: boolean; right: boolean } {
   return { left: x > 1, right: frame > 0 && x + frame < total - 1 };
@@ -853,6 +949,33 @@ export function parseBlocks(body: string): Block[] {
   if (from === 0) return plainBlocks(body);
   out.push(...plainBlocks(lines.slice(from).join("\n")));
   return out;
+}
+
+/** Texts whose blocks are kept, and the longest one kept (a longer one is parsed each time, never held). */
+export const BLOCKS_KEPT = 400;
+const BLOCKS_KEPT_CHARS = 20_000;
+const blocksKept = new Map<string, Block[]>();
+
+/**
+ * `parseBlocks`, kept for the texts read lately (read only: nothing changes them). The conversation's list mounts a row
+ * again each time it comes back into view, and each mount parsed its text again. Bounded: past `BLOCKS_KEPT` the text
+ * read longest ago goes first.
+ */
+export function blocksOf(body: string): Block[] {
+  const hit = blocksKept.get(body);
+  if (hit) {
+    blocksKept.delete(body);
+    blocksKept.set(body, hit);
+    return hit;
+  }
+  const blocks = parseBlocks(body);
+  if (body.length > BLOCKS_KEPT_CHARS) return blocks;
+  blocksKept.set(body, blocks);
+  if (blocksKept.size > BLOCKS_KEPT) {
+    const oldest = blocksKept.keys().next();
+    if (!oldest.done) blocksKept.delete(oldest.value);
+  }
+  return blocks;
 }
 
 function plainBlocks(body: string): Block[] {

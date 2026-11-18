@@ -43,7 +43,7 @@ const rows = (el: HTMLElement) =>
     li.querySelector(".ac-planmeter__reset")?.textContent ?? null,
   ]);
 
-test("a bar per window, tightest first, each with its percentage and reset; how old the numbers are", () => {
+test("a bar per window, tightest first, each with its percentage and reset; how old the numbers are, once 10 minutes", () => {
   const usage: PlanMeterUsage = {
     windows: [
       { kind: "seven_day", usedPercent: 35, resetsAt: at(48 * HOUR) },
@@ -68,7 +68,11 @@ test("a bar per window, tightest first, each with its percentage and reset; how 
     ["Semana", "35"],
     ["Fable", "35"],
   ]);
-  expect(el.querySelector(".ac-planmeter__at")?.textContent).toBe("Atualizado 11:55");
+  // Five minutes old: fresh numbers need no date.
+  expect(el.querySelector(".ac-planmeter__at")).toBeNull();
+  cleanup();
+  const old = render(<PlanMeter usage={{ ...usage, at: at(-15 * 60_000) }} text={text} now={NOW} />).container;
+  expect(old.querySelector(".ac-planmeter__at")?.textContent).toBe("Atualizado 11:45");
 });
 
 test("from 80% it says so; at 100% it is at the limit until every full window resets", () => {
@@ -361,6 +365,22 @@ test("at the limit, the owner's other free accounts of the same kind and maker, 
   // One made for all of the owner's agents there is offered though another agent thinks with it.
   const all = account("all", { usedBy: ["Infra"], usage: usage(1), shared: true });
   expect(limitOffers([...accounts, all], "claude_code", "now", NOW)[0]?.account.id).toBe("all");
+  // The order of use comes before room: a placed account first, the unplaced after it by room.
+  const placed = account("placed", { usage: usage(60), useOrder: 0 });
+  expect(limitOffers([...accounts, placed], "claude_code", "now", NOW).map((o) => o.account.id)).toEqual([
+    "placed",
+    "calm",
+    "busy",
+    "unknown",
+  ]);
+  // One account signed in once per agent: its other login shares the limit in use, and another account is offered once.
+  const team = [
+    account("t1", { usage: usage(100), usedBy: ["Dev"], sameAs: "t1" }),
+    account("t2", { sameAs: "t1" }),
+    account("m1", { usage: usage(20), sameAs: "m1" }),
+    account("m2", { usage: usage(30), sameAs: "m1" }),
+  ];
+  expect(limitOffers(team, "claude_code", "t1", NOW).map((o) => o.account.id)).toEqual(["m1"]);
 });
 
 test("a model group's own quota (Antigravity's Claude and GPT week at 0%) binds only its models, never the account", () => {

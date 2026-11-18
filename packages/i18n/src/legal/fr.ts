@@ -8,13 +8,13 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
       "Le contrat d'utilisation d'agentes.chat : votre espace de travail, vos agents et les responsabilités de chaque partie.",
     courtesy:
       "Ceci est une traduction de courtoisie. En cas de divergence avec la version anglaise, la version anglaise prévaut.",
-    updated: "2026-11-13",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
         heading: "1. Contrat",
         blocks: [
-          "Les présentes Conditions d'utilisation (les « Conditions ») constituent un contrat ayant force obligatoire entre CODARI GLOBAL, LLC, société à responsabilité limitée (limited liability company) du Wyoming exerçant sous le nom agentes.chat (« agentes.chat », « nous »), et la personne physique ou morale qui crée un compte ou un espace de travail (« vous »). En créant un compte, en rejoignant un espace de travail ou en utilisant de toute autre manière agentes.chat sur le web, l'application Mac ou l'application mobile (le « Service »), vous acceptez les présentes Conditions et notre Politique de confidentialité. Si vous utilisez le Service pour le compte d'une société ou d'une autre entité, vous déclarez être habilité à l'engager.",
+          "Les présentes Conditions d'utilisation (les « Conditions ») constituent un contrat ayant force obligatoire entre AGENTESCHAT, LLC, société à responsabilité limitée (limited liability company) du Delaware exerçant sous le nom agentes.chat (« agentes.chat », « nous »), et la personne physique ou morale qui crée un compte ou un espace de travail (« vous »). En créant un compte, en rejoignant un espace de travail ou en utilisant de toute autre manière agentes.chat sur le web, l'application Mac ou l'application mobile (le « Service »), vous acceptez les présentes Conditions et notre Politique de confidentialité. Si vous utilisez le Service pour le compte d'une société ou d'une autre entité, vous déclarez être habilité à l'engager.",
           "Vous devez être âgé d'au moins 18 ans et avoir la capacité de contracter pour utiliser le Service.",
         ],
       },
@@ -99,10 +99,11 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
           "Chaque espace de travail paie son propre abonnement agentes.chat. Les règles suivantes s'appliquent à tous les abonnements :",
           {
             list: [
+              "**Vendeur.** Tout achat est effectué auprès d'AGENTESCHAT, LLC, société des États-Unis constituée dans le Delaware, qui le facture.",
               "**Prix.** Les abonnements et leurs prix figurent sur notre page de tarifs. Les prix sont exprimés en dollars américains, et les taxes s'y ajoutent lorsqu'elles sont applicables. Votre banque ou votre prestataire de paiement peut prélever ses propres frais sur les achats effectués à l'étranger, comme l'IOF au Brésil.",
               "**Renouvellement.** Un abonnement se renouvelle automatiquement chaque mois ou chaque année, selon la période choisie, jusqu'à sa résiliation. Nous envoyons un rappel avant le renouvellement d'un abonnement annuel.",
               "**Résiliation.** Vous pouvez résilier à tout moment, et la résiliation prend effet à la fin de la période déjà payée. Les agents de l'espace de travail s'arrêtent alors, son ordinateur est effacé 7 jours plus tard, et ses conversations et fichiers restent accessibles en lecture et en téléchargement pendant 90 jours, après quoi ils sont supprimés.",
-              "**Absence de remboursement.** Les paiements sont définitifs et non remboursables, en tout ou en partie, y compris pour le reste d'une période après une résiliation, sauf disposition légale contraire.",
+              "**Absence de remboursement.** Chaque abonnement engendre des coûts d'exploitation dès son achat, comme l'utilisation de modèles d'IA, les serveurs et l'ordinateur de l'espace de travail. C'est pourquoi les achats sont définitifs et non remboursables, en tout ou en partie, y compris pour le reste d'une période après une résiliation.",
               "**Échecs de paiement.** Si un paiement échoue, nous réessayons au cours des jours suivants. S'il échoue toujours, l'espace de travail est mis en suspens : ses agents s'arrêtent, et les personnes peuvent toujours y lire et y écrire. Son ordinateur est conservé pendant 7 jours, puis libéré et effacé. Le paiement rétablit l'espace de travail, sur un nouvel ordinateur si l'ancien a été libéré.",
               "**Modifications de prix.** Nous pouvons modifier les prix pour les nouveaux clients à tout moment. Le prix d'un abonnement que vous avez déjà ne change qu'en raison de nouvelles taxes, à compter de son prochain renouvellement, avec un préavis d'au moins 30 jours.",
               "**Usage raisonnable.** Certaines fonctionnalités reposent sur des services d'IA que nous fournissons sans frais supplémentaires, comme le choix de l'agent qui répond, l'évaluation des souvenirs et des actions, et la recherche de l'élément sur lequel cliquer à l'écran. Nous pouvons les limiter pour un espace de travail dont l'utilisation dépasse largement la normale.",
@@ -150,7 +151,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Droit applicable",
         blocks: [
-          "Les présentes Conditions sont régies par le droit de l'État du Wyoming (États-Unis), à l'exclusion de ses règles de conflit de lois, et les parties se soumettent à la compétence exclusive des juridictions étatiques et fédérales situées dans le Wyoming. Si vous êtes un consommateur relevant d'une juridiction dont la loi vous accorde des droits ou un for auxquels il ne peut être renoncé, comme le Brésil, ces droits ne sont pas affectés.",
+          "Les présentes Conditions, ainsi que tout achat effectué en vertu de celles-ci, sont régies par le droit des États-Unis et de l'État du Delaware, à l'exclusion des règles de conflit de lois, et les parties se soumettent à la compétence exclusive des juridictions étatiques et fédérales situées dans le Delaware.",
         ],
       },
       {
@@ -164,7 +165,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Contact",
         blocks: [
-          "CODARI GLOBAL, LLC, exerçant sous le nom agentes.chat. Notifications : 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Pour tout le reste : hello@agentes.chat",
+          "AGENTESCHAT, LLC, exerçant sous le nom agentes.chat. Notifications : 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Pour tout le reste : hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +176,13 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
       "Ce que nous collectons, ce que les agents envoient et à qui, qui peut voir votre espace de travail, et les droits dont vous disposez.",
     courtesy:
       "Ceci est une traduction de courtoisie. En cas de divergence avec la version anglaise, la version anglaise prévaut.",
-    updated: "2026-11-14",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
         heading: "1. Présentation",
         blocks: [
-          "CODARI GLOBAL, LLC, société à responsabilité limitée (limited liability company) du Wyoming exerçant sous le nom agentes.chat (« agentes.chat », « nous »), exploite agentes.chat : un espace de travail où des personnes et des agents d'IA travaillent ensemble, disponible sur le web, en application Mac et en application mobile (le « Service »). La présente politique distingue deux rôles :",
+          "AGENTESCHAT, LLC, société à responsabilité limitée (limited liability company) du Delaware exerçant sous le nom agentes.chat (« agentes.chat », « nous »), exploite agentes.chat : un espace de travail où des personnes et des agents d'IA travaillent ensemble, disponible sur le web, en application Mac et en application mobile (le « Service »). La présente politique distingue deux rôles :",
           {
             list: [
               "Pour les **données de compte**, c'est-à-dire les informations que les personnes nous fournissent pour créer et utiliser un compte, nous sommes le responsable du traitement.",
@@ -322,6 +323,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookies et stockage local",
         blocks: [
           "L'espace de travail utilise uniquement les cookies et le stockage local nécessaires pour maintenir votre connexion, protéger les formulaires et mémoriser des préférences telles que le thème et la langue. Le site public agentes.chat mémorise la langue que vous avez choisie et utilise les statistiques Himetrica (section 2). Nous n'utilisons pas de cookies publicitaires ni de cookies de suivi intersites.",
+          "**Cookie de parrainage :** lorsque vous ouvrez un lien de parrainage vers agentes.chat, notre service de facturation conserve le parrainage dans un cookie de votre navigateur pendant 60 jours, afin que la personne qui a envoyé le lien soit créditée si vous vous abonnez. Dans l'Espace économique européen, au Royaume-Uni et en Suisse, nous ne le déposons qu'après votre accord sur agentes.chat. Pour oublier le parrainage sur cet appareil, ouvrez https://agentes.chat/fr/privacy?forget-referral#cookies.",
         ],
       },
       {
@@ -342,7 +344,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Contact",
         blocks: [
-          "CODARI GLOBAL, LLC, exerçant sous le nom agentes.chat. Notifications : 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Les demandes relatives à la protection des données provenant de l'UE, du Royaume-Uni et du Brésil parviennent à notre équipe chargée de la confidentialité à la même adresse. Pour toute autre question, écrivez à hello@agentes.chat.",
+          "AGENTESCHAT, LLC, exerçant sous le nom agentes.chat. Notifications : 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Les demandes relatives à la protection des données provenant de l'UE, du Royaume-Uni et du Brésil parviennent à notre équipe chargée de la confidentialité à la même adresse. Pour toute autre question, écrivez à hello@agentes.chat.",
         ],
       },
     ],

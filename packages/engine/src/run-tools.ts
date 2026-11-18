@@ -6,6 +6,7 @@ import { openApprovalCard, publishApproval, supersedeApprovals } from "./approva
 import { runAuthorityById } from "./authority";
 import type { BrainTool, ToolResult } from "./brains/types";
 import { readableChannelIds } from "./channels";
+import { isConfidential, threadIsConfidential } from "./confidential";
 import { announceConsultationChange, consultationCardThread, consultationOrigin } from "./consultations";
 import { NotFoundError } from "./errors";
 import { type MemoryUpdate, publishChannelEvent, publishMessageCreated, takeStepWords } from "./events";
@@ -236,6 +237,9 @@ export function absorbToolData(t: ToolSideEffects, data: Record<string, unknown>
   if (!data) return null;
   const artifact = data.artifact as ArtifactLink | undefined;
   if (artifact) t.artifacts = withArtifacts(t.artifacts, [artifact]);
+  // Several files from one call (pictures made in a conversation, ADR 0197): each a card on the reply.
+  const several = Array.isArray(data.artifacts) ? (data.artifacts as ArtifactLink[]) : [];
+  if (several.length > 0) t.artifacts = withArtifacts(t.artifacts, several);
   const link = data.missionLink as { missionId: string; threadId: string } | undefined;
   if (link?.missionId && link.threadId) t.missionLink = link;
   if (data.reacted) t.reacted = true;
@@ -326,6 +330,8 @@ const hasEffects = (e: ToolSideEffects) =>
 const BRIDGE_EFFECTS = "bridgeEffects";
 /** How many calls the runner made through the bridge during the turn. */
 const BRIDGE_CALLS = "bridgeCalls";
+/** A person's "ignore the limit" (`grantUsageOverride`), written on the row while the engine holds its own copy. */
+const USAGE_GRANT = "usageGrant";
 
 /**
  * A bridged call's side effects (a computer brain's tool through the runner
@@ -384,7 +390,8 @@ export function storedTranscript(t: object): SQL {
   const { [BRIDGE_EFFECTS]: _kept, [BRIDGE_CALLS]: _calls, ...rest } = t as Record<string, unknown>;
   return sql`(${pgSafeStringify(rest)}::jsonb || jsonb_strip_nulls(jsonb_build_object(
     ${BRIDGE_EFFECTS}::text, ${agentRuns.transcript} -> ${BRIDGE_EFFECTS}::text,
-    ${BRIDGE_CALLS}::text, ${agentRuns.transcript} -> ${BRIDGE_CALLS}::text
+    ${BRIDGE_CALLS}::text, ${agentRuns.transcript} -> ${BRIDGE_CALLS}::text,
+    ${USAGE_GRANT}::text, ${agentRuns.transcript} -> ${USAGE_GRANT}::text
   )))`;
 }
 
@@ -632,6 +639,7 @@ async function locate(db: Database, id: BridgeIdentity): Promise<Located> {
       threadRootId: run.threadRootId,
       triggerMessageId: run.triggerMessageId,
       ...(id.machineId ? { bridge: { machineId: id.machineId } } : {}),
+      ...(run.brain ? { thinksWith: run.brain } : {}),
       // Tools on demand (ADR 0043): the same list the run's turns see.
       loadedGroups: loadedGroupsOf(run.transcript),
       ...(run.background ? { background: true } : {}),
@@ -844,7 +852,10 @@ export async function postPauseCards(tx: Executor, run: AgentRun, requests: Paus
   const trigger = await runTriggerOf(tx, run);
   const extra = runMessageMeta(run, trigger);
   const brief = run.background ? routineBriefOf(trigger?.meta) : null;
-  const home = brief?.deliverTo ?? { channelId: run.channelId, threadId: replyThreadOf(run) };
+  // A question is answered by a reply where it was asked: in a confidential thread (ADR 0190) that is under its
+  // root. The message that asked carries the thread's mark, and only then is the thread's row read.
+  const confidential = isConfidential(trigger?.meta) && (await threadIsConfidential(tx, run.orgId, run.threadRootId));
+  const home = brief?.deliverTo ?? { channelId: run.channelId, threadId: replyThreadOf({ ...run, confidential }) };
   // A consulted run asks from the agents' DM, which no person reads: its questions and secret requests go where
   // the person behind it asked, like its approvals (the gateway already placed those). Only a DM run answers one.
   const origin =

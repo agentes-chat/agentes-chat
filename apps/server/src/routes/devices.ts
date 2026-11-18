@@ -31,6 +31,7 @@ import {
   installScript,
   installScriptPowerShell,
 } from "../../runner/install-script";
+import { migrateScript, migrateScriptPowerShell } from "../../runner/migrate-script";
 import { requestLimitIp } from "../http/client-ip";
 import { apiError, errorResponse } from "../http/errors";
 import {
@@ -738,4 +739,8 @@ export function registerConnectScripts(app: OpenAPIHono, deps: AppDeps) {
   };
   app.get("/i/:code", serve(false));
   app.get("/i/:code/ps", serve(true));
+  // `agentes-runner migrate`, run once without installing or connecting anything (ADR 0055, addendum 2026-11-16):
+  // the same for everyone, so no code and nothing of the caller's in it.
+  app.get("/migrate.sh", (c) => c.body(migrateScript(config.PUBLIC_URL), 200, SH));
+  app.get("/migrate.ps1", (c) => c.body(migrateScriptPowerShell(config.PUBLIC_URL), 200, PS));
 }

@@ -125,7 +125,7 @@ describe("calendar", () => {
     expect(range.events.map((e) => e.title)).toEqual(["Planejamento"]);
     expect(range.deadlines.map((d) => [d.number, d.date])).toEqual([[1, "2026-10-21"]]);
     // Nobody has it yet: the calendar draws its due date without a face.
-    expect(range.deadlines[0]?.assignee).toBeNull();
+    expect(range.deadlines[0]?.assignees).toEqual([]);
     // One a day, counted in a week that is always ahead (today's 9:00 may already be past).
     const ahead = await calendarRange(deps, bia.id, f.org.id, "2099-01-05T00:00:00Z", "2099-01-09T00:00:00Z");
     expect(ahead.routines.length).toBe(4);
@@ -184,17 +184,17 @@ describe("calendar", () => {
     await createIssue(deps, owner, f.org.id, {
       title: "Login",
       dueDate: "2026-10-21",
-      assignee: { type: "agent", id: f.agent.id },
+      assignees: [{ type: "agent", id: f.agent.id }],
     });
     await createIssue(deps, owner, f.org.id, {
       title: "Textos",
       dueDate: "2026-10-22",
-      assignee: { type: "person", id: bia.id },
+      assignees: [{ type: "person", id: bia.id }],
     });
     const range = await calendarRange(deps, f.owner.id, f.org.id, "2026-10-19T00:00:00Z", "2026-10-23T00:00:00Z");
-    expect(range.deadlines.map((d) => [d.title, d.assignee])).toEqual([
-      ["Login", { type: "agent", id: f.agent.id }],
-      ["Textos", { type: "person", id: bia.id }],
+    expect(range.deadlines.map((d) => [d.title, d.assignees])).toEqual([
+      ["Login", [{ type: "agent", id: f.agent.id }]],
+      ["Textos", [{ type: "person", id: bia.id }]],
     ]);
   });
 

@@ -1,9 +1,18 @@
-import { and, asc, type Database, desc, eq, gte, inArray, isNotNull, isNull, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, desc, eq, gte, inArray, isNotNull, isNull, or, schema, sql } from "@agenteschat/db";
 import { type AgentStatusView, lineInEnglish, loadAgentStatuses } from "./agent-status";
 import { currentHandles } from "./agents";
 import { type AiStatusDeps, agentAiStates } from "./ai-status";
 import type { AgentAppearance } from "./appearance";
-import { canTalkTo, listsAgentTo, type Speaker, seesAgentDetails, speakerFor, speakerOf, viaAgent } from "./audience";
+import {
+  canTalkTo,
+  listsAgentTo,
+  managesAgent,
+  type Speaker,
+  seesAgentDetails,
+  speakerFor,
+  speakerOf,
+  viaAgent,
+} from "./audience";
 import { inLine, mayCall } from "./autonomy-settings";
 import { agentBrowserStatus } from "./browser/status";
 import { BROWSER_SCOPE, DESKTOP_SCOPE } from "./browser/types";
@@ -38,6 +47,7 @@ const {
 /**
  * Each agent's scopes, with a whole-connection grant (`connector:*`) named
  * after its connector (`sentry:*`), so summaries say "Sentry", not "Connector".
+ * A person's own connection serves that person alone: none of its grants are named.
  */
 export async function agentScopeNames(db: Database, orgId: string, agentIds: string[]) {
   if (agentIds.length === 0) return [];
@@ -45,7 +55,13 @@ export async function agentScopeNames(db: Database, orgId: string, agentIds: str
     .select({ agentId: agentScopes.agentId, scope: agentScopes.scope, connector: connectorConnections.connector })
     .from(agentScopes)
     .leftJoin(connectorConnections, eq(connectorConnections.id, agentScopes.connectionId))
-    .where(and(eq(agentScopes.orgId, orgId), inArray(agentScopes.agentId, agentIds)));
+    .where(
+      and(
+        eq(agentScopes.orgId, orgId),
+        inArray(agentScopes.agentId, agentIds),
+        or(isNull(agentScopes.connectionId), isNull(connectorConnections.ownerUserId)),
+      ),
+    );
   return rows.map((r) => ({
     agentId: r.agentId,
     scope: r.scope.startsWith("connector:") && r.connector ? `${r.connector}:${r.scope.slice(10)}` : r.scope,
@@ -450,9 +466,7 @@ export async function teammatesNowPrompt(
   if (ids.length === 0) return "";
   const [ai, presence, personal] = await Promise.all([
     agentAiStates(deps, orgId, ids),
-    loadAgentStatuses(deps.db, orgId, new Date(), ids, {
-      hasModel: (agent) => deps.gateway.hasModelCredential(agent),
-    }),
+    loadAgentStatuses(deps.db, orgId, new Date(), ids),
     isPersonalWorkspace(deps.db, orgId),
   ]);
   const presenceOf = new Map(presence.map((s) => [s.agentId, s]));
@@ -504,6 +518,8 @@ export async function getTeam(db: Database, actorId: string, orgId: string) {
       audienceRoleIds: agents.audienceRoleIds,
       consultable: agents.consultable,
       brain: agents.brain,
+      editorUserIds: agents.editorUserIds,
+      editorRoleIds: agents.editorRoleIds,
       reportsToAgentId: agents.reportsToAgentId,
     })
     .from(agents)
@@ -580,6 +596,7 @@ export async function getTeam(db: Database, actorId: string, orgId: string) {
         channelIds: seats.filter((r) => r.agentId === a.id).map((r) => r.channelId),
         canTalk: canTalkTo(a, actorId, talks),
         seesDetails,
+        canManage: managesAgent(a, actorId, membership),
       };
     }),
     people: owners.map((o) => ({ id: o.id, name: o.name, image: o.image ?? null })),

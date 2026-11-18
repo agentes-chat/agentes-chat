@@ -7,6 +7,15 @@
  */
 
 export {
+  type AccentPalette,
+  type AccentTokens,
+  accentPalette,
+  accentSky,
+  contrastRatio,
+  DEFAULT_ACCENT,
+  isAccentHex,
+} from "@agenteschat/tokens/accent";
+export {
   ACCESSORIES,
   ACCESSORY_REACH,
   AGENT_GRADIENTS,
@@ -19,6 +28,7 @@ export {
   drawAccessory,
   drawAgent,
   drawEyes,
+  drawnKey,
   EXPRESSIONS,
   type Expression,
   EYE_STYLES,
@@ -166,6 +176,7 @@ export {
   useUnsavedInDialog,
 } from "./components/Dialog";
 export { Diff, type DiffBlock, type DiffKind, type DiffLine, diffBlocks, diffLines } from "./components/Diff";
+export { Disclosure } from "./components/Disclosure";
 export { drawEffort, EffortPixels, type EffortStep } from "./components/EffortPixels";
 export {
   EMOJI_COLUMNS,
@@ -215,6 +226,7 @@ export { FoldRow } from "./components/FoldRow";
 export { GroupHeading } from "./components/GroupHeading";
 export { type Hosting, HostingScene, type Place, PlaceScene } from "./components/HostingScene";
 export { HintLine, type HintLineProps, InfoHint, type InfoHintProps } from "./components/InfoHint";
+export { type Journey, JourneyScene } from "./components/JourneyScene";
 export { isApple, Kbd, modKey, shortcut } from "./components/Kbd";
 export { Logo, LogoMark, type LogoProps } from "./components/Logo";
 export {
@@ -287,6 +299,7 @@ export {
   type PlanMeterUsage,
   type PlanMeterWindow,
   type PlanState,
+  planAgeShown,
   planAttention,
   planLevel,
   planLine,
@@ -502,6 +515,7 @@ export {
   zonedInstant,
 } from "./recurrence";
 export { fold, matchesWords } from "./search";
+export { workspaceSky } from "./sky/accent";
 export { pixelBurst, pixelConfetti } from "./sky/burst";
 export { ditherCells, ditherSvg, ditherTones, ditherUrl } from "./sky/dither";
 export {
@@ -542,7 +556,14 @@ export {
   workspaceInk,
   workspaceTones,
 } from "./sky/workspace";
-export { onThemeChange, switchTheme, THEME_SWITCHING_ATTR, type Theme } from "./theme";
+export {
+  ACCENT_ATTR,
+  onThemeChange,
+  PAINT_ATTRS,
+  switchTheme,
+  THEME_SWITCHING_ATTR,
+  type Theme,
+} from "./theme";
 export {
   allZones,
   cityOf,

@@ -3,13 +3,13 @@ import type { LegalDocument } from "./types";
 export const privacyEn: LegalDocument = {
   title: "Privacy Policy",
   summary: "What we collect, what agents send where, who can see your workspace, and the rights you have.",
-  updated: "2026-11-14",
+  updated: "2026-11-18",
   sections: [
     {
       id: "overview",
       heading: "1. Overview",
       blocks: [
-        'CODARI GLOBAL, LLC, a Wyoming limited liability company doing business as agentes.chat ("agentes.chat", "we"), operates agentes.chat: a workspace where people and AI agents work together, available on the web, as a Mac app and as a phone app (the "Service"). This policy distinguishes two roles:',
+        'AGENTESCHAT, LLC, a Delaware limited liability company doing business as agentes.chat ("agentes.chat", "we"), operates agentes.chat: a workspace where people and AI agents work together, available on the web, as a Mac app and as a phone app (the "Service"). This policy distinguishes two roles:',
         {
           list: [
             "For **account data**, the information people give us to create and use an account, we are the data controller.",
@@ -150,6 +150,7 @@ export const privacyEn: LegalDocument = {
       heading: "14. Cookies and local storage",
       blocks: [
         "The workspace uses only the cookies and local storage needed to keep you signed in, protect forms, and remember preferences such as theme and language. The public site agentes.chat remembers the language you chose and uses Himetrica analytics (Section 2). We do not use advertising or cross-site tracking cookies.",
+        "**Referral cookie:** when you open a referral link to agentes.chat, our billing service keeps the referral in one cookie in your browser for 60 days, so the person who sent the link gets credit if you subscribe. In the European Economic Area, the United Kingdom and Switzerland, we set it only after you agree on agentes.chat. To forget the referral on this device, open https://agentes.chat/privacy?forget-referral#cookies.",
       ],
     },
     {
@@ -170,7 +171,7 @@ export const privacyEn: LegalDocument = {
       id: "contact",
       heading: "17. Contact",
       blocks: [
-        "CODARI GLOBAL, LLC, doing business as agentes.chat. Notices: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. EU, UK and Brazil data-protection inquiries reach our privacy team at the same address. For anything else, write to hello@agentes.chat.",
+        "AGENTESCHAT, LLC, doing business as agentes.chat. Notices: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. EU, UK and Brazil data-protection inquiries reach our privacy team at the same address. For anything else, write to hello@agentes.chat.",
       ],
     },
   ],

@@ -8,13 +8,13 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
       "agentes.chat'in kullanımına ilişkin sözleşme: çalışma alanınız, ajanlarınız ve her bir tarafın neden sorumlu olduğu.",
     courtesy:
       "Bu metin bir nezaket çevirisidir. İngilizce sürümden farklılık göstermesi hâlinde İngilizce sürüm esas alınır.",
-    updated: "2026-11-13",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
         heading: "1. Sözleşme",
         blocks: [
-          'İşbu Kullanım Koşulları ("Koşullar"), agentes.chat ticari adıyla faaliyet gösteren Wyoming eyaleti limited şirketi CODARI GLOBAL, LLC ("agentes.chat", "biz") ile bir hesap veya çalışma alanı oluşturan gerçek ya da tüzel kişi ("siz") arasında bağlayıcı bir sözleşmedir. Bir hesap oluşturarak, bir çalışma alanına katılarak veya agentes.chat\'i web üzerinde, Mac uygulamasında ya da telefon uygulamasında ("Hizmet") başka herhangi bir şekilde kullanarak işbu Koşulları ve Gizlilik Politikamızı kabul etmiş olursunuz. Hizmeti bir şirket veya başka bir kuruluş adına kullanıyorsanız, o kuruluşu bağlamaya yetkili olduğunuzu beyan etmiş olursunuz.',
+          'İşbu Kullanım Koşulları ("Koşullar"), agentes.chat ticari adıyla faaliyet gösteren Delaware eyaleti limited şirketi AGENTESCHAT, LLC ("agentes.chat", "biz") ile bir hesap veya çalışma alanı oluşturan gerçek ya da tüzel kişi ("siz") arasında bağlayıcı bir sözleşmedir. Bir hesap oluşturarak, bir çalışma alanına katılarak veya agentes.chat\'i web üzerinde, Mac uygulamasında ya da telefon uygulamasında ("Hizmet") başka herhangi bir şekilde kullanarak işbu Koşulları ve Gizlilik Politikamızı kabul etmiş olursunuz. Hizmeti bir şirket veya başka bir kuruluş adına kullanıyorsanız, o kuruluşu bağlamaya yetkili olduğunuzu beyan etmiş olursunuz.',
           "Hizmeti kullanabilmek için en az 18 yaşında olmanız ve sözleşme yapma ehliyetine sahip olmanız gerekir.",
         ],
       },
@@ -99,10 +99,11 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
           "Her çalışma alanı kendi agentes.chat planının ücretini öder. Aşağıdaki kurallar tüm planlar için geçerlidir:",
           {
             list: [
+              "**Satıcı.** Tüm satın almalar, Delaware'de kurulmuş bir ABD şirketi olan AGENTESCHAT, LLC'den yapılır ve bu şirket tarafından faturalandırılır.",
               "**Fiyatlar.** Planlar ve fiyatları fiyatlandırma sayfamızda yer alır. Fiyatlar ABD doları cinsindendir ve uygulandığı hâllerde vergiler eklenir. Bankanız veya ödeme sağlayıcınız, Brezilya'daki IOF gibi, yurt dışından yapılan alımlar için kendi ücretlerini tahsil edebilir.",
               "**Yenileme.** Bir plan, seçilen döneme bağlı olarak her ay veya her yıl, iptal edilene kadar otomatik olarak yenilenir. Yıllık bir plan yenilenmeden önce bir hatırlatma göndeririz.",
               "**İptal.** Dilediğiniz zaman iptal edebilirsiniz. İptal, ücreti ödenmiş dönemin sonunda geçerli olur. Bunun ardından çalışma alanının ajanları durur, bilgisayarı 7 gün sonra silinir ve konuşmaları ile dosyaları 90 gün boyunca okunabilir ve indirilebilir durumda kalır. Bu sürenin sonunda silinir.",
-              "**İade yapılmaz.** Kanunun aksini gerektirdiği hâller dışında, bir iptalden sonra kalan dönem için olanlar dahil olmak üzere, ödemeler kesindir ve tamamen veya kısmen iade edilmez.",
+              "**İade yapılmaz.** Her plan, satın alındığı andan itibaren yapay zekâ modeli kullanımı, sunucular ve çalışma alanının bilgisayarı gibi işletme maliyetleri doğurur. Bu nedenle, bir iptalden sonra kalan dönem için olanlar dahil olmak üzere, satın almalar kesindir ve tamamen veya kısmen iade edilmez.",
               "**Başarısız ödemeler.** Bir ödeme başarısız olursa, izleyen günlerde yeniden deneriz. Yine başarısız olursa çalışma alanı beklemeye alınır: ajanları durur, kişiler ise çalışma alanında okumaya ve yazmaya devam edebilir. Bilgisayarı 7 gün boyunca saklanır, ardından serbest bırakılır ve silinir. Ödeme yapılması çalışma alanını geri getirir, eski bilgisayar serbest bırakılmışsa yeni bir bilgisayar üzerinde.",
               "**Fiyat değişiklikleri.** Yeni müşteriler için fiyatları dilediğimiz zaman değiştirebiliriz. Hâlihazırda sahip olduğunuz bir planın fiyatı yalnızca yeni vergiler nedeniyle, bir sonraki yenilemeden itibaren ve en az 30 gün önceden bildirimde bulunularak değişir.",
               "**Adil kullanım.** Bazı özellikler, hangi ajanın yanıt vereceğinin seçilmesi, hafızaların ve işlemlerin değerlendirilmesi ve bir ekranda neye tıklanacağının bulunması gibi, ek ücret almadan sağladığımız yapay zekâ hizmetleri üzerinde çalışır. Kullanımı normalin çok üzerinde olan bir çalışma alanı için bunları sınırlayabiliriz.",
@@ -150,7 +151,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Uygulanacak hukuk",
         blocks: [
-          "İşbu Koşullar, kanunlar ihtilafı kuralları hariç olmak üzere ABD'nin Wyoming eyaleti kanunlarına tabidir ve taraflar Wyoming'de bulunan eyalet ve federal mahkemelerin münhasır yargı yetkisini kabul eder. Brezilya gibi, kanunu size feragat edilemeyen haklar veya yetkili mahkeme hakkı tanıyan bir yargı bölgesinde tüketiciyseniz, bu haklarınız saklıdır.",
+          "İşbu Koşullar ve bunlara dayanılarak yapılan tüm satın almalar, kanunlar ihtilafı kuralları hariç olmak üzere Amerika Birleşik Devletleri ve Delaware eyaleti kanunlarına tabidir ve taraflar Delaware'de bulunan eyalet ve federal mahkemelerin münhasır yargı yetkisini kabul eder.",
         ],
       },
       {
@@ -164,7 +165,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. İletişim",
         blocks: [
-          "CODARI GLOBAL, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Diğer tüm konular: hello@agentes.chat",
+          "AGENTESCHAT, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Diğer tüm konular: hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +176,13 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
       "Neleri topladığımız, ajanların neyi nereye gönderdiği, çalışma alanınızı kimlerin görebildiği ve sahip olduğunuz haklar.",
     courtesy:
       "Bu metin bir nezaket çevirisidir. İngilizce sürümden farklılık göstermesi hâlinde İngilizce sürüm esas alınır.",
-    updated: "2026-11-14",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
         heading: "1. Genel bakış",
         blocks: [
-          'agentes.chat ticari adıyla faaliyet gösteren Wyoming eyaleti limited şirketi CODARI GLOBAL, LLC ("agentes.chat", "biz"), insanların ve yapay zekâ ajanlarının birlikte çalıştığı, web üzerinde, Mac uygulaması olarak ve telefon uygulaması olarak sunulan bir çalışma alanı olan agentes.chat\'i ("Hizmet") işletir. Bu politika iki rolü birbirinden ayırır:',
+          'agentes.chat ticari adıyla faaliyet gösteren Delaware eyaleti limited şirketi AGENTESCHAT, LLC ("agentes.chat", "biz"), insanların ve yapay zekâ ajanlarının birlikte çalıştığı, web üzerinde, Mac uygulaması olarak ve telefon uygulaması olarak sunulan bir çalışma alanı olan agentes.chat\'i ("Hizmet") işletir. Bu politika iki rolü birbirinden ayırır:',
           {
             list: [
               "Kişilerin bir hesap oluşturmak ve kullanmak için bize verdiği bilgiler olan **hesap verileri** bakımından veri sorumlusu biziz.",
@@ -322,6 +323,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Çerezler ve yerel depolama",
         blocks: [
           "Çalışma alanı yalnızca oturumunuzu açık tutmak, formları korumak ve tema ile dil gibi tercihleri hatırlamak için gerekli çerezleri ve yerel depolamayı kullanır. Herkese açık site agentes.chat seçtiğiniz dili hatırlar ve Himetrica analitiğini (2. Bölüm) kullanır. Reklam veya siteler arası izleme çerezleri kullanmayız.",
+          "**Referans çerezi:** agentes.chat'e bir referans bağlantısı açtığınızda, faturalandırma hizmetimiz, abone olursanız bağlantıyı gönderen kişiye sayılması için referansı tarayıcınızda tek bir çerezde 60 gün saklar. Avrupa Ekonomik Alanı, Birleşik Krallık ve İsviçre'de bu çerezi yalnızca siz agentes.chat üzerinde onay verdikten sonra yerleştiririz. Bu cihazdaki referansı unutmak için https://agentes.chat/tr/privacy?forget-referral#cookies adresini açın.",
         ],
       },
       {
@@ -342,7 +344,7 @@ export const legalTr: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. İletişim",
         blocks: [
-          "CODARI GLOBAL, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. AB, Birleşik Krallık ve Brezilya'ya ilişkin veri koruma soruları da aynı adresten gizlilik ekibimize ulaşır. Diğer tüm konular için hello@agentes.chat adresine yazın.",
+          "AGENTESCHAT, LLC, agentes.chat ticari adıyla faaliyet gösterir. Bildirimler: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. AB, Birleşik Krallık ve Brezilya'ya ilişkin veri koruma soruları da aynı adresten gizlilik ekibimize ulaşır. Diğer tüm konular için hello@agentes.chat adresine yazın.",
         ],
       },
     ],

@@ -6,13 +6,13 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
     title: "使用条款",
     summary: "使用 agentes.chat 的协议：您的工作区、您的智能体，以及双方各自承担的责任。",
     courtesy: "本文件为礼节性译本。如本译本与英文版本存在任何差异，以英文版本为准。",
-    updated: "2026-11-13",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
         heading: "1. 协议",
         blocks: [
-          "本使用条款（以下简称“本条款”）是 CODARI GLOBAL, LLC（一家依据怀俄明州（Wyoming）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）与创建账户或工作区的个人或实体（以下简称“您”）之间具有约束力的协议。一旦您创建账户、加入工作区，或以其他方式通过网页、Mac 应用或手机应用使用 agentes.chat（以下简称“本服务”），即表示您接受本条款及我们的隐私政策。如果您代表公司或其他实体使用本服务，您声明您有权代表该实体并使其受本条款约束。",
+          "本使用条款（以下简称“本条款”）是 AGENTESCHAT, LLC（一家依据特拉华州（Delaware）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）与创建账户或工作区的个人或实体（以下简称“您”）之间具有约束力的协议。一旦您创建账户、加入工作区，或以其他方式通过网页、Mac 应用或手机应用使用 agentes.chat（以下简称“本服务”），即表示您接受本条款及我们的隐私政策。如果您代表公司或其他实体使用本服务，您声明您有权代表该实体并使其受本条款约束。",
           "您必须年满 18 周岁并具备订立合同的能力，方可使用本服务。",
         ],
       },
@@ -97,10 +97,11 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
           "每个工作区为其自身的 agentes.chat 套餐付费。以下规则适用于所有套餐：",
           {
             list: [
+              "**销售方。** 所有购买均向 AGENTESCHAT, LLC（一家在美国特拉华州注册成立的美国公司）进行，并由其开具账单。",
               "**价格。** 套餐及其价格载于我们的价格页面。价格以美元计价，并在适用时另加税费。您的银行或支付服务提供商可能对境外购买收取其自身的费用，例如巴西的 IOF。",
               "**续订。** 套餐根据所选周期按月或按年自动续订，直至被取消。年度套餐续订前，我们会发送提醒。",
               "**取消。** 您可以随时取消，取消自已付费周期结束时生效。届时，该工作区的智能体将停止运行，其计算机将在 7 天后被清除，其对话和文件在 90 天内仍可阅读和下载，之后将被删除。",
-              "**不予退款。** 所有付款均为最终付款，不予全部或部分退还，包括取消后剩余周期的款项，但法律另有要求的除外。",
+              "**不予退款。** 每个套餐自购买之时起即产生运营成本，例如 AI 模型使用、服务器和工作区的计算机。因此，所有购买均为最终交易，不予全部或部分退还，包括取消后剩余周期的款项。",
               "**付款失败。** 如果付款失败，我们会在随后数日内重试。如果仍然失败，该工作区将被暂停：其智能体停止运行，人员仍可在其中阅读和撰写内容。其计算机将保留 7 天，之后被释放并清除。付款后工作区即可恢复。如原计算机已被释放，则在一台新计算机上恢复。",
               "**价格变更。** 我们可以随时更改面向新客户的价格。您已持有的套餐的价格仅会因新增税费而变更，自其下一次续订时起生效，并至少提前 30 天通知。",
               "**合理使用。** 部分功能运行于我们提供且不另行收费的 AI 服务之上，例如选择由哪个智能体作答、评判记忆和操作，以及在屏幕上找到要点击的位置。对于使用量远超正常水平的工作区，我们可以对这些功能加以限制。",
@@ -148,7 +149,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. 适用法律",
         blocks: [
-          "本条款受美国怀俄明州法律管辖（不包括其法律冲突规则），双方服从位于怀俄明州的州法院和联邦法院的专属管辖。如果您是某一司法管辖区（例如巴西）的消费者，而该地法律赋予您不可放弃的权利或管辖地，则这些权利不受影响。",
+          "本条款以及根据本条款进行的所有购买受美国法律和特拉华州（Delaware）法律管辖（不包括法律冲突规则），双方服从位于特拉华州的州法院和联邦法院的专属管辖。",
         ],
       },
       {
@@ -162,7 +163,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. 联系方式",
         blocks: [
-          "CODARI GLOBAL, LLC，以 agentes.chat 名义经营。通知地址：7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · 其他事宜：hello@agentes.chat",
+          "AGENTESCHAT, LLC，以 agentes.chat 名义经营。通知地址：2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · 其他事宜：hello@agentes.chat",
         ],
       },
     ],
@@ -171,13 +172,13 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
     title: "隐私政策",
     summary: "我们收集哪些数据、智能体将数据发送至何处、谁能看到您的工作区，以及您享有的权利。",
     courtesy: "本文件为礼节性译本。如本译本与英文版本存在任何差异，以英文版本为准。",
-    updated: "2026-11-14",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
         heading: "1. 概述",
         blocks: [
-          "CODARI GLOBAL, LLC（一家依据怀俄明州（Wyoming）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）运营 agentes.chat：一个供人与 AI 智能体协同工作的工作区，可通过网页、Mac 应用和手机应用使用（以下简称“本服务”）。本政策区分两种角色：",
+          "AGENTESCHAT, LLC（一家依据特拉华州（Delaware）法律设立、以 agentes.chat 名义经营的有限责任公司，以下简称“agentes.chat”或“我们”）运营 agentes.chat：一个供人与 AI 智能体协同工作的工作区，可通过网页、Mac 应用和手机应用使用（以下简称“本服务”）。本政策区分两种角色：",
           {
             list: [
               "对于**账户数据**，即人们为创建和使用账户而向我们提供的信息，我们是数据控制者。",
@@ -318,6 +319,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookie 和本地存储",
         blocks: [
           "工作区仅使用为保持您的登录状态、保护表单以及记住主题和语言等偏好所必需的 Cookie 和本地存储。公开网站 agentes.chat 会记住您选择的语言，并使用 Himetrica 分析（见第 2 条）。我们不使用广告 Cookie 或跨站跟踪 Cookie。",
+          "**推荐 Cookie：** 当您打开指向 agentes.chat 的推荐链接时，我们的计费服务会将该推荐保存在您浏览器的一个 Cookie 中，为期 60 天，以便您订阅时，发送链接的人获得推荐奖励。在欧洲经济区、英国和瑞士，我们仅在您于 agentes.chat 上同意后才设置该 Cookie。如需在此设备上忘记该推荐，请打开 https://agentes.chat/zh/privacy?forget-referral#cookies 。",
         ],
       },
       {
@@ -338,7 +340,7 @@ export const legalZhHans: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. 联系方式",
         blocks: [
-          "CODARI GLOBAL, LLC，以 agentes.chat 名义经营。通知地址：7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat。来自欧盟、英国和巴西的数据保护咨询可通过同一地址联系我们的隐私团队。其他事宜，请发送电子邮件至 hello@agentes.chat。",
+          "AGENTESCHAT, LLC，以 agentes.chat 名义经营。通知地址：2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat。来自欧盟、英国和巴西的数据保护咨询可通过同一地址联系我们的隐私团队。其他事宜，请发送电子邮件至 hello@agentes.chat。",
         ],
       },
     ],
