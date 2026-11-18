@@ -1,16 +1,18 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, type Executor, eq, inArray, isNull, ne, schema, sql } from "@agenteschat/db";
 import type { Agent } from "./agents";
-import { audienceError, canTalkTo, speakerOf } from "./audience";
+import { audienceError, canTalkTo, managesAgent, speakerOf } from "./audience";
 import { caches } from "./cache";
+import { wordsOf } from "./confidential";
 import { sha256 } from "./crypto";
 import { NotFoundError, ValidationError } from "./errors";
 import { publishChannelEvent, publishUserEvent } from "./events";
+import { followsThreadSql, threadReadAtSql } from "./follows";
 import { landedAfterSql } from "./message-place";
 import { type PreviewMeta, previewMediaKind, previewMeta, readableBody } from "./message-preview";
 import { quietNoticeSql } from "./notices";
 import { resolveNotifications, unaskedGroup } from "./notifications";
-import { can, getMembership, requirePermission } from "./organizations";
+import { getMembership, requirePermission } from "./organizations";
 import { accountInUse, closedRefusal } from "./standing";
 
 const { channels, channelMembers, channelReads, messages, agents, users, organizationMembers } = schema;
@@ -121,8 +123,10 @@ export async function openDm(
       .from(agents)
       .where(and(eq(agents.id, target.agentId), eq(agents.orgId, orgId), isNull(agents.archivedAt)));
     if (!agent) throw new NotFoundError("Agent not found");
-    // Who manages agents opens it anyway (its composer says why it won't answer and offers to let them in).
-    if (!canTalkTo(agent, actorId, speakerOf(membership)) && !can(membership, "manage_agents")) blockedAgent = agent;
+    // Who manages the agent opens it anyway (its composer says why it won't answer and offers to let them in); a
+    // private agent stays closed to who merely holds "Editar qualquer agente" (ADR 0085 addendum of 2026-11-17).
+    if (!canTalkTo(agent, actorId, speakerOf(membership)) && !managesAgent(agent, actorId, membership))
+      blockedAgent = agent;
     other = `a:${target.agentId}`;
   }
   const dmKey = keyOf([`u:${actorId}`, other]);
@@ -379,6 +383,11 @@ export async function listDms(db: Database, actorId: string, orgId: string, only
           sql`(${messages.authorUserId} is null or ${messages.authorUserId} <> ${actorId})`,
           sql`not ${quietNoticeSql(sql`${messages.meta}`)}`,
           landedAfterSql(messages, sql`coalesce(${channelReads.lastReadAt}, 'epoch'::timestamptz)`),
+          // A thread's reply by the channels' rule: only in one I follow or that mentions me, and haven't read there
+          // (reading the thread clears it here too).
+          sql`(${messages.threadId} is null or ((${actorId} = any(${messages.mentionedUserIds})
+              or ${followsThreadSql(orgId, actorId, sql`${messages.threadId}`)})
+            and ${landedAfterSql(messages, threadReadAtSql(actorId, sql`${messages.threadId}`))}))`,
           // Nor one more unread (ADR 0091): it is silent.
           sql`${messages.meta}->>'mediaAfter' is null`,
         ),
@@ -403,7 +412,10 @@ export async function listDms(db: Database, actorId: string, orgId: string, only
           lastMessage: m
             ? {
                 id: m.id,
-                body: readableBody(m.body, m.meta as Record<string, unknown> | null).slice(0, 200),
+                body: readableBody(
+                  wordsOf(m.body, m.meta as Record<string, unknown> | null),
+                  m.meta as Record<string, unknown> | null,
+                ).slice(0, 200),
                 meta: previewMeta(m.meta as Record<string, unknown> | null),
                 mediaKind: previewMediaKind(m.body, m.meta as Record<string, unknown> | null),
                 createdAt: m.createdAt,

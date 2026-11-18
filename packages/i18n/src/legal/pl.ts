@@ -8,13 +8,13 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
       "Umowa dotycząca korzystania z agentes.chat: Twój obszar roboczy, Twoi agenci oraz zakres odpowiedzialności każdej ze stron.",
     courtesy:
       "Niniejszy dokument jest tłumaczeniem grzecznościowym. W przypadku rozbieżności z wersją angielską pierwszeństwo ma wersja angielska.",
-    updated: "2026-11-13",
+    updated: "2026-11-18",
     sections: [
       {
         id: "agreement",
         heading: "1. Umowa",
         blocks: [
-          "Niniejsze Warunki korzystania („Warunki”) stanowią wiążącą umowę między CODARI GLOBAL, LLC, spółką z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Wyoming, prowadzącą działalność pod nazwą agentes.chat („agentes.chat”, „my”, „nas”), a osobą lub podmiotem, który zakłada konto lub obszar roboczy („Ty”). Zakładając konto, dołączając do obszaru roboczego lub w inny sposób korzystając z agentes.chat w przeglądarce, w aplikacji na komputery Mac lub w aplikacji na telefon („Usługa”), akceptujesz niniejsze Warunki oraz naszą Politykę prywatności. Jeżeli korzystasz z Usługi w imieniu spółki lub innego podmiotu, oświadczasz, że jesteś umocowany do zaciągania w jego imieniu zobowiązań.",
+          "Niniejsze Warunki korzystania („Warunki”) stanowią wiążącą umowę między AGENTESCHAT, LLC, spółką z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Delaware, prowadzącą działalność pod nazwą agentes.chat („agentes.chat”, „my”, „nas”), a osobą lub podmiotem, który zakłada konto lub obszar roboczy („Ty”). Zakładając konto, dołączając do obszaru roboczego lub w inny sposób korzystając z agentes.chat w przeglądarce, w aplikacji na komputery Mac lub w aplikacji na telefon („Usługa”), akceptujesz niniejsze Warunki oraz naszą Politykę prywatności. Jeżeli korzystasz z Usługi w imieniu spółki lub innego podmiotu, oświadczasz, że jesteś umocowany do zaciągania w jego imieniu zobowiązań.",
           "Aby korzystać z Usługi, musisz mieć ukończone co najmniej 18 lat i posiadać zdolność do zawarcia umowy.",
         ],
       },
@@ -99,10 +99,11 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
           "Każdy obszar roboczy płaci za własny plan agentes.chat. Poniższe zasady dotyczą każdego planu:",
           {
             list: [
+              "**Sprzedawca.** Każdy zakup jest dokonywany od AGENTESCHAT, LLC, spółki ze Stanów Zjednoczonych zarejestrowanej w stanie Delaware, i przez nią rozliczany.",
               "**Ceny.** Plany i ich ceny są podane na naszej stronie z cennikiem. Ceny są wyrażone w dolarach amerykańskich, a podatki są doliczane tam, gdzie mają zastosowanie. Twój bank lub dostawca usług płatniczych może pobierać własne opłaty od zakupów za granicą, takie jak IOF w Brazylii.",
               "**Odnowienie.** Plan odnawia się automatycznie co miesiąc lub co rok, w zależności od wybranego okresu, do czasu jego anulowania. Przed odnowieniem planu rocznego wysyłamy przypomnienie.",
               "**Anulowanie.** Możesz anulować plan w dowolnym momencie, a anulowanie staje się skuteczne z końcem już opłaconego okresu. Wówczas agenci obszaru roboczego zatrzymują się, jego komputer zostaje wyczyszczony 7 dni później, a jego rozmowy i pliki pozostają dostępne do odczytu i pobrania przez 90 dni, po czym zostają usunięte.",
-              "**Brak zwrotów.** Płatności są ostateczne i nie podlegają zwrotowi, w całości ani w części, w tym za pozostałą część okresu po anulowaniu, chyba że przepisy prawa stanowią inaczej.",
+              "**Brak zwrotów.** Każdy plan od chwili zakupu generuje koszty operacyjne, takie jak korzystanie z modeli AI, serwery i komputer obszaru roboczego. Dlatego zakupy są ostateczne i nie podlegają zwrotowi, w całości ani w części, w tym za pozostałą część okresu po anulowaniu.",
               "**Nieudane płatności.** Jeżeli płatność się nie powiedzie, ponawiamy próbę w ciągu kolejnych dni. Jeżeli nadal się nie powiedzie, obszar roboczy zostaje wstrzymany: jego agenci zatrzymują się, a osoby nadal mogą w nim czytać i pisać. Jego komputer jest zachowywany przez 7 dni, a następnie zwalniany i czyszczony. Dokonanie płatności przywraca obszar roboczy, na nowym komputerze, jeżeli poprzedni został zwolniony.",
               "**Zmiany cen.** Możemy w każdej chwili zmienić ceny dla nowych klientów. Cena posiadanego już przez Ciebie planu zmienia się wyłącznie z powodu nowych podatków, od jego najbliższego odnowienia, z co najmniej 30-dniowym wyprzedzeniem.",
               "**Uczciwe korzystanie.** Niektóre funkcje działają na usługach AI, które zapewniamy bez dodatkowej opłaty, takie jak wybór agenta, który odpowiada, ocena wspomnień i działań oraz znajdowanie elementu do kliknięcia na ekranie. Możemy je ograniczyć dla obszaru roboczego, którego wykorzystanie znacznie przekracza normalny poziom.",
@@ -150,7 +151,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "law",
         heading: "16. Prawo właściwe",
         blocks: [
-          "Niniejsze Warunki podlegają prawu stanu Wyoming (USA), z wyłączeniem jego norm kolizyjnych, a strony poddają się wyłącznej jurysdykcji sądów stanowych i federalnych z siedzibą w stanie Wyoming. Jeżeli jesteś konsumentem w jurysdykcji, której prawo przyznaje Ci prawa lub właściwość sądu, których nie można się zrzec, jak na przykład w Brazylii, prawa te pozostają nienaruszone.",
+          "Niniejsze Warunki oraz każdy zakup dokonany na ich podstawie podlegają prawu Stanów Zjednoczonych i stanu Delaware, z wyłączeniem norm kolizyjnych, a strony poddają się wyłącznej jurysdykcji sądów stanowych i federalnych z siedzibą w stanie Delaware.",
         ],
       },
       {
@@ -164,7 +165,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "18. Kontakt",
         blocks: [
-          "CODARI GLOBAL, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Wszystkie pozostałe sprawy: hello@agentes.chat",
+          "AGENTESCHAT, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Wszystkie pozostałe sprawy: hello@agentes.chat",
         ],
       },
     ],
@@ -175,13 +176,13 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
       "Jakie dane zbieramy, co i dokąd wysyłają agenci, kto może widzieć Twój obszar roboczy oraz jakie przysługują Ci prawa.",
     courtesy:
       "Niniejszy dokument jest tłumaczeniem grzecznościowym. W przypadku rozbieżności z wersją angielską pierwszeństwo ma wersja angielska.",
-    updated: "2026-11-14",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
         heading: "1. Informacje ogólne",
         blocks: [
-          "CODARI GLOBAL, LLC, spółka z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Wyoming, prowadząca działalność pod nazwą agentes.chat („agentes.chat”, „my”), prowadzi agentes.chat: obszar roboczy, w którym ludzie i agenci AI pracują wspólnie, dostępny w przeglądarce, jako aplikacja na komputery Mac oraz jako aplikacja na telefon („Usługa”). Niniejsza polityka rozróżnia dwie role:",
+          "AGENTESCHAT, LLC, spółka z ograniczoną odpowiedzialnością (limited liability company) z siedzibą w stanie Delaware, prowadząca działalność pod nazwą agentes.chat („agentes.chat”, „my”), prowadzi agentes.chat: obszar roboczy, w którym ludzie i agenci AI pracują wspólnie, dostępny w przeglądarce, jako aplikacja na komputery Mac oraz jako aplikacja na telefon („Usługa”). Niniejsza polityka rozróżnia dwie role:",
           {
             list: [
               "W odniesieniu do **danych konta**, czyli informacji, które ludzie nam przekazują, aby założyć konto i z niego korzystać, jesteśmy administratorem danych.",
@@ -322,6 +323,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Pliki cookie i pamięć lokalna",
         blocks: [
           "Obszar roboczy korzysta wyłącznie z plików cookie i pamięci lokalnej niezbędnych do utrzymania Twojego zalogowania, ochrony formularzy oraz zapamiętania preferencji, takich jak motyw i język. Publiczna witryna agentes.chat zapamiętuje wybrany przez Ciebie język i korzysta z analityki Himetrica (sekcja 2). Nie używamy reklamowych plików cookie ani plików cookie służących do śledzenia między witrynami.",
+          "**Plik cookie polecenia:** gdy otworzysz link polecający do agentes.chat, nasz serwis rozliczeń zapisuje polecenie w jednym pliku cookie w Twojej przeglądarce na 60 dni, aby osoba, która wysłała link, otrzymała polecenie, jeśli wykupisz subskrypcję. W Europejskim Obszarze Gospodarczym, Wielkiej Brytanii i Szwajcarii ustawiamy go dopiero po wyrażeniu przez Ciebie zgody w agentes.chat. Aby zapomnieć polecenie na tym urządzeniu, otwórz https://agentes.chat/pl/privacy?forget-referral#cookies.",
         ],
       },
       {
@@ -342,7 +344,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         id: "contact",
         heading: "17. Kontakt",
         blocks: [
-          "CODARI GLOBAL, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · privacy@agentes.chat. Zapytania dotyczące ochrony danych z UE, Wielkiej Brytanii i Brazylii trafiają do naszego zespołu ds. prywatności pod tym samym adresem. We wszystkich innych sprawach napisz na adres hello@agentes.chat.",
+          "AGENTESCHAT, LLC, prowadząca działalność pod nazwą agentes.chat. Zawiadomienia: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · privacy@agentes.chat. Zapytania dotyczące ochrony danych z UE, Wielkiej Brytanii i Brazylii trafiają do naszego zespołu ds. prywatności pod tym samym adresem. We wszystkich innych sprawach napisz na adres hello@agentes.chat.",
         ],
       },
     ],

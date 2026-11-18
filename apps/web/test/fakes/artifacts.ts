@@ -75,6 +75,11 @@ export function serializeContent(content: ArtifactContent): { text: string; type
       return { text: content.question, type: "text/plain" };
     case "choices":
       return { text: content.questions.map((q) => q.question).join("\n"), type: "text/plain" };
+    // A live file's content is its card's preview (ADR 0196 §7); the server exports the document itself.
+    case "spreadsheet":
+    case "slides":
+    case "canvas":
+      return { text: JSON.stringify(content.preview), type: "application/json" };
   }
 }
 
@@ -173,16 +178,22 @@ export function createMockArtifacts(
   };
   const view = async (orgId: string, s: Stored): Promise<Artifact> => {
     const audience = await audienceOf(orgId, s.meta.channelId);
+    // A file of the Drive itself lives with its maker, made shared with everyone (ADR 0157, amendment 2026-11-17).
+    const drive = audience.kind === "workspace";
+    const viewer = await me();
+    const mine = s.meta.createdBy.type === "person" && s.meta.createdBy.id === viewer.id;
     return {
       canDelete: true,
-      sharing: { mode: "conversation", userIds: [], roleIds: [] },
+      sharing: { mode: drive ? "everyone" : "conversation", userIds: [], roleIds: [] },
       ...clone(s.meta),
       canEdit: editable(s.meta.kind),
       untrusted: s.meta.kind === "html" || s.meta.kind === "file",
       audience,
-      // As the server: whoever reads it where it lives may share what not everyone sees (the fake's viewer is there).
+      // As the server: whoever reads it where it lives may share what not everyone sees (the fake's viewer is there);
+      // a Drive file, its maker (administrators too, which the fake's viewer isn't).
       canShare:
-        s.meta.inDrive !== false && (audience.kind === "dm" || (audience.kind === "channel" && audience.private)),
+        s.meta.inDrive !== false &&
+        (drive ? mine : audience.kind === "dm" || (audience.kind === "channel" && audience.private)),
     };
   };
   const detail = async (orgId: string, s: Stored, version?: number): Promise<ArtifactDetail> => {
@@ -239,6 +250,12 @@ export function createMockArtifacts(
       };
     },
     get: async (orgId, id, version) => detail(orgId, await find(orgId, id), version),
+    // A live file's conversation (ADR 0199): a stable channel and root per file, as the server makes on first use.
+    conversation: async (orgId, id) => {
+      record("artifacts.conversation", orgId, id);
+      await find(orgId, id);
+      return { channelId: `file-conversation-${id}`, rootId: `file-root-${id}` };
+    },
     keep: async (orgId, id) => {
       const s = await find(orgId, id);
       s.meta.inDrive = true;

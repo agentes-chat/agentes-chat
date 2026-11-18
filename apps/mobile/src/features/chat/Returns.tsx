@@ -6,8 +6,19 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Pressable, Text as RNText, StyleSheet, View } from "react-native";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
-import { Card, CHROME_MAX_SCALE, Icon, IconButton, Row, Text, useReducedMotion, useTheme, useToast } from "@/ui";
+import {
+  CHROME_MAX_SCALE,
+  GroupedList,
+  GroupedRow,
+  Icon,
+  SkeletonList,
+  Text,
+  useReducedMotion,
+  useTheme,
+  useToast,
+} from "@/ui";
 import { AgentFace, Face } from "../shared/Face";
+import { LoadFailed } from "../shared/FirstUse";
 import { useDirectory, useNow, useOrgId } from "../shared/hooks";
 import { SheetTitle } from "../shared/PromptForm";
 import { Tile } from "../shared/parts";
@@ -135,9 +146,9 @@ export function ReturnLine({ returns, onOpen }: { returns: PendingReturn[]; onOp
 }
 
 /**
- * "Retornos": the returns here, the soonest first, as the pins' sheet builds them: her face, her name, her words whole
- * (three lines), the time (the wait mark once its time passed waiting on an answer), and × for who may cancel, its
- * spinner while it goes. A tap goes to her reply.
+ * "Retornos": the returns here, the soonest first, on the sheets' grouped rows as the pins' sheet: her face, her name,
+ * her words whole (three lines), the time (the wait mark once its time passed waiting on an answer), and the row's ×
+ * for who may cancel, a spinner while it goes. A tap goes to her reply.
  */
 export function ReturnsSheet({
   channelId,
@@ -174,45 +185,47 @@ export function ReturnsSheet({
   return (
     <>
       <SheetTitle leading={<Tile icon="clock" />} title={t("followUps.title")} />
+      {/* Loading: the rows' shape; didn't load: what happened and the way to ask again, from the sheet itself. */}
       {query.isLoading ? (
-        <ActivityIndicator color={c.muted} />
-      ) : query.isError ? (
-        <Text tone="muted">{t("mobile.app.failed")}</Text>
+        <SkeletonList rows={2} />
+      ) : query.isError && !query.data ? (
+        <LoadFailed onRetry={() => void query.refetch()} />
       ) : (
-        <Card>
+        <GroupedList>
           {list.map((r) => {
             const name = dir.agentById.get(r.agentId)?.name ?? t("channel.unknownAgent");
             const g = agentGrammar(name);
             const reply = r.replyMessageId;
+            const leaving = going.has(r.messageId);
             return (
-              <Row
+              <GroupedRow
                 key={r.messageId}
                 leading={<Face who={{ type: "agent", id: r.agentId }} size={30} live={false} />}
-                title={name}
-                subtitle={r.about}
-                subtitleLines={3}
-                meta={
-                  <View style={styles.meta}>
-                    {r.held ? (
-                      <WaitMark size={8} />
-                    ) : (
-                      <Text variant="caption" tone="faint" style={styles.time}>
-                        {returnClock(t, i18n.language, r.at, now)}
-                      </Text>
-                    )}
-                    {!r.canCancel ? null : going.has(r.messageId) ? (
-                      <View style={styles.going} accessible accessibilityLabel={t("followUps.cancel")}>
-                        <ActivityIndicator size="small" color={c.muted} />
-                      </View>
-                    ) : (
-                      <IconButton
-                        icon="x"
-                        label={t("followUps.cancelOf", {
+                label={name}
+                sub={r.about}
+                subLines={3}
+                // The time, or the wait mark once it passed waiting on an answer; a spinner while it is canceled.
+                {...(leaving
+                  ? {
+                      valueLeading: (
+                        <View accessible accessibilityLabel={t("followUps.cancel")}>
+                          <ActivityIndicator size="small" color={c.muted} />
+                        </View>
+                      ),
+                    }
+                  : r.held
+                    ? { valueLeading: <WaitMark size={8} /> }
+                    : {})}
+                {...(r.held ? {} : { value: returnClock(t, i18n.language, r.at, now) })}
+                {...(r.canCancel && !leaving
+                  ? {
+                      remove: {
+                        label: t("followUps.cancelOf", {
                           name: g.name,
                           context: g.context,
                           when: returnWhen(t, i18n.language, r.at, now),
-                        })}
-                        onPress={() => {
+                        }),
+                        onPress: () => {
                           mark(r.messageId, true);
                           cancel.mutate(
                             { channelId, messageId: r.messageId },
@@ -221,16 +234,15 @@ export function ReturnsSheet({
                               onSettled: () => mark(r.messageId, false),
                             },
                           );
-                        }}
-                      />
-                    )}
-                  </View>
-                }
+                        },
+                      },
+                    }
+                  : {})}
                 {...(reply ? { onPress: () => onPick(reply) } : {})}
               />
             );
           })}
-        </Card>
+        </GroupedList>
       )}
     </>
   );
@@ -265,7 +277,4 @@ const styles = StyleSheet.create({
   measure: { position: "absolute", left: 0, top: 0, opacity: 0 },
   // ⋯ in the line's round end, 2 points from its edge: a sign the line opens the list (the line is the button).
   more: { width: 24, height: 24, marginRight: -6, alignItems: "center", justifyContent: "center" },
-  meta: { flexDirection: "row", alignItems: "center", gap: 2 },
-  time: { fontVariant: ["tabular-nums"] },
-  going: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
 });

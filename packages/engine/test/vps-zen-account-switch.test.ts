@@ -73,11 +73,11 @@ describe("VPS Zen: automatic account switch", () => {
     expect((await agent()).brainAccountId).toBe(id("a1"));
   });
 
-  test("the long-work pause (95%) and a refusal seen in this process count as no room", async () => {
+  test("the long-work pause (`PLAN_PAUSE`) and a refusal seen in this process count as no room", async () => {
     const { fx, machineId, account, agent } = await world();
     await fx.db
       .update(schema.machineAccounts)
-      .set({ usage: week(96) as never })
+      .set({ usage: week(99) as never })
       .where(eq(schema.machineAccounts.id, id("a1")));
     await account(id("b1"), week(30));
     expect((await brainAccountFor(fx.db, await agent(), "claude_code", machineId))?.id).toBe(id("b1"));
@@ -105,8 +105,8 @@ describe("VPS Zen: automatic account switch", () => {
   test("with a spare account it isn't out of office", async () => {
     const { fx, account, agent } = await world();
     const a = await agent();
-    expect((await outOfOffice(fx.db, fx.org.id, [a], { hasModel: async () => false })).get(a.id)?.reason).toBe("plan");
+    expect((await outOfOffice(fx.db, fx.org.id, [a])).get(a.id)?.reason).toBe("plan");
     await account(id("b1"), week(10));
-    expect((await outOfOffice(fx.db, fx.org.id, [a], { hasModel: async () => false })).has(a.id)).toBe(false);
+    expect((await outOfOffice(fx.db, fx.org.id, [a])).has(a.id)).toBe(false);
   });
 });

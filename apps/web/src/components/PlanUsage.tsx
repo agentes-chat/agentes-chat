@@ -1,13 +1,22 @@
-import type { AiAccounts, PlanAccountInfo, PlanAccountUsage, PlanServes } from "@agenteschat/client";
-import { keys, useAiAccounts, useApi, useModels, usePlanUsage } from "@agenteschat/client";
+import type {
+  AccountOrderGroup,
+  AiAccounts,
+  PlanAccountInfo,
+  PlanAccountUsage,
+  PlanServes,
+  PlanUseKind,
+} from "@agenteschat/client";
+import { keys, useAccountOrder, useAiAccounts, useApi, useModels, usePlanUsage } from "@agenteschat/client";
 import { removableLogins } from "@agenteschat/client/lib/ai-accounts";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { formatPercent, formatTokensShort, formatUsd, joinNames } from "@agenteschat/client/lib/format";
+import { accountKinds, kindFacts, usageOrderSections } from "@agenteschat/client/lib/plan-usage";
 import { planName } from "@agenteschat/client/lib/plans";
 import { AUTO, apiProviderOf } from "@agenteschat/client/lib/providers";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
 import {
+  Alert,
   agentGradient,
   Button,
   Card,
@@ -29,9 +38,10 @@ import {
 } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Fragment, useEffect, useId, useState } from "react";
+import { Fragment, type HTMLAttributes, type ReactNode, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import { OrderHead, useOrderMoves } from "@/components/ai/AccountOrder";
 import { AccountActions } from "@/components/ai/AiAccounts";
 import { PlanHold, usePlanHold } from "@/components/ai/ConnectAiSteps";
 import { useConnectAi, useMayConnectAi } from "@/components/ConnectAi";
@@ -44,6 +54,7 @@ import {
   accountName,
   accountOwner,
   accountShares,
+  accountWhose,
   brandOf,
   groupUsageAccounts,
   loginsText,
@@ -71,7 +82,7 @@ const WIDE_SPACE = "\u2002";
 /** An account's head: the maker's mark, its name and plan, its maker and whose it is. */
 export function AccountHead({ account, extra }: { account: PlanAccountInfo; extra?: string | null }) {
   const { t } = useTranslation();
-  const whose = account.email ?? accountOwner(t, account);
+  const whose = accountWhose(t, account);
   return (
     <div className="plan-acct ac-mediarow ac-mediarow--row">
       <span className="ac-mediarow__face">
@@ -103,6 +114,7 @@ export function PlanUsageCards() {
   const api = useApi();
   const usage = usePlanUsage(org.id);
   const mine = useAiAccounts(org.id);
+  const order = useAccountOrder(org.id);
   const look = useRightHandLook();
   const connectAi = useConnectAi();
   const mayConnect = useMayConnectAi();
@@ -167,14 +179,26 @@ export function PlanUsageCards() {
       )}
       {accounts.length > 0 && (
         <List className="plan-rows">
-          {accounts.map((a) => (
-            <AccountRow
-              key={a.key}
-              account={a}
-              money={money}
-              computer={several ? computerNameOf(t, org.name, a.machineName, isPersonal(org)) : null}
-            />
-          ))}
+          {usageOrderSections(accounts, order.data?.groups).map((s) =>
+            s.group ? (
+              <OrderRows
+                key={`${s.group.machineId}:${s.group.kind}`}
+                group={s.group}
+                rows={s.rows}
+                money={money}
+                several={several}
+              />
+            ) : (
+              s.rows.map((a) => (
+                <AccountRow
+                  key={a.key}
+                  account={a}
+                  money={money}
+                  computer={several ? computerNameOf(t, org.name, a.machineName, isPersonal(org)) : null}
+                />
+              ))
+            ),
+          )}
         </List>
       )}
       {grokLogins.length > 1 && <RemoveGrokLogins logins={grokLogins} />}
@@ -182,34 +206,76 @@ export function PlanUsageCards() {
   );
 }
 
+/** An order of use's rows (ADR 0041 §6) under its heading, each starting with its place. */
+function OrderRows({
+  group,
+  rows,
+  money,
+  several,
+}: {
+  group: AccountOrderGroup;
+  rows: PlanAccountUsage[];
+  money: boolean;
+  several: boolean;
+}) {
+  const { t } = useTranslation();
+  const { org } = useOrg();
+  const { place, drop } = useOrderMoves(org.id, group);
+  const computer = several ? computerNameOf(t, org.name, group.computer, isPersonal(org)) : null;
+  return (
+    <div className="plan-order">
+      <OrderHead group={group} computer={computer} />
+      {rows.map((a) => (
+        <AccountRow
+          key={a.key}
+          account={a}
+          money={money}
+          computer={computer}
+          place={a.accountId ? place(a.accountId, accountName(t, a)) : undefined}
+          drop={a.accountId ? drop(a.accountId) : undefined}
+        />
+      ))}
+    </div>
+  );
+}
+
 /**
  * A plan account as a row that opens. Closed: its maker's mark, its name and plan, whose it is and one meter, the
  * window closest to its limit, with what matters near the limit on a line under them. Open: its maker and address,
  * every window with its bar split by agent in their colours, its agents (share of the window the bar splits, tokens
- * this month), when it renews, the month's total and, for its owner, what they do with it. Near its limit it starts
- * open.
+ * this month), when it renews, the month's total and, for its owner, what they do with it. Every row starts closed:
+ * the head's meter and its limit line already say where it stands.
  */
 function AccountRow({
   account,
   money,
   computer,
+  place,
+  drop,
 }: {
   account: PlanAccountUsage;
   money: boolean;
   computer: string | null;
+  /** Its place in an order of use, before the row's line. */
+  place?: ReactNode;
+  drop?: HTMLAttributes<HTMLDivElement>;
 }) {
   const { t, i18n } = useTranslation();
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const text = planMeterText(t, i18n.language);
   const line = account.usage ? planLine(account.usage, text) : null;
-  const [open, setOpen] = useState(line != null && line.state !== "ok");
+  const [open, setOpen] = useState(false);
   // What the row holds leaves the page once it has closed, so a closed list of many accounts stays light.
-  const [held, setHeld] = useState(open);
+  const [held, setHeld] = useState(false);
   const body = useId();
   const shares = accountShares(account);
+  const window = shares.window ? text.short(shares.window) : null;
   const list = shares.shown.length > 0 && (
-    <AgentShares shares={shares} window={shares.window ? text.short(shares.window) : null} />
+    <>
+      <AgentShares shares={shares} window={window} />
+      <KindShares account={account} window={window} />
+    </>
   );
   // Whose it is, who uses it and how many logins it stands for: each moves to the next line whole.
   const facts = [accountOwner(t, account), servesText(t, account), loginsText(t, account)].filter((f): f is string =>
@@ -218,7 +284,8 @@ function AccountRow({
   const owner = facts.length > 0;
   const chips = Boolean(account.plan) || Boolean(account.signedOut);
   return (
-    <div className="plan-row" data-open={open || undefined}>
+    <div className={place ? "plan-row plan-row--placed" : "plan-row"} data-open={open || undefined} {...drop}>
+      {place}
       <button
         type="button"
         // The kit's line of a row that opens under it: the row's room is above the line and below what it unfolds.
@@ -230,7 +297,7 @@ function AccountRow({
           setOpen(!open);
         }}
       >
-        <ProviderLogo id={account.provider ?? account.kind} size="sm" off={account.signedOut} />
+        {!place && <ProviderLogo id={account.provider ?? account.kind} size="sm" off={account.signedOut} />}
         {/* Two parts: one line of words on a wide row, and on a phone the name beside the mark with the plan and
             whose it is under both. The space that parts them ends the name, so neither starts with it. */}
         <span className="plan-acct__name">
@@ -394,35 +461,84 @@ function AgentShares({ shares, window }: { shares: ReturnType<typeof accountShar
   const dir = useDirectory(org.id);
   const [open, setOpen] = useState(false);
   return (
-    <div className="plan-shares">
-      {(open ? [...shares.shown, ...shares.rest] : shares.shown).map((a) => {
-        const name = dir.agentById.get(a.agentId)?.name ?? a.name;
-        return (
-          <Link
-            key={a.agentId}
-            className="plan-shares__row"
-            to="/org/$orgId/agents/$agentId"
-            params={{ orgId: org.id, agentId: a.agentId }}
-            search={{ tab: "usage" }}
-          >
-            <AgentAvatar agentId={a.agentId} size="xs" name={name} />
+    <div className="plan-group">
+      <p className="plan-group__label">{t("shell.agents")}</p>
+      <div className="plan-shares">
+        {(open ? [...shares.shown, ...shares.rest] : shares.shown).map((a) => {
+          const name = dir.agentById.get(a.agentId)?.name ?? a.name;
+          return (
+            <Link
+              key={a.agentId}
+              className="plan-shares__row"
+              to="/org/$orgId/agents/$agentId"
+              params={{ orgId: org.id, agentId: a.agentId }}
+              search={{ tab: "usage" }}
+            >
+              <AgentAvatar agentId={a.agentId} size="xs" name={name} />
+              <span>
+                <b>{name}</b>
+                {shareFacts(t, i18n.language, window, a)}
+              </span>
+            </Link>
+          );
+        })}
+        {!open && shares.rest.length > 0 && (
+          <button type="button" className="plan-shares__row" aria-expanded={false} onClick={() => setOpen(true)}>
+            <span />
             <span>
-              <b>{name}</b>
-              {shareFacts(t, i18n.language, window, a)}
+              <b>{t("usageViews.moreAgents", { count: shares.rest.length })}</b>
+              {shareFacts(t, i18n.language, window, { share: shares.restShare, tokens: shares.restTokens })}
             </span>
-          </Link>
-        );
-      })}
-      {!open && shares.rest.length > 0 && (
-        <button type="button" className="plan-shares__row" aria-expanded={false} onClick={() => setOpen(true)}>
-          <span />
-          <span>
-            <b>{t("usageViews.moreAgents", { count: shares.rest.length })}</b>
-            {shareFacts(t, i18n.language, window, { share: shares.restShare, tokens: shares.restTokens })}
-          </span>
-        </button>
-      )}
+          </button>
+        )}
+      </div>
     </div>
+  );
+}
+
+const KIND_ICONS = { handoffs: "swap", people: "person", routines: "routines" } as const satisfies Record<
+  PlanUseKind,
+  string
+>;
+
+/**
+ * Under the agents, what the account's use was for ("Handoffs between agents · week 37% · 6.9M tokens"), and when
+ * handoffs led the week, a hint to ask the agent that took most of them directly.
+ */
+function KindShares({ account, window }: { account: PlanAccountUsage; window: string | null }) {
+  const { t, i18n } = useTranslation();
+  const { org } = useOrg();
+  const dir = useDirectory(org.id);
+  const kinds = accountKinds(account);
+  const target = account.hint ? dir.agentById.get(account.hint.agentId) : undefined;
+  if (kinds.length === 0) return null;
+  return (
+    <>
+      <div className="plan-group">
+        <p className="plan-group__label">{t("usage.kinds.label")}</p>
+        <div className="plan-shares plan-kinds">
+          {kinds.map((k) => (
+            <div key={k.kind} className="plan-shares__row">
+              <span className="plan-kinds__icon">
+                <Icon name={KIND_ICONS[k.kind]} size={16} />
+              </span>
+              <span>
+                <b>{t(`usage.kinds.${k.kind}`)}</b>
+                {kindFacts(t, i18n.language, window, k)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {target && (
+        <Alert tone="neutral" icon="info" className="plan-kinds__hint">
+          {t("usage.hint.handoffs")}{" "}
+          <Link className="ac-link" to="/org/$orgId/dm/agent/$agentId" params={{ orgId: org.id, agentId: target.id }}>
+            {t("usage.hint.message", { name: target.name })}
+          </Link>
+        </Alert>
+      )}
+    </>
   );
 }
 

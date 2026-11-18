@@ -543,6 +543,8 @@ export type ChannelEvent =
   | { type: "artifact.created" | "artifact.updated"; channelId: string; artifact: ArtifactView }
   /** A file was deleted (it shows as removed; restorable for 30 days). */
   | { type: "artifact.deleted"; channelId: string; artifactId: string }
+  /** Who is in a live file changed (ADR 0196 §5): its cards ask `…/live/presence` again. Ids only. */
+  | { type: "live.presence"; channelId: string; artifactId: string }
   /** Channel membership changed (agents carry `autoReply`). */
   | {
       type: "channel.member_added" | "channel.member_removed" | "channel.member_updated";

@@ -32,7 +32,7 @@ import {
 } from "@agenteschat/client/lib/task-manager";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { ActivityIndicator, RefreshControl, StyleSheet, View } from "react-native";
 import Animated, {
   FadeIn,
   FadeOut,
@@ -43,14 +43,15 @@ import Animated, {
 } from "react-native-reanimated";
 import { ComputerIcon, useComputerKind } from "@/computer/ComputerPortrait";
 import {
-  Button,
   Count,
+  Disclosure,
   EmptyState,
   Icon,
   PixelDone,
   PixelFail,
   PixelStopped,
   ProviderLogo,
+  RowPressable,
   SCREEN_X,
   SectionHeader,
   SkeletonList,
@@ -65,7 +66,7 @@ import { CollapsibleSection } from "../chats/HomeSection";
 import { chatHref } from "../links/logic";
 import { useOpenQueue } from "../queue/QueueSheet";
 import { AgentFace, OpensAgent } from "../shared/Face";
-import { useEmptyLook } from "../shared/FirstUse";
+import { LoadFailed, useEmptyLook } from "../shared/FirstUse";
 import { useColors, useDirectory, useMeId, useNow, useOrgId, usePullRefresh, useWhen } from "../shared/hooks";
 import { agentLook } from "../shared/logic";
 import { SheetTitle } from "../shared/PromptForm";
@@ -180,12 +181,7 @@ function TaskManager() {
         // Loading: the rows' own shape, never a spinner.
         <SkeletonList rows={4} />
       ) : tasks.isError && !view ? (
-        <View style={styles.center}>
-          <Text tone="muted" style={styles.centerText}>
-            {t("mobile.taskManager.loadFailed")}
-          </Text>
-          <Button variant="secondary" size="sm" label={t("mobile.common.retry")} onPress={() => void tasks.refetch()} />
-        </View>
+        <LoadFailed onRetry={() => void tasks.refetch()} />
       ) : (
         // Loaded, the list fades in over the spinner; the rows it starts with don't each fade again.
         <Animated.View {...fade}>
@@ -368,12 +364,12 @@ function AgentGroup({
   const counted = group.tasks.length === group.working || group.tasks.length === group.waiting;
   return (
     <Animated.View {...fade} layout={layout}>
-      <Pressable
+      <RowPressable
         onPress={onToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel={`${name}, ${line.text}, ${time}`}
-        style={({ pressed }) => [styles.agent, pressed && { backgroundColor: c.sunken }]}
+        style={styles.agent}
       >
         {divider ? <View style={[styles.divider, styles.agentDivider, { backgroundColor: c.line2 }]} /> : null}
         <OpensAgent agentId={group.agentId}>
@@ -398,7 +394,7 @@ function AgentGroup({
         <Animated.View style={chevron}>
           <Icon name="down" size={CHEVRON} color={c.faint} />
         </Animated.View>
-      </Pressable>
+      </RowPressable>
       {open
         ? group.tasks.map((task, i) => (
             <Animated.View key={task.runId} {...fade} layout={layout}>
@@ -440,11 +436,12 @@ function TaskRow({
   const agent = dir.nameOf({ type: "agent", id: task.agentId });
   const line = flat ? [agent, sub].filter(Boolean).join(" · ") : sub;
   return (
-    <Pressable
+    <RowPressable
+      hold
       onPress={() => router.push(taskHref(task.runId))}
       accessibilityRole="button"
       accessibilityLabel={[title, line, words.state, words.next].filter(Boolean).join(", ")}
-      style={({ pressed }) => [styles.task, pressed && { backgroundColor: c.sunken }]}
+      style={styles.task}
     >
       {divider ? <View style={[styles.divider, styles.textDivider, { backgroundColor: c.line2 }]} /> : null}
       <View style={styles.lead}>
@@ -456,8 +453,8 @@ function TaskRow({
           {taskTime(t, task, now)}
         </Text>
       )}
-      <Icon name="right" size={15} color={c.faint} />
-    </Pressable>
+      <Disclosure />
+    </RowPressable>
   );
 }
 
@@ -499,17 +496,18 @@ function CauseRow({ cause, computers, divider }: { cause: WaitCause; computers: 
             onPress: () => router.push(taskHref(first.runId)),
           };
   return (
-    <Pressable
+    <RowPressable
+      hold
       onPress={row.onPress}
       accessibilityRole="button"
       accessibilityLabel={`${title}, ${line}`}
-      style={({ pressed }) => [styles.task, pressed && { backgroundColor: c.sunken }]}
+      style={styles.task}
     >
       {divider ? <View style={[styles.divider, styles.textDivider, { backgroundColor: c.line2 }]} /> : null}
       <Tile size={LEAD}>{row.lead}</Tile>
       <OneLine title={title} line={line} variant="subhead" />
-      <Icon name="right" size={15} color={c.faint} />
-    </Pressable>
+      <Disclosure />
+    </RowPressable>
   );
 }
 
@@ -524,19 +522,20 @@ function ComputerRow({ computer, divider }: { computer: ComputerSummary; divider
   const openQueue = useOpenQueue();
   const line = computerRoomText(t, computer);
   return (
-    <Pressable
+    <RowPressable
+      hold
       onPress={() => openQueue(computer.id)}
       accessibilityRole="button"
       accessibilityLabel={`${computer.name}, ${line}`}
-      style={({ pressed }) => [styles.task, pressed && { backgroundColor: c.sunken }]}
+      style={styles.task}
     >
       {divider ? <View style={[styles.divider, styles.textDivider, { backgroundColor: c.line2 }]} /> : null}
       <Tile size={LEAD}>
         <ComputerIcon kind={kind} size={16} color={c.muted} />
       </Tile>
       <OneLine title={computer.name} line={line} variant="subhead" />
-      <Icon name="right" size={15} color={c.faint} />
-    </Pressable>
+      <Disclosure />
+    </RowPressable>
   );
 }
 
@@ -555,11 +554,12 @@ function EndedRow({ task, divider, meId }: { task: EndedTask; divider: boolean; 
   const how = endedText(t, task, meId, (id) => dir.nameOf({ type: "agent", id }) || undefined);
   const state = endedState(task);
   return (
-    <Pressable
+    <RowPressable
+      hold
       onPress={() => router.push(taskHref(task.runId))}
       accessibilityRole="button"
       accessibilityLabel={[title, line, how, when.time(task.finishedAt)].filter(Boolean).join(", ")}
-      style={({ pressed }) => [styles.task, pressed && { backgroundColor: c.sunken }]}
+      style={styles.task}
     >
       {divider ? <View style={[styles.divider, styles.textDivider, { backgroundColor: c.line2 }]} /> : null}
       <OpensAgent agentId={task.agentId}>
@@ -576,7 +576,7 @@ function EndedRow({ task, divider, meId }: { task: EndedTask; divider: boolean; 
       <Text variant="caption" tone="faint" style={styles.num}>
         {when.time(task.finishedAt)}
       </Text>
-    </Pressable>
+    </RowPressable>
   );
 }
 
@@ -606,12 +606,13 @@ function ReturnRow({ item, divider, now }: { item: PendingReturn; divider: boole
       />,
     );
   return (
-    <Pressable
+    <RowPressable
+      hold
       onPress={open}
       onLongPress={open}
       accessibilityRole="button"
       accessibilityLabel={[item.about, line, when, soon].filter(Boolean).join(", ")}
-      style={({ pressed }) => [styles.task, pressed && { backgroundColor: c.sunken }]}
+      style={styles.task}
     >
       {divider ? <View style={[styles.divider, styles.textDivider, { backgroundColor: c.line2 }]} /> : null}
       <View style={styles.lead}>
@@ -621,8 +622,8 @@ function ReturnRow({ item, divider, now }: { item: PendingReturn; divider: boole
       <Text variant="caption" tone="faint" style={styles.num}>
         {item.held ? when : returnClock(t, i18n.language, item.at, now)}
       </Text>
-      <Icon name="right" size={15} color={c.faint} />
-    </Pressable>
+      <Disclosure />
+    </RowPressable>
   );
 }
 
@@ -647,12 +648,12 @@ function CanceledReturnRow({ item, divider, meId }: { item: CanceledReturn; divi
       />,
     );
   return (
-    <Pressable
+    <RowPressable
       onPress={open}
       onLongPress={open}
       accessibilityRole="button"
       accessibilityLabel={[item.about, line, returnPlace(t, item), at].filter(Boolean).join(", ")}
-      style={({ pressed }) => [styles.task, pressed && { backgroundColor: c.sunken }]}
+      style={styles.task}
     >
       {divider ? <View style={[styles.divider, styles.textDivider, { backgroundColor: c.line2 }]} /> : null}
       <OpensAgent agentId={item.agentId}>
@@ -663,7 +664,7 @@ function CanceledReturnRow({ item, divider, meId }: { item: CanceledReturn; divi
       <Text variant="caption" tone="faint" style={styles.num}>
         {at}
       </Text>
-    </Pressable>
+    </RowPressable>
   );
 }
 
@@ -745,8 +746,6 @@ const LEAD = 28;
 const GAP = "  ";
 
 const styles = StyleSheet.create({
-  center: { alignItems: "center", gap: 12, paddingVertical: 48, paddingHorizontal: 24 },
-  centerText: { textAlign: "center" },
   // Under the large title's words, as Equipe's line.
   summary: { paddingHorizontal: SCREEN_X, marginTop: -4, paddingBottom: 4 },
   today: { paddingHorizontal: SCREEN_X, paddingTop: 8 },

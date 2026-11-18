@@ -175,6 +175,34 @@ describe("a computer's line", () => {
     expect(screen().getByRole("dialog", { name: "Fila de Studio" })).toBeTruthy();
   });
 
+  test("a turn waiting for its Claude sign-in names the sign-in in its row; my message keeps the plain line", async () => {
+    const { api, state, me, machines, queue } = setup();
+    machines?.setQueue({
+      ...queue,
+      waiting: queue.waiting.map((w) => (w.runId === "r-atlas" ? { ...w, signIn: "Claude Max" } : w)),
+    });
+    state.messages.push(
+      said({
+        author: { type: "person", id: me },
+        receipts: {
+          seenBy: [ATLAS_ID],
+          pickedBy: [ATLAS_ID],
+          handled: [{ agentId: ATLAS_ID, runId: "r-atlas", status: "waiting_input", computer: "queued" }],
+          blocked: [],
+        },
+      }),
+    );
+    await renderApp(`/org/${ORG_ID}/c/${ENG_ID}`, { api });
+    await settle(10);
+    const foot = row("m-ask").querySelector(".ac-msg__foot") as HTMLElement;
+    expect(foot.textContent).toContain("Atlas está na fila do computador");
+    expect(foot.textContent).not.toContain("é o próximo");
+    const [turn] = turns();
+    expect(turn?.textContent).toContain("Aguardando Claude Max terminar outra tarefa");
+    // The computer's memory isn't what it waits for: no cause line about it.
+    expect(turn?.querySelector(".cq-turn__cause")).toBeNull();
+  });
+
   test("the waiting turn says what holds the computer's memory; the line offers my own computers for my replies", async () => {
     const { api, state, me, machines } = setup();
     const mac = machines?.pair({ name: "MacBook da Ana", pairedBy: { id: me, name: "Ana" } });

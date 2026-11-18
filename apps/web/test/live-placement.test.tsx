@@ -242,7 +242,9 @@ describe("live row in the timeline", () => {
     expect(row()).toBeNull();
     expect(document.querySelector(".ac-msg--waiting, .ac-wait")).toBeNull();
     expect(bar().querySelector(".ac-typing__text")?.textContent).toBe("Ada pensando…");
-    expect(within(bar()).getByRole("button", { name: "Parar" })).toBeTruthy();
+    // The composer stops it; the bar has no stop of its own.
+    expect(within(bar()).queryByRole("button", { name: "Parar" })).toBeNull();
+    expect(screen().getByRole("button", { name: "Parar a Ada" })).toBeTruthy();
     // The step follows the run there.
     await ev({
       type: "agent.tool",
@@ -263,7 +265,7 @@ describe("live row in the timeline", () => {
     await settle(3);
     expect(row()).toBeNull();
     expect(bar().querySelector(".ac-typing__text")?.textContent).toBe("Ada escrevendo…");
-    expect(within(bar()).getByRole("button", { name: "Parar" })).toBeTruthy();
+    expect(screen().getByRole("button", { name: "Parar a Ada" })).toBeTruthy();
     expect(document.body.textContent).not.toContain("O login devolve 401");
     await post(ev, "m-later", "Também confere o refresh");
     await settle(3);

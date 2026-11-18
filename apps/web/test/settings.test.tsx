@@ -168,10 +168,16 @@ describe("Configurações do workspace", () => {
 
   test("Notificações: no phone gets them yet, so the row opens the phone app with a code", async () => {
     await go(seedState(), "settings/notifications");
-    const row = document.getElementById("notice-phone-status")?.closest(".settings-row") as HTMLElement;
-    expect(row.textContent).toContain("Ative no app do celular");
+    // How to turn them on is the ⓘ's, as on the rows beside it; the button keeps the name's line.
+    const row = document.getElementById("notice-phone-help")?.closest(".settings-row") as HTMLElement;
+    expect(document.getElementById("notice-phone-help")?.textContent).toBe("Ative no app do celular");
+    expect(document.getElementById("notice-phone-status")).toBeNull();
+    expect(row.classList.contains("settings-row--button")).toBe(true);
     expect(row.textContent).not.toContain("›");
-    await click(within(row).getByRole("button", { name: "Abrir no celular" }));
+    // The button's word is short enough for the name's line; a screen reader hears what it opens.
+    const open = within(row).getByRole("button", { name: "Abrir no celular" });
+    expect(open.textContent).toBe("Abrir");
+    await click(open);
     await settle(4);
     expect(screen().getByRole("dialog", { name: "Abrir no celular" })).toBeTruthy();
   });
@@ -683,6 +689,8 @@ describe("Configurações do workspace", () => {
     expect(document.body.textContent).not.toContain("Acme builds rockets");
     cleanup();
     await go(state, "settings/connectors");
+    // Their own connections only: the team's side has no Adicionar for them.
+    await click(screen().getByRole("radio", { name: /Equipe/ }));
     expect(screen().queryByRole("button", { name: "Adicionar conector" })).toBeNull();
     cleanup();
     // IA e uso: the plans in percentages, never the workspace's keys, money or report.

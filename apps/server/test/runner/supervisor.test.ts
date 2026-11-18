@@ -1094,6 +1094,24 @@ test("root counts the live view of its agents' browsers it relays: frames up, pe
   await Promise.all([run, input]);
 });
 
+test("a worker's pointer on its agent's desktop goes up; one said for another agent never does", async () => {
+  const t = setup();
+  t.sup.boot();
+  t.sup.attach();
+  const run = handleRequest(t.ctx, exec(ANA), scope().scope);
+  await waitFor(() => t.workers.length === 1);
+  const ana = t.last(ANA.id);
+  ana.hello();
+  const pointer = { type: "desktop.pointer", agentId: ANA.id, x: 83, y: 46, width: 1280, height: 900, act: "click" };
+  ana.send({ ...pointer, agentId: BIA.id });
+  ana.send(pointer);
+  await waitFor(() => t.up.some((f) => f.type === "desktop.pointer"));
+  expect(t.up.filter((f) => f.type === "desktop.pointer")).toEqual([pointer]);
+  const req = await requestOn(ana, 1);
+  ana.send({ type: "result", id: req.id, ok: true, data: execDone });
+  await run;
+});
+
 test("a worker's browser frames go to its agent's live view when it takes them, else up as before", async () => {
   const pushed: number[] = [];
   const ended: string[] = [];

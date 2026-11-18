@@ -12,19 +12,31 @@ mock.module("expo-secure-store", () => ({
   deleteItemAsync: async (key: string) => void kept.delete(key),
 }));
 mock.module("expo-constants", () => ({ default: {} }));
-// The app's one shared player, counting the speeds it is given.
+// The app's one shared player, counting the speeds it is given. A test moves its clock (`currentTime`, of a 9 s clip)
+// and can hold its seeks until it lets them land.
 const rates: number[] = [];
+const clock = { currentTime: 0, holdSeeks: false, land: null as null | (() => void) };
 mock.module("expo-audio", () => ({
   setAudioModeAsync: async () => undefined,
   createAudioPlayer: () => ({
     addListener: () => undefined,
     replace: () => undefined,
     setPlaybackRate: (rate: number) => void rates.push(rate),
-    seekTo: async () => undefined,
+    seekTo: (seconds: number) =>
+      new Promise<void>((done) => {
+        const land = () => {
+          clock.currentTime = seconds;
+          done();
+        };
+        if (clock.holdSeeks) clock.land = land;
+        else land();
+      }),
     play: () => undefined,
     pause: () => undefined,
     currentStatus: { didJustFinish: false },
-    currentTime: 0,
+    get currentTime() {
+      return clock.currentTime;
+    },
     duration: 9,
   }),
 }));
@@ -32,7 +44,19 @@ mock.module("expo-audio", () => ({
 const { STORAGE_PREFIX } = await import("../../src/config");
 const { STORED } = await import("../../src/lib/storage");
 const { setVoiceSpeed, subscribeVoiceSpeed, voiceSpeed } = await import("../../src/features/voice/speed");
-const { setPlaybackSpeed, startPlayback, stopPlayback } = await import("../../src/features/voice/playback");
+const { placeOf, playingId, seekPlayback, setPlaybackSpeed, startingId, startPlayback, stopPlayback, subscribePlace } =
+  await import("../../src/features/voice/playback");
+
+/** A few of the player's 50 ms ticks. */
+const ticks = () => Bun.sleep(160);
+const request = (id: string, from = 0) => ({
+  id,
+  source: null,
+  durationMs: 9000,
+  from,
+  speed: 1,
+  onError: () => undefined,
+});
 
 describe("voice messages remember the speed picked on this phone", () => {
   test("the speed kept when the app closed is where every voice message starts", () => {
@@ -78,5 +102,79 @@ describe("voice messages remember the speed picked on this phone", () => {
     const row = readFileSync(join(import.meta.dir, "../../src/features/voice/VoiceMessage.tsx"), "utf8");
     expect(row).toContain("if (playing) setPlaybackSpeed(clipId, rate);");
     expect(row).toContain("}, [playing, rate, clipId]);");
+  });
+});
+
+describe("where a voice message stands lives in the playback module, not in its row", () => {
+  test("each tick moves the clip's place and is heard with its id; another clip starting keeps it for the next play", async () => {
+    clock.currentTime = 0;
+    const heard = new Set<string>();
+    const unsubscribe = subscribePlace((id) => heard.add(id));
+    await startPlayback(request("clip-a"));
+    clock.currentTime = 3;
+    await ticks();
+    // A row drawn again while it plays (the list recycles rows) reads this, whatever its row saw before.
+    expect(placeOf("clip-a")).toBeCloseTo(1 / 3, 5);
+    expect(heard.has("clip-a")).toBe(true);
+    await startPlayback(request("clip-b"));
+    expect(playingId()).toBe("clip-b");
+    expect(placeOf("clip-a")).toBeCloseTo(1 / 3, 5);
+    stopPlayback();
+    unsubscribe();
+  });
+
+  test("a seek places the clip at once and holds the player's stale ticks back until it lands", async () => {
+    clock.currentTime = 0;
+    clock.holdSeeks = true;
+    await startPlayback(request("clip-c"));
+    clock.currentTime = 1;
+    await ticks();
+    expect(placeOf("clip-c")).toBeCloseTo(1 / 9, 5);
+    seekPlayback("clip-c", 0.8);
+    expect(placeOf("clip-c")).toBe(0.8);
+    // The player still reads where it was: the handle doesn't jump back.
+    clock.currentTime = 1.1;
+    await ticks();
+    expect(placeOf("clip-c")).toBe(0.8);
+    clock.land?.();
+    await ticks();
+    expect(placeOf("clip-c")).toBeCloseTo(0.8, 5);
+    clock.holdSeeks = false;
+    stopPlayback();
+    // A clip not playing takes the seek as its place: its next play starts there.
+    seekPlayback("clip-c", 0.5);
+    expect(placeOf("clip-c")).toBe(0.5);
+  });
+
+  test("the play button spins from the tap until the clip moves; a stop while starting plays nothing", async () => {
+    clock.currentTime = 0;
+    const started = startPlayback(request("clip-d"));
+    // At once, before the audio mode and the file are ready.
+    expect(startingId()).toBe("clip-d");
+    await started;
+    expect(playingId()).toBe("clip-d");
+    expect(startingId()).toBe("clip-d");
+    clock.currentTime = 0.5;
+    await ticks();
+    expect(startingId()).toBeNull();
+    stopPlayback();
+    const again = startPlayback(request("clip-e"));
+    expect(startingId()).toBe("clip-e");
+    stopPlayback();
+    await again;
+    expect(startingId()).toBeNull();
+    expect(playingId()).toBeNull();
+  });
+
+  test("a clip that ends goes back to its start", async () => {
+    clock.currentTime = 0;
+    let ended = 0;
+    await startPlayback({ ...request("clip-f"), onEnd: () => ended++ });
+    clock.currentTime = 4.5;
+    await ticks();
+    expect(placeOf("clip-f")).toBeCloseTo(0.5, 5);
+    clock.currentTime = 9;
+    await ticks();
+    expect([placeOf("clip-f"), playingId(), ended]).toEqual([0, null, 1]);
   });
 });

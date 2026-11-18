@@ -20,6 +20,8 @@ export interface FilterItem {
   icon?: IconName;
   /** What a screen reader says where the label doesn't say it in words (Segmented only). */
   accessibilityLabel?: string;
+  /** Can't be chosen here; the screen says why beside it (Segmented only). */
+  disabled?: boolean;
 }
 
 export interface FiltersProps {

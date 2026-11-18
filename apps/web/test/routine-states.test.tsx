@@ -236,7 +236,9 @@ describe("Rotinas: each routine's state, with its one-tap fix", () => {
 
     const theirs = await details("Resumo do suporte");
     expect((within(theirs).getByRole("button", { name: "Continuar agora" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(theirs.textContent).toContain("Só quem criou a rotina, o dono do agente ou um admin pode continuar agora");
+    expect(theirs.textContent).toContain(
+      "Só quem criou a rotina, o dono do agente, quem pode editar o agente ou um admin pode continuar agora",
+    );
     await click(within(theirs).getByRole("button", { name: "Fechar detalhes" }));
     await settle(4);
 
@@ -532,7 +534,9 @@ describe("Rotinas: a routine's details", () => {
     expect(within(row).queryByRole("switch")).toBeNull();
     expect(within(row).queryByRole("button", { name: "Rodar agora" })).toBeNull();
     const panel = await details("Caixa do suporte");
-    expect(panel.textContent).toContain("Só quem criou, o dono do agente, admins e quem está na conversa veem isto.");
+    expect(panel.textContent).toContain(
+      "Só quem criou, o dono do agente, quem pode editar o agente, admins e quem está na conversa veem isto.",
+    );
     expect(within(panel).queryByRole("button", { name: "Editar" })).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Editar o nome" })).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Rodar agora" })).toBeNull();

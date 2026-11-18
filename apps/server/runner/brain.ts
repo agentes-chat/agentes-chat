@@ -2286,7 +2286,10 @@ export class BrainManager {
     const asks = mode === "work" ? turnAsks(req.permissions?.asks) : undefined;
     const launch = brainProfileLaunch(mode, req.personalMcp === true, delegated !== undefined, asks === "always");
     // A work turn on a computer with full access is told so (`full-access.ts`), unless its agent always asks.
-    const system = withFullAccessNote(typeof req.system === "string" ? req.system : "", mode === "work" && asks !== "always");
+    const system = withFullAccessNote(
+      typeof req.system === "string" ? req.system : "",
+      mode === "work" && asks !== "always",
+    );
     const ranKey = ranKeyOf(req, session);
     // A `chat` turn reads nothing of the folder, its CLAUDE.md included.
     const withRepo = launch.settingSources === "" && mode !== "chat";

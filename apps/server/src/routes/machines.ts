@@ -41,7 +41,7 @@ import {
   ValidationError,
 } from "@agenteschat/engine";
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
-import { installScript } from "../../runner/install-script";
+import { installScript, withoutTrailingSlashes } from "../../runner/install-script";
 import { requestIp, requestLimitIp } from "../http/client-ip";
 import { apiError, domainErrorResponse, errorResponse } from "../http/errors";
 import {
@@ -137,10 +137,13 @@ export const Machine = z
       description:
         "`connected`: a person paired it; `host`: this server's own computer (`HOST_COMPUTER_TOKEN`); `managed`: the workspace's own computer (ADR 0056 §10), which people can't remove and whose hostname, OS and arch aren't shown.",
     }),
-    online: z.boolean().openapi({ description: "Runner connected now. Changes come as `machine.status` events." }),
+    online: z.boolean().openapi({
+      description:
+        "Runner connected now, or asleep in standby and waking as it should (`standby`). Changes come as `machine.status` events.",
+    }),
     standby: z.boolean().openapi({
       description:
-        "The workspace's own computer is asleep in standby (ADR 0161): offline by design, it wakes when something wants it. A change comes as `machine.updated`.",
+        "The workspace's own computer is asleep in standby (ADR 0161): it wakes when something wants it, and reads online meanwhile. False again once a wake failed to bring it back in time. A change comes as `machine.updated`.",
     }),
     lastSeenAt: z.string().nullable(),
     hostname: z.string(),
@@ -428,6 +431,10 @@ const ComputerQueue = z
         after: z.array(z.uuid()).openapi({
           description:
             "Who it waits for: for the head, the running turn expected to end first; behind it, the agents ahead in line.",
+        }),
+        signIn: z.string().nullable().openapi({
+          description:
+            "The Claude plan sign-in it waits for, by its label: that sign-in works on all the runs it takes at once. Null: it waits for room.",
         }),
         ...QueueAccess,
       }),
@@ -1218,7 +1225,7 @@ export function registerMachinePublicRoutes(api: OpenAPIHono, deps: AppDeps) {
       const result = await pollDeviceToken({ db, pubsub: adapters.pubsub }, c.req.valid("json").deviceCode);
       if (!result.ok) return c.json({ error: result.error }, 400);
       const { ok: _ok, ...token } = result;
-      const url = `${config.PUBLIC_URL.replace(/\/+$/, "")}/org/${token.org.id}/settings/devices/${token.machineId}`;
+      const url = `${withoutTrailingSlashes(config.PUBLIC_URL)}/org/${token.org.id}/settings/devices/${token.machineId}`;
       return c.json({ ...token, url }, 200);
     },
   );

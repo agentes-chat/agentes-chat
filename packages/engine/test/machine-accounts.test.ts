@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import {
   ACCOUNT_LOGIN_TTL_MS,
   ACCOUNTS_PROTOCOL,
+  ANTIGRAVITY_MAC_PROTOCOL,
   accountCodeAad,
   BRAIN_PROTOCOL,
   CLAUDE_AUTH_PROTOCOL,
@@ -56,6 +57,7 @@ import {
   syncMachineAccounts,
   ValidationError,
 } from "../src";
+import { isDefaultAccountLabel } from "../src/machine-accounts";
 import { addMember, addUser, type Fixture, setup } from "./fixtures";
 import { pairMachine } from "./machine-fixtures";
 
@@ -462,6 +464,7 @@ test("signing in: the person who connected the computer; the code is sealed to i
       id: login.loginId,
       kind: "claude_code",
       label: "Claude",
+      named: false,
       email: "ana@example.com",
       plan: "max",
       status: "active",
@@ -477,6 +480,10 @@ test("signing in: the person who connected the computer; the code is sealed to i
       shared: false,
       providerOrgId: null,
       serves: "everyone",
+      useOrder: null,
+      sameAs: login.loginId,
+      // A login for one agent is never a next account.
+      movable: false,
     },
   });
   // Polled again: the same account, added once.
@@ -737,6 +744,27 @@ test("a sign-in needs the computer online, a runner that knows accounts and a pr
   expect(old.code).toBe("account.runner_old");
 });
 
+test("a sign-in on a computer asleep in standby wakes it once and goes on when it is back (ADR 0161)", async () => {
+  f = await setup();
+  const { machineId } = await ownedMachine();
+  const codex = fakeHub(machineId, () => ({ url: "https://auth.openai.com/codex/device", userCode: "ABCD-1234" }));
+  let awake = false;
+  const woke: string[] = [];
+  const hub = {
+    ...codex.deps.hub,
+    status: async () => ({ ...(await codex.deps.hub.status()), online: awake, standby: !awake }),
+    wake: async (_id: string, why: string) => {
+      woke.push(why);
+      awake = true;
+    },
+  };
+  expect(await beginAccountLogin({ ...codex.deps, hub }, f.owner.id, f.org.id, machineId, "codex")).toMatchObject({
+    kind: "codex",
+    url: "https://auth.openai.com/codex/device",
+  });
+  expect(woke).toEqual(["call"]);
+});
+
 test("the email that names the account: a plain address only, never one a shell would read", async () => {
   f = await setup();
   const { machineId } = await ownedMachine();
@@ -896,10 +924,18 @@ test("Gemini's sign-in is made for all of its owner's agents from runner protoco
     );
     return (runner.calls.find((c) => c.action === "begin") as { shared?: boolean } | undefined)?.shared;
   };
+  await f.db.update(schema.machines).set({ os: "linux" }).where(eq(schema.machines.id, machineId));
   expect(await begun(SHARED_GEMINI_PROTOCOL)).toBe(true);
   // A Gemini Enterprise seat too.
   expect(await begun(SHARED_GEMINI_PROTOCOL, "enterprise")).toBe(true);
   expect(await begun(SHARED_GEMINI_PROTOCOL - 1)).toBeUndefined();
+  // A Mac signs in to Gemini from `ANTIGRAVITY_MAC_PROTOCOL` on: an older runner there refuses it.
+  await f.db
+    .update(schema.machines)
+    .set({ os: "darwin", protocol: ANTIGRAVITY_MAC_PROTOCOL })
+    .where(eq(schema.machines.id, machineId));
+  expect(await begun(ANTIGRAVITY_MAC_PROTOCOL)).toBe(true);
+  await expect(begun(ANTIGRAVITY_MAC_PROTOCOL - 1)).rejects.toMatchObject({ code: "account.runner_old" });
 });
 
 test("Claude: an account another agent thinks with signs in again as a login of its own, under the account's name", async () => {
@@ -2276,4 +2312,17 @@ test("hello keeps what a new Claude sign-in for all agents can use on the comput
   // An older runner says nothing: nothing of a newer one's stays.
   await runner.hello([], CLAUDE_AUTH_PROTOCOL - 1, { executors: { claude: { version: "2.1.304" } } });
   expect((await executors())?.claudeLoginMethods).toBeUndefined();
+});
+
+test("a name is the automatic one only as the server gives it; any other is its owner's", () => {
+  expect(isDefaultAccountLabel("claude_code", "Claude")).toBe(true);
+  expect(isDefaultAccountLabel("claude_code", "Claude 2")).toBe(true);
+  // Servers before ADR 0059's 2026-10-30 amendment put the plan in it.
+  expect(isDefaultAccountLabel("claude_code", "Claude Max 2")).toBe(true);
+  expect(isDefaultAccountLabel("codex", "ChatGPT 3")).toBe(true);
+  expect(isDefaultAccountLabel("claude_code", "GLM Coding 2", "zai")).toBe(true);
+  expect(isDefaultAccountLabel("claude_code", "Trabalho")).toBe(false);
+  expect(isDefaultAccountLabel("claude_code", "Claude pessoal")).toBe(false);
+  expect(isDefaultAccountLabel("claude_code", "Claudette")).toBe(false);
+  expect(isDefaultAccountLabel("claude_code", "ana@acme.com")).toBe(false);
 });

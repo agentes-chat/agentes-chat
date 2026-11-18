@@ -273,6 +273,12 @@ export function timeLeft(t: TFunction, iso: string, now = new Date()) {
   return t("format.inDays", { count: Math.round(hours / 24) });
 }
 
+/**
+ * A name set apart from the words around it (U+2068 … U+2069), so a right-to-left name keeps its own order inside a
+ * left-to-right line ("Pessoal de …"), and the other way round.
+ */
+export const isolate = (name: string) => `\u2068${name}\u2069`;
+
 /** "Ana" for "Ana Souza". */
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? "";
 

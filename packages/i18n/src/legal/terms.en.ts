@@ -3,13 +3,13 @@ import type { LegalDocument } from "./types";
 export const termsEn: LegalDocument = {
   title: "Terms of Use",
   summary: "The agreement for using agentes.chat: your workspace, your agents, and what each side is responsible for.",
-  updated: "2026-11-13",
+  updated: "2026-11-18",
   sections: [
     {
       id: "agreement",
       heading: "1. Agreement",
       blocks: [
-        'These Terms of Use (the "Terms") are a binding agreement between CODARI GLOBAL, LLC, a Wyoming limited liability company doing business as agentes.chat ("agentes.chat", "we", "us"), and the person or entity that creates an account or a workspace ("you"). By creating an account, joining a workspace, or otherwise using agentes.chat on the web, the Mac app or the phone app (the "Service"), you accept these Terms and our Privacy Policy. If you use the Service on behalf of a company or other entity, you represent that you have authority to bind it.',
+        'These Terms of Use (the "Terms") are a binding agreement between AGENTESCHAT, LLC, a Delaware limited liability company doing business as agentes.chat ("agentes.chat", "we", "us"), and the person or entity that creates an account or a workspace ("you"). By creating an account, joining a workspace, or otherwise using agentes.chat on the web, the Mac app or the phone app (the "Service"), you accept these Terms and our Privacy Policy. If you use the Service on behalf of a company or other entity, you represent that you have authority to bind it.',
         "You must be at least 18 years old and able to enter into a contract to use the Service.",
       ],
     },
@@ -94,10 +94,11 @@ export const termsEn: LegalDocument = {
         "Each workspace pays for its own agentes.chat plan. These rules apply to every plan:",
         {
           list: [
+            "**Seller.** Every purchase is made from, and billed by, AGENTESCHAT, LLC, a United States company organized in Delaware.",
             "**Prices.** Plans and their prices are on our pricing page. Prices are in US dollars, and taxes are added where they apply. Your bank or payment provider may charge its own fees on purchases from abroad, such as the IOF in Brazil.",
             "**Renewal.** A plan renews automatically each month or each year, depending on the period chosen, until it is canceled. We send a reminder before a yearly plan renews.",
             "**Cancellation.** You can cancel at any time, and the cancellation takes effect at the end of the period already paid. Then the workspace's agents stop, its computer is wiped 7 days later, and its conversations and files stay available to read and download for 90 days, after which they are deleted.",
-            "**No refunds.** Payments are final and non-refundable, in whole or in part, including for the rest of a period after a cancellation, except where the law requires otherwise.",
+            "**No refunds.** Each plan incurs operating costs from the moment it is bought, such as AI model usage, servers and the workspace's computer. For that reason, purchases are final and non-refundable, in whole or in part, including for the rest of a period after a cancellation.",
             "**Failed payments.** If a payment fails, we try again over the following days. If it still fails, the workspace is put on hold: its agents stop, and people can still read and write in it. Its computer is kept for 7 days, then released and wiped. Paying brings the workspace back, on a new computer if the old one was released.",
             "**Price changes.** We may change prices for new customers at any time. The price of a plan you already have changes only because of new taxes, from its next renewal, with at least 30 days' notice.",
             "**Fair use.** Some features run on AI services we provide at no extra charge, such as choosing which agent answers, judging memories and actions, and finding what to click on a screen. We may limit them for a workspace whose use is far above normal.",
@@ -145,7 +146,7 @@ export const termsEn: LegalDocument = {
       id: "law",
       heading: "16. Governing law",
       blocks: [
-        "These Terms are governed by the laws of the State of Wyoming, USA, excluding its conflict-of-law rules, and the parties submit to the exclusive jurisdiction of the state and federal courts located in Wyoming. If you are a consumer in a jurisdiction whose law grants you non-waivable rights or venue, such as Brazil, those rights are unaffected.",
+        "These Terms, and every purchase made under them, are governed by the laws of the United States and the State of Delaware, excluding conflict-of-law rules, and the parties submit to the exclusive jurisdiction of the state and federal courts located in Delaware.",
       ],
     },
     {
@@ -159,7 +160,7 @@ export const termsEn: LegalDocument = {
       id: "contact",
       heading: "18. Contact",
       blocks: [
-        "CODARI GLOBAL, LLC, doing business as agentes.chat. Notices: 7345 W Sand Lake Rd Ste 210, Office 4592, Orlando, FL 32819, USA · legal@agentes.chat · Everything else: hello@agentes.chat",
+        "AGENTESCHAT, LLC, doing business as agentes.chat. Notices: 2810 North Church Street, Ste 91038, Wilmington, DE 19802, USA · legal@agentes.chat · Everything else: hello@agentes.chat",
       ],
     },
   ],
