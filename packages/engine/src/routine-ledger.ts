@@ -1,5 +1,7 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, type Database, type Executor, eq, inArray, isNull, lt, schema, sql } from "@agenteschat/db";
+import { serverText } from "@agenteschat/i18n";
+import { appLocale } from "@agenteschat/i18n/locale";
 import { routineBriefOfRun, routineOfRun } from "./background";
 import { confidentialThreadSql } from "./confidential";
 import { widgetRoutineEnded } from "./dashboards/refresh-ledger";
@@ -198,7 +200,8 @@ async function tellsRoutineFailure(
  * that already handed off stays `reported` whatever happens after (people heard it).
  *
  * A routine that reports every time (`always`, §7) and ended with a final text but no `hand_off`
- * delivers that text as its report (`auto_report`); with no text it fails (`no_report`). Then
+ * delivers that text as its report (`auto_report`); with no text it fails (`no_report`) and delivers
+ * a deterministic failure notice to the same destination, without waking the agent. Then
  * `afterRoutineRunEnded`: the failure streak, emails released, the gathered event run started.
  * Returns the routine run and its end status, or null when the run is not a routine's or its row
  * already ended.
@@ -223,11 +226,17 @@ export async function closeRoutineRun(
   // A run of a confidential thread (ADR 0190) leaves no record and delivers no report: the record is handed to the
   // routine's next run and the report is read where the routine reports, both outside that thread.
   const sealed = agentRun?.confidential === true;
-  let final: RoutineRunEnd = sealed && end.status === "done" ? { status: "done", text: "" } : end;
+  const final: RoutineRunEnd = sealed && end.status === "done" ? { status: "done", text: "" } : end;
   if (end.status === "done" && agentRun && !sealed) {
     const reported = await reportEveryTime(deps, run, agentRun.agentId, ref, recordOf(end.text));
-    if (reported === "no_report") final = { status: "failed", code: "no_report" };
-    else if (reported) {
+    if (reported === "no_report") {
+      const [ended] = await deps.db
+        .select({ event: routineRuns.event })
+        .from(routineRuns)
+        .where(and(eq(routineRuns.id, ref.routineRunId), eq(routineRuns.orgId, ref.orgId)));
+      await afterRoutineRunEnded(deps, { ...ref, status: "failed", code: "no_report", event: ended?.event ?? null });
+      return { routineId: ref.routineId, routineRunId: ref.routineRunId, status: "failed" };
+    } else if (reported) {
       await afterRoutineRunEnded(deps, { ...ref, status: "skipped", code: reported, event: null });
       return { routineId: ref.routineId, routineRunId: ref.routineRunId, status: "skipped" };
     }
@@ -243,7 +252,8 @@ export async function closeRoutineRun(
 
 /**
  * `always`: a run that ended without handing off delivers its final text as the report. Returns null
- * when nothing else is needed, `no_report` when there was no text, or the block code when the report
+ * when nothing else is needed, `no_report` when this call delivered the missing-report failure notice,
+ * or the block code when the report
  * could no longer be delivered (the row then ended `skipped`).
  */
 async function reportEveryTime(
@@ -254,13 +264,24 @@ async function reportEveryTime(
   record: string,
 ): Promise<string | null> {
   const brief = await routineBriefOfRun(deps.db, run);
-  if (brief?.report !== "always") return null;
+  if (brief?.report !== "always" || brief.widget) return null;
   const [row] = await deps.db
     .select({ status: routineRuns.status, finishedAt: routineRuns.finishedAt })
     .from(routineRuns)
     .where(and(eq(routineRuns.id, ref.routineRunId), eq(routineRuns.orgId, ref.orgId)));
   if (!row || row.finishedAt || row.status === "reported" || !OPEN.includes(row.status)) return null;
-  if (!record) return "no_report";
+  const missingReport = !record;
+  if (missingReport) {
+    const [creator] = brief.creatorUserId
+      ? await deps.db
+          .select({ locale: schema.users.locale })
+          .from(schema.users)
+          .where(eq(schema.users.id, brief.creatorUserId))
+      : [];
+    record = serverText(appLocale([creator?.locale], true) ?? "en", "routines.missingReport", {
+      runId: ref.routineRunId,
+    });
+  }
   const outcome = await deps.db.transaction(async (tx) => {
     const block = await routineDeliveryBlock(tx, brief);
     if (block) {
@@ -279,13 +300,14 @@ async function reportEveryTime(
         text: record,
         code: "auto_report",
         // Its final text is its record, written for the next run, not for people: the agent tells them.
-        wake: true,
+        wake: !missingReport,
+        missingReport,
       }),
     };
   });
   if (outcome.block) return outcome.block;
   if (outcome.delivered) await publishDelivery(deps.pubsub, outcome.delivered).catch(() => {});
-  return null;
+  return missingReport && outcome.delivered ? "no_report" : null;
 }
 
 /**

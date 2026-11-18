@@ -550,6 +550,8 @@ export interface TurnEnd {
   bound: string | null;
   /** It passed, used the silence word, or a reaction, a GIF or a report card is its answer. */
   quiet: boolean;
+  /** An always routine has neither delivered a report nor kept text to deliver. */
+  reportOwed?: boolean;
   /** A person decided what it waited on and it ended without a word: the decision and its result. */
   decided: string | null;
   /** Addressed directly, it wrote nothing (or only the silence word). */
@@ -615,6 +617,7 @@ const UNPOSTED = new Set([
   "step_limit",
   "widget",
   "quiet",
+  "report",
   "decision",
   "answer",
   "untried",
@@ -642,6 +645,13 @@ async function answerTurnEnd(t: TurnEnd): Promise<TurnEndDecision> {
   if (t.bound) return { outcome: "done", rule: t.bound };
   // Quiet or not, a widget's run speaks only through update_widget: without it, nobody gets anything.
   if (t.widgetOwed && canNudge) return { outcome: "continue", rule: "widget", nudge: WIDGET_NUDGE };
+  if (t.kind === "routine" && t.reportOwed && canNudge)
+    return {
+      outcome: "continue",
+      rule: "report",
+      nudge:
+        "This routine requires a report on every run, and none was delivered. Write the verified results now, including an empty result or failure, what you tried and what remains unknown. Do not claim work you did not do. Deliver it with hand_off or leave the complete report as your final text. Do not end silently or use NO_REPLY.",
+    };
   if (t.quiet) return { outcome: "done", rule: "quiet" };
   if (t.decided && canNudge) return { outcome: "continue", rule: "decision", nudge: decisionNudge(t.decided) };
   if (t.unanswered && canNudge) return { outcome: "continue", rule: "answer", nudge: ANSWER_NUDGE };

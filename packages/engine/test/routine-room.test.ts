@@ -312,6 +312,9 @@ test("report every time: a final text without hand_off is the report (auto_repor
   expect(await closeRoutineRun(deps, secondRun, { status: "done", text: "  " })).toMatchObject({ status: "failed" });
   expect(await routineRunRow(f, second.id)).toMatchObject({ status: "failed", code: "no_report" });
   expect(await notificationsOf(f, "routine_failed")).toHaveLength(1);
-  // Only the first report reached the conversation.
-  expect(await messagesIn(f, f.general.id)).toHaveLength(1);
+  // The first report and a deterministic failure notice, without waking another model run.
+  const messages = await messagesIn(f, f.general.id);
+  expect(messages).toHaveLength(2);
+  expect(messages[1]?.body).toContain(second.id);
+  expect(messages[1]?.meta.notice).toBeUndefined();
 });

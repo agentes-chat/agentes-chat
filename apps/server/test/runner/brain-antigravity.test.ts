@@ -329,6 +329,24 @@ const logOf = (file: string) =>
       (l) => JSON.parse(l) as { args: string[]; home: string; run: string; token: string; geminiKey: string | null },
     );
 
+for (const prompt of ["EMPTY_RESPONSE", "MISSING_RESPONSE"]) {
+  test.skipIf(!posix)(`streamed deltas are the final answer when result.response is ${prompt}`, async () => {
+    const root = tempDir("brain-agy-stream-");
+    dirs.push(root);
+    const { ctx, accountDir } = turnContext(root);
+    signIn(accountDir);
+    const events = await run(ctx, turn({ prompt }));
+    expect(events.at(-1)).toEqual({ type: "done", text: "Let me check. All good.", session: { id: SESSION } });
+    expect(events.filter((e) => e.type === "done")).toHaveLength(1);
+    expect(
+      events
+        .filter((e) => e.type === "text_delta")
+        .map((e) => (e as { text: string }).text)
+        .join(""),
+    ).toBe("Let me check. All good.\n");
+  });
+}
+
 test.skipIf(!posix)(
   "a fake agy: the first turn starts a conversation with the context, the next resumes it with the new message only",
   async () => {
