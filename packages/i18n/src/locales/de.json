@@ -312,8 +312,8 @@
       "noTalk": "Wer nur {{name}} hat, spricht nicht mit Agenten.",
       "turnOnTalk": "Mit Agenten sprechen einschalten",
       "search": "Agent suchen",
-      "notYours": "Nur {{owner}}, verantwortlich für {{name}}, oder wer jeden Agenten bearbeitet, ändert das.",
-      "notYoursNoOwner": "Nur wer jeden Agenten bearbeitet, ändert das.",
+      "notYours": "Nur {{owner}}, verantwortlich für {{name}}, oder wer Agenten bearbeitet, ändert das.",
+      "notYoursNoOwner": "Nur wer Agenten bearbeitet, ändert das.",
       "none": "Es gibt noch keine Agenten.",
       "noMatch": "Kein Agent mit „{{q}}“."
     },
@@ -405,9 +405,9 @@
     },
     "manage_routines": {
       "title": "Routinen erstellen",
-      "desc": "Arbeit, die der Agent zu festen Zeiten selbst erledigt.",
+      "desc": "Arbeit, die ein Agent zu einer festen Zeit selbst erledigt, bei den Agenten, mit denen die Person spricht.",
       "short": "Routinen erstellen",
-      "say": "erstellt Routinen"
+      "say": "erstellt Routinen bei den Agenten, mit denen sie spricht"
     },
     "approve_actions": {
       "title": "Aktionen von Agenten freigeben",
@@ -422,10 +422,10 @@
       "say": "erstellt Agenten"
     },
     "manage_agents": {
-      "title": "Jeden Agenten bearbeiten",
-      "desc": "Anweisungen, Gehirn, Budget und was jeder nutzt.",
+      "title": "Agenten bearbeiten",
+      "desc": "Anweisungen, Gehirn, Budget und was jeder nutzt, bei den Agenten, mit denen die Person spricht. Private Agenten anderer Personen bleiben außen vor.",
       "short": "Agenten bearbeiten",
-      "say": "bearbeitet jeden Agenten"
+      "say": "bearbeitet die Agenten, mit denen sie spricht"
     },
     "pair_computers": {
       "title": "Computer verbinden",
@@ -3073,7 +3073,7 @@
         "delete": "Nur Admins löschen einen Agenten",
         "audience": "Nur Admins und der Verantwortliche ändern, wer mit ihm spricht",
         "channels": "Nur Admins und der Verantwortliche ändern seine Kanäle",
-        "skill": "Nur Admins ändern die Skills eines Agenten",
+        "skill": "Nur wer einen Agenten bearbeiten darf, ändert seine Skills",
         "ai_account": "Nur die Person, der das Konto gehört, vergibt es",
         "name": "Nur Admins benennen einen Agenten um",
         "look": "Nur Admins und sein Verantwortlicher ändern sein Aussehen",
@@ -4276,7 +4276,8 @@
     "former": "Nicht mehr in diesem Workspace",
     "askAccess": "Zugriff anfragen",
     "detailsHiddenTitle": "Wie es arbeitet",
-    "detailsHidden": "Anweisungen, Tools, Gedächtnis und Nutzung von {{name}} sehen nur die Personen, denen {{name}} antwortet, die verantwortliche Person und Admins."
+    "detailsHidden": "Anweisungen, Tools, Gedächtnis und Nutzung von {{name}} sehen nur die Personen, denen er antwortet, alle, die ihn bearbeiten dürfen, die verantwortliche Person und Admins.",
+    "detailsHidden_female": "Anweisungen, Tools, Gedächtnis und Nutzung von {{name}} sehen nur die Personen, denen sie antwortet, alle, die sie bearbeiten dürfen, die verantwortliche Person und Admins."
   },
   "presence": {
     "online": "Online",
@@ -6098,6 +6099,7 @@
       "budget": "Budget",
       "owner": "Inhaber",
       "audience": "Wer schreiben darf",
+      "editors": "Wer bearbeiten darf",
       "channels": "Kanäle",
       "machine": "Computer",
       "brain": "Wer denkt",
@@ -6135,12 +6137,9 @@
       "memberPersonal": "Du siehst, wie {{name}} arbeitet. Bearbeiten darf nur, wer hier alles verwaltet.",
       "memberOwner": "Du siehst, wie {{name}} arbeitet. Bearbeiten dürfen: Admins und {{owner}} (Inhaber).",
       "memberOwnerPersonal": "Du siehst, wie {{name}} arbeitet. Bearbeiten dürfen: {{owner}} (Inhaber) und wer hier alles verwaltet.",
-      "owner": "Dir gehört {{name}}: Du änderst das Aussehen, wer schreiben darf, die Kanäle und den Computer. Den Rest nur Admins.",
-      "ownerKeeper": "Dir gehört {{name}}: Du änderst das Aussehen, wer schreiben darf, die Gruppenunterhaltungen und den Computer. Den Rest nur {{keeper}}.",
-      "ownerPersonal": "Dir gehört {{name}}: Du änderst das Aussehen, wer schreiben darf, die Gruppenunterhaltungen und den Computer. Den Rest nur, wer hier alles verwaltet.",
-      "ownerInstructions": "Nur Admins bearbeiten die Anweisungen. Als Inhaber gibst du vorgeschlagene Änderungen frei.",
-      "ownerInstructionsKeeper": "Nur {{keeper}} bearbeitet die Anweisungen. Als Inhaber gibst du vorgeschlagene Änderungen frei.",
-      "ownerInstructionsPersonal": "Nur wer hier alles verwaltet, bearbeitet die Anweisungen. Als Inhaber gibst du vorgeschlagene Änderungen frei.",
+      "owner": "Dir gehört {{name}}: Du änderst die Anweisungen, die Rolle, die Skills, das Aussehen, wer schreiben oder bearbeiten darf, die Kanäle und den Computer. Den Rest nur Admins.",
+      "ownerKeeper": "Dir gehört {{name}}: Du änderst die Anweisungen, die Rolle, die Skills, das Aussehen, wer schreiben oder bearbeiten darf, die Gruppenunterhaltungen und den Computer. Den Rest nur {{keeper}}.",
+      "ownerPersonal": "Dir gehört {{name}}: Du änderst die Anweisungen, die Rolle, die Skills, das Aussehen, wer schreiben oder bearbeiten darf, die Gruppenunterhaltungen und den Computer. Den Rest nur, wer hier alles verwaltet.",
       "ownerAccess": "Nur Admins vergeben oder entziehen Zugriffe und Repositorys.",
       "ownerAccessKeeper": "Nur {{keeper}} vergibt oder entzieht Zugriffe und Repositorys.",
       "ownerAccessPersonal": "Nur wer hier alles verwaltet, vergibt oder entzieht Zugriffe und Repositorys."
@@ -6397,6 +6396,7 @@
       "budget": "Budget",
       "owner": "Inhaber",
       "audience": "Wer schreiben darf",
+      "editors": "Wer bearbeiten darf",
       "channels": "Kanäle",
       "computer": "Computer",
       "danger": "Archivieren oder löschen",
@@ -9100,13 +9100,13 @@
       "dontRunName": "{{name}} nicht ausführen, wenn das Limit zurückgesetzt ist",
       "canceledToast": "Abgebrochen. Es läuft nicht, wenn das Limit zurückgesetzt ist.",
       "continuedToast": "Ausführung geht weiter.",
-      "forbidden": "Nur wer die Routine erstellt hat, der Inhaber des Agenten oder ein Admin kann sie jetzt fortsetzen",
+      "forbidden": "Nur wer die Routine erstellt hat, der Inhaber des Agenten, wer den Agenten bearbeiten darf, oder ein Admin kann sie jetzt fortsetzen",
       "extra_off": "Das Zeitfenster dieses Abos ist aufgebraucht und die längere Arbeit dieses Agenten nutzt keine bezahlte Zusatznutzung des Abos. Sie geht nach dem Zurücksetzen weiter",
       "extra_used_up": "Das Zeitfenster dieses Abos ist aufgebraucht und seine bezahlte Zusatznutzung ist verbraucht oder nicht verfügbar. Es geht nach dem Zurücksetzen weiter"
     },
     "pausedRunningToast": "Routine pausiert. Die laufende Ausführung wurde auch gestoppt.",
     "deleteBodyRunning": "Sie läuft nicht mehr, verschwindet aus der Liste, und die laufende Ausführung stoppt auch. Frühere Ausführungen bleiben im Verlauf.",
-    "detailsHidden": "Nur wer sie erstellt hat, der Inhaber des Agenten, Admins und die Personen in der Unterhaltung sehen das."
+    "detailsHidden": "Nur wer sie erstellt hat, der Inhaber des Agenten, wer den Agenten bearbeiten darf, Admins und die Personen in der Unterhaltung sehen das."
   },
   "missions": {
     "chip": "Mission · {{done}} von {{count}}",
@@ -10861,6 +10861,25 @@
       "nobody": "{{name}} antwortet gerade niemandem."
     }
   },
+  "editors": {
+    "section": "Wer bearbeiten darf",
+    "title": "Wer {{name}} bearbeiten darf",
+    "mode": {
+      "owner": "Nur wer sich um {{name}} kümmert",
+      "people": "Auch bestimmte Personen oder Rollen"
+    },
+    "modeText": {
+      "owner": "{{owner}} (Inhaber), Admins und alle, die Agenten bearbeiten und mit {{name}} schreiben dürfen.",
+      "noOwner": "Admins und alle, die Agenten bearbeiten und mit {{name}} schreiben dürfen.",
+      "people": "Wähle, wer sonst noch ändern darf, wie {{name}} arbeitet."
+    },
+    "rolesHint": "Alle mit dieser Rolle dürfen bearbeiten, auch wer sie später bekommt.",
+    "note": "Bearbeiten heißt, Anweisungen, Rolle, Skills und Routinen von {{name}} zu ändern. Apps, Budget und Inhaber bleiben bei denen, die Agenten bearbeiten.",
+    "summary": {
+      "owner": "Nur wer sich um ihn kümmert",
+      "owner_female": "Nur wer sich um sie kümmert"
+    }
+  },
   "composer": {
     "commands": "Befehle",
     "report": "/bericht",
@@ -12138,7 +12157,8 @@
       "next": "Wartet auf den Computer. Als Nächstes dran",
       "waiting": "Wartet auf den Computer",
       "behind": "In der Warteschlange, {{nth}}. Nach {{names}}",
-      "position": "In der Warteschlange, {{nth}}"
+      "position": "In der Warteschlange, {{nth}}",
+      "signIn": "Wartet, bis {{account}} eine andere Aufgabe beendet"
     },
     "nth": {
       "one": "{{n}}.",
@@ -14328,6 +14348,7 @@
       "vault_delete": "Passwort löschen",
       "vault_make_password": "Passwort erstellen",
       "get_my_usage": "Meine Nutzung anzeigen",
+      "ignore_usage_limit": "Nutzungslimit ignorieren",
       "send_feedback": "Feedback senden",
       "offer_feedback": "Problemmeldung anbieten"
     }
@@ -15374,7 +15395,7 @@
       "continueExtraOff": "Das Zeitfenster dieses Abos ist aufgebraucht, und die lange Arbeit dieses Agenten nutzt keine bezahlte Zusatznutzung des Abos. Sie geht nach dem Zurücksetzen weiter.",
       "continueExtraUsedUp": "Das Zeitfenster dieses Abos ist aufgebraucht, und seine bezahlte Zusatznutzung ist aufgebraucht oder nicht verfügbar. Es geht nach dem Zurücksetzen weiter.",
       "actionsNeedApprover": "Nur der Inhaber des Agenten oder wer seine Aktionen genehmigt, kann eine Routine selbstständig handeln lassen.",
-      "editorOnly": "Nur wer die Routine erstellt hat, der Inhaber des Agenten oder ein Admin kann sie ändern.",
+      "editorOnly": "Nur wer die Routine erstellt hat, der Inhaber des Agenten, wer den Agenten bearbeiten darf, oder ein Admin kann sie ändern.",
       "widgetFixed": "Diese Routine hält ein Widget aktuell. Ändere sie über das Widget."
     },
     "run": {
@@ -15450,6 +15471,7 @@
       "askSelf": "Es ist dein Computer: schalte es mit dem Button ein.",
       "adminAskSelf": "Das kannst du hier selbst tun.",
       "accountMethodUnsupported": "Dieser Computer kann Claude noch nicht auf diese Weise verbinden. Aktualisiere das agentes.chat-Programm darauf oder verwende einen API-Schlüssel.",
+      "brainUnavailable": "Diese KI ist auf {{computer}} noch nicht eingerichtet. Richte sie dort ein oder wähle eine andere.",
       "offline": "{{name}} ist gerade offline. Versuch es noch einmal, sobald er wieder da ist.",
       "paused": "{{name}} ist pausiert: Darauf startet nichts Neues, bis er fortgesetzt wird.",
       "timeout": "Der Computer hat nicht rechtzeitig geantwortet. Versuch es noch einmal."
@@ -15495,7 +15517,7 @@
       "ownerOrAdmin": "Nur der Inhaber des Agenten oder ein Admin kann das tun.",
       "detailsHidden": "Nur wer mit {{agentName}} spricht, sieht, wie es funktioniert.",
       "undoForbidden": "Nur die Person, für die der Agent gearbeitet hat, sein Inhaber oder ein Admin kann das rückgängig machen.",
-      "undoSkillsAdmins": "Nur ein Admin kann eine Änderung an den Skills eines Agenten rückgängig machen oder wiederholen."
+      "undoSkillsAdmins": "Nur wer den Agenten bearbeiten darf, kann eine Änderung an seinen Skills rückgängig machen oder wiederholen."
     },
     "account": {
       "notRestorable": "Dieses Konto kann nicht mehr wiederhergestellt werden.",

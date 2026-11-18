@@ -20,6 +20,7 @@ import {
 import { actionCardOf, costlyProposalOf, stretchCardOf } from "@agenteschat/client/lib/action-cards";
 import { foldTalk, TALK_LINE_CHARS, talksToAgent } from "@agenteschat/client/lib/agent-talk";
 import { APP_BRANDS } from "@agenteschat/client/lib/apps";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { channelRefsOf } from "@agenteschat/client/lib/channel-refs";
 import { type RunPosition, runAround } from "@agenteschat/client/lib/chat";
 import { mineOnRight } from "@agenteschat/client/lib/chat-look";
@@ -46,7 +47,6 @@ import { serverBody } from "@agenteschat/client/lib/message-body";
 import { missionSetupOf } from "@agenteschat/client/lib/missions";
 import { isStandInLine, noAiCardOf } from "@agenteschat/client/lib/no-ai";
 import { isTalkerReply, routineReportText, talkerWaited } from "@agenteschat/client/lib/notices";
-import { can } from "@agenteschat/client/lib/permissions";
 import { modelStandInText } from "@agenteschat/client/lib/plan-usage";
 import { reachHandoffs } from "@agenteschat/client/lib/reach";
 import { replyOf } from "@agenteschat/client/lib/reply";
@@ -1167,7 +1167,6 @@ function StoppedLine({
   const toast = useToast();
   const meId = useRowMeId();
   const dir = useRowDirectory();
-  const org = useOrg().org;
   const [busy, setBusy] = useState(false);
   // The stop's notice, when it is in this conversation: who stopped it, the reason, its time.
   const stop = useStoppedRun(limit ? null : runId);
@@ -1184,17 +1183,18 @@ function StoppedLine({
     : by
       ? t("mobile.chat.stopped.plain")
       : (runErrorText(t, stopped.code) ?? t("mobile.chat.stopped.plain"));
-  const owner = m.author.id ? dir.agentById.get(m.author.id)?.ownerUserId : null;
+  const author = m.author.id ? dir.agentById.get(m.author.id) : undefined;
+  const owner = author?.ownerUserId ?? null;
   const loaded = [
     ...(qc.getQueryData<Message[]>(keys.messages(orgId, m.channelId)) ?? []),
     ...((m.threadId && qc.getQueryData<Message[]>(keys.thread(orgId, m.channelId, m.threadId))) || []),
   ];
-  // Same people who may stop it (the server checks again): an admin, the agent's owner, or who asked.
+  // Same people who may stop it (the server checks again): who manages the agent, its owner, or who asked.
   const may =
     byMe ||
     mayStopRun(
       { agentId: m.author.id ?? "", threadId: m.threadId ?? m.id, triggerMessageId: null },
-      { meId, manageAgents: can(org, "manage_agents"), agentOwnerId: owner, messages: loaded },
+      { meId, manageAgents: managesAgent(author), agentOwnerId: owner, messages: loaded },
     );
   // The agent works here again, or wrote after the stop: it went on, the stop offers nothing.
   const movedOn = useStopMovedOn(runId);

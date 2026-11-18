@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   bigint,
   boolean,
+  check,
   foreignKey,
   index,
   integer,
@@ -154,6 +155,13 @@ export const agents = pgTable(
      * asked, never that person. A plan only answering its owner (ADR 0059 §5) still keeps them out.
      */
     consultable: boolean().notNull().default(true),
+    /**
+     * "Quem pode editar" (ADR 0085, addendum of 2026-11-17): besides its owner and who manages it, the people named
+     * and whoever holds one of `editor_role_ids` at the time edit how it works (instructions, role, skills and
+     * routines) and see it. Talking to it is still its audience's.
+     */
+    editorUserIds: text().array().notNull().default(sql`'{}'::text[]`),
+    editorRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     /**
      * Autonomy brakes (ADR 0131): what it may start that nobody asked for directly (costly work, how much at once,
      * PRs an hour) and which agents it may call. Validated in code (`autonomySettings`); `{}` = the defaults.
@@ -459,7 +467,10 @@ export const rightHandBrains = pgTable(
     /** A computer brain (`claude_code`, `codex`…): an API key is the workspace's, never a person's. */
     brain: text().notNull(),
     brainModel: text(),
-    brainAccountId: uuid().notNull(),
+    /** Null: the plan the person's own computer is signed in to (`machineId`), as any agent's owner may use. */
+    brainAccountId: uuid(),
+    /** The computer whose own sign-in thinks, when there is no account: one the person paired. */
+    machineId: uuid(),
     /** Someone else's plan, given with `use_others_plans`: who gave it (themselves); its owner may take it back. */
     brainAccountLentBy: text().references(() => users.id, { onDelete: "set null" }),
     brainEffort: text(),
@@ -475,7 +486,9 @@ export const rightHandBrains = pgTable(
       columns: [t.orgId, t.brainAccountId],
       foreignColumns: [machineAccounts.orgId, machineAccounts.id],
     }).onDelete("cascade"),
+    foreignKey({ columns: [t.orgId, t.machineId], foreignColumns: [machines.orgId, machines.id] }).onDelete("cascade"),
     index().on(t.orgId, t.brainAccountId),
+    check("right_hand_brains_account_or_machine", sql`${t.brainAccountId} is not null or ${t.machineId} is not null`),
   ],
 );
 

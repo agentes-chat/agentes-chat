@@ -2,7 +2,6 @@ import {
   activeRunsIn,
   addChannelMember,
   answerNow,
-  can,
   cancelFollowUp,
   channelCard,
   consultationConversation,
@@ -750,11 +749,8 @@ export function chatRoutes(deps: AppDeps) {
     async (c) => {
       const { orgId, channelId } = c.req.valid("param");
       const userId = c.get("user").id;
-      const { workspace } = await requireChannelAccess(db, userId, orgId, channelId);
-      const followUps = await pendingReturns(db, userId, orgId, {
-        channelId,
-        managesAgents: can(workspace, "manage_agents"),
-      });
+      await requireChannelAccess(db, userId, orgId, channelId);
+      const followUps = await pendingReturns(db, userId, orgId, { channelId });
       return c.json({ followUps }, 200);
     },
   );

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   type Agent,
   createAgent,
+  editAgent,
   freeHandle,
   listAgents,
   NEW_AGENT_DEFAULTS,
@@ -293,27 +294,27 @@ export function registerManageTools(deps: AppsToolDeps, p: AppPrincipal, tool: R
       if (!look && Object.keys(fields).length === 0)
         throw new ValidationError("Nothing to change: give role, name, or one of the avatar fields.");
       await allow();
-      let updated: Pick<Agent, "id" | "name" | "handle"> = agent;
-      if (Object.keys(fields).length > 0)
-        updated = await updateAgent(deps.db, p.userId, p.orgId, agent.id, fields, {
-          remember: false,
-          pubsub: deps.pubsub,
-        });
-      if (look) {
-        const now = agent.appearance;
-        updated = await setAgentAppearance(
-          deps.db,
-          p.userId,
-          p.orgId,
-          agent.id,
-          {
-            color: args.avatar_color ?? now?.color ?? AGENT_LOOK.colors[0],
-            eyes: args.avatar_eyes ?? now?.eyes ?? AGENT_LOOK.eyes[0],
-            accessory: args.avatar_accessory ?? now?.accessory ?? "none",
-          },
-          { pubsub: deps.pubsub },
-        );
-      }
+      // Its fields and its look in one change, both decided against the agent as it was: who may change one but not
+      // the other gets a refusal before anything is saved (ADR 0085 addendum of 2026-11-17).
+      const now = agent.appearance;
+      const updated: Pick<Agent, "id" | "name" | "handle"> = await editAgent(
+        { db: deps.db, pubsub: deps.pubsub },
+        p.userId,
+        p.orgId,
+        agent.id,
+        {
+          ...(Object.keys(fields).length > 0 ? { fields } : {}),
+          ...(look
+            ? {
+                appearance: {
+                  color: args.avatar_color ?? now?.color ?? AGENT_LOOK.colors[0],
+                  eyes: args.avatar_eyes ?? now?.eyes ?? AGENT_LOOK.eyes[0],
+                  accessory: args.avatar_accessory ?? now?.accessory ?? "none",
+                },
+              }
+            : {}),
+        },
+      );
       await recordAudit(deps.db, {
         orgId: p.orgId,
         actor: { type: "person", id: p.userId },

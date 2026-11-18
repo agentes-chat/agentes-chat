@@ -5,6 +5,7 @@ import { driveFolder, isIdHandle, isSecretFile } from "@agenteschat/ui/names";
 import { createAgent, freeHandle, HANDLE_PATTERN, updateAgent } from "./agents";
 import { type AgentAppearance, setAgentAppearance, validateAppearance } from "./appearance";
 import { ARTIFACT_LIMITS, type ArtifactDeps, createFileArtifact } from "./artifacts";
+import { managesAgent, REACH_COLUMNS } from "./audience";
 import { recordAudit } from "./audit";
 import { addChannelMember, CHANNEL_NAME_PATTERN, createChannel } from "./channels";
 import type { ConnectorTriggerDeps } from "./connector-triggers";
@@ -12,7 +13,7 @@ import { addContextItemByPerson, editContextItem, holdsSecret, looksLikeSecret }
 import { nextCronTime, zonedParts } from "./cron";
 import { sha256 } from "./crypto";
 import { ConflictError, NotFoundError, ValidationError } from "./errors";
-import { can, requirePermission } from "./organizations";
+import { requirePermission } from "./organizations";
 import type { RoutineHookConfig } from "./routine-hooks";
 import { createRoutine, type RoutineDeps, type RoutineTriggerInput, routineTimezone, updateRoutine } from "./routines";
 import { localDate, nextOccurrence, normalizeRule, type ScheduleRule } from "./rrule";
@@ -989,7 +990,7 @@ function driveTitle(folder: string, path: string) {
  * trash, whatever its folder is named now) stays as it was: `exists`, so importing again never overwrites. Never a credential store, by its name (`isSecretFile`) or
  * by what it holds, whatever its type (`holdsSecret`: a private key, or a key or a password in its text, as for
  * memory). The Drive's limits apply: 50 MB a file, the workspace's storage and daily uploads (409 `storage.full`,
- * `storage.daily_full`). Who may import, into an agent their own import brought (or anyone's, who manages agents).
+ * `storage.daily_full`). Who may import, into an agent their own import brought (or one they manage).
  */
 export async function copyImportedFile(
   deps: ArtifactDeps,
@@ -1006,8 +1007,14 @@ export async function copyImportedFile(
 ): Promise<{ status: "created" | "exists"; artifactId: string; title: string; folder: string }> {
   const { db } = deps;
   const membership = await requirePermission(db, actorId, orgId, "create_agents");
-  // The file is credited to the agent: only into one this person's import brought, unless they manage agents.
-  if (!can(membership, "manage_agents")) {
+  const [agent] = await db
+    .select({ name: agents.name, ...REACH_COLUMNS })
+    .from(agents)
+    .where(and(eq(agents.id, input.agentId), eq(agents.orgId, orgId), isNull(agents.deletedAt)));
+  if (!agent) throw new NotFoundError("Agent not found");
+  // The file is credited to the agent: only into one this person's import brought, unless they manage that agent
+  // (`managesAgent`, ADR 0085 addendum of 2026-11-17).
+  if (!managesAgent(agent, actorId, membership)) {
     const [mine] = await db
       .select({ id: importItems.id })
       .from(importItems)
@@ -1031,11 +1038,6 @@ export async function copyImportedFile(
   if (isSecretFile(path) || isSecretFile(name) || holdsSecret(input.bytes)) {
     throw new ValidationError("files with keys or sign-ins are never copied to the Drive", "import.secret_file");
   }
-  const [agent] = await db
-    .select({ name: agents.name })
-    .from(agents)
-    .where(and(eq(agents.id, input.agentId), eq(agents.orgId, orgId), isNull(agents.deletedAt)));
-  if (!agent) throw new NotFoundError("Agent not found");
   const folder = driveFolder(agent.name);
   // Trimmed as the Drive stores titles. What the agent already has at this path, whatever its folder is named now.
   const title = driveTitle(folder, path).trim();

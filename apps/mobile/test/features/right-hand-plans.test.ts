@@ -66,8 +66,9 @@ test("Sua IA is one row that opens its choice: what answers me, by its logo and 
   expect(screen.indexOf("<RightHandMine agent={agent} />")).toBeGreaterThan(mine);
   expect(screen.indexOf("<RightHandApprovalsGroup />")).toBeGreaterThan(mine);
   expect(screen.indexOf("<RightHandApprovalsGroup />")).toBeLessThan(workspace);
-  // The workspace's group is only for who manages agents, and the settings open for everyone from the profile.
-  expect(screen.slice(mine, workspace)).toContain('{can(org, "manage_agents") ? (');
+  // The workspace's group is only for who manages it (the server's `canManage`), and the settings open for everyone
+  // from the profile.
+  expect(screen.slice(mine, workspace)).toContain("{managesAgent(agent) ? (");
   expect(profile).toContain(
     '? { action: { label: t("rightHand.profile.configure"), onPress: openRightHandSettings } }',
   );

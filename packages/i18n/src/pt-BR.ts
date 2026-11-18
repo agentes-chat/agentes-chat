@@ -336,9 +336,9 @@ export const ptBR = {
       noTalk: "Quem só tem {{name}} não conversa com agentes.",
       turnOnTalk: "Ligar Conversar com agentes",
       search: "Buscar agente",
-      notYours: "Só {{owner}}, responsável pelo {{name}}, ou quem edita qualquer agente muda.",
-      notYours_female: "Só {{owner}}, responsável pela {{name}}, ou quem edita qualquer agente muda.",
-      notYoursNoOwner: "Só quem edita qualquer agente muda.",
+      notYours: "Só {{owner}}, responsável pelo {{name}}, ou quem edita agentes muda.",
+      notYours_female: "Só {{owner}}, responsável pela {{name}}, ou quem edita agentes muda.",
+      notYoursNoOwner: "Só quem edita agentes muda.",
       none: "Ainda não há agentes.",
       noMatch: "Nenhum agente com “{{q}}”.",
     },
@@ -431,9 +431,9 @@ export const ptBR = {
     },
     manage_routines: {
       title: "Criar rotinas",
-      desc: "Trabalho que o agente faz sozinho na hora marcada.",
+      desc: "Trabalho que o agente faz sozinho na hora marcada, nos agentes com que a pessoa fala.",
       short: "criar rotinas",
-      say: "cria rotinas",
+      say: "cria rotinas nos agentes com que fala",
     },
     approve_actions: {
       title: "Aprovar ações dos agentes",
@@ -448,10 +448,10 @@ export const ptBR = {
       say: "cria agentes",
     },
     manage_agents: {
-      title: "Editar qualquer agente",
-      desc: "Instruções, cérebro, orçamento e o que cada um usa.",
+      title: "Editar agentes",
+      desc: "Instruções, cérebro, orçamento e o que cada um usa, nos agentes com que a pessoa fala. Os privados de outras pessoas ficam de fora.",
       short: "editar agentes",
-      say: "edita qualquer agente",
+      say: "edita os agentes com que fala",
     },
     pair_computers: {
       title: "Conectar computadores",
@@ -3197,7 +3197,7 @@ export const ptBR = {
         audience_female: "Só admins e o responsável mudam quem conversa com ela",
         channels: "Só admins e o responsável mudam os canais dele",
         channels_female: "Só admins e o responsável mudam os canais dela",
-        skill: "Só admins mudam as skills de um agente",
+        skill: "Só quem pode editar um agente muda as skills dele",
         ai_account: "Só o dono da conta a escolhe",
         name: "Só admins mudam o nome de um agente",
         look: "Só admins e o responsável mudam a aparência",
@@ -4498,9 +4498,9 @@ export const ptBR = {
     askAccess: "Pedir acesso",
     detailsHiddenTitle: "Como trabalha",
     detailsHidden:
-      "Instruções, ferramentas, memória e uso de {{name}} ficam só para quem conversa com ele, o responsável e os admins.",
+      "Instruções, ferramentas, memória e uso de {{name}} ficam só para quem conversa com ele, quem pode editá-lo, o responsável e os admins.",
     detailsHidden_female:
-      "Instruções, ferramentas, memória e uso de {{name}} ficam só para quem conversa com ela, o responsável e os admins.",
+      "Instruções, ferramentas, memória e uso de {{name}} ficam só para quem conversa com ela, quem pode editá-la, o responsável e os admins.",
   },
   presence: {
     online: "Online",
@@ -6468,6 +6468,7 @@ export const ptBR = {
       budget: "Orçamento",
       owner: "Responsável",
       audience: "Quem pode falar",
+      editors: "Quem pode editar",
       channels: "Canais",
       machine: "Computador",
       brain: "Quem pensa",
@@ -6508,22 +6509,17 @@ export const ptBR = {
       memberOwnerPersonal_female:
         "Você vê como a {{name}} trabalha. Quem edita: {{owner}} (responsável) e quem cuida daqui.",
       owner:
-        "Você é responsável do {{name}}: muda o jeito, quem pode falar, os canais e o computador. O resto, só admins.",
+        "Você é responsável do {{name}}: muda as instruções, a função, as skills, o jeito, quem pode falar ou editar, os canais e o computador. O resto, só admins.",
       owner_female:
-        "Você é responsável da {{name}}: muda o jeito, quem pode falar, os canais e o computador. O resto, só admins.",
+        "Você é responsável da {{name}}: muda as instruções, a função, as skills, o jeito, quem pode falar ou editar, os canais e o computador. O resto, só admins.",
       ownerKeeper:
-        "Você é responsável do {{name}}: muda o jeito, quem pode falar, as conversas em grupo e o computador. O resto, só {{keeper}}.",
+        "Você é responsável do {{name}}: muda as instruções, a função, as skills, o jeito, quem pode falar ou editar, as conversas em grupo e o computador. O resto, só {{keeper}}.",
       ownerKeeper_female:
-        "Você é responsável da {{name}}: muda o jeito, quem pode falar, as conversas em grupo e o computador. O resto, só {{keeper}}.",
+        "Você é responsável da {{name}}: muda as instruções, a função, as skills, o jeito, quem pode falar ou editar, as conversas em grupo e o computador. O resto, só {{keeper}}.",
       ownerPersonal:
-        "Você é responsável do {{name}}: muda o jeito, quem pode falar, as conversas em grupo e o computador. O resto, só quem cuida daqui.",
+        "Você é responsável do {{name}}: muda as instruções, a função, as skills, o jeito, quem pode falar ou editar, as conversas em grupo e o computador. O resto, só quem cuida daqui.",
       ownerPersonal_female:
-        "Você é responsável da {{name}}: muda o jeito, quem pode falar, as conversas em grupo e o computador. O resto, só quem cuida daqui.",
-      ownerInstructions: "Só admins editam as instruções. Você, como responsável, aprova as propostas de mudança.",
-      ownerInstructionsKeeper:
-        "Só {{keeper}} edita as instruções. Você, como responsável, aprova as propostas de mudança.",
-      ownerInstructionsPersonal:
-        "Só quem cuida daqui edita as instruções. Você, como responsável, aprova as propostas de mudança.",
+        "Você é responsável da {{name}}: muda as instruções, a função, as skills, o jeito, quem pode falar ou editar, as conversas em grupo e o computador. O resto, só quem cuida daqui.",
       ownerAccess: "Só admins dão ou tiram acessos e repositórios.",
       ownerAccessKeeper: "Só {{keeper}} dá ou tira acessos e repositórios.",
       ownerAccessPersonal: "Só quem cuida daqui dá ou tira acessos e repositórios.",
@@ -6785,6 +6781,7 @@ export const ptBR = {
       budget: "Orçamento",
       owner: "Responsável",
       audience: "Quem pode falar",
+      editors: "Quem pode editar",
       channels: "Canais",
       computer: "Computador",
       danger: "Arquivar ou apagar",
@@ -9530,7 +9527,7 @@ export const ptBR = {
       dontRunName: "Não rodar {{name}} quando o limite voltar",
       canceledToast: "Cancelado. Não vai rodar quando o limite voltar.",
       continuedToast: "Execução continuando.",
-      forbidden: "Só quem criou a rotina, o dono do agente ou um admin pode continuar agora",
+      forbidden: "Só quem criou a rotina, o dono do agente, quem pode editar o agente ou um admin pode continuar agora",
       extra_off:
         "A janela deste plano acabou e o trabalho longo deste agente não usa o uso extra pago do plano. Ele retoma depois que o limite renovar",
       extra_used_up:
@@ -9539,7 +9536,8 @@ export const ptBR = {
     pausedRunningToast: "Rotina pausada. A execução em andamento também parou.",
     deleteBodyRunning:
       "Ela para de rodar e sai da lista, e a execução em andamento também para. As execuções passadas continuam no histórico.",
-    detailsHidden: "Só quem criou, o dono do agente, admins e quem está na conversa veem isto.",
+    detailsHidden:
+      "Só quem criou, o dono do agente, quem pode editar o agente, admins e quem está na conversa veem isto.",
   },
   missions: {
     chip: "Missão · {{done}} de {{count}}",
@@ -11279,6 +11277,34 @@ export const ptBR = {
       nobody_female: "A {{name}} não está respondendo a ninguém agora.",
     },
   },
+  /** "Quem pode editar" (ADR 0085 addendum of 2026-11-17): who else changes how an agent works. */
+  editors: {
+    section: "Quem pode editar",
+    title: "Quem pode editar o {{name}}",
+    title_female: "Quem pode editar a {{name}}",
+    mode: {
+      owner: "Só quem cuida do {{name}}",
+      owner_female: "Só quem cuida da {{name}}",
+      people: "Também algumas pessoas ou cargos",
+    },
+    modeText: {
+      /** `owner`: the owner's name, with "responsável" beside it and no article: never give that person a gender. */
+      owner: "{{owner}}, responsável, os administradores e quem edita agentes e fala com o {{name}}.",
+      owner_female: "{{owner}}, responsável, os administradores e quem edita agentes e fala com a {{name}}.",
+      noOwner: "Os administradores e quem edita agentes e fala com o {{name}}.",
+      noOwner_female: "Os administradores e quem edita agentes e fala com a {{name}}.",
+      people: "Escolha quem mais pode mudar como o {{name}} trabalha.",
+      people_female: "Escolha quem mais pode mudar como a {{name}} trabalha.",
+    },
+    rolesHint: "Quem tem o cargo pode editar, inclusive quem entrar nele depois.",
+    note: "Editar é mudar as instruções, a função, as skills e as rotinas do {{name}}. Apps, orçamento e responsável continuam com quem edita agentes.",
+    note_female:
+      "Editar é mudar as instruções, a função, as skills e as rotinas da {{name}}. Apps, orçamento e responsável continuam com quem edita agentes.",
+    summary: {
+      owner: "Só quem cuida dele",
+      owner_female: "Só quem cuida dela",
+    },
+  },
   composer: {
     commands: "Comandos",
     report: "/relatório",
@@ -12559,6 +12585,7 @@ export const ptBR = {
       waiting: "Aguardando o computador",
       behind: "Na fila, {{nth}}. Depois de {{names}}",
       position: "Na fila, {{nth}}",
+      signIn: "Aguardando {{account}} terminar outra tarefa",
     },
     nth: {
       one: "{{n}}º",
@@ -14604,6 +14631,7 @@ export const ptBR = {
       vault_delete: "Apagar senha",
       vault_make_password: "Criar senha",
       get_my_usage: "Ver meu uso",
+      ignore_usage_limit: "Ignorar o limite de uso",
       send_feedback: "Enviar feedback",
       offer_feedback: "Oferecer um relato de problema",
     },
@@ -15614,7 +15642,7 @@ export const ptBR = {
       continueExtraUsedUp:
         "A janela deste plano acabou e o uso extra pago dele acabou ou não está disponível. Ele retoma depois que o limite renovar.",
       actionsNeedApprover: "Só o dono do agente ou quem aprova as ações dele pode deixar uma rotina agir sozinha.",
-      editorOnly: "Só quem criou a rotina, o dono do agente ou um admin pode mudá-la.",
+      editorOnly: "Só quem criou a rotina, o dono do agente, quem pode editar o agente ou um admin pode mudá-la.",
       widgetFixed: "Esta rotina mantém um widget atualizado. Mude pelo widget.",
     },
     run: {
@@ -15693,6 +15721,7 @@ export const ptBR = {
       adminAskSelf: "Você mesmo pode fazer isso aqui.",
       accountMethodUnsupported:
         "Este computador ainda não conecta o Claude desse jeito. Atualize o programa do agentes.chat nele, ou use uma chave de API.",
+      brainUnavailable: "Essa IA ainda não está configurada em {{computer}}. Configure lá, ou escolha outra.",
       offline: "{{name}} está fora do ar agora. Tente de novo quando ele voltar.",
       paused: "{{name}} está pausado: nada novo começa nele até ele ser retomado.",
       timeout: "O computador não respondeu a tempo. Tente de novo.",
@@ -15743,7 +15772,7 @@ export const ptBR = {
       ownerOrAdmin: "Só o dono do agente ou um admin pode fazer isso.",
       detailsHidden: "Só quem conversa com {{agentName}} vê como funciona.",
       undoForbidden: "Só a pessoa para quem o agente trabalhou, o dono dele ou um admin pode desfazer isso.",
-      undoSkillsAdmins: "Só um admin desfaz ou refaz uma mudança nas skills de um agente.",
+      undoSkillsAdmins: "Só quem pode editar o agente desfaz ou refaz uma mudança nas skills dele.",
     },
     account: {
       notRestorable: "Esta conta não pode mais ser restaurada.",
@@ -18629,7 +18658,7 @@ export const ptBR = {
       plan_limit_wait_unknown: "O plano do {{plan}} chegou ao limite. Respondo assim que ele renovar.",
       /** The run went on with the next account of the order at its plan's limit (ADR 0041 §6). */
       plan_account_moved: "A conta {{from}} chegou ao limite. Sigo na conta {{to}}.",
-      /** The same, for long work at the pause line (95%) of its account. */
+      /** The same, for long work at the pause line (99%) of its account. */
       plan_account_moved_line: "A conta {{from}} está perto do limite. Sigo na conta {{to}}.",
       /** The same, for long work that would go on into its account's paid extra usage. */
       plan_account_moved_extra: "A conta {{from}} entraria no uso extra pago. Sigo na conta {{to}}.",

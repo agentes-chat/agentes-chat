@@ -126,9 +126,10 @@ export function DmPage({ target, focusMessageId }: { target: DmTarget; focusMess
           {/* Its tasks (ADR 0128), while it has any: they open in the side panel. */}
           {agent && <AgentTasksPill />}
           {/* The sidebar has the computer: only a line of turns waiting for it still shows here. A viewer of its public
-              card gets the sidebar's head alone, so the way in stays for one who may still watch the computer. */}
+              card gets the sidebar's head alone, so the way in stays for one who may still watch the computer. The
+              right hand's AI is each person's own ("Sua IA" in the sidebar), so its header has no model button. */}
           {agent && !rightHand && <ModelPickerButton agent={agent} className="channel__brain" />}
-          {agent && !rightHand && <ComputerButton agent={agent} queueOnly={side?.docked && seesDetails(agent)} />}
+          {agent && <ComputerButton agent={agent} queueOnly={side?.docked && seesDetails(agent)} />}
           {/* The same field as a channel's, held to this DM. */}
           <HeaderSearch channelId={dm.data.channelId} onOpen={onSearch} searching={searching} dm />
           {/* Its own list, as its right click elsewhere, with this conversation's background. */}

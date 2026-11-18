@@ -854,6 +854,12 @@ export interface EndpointCheck {
 /** Who can talk to an agent: everyone, some people, or only its owner. */
 export type AudienceMode = "everyone" | "people" | "owner";
 
+/** "Quem pode editar" (ADR 0085, addendum of 2026-11-17): who edits an agent besides its owner and who manages it. */
+export interface AgentEditors {
+  userIds: string[];
+  roleIds: string[];
+}
+
 export interface AgentAudience {
   mode: AudienceMode;
   /** For `people` (the owner can always talk to it). */
@@ -893,6 +899,18 @@ export interface Agent {
   audienceMode?: AudienceMode;
   /** Whether I can talk to it (absent = yes). */
   canTalk?: boolean;
+  /**
+   * Whether I manage it (ADR 0085, addendum of 2026-11-17): "Editar qualquer agente" where it reaches (owners and
+   * administrators every agent, anyone else the agents whose audience takes them and the ones with no owner).
+   * Everything about it, its apps, budget and owner included. Absent = no.
+   */
+  canManage?: boolean;
+  /** Whether I edit how it works: its instructions, role, skills and routines (its owner, who manages it, `editors`). */
+  canEdit?: boolean;
+  /** Whether I set up its routines: who edits it, and "Criar rotinas" where it reaches. */
+  canManageRoutines?: boolean;
+  /** "Quem pode editar": who edits it besides its owner and who manages it (empty for who doesn't see its details). */
+  editors?: AgentEditors;
   /**
    * Whether I see how it works (its owner, who manages agents, whoever it answers); absent = yes (an older server).
    * Without it `instructions` is empty and its tools, memory, usage and activity are refused: only its public card.
@@ -992,6 +1010,11 @@ export interface FormerAgent {
   appearance: AgentLookInput | null;
   /** Deleted for good; false: archived (an admin may still delete it). */
   deleted: boolean;
+  /**
+   * An archived one: whether I manage it (as `Agent.canManage`, ADR 0085 addendum of 2026-11-17), so I bring it back or
+   * delete it for good. Absent once deleted, and from an older server.
+   */
+  canManage?: boolean;
 }
 
 /**
@@ -1042,6 +1065,8 @@ export interface TeamAgent {
   canTalk: boolean;
   /** Whether I see how it works (absent = yes); without it `capabilities` is empty. */
   seesDetails?: boolean;
+  /** Whether I manage it (as `Agent.canManage`); absent = no. */
+  canManage?: boolean;
 }
 
 /** Responde a: one agent and the agent it reports to (null: nobody, its owner then). */
@@ -1103,6 +1128,11 @@ export interface AgentInput {
   audience?: AgentAudience;
   /** With `audience`: the mailboxes the person agreed it loses; losing another refuses the save (409). */
   mailLossSeen?: string[];
+  /**
+   * "Quem pode editar" (ADR 0085, addendum of 2026-11-17): the whole lists, empty for only who looks after it. Its
+   * owner or who manages it sends it; never on the team's right hand.
+   */
+  editors?: AgentEditors;
   appearance?: AgentLookInput;
   /** Created from an agent's proposal (its card's message id, ADR 0081): the card is marked created. */
   proposal?: string;
@@ -5225,6 +5255,8 @@ export interface QueueWaiting extends QueueAccess {
   estimatedStartAt: string | null;
   /** Who it waits for: for the head, the running turn expected to end first; behind it, the agents ahead in line. */
   after: string[];
+  /** The Claude plan sign-in it waits for, by its label (it works on all the runs it takes at once); null: room. */
+  signIn?: string | null;
 }
 
 /** `GET …/machines/{machineId}/queue`: a computer's line; `computer.queue` org events say it changed. */

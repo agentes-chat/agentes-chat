@@ -83,18 +83,18 @@ async function openUsage(account: PlanAccountUsage, lang?: "en") {
   await settle(6);
   if (lang) await showIn(services, lang);
   const head = document.querySelector(".plan-row__head");
-  // Near its limit the row starts open.
-  if (head?.getAttribute("aria-expanded") === "false") {
-    await act(async () => fireEvent.click(head));
-    await settle(4);
-  }
+  // Every row starts closed, near its limit too.
+  expect(head?.getAttribute("aria-expanded")).toBe("false");
+  await act(async () => fireEvent.click(head as Element));
+  await settle(4);
   (globalThis as { geometrySnapshot?: () => void }).geometrySnapshot?.();
   return document.querySelector(".plan-row__body") as HTMLElement;
 }
 
 test("an open account lists its use by kind under the agents, handoffs first, and offers to message Ada", async () => {
   const body = await openUsage(claudeMax(), "en");
-  expect(within(body).getByText("By kind")).toBeTruthy();
+  // Two labelled groups: the agents, then the use by kind.
+  expect([...body.querySelectorAll(".plan-group__label")].map((l) => l.textContent)).toEqual(["Agents", "By kind"]);
   const rows = [...body.querySelectorAll(".plan-kinds .plan-shares__row")].map((r) => r.textContent);
   expect(rows).toEqual([
     "Handoffs between agents · week 37% · 6.9M tokens",
@@ -117,6 +117,6 @@ test("no hint from the server, no hint; no kinds (an older server), no list", as
   const { kinds: _k, hint: _h, ...older } = claudeMax();
   body = await openUsage(older);
   expect(body.querySelector(".plan-kinds")).toBeNull();
-  expect(body.querySelector(".plan-kinds__label")).toBeNull();
+  expect([...body.querySelectorAll(".plan-group__label")].map((l) => l.textContent)).toEqual(["Agentes"]);
   cleanup();
 });

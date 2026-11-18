@@ -3,6 +3,7 @@ import {
   AGENT_SORTS,
   AGENT_STYLES,
   agentDetail,
+  agentRights,
   agentView,
   announceMembers,
   audienceOf,
@@ -14,6 +15,7 @@ import {
   canViewCost,
   continuePausedRuns,
   continueRun,
+  editorsOf,
   GIF_RATINGS,
   getMembership,
   getOrgSettings,
@@ -109,6 +111,7 @@ import { credentialOut } from "./credential-view";
 import {
   AgentAppearance,
   AgentAudience,
+  AgentEditors,
   ApprovalsLevel,
   CanceledReturn,
   ChatPrefs,
@@ -375,9 +378,13 @@ const AgentDetail = z
     audience: AgentAudience,
     audienceMode: z.enum(["everyone", "people", "owner"]),
     canTalk: z.boolean(),
+    canManage: z.boolean().openapi({ description: "Whether the current person manages it (as on the agent)." }),
+    canEdit: z.boolean().openapi({ description: "Whether the current person edits how it works (as on the agent)." }),
+    canManageRoutines: z.boolean().openapi({ description: "Whether the current person sets up its routines." }),
+    editors: AgentEditors,
     seesDetails: z.boolean().openapi({
       description:
-        "Whether the current person sees how it works (its owner, who manages agents, whoever it answers). Without it the instructions are empty and the month's numbers zero: only its public card.",
+        "Whether the current person sees how it works (who edits it and whoever it answers). Without it the instructions are empty and the month's numbers zero: only its public card.",
     }),
     appearance: AgentAppearance.nullable(),
     mediaReplies: z.boolean().openapi({
@@ -706,7 +713,7 @@ export function managementRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/approvals-level",
       tags: ["Organization"],
       security,
-      summary: "Set how much the workspace's agents ask before acting (who manages agents)",
+      summary: "Set how much the workspace's agents ask before acting (owners and administrators)",
       description:
         "Every agent that follows the workspace takes the level at once; an agent with its own choice keeps it unless `everyAgent` is true, which clears every agent's own choice.",
       request: {
@@ -1637,6 +1644,8 @@ export function managementRoutes(deps: AppDeps) {
           audience: audienceOf(d.agent),
           audienceMode: d.agent.audienceMode,
           canTalk: canTalkTo(d.agent, userId, speakerOf(viewer)),
+          ...agentRights(d.agent, userId, viewer),
+          editors: seesDetails ? editorsOf(d.agent) : { userIds: [], roleIds: [] },
           seesDetails,
           appearance: v.appearance,
           mediaReplies: v.mediaReplies,

@@ -333,26 +333,33 @@ describe("the home's Recentes", () => {
     expect(recentRows([])).toEqual([]);
   });
 
-  test("Recentes leaves out the agents that don't answer me, and who manages agents sees all", () => {
-    const agents = [
+  test("Recentes leaves out the agents whose DM wouldn't open for me, and who manages one keeps it", () => {
+    // The server's flags are each viewer's own: A answers neither of them, and only the manager manages it.
+    const forMember = [
       { id: "a-A", canTalk: false },
+      { id: "a-B", canTalk: true },
+    ];
+    const forManager = [
+      { id: "a-A", canTalk: false, canManage: true },
       { id: "a-B", canTalk: true },
     ];
     const dms = [dm("d0", "A", 1, 5), dm("d1", "B", 0, 9), person("p1", "Ana", 1)];
     const member: OrgSummary = { id: "o1", name: "Acme", role: "member", permissions: ["read", "talk_to_agents"] };
     const manager: OrgSummary = { ...member, permissions: ["read", "talk_to_agents", "manage_agents"] };
-    expect([...hiddenAgentIds(member, agents)]).toEqual(["a-A"]);
-    expect([...hiddenAgentIds(manager, agents)]).toEqual([]);
-    const hiddenAgents = (org: OrgSummary) => hiddenAgentIds(org, agents);
-    const recentOf = (org: OrgSummary) =>
-      recentRows(buildConversations({ channels: [], dms, threads: [], hiddenAgents: hiddenAgents(org) })).map(
-        (r) => r.key,
-      );
-    expect(recentOf(member)).toEqual(["d:p1", "d:d1"]);
-    expect(recentOf(manager)).toEqual(["d:p1", "d:d0", "d:d1"]);
+    const hiddenOf = { member: hiddenAgentIds(member, forMember), manager: hiddenAgentIds(manager, forManager) };
+    expect([...hiddenOf.member]).toEqual(["a-A"]);
+    expect([...hiddenOf.manager]).toEqual([]);
+    // "Edit agents" alone doesn't reach someone's private agent, and being among its editors opens no DM either (ADR
+    // 0085 addendum of 2026-11-17): its DM stays off the lists.
+    const editedOnly = { id: "a-A", canTalk: false, canManage: false, canEdit: true };
+    expect([...hiddenAgentIds(manager, [editedOnly])]).toEqual(["a-A"]);
+    const recentOf = (hidden: ReadonlySet<string>) =>
+      recentRows(buildConversations({ channels: [], dms, threads: [], hiddenAgents: hidden })).map((r) => r.key);
+    expect(recentOf(hiddenOf.member)).toEqual(["d:p1", "d:d1"]);
+    expect(recentOf(hiddenOf.manager)).toEqual(["d:p1", "d:d0", "d:d1"]);
     // The tab's badge counts what the home lists: A's unread stays out for the member.
-    expect(unreadConversationCount({ channels: [], dms, hiddenAgents: hiddenAgents(member) })).toBe(0);
-    expect(unreadConversationCount({ channels: [], dms, hiddenAgents: hiddenAgents(manager) })).toBe(1);
+    expect(unreadConversationCount({ channels: [], dms, hiddenAgents: hiddenOf.member })).toBe(0);
+    expect(unreadConversationCount({ channels: [], dms, hiddenAgents: hiddenOf.manager })).toBe(1);
   });
 
   test("the Threads tab: threads and missions by latest activity", () => {

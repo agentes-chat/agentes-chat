@@ -1,3 +1,4 @@
+import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
 import { markTerms } from "@agenteschat/client/lib/search-filters";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { type AgentPresetColor, gradientOf, mixHex } from "@agenteschat/ui/agent/engine";
@@ -83,8 +84,9 @@ export function NewScreen() {
   // No words: the agents in the order you talk to them; words: the matches.
   const agents = typed ? found.agents : recent;
   const people = found.people;
-  const ownsAgent = Boolean(meId) && dir.agents.some((a) => a.ownerUserId === meId);
-  const items = createItems(org, { ownsAgent });
+  // Some agent this person may make a routine for (`createsRoutinesFor`: they set up its routines and it answers them).
+  const createsRoutines = dir.agents.some((a) => createsRoutinesFor(a));
+  const items = createItems(org, { createsRoutines });
   const invite = !typed && items.includes("invite");
 
   const talkTo = (agentId: string) => void openDm({ agentId }, { replace: true });

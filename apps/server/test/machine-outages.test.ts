@@ -172,6 +172,7 @@ test("a computer's queue over HTTP: every member reads it, only the org's own co
         after: [],
         canOpen: true,
         canStop: true,
+        signIn: null,
       },
     ],
   });

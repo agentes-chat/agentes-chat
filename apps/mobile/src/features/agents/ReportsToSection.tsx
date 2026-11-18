@@ -1,10 +1,9 @@
 import { type AgentLineChange, useSetAgentLines, useTeam } from "@agenteschat/client";
-import { can } from "@agenteschat/client/lib/permissions";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { rightHandOf } from "@agenteschat/client/lib/right-hand";
-import { mayReportTo, reportsOf, supervisorOf } from "@agenteschat/client/lib/team-views";
+import { mayReportTo, mayUndoLines, reportsOf, supervisorOf } from "@agenteschat/client/lib/team-views";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { useOrg } from "@/providers/org";
 import { GroupedFooter, GroupedHeader, GroupedList, GroupedRow, useToast } from "@/ui";
 import { router } from "@/ui/navigation";
 import { useFailed } from "../routines/hooks";
@@ -12,14 +11,14 @@ import { useDirectory, useOrgId } from "../shared/hooks";
 import { closeAgentChoose, openAgentChoose } from "./agent-choose";
 
 /**
- * Responde a (ADR 0148 addendum), as the web's field: who manages agents picks the agent it reports to on a screen of
- * its own (the agents it may report to, and nobody), applied at once, with Desfazer in the toast; anyone else reads it.
- * A supervisor lists who reports to it. No drag on the phone.
+ * Responde a (ADR 0148 addendum), as the web's field: who manages the agent (the server's `canManage`) picks the agent
+ * it reports to on a screen of its own (the agents it may report to, and nobody), applied at once, with Desfazer in the
+ * toast while the server would take it back (`mayUndoLines`); anyone else reads it. A supervisor lists who reports to
+ * it. No drag on the phone.
  */
 export function ReportsToSection({ agentId }: { agentId: string }) {
   const { t } = useTranslation();
   const orgId = useOrgId();
-  const { org } = useOrg();
   const dir = useDirectory();
   const toast = useToast();
   const failed = useFailed();
@@ -38,7 +37,9 @@ export function ReportsToSection({ agentId }: { agentId: string }) {
             ? t("team.reportsTo.done", { agent: name, to: team.find((a) => a.id === to)?.name ?? "" })
             : t("team.reportsTo.cleared", { agent: name }),
           agentId,
-          ...(undoing || previous.length === 0
+          // Undoing puts it back under its former supervisor: only one the person manages, or nobody (ADR 0085
+          // addendum of 2026-11-17). Nothing changed, nothing to undo.
+          ...(undoing || previous.length === 0 || !mayUndoLines(previous, team)
             ? {}
             : { action: { label: t("agentGroups.undo"), onPress: () => apply(previous, true) } }),
         });
@@ -51,12 +52,19 @@ export function ReportsToSection({ agentId }: { agentId: string }) {
   });
   useEffect(() => () => closeAgentChoose(), []);
   if (!agent || agent.id === lodiId) return null;
-  const manages = can(org, "manage_agents");
+  const manages = managesAgent(agent);
   const current = supervisorOf(agent, team);
   const reports = reportsOf(agentId, team);
   if (!manages && !current && reports.length === 0) return null;
   const choose = () => {
-    const choices = team.filter((a) => a.id !== lodiId && a.id !== agentId && mayReportTo(team, agentId, a.id));
+    // Only supervisors the person manages, the current one kept (ADR 0085 addendum of 2026-11-17).
+    const choices = team.filter(
+      (a) =>
+        a.id !== lodiId &&
+        a.id !== agentId &&
+        mayReportTo(team, agentId, a.id) &&
+        (a.canManage === true || a.id === agent.reportsToAgentId),
+    );
     const now = agent.reportsToAgentId ?? null;
     openAgentChoose({
       title: t("team.reportsTo.label"),

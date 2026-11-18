@@ -1,6 +1,12 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { answerAfter, answerPicks, BUSINESS_TYPES, replyChipsOf } from "@agenteschat/client/lib/team-plan";
+import {
+  answerAfter,
+  answerPicks,
+  BUSINESS_TYPES,
+  managesTeamAgents,
+  replyChipsOf,
+} from "@agenteschat/client/lib/team-plan";
 
 const src = (f: string) => readFileSync(new URL(`../../src/features/${f}`, import.meta.url), "utf8");
 
@@ -110,4 +116,25 @@ test("an agent with no channel lives in its DM: no bare #, a block of its own, n
   expect(card).toContain('t(personal ? "teamPlan.card.weeklyPersonal" : "teamPlan.card.weekly")');
   // No invitation on a personal workspace's first tasks.
   expect(card).toContain("const people = isPersonal(org) ? [] : card.params.invite;");
+});
+
+test("Undo on someone else's team: every agent it made managed, archived ones too, never one taken on trust", () => {
+  // The server checks each agent the team made, archived ones too (ADR 0085 addendum of 2026-11-17): one missing from
+  // the directory is no longer taken as managed.
+  const card = src("right-hand/TeamCard.tsx");
+  expect(card).toContain("const former = useFormerAgents(orgId).data;");
+  expect(card).toContain(
+    "const managesTeam = managesTeamAgents(org, card.created?.agentIds ?? [], dir.agents, former);",
+  );
+  expect(card).not.toContain("return !a || managesAgent(a);");
+  expect(card).toContain('teamUndoable(card, { userId: meId ?? "", admin: managesTeam })');
+  const editor = { permissions: ["manage_agents"] };
+  const admin = { permissions: ["manage_agents", "administrator"] };
+  const here = [{ id: "a-nina", canManage: true }];
+  const made = ["a-nina", "a-ivo"];
+  // Archived since and out of my reach, or not known at all: not mine to undo, unless I reach every agent.
+  expect(managesTeamAgents(editor, made, here, [{ id: "a-ivo", deleted: false, canManage: false }])).toBe(false);
+  expect(managesTeamAgents(editor, made, here, [])).toBe(false);
+  expect(managesTeamAgents(admin, made, here, [])).toBe(true);
+  expect(managesTeamAgents(editor, made, here, [{ id: "a-ivo", deleted: false, canManage: true }])).toBe(true);
 });

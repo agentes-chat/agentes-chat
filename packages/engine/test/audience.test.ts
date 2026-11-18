@@ -36,6 +36,7 @@ import {
   routeMessage,
   setAgentAudience,
   setAgentBrain,
+  setAgentEditors,
   setMemberRoles,
   speakerFor,
   updateAgent,
@@ -67,7 +68,7 @@ const runsOf = async (messageId: string) =>
   (await f.db.select().from(schema.agentRuns)).filter((r) => r.triggerMessageId === messageId);
 
 describe("who can talk to the agent", () => {
-  test("an admin sees and manages another admin's agent kept to a role they don't hold; a member outside sees its card", async () => {
+  test("an admin sees and manages another admin's agent kept to a role they don't hold; the key alone doesn't reach it, who it names as editors edit it; a member outside sees its card", async () => {
     const { bia } = await world();
     const walt = await addMember(f.db, f.org.id, "admin", "walt");
     const caio = await addMember(f.db, f.org.id, "admin", "caio");
@@ -94,17 +95,33 @@ describe("who can talk to the agent", () => {
     });
     expect((await card(caio.id))?.canTalk).toBe(true);
 
-    // A member whose role manages agents, without being an admin: the same as an admin.
+    // Seeing it isn't talking to it: what an admin outside it writes in its conversation starts no run.
+    const ownerDm = await openDm(f.db, f.owner.id, f.org.id, { agentId: f.agent.id });
+    const sent = await postPersonMessage(deps(), f.owner.id, f.org.id, ownerDm.id, { body: "oi" });
+    await drainOutbox(f.db, f.handlers);
+    expect(await runsOf(sent.id)).toEqual([]);
+
+    // A member whose role holds "Edit agents", without being an admin: someone's private agent is out of the key's
+    // reach (ADR 0085 addendum of 2026-11-17), its public card and no conversation, nothing of it theirs to change.
     const managers = await createRole(f.db, f.owner.id, f.org.id, { name: "Gestores", permissions: ["manage_agents"] });
     const lia = await addMember(f.db, f.org.id, "member", "lia");
     await setMemberRoles(f.db, f.owner.id, f.org.id, lia.id, [managers.id]);
-    expect(await card(lia.id)).toMatchObject({ seesDetails: true, canTalk: false });
-    const liaDm = await openDm(f.db, lia.id, f.org.id, { agentId: f.agent.id });
-    expect(liaDm.kind).toBe("dm");
-    // Seeing it isn't talking to it: what they write there starts no run.
-    const sent = await postPersonMessage(deps(), lia.id, f.org.id, liaDm.id, { body: "oi" });
-    await drainOutbox(f.db, f.handlers);
-    expect(await runsOf(sent.id)).toEqual([]);
+    expect(await card(lia.id)).toMatchObject({
+      seesDetails: false,
+      canTalk: false,
+      canManage: false,
+      capabilities: [],
+    });
+    await expect(openDm(f.db, lia.id, f.org.id, { agentId: f.agent.id })).rejects.toMatchObject({
+      code: "audience.only",
+    });
+    await expect(updateAgent(f.db, lia.id, f.org.id, f.agent.id, { role: "Suporte" })).rejects.toBeInstanceOf(
+      ForbiddenError,
+    );
+    // Named in its "Who can edit", she sees how it works and edits its role, still not talking to it.
+    await setAgentEditors(f.db, walt.id, f.org.id, f.agent.id, { userIds: [lia.id], roleIds: [] });
+    expect(await card(lia.id)).toMatchObject({ seesDetails: true, canTalk: false, canManage: false });
+    expect((await updateAgent(f.db, lia.id, f.org.id, f.agent.id, { role: "Suporte" })).role).toBe("Suporte");
 
     // A member outside it: its public card, no conversation.
     expect(await card(bia.id)).toMatchObject({ seesDetails: false, canTalk: false, capabilities: [] });

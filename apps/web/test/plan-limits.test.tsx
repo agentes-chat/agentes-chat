@@ -191,7 +191,7 @@ describe("IA e uso › Contas with many accounts and long names", () => {
     usage: i === 11 ? null : used(5 * i, i < 2 ? 96 - 10 * i : 7 * i),
   }));
 
-  test("each is one row: whole name, plan, owner's first name and one meter; only those near a limit start open", async () => {
+  test("each is one row: whole name, plan, owner's first name and one meter; every one starts closed, the limit's line on those near it", async () => {
     await go("settings/usage", onPlans(), MANY);
     const plans = screen().getByRole("region", { name: "Contas" });
     // The seeded computer's own sign-in comes first.
@@ -205,14 +205,14 @@ describe("IA e uso › Contas with many accounts and long names", () => {
     // One meter each, none while nothing is known: never 0%.
     expect(heads.map((h) => within(h).queryAllByRole("meter").length)).toEqual([...Array(11).fill(1), 0]);
     expect(heads[0]?.querySelector(".ac-planmeter__line")?.textContent).toBe("semana 96%");
-    expect(heads.map((h) => h.getAttribute("aria-expanded"))).toEqual(["true", "true", ...Array(10).fill("false")]);
+    expect(heads.map((h) => h.getAttribute("aria-expanded"))).toEqual(Array(12).fill("false"));
     expect(heads.map((h) => Boolean(h.querySelector(".plan-row__alert")))).toEqual([
       true,
       true,
       ...Array(10).fill(false),
     ]);
     // A closed row holds nothing: twelve accounts stay twelve lines.
-    expect(rows.slice(2).map((r) => r.querySelector(".plan-row__body")?.textContent)).toEqual(Array(10).fill(""));
+    expect(rows.map((r) => r.querySelector(".plan-row__body")?.textContent)).toEqual(Array(12).fill(""));
     // The keyboard opens one: its head is a button that says whether it is open.
     const third = heads[2] as HTMLElement;
     expect(third.tagName).toBe("BUTTON");

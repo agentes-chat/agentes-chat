@@ -15,6 +15,7 @@ import {
   sql,
 } from "@agenteschat/db";
 import { resolveChannelAgentAsks } from "./admin-asks";
+import { managesAgent, REACH_COLUMNS } from "./audience";
 import { caches } from "./cache";
 import { endOfCategory, requireCategoryInOrg } from "./channel-categories";
 import { wordsOf } from "./confidential";
@@ -753,8 +754,8 @@ const channelCanSql = (orgId: string, userId: string, key: ChannelKey) =>
   channelMaySql(sql`${orgId}::uuid`, sql`c.id`, sql`${userId}::text`, key);
 
 /**
- * Where `actorId` may put an agent of theirs (or any, with `manage_agents`) or take it out (ADR 0085 §5): a channel
- * they're in and may post in or created, or any with `manage_channels`. One rule for an agent's page
+ * Where `actorId` may put an agent of theirs (or one they manage, `managesAgent`) or take it out (ADR 0085 §5): a
+ * channel they're in and may post in or created, or any with `manage_channels`. One rule for an agent's page
  * (`setAgentChannels`) and a channel's members; the apps mirror it (`addsAgentsTo` in packages/client).
  */
 export const placesAgentsIn = (
@@ -766,8 +767,8 @@ export const placesAgentsIn = (
   (actorIn && (can(membership, "post") || channel.createdByUserId === actorId)) || can(membership, "manage_channels");
 
 /**
- * Refuses unless `actorId` may put `agentId` in `channel` or take it out: the agent theirs or `manage_agents`, and
- * `placesAgentsIn`.
+ * Refuses unless `actorId` may put `agentId` in `channel` or take it out: the agent theirs or one they manage
+ * (`managesAgent`: "Editar qualquer agente" where it reaches, ADR 0085 addendum of 2026-11-17), and `placesAgentsIn`.
  */
 async function requirePlacesAgent(
   db: Database,
@@ -777,11 +778,11 @@ async function requirePlacesAgent(
   agentId: string,
 ) {
   const [agent] = await db
-    .select({ ownerUserId: agents.ownerUserId })
+    .select(REACH_COLUMNS)
     .from(agents)
     .where(and(eq(agents.id, agentId), eq(agents.orgId, channel.orgId), isNull(agents.archivedAt)));
   if (!agent) throw new ValidationError("That agent does not exist in this organization");
-  if (agent.ownerUserId !== actorId && !can(membership, "manage_agents")) {
+  if (agent.ownerUserId !== actorId && !managesAgent(agent, actorId, membership)) {
     throw new ForbiddenError("Only an admin or the agent's owner can change where it works");
   }
   if (!placesAgentsIn(membership, actorId, channel, await isChannelMember(db, channel.orgId, channel.id, actorId))) {

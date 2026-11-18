@@ -1026,7 +1026,7 @@ test("a reading wakes its plan's limit waits even behind more than a hundred old
   const usage: PlanUsage = {
     windows: [
       { kind: "five_hour", usedPercent: 3, resetsAt: new Date(now + 5 * 3600_000).toISOString() },
-      { kind: "seven_day", usedPercent: 97, resetsAt: new Date(now + 3 * 86_400_000).toISOString() },
+      { kind: "seven_day", usedPercent: 99, resetsAt: new Date(now + 3 * 86_400_000).toISOString() },
     ],
     source: "turn",
     at: new Date(now).toISOString(),

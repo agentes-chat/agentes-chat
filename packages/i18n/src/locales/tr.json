@@ -312,8 +312,8 @@
       "noTalk": "Yalnızca {{name}} sahibi olanlar ajanlarla konuşmaz.",
       "turnOnTalk": "Ajanlarla konuşmayı aç",
       "search": "Ajan ara",
-      "notYours": "Bunu yalnızca {{name}} ajanından sorumlu {{owner}} ya da herhangi bir ajanı düzenleyen değiştirir.",
-      "notYoursNoOwner": "Bunu yalnızca herhangi bir ajanı düzenleyen değiştirir.",
+      "notYours": "Bunu yalnızca {{name}} ajanından sorumlu {{owner}} ya da ajanları düzenleyen biri değiştirir.",
+      "notYoursNoOwner": "Bunu yalnızca ajanları düzenleyen biri değiştirir.",
       "none": "Henüz ajan yok.",
       "noMatch": "“{{q}}” ile eşleşen ajan yok."
     },
@@ -405,9 +405,9 @@
     },
     "manage_routines": {
       "title": "Rutin oluşturma",
-      "desc": "Ajanın belirli saatlerde kendi başına yaptığı işler.",
+      "desc": "Bir ajanın belirli bir saatte kendi başına yaptığı işler, kişinin konuştuğu ajanlarda.",
       "short": "rutin oluşturma",
-      "say": "rutin oluşturur"
+      "say": "konuştuğu ajanlarda rutin oluşturur"
     },
     "approve_actions": {
       "title": "Ajanların eylemlerini onaylama",
@@ -422,10 +422,10 @@
       "say": "ajan oluşturur"
     },
     "manage_agents": {
-      "title": "Herhangi bir ajanı düzenleme",
-      "desc": "Talimatlar, beyin, bütçe ve her birinin kullandıkları.",
+      "title": "Ajanları düzenleme",
+      "desc": "Talimatlar, beyin, bütçe ve her birinin kullandıkları, kişinin konuştuğu ajanlarda. Başkalarının özel ajanları hariç.",
       "short": "ajanları düzenleme",
-      "say": "herhangi bir ajanı düzenler"
+      "say": "konuştuğu ajanları düzenler"
     },
     "pair_computers": {
       "title": "Bilgisayar bağlama",
@@ -3069,7 +3069,7 @@
         "delete": "Bir ajanı yalnızca yöneticiler siler",
         "audience": "Onunla kimin konuşacağını yalnızca yöneticiler ve sorumlusu değiştirir",
         "channels": "Kanallarını yalnızca yöneticiler ve sorumlusu değiştirir",
-        "skill": "Bir ajanın becerilerini yalnızca yöneticiler değiştirir",
+        "skill": "Bir ajanın becerilerini yalnızca onu düzenleyebilenler değiştirir",
         "ai_account": "Yalnızca hesabın sahibi verebilir",
         "name": "Bir ajanın adını yalnızca yöneticiler değiştirir",
         "look": "Görünümünü yalnızca yöneticiler ve sorumlusu değiştirir",
@@ -4262,7 +4262,7 @@
     "former": "Artık bu çalışma alanında değil",
     "askAccess": "Erişim iste",
     "detailsHiddenTitle": "Nasıl çalışır",
-    "detailsHidden": "{{name}} adlı ajanın talimatlarını, araçlarını, hafızasını ve kullanımını yalnızca yanıt verdiği kişiler, sorumlusu ve yöneticiler görür."
+    "detailsHidden": "{{name}} adlı ajanın talimatlarını, araçlarını, hafızasını ve kullanımını yalnızca yanıt verdiği kişiler, onu düzenleyebilenler, sorumlusu ve yöneticiler görür."
   },
   "presence": {
     "online": "Çevrimiçi",
@@ -6081,6 +6081,7 @@
       "budget": "Bütçe",
       "owner": "Sahip",
       "audience": "Kimler konuşabilir",
+      "editors": "Kimler düzenleyebilir",
       "channels": "Kanallar",
       "machine": "Bilgisayar",
       "brain": "Düşünen yapay zeka",
@@ -6118,12 +6119,9 @@
       "memberPersonal": "{{name}} ajanının nasıl çalıştığını görüyorsunuz. Yalnızca burayı yöneten kişiler düzenleyebilir.",
       "memberOwner": "{{name}} ajanının nasıl çalıştığını görüyorsunuz. Düzenleyebilenler: yöneticiler ve {{owner}} (sahip).",
       "memberOwnerPersonal": "{{name}} ajanının nasıl çalıştığını görüyorsunuz. Düzenleyebilenler: {{owner}} (sahip) ve burayı yöneten kişiler.",
-      "owner": "{{name}} ajanının sahibisiniz: görünümü, kimlerin konuşabileceğini, kanalları ve bilgisayarı siz değiştirirsiniz. Gerisini yalnızca yöneticiler.",
-      "ownerKeeper": "{{name}} ajanının sahibisiniz: görünümü, kimlerin konuşabileceğini, grup sohbetlerini ve bilgisayarı siz değiştirirsiniz. Gerisini yalnızca {{keeper}}.",
-      "ownerPersonal": "{{name}} ajanının sahibisiniz: görünümü, kimlerin konuşabileceğini, grup sohbetlerini ve bilgisayarı siz değiştirirsiniz. Gerisini yalnızca burayı yöneten kişiler.",
-      "ownerInstructions": "Talimatları yalnızca yöneticiler düzenleyebilir. Sahip olarak önerilen değişiklikleri siz onaylarsınız.",
-      "ownerInstructionsKeeper": "Talimatları yalnızca {{keeper}} düzenleyebilir. Sahip olarak önerilen değişiklikleri siz onaylarsınız.",
-      "ownerInstructionsPersonal": "Talimatları yalnızca burayı yöneten kişiler düzenleyebilir. Sahip olarak önerilen değişiklikleri siz onaylarsınız.",
+      "owner": "{{name}} ajanının sahibisiniz: talimatları, rolü, becerileri, görünümü, kimlerin konuşabileceğini veya düzenleyebileceğini, kanalları ve bilgisayarı siz değiştirirsiniz. Gerisini yalnızca yöneticiler.",
+      "ownerKeeper": "{{name}} ajanının sahibisiniz: talimatları, rolü, becerileri, görünümü, kimlerin konuşabileceğini veya düzenleyebileceğini, grup sohbetlerini ve bilgisayarı siz değiştirirsiniz. Gerisini yalnızca {{keeper}}.",
+      "ownerPersonal": "{{name}} ajanının sahibisiniz: talimatları, rolü, becerileri, görünümü, kimlerin konuşabileceğini veya düzenleyebileceğini, grup sohbetlerini ve bilgisayarı siz değiştirirsiniz. Gerisini yalnızca burayı yöneten kişiler.",
       "ownerAccess": "Erişimi ve depoları yalnızca yöneticiler verebilir veya geri alabilir.",
       "ownerAccessKeeper": "Erişimi ve depoları yalnızca {{keeper}} verebilir veya geri alabilir.",
       "ownerAccessPersonal": "Erişimi ve depoları yalnızca burayı yöneten kişiler verebilir veya geri alabilir."
@@ -6380,6 +6378,7 @@
       "budget": "Bütçe",
       "owner": "Sahip",
       "audience": "Kimler konuşabilir",
+      "editors": "Kimler düzenleyebilir",
       "channels": "Kanallar",
       "computer": "Bilgisayar",
       "danger": "Arşivle veya sil",
@@ -9057,13 +9056,13 @@
       "dontRunName": "Sınır sıfırlanınca {{name}} çalıştırılmasın",
       "canceledToast": "İptal edildi. Sınır sıfırlanınca çalışmayacak.",
       "continuedToast": "Çalıştırma devam ediyor.",
-      "forbidden": "Şu anda yalnızca rutini oluşturan kişi, ajanın sahibi ya da bir yönetici devam ettirebilir",
+      "forbidden": "Şu anda yalnızca rutini oluşturan kişi, ajanın sahibi, ajanı düzenleyebilen biri ya da bir yönetici devam ettirebilir",
       "extra_off": "Bu planın kullanım aralığı doldu ve bu ajanın uzun işleri planın ücretli ek kullanımını kullanmıyor. Sıfırlamadan sonra devam eder",
       "extra_used_up": "Bu planın kullanım aralığı doldu ve ücretli ek kullanımı da bitti ya da kullanılamıyor. Sıfırlamadan sonra devam eder"
     },
     "pausedRunningToast": "Rutin duraklatıldı. Süren çalıştırma da durdu.",
     "deleteBodyRunning": "Çalışmayı bırakır ve listeden çıkar, süren çalıştırma da durur. Geçmiş çalıştırmalar geçmişte kalır.",
-    "detailsHidden": "Bunu yalnızca oluşturan kişi, ajanın sahibi, yöneticiler ve konuşmadaki kişiler görür."
+    "detailsHidden": "Bunu yalnızca oluşturan kişi, ajanın sahibi, ajanı düzenleyebilenler, yöneticiler ve konuşmadaki kişiler görür."
   },
   "missions": {
     "chip": "Misyon · {{done}}/{{count}}",
@@ -10805,6 +10804,24 @@
       "nobody": "{{name}} şu anda kimseye yanıt vermiyor."
     }
   },
+  "editors": {
+    "section": "Kimler düzenleyebilir",
+    "title": "{{name}} ajanını kimler düzenleyebilir",
+    "mode": {
+      "owner": "Yalnızca {{name}} ajanının sorumlusu",
+      "people": "Bazı kişiler veya roller de"
+    },
+    "modeText": {
+      "owner": "{{owner}} (sahip), yöneticiler ve ajanları düzenleyip {{name}} ile konuşabilen herkes.",
+      "noOwner": "Yöneticiler ve ajanları düzenleyip {{name}} ile konuşabilen herkes.",
+      "people": "{{name}} ajanının çalışma şeklini başka kimlerin değiştirebileceğini seçin."
+    },
+    "rolesHint": "Bu role sahip herkes düzenleyebilir, rolü sonradan alanlar da dahil.",
+    "note": "Düzenlemek, {{name}} ajanının talimatlarını, rolünü, becerilerini ve rutinlerini değiştirmek demektir. Uygulamalar, bütçe ve sahip, ajanları düzenleyenlerde kalır.",
+    "summary": {
+      "owner": "Yalnızca sorumlusu"
+    }
+  },
   "composer": {
     "commands": "Komutlar",
     "report": "/rapor",
@@ -12079,7 +12096,8 @@
       "next": "Bilgisayarı bekliyor. Sıradaki o",
       "waiting": "Bilgisayarı bekliyor",
       "behind": "Sırada, {{nth}}. {{names}} sonrasında",
-      "position": "Sırada, {{nth}}"
+      "position": "Sırada, {{nth}}",
+      "signIn": "{{account}} başka bir görevi bitirene kadar bekliyor"
     },
     "nth": {
       "one": "{{n}}.",
@@ -14265,6 +14283,7 @@
       "vault_delete": "Şifreyi sil",
       "vault_make_password": "Şifre oluştur",
       "get_my_usage": "Kullanımımı görüntüle",
+      "ignore_usage_limit": "Kullanım sınırını yok say",
       "send_feedback": "Geri bildirim gönder",
       "offer_feedback": "Sorun bildirmeyi öner"
     }
@@ -15311,7 +15330,7 @@
       "continueExtraOff": "Bu planın kullanım dönemi doldu ve bu ajanın uzun işleri planın ücretli ek kullanımını kullanmıyor. Sıfırlamadan sonra kaldığı yerden sürer.",
       "continueExtraUsedUp": "Bu planın kullanım dönemi doldu ve ücretli ek kullanımı da bitti ya da kullanılamıyor. Sıfırlamadan sonra kaldığı yerden sürer.",
       "actionsNeedApprover": "Bir rutinin kendi başına hareket etmesine yalnızca ajanın sahibi veya eylemlerini onaylayan kişi izin verebilir.",
-      "editorOnly": "Rutini yalnızca oluşturan kişi, ajanın sahibi veya bir yönetici değiştirebilir.",
+      "editorOnly": "Rutini yalnızca oluşturan kişi, ajanın sahibi, ajanı düzenleyebilen biri veya bir yönetici değiştirebilir.",
       "widgetFixed": "Bu rutin bir widget'ı güncel tutar. Widget'ından değiştirin."
     },
     "run": {
@@ -15387,6 +15406,7 @@
       "askSelf": "Bu sizin bilgisayarınız: düğmeyle açın.",
       "adminAskSelf": "Bunu burada kendiniz yapabilirsiniz.",
       "accountMethodUnsupported": "Bu bilgisayar Claude'u henüz bu şekilde bağlayamıyor. Üzerindeki agentes.chat programını güncelleyin ya da bir API anahtarı kullanın.",
+      "brainUnavailable": "Bu yapay zekâ {{computer}} üzerinde henüz kurulmadı. Orada kurun ya da başka birini seçin.",
       "offline": "{{name}} şu an çevrimdışı. Geri geldiğinde tekrar deneyin.",
       "paused": "{{name}} duraklatıldı: devam ettirilene kadar üzerinde yeni bir şey başlamaz.",
       "timeout": "Bilgisayar zamanında yanıt vermedi. Tekrar deneyin."
@@ -15432,7 +15452,7 @@
       "ownerOrAdmin": "Bunu yalnızca ajanın sahibi veya bir yönetici yapabilir.",
       "detailsHidden": "Nasıl çalıştığını yalnızca {{agentName}} ile konuşanlar görür.",
       "undoForbidden": "Bunu yalnızca ajanın çalıştığı kişi, sahibi veya bir yönetici geri alabilir.",
-      "undoSkillsAdmins": "Bir ajanın becerilerindeki değişikliği yalnızca bir yönetici geri alabilir veya yineleyebilir."
+      "undoSkillsAdmins": "Becerilerindeki bir değişikliği yalnızca ajanı düzenleyebilenler geri alabilir veya yineleyebilir."
     },
     "account": {
       "notRestorable": "Bu hesap artık geri yüklenemez.",

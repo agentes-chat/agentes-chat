@@ -1,6 +1,7 @@
 import type { PlanUsage, PubSub } from "@agenteschat/adapters";
 import { and, type Database, desc, type Executor, eq, inArray, type SQL, schema, sql } from "@agenteschat/db";
 import { extraUsageLeft, PLAN_PAUSE, planBinding, planState } from "@agenteschat/ui/plan-state";
+import { ACCESS_COLUMNS, type AgentAccessFields, managesRoutinesOf, REACH_COLUMNS } from "./audience";
 import { recordAudit } from "./audit";
 import { UUID } from "./authority";
 import { forgetPlanLimit, storedPlanUsage } from "./brains/select";
@@ -10,7 +11,7 @@ import { ConflictError, ForbiddenError } from "./errors";
 import { publishMessageCreated } from "./events";
 import { inMillisecondOf } from "./message-place";
 import { type Message, messageView } from "./messages";
-import { can, type Membership, requireActiveMembership } from "./organizations";
+import { type Membership, requireActiveMembership } from "./organizations";
 import { enqueue } from "./outbox";
 import { isRightHand } from "./right-hand";
 import { missStaleRoutineRun } from "./routine-firing";
@@ -201,7 +202,7 @@ export async function lineHeadLooks(db: Executor, orgId: string, key: string, no
  * A turn on a plan just went through, so the plan has room again: the runs parked on its limit (`plan_limit`, the same
  * `key`) go on now, in `usageWaitPlace`'s order, 60 s apart, instead of each sleeping until its own timer (a later
  * reset reading, an unknown reset's re-checks). Without this a routine's slot could wait well past the reset while a
- * person's reply on the same plan had already gone through. A long-work pause (95%) keeps its timer: a quick reply
+ * person's reply on the same plan had already gone through. A long-work pause (99%) keeps its timer: a quick reply
  * going through says nothing about its line. One job per wait; the old timed one finds the wait gone and does nothing.
  * Only waits on the same `model` (a model's own weekly limit isn't lifted by another model's turn); a wait stored
  * without one is woken. `room`: a reading of the plan taken `at` has room again (`wakeOnRoom`): every wait on the
@@ -524,10 +525,14 @@ export const USAGE_WINDOW_WORDS: Record<string, string> = {
   monthly: "of its month",
 };
 
-/** What a computer brain reads in "# This turn" from 90% of its plan (ADR 0118). */
+/**
+ * What a computer brain reads in "# This turn" from 90% of its plan (ADR 0118). `granted`: a person let this work go
+ * past the pause line (Continuar agora, or `ignore_usage_limit`).
+ */
 export function usageNoticeText(
   plan: string,
   r: { used: number; window?: string; resetsAt?: string; extra?: boolean },
+  granted = false,
 ) {
   const window = r.window ? ` ${USAGE_WINDOW_WORDS[r.window] ?? ""}`.trimEnd() : "";
   const resets = r.resetsAt ? ` and resets at ${r.resetsAt}` : "";
@@ -536,8 +541,24 @@ export function usageNoticeText(
     `Your ${plan} plan is at ${r.used}%${window}${resets}.`,
     r.extra
       ? "Its paid extra usage is on, so long work goes on past the plan's limit and replies to people go on too."
-      : "At 95% long work pauses by itself and picks up after the reset, and replies to people go on. Keep working as usual and leave each finished step in a working state. Before you start something big, tell the people it may pause.",
+      : granted
+        ? "A person told you to go past the pause line for this work. Keep working: only the plan's own limit (100%) stops you."
+        : `At ${PLAN_PAUSE}% long work pauses by itself and picks up after the reset, and replies to people go on. Keep working as usual and leave each finished step in a working state. Before you start something big, tell the people it may pause. If a person tells you to ignore the limit or to keep going anyway, call ${IGNORE_LIMIT_TOOL} and go on.`,
   ].join("\n");
+}
+
+/** The tool a person's "ignore the limit" in the chat goes through (`grantUsageOverride`). */
+export const IGNORE_LIMIT_TOOL = "ignore_usage_limit";
+
+/** Whether a person let this run go past the pause line from the chat (`usageGrant`, on the row or in `t`). */
+export async function usageGranted(db: Executor, runId: string, t?: { usageGrant?: unknown }) {
+  if (t?.usageGrant) return true;
+  const { agentRuns } = schema;
+  const [row] = await db
+    .select({ granted: sql<boolean>`${agentRuns.transcript} ? 'usageGrant'` })
+    .from(agentRuns)
+    .where(eq(agentRuns.id, runId));
+  return row?.granted === true;
 }
 
 /** Whether a routine's run was started by Rodar agora (a person asked for it now), not by its schedule. */
@@ -859,15 +880,19 @@ export async function overrideUsagePause(
     userId: string;
     details: Record<string, unknown>;
     channelId?: string | null;
+    /** Told in the chat (`grantUsageOverride`): the run keeps going past the line for good (`usageGrant`). */
+    grant?: boolean;
   },
 ): Promise<boolean> {
   const { agentRuns } = schema;
   const override = { until: p.until, by: p.userId };
+  const grant = p.grant ? { usageGrant: { by: p.userId, at: new Date().toISOString() } } : {};
   const [moved] = await tx
     .update(agentRuns)
     .set({
       transcript: sql`${agentRuns.transcript} || jsonb_build_object('usagePause',
-        coalesce(${agentRuns.transcript}->'usagePause', '{}'::jsonb) || jsonb_build_object('override', ${JSON.stringify(override)}::jsonb))`,
+        coalesce(${agentRuns.transcript}->'usagePause', '{}'::jsonb) || jsonb_build_object('override', ${JSON.stringify(override)}::jsonb))
+        || ${JSON.stringify(grant)}::jsonb`,
     })
     .where(
       and(
@@ -900,16 +925,30 @@ export async function overrideUsagePause(
 
 /**
  * Who may press Continuar agora on a paused run: the card's people (`mayStopRun`) and, for a routine's run, Rotinas'
- * (its creator, whoever manages routines).
+ * (its creator, whoever manages that agent's routines: `managesRoutinesOf`, ADR 0085 addendum of 2026-11-17). The
+ * agent is the run's own, even when its routine moved to another since: `row.agent`, its `ACCESS_COLUMNS` when the
+ * caller's select has them (a caller checking many runs passes them), else read here once for both rules.
  */
 export async function mayContinuePause(
   db: Executor,
   userId: string,
   membership: Membership,
-  row: Parameters<typeof mayStopRun>[3] & { routineId: string | null; routineCreatorId: string | null },
+  row: Parameters<typeof mayStopRun>[3] & {
+    routineId: string | null;
+    routineCreatorId: string | null;
+    agent?: AgentAccessFields;
+  },
 ) {
-  if (row.routineId && (row.routineCreatorId === userId || can(membership, "manage_routines"))) return true;
-  return mayStopRun(db, userId, membership, row);
+  if (!row.routineId) return mayStopRun(db, userId, membership, row);
+  if (row.routineCreatorId === userId) return true;
+  const [agent] = row.agent
+    ? [row.agent]
+    : await db
+        .select(ACCESS_COLUMNS)
+        .from(schema.agents)
+        .where(and(eq(schema.agents.orgId, row.run.orgId), eq(schema.agents.id, row.run.agentId)));
+  if (agent && managesRoutinesOf(agent, userId, membership)) return true;
+  return mayStopRun(db, userId, membership, { ...row, agent });
 }
 
 /**
@@ -922,13 +961,21 @@ export async function continuePausedRuns(
   userId: string,
   orgId: string,
   runIds: string[],
+  options: { grant?: boolean } = {},
 ): Promise<{ continued: number }> {
   const { db } = deps;
   const { agentRuns, agents, messages, routineRuns, routines } = schema;
   const membership = await requireActiveMembership(db, userId, orgId);
   const rows = await db
     .select({
-      run: { id: agentRuns.id, orgId: agentRuns.orgId, triggerMessageId: agentRuns.triggerMessageId },
+      run: {
+        id: agentRuns.id,
+        orgId: agentRuns.orgId,
+        agentId: agentRuns.agentId,
+        triggerMessageId: agentRuns.triggerMessageId,
+      },
+      // What `mayContinuePause` reads of each run's agent, read with the runs.
+      agent: ACCESS_COLUMNS,
       ownerUserId: agents.ownerUserId,
       requester: runRequester,
       routineId: routines.id,
@@ -971,7 +1018,8 @@ export async function continuePausedRuns(
         waitId: waitId as string,
         until: resetsAt,
         userId,
-        details: { source: source ?? "plan" },
+        details: { source: source ?? "plan", ...(options.grant ? { via: "chat" } : {}) },
+        ...(options.grant ? { grant: true, until: null } : {}),
       }),
     );
     if (!moved) continue;
@@ -984,6 +1032,69 @@ export async function continuePausedRuns(
   }
   if (continued === 0 && refused) throw refused;
   return { continued };
+}
+
+/**
+ * A person told the agent in the chat to ignore its usage limit (`ignore_usage_limit`): the same people as Continuar
+ * agora (`mayStopRun` on the run that heard it). That run goes past the pause line for good (`usageGrant`, audited as
+ * `usage.continued` with `via: chat`), and so does each of the agent's paused runs the person may continue
+ * (`continuePausedRuns`), up to the plan's own allowance. `granted` false: this person may not.
+ */
+export async function grantUsageOverride(
+  deps: { db: Database; pubsub?: PubSub },
+  userId: string,
+  orgId: string,
+  agentId: string,
+  runId: string,
+): Promise<{ granted: boolean; continued: number }> {
+  const { db } = deps;
+  const { agentRuns, agents, messages } = schema;
+  const membership = await requireActiveMembership(db, userId, orgId);
+  const [row] = await db
+    .select({ run: agentRuns, ownerUserId: agents.ownerUserId, requester: runRequester })
+    .from(agentRuns)
+    .innerJoin(agents, eq(agents.id, agentRuns.agentId))
+    .leftJoin(messages, and(eq(messages.id, agentRuns.triggerMessageId), eq(messages.orgId, agentRuns.orgId)))
+    .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, runId)));
+  if (!row || !(await mayStopRun(db, userId, membership, row))) return { granted: false, continued: 0 };
+  const grant = { by: userId, at: new Date().toISOString() };
+  await db
+    .update(agentRuns)
+    .set({
+      transcript: sql`${agentRuns.transcript} || jsonb_build_object('usageGrant', ${JSON.stringify(grant)}::jsonb)`,
+    })
+    .where(and(eq(agentRuns.orgId, orgId), eq(agentRuns.id, runId)));
+  await recordAudit(db, {
+    orgId,
+    actor: { type: "person", id: userId },
+    action: "usage.continued",
+    target: { type: "agent_run", id: runId },
+    details: { via: "chat", until: null },
+    channelId: row.run.channelId,
+  });
+  const paused = await db
+    .select({ id: agentRuns.id })
+    .from(agentRuns)
+    .where(
+      and(
+        eq(agentRuns.orgId, orgId),
+        eq(agentRuns.agentId, agentId),
+        eq(agentRuns.status, "waiting_input"),
+        sql`${agentRuns.transcript}->'waitingForBrain'->>'code' = 'usage_pause'`,
+      ),
+    )
+    .limit(100);
+  const { continued } =
+    paused.length > 0
+      ? await continuePausedRuns(
+          deps,
+          userId,
+          orgId,
+          paused.map((r) => r.id),
+          { grant: true },
+        ).catch(() => ({ continued: 0 }))
+      : { continued: 0 };
+  return { granted: true, continued };
 }
 
 /**
@@ -1002,7 +1113,7 @@ export async function continueUsagePause(
   const { db } = deps;
   const { agentRuns, agents, messages } = schema;
   const [row] = await db
-    .select({ run: agentRuns, ownerUserId: agents.ownerUserId, requester: runRequester })
+    .select({ run: agentRuns, agent: REACH_COLUMNS, ownerUserId: agents.ownerUserId, requester: runRequester })
     .from(agentRuns)
     .innerJoin(agents, eq(agents.id, agentRuns.agentId))
     .leftJoin(messages, and(eq(messages.id, agentRuns.triggerMessageId), eq(messages.orgId, agentRuns.orgId)))

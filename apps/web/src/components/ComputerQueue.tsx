@@ -372,7 +372,11 @@ export function QueuedWords({ message, fallback }: { message: Message; fallback:
   const { org } = useOrg();
   const dir = useDirectory(org.id);
   const { agents, rows } = useQueueWaits(message);
-  const next = agents.length === 1 && rows[0]?.position === 1 ? dir.agentById.get(rows[0].agentId)?.name : undefined;
+  // A turn waiting for its plan sign-in isn't next for the computer: its own row names the sign-in.
+  const next =
+    agents.length === 1 && rows[0]?.position === 1 && !rows[0].signIn
+      ? dir.agentById.get(rows[0].agentId)?.name
+      : undefined;
   return <span>{next ? queuedNextText(t, next) : fallback}</span>;
 }
 
@@ -413,7 +417,7 @@ function QueueWaitTurn({ wait: { agentId, runId }, channelId }: { wait: Conversa
   const text = w ? queueLiveText(t, i18n.language, queue, w.runId, agentName, now) : t("queue.live.waiting");
   const first = w?.people && w.purpose.kind === "person" && w.purpose.userId === me.user.id;
   // The real cause, once the line knows the turn: what holds the computer's memory now.
-  const cause = w ? queueCauseText(t, queue) : null;
+  const cause = w ? queueCauseText(t, queue, w) : null;
   const { stop, stopping } = useTaskStop();
   const freeing = w ? queueStoppable(queue) : undefined;
   return (
