@@ -9287,8 +9287,7 @@
       "approvals": "Secara default, merge, deploy, dan rollback meminta persetujuan",
       "start": "Mulai misi",
       "created": "Misi dibuat: {{name}} sedang menyusun rencananya.",
-      "who": "Siapa yang menulis kode",
-      "codexOld": "Codex di {{computer}} terlalu lama untuk misi: perbarui di sana."
+      "who": "Siapa yang menulis kode"
     },
     "commandApproval": {
       "label": "Otonomi",
@@ -10293,7 +10292,6 @@
       "needsCloud": {
         "online": "{{computer}} sedang memulai ulang atau menyambung lagi. Ini berubah sendiri begitu ia kembali.",
         "installing": "{{program}} sedang dipasang di {{computer}}. Ini berubah sendiri setelah selesai.",
-        "updating": "{{program}} sedang diperbarui di {{computer}}. Ini berubah sendiri setelah selesai.",
         "runnerOld": "Program agentes.chat di {{computer}} sudah usang dan pembaruannya sedang dalam perjalanan. Ini berubah sendiri setelah selesai.",
         "execOff": "{{computer}} belum bisa menjalankan {{program}}. Kami sedang menanganinya, dan ini berubah sendiri.",
         "toolOff": "{{program}} belum diizinkan di {{computer}}. Itu urusan kami: coba lagi nanti.",
@@ -11588,11 +11586,6 @@
       "not_installed": "{{program}} belum terpasang di {{computer}}.",
       "cant_start": "{{program}} ada di {{computer}}, tetapi tidak mau berjalan.",
       "not_reported": "{{computer}} masih memeriksa program apa saja yang dimilikinya. Ini berubah sendiri setelah selesai.",
-      "outdated": "Versi di {{computer}} sudah lama. Perbarui Codex untuk memakainya.",
-      "outdatedCodex": "Codex CLI {{detected}} ditemukan di {{computer}}. Perbarui ke versi {{minimum}} atau yang lebih baru.",
-      "codexUpdateGuide": "Cara memperbarui Codex CLI",
-      "codexRecheckHere": "Setelah memperbarui, pilih Periksa lagi pada baris Codex di Preferensi › Alat.",
-      "codexRecheckThere": "Perbarui Codex CLI di {{computer}}. Jika komputer itu menjalankan aplikasi desktop, pilih Periksa lagi pada baris Codex di Preferensi › Alat.",
       "system": "{{program}} belum berjalan di sistem {{computer}}.",
       "no_computerCloud": "Siap begitu {{computer}} siap."
     },

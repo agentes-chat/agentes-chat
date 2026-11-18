@@ -412,7 +412,7 @@ describe("planGateWithoutAgent: a plan connected before its owner has any agent"
 
   test("a program that can't run says the server's reason, never a guess that it's on its way", () => {
     const noClaude = { ...MAC, brains: { claude_code: false, codex: true } };
-    const reasons = ["tool_off", "exec_off", "runner_old", "outdated", "not_installed", "not_reported"] as const;
+    const reasons = ["tool_off", "exec_off", "runner_old", "not_installed", "not_reported"] as const;
     for (const reason of reasons)
       expect(at({ computers: [{ ...noClaude, off: { claude_code: reason } }] }).gate).toEqual({
         state: "unsupported",
@@ -826,10 +826,6 @@ describe("why a plan can't sign in yet, in plain words (`gateLine`)", () => {
       text: "O Codex está sendo instalado no Computador da Acme. Isto muda sozinho quando terminar.",
       rechecks: true,
     });
-    expect(line(off("outdated"), "cloud")).toEqual({
-      text: "O Codex está sendo atualizado no Computador da Acme. Isto muda sozinho quando terminar.",
-      rechecks: true,
-    });
     const runner =
       "O programa do agentes.chat no Computador da Acme está desatualizado e a atualização já está a caminho. Isto muda sozinho quando ela terminar.";
     expect(line(off("runner_old"), "cloud")).toEqual({ text: runner, rechecks: true });
@@ -847,14 +843,6 @@ describe("why a plan can't sign in yet, in plain words (`gateLine`)", () => {
     });
   });
 
-  test("an outdated self-hosted Codex names the detected and minimum versions", () => {
-    const codexVersion = { detected: "0.149.0", minimum: "0.163.0" };
-    const status = line({ ...off("outdated"), codexVersion }, "selfhost");
-    expect(status?.text).toContain("Codex CLI");
-    expect(status?.text).toContain(codexVersion.detected);
-    expect(status?.text).toContain(codexVersion.minimum);
-  });
-
   test("a program not allowed there says it's on our side, and looks again only when asked", () => {
     expect(line(off("tool_off"), "cloud")).toEqual({
       text: "O Codex ainda não está liberado no Computador da Acme. Isso é do nosso lado: tente de novo mais tarde.",
@@ -869,7 +857,6 @@ describe("why a plan can't sign in yet, in plain words (`gateLine`)", () => {
       "runner_old",
       "tool_off",
       "not_installed",
-      "outdated",
       "not_reported",
       "keys",
     ] as const;

@@ -9626,8 +9626,7 @@
       "approvals": "Standardmäßig fragen Merge, Deploy und Rollback nach Freigabe",
       "start": "Mission starten",
       "created": "Mission erstellt: {{name}} stellt den Plan zusammen.",
-      "who": "Wer programmiert",
-      "codexOld": "Codex auf {{computer}} ist zu alt für Missionen: Aktualisiere es dort."
+      "who": "Wer programmiert"
     },
     "commandApproval": {
       "label": "Selbstständigkeit",
@@ -10677,7 +10676,6 @@
       "needsCloud": {
         "online": "{{computer}} startet neu oder verbindet sich wieder. Das ändert sich von selbst, sobald er zurück ist.",
         "installing": "{{program}} wird auf {{computer}} installiert. Das ändert sich von selbst, wenn es fertig ist.",
-        "updating": "{{program}} wird auf {{computer}} aktualisiert. Das ändert sich von selbst, wenn es fertig ist.",
         "runnerOld": "Das agentes.chat-Programm auf {{computer}} ist veraltet und ein Update ist unterwegs. Das ändert sich von selbst, wenn es fertig ist.",
         "execOff": "{{computer}} kann {{program}} noch nicht ausführen. Wir kümmern uns, und das ändert sich von selbst.",
         "toolOff": "{{program}} ist auf {{computer}} noch nicht freigegeben. Das liegt an uns: Versuch es später noch einmal.",
@@ -12030,11 +12028,6 @@
       "not_installed": "{{program}} ist auf {{computer}} nicht installiert.",
       "cant_start": "{{program}} ist auf {{computer}}, startet aber nicht.",
       "not_reported": "{{computer}} prüft noch, welche Programme vorhanden sind. Das ändert sich von selbst, wenn es so weit ist.",
-      "outdated": "Die Version auf {{computer}} ist veraltet. Aktualisiere Codex, um es zu nutzen.",
-      "outdatedCodex": "Auf {{computer}} wurde Codex CLI {{detected}} gefunden. Aktualisiere auf Version {{minimum}} oder neuer.",
-      "codexUpdateGuide": "Codex CLI aktualisieren",
-      "codexRecheckHere": "Wähle nach dem Update in den Einstellungen unter Tools bei Codex „Erneut prüfen“.",
-      "codexRecheckThere": "Aktualisiere Codex CLI auf {{computer}}. Falls dort die Desktop-App läuft, wähle in den Einstellungen unter Tools bei Codex „Erneut prüfen“.",
       "system": "{{program}} läuft noch nicht auf dem System von {{computer}}.",
       "no_computerCloud": "Bereit, sobald {{computer}} es ist."
     },

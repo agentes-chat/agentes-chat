@@ -9239,8 +9239,7 @@
       "approvals": "기본적으로 머지, 배포, 롤백은 승인을 요청해요",
       "start": "미션 시작",
       "created": "미션을 만들었어요. {{name}}이(가) 계획을 세우고 있어요.",
-      "who": "프로그래밍 담당",
-      "codexOld": "{{computer}}의 Codex가 미션에 쓰기에는 너무 오래됐어요. 그 컴퓨터에서 업데이트하세요."
+      "who": "프로그래밍 담당"
     },
     "commandApproval": {
       "label": "자율성",
@@ -10239,7 +10238,6 @@
       "needsCloud": {
         "online": "{{computer}}이(가) 다시 시작하거나 다시 연결하는 중이에요. 돌아오면 저절로 바뀌어요.",
         "installing": "{{computer}}에 {{program}}을(를) 설치하는 중이에요. 끝나면 저절로 바뀌어요.",
-        "updating": "{{computer}}의 {{program}}을(를) 업데이트하는 중이에요. 끝나면 저절로 바뀌어요.",
         "runnerOld": "{{computer}}의 agentes.chat 프로그램이 오래되어 업데이트가 오고 있어요. 끝나면 저절로 바뀌어요.",
         "execOff": "{{computer}}이(가) 아직 {{program}}을(를) 실행할 수 없어요. 해결 중이고, 저절로 바뀌어요.",
         "toolOff": "{{computer}}에서 {{program}}이(가) 아직 허용되지 않았어요. 저희 쪽 문제예요. 나중에 다시 시도하세요.",
@@ -11530,11 +11528,6 @@
       "not_installed": "{{computer}}에 {{program}}이(가) 설치되어 있지 않아요.",
       "cant_start": "{{program}}이(가) {{computer}}에 있지만 실행되지 않습니다.",
       "not_reported": "{{computer}}에 어떤 프로그램이 있는지 아직 확인하는 중이에요. 끝나면 저절로 바뀌어요.",
-      "outdated": "{{computer}}의 버전이 오래됐어요. 사용하려면 Codex를 업데이트하세요.",
-      "outdatedCodex": "{{computer}}에서 Codex CLI {{detected}} 버전을 찾았습니다. {{minimum}} 이상으로 업데이트하세요.",
-      "codexUpdateGuide": "Codex CLI 업데이트 방법",
-      "codexRecheckHere": "업데이트한 뒤 환경설정 › 도구의 Codex 행에서 다시 확인을 선택하세요.",
-      "codexRecheckThere": "{{computer}}에서 Codex CLI를 업데이트하세요. 데스크톱 앱이 있다면 환경설정 › 도구의 Codex 행에서 다시 확인을 선택하세요.",
       "system": "{{program}}은(는) 아직 {{computer}}의 시스템에서 실행되지 않아요.",
       "no_computerCloud": "{{computer}}이(가) 준비되면 바로 쓸 수 있어요."
     },

@@ -9670,8 +9670,7 @@
       "approvals": "Standaard vragen merge, deploy en rollback om goedkeuring",
       "start": "Missie starten",
       "created": "Missie gemaakt: {{name}} stelt het plan op.",
-      "who": "Wie programmeert",
-      "codexOld": "Codex op {{computer}} is te oud voor missies: werk het daar bij."
+      "who": "Wie programmeert"
     },
     "commandApproval": {
       "label": "Autonomie",
@@ -10728,7 +10727,6 @@
       "needsCloud": {
         "online": "{{computer}} start opnieuw op of maakt opnieuw verbinding. Dit verandert vanzelf zodra hij terug is.",
         "installing": "{{program}} wordt geïnstalleerd op {{computer}}. Dit verandert vanzelf als het klaar is.",
-        "updating": "{{program}} wordt bijgewerkt op {{computer}}. Dit verandert vanzelf als het klaar is.",
         "runnerOld": "Het agentes.chat-programma op {{computer}} is verouderd en een update is onderweg. Dit verandert vanzelf als het klaar is.",
         "execOff": "{{computer}} kan {{program}} nog niet uitvoeren. We zijn ermee bezig, en dit verandert vanzelf.",
         "toolOff": "{{program}} is nog niet toegestaan op {{computer}}. Dat ligt aan ons: probeer het later opnieuw.",
@@ -12101,11 +12099,6 @@
       "not_installed": "{{program}} is niet geïnstalleerd op {{computer}}.",
       "cant_start": "{{program}} staat op {{computer}}, maar start niet.",
       "not_reported": "{{computer}} controleert nog welke programma's erop staan. Dit verandert vanzelf als het klaar is.",
-      "outdated": "De versie op {{computer}} is oud. Werk Codex bij om het te gebruiken.",
-      "outdatedCodex": "Op {{computer}} is Codex CLI {{detected}} gevonden. Werk bij naar versie {{minimum}} of hoger.",
-      "codexUpdateGuide": "Codex CLI bijwerken",
-      "codexRecheckHere": "Kies na het bijwerken Opnieuw controleren bij Codex in Voorkeuren › Tools.",
-      "codexRecheckThere": "Werk Codex CLI bij op {{computer}}. Als daar de desktopapp draait, kies je Opnieuw controleren bij Codex in Voorkeuren › Tools.",
       "system": "{{program}} werkt nog niet op het systeem van {{computer}}.",
       "no_computerCloud": "Klaar zodra {{computer}} klaar is."
     },

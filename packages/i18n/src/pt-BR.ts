@@ -10045,7 +10045,6 @@ export const ptBR = {
       start: "Começar missão",
       created: "Missão criada: {{name}} está montando o plano.",
       who: "Quem programa",
-      codexOld: "O Codex no {{computer}} é antigo demais para missões: atualize-o lá.",
     },
     commandApproval: {
       label: "Autonomia",
@@ -11065,7 +11064,6 @@ export const ptBR = {
       needsCloud: {
         online: "O {{computer}} está reiniciando ou se reconectando. Isto muda sozinho quando ele voltar.",
         installing: "O {{program}} está sendo instalado no {{computer}}. Isto muda sozinho quando terminar.",
-        updating: "O {{program}} está sendo atualizado no {{computer}}. Isto muda sozinho quando terminar.",
         runnerOld:
           "O programa do agentes.chat no {{computer}} está desatualizado e a atualização já está a caminho. Isto muda sozinho quando ela terminar.",
         execOff: "O {{computer}} ainda não consegue rodar o {{program}}. Já estamos cuidando, e isto muda sozinho.",
@@ -12433,14 +12431,6 @@ export const ptBR = {
       not_installed: "O {{program}} não está instalado no {{computer}}.",
       cant_start: "O {{program}} está no {{computer}}, mas não abre.",
       not_reported: "O {{computer}} ainda está vendo quais programas tem. Isto muda sozinho quando terminar.",
-      outdated: "A versão no {{computer}} é antiga. Atualize o Codex para usar.",
-      outdatedCodex:
-        "O Codex CLI {{detected}} foi encontrado no {{computer}}. Atualize para a versão {{minimum}} ou superior.",
-      codexUpdateGuide: "Como atualizar o Codex CLI",
-      codexRecheckHere:
-        "Depois de atualizar, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
-      codexRecheckThere:
-        "Atualize o Codex CLI no {{computer}}. Se ele usa o app para computador, clique em Verificar de novo na linha do Codex em Preferências › Ferramentas.",
       system: "O {{program}} ainda não roda no sistema do {{computer}}.",
       no_computerCloud: "Disponível assim que o {{computer}} ficar pronto.",
     },

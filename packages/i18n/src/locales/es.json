@@ -9942,8 +9942,7 @@
       "approvals": "Por defecto, merge, deploy y rollback piden aprobación",
       "start": "Empezar misión",
       "created": "Misión creada: {{name}} está armando el plan.",
-      "who": "Quién programa",
-      "codexOld": "Codex en {{computer}} es demasiado antiguo para misiones: actualízalo ahí."
+      "who": "Quién programa"
     },
     "commandApproval": {
       "label": "Autonomía",
@@ -11031,7 +11030,6 @@
       "needsCloud": {
         "online": "{{computer}} se está reiniciando o reconectando. Esto cambia solo cuando vuelva.",
         "installing": "{{program}} se está instalando en {{computer}}. Esto cambia solo cuando termine.",
-        "updating": "{{program}} se está actualizando en {{computer}}. Esto cambia solo cuando termine.",
         "runnerOld": "El programa de agentes.chat en {{computer}} está desactualizado y la actualización ya viene en camino. Esto cambia solo cuando termine.",
         "execOff": "{{computer}} todavía no puede ejecutar {{program}}. Ya estamos en eso, y esto cambia solo.",
         "toolOff": "{{program}} todavía no está habilitado en {{computer}}. Eso es cosa nuestra: inténtalo de nuevo más tarde.",
@@ -12423,11 +12421,6 @@
       "not_installed": "{{program}} no está instalado en {{computer}}.",
       "cant_start": "{{program}} está en {{computer}}, pero no abre.",
       "not_reported": "{{computer}} todavía está comprobando qué programas tiene. Esto cambia solo cuando termine.",
-      "outdated": "La versión de {{computer}} es antigua. Actualiza Codex para usarlo.",
-      "outdatedCodex": "Se encontró Codex CLI {{detected}} en {{computer}}. Actualízalo a la versión {{minimum}} o posterior.",
-      "codexUpdateGuide": "Cómo actualizar Codex CLI",
-      "codexRecheckHere": "Después de actualizar, pulsa Volver a comprobar en la fila de Codex en Preferencias › Herramientas.",
-      "codexRecheckThere": "Actualiza Codex CLI en {{computer}}. Si tiene la aplicación de escritorio, pulsa Volver a comprobar en la fila de Codex en Preferencias › Herramientas.",
       "system": "{{program}} todavía no funciona en el sistema de {{computer}}.",
       "no_computerCloud": "Listo en cuanto {{computer}} lo esté."
     },

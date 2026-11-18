@@ -19,7 +19,6 @@ import {
 import type { CodeSetup } from "../git/machine";
 import type { MachineCaller } from "../machine-hub";
 import { MachineDroppedError, MachineOfflineError, MachinePausedError, pausedMessage } from "../machines";
-import { CODEX_MIN_VERSION, versionOf } from "../missions";
 import { runnerUpdateWay } from "../runner-update";
 import {
   accountFields,
@@ -141,15 +140,6 @@ export interface CodexBrainDeps {
   keepAlive?: boolean;
 }
 
-/** `codex-cli 0.163.0` is new enough (`CODEX_MIN_VERSION`). */
-export function codexVersionOk(version: string | undefined): boolean {
-  const have = versionOf(version);
-  const want = versionOf(CODEX_MIN_VERSION) as number[];
-  if (!have) return false;
-  for (let i = 0; i < 3; i++) if ((have[i] ?? 0) !== (want[i] ?? 0)) return (have[i] ?? 0) > (want[i] ?? 0);
-  return true;
-}
-
 /** Events pushed by a callback, read as an async iterable. */
 function channel<T>() {
   const queue: T[] = [];
@@ -209,14 +199,6 @@ const CODEX_CLI: CliBrainSpec = {
         type: "error",
         code: "codex_missing",
         message: "Codex is not installed on the computer.",
-        retryable: true,
-      };
-    }
-    if (!codexVersionOk(codex.version)) {
-      return {
-        type: "error",
-        code: "codex_too_old",
-        message: `Codex on the computer is ${codex.version}. Agents need ${CODEX_MIN_VERSION} or newer (update it there).`,
         retryable: true,
       };
     }

@@ -6,13 +6,7 @@ import {
   MACHINE_PROTOCOL_VERSION,
   OPENCODE_ACP_PROTOCOL,
 } from "@agenteschat/adapters";
-import {
-  type BrainTurnRequest,
-  CodexBrain,
-  type ComputerBrainLink,
-  codexVersionOk,
-  OpencodeBrain,
-} from "../src/brains/codex";
+import { type BrainTurnRequest, CodexBrain, type ComputerBrainLink, OpencodeBrain } from "../src/brains/codex";
 import { computerPrompt } from "../src/brains/prompt";
 import type { BrainEvent, BrainTurn } from "../src/brains/types";
 import { MachineRequestError } from "../src/machine-hub";
@@ -80,15 +74,6 @@ async function collect(it: AsyncIterable<BrainEvent>) {
   for await (const e of it) out.push(e);
   return out;
 }
-
-test("version gate: 0.163.0 and newer only", () => {
-  expect(codexVersionOk("codex-cli 0.163.0")).toBe(true);
-  expect(codexVersionOk("codex-cli 0.164.2")).toBe(true);
-  expect(codexVersionOk("codex-cli 1.0.0")).toBe(true);
-  expect(codexVersionOk("codex-cli 0.162.9")).toBe(false);
-  expect(codexVersionOk("codex")).toBe(false);
-  expect(codexVersionOk(undefined)).toBe(false);
-});
 
 test("on Windows a runner before CODEX_WINDOWS_PROTOCOL refuses every Codex turn: too old there, nothing sent", async () => {
   const brain = (l: ComputerBrainLink) => new CodexBrain({ link: l, mcp: async () => ({ token: "t" }) });
@@ -207,17 +192,17 @@ test("a resumed turn sends only what came after the brain's last reply", () => {
   );
 });
 
-test("refuses before sending: offline, no Codex, Codex too old, no session", async () => {
+test("refuses before sending: offline, no Codex, no session; any Codex version goes", async () => {
   const run = async (l: ComputerBrainLink, t = turn()) =>
     collect(new CodexBrain({ link: l, mcp: async () => ({ token: "t" }) }).run(t, io()));
   const offline = link({ online: false });
   expect(await run(offline)).toMatchObject([{ type: "error", code: "machine_offline", retryable: true }]);
   expect(await run(link({ version: null }))).toMatchObject([{ type: "error", code: "codex_missing" }]);
-  const old = link({ version: "codex-cli 0.162.0" });
-  const refused = await run(old);
-  expect(refused).toMatchObject([{ type: "error", code: "codex_too_old" }]);
-  expect((refused[0] as { message: string }).message).toContain("0.163.0");
-  expect(old.sent).toHaveLength(0);
+  for (const version of ["codex-cli 0.100.0", "codex-cli 0.170.0", "WARNING: proceeding\ncodex-cli 0.170.0", ""]) {
+    const any = link({ version });
+    await run(any);
+    expect(any.sent).toHaveLength(1);
+  }
   expect(await run(link({}), turn({ session: undefined }))).toMatchObject([{ type: "error", code: "no_session" }]);
 });
 

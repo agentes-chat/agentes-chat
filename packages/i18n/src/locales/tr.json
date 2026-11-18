@@ -9575,8 +9575,7 @@
       "approvals": "Varsayılan olarak birleştirme, dağıtım ve geri alma onay ister",
       "start": "Misyonu başlat",
       "created": "Misyon oluşturuldu: {{name}} planı hazırlıyor.",
-      "who": "Kim programlıyor",
-      "codexOld": "{{computer}} üzerindeki Codex misyonlar için çok eski: orada güncelleyin."
+      "who": "Kim programlıyor"
     },
     "commandApproval": {
       "label": "Özerklik",
@@ -10620,7 +10619,6 @@
       "needsCloud": {
         "online": "{{computer}} yeniden başlıyor ya da yeniden bağlanıyor. Geri döndüğünde bu kendiliğinden değişir.",
         "installing": "{{program}}, {{computer}} üzerine kuruluyor. Bittiğinde bu kendiliğinden değişir.",
-        "updating": "{{program}}, {{computer}} üzerinde güncelleniyor. Bittiğinde bu kendiliğinden değişir.",
         "runnerOld": "{{computer}} üzerindeki agentes.chat programı eski ve güncelleme yolda. Bittiğinde bu kendiliğinden değişir.",
         "execOff": "{{computer}} henüz {{program}} çalıştıramıyor. İlgileniyoruz, bu kendiliğinden değişir.",
         "toolOff": "{{program}}, {{computer}} üzerinde henüz izinli değil. Bu bizim tarafımızda: daha sonra yeniden dene.",
@@ -11969,11 +11967,6 @@
       "not_installed": "{{program}}, {{computer}} üzerinde yüklü değil.",
       "cant_start": "{{program}}, {{computer}} üzerinde var ama açılmıyor.",
       "not_reported": "{{computer}} hangi programların olduğunu hâlâ kontrol ediyor. Bittiğinde bu kendiliğinden değişir.",
-      "outdated": "{{computer}} üzerindeki sürüm eski. Kullanmak için Codex'i güncelleyin.",
-      "outdatedCodex": "{{computer}} üzerinde Codex CLI {{detected}} bulundu. {{minimum}} veya daha yeni bir sürüme güncelleyin.",
-      "codexUpdateGuide": "Codex CLI nasıl güncellenir?",
-      "codexRecheckHere": "Güncellemeden sonra Tercihler › Araçlar bölümünde Codex satırındaki Tekrar kontrol et seçeneğini seçin.",
-      "codexRecheckThere": "Codex CLI aracını {{computer}} üzerinde güncelleyin. Bu bilgisayarda masaüstü uygulaması çalışıyorsa Tercihler › Araçlar bölümünde Codex satırındaki Tekrar kontrol et seçeneğini seçin.",
       "system": "{{program}} henüz {{computer}} sisteminde çalışmıyor.",
       "no_computerCloud": "{{computer}} hazır olur olmaz hazır."
     },

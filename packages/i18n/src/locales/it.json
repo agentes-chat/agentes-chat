@@ -10007,8 +10007,7 @@
       "approvals": "Di norma merge, deploy e rollback chiedono l'approvazione",
       "start": "Avvia missione",
       "created": "Missione creata: {{name}} sta preparando il piano.",
-      "who": "Chi programma",
-      "codexOld": "Codex su {{computer}} è troppo vecchio per le missioni: aggiornalo lì."
+      "who": "Chi programma"
     },
     "commandApproval": {
       "label": "Autonomia",
@@ -11108,7 +11107,6 @@
       "needsCloud": {
         "online": "{{computer}} si sta riavviando o riconnettendo. Questo cambia da solo appena torna.",
         "installing": "{{program}} è in installazione su {{computer}}. Questo cambia da solo quando ha finito.",
-        "updating": "{{program}} è in aggiornamento su {{computer}}. Questo cambia da solo quando ha finito.",
         "runnerOld": "Il programma agentes.chat su {{computer}} non è aggiornato e l'aggiornamento è in arrivo. Questo cambia da solo quando ha finito.",
         "execOff": "{{computer}} non può ancora eseguire {{program}}. Ci stiamo lavorando, e questo cambia da solo.",
         "toolOff": "{{program}} non è ancora consentito su {{computer}}. Dipende da noi: riprova più tardi.",
@@ -12518,11 +12516,6 @@
       "not_installed": "{{program}} non è installato su {{computer}}.",
       "cant_start": "{{program}} è su {{computer}}, ma non si avvia.",
       "not_reported": "{{computer}} sta ancora controllando quali programmi ha. Questo cambia da solo quando ha finito.",
-      "outdated": "La versione su {{computer}} è vecchia. Aggiorna Codex per usarlo.",
-      "outdatedCodex": "Su {{computer}} è stato rilevato Codex CLI {{detected}}. Aggiornalo alla versione {{minimum}} o successiva.",
-      "codexUpdateGuide": "Come aggiornare Codex CLI",
-      "codexRecheckHere": "Dopo l’aggiornamento, seleziona Controlla di nuovo nella riga di Codex in Preferenze › Strumenti.",
-      "codexRecheckThere": "Aggiorna Codex CLI su {{computer}}. Se è presente l’app desktop, seleziona Controlla di nuovo nella riga di Codex in Preferenze › Strumenti.",
       "system": "{{program}} non funziona ancora sul sistema di {{computer}}.",
       "no_computerCloud": "Pronto appena lo è {{computer}}."
     },
