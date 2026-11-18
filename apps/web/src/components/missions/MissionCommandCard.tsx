@@ -16,8 +16,8 @@ import "./missions.css";
 
 /**
  * The command card (ADR 0029): the executor asks to run a command off its
- * allow list ("Claude Code quer rodar: `swift build`"). The owner or someone
- * who decides answers Aprovar / Recusar / Aprovar sempre nesta missão, what
+ * allow list. The owner or someone who decides answers Aprovar / Recusar /
+ * Aprovar sempre nesta missão, what
  * each "sempre" covers in its button's tip; the waiting executor gets the
  * answer within seconds. Merges, pushes to the default branch and deploys
  * never come here (they need `request_approval`).
@@ -42,7 +42,7 @@ export function MissionCommandCard({ command: meta }: { command: MissionCommandM
       </div>
     ) : null;
   }
-  const who = executorName(m.executor === "codex" ? "codex" : "claude");
+  const who = executorName(m.executor, dir.agentById.get(m.agentId)?.name ?? t("missions.someone"));
   const answer = (decision: MissionCommandDecision) =>
     decide.mutate(decision, { onError: (e) => toast.show(errorText(t, e), "error") });
   const by = c.decidedBy ? (dir.memberById.get(c.decidedBy)?.name ?? t("missions.someone")) : "";
