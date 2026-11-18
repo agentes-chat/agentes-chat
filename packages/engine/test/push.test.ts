@@ -1074,5 +1074,16 @@ describe("VAPID keys", () => {
     expect(subject("http://localhost:3000", "agentes.chat <ping@localhost>")).toBe(VAPID_FALLBACK_SUBJECT);
     expect(subject("http://localhost:3000", "Ops <ops@acme.com>")).toBe("mailto:ops@acme.com");
     expect(subject("http://localhost:3000", "not an address")).toBe(VAPID_FALLBACK_SUBJECT);
+    // The first `<…>` that holds an address, as before; one with a space, an empty side or no `>` is passed over.
+    expect(subject("http://localhost:3000", "<a b@c.com> <@acme.com> <ops@> <ops@acme.com> <x@y.com>")).toBe(
+      "mailto:ops@acme.com",
+    );
+    // Long runs are read once: `@`s with nothing that closes them, slashes that don't end the address.
+    const started = performance.now();
+    expect(subject("http://localhost:3000", `<${"!@".repeat(100_000)}`)).toBe(VAPID_FALLBACK_SUBJECT);
+    const slashes = `https://chat.acme.com${"/".repeat(200_000)}a`;
+    expect(subject(slashes)).toBe(slashes);
+    expect(subject(`${slashes}///`)).toBe(slashes);
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 });

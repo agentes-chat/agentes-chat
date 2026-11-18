@@ -12,6 +12,7 @@ import {
   fileReach,
   getArtifact,
   listArtifacts,
+  liveFileHint,
   moveToSharedDrive,
   shareArtifact,
   TEXT_ARTIFACT_KINDS,
@@ -28,7 +29,11 @@ const MAX_READ_CHARS = 40_000;
 
 /** Content fields shared by create and update (only the ones of the kind are used). */
 const contentProperties = {
-  markdown: { type: "string", description: "document: the text, in Markdown" },
+  markdown: {
+    type: "string",
+    description:
+      "document: the text, in Markdown (headings, lists, **bold**, tables, quotes, code). It becomes a live document people and you edit together",
+  },
   columns: { type: "array", items: { type: "string" }, description: "table: column names" },
   rows: {
     type: "array",
@@ -89,7 +94,8 @@ function asText(content: ArtifactContent, opened?: ModelFile): string {
       return [`${head}${opened?.note ? ` ${opened.note}` : ""}`, text].filter((t) => t !== undefined).join("\n");
     }
     case "document":
-      return content.markdown;
+      // A live document (ADR 0200): its Markdown, and the tools that read it by block and change it.
+      return `${liveFileHint(content.kind)}\n\n${content.markdown}`;
     case "table":
       return tableToCsv(content.columns, content.rows);
     case "diff":
@@ -104,6 +110,11 @@ function asText(content: ArtifactContent, opened?: ModelFile): string {
       return [content.question, ...content.options.map((o) => `- ${o}`)].join("\n");
     case "choices":
       return choicesText(content.questions);
+    // Live files (ADR 0196): what `getArtifact` gives is their card's preview; their own tools read them whole.
+    case "spreadsheet":
+    case "slides":
+    case "canvas":
+      return liveFileHint(content.kind);
   }
 }
 
@@ -150,13 +161,13 @@ export function createArtifactToolSource(deps: ArtifactDeps): ToolSource {
     {
       name: "create_artifact",
       description:
-        "Save a file people can open in the Drive: a Markdown document (reports, plans), a table, a diff, a Mermaid diagram (org charts, flows) or a self-contained HTML page. Use it for anything longer than a chat message or meant to be kept. Its result says who sees it: tell people that, never more.",
+        "Save a file people can open in the Drive: a document written in Markdown (reports, plans: a live document people and you then edit together, changed with edit_document), a table, a diff, a Mermaid diagram (org charts, flows) or a self-contained HTML page. Use it for anything longer than a chat message or meant to be kept. Its result says who sees it: tell people that, never more.",
       scope: "drive:write",
       inputSchema: {
         type: "object",
         properties: {
           title: { type: "string", minLength: 1, maxLength: 200 },
-          kind: { enum: TEXT_ARTIFACT_KINDS },
+          kind: { enum: ["document", ...TEXT_ARTIFACT_KINDS] },
           shared_drive: SHARED_DRIVE_INPUT,
           ...contentProperties,
         },
@@ -182,7 +193,7 @@ export function createArtifactToolSource(deps: ArtifactDeps): ToolSource {
     {
       name: "update_artifact",
       description:
-        "Save a new version of an artifact (old versions are kept). Send the whole new content and a short note on what changed. Uploaded files (kind file) get new versions with upload_file and artifact_id instead. With shared_drive and no content, it only moves the file to the shared Drive.",
+        "Save a new version of an artifact (old versions are kept). Send the whole new content and a short note on what changed. Documents are live files: change them with edit_document instead, and uploaded files (kind file) get new versions with upload_file and artifact_id. With shared_drive and no content, it only moves the file to the shared Drive.",
       scope: "drive:write",
       inputSchema: {
         type: "object",

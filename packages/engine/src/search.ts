@@ -16,6 +16,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  ne,
   or,
   rowsOf,
   schema,
@@ -380,18 +381,22 @@ async function issueSearchScopes(db: Database, orgId: string, userId: string) {
 
 /**
  * The files a list shares with this person (ADR 0157), by id: their documents carry their conversation, which they may
- * not read, so they're found by their own id (`visibleFileScopes`).
+ * not read, so they're found by their own id (`visibleFileScopes`). So are the files of the Drive itself not shared
+ * with everyone that they read, whose documents carry their own id (amendment 2026-11-17).
  */
 async function fileSearchScopes(db: Database, orgId: string, userId: string) {
+  const user = sql`${userId}::text`;
   const rows = await db
     .select({ id: schema.artifacts.id })
     .from(schema.artifacts)
     .where(
       and(
         eq(schema.artifacts.orgId, orgId),
-        eq(schema.artifacts.share, "people"),
         isNull(schema.artifacts.deletedAt),
-        fileSharedSql(sql`${userId}::text`),
+        or(
+          and(eq(schema.artifacts.share, "people"), fileSharedSql(user)),
+          and(isNull(schema.artifacts.channelId), ne(schema.artifacts.share, "everyone"), fileSeenSql(user)),
+        ),
       ),
     );
   return rows.map((r) => r.id);

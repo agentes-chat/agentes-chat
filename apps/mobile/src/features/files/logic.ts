@@ -1,14 +1,30 @@
 import type { ArtifactDetail, ArtifactKind } from "@agenteschat/client";
-import { fileIcon, previewType } from "@agenteschat/client/lib/files";
+import { fileIcon, previewKind, previewType } from "@agenteschat/client/lib/files";
 import { filePath } from "@agenteschat/client/lib/message-links";
+import { type LiveScreen, liveRoute, opensLive, type PhoneLiveKind } from "../live-files/routes";
 
 /**
  * Files on a message: which ones show as pictures, the card's tile and
  * line ("MD", "Documento · 4 KB"), how a viewer shows each, and the name a shared copy gets.
  */
 
-/** How the app shows a file: inline picture or video, the document screen (Markdown, text, PDF), or only its card. */
-export type FileView = "image" | "video" | "markdown" | "text" | "pdf" | "html" | "other";
+/**
+ * How the app shows a file: inline picture or video, the document screen (Markdown, text, PDF), a live file's own
+ * screen (ADR 0196), an Office file as the server read it (ADR 0198: a workbook's grid, a deck's slides, a Word
+ * document's page; an old table in the same grid), or only its card.
+ */
+export type FileView =
+  | "image"
+  | "video"
+  | "markdown"
+  | "text"
+  | "pdf"
+  | "html"
+  | "live"
+  | "sheet"
+  | "deck"
+  | "word"
+  | "other";
 
 /** The word under the name ("Imagem", "PDF", "Documento"…): `mobile.files.type.<key>`. */
 export type FileTypeKey =
@@ -23,6 +39,9 @@ export type FileTypeKey =
   | "diagram"
   | "page"
   | "text"
+  | "spreadsheet"
+  | "slides"
+  | "canvas"
   | "file";
 
 export interface FileInfo {
@@ -59,6 +78,10 @@ const KIND_EXT: Record<Exclude<ArtifactKind, "file">, string> = {
   block: "html",
   poll: "json",
   choices: "json",
+  // A live file downloads as the Office file other apps open (ADR 0198); a canvas as its shapes.
+  spreadsheet: "xlsx",
+  slides: "pptx",
+  canvas: "json",
 };
 
 const KIND_TYPE: Record<Exclude<ArtifactKind, "file">, FileTypeKey> = {
@@ -70,6 +93,9 @@ const KIND_TYPE: Record<Exclude<ArtifactKind, "file">, FileTypeKey> = {
   block: "page",
   poll: "file",
   choices: "file",
+  spreadsheet: "spreadsheet",
+  slides: "slides",
+  canvas: "canvas",
 };
 
 /** "relatorio.final.PDF" → "pdf" ("" without one). */
@@ -111,10 +137,13 @@ export function fileInfo(a: Pick<ArtifactDetail, "kind" | "title" | "content">):
     const mime = previewType(c.contentType);
     // The type says what it is; a file stored as plain bytes goes by its name.
     const untyped = !mime || mime === "application/octet-stream";
+    // Spreadsheets, decks and Word documents the server reads for the app to draw (ADR 0198), CSV included.
+    const office = OFFICE_VIEW[previewKind(mime, name) ?? ""];
     let view: FileView = "other";
     if (IMAGE_TYPES.has(mime) || (untyped && IMAGE_EXT.has(ext))) view = "image";
     else if (VIDEO_TYPES.has(mime) || (untyped && VIDEO_EXT.has(ext))) view = "video";
     else if (mime === "application/pdf" || ext === "pdf") view = "pdf";
+    else if (office) view = office;
     // A page is shown as a page (its source isn't the point), before the text types it is one of.
     else if (mime === "text/html" || ext === "html" || ext === "htm") view = "html";
     else if (MARKDOWN_EXT.has(ext) || mime === "text/markdown") view = "markdown";
@@ -123,10 +152,24 @@ export function fileInfo(a: Pick<ArtifactDetail, "kind" | "title" | "content">):
   }
   const ext = KIND_EXT[c.kind];
   const name = withExtension(a.title, ext);
-  const view: FileView = c.kind === "document" ? "markdown" : c.kind === "html" ? "html" : "other";
+  // A document is a live file (ADR 0200): it opens on its own screen as every live kind.
+  const view: FileView = opensLive(c.kind)
+    ? "live"
+    : c.kind === "html"
+      ? "html"
+      : c.kind === "table"
+        ? "sheet"
+        : "other";
   const size = c.kind === "document" ? utf8Bytes(c.markdown) : null;
   return { name, view, type: KIND_TYPE[c.kind], ext: extLabel(ext), size, mime: "" };
 }
+
+/** The Office previews, by the kind `previewKind` names them. */
+const OFFICE_VIEW: Record<string, FileView> = {
+  "office-sheet": "sheet",
+  "office-slides": "deck",
+  "office-doc": "word",
+};
 
 function fileType(name: string, mime: string, view: FileView): FileTypeKey {
   if (view === "image") return "image";
@@ -139,6 +182,7 @@ function fileType(name: string, mime: string, view: FileView): FileTypeKey {
   if (icon === "code") return "code";
   if (icon === "archive") return "archive";
   if (icon === "page") return "page";
+  if (icon === "slides") return "slides";
   if (icon === "document") return view === "text" ? "text" : "document";
   return view === "text" ? "text" : "file";
 }
@@ -219,12 +263,14 @@ export function resolveDownloadUrl(apiUrl: string, url: string): { uri: string; 
 
 /**
  * Where a shared copy comes from: the text the app already has (documents, diagrams, pages, small
- * text files), or a download (uploaded files, and tables and code changes as CSV / .patch exports).
+ * text files), or a download (uploaded files, tables and code changes as CSV / .patch exports, live files as the
+ * Office file other apps open).
  */
 export type ShareSource =
   | { from: "text"; text: string; name: string; mime: string }
   | { from: "download"; name: string; mime: string }
-  | { from: "export"; format: "csv" | "patch"; name: string; mime: string };
+  /** Made by the server: a table's CSV, a change's .patch, a live file as it is now (no format: a canvas's JSON). */
+  | { from: "export"; format?: "csv" | "patch" | "xlsx" | "pptx"; name: string; mime: string };
 
 export function shareSource(a: Pick<ArtifactDetail, "kind" | "title" | "content">): ShareSource {
   const info = fileInfo(a);
@@ -259,6 +305,23 @@ export function shareSource(a: Pick<ArtifactDetail, "kind" | "title" | "content"
       return { from: "export", format: "csv", name, mime: "text/csv" };
     case "diff":
       return { from: "export", format: "patch", name, mime: "text/x-patch" };
+    // A live file as the Office file other apps open, made from it as it is now (ADR 0198).
+    case "spreadsheet":
+      return {
+        from: "export",
+        format: "xlsx",
+        name,
+        mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      };
+    case "slides":
+      return {
+        from: "export",
+        format: "pptx",
+        name,
+        mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      };
+    case "canvas":
+      return { from: "export", name, mime: "application/json" };
     case "file":
       return { from: "download", name, mime: info.mime };
   }
@@ -303,15 +366,24 @@ export function isMediaFile(ref: FileRef): boolean {
 
 export type FileRoute =
   | { pathname: "/images"; params: { files: string; at: string; from?: string } }
-  | { pathname: "/file/[id]"; params: { id: string; v?: string } };
+  | { pathname: "/file/[id]"; params: { id: string; v?: string } }
+  | { pathname: LiveScreen; params: { id: string } };
+
+/** A live file's kind, from its details or from the kind the place names (ADR 0196). */
+export function liveKindOfRef(ref: FileRef): PhoneLiveKind | null {
+  const kind = ref.detail?.kind ?? ref.kind;
+  return opensLive(kind) ? kind : null;
+}
 
 /**
  * Where a file opens, the one way in from every place that shows one: a picture or a video straight in the picture
  * viewer, among the pictures and videos beside it (`siblings`, in the order they show, so the viewer pages through
- * them) at the one tapped; anything else in the file screen, at an older version when that's the one shown. `from`:
- * the deck it opened from, told where the person stops.
+ * them) at the one tapped; a live file on its own screen, as it is now (ADR 0196 §9); anything else in the file screen,
+ * at an older version when that's the one shown. `from`: the deck it opened from, told where the person stops.
  */
 export function fileRoute(ref: FileRef, siblings?: readonly FileRef[], from?: string): FileRoute {
+  const live = liveKindOfRef(ref);
+  if (live) return liveRoute(live, ref.id);
   if (!isMediaFile(ref)) {
     // Its details say whether the version shown is an older one; without them, the version the place names.
     const older = ref.detail && ref.detail.shownVersion < ref.detail.version ? ref.detail.shownVersion : undefined;

@@ -235,6 +235,7 @@ import {
   kickKeyLine,
   rateLimited,
 } from "./key-line";
+import { carriesLiveFile } from "./live/tools";
 import { answerNoTurn, deliverLive, listenLiveSteering, renderSteered } from "./live-steer";
 import {
   accountEverWorked,
@@ -369,6 +370,8 @@ import {
   EVERY_TOOL,
   isCore,
   isStableTool,
+  LIVE_FILE_TOOLS,
+  LIVE_FILES_GROUP,
   listsEveryTool,
   ON_DEMAND_FIND,
   ON_DEMAND_USE,
@@ -1921,10 +1924,14 @@ async function executeRunInner(
   const judging: Promise<void> | null =
     needsContext && deps.toolsOnDemand && judge && granted.length > 0 && !every
       ? (async () => {
-          const [recent, keep] = await Promise.all([
+          const [recent, kept, live] = await Promise.all([
             recentMessages(),
             keptToolGroups(db, run, granted).catch(() => [] as string[]),
+            // Asked from inside a live file, one attached, or in a file's own conversation: its own tools come with
+            // it (ADR 0196 §6, ADR 0199).
+            carriesLiveFile(db, run.orgId, trigger?.meta, run.channelId).catch(() => false),
           ]);
+          const keep = live ? [...kept, LIVE_FILES_GROUP] : kept;
           const choice = await chooseToolGroups(judge, {
             orgId: run.orgId,
             agentId: agent.id,
@@ -2362,6 +2369,11 @@ async function executeRunInner(
         followUp: tools.some((t) => t.name === FOLLOW_UP_TOOL),
         work: workApplies && tools.some((t) => t.name === WORK_IN_BACKGROUND_TOOL),
         blocks: tools.some((t) => t.name === SHOW_BLOCK_TOOL),
+        // Granted is enough: on demand their group is one `use_tool` away (ADR 0196 §6). `image_search` is every
+        // agent's (no scope), so it says nothing about the Drive's.
+        ...(granted.some((t) => LIVE_FILE_TOOLS.has(t.name) && t.name !== "image_search" && !t.connectionId)
+          ? { liveFiles: { images: granted.some((t) => t.name === "generate_image" && !t.connectionId) } }
+          : {}),
         ...(deps.blockSpec ? { blockSpec: deps.blockSpec } : {}),
         choices: choicesApply && tools.some((t) => t.name === ASK_CHOICES_TOOL),
         // "What you can do" names the loaded groups: it waits for the judge.

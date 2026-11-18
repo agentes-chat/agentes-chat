@@ -1203,6 +1203,9 @@
       "diagram": "Diyagram",
       "page": "Sayfa",
       "text": "Metin",
+      "spreadsheet": "E-tablo",
+      "slides": "Sunum",
+      "canvas": "Tuval",
       "file": "Dosya"
     },
     "more": "Diğer seçenekler",
@@ -1327,6 +1330,9 @@
     "type": {
       "all": "Tümü",
       "documents": "Belgeler",
+      "spreadsheets": "E-tablolar",
+      "presentations": "Sunumlar",
+      "canvases": "Tuvaller",
       "images": "Görseller",
       "tables": "Tablolar",
       "diffs": "Farklar"
@@ -1340,6 +1346,9 @@
       "table": "Tablo",
       "diff": "Fark",
       "image": "Görsel",
+      "spreadsheet": "E-tablo",
+      "slides": "Sunum",
+      "canvas": "Tuval",
       "file": "Dosya"
     },
     "by": "{{name}} · {{when}}",
@@ -2858,6 +2867,223 @@
     "audit": {
       "title": "İncelenecek bir şey yok",
       "text": "Bir ajan sohbet dışında bir şey yaptığında burada görünür."
+    }
+  },
+  "live": {
+    "status": {
+      "opening": "Açılıyor…",
+      "saved": "Kaydedildi",
+      "saving": "Kaydediliyor…",
+      "offline": "Bağlantı yok",
+      "offlineKept": "Bağlantı yok · değişiklikler bu telefonda saklanıyor",
+      "readOnly": "Salt okunur"
+    },
+    "closed": {
+      "missing": "Bu dosya yok ya da sizinle paylaşılmadı",
+      "signedOut": "Bu dosyayı açmak için yeniden giriş yapın",
+      "broken": "Bu dosya uygulamada açılamıyor",
+      "toDrive": "Drive'a dön"
+    },
+    "menu": {
+      "undo": "Geri al",
+      "redo": "Yinele"
+    },
+    "here": {
+      "title": "Burada kimler var",
+      "faces_one": "Burada {{count}} kişi daha var. Kim olduğunu görün",
+      "faces_other": "Burada {{count}} kişi daha var. Kimler olduğunu görün",
+      "group": {
+        "editing": "Düzenleyenler",
+        "viewing": "Görüntüleyenler"
+      },
+      "editing": "düzenliyor",
+      "viewing": "görüntülüyor",
+      "editingAt": "düzenliyor: {{where}}",
+      "viewingAt": "{{where}} üzerinde",
+      "editingSlide": "{{n}}. slaytı düzenliyor",
+      "onSlide": "{{n}}. slaytta",
+      "editingShapes_one": "{{count}} öğeyi düzenliyor",
+      "editingShapes_other": "{{count}} öğeyi düzenliyor",
+      "followingName": "Takip ediliyor: {{name}}",
+      "stop": "Durdur",
+      "alone": "Şu anda burada yalnızca siz varsınız",
+      "aloneHint": "Bu dosyayı açan herkes, ne yaptığıyla birlikte burada görünür."
+    },
+    "card": {
+      "sheets_one": "{{count}} sayfa",
+      "sheets_other": "{{count}} sayfa",
+      "slides_one": "{{count}} slayt",
+      "slides_other": "{{count}} slayt",
+      "shapes_one": "{{count}} öğe",
+      "shapes_other": "{{count}} öğe"
+    },
+    "sheet": {
+      "edit": "Düzenle",
+      "editHint": "Bu hücreye yazın",
+      "editing": "Düzenleniyor: {{cell}}",
+      "placeholder": "Bir değer veya = yazın",
+      "empty": "Boş",
+      "cancel": "Olduğu gibi bırak",
+      "done": "Bitti",
+      "typeKey": "{{key}} yaz",
+      "stats": "Toplam {{sum}} · Ortalama {{average}} · Sayı {{count}}",
+      "countOnly": "Sayı {{count}}",
+      "cantDo": "Bu burada yapılamaz",
+      "copied": "Kopyalandı",
+      "newSheet": "Yeni sayfa",
+      "sheetWord": "Sayfa",
+      "duplicateSheet": "Sayfayı çoğalt",
+      "copyOf": "{{name}} (kopya)",
+      "deleteSheet": "Sayfayı sil",
+      "deleteSheetTitle": "{{name}} silinsin mi?",
+      "deleteSheetText": "Bu sayfadaki her şey dosyadaki herkes için silinir. Geri al ile geri gelir.",
+      "menu": {
+        "copy": "Kopyala",
+        "paste": "Yapıştır",
+        "clear": "Temizle",
+        "rowsAbove_one": "Üste bir satır ekle",
+        "rowsAbove_other": "Üste {{count}} satır ekle",
+        "rowsBelow_one": "Alta bir satır ekle",
+        "rowsBelow_other": "Alta {{count}} satır ekle",
+        "colsLeft_one": "Sola bir sütun ekle",
+        "colsLeft_other": "Sola {{count}} sütun ekle",
+        "colsRight_one": "Sağa bir sütun ekle",
+        "colsRight_other": "Sağa {{count}} sütun ekle",
+        "sortUp": "A'dan Z'ye sırala",
+        "sortDown": "Z'den A'ya sırala",
+        "deleteRows_one": "Satırı sil",
+        "deleteRows_other": "{{count}} satırı sil",
+        "deleteCols_one": "Sütunu sil",
+        "deleteCols_other": "{{count}} sütunu sil"
+      },
+      "problem": {
+        "empty": "= işaretinden sonra bir şey yazın",
+        "unexpected": "{{text}} yakınında bir sorun var",
+        "paren": "Bir parantez kapatılmamış",
+        "quote": "Bir tırnak kapatılmamış",
+        "sheetQuote": "Bir sayfa adının tırnağı kapatılmamış",
+        "operand": "Bir işaretin yanında değer eksik",
+        "array": "Bu değer listesi eksik",
+        "range": "Bu aralık geçerli değil",
+        "sheet": "{{text}} adında bir sayfa yok",
+        "args": "{{fn}} için değer sayısı yanlış",
+        "tooLong": "Bu, bir hücre için çok uzun",
+        "tooDeep": "Bu formülde çok fazla iç içe düzey var",
+        "tooFar": "Bu başvuru e-tablonun sınırını aşıyor",
+        "limit": "E-tablo boyut sınırına ulaştı",
+        "merged": "Birleştirilmiş hücreler engel oluyor",
+        "failed": "Olmadı. Tekrar deneyin."
+      }
+    },
+    "slides": {
+      "placeholder": {
+        "title": "Başlık eklemek için dokunun",
+        "text": "Metin eklemek için dokunun",
+        "image": "Fotoğraf eklemek için dokunun"
+      },
+      "part": {
+        "title": "Başlık",
+        "subtitle": "Alt başlık",
+        "body": "Metin",
+        "caption": "Açıklama",
+        "number": "Büyük sayı",
+        "quote": "Alıntı",
+        "shape": "Şekildeki metin",
+        "text": "Metin kutusu",
+        "note": "Not"
+      },
+      "openHint": "Slaytı açar",
+      "editHint": "Metnini düzenler",
+      "place": "Slayt {{n}} / {{count}}",
+      "placeHidden": "Slayt {{n}} / {{count}} · sunarken gizli",
+      "deleteTitle": "{{n}}. slayt silinsin mi?",
+      "deleteText": "Dosyadaki herkes için silinir. Geri al ile geri gelir.",
+      "notesPlaceholder": "Bu slaytta ne söyleyeceğinizi yazın",
+      "pickPhoto": "Fotoğraf seçin",
+      "tools": {
+        "text": "Metin",
+        "photo": "Fotoğraf",
+        "sending": "Gönderiliyor…"
+      }
+    },
+    "text": {
+      "title": "Metin",
+      "noteTitle": "Not",
+      "done": "Bitti",
+      "placeholder": "Metni yazın",
+      "titlePlaceholder": "Başlığı yazın",
+      "hint": "Her satır bir paragraftır. Yazdıklarınız siz yazarken dosyaya gider."
+    },
+    "show": {
+      "nothing": "Tüm slaytlar gizli, bu yüzden gösterilecek bir şey yok.",
+      "upright": "Telefonu dik tutun",
+      "sideways": "Telefonu yan çevirin"
+    },
+    "canvas": {
+      "tools": {
+        "label": "Araçlar",
+        "select": "Seç",
+        "pen": "Kalem",
+        "shapes": "Şekiller",
+        "arrow": "Ok",
+        "note": "Not",
+        "text": "Metin",
+        "photo": "Fotoğraf",
+        "comment": "Yorum yap"
+      },
+      "shapes": {
+        "rect": "Dikdörtgen",
+        "ellipse": "Elips",
+        "diamond": "Eşkenar dörtgen",
+        "triangle": "Üçgen",
+        "star": "Yıldız",
+        "line": "Çizgi"
+      },
+      "penHint": "Parmağınızla çizin. İki parmakla tuvali kaydırın.",
+      "arrowHint": "Bir yerden başka bir yere sürükleyin",
+      "commentHint": "Yorum yapmak istediğiniz yere dokunun",
+      "pin": "Yorum {{n}}, {{name}}",
+      "addToSelection": "Bunu da seç",
+      "emptyText": "Bir not veya fotoğraf ekleyin ya da sohbette bir ajandan isteyin."
+    },
+    "talk": {
+      "start": "Sohbet et: {{what}}",
+      "openHint": "Sohbeti açar",
+      "placeholder": {
+        "spreadsheet": "E-tablo hakkında yazın…",
+        "slides": "Sunum hakkında yazın…",
+        "canvas": "Tuval hakkında yazın…",
+        "document": "Belge hakkında yazın…"
+      },
+      "aboutPoint": "Tuvaldeki bir noktaya yorum",
+      "comment": "Yorum",
+      "imported": "{{file}} dosyasından içe aktaran: <0>{{name}}</0>",
+      "variationsText": "bu görselin farklı versiyonlarını oluştur"
+    },
+    "doc": {
+      "styles": {
+        "paragraph": "Metin",
+        "h1": "Başlık 1",
+        "h2": "Başlık 2",
+        "h3": "Başlık 3",
+        "quote": "Alıntı",
+        "code": "Kod"
+      },
+      "style": "Metin stili",
+      "bold": "Kalın",
+      "italic": "İtalik",
+      "bullets": "Madde işaretli liste",
+      "numbers": "Numaralı liste",
+      "quote": "Alıntı",
+      "link": "Bağlantı ekle",
+      "linkChoose": "Önce bağlantı için kelimeleri seçin",
+      "linkBad": "Bu adres bağlantı olamaz",
+      "linkPlaceholder": "Bağlantı adresi",
+      "linkApply": "Bağlantıyı ekle",
+      "placeholder": "Buraya yazın",
+      "add": "Paragraf ekle",
+      "editHint": "Bu kısmı düzenler",
+      "notHere": "Bu kısım bilgisayarda düzenlenir"
     }
   },
   "surface": {

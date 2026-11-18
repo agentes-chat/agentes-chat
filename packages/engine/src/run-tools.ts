@@ -237,6 +237,9 @@ export function absorbToolData(t: ToolSideEffects, data: Record<string, unknown>
   if (!data) return null;
   const artifact = data.artifact as ArtifactLink | undefined;
   if (artifact) t.artifacts = withArtifacts(t.artifacts, [artifact]);
+  // Several files from one call (pictures made in a conversation, ADR 0197): each a card on the reply.
+  const several = Array.isArray(data.artifacts) ? (data.artifacts as ArtifactLink[]) : [];
+  if (several.length > 0) t.artifacts = withArtifacts(t.artifacts, several);
   const link = data.missionLink as { missionId: string; threadId: string } | undefined;
   if (link?.missionId && link.threadId) t.missionLink = link;
   if (data.reacted) t.reacted = true;

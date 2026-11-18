@@ -16,6 +16,17 @@ export function shQuote(value: string): string {
 }
 
 /**
+ * `address` without the slashes it ends with, read from the end. Not by `/\/+$/`: the address comes from outside (the
+ * server's settings, a request), and that pattern reads each run of slashes that doesn't end the text again from each
+ * of its slashes, quadratic in the run's length.
+ */
+export function withoutTrailingSlashes(address: string): string {
+  let end = address.length;
+  while (end > 0 && address.charAt(end - 1) === "/") end--;
+  return address.slice(0, end);
+}
+
+/**
  * The Bun a system-mode runner runs on, and any runner whose computer has no
  * Bun with `Bun.Terminal` (1.3.5 or newer), which screens and terminals
  * need: the one the repo builds and tests with (`packageManager` in
@@ -206,7 +217,7 @@ export const CODEX_EXE = "/usr/local/bin/codex";
  * whole computer as `--system` does; anywhere else, for the user who runs it.
  */
 export function installScript(publicUrl: string, options: { link?: string } = {}): string {
-  const server = shQuote(publicUrl.trim().replace(/\/+$/, ""));
+  const server = shQuote(withoutTrailingSlashes(publicUrl.trim()));
   const uids = DEFAULT_AGENT_UID_RANGE.join("-");
   const shaCases = Object.entries(RUNNER_BUN_SHA256)
     .map(([target, sha]) => `    ${target}) BUN_SHA256=${shQuote(sha)} ;;`)
@@ -1149,7 +1160,7 @@ export const RUNNER_BUN_WINDOWS_SHA256 = {
  * ASCII only (`psText`).
  */
 export function installScriptPowerShell(publicUrl: string, options: { link?: string } = {}): string {
-  const server = psQuote(publicUrl.trim().replace(/\/+$/, ""));
+  const server = psQuote(withoutTrailingSlashes(publicUrl.trim()));
   const sha = RUNNER_BUN_WINDOWS_SHA256;
   return `# agentes.chat runner installer for Windows: connects this computer to your organization.
 # Usage, with a link made under Settings > Devices: irm <server>/i/<code>/ps | iex

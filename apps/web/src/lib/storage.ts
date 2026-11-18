@@ -79,6 +79,10 @@ export const STORAGE_KEYS = {
   membersColumn: "agentes.members.column",
   /** Prefix (`.<user id>.<org id>`): "1" or "0", the person opened or closed the sidebar of a DM with an agent there. */
   dmSidebar: "agentes.dm.sidebar",
+  /** Prefix (`.<user id>.<org id>`): "1" or "0", the person opened or closed a live file's conversation there. */
+  liveTalk: "agentes.live.talk",
+  /** Prefix (`.<user id>.<org id>`): the width (px) the person dragged a live file's conversation to there. */
+  liveTalkWidth: "agentes.live.talkWidth",
   /** Offline-computer notices the person closed (`machineId@offlineSince`), until that computer comes back. */
   outagesDismissed: "agentes.outages.dismissed",
   /** The workspace computer's notice the person closed (`setupNoticeKey`), until its state changes. */

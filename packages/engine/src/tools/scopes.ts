@@ -152,7 +152,8 @@ export const BUILTIN_SCOPES: Record<string, { label: string; description: string
   "drive:read": { label: "Read files", description: "Read files in the Drive." },
   "drive:write": {
     label: "Write files",
-    description: "Create reports, tables, org charts, diffs and pages in the Drive.",
+    description:
+      "Create reports, spreadsheets, presentations, canvases, diffs and pages in the Drive, and generate images.",
   },
   "issues:read": { label: "Read issues", description: "List and read issues." },
   "calendar:read": { label: "View calendar", description: "View events and free time." },

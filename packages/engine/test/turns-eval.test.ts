@@ -114,9 +114,11 @@ const size = (r: ModelRequest) =>
  * ADR 0137), and 47,631 with recall reading the asker's own DM with the agent from anywhere they ask, an empty search
  * never told as "the first time", and the DM rule saying what may be said of it elsewhere. Where each workspace gets its
  * own computer, `workspaceComputerText` adds 447 to that (48,078); and a sign-in whose link or
- * code goes to a mailbox the agent reads being its own work adds 360; the ceiling leaves a little room above both.
+ * code goes to a mailbox the agent reads being its own work adds 360; the live files' group (ADR 0196 §6) named with
+ * the others, in the prompt and in `find_tools`, adds about 170 (48,834 on the Cloud); the ceiling leaves a little
+ * room above them.
  */
-const OI_CEILING_CHARS = 48_700;
+const OI_CEILING_CHARS = 49_000;
 
 test("a DM 'oi' stays under the size ceiling", async () => {
   const [request] = await play(TURNS.find((t) => t.id === "greet-dm") as ScriptedTurn);

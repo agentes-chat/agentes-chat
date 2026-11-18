@@ -201,8 +201,8 @@ export async function assessThread(
     .where(and(eq(messages.orgId, orgId), eq(messages.id, threadRootId), isNull(messages.deletedAt)));
   if (!root || root.threadId || isConfidential(root.meta)) return null;
   const channel = await getChannelCached(db, orgId, root.channelId);
-  // A task's conversation is titled by its task (ADR 0145).
-  if (!channel || channel.kind === "task") return null;
+  // A task's conversation is titled by its task (ADR 0145), a live file's by its file (ADR 0199).
+  if (!channel || channel.kind === "task" || channel.kind === "file") return null;
   const [row] = await db
     .select()
     .from(threads)

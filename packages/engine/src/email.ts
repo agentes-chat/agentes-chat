@@ -45,6 +45,7 @@ import { publicHostAddress, type ResolveHost, resolveHostDns } from "./net-guard
 import { enqueue, PermanentJobError } from "./outbox";
 import { billingHold } from "./standing";
 import { isAgentesCloud } from "./telemetry";
+import { withoutTrailingSlashes } from "./url-text";
 import { budgetPercent } from "./usage";
 import { isPersonalWorkspace } from "./workspace-mode";
 
@@ -394,7 +395,7 @@ export interface PlanAudience {
 }
 
 export function emailArtAt(publicUrl: string): EmailArt {
-  const home = publicUrl.replace(/\/+$/, "");
+  const home = withoutTrailingSlashes(publicUrl);
   return { home, base: `${home}/email/`, files: null };
 }
 
@@ -514,6 +515,20 @@ export const modeStamp = async (db: Executor, orgId: string): Promise<{ personal
  */
 const inMode = <G extends { personal: object }>(group: G, personal: boolean | undefined): G =>
   personal ? deepMerge(group, group.personal) : group;
+
+const LINE_BREAKS = new Set(["\n", "\r", "\u2028", "\u2029"]);
+
+/**
+ * `url` without its query and fragment, cut where `/[?#].*$/` cuts it: at the first `?` or `#` past its last line
+ * break (`.` doesn't cross one). Read by index: that pattern reads the rest of the text again from each `?` or `#`
+ * that a line break follows, quadratic in its length.
+ */
+function withoutQuery(url: string): string {
+  let from = url.length;
+  while (from > 0 && !LINE_BREAKS.has(url.charAt(from - 1))) from--;
+  for (let i = from; i < url.length; i++) if (url.charAt(i) === "?" || url.charAt(i) === "#") return url.slice(0, i);
+  return url;
+}
 
 /**
  * One email's content: our words in the subject, preheader, headline and buttons; what people typed or
@@ -746,7 +761,7 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
         ? [...(t.needsAi ? (["ai"] as const) : []), "task", "watch"]
         : ["create", ...(t.needsAi ? (["ai"] as const) : [])];
       // `url` is the workspace in every job, however old: the button's address follows its step.
-      const home = t.url.replace(/[?#].*$/, "").replace(/\/$/, "");
+      const home = withoutQuery(t.url).replace(/\/$/, "");
       const url = { ai: `${t.keptUrl ?? home}?connect=ai`, task: t.keptUrl ?? home, create: `${home}/agents/new` }[
         first
       ];

@@ -159,7 +159,8 @@ beforeAll(async () => {
   ]);
   const drawn = { ...written, orgId: ADA, kind: "document" as const, updatedByType: "person", updatedById: "u-ada" };
   await db.insert(schema.artifacts).values([
-    { ...drawn, id: file(1) },
+    // In the Drive itself: shared with everyone, as a Drive file is made; one kept to its maker (ADR 0157 amendment).
+    { ...drawn, id: file(1), share: "everyone" },
     { ...drawn, id: file(2), channelId: SECRET },
     { ...drawn, id: file(3), channelId: SECRET, share: "people", shareUserIds: ["u-cy"], shareRoleIds: [SUPPORT] },
     { ...drawn, id: file(4), channelId: SECRET, share: "everyone" },
@@ -167,6 +168,7 @@ beforeAll(async () => {
     { ...drawn, id: file(6), channelId: DM },
     { ...drawn, id: file(7), deletedAt: ago(1) },
     { ...drawn, id: file(8), channelId: TASK_TALK },
+    { ...drawn, id: file(9) },
   ]);
   const listed = { audienceMode: "people" as const, audienceUserIds: ["u-cy"], audienceRoleIds: [SUPPORT] };
   const computer = (n: number, name: string) => ({ id: box(n), orgId: ADA, name, tokenHash: `fake-machine-hash-${n}` });
@@ -624,6 +626,9 @@ test("access: whether a person reaches an agent, a channel, a task, a file or a 
     ["file", "u-ada", file(7), false, "gone"],
     ["file", "u-ada", file(8), true, "task_reader"],
     ["file", "u-cy", file(8), false, "not_shared"],
+    ["file", "u-ada", file(9), true, "owner"],
+    ["file", "u-fay", file(9), true, "administrator"],
+    ["file", "u-cy", file(9), false, "not_shared"],
 
     ["computer", "u-ada", box(1), true, "owner"],
     ["computer", "u-cy", box(1), true, "audience_person"],

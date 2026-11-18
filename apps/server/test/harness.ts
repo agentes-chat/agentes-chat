@@ -45,6 +45,7 @@ import { type AppleTokenRevoker, createAuth } from "../src/auth";
 import { buildEngine } from "../src/engine";
 import { createHumanCheck } from "../src/http/human-check";
 import { createLogger } from "../src/logger";
+import { createLiveSockets } from "../src/realtime/live";
 import { createMachineSockets } from "../src/realtime/machines";
 import { createStreamSockets } from "../src/realtime/streams";
 import { createRealtime, type SocketData } from "../src/realtime/ws";
@@ -229,6 +230,8 @@ export async function createTestServer(
       githubApp: engine.githubApp,
       speech: engine.speech,
       voice: engine.voice,
+      live: engine.live,
+      liveDeps: engine.liveDeps,
     },
     log,
   };
@@ -245,6 +248,16 @@ export async function createTestServer(
     services,
     log,
   });
+  const live = createLiveSockets({
+    db,
+    auth,
+    config,
+    pubsub: adapters.pubsub,
+    rateLimiter: adapters.rateLimiter,
+    docs: engine.live,
+    artifacts: engine.artifacts,
+    log,
+  });
   const realtime = createRealtime({
     db,
     auth,
@@ -254,12 +267,15 @@ export async function createTestServer(
     machines: createMachineSockets(engine.machineHub),
     browserLive: engine.browserLive,
     streams: createStreamSockets({ db, auth, config, broker: engine.streams }),
+    live,
   });
   return {
     db,
     close: async () => {
       await engine.machineHub.stop();
       engine.streams.stop();
+      live.stop();
+      await engine.live.stop();
       await close();
     },
     config,

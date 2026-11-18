@@ -5,6 +5,7 @@ import {
   keys,
   type Message,
   type MessageReceipt,
+  messageLiveRef,
   type ReplyRef,
   type RunConsultation,
   type ScreenKind,
@@ -106,6 +107,7 @@ import { WaitToolOffAction } from "../devices/ToolOneClick";
 import { localFilesOf } from "../files/local-files";
 import { LocalFiles, MessageFiles } from "../files/MessageFiles";
 import { consultationHref, routineHref } from "../links/logic";
+import { MessageAbout } from "../live-files/talk/AboutLine";
 import { surfaceTagText } from "../me/surface";
 import { DecisionCard, MissionCard, PlanCard, ReviewCard, SetupFailedCard } from "../missions/cards";
 import { AwayPill, BrainWait } from "../outages/WaitCard";
@@ -153,7 +155,7 @@ import {
 } from "./logic";
 import { liftedEdge, lookRows, RowPartContext, useRhythm, useRowLook } from "./look";
 import { MessageText } from "./MessageText";
-import { QuoteAbove, QuotePlate } from "./QuoteLine";
+import { aboveInset, QuoteAbove, QuotePlate } from "./QuoteLine";
 import { ReachLines } from "./ReachLines";
 import { Receipts } from "./Receipts";
 import {
@@ -490,6 +492,8 @@ function RowBody({
         : undefined;
   const solidInk = bubbled && look.tone === "strong" ? ON_SOLID : undefined;
   const quote = replyOf(meta);
+  // About part of a live file (ADR 0199): its line over the message, a tap shows that part in the file.
+  const liveRef = messageLiveRef(m);
   const myHandle = useRowMyHandle();
   const mentionsMe = !mine && mentionsReader({ body, meta }, myHandle);
 
@@ -633,6 +637,7 @@ function RowBody({
                 </Text>
               </View>
             ) : null}
+            {liveRef ? <MessageAbout liveRef={liveRef} messageId={m.id} end /> : null}
             {/* With no words there is no bubble to hold it. */}
             {quote && (!body || choiceReply) ? (
               <View style={styles.meEnd}>
@@ -871,7 +876,12 @@ function RowBody({
   return (
     <>
       {pair}
-      {quote && !inBubble ? <QuoteAbove look={look} reply={quote} onJump={onQuote} gap={rowGap} /> : null}
+      {liveRef ? (
+        <View style={[styles.aboutAbove, { paddingLeft: aboveInset(look), marginTop: rowGap }]}>
+          <MessageAbout liveRef={liveRef} messageId={m.id} />
+        </View>
+      ) : null}
+      {quote && !inBubble ? <QuoteAbove look={look} reply={quote} onJump={onQuote} gap={liveRef ? 0 : rowGap} /> : null}
       <Pressable
         onPress={onTap}
         onLongPress={press}
@@ -882,8 +892,9 @@ function RowBody({
           bubbled && lookRows.bubblesRow,
           compact && lookRows.compactRow,
           rowFrame(rhythm.block, rowGap),
-          // On the quote it answers, its plate never over it.
+          // On the quote it answers (or the line about a file's part), its plate never over it.
           quoteAbove && styles.replied,
+          liveRef !== null && styles.replied,
           // A mention of me: the row's tint says it, with round corners; no accent bar on its left edge. In bubbles the
           // bubble says it.
           mentionsMe && !inBubble && { backgroundColor: `${c.amber}17`, borderRadius: 14 },
@@ -1523,6 +1534,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   replied: { marginTop: 0, paddingTop: QUOTE_GAP },
+  aboutAbove: { paddingRight: 16 },
   avslot: { width: MSG_AVATAR, alignItems: "center", paddingTop: 2 },
   body: { flex: 1, minWidth: 0 },
   // A long pick wraps: the check stays on its first line.

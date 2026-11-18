@@ -1,4 +1,4 @@
-import { useArtifacts } from "@agenteschat/client";
+import { isLiveFileKind, LIVE_PRESENCE_BATCH, useArtifacts, useLivePresence } from "@agenteschat/client";
 import { can } from "@agenteschat/client/lib/permissions";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,12 +9,16 @@ import {
   Button,
   EmptyState,
   Filters,
+  type HeaderMenuItem,
   SCREEN_X,
   SearchField,
   SectionHeader,
   SkeletonList,
   useReducedMotion,
 } from "@/ui";
+import { LIVE_ICON, LIVE_KINDS_MADE, LIVE_SF } from "../live-files/routes";
+import { useCreateLive } from "../live-files/shared/useCreateLive";
+import { chooseAction } from "../settings/parts";
 import { FirstUse, LoadFailed } from "../shared/FirstUse";
 import { useOrgId, usePullRefresh, useWhen } from "../shared/hooks";
 import { PushedLargeTitle } from "../shared/PushedLargeTitle";
@@ -36,10 +40,11 @@ import { useDriveUpload } from "./useDriveUpload";
 const PAGE = 24;
 
 /**
- * Drive, pushed from Você: the search, the type chips (Tudo, Documentos, Imagens, Tabelas, Diffs), and everything the
- * person can see grouped by day (Hoje, Esta semana, then by month) in a two-column grid of real previews, and a file
- * sent from the phone. A card opens the file as every file opens. `highlightId`: the item "Ver no Drive" came from,
- * outlined.
+ * Drive, pushed from Você: the search, the type chips (Tudo, Documentos, Planilhas, Apresentações, Quadros, Imagens,
+ * Tabelas, Diffs), and everything the person can see grouped by day (Hoje, Esta semana, then by month) in a two-column
+ * grid of real previews, with the faces of who is in each live file now, and a file sent from the phone. "+" makes a
+ * spreadsheet, a presentation or a canvas (ADR 0196 §9) or sends a file. A card opens the file as every file opens.
+ * `highlightId`: the item "Ver no Drive" came from, outlined.
  *
  * A chip narrows the list on the server to the kinds that can hold its type (`driveFilters`); an uploaded file is one
  * kind there whatever it holds, so the phone keeps the files its name says are of the type, and reads the server's
@@ -79,6 +84,15 @@ export function DriveScreen({ highlightId = null }: { highlightId?: string | nul
   }, [matches, shown, highlightId]);
   // What the grid shows, in its order: a picture or a video opens among the grid's others, to swipe through.
   const shownRefs = useMemo(() => sections.flatMap((s) => s.items.map(driveRef)), [sections]);
+  // Who is in the live files shown, asked for all of them at once.
+  const liveIds = useMemo(
+    () =>
+      sections
+        .flatMap((s) => s.items.filter((a) => isLiveFileKind(a.kind)).map((a) => a.id))
+        .slice(0, LIVE_PRESENCE_BATCH),
+    [sections],
+  );
+  const presence = useLivePresence(orgId, liveIds);
   const label = (s: DriveDaySection) =>
     s.label.kind === "month"
       ? new Intl.DateTimeFormat(when.locale, {
@@ -90,6 +104,16 @@ export function DriveScreen({ highlightId = null }: { highlightId?: string | nul
       : t(`mobile.drive.section.${s.label.kind}`);
   const mayUpload = can(useOrg().org, "upload_files");
   const uploader = useDriveUpload(list.refetch);
+  const maker = useCreateLive();
+  const newItems: HeaderMenuItem[] = [
+    ...LIVE_KINDS_MADE.map((kind) => ({
+      icon: LIVE_ICON[kind],
+      sf: LIVE_SF[kind],
+      label: t(`live.kinds.${kind}`),
+      onPress: () => void maker.make(kind),
+    })),
+    { icon: "share", sf: "square.and.arrow.up", label: t("files.upload"), onPress: uploader.pick },
+  ];
   const clear = () => {
     setQ("");
     setType("all");
@@ -115,7 +139,15 @@ export function DriveScreen({ highlightId = null }: { highlightId?: string | nul
       {...(mayUpload
         ? {
             actions: [
-              { icon: "plus", sf: "plus", label: t("files.upload"), disabled: uploader.busy, onPress: uploader.pick },
+              {
+                icon: "plus",
+                sf: "plus",
+                label: t("live.kinds.newMenu"),
+                disabled: uploader.busy || maker.busy !== null,
+                menu: newItems,
+                // Android: the same choices in the app's list (iOS opens the menu from the button itself).
+                onPress: () => chooseAction(t("live.kinds.newMenu"), newItems, t("mobile.common.cancel")),
+              },
             ],
           }
         : {})}
@@ -174,7 +206,13 @@ export function DriveScreen({ highlightId = null }: { highlightId?: string | nul
                   {gridRows(s.items).map((row) => (
                     <View key={row.map((a) => a.id).join(":")} style={styles.row}>
                       {row.map((a) => (
-                        <DriveCard key={a.id} artifact={a} highlighted={a.id === highlightId} siblings={shownRefs} />
+                        <DriveCard
+                          key={a.id}
+                          artifact={a}
+                          highlighted={a.id === highlightId}
+                          siblings={shownRefs}
+                          present={presence.data?.[a.id]}
+                        />
                       ))}
                       {row.length === 1 ? <View style={styles.spacer} /> : null}
                     </View>
