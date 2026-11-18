@@ -13812,6 +13812,7 @@
       "vault_delete": "删除密码",
       "vault_make_password": "生成密码",
       "get_my_usage": "查看我的用量",
+      "ignore_usage_limit": "忽略用量上限",
       "send_feedback": "发送反馈",
       "offer_feedback": "提议报告问题"
     }

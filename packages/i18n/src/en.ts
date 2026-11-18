@@ -14587,6 +14587,7 @@ export const en = {
       vault_delete: "Delete password",
       vault_make_password: "Make a password",
       get_my_usage: "See my usage",
+      ignore_usage_limit: "Ignore the usage limit",
       send_feedback: "Send feedback",
       offer_feedback: "Offer to report a problem",
     },
@@ -18677,7 +18678,7 @@ export const en = {
       plan_limit_wait_unknown: "The {{plan}} plan hit its limit. I'll answer as soon as it resets.",
       /** The run went on with the next account of the order at its plan's limit (ADR 0041 §6). */
       plan_account_moved: "The {{from}} account hit its limit. I'm going on with the {{to}} account.",
-      /** The same, for long work at the pause line (95%) of its account. */
+      /** The same, for long work at the pause line (99%) of its account. */
       plan_account_moved_line: "The {{from}} account is near its limit. I'm going on with the {{to}} account.",
       /** The same, for long work that would go on into its account's paid extra usage. */
       plan_account_moved_extra:

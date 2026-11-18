@@ -322,7 +322,8 @@ export function toolKind(tool: PolicyTool): ToolKind {
     tool.name === "withdraw_request" ||
     tool.name === "set_reply_style" ||
     tool.name === "commit_co_author" ||
-    tool.name === "wait_for_device"
+    tool.name === "wait_for_device" ||
+    tool.name === "ignore_usage_limit"
   )
     return { kind: "self" };
   // Long work (ADR 0121): the run's own work only; who may go to the background is the tool source's.

@@ -80,7 +80,7 @@ function backWhen(t: TFunction, locale: string, resetsAt: string | null, now: nu
 const COMPUTER_GONE = new Set(["machine_offline", "machine_dropped"]);
 
 /**
- * What a waiting task says on its row, whole: what holds it and why ("Pausada: plano a 95% da semana"), and what comes
+ * What a waiting task says on its row, whole: what holds it and why ("Pausada: plano a 99% da semana"), and what comes
  * next ("Volta sáb às 18:00"). Null when it isn't waiting.
  */
 export function taskWaitWords(
@@ -197,7 +197,7 @@ export function taskWaitGroups(tasks: ManagedTask[]): TaskWaitGroup[] {
     });
 }
 
-/** The line over a group: "9 rotinas pausadas: o plano do Claude está em 95% da semana e volta sáb às 18:00. …". */
+/** The line over a group: "9 rotinas pausadas: o plano do Claude está em 99% da semana e volta sáb às 18:00. …". */
 export function taskWaitGroupText(t: TFunction, locale: string, group: TaskWaitGroup, now = Date.now()) {
   const s = say(t);
   const { wait: w, tasks } = group;

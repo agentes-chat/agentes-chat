@@ -14770,6 +14770,7 @@
       "vault_delete": "Supprimer un mot de passe",
       "vault_make_password": "Générer un mot de passe",
       "get_my_usage": "Voir mon utilisation",
+      "ignore_usage_limit": "Ignorer la limite d'utilisation",
       "send_feedback": "Envoyer un retour",
       "offer_feedback": "Proposer de signaler un problème"
     }

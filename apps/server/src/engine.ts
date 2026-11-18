@@ -416,7 +416,7 @@ export function buildEngine(o: EngineOptions) {
         judge: context.judge,
       }),
       createFindAgentToolSource({ machines: machineHub }),
-      createUsageToolSource(),
+      createUsageToolSource({ pubsub: adapters.pubsub }),
       // What people saved for the agent in the Vault, found before it asks them (ADR 0144).
       createVaultToolSource(vault),
       // What the agent says it is doing, next to its name (ADR 0084).

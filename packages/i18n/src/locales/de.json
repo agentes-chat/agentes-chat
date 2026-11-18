@@ -14278,6 +14278,7 @@
       "vault_delete": "Passwort löschen",
       "vault_make_password": "Passwort erstellen",
       "get_my_usage": "Meine Nutzung anzeigen",
+      "ignore_usage_limit": "Nutzungslimit ignorieren",
       "send_feedback": "Feedback senden",
       "offer_feedback": "Problemmeldung anbieten"
     }

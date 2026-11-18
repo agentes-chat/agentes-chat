@@ -14215,6 +14215,7 @@
       "vault_delete": "Şifreyi sil",
       "vault_make_password": "Şifre oluştur",
       "get_my_usage": "Kullanımımı görüntüle",
+      "ignore_usage_limit": "Kullanım sınırını yok say",
       "send_feedback": "Geri bildirim gönder",
       "offer_feedback": "Sorun bildirmeyi öner"
     }

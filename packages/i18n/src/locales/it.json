@@ -14784,6 +14784,7 @@
       "vault_delete": "Elimina password",
       "vault_make_password": "Crea password",
       "get_my_usage": "Vedi il mio utilizzo",
+      "ignore_usage_limit": "Ignora il limite di utilizzo",
       "send_feedback": "Invia feedback",
       "offer_feedback": "Offri di segnalare un problema"
     }

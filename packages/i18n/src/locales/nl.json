@@ -14340,6 +14340,7 @@
       "vault_delete": "Wachtwoord verwijderen",
       "vault_make_password": "Wachtwoord maken",
       "get_my_usage": "Mijn gebruik bekijken",
+      "ignore_usage_limit": "Gebruikslimiet negeren",
       "send_feedback": "Feedback sturen",
       "offer_feedback": "Aanbieden om een probleem te melden"
     }

@@ -14546,6 +14546,7 @@ export const ptBR = {
       vault_delete: "Apagar senha",
       vault_make_password: "Criar senha",
       get_my_usage: "Ver meu uso",
+      ignore_usage_limit: "Ignorar o limite de uso",
       send_feedback: "Enviar feedback",
       offer_feedback: "Oferecer um relato de problema",
     },
@@ -18545,7 +18546,7 @@ export const ptBR = {
       plan_limit_wait_unknown: "O plano do {{plan}} chegou ao limite. Respondo assim que ele renovar.",
       /** The run went on with the next account of the order at its plan's limit (ADR 0041 §6). */
       plan_account_moved: "A conta {{from}} chegou ao limite. Sigo na conta {{to}}.",
-      /** The same, for long work at the pause line (95%) of its account. */
+      /** The same, for long work at the pause line (99%) of its account. */
       plan_account_moved_line: "A conta {{from}} está perto do limite. Sigo na conta {{to}}.",
       /** The same, for long work that would go on into its account's paid extra usage. */
       plan_account_moved_extra: "A conta {{from}} entraria no uso extra pago. Sigo na conta {{to}}.",

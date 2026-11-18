@@ -406,6 +406,7 @@ import {
   USAGE_WAIT_CODES,
   USAGE_WINDOW_WORDS,
   usageCardResumed,
+  usageGranted,
   usageNoteHandOn,
   usageNoticeText,
   usageWaitClosed,
@@ -731,6 +732,12 @@ export interface Transcript {
    * `override` set by Continuar agora (`until` the window it was pressed on resets; it never pauses before).
    */
   usagePause?: { paused?: boolean; cardId?: string; override?: { until: string | null; by: string } };
+  /**
+   * A person told the agent in the chat to go past the pause line (`ignore_usage_limit`): for the rest of the run long
+   * work goes on up to the plan's own allowance, as after Continuar agora, and no re-park drops it. Written on the row
+   * by the tool, so `storedTranscript` keeps the row's copy.
+   */
+  usageGrant?: { by: string; at: string };
   /**
    * Since when (ms) this run waits on usage, across its re-parks, and how far along the re-checks of an unknown
    * reset it is (`LIMIT_LADDER_MS`); `noticed`: its owner heard that the reset is still unknown. Gone once a turn runs.
@@ -4571,7 +4578,10 @@ async function executeRunInner(
     if (!(await longNow())) return null;
     const now = await usageReading();
     intoExtra = now?.source === "plan" && now.used >= PLAN_PAUSE && now.extra === true;
-    return longWorkHasRoom(now) ? null : now;
+    if (longWorkHasRoom(now)) return null;
+    // Told in the chat to go past the line: as after Continuar agora, up to the plan's own allowance.
+    if (await usageGranted(db, run.id, t)) return continuesPastPlan(now) ? now : null;
+    return now;
   };
   // From 90% the agent reads where its plan stands, every turn, so it can tell people a long task may pause.
   if (plan.kind !== "model") {
@@ -4579,7 +4589,13 @@ async function executeRunInner(
     transcript.system = transcript.system.filter((b) => !(b as ContextBlock).usage);
     if (reading && reading.used >= PLAN_NOTICE) {
       const name = planName(plan.kind, plan.account?.provider);
-      transcript.system.push({ turn: true, usage: true, text: usageNoticeText(name, reading) } as ContextBlock);
+      const t = transcript as Transcript;
+      const granted = Boolean(t.usageGrant) || overrideHolds(t.usagePause?.override);
+      transcript.system.push({
+        turn: true,
+        usage: true,
+        text: usageNoticeText(name, reading, granted),
+      } as ContextBlock);
     }
   }
 

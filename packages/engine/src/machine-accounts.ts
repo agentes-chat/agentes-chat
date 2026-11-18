@@ -65,7 +65,7 @@ import {
   SHARED_SIGN_INS,
   sharedSignIn,
 } from "@agenteschat/providers/plans";
-import { PLAN_PAUSE, planCheckedAt, planFull, planState } from "@agenteschat/ui/plan-state";
+import { PLAN_PAUSE, planCheckedAt, planFull, planState, resetSinceRead } from "@agenteschat/ui/plan-state";
 import { recordAudit } from "./audit";
 import { liveModelLimits } from "./brains/select";
 import { BRAIN_PLAN_NAMES } from "./brains/types";
@@ -1095,7 +1095,8 @@ export async function refreshAiAccounts(deps: MachineAccountHubDeps, userId: str
 /**
  * The sweep (every minute) that notices a plan freed before its stored reset (Claude's "reset for free", extra usage
  * bought, a new week): every account whose last reading is at its limit, or at the long-work pause line (`PLAN_PAUSE`)
- * with work waiting on it, is read again on its computer. A CLI login or a key gets the free probe every
+ * with work waiting on it, is read again on its computer, and so, once, is one whose window reset since its reading
+ * (`resetSinceRead`), so the meter doesn't keep a day-old reading. A CLI login or a key gets the free probe every
  * `PLAN_RECHECK_MS`; a Claude setup token, which can't read its usage without a model call, a one-shot check on the
  * cheapest model every `TOKEN_RECHECK_MS` (`list.recheck`, protocol 62), refused while still full. A computer's own
  * sign-ins (`executors.ownUsage`, asked as `OWN_USAGE_ID`s) get the free probe too. A reading with room goes on from
@@ -1119,7 +1120,9 @@ export async function recheckStuckPlans(deps: Pick<MachineAccountHubDeps, "db" |
         isNotNull(machineAccounts.usage),
         sql`(${machineAccounts.usage}->>'limited' = 'true' or exists (
           select 1 from jsonb_array_elements(coalesce(${machineAccounts.usage}->'windows', '[]'::jsonb)) w
-          where (w->>'usedPercent')::numeric >= ${PLAN_PAUSE}))`,
+          where (w->>'usedPercent')::numeric >= ${PLAN_PAUSE}
+            or (w->>'resetsAt' <= ${new Date(now).toISOString()}
+              and w->>'resetsAt' > greatest(${machineAccounts.usage}->>'at', ${machineAccounts.usage}->>'checkedAt'))))`,
       ),
     );
   const owned = (
@@ -1160,7 +1163,7 @@ export async function recheckStuckPlans(deps: Pick<MachineAccountHubDeps, "db" |
   ) => {
     const { state, used } = planState(usage, now);
     const key = usageWaitKey({ code: "plan_limit", machineId, kind, accountId });
-    if (state !== "limited" && !(used >= PLAN_PAUSE && waiting.has(key))) return;
+    if (state !== "limited" && !(used >= PLAN_PAUSE && waiting.has(key)) && !resetSinceRead(usage, now)) return;
     const last = Date.parse(planCheckedAt(usage) ?? "") || 0;
     if (now - last < (token ? TOKEN_RECHECK_MS : PLAN_RECHECK_MS)) return;
     const m = byMachine.get(machineId) ?? { fresh: [], tokens: [], own: [] };

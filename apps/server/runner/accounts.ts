@@ -505,6 +505,12 @@ export function codexAuthOf(text: unknown): CodexAuth | null {
   };
 }
 
+/** Root's copy of a ChatGPT sign-in is safe to read limits with: Codex won't refresh it within the next hour. */
+export function codexProbeSafe(dir: string, now: number) {
+  const auth = readCodexAuth(dir);
+  return auth !== null && now - auth.refreshedAt < CODEX_REFRESH_AFTER_MS - 3600_000;
+}
+
 /** A folder's Codex sign-in; null when it has none. Never through a link or a pipe. */
 export function readCodexAuth(dir: string): CodexAuth | null {
   const o = readSmallJson(path.join(dir, CODEX_AUTH_FILE), MAX_CODEX_AUTH_CHARS);
@@ -3044,7 +3050,12 @@ export class AccountManager {
         this.usage.get(id),
       );
     }
-    if (!own && (this.lentTo(target.kind, id) !== null || shared)) return null;
+    // A ChatGPT sign-in for all agents is root's own copy: Codex reads its limits there as long as it won't refresh it
+    // (a refresh rotates the token every agent's copy holds). Without this its numbers only came from turns, so with
+    // all long work paused nothing read them again.
+    const codexReadable =
+      shared && target.kind === "codex" && codexProbeSafe(target.cwd, (this.opts.now ?? Date.now)());
+    if (!own && (this.lentTo(target.kind, id) !== null || (shared && !codexReadable))) return null;
     const probe = { command: this.command(target.kind, Boolean(own)), cwd: target.cwd, env: target.env, ...limits };
     // Cursor's CLI reports no plan usage: its turns' `usage` is all there is.
     // Nor does OpenCode's: its key's usage is on OpenCode's console. Grok Build shows its plan's only in its TUI.

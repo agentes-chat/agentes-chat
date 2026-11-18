@@ -327,6 +327,8 @@ const hasEffects = (e: ToolSideEffects) =>
 const BRIDGE_EFFECTS = "bridgeEffects";
 /** How many calls the runner made through the bridge during the turn. */
 const BRIDGE_CALLS = "bridgeCalls";
+/** A person's "ignore the limit" (`grantUsageOverride`), written on the row while the engine holds its own copy. */
+const USAGE_GRANT = "usageGrant";
 
 /**
  * A bridged call's side effects (a computer brain's tool through the runner
@@ -385,7 +387,8 @@ export function storedTranscript(t: object): SQL {
   const { [BRIDGE_EFFECTS]: _kept, [BRIDGE_CALLS]: _calls, ...rest } = t as Record<string, unknown>;
   return sql`(${pgSafeStringify(rest)}::jsonb || jsonb_strip_nulls(jsonb_build_object(
     ${BRIDGE_EFFECTS}::text, ${agentRuns.transcript} -> ${BRIDGE_EFFECTS}::text,
-    ${BRIDGE_CALLS}::text, ${agentRuns.transcript} -> ${BRIDGE_CALLS}::text
+    ${BRIDGE_CALLS}::text, ${agentRuns.transcript} -> ${BRIDGE_CALLS}::text,
+    ${USAGE_GRANT}::text, ${agentRuns.transcript} -> ${USAGE_GRANT}::text
   )))`;
 }
 

@@ -15273,6 +15273,7 @@
       "vault_delete": "Usuń hasło",
       "vault_make_password": "Utwórz hasło",
       "get_my_usage": "Zobacz moje zużycie",
+      "ignore_usage_limit": "Ignoruj limit użycia",
       "send_feedback": "Wyślij opinię",
       "offer_feedback": "Zaproponuj zgłoszenie problemu"
     }

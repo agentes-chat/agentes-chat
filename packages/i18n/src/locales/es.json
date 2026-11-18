@@ -14701,6 +14701,7 @@
       "vault_delete": "Borrar contraseña",
       "vault_make_password": "Generar contraseña",
       "get_my_usage": "Ver mi uso",
+      "ignore_usage_limit": "Ignorar el límite de uso",
       "send_feedback": "Enviar feedback",
       "offer_feedback": "Ofrecer reportar un problema"
     }
