@@ -482,6 +482,8 @@ const PLAIN_LINE = new Set([
   "database.invalid_table",
   "database.timeout",
   "early_access.used",
+  "endpoint.context_window",
+  "endpoint.max_output",
   "endpoint.model_id",
   "endpoint.prices",
   "endpoint.style",
