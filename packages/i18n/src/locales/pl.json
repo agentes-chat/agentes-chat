@@ -3962,11 +3962,13 @@
   },
   "keyGuard": {
     "title": "To wygląda na klucz API",
-    "text": "Wszystko na czacie widzą osoby i agenci. Zapisz to lepiej jako klucz przestrzeni roboczej: jest szyfrowany i nikt go nie widzi.",
-    "textMember": "Wszystko na czacie widzą osoby i agenci. Klucz jest jak hasło.",
-    "save": "Zapisz jako klucz",
+    "titleSecret": "To wygląda na klucz lub hasło",
+    "vaultText": "Wszystko na czacie widzą ludzie i agenci. Przechowuj go w Vault: jest zaszyfrowany, a agenci, którym pozwolisz, używają go, nie widząc go.",
+    "vault": "Zapisz w Vault",
+    "useAsAi": "Użyj jako klucza AI",
     "remove": "Usuń",
-    "send": "Wyślij mimo to"
+    "send": "Wyślij mimo to",
+    "saved": "Zapisano w Vault jako {{name}}. Agenci z dostępem używają go pod tą nazwą."
   },
   "costlyCard": {
     "go": "Działaj",

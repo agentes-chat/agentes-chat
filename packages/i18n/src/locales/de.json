@@ -3678,11 +3678,13 @@
   },
   "keyGuard": {
     "title": "Das sieht nach einem API-Schlüssel aus",
-    "text": "Alles im Chat ist für Personen und Agenten sichtbar. Speichere ihn lieber als Workspace-Schlüssel: Er wird verschlüsselt und niemand sieht ihn.",
-    "textMember": "Alles im Chat ist für Personen und Agenten sichtbar. Ein Schlüssel ist wie ein Passwort.",
-    "save": "Als Schlüssel speichern",
+    "titleSecret": "Das sieht nach einem Schlüssel oder Passwort aus",
+    "vaultText": "Alles im Chat sehen Menschen und Agenten. Bewahre ihn im Vault auf: Er ist verschlüsselt, und die Agenten, die du erlaubst, verwenden ihn, ohne ihn zu sehen.",
+    "vault": "Im Vault speichern",
+    "useAsAi": "Als KI-Schlüssel verwenden",
     "remove": "Entfernen",
-    "send": "Trotzdem senden"
+    "send": "Trotzdem senden",
+    "saved": "Im Vault als {{name}} gespeichert. Agenten mit Zugriff verwenden ihn unter diesem Namen."
   },
   "costlyCard": {
     "go": "Mach es",

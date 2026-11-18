@@ -3667,11 +3667,13 @@
   },
   "keyGuard": {
     "title": "Bu bir API anahtarına benziyor",
-    "text": "Sohbetteki her şeyi kişiler ve ajanlar görür. Bunun yerine çalışma alanı anahtarı olarak kaydedin: şifrelenir ve kimse görmez.",
-    "textMember": "Sohbetteki her şeyi kişiler ve ajanlar görür. Anahtar bir şifre gibidir.",
-    "save": "Anahtar olarak kaydet",
+    "titleSecret": "Bu bir anahtar ya da şifreye benziyor",
+    "vaultText": "Sohbete giden her şeyi kişiler ve ajanlar görür. Vault'ta saklayın: şifrelenir ve izin verdiğiniz ajanlar onu görmeden kullanır.",
+    "vault": "Vault'a kaydet",
+    "useAsAi": "Yapay zekâ anahtarı olarak kullan",
     "remove": "Kaldır",
-    "send": "Yine de gönder"
+    "send": "Yine de gönder",
+    "saved": "Vault'a {{name}} olarak kaydedildi. Erişimi olan ajanlar onu bu adla kullanır."
   },
   "costlyCard": {
     "go": "Devam et",
