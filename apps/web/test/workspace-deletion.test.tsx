@@ -702,7 +702,7 @@ describe("deleting your account (Configurações › Sua conta)", () => {
   });
 
   test("resetting: what goes and stays on the row, then the name and its own code; the row says it started", async () => {
-    const { state } = await open(`/org/${ORG_ID}/settings/account`);
+    const { state, services, router } = await open(`/org/${ORG_ID}/settings/account`);
     const card = screen().getByRole("region", { name: "Recomeçar ou apagar" });
     const row = card.querySelector<HTMLDetailsElement>("details.danger-row") as HTMLDetailsElement;
     await act(async () => {
@@ -733,6 +733,14 @@ describe("deleting your account (Configurações › Sua conta)", () => {
     expect(screen().queryByRole("dialog")).toBeNull();
     expect(row.querySelector("summary")?.textContent).toContain("Recomeçando Acme…");
     expect(within(row).getByRole("button", { name: "Recomeçar workspace" }).hasAttribute("disabled")).toBe(true);
+    // Done (`org.reset` reads `GET /me` again): its owner is on to the onboarding, without a click.
+    const acme = state.me?.organizations.find((o) => o.id === ORG_ID);
+    if (acme) acme.onboarding = { step: "context", generalChannelId: "c-general" };
+    await act(async () => {
+      await services.queryClient.invalidateQueries();
+    });
+    await settle(8);
+    expect(router.state.location.pathname).toBe("/onboarding");
   });
 
   test("the longest workspace name the server takes: every row and the reset dialog keep it whole", async () => {
