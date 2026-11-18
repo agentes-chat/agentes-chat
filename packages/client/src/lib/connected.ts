@@ -170,6 +170,16 @@ export function connectedIds(items: ConnectedItem[]) {
 }
 
 /**
+ * Each connected catalog id and its first connection: a catalog connector, or a server at a one-click preset's
+ * address (Supabase, Expo), which is the catalog's too. An MCP server added by its own address names none.
+ */
+export function firstConnectedByCatalogId(items: readonly Pick<ConnectedItem, "id" | "def">[]) {
+  const out = new Map<string, string>();
+  for (const item of items) if (item.def && !out.has(item.def.id)) out.set(item.def.id, item.id);
+  return out;
+}
+
+/**
  * The name a connected service shows: its connection's own ("Stripe (Acme)", "Stripe 2", a rename), so two
  * accounts read apart everywhere; a name nobody changed is the catalog's, in the app's language ("Supabase (somente
  * leitura) 2" for "Supabase (read-only) 2").
