@@ -3069,12 +3069,17 @@
           {
             "type": "object",
             "properties": {
+              "percent": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
               "changedAt": {
                 "type": ["string", "null"],
                 "description": "When it last changed; null: never."
               }
             },
-            "required": ["changedAt"]
+            "required": ["percent", "changedAt"]
           }
         ]
       },
@@ -3086,8 +3091,8 @@
           },
           "rollout": {
             "type": "string",
-            "enum": ["selected", "all"],
-            "description": "`selected`: only the workspaces in `orgIds`. `all`: every workspace."
+            "enum": ["selected", "percent", "all"],
+            "description": "`selected`: only the workspaces in `orgIds`. `percent`: those plus `percent` of all workspaces, picked by a stable hash of the workspace's id (raising it only adds workspaces). `all`: every workspace."
           },
           "orgIds": {
             "type": "array",
@@ -3097,6 +3102,12 @@
             },
             "maxItems": 500,
             "description": "Deduplicated; each must exist."
+          },
+          "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "With `percent`: the share of workspaces, 0–100 (0 when left out). Kept as 0 with any other rollout."
           }
         },
         "required": ["method", "rollout", "orgIds"]
