@@ -105,11 +105,14 @@ export function antigravityTurnArgs(input: {
   profile?: CommandProfile;
   /** The team's right hand: our server's tools alone. */
   locked?: boolean;
+  /** Windows: pass the prompt via `--input-format stream-json` on stdin to avoid `CreateProcess` `ENAMETOOLONG`. */
+  stdin?: boolean;
 }): string[] {
   const effort = agyEffort(input.effort, input.model);
   return [
     "-p",
-    input.prompt,
+    input.stdin ? "" : input.prompt,
+    ...(input.stdin ? ["--input-format", "stream-json"] : []),
     "--output-format",
     "stream-json",
     "--sandbox",
@@ -242,8 +245,9 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
   const fail = (code: string, message: string, retryable?: boolean) =>
     opts.emit({ type: "error", code, message, ...(retryable ? { retryable } : {}) });
   // Elsewhere the CLI keeps its sign-in in the one keychain of the computer's user (ADR 0143).
-  if ((opts.platform ?? process.platform) !== "linux") {
-    return fail("unsupported", "Gemini plans think on Linux computers only, for now.");
+  // Allowed on Linux and Windows (where USERPROFILE is isolated per account).
+  if ((opts.platform ?? process.platform) !== "linux" && (opts.platform ?? process.platform) !== "win32") {
+    return fail("unsupported", "Gemini plans think on Linux and Windows computers only, for now.");
   }
   try {
     prepareAgyHome(input.account.home, opts.mcpCommand);
@@ -272,27 +276,34 @@ export async function runAntigravityTurn(input: AntigravityTurnInput, opts: Anti
   const clean = (text: string) => (opts.redact ? opts.redact(text) : text);
   const hold = opts.redact ? (opts.redactHold ?? 0) : 0;
 
+  const windows = (opts.platform ?? process.platform) === "win32";
   // One retry, as a new chat, when the CLI doesn't have the conversation it was to resume.
   for (let attempt = 0; ; attempt++) {
     const chat = opts.chats.get(chatKey);
+    const prompt = cursorPrompt(input.system, input.prompt, !chat);
     const args = antigravityTurnArgs({
-      prompt: cursorPrompt(input.system, input.prompt, !chat),
+      prompt,
       ...(chat ? { chat } : {}),
       ...(input.model ? { model: input.model } : {}),
       ...(input.effort ? { effort: input.effort } : {}),
       profile: input.profile ?? "work",
       ...(input.chat ? { locked: true } : {}),
+      ...(windows ? { stdin: true } : {}),
     });
     let child: ChildProcess;
     try {
       child = (opts.spawn ?? spawn)(resolveCommand(opts.bin ?? AGY_BIN, env.PATH), args, {
         cwd: input.cwd,
         env,
-        stdio: ["ignore", "pipe", "pipe"],
-        detached: true,
+        stdio: [windows ? "pipe" : "ignore", "pipe", "pipe"],
+        detached: !windows,
       });
     } catch (err) {
       return fail("antigravity_failed", err instanceof Error ? err.message : String(err));
+    }
+    if (windows) {
+      child.stdin?.on("error", () => {});
+      child.stdin?.end(`${JSON.stringify({ event: "user", message: { role: "user", content: prompt } })}\n`);
     }
     let stderr = "";
     child.stderr?.on("data", (c: Buffer) => {

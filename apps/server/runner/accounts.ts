@@ -291,6 +291,7 @@ export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessE
   }
   if (kind === "grok") Object.assign(env, GROK_QUIET_ENV);
   if (kind === "antigravity") {
+    if (process.platform === "win32") env.USERPROFILE = dir;
     // Everything Go and the CLI keep under the home stays in the account's folder; no D-Bus session, so the CLI
     // skips the keyring and keeps its sign-in in its own file there (changelog 1.2.x: "bypasses the keyring when no
     // D-Bus session bus is present").
@@ -1752,9 +1753,13 @@ export class AccountManager {
       throw new RunnerError("bad_request", "OpenCode signs in with its API key");
     }
     // ADR 0143: elsewhere the CLI keeps every sign-in in the one keychain of the computer's user, so two accounts
-    // would be one.
-    if (kind === "antigravity" && (this.opts.platform ?? process.platform) !== "linux") {
-      throw new RunnerError("bad_request", "Gemini accounts sign in on Linux computers only, for now.");
+    // would be one. Allowed on Linux and Windows (where USERPROFILE is isolated per account).
+    if (
+      kind === "antigravity" &&
+      (this.opts.platform ?? process.platform) !== "linux" &&
+      (this.opts.platform ?? process.platform) !== "win32"
+    ) {
+      throw new RunnerError("bad_request", "Gemini accounts sign in on Linux and Windows computers only, for now.");
     }
     if (this.logins.get(loginId)?.state === "waiting") {
       throw new RunnerError("bad_request", "This sign-in already exists");
