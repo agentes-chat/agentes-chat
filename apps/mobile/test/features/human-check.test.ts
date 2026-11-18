@@ -206,7 +206,13 @@ describe("refusals in the phone's words", () => {
 
   test("an account out of password tries: when to try again, in minutes from the server's wait", async () => {
     const out = refusalOf({ error: { status: 429, code: "TOO_MANY_PASSWORD_TRIES", retryIn: 61 } });
-    expect(out).toEqual({ status: 429, code: "TOO_MANY_PASSWORD_TRIES", kind: undefined, cloud: undefined, retryIn: 61 });
+    expect(out).toEqual({
+      status: 429,
+      code: "TOO_MANY_PASSWORD_TRIES",
+      kind: undefined,
+      cloud: undefined,
+      retryIn: 61,
+    });
     const refused = out ?? { status: 0 };
     expect(refusalText(await translator("en"), refused)).toBe(
       "Too many password tries on this account. Try again in 2 minutes.",

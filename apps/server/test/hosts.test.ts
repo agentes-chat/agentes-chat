@@ -156,7 +156,7 @@ test("a registered host runs no bot check: no site key, no token, no call to Clo
   }) as typeof globalThis.fetch;
   const landing = { LANDING_URL: "https://landing.example" };
   const s = await server(landing, turnstileCheck(fetch, landing));
-  const config = async (b: Browser) => ((await (await b("/api/app/auth-config")).json()) as Record<string, unknown>);
+  const config = async (b: Browser) => (await (await b("/api/app/auth-config")).json()) as Record<string, unknown>;
   expect(await config(on(browser(s), HOST))).toMatchObject({ turnstileSiteKey: null });
   expect(await config(browser(s))).toMatchObject({ turnstileSiteKey: "1x00000000000000000000AA" });
 
@@ -207,7 +207,11 @@ test("a registered host runs no bot check: no site key, no token, no call to Clo
   const found = await on(browser(s), HOST)("/api/app/sign-in-options", { json: { email: account.email } });
   expect(await found.json()).not.toHaveProperty("pass");
   // The waiting lists' forms are the landing page's: a request for a registered host still needs a token.
-  const waitlist = await on(browser(s), HOST, landing.LANDING_URL)("/api/waitlist", { json: { email: "di@example.com" } });
+  const waitlist = await on(
+    browser(s),
+    HOST,
+    landing.LANDING_URL,
+  )("/api/waitlist", { json: { email: "di@example.com" } });
   expect(waitlist.status).toBe(403);
   expect(asked).toEqual([]);
 });

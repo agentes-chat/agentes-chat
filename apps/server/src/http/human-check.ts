@@ -37,7 +37,11 @@ const REFUSALS: Record<HumanCheckRefusal, string> = {
  * of hostnames, so it can't run on an open-ended list of them; the limits per network and per account guard sign-in
  * there.
  */
-export async function humanCheckFor(check: HumanCheck | null | undefined, db: Database, host: string | null | undefined) {
+export async function humanCheckFor(
+  check: HumanCheck | null | undefined,
+  db: Database,
+  host: string | null | undefined,
+) {
   return check && !(await hostLook(db, host)) ? check : null;
 }
 
