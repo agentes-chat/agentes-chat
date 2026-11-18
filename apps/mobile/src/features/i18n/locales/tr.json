@@ -2251,6 +2251,8 @@
     "deleteIntro": "{{name}} herkes için hemen salt okunur olur ve 7 gün sonra kalıcı olarak silinir.",
     "holdDelete": "Silmek için basılı tutun",
     "deleteFailed": "Çalışma alanı silinemedi. Tekrar deneyin.",
+    "holdReset": "Sıfırlamak için basılı tutun",
+    "resetFailed": "Çalışma alanı sıfırlanamadı. Tekrar deneyin.",
     "access": {
       "how": "Düzeyini değiştirmek için bir satıra dokunun: Erişim yok, Okuma, Okuma ve yazma."
     },

@@ -2350,6 +2350,8 @@
     "deleteIntro": "{{name}} passe tout de suite en lecture seule pour tout le monde et sera supprimé définitivement dans 7 jours.",
     "holdDelete": "Maintenir pour supprimer",
     "deleteFailed": "Impossible de supprimer l'espace de travail. Réessayez.",
+    "holdReset": "Maintenez pour réinitialiser",
+    "resetFailed": "Impossible de réinitialiser l'espace de travail. Réessayez.",
     "access": {
       "how": "Touchez une ligne pour changer son niveau : Aucun accès, Lecture, Lecture et écriture."
     },

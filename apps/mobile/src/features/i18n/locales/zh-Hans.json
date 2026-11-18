@@ -2145,6 +2145,8 @@
     "deleteIntro": "{{name}} 会立即对所有人变为只读，并在 7 天后永久删除。",
     "holdDelete": "长按以删除",
     "deleteFailed": "无法删除工作区，请重试。",
+    "holdReset": "长按以重置",
+    "resetFailed": "无法重置工作区。请重试。",
     "access": {
       "how": "点按一行可更改其级别：无权限、读取、读写。"
     },

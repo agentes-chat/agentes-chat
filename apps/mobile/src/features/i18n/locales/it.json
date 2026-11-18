@@ -2350,6 +2350,8 @@
     "deleteIntro": "{{name}} diventa subito di sola lettura per tutti e viene eliminato per sempre tra 7 giorni.",
     "holdDelete": "Tieni premuto per eliminare",
     "deleteFailed": "Non è stato possibile eliminare lo spazio di lavoro. Riprova.",
+    "holdReset": "Tieni premuto per reimpostare",
+    "resetFailed": "Non è stato possibile reimpostare lo spazio di lavoro. Riprova.",
     "access": {
       "how": "Tocca una riga per cambiarne il livello: Nessun accesso, Lettura, Lettura e scrittura."
     },

@@ -2463,6 +2463,8 @@
     "deleteIntro": "{{name}} od razu staje się dla wszystkich tylko do odczytu, a po 7 dniach zostaje trwale usunięta.",
     "holdDelete": "Przytrzymaj, aby usunąć",
     "deleteFailed": "Nie udało się usunąć przestrzeni roboczej. Spróbuj ponownie.",
+    "holdReset": "Przytrzymaj, aby zresetować",
+    "resetFailed": "Nie udało się zresetować przestrzeni roboczej. Spróbuj ponownie.",
     "access": {
       "how": "Stuknij wiersz, aby zmienić poziom: Brak dostępu, Odczyt, Odczyt i zapis."
     },

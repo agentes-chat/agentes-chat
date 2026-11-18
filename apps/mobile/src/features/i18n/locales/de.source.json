@@ -5547,6 +5547,12 @@
   "settings.deleteFailed": {
     "value": "Couldn't delete the workspace. Try again."
   },
+  "settings.holdReset": {
+    "value": "Hold to reset"
+  },
+  "settings.resetFailed": {
+    "value": "Couldn't reset the workspace. Try again."
+  },
   "settings.access.how": {
     "value": "Tap a row to change its level: No access, Read, Read and write."
   },
