@@ -16240,6 +16240,8 @@
       "list_dashboards": "Wyświetl dashboardy",
       "share_dashboard": "Udostępnij dashboard",
       "create_widget": "Utwórz widżet",
+      "change_widget": "Edytuj widżet",
+      "remove_widget": "Usuń widżet",
       "update_widget": "Zaktualizuj widżet",
       "load_skill": "Otwórz umiejętność",
       "read_skill_file": "Przeczytaj plik umiejętności",

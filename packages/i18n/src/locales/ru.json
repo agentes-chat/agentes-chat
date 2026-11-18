@@ -16185,6 +16185,8 @@
       "list_dashboards": "Показать дашборды",
       "share_dashboard": "Поделиться дашбордом",
       "create_widget": "Создать виджет",
+      "change_widget": "Редактировать виджет",
+      "remove_widget": "Удалить виджет",
       "update_widget": "Изменить виджет",
       "load_skill": "Открыть навык",
       "read_skill_file": "Прочитать файл навыка",

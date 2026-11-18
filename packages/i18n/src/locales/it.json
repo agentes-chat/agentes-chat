@@ -15728,6 +15728,8 @@
       "list_dashboards": "Elenca dashboard",
       "share_dashboard": "Condividi dashboard",
       "create_widget": "Crea widget",
+      "change_widget": "Edita widget",
+      "remove_widget": "Rimuovi widget",
       "update_widget": "Modifica widget",
       "load_skill": "Apri skill",
       "read_skill_file": "Leggi file della skill",

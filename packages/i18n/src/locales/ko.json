@@ -14603,6 +14603,8 @@
       "list_dashboards": "대시보드 목록 조회",
       "share_dashboard": "대시보드 공유",
       "create_widget": "위젯 생성",
+      "change_widget": "위젯 편집",
+      "remove_widget": "위젯 삭제",
       "update_widget": "위젯 업데이트",
       "load_skill": "스킬 열기",
       "read_skill_file": "스킬 파일 읽기",

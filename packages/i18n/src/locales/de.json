@@ -15180,6 +15180,8 @@
       "list_dashboards": "Dashboards auflisten",
       "share_dashboard": "Dashboard teilen",
       "create_widget": "Widget erstellen",
+      "change_widget": "Widget bearbeiten",
+      "remove_widget": "Widget entfernen",
       "update_widget": "Widget ändern",
       "load_skill": "Skill öffnen",
       "read_skill_file": "Skill-Datei lesen",

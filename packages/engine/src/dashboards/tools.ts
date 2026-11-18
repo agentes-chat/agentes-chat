@@ -19,17 +19,19 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from ".
 import { getMembership } from "../organizations";
 import { routineBriefOf } from "../routine-brief";
 import type { ToolContext, ToolDefinition, ToolOutput, ToolSource } from "../tools/types";
-import { dashboardRights, dashboardSeerSql, viewerOf } from "./access";
+import { dashboardRights, dashboardSeerSql, requireWidget, viewerOf } from "./access";
 import { proposeDashboardAudience } from "./proposals";
-import { applyWidgetUpdate, UPDATE_WIDGET_TOOL } from "./refresh";
+import { applyWidgetUpdate, askWidgetChange, refreshWidgetNow, UPDATE_WIDGET_TOOL } from "./refresh";
 import { WIDGET_KIND_MANUAL } from "./refresh-context";
 import { widgetNeedsAi } from "./refresh-ledger";
 import {
   ensureHomeBoard,
   insertDashboard,
   insertWidget,
+  removeWidget,
   setDashboardAudience,
   setDashboardEditors,
+  updateWidget,
   widensDashboardAudience,
 } from "./service";
 import {
@@ -59,6 +61,10 @@ const { dashboards, dashboardWidgets, messages, orgRoles, users, agents } = sche
  *   the run (else the accountable person), private; a wider `audience` becomes a proposal to them.
  * - `create_widget` `{ dashboard_id?, title, prompt, kind?, schedule, alert?, size?, data?, sources? }`: on a board
  *   that person edits (default: their home); `data` (a `WidgetSpec`) shows at once, else the first build is queued.
+ * - `change_widget` `{ widget_id, title?, prompt?, schedule?, size?, change?, update_now? }` and `remove_widget`
+ *   `{ widget_id }`: a widget on a board the person behind the run edits, only on that person's run (never a
+ *   routine's): its settings as a person changes them (`updateWidget`), "Ask for a change" (`change`) or "Update now"
+ *   (`update_now`), or gone (`removeWidget`).
  * - `share_dashboard` `{ dashboard_id, audience?, roles?, why?, edit?, edit_roles? }`: narrower applies (on a board
  *   the agent made or the person manages), wider is a proposal; a routine's or unattended run only ever proposes.
  *   Who edits (`edit`, `edit_roles`) applies at once: editing isn't seeing (ADR 0135 §8).
@@ -113,6 +119,16 @@ async function personOf(ctx: ToolContext, maker: AgentMaker) {
 }
 
 type Person = NonNullable<Awaited<ReturnType<typeof personOf>>>;
+
+/**
+ * The person whose run this is, who changes or removes a widget through it, or why not: a widget already on a board
+ * changes only when a person asks, never on a routine's or an unattended run.
+ */
+async function askerOf(ctx: ToolContext): Promise<Person | string> {
+  const { maker } = await makerOf(ctx);
+  if (!maker.personId) return "Only a person's request changes or removes a widget: none is behind this run.";
+  return (await personOf(ctx, { ...maker, accountableUserId: maker.personId })) ?? NOBODY;
+}
 
 const NOBODY =
   "Nobody is behind this run to make a dashboard for (no person asked, and your work has no owner). Don't make one.";
@@ -243,7 +259,7 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
   const listDashboards: ToolDefinition = {
     name: "list_dashboards",
     description:
-      "List the dashboards (in Portuguese, painéis) the person you work for can add widgets to, and their Home, with who sees each one and its widgets. Use it before create_widget when they name a dashboard, or to answer what's on them. Read only.",
+      "List the dashboards (in Portuguese, painéis) the person you work for can add widgets to, and their Home, with who sees each one and its widgets (each one's id, schedule, and why it fails when it does). Use it before create_widget, change_widget or remove_widget, or to answer what's on them. Read only.",
     scope: "",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     async execute(_input, ctx) {
@@ -265,6 +281,7 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
           ? []
           : await ctx.db
               .select({
+                id: dashboardWidgets.id,
                 dashboardId: dashboardWidgets.dashboardId,
                 title: dashboardWidgets.title,
                 schedule: dashboardWidgets.schedule,
@@ -295,7 +312,7 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
         const pending = b.proposal ? `; waiting on ${person.name} to publish it wider` : "";
         const each = own.map((w) => {
           const when = SCHEDULE_WORDS[w.schedule as WidgetSchedule] ?? w.schedule;
-          return `${w.title} (${when}${w.status === "failed" ? failingWords(w) : ""})`;
+          return `${w.id} ${w.title} (${when}${w.status === "failed" ? failingWords(w) : ""})`;
         });
         const list = own.length === 0 ? "no widgets yet" : `${own.length} widgets: ${each.join("; ")}`;
         lines.push(`${b.id} — ${name}: seen by ${who}${editors}${pending}; ${list}`);
@@ -385,7 +402,7 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
 
   const createWidget: ToolDefinition = {
     name: "create_widget",
-    description: `Add a widget: one number, goal, chart, list or short summary that you keep up to date on a dashboard (or the person's Home), redone in place on a schedule by your own background run, which posts nothing in the chat. Use it when someone asks to "keep this updated", "pin this chart", "put it on my Home", "add to the dashboard", "acompanhar", "fixar", or for a number they want to look at every day. \`prompt\` is what to show, in their words (it is your instructions on every update). \`schedule\`: half (every 30 min, the most often), hour, day (08:00), week (Monday 08:00) or manual (only when asked). \`alert\`: a condition in their words ("drops 20% below yesterday"; "" = when something is off) when they want to hear it: you judge it on each update and it goes to their Waiting on you, never the chat. Give \`data\` when you already have the numbers (it shows at once), else your first update builds it soon. Without \`dashboard_id\` it goes on their Home.`,
+    description: `Add a widget: one number, goal, chart, list or short summary that you keep up to date on a dashboard (or the person's Home), redone in place on a schedule by your own background run, which posts nothing in the chat. Use it when someone asks to "keep this updated", "pin this chart", "put it on my Home", "add to the dashboard", "acompanhar", "fixar", or for a number they want to look at every day. \`prompt\` is what to show, in their words (it is your instructions on every update). \`schedule\`: half (every 30 min, the most often), hour, day (08:00), week (Monday 08:00) or manual (only when asked). \`alert\`: a condition in their words ("drops 20% below yesterday"; "" = when something is off) when they want to hear it: you judge it on each update and it goes to their Waiting on you, never the chat. Give \`data\` when you already have the numbers (it shows at once), else your first update builds it soon. Without \`dashboard_id\` it goes on their Home. Never add a widget that one on the board already shows (list_dashboards): change that one with change_widget.`,
     scope: "",
     inputSchema: {
       type: "object",
@@ -570,7 +587,91 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
     },
   };
 
-  const updateWidget: ToolDefinition = {
+  const changeWidget: ToolDefinition = {
+    name: "change_widget",
+    description:
+      'Change a widget that is already on a dashboard, when the person you work for asks: fix one that fails, show it another way, rename it, change what it shows or how often it updates. Never add another widget for that. `title`, `prompt` (what to show, your instructions on every update), `schedule` and `size` apply now. `change`: what they want different, in their words ("show each day\'s count", "as bars"): your next update redoes it that way, kind included. `update_now`: redo it now with what it has (after you fixed why it failed). Its id comes from list_dashboards.',
+    scope: "",
+    inputSchema: {
+      type: "object",
+      properties: {
+        widget_id: { type: "string", minLength: 36, maxLength: 36 },
+        title: { type: "string", minLength: 1, maxLength: WIDGET_AGENT_TITLE_MAX },
+        prompt: { type: "string", minLength: 1, maxLength: WIDGET_PROMPT_MAX },
+        schedule: { type: "string", enum: [...WIDGET_SCHEDULES] },
+        size: { type: "string", enum: [...WIDGET_SIZES], description: "s (1×1), m (2×1) or l (2×2)" },
+        change: { type: "string", minLength: 1, maxLength: WIDGET_PROMPT_MAX },
+        update_now: { type: "boolean" },
+      },
+      required: ["widget_id"],
+      additionalProperties: false,
+    },
+    async execute(input, ctx) {
+      try {
+        const person = await askerOf(ctx);
+        if (typeof person === "string") return refusal(person);
+        const id = str(input.widget_id);
+        const { widget } = await requireWidget(ctx.db, person.userId, ctx.orgId, id, "edit");
+        const patch = {
+          ...(str(input.title).trim() ? { title: str(input.title) } : {}),
+          ...(str(input.prompt).trim() ? { prompt: str(input.prompt) } : {}),
+          ...(isWidgetSchedule(input.schedule) ? { schedule: input.schedule } : {}),
+          ...(isWidgetSize(input.size) ? { size: input.size } : {}),
+        };
+        const change = str(input.change).trim();
+        if (Object.keys(patch).length === 0 && !change && input.update_now !== true) {
+          return refusal("Give what to change (`title`, `prompt`, `schedule`, `size`, `change`) or `update_now`.");
+        }
+        let view =
+          Object.keys(patch).length > 0 ? await updateWidget(depsOf(ctx), person.userId, ctx.orgId, id, patch) : null;
+        let next = "";
+        if (change) {
+          view = await askWidgetChange(depsOf(ctx), person.userId, ctx.orgId, id, change);
+          next = " Your next update redoes it as asked, shortly, in the background.";
+        } else if (input.update_now === true) {
+          view = await refreshWidgetNow(depsOf(ctx), person.userId, ctx.orgId, id);
+          next = " It updates now, in the background.";
+        }
+        const title = view?.title ?? widget.title;
+        const changed = Object.keys(patch).length > 0 ? ` Changed its ${Object.keys(patch).join(", ")}.` : "";
+        return {
+          content: `Widget ${id} «${title}»:${changed}${next} Don't post its numbers in the chat; tell ${person.name} it's done.`,
+          data: { widget: { id, status: view?.status ?? widget.status } },
+        };
+      } catch (error) {
+        if (explained(error)) return failed(error);
+        throw error;
+      }
+    },
+  };
+
+  const removeWidgetTool: ToolDefinition = {
+    name: "remove_widget",
+    description:
+      "Take a widget off its dashboard for good, with its history, when the person you work for asks (a duplicate, one they no longer want). Its id comes from list_dashboards.",
+    scope: "",
+    inputSchema: {
+      type: "object",
+      properties: { widget_id: { type: "string", minLength: 36, maxLength: 36 } },
+      required: ["widget_id"],
+      additionalProperties: false,
+    },
+    async execute(input, ctx) {
+      try {
+        const person = await askerOf(ctx);
+        if (typeof person === "string") return refusal(person);
+        const id = str(input.widget_id);
+        const { widget } = await requireWidget(ctx.db, person.userId, ctx.orgId, id, "edit");
+        await removeWidget(depsOf(ctx), person.userId, ctx.orgId, id);
+        return { content: `Removed the widget «${widget.title}». Tell ${person.name}.`, data: { widget: { id } } };
+      } catch (error) {
+        if (explained(error)) return failed(error);
+        throw error;
+      }
+    },
+  };
+
+  const updateWidgetTool: ToolDefinition = {
     name: UPDATE_WIDGET_TOOL,
     description:
       "Redo the widget this run keeps up to date, in place: its new `data` (one kind's shape, as this run's instructions say; every `note` one short sentence of at most 140 characters; a bars or line chart's unit, like \"runs per day\", goes once in its `unit`, never in each value or label), a one-line `summary` of what changed for its history, and the `sources` you read. Set `alert` (one sentence for the person) only when its alert condition is met. `title` is required on its first build (a short name of at most 40 characters, sentence case, in the person's language, no period at the end, never the ask itself) and allowed only then or when a person asked for a change, never over a title a person gave it; `prompt` only on a change. If you couldn't get the data, give `failed` with why, in the person's words, instead of `data`. Call it once; nothing goes to any chat.",
@@ -640,8 +741,8 @@ export function createDashboardToolSource(deps: DashboardDeps): ToolSource {
     async tools(ctx) {
       // A widget's refresh run speaks only through update_widget (ADR 0135 §5); no other run has it.
       const brief = await briefOf(ctx);
-      if (brief?.widget) return [updateWidget];
-      return [listDashboards, createDashboard, createWidget, shareDashboard];
+      if (brief?.widget) return [updateWidgetTool];
+      return [listDashboards, createDashboard, createWidget, changeWidget, removeWidgetTool, shareDashboard];
     },
   };
 }

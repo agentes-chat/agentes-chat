@@ -15247,6 +15247,8 @@
       "list_dashboards": "Dashboards weergeven",
       "share_dashboard": "Dashboard delen",
       "create_widget": "Widget maken",
+      "change_widget": "Widget bewerken",
+      "remove_widget": "Widget verwijderen",
       "update_widget": "Widget bijwerken",
       "load_skill": "Skill openen",
       "read_skill_file": "Skillbestand lezen",

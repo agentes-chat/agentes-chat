@@ -15703,6 +15703,8 @@
       "list_dashboards": "Lister les tableaux de bord",
       "share_dashboard": "Partager un tableau de bord",
       "create_widget": "Créer un widget",
+      "change_widget": "Éditer un widget",
+      "remove_widget": "Retirer un widget",
       "update_widget": "Modifier un widget",
       "load_skill": "Ouvrir une compétence",
       "read_skill_file": "Lire un fichier de compétence",

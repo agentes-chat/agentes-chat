@@ -14609,6 +14609,8 @@
       "list_dashboards": "ダッシュボードを一覧表示",
       "share_dashboard": "ダッシュボードを共有",
       "create_widget": "ウィジェットを作成",
+      "change_widget": "ウィジェットを編集",
+      "remove_widget": "ウィジェットを削除",
       "update_widget": "ウィジェットを更新",
       "load_skill": "スキルを開く",
       "read_skill_file": "スキルのファイルを読み取り",

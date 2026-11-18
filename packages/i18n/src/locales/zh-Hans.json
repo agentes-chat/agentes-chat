@@ -14677,6 +14677,8 @@
       "list_dashboards": "列出仪表盘",
       "share_dashboard": "分享仪表盘",
       "create_widget": "创建小组件",
+      "change_widget": "编辑小组件",
+      "remove_widget": "移除小组件",
       "update_widget": "更新小组件",
       "load_skill": "打开技能",
       "read_skill_file": "读取技能文件",

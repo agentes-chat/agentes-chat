@@ -9,6 +9,7 @@ import {
   type DashboardDeps,
   decideDashboardProposal,
   drainOutbox,
+  insertWidget,
   postPersonMessage,
   proposeDashboardAudience,
   runRoutineNow,
@@ -521,5 +522,107 @@ describe("share_dashboard and list_dashboards", () => {
     expect(board).toMatchObject({ audience: "private" });
     expect(board?.proposal).toMatchObject({ audience: "workspace" });
     expect((await notificationsOf(f, "dashboard_proposal")).map((n) => n.userId)).toEqual([f.owner.id]);
+  });
+});
+
+describe("change_widget and remove_widget", () => {
+  /** A board with two widgets that show data: one that fails, as its run said, and its duplicate. */
+  async function boardWithWidgets() {
+    const board = await createDashboard(dash(), f.owner.id, f.org.id, {
+      title: "Infra",
+      audience: "private",
+      editPolicy: "owner",
+    });
+    const shown = (title: string) =>
+      insertWidget(dash(), {
+        orgId: f.org.id,
+        dashboardId: board.id,
+        agentId: f.agent.id,
+        title,
+        prompt: "Emails enviados por dia, na semana",
+        format: "auto",
+        schedule: "manual",
+        spec: { kind: "line", labels: ["10/11", "11/11"], values: [3, 5] },
+        createdByUserId: f.owner.id,
+      });
+    const original = await shown("Emails enviados por dia");
+    const duplicate = await shown("Emails por dia · quantidade");
+    await f.db
+      .update(schema.dashboardWidgets)
+      .set({ status: "failed", failureCode: "agent_reported", failureDetail: "PostHog não habilitado" })
+      .where(eq(schema.dashboardWidgets.id, original.id));
+    return { board, original, duplicate };
+  }
+
+  test("list_dashboards names each widget's id and why it fails; the agent fixes one and removes its duplicate", async () => {
+    let ids = { original: "", duplicate: "" };
+    const results = await setupAgent((req) => {
+      const said = JSON.stringify(req.messages);
+      if (!said.includes("painel")) return [];
+      return [
+        { name: "list_dashboards", input: {} },
+        { name: "change_widget", input: { widget_id: ids.original, change: "mostrar a contagem de cada dia" } },
+        { name: "remove_widget", input: { widget_id: ids.duplicate } },
+      ];
+    });
+    const { original, duplicate } = await boardWithWidgets();
+    ids = { original: original.id, duplicate: duplicate.id };
+    await ask("arruma o painel de infra e tira o duplicado");
+    expect(results[0]).toContain(`${original.id} Emails enviados por dia`);
+    expect(results[0]).toContain("failing: PostHog não habilitado");
+    expect(results[0]).toContain(`${duplicate.id} Emails por dia · quantidade`);
+    expect(results[0]).toContain("Your next update redoes it as asked");
+    expect(results[0]).toContain("Removed the widget «Emails por dia · quantidade»");
+    expect((await widgets()).map((w) => w.id)).toEqual([original.id]);
+    // Its change waits as a run of its routine, with the person's words.
+    const [row] = await widgets();
+    const runs = await f.db
+      .select()
+      .from(schema.routineRuns)
+      .where(eq(schema.routineRuns.routineId, row?.routineId ?? ""));
+    expect(runs.map((r) => r.event)).toEqual([
+      expect.objectContaining({ type: "widget.change", text: "mostrar a contagem de cada dia", byUserId: f.owner.id }),
+    ]);
+  });
+
+  test("its settings apply at once; a widget the person can't edit, and a routine's run, are refused", async () => {
+    let ids = { original: "", other: "" };
+    const results = await setupAgent((req) => {
+      if (isRoutineRun(req)) return [{ name: "remove_widget", input: { widget_id: ids.original } }];
+      if (!JSON.stringify(req.messages).includes("painel")) return [];
+      return [
+        { name: "change_widget", input: { widget_id: ids.original, title: "Emails por dia", schedule: "day" } },
+        { name: "remove_widget", input: { widget_id: ids.other } },
+      ];
+    });
+    const { original, duplicate } = await boardWithWidgets();
+    const bia = await addMember(f.db, f.org.id, "member", "bia");
+    const theirs = await createDashboard(dash(), bia.id, f.org.id, {
+      title: "Da Bia",
+      audience: "private",
+      editPolicy: "owner",
+    });
+    const other = await insertWidget(dash(), {
+      orgId: f.org.id,
+      dashboardId: theirs.id,
+      agentId: f.agent.id,
+      title: "Só dela",
+      prompt: "Algo",
+      format: "auto",
+      schedule: "manual",
+      spec: { kind: "kpi", value: 1 },
+      createdByUserId: bia.id,
+    });
+    ids = { original: original.id, other: other.id };
+    await ask("muda o título no painel de infra");
+    const changed = (await widgets()).find((w) => w.id === original.id);
+    expect(changed).toMatchObject({ title: "Emails por dia", titleSetByUser: true, schedule: "day" });
+    expect(results.some((r) => r.includes("Widget not found"))).toBe(true);
+
+    const routine = await channelRoutine(f, { prompt: "Limpe o painel de infra." });
+    await runRoutineNow(routineDeps(f), f.owner.id, f.org.id, routine.id);
+    await drainOutbox(f.db, f.handlers);
+    expect(results.some((r) => r.includes("Only a person's request changes or removes a widget"))).toBe(true);
+    expect((await widgets()).map((w) => w.id).sort()).toEqual([original.id, duplicate.id, other.id].sort());
   });
 });
