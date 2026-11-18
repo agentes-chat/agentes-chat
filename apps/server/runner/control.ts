@@ -11,6 +11,7 @@ import {
 import { ControlError } from "./access";
 import { type DaemonOptions, RunnerDaemon } from "./daemon";
 import { RUNNER_VERSION, RunnerError } from "./errors";
+import { type GateCredentials, isGateKind } from "./gate";
 import { type LockInfo, lockedMessage } from "./lock";
 
 /**
@@ -42,6 +43,13 @@ function toControlError(err: unknown): { code: ControlErrorCode; message: string
 }
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
+
+/** `gate.set`'s credentials, as the app sent them: a kind this runner knows and its fields, or nothing. */
+function gateCredentialsOf(m: { kind?: unknown; token?: unknown }): GateCredentials | null {
+  if (!isGateKind(m.kind)) throw new ControlError("bad_request", "unknown gate");
+  const token = str(m.token);
+  return token ? { kind: m.kind, token } : null;
+}
 
 /** Answers the app's requests with the daemon. */
 export class ControlServer {
@@ -118,6 +126,8 @@ export class ControlServer {
         return d.accessAnswer(str(m.requestId), m.decision, m.scope === "all" ? "all" : "agent");
       case "reconnect":
         return d.reconnect();
+      case "gate.set":
+        return d.gateSet(str(m.server), gateCredentialsOf(m));
       case "browser.stop":
         return d.browserStop(str(m.agentId));
       case "accounts.list":
