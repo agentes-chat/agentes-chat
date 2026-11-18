@@ -256,3 +256,13 @@ whose calls the server's own words tell apart (`readsOnly`: PostHog's commands, 
 executor through its actions) is now listed for a run that may only read, and each call is judged as it comes: one
 that only reads runs as the connection's read, anything else is refused with why. Routines' reads through it stop
 asking a person for the same reason.
+
+## Addendum (2026-11-18): agents change and remove the widgets already there
+
+An agent could make boards and widgets (§10) but not touch one already on a board: asked to fix a failing widget, to
+show it another way or to drop a duplicate, it could only add another. Two built-in tools join §10's, on a person's
+run only (a widget already there changes when a person asks, never on a routine's or an unattended run), on a widget
+that person edits, through the same calls as the person's own buttons: `change_widget` (title, instructions, schedule
+and size as a person sets them; `change` is "Ask for a change", `update_now` is "Update now") and `remove_widget`.
+`list_dashboards` names each widget's id and, when it fails, why, in its run's own words; `create_widget` says to
+change the widget that already shows something instead of adding another.

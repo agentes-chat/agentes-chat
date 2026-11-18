@@ -267,6 +267,8 @@ const INTERNAL_BY_NAME: Readonly<Record<string, InternalArea>> = {
   // Boards and widgets for the person behind the run (ADR 0135 §10): private until the person widens them.
   create_dashboard: "dashboards",
   create_widget: "dashboards",
+  change_widget: "dashboards",
+  remove_widget: "dashboards",
   share_dashboard: "dashboards",
 };
 
