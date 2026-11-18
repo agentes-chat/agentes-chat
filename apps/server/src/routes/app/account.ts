@@ -1,3 +1,4 @@
+import { retryInSeconds } from "@agenteschat/adapters";
 import { isLoopback } from "@agenteschat/client/lib/server";
 import { isWorkAreaAnswer, WORK_AREA_ANSWERS } from "@agenteschat/client/lib/work-area";
 import {
@@ -124,6 +125,8 @@ import { AccentColor, Invitation, Member, Organization, Role } from "./schemas";
 const tags = ["Account"];
 /** E-mail lookups on the sign-in screen: enough for typos and a few accounts, not for listing who has one. */
 const SIGN_IN_OPTIONS_PER_IP = { limit: 30, windowMs: 10 * 60_000 };
+/** The same on registered hosts, which run no bot check (ADR 0194), counted apart. */
+const SIGN_IN_OPTIONS_PER_IP_ON_HOSTS = { limit: 10, windowMs: 10 * 60_000 };
 /** A workspace's deletions in a day: deleting and restoring it over and over can't email its people all day. */
 const DELETIONS_PER_DAY = { limit: 3, windowMs: 86_400_000 };
 /** Workspaces a person makes in a day: making and deleting them over and over can't churn the Cloud's computers. */
@@ -390,7 +393,7 @@ export function accountRoutes(deps: AppDeps) {
             }),
             turnstileSiteKey: z.string().nullable().openapi({
               description:
-                "The bot check's site key (`TURNSTILE_SITE_KEY`, ADR 0075): pages run Cloudflare Turnstile and send its token in `x-captcha-response`. Null: no check, and nothing loads from Cloudflare.",
+                "The bot check's site key (`TURNSTILE_SITE_KEY`, ADR 0075): pages run Cloudflare Turnstile and send its token in `x-captcha-response`. Null: no check, and nothing loads from Cloudflare; always null on a registered host (`host`), which runs no check.",
             }),
             errorReports: z
               .object({ dsn: z.string(), environment: z.string(), release: z.string() })
@@ -447,7 +450,7 @@ export function accountRoutes(deps: AppDeps) {
           billingUrl: config.BILLING_URL ?? null,
           referralsUrl: config.REFERRALS_URL ?? null,
           cloud: isAgentesCloud(config.PUBLIC_URL),
-          turnstileSiteKey: deps.adapters.humanCheck?.siteKey ?? null,
+          turnstileSiteKey: look ? null : (deps.adapters.humanCheck?.siteKey ?? null),
           errorReports: reportsTo(config.SENTRY_WEB_DSN),
           mobileErrorReports: reportsTo(config.SENTRY_MOBILE_DSN ?? config.SENTRY_WEB_DSN),
           surface: surfaceOn() !== null,
@@ -498,7 +501,7 @@ export function accountRoutes(deps: AppDeps) {
             }),
             pass: z.string().optional().openapi({
               description:
-                "Only with the bot check on: sent as `x-captcha-response` in place of a token, it stands for the check at this address's sign-in, sign-up or password reset, from the same network, for ten minutes and a few calls (ADR 0075).",
+                "Only with the bot check on, and never on a registered host: sent as `x-captcha-response` in place of a token, it stands for the check at this address's sign-in, sign-up or password reset, from the same network, for ten minutes and a few calls (ADR 0075).",
             }),
           }),
         ),
@@ -508,20 +511,23 @@ export function accountRoutes(deps: AppDeps) {
     }),
     async (c) => {
       const ip = requestLimitIp(c.req.raw.headers, config.TRUSTED_PROXIES);
-      const limit = await deps.adapters.rateLimiter.consume(`sign-in-options:${ip}`, SIGN_IN_OPTIONS_PER_IP);
-      if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many requests. Try again later.");
-      const refused = await humanCheckRefusal(
-        deps.adapters.humanCheck,
-        db,
-        c.req.raw.headers,
-        "email-lookup",
-        config.TRUSTED_PROXIES,
+      const look = await hostLook(db, c.req.header("host"));
+      const limit = await deps.adapters.rateLimiter.consume(
+        look ? `sign-in-options:hosts:${ip}` : `sign-in-options:${ip}`,
+        look ? SIGN_IN_OPTIONS_PER_IP_ON_HOSTS : SIGN_IN_OPTIONS_PER_IP,
       );
+      if (!limit.allowed) {
+        c.header("Retry-After", String(retryInSeconds(limit.resetAt)));
+        return apiError(c, 429, "rate_limited", "Too many requests. Try again later.");
+      }
+      // Where no check runs, no pass either: it would stand for the check on the main address.
+      const check = look ? null : (deps.adapters.humanCheck ?? null);
+      const refused = await humanCheckRefusal(check, db, c.req.raw.headers, "email-lookup", config.TRUSTED_PROXIES);
       if (refused) return apiError(c, 403, refused.code, refused.message);
       const { email, access } = c.req.valid("json");
       const found = await signInOptions(db, email, signupPolicy(config), access);
       // Checked once: the step after this one, for this address, goes with the pass and no second check.
-      if (!deps.adapters.humanCheck) return c.json(found, 200);
+      if (!check) return c.json(found, 200);
       const pass = humanPassesFor(deriveSecret(config.AGENTES_SECRET, "human-pass")).issue(email, ip);
       return c.json({ ...found, pass }, 200);
     },

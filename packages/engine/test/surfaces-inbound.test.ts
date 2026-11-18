@@ -43,6 +43,7 @@ beforeEach(async () => {
       limited.push(key);
       return inner.consume(key, rule);
     },
+    release: (key) => inner.release(key),
   };
 });
 afterEach(async () => {

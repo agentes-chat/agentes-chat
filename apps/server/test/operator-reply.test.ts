@@ -163,7 +163,10 @@ beforeAll(async () => {
   });
   db = t.db;
   // The tests' own door counts no minute: the one about the limits brings a clock.
-  const unlimited = { consume: async () => ({ allowed: true, remaining: 1, resetAt: new Date(0) }) };
+  const unlimited = {
+    consume: async () => ({ allowed: true, remaining: 1, resetAt: new Date(0) }),
+    release: async () => {},
+  };
   deps = { db, config: t.config, version: "test", log: createLogger("error"), rateLimiter: unlimited, emails: true };
   app = createOperatorApp(deps, TOKEN, READ, REVEAL);
 

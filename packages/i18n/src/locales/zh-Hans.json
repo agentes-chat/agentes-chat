@@ -588,6 +588,7 @@
     "hidePassword": "隐藏密码",
     "capsLock": "大写锁定已开启",
     "tooManyTries": "尝试次数过多。请等几分钟后再试。",
+    "passwordTries_other": "此账号的密码尝试次数过多。请在 {{count}} 分钟后重试。",
     "accountBlocked": "这个账号无法登录。",
     "passwordHelp": "至少 8 个字符。",
     "passwordOk": "密码可用。",

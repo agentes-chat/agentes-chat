@@ -588,6 +588,7 @@
     "hidePassword": "비밀번호 숨기기",
     "capsLock": "Caps Lock이 켜져 있어요",
     "tooManyTries": "시도 횟수가 너무 많아요. 몇 분 기다렸다가 다시 시도하세요.",
+    "passwordTries_other": "이 계정의 비밀번호 시도 횟수가 너무 많아요. {{count}}분 후에 다시 시도하세요.",
     "accountBlocked": "이 계정은 로그인할 수 없어요.",
     "passwordHelp": "8자 이상이에요.",
     "passwordOk": "좋은 비밀번호예요.",

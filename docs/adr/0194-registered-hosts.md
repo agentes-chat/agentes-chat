@@ -64,9 +64,19 @@ stay exact and be written once.
    callback address it knows, `PUBLIC_URL`'s, whose session the registered host can't read. Social sign-in there
    would need a hand-over: the main address finishes the sign-in, then passes a one-time code back to the registered
    host, which turns it into a session of its own. It is left for later.
-   With the bot check on (ADR 0075), a token counts when Cloudflare saw it made on `PUBLIC_URL`'s host or on the
-   request's own registered host (`humanCheckRefusal` passes `hostLook`'s host to the check), never on another
-   registered host, and never on one for the waiting lists.
+   A registered host runs no bot check (ADR 0075): there `auth-config`'s `turnstileSiteKey` is null, so its pages load
+   no widget and send no token, and `humanCheckRefusal` lets its requests through without asking Cloudflare. The
+   e-mail's lookup gives no pass there, since a pass would stand for the check on the main address. Turnstile's widget
+   takes a fixed list of hostnames, so it can't follow a list an operator keeps adding to. The waiting lists keep the
+   check on every host: their forms are the landing page's. Only the request's own `Host`, through `hostLook`, decides.
+   What that leaves unguarded, plainly: nothing ties an account to a host, so every account's email lookup, password
+   sign-in and password reset can be asked on any registered host, where no bot check runs. On a server with
+   registered hosts, the main address's bot check therefore no longer stands between a script and those calls for any
+   account. What guards them is the limits per network, tighter on registered hosts (10 email lookups in 10 minutes and
+   5 sign-ups in 15 minutes per network, for all of them together), and the wrong passwords per account (10 in 15
+   minutes from one network, 50 from all), each counted in a server process's memory, so a restart starts them again
+   (ADR 0075, points 10 and 11). Sign-up there can send confirmation emails with only the limit per network in front
+   of it.
 6. **The links that bring a person back.** `baseUrlFor(requestHost)` gives the registered host's address on a request
    for one, else `PUBLIC_URL`. The confirmation link of an account signed up on that host, an invitation's link and its
    email (the host it was created or re-sent from, by someone signed in there), the invitation links' list and the join
@@ -106,10 +116,8 @@ stay exact and be written once.
 ## Consequences
 
 - An operator registers a host only after pointing the hostname at the server and serving a certificate for it (the
-  server only answers what reaches it, over HTTPS). With the bot check on, the operator also adds the hostname to the
-  Turnstile widget's domains in Cloudflare, or the widget can't run there and email sign-in is refused. A proxy in
-  front must pass the `Host` the browser sent; one that rewrites it makes the host look unregistered, which fails
-  closed.
+  server only answers what reaches it, over HTTPS). A proxy in front must pass the `Host` the browser sent; one that
+  rewrites it makes the host look unregistered, which fails closed.
 - Deleting a host does not end the sessions people hold there: they stop being reachable there once its traffic stops
   reaching the server, and its origin is no longer trusted at once on this process and within 30 seconds elsewhere.
 - Every request to Better Auth, and every write and WebSocket upgrade with an origin outside the old list, reads the

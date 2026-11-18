@@ -60,7 +60,7 @@ function useStep(action: HumanAction | null) {
     /** "Use another email": back down to the e-mail's screen, past every step over it. */
     toEmail: () => router.dismiss(depth),
     /** Better Auth's refusal → the sentence to show (never the server's raw text). */
-    failed: (refusal: { status: number; code?: string }) =>
+    failed: (refusal: { status: number; code?: string; retryIn?: number }) =>
       setError(refusal.status ? refusalText(t, refusal) : t("mobile.auth.errors.network")),
     /**
      * What a throw means: only a request that never got an answer (fetch's "Network request failed") is "No

@@ -472,10 +472,10 @@ html:not([data-pointer]) .plan-row__place--grip:focus-visible {
 .plan-shares__tokens {
   grid-column: 4;
 }
-/* A one-line row is a small control tall. Its face sits on the first line's capitals, as an `.ac-iconline` lead does,
-   so it stays there when the name wraps. */
+/* The face keeps 8 from the hairlines above and below. It sits on the first line's capitals, as an `.ac-iconline` lead
+   does, so it stays there when the name wraps. */
 .plan-shares__row {
-  padding: calc((var(--control-h-sm) - 1lh) / 2) 0;
+  padding: var(--space-2) 0;
   border: 0;
   background: none;
   font: inherit;
@@ -486,7 +486,13 @@ html:not([data-pointer]) .plan-row__place--grip:focus-visible {
 }
 .plan-shares__row > :first-child {
   line-height: inherit;
-  translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+  /* Browsers without the lh unit: the page's 22px line. */
+  translate: 0 calc(11px - var(--cap-mid) - 50%);
+}
+@supports (top: 1lh) {
+  .plan-shares__row > :first-child {
+    translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+  }
 }
 .plan-shares__row + .plan-shares__row {
   border-top: 1px solid var(--line);

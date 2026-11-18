@@ -601,6 +601,8 @@
     "hidePassword": "Şifreyi gizle",
     "capsLock": "Caps Lock açık",
     "tooManyTries": "Çok fazla deneme. Birkaç dakika bekleyip tekrar deneyin.",
+    "passwordTries_one": "Bu hesapta çok fazla şifre denemesi yapıldı. {{count}} dakika sonra tekrar deneyin.",
+    "passwordTries_other": "Bu hesapta çok fazla şifre denemesi yapıldı. {{count}} dakika sonra tekrar deneyin.",
     "accountBlocked": "Bu hesapla giriş yapılamaz.",
     "passwordHelp": "En az 8 karakter.",
     "passwordOk": "Şifre uygun.",

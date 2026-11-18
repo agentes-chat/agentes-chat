@@ -38,6 +38,9 @@ const limiter = () => {
       used.set(key, count);
       return { allowed: count <= rule.limit, remaining: Math.max(0, rule.limit - count), resetAt: new Date(0) };
     },
+    async release(key: string) {
+      used.set(key, Math.max(0, (used.get(key) ?? 0) - 1));
+    },
   };
 };
 

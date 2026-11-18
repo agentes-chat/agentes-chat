@@ -550,7 +550,8 @@ export function inviteRoutes(deps: AppDeps) {
       const from = requestLimitIp(c.req.raw.headers, config.TRUSTED_PROXIES);
       const ip = await adapters.rateLimiter.consume(`join-code:ip:${from}`, CODES_PER_IP);
       if (!ip.allowed) return apiError(c, 429, "join.rate_limited", TOO_MANY);
-      // Before the link's count, so refused bots don't spend what everyone asking through it shares.
+      // Before the link's count, so refused bots don't spend what everyone asking through it shares. A registered host
+      // runs no check: there the limit per IP above guards it.
       const refused = await humanCheckRefusal(
         adapters.humanCheck,
         db,
