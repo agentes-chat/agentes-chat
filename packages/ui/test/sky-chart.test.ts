@@ -4,6 +4,7 @@ import {
   barCells,
   cellPaths,
   chartRamp,
+  lineMarksFit,
   linePoints,
   lineTops,
   ringCells,
@@ -60,5 +61,17 @@ describe("chart cells (C · Traço + trama)", () => {
     expect(paths.get(1)).toBe("M0 0h4v2h-4Z");
     expect(paths.get(2)).toBe("M0 2h2v2h-2Z");
     expect(paths.has(0)).toBe(false);
+  });
+});
+
+describe("a line's values over its points", () => {
+  test("show only when the widest fits between two points; never with fewer than two or no room", () => {
+    const week = ["3", "5", "4", "12", "9", "7", "120"];
+    expect(lineMarksFit(week, 600)).toBe(true);
+    // 584 points between the pads over 6 gaps: 97 each; a 13-character value needs 103.5.
+    expect(lineMarksFit([...week.slice(0, 6), "1.234.567,890"], 600)).toBe(false);
+    expect(lineMarksFit(Array.from({ length: 30 }, () => "1.234"), 600)).toBe(false);
+    expect(lineMarksFit(["3"], 600)).toBe(false);
+    expect(lineMarksFit(week, 0)).toBe(false);
   });
 });

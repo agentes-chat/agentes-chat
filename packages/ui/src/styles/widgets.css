@@ -432,6 +432,22 @@ html:not([data-pointer]) .wg__resolve:focus-visible {
   inset: 0;
   overflow: visible;
 }
+/* A point's value over it (`marks`): its bottom 6 above the point, as a bar's number stands over its bar. */
+.ac-dline__mark {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ac-dline__mark[data-end="start"] {
+  transform: translate(-6px, -100%);
+}
+.ac-dline__mark[data-end="end"] {
+  transform: translate(calc(-100% + 6px), -100%);
+}
 .wk-spark {
   margin-top: 8px;
 }

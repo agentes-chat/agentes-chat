@@ -163,6 +163,27 @@ describe("a widget's body, by kind", () => {
     expect(container.querySelector(".wk-note")?.textContent).toBe("3,9 min no último · −36%");
   });
 
+  test("a line shows each point's number over it when they fit, the ends inside the box; none when they don't", () => {
+    const spec = { kind: "line" as const, labels: ["10/11", "11/11", "12/11"], values: [1.5, 1204, 37] };
+    const width = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => 600 });
+    try {
+      const { container } = card(spec);
+      const marks = [...container.querySelectorAll(".wk-line .ac-dline__mark")];
+      expect(marks.map((m) => m.textContent)).toEqual(["1,5", "1.204", "37"]);
+      expect(marks.map((m) => m.getAttribute("data-end"))).toEqual(["start", null, "end"]);
+      cleanup();
+      // Thirty points of four digits in 600 points: no room, so no numbers.
+      const many = { kind: "line" as const, labels: spec.labels, values: [] as number[] };
+      many.labels = Array.from({ length: 30 }, (_, i) => String(i));
+      many.values = Array.from({ length: 30 }, (_, i) => 1000 + i);
+      expect(card(many).container.querySelectorAll(".ac-dline__mark")).toHaveLength(0);
+    } finally {
+      if (width) Object.defineProperty(HTMLElement.prototype, "clientWidth", width);
+      else delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth;
+    }
+  });
+
   test("a list: each row with its word, in its tone; a summary: its sentences", () => {
     const list = card({
       kind: "list",
