@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { HumanAction, HumanCheck } from "@agenteschat/adapters";
+import type { HumanCheck } from "@agenteschat/adapters";
 import { schema } from "@agenteschat/db";
 import { enableCaches, listHosts, putHost } from "@agenteschat/engine";
 import { createApp } from "../src/app";
@@ -20,7 +20,6 @@ import {
   seedOrg,
   signUp,
   type TestServer,
-  tokenMadeOn,
   turnstileCheck,
 } from "./harness";
 
@@ -148,40 +147,69 @@ test("by email on a registered host: sign-up, the app's writes, sign-out and sig
   expect((await there("/api/app/me")).status).toBe(200);
 });
 
-test("the bot check takes a token made on the request's own registered host, on that host only", async () => {
-  const s = await server({}, turnstileCheck(fakeCloudflare().fetch));
-  const made = (host: string, action: HumanAction) => ({ "x-captcha-response": tokenMadeOn(host, action) });
+test("a registered host runs no bot check: no site key, no token, no call to Cloudflare; the main address keeps it", async () => {
+  const cloudflare = fakeCloudflare();
+  const asked: string[] = [];
+  const fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    asked.push(String(input));
+    return cloudflare.fetch(input, init);
+  }) as typeof globalThis.fetch;
+  const landing = { LANDING_URL: "https://landing.example" };
+  const s = await server(landing, turnstileCheck(fetch, landing));
+  const config = async (b: Browser) => ((await (await b("/api/app/auth-config")).json()) as Record<string, unknown>);
+  expect(await config(on(browser(s), HOST))).toMatchObject({ turnstileSiteKey: null });
+  expect(await config(browser(s))).toMatchObject({ turnstileSiteKey: "1x00000000000000000000AA" });
+
   const there = on(browser(s), HOST);
   const account = { email: "ana@example.com", password: "correct horse battery" };
-  const up = await there("/api/auth/sign-up/email", {
-    json: { ...account, name: "Ana" },
-    headers: made(HOST, "sign-up"),
+  expect((await there("/api/auth/sign-up/email", { json: { ...account, name: "Ana" } })).status).toBe(200);
+  const { orgId } = await seedOrg(there);
+  const link = (await (await there(`/api/app/organizations/${orgId}/invite-links`, { json: {} })).json()) as {
+    url: string;
+  };
+  const code = `/api/app/invitations/${link.url.split("/invite/")[1]}/code`;
+  const calls = (b: Browser) => ({
+    "email-lookup": b("/api/app/sign-in-options", { json: { email: account.email } }),
+    "sign-in": b("/api/auth/sign-in/email", { json: account }),
+    "sign-up": b("/api/auth/sign-up/email", {
+      json: { email: "bo@example.com", password: "correct horse battery", name: "Bo" },
+    }),
+    "password-reset": b("/api/auth/request-password-reset", {
+      json: { email: account.email, redirectTo: "/reset-password" },
+    }),
+    "ask-code": b(code, { json: { email: "cy@example.com" } }),
   });
-  expect(up.status).toBe(200);
-  const lookup = await there("/api/app/sign-in-options", {
-    json: { email: account.email },
-    headers: made(HOST, "email-lookup"),
+  const outcomes = async (b: Browser) =>
+    Object.fromEntries(
+      await Promise.all(
+        Object.entries(calls(b)).map(async ([call, pending]) => {
+          const res = await pending;
+          const body = (await res.json()) as { code?: string; error?: { code?: string } };
+          return [call, res.ok ? res.status : (body.error?.code ?? body.code)];
+        }),
+      ),
+    );
+  expect(await outcomes(on(browser(s), HOST))).toEqual({
+    "email-lookup": 200,
+    "sign-in": 200,
+    "sign-up": 200,
+    "password-reset": 200,
+    "ask-code": 202,
   });
-  expect(lookup.status).toBe(200);
-  const reset = await there("/api/auth/request-password-reset", {
-    json: { email: account.email, redirectTo: "/reset-password" },
-    headers: made(HOST, "password-reset"),
+  expect(await outcomes(browser(s))).toEqual({
+    "email-lookup": "human_check",
+    "sign-in": "human_check",
+    "sign-up": "human_check",
+    "password-reset": "human_check",
+    "ask-code": "human_check",
   });
-  expect(reset.status).toBe(200);
-  const signIn = (b: Browser) => b("/api/auth/sign-in/email", { json: account, headers: made(HOST, "sign-in") });
-  expect((await signIn(on(browser(s), HOST))).status).toBe(200);
-  // The same token on a request for another registered host or for the main address: refused.
-  for (const b of [on(browser(s), OTHER, HOST_ORIGIN), on(browser(s), OTHER), browser(s)]) {
-    const res = await signIn(b);
-    expect(res.status).toBe(403);
-    expect(((await res.json()) as { code?: string }).code).toBe("human_check");
-  }
-  // The main address's own tokens still count on a registered host.
-  const main = await on(browser(s), HOST)("/api/auth/sign-in/email", {
-    json: account,
-    headers: made("localhost", "sign-in"),
-  });
-  expect(main.status).toBe(200);
+  // No pass where no check ran: it would stand for the check on the main address.
+  const found = await on(browser(s), HOST)("/api/app/sign-in-options", { json: { email: account.email } });
+  expect(await found.json()).not.toHaveProperty("pass");
+  // The waiting lists' forms are the landing page's: a request for a registered host still needs a token.
+  const waitlist = await on(browser(s), HOST, landing.LANDING_URL)("/api/waitlist", { json: { email: "di@example.com" } });
+  expect(waitlist.status).toBe(403);
+  expect(asked).toEqual([]);
 });
 
 test("the WebSocket upgrade takes the same rule", async () => {

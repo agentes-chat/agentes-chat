@@ -102,7 +102,7 @@ import {
 } from "../../auth";
 import { requestLimitIp } from "../../http/client-ip";
 import { apiError, errorResponse } from "../../http/errors";
-import { humanCheckRefusal } from "../../http/human-check";
+import { humanCheckFor, humanCheckRefusal } from "../../http/human-check";
 import { humanPassesFor } from "../../http/human-pass";
 import { imageFile } from "../../http/image-file";
 import { releaseOf } from "../../version";
@@ -390,7 +390,7 @@ export function accountRoutes(deps: AppDeps) {
             }),
             turnstileSiteKey: z.string().nullable().openapi({
               description:
-                "The bot check's site key (`TURNSTILE_SITE_KEY`, ADR 0075): pages run Cloudflare Turnstile and send its token in `x-captcha-response`. Null: no check, and nothing loads from Cloudflare.",
+                "The bot check's site key (`TURNSTILE_SITE_KEY`, ADR 0075): pages run Cloudflare Turnstile and send its token in `x-captcha-response`. Null: no check, and nothing loads from Cloudflare; always null on a registered host (`host`), which runs no check.",
             }),
             errorReports: z
               .object({ dsn: z.string(), environment: z.string(), release: z.string() })
@@ -447,7 +447,7 @@ export function accountRoutes(deps: AppDeps) {
           billingUrl: config.BILLING_URL ?? null,
           referralsUrl: config.REFERRALS_URL ?? null,
           cloud: isAgentesCloud(config.PUBLIC_URL),
-          turnstileSiteKey: deps.adapters.humanCheck?.siteKey ?? null,
+          turnstileSiteKey: look ? null : (deps.adapters.humanCheck?.siteKey ?? null),
           errorReports: reportsTo(config.SENTRY_WEB_DSN),
           mobileErrorReports: reportsTo(config.SENTRY_MOBILE_DSN ?? config.SENTRY_WEB_DSN),
           surface: surfaceOn() !== null,
@@ -498,7 +498,7 @@ export function accountRoutes(deps: AppDeps) {
             }),
             pass: z.string().optional().openapi({
               description:
-                "Only with the bot check on: sent as `x-captcha-response` in place of a token, it stands for the check at this address's sign-in, sign-up or password reset, from the same network, for ten minutes and a few calls (ADR 0075).",
+                "Only with the bot check on, and never on a registered host: sent as `x-captcha-response` in place of a token, it stands for the check at this address's sign-in, sign-up or password reset, from the same network, for ten minutes and a few calls (ADR 0075).",
             }),
           }),
         ),
@@ -510,18 +510,14 @@ export function accountRoutes(deps: AppDeps) {
       const ip = requestLimitIp(c.req.raw.headers, config.TRUSTED_PROXIES);
       const limit = await deps.adapters.rateLimiter.consume(`sign-in-options:${ip}`, SIGN_IN_OPTIONS_PER_IP);
       if (!limit.allowed) return apiError(c, 429, "rate_limited", "Too many requests. Try again later.");
-      const refused = await humanCheckRefusal(
-        deps.adapters.humanCheck,
-        db,
-        c.req.raw.headers,
-        "email-lookup",
-        config.TRUSTED_PROXIES,
-      );
+      // Where no check runs, no pass either: it would stand for the check on the main address.
+      const check = await humanCheckFor(deps.adapters.humanCheck, db, c.req.header("host"));
+      const refused = await humanCheckRefusal(check, db, c.req.raw.headers, "email-lookup", config.TRUSTED_PROXIES);
       if (refused) return apiError(c, 403, refused.code, refused.message);
       const { email, access } = c.req.valid("json");
       const found = await signInOptions(db, email, signupPolicy(config), access);
       // Checked once: the step after this one, for this address, goes with the pass and no second check.
-      if (!deps.adapters.humanCheck) return c.json(found, 200);
+      if (!check) return c.json(found, 200);
       const pass = humanPassesFor(deriveSecret(config.AGENTES_SECRET, "human-pass")).issue(email, ip);
       return c.json({ ...found, pass }, 200);
     },
