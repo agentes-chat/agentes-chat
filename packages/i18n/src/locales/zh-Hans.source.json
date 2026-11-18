@@ -30689,6 +30689,105 @@
   "drive.fileBadge": {
     "value": "FILE"
   },
+  "drive.folders": {
+    "value": "Folders"
+  },
+  "drive.folder": {
+    "value": "Folder"
+  },
+  "drive.newFolder": {
+    "value": "New folder"
+  },
+  "drive.renameFolder": {
+    "value": "Rename folder"
+  },
+  "drive.renameFile": {
+    "value": "Rename file"
+  },
+  "drive.rename": {
+    "value": "Rename"
+  },
+  "drive.create": {
+    "value": "Create"
+  },
+  "drive.openFolder": {
+    "value": "Open"
+  },
+  "drive.folderMore": {
+    "value": "More actions for {{name}}"
+  },
+  "drive.path": {
+    "value": "Folder path"
+  },
+  "drive.up": {
+    "value": "Up one level"
+  },
+  "drive.folderEmptyTitle": {
+    "value": "This folder is empty"
+  },
+  "drive.folderEmptyText": {
+    "value": "Drop files here, or upload them. Dragging a file onto a folder moves it."
+  },
+  "drive.folderEmptyViewer": {
+    "value": "Files put in this folder show up here."
+  },
+  "drive.move": {
+    "value": "Move"
+  },
+  "drive.moveToMenu": {
+    "value": "Move to…"
+  },
+  "drive.moveTitle": {
+    "value": {
+      "one": "Move {{count}} item",
+      "other": "Move {{count}} items"
+    }
+  },
+  "drive.moveTo": {
+    "value": "Folders"
+  },
+  "drive.moveSearch": {
+    "value": "Search folders"
+  },
+  "drive.moveEmpty": {
+    "value": "No folder named “{{q}}”."
+  },
+  "drive.moveHere": {
+    "value": "Here now"
+  },
+  "drive.moveToName": {
+    "value": "Move to {{name}}"
+  },
+  "drive.moved": {
+    "value": {
+      "one": "Moved to {{name}}.",
+      "other": "{{count}} items moved to {{name}}."
+    }
+  },
+  "drive.deleteFolder": {
+    "value": "Delete folder"
+  },
+  "drive.deleteFolderTitle": {
+    "value": "Delete “{{name}}”?"
+  },
+  "drive.deleteFolderBody": {
+    "value": "The folders inside it go too. Files you can delete go to the trash for 30 days. Anyone else's files move up to where this folder was."
+  },
+  "drive.folderDeletedEmpty": {
+    "value": "Folder deleted."
+  },
+  "drive.folderDeleted": {
+    "value": {
+      "one": "Folder deleted. {{count}} file went to the trash.",
+      "other": "Folder deleted. {{count}} files went to the trash."
+    }
+  },
+  "drive.folderDeletedKept": {
+    "value": {
+      "one": "Folder deleted. {{count}} file you can't delete moved up a level.",
+      "other": "Folder deleted. {{count}} files you can't delete moved up a level."
+    }
+  },
   "storage.title": {
     "value": "Storage"
   },
@@ -37742,6 +37841,9 @@
   },
   "errors.artifact.notInDrive": {
     "value": "This lives only in its conversation, so it can't be shared."
+  },
+  "errors.drive.folderIntoItself": {
+    "value": "A folder can't go inside itself or a folder inside it."
   },
   "errors.device.notLinkMaker": {
     "value": "Only the person who made the link can let this computer join."

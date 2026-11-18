@@ -2974,6 +2974,9 @@
       "storage.connect.provider.b2"
     ],
     "id": [
+      "drive.folder",
+      "drive.folders",
+      "drive.moveTo",
       "shell.email.label",
       "devices.cpus",
       "devices.memory",
@@ -3481,6 +3484,7 @@
       "onboarding.import.choose.step.video"
     ],
     "pl": [
+      "drive.folder",
       "devices.cpus",
       "devices.memory",
       "devices.system.android",

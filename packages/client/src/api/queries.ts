@@ -4467,6 +4467,44 @@ export function useArtifacts(orgId: string, filters: ArtifactFilters) {
   return { ...query, artifacts: query.data ? artifacts : undefined, counts: pages?.[0]?.counts ?? null };
 }
 
+/** Every Drive folder of the workspace (the apps build the tree from `parentId`). */
+export const useDriveFolders = (orgId: string) => {
+  const api = useApi();
+  return useQuery({ queryKey: keys.driveFolders(orgId), queryFn: () => api.artifacts.folders(orgId) });
+};
+
+/**
+ * Arranging the Drive: folders made, renamed, moved and deleted, files moved and renamed. Each refreshes the Drive's
+ * lists and folders.
+ */
+export function useDriveArrange(orgId: string) {
+  const api = useApi();
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: keys.artifacts(orgId) });
+  const options = { onSettled: refresh };
+  return {
+    createFolder: useMutation({
+      mutationFn: (input: { name: string; parentId?: string | null }) => api.artifacts.createFolder(orgId, input),
+      ...options,
+    }),
+    updateFolder: useMutation({
+      mutationFn: (input: { id: string; name?: string; parentId?: string | null }) =>
+        api.artifacts.updateFolder(orgId, input.id, { name: input.name, parentId: input.parentId }),
+      ...options,
+    }),
+    deleteFolder: useMutation({ mutationFn: (id: string) => api.artifacts.deleteFolder(orgId, id), ...options }),
+    move: useMutation({
+      mutationFn: (input: { ids: string[]; folderId: string | null }) =>
+        api.artifacts.move(orgId, input.ids, input.folderId),
+      ...options,
+    }),
+    rename: useMutation({
+      mutationFn: (input: { id: string; title: string }) => api.artifacts.rename(orgId, input.id, input.title),
+      ...options,
+    }),
+  };
+}
+
 /** One artifact at a version (latest when omitted). */
 /** `GET …/artifacts-trash`: deleted files (30 days). */
 export const useArtifactTrash = (orgId: string) => {
@@ -4700,12 +4738,17 @@ export function useUploadFile(orgId: string) {
       file: File;
       title?: string;
       channelId?: string | null;
+      folderId?: string | null;
       artifactId?: string;
       note?: string;
     }): Promise<ArtifactDetail> =>
       input.artifactId
         ? api.artifacts.uploadVersion(orgId, input.artifactId, input.file, { note: input.note })
-        : api.artifacts.upload(orgId, input.file, { title: input.title, channelId: input.channelId }),
+        : api.artifacts.upload(orgId, input.file, {
+            title: input.title,
+            channelId: input.channelId,
+            folderId: input.folderId,
+          }),
     meta: { silent: true },
     onSettled: () => qc.invalidateQueries({ queryKey: keys.artifacts(orgId) }),
   });

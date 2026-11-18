@@ -177,6 +177,34 @@ export const artifactKindEnum = pgEnum("artifact_kind", [
 ]);
 
 /**
+ * The Drive's folders: the shared Drive's own structure, so everyone in the workspace sees every folder. A file in one
+ * keeps its own visibility (where it lives and its sharing): a folder never shows a file to anyone more. Deleting a
+ * folder deletes the folders inside it; its files fall back to the Drive's top level (`set null`).
+ */
+export const driveFolders = pgTable(
+  "drive_folders",
+  {
+    id: uuid()
+      .primaryKey()
+      .$defaultFn(() => Bun.randomUUIDv7()),
+    orgId: uuid()
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    /** Null: at the Drive's top level. */
+    parentId: uuid(),
+    name: text().notNull(),
+    createdByType: text().notNull(),
+    createdById: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index().on(t.orgId, t.parentId),
+    foreignKey({ columns: [t.parentId], foreignColumns: [t.id] }).onDelete("cascade"),
+  ],
+);
+
+/**
  * Files people and agents make (Drive): documents, tables, diffs, HTML
  * pages, diagrams, and binary files as is (`file`, ADR 0025). Visibility comes from the channel of origin (null =
  * the whole organization), widened by `share` (ADR 0157). Content lives in the blob store, one object per
@@ -195,6 +223,8 @@ export const artifacts = pgTable(
     title: text().notNull(),
     channelId: uuid(),
     threadId: uuid(),
+    /** The Drive folder it is in; null = the Drive's top level. */
+    folderId: uuid().references(() => driveFolders.id, { onDelete: "set null" }),
     /** `html` is always untrusted: the app renders it only in a sandboxed iframe on another origin. */
     untrusted: boolean().notNull().default(false),
     /** Listed in the Drive and found by search. False for what lives in a conversation (ADR 0113): blocks and polls. */
@@ -217,7 +247,7 @@ export const artifacts = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index().on(t.orgId, t.updatedAt), index().on(t.channelId)],
+  (t) => [index().on(t.orgId, t.updatedAt), index().on(t.channelId), index().on(t.folderId)],
 );
 
 /** One saved version of an artifact: where its bytes are, who made it and why. */

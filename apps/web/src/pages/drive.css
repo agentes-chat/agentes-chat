@@ -574,3 +574,104 @@ html:not([data-pointer]) .drive-row:has(.drive-hit:focus-visible) {
     max-width: none;
   }
 }
+
+/* Folders: compact tiles above the files, Google Drive's way; each one takes Drive items dropped on it. */
+.drive-folders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+  gap: var(--space-3);
+}
+.drive-folder {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: var(--control-h-lg);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--raised);
+  box-shadow: var(--e1), var(--top);
+  transition: box-shadow 0.2s var(--out);
+}
+.drive-folder:hover {
+  box-shadow: var(--e2), var(--top);
+}
+.drive-folder__icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--muted);
+}
+.drive-folder__name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.drive-folder__more {
+  position: relative;
+  z-index: 1;
+  flex: none;
+}
+.drive-folder--over,
+.drive-row--over {
+  background: var(--chosen-bg);
+  box-shadow: var(--chosen-shadow);
+}
+.drive-row--folder .drive-row__name {
+  gap: var(--space-3);
+}
+html:not([data-pointer]) .drive-folder:has(.drive-hit:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+/* The path under a folder's title: each step a way back, and a place to drop items. */
+.drive-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+.drive-crumbs__step {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.drive-crumbs__step + .drive-crumbs__step::before {
+  content: "/";
+  padding: 0 var(--space-1);
+  color: var(--faint);
+}
+.drive-crumbs__link {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0 var(--space-1);
+  margin: 0 calc(-1 * var(--space-1));
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.drive-crumbs__link:hover {
+  color: var(--ink);
+}
+.drive-crumbs__link--over {
+  background: var(--chosen-bg);
+  color: var(--ink);
+}
+.drive-crumbs__here {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* The move dialog's tree: each folder indented by its depth. */
+.drive-move__lead {
+  display: inline-flex;
+  padding-inline-start: calc(var(--depth, 0) * var(--space-4));
+  color: var(--muted);
+}

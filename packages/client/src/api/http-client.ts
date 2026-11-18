@@ -105,6 +105,7 @@ import type {
   DevicesList,
   DirectMessage,
   DmRead,
+  DriveFolder,
   EmailChange,
   EndpointCheck,
   EndpointModel,
@@ -316,6 +317,7 @@ const artifactQuery = (f: ArtifactFilters) => ({
   authors: csv(f.authors?.map((a) => `${a.type}:${a.id}`)),
   who: f.who,
   sort: f.sort && f.sort !== "recent" ? f.sort : undefined,
+  folder: f.folderId === null ? "root" : f.folderId,
 });
 
 /**
@@ -1597,6 +1599,7 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         if (options.title) form.append("title", options.title);
         if (options.channelId) form.append("channelId", options.channelId);
         if (options.threadId) form.append("threadId", options.threadId);
+        if (options.folderId) form.append("folderId", options.folderId);
         return files.upload<ArtifactDetail>(`${org(orgId)}/artifacts/files`, form);
       },
       uploadVersion: (orgId, id, file, options = {}) => {
@@ -1613,6 +1616,16 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       setSharing: (orgId, id, sharing) =>
         request<Artifact>(`${org(orgId)}/artifacts/${enc(id)}/sharing`, { method: "PUT", json: sharing }),
       remove: (orgId, id) => request<void>(`${org(orgId)}/artifacts/${enc(id)}`, { method: "DELETE" }),
+      rename: (orgId, id, title) =>
+        request<Artifact>(`${org(orgId)}/artifacts/${enc(id)}`, { method: "PATCH", json: { title } }),
+      move: (orgId, ids, folderId) =>
+        request<{ moved: number }>(`${org(orgId)}/artifacts/move`, { json: { ids, folderId } }),
+      folders: async (orgId) => (await request<{ folders: DriveFolder[] }>(`${org(orgId)}/drive-folders`)).folders,
+      createFolder: (orgId, input) => request<DriveFolder>(`${org(orgId)}/drive-folders`, { json: input }),
+      updateFolder: (orgId, id, patch) =>
+        request<DriveFolder>(`${org(orgId)}/drive-folders/${enc(id)}`, { method: "PATCH", json: patch }),
+      deleteFolder: (orgId, id) =>
+        request<{ trashed: number; kept: number }>(`${org(orgId)}/drive-folders/${enc(id)}`, { method: "DELETE" }),
       trash: async (orgId) => {
         // The server answers `{ files }`.
         const res = await request<{ files?: TrashedArtifact[]; artifacts?: TrashedArtifact[] } | TrashedArtifact[]>(

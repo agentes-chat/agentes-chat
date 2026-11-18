@@ -142,6 +142,7 @@ import type {
   DirectMessage,
   DmRead,
   DmTarget,
+  DriveFolder,
   EmailChange,
   EndpointCheck,
   EndpointModel,
@@ -1878,13 +1879,13 @@ export interface ApiClient {
     ): string;
     create(
       orgId: string,
-      input: { title: string; channelId?: string | null; content: ArtifactContent },
+      input: { title: string; channelId?: string | null; folderId?: string | null; content: ArtifactContent },
     ): Promise<ArtifactDetail>;
     /** Uploads a file as is (multipart, ≤ 50 MB) to the Drive or to a channel. */
     upload(
       orgId: string,
       file: File,
-      options?: { title?: string; channelId?: string | null; threadId?: string | null },
+      options?: { title?: string; channelId?: string | null; threadId?: string | null; folderId?: string | null },
     ): Promise<ArtifactDetail>;
     /** A new version of an uploaded file (multipart, ≤ 50 MB). */
     uploadVersion(orgId: string, id: string, file: File, options?: { note?: string }): Promise<ArtifactDetail>;
@@ -1904,6 +1905,17 @@ export interface ApiClient {
     ): Promise<Artifact>;
     /** To the trash for 30 days (403 `artifact.delete_forbidden`). */
     remove(orgId: string, id: string): Promise<void>;
+    /** A Drive file's new name (no new version). */
+    rename(orgId: string, id: string, title: string): Promise<Artifact>;
+    /** Puts Drive files in a folder (null: the top level). Who sees them doesn't change. */
+    move(orgId: string, ids: string[], folderId: string | null): Promise<{ moved: number }>;
+    /** Every Drive folder of the workspace. */
+    folders(orgId: string): Promise<DriveFolder[]>;
+    createFolder(orgId: string, input: { name: string; parentId?: string | null }): Promise<DriveFolder>;
+    /** Rename, or move (`parentId`, null: the top level); 400 `drive.folder_into_itself`. */
+    updateFolder(orgId: string, id: string, patch: { name?: string; parentId?: string | null }): Promise<DriveFolder>;
+    /** The folder and its folders go; my files in them to the trash, the rest move up (`kept`). */
+    deleteFolder(orgId: string, id: string): Promise<{ trashed: number; kept: number }>;
     trash(orgId: string): Promise<TrashedArtifact[]>;
     /** Back from the trash (409 `artifact.purged` after 30 days). */
     restore(orgId: string, id: string): Promise<ArtifactDetail | undefined>;

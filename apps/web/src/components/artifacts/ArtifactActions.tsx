@@ -183,7 +183,10 @@ export function useArtifactEntries() {
       },
     ];
   };
-  const build = (artifact: Artifact, { onOpen, onVersions, onDelete, download }: ArtifactMenuOptions): MenuEntry[] => [
+  const build = (
+    artifact: Artifact,
+    { onOpen, onVersions, onDelete, download, onRename, onMove }: ArtifactMenuOptions,
+  ): MenuEntry[] => [
     ...(onOpen
       ? ([
           { kind: "item", id: "open", label: t("artifacts.openFile"), icon: "external", run: () => onOpen() },
@@ -213,6 +216,12 @@ export function useArtifactEntries() {
       run: () => share.copyLink(artifact),
     },
     ...placeEntry(artifact),
+    ...(onRename
+      ? ([{ kind: "item", id: "rename", label: t("drive.rename"), icon: "edit", run: onRename }] satisfies MenuEntry[])
+      : []),
+    ...(onMove
+      ? ([{ kind: "item", id: "move", label: t("drive.moveToMenu"), icon: "move", run: onMove }] satisfies MenuEntry[])
+      : []),
     ...(onVersions
       ? ([
           { kind: "item", id: "versions", label: t("artifacts.seeVersions"), icon: "waiting", run: onVersions },
@@ -235,6 +244,9 @@ export interface ArtifactMenuOptions {
   onDelete: () => void;
   /** "Baixar" the original (Drive's right click; the details and the viewer have their own button). */
   download?: boolean;
+  /** The Drive's own: "Renomear" and "Mover para…" (who adds to the Drive). */
+  onRename?: () => void;
+  onMove?: () => void;
 }
 
 /** "…" on a file (viewer header, Drive rows, the details): its actions (`useArtifactEntries`). */

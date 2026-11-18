@@ -12079,7 +12079,36 @@
     "trashBy": "{{name}} · 删除于 {{when}}",
     "daysLeft_other": "{{count}} 天",
     "goneIn_other": "{{count}} 天后清除",
-    "fileBadge": "文件"
+    "fileBadge": "文件",
+    "folders": "文件夹",
+    "folder": "文件夹",
+    "newFolder": "新建文件夹",
+    "renameFolder": "重命名文件夹",
+    "renameFile": "重命名文件",
+    "rename": "重命名",
+    "create": "创建",
+    "openFolder": "打开",
+    "folderMore": "{{name}} 的更多操作",
+    "path": "文件夹路径",
+    "up": "返回上一级",
+    "folderEmptyTitle": "此文件夹为空",
+    "folderEmptyText": "将文件拖放到这里，或上传文件。把文件拖到文件夹上即可移入。",
+    "folderEmptyViewer": "放入此文件夹的文件会显示在这里。",
+    "move": "移动",
+    "moveToMenu": "移动到…",
+    "moveTitle_other": "移动 {{count}} 项",
+    "moveTo": "文件夹",
+    "moveSearch": "搜索文件夹",
+    "moveEmpty": "没有名为“{{q}}”的文件夹。",
+    "moveHere": "当前位置",
+    "moveToName": "移动到 {{name}}",
+    "moved_other": "已将 {{count}} 项移动到 {{name}}。",
+    "deleteFolder": "删除文件夹",
+    "deleteFolderTitle": "删除“{{name}}”？",
+    "deleteFolderBody": "其中的文件夹也会一并删除。你可以删除的文件会进入回收站保留 30 天。其他人的文件会移到此文件夹原来的位置。",
+    "folderDeletedEmpty": "文件夹已删除。",
+    "folderDeleted_other": "文件夹已删除。{{count}} 个文件已进入回收站。",
+    "folderDeletedKept_other": "文件夹已删除。{{count}} 个你无法删除的文件已移到上一级。"
   },
   "storage": {
     "title": "存储",
@@ -14852,6 +14881,9 @@
       "sharingEmpty": "请选择谁能看到。",
       "sharingTooMany": "最多选择 {{max}} 个人和 {{max}} 个角色。",
       "notInDrive": "它只存在于自己的对话中，所以无法共享。"
+    },
+    "drive": {
+      "folderIntoItself": "文件夹不能移入自身或其中的文件夹。"
     },
     "device": {
       "notLinkMaker": "只有创建链接的人才能让这台电脑加入。",

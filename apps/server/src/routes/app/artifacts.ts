@@ -13,8 +13,10 @@ import {
   countArtifacts,
   createArtifact,
   createFileArtifact,
+  createFolder,
   DRAW_OPTIONS,
   deleteArtifact,
+  deleteFolder,
   drawBlock,
   getArtifact,
   getBlockState,
@@ -24,13 +26,17 @@ import {
   listArtifacts,
   listArtifactVersions,
   listDeletedArtifacts,
+  listFolders,
   MAX_MESSAGE_LENGTH,
+  moveArtifacts,
   purgeArtifactNow,
+  renameArtifact,
   replyToBlock,
   restoreArtifact,
   setBlockState,
   setFileSharing,
   updateArtifact,
+  updateFolder,
   ValidationError,
   votePoll,
   withPersonFacts,
@@ -205,8 +211,22 @@ const Artifact = z
     canShare: z.boolean().openapi({
       description: "I may change its sharing: it lives in a conversation not everyone reads, and I read it there.",
     }),
+    folderId: z.uuid().nullable().openapi({ description: "The Drive folder it is in; null = the top level." }),
   })
   .openapi("Artifact");
+
+const Folder = z
+  .object({
+    id: z.uuid(),
+    name: z.string(),
+    parentId: z.uuid().nullable(),
+    createdBy: Author,
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .openapi("DriveFolder");
+const FolderParams = OrgParams.extend({ folderId: z.uuid() });
+const FolderName = z.string().trim().min(1).max(120);
 
 const Poll = z
   .object({
@@ -336,6 +356,10 @@ export function artifactRoutes(deps: AppDeps) {
           ),
           who: z.enum(["agents", "people"]).optional().openapi({ description: "Made by an agent or by a person." }),
           sort: z.enum(["recent", "name", "kind"]).optional(),
+          folder: z
+            .union([z.literal("root"), z.uuid()])
+            .optional()
+            .openapi({ description: "In this Drive folder, or `root` for the top level. Absent: anywhere." }),
           cursor: z
             .string()
             .regex(/^\d{1,7}$/)
@@ -371,6 +395,7 @@ export function artifactRoutes(deps: AppDeps) {
         channelIds: query.channelIds,
         authors: query.authors,
         who: query.who,
+        ...(query.folder ? { folderId: query.folder === "root" ? null : query.folder } : {}),
         ...(query.changed ? { changedBy: author } : { author }),
       };
       const limit = query.limit ?? 100;
@@ -406,6 +431,7 @@ export function artifactRoutes(deps: AppDeps) {
           z.object({
             title: z.string().min(1).max(200),
             channelId: z.uuid().nullable().optional(),
+            folderId: z.uuid().nullable().optional(),
             content: ContentInput,
           }),
         ),
@@ -435,6 +461,7 @@ export function artifactRoutes(deps: AppDeps) {
             title: z.string().max(200).optional().openapi({ description: "Default: the file name." }),
             channelId: z.uuid().optional(),
             threadId: z.uuid().optional(),
+            folderId: z.uuid().optional().openapi({ description: "A Drive folder to put it in." }),
           }),
         ),
       },
@@ -450,6 +477,7 @@ export function artifactRoutes(deps: AppDeps) {
         title: form.title?.trim() || file.name,
         channelId: form.channelId ?? null,
         threadId: form.threadId ?? null,
+        folderId: form.folderId ?? null,
       });
       return c.json(await withFacts(userId, orgId, created), 201);
     },
@@ -941,6 +969,124 @@ export function artifactRoutes(deps: AppDeps) {
       const { orgId, artifactId } = c.req.valid("param");
       await purgeArtifactNow(artifacts(), c.get("user").id, orgId, artifactId);
       return c.body(null, 204);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "patch",
+      path: "/organizations/{orgId}/artifacts/{artifactId}",
+      tags,
+      security,
+      summary: "Rename a Drive file (no new version)",
+      request: { params: ArtifactParams, body: body(z.object({ title: z.string().trim().min(1).max(200) })) },
+      responses: { 200: json(Artifact), ...errors },
+    }),
+    async (c) => {
+      const { orgId, artifactId } = c.req.valid("param");
+      const userId = c.get("user").id;
+      const saved = await renameArtifact(artifacts(), person(userId), orgId, artifactId, c.req.valid("json").title);
+      return c.json(await withFacts(userId, orgId, saved), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/artifacts/move",
+      tags,
+      security,
+      summary: "Put Drive files in a folder (null: the top level). Who sees them doesn't change",
+      request: {
+        params: OrgParams,
+        body: body(z.object({ ids: z.array(z.uuid()).min(1).max(ARTIFACT_PAGE_MAX), folderId: z.uuid().nullable() })),
+      },
+      responses: { 200: json(z.object({ moved: z.number().int() })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      const { ids, folderId } = c.req.valid("json");
+      const moved = await moveArtifacts(artifacts(), person(c.get("user").id), orgId, ids, folderId);
+      return c.json({ moved }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "get",
+      path: "/organizations/{orgId}/drive-folders",
+      tags,
+      security,
+      summary: "Every Drive folder of the workspace (the shared Drive's structure)",
+      request: { params: OrgParams },
+      responses: { 200: json(z.object({ folders: z.array(Folder) })), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      return c.json({ folders: await listFolders(db, person(c.get("user").id), orgId) }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/drive-folders",
+      tags,
+      security,
+      summary: "Create a Drive folder (at the top level, or inside `parentId`)",
+      request: {
+        params: OrgParams,
+        body: body(z.object({ name: FolderName, parentId: z.uuid().nullable().optional() })),
+      },
+      responses: { 201: json(Folder, "Created"), ...errors },
+    }),
+    async (c) => {
+      const { orgId } = c.req.valid("param");
+      return c.json(await createFolder(artifacts(), person(c.get("user").id), orgId, c.req.valid("json")), 201);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "patch",
+      path: "/organizations/{orgId}/drive-folders/{folderId}",
+      tags,
+      security,
+      summary: "Rename a Drive folder, or move it (`parentId`, null: the top level)",
+      request: {
+        params: FolderParams,
+        body: body(z.object({ name: FolderName.optional(), parentId: z.uuid().nullable().optional() })),
+      },
+      responses: { 200: json(Folder), ...errors },
+    }),
+    async (c) => {
+      const { orgId, folderId } = c.req.valid("param");
+      return c.json(await updateFolder(artifacts(), c.get("user").id, orgId, folderId, c.req.valid("json")), 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "delete",
+      path: "/organizations/{orgId}/drive-folders/{folderId}",
+      tags,
+      security,
+      summary:
+        "Delete a folder with what is inside: its folders, and the files I may delete (to the trash). The rest move up",
+      request: { params: FolderParams },
+      responses: {
+        200: json(
+          z.object({
+            trashed: z.number().int(),
+            kept: z.number().int().openapi({ description: "Files I may not delete: moved to where the folder was." }),
+          }),
+        ),
+        ...errors,
+      },
+    }),
+    async (c) => {
+      const { orgId, folderId } = c.req.valid("param");
+      return c.json(await deleteFolder(artifacts(), c.get("user").id, orgId, folderId), 200);
     },
   );
 

@@ -19,6 +19,7 @@ import type {
   ArtifactFilters,
   ArtifactKind,
   ArtifactVersion,
+  DriveFolder,
 } from "@agenteschat/client";
 import { ApiError } from "@agenteschat/client";
 import { clone, type MockContext, MockNotFoundError, minutesAgo, mockId, perOrg } from "./context";
@@ -158,6 +159,16 @@ export function createMockArtifacts(
     }
     return list;
   });
+  /** The Drive's folders: none seeded (a test adds its own with `createFolder`). */
+  const folders = perOrg(async (): Promise<DriveFolder[]> => []);
+  const inside = (all: DriveFolder[], id: string): Set<string> => {
+    const out = new Set([id]);
+    for (let grew = true; grew; ) {
+      grew = false;
+      for (const f of all) if (f.parentId && out.has(f.parentId) && !out.has(f.id)) grew = out.add(f.id).size > 0;
+    }
+    return out;
+  };
   /** Like the server: the DM's other participant, the channel's name and privacy, else the whole workspace. */
   const audienceOf = async (orgId: string, channelId: string | null): Promise<ArtifactAudience> => {
     if (!channelId) return { kind: "workspace" };
@@ -203,6 +214,7 @@ export function createMockArtifacts(
       .filter((s) => !s.deletedAt)
       .filter((s) => allKinds || !filters.kind || s.meta.kind === filters.kind)
       .filter((s) => allKinds || !filters.kinds?.length || filters.kinds.includes(s.meta.kind))
+      .filter((s) => filters.folderId === undefined || (s.meta.folderId ?? null) === filters.folderId)
       .filter((s) => !filters.channelId || s.meta.channelId === filters.channelId)
       .filter((s) => !filters.channelIds?.length || filters.channelIds.includes(s.meta.channelId ?? ""))
       .filter((s) => !filters.author || s.versions.some((v) => same(v.author, filters.author)))
@@ -328,6 +340,7 @@ export function createMockArtifacts(
           version: 1,
           channelId: options.channelId ?? null,
           threadId: options.threadId ?? null,
+          folderId: options.folderId ?? null,
           createdBy: author,
           updatedBy: author,
           createdAt: at,
@@ -382,6 +395,60 @@ export function createMockArtifacts(
       });
       Object.assign(s.meta, { version, updatedBy: author, updatedAt: at, title: input.title ?? s.meta.title });
       return detail(orgId, s);
+    },
+    rename: async (orgId, id, title) => {
+      record("artifacts.rename", id, title);
+      const s = await find(orgId, id);
+      s.meta.title = title.trim();
+      return view(orgId, s);
+    },
+    move: async (orgId, ids, folderId) => {
+      record("artifacts.move", ids, folderId);
+      for (const id of ids) (await find(orgId, id)).meta.folderId = folderId;
+      return { moved: ids.length };
+    },
+    folders: async (orgId) => clone(await folders(orgId)),
+    createFolder: async (orgId, input) => {
+      record("artifacts.createFolder", input);
+      const at = ctx.now().toISOString();
+      const f: DriveFolder = {
+        id: mockId("folder"),
+        name: input.name.trim(),
+        parentId: input.parentId ?? null,
+        createdBy: await me(),
+        createdAt: at,
+        updatedAt: at,
+      };
+      (await folders(orgId)).push(f);
+      return clone(f);
+    },
+    updateFolder: async (orgId, id, patch) => {
+      record("artifacts.updateFolder", id, patch);
+      const all = await folders(orgId);
+      const f = all.find((x) => x.id === id);
+      if (!f) throw new MockNotFoundError("Pasta não encontrada.");
+      if (patch.parentId && inside(all, id).has(patch.parentId)) {
+        throw new ApiError(400, "drive.folder_into_itself", "A folder can't go inside itself");
+      }
+      if (patch.name !== undefined) f.name = patch.name.trim();
+      if (patch.parentId !== undefined) f.parentId = patch.parentId;
+      return clone(f);
+    },
+    deleteFolder: async (orgId, id) => {
+      record("artifacts.deleteFolder", id);
+      const all = await folders(orgId);
+      const gone = inside(all, id);
+      let trashed = 0;
+      for (const s of await store(orgId)) {
+        if (s.meta.folderId && gone.has(s.meta.folderId) && !s.deletedAt) {
+          s.deletedAt = ctx.now().toISOString();
+          s.meta.folderId = null;
+          trashed++;
+        }
+      }
+      const kept = all.filter((f) => !gone.has(f.id));
+      all.splice(0, all.length, ...kept);
+      return { trashed, kept: 0 };
     },
     remove: async (orgId, id) => {
       record("artifacts.remove", id);

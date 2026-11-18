@@ -12066,7 +12066,36 @@
     "trashBy": "{{name}} · dihapus {{when}}",
     "daysLeft_other": "{{count}} hari",
     "goneIn_other": "hilang dalam {{count}} hari",
-    "fileBadge": "FILE"
+    "fileBadge": "FILE",
+    "folders": "Folder",
+    "folder": "Folder",
+    "newFolder": "Folder baru",
+    "renameFolder": "Ganti nama folder",
+    "renameFile": "Ganti nama file",
+    "rename": "Ganti nama",
+    "create": "Buat",
+    "openFolder": "Buka",
+    "folderMore": "Tindakan lain untuk {{name}}",
+    "path": "Jalur folder",
+    "up": "Naik satu tingkat",
+    "folderEmptyTitle": "Folder ini kosong",
+    "folderEmptyText": "Letakkan file di sini atau unggah. Menyeret file ke folder akan memindahkannya ke sana.",
+    "folderEmptyViewer": "File yang dimasukkan ke folder ini muncul di sini.",
+    "move": "Pindahkan",
+    "moveToMenu": "Pindahkan ke…",
+    "moveTitle_other": "Pindahkan {{count}} item",
+    "moveTo": "Folder",
+    "moveSearch": "Cari folder",
+    "moveEmpty": "Tidak ada folder bernama “{{q}}”.",
+    "moveHere": "Ada di sini",
+    "moveToName": "Pindahkan ke {{name}}",
+    "moved_other": "{{count}} item dipindahkan ke {{name}}.",
+    "deleteFolder": "Hapus folder",
+    "deleteFolderTitle": "Hapus “{{name}}”?",
+    "deleteFolderBody": "Folder di dalamnya juga ikut terhapus. File yang bisa kamu hapus masuk ke sampah selama 30 hari. File milik orang lain naik ke tempat folder ini berada.",
+    "folderDeletedEmpty": "Folder dihapus.",
+    "folderDeleted_other": "Folder dihapus. {{count}} file masuk ke sampah.",
+    "folderDeletedKept_other": "Folder dihapus. {{count}} file yang tidak bisa kamu hapus naik satu tingkat."
   },
   "storage": {
     "title": "Penyimpanan",
@@ -14843,6 +14872,9 @@
       "sharingEmpty": "Pilih siapa yang melihat.",
       "sharingTooMany": "Pilih paling banyak {{max}} orang dan {{max}} peran.",
       "notInDrive": "Ini hanya ada di percakapannya, jadi tidak bisa dibagikan."
+    },
+    "drive": {
+      "folderIntoItself": "Folder tidak bisa dimasukkan ke dirinya sendiri atau ke folder di dalamnya."
     },
     "device": {
       "notLinkMaker": "Hanya orang yang membuat tautan ini yang bisa mengizinkan komputer ini bergabung.",

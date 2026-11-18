@@ -86,6 +86,7 @@ const KNOWN = {
   "artifact.sharing_empty": "errors.artifact.sharingEmpty",
   "artifact.sharing_too_many": "errors.artifact.sharingTooMany",
   "artifact.not_in_drive": "errors.artifact.notInDrive",
+  "drive.folder_into_itself": "errors.drive.folderIntoItself",
   "machine.forbidden": "errors.machine.forbidden",
   "device.forbidden": "errors.machine.forbidden",
   "device.link_not_found": "errors.machine.pairingInvalid",

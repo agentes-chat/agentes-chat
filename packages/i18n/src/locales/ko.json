@@ -12007,7 +12007,36 @@
     "trashBy": "{{name}} · {{when}} 삭제",
     "daysLeft_other": "{{count}}일",
     "goneIn_other": "{{count}}일 후 삭제",
-    "fileBadge": "파일"
+    "fileBadge": "파일",
+    "folders": "폴더",
+    "folder": "폴더",
+    "newFolder": "새 폴더",
+    "renameFolder": "폴더 이름 바꾸기",
+    "renameFile": "파일 이름 바꾸기",
+    "rename": "이름 바꾸기",
+    "create": "만들기",
+    "openFolder": "열기",
+    "folderMore": "{{name}} 작업 더 보기",
+    "path": "폴더 경로",
+    "up": "한 단계 위로",
+    "folderEmptyTitle": "이 폴더는 비어 있어요",
+    "folderEmptyText": "여기에 파일을 놓거나 업로드하세요. 파일을 폴더로 끌어다 놓으면 그 폴더로 옮겨져요.",
+    "folderEmptyViewer": "이 폴더에 넣은 파일이 여기에 표시돼요.",
+    "move": "이동",
+    "moveToMenu": "이동할 위치…",
+    "moveTitle_other": "항목 {{count}}개 이동",
+    "moveTo": "폴더",
+    "moveSearch": "폴더 검색",
+    "moveEmpty": "‘{{q}}’ 폴더가 없어요.",
+    "moveHere": "현재 위치",
+    "moveToName": "{{name}}(으)로 이동",
+    "moved_other": "항목 {{count}}개를 {{name}}(으)로 옮겼어요.",
+    "deleteFolder": "폴더 삭제",
+    "deleteFolderTitle": "‘{{name}}’을(를) 삭제할까요?",
+    "deleteFolderBody": "안에 있는 폴더도 함께 삭제돼요. 삭제할 수 있는 파일은 30일 동안 휴지통에 보관돼요. 다른 사람의 파일은 이 폴더가 있던 위치로 옮겨져요.",
+    "folderDeletedEmpty": "폴더를 삭제했어요.",
+    "folderDeleted_other": "폴더를 삭제했어요. 파일 {{count}}개가 휴지통으로 이동했어요.",
+    "folderDeletedKept_other": "폴더를 삭제했어요. 삭제할 수 없는 파일 {{count}}개는 한 단계 위로 옮겨졌어요."
   },
   "storage": {
     "title": "저장 공간",
@@ -14784,6 +14813,9 @@
       "sharingEmpty": "볼 수 있는 사람을 선택하세요.",
       "sharingTooMany": "사람은 최대 {{max}}명, 역할은 최대 {{max}}개까지 선택할 수 있어요.",
       "notInDrive": "이것은 대화 안에만 있어서 공유할 수 없어요."
+    },
+    "drive": {
+      "folderIntoItself": "폴더를 자기 자신이나 그 안의 폴더로 옮길 수 없어요."
     },
     "device": {
       "notLinkMaker": "링크를 만든 사람만 이 컴퓨터를 참여시킬 수 있어요.",

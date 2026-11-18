@@ -12013,7 +12013,36 @@
     "trashBy": "{{name}} · {{when}}に削除",
     "daysLeft_other": "{{count}}日",
     "goneIn_other": "あと{{count}}日で削除",
-    "fileBadge": "ファイル"
+    "fileBadge": "ファイル",
+    "folders": "フォルダ",
+    "folder": "フォルダ",
+    "newFolder": "新しいフォルダ",
+    "renameFolder": "フォルダ名を変更",
+    "renameFile": "ファイル名を変更",
+    "rename": "名前を変更",
+    "create": "作成",
+    "openFolder": "開く",
+    "folderMore": "{{name}} のその他の操作",
+    "path": "フォルダのパス",
+    "up": "1つ上の階層へ",
+    "folderEmptyTitle": "このフォルダは空です",
+    "folderEmptyText": "ここにファイルをドロップするか、アップロードしてください。ファイルをフォルダにドラッグすると移動します。",
+    "folderEmptyViewer": "このフォルダに入れたファイルがここに表示されます。",
+    "move": "移動",
+    "moveToMenu": "移動先…",
+    "moveTitle_other": "{{count}} 件を移動",
+    "moveTo": "フォルダ",
+    "moveSearch": "フォルダを検索",
+    "moveEmpty": "「{{q}}」という名前のフォルダはありません。",
+    "moveHere": "現在の場所",
+    "moveToName": "{{name}} に移動",
+    "moved_other": "{{count}} 件を {{name}} に移動しました。",
+    "deleteFolder": "フォルダを削除",
+    "deleteFolderTitle": "「{{name}}」を削除しますか？",
+    "deleteFolderBody": "中のフォルダも削除されます。削除できるファイルは30日間ゴミ箱に入ります。ほかの人のファイルは、このフォルダがあった場所に移ります。",
+    "folderDeletedEmpty": "フォルダを削除しました。",
+    "folderDeleted_other": "フォルダを削除しました。{{count}} 件のファイルがゴミ箱に入りました。",
+    "folderDeletedKept_other": "フォルダを削除しました。削除できない {{count}} 件のファイルは1つ上の階層に移りました。"
   },
   "storage": {
     "title": "ストレージ",
@@ -14790,6 +14819,9 @@
       "sharingEmpty": "閲覧できる人を選んでください。",
       "sharingTooMany": "選べるのは最大{{max}}人と{{max}}個のロールです。",
       "notInDrive": "これは会話の中だけにあるため、共有できません。"
+    },
+    "drive": {
+      "folderIntoItself": "フォルダを自分自身や中のフォルダに移動することはできません。"
     },
     "device": {
       "notLinkMaker": "このコンピューターを参加させられるのは、リンクを作った人だけです。",

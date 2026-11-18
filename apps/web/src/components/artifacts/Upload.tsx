@@ -30,7 +30,7 @@ export function useDriveUpload(onUploaded?: (saved: ArtifactDetail, file: File) 
   const [queue, setQueue] = useState<UploadItem[]>([]);
   const mark = (i: number, status: UploadItem["status"]) =>
     setQueue((q) => q.map((item, j) => (j === i ? { ...item, status } : item)));
-  const upload = async (files: File[], target?: { artifactId: string }) => {
+  const upload = async (files: File[], target?: { artifactId: string } | { folderId: string | null }) => {
     setQueue(files.map((f) => ({ name: f.name, status: "waiting" })));
     for (const [i, file] of files.entries()) {
       if (!fitsUpload(file)) {
@@ -41,7 +41,7 @@ export function useDriveUpload(onUploaded?: (saved: ArtifactDetail, file: File) 
       setCurrent(file.name);
       mark(i, "sending");
       try {
-        const saved = await mutation.mutateAsync(target ? { file, artifactId: target.artifactId } : { file });
+        const saved = await mutation.mutateAsync({ file, ...target });
         mark(i, "done");
         onUploaded?.(saved, file);
       } catch (error) {

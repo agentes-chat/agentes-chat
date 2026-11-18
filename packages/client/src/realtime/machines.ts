@@ -550,7 +550,10 @@ export function applyWorkspaceEvent(qc: QueryClient, orgId: string, event: { typ
   if (event.type === "artifacts.changed") {
     readList(qc, `${orgId}:drive`, {
       predicate: ({ queryKey: k }) =>
-        k[0] === "org" && k[1] === orgId && k[2] === "artifacts" && (k[3] === "list" || k[3] === "trash"),
+        k[0] === "org" &&
+        k[1] === orgId &&
+        k[2] === "artifacts" &&
+        (k[3] === "list" || k[3] === "trash" || k[3] === "folders"),
     });
     return true;
   }

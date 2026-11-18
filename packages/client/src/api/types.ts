@@ -3838,6 +3838,19 @@ export interface Artifact {
   sharing?: ArtifactSharing;
   /** I may change `sharing`: it lives in a conversation not everyone reads, and I read it there. */
   canShare?: boolean;
+  /** The Drive folder it is in; null = the top level. Absent from an older server. */
+  folderId?: string | null;
+}
+
+/** A Drive folder: every one in the workspace sees it; a file in it keeps its own visibility. */
+export interface DriveFolder {
+  id: string;
+  name: string;
+  /** Null: at the Drive's top level. */
+  parentId: string | null;
+  createdBy: ArtifactAuthor;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
@@ -3917,6 +3930,8 @@ export interface ArtifactFilters {
   who?: "agents" | "people";
   /** Newest update first (default), by name, or by kind. */
   sort?: "recent" | "name" | "kind";
+  /** In this Drive folder; null = the top level; absent = anywhere. */
+  folderId?: string | null;
 }
 
 /** A page of the Drive: the next one starts at `nextCursor`; the first also counts the files per kind. */
