@@ -3993,12 +3993,17 @@ export const en = {
   },
   keyGuard: {
     title: "This looks like an API key",
-    text: "Everything in the chat is visible to people and agents. Save it as a workspace key instead: it's encrypted and nobody sees it.",
-    textMember: "Everything in the chat is visible to people and agents. A key is like a password.",
-    save: "Save as a key",
+    titleSecret: "This looks like a key or password",
+    vaultText:
+      "Everything in the chat is visible to people and agents. Keep it in the Vault: it's encrypted, and the agents you allow use it without seeing it.",
+    vault: "Save in the Vault",
+    useAsAi: "Use as AI key",
     remove: "Remove it",
     send: "Send anyway",
+    /** After "Save in the Vault", in a toast. */
+    saved: "Saved in the Vault as {{name}}. Agents with access use it by that name.",
   },
+
   /** An agent's proposal of costly work nobody asked for directly (ADR 0131): the card's buttons and who decided. */
   costlyCard: {
     go: "Go ahead",
