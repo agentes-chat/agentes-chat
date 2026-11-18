@@ -17,6 +17,7 @@ import Animated from "react-native-reanimated";
 import { Entering } from "@/features/auth/Entering";
 import { forgetInvite, loadPendingInvite, waitingAsk } from "@/features/auth/invite";
 import { resumesAsk } from "@/features/auth/invite-steps";
+import { GateSignIn } from "@/features/gate/GateSignIn";
 import { LaunchSplash, useLaunchSettle } from "@/features/launch/LaunchSplash";
 import { markLaunched } from "@/features/launch/launched";
 import { isStill, stillHref } from "@/features/links/landing";
@@ -31,12 +32,14 @@ import {
 } from "@/features/onboarding/draft";
 import { ServerDownPanel, useServerDown } from "@/features/server/ServerDown";
 import { ScreenError } from "@/features/shared/ScreenError";
+import { readCookie } from "@/lib/auth";
 import { catchGlobalErrors, setErrorScope, startErrorReports } from "@/lib/error-reports";
+import { useGateWanted } from "@/lib/gate";
 import { keepLastCrash } from "@/lib/last-crash";
 import { newWorkspaceDone, newWorkspaceMade, newWorkspaceShown, useNewWorkspaceAsk } from "@/lib/new-workspace";
 import { enteringShown, firstRunMounted, suspendedOf } from "@/lib/org-choice";
 import { followScreens } from "@/lib/orientation";
-import { useServer } from "@/lib/server";
+import { placeKey, useServer } from "@/lib/server";
 import { AppProviders } from "@/providers/AppProviders";
 import { useAppFonts } from "@/providers/fonts";
 import { useOrgGate } from "@/providers/org";
@@ -125,6 +128,18 @@ function Gate() {
     else newWorkspaceShown(openOrg);
   }, [ask, server, ready, signedIn, openOrg]);
   const fresh = asking;
+
+  // A gate in front of the server turned the app away (ADR 0195 §10): its sign-in covers everything, the splash too,
+  // and once through, everything is asked again with its session.
+  const gated = useGateWanted(server);
+  const gateQueries = useQueryClient();
+  const refreshSession = session.refresh;
+  const throughGate = useCallback(() => {
+    void readCookie(placeKey()).then(() => {
+      void refreshSession();
+      void gateQueries.invalidateQueries();
+    });
+  }, [refreshSession, gateQueries]);
 
   // Opening the app: the native launch image hands over to the animated splash on its first frame (they look
   // the same), which leaves once the app is ready. The fallback hide covers a splash that never lays out.
@@ -260,6 +275,7 @@ function Gate() {
           dusk={down !== null && skyHourOf(serverHost(down.server)) === "dusk"}
         />
       ) : null}
+      {gated ? <GateSignIn server={server} onSignedIn={throughGate} /> : null}
     </NavigationThemeProvider>
   );
 }

@@ -52,6 +52,11 @@
       "notAgentes": "{{host}} ist kein agentes.chat-Server. Prüf die Adresse.",
       "serverTooOld": "{{host}} braucht ein Update, um mit dieser App zu funktionieren.",
       "appTooOld": "Aktualisiere die agentes-App, um {{host}} zu nutzen.",
+      "gate": {
+        "on": "Anmeldung für {{host}}",
+        "loading": "Anmeldung für {{host}} wird geöffnet",
+        "failed": "Die Anmeldung für {{host}} ließ sich nicht öffnen. Prüfe deine Verbindung und versuche es erneut."
+      },
       "down": {
         "line": "{{host}} hat nicht geantwortet.",
         "text": "Er ist vielleicht offline oder außerhalb deines Netzwerks. Die App öffnet sich von selbst, sobald er wieder da ist.",

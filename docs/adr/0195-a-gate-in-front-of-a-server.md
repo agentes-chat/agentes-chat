@@ -1,4 +1,4 @@
-# 0195. A gate in front of a server: Cloudflare Access, per server, in the desktop app and the runner
+# 0195. A gate in front of a server: Cloudflare Access, per server, in the desktop app, the runner and the phone app
 
 - Status: Proposed
 - Date: 2026-11-17
@@ -12,7 +12,11 @@
   (`webSocketDial`), `streams.ts` (`openDataSocket`), `daemon.ts` (`gateSet`), `control.ts`, `config.ts` (`gate`),
   `main.ts` (`pair --gate`); control
   protocol `packages/adapters/src/runner-control.ts` (`gate.set`, `gate.required`); tests
-  `apps/server/test/runner/gate.test.ts`, `config.test.ts` and the Rust tests in `gate.rs` and `gate_cloudflare.rs`
+  `apps/server/test/runner/gate.test.ts`, `config.test.ts` and the Rust tests in `gate.rs` and `gate_cloudflare.rs`;
+  phone `apps/mobile/src/lib/gate.ts`, `gate-cloudflare.ts`, `auth.ts` (`readCookie`, the Better Auth client),
+  `api.ts` (`onResponse`, from `packages/client/src/api/http.ts`), `src/features/gate/GateSignIn.tsx`, `app/_layout.tsx`,
+  `src/features/account/index.ts` (`forgetServer`), the local
+  module `apps/mobile/modules/web-cookies`; test `apps/mobile/test/gate-cloudflare.test.ts`
 
 ## Context
 
@@ -87,16 +91,33 @@ The alternatives considered:
    `iss`) from the window, so the next sign-in asks for the PIN again; every runner that was handed that session gets
    `gate.set` with no token. Nothing is asked of Access: the person's session in the system browser and in other
    applications stays.
+10. **The phone app signs in to the gate in a web view, and sends the session as a cookie.** The phone keeps no
+    platform cookie jar for the server (every request writes its own `Cookie`, ADR 0035 §3), so the gate's session is
+    kept apart, per server, in SecureStore, and joined to the server's own cookie by `readCookie`: the API client,
+    pictures, voice, the realtime socket and the agent's screen all carry it to that origin only, and Better Auth's
+    requests carry it as `cf-access-token`. An answer from the gate (the sign-in page a redirect led to, or its
+    `WWW-Authenticate`) to the API client (its transport's `onResponse`, so uploads keep their progress), Better Auth's
+    requests, `authedFetch` or the server's check marks the server as
+    wanting its sign-in, and `GateSignIn` covers the whole app with the gate's page in a web view that keeps only the
+    server's and its team's pages. Back on the server's own pages, the app reads `CF_Authorization` from the web
+    views' store (`modules/web-cookies`: WebKit's default store on iOS, `CookieManager` on Android, which also read an
+    HttpOnly cookie), keeps it and asks everything again. A server typed in "Onde fica o seu agentes.chat?" that only
+    the gate answers is taken, and its sign-in shows. "Trocar de servidor" over the sign-in keeps a server nobody can
+    get through from locking the app. Signing out of a server's last account forgets its gate session, the app's copy
+    and the web views', with the web views' cookies of the team that issued it (the JWT's `iss`), as item 9 does on the
+    desktop: Android's networking follows Access's redirects with the web views' cookies, so a team session left there
+    would get a new one without asking.
 
 ## Consequences
 
-- A server behind Cloudflare Access works in the desktop app and with its computers, with nothing to change on the
+- A server behind Cloudflare Access works in the desktop app, with its computers and in the phone app, with nothing to change on the
   Access application, and each server's session stays its own.
 - The person's session lasts as long as the Access application's session duration. A computer that has to run
   unattended needs a service token and a Service Auth policy on the Access application, or Managed OAuth later.
-- Only a sign-in on Access's own pages (the one-time PIN) completes in the window. Other identity providers need the
-  same flow in the system browser, which the app can't receive yet.
-- The phone app is not covered yet; it would read the same cookie from its own sign-in WebView.
+- Only a sign-in on Access's own pages (the one-time PIN) completes in the window and in the phone's web view. Other
+  identity providers need the same flow in the system browser, which the apps can't receive yet.
+- On the phone, an upload with progress (through the platform's XHR) that the gate turns away fails as it would without
+  a gate; the next request notices the gate.
 - Cloudflare's bot checks (Browser Integrity Check, Bot Fight Mode) can answer a program's request with `403`
   (`error code: 1010`) before Access sees it, by its `User-Agent`. The runner (Bun) and the app (ureq) pass with the
   default settings; a zone that turns them stricter needs a rule that skips them on the server's host.

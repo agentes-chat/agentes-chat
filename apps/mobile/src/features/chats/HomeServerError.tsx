@@ -1,9 +1,10 @@
-import { checkServer, isTailnet, type ServerCheck, serverHost } from "@agenteschat/client/lib/server";
+import { isTailnet, type ServerCheck, serverHost } from "@agenteschat/client/lib/server";
 import { useNetworkState } from "expo-network";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { AgentAvatar } from "@/agent/AgentAvatar";
+import { checkServerOrGate } from "@/lib/gate";
 import { serverUrl } from "@/lib/server";
 import { Button, LineIcon, Text } from "@/ui";
 import { problemText } from "../server";
@@ -30,7 +31,8 @@ function useServerTrouble(retry: () => Promise<unknown>) {
 
   useEffect(() => {
     let alive = true;
-    void checkServer(serverUrl()).then((c) => {
+    // A gate in front of the server (ADR 0195 §10) shows its own sign-in over this.
+    void checkServerOrGate(serverUrl()).then(({ check: c }) => {
       if (alive) setCheck(c);
     });
     return () => {
@@ -62,7 +64,9 @@ function useServerTrouble(retry: () => Promise<unknown>) {
   const again = () => {
     setChecking(true);
     setNextRetryAt(Date.now() + RETRY_EVERY_MS);
-    void Promise.allSettled([checkServer(serverUrl()).then(setCheck), retry()]).then(() => setChecking(false));
+    void Promise.allSettled([checkServerOrGate(serverUrl()).then(({ check: c }) => setCheck(c)), retry()]).then(() =>
+      setChecking(false),
+    );
   };
   return { title, plain, checking, nextRetryAt, again };
 }

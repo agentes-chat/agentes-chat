@@ -52,6 +52,11 @@
       "notAgentes": "{{host}} n'est pas un serveur agentes.chat. Vérifiez l'adresse.",
       "serverTooOld": "{{host}} doit être mis à jour pour fonctionner avec cette app.",
       "appTooOld": "Mettez à jour l'app agentes pour utiliser {{host}}.",
+      "gate": {
+        "on": "Connexion à {{host}}",
+        "loading": "Ouverture de la connexion à {{host}}",
+        "failed": "Impossible d'ouvrir la connexion à {{host}}. Vérifie ta connexion et réessaie."
+      },
       "down": {
         "line": "{{host}} n'a pas répondu.",
         "text": "Il est peut-être hors service ou en dehors de votre réseau. L'app s'ouvrira d'elle-même dès son retour.",

@@ -74,6 +74,15 @@ describe("requester", () => {
     expect(bare?.init.body).toBe("{}");
   });
 
+  test("onResponse sees every answer before it is read (a gate in front of the server, ADR 0195 §10)", async () => {
+    const { fetch } = fakeFetch({ "GET /a": { status: 200, body: { ok: 1 } }, "GET /b": { status: 404, body: {} } });
+    const seen: number[] = [];
+    const request = createRequester({ fetch, onResponse: (res) => seen.push(res.status) });
+    expect(await request("/a")).toEqual({ ok: 1 });
+    await request("/b").catch(() => {});
+    expect(seen).toEqual([200, 404]);
+  });
+
   test("query strings skip empty values", async () => {
     const { fetch, calls } = fakeFetch({});
     const request = createRequester({ fetch });
