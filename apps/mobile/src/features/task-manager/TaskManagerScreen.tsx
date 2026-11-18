@@ -470,12 +470,11 @@ function OneLine({ title, line, variant = "body" }: { title: string; line?: stri
 
 /**
  * What holds waiting work (`waitCauses`), one line with its count, as the web's strip: a plan at its limit opens IA e
- * uso, a full computer its line, one away the computers, people's oks and answers the first such task's screen.
+ * uso, one away the computers, people's oks and answers the first such task's screen.
  */
 function CauseRow({ cause, computers, divider }: { cause: WaitCause; computers: ComputerSummary[]; divider: boolean }) {
   const { t, i18n } = useTranslation();
   const c = useColors();
-  const openQueue = useOpenQueue();
   const first = cause.tasks[0] as ManagedTask;
   const { name: title, fact: line } = causeWords(t, i18n.language, cause, computers);
   const brain = first.brain && first.brain !== "model" ? first.brain : null;
@@ -489,7 +488,7 @@ function CauseRow({ cause, computers, divider }: { cause: WaitCause; computers: 
       : cause.kind === "computer"
         ? {
             lead: <ComputerIcon kind={kind} size={16} color={c.muted} />,
-            onPress: cause.busy ? () => openQueue(cause.machineId) : () => router.push("/settings/devices"),
+            onPress: () => router.push("/settings/devices"),
           }
         : {
             lead: <Icon name="clock" size={16} color={c.muted} />,

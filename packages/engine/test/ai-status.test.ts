@@ -250,7 +250,9 @@ describe("who picks the agents (ADR 0074)", () => {
     orgRouting({ db: f.db, gateway: f.gateway }, routing, f.org.id, userId);
 
   /** Ana's own Claude account on her computer, lent to Dev; no API key; Bruna in the workspace. */
-  async function plans() {
+  async function plans(fallback = true) {
+    // An installation from before people's plans left routing (migration 0300); a new one has none.
+    if (fallback) await f.db.insert(schema.instanceTelemetry).values({ routerPlanFallback: true });
     await revokeKeys();
     const bruna = await addMember(f.db, f.org.id, "member", "Bruna");
     const { machineId } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, { name: "Mac" });
@@ -326,6 +328,12 @@ describe("who picks the agents (ADR 0074)", () => {
     expect((await who(cloud)).routing.by).toBe("rules");
     await f.db.update(schema.machineAccounts).set({ provider: "zai" }).where(eq(schema.machineAccounts.id, accountId));
     expect((await who(routing)).routing).toMatchObject({ by: "rules", mine: "rules" });
+  });
+
+  test("a new installation never picks on a person's plan: the rules", async () => {
+    f = await setup();
+    await plans(false);
+    expect((await who(routingOf({}))).routing).toMatchObject({ by: "rules", mine: "rules" });
   });
 
   test("the computer's own sign-in counts only when made with a plan", async () => {

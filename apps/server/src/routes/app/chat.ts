@@ -573,6 +573,14 @@ export function chatRoutes(deps: AppDeps) {
         query: z.object({
           threadId: z.uuid().optional(),
           before: z.iso.datetime().optional().openapi({ description: "Page backwards from this time." }),
+          after: z.iso
+            .datetime()
+            .optional()
+            .openapi({ description: "Page forwards from this time: the oldest `limit` after it." }),
+          around: z.uuid().optional().openapi({
+            description:
+              "The page with this top-level message in its middle (404 when it is deleted or not in this channel).",
+          }),
           limit: z.coerce.number().int().min(1).max(200).optional(),
           include: z
             .string()
@@ -588,6 +596,8 @@ export function chatRoutes(deps: AppDeps) {
       const messages = await listMessages(db, c.get("user").id, orgId, channelId, {
         threadId: q.threadId,
         before: q.before ? new Date(q.before) : undefined,
+        after: q.after ? new Date(q.after) : undefined,
+        around: q.around,
         limit: q.limit,
         includeReplies: q.include?.split(",").includes("replies") ?? false,
       });

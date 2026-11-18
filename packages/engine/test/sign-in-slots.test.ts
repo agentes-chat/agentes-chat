@@ -21,7 +21,7 @@ afterEach(async () => {
 const { agentRuns, outbox } = schema;
 const ACCOUNT = "0193f1c2-0000-7000-8000-00000000a001";
 const OTHER = "0193f1c2-0000-7000-8000-00000000a002";
-const slot = (key: string, cap = 1) => ({ key, label: key === ACCOUNT ? "Claude 2" : "Claude 3", cap });
+const slot = (key: string, cap = 1) => ({ key, cap });
 
 async function computer() {
   const { machineId } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, RUNNER);
@@ -63,13 +63,14 @@ const waiting = (machineId: string, key: string, extra: Record<string, unknown> 
     transcript: {
       waitingForBrain: { kind: "claude_code", machineId, code: "busy", waitId: Bun.randomUUIDv7() },
       roomWaitSince: Date.now() - sinceAgo,
-      signInWait: { key, label: "Claude 2" },
+      signInWait: { key },
       ...extra,
     },
   });
 
 const newcomer = () => ({ id: Bun.randomUUIDv7(), orgId: f.org.id });
-const person = { rank: 0, since: Date.now() } as const;
+/** A person's turn arriving now: `since` must be read per call, or it falls behind runs set up later. */
+const person = () => ({ rank: 0, since: Date.now() }) as const;
 const kicks = async () =>
   (await f.db.select().from(outbox))
     .filter((j) => j.dedupeKey?.includes(":sign-in-freed:"))
@@ -77,7 +78,7 @@ const kicks = async () =>
 
 describe("plan sign-in slots", () => {
   test("only Claude Code on a plan sign-in takes a slot, never a key, another brain or a cap of 0", () => {
-    expect(signInSlotOf({ kind: "claude_code" }, 2)).toEqual({ key: "own", label: "Claude", cap: 2 });
+    expect(signInSlotOf({ kind: "claude_code" }, 2)).toEqual({ key: "own", cap: 2 });
     const account = { id: ACCOUNT, label: "Claude 2", status: "active" as const };
     expect(signInSlotOf({ kind: "claude_code", account }, 1)?.key).toBe(ACCOUNT);
     expect(signInSlotOf({ kind: "claude_code", account: { ...account, provider: "opencode" } }, 1)).toBeUndefined();
@@ -89,13 +90,13 @@ describe("plan sign-in slots", () => {
     f = await setup();
     const machineId = await computer();
     await working(machineId, ACCOUNT);
-    const behind = await roomGate(f.db, newcomer(), machineId, person, slot(ACCOUNT));
+    const behind = await roomGate(f.db, newcomer(), machineId, person(), slot(ACCOUNT));
     expect(behind?.signIn).toBe(true);
     // Two slots: the second run goes on.
-    expect(await roomGate(f.db, newcomer(), machineId, person, slot(ACCOUNT, 2))).toBeNull();
-    expect(await roomGate(f.db, newcomer(), machineId, person, slot(OTHER))).toBeNull();
+    expect(await roomGate(f.db, newcomer(), machineId, person(), slot(ACCOUNT, 2))).toBeNull();
+    expect(await roomGate(f.db, newcomer(), machineId, person(), slot(OTHER))).toBeNull();
     // Without a sign-in to wait for (an API key), nothing holds it.
-    expect(await roomGate(f.db, newcomer(), machineId, person)).toBeNull();
+    expect(await roomGate(f.db, newcomer(), machineId, person())).toBeNull();
   });
 
   test("an account's slots are shared by every computer of the workspace; a computer's own sign-in is its own", async () => {
@@ -104,18 +105,18 @@ describe("plan sign-in slots", () => {
     const { machineId: b } = await pairMachine({ db: f.db, pubsub: f.pubsub }, f.owner.id, f.org.id, RUNNER);
     await working(a, ACCOUNT);
     await working(a, "own");
-    expect((await roomGate(f.db, newcomer(), b, person, slot(ACCOUNT)))?.signIn).toBe(true);
-    expect(await roomGate(f.db, newcomer(), b, person, { key: "own", label: "Claude", cap: 1 })).toBeNull();
+    expect((await roomGate(f.db, newcomer(), b, person(), slot(ACCOUNT)))?.signIn).toBe(true);
+    expect(await roomGate(f.db, newcomer(), b, person(), { key: "own", cap: 1 })).toBeNull();
   });
 
   test("the admitted run holds the slot until it leaves running", async () => {
     f = await setup();
     const machineId = await computer();
     const first = await insertRun({ heartbeatAt: new Date() });
-    expect(await roomGate(f.db, first, machineId, person, slot(ACCOUNT))).toBeNull();
+    expect(await roomGate(f.db, first, machineId, person(), slot(ACCOUNT))).toBeNull();
     const [row] = await f.db.select().from(agentRuns).where(eq(agentRuns.id, first.id));
     expect((row?.transcript as { roomAsk?: { signIn?: string } } | undefined)?.roomAsk?.signIn).toBe(ACCOUNT);
-    expect((await roomGate(f.db, newcomer(), machineId, person, slot(ACCOUNT)))?.signIn).toBe(true);
+    expect((await roomGate(f.db, newcomer(), machineId, person(), slot(ACCOUNT)))?.signIn).toBe(true);
   });
 
   for (const end of ["done", "failed", "canceled"] as const) {
@@ -135,7 +136,7 @@ describe("plan sign-in slots", () => {
     f = await setup();
     const machineId = await computer();
     await working(machineId, ACCOUNT, RUN_STALE_MS + 10_000);
-    expect(await roomGate(f.db, newcomer(), machineId, person, slot(ACCOUNT))).toBeNull();
+    expect(await roomGate(f.db, newcomer(), machineId, person(), slot(ACCOUNT))).toBeNull();
   });
 
   test("runs waiting for a sign-in keep the line's order; another sign-in's wait holds nobody back", async () => {
@@ -145,7 +146,7 @@ describe("plan sign-in slots", () => {
     const agents = await waiting(machineId, ACCOUNT, {}, 300_000);
     const people = await waiting(machineId, ACCOUNT, { roomPeople: true }, 10_000);
     await waiting(machineId, OTHER, {}, 600_000);
-    expect(await roomGate(f.db, newcomer(), machineId, person, slot(ACCOUNT, 5))).not.toBeNull();
+    expect(await roomGate(f.db, newcomer(), machineId, person(), slot(ACCOUNT, 5))).not.toBeNull();
     // A person waits on `people`: it is woken first, and `agents` stays behind it.
     await transitionRun(f.db, holder.id, "running", "done");
     expect(await kicks()).toEqual([people.id]);

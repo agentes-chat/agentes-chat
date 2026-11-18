@@ -188,12 +188,6 @@ html:not([data-pointer]) .cq__open:focus-visible {
 :where(:not(.ac-msg__body)) > .cq-turn__say {
   margin: 0;
 }
-.cq-turn__cause {
-  margin: 0;
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--ink-muted);
-}
 .cq-turn__acts {
   display: flex;
   flex-wrap: wrap;
@@ -202,12 +196,6 @@ html:not([data-pointer]) .cq__open:focus-visible {
 }
 .cq-turn__acts:empty {
   display: none;
-}
-/* "Parar <agent>" carries a name of any length: it wraps instead of pushing past the row. */
-.cq-turn__stop {
-  min-width: 0;
-  white-space: normal;
-  text-align: start;
 }
 
 /* Under a message that called several agents. */

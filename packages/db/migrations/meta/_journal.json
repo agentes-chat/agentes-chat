@@ -2094,6 +2094,13 @@
       "when": 1795025576604,
       "tag": "0303_lodi_own_sign_in",
       "breakpoints": true
+    },
+    {
+      "idx": 301,
+      "version": "7",
+      "when": 1795028809526,
+      "tag": "0304_claude_auth_percent",
+      "breakpoints": true
     }
   ]
 }

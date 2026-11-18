@@ -5240,8 +5240,6 @@ export interface QueueWaiting extends QueueAccess {
   estimatedStartAt: string | null;
   /** Who it waits for: for the head, the running turn expected to end first; behind it, the agents ahead in line. */
   after: string[];
-  /** The Claude plan sign-in it waits for, by its label (it works on all the runs it takes at once); null: room. */
-  signIn?: string | null;
 }
 
 /** `GET …/machines/{machineId}/queue`: a computer's line; `computer.queue` org events say it changed. */

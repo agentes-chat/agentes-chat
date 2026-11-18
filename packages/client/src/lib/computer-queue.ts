@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import type { ComputerQueue, Message, QueuePurpose, QueueWaiting, QueueWorking } from "../api/types";
 import type { MessageReceipt, ReceiptPhase, ReceiptsState } from "../realtime/receipts";
-import { joinNames, namesText, ordinalForm } from "./format";
+import { joinNames, ordinalForm } from "./format";
 import { agentGrammar } from "./grammar";
 
 /**
@@ -66,35 +66,6 @@ export function queueFillText(t: TFunction, working: readonly Pick<QueueWorking,
   });
   return parts.length ? joinNames(parts, t) : null;
 }
-
-/**
- * Why a turn waits: "Computer full: 4 jobs use its memory now (2 for people, 1 routine…)", null with nothing on it, or
- * for a turn that waits for its plan sign-in (its live row says so).
- */
-export function queueCauseText(
-  t: TFunction,
-  queue: Pick<ComputerQueue, "working"> | null | undefined,
-  w?: Pick<QueueWaiting, "signIn"> | null,
-) {
-  if (w?.signIn) return null;
-  const fill = queue ? queueFillText(t, queue.working) : null;
-  return fill ? t("queue.cause", { count: queue?.working.length ?? 0, fill }) : null;
-}
-
-/**
- * The work on the computer the viewer may stop to free it for a waiting turn (`canStop`, the line's own stop right): a
- * routine first, then long work, then an agent's ask, never a reply someone waits on. Undefined with none.
- */
-export const queueStoppable = (queue: Pick<ComputerQueue, "working"> | null | undefined) =>
-  (["routine", "work", "agent"] as const).flatMap(
-    (kind) => queue?.working.filter((w): w is StoppableWork => w.canStop === true && w.purpose.kind === kind) ?? [],
-  )[0];
-
-type StoppableWork = QueueWorking & { purpose: Exclude<QueuePurpose, { kind: "person" }> };
-
-/** "Parar a rotina", "Parar o trabalho longo", "Parar Ada" (an agent's ask, by the agent doing it). */
-export const queueStopText = (t: TFunction, row: Pick<StoppableWork, "purpose">, agent: string) =>
-  t(`queue.stopFill.${row.purpose.kind}`, { name: agent });
 
 /** "Computer · 9 waiting", or "Computer" while nothing waits. */
 export const queueButtonText = (t: TFunction, queue: ComputerQueue | null | undefined) =>
@@ -178,34 +149,6 @@ export function queueStartText(
 }
 
 /**
- * The waiting agent's live row: "Waiting for the computer. Next up, in about 1 min" when the line can say when, else
- * "… Next up" alone, or "In line, 4th. After Ada, Kai and Ravi"; "Waiting for Claude 2 to finish another task" when
- * its plan sign-in is what it waits for. Null when the run isn't in this computer's line.
- */
-export function queueLiveText(
-  t: TFunction,
-  locale: string,
-  queue: ComputerQueue | null | undefined,
-  runId: string,
-  agentName: (id: string) => string | undefined,
-  now: number,
-) {
-  const w = queue?.waiting.find((x) => x.runId === runId);
-  if (!w) return null;
-  if (w.signIn) return t("queue.live.signIn", { account: w.signIn });
-  const { context } = agentGrammar(agentName(w.agentId) ?? "");
-  if (w.position === 1) {
-    if (w.estimatedStartAt) return t("queue.live.nextEta", { n: etaMinutes(w.estimatedStartAt, now), context });
-    return t("queue.live.next", { context });
-  }
-  const names = w.after.flatMap((id) => agentName(id) ?? []);
-  const nth = nthText(t, locale, w.position);
-  return names.length
-    ? t("queue.live.behind", { nth, names: namesText(t, names, 3) })
-    : t("queue.live.position", { nth });
-}
-
-/**
  * An agent's place in line for a message: its run as the receipt follows it, else its one waiting turn in this
  * conversation (a new mention joins the turn already waiting).
  */
@@ -252,10 +195,6 @@ export function conversationWaits(
   }
   return [...waits.values()];
 }
-
-/** The receipt of a message whose agent is next in line: "Theo is in line for the computer · next". */
-export const queuedNextText = (t: TFunction, name: string) =>
-  t("receipts.queuedNext", { names: name, context: agentGrammar(name).context });
 
 /** The outage card's pill beside the time: "Away 3 min". */
 export const awayText = (t: TFunction, sinceIso: string, now: number) =>

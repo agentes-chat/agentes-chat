@@ -1,5 +1,5 @@
 import type { Message, ComputerQueue as Queue, QueueWhere } from "@agenteschat/client";
-import { receiptView, useAiAccounts, useChannels, useDms, useMachineQueue, useMachines } from "@agenteschat/client";
+import { useAiAccounts, useChannels, useDms, useMachineQueue, useMachines } from "@agenteschat/client";
 import {
   type ConversationWait,
   conversationWaits,
@@ -13,16 +13,11 @@ import {
   type QueuePlace,
   queueAllStartedText,
   queueButtonText,
-  queueCauseText,
-  queuedNextText,
   queueFillText,
   queueLeftText,
-  queueLiveText,
   queuePurposeText,
   queueStartText,
   queueStatusText,
-  queueStoppable,
-  queueStopText,
   queueView,
   queueWhereText,
   waitingFor,
@@ -349,37 +344,6 @@ function SpillHere({ machineId }: { machineId: string }) {
   );
 }
 
-/** The waiting turns of a message's agents in their computer's line, resolved as `waitingFor` finds them. */
-function useQueueWaits(message: Message) {
-  const { org } = useOrg();
-  const receipt = useLive((s) => s.receipts[message.id]);
-  const status = receiptView(receipt).status;
-  const agents = status?.kind === "queued" ? status.agents : [];
-  const machineId = useAgentsMachineId(agents);
-  const q = useMachineQueue(org.id, machineId, agents.length > 0);
-  const rows = agents.flatMap((id) => waitingFor(q.data, receipt, id, message.channelId) ?? []);
-  // The fan-out strip says where each stands instead.
-  const fanned = fanShows(message, fanOutOf(receipt, q.data), receipt);
-  return { agents, rows: fanned ? [] : rows };
-}
-
-/**
- * The receipt of a message whose agents wait in line: "Theo is in line for the computer · next" when its one agent
- * is next, else `fallback` (the plain queued line). Once, whatever the number of agents.
- */
-export function QueuedWords({ message, fallback }: { message: Message; fallback: string }) {
-  const { t } = useTranslation();
-  const { org } = useOrg();
-  const dir = useDirectory(org.id);
-  const { agents, rows } = useQueueWaits(message);
-  // A turn waiting for its plan sign-in isn't next for the computer: its own row names the sign-in.
-  const next =
-    agents.length === 1 && rows[0]?.position === 1 && !rows[0].signIn
-      ? dir.agentById.get(rows[0].agentId)?.name
-      : undefined;
-  return <span>{next ? queuedNextText(t, next) : fallback}</span>;
-}
-
 const sameWaits = (a: ConversationWait[], b: ConversationWait[]) =>
   a.length === b.length && a.every((w, i) => w.agentId === b[i]?.agentId && w.runId === b[i]?.runId);
 
@@ -400,26 +364,18 @@ export function QueueWaitTurns({ channelId, messages }: { channelId: string; mes
 }
 
 /**
- * The agent's turn (its face, its name): "Waiting for the computer. Next up, in about 1 min" or "In line, 4th. After
- * Ada, Kai and Ravi", "You go first" on the viewer's own request, and "See queue"; "Waiting for the computer" until
- * the line knows the turn.
+ * The agent's turn (its face, its name): one line whatever holds it ("In line · starts soon"), "You go first" on the
+ * viewer's own request, and "See queue".
  */
 function QueueWaitTurn({ wait: { agentId, runId }, channelId }: { wait: ConversationWait; channelId: string }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { org, me } = useOrg();
   const dir = useDirectory(org.id);
-  const now = useNow(30_000);
   const machineId = useAgentMachineId(agentId);
   const queue = useMachineQueue(org.id, machineId).data;
   const w = waitingFor(queue, runId ? { runOf: { [agentId]: runId } } : undefined, agentId, channelId);
-  const agentName = (id: string) => dir.agentById.get(id)?.name;
-  const name = agentName(agentId) ?? t("channel.unknownAgent");
-  const text = w ? queueLiveText(t, i18n.language, queue, w.runId, agentName, now) : t("queue.live.waiting");
+  const name = dir.agentById.get(agentId)?.name ?? t("channel.unknownAgent");
   const first = w?.people && w.purpose.kind === "person" && w.purpose.userId === me.user.id;
-  // The real cause, once the line knows the turn: what holds the computer's memory now.
-  const cause = w ? queueCauseText(t, queue, w) : null;
-  const { stop, stopping } = useTaskStop();
-  const freeing = w ? queueStoppable(queue) : undefined;
   return (
     <MessageRow
       agent
@@ -431,37 +387,13 @@ function QueueWaitTurn({ wait: { agentId, runId }, channelId }: { wait: Conversa
     >
       <p className="cq-turn__say ac-iconline" aria-live="polite">
         <Icon name="waiting" size={14} />
-        <span>{text}</span>
+        <span>{t("queue.waiting")}</span>
       </p>
-      {cause && <p className="cq-turn__cause">{cause}</p>}
       <span className="cq-turn__acts">
         {first && <Chip className="cq-first">{t("queue.youFirst")}</Chip>}
         {machineId && <SeeQueue machineId={machineId} />}
-        {freeing && (
-          <StopFill
-            label={queueStopText(t, freeing, agentName(freeing.agentId) ?? t("channel.unknownAgent"))}
-            stopping={stopping.has(freeing.runId)}
-            onStop={() => stop([freeing.runId], undefined, true)}
-          />
-        )}
       </span>
     </MessageRow>
-  );
-}
-
-/** The wait line's way out, beside "See queue": stop the work the viewer may stop on the full computer. */
-function StopFill({ label, stopping, onStop }: { label: string; stopping: boolean; onStop: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <button
-      type="button"
-      className="cq-link cq-turn__stop"
-      disabled={stopping}
-      aria-busy={stopping || undefined}
-      onClick={onStop}
-    >
-      {stopping ? t("taskManager.state.stopping") : label}
-    </button>
   );
 }
 

@@ -417,9 +417,9 @@ export const envVars = {
     section: "Agents",
   },
   CLAUDE_PLAN_CONCURRENCY: {
-    schema: z.coerce.number().int().min(0).max(50).default(2),
+    schema: z.coerce.number().int().min(0).max(50).default(6),
     description:
-      "How many agent runs one Claude plan sign-in (a subscription, never an API key) works on at once. Past it, the next run waits in its computer's line and starts as soon as one ends; the conversation says who it waits for. 0 turns the limit off.",
+      "How many agent runs one Claude plan sign-in (a subscription, never an API key) works on at once. Past it, the next run waits in line like any other and starts as soon as one ends. 0 turns the limit off.",
     section: "Agents",
   },
   AGENT_MAX_TOOL_TURNS: {
