@@ -27,6 +27,8 @@ export interface MachinePlanUsage {
     label?: string;
     usedPercent: number;
     resetsAt?: string;
+    /** When this window was last read, where that is before `at` (`PlanWindow.at`). */
+    at?: string;
   }[];
   limited?: boolean;
   source: "turn" | "probe";

@@ -167,3 +167,55 @@ test("a computer's own sign-in at its limit is probed too, and stamped as checke
   expect(own?.codex?.checkedAt).toBeUndefined();
   expect(await recheckStuckPlans({ db: fx.db, hub }, NOW + 60_000)).toEqual([]);
 });
+
+test("a window whose own reading went out of date while turns ran is read again, once", async () => {
+  const { fx, hub, calls, account } = await world();
+  const turns = async (id: string, lastSuccessAt: string) =>
+    fx.db
+      .update(schema.machineAccounts)
+      .set({ lastSuccessAt: new Date(lastSuccessAt) })
+      .where(eq(schema.machineAccounts.id, id));
+  // A turn's event a minute ago named the 5 hours only: the week is still the one read 7 hours ago.
+  const week = (): PlanUsage => ({
+    windows: [
+      { kind: "five_hour", usedPercent: 10, resetsAt: "2030-01-01T14:00:00.000Z" },
+      { kind: "seven_day", usedPercent: 73, resetsAt: "2030-01-04T00:00:00.000Z", at: ago(7 * 3600_000) },
+    ],
+    source: "turn",
+    at: ago(60_000),
+  });
+  const worked = await account(week(), "setup_token");
+  await turns(worked, ago(60_000));
+  // No turn since that week was read: nothing says it moved.
+  const idle = await account(week(), "setup_token");
+  await turns(idle, ago(8 * 3600_000));
+  expect(await recheckStuckPlans({ db: fx.db, hub }, NOW)).toEqual([worked]);
+  expect(calls[0]?.req).toEqual({ op: "account", action: "list", fresh: [worked], recheck: [worked] });
+  // Asked once for that reading: a check that didn't name the week either leaves it as it is.
+  expect(await recheckStuckPlans({ db: fx.db, hub }, NOW + TOKEN_RECHECK_MS)).toEqual([]);
+});
+
+test("after a refusal for the limit that a turn got past, a window read before it is read again", async () => {
+  const { fx, hub, account } = await world();
+  const refusal = ago(2 * 3600_000);
+  const usage: PlanUsage = {
+    windows: [
+      { kind: "five_hour", usedPercent: 4, resetsAt: "2030-01-01T16:00:00.000Z" },
+      { kind: "seven_day", usedPercent: 100, resetsAt: "2030-01-04T00:00:00.000Z", at: ago(3 * 3600_000) },
+    ],
+    source: "turn",
+    at: ago(60_000),
+  };
+  const failed = async (id: string, lastSuccessAt: string) =>
+    fx.db
+      .update(schema.machineAccounts)
+      .set({ lastFailureCause: "quota", lastFailureAt: new Date(refusal), lastSuccessAt: new Date(lastSuccessAt) })
+      .where(eq(schema.machineAccounts.id, id));
+  const past = await account({ ...usage, windows: usage.windows.map((w) => ({ ...w, usedPercent: 60 })) });
+  await failed(past, ago(5 * 60_000));
+  // Still refused: no turn since.
+  const still = await account({ ...usage, windows: usage.windows.map((w) => ({ ...w, usedPercent: 60 })) });
+  await failed(still, ago(3 * 3600_000));
+  expect(await recheckStuckPlans({ db: fx.db, hub }, NOW)).toEqual([past]);
+  expect(await recheckStuckPlans({ db: fx.db, hub }, NOW + 60_000)).toEqual([]);
+});
