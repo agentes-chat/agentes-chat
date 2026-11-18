@@ -27,7 +27,7 @@ import {
   videoClock,
   videoHeight,
 } from "./logic";
-import { openFile } from "./open";
+import { openFile, useOpenFile } from "./open";
 import { rememberLocalCopy, useArtifacts, useRemoteFile } from "./source";
 import { VideoFirstFrame, VideoPlayer } from "./VideoPlayer";
 
@@ -236,12 +236,16 @@ function InlineVideo({
   const link = useRemoteFile(orgId, file.id, file.version, { once: true });
   const [failed, setFailed] = useState(false);
   const source = useMemo(() => (link.data ? { uri: link.data.uri, headers: link.data.headers } : null), [link.data]);
+  const openLooked = useOpenFile();
   if (failed || link.isError)
     return <AttachmentTile file={file} detail={detail} width={width} single siblings={siblings} />;
   const info = detail ? fileInfo(detail) : null;
-  // In the same viewer as the pictures: one place where media opens.
+  // In the same viewer as the pictures: one place where media opens. Its details may not be here yet (slow, or their
+  // read failed): the tap still opens, reading them first, never a press that does nothing.
   const open = () => {
-    if (detail) openFile({ id: file.id, version: file.version, title: file.title, detail }, siblings);
+    const ref = { id: file.id, version: file.version, title: file.title };
+    if (detail) openFile({ ...ref, detail }, siblings);
+    else void openLooked(ref, siblings);
   };
   return (
     <View>
@@ -251,11 +255,15 @@ function InlineVideo({
           source={source}
           name={info?.name || file.title}
           width={width}
-          onOpen={detail ? open : undefined}
+          onOpen={open}
           onFailed={() => setFailed(true)}
         />
       ) : (
-        <View
+        <PressScale
+          haptic={false}
+          onPress={open}
+          accessibilityRole="button"
+          accessibilityLabel={info?.name || file.title}
           style={[styles.shot, { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 }]}
         />
       )}

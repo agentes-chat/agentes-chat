@@ -14,6 +14,26 @@ import { videoClock, videoHeight } from "./logic";
  */
 const SURFACE = "textureView";
 
+/**
+ * A video that only shows, under something pressable. Android's player view takes every touch on it and reports it to
+ * JS in its own coordinates, which read as the finger having left the control, so a real tap (a finger always moves a
+ * little) never lands. `pointerEvents` on the video doesn't reach that view; a plain view around it keeps touches away.
+ */
+function StillVideo({ player, contentFit }: { player: Player; contentFit: "contain" | "cover" }) {
+  return (
+    <View pointerEvents="none" collapsable={false} style={StyleSheet.absoluteFill}>
+      <VideoView
+        player={player}
+        nativeControls={false}
+        contentFit={contentFit}
+        allowsPictureInPicture={false}
+        surfaceType={SURFACE}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
 /** Only one video plays at a time: starting one pauses the one before. */
 let current: Player | null = null;
 function claim(player: Player) {
@@ -85,15 +105,7 @@ function InlineVideo({
       accessibilityLabel={`${t("mobile.files.video.play")}: ${name}${length ? `, ${length}` : ""}`}
       style={[styles.inline, { width, height: videoHeight(width), backgroundColor: c.sunken, borderColor: c.line2 }]}
     >
-      <VideoView
-        player={player}
-        nativeControls={false}
-        contentFit="contain"
-        allowsPictureInPicture={false}
-        surfaceType={SURFACE}
-        pointerEvents="none"
-        style={StyleSheet.absoluteFill}
-      />
+      <StillVideo player={player} contentFit="contain" />
       <View style={styles.center} pointerEvents="none">
         <View style={[styles.big, { backgroundColor: c.raised }]}>
           <Icon name="play" size={24} color={c.ink} />
@@ -166,17 +178,7 @@ export function VideoFirstFrame({ uri }: { uri: string }) {
   const player = useVideoPlayer({ uri }, (p) => {
     p.muted = true;
   });
-  return (
-    <VideoView
-      player={player}
-      nativeControls={false}
-      contentFit="cover"
-      allowsPictureInPicture={false}
-      surfaceType={SURFACE}
-      pointerEvents="none"
-      style={StyleSheet.absoluteFill}
-    />
-  );
+  return <StillVideo player={player} contentFit="cover" />;
 }
 
 const styles = StyleSheet.create({

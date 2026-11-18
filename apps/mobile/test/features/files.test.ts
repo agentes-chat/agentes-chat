@@ -562,7 +562,20 @@ describe("viewer", () => {
   test("on Android a video draws with the views around it, inside rounded corners and under a pull", () => {
     const player = src("features/files/VideoPlayer.tsx");
     expect(player).toContain('const SURFACE = "textureView";');
-    expect(player.match(/surfaceType=\{SURFACE\}/g)?.length).toBe(3);
+    expect(player.match(/surfaceType=\{SURFACE\}/g)?.length).toBe(2);
+  });
+
+  test("a video under a press never takes the touch, and the press works before its link is here", () => {
+    const player = src("features/files/VideoPlayer.tsx");
+    // Android's player view reports touches in its own coordinates, which cancel the press around it.
+    expect(player).toContain('<View pointerEvents="none" collapsable={false} style={StyleSheet.absoluteFill}>');
+    expect(player.match(/<StillVideo /g)?.length).toBe(2);
+    const files = src("features/files/MessageFiles.tsx");
+    const start = files.indexOf("function InlineVideo(");
+    const video = files.slice(start, files.indexOf("\n}\n", start));
+    expect(video).toContain("onPress={open}");
+    // The hooks come before the early return for a video this phone can't play.
+    expect(video.indexOf("useOpenFile()")).toBeLessThan(video.indexOf("if (failed || link.isError)"));
   });
 
   test("a picture fits whole, zooms up to twice its own pixels, and a double tap zooms in at the spot", () => {
