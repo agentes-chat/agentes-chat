@@ -7568,7 +7568,7 @@
     "offlineTitle": "오프라인 상태예요",
     "offlineText": "다시 온라인이 되면 이 페이지가 자동으로 열려요.",
     "unknownHostTitle": "이 주소는 아직 설정되지 않았어요",
-    "unknownHostText": "{{host}}에는 아직 준비된 것이 없어요. 방금 연결했다면 몇 분 뒤에 다시 시도하세요.",
+    "unknownHostText": "방금 연결했다면 몇 분 뒤에 다시 시도하세요.",
     "unknownHostTab": "설정되지 않은 주소 · agentes.chat"
   },
   "scopes": {

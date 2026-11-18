@@ -7876,7 +7876,7 @@
     "offlineTitle": "Du bist offline",
     "offlineText": "Diese Seite öffnet sich von selbst, sobald du wieder online bist.",
     "unknownHostTitle": "Diese Adresse ist noch nicht eingerichtet",
-    "unknownHostText": "Unter {{host}} ist noch nichts bereit. Wenn sie gerade erst verbunden wurde, versuch es in ein paar Minuten noch einmal.",
+    "unknownHostText": "Wenn sie gerade erst verbunden wurde, versuch es in ein paar Minuten noch einmal.",
     "unknownHostTab": "Adresse nicht eingerichtet · agentes.chat"
   },
   "scopes": {

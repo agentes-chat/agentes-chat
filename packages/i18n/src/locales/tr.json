@@ -7835,7 +7835,7 @@
     "offlineTitle": "Çevrimdışısınız",
     "offlineText": "Yeniden çevrimiçi olduğunuzda bu sayfa kendiliğinden açılır.",
     "unknownHostTitle": "Bu adres henüz ayarlanmadı",
-    "unknownHostText": "{{host}} adresinde henüz hazır bir şey yok. Yeni bağlandıysa birkaç dakika sonra tekrar deneyin.",
+    "unknownHostText": "Yeni bağlandıysa birkaç dakika sonra tekrar deneyin.",
     "unknownHostTab": "Adres ayarlanmadı · agentes.chat"
   },
   "scopes": {

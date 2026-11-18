@@ -7571,7 +7571,7 @@
     "offlineTitle": "オフラインです",
     "offlineText": "オンラインに戻ると、このページは自動で開きます。",
     "unknownHostTitle": "このアドレスはまだ設定されていません",
-    "unknownHostText": "{{host}} ではまだ何も準備できていません。接続したばかりなら、数分後にもう一度お試しください。",
+    "unknownHostText": "接続したばかりなら、数分後にもう一度お試しください。",
     "unknownHostTab": "未設定のアドレス · agentes.chat"
   },
   "scopes": {

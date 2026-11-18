@@ -8120,7 +8120,7 @@
     "offlineTitle": "No tienes conexión",
     "offlineText": "Esta página se abre sola cuando vuelvas a tener conexión.",
     "unknownHostTitle": "Esta dirección aún no está configurada",
-    "unknownHostText": "Todavía no hay nada listo en {{host}}. Si se acaba de conectar, vuelve a intentarlo en unos minutos.",
+    "unknownHostText": "Si se acaba de conectar, vuelve a intentarlo en unos minutos.",
     "unknownHostTab": "Dirección sin configurar · agentes.chat"
   },
   "scopes": {

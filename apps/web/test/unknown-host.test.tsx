@@ -10,8 +10,6 @@ import { onUnknownHost, showUnknownHost } from "@/components/UnknownHost";
 import { createI18n } from "@/i18n";
 import { screen } from "./render";
 
-const HOST = `${"a".repeat(63)}.${"b".repeat(63)}.${"c".repeat(63)}.${"d".repeat(53)}.example`;
-
 afterEach(() => {
   cleanup();
   document.body.replaceChildren();
@@ -21,7 +19,7 @@ afterEach(() => {
 
 /** The page as the server answers it on an unknown hostname: #root with the boot sky, the document marked. */
 async function open(lang: "en" | "pt-BR" = "en") {
-  domWindow().happyDOM.setURL(`https://${HOST}/login`);
+  domWindow().happyDOM.setURL("https://unset.example.com/login");
   document.documentElement.setAttribute("data-unknown-host", "");
   const root = document.body.appendChild(document.createElement("div"));
   root.id = "root";
@@ -38,23 +36,18 @@ async function open(lang: "en" | "pt-BR" = "en") {
   return { root, fetched: fetches.mock.calls.length, settled };
 }
 
-test("a page marked data-unknown-host shows only the not-set-up screen, its host as text, and asks nothing", async () => {
+test("a page marked data-unknown-host shows only the not-set-up screen and asks nothing", async () => {
   expect(onUnknownHost()).toBe(false);
   document.documentElement.setAttribute("data-unknown-host", "");
   expect(onUnknownHost()).toBe(true);
 
-  expect(HOST.length).toBe(253);
   const { root, fetched, settled } = await open();
   expect(fetched).toBe(0);
   // The entry awaits it for good: nothing after it in main.tsx runs.
   expect(settled).toBe(false);
   expect(root.querySelector(".boot")).toBeNull();
   expect(screen().getByRole("heading", { name: "This address isn't set up yet" })).toBeTruthy();
-  const text = screen().getByText(/^Nothing is ready at/);
-  expect(text.textContent).toBe(
-    `Nothing is ready at ${HOST} yet. If it was just connected, try again in a few minutes.`,
-  );
-  expect(text.children.length).toBe(0);
+  expect(screen().getByText("If it was just connected, try again in a few minutes.")).toBeTruthy();
   expect(screen().getByRole("button", { name: "Try again" })).toBeTruthy();
   expect(document.title).toBe("Address not set up · agentes.chat");
   expect(document.documentElement.lang).toBe("en");

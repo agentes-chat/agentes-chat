@@ -8181,7 +8181,7 @@
     "offlineTitle": "Sei offline",
     "offlineText": "Questa pagina si riapre da sola quando torni online.",
     "unknownHostTitle": "Questo indirizzo non è ancora configurato",
-    "unknownHostText": "Su {{host}} non c'è ancora nulla di pronto. Se è stato appena collegato, riprova tra qualche minuto.",
+    "unknownHostText": "Se è stato appena collegato, riprova tra qualche minuto.",
     "unknownHostTab": "Indirizzo non configurato · agentes.chat"
   },
   "scopes": {

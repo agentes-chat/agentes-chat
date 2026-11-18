@@ -8452,7 +8452,7 @@
     "offlineTitle": "Jesteś offline",
     "offlineText": "Ta strona otworzy się sama, gdy wrócisz do sieci.",
     "unknownHostTitle": "Ten adres nie jest jeszcze skonfigurowany",
-    "unknownHostText": "Pod adresem {{host}} nic jeszcze nie jest gotowe. Jeśli został właśnie podłączony, spróbuj ponownie za kilka minut.",
+    "unknownHostText": "Jeśli został właśnie podłączony, spróbuj ponownie za kilka minut.",
     "unknownHostTab": "Adres nieskonfigurowany · agentes.chat"
   },
   "scopes": {

@@ -118,8 +118,8 @@ stay exact and be written once.
    emails' pictures, the installer and every other answer are the same on every host, since the phone and desktop
    apps, runners, webhooks and health checks call the server at names of their own. A server without the operator API
    registers no hosts, so it has none to tell apart and answers every `Host` as before. A marked page shows only one
-   screen in the sign-in pages' look with the product's mark (`UnknownHost`): the address isn't set up yet, the
-   hostname as text, and a button that loads the page again. The web's entry decides it first: no session, router,
+   screen in the sign-in pages' look with the product's mark (`UnknownHost`): the address isn't set up yet, a
+   short line to try again in a few minutes, and a button that loads the page again. The web's entry decides it first: no session, router,
    socket, service worker or notification starts on that page.
 10. **Phone and desktop.** Nothing changes. The phone app is built for one address. The desktop app's server check
    (`checkServer`, shared with the phone) asks `GET /api/instance`, whose `url` is `PUBLIC_URL`'s origin on every

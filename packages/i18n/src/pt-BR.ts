@@ -8344,8 +8344,7 @@ export const ptBR = {
     offlineTitle: "Você está sem internet",
     offlineText: "Esta página abre sozinha quando a internet voltar.",
     unknownHostTitle: "Este endereço ainda não está configurado",
-    unknownHostText:
-      "Ainda não há nada pronto em {{host}}. Se ele acabou de ser conectado, tente de novo em alguns minutos.",
+    unknownHostText: "Se ele acabou de ser conectado, tente de novo em alguns minutos.",
     unknownHostTab: "Endereço não configurado · agentes.chat",
   },
   scopes: {

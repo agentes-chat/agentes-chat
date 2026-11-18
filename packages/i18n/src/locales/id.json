@@ -7598,7 +7598,7 @@
     "offlineTitle": "Kamu sedang offline",
     "offlineText": "Halaman ini terbuka sendiri saat kamu kembali online.",
     "unknownHostTitle": "Alamat ini belum disiapkan",
-    "unknownHostText": "Belum ada yang siap di {{host}}. Kalau baru saja dihubungkan, coba lagi dalam beberapa menit.",
+    "unknownHostText": "Kalau baru saja dihubungkan, coba lagi dalam beberapa menit.",
     "unknownHostTab": "Alamat belum disiapkan · agentes.chat"
   },
   "scopes": {

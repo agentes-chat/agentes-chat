@@ -19295,7 +19295,7 @@
     "value": "This address isn't set up yet"
   },
   "empty.unknownHostText": {
-    "value": "Nothing is ready at {{host}} yet. If it was just connected, try again in a few minutes."
+    "value": "If it was just connected, try again in a few minutes."
   },
   "empty.unknownHostTab": {
     "value": "Address not set up · agentes.chat"

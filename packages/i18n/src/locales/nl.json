@@ -7914,7 +7914,7 @@
     "offlineTitle": "Je bent offline",
     "offlineText": "Deze pagina opent vanzelf zodra je weer online bent.",
     "unknownHostTitle": "Dit adres is nog niet ingesteld",
-    "unknownHostText": "Op {{host}} staat nog niets klaar. Is het net gekoppeld, probeer het dan over een paar minuten opnieuw.",
+    "unknownHostText": "Is het net gekoppeld, probeer het dan over een paar minuten opnieuw.",
     "unknownHostTab": "Adres niet ingesteld · agentes.chat"
   },
   "scopes": {

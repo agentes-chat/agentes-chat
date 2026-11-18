@@ -16,7 +16,7 @@ export function UnknownHost() {
       <div className="auth__notice">
         <LogoMark size={48} />
         <h1>{t("empty.unknownHostTitle")}</h1>
-        <p>{t("empty.unknownHostText", { host: window.location.hostname })}</p>
+        <p>{t("empty.unknownHostText")}</p>
         <Button variant="primary" size="lg" icon="refresh" onClick={() => window.location.reload()}>
           {t("common.retry")}
         </Button>

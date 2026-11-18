@@ -7608,7 +7608,7 @@
     "offlineTitle": "你已离线",
     "offlineText": "恢复联网后此页面会自动打开。",
     "unknownHostTitle": "此地址尚未设置",
-    "unknownHostText": "{{host}} 上还没有准备好任何内容。如果刚刚完成连接，请过几分钟再试。",
+    "unknownHostText": "如果刚刚完成连接，请过几分钟再试。",
     "unknownHostTab": "地址未设置 · agentes.chat"
   },
   "scopes": {
