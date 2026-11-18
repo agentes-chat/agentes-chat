@@ -15968,6 +15968,7 @@
       "askSelf": "C'est votre ordinateur : activez-le avec le bouton.",
       "adminAskSelf": "Vous pouvez le faire ici vous-même.",
       "accountMethodUnsupported": "Cet ordinateur ne peut pas encore connecter Claude de cette façon. Mettez à jour le programme agentes.chat dessus ou utilisez une clé API.",
+      "brainUnavailable": "Cette IA n'est pas encore configurée sur {{computer}}. Configurez-la là-bas, ou choisissez-en une autre.",
       "offline": "{{name}} est hors ligne pour le moment. Réessayez quand il sera de retour.",
       "paused": "{{name}} est en pause : rien de nouveau n'y démarre tant qu'il n'a pas repris.",
       "timeout": "L'ordinateur n'a pas répondu à temps. Réessayez."

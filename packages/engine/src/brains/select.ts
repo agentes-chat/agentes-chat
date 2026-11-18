@@ -808,7 +808,9 @@ export async function resolveBrain(
     kind === "claude_code" && model && !isAutoModel(model) ? claudeCodeModel(planOf(account?.provider), model) : model;
   const effort = brainEffortFor(agent, kind);
   const unavailable =
-    (isRightHand(agent) && agent.brainAccountId ? await rightHandPlanRefusal(deps.db, agent, run, status) : null) ??
+    (isRightHand(agent) && (agent.brainAccountId || agent.machineId)
+      ? await rightHandPlanRefusal(deps.db, agent, run, status)
+      : null) ??
     (machineId && !deps.machines
       ? null
       : computerBrainUnavailable(

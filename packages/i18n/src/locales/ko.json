@@ -14866,6 +14866,7 @@
       "askSelf": "내 컴퓨터입니다. 버튼으로 켜세요.",
       "adminAskSelf": "여기서 직접 할 수 있어요.",
       "accountMethodUnsupported": "이 컴퓨터에서는 아직 이 방식으로 Claude를 연결할 수 없어요. 컴퓨터의 agentes.chat 프로그램을 업데이트하거나 API 키를 쓰세요.",
+      "brainUnavailable": "이 AI는 아직 {{computer}}에 설정되지 않았어요. 거기서 설정하거나 다른 AI를 고르세요.",
       "offline": "{{name}}은(는) 지금 오프라인이에요. 돌아오면 다시 시도해 주세요.",
       "paused": "{{name}}이(가) 일시 중지됐어요: 다시 시작될 때까지 새 작업이 시작되지 않아요.",
       "timeout": "컴퓨터가 제때 응답하지 않았어요. 다시 시도해 주세요."

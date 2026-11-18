@@ -71,6 +71,8 @@ const SPECS = { cpus: 4, memoryGb: 8, diskGb: 100 };
 const RUNNING: Partial<DesktopStatus> = { available: true, reason: null, running: true, canControl: true };
 
 interface Options {
+  /** The agent is the built-in right hand: its computer is the workspace's own. */
+  rightHand?: boolean;
   /** The workspace gets its own computer (the Cloud), this far. */
   setup?: Partial<ComputerSetup>;
   /** Ada's computer; null: none. */
@@ -121,7 +123,8 @@ const adaOf = async (b: Awaited<ReturnType<typeof backend>>) =>
 
 async function dialog(o: Options = {}) {
   const b = await backend(o);
-  const ada = await adaOf(b);
+  const found = await adaOf(b);
+  const ada = o.rightHand ? ({ ...found, builtin: "right_hand" } as Agent) : found;
   let closed = 0;
   const r = await renderPage(<ComputerDialog agent={ada} open onClose={() => closed++} />, {
     api: b.api,
@@ -697,6 +700,11 @@ describe("the computer dialog, self-host", () => {
     expect(sub()).toBe("Sem computador ainda");
     expect(box().textContent).toContain("Escolha um computador para a Ada.");
     expect(view().getByRole("button", { name: "Escolher um computador" })).toBeTruthy();
+  });
+
+  test("no computer yet for the right hand: never one to choose", async () => {
+    await dialog({ machine: null, desktop: { available: false, reason: "no_computer" }, rightHand: true });
+    expect(view().queryByRole("button", { name: "Escolher um computador" })).toBeNull();
   });
 
   test("neither its screen nor its browser: where to allow them is the button", async () => {

@@ -3,6 +3,7 @@ import { managesAgent } from "@agenteschat/client/lib/audience";
 import { setupView } from "@agenteschat/client/lib/computer";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { machineTitle } from "@agenteschat/client/lib/machines";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/providers/org";
 import { useToast } from "@/ui";
@@ -28,7 +29,8 @@ export function usePickComputer(agentId: string): (() => void) | null {
   const setupQ = useComputerSetup(orgId);
   const setTarget = useSetComputerTarget(orgId);
   const agent = dir.agentById.get(agentId);
-  if (!agent || !machines.data) return null;
+  // The right hand's computer is the workspace's own, never chosen (the server refuses it).
+  if (!agent || isRightHand(agent) || !machines.data) return null;
   const pick = agentComputerPick({
     agent,
     meId,

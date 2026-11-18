@@ -518,7 +518,7 @@ function Chat({
   }, [walled]);
   const rhythm = CHAT_RHYTHM[rowLook.style];
   const quiet = quietInset(rowLook);
-  // The right hand (ADR 0137): its own line and composer hint, no computer, and its greeting on top.
+  // The right hand (ADR 0137): its own line and composer hint, and its greeting on top. Its computer opens as any agent's.
   const rightHand = isRightHand(dmAgent) && !isThread;
   // A new agent's setup checklist (ADR 0155 §2) for whoever sets it up: its greeting and the checklist on top.
   const setupIntro = useSetupSteps(dmAgent).length > 0 && !rightHand && !isThread;
@@ -2114,7 +2114,7 @@ function Chat({
   const tasksInBar = Boolean(dmAgentId && agentTasks);
   const [leadWidth, setLeadWidth] = useState(0);
   const leadRoom = queueInBar || tasksInBar ? leadWidth : 0;
-  const computerInBar = Boolean(dmAgentId && !isThread && !rightHand && computerWords && !queueInBar);
+  const computerInBar = Boolean(dmAgentId && !isThread && computerWords && !queueInBar);
   const dmExtra = computerInBar ? 1 : 0;
   const channelExtra = searchPlace ? 1 : 0;
   // The channel's sky in the pill, as an agent's DM: the color of the first agent in it.
@@ -2205,7 +2205,7 @@ function Chat({
   // An agent's DM also opens its tasks while it has some (ADR 0128), pushed like a thread, and its computer (as the
   // web's DM header) for whoever may watch it: one entry, the line while turns wait for the computer (the way on to
   // it inside), else the computer.
-  const dmComputer = dmAgentId && !isThread && !rightHand ? { agentId: dmAgentId, onOpen: leavePlace } : undefined;
+  const dmComputer = dmAgentId && !isThread ? { agentId: dmAgentId, onOpen: leavePlace } : undefined;
   // The bar's buttons: one group on every platform, whatever shows. First our own counted views, which have no system
   // button (the agent's tasks, the computer's line; `lead`), then the system's own buttons (the computer, search, "…";
   // our icon buttons in the same capsule on Android). Never two ways of drawing it: a bar that switched to our views

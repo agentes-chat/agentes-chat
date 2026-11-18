@@ -43,7 +43,7 @@ import { useOpenComputer } from "@/components/computer/open";
 import { OpensAgent } from "@/components/OpensAgent";
 import { useOrg } from "@/components/org-context";
 import { StatusLine } from "@/components/Presence";
-import { RightHandMineRow, useRightHandMineHint } from "@/components/RightHandSettings";
+import { RightHandMineRow, useRightHandMineHint, useRightHandNoComputer } from "@/components/RightHandSettings";
 import { SidePanel } from "@/components/SidePanel";
 import { AgentCover, colorOf } from "@/components/Sky";
 import { useAgentThinks } from "@/hooks/useAgentThinks";
@@ -72,21 +72,21 @@ export function AgentSidebar({ agent, onClose }: { agent: Agent; onClose?: () =>
   const body = (
     <ErrorBoundary resetKey={agent} fallback={() => null}>
       <AgentHead agent={agent} />
+      {seesDetails(agent) && (
+        <>
+          <ComputerSection agent={agent} />
+          <RoutinesSection agent={agent} />
+        </>
+      )}
       {isRightHand(agent) ? (
-        // No computer of its own, and each person's DM thinks with their own plan (ADR 0137 §11).
+        // Each person's DM with the right hand thinks with their own AI (ADR 0137 §11).
         <Section title={t("agentSide.thinks")} hint={mineHint}>
           <RightHandMineRow agent={agent} />
         </Section>
       ) : (
-        seesDetails(agent) && (
-          <>
-            <ComputerSection agent={agent} />
-            <RoutinesSection agent={agent} />
-            <ThinksSection agent={agent} />
-            <TasksSection agent={agent} />
-          </>
-        )
+        seesDetails(agent) && <ThinksSection agent={agent} />
       )}
+      {seesDetails(agent) && <TasksSection agent={agent} />}
     </ErrorBoundary>
   );
   if (!onClose) {
@@ -207,7 +207,19 @@ function ComputerSection({ agent }: { agent: Agent }) {
   const running = asksPicture(true, view.desktop);
   const shot = useDesktopPicture(org.id, agent.id, { enabled: active && running, working: Boolean(f?.working) });
   const nowMs = useNow(15_000);
+  const noneForHand = useRightHandNoComputer(isRightHand(agent) ? view.desktop?.reason : null);
   if (view.forbidden) return null;
+  // The right hand's computer is the workspace's own, never chosen: where there is none, why, and the way to one.
+  if (noneForHand && view.ready) {
+    return (
+      <Section title={t("agentComputer.button")}>
+        <p className="dm-side__using">
+          <span>{noneForHand.line}</span>
+        </p>
+        {noneForHand.action && <div className="dm-side__acts">{noneForHand.action}</div>}
+      </Section>
+    );
+  }
   // Its place is kept: the sections under it are faster, and would jump down when it comes.
   if (!view.ready || !f) {
     return (
@@ -296,6 +308,7 @@ function ComputerSection({ agent }: { agent: Agent }) {
             {t("agentComputer.help")}
           </Button>
         ) : button === "choose" ? (
+          !isRightHand(agent) &&
           (managesAgent(agent) || agent.ownerUserId === me.user.id) && (
             <Button
               size="sm"

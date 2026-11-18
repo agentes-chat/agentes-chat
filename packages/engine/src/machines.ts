@@ -733,13 +733,15 @@ export async function machineAgents(db: Database, orgId: string, machineId: stri
               sql`exists (select 1 from ${schema.rightHandBrains} rb join ${schema.machineAccounts} ma
                 on ma.org_id = rb.org_id and ma.id = rb.brain_account_id
                 where rb.org_id = ${agents.orgId} and ma.machine_id = ${machineId}::uuid)`,
+              sql`exists (select 1 from ${schema.rightHandBrains} rb
+                where rb.org_id = ${agents.orgId} and rb.machine_id = ${machineId}::uuid)`,
             ),
           ),
         ),
       ),
     )
     .orderBy(agents.createdAt);
-  const personal = rows.some((a) => a.builtin === RIGHT_HAND)
+  const personal: { id: string }[] = rows.some((a) => a.builtin === RIGHT_HAND)
     ? await db
         .select({ id: schema.rightHandBrains.brainAccountId })
         .from(schema.rightHandBrains)
@@ -751,6 +753,7 @@ export async function machineAgents(db: Database, orgId: string, machineId: stri
           ),
         )
         .where(and(eq(schema.rightHandBrains.orgId, orgId), eq(schema.machineAccounts.machineId, machineId)))
+        .then((rows) => rows.flatMap((r) => (r.id ? [{ id: r.id }] : [])))
     : [];
   const listed = rows.map((a): MachineAgent => {
     const own = a.builtin === RIGHT_HAND ? lentAccount(a) : null;

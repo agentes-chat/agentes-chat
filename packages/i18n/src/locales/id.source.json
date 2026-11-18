@@ -37935,6 +37935,9 @@
   "errors.machine.accountMethodUnsupported": {
     "value": "This computer can't connect Claude this way yet. Update the agentes.chat program on it, or use an API key."
   },
+  "errors.machine.brainUnavailable": {
+    "value": "This AI isn't set up on {{computer}} yet. Set it up there, or choose another one."
+  },
   "errors.machine.offline": {
     "value": "{{name}} is offline right now. Try again once it's back."
   },

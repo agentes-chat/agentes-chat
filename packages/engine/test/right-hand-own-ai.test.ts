@@ -752,3 +752,33 @@ test("a model the person chose for their own DM wins over the right hand's", asy
     .where(eq(schema.agents.id, lodi.id));
   expect((await runIn(bia.id)).model).toBe("glm-5.3");
 });
+
+test("a person's own Lodi thinks with the plan their own computer is signed in to, as any agent they own may", async () => {
+  const { fx, deps, machineId, bia, caio, lodi, runIn } = await world();
+  await fx.db.update(schema.machines).set({ pairedByUserId: bia.id }).where(eq(schema.machines.id, machineId));
+  expect(await getAgentBrain(deps, bia.id, fx.org.id, lodi.id, "mine")).toMatchObject({ ownSignIn: true });
+  expect(await getAgentBrain(deps, caio.id, fx.org.id, lodi.id, "mine")).toMatchObject({ ownSignIn: false });
+  const view = await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, {
+    scope: "mine",
+    brain: "claude_code",
+    account: null,
+  });
+  expect(view).toMatchObject({ scope: "mine", brain: "claude_code", account: null, computer: { machineId } });
+  expect(await runIn(bia.id)).toMatchObject({ kind: "claude_code", session: { machineId } });
+  expect((await runIn(bia.id)).account).toBeUndefined();
+  expect((await runIn(bia.id)).unavailable).toBeUndefined();
+  // Her sign-in is hers alone: nobody else's DM thinks with it, and nobody else may pick it.
+  expect((await runIn(fx.owner.id)).kind).toBe("model");
+  expect(
+    await codeOf(
+      setAgentBrain(deps, caio.id, fx.org.id, lodi.id, { scope: "mine", brain: "claude_code", account: null }),
+    ),
+  ).toBe("account.not_owner");
+  // Her computer's frame lists Lodi, on the computer's own sign-in.
+  const frame = (await machineAgents(fx.db, fx.org.id, machineId)).find((a) => a.id === lodi.id);
+  expect(frame).toBeDefined();
+  expect(frame?.account).toBeUndefined();
+  // `account: null` alone still goes back to the workspace's.
+  await setAgentBrain(deps, bia.id, fx.org.id, lodi.id, { scope: "mine", account: null });
+  expect((await runIn(bia.id)).kind).toBe("model");
+});

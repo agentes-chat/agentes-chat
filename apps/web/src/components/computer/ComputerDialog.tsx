@@ -22,6 +22,7 @@ import { clockAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { computerKind, isPaused } from "@agenteschat/client/lib/machines";
 import { can } from "@agenteschat/client/lib/permissions";
+import { isRightHand } from "@agenteschat/client/lib/right-hand";
 import { type Seat, screenId } from "@agenteschat/client/lib/seat";
 import { SeatContext, useSeat } from "@agenteschat/client/lib/seat-context";
 import { isPersonal } from "@agenteschat/client/lib/workspace-mode";
@@ -556,7 +557,9 @@ function ComputerStage({
             icon="computer"
             text={t("agentComputer.state.noComputer", g)}
             action={
-              manages && (
+              // The right hand's computer is the workspace's own, never chosen (the server refuses it).
+              manages &&
+              !isRightHand(agent) && (
                 <Button size="sm" variant="primary" onClick={choose}>
                   {t("agentComputer.choose")}
                 </Button>

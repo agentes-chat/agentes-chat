@@ -886,6 +886,8 @@ function Profile({ id }: { id: string }) {
 
         {rightHand && agent ? (
           <View style={styles.page}>
+            {/* Its computer as any agent's: the viewer's own seat there. */}
+            {details ? <AgentComputerCard agentId={id} style={styles.computer} /> : null}
             {nowBlock}
             <GroupedHeader>{t("rightHand.settings.mine")}</GroupedHeader>
             <RightHandMine agent={agent} />
