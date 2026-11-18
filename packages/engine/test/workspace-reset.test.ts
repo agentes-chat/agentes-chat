@@ -3,6 +3,7 @@ import { and, eq, isNull, rowsOf, schema, sql } from "@agenteschat/db";
 import {
   createFileArtifact,
   drainOutbox,
+  enqueueWaitingResets,
   ORG_RESET_JOB,
   postPersonMessage,
   RESET_ERASES,
@@ -11,6 +12,7 @@ import {
   requestReset,
   resetWorkspace,
   scheduleDeletion,
+  setDeletionHold,
 } from "../src";
 import { addMember, type Fixture, setup } from "./fixtures";
 
@@ -36,7 +38,7 @@ describe("workspace reset", () => {
         where c.table_schema = 'public' and c.column_name = 'org_id' and t.table_type = 'BASE TABLE'
           and c.table_name not like 'messages\\_%'`),
     ).map((r) => r.name);
-    const listed = [...RESET_KEEPS, ...RESET_TOMBSTONES, ...RESET_ERASES];
+    const listed: string[] = [...RESET_KEEPS, ...RESET_TOMBSTONES, ...RESET_ERASES];
     expect(new Set(listed).size).toBe(listed.length);
     expect([...listed].sort()).toEqual([...tables].sort());
   });
@@ -137,5 +139,23 @@ describe("workspace reset", () => {
     await resetWorkspace(resetDeps(), f.org.id);
     await scheduleDeletion({ db: f.db }, f.owner.id, f.org.id, "owner");
     expect(await requestReset(f.db, f.owner.id, f.org.id).catch((e) => e.code)).toBe("org.deleting");
+  });
+
+  test("waits while the operator holds the workspace, and the hourly tick takes it once the hold lifts", async () => {
+    f = await setup();
+    await setDeletionHold(f.db, f.org.id, { held: true, reason: "legal" });
+    await requestReset(f.db, f.owner.id, f.org.id);
+    expect(await resetWorkspace(resetDeps(), f.org.id)).toBe(false);
+    expect(await count("channels")).toBeGreaterThan(0);
+    const [held] = await f.db.select().from(schema.organizations).where(eq(schema.organizations.id, f.org.id));
+    expect(held?.resetRequestedAt).not.toBeNull();
+    const later = new Date(Date.now() + 3600_000);
+    expect(await enqueueWaitingResets(f.db, later)).toBe(0);
+
+    await setDeletionHold(f.db, f.org.id, { held: false, reason: null });
+    expect(await enqueueWaitingResets(f.db, later)).toBe(1);
+    await drainOutbox(f.db, { [ORG_RESET_JOB]: () => resetWorkspace(resetDeps(), f.org.id).then(() => undefined) });
+    const [done] = await f.db.select().from(schema.organizations).where(eq(schema.organizations.id, f.org.id));
+    expect(done?.resetRequestedAt).toBeNull();
   });
 });

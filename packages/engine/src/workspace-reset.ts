@@ -1,5 +1,5 @@
 import type { BlobStoreResolver } from "@agenteschat/adapters";
-import { and, type Database, eq, isNull, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, type Database, eq, isNotNull, isNull, lte, rowsOf, schema, sql } from "@agenteschat/db";
 import { type AgentDeletionDeps, eraseAgent } from "./agent-deletion";
 import { recordAudit } from "./audit";
 import { invalidateOrg } from "./cache";
@@ -11,22 +11,27 @@ import { lockOrgMembers } from "./organizations";
 import { enqueue } from "./outbox";
 import { ensureRightHand } from "./right-hand";
 import { closedRefusal, STANDING_COLUMNS } from "./standing";
+import { keptFromDeletion, keptOrg } from "./workspace-deletion";
 
 const { agents, channels, channelMembers, organizations, organizationMembers, rightHandSeats } = schema;
 
 /*
  * Resetting a workspace (owners, with the proof deleting it takes): it stays, with its plan, people, roles,
- * invitations, AI accounts, computers, connectors and usage, and everything made in it goes at once, for good. Then it
- * starts over as a new one: the right hand, #general with everyone in it, and the onboarding. The `org.reset` job does
- * it; `organizations.reset_requested_at` says it is under way until the transaction that erases it clears it.
+ * invitations, AI accounts, computers, connectors, Vault and usage, and everything made in it goes at once, for good.
+ * Then it starts over as a new one: the right hand, #general with everyone in it, and the onboarding. The `org.reset`
+ * job does it; `organizations.reset_requested_at` says it is under way until the transaction that erases it clears it.
  */
 
 /** The job that resets a workspace (`resetWorkspace`). */
 export const ORG_RESET_JOB = "org.reset";
 
+/** What a reset waits on, as a deletion past its date does (`keptFromDeletion`): evidence outlives it. */
+const KEPT_COLUMNS = { ...STANDING_COLUMNS, deletionHoldAt: organizations.deletionHoldAt };
+
 /**
  * Tenant tables a reset leaves as they are: the workspace's settings, its people and how they join, their own
- * settings there, AI accounts, computers, connectors and storage, usage and the audit. `blobs` is a storage: the
+ * settings there, AI accounts, computers, connectors, the Vault (people's own logins among them) and storage, usage
+ * and the audit. `blobs` is a storage: the
  * erased files' bytes leave it through their store.
  */
 export const RESET_KEEPS = [
@@ -62,6 +67,9 @@ export const RESET_KEEPS = [
   "oauth_states",
   "github_app_installations",
   "mail_accounts",
+  "vault_connections",
+  "vault_items",
+  "vault_uses",
   "db_connections",
   "webhook_endpoints",
   "storage_configs",
@@ -191,9 +199,6 @@ export const RESET_ERASES = [
   "thread_reads",
   "thread_reflections",
   "threads",
-  "vault_connections",
-  "vault_items",
-  "vault_uses",
   "voice_clips",
   "wiki_folder_audiences",
   "wiki_links",
@@ -252,7 +257,8 @@ export async function requestReset(db: Database, actorId: string, orgId: string)
 }
 
 /**
- * The `org.reset` job: a no-op unless a reset is under way. Every agent goes as deleting it does (its work stops, its
+ * The `org.reset` job: a no-op unless a reset is under way, and while the workspace is kept as a deletion past its
+ * date is (`keptFromDeletion`): it waits, and `enqueueWaitingResets` comes back for it. Every agent goes as deleting it does (its work stops, its
  * secrets and sign-ins leave its computer, its row stays as a tombstone), the right hand included. Then one
  * transaction empties `RESET_ERASES`, marks the right hand's places removed, makes the right hand and #general again
  * (everyone in it, its maker the same), opens the onboarding and clears the reset. After it commits, the erased files'
@@ -262,10 +268,10 @@ export async function requestReset(db: Database, actorId: string, orgId: string)
 export async function resetWorkspace(deps: ResetDeps, orgId: string) {
   const { db } = deps;
   const [org] = await db
-    .select({ at: organizations.resetRequestedAt, by: organizations.resetRequestedBy })
+    .select({ at: organizations.resetRequestedAt, by: organizations.resetRequestedBy, ...KEPT_COLUMNS })
     .from(organizations)
     .where(eq(organizations.id, orgId));
-  if (!org?.at) return false;
+  if (!org?.at || keptFromDeletion(org)) return false;
   const actorId = org.by ?? (await anOwner(db, orgId));
   if (!actorId) return false;
 
@@ -284,11 +290,11 @@ export async function resetWorkspace(deps: ResetDeps, orgId: string) {
   const done = await db.transaction(async (tx) => {
     await lockOrgMembers(tx, orgId);
     const [still] = await tx
-      .select({ at: organizations.resetRequestedAt })
+      .select({ at: organizations.resetRequestedAt, ...KEPT_COLUMNS })
       .from(organizations)
       .where(eq(organizations.id, orgId))
       .for("update");
-    if (!still?.at) return false;
+    if (!still?.at || keptFromDeletion(still)) return false;
     // One made while the agents above went: a tombstone like theirs.
     await tx
       .update(agents)
@@ -354,6 +360,33 @@ export async function resetWorkspace(deps: ResetDeps, orgId: string) {
   await publishListChanged(deps.pubsub, orgId, "artifacts");
   await publishMachineAgentsChanged(deps.pubsub, orgId);
   return true;
+}
+
+/**
+ * Resets asked for over 10 minutes ago and not done: their job failed for good, a deploy lost it, or a hold kept it
+ * waiting and has lifted. The hourly `deletions` tick queues them again. Returns how many.
+ */
+export async function enqueueWaitingResets(db: Database, now = new Date()) {
+  const waiting = await db
+    .select({ id: organizations.id })
+    .from(organizations)
+    .where(
+      and(
+        isNotNull(organizations.resetRequestedAt),
+        lte(organizations.resetRequestedAt, new Date(now.getTime() - 600_000)),
+        sql`not ${keptOrg}`,
+      ),
+    );
+  const hour = now.toISOString().slice(0, 13);
+  for (const { id } of waiting) {
+    await enqueue(db, {
+      orgId: null,
+      kind: ORG_RESET_JOB,
+      payload: { orgId: id },
+      dedupeKey: `${ORG_RESET_JOB}:${id}:${hour}`,
+    });
+  }
+  return waiting.length;
 }
 
 async function anOwner(db: Database, orgId: string) {

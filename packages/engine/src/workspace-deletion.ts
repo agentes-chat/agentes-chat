@@ -131,7 +131,7 @@ export const keptFromDeletion = (
   org: Pick<OrgStanding, "state" | "reason" | "notice"> & { deletionHoldAt: Date | null },
 ) => refusesNewWorkspace(org) || org.deletionHoldAt !== null;
 /** `keptFromDeletion` in SQL. */
-const keptOrg = sql<boolean>`(${heldOrg} or ${organizations.deletionHoldAt} is not null)`;
+export const keptOrg = sql<boolean>`(${heldOrg} or ${organizations.deletionHoldAt} is not null)`;
 /**
  * Its date passed, by the database's clock when the statement runs: after the lock it waited for, never when its
  * transaction began. Restoring reads the same clock the same way (`restorable`).
