@@ -9,6 +9,8 @@ import {
   chartInk,
   chartRamp,
   chartSlices,
+  LINE_MARK_ROOM,
+  lineMarksFit,
   linePoints,
   lineTops,
   ringCells,
@@ -363,6 +365,7 @@ export function Line({
   spark = false,
   height,
   still = false,
+  marks,
 }: {
   spec: ChartSpec;
   accent: AgentColorName;
@@ -370,6 +373,8 @@ export function Line({
   spark?: boolean;
   height?: number;
   still?: boolean;
+  /** Each point's value as the reader reads it, shown over it when they all fit side by side (`lineMarksFit`). */
+  marks?: readonly string[];
 }) {
   const { i18n } = useTranslation();
   const { scheme } = useTheme();
@@ -380,10 +385,13 @@ export function Line({
   const h = height ?? (big ? 240 : 150);
   const values = spec.series[0]?.values ?? [];
   const [picked, setPicked] = useState<number | null>(null);
-  const points = useMemo(
-    () => (width > 10 && values.length > 1 ? linePoints(values, width, h) : []),
-    [width, h, values],
-  );
+  const marked = !spark && marks !== undefined && marks.length === values.length && lineMarksFit(marks, width);
+  const points = useMemo(() => {
+    if (width <= 10 || values.length < 2) return [];
+    // The values take the room above the line; the line keeps the rest.
+    if (!marked) return linePoints(values, width, h);
+    return linePoints(values, width, h - LINE_MARK_ROOM).map(([x, y]): [number, number] => [x, y + LINE_MARK_ROOM]);
+  }, [width, h, values, marked]);
   const stroke = useMemo(() => (points.length ? Skia.Path.MakeFromSVGString(smoothPath(points)) : null), [points]);
   const area = useMemo(() => {
     const cols = Math.round(width / CHART_CELL);
@@ -436,6 +444,29 @@ export function Line({
               ))}
           </Canvas>
         ) : null}
+        {marked
+          ? points.map(([x, y], i) => (
+              <Text
+                // biome-ignore lint/suspicious/noArrayIndexKey: the values, in order
+                key={i}
+                variant="caption"
+                numberOfLines={1}
+                maxFontSizeMultiplier={1}
+                // The first and the last stay inside the box: they sit from its edge, the rest centred on their point.
+                style={[
+                  styles.mark,
+                  { color: c.ink, top: y - 20 },
+                  i === 0
+                    ? { left: 0 }
+                    : i === points.length - 1
+                      ? { right: 0 }
+                      : { left: x - 40, width: 80, textAlign: "center" },
+                ]}
+              >
+                {marks?.[i]}
+              </Text>
+            ))
+          : null}
       </Pressable>
       {!spark ? (
         <>
@@ -599,6 +630,7 @@ const styles = StyleSheet.create({
   barValue: { minWidth: 44, textAlign: "right", fontWeight: "600", fontVariant: ["tabular-nums"] },
   xLabels: { flexDirection: "row", justifyContent: "space-between", paddingTop: 6, paddingHorizontal: 2 },
   picked: { paddingTop: 8, fontVariant: ["tabular-nums"] },
+  mark: { position: "absolute", fontWeight: "700", lineHeight: 14, fontVariant: ["tabular-nums"] },
   pie: { flexDirection: "row", alignItems: "center", gap: 16 },
   pieCenter: { alignItems: "center", justifyContent: "center" },
   legend: { flex: 1, gap: 6 },

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useDarkTheme } from "../hooks/useDarkTheme";
 import { Icon } from "../icons/Icon";
 import { prefersReducedMotion } from "../sky/engine";
@@ -168,12 +168,21 @@ function LineBody({
   locale: string;
 }) {
   const last = spec.values[spec.values.length - 1];
+  const marks = useMemo(() => spec.values.map((v) => formatWidgetNumber(v, locale)), [spec.values, locale]);
   // Seven labels at most under the line: the first, the last and evenly between.
   const step = Math.max(1, Math.ceil(spec.labels.length / 7));
   return (
     <>
       {spec.unit && <div className="wk-cap">{spec.unit}</div>}
-      <DitherLine className="wk-line" values={spec.values} color={color} height={size.h === 2 ? 210 : 96} dot />
+      <DitherLine
+        className="wk-line"
+        values={spec.values}
+        color={color}
+        height={size.h === 2 ? 210 : 96}
+        dot
+        // Each point's number over it when they fit, as a bars widget shows each bar's.
+        marks={marks}
+      />
       <div className="wk-axis wk-axis--line">
         {spec.labels.map((label, i) =>
           i % step === 0 || i === spec.labels.length - 1 ? (

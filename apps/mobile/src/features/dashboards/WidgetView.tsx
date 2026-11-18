@@ -420,12 +420,18 @@ function LineBody({
   big: boolean;
   bleed: boolean;
 }) {
+  const { i18n } = useTranslation();
   // The unit is the tag above: a tapped point reads only its number.
   const chart = useMemo(() => lineSpec(spec.labels, spec.values), [spec.labels, spec.values]);
+  // Each point's number over it when they fit, as a bars widget shows each bar's.
+  const marks = useMemo(
+    () => spec.values.map((v) => formatWidgetNumber(v, i18n.language)),
+    [spec.values, i18n.language],
+  );
   return (
     <View>
       <UnitTag unit={spec.unit} />
-      {bleed ? null : <Line spec={chart} accent={color} big={big} spark={!big} height={big ? 160 : 80} />}
+      {bleed ? null : <Line spec={chart} accent={color} big={big} spark={!big} height={big ? 160 : 80} marks={marks} />}
       <Note text={spec.note} />
     </View>
   );
