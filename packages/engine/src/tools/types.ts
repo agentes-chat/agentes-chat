@@ -221,7 +221,12 @@ export interface ToolDefinition {
    * input isn't a shape we know. A call whose actions all only read runs as the connection's read (`readScope`).
    */
   actions?(input: Record<string, unknown>): string[] | null;
-  /** With `actions`: the scope of the connection's reads. */
+  /**
+   * A tool that runs what its input says (PostHog's `exec`): whether this call only reads. One that does runs as the
+   * connection's read (`readScope`), like a call of `actions` that all only read.
+   */
+  readsOnly?(input: Record<string, unknown>): boolean;
+  /** With `actions` or `readsOnly`: the scope of the connection's reads. */
   readScope?: string;
   /**
    * The server's own name for this tool: "Aprovar sempre" rules are kept by it, so they outlive a renamed
