@@ -620,6 +620,8 @@ export const ptBR = {
     hidePassword: "Esconder senha",
     capsLock: "Caps Lock ligado",
     tooManyTries: "Muitas tentativas. Espere alguns minutos e tente de novo.",
+    passwordTries_one: "Muitas tentativas de senha nesta conta. Tente de novo em {{count}} minuto.",
+    passwordTries_other: "Muitas tentativas de senha nesta conta. Tente de novo em {{count}} minutos.",
     accountBlocked: "Esta conta não pode entrar.",
     passwordHelp: "Pelo menos 8 caracteres.",
     passwordOk: "Senha ok.",

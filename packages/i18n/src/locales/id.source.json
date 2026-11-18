@@ -1421,6 +1421,12 @@
   "auth.tooManyTries": {
     "value": "Too many tries. Wait a few minutes and try again."
   },
+  "auth.passwordTries": {
+    "value": {
+      "one": "Too many password tries on this account. Try again in {{count}} minute.",
+      "other": "Too many password tries on this account. Try again in {{count}} minutes."
+    }
+  },
   "auth.accountBlocked": {
     "value": "This account can't sign in."
   },

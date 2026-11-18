@@ -587,6 +587,7 @@
     "hidePassword": "パスワードを隠す",
     "capsLock": "Caps Lockがオンです",
     "tooManyTries": "試行回数が多すぎます。数分待ってからもう一度お試しください。",
+    "passwordTries_other": "このアカウントでパスワードの試行回数が多すぎます。{{count}}分後にもう一度お試しください。",
     "accountBlocked": "このアカウントではログインできません。",
     "passwordHelp": "8文字以上。",
     "passwordOk": "パスワードはOKです。",

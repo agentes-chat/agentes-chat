@@ -587,6 +587,7 @@
     "hidePassword": "Sembunyikan kata sandi",
     "capsLock": "Caps Lock menyala",
     "tooManyTries": "Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.",
+    "passwordTries_other": "Terlalu banyak percobaan kata sandi di akun ini. Coba lagi dalam {{count}} menit.",
     "accountBlocked": "Akun ini tidak bisa masuk.",
     "passwordHelp": "Minimal 8 karakter.",
     "passwordOk": "Kata sandi oke.",

@@ -600,6 +600,8 @@
     "hidePassword": "Wachtwoord verbergen",
     "capsLock": "Caps Lock staat aan",
     "tooManyTries": "Te veel pogingen. Wacht een paar minuten en probeer het opnieuw.",
+    "passwordTries_one": "Te veel wachtwoordpogingen voor dit account. Probeer het over {{count}} minuut opnieuw.",
+    "passwordTries_other": "Te veel wachtwoordpogingen voor dit account. Probeer het over {{count}} minuten opnieuw.",
     "accountBlocked": "Met dit account kun je niet inloggen.",
     "passwordHelp": "Minstens 8 tekens.",
     "passwordOk": "Wachtwoord oké.",

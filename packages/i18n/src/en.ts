@@ -626,6 +626,9 @@ export const en = {
     hidePassword: "Hide password",
     capsLock: "Caps Lock is on",
     tooManyTries: "Too many tries. Wait a few minutes and try again.",
+    /** Password tries on one account, from any device, ran out: `count` is the minutes until they open again. */
+    passwordTries_one: "Too many password tries on this account. Try again in {{count}} minute.",
+    passwordTries_other: "Too many password tries on this account. Try again in {{count}} minutes.",
     accountBlocked: "This account can't sign in.",
     passwordHelp: "At least 8 characters.",
     passwordOk: "Password ok.",

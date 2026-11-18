@@ -600,6 +600,8 @@
     "hidePassword": "Passwort verbergen",
     "capsLock": "Feststelltaste ist an",
     "tooManyTries": "Zu viele Versuche. Warte ein paar Minuten und versuch es noch einmal.",
+    "passwordTries_one": "Zu viele Passwortversuche für dieses Konto. Versuch es in {{count}} Minute noch einmal.",
+    "passwordTries_other": "Zu viele Passwortversuche für dieses Konto. Versuch es in {{count}} Minuten noch einmal.",
     "accountBlocked": "Dieses Konto kann sich nicht anmelden.",
     "passwordHelp": "Mindestens 8 Zeichen.",
     "passwordOk": "Passwort ok.",
