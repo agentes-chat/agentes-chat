@@ -8343,6 +8343,10 @@ export const ptBR = {
     unreachableText: "Ele pode estar reiniciando. Esta página abre sozinha assim que ele voltar.",
     offlineTitle: "Você está sem internet",
     offlineText: "Esta página abre sozinha quando a internet voltar.",
+    unknownHostTitle: "Este endereço ainda não está configurado",
+    unknownHostText:
+      "Ainda não há nada pronto em {{host}}. Se ele acabou de ser conectado, tente de novo em alguns minutos.",
+    unknownHostTab: "Endereço não configurado · agentes.chat",
   },
   scopes: {
     context_read: { label: "Ler o contexto", description: "Buscar mensagens, resumos e fatos nos canais do agente." },

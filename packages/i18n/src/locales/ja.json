@@ -7569,7 +7569,10 @@
     "unreachableTitle": "agentes.chatに接続できません",
     "unreachableText": "再起動中かもしれません。復旧しだい、このページは自動で開きます。",
     "offlineTitle": "オフラインです",
-    "offlineText": "オンラインに戻ると、このページは自動で開きます。"
+    "offlineText": "オンラインに戻ると、このページは自動で開きます。",
+    "unknownHostTitle": "このアドレスはまだ設定されていません",
+    "unknownHostText": "{{host}} ではまだ何も準備できていません。接続したばかりなら、数分後にもう一度お試しください。",
+    "unknownHostTab": "未設定のアドレス · agentes.chat"
   },
   "scopes": {
     "context_read": {

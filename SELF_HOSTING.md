@@ -15,7 +15,10 @@ own machine). The setup writes it for you. Sign-in cookies, the only browser ori
 anything, and every link the app sends come from it. Opened at any other address, sign-in fails with
 "Invalid origin" and saving fails with `bad_origin`. To reach the same instance at more than one
 address (the machine's LAN IP and a tunnel hostname, say), list the others in
-`EXTRA_TRUSTED_ORIGINS`, comma-separated; `PUBLIC_URL` stays trusted either way.
+`EXTRA_TRUSTED_ORIGINS`, comma-separated; `PUBLIC_URL` stays trusted either way. With the operator
+API on (below), a browser that opens the app at a hostname that is neither of these nor a host registered
+through that API sees only an "address isn't set up yet" page, so a proxy in front must pass the
+browser's `Host` through unchanged.
 
 The server needs no model key of its own. Each organization adds its own keys (Claude, OpenAI,
 Gemini, DeepSeek, Kimi, Z.ai, MiniMax, Command Code or OpenRouter) in **Settings → AI and usage**. Keys are stored encrypted with a key derived from `AGENTES_SECRET` and are

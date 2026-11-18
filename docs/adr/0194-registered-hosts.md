@@ -5,12 +5,13 @@
 - Extends: ADR 0056 (the operator API), ADR 0193 (a workspace's accent), `EXTRA_TRUSTED_ORIGINS`
 - Code: schema `packages/db/src/schema/hosts.ts` (migration 0291); engine `packages/engine/src/hosts.ts` (`hostLook`,
   `hostOrigin`, `baseUrlFor`, `putHost`, `deleteHost`), `net-guard.ts` (`normalizeHost`), `cache.ts` (`caches.hosts`);
-  server `app.ts` (`data-host` on the page), `apps/server/src/routes/app/context.ts` (`requestOriginAllowed`, `requestBaseUrl`), `realtime/ws.ts`
+  server `app.ts` (`data-host` and `data-unknown-host` on the page), `apps/server/src/routes/app/context.ts` (`requestOriginAllowed`, `requestBaseUrl`), `realtime/ws.ts`
   (`personUpgrade`), `auth.ts` (`trustedOrigins`, `SOCIAL_STARTS`, the reset and confirmation links, `authUiConfig`),
   `http/human-check.ts` (`humanCheckRefusal`), `routes/app/account.ts` (`GET /api/app/auth-config`'s `host`),
   `routes/instance.ts` (`GET /api/host-look/logo`), `operator/hosts.ts`; web `apps/web/src/components/AuthLayout.tsx`
-  (`AuthShell`), `i18n/index.ts` (`brandTabTitle`), `lib/app-icon.ts` (`showHostIcon`); tests
-  `packages/engine/test/hosts.test.ts`, `apps/server/test/hosts.test.ts`, `apps/web/test/host-look.test.tsx`
+  (`AuthShell`, `AuthFrame`), `components/UnknownHost.tsx`, `i18n/index.ts` (`brandTabTitle`), `lib/app-icon.ts` (`showHostIcon`); tests
+  `packages/engine/test/hosts.test.ts`, `apps/server/test/hosts.test.ts`, `apps/web/test/host-look.test.tsx`,
+  `apps/web/test/unknown-host.test.tsx`
 
 ## Context
 
@@ -107,7 +108,20 @@ stay exact and be written once.
    The powered-by line is shown by default: someone signing in at an address that isn't the product's can tell which
    software will hold their account. An operator may turn it off for one host (`poweredBy: false`, carried to the web
    in `auth-config`'s `host`); the main address never shows it.
-9. **Phone and desktop.** Nothing changes. The phone app is built for one address. The desktop app's server check
+9. **A hostname the server doesn't answer for.** On a server with the operator API on (`OPERATOR_API_TOKEN` set), a
+   `GET` for the web app's page whose `Host` is an unknown hostname answers that page marked `data-unknown-host` on
+   its `<html>`, with status 404 and `cache-control: no-store` (the hostname may be registered a moment later). A
+   hostname is unknown when `normalizeHost` reads a name from it (never an IP address, a single label such as
+   `localhost`, or anything with a port), the name is none of the server's own (`PUBLIC_URL`'s host and those of
+   `EXTRA_TRUSTED_ORIGINS`, `ownHosts`), and `hostLook` finds no registered host for it. A registered host is marked
+   `data-host` alone, never both. Only the app's page changes: the API, the build's files, the service worker, the
+   emails' pictures, the installer and every other answer are the same on every host, since the phone and desktop
+   apps, runners, webhooks and health checks call the server at names of their own. A server without the operator API
+   registers no hosts, so it has none to tell apart and answers every `Host` as before. A marked page shows only one
+   screen in the sign-in pages' look with the product's mark (`UnknownHost`): the address isn't set up yet, the
+   hostname as text, and a button that loads the page again. The web's entry decides it first: no session, router,
+   socket, service worker or notification starts on that page.
+10. **Phone and desktop.** Nothing changes. The phone app is built for one address. The desktop app's server check
    (`checkServer`, shared with the phone) asks `GET /api/instance`, whose `url` is `PUBLIC_URL`'s origin on every
    host, and uses a server at the address it names: a registered host typed in its server field opens the main
    address, with the product's own look and sign-in. `url` stays the main address on purpose: the phone app and the
@@ -117,7 +131,11 @@ stay exact and be written once.
 
 - An operator registers a host only after pointing the hostname at the server and serving a certificate for it (the
   server only answers what reaches it, over HTTPS). A proxy in front must pass the `Host` the browser sent; one that
-  rewrites it makes the host look unregistered, which fails closed.
+  rewrites it makes the host look unregistered, which fails closed. On a server with the operator API on, a rewritten
+  `Host` that is a real hostname gets the "not set up yet" page (point 9): pass the browser's `Host` through, or list
+  that name in `EXTRA_TRUSTED_ORIGINS`.
+- A session cookie someone still holds at a hostname that stopped being registered reads through the API as before:
+  point 9 changes the page, not the API.
 - Deleting a host does not end the sessions people hold there: they stop being reachable there once its traffic stops
   reaching the server, and its origin is no longer trusted at once on this process and within 30 seconds elsewhere.
 - Every request to Better Auth, and every write and WebSocket upgrade with an origin outside the old list, reads the
