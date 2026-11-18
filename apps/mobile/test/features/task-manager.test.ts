@@ -170,7 +170,6 @@ describe("one line a row", () => {
     expect(screen).toContain('<OneLine title={title} line={line} variant="subhead" />');
     for (const way of [
       'router.push("/usage")',
-      "openQueue(cause.machineId)",
       'router.push("/settings/devices")',
       "router.push(taskHref(first.runId))",
     ])
@@ -357,23 +356,27 @@ describe("a computer's line (ADR 0128)", () => {
   const now = Date.parse("2026-11-02T14:00:00.000Z");
   const full = { machineId: "m1", position: 2, of: 3, people: false, estimatedStartAt: null };
 
-  test("a task waiting for room on its computer says its place, not just that the computer is full", async () => {
+  test("a task waiting its turn says one line, whatever holds it, its place or its estimate", async () => {
     const t = await translator("pt-BR");
     const inLine = task({ runId: "r1", status: "waiting_input", held: "computer_busy", line: full });
-    const said = (x: ManagedTask) => taskStateWords(t, "pt-BR", x, rowState(x, NONE), now).state;
-    expect(said(inLine)).toBe("Na fila · 2º");
-    expect(said({ ...inLine, line: null })).toBe("Computador cheio");
-    expect(said(task({ runId: "r2" }))).toBe("Trabalhando");
+    const words = (x: ManagedTask) => taskStateWords(t, "pt-BR", x, rowState(x, NONE), now);
+    const one = { state: "Na fila · começa em seguida", next: null };
+    expect(words(inLine)).toEqual(one);
+    expect(words({ ...inLine, line: null })).toEqual(one);
+    expect(words({ ...inLine, line: { ...full, position: 1, estimatedStartAt: "2026-11-02T14:03:00.000Z" } })).toEqual(
+      one,
+    );
+    expect(words(task({ runId: "r2" })).state).toBe("Trabalhando");
   });
 
-  test("a computer on the task manager: full with how many wait, or room, and how many run", async () => {
+  test("a computer on the task manager: how many wait, or room, and how many run", async () => {
     const t = await translator("pt-BR");
-    expect(computerRoomText(t, { working: 3, inLine: 2 })).toBe("Cheio · 2 na fila · 3 trabalhando");
+    expect(computerRoomText(t, { working: 3, inLine: 2 })).toBe("2 na fila · 3 trabalhando");
     expect(computerRoomText(t, { working: 1, inLine: 0 })).toBe("Tem espaço · 1 trabalhando");
     expect(computerRoomText(t, { working: 0, inLine: 0 })).toBe("Tem espaço");
   });
 
-  test("what holds the work, in the rows' words: a plan by its wait's return, a full computer once, with its facts", async () => {
+  test("what holds the work, in the rows' words: a plan by its wait's return; a turn in line is no cause", async () => {
     const t = await translator("pt-BR");
     const onPlan = (runId: string) =>
       task({
@@ -400,26 +403,11 @@ describe("a computer's line (ADR 0128)", () => {
       { id: "m2", name: "Servidor", working: 1, inLine: 0 },
     ];
     const causes = shownCauses([onPlan("a"), onPlan("b"), inLine("c")]);
-    const [plan, computer] = causes.map((c) => causeWords(t, "pt-BR", c, computers));
+    const [plan, ...rest] = causes.map((c) => causeWords(t, "pt-BR", c, computers));
     expect(plan?.name).toBe("Plano do Claude no limite");
     expect(plan?.fact).toMatch(/^Volta (às|amanhã|\S+ às) .+ · 2 tarefas$/);
-    expect(computer).toEqual({ name: "Computador da equipe", fact: "Cheio · 4 na fila · 2 trabalhando" });
-    // The other computer still lists under Computadores; the one in the strip does not.
-    expect(computersBesides(computers, causes).map((c) => c.id)).toEqual(["m2"]);
-  });
-
-  test("under its place, when it should start, in the computer line's words; no made-up time without an estimate", async () => {
-    const t = await translator("pt-BR");
-    const soon = task({
-      runId: "r1",
-      status: "waiting_input",
-      held: "computer_busy",
-      line: { ...full, estimatedStartAt: "2026-11-02T14:03:00.000Z" },
-    });
-    const next = (x: ManagedTask) => taskStateWords(t, "pt-BR", x, rowState(x, NONE), now).next;
-    expect(next(soon)).toBe("começa em ~3 min");
-    expect(next({ ...soon, line: full })).toBe("Começa quando tiver memória livre");
-    expect(next(task({ runId: "r2" }))).toBeNull();
+    expect(rest).toEqual([]);
+    expect(computersBesides(computers, causes).map((c) => c.id)).toEqual(["m1", "m2"]);
   });
 });
 

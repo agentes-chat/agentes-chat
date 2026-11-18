@@ -447,6 +447,17 @@ test("parser: a failed turn says why the provider failed it, from Claude Code's 
     cause: "auth_rejected",
     httpStatus: 401,
   });
+  // A 401 the CLI got past (its login refreshed, then another error, or an answer) never reads as signed out.
+  expect(fail(retry("authentication_failed", 401), retry("server_error", 529), failed)).toMatchObject({
+    code: "claude_failed",
+  });
+  expect(
+    fail(
+      retry("authentication_failed", 401),
+      { type: "assistant", parent_tool_use_id: null, message: { id: "m2", content: [{ type: "text", text: "hi" }] } },
+      failed,
+    ),
+  ).toMatchObject({ code: "claude_failed" });
   // A 403 alone is a refused sign-in, not a disabled account.
   expect(fail(retry("authentication_failed", 403), failed)).toMatchObject({ cause: "auth_rejected", httpStatus: 403 });
   expect(

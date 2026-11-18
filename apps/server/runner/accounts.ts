@@ -3025,7 +3025,9 @@ export class AccountManager {
     if (!target) return null;
     const limits = timeoutMs ? { timeoutMs } : {};
     if (!own && this.isCliShared(target.kind, id)) {
-      return this.opts.sharedLogin?.ready() ? probeClaudeUsage({ ...this.sharedCli(id), ...limits }) : null;
+      return this.opts.sharedLogin?.ready()
+        ? this.answered(target.kind, id, await probeClaudeUsage({ ...this.sharedCli(id), ...limits }))
+        : null;
     }
     const plan = own || target.kind !== "claude_code" ? null : await planKeyOf(target.cwd);
     if (plan) {
@@ -3068,7 +3070,24 @@ export class AccountManager {
       const r = await runCli(probe.command, ["-p", "/usage"], probe.env, timeoutMs ?? STATUS_TIMEOUT_MS);
       return r.status === 0 ? antigravityUsage(r.stdout, "probe") : null;
     }
-    return target.kind === "codex" ? probeCodexUsage(probe) : probeClaudeUsage(probe);
+    const found = await (target.kind === "codex" ? probeCodexUsage(probe) : probeClaudeUsage(probe));
+    return own ? found : this.answered(target.kind, id, found);
+  }
+
+  /**
+   * A CLI login that refreshes itself answered its provider's usage call: the provider takes its sign-in, so a turn's
+   * refusal (`refused`) was passing (a refresh another process of the same login had just rotated, or a 401 the CLI
+   * then recovered from) and the account reads as signed in again. A sign-in another login really ended fails this
+   * call too and stays signed out. Never for a token or a key, whose readings don't prove the sign-in.
+   */
+  private async answered(kind: AccountKind, id: string, found: PlanUsage | null) {
+    if (found && existsSync(this.marker(kind, id, "invalid"))) {
+      await rm(this.marker(kind, id, "invalid"), { force: true }).catch(() => undefined);
+      this.knownLoggedIn.delete(id);
+      this.invalidate();
+      void this.refresh(true).catch(() => undefined);
+    }
+    return found;
   }
 
   /** The runner is exiting: sign-ins in progress stop and their folders go. */

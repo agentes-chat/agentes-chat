@@ -74,13 +74,11 @@ export type RoomRank = 0 | 1 | 2;
  * many sessions at once reads as automated use to its provider; past this the next run waits in its computer's line
  * for one of them to end. Long work can hold a slot for hours, so 1 would park every reply behind it.
  */
-export const SIGN_IN_CONCURRENCY = 2;
+export const SIGN_IN_CONCURRENCY = 6;
 
 /** A Claude plan sign-in a run thinks with: its account, or its computer's own sign-in (`own`). */
 export interface SignInSlot {
   key: string;
-  /** What the person calls it ("Claude 2", "Trabalho"), said while a run waits for it. */
-  label: string;
   /** Runs it takes at once; 0 or less: no limit. */
   cap: number;
 }
@@ -91,7 +89,7 @@ export interface SignInSlot {
  */
 export function signInSlotOf(plan: Pick<BrainPlan, "kind" | "account">, cap: number): SignInSlot | undefined {
   if (plan.kind !== "claude_code" || plan.account?.provider || cap <= 0) return undefined;
-  return { key: plan.account?.id ?? "own", label: plan.account?.label ?? "Claude", cap };
+  return { key: plan.account?.id ?? "own", cap };
 }
 
 /** A computer's own sign-in is that computer's; an account is the workspace's, whichever computer its runs think on. */
@@ -317,8 +315,6 @@ export interface QueueWaiting extends QueueAccess {
   estimatedStartAt: string | null;
   /** Who it waits for: for the head, the running turn expected to end first; behind it, the agents ahead in line. */
   after: string[];
-  /** The plan sign-in it waits for, by its label: that sign-in has all the runs it takes at once. Null: room. */
-  signIn: string | null;
 }
 
 export interface ComputerQueue {
@@ -533,10 +529,7 @@ export async function computerQueue(
         ),
       )
       .orderBy(askAt),
-    lineRows({
-      people: sql<boolean>`${peopleSql}`,
-      signIn: sql<string | null>`${agentRuns.transcript}->'signInWait'->>'label'`,
-    })
+    lineRows({ people: sql<boolean>`${peopleSql}` })
       .where(and(eq(agentRuns.orgId, orgId), shownInLine(machineId)))
       .orderBy(rankSql(now), sinceSql, agentRuns.id),
     typicalTurns(db, orgId),
@@ -586,7 +579,6 @@ export async function computerQueue(
       position: i + 1,
       estimatedStartAt: iso(est.starts[i]),
       after: est.after[i] ?? [],
-      signIn: r.signIn ?? null,
       ...access(r),
     })),
   };

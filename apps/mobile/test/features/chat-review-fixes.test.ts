@@ -186,7 +186,7 @@ describe("a message from an older page follows its pin", () => {
   test("the screen builds its list from the older pages as pinned", () => {
     const chat = src("features/chat/ChatScreen.tsx");
     expect(chat).toContain("const olderPinned = useMemo(() => pinnedAsListed(older, pinsData), [older, pinsData]);");
-    expect(chat).toContain("return mergeTimeline([...olderPinned, ...(top.data ?? [])], []);");
+    expect(chat).toContain("return mergeTimeline(gap ? olderPinned : [...olderPinned, ...(top.data ?? [])], []);");
     expect(chat.indexOf("const pinsData = usePins(orgId, channelId, member).data;")).toBeLessThan(
       chat.indexOf("const olderPinned = "),
     );

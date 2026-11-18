@@ -13,11 +13,8 @@ import {
   nthText,
   queueAllStartedText,
   queueButtonText,
-  queueCauseText,
-  queuedNextText,
   queueFillText,
   queueLeftText,
-  queueLiveText,
   queuePurposeText,
   queueStartText,
   queueStatusText,
@@ -119,28 +116,6 @@ test("an agent's turn for a message: the run its receipt follows, else its one t
   expect(waitingFor(queue, undefined, "kai", "c1")?.runId).toBe("q2");
   expect(waitingFor(queue, undefined, "kai", "c2")).toBeNull();
   expect(waitingFor(null, undefined, "theo", "c1")).toBeNull();
-});
-
-test("the agent's live row: next with an estimate, next alone without one, further back after the ones ahead", () => {
-  expect(queueLiveText(en, "en", queue, "q1", agentName, NOW)).toBe(
-    "Waiting for the computer. Next up, in about 1 min",
-  );
-  const noEta = { ...queue, waiting: queue.waiting.map((w) => ({ ...w, estimatedStartAt: null })) };
-  expect(queueLiveText(en, "en", noEta, "q1", agentName, NOW)).toBe("Waiting for the computer. Next up");
-  expect(queueLiveText(pt, "pt-BR", noEta, "q1", agentName, NOW)).toBe("Aguardando o computador. É o próximo");
-  expect(queueLiveText(en, "en", queue, "q4", agentName, NOW)).toBe("In line, 4th. After Theo, Kai, and Rio");
-  expect(queueLiveText(pt, "pt-BR", queue, "q2", agentName, NOW)).toBe("Na fila, 2º. Depois de Theo");
-  expect(queueLiveText(en, "en", queue, "elsewhere", agentName, NOW)).toBeNull();
-  expect(queuedNextText(pt, "Ada")).toBe("Ada está na fila do computador · é a próxima");
-  expect(queuedNextText(en, "Theo")).toBe("Theo is in line for the computer · next");
-});
-
-test("a turn waiting for its plan sign-in says which, and no computer cause", () => {
-  const signed = { ...queue, waiting: queue.waiting.map((w, i) => (i === 1 ? { ...w, signIn: "Claude 2" } : w)) };
-  expect(queueLiveText(en, "en", signed, "q2", agentName, NOW)).toBe("Waiting for Claude 2 to finish another task");
-  expect(queueLiveText(pt, "pt-BR", signed, "q2", agentName, NOW)).toBe("Aguardando Claude 2 terminar outra tarefa");
-  expect(queueCauseText(en, signed, signed.waiting[1])).toBeNull();
-  expect(queueCauseText(en, signed, signed.waiting[0])).not.toBeNull();
 });
 
 test("rows: what each turn is for, never its content, where, and its estimate", () => {
@@ -317,7 +292,7 @@ test("a conversation shows one wait per run, from the receipts alone, leaving a 
 test("the status note of an agent waiting for its computer says that, never that it works", () => {
   const pt = tFor("pt-BR");
   expect(talkerStatusText(pt, { minutes: "11", steps: "0", wait: "queued" })).toBe(
-    "Aguardando o computador (11 min). Leio sua mensagem quando chegar minha vez.",
+    "Na fila (11 min). Leio sua mensagem quando chegar minha vez.",
   );
   expect(talkerStatusText(pt, { minutes: "0", steps: "0", wait: "away" })).toBe(
     "Aguardando meu computador voltar. Leio sua mensagem assim que ele voltar.",

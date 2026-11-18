@@ -60,6 +60,7 @@ const FAKE_ENV = [
   "FAKE_CODEX_DELAY",
   "FAKE_CODEX_REFRESHED",
   "FAKE_ACCOUNT_STATUS",
+  "FAKE_ACCOUNT_USAGE",
   "FAKE_ACCOUNT_STATUS_DELAY",
 ];
 const dirs: string[] = [];
@@ -1650,6 +1651,7 @@ function sharedLoginSetup(ready = true, over: Partial<AccountManagerOptions> = {
           CLAUDE_CONFIG_DIR: store,
           FAKE_ACCOUNT_LOG: process.env.FAKE_ACCOUNT_LOG,
           ...(process.env.FAKE_ACCOUNT_MODE ? { FAKE_ACCOUNT_MODE: process.env.FAKE_ACCOUNT_MODE } : {}),
+          ...(process.env.FAKE_ACCOUNT_USAGE ? { FAKE_ACCOUNT_USAGE: process.env.FAKE_ACCOUNT_USAGE } : {}),
         } as Record<string, string>,
         home: store,
       }),
@@ -1808,6 +1810,32 @@ test.if(posix)("a new sign-in of this kind that fails or is canceled leaves no u
   expect(removed).toEqual([id, canceled]);
   expect(existsSync(path.join(root, "claude_code", `${canceled}.method`))).toBe(false);
 });
+
+test.if(posix)(
+  "Claude's own login: a turn's refusal ends when its provider answers the usage call; one it doesn't answer stays out",
+  async () => {
+    process.env.FAKE_ACCOUNT_USAGE = "1";
+    const { m, root, store } = sharedLoginSetup(true, { usageTtlMs: 0 });
+    const id = LOGIN(209);
+    await signInClaude(m, id, false, true, "cli_login");
+    const invalid = path.join(root, "claude_code", `${id}.invalid`);
+    // A refresh another process had just rotated failed one turn: the login itself still works.
+    await m.refused("claude_code", id);
+    m.invalidate();
+    expect((await m.list())[0]).toMatchObject({ loggedIn: false });
+    m.probeUsage([id]);
+    await waitFor(() => !existsSync(invalid), 5000);
+    m.invalidate();
+    expect((await m.list())[0]).toMatchObject({ loggedIn: true, authMethod: "cli_login" });
+    // Ended for real (the store has no sign-in): the provider refuses the call too, and it stays signed out.
+    rmSync(path.join(store, "signed-in"), { force: true });
+    await m.refused("claude_code", id);
+    m.probeUsage([id]);
+    await new Promise((r) => setTimeout(r, 1000));
+    expect(existsSync(invalid)).toBe(true);
+  },
+  20_000,
+);
 
 test.if(posix)(
   "switched off or failing its check: the sign-in stays as known, no CLI touches its store, and only removing ends it",

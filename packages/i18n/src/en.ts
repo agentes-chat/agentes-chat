@@ -2882,11 +2882,10 @@ export const en = {
     reply: "Reply",
     quoteOf: "Reply to {{name}}: {{excerpt}}. See the message",
     quoteGone: "Original message deleted",
-    jumpTooFar: "That message is too far back to open from here.",
     quoteNoWords: "Message with no text",
     replyingTo: "Replying to {{name}}",
     cancelReply: "Cancel reply",
-    jumpMissing: "Couldn't reach that message here. It may be deleted or too far back.",
+    jumpMissing: "That message isn't available. It may have been deleted, or you can't see it.",
     emoji: "Emoji",
     uploading: "uploading…",
     uploadFailed: "was not uploaded",
@@ -3031,8 +3030,8 @@ export const en = {
     asking_other: "{{names}} are waiting for an answer",
     outage_one: "{{names}}: the AI provider is down · retries by itself",
     outage_other: "{{names}}: the AI provider is down · retries by itself",
-    queued_one: "{{names}} is in line for the computer",
-    queued_other: "{{names}} are in line for the computer",
+    queued_one: "{{names}} is in line",
+    queued_other: "{{names}} are in line",
     away_one: "{{names}} is waiting for the computer",
     away_other: "{{names}} are waiting for the computer",
     /** Its plan's limit or its budget holds its answer (`receipts.ts` `plan` / `budget`). */
@@ -3045,8 +3044,6 @@ export const en = {
     /** A person stopped its run (Não rodar, Parar). */
     canceled_one: "{{names}} won't answer",
     canceled_other: "{{names}} won't answer",
-    /** One agent first in the computer's line. */
-    queuedNext: "{{names}} is in line for the computer · next",
     nobody: "No agent will answer",
     status: {
       seen: "Saw it",
@@ -3055,7 +3052,7 @@ export const en = {
       waiting: "Waiting for approval",
       asking: "Waiting for an answer",
       outage: "The AI provider is down · retries by itself",
-      queued: "In line for the computer",
+      queued: "In line",
       away: "Waiting for the computer",
       plan: "Waiting on the plan",
       budget: "Answers when the budget renews",
@@ -4715,7 +4712,7 @@ export const en = {
       waiting_approval: "Waiting for approval",
       waiting_answer: "Waiting for an answer",
       waiting_computer: "Waiting for the computer",
-      queued_computer: "In line for the computer",
+      queued_computer: "In line",
       waiting_plan: "Waiting on the plan",
       waiting_budget: "Waiting for the budget to reset",
       provider_down: "The AI provider is down · retries by itself",
@@ -12516,21 +12513,12 @@ export const en = {
     allStarted: "all started in ~{{n}} min",
     nothingWorking: "Nothing running right now",
     rule: "New work starts when the computer has free memory. People go first. Agents mentioned together start one at a time.",
-    /** Why a turn waits: `fill` is `queue.fill`'s line. */
-    cause_one: "Computer full: {{count}} job uses its memory now ({{fill}}).",
-    cause_other: "Computer full: {{count}} jobs use its memory now ({{fill}}).",
     /** The viewer's own computers that may take their replies while this one is full (`machines.spill_own`). */
     spill: {
       title: "More computers, shorter line",
       text: "When this computer is full, replies to you can start on one of yours. Long work and the agents' files stay here.",
       /** The viewer's own sign-in there, "Claude Max". */
       plan: "your {{plan}} plan",
-    },
-    /** The wait line's way out: stop the work on the computer the viewer may stop. `name` is the agent doing it. */
-    stopFill: {
-      routine: "Stop the routine",
-      work: "Stop the long job",
-      agent: "Stop {{name}}",
     },
     youFirst: "You go first",
     startsIn: "starts ~{{n}} min",
@@ -12573,18 +12561,8 @@ export const en = {
       agents: "a conversation between agents",
       private: "a private conversation",
     },
-    /** The waiting agent's live row, where "thinking" shows otherwise. */
-    live: {
-      nextEta: "Waiting for the computer. Next up, in about {{n}} min",
-      next: "Waiting for the computer. Next up",
-      /** Before the line knows its turn, or while it can't say where it is. */
-      waiting: "Waiting for the computer",
-      /** {{nth}} is the place in line (`queue.nth`), {{names}} the agents ahead. */
-      behind: "In line, {{nth}}. After {{names}}",
-      position: "In line, {{nth}}",
-      /** Its Claude plan sign-in ({{account}}, its label) works on all the runs it takes at once; it starts when one ends. */
-      signIn: "Waiting for {{account}} to finish another task",
-    },
+    /** A turn waiting its turn, one line whatever holds it (its computer or its AI sign-in): the agent's row where "thinking" shows otherwise, and the task manager. */
+    waiting: "In line · starts soon",
     /** Places in line by the language's ordinal rule (one: 1st, 21st; two: 2nd; few: 3rd; other: 4th). Same text in each when your language has one form. */
     nth: {
       one: "{{n}}st",
@@ -18167,8 +18145,8 @@ export const en = {
     /** The same line when the agent's computer reads the message only once its current round of work ends. */
     statusReplyTurn:
       "I'm in the middle of a task ({{duration}}) and can't answer yet. Your message is queued and I'll read it when this round of work ends.",
-    /** The same line for an agent waiting in line for its computer: {{duration}} is how long it has waited. */
-    statusReplyQueued: "Waiting for the computer ({{duration}}). I'll read your message when my turn comes.",
+    /** The same line for an agent waiting its turn in line, whatever holds it: {{duration}} is how long it has waited. */
+    statusReplyQueued: "In line ({{duration}}). I'll read your message when my turn comes.",
     /** The same line for an agent whose computer is away. */
     statusReplyAway: "Waiting for my computer to come back. I'll read your message as soon as it's back.",
     /** The same line for an agent waiting on its plan's limit: {{when}} is when it is back ("Wednesday at 14:00"). */
@@ -18783,8 +18761,7 @@ export const en = {
         "Something on our side is blocking my AI, not your account. I'll answer as soon as it's fixed.",
       provider_back: "My AI is back.",
       confidential_removed: "Removed: confidential text is kept for {{days}} days.",
-      brain_busy: "My computer is busy with other tasks right now. I'll answer as soon as it's free.",
-      brain_queued: "Still in line for the computer. I'll answer as soon as it has free memory.",
+      brain_queued: "Still in line. I'll answer as soon as my turn comes.",
       brain_interrupted: "{{brain}} stopped before finishing. Already done, not repeated: {{tools}}.",
       plan_limit_cut: "I stopped at the {{plan}} plan's limit. I'll pick up where I left off {{when}}, when it resets.",
       plan_limit_cut_unknown:
@@ -20359,8 +20336,6 @@ export const en = {
       working: "Working",
       ok: "Waiting for you",
       answer: "Waits for an answer",
-      computerBusy: "Waits for room on the computer",
-      inLine: "In line · #{{position}}",
       computerOffline: "Waits for the computer",
       plan: "Waits for the plan",
       budget: "Waits for the budget",
@@ -20386,7 +20361,6 @@ export const en = {
       computerWait: "Waiting for the computer",
       computerWaitNext: "Back when it's ready",
       computerOfflineNext: "Back when it's on",
-      computerBusyNext: "Starts when there's free memory",
       okNext: "Goes on once someone approves",
       answerNext: "Goes on once someone answers",
       back: "Back {{when}}",
@@ -20484,8 +20458,8 @@ export const en = {
     failed: "Couldn't stop it. Try again.",
     queue: {
       see: "See the line",
-      full_one: "Full · {{count}} in line",
-      full_other: "Full · {{count}} in line",
+      inLine_one: "{{count}} in line",
+      inLine_other: "{{count}} in line",
       room: "Has room",
       computers: "Computers",
     },

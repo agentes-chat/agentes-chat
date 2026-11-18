@@ -154,13 +154,11 @@ describe("a conversation with a pinned message", () => {
 });
 
 describe("going to a message", () => {
-  test("out of pages, it waits for a cached page refreshing before saying the message can't be reached", () => {
+  test("not shown after its page was read, it waits for a cached page refreshing before saying it's gone", () => {
     const screen = src("features/chat/ChatScreen.tsx");
-    const missing = screen.indexOf('toast({ title: t("channel.jumpMissing")');
-    expect(missing).toBeGreaterThan(0);
-    expect(screen.lastIndexOf("if (seekRefreshing) return;", missing)).toBeGreaterThan(
-      screen.lastIndexOf("seekPages.current >= SEEK_MAX_PAGES", missing),
-    );
+    const refresh = screen.indexOf("if (!seekRefreshing) missing();");
+    expect(refresh).toBeGreaterThan(0);
+    expect(screen.lastIndexOf("if (isThread || (around?.id === seek && around.done)) {", refresh)).toBeGreaterThan(0);
     expect(screen).toContain("const seekRefreshing = isThread ? threadMessages.isFetching : top.isFetching;");
   });
 });

@@ -318,7 +318,7 @@ export async function statusReply(db: Executor, run: AgentRun, now: Date, option
     const since = (run.transcript as { roomWaitSince?: number } | null)?.roomWaitSince ?? run.updatedAt.getTime();
     const minutes = Math.max(1, Math.round((now.getTime() - since) / 60_000));
     return {
-      text: `Waiting for the computer (${minutes} min). I'll read your message when my turn comes.`,
+      text: `In line (${minutes} min). I'll read your message when my turn comes.`,
       meta: { bodyCode: "talker_status", bodyParams: { minutes: String(minutes), steps: "0", wait } },
     };
   }
