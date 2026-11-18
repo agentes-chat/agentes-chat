@@ -1,6 +1,7 @@
 import type {
   Agent,
   AgentAccess,
+  AuthConfig,
   Machine,
   MachineAccessReduce,
   MachineOs,
@@ -12,6 +13,7 @@ import type {
   StorageConfig,
   StoragePlatform,
 } from "@agenteschat/client";
+import { selfHosted } from "@agenteschat/client/lib/about";
 import { type AccessResource, resourcesOf } from "@agenteschat/client/lib/access-levels";
 import { type NoComputer, noComputerChoice, type SetupView, setupPending } from "@agenteschat/client/lib/computer";
 import { clockAt, formatInt, formatPercent, relativeTime } from "@agenteschat/client/lib/format";
@@ -39,6 +41,7 @@ export type SettingsSection =
   | "roles"
   | "audit"
   | "media"
+  | "voice"
   | "access"
   | "connectors"
   | "skills"
@@ -69,8 +72,11 @@ export interface SettingsEntry {
   icon: IconName;
   /** The phone's screen for it. */
   href: string;
-  /** Who opens it: the web's rule (`apps/web/src/pages/settings-sections.ts`), but for Membros (see there). */
-  allowed: (org: OrgSummary | null | undefined) => boolean;
+  /**
+   * Who opens it: the web's rule (`apps/web/src/pages/settings-sections.ts`), but for Membros (see there); `server`
+   * (its sign-in config, unknown while it loads) for what depends on where the app runs.
+   */
+  allowed: (org: OrgSummary | null | undefined, server?: AuthConfig) => boolean;
 }
 
 /**
@@ -84,6 +90,15 @@ export const SETTINGS_SECTIONS: readonly SettingsEntry[] = [
   { id: "general", group: "org", icon: "home", href: "/settings/general", allowed: (o) => can(o, "configure") },
   // GIFs and stickers in chat (ADR 0091): who configures the workspace.
   { id: "media", group: "org", icon: "sticker", href: "/settings/media", allowed: (o) => can(o, "configure") },
+  // Voice messages (ADR 0100): who configures the workspace, on a self-hosted server only, as on the web (agentes.chat
+  // Cloud runs its own speech engine, so the section has nothing to offer there).
+  {
+    id: "voice",
+    group: "org",
+    icon: "mic",
+    href: "/settings/voice",
+    allowed: (o, server) => selfHosted(server) && can(o, "configure"),
+  },
   // Everyone, as on the web: who invites finds the requests there, a member who may not suggests someone (ADR 0090).
   { id: "members", group: "people", icon: "members", href: "/me/members", allowed: (o) => can(o, "read") },
   // Convites (ADR 0184): who waits on an answer, the links and the invitations sent, for whoever invites.
@@ -117,8 +132,9 @@ export const SETTINGS_SECTIONS: readonly SettingsEntry[] = [
 
 export const SETTINGS_GROUPS: readonly SettingsGroup[] = ["org", "people", "ai", "connectors", "advanced"];
 
-/** The sections this membership opens, in order. */
-export const visibleSections = (org: OrgSummary | null | undefined) => SETTINGS_SECTIONS.filter((s) => s.allowed(org));
+/** The sections this membership opens on this server, in order. */
+export const visibleSections = (org: OrgSummary | null | undefined, server?: AuthConfig) =>
+  SETTINGS_SECTIONS.filter((s) => s.allowed(org, server));
 
 // ── A personal workspace's settings (ADR 0159 §3) ───────────────────────────
 
@@ -136,8 +152,11 @@ export interface PersonalSettings {
  * Advanced. Only where a section is listed changes: each opens the same screen, with the same permission, as in a
  * team's workspace.
  */
-export const personalSections = (org: OrgSummary | null | undefined, others: number | undefined): PersonalSettings =>
-  personalSettingsNav(visibleSections(org), others);
+export const personalSections = (
+  org: OrgSummary | null | undefined,
+  others: number | undefined,
+  server?: AuthConfig,
+): PersonalSettings => personalSettingsNav(visibleSections(org, server), others);
 
 /**
  * What the AI accounts screen lists at its foot in a personal workspace: the sections it holds (`personalSettingsHost`),

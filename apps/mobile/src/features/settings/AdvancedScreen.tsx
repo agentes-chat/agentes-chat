@@ -1,3 +1,4 @@
+import { useAuthConfig } from "@agenteschat/client";
 import { useTranslation } from "react-i18next";
 import { useOrg } from "@/providers/org";
 import { GroupedRow } from "@/ui";
@@ -17,7 +18,7 @@ export function AdvancedScreen() {
   const { t } = useTranslation();
   const { org } = useOrg();
   const { others } = usePersonalView();
-  const { advanced } = personalSections(org, others);
+  const { advanced } = personalSections(org, others, useAuthConfig().data);
   return (
     <SettingsPage title={t("settings.advanced")}>
       <SectionGroups

@@ -12,7 +12,8 @@ import { useDirectory, useOrgId, useWhen } from "../shared/hooks";
 import { MONO, useSurface } from "../shared/parts";
 import { type CardPreview, cardPreview, cardShape, kindKey } from "./logic";
 
-const KIND_ICON: Record<ReturnType<typeof kindKey>, IconName> = {
+/** A kind's icon: the card's chip and the Lixeira's tile. */
+export const KIND_ICON: Record<ReturnType<typeof kindKey>, IconName> = {
   document: "doc",
   table: "list",
   diff: "code",

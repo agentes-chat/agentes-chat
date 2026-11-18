@@ -45,6 +45,8 @@ import { pushedByDefault } from "../main-stack";
 import { translator } from "./fixtures";
 
 const APP = join(import.meta.dir, "..", "..", "app", "(app)", "(main)");
+/** A self-hosted server's sign-in config: only `cloud` matters to the sections. */
+const SELF_HOSTED = { cloud: false } as AuthConfig;
 const NOW = new Date(2026, 9, 28, 15, 0);
 
 const machine = (over: Partial<Machine> & { id: string }): Machine => ({
@@ -89,6 +91,7 @@ describe("the workspace's settings on the phone: who opens what (the web's sub-n
     expect(SETTINGS_SECTIONS.map((s) => `${s.group}:${s.id}`)).toEqual([
       "org:general",
       "org:media",
+      "org:voice",
       "people:members",
       "people:invites",
       "people:roles",
@@ -127,7 +130,7 @@ describe("the workspace's settings on the phone: who opens what (the web's sub-n
       "create_agents",
       "manage_roles",
     ];
-    expect(visibleSections(as("owner", all)).length).toBe(SETTINGS_SECTIONS.length);
+    expect(visibleSections(as("owner", all), SELF_HOSTED).length).toBe(SETTINGS_SECTIONS.length);
     // No Geral (what the agents know of the workspace) or GIFs: those are the workspace's, for admins. Uso stays:
     // their own plans' meters, in percentages (ADR 0063).
     // The Vault and Skills are every member's (ADR 0144): their own items, and the team's shared with them.
@@ -146,6 +149,17 @@ describe("the workspace's settings on the phone: who opens what (the web's sub-n
     expect(ids(["read", "view_audit"])).toContain("audit");
     expect(ids(["read", "create_agents"])).toContain("import");
     expect(visibleSections(undefined).map((s) => s.id)).toEqual(["usage", "connectors", "apps"]);
+  });
+
+  test("Voz is for who configures the workspace, on a self-hosted server only, as on the web (ADR 0100)", () => {
+    const as = (permissions: string[]) => ({ id: "o", name: "Acme", role: "member" as const, permissions });
+    const voice = (permissions: string[], server?: AuthConfig) =>
+      visibleSections(as(permissions), server).some((s) => s.id === "voice");
+    expect(voice(["read", "configure"], SELF_HOSTED)).toBe(true);
+    // agentes.chat Cloud runs its own engine, and a server not yet known shows nothing that depends on it.
+    expect(voice(["read", "configure"], { ...SELF_HOSTED, cloud: true })).toBe(false);
+    expect(voice(["read", "configure"])).toBe(false);
+    expect(voice(["read"], SELF_HOSTED)).toBe(false);
   });
 
   test("each section opens a screen the app has", () => {

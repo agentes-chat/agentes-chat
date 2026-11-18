@@ -30,6 +30,7 @@ import {
   keepsLooking,
   matchesType,
 } from "./logic";
+import { openDriveTrash } from "./useDriveTrash";
 import { useDriveUpload } from "./useDriveUpload";
 
 /** Cards shown at first and added by "Mostrar mais" (each card loads its own preview). */
@@ -38,7 +39,7 @@ const PAGE = 24;
 /**
  * Drive, pushed from Você: the search, the type chips (Tudo, Documentos, Imagens, Tabelas, Diffs), and everything the
  * person can see grouped by day (Hoje, Esta semana, then by month) in a two-column grid of real previews, and a file
- * sent from the phone. A card opens the file as every file opens. `highlightId`: the item "Ver no Drive" came from,
+ * sent from the phone; the bar's trash opens the Lixeira. A card opens the file as every file opens. `highlightId`: the item "Ver no Drive" came from,
  * outlined.
  *
  * A chip narrows the list on the server to the kinds that can hold its type (`driveFilters`); an uploaded file is one
@@ -112,13 +113,21 @@ export function DriveScreen({ highlightId = null }: { highlightId?: string | nul
   return (
     <PushedLargeTitle
       title={t("mobile.drive.title")}
-      {...(mayUpload
-        ? {
-            actions: [
-              { icon: "plus", sf: "plus", label: t("files.upload"), disabled: uploader.busy, onPress: uploader.pick },
-            ],
-          }
-        : {})}
+      actions={[
+        // The Lixeira, for everyone as on the web: it lists what the person may restore.
+        { icon: "trash", sf: "trash", label: t("artifacts.trash"), onPress: openDriveTrash },
+        ...(mayUpload
+          ? [
+              {
+                icon: "plus" as const,
+                sf: "plus" as const,
+                label: t("files.upload"),
+                disabled: uploader.busy,
+                onPress: uploader.pick,
+              },
+            ]
+          : []),
+      ]}
       refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={pull.onRefresh} />}
     >
       <View style={styles.search}>

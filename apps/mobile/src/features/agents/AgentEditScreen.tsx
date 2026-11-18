@@ -39,6 +39,7 @@ import { Gap, NEXT_FIELD, SettingsPage, useUnsavedGuard } from "../settings/part
 import { useColors, useDirectory, useMeId, useOrgId } from "../shared/hooks";
 import { FocusLive, successHaptic } from "../shared/parts";
 import { overLimit, TextArea } from "../shared/TextArea";
+import { ArchiveAgentRow } from "./ArchiveAgentRow";
 import { BrakesSection } from "./BrakesSection";
 import { BudgetSection } from "./BudgetSection";
 import { openAgentDelete } from "./DeleteAgentScreen";
@@ -331,11 +332,12 @@ export function AgentEditScreen({ id }: { id: string }) {
         </>
       ) : null}
 
-      {/* Deleting for good asks for its name on a screen of its own (ADR 0082). */}
+      {/* Archiving asks first, as the web's; deleting for good asks for its name on a screen of its own (ADR 0082). */}
       {admin && !rightHand && !personal ? (
         <>
           <Gap />
           <GroupedList>
+            <ArchiveAgentRow agentId={id} name={agent.name} onLeave={leave} />
             <GroupedRow
               icon="x"
               label={t("agentPage.delete.action", agentGrammar(agent.name))}

@@ -15,7 +15,7 @@ import { MessageText } from "../chat/MessageText";
 import { chooseAction } from "../settings/parts";
 import { LoadFailed } from "../shared/FirstUse";
 import { useColors, useDirectory, useOrgId } from "../shared/hooks";
-import { copyText, MONO, PushedHeader, successHaptic } from "../shared/parts";
+import { copyText, goBack, MONO, PushedHeader, successHaptic } from "../shared/parts";
 import { useFileActions } from "./actions";
 import { fileInfo, textChunks } from "./logic";
 import { useFileLine } from "./MessageFiles";
@@ -27,7 +27,7 @@ import { fileText, useRemoteFile } from "./source";
  * A file opened from a message, the Drive or a link: a screen pushed with the platform's push. Its bar is the native
  * one: back, the file's name with its line under it ("Documento · 4 KB · Theo"), and two buttons: Enviar cópia (the
  * system's share sheet with the file) and the "…" with Compartilhar (who sees it and its link, ADR 0157), Copiar texto
- * and Ver no Drive (the system's own menu on iOS, the app's list of the same choices on Android). Under it the file
+ * Ver no Drive and Mover para a lixeira (the system's own menu on iOS, the app's list of the same choices on Android). Under it the file
  * itself, the screen's whole width: Markdown and text drawn by the app, a page or a PDF in a web view (iOS draws PDFs
  * natively there), anything else says it opens in another app. Pictures and videos open straight in the picture
  * viewer (`openFile`); one reached here anyway (a file's link that didn't say what it was) goes on there.
@@ -79,6 +79,17 @@ export function DocumentViewer({ id, version }: { id: string; version?: number }
       : []),
     ...(inDrive
       ? [{ icon: "drive" as const, sf: "folder" as const, label: t("mobile.files.drive"), onPress: actions.drive }]
+      : []),
+    ...(actions.mayTrash
+      ? [
+          {
+            icon: "trash" as const,
+            sf: "trash" as const,
+            label: t("artifacts.delete"),
+            destructive: true,
+            onPress: () => actions.trash(goBack),
+          },
+        ]
       : []),
   ];
   const bar: HeaderAction[] = detail

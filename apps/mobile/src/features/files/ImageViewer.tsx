@@ -208,8 +208,15 @@ function Viewer({
         {/* A shade behind the bar, fading into the picture past it: the name and × read over any picture, and the
             picture's edge melts into the black above it instead of meeting it in a line. */}
         <LinearGradient pointerEvents="none" colors={SHADE_DOWN} locations={SHADE_STOPS} style={styles.shadeTop} />
-        {/* × alone: the file's actions are the row at the bottom, never repeated in a "…" here. */}
+        {/* × and, for who may delete the file, its trash at the other end: the file's other actions are the row at the
+            bottom (four, so their words fit a 320-point screen), never repeated in a "…" here. */}
         <Round icon="x" label={t("mobile.common.close")} onPress={close} />
+        {actions.mayTrash ? (
+          <>
+            <View style={styles.grow} />
+            <Round icon="trash" label={t("artifacts.delete")} onPress={() => actions.trash(close)} />
+          </>
+        ) : null}
         {/* The name and its line on a row of their own under the button, the screen's width: never cut beside it. */}
         <View style={styles.title}>
           <Text variant="subhead" style={[styles.bold, { color: WHITE }]} numberOfLines={3}>
@@ -602,6 +609,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   title: { flexBasis: "100%", gap: 2 },
+  grow: { flex: 1 },
   shadeTop: { position: "absolute", top: 0, left: 0, right: 0, bottom: -SHADE_PAST },
   shadeBottom: { position: "absolute", top: -SHADE_PAST, left: 0, right: 0, bottom: 0 },
   bold: { fontWeight: "600" },
@@ -611,7 +619,8 @@ const styles = StyleSheet.create({
   side: { position: "absolute", top: 0 },
   bottom: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 6 },
   actions: { flexDirection: "row", gap: 8, paddingHorizontal: SCREEN_X, paddingTop: 10 },
-  // Four actions share the row evenly, a long label on two lines under its circle (a 320-point screen included).
+  // Four actions share the row evenly, a long label on two lines under its circle (a 320-point screen included); the
+  // trash is a round button at the top, beside ×.
   action: { flex: 1 },
   actionIn: { alignItems: "center", gap: 6 },
   actionLabel: { textAlign: "center" },

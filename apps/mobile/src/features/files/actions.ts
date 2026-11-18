@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Linking } from "react-native";
 import { useToast } from "@/ui";
 import { router } from "@/ui/navigation";
+import { useDriveTrash } from "../drive/useDriveTrash";
 import { useOrgId, useWhen } from "../shared/hooks";
 import { whenKind } from "../shared/logic";
 import { successHaptic } from "../shared/parts";
@@ -12,8 +13,9 @@ import { openInDrive, saveToPhotos, shareFile } from "./source";
 
 /**
  * Compartilhar (who sees it and its link, ADR 0157), Enviar cópia (the system's share sheet with the file), Salvar
- * em Fotos and Ver no Drive for one file, with their toasts; one at a time. The file screen and the picture viewer
- * both use these, under the same words and icons.
+ * em Fotos, Ver no Drive and Mover para a lixeira (only who may delete it, `canDelete`, as on the web) for one file,
+ * with their toasts; one at a time. The file screen and the picture viewer both use these, under the same words and
+ * icons.
  */
 export function useFileActions(detail: ArtifactDetail | undefined) {
   const { t } = useTranslation();
@@ -21,6 +23,7 @@ export function useFileActions(detail: ArtifactDetail | undefined) {
   const orgId = useOrgId();
   const toast = useToast();
   const [busy, setBusy] = useState<"share" | "photos" | null>(null);
+  const driveTrash = useDriveTrash();
 
   const share = async () => {
     if (!detail || busy) return;
@@ -64,7 +67,13 @@ export function useFileActions(detail: ArtifactDetail | undefined) {
     if (detail) router.push({ pathname: "/file-share", params: { id: detail.id } });
   };
 
-  return { share, shareSheet, savePhotos, drive, busy };
+  /** Asks, moves it to the trash, then `after` (the viewer closes: the file is gone). */
+  const trash = (after: () => void) => {
+    if (detail?.canDelete) driveTrash.moveToTrash(detail, after);
+  };
+  const mayTrash = Boolean(detail?.canDelete);
+
+  return { share, shareSheet, savePhotos, drive, trash, mayTrash, busy };
 }
 
 /** "hoje 10:03", "ontem 18:20", "12 de out. 09:15": when the file was saved. */
