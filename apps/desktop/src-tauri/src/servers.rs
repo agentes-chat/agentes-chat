@@ -301,11 +301,16 @@ pub async fn server_sign_out(app: AppHandle, server: String) -> Result<(), Strin
                 .send_string("{}");
         }
         if !shared {
-            crate::cookies::remove(&page, move |c| crate::workspaces::sent_to(c, &url));
+            // ADR 0195: the gate's own cookies of this server's session go too, or the next sign-in asks nothing.
+            let gate_session = crate::gate::session_among(&cookies, url.origin().ascii_serialization().as_str());
+            crate::cookies::remove(&page, move |c| {
+                crate::workspaces::sent_to(c, &url) || crate::gate::sign_out_cookie(c, gate_session.as_deref())
+            });
         }
     })
     .await
     .map_err(|e| e.to_string())?;
+    crate::gate::signed_out(&app, &server);
     crate::workspaces::trigger(&app);
     if showing {
         let login: Url = format!("{server}/login").parse().map_err(|_| "not a URL")?;

@@ -875,6 +875,8 @@ export const desktopPtBR = {
   /** The main window's cover (cover/main.ts): the server can't be reached (it tries again by itself), or the server here's state. */
   cover: {
     offline: "Sem conexão com a internet · tentando de novo…",
+    /** A gate's sign-in page (Cloudflare Access) loading: the small badge in the window's corner. */
+    loading: "Carregando…",
     unreachable: "Sem acesso a {{host}} · tentando de novo…",
     tailnet: "O Tailscale está conectado neste {{device}}?",
     starting: "Iniciando o agentes.chat neste {{device}}…",

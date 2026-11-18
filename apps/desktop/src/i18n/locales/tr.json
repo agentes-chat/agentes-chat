@@ -819,6 +819,7 @@
   },
   "cover": {
     "offline": "İnternet bağlantısı yok · yeniden deneniyor…",
+    "loading": "Yükleniyor…",
     "unreachable": "{{host}} sunucusuna ulaşılamıyor · yeniden deneniyor…",
     "tailnet": "Tailscale bu {{device}} üzerinde bağlı mı?",
     "starting": "agentes.chat bu {{device}} üzerinde başlatılıyor…",

@@ -904,6 +904,8 @@ export const desktopEn = {
   },
   cover: {
     offline: "No internet connection · trying again…",
+    /** A gate's sign-in page (Cloudflare Access) loading: the small badge in the window's corner. */
+    loading: "Loading…",
     unreachable: "Can't reach {{host}} · trying again…",
     tailnet: "Is Tailscale connected on this {{device}}?",
     starting: "Starting agentes.chat on this {{device}}…",

@@ -80,6 +80,7 @@ export function createTauriHost(): Host {
     discover: () => invoke<Candidate[]>("discover"),
     // From the web view itself: every server answers `/api/instance` to any origin (it is public).
     checkServer: (server) => checkServer(server),
+    serverBehindGate: (server) => invoke<boolean>("server_behind_gate", { server }),
     takeLink: () => invoke<string | null>("link_take"),
     onLink: (cb) => subscribe<null>("link://pending", () => cb()),
     revealFolder: (path) => invoke<void>("reveal_folder", { path }),

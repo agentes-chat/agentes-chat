@@ -169,9 +169,24 @@ function fade() {
   root?.setAttribute("data-fading", "");
 }
 
-const w = window as { __coverShown?: () => void; __coverFade?: () => void };
+/**
+ * A gate's sign-in page loading (cover.rs `compact`): only a small badge in the window's corner says so, and none of
+ * the checks run (the page under it is the gate's, not the server's).
+ */
+let compact = false;
+function setCompact(on: boolean) {
+  if (compact === on) return;
+  compact = on;
+  root?.toggleAttribute("data-compact", on);
+  root?.removeAttribute("data-fading");
+  if (on) buttons([]);
+  say(on ? words.loading : "");
+}
+
+const w = window as { __coverShown?: () => void; __coverFade?: () => void; __coverCompact?: (on: boolean) => void };
 w.__coverShown = shown;
 w.__coverFade = fade;
+w.__coverCompact = setCompact;
 
 /** The server the main window opens (servers.json, through Rust); agentes.chat before one is chosen. */
 const currentServer = () =>
@@ -325,7 +340,7 @@ function showHere(
 }
 
 async function check() {
-  if (document.visibilityState !== "visible" || root?.hasAttribute("data-fading")) return;
+  if (compact || document.visibilityState !== "visible" || root?.hasAttribute("data-fading")) return;
   const waited = performance.now() - shownAt;
   const server = await currentServer();
   const here = await localStatus();

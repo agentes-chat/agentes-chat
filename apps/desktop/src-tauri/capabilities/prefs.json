@@ -15,6 +15,7 @@
     "allow-servers-get",
     "allow-workspaces-get",
     "allow-site-fetch",
+    "allow-server-behind-gate",
     "allow-server-choose",
     "allow-server-remove",
     "allow-server-sign-out",

@@ -82,6 +82,29 @@ fn lock(app: &AppHandle) -> std::sync::MutexGuard<'_, Shown> {
     app.state::<Cover>().inner().0.lock().unwrap_or_else(|e| e.into_inner())
 }
 
+/// The badge's size and its distance from the window's top right corner, in points (`compact`).
+const BADGE: LogicalSize<f64> = LogicalSize { width: 150.0, height: 36.0 };
+const BADGE_MARGIN: f64 = 14.0;
+
+/// A page of a gate's sign-in loading (gate.rs: the next page of the sign-in, or the form just sent): the page it
+/// replaces stays in sight, and the cover is only a small badge in the window's top right corner saying it loads.
+/// It goes when the page finished loading (`login_page_shown`), as the full cover does.
+pub fn compact(app: &AppHandle) {
+    {
+        let mut shown = lock(app);
+        shown.generation += 1;
+        shown.since = Some((Instant::now(), Duration::ZERO));
+    }
+    let Some(cover) = app.get_webview(LABEL) else { return };
+    let _ = cover.eval("window.__coverCompact?.(true)");
+    if let Some(Ok(size)) = app.get_window(main_window::LABEL).map(|w| window_points(&w)) {
+        let x = (size.width - BADGE.width - BADGE_MARGIN).max(0.0);
+        let _ = cover.set_position(LogicalPosition::new(x, BADGE_MARGIN));
+        let _ = cover.set_size(BADGE);
+    }
+    let _ = cover.show();
+}
+
 /// Covers the site now (it is loading a whole page again), for at least `min`. Already covering (the
 /// splash, when the first load starts), it keeps whatever minimum is left.
 pub fn show(app: &AppHandle, min: Duration) {
@@ -101,8 +124,11 @@ pub fn show(app: &AppHandle, min: Duration) {
     if !was_shown {
         let _ = cover.eval("window.__coverShown?.()");
     }
+    // Never left as the gate's badge (`compact`).
+    let _ = cover.eval("window.__coverCompact?.(false)");
     // Whatever became of its size while it was hidden, it shows as large as the window.
     if let Some(Ok(size)) = app.get_window(main_window::LABEL).map(|w| window_points(&w)) {
+        let _ = cover.set_position(LogicalPosition::new(0.0, 0.0));
         let _ = cover.set_size(size);
     }
     let _ = cover.show();
@@ -192,12 +218,23 @@ pub fn page_ready(app: AppHandle, webview: tauri::Webview) -> Result<(), String>
     if webview.label() != main_window::LABEL {
         return Err("only the site says it painted".into());
     }
-    if let Some(path) = pending_path(&app).filter(|p| p.exists()) {
+    painted(&app);
+    Ok(())
+}
+
+/// The window shows a page that paints but never says so: the sign-in of a gate in front of the server (gate.rs, Cloudflare Access). The
+/// cover steps aside for it, and the opening counts as painted (no reload, no cache cleared over the PIN typed).
+pub fn login_page_shown(app: &AppHandle) {
+    painted(app);
+}
+
+/// The window's page is on screen: the opening's marker goes and the cover steps aside.
+fn painted(app: &AppHandle) {
+    if let Some(path) = pending_path(app).filter(|p| p.exists()) {
         let _marker = MARKER.lock();
         let _ = std::fs::remove_file(path);
     }
-    hide(&app);
-    Ok(())
+    hide(app);
 }
 
 /// The site's page finished loading (on Linux, on the graphics card, before it painted): when WebKit's own answer for
