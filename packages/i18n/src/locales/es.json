@@ -19688,6 +19688,21 @@
     "writeAfter": ".",
     "ask": "¿Necesitas ayuda? Pregúntales a quienes administran este servidor."
   },
+  "resetOrg": {
+    "cardTitle": "Reiniciar o eliminar",
+    "row": {
+      "title": "Reiniciar espacio de trabajo",
+      "text": "Borra todo lo que se hizo en él y empieza de cero, con las mismas personas."
+    },
+    "goes": "Agentes, conversaciones, mensajes directos, archivos, tareas, rutinas y memoria",
+    "stays": "Personas, roles, invitaciones, cuentas de IA, computadoras y conectores",
+    "fresh": "Después se abre como un espacio de trabajo nuevo, con la configuración inicial",
+    "plan": "El plan sigue igual, sin cobros nuevos",
+    "now": "Ocurre al instante y no se puede deshacer.",
+    "title": "¿Reiniciar {{name}}?",
+    "submit": "Reiniciar espacio de trabajo",
+    "resetting": "Reiniciando {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Eliminar espacio de trabajo",
@@ -19759,8 +19774,7 @@
     "menu": "Eliminar cuenta",
     "card": {
       "text": "Elimina tu cuenta en 7 días, en todos los espacios de trabajo.",
-      "button": "Eliminar cuenta…",
-      "title": "Eliminar"
+      "button": "Eliminar cuenta…"
     },
     "title": "¿Eliminar toda tu cuenta?",
     "intro": "Esto elimina toda tu cuenta, no solo un espacio de trabajo.",

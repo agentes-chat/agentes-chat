@@ -19832,6 +19832,21 @@
     "writeAfter": ".",
     "ask": "Serve aiuto? Chiedi a chi gestisce questo server."
   },
+  "resetOrg": {
+    "cardTitle": "Reimposta o elimina",
+    "row": {
+      "title": "Reimposta lo spazio di lavoro",
+      "text": "Cancella tutto ciò che è stato fatto al suo interno e riparte da zero, con le stesse persone."
+    },
+    "goes": "Agenti, conversazioni, messaggi diretti, file, attività, routine e memoria",
+    "stays": "Persone, ruoli, inviti, account IA, computer e connettori",
+    "fresh": "Poi si apre come uno spazio di lavoro nuovo, con la configurazione iniziale",
+    "plan": "Il piano resta lo stesso, senza nuovi addebiti",
+    "now": "Succede subito e non si può annullare.",
+    "title": "Reimpostare {{name}}?",
+    "submit": "Reimposta lo spazio di lavoro",
+    "resetting": "Reimpostazione di {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Elimina spazio di lavoro",
@@ -19903,8 +19918,7 @@
     "menu": "Elimina account",
     "card": {
       "text": "Elimina il tuo account tra 7 giorni, in tutti gli spazi di lavoro.",
-      "button": "Elimina account…",
-      "title": "Elimina"
+      "button": "Elimina account…"
     },
     "title": "Eliminare tutto il tuo account?",
     "intro": "Elimina tutto il tuo account, non solo uno spazio di lavoro.",

@@ -47078,6 +47078,39 @@
   "support.ask": {
     "value": "Need help? Ask the people who run this server."
   },
+  "resetOrg.cardTitle": {
+    "value": "Reset or delete"
+  },
+  "resetOrg.row.title": {
+    "value": "Reset workspace"
+  },
+  "resetOrg.row.text": {
+    "value": "Erases everything made in it and starts over, with the same people."
+  },
+  "resetOrg.goes": {
+    "value": "Agents, conversations, DMs, files, tasks, routines and memory"
+  },
+  "resetOrg.stays": {
+    "value": "People, roles, invitations, AI accounts, computers and connectors"
+  },
+  "resetOrg.fresh": {
+    "value": "Then it opens like a new workspace, with the first setup"
+  },
+  "resetOrg.plan": {
+    "value": "The plan stays the same, with no new charge"
+  },
+  "resetOrg.now": {
+    "value": "It happens at once and can't be undone."
+  },
+  "resetOrg.title": {
+    "value": "Reset {{name}}?"
+  },
+  "resetOrg.submit": {
+    "value": "Reset workspace"
+  },
+  "resetOrg.resetting": {
+    "value": "Resetting {{name}}…"
+  },
   "deleteOrg.card.title": {
     "value": "Delete workspace"
   },
@@ -47245,9 +47278,6 @@
   },
   "deleteAccount.card.button": {
     "value": "Delete account…"
-  },
-  "deleteAccount.card.title": {
-    "value": "Delete"
   },
   "deleteAccount.title": {
     "value": "Delete your whole account?"

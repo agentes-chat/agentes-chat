@@ -18615,6 +18615,21 @@
     "writeAfter": ".",
     "ask": "Butuh bantuan? Tanyakan ke pengelola server ini."
   },
+  "resetOrg": {
+    "cardTitle": "Atur ulang atau hapus",
+    "row": {
+      "title": "Atur ulang ruang kerja",
+      "text": "Menghapus semua yang dibuat di dalamnya dan mulai lagi, dengan orang-orang yang sama."
+    },
+    "goes": "Agen, percakapan, DM, file, tugas, rutinitas, dan memori",
+    "stays": "Orang, peran, undangan, akun AI, komputer, dan konektor",
+    "fresh": "Setelah itu ruang kerja terbuka seperti baru, dengan penyiapan awal",
+    "plan": "Paketnya tetap sama, tanpa tagihan baru",
+    "now": "Terjadi seketika dan tidak bisa dibatalkan.",
+    "title": "Atur ulang {{name}}?",
+    "submit": "Atur ulang ruang kerja",
+    "resetting": "Mengatur ulang {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Hapus ruang kerja",
@@ -18686,8 +18701,7 @@
     "menu": "Hapus akun",
     "card": {
       "text": "Menghapus akunmu dalam 7 hari, di semua ruang kerja.",
-      "button": "Hapus akun…",
-      "title": "Hapus"
+      "button": "Hapus akun…"
     },
     "title": "Hapus seluruh akunmu?",
     "intro": "Ini menghapus seluruh akunmu, bukan hanya satu ruang kerja.",

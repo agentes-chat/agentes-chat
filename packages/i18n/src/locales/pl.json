@@ -20409,6 +20409,21 @@
     "writeAfter": ".",
     "ask": "Potrzebujesz pomocy? Zapytaj osoby, które prowadzą ten serwer."
   },
+  "resetOrg": {
+    "cardTitle": "Zresetuj lub usuń",
+    "row": {
+      "title": "Zresetuj przestrzeń roboczą",
+      "text": "Usuwa wszystko, co w niej powstało, i zaczyna od nowa, z tymi samymi osobami."
+    },
+    "goes": "Agenci, rozmowy, wiadomości prywatne, pliki, zadania, rutyny i pamięć",
+    "stays": "Osoby, role, zaproszenia, konta AI, komputery i konektory",
+    "fresh": "Potem otwiera się jak nowa przestrzeń robocza, z początkową konfiguracją",
+    "plan": "Plan zostaje ten sam, bez nowej opłaty",
+    "now": "Dzieje się od razu i nie da się tego cofnąć.",
+    "title": "Zresetować {{name}}?",
+    "submit": "Zresetuj przestrzeń roboczą",
+    "resetting": "Resetowanie {{name}}…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Usuń przestrzeń roboczą",
@@ -20480,8 +20495,7 @@
     "menu": "Usuń konto",
     "card": {
       "text": "Usuwa twoje konto za 7 dni, we wszystkich przestrzeniach roboczych.",
-      "button": "Usuń konto…",
-      "title": "Usuń"
+      "button": "Usuń konto…"
     },
     "title": "Usunąć całe twoje konto?",
     "intro": "To usuwa całe twoje konto, a nie tylko jedną przestrzeń roboczą.",

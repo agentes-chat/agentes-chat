@@ -19300,6 +19300,21 @@
     "writeAfter": ".",
     "ask": "Hulp nodig? Vraag het aan de mensen die deze server beheren."
   },
+  "resetOrg": {
+    "cardTitle": "Resetten of verwijderen",
+    "row": {
+      "title": "Werkruimte resetten",
+      "text": "Wist alles wat erin is gemaakt en begint opnieuw, met dezelfde mensen."
+    },
+    "goes": "Agents, gesprekken, privéberichten, bestanden, taken, routines en geheugen",
+    "stays": "Mensen, rollen, uitnodigingen, AI-accounts, computers en connectors",
+    "fresh": "Daarna opent hij als een nieuwe werkruimte, met de eerste inrichting",
+    "plan": "Het abonnement blijft hetzelfde, zonder nieuwe afschrijving",
+    "now": "Dit gebeurt meteen en kan niet ongedaan worden gemaakt.",
+    "title": "{{name}} resetten?",
+    "submit": "Werkruimte resetten",
+    "resetting": "{{name}} wordt gereset…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Werkruimte verwijderen",
@@ -19371,8 +19386,7 @@
     "menu": "Account verwijderen",
     "card": {
       "text": "Verwijdert je account over 7 dagen, in alle werkruimtes.",
-      "button": "Account verwijderen…",
-      "title": "Verwijderen"
+      "button": "Account verwijderen…"
     },
     "title": "Je hele account verwijderen?",
     "intro": "Dit verwijdert je hele account, niet alleen één werkruimte.",

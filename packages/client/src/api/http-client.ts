@@ -681,6 +681,9 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       deleteWorkspace: async (orgId, input = {}) =>
         (await request<{ deletion: { dueAt: string } }>(`${org(orgId)}/deletion`, { json: input })).deletion,
       restore: (orgId) => request<void>(`${org(orgId)}/deletion`, { method: "DELETE" }),
+      resetCode: (orgId) => request<CodeSent>(`${org(orgId)}/reset/code`, { json: {} }),
+      reset: async (orgId, input = {}) =>
+        (await request<{ reset: { startedAt: string } }>(`${org(orgId)}/reset`, { json: input })).reset,
       setAvatar: (orgId, input) =>
         request<{ avatarUrl: string }>(`${org(orgId)}/me/avatar`, { method: "PUT", json: input }),
       removeAvatar: (orgId) => request<void>(`${org(orgId)}/me/avatar`, { method: "DELETE" }),

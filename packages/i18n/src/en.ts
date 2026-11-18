@@ -19740,6 +19740,25 @@ export const en = {
     writeAfter: ".",
     ask: "Need help? Ask the people who run this server.",
   },
+  /** Resetting a workspace (owners, Sua conta): what it made goes now and for good, and it starts over as a new one. */
+  resetOrg: {
+    /** The title over the account's danger rows for an owner: resetting, deleting the workspace, deleting the account. */
+    cardTitle: "Reset or delete",
+    row: {
+      title: "Reset workspace",
+      text: "Erases everything made in it and starts over, with the same people.",
+    },
+    goes: "Agents, conversations, DMs, files, tasks, routines and memory",
+    stays: "People, roles, invitations, AI accounts, computers and connectors",
+    fresh: "Then it opens like a new workspace, with the first setup",
+    /** Only where plans are billed. */
+    plan: "The plan stays the same, with no new charge",
+    now: "It happens at once and can't be undone.",
+    title: "Reset {{name}}?",
+    submit: "Reset workspace",
+    /** In the row once it started, until the workspace opens again as a new one. */
+    resetting: "Resetting {{name}}…",
+  },
   /** Deleting a workspace (owners): it turns read-only for everyone now and is deleted for good 7 days later. */
   deleteOrg: {
     card: {
@@ -19832,8 +19851,6 @@ export const en = {
     card: {
       text: "Deletes your account in 7 days, in every workspace.",
       button: "Delete account…",
-      /** The card's title for an owner, over its two buttons: the account and the workspace. */
-      title: "Delete",
     },
     title: "Delete your whole account?",
     intro: "This deletes your whole account, not just one workspace.",

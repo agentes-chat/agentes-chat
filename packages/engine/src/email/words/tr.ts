@@ -317,7 +317,7 @@ export const words: EmailWords = {
     subjectReset: (code) => `Çalışma alanı sıfırlama kodunuz: ${code}`,
     reset: (org) => [
       { b: org },
-      " çalışma alanını sıfırlamak için bu kodu yazın. Ajanları, konuşmaları, dosyaları ve hafızası hemen ve kalıcı olarak silinir ve yeni bir çalışma alanı gibi baştan başlar.",
+      " çalışma alanını sıfırlamak için bu kodu yazın. Ajanları, konuşmaları, dosyaları ve belleği hemen ve kalıcı olarak silinir ve yeni bir çalışma alanı gibi baştan başlar.",
     ],
     whyReset: (org) =>
       `Bu e-postayı, hesabınızdan agentes.chat'te ${org} çalışma alanının sıfırlanması istendiği için aldınız.`,

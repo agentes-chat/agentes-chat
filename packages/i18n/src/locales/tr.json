@@ -19108,6 +19108,21 @@
     "writeAfter": ".",
     "ask": "Yardım mı lazım? Bu sunucuyu yönetenlere sorun."
   },
+  "resetOrg": {
+    "cardTitle": "Sıfırla veya sil",
+    "row": {
+      "title": "Çalışma alanını sıfırla",
+      "text": "İçinde yapılan her şeyi siler ve aynı kişilerle baştan başlar."
+    },
+    "goes": "Ajanlar, konuşmalar, özel mesajlar, dosyalar, görevler, rutinler ve bellek",
+    "stays": "Kişiler, roller, davetler, yapay zekâ hesapları, bilgisayarlar ve bağlayıcılar",
+    "fresh": "Sonra ilk kurulumla yeni bir çalışma alanı gibi açılır",
+    "plan": "Plan aynı kalır, yeni ücret alınmaz",
+    "now": "Hemen olur ve geri alınamaz.",
+    "title": "{{name}} sıfırlansın mı?",
+    "submit": "Çalışma alanını sıfırla",
+    "resetting": "{{name}} sıfırlanıyor…"
+  },
   "deleteOrg": {
     "card": {
       "title": "Çalışma alanını sil",
@@ -19179,8 +19194,7 @@
     "menu": "Hesabı sil",
     "card": {
       "text": "Hesabınızı 7 gün sonra tüm çalışma alanlarında siler.",
-      "button": "Hesabı sil…",
-      "title": "Sil"
+      "button": "Hesabı sil…"
     },
     "title": "Hesabınızın tamamı silinsin mi?",
     "intro": "Bu, tek bir çalışma alanını değil hesabınızın tamamını siler.",
