@@ -316,7 +316,7 @@ test("Sua IA on Antigravity: the ramp is the model's own levels, and a level sav
   expect(sent.at(-1)).toMatchObject({ effort: "high", model: "gemini-4-hydrogen-high" });
 });
 
-test("the workspace's AI on an API key: the ramp is the levels its model takes (ADR 0187), none for an unchecked one", async () => {
+test("the workspace's AI on an API key: the ramp is the levels its model takes (ADR 0199), none for an unchecked one", async () => {
   const state = withRightHand(seedState(), { model: "deepseek/deepseek-v4" });
   state.extraModels = [
     {

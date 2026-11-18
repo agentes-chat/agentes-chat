@@ -478,7 +478,7 @@ export function machineAccountRoutes(deps: AppDeps) {
       security,
       summary: "Move an account to a place in its order of use (its owner or an admin)",
       description:
-        "`index` 0 is first; past the end, last. The other accounts of its computer and kind keep their order. Someone else's account: `account.order_forbidden`. Audited as `account.order`.",
+        "`index` counts accounts, not logins: 0 is first; past the end, last. An account signed in once per agent moves with all its logins, named by any of them that has a place in the order (one with none: `account.not_found`). The other accounts of its computer and kind keep their order. Someone else's account: `account.order_forbidden`. Audited as `account.order`.",
       request: {
         params: PlanParams,
         body: body(z.object({ index: z.number().int().min(0) })),

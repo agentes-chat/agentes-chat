@@ -86,7 +86,7 @@ export const NOTIFICATION_KINDS = [
    */
   "plan_reset_unknown",
   /**
-   * A workspace endpoint's effort check finished (ADR 0187): the key's owner, from the right hand (its actor),
+   * A workspace endpoint's effort check finished (ADR 0199): the key's owner, from the right hand (its actor),
    * `source.label` the key's name, `latest.statusTo` `done` or `failed` (its words in `latest.text`).
    */
   "credential_efforts",

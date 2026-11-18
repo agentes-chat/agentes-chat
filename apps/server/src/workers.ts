@@ -46,6 +46,7 @@ import {
   pruneMessageClientIds,
   pruneOperatorEvents,
   pruneRoutineHookCalls,
+  pruneSurfaceRows,
   purgeApps,
   purgeDeletedArtifacts,
   purgeDeletedWikiPages,
@@ -329,6 +330,8 @@ export function startWorkers(deps: WorkerDeps) {
     // Old send ids (idempotent resends) are no longer needed.
     const pruned = await pruneMessageClientIds(db);
     if (pruned > 0) log.info("pruned message client ids", { pruned });
+    const surfaceRows = await pruneSurfaceRows(db);
+    if (surfaceRows > 0) log.info("pruned surface rows", { pruned: surfaceRows });
     const events = await pruneOperatorEvents(db);
     if (events > 0) log.info("pruned operator events", { pruned: events });
     const cleared = await clearOldOutboxPayloads(db);

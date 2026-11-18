@@ -2,12 +2,14 @@ import type { AiAccounts as AiAccountsView } from "@agenteschat/client";
 import { keys, useAiAccounts, useAiStatus, useApi, useMachines } from "@agenteschat/client";
 import {
   accountTitle,
+  againLogin,
   agentsToGive,
   endsOnClaude,
   groupPlans,
   identityUnknown,
   offersSignInAgain,
   type PlanAccount,
+  signInNote,
   unusedCopies,
 } from "@agenteschat/client/lib/ai-accounts";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
@@ -65,7 +67,7 @@ export function AccountActions({ machineId, accountId }: { machineId: string; ac
   );
   const a = account?.logins.find((l) => l.shared === true) ?? account?.logins[0];
   if (!account || !a) return null;
-  const { logins, signedOut, unknown } = account;
+  const { logins } = account;
   const names = (list: string[]) => joinNames(list, t);
   const refetch = () => {
     for (const key of [keys.aiAccounts(org.id), keys.planUsage(org.id)]) void qc.invalidateQueries({ queryKey: key });
@@ -114,9 +116,7 @@ export function AccountActions({ machineId, accountId }: { machineId: string; ac
 
   const copies = unusedCopies(account);
   const plan = planOf(a.provider);
-  const allOut = signedOut.length === logins.length;
-  // Of an account with a login per agent, the agents whose login is out.
-  const outFor = allOut ? [] : signedOut.flatMap((l) => l.usedBy);
+  const note = signInNote(t, account, Boolean(plan));
   // The email is the account's own line: here only what stands for it.
   const identity = a.email
     ? null
@@ -128,18 +128,7 @@ export function AccountActions({ machineId, accountId }: { machineId: string; ac
   return (
     <div className="ai-accounts__own">
       {identity && <span className="small muted">{identity}</span>}
-      {signedOut.length > 0 && (
-        <SettingNote icon="alert">
-          {outFor.length > 0
-            ? t("aiAccounts.page.signedOutFor", { count: outFor.length, agents: names(outFor) })
-            : plan
-              ? t("aiAccounts.page.keyRefused")
-              : t("aiAccounts.page.signedOut")}
-        </SettingNote>
-      )}
-      {signedOut.length === 0 && unknown.length > 0 && (
-        <SettingNote icon="info">{t("aiAccounts.page.statusUnknown")}</SettingNote>
-      )}
+      {note && <SettingNote icon={note.state === "out" ? "alert" : "info"}>{note.text}</SettingNote>}
       {copies.length > 0 && (
         <SettingNote icon="repeat">{t("aiAccounts.page.copies", { count: copies.length })}</SettingNote>
       )}
@@ -283,7 +272,7 @@ function AgainDialog({
   const { t } = useTranslation();
   const hold = usePlanHold();
   const added = useRef(new Set<string>());
-  const a = account.signedOut[0] ?? account.unknown[0] ?? account.logins[0];
+  const a = againLogin(account);
   if (!a) return null;
   const key = isPlanId(a.provider);
   const fanOut = key ? account.logins.map((l) => ({ id: l.id, again: l.id })) : undefined;

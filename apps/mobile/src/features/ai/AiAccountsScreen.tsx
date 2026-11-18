@@ -15,16 +15,20 @@ import {
 import {
   accountSub,
   accountTitle,
+  againLogin,
   agentsToGive,
   endsOnClaude,
   identityUnknown,
   keyRemovalText,
+  newestUsage,
   offersSignInAgain,
   onSeveralComputers,
+  orderAccounts,
+  orderMover,
   orderPlaces,
   ownSignIns,
   ownSignInTitle,
-  signInOf,
+  signInNote,
   unnamedAccount,
 } from "@agenteschat/client/lib/ai-accounts";
 import { computerNameOf } from "@agenteschat/client/lib/computer";
@@ -68,7 +72,7 @@ import { SheetHostProvider, useSheet } from "../shared/SheetHost";
 import { overLimit, TextArea } from "../shared/TextArea";
 import { PlanMeter } from "../usage/parts";
 import { openKeyForAll } from "./KeyForAllScreen";
-import { orderMoves } from "./logic";
+import { orderMoves, ownAccountRows } from "./logic";
 import { openConnectAi } from "./NoAiCard";
 import { alertKeyRefused, Note, openRenameAiAccount, PasteField, PlanHoldNote, usePlanHold } from "./parts";
 
@@ -137,7 +141,11 @@ function AiAccounts() {
       qc.invalidateQueries({ queryKey: keys.credentials(orgId) }),
     ]);
   });
-  const rows = ai.data?.accounts ?? [];
+  // The viewer's logins of one account (one per agent) are one row; disconnecting it removes every one of them.
+  const owned = ownAccountRows(ai.data?.accounts ?? []);
+  const rows = owned.map((o) => o.account);
+  const ownOf = (a: Account) => owned.find((o) => o.account.id === a.id) ?? { logins: [a], signedOut: [], unknown: [] };
+  const loginsOf = (a: Account) => ownOf(a).logins;
   const own = ownSignIns(ai.data);
   const several = onSeveralComputers(rows);
   const refetch = () => void qc.invalidateQueries({ queryKey: keys.aiAccounts(orgId) });
@@ -192,17 +200,24 @@ function AiAccounts() {
           text: t("aiAccounts.page.disconnect"),
           style: "destructive",
           onPress: () =>
-            api.machines.removeAccount(orgId, a.machineId, a.id).then(() => {
-              successHaptic();
-              toast({ title: t("aiAccounts.page.disconnected", { label: a.label }), icon: "check" });
-              refetch();
-              void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
-            }, failed),
+            Promise.all(loginsOf(a).map((l) => api.machines.removeAccount(orgId, l.machineId, l.id))).then(
+              () => {
+                successHaptic();
+                toast({ title: t("aiAccounts.page.disconnected", { label: a.label }), icon: "check" });
+                refetch();
+                void qc.invalidateQueries({ queryKey: keys.agents(orgId) });
+              },
+              () => {
+                // Some logins may be gone already: the list is read again either way.
+                failed();
+                refetch();
+              },
+            ),
         },
       ],
     );
-  // An order of one account shows nothing of an order.
-  const groups = (order.data?.groups ?? []).filter((g) => g.accounts.length > 1);
+  // An order of one account shows nothing of an order; an account signed in once per agent is one place in it.
+  const groups = (order.data?.groups ?? []).filter((g) => orderAccounts(g.accounts).length > 1);
   const placed = new Set(groups.flatMap((g) => g.accounts.map((a) => a.id)));
   const severalOrders = new Set(groups.map((g) => g.machineId)).size > 1;
   const put = (accountId: string, index: number | null) => {
@@ -222,12 +237,12 @@ function AiAccounts() {
   const moves = (g: AccountOrderGroup, a: OrderAccount) =>
     orderMoves(g.accounts, a).map((m) => ({
       label: t(m.step < 0 ? "contextMenu.moveUp" : "contextMenu.moveDown"),
-      onPress: () => put(a.id, m.index),
+      onPress: () => put(orderMover(g.accounts, a.id), m.index),
     }));
   const actions = (a: Account, g?: AccountOrderGroup) => {
     const plan = planOf(a.provider);
     const placedAs = g?.accounts.find((x) => x.id === a.id);
-    const out = offersSignInAgain(a);
+    const out = loginsOf(a).some(offersSignInAgain);
     const toGive = meId
       ? agentsToGive({
           account: a,
@@ -253,7 +268,7 @@ function AiAccounts() {
           ? [
               {
                 label: plan ? t("aiAccounts.page.newKey") : t("aiAccounts.page.signInAgain"),
-                onPress: () => signInAgain(a),
+                onPress: () => signInAgain(againLogin(ownOf(a)) ?? a),
               },
             ]
           : []),
@@ -269,8 +284,9 @@ function AiAccounts() {
    */
   const accountRow = (a: Account, g?: AccountOrderGroup, n?: number | null) => {
     const plan = planOf(a.provider);
-    const out = signInOf(a) === "signed_out";
-    const unknown = signInOf(a) === "unknown";
+    // Every login of the account: one agent's sign-in may have ended while the row goes by another's.
+    const note = signInNote(t, ownOf(a), Boolean(plan));
+    const off = ownOf(a).signedOut.length === loginsOf(a).length;
     const facts = [
       accountSub(a) ??
         (a.keyHint
@@ -292,7 +308,7 @@ function AiAccounts() {
               {n ?? ""}
             </Text>
           ) : (
-            <ProviderLogo id={a.provider ?? a.kind} size="sm" off={out} />
+            <ProviderLogo id={a.provider ?? a.kind} size="sm" off={off} />
           )
         }
         leadingSaid={n?.toString()}
@@ -304,12 +320,9 @@ function AiAccounts() {
         disabled={g !== undefined && move.isPending}
         onPress={() => actions(a, g)}
         below={
-          out || unknown || a.usage || (plan && !plan.usage) ? (
+          note || a.usage || (plan && !plan.usage) ? (
             <View style={styles.below}>
-              {out ? (
-                <Note icon="x">{plan ? t("aiAccounts.page.keyRefused") : t("aiAccounts.page.signedOut")}</Note>
-              ) : null}
-              {unknown ? <Note icon="info">{t("aiAccounts.page.statusUnknown")}</Note> : null}
+              {note ? <Note icon={note.state === "out" ? "x" : "info"}>{note.text}</Note> : null}
               {a.usage ? (
                 <PlanMeter usage={a.usage} compact />
               ) : plan && !plan.usage ? (
@@ -382,11 +395,14 @@ function AiAccounts() {
             group={g}
             computer={severalOrders ? computerOf(g.computer) : null}
           >
-            {g.accounts.map((a, i) => {
+            {orderAccounts(g.accounts).map((block, i) => {
+              const a = block.find((l) => rows.some((r) => r.id === l.id)) ?? block[0];
+              if (!a) return null;
               const n = orderPlaces(g.accounts)[i] ?? null;
               const mine = rows.find((r) => r.id === a.id);
               if (mine) return accountRow(mine, g, n);
               const them = moves(g, a);
+              const usage = newestUsage(block);
               return (
                 <GroupedRow
                   key={a.id}
@@ -402,9 +418,9 @@ function AiAccounts() {
                   disabled={move.isPending}
                   {...(them.length > 0 ? { onPress: () => choose(accountTitle(t, a), them, t("common.cancel")) } : {})}
                   below={
-                    a.usage ? (
+                    usage ? (
                       <View style={styles.below}>
-                        <PlanMeter usage={a.usage} compact />
+                        <PlanMeter usage={usage} compact />
                       </View>
                     ) : undefined
                   }

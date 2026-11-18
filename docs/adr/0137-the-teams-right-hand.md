@@ -472,7 +472,7 @@ threw its rows away. The owner decided it has every tool an agent can have, by d
   - **The Vault** (`vaultPersonOfRun`): a personal item for its owner, a team item for its audience, only in that DM.
     Called in a channel, or by a routine that reports anywhere else, it reaches only team items open to everyone and
     shared with it.
-  - **A mailbox** (`mailboxUserCheck`): only for the person who connected it, in that DM. Being in its audience opens
+  - **A mailbox** (`personalUseCheck`; a person's own connection too, which no one else's run gets anywhere): only for the person who connected it, in that DM. Being in its audience opens
     no one else's mailbox, since its audience is everyone. Its routine watches a mailbox only when the routine's
     creator connected it (`watchesFor`, checked when the routine is saved and again as mail arrives, so a routine
     taken over by someone else gets none), and `create_routine` names only that person's mailboxes. The mailbox's

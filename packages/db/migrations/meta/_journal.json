@@ -2031,6 +2031,55 @@
       "when": 1794942564490,
       "tag": "0293_brand_hosts",
       "breakpoints": true
+    },
+    {
+      "idx": 292,
+      "version": "7",
+      "when": 1794947961099,
+      "tag": "0294_chat_surfaces",
+      "breakpoints": true
+    },
+    {
+      "idx": 293,
+      "version": "7",
+      "when": 1794952526821,
+      "tag": "0295_machine_wake_wanted",
+      "breakpoints": true
+    },
+    {
+      "idx": 294,
+      "version": "7",
+      "when": 1794952626821,
+      "tag": "0296_handed_for_user",
+      "breakpoints": true
+    },
+    {
+      "idx": 295,
+      "version": "7",
+      "when": 1794963495178,
+      "tag": "0297_run_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 296,
+      "version": "7",
+      "when": 1794964106130,
+      "tag": "0298_operator_events_covering",
+      "breakpoints": true
+    },
+    {
+      "idx": 297,
+      "version": "7",
+      "when": 1794984191596,
+      "tag": "0299_host_powered_by",
+      "breakpoints": true
+    },
+    {
+      "idx": 298,
+      "version": "7",
+      "when": 1794984291596,
+      "tag": "0300_personal_connections",
+      "breakpoints": true
     }
   ]
 }

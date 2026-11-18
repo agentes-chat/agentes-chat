@@ -1,8 +1,22 @@
-import { and, type Database, desc, type Executor, eq, isNotNull, lt, or, schema, sql } from "@agenteschat/db";
+import {
+  and,
+  type Database,
+  desc,
+  type Executor,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  lt,
+  or,
+  schema,
+  sql,
+} from "@agenteschat/db";
 import { decodeCursor } from "./cursor";
 import { recordOperatorEvent } from "./operator-events";
 import { listedOf, ms, olderThan, orgExists, type PageQuery, pageOf, UuidCursor, uuidOf } from "./operator-paging";
 import { getMembership } from "./organizations";
+import type { OutboxJob } from "./outbox";
 
 /*
  * Support requests (ADR 0160, ADR 0056): the record that a member asked whoever runs the server for help. It is what
@@ -11,7 +25,7 @@ import { getMembership } from "./organizations";
  * way. Never an agent's send: an agent can be steered.
  */
 
-const { supportRequests, messages } = schema;
+const { supportRequests, messages, outbox } = schema;
 
 export const SUPPORT_SOURCES = ["form", "offer", "email", "operator"] as const;
 export type SupportSource = (typeof SUPPORT_SOURCES)[number];
@@ -167,11 +181,45 @@ export async function operatorRecordSupportRequest(
 }
 
 /**
- * The daily sweep: a request's words go after `SUPPORT_WORDS_KEEP_DAYS`, the row after `SUPPORT_REQUEST_KEEP_DAYS`.
- * Returns how many of each.
+ * How far back the daily sweep looks for a reply's finished job: the sweep runs once a day and a job ends within
+ * hours of being made, so two days reach every job the sweep before ran too early for.
+ */
+const REPLY_SWEEP_DAYS = 2;
+
+/**
+ * The operator's own words in a reply to a request (`operatorReply`) leave the reply's email job once the email is
+ * sent or given up: the job keeps whom it went to and how it ended, as any email's does, never what it said. With no
+ * `job`: every finished one made in the last `REPLY_SWEEP_DAYS`, for a job whose worker died before it got here.
+ */
+export async function forgetReplyWords(db: Executor, job?: OutboxJob, now = new Date()) {
+  if (job && (job.payload.template as { kind?: unknown } | undefined)?.kind !== "support_reply") return;
+  // ponytail: without a job, one daily read of those days' jobs by their time index; an index on the email's kind if
+  // they grow too long to scan.
+  await db
+    .update(outbox)
+    .set({ payload: sql`${outbox.payload} #- '{template,text}'` })
+    .where(
+      and(
+        job
+          ? eq(outbox.id, job.id)
+          : and(
+              inArray(outbox.status, ["done", "failed"]),
+              gt(outbox.createdAt, new Date(now.getTime() - REPLY_SWEEP_DAYS * 86_400_000)),
+            ),
+        eq(outbox.kind, "email.send"),
+        sql`${outbox.payload}#>>'{template,kind}' = 'support_reply'`,
+        sql`${outbox.payload}#>'{template,text}' is not null`,
+      ),
+    );
+}
+
+/**
+ * The daily sweep: a request's words go after `SUPPORT_WORDS_KEEP_DAYS`, the row after `SUPPORT_REQUEST_KEEP_DAYS`,
+ * and a reply's words its job still holds though it finished (`forgetReplyWords`). Returns how many requests of each.
  */
 export async function sweepSupportRequests(db: Executor, now = new Date()) {
   const before = (days: number) => new Date(now.getTime() - days * 86_400_000);
+  await forgetReplyWords(db, undefined, now);
   const deleted = await db
     .delete(supportRequests)
     .where(lt(supportRequests.createdAt, before(SUPPORT_REQUEST_KEEP_DAYS)))

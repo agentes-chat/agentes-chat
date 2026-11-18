@@ -74,6 +74,7 @@ test("a registered host: its look, its origin and its links, by its own Host onl
     name: "Northwind Studio",
     accent: "#7c3aed",
     logo: null,
+    poweredBy: true,
   });
   expect(await hostLook(db, "app.northwind.example:8443")).toBeNull();
   expect(await hostOrigin(db, new Headers({ host: "app.northwind.example" }))).toBe("https://app.northwind.example");
@@ -87,6 +88,17 @@ test("a registered host: its look, its origin and its links, by its own Host onl
   );
   expect(await baseUrlFor(db, "https://chat.example.com/", "chat.example.com")).toBe("https://chat.example.com");
   expect(await baseUrlFor(db, "https://chat.example.com", null)).toBe("https://chat.example.com");
+});
+
+test("the powered-by line: on for a new host, kept when left out, turned off and on", async () => {
+  const { db, blobs } = await world();
+  const deps = { db, blobs };
+  const host = "app.northwind.example";
+  expect((await putHost(deps, OWN, host, { name: "Northwind" })).poweredBy).toBe(true);
+  expect((await putHost(deps, OWN, host, { name: "Northwind", poweredBy: false })).poweredBy).toBe(false);
+  expect((await putHost(deps, OWN, host, { name: "Northwind", accent: "#0f766e" })).poweredBy).toBe(false);
+  expect((await hostLook(db, host))?.poweredBy).toBe(false);
+  expect((await putHost(deps, OWN, host, { name: "Northwind", poweredBy: true })).poweredBy).toBe(true);
 });
 
 test("refusals: not a hostname, the server's own, too many; and a logo's own", async () => {

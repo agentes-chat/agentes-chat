@@ -26,8 +26,10 @@ import { type Browser, browser, createTestServer, joinByInvitation, seedOrg, sig
 
 const TOKEN = "operator-test-token-".padEnd(48, "x");
 const READ = "operator-read-token-".padEnd(48, "x");
+const REVEAL = "operator-reveal-token-".padEnd(48, "x");
 const UNKNOWN = "0b0b0b0b-0b0b-4b0b-8b0b-0b0b0b0b0b0b";
 const WHY = "canary-why: the person asked for it and nothing else answers this.";
+const CONFIDENTIAL_JOB_ERROR = "canary-confidential-job: what the run was writing";
 
 /**
  * Stored text the reads return by design, as `table: columns` (`column.path` inside a JSON column): who and what
@@ -85,7 +87,7 @@ const KEPT: Record<string, string[]> = {
     "transcript.waitingForBrain.code",
     "transcript.waitingForBrain.source",
     // The stages of a run's profile: named by the code that times them, counted by the work analytics.
-    "transcript.profiles.stages.stage",
+    "profiles.stages.stage",
   ],
   agent_run_steps: [
     "data.name",
@@ -154,6 +156,12 @@ const PLACES: [what: string, table: string, value: string, where?: string][] = [
   ["a notification's words", "notifications", "latest::text"],
   ["what a member wrote to ask for help", "support_requests", "text"],
   ["what the thing they reported says", "support_requests", "about"],
+  [
+    "the operator's reply to them, in the job of its email",
+    "outbox",
+    "payload->'template'->>'text'",
+    "payload->'template'->>'kind' = 'support_reply'",
+  ],
 ];
 
 const TABLES = `
@@ -194,6 +202,10 @@ let owner: Browser;
 let org: { orgId: string; channelId: string; agentId: string };
 /** A GET with the read-only token. */
 let get: (path: string) => Promise<Response>;
+/** A call with another token: the full one's review blocks, the reveal token's door. */
+let as: (token: string) => (path: string, json?: unknown) => Promise<Response>;
+/** A failed run of a confidential thread (ADR 0190), the task it started, and a member's request for help. */
+const confidential = { runId: "", taskId: "", requestId: "" };
 /** Every GET of the committed contract, as its path's template. */
 let contract: string[];
 let calls: Call[];
@@ -232,9 +244,17 @@ beforeAll(async () => {
   });
   // A server that provisions computers lists the workspaces waiting for one: the only read its setting changes.
   const config = { ...t.config, MACHINE_PROVISIONING: "external" as const };
-  const app = createOperatorApp({ db: t.db, config, version: "test", log: createLogger("error") }, TOKEN, READ);
-  const as = (token: string) => async (path: string) =>
-    app.request(`/api/operator/v1${path}`, { headers: { authorization: `Bearer ${token}` } });
+  const app = createOperatorApp(
+    { db: t.db, config, version: "test", log: createLogger("error"), emails: true },
+    TOKEN,
+    READ,
+    REVEAL,
+  );
+  as = (token) => async (path, json) =>
+    app.request(`/api/operator/v1${path}`, {
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      ...(json ? { method: "POST", body: JSON.stringify(json) } : {}),
+    });
   get = as(READ);
   const db = t.db;
   enableOperatorEvents();
@@ -340,19 +360,47 @@ beforeAll(async () => {
       },
     },
   });
-  // A run of a confidential thread (ADR 0190) that failed on what it read: its error's words are not returned.
+  // A run of a confidential thread (ADR 0190) that failed on what it read: its error's words are not returned, nor
+  // what its steps hold, nor its job's error.
   const confidentialRoot = crypto.randomUUID();
   await db.insert(schema.confidentialThreads).values({ orgId, channelId, rootMessageId: confidentialRoot });
-  await db.insert(schema.agentRuns).values({
+  const [confidentialRun] = await db
+    .insert(schema.agentRuns)
+    .values({
+      orgId,
+      agentId,
+      channelId,
+      threadRootId: confidentialRoot,
+      triggerMessageId: confidentialRoot,
+      trigger: "mention",
+      hop: 1,
+      status: "failed",
+      error: "canary-confidential: what the run read",
+    })
+    .returning({ id: schema.agentRuns.id, orgId: schema.agentRuns.orgId });
+  if (!confidentialRun) throw new Error("no confidential run");
+  confidential.runId = confidentialRun.id;
+  await addRunStep(db, confidentialRun, "tool_call", {
+    toolUseId: "call-4",
+    name: "get_issue",
+    input: { q: "canary-confidential-input" },
+  });
+  await addRunStep(db, confidentialRun, "tool_result", {
+    toolUseId: "call-4",
+    name: "get_issue",
+    isError: true,
+    content: "canary-confidential-result",
+  });
+  await addRunStep(db, confidentialRun, "model_call", { narration: "canary-confidential-narration" });
+  await addRunStep(db, confidentialRun, "error", { reason: "transient", message: "canary-confidential-message" });
+  // Its job failed on a write: what a database answers then names the values the run was writing.
+  await db.insert(schema.outbox).values({
     orgId,
-    agentId,
-    channelId,
-    threadRootId: confidentialRoot,
-    triggerMessageId: confidentialRoot,
-    trigger: "mention",
-    hop: 1,
+    kind: "agent_run.execute",
+    payload: { runId: confidentialRun.id },
     status: "failed",
-    error: "canary-confidential: what the run read",
+    dedupeKey: `agent_run.execute:${confidentialRun.id}`,
+    lastError: CONFIDENTIAL_JOB_ERROR,
   });
 
   // What the conversation didn't write, each with its canary.
@@ -589,6 +637,26 @@ beforeAll(async () => {
     lastLine: "canary line",
     status: "running",
   });
+  const [confidentialTask] = await db
+    .insert(schema.machineTasks)
+    .values({
+      orgId,
+      agentId,
+      machineId,
+      channelId,
+      runId: confidential.runId,
+      title: "canary confidential task",
+      executor: "claude",
+      command: "canary confidential command",
+      prompt: "canary confidential prompt",
+      result: "canary confidential result",
+      lastLine: "canary confidential line",
+      recentLines: ["canary confidential lines"],
+      files: ["canary/confidential.txt"],
+      status: "done",
+    })
+    .returning({ id: schema.machineTasks.id });
+  confidential.taskId = confidentialTask?.id ?? "";
   await db
     .insert(schema.machineHolds)
     .values({ orgId, agentId, machineId, what: "canary hold", why: "canary hold reason" });
@@ -760,16 +828,20 @@ beforeAll(async () => {
     expiresAt: soon,
   });
   // A member's request for help, with its words kept as on a server that lets its operator read them.
-  await db.insert(schema.supportRequests).values({
-    orgId,
-    userId: ownerId,
-    source: "form",
-    ref: "canary-ref",
-    aboutKind: "message",
-    messageId: look,
-    text: "canary request words",
-    about: "canary reported words",
-  });
+  const [asked] = await db
+    .insert(schema.supportRequests)
+    .values({
+      orgId,
+      userId: ownerId,
+      source: "form",
+      ref: "canary-ref",
+      aboutKind: "message",
+      messageId: look,
+      text: "canary request words",
+      about: "canary reported words",
+    })
+    .returning({ id: schema.supportRequests.id });
+  confidential.requestId = asked?.id ?? "";
   await db
     .insert(schema.githubAppInstallations)
     .values({ orgId, installationId: 1, accountLogin: "canary-login", accountType: "Organization" });
@@ -796,6 +868,15 @@ beforeAll(async () => {
   await db
     .insert(schema.machineProvisioning)
     .values({ orgId: waiting?.id ?? "", state: "preparing", step: "installing", stage: "apps", since: new Date() });
+
+  // The operator answered that request in its own words: until the email goes out, its job holds them.
+  const replied = await as(REVEAL)(`/reveal/orgs/${orgId}/replies`, {
+    requestId: confidential.requestId,
+    text: "canary reply words",
+    operator: "someone",
+    assistedByAi: true,
+  });
+  expect(replied.status).toBe(200);
 
   // The secrets the server made itself, as it stored them.
   for (const s of await db.select({ token: schema.sessions.token }).from(schema.sessions)) hidden.push(s.token);
@@ -1029,8 +1110,54 @@ test("no GET says what anyone wrote or a secret, as the history was written", as
   expect(await readEverything()).toEqual(NOTHING);
 });
 
+test("a confidential thread's run: what its steps and the task it started hold is in no review block and behind no proof of the reveal door", async () => {
+  const review = "reason=a%20report&operator=someone";
+  const blocks = [`/review/run/${confidential.runId}?${review}`, `/review/task/${confidential.taskId}?${review}`];
+  const asking = { reason: "Check what the run was doing when it failed", operator: "someone", assistedByAi: true };
+  const records = [
+    ...["input", "result", "narration", "error"].map((field, n) => ({
+      kind: "run_step",
+      id: confidential.runId,
+      seq: n + 1,
+      field,
+    })),
+    ...["command", "prompt", "result"].map((field) => ({ kind: "task", id: confidential.taskId, field })),
+  ];
+  const proofs = [
+    { purpose: "fault", runId: confidential.runId },
+    { purpose: "member_request", requestId: confidential.requestId },
+  ];
+  const said = (text: string) => text.match(/canary[^"\\\s]*/gi) ?? [];
+  const answers: Record<string, unknown> = {};
+  for (const path of blocks) {
+    const res = await as(TOKEN)(path);
+    answers[path] = [res.status, said(await res.text())];
+  }
+  for (const proof of proofs) {
+    for (const record of records) {
+      const res = await as(REVEAL)(`/reveal/orgs/${org.orgId}`, { ...asking, ...record, ...proof });
+      const text = await res.text();
+      const code = (JSON.parse(text) as { error?: { code?: string } }).error?.code;
+      answers[`${proof.purpose} ${record.kind}.${record.field}`] = [res.status, code, said(text)];
+    }
+  }
+  expect(answers).toEqual({
+    ...Object.fromEntries(blocks.map((path) => [path, [200, []]])),
+    ...Object.fromEntries(
+      proofs.flatMap((proof) =>
+        records.map((record) => [`${proof.purpose} ${record.kind}.${record.field}`, [403, "reveal.confidential", []]]),
+      ),
+    ),
+  });
+});
+
 test("no GET says anything else the database holds: a canary in every other text column, and none comes back", async () => {
   expect(await poison(t.db, KEPT)).toBeGreaterThan(500);
+  // A run's job is its run's by its name alone, and its name is text: the confidential run's job gets its own back.
+  await t.db
+    .update(schema.outbox)
+    .set({ dedupeKey: `agent_run.execute:${confidential.runId}` })
+    .where(eq(schema.outbox.lastError, CONFIDENTIAL_JOB_ERROR));
   expect(await unmarked()).toEqual([]);
   expect(await readEverything()).toEqual(NOTHING);
 });

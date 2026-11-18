@@ -4,6 +4,8 @@ import { testConfig } from "@agenteschat/config";
 import { and, asc, type Database, desc, eq, schema } from "@agenteschat/db";
 import {
   addRunStep,
+  CONFIDENTIAL_STUB,
+  markThreadConfidential,
   REVEAL_FIELDS,
   REVEAL_PER_WORKSPACE_DAY,
   routineRoomKey,
@@ -56,7 +58,9 @@ const w = {} as Record<
   | "routineId"
   | "dmRoutineId"
   | "taskId"
-  | "goneTaskId",
+  | "goneTaskId"
+  | "sealedTaskId"
+  | "againTaskId",
   string
 >;
 const messages = {} as Record<"asked" | "written" | "other" | "secret" | "dm" | "deleted" | "gone" | "foreign", string>;
@@ -78,6 +82,8 @@ const runs = {} as Record<
   | "room"
   | "parked"
   | "dmRoom"
+  | "sealed"
+  | "again"
   | "foreign",
   string
 >;
@@ -436,8 +442,16 @@ beforeAll(async () => {
     channelId: await channel(routineRoomKey(w.devId, w.dmRoutineId), "dm", [{ agentId: w.devId }]),
   });
   await steps(runs.dmRoom, [aCall("y")]);
+  // A run whose thread a test marks confidential: one step for each field, a routine's firing and a task of its own.
+  runs.sealed = await run("failed");
+  await steps(runs.sealed, [
+    aCall("s"),
+    aResult("s"),
+    ["model_call", { model: "x", narration: "canary-sealed-narration" }],
+    ["error", { reason: "cli_failed: canary-sealed-error" }],
+  ]);
   await db.insert(schema.routineRuns).values(
-    [runs.failed, runs.direct, runs.parked, runs.dmRoom].map((agentRunId, n) => ({
+    [runs.failed, runs.direct, runs.parked, runs.dmRoom, runs.sealed].map((agentRunId, n) => ({
       orgId,
       routineId: agentRunId === runs.dmRoom ? w.dmRoutineId : w.routineId,
       at: ago(DAY + n * HOUR),
@@ -468,6 +482,47 @@ beforeAll(async () => {
       })
       .returning({ id: schema.machineTasks.id }),
   );
+  w.sealedTaskId = await one(
+    db
+      .insert(schema.machineTasks)
+      .values({
+        orgId,
+        agentId: w.devId,
+        machineId,
+        channelId: w.generalId,
+        runId: runs.sealed,
+        title: "canary-sealed-title",
+        executor: "claude",
+        command: "canary-sealed-command",
+        prompt: "canary-sealed-prompt",
+        result: "canary-sealed-result",
+        status: "done",
+      })
+      .returning({ id: schema.machineTasks.id }),
+  );
+  // A task the server started again by itself, twice: each a row with no run, which names the task it resumes.
+  runs.again = await run("failed");
+  const again = {
+    orgId,
+    agentId: w.devId,
+    machineId,
+    channelId: w.generalId,
+    title: "canary-again-title",
+    executor: "claude",
+    command: "canary-again-command",
+    prompt: "canary-again-prompt",
+    result: "canary-again-result",
+    status: "done" as const,
+  };
+  const started = (over: Partial<typeof schema.machineTasks.$inferInsert>) =>
+    one(
+      db
+        .insert(schema.machineTasks)
+        .values({ ...again, ...over })
+        .returning({ id: schema.machineTasks.id }),
+    );
+  const once = await started({ resumedFromId: await started({ runId: runs.again }), resumeCount: 1 });
+  w.againTaskId = await started({ resumedFromId: once, resumeCount: 2 });
   w.goneTaskId = await one(
     db
       .insert(schema.machineTasks)
@@ -1493,6 +1548,163 @@ test("the door's own limits: 30 calls a minute, and 100 reads of one workspace i
     .set({ createdAt: ago(DAY + HOUR) })
     .where(eq(schema.operatorEvents.orgId, w.orgId));
   expect(await outcome(good, { on })).toBe(200);
+});
+
+test("a confidential thread: its run's steps and the task it started open under neither purpose, its messages read as the stub, and what is no thread's words stays", async () => {
+  const root = asking.get(runs.sealed) ?? "";
+  const mine = { requestId: requests.owner };
+  const of = { runId: runs.sealed };
+  type Proof = Record<string, unknown>;
+  // Every field of the door's table: the thread's own record where the kind has one.
+  const places: Record<string, (proof: Proof) => Record<string, unknown>> = {
+    "message.text": (proof) => ask("message", root, "text", proof),
+    "run_step.input": (proof) => step(runs.sealed, 1, "input", proof),
+    "run_step.result": (proof) => step(runs.sealed, 2, "result", proof),
+    "run_step.narration": (proof) => step(runs.sealed, 3, "narration", proof),
+    "run_step.error": (proof) => step(runs.sealed, 4, "error", proof),
+    "agent.instructions": (proof) => ask("agent", w.devId, "instructions", proof),
+    "routine.name": (proof) => ask("routine", w.routineId, "name", proof),
+    "routine.instructions": (proof) => ask("routine", w.routineId, "instructions", proof),
+    "task.command": (proof) => ask("task", w.sealedTaskId, "command", proof),
+    "task.prompt": (proof) => ask("task", w.sealedTaskId, "prompt", proof),
+    "task.result": (proof) => ask("task", w.sealedTaskId, "result", proof),
+    "channel.name": (proof) => ask("channel", w.generalId, "name", proof),
+    "connection.label": (proof) => ask("connection", w.connectionId, "label", proof),
+    "connection.host": (proof) => ask("connection", w.connectionId, "host", proof),
+    "connection.last_error": (proof) => ask("connection", w.connectionId, "last_error", proof),
+    "support_request.text": (proof) => ask("support_request", requests.owner, "text", { ...mine, ...proof }),
+    "support_request.about": (proof) => ask("support_request", requests.owner, "about", { ...mine, ...proof }),
+  };
+  // A field added to the table and not here fails this test.
+  expect(Object.keys(places).sort()).toEqual(
+    Object.entries(REVEAL_FIELDS)
+      .flatMap(([kind, list]) => list.map((field) => `${kind}.${field}`))
+      .sort(),
+  );
+  /** Each field under each purpose: its text, or the refusal's status and code. */
+  const read = async () => {
+    const answers: Record<string, unknown> = {};
+    for (const [asked, json] of Object.entries(places)) {
+      for (const [purpose, proof] of Object.entries({ member_request: mine, fault: of })) {
+        const res = await call(json(proof));
+        const body = (await res.json()) as Answer & Refusal;
+        answers[`${asked} ${purpose}`] = res.status === 200 ? body.text : [res.status, body.error.code];
+      }
+    }
+    return answers;
+  };
+  /** The reads on record of the run's steps and of its task: the operator's feed, and the workspace's audit log. */
+  const onRecord = async () => {
+    const its = (id: unknown) => String(id).includes(runs.sealed) || String(id).includes(w.sealedTaskId);
+    return [
+      (await events()).filter((e) => its(e.data.ref)).length,
+      (await auditLines()).filter((l) => its(l.targetId)).length,
+    ];
+  };
+
+  const before = await read();
+  const held = {
+    "run_step.input": "q: canary-input-s\npassword: ***",
+    "run_step.result": "canary-result-s",
+    "run_step.narration": "canary-sealed-narration",
+    "run_step.error": "cli_failed: canary-sealed-error",
+    "task.command": "canary-sealed-command",
+    "task.prompt": "canary-sealed-prompt",
+    "task.result": "canary-sealed-result",
+  };
+  for (const [asked, text] of Object.entries(held)) {
+    for (const purpose of ["member_request", "fault"]) {
+      expect({ asked, purpose, text: before[`${asked} ${purpose}`] }).toEqual({ asked, purpose, text });
+    }
+  }
+  expect(await onRecord()).toEqual([14, 14]);
+
+  await forget();
+  await markThreadConfidential(db, { orgId: w.orgId, channelId: w.generalId, rootId: root });
+  const kept = (key: string, was: unknown) => {
+    const kind = key.split(".")[0];
+    if (kind === "run_step" || kind === "task") return [403, "reveal.confidential"];
+    return kind === "message" ? CONFIDENTIAL_STUB : was;
+  };
+  expect(await read()).toEqual(Object.fromEntries(Object.entries(before).map(([key, was]) => [key, kept(key, was)])));
+  // Refused before the record: nothing says a step or the task was read.
+  expect(await onRecord()).toEqual([0, 0]);
+
+  // Told only where the proof holds, and never of a record the caller could not find: a step the run doesn't have,
+  // a field the step doesn't have and another workspace's confidential run are the 404 they were.
+  expect(await outcome(step(runs.sealed, 1, "input", { runId: runs.clean }))).toEqual([403, "reveal.no_fault"]);
+  const [foreign] = await db
+    .select({ channelId: schema.agentRuns.channelId })
+    .from(schema.agentRuns)
+    .where(eq(schema.agentRuns.id, runs.foreign));
+  await markThreadConfidential(db, {
+    orgId: w.otherOrgId,
+    channelId: foreign?.channelId ?? "",
+    rootId: messages.foreign,
+  });
+  const nobody = await (await call(ask("message", UNKNOWN, "text", mine))).text();
+  for (const json of [
+    step(runs.sealed, 99, "input", mine),
+    step(runs.sealed, 1, "narration", of),
+    step(runs.foreign, 1, "input", mine),
+    step(runs.foreign, 1, "input", { runId: runs.foreign }),
+  ]) {
+    const res = await call(json);
+    expect({ json, status: res.status, body: (await res.text()).replace(String(json.id), UNKNOWN) }).toEqual({
+      json,
+      status: 404,
+      body: nobody,
+    });
+  }
+});
+
+test("a task the server started again by itself is its first task's run's: a confidential thread keeps it after any number of restarts", async () => {
+  const mine = { requestId: requests.owner };
+  const read = async () => {
+    const answers: unknown[] = [];
+    for (const field of REVEAL_FIELDS.task) {
+      const res = await call(ask("task", w.againTaskId, field, mine));
+      const body = (await res.json()) as Answer & Refusal;
+      answers.push(res.status === 200 ? body.text : [res.status, body.error.code]);
+    }
+    return answers;
+  };
+  // It has no run of its own: no run's fault opens it, whatever its thread.
+  const fault = ask("task", w.againTaskId, "command", { runId: runs.again });
+  expect(await read()).toEqual(["canary-again-command", "canary-again-prompt", "canary-again-result"]);
+  expect(await outcome(fault)).toEqual([403, "reveal.not_the_fault"]);
+
+  await forget();
+  await markThreadConfidential(db, { orgId: w.orgId, channelId: w.generalId, rootId: asking.get(runs.again) ?? "" });
+  expect(await read()).toEqual(REVEAL_FIELDS.task.map(() => [403, "reveal.confidential"]));
+  expect(await outcome(fault)).toEqual([403, "reveal.not_the_fault"]);
+  expect([await events(), await auditLines()]).toEqual([[], []]);
+});
+
+test("a message of a confidential thread that is not sealed yet reads as the stub, under both purposes", async () => {
+  const root = asking.get(runs.sealed) ?? "";
+  await markThreadConfidential(db, { orgId: w.orgId, channelId: w.generalId, rootId: root });
+  // As a message written while the mark was being committed is stored: in the thread, with its words.
+  const [reply] = await db
+    .insert(schema.messages)
+    .values({
+      orgId: w.orgId,
+      channelId: w.generalId,
+      threadId: root,
+      authorType: "agent",
+      authorAgentId: w.devId,
+      agentRunId: runs.sealed,
+      body: "canary-unsealed reply",
+    })
+    .returning({ id: schema.messages.id, body: schema.messages.body });
+  expect(reply?.body).toBe("canary-unsealed reply");
+  for (const proof of [{ requestId: requests.owner }, { runId: runs.sealed }]) {
+    expect(await text(ask("message", reply?.id ?? "", "text", proof))).toBe(CONFIDENTIAL_STUB);
+  }
+  // A message of any other thread reads as it is stored.
+  expect(await text(ask("message", messages.secret, "text", { requestId: requests.owner }))).toBe(
+    "canary-secret plans",
+  );
 });
 
 test("a canary in every text column of the database: each answer holds its own field's and no other", async () => {

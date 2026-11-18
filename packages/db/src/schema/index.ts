@@ -24,6 +24,7 @@ export * from "./runtime";
 export * from "./sandbox";
 export * from "./skills";
 export * from "./storage";
+export * from "./surfaces";
 export * from "./team-actions";
 export * from "./telemetry";
 export * from "./tenancy";

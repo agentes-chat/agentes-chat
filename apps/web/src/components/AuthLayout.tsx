@@ -31,7 +31,7 @@ export function AuthShell({ children, languages = true }: { children: ReactNode;
       )}
       <main className="auth__col" ref={col}>
         {children}
-        {host && (
+        {host?.poweredBy && (
           <p className="auth__powered">
             <a className="ac-link" href={DOCS_SITE}>
               {t("auth.poweredBy")}

@@ -500,10 +500,10 @@ export function agentRoutes(deps: AppDeps) {
               .object({ models: z.array(z.string().min(1).max(200)).min(1).max(100) })
               .optional()
               .openapi({
-                description: "`openrouter` only: the models this workspace chooses to use with the key (ADR 0187).",
+                description: "`openrouter` only: the models this workspace chooses to use with the key (ADR 0199).",
               }),
             syncEfforts: z.boolean().optional().openapi({
-              description: "`custom` only: check each model's effort levels in the background (ADR 0187).",
+              description: "`custom` only: check each model's effort levels in the background (ADR 0199).",
             }),
           }),
         ),
@@ -578,7 +578,7 @@ export function agentRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/credentials/openrouter-models",
       tags,
       security,
-      summary: "OpenRouter's models, to choose which ones a key uses (admins, ADR 0187)",
+      summary: "OpenRouter's models, to choose which ones a key uses (admins, ADR 0199)",
       description:
         "Reads OpenRouter's public list with no model call; with a key, it is checked first (`provider_key_invalid`, `provider_key_management`). Batch variants (`:batch`) never appear.",
       request: {
@@ -618,7 +618,7 @@ export function agentRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/credentials/{credentialId}/openrouter-models",
       tags,
       security,
-      summary: "Choose the models an OpenRouter key uses (admins, ADR 0187)",
+      summary: "Choose the models an OpenRouter key uses (admins, ADR 0199)",
       description:
         "The pickers and Automático offer those alone. Agents already on another of the list's models keep running it.",
       request: {
@@ -640,7 +640,7 @@ export function agentRoutes(deps: AppDeps) {
       path: "/organizations/{orgId}/credentials/{credentialId}/efforts",
       tags,
       security,
-      summary: "Check the effort levels of an endpoint's models, in the background (admins, ADR 0187)",
+      summary: "Check the effort levels of an endpoint's models, in the background (admins, ADR 0199)",
       description:
         "One short call per level and model; the key's owner hears from the right hand when it ends. The credential stays usable meanwhile.",
       request: { params: OrgParams.extend({ credentialId: z.uuid() }) },
@@ -672,7 +672,7 @@ export function agentRoutes(deps: AppDeps) {
             syncEfforts: z
               .boolean()
               .optional()
-              .openapi({ description: "Also check the models' effort levels in the background (ADR 0187)." }),
+              .openapi({ description: "Also check the models' effort levels in the background (ADR 0199)." }),
           }),
         ),
       },

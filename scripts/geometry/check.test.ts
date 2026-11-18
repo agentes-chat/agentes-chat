@@ -109,6 +109,9 @@ describe("geometry check", () => {
       "countfill",
     ])
       expect(SELF_TESTED).toContain(rule);
+    // A button row's state line starts at its name's words, wherever a rule moves it from.
+    for (const twin of ["bad-endline--status", "good-endline"]) expect(fixture).toContain(twin);
+    expect(rules).toContain('side: "status"');
     // A calendar item never covers another: what meets sits beside it.
     expect(SELF_TESTED).toContain("calstack");
     // The working line's stop is at its end before its time comes, not beside its words.

@@ -227,6 +227,13 @@ export interface ComposerProps {
 }
 
 /**
+ * A thumbnail's address: only a local object URL (`blob:`), the only kind the apps make for a picked file, through
+ * `encodeURI` (which leaves such a URL as it is), so nothing from the file can reach the page as markup or as a
+ * script address. Any other address shows the file's icon instead.
+ */
+const thumbnailSrc = (url: string | undefined) => (url?.startsWith("blob:") ? encodeURI(url) : undefined);
+
+/**
  * A file in the composer, as a tile beside the others: an image shows its
  * thumbnail (`preview`, a local object URL); the rest show the type, name and
  * `detail` (the size). A spinner while it uploads, remove.
@@ -243,7 +250,7 @@ export function ComposerFile({
 }: {
   name: string;
   icon?: IconName;
-  /** An image's thumbnail URL. */
+  /** An image's thumbnail: a local object URL (`blob:`). */
   preview?: string;
   /** Under the name ("1,2 MB"). */
   detail?: string;
@@ -259,7 +266,8 @@ export function ComposerFile({
       <Icon name="close" size={14} />
     </button>
   );
-  if (preview) {
+  const src = thumbnailSrc(preview);
+  if (src) {
     return (
       <span
         className="ac-composer__file ac-composer__file--image"
@@ -267,7 +275,7 @@ export function ComposerFile({
         aria-busy={status === "uploading" || undefined}
         title={name}
       >
-        <img src={preview} alt="" />
+        <img src={src} alt="" />
         <span className="ac-visually-hidden">{name}</span>
         {status !== "done" && (
           <span className="ac-composer__file-state" aria-hidden="true">

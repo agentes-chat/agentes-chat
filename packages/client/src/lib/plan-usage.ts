@@ -12,7 +12,15 @@ import type {
   PlanUseKind,
   PlanWindowParts,
 } from "../api/types";
-import { accountSub, accountTitle, groupPlans, ownSignInName, ownSignIns, ownSignInTitle } from "./ai-accounts";
+import {
+  accountSub,
+  accountTitle,
+  groupPlans,
+  orderAccounts,
+  ownSignInName,
+  ownSignIns,
+  ownSignInTitle,
+} from "./ai-accounts";
 import {
   daysBetween,
   firstName,
@@ -278,6 +286,14 @@ export function planWord(
   const text = planMeterText(t, locale, now);
   return plan.state === "limited" ? text.limited(plan.until) : text.almost;
 }
+
+/** Someone else's plan's state in a few words, said too when it is fine ("Com folga"): nothing else on its row says it. */
+export const roomWord = (
+  t: TFunction,
+  locale: string,
+  plan: { state: "ok" | "almost" | "limited"; until: string | null } | null,
+  now = new Date(),
+) => (plan?.state === "ok" ? t("connectAi.have.plenty") : planWord(t, locale, plan, now));
 
 /** A plan's limits are worth a line once a window is known or the plan refused a request: unknown is nothing. */
 const knownLimits = (usage: PlanUsage | null | undefined): usage is PlanUsage =>
@@ -630,8 +646,8 @@ export function usageOrderSections<R extends Pick<PlanAccountInfo, "machineId" |
 ): UsageOrderSection<R>[] {
   const place = new Map<string, { group: AccountOrderGroup; index: number }>();
   for (const group of groups ?? [])
-    group.accounts.forEach((a, index) => {
-      place.set(`${group.machineId}:${group.kind}:${a.id}`, { group, index });
+    orderAccounts(group.accounts).forEach((logins, index) => {
+      for (const a of logins) place.set(`${group.machineId}:${group.kind}:${a.id}`, { group, index });
     });
   const at = (r: R) => (r.accountId ? place.get(`${r.machineId}:${r.kind}:${r.accountId}`) : undefined);
   const count = new Map<AccountOrderGroup, number>();

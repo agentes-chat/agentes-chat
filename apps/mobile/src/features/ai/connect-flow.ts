@@ -51,7 +51,7 @@ export interface KeyDraft {
   /** "Outro provedor" (ADR 0146): the workspace's own endpoint, its own form. */
   custom: boolean;
   text: string;
-  /** OpenRouter: the models this key uses (ADR 0187), chosen before it is saved. */
+  /** OpenRouter: the models this key uses (ADR 0199), chosen before it is saved. */
   models: string[];
 }
 

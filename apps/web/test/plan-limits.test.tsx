@@ -543,6 +543,58 @@ describe("IA e uso › Contas: the order of use at a limit (ADR 0041 §6)", () =
     expect(places().at(-1)?.[1]).toBe("Assinatura corporativa compartilhada da equipe de produto");
   });
 
+  test("an account signed in once per agent is one row with one place; moving it moves all its logins", async () => {
+    const state = onPlans();
+    // Trabalho signed in three times for all agents (a run may move to each), with Pessoal placed between two of them.
+    const team = (id: string, useOrder: number) =>
+      claude(id, "Trabalho", { email: "trabalho@example.com", sameAs: "acct_t1", useOrder, shared: true });
+    await go("settings/usage", state, [
+      team("acct_t1", 0),
+      claude("acct_p", "Pessoal", { useOrder: 1, sameAs: "acct_p" }),
+      team("acct_t2", 2),
+      team("acct_t3", 3),
+    ]);
+    expect(places()).toEqual([
+      ["1", "Trabalho"],
+      ["2", "Pessoal"],
+    ]);
+    await moveDown("Mover Trabalho, número 1 na ordem");
+    expect(state.calls.filter((c) => c.method === "machines.moveAccountInOrder").map((c) => c.args.slice(1))).toEqual([
+      ["acct_t1", 1],
+    ]);
+    expect(places()).toEqual([
+      ["1", "Pessoal"],
+      ["2", "Trabalho"],
+    ]);
+  });
+
+  test("a row that goes by a login with no place moves its account by one of its logins that has one", async () => {
+    const state = onPlans();
+    // Trabalho's first login thinks for one agent alone (no place); its second serves everyone and has one.
+    await go("settings/usage", state, [
+      claude("acct_t1", "Trabalho", { email: "trabalho@example.com", sameAs: "acct_t1", shared: false }),
+      claude("acct_t2", "Trabalho", { email: "trabalho@example.com", sameAs: "acct_t1", useOrder: 1 }),
+      claude("acct_p", "Pessoal", { useOrder: 0, sameAs: "acct_p" }),
+    ]);
+    expect(places()).toEqual([
+      ["1", "Pessoal"],
+      ["2", "Trabalho"],
+    ]);
+    const grip = within(order() as HTMLElement).getByRole("button", { name: "Mover Trabalho, número 2 na ordem" });
+    expect(grip.getAttribute("data-order-grip")).toBe("acct_t1");
+    await click(grip);
+    const menu = screen().getByRole("menu", { name: "Ações" });
+    await act(async () => fireEvent.click(within(menu).getByRole("menuitem", { name: "Mover para cima" })));
+    await settle(6);
+    expect(state.calls.filter((c) => c.method === "machines.moveAccountInOrder").map((c) => c.args.slice(1))).toEqual([
+      ["acct_t2", 0],
+    ]);
+    expect(places()).toEqual([
+      ["1", "Trabalho"],
+      ["2", "Pessoal"],
+    ]);
+  });
+
   test("a drop before another row moves the account there", async () => {
     const state = onPlans();
     await go("settings/usage", state, ORDER);

@@ -11,7 +11,9 @@ const read = (path: string) => readFileSync(join(ROOT, path), "utf8");
 describe("the tabs of a personal workspace", () => {
   test("Threads leaves the bar the system's way, and its list is pushed from You › Work", () => {
     const tabs = read("app/(app)/(main)/(tabs)/_layout.tsx");
-    expect(tabs).toContain('{ name: "threads", glyph: "threads", label: "mobile.tabs.threads", teamOnly: true }');
+    expect(tabs).toMatch(
+      /\{\s*name: "threads",\s*glyph: "threads",\s*label: "mobile\.tabs\.threads",\s*sf: \{[^}]*\},\s*teamOnly: true,\s*\}/,
+    );
     expect(tabs).toContain("hidden={personal && tab.teamOnly === true}");
     // A hidden tab can't be opened: the pushed list lives at /conversations/threads.
     const route = read("app/(app)/(main)/conversations/[kind].tsx");

@@ -1,11 +1,13 @@
 import type { BlobStore, HumanCheck, PubSub, RateLimiter } from "@agenteschat/adapters";
 import type { Config } from "@agenteschat/config";
 import type { Database } from "@agenteschat/db";
-import { type MachineHub, type SessionScreening, safeEqual } from "@agenteschat/engine";
+import { type MachineHub, type SessionScreening, SURFACE_PREFIX, safeEqual } from "@agenteschat/engine";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { apiError, domainErrorResponse, routeOf, validationHook } from "../http/errors";
 import type { Logger } from "../logger";
+import type { AppDeps } from "../routes/app/context";
+import { createSurfaceApp } from "../surface/app";
 import { registerOperatorAccess } from "./access";
 import { registerOperatorAnalytics } from "./analytics";
 import { registerOperatorClaudeAuth } from "./claude-auth";
@@ -40,7 +42,7 @@ export interface OperatorDeps {
   hub?: MachineHub;
   /**
    * The server sends email: a workspace waiting long for its computer is told its owners will be emailed, and
-   * early-access invitations can go out.
+   * early-access invitations and replies to support requests can go out.
    */
   emails?: boolean;
   /** The bot check (ADR 0075), reported by `/health`; absent: `off`. */
@@ -49,6 +51,8 @@ export interface OperatorDeps {
   rateLimiter?: RateLimiter;
   /** Screened sessions (ADR 0076), read through the review door; absent: none, so every one is a 404. */
   sessions?: Pick<SessionScreening, "segment"> | null;
+  /** What the chat surface bridge (ADR 0187) posts and reads with; served only with `SURFACE_BRIDGE_TOKEN`. */
+  surface?: AppDeps;
 }
 
 /**
@@ -116,7 +120,7 @@ export function createOperatorApp(deps: OperatorDeps, token: string, readToken?:
       title: "agentes.chat operator API",
       version: deps.version,
       description:
-        "Workspace and account lookups, what a run did and why a message started one or none, what a workspace connected, recorded, asked and scheduled, what a person was notified of and reaches, the messages no run answered, the job queue, the emails queued to an address and what model calls spent, the times a member asked for help, one piece of what a workspace wrote read with a reason (the reveal door), workspace standing, billing holds and limits (ADR 0079), a workspace's logo and accent color (ADR 0193), the extra hostnames this server answers on with their look (ADR 0194), outside collaborators (ADR 0191), the events feed and review blocks, the workspaces' computers from an external provisioner, who may sign up (the waiting list and early-access invitations, ADR 0078), how new Claude sign-ins for all agents are made (ADR 0150), and how connectors are used (ADR 0103), for the people who run this instance (ADR 0056).",
+        "Workspace and account lookups, what a run did and why a message started one or none, what a workspace connected, recorded, asked and scheduled, what a person was notified of and reaches, the messages no run answered, the job queue, the emails queued to an address and what model calls spent, the times a member asked for help, one piece of what a workspace wrote read with a reason and a member's support request answered by email (the reveal door), workspace standing, billing holds and limits (ADR 0079), a workspace's logo and accent color (ADR 0193), the extra hostnames this server answers on with their look (ADR 0194), outside collaborators (ADR 0191), the events feed and review blocks, the workspaces' computers from an external provisioner, who may sign up (the waiting list and early-access invitations, ADR 0078), how new Claude sign-ins for all agents are made (ADR 0150), and how connectors are used (ADR 0103), for the people who run this instance (ADR 0056).",
     },
     servers: [{ url: OPERATOR_API_PREFIX }],
     security: [{ operator: [] }],
@@ -142,11 +146,29 @@ export function createOperatorApp(deps: OperatorDeps, token: string, readToken?:
   return app;
 }
 
-/** The operator API's own listener, only when `OPERATOR_API_TOKEN` is set: without it nothing listens. */
-export function serveOperatorApi(deps: OperatorDeps, port = deps.config.OPERATOR_API_PORT) {
-  const token = deps.config.OPERATOR_API_TOKEN;
-  if (!token) return null;
+/**
+ * What the operator listener answers: `/api/surface/v1` goes to the chat surface bridge and everything else to the
+ * operator API, each only with its own token set (absent: 404). Null when neither token is set.
+ */
+export function operatorFetch(deps: OperatorDeps): ((req: Request) => Response | Promise<Response>) | null {
+  const { OPERATOR_API_TOKEN: token, SURFACE_BRIDGE_TOKEN: bridgeToken } = deps.config;
+  if (!token && !bridgeToken) return null;
   const { OPERATOR_API_READ_TOKEN, OPERATOR_API_REVEAL_TOKEN } = deps.config;
-  const app = createOperatorApp(deps, token, OPERATOR_API_READ_TOKEN, OPERATOR_API_REVEAL_TOKEN);
-  return Bun.serve({ hostname: deps.config.HOST, port, fetch: (req) => app.fetch(req) });
+  const operator = token ? createOperatorApp(deps, token, OPERATOR_API_READ_TOKEN, OPERATOR_API_REVEAL_TOKEN) : null;
+  const surface = bridgeToken && deps.surface ? createSurfaceApp(deps.surface, bridgeToken, deps.version) : null;
+  const missing = () => Response.json({ error: { code: "not_found", message: "Route not found" } }, { status: 404 });
+  return (req) => {
+    const { pathname } = new URL(req.url);
+    const bridge = pathname === SURFACE_PREFIX || pathname.startsWith(`${SURFACE_PREFIX}/`);
+    const app = bridge ? surface : operator;
+    return app ? app.fetch(req) : missing();
+  };
+}
+
+/** The operator listener, only when `OPERATOR_API_TOKEN` or `SURFACE_BRIDGE_TOKEN` is set: without both nothing listens. */
+export function serveOperatorApi(deps: OperatorDeps, port = deps.config.OPERATOR_API_PORT) {
+  const fetch = operatorFetch(deps);
+  if (!fetch) return null;
+  // The bridge takes a message with its files and a voice note: up to 100 MiB, and room for the multipart framing.
+  return Bun.serve({ hostname: deps.config.HOST, port, fetch, maxRequestBodySize: 101 * 1024 * 1024 });
 }

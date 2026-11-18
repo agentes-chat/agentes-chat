@@ -62,7 +62,7 @@ export function EndpointForm({
   const [listError, setListError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
-  // Models whose effort levels were never checked: the save asks whether to check them (ADR 0187).
+  // Models whose effort levels were never checked: the save asks whether to check them (ADR 0199).
   const [askEffort, setAskEffort] = useState(false);
   const [checkingEfforts, setCheckingEfforts] = useState(false);
   const [saved, setSaved] = useState<{ key: Credential; checks: EndpointCheck[] } | null>(null);

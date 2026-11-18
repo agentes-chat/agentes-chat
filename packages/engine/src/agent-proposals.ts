@@ -301,7 +301,14 @@ async function offerOf(db: Database, at: DraftPlace): Promise<Offer> {
         toolPrefix: connectorConnections.toolPrefix,
       })
       .from(connectorConnections)
-      .where(and(eq(connectorConnections.orgId, at.orgId), isNull(connectorConnections.revokedAt)))
+      // The team's: a person's own connection reaches an agent only from that person's own page or settings.
+      .where(
+        and(
+          eq(connectorConnections.orgId, at.orgId),
+          isNull(connectorConnections.revokedAt),
+          isNull(connectorConnections.ownerUserId),
+        ),
+      )
       .orderBy(asc(connectorConnections.createdAt)),
     at.personId
       ? db

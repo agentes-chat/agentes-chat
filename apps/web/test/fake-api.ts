@@ -99,6 +99,7 @@ import type {
   SpeechKey,
   StoragePlatform,
   StorageUsage,
+  SurfaceLink,
   TaskManagerView,
   TaskSteps,
   TeamProposalCard,
@@ -209,6 +210,21 @@ export interface FakeState {
   roleMailLoss?: Record<string, RoleMailLoss[]>;
   /** Overrides `account.authConfig` (default: GitHub only, sign-up open). */
   authConfig?: Partial<AuthConfig>;
+  /**
+   * The outside chat surface (`surfaces.*`, ADR 0187); unset: the server bridges none. Set, `authConfig.surface` is
+   * true. `undo` is what `surfaces.undo` answers, or the error it throws.
+   */
+  surface?: {
+    name: string;
+    allowed?: boolean;
+    links: SurfaceLink[];
+    mintError?: ApiError;
+    confirmError?: ApiError;
+    removeError?: ApiError;
+    undo?: { unlinked: boolean; display: string | null } | ApiError;
+  };
+  /** Another workspace's agents, by its id (default: `agents`, whatever the workspace). */
+  agentsOf?: Record<string, Agent[]>;
   /** Overrides `account.signInOptions` (default: no account, sign-up allowed). */
   signInOptions?: SignInOptions;
   /** The server `account.phoneSignIn` names (default: https://app.agentes.chat). */
@@ -1621,6 +1637,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         socialProviders: { google: false, github: true },
         signupOpen: true,
         firstRun: false,
+        ...(state.surface ? { surface: true } : {}),
         ...state.authConfig,
       }),
       referralsLink: async (returnTo) => {
@@ -1699,6 +1716,52 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           server: state.phoneServer ?? "https://app.agentes.chat",
           expiresIn: 180,
         };
+      },
+    },
+    surfaces: {
+      list: async () => {
+        log("surfaces.list");
+        const sf = state.surface;
+        return sf
+          ? { surface: { name: sf.name }, allowed: sf.allowed ?? true, links: sf.links }
+          : { surface: null, allowed: false, links: [] };
+      },
+      mintCode: async (orgId) => {
+        log("surfaces.mintCode", orgId);
+        const sf = state.surface;
+        if (!sf) throw new ApiError(404, "surface.off", "Outside chat surfaces are off on this server");
+        if (sf.mintError) throw sf.mintError;
+        const n = state.calls.filter((c) => c.method === "surfaces.mintCode").length;
+        const code = `KQ7M-3XP${n}`;
+        return {
+          code,
+          openUrl: `https://chat.example.com/send?text=${code}`,
+          expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+        };
+      },
+      confirm: async (linkId) => {
+        log("surfaces.confirm", linkId);
+        const sf = state.surface;
+        const link = sf?.links.find((l) => l.id === linkId && l.status === "pending");
+        if (sf?.confirmError) throw sf.confirmError;
+        if (!sf || !link) throw new ApiError(404, "surface.link_gone", "This link is no longer waiting");
+        const active = { ...link, status: "active" as const, confirmedAt: new Date().toISOString(), expiresAt: null };
+        sf.links = [active];
+        return active;
+      },
+      remove: async (linkId) => {
+        log("surfaces.remove", linkId);
+        const sf = state.surface;
+        if (sf?.removeError) throw sf.removeError;
+        if (!sf?.links.some((l) => l.id === linkId)) throw new ApiError(404, "surface.link_gone", "This link is gone");
+        sf.links = sf.links.filter((l) => l.id !== linkId);
+      },
+      undo: async () => {
+        log("surfaces.undo");
+        const undo = state.surface?.undo;
+        if (!undo) throw new ApiError(404, "surface.undo_gone", "This link expired or was already used");
+        if (undo instanceof ApiError) throw undo;
+        return { ...undo, surface: state.surface?.name ?? "" };
       },
     },
     push: {
@@ -2451,8 +2514,8 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           .map((m) => ({ id: m.userId, name: m.name, image: m.image ?? null })),
         consultations: [],
       }),
-      list: async () =>
-        state.agents.map((a) => {
+      list: async (orgId) =>
+        (state.agentsOf?.[orgId] ?? state.agents).map((a) => {
           const mode = a.audience?.mode ?? "everyone";
           const canTalk = talksToMe(a);
           const { monthlyBudgetUsd, ...rest } = a;
@@ -3668,7 +3731,13 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
     },
     connectors: {
       catalog: async () => CATALOG,
-      list: async () => structuredClone(state.connections),
+      // As the backend: the team's and the viewer's own; everyone's with `others`.
+      list: async (_orgId, options) =>
+        structuredClone(
+          state.connections.filter(
+            (c) => options?.others || !c.ownerUserId || c.ownerUserId === (state.me?.user.id ?? null),
+          ),
+        ),
       connectWithKey: async (orgId, input) => {
         log("connectors.connectWithKey", orgId, { ...input, apiKey: "[redacted]" });
         const conn: Connection = {
@@ -3681,6 +3750,7 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
           tokenExpiresAt: null,
           createdAt: new Date().toISOString(),
           revokedAt: null,
+          ...(input.personal ? { ownerUserId: state.me?.user.id ?? null } : {}),
         };
         state.connections.push(conn);
         return conn;
@@ -3699,6 +3769,17 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
         const conn = state.connections.find((c) => c.id === connectionId);
         if (!conn) throw new ApiError(404, "not_found", "Connection not found");
         conn.label = label;
+        return structuredClone(conn);
+      },
+      takeOffAgent: async (orgId, connectionId, agentId) => {
+        log("connectors.takeOffAgent", orgId, connectionId, agentId);
+        state.scopes[agentId] = (state.scopes[agentId] ?? []).filter((g) => g.connectionId !== connectionId);
+      },
+      moveToTeam: async (orgId, connectionId) => {
+        log("connectors.moveToTeam", orgId, connectionId);
+        const conn = state.connections.find((c) => c.id === connectionId);
+        if (!conn) throw new ApiError(404, "not_found", "Connection not found");
+        conn.ownerUserId = null;
         return structuredClone(conn);
       },
       disconnect: async (orgId, connectionId) => {
@@ -4189,15 +4270,23 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
     (orgId, id) => machines.client.remove(orgId, id),
   );
   const agentIds = async (orgId: string) => (await http.agents.list(orgId)).map((a) => a.id);
+  const ownAgentIds = async (orgId: string) =>
+    (await http.agents.list(orgId)).filter((a) => a.ownerUserId === state.me?.user.id).map((a) => a.id);
   const customConnectors = createMockCustomConnectors(
     ctx,
     (method, ...args) => state.calls.push({ method, args }),
-    async (orgId, serverId) => access.connected(serverId, await agentIds(orgId)),
+    async (orgId, serverId) => {
+      // A personal account goes on for its person's own agents, a team one for every agent.
+      const server = (await customConnectors.list(orgId)).find((x) => x.id === serverId);
+      access.connected(serverId, server?.ownerUserId ? await ownAgentIds(orgId) : await agentIds(orgId));
+    },
+    () => state.me?.user.id ?? null,
   );
   const access = createFakeAccess(
-    (orgId) => http.connectors.list(orgId),
+    (orgId, options) => http.connectors.list(orgId, options),
     (method, ...args) => state.calls.push({ method, args }),
-    (orgId) => customConnectors.list(orgId),
+    (orgId, options) => customConnectors.list(orgId, options),
+    () => state.me?.user.id ?? null,
   );
   const mail = createFakeMail(
     (method, ...args) => state.calls.push({ method, args }),
@@ -4242,8 +4331,20 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
       },
     ),
     access,
+    // Someone else's personal server comes with the agents that hold it, as the backend lists it with `others`.
+    customConnectors: {
+      ...customConnectors,
+      list: async (orgId, options) =>
+        (await customConnectors.list(orgId, options)).map((x) =>
+          x.ownerUserId && x.ownerUserId !== state.me?.user.id ? { ...x, agentIds: access.holders(x.id) } : x,
+        ),
+    },
     connectors: {
       ...http.connectors,
+      takeOffAgent: async (orgId, connectionId, agentId) => {
+        await http.connectors.takeOffAgent(orgId, connectionId, agentId);
+        access.takeOff(connectionId, agentId);
+      },
       // Any kind: a server's account or a catalog connection. Names are unique in the workspace.
       rename: async (orgId, connectionId, label) => {
         const name = label.trim();
@@ -4269,9 +4370,11 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
       },
       // A first connection of a connector is every agent's (a new key for it keeps their grants).
       connectWithKey: async (orgId, input) => {
-        const first = !(await http.connectors.list(orgId)).some((c) => c.connector === input.connector);
+        const first = !(await http.connectors.list(orgId)).some(
+          (c) => c.connector === input.connector && !c.ownerUserId === !input.personal,
+        );
         const connection = await http.connectors.connectWithKey(orgId, input);
-        if (first) access.connected(connection.id, await agentIds(orgId));
+        if (first) access.connected(connection.id, input.personal ? await ownAgentIds(orgId) : await agentIds(orgId));
         return connection;
       },
     },
@@ -4452,7 +4555,6 @@ export function createFakeApi(state: FakeState = seedState(), options: { seed?: 
     ),
     artifacts,
     ...createMockPlanning(ctx, (method, ...args) => state.calls.push({ method, args })),
-    customConnectors,
     mail: mail.client,
     databases: databases.client,
     dashboards: dashboards.client,

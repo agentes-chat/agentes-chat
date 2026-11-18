@@ -1,13 +1,15 @@
-import { and, type Database, eq, gt, isNull, rowsOf, schema, sql } from "@agenteschat/db";
+import { and, type Database, type Executor, eq, gt, isNull, rowsOf, schema, sql } from "@agenteschat/db";
+import { othersPersonalTools } from "./agent-audit";
 import { requireAgentDetails } from "./audience";
 import { recordAudit } from "./audit";
 import { readableChannelIds, requireChannelAccess } from "./channels";
+import { CONFIDENTIAL_STUB, confidentialThreadSql } from "./confidential";
 import { ConflictError, ForbiddenError, NotFoundError, TooManyError, ValidationError } from "./errors";
 import { cutText, pgSafeText } from "./format";
 import { requireUsageAccess } from "./management";
 import { recordContentViewed } from "./operator-events";
 import { listedOf } from "./operator-paging";
-import { inputLines, keptText } from "./operator-review";
+import { inputLines, keptText, taskRunSql } from "./operator-review";
 import { runShownSql } from "./operator-runs";
 import { getMembership, requirePermission } from "./organizations";
 import { ROUTINE_ROOM_PREFIX } from "./routine-brief";
@@ -69,6 +71,12 @@ export const REVEAL_STUCK_MS = 60 * 60_000;
 /** The door's own bounds, for an instance with nothing in front of it: calls a minute, and reads of one workspace a day. */
 export const REVEAL_PER_MINUTE = { limit: 30, windowMs: 60_000 } as const;
 export const REVEAL_PER_WORKSPACE_DAY = 100;
+/** The sentences a reply to a support request can say in core's own words (`operatorReply`). */
+export const REPLY_TEMPLATES = ["received", "need_more", "resolved", "handed_over"] as const;
+export type ReplyTemplate = (typeof REPLY_TEMPLATES)[number];
+/** A reply's bounds: how many one request gets, and how many the instance sends in a day. */
+export const REPLIES_PER_REQUEST = 3;
+export const REPLIES_PER_DAY = 60;
 
 const DAY_MS = 86_400_000;
 
@@ -129,6 +137,16 @@ function checkShape(input: RevealInput) {
 
 const refused = (code: string, message: string) => new ForbiddenError(message, `reveal.${code}`);
 
+/** One answer for a record of another workspace, a deleted one and one nobody has. */
+export const noSuchRecord = () => new NotFoundError("No such record in this workspace");
+
+/** Who made a support request is still a member the app lets in: not gone, blocked or being deleted. */
+export async function requireRequester(db: Executor, orgId: string, userId: string) {
+  if (!(await getMembership(db, userId, orgId))) {
+    throw refused("requester", "Who asked is no longer a member of this workspace");
+  }
+}
+
 /** The app's own check, asked as a question: its refusal is a no, anything else it throws is not an answer. */
 async function passes(check: () => Promise<unknown>) {
   try {
@@ -155,6 +173,11 @@ interface FaultRun {
 interface Found {
   /** It is of a direct conversation. */
   direct: boolean;
+  /**
+   * It holds what a run of a confidential thread read or wrote (ADR 0190): the run's step, a task it started, a task
+   * the server started again from that one.
+   */
+  confidential: boolean;
   /** The field holds text (measured in the database). */
   has: boolean;
   /** Whether this member reads it in the app now. */
@@ -198,6 +221,13 @@ const conversationStands = (channelId: string) =>
   sql<boolean>`not exists (
     select 1 from ${channels} c where c.id = ${sql.raw(channelId)} and c.deleted_at is not null)`;
 const filled = (column: unknown) => sql<boolean>`coalesce(length(${column}), 0) > 0`;
+/** Whether the run aliased `r` is of a confidential thread, as the run review asks it. */
+const confidentialRun = confidentialThreadSql(sql`r.org_id`, sql`r.thread_root_id`);
+/** Whether a message is of a confidential thread: the one it answers in, or the one it starts. */
+const confidentialMessage = confidentialThreadSql(
+  sql`${messages.orgId}`,
+  sql`coalesce(${messages.threadId}, ${messages.id})`,
+);
 
 /** Who the app gives a run's steps to: who may see the agent's runs, and reads the conversation it ran in. */
 const readsRunsOf = async (db: Database, orgId: string, userId: string, agentId: string, channelId: string) =>
@@ -223,10 +253,21 @@ const findMessage: Find = async (db, orgId, { id }) => {
   if (!m) return null;
   return {
     ...m,
+    // Never refused: of a confidential thread `text` reads the stub, whatever is stored (one written while the
+    // thread's mark was being committed keeps its words until `sealStragglers` seals it).
+    confidential: false,
     failure: false,
     seenBy: (userId) => passes(() => requireChannelAccess(db, userId, orgId, m.channelId)),
     ofRun: (run) => id === run.triggerMessageId || m.agentRunId === run.id,
-    text: async () => (await db.select({ text: messages.body }).from(messages).where(where))[0]?.text ?? null,
+    text: async () =>
+      (
+        await db
+          .select({
+            text: sql<string>`case when ${confidentialMessage} then ${CONFIDENTIAL_STUB} else ${messages.body} end`,
+          })
+          .from(messages)
+          .where(where)
+      )[0]?.text ?? null,
   };
 };
 
@@ -244,13 +285,16 @@ const findStep: Find = async (db, orgId, { id, seq, field }) => {
     agent_id: string;
     channel_id: string;
     direct: boolean;
+    confidential: boolean;
     kind: string;
+    name: string | null;
     failed: boolean;
     result_failed: boolean;
     narrated: boolean;
   }>(
-    await db.execute(sql`select r.agent_id, r.channel_id, s.kind,
+    await db.execute(sql`select r.agent_id, r.channel_id, s.kind, s.data->>'name' as name,
         ${directOf("r.channel_id", "r.trigger_message_id")} as direct,
+        ${confidentialRun} as confidential,
         (s.kind = 'error' or (s.kind = 'tool_result' and s.data->'isError' = 'true'::jsonb)) as failed,
         (s.kind = 'tool_call' and exists (select 1 from ${agentRunSteps} o where o.run_id = s.run_id
           and o.kind = 'tool_result' and o.data->>'toolUseId' = s.data->>'toolUseId'
@@ -264,9 +308,13 @@ const findStep: Find = async (db, orgId, { id, seq, field }) => {
   const has = { input: s.kind === "tool_call", result: s.kind === "tool_result", narration: s.narrated }[field];
   return {
     direct: s.direct,
+    confidential: s.confidential,
     has: has ?? s.failed,
     failure: field === "error" ? s.failed : field === "input" && s.result_failed,
-    seenBy: (userId) => readsRunsOf(db, orgId, userId, s.agent_id, s.channel_id),
+    // A call in someone else's own connection shows them its name alone (`getRun`).
+    seenBy: async (userId) =>
+      (await readsRunsOf(db, orgId, userId, s.agent_id, s.channel_id)) &&
+      !(s.name && (await othersPersonalTools(db, orgId, id, userId)).has(s.name)),
     ofRun: (run) => id === run.id,
     text: async () => {
       const [step] = await db
@@ -287,6 +335,7 @@ const findAgent: Find = async (db, orgId, { id }) => {
   if (!a) return null;
   return {
     direct: false,
+    confidential: false,
     has: a.has,
     failure: false,
     seenBy: (userId) => passes(() => requireAgentDetails(db, userId, orgId, id)),
@@ -305,6 +354,7 @@ const findRoutine: Find = async (db, orgId, { id, field }) => {
   if (!r) return null;
   return {
     direct: false,
+    confidential: false,
     has: r.has,
     failure: false,
     // The app shows a routine's name to whoever sees it, and its instructions only to who reads it.
@@ -339,6 +389,8 @@ const findTask: Find = async (db, orgId, { id, field }) => {
       channelId: machineTasks.channelId,
       runId: machineTasks.runId,
       direct: directOf('"machine_tasks"."channel_id"', firingOf('"machine_tasks"."run_id"')),
+      confidential: sql<boolean>`exists (
+        select 1 from ${agentRuns} r where r.id = ${taskRunSql(sql`"machine_tasks"."id"`)} and ${confidentialRun})`,
       has: filled(column),
     })
     .from(machineTasks)
@@ -346,6 +398,7 @@ const findTask: Find = async (db, orgId, { id, field }) => {
   if (!t) return null;
   return {
     direct: t.direct,
+    confidential: t.confidential,
     has: t.has,
     failure: false,
     // What a task was told to do and what it answered are its run's own words: the app shows them in the run's
@@ -371,6 +424,7 @@ const findChannel: Find = async (db, orgId, { id }) => {
   if (!c) return null;
   return {
     direct: false,
+    confidential: false,
     has: c.has,
     failure: false,
     seenBy: (userId) => passes(() => requireChannelAccess(db, userId, orgId, id)),
@@ -394,15 +448,18 @@ const findConnection: Find = async (db, orgId, { id, field }) => {
   if (!column) return null;
   const where = and(eq(cc.id, id), eq(cc.orgId, orgId), isNull(cc.revokedAt));
   const [c] = await db
-    .select({ has: filled(column) })
+    .select({ has: filled(column), owner: cc.ownerUserId })
     .from(cc)
     .where(where);
   if (!c) return null;
   return {
     direct: false,
+    confidential: false,
     has: c.has,
     failure: false,
-    seenBy: (userId) => passes(() => requirePermission(db, userId, orgId, "read")),
+    // A person's own connection is opened by that person alone (ADR 0099 addendum).
+    seenBy: async (userId) =>
+      c.owner ? c.owner === userId : passes(() => requirePermission(db, userId, orgId, "read")),
     ofRun: () => false,
     text: async () => {
       const text = (await db.select({ text: column }).from(cc).where(where))[0]?.text ?? null;
@@ -421,6 +478,7 @@ const findSupportRequest: Find = async (db, orgId, { id, field, requestId }) => 
   if (!r) return null;
   return {
     direct: false,
+    confidential: false,
     has: r.has,
     failure: false,
     // Its own request opens it, and no other member's does.
@@ -530,9 +588,7 @@ async function checkFault(db: Database, orgId: string, input: RevealInput, found
 /** `member_request`: the request is this workspace's and young, its member is still one, and reads the record now. */
 async function checkMemberRequest(db: Database, orgId: string, input: RevealInput, found: Found, now: Date) {
   const request = await openRequest(db, orgId, input.requestId ?? "", now);
-  if (!(await getMembership(db, request.userId, orgId))) {
-    throw refused("requester", "Who asked is no longer a member of this workspace");
-  }
+  await requireRequester(db, orgId, request.userId);
   if (!(await found.seenBy(request.userId))) {
     throw refused("not_visible", "Who asked can't read this in the app");
   }
@@ -559,7 +615,8 @@ async function readsToday(db: Database, orgId: string, now: Date) {
 /**
  * Reads one field of one record of a workspace for its operator. In order: the request's shape; the workspace's
  * day; the record, in this workspace and not deleted (one answer for another workspace's and for nobody's); the
- * purpose's proof; the record of the read, committed; and only then the text, masked whole and cut.
+ * purpose's proof; whether a confidential thread keeps it (ADR 0190); the record of the read, committed; and only
+ * then the text, masked whole and cut.
  */
 export async function operatorReveal(
   db: Database,
@@ -581,12 +638,16 @@ export async function operatorReveal(
   if (found && !found.has && anError) {
     throw new ConflictError("Nothing failed there: it holds no error", "reveal.no_error");
   }
-  if (!found?.has) throw new NotFoundError("No such record in this workspace");
+  if (!found?.has) throw noSuchRecord();
 
   const { member, facts } =
     input.purpose === "fault"
       ? await checkFault(db, orgId, input, found, now)
       : await checkMemberRequest(db, orgId, input, found, now);
+  // Told only to a caller whose proof holds, as a direct conversation is.
+  if (found.confidential) {
+    throw refused("confidential", "What a run of a confidential thread holds is read only in that thread");
+  }
 
   const { kind, id, seq, field, offset, limit, purpose, assistedByAi } = input;
   await db.transaction(async (tx) => {

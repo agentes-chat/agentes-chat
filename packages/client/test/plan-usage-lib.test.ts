@@ -598,6 +598,21 @@ describe("usageOrderSections: the usage list by order of use", () => {
     expect(ids(usageOrderSections(rows, [group("m1", "claude_code", ["a", "z"])]))).toEqual([[null, ["a", "b"]]]);
     expect(ids(usageOrderSections(rows, undefined))).toEqual([[null, ["a", "b"]]]);
   });
+
+  test("a row stands at its account's place, whichever of the account's logins it goes by", () => {
+    const placed: AccountOrderGroup = {
+      machineId: "m1",
+      computer: "MacBook",
+      kind: "claude_code",
+      accounts: [
+        { id: "t1", sameAs: "t1" },
+        { id: "p", sameAs: "p" },
+        { id: "t2", sameAs: "t1" },
+      ] as AccountOrderGroup["accounts"],
+    };
+    const rows = [row("m1", "claude_code", "p"), row("m1", "claude_code", "t2")];
+    expect(ids(usageOrderSections(rows, [placed]))).toEqual([["m1:claude_code", ["t2", "p"]]]);
+  });
 });
 
 describe("an account's use by kind", () => {

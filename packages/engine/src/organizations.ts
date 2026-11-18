@@ -9,6 +9,7 @@ import {
   eq,
   gt,
   inArray,
+  isNotNull,
   isNull,
   ne,
   not,
@@ -1299,6 +1300,7 @@ async function takeOut(
   const { wakeAgentsBrainWaits } = await import("./usage-pause");
   const { cancelMailboxApprovals, publishApproval } = await import("./approvals");
   const { dropMailOfOwner } = await import("./tools/scopes");
+  const { dropPersonalConnections, forgetConnectionCaches } = await import("./connectors/connections");
   const { removeSeat } = await import("./right-hand-seats");
   const { dropMemberDashboards } = await import("./dashboards/service");
   const { released, removed, handed, changed, heir, secrets, mailActions, toApi, tasks } = await db.transaction(
@@ -1417,6 +1419,8 @@ async function takeOut(
       }
       // No agent goes on reading or sending in their name: their mailboxes leave every agent, and what waits to run there doesn't.
       await dropMailOfOwner(tx, orgId, targetUserId, actorId);
+      // Their personal connections go with them (ADR 0099 addendum).
+      await dropPersonalConnections(tx, orgId, targetUserId, actorId);
       // Their place on the workspace's computer for the right hand goes too (ADR 0175): coming back starts a new one.
       await removeSeat(tx, orgId, targetUserId);
       const mailActions = await cancelMailboxApprovals(tx, orgId, targetUserId, actorId);
@@ -1434,6 +1438,7 @@ async function takeOut(
       return { released, removed, handed, changed, heir, secrets, mailActions, toApi, tasks };
     },
   );
+  forgetConnectionCaches(orgId);
   if (tasks.length > 0) {
     const { unassignGone } = await import("./issues");
     await unassignGone({ db, pubsub: options.pubsub }, orgId, { type: "person", id: targetUserId }, tasks).catch(
@@ -1526,6 +1531,7 @@ export async function deleteAccount(
     await import("./workspace-deletion");
   const { cancelMailboxApprovals, publishApproval } = await import("./approvals");
   const { dropMailOfOwner } = await import("./tools/scopes");
+  const { dropPersonalConnections, forgetConnectionCaches } = await import("./connectors/connections");
   const { removeSeat } = await import("./right-hand-seats");
   const { wakeAgentsBrainWaits } = await import("./usage-pause");
   const done = await db.transaction(async (tx) => {
@@ -1563,6 +1569,8 @@ export async function deleteAccount(
       // They leave every task they were on, as someone removed from a workspace does (ADR 0188).
       await dropAssignee(tx, m.orgId, { type: "person", id: userId });
       await dropMailOfOwner(tx, m.orgId, userId, userId);
+      // Before the user row: the foreign key would delete their connections with no audit and no adapter forget.
+      await dropPersonalConnections(tx, m.orgId, userId, userId);
       await removeSeat(tx, m.orgId, userId);
       mailActions.push(...(await cancelMailboxApprovals(tx, m.orgId, userId, userId)));
     }
@@ -1575,6 +1583,21 @@ export async function deleteAccount(
       });
       if (outsideOf) await recordOperatorEvent(tx, { type: "outside_access.ended", orgId: org.id, data: { userId } });
     }
+    // Their outside requests not yet told as over go with the account (the rows cascade): the operator hears it once.
+    const outsideAsks = await tx
+      .select({ orgId: organizationJoinRequests.orgId })
+      .from(organizationJoinRequests)
+      .where(
+        and(
+          eq(organizationJoinRequests.userId, userId),
+          eq(organizationJoinRequests.status, "pending"),
+          isNotNull(organizationJoinRequests.outsideOf),
+        ),
+      );
+    await recordOperatorEvent(
+      tx,
+      ...outsideAsks.map((r) => ({ type: "outside_access.ended" as const, orgId: r.orgId, data: { userId } })),
+    );
     const removed = [];
     for (const computer of plan.computers) {
       const freed = await detachMachine(tx, { ...computer, kind: "connected" });
@@ -1627,6 +1650,7 @@ export async function deleteAccount(
   });
   if (!done) return false;
   const { plan, closed, released, removed, mailActions, ownerless } = done;
+  for (const org of [...plan.leaves, ...plan.closes]) forgetConnectionCaches(org.id);
   for (const row of mailActions) await publishApproval({ db, pubsub: options.pubsub }, row, "approval.decided");
   await announceReleasedAccounts({ db, pubsub: options.pubsub }, released);
   for (const { computer, freed } of removed) {

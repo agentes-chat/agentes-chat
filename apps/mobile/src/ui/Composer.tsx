@@ -40,12 +40,14 @@ import Animated, {
   useDerivedValue,
   useSharedValue,
   withDelay,
+  withSequence,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { PixelStop } from "@/agent/PixelMarks";
 import { readValueSync, STORED, writeValueSync } from "@/lib/storage";
+import { FADE_OUT, RISE_IN } from "./entrances";
 import { Glass } from "./Glass";
 import { haptics } from "./haptics";
 import { Icon } from "./Icon";
@@ -155,6 +157,8 @@ export interface ComposerProps {
     send: ((text: string) => Promise<boolean>) | null;
     above: ReactNode | null;
     active: boolean;
+    /** Goes up each time a take was too short: the field shakes, as a refused entry does. */
+    nope?: number;
   } | null;
 }
 
@@ -265,6 +269,20 @@ const sameToken = (a: ComposerToken | null, b: ComposerToken | null) =>
   a === b || (a !== null && b !== null && a.start === b.start && a.query === b.query && a.sigil === b.sigil);
 
 /**
+ * The field's shake each time `count` goes up (a voice take too short to send): a few points either way, settling,
+ * on the UI thread; none with Reduce Motion.
+ */
+function useShake(count: number, reduced: boolean) {
+  const shake = useSharedValue(0);
+  useEffect(() => {
+    if (!count || reduced) return;
+    const step = (to: number, duration: number) => withTiming(to, { duration, easing: Easing.linear });
+    shake.set(withSequence(step(-6, 45), step(6, 70), step(-4, 60), step(3, 50), step(0, 45)));
+  }, [count, reduced, shake]);
+  return useAnimatedStyle(() => ({ transform: [{ translateX: shake.get() }] }));
+}
+
+/**
  * The center of the app: a round glass "+" for attachments and actions,
  * then the field, a raised pill; with text, the round ink send button comes in. One line keeps "+", text and send on the
  * same center line; longer text grows the pill upward and everything stays at the bottom. GIFs and stickers (`media`)
@@ -364,6 +382,8 @@ export function Composer({
   const mediaButton = media && !has ? media : null;
   // Files waiting don't take it away: a take started then goes with them.
   const mic = voice && !typed ? voice.mic : null;
+  // A take too short to send: the field shakes once, as a refused entry does (with the haptic and the line saying so).
+  const shakeStyle = useShake(voice?.nope ?? 0, reducedMotion);
 
   // Words set from here leave no words selected. iOS reports no selection change for text set from code, so what
   // was selected before stayed "selected": the formatting bar floated over the field emptied by a send.
@@ -564,13 +584,17 @@ export function Composer({
       ) : null}
       {voice?.above ?? null}
       {voice?.bar ? (
-        <View style={[styles.bar, { backgroundColor: colors.raised, boxShadow: FIELD_SHADOW(colors.line2) }]}>
+        <Animated.View
+          entering={reducedMotion ? undefined : RISE_IN}
+          exiting={reducedMotion ? undefined : FADE_OUT}
+          style={[styles.bar, { backgroundColor: colors.raised, boxShadow: FIELD_SHADOW(colors.line2) }]}
+        >
           {voice.bar}
-        </View>
+        </Animated.View>
       ) : null}
       <View style={styles.row}>
         {onPlus ? <PlusButton label={t("mobile.a11y.attach")} onPress={onPlus} /> : null}
-        <View
+        <Animated.View
           style={[
             styles.field,
             {
@@ -578,6 +602,7 @@ export function Composer({
               boxShadow: FIELD_SHADOW(colors.line2),
               paddingRight: button || mediaButton || mic ? INSET : 14,
             },
+            shakeStyle,
           ]}
         >
           {/* What goes with the message: a row of its own across the field, over the words and the send button. */}
@@ -653,7 +678,7 @@ export function Composer({
           ) : null}
           {voice?.overlay ?? null}
           {mic ? <View style={styles.micBox}>{mic}</View> : null}
-        </View>
+        </Animated.View>
       </View>
     </View>
   );

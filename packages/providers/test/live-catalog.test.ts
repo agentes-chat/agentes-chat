@@ -19,8 +19,8 @@ afterEach(() => {
 const SAMPLE_API = {
   openai: {
     models: {
-      "gpt-6.2-astra": {
-        id: "gpt-6.2-astra",
+      "gpt-6.9-nova": {
+        id: "gpt-6.9-nova",
         name: "GPT-6.2 Astra",
         tool_call: true,
         reasoning: true,
@@ -114,25 +114,25 @@ describe("live-catalog (models.dev)", () => {
   test("stays offline until enableLiveCatalog is called", async () => {
     await ensureLiveCatalog();
     expect(liveCatalogLoaded()).toBe(false);
-    expect(modelInfo("gpt-6.2-astra")).toBeUndefined();
+    expect(modelInfo("gpt-6.9-nova")).toBeUndefined();
   });
 
   test("parses frontier models, efforts, pricing tiers, fast mode, and xAI efforts", () => {
     const parsed = parseModelsDevCatalog(SAMPLE_API);
     const ids = parsed.active.map(([id]) => id);
-    expect(ids).toContain("gpt-6.2-astra");
+    expect(ids).toContain("gpt-6.9-nova");
     expect(ids).toContain("claude-fable-5-2");
     expect(ids).toContain("gemini-4-hydrogen");
     expect(ids).not.toContain("gpt-realtime-2.1");
 
     const terra = parsed.known.get("gpt-6.1-terra");
     expect(terra?.efforts).toEqual(["none", "low", "medium", "high", "xhigh", "max"]);
-    expect(parsed.known.get("gpt-6.2-astra")?.longContext).toEqual({
+    expect(parsed.known.get("gpt-6.9-nova")?.longContext).toEqual({
       aboveInputTokens: 272_000,
       prices: { input: 16_000, output: 60_000, cacheRead: 800, cacheWrite: 20_000 },
     });
     expect(parsed.xaiEfforts.get("grok-4.7")).toEqual(["low", "medium", "high", "xhigh"]);
-    expect(parsed.fastModels).toEqual(["gpt-6.2-astra", "gpt-6.1-terra"]);
+    expect(parsed.fastModels).toEqual(["gpt-6.9-nova", "gpt-6.1-terra"]);
   });
 
   test("populates listedModels, modelInfo, xaiLiveEffortsOf, and speedFits when enabled", async () => {
@@ -142,15 +142,15 @@ describe("live-catalog (models.dev)", () => {
       return new Response(JSON.stringify(SAMPLE_API), { status: 200 });
     }) as unknown as typeof fetch);
 
-    await Promise.all([ensureLiveCatalog(), ensureLiveCatalog("gpt-6.2-astra")]);
+    await Promise.all([ensureLiveCatalog(), ensureLiveCatalog("gpt-6.9-nova")]);
     expect(reads).toBe(1);
     expect(liveCatalogLoaded()).toBe(true);
-    expect(modelInfo("gpt-6.2-astra")?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
+    expect(modelInfo("gpt-6.9-nova")?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
     expect(modelInfo("gemini-4-hydrogen")?.efforts).toEqual(["low", "medium", "high", "xhigh"]);
     expect(listedModels().some(([id]) => id === "claude-fable-5-2")).toBe(true);
     // Preserves static catalog recommended/tier flags on merged entries
-    expect(modelInfo("gpt-6.1-sol")?.recommended).toBe(true);
+    expect(modelInfo("gpt-6.2-sol")?.recommended).toBe(true);
     expect(xaiLiveEffortsOf("grok-4.7")).toEqual(["low", "medium", "high", "xhigh"]);
-    expect(speedFits({ kind: "codex", model: "gpt-6.2-astra" })).toBe(true);
+    expect(speedFits({ kind: "codex", model: "gpt-6.9-nova" })).toBe(true);
   });
 });

@@ -412,7 +412,7 @@ function toMessages(request: ModelRequest, claude: boolean): Message[] {
 
 function toBody(request: ModelRequest, compatible: boolean) {
   const claude = !compatible && isClaude(request.model);
-  // A probe (ADR 0187) sends the level itself; otherwise the nearest one the model takes.
+  // A probe (ADR 0199) sends the level itself; otherwise the nearest one the model takes.
   const exact =
     request.exactEffort && request.effort
       ? request.effort === "none"

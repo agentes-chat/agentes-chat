@@ -249,7 +249,8 @@ describe("Quem pensa: a coding plan's models", () => {
     expect(brainScreen(d)).toBe("Modelo da Ada");
     expect(within(d).getByRole("radiogroup", { name: "Modelo da Ada" })).toBeTruthy();
     const rows = brainRows(d);
-    expect(rows).toHaveLength(32);
+    // Automatic and the 32 models of Go's list.
+    expect(rows).toHaveLength(33);
     expect(rowsOf(d).slice(0, 4)).toEqual([
       ["Automático", "Escolhe o modelo e o esforço para cada tarefa"],
       ["MiniMax M3"],

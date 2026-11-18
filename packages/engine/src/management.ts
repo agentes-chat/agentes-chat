@@ -1,6 +1,7 @@
 import type { PubSub } from "@agenteschat/adapters";
 import { and, asc, type Database, desc, eq, gte, inArray, isNull, lt, schema, sql } from "@agenteschat/db";
 import { MODEL_TIERS, type ModelTier } from "@agenteschat/providers";
+import { othersPersonalTools } from "./agent-audit";
 import { getAgent } from "./agents";
 import { decidableBySql } from "./approvals";
 import { audienceSql, listsAllAgents } from "./audience";
@@ -808,7 +809,25 @@ export async function getRun(db: Database, actorId: string, orgId: string, runId
     .from(agentRunSteps)
     .where(eq(agentRunSteps.runId, runId))
     .orderBy(asc(agentRunSteps.seq));
-  return { run: summary, steps };
+  const hidden = await othersPersonalTools(db, orgId, runId, actorId);
+  // A call still running has no audit row yet: its step says whose connection it goes through.
+  const running = new Set(
+    steps.flatMap((s) =>
+      s.kind === "tool_call" && typeof s.data.personalOf === "string" && s.data.personalOf !== actorId
+        ? [String(s.data.toolUseId)]
+        : [],
+    ),
+  );
+  if (hidden.size === 0 && running.size === 0) return { run: summary, steps };
+  return {
+    run: summary,
+    steps: steps.map((s) =>
+      (s.kind === "tool_call" || s.kind === "tool_result") &&
+      (hidden.has(String(s.data.name)) || running.has(String(s.data.toolUseId)))
+        ? { ...s, data: { toolUseId: s.data.toolUseId, name: s.data.name, isError: s.data.isError } }
+        : s,
+    ),
+  };
 }
 
 /**

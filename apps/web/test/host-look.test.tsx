@@ -13,7 +13,12 @@ import { renderApp, screen, settle } from "./render";
 
 /** ADR 0194: on a registered host, the pages before sign-in wear its look; elsewhere, nothing changes. */
 
-const NORTHWIND = { name: "Northwind Studio", accent: "#7c3aed", logoUrl: "/api/host-look/logo?v=abc.png" };
+const NORTHWIND = {
+  name: "Northwind Studio",
+  accent: "#7c3aed",
+  logoUrl: "/api/host-look/logo?v=abc.png",
+  poweredBy: true,
+};
 
 afterEach(() => {
   cleanup();
@@ -49,6 +54,13 @@ describe("the sign-in page", () => {
     expect(document.querySelector(".auth__host-name")?.textContent).toBe("Northwind Studio");
     expect(document.querySelector(".auth__host-logo")).toBeNull();
     expect(agentVar()).toBe("");
+  });
+
+  test("on a registered host whose operator turned the powered-by line off: its look without the line", async () => {
+    await signInPage({ ...NORTHWIND, poweredBy: false }, false);
+    expect(screen().getByRole("img", { name: "Northwind Studio" })).toBeTruthy();
+    expect(screen().queryByRole("link", { name: "Feito com agentes.chat" })).toBeNull();
+    expect(document.querySelector(".auth__powered")).toBeNull();
   });
 
   test("anywhere else: exactly as before", async () => {

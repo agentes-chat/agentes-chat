@@ -217,6 +217,45 @@ describe("Auditoria in words (web and phone)", () => {
     ]);
   });
 
+  test("whoever runs the server answered a member's support request: who and how, then whose request, never an id", () => {
+    const replied = (details: Record<string, unknown>, over: Partial<AuditRow> = {}) =>
+      row({
+        actor: { type: "system", id: null, name: null },
+        action: "operator.support_replied",
+        target: { type: "support_request", id: "q1" },
+        details: { template: "text", chars: 412, assistedByAi: false, ...details },
+        runId: null,
+        channelId: null,
+        channel: null,
+        outcome: null,
+        ...over,
+      });
+    const own = replied({});
+    expect(auditSentence(t, own, "en")).toEqual({
+      name: null,
+      text: "audit.operatorReply.sentence(audit.operatorRead.who.server)",
+    });
+    const whose = "audit.operatorReply.request(Bia)";
+    expect([auditSubLine(t, own), auditReason(t, own)]).toEqual([whose, whose]);
+    expect(auditOutcome(t, own)).toBeNull();
+    // The panel's title is the sentence: the entry holds nothing a hint could be.
+    expect(auditHint(t, own)).toBeNull();
+
+    // One of the server's own sentences, sent with an AI assistant. On agentes.chat's own servers, its support.
+    const assisted = replied({ template: "received", chars: 0, assistedByAi: true, cloud: true });
+    expect(auditSentence(t, assisted, "en").text).toBe("audit.operatorReply.sentence(audit.operatorRead.who.cloud)");
+    const withAi = `${whose} · audit.operatorRead.ai`;
+    expect([auditSubLine(t, assisted), auditReason(t, assisted)]).toEqual([withAi, withAi]);
+    // Their account is gone since.
+    expect(auditSubLine(t, replied({}, { onBehalfOf: null }))).toBe("audit.operatorReply.request(audit.removed)");
+    // The panel's details: which answer and how long, never an id nor the server's own mark.
+    expect(auditDetailEntries(assisted.details)).toEqual([
+      ["template", "received"],
+      ["chars", 0],
+      ["assistedByAi", true],
+    ]);
+  });
+
   test("a merge done without asking says where", () => {
     const merged = row({
       action: "agent.merged_without_asking",

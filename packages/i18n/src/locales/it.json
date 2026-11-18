@@ -2159,6 +2159,7 @@
     "phone": "Telefono",
     "phoneOn": "Nell'app per telefono, anche con il telefono bloccato",
     "phoneOff": "Attivale nell'app per telefono",
+    "phoneOpen": "Apri",
     "mac": "App per Mac",
     "macHelp": "Mentre l'app è aperta, anche in background",
     "on": "Attive",
@@ -2494,6 +2495,56 @@
     "localOnly": "Questo server si apre solo sul computer dove gira, quindi il telefono non lo raggiunge.",
     "localOnlyHow": "Nell'app agentes.chat di quel computer, attiva Raggiungilo dal telefono e dai colleghi in Preferenze › Server. Poi torna qui.",
     "localOnlyHere": "Attiva Raggiungilo dal telefono e dai colleghi. Poi torna qui."
+  },
+  "surface": {
+    "link": {
+      "consent": "{{assistant}} di agentes.chat può scriverti su {{surface}} riguardo ai tuoi spazi di lavoro, e chiamarti solo quando qualcosa è urgente e tu lo permetti. Scrivi stop per disattivarlo.",
+      "title": "Parla con {{assistant}} su {{surface}}",
+      "qr": "Codice QR che apre {{surface}} con il tuo codice già scritto",
+      "making": "Creazione del tuo codice",
+      "code": "Il tuo codice {{code}}",
+      "open": "Apri {{surface}}",
+      "stepScan": "Scansiona il codice con il telefono, oppure apri l'app",
+      "stepSend": "Invia il messaggio così com'è",
+      "stepSendText": "Si va avanti da solo appena arriva il tuo messaggio.",
+      "stepConfirm": "Controlla il mittente e conferma qui",
+      "showCode": "Mostra di nuovo il codice",
+      "confirmTitle": "È il tuo {{surface}}?",
+      "sentBy": "Questo mittente ha inviato il tuo codice",
+      "onlyYou": "Collegalo solo se sei tu.",
+      "workspace": "Risponde in {{workspace}}",
+      "confirm": "Sì, collega",
+      "notMe": "Non sono io",
+      "doneTitle": "{{surface}} collegato",
+      "doneText": "{{assistant}} ti risponde lì da adesso.",
+      "newCode": "Crea un nuovo codice",
+      "done": "Fatto"
+    },
+    "row": {
+      "hint": "Parla con {{assistant}} e ricevi le sue risposte su {{surface}}.",
+      "link": "Collega",
+      "none": "{{assistant}} può scriverti lì",
+      "pending": "Un mittente aspetta che tu confermi",
+      "unlink": "Scollega",
+      "unlinkTitle": "Scollegare {{surface}}?",
+      "unlinkText": "{{assistant}} smette di risponderti lì. Puoi collegarlo di nuovo quando vuoi.",
+      "unlinked": "{{surface}} scollegato"
+    },
+    "undo": {
+      "title": "Scollegare l'app di chat?",
+      "lead": "Il tuo account è appena stato collegato a un'app di chat. Se non sei stato tu, scollegala qui.",
+      "button": "Scollega",
+      "done": "{{surface}} scollegato",
+      "doneLead": "{{display}} non può più raggiungere il tuo account.",
+      "ended": "Già scollegato",
+      "endedLead": "{{display}} su {{surface}} era già stato scollegato. Non c'è altro da fare.",
+      "gone": "Questo link per annullare non funziona più",
+      "sender": "Quel mittente"
+    },
+    "via": "tramite {{surface}}",
+    "viaTip": "Inviato da {{person}} su {{surface}}",
+    "forwarded": "inoltrato tramite {{surface}}",
+    "forwardedTip": "{{person}} ha inoltrato questo da {{surface}}. Le parole sono di qualcun altro."
   },
   "team": {
     "title": "Team",
@@ -3538,10 +3589,16 @@
     "titleFor_female": "Collega un'IA per {{name}}",
     "have": {
       "title": "Già collegati",
-      "titleFor": "Già collegati, per {{name}}",
-      "titleFor_female": "Già collegati, per {{name}}",
       "other": "Oppure collegane un altro",
-      "manageKeys": "Gestisci o elimina le chiavi"
+      "manageKeys": "Gestisci o elimina le chiavi",
+      "pickLine": "Scegli un account già collegato qui. {{name}} ragiona con quello.",
+      "onlyOwner_one": "Ancora {{count}} account che solo {{name}} può dare.",
+      "onlyOwner_many": "Ancora {{count}} account che solo {{name}} può dare.",
+      "onlyOwner_other": "Ancora {{count}} account che solo {{name}} può dare.",
+      "moreAgents_one": "e {{count}} altro agente",
+      "moreAgents_many": "e altri {{count}} agenti",
+      "moreAgents_other": "e altri {{count}} agenti",
+      "plenty": "Ampio margine"
     },
     "chat": {
       "mine": "I tuoi",
@@ -13334,6 +13391,37 @@
       "list": "Server MCP collegati",
       "none": "Qui compaiono i server MCP che colleghi tramite il loro indirizzo."
     },
+    "personal": {
+      "note": "Solo tu apri queste connessioni. I tuoi agenti le usano solo quando glielo chiedi.",
+      "noteOne": "Solo tu apri questa connessione. I tuoi agenti la usano solo quando glielo chiedi.",
+      "emptyTitle": "Collega i tuoi account",
+      "emptyText": "Solo tu apri le tue connessioni, e i tuoi agenti le usano solo quando glielo chiedi. Le caselle email seguono la loro regola.",
+      "noApps": "I servizi che colleghi solo per te compaiono qui.",
+      "mailTitle": "Le tue caselle email",
+      "mailNote": "Gli agenti a cui l'hai permesso usano le tue caselle come hai impostato, anche per chi parla direttamente con loro. Quando un'altra persona chiede qualcosa che richiede approvazione, sei tu ad approvare.",
+      "others": "Connessioni personali di altre persone",
+      "of": "Personale di {{name}}",
+      "seeAll": "Vedi tutte e {{count}}",
+      "forWhom": "Per chi",
+      "teamLocked": "Solo chi gestisce i connettori aggiunge quelli del team.",
+      "mailLocked": "Una casella di posta è sempre di chi la collega.",
+      "done": "I tuoi agenti lo usano solo quando lo chiedi tu.",
+      "worksWhenAsked": "Funziona solo quando lo chiedi tu.",
+      "remove": "Rimuovi",
+      "removeName": "Rimuovi {{name}}",
+      "removeTitle": "Rimuovere {{name}}?",
+      "takeOff": "Togli da un agente",
+      "takeOffTitle": "Togli {{name}} da un agente",
+      "takeOffName": "Togli {{name}} da {{agent}}",
+      "takeOffOne": "Togli",
+      "takenOff": "{{agent}} non usa più {{name}}.",
+      "turnOff": "Disattiva",
+      "turnOffName": "Disattiva {{name}} per questo agente",
+      "moveToTeam": "Passa al team",
+      "moveTitle": "Passare {{name}} al team?",
+      "moveText": "Tutti nel workspace lo vedono. Chi gestisce gli agenti sceglie quali agenti lo usano, e il proprietario di un agente può disattivarlo sul suo. Un agente che usa tutte le app collegate lo riceve subito.",
+      "moved": "{{name}} ora è del team."
+    },
     "addTitle": "Aggiungi connettore",
     "catalogText": "Collega una volta per {{org}}. Poi scegli cosa può usare ogni agente.",
     "catalog": "Connettori disponibili",
@@ -15541,6 +15629,16 @@
     }
   },
   "errors": {
+    "surface": {
+      "off": "Il collegamento delle app di chat è stato disattivato. Ricarica per vedere le impostazioni come sono ora.",
+      "notAllowed": "Collegare un'app di chat non è ancora disponibile per il tuo account. Continua a usare l'app qui finché non si apre.",
+      "noAssistant": "L'assistente di questo spazio di lavoro non è impostato per parlare con te. Scegli un altro spazio di lavoro da collegare.",
+      "noWorkspace": "Non sei più in questo spazio di lavoro. Scegli un altro spazio di lavoro da collegare.",
+      "linkGone": "Questo collegamento non è più in attesa: è scaduto dopo 10 minuti o è stato annullato. Crea un nuovo codice per ricominciare.",
+      "taken": "Questo mittente è collegato a un altro account agentes.chat. Scollegalo lì, poi invia un nuovo codice.",
+      "undoGone": "Questo link per annullare è già stato usato o è scaduto. Scollega invece dalle impostazioni delle notifiche.",
+      "codeGone": "Questo codice è sbagliato, già usato o scaduto dopo 10 minuti. Crea un nuovo codice e invialo di nuovo."
+    },
     "wallpaper": {
       "notYours": "Quella foto non è tua.",
       "invalid": "Quello sfondo non esiste.",
@@ -15577,7 +15675,7 @@
       "accountInUse": "Questo account pensa già per un altro agente.",
       "noAiYet": "Non c'è ancora nessuna IA collegata.",
       "filePurged": "Questo file è stato eliminato più di 30 giorni fa e non può tornare.",
-      "looksSecret": "Sembra una password o una chiave, e tutti qui la vedrebbero.",
+      "looksSecret": "Sembra una password o una chiave, e tutti qui la vedrebbero. Chiedi piuttosto all'agente di chiedertela in privato.",
       "blockSpec": "Questo blocco ha un errore nelle parti o nelle formule, quindi non può essere mostrato. Correggilo e riprova.",
       "takeControl": "Prendi prima il controllo del profilo.",
       "profileBusy": "Qualcun altro sta usando questo profilo.",
@@ -15595,8 +15693,10 @@
       "createRefused": "Ora non puoi creare uno spazio di lavoro.",
       "noAgentToRemind": "Nessun agente di questa conversazione può ricordartelo.",
       "agentCantRead": "Lascia prima che l'agente legga questo, nei suoi accessi.",
+      "connectionNotYours": "Questa connessione è personale di un'altra persona. Solo una sua routine può attendere i suoi eventi.",
       "neverHappens": "Questa pianificazione non si verifica mai.",
       "soleOwner": "Sei l'unico proprietario di uno spazio di lavoro con altri membri. Prima nomina un altro proprietario o elimina lo spazio di lavoro.",
+      "soleOwnerOutside": "Sei l'unico proprietario di uno spazio di lavoro in cui le altre persone sono collaboratori esterni, che non possono essere proprietari. Prima invita un membro e rendilo proprietario, o elimina lo spazio di lavoro.",
       "testFirst": "Prova la connessione con queste impostazioni prima di attivarla.",
       "voiceLength": "La registrazione è troppo lunga o troppo corta.",
       "sendAgain": "Il file non è arrivato intero. Invialo di nuovo.",
@@ -15706,7 +15806,8 @@
       "denied": "La tua richiesta non è stata approvata. Chiedi a qualcuno lì di invitarti.",
       "answered": "Qualcuno ha già risposto a questa richiesta.",
       "expired": "Questa richiesta è scaduta: nessuno ha risposto entro 14 giorni.",
-      "codeNeeded": "Prima verifica la tua email."
+      "codeNeeded": "Prima verifica la tua email.",
+      "outsideClosed": "Questo account è stato bloccato o è in corso di eliminazione, quindi non può entrare. La richiesta è chiusa."
     },
     "code": {
       "wrong": "Codice errato. Riprova.",
@@ -17235,6 +17336,10 @@
       "fault": "per diagnosticare un'esecuzione non riuscita o bloccata",
       "ai": "con un assistente IA"
     },
+    "operatorReply": {
+      "sentence": "{{who}} ha risposto via email",
+      "request": "richiesta di supporto di {{name}}"
+    },
     "change": {
       "mergedWithoutAsking": "Ha fatto il merge in {{repo}} senza chiedere",
       "accentChanged": "Ha cambiato il colore di accento dello spazio di lavoro",
@@ -17442,7 +17547,7 @@
       "roles": "Ogni ruolo aggiunge permessi, canali e agenti.",
       "vault": "Password, chiavi e contatti dei tuoi agenti. Non vedono mai una password.",
       "access": "Cosa può usare ogni agente: un livello per connettore.",
-      "connectors": "Servizi e server MCP collegati una sola volta per tutto lo spazio di lavoro.",
+      "connectors": "Servizi e server MCP, collegati per il team o solo per te.",
       "skills": "Istruzioni in Markdown che gli agenti aprono quando ne hanno bisogno.",
       "storage": "Dove si trovano i file dello spazio di lavoro.",
       "usage": "Gli account IA dello spazio di lavoro, e quanto usa ogni persona e ogni agente.",
@@ -17521,7 +17626,7 @@
         "wallpaper": {
           "title": "Sfondo",
           "help": "Cambia solo per te, su tutti i tuoi dispositivi",
-          "rowHelp": "Dietro ogni conversazione, solo per te. Una conversazione può averne uno suo dal proprio menu.",
+          "rowHelp": "Dietro ogni conversazione, solo per te, a meno che una conversazione ne abbia uno suo dal proprio menu.",
           "rowSub": "Solo per te, in ogni conversazione",
           "onlyHere": "Solo in {{name}}, solo per te",
           "none": "Nessuno sfondo",
@@ -18780,6 +18885,8 @@
       "file_saved": "File salvato.",
       "issue_work_start": "Per favore, fai l'attività #{{number}}.",
       "issue_taken": "Ho preso l'attività #{{number}}.",
+      "surfaceUnlinked": "{{surface}} è stato scollegato perché la sua identità è cambiata. Collegalo di nuovo nelle Impostazioni se sei stato tu.",
+      "surfaceVoiceDropped": "Non sono riuscito a capire quel vocale. Puoi rimandarlo o scriverlo?",
       "done": "Fatto.",
       "stretch_paused_runs_one": "{{agents}} si è fermato per sentirti prima di andare avanti",
       "stretch_paused_runs_many": "{{agents}} si sono fermati per sentirti prima di andare avanti",
@@ -19706,6 +19813,7 @@
     "serverOwner": "Hai configurato tu questo server. Le sue impostazioni non avranno un proprietario qui, solo nel suo ambiente.",
     "blockers": "Prima di poterlo eliminare",
     "soleOwner": "Sei l'unico Proprietario di {{name}}. Rendi Proprietario qualcun altro, oppure elimina {{name}}.",
+    "soleOwnerOutside": "Sei l'unico Proprietario di {{name}}, e le altre persone lì sono collaboratori esterni, che non possono essere proprietari. Invita un membro e rendilo Proprietario, oppure elimina {{name}}.",
     "soleOwnerSettingUp": "Sei l'unico Proprietario di {{name}}. Completa la configurazione per rendere Proprietario qualcun altro, oppure elimina {{name}}.",
     "openPeople": "Apri Persone",
     "finishSetup": "Completa la configurazione",

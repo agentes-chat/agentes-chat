@@ -2086,6 +2086,7 @@
     "phone": "Telefon",
     "phoneOn": "Telefon uygulamasında, telefon kilitliyken bile",
     "phoneOff": "Telefon uygulamasında açın",
+    "phoneOpen": "Aç",
     "mac": "Mac uygulaması",
     "macHelp": "Uygulama açıkken, arka planda bile",
     "on": "Açık",
@@ -2409,6 +2410,56 @@
     "localOnly": "Bu sunucu yalnızca çalıştığı bilgisayarda açılıyor, bu yüzden telefonunuz ona ulaşamıyor.",
     "localOnlyHow": "O bilgisayardaki agentes.chat uygulamasında Tercihler › Sunucular bölümünden Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın. Sonra buraya dönün.",
     "localOnlyHere": "Telefonunuzdan ve ekip arkadaşlarınızdan erişin seçeneğini açın. Sonra buraya dönün."
+  },
+  "surface": {
+    "link": {
+      "consent": "agentes.chat'ten {{assistant}}, çalışma alanlarınız hakkında size {{surface}} üzerinden mesaj gönderebilir ve sizi yalnızca acil bir durum olduğunda ve siz izin verdiğinizde arar. Kapatmak için stop yazın.",
+      "title": "{{surface}} üzerinden {{assistant}} ile konuşun",
+      "qr": "Kodunuz yazılı olarak {{surface}} uygulamasını açan QR kod",
+      "making": "Kodunuz oluşturuluyor",
+      "code": "Kodunuz {{code}}",
+      "open": "{{surface}} uygulamasını açın",
+      "stepScan": "Kodu telefonunuzla tarayın veya uygulamayı açın",
+      "stepSend": "Mesajı olduğu gibi gönderin",
+      "stepSendText": "Mesajınız ulaşınca bu adım kendiliğinden ilerler.",
+      "stepConfirm": "Göndereni kontrol edin ve burada onaylayın",
+      "showCode": "Kodu yeniden göster",
+      "confirmTitle": "Bu sizin {{surface}} hesabınız mı?",
+      "sentBy": "Kodunuzu bu gönderen gönderdi",
+      "onlyYou": "Yalnızca bu sizseniz bağlayın.",
+      "workspace": "{{workspace}} içinde yanıtlar",
+      "confirm": "Evet, bağla",
+      "notMe": "Ben değilim",
+      "doneTitle": "{{surface}} bağlandı",
+      "doneText": "{{assistant}} artık size orada yanıt verir.",
+      "newCode": "Yeni kod oluştur",
+      "done": "Tamam"
+    },
+    "row": {
+      "hint": "{{assistant}} ile konuşun ve yanıtları {{surface}} üzerinden alın.",
+      "link": "Bağla",
+      "none": "{{assistant}} size oradan mesaj gönderebilir",
+      "pending": "Bir gönderen onaylamanızı bekliyor",
+      "unlink": "Bağlantıyı kaldır",
+      "unlinkTitle": "{{surface}} bağlantısı kaldırılsın mı?",
+      "unlinkText": "{{assistant}} size orada artık yanıt vermez. İstediğiniz zaman yeniden bağlayabilirsiniz.",
+      "unlinked": "{{surface}} bağlantısı kaldırıldı"
+    },
+    "undo": {
+      "title": "Sohbet uygulamasının bağlantısı kaldırılsın mı?",
+      "lead": "Hesabınız az önce bir sohbet uygulamasına bağlandı. Bunu siz yapmadıysanız bağlantıyı buradan kaldırın.",
+      "button": "Bağlantıyı kaldır",
+      "done": "{{surface}} bağlantısı kaldırıldı",
+      "doneLead": "{{display}} artık hesabınıza ulaşamaz.",
+      "ended": "Bağlantı zaten kaldırılmış",
+      "endedLead": "{{surface}} üzerindeki {{display}} bağlantısı daha önce kaldırılmış. Yapılacak başka bir şey yok.",
+      "gone": "Bu geri alma bağlantısı artık çalışmıyor",
+      "sender": "O gönderen"
+    },
+    "via": "{{surface}} aracılığıyla",
+    "viaTip": "{{person}} tarafından {{surface}} üzerinden gönderildi",
+    "forwarded": "{{surface}} üzerinden iletildi",
+    "forwardedTip": "{{person}} bunu {{surface}} üzerinden iletti. Bu sözler başka birine ait."
   },
   "team": {
     "title": "Ekip",
@@ -3391,9 +3442,14 @@
     "titleFor": "{{name}} için bir yapay zeka bağlayın",
     "have": {
       "title": "Zaten bağlı",
-      "titleFor": "Zaten bağlı, {{name}} için",
       "other": "Ya da başka birini bağlayın",
-      "manageKeys": "Anahtarları yönet veya sil"
+      "manageKeys": "Anahtarları yönet veya sil",
+      "pickLine": "Burada zaten bağlı bir hesap seçin. {{name}} onunla düşünür.",
+      "onlyOwner_one": "Yalnızca {{name}} tarafından verilebilecek {{count}} hesap daha var.",
+      "onlyOwner_other": "Yalnızca {{name}} tarafından verilebilecek {{count}} hesap daha var.",
+      "moreAgents_one": "ve {{count}} ajan daha",
+      "moreAgents_other": "ve {{count}} ajan daha",
+      "plenty": "Bolca yer var"
     },
     "chat": {
       "mine": "Sizinkiler",
@@ -12771,6 +12827,37 @@
       "list": "Bağlı MCP sunucuları",
       "none": "Adresiyle bağladığınız MCP sunucuları burada görünür."
     },
+    "personal": {
+      "note": "Bu bağlantıları yalnızca sen açarsın. Ajanların bunları yalnızca sen istediğinde kullanır.",
+      "noteOne": "Bu bağlantıyı yalnızca sen açarsın ve ajanların onu yalnızca sen istediğinde kullanır.",
+      "emptyTitle": "Kendi hesaplarını bağla",
+      "emptyText": "Bağlantılarını yalnızca sen açarsın ve ajanların bunları yalnızca sen istediğinde kullanır. E-posta kutularının kendi kuralı vardır.",
+      "noApps": "Yalnızca kendin için bağladığın hizmetler burada görünür.",
+      "mailTitle": "Posta kutuların",
+      "mailNote": "İzin verdiğin ajanlar posta kutularını ayarladığın gibi kullanır, onlarla doğrudan konuşan kişiler için de. Başka biri onay gerektiren bir şey istediğinde onaylayan sensin.",
+      "others": "Başkalarının kişisel bağlantıları",
+      "of": "{{name}} kişisel",
+      "seeAll": "{{count}} tanesini gör",
+      "forWhom": "Kimin için",
+      "teamLocked": "Ekibinkileri yalnızca bağlayıcıları yönetenler ekler.",
+      "mailLocked": "Bir posta kutusu her zaman onu bağlayan kişinindir.",
+      "done": "Ajanların onu yalnızca sen istediğinde kullanır.",
+      "worksWhenAsked": "Yalnızca sen istediğinde çalışır.",
+      "remove": "Kaldır",
+      "removeName": "{{name}} kaldır",
+      "removeTitle": "{{name}} kaldırılsın mı?",
+      "takeOff": "Bir ajandan çıkar",
+      "takeOffTitle": "{{name}} bir ajandan çıkar",
+      "takeOffName": "{{name}} {{agent}} ajanından çıkar",
+      "takeOffOne": "Çıkar",
+      "takenOff": "{{agent}} artık {{name}} kullanmıyor.",
+      "turnOff": "Kapat",
+      "turnOffName": "Bu ajan için {{name}} kapat",
+      "moveToTeam": "Ekibe taşı",
+      "moveTitle": "{{name}} ekibe taşınsın mı?",
+      "moveText": "Workspace'teki herkes görür. Hangi ajanların kullanacağını ajanları yöneten kişiler seçer, bir ajanın sahibi de kendi ajanında kapatabilir. Bağlı tüm uygulamaları kullanan bir ajan onu hemen alır.",
+      "moved": "{{name}} artık ekibin."
+    },
     "addTitle": "Bağlayıcı ekle",
     "catalogText": "{{org}} için bir kez bağlayın. Sonra her ajanın neyi kullanabileceğini seçin.",
     "catalog": "Kullanılabilir bağlayıcılar",
@@ -14941,6 +15028,16 @@
     }
   },
   "errors": {
+    "surface": {
+      "off": "Sohbet uygulamalarını bağlama kapatıldı. Ayarlarınızın şu anki halini görmek için sayfayı yenileyin.",
+      "notAllowed": "Sohbet uygulaması bağlama hesabınıza henüz açık değil. Açılana kadar buradaki uygulamayı kullanmaya devam edin.",
+      "noAssistant": "Bu çalışma alanındaki asistan sizinle konuşacak şekilde ayarlı değil. Bağlamak için başka bir çalışma alanı seçin.",
+      "noWorkspace": "Artık bu çalışma alanında değilsiniz. Bağlamak için başka bir çalışma alanı seçin.",
+      "linkGone": "Bu bağlantı artık beklemiyor: 10 dakika sonra süresi doldu ya da iptal edildi. Yeniden başlamak için yeni bir kod oluşturun.",
+      "taken": "Bu gönderen başka bir agentes.chat hesabına bağlı. Önce oradaki bağlantıyı kaldırın, sonra yeni bir kod gönderin.",
+      "undoGone": "Bu geri alma bağlantısı zaten kullanılmış ya da süresi dolmuş. Bunun yerine bildirim ayarlarınızdan bağlantıyı kaldırın.",
+      "codeGone": "Bu kod yanlış, kullanılmış ya da 10 dakika sonra süresi dolmuş. Yeni bir kod oluşturup tekrar gönderin."
+    },
     "wallpaper": {
       "notYours": "Bu fotoğraf sizin değil.",
       "invalid": "Böyle bir arka plan yok.",
@@ -14977,7 +15074,7 @@
       "accountInUse": "Bu hesap zaten başka bir ajan için düşünüyor.",
       "noAiYet": "Henüz bağlı bir yapay zekâ yok.",
       "filePurged": "Bu dosya 30 günden uzun süre önce silindi ve geri gelemez.",
-      "looksSecret": "Bu bir parola veya anahtara benziyor ve buradaki herkes görür.",
+      "looksSecret": "Bu bir parola veya anahtara benziyor ve buradaki herkes görür. Bunun yerine ajandan özelden istemesini isteyin.",
       "blockSpec": "Bu bloğun parçalarında veya formüllerinde bir hata var, bu yüzden gösterilemiyor. Düzeltip tekrar deneyin.",
       "takeControl": "Önce profilin kontrolünü alın.",
       "profileBusy": "Bu profili başka biri kullanıyor.",
@@ -14995,8 +15092,10 @@
       "createRefused": "Şu anda çalışma alanı oluşturamazsınız.",
       "noAgentToRemind": "Bu sohbette size hatırlatabilecek bir ajan yok.",
       "agentCantRead": "Önce ajanın erişim ayarlarından bunu okumasına izin verin.",
+      "connectionNotYours": "Bu bağlantı başka birinin kişisel bağlantısı. Olaylarını yalnızca onun bir rutini bekleyebilir.",
       "neverHappens": "Bu zamanlama hiç gerçekleşmiyor.",
       "soleOwner": "Başka üyeleri olan bir çalışma alanının tek sahibi sizsiniz. Önce başka birini sahip yapın veya çalışma alanını silin.",
+      "soleOwnerOutside": "Diğer kişileri harici çalışanlar olan bir çalışma alanının tek sahibi sizsiniz ve harici çalışanlar sahip olamaz. Önce bir üye davet edip onu sahip yapın veya çalışma alanını silin.",
       "testFirst": "Açmadan önce bağlantıyı bu ayarlarla test edin.",
       "voiceLength": "Kayıt çok uzun veya çok kısa.",
       "sendAgain": "Dosya tam olarak ulaşmadı. Yeniden gönderin.",
@@ -15106,7 +15205,8 @@
       "denied": "İsteğiniz onaylanmadı. Oradan birinin sizi davet etmesini isteyin.",
       "answered": "Bu isteği zaten biri yanıtladı.",
       "expired": "Bu isteğin süresi doldu: 14 gün içinde kimse yanıtlamadı.",
-      "codeNeeded": "Önce e-postanızı doğrulayın."
+      "codeNeeded": "Önce e-postanızı doğrulayın.",
+      "outsideClosed": "Bu hesap engellendi ya da siliniyor, bu yüzden katılamaz. İstek kapatıldı."
     },
     "code": {
       "wrong": "Kod yanlış. Tekrar deneyin.",
@@ -16616,6 +16716,10 @@
       "fault": "başarısız olan veya takılan bir çalıştırmayı incelemek için",
       "ai": "bir yapay zeka asistanıyla"
     },
+    "operatorReply": {
+      "sentence": "{{who}} e-postayla yanıt verdi",
+      "request": "{{name}} adlı üyenin destek talebi"
+    },
     "change": {
       "mergedWithoutAsking": "{{repo}} içinde sormadan birleştirdi",
       "accentChanged": "Çalışma alanının vurgu rengini değiştirdi",
@@ -16823,7 +16927,7 @@
       "roles": "Her rol izin, kanal ve ajan ekler.",
       "vault": "Ajanlarınızın parolaları, anahtarları ve kişileri. Parolaları asla görmezler.",
       "access": "Her ajanın neleri kullanabileceği: bağlayıcı başına bir düzey.",
-      "connectors": "Tüm çalışma alanı için bir kez bağlanan hizmetler ve MCP sunucuları.",
+      "connectors": "Ekip için ya da yalnızca senin için bağlanan hizmetler ve MCP sunucuları.",
       "skills": "Ajanların ihtiyaç duyduklarında açtıkları Markdown talimatları.",
       "storage": "Çalışma alanının dosyalarının durduğu yer.",
       "usage": "Çalışma alanının yapay zeka hesapları ve her kişinin ve her ajanın ne kadar kullandığı.",
@@ -16902,7 +17006,7 @@
         "wallpaper": {
           "title": "Arka plan",
           "help": "Yalnızca sizin için değişir, tüm cihazlarınızda",
-          "rowHelp": "Tüm sohbetlerin arkasında, yalnızca sizin için. Bir sohbet, menüsünden kendi arka planını alabilir.",
+          "rowHelp": "Tüm sohbetlerin arkasında, yalnızca sizin için, menüsünden kendi arka planını seçen sohbetler hariç.",
           "rowSub": "Yalnızca sizin için, tüm sohbetlerde",
           "onlyHere": "Yalnızca {{name}} içinde, yalnızca sizin için",
           "none": "Arka plan yok",
@@ -18128,6 +18232,8 @@
       "file_saved": "Dosya kaydedildi.",
       "issue_work_start": "Lütfen #{{number}} görevini yap.",
       "issue_taken": "#{{number}} görevini aldım.",
+      "surfaceUnlinked": "{{surface}} kimliği değiştiği için ayrıldı. Sensen Ayarlar'dan yeniden bağla.",
+      "surfaceVoiceDropped": "O sesli mesajı anlayamadım. Tekrar gönderebilir ya da yazabilir misin?",
       "done": "Bitti.",
       "stretch_paused_runs_one": "{{agents}} devam etmeden önce size danışmak için durdu",
       "stretch_paused_runs_other": "{{agents}} devam etmeden önce size danışmak için durdu",
@@ -18997,6 +19103,7 @@
     "serverOwner": "Bu sunucuyu siz kurdunuz. Kendi ayarlarının burada sahibi olmayacak, yalnızca ortamında olacak.",
     "blockers": "Silebilmeniz için önce",
     "soleOwner": "{{name}} çalışma alanının tek sahibi sizsiniz. Başka birini sahip yapın ya da {{name}} çalışma alanını silin.",
+    "soleOwnerOutside": "{{name}} çalışma alanının tek sahibi sizsiniz ve oradaki diğer kişiler sahip olamayan harici çalışanlar. Bir üye davet edip onu sahip yapın ya da {{name}} çalışma alanını silin.",
     "soleOwnerSettingUp": "{{name}} çalışma alanının tek sahibi sizsiniz. Başka birini sahip yapmak için kurulumu tamamlayın ya da {{name}} çalışma alanını silin.",
     "openPeople": "Kişiler'i aç",
     "finishSetup": "Kurulumu tamamla",

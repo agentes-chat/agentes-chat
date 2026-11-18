@@ -164,7 +164,7 @@ export function RightHandBrainDialog({
     ? option?.models.find((m) => m.value === (advanced?.effectiveModel ?? option?.defaultModel ?? ""))?.level
     : undefined;
   const savedEffort = advanced ? (modelLevel ?? effortOf(advanced.brain, advanced.effort)) : null;
-  // An API model's ramp is the levels it takes (ADR 0187); computer brains follow their plan/model efforts.
+  // An API model's ramp is the levels it takes (ADR 0199); computer brains follow their plan/model efforts.
   const modelNow = advanced?.brain === "model" ? agent.model : (advanced?.effectiveModel ?? option?.defaultModel ?? "");
   const planModel = advanced?.brain === "model" ? undefined : option?.models.find((m) => m.value === modelNow);
   const keyModel = autoModel

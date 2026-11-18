@@ -26,10 +26,10 @@ stay exact and be written once.
 
 1. **A table of hosts, kept by the operator.** `hosts`: `host` (the primary key: lower case, a hostname only, no
    scheme, port, path or trailing dot, at most 253 characters and at least one dot), `name` (1 to 60), `accent`
-   (`#rrggbb` or null), `logo` (a stored file's key in the platform's bucket, as a workspace's logo is kept, or null)
-   and the times. It is the server's, not a tenant's: no `org_id`. Only the operator API writes it:
-   `GET /hosts`, `PUT /hosts/{host}` (creates or replaces; `accent` and `logo` left out are left as they are, null
-   clears them; the logo takes a workspace logo's checks) and `DELETE /hosts/{host}` (also deletes its logo).
+   (`#rrggbb` or null), `logo` (a stored file's key in the platform's bucket, as a workspace's logo is kept, or null),
+   `powered_by` (true unless turned off, see 8; migration 0298) and the times. It is the server's, not a tenant's: no `org_id`. Only the operator API writes it:
+   `GET /hosts`, `PUT /hosts/{host}` (creates or replaces; `accent`, `logo` and `poweredBy` left out are left as they
+   are, null clears `accent` and `logo`; the logo takes a workspace logo's checks) and `DELETE /hosts/{host}` (also deletes its logo).
    Refusals: `host.invalid` (not a hostname), `host.own` (`PUBLIC_URL`'s host or one of `EXTRA_TRUSTED_ORIGINS`'),
    `host.too_many` (past 1,000), `host.needs_https` (409: `PUBLIC_URL` isn't https; see 4). Every write of the table holds one transaction lock, so a replace and a delete never
    interleave (a deleted host never comes back pointing at a logo the delete removed) and two creates never both pass
@@ -93,6 +93,10 @@ stay exact and be written once.
    then hide the product's mark: the boot shows its sky alone. The tab's title names the host where it
    names the product, on every page of that host, and the tab's icon is its logo unless the browser picked another icon.
    The About screen and its license notice are unchanged.
+
+   The powered-by line is shown by default: someone signing in at an address that isn't the product's can tell which
+   software will hold their account. An operator may turn it off for one host (`poweredBy: false`, carried to the web
+   in `auth-config`'s `host`); the main address never shows it.
 9. **Phone and desktop.** Nothing changes. The phone app is built for one address. The desktop app's server check
    (`checkServer`, shared with the phone) asks `GET /api/instance`, whose `url` is `PUBLIC_URL`'s origin on every
    host, and uses a server at the address it names: a registered host typed in its server field opens the main

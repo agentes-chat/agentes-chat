@@ -34,6 +34,7 @@ const Host = z
     name: z.string(),
     accent: AccentColor.nullable(),
     logo: z.boolean().openapi({ description: "It has a logo." }),
+    poweredBy: z.boolean().openapi({ description: "Its pages before sign-in end with the powered-by line." }),
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })
@@ -56,6 +57,10 @@ const HostLookBody = z
         description:
           "Its logo, checked by its bytes, metadata removed; shown at the sign-in page's lockup height. Null: the name alone. Left out: left as it is.",
       }),
+    poweredBy: z.boolean().optional().openapi({
+      description:
+        "Its pages before sign-in end with a line linking to the software's site. Left out: left as it is (true on a new host).",
+    }),
   })
   .openapi("OperatorHostLook");
 
@@ -64,6 +69,7 @@ const hostJson = (h: HostLook) => ({
   name: h.name,
   accent: h.accent,
   logo: h.logo !== null,
+  poweredBy: h.poweredBy,
   createdAt: h.createdAt.toISOString(),
   updatedAt: h.updatedAt.toISOString(),
 });

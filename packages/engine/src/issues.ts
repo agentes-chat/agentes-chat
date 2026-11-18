@@ -47,6 +47,7 @@ import { fileIdsOf, getMessage, insertMessage, type MessageView, messageView, po
 import { enqueueRunJob } from "./mission-runs";
 import { notifyIssueChanged } from "./notification-producers";
 import { can, getMembership, requireActiveMembership } from "./organizations";
+import { runReadOutsideById } from "./outside";
 import { membersWhoMaySql } from "./permissions";
 import { queueTaskCheck, queueTaskEnd, tellTaskEnd } from "./right-hand-follow";
 import { fireRoutineEvent } from "./routines";
@@ -529,7 +530,8 @@ async function workOf(
   for (const st of steps) {
     const name = st.kind === "tool_call" && typeof st.data.name === "string" ? st.data.name : "";
     const input = st.data.input as Record<string, unknown> | undefined;
-    if (!name) continue;
+    // A call in a person's own connection is theirs alone, and one task view goes to every reader of the task.
+    if (!name || st.data.personal === true) continue;
     const answer = name === PERMISSION_TOOL ? answers.get(st.data.toolUseId) : undefined;
     if (promptPoll(name, input)) {
       for (const asked of answer?.behavior ? (waiting.get(String(input?.request_id)) ?? []) : []) {
@@ -1733,6 +1735,8 @@ export async function askAgentToImplement(
         question: `Work on task #${issue.number}: ${issue.title}`.slice(0, 2_000),
         chain: [by.agentId],
         expiresAt: new Date(Date.now() + TASK_HAND_OFF_TTL_MS),
+        forUserId: (await runAuthorityById(tx, orgId, by.runId)).personId,
+        askerReadOutside: await runReadOutsideById(tx, orgId, by.runId),
       });
       // The right hand looks at it again a day later, for the person it handed it over for.
       await queueTaskCheck(tx, orgId, consultationId);

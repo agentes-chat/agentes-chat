@@ -97,8 +97,10 @@ describe("voice", () => {
     expect(composer.split("hitSlop: MIC_SLOP,").length - 1).toBe(2);
   });
 
-  test("deleting a take is the person's own act, said in the neutral tone", () => {
-    expect(src("features/voice/useVoiceTake.ts")).toContain('toast({ title: t("voice.deleted"), icon: "trash" })');
+  test("deleting a take is the person's own act: a fold, a haptic and a sound, no toast; a screen reader hears it", () => {
+    const take = src("features/voice/useVoiceTake.ts");
+    expect(take).not.toContain('toast({ title: t("voice.deleted")');
+    expect(take).toContain('AccessibilityInfo.announceForAccessibility(t("voice.deleted"));');
   });
 });
 

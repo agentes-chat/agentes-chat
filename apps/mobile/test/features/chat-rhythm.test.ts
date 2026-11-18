@@ -67,7 +67,10 @@ describe("one rhythm, the web's numbers (chat-rhythm-css.test.ts holds them to t
     const row = await read("chat/MessageRow.tsx");
     expect(row).toContain("cardRow ? rhythm.card : rhythm.part");
     expect(row).toContain("const cardTop = body || media ? rhythm.card - rhythm.part : 0;");
-    expect(row.match(/<RowPartContext.Provider value=\{cardTop\}>/g)).toHaveLength(2);
+    // My row's parts, and someone else's (in bubbles its cards join the bubble, `BUBBLE_JOIN`).
+    expect(row.match(/<RowPartContext.Provider value=\{cardTop\}>/g)).toHaveLength(1);
+    expect(row).toContain("<RowParts top={partTop} part={bubblePart} head={bubbleHead}>");
+    expect(row).toContain("const partTop = bubbled && (body || media) ? BUBBLE_JOIN - rhythm.part : cardTop;");
     for (const file of [
       "chat/asks.tsx",
       "chat/issue-work.tsx",

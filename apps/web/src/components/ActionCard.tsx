@@ -36,7 +36,7 @@ import {
   type UpdateSkillsCard,
 } from "@agenteschat/client/lib/action-cards";
 import { delegateUndoLine } from "@agenteschat/client/lib/approval-words";
-import { connectedItems, itemName } from "@agenteschat/client/lib/connected";
+import { connectedItems, itemName, personalAllowed } from "@agenteschat/client/lib/connected";
 import { setDraftFor } from "@agenteschat/client/lib/drafts";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { joinNames, whenAt } from "@agenteschat/client/lib/format";
@@ -197,8 +197,9 @@ export function ActionCard({ message }: { message: Message }) {
 /**
  * "Connect Linear" / "Add MCP" (`offer_connect_app`) as a waiting pill: "Connect" opens the same connect dialog as
  * Settings, at the catalog entry or at connecting by address with the address filled in; the person signs in or types
- * the key there. Its why and address go under it, and who may not connect reads who does there. Done once the
- * workspace has it.
+ * the key there. Its why and address go under it. Every member connects it, as their own when they may not add the
+ * team's ("Para quem" there); GitHub connects for the team only, so who may not reads who does. Done once the viewer
+ * has it, theirs or the team's.
  */
 function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
   const { t } = useTranslation();
@@ -218,7 +219,8 @@ function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
       </RequestDone>
     );
   }
-  const may = can(org, "manage_connectors");
+  const admin = can(org, "manage_connectors");
+  const may = admin || personalAllowed(card.connector);
   return (
     <>
       <RequestOpen
@@ -229,7 +231,11 @@ function ConnectAppCardView({ card }: { card: ConnectAppCard }) {
           may ? (
             <EventPillAction
               primary
-              onClick={() => setFlow(def ? { step: 0, def } : { step: 0, def: null, url: card.url })}
+              onClick={() =>
+                setFlow(
+                  def ? { step: 0, def, personal: !admin } : { step: 0, def: null, url: card.url, personal: !admin },
+                )
+              }
             >
               {t("actionCard.connect")}
             </EventPillAction>

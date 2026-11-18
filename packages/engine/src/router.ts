@@ -911,14 +911,19 @@ export async function routeMessage(
     }
     if (await continuedSoon(db, message, quietMs)) return { runs: [], skipped: "continued" };
   }
-  // What each one can reach, by name ("Sentry"): a question about an app goes to who has it.
+  // What each one can reach, by name ("Sentry"): a question about an app goes to who has it. A person's own
+  // connection is never named: the router's reason is read by the whole conversation.
   const [granted, connections] = await Promise.all([
     db
       .select({ agentId: agentScopes.agentId, scope: agentScopes.scope, connectionLabel: connectorConnections.label })
       .from(agentScopes)
       .leftJoin(
         connectorConnections,
-        and(eq(connectorConnections.id, agentScopes.connectionId), isNull(connectorConnections.revokedAt)),
+        and(
+          eq(connectorConnections.id, agentScopes.connectionId),
+          isNull(connectorConnections.revokedAt),
+          isNull(connectorConnections.ownerUserId),
+        ),
       )
       .where(
         and(
@@ -932,7 +937,13 @@ export async function routeMessage(
     db
       .select({ label: connectorConnections.label })
       .from(connectorConnections)
-      .where(and(eq(connectorConnections.orgId, message.orgId), isNull(connectorConnections.revokedAt))),
+      .where(
+        and(
+          eq(connectorConnections.orgId, message.orgId),
+          isNull(connectorConnections.revokedAt),
+          isNull(connectorConnections.ownerUserId),
+        ),
+      ),
   ]);
   const orgApps = connections.map((c) => c.label);
   for (const c of candidates) {

@@ -1,4 +1,4 @@
-import { and, asc, type Database, desc, eq, gte, inArray, isNotNull, isNull, schema, sql } from "@agenteschat/db";
+import { and, asc, type Database, desc, eq, gte, inArray, isNotNull, isNull, or, schema, sql } from "@agenteschat/db";
 import { type AgentStatusView, lineInEnglish, loadAgentStatuses } from "./agent-status";
 import { currentHandles } from "./agents";
 import { type AiStatusDeps, agentAiStates } from "./ai-status";
@@ -38,6 +38,7 @@ const {
 /**
  * Each agent's scopes, with a whole-connection grant (`connector:*`) named
  * after its connector (`sentry:*`), so summaries say "Sentry", not "Connector".
+ * A person's own connection serves that person alone: none of its grants are named.
  */
 export async function agentScopeNames(db: Database, orgId: string, agentIds: string[]) {
   if (agentIds.length === 0) return [];
@@ -45,7 +46,13 @@ export async function agentScopeNames(db: Database, orgId: string, agentIds: str
     .select({ agentId: agentScopes.agentId, scope: agentScopes.scope, connector: connectorConnections.connector })
     .from(agentScopes)
     .leftJoin(connectorConnections, eq(connectorConnections.id, agentScopes.connectionId))
-    .where(and(eq(agentScopes.orgId, orgId), inArray(agentScopes.agentId, agentIds)));
+    .where(
+      and(
+        eq(agentScopes.orgId, orgId),
+        inArray(agentScopes.agentId, agentIds),
+        or(isNull(agentScopes.connectionId), isNull(connectorConnections.ownerUserId)),
+      ),
+    );
   return rows.map((r) => ({
     agentId: r.agentId,
     scope: r.scope.startsWith("connector:") && r.connector ? `${r.connector}:${r.scope.slice(10)}` : r.scope,

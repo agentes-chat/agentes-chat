@@ -303,7 +303,7 @@ export const EndpointModel = z
     efforts: z
       .array(z.string())
       .optional()
-      .openapi({ description: "The effort levels its check found it takes: low, medium and high (ADR 0187)." }),
+      .openapi({ description: "The effort levels its check found it takes: low, medium and high (ADR 0199)." }),
     effortsAt: z.string().optional().openapi({ description: "When those levels were checked." }),
   })
   .openapi("EndpointModel");
@@ -332,7 +332,7 @@ export const Credential = z
     openrouter: z
       .object({ models: z.array(z.string()) })
       .optional()
-      .openapi({ description: "OpenRouter (ADR 0187): the models this workspace chose to use with the key." }),
+      .openapi({ description: "OpenRouter (ADR 0199): the models this workspace chose to use with the key." }),
     keyHint: z.string().openapi({ description: "Last 4 characters of the key. The key itself is never returned." }),
     workspaceIdHint: z
       .string()
@@ -997,7 +997,7 @@ export const Model = z
     efforts: z
       .array(z.string())
       .optional()
-      .openapi({ description: "The effort levels it takes, when known (ADR 0187)." }),
+      .openapi({ description: "The effort levels it takes, when known (ADR 0199)." }),
     reasoning: z
       .boolean()
       .optional()
@@ -1132,6 +1132,10 @@ export const MachineAccount = z
     useOrder: z.number().int().nullable().openapi({
       description:
         "Its place in the order of use of its computer's accounts of its kind (ADR 0041 §6), 0 first; null: after the placed ones, oldest first. A run at its plan's limit goes on with its agent's owner's next account, then the others that serve everyone.",
+    }),
+    sameAs: z.uuid().openapi({
+      description:
+        "The id of the oldest login of the same account on its computer (one account may be signed in once per agent); its own id where it is the oldest or nothing tells it apart. Logins with the same `sameAs` are one account, whoever looks: the email and key's end that tell them apart stay its owner's.",
     }),
     movable: z.boolean().openapi({
       description:

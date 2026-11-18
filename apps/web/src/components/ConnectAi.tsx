@@ -701,7 +701,7 @@ function ConnectAiDialog({
   const [footAt, setFootAt] = useState<HTMLElement | null>(null);
   const day = useDawn((stage || band || team) && connected);
   const [keySaved, setKeySaved] = useState(false);
-  // OpenRouter: the models this key uses (ADR 0187), chosen before it is saved.
+  // OpenRouter: the models this key uses (ADR 0199), chosen before it is saved.
   const [keyModels, setKeyModels] = useState<string[]>([]);
   const [keyNote, setKeyNote] = useState<string>();
   const [refused, setRefused] = useState<ReturnType<typeof keyRefusal>>(null);
@@ -1684,7 +1684,6 @@ function ConnectAiDialog({
                   gates={gates}
                   agent={forAgent}
                   credentials={credentials.data ?? []}
-                  named={!one}
                   signIn={login}
                   panel={held}
                   onSignIn={(next) => {

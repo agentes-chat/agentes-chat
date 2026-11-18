@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 /**
- * The models an OpenRouter key uses (ADR 0187): OpenRouter's list, the good picks first, with the key checked when
+ * The models an OpenRouter key uses (ADR 0199): OpenRouter's list, the good picks first, with the key checked when
  * one is typed. The person chooses; only what they choose is offered to agents afterwards, and batch variants never
  * appear (the server leaves them out).
  */
@@ -37,7 +37,7 @@ export function OpenRouterModels({
   useEffect(() => {
     if (!loaded || seeded.current || models.length === 0) return;
     seeded.current = true;
-    // A saved choice is never replaced by the picks; only a new key starts from them (ADR 0187).
+    // A saved choice is never replaced by the picks; only a new key starts from them (ADR 0199).
     if (value.length > 0) return;
     onChange(models.filter((m) => m.pick).map((m) => m.id));
   }, [loaded, models, onChange, value.length]);

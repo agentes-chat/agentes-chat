@@ -3,7 +3,7 @@
   "info": {
     "title": "agentes.chat operator API",
     "version": "test",
-    "description": "Workspace and account lookups, what a run did and why a message started one or none, what a workspace connected, recorded, asked and scheduled, what a person was notified of and reaches, the messages no run answered, the job queue, the emails queued to an address and what model calls spent, the times a member asked for help, one piece of what a workspace wrote read with a reason (the reveal door), workspace standing, billing holds and limits (ADR 0079), a workspace's logo and accent color (ADR 0193), the extra hostnames this server answers on with their look (ADR 0194), outside collaborators (ADR 0191), the events feed and review blocks, the workspaces' computers from an external provisioner, who may sign up (the waiting list and early-access invitations, ADR 0078), how new Claude sign-ins for all agents are made (ADR 0150), and how connectors are used (ADR 0103), for the people who run this instance (ADR 0056)."
+    "description": "Workspace and account lookups, what a run did and why a message started one or none, what a workspace connected, recorded, asked and scheduled, what a person was notified of and reaches, the messages no run answered, the job queue, the emails queued to an address and what model calls spent, the times a member asked for help, one piece of what a workspace wrote read with a reason and a member's support request answered by email (the reveal door), workspace standing, billing holds and limits (ADR 0079), a workspace's logo and accent color (ADR 0193), the extra hostnames this server answers on with their look (ADR 0194), outside collaborators (ADR 0191), the events feed and review blocks, the workspaces' computers from an external provisioner, who may sign up (the waiting list and early-access invitations, ADR 0078), how new Claude sign-ins for all agents are made (ADR 0150), and how connectors are used (ADR 0103), for the people who run this instance (ADR 0056)."
   },
   "servers": [
     {
@@ -651,7 +651,7 @@
           },
           "type": {
             "type": "string",
-            "description": "`user.signed_up`, `session.created`, `user.deletion_requested`, `user.deletion_canceled`, `user.deleted`, `organization.created`, `organization.deletion_requested`, `organization.deletion_canceled`, `organization.deleted`, `invitation.created`, `agent.created`, `agent.deleted`, `mail.sent`, `run.finished`, `run.hop_limit`, `task.finished`, `desktop_control.ended`, `content.viewed`, `support.requested`, `platform_ai.threshold`, `account.failure`, `outside_access.granted`, `outside_access.denied` or `outside_access.ended` (ADR 0056 §5 lists each one's `data`; ADR 0191 the last three's). Ignore types you don't know: new ones keep v1."
+            "description": "`user.signed_up`, `session.created`, `user.deletion_requested`, `user.deletion_canceled`, `user.deleted`, `organization.created`, `organization.deletion_requested`, `organization.deletion_canceled`, `organization.deleted`, `invitation.created`, `agent.created`, `agent.deleted`, `mail.sent`, `run.finished`, `run.hop_limit`, `task.finished`, `desktop_control.ended`, `content.viewed`, `support.requested`, `support.replied`, `platform_ai.threshold`, `account.failure`, `surface.cap_reached`, `outside_access.granted`, `outside_access.denied` or `outside_access.ended` (ADR 0056 §5 lists each one's `data`; ADR 0191 the last three's). Ignore types you don't know: new ones keep v1."
           },
           "orgId": {
             "type": ["string", "null"],
@@ -4660,7 +4660,7 @@
           },
           "lastError": {
             "type": ["string", "null"],
-            "description": "Its first 300 characters; cleared 30 days after the job ended."
+            "description": "Its first 300 characters; cleared 30 days after the job ended. Null for a job of a run of a confidential thread."
           },
           "lastErrorStatus": {
             "type": ["integer", "null"],
@@ -6977,6 +6977,52 @@
         "required": ["kind", "id", "field", "purpose", "reason", "operator", "assistedByAi"],
         "additionalProperties": false
       },
+      "OperatorReplied": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "replies": {
+            "type": "integer",
+            "description": "How many replies this request now has, of the 3 it may get."
+          }
+        },
+        "required": ["requestId", "replies"]
+      },
+      "OperatorReplyRequest": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The support request answered: one of this workspace made in the last 90 days."
+          },
+          "template": {
+            "type": "string",
+            "enum": ["received", "need_more", "resolved", "handed_over"],
+            "description": "One of this server's own sentences, sent in the member's language: `received` (the request is being looked into), `need_more` (more details are needed), `resolved` (what they reported is fixed) or `handed_over` (a person now has the request). This or `text`, never both."
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Your own words, as plain text: a line break ends a paragraph, and nothing else in it is rendered or becomes a link. Kept nowhere but the email."
+          },
+          "operator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Who answers, as your own service names them. Kept in the `support.replied` event."
+          },
+          "assistedByAi": {
+            "type": "boolean",
+            "description": "Whether an AI assistant wrote the answer. The email and the workspace's audit entry say so."
+          }
+        },
+        "required": ["requestId", "operator", "assistedByAi"],
+        "additionalProperties": false
+      },
       "OperatorHost": {
         "type": "object",
         "properties": {
@@ -6995,6 +7041,10 @@
             "type": "boolean",
             "description": "It has a logo."
           },
+          "poweredBy": {
+            "type": "boolean",
+            "description": "Its pages before sign-in end with the powered-by line."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -7004,7 +7054,7 @@
             "format": "date-time"
           }
         },
-        "required": ["host", "name", "accent", "logo", "createdAt", "updatedAt"]
+        "required": ["host", "name", "accent", "logo", "poweredBy", "createdAt", "updatedAt"]
       },
       "OperatorHostLook": {
         "type": "object",
@@ -7037,6 +7087,10 @@
             },
             "required": ["contentType", "base64"],
             "description": "Its logo, checked by its bytes, metadata removed; shown at the sign-in page's lockup height. Null: the name alone. Left out: left as it is."
+          },
+          "poweredBy": {
+            "type": "boolean",
+            "description": "Its pages before sign-in end with a line linking to the software's site. Left out: left as it is (true on a new host)."
           }
         },
         "required": ["name"]
@@ -7850,7 +7904,7 @@
       "post": {
         "tags": ["Operator"],
         "summary": "Ask a workspace to let an account in as an outside collaborator",
-        "description": "Files a request to join that whoever may invite people in the workspace approves or denies like any other, told the same way. Approved, the account joins at once and never counts toward the `members` limit, even in a full workspace. Asking again while the request waits changes nothing. 409 `join.member` when the account is already in the workspace, `join.waiting` while another request to join waits for its address. The events feed tells the answer: `outside_access.granted` or `outside_access.denied`, and `outside_access.ended` when they leave or are removed, each with `data.userId`.",
+        "description": "Files a request to join that whoever may invite people in the workspace approves or denies like any other, told the same way. Approved, the account joins at once and never counts toward the `members` limit, even in a full workspace. Asking again while the request waits changes nothing. 409 `join.member` when the account is already in the workspace, `join.waiting` while another request to join waits for its address, `join.full` while 50 outside requests already wait in the workspace (counted apart from the asks through its invitation links), `outside_access.account_closed` when the account is blocked or waiting for its deletion (one that becomes so while its request waits has the request closed when someone approves it, with `outside_access.ended`). The events feed tells the answer: `outside_access.granted` or `outside_access.denied`, and `outside_access.ended` when they leave or are removed, or when the request is over unanswered (run out, told by a daily sweep, or gone with the account), each with `data.userId`.",
         "parameters": [
           {
             "schema": {
@@ -8014,7 +8068,7 @@
       "delete": {
         "tags": ["Operator"],
         "summary": "End an account's outside access to a workspace",
-        "description": "Closes its request still waiting, or removes the outside collaborator as anyone removed from a workspace is. With neither, nothing changes. 409 `outside_access.member` for an ordinary member: only someone in the workspace removes one.",
+        "description": "Closes its request still waiting, or removes the outside collaborator as anyone removed from a workspace is. With neither, nothing changes. 409 `outside_access.member` for an ordinary member, before anything changes: only someone in the workspace removes one.",
         "parameters": [
           {
             "schema": {
@@ -12413,7 +12467,7 @@
       "post": {
         "tags": ["Operator"],
         "summary": "Read one field of one record of what a workspace wrote, with a reason",
-        "description": "Only with `OPERATOR_API_REVEAL_TOKEN`. One record a call, at most 2000 characters, for one of two purposes that a record of the workspace proves. For `member_request`: the support request is this workspace's and recent (403 `reveal.no_request`), its member still is one (`reveal.requester`) and reads the record in the app now (`reveal.not_visible`). For `fault`: the run failed or got stuck in its days (`reveal.no_fault`), the record is its step, the message that started it or one it wrote, its agent's instructions, its routine or a task it started, or, for a run that went on past a failed step, that step's `error` and its call's `input` alone (`reveal.not_the_fault`), and it is not of a direct conversation (`reveal.direct_conversation`). Before any text is read, the read is recorded: a `content.viewed` event with the reason, and an entry in the workspace's own audit log (`operator.content_read`) with what was read, the purpose and its proof, never the reason. A record of another workspace, a deleted one and one nobody has answer the same 404. An `error` of something that did not fail is 409 `reveal.no_error`. At most 30 calls a minute (429 `reveal.limit_minute`) and 100 reads of one workspace in 24 hours (`reveal.limit_workspace`).",
+        "description": "Only with `OPERATOR_API_REVEAL_TOKEN`. One record a call, at most 2000 characters, for one of two purposes that a record of the workspace proves. For `member_request`: the support request is this workspace's and recent (403 `reveal.no_request`), its member still is one (`reveal.requester`) and reads the record in the app now (`reveal.not_visible`). For `fault`: the run failed or got stuck in its days (`reveal.no_fault`), the record is its step, the message that started it or one it wrote, its agent's instructions, its routine or a task it started, or, for a run that went on past a failed step, that step's `error` and its call's `input` alone (`reveal.not_the_fault`), and it is not of a direct conversation (`reveal.direct_conversation`). What a run of a confidential thread holds opens under neither purpose: its steps and a task it started answer 403 `reveal.confidential` where the proof would have opened them, and a message of such a thread reads as its stub. Before any text is read, the read is recorded: a `content.viewed` event with the reason, and an entry in the workspace's own audit log (`operator.content_read`) with what was read, the purpose and its proof, never the reason. A record of another workspace, a deleted one and one nobody has answer the same 404. An `error` of something that did not fail is 409 `reveal.no_error`. At most 30 calls a minute (429 `reveal.limit_minute`) and 100 reads of one workspace in 24 hours (`reveal.limit_workspace`).",
         "parameters": [
           {
             "schema": {
@@ -12467,7 +12521,7 @@
             }
           },
           "403": {
-            "description": "Not the reveal token, the door is closed, or the purpose's proof does not open this",
+            "description": "Not the reveal token, the door is closed, the purpose's proof does not open this, or a confidential thread keeps it",
             "content": {
               "application/json": {
                 "schema": {
@@ -12498,6 +12552,106 @@
           },
           "429": {
             "description": "Past the door's own limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reveal/orgs/{orgId}/replies": {
+      "post": {
+        "tags": ["Operator"],
+        "summary": "Answer a member's support request at the address of their account",
+        "description": "Only with `OPERATOR_API_REVEAL_TOKEN`. An email to the address the request's account has now, in that account's language: one of this server's own sentences (`template`) or your own words (`text`, plain text of at most 2000 characters). No argument names an address, a name or a subject. The email says that this server answers, that an AI assistant wrote it when `assistedByAi`, and where to write back when `SUPPORT_EMAIL` is set. A reply reads nothing: a request can be answered after the 30 days in which it opens content, for the 90 days its words are kept (403 `reveal.request_old` after that). Its member must still be one (`reveal.requester`). A request of another workspace and one nobody has answer the same 404. In one transaction with the email's job, the reply is recorded: a `support.replied` event and an entry in the workspace's own audit log (`operator.support_replied`), each with the request, the template or the word `text`, how long your words were and `assistedByAi`. Never the words: they are in the email's job alone, and leave it once the email is sent or given up. At most 3 replies to one request (429 `reveal.limit_request`) and 60 from this server in 24 hours (`reveal.limit_day`), counted from those events; a call counts toward the door's 30 a minute (`reveal.limit_minute`). A server that sends no email answers 409 `reveal.no_email`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "orgId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatorReplyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorReplied"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request: both or neither of `template` and `text`, or a `text` that says nothing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or wrong token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the reveal token, the door is closed, the request is too old or its member is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record in this workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This server sends no email (`reveal.no_email`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Past the replies' own limits, or the door's",
             "content": {
               "application/json": {
                 "schema": {

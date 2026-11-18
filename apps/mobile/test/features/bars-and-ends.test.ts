@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { restingKeyboard } from "../../src/features/chat/dock-height";
 
 const src = (path: string) => readFileSync(join(import.meta.dir, "../../src", path), "utf8");
 
@@ -48,15 +49,39 @@ test("a pushed screen's large title is the system's on iOS, over a scroll view t
   expect(header).toContain("headerLargeTitleShadowVisible: false,");
 });
 
-test("the dock settles on the system's word once the keyboard is shown or gone", () => {
-  const chat = src("features/chat/ChatScreen.tsx");
-  expect(chat).toContain('Keyboard.addListener("keyboardDidHide", () => settle(0))');
-  expect(chat).toContain('Keyboard.addListener("keyboardDidShow", (e) => settle(e.endCoordinates.height))');
+test("the dock settles on the system's word once the keyboard is shown or gone, and looks again on a doubt", () => {
+  const truth = src("features/chat/keyboard-truth.ts");
+  // The system's notifications that a move finished settle it at once.
+  expect(truth).toMatch(
+    /Keyboard\.addListener\("keyboardDidHide", \(\) => \{\s*movingUntil = 0;\s*settle\(false, 0\);/,
+  );
+  expect(truth).toMatch(
+    /Keyboard\.addListener\("keyboardDidShow", \(e\) => \{\s*movingUntil = 0;\s*settle\(true, e\.endCoordinates\.height\);/,
+  );
+  // A doubt looks at the system's state a moment later, never while the system says a move is under way.
+  expect(truth).toContain("settle(Keyboard.isVisible(), Keyboard.metrics()?.height ?? 0);");
+  expect(truth).toMatch(
+    /const wait = movingUntil - Date\.now\(\);\s*if \(wait > 0\) \{\s*timer = setTimeout\(check, wait\);/,
+  );
+  expect(truth).toContain('if (state === "active") look.current();');
   // On iOS only: Android's height leaves out the navigation bar the keyboard library counts edge to edge, so a late
   // event sank the box behind the keys (and the library ends every move there itself).
+  expect(truth).toMatch(/useEffect\(\(\) => \{\s*if \(Platform\.OS !== "ios"\) return;/);
+  // The doubts: the library ending a move, the list let go, the dock changing height, the screen coming back.
+  const chat = src("features/chat/ChatScreen.tsx");
+  expect(chat).toContain("const lookAtKeyboard = useKeyboardTruth(keyboardAt);");
+  expect(chat).toContain("if (IOS) scheduleOnRN(lookAtKeyboard);");
   expect(chat).toMatch(
-    /useEffect\(\(\) => \{\s*if \(Platform\.OS !== "ios"\) return;\s*const settle = \(height: number\) => \{/,
+    /hideDay\(\);[\s\S]{0,200}lookAtKeyboard\(\);\s*\}, \[releaseAtEnd, hideDay, still, lookAtKeyboard\]\);/,
   );
+  expect(chat).toMatch(/dock\.set\(height\);\s*watchList\(\);\s*lookAtKeyboard\(\);/);
+  expect(chat).toContain("if (focused) lookAtKeyboard();");
+});
+
+test("with no keyboard the dock rests down, whatever height was last said", () => {
+  expect(restingKeyboard(false, 336)).toEqual({ height: 0, progress: 0 });
+  expect(restingKeyboard(true, 336)).toEqual({ height: -336, progress: 1 });
+  expect(restingKeyboard(true, 0)).toEqual({ height: 0, progress: 0 });
 });
 
 test("a cover freezes the list only once a keyboard that was up has gone: no keyboard-tall gap over the dock after", () => {

@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { generateKeyPairSync } from "node:crypto";
-import { ConfigError, envVars, loadConfig, mcpCallerIdentity, redactConfig, testConfig } from "./index";
+import {
+  ConfigError,
+  envVars,
+  loadConfig,
+  mcpCallerIdentity,
+  redactConfig,
+  referralsLinkSecret,
+  testConfig,
+} from "./index";
 import { parseFirebaseServiceAccount, parsePemKey } from "./pem";
 
 const valid = {
@@ -154,6 +162,50 @@ describe("loadConfig", () => {
     );
   });
 
+  test("the chat surface bridge: its token needs a name and an address, the rest need the token, never an operator token", () => {
+    const token = "b".repeat(32);
+    const surface = {
+      SURFACE_BRIDGE_TOKEN: token,
+      SURFACE_NAME: "Example Chat",
+      SURFACE_OPEN_URL: "https://chat.example.com/open?text={text}",
+    };
+    const on = loadConfig({ ...valid, ...surface, SURFACE_ONLY: " A@Example.com, b@example.com ," });
+    expect(on.SURFACE_ONLY).toEqual(["a@example.com", "b@example.com"]);
+    expect(redactConfig(on).SURFACE_BRIDGE_TOKEN).toBe("********");
+    expect(loadConfig(valid).SURFACE_BRIDGE_TOKEN).toBeUndefined();
+    expect(() => loadConfig({ ...valid, SURFACE_BRIDGE_TOKEN: token })).toThrow(
+      /SURFACE_BRIDGE_TOKEN needs SURFACE_NAME and SURFACE_OPEN_URL/,
+    );
+    expect(() => loadConfig({ ...valid, ...surface, SURFACE_NAME: "" })).toThrow(/needs SURFACE_NAME/);
+    for (const alone of [
+      { SURFACE_NAME: "Example Chat" },
+      { SURFACE_OPEN_URL: surface.SURFACE_OPEN_URL },
+      { SURFACE_ONLY: "a@example.com" },
+    ]) {
+      expect(() => loadConfig({ ...valid, ...alone })).toThrow(/need SURFACE_BRIDGE_TOKEN/);
+    }
+    expect(() => loadConfig({ ...valid, ...surface, OPERATOR_API_TOKEN: token })).toThrow(
+      /SURFACE_BRIDGE_TOKEN must differ/,
+    );
+    expect(() =>
+      loadConfig({ ...valid, ...surface, OPERATOR_API_TOKEN: "o".repeat(32), OPERATOR_API_READ_TOKEN: token }),
+    ).toThrow(/SURFACE_BRIDGE_TOKEN must differ/);
+    expect(() =>
+      loadConfig({ ...valid, ...surface, OPERATOR_API_TOKEN: "o".repeat(32), OPERATOR_API_REVEAL_TOKEN: token }),
+    ).toThrow(/SURFACE_BRIDGE_TOKEN must differ from OPERATOR_API_REVEAL_TOKEN/);
+    for (const url of [
+      "https://chat.example.com/open",
+      "https://chat.example.com/{text}?text={text}",
+      "http://chat.example.com/open?text={text}",
+    ]) {
+      expect(() => loadConfig({ ...valid, ...surface, SURFACE_OPEN_URL: url })).toThrow(/SURFACE_OPEN_URL/);
+    }
+    expect(() => loadConfig({ ...valid, ...surface, SURFACE_BRIDGE_TOKEN: "short" })).toThrow(
+      /SURFACE_BRIDGE_TOKEN: must be at least 32 characters/,
+    );
+    expect(() => loadConfig({ ...valid, ...surface, SURFACE_ONLY: "not-an-email" })).toThrow(/SURFACE_ONLY/);
+  });
+
   test("the operator API's reveal token: optional, long, secret, only with the full token and equal to neither of the others", () => {
     const full = "o".repeat(32);
     const read = "r".repeat(32);
@@ -239,14 +291,20 @@ describe("loadConfig", () => {
     expect(redactConfig(loadConfig(billing)).BILLING_LINK_SECRET).toBe("********");
   });
 
-  test("referrals: an https address, only with the link's secret", () => {
+  test("referrals: an https address, with its own secret or the billing link's", () => {
     expect(loadConfig(valid).REFERRALS_URL).toBeUndefined();
     const billing = { ...valid, BILLING_URL: "https://billing.example.com", BILLING_LINK_SECRET: "b".repeat(32) };
-    expect(loadConfig({ ...billing, REFERRALS_URL: "https://refer.example.com" }).REFERRALS_URL).toBe(
-      "https://refer.example.com",
-    );
+    const borrowed = loadConfig({ ...billing, REFERRALS_URL: "https://refer.example.com" });
+    expect(borrowed.REFERRALS_URL).toBe("https://refer.example.com");
+    expect(referralsLinkSecret(borrowed)).toBe("b".repeat(32));
+    // No billing service: its own secret is enough, and signs even beside the billing link's.
+    const own = { ...valid, REFERRALS_URL: "https://refer.example.com", REFERRALS_LINK_SECRET: "r".repeat(32) };
+    expect(referralsLinkSecret(loadConfig(own))).toBe("r".repeat(32));
+    expect(referralsLinkSecret(loadConfig({ ...billing, ...own }))).toBe("r".repeat(32));
+    expect(redactConfig(loadConfig(own)).REFERRALS_LINK_SECRET).toBe("********");
+    expect(() => loadConfig({ ...own, REFERRALS_LINK_SECRET: "short" })).toThrow(/REFERRALS_LINK_SECRET/);
     expect(() => loadConfig({ ...valid, REFERRALS_URL: "https://refer.example.com" })).toThrow(
-      /REFERRALS_URL needs BILLING_LINK_SECRET/,
+      /REFERRALS_URL needs REFERRALS_LINK_SECRET/,
     );
     expect(() => loadConfig({ ...billing, REFERRALS_URL: "http://refer.example.com" })).toThrow(/REFERRALS_URL/);
   });

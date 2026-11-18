@@ -13,7 +13,8 @@ export const Route = createFileRoute("/refer")({
   loader: async ({ context }) => {
     const link = await context.api.account.referralsLink("/").catch(() => null);
     if (!link) throw notFound();
-    navigateAway(link.url);
+    // Out of the history: Back from the referral service would land here and mint a link again.
+    navigateAway(link.url, { replace: true });
     // The splash stays while the browser leaves.
     await new Promise(() => {});
   },

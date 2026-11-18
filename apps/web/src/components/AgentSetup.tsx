@@ -90,6 +90,7 @@ import { ConnectFlow, type FlowState } from "@/components/ConnectFlow";
 import { ConnectorIcon } from "@/components/ConnectorCatalog";
 import { useChannelActions } from "@/components/channel-actions";
 import { SetupBand } from "@/components/new-agent/SetupBand";
+import { PersonalChip } from "@/components/OwnerScope";
 import { useOrg } from "@/components/org-context";
 import { useWidenAsk } from "@/components/ReachLines";
 import { useDirectory } from "@/hooks/useDirectory";
@@ -785,16 +786,24 @@ function AppsDialog({
           <ul className="level-list setup-dlg__apps" aria-label={t("access.kind.connectors")}>
             {ordered.map((r) => {
               const name = resourceName(t, r, items);
+              const personal = Boolean(r.connectionId && items.get(r.connectionId)?.ownerUserId);
               return (
                 <LevelRow
                   key={r.id}
                   icon={<ResourceIcon resource={r} items={items} name={name} />}
                   name={name}
+                  {...(personal ? { hint: t("connectors.personal.worksWhenAsked") } : {})}
                   asks={asksAt(r, level(r)).map((x) => toolLabel(t, r, x))}
                   levels={r.levels}
                   value={level(r)}
                   onChange={(l) => setLevelsDraft((d) => ({ ...d, [r.id]: l }))}
-                  tag={suggestionOf(r) ? <span className="setup-tag">{t("agentSetup.suggested")}</span> : undefined}
+                  tag={
+                    personal ? (
+                      <PersonalChip />
+                    ) : suggestionOf(r) ? (
+                      <span className="setup-tag">{t("agentSetup.suggested")}</span>
+                    ) : undefined
+                  }
                 />
               );
             })}

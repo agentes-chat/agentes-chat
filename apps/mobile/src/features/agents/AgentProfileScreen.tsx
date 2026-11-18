@@ -8,6 +8,7 @@ import {
   useAiStatus,
   useApi,
   useApprovalRules,
+  useCatalog,
   useDms,
   useMemory,
   useMemoryAboutMe,
@@ -15,12 +16,14 @@ import {
   useModelLabel,
   useModels,
   useRemoveApprovalRule,
+  useTakeConnectionOffAgent,
   useUsage,
 } from "@agenteschat/client";
 import { approvalRuleServer, approvalRuleWords, approvalTitle } from "@agenteschat/client/lib/approval-words";
 import { listsAgent, seesDetails } from "@agenteschat/client/lib/audience";
 import { brainLine } from "@agenteschat/client/lib/brain";
 import { effortLevel } from "@agenteschat/client/lib/brain-advanced";
+import { personalOfText } from "@agenteschat/client/lib/connected";
 import { modelUnpriced } from "@agenteschat/client/lib/endpoints";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { formatPercent, lowerFirst, timeLeft } from "@agenteschat/client/lib/format";
@@ -51,6 +54,7 @@ import {
   GroupedRow,
   Icon,
   type IconName,
+  LivePause,
   Locked,
   PixelOrbit,
   ProviderLogo,
@@ -78,7 +82,16 @@ import { openRightHandSettings, RightHandMine } from "../right-hand/SettingsScre
 import { useConnectedById } from "../settings/hooks";
 import { agentBadgeInset } from "../shared/Face";
 import { LoadFailed } from "../shared/FirstUse";
-import { useColors, useDirectory, useErrorToast, useMeId, useNow, useOrgId, useWhen } from "../shared/hooks";
+import {
+  useColors,
+  useDirectory,
+  useErrorToast,
+  useMeId,
+  useNow,
+  useOrgId,
+  usePushEnded,
+  useWhen,
+} from "../shared/hooks";
 import { agentLook, genderOf } from "../shared/logic";
 import { SheetTitle } from "../shared/PromptForm";
 import { PushedHeader } from "../shared/parts";
@@ -100,6 +113,7 @@ import {
   didLines,
   knownAboutMe,
   modelRow,
+  othersPersonalOf,
   plainRole,
   spendOf,
   statusCardShown,
@@ -196,8 +210,10 @@ function Profile({ id }: { id: string }) {
     setTabState(next);
     void writeValue(STORED.agentProfileTab, next === "today" ? null : next);
   };
+  // The cover's sky and the face come alive once the push has ended: the slide has the threads to itself.
+  const arrived = usePushEnded();
   // A hello when its profile opens (a rare, small moment): it smiles once, unless it is at work.
-  const hello = useHello();
+  const hello = useHello(arrived);
   const modelLabel = useModelLabel();
   const detail = useAgentDetail(orgId, id);
   const access = useAgentAccess(orgId, id, details);
@@ -235,6 +251,11 @@ function Profile({ id }: { id: string }) {
   const learned = byPlaybook(memories);
   const uses = usesOf(access.data);
   const connected = useConnectedById();
+  // Other people's personal connections it holds: who manages connectors or agents and its owner may only turn them off.
+  const takesOff = details && (decides || can(org, "manage_connectors"));
+  const theirs = othersPersonalOf(useAgentAccess(orgId, id, takesOff, { others: true }).data, meId);
+  const catalog = useCatalog();
+  const takeOff = useTakeConnectionOffAgent(orgId);
   // A computer brain: its maker's mark and the model by the plan that pays for it ("Sonnet pelo plano do Claude"; its
   // computer only where it tells two apart).
   const thinks =
@@ -625,10 +646,58 @@ function Profile({ id }: { id: string }) {
                     />
                   }
                   label={u.label.text}
+                  {...(u.personal
+                    ? {
+                        sub: t("vault.tab.personal"),
+                        hint: {
+                          name: t("common.about", { label: u.label.text }),
+                          text: t("connectors.personal.worksWhenAsked"),
+                        },
+                      }
+                    : {})}
                   value={t(`mobile.intentAgents.uses.level.${u.level}`)}
                 />
               ),
             )}
+            {/* Someone else's personal connection: whose it is and Desligar, never its tools or level. */}
+            {takesOff
+              ? theirs.map((c) => (
+                  <GroupedRow
+                    key={`theirs:${c.connectionId}`}
+                    leading={
+                      <ConnectorIcon
+                        def={catalog.data?.connectors.find((d) => d.id === c.connector) ?? null}
+                        label={c.label}
+                        size={30}
+                      />
+                    }
+                    label={c.label}
+                    labelLines={0}
+                    sub={personalOfText(t, dir.memberById.get(c.ownerUserId ?? "")?.name ?? t("channel.unknownPerson"))}
+                    subLines={0}
+                    // Its × takes it off this agent (gone while that save is on its way), as a mailbox's does.
+                    {...(takeOff.isPending
+                      ? {}
+                      : {
+                          remove: {
+                            label: t("connectors.personal.turnOff"),
+                            onPress: () =>
+                              takeOff.mutate(
+                                { connectionId: c.connectionId, agentId: id },
+                                {
+                                  onSuccess: () =>
+                                    toast({
+                                      title: t("connectors.personal.takenOff", { name: c.label, agent: name }),
+                                      agentId: id,
+                                    }),
+                                  onError: failed,
+                                },
+                              ),
+                          },
+                        })}
+                  />
+                ))
+              : null}
             {/* Its mailboxes beside its apps (ADR 0038): a tap on one's own picks the level. */}
             {mailboxes.map((m) => (
               <GroupedRow
@@ -745,20 +814,25 @@ function Profile({ id }: { id: string }) {
         contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
       >
         <View style={styles.cover}>
-          <CoverParallax y={y} style={StyleSheet.absoluteFill}>
-            <Sky color={look.color} depth={1} style={StyleSheet.absoluteFill} />
-          </CoverParallax>
-          {/* Its presence is the badge; a screen reader hears it in words, with why. */}
-          <Animated.View style={avatarFade} {...(status ? { accessible: true, accessibilityLabel: status.line } : {})}>
-            <WithPresence size={FACE} presence={status?.presence} inset={agentBadgeInset(look, FACE)}>
-              <AgentAvatar
-                agent={look}
-                size={FACE}
-                mode={busy ? "run" : "idle"}
-                {...(hello && !busy ? { expression: "happy" as const } : {})}
-              />
-            </WithPresence>
-          </Animated.View>
+          <LivePause paused={!arrived}>
+            <CoverParallax y={y} style={StyleSheet.absoluteFill}>
+              <Sky color={look.color} depth={1} style={StyleSheet.absoluteFill} />
+            </CoverParallax>
+            {/* Its presence is the badge; a screen reader hears it in words, with why. */}
+            <Animated.View
+              style={avatarFade}
+              {...(status ? { accessible: true, accessibilityLabel: status.line } : {})}
+            >
+              <WithPresence size={FACE} presence={status?.presence} inset={agentBadgeInset(look, FACE)}>
+                <AgentAvatar
+                  agent={look}
+                  size={FACE}
+                  mode={busy ? "run" : "idle"}
+                  {...(hello && !busy ? { expression: "happy" as const } : {})}
+                />
+              </WithPresence>
+            </Animated.View>
+          </LivePause>
         </View>
         <View style={styles.prof}>
           <Text variant="display2" style={styles.center}>
@@ -1113,13 +1187,14 @@ const profileTabOf = (v: string | null): ProfileTab => (v === "access" || v === 
 /** How long the face holds its smile when the profile opens. */
 const HELLO_MS = 900;
 
-/** True for a moment after the profile opens: the face's hello. */
-function useHello() {
+/** True for a moment after the profile has come in (`arrived`): the face's hello. */
+function useHello(arrived: boolean) {
   const [on, setOn] = useState(true);
   useEffect(() => {
+    if (!arrived) return;
     const off = setTimeout(() => setOn(false), HELLO_MS);
     return () => clearTimeout(off);
-  }, []);
+  }, [arrived]);
   return on;
 }
 

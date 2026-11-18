@@ -2159,6 +2159,7 @@
     "phone": "Téléphone",
     "phoneOn": "Dans l'app mobile, même téléphone verrouillé",
     "phoneOff": "Activez-les dans l'app mobile",
+    "phoneOpen": "Ouvrir",
     "mac": "App Mac",
     "macHelp": "Tant que l'app est ouverte, même en arrière-plan",
     "on": "Activé",
@@ -2494,6 +2495,56 @@
     "localOnly": "Ce serveur ne s'ouvre que sur l'ordinateur où il tourne, donc votre téléphone ne peut pas le joindre.",
     "localOnlyHow": "Dans l'app agentes.chat de cet ordinateur, activez Y accéder depuis votre téléphone et vos collègues dans Préférences › Serveurs. Puis revenez ici.",
     "localOnlyHere": "Activez Y accéder depuis votre téléphone et vos collègues. Puis revenez ici."
+  },
+  "surface": {
+    "link": {
+      "consent": "{{assistant}} d'agentes.chat peut vous écrire sur {{surface}} à propos de vos espaces de travail, et vous appeler seulement en cas d'urgence si vous l'autorisez. Écrivez stop pour désactiver.",
+      "title": "Parlez à {{assistant}} sur {{surface}}",
+      "qr": "QR code qui ouvre {{surface}} avec votre code déjà saisi",
+      "making": "Création de votre code",
+      "code": "Votre code {{code}}",
+      "open": "Ouvrir {{surface}}",
+      "stepScan": "Scannez le code avec votre téléphone, ou ouvrez l'app",
+      "stepSend": "Envoyez le message tel quel",
+      "stepSendText": "Cela avance tout seul dès que votre message arrive.",
+      "stepConfirm": "Vérifiez l'expéditeur et confirmez ici",
+      "showCode": "Afficher le code à nouveau",
+      "confirmTitle": "Est-ce bien votre {{surface}} ?",
+      "sentBy": "Cet expéditeur a envoyé votre code",
+      "onlyYou": "Liez-le uniquement si c'est vous.",
+      "workspace": "Répond dans {{workspace}}",
+      "confirm": "Oui, lier",
+      "notMe": "Ce n'est pas moi",
+      "doneTitle": "{{surface}} est lié",
+      "doneText": "{{assistant}} vous répond là-bas à partir de maintenant.",
+      "newCode": "Créer un nouveau code",
+      "done": "Terminé"
+    },
+    "row": {
+      "hint": "Parlez à {{assistant}} et recevez ses réponses sur {{surface}}.",
+      "link": "Lier",
+      "none": "{{assistant}} peut vous écrire là-bas",
+      "pending": "Un expéditeur attend que vous confirmiez",
+      "unlink": "Délier",
+      "unlinkTitle": "Délier {{surface}} ?",
+      "unlinkText": "{{assistant}} ne vous répondra plus là-bas. Vous pouvez le lier à nouveau quand vous voulez.",
+      "unlinked": "{{surface}} délié"
+    },
+    "undo": {
+      "title": "Délier l'app de chat ?",
+      "lead": "Votre compte vient d'être lié à une app de chat. Si ce n'était pas vous, déliez-la ici.",
+      "button": "Délier",
+      "done": "{{surface}} délié",
+      "doneLead": "{{display}} ne peut plus atteindre votre compte.",
+      "ended": "Déjà délié",
+      "endedLead": "{{display}} sur {{surface}} avait déjà été délié. Rien d'autre à faire.",
+      "gone": "Ce lien d'annulation ne fonctionne plus",
+      "sender": "Cet expéditeur"
+    },
+    "via": "via {{surface}}",
+    "viaTip": "Envoyé par {{person}} sur {{surface}}",
+    "forwarded": "transféré via {{surface}}",
+    "forwardedTip": "{{person}} a transféré ceci depuis {{surface}}. Ce sont les mots de quelqu'un d'autre."
   },
   "team": {
     "title": "Équipe",
@@ -3537,10 +3588,16 @@
     "titleFor_female": "Connecter une IA pour {{name}}",
     "have": {
       "title": "Déjà connecté",
-      "titleFor": "Déjà connecté, pour {{name}}",
-      "titleFor_female": "Déjà connecté, pour {{name}}",
       "other": "Ou en connecter un autre",
-      "manageKeys": "Gérer ou supprimer les clés"
+      "manageKeys": "Gérer ou supprimer les clés",
+      "pickLine": "Choisissez un compte déjà connecté ici. {{name}} réfléchit avec.",
+      "onlyOwner_one": "Encore {{count}} compte, à donner par {{name}} uniquement.",
+      "onlyOwner_many": "Encore {{count}} comptes, à donner par {{name}} uniquement.",
+      "onlyOwner_other": "Encore {{count}} comptes, à donner par {{name}} uniquement.",
+      "moreAgents_one": "et {{count}} autre agent",
+      "moreAgents_many": "et {{count}} autres agents",
+      "moreAgents_other": "et {{count}} autres agents",
+      "plenty": "Bonne marge"
     },
     "chat": {
       "mine": "Les vôtres",
@@ -13320,6 +13377,37 @@
       "list": "Serveurs MCP connectés",
       "none": "Les serveurs MCP que vous connectez par leur adresse s'affichent ici."
     },
+    "personal": {
+      "note": "Vous seul ouvrez ces connexions. Vos agents les utilisent seulement quand vous le demandez.",
+      "noteOne": "Vous seul ouvrez cette connexion. Vos agents l'utilisent seulement quand vous le demandez.",
+      "emptyTitle": "Connectez vos propres comptes",
+      "emptyText": "Vous seul ouvrez vos connexions, et vos agents les utilisent seulement quand vous le demandez. Les boîtes mail suivent leur propre règle.",
+      "noApps": "Les services que vous connectez rien que pour vous apparaissent ici.",
+      "mailTitle": "Tes boîtes mail",
+      "mailNote": "Les agents que tu as autorisés utilisent tes boîtes comme tu l'as réglé, aussi pour les personnes qui leur parlent directement. Quand quelqu'un d'autre demande quelque chose qui doit être approuvé, c'est toi qui approuves.",
+      "others": "Connexions personnelles des autres",
+      "of": "Personnel de {{name}}",
+      "seeAll": "Voir les {{count}}",
+      "forWhom": "Pour qui",
+      "teamLocked": "Seules les personnes qui gèrent les connecteurs ajoutent ceux de l’équipe.",
+      "mailLocked": "Une boîte mail appartient toujours à qui la connecte.",
+      "done": "Vos agents l’utilisent seulement quand vous le demandez.",
+      "worksWhenAsked": "Fonctionne seulement quand vous le demandez.",
+      "remove": "Retirer",
+      "removeName": "Retirer {{name}}",
+      "removeTitle": "Retirer {{name}} ?",
+      "takeOff": "Retirer d’un agent",
+      "takeOffTitle": "Retirer {{name}} d’un agent",
+      "takeOffName": "Retirer {{name}} de {{agent}}",
+      "takeOffOne": "Retirer",
+      "takenOff": "{{agent}} n’utilise plus {{name}}.",
+      "turnOff": "Désactiver",
+      "turnOffName": "Désactiver {{name}} pour cet agent",
+      "moveToTeam": "Passer à l’équipe",
+      "moveTitle": "Passer {{name}} à l’équipe ?",
+      "moveText": "Tout le workspace la voit. Les personnes qui gèrent les agents choisissent quels agents l'utilisent, et le propriétaire d'un agent peut la désactiver sur le sien. Un agent qui utilise toutes les apps connectées la reçoit tout de suite.",
+      "moved": "{{name}} appartient maintenant à l’équipe."
+    },
     "addTitle": "Ajouter un connecteur",
     "catalogText": "Connectez une seule fois pour {{org}}. Choisissez ensuite ce que chaque agent peut utiliser.",
     "catalog": "Connecteurs disponibles",
@@ -15527,6 +15615,16 @@
     }
   },
   "errors": {
+    "surface": {
+      "off": "La liaison des apps de chat a été désactivée. Rechargez pour voir vos paramètres tels qu'ils sont maintenant.",
+      "notAllowed": "Relier une app de chat n'est pas encore ouvert à votre compte. Continuez à utiliser l'app ici en attendant.",
+      "noAssistant": "L'assistant de cet espace de travail n'est pas autorisé à vous parler. Choisissez un autre espace de travail à relier.",
+      "noWorkspace": "Vous n'êtes plus dans cet espace de travail. Choisissez un autre espace de travail à relier.",
+      "linkGone": "Cette liaison n'attend plus : elle a expiré après 10 minutes ou a été annulée. Créez un nouveau code pour recommencer.",
+      "taken": "Cet expéditeur est relié à un autre compte agentes.chat. Supprimez la liaison là-bas, puis envoyez un nouveau code.",
+      "undoGone": "Ce lien d'annulation a déjà servi ou a expiré. Supprimez plutôt la liaison dans vos paramètres de notifications.",
+      "codeGone": "Ce code est erroné, déjà utilisé ou expiré après 10 minutes. Créez un nouveau code et renvoyez-le."
+    },
     "wallpaper": {
       "notYours": "Cette photo n'est pas à vous.",
       "invalid": "Ce fond n'existe pas.",
@@ -15563,7 +15661,7 @@
       "accountInUse": "Ce compte pense déjà pour un autre agent.",
       "noAiYet": "Aucune IA n'est encore connectée.",
       "filePurged": "Ce fichier a été supprimé il y a plus de 30 jours et ne peut pas revenir.",
-      "looksSecret": "Cela ressemble à un mot de passe ou à une clé, et tout le monde ici le verrait.",
+      "looksSecret": "Cela ressemble à un mot de passe ou à une clé, et tout le monde ici le verrait. Demandez plutôt à l'agent de vous le demander en privé.",
       "blockSpec": "Ce bloc contient une erreur dans ses éléments ou ses formules, il ne peut donc pas être affiché. Corrigez-le et réessayez.",
       "takeControl": "Prenez d'abord le contrôle du profil.",
       "profileBusy": "Quelqu'un d'autre utilise ce profil.",
@@ -15581,8 +15679,10 @@
       "createRefused": "Vous ne pouvez pas créer d'espace de travail pour le moment.",
       "noAgentToRemind": "Aucun agent de cette conversation ne peut vous le rappeler.",
       "agentCantRead": "Laissez d'abord l'agent lire ceci, dans ses accès.",
+      "connectionNotYours": "Cette connexion est personnelle à quelqu'un d'autre. Seule une de ses routines peut attendre ses événements.",
       "neverHappens": "Cette planification n'arrive jamais.",
       "soleOwner": "Vous êtes le seul propriétaire d'un espace de travail avec d'autres membres. Nommez un autre propriétaire ou supprimez l'espace de travail d'abord.",
+      "soleOwnerOutside": "Vous êtes le seul propriétaire d'un espace de travail dont les autres personnes sont des collaborateurs externes, qui ne peuvent pas être propriétaires. Invitez d'abord un membre et nommez-le propriétaire, ou supprimez l'espace de travail.",
       "testFirst": "Testez la connexion avec ces réglages avant de l'activer.",
       "voiceLength": "L'enregistrement est trop long ou trop court.",
       "sendAgain": "Le fichier n'est pas arrivé entier. Renvoyez-le.",
@@ -15692,7 +15792,8 @@
       "denied": "Votre demande n'a pas été approuvée. Demandez à quelqu'un sur place de vous inviter.",
       "answered": "Quelqu'un a déjà répondu à cette demande.",
       "expired": "Cette demande a expiré : personne n'y a répondu en 14 jours.",
-      "codeNeeded": "Vérifiez d'abord votre e-mail."
+      "codeNeeded": "Vérifiez d'abord votre e-mail.",
+      "outsideClosed": "Ce compte a été bloqué ou est en cours de suppression : il ne peut pas rejoindre. La demande est fermée."
     },
     "code": {
       "wrong": "Code incorrect. Réessayez.",
@@ -17221,6 +17322,10 @@
       "fault": "pour diagnostiquer une exécution en échec ou bloquée",
       "ai": "avec un assistant IA"
     },
+    "operatorReply": {
+      "sentence": "{{who}} a répondu par e-mail",
+      "request": "demande d'assistance de {{name}}"
+    },
     "change": {
       "mergedWithoutAsking": "A mergé dans {{repo}} sans demander",
       "accentChanged": "A changé la couleur d’accent de l’espace de travail",
@@ -17428,7 +17533,7 @@
       "roles": "Chaque rôle ajoute des autorisations, des canaux et des agents.",
       "vault": "Mots de passe, clés et contacts de vos agents. Ils ne voient jamais un mot de passe.",
       "access": "Ce que chaque agent peut utiliser : un niveau par connecteur.",
-      "connectors": "Services et serveurs MCP connectés une fois pour tout l'espace de travail.",
+      "connectors": "Services et serveurs MCP, connectés pour l'équipe ou rien que pour vous.",
       "skills": "Instructions en Markdown que les agents ouvrent quand ils en ont besoin.",
       "storage": "Où sont stockés les fichiers de l'espace de travail.",
       "usage": "Les comptes IA de l'espace de travail, et ce que chaque personne et chaque agent utilisent.",
@@ -17507,7 +17612,7 @@
         "wallpaper": {
           "title": "Fond",
           "help": "Ne change que pour vous, sur tous vos appareils",
-          "rowHelp": "Derrière toutes les conversations, pour vous seul. Une conversation peut avoir le sien depuis son menu.",
+          "rowHelp": "Derrière toutes les conversations, pour vous seul, sauf si une conversation a le sien depuis son menu.",
           "rowSub": "Pour vous seul, dans toutes les conversations",
           "onlyHere": "Seulement dans {{name}}, pour vous seul",
           "none": "Aucun fond",
@@ -18772,6 +18877,8 @@
       "file_saved": "Fichier enregistré.",
       "issue_work_start": "Merci de faire la tâche #{{number}}.",
       "issue_taken": "A pris la tâche #{{number}}.",
+      "surfaceUnlinked": "{{surface}} a été délié parce que son identité a changé. Lie-le à nouveau dans les Paramètres si c'était toi.",
+      "surfaceVoiceDropped": "Je n'ai pas compris ce message vocal. Tu peux le renvoyer ou l'écrire ?",
       "done": "C'est fait.",
       "stretch_paused_runs_one": "{{agents}} s'est arrêté pour faire le point avec vous avant de continuer",
       "stretch_paused_runs_many": "{{agents}} se sont arrêtés pour faire le point avec vous avant de continuer",
@@ -19698,6 +19805,7 @@
     "serverOwner": "Vous avez installé ce serveur. Ses propres paramètres n'auront plus de propriétaire ici, seulement dans son environnement.",
     "blockers": "Avant de pouvoir le supprimer",
     "soleOwner": "Vous êtes l'unique propriétaire de {{name}}. Nommez quelqu'un d'autre propriétaire, ou supprimez {{name}}.",
+    "soleOwnerOutside": "Vous êtes l'unique propriétaire de {{name}}, et les autres personnes y sont des collaborateurs externes, qui ne peuvent pas être propriétaires. Invitez un membre et nommez-le propriétaire, ou supprimez {{name}}.",
     "soleOwnerSettingUp": "Vous êtes l'unique propriétaire de {{name}}. Terminez sa configuration pour nommer quelqu'un d'autre propriétaire, ou supprimez {{name}}.",
     "openPeople": "Ouvrir Personnes",
     "finishSetup": "Terminer la configuration",

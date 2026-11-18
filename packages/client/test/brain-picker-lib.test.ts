@@ -108,10 +108,8 @@ describe("Quem pensa as one list (the new agent's step)", () => {
     expect(options.find((o) => o.value === "none:chatgpt")?.disabled).toBe(true);
     // Cursor and OpenCode show only where a computer runs them.
     expect(options.some((o) => o.value.startsWith("cursor") || o.value.startsWith("zen"))).toBe(false);
-    // A model without the provider's key says so and can't be picked.
-    const gpt = options.find((o) => o.value === "gpt-6.1-sol");
-    expect(gpt?.disabled).toBe(true);
-    expect(gpt?.description).toStartWith("newAgent.modelNeedsKey");
+    // A model without the provider's key isn't offered (ADR 0199).
+    expect(options.some((o) => o.value === "gpt-6.1-sol")).toBe(false);
   });
 
   test("Claude's plan ready here: Claude's models read as the plan's, none says it needs a Claude API key", () => {
@@ -120,15 +118,15 @@ describe("Quem pensa as one list (the new agent's step)", () => {
     const plan = options.filter((o) => o.value.startsWith("claude@m1/"));
     expect(plan.map((o) => o.label)).toEqual(["brain.auto.label", "Opus", "Sonnet", "Haiku"]);
     expect(plan.every((o) => !o.disabled)).toBe(true);
-    // ChatGPT's plan isn't ready there: its models still say what they need.
-    expect(options.find((o) => o.value === "gpt-6.1-sol")?.description).toStartWith("newAgent.modelNeedsKey");
+    // ChatGPT's plan isn't ready there and there's no OpenAI key: its API models aren't offered (ADR 0199).
+    expect(options.some((o) => o.value === "gpt-6.1-sol")).toBe(false);
     const noComputer = brainPickOptions(t, "pt-BR", {
       api: modelChoices(MODELS, [], false),
       machines: [],
       accounts: [],
       ownerIsMe: true,
     });
-    expect(noComputer.find((o) => o.value === "claude-sonnet-5-5")?.disabled).toBe(true);
+    expect(noComputer.some((o) => o.value === "claude-sonnet-5-5")).toBe(false);
     expect(noComputer.find((o) => o.value === "none:claude")?.description).toBe("brain.foot.noComputer");
     // A billing hold, not the computers, is why a plan is off then.
     const held = brainPickOptions(t, "pt-BR", {
@@ -169,14 +167,14 @@ describe("Quem pensa as one list (the new agent's step)", () => {
   test("search finds free models by 'free', and a plan's model by its name or maker", () => {
     const options = build([goKey]);
     const free = finds(options, "free");
-    expect(free).toContain("some-free-model");
+    // No OpenRouter key: its free model isn't offered (ADR 0199).
+    expect(free).not.toContain("some-free-model");
     expect(free).toContain("opencode@m1#acc-go/beam-free");
     expect(free).toContain("opencode@m1#acc-go/iceman-contributor-free");
     expect(options.filter((o) => o.free).map((o) => o.value)).toEqual([
-      "some-free-model",
       "opencode@m1#acc-go/longcat-2.5-free",
+      "opencode@m1#acc-go/hy4-flash-free",
       "opencode@m1#acc-go/beam-free",
-      "opencode@m1#acc-go/crouton-alpha-free",
       "opencode@m1#acc-go/iceman-contributor-free",
     ]);
     expect(finds(options, "deepseek-v4.1-flash")).toEqual(["opencode@m1#acc-go/deepseek-v4.1-flash"]);
@@ -325,9 +323,11 @@ describe("OpenCode (ADR 0132) in Quem pensa", () => {
     const goModels = keyed.slice(3).map((o) => (o.pick as { model: string }).model);
     expect(goModels.every((m) => m.startsWith("opencode-go/"))).toBe(true);
     expect(goModels).toContain("opencode-go/deepseek-v4.1-flash");
-    // Go thinks through Claude Code, where OpenCode's free tier never answers: a hint says where they run.
+    // Go thinks through Claude Code, where OpenCode's free tier never answers: a hint says where they run. Go's own
+    // free models (`hy4-flash-free`) are its list's, not the free tier's.
     const go = options.filter((o) => "accountId" in o.pick && o.pick.accountId === "acc-go");
-    expect(go.some((o) => o.value.endsWith("-flash-free"))).toBe(false);
+    for (const id of ["deepseek-v4.1-flash-free", "glm-5.3-flash-free", "mimo-v2.6-flash-free"])
+      expect(go.some((o) => o.value.endsWith(`/${id}`))).toBe(false);
     expect(go[0]?.hint).toBe("brain.opencodeFreeHint");
     expect(options.find((o) => o.value === "claude@m1/auto")?.hint).toBeUndefined();
     expect(planFreeHint(t, CODING_PLANS.opencode)).toBe("brain.opencodeFreeHint");
@@ -606,5 +606,22 @@ test("a model sold at thinking levels: one row, its levels are the effort, and e
   expect(modelInput("gemini-4-hydrogen-xhigh", view)).toEqual({
     model: "gemini-4-hydrogen-xhigh",
     effort: "xhigh",
+  });
+});
+
+describe("pickGroups", () => {
+  test("two groups of the same heading stay two where their keys differ (two owners of one first name)", () => {
+    const groups = pickGroups([
+      { group: "De João", groupKey: "owner:u1" },
+      { group: "De João", groupKey: "owner:u2" },
+      { group: "De João", groupKey: "owner:u2" },
+      { group: "Claude" },
+      { group: "Claude" },
+    ]);
+    expect(groups.map((g) => [g.key, g.group, g.options.length])).toEqual([
+      ["owner:u1", "De João", 1],
+      ["owner:u2", "De João", 2],
+      ["Claude", "Claude", 2],
+    ]);
   });
 });

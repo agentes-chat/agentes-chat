@@ -58,8 +58,8 @@ function registrable(host: string, own: ReadonlySet<string>) {
 const lockHosts = (tx: Pick<Database, "execute">) => tx.execute(sql`select pg_advisory_xact_lock(hashtext('hosts'))`);
 
 /**
- * Registers a host or replaces its look (the operator's `PUT /hosts/{host}`). `accent` and `logo` left out are left as
- * they are (none on a new host); null clears them. The logo takes a workspace logo's checks (`readImage`). A new logo
+ * Registers a host or replaces its look (the operator's `PUT /hosts/{host}`). `accent`, `logo` and `poweredBy` left
+ * out are left as they are (none, none and true on a new host); null clears `accent` and `logo`. The logo takes a workspace logo's checks (`readImage`). A new logo
  * is stored under a name of its own before the row, so no other write's cleanup can remove it; a file no committed row
  * holds any more is removed only after the commit.
  */
@@ -71,6 +71,7 @@ export async function putHost(
     name: string;
     accent?: string | null;
     logo?: { contentType: string; base64: string } | null;
+    poweredBy?: boolean;
   },
 ): Promise<HostLook> {
   const h = registrable(host, own);
@@ -95,10 +96,14 @@ export async function putHost(
       }
       const logo = input.logo === undefined ? (before?.logo ?? null) : stored;
       const accent = input.accent === undefined ? (before?.accent ?? null) : (input.accent?.toLowerCase() ?? null);
+      const poweredBy = input.poweredBy ?? before?.poweredBy ?? true;
       const [row] = await tx
         .insert(hosts)
-        .values({ host: h, name: input.name, accent, logo })
-        .onConflictDoUpdate({ target: hosts.host, set: { name: input.name, accent, logo, updatedAt: sql`now()` } })
+        .values({ host: h, name: input.name, accent, logo, poweredBy })
+        .onConflictDoUpdate({
+          target: hosts.host,
+          set: { name: input.name, accent, logo, poweredBy, updatedAt: sql`now()` },
+        })
         .returning();
       if (!row) throw new Error("host not saved");
       return { row, before };

@@ -7,6 +7,7 @@ import { CONNECTOR_CATALOG } from "./connectors/catalog";
 import { connectorGrantValidator, toolPrefixOfConnection } from "./connectors/connections";
 import { classifiedTools, customScope, isCustom, type ToolAccess } from "./connectors/custom";
 import { exposedToolName } from "./connectors/mcp";
+import { othersLabel, othersPersonal, seesOthersOnAgent } from "./connectors/personal";
 import { sha256 } from "./crypto";
 import { ForbiddenError, NotFoundError, ValidationError } from "./errors";
 import { can, requirePermission } from "./organizations";
@@ -19,6 +20,7 @@ import {
   CONNECTOR_ALL,
   freshGrantedKeys,
   grantKey,
+  holdsConnection,
   impliedByWrite,
   isAllowed,
   isBuiltinScope,
@@ -338,15 +340,27 @@ export interface AccessTree {
     custom: boolean;
     state: AccessState;
     scopes: AccessScope[];
+    /** A personal connection's person; null: the team's. Someone else's comes with no scopes or tools. */
+    ownerUserId: string | null;
   }[];
 }
 
-/** Every tool the org offers, from the catalogs (no network): built-ins, catalog connectors, classified custom tools. */
-export async function orgToolCatalog(db: Database, orgId: string) {
+/**
+ * Every tool the org offers, from the catalogs (no network): built-ins, catalog connectors, classified custom tools.
+ * Without `viewer`, the team's connections alone. With it, also the viewer's own personal ones, and everyone else's
+ * with no scopes or tools (only their name and person: an agent's page shows that it holds one).
+ */
+export async function orgToolCatalog(db: Database, orgId: string, options: { viewer?: string } = {}) {
   const connections = await db
     .select()
     .from(connectorConnections)
-    .where(and(eq(connectorConnections.orgId, orgId), isNull(connectorConnections.revokedAt)))
+    .where(
+      and(
+        eq(connectorConnections.orgId, orgId),
+        isNull(connectorConnections.revokedAt),
+        options.viewer === undefined ? isNull(connectorConnections.ownerUserId) : undefined,
+      ),
+    )
     .orderBy(asc(connectorConnections.createdAt));
   const out: {
     connectionId: string;
@@ -354,8 +368,20 @@ export async function orgToolCatalog(db: Database, orgId: string) {
     label: string;
     custom: boolean;
     scopes: { scope: string; label: string; tools: CatalogTool[] }[];
+    ownerUserId: string | null;
   }[] = [];
   for (const c of connections) {
+    if (options.viewer !== undefined && othersPersonal(c, options.viewer)) {
+      out.push({
+        connectionId: c.id,
+        connector: isCustom(c) ? "custom" : c.connector,
+        label: othersLabel(c.label, c.accountLabel),
+        custom: isCustom(c),
+        scopes: [],
+        ownerUserId: c.ownerUserId,
+      });
+      continue;
+    }
     if (isCustom(c)) {
       const tools = await classifiedTools(db, c.id);
       const byScope = new Map<string, CatalogTool[]>();
@@ -376,6 +402,7 @@ export async function orgToolCatalog(db: Database, orgId: string) {
         connector: "custom",
         label: c.label,
         custom: true,
+        ownerUserId: c.ownerUserId,
         scopes: [...byScope].map(([scope, list]) => ({
           scope,
           label: scope.endsWith(":read") ? "Read" : "Write",
@@ -391,6 +418,7 @@ export async function orgToolCatalog(db: Database, orgId: string) {
       connector: def.id,
       label: c.label,
       custom: false,
+      ownerUserId: c.ownerUserId,
       scopes: Object.entries(def.scopes).map(([id, s]) => ({
         scope: `${def.id}:${id}`,
         label: s.label,
@@ -465,40 +493,73 @@ function treeFor(
         state: toolAccess(granted, { name, scope, connectionId: null }),
       })),
     }));
+  // "All tools" never covers someone's personal connection: only grants of its own on it count.
+  const own = new Set([...granted].filter((k) => k !== grantKey(null, ALL_TOOLS)));
   return {
     all: granted.has(grantKey(null, ALL_TOOLS)),
     builtins,
-    connectors: catalog.map((c) => ({
-      connectionId: c.connectionId,
-      connector: c.connector,
-      label: c.label,
-      custom: c.custom,
-      state: granted.has(grantKey(c.connectionId, CONNECTOR_ALL))
-        ? "granted"
-        : granted.has(grantKey(null, ALL_TOOLS))
-          ? "inherited"
-          : "off",
-      scopes: c.scopes.map((s) => ({
+    connectors: catalog.map((c) => connectorTree(c, c.ownerUserId ? own : granted)),
+  };
+}
+
+/** One connection's branch of an agent's access tree. */
+function connectorTree(c: Awaited<ReturnType<typeof orgToolCatalog>>[number], granted: Set<string>) {
+  return {
+    connectionId: c.connectionId,
+    connector: c.connector,
+    label: c.label,
+    custom: c.custom,
+    ownerUserId: c.ownerUserId,
+    state: (granted.has(grantKey(c.connectionId, CONNECTOR_ALL))
+      ? "granted"
+      : granted.has(grantKey(null, ALL_TOOLS))
+        ? "inherited"
+        : "off") as AccessState,
+    scopes: c.scopes.map((s) => ({
+      scope: s.scope,
+      label: s.label,
+      state: scopeState(granted, c.connectionId, s.scope),
+      tools: s.tools.map((t) => ({
+        ...t,
+        connectionId: c.connectionId,
         scope: s.scope,
-        label: s.label,
-        state: scopeState(granted, c.connectionId, s.scope),
-        tools: s.tools.map((t) => ({
-          ...t,
-          connectionId: c.connectionId,
-          scope: s.scope,
-          state: toolAccess(granted, { name: t.name, scope: s.scope, connectionId: c.connectionId }),
-        })),
+        state: toolAccess(granted, { name: t.name, scope: s.scope, connectionId: c.connectionId }),
       })),
     })),
   };
 }
 
+/**
+ * The agent's tree as `actorId` may see it: someone else's personal connection only while the agent holds some of
+ * it, so who manages agents or owns the agent can take it off.
+ */
+async function treeAs(
+  db: Database,
+  actorId: string,
+  orgId: string,
+  agent: { id: string; builtin?: string | null },
+  others: boolean,
+) {
+  const granted = await freshGrantedKeys(db, orgId, agent.id);
+  const catalog = (await orgToolCatalog(db, orgId, { viewer: actorId })).filter(
+    (c) => !othersPersonal(c, actorId) || (others && holdsConnection(granted, c.connectionId)),
+  );
+  return treeFor(granted, catalog, isRightHand(agent));
+}
+
 /** `GET …/agents/{id}/access`: the effective access as a tree. */
-export async function getAgentAccess(db: Database, actorId: string, orgId: string, agentId: string) {
-  await requirePermission(db, actorId, orgId, "read");
+/** `others`: someone else's personal connection the agent holds shows too (a client that knows the word). */
+export async function getAgentAccess(
+  db: Database,
+  actorId: string,
+  orgId: string,
+  agentId: string,
+  options: { others?: boolean } = {},
+) {
+  const membership = await requirePermission(db, actorId, orgId, "read");
   const agent = await getAgent(db, orgId, agentId);
   if (!agent) throw new NotFoundError("Agent not found");
-  return treeFor(await freshGrantedKeys(db, orgId, agentId), await orgToolCatalog(db, orgId), isRightHand(agent));
+  return treeAs(db, actorId, orgId, agent, options.others === true && seesOthersOnAgent(membership, agent, actorId));
 }
 
 /**
@@ -514,6 +575,7 @@ export async function setAgentAccess(
   orgId: string,
   agentId: string,
   input: AccessInput,
+  options: { others?: boolean } = {},
 ): Promise<AccessTree> {
   const membership = await requirePermission(db, actorId, orgId, "read");
   const agent = await getAgent(db, orgId, agentId);
@@ -522,14 +584,11 @@ export async function setAgentAccess(
   if (!admin && agent.ownerUserId !== actorId) {
     throw new ForbiddenError("Only an admin or the agent's owner can change its access");
   }
-  const active = new Set(
-    (
-      await db
-        .select({ id: connectorConnections.id })
-        .from(connectorConnections)
-        .where(and(eq(connectorConnections.orgId, orgId), isNull(connectorConnections.revokedAt)))
-    ).map((r) => r.id),
-  );
+  const live = await db
+    .select({ id: connectorConnections.id, ownerUserId: connectorConnections.ownerUserId })
+    .from(connectorConnections)
+    .where(and(eq(connectorConnections.orgId, orgId), isNull(connectorConnections.revokedAt)));
+  const active = new Set(live.map((r) => r.id));
   const rows: ScopeGrant[] = [];
   if (input.all) rows.push({ connectionId: null, scope: ALL_TOOLS });
   for (const [connectionId, on] of Object.entries(input.connectors ?? {})) {
@@ -565,10 +624,42 @@ export async function setAgentAccess(
         if (toolAccess(wanted, { name, scope }) === "off")
           rows.push({ connectionId: null, scope: toolDenyScope(name) });
   }
+  const current = await freshGrantedKeys(db, orgId, agentId);
   const unique = new Map(rows.map((r) => [grantKey(r.connectionId, r.scope), r]));
-  if (!admin && widens(await freshGrantedKeys(db, orgId, agentId), unique)) {
+  // Someone else's personal connection: only its person gives it to an agent. What a save says of one (its page shows
+  // no tools of it) keeps what the agent holds, unless it turns the connection off (`connectors[id]: false`).
+  const theirs = new Set(live.filter((c) => othersPersonal(c, actorId)).map((c) => c.id));
+  for (const [key, grant] of unique) {
+    if (!grant.connectionId || !theirs.has(grant.connectionId)) continue;
+    if (!holdsConnection(current, grant.connectionId))
+      throw new ForbiddenError("Only its person gives a personal connection to an agent");
+    unique.delete(key);
+  }
+  for (const key of current) {
+    const connectionId = key.slice(0, key.indexOf("|"));
+    if (!theirs.has(connectionId) || input.connectors?.[connectionId] === false) continue;
+    const scope = key.slice(key.indexOf("|") + 1);
+    unique.set(key, { connectionId, scope });
+  }
+  // The actor's own personal connection is theirs to give, on an agent they may change.
+  const mine = new Set(live.filter((c) => c.ownerUserId === actorId).map((c) => c.id));
+  const widening = new Map([...unique].filter(([, g]) => !g.connectionId || !mine.has(g.connectionId)));
+  if (!admin && widens(current, widening)) {
     throw new ForbiddenError("Only an admin can give an agent new access. Its owner can only take access away.");
   }
+  // The audit line: what the save says of the team's connections and built-ins, and of the actor's own connections
+  // apart (`own`), which only they read (`listAudit`). What it says of someone else's own changes nothing: left out.
+  const ownerOf = new Map(live.map((c) => [c.id, c.ownerUserId]));
+  const said = (owner: string | null) => {
+    const of = (id: string | null | undefined) => (id ? (ownerOf.get(id) ?? null) : null) === owner;
+    return {
+      connectors: Object.keys(input.connectors ?? {}).filter((k) => input.connectors[k] && of(k)),
+      scopes: (input.scopes ?? []).filter((g) => of(g.connectionId)).map((g) => g.scope),
+      allow: (input.tools?.allow ?? []).filter((t) => of(t.connectionId)).map((t) => t.name),
+      deny: (input.tools?.deny ?? []).filter((t) => of(t.connectionId)).map((t) => t.name),
+    };
+  };
+  const own = said(actorId);
   await db.transaction(async (tx) => {
     // The right hand's shared seat on the workspace's computer (ADR 0175) goes with its last computer grant: the
     // computer stops what runs there, and a grant given again starts an empty one. A tool left on by name is a grant.
@@ -598,15 +689,13 @@ export async function setAgentAccess(
       target: { type: "agent", id: agentId },
       details: {
         all: input.all,
-        connectors: Object.keys(input.connectors ?? {}).filter((k) => input.connectors[k]),
-        scopes: (input.scopes ?? []).map((s) => s.scope),
-        allow: (input.tools?.allow ?? []).map((t) => t.name),
-        deny: (input.tools?.deny ?? []).map((t) => t.name),
+        ...said(null),
+        ...(Object.values(own).some((l) => l.length) ? { own, personalOf: actorId } : {}),
       },
     });
   });
   caches.scopes.deletePrefix(`${orgId}:${agentId}`);
-  return treeFor(await freshGrantedKeys(db, orgId, agentId), await orgToolCatalog(db, orgId), isRightHand(agent));
+  return treeAs(db, actorId, orgId, agent, options.others === true && seesOthersOnAgent(membership, agent, actorId));
 }
 
 /**
@@ -726,6 +815,7 @@ export function appHeldBy(grants: ScopeGrant[], id: string): string | null {
  * their own screens). `choices` lists them all.
  */
 export async function resolveApps(db: Executor, orgId: string, names: string[]) {
+  // The team's alone: a person's own connection is given to agents by that person only, never through a card.
   const active = await db
     .select({
       id: connectorConnections.id,
@@ -733,7 +823,13 @@ export async function resolveApps(db: Executor, orgId: string, names: string[]) 
       connector: connectorConnections.connector,
     })
     .from(connectorConnections)
-    .where(and(eq(connectorConnections.orgId, orgId), isNull(connectorConnections.revokedAt)))
+    .where(
+      and(
+        eq(connectorConnections.orgId, orgId),
+        isNull(connectorConnections.revokedAt),
+        isNull(connectorConnections.ownerUserId),
+      ),
+    )
     .orderBy(asc(connectorConnections.createdAt));
   const own = await mailConnectionIds(
     db,
@@ -828,7 +924,13 @@ export async function pendingConnectors(
   const [any] = await db
     .select({ id: connectorConnections.id })
     .from(connectorConnections)
-    .where(and(eq(connectorConnections.orgId, orgId), isNull(connectorConnections.revokedAt)))
+    .where(
+      and(
+        eq(connectorConnections.orgId, orgId),
+        isNull(connectorConnections.revokedAt),
+        isNull(connectorConnections.ownerUserId),
+      ),
+    )
     .limit(1);
   if (!any) return [];
   const out: PendingConnector[] = [];

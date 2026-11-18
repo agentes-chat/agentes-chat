@@ -155,6 +155,7 @@ test("accounts on a computer: the runner's list, signing in with a sealed code, 
         providerOrgId: null,
         serves: "everyone",
         useOrder: null,
+        sameAs: OLD_ACCOUNT,
         // A login for one agent is never a next account.
         movable: false,
       },

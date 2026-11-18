@@ -40,21 +40,33 @@ workspace could not let them in at all. A self-hosted server sets no limit, so i
    operator named the account, so nothing is left for its address to prove. Whoever may invite people is told the way
    they are told of someone asking through a link (the merged notice, its push, the hour's email) and approves, with
    the roles, channels and agents they choose, or denies. An approval lets that account in at once, into a full
-   workspace too, and never sends an email invitation. The request closes unanswered after 14 days, as any does.
+   workspace too, and never sends an email invitation. The request closes unanswered after 14 days, as any does; the
+   daily sweep of requests to join (`pruneJoinRequests`) then marks it `closed`, so the operator is told once.
    Asking again while it waits changes nothing and answers the same request; an account already in the workspace is
    refused (`join.member`), and so is one whose address has another request waiting (`join.waiting`), which is
-   answered first.
+   answered first. At most 50 outside requests wait in a workspace (`join.full`), counted apart from the 50 asks
+   through its links, so the operator's requests never use those up. An account blocked or waiting for its deletion is refused (`outside_access.account_closed`), as
+   every other way into a workspace refuses it; one that becomes so while its request waits has the request closed
+   when someone approves it, and the approval answers that same code. While it waits, an ask through an invitation
+   link for its address never takes it over: that ask is answered as one for an address someone already asked for
+   (`join.waiting`), and the request keeps the account the operator named.
 5. **Leaving.** Whoever may remove members removes an outside collaborator like anyone, and they may leave. The
    operator ends it with `DELETE /orgs/{orgId}/outside-access/{userId}`: a request still waiting closes, and a member
    is taken out with everything a removal does, the audit log's entry being the system's. It refuses an ordinary member
-   (`outside_access.member`): only the workspace removes one of its own.
+   (`outside_access.member`) before it changes anything, a request still waiting for them included: only the workspace
+   removes one of its own.
 6. **Never an owner.** Making an outside collaborator an owner is refused (`member.outside_owner`): they answer to
-   whoever they work for, not to the workspace.
+   whoever they work for, not to the workspace. So a sole owner whose only other people are outside collaborators,
+   refused their account's deletion (`sole_owner`), is told that the way out is to invite a member and make them an
+   owner, or to delete the workspace: the plan marks such a workspace `onlyOutside`, and the refusal carries
+   `params.onlyOutside` when every workspace that keeps the account is one.
 7. **What the operator reads.** `GET /orgs/{orgId}/outside-access` lists `{ userId, outsideOf, state, since }`,
    `state` being `pending` or `member`. The events feed (ADR 0056 §5) gets `outside_access.granted` when a request is
    approved, `outside_access.denied` when it is denied, and `outside_access.ended` when an outside collaborator leaves,
-   is removed by anyone or deletes their account, and when their waiting request is closed through the `DELETE`
-   above; each with `orgId` and `data: { userId }`.
+   is removed by anyone or deletes their account, and when their waiting request is over without an answer: closed
+   through the `DELETE` above, closed at an approval because the account was blocked or is being deleted, run out
+   (told by the daily sweep, so up to a day late) or gone with the account's deletion; each with `orgId` and
+   `data: { userId }`, once per request.
 8. **What the workspace reads.** `outsideOf` on a member (`GET …/members`, `GET …/people`) and on a request to join
    (`GET …/join-requests`), optional so that an app reading an older server still parses. In the audit log,
    `join_request.approved`, `member.removed` and `member.left` carry `outsideOf` in their details for these people.

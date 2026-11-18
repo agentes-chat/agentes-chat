@@ -57,13 +57,13 @@ describe("Indique e ganhe in the account menu", () => {
 });
 
 describe("/refer", () => {
-  test("signed in: leaves for the referral service at once", async () => {
-    const left: string[] = [];
-    setNavigateAway((url) => left.push(url));
+  test("signed in: leaves for the referral service at once, /refer left out of the history", async () => {
+    const left: [string, boolean][] = [];
+    setNavigateAway((url, options) => left.push([url, options?.replace === true]));
     const state = seedState({ authConfig: REFERRALS });
     await renderApp("/refer", { api: createFakeApi(state) });
     expect(minted(state)).toEqual([["/"]]);
-    expect(left).toEqual(["https://refer.example.com/link?t=v1"]);
+    expect(left).toEqual([["https://refer.example.com/link?t=v1", true]]);
   });
 
   test("no referral service: the page that doesn't exist, with its way back", async () => {

@@ -250,7 +250,7 @@ export function autoModelFor(
   tier: ModelTier,
   tiers?: Partial<Record<ModelTier, string>>,
   endpoint?: AutoEndpoint | null,
-  /** The models the workspace chose on this line (OpenRouter, ADR 0187); absent or null: all of them. */
+  /** The models the workspace chose on this line (OpenRouter, ADR 0199); absent or null: all of them. */
   allowed?: readonly string[] | null,
 ): string | null {
   const own = tiers?.[tier];

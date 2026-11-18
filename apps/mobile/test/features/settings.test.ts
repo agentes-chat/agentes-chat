@@ -1,8 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { AuthConfig, ComputerSetup, Machine, StorageConfig } from "@agenteschat/client";
+import type { AuditRow, AuthConfig, ComputerSetup, Machine, StorageConfig } from "@agenteschat/client";
 import { showsAbout } from "@agenteschat/client/lib/about";
+import { auditOutcome, auditReason, auditSentence, auditSubLine } from "@agenteschat/client/lib/audit";
 import { type SetupView, setupView } from "@agenteschat/client/lib/computer";
 import { proofToSend } from "@agenteschat/client/lib/deletion";
 import { changedByText, changesSinceLink, skillPendingViews, skillUpdateWords } from "@agenteschat/client/lib/skills";
@@ -677,6 +678,41 @@ test("Auditoria says an operator's read of the workspace in the words the web us
   // The row's own screen says why in the reason's place.
   expect(src).toContain("const reason = auditReason(t, row);");
   expect(src).toContain("{reason ? (");
+});
+
+test("Auditoria says an operator's answer to a support request as the web does: who answered and how, whose request under it and on the row's screen", async () => {
+  const [pt, en] = [await translator("pt-BR"), await translator("en")];
+  const name = "Maria Aleksandra Wiśniewska-Kowalczyk de Vasconcelos";
+  const replied = (details: Record<string, unknown>, onBehalfOf: AuditRow["onBehalfOf"]): AuditRow => ({
+    id: "p1",
+    at: "2026-10-28T12:00:00Z",
+    actor: { type: "system", id: null, name: null },
+    action: "operator.support_replied",
+    target: { type: "support_request", id: "req-1" },
+    details,
+    runId: null,
+    channelId: null,
+    channel: null,
+    onBehalfOf,
+    outcome: null,
+    approval: null,
+    secret: null,
+  });
+  const assisted = replied({ template: "text", chars: 1840, assistedByAi: true }, { id: "u1", name });
+  // The list's row: no name before the sentence (the system's), so the label is the sentence alone.
+  expect(auditSentence(pt, assisted, "pt-BR")).toEqual({
+    name: null,
+    text: "Quem cuida deste servidor respondeu por e-mail",
+  });
+  expect(auditSubLine(pt, assisted)).toBe(`pedido de suporte de ${name} · com um assistente de IA`);
+  expect(auditSentence(en, assisted, "en").text).toBe("Whoever runs this server answered by email");
+  // The row's own screen says it whole in the reason's place: the list's line is one line there.
+  expect(auditReason(en, assisted)).toBe(`support request from ${name} · with an AI assistant`);
+  // On agentes.chat's own servers, with no AI assistant, of an account that is gone since.
+  const plain = replied({ template: "received", chars: 0, assistedByAi: false, cloud: true }, null);
+  expect(auditSentence(en, plain, "en").text).toBe("agentes.chat support answered by email");
+  expect(auditSubLine(en, plain)).toBe("support request from Removed");
+  expect(auditOutcome(en, plain)).toBeNull();
 });
 
 test("my photo on Você changes it with a tap, through Conta's own Alterar foto", () => {

@@ -72,15 +72,17 @@ export function Segmented({ items, value, onChange, wide = false, size }: Segmen
       ) : null}
       {items.map((item) => {
         const on = item.key === value;
+        const off = item.disabled === true && !on;
         return (
           <Pressable
             key={item.key}
+            disabled={off}
             onPress={() => {
               if (!on) haptics.selection();
               onChange(item.key);
             }}
             accessibilityRole="tab"
-            accessibilityState={{ selected: on }}
+            accessibilityState={{ selected: on, disabled: off }}
             accessibilityLabel={item.accessibilityLabel}
             onLayout={(e) => {
               const { x: left, width: w } = e.nativeEvent.layout;
@@ -91,6 +93,7 @@ export function Segmented({ items, value, onChange, wide = false, size }: Segmen
             style={({ pressed }) => [
               wide === "fit" ? { flexGrow: 1 } : wide ? { flex: 1 } : null,
               pressed && !on ? { opacity: 0.6 } : null,
+              off ? { opacity: 0.45 } : null,
             ]}
             // The slop gives a segment the 44 a finger needs, past the track's own padding (a page's is 48 already).
             hitSlop={{

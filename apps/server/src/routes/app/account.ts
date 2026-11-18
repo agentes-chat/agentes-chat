@@ -67,6 +67,7 @@ import {
   setWallpaperPhoto,
   signInOptions,
   soleOwnerRefusal,
+  surfaceOn,
   toldReason,
   USER_LOCALES,
   undoEmailChange,
@@ -405,6 +406,10 @@ export function accountRoutes(deps: AppDeps) {
                 description:
                   "The same for the phone app (`SENTRY_MOBILE_DSN`, else `SENTRY_WEB_DSN`); `release` is the server's, the app files its reports under its own.",
               }),
+            surface: z.boolean().openapi({
+              description:
+                "An outside chat surface is bridged (`SURFACE_BRIDGE_TOKEN`, ADR 0187). Whether this account may link it is `GET /api/app/me/surface-links`'s `allowed`.",
+            }),
             host: z
               .object({
                 name: z.string(),
@@ -413,6 +418,7 @@ export function accountRoutes(deps: AppDeps) {
                   .string()
                   .nullable()
                   .openapi({ description: "Its logo (`GET /api/host-look/logo`); null: none." }),
+                poweredBy: z.boolean().openapi({ description: "Its pages end with the powered-by line." }),
               })
               .nullable()
               .openapi({
@@ -444,10 +450,12 @@ export function accountRoutes(deps: AppDeps) {
           turnstileSiteKey: deps.adapters.humanCheck?.siteKey ?? null,
           errorReports: reportsTo(config.SENTRY_WEB_DSN),
           mobileErrorReports: reportsTo(config.SENTRY_MOBILE_DSN ?? config.SENTRY_WEB_DSN),
+          surface: surfaceOn() !== null,
           host: look && {
             name: look.name,
             accent: look.accent,
             logoUrl: look.logo ? `${HOST_LOGO_PATH}?v=${look.logo.split("/").pop()}` : null,
+            poweredBy: look.poweredBy,
           },
         },
         200,
@@ -991,10 +999,21 @@ export function accountRoutes(deps: AppDeps) {
             leaves: z
               .array(z.object({ id: z.uuid(), name: z.string(), role: Role }))
               .openapi({ description: "Workspaces with others in them, which they leave." }),
-            soleOwner: z.array(z.object({ id: z.uuid(), name: z.string() })).openapi({
-              description:
-                "Workspaces they are the only owner of, with others in them and not being deleted: make someone else an owner, or delete the workspace, first (`sole_owner`).",
-            }),
+            soleOwner: z
+              .array(
+                z.object({
+                  id: z.uuid(),
+                  name: z.string(),
+                  onlyOutside: z.boolean().openapi({
+                    description:
+                      "Everyone else in it is an outside collaborator, who can't be an owner: invite a member and make them an owner first.",
+                  }),
+                }),
+              )
+              .openapi({
+                description:
+                  "Workspaces they are the only owner of, with others in them and not being deleted: make someone else an owner, or delete the workspace, first (`sole_owner`, with `params.onlyOutside` when every one has only outside collaborators besides them).",
+              }),
             computers: z.array(z.object({ orgId: z.uuid(), id: z.uuid(), name: z.string() })).openapi({
               description:
                 "Computers they connected in the workspaces they leave, not in system mode: removed with the account.",

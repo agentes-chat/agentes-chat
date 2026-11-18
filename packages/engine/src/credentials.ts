@@ -57,7 +57,7 @@ export interface CredentialSummary {
   isDefault?: boolean;
   /** A workspace endpoint's address, API style and models (`custom`, ADR 0146). Not secret. */
   endpoint?: StoredEndpoint;
-  /** OpenRouter (ADR 0187): the models this workspace chose to use with the key; absent: all of them. */
+  /** OpenRouter (ADR 0199): the models this workspace chose to use with the key; absent: all of them. */
   openrouter?: { models: string[] };
   /** The agents that think with it (`listCredentials`): what removing it would change. */
   usedBy?: { id: string; name: string }[];
@@ -135,7 +135,7 @@ export async function openRouterInUse(db: Executor): Promise<boolean> {
  * endpoint's model (ADR 0146) is found only for its own organization.
  */
 /**
- * The models this workspace's OpenRouter keys chose (ADR 0187), the union of every live key's, or null while none
+ * The models this workspace's OpenRouter keys chose (ADR 0199), the union of every live key's, or null while none
  * chose (a key saved before the choice existed: the whole list, as before). Cached like credential rows.
  */
 export async function openRouterSelection(db: Executor, orgId: string): Promise<string[] | null> {
@@ -169,7 +169,7 @@ export async function modelInfoFor(db: Executor, model: string, orgId?: string):
  * Every model for the pickers: the catalog's, then OpenRouter's (its list read first only while it is in use), then
  * the endpoint models of `orgIds` (ADR 0146).
  */
-/** The levels each OpenRouter model was checked to take, across `orgIds`' keys (ADR 0187). */
+/** The levels each OpenRouter model was checked to take, across `orgIds`' keys (ADR 0199). */
 export async function openRouterTestedEfforts(db: Executor, orgIds: readonly string[]): Promise<Map<string, string[]>> {
   const out = new Map<string, string[]>();
   if (orgIds.length === 0) return out;
@@ -194,7 +194,7 @@ export async function openRouterTestedEfforts(db: Executor, orgIds: readonly str
 /**
  * Every model for the pickers: the catalog's, then OpenRouter's (its list read first only while it is in use), then
  * the endpoint models of `orgIds` (ADR 0146). An OpenRouter model's checked levels replace the list's, so the ramp
- * offers what its own key answered for (ADR 0187).
+ * offers what its own key answered for (ADR 0199).
  */
 export async function pickerModels(db: Executor, orgIds: readonly string[] = []): Promise<[string, ModelInfo][]> {
   await ensureLiveCatalog();
@@ -210,10 +210,10 @@ export async function pickerModels(db: Executor, orgIds: readonly string[] = [])
   ];
 }
 
-/** The most models one OpenRouter key may be limited to (ADR 0187). */
+/** The most models one OpenRouter key may be limited to (ADR 0199). */
 export const MAX_OPENROUTER_MODELS = 100;
 
-/** A model an OpenRouter key can be limited to, as the picker lists it (ADR 0187). */
+/** A model an OpenRouter key can be limited to, as the picker lists it (ADR 0199). */
 export interface OpenRouterChoice {
   id: string;
   label: string;
@@ -225,7 +225,7 @@ export interface OpenRouterChoice {
 }
 
 /**
- * The models an OpenRouter key may be limited to (admins, ADR 0187): its public list, read now, with the key checked
+ * The models an OpenRouter key may be limited to (admins, ADR 0199): its public list, read now, with the key checked
  * when one is given (a refused or management key never gets to choose). Good picks first, as the list orders them.
  */
 export async function openRouterChoices(
@@ -260,7 +260,7 @@ export async function openRouterChoices(
 }
 
 /**
- * The models an OpenRouter key may use (ADR 0187): at least one, each one the list still carries. Undefined: the
+ * The models an OpenRouter key may use (ADR 0199): at least one, each one the list still carries. Undefined: the
  * caller sent none, which keeps the key on every model (the apps always send a choice).
  */
 async function checkedOpenRouterModels(models: readonly string[] | undefined): Promise<string[] | undefined> {
@@ -331,9 +331,9 @@ export async function createCredential(
     makeDefault?: boolean;
     /** `custom` only, and required there: the endpoint's address, API style and models (ADR 0146). */
     endpoint?: { style: EndpointStyle; baseURL: string; models: EndpointModel[] };
-    /** `openrouter` only: the models this workspace chooses to use with the key (ADR 0187). */
+    /** `openrouter` only: the models this workspace chooses to use with the key (ADR 0199). */
     openrouter?: { models: string[] };
-    /** `custom` or `openrouter`: check the models' effort levels in the background after saving (ADR 0187). */
+    /** `custom` or `openrouter`: check the models' effort levels in the background after saving (ADR 0199). */
     syncEfforts?: boolean;
   },
   /**
@@ -402,7 +402,7 @@ export async function createCredential(
         return r;
       });
   if (!row) throw new Error("credential insert returned nothing");
-  // The effort check (ADR 0187): queued now, and the credential says it is running until the worker says else.
+  // The effort check (ADR 0199): queued now, and the credential says it is running until the worker says else.
   const endpointToCheck = row.options.endpoint;
   const openrouterToCheck = row.options.openrouter;
   if (input.syncEfforts && (endpointToCheck || openrouterToCheck)) {
@@ -750,7 +750,7 @@ export async function revokeCredential(db: Database, actorId: string, orgId: str
 }
 
 /**
- * The models an OpenRouter key may use (admins, ADR 0187): the pickers and Automático offer those alone. The key
+ * The models an OpenRouter key may use (admins, ADR 0199): the pickers and Automático offer those alone. The key
  * itself keeps calling what an agent already had; the choice is about what is offered, not about what is allowed.
  */
 export async function updateOpenRouterModels(

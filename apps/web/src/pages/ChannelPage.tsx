@@ -172,7 +172,7 @@ import { hiddenCount, tasksOf, todayStart } from "@agenteschat/client/lib/task-m
 import { contextMarks, hiddenByThreads, rangeCandidates, threadStartOf } from "@agenteschat/client/lib/threads";
 import { buildTimeline, lastPostedId, mergeTimeline, type TimelineItem } from "@agenteschat/client/lib/timeline";
 import { usageWaitOf } from "@agenteschat/client/lib/usage-pause";
-import { appVia } from "@agenteschat/client/lib/via";
+import { appVia, surfaceVia } from "@agenteschat/client/lib/via";
 import { listedText, voiceOf } from "@agenteschat/client/lib/voice";
 import { waitingAway, waitingNotification } from "@agenteschat/client/lib/waiting";
 import { barStep, makingImage, showsActivity, splitCanceled } from "@agenteschat/client/lib/work";
@@ -292,6 +292,7 @@ import {
   SpeedFallbackLine,
   StopPill,
   StopsProvider,
+  SurfaceViaMark,
   stopsOf,
   UnshownLine,
   useStopMovedOn,
@@ -4373,6 +4374,7 @@ export const TimelineMessage = memo(function TimelineMessage({
   // A plain reminder: the agent's own message, with a small "Reminder" label.
   const reminder = isReminderMessage(m.meta);
   const via = m.author.type === "person" ? appVia(m.meta) : null;
+  const viaSurface = m.author.type === "person" ? surfaceVia(m.meta) : null;
   const myHandle = dir.memberById.get(me.user.id)?.handle?.toLowerCase();
   const mentionsMe =
     !(m.author.type === "person" && m.author.id === me.user.id) && mentionsReader({ body, meta: m.meta }, myHandle);
@@ -4667,6 +4669,7 @@ export const TimelineMessage = memo(function TimelineMessage({
         gutterTime={live ? undefined : <time dateTime={m.createdAt}>{formatClock(i18n.language, m.createdAt)}</time>}
         meta={m.local || live ? undefined : details}
         note={joinedTip ? { label: t("chat.joined.label"), tip: joinedTip } : undefined}
+        mark={viaSurface ? <SurfaceViaMark via={viaSurface} person={name} /> : undefined}
         // Its words arriving: its time and its stop after the time it started (the bar no longer says them).
         status={
           liveWaiting

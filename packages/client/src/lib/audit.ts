@@ -16,6 +16,9 @@ import { stepLabel, toolWhy } from "./work";
 export const TOOL_CALL = "tool.call";
 /** Whoever runs the server read one piece of what the workspace wrote, for a stated purpose (the reveal door). */
 export const OPERATOR_READ = "operator.content_read";
+/** Whoever runs the server answered a member's support request, by email to their account's address. */
+export const OPERATOR_REPLIED = "operator.support_replied";
+const byOperator = (row: AuditRow) => row.action === OPERATOR_READ || row.action === OPERATOR_REPLIED;
 
 /** The shortcuts over the list: one view at a time. */
 export type AuditShow = "all" | "problems" | "waiting" | "people";
@@ -45,7 +48,7 @@ const notThrough = (row: AuditRow) =>
  * its refusal's code (`details.refusal`, as its line in the chat): what the tool said goes to the technical part.
  */
 export function auditReason(t: TFunction, row: AuditRow): string | null {
-  if (row.action === OPERATOR_READ) return operatorReadWhy(t, row);
+  if (byOperator(row)) return operatorWhy(t, row);
   if (notThrough(row)) return toolWhy(t, { refusal: auditStr(row.details.refusal) });
   const reason = auditStr(row.details.reason);
   if (!reason || row.action !== "organization.standing_changed" || row.details.to !== "hold") return reason;
@@ -79,11 +82,9 @@ export function auditPhrase(t: TFunction, row: AuditRow, locale?: string): strin
   }
   if (row.action === OPERATOR_READ) {
     const what = row.details.direct === true ? "direct" : (READ_KINDS.find((k) => k === row.target.type) ?? "other");
-    return t("audit.operatorRead.sentence", {
-      who: t(row.details.cloud === true ? "audit.operatorRead.who.cloud" : "audit.operatorRead.who.server"),
-      what: t(`audit.operatorRead.what.${what}`),
-    });
+    return t("audit.operatorRead.sentence", { who: operatorWho(t, row), what: t(`audit.operatorRead.what.${what}`) });
   }
+  if (row.action === OPERATOR_REPLIED) return t("audit.operatorReply.sentence", { who: operatorWho(t, row) });
   if (row.action === "organization.accent_changed") return t("audit.change.accentChanged");
   if (row.action === "agent.merged_without_asking") {
     return t("audit.change.mergedWithoutAsking", { repo: row.target.id ?? "" });
@@ -149,11 +150,16 @@ const READ_KINDS = [
   "support_request",
 ] as const;
 
+/** Who the operator is to the workspace's people: on agentes.chat's own servers, its support. */
+const operatorWho = (t: TFunction, row: AuditRow) =>
+  t(row.details.cloud === true ? "audit.operatorRead.who.cloud" : "audit.operatorRead.who.server");
+
 /**
- * Why the operator read it: at whose request and how that request arrived, or to diagnose a run, and whether an AI
- * assistant read with them. Never the operator's own words: the entry holds none.
+ * Under the operator's sentence. A read: at whose request and how that request arrived, or to diagnose a run. An
+ * answer: whose support request. Then whether an AI assistant read or wrote with them. Never the operator's own
+ * words: the entry holds none.
  */
-function operatorReadWhy(t: TFunction, row: AuditRow): string | null {
+function operatorWhy(t: TFunction, row: AuditRow): string | null {
   const name = row.onBehalfOf?.name ?? t("audit.removed");
   const source = auditStr(row.details.source);
   const how =
@@ -167,11 +173,13 @@ function operatorReadWhy(t: TFunction, row: AuditRow): string | null {
             : "operator"
           : "plain";
   const why =
-    row.details.purpose === "fault"
-      ? t("audit.operatorRead.fault")
-      : row.details.purpose === "member_request"
-        ? t(`audit.operatorRead.request.${how}`, { name })
-        : null;
+    row.action === OPERATOR_REPLIED
+      ? t("audit.operatorReply.request", { name })
+      : row.details.purpose === "fault"
+        ? t("audit.operatorRead.fault")
+        : row.details.purpose === "member_request"
+          ? t(`audit.operatorRead.request.${how}`, { name })
+          : null;
   return (
     [why, row.details.assistedByAi === true ? t("audit.operatorRead.ai") : null].filter(Boolean).join(" · ") || null
   );
@@ -316,7 +324,7 @@ export function auditBehind(t: TFunction, row: AuditRow) {
 
 /** The line under the sentence: about what · who asked · where. */
 export function auditSubLine(t: TFunction, row: AuditRow) {
-  if (row.action === OPERATOR_READ) return operatorReadWhy(t, row) ?? "";
+  if (byOperator(row)) return operatorWhy(t, row) ?? "";
   return [auditHint(t, row), auditBehind(t, row), auditWhere(t, row)].filter(Boolean).join(" · ");
 }
 

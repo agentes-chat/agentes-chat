@@ -50,7 +50,7 @@ async function server(env: Record<string, string> = {}, humanCheck?: HumanCheck 
     accent: "#7c3aed",
     logo: { contentType: "image/png", base64: PNG.toString("base64") },
   });
-  await putHost({ db: s.db, blobs }, own, OTHER, { name: "Contoso" });
+  await putHost({ db: s.db, blobs }, own, OTHER, { name: "Contoso", poweredBy: false });
   return s;
 }
 
@@ -222,6 +222,7 @@ test("auth-config: unchanged on the main address; on a registered host its look 
     name: "Northwind Studio",
     accent: "#7c3aed",
     logoUrl: expect.stringMatching(/^\/api\/host-look\/logo\?v=[0-9a-f]{8}-[0-9a-f]{16}\.png$/),
+    poweredBy: true,
   });
   const { host: _main, socialProviders: _a, ...mainRest } = main;
   const { host: _there, socialProviders: _b, ...thereRest } = there;
@@ -230,6 +231,7 @@ test("auth-config: unchanged on the main address; on a registered host its look 
     name: "Contoso",
     accent: null,
     logoUrl: null,
+    poweredBy: false,
   });
 
   // A provider's sign-in can't start on a registered host, and still starts on the main address.
@@ -356,6 +358,7 @@ test("the operator's routes: auth, shapes, refusals, and the cache dropped on a 
     name: "Northwind Studio",
     accent: "#7c3aed",
     logo: true,
+    poweredBy: true,
     createdAt: expect.any(String),
     updatedAt: expect.any(String),
   });
@@ -371,7 +374,29 @@ test("the operator's routes: auth, shapes, refusals, and the cache dropped on a 
   expect(await (await call("PUT", `/hosts/${HOST}`, { name: "Northwind", logo: null })).json()).toMatchObject({
     logo: false,
     accent: "#0f766e",
+    poweredBy: true,
   });
+  // The powered-by line: off, kept off when left out, on again; a new host has it.
+  expect(await (await call("PUT", `/hosts/${HOST}`, { name: "Northwind", poweredBy: false })).json()).toMatchObject({
+    poweredBy: false,
+  });
+  expect(await look()).toMatchObject({ poweredBy: false });
+  expect(await (await call("PUT", `/hosts/${HOST}`, { name: "Northwind" })).json()).toMatchObject({
+    poweredBy: false,
+    accent: "#0f766e",
+  });
+  expect(await (await call("PUT", `/hosts/${HOST}`, { name: "Northwind", poweredBy: true })).json()).toMatchObject({
+    poweredBy: true,
+  });
+  expect(await (await call("PUT", "/hosts/new.northwind.example", { name: "New" })).json()).toMatchObject({
+    poweredBy: true,
+  });
+  expect(
+    (
+      (await (await call("GET", "/hosts", undefined, READ)).json()) as { hosts: { host: string; poweredBy: boolean }[] }
+    ).hosts.find((h) => h.host === OTHER)?.poweredBy,
+  ).toBe(false);
+  await call("DELETE", "/hosts/new.northwind.example");
 
   for (const [host, code] of [
     ["localhost", "host.invalid"],
@@ -385,7 +410,12 @@ test("the operator's routes: auth, shapes, refusals, and the cache dropped on a 
       r: [400, code],
     });
   }
-  for (const bad of [{ name: "" }, { name: "x".repeat(61) }, { name: "N", accent: "purple" }]) {
+  for (const bad of [
+    { name: "" },
+    { name: "x".repeat(61) },
+    { name: "N", accent: "purple" },
+    { name: "N", poweredBy: "no" },
+  ]) {
     expect({ bad, status: (await call("PUT", "/hosts/b.northwind.example", bad)).status }).toEqual({
       bad,
       status: 400,

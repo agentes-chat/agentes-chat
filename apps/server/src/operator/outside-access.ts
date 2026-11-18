@@ -61,7 +61,7 @@ export function registerOperatorOutsideAccess(api: OpenAPIHono, { db, pubsub, co
       tags,
       summary: "Ask a workspace to let an account in as an outside collaborator",
       description:
-        "Files a request to join that whoever may invite people in the workspace approves or denies like any other, told the same way. Approved, the account joins at once and never counts toward the `members` limit, even in a full workspace. Asking again while the request waits changes nothing. 409 `join.member` when the account is already in the workspace, `join.waiting` while another request to join waits for its address. The events feed tells the answer: `outside_access.granted` or `outside_access.denied`, and `outside_access.ended` when they leave or are removed, each with `data.userId`.",
+        "Files a request to join that whoever may invite people in the workspace approves or denies like any other, told the same way. Approved, the account joins at once and never counts toward the `members` limit, even in a full workspace. Asking again while the request waits changes nothing. 409 `join.member` when the account is already in the workspace, `join.waiting` while another request to join waits for its address, `join.full` while 50 outside requests already wait in the workspace (counted apart from the asks through its invitation links), `outside_access.account_closed` when the account is blocked or waiting for its deletion (one that becomes so while its request waits has the request closed when someone approves it, with `outside_access.ended`). The events feed tells the answer: `outside_access.granted` or `outside_access.denied`, and `outside_access.ended` when they leave or are removed, or when the request is over unanswered (run out, told by a daily sweep, or gone with the account), each with `data.userId`.",
       request: { params: OrgParams, body: body(OutsideAccessInput) },
       responses: { 200: json(z.object({ state: OutsideAccessState })), ...errors, ...refused },
     }),
@@ -98,7 +98,7 @@ export function registerOperatorOutsideAccess(api: OpenAPIHono, { db, pubsub, co
       tags,
       summary: "End an account's outside access to a workspace",
       description:
-        "Closes its request still waiting, or removes the outside collaborator as anyone removed from a workspace is. With neither, nothing changes. 409 `outside_access.member` for an ordinary member: only someone in the workspace removes one.",
+        "Closes its request still waiting, or removes the outside collaborator as anyone removed from a workspace is. With neither, nothing changes. 409 `outside_access.member` for an ordinary member, before anything changes: only someone in the workspace removes one.",
       request: { params: OutsideParams },
       responses: { 200: json(z.object({ state: z.literal("none") })), ...errors, ...refused },
     }),

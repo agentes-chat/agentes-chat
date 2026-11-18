@@ -1130,4 +1130,13 @@ describe("the right hand's stand-in line (ADR 0137 §7, amended 2026-11-15)", ()
     ]);
     expect(rightHandUnusable(undefined)).toEqual([]);
   });
+
+  test("an account signed in once per agent is one row, and none while one of its logins is the one in use", () => {
+    const laptop = { machineId: "lap", name: "Laptop", online: false };
+    const login = (id: string) =>
+      ({ id, machineId: "lap", computer: "Laptop", status: "active", kind: "claude_code", sameAs: "a1" }) as never;
+    const view = { computers: [laptop] as AiComputer[], accounts: [login("a1"), login("a2"), login("a3")] };
+    expect(rightHandUnusable(view).map((u) => [u.id, u.ids])).toEqual([["a1", ["a1", "a2", "a3"]]]);
+    expect(rightHandUnusable(view, "a2")).toEqual([]);
+  });
 });

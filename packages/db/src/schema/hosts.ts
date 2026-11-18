@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, check, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 /**
  * Extra hostnames this server answers on besides `PUBLIC_URL`'s, each with the look its pages before sign-in show
@@ -15,6 +15,8 @@ export const hosts = pgTable(
     accent: text(),
     /** The stored file's key in the platform's bucket; null: the name alone. */
     logo: text(),
+    /** The pages before sign-in end with the line naming the software behind them. */
+    poweredBy: boolean().notNull().default(true),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },

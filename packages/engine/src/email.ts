@@ -23,8 +23,9 @@ import { notifiedIds } from "./approvals";
 import { isComputerBrain, planName } from "./brains/types";
 import { confidentialRoots } from "./confidential";
 import { invitationMailProof } from "./crypto";
-import { inertText } from "./email/inert";
+import { inertSender, inertText } from "./email/inert";
 import {
+  ASSISTANT_LOOK,
   type Block,
   EMAIL_PICTURES,
   type EmailArt,
@@ -37,7 +38,7 @@ import {
   type Scene,
   type Text,
 } from "./email/layout";
-import { wordsFor } from "./email/words";
+import { type Words, wordsFor } from "./email/words";
 import { dayAndTime } from "./format";
 import { adminIds } from "./gateway";
 import { publicHostAddress, type ResolveHost, resolveHostDns } from "./net-guard";
@@ -192,6 +193,20 @@ export type EmailTemplate =
    */
   | { kind: "email_changed"; locale: EmailLocale; email: string; newEmail: string; url: string }
   /**
+   * An outside chat surface was linked to the account (ADR 0187): `display` is how the surface shows the sender, `url`
+   * the undo page that unlinks it, for 7 days.
+   */
+  | ({
+      kind: "surface_linked";
+      locale: EmailLocale;
+      surface: string;
+      display: string;
+      orgName: string;
+      url: string;
+    } & Beside)
+  /** The surface unlinked the account because the sender's identity there changed. `url`: the server, for the pictures. */
+  | ({ kind: "surface_unlinked"; locale: EmailLocale; surface: string; display: string; url: string } & Beside)
+  /**
    * Double opt-in for the landing page's waiting list, in the language they
    * joined in. `email` is the address being confirmed (absent in jobs queued
    * before it existed).
@@ -339,6 +354,21 @@ export type EmailTemplate =
       personal?: true;
     }
   /**
+   * The answer of whoever runs the server to a member's support request (ADR 0056), to the address of their account:
+   * one of our own sentences (`reply`), or the operator's words (`text`), which are another party's and print inert,
+   * line by line. With neither, the words were sent already (`forgetReplyWords`). `support`: where to answer back
+   * (`SUPPORT_EMAIL`), or nowhere. `url`: the server's own address, for the pictures.
+   */
+  | {
+      kind: "support_reply";
+      locale: EmailLocale;
+      reply?: keyof Words["supportReply"]["answers"];
+      text?: string;
+      assistedByAi: boolean;
+      support: string | null;
+      url: string;
+    }
+  /**
    * The daily stall-and-noise report to the people who run the server (`OPS_REPORT_EMAIL`, `autonomy-report.ts`):
    * each count of the UTC `day` against its daily average over the 7 days before, and the workspaces with the most.
    * Workspace names and counts only. `url`: the server's own address, for the pictures.
@@ -400,6 +430,30 @@ async function readPictures(dir: string) {
   }
 }
 
+/** The workspace's assistant beside the phone in the surface emails' picture (`emailAssistant`); none: its default look. */
+interface Beside {
+  assistant?: Look;
+}
+
+/** The look of the workspace's assistant (ADR 0137), when it has one of its own. */
+export async function emailAssistant(db: Executor, orgId: string | null): Promise<Look | undefined> {
+  if (!orgId) return undefined;
+  const { RIGHT_HAND } = await import("./right-hand");
+  const [row] = await db
+    .select({ appearance: agents.appearance })
+    .from(agents)
+    .where(and(eq(agents.orgId, orgId), eq(agents.builtin, RIGHT_HAND), isNull(agents.archivedAt)));
+  const a = row?.appearance;
+  return a ? { color: a.color, eyes: a.eyes, accessory: a.accessory } : undefined;
+}
+
+/** The surface emails' stage: the assistant beside the phone, between two of the onboarding's agents. */
+const surfaceCrew = (assistant: Look | undefined): Look[] => {
+  // Lia, not Ada: Ada's green and headphones read as the teal, headset assistant's twin beside it.
+  const [theo, , lia] = ONBOARDING_CREW;
+  return [theo, assistant ?? ASSISTANT_LOOK, lia];
+};
+
 /** How many agents a picture shows: two on each side of the computer still fit a 320 px phone. */
 const CREW = 4;
 
@@ -443,6 +497,8 @@ const JOIN_NAME_SHOWN = 60;
 const OUTSIDE_OF_SHOWN = 80;
 /** An admin's reason for denying a request to join, as long as it is kept. */
 const JOIN_REASON_SHOWN = 300;
+/** The operator's own words in a reply to a support request, shown whole: the route takes no more. */
+export const REPLY_TEXT_MAX = 2000;
 
 /**
  * The template's stamp for a personal workspace (ADR 0159), spread into it where it is queued: the mode it had then
@@ -848,6 +904,34 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
         c.why,
       );
     }
+    case "surface_linked": {
+      const c = w.surface.linked;
+      return doc(
+        c.subject(t.surface),
+        c.preheader,
+        c.headline(t.surface),
+        [
+          { p: c.body(t.surface, inertSender(t.display), inertText(t.orgName)) },
+          { note: c.notYou },
+          { button: c.button, url: t.url },
+          { small: c.small },
+          fallback(t.url),
+        ],
+        c.why(t.surface),
+        { crew: surfaceCrew(t.assistant), phone: { alt: c.picture, on: true } },
+      );
+    }
+    case "surface_unlinked": {
+      const c = w.surface.unlinked;
+      return doc(
+        c.subject(t.surface),
+        c.preheader,
+        c.headline(t.surface),
+        [{ p: c.body(t.surface, inertSender(t.display)) }, { small: c.small }],
+        c.why(t.surface),
+        { crew: surfaceCrew(t.assistant), phone: { alt: c.picture, on: false } },
+      );
+    }
     case "autonomy_report": {
       const c = w.autonomy;
       const num = (v: number, digits = 0) => v.toLocaleString(lang, { maximumFractionDigits: digits });
@@ -1029,6 +1113,28 @@ function docOf(t: EmailTemplate, sender: string | null): EmailDoc {
         c.why,
       );
     }
+    case "support_reply": {
+      const c = w.supportReply;
+      // A line break ends a paragraph, as it was written: each line is inert on its own.
+      const answer = t.reply
+        ? [c.answers[t.reply]]
+        : (t.text ?? "")
+            .split(/[\r\n\u2028\u2029]+/)
+            .map((line) => inertText(line, REPLY_TEXT_MAX))
+            .filter(Boolean);
+      return doc(
+        c.subject,
+        c.preheader,
+        c.headline,
+        [
+          ...answer.map((p): Block => ({ p })),
+          { small: c.from(sender) },
+          ...(t.assistedByAi ? [{ small: c.ai }] : []),
+          ...(t.support ? [{ small: c.reply(t.support) }] : []),
+        ],
+        c.why,
+      );
+    }
   }
 }
 
@@ -1188,7 +1294,10 @@ export async function sendPlanWaitingEmail(db: Database, publicUrl: string, orgI
 export async function sendQueuedEmail(sender: EmailSender, payload: Record<string, unknown>, art?: EmailArt) {
   const to = Array.isArray(payload.to) ? payload.to.map(String) : [];
   if (to.length === 0) throw new PermanentJobError("email without recipients");
-  const { subject, html, text, inline } = renderEmail(payload.template as EmailTemplate, art);
+  const template = payload.template as EmailTemplate;
+  // A reply whose words are gone was sent, or given up: its job run again (a lease lost after the send) sends nothing.
+  if (template.kind === "support_reply" && !template.reply && template.text === undefined) return;
+  const { subject, html, text, inline } = renderEmail(template, art);
   await sender
     .send({
       subject,
@@ -1197,7 +1306,7 @@ export async function sendQueuedEmail(sender: EmailSender, payload: Record<strin
       ...(inline.length > 0 ? { inline } : {}),
       to,
       idempotencyKey: String(payload.key),
-      tags: [{ name: "kind", value: (payload.template as EmailTemplate).kind }],
+      tags: [{ name: "kind", value: template.kind }],
     })
     .catch(rethrowEmailError);
 }

@@ -541,4 +541,48 @@ export const words: EmailWords = {
         "Kamu menerima email ini karena ruang kerja ini di agentes.chat adalah milikmu. Kami hanya mengirim dua pemberitahuan seperti ini.",
     },
   },
+  surface: {
+    linked: {
+      subject: (surface) => `${surface} ditautkan ke akun agentes.chat kamu`,
+      preheader: "Asistenmu sekarang menjawabmu di sana. Kalau bukan kamu, putuskan tautannya.",
+      headline: (surface) => `${surface} ditautkan`,
+      body: (surface, display, org) => [
+        { b: display },
+        ` di ${surface} sekarang bicara dengan asistenmu di `,
+        { b: org },
+        ".",
+      ],
+      notYou: "Bukan kamu? Putuskan tautannya. Pesan dari sana langsung berhenti masuk ke akunmu.",
+      button: "Putuskan tautan",
+      small: "Kalau itu kamu, tidak perlu melakukan apa-apa. Kamu bisa memutuskannya kapan saja di Pengaturan.",
+      why: (surface) => `Kamu menerima email ini karena ${surface} ditautkan ke akun agentes.chat kamu.`,
+      picture: "Asistenmu, kini juga di ponselmu",
+    },
+    unlinked: {
+      subject: (surface) => `Tautan ${surface} ke akun agentes.chat kamu diputus`,
+      preheader: "Identitasnya berubah. Tautkan lagi di Pengaturan kalau itu kamu.",
+      headline: (surface) => `Tautan ${surface} diputus`,
+      body: (surface, display) => [{ b: display }, ` di ${surface} diputus tautannya karena identitasnya berubah.`],
+      small: "Tautkan lagi di Pengaturan kalau itu kamu.",
+      why: (surface) => `Kamu menerima email ini karena ${surface} pernah ditautkan ke akun agentes.chat kamu.`,
+      picture: "Asistenmu, tidak lagi di ponselmu",
+    },
+  },
+  supportReply: {
+    subject: "Jawaban untuk permintaan bantuanmu",
+    preheader: "Tentang bantuan yang kamu minta di agentes.chat.",
+    headline: "Jawaban untuk permintaan bantuanmu",
+    answers: {
+      received: "Kami sudah menerima permintaanmu dan sedang memeriksanya.",
+      need_more:
+        "Kami perlu tahu lebih banyak untuk membantu: apa yang sedang kamu lakukan, apa yang kamu harapkan, dan apa yang terjadi.",
+      resolved: "Yang kamu laporkan sudah diperbaiki.",
+      handed_over: "Sekarang permintaanmu ditangani seseorang, dan dia akan membalasmu.",
+    },
+    from: (host) =>
+      host ? atHost("Dijawab oleh pengelola server agentes.chat", "di", host) : "Dijawab oleh agentes.chat.",
+    ai: "Jawaban ini ditulis oleh asisten AI.",
+    reply: (address) => ["Untuk membalas, kirim email ke ", { mail: address }, "."],
+    why: "Kamu menerima email ini karena kamu meminta bantuan di agentes.chat.",
+  },
 };

@@ -7,16 +7,25 @@ import {
   accountChoices,
   accountSub,
   accountTitle,
+  againLogin,
   agentsToGive,
   chainHasRoom,
   endsOnClaude,
   existingAi,
   groupPlans,
+  haveAbout,
+  haveGroup,
   identityUnknown,
   labelTitle,
   lendable,
   listsExisting,
+  lockedByOwner,
+  lockedText,
+  newestUsage,
   offersSignInAgain,
+  orderAccounts,
+  orderDrop,
+  orderMover,
   orderPlaces,
   orderStep,
   ownSignInListed,
@@ -24,16 +33,18 @@ import {
   ownSignInName,
   ownSignInReady,
   ownSignIns,
+  pickable,
   planWordOf,
   removableLogins,
   reusableAccount,
+  signInNote,
   signInOf,
   signInPlan,
   unnamedAccount,
   unusedCopies,
   withSub,
 } from "../src/lib/ai-accounts";
-import { accountName, usageSourcePart } from "../src/lib/plan-usage";
+import { accountName, roomWord, usageSourcePart } from "../src/lib/plan-usage";
 
 const usage = (at: string, usedPercent: number): PlanUsage => ({
   windows: [{ kind: "five_hour", usedPercent }],
@@ -264,6 +275,116 @@ describe("existingAi: what a person already has for an agent with no AI", () => 
     expect(rows(false).every(([act]) => act === "locked")).toBe(true);
     expect(lendable({ status: "active", shared: false, usedBy: ["Ada"] }, "Ada")).toBe(true);
     expect(lendable({ status: "active", shared: false, usedBy: ["Theo"] }, "Ada")).toBe(false);
+  });
+});
+
+describe("one account signed in once per agent is one row, whoever looks", () => {
+  /** Walter's Claude Team, signed in thirteen times on the Mac (one login per agent): ten agents on it, two signed out, one free. */
+  const team = (mine: boolean) =>
+    Array.from({ length: 13 }, (_, i) =>
+      login(`w${i + 1}`, {
+        provider: null,
+        keyHint: null,
+        label: "Claude",
+        plan: "team",
+        email: mine ? "walter@example.com" : null,
+        mine,
+        ownerId: "u_walter",
+        ownerName: "Walter Branco",
+        sameAs: "w1",
+        status: i === 10 || i === 11 ? "signed_out" : "active",
+        usedBy: i < 10 ? [`Agent ${i + 1}`] : [],
+      }),
+    );
+  /** One more of Walter's, made for all of his agents there (another account), and one of Bia's own. */
+  const more = (mine: boolean) => [
+    login("s1", {
+      provider: null,
+      keyHint: null,
+      label: "Claude",
+      plan: "team",
+      email: mine ? "walter.ops@example.com" : null,
+      mine,
+      ownerId: "u_walter",
+      ownerName: "Walter Branco",
+      sameAs: "s1",
+      shared: true,
+      usedBy: ["Atlas"],
+    }),
+    login("b1", {
+      provider: null,
+      keyHint: null,
+      label: "Claude",
+      email: mine ? null : "bia@example.com",
+      mine: !mine,
+      ownerId: "u_bia",
+      ownerName: "Bia",
+      sameAs: "b1",
+    }),
+  ];
+  const acts = (mine: boolean, canUseOthersPlans: boolean, accounts = [...team(mine), ...more(mine)]) =>
+    existingAi({ accounts, account: null, canUseOthersPlans }, []).map((r) =>
+      r.kind === "key" ? ["key", r.key.id] : [r.act, r.choice.login.id],
+    );
+
+  test("its owner, an admin who may use others' plans and a member who may not each read one row per account", () => {
+    expect(groupPlans(team(true)).map((g) => g.logins.length)).toEqual([13]);
+    expect(groupPlans(team(false)).map((g) => g.logins.length)).toEqual([13]);
+    // The owner: the free login of the thirteen, used at once.
+    expect(acts(true, false, team(true))).toEqual([["use", "w13"]]);
+    // An admin: the same free login, not the oldest (an agent's), so the account reads as usable, not locked.
+    expect(acts(false, true)).toEqual([
+      ["use", "w13"],
+      ["use", "s1"],
+      ["use", "b1"],
+    ]);
+    // A member who may not use others' plans: each of Walter's accounts once, locked.
+    expect(acts(false, false)).toEqual([
+      ["use", "b1"],
+      ["locked", "w13"],
+      ["locked", "s1"],
+    ]);
+  });
+
+  test("its oldest login signed out, a newer one free: the row offers the newer one, usable", () => {
+    const [old, , , , , , , , , , , , free] = team(false);
+    if (!old || !free) throw new Error("logins");
+    const logins = [{ ...old, status: "signed_out" as const, usedBy: [] }, free];
+    expect(acts(false, true, logins)).toEqual([["use", "w13"]]);
+  });
+
+  test("an account none of whose logins is free stays locked, once, even for an admin", () => {
+    const busy = team(false).map((l) => (l.usedBy.length ? l : { ...l, status: "signed_out" as const }));
+    expect(acts(false, true, busy)).toEqual([["locked", "w1"]]);
+  });
+
+  test("what can't be picked leaves the list and is counted per person and per account, never per login", () => {
+    const rows = existingAi({ accounts: [...team(false), ...more(false)], account: null }, []);
+    expect(pickable(rows).map((r) => (r.kind === "account" ? r.choice.login.id : r.key.id))).toEqual(["b1"]);
+    expect(lockedByOwner(rows)).toEqual([{ key: "owner:u_walter", name: "Walter", count: 2 }]);
+    const t = ((key: string, o?: object) => `${key} ${JSON.stringify(o)}`) as unknown as TFunction;
+    expect(lockedText(t, { name: "Walter", count: 2 })).toBe('connectAi.have.onlyOwner {"count":2,"name":"Walter"}');
+  });
+
+  test("a row's line tells accounts apart: one's own by what its title leaves out and how many more agents; someone else's by whose alone (its title says the plan)", () => {
+    const t = ((key: string, o?: Record<string, unknown>) =>
+      o ? `${key}(${Object.values(o).join(",")})` : key) as unknown as TFunction;
+    const [own, ,] = existingAi({ accounts: more(true), account: null }, []);
+    const theirs = existingAi({ accounts: team(false), account: null, canUseOthersPlans: true }, [])[0];
+    if (own?.kind !== "account" || theirs?.kind !== "account") throw new Error("rows");
+    // Made for all of Walter's agents, Atlas on it: its title is its email, so the line says the plan, then one more agent.
+    expect(haveAbout(t, own, "Lia")).toBe("Team · agentPage.work.brain.accountAlso(format.list(Atlas))");
+    expect(haveAbout(t, own, "Atlas")).toBe("Team");
+    const named = { ...own, choice: { ...own.choice, login: { ...own.choice.login, named: true, label: "Trabalho" } } };
+    expect(haveAbout(t, named, "Atlas")).toBe("walter.ops@example.com · Team");
+    expect(haveAbout(t, theirs, "Lia")).toBe("agentPage.work.brain.accountOf(Walter)");
+    expect(theirs.choice.login.plan).toBe("team");
+    expect(JSON.stringify(haveAbout(t, theirs, "Lia"))).not.toContain("@");
+    expect(haveGroup(t, own)).toEqual({ key: "mine", label: "connectAi.chat.mine" });
+    expect(haveGroup(t, theirs)).toEqual({ key: "owner:u_walter", label: "agentPage.work.brain.accountOf(Walter)" });
+    expect(roomWord(t, "en", { state: "ok", until: null })).toBe("connectAi.have.plenty");
+    expect(roomWord(t, "en", { state: "almost", until: null })).toBe("aiAccounts.usage.almost");
+    expect(roomWord(t, "en", null)).toBeNull();
   });
 });
 
@@ -644,6 +765,45 @@ describe("accountChain: the accounts a run goes through at its plan's limit", ()
     expect(orderStep(order, "x", 1)).toBeNull();
   });
 
+  test("an account signed in once per agent is one place: its logins move together, a step passes a whole account", () => {
+    // Walter's Team signed in three times (t1-t3, one apart), then Ada's, then Bia's.
+    const order = [
+      { id: "t1", sameAs: "t1" },
+      { id: "t2", sameAs: "t1" },
+      { id: "ada", sameAs: "ada" },
+      { id: "t3", sameAs: "t1" },
+      { id: "bia", sameAs: "bia" },
+    ];
+    expect(orderAccounts(order).map((b) => b.map((a) => a.id))).toEqual([["t1", "t2", "t3"], ["ada"], ["bia"]]);
+    // A place is an account's: Ada's up is first, Team's down is past Ada, Bia's up passes all of Team's logins at once.
+    expect(orderStep(order, "ada", -1)).toBe(0);
+    expect(orderStep(order, "t2", 1)).toBe(1);
+    expect(orderStep(order, "t3", -1)).toBeNull();
+    expect(orderStep(order, "bia", -1)).toBe(1);
+    expect(orderStep(order, "bia", 1)).toBeNull();
+    expect(orderDrop(order, "bia", "t2", "before")).toBe(0);
+    expect(orderDrop(order, "t1", "bia", "after")).toBe(2);
+    expect(orderDrop(order, "t1", "t3", "after")).toBeNull();
+  });
+
+  test("an account has a place when one of its logins does, and one number for all of them", () => {
+    // Walter's Team: t2 is signed out (no place of its own), still one account with t1. Bia's only login has no place.
+    const order = [
+      { id: "t1", sameAs: "t1" },
+      { id: "ada", sameAs: "ada" },
+      { id: "t2", sameAs: "t1", movable: false },
+      { id: "bia", sameAs: "bia", movable: false },
+    ];
+    expect(orderPlaces(order)).toEqual([1, 2, null]);
+    expect(orderStep(order, "t2", 1)).toBe(1);
+    expect(orderStep(order, "ada", 1)).toBeNull();
+    expect(orderStep(order, "bia", -1)).toBeNull();
+    expect(orderDrop(order, "ada", "bia", "before")).toBeNull();
+    // The server moves an account by a login with a place: t2's row moves by t1.
+    expect(orderMover(order, "t2")).toBe("t1");
+    expect(orderMover(order, "ada")).toBe("ada");
+  });
+
   test("a CLI login by API key is never a next account: the server says so with `movable`", () => {
     expect(chainOf([claude("own1"), claude("cli-key", { movable: false }), claude("own2")])).toEqual(["own1", "own2"]);
   });
@@ -678,4 +838,45 @@ describe("a batch removal takes only what the viewer may remove (`removableLogin
     expect(removableLogins(accounts, "codex").map((a) => a.id)).toEqual(["chatgpt"]);
     expect(removableLogins([], "grok")).toEqual([]);
   });
+});
+
+describe("an account's sign-ins, read from every login of it", () => {
+  const t = ((key: string, o?: Record<string, unknown>) =>
+    o ? `${key}(${Object.values(o).join(",")})` : key) as unknown as TFunction;
+  const team = (id: string, over: Partial<MachineAccount> = {}) =>
+    login(id, { provider: null, keyHint: null, email: "ana@example.com", ...over });
+
+  test("one login of several signed out says whose sign-in ended and is the one signed in again", () => {
+    const [g] = groupPlans([
+      team("a1", { usedBy: ["Theo"], shared: true }),
+      team("a2", { usedBy: ["Ada"], status: "signed_out" }),
+    ]);
+    if (!g) throw new Error("group");
+    expect(signInNote(t, g, false)).toEqual({ state: "out", text: "aiAccounts.page.signedOutFor(1,format.list(Ada))" });
+    expect(againLogin(g)?.id).toBe("a2");
+  });
+
+  test("every login out says the account is signed out (a key: refused); one unknown says so while none is out", () => {
+    const [out] = groupPlans([team("b1", { usedBy: ["Ada"], status: "signed_out" })]);
+    const [key] = groupPlans([login("k1", { status: "signed_out", keyHint: "AbCd" })]);
+    const [unknown] = groupPlans([
+      team("c1", { usedBy: ["Theo"] }),
+      team("c2", { usedBy: ["Ada"], status: "signed_out", statusKnown: false }),
+    ]);
+    const [fine] = groupPlans([team("d1")]);
+    if (!out || !key || !unknown || !fine) throw new Error("groups");
+    expect(signInNote(t, out, false)).toEqual({ state: "out", text: "aiAccounts.page.signedOut" });
+    expect(signInNote(t, key, true)).toEqual({ state: "out", text: "aiAccounts.page.keyRefused" });
+    expect(signInNote(t, unknown, false)).toEqual({ state: "unknown", text: "aiAccounts.page.statusUnknown" });
+    expect(againLogin(unknown)?.id).toBe("c2");
+    expect(signInNote(t, fine, false)).toBeNull();
+    expect(againLogin(fine)?.id).toBe("d1");
+  });
+});
+
+test("an order row of an account signed in once per agent shows its newest reading, not its first login's", () => {
+  const old = usage("2026-11-01T10:00:00Z", 90);
+  const fresh = usage("2026-11-02T10:00:00Z", 20);
+  expect(newestUsage([{ usage: old }, { usage: null }, { usage: fresh }])).toBe(fresh);
+  expect(newestUsage([{ usage: null }])).toBeNull();
 });

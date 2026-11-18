@@ -1064,10 +1064,17 @@ your reason and in that workspace's own audit log (**Settings → Audit log**: w
 request or for which failed run, never your reason), credentials are masked, and the door takes 30
 calls a minute and 100 reads of one workspace a day. `GET /orgs/{orgId}/support-requests` lists who
 asked for help and when, and `POST` there records a request that reached you another way (a mail, a
-call), which the audit log then shows as recorded by you. Setting the token makes you a reader of
-your workspaces' content: tell them before the first read, and say whether an AI assistant reads
-with you (`assistedByAi`). It also makes the server keep what members write in the feedback form,
-and what the thing they reported says, for 90 days beside their request. Unset, every path under
+call), which the audit log then shows as recorded by you. `POST /reveal/orgs/{orgId}/replies` answers
+a member's support request by email, at the address of their account and in their language, never
+at one you name: one of the server's four sentences (`template`) or your own words as plain text
+(`text`, 2,000 characters at most, in which nothing becomes a link). It needs email set up, takes 3
+replies a request and 60 a day, and is recorded in the events feed and in that workspace's audit log
+(that you answered, whose request, and whether an AI assistant wrote the answer), never with its
+words, which the server forgets once the email is sent or given up. Write in a reply only what that
+member could read in the app. Setting the token makes you a reader of your workspaces' content: tell
+them before the first read, and say whether an AI assistant reads with you (`assistedByAi`). It also
+makes the server keep what members write in the feedback form, and what the thing they reported
+says, for 90 days beside their request. Unset, every path under
 `/reveal` answers 403 and the server keeps neither: of a member's feedback it keeps only that they
 asked (who, when, and which message), for a year. If you set the token and later take it away, the
 door closes at once and no new words are kept; the ones already kept stay until their 90 days are up.

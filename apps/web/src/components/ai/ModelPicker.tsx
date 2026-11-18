@@ -220,7 +220,7 @@ function PickerBody({ agent, view, onClose }: { agent: Agent; view: AgentBrain; 
     tile && tile.kind !== "model" && checked && !checked.auto
       ? view.options.find((o) => o.kind === tile.kind)?.models.find((m) => m.value === checked.value)
       : undefined;
-  // An API model whose levels were never checked (or which takes none): no ramp to offer (ADR 0187).
+  // An API model whose levels were never checked (or which takes none): no ramp to offer (ADR 0199).
   const keyModel =
     checked && !checked.auto
       ? all.find((m) => m.id === (tile?.kind === "model" ? checked.value : (planModel?.modelId ?? checked.value)))

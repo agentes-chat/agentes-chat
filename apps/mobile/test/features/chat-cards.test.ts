@@ -26,7 +26,7 @@ describe("a reply's tools sit last", () => {
           "<SavedTools",
           "<NoAiCard message={m} />",
           // The foot is the reply's last part: only the double tap's one-time hint and its 👍 over the row follow it.
-          "{foot}\n          </RowPartContext.Provider>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n}\n",
+          "{foot}\n          </RowParts>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n}\n",
         ]),
       ),
     ).toBe(true);
@@ -44,7 +44,7 @@ describe("a reply's tools sit last", () => {
     const row = source("MessageRow.tsx");
     const [toolsAt, footAt] = at(row, [
       "<SavedTools\n",
-      "{foot}\n          </RowPartContext.Provider>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n}\n",
+      "{foot}\n          </RowParts>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>\n    </>\n  );\n}\n",
     ]);
     const last = row.slice(toolsAt, footAt);
     for (const card of [
@@ -74,7 +74,7 @@ describe("agents it asked first: one pair row right before the reply, never insi
     expect(ascending(at(row, ["const grouped = groupedIn && !pair;", "{pair}\n      {quote && !inBubble"]))).toBe(true);
     const [bodyAt, endAt] = at(row, [
       "<View style={[styles.body, { gap: rhythm.part }]}>",
-      "{foot}\n          </RowPartContext.Provider>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>",
+      "{foot}\n          </RowParts>\n          {hintNode}\n        </View>\n        {popNode}\n      </Pressable>",
     ]);
     expect(row.slice(bodyAt, endAt)).not.toContain("Consult");
   });
@@ -121,7 +121,7 @@ describe("agents it asked first: one pair row right before the reply, never insi
     expect(reach).not.toContain("reach.see");
     // One older than the conversation's list goes back is loaded on its own, never the "Entregue ao" text.
     expect(source("ConsultGroup.tsx")).toContain(
-      "useConsultationConversation(orgId, channelId, id && list.isSuccess && !listed ? id : null)",
+      "useConsultationConversation(orgId, channelId, id && list.loaded && !listed ? id : null)",
     );
     const row = source("MessageRow.tsx");
     expect(row).toContain("const reached = useMemo(() => reachHandoffs(m.meta), [m.meta]);");
@@ -131,7 +131,9 @@ describe("agents it asked first: one pair row right before the reply, never insi
 
 describe("an exchange between the same two agents", () => {
   test("is one row on its first asking run's reply, and one conversation when opened", () => {
-    expect(source("ConsultGroup.tsx")).toContain("groupsByRun(asExchanges(list.data ?? []))");
+    // Grouped once for the conversation (`RowConsults`), each reply's row reading its run's.
+    expect(source("row-data.tsx")).toContain("byRun: groupsByRun(asExchanges(list ?? []))");
+    expect(source("ConsultGroup.tsx")).toContain("const group = runId ? list.byRun.get(runId) : undefined;");
     expect(source("ConsultGroup.tsx")).toContain("consultPair(items, now, askerId,");
     expect(source("ChatScreen.tsx")).toContain("asExchanges(consultData)");
     expect(source("ConsultationScreen.tsx")).toContain("useExchangeConversation(");

@@ -37,7 +37,7 @@ import {
   newPlanAccountOption,
   planAccountOption,
 } from "@agenteschat/client/lib/brain-picker";
-import { type ConnectedItem, itemName } from "@agenteschat/client/lib/connected";
+import { type ConnectedItem, itemName, personalAllowed } from "@agenteschat/client/lib/connected";
 import { errorText as failureText } from "@agenteschat/client/lib/errors";
 import { FIELD_LIMITS } from "@agenteschat/client/lib/field-limits";
 import { joinNames } from "@agenteschat/client/lib/format";
@@ -1907,7 +1907,7 @@ function NewAgentFlow({ channelId = null }: { channelId?: string | null }) {
           // Every connected app is a row of the step's list already.
           onCard={connectedApps}
           inList
-          canConnect={can(org, "manage_connectors")}
+          canConnect={(d) => can(org, "manage_connectors") || personalAllowed(d.id)}
           onUse={() => {}}
           onConnect={(def) => {
             keepForReturn();

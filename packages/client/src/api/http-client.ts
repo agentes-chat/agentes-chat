@@ -240,6 +240,9 @@ import type {
   StorageMigration,
   StorageTestResult,
   SuggestedAi,
+  SurfaceLink,
+  SurfaceLinkCode,
+  SurfaceLinks,
   TaskManagerView,
   TaskOutput,
   TaskSteps,
@@ -282,6 +285,8 @@ const filterQuery = (f: SearchFilterInput | undefined) =>
 
 const pageBody = (to: PageTarget) => (typeof to === "string" ? { url: to } : to);
 const org = (orgId: string) => `/api/app/organizations/${enc(orgId)}`;
+/** `?others=1`: a list that also holds everyone else's personal connections (who manages connectors gets them). */
+const othersQuery = (options?: { others?: boolean }) => (options?.others ? "?others=1" : "");
 /** The most agents one `POST …/agent-setup` takes (the server's `SETUP_AGENTS_MAX`). */
 const SETUP_AGENTS_PER_CALL = 200;
 
@@ -393,7 +398,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     mail: {
       providers: (orgId) => request<MailProviders>(`${org(orgId)}/mail/providers`),
-      accounts: async (orgId) => (await request<{ accounts: MailAccount[] }>(`${org(orgId)}/mail/accounts`)).accounts,
+      accounts: async (orgId, options) =>
+        (await request<{ accounts: MailAccount[] }>(`${org(orgId)}/mail/accounts${othersQuery(options)}`)).accounts,
       connectImap: async (orgId, input) =>
         (await request<{ account: MailAccount }>(`${org(orgId)}/mail/accounts/imap`, { json: input })).account,
       connectComposio: (orgId, input) =>
@@ -646,6 +652,16 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
       restore: () => request<void>("/api/app/account/deletion", { method: "DELETE" }),
       changeEmail: (input) => request<EmailChange>("/api/app/account/email", { json: input }),
       undoEmailChange: (token) => request<{ email: string }>("/api/app/email-undo", { json: { token } }),
+    },
+    surfaces: {
+      list: () => request<SurfaceLinks>("/api/app/me/surface-links"),
+      mintCode: (orgId) => request<SurfaceLinkCode>(`${org(orgId)}/surface-link/code`, { json: {} }),
+      confirm: (linkId) => request<SurfaceLink>(`/api/app/me/surface-links/${enc(linkId)}/confirm`, { json: {} }),
+      remove: (linkId) => request<void>(`/api/app/me/surface-links/${enc(linkId)}`, { method: "DELETE" }),
+      undo: (token) =>
+        request<{ unlinked: boolean; surface: string; display: string | null }>("/api/app/surface-undo", {
+          json: { token },
+        }),
     },
     push: {
       webKey: async () =>
@@ -1212,7 +1228,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     connectors: {
       catalog: () => request<ConnectorCatalog>("/api/app/connectors/catalog"),
-      list: async (orgId) => (await request<{ connections: Connection[] }>(`${org(orgId)}/connectors`)).connections,
+      list: async (orgId, options) =>
+        (await request<{ connections: Connection[] }>(`${org(orgId)}/connectors${othersQuery(options)}`)).connections,
       connectWithKey: (orgId, input) => request<Connection>(`${org(orgId)}/connectors`, { json: input }),
       startOAuth: async (orgId, connector, input) =>
         (
@@ -1230,6 +1247,13 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         ),
       rename: (orgId, connectionId, label) =>
         request<Connection>(`${org(orgId)}/connectors/${enc(connectionId)}`, { method: "PATCH", json: { label } }),
+      takeOffAgent: (orgId, connectionId, agentId) =>
+        request<void>(`${org(orgId)}/connectors/${enc(connectionId)}/agents/${enc(agentId)}`, { method: "DELETE" }),
+      moveToTeam: (orgId, connectionId) =>
+        request<Connection>(`${org(orgId)}/connectors/${enc(connectionId)}`, {
+          method: "PATCH",
+          json: { personal: false },
+        }),
       disconnect: (orgId, connectionId) =>
         request<void>(`${org(orgId)}/connectors/${enc(connectionId)}`, { method: "DELETE" }),
     },
@@ -1502,9 +1526,13 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         request<SkillSettings>(`${org(orgId)}/skill-settings`, { method: "PUT", json: input }),
     },
     access: {
-      get: (orgId, agentId) => request<AgentAccess>(`${org(orgId)}/agents/${enc(agentId)}/access`),
-      set: (orgId, agentId, input) =>
-        request<AgentAccess>(`${org(orgId)}/agents/${enc(agentId)}/access`, { method: "PUT", json: input }),
+      get: (orgId, agentId, options) =>
+        request<AgentAccess>(`${org(orgId)}/agents/${enc(agentId)}/access${othersQuery(options)}`),
+      set: (orgId, agentId, input, options) =>
+        request<AgentAccess>(`${org(orgId)}/agents/${enc(agentId)}/access${othersQuery(options)}`, {
+          method: "PUT",
+          json: input,
+        }),
     },
     invites: {
       createLink: (orgId, choices) => request<InviteLinkMade>(`${org(orgId)}/invite-links`, { json: choices ?? {} }),
@@ -1940,7 +1968,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
     },
     customConnectors: {
       transports: (orgId) => request<{ stdio: boolean }>(`${org(orgId)}/connectors/custom-transports`),
-      list: async (orgId) => (await request<{ servers: CustomServer[] }>(`${org(orgId)}/connectors/custom`)).servers,
+      list: async (orgId, options) =>
+        (await request<{ servers: CustomServer[] }>(`${org(orgId)}/connectors/custom${othersQuery(options)}`)).servers,
       connect: (orgId, input) => request<CustomConnectStart>(`${org(orgId)}/connectors/custom`, { json: input }),
       refresh: (orgId, serverId) =>
         request<CustomServer>(`${org(orgId)}/connectors/custom/${enc(serverId)}/refresh`, { json: {} }),

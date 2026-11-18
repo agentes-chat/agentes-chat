@@ -891,7 +891,13 @@ export function createSetupToolSource(deps: {
           if (!at) return NOBODY_READS;
           const forUserId = await personBehindCall(ctx);
           const acts = await whoActs(ctx, forUserId, "manage_connectors", at.channelId);
-          if (!acts) {
+          // Anyone may connect their own (GitHub stays the team's): the card opens on "Pessoal" for them.
+          const own =
+            acts !== "person" &&
+            known?.id !== "github" &&
+            !!forUserId &&
+            !!(await getMembership(ctx.db, forUserId, ctx.orgId));
+          if (!acts && !own) {
             return {
               content:
                 "Nothing was posted: connecting apps is for admins, and none of them can open this conversation. Tell the person an admin connects it, and offer to ask one (request_approval, or in a channel an admin reads).",
@@ -915,7 +921,7 @@ export function createSetupToolSource(deps: {
           });
           if (deps.pubsub) await publishMessageCreated(deps.pubsub, messageView(message));
           return {
-            content: `Posted the card to connect ${name ?? "an MCP server"}: a person signs in or adds its key in the app's dialog, then picks its tools and which agents use it.${acts === "person" ? "" : " The person who asked can't connect apps: an admin here does it from the card. Say so, and offer to ask one."} Don't ask for keys or tokens here, and don't say it's connected until you can use its tools.`,
+            content: `Posted the card to connect ${name ?? "an MCP server"}: a person signs in or adds its key in the app's dialog, then picks its tools and which agents use it.${acts === "person" ? "" : own ? " The person who asked connects it as their own: their agents use it when they ask, in their own conversation with them. Connecting it for the whole team is an admin's." : " The person who asked can't connect apps: an admin here does it from the card. Say so, and offer to ask one."} Don't ask for keys or tokens here, and don't say it's connected until you can use its tools.`,
             data: { actionCard: { messageId: message.id } },
           };
         } catch (error) {

@@ -1192,7 +1192,7 @@ export async function insertMessageWithRuns(
 }
 
 /** The message this person already sent with this `clientId` (a resend's lookup). */
-async function sentWithClientId(db: Executor, orgId: string, userId: string, clientId: string) {
+export async function sentWithClientId(db: Executor, orgId: string, userId: string, clientId: string) {
   const { messageClientIds } = schema;
   const [claim] = await db
     .select({ messageId: messageClientIds.messageId })

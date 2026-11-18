@@ -376,7 +376,8 @@ export const organizationJoinRequests = pgTable(
     claimHash: text(),
     /**
      * Who the person works for, on a request the operator API filed for an outside collaborator (ADR 0191): an
-     * approval lets `userId` in with it, past the workspace's limit of people.
+     * approval lets `userId` in with it, past the workspace's limit of people. Unlike other requests, one that ran out
+     * is stored as `closed` by the daily sweep, which tells the operator once.
      */
     outsideOf: text(),
     expiresAt: timestamp({ withTimezone: true }).notNull(),

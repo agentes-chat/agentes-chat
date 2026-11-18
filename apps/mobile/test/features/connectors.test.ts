@@ -364,11 +364,13 @@ describe("a connection's screen and the gallery, at a finger's reach", () => {
     const screen = read("ConnectionScreen.tsx");
     // The system's bar button (`actions`), never a view of ours drawn in the bar.
     expect(screen).toMatch(
-      /icon: "pen",\s+sf: "pencil",\s+label: t\("connectors\.rename"\),\s+onPress: \(\) => openRename\(item\.id\),/,
+      /icon: "pen" as const,\s+sf: "pencil" as const,\s+label: t\("connectors\.rename"\),\s+onPress: \(\) => openRename\(item\.id\),/,
     );
-    expect(screen).toContain("{...(rename ? { actions: [rename] } : {})}");
+    expect(screen).toContain("{...(barAction ? { actions: [barAction] } : {})}");
     expect(screen).not.toContain("<IconButton");
-    expect(screen).not.toContain("chooseAction(");
+    // A menu only when there are two things to do (one's own connection may also go to the team).
+    expect(screen).toMatch(/choices\.length > 1\s+\? \{\s+icon: "more",/);
+    expect(screen).toContain("? { ...only, disabled: move.isPending }");
   });
 
   test("a connection that didn't load, or is gone, says so instead of a blank page", () => {

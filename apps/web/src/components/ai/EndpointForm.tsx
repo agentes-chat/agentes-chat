@@ -143,7 +143,7 @@ export function EndpointForm({
   };
   const save = () => {
     if (endpointModelsOf(draft) === null) return;
-    // Models whose levels were never checked: ask whether to check them in the background (ADR 0187).
+    // Models whose levels were never checked: ask whether to check them in the background (ADR 0199).
     if (draft.models.some((m) => m.on && !m.efforts)) {
       setAskEffort(true);
       return;

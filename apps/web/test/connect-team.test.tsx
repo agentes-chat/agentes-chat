@@ -363,6 +363,17 @@ describe("the team dialog's styles", () => {
     );
   });
 
+  test("an account row's name and lines wrap whole, never cut", async () => {
+    const css = await stylesheet("../src/components/arrival/arrival.css");
+    const rule = css.split("\n.arrival-have__title,\n.arrival-have__line {")[1]?.split("}")[0] ?? "";
+    expect(rule).toContain("overflow-wrap: anywhere");
+    for (const sel of [".arrival-have__title {", ".arrival-have__line {"]) {
+      for (const block of css.split(`\n${sel}`).slice(1)) {
+        expect(block.split("}")[0]).not.toMatch(/ellipsis|nowrap/);
+      }
+    }
+  });
+
   test("Choose keeps long names whole, the box and the face on the name's first line", async () => {
     const css = await stylesheet("../src/components/arrival/arrival.css");
     const rule = (selector: string) =>
