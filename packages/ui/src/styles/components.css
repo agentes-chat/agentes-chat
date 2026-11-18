@@ -11153,8 +11153,26 @@ html:not([data-pointer]) .ac-optlist--list .ac-optrow:focus-visible {
   font-weight: 500;
   overflow-wrap: anywhere;
 }
+/* A long name wraps: the icon stays at the top, centred on the first line's capitals (`.ac-iconline`'s rule), at every
+   depth. In the title's size, so its `lh` is the title's line. */
+.ac-optlist--list .ac-optrow {
+  align-items: flex-start;
+}
 .ac-optlist--list .ac-optrow__lead {
+  font-size: 14px;
   color: var(--muted);
+  translate: 0 calc(11px - var(--cap-mid) - 50%);
+}
+@supports (top: 1lh) {
+  .ac-optlist--list .ac-optrow__lead {
+    translate: 0 calc(0.5lh - var(--cap-mid) - 50%);
+  }
+  /* A one-line row stays centred: the air above and under its line split the row's 40 evenly. */
+  .ac-optlist--list .ac-optrow,
+  .ac-optlist--list .ac-optrow--lead {
+    --optrow-pad-y: calc((var(--control-h-md) - 1lh) / 2);
+    padding-block: var(--optrow-pad-y);
+  }
 }
 .ac-optlist--list .ac-optrow[data-state="checked"] .ac-optrow__title {
   font-weight: 650;
@@ -11169,7 +11187,7 @@ html:not([data-pointer]) .ac-optlist--list .ac-optrow:focus-visible {
   flex: none;
   align-self: stretch;
   width: var(--space-4);
-  margin-block: calc(-1 * var(--space-2) - 1px);
+  margin-block: calc(-1 * var(--optrow-pad-y, var(--space-2)) - 1px);
   margin-inline-end: calc(-1 * var(--space-3));
   background: linear-gradient(var(--line2), var(--line2)) center / 1px 100% no-repeat;
 }

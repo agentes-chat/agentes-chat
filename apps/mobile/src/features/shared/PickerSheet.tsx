@@ -250,7 +250,7 @@ export function PickerHost() {
                 {...(typed ? { labelParts: markTerms(o.label, [typed]) } : {})}
                 {...(o.sub ? { sub: o.sub } : {})}
                 {...(o.subLines ? { subLines: o.subLines } : {})}
-                {...(o.depth && !typed ? { depth: o.depth } : {})}
+                {...(o.depth && !typed ? { depth: o.depth, labelLines: 0 } : {})}
                 {...(lead?.kind === "icon" ? { icon: lead.name } : {})}
                 {...(lead?.kind === "person"
                   ? { leading: <Face who={{ type: "person", id: lead.userId }} size={36} /> }
