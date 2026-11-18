@@ -57,6 +57,32 @@ test("assertPublicHttpsUrl still accepts a public host", async () => {
   expect(url.hostname).toBe("example.com");
 });
 
+test("assertPublicHttpsUrl allows the operator's own network when private outbound is on", async () => {
+  // What Tailscale hands out: a CGNAT address. Refusing it here while `outboundFetch` allows it at request time means a
+  // custom MCP server on the tailnet cannot be saved, and is told the address is invalid.
+  const tailnet = "https://bot-consulta.tailnet.example.ts.net:8765/mcp";
+  const resolve = async () => ["100.77.109.8"];
+
+  allowPrivateOutbound(false);
+  try {
+    await expect(assertPublicHttpsUrl(tailnet, resolve)).rejects.toThrow();
+  } finally {
+    allowPrivateOutbound(false);
+  }
+
+  allowPrivateOutbound(true);
+  try {
+    const url = await assertPublicHttpsUrl(tailnet, resolve);
+    expect(url.hostname).toBe("bot-consulta.tailnet.example.ts.net");
+    expect(url.port).toBe("8765");
+    // The rest of the guard is untouched: https only, no credentials in the address.
+    await expect(assertPublicHttpsUrl("http://bot-consulta.tailnet.example.ts.net/", resolve)).rejects.toThrow();
+    await expect(assertPublicHttpsUrl("https://ana:segredo@bot-consulta.tailnet.example.ts.net/", resolve)).rejects.toThrow();
+  } finally {
+    allowPrivateOutbound(false);
+  }
+});
+
 /**
  * `node:https`'s `request` as far as the guarded fetch uses it: what it was asked (its options and body), answered
  * with `reply` once the request ends. Nothing touches the network.
