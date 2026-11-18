@@ -265,7 +265,7 @@ const defaultRun: Run = (command, args) =>
             ? { status: code, stdout: out, stderr: `${stderr ?? ""}` }
             : err
               ? { status: null, stdout: out, error: err }
-              : { status: 0, stdout: out },
+              : { status: 0, stdout: out, stderr: `${stderr ?? ""}` },
         );
       },
     );
@@ -347,6 +347,32 @@ export async function claudeAuth(
     };
   } catch {
     return {};
+  }
+}
+
+/**
+ * `codex login status`, on either stream: signed in when it exits 0 and says so, with ChatGPT (`Logged in using
+ * ChatGPT`) or with an API key (`Logged in using an API key - sk-…`, or `API key configured - …` as some versions put
+ * it). `Not logged in` is signed out.
+ */
+export const codexSignedIn = (status: number | null, text: string) =>
+  status === 0 && /logged in|api key configured/i.test(text) && !/not logged in/i.test(text);
+
+/**
+ * Whether the computer's own Codex is signed in (`codex login status`), with ChatGPT or with an API key. An API key
+ * has no plan usage to read, so this is the only way the app learns that Codex can think there. Undefined: it answered
+ * in words we don't know. Null: it couldn't answer (timed out, failed), so the last login seen stands.
+ */
+export async function codexLoggedIn(run: Run = defaultRun): Promise<boolean | undefined | null> {
+  try {
+    const r = await run("codex", ["login", "status"]);
+    if (r.error || r.status === null) return null;
+    const text = `${r.stdout}\n${r.stderr ?? ""}`;
+    if (codexSignedIn(r.status, text)) return true;
+    if (/not logged in/i.test(text)) return false;
+    return r.status === 0 ? undefined : null;
+  } catch {
+    return null;
   }
 }
 
@@ -531,7 +557,11 @@ async function detectVersion(run: Run, name: "claude" | "codex"): Promise<Probe>
   if (r.error || r.status !== 0) return versionFailed(r);
   const version = firstLine(r);
   if (!version) return {};
-  if (name !== "claude") return { entry: { version } };
+  if (name !== "claude") {
+    const loggedIn = await codexLoggedIn(run);
+    if (loggedIn === null) return { entry: { version }, unsure: true };
+    return { entry: { version, ...(loggedIn === undefined ? {} : { loggedIn }) } };
+  }
   const auth = await claudeAuth(run);
   return auth ? { entry: { version, ...auth } } : { entry: { version }, unsure: true };
 }
