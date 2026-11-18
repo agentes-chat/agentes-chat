@@ -535,6 +535,7 @@ function withWeb(s: TestServer) {
   writeFileSync(join(web, "index.html"), index);
   mkdirSync(join(web, "assets"));
   writeFileSync(join(web, "assets", "index-4f2a.js"), "export {};");
+  writeFileSync(join(web, "screen.html"), SCREEN);
   const app = createApp({
     edition: "cloud",
     version: "test",
@@ -566,6 +567,7 @@ test("the app's page says it is on a registered host, so its boot hides the prod
 });
 
 const UNKNOWN = "app.unregistered.example";
+const SCREEN = '<!doctype html>\n<html lang="en"><body>screen</body></html>';
 
 test("a hostname neither the server's own nor registered: the app's page is a 404 marked data-unknown-host", async () => {
   const s = await server({ PUBLIC_URL: "https://chat.example.com", EXTRA_TRUSTED_ORIGINS: OWN_EXTRA });
@@ -600,6 +602,9 @@ test("a hostname neither the server's own nor registered: the app's page is a 40
   expect(asset.status).toBe(200);
   expect(await asset.text()).toBe("export {};");
   expect((await get("/assets/gone-1234.js", UNKNOWN)).status).toBe(404);
+  const other = await get("/screen.html", UNKNOWN);
+  expect(other.status).toBe(200);
+  expect(await other.text()).toBe(SCREEN);
 });
 
 test("without the operator API no hostname is unknown: the page as before, whatever Host the proxy sends", async () => {
