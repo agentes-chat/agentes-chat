@@ -1124,6 +1124,9 @@
       "diagram": "图表",
       "page": "页面",
       "text": "文本",
+      "spreadsheet": "电子表格",
+      "slides": "演示文稿",
+      "canvas": "白板",
       "file": "文件"
     },
     "more": "更多选项",
@@ -1247,6 +1250,9 @@
     "type": {
       "all": "全部",
       "documents": "文档",
+      "spreadsheets": "电子表格",
+      "presentations": "演示文稿",
+      "canvases": "白板",
       "images": "图片",
       "tables": "表格",
       "diffs": "差异"
@@ -1260,6 +1266,9 @@
       "table": "表格",
       "diff": "差异",
       "image": "图片",
+      "spreadsheet": "电子表格",
+      "slides": "演示文稿",
+      "canvas": "白板",
       "file": "文件"
     },
     "by": "{{name}} · {{when}}",
@@ -2737,6 +2746,212 @@
     "audit": {
       "title": "没有需要查看的内容",
       "text": "智能体在对话之外做事时，会显示在这里。"
+    }
+  },
+  "live": {
+    "status": {
+      "opening": "正在打开…",
+      "saved": "已保存",
+      "saving": "正在保存…",
+      "offline": "没有网络连接",
+      "offlineKept": "没有网络连接 · 更改已保存在这部手机上",
+      "readOnly": "只读"
+    },
+    "closed": {
+      "missing": "这个文件不存在，或没有共享给你",
+      "signedOut": "请重新登录后打开这个文件",
+      "broken": "这个文件无法在应用中打开",
+      "toDrive": "返回 Drive"
+    },
+    "menu": {
+      "undo": "撤销",
+      "redo": "重做"
+    },
+    "here": {
+      "title": "谁在这里",
+      "faces_other": "这里还有 {{count}} 人。查看是谁",
+      "group": {
+        "editing": "正在编辑",
+        "viewing": "正在查看"
+      },
+      "editing": "正在编辑",
+      "viewing": "正在查看",
+      "editingAt": "正在编辑 {{where}}",
+      "viewingAt": "在 {{where}}",
+      "editingSlide": "正在编辑第 {{n}} 张幻灯片",
+      "onSlide": "在第 {{n}} 张幻灯片",
+      "editingShapes_other": "正在编辑 {{count}} 个元素",
+      "followingName": "正在跟随 {{name}}",
+      "stop": "停止",
+      "alone": "现在只有你在这里",
+      "aloneHint": "打开这个文件的人都会显示在这里，还能看到他们正在做什么。"
+    },
+    "card": {
+      "sheets_other": "{{count}} 个工作表",
+      "slides_other": "{{count}} 张幻灯片",
+      "shapes_other": "{{count}} 个元素"
+    },
+    "sheet": {
+      "edit": "编辑",
+      "editHint": "在这个单元格中输入",
+      "editing": "正在编辑 {{cell}}",
+      "placeholder": "输入一个值或 =",
+      "empty": "空",
+      "cancel": "保持原样",
+      "done": "完成",
+      "typeKey": "输入 {{key}}",
+      "stats": "求和 {{sum}} · 平均值 {{average}} · 计数 {{count}}",
+      "countOnly": "计数 {{count}}",
+      "cantDo": "这里无法这样操作",
+      "copied": "已复制",
+      "newSheet": "新建工作表",
+      "sheetWord": "工作表",
+      "duplicateSheet": "复制工作表",
+      "copyOf": "{{name}}（副本）",
+      "deleteSheet": "删除工作表",
+      "deleteSheetTitle": "删除 {{name}}？",
+      "deleteSheetText": "这个工作表中的所有内容都会为文件里的每个人删除。撤销可以恢复。",
+      "menu": {
+        "copy": "复制",
+        "paste": "粘贴",
+        "clear": "清除",
+        "rowsAbove_other": "在上方插入 {{count}} 行",
+        "rowsBelow_other": "在下方插入 {{count}} 行",
+        "colsLeft_other": "在左侧插入 {{count}} 列",
+        "colsRight_other": "在右侧插入 {{count}} 列",
+        "sortUp": "按 A 到 Z 排序",
+        "sortDown": "按 Z 到 A 排序",
+        "deleteRows_other": "删除 {{count}} 行",
+        "deleteCols_other": "删除 {{count}} 列"
+      },
+      "problem": {
+        "empty": "请在 = 后面输入内容",
+        "unexpected": "{{text}} 附近有问题",
+        "paren": "有一个括号没有闭合",
+        "quote": "有一个引号没有闭合",
+        "sheetQuote": "工作表名称的引号没有闭合",
+        "operand": "符号旁边缺少一个值",
+        "array": "这个值列表不完整",
+        "range": "这个范围无效",
+        "sheet": "没有名为 {{text}} 的工作表",
+        "args": "{{fn}} 的值数量不对",
+        "tooLong": "内容太长，一个单元格放不下",
+        "tooDeep": "这个公式的层级太多",
+        "tooFar": "这个引用超出了电子表格的范围",
+        "limit": "这个电子表格已达到大小上限",
+        "merged": "合并单元格挡住了",
+        "failed": "没有成功。请重试。"
+      }
+    },
+    "slides": {
+      "placeholder": {
+        "title": "点按添加标题",
+        "text": "点按添加文字",
+        "image": "点按添加照片"
+      },
+      "part": {
+        "title": "标题",
+        "subtitle": "副标题",
+        "body": "正文",
+        "caption": "说明文字",
+        "number": "大数字",
+        "quote": "引用",
+        "shape": "形状中的文字",
+        "text": "文本框",
+        "note": "备注"
+      },
+      "openHint": "打开这张幻灯片",
+      "editHint": "编辑其中的文字",
+      "place": "第 {{n}} 张，共 {{count}} 张",
+      "placeHidden": "第 {{n}} 张，共 {{count}} 张 · 演示时隐藏",
+      "deleteTitle": "删除第 {{n}} 张幻灯片？",
+      "deleteText": "它会为文件里的每个人删除。撤销可以恢复。",
+      "notesPlaceholder": "写下这张幻灯片要讲的内容",
+      "pickPhoto": "选择照片",
+      "tools": {
+        "text": "文字",
+        "photo": "照片",
+        "sending": "正在发送…"
+      }
+    },
+    "text": {
+      "title": "文字",
+      "noteTitle": "便签",
+      "done": "完成",
+      "placeholder": "输入文字",
+      "titlePlaceholder": "输入标题",
+      "hint": "每一行是一个段落。你输入的内容会实时写进文件。"
+    },
+    "show": {
+      "nothing": "所有幻灯片都已隐藏，没有可以展示的内容。",
+      "upright": "把手机竖起来",
+      "sideways": "把手机横过来"
+    },
+    "canvas": {
+      "tools": {
+        "label": "工具",
+        "select": "选择",
+        "pen": "画笔",
+        "shapes": "形状",
+        "arrow": "箭头",
+        "note": "便签",
+        "text": "文字",
+        "photo": "照片",
+        "comment": "评论"
+      },
+      "shapes": {
+        "rect": "矩形",
+        "ellipse": "椭圆",
+        "diamond": "菱形",
+        "triangle": "三角形",
+        "star": "星形",
+        "line": "线条"
+      },
+      "penHint": "用手指画。两指可以移动白板。",
+      "arrowHint": "从一个位置拖到另一个位置",
+      "commentHint": "点按要评论的位置",
+      "pin": "{{name}} 的第 {{n}} 条评论",
+      "addToSelection": "也选择这个",
+      "emptyText": "添加便签或照片，或在对话中请智能体帮忙。"
+    },
+    "talk": {
+      "start": "聊聊{{what}}",
+      "openHint": "打开对话",
+      "placeholder": {
+        "spreadsheet": "聊聊这个电子表格…",
+        "slides": "聊聊这份演示文稿…",
+        "canvas": "聊聊这块白板…",
+        "document": "聊聊这份文档…"
+      },
+      "aboutPoint": "对白板上某个位置的评论",
+      "comment": "评论",
+      "imported": "由 <0>{{name}}</0> 从 {{file}} 导入",
+      "variationsText": "生成这张图片的几个变体"
+    },
+    "doc": {
+      "styles": {
+        "paragraph": "正文",
+        "h1": "标题 1",
+        "h2": "标题 2",
+        "h3": "标题 3",
+        "quote": "引用",
+        "code": "代码"
+      },
+      "style": "文字样式",
+      "bold": "粗体",
+      "italic": "斜体",
+      "bullets": "项目符号列表",
+      "numbers": "编号列表",
+      "quote": "引用",
+      "link": "添加链接",
+      "linkChoose": "请先选中要加链接的文字",
+      "linkBad": "这个地址不能用作链接",
+      "linkPlaceholder": "链接地址",
+      "linkApply": "添加链接",
+      "placeholder": "在这里写",
+      "add": "添加段落",
+      "editHint": "编辑这一部分",
+      "notHere": "这一部分需要在电脑上编辑"
     }
   },
   "surface": {

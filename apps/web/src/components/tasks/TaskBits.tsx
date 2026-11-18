@@ -429,7 +429,7 @@ export function useOpenTask() {
   const navigate = useNavigate();
   return (
     task: Pick<ManagedTask, "agentId" | "channelId" | "threadId"> & {
-      channelKind: ManagedTask["channelKind"] | "task";
+      channelKind: ManagedTask["channelKind"] | "task" | "file";
       background?: boolean;
       routine?: ManagedTask["routine"];
       delegation?: ManagedTask["delegation"];

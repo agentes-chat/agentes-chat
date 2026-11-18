@@ -3,6 +3,7 @@ import {
   applyComputerEvent,
   applyDashboardEvent,
   applyIssueEvent,
+  applyLiveEvent,
   applyMachineEvent,
   applyNotificationEvent,
   applyUnreadEvent,
@@ -74,6 +75,8 @@ export function useUserEvents() {
       applyWorkspaceEvent(qc, orgId, event);
       // Dashboards and widgets (ADR 0135): a board changed, a widget updated, failed or was removed.
       applyDashboardEvent(qc, orgId, event);
+      // Who is in a Drive file now (ADR 0196 §5): the cards showing it ask again.
+      applyLiveEvent(qc, orgId, event);
       // Org event: someone changed the task board's columns or projects. Deleting a column moves its tasks and
       // a project's name is on its cards, so the tasks refresh too (both live under the same key).
       if (event.type === "issue.columns" || event.type === "issue.projects")

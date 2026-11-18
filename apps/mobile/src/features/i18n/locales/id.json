@@ -1124,6 +1124,9 @@
       "diagram": "Diagram",
       "page": "Halaman",
       "text": "Teks",
+      "spreadsheet": "Spreadsheet",
+      "slides": "Presentasi",
+      "canvas": "Kanvas",
       "file": "File"
     },
     "more": "Opsi lainnya",
@@ -1247,6 +1250,9 @@
     "type": {
       "all": "Semua",
       "documents": "Dokumen",
+      "spreadsheets": "Spreadsheet",
+      "presentations": "Presentasi",
+      "canvases": "Kanvas",
       "images": "Gambar",
       "tables": "Tabel",
       "diffs": "Perubahan kode"
@@ -1260,6 +1266,9 @@
       "table": "Tabel",
       "diff": "Perubahan kode",
       "image": "Gambar",
+      "spreadsheet": "Spreadsheet",
+      "slides": "Presentasi",
+      "canvas": "Kanvas",
       "file": "File"
     },
     "by": "{{name}} · {{when}}",
@@ -2737,6 +2746,212 @@
     "audit": {
       "title": "Tidak ada yang perlu ditinjau",
       "text": "Saat agen melakukan sesuatu di luar percakapan, itu muncul di sini."
+    }
+  },
+  "live": {
+    "status": {
+      "opening": "Membuka…",
+      "saved": "Tersimpan",
+      "saving": "Menyimpan…",
+      "offline": "Tidak ada koneksi",
+      "offlineKept": "Tidak ada koneksi · perubahan disimpan di ponsel ini",
+      "readOnly": "Hanya baca"
+    },
+    "closed": {
+      "missing": "File ini tidak ada atau tidak dibagikan denganmu",
+      "signedOut": "Masuk lagi untuk membuka file ini",
+      "broken": "File ini tidak bisa dibuka di aplikasi",
+      "toDrive": "Kembali ke Drive"
+    },
+    "menu": {
+      "undo": "Urungkan",
+      "redo": "Ulangi"
+    },
+    "here": {
+      "title": "Siapa yang ada di sini",
+      "faces_other": "{{count}} orang lagi di sini. Lihat siapa",
+      "group": {
+        "editing": "Mengedit",
+        "viewing": "Melihat"
+      },
+      "editing": "mengedit",
+      "viewing": "melihat",
+      "editingAt": "mengedit {{where}}",
+      "viewingAt": "di {{where}}",
+      "editingSlide": "mengedit slide {{n}}",
+      "onSlide": "di slide {{n}}",
+      "editingShapes_other": "mengedit {{count}} item",
+      "followingName": "Mengikuti {{name}}",
+      "stop": "Hentikan",
+      "alone": "Sekarang hanya kamu yang ada di sini",
+      "aloneHint": "Siapa pun yang membuka file ini akan muncul di sini, beserta apa yang sedang dilakukannya."
+    },
+    "card": {
+      "sheets_other": "{{count}} lembar",
+      "slides_other": "{{count}} slide",
+      "shapes_other": "{{count}} item"
+    },
+    "sheet": {
+      "edit": "Ubah",
+      "editHint": "Ketik di sel ini",
+      "editing": "Mengedit {{cell}}",
+      "placeholder": "Ketik nilai atau =",
+      "empty": "Kosong",
+      "cancel": "Biarkan seperti semula",
+      "done": "Selesai",
+      "typeKey": "Ketik {{key}}",
+      "stats": "Jumlah {{sum}} · Rata-rata {{average}} · Hitungan {{count}}",
+      "countOnly": "Hitungan {{count}}",
+      "cantDo": "Itu tidak bisa dilakukan di sini",
+      "copied": "Disalin",
+      "newSheet": "Lembar baru",
+      "sheetWord": "Lembar",
+      "duplicateSheet": "Duplikat lembar",
+      "copyOf": "{{name}} (salinan)",
+      "deleteSheet": "Hapus lembar",
+      "deleteSheetTitle": "Hapus {{name}}?",
+      "deleteSheetText": "Semua isi lembar ini hilang untuk semua orang di file ini. Urungkan bisa mengembalikannya.",
+      "menu": {
+        "copy": "Salin",
+        "paste": "Tempel",
+        "clear": "Kosongkan",
+        "rowsAbove_other": "Sisipkan {{count}} baris di atas",
+        "rowsBelow_other": "Sisipkan {{count}} baris di bawah",
+        "colsLeft_other": "Sisipkan {{count}} kolom di kiri",
+        "colsRight_other": "Sisipkan {{count}} kolom di kanan",
+        "sortUp": "Urutkan A ke Z",
+        "sortDown": "Urutkan Z ke A",
+        "deleteRows_other": "Hapus {{count}} baris",
+        "deleteCols_other": "Hapus {{count}} kolom"
+      },
+      "problem": {
+        "empty": "Ketik sesuatu setelah =",
+        "unexpected": "Ada yang salah di dekat {{text}}",
+        "paren": "Ada tanda kurung yang belum ditutup",
+        "quote": "Ada tanda kutip yang belum ditutup",
+        "sheetQuote": "Tanda kutip nama lembar belum ditutup",
+        "operand": "Ada nilai yang kurang di samping tanda",
+        "array": "Daftar nilai ini belum lengkap",
+        "range": "Rentang ini tidak valid",
+        "sheet": "Tidak ada lembar bernama {{text}}",
+        "args": "Jumlah nilai untuk {{fn}} salah",
+        "tooLong": "Ini terlalu panjang untuk satu sel",
+        "tooDeep": "Rumus ini punya terlalu banyak tingkat",
+        "tooFar": "Referensi ini melewati batas spreadsheet",
+        "limit": "Spreadsheet ini sudah mencapai batas ukurannya",
+        "merged": "Ada sel yang digabung menghalangi",
+        "failed": "Itu tidak berhasil. Coba lagi."
+      }
+    },
+    "slides": {
+      "placeholder": {
+        "title": "Ketuk untuk menambahkan judul",
+        "text": "Ketuk untuk menambahkan teks",
+        "image": "Ketuk untuk menambahkan foto"
+      },
+      "part": {
+        "title": "Judul",
+        "subtitle": "Subjudul",
+        "body": "Teks",
+        "caption": "Keterangan",
+        "number": "Angka besar",
+        "quote": "Kutipan",
+        "shape": "Teks di dalam bentuk",
+        "text": "Kotak teks",
+        "note": "Catatan"
+      },
+      "openHint": "Membuka slide",
+      "editHint": "Mengubah teksnya",
+      "place": "Slide {{n}} dari {{count}}",
+      "placeHidden": "Slide {{n}} dari {{count}} · disembunyikan saat presentasi",
+      "deleteTitle": "Hapus slide {{n}}?",
+      "deleteText": "Slide ini hilang untuk semua orang di file ini. Urungkan bisa mengembalikannya.",
+      "notesPlaceholder": "Tulis apa yang ingin disampaikan di slide ini",
+      "pickPhoto": "Pilih foto",
+      "tools": {
+        "text": "Teks",
+        "photo": "Foto",
+        "sending": "Mengirim…"
+      }
+    },
+    "text": {
+      "title": "Teks",
+      "noteTitle": "Catatan",
+      "done": "Selesai",
+      "placeholder": "Ketik teksnya",
+      "titlePlaceholder": "Ketik judulnya",
+      "hint": "Setiap baris adalah satu paragraf. Yang kamu ketik langsung masuk ke file."
+    },
+    "show": {
+      "nothing": "Semua slide disembunyikan, jadi tidak ada yang bisa ditampilkan.",
+      "upright": "Tegakkan ponsel",
+      "sideways": "Miringkan ponsel"
+    },
+    "canvas": {
+      "tools": {
+        "label": "Alat",
+        "select": "Pilih",
+        "pen": "Pena",
+        "shapes": "Bentuk",
+        "arrow": "Panah",
+        "note": "Catatan",
+        "text": "Teks",
+        "photo": "Foto",
+        "comment": "Komentar"
+      },
+      "shapes": {
+        "rect": "Persegi panjang",
+        "ellipse": "Elips",
+        "diamond": "Belah ketupat",
+        "triangle": "Segitiga",
+        "star": "Bintang",
+        "line": "Garis"
+      },
+      "penHint": "Gambar dengan jarimu. Dua jari untuk menggeser kanvas.",
+      "arrowHint": "Seret dari satu tempat ke tempat lain",
+      "commentHint": "Ketuk tempat yang ingin kamu komentari",
+      "pin": "Komentar {{n}} dari {{name}}",
+      "addToSelection": "Pilih ini juga",
+      "emptyText": "Tambahkan catatan atau foto, atau minta bantuan agen di percakapan."
+    },
+    "talk": {
+      "start": "Bicarakan {{what}}",
+      "openHint": "Membuka percakapan",
+      "placeholder": {
+        "spreadsheet": "Tulis tentang spreadsheet…",
+        "slides": "Tulis tentang presentasi…",
+        "canvas": "Tulis tentang kanvas…",
+        "document": "Tulis tentang dokumen…"
+      },
+      "aboutPoint": "Komentar di satu titik kanvas",
+      "comment": "Komentar",
+      "imported": "Diimpor dari {{file}} oleh <0>{{name}}</0>",
+      "variationsText": "buat variasi dari gambar ini"
+    },
+    "doc": {
+      "styles": {
+        "paragraph": "Teks",
+        "h1": "Judul 1",
+        "h2": "Judul 2",
+        "h3": "Judul 3",
+        "quote": "Kutipan",
+        "code": "Kode"
+      },
+      "style": "Gaya teks",
+      "bold": "Tebal",
+      "italic": "Miring",
+      "bullets": "Daftar berpoin",
+      "numbers": "Daftar bernomor",
+      "quote": "Kutipan",
+      "link": "Tambahkan tautan",
+      "linkChoose": "Pilih dulu kata-kata untuk tautannya",
+      "linkBad": "Alamat itu tidak bisa dijadikan tautan",
+      "linkPlaceholder": "Alamat tautan",
+      "linkApply": "Tambahkan tautan",
+      "placeholder": "Tulis di sini",
+      "add": "Tambah paragraf",
+      "editHint": "Mengubah bagian ini",
+      "notHere": "Bagian ini diubah di komputer"
     }
   },
   "surface": {

@@ -27,6 +27,7 @@ import {
   type ConnectionStatus,
   consultsIn,
   desktopTrailOf,
+  fileConversationOf,
   heldRowsIn,
   inMainTimeline,
   isQuiet,
@@ -34,6 +35,7 @@ import {
   keys,
   type LiveRun,
   MESSAGES_PAGE,
+  messageLiveRef,
   OPEN_THREAD,
   QUIET_AFTER_MS,
   runsInChannel,
@@ -327,6 +329,8 @@ import { useLeaveChannelWithUndo } from "@/components/LeaveChannelDialog";
 import { useUploadFailed } from "@/components/Limits";
 import { LiveCodeToggle, type SteerNote } from "@/components/LiveCode";
 import { ErrorState, LoadingConversation } from "@/components/Loading";
+import { LiveQuoteBar, LiveRefLine } from "@/components/live/TalkBits";
+import { useFileTalk } from "@/components/live/talk";
 import { AwayPill, WaitingCard } from "@/components/MachineOutages";
 import { useMediaTabs } from "@/components/MediaPicker";
 import { MemberPickerRows, memberOf, type PickKey, useMemberRows } from "@/components/MemberPicker";
@@ -1108,6 +1112,36 @@ function ChannelView({
   );
   const channelSearch = useChannelSearch();
   const composer = useRef<HTMLTextAreaElement>(null);
+  // The live file beside its own conversation (ADR 0199): what is selected there rides on the next message, and its
+  // buttons ("Pedir ao Atlas") put their words in this composer.
+  const fileTalk = useFileTalk();
+  const fileHere = fileTalk && thread && fileTalk.rootId === thread.id ? fileTalk : null;
+  const prefill = fileHere?.prefill ?? null;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once per request (its key); the draft is read as it is then
+  useEffect(() => {
+    if (!prefill || !fileHere) return;
+    const words = prefill.text;
+    // What was typed stays after the agent's @; the same request twice doesn't write it twice.
+    setDraft((now) => (now.trim() ? (now.startsWith(words.trim()) ? now : `${words}${now}`) : words));
+    fileHere.tookPrefill();
+    requestAnimationFrame(() => {
+      const box = composer.current;
+      if (!box) return;
+      box.focus({ preventScroll: true });
+      box.setSelectionRange(box.value.length, box.value.length);
+    });
+  }, [prefill?.key]);
+  // "Sobre C2:D6 em Custos" over the composer, as "Respondendo a" shows; × drops it.
+  const aboutBar = fileHere?.about ? (
+    <LiveQuoteBar
+      kind={fileHere.kind}
+      selection={fileHere.about}
+      onDrop={() => {
+        fileHere.dropAbout();
+        composer.current?.focus();
+      }}
+    />
+  ) : null;
   const emojiPicker = useEmojiLabels();
   const emojiLabels = useMemo(() => ({ ...emojiPicker, button: t("channel.emoji") }), [emojiPicker, t]);
   const formatLabels: ComposerFormatLabels = useMemo(
@@ -1330,10 +1364,12 @@ function ChannelView({
       // The thread's conversation. One made from a range: not its root (the channel's marker) nor the
       // moved messages (written before the root; the context block lists them).
       const mine = (channelMessages.data ?? []).filter((m) => m.local && m.threadId === thread.id);
-      // A task's conversation: not its root, which stands for the task beside it (ADR 0145).
+      // A task's conversation: not its root, which stands for the task beside it (ADR 0145); a live file's the same
+      // (ADR 0199).
       const list = mergeTimeline(threadMessages.data ?? [], [mine]).filter(
         (m) =>
           !taskConversationOf(m.meta) &&
+          !fileConversationOf(m.meta) &&
           (!thread.context || m.local || (m.id !== thread.id && m.createdAt > thread.createdAt)),
       );
       const passed = supersededBrainNotices(list);
@@ -2120,6 +2156,16 @@ function ChannelView({
     setDraft("");
     const meta = localMeta(quote, quote ? dir.authorName(quote.author) : "", attached);
     setQuote(null);
+    // About what is selected in the file beside it (ADR 0199): the message carries it, then the quote goes.
+    if (fileHere?.about) {
+      meta.liveRef = {
+        artifactId: fileHere.artifactId,
+        kind: fileHere.kind,
+        title: fileHere.title,
+        selection: fileHere.about,
+      };
+      fileHere.dropAbout();
+    }
     // From the thread panel or page: the reply makes it a "Responder" thread (out of the channel's timeline).
     if (thread && chrome?.openThread) meta[OPEN_THREAD] = true;
     // "Parar e mandar" (⌘↵): the agent drops the step it is on and reads this now.
@@ -2822,13 +2868,18 @@ function ChannelView({
                               <Composer
                                 header={
                                   quote ? (
-                                    <QuoteBar
-                                      name={dir.authorName(quote.author)}
-                                      onCancel={() => {
-                                        setQuote(null);
-                                        composer.current?.focus();
-                                      }}
-                                    />
+                                    <>
+                                      <QuoteBar
+                                        name={dir.authorName(quote.author)}
+                                        onCancel={() => {
+                                          setQuote(null);
+                                          composer.current?.focus();
+                                        }}
+                                      />
+                                      {aboutBar}
+                                    </>
+                                  ) : aboutBar ? (
+                                    aboutBar
                                   ) : finishing ? (
                                     <div className="composer-quote" role="note">
                                       <Icon name="edit" size={16} />
@@ -4441,6 +4492,8 @@ export const TimelineMessage = memo(function TimelineMessage({
   const replyRun = mediaAfter ? null : m.agentRunId;
   // "Responder": the message this one quotes.
   const quoted = useMemo(() => replyOf(m.meta) ?? replyContext ?? null, [m.meta, replyContext]);
+  // About part of a live file (ADR 0199): its line in the same place, opening that part in the file.
+  const liveRef = useMemo(() => messageLiveRef(m), [m]);
   // A mission's cards (ADR 0029): the plan, a decision, a review; a report says where it ran.
   const missionPlan = m.author.type === "agent" ? missionPlanOf(meta) : null;
   const missionDecision = m.author.type === "agent" && meta.missionDecision ? m : null;
@@ -4578,7 +4631,14 @@ export const TimelineMessage = memo(function TimelineMessage({
         own={own}
         run={run}
         bare={waiting || !bodyShown}
-        quote={quoted ? <QuotedMessage reply={quoted} /> : undefined}
+        quote={
+          quoted || liveRef ? (
+            <>
+              {quoted && <QuotedMessage reply={quoted} />}
+              {liveRef && <LiveRefLine liveRef={liveRef} />}
+            </>
+          ) : undefined
+        }
         nameColor={dir.nameColorOf(m.author)}
         waiting={waiting}
         entering={entering}

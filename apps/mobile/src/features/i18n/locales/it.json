@@ -1279,6 +1279,9 @@
       "diagram": "Diagramma",
       "page": "Pagina",
       "text": "Testo",
+      "spreadsheet": "Foglio di calcolo",
+      "slides": "Presentazione",
+      "canvas": "Lavagna",
       "file": "File"
     },
     "more": "Altre opzioni",
@@ -1404,6 +1407,9 @@
     "type": {
       "all": "Tutti",
       "documents": "Documenti",
+      "spreadsheets": "Fogli di calcolo",
+      "presentations": "Presentazioni",
+      "canvases": "Lavagne",
       "images": "Immagini",
       "tables": "Tabelle",
       "diffs": "Diff"
@@ -1417,6 +1423,9 @@
       "table": "Tabella",
       "diff": "Diff",
       "image": "Immagine",
+      "spreadsheet": "Foglio di calcolo",
+      "slides": "Presentazione",
+      "canvas": "Lavagna",
       "file": "File"
     },
     "by": "{{name}} · {{when}}",
@@ -2966,6 +2975,234 @@
     "audit": {
       "title": "Niente da controllare",
       "text": "Quando un agente fa qualcosa fuori dalla conversazione, compare qui."
+    }
+  },
+  "live": {
+    "status": {
+      "opening": "Apertura…",
+      "saved": "Salvato",
+      "saving": "Salvataggio…",
+      "offline": "Nessuna connessione",
+      "offlineKept": "Nessuna connessione · modifiche salvate su questo telefono",
+      "readOnly": "Sola lettura"
+    },
+    "closed": {
+      "missing": "Questo file non esiste o non è stato condiviso con te",
+      "signedOut": "Accedi di nuovo per aprire questo file",
+      "broken": "Questo file non si apre nell'app",
+      "toDrive": "Torna al Drive"
+    },
+    "menu": {
+      "undo": "Annulla",
+      "redo": "Ripeti"
+    },
+    "here": {
+      "title": "Chi c'è",
+      "faces_one": "Altri {{count}} qui. Vedi chi",
+      "faces_many": "Altri {{count}} qui. Vedi chi",
+      "faces_other": "Altri {{count}} qui. Vedi chi",
+      "group": {
+        "editing": "Stanno modificando",
+        "viewing": "Stanno guardando"
+      },
+      "editing": "sta modificando",
+      "viewing": "sta guardando",
+      "editingAt": "sta modificando {{where}}",
+      "viewingAt": "su {{where}}",
+      "editingSlide": "sta modificando la diapositiva {{n}}",
+      "onSlide": "sulla diapositiva {{n}}",
+      "editingShapes_one": "modifica {{count}} elemento",
+      "editingShapes_many": "modifica {{count}} elementi",
+      "editingShapes_other": "modifica {{count}} elementi",
+      "followingName": "Stai seguendo {{name}}",
+      "stop": "Interrompi",
+      "alone": "Ora ci sei solo tu",
+      "aloneHint": "Chi apre questo file compare qui, con quello che sta facendo."
+    },
+    "card": {
+      "sheets_one": "{{count}} foglio",
+      "sheets_many": "{{count}} fogli",
+      "sheets_other": "{{count}} fogli",
+      "slides_one": "{{count}} diapositiva",
+      "slides_many": "{{count}} diapositive",
+      "slides_other": "{{count}} diapositive",
+      "shapes_one": "{{count}} elemento",
+      "shapes_many": "{{count}} elementi",
+      "shapes_other": "{{count}} elementi"
+    },
+    "sheet": {
+      "edit": "Modifica",
+      "editHint": "Scrivi in questa cella",
+      "editing": "Modifica di {{cell}}",
+      "placeholder": "Digita un valore o =",
+      "empty": "Vuota",
+      "cancel": "Lascia com'era",
+      "done": "Fatto",
+      "typeKey": "Digita {{key}}",
+      "stats": "Somma {{sum}} · Media {{average}} · Conteggio {{count}}",
+      "countOnly": "Conteggio {{count}}",
+      "cantDo": "Qui non si può fare",
+      "copied": "Copiato",
+      "newSheet": "Nuovo foglio",
+      "sheetWord": "Foglio",
+      "duplicateSheet": "Duplica foglio",
+      "copyOf": "{{name}} (copia)",
+      "deleteSheet": "Elimina foglio",
+      "deleteSheetTitle": "Eliminare {{name}}?",
+      "deleteSheetText": "Tutto ciò che c'è in questo foglio sparisce per tutti nel file. Annulla lo riporta indietro.",
+      "menu": {
+        "copy": "Copia",
+        "paste": "Incolla",
+        "clear": "Cancella",
+        "rowsAbove_one": "Inserisci una riga sopra",
+        "rowsAbove_many": "Inserisci {{count}} righe sopra",
+        "rowsAbove_other": "Inserisci {{count}} righe sopra",
+        "rowsBelow_one": "Inserisci una riga sotto",
+        "rowsBelow_many": "Inserisci {{count}} righe sotto",
+        "rowsBelow_other": "Inserisci {{count}} righe sotto",
+        "colsLeft_one": "Inserisci una colonna a sinistra",
+        "colsLeft_many": "Inserisci {{count}} colonne a sinistra",
+        "colsLeft_other": "Inserisci {{count}} colonne a sinistra",
+        "colsRight_one": "Inserisci una colonna a destra",
+        "colsRight_many": "Inserisci {{count}} colonne a destra",
+        "colsRight_other": "Inserisci {{count}} colonne a destra",
+        "sortUp": "Ordina dalla A alla Z",
+        "sortDown": "Ordina dalla Z alla A",
+        "deleteRows_one": "Elimina la riga",
+        "deleteRows_many": "Elimina {{count}} righe",
+        "deleteRows_other": "Elimina {{count}} righe",
+        "deleteCols_one": "Elimina la colonna",
+        "deleteCols_many": "Elimina {{count}} colonne",
+        "deleteCols_other": "Elimina {{count}} colonne"
+      },
+      "problem": {
+        "empty": "Scrivi qualcosa dopo =",
+        "unexpected": "Qualcosa non va vicino a {{text}}",
+        "paren": "Una parentesi non è chiusa",
+        "quote": "Delle virgolette non sono chiuse",
+        "sheetQuote": "Le virgolette del nome di un foglio non sono chiuse",
+        "operand": "Manca un valore accanto a un segno",
+        "array": "Questo elenco di valori è incompleto",
+        "range": "Questo intervallo non è valido",
+        "sheet": "Non c'è nessun foglio chiamato {{text}}",
+        "args": "{{fn}} ha il numero sbagliato di valori",
+        "tooLong": "Questo è troppo lungo per una cella",
+        "tooDeep": "Questa formula ha troppi livelli",
+        "tooFar": "Questo riferimento supera il limite del foglio di calcolo",
+        "limit": "Il foglio di calcolo ha raggiunto il limite di dimensione",
+        "merged": "Ci sono celle unite di mezzo",
+        "failed": "Non ha funzionato. Riprova."
+      }
+    },
+    "slides": {
+      "placeholder": {
+        "title": "Tocca per aggiungere un titolo",
+        "text": "Tocca per aggiungere del testo",
+        "image": "Tocca per aggiungere una foto"
+      },
+      "part": {
+        "title": "Titolo",
+        "subtitle": "Sottotitolo",
+        "body": "Testo",
+        "caption": "Didascalia",
+        "number": "Numero grande",
+        "quote": "Citazione",
+        "shape": "Testo nella forma",
+        "text": "Casella di testo",
+        "note": "Nota"
+      },
+      "openHint": "Apre la diapositiva",
+      "editHint": "Modifica il testo",
+      "place": "Diapositiva {{n}} di {{count}}",
+      "placeHidden": "Diapositiva {{n}} di {{count}} · nascosta durante la presentazione",
+      "deleteTitle": "Eliminare la diapositiva {{n}}?",
+      "deleteText": "Sparisce per tutti nel file. Annulla la riporta indietro.",
+      "notesPlaceholder": "Scrivi cosa dire su questa diapositiva",
+      "pickPhoto": "Scegli una foto",
+      "tools": {
+        "text": "Testo",
+        "photo": "Foto",
+        "sending": "Invio…"
+      }
+    },
+    "text": {
+      "title": "Testo",
+      "noteTitle": "Nota",
+      "done": "Fatto",
+      "placeholder": "Scrivi il testo",
+      "titlePlaceholder": "Scrivi il titolo",
+      "hint": "Ogni riga è un paragrafo. Quello che scrivi entra nel file mentre lo scrivi."
+    },
+    "show": {
+      "nothing": "Tutte le diapositive sono nascoste, quindi non c'è niente da mostrare.",
+      "upright": "Metti il telefono in verticale",
+      "sideways": "Gira il telefono in orizzontale"
+    },
+    "canvas": {
+      "tools": {
+        "label": "Strumenti",
+        "select": "Seleziona",
+        "pen": "Penna",
+        "shapes": "Forme",
+        "arrow": "Freccia",
+        "note": "Nota",
+        "text": "Testo",
+        "photo": "Foto",
+        "comment": "Commenta"
+      },
+      "shapes": {
+        "rect": "Rettangolo",
+        "ellipse": "Ellisse",
+        "diamond": "Rombo",
+        "triangle": "Triangolo",
+        "star": "Stella",
+        "line": "Linea"
+      },
+      "penHint": "Disegna con il dito. Con due dita sposti la lavagna.",
+      "arrowHint": "Trascina da un punto a un altro",
+      "commentHint": "Tocca dove vuoi commentare",
+      "pin": "Commento {{n}} di {{name}}",
+      "addToSelection": "Scegli anche questo",
+      "emptyText": "Aggiungi una nota o una foto, o chiedi a un agente nella conversazione."
+    },
+    "talk": {
+      "start": "Parla di {{what}}",
+      "openHint": "Apre la conversazione",
+      "placeholder": {
+        "spreadsheet": "Scrivi sul foglio di calcolo…",
+        "slides": "Scrivi sulla presentazione…",
+        "canvas": "Scrivi sulla lavagna…",
+        "document": "Scrivi sul documento…"
+      },
+      "aboutPoint": "Un commento su un punto della lavagna",
+      "comment": "Commento",
+      "imported": "<0>{{name}}</0> l'ha importato da {{file}}",
+      "variationsText": "crea varianti di questa immagine"
+    },
+    "doc": {
+      "styles": {
+        "paragraph": "Testo",
+        "h1": "Titolo 1",
+        "h2": "Titolo 2",
+        "h3": "Titolo 3",
+        "quote": "Citazione",
+        "code": "Codice"
+      },
+      "style": "Stile del testo",
+      "bold": "Grassetto",
+      "italic": "Corsivo",
+      "bullets": "Elenco puntato",
+      "numbers": "Elenco numerato",
+      "quote": "Citazione",
+      "link": "Aggiungi un link",
+      "linkChoose": "Scegli prima le parole per il link",
+      "linkBad": "Questo indirizzo non può essere un link",
+      "linkPlaceholder": "Indirizzo del link",
+      "linkApply": "Inserisci il link",
+      "placeholder": "Scrivi qui",
+      "add": "Aggiungi un paragrafo",
+      "editHint": "Modifica questa parte",
+      "notHere": "Questa parte si modifica sul computer"
     }
   },
   "surface": {

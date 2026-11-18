@@ -99,7 +99,7 @@ const Resolved = z
         z.object({
           kind: z.enum(OPERATOR_MATCH_KINDS).openapi({
             description:
-              "`user`: an account (by its id) or a member (by handle). `dm`: a direct conversation. `task_conversation`: the channel a task's conversation is in. `file`: a file in the Drive. `computer`: a connected computer. `ai_account`: a sign-in to an AI plan on a computer.",
+              "`user`: an account (by its id) or a member (by handle). `dm`: a direct conversation. `task_conversation`: the channel a task's conversation is in. `file_conversation`: the channel a live file's conversation is in. `file`: a file in the Drive. `computer`: a connected computer. `ai_account`: a sign-in to an AI plan on a computer.",
           }),
           id: z.string(),
           orgId: z.uuid().nullable().openapi({ description: "Null only for an account found by its id." }),
@@ -190,7 +190,8 @@ const Members = z
 
 const ChannelQuery = z.object({
   kind: z.enum(OPERATOR_CHANNEL_KINDS).optional().openapi({
-    description: "`channel`, `dm` (a direct conversation) or `task` (a task's conversation). Absent: all of them.",
+    description:
+      "`channel`, `dm` (a direct conversation), `task` (a task's conversation) or `file` (a live file's conversation). Absent: all of them.",
   }),
   ...paging,
 });
@@ -200,8 +201,10 @@ const ChannelPage = z
     channels: z.array(
       z.object({
         id: z.uuid(),
-        name: z.string().openapi({ description: "A channel's name. A direct or a task's conversation's is made up." }),
-        kind: z.string().openapi({ description: "`channel`, `dm` or `task`." }),
+        name: z
+          .string()
+          .openapi({ description: "A channel's name. A direct, a task's or a file's conversation's is made up." }),
+        kind: z.string().openapi({ description: "`channel`, `dm`, `task` or `file`." }),
         visibility: z.enum(["public", "private"]),
         people: z.number().int().openapi({ description: "People in it." }),
         agents: z.number().int().openapi({ description: "Agents in it." }),

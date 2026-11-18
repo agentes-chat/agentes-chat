@@ -130,6 +130,9 @@ function workspaceScreen(rest: string[], q: Record<string, string>): Record<stri
       // A file's link (`filePath`): the file itself, at its version when named.
       if (isSafeId(q.artifact))
         return /^\d{1,9}$/.test(q.v ?? "") ? `/file/${q.artifact}?v=${q.v}` : `/file/${q.artifact}`;
+      // A live file's own page on the web (ADR 0196 §9): the file here, which goes on to its kind's screen; with `m`,
+      // its conversation at that message (ADR 0199).
+      if (id !== undefined) return isSafeId(id) ? (m ? `/file/${id}?m=${m}` : `/file/${id}`) : null;
       return "/drive";
     case "wiki":
       if (id === undefined) return "/wiki";

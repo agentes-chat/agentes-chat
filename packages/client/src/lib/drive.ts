@@ -63,16 +63,28 @@ export function groupArtifacts(list: Artifact[], group: DriveGroup, now = new Da
   return order.filter((k) => map.has(k)).map((key) => ({ key, items: map.get(key) ?? [] }));
 }
 
-/** The Drive's section of files only a DM's two sides or a private channel's members can see. */
+/** The Drive's section of files only some people see: a DM's sides, a private channel's members, a Drive file's maker. */
 export const PRIVATE_SECTION = "private";
 
-/** Not open to the whole workspace: from a DM or a private channel (ADR 0111), unless shared with everyone (ADR 0157). */
-export const isPrivateArtifact = (a: Pick<Artifact, "audience"> & Partial<Pick<Artifact, "sharing">>) =>
-  (a.audience.kind === "dm" || (a.audience.kind === "channel" && a.audience.private)) && a.sharing?.mode !== "everyone";
+/**
+ * Where a file lives isn't open to the whole workspace, so its sharing has something to add (ADR 0157): a DM, a
+ * private channel, or the Drive itself, where a file lives with its maker (amendment 2026-11-17).
+ */
+export const livesInPrivate = (audience: Artifact["audience"]) =>
+  audience.kind === "dm" || audience.kind === "workspace" || (audience.kind === "channel" && audience.private);
 
 /**
- * Only the private conversation it lives in sees it (ADR 0157): a link to it opens for nobody else, so copying one
- * goes through the share dialog, which says so.
+ * Not open to the whole workspace: from a DM or a private channel (ADR 0111), or a file of the Drive itself, unless
+ * shared with everyone (ADR 0157). A Drive file from a server that sends no sharing is the workspace's, as it was.
+ */
+export const isPrivateArtifact = (a: Pick<Artifact, "audience"> & Partial<Pick<Artifact, "sharing">>) =>
+  livesInPrivate(a.audience) &&
+  (a.audience.kind !== "workspace" || a.sharing !== undefined) &&
+  a.sharing?.mode !== "everyone";
+
+/**
+ * Only the private conversation it lives in sees it, or only its maker a file of the Drive itself (ADR 0157): a link
+ * to it opens for nobody else, so copying one goes through the share dialog, which says so.
  */
 export const onlyItsConversation = (a: Pick<Artifact, "audience" | "sharing">) =>
   isPrivateArtifact(a) && (a.sharing?.mode ?? "conversation") === "conversation";

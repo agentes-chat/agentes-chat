@@ -17,7 +17,7 @@ describe("the phone's Drive folders", () => {
 
   test("who adds to the Drive makes folders and moves or renames files from a long press", () => {
     const screen = read("src/features/drive/DriveScreen.tsx");
-    expect(screen).toContain("onPress: () => arrange.newFolder(folderId),");
+    expect(screen).toContain("onPress: () => arrange.newFolder(folderId)");
     expect(screen).toContain("{...(mayUpload ? { onLongPress: arrange.fileMenu } : {})}");
     const folders = read("src/features/drive/folders.tsx");
     expect(folders).toContain('label: t("drive.moveToMenu")');

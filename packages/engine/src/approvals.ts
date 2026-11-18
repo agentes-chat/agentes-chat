@@ -39,7 +39,7 @@ import { enqueue } from "./outbox";
 import { quietEnd, withMootRequest } from "./parked-asks";
 import { maySql, type RolePermission } from "./permissions";
 import { accountInUse } from "./standing";
-import { taskReaderSql } from "./task-access";
+import { fileConversationReaderSql, taskReaderSql } from "./task-access";
 import { AHEAD_GRACE_MS, type Approval, readsSqlOnly, routineCall } from "./tools/gateway";
 import { canonicalJson } from "./tools/json-schema";
 import { REQUEST_PERMISSION_TOOL } from "./tools/permission";
@@ -1435,8 +1435,10 @@ const seenBy = (db: Database, orgId: string, actorId: string) =>
         .from(channelMembers)
         .where(and(eq(channelMembers.orgId, orgId), eq(channelMembers.userId, actorId))),
     ),
-    // A task's conversation (ADR 0145): people are never its members; whoever sees the task sees its cards.
+    // A task's conversation (ADR 0145): people are never its members; whoever sees the task sees its cards. A live
+    // file's (ADR 0199): whoever reads the file.
     taskReaderSql(sql`${approvals.channelId}`, sql`${actorId}::text`),
+    fileConversationReaderSql(sql`${approvals.channelId}`, sql`${actorId}::text`),
   );
 
 /** One in someone's own connection (`approvers.personal`): only they and who is in its conversation list it. */
