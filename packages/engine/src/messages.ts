@@ -6,6 +6,7 @@ import {
   desc,
   type Executor,
   eq,
+  gt,
   inArray,
   isNull,
   lt,
@@ -1876,15 +1877,23 @@ export async function getMessage(db: Executor, orgId: string, messageId: string)
 
 /**
  * Lists messages the user may read. Without `threadId`: top-level channel
- * messages, newest page first (returned oldest → newest). With `threadId`:
- * the thread root and its replies.
+ * messages, newest page first (returned oldest → newest); `after` pages
+ * forward instead, and `around` is the page with that message in its middle,
+ * so a link opens at any distance. With `threadId`: the thread root and its replies.
  */
 export async function listMessages(
   db: Database,
   userId: string,
   orgId: string,
   channelId: string,
-  options: { threadId?: string; before?: Date; limit?: number; includeReplies?: boolean } = {},
+  options: {
+    threadId?: string;
+    before?: Date;
+    after?: Date;
+    around?: string;
+    limit?: number;
+    includeReplies?: boolean;
+  } = {},
 ): Promise<MessageView[]> {
   await requireChannelAccess(db, userId, orgId, channelId);
   const limit = Math.min(options.limit ?? 50, 200);
@@ -1907,13 +1916,47 @@ export async function listMessages(
       .limit(limit);
     return withReceipts(db, orgId, [root, ...replies.reverse()]);
   }
-  const rows = await db
-    .select()
-    .from(messages)
-    .where(and(scope, isNull(messages.threadId), options.before ? lt(messages.createdAt, options.before) : undefined))
-    .orderBy(desc(messages.createdAt), desc(messages.id))
-    .limit(limit);
-  const views = await withReceipts(db, orgId, rows.reverse());
+  const top = and(scope, isNull(messages.threadId));
+  let rows: Message[];
+  if (options.around) {
+    const target = await getMessage(db, orgId, options.around);
+    if (!target || target.channelId !== channelId || target.threadId || target.deletedAt)
+      throw new NotFoundError("Message not found");
+    const at = target.createdAt;
+    const half = Math.floor(limit / 2);
+    const [before, after] = await Promise.all([
+      db
+        .select()
+        .from(messages)
+        .where(and(top, or(lt(messages.createdAt, at), and(eq(messages.createdAt, at), lt(messages.id, target.id)))))
+        .orderBy(desc(messages.createdAt), desc(messages.id))
+        .limit(half),
+      db
+        .select()
+        .from(messages)
+        .where(and(top, or(gt(messages.createdAt, at), and(eq(messages.createdAt, at), gt(messages.id, target.id)))))
+        .orderBy(asc(messages.createdAt), asc(messages.id))
+        .limit(Math.max(0, limit - half - 1)),
+    ]);
+    rows = [...before.reverse(), target, ...after];
+  } else if (options.after) {
+    rows = await db
+      .select()
+      .from(messages)
+      .where(and(top, gt(messages.createdAt, options.after)))
+      .orderBy(asc(messages.createdAt), asc(messages.id))
+      .limit(limit);
+  } else {
+    rows = (
+      await db
+        .select()
+        .from(messages)
+        .where(and(top, options.before ? lt(messages.createdAt, options.before) : undefined))
+        .orderBy(desc(messages.createdAt), desc(messages.id))
+        .limit(limit)
+    ).reverse();
+  }
+  const views = await withReceipts(db, orgId, rows);
   return options.includeReplies ? withReplies(db, orgId, views) : views;
 }
 

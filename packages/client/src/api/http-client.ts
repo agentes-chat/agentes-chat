@@ -1168,7 +1168,8 @@ export function createHttpApi(options: TransportOptions = {}): HttpApi {
         })) ?? null,
       messages: async (orgId, channelId, options = {}) => {
         const path = `${org(orgId)}/channels/${enc(channelId)}/messages`;
-        const query = { threadId: options.threadId, before: options.before, limit: options.limit };
+        const { threadId, before, after, around, limit } = options;
+        const query = { threadId, before, after, around, limit };
         const { messages } = await request<{ messages: Message[] }>(path, { query });
         steerStore.seed(channelId, messages);
         return messages;

@@ -3489,8 +3489,22 @@ export function createFakeHttpApi(state: FakeState): Omit<HttpApi, FakedParts> {
             ...inChannel.filter((m) => m.threadId === options.threadId),
           ]);
         }
-        // Like the server: the latest `limit` before `before`, oldest first.
-        const top = inChannel.filter((m) => m.threadId === null && (!options.before || m.createdAt < options.before));
+        if (options.around || options.after) log("chat.messages", channelId, options);
+        const all = inChannel.filter((m) => m.threadId === null);
+        // Like the server: `around` is the page with the message in its middle; gone or elsewhere is a 404.
+        if (options.around) {
+          const at = all.findIndex((m) => m.id === options.around);
+          if (at < 0) throw new ApiError(404, "not_found", "Message not found");
+          const half = Math.floor((options.limit ?? 50) / 2);
+          return structuredClone(all.slice(Math.max(0, at - half), at + (options.limit ?? 50) - half));
+        }
+        // `after`: the oldest `limit` after it.
+        if (options.after) {
+          const after = options.after;
+          return structuredClone(all.filter((m) => m.createdAt > after).slice(0, options.limit ?? 50));
+        }
+        // The latest `limit` before `before`, oldest first.
+        const top = all.filter((m) => !options.before || m.createdAt < options.before);
         return structuredClone(options.limit ? top.slice(-options.limit) : top);
       },
       post: async (orgId, channelId, input) => {
