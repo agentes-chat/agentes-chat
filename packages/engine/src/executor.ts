@@ -184,6 +184,7 @@ import {
   heldReplyRead,
   type LearnSignal,
   localPathsCited,
+  repeatedCalls,
   reportRunFailure,
   type TurnEndDecision,
   toolsNamed,
@@ -3233,6 +3234,9 @@ async function executeRunInner(
     };
     return { evidence, gather };
   };
+  /** The run's executed calls less those repeating one that already worked (`repeatedCalls`): what a nudge must grow. */
+  const workDone = async (t: Transcript) =>
+    (t.executedCalls ?? 0) - (t.executedCalls ? await repeatedCalls(db, run).catch(() => 0) : 0);
   let brain = createBrain(deps, thinker, run, plan.kind, turnToken, () => transcript as Transcript);
   /**
    * What the key stands in for since this claim's stand-in for the right hand, until it answers a turn: the plan and
@@ -5671,10 +5675,11 @@ async function executeRunInner(
               .where(and(eq(routineRuns.id, routineRunId), eq(routineRuns.orgId, run.orgId)))
           : [];
         const judging = evidenceFor(transcript);
+        const work = await workDone(transcript);
         const decision = await decideTurnEnd({
           state,
           kind: "routine",
-          executed: transcript.executedCalls ?? 0,
+          executed: work,
           bound: run.turns + 1 >= maxTurns ? "turn_cap" : routineRun?.status === "reported" ? "reported" : null,
           // A good update made the run `reported`; one with `failed` left its code (ADR 0135 §5).
           widgetOwed:
@@ -5707,7 +5712,8 @@ async function executeRunInner(
             : null,
           evidence: judging.evidence,
         });
-        transcript.continuation = advanceContinuation(state, decision, transcript.executedCalls ?? 0);
+        prof.mark(`turn_end#${run.turns}`);
+        transcript.continuation = advanceContinuation(state, decision, work);
         const { nudge, ...recorded } = { ...decision, count: transcript.continuation.count };
         later(() =>
           addRunStep(db, run, "context", {
@@ -5896,13 +5902,14 @@ async function executeRunInner(
           machine.pairedByUserId === triggerMessage.authorUserId,
       );
       const localPaths = theirs ? [] : cited;
+      const work = await workDone(t);
       let decision = await decideTurnEnd({
         state,
         kind: betweenAgents ? "agents_dm" : "conversation",
         openRequest,
         namedTools,
         localPaths,
-        executed: transcript.executedCalls ?? 0,
+        executed: work,
         bound: t.stuck?.endAt !== undefined ? "stuck" : t.wrapUpNoted ? "step_limit" : null,
         quiet: silent && !judged,
         decided: decided && !silent && !said && !capped && !closingSummary(t, true) ? decided : null,
@@ -5962,10 +5969,12 @@ async function executeRunInner(
       if (decision.outcome === "ask_card" && (text || judged).length > QUESTION_MAX_CHARS)
         decision = { outcome: "done", rule: "ask_long", verdict: decision.verdict };
       turnEnd = decision;
+      // From the model's answer to the turn's decision (its judgments included): where a run's end waits shows apart.
+      prof.mark(`turn_end#${run.turns}`);
       // A promise something already keeps (`comes_back`) waits on it: no unkept promise.
       if (decision.verdict)
         t.followThroughVerdict = decision.outcome === "waiting" ? "waiting" : verdictRecord(decision.verdict);
-      t.continuation = advanceContinuation(state, decision, transcript.executedCalls ?? 0);
+      t.continuation = advanceContinuation(state, decision, work);
       const nudgedAs = {
         decision: "decision",
         answer: sentinelOnly ? "sentinel" : "empty",
