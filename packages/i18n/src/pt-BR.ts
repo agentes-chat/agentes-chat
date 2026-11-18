@@ -6759,7 +6759,7 @@ export const ptBR = {
           "A conta escolhida para este agente não está mais no computador dele. Escolha outra nas configurações do agente ou adicione de novo.",
         /** A Codex turn on a Windows computer where MXC can't hold its commands (runner `windows_sandbox`). */
         windows_sandbox:
-          "Este computador com Windows não consegue isolar os comandos do Codex: ele precisa do Windows 11 24H2 ou mais novo.",
+          "Este computador com Windows não consegue isolar os comandos do Codex: ele precisa do Windows 11 24H2 ou mais novo. Atualize o Windows, escolha o Claude ou uma chave de API para este agente, ou mova-o para um computador Linux.",
         our_error: "Algo deu errado do nosso lado e a tarefa parou. Peça de novo daqui a pouco.",
         unknown: "Falhou.",
       },
