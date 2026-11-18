@@ -80,6 +80,7 @@ export * from "./connectors/mcp";
 export * from "./connectors/oauth-mcp";
 export * from "./connectors/oauth-return";
 export * from "./connectors/pins";
+export * from "./connectors/posthog";
 export * from "./connectors/presets";
 export * from "./connectors/request-headers";
 export * from "./connectors/server-icon";

@@ -246,3 +246,23 @@ people than asked.
   wait days for its owner to look, and nothing needs to wait for it (§11).
 - **Posting the refreshed chart in a channel.** What people do today, and what this replaces: the latest number gets
   buried, and the conversation fills with reports nobody asked to read.
+
+## Addendum (2026-11-18): reads through a tool that runs what its input says
+
+A widget's refresh run lists only reads (§5), and a connected server that answers with one tool that runs whatever
+its input says has a write's level for that tool: PostHog's `exec` (`call query-trends …` reads, `call
+dashboard-create …` writes). Such a run never had PostHog at all, and its agent reported it "not enabled". A tool
+whose calls the server's own words tell apart (`readsOnly`: PostHog's commands, `connectors/posthog.ts`; Composio's
+executor through its actions) is now listed for a run that may only read, and each call is judged as it comes: one
+that only reads runs as the connection's read, anything else is refused with why. Routines' reads through it stop
+asking a person for the same reason.
+
+## Addendum (2026-11-18): agents change and remove the widgets already there
+
+An agent could make boards and widgets (§10) but not touch one already on a board: asked to fix a failing widget, to
+show it another way or to drop a duplicate, it could only add another. Two built-in tools join §10's, on a person's
+run only (a widget already there changes when a person asks, never on a routine's or an unattended run), on a widget
+that person edits, through the same calls as the person's own buttons: `change_widget` (title, instructions, schedule
+and size as a person sets them; `change` is "Ask for a change", `update_now` is "Update now") and `remove_widget`.
+`list_dashboards` names each widget's id and, when it fails, why, in its run's own words; `create_widget` says to
+change the widget that already shows something instead of adding another.

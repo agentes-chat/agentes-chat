@@ -14527,6 +14527,8 @@ export const en = {
       list_dashboards: "List dashboards",
       share_dashboard: "Share dashboard",
       create_widget: "Create widget",
+      change_widget: "Edit widget",
+      remove_widget: "Remove widget",
       update_widget: "Change widget",
       load_skill: "Open skill",
       read_skill_file: "Read skill file",

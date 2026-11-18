@@ -14647,6 +14647,8 @@
       "list_dashboards": "Listar paneles",
       "share_dashboard": "Compartir panel",
       "create_widget": "Crear widget",
+      "change_widget": "Editar widget",
+      "remove_widget": "Quitar widget",
       "update_widget": "Actualizar widget",
       "load_skill": "Abrir habilidad",
       "read_skill_file": "Leer archivo de habilidad",

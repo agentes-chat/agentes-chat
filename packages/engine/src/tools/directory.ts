@@ -414,6 +414,8 @@ export const DASHBOARD_TOOLS: ReadonlySet<string> = new Set([
   "list_dashboards",
   "create_dashboard",
   "create_widget",
+  "change_widget",
+  "remove_widget",
   "share_dashboard",
 ]);
 const DASHBOARD_GROUP = "dashboards";
