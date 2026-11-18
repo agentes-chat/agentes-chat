@@ -2264,6 +2264,9 @@
   "cover.offline": {
     "value": "No internet connection · trying again…"
   },
+  "cover.loading": {
+    "value": "Loading…"
+  },
   "cover.unreachable": {
     "value": "Can't reach {{host}} · trying again…"
   },

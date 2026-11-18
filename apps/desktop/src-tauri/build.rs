@@ -68,6 +68,7 @@ const COMMANDS: &[&str] = &[
     "tailscale_open",
     "workspaces_get",
     "site_fetch",
+    "server_behind_gate",
     "welcome_mode_take",
     "welcome_add",
     "pair_link_info",
