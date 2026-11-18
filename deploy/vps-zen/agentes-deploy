@@ -19,6 +19,8 @@ if [ -z "${AGENTES_DEPLOY_DETACHED:-}" ]; then
 fi
 exec >>/var/log/agentes-deploy.log 2>&1
 DIR=/opt/agentes
+PORT=$(grep -E '^HOST_PORT=' "$DIR/.env" | cut -d= -f2-)
+PORT=${PORT:-3000}
 log() { echo "$(date -u +%FT%TZ) $*"; }
 psql() { docker exec agentes-postgres-1 psql -U agentes -d agentes -Atc "$1"; }
 exec 9>/run/agentes-deploy.lock
@@ -46,7 +48,7 @@ up() {
   for i in $(seq 1 60); do
     sleep 5
     [ "$(docker inspect -f '{{.State.Health.Status}}' agentes-agentes-1 2>/dev/null)" = "healthy" ] &&
-      curl -fsS -o /dev/null -m 10 http://127.0.0.1:3000/api/health && return 0
+      curl -fsS -o /dev/null -m 10 "http://127.0.0.1:$PORT/api/health" && return 0
   done
   return 1
 }
@@ -63,7 +65,8 @@ uid=$(id -u agentes)
 back=no
 for i in $(seq 1 36); do
   sleep 5
-  if journalctl --since "$started" --no-pager -q _SYSTEMD_USER_UNIT=agentes-runner.service 2>/dev/null | grep -q 'connected as'; then back=yes; break; fi
+  seen=$(psql "select count(*) from machines where deleted_at is null and online and last_seen_at >= '$started'")
+  if [ "${seen:-0}" -gt 0 ] 2>/dev/null; then back=yes; break; fi
 done
 if [ "$back" = "yes" ]; then
   log "runner reconnected"
