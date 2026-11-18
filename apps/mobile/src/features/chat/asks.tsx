@@ -1104,8 +1104,8 @@ const styles = StyleSheet.create({
   lineMore: { flexDirection: "row", alignItems: "center", gap: 3, alignSelf: "flex-start", marginLeft: 30, height: 22 },
   // Under the title, on its column (the mark and its gap), to the card's edge.
   lineDetail: { marginLeft: 30, marginTop: 1 },
-  // The deadline at the foot's end, right-aligned under the decision.
-  expiryRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 10 },
+  // The deadline under the decision, from the card's edge as everything in it: never floating at the other end.
+  expiryRow: { flexDirection: "row", marginTop: 10 },
   pressed: { opacity: 0.7 },
   flip: { transform: [{ rotate: "180deg" }] },
   exact: { gap: 10, paddingVertical: 12 },

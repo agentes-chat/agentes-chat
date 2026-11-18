@@ -2540,14 +2540,14 @@
       }
     },
     /**
-     * A wrapping row keeps one start edge: a line it wrapped onto starts where the row does, never pushed along by an
-     * auto margin (a time left, a status, a link floating at the end under buttons that start at the start). Rows whose
-     * lines all end at the end (`justify-content: flex-end`) or centre are aligned as a whole and left alone.
+     * A wrapping row keeps one start edge: when one of its lines starts at the row's start with room to spare, no other
+     * line is pushed away from it, by an auto margin (a time left, a status floating at the end under buttons) or by
+     * the row ending its lines at the end (buttons under "Mudar quando perguntar"). A line set in by a fixed margin (an
+     * outcome on its item's words) and rows that end or centre every line are left alone.
      */
     strayend(out) {
-      // Pushed by an auto margin, not set in by a fixed one (an outcome under its item's words): the computed value
-      // keeps "auto" where the resolved one is already in pixels.
-      const pushed = (el) => {
+      // The computed value keeps "auto" where the resolved one is already in pixels.
+      const auto = (el) => {
         try {
           return String(el.computedStyleMap().get("margin-left")) === "auto";
         } catch {
@@ -2559,11 +2559,13 @@
         const s = style(row);
         if (!s.display.includes("flex") || s.flexDirection !== "row" || s.flexWrap !== "wrap" || s.direction === "rtl")
           continue;
-        if (!["normal", "flex-start", "start", "left"].includes(s.justifyContent)) continue;
+        const toEnd = ["flex-end", "end", "right"].includes(s.justifyContent);
+        if (!toEnd && !["normal", "flex-start", "start", "left"].includes(s.justifyContent)) continue;
         const kids = flow(row);
         if (kids.length < 2) continue;
         const r = row.getBoundingClientRect();
         const start = r.left + parseFloat(s.borderLeftWidth) + parseFloat(s.paddingLeft);
+        const end = r.right - parseFloat(s.borderRightWidth) - parseFloat(s.paddingRight);
         const lines = [];
         for (const kid of kids) {
           const k = kid.getBoundingClientRect();
@@ -2572,12 +2574,21 @@
           else lines.push({ box: k, kids: [[kid, k]] });
         }
         if (lines.length < 2) continue;
-        const [first, ...rest] = lines;
-        if (first.kids[0][1].left > start + 2) continue;
-        for (const line of rest) {
-          const [kid, k] = line.kids[0];
-          if (k.left > start + 2 && pushed(kid))
-            out.push({ rule: "strayend", node: kid, el: sig(kid), box: sig(row), px: +(k.left - start).toFixed(1), text: words(kid) });
+        const firstOf = (line) => line.kids[0];
+        const lastOf = (line) => line.kids[line.kids.length - 1];
+        const anchored = lines.some((l) => firstOf(l)[1].left <= start + 2 && lastOf(l)[1].right < end - 2);
+        if (!anchored) continue;
+        for (const line of lines) {
+          const [kid, k] = firstOf(line);
+          if (k.left > start + 2 && (toEnd || auto(kid)))
+            out.push({
+              rule: "strayend",
+              node: kid,
+              el: sig(kid),
+              box: sig(row),
+              px: +(k.left - start).toFixed(1),
+              text: words(kid),
+            });
         }
       }
     },

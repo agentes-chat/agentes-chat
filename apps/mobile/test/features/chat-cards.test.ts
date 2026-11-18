@@ -443,6 +443,8 @@ describe("the secret card on the phone", () => {
     expect(asks).toContain("lineMark: { flexShrink: 0, width: 20, height: 20,");
     // The fuse and the time left under the decision, never on the card's top line.
     expect(asks).toContain('{waitsFor === "you" && expiry ? <View style={styles.expiryRow}>{expiry}</View> : null}');
+    // From the card's edge, as the buttons above it: never floating at the other end on a line of its own.
+    expect(asks).toContain('expiryRow: { flexDirection: "row", marginTop: 10 },');
     expect(asks).toContain('{waitsFor && waitsFor !== "you" && !ended ? (');
   });
 });

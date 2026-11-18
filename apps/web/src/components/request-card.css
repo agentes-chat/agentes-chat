@@ -398,8 +398,8 @@ html:not([data-pointer]) .rq__more:focus-visible {
   }
   /* That button takes the room the time left's spring would: the time left still ends its line. */
   .rq__foot:has(.ac-btn--ghost):has(> .ac-btn:not(.ac-btn--ghost)):not(
-      :has(> .ac-btn:not(.ac-btn--ghost) ~ .ac-btn:not(.ac-btn--ghost))
-    )::after {
+    :has(> .ac-btn:not(.ac-btn--ghost) ~ .ac-btn:not(.ac-btn--ghost))
+  )::after {
     flex-grow: 0;
   }
 }
