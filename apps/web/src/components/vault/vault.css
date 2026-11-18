@@ -292,6 +292,17 @@ html:not([data-pointer]) .vlt-list .vlt-row:focus-visible {
   min-width: 0;
 }
 
+/* A value being typed, before Salvar: the field, and the eye that shows it while it is on screen. */
+.vlt-secret__reveal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vlt-secret__reveal > .ac-input {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Recent uses: a face, what happened, for whom and when. */
 .vlt-uses__none {
   margin: 0;
