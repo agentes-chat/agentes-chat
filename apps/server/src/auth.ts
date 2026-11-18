@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomBytes, sign as signWithKey } from "node:crypto";
-import type { HumanAction, HumanCheck, PubSub, RateLimiter } from "@agenteschat/adapters";
+import { type HumanAction, type HumanCheck, type PubSub, type RateLimiter, retryInSeconds } from "@agenteschat/adapters";
 import { jwtClaims, nameIsPassword } from "@agenteschat/client/lib/text";
 import type { Config } from "@agenteschat/config";
 import { and, type Database, eq, ne, schema } from "@agenteschat/db";
@@ -95,7 +95,7 @@ export function createAuth(deps: {
   config: Config;
   log: Logger;
   emailDelivers?: boolean;
-  /** Counts the reset and confirmation emails per address. */
+  /** Counts the reset and confirmation emails, and the password tries, per address. */
   rateLimiter: RateLimiter;
   /** The bot check of the email forms (ADR 0075); absent: none. */
   humanCheck?: HumanCheck | null;
@@ -421,10 +421,10 @@ export function createAuth(deps: {
           }
         }
         const action = HUMAN_ACTIONS[ctx.path];
+        const address = (ctx.body as { email?: unknown } | undefined)?.email;
         // Before the sign-up policy: a bot gets the cheap refusal first.
         if (action && ctx.headers) {
           // The lookup of this address passed the check a moment ago: its pass stands for this step's (ADR 0075).
-          const address = (ctx.body as { email?: unknown } | undefined)?.email;
           const refused = await humanCheckRefusal(
             deps.humanCheck,
             db,
@@ -436,6 +436,23 @@ export function createAuth(deps: {
               : undefined,
           );
           if (refused) throw new APIError("FORBIDDEN", refused);
+        }
+        // After the bot check, so a refused bot spends none of an account's tries. Right or wrong, and for an address
+        // nobody has alike, so the answer never tells whether an account exists.
+        if (ctx.path === "/sign-in/email" && typeof address === "string") {
+          const tries = await rateLimiter.consume(`sign-in-tries:${sha256(address.toLowerCase())}`, SIGN_IN_TRIES);
+          if (!tries.allowed) {
+            const retryIn = retryInSeconds(tries.resetAt);
+            throw new APIError(
+              "TOO_MANY_REQUESTS",
+              {
+                code: TOO_MANY_PASSWORD_TRIES,
+                message: "Too many password tries for this account. Try again later.",
+                retryIn,
+              },
+              { "Retry-After": String(retryIn) },
+            );
+          }
         }
         if (ctx.path !== "/sign-up/email") return;
         const { email, name, password } = (ctx.body ?? {}) as { email?: unknown; name?: unknown; password?: unknown };
@@ -1012,6 +1029,15 @@ const HUMAN_ACTIONS: Record<string, HumanAction> = {
   "/sign-up/email": "sign-up",
   "/request-password-reset": "password-reset",
 };
+
+/** Password sign-ins one address may try in 15 minutes, from any network (ADR 0075). */
+const SIGN_IN_TRIES = { limit: 10, windowMs: 15 * 60_000 };
+
+/**
+ * `APIError` code of a password sign-in past `SIGN_IN_TRIES`, with `retryIn` in seconds, as `Retry-After` says
+ * (mirrored in packages/client errors.ts).
+ */
+export const TOO_MANY_PASSWORD_TRIES = "TOO_MANY_PASSWORD_TRIES";
 
 /** Reset and confirmation emails to one address in an hour. */
 const EMAILS_PER_ADDRESS = { limit: 3, windowMs: 3600_000 };
