@@ -255,7 +255,9 @@ describe("viewer", () => {
     const chat = src("features/chat/ChatScreen.tsx");
     expect(chat).toContain("api.artifacts.upload(orgId, uploadPart(file), {");
     expect(chat).not.toContain("as unknown as Parameters<typeof api.artifacts.upload>[1]");
-    expect(src("features/drive/useDriveUpload.ts")).toContain("api.artifacts.upload(orgId, uploadPart(file))");
+    expect(src("features/drive/useDriveUpload.ts")).toContain(
+      "api.artifacts.upload(orgId, uploadPart(file), folderId ? { folderId } : {})",
+    );
     expect(src("features/files/upload-part.ts")).toContain("bytes: () => source.bytes()");
   });
 

@@ -1,10 +1,10 @@
 import { type Artifact, type DriveFolder, useDriveArrange, useDriveFolders } from "@agenteschat/client";
 import { folderAndInside, folderOutline, folderTrail } from "@agenteschat/client/lib/drive";
 import { errorText } from "@agenteschat/client/lib/errors";
-import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 import { GroupedList, GroupedRow, SCREEN_X, Text, useToast } from "@/ui";
+import { router } from "@/ui/navigation";
 import { useOrgId } from "../shared/hooks";
 import { pickOne, showActionSheet } from "../shared/PickerSheet";
 import { PromptForm } from "../shared/PromptForm";
