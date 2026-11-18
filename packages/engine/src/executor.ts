@@ -355,6 +355,7 @@ import {
   transitionRun,
 } from "./runs";
 import { SANDBOX_SCOPE, truncateOutput } from "./sandbox";
+import { sharedQueryEmbedding } from "./search";
 import { secretResult } from "./secrets";
 import { enabledSkills } from "./skills";
 import {
@@ -2376,6 +2377,12 @@ async function executeRunInner(
       ? await enabledSkills(db, run.orgId, agent.id, run.id)
       : [];
     const readsWiki = tools.some((t) => t.name === "read_wiki_page");
+    const queryEmbedding = contextDeps
+      ? sharedQueryEmbedding(contextDeps, run.orgId, (trigger?.body ?? "").trim().slice(0, 500), [
+          "context_item",
+          "wiki",
+        ])
+      : undefined;
     const personBehind = () => runAuthority(db, run).then((a) => a.personId);
     // Limited to some GitHub repositories: which ones, and where to start.
     const repositories = granted.some((t) => t.scope.startsWith("github:"))
@@ -2445,6 +2452,7 @@ async function executeRunInner(
                 personIds: personId ? [personId] : [],
                 runId: run.id,
                 withOwn: memoryArmOf(run.id) === "with",
+                queryEmbedding,
               }),
             )
             .catch(() => ({ text: "", itemIds: [] as string[], matchedIds: [] as string[] }))
@@ -2456,6 +2464,7 @@ async function executeRunInner(
             {
               orgId: run.orgId,
               text: trigger?.body ?? "",
+              queryEmbedding,
               reader: async () => ({
                 type: "agent",
                 agentId: agent.id,
