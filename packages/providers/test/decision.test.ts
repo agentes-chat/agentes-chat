@@ -122,6 +122,19 @@ describe("Gemini Decisions", () => {
     expect(result.answers.yes).toEqual({ noul: 0.99, confidence: 0.9 });
     expect(result.usage).toEqual({ inputTokens: 120, outputTokens: 0 });
   });
+
+  test("no answers says why: a blocked input, or the fields that came back", async () => {
+    const reply = (body: unknown) => (async () => Response.json(body)) as unknown as typeof fetch;
+    await expect(
+      geminiDecision(
+        { apiKey: "AQ.test", http: reply({ prompt_feedback: { block_reason: "SAFETY" } }) },
+        call("gemini-decision-1"),
+      ),
+    ).rejects.toThrow("Gemini blocked the input: SAFETY");
+    await expect(
+      geminiDecision({ apiKey: "AQ.test", http: reply({ model: "gemini-decision-1" }) }, call("gemini-decision-1")),
+    ).rejects.toThrow("answered without answers (fields: model)");
+  });
 });
 
 describe("System One", () => {

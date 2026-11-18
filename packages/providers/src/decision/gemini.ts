@@ -119,10 +119,20 @@ export async function geminiDecision(options: GeminiOptions, call: DecisionCall)
   const json = (reply.body ?? {}) as {
     model?: unknown;
     answers?: unknown;
+    prompt_feedback?: { block_reason?: unknown };
     usage?: { total_input_tokens?: unknown; input_tokens?: unknown; total_output_tokens?: unknown };
   };
-  if (!json.answers || typeof json.answers !== "object")
-    throw new DecisionError("the decision model answered without answers", "down", reply.status);
+  if (!json.answers || typeof json.answers !== "object") {
+    // An empty answers map is left out of the JSON: say why (a blocked input) or what came back, by field names only.
+    const blocked = json.prompt_feedback?.block_reason;
+    throw new DecisionError(
+      typeof blocked === "string"
+        ? `Gemini blocked the input: ${blocked}`
+        : `the decision model answered without answers (fields: ${Object.keys(json).join(", ") || "none"})`,
+      "down",
+      reply.status,
+    );
+  }
   const input = json.usage?.total_input_tokens ?? json.usage?.input_tokens;
   const usage: DecisionUsage = {
     inputTokens: typeof input === "number" ? input : 0,

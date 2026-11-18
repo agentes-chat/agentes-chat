@@ -10,6 +10,7 @@ import { rightHandId } from "./right-hand";
 export const DECISION_INSTALL_JOB = "decision.model.install";
 
 const WAIT_MS = 10 * 60_000;
+const API_WAIT_MS = 30_000;
 const STEP_MS = 5_000;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -60,7 +61,8 @@ export async function runDecisionInstall(deps: JobDeps, job: { payload: Record<s
   if (!decision || !token) return;
   let model = await decision.pending(token);
   if (!model) return;
-  const deadline = Date.now() + WAIT_MS;
+  // Only a local runtime has a download to wait for; an API that fails for 30 s won't answer in ten minutes.
+  const deadline = Date.now() + (model.provider === "local" ? WAIT_MS : API_WAIT_MS);
   let last: string | null = null;
   // The step is persisted so the switch's card says what is happening, not "queued" for ten minutes.
   await decision.progress(
