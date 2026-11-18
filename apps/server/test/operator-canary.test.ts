@@ -770,6 +770,29 @@ beforeAll(async () => {
     authorType: "person",
     authorId: ownerId,
   });
+  // A live file's document and a picture in it (ADR 0196): its meters read their sizes, never what they hold.
+  await db.insert(schema.liveDocs).values({
+    orgId,
+    artifactId: file?.id ?? "",
+    kind: "document",
+    state: "canary-live-state",
+    stateBytes: 17,
+    editedByType: "person",
+    editedById: ownerId,
+  });
+  await db.insert(schema.liveAssets).values({
+    id: crypto.randomUUID(),
+    orgId,
+    artifactId: file?.id ?? "",
+    blobKey: "canary-live-blob",
+    contentType: "image/png",
+    size: 12,
+    sha256: "canary-live-digest",
+    source: "upload",
+    origin: { url: "https://example.com/canary-live-picture.png", credit: "canary credit" },
+    createdByType: "person",
+    createdById: ownerId,
+  });
   await db.insert(schema.skillFiles).values({
     orgId,
     skillId: skill?.id ?? "",

@@ -1,5 +1,5 @@
 import { ApiError, type ArtifactSharing, useArtifact, useRoles, useSetArtifactSharing } from "@agenteschat/client";
-import { CONVERSATION_ONLY, isPrivateArtifact, toggledSharing } from "@agenteschat/client/lib/drive";
+import { CONVERSATION_ONLY, livesInPrivate, toggledSharing } from "@agenteschat/client/lib/drive";
 import { errorText } from "@agenteschat/client/lib/errors";
 import { joinNames } from "@agenteschat/client/lib/format";
 import { filePath } from "@agenteschat/client/lib/message-links";
@@ -50,7 +50,9 @@ const SAVED = {
 /**
  * Compartilhar on the phone (ADR 0157), the web's share dialog as a sheet: the file's name, who sees it (changed in
  * place), who has access, and Copiar link, an address of the app. While only a private conversation sees the file,
- * it says people outside won't open the link, with the way to choose them right there.
+ * it says people outside won't open the link, with the way to choose them right there. A file of the Drive itself
+ * lives with its maker (amendment 2026-11-17): its first choice is "Só você" to its maker, who changes it with the
+ * administrators.
  */
 export function FileShareSheet({ id, onClose }: { id: string; onClose: () => void }) {
   const { t, i18n } = useTranslation();
@@ -81,9 +83,14 @@ export function FileShareSheet({ id, onClose }: { id: string; onClose: () => voi
   }
   const sharing = a.sharing ?? CONVERSATION_ONLY;
   const listed = sharing.mode === "people" ? sharing : CONVERSATION_ONLY;
-  const closed = isPrivateArtifact({ audience: a.audience });
+  const closed = livesInPrivate(a.audience);
   const canShare = closed && Boolean(a.canShare);
   const busy = save.isPending;
+  // A file of the Drive itself: where it lives is its maker.
+  const drive = a.audience.kind === "workspace";
+  const maker = a.createdBy;
+  const mine = maker.type === "person" && maker.id === meId;
+  const makerName = dir.nameOf(maker);
   // "people" is chosen before anyone is picked: it's saved with the first one.
   const mode: Mode = picking && sharing.mode !== "people" ? "people" : sharing.mode;
   const apply = (next: ArtifactSharing) =>
@@ -93,7 +100,9 @@ export function FileShareSheet({ id, onClose }: { id: string; onClose: () => voi
         onSuccess: (saved) => {
           successHaptic();
           setPicking(false);
-          toast({ title: t(SAVED[saved.sharing?.mode ?? "conversation"]) });
+          const savedMode = saved.sharing?.mode ?? "conversation";
+          const only = mine ? t("share.savedOnlyYou") : t("share.savedOnlyMaker", { name: makerName });
+          toast({ title: drive && savedMode === "conversation" ? only : t(SAVED[savedMode]) });
         },
         onError: (e) => toast({ title: errorText(t, e, i18n.language), icon: "x" }),
       },
@@ -122,10 +131,12 @@ export function FileShareSheet({ id, onClose }: { id: string; onClose: () => voi
           : t("share.whereDmGone")
       : aud.kind === "channel"
         ? t("share.whereChannel", { name: aud.name })
-        : t("share.everyone");
+        : mine
+          ? t("share.you", { name: makerName })
+          : makerName;
   const roleList = sortRoles((roles.data?.roles ?? []).filter((r) => !isEveryone(r)));
-  // Who sees it where it lives (I do, to be here) has nothing to gain from the list.
-  const people = [...dir.memberById.values()].filter((m) => m.userId !== meId);
+  // Who sees it where it lives (I do, to be here; a Drive file's maker) has nothing to gain from the list.
+  const people = [...dir.memberById.values()].filter((m) => m.userId !== meId && !(drive && m.userId === maker.id));
   const personName = (userId: string) => {
     const name = dir.memberById.get(userId)?.name ?? t("channel.unknownPerson");
     return userId === meId ? t("share.you", { name }) : name;
@@ -146,14 +157,20 @@ export function FileShareSheet({ id, onClose }: { id: string; onClose: () => voi
                 <GroupedRow
                   key={m.mode}
                   icon={m.icon}
-                  label={t(m.label as "share.people")}
+                  label={
+                    drive && m.mode === "conversation"
+                      ? mine
+                        ? t("share.onlyYou")
+                        : t("share.onlyMaker", { name: makerName })
+                      : t(m.label as "share.people")
+                  }
                   checked={mode === m.mode}
                   disabled={!canShare}
                   onPress={() => choose(m.mode)}
                 />
               ))}
             </GroupedList>
-            {!canShare ? <GroupedFooter>{t("share.readOnly")}</GroupedFooter> : null}
+            {!canShare ? <GroupedFooter>{t(drive ? "share.readOnlyDrive" : "share.readOnly")}</GroupedFooter> : null}
           </View>
         ) : (
           <View style={styles.line}>
@@ -198,6 +215,8 @@ export function FileShareSheet({ id, onClose }: { id: string; onClose: () => voi
             <GroupedList>
               {sharing.mode === "everyone" ? (
                 <GroupedRow icon="globe" label={t("share.everyone")} />
+              ) : drive ? (
+                <GroupedRow label={where} leading={<Face who={maker} size={26} live={false} />} />
               ) : (
                 <GroupedRow icon={aud.kind === "dm" ? "chat" : "hash"} label={where} />
               )}
@@ -234,6 +253,7 @@ export function FileShareSheet({ id, onClose }: { id: string; onClose: () => voi
                 );
               })}
             </GroupedList>
+            {drive && sharing.mode === "conversation" ? <GroupedFooter>{t("share.admins")}</GroupedFooter> : null}
           </View>
         ) : null}
         {closed && sharing.mode === "conversation" ? (
@@ -242,7 +262,13 @@ export function FileShareSheet({ id, onClose }: { id: string; onClose: () => voi
               <View style={onLine}>
                 <Icon name="lock" size={16} color={c.ink} />
               </View>
-              <Text style={styles.grow}>{t("share.onlyHere")}</Text>
+              <Text style={styles.grow}>
+                {drive
+                  ? mine
+                    ? t("share.onlyYouLink")
+                    : t("share.onlyMakerLink", { name: makerName })
+                  : t("share.onlyHere")}
+              </Text>
             </View>
             {canShare && !picking ? (
               <Button variant="secondary" wide label={t("share.choosePeople")} onPress={() => setPicking(true)} />

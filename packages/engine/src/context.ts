@@ -50,6 +50,7 @@ import { isAgentOnlyDm } from "./dms";
 import { cutText, stringsOf } from "./format";
 import { issueWorkBrief, issueWorkOf } from "./issue-work";
 import { openTasksBrief } from "./issues";
+import { fileConversationBrief, liveRefLine } from "./live/conversation";
 import type { MachineCaller } from "./machine-hub";
 import { type TaskEnd, taskEndText } from "./machine-task-text";
 import { type MessageMedia, mediaOf } from "./media";
@@ -271,10 +272,21 @@ export const ASK_APPROVALS_TOGETHER =
  * since… \n\nNO_REPLY"): the last line decides, since the word means stay quiet wherever it lands.
  */
 export const isNoReply = (text: string) =>
-  (text.trim().split("\n").at(-1) ?? "")
-    .trim()
-    .replace(/^[`*]+|[`*]+$/g, "")
-    .replace(/\.$/, "") === ROUTINE_NO_REPLY;
+  withoutMarksAround((text.trim().split("\n").at(-1) ?? "").trim()).replace(/\.$/, "") === ROUTINE_NO_REPLY;
+
+const isMark = (ch: string) => ch === "`" || ch === "*";
+
+/**
+ * `line` without the backticks and asterisks at its ends, read by index: `/[`*]+$/` reads a run of them again from
+ * each of its marks when the run doesn't end the line, quadratic in its length (a model writes this text).
+ */
+function withoutMarksAround(line: string): string {
+  let start = 0;
+  let end = line.length;
+  while (start < end && isMark(line.charAt(start))) start++;
+  while (end > start && isMark(line.charAt(end - 1))) end--;
+  return line.slice(start, end);
+}
 
 /** "reagi", "reacted", "リアクション": a word for having reacted, in the app's languages. */
 const REACTED_WORD =
@@ -586,6 +598,21 @@ export interface RunContext {
 }
 
 /**
+ * When a live file fits better than a reply (ADR 0196 §6, documents ADR 0200), which picture to put in one (ADR 0196
+ * §8: an SVG it writes, a picture from the web, a generated one), and where generated pictures go (ADR 0197): ours
+ * posts them in the conversation (or on a canvas) and counts them in the budget, which a computer brain's own image
+ * tool doesn't.
+ */
+export const liveFilesLine = (images: boolean) =>
+  [
+    "- Data people keep editing (a budget, a tracker, a list) goes in a spreadsheet (create_spreadsheet, formulas in English), not a Markdown table; slides in create_presentation; ideas and images side by side in create_canvas; documents (create_artifact kind document) are live: change them with edit_document. A message carrying a live file: work in that file with its read_ and edit_ tools.",
+    ` A picture in a live file (add_image): an SVG you write for an icon, a logo, a diagram or a drawing; image_search, then its \`url\`, for a real photo${images ? "; generate_image for new artwork" : ""}.`,
+    images
+      ? " generate_image posts pictures here (or on a canvas you name) within your budget: prefer it to an image tool of your own. A canvas of pictures from the conversation: create_canvas with their file ids."
+      : "",
+  ].join("");
+
+/**
  * Builds the fixed context of a run (ADR 0008): organization context,
  * agent instructions, channel and members, and the recent conversation up to
  * the trigger message. Search, memory and summaries (layers 2–4) come later as
@@ -609,6 +636,11 @@ export async function buildRunContext(
     work?: boolean;
     /** `show_block` and `start_poll` are available: when to use them (a routine's run is refused them). */
     blocks?: boolean;
+    /**
+     * Live files' tools are granted (ADR 0196 §6): when a spreadsheet, a presentation or a canvas fits; `images`:
+     * `generate_image` too (ADR 0197), which a workspace has only with an image model.
+     */
+    liveFiles?: { images: boolean };
     /** Reads a block's parts, so the agent reads what its blocks show and not only what people set in them. */
     blockSpec?: BlockSpecReader;
     /** `ask_choices` is available (ADR 0124): a short decision goes on a card instead of a numbered list. */
@@ -1068,6 +1100,11 @@ export async function buildRunContext(
     : taskHere
       ? await issueWorkBrief(db, run.orgId, taskHere.issueId, { asked: taskAsked, personal }).catch(() => null)
       : null;
+  // A live file's conversation (ADR 0199): the file in focus, read from the artifact now.
+  const fileBrief =
+    root && channel.kind === "file"
+      ? await fileConversationBrief(db, run.orgId, root.meta, agent.id).catch(() => null)
+      : null;
 
   // A routine's background run: its routine block, time line and where it reports (ADR 0053 §4).
   const routine = background ? await routineContext(db, run, agent, trigger, zone, personal) : null;
@@ -1120,6 +1157,7 @@ export async function buildRunContext(
           PLAIN_WORDS_LINE,
           `- Write like ${personal ? "a trusted assistant texting the person" : "a colleague texting the team"}, not a report: short paragraphs in a natural spoken tone. No headings, no bold, no labeled bullets ('Size:', 'Cause:', 'Logs:') and no numbered recommendations: say each thing in a sentence. A list only for steps or a plain enumeration.`,
           '- Numbers you compare (categories, periods, a trend, a ranking, parts of a whole) get a chart without being asked: a ```chart block holding only JSON data, like {"type":"bar","title":"Conversion by trigger","subtitle":"Purchases ÷ views, week of Oct 18","unit":"%","labels":["a","b"],"series":[{"name":"Rate","values":[15,6.7]}]}. Types: bar (rankings), line (over time), pie (parts of a whole), number (one big figure: "value" and an optional "delta" like "+0.8 pp vs last week", with labels/series for a small trend line or empty). Every series has one value per label, at most 24 labels; people can flip the chart to a table, so don\'t repeat every number in your text: say the takeaway around it. A few rows of several columns go in a Markdown table. More data than that belongs in a table saved to the Drive.',
+          options.liveFiles ? liveFilesLine(options.liveFiles.images) : "",
           options.blocks && !options.routine && !run.background
             ? "- Something to use rather than read (a what-if, options to see side by side, a view to filter, a short form): show it yourself with show_block, inside your reply; what the person picks comes back to you. A group deciding together: start_poll. Plain numbers stay a table or a chart, and reports and anything to keep stay files."
             : "",
@@ -1249,6 +1287,7 @@ export async function buildRunContext(
       : []),
     ...(briefing ? await briefing.then((text) => (text ? [{ conversation: true, text }] : [])) : []),
     ...(issueBrief ? [{ conversation: true, text: issueBrief }] : []),
+    ...(fileBrief ? [{ conversation: true, text: fileBrief }] : []),
     ...(machineAccess
       ? await machineAccess.then((a) =>
           a
@@ -1334,7 +1373,7 @@ export async function buildRunContext(
                 surface,
                 names,
               )}`
-            : `# Where you are\nChannel #${channel.name}${channel.topic ? ` (topic: ${channel.topic})` : ""}, replying ${flat ? "in the channel" : "in a thread"}. Members: ${memberList}.${
+            : `# Where you are\n${channel.kind === "file" ? "A live file's own conversation (# This conversation says which)" : `Channel #${channel.name}${channel.topic ? ` (topic: ${channel.topic})` : ""}`}, replying ${flat ? "in the channel" : "in a thread"}. Members: ${memberList}.${
                 otherAgents
                   ? `\nOther agents here and what they can do: ${otherAgents}. Never answer for another agent or guess its permissions: say what this list shows, or ask it yourself (ask_agent) when you need its answer, or hand it work or news (tell_agent): what comes of either reaches you here by itself. Never relay to another agent what the person asked that agent directly: it got the message and answers it itself. Ask another agent with ask_agent and hand it work with tell_agent, not with an @mention here: a mention is credit or a reference, and wakes it only when it plainly asks it to act${options.followUp ? " (to wait for something use follow_up, not a mention)" : ""}. Never restate or confirm another agent's answer to the person: add only what is new, linking its message, and tell an agent whose answer is wrong privately (tell_agent), not here. Never name your tools to people.`
                   : ""
@@ -2088,13 +2127,15 @@ function fileList(meta: Message["meta"] | undefined): string {
 
 /**
  * Files attached to someone else's message (a person's or another agent's): titles and ids, so the agent can open or
- * send them with its file tools instead of searching the Drive for a file by name.
+ * send them with its file tools instead of searching the Drive for a file by name. Then what the message points at in
+ * a live file (`meta.liveRef`, ADR 0199).
  */
 export function attachedLine(m: Pick<Message, "meta">): string {
   const list = fileList(m.meta);
-  return list
+  const files = list
     ? `\n(attached files: ${list}; open each with read_artifact before you answer about it; if one is unreadable to you, give the reason and way out the tool gave)`
     : "";
+  return `${files}${liveRefLine(m.meta)}`;
 }
 
 /**

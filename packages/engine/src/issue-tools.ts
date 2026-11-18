@@ -373,14 +373,15 @@ async function bringFiles(
 
 /**
  * Whether everyone `readers` names opens this file where it lives, and `shareArtifact` takes it into `channelId` as it
- * is: one in the Drive or a public channel, or for people who each read it, one already in `channelId`. True for no
- * such file: `shareArtifact` refuses it.
+ * is: one in the Drive shared with everyone (ADR 0157, amendment 2026-11-17) or a public channel, or for people who
+ * each read it, one already in `channelId`. True for no such file: `shareArtifact` refuses it.
  */
 async function readsAsIs(deps: ArtifactDeps, orgId: string, id: string, readers: Audience, channelId: string) {
   const [file] = UUID.test(id)
     ? await deps.db
         .select({
           channelId: schema.artifacts.channelId,
+          share: schema.artifacts.share,
           kind: schema.channels.kind,
           visibility: schema.channels.visibility,
         })
@@ -388,7 +389,8 @@ async function readsAsIs(deps: ArtifactDeps, orgId: string, id: string, readers:
         .leftJoin(schema.channels, eq(schema.channels.id, schema.artifacts.channelId))
         .where(and(eq(schema.artifacts.orgId, orgId), eq(schema.artifacts.id, id), isNull(schema.artifacts.deletedAt)))
     : [];
-  if (!file?.channelId || (file.kind === "channel" && file.visibility === "public")) return true;
+  if (!file || (!file.channelId && file.share === "everyone")) return true;
+  if (file.kind === "channel" && file.visibility === "public") return true;
   if (readers.mode === "everyone" || file.channelId !== channelId) return false;
   const read = await Promise.all(readers.userIds.map((userId) => fileRefOf(deps.db, userId, orgId, id)));
   return read.every(Boolean);

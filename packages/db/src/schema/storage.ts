@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   boolean,
   foreignKey,
   index,
@@ -16,6 +17,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { agents } from "./agents";
 import { users } from "./auth";
+import { channels } from "./chat";
 import { organizations } from "./tenancy";
 
 /**
@@ -174,6 +176,10 @@ export const artifactKindEnum = pgEnum("artifact_kind", [
   "block",
   "poll",
   "choices",
+  // Live files, edited together through `live_docs` (ADR 0196).
+  "spreadsheet",
+  "slides",
+  "canvas",
 ]);
 
 /**
@@ -209,6 +215,12 @@ export const artifacts = pgTable(
     shareUserIds: text().array().notNull().default(sql`'{}'::text[]`),
     shareRoleIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
     currentVersion: integer().notNull().default(1),
+    /**
+     * A live file's conversation (ADR 0199): a channel of kind `file` and the thread root in it, made on first use. No
+     * foreign key to the root (`messages` is partitioned).
+     */
+    conversationChannelId: uuid().references((): AnyPgColumn => channels.id, { onDelete: "set null" }),
+    conversationRootId: uuid(),
     createdByType: text().notNull(),
     createdById: text().notNull(),
     updatedByType: text().notNull(),
@@ -217,7 +229,7 @@ export const artifacts = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index().on(t.orgId, t.updatedAt), index().on(t.channelId)],
+  (t) => [index().on(t.orgId, t.updatedAt), index().on(t.channelId), uniqueIndex().on(t.conversationChannelId)],
 );
 
 /** One saved version of an artifact: where its bytes are, who made it and why. */

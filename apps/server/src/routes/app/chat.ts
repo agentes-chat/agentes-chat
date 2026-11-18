@@ -40,7 +40,7 @@ import {
   requireSession,
   security,
 } from "./context";
-import { Channel, Message, PendingReturn } from "./schemas";
+import { Channel, LiveSelection, Message, PendingReturn } from "./schemas";
 
 const tags = ["Chat"];
 const ChannelParams = OrgParams.extend({ channelId: z.uuid() });
@@ -643,6 +643,14 @@ export function chatRoutes(deps: AppDeps) {
               description:
                 "Sent while an agent works here (it goes into its task): stop its current model call and read this message now. Without it, the agent reads it at its next step.",
             }),
+            liveRef: z
+              .object({ artifactId: z.uuid(), selection: LiveSelection.optional() })
+              .nullable()
+              .optional()
+              .openapi({
+                description:
+                  "In a live file's conversation (ADR 0199): what you had selected in the file. Stored as `meta.liveRef` ({ artifactId, kind, title, selection? }) and shown as the message's `liveRef`. Only that conversation's own file (400 `message.live_ref`).",
+              }),
             clientId: z
               .string()
               .max(64)

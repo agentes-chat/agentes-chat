@@ -2973,6 +2973,15 @@
   "files.type.text": {
     "value": "Text"
   },
+  "files.type.spreadsheet": {
+    "value": "Spreadsheet"
+  },
+  "files.type.slides": {
+    "value": "Presentation"
+  },
+  "files.type.canvas": {
+    "value": "Canvas"
+  },
   "files.type.file": {
     "value": "File"
   },
@@ -3285,6 +3294,15 @@
   "drive.type.documents": {
     "value": "Documents"
   },
+  "drive.type.spreadsheets": {
+    "value": "Spreadsheets"
+  },
+  "drive.type.presentations": {
+    "value": "Presentations"
+  },
+  "drive.type.canvases": {
+    "value": "Canvases"
+  },
   "drive.type.images": {
     "value": "Images"
   },
@@ -3311,6 +3329,15 @@
   },
   "drive.kind.image": {
     "value": "Image"
+  },
+  "drive.kind.spreadsheet": {
+    "value": "Spreadsheet"
+  },
+  "drive.kind.slides": {
+    "value": "Presentation"
+  },
+  "drive.kind.canvas": {
+    "value": "Canvas"
   },
   "drive.kind.file": {
     "value": "File"
@@ -6942,6 +6969,519 @@
   },
   "empty.audit.text": {
     "value": "When an agent does something outside the conversation, it shows up here."
+  },
+  "live.status.opening": {
+    "value": "Opening…"
+  },
+  "live.status.saved": {
+    "value": "Saved"
+  },
+  "live.status.saving": {
+    "value": "Saving…"
+  },
+  "live.status.offline": {
+    "value": "No connection"
+  },
+  "live.status.offlineKept": {
+    "value": "No connection · changes kept on this phone"
+  },
+  "live.status.readOnly": {
+    "value": "Read-only"
+  },
+  "live.closed.missing": {
+    "value": "This file doesn't exist or wasn't shared with you"
+  },
+  "live.closed.signedOut": {
+    "value": "Sign in again to open this file"
+  },
+  "live.closed.broken": {
+    "value": "This file can't be opened in the app"
+  },
+  "live.closed.toDrive": {
+    "value": "Back to the Drive"
+  },
+  "live.menu.undo": {
+    "value": "Undo"
+  },
+  "live.menu.redo": {
+    "value": "Redo"
+  },
+  "live.here.title": {
+    "value": "Who's here"
+  },
+  "live.here.faces": {
+    "value": {
+      "one": "{{count}} more here. See who",
+      "other": "{{count}} more here. See who"
+    }
+  },
+  "live.here.group.editing": {
+    "value": "Editing"
+  },
+  "live.here.group.viewing": {
+    "value": "Looking"
+  },
+  "live.here.editing": {
+    "value": "editing"
+  },
+  "live.here.viewing": {
+    "value": "viewing"
+  },
+  "live.here.editingAt": {
+    "value": "editing {{where}}"
+  },
+  "live.here.viewingAt": {
+    "value": "on {{where}}"
+  },
+  "live.here.editingSlide": {
+    "value": "editing slide {{n}}"
+  },
+  "live.here.onSlide": {
+    "value": "on slide {{n}}"
+  },
+  "live.here.editingShapes": {
+    "value": {
+      "one": "editing {{count}} item",
+      "other": "editing {{count}} items"
+    }
+  },
+  "live.here.followingName": {
+    "value": "Following {{name}}"
+  },
+  "live.here.stop": {
+    "value": "Stop"
+  },
+  "live.here.alone": {
+    "value": "Only you are here now"
+  },
+  "live.here.aloneHint": {
+    "value": "Whoever opens this file shows up here, with what they're doing."
+  },
+  "live.card.sheets": {
+    "value": {
+      "one": "{{count}} sheet",
+      "other": "{{count}} sheets"
+    }
+  },
+  "live.card.slides": {
+    "value": {
+      "one": "{{count}} slide",
+      "other": "{{count}} slides"
+    }
+  },
+  "live.card.shapes": {
+    "value": {
+      "one": "{{count}} item",
+      "other": "{{count}} items"
+    }
+  },
+  "live.sheet.edit": {
+    "value": "Edit"
+  },
+  "live.sheet.editHint": {
+    "value": "Type into this cell"
+  },
+  "live.sheet.editing": {
+    "value": "Editing {{cell}}"
+  },
+  "live.sheet.placeholder": {
+    "value": "Type a value or ="
+  },
+  "live.sheet.empty": {
+    "value": "Empty"
+  },
+  "live.sheet.cancel": {
+    "value": "Leave it as it was"
+  },
+  "live.sheet.done": {
+    "value": "Done"
+  },
+  "live.sheet.typeKey": {
+    "value": "Type {{key}}"
+  },
+  "live.sheet.stats": {
+    "value": "Sum {{sum}} · Average {{average}} · Count {{count}}"
+  },
+  "live.sheet.countOnly": {
+    "value": "Count {{count}}"
+  },
+  "live.sheet.cantDo": {
+    "value": "That can't be done here"
+  },
+  "live.sheet.copied": {
+    "value": "Copied"
+  },
+  "live.sheet.newSheet": {
+    "value": "New sheet"
+  },
+  "live.sheet.sheetWord": {
+    "value": "Sheet"
+  },
+  "live.sheet.duplicateSheet": {
+    "value": "Duplicate sheet"
+  },
+  "live.sheet.copyOf": {
+    "value": "{{name}} (copy)"
+  },
+  "live.sheet.deleteSheet": {
+    "value": "Delete sheet"
+  },
+  "live.sheet.deleteSheetTitle": {
+    "value": "Delete {{name}}?"
+  },
+  "live.sheet.deleteSheetText": {
+    "value": "Everything in this sheet goes for everyone in the file. Undo brings it back."
+  },
+  "live.sheet.menu.copy": {
+    "value": "Copy"
+  },
+  "live.sheet.menu.paste": {
+    "value": "Paste"
+  },
+  "live.sheet.menu.clear": {
+    "value": "Clear"
+  },
+  "live.sheet.menu.rowsAbove": {
+    "value": {
+      "one": "Insert a row above",
+      "other": "Insert {{count}} rows above"
+    }
+  },
+  "live.sheet.menu.rowsBelow": {
+    "value": {
+      "one": "Insert a row below",
+      "other": "Insert {{count}} rows below"
+    }
+  },
+  "live.sheet.menu.colsLeft": {
+    "value": {
+      "one": "Insert a column to the left",
+      "other": "Insert {{count}} columns to the left"
+    }
+  },
+  "live.sheet.menu.colsRight": {
+    "value": {
+      "one": "Insert a column to the right",
+      "other": "Insert {{count}} columns to the right"
+    }
+  },
+  "live.sheet.menu.sortUp": {
+    "value": "Sort A to Z"
+  },
+  "live.sheet.menu.sortDown": {
+    "value": "Sort Z to A"
+  },
+  "live.sheet.menu.deleteRows": {
+    "value": {
+      "one": "Delete the row",
+      "other": "Delete {{count}} rows"
+    }
+  },
+  "live.sheet.menu.deleteCols": {
+    "value": {
+      "one": "Delete the column",
+      "other": "Delete {{count}} columns"
+    }
+  },
+  "live.sheet.problem.empty": {
+    "value": "Type something after ="
+  },
+  "live.sheet.problem.unexpected": {
+    "value": "Something is off near {{text}}"
+  },
+  "live.sheet.problem.paren": {
+    "value": "A parenthesis isn't closed"
+  },
+  "live.sheet.problem.quote": {
+    "value": "A quote isn't closed"
+  },
+  "live.sheet.problem.sheetQuote": {
+    "value": "A sheet name's quote isn't closed"
+  },
+  "live.sheet.problem.operand": {
+    "value": "A value is missing beside a sign"
+  },
+  "live.sheet.problem.array": {
+    "value": "This list of values isn't complete"
+  },
+  "live.sheet.problem.range": {
+    "value": "This range isn't valid"
+  },
+  "live.sheet.problem.sheet": {
+    "value": "There's no sheet called {{text}}"
+  },
+  "live.sheet.problem.args": {
+    "value": "{{fn}} has the wrong number of values"
+  },
+  "live.sheet.problem.tooLong": {
+    "value": "This is too long for a cell"
+  },
+  "live.sheet.problem.tooDeep": {
+    "value": "This formula has too many levels"
+  },
+  "live.sheet.problem.tooFar": {
+    "value": "This reference goes past the spreadsheet's limit"
+  },
+  "live.sheet.problem.limit": {
+    "value": "The spreadsheet is at its size limit"
+  },
+  "live.sheet.problem.merged": {
+    "value": "Merged cells are in the way"
+  },
+  "live.sheet.problem.failed": {
+    "value": "That didn't work. Try again."
+  },
+  "live.slides.placeholder.title": {
+    "value": "Tap to add a title"
+  },
+  "live.slides.placeholder.text": {
+    "value": "Tap to add text"
+  },
+  "live.slides.placeholder.image": {
+    "value": "Tap to add a photo"
+  },
+  "live.slides.part.title": {
+    "value": "Title"
+  },
+  "live.slides.part.subtitle": {
+    "value": "Subtitle"
+  },
+  "live.slides.part.body": {
+    "value": "Text"
+  },
+  "live.slides.part.caption": {
+    "value": "Caption"
+  },
+  "live.slides.part.number": {
+    "value": "Big number"
+  },
+  "live.slides.part.quote": {
+    "value": "Quote"
+  },
+  "live.slides.part.shape": {
+    "value": "Text in the shape"
+  },
+  "live.slides.part.text": {
+    "value": "Text box"
+  },
+  "live.slides.part.note": {
+    "value": "Note"
+  },
+  "live.slides.openHint": {
+    "value": "Opens the slide"
+  },
+  "live.slides.editHint": {
+    "value": "Edits its words"
+  },
+  "live.slides.place": {
+    "value": "Slide {{n}} of {{count}}"
+  },
+  "live.slides.placeHidden": {
+    "value": "Slide {{n}} of {{count}} · hidden when presenting"
+  },
+  "live.slides.deleteTitle": {
+    "value": "Delete slide {{n}}?"
+  },
+  "live.slides.deleteText": {
+    "value": "It goes for everyone in the file. Undo brings it back."
+  },
+  "live.slides.notesPlaceholder": {
+    "value": "Write what to say on this slide"
+  },
+  "live.slides.pickPhoto": {
+    "value": "Choose a photo"
+  },
+  "live.slides.tools.text": {
+    "value": "Text"
+  },
+  "live.slides.tools.photo": {
+    "value": "Photo"
+  },
+  "live.slides.tools.sending": {
+    "value": "Sending…"
+  },
+  "live.text.title": {
+    "value": "Text"
+  },
+  "live.text.noteTitle": {
+    "value": "Note"
+  },
+  "live.text.done": {
+    "value": "Done"
+  },
+  "live.text.placeholder": {
+    "value": "Type the text"
+  },
+  "live.text.titlePlaceholder": {
+    "value": "Type the title"
+  },
+  "live.text.hint": {
+    "value": "Each line is a paragraph. What you type goes into the file as you type."
+  },
+  "live.show.nothing": {
+    "value": "Every slide is hidden, so there is nothing to show."
+  },
+  "live.show.upright": {
+    "value": "Stand the phone up"
+  },
+  "live.show.sideways": {
+    "value": "Turn the phone sideways"
+  },
+  "live.canvas.tools.label": {
+    "value": "Tools"
+  },
+  "live.canvas.tools.select": {
+    "value": "Select"
+  },
+  "live.canvas.tools.pen": {
+    "value": "Pen"
+  },
+  "live.canvas.tools.shapes": {
+    "value": "Shapes"
+  },
+  "live.canvas.tools.arrow": {
+    "value": "Arrow"
+  },
+  "live.canvas.tools.note": {
+    "value": "Note"
+  },
+  "live.canvas.tools.text": {
+    "value": "Text"
+  },
+  "live.canvas.tools.photo": {
+    "value": "Photo"
+  },
+  "live.canvas.tools.comment": {
+    "value": "Comment"
+  },
+  "live.canvas.shapes.rect": {
+    "value": "Rectangle"
+  },
+  "live.canvas.shapes.ellipse": {
+    "value": "Ellipse"
+  },
+  "live.canvas.shapes.diamond": {
+    "value": "Diamond"
+  },
+  "live.canvas.shapes.triangle": {
+    "value": "Triangle"
+  },
+  "live.canvas.shapes.star": {
+    "value": "Star"
+  },
+  "live.canvas.shapes.line": {
+    "value": "Line"
+  },
+  "live.canvas.penHint": {
+    "value": "Draw with your finger. Two fingers move the canvas."
+  },
+  "live.canvas.arrowHint": {
+    "value": "Drag from one place to another"
+  },
+  "live.canvas.commentHint": {
+    "value": "Tap where you want to comment"
+  },
+  "live.canvas.pin": {
+    "value": "Comment {{n}} by {{name}}"
+  },
+  "live.canvas.addToSelection": {
+    "value": "Choose this too"
+  },
+  "live.canvas.emptyText": {
+    "value": "Add a note or a photo, or ask an agent in the conversation."
+  },
+  "live.talk.start": {
+    "value": "Talk about {{what}}"
+  },
+  "live.talk.openHint": {
+    "value": "Opens the conversation"
+  },
+  "live.talk.placeholder.spreadsheet": {
+    "value": "Write on the spreadsheet…"
+  },
+  "live.talk.placeholder.slides": {
+    "value": "Write on the presentation…"
+  },
+  "live.talk.placeholder.canvas": {
+    "value": "Write on the canvas…"
+  },
+  "live.talk.placeholder.document": {
+    "value": "Write on the document…"
+  },
+  "live.talk.aboutPoint": {
+    "value": "A comment on a spot of the canvas"
+  },
+  "live.talk.comment": {
+    "value": "Comment"
+  },
+  "live.talk.imported": {
+    "value": "Imported from {{file}} by <0>{{name}}</0>"
+  },
+  "live.talk.variationsText": {
+    "value": "make variations of this image"
+  },
+  "live.doc.styles.paragraph": {
+    "value": "Text"
+  },
+  "live.doc.styles.h1": {
+    "value": "Heading 1"
+  },
+  "live.doc.styles.h2": {
+    "value": "Heading 2"
+  },
+  "live.doc.styles.h3": {
+    "value": "Heading 3"
+  },
+  "live.doc.styles.quote": {
+    "value": "Quote"
+  },
+  "live.doc.styles.code": {
+    "value": "Code"
+  },
+  "live.doc.style": {
+    "value": "Text style"
+  },
+  "live.doc.bold": {
+    "value": "Bold"
+  },
+  "live.doc.italic": {
+    "value": "Italic"
+  },
+  "live.doc.bullets": {
+    "value": "Bulleted list"
+  },
+  "live.doc.numbers": {
+    "value": "Numbered list"
+  },
+  "live.doc.quote": {
+    "value": "Quote"
+  },
+  "live.doc.link": {
+    "value": "Add a link"
+  },
+  "live.doc.linkChoose": {
+    "value": "Choose the words for the link first"
+  },
+  "live.doc.linkBad": {
+    "value": "That address can't be a link"
+  },
+  "live.doc.linkPlaceholder": {
+    "value": "Link address"
+  },
+  "live.doc.linkApply": {
+    "value": "Add the link"
+  },
+  "live.doc.placeholder": {
+    "value": "Write here"
+  },
+  "live.doc.add": {
+    "value": "Add a paragraph"
+  },
+  "live.doc.editHint": {
+    "value": "Edits this part"
+  },
+  "live.doc.notHere": {
+    "value": "This part is edited on the computer"
   },
   "surface.on": {
     "value": "On"

@@ -452,6 +452,27 @@ export const envVars = {
       "Workspace id for the platform key, when the key is not scoped to a workspace (sent as `anthropic-workspace-id`).",
     section: "Agents",
   },
+  PLATFORM_OPENAI_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "The server's own OpenAI API key. Workspaces without an OpenAI key of their own use it to generate images on canvases (GPT Image, ADR 0197) and for agents on OpenAI models. Usage is still recorded per organization.",
+    section: "Agents",
+    secret: true,
+  },
+  PLATFORM_GEMINI_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "The server's own Gemini API key. Workspaces without a Gemini key of their own use it to generate images on canvases (Nano Banana, ADR 0197) and for agents on Gemini models. Usage is still recorded per organization.",
+    section: "Agents",
+    secret: true,
+  },
+  PLATFORM_OPENROUTER_API_KEY: {
+    schema: z.string().optional(),
+    description:
+      "The server's own OpenRouter API key. Workspaces without an OpenRouter key of their own use it to generate images on canvases (ADR 0197) and for agents on OpenRouter models. Usage is still recorded per organization.",
+    section: "Agents",
+    secret: true,
+  },
   MODEL_ENDPOINTS_PRIVATE: {
     schema: z.stringbool().optional(),
     description:

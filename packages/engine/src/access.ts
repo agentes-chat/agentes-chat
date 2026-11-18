@@ -41,11 +41,40 @@ const { agentScopes, connectorConnections, agents } = schema;
  * scope missing here would be dropped by any save.
  */
 export const BUILTIN_TOOLS: Record<string, string[]> = {
-  "": ["ask_user", "request_approval", "react", "show_block", "start_poll", "ask_choices", "web_search", "web_fetch"],
+  "": [
+    "ask_user",
+    "request_approval",
+    "react",
+    "show_block",
+    "start_poll",
+    "ask_choices",
+    "web_search",
+    "web_fetch",
+    "image_search",
+  ],
   "context:read": ["search_context", "get_summary", "expand"],
   "memory:write": ["remember", "update_memory", "forget", "save_how_to", "propose_instruction_change"],
-  "drive:read": ["read_artifact", "list_artifacts", "share_artifact"],
-  "drive:write": ["create_artifact", "update_artifact"],
+  "drive:read": [
+    "read_artifact",
+    "list_artifacts",
+    "share_artifact",
+    "read_spreadsheet",
+    "read_presentation",
+    "read_canvas",
+    "read_document",
+  ],
+  "drive:write": [
+    "create_artifact",
+    "update_artifact",
+    "create_spreadsheet",
+    "edit_spreadsheet",
+    "create_presentation",
+    "edit_presentation",
+    "create_canvas",
+    "edit_canvas",
+    "edit_document",
+    "generate_image",
+  ],
   "issues:read": ["list_issues"],
   "issues:write": ["create_issue", "update_issue", "comment_issue"],
   "calendar:read": ["list_events", "find_free_time"],
@@ -179,6 +208,33 @@ export const BUILTIN_TOOL_INFO: Record<string, { label: string; description: str
   },
   create_artifact: { label: "Create file", description: "Creates a document, table, diff, diagram or page." },
   update_artifact: { label: "Update file", description: "Saves a new version of a file." },
+  // Live files (ADR 0196 §6) and images onto a canvas (ADR 0197).
+  read_spreadsheet: { label: "Read spreadsheet", description: "Reads a spreadsheet's cells and formulas." },
+  read_presentation: { label: "Read presentation", description: "Reads a presentation's slides and notes." },
+  read_canvas: { label: "Read canvas", description: "Reads what is on a canvas: images, notes and text." },
+  create_spreadsheet: { label: "Create spreadsheet", description: "Makes a spreadsheet, with its first rows." },
+  edit_spreadsheet: {
+    label: "Edit spreadsheet",
+    description: "Changes cells, formulas, formats, rows and sheets while people watch.",
+  },
+  create_presentation: { label: "Create presentation", description: "Makes a presentation with its slides." },
+  edit_presentation: {
+    label: "Edit presentation",
+    description: "Changes slides, their text, pictures, charts and notes while people watch.",
+  },
+  create_canvas: { label: "Create canvas", description: "Makes a canvas for images, notes and ideas." },
+  edit_canvas: { label: "Edit canvas", description: "Adds and moves notes, text, pictures and arrows." },
+  // Documents (ADR 0200): made with create_artifact.
+  read_document: { label: "Read document", description: "Reads a document's text, block by block." },
+  edit_document: {
+    label: "Edit document",
+    description: "Writes, rewrites and formats a document's text while people watch.",
+  },
+  generate_image: {
+    label: "Generate images",
+    description:
+      "Makes images with the workspace's image AI, in the conversation or on a canvas. Paid from its budget.",
+  },
   list_issues: { label: "View issues", description: "Lists and opens issues." },
   create_issue: { label: "Create issue", description: "Creates an issue with acceptance criteria." },
   update_issue: { label: "Update issue", description: "Changes status or priority, or links a PR." },

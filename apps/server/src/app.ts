@@ -41,10 +41,12 @@ import { dmRoutes } from "./routes/app/dms";
 import { feedbackRoutes, registerFeedbackFiles, registerFeedbackInbox } from "./routes/app/feedback";
 import { gifKeyRoutes } from "./routes/app/gif-key";
 import { gifRoutes } from "./routes/app/gifs";
+import { imageRoutes } from "./routes/app/images";
 import { inviteRoutes } from "./routes/app/invites";
 import { issueRoutes } from "./routes/app/issues";
 import { jevRoutes } from "./routes/app/jev";
 import { knowledgeRoutes } from "./routes/app/knowledge";
+import { liveRoutes } from "./routes/app/live";
 import { machineAccountRoutes } from "./routes/app/machine-accounts";
 import { mailRoutes } from "./routes/app/mail";
 import { managementRoutes } from "./routes/app/management";
@@ -129,6 +131,7 @@ export interface AppOptions {
  * - `/api/push-relay/v1/*` other installations' phone pushes, server to server (only with PUSH_RELAY_SERVE, ADR 0152)
  * - `/mcp`                AI apps' MCP endpoint, bearer tokens only (ADR 0119); `/.well-known/oauth-*` its discovery
  * - `/api/ws`             WebSocket (real-time)
+ * - `/api/live`           WebSocket: one live file, a spreadsheet, presentation or canvas (ADR 0196)
  * - `/api/openapi.json`   OpenAPI 3.1 document; `/api/reference` interactive docs
  * - `/install`            the self-host installer, `install.sh` (`curl -fsSL <server>/install | sh`)
  * - `/i/<code>`           a new computer's installer with a connect link baked in (`/i/<code>/ps` for Windows)
@@ -211,6 +214,9 @@ export function createApp(options: AppOptions) {
     api.route("/app", billingRoutes(deps));
     api.route("/app", referralRoutes(deps));
     api.route("/app", artifactRoutes(deps));
+    api.route("/app", liveRoutes(deps));
+    // Pictures on canvases (ADR 0197): the image models, requests and Try again.
+    api.route("/app", imageRoutes(deps));
     api.route("/app", issueRoutes(deps));
     api.route("/app", threadRoutes(deps));
     api.route("/app", missionRoutes(deps));

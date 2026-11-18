@@ -223,19 +223,37 @@ export const TABLET_QUERY = "(min-width: 761px) and (max-width: 1199px)";
 const SIDEBAR_EVENT = "agentes:sidebar";
 let sidebarCollapsed = storage.get(STORAGE_KEYS.sidebarCollapsed) === "1";
 let tabletOpen = false;
-const onSidebarChange = (cb: () => void) => {
+/**
+ * A page that runs out of room asked for the rail (a live file with its conversation beside it, ADR 0199): shown as
+ * the rail on desktop widths, never stored, so the person's own choice comes back when the page lets go.
+ */
+let roomAsked = false;
+/** How many times the person used the toggle (any page): a page that asked for the room stops at their hand. */
+let handToggles = 0;
+export const onSidebarChange = (cb: () => void) => {
   window.addEventListener(SIDEBAR_EVENT, cb);
   return () => window.removeEventListener(SIDEBAR_EVENT, cb);
 };
 const isTablet = () => typeof window.matchMedia === "function" && window.matchMedia(TABLET_QUERY).matches;
 export const toggleSidebar = () => {
+  handToggles += 1;
   if (isTablet()) tabletOpen = !tabletOpen;
+  // Shrunk for a page's room: the toggle gives the person their sidebar back (their stored choice, open).
+  else if (roomAsked) roomAsked = false;
   else {
     sidebarCollapsed = !sidebarCollapsed;
     storage.set(STORAGE_KEYS.sidebarCollapsed, sidebarCollapsed ? "1" : "0");
   }
   window.dispatchEvent(new Event(SIDEBAR_EVENT));
 };
+/** A page asks for the sidebar's room (its rail) or lets it go; the person's stored choice is untouched. */
+export const askSidebarRoom = (asked: boolean) => {
+  if (roomAsked === asked) return;
+  roomAsked = asked;
+  window.dispatchEvent(new Event(SIDEBAR_EVENT));
+};
+/** The toggle's count so far: a page compares it to tell the person's hand from its own ask. */
+export const sidebarHandToggles = () => handToggles;
 /** A tablet's open sidebar back to its rail. */
 export const closeTabletSidebar = () => {
   if (!tabletOpen) return;
@@ -247,7 +265,7 @@ export function useSidebarCollapsed(): [boolean, () => void] {
   const tablet = useMediaQuery(TABLET_QUERY);
   const collapsed = useSyncExternalStore(
     onSidebarChange,
-    () => (tablet ? !tabletOpen : sidebarCollapsed),
+    () => (tablet ? !tabletOpen : sidebarCollapsed || roomAsked),
     () => false,
   );
   return [collapsed, toggleSidebar];

@@ -19313,7 +19313,7 @@
     "value": "Write files"
   },
   "scopes.drive_write.description": {
-    "value": "Create reports, tables, org charts and diffs in the Drive."
+    "value": "Create reports, spreadsheets, presentations, canvases and diffs in the Drive, and generate images."
   },
   "scopes.issues_write.label": {
     "value": "Tasks"
@@ -30056,6 +30056,15 @@
   "artifacts.kind.choices": {
     "value": "Choices"
   },
+  "artifacts.kind.spreadsheet": {
+    "value": "Spreadsheet"
+  },
+  "artifacts.kind.slides": {
+    "value": "Presentation"
+  },
+  "artifacts.kind.canvas": {
+    "value": "Canvas"
+  },
   "artifacts.version": {
     "value": "v{{version}}"
   },
@@ -30449,6 +30458,15 @@
   "drive.kindMany.choices": {
     "value": "Choices"
   },
+  "drive.kindMany.spreadsheet": {
+    "value": "Spreadsheets"
+  },
+  "drive.kindMany.slides": {
+    "value": "Presentations"
+  },
+  "drive.kindMany.canvas": {
+    "value": "Canvases"
+  },
   "drive.view": {
     "value": "View"
   },
@@ -30618,7 +30636,7 @@
     "value": "Private"
   },
   "drive.privateHint": {
-    "value": "Only the people in the conversation see these files. In a channel, administrators do too."
+    "value": "Only the people in the conversation, or who made the file, see these files. In a channel and in the Drive, administrators do too."
   },
   "drive.downloadAs": {
     "value": "Download as"
@@ -34980,6 +34998,36 @@
   "toolNames.label.share_artifact": {
     "value": "Share file"
   },
+  "toolNames.label.read_spreadsheet": {
+    "value": "Read spreadsheet"
+  },
+  "toolNames.label.edit_spreadsheet": {
+    "value": "Edit spreadsheet"
+  },
+  "toolNames.label.create_presentation": {
+    "value": "Create presentation"
+  },
+  "toolNames.label.read_presentation": {
+    "value": "Read presentation"
+  },
+  "toolNames.label.edit_presentation": {
+    "value": "Edit presentation"
+  },
+  "toolNames.label.create_canvas": {
+    "value": "Create canvas"
+  },
+  "toolNames.label.read_canvas": {
+    "value": "Read canvas"
+  },
+  "toolNames.label.edit_canvas": {
+    "value": "Edit canvas"
+  },
+  "toolNames.label.read_document": {
+    "value": "Read document"
+  },
+  "toolNames.label.edit_document": {
+    "value": "Edit document"
+  },
   "toolNames.label.upload_file": {
     "value": "Upload file"
   },
@@ -35018,6 +35066,9 @@
   },
   "toolNames.label.web_fetch": {
     "value": "Read web page"
+  },
+  "toolNames.label.image_search": {
+    "value": "Search for pictures"
   },
   "toolNames.label.create_routine": {
     "value": "Create routine"
@@ -37742,6 +37793,57 @@
   },
   "errors.artifact.notInDrive": {
     "value": "This lives only in its conversation, so it can't be shared."
+  },
+  "errors.live.readOnly": {
+    "value": "This file is read-only now, so it can't be changed."
+  },
+  "errors.live.tooLarge": {
+    "value": "This file is at its size limit. Remove something from it first."
+  },
+  "errors.live.assetTooLarge": {
+    "value": "The picture is over {{max}} MB, the limit per picture."
+  },
+  "errors.live.assetType": {
+    "value": "Only pictures go in this file: PNG, JPEG, WebP or GIF."
+  },
+  "errors.live.liveOnly": {
+    "value": "This file is changed right where it is, so it can't be replaced as a whole."
+  },
+  "errors.office.unreadable": {
+    "value": "This file couldn't be opened here. It may be damaged. Download it to open it in its own app."
+  },
+  "errors.office.tooLarge": {
+    "value": "This file is too large to open here. Download it to see it in its own app."
+  },
+  "errors.office.unsupported": {
+    "value": "Files like this one can only be downloaded."
+  },
+  "errors.office.encrypted": {
+    "value": "This file is protected with a password, so only its own app opens it."
+  },
+  "errors.office.tooLargeToEdit": {
+    "value": "This file is too large to edit here. You can still see it and download it."
+  },
+  "errors.images.noModel": {
+    "value": "To make images, add an OpenAI, Gemini or OpenRouter key in the workspace settings."
+  },
+  "errors.images.modelUnavailable": {
+    "value": "This image AI isn't available in the workspace anymore. Choose another one."
+  },
+  "errors.images.reference": {
+    "value": "Choose up to 4 images on this canvas to start from."
+  },
+  "errors.images.notCanvas": {
+    "value": "Images can only be made on a canvas."
+  },
+  "errors.images.rate": {
+    "value": "You asked for a lot of images in the last hour. Try again in a little while."
+  },
+  "errors.images.personLimit": {
+    "value": "You reached your AI usage limit for this month."
+  },
+  "errors.images.provider": {
+    "value": "The AI couldn't do it right now. Try again in a little while."
   },
   "errors.device.notLinkMaker": {
     "value": "Only the person who made the link can let this computer join."
@@ -42449,6 +42551,9 @@
   "settings.kinds.summary": {
     "value": "Summaries"
   },
+  "settings.kinds.image": {
+    "value": "Images"
+  },
   "settings.usageCalls": {
     "value": {
       "one": "{{count}} call",
@@ -45309,6 +45414,78 @@
   },
   "builtinTools.update_artifact.description": {
     "value": "Saves a new version of a file."
+  },
+  "builtinTools.read_spreadsheet.label": {
+    "value": "Read spreadsheet"
+  },
+  "builtinTools.read_spreadsheet.description": {
+    "value": "Reads a spreadsheet's cells and formulas."
+  },
+  "builtinTools.read_presentation.label": {
+    "value": "Read presentation"
+  },
+  "builtinTools.read_presentation.description": {
+    "value": "Reads a presentation's slides and notes."
+  },
+  "builtinTools.read_canvas.label": {
+    "value": "Read canvas"
+  },
+  "builtinTools.read_canvas.description": {
+    "value": "Reads what is on a canvas: images, notes and text."
+  },
+  "builtinTools.create_spreadsheet.label": {
+    "value": "Create spreadsheet"
+  },
+  "builtinTools.create_spreadsheet.description": {
+    "value": "Makes a spreadsheet, with its first rows."
+  },
+  "builtinTools.edit_spreadsheet.label": {
+    "value": "Edit spreadsheet"
+  },
+  "builtinTools.edit_spreadsheet.description": {
+    "value": "Changes cells, formulas, formats, rows and sheets while people watch."
+  },
+  "builtinTools.create_presentation.label": {
+    "value": "Create presentation"
+  },
+  "builtinTools.create_presentation.description": {
+    "value": "Makes a presentation with its slides."
+  },
+  "builtinTools.edit_presentation.label": {
+    "value": "Edit presentation"
+  },
+  "builtinTools.edit_presentation.description": {
+    "value": "Changes slides, their text, pictures, charts and notes while people watch."
+  },
+  "builtinTools.create_canvas.label": {
+    "value": "Create canvas"
+  },
+  "builtinTools.create_canvas.description": {
+    "value": "Makes a canvas for images, notes and ideas."
+  },
+  "builtinTools.edit_canvas.label": {
+    "value": "Edit canvas"
+  },
+  "builtinTools.edit_canvas.description": {
+    "value": "Adds and moves notes, text, pictures and arrows."
+  },
+  "builtinTools.read_document.label": {
+    "value": "Read document"
+  },
+  "builtinTools.read_document.description": {
+    "value": "Reads a document's text, block by block."
+  },
+  "builtinTools.edit_document.label": {
+    "value": "Edit document"
+  },
+  "builtinTools.edit_document.description": {
+    "value": "Writes, rewrites and formats a document's text while people watch."
+  },
+  "builtinTools.generate_image.label": {
+    "value": "Generate images"
+  },
+  "builtinTools.generate_image.description": {
+    "value": "Makes images with the workspace's image AI, in the conversation or on a canvas. Paid from its budget."
   },
   "builtinTools.list_issues.label": {
     "value": "View tasks"
@@ -49902,6 +50079,27 @@
   "share.savedConversation": {
     "value": "Only the conversation sees the file now."
   },
+  "share.onlyYou": {
+    "value": "Only you"
+  },
+  "share.onlyMaker": {
+    "value": "Only {{name}}"
+  },
+  "share.onlyYouLink": {
+    "value": "Only you can open this link."
+  },
+  "share.onlyMakerLink": {
+    "value": "Only {{name}} can open this link."
+  },
+  "share.readOnlyDrive": {
+    "value": "Only who made the file and administrators change who sees it."
+  },
+  "share.savedOnlyYou": {
+    "value": "Only you see the file now."
+  },
+  "share.savedOnlyMaker": {
+    "value": "Only {{name}} sees the file now."
+  },
   "share.undo": {
     "value": "Undo"
   },
@@ -49915,7 +50113,7 @@
     "value": "{{text}}. Also shared with {{who}}."
   },
   "share.someOnlyHere": {
-    "value": "Some of these links open only for who's in the file's conversation."
+    "value": "Some of these links open only for who already sees the file."
   },
   "linkErrors.signIn.title": {
     "value": "Sign in to open this link"
@@ -50600,5 +50798,3629 @@
   },
   "feedback.offer.askFirst": {
     "value": "Ask before sending"
+  },
+  "live.slides.rail.label": {
+    "value": "Slides"
+  },
+  "live.slides.rail.slide": {
+    "value": "Slide {{n}}"
+  },
+  "live.slides.rail.slideHidden": {
+    "value": "Slide {{n}}, hidden"
+  },
+  "live.slides.rail.more": {
+    "value": "More for slide {{n}}"
+  },
+  "live.slides.rail.newAfter": {
+    "value": "New slide"
+  },
+  "live.slides.rail.duplicate": {
+    "value": "Duplicate"
+  },
+  "live.slides.rail.hide": {
+    "value": "Hide when presenting"
+  },
+  "live.slides.rail.show": {
+    "value": "Show when presenting"
+  },
+  "live.slides.rail.presentFrom": {
+    "value": "Present from here"
+  },
+  "live.slides.rail.moveUp": {
+    "value": "Move up"
+  },
+  "live.slides.rail.moveDown": {
+    "value": "Move down"
+  },
+  "live.slides.rail.delete": {
+    "value": "Delete slide"
+  },
+  "live.slides.rail.deleted": {
+    "value": "Slide deleted"
+  },
+  "live.slides.stage.role": {
+    "value": "slide"
+  },
+  "live.slides.stage.label": {
+    "value": "Slide {{n}} of {{total}}"
+  },
+  "live.slides.stage.peers": {
+    "value": "{{name}} +{{count}}"
+  },
+  "live.slides.selection.slide": {
+    "value": "Slide {{n}}"
+  },
+  "live.slides.element.text": {
+    "value": "Text"
+  },
+  "live.slides.element.shapeText": {
+    "value": "Text in the shape"
+  },
+  "live.slides.placeholder.title": {
+    "value": "Click to add a title"
+  },
+  "live.slides.placeholder.text": {
+    "value": "Click to add text"
+  },
+  "live.slides.tools.label": {
+    "value": "Presentation tools"
+  },
+  "live.slides.tools.undo": {
+    "value": "Undo"
+  },
+  "live.slides.tools.redo": {
+    "value": "Redo"
+  },
+  "live.slides.tools.newSlide": {
+    "value": "New slide"
+  },
+  "live.slides.tools.newSlideLayout": {
+    "value": "New slide with a layout"
+  },
+  "live.slides.tools.layout": {
+    "value": "Layout"
+  },
+  "live.slides.tools.theme": {
+    "value": "Theme"
+  },
+  "live.slides.tools.text": {
+    "value": "Text box"
+  },
+  "live.slides.tools.image": {
+    "value": "Image"
+  },
+  "live.slides.tools.shape": {
+    "value": "Shape"
+  },
+  "live.slides.tools.chart": {
+    "value": "Chart"
+  },
+  "live.slides.tools.table": {
+    "value": "Table"
+  },
+  "live.slides.tools.size": {
+    "value": "Text size"
+  },
+  "live.slides.tools.bold": {
+    "value": "Bold"
+  },
+  "live.slides.tools.italic": {
+    "value": "Italic"
+  },
+  "live.slides.tools.underline": {
+    "value": "Underline"
+  },
+  "live.slides.tools.strike": {
+    "value": "Strikethrough"
+  },
+  "live.slides.tools.textColor": {
+    "value": "Text color"
+  },
+  "live.slides.tools.alignLeft": {
+    "value": "Align left"
+  },
+  "live.slides.tools.alignCenter": {
+    "value": "Center"
+  },
+  "live.slides.tools.alignRight": {
+    "value": "Align right"
+  },
+  "live.slides.tools.bullets": {
+    "value": "Bulleted list"
+  },
+  "live.slides.tools.numbers": {
+    "value": "Numbered list"
+  },
+  "live.slides.tools.indent": {
+    "value": "Indent"
+  },
+  "live.slides.tools.outdent": {
+    "value": "Outdent"
+  },
+  "live.slides.tools.link": {
+    "value": "Link"
+  },
+  "live.slides.tools.fill": {
+    "value": "Fill"
+  },
+  "live.slides.tools.stroke": {
+    "value": "Outline"
+  },
+  "live.slides.tools.lineColor": {
+    "value": "Line color"
+  },
+  "live.slides.tools.arrowEnd": {
+    "value": "Arrow at the end"
+  },
+  "live.slides.tools.arrange": {
+    "value": "Arrange"
+  },
+  "live.slides.tools.delete": {
+    "value": "Delete"
+  },
+  "live.slides.layout.label": {
+    "value": "Slide layout"
+  },
+  "live.slides.layouts.title": {
+    "value": "Title"
+  },
+  "live.slides.layouts.titleBody": {
+    "value": "Title and text"
+  },
+  "live.slides.layouts.section": {
+    "value": "Section"
+  },
+  "live.slides.layouts.twoColumns": {
+    "value": "Two columns"
+  },
+  "live.slides.layouts.imageLeft": {
+    "value": "Image on the left"
+  },
+  "live.slides.layouts.imageRight": {
+    "value": "Image on the right"
+  },
+  "live.slides.layouts.bigNumber": {
+    "value": "Big number"
+  },
+  "live.slides.layouts.quote": {
+    "value": "Quote"
+  },
+  "live.slides.layouts.titleOnly": {
+    "value": "Title only"
+  },
+  "live.slides.layouts.blank": {
+    "value": "Blank"
+  },
+  "live.slides.theme.label": {
+    "value": "Theme"
+  },
+  "live.slides.themes.sky": {
+    "value": "Sky"
+  },
+  "live.slides.themes.night": {
+    "value": "Night"
+  },
+  "live.slides.themes.paper": {
+    "value": "Paper"
+  },
+  "live.slides.themes.graphite": {
+    "value": "Graphite"
+  },
+  "live.slides.themes.contrast": {
+    "value": "Contrast"
+  },
+  "live.slides.themes.forest": {
+    "value": "Forest"
+  },
+  "live.slides.shapes.rect": {
+    "value": "Rectangle"
+  },
+  "live.slides.shapes.ellipse": {
+    "value": "Ellipse"
+  },
+  "live.slides.shapes.triangle": {
+    "value": "Triangle"
+  },
+  "live.slides.shapes.diamond": {
+    "value": "Diamond"
+  },
+  "live.slides.shapes.arrow": {
+    "value": "Arrow"
+  },
+  "live.slides.shapes.line": {
+    "value": "Line"
+  },
+  "live.slides.arrange.front": {
+    "value": "Bring to front"
+  },
+  "live.slides.arrange.forward": {
+    "value": "Bring forward"
+  },
+  "live.slides.arrange.backward": {
+    "value": "Send backward"
+  },
+  "live.slides.arrange.back": {
+    "value": "Send to back"
+  },
+  "live.slides.align.left": {
+    "value": "Align left edges"
+  },
+  "live.slides.align.center": {
+    "value": "Center horizontally"
+  },
+  "live.slides.align.right": {
+    "value": "Align right edges"
+  },
+  "live.slides.align.top": {
+    "value": "Align tops"
+  },
+  "live.slides.align.middle": {
+    "value": "Center vertically"
+  },
+  "live.slides.align.bottom": {
+    "value": "Align bottoms"
+  },
+  "live.slides.colors.label": {
+    "value": "Colors"
+  },
+  "live.slides.colors.automatic": {
+    "value": "Automatic"
+  },
+  "live.slides.colors.noFill": {
+    "value": "No fill"
+  },
+  "live.slides.colors.noStroke": {
+    "value": "No outline"
+  },
+  "live.slides.colors.text": {
+    "value": "Theme text"
+  },
+  "live.slides.colors.muted": {
+    "value": "Theme quiet text"
+  },
+  "live.slides.colors.accent": {
+    "value": "Theme accent"
+  },
+  "live.slides.colors.accent2": {
+    "value": "Second theme accent"
+  },
+  "live.slides.colors.red": {
+    "value": "Red"
+  },
+  "live.slides.colors.orange": {
+    "value": "Orange"
+  },
+  "live.slides.colors.yellow": {
+    "value": "Yellow"
+  },
+  "live.slides.colors.green": {
+    "value": "Green"
+  },
+  "live.slides.colors.teal": {
+    "value": "Teal"
+  },
+  "live.slides.colors.blue": {
+    "value": "Blue"
+  },
+  "live.slides.colors.purple": {
+    "value": "Purple"
+  },
+  "live.slides.colors.pink": {
+    "value": "Pink"
+  },
+  "live.slides.colors.white": {
+    "value": "White"
+  },
+  "live.slides.colors.black": {
+    "value": "Black"
+  },
+  "live.slides.link.address": {
+    "value": "Link address"
+  },
+  "live.slides.link.placeholder": {
+    "value": "https://acme.com"
+  },
+  "live.slides.link.apply": {
+    "value": "Apply"
+  },
+  "live.slides.link.remove": {
+    "value": "Remove link"
+  },
+  "live.slides.link.invalid": {
+    "value": "Use an address that starts with https:// or an email"
+  },
+  "live.slides.image.upload": {
+    "value": "Upload from computer"
+  },
+  "live.slides.image.drive": {
+    "value": "From the Drive"
+  },
+  "live.slides.image.driveTitle": {
+    "value": "Pick an image from the Drive"
+  },
+  "live.slides.image.driveSearch": {
+    "value": "Search images"
+  },
+  "live.slides.image.clearSearch": {
+    "value": "Clear search"
+  },
+  "live.slides.image.driveEmpty": {
+    "value": "No images in the Drive yet"
+  },
+  "live.slides.image.driveMore": {
+    "value": "Show more"
+  },
+  "live.slides.image.empty": {
+    "value": "Add an image"
+  },
+  "live.slides.image.missing": {
+    "value": "Image not found"
+  },
+  "live.slides.image.replace": {
+    "value": "Replace image"
+  },
+  "live.slides.image.contain": {
+    "value": "Show it whole"
+  },
+  "live.slides.image.cover": {
+    "value": "Fill the box"
+  },
+  "live.slides.image.onlyImages": {
+    "value": "Only PNG, JPEG, WebP and GIF images go on a slide"
+  },
+  "live.slides.image.tooBig": {
+    "value": "Use images up to 25 MB"
+  },
+  "live.slides.image.uploading": {
+    "value": {
+      "one": "Uploading image…",
+      "other": "Uploading {{count}} images…"
+    }
+  },
+  "live.slides.chart.newTitle": {
+    "value": "New chart"
+  },
+  "live.slides.chart.editTitle": {
+    "value": "Chart data"
+  },
+  "live.slides.chart.editData": {
+    "value": "Edit data"
+  },
+  "live.slides.chart.type": {
+    "value": "Chart type"
+  },
+  "live.slides.chart.types.bar": {
+    "value": "Bars"
+  },
+  "live.slides.chart.types.line": {
+    "value": "Line"
+  },
+  "live.slides.chart.types.pie": {
+    "value": "Pie"
+  },
+  "live.slides.chart.types.number": {
+    "value": "Number"
+  },
+  "live.slides.chart.title": {
+    "value": "Title"
+  },
+  "live.slides.chart.unit": {
+    "value": "Unit"
+  },
+  "live.slides.chart.value": {
+    "value": "Value"
+  },
+  "live.slides.chart.delta": {
+    "value": "Change"
+  },
+  "live.slides.chart.label": {
+    "value": "Label"
+  },
+  "live.slides.chart.labelN": {
+    "value": "Label {{n}}"
+  },
+  "live.slides.chart.series": {
+    "value": "Series"
+  },
+  "live.slides.chart.seriesName": {
+    "value": "Name of series {{n}}"
+  },
+  "live.slides.chart.item": {
+    "value": "Item"
+  },
+  "live.slides.chart.cell": {
+    "value": "{{label}}, {{series}}"
+  },
+  "live.slides.chart.removeSeries": {
+    "value": "Remove {{name}}"
+  },
+  "live.slides.chart.removeRow": {
+    "value": "Remove {{label}}"
+  },
+  "live.slides.chart.addRow": {
+    "value": "Add row"
+  },
+  "live.slides.chart.addSeries": {
+    "value": "Add series"
+  },
+  "live.slides.chart.notNumber": {
+    "value": "Type a number"
+  },
+  "live.slides.chart.fix": {
+    "value": "Fill every value with a number to see the chart"
+  },
+  "live.slides.chart.insert": {
+    "value": "Insert chart"
+  },
+  "live.slides.chart.save": {
+    "value": "Save"
+  },
+  "live.slides.table.size": {
+    "value": "Table size"
+  },
+  "live.slides.table.dims": {
+    "value": "{{rows}} × {{cols}}"
+  },
+  "live.slides.table.edit": {
+    "value": "Table"
+  },
+  "live.slides.table.rowAbove": {
+    "value": "Add a row at the top"
+  },
+  "live.slides.table.rowBelow": {
+    "value": "Add a row at the bottom"
+  },
+  "live.slides.table.colLeft": {
+    "value": "Add a column on the left"
+  },
+  "live.slides.table.colRight": {
+    "value": "Add a column on the right"
+  },
+  "live.slides.table.deleteRow": {
+    "value": "Remove the last row"
+  },
+  "live.slides.table.deleteCol": {
+    "value": "Remove the last column"
+  },
+  "live.slides.table.header": {
+    "value": "First row as header"
+  },
+  "live.slides.table.cell": {
+    "value": "Row {{row}}, column {{col}}"
+  },
+  "live.slides.notes.title": {
+    "value": "Speaker notes"
+  },
+  "live.slides.notes.short": {
+    "value": "Notes"
+  },
+  "live.slides.notes.placeholder": {
+    "value": "Click to add notes for this slide"
+  },
+  "live.slides.present.label": {
+    "value": "Presentation"
+  },
+  "live.slides.present.controls": {
+    "value": "Presentation controls"
+  },
+  "live.slides.present.previous": {
+    "value": "Previous slide"
+  },
+  "live.slides.present.nextSlide": {
+    "value": "Next slide"
+  },
+  "live.slides.present.count": {
+    "value": "{{n}} / {{total}}"
+  },
+  "live.slides.present.exit": {
+    "value": "Exit"
+  },
+  "live.slides.present.elapsed": {
+    "value": "Time"
+  },
+  "live.slides.present.next": {
+    "value": "Next"
+  },
+  "live.slides.present.lastSlide": {
+    "value": "This is the last slide"
+  },
+  "live.slides.present.noNotes": {
+    "value": "No notes for this slide"
+  },
+  "live.slides.present.following": {
+    "value": "Following {{name}}"
+  },
+  "live.slides.presenting.who": {
+    "value": "{{name}} is presenting"
+  },
+  "live.slides.presenting.follow": {
+    "value": "Follow"
+  },
+  "live.slides.menu.cut": {
+    "value": "Cut"
+  },
+  "live.slides.menu.copy": {
+    "value": "Copy"
+  },
+  "live.slides.menu.paste": {
+    "value": "Paste"
+  },
+  "live.slides.menu.duplicate": {
+    "value": "Duplicate"
+  },
+  "live.slides.menu.editText": {
+    "value": "Edit text"
+  },
+  "live.slides.menu.editTable": {
+    "value": "Edit cells"
+  },
+  "live.slides.menu.selectAll": {
+    "value": "Select all"
+  },
+  "live.slides.menu.delete": {
+    "value": "Delete"
+  },
+  "live.slides.clipboard.blocked": {
+    "value": "Use ⌘V or Ctrl+V to paste here"
+  },
+  "live.slides.empty.title": {
+    "value": "No slides yet"
+  },
+  "live.slides.empty.body": {
+    "value": "Add a slide to start"
+  },
+  "live.slides.empty.add": {
+    "value": "Add slide"
+  },
+  "live.slides.errors.tooMany": {
+    "value": "A presentation holds up to 300 slides, and a slide up to 200 elements"
+  },
+  "live.slides.errors.tooLarge": {
+    "value": "That text is too long for one box"
+  },
+  "live.slides.errors.notFound": {
+    "value": "Someone just deleted that"
+  },
+  "live.slides.errors.invalid": {
+    "value": "That change didn't fit the presentation"
+  },
+  "live.slides.deck.label": {
+    "value": {
+      "one": "Presentation with {{count}} slide",
+      "other": "Presentation with {{count}} slides"
+    }
+  },
+  "live.slides.deck.number": {
+    "value": "Slide {{n}}"
+  },
+  "live.slides.deck.hiddenNumber": {
+    "value": "Slide {{n}} · hidden"
+  },
+  "live.doc.body": {
+    "value": "Document text"
+  },
+  "live.doc.title": {
+    "value": "Document title"
+  },
+  "live.doc.placeholder": {
+    "value": "Start writing, or ask an agent in the conversation"
+  },
+  "live.doc.toolbar": {
+    "value": "Document tools"
+  },
+  "live.doc.undo": {
+    "value": "Undo"
+  },
+  "live.doc.redo": {
+    "value": "Redo"
+  },
+  "live.doc.style.label": {
+    "value": "Text style"
+  },
+  "live.doc.style.text": {
+    "value": "Text"
+  },
+  "live.doc.style.h1": {
+    "value": "Heading 1"
+  },
+  "live.doc.style.h2": {
+    "value": "Heading 2"
+  },
+  "live.doc.style.h3": {
+    "value": "Heading 3"
+  },
+  "live.doc.style.quote": {
+    "value": "Quote"
+  },
+  "live.doc.style.code": {
+    "value": "Code"
+  },
+  "live.doc.bold": {
+    "value": "Bold"
+  },
+  "live.doc.italic": {
+    "value": "Italic"
+  },
+  "live.doc.underline": {
+    "value": "Underline"
+  },
+  "live.doc.strike": {
+    "value": "Strikethrough"
+  },
+  "live.doc.bulletList": {
+    "value": "Bulleted list"
+  },
+  "live.doc.numberedList": {
+    "value": "Numbered list"
+  },
+  "live.doc.quote": {
+    "value": "Quote"
+  },
+  "live.doc.codeBlock": {
+    "value": "Code block"
+  },
+  "live.doc.link.title": {
+    "value": "Link"
+  },
+  "live.doc.link.address": {
+    "value": "Link address"
+  },
+  "live.doc.link.placeholder": {
+    "value": "Paste or type an address"
+  },
+  "live.doc.link.apply": {
+    "value": "Apply"
+  },
+  "live.doc.link.remove": {
+    "value": "Remove link"
+  },
+  "live.doc.image.add": {
+    "value": "Image"
+  },
+  "live.doc.image.upload": {
+    "value": "From your computer"
+  },
+  "live.doc.image.drive": {
+    "value": "From the Drive"
+  },
+  "live.doc.image.menu": {
+    "value": "Image size"
+  },
+  "live.doc.image.small": {
+    "value": "Small"
+  },
+  "live.doc.image.medium": {
+    "value": "Medium"
+  },
+  "live.doc.image.large": {
+    "value": "Large"
+  },
+  "live.doc.image.full": {
+    "value": "Page width"
+  },
+  "live.doc.image.natural": {
+    "value": "Original size"
+  },
+  "live.doc.image.remove": {
+    "value": "Remove image"
+  },
+  "live.doc.image.uploading": {
+    "value": {
+      "one": "Sending {{count}} image…",
+      "other": "Sending {{count}} images…"
+    }
+  },
+  "live.doc.image.onlyImages": {
+    "value": "Only PNG, JPEG, WebP or GIF images go in a document."
+  },
+  "live.doc.image.tooBig": {
+    "value": "An image is larger than 25 MB and was left out."
+  },
+  "live.doc.image.missing": {
+    "value": "Image unavailable"
+  },
+  "live.doc.table.insert": {
+    "value": "Table"
+  },
+  "live.doc.table.menu": {
+    "value": "Table"
+  },
+  "live.doc.table.rowAbove": {
+    "value": "Insert row above"
+  },
+  "live.doc.table.rowBelow": {
+    "value": "Insert row below"
+  },
+  "live.doc.table.columnLeft": {
+    "value": "Insert column to the left"
+  },
+  "live.doc.table.columnRight": {
+    "value": "Insert column to the right"
+  },
+  "live.doc.table.header": {
+    "value": "Header row"
+  },
+  "live.doc.table.deleteRow": {
+    "value": "Delete row"
+  },
+  "live.doc.table.deleteColumn": {
+    "value": "Delete column"
+  },
+  "live.doc.table.deleteTable": {
+    "value": "Delete table"
+  },
+  "live.doc.selection.text": {
+    "value": "Selected text"
+  },
+  "live.doc.selection.image": {
+    "value": "Image"
+  },
+  "live.doc.selection.table": {
+    "value": "Table"
+  },
+  "live.doc.keys.title": {
+    "value": "In the document"
+  },
+  "live.doc.keys.text": {
+    "value": "Normal text"
+  },
+  "live.doc.keys.heading": {
+    "value": "Heading 1, 2 or 3"
+  },
+  "live.doc.keys.strike": {
+    "value": "Strikethrough"
+  },
+  "live.doc.keys.code": {
+    "value": "Code in the text"
+  },
+  "live.doc.keys.bulletList": {
+    "value": "Bulleted list"
+  },
+  "live.doc.keys.numberedList": {
+    "value": "Numbered list"
+  },
+  "live.doc.keys.link": {
+    "value": "Link"
+  },
+  "live.doc.keys.lineBreak": {
+    "value": "Line break"
+  },
+  "live.doc.keys.nextCell": {
+    "value": "Next cell of a table"
+  },
+  "live.kinds.spreadsheet": {
+    "value": "Spreadsheet"
+  },
+  "live.kinds.slides": {
+    "value": "Presentation"
+  },
+  "live.kinds.canvas": {
+    "value": "Canvas"
+  },
+  "live.kinds.document": {
+    "value": "Document"
+  },
+  "live.kinds.spreadsheetHint": {
+    "value": "Numbers and formulas, as a team"
+  },
+  "live.kinds.slidesHint": {
+    "value": "Slides to show"
+  },
+  "live.kinds.canvasHint": {
+    "value": "Images, notes and loose ideas"
+  },
+  "live.kinds.documentHint": {
+    "value": "Text written together"
+  },
+  "live.kinds.untitled.spreadsheet": {
+    "value": "Untitled spreadsheet"
+  },
+  "live.kinds.untitled.slides": {
+    "value": "Untitled presentation"
+  },
+  "live.kinds.untitled.canvas": {
+    "value": "Untitled canvas"
+  },
+  "live.kinds.untitled.document": {
+    "value": "Untitled document"
+  },
+  "live.kinds.new": {
+    "value": "New"
+  },
+  "live.kinds.newMenu": {
+    "value": "Make a new file"
+  },
+  "live.kinds.sheetCount": {
+    "value": {
+      "one": "{{count}} sheet",
+      "other": "{{count}} sheets"
+    }
+  },
+  "live.kinds.slideCount": {
+    "value": {
+      "one": "{{count}} slide",
+      "other": "{{count}} slides"
+    }
+  },
+  "live.shell.crumbs": {
+    "value": "Where it is"
+  },
+  "live.shell.title": {
+    "value": "File name"
+  },
+  "live.shell.rename": {
+    "value": "Rename"
+  },
+  "live.shell.status.saved": {
+    "value": "Saved"
+  },
+  "live.shell.status.saving": {
+    "value": "Saving…"
+  },
+  "live.shell.status.connecting": {
+    "value": "Connecting…"
+  },
+  "live.shell.status.offline": {
+    "value": "No connection. Your changes are kept and go out as soon as it's back."
+  },
+  "live.shell.status.readOnly": {
+    "value": "Read-only"
+  },
+  "live.shell.status.inTrash": {
+    "value": "In the trash. Restore it to change it."
+  },
+  "live.shell.status.closing": {
+    "value": "The workspace is being deleted. Its files can only be read."
+  },
+  "live.shell.present": {
+    "value": "Present"
+  },
+  "live.shell.download": {
+    "value": "Download"
+  },
+  "live.shell.formats.xlsx": {
+    "value": "Excel (.xlsx)"
+  },
+  "live.shell.formats.csv": {
+    "value": "CSV (.csv, first sheet)"
+  },
+  "live.shell.formats.pptx": {
+    "value": "PowerPoint (.pptx)"
+  },
+  "live.shell.formats.pdf": {
+    "value": "PDF (.pdf)"
+  },
+  "live.shell.formats.json": {
+    "value": "JSON (.json)"
+  },
+  "live.shell.formats.docx": {
+    "value": "Word (.docx)"
+  },
+  "live.shell.formats.md": {
+    "value": "Markdown (.md)"
+  },
+  "live.shell.more": {
+    "value": "More"
+  },
+  "live.shell.menu.versions": {
+    "value": "Versions"
+  },
+  "live.shell.menu.saveVersion": {
+    "value": "Save version…"
+  },
+  "live.shell.menu.duplicate": {
+    "value": "Duplicate"
+  },
+  "live.shell.menu.showInDrive": {
+    "value": "Show in the Drive"
+  },
+  "live.shell.menu.copyLink": {
+    "value": "Copy link"
+  },
+  "live.shell.menu.trash": {
+    "value": "Move to the trash"
+  },
+  "live.shell.menu.shortcuts": {
+    "value": "Keyboard shortcuts"
+  },
+  "live.shell.meta.madeFrom": {
+    "value": "<0>{{name}}</0> made it from the <1>{{place}}</1>"
+  },
+  "live.shell.meta.made": {
+    "value": "<0>{{name}}</0> made it"
+  },
+  "live.shell.meta.imported": {
+    "value": "<0>{{name}}</0> imported it from <1>{{file}}</1>"
+  },
+  "live.shell.meta.inChannel": {
+    "value": "conversation in #{{channel}}"
+  },
+  "live.shell.meta.with": {
+    "value": "conversation with {{name}}"
+  },
+  "live.shell.meta.between": {
+    "value": "conversation between {{names}}"
+  },
+  "live.shell.meta.inConversation": {
+    "value": "conversation"
+  },
+  "live.shell.meta.edited": {
+    "value": "edited {{when}}"
+  },
+  "live.shell.notHere": {
+    "value": "This kind of file doesn't open here yet."
+  },
+  "live.shell.copyTitle": {
+    "value": "{{title}} (copy)"
+  },
+  "live.shell.duplicated": {
+    "value": "Copy made: {{title}}"
+  },
+  "live.shell.open": {
+    "value": "Open"
+  },
+  "live.shell.notFound.title": {
+    "value": "This file doesn't exist or wasn't shared with you"
+  },
+  "live.shell.notFound.back": {
+    "value": "Back to the Drive"
+  },
+  "live.shell.failed.title": {
+    "value": "Couldn't open this file"
+  },
+  "live.shell.failed.body": {
+    "value": "Check your connection and try again."
+  },
+  "live.shell.failed.retry": {
+    "value": "Try again"
+  },
+  "live.shell.loading": {
+    "value": "Opening the file…"
+  },
+  "live.shell.errors.tooLarge": {
+    "value": "This file is at its size limit. Remove something to keep changing it."
+  },
+  "live.shell.errors.rate": {
+    "value": "Too many changes at once. They go out in a moment."
+  },
+  "live.shell.errors.readOnly": {
+    "value": "This file is read-only now."
+  },
+  "live.shell.errors.invalid": {
+    "value": "A change couldn't be saved. Reload the page to see the file as it is."
+  },
+  "live.shell.presence.title": {
+    "value": "Who's here"
+  },
+  "live.shell.presence.label": {
+    "value": "In this file: {{names}}"
+  },
+  "live.shell.presence.you": {
+    "value": "You"
+  },
+  "live.shell.presence.agent": {
+    "value": "(agent)"
+  },
+  "live.shell.presence.more": {
+    "value": "+{{count}}"
+  },
+  "live.shell.presence.viewing": {
+    "value": "viewing"
+  },
+  "live.shell.presence.editing": {
+    "value": "editing"
+  },
+  "live.shell.presence.editingRange": {
+    "value": "editing {{range}}"
+  },
+  "live.shell.presence.atRange": {
+    "value": "on {{range}}"
+  },
+  "live.shell.presence.onSlide": {
+    "value": "on slide {{n}}"
+  },
+  "live.shell.presence.editingSlide": {
+    "value": "editing slide {{n}}"
+  },
+  "live.shell.presence.presenting": {
+    "value": "presenting"
+  },
+  "live.shell.presence.follow": {
+    "value": "Follow"
+  },
+  "live.shell.presence.unfollow": {
+    "value": "Stop following"
+  },
+  "live.shell.presence.following": {
+    "value": "Following {{name}}"
+  },
+  "live.shell.presence.stop": {
+    "value": "Stop"
+  },
+  "live.shell.presence.left": {
+    "value": "{{name}} left the file."
+  },
+  "live.shell.presence.inNow": {
+    "value": "In it now: {{names}}"
+  },
+  "live.shell.versions.title": {
+    "value": "Versions"
+  },
+  "live.shell.versions.close": {
+    "value": "Close versions"
+  },
+  "live.shell.versions.current": {
+    "value": "Current version"
+  },
+  "live.shell.versions.byAgent": {
+    "value": "{{name}} (agent)"
+  },
+  "live.shell.versions.number": {
+    "value": "Version {{version}}"
+  },
+  "live.shell.versions.viewing": {
+    "value": "Version from {{when}}"
+  },
+  "live.shell.versions.restore": {
+    "value": "Restore this version"
+  },
+  "live.shell.versions.back": {
+    "value": "Back to the current one"
+  },
+  "live.shell.versions.save": {
+    "value": "Save version"
+  },
+  "live.shell.versions.saveTitle": {
+    "value": "Save a version"
+  },
+  "live.shell.versions.saveHint": {
+    "value": "A named version stays in the history, easy to find and to bring back."
+  },
+  "live.shell.versions.name": {
+    "value": "Name"
+  },
+  "live.shell.versions.namePlaceholder": {
+    "value": "Before the review"
+  },
+  "live.shell.versions.saved": {
+    "value": "Version saved."
+  },
+  "live.shell.versions.nothingNew": {
+    "value": "Nothing changed since the last version."
+  },
+  "live.shell.versions.restored": {
+    "value": "Version {{version}} is back."
+  },
+  "live.shell.versions.empty": {
+    "value": "No versions yet."
+  },
+  "live.shell.versions.failed": {
+    "value": "Couldn't load the versions."
+  },
+  "live.shell.versions.retry": {
+    "value": "Try again"
+  },
+  "live.shell.versions.opening": {
+    "value": "Opening this version…"
+  },
+  "live.shell.versions.openFailed": {
+    "value": "Couldn't open this version."
+  },
+  "live.shell.shortcuts.title": {
+    "value": "Keyboard shortcuts"
+  },
+  "live.shell.shortcuts.general": {
+    "value": "General"
+  },
+  "live.shell.shortcuts.undo": {
+    "value": "Undo"
+  },
+  "live.shell.shortcuts.redo": {
+    "value": "Redo"
+  },
+  "live.shell.shortcuts.saveVersion": {
+    "value": "Save a version"
+  },
+  "live.shell.shortcuts.show": {
+    "value": "Show the shortcuts"
+  },
+  "live.shell.shortcuts.stopFollowing": {
+    "value": "Stop following"
+  },
+  "live.shell.shortcuts.spreadsheet": {
+    "value": "In the spreadsheet"
+  },
+  "live.shell.shortcuts.edit": {
+    "value": "Edit the cell"
+  },
+  "live.shell.shortcuts.confirm": {
+    "value": "Confirm and go down"
+  },
+  "live.shell.shortcuts.cancel": {
+    "value": "Cancel the edit"
+  },
+  "live.shell.shortcuts.nextCell": {
+    "value": "Next cell"
+  },
+  "live.shell.shortcuts.bold": {
+    "value": "Bold"
+  },
+  "live.shell.shortcuts.italic": {
+    "value": "Italic"
+  },
+  "live.shell.shortcuts.fillDown": {
+    "value": "Fill down"
+  },
+  "live.shell.shortcuts.clear": {
+    "value": "Clear the cells"
+  },
+  "live.shell.shortcuts.selectAll": {
+    "value": "Select all"
+  },
+  "live.shell.shortcuts.slides": {
+    "value": "In the presentation"
+  },
+  "live.shell.shortcuts.duplicate": {
+    "value": "Duplicate"
+  },
+  "live.shell.shortcuts.remove": {
+    "value": "Delete"
+  },
+  "live.shell.shortcuts.nudge": {
+    "value": "Move a little"
+  },
+  "live.shell.shortcuts.presentNow": {
+    "value": "Present"
+  },
+  "live.shell.shortcuts.canvas": {
+    "value": "On the canvas"
+  },
+  "live.shell.shortcuts.select": {
+    "value": "Select"
+  },
+  "live.shell.shortcuts.hand": {
+    "value": "Move around"
+  },
+  "live.shell.shortcuts.note": {
+    "value": "Note"
+  },
+  "live.shell.shortcuts.text": {
+    "value": "Text"
+  },
+  "live.shell.shortcuts.zoom": {
+    "value": "Zoom in and out"
+  },
+  "live.shell.shortcuts.fit": {
+    "value": "Fit everything"
+  },
+  "live.conversation.button": {
+    "value": "Conversation"
+  },
+  "live.conversation.toggle": {
+    "value": {
+      "one": "Conversation, {{count}} message",
+      "other": "Conversation, {{count}} messages"
+    }
+  },
+  "live.conversation.close": {
+    "value": "Close the conversation"
+  },
+  "live.conversation.resize": {
+    "value": "Conversation width"
+  },
+  "live.conversation.resizeHint": {
+    "value": "Drag to resize · double-click to reset"
+  },
+  "live.conversation.title.canvas": {
+    "value": "Canvas conversation"
+  },
+  "live.conversation.title.spreadsheet": {
+    "value": "Spreadsheet conversation"
+  },
+  "live.conversation.title.slides": {
+    "value": "Presentation conversation"
+  },
+  "live.conversation.title.document": {
+    "value": "Document conversation"
+  },
+  "live.conversation.title.file": {
+    "value": "File conversation"
+  },
+  "live.conversation.placeholder.canvas": {
+    "value": "Write about this canvas · use @ to call an agent"
+  },
+  "live.conversation.placeholder.spreadsheet": {
+    "value": "Write about this spreadsheet · use @ to call an agent"
+  },
+  "live.conversation.placeholder.slides": {
+    "value": "Write about this presentation · use @ to call an agent"
+  },
+  "live.conversation.placeholder.document": {
+    "value": "Write about this document · use @ to call an agent"
+  },
+  "live.conversation.placeholder.file": {
+    "value": "Write about this file · use @ to call an agent"
+  },
+  "live.conversation.this.canvas": {
+    "value": "this canvas"
+  },
+  "live.conversation.this.spreadsheet": {
+    "value": "this spreadsheet"
+  },
+  "live.conversation.this.slides": {
+    "value": "this presentation"
+  },
+  "live.conversation.this.document": {
+    "value": "this document"
+  },
+  "live.conversation.origin.from": {
+    "value": "<0>{{name}}</0> made {{what}} from the <1>{{place}}</1>"
+  },
+  "live.conversation.origin.made": {
+    "value": "<0>{{name}}</0> made {{what}}"
+  },
+  "live.conversation.origin.imported": {
+    "value": "Imported from <1>{{file}}</1> by {{name}}"
+  },
+  "live.conversation.about.range": {
+    "value": "About {{range}} in {{sheet}}"
+  },
+  "live.conversation.about.slide": {
+    "value": "About slide {{n}}"
+  },
+  "live.conversation.about.canvas": {
+    "value": "About {{label}} on the canvas"
+  },
+  "live.conversation.about.text": {
+    "value": "About the selected text"
+  },
+  "live.conversation.about.point": {
+    "value": "About a spot on the canvas"
+  },
+  "live.conversation.about.other": {
+    "value": "About {{label}}"
+  },
+  "live.conversation.drop": {
+    "value": "Don't send the selection"
+  },
+  "live.conversation.aboutLine": {
+    "value": "Show {{what}} ({{where}}) in the file"
+  },
+  "live.conversation.untitled": {
+    "value": "Untitled file"
+  },
+  "live.conversation.ask": {
+    "value": "Ask {{name}}"
+  },
+  "live.office.loading": {
+    "value": "Opening the file…"
+  },
+  "live.office.failed": {
+    "value": "This file can't be shown here. Download it to open it."
+  },
+  "live.office.loadFailed": {
+    "value": "Couldn't open the preview"
+  },
+  "live.office.retry": {
+    "value": "Try again"
+  },
+  "live.office.kind.excel": {
+    "value": "Excel file"
+  },
+  "live.office.kind.ods": {
+    "value": "Spreadsheet file"
+  },
+  "live.office.kind.csv": {
+    "value": "CSV file"
+  },
+  "live.office.kind.powerpoint": {
+    "value": "PowerPoint file"
+  },
+  "live.office.kind.word": {
+    "value": "Word file"
+  },
+  "live.office.kind.file": {
+    "value": "File"
+  },
+  "live.office.editAs.workbook": {
+    "value": "Edit as spreadsheet"
+  },
+  "live.office.editAs.deck": {
+    "value": "Edit as presentation"
+  },
+  "live.office.editAs.document": {
+    "value": "Edit as document"
+  },
+  "live.office.editAsHint": {
+    "value": "Makes an editable copy beside it. This file stays as it is."
+  },
+  "live.office.made": {
+    "value": "Editable copy made: {{title}}"
+  },
+  "live.office.frame": {
+    "value": "{{title}}, as a page"
+  },
+  "live.activity.working": {
+    "value": "working on the file"
+  },
+  "live.activity.readingFile": {
+    "value": "reading the file"
+  },
+  "live.activity.readingCells": {
+    "value": "reading {{range}}"
+  },
+  "live.activity.writingCells": {
+    "value": "writing in {{range}}"
+  },
+  "live.activity.formatting": {
+    "value": "formatting {{range}}"
+  },
+  "live.activity.sorting": {
+    "value": "sorting {{range}}"
+  },
+  "live.activity.addingRows": {
+    "value": "adding rows"
+  },
+  "live.activity.addingSheet": {
+    "value": "adding a sheet"
+  },
+  "live.activity.creatingSpreadsheet": {
+    "value": "setting up the spreadsheet"
+  },
+  "live.activity.addingSlides": {
+    "value": "adding slides"
+  },
+  "live.activity.editingSlide": {
+    "value": "editing slide {{n}}"
+  },
+  "live.activity.writingSlide": {
+    "value": "writing slide {{n}}"
+  },
+  "live.activity.creatingPresentation": {
+    "value": "setting up the presentation"
+  },
+  "live.activity.arrangingCanvas": {
+    "value": "arranging the canvas"
+  },
+  "live.activity.addingNotes": {
+    "value": "adding notes"
+  },
+  "live.activity.placingImages": {
+    "value": "placing images"
+  },
+  "live.activity.generatingImages": {
+    "value": "making images"
+  },
+  "live.activity.creatingCanvas": {
+    "value": "setting up the canvas"
+  },
+  "live.activity.writingDocument": {
+    "value": "writing in the document"
+  },
+  "live.defaults.sheetName": {
+    "value": "Sheet {{n}}"
+  },
+  "live.defaults.restored": {
+    "value": "Restored version {{version}}"
+  },
+  "live.defaults.fromFile": {
+    "value": "Made from {{name}}"
+  },
+  "live.canvas.label": {
+    "value": "Canvas"
+  },
+  "live.canvas.roledescription": {
+    "value": "canvas"
+  },
+  "live.canvas.loading": {
+    "value": "Opening the canvas…"
+  },
+  "live.canvas.count.image": {
+    "value": {
+      "one": "{{count}} image",
+      "other": "{{count}} images"
+    }
+  },
+  "live.canvas.count.note": {
+    "value": {
+      "one": "{{count}} note",
+      "other": "{{count}} notes"
+    }
+  },
+  "live.canvas.count.text": {
+    "value": {
+      "one": "{{count}} text",
+      "other": "{{count}} texts"
+    }
+  },
+  "live.canvas.count.frame": {
+    "value": {
+      "one": "{{count}} frame",
+      "other": "{{count}} frames"
+    }
+  },
+  "live.canvas.count.shape": {
+    "value": {
+      "one": "{{count}} shape",
+      "other": "{{count}} shapes"
+    }
+  },
+  "live.canvas.count.arrow": {
+    "value": {
+      "one": "{{count}} arrow",
+      "other": "{{count}} arrows"
+    }
+  },
+  "live.canvas.count.draw": {
+    "value": {
+      "one": "{{count}} drawing",
+      "other": "{{count}} drawings"
+    }
+  },
+  "live.canvas.count.html": {
+    "value": {
+      "one": "{{count}} page",
+      "other": "{{count}} pages"
+    }
+  },
+  "live.canvas.count.file": {
+    "value": {
+      "one": "{{count}} file",
+      "other": "{{count}} files"
+    }
+  },
+  "live.canvas.count.items": {
+    "value": {
+      "one": "{{count}} item",
+      "other": "{{count}} items"
+    }
+  },
+  "live.canvas.kinds.image": {
+    "value": "Image"
+  },
+  "live.canvas.kinds.frame": {
+    "value": "Frame"
+  },
+  "live.canvas.kinds.html": {
+    "value": "Page"
+  },
+  "live.canvas.kinds.note": {
+    "value": "Note"
+  },
+  "live.canvas.kinds.text": {
+    "value": "Text"
+  },
+  "live.canvas.kinds.arrow": {
+    "value": "Arrow"
+  },
+  "live.canvas.kinds.line": {
+    "value": "Line"
+  },
+  "live.canvas.kinds.draw": {
+    "value": "Drawing"
+  },
+  "live.canvas.kinds.file": {
+    "value": "File"
+  },
+  "live.canvas.tools.label": {
+    "value": "Tools"
+  },
+  "live.canvas.tools.select": {
+    "value": "Select"
+  },
+  "live.canvas.tools.hand": {
+    "value": "Move around"
+  },
+  "live.canvas.tools.note": {
+    "value": "Note"
+  },
+  "live.canvas.tools.text": {
+    "value": "Text"
+  },
+  "live.canvas.tools.shape": {
+    "value": "Shape"
+  },
+  "live.canvas.tools.arrow": {
+    "value": "Arrow"
+  },
+  "live.canvas.tools.frame": {
+    "value": "Frame"
+  },
+  "live.canvas.tools.image": {
+    "value": "Upload an image"
+  },
+  "live.canvas.tools.shapes": {
+    "value": "Shapes"
+  },
+  "live.canvas.tools.pen": {
+    "value": "Pen"
+  },
+  "live.canvas.tools.comment": {
+    "value": "Comment"
+  },
+  "live.canvas.tools.ask": {
+    "value": "Ask the file's agent"
+  },
+  "live.canvas.zoom.label": {
+    "value": "Zoom"
+  },
+  "live.canvas.zoom.out": {
+    "value": "Zoom out"
+  },
+  "live.canvas.zoom.in": {
+    "value": "Zoom in"
+  },
+  "live.canvas.zoom.actual": {
+    "value": "Zoom to 100%"
+  },
+  "live.canvas.zoom.fit": {
+    "value": "Fit"
+  },
+  "live.canvas.zoom.fitAll": {
+    "value": "Fit everything"
+  },
+  "live.canvas.zoom.selection": {
+    "value": "Fit the selection"
+  },
+  "live.canvas.zoom.menu": {
+    "value": "Zoom {{percent}}"
+  },
+  "live.canvas.actions.cut": {
+    "value": "Cut"
+  },
+  "live.canvas.actions.copy": {
+    "value": "Copy"
+  },
+  "live.canvas.actions.paste": {
+    "value": "Paste"
+  },
+  "live.canvas.actions.duplicate": {
+    "value": "Duplicate"
+  },
+  "live.canvas.actions.delete": {
+    "value": "Delete"
+  },
+  "live.canvas.actions.lock": {
+    "value": "Lock"
+  },
+  "live.canvas.actions.unlock": {
+    "value": "Unlock"
+  },
+  "live.canvas.actions.editText": {
+    "value": "Edit the text"
+  },
+  "live.canvas.actions.openFile": {
+    "value": "Open the file"
+  },
+  "live.canvas.actions.addNote": {
+    "value": "New note"
+  },
+  "live.canvas.actions.addText": {
+    "value": "New text"
+  },
+  "live.canvas.actions.selectAll": {
+    "value": "Select all"
+  },
+  "live.canvas.arrange.label": {
+    "value": "Arrange"
+  },
+  "live.canvas.arrange.front": {
+    "value": "Bring to front"
+  },
+  "live.canvas.arrange.forward": {
+    "value": "Bring forward"
+  },
+  "live.canvas.arrange.backward": {
+    "value": "Send backward"
+  },
+  "live.canvas.arrange.back": {
+    "value": "Send to back"
+  },
+  "live.canvas.bar.title": {
+    "value": "Options"
+  },
+  "live.canvas.bar.color": {
+    "value": "Note color"
+  },
+  "live.canvas.bar.fill": {
+    "value": "Fill"
+  },
+  "live.canvas.bar.size": {
+    "value": "Text size"
+  },
+  "live.canvas.bar.dashed": {
+    "value": "Dashed"
+  },
+  "live.canvas.bar.label": {
+    "value": "Label"
+  },
+  "live.canvas.bar.rename": {
+    "value": "Rename"
+  },
+  "live.canvas.bar.noFill": {
+    "value": "No fill"
+  },
+  "live.canvas.bar.auto": {
+    "value": "Automatic"
+  },
+  "live.canvas.bar.soft": {
+    "value": "Soft tones"
+  },
+  "live.canvas.bar.strong": {
+    "value": "Strong tones"
+  },
+  "live.canvas.bar.stroke": {
+    "value": "Border"
+  },
+  "live.canvas.bar.noStroke": {
+    "value": "No border"
+  },
+  "live.canvas.bar.lineColor": {
+    "value": "Color"
+  },
+  "live.canvas.bar.strokeWidth": {
+    "value": "Width"
+  },
+  "live.canvas.bar.corners": {
+    "value": "Corners"
+  },
+  "live.canvas.bar.editText": {
+    "value": "Text"
+  },
+  "live.canvas.bar.more": {
+    "value": "More"
+  },
+  "live.canvas.colors.yellow": {
+    "value": "Yellow"
+  },
+  "live.canvas.colors.pink": {
+    "value": "Pink"
+  },
+  "live.canvas.colors.blue": {
+    "value": "Blue"
+  },
+  "live.canvas.colors.green": {
+    "value": "Green"
+  },
+  "live.canvas.colors.purple": {
+    "value": "Purple"
+  },
+  "live.canvas.colors.gray": {
+    "value": "Gray"
+  },
+  "live.canvas.shapeKinds.rect": {
+    "value": "Rectangle"
+  },
+  "live.canvas.shapeKinds.ellipse": {
+    "value": "Ellipse"
+  },
+  "live.canvas.shapeKinds.diamond": {
+    "value": "Diamond"
+  },
+  "live.canvas.shapeKinds.triangle": {
+    "value": "Triangle"
+  },
+  "live.canvas.shapeKinds.star": {
+    "value": "Star"
+  },
+  "live.canvas.shapeKinds.line": {
+    "value": "Line"
+  },
+  "live.canvas.sizes.s": {
+    "value": "Small"
+  },
+  "live.canvas.sizes.m": {
+    "value": "Medium"
+  },
+  "live.canvas.sizes.l": {
+    "value": "Large"
+  },
+  "live.canvas.sizes.xl": {
+    "value": "Extra large"
+  },
+  "live.canvas.sizes.short.s": {
+    "value": "S"
+  },
+  "live.canvas.sizes.short.m": {
+    "value": "M"
+  },
+  "live.canvas.sizes.short.l": {
+    "value": "L"
+  },
+  "live.canvas.sizes.short.xl": {
+    "value": "XL"
+  },
+  "live.canvas.background.label": {
+    "value": "Background"
+  },
+  "live.canvas.background.dots": {
+    "value": "Dots"
+  },
+  "live.canvas.background.grid": {
+    "value": "Grid"
+  },
+  "live.canvas.background.plain": {
+    "value": "Plain"
+  },
+  "live.canvas.empty.title": {
+    "value": "Blank canvas"
+  },
+  "live.canvas.empty.text": {
+    "value": "Drag images here, add notes or ask an agent for images in the conversation."
+  },
+  "live.canvas.empty.readOnly": {
+    "value": "Nothing on this canvas yet."
+  },
+  "live.canvas.empty.note": {
+    "value": "New note"
+  },
+  "live.canvas.empty.upload": {
+    "value": "Upload an image"
+  },
+  "live.canvas.placeholders.note": {
+    "value": "Write something"
+  },
+  "live.canvas.placeholders.text": {
+    "value": "Type here"
+  },
+  "live.canvas.placeholders.label": {
+    "value": "Add a label"
+  },
+  "live.canvas.textBox.note": {
+    "value": "Note text"
+  },
+  "live.canvas.textBox.text": {
+    "value": "Text"
+  },
+  "live.canvas.textBox.label": {
+    "value": "Shape label"
+  },
+  "live.canvas.errors.tooMany": {
+    "value": "This canvas holds as many things as it can."
+  },
+  "live.canvas.errors.tooLarge": {
+    "value": "This canvas is too big to take more."
+  },
+  "live.canvas.errors.other": {
+    "value": "That change didn't go through. Try again."
+  },
+  "live.canvas.errors.onlyImages": {
+    "value": "Only images go on a canvas (PNG, JPEG, WebP or GIF)."
+  },
+  "live.canvas.errors.imageTooBig": {
+    "value": "Images can be up to 25 MB."
+  },
+  "live.canvas.errors.someImagesLeft": {
+    "value": "Some images couldn't come along."
+  },
+  "live.canvas.errors.copyImage": {
+    "value": "The image couldn't be copied."
+  },
+  "live.canvas.newFrame": {
+    "value": "Frame"
+  },
+  "live.canvas.renameFrame": {
+    "value": "Frame name"
+  },
+  "live.canvas.arrowLabel": {
+    "value": "Arrow label"
+  },
+  "live.canvas.dropHere": {
+    "value": "Drop to add to the canvas"
+  },
+  "live.canvas.uploading": {
+    "value": "Uploading the image…"
+  },
+  "live.canvas.imageCopied": {
+    "value": "Image copied"
+  },
+  "live.canvas.imageFailed": {
+    "value": "The image didn't load"
+  },
+  "live.canvas.imageFile": {
+    "value": "image"
+  },
+  "live.canvas.fileMissing": {
+    "value": "This file is gone or wasn't shared with you"
+  },
+  "live.canvas.loadingFile": {
+    "value": "Opening…"
+  },
+  "live.canvas.interact": {
+    "value": "Interact"
+  },
+  "live.canvas.routes.straight": {
+    "value": "Straight"
+  },
+  "live.canvas.routes.curve": {
+    "value": "Curved"
+  },
+  "live.canvas.routes.elbow": {
+    "value": "Elbow"
+  },
+  "live.canvas.heads.label": {
+    "value": "Arrowheads"
+  },
+  "live.canvas.heads.end": {
+    "value": "At the end"
+  },
+  "live.canvas.heads.both": {
+    "value": "At both ends"
+  },
+  "live.canvas.heads.start": {
+    "value": "At the start"
+  },
+  "live.canvas.heads.none": {
+    "value": "None"
+  },
+  "live.canvas.pen.label": {
+    "value": "Pen"
+  },
+  "live.canvas.pen.pen": {
+    "value": "Pen"
+  },
+  "live.canvas.pen.marker": {
+    "value": "Highlighter"
+  },
+  "live.canvas.pen.color": {
+    "value": "Color"
+  },
+  "live.canvas.pen.size": {
+    "value": "Thickness"
+  },
+  "live.canvas.pen.sizes.s": {
+    "value": "Thin"
+  },
+  "live.canvas.pen.sizes.m": {
+    "value": "Medium"
+  },
+  "live.canvas.pen.sizes.l": {
+    "value": "Thick"
+  },
+  "live.canvas.pen.short.s": {
+    "value": "S"
+  },
+  "live.canvas.pen.short.m": {
+    "value": "M"
+  },
+  "live.canvas.pen.short.l": {
+    "value": "L"
+  },
+  "live.canvas.inks.red": {
+    "value": "Red"
+  },
+  "live.canvas.inks.ink": {
+    "value": "Black"
+  },
+  "live.canvas.inks.blue": {
+    "value": "Blue"
+  },
+  "live.canvas.inks.green": {
+    "value": "Green"
+  },
+  "live.canvas.inks.orange": {
+    "value": "Orange"
+  },
+  "live.canvas.image.crop": {
+    "value": "Crop"
+  },
+  "live.canvas.image.replace": {
+    "value": "Replace image"
+  },
+  "live.canvas.image.details": {
+    "value": "Details"
+  },
+  "live.canvas.ask.variations": {
+    "value": "make variations of this image"
+  },
+  "live.canvas.crop.label": {
+    "value": "Crop the image"
+  },
+  "live.canvas.crop.apply": {
+    "value": "Apply"
+  },
+  "live.canvas.crop.cancel": {
+    "value": "Cancel"
+  },
+  "live.canvas.layers.title": {
+    "value": "Layers"
+  },
+  "live.canvas.layers.close": {
+    "value": "Close layers"
+  },
+  "live.canvas.layers.empty": {
+    "value": "Nothing on this canvas yet."
+  },
+  "live.canvas.layers.hide": {
+    "value": "Hide {{name}}"
+  },
+  "live.canvas.layers.show": {
+    "value": "Show {{name}}"
+  },
+  "live.canvas.comment.label": {
+    "value": "Comment"
+  },
+  "live.canvas.comment.pin": {
+    "value": "Comment {{n}} by {{name}}"
+  },
+  "live.canvas.inspector.title": {
+    "value": "Image"
+  },
+  "live.canvas.inspector.generated": {
+    "value": "Generated image"
+  },
+  "live.canvas.inspector.close": {
+    "value": "Close"
+  },
+  "live.canvas.inspector.prompt": {
+    "value": "Description"
+  },
+  "live.canvas.inspector.model": {
+    "value": "Model"
+  },
+  "live.canvas.inspector.askedBy": {
+    "value": "Asked by"
+  },
+  "live.canvas.inspector.byAt": {
+    "value": "{{name}} · {{when}}"
+  },
+  "live.canvas.inspector.references": {
+    "value": "Made from"
+  },
+  "live.canvas.inspector.variations": {
+    "value": "Variations"
+  },
+  "live.canvas.inspector.edit": {
+    "value": "Edit with AI"
+  },
+  "live.canvas.inspector.download": {
+    "value": "Download"
+  },
+  "live.canvas.inspector.copy": {
+    "value": "Copy image"
+  },
+  "live.canvas.inspector.open": {
+    "value": "Open"
+  },
+  "live.canvas.inspector.size": {
+    "value": "{{w}} × {{h}} pixels"
+  },
+  "live.canvas.inspector.uploaded": {
+    "value": "Uploaded to this canvas"
+  },
+  "live.images.queued": {
+    "value": "Waiting its turn…"
+  },
+  "live.images.making": {
+    "value": "Making the image…"
+  },
+  "live.images.askedBy": {
+    "value": "Asked by {{name}}"
+  },
+  "live.images.retry": {
+    "value": "Try again"
+  },
+  "live.images.failed.noKey": {
+    "value": "No key is connected for this model"
+  },
+  "live.images.failed.budget": {
+    "value": "The budget ran out"
+  },
+  "live.images.failed.limit": {
+    "value": "You reached your spending limit"
+  },
+  "live.images.failed.blocked": {
+    "value": "The provider refused this request"
+  },
+  "live.images.failed.provider": {
+    "value": "The provider failed. Try again in a moment."
+  },
+  "live.images.failed.tooMany": {
+    "value": "This canvas has no more room"
+  },
+  "live.images.failed.other": {
+    "value": "The image couldn't be made"
+  },
+  "live.sheet.errors.null": {
+    "value": "These ranges don't meet"
+  },
+  "live.sheet.errors.div0": {
+    "value": "Division by zero"
+  },
+  "live.sheet.errors.value": {
+    "value": "A value of the wrong kind, like text where a number goes"
+  },
+  "live.sheet.errors.ref": {
+    "value": "A reference to cells that are gone"
+  },
+  "live.sheet.errors.name": {
+    "value": "A function or name this spreadsheet doesn't know"
+  },
+  "live.sheet.errors.num": {
+    "value": "A number that can't be worked out, or is too big"
+  },
+  "live.sheet.errors.na": {
+    "value": "No value found"
+  },
+  "live.sheet.errors.calc": {
+    "value": "This formula takes too long to work out"
+  },
+  "live.sheet.errors.spill": {
+    "value": "The result doesn't fit here"
+  },
+  "live.sheet.errors.circular": {
+    "value": "Circular reference"
+  },
+  "live.sheet.loading": {
+    "value": "Opening the spreadsheet…"
+  },
+  "live.sheet.toolbar": {
+    "value": "Spreadsheet tools"
+  },
+  "live.sheet.readOnly": {
+    "value": "Read only"
+  },
+  "live.sheet.empty": {
+    "value": "This spreadsheet is empty"
+  },
+  "live.sheet.undo": {
+    "value": "Undo"
+  },
+  "live.sheet.redo": {
+    "value": "Redo"
+  },
+  "live.sheet.numberFormat": {
+    "value": "Number format"
+  },
+  "live.sheet.formats.general": {
+    "value": "Automatic"
+  },
+  "live.sheet.formats.number": {
+    "value": "Number"
+  },
+  "live.sheet.formats.integer": {
+    "value": "Whole number"
+  },
+  "live.sheet.formats.percent": {
+    "value": "Percent"
+  },
+  "live.sheet.formats.percent2": {
+    "value": "Percent with decimals"
+  },
+  "live.sheet.formats.currency": {
+    "value": "Currency"
+  },
+  "live.sheet.formats.date": {
+    "value": "Date"
+  },
+  "live.sheet.formats.time": {
+    "value": "Time"
+  },
+  "live.sheet.formats.datetime": {
+    "value": "Date and time"
+  },
+  "live.sheet.formats.scientific": {
+    "value": "Scientific"
+  },
+  "live.sheet.formats.text": {
+    "value": "Plain text"
+  },
+  "live.sheet.formats.custom": {
+    "value": "Custom"
+  },
+  "live.sheet.decimalsLess": {
+    "value": "Fewer decimals"
+  },
+  "live.sheet.decimalsMore": {
+    "value": "More decimals"
+  },
+  "live.sheet.bold": {
+    "value": "Bold"
+  },
+  "live.sheet.italic": {
+    "value": "Italic"
+  },
+  "live.sheet.underline": {
+    "value": "Underline"
+  },
+  "live.sheet.strike": {
+    "value": "Strikethrough"
+  },
+  "live.sheet.textColor": {
+    "value": "Text color"
+  },
+  "live.sheet.fillColor": {
+    "value": "Fill color"
+  },
+  "live.sheet.automatic": {
+    "value": "Automatic"
+  },
+  "live.sheet.noFill": {
+    "value": "No fill"
+  },
+  "live.sheet.colors.red": {
+    "value": "Red"
+  },
+  "live.sheet.colors.emerald": {
+    "value": "Emerald"
+  },
+  "live.sheet.colors.magenta": {
+    "value": "Magenta"
+  },
+  "live.sheet.colors.orange": {
+    "value": "Orange"
+  },
+  "live.sheet.colors.cyan": {
+    "value": "Cyan"
+  },
+  "live.sheet.colors.olive": {
+    "value": "Olive"
+  },
+  "live.sheet.colors.plum": {
+    "value": "Plum"
+  },
+  "live.sheet.colors.lime": {
+    "value": "Lime"
+  },
+  "live.sheet.colors.slate": {
+    "value": "Slate"
+  },
+  "live.sheet.colors.brown": {
+    "value": "Brown"
+  },
+  "live.sheet.alignLeft": {
+    "value": "Align left"
+  },
+  "live.sheet.alignCenter": {
+    "value": "Center"
+  },
+  "live.sheet.alignRight": {
+    "value": "Align right"
+  },
+  "live.sheet.wrap": {
+    "value": "Wrap text"
+  },
+  "live.sheet.merge": {
+    "value": "Merge cells"
+  },
+  "live.sheet.unmerge": {
+    "value": "Unmerge cells"
+  },
+  "live.sheet.borders": {
+    "value": "Borders"
+  },
+  "live.sheet.border.all": {
+    "value": "All borders"
+  },
+  "live.sheet.border.outer": {
+    "value": "Outside borders"
+  },
+  "live.sheet.border.inner": {
+    "value": "Inside borders"
+  },
+  "live.sheet.border.horizontal": {
+    "value": "Inside horizontal borders"
+  },
+  "live.sheet.border.vertical": {
+    "value": "Inside vertical borders"
+  },
+  "live.sheet.border.top": {
+    "value": "Top border"
+  },
+  "live.sheet.border.bottom": {
+    "value": "Bottom border"
+  },
+  "live.sheet.border.left": {
+    "value": "Left border"
+  },
+  "live.sheet.border.right": {
+    "value": "Right border"
+  },
+  "live.sheet.border.none": {
+    "value": "No borders"
+  },
+  "live.sheet.freeze": {
+    "value": "Freeze"
+  },
+  "live.sheet.frozen.none": {
+    "value": "Nothing frozen"
+  },
+  "live.sheet.frozen.rows": {
+    "value": "Rows"
+  },
+  "live.sheet.frozen.cols": {
+    "value": "Columns"
+  },
+  "live.sheet.frozen.row": {
+    "value": {
+      "one": "1 row",
+      "other": "{{count}} rows"
+    }
+  },
+  "live.sheet.frozen.col": {
+    "value": {
+      "one": "1 column",
+      "other": "{{count}} columns"
+    }
+  },
+  "live.sheet.frozen.upToRow": {
+    "value": "Up to row {{n}}"
+  },
+  "live.sheet.frozen.upToCol": {
+    "value": "Up to column {{name}}"
+  },
+  "live.sheet.sortAsc": {
+    "value": "Sort A to Z"
+  },
+  "live.sheet.sortDesc": {
+    "value": "Sort Z to A"
+  },
+  "live.sheet.functions": {
+    "value": "Functions"
+  },
+  "live.sheet.nameBox": {
+    "value": "Cell or range. Type one to go there"
+  },
+  "live.sheet.fx": {
+    "value": "Formula"
+  },
+  "live.sheet.formula": {
+    "value": "Cell content"
+  },
+  "live.sheet.cellLabel": {
+    "value": "Cell {{cell}}"
+  },
+  "live.sheet.cellWith": {
+    "value": "Cell {{cell}}, {{value}}"
+  },
+  "live.sheet.suggestions": {
+    "value": "Functions"
+  },
+  "live.sheet.moreRows": {
+    "value": {
+      "one": "Add {{count}} row",
+      "other": "Add {{count}} rows"
+    }
+  },
+  "live.sheet.pasteKeys": {
+    "value": "To paste here, use {{keys}}"
+  },
+  "live.sheet.menu.cut": {
+    "value": "Cut"
+  },
+  "live.sheet.menu.copy": {
+    "value": "Copy"
+  },
+  "live.sheet.menu.paste": {
+    "value": "Paste"
+  },
+  "live.sheet.menu.pasteValues": {
+    "value": "Paste values only"
+  },
+  "live.sheet.menu.insertRowsAbove": {
+    "value": {
+      "one": "Insert row above",
+      "other": "Insert {{count}} rows above"
+    }
+  },
+  "live.sheet.menu.insertRowsBelow": {
+    "value": {
+      "one": "Insert row below",
+      "other": "Insert {{count}} rows below"
+    }
+  },
+  "live.sheet.menu.insertColsLeft": {
+    "value": {
+      "one": "Insert column left",
+      "other": "Insert {{count}} columns left"
+    }
+  },
+  "live.sheet.menu.insertColsRight": {
+    "value": {
+      "one": "Insert column right",
+      "other": "Insert {{count}} columns right"
+    }
+  },
+  "live.sheet.menu.deleteRows": {
+    "value": {
+      "one": "Delete row",
+      "other": "Delete {{count}} rows"
+    }
+  },
+  "live.sheet.menu.deleteCols": {
+    "value": {
+      "one": "Delete column",
+      "other": "Delete {{count}} columns"
+    }
+  },
+  "live.sheet.menu.clear": {
+    "value": "Clear"
+  },
+  "live.sheet.menu.fitWidth": {
+    "value": "Fit width to content"
+  },
+  "live.sheet.menu.fitHeight": {
+    "value": "Fit height to content"
+  },
+  "live.sheet.menu.ask": {
+    "value": "Ask an agent about the selection"
+  },
+  "live.sheet.status.label": {
+    "value": "Selection totals"
+  },
+  "live.sheet.status.sum": {
+    "value": "Sum {{value}}"
+  },
+  "live.sheet.status.average": {
+    "value": "Average {{value}}"
+  },
+  "live.sheet.status.count": {
+    "value": "Count {{value}}"
+  },
+  "live.sheet.tabs.label": {
+    "value": "Sheets"
+  },
+  "live.sheet.tabs.add": {
+    "value": "Add sheet"
+  },
+  "live.sheet.tabs.base": {
+    "value": "Sheet"
+  },
+  "live.sheet.tabs.rename": {
+    "value": "Rename"
+  },
+  "live.sheet.tabs.renameLabel": {
+    "value": "Sheet name"
+  },
+  "live.sheet.tabs.duplicate": {
+    "value": "Duplicate"
+  },
+  "live.sheet.tabs.color": {
+    "value": "Color"
+  },
+  "live.sheet.tabs.noColor": {
+    "value": "No color"
+  },
+  "live.sheet.tabs.delete": {
+    "value": "Delete"
+  },
+  "live.sheet.tabs.copyName": {
+    "value": "{{name}} (copy)"
+  },
+  "live.sheet.tabs.deleteTitle": {
+    "value": "Delete {{name}}?"
+  },
+  "live.sheet.tabs.deleteBody": {
+    "value": "Everything on this sheet goes with it. Formulas on other sheets that use it show #REF!."
+  },
+  "live.sheet.tabs.deleteConfirm": {
+    "value": "Delete sheet"
+  },
+  "live.sheet.failed.other": {
+    "value": "That change couldn't be made."
+  },
+  "live.sheet.failed.no_sheet": {
+    "value": "This sheet is gone."
+  },
+  "live.sheet.failed.broken": {
+    "value": "This spreadsheet has a problem and didn't take the change."
+  },
+  "live.sheet.failed.limit": {
+    "value": "The spreadsheet has reached its size limit."
+  },
+  "live.sheet.failed.last_sheet": {
+    "value": "A spreadsheet needs at least one sheet."
+  },
+  "live.sheet.failed.last_row": {
+    "value": "A sheet needs at least one row."
+  },
+  "live.sheet.failed.last_col": {
+    "value": "A sheet needs at least one column."
+  },
+  "live.sheet.failed.sheet_name": {
+    "value": "Give the sheet a name."
+  },
+  "live.sheet.failed.sheet_name_taken": {
+    "value": "There's already a sheet with that name."
+  },
+  "live.sheet.failed.merged": {
+    "value": "That can't be done on part of merged cells."
+  },
+  "live.sheet.failed.formula": {
+    "value": "That formula couldn't be read."
+  },
+  "live.sheet.failed.text_too_long": {
+    "value": "That text is too long for one cell."
+  },
+  "live.sheet.failed.formula_too_long": {
+    "value": "That formula is too long."
+  },
+  "live.sheet.failed.range": {
+    "value": "That range doesn't work here."
+  },
+  "live.sheet.failed.value": {
+    "value": "That value doesn't work here."
+  },
+  "live.sheet.problem.empty": {
+    "value": "Type something after the ="
+  },
+  "live.sheet.problem.unexpected": {
+    "value": "Something in this formula can't be read"
+  },
+  "live.sheet.problem.unclosed_paren": {
+    "value": "A parenthesis isn't closed"
+  },
+  "live.sheet.problem.unclosed_string": {
+    "value": "A text's quotes aren't closed"
+  },
+  "live.sheet.problem.unclosed_sheet": {
+    "value": "A sheet name's quote isn't closed"
+  },
+  "live.sheet.problem.missing_operand": {
+    "value": "A value is missing beside an operator"
+  },
+  "live.sheet.problem.bad_array": {
+    "value": "A list in braces is written wrong"
+  },
+  "live.sheet.problem.bad_range": {
+    "value": "A range is written wrong"
+  },
+  "live.sheet.problem.bad_sheet": {
+    "value": "There's no sheet with that name"
+  },
+  "live.sheet.problem.args": {
+    "value": "A function got too many or too few values"
+  },
+  "live.sheet.problem.too_long": {
+    "value": "The formula is too long"
+  },
+  "live.sheet.problem.too_deep": {
+    "value": "The formula has too many parentheses inside each other"
+  },
+  "live.sheet.problem.too_far": {
+    "value": "A reference goes past the largest a sheet can be"
+  },
+  "live.sheet.args.a1": {
+    "value": "a1"
+  },
+  "live.sheet.args.angle": {
+    "value": "angle"
+  },
+  "live.sheet.args.area_num": {
+    "value": "area_num"
+  },
+  "live.sheet.args.array": {
+    "value": "array"
+  },
+  "live.sheet.args.array1": {
+    "value": "array1"
+  },
+  "live.sheet.args.array2": {
+    "value": "array2"
+  },
+  "live.sheet.args.average_range": {
+    "value": "average_range"
+  },
+  "live.sheet.args.base": {
+    "value": "base"
+  },
+  "live.sheet.args.basis": {
+    "value": "basis"
+  },
+  "live.sheet.args.bottom": {
+    "value": "bottom"
+  },
+  "live.sheet.args.by_col": {
+    "value": "by_col"
+  },
+  "live.sheet.args.col_index_num": {
+    "value": "col_index_num"
+  },
+  "live.sheet.args.cols": {
+    "value": "cols"
+  },
+  "live.sheet.args.column_num": {
+    "value": "column_num"
+  },
+  "live.sheet.args.columns": {
+    "value": "columns"
+  },
+  "live.sheet.args.cost": {
+    "value": "cost"
+  },
+  "live.sheet.args.criteria": {
+    "value": "criteria"
+  },
+  "live.sheet.args.criteria1": {
+    "value": "criteria1"
+  },
+  "live.sheet.args.criteria2": {
+    "value": "criteria2"
+  },
+  "live.sheet.args.criteria_range1": {
+    "value": "criteria_range1"
+  },
+  "live.sheet.args.criteria_range2": {
+    "value": "criteria_range2"
+  },
+  "live.sheet.args.date": {
+    "value": "date"
+  },
+  "live.sheet.args.date_text": {
+    "value": "date_text"
+  },
+  "live.sheet.args.dates": {
+    "value": "dates"
+  },
+  "live.sheet.args.day": {
+    "value": "day"
+  },
+  "live.sheet.args.days": {
+    "value": "days"
+  },
+  "live.sheet.args.decimal_separator": {
+    "value": "decimal_separator"
+  },
+  "live.sheet.args.decimals": {
+    "value": "decimals"
+  },
+  "live.sheet.args.default_or_value2": {
+    "value": "default_or_value2"
+  },
+  "live.sheet.args.delimiter": {
+    "value": "delimiter"
+  },
+  "live.sheet.args.denominator": {
+    "value": "denominator"
+  },
+  "live.sheet.args.divisor": {
+    "value": "divisor"
+  },
+  "live.sheet.args.effect_rate": {
+    "value": "effect_rate"
+  },
+  "live.sheet.args.end_date": {
+    "value": "end_date"
+  },
+  "live.sheet.args.end_period": {
+    "value": "end_period"
+  },
+  "live.sheet.args.error_val": {
+    "value": "error_val"
+  },
+  "live.sheet.args.exactly_once": {
+    "value": "exactly_once"
+  },
+  "live.sheet.args.expression": {
+    "value": "expression"
+  },
+  "live.sheet.args.find_text": {
+    "value": "find_text"
+  },
+  "live.sheet.args.format_text": {
+    "value": "format_text"
+  },
+  "live.sheet.args.function_num": {
+    "value": "function_num"
+  },
+  "live.sheet.args.fv": {
+    "value": "fv"
+  },
+  "live.sheet.args.group_separator": {
+    "value": "group_separator"
+  },
+  "live.sheet.args.guess": {
+    "value": "guess"
+  },
+  "live.sheet.args.height": {
+    "value": "height"
+  },
+  "live.sheet.args.holidays": {
+    "value": "holidays"
+  },
+  "live.sheet.args.hour": {
+    "value": "hour"
+  },
+  "live.sheet.args.if_empty": {
+    "value": "if_empty"
+  },
+  "live.sheet.args.if_not_found": {
+    "value": "if_not_found"
+  },
+  "live.sheet.args.ignore_empty": {
+    "value": "ignore_empty"
+  },
+  "live.sheet.args.include": {
+    "value": "include"
+  },
+  "live.sheet.args.index_num": {
+    "value": "index_num"
+  },
+  "live.sheet.args.instance_num": {
+    "value": "instance_num"
+  },
+  "live.sheet.args.k": {
+    "value": "k"
+  },
+  "live.sheet.args.known_xs": {
+    "value": "known_x's"
+  },
+  "live.sheet.args.known_ys": {
+    "value": "known_y's"
+  },
+  "live.sheet.args.life": {
+    "value": "life"
+  },
+  "live.sheet.args.logical": {
+    "value": "logical"
+  },
+  "live.sheet.args.logical1": {
+    "value": "logical1"
+  },
+  "live.sheet.args.logical2": {
+    "value": "logical2"
+  },
+  "live.sheet.args.logical_test": {
+    "value": "logical_test"
+  },
+  "live.sheet.args.logical_test1": {
+    "value": "logical_test1"
+  },
+  "live.sheet.args.logical_test2": {
+    "value": "logical_test2"
+  },
+  "live.sheet.args.lookup_array": {
+    "value": "lookup_array"
+  },
+  "live.sheet.args.lookup_value": {
+    "value": "lookup_value"
+  },
+  "live.sheet.args.lookup_vector": {
+    "value": "lookup_vector"
+  },
+  "live.sheet.args.match_end": {
+    "value": "match_end"
+  },
+  "live.sheet.args.match_mode": {
+    "value": "match_mode"
+  },
+  "live.sheet.args.match_type": {
+    "value": "match_type"
+  },
+  "live.sheet.args.max_range": {
+    "value": "max_range"
+  },
+  "live.sheet.args.mean": {
+    "value": "mean"
+  },
+  "live.sheet.args.method": {
+    "value": "method"
+  },
+  "live.sheet.args.min_range": {
+    "value": "min_range"
+  },
+  "live.sheet.args.minute": {
+    "value": "minute"
+  },
+  "live.sheet.args.mode": {
+    "value": "mode"
+  },
+  "live.sheet.args.month": {
+    "value": "month"
+  },
+  "live.sheet.args.months": {
+    "value": "months"
+  },
+  "live.sheet.args.multiple": {
+    "value": "multiple"
+  },
+  "live.sheet.args.new_text": {
+    "value": "new_text"
+  },
+  "live.sheet.args.no_commas": {
+    "value": "no_commas"
+  },
+  "live.sheet.args.nominal_rate": {
+    "value": "nominal_rate"
+  },
+  "live.sheet.args.nper": {
+    "value": "nper"
+  },
+  "live.sheet.args.npery": {
+    "value": "npery"
+  },
+  "live.sheet.args.num_chars": {
+    "value": "num_chars"
+  },
+  "live.sheet.args.num_digits": {
+    "value": "num_digits"
+  },
+  "live.sheet.args.number": {
+    "value": "number"
+  },
+  "live.sheet.args.number1": {
+    "value": "number1"
+  },
+  "live.sheet.args.number2": {
+    "value": "number2"
+  },
+  "live.sheet.args.number_chosen": {
+    "value": "number_chosen"
+  },
+  "live.sheet.args.number_times": {
+    "value": "number_times"
+  },
+  "live.sheet.args.numerator": {
+    "value": "numerator"
+  },
+  "live.sheet.args.old_text": {
+    "value": "old_text"
+  },
+  "live.sheet.args.order": {
+    "value": "order"
+  },
+  "live.sheet.args.per": {
+    "value": "per"
+  },
+  "live.sheet.args.percent": {
+    "value": "percent"
+  },
+  "live.sheet.args.pmt": {
+    "value": "pmt"
+  },
+  "live.sheet.args.power": {
+    "value": "power"
+  },
+  "live.sheet.args.pv": {
+    "value": "pv"
+  },
+  "live.sheet.args.quart": {
+    "value": "quart"
+  },
+  "live.sheet.args.range": {
+    "value": "range"
+  },
+  "live.sheet.args.range_lookup": {
+    "value": "range_lookup"
+  },
+  "live.sheet.args.rate": {
+    "value": "rate"
+  },
+  "live.sheet.args.ref": {
+    "value": "ref"
+  },
+  "live.sheet.args.ref1": {
+    "value": "ref1"
+  },
+  "live.sheet.args.ref2": {
+    "value": "ref2"
+  },
+  "live.sheet.args.ref_text": {
+    "value": "ref_text"
+  },
+  "live.sheet.args.reference": {
+    "value": "reference"
+  },
+  "live.sheet.args.result1": {
+    "value": "result1"
+  },
+  "live.sheet.args.result2": {
+    "value": "result2"
+  },
+  "live.sheet.args.result_vector": {
+    "value": "result_vector"
+  },
+  "live.sheet.args.return_array": {
+    "value": "return_array"
+  },
+  "live.sheet.args.return_type": {
+    "value": "return_type"
+  },
+  "live.sheet.args.row_index_num": {
+    "value": "row_index_num"
+  },
+  "live.sheet.args.row_num": {
+    "value": "row_num"
+  },
+  "live.sheet.args.rows": {
+    "value": "rows"
+  },
+  "live.sheet.args.salvage": {
+    "value": "salvage"
+  },
+  "live.sheet.args.search_mode": {
+    "value": "search_mode"
+  },
+  "live.sheet.args.second": {
+    "value": "second"
+  },
+  "live.sheet.args.serial_number": {
+    "value": "serial_number"
+  },
+  "live.sheet.args.significance": {
+    "value": "significance"
+  },
+  "live.sheet.args.sort_index": {
+    "value": "sort_index"
+  },
+  "live.sheet.args.sort_order": {
+    "value": "sort_order"
+  },
+  "live.sheet.args.standard_dev": {
+    "value": "standard_dev"
+  },
+  "live.sheet.args.start": {
+    "value": "start"
+  },
+  "live.sheet.args.start_date": {
+    "value": "start_date"
+  },
+  "live.sheet.args.start_num": {
+    "value": "start_num"
+  },
+  "live.sheet.args.start_period": {
+    "value": "start_period"
+  },
+  "live.sheet.args.step": {
+    "value": "step"
+  },
+  "live.sheet.args.sum_range": {
+    "value": "sum_range"
+  },
+  "live.sheet.args.table_array": {
+    "value": "table_array"
+  },
+  "live.sheet.args.text": {
+    "value": "text"
+  },
+  "live.sheet.args.text1": {
+    "value": "text1"
+  },
+  "live.sheet.args.text2": {
+    "value": "text2"
+  },
+  "live.sheet.args.time_text": {
+    "value": "time_text"
+  },
+  "live.sheet.args.top": {
+    "value": "top"
+  },
+  "live.sheet.args.type": {
+    "value": "type"
+  },
+  "live.sheet.args.unit": {
+    "value": "unit"
+  },
+  "live.sheet.args.value": {
+    "value": "value"
+  },
+  "live.sheet.args.value1": {
+    "value": "value1"
+  },
+  "live.sheet.args.value2": {
+    "value": "value2"
+  },
+  "live.sheet.args.value_if_error": {
+    "value": "value_if_error"
+  },
+  "live.sheet.args.value_if_false": {
+    "value": "value_if_false"
+  },
+  "live.sheet.args.value_if_na": {
+    "value": "value_if_na"
+  },
+  "live.sheet.args.value_if_true": {
+    "value": "value_if_true"
+  },
+  "live.sheet.args.value_if_true1": {
+    "value": "value_if_true1"
+  },
+  "live.sheet.args.value_if_true2": {
+    "value": "value_if_true2"
+  },
+  "live.sheet.args.values": {
+    "value": "values"
+  },
+  "live.sheet.args.weekend": {
+    "value": "weekend"
+  },
+  "live.sheet.args.width": {
+    "value": "width"
+  },
+  "live.sheet.args.within_text": {
+    "value": "within_text"
+  },
+  "live.sheet.args.x": {
+    "value": "x"
+  },
+  "live.sheet.args.x_num": {
+    "value": "x_num"
+  },
+  "live.sheet.args.y_num": {
+    "value": "y_num"
+  },
+  "live.sheet.args.year": {
+    "value": "year"
+  },
+  "live.sheet.fn.ABS": {
+    "value": "The number without its sign"
+  },
+  "live.sheet.fn.ACOS": {
+    "value": "The arccosine of a number, in radians"
+  },
+  "live.sheet.fn.ACOSH": {
+    "value": "The inverse hyperbolic cosine of a number"
+  },
+  "live.sheet.fn.AND": {
+    "value": "TRUE when every condition is true"
+  },
+  "live.sheet.fn.ASIN": {
+    "value": "The arcsine of a number, in radians"
+  },
+  "live.sheet.fn.ASINH": {
+    "value": "The inverse hyperbolic sine of a number"
+  },
+  "live.sheet.fn.ATAN": {
+    "value": "The arctangent of a number, in radians"
+  },
+  "live.sheet.fn.ATAN2": {
+    "value": "The angle of a point from its x and y, in radians"
+  },
+  "live.sheet.fn.ATANH": {
+    "value": "The inverse hyperbolic tangent of a number"
+  },
+  "live.sheet.fn.AVEDEV": {
+    "value": "The average distance of the numbers from their mean"
+  },
+  "live.sheet.fn.AVERAGE": {
+    "value": "The average of the numbers"
+  },
+  "live.sheet.fn.AVERAGEA": {
+    "value": "The average of the values, counting text as 0"
+  },
+  "live.sheet.fn.AVERAGEIF": {
+    "value": "The average of the cells that meet a condition"
+  },
+  "live.sheet.fn.AVERAGEIFS": {
+    "value": "The average of the cells that meet every condition"
+  },
+  "live.sheet.fn.CEILING": {
+    "value": "A number rounded up to a multiple"
+  },
+  "live.sheet.fn.CEILING_MATH": {
+    "value": "A number rounded up to a multiple, or to a whole number"
+  },
+  "live.sheet.fn.CEILING_PRECISE": {
+    "value": "A number rounded up to a multiple, whatever its sign"
+  },
+  "live.sheet.fn.CHAR": {
+    "value": "The character with a code"
+  },
+  "live.sheet.fn.CHOOSE": {
+    "value": "One of the values, by its position"
+  },
+  "live.sheet.fn.CLEAN": {
+    "value": "The text without characters that can't be printed"
+  },
+  "live.sheet.fn.CODE": {
+    "value": "The code of a text's first character"
+  },
+  "live.sheet.fn.COLUMN": {
+    "value": "The column number of a reference"
+  },
+  "live.sheet.fn.COLUMNS": {
+    "value": "How many columns a range has"
+  },
+  "live.sheet.fn.COMBIN": {
+    "value": "How many groups of a size can be picked from a number of items"
+  },
+  "live.sheet.fn.CONCAT": {
+    "value": "Texts joined into one"
+  },
+  "live.sheet.fn.CONCATENATE": {
+    "value": "Texts joined into one"
+  },
+  "live.sheet.fn.CORREL": {
+    "value": "How closely two sets of numbers move together"
+  },
+  "live.sheet.fn.COS": {
+    "value": "The cosine of an angle in radians"
+  },
+  "live.sheet.fn.COSH": {
+    "value": "The hyperbolic cosine of a number"
+  },
+  "live.sheet.fn.COUNT": {
+    "value": "How many cells hold numbers"
+  },
+  "live.sheet.fn.COUNTA": {
+    "value": "How many cells aren't empty"
+  },
+  "live.sheet.fn.COUNTBLANK": {
+    "value": "How many cells are empty"
+  },
+  "live.sheet.fn.COUNTIF": {
+    "value": "How many cells meet a condition"
+  },
+  "live.sheet.fn.COUNTIFS": {
+    "value": "How many cells meet every condition"
+  },
+  "live.sheet.fn.COVARIANCE_P": {
+    "value": "The covariance of two sets of numbers, as a whole population"
+  },
+  "live.sheet.fn.COVARIANCE_S": {
+    "value": "The covariance of two sets of numbers, as a sample"
+  },
+  "live.sheet.fn.CUMIPMT": {
+    "value": "The interest paid on a loan between two periods"
+  },
+  "live.sheet.fn.CUMPRINC": {
+    "value": "The principal paid on a loan between two periods"
+  },
+  "live.sheet.fn.DATE": {
+    "value": "A date from its year, month and day"
+  },
+  "live.sheet.fn.DATEDIF": {
+    "value": "The time between two dates in days, months or years"
+  },
+  "live.sheet.fn.DATEVALUE": {
+    "value": "A date written as text, turned into a date"
+  },
+  "live.sheet.fn.DAY": {
+    "value": "The day of the month of a date"
+  },
+  "live.sheet.fn.DAYS": {
+    "value": "How many days between two dates"
+  },
+  "live.sheet.fn.DAYS360": {
+    "value": "The days between two dates in a 360-day year"
+  },
+  "live.sheet.fn.DEGREES": {
+    "value": "Radians turned into degrees"
+  },
+  "live.sheet.fn.DEVSQ": {
+    "value": "The sum of the squared distances from the mean"
+  },
+  "live.sheet.fn.DOLLAR": {
+    "value": "A number as money, as text"
+  },
+  "live.sheet.fn.EDATE": {
+    "value": "The date some months before or after a date"
+  },
+  "live.sheet.fn.EFFECT": {
+    "value": "The effective yearly interest rate"
+  },
+  "live.sheet.fn.EOMONTH": {
+    "value": "The last day of the month some months away"
+  },
+  "live.sheet.fn.ERROR_TYPE": {
+    "value": "A number for the kind of error"
+  },
+  "live.sheet.fn.EVEN": {
+    "value": "A number rounded up to the next even whole number"
+  },
+  "live.sheet.fn.EXACT": {
+    "value": "TRUE when two texts are exactly the same"
+  },
+  "live.sheet.fn.EXP": {
+    "value": "e raised to a power"
+  },
+  "live.sheet.fn.FACT": {
+    "value": "The factorial of a number"
+  },
+  "live.sheet.fn.FALSE": {
+    "value": "The value FALSE"
+  },
+  "live.sheet.fn.FILTER": {
+    "value": "The rows of a range that meet a condition"
+  },
+  "live.sheet.fn.FIND": {
+    "value": "Where a text starts inside another, matching case"
+  },
+  "live.sheet.fn.FIXED": {
+    "value": "A number rounded and written as text"
+  },
+  "live.sheet.fn.FLOOR": {
+    "value": "A number rounded down to a multiple"
+  },
+  "live.sheet.fn.FLOOR_MATH": {
+    "value": "A number rounded down to a multiple, or to a whole number"
+  },
+  "live.sheet.fn.FLOOR_PRECISE": {
+    "value": "A number rounded down to a multiple, whatever its sign"
+  },
+  "live.sheet.fn.FORECAST": {
+    "value": "A future value along the straight line through known values"
+  },
+  "live.sheet.fn.FORECAST_LINEAR": {
+    "value": "A future value along the straight line through known values"
+  },
+  "live.sheet.fn.FV": {
+    "value": "What an investment will be worth in the end"
+  },
+  "live.sheet.fn.GCD": {
+    "value": "The greatest common divisor"
+  },
+  "live.sheet.fn.GEOMEAN": {
+    "value": "The geometric mean of the numbers"
+  },
+  "live.sheet.fn.HARMEAN": {
+    "value": "The harmonic mean of the numbers"
+  },
+  "live.sheet.fn.HLOOKUP": {
+    "value": "Looks for a value in a table's first row and returns one below it"
+  },
+  "live.sheet.fn.HOUR": {
+    "value": "The hour of a time, 0 to 23"
+  },
+  "live.sheet.fn.IF": {
+    "value": "One value when a condition is true, another when it isn't"
+  },
+  "live.sheet.fn.IFERROR": {
+    "value": "A value, or another one when it is an error"
+  },
+  "live.sheet.fn.IFNA": {
+    "value": "A value, or another one when it is #N/A"
+  },
+  "live.sheet.fn.IFS": {
+    "value": "The value of the first condition that is true"
+  },
+  "live.sheet.fn.INDEX": {
+    "value": "The value at a row and column of a range"
+  },
+  "live.sheet.fn.INDIRECT": {
+    "value": "The cells a reference written as text points to"
+  },
+  "live.sheet.fn.INT": {
+    "value": "A number rounded down to a whole number"
+  },
+  "live.sheet.fn.INTERCEPT": {
+    "value": "Where the line through known values crosses the y axis"
+  },
+  "live.sheet.fn.IPMT": {
+    "value": "The interest part of one loan payment"
+  },
+  "live.sheet.fn.IRR": {
+    "value": "The internal rate of return of cash flows"
+  },
+  "live.sheet.fn.ISBLANK": {
+    "value": "TRUE when the cell is empty"
+  },
+  "live.sheet.fn.ISERR": {
+    "value": "TRUE when the value is an error other than #N/A"
+  },
+  "live.sheet.fn.ISERROR": {
+    "value": "TRUE when the value is any error"
+  },
+  "live.sheet.fn.ISEVEN": {
+    "value": "TRUE when the number is even"
+  },
+  "live.sheet.fn.ISFORMULA": {
+    "value": "TRUE when the cell holds a formula"
+  },
+  "live.sheet.fn.ISLOGICAL": {
+    "value": "TRUE when the value is TRUE or FALSE"
+  },
+  "live.sheet.fn.ISNA": {
+    "value": "TRUE when the value is #N/A"
+  },
+  "live.sheet.fn.ISNONTEXT": {
+    "value": "TRUE when the value isn't text"
+  },
+  "live.sheet.fn.ISNUMBER": {
+    "value": "TRUE when the value is a number"
+  },
+  "live.sheet.fn.ISODD": {
+    "value": "TRUE when the number is odd"
+  },
+  "live.sheet.fn.ISOWEEKNUM": {
+    "value": "The ISO week number of a date"
+  },
+  "live.sheet.fn.ISREF": {
+    "value": "TRUE when the value is a reference"
+  },
+  "live.sheet.fn.ISTEXT": {
+    "value": "TRUE when the value is text"
+  },
+  "live.sheet.fn.LARGE": {
+    "value": "The k-th largest number"
+  },
+  "live.sheet.fn.LCM": {
+    "value": "The least common multiple"
+  },
+  "live.sheet.fn.LEFT": {
+    "value": "The first characters of a text"
+  },
+  "live.sheet.fn.LEN": {
+    "value": "How many characters a text has"
+  },
+  "live.sheet.fn.LN": {
+    "value": "The natural logarithm of a number"
+  },
+  "live.sheet.fn.LOG": {
+    "value": "The logarithm of a number in a base"
+  },
+  "live.sheet.fn.LOG10": {
+    "value": "The base-10 logarithm of a number"
+  },
+  "live.sheet.fn.LOOKUP": {
+    "value": "Looks for a value in a row or column and returns the matching one"
+  },
+  "live.sheet.fn.LOWER": {
+    "value": "The text in lowercase"
+  },
+  "live.sheet.fn.MATCH": {
+    "value": "The position of a value in a range"
+  },
+  "live.sheet.fn.MAX": {
+    "value": "The largest number"
+  },
+  "live.sheet.fn.MAXA": {
+    "value": "The largest value, counting text as 0"
+  },
+  "live.sheet.fn.MAXIFS": {
+    "value": "The largest number among the cells that meet every condition"
+  },
+  "live.sheet.fn.MEDIAN": {
+    "value": "The number in the middle"
+  },
+  "live.sheet.fn.MID": {
+    "value": "Characters from the middle of a text"
+  },
+  "live.sheet.fn.MIN": {
+    "value": "The smallest number"
+  },
+  "live.sheet.fn.MINA": {
+    "value": "The smallest value, counting text as 0"
+  },
+  "live.sheet.fn.MINIFS": {
+    "value": "The smallest number among the cells that meet every condition"
+  },
+  "live.sheet.fn.MINUTE": {
+    "value": "The minute of a time, 0 to 59"
+  },
+  "live.sheet.fn.MOD": {
+    "value": "The remainder of a division"
+  },
+  "live.sheet.fn.MODE": {
+    "value": "The number that appears most often"
+  },
+  "live.sheet.fn.MODE_SNGL": {
+    "value": "The number that appears most often"
+  },
+  "live.sheet.fn.MONTH": {
+    "value": "The month of a date, 1 to 12"
+  },
+  "live.sheet.fn.MROUND": {
+    "value": "A number rounded to the nearest multiple"
+  },
+  "live.sheet.fn.N": {
+    "value": "A value as a number"
+  },
+  "live.sheet.fn.NA": {
+    "value": "The error #N/A, for a value that's missing"
+  },
+  "live.sheet.fn.NETWORKDAYS": {
+    "value": "How many workdays between two dates"
+  },
+  "live.sheet.fn.NETWORKDAYS_INTL": {
+    "value": "How many workdays between two dates, with your own weekend"
+  },
+  "live.sheet.fn.NOMINAL": {
+    "value": "The nominal yearly interest rate"
+  },
+  "live.sheet.fn.NOT": {
+    "value": "The opposite of a condition"
+  },
+  "live.sheet.fn.NOW": {
+    "value": "The date and time now"
+  },
+  "live.sheet.fn.NPER": {
+    "value": "How many payments pay off a loan or reach a goal"
+  },
+  "live.sheet.fn.NPV": {
+    "value": "The net present value of cash flows"
+  },
+  "live.sheet.fn.NUMBERVALUE": {
+    "value": "Text read as a number, with the separators you give"
+  },
+  "live.sheet.fn.ODD": {
+    "value": "A number rounded up to the next odd whole number"
+  },
+  "live.sheet.fn.OFFSET": {
+    "value": "A range some rows and columns away from a reference"
+  },
+  "live.sheet.fn.OR": {
+    "value": "TRUE when any condition is true"
+  },
+  "live.sheet.fn.PEARSON": {
+    "value": "The Pearson correlation of two sets of numbers"
+  },
+  "live.sheet.fn.PERCENTILE": {
+    "value": "The value below which a share of the numbers fall"
+  },
+  "live.sheet.fn.PERCENTILE_EXC": {
+    "value": "The percentile of the numbers, ends excluded"
+  },
+  "live.sheet.fn.PERCENTILE_INC": {
+    "value": "The percentile of the numbers, ends included"
+  },
+  "live.sheet.fn.PERCENTRANK": {
+    "value": "Where a value ranks among the numbers, as a share"
+  },
+  "live.sheet.fn.PERCENTRANK_INC": {
+    "value": "Where a value ranks among the numbers, as a share"
+  },
+  "live.sheet.fn.PI": {
+    "value": "The number pi"
+  },
+  "live.sheet.fn.PMT": {
+    "value": "The payment of a loan per period"
+  },
+  "live.sheet.fn.POWER": {
+    "value": "A number raised to a power"
+  },
+  "live.sheet.fn.PPMT": {
+    "value": "The principal part of one loan payment"
+  },
+  "live.sheet.fn.PRODUCT": {
+    "value": "The numbers multiplied together"
+  },
+  "live.sheet.fn.PROPER": {
+    "value": "The text with each word capitalized"
+  },
+  "live.sheet.fn.PV": {
+    "value": "What a series of future payments is worth today"
+  },
+  "live.sheet.fn.QUARTILE": {
+    "value": "A quartile of the numbers"
+  },
+  "live.sheet.fn.QUARTILE_EXC": {
+    "value": "A quartile of the numbers, ends excluded"
+  },
+  "live.sheet.fn.QUARTILE_INC": {
+    "value": "A quartile of the numbers, ends included"
+  },
+  "live.sheet.fn.QUOTIENT": {
+    "value": "The whole part of a division"
+  },
+  "live.sheet.fn.RADIANS": {
+    "value": "Degrees turned into radians"
+  },
+  "live.sheet.fn.RAND": {
+    "value": "A random number between 0 and 1"
+  },
+  "live.sheet.fn.RANDBETWEEN": {
+    "value": "A random whole number between two numbers"
+  },
+  "live.sheet.fn.RANK": {
+    "value": "A number's position in a list"
+  },
+  "live.sheet.fn.RANK_AVG": {
+    "value": "A number's position in a list, ties sharing the average"
+  },
+  "live.sheet.fn.RANK_EQ": {
+    "value": "A number's position in a list, ties sharing the top"
+  },
+  "live.sheet.fn.RATE": {
+    "value": "The interest rate per period of a loan or investment"
+  },
+  "live.sheet.fn.REPLACE": {
+    "value": "A text with part of it replaced by position"
+  },
+  "live.sheet.fn.REPT": {
+    "value": "A text repeated a number of times"
+  },
+  "live.sheet.fn.RIGHT": {
+    "value": "The last characters of a text"
+  },
+  "live.sheet.fn.ROUND": {
+    "value": "A number rounded to some digits"
+  },
+  "live.sheet.fn.ROUNDDOWN": {
+    "value": "A number rounded toward zero"
+  },
+  "live.sheet.fn.ROUNDUP": {
+    "value": "A number rounded away from zero"
+  },
+  "live.sheet.fn.ROW": {
+    "value": "The row number of a reference"
+  },
+  "live.sheet.fn.ROWS": {
+    "value": "How many rows a range has"
+  },
+  "live.sheet.fn.RSQ": {
+    "value": "The square of the Pearson correlation"
+  },
+  "live.sheet.fn.SEARCH": {
+    "value": "Where a text starts inside another, ignoring case"
+  },
+  "live.sheet.fn.SECOND": {
+    "value": "The second of a time, 0 to 59"
+  },
+  "live.sheet.fn.SEQUENCE": {
+    "value": "A list of numbers in order"
+  },
+  "live.sheet.fn.SIGN": {
+    "value": "1 for a positive number, -1 for a negative, 0 for zero"
+  },
+  "live.sheet.fn.SIN": {
+    "value": "The sine of an angle in radians"
+  },
+  "live.sheet.fn.SINH": {
+    "value": "The hyperbolic sine of a number"
+  },
+  "live.sheet.fn.SLN": {
+    "value": "The straight-line depreciation of an asset per period"
+  },
+  "live.sheet.fn.SLOPE": {
+    "value": "The slope of the line through known values"
+  },
+  "live.sheet.fn.SMALL": {
+    "value": "The k-th smallest number"
+  },
+  "live.sheet.fn.SORT": {
+    "value": "A range sorted"
+  },
+  "live.sheet.fn.SQRT": {
+    "value": "The square root of a number"
+  },
+  "live.sheet.fn.SQRTPI": {
+    "value": "The square root of a number times pi"
+  },
+  "live.sheet.fn.STANDARDIZE": {
+    "value": "How many standard deviations a value is from the mean"
+  },
+  "live.sheet.fn.STDEV": {
+    "value": "The standard deviation of a sample"
+  },
+  "live.sheet.fn.STDEV_P": {
+    "value": "The standard deviation of a whole population"
+  },
+  "live.sheet.fn.STDEV_S": {
+    "value": "The standard deviation of a sample"
+  },
+  "live.sheet.fn.STDEVA": {
+    "value": "The standard deviation of a sample, counting text as 0"
+  },
+  "live.sheet.fn.STDEVP": {
+    "value": "The standard deviation of a whole population"
+  },
+  "live.sheet.fn.SUBSTITUTE": {
+    "value": "A text with some words swapped for others"
+  },
+  "live.sheet.fn.SUBTOTAL": {
+    "value": "A sum, average, count or other total that skips other subtotals"
+  },
+  "live.sheet.fn.SUM": {
+    "value": "The numbers added up"
+  },
+  "live.sheet.fn.SUMIF": {
+    "value": "The sum of the cells that meet a condition"
+  },
+  "live.sheet.fn.SUMIFS": {
+    "value": "The sum of the cells that meet every condition"
+  },
+  "live.sheet.fn.SUMPRODUCT": {
+    "value": "Ranges multiplied item by item, then added up"
+  },
+  "live.sheet.fn.SUMSQ": {
+    "value": "The sum of the squares of the numbers"
+  },
+  "live.sheet.fn.SWITCH": {
+    "value": "The result matching a value, or a default"
+  },
+  "live.sheet.fn.T": {
+    "value": "The value when it is text, else empty text"
+  },
+  "live.sheet.fn.TAN": {
+    "value": "The tangent of an angle in radians"
+  },
+  "live.sheet.fn.TANH": {
+    "value": "The hyperbolic tangent of a number"
+  },
+  "live.sheet.fn.TEXT": {
+    "value": "A value written as text in a number format"
+  },
+  "live.sheet.fn.TEXTAFTER": {
+    "value": "The text after a delimiter"
+  },
+  "live.sheet.fn.TEXTBEFORE": {
+    "value": "The text before a delimiter"
+  },
+  "live.sheet.fn.TEXTJOIN": {
+    "value": "Texts joined with a delimiter between them"
+  },
+  "live.sheet.fn.TIME": {
+    "value": "A time from its hour, minute and second"
+  },
+  "live.sheet.fn.TIMEVALUE": {
+    "value": "A time written as text, turned into a time"
+  },
+  "live.sheet.fn.TODAY": {
+    "value": "Today's date"
+  },
+  "live.sheet.fn.TRANSPOSE": {
+    "value": "A range with its rows and columns swapped"
+  },
+  "live.sheet.fn.TRIM": {
+    "value": "The text without extra spaces"
+  },
+  "live.sheet.fn.TRIMMEAN": {
+    "value": "The average without the highest and lowest values"
+  },
+  "live.sheet.fn.TRUE": {
+    "value": "The value TRUE"
+  },
+  "live.sheet.fn.TRUNC": {
+    "value": "A number with its decimals cut off"
+  },
+  "live.sheet.fn.TYPE": {
+    "value": "A number for the kind of value"
+  },
+  "live.sheet.fn.UNICHAR": {
+    "value": "The Unicode character with a number"
+  },
+  "live.sheet.fn.UNICODE": {
+    "value": "The Unicode number of a text's first character"
+  },
+  "live.sheet.fn.UNIQUE": {
+    "value": "The values of a range without repeats"
+  },
+  "live.sheet.fn.UPPER": {
+    "value": "The text in uppercase"
+  },
+  "live.sheet.fn.VALUE": {
+    "value": "Text read as a number"
+  },
+  "live.sheet.fn.VAR": {
+    "value": "The variance of a sample"
+  },
+  "live.sheet.fn.VAR_P": {
+    "value": "The variance of a whole population"
+  },
+  "live.sheet.fn.VAR_S": {
+    "value": "The variance of a sample"
+  },
+  "live.sheet.fn.VARA": {
+    "value": "The variance of a sample, counting text as 0"
+  },
+  "live.sheet.fn.VARP": {
+    "value": "The variance of a whole population"
+  },
+  "live.sheet.fn.VLOOKUP": {
+    "value": "Looks for a value in a table's first column and returns one beside it"
+  },
+  "live.sheet.fn.WEEKDAY": {
+    "value": "The day of the week of a date"
+  },
+  "live.sheet.fn.WEEKNUM": {
+    "value": "The week of the year of a date"
+  },
+  "live.sheet.fn.WORKDAY": {
+    "value": "The date some workdays away"
+  },
+  "live.sheet.fn.WORKDAY_INTL": {
+    "value": "The date some workdays away, with your own weekend"
+  },
+  "live.sheet.fn.XIRR": {
+    "value": "The internal rate of return of cash flows on dates"
+  },
+  "live.sheet.fn.XLOOKUP": {
+    "value": "Looks for a value in a range and returns the matching one from another"
+  },
+  "live.sheet.fn.XMATCH": {
+    "value": "The position of a value in a range, with more ways to match"
+  },
+  "live.sheet.fn.XNPV": {
+    "value": "The net present value of cash flows on dates"
+  },
+  "live.sheet.fn.XOR": {
+    "value": "TRUE when an odd number of conditions are true"
+  },
+  "live.sheet.fn.YEAR": {
+    "value": "The year of a date"
+  },
+  "live.sheet.fn.YEARFRAC": {
+    "value": "The share of a year between two dates"
   }
 }
