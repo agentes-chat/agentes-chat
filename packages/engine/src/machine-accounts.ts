@@ -5,6 +5,7 @@ import {
   type AccountKind,
   type AccountLoginFailure,
   type AccountLoginState,
+  ANTIGRAVITY_MAC_PROTOCOL,
   ANTIGRAVITY_PROTOCOL,
   type AuthMethod,
   accountCodeAad,
@@ -1487,7 +1488,9 @@ export async function beginAccountLogin(
     kind === "cursor"
       ? CURSOR_PROTOCOL
       : kind === "antigravity"
-        ? ANTIGRAVITY_PROTOCOL
+        ? machine.os === "darwin"
+          ? ANTIGRAVITY_MAC_PROTOCOL
+          : ANTIGRAVITY_PROTOCOL
         : kind === "grok"
           ? GROK_PROTOCOL
           : kind === "opencode"

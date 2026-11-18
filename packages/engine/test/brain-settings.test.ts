@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   ACCOUNTS_PROTOCOL,
+  ANTIGRAVITY_MAC_PROTOCOL,
   BRAIN_PROTOCOL,
   CODEX_WINDOWS_PROTOCOL,
   CONTEXT_LIMIT_PROTOCOL,
@@ -163,8 +164,8 @@ describe("brain settings", () => {
           .slice(3)
           .map((o) => [o.kind, o.reason ?? null]),
       );
-    // An older Windows runner refuses every OpenCode turn; Cursor and Grok Build don't run on Windows; the Antigravity
-    // CLI only on Linux.
+    // An older Windows runner refuses every OpenCode turn; Cursor, Grok Build and the Antigravity CLI don't run on
+    // Windows; a Mac runner before `ANTIGRAVITY_MAC_PROTOCOL` refuses Gemini.
     expect(reasons(mac({ os: "windows", protocol: OPENCODE_ACP_PROTOCOL - 1, executors }))).toEqual({
       cursor: "system",
       opencode: "runner_old",
@@ -176,8 +177,9 @@ describe("brain settings", () => {
       cursor: null,
       opencode: null,
       grok: null,
-      antigravity: "system",
+      antigravity: "runner_old",
     });
+    expect(reasons(mac({ os: "darwin", protocol: ANTIGRAVITY_MAC_PROTOCOL, executors })).antigravity).toBeNull();
     expect(reasons(mac({ os: "linux", protocol: OPENCODE_ACP_PROTOCOL, executors }))).toEqual({
       cursor: null,
       opencode: null,

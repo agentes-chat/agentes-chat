@@ -60,6 +60,7 @@ import {
   AGY_SIGN_IN_FILE,
   type AgySignIn,
   agyAuthOf,
+  agyKeychain,
   agyRuntimeDir,
   agySignInFrom,
   agySignInOf,
@@ -305,6 +306,7 @@ export function accountEnv(kind: AccountKind, dir: string, base: NodeJS.ProcessE
     delete env.DISPLAY;
     delete env.SSH_AUTH_SOCK;
     Object.assign(env, AGY_QUIET_ENV);
+    if (process.platform === "darwin") agyKeychain(dir);
   }
   return env;
 }
@@ -1386,7 +1388,7 @@ export interface AccountManagerOptions {
   grokRoot?: string;
   /** System mode: whether Grok Build's sandbox starts for an agent's user above a folder (`grokSandboxFails`). */
   grokSandbox?: (dir: string) => string | null;
-  /** Tests: the platform (the Antigravity CLI signs in only on Linux here). */
+  /** Tests: the platform (the Antigravity CLI signs in on Linux and macOS here). */
   platform?: NodeJS.Platform;
   /**
    * System mode: what goes before each Claude CLI root runs on an account folder (`authEgressPrefix`), asked once;
@@ -1751,10 +1753,10 @@ export class AccountManager {
     if (kind === "opencode" && !cliKey) {
       throw new RunnerError("bad_request", "OpenCode signs in with its API key");
     }
-    // ADR 0143: elsewhere the CLI keeps every sign-in in the one keychain of the computer's user, so two accounts
+    // ADR 0143: Windows keeps every sign-in in the one Credential Manager of the computer's user, so two accounts
     // would be one.
-    if (kind === "antigravity" && (this.opts.platform ?? process.platform) !== "linux") {
-      throw new RunnerError("bad_request", "Gemini accounts sign in on Linux computers only, for now.");
+    if (kind === "antigravity" && (this.opts.platform ?? process.platform) === "win32") {
+      throw new RunnerError("bad_request", "Gemini accounts don't sign in on Windows computers yet.");
     }
     if (this.logins.get(loginId)?.state === "waiting") {
       throw new RunnerError("bad_request", "This sign-in already exists");
