@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
@@ -6,10 +6,13 @@ import {
   codexExeBehindShim,
   codexLaunch,
   codexStdinPrompt,
+  codexWindowsConfig,
   MXC_CHECK_ARGS,
   runMxcCheck,
+  setWindowsSandbox,
   WINDOWS_MXC_RETRY_MS,
   windowsMxcReady,
+  windowsUnelevatedAllowed,
 } from "../../runner/codex-windows";
 import { removeDirs, tempDir } from "./helpers";
 
@@ -146,4 +149,20 @@ test.if(posix)("Codex's MXC check: MXC_OK and a good end is a yes, its own failu
   expect(await runMxcCheck(run, { cwd: home, env: process.env })).toBe(false);
   // It didn't start: nobody knows yet.
   expect(await runMxcCheck({ file: path.join(home, "nowhere"), args: [] }, { cwd: home, env: process.env })).toBeNull();
+});
+
+describe("the opt-in unelevated fallback", () => {
+  test("is off unless AGENTES_CODEX_WINDOWS_UNELEVATED=1", () => {
+    expect(windowsUnelevatedAllowed({})).toBe(false);
+    expect(windowsUnelevatedAllowed({ AGENTES_CODEX_WINDOWS_UNELEVATED: "0" })).toBe(false);
+    expect(windowsUnelevatedAllowed({ AGENTES_CODEX_WINDOWS_UNELEVATED: "1" })).toBe(true);
+  });
+
+  test("names MXC by default and unelevated only once chosen", () => {
+    expect(codexWindowsConfig()).toEqual(['windows.sandbox="mxc"']);
+    setWindowsSandbox("unelevated");
+    expect(codexWindowsConfig()).toEqual(['windows.sandbox="unelevated"']);
+    setWindowsSandbox("mxc");
+    expect(codexWindowsConfig()).toEqual(['windows.sandbox="mxc"']);
+  });
 });

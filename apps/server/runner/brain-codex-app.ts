@@ -25,7 +25,7 @@ import {
   codexThreadKey,
   shellScript,
 } from "./brain-codex";
-import { CODEX_WINDOWS_CONFIG, codexLaunch } from "./codex-windows";
+import { codexLaunch, codexWindowsConfig } from "./codex-windows";
 import { killTree } from "./exec";
 import { envValue } from "./executors";
 import {
@@ -195,7 +195,7 @@ export function codexAppServerArgs(input: {
     CODEX_NO_NETWORK,
     "-c",
     codexWritableRoots(input.writableRoots ?? []),
-    ...(input.windows ? CODEX_WINDOWS_CONFIG.flatMap((c) => ["-c", c]) : []),
+    ...(input.windows ? codexWindowsConfig().flatMap((c) => ["-c", c]) : []),
     ...codexContextOverride(input.contextTokens),
     ...(input.mcp
       ? [CODEX_DIRECT_MCP_CONFIG, ...codexBridgeOverrides({ runId: input.processId, ...input.mcp })].flatMap((o) => [
