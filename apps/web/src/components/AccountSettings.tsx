@@ -363,8 +363,9 @@ export function AccountSection() {
 }
 
 /**
- * One way to reset or delete, as a row of Sua conta's last card: its icon, title and one line; opened, what it does and
- * its button.
+ * One way to reset or delete, as a row of Sua conta's last card: its icon and title, its line under them at the row's
+ * full width (a MediaRow: the tile never owns a column beside a sentence that wraps); opened, what it does and its
+ * button.
  */
 function DangerRow({
   icon,
@@ -381,15 +382,17 @@ function DangerRow({
     <Disclosure
       className="danger-row"
       summary={
-        <>
-          <span className="settings-row__icon" aria-hidden="true">
-            <Icon name={icon} size={16} />
+        <span className="ac-mediarow">
+          <span className="ac-mediarow__face" aria-hidden="true">
+            <span className="settings-row__icon">
+              <Icon name={icon} size={16} />
+            </span>
           </span>
-          <span className="settings-row__text">
-            <span className="settings-row__label">{title}</span>
-            <span className="settings-row__status">{text}</span>
+          <span className="ac-mediarow__head">
+            <b>{title}</b>
           </span>
-        </>
+          <span className="ac-mediarow__body settings-row__status">{text}</span>
+        </span>
       }
     >
       {children}

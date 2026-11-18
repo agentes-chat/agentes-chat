@@ -4,39 +4,43 @@
   color: var(--danger);
 }
 /* Sua conta's last card: one row per way to reset or delete (the workspace's two for an owner, then the account), one
-   below the other. Closed, a settings row's icon, title and line with the kit's chevron at the end; open, what it does
-   and its button, from the row's edge under them. */
+   below the other. Closed, a settings row's icon tile and title with the kit's chevron at the end, its line under them
+   (a MediaRow); open, what it does and its button, from the row's edge. */
 .danger-row {
   border-top: 1px solid var(--line);
+}
+/* The settings rows' 28 tile, as tall as the chevron's line. */
+.danger-row,
+.danger-row .ac-mediarow {
+  --mediarow-face: 28px;
 }
 .danger-row:first-child {
   border-top: 0;
 }
 .danger-row > .ac-disclosure__summary {
   display: flex;
+  align-items: flex-start;
   gap: var(--space-3);
-  min-height: calc(var(--control-h-sm) + 2 * var(--row-py));
   box-sizing: border-box;
-  padding: var(--row-py) var(--card-pad);
+  padding: var(--space-3) var(--card-pad);
   color: var(--ink);
   font-size: inherit;
   font-weight: inherit;
 }
 .danger-row > .ac-disclosure__summary > span:first-child {
-  display: flex;
   flex: 1;
-  align-items: center;
-  gap: var(--space-3);
   min-width: 0;
 }
+/* On the title's line, centred on the icon's tile. */
 .danger-row > .ac-disclosure__summary > .ac-disclosure__chevron {
   flex: none;
-  align-self: center;
+  margin-block-start: calc((var(--mediarow-face) - 16px) / 2);
 }
 .danger-row > .ac-disclosure__body {
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-1) var(--card-pad) var(--space-4);
+  font-size: var(--text-sm);
 }
 .danger-row > .ac-disclosure__body > .deletion-lines {
   align-self: stretch;

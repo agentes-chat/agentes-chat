@@ -735,6 +735,21 @@ describe("deleting your account (Configurações › Sua conta)", () => {
     expect(within(row).getByRole("button", { name: "Recomeçar workspace" }).hasAttribute("disabled")).toBe(true);
   });
 
+  test("the longest workspace name the server takes: every row and the reset dialog keep it whole", async () => {
+    const name = "Northwind Industries Holdings: Planejamento Estratégico e Operações Regionais (LATAM 2027)";
+    await open(`/org/${ORG_ID}/settings/account`, { name });
+    const card = screen().getByRole("region", { name: "Recomeçar ou apagar" });
+    const rows = Array.from(card.querySelectorAll<HTMLDetailsElement>("details.danger-row"));
+    await act(async () => {
+      for (const row of rows) row.setAttribute("open", "");
+    });
+    expect(rows[1]?.querySelector("summary")?.textContent).toContain(name);
+    await click(within(rows[0] as HTMLElement).getByRole("button", { name: "Recomeçar workspace" }));
+    await settle(4);
+    const dialog = screen().getByRole("dialog", { name: `Recomeçar ${name}?` });
+    expect(within(dialog).getByLabelText(`Digite ${name} para confirmar`)).toBeTruthy();
+  });
+
   test("two with the same name in the dialog: told apart in what it says and in its links", async () => {
     const made = (days: number) => new Date(Date.now() - days * DAY).toISOString();
     const state = seedState({
