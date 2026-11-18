@@ -193,6 +193,18 @@ export function planCheckedAt(usage: { at?: string; checkedAt?: string } | null 
   return at > 0 ? new Date(at).toISOString() : null;
 }
 
+/** A window of this reading reset since it was read or last asked for (`planCheckedAt`): its numbers are out of date. */
+export function resetSinceRead(
+  usage: { at?: string; checkedAt?: string; windows: readonly PlanMeterWindow[] },
+  now = Date.now(),
+) {
+  const read = Date.parse(planCheckedAt(usage) ?? "") || 0;
+  return usage.windows.some((w) => {
+    const reset = Date.parse(w.resetsAt ?? "");
+    return reset > read && reset <= now;
+  });
+}
+
 /** From this age the compact line says how old its numbers are. */
 export const PLAN_AGE_SHOWN_MS = 10 * 60_000;
 /** Numbers older than this read as out of date. */
@@ -292,7 +304,7 @@ export function limitOffers<A extends OfferAccount>(
 }
 
 /** From here long work pauses until the window resets (ADR 0118); replies to people go on until the limit. */
-export const PLAN_PAUSE = 95;
+export const PLAN_PAUSE = 99;
 /** From here an agent is told where its plan stands, so it can say a long task may pause. */
 export const PLAN_NOTICE = 90;
 

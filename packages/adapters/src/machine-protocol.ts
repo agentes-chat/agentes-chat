@@ -7,7 +7,7 @@ import type { MergeDone } from "./command-policy";
  */
 
 /** Bumped on breaking changes; the server refuses runners older than `MIN_RUNNER_PROTOCOL`. */
-export const MACHINE_PROTOCOL_VERSION = 67;
+export const MACHINE_PROTOCOL_VERSION = 68;
 export const MIN_RUNNER_PROTOCOL = 1;
 /** From this protocol on, requests carry `agent` and each agent works in its own folder. */
 export const AGENT_FOLDERS_PROTOCOL = 2;
@@ -677,6 +677,11 @@ export const IPHONE_DEV_MODE_PROTOCOL = 65;
  * per agent, as before.
  */
 export const SHARED_GROK_PROTOCOL = 67;
+/**
+ * From this protocol on, Gemini accounts sign in and think on macOS too, each in a keychain of its own inside its
+ * folder (ADR 0143). An older Mac runner refuses them, so the server reads it as too old for the Antigravity CLI.
+ */
+export const ANTIGRAVITY_MAC_PROTOCOL = 68;
 
 /**
  * `clis.check`: the coding CLIs looked up again now, the PATH read again first (the apps' "I installed it, check again").

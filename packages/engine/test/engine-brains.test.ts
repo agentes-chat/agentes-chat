@@ -84,6 +84,7 @@ import {
   storeMachineAccess,
   type ToolSource,
   taskManager,
+  transitionRun,
 } from "../src";
 import { computerPrompt } from "../src/brains/prompt";
 import { afterSteered } from "../src/steering";
@@ -4267,6 +4268,55 @@ test("a deploy drops the computer for seconds: runs in line keep their place, an
   expect(t.waitingForBrain?.code).toBe("busy");
   expect(t.roomWaitSince).toBe(since);
   expect((await timeline(f)).filter((m) => m.meta.bodyCode === "brain_unavailable")).toEqual([]);
+});
+
+test("a Claude plan sign-in at its cap: the next run waits for it by name, then answers once the other ends", async () => {
+  f = await setup({ reply: () => ({ chunks: ["Pela API."] }) });
+  const machineId = await computerAgent(f);
+  const { brain, seen } = scriptedComputerBrain(() => [{ type: "done", text: "Pronto." }]);
+  const handlers = createJobHandlers({
+    ...f.jobDeps,
+    signInConcurrency: 1,
+    brains: { claude_code: () => brain },
+    machines: { status: async (id) => statusOf(id) },
+  });
+  // The computer's own Claude sign-in works on another agent's run now.
+  const ops = await createAgent(
+    f.db,
+    f.owner.id,
+    f.org.id,
+    { name: "Ops", handle: "ops", role: "Infra", instructions: "", credentialId: f.credential.id },
+    { model: "claude-sonnet-5-5" },
+  );
+  const holder = Bun.randomUUIDv7();
+  await f.db.insert(schema.agentRuns).values({
+    id: holder,
+    orgId: f.org.id,
+    agentId: ops.id,
+    channelId: f.general.id,
+    threadRootId: holder,
+    triggerMessageId: holder,
+    trigger: "mention",
+    hop: 2,
+    status: "running",
+    heartbeatAt: new Date(),
+    transcript: { roomAsk: { machineId, at: Date.now() - 60_000, signIn: "own" } },
+  });
+  await post(f, "@dev oi");
+  await drainOutbox(f.db, handlers);
+  const run = (await f.db.select().from(schema.agentRuns)).find((r) => r.id !== holder);
+  expect(run?.status).toBe("waiting_input");
+  expect(run?.transcript).toMatchObject({ waitingForBrain: { code: "busy" }, signInWait: { key: "own" } });
+  expect(seen).toHaveLength(0);
+  const line = await computerQueue(f.db, f.owner.id, f.org.id, machineId);
+  expect(line.waiting.map((w) => [w.runId, w.signIn])).toEqual([[run?.id ?? "", "Claude"]]);
+
+  // The other run ends: its slot wakes this one at once, which answers on the computer, never the API.
+  await transitionRun(f.db, holder, "running", "done");
+  await drainOutbox(f.db, handlers);
+  expect((await runById(f, run?.id ?? ""))?.status).toBe("done");
+  expect(seen).toHaveLength(1);
+  expect((await timeline(f)).some((m) => m.body === "Pronto.")).toBe(true);
 });
 
 test("agents' turns on one computer start apart, parked in line (never handed to the API); a person's goes at once", async () => {

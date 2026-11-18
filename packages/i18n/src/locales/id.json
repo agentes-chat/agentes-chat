@@ -11712,7 +11712,8 @@
       "next": "Menunggu komputer. Giliran berikutnya",
       "waiting": "Menunggu komputer",
       "behind": "Dalam antrean, ke-{{nth}}. Setelah {{names}}",
-      "position": "Dalam antrean, ke-{{nth}}"
+      "position": "Dalam antrean, ke-{{nth}}",
+      "signIn": "Menunggu {{account}} menyelesaikan tugas lain"
     },
     "nth": {
       "one": "{{n}}",
@@ -13838,6 +13839,7 @@
       "vault_delete": "Hapus kata sandi",
       "vault_make_password": "Buat kata sandi",
       "get_my_usage": "Lihat pemakaian saya",
+      "ignore_usage_limit": "Abaikan batas penggunaan",
       "send_feedback": "Kirim masukan",
       "offer_feedback": "Tawarkan laporan masalah"
     }

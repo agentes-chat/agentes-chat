@@ -12632,7 +12632,8 @@
       "next": "En attente de l'ordinateur. Passe ensuite",
       "waiting": "En attente de l'ordinateur",
       "behind": "Dans la file, {{nth}}. Après {{names}}",
-      "position": "Dans la file, {{nth}}"
+      "position": "Dans la file, {{nth}}",
+      "signIn": "En attente que {{account}} termine une autre tâche"
     },
     "nth": {
       "one": "{{n}}er",
@@ -14815,6 +14816,7 @@
       "vault_delete": "Supprimer un mot de passe",
       "vault_make_password": "Générer un mot de passe",
       "get_my_usage": "Voir mon utilisation",
+      "ignore_usage_limit": "Ignorer la limite d'utilisation",
       "send_feedback": "Envoyer un retour",
       "offer_feedback": "Proposer de signaler un problème"
     }

@@ -67,8 +67,16 @@ export function queueFillText(t: TFunction, working: readonly Pick<QueueWorking,
   return parts.length ? joinNames(parts, t) : null;
 }
 
-/** Why a turn waits: "Computer full: 4 jobs use its memory now (2 for people, 1 routine…)", null with nothing on it. */
-export function queueCauseText(t: TFunction, queue: Pick<ComputerQueue, "working"> | null | undefined) {
+/**
+ * Why a turn waits: "Computer full: 4 jobs use its memory now (2 for people, 1 routine…)", null with nothing on it, or
+ * for a turn that waits for its plan sign-in (its live row says so).
+ */
+export function queueCauseText(
+  t: TFunction,
+  queue: Pick<ComputerQueue, "working"> | null | undefined,
+  w?: Pick<QueueWaiting, "signIn"> | null,
+) {
+  if (w?.signIn) return null;
   const fill = queue ? queueFillText(t, queue.working) : null;
   return fill ? t("queue.cause", { count: queue?.working.length ?? 0, fill }) : null;
 }
@@ -171,7 +179,8 @@ export function queueStartText(
 
 /**
  * The waiting agent's live row: "Waiting for the computer. Next up, in about 1 min" when the line can say when, else
- * "… Next up" alone, or "In line, 4th. After Ada, Kai and Ravi". Null when the run isn't in this computer's line.
+ * "… Next up" alone, or "In line, 4th. After Ada, Kai and Ravi"; "Waiting for Claude 2 to finish another task" when
+ * its plan sign-in is what it waits for. Null when the run isn't in this computer's line.
  */
 export function queueLiveText(
   t: TFunction,
@@ -183,6 +192,7 @@ export function queueLiveText(
 ) {
   const w = queue?.waiting.find((x) => x.runId === runId);
   if (!w) return null;
+  if (w.signIn) return t("queue.live.signIn", { account: w.signIn });
   const { context } = agentGrammar(agentName(w.agentId) ?? "");
   if (w.position === 1) {
     if (w.estimatedStartAt) return t("queue.live.nextEta", { n: etaMinutes(w.estimatedStartAt, now), context });

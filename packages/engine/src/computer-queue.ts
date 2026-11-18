@@ -13,13 +13,14 @@ import {
   sql,
 } from "@agenteschat/db";
 import { managesAgentSql } from "./audience";
+import type { BrainPlan } from "./brains/select";
 import { TtlCache } from "./cache";
 import { NotFoundError } from "./errors";
 import { publishOrgEvent } from "./events";
 import { getMachine } from "./machines";
 import { requirePermission } from "./organizations";
 import { enqueue } from "./outbox";
-import { replyThreadOf } from "./runs";
+import { RUN_STALE_MS, replyThreadOf } from "./runs";
 
 const { agentRuns, agents, channelMembers, channels, messages } = schema;
 
@@ -67,6 +68,37 @@ const sinceSql = sql`coalesce((${agentRuns.transcript}->>'roomOrderSince')::bigi
 const rankSql = (now: number) =>
   sql<number>`(case when ${peopleSql} then 0 when ${askedSql} or ${sinceSql} < ${now - ROOM_RANK_AGE_MS}::bigint then 1 else 2 end)`;
 export type RoomRank = 0 | 1 | 2;
+
+/**
+ * Runs one Claude plan sign-in thinks for at once, by default (`CLAUDE_PLAN_CONCURRENCY`). A personal plan used by
+ * many sessions at once reads as automated use to its provider; past this the next run waits in its computer's line
+ * for one of them to end. Long work can hold a slot for hours, so 1 would park every reply behind it.
+ */
+export const SIGN_IN_CONCURRENCY = 2;
+
+/** A Claude plan sign-in a run thinks with: its account, or its computer's own sign-in (`own`). */
+export interface SignInSlot {
+  key: string;
+  /** What the person calls it ("Claude 2", "Trabalho"), said while a run waits for it. */
+  label: string;
+  /** Runs it takes at once; 0 or less: no limit. */
+  cap: number;
+}
+
+/**
+ * The plan sign-in this plan's turn holds a slot of: Claude Code on a subscription (its account, or its computer's own
+ * sign-in). Never an API key nor a coding plan's key (`provider`), nor another brain.
+ */
+export function signInSlotOf(plan: Pick<BrainPlan, "kind" | "account">, cap: number): SignInSlot | undefined {
+  if (plan.kind !== "claude_code" || plan.account?.provider || cap <= 0) return undefined;
+  return { key: plan.account?.id ?? "own", label: plan.account?.label ?? "Claude", cap };
+}
+
+/** A computer's own sign-in is that computer's; an account is the workspace's, whichever computer its runs think on. */
+const ownSignIn = (key: string) => key === "own";
+
+/** The sign-in a run in line waits on (`signInWait`): only runs waiting for that same sign-in hold it back. */
+const signInWaitSql = sql<string | null>`${agentRuns.transcript}->'signInWait'->>'key'`;
 
 /** The run first in line for room on this computer, with the wait its job must carry. */
 export async function roomHead(
@@ -125,6 +157,27 @@ export async function kickRoomQueue(db: Database, machineId: string, at?: Date) 
 }
 
 /**
+ * A run on this sign-in left its slot (it ended, or waits on something else): the first run in line waiting for that
+ * sign-in looks again now, not at its next retry.
+ */
+export async function kickSignInLine(db: Executor, machineId: string, key: string) {
+  const [head] = await db
+    .select({ id: agentRuns.id, orgId: agentRuns.orgId, waitId: waitIdSql })
+    .from(agentRuns)
+    .where(and(ownSignIn(key) ? waitingForRoom(machineId) : inLine, sql`${signInWaitSql} = ${key}`))
+    .orderBy(rankSql(Date.now()), sinceSql, agentRuns.id)
+    .limit(1);
+  if (!head?.waitId) return;
+  await enqueue(db, {
+    orgId: head.orgId,
+    kind: "agent_run.execute",
+    payload: { runId: head.id, wait: head.waitId },
+    dedupeKey: `agent_run.execute:${head.id}:sign-in-freed:${head.waitId}`,
+    maxAttempts: 4,
+  });
+}
+
+/**
  * Whether this run may send its computer turn now. Null: go (its ask is recorded, and the next in line is asked
  * once the spacing is over). Otherwise it is behind: `retryAt` is when it may look again. Behind when a run waiting
  * for room ranks ahead of it (by rank, then the longest wait), or, for agents' work, when another run asked
@@ -136,7 +189,8 @@ export async function roomGate(
   run: { id: string; orgId: string },
   machineId: string,
   place: { rank: RoomRank; since: number },
-): Promise<{ retryAt: number } | null> {
+  signIn?: SignInSlot,
+): Promise<{ retryAt: number; signIn?: true } | null> {
   const now = Date.now();
   const rank = place.rank === 2 && place.since < now - ROOM_RANK_AGE_MS ? 1 : place.rank;
   const behind = await db.transaction(async (tx) => {
@@ -149,10 +203,31 @@ export async function roomGate(
           waitingForRoom(machineId),
           sql`${agentRuns.id} <> ${run.id}`,
           sql`(${rankSql(now)}, ${sinceSql}, ${agentRuns.id}) < (${rank}::int, ${place.since}::bigint, ${run.id}::uuid)`,
+          // A run held only by another sign-in's limit doesn't hold this one back.
+          sql`(${signInWaitSql} is null or ${signInWaitSql} = ${signIn?.key ?? ""})`,
         ),
       )
       .limit(1);
     if (ahead) return { retryAt: now + ROOM_BEHIND_RETRY_MS };
+    if (signIn) {
+      if (!ownSignIn(signIn.key))
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`sign-in:${signIn.key}`}))`);
+      // Its slots: runs working on this sign-in now. One whose worker died stops counting once its heartbeat is stale.
+      const [taken] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(agentRuns)
+        .where(
+          and(
+            eq(agentRuns.orgId, run.orgId),
+            eq(agentRuns.status, "running"),
+            sql`${agentRuns.id} <> ${run.id}`,
+            ownSignIn(signIn.key) ? sql`${agentRuns.transcript}->'roomAsk'->>'machineId' = ${machineId}` : undefined,
+            sql`${agentRuns.transcript}->'roomAsk'->>'signIn' = ${signIn.key}`,
+            sql`${agentRuns.heartbeatAt} > ${new Date(now - RUN_STALE_MS).toISOString()}::timestamptz`,
+          ),
+        );
+      if (Number(taken?.n ?? 0) >= signIn.cap) return { retryAt: now + ROOM_BEHIND_RETRY_MS, signIn: true as const };
+    }
     if (rank > 0) {
       const [last] = await tx
         .select({ at: sql<string>`max((${agentRuns.transcript}->'roomAsk'->>'at')::bigint)` })
@@ -171,7 +246,7 @@ export async function roomGate(
     await tx
       .update(agentRuns)
       .set({
-        transcript: sql`jsonb_set(coalesce(${agentRuns.transcript}, '{}'::jsonb), '{roomAsk}', ${JSON.stringify({ machineId, at: now })}::jsonb)`,
+        transcript: sql`jsonb_set(coalesce(${agentRuns.transcript}, '{}'::jsonb), '{roomAsk}', ${JSON.stringify({ machineId, at: now, ...(signIn ? { signIn: signIn.key } : {}) })}::jsonb)`,
       })
       .where(eq(agentRuns.id, run.id));
     return null;
@@ -242,6 +317,8 @@ export interface QueueWaiting extends QueueAccess {
   estimatedStartAt: string | null;
   /** Who it waits for: for the head, the running turn expected to end first; behind it, the agents ahead in line. */
   after: string[];
+  /** The plan sign-in it waits for, by its label: that sign-in has all the runs it takes at once. Null: room. */
+  signIn: string | null;
 }
 
 export interface ComputerQueue {
@@ -456,7 +533,10 @@ export async function computerQueue(
         ),
       )
       .orderBy(askAt),
-    lineRows({ people: sql<boolean>`${peopleSql}` })
+    lineRows({
+      people: sql<boolean>`${peopleSql}`,
+      signIn: sql<string | null>`${agentRuns.transcript}->'signInWait'->>'label'`,
+    })
       .where(and(eq(agentRuns.orgId, orgId), shownInLine(machineId)))
       .orderBy(rankSql(now), sinceSql, agentRuns.id),
     typicalTurns(db, orgId),
@@ -506,6 +586,7 @@ export async function computerQueue(
       position: i + 1,
       estimatedStartAt: iso(est.starts[i]),
       after: est.after[i] ?? [],
+      signIn: r.signIn ?? null,
       ...access(r),
     })),
   };

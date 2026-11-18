@@ -12557,7 +12557,8 @@
       "next": "Esperando la computadora. Es el siguiente",
       "waiting": "Esperando la computadora",
       "behind": "En la cola, {{nth}}. Después de {{names}}",
-      "position": "En la cola, {{nth}}"
+      "position": "En la cola, {{nth}}",
+      "signIn": "Esperando a que {{account}} termine otra tarea"
     },
     "nth": {
       "one": "{{n}}.º",
@@ -14740,6 +14741,7 @@
       "vault_delete": "Borrar contraseña",
       "vault_make_password": "Generar contraseña",
       "get_my_usage": "Ver mi uso",
+      "ignore_usage_limit": "Ignorar el límite de uso",
       "send_feedback": "Enviar feedback",
       "offer_feedback": "Ofrecer reportar un problema"
     }

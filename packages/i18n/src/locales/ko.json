@@ -11653,7 +11653,8 @@
       "next": "컴퓨터를 기다리는 중. 다음 차례",
       "waiting": "컴퓨터를 기다리는 중",
       "behind": "대기열 {{nth}}. {{names}} 다음",
-      "position": "대기열 {{nth}}"
+      "position": "대기열 {{nth}}",
+      "signIn": "{{account}}이(가) 다른 작업을 마칠 때까지 기다리는 중"
     },
     "nth": {
       "one": "{{n}}번째",
@@ -13779,6 +13780,7 @@
       "vault_delete": "비밀번호 삭제",
       "vault_make_password": "비밀번호 생성",
       "get_my_usage": "내 사용량 조회",
+      "ignore_usage_limit": "사용 한도 무시",
       "send_feedback": "피드백 보내기",
       "offer_feedback": "문제 신고 제안"
     }

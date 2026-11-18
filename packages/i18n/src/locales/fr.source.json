@@ -35241,6 +35241,9 @@
   "toolNames.label.get_my_usage": {
     "value": "See my usage"
   },
+  "toolNames.label.ignore_usage_limit": {
+    "value": "Ignore the usage limit"
+  },
   "toolNames.label.send_feedback": {
     "value": "Send feedback"
   },

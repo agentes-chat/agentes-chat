@@ -12652,7 +12652,8 @@
       "next": "In attesa del computer. È il prossimo",
       "waiting": "In attesa del computer",
       "behind": "In coda, {{nth}}. Dopo {{names}}",
-      "position": "In coda, {{nth}}"
+      "position": "In coda, {{nth}}",
+      "signIn": "In attesa che {{account}} finisca un'altra attività"
     },
     "nth": {
       "one": "{{n}}º",
@@ -14831,6 +14832,7 @@
       "vault_delete": "Elimina password",
       "vault_make_password": "Crea password",
       "get_my_usage": "Vedi il mio utilizzo",
+      "ignore_usage_limit": "Ignora il limite di utilizzo",
       "send_feedback": "Invia feedback",
       "offer_feedback": "Offri di segnalare un problema"
     }

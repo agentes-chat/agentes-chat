@@ -11732,7 +11732,8 @@
       "next": "正在等待电脑。下一个就是它",
       "waiting": "正在等待电脑",
       "behind": "排队中，第 {{nth}}。在 {{names}} 之后",
-      "position": "排队中，第 {{nth}}"
+      "position": "排队中，第 {{nth}}",
+      "signIn": "正在等待 {{account}} 完成另一项任务"
     },
     "nth": {
       "one": "{{n}}",
@@ -13854,6 +13855,7 @@
       "vault_delete": "删除密码",
       "vault_make_password": "生成密码",
       "get_my_usage": "查看我的用量",
+      "ignore_usage_limit": "忽略用量上限",
       "send_feedback": "发送反馈",
       "offer_feedback": "提议报告问题"
     }

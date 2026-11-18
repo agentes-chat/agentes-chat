@@ -255,6 +255,7 @@ const BUILTIN: Record<string, ActivityKind> = {
   use_tool: "findingTools",
   follow_up: "followingUp",
   get_my_usage: "checkingUsage",
+  ignore_usage_limit: "updatingWork",
   find_agent: "findingAgent",
   // The right hand's look at the team: its tasks, open and stuck, and what waits.
   team_status: "listingTasks",

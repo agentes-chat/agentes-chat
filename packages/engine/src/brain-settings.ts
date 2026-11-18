@@ -1,6 +1,7 @@
 import {
   ACCOUNTS_PROTOCOL,
   type AccountKind,
+  ANTIGRAVITY_MAC_PROTOCOL,
   ANTIGRAVITY_PROTOCOL,
   BRAIN_PROTOCOL,
   type BrainEffort,
@@ -431,6 +432,9 @@ function cliOption(machine: MachineLike | null, kind: "cursor" | "opencode" | "g
     reason = "runner_old";
   // On Windows a runner before `OPENCODE_ACP_PROTOCOL` refuses every OpenCode turn.
   else if (kind === "opencode" && machine.os === "windows" && machine.protocol < OPENCODE_ACP_PROTOCOL)
+    reason = "runner_old";
+  // On a Mac a runner before `ANTIGRAVITY_MAC_PROTOCOL` refuses every Gemini sign-in and turn.
+  else if (kind === "antigravity" && machine.os === "darwin" && machine.protocol < ANTIGRAVITY_MAC_PROTOCOL)
     reason = "runner_old";
   else if (!brainRunsOn(kind, machine.os)) reason = "system";
   else if (!machine.executors?.[kind]) reason = missingCli(machine, kind);

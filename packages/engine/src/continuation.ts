@@ -530,6 +530,25 @@ export async function runCalls(db: Database, run: { id: string; orgId: string })
   return [...calls.values()];
 }
 
+/**
+ * The run's calls that repeat an earlier one that worked (same tool and argument, its stated `why` aside): the run's
+ * executed calls less these are its work, so a turn told to go on that only re-runs what it already did earns no
+ * further nudge.
+ */
+export async function repeatedCalls(db: Database, run: { id: string; orgId: string }) {
+  const done = new Set<string>();
+  let repeated = 0;
+  for (const call of await runCalls(db, run)) {
+    const { why: _, ...input } = (
+      call.input && typeof call.input === "object" ? call.input : { value: call.input }
+    ) as Record<string, unknown>;
+    const key = `${call.name}\u0000${JSON.stringify(input)}`;
+    if (done.has(key)) repeated++;
+    else if (call.result && !call.result.isError) done.add(key);
+  }
+  return repeated;
+}
+
 export interface RunCall {
   name: string;
   input: unknown;

@@ -13106,7 +13106,8 @@
       "next": "Czeka na komputer. Następny w kolejce",
       "waiting": "Czeka na komputer",
       "behind": "W kolejce, {{nth}}. Po: {{names}}",
-      "position": "W kolejce, {{nth}}"
+      "position": "W kolejce, {{nth}}",
+      "signIn": "Czeka, aż {{account}} skończy inne zadanie"
     },
     "nth": {
       "one": "{{n}}.",
@@ -15321,6 +15322,7 @@
       "vault_delete": "Usuń hasło",
       "vault_make_password": "Utwórz hasło",
       "get_my_usage": "Zobacz moje zużycie",
+      "ignore_usage_limit": "Ignoruj limit użycia",
       "send_feedback": "Wyślij opinię",
       "offer_feedback": "Zaproponuj zgłoszenie problemu"
     }

@@ -11659,7 +11659,8 @@
       "next": "コンピューター待ち。次の番です",
       "waiting": "コンピューター待ち",
       "behind": "待ち行列の{{nth}}。{{names}}の後",
-      "position": "待ち行列の{{nth}}"
+      "position": "待ち行列の{{nth}}",
+      "signIn": "{{account}} が別のタスクを終えるのを待っています"
     },
     "nth": {
       "one": "{{n}}番目",
@@ -13785,6 +13786,7 @@
       "vault_delete": "パスワードを削除",
       "vault_make_password": "パスワードを作成",
       "get_my_usage": "自分の使用量を表示",
+      "ignore_usage_limit": "利用上限を無視",
       "send_feedback": "フィードバックを送信",
       "offer_feedback": "問題の報告を提案"
     }
