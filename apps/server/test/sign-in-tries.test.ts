@@ -1,4 +1,5 @@
 import { afterEach, expect, setSystemTime, test } from "bun:test";
+import { schema } from "@agenteschat/db";
 import { browser, createTestServer, signUp, type TestServer } from "./harness";
 
 /** ADR 0075: wrong passwords per address, from one network and from all. */
@@ -81,6 +82,28 @@ test("a sign-in that succeeds gives back its own try only: the failures stay cou
   expect(await status(s, ANA, RIGHT, "203.0.113.1")).toBe(200);
   await wrong(s, ANA, "203.0.113.1", 5);
   await expectRefused(await signIn(s, ANA, RIGHT, "203.0.113.1"));
+}, 30_000);
+
+test("refused by both counts, the wait is the later window's", async () => {
+  const s = await start();
+  const begin = Date.now();
+  setSystemTime(begin);
+  await wrong(s, ANA, "198.51.100.7", 1);
+  setSystemTime(begin + 5 * 60_000);
+  await wrong(s, ANA, "203.0.113.1", 10);
+  // The count from all networks opens again before this network's does, and fills again from others.
+  setSystemTime(begin + 15 * 60_000);
+  for (let n = 2; n <= 7; n++) await wrong(s, ANA, `203.0.113.${n}`, n === 7 ? 5 : 9);
+  await expectRefused(await signIn(s, ANA, RIGHT, "203.0.113.1"));
+}, 60_000);
+
+test("a sign-in that fails on the server gives its tries back", async () => {
+  const s = await start();
+  const [account] = await s.db.select({ password: schema.accounts.password }).from(schema.accounts);
+  await s.db.update(schema.accounts).set({ password: "not-a-hash" });
+  for (let i = 0; i < 10; i++) expect(await status(s, ANA, RIGHT, "203.0.113.1")).toBe(500);
+  await s.db.update(schema.accounts).set({ password: account?.password ?? null });
+  expect(await status(s, ANA, RIGHT, "203.0.113.1")).toBe(200);
 }, 30_000);
 
 test("twenty wrong tries at once from one network: ten reach the password check, the rest are refused before it", async () => {

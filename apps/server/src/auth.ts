@@ -465,15 +465,19 @@ export function createAuth(deps: {
         }
         // After the bot check, so a refused bot spends none of an account's tries. Taken before the password is
         // checked, so tries in flight can't all pass a count none of them wrote yet; the after hook gives back every
-        // try that wasn't a wrong password (or an address nobody has, refused alike).
+        // try that wasn't a wrong password (or an address nobody has, refused alike), and `authHandler` those of a
+        // sign-in that never reached it.
         if (ctx.path === "/sign-in/email" && typeof address === "string") {
-          const taken: string[] = [];
-          for (const [key, rule] of await signInTries(address, ctx.headers)) {
-            const tries = await rateLimiter.consume(key, rule);
-            taken.push(key);
-            if (tries.allowed) continue;
-            await Promise.all(taken.map((k) => rateLimiter.release(k)));
-            const retryIn = retryInSeconds(tries.resetAt);
+          const keys = await signInTries(address, ctx.headers);
+          const counts = await Promise.all(keys.map(([key, rule]) => rateLimiter.consume(key, rule)));
+          const giveBack = async () => {
+            await Promise.all(keys.map(([key]) => rateLimiter.release(key)));
+          };
+          const refused = counts.filter((count) => !count.allowed);
+          if (refused.length > 0) {
+            await giveBack();
+            // Both counts full: the wait until both open, not the first one's.
+            const retryIn = retryInSeconds(new Date(Math.max(...refused.map((count) => count.resetAt.getTime()))));
             throw new APIError(
               "TOO_MANY_REQUESTS",
               {
@@ -484,6 +488,8 @@ export function createAuth(deps: {
               { "Retry-After": String(retryIn) },
             );
           }
+          const seen = authRequest.getStore();
+          if (seen) seen.giveBack = giveBack;
         }
         if (ctx.path !== "/sign-up/email") return;
         // Better Auth's own limit is the main address's; here, where no bot check runs, fewer, since each can email.
@@ -510,6 +516,8 @@ export function createAuth(deps: {
       after: createAuthMiddleware(async (ctx) => {
         const address = (ctx.body as { email?: unknown } | undefined)?.email;
         if (ctx.path !== "/sign-in/email" || typeof address !== "string") return;
+        const seen = authRequest.getStore();
+        if (seen) seen.giveBack = undefined;
         const { returned } = ctx.context;
         if (isAPIError(returned) && returned.body?.code === "INVALID_EMAIL_OR_PASSWORD") return;
         for (const [key] of await signInTries(address, ctx.headers)) await rateLimiter.release(key);
@@ -616,10 +624,10 @@ export function createAuth(deps: {
 export type Auth = ReturnType<typeof createAuth>;
 
 /**
- * This request to Better Auth (`authHandler`): when it began, and the address a provider gave its sign-in
- * (`noteProviderEmail`).
+ * This request to Better Auth (`authHandler`): when it began, the address a provider gave its sign-in
+ * (`noteProviderEmail`), and the password tries its sign-in took that no after hook has settled yet.
  */
-const authRequest = new AsyncLocalStorage<{ startedAt: number; email?: string }>();
+const authRequest = new AsyncLocalStorage<{ startedAt: number; email?: string; giveBack?: () => Promise<void> }>();
 
 /** Every provider's `mapProfileToUser`: notes the address, changes nothing. */
 function noteProviderEmail(profile: { email?: unknown }) {
@@ -650,9 +658,11 @@ async function signInStartedAt(): Promise<number | null> {
  */
 export function authHandler(auth: Auth, db: Database) {
   return (request: Request) => {
-    const seen: { startedAt: number; email?: string } = { startedAt: Date.now() };
+    const seen: { startedAt: number; email?: string; giveBack?: () => Promise<void> } = { startedAt: Date.now() };
     return authRequest.run(seen, async () => {
-      const res = await auth.handler(request);
+      // Better Auth skips the after hooks when its endpoint throws anything but an APIError (a failed query, say): a
+      // sign-in that ended so was never refused for its credentials, so its tries go back here.
+      const res = await auth.handler(request).finally(() => seen.giveBack?.());
       const location = res.headers.get("location");
       if (!seen.email || !location) return res;
       const back = new URL(location, "http://localhost");
