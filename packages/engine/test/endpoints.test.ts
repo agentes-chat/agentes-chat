@@ -313,6 +313,32 @@ describe("calls", () => {
     expect([moved.model, moved.credentialId]).toEqual([openai, null]);
   });
 
+  test("a declared context window reaches the model's info, with a quarter of it for output unless set", async () => {
+    f = await setup();
+    const cred = await addEndpoint(f, [
+      { id: "local", contextWindow: 32_768 },
+      { id: "capped", contextWindow: 131_072, maxOutputTokens: 8192 },
+      { id: "plain" },
+    ]);
+    expect(cred.endpoint?.models).toEqual([
+      { id: "local", contextWindow: 32_768 },
+      { id: "capped", contextWindow: 131_072, maxOutputTokens: 8192 },
+      { id: "plain" },
+    ]);
+    const info = async (id: string) => modelInfoFor(f.db, customModelId(cred.id, id), f.org.id);
+    expect(await info("local")).toMatchObject({ contextWindow: 32_768, maxOutputTokens: 8192 });
+    expect(await info("capped")).toMatchObject({ contextWindow: 131_072, maxOutputTokens: 8192 });
+    const plain = await info("plain");
+    expect(plain?.contextWindow).toBeUndefined();
+    expect(plain?.maxOutputTokens).toBeUndefined();
+    for (const bad of [
+      { contextWindow: 100 },
+      { contextWindow: 32_768.5 },
+      { contextWindow: 32_768, maxOutputTokens: 32_768 },
+    ])
+      await expect(addEndpoint(f, [{ id: "bad", ...bad }])).rejects.toThrow("bad:");
+  });
+
   test("another workspace's endpoint model is unknown here", async () => {
     f = await setup();
     const cred = await addEndpoint(f);

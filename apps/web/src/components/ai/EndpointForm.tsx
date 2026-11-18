@@ -4,6 +4,7 @@ import {
   CHECK_VIEW,
   CUSTOM_PROVIDER,
   checksInOrder,
+  contextProblem,
   draftOfEndpoint,
   ENDPOINT_SEARCH_FROM,
   ENDPOINT_STYLES,
@@ -308,6 +309,7 @@ export function EndpointForm({
               )}
               {shown.map((m) => {
                 const problem = m.on ? pricesProblem(m) : null;
+                const contextWrong = m.on && contextProblem(m);
                 return (
                   <div key={m.id} className="endpoint-model">
                     <Checkbox id={`${ids}-m-${m.id}`} checked={m.on} onCheckedChange={(on) => setModel(m.id, { on })} />
@@ -341,6 +343,14 @@ export function EndpointForm({
                           invalid={problem !== null}
                           onChange={(e) => setModel(m.id, { output: e.target.value })}
                         />
+                        <Input
+                          aria-label={t("endpoint.context", { model: m.id })}
+                          placeholder={t("endpoint.contextShort")}
+                          inputMode="numeric"
+                          value={m.context ?? ""}
+                          invalid={contextWrong}
+                          onChange={(e) => setModel(m.id, { context: e.target.value })}
+                        />
                       </span>
                     )}
                     {problem && (
@@ -348,10 +358,19 @@ export function EndpointForm({
                         {t(problem === "both" ? "endpoint.priceBoth" : "endpoint.priceInvalid")}
                       </div>
                     )}
+                    {contextWrong && (
+                      <div className="ac-field__error endpoint-model__error" role="alert">
+                        {t("endpoint.contextInvalid")}
+                      </div>
+                    )}
                   </div>
                 );
               })}
-              {draft.models.some((m) => m.on) && <span className="ac-field__example">{t("endpoint.priceUnit")}</span>}
+              {draft.models.some((m) => m.on) && (
+                <span className="ac-field__example">
+                  {t("endpoint.priceUnit")} {t("endpoint.contextHelp")}
+                </span>
+              )}
             </fieldset>
           )}
           {unpriced && <SettingNote icon="info">{t("endpoint.unpriced")}</SettingNote>}

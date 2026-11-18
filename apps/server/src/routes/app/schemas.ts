@@ -330,6 +330,14 @@ export const EndpointModel = z
     prices: EndpointPrices.optional().openapi({
       description: "Absent: unpriced. Its calls are recorded with their tokens and cost 0, so no budget limits them.",
     }),
+    contextWindow: z.number().int().min(1024).max(10_000_000).optional().openapi({
+      description:
+        "Its context window in tokens (prompt + output), as its server is set up (an Ollama num_ctx, a vLLM --max-model-len). Absent: the default for unknown models.",
+    }),
+    maxOutputTokens: z.number().int().min(1).optional().openapi({
+      description:
+        "The most output tokens one call may ask for, under contextWindow. Absent with a contextWindow: a quarter of it.",
+    }),
     check: z
       .enum(["ok", "no_tools", "failed"])
       .optional()

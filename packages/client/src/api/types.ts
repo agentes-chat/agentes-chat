@@ -841,6 +841,10 @@ export interface EndpointModel {
   label?: string;
   /** Absent: unpriced (its calls cost 0, so no budget limits them). */
   prices?: EndpointPrices;
+  /** Its context window in tokens, as its server is set up; absent: the server's default for unknown models. */
+  contextWindow?: number;
+  /** The most output tokens one call may ask for; absent with a `contextWindow`: a quarter of it. */
+  maxOutputTokens?: number;
   check?: EndpointCheckResult;
 }
 

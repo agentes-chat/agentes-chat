@@ -9,6 +9,7 @@ import {
   type ModelMessage,
   type ModelRequest,
   promptChars,
+  setCustomModels,
 } from "@agenteschat/providers";
 import {
   createFakeJudge,
@@ -153,6 +154,28 @@ describe("fitContextWindow", () => {
     const judge = createFakeJudge(() => 0.5);
     expect(await fitContextWindow(judge, input(three(), 200_000))).toBeNull();
     expect(judge.calls).toHaveLength(0);
+  });
+
+  test("the output kept free is the model's own limit when smaller, as the gateway caps it", async () => {
+    const model = "custom:00000000-0000-4000-8000-000000000001:local";
+    setCustomModels("org", {
+      [model]: {
+        provider: "custom",
+        label: "local",
+        prices: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        serverSideFallback: false,
+        contextWindow: 32_768,
+        maxOutputTokens: 8192,
+      },
+    });
+    try {
+      // Asked for 32k of output in a 32k window, the whole window would go to it and every old result with it.
+      const { windowTokens: _catalog, ...rest } = input(three());
+      const fitted = await fitContextWindow(null, { ...rest, model, maxOutputTokens: 32_000 });
+      expect(fitted?.report).toMatchObject({ windowTokens: 32_768, budgetTokens: 32_768 - 8192 - 1639, fits: true });
+    } finally {
+      setCustomModels("org", {});
+    }
   });
 
   test("the agent's limit is the window when smaller", async () => {
