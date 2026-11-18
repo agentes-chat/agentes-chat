@@ -2376,12 +2376,16 @@ async function executeRunInner(
     const skillList = tools.some((t) => t.name === "load_skill")
       ? await enabledSkills(db, run.orgId, agent.id, run.id)
       : [];
-    const readsWiki = tools.some((t) => t.name === "read_wiki_page");
+    // A routine's instructions name what it checks; the wiki stays one `read_wiki_page` away.
+    const searchesWiki = tools.some((t) => t.name === "read_wiki_page") && !viaRoutine;
+    // Only the kinds searched below: with vectors for the wiki alone, a run that doesn't search it pays for none.
     const queryEmbedding = contextDeps
-      ? sharedQueryEmbedding(contextDeps, run.orgId, (trigger?.body ?? "").trim().slice(0, 500), [
-          "context_item",
-          "wiki",
-        ])
+      ? sharedQueryEmbedding(
+          contextDeps,
+          run.orgId,
+          (trigger?.body ?? "").trim().slice(0, 500),
+          searchesWiki ? ["context_item", "wiki"] : ["context_item"],
+        )
       : undefined;
     const personBehind = () => runAuthority(db, run).then((a) => a.personId);
     // Limited to some GitHub repositories: which ones, and where to start.
@@ -2457,8 +2461,7 @@ async function executeRunInner(
             )
             .catch(() => ({ text: "", itemIds: [] as string[], matchedIds: [] as string[] }))
         : Promise.resolve({ text: "", itemIds: [] as string[], matchedIds: [] as string[] }),
-      // A routine's instructions name what it checks; the wiki stays one `read_wiki_page` away.
-      readsWiki && !viaRoutine
+      searchesWiki
         ? retrieveWikiForRun(
             { db, search: contextDeps },
             {
