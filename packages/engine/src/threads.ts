@@ -27,6 +27,7 @@ import { type PreviewMeta, previewMeta, readableBody } from "./message-preview";
 import { type Message, messageView, replyExcerpt } from "./messages";
 import { pendingCommandsSql } from "./mission-command-rules";
 import { quietNoticeSql } from "./notices";
+import { readConversationNotifications } from "./notifications";
 import { can, type Membership, requirePermission } from "./organizations";
 import { maySql } from "./permissions";
 import { taskReaderSql } from "./task-access";
@@ -1519,6 +1520,8 @@ export async function markThreadRead(
       target: [schema.threadReads.rootMessageId, schema.threadReads.userId],
       set: { lastReadAt: at },
     });
+  // Its replies and the mentions in it are read in the inbox too.
+  await readConversationNotifications(deps, orgId, actorId, { channelId: root.channelId, threadId: root.id }, at);
   await publishUserEvent(deps.pubsub, orgId, actorId, {
     type: "thread.read",
     threadId: root.id,

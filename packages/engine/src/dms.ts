@@ -11,7 +11,7 @@ import { followsThreadSql, threadReadAtSql } from "./follows";
 import { landedAfterSql } from "./message-place";
 import { type PreviewMeta, previewMediaKind, previewMeta, readableBody } from "./message-preview";
 import { quietNoticeSql } from "./notices";
-import { resolveNotifications, unaskedGroup } from "./notifications";
+import { readConversationNotifications, resolveNotifications, unaskedGroup } from "./notifications";
 import { can, getMembership, requirePermission } from "./organizations";
 import { accountInUse, closedRefusal } from "./standing";
 
@@ -464,6 +464,8 @@ export async function markChannelRead(
     kind: "agent_reply",
   });
   await resolveNotifications({ db, pubsub }, orgId, { groupKeyPrefix: unaskedGroup(channelId), userIds: [actorId] });
+  // What people said to me here (DMs, mentions) is read too, so the inbox doesn't keep it unread.
+  await readConversationNotifications({ db, pubsub }, orgId, actorId, { channelId }, at);
   const read = { type: "channel.read" as const, channelId, userId: actorId, lastReadAt: at.toISOString() };
   if (member.kind === "dm") await publishChannelEvent(pubsub, read);
   // My other devices: the conversation stops looking unread there too.
