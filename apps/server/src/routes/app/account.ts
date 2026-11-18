@@ -13,6 +13,7 @@ import {
   canCreateWorkspace,
   changeMemberRole,
   clearPassword,
+  closedRefusal,
   cloudNotice,
   countUsers,
   createInvitation,
@@ -48,6 +49,7 @@ import {
   removeAvatar,
   removeMember,
   removeOrgLogo,
+  requestReset,
   requireOwnerToDelete,
   requirePermission,
   resolvePermissions,
@@ -318,8 +320,13 @@ export function accountRoutes(deps: AppDeps) {
     emails: { publicUrl: config.PUBLIC_URL, support: config.SUPPORT_EMAIL },
   };
   /** The proof a deletion takes (`deletionProof`). */
-  const prove = (c: { req: { raw: Request } }, userId: string, orgId: string | null, proof: z.infer<typeof Proof>) =>
-    deletionProof(deps.auth, proofDeps(), c.req.raw.headers, userId, orgId, proof);
+  const prove = (
+    c: { req: { raw: Request } },
+    userId: string,
+    orgId: string | null,
+    proof: z.infer<typeof Proof>,
+    reset = false,
+  ) => deletionProof(deps.auth, proofDeps(), c.req.raw.headers, userId, orgId, proof, reset);
   for (const path of [
     "/me",
     "/me/unread",
@@ -1680,6 +1687,73 @@ export function accountRoutes(deps: AppDeps) {
       if (deps.adapters.email.delivers !== true)
         return apiError(c, 409, "reauth.no_email", "This server doesn't send email. Give your password.");
       const sent = await sendDeletionCode(codes, user.id, orgId);
+      deps.wakeWorkers?.();
+      return c.json(sent, 202);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/reset",
+      tags,
+      security,
+      summary: "Reset a workspace (owners)",
+      description: `Erases everything made in it, at once and for good: its agents (the right hand too), conversations, files, tasks, routines, memory, the Vault and browser profiles. It keeps its name, plan, people, roles, invitations, AI accounts, computers, connectors and usage, and starts over like a new one: the right hand, #general with everyone in it, and the onboarding. Its people's apps hear an \`org.reset\` org event once it is done. ${PROOF_TEXT.replace("POST …/deletion/code", "POST …/reset/code").replace("for this deletion only", "for this reset only")} A workspace takes 3 resets a day (429). Already under way, it answers 202 before any proof. 403 \`forbidden\` for anyone but an owner, \`org.suspended\` while suspended, \`org.deleting\` while it is being deleted.`,
+      request: { params: OrgParams, body: body(Proof) },
+      responses: {
+        202: json(
+          z.object({
+            reset: z.object({ startedAt: z.string().openapi({ description: "When it started." }) }),
+          }),
+          "Resetting",
+        ),
+        ...errors,
+        429: errorResponse(
+          "Too many tries today (`reauth.code_limit`), or password tries or resets of it today (`rate_limited`)",
+        ),
+      },
+    }),
+    async (c) => {
+      const user = c.get("user");
+      const { orgId } = c.req.valid("param");
+      const refusal = closedRefusal((await requireOwnerToDelete(db, user.id, orgId)).standing);
+      if (refusal) throw refusal;
+      const under = (await getOrganization(db, orgId))?.resetRequestedAt;
+      if (under) return c.json({ reset: { startedAt: under.toISOString() } }, 202);
+      await prove(c, user.id, orgId, c.req.valid("json"), true);
+      if (!(await deps.adapters.rateLimiter.consume(`org-reset:${orgId}`, DELETIONS_PER_DAY)).allowed) {
+        return apiError(c, 429, "rate_limited", "This workspace was reset too many times today. Try again tomorrow.");
+      }
+      const { startedAt } = await requestReset(db, user.id, orgId);
+      deps.wakeWorkers?.();
+      return c.json({ reset: { startedAt: startedAt.toISOString() } }, 202);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: "post",
+      path: "/organizations/{orgId}/reset/code",
+      tags,
+      security,
+      summary: "Email a code to reset a workspace (owners)",
+      description:
+        "To your own address: the proof `POST …/reset` takes, for this workspace only, with the same rules as `POST …/deletion/code`. 409 `reauth.no_email` on a server that sends no email: the password is the proof there. 403 `forbidden` for anyone but an owner, `org.suspended` while suspended.",
+      request: { params: OrgParams },
+      responses: {
+        202: Sent,
+        ...errors,
+        429: errorResponse("Too many codes (`reauth.code_wait`, `reauth.code_limit`)"),
+      },
+    }),
+    async (c) => {
+      const user = c.get("user");
+      const { orgId } = c.req.valid("param");
+      await requireOwnerToDelete(db, user.id, orgId);
+      if (deps.adapters.email.delivers !== true)
+        return apiError(c, 409, "reauth.no_email", "This server doesn't send email. Give your password.");
+      const sent = await sendDeletionCode(codes, user.id, orgId, new Date(), true);
       deps.wakeWorkers?.();
       return c.json(sent, 202);
     },
