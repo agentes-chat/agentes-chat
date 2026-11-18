@@ -93,7 +93,7 @@ import {
   ruleToCron,
   type ScheduleRule,
 } from "./rrule";
-import { providerFailure } from "./runs";
+import { cliFailureParams, isCliFailure, providerFailure } from "./runs";
 import { describeWhen, parseSchedule, readSchedule, type ScheduleParse } from "./schedule";
 import { assertCanWork, closedRefusal, deletionPending, orgStanding, standingRefusal } from "./standing";
 import { alwaysAsks } from "./tools/gateway";
@@ -254,7 +254,10 @@ export interface RoutineRunView {
   id: string;
   at: string;
   status: RoutineRunStatus;
-  /** The coded reason of a skip, miss, failure or stop (the app translates it); `stopped` carries `by`. */
+  /**
+   * The coded reason of a skip, miss, failure or stop (the app translates it); `stopped` carries `by`, a provider's
+   * failure its `provider` and `detail`, a CLI's (`cli_failed`) its `brain` and what it said (`detail`).
+   */
   code: string | null;
   codeParams?: Record<string, string>;
   /** Its record or report, cut in `recentRuns`; '' when the viewer may not see what routines read. */
@@ -665,6 +668,10 @@ function runView(run: RunRow, details: RunDetails, detailed: boolean): RoutineRu
   // A provider's failure says its cause and its words, for who reads the records: the code alone says only "an error".
   const failure = detailed && status === "failed" ? providerFailure(agentRun?.error) : null;
   const cause = failure?.errorParams?.provider ? failure : null;
+  // A CLI's failure names its program and says what it said, for the same reader: the code alone says "an error".
+  const cli = detailed && status === "failed" && !cause ? cliFailureParams(agentRun?.error, run.code) : null;
+  // Older rows kept the brain's own code (`claude_failed`), which the apps have no words for.
+  const ownCode = cli || (run.code && isCliFailure(run.code)) ? "cli_failed" : run.code;
   return {
     id: run.id,
     at: run.at.toISOString(),
@@ -673,15 +680,15 @@ function runView(run: RunRow, details: RunDetails, detailed: boolean): RoutineRu
     code: cause
       ? cause.errorCode.replace(/^run\./, "")
       : status !== "waiting"
-        ? run.code
+        ? ownCode
         : agentAway(agentRun)
           ? "waiting_computer"
           : usageWaiting(agentRun)
             ? agentRun?.waitingCode === "budget" || agentRun?.waitSource === "budget"
               ? "waiting_budget"
               : "waiting_plan"
-            : run.code,
-    ...(by ? { codeParams: { by } } : cause ? { codeParams: cause.errorParams } : {}),
+            : ownCode,
+    ...(by ? { codeParams: { by } } : cause ? { codeParams: cause.errorParams } : cli ? { codeParams: cli } : {}),
     summary: detailed && run.status !== "canceled" ? run.summary : "",
     brain: run.brain,
     link: link && run.messageId ? { ...link, messageId: run.messageId } : null,

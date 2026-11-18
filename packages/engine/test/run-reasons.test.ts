@@ -3,6 +3,7 @@ import { ProviderError } from "@agenteschat/providers";
 import { routineFailureCode } from "../src/routine-ledger";
 import {
   brainFailureText,
+  cliFailureParams,
   cliFailureText,
   cliRefusedStart,
   OUR_ERROR,
@@ -282,4 +283,25 @@ test("a CLI whose sandbox can't start on its computer: said as that, never as it
   // Another program's words that only name bubblewrap stay that program's.
   const other = "Grok Build exited with code 1: error: bwrap exec failed: No such file or directory";
   expect(cliFailureText({ code: "grok_failed", message: other })).toStartWith("cli_failed: Grok Build: ");
+});
+
+test("a routine's run reads its CLI's failure from the run's error: whose program, and what it said", () => {
+  const spawn = "EAGAIN: resource temporarily unavailable, posix_spawn 'claude'";
+  expect(cliFailureParams(`cli_failed: Claude Code: ${spawn}`, "cli_failed")).toEqual({
+    brain: "Claude Code",
+    detail: spawn,
+  });
+  // It ended without a word, or an older row kept only its code: the program is still named.
+  expect(cliFailureParams("cli_closed: Codex: exit 1", "cli_failed")).toEqual({ brain: "Codex" });
+  expect(cliFailureParams("claude_failed", "cli_failed")).toEqual({ brain: "Claude Code" });
+  // Cut after its tools ran: the routine's run kept the brain's code, the run's error what the CLI said.
+  expect(cliFailureParams("brain_interrupted: Cannot fork", "claude_failed")).toEqual({
+    brain: "Claude Code",
+    detail: "Cannot fork",
+  });
+  expect(cliFailureParams(null, "codex_failed")).toEqual({ brain: "Codex" });
+  // Not the CLI's: the provider's, the budget's, the computer's own.
+  for (const error of ["provider_error: no_credit@OpenRouter: Insufficient credits", "budget_exceeded", "timeout"])
+    expect(cliFailureParams(error, routineFailureCode(error))).toBeNull();
+  expect(cliFailureParams("brain_interrupted: The computer stopped answering", "runner_error")).toBeNull();
 });

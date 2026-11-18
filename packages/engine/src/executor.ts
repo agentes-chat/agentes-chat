@@ -297,7 +297,13 @@ import {
 import { seatState } from "./right-hand-seats";
 import { routineBriefOf } from "./routine-brief";
 import { missStaleRoutineRun, routineRunWaitingForComputer, routineRunWaitingForPlan } from "./routine-firing";
-import { closeRoutineRun, type RoutineRunEnd, recordRoutineReportMessage, routineFailureEnd } from "./routine-ledger";
+import {
+  closeRoutineRun,
+  type RoutineRunEnd,
+  recordRoutineReportMessage,
+  routineFailureCode,
+  routineFailureEnd,
+} from "./routine-ledger";
 import { type ReleaseReason, releaseHeldInbox, releaseInbox, stoppedToSend, takeInbox, whileHeld } from "./run-inbox";
 import { deliverNoticeToRun } from "./run-resume";
 import { issueRunToolToken, revokeRunToolTokens } from "./run-tool-tokens";
@@ -1681,7 +1687,9 @@ async function executeRunInner(
       error: reason,
       ...(brainFailure ? { failure: brainFailure } : {}),
     });
-    if (failed) await closeRoutine({ status: "failed", ...(ledger ?? routineFailureEnd(reason)) });
+    // A brain's own code (`claude_failed`, `runner_error`) reads in the ledger as the apps word it (`cli_failed`).
+    const end = ledger ? { ...ledger, code: routineFailureCode(ledger.code) } : routineFailureEnd(reason);
+    if (failed) await closeRoutine({ status: "failed", ...end });
     await publishChannelEvent(deps.pubsub, event("failed", reason));
     await finished("failed", reason);
     // An archived agent answers nobody, nor does a paused workspace or agent; any other failure leaves the

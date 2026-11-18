@@ -46,6 +46,7 @@ import { RUN_APPROVED_ACTION } from "./tools/gateway";
 import { approvalsLevelOf, WHY_MAX_CHARS, WHY_MIN_CHARS } from "./tools/run-policy";
 import { hasScope } from "./tools/scopes";
 import type { AheadRequest, ToolContext, ToolDefinition, ToolOutput, ToolSource } from "./tools/types";
+import { untrustedBlock } from "./untrusted";
 
 export const SCHEDULE_SCOPE = "schedule:write";
 
@@ -278,11 +279,21 @@ function needsText(r: RoutineView) {
   return ` It can't run yet: no ${name} webhook sends this workspace its events, so nothing starts it. Tell the person what it needs: someone who manages connectors opens this routine in Rotinas and follows the ${name} webhook steps shown there. Until then it never runs; if they'd rather not wait, offer a schedule that checks instead.`;
 }
 
-/** One run, coded: "2026-10-20 09:00 failed (provider_error)". */
+/** What a failed run's CLI said is cut to this for the agent's list. */
+const RUN_ERROR_CHARS = 300;
+
+/**
+ * One run, coded: "2026-10-20 09:00 failed (provider_error)". A CLI's failure says what the code means and what the
+ * program said, so the agent can tell why without the computer's log.
+ */
 function runText(run: RoutineRunView, zone: string) {
   const at = localDateTimeOf(new Date(run.at), zone).replace("T", " ");
   const by = run.codeParams?.by ? ` by ${run.codeParams.by}` : "";
-  return `${at} ${run.status}${run.code ? ` (${run.code}${by})` : ""}`;
+  const line = `${at} ${run.status}${run.code ? ` (${run.code}${by})` : ""}`;
+  const { brain, detail } = run.codeParams ?? {};
+  if (run.status !== "failed" || run.code !== "cli_failed" || !brain) return line;
+  const meaning = `${line}: the ${brain} program on the agent's computer stopped with an error`;
+  return detail ? `${meaning}. It said:\n${untrustedBlock("routine run error", detail, RUN_ERROR_CHARS)}` : meaning;
 }
 
 /** How many of a routine's last runs `list_routines` shows. */

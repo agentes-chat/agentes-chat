@@ -412,6 +412,27 @@ export function runErrorDetail(error: string | null | undefined): {
   return { errorCode: "run.failed", errorParams: { detail: error.slice(0, 300) } };
 }
 
+/**
+ * A CLI's failed turn for a view that keeps only a code (a routine's run): whose program it was and what it said, read
+ * from the run's stored error. `code`: the brain's own code (`claude_failed`), which a turn cut after its tools ran
+ * leaves on the routine's run while the run's error keeps what the CLI said. Null when the CLI didn't fail the run.
+ */
+export function cliFailureParams(
+  error: string | null | undefined,
+  code?: string | null,
+): { brain: string; detail?: string } | null {
+  const of = runErrorDetail(error);
+  const params = of?.errorParams;
+  if (of?.errorCode.startsWith("run.cli_")) {
+    if (!params?.brain) return null;
+    return params.detail ? { brain: params.brain, detail: params.detail } : { brain: params.brain };
+  }
+  const kind = code ? CLI_CODES[code] : undefined;
+  if (!kind) return null;
+  const cut = of?.errorCode === "run.brain_interrupted" || of?.errorCode === "run.brain_unavailable";
+  return cut && params?.detail ? { brain: BRAIN_NAMES[kind], detail: params.detail } : { brain: BRAIN_NAMES[kind] };
+}
+
 /** The detail of a run error its AI provider caused, on the person's key or the server's: worth another try. */
 export function providerFailure(error: string | null | undefined) {
   const detail = runErrorDetail(error);

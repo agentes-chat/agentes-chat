@@ -179,7 +179,10 @@ const RoutineRun = z
       description:
         "Why it was skipped, missed, failed or stopped (`previous_running`, `waiting_computer`, `stopped`, `budget_exceeded`…): the app translates it.",
     }),
-    codeParams: z.record(z.string(), z.string()).optional().openapi({ description: "`stopped`: `by` (a name)." }),
+    codeParams: z.record(z.string(), z.string()).optional().openapi({
+      description:
+        "`stopped`: `by` (a name). A provider's failure: `provider`, `detail`. `cli_failed`: `brain`, `detail`.",
+    }),
     summary: z.string().openapi({
       description: "Its record or report, cut in a routine's `recentRuns`; empty when you may not read it.",
     }),
