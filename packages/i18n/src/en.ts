@@ -4003,7 +4003,6 @@ export const en = {
     /** After "Save in the Vault", under the toast's "Saved in the Vault". */
     saved: "Agents with access use it by the name {{name}}.",
   },
-
   /** An agent's proposal of costly work nobody asked for directly (ADR 0131): the card's buttons and who decided. */
   costlyCard: {
     go: "Go ahead",

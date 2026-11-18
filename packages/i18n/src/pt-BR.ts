@@ -3882,7 +3882,6 @@ export const ptBR = {
     /** After "Save in the Vault", under the toast's "Saved in the Vault". */
     saved: "Os agentes com acesso usam pelo nome {{name}}.",
   },
-
   /** An agent's card whose button opens the app's own dialog, filled in (`meta.actionCard`). */
   /** A stretch's pause card once someone pressed Continuar (ADR 0089). */
   /** A proposta de um agente de trabalho caro que ninguém pediu diretamente (ADR 0131): os botões do card e quem decidiu. */

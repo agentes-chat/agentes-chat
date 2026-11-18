@@ -1444,18 +1444,22 @@ function Chat({
   // A take goes with the words typed beside it and the files waiting above the field, in one message. The files that
   // can't upload keep the take, paused, and the words in the field (the composer puts them back).
   const withVoice = async (typed: string) => {
-    // A key typed beside the take: the take goes without the words, which wait on the key guard.
+    // A key typed beside the take: the take goes without the words, which wait on the key guard. Asked only once the
+    // take goes: when the files can't upload, the composer keeps the words, key and all, and nothing was sent.
     const found = looksLikeApiKey(typed);
-    if (found) guardKey(typed, found, () => sendFromField(typed, "join", true));
     const text = found ? "" : typed;
-    if (pending.length === 0) return { text, artifacts: [] };
-    const artifacts = await uploadPending(pending);
-    if (!artifacts) return null;
-    artifacts.forEach((a, i) => {
-      const file = pending[i];
-      if (file) sentWithVoice.current.set(a.id, file);
-    });
-    setPending([]);
+    let artifacts: ArtifactRef[] = [];
+    if (pending.length > 0) {
+      const uploaded = await uploadPending(pending);
+      if (!uploaded) return null;
+      uploaded.forEach((a, i) => {
+        const file = pending[i];
+        if (file) sentWithVoice.current.set(a.id, file);
+      });
+      setPending([]);
+      artifacts = uploaded;
+    }
+    if (found) guardKey(typed, found, () => sendFromField(typed, "join", true));
     return { text, artifacts };
   };
   const onRecording = useCallback(() => sendTyping(threadId, undefined, "voice"), [sendTyping, threadId]);

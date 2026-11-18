@@ -30,7 +30,7 @@ import { modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { Button, Chip, Dialog, DialogFooter, EventPill, EventPillAction, Icon, InfoHint } from "@agenteschat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePlanHold } from "@/components/ai/ConnectAiSteps";
 import { useOpenBilling } from "@/components/BillingLinkButton";
@@ -506,7 +506,10 @@ export function KeyGuardDialog({
   const connect = useConnectAi();
   const held = usePlanHold() !== null;
   const [vault, setVault] = useState<FoundKey | null>(null);
-  const found = ask?.found;
+  // The last key asked about: the dialog keeps its title and width while it animates closed.
+  const last = useRef(ask);
+  if (ask) last.current = ask;
+  const found = last.current?.found;
   const ai = found?.ai === true && connect !== null && can(org, "manage_credentials") && !held;
   return (
     <>
