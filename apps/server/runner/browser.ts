@@ -840,6 +840,13 @@ async function stopPid(pid: number) {
 }
 
 /** A Chrome the runner started for one agent. */
+
+/** `agent-browser upload` answers this when the element isn't a file input. */
+const UPLOAD_CHOOSER_FAILURE = /not an? (file )?input|file input element/i;
+
+type CdpMessage = { id?: number; method?: string; params?: unknown; error?: unknown; result?: unknown };
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export interface OwnChrome {
   pid: number;
   /** Its debugging port (`agent-browser --cdp`). */
@@ -2800,7 +2807,7 @@ export class BrowserManager {
       return TOOK_OVER;
     }
     if (!human) await this.toolbarGoes(session, command, stops);
-    const plain =
+    let plain =
       human ??
       // `--human`: its drag goes along an eased curve from where the pointer is, slower than a script's.
       (await this.run(
@@ -2811,6 +2818,12 @@ export class BrowserManager {
           ...(stops ? { signal: stops } : {}),
         },
       ));
+    // A site whose "Add video" opens the system's file picker has no `<input type=file>` for
+    // `agent-browser upload` to fill (Meta Business Suite, Google's pickers). Chrome's chooser is
+    // intercepted instead, and the files go on the node the page opened.
+    if (!plain.success && command === "upload" && UPLOAD_CHOOSER_FAILURE.test(plain.error ?? "")) {
+      plain = (await this.uploadViaChooser(session, args, timeoutMs, stops)) ?? plain;
+    }
     const answer = taken?.aborted && !plain.success ? TOOK_OVER : plain;
     // agent-browser sizes the page for a full-page shot and leaves it at the window's pixel ratio after (measured on
     // Chrome for Testing 156): the emulated size goes back.
@@ -2826,6 +2839,122 @@ export class BrowserManager {
       if (left) return { success: false, data: null, error: left };
     }
     return answer;
+  }
+
+  /**
+   * Uploads into a page whose button opens the system's file picker: Chrome is told to intercept the
+   * chooser, the button is clicked for real, and the files are set on the node the page opened.
+   * Null keeps the plain command's failure (an element that is neither a file input nor a chooser).
+   */
+  private async uploadViaChooser(
+    session: Session,
+    args: string[],
+    timeoutMs: number,
+    signal?: AbortSignal,
+  ): Promise<BrowserAnswer | null> {
+    const [selector, ...files] = args;
+    const chrome = session.chrome;
+    if (!selector || selector.startsWith("-") || files.length === 0 || !chrome) return null;
+    const quick = { timeoutMs: Math.min(timeoutMs, 20_000), ...(signal ? { signal } : {}) };
+    const at = await this.run(session, ["eval", "location.href"], quick);
+    const raw = (at.data as { result?: unknown } | null)?.result;
+    const href = typeof raw === "string" ? raw : "";
+    const wsUrl = await this.chooserTarget(chrome.port, href);
+    if (!wsUrl) return null;
+
+    const ws = new WebSocket(wsUrl);
+    let id = 0;
+    const pending = new Map<number, (m: CdpMessage) => void>();
+    let resolveChooser: ((node: number) => void) | null = null;
+    const chooser = new Promise<number | null>((resolve) => {
+      const t = setTimeout(() => resolve(null), Math.min(12_000, timeoutMs));
+      resolveChooser = (node) => {
+        clearTimeout(t);
+        resolve(node);
+      };
+    });
+    const send = (method: string, params: Record<string, unknown> = {}) =>
+      new Promise<CdpMessage>((resolve) => {
+        const n = ++id;
+        pending.set(n, resolve);
+        ws.send(JSON.stringify({ id: n, method, params }));
+      });
+    ws.onmessage = (event: MessageEvent) => {
+      const m = JSON.parse(String(event.data)) as CdpMessage;
+      if (typeof m.id === "number" && pending.has(m.id)) {
+        pending.get(m.id)?.(m);
+        pending.delete(m.id);
+        return;
+      }
+      const node = (m.params as { backendNodeId?: number } | undefined)?.backendNodeId;
+      if (m.method !== "Page.fileChooserOpened" || typeof node !== "number") return;
+      void send("DOM.describeNode", { backendNodeId: node })
+        .then((d) => {
+          const name = (
+            (d.result as { node?: { nodeName?: string } } | undefined)?.node?.nodeName ?? "?"
+          ).toUpperCase();
+          if (name === "INPUT") resolveChooser?.(node);
+          else this.opts.log(`a file picker opened on <${name.toLowerCase()}> (nothing to fill); waiting for another`);
+        })
+        .catch(() => undefined);
+    };
+
+    try {
+      await Promise.race([new Promise<void>((resolve) => (ws.onopen = () => resolve())), sleep(2_000)]);
+      await send("Page.enable");
+      await send("DOM.enable");
+      await send("Page.setInterceptFileChooserDialog", { enabled: true });
+
+      const box = await this.run(session, ["get", "box", selector], quick);
+      const b = (box.data as { result?: { x?: number; y?: number; width?: number; height?: number } } | null)?.result;
+      const hasBox = b && typeof b.x === "number" && typeof b.y === "number" && Boolean(b.width) && Boolean(b.height);
+      if (hasBox) {
+        const x = Math.round((b as { x: number }).x + ((b as { width: number }).width ?? 0) / 2);
+        const y = Math.round((b as { y: number }).y + ((b as { height: number }).height ?? 0) / 2);
+        for (const type of ["mousePressed", "mouseReleased"]) {
+          await send("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: 1 });
+        }
+      } else {
+        // A ref that no longer resolves (a stale snapshot): the plain click still opens the picker.
+        // A ref that no longer resolves (a stale snapshot): the plain click still opens the picker.
+        await this.run(session, ["click", selector], {
+          timeoutMs: Math.min(timeoutMs, 20_000),
+          ...(signal ? { signal } : {}),
+        });
+      }
+
+      const node = await chooser;
+      if (node === null) return null;
+      const set = await send("DOM.setFileInputFiles", { files, backendNodeId: node });
+      if (set.error) return null;
+      this.opts.log(
+        `the browser of ${session.agent.handle} uploaded ${files.length} file(s) through the page's picker`,
+      );
+      return { success: true, data: null };
+    } catch {
+      return null;
+    } finally {
+      void send("Page.setInterceptFileChooserDialog", { enabled: false }).catch(() => undefined);
+      try {
+        ws.close();
+      } catch {
+        // already closed
+      }
+    }
+  }
+
+  /** The DevTools endpoint of the page whose URL matches the tab the agent is on. */
+  private async chooserTarget(port: number, href: string): Promise<string | null> {
+    try {
+      const resp = await fetch(`http://127.0.0.1:${port}/json/list`);
+      if (!resp.ok) return null;
+      const list = (await resp.json()) as Array<{ type?: string; url?: string; webSocketDebuggerUrl?: string }>;
+      const pages = list.filter((t) => t.type === "page" && /^https?:/i.test(t.url ?? "") && t.webSocketDebuggerUrl);
+      const same = pages.find((t) => href && (t.url ?? "").startsWith(href.slice(0, 120)));
+      return (same ?? pages[0])?.webSocketDebuggerUrl ?? null;
+    } catch {
+      return null;
+    }
   }
 
   /**
