@@ -12,7 +12,7 @@ import { publishDelivery } from "./delivery";
 import { isAgentOnlyDm } from "./dms";
 import { decisionNudge, FOLLOW_THROUGH_NUDGE, FOLLOW_THROUGH_NUDGE_DM, MISSION_ASK_NUDGE } from "./follow-through";
 import { cutText, cutTextEnd } from "./format";
-import type { Judge } from "./judge";
+import { type Judge, JudgeBudgetError } from "./judge";
 import type { NoticeKind } from "./notices";
 import { notifyRunFailed } from "./notification-producers";
 import { ANSWER_NUDGE } from "./reply-policy";
@@ -405,8 +405,8 @@ export async function continuationVerdict(
     answers = await ask(learned);
   } catch (error) {
     // Some providers' filters refuse a wording (a Claude subscription sign-in's misleading 400): the follow-through
-    // verdict must never fail because of the extra question, so it is asked again alone.
-    if (!learned) throw error;
+    // verdict must never fail because of the extra question, so it is asked again alone. Not past the turn end's wait.
+    if (!learned || error instanceof JudgeBudgetError) throw error;
     learned = false;
     input.onLearnFailed?.(error);
     answers = await ask(false);

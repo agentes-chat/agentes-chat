@@ -304,6 +304,51 @@ export function createLlmJudge(deps: {
 }
 
 /**
+ * What a turn's end waits for its checks in all (`withJudgeBudget`): the reply waits on them, and a slow small model
+ * would otherwise hold it `LLM_JUDGE_TIMEOUT_MS` per check, up to four checks a run.
+ */
+export const TURN_END_CHECK_BUDGET_MS = 4_000;
+
+/** A check that ran out of its turn end's wait, or skipped after an earlier one did. */
+export class JudgeBudgetError extends Error {
+  constructor() {
+    super("judge: out of the turn end's wait");
+    this.name = "JudgeBudgetError";
+  }
+}
+
+/**
+ * `judge` within one wait of `budgetMs` from its first ask. Past it the check fails at once, so its caller takes the
+ * default it takes on any failure, and `slow.timedOut` is set: every later check sharing `slow` (the run's next turn
+ * ends) fails at once too. The request left behind ends on its own timeout.
+ */
+export function withJudgeBudget(judge: Judge, budgetMs: number, slow: { timedOut: boolean }): Judge {
+  let until: number | null = null;
+  return {
+    get name() {
+      return judge.name;
+    },
+    async ask(request) {
+      if (slow.timedOut) throw new JudgeBudgetError();
+      until ??= Date.now() + budgetMs;
+      const left = Math.max(0, until - Date.now());
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const out = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          slow.timedOut = true;
+          reject(new JudgeBudgetError());
+        }, left);
+      });
+      try {
+        return await Promise.race([judge.ask(request), out]);
+      } finally {
+        clearTimeout(timer);
+      }
+    },
+  };
+}
+
+/**
  * `primary`, and `fallback` on any error or timeout. Named after `fallback` while `primaryOn()` is false (no Jev key
  * now), so a decision never names a judge that wasn't asked.
  */

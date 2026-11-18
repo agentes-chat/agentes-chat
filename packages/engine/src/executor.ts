@@ -234,7 +234,7 @@ import { agentRepositoryList, repositoriesPrompt } from "./git/repos";
 import { askVerdict, handOffHolds, repeatedAsk, saysNeedsNothing } from "./hand-off";
 import { UPDATE_ISSUE_TOOL } from "./issue-tools";
 import { linkRunToIssue, mirrorReplyToIssue } from "./issues";
-import { type Judge, judgeCallOf } from "./judge";
+import { type Judge, judgeCallOf, TURN_END_CHECK_BUDGET_MS, withJudgeBudget } from "./judge";
 import {
   KEY_LINE_PERSON_MINUTES,
   type KeyLinePlace,
@@ -1916,6 +1916,9 @@ async function executeRunInner(
   // Tools on demand (ADR 0043): a new run lists the core tools and the groups the judge expects it to need.
   let toolChoice = null as ToolGroupChoice | null;
   const judge = deps.context?.judge;
+  /** A turn end's checks timed out once: the run's later ones take their default at once (`withJudgeBudget`). */
+  const slowChecks = { timedOut: false };
+  const turnEndJudge = () => (judge ? withJudgeBudget(judge, TURN_END_CHECK_BUDGET_MS, slowChecks) : undefined);
   /** The latest messages where the run answers, read once for every judge that needs them. */
   let recentRead: Promise<string[]> | null = null;
   const recentMessages = () => {
@@ -5733,6 +5736,7 @@ async function executeRunInner(
           : [];
         const judging = evidenceFor(transcript);
         const work = await workDone(transcript);
+        const checker = turnEndJudge();
         const decision = await decideTurnEnd({
           state,
           kind: "routine",
@@ -5750,9 +5754,9 @@ async function executeRunInner(
           judged: record,
           mission: false,
           wakesLater: () => wakesLater(db, run),
-          verdict: judge
+          verdict: checker
             ? async () =>
-                continuationVerdict(judge, {
+                continuationVerdict(checker, {
                   orgId: run.orgId,
                   agentId: run.agentId,
                   runId: run.id,
@@ -5764,7 +5768,7 @@ async function executeRunInner(
                   onLearn: (signal) => {
                     learned = signal;
                   },
-                  onLearnFailed: (error) => reportJudgeLearn(judge, error),
+                  onLearnFailed: (error) => reportJudgeLearn(checker, error),
                 })
             : null,
           evidence: judging.evidence,
@@ -5960,6 +5964,7 @@ async function executeRunInner(
       );
       const localPaths = theirs ? [] : cited;
       const work = await workDone(t);
+      const checker = turnEndJudge();
       let decision = await decideTurnEnd({
         state,
         kind: betweenAgents ? "agents_dm" : "conversation",
@@ -5979,9 +5984,9 @@ async function executeRunInner(
           (plan.missionId ? await missionAsksPerson(db, plan.missionId) : false) ||
           wakesLater(db, run, (t as { detachedWaits?: { waitId: string }[] }).detachedWaits),
         comesBack: () => comesBackHere(db, run),
-        verdict: judge
+        verdict: checker
           ? async () =>
-              continuationVerdict(judge, {
+              continuationVerdict(checker, {
                 orgId: run.orgId,
                 agentId: run.agentId,
                 runId: run.id,
@@ -5994,7 +5999,7 @@ async function executeRunInner(
                 onLearn: (signal) => {
                   learned = signal;
                 },
-                onLearnFailed: (error) => reportJudgeLearn(judge, error),
+                onLearnFailed: (error) => reportJudgeLearn(checker, error),
               })
           : null,
         evidence: judging.evidence,
@@ -6009,10 +6014,10 @@ async function executeRunInner(
       // On its way to asking a person, by the verdict `ask` or by repeating a promise (`continue`), yet asking them for
       // nothing it needs (a status note, an optional offer, a question it already asked): it is its answer, never a
       // nudge to ask nor a question card the run would wait on. On a judge error the rule stands.
-      if (judge && (decision.rule === "ask" || decision.rule === "ask_card")) {
+      if (checker && (decision.rule === "ask" || decision.rule === "ask_card")) {
         const asks = (await repeatedAsk(db, run, judged))
           ? "none"
-          : await askVerdict(judge, {
+          : await askVerdict(checker, {
               orgId: run.orgId,
               agentId: run.agentId,
               runId: run.id,
