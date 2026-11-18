@@ -12097,8 +12097,6 @@
     "see": "Warteschlange ansehen",
     "openComputer": "Computer öffnen",
     "label": "Warteschlange für {{name}}",
-    "full": "Voll",
-    "fullNext": "Voll · der Nächste startet in etwa {{n}} Min.",
     "free": "Niemand wartet",
     "workingNow": "Arbeitet gerade · {{n}}",
     "inLine": "In der Warteschlange · {{n}}",

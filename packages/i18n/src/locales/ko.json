@@ -11597,8 +11597,6 @@
     "see": "대기열 보기",
     "openComputer": "컴퓨터 열기",
     "label": "{{name}} 대기열",
-    "full": "가득 참",
-    "fullNext": "가득 참 · 다음 차례는 약 {{n}}분 후 시작",
     "free": "대기 중인 항목 없음",
     "workingNow": "지금 작업 중 · {{n}}",
     "inLine": "대기 중 · {{n}}",

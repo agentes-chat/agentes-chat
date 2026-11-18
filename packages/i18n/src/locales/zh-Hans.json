@@ -11676,8 +11676,6 @@
     "see": "查看队列",
     "openComputer": "打开电脑",
     "label": "{{name}} 的队列",
-    "full": "已满",
-    "fullNext": "已满 · 下一个约 {{n}} 分钟后开始",
     "free": "没有排队",
     "workingNow": "正在工作 · {{n}}",
     "inLine": "排队中 · {{n}}",

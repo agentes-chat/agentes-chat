@@ -29567,12 +29567,6 @@
   "queue.label": {
     "value": "Line for {{name}}"
   },
-  "queue.full": {
-    "value": "Full"
-  },
-  "queue.fullNext": {
-    "value": "Full · next starts in about {{n}} min"
-  },
   "queue.free": {
     "value": "Nobody in line"
   },

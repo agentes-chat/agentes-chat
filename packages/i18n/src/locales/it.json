@@ -12585,8 +12585,6 @@
     "see": "Vedi la coda",
     "openComputer": "Apri il computer",
     "label": "Coda di {{name}}",
-    "full": "Pieno",
-    "fullNext": "Pieno · il prossimo inizia tra circa {{n}} min",
     "free": "Nessuno in coda",
     "workingNow": "Al lavoro ora · {{n}}",
     "inLine": "In coda · {{n}}",

@@ -11656,8 +11656,6 @@
     "see": "Lihat antrean",
     "openComputer": "Buka komputer",
     "label": "Antrean {{name}}",
-    "full": "Penuh",
-    "fullNext": "Penuh · berikutnya mulai sekitar {{n}} mnt lagi",
     "free": "Tidak ada yang mengantre",
     "workingNow": "Sedang bekerja · {{n}}",
     "inLine": "Dalam antrean · {{n}}",

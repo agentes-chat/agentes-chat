@@ -1196,7 +1196,7 @@ describe("a computer's line", () => {
     await settle(4);
     const dialog = screen().getByRole("dialog", { name: "Fila de MacBook" });
     const text = dialog.textContent ?? "";
-    expect(text).toContain("Cheio · o próximo começa em cerca de 3 min");
+    expect(text).toContain("Na fila · começa em seguida");
     expect(text).toContain("Trabalhando agora · 1");
     expect(text).toContain("faltam ~3 min");
     expect(text).toContain("Na fila · 3");

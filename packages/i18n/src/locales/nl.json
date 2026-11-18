@@ -12169,8 +12169,6 @@
     "see": "Wachtrij bekijken",
     "openComputer": "Computer openen",
     "label": "Wachtrij van {{name}}",
-    "full": "Vol",
-    "fullNext": "Vol · de volgende start over ongeveer {{n}} min",
     "free": "Niemand in de wachtrij",
     "workingNow": "Nu bezig · {{n}}",
     "inLine": "In de wachtrij · {{n}}",

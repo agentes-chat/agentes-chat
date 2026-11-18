@@ -12513,8 +12513,6 @@ export const ptBR = {
     /** In the line's dialog opened from a DM: on to the agent's computer. */
     openComputer: "Abrir o computador",
     label: "Fila de {{name}}",
-    full: "Cheio",
-    fullNext: "Cheio · o próximo começa em cerca de {{n}} min",
     free: "Ninguém na fila",
     workingNow: "Trabalhando agora · {{n}}",
     inLine: "Na fila · {{n}}",

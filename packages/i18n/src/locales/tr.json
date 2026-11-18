@@ -12036,8 +12036,6 @@
     "see": "Sırayı gör",
     "openComputer": "Bilgisayarı aç",
     "label": "{{name}} sırası",
-    "full": "Dolu",
-    "fullNext": "Dolu · sıradaki yaklaşık {{n}} dk sonra başlar",
     "free": "Sırada kimse yok",
     "workingNow": "Şu an çalışıyor · {{n}}",
     "inLine": "Sırada · {{n}}",

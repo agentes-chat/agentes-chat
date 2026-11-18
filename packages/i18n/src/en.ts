@@ -12506,8 +12506,6 @@ export const en = {
     openComputer: "Open the computer",
     /** The dialog's label for screen readers; the visible title is the computer's name. */
     label: "Line for {{name}}",
-    full: "Full",
-    fullNext: "Full · next starts in about {{n}} min",
     free: "Nobody in line",
     workingNow: "Working now · {{n}}",
     inLine: "In line · {{n}}",

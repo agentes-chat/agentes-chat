@@ -13032,8 +13032,6 @@
     "see": "Zobacz kolejkę",
     "openComputer": "Otwórz komputer",
     "label": "Kolejka: {{name}}",
-    "full": "Pełny",
-    "fullNext": "Pełny · następny zacznie za około {{n}} min",
     "free": "Nikt nie czeka",
     "workingNow": "Pracuje teraz · {{n}}",
     "inLine": "W kolejce · {{n}}",

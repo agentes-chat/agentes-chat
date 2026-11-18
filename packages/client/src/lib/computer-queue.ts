@@ -36,10 +36,8 @@ export type QueueRow<T> = T & {
 export interface QueueView {
   working: QueueRow<QueueWorking>[];
   waiting: QueueRow<QueueWaiting>[];
-  /** Turns wait for room: the computer is full. */
+  /** Turns wait, for room on the computer or for their AI sign-in. */
   full: boolean;
-  /** When the next in line should start (null: no basis). */
-  nextStartAt: string | null;
   /** When the last in line should start, once every estimate is known. */
   allStartedAt: string | null;
 }
@@ -53,7 +51,6 @@ export function queueView(queue: ComputerQueue, viewerId: string): QueueView {
     working: queue.working.map((w) => ({ ...w, mine: mineOf(w.purpose, viewerId) })),
     waiting,
     full: waiting.length > 0,
-    nextStartAt: waiting[0]?.estimatedStartAt ?? null,
     allStartedAt: waiting.every((w) => w.estimatedStartAt) ? (last?.estimatedStartAt ?? null) : null,
   };
 }
@@ -71,11 +68,8 @@ export function queueFillText(t: TFunction, working: readonly Pick<QueueWorking,
 export const queueButtonText = (t: TFunction, queue: ComputerQueue | null | undefined) =>
   queue?.waiting.length ? t("queue.button", { count: queue.waiting.length }) : t("queue.buttonIdle");
 
-/** "Full · next starts in about 1 min", "Full", "Nobody in line". */
-export function queueStatusText(t: TFunction, view: QueueView, now: number) {
-  if (!view.full) return t("queue.free");
-  return view.nextStartAt ? t("queue.fullNext", { n: etaMinutes(view.nextStartAt, now) }) : t("queue.full");
-}
+/** "In line · starts soon" whatever holds the line, or "Nobody in line". */
+export const queueStatusText = (t: TFunction, view: QueueView) => t(view.full ? "queue.waiting" : "queue.free");
 
 /** "all started in ~6 min", or null with no basis or one in line (its row says it). */
 export const queueAllStartedText = (t: TFunction, view: QueueView, now: number) =>

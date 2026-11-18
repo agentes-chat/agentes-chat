@@ -12490,8 +12490,6 @@
     "see": "Ver cola",
     "openComputer": "Abrir la computadora",
     "label": "Cola de {{name}}",
-    "full": "Llena",
-    "fullNext": "Llena · el siguiente empieza en unos {{n}} min",
     "free": "Nadie en la cola",
     "workingNow": "Trabajando ahora · {{n}}",
     "inLine": "En la cola · {{n}}",
