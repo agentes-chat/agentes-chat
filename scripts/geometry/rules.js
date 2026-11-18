@@ -620,8 +620,11 @@
      * apart from its box (a `::before` set in from its sides, as `.ac-btn--glyph` does).
      */
     square(out) {
-      // A select's trigger and a segmented control's part are sized by the control they belong to.
-      const parts = "[role=combobox],[aria-haspopup=listbox],.ac-select__trigger,.ac-seg__item,[role=tab],[role=radio]";
+      // A select's trigger and a segmented control's part are sized by the control they belong to, and so is a canvas
+      // bar's picker, which shows its value and ▾ like a select, and the ▾ half of a slides toolbar's pair ("New
+      // slide" | ▾ for its layout), one control split in two (ADR 0196).
+      const parts =
+        "[role=combobox],[aria-haspopup=listbox],.ac-select__trigger,.ac-seg__item,[role=tab],[role=radio],.cnv-bar__pick,.sl-tools__pair > .sl-tools__open";
       for (const el of document.querySelectorAll("button,a.ac-btn,[role=button]")) {
         if (!seen(el) || el.matches(parts) || hasWords(el)) continue;
         // One glyph: two side by side (a face and a +) are a pill of their own.
@@ -877,8 +880,9 @@
     floating(out) {
       if (innerWidth < DESKTOP_MIN) return;
       const GAP = 10;
-      // An inline position is a test's own stand-in for a narrow window, not the app's layout.
-      for (const pane of document.querySelectorAll(".thread-panel:not([style])")) {
+      // An inline position is a test's own stand-in for a narrow window, not the app's layout. A live file's docked
+      // conversation is a column of the work area beside the file's page, with no scrim, never over it (ADR 0199).
+      for (const pane of document.querySelectorAll(".thread-panel:not([style], .lf-talk)")) {
         if (!seen(pane)) continue;
         const a = pane.getBoundingClientRect();
         const gaps = { Top: a.top - GAP, Right: innerWidth - a.right - GAP, Bottom: innerHeight - a.bottom - GAP };
@@ -2165,8 +2169,10 @@
         const air = parseFloat(getComputedStyle(el, "::before").left) || 0;
         return { left: r.left + air, right: r.right - air, top: r.top + air, bottom: r.bottom - air };
       };
+      // The canvas's tool strips and the spreadsheet's, the document's and the slides' toolbars (ADR 0196) are drawn
+      // as one too, like the format bars.
       const ONE =
-        ".ac-split,.ac-seg,.ac-token,.ac-eventpill,.ac-msg__actions,.ac-formatbar,.wiki-bar,[role=menu],[role=menubar],svg";
+        ".ac-split,.ac-seg,.ac-token,.ac-eventpill,.ac-msg__actions,.ac-formatbar,.wiki-bar,.cnv-bar,.cnv-dock,.cnv-zoom,.sheet-tools,.sl-tools,[role=menu],[role=menubar],svg";
       for (const row of document.body.querySelectorAll("*")) {
         if (!seen(row) || row.closest(ONE) || !isRow(style(row))) continue;
         const kids = flow(row);

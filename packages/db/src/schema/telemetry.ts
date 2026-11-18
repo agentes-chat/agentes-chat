@@ -29,7 +29,7 @@ export const instanceTelemetry = pgTable(
     ownerUserId: text(),
     /**
      * Whether the router may pick who answers on a person's own Claude or ChatGPT plan (`router-plan.ts`): true only
-     * on installations that already had a workspace when it became opt-in (migration 0300), false on new ones.
+     * on installations that already had a workspace when it became opt-in (migration 0304), false on new ones.
      */
     routerPlanFallback: boolean().notNull().default(false),
   },

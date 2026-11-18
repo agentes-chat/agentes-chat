@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import {
   ACCOUNT_LOGIN_TTL_MS,
   ACCOUNTS_PROTOCOL,
+  ANTIGRAVITY_MAC_PROTOCOL,
   accountCodeAad,
   BRAIN_PROTOCOL,
   CLAUDE_AUTH_PROTOCOL,
@@ -924,10 +925,18 @@ test("Gemini's sign-in is made for all of its owner's agents from runner protoco
     );
     return (runner.calls.find((c) => c.action === "begin") as { shared?: boolean } | undefined)?.shared;
   };
+  await f.db.update(schema.machines).set({ os: "linux" }).where(eq(schema.machines.id, machineId));
   expect(await begun(SHARED_GEMINI_PROTOCOL)).toBe(true);
   // A Gemini Enterprise seat too.
   expect(await begun(SHARED_GEMINI_PROTOCOL, "enterprise")).toBe(true);
   expect(await begun(SHARED_GEMINI_PROTOCOL - 1)).toBeUndefined();
+  // A Mac signs in to Gemini from `ANTIGRAVITY_MAC_PROTOCOL` on: an older runner there refuses it.
+  await f.db
+    .update(schema.machines)
+    .set({ os: "darwin", protocol: ANTIGRAVITY_MAC_PROTOCOL })
+    .where(eq(schema.machines.id, machineId));
+  expect(await begun(ANTIGRAVITY_MAC_PROTOCOL)).toBe(true);
+  await expect(begun(ANTIGRAVITY_MAC_PROTOCOL - 1)).rejects.toMatchObject({ code: "account.runner_old" });
 });
 
 test("Claude: an account another agent thinks with signs in again as a login of its own, under the account's name", async () => {

@@ -173,7 +173,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
     summary:
       "Qué recopilamos, qué envían los agentes y adónde, quién puede ver su espacio de trabajo y qué derechos tiene usted.",
     courtesy: "Esta es una traducción de cortesía. Si difiere de la versión en inglés, prevalece la versión en inglés.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -320,6 +320,7 @@ export const legalEs: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookies y almacenamiento local",
         blocks: [
           "El espacio de trabajo utiliza únicamente las cookies y el almacenamiento local necesarios para mantener su sesión iniciada, proteger los formularios y recordar preferencias como el tema y el idioma. El sitio público agentes.chat recuerda el idioma que usted eligió y utiliza la analítica de Himetrica (Sección 2). No utilizamos cookies publicitarias ni de seguimiento entre sitios.",
+          "**Cookie de referido:** cuando usted abre un enlace de referido de agentes.chat, nuestro servicio de facturación guarda el referido en una cookie en su navegador durante 60 días, para que quien envió el enlace reciba el crédito si usted se suscribe. En el Espacio Económico Europeo, el Reino Unido y Suiza, solo la establecemos después de que usted lo acepte en agentes.chat. Para olvidar el referido en este dispositivo, abra https://agentes.chat/es/privacy?forget-referral#cookies.",
         ],
       },
       {

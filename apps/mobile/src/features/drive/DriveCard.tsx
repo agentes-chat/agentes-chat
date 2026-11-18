@@ -1,12 +1,14 @@
-import { type Artifact, useArtifact } from "@agenteschat/client";
+import { type Artifact, type ArtifactLiveContent, type LivePresent, useArtifact } from "@agenteschat/client";
 import { Image } from "expo-image";
-import { memo } from "react";
+import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Text as RNText, StyleSheet, View } from "react-native";
 import { CHROME_MAX_SCALE, Icon, type IconName, PressScale, systemText, Text, useTheme, weights } from "@/ui";
 import type { FileRef } from "../files/logic";
 import { useOpenFile } from "../files/open";
 import { useRemoteFile } from "../files/source";
+import { PresentFaces } from "../live-files/shared/HereFaces";
+import { LiveCover } from "../live-files/shared/LiveCover";
 import { Face } from "../shared/Face";
 import { useDirectory, useOrgId, useWhen } from "../shared/hooks";
 import { MONO, useSurface } from "../shared/parts";
@@ -17,6 +19,9 @@ const KIND_ICON: Record<ReturnType<typeof kindKey>, IconName> = {
   table: "list",
   diff: "code",
   image: "image",
+  spreadsheet: "spreadsheet",
+  slides: "slides",
+  canvas: "canvas",
   file: "file",
 };
 
@@ -31,17 +36,21 @@ export const driveRef = (a: Pick<Artifact, "id" | "kind" | "title" | "version">)
 /**
  * A Drive card: the real preview at the item's version (a document's
  * first lines under its title, a table's first rows, a diff's first changed lines, the picture itself, a
- * file's type tile) with the kind on a small chip, then the name and who made it, when. A tap opens it as every file
- * opens (`openFile`): a picture or a video in the picture viewer, among the grid's (`siblings`, in the grid's order).
+ * file's type tile, a live file's grid, first slide or canvas map) with the kind on a small chip, then the name and
+ * who made it, when, and the faces of who is in a live file now (`present`, asked for the whole grid at once). A tap
+ * opens it as every file opens (`openFile`): a picture or a video in the picture viewer, among the grid's
+ * (`siblings`, in the grid's order), a live file on its own screen.
  */
 export const DriveCard = memo(function DriveCard({
   artifact: a,
   highlighted = false,
   siblings,
+  present,
 }: {
   artifact: Artifact;
   highlighted?: boolean;
   siblings?: readonly FileRef[];
+  present?: readonly LivePresent[];
 }) {
   const { t } = useTranslation();
   const { colors: c } = useTheme();
@@ -81,6 +90,7 @@ export const DriveCard = memo(function DriveCard({
         <Text variant="footnote" tone="faint" numberOfLines={1} style={styles.grow}>
           {author ? t("mobile.drive.by", { name: author, when: when.short(a.updatedAt) }) : when.short(a.updatedAt)}
         </Text>
+        <PresentFaces present={present} ring={c.bg} />
       </View>
     </PressScale>
   );
@@ -96,7 +106,21 @@ function Preview({ artifact: a }: { artifact: Artifact }) {
   if (!content) return <Placeholder />;
   const p = cardPreview(a.title, content);
   if (p.kind === "image") return <ImagePreview artifact={a} />;
+  if (p.kind === "live") return <LivePreview content={p.content} />;
   return <ContentPreview preview={p} />;
+}
+
+/** A live file's preview at the card's size (its slide and its canvas map fit the box). */
+function LivePreview({ content }: { content: ArtifactLiveContent }) {
+  const [box, setBox] = useState({ width: 0, height: 0 });
+  return (
+    <View
+      style={StyleSheet.absoluteFill}
+      onLayout={(e) => setBox({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+    >
+      {box.width > 0 ? <LiveCover content={content} width={box.width} height={box.height} /> : null}
+    </View>
+  );
 }
 
 function ImagePreview({ artifact: a }: { artifact: Artifact }) {
@@ -155,7 +179,7 @@ function Placeholder() {
   );
 }
 
-function ContentPreview({ preview: p }: { preview: Exclude<CardPreview, { kind: "image" }> }) {
+function ContentPreview({ preview: p }: { preview: Exclude<CardPreview, { kind: "image" } | { kind: "live" }> }) {
   const { colors: c, fonts } = useTheme();
   switch (p.kind) {
     case "document":

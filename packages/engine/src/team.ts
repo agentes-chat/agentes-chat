@@ -3,7 +3,16 @@ import { type AgentStatusView, lineInEnglish, loadAgentStatuses } from "./agent-
 import { currentHandles } from "./agents";
 import { type AiStatusDeps, agentAiStates } from "./ai-status";
 import type { AgentAppearance } from "./appearance";
-import { canTalkTo, listsAgentTo, type Speaker, seesAgentDetails, speakerFor, speakerOf, viaAgent } from "./audience";
+import {
+  canTalkTo,
+  listsAgentTo,
+  managesAgent,
+  type Speaker,
+  seesAgentDetails,
+  speakerFor,
+  speakerOf,
+  viaAgent,
+} from "./audience";
 import { inLine, mayCall } from "./autonomy-settings";
 import { agentBrowserStatus } from "./browser/status";
 import { BROWSER_SCOPE, DESKTOP_SCOPE } from "./browser/types";
@@ -509,6 +518,8 @@ export async function getTeam(db: Database, actorId: string, orgId: string) {
       audienceRoleIds: agents.audienceRoleIds,
       consultable: agents.consultable,
       brain: agents.brain,
+      editorUserIds: agents.editorUserIds,
+      editorRoleIds: agents.editorRoleIds,
       reportsToAgentId: agents.reportsToAgentId,
     })
     .from(agents)
@@ -585,6 +596,7 @@ export async function getTeam(db: Database, actorId: string, orgId: string) {
         channelIds: seats.filter((r) => r.agentId === a.id).map((r) => r.channelId),
         canTalk: canTalkTo(a, actorId, talks),
         seesDetails,
+        canManage: managesAgent(a, actorId, membership),
       };
     }),
     people: owners.map((o) => ({ id: o.id, name: o.name, image: o.image ?? null })),

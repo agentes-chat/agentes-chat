@@ -2070,8 +2070,36 @@
     {
       "idx": 297,
       "version": "7",
-      "when": 1794984391596,
-      "tag": "0300_claude_auth_percent",
+      "when": 1794994291596,
+      "tag": "0300_live_files",
+      "breakpoints": true
+    },
+    {
+      "idx": 298,
+      "version": "7",
+      "when": 1795004291596,
+      "tag": "0301_drive_files_shared",
+      "breakpoints": true
+    },
+    {
+      "idx": 299,
+      "version": "7",
+      "when": 1795014291596,
+      "tag": "0302_agent_editors",
+      "breakpoints": true
+    },
+    {
+      "idx": 300,
+      "version": "7",
+      "when": 1795025576604,
+      "tag": "0303_lodi_own_sign_in",
+      "breakpoints": true
+    },
+    {
+      "idx": 301,
+      "version": "7",
+      "when": 1795028809526,
+      "tag": "0304_claude_auth_percent",
       "breakpoints": true
     }
   ]

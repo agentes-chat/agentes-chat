@@ -114,6 +114,8 @@ export const LONG_JOB_KINDS = [
   "team_week.post",
   "team_day.post",
   "team_watch.check",
+  // Pictures for a canvas (ADR 0197): up to four provider calls of a minute or so each.
+  "live.image",
 ];
 
 const longJobSql = inArray(outbox.kind, LONG_JOB_KINDS);

@@ -376,7 +376,7 @@ html:not([data-pointer]) .nt-item:focus-visible {
   cursor: pointer;
 }
 .nt-more:hover {
-  background: rgba(127, 127, 127, 0.12);
+  color: var(--ink);
 }
 html:not([data-pointer]) .nt-more:focus-visible {
   outline: none;

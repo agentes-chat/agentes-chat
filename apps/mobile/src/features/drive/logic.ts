@@ -1,4 +1,10 @@
-import type { Artifact, ArtifactContent, ArtifactFilters, ArtifactKind } from "@agenteschat/client";
+import type {
+  Artifact,
+  ArtifactContent,
+  ArtifactFilters,
+  ArtifactKind,
+  ArtifactLiveContent,
+} from "@agenteschat/client";
 import { documentPreview, parsePatch } from "@agenteschat/client/lib/artifacts";
 import { fileIcon, previewKind } from "@agenteschat/client/lib/files";
 import { daysBetween } from "@agenteschat/client/lib/format";
@@ -8,11 +14,29 @@ import { daysBetween } from "@agenteschat/client/lib/format";
  * (Hoje, Esta semana, then by month) and what each card's real preview shows. Pure: the screen draws it.
  */
 
-export type DriveType = "all" | "documents" | "images" | "tables" | "diffs";
-export const DRIVE_TYPES: DriveType[] = ["all", "documents", "images", "tables", "diffs"];
+export type DriveType =
+  | "all"
+  | "documents"
+  | "spreadsheets"
+  | "presentations"
+  | "canvases"
+  | "images"
+  | "tables"
+  | "diffs";
+/** The chips in their order: the live files (ADR 0196 §9) after documents, as the New menu lists them. */
+export const DRIVE_TYPES: DriveType[] = [
+  "all",
+  "documents",
+  "spreadsheets",
+  "presentations",
+  "canvases",
+  "images",
+  "tables",
+  "diffs",
+];
 
 /** What a card shows before (or without) its content: by kind, uploaded files by their name. */
-export type CardShape = "document" | "table" | "diff" | "image" | "file";
+export type CardShape = "document" | "table" | "diff" | "image" | "spreadsheet" | "slides" | "canvas" | "file";
 
 export function cardShape(a: Pick<Artifact, "kind" | "title">): CardShape {
   switch (a.kind) {
@@ -22,6 +46,10 @@ export function cardShape(a: Pick<Artifact, "kind" | "title">): CardShape {
       return "table";
     case "diff":
       return "diff";
+    case "spreadsheet":
+    case "slides":
+    case "canvas":
+      return a.kind;
     case "file":
       return fileIcon(a.title) === "image" ? "image" : "file";
     default:
@@ -42,6 +70,13 @@ export function matchesType(a: Pick<Artifact, "kind" | "title">, type: DriveType
       return a.kind === "table" || icon === "table";
     case "diffs":
       return a.kind === "diff";
+    case "spreadsheets":
+      return a.kind === "spreadsheet";
+    // An uploaded deck is a presentation too (it opens as its slides, ADR 0198).
+    case "presentations":
+      return a.kind === "slides" || icon === "slides";
+    case "canvases":
+      return a.kind === "canvas";
   }
 }
 
@@ -62,6 +97,12 @@ export function driveKinds(type: DriveType): ArtifactKind[] | undefined {
       return ["table", "file"];
     case "diffs":
       return ["diff"];
+    case "spreadsheets":
+      return ["spreadsheet"];
+    case "presentations":
+      return ["slides", "file"];
+    case "canvases":
+      return ["canvas"];
   }
 }
 
@@ -162,6 +203,8 @@ export type CardPreview =
   | { kind: "table"; columns: string[]; rows: string[][] }
   | { kind: "diff"; lines: { kind: "add" | "del" | "same"; text: string }[] }
   | { kind: "image" }
+  /** A live file: its card draws the preview it carries (ADR 0196 §7). */
+  | { kind: "live"; content: ArtifactLiveContent }
   | { kind: "file"; ext: string };
 
 const extOf = (name: string) => (/\.([a-z0-9]{1,8})$/i.exec(name)?.[1] ?? "").slice(0, 4).toUpperCase();
@@ -206,12 +249,20 @@ export function cardPreview(title: string, content: ArtifactContent): CardPrevie
     case "poll":
     case "choices":
       return { kind: "file", ext: "POLL" };
+    case "spreadsheet":
+    case "slides":
+    case "canvas":
+      return { kind: "live", content };
   }
 }
 
 /** The kind chip on the preview: `mobile.drive.kind.<key>`. */
-export function kindKey(a: Pick<Artifact, "kind" | "title">): "document" | "table" | "diff" | "image" | "file" {
+export function kindKey(
+  a: Pick<Artifact, "kind" | "title">,
+): "document" | "table" | "diff" | "image" | "spreadsheet" | "slides" | "canvas" | "file" {
   const shape = cardShape(a);
   if (shape !== "file") return shape;
-  return a.kind === "file" && fileIcon(a.title) === "document" ? "document" : "file";
+  if (a.kind !== "file") return "file";
+  const icon = fileIcon(a.title);
+  return icon === "document" ? "document" : icon === "slides" ? "slides" : "file";
 }

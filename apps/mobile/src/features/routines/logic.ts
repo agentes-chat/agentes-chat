@@ -1,4 +1,5 @@
 import type {
+  Agent,
   MailFolder,
   Routine,
   RoutineConnectorTrigger,
@@ -10,8 +11,9 @@ import type {
   RoutineTarget,
   RoutineTargetInput,
 } from "@agenteschat/client";
+import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
 import type { RunStatus } from "@agenteschat/client/lib/calendar";
-import { type RoutineFix, runPixels } from "@agenteschat/client/lib/routine-view";
+import { pausedFix, type RoutineFix, runPixels } from "@agenteschat/client/lib/routine-view";
 import type { IconName } from "@/ui";
 import { defaultRule, fromApiRule, onceAt, onceRule, type RecurrenceRule, toApiRule } from "./rule";
 
@@ -185,6 +187,19 @@ export const STATE_ICON: Record<"repeat" | "pause" | "alert" | "computer" | "wai
 
 /** A one-tap fix's icon. */
 export const FIX_ICON: Record<RoutineFix, IconName> = { add_agent: "plus", take_over: "join", resume: "play" };
+
+/**
+ * The one-tap fix a paused routine offers me (`pausedFix`), for who changes it (`canManage`). "Take over" makes it
+ * mine, the server's create check (`takeOverRoutine`, ADR 0053 §6.2): only where I may make one for its agent
+ * (`createsRoutinesFor`, its entry in the directory; ADR 0085 addendum of 2026-11-17).
+ */
+export function fixFor(
+  r: Pick<Routine, "active" | "pausedReason" | "target" | "canManage">,
+  agent: Pick<Agent, "canManageRoutines" | "canTalk"> | undefined,
+): RoutineFix | null {
+  const fix = r.canManage ? pausedFix(r) : null;
+  return fix === "take_over" && !createsRoutinesFor(agent) ? null : fix;
+}
 
 // ── What the row says under the "when" ──────────────────────────────────────
 

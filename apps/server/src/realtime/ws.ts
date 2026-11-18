@@ -25,6 +25,7 @@ import {
   browserFrameBytes,
   closesWorkspace,
   ForbiddenError,
+  fileConversationReaderSql,
   getMembership,
   isConnected,
   type LiveWatch,
@@ -57,6 +58,7 @@ import {
   parseFrameSocketMessage,
   type ViewerPacer,
 } from "./browser";
+import type { LiveSocketData, LiveSockets } from "./live";
 import type { MachineSocketData, MachineSockets } from "./machines";
 import type { StreamSocketData, StreamSockets } from "./streams";
 
@@ -98,6 +100,8 @@ export interface RealtimeDeps {
   browserLive?: BrowserLive;
   /** Agents' desktops and terminals (ADR 0058): people's stream sockets and the runners' data sockets. */
   streams?: StreamSockets;
+  /** Live files (ADR 0196): one socket per open spreadsheet, presentation or canvas (`/api/live`). */
+  live?: LiveSockets;
   /** How often an open socket checks its session and channels again (`SESSION_RECHECK_MS`; tests go faster). */
   sessionRecheckMs?: number;
 }
@@ -146,8 +150,11 @@ export interface FrameSocketData {
   pinger?: ReturnType<typeof setInterval>;
 }
 
-/** Every socket of the server: browsers (`/api/ws`), runners (`/api/machines/connect`) and streams (ADR 0058). */
-export type SocketData = BrowserSocketData | MachineSocketData | StreamSocketData | FrameSocketData;
+/**
+ * Every socket of the server: browsers (`/api/ws`), runners (`/api/machines/connect`), streams (ADR 0058) and live
+ * files (ADR 0196).
+ */
+export type SocketData = BrowserSocketData | MachineSocketData | StreamSocketData | FrameSocketData | LiveSocketData;
 
 type BrowserSocket = Bun.ServerWebSocket<BrowserSocketData>;
 type MachineSocket = Bun.ServerWebSocket<MachineSocketData>;
@@ -157,6 +164,8 @@ const isFrames = (ws: Bun.ServerWebSocket<SocketData>): ws is Bun.ServerWebSocke
   ws.data.kind === "browser.frames";
 const isStream = (ws: Bun.ServerWebSocket<SocketData>): ws is StreamSocket =>
   ws.data.kind === "stream.viewer" || ws.data.kind === "stream.data";
+const isLive = (ws: Bun.ServerWebSocket<SocketData>): ws is Bun.ServerWebSocket<LiveSocketData> =>
+  ws.data.kind === "live";
 
 export type ClientFrame =
   | { type: "subscribe" | "unsubscribe"; channelId: string }
@@ -281,6 +290,11 @@ export async function currentSubscriptions(
           isNotNull(schema.channelMembers.id),
           // A task's conversation: whoever sees the task (ADR 0145).
           and(eq(schema.channels.kind, "task"), taskReaderSql(sql`${schema.channels.id}`, sql`${userId}::text`)),
+          // A live file's conversation: whoever reads the file (ADR 0199).
+          and(
+            eq(schema.channels.kind, "file"),
+            fileConversationReaderSql(sql`${schema.channels.id}`, sql`${userId}::text`),
+          ),
           adminChannelSql(sql`${orgId}::uuid`, sql`${userId}::text`),
         ),
       ),
@@ -695,6 +709,7 @@ export function createRealtime(deps: RealtimeDeps) {
       if (deps.streams?.paths.has(path)) {
         return deps.streams.upgrade(req, server as unknown as Bun.Server<StreamSocketData>);
       }
+      if (deps.live?.paths.has(path)) return deps.live.upgrade(req, server as unknown as Bun.Server<LiveSocketData>);
       return next(req);
     },
 
@@ -732,6 +747,7 @@ export function createRealtime(deps: RealtimeDeps) {
         if (isFrames(socket)) return frameSocket.open(socket);
         if (isMachine(socket)) return deps.machines?.open(socket);
         if (isStream(socket)) return deps.streams?.open(socket);
+        if (isLive(socket)) return deps.live?.open(socket);
         const ws = socket as BrowserSocket;
         if (!(await liveSession(ws, true))) return;
         browsers.add(ws);
@@ -818,6 +834,7 @@ export function createRealtime(deps: RealtimeDeps) {
         if (isFrames(socket)) return frameSocket.message(socket, raw);
         if (isMachine(socket)) return deps.machines?.message(socket, raw);
         if (isStream(socket)) return deps.streams?.message(socket, raw);
+        if (isLive(socket)) return deps.live?.message(socket, raw);
         const ws = socket as BrowserSocket;
         const browserFrame = deps.browserLive ? parseBrowserClientFrame(raw) : null;
         // Numbered as it came, before anything awaits: a rate sent after a watch must win over it (`browserRate`).
@@ -902,6 +919,7 @@ export function createRealtime(deps: RealtimeDeps) {
         if (isFrames(socket)) return frameSocket.close(socket);
         if (isMachine(socket)) return deps.machines?.close(socket);
         if (isStream(socket)) return deps.streams?.close(socket, code);
+        if (isLive(socket)) return deps.live?.close(socket);
         const ws = socket as BrowserSocket;
         browsers.delete(ws);
         if (ws.data.sessionTimer) clearInterval(ws.data.sessionTimer);
@@ -958,6 +976,7 @@ function socketIds(data: SocketData) {
     return { orgId: data.conn?.orgId ?? undefined, machineId: data.conn?.machineId ?? undefined };
   if (data.kind === "stream.viewer")
     return { orgId: data.input.orgId, userId: data.input.userId, agentId: data.input.agentId };
+  if (data.kind === "live") return { orgId: data.orgId, userId: data.userId, fileId: data.fileId };
   return {};
 }
 

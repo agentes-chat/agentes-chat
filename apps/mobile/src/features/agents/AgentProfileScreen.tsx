@@ -20,7 +20,7 @@ import {
   useUsage,
 } from "@agenteschat/client";
 import { approvalRuleServer, approvalRuleWords, approvalTitle } from "@agenteschat/client/lib/approval-words";
-import { listsAgent, seesDetails } from "@agenteschat/client/lib/audience";
+import { canTalk, editsAgent, managesAgent, seesDetails } from "@agenteschat/client/lib/audience";
 import { brainLine } from "@agenteschat/client/lib/brain";
 import { effortLevel } from "@agenteschat/client/lib/brain-advanced";
 import { personalOfText } from "@agenteschat/client/lib/connected";
@@ -242,7 +242,8 @@ function Profile({ id }: { id: string }) {
   // Its presence (ADR 0084): the badge, and the card with what it does where nothing else here says it.
   const status = useAgentProfileStatus(id, name);
   const statusLine = usePresenceOf().agent(id)?.status?.status ?? null;
-  const decides = mine || can(org, "manage_agents");
+  // Its owner or who manages it (the server's `canManage`: "Editar qualquer agente" where it reaches).
+  const decides = mine || managesAgent(agent);
   // The request in the card above leaves the list, so it is said once.
   const did = didLines(forYou.data?.items).filter(
     (l) => !(waitingNow && l.href?.kind === "approval" && l.href.id === waitingNow.id),
@@ -746,7 +747,7 @@ function Profile({ id }: { id: string }) {
       ) : (
         <>
           <AlwaysApproved agentId={id} name={name} mayRemove={mine || can(org, "approve_actions")} />
-          <MergeReposSection agentId={id} mayEdit={mine || can(org, "manage_agents")} />
+          <MergeReposSection agentId={id} mayEdit={decides} />
           {ownerLine ? (
             <View style={styles.apart}>
               <GroupedList>
@@ -855,7 +856,15 @@ function Profile({ id }: { id: string }) {
                 variant="primary"
                 label={t("mobile.agent.talk")}
                 loading={opening}
-                disabled={!listsAgent(org, agent)}
+                // What the server's `openDm` takes: whom it answers or who manages it starts a conversation; one
+                // already there opens for anyone. Editing it alone talks to nobody (ADR 0085 addendum of 2026-11-17).
+                disabled={
+                  !(
+                    canTalk(agent) ||
+                    managesAgent(agent) ||
+                    dms.data?.some((d) => d.with.type === "agent" && d.with.id === id)
+                  )
+                }
                 onPress={() => openDm()}
               />
             ) : (
@@ -877,6 +886,8 @@ function Profile({ id }: { id: string }) {
 
         {rightHand && agent ? (
           <View style={styles.page}>
+            {/* Its computer as any agent's: the viewer's own seat there. */}
+            {details ? <AgentComputerCard agentId={id} style={styles.computer} /> : null}
             {nowBlock}
             <GroupedHeader>{t("rightHand.settings.mine")}</GroupedHeader>
             <RightHandMine agent={agent} />
@@ -930,14 +941,14 @@ function Profile({ id }: { id: string }) {
           <View style={styles.page}>{nowBlock}</View>
         )}
       </Animated.ScrollView>
-      {/* Its person changes its look; admins, everything ("Editar", as the web's Configurações). The right hand's
-          settings open for everyone: each person has their own there. */}
+      {/* Its person changes its look; who edits it, its role and instructions; who manages it, everything ("Editar",
+          as the web's Configurações). The right hand's settings open for everyone: each person has their own there. */}
       <PushedHeader
         plate
         solid={false}
         {...(rightHand
           ? { action: { label: t("rightHand.profile.configure"), onPress: openRightHandSettings } }
-          : decides && agent
+          : (decides || editsAgent(agent)) && agent
             ? { action: { label: t("agent.edit"), onPress: () => openAgentEdit(id) } }
             : {})}
       />

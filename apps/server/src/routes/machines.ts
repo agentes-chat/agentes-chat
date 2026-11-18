@@ -41,7 +41,7 @@ import {
   ValidationError,
 } from "@agenteschat/engine";
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi";
-import { installScript } from "../../runner/install-script";
+import { installScript, withoutTrailingSlashes } from "../../runner/install-script";
 import { requestIp, requestLimitIp } from "../http/client-ip";
 import { apiError, domainErrorResponse, errorResponse } from "../http/errors";
 import {
@@ -431,6 +431,10 @@ const ComputerQueue = z
         after: z.array(z.uuid()).openapi({
           description:
             "Who it waits for: for the head, the running turn expected to end first; behind it, the agents ahead in line.",
+        }),
+        signIn: z.string().nullable().openapi({
+          description:
+            "The Claude plan sign-in it waits for, by its label: that sign-in works on all the runs it takes at once. Null: it waits for room.",
         }),
         ...QueueAccess,
       }),
@@ -1221,7 +1225,7 @@ export function registerMachinePublicRoutes(api: OpenAPIHono, deps: AppDeps) {
       const result = await pollDeviceToken({ db, pubsub: adapters.pubsub }, c.req.valid("json").deviceCode);
       if (!result.ok) return c.json({ error: result.error }, 400);
       const { ok: _ok, ...token } = result;
-      const url = `${config.PUBLIC_URL.replace(/\/+$/, "")}/org/${token.org.id}/settings/devices/${token.machineId}`;
+      const url = `${withoutTrailingSlashes(config.PUBLIC_URL)}/org/${token.org.id}/settings/devices/${token.machineId}`;
       return c.json({ ...token, url }, 200);
     },
   );

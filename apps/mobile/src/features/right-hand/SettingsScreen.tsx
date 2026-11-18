@@ -19,7 +19,7 @@ import {
 } from "@agenteschat/client";
 import { selfHosted } from "@agenteschat/client/lib/about";
 import { accountChoices, accountTitle, ownSignInTitle } from "@agenteschat/client/lib/ai-accounts";
-import { agentsReach, audienceOf, audiencePatch } from "@agenteschat/client/lib/audience";
+import { agentsReach, audienceOf, audiencePatch, managesAgent } from "@agenteschat/client/lib/audience";
 import { modelRows } from "@agenteschat/client/lib/brain-picker";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
 import { readBudget } from "@agenteschat/client/lib/new-agent";
@@ -76,7 +76,6 @@ export const openRightHandSettings = () => router.push("/settings/right-hand" as
  */
 export function RightHandSettingsScreen() {
   const { t } = useTranslation();
-  const { org } = useOrg();
   const agent = rightHandOf(useDirectory().agents);
   if (!agent)
     return (
@@ -93,9 +92,9 @@ export function RightHandSettingsScreen() {
       <RightHandMine agent={agent} />
       <RightHandApprovalsGroup />
       <OwnRows name={agent.name} />
-      {can(org, "manage_agents") ? (
+      {managesAgent(agent) ? (
         <>
-          {/* Who sees the group, after its name: only who manages agents. */}
+          {/* Who sees the group, after its name: only who manages it (the server's `canManage`). */}
           <SectionHeader title={`${t("rightHand.settings.groupWorkspace")} · ${t("rightHand.settings.groupAdmins")}`} />
           <Form agent={agent} />
         </>

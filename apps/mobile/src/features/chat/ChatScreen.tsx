@@ -8,10 +8,12 @@ import {
   channelsQuery,
   type DirectMessage,
   dmsQuery,
+  fileConversationOf,
   heldTakeoversHere,
   inMainTimeline,
   keys,
   type LiveConsult,
+  type LiveKind,
   type LiveRun,
   MESSAGES_PAGE,
   type Message,
@@ -30,6 +32,7 @@ import {
   useAgentsBrowserHandoffs,
   useAiStatus,
   useApi,
+  useArtifact,
   useChannelThreads,
   useConsultations,
   useCreateMission,
@@ -54,7 +57,7 @@ import {
 } from "@agenteschat/client";
 import { activityVerb, consultDetails, lineStep, listNames } from "@agenteschat/client/lib/activity";
 import { handoffAsk } from "@agenteschat/client/lib/agent-work";
-import { canTalk } from "@agenteschat/client/lib/audience";
+import { canTalk, managesAgent } from "@agenteschat/client/lib/audience";
 import { runPosition, screenAboveEnd } from "@agenteschat/client/lib/chat";
 import { CHAT_RHYTHM, firstUnreadId, opensAtLastRead, unreadThreadRootId } from "@agenteschat/client/lib/chat-look";
 import { type ConversationWait, conversationWaits } from "@agenteschat/client/lib/computer-queue";
@@ -67,7 +70,7 @@ import {
 import { errorText, sendFailureOf, sendNeedsEdit } from "@agenteschat/client/lib/errors";
 import { mentionsReader, offersEveryone } from "@agenteschat/client/lib/everyone";
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from "@agenteschat/client/lib/files";
-import { capitalize } from "@agenteschat/client/lib/format";
+import { capitalize, joinNames } from "@agenteschat/client/lib/format";
 import { issueTakenOf, issueWorkOf, taskConversationOf } from "@agenteschat/client/lib/issues";
 import { workIsOver } from "@agenteschat/client/lib/long-work";
 import { supersededBrainNotices } from "@agenteschat/client/lib/machine-outages";
@@ -183,6 +186,8 @@ import { isLocalMedia, LOCAL_FILES, type LocalFile, localFilesOf } from "../file
 import { rememberLocalCopy } from "../files/source";
 import { uploadPart } from "../files/upload-part";
 import { chatHref, consultationHref, notificationHref } from "../links/logic";
+import { FileOrigin, LiveQuoteBar } from "../live-files/talk/AboutLine";
+import { dropTalkAbout, useTalkAbout } from "../live-files/talk/store";
 import { MissionCardView } from "../missions/cards";
 import { isOpenMission } from "../missions/logic";
 import { PushOfferLine } from "../push/PushOfferLine";
@@ -302,6 +307,8 @@ type Row =
       newTurn?: boolean;
     })
   | { kind: "marker"; key: string; text: string }
+  /** A live file's conversation (ADR 0199): where the file was made, at its top. */
+  | { kind: "origin"; key: string; artifactId: string; fileKind: LiveKind }
   /** A run in line for its computer (`conversationWaits`): no live row of its own, this one for all its messages. */
   | { kind: "wait"; key: string; wait: ConversationWait }
   /** An agent's browser card: its live run in the browser, or (no run row) a take over held here. */
@@ -511,7 +518,7 @@ function Chat({
   }, [walled]);
   const rhythm = CHAT_RHYTHM[rowLook.style];
   const quiet = quietInset(rowLook);
-  // The right hand (ADR 0137): its own line and composer hint, no computer, and its greeting on top.
+  // The right hand (ADR 0137): its own line and composer hint, and its greeting on top. Its computer opens as any agent's.
   const rightHand = isRightHand(dmAgent) && !isThread;
   // A new agent's setup checklist (ADR 0155 §2) for whoever sets it up: its greeting and the checklist on top.
   const setupIntro = useSetupSteps(dmAgent).length > 0 && !rightHand && !isThread;
@@ -604,18 +611,18 @@ function Chat({
     [live.consults, isThread, threadId, topIds],
   );
 
-  // "Parar" in the working line (as on the web): who manages agents, the agent's owner, or who started it.
+  // "Parar" in the working line (as on the web): who manages the agent (the server's `canManage`), its owner, or who
+  // started it.
   const { org } = useOrg();
-  const manageAgents = can(org, "manage_agents");
   const canStop = useCallback(
     (r: LiveRun) =>
       mayStopRun(r, {
         meId,
-        manageAgents,
+        manageAgents: managesAgent(dir.agentById.get(r.agentId)),
         agentOwnerId: dir.agentById.get(r.agentId)?.ownerUserId,
         messages: list,
       }),
-    [meId, manageAgents, dir.agentById, list],
+    [meId, dir.agentById, list],
   );
   const { stop } = live;
   const stopRun = useCallback(
@@ -732,9 +739,12 @@ function Chat({
     if (isThread && threadId) {
       const root = list.find((m) => m.id === threadId);
       const replies = list.filter((m) => m.id !== threadId);
-      // A task's conversation (ADR 0145): its root stands for the task, one screen back; only the replies show.
-      const head: Row[] =
-        root && !taskConversationOf(root.meta)
+      // A task's conversation (ADR 0145): its root stands for the task, one screen back; only the replies show. A
+      // live file's (ADR 0199) the same, under where the file was made.
+      const file = root ? fileConversationOf(root.meta) : null;
+      const head: Row[] = file
+        ? [{ kind: "origin", key: "origin", artifactId: file.artifactId, fileKind: file.kind }]
+        : root && !taskConversationOf(root.meta)
           ? [
               { kind: "marker", key: "started", text: startedText },
               // The root as it started the thread (its mission card is pinned above already).
@@ -1141,10 +1151,19 @@ function Chat({
     setQuote(m);
     setReplyAt(Date.now());
   }, []);
+  // In a live file's conversation (ADR 0199), what the person had selected in the file (the quote over the field)
+  // rides on the next message as `meta.liveRef`, once.
+  const about = useTalkAbout(isThread ? channelId : "");
+  const takeAbout = (): Record<string, unknown> => {
+    if (!about) return {};
+    dropTalkAbout(channelId);
+    return { liveRef: about };
+  };
   const takeQuote = (files: ArtifactRef[] = []) => {
-    if (!quote) return files.length > 0 ? localMeta(null, "", files) : undefined;
+    const liveRef = takeAbout();
+    if (!quote) return files.length > 0 ? { ...localMeta(null, "", files), ...liveRef } : about ? liveRef : undefined;
     setQuote(null);
-    return localMeta(quote, dir.nameOf(quote.author), files);
+    return { ...localMeta(quote, dir.nameOf(quote.author), files), ...liveRef };
   };
   const qc = useQueryClient();
   const voiceRefused = useCallback(
@@ -1463,6 +1482,7 @@ function Chat({
     if (files.length === 0) return;
     const replyTo = quote;
     if (replyTo) setQuote(null);
+    const liveRef = takeAbout();
     const clientId = newClientId();
     const local: Message = {
       id: `local-${clientId}`,
@@ -1474,6 +1494,7 @@ function Chat({
       agentRunId: null,
       meta: {
         ...localMeta(replyTo, replyTo ? dir.nameOf(replyTo.author) : "", []),
+        ...liveRef,
         [LOCAL_FILES]: files.map(
           (f): LocalFile => ({
             uri: f.uri,
@@ -1819,15 +1840,22 @@ function Chat({
   const rootWork = issueWorkOf(root?.meta);
   // A task's conversation (ADR 0145): "Conversa da tarefa", the task under it.
   const rootTask = taskConversationOf(root?.meta);
+  // A live file's (ADR 0199): "Canvas conversation", who took part under it (the file's name until someone writes).
+  const rootFile = fileConversationOf(root?.meta);
+  const fileTalk = useArtifact(orgId, rootFile?.artifactId ?? null).data?.conversation;
   const title = isThread
     ? rootTask
       ? t("issues.conversation.title")
-      : rootWork
-        ? t("issues.open", { number: rootWork.number, title: rootWork.title })
-        : info
-          ? // A thread on a GIF or a sticker has no words of its own to title it (ADR 0091).
-            threadTitle(info) || previewOf(root ? textOrMedia(t, root.body, root.meta) : "") || t("mobile.chat.thread")
-          : ""
+      : rootFile
+        ? t(`live.conversation.title.${rootFile.kind}`)
+        : rootWork
+          ? t("issues.open", { number: rootWork.number, title: rootWork.title })
+          : info
+            ? // A thread on a GIF or a sticker has no words of its own to title it (ADR 0091).
+              threadTitle(info) ||
+              previewOf(root ? textOrMedia(t, root.body, root.meta) : "") ||
+              t("mobile.chat.thread")
+            : ""
     : dm
       ? dm.with.name
       : channel
@@ -1837,28 +1865,32 @@ function Chat({
   const subtitle = isThread
     ? rootTask
       ? `#${rootTask.number} · ${rootTask.title}`
-      : info
-        ? info.channelKind === "dm"
-          ? // A DM's channel name is internal ("dm-…"): the thread says who it is with.
-            t(
-              mission
-                ? "mobile.chat.missionWith"
-                : info.state === "closed"
-                  ? "mobile.chat.closedThreadWith"
-                  : "mobile.chat.threadWith",
-              { name: dm?.with.name ?? "" },
-            )
-          : t(
-              mission
-                ? "mobile.chat.missionIn"
-                : info.state === "closed"
-                  ? "mobile.chat.closedThreadIn"
-                  : "mobile.chat.threadIn",
-              {
-                channel: info.channelName,
-              },
-            )
-        : undefined
+      : rootFile
+        ? fileTalk?.participants.length
+          ? joinNames(fileTalk.participants.map(dir.nameOf).filter(Boolean), t)
+          : rootFile.title || undefined
+        : info
+          ? info.channelKind === "dm"
+            ? // A DM's channel name is internal ("dm-…"): the thread says who it is with.
+              t(
+                mission
+                  ? "mobile.chat.missionWith"
+                  : info.state === "closed"
+                    ? "mobile.chat.closedThreadWith"
+                    : "mobile.chat.threadWith",
+                { name: dm?.with.name ?? "" },
+              )
+            : t(
+                mission
+                  ? "mobile.chat.missionIn"
+                  : info.state === "closed"
+                    ? "mobile.chat.closedThreadIn"
+                    : "mobile.chat.threadIn",
+                {
+                  channel: info.channelName,
+                },
+              )
+          : undefined
     : dmAgentId
       ? rightHand
         ? `${t("rightHand.label")} · ${t("rightHand.actsAsYou")}`
@@ -2082,7 +2114,7 @@ function Chat({
   const tasksInBar = Boolean(dmAgentId && agentTasks);
   const [leadWidth, setLeadWidth] = useState(0);
   const leadRoom = queueInBar || tasksInBar ? leadWidth : 0;
-  const computerInBar = Boolean(dmAgentId && !isThread && !rightHand && computerWords && !queueInBar);
+  const computerInBar = Boolean(dmAgentId && !isThread && computerWords && !queueInBar);
   const dmExtra = computerInBar ? 1 : 0;
   const channelExtra = searchPlace ? 1 : 0;
   // The channel's sky in the pill, as an agent's DM: the color of the first agent in it.
@@ -2173,7 +2205,7 @@ function Chat({
   // An agent's DM also opens its tasks while it has some (ADR 0128), pushed like a thread, and its computer (as the
   // web's DM header) for whoever may watch it: one entry, the line while turns wait for the computer (the way on to
   // it inside), else the computer.
-  const dmComputer = dmAgentId && !isThread && !rightHand ? { agentId: dmAgentId, onOpen: leavePlace } : undefined;
+  const dmComputer = dmAgentId && !isThread ? { agentId: dmAgentId, onOpen: leavePlace } : undefined;
   // The bar's buttons: one group on every platform, whatever shows. First our own counted views, which have no system
   // button (the agent's tasks, the computer's line; `lead`), then the system's own buttons (the computer, search, "…";
   // our icon buttons in the same capsule on Android). Never two ways of drawing it: a bar that switched to our views
@@ -2235,7 +2267,9 @@ function Chat({
     ? rootTask
       ? // One line on the phone: the tip after "·" in the web's placeholder doesn't fit.
         t("issues.comment")
-      : t("mobile.chat.reply")
+      : rootFile
+        ? t(`mobile.live.talk.placeholder.${rootFile.kind}`)
+        : t("mobile.chat.reply")
     : dm
       ? // One line on the phone: the right hand's "nada muda sem você" doesn't fit beside its name.
         t("mobile.chat.messageTo", { name: dm.with.name })
@@ -2361,6 +2395,8 @@ function Chat({
           return dayLine(when.day(item.iso));
         case "marker":
           return dayLine(item.text);
+        case "origin":
+          return <FileOrigin artifactId={item.artifactId} kind={item.fileKind} />;
         case "wait":
           return <QueueWaitRow channelId={channelId} wait={item.wait} />;
         case "unseen":
@@ -2477,10 +2513,16 @@ function Chat({
   const cancelQuote = useCallback(() => setQuote(null), []);
   const quoteName = quote ? dir.nameOf(quote.author) : null;
   const canAttach = pending.length < MAX_PENDING;
-  // Whom it answers, over the field.
+  const dropAbout = useCallback(() => dropTalkAbout(channelId), [channelId]);
+  // Whom it answers, over the field; in a live file's conversation, else what the person had selected in the file.
   const composerBanner = useMemo(
-    () => (quoteName !== null ? <QuoteBar name={quoteName} onCancel={cancelQuote} /> : undefined),
-    [quoteName, cancelQuote],
+    () =>
+      quoteName !== null ? (
+        <QuoteBar name={quoteName} onCancel={cancelQuote} />
+      ) : about ? (
+        <LiveQuoteBar liveRef={about} onDrop={dropAbout} />
+      ) : undefined,
+    [quoteName, cancelQuote, about, dropAbout],
   );
   // Photos and files waiting to go, inside the field over their caption.
   const composerAttachments = useMemo(

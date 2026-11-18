@@ -107,9 +107,10 @@ describe("IA e uso: the viewer's own accounts", () => {
     expect(head.textContent).toContain("Trabalho\u2002Team\u2002de Walter");
     expect(head.querySelector(".ac-planmeter__line")?.textContent).toBe("5h 84%");
     expect(within(head).getAllByRole("meter")).toHaveLength(1);
-    // Near its limit: what matters then on one line under them, and the row starts open.
+    // Near its limit: what matters then on one line under them. The row still starts closed.
     expect(head.querySelector(".plan-row__alert")?.textContent).toMatch(/^Quase no limite · renova /);
-    expect(head.getAttribute("aria-expanded")).toBe("true");
+    expect(head.getAttribute("aria-expanded")).toBe("false");
+    await opened(work);
     expect(work?.textContent).toContain("Claude Code · walt@acme.com");
     expect(work?.querySelector(".plan-shares__row")?.textContent).toBe("Ada · usa agora");
     // A coding plan's key, closed until asked: its last 4 and what its maker shares.

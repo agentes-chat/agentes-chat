@@ -13,6 +13,7 @@ import {
   nthText,
   queueAllStartedText,
   queueButtonText,
+  queueCauseText,
   queuedNextText,
   queueFillText,
   queueLeftText,
@@ -132,6 +133,14 @@ test("the agent's live row: next with an estimate, next alone without one, furth
   expect(queueLiveText(en, "en", queue, "elsewhere", agentName, NOW)).toBeNull();
   expect(queuedNextText(pt, "Ada")).toBe("Ada está na fila do computador · é a próxima");
   expect(queuedNextText(en, "Theo")).toBe("Theo is in line for the computer · next");
+});
+
+test("a turn waiting for its plan sign-in says which, and no computer cause", () => {
+  const signed = { ...queue, waiting: queue.waiting.map((w, i) => (i === 1 ? { ...w, signIn: "Claude 2" } : w)) };
+  expect(queueLiveText(en, "en", signed, "q2", agentName, NOW)).toBe("Waiting for Claude 2 to finish another task");
+  expect(queueLiveText(pt, "pt-BR", signed, "q2", agentName, NOW)).toBe("Aguardando Claude 2 terminar outra tarefa");
+  expect(queueCauseText(en, signed, signed.waiting[1])).toBeNull();
+  expect(queueCauseText(en, signed, signed.waiting[0])).not.toBeNull();
 });
 
 test("rows: what each turn is for, never its content, where, and its estimate", () => {

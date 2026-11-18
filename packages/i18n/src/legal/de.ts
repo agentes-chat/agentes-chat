@@ -176,7 +176,7 @@ export const legalDe: Partial<Record<LegalKind, LegalDocument>> = {
       "Welche Daten wir erheben, was Agenten wohin senden, wer Ihren Workspace sehen kann und welche Rechte Sie haben.",
     courtesy:
       "Dies ist eine unverbindliche Übersetzung. Weicht sie von der englischen Fassung ab, ist die englische Fassung maßgeblich.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -323,6 +323,7 @@ export const legalDe: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookies und lokaler Speicher",
         blocks: [
           "Der Workspace verwendet nur die Cookies und den lokalen Speicher, die erforderlich sind, um Sie angemeldet zu halten, Formulare zu schützen und Einstellungen wie Design und Sprache zu speichern. Die öffentliche Website agentes.chat speichert die von Ihnen gewählte Sprache und verwendet Himetrica-Analysen (Abschnitt 2). Wir verwenden keine Werbe-Cookies und keine Cookies zum websiteübergreifenden Tracking.",
+          "**Empfehlungs-Cookie:** Wenn Sie einen Empfehlungslink zu agentes.chat öffnen, speichert unser Abrechnungsdienst die Empfehlung 60 Tage lang in einem Cookie in Ihrem Browser, damit Ihr Abonnement der Person gutgeschrieben wird, die den Link gesendet hat. Im Europäischen Wirtschaftsraum, im Vereinigten Königreich und in der Schweiz setzen wir es erst, nachdem Sie auf agentes.chat zugestimmt haben. Um die Empfehlung auf diesem Gerät zu vergessen, öffnen Sie https://agentes.chat/de/privacy?forget-referral#cookies.",
         ],
       },
       {

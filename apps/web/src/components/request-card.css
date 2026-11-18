@@ -225,7 +225,6 @@
   cursor: pointer;
 }
 .rq__more:hover {
-  background: var(--plate);
   color: var(--ink);
 }
 html:not([data-pointer]) .rq__more:focus-visible {

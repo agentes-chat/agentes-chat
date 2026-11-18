@@ -6,6 +6,7 @@ import {
   useMailAccounts,
   useRoutineAction,
 } from "@agenteschat/client";
+import { createsRoutinesFor } from "@agenteschat/client/lib/audience";
 import { knownErrorText } from "@agenteschat/client/lib/errors";
 import { relativeTime, toYmd, whenAt } from "@agenteschat/client/lib/format";
 import { agentGrammar } from "@agenteschat/client/lib/grammar";
@@ -283,6 +284,7 @@ export function useRoutineMenu(r: Routine, onDeleted?: () => void): HeaderAction
   const toast = useToast();
   const failed = useFailed();
   const action = useRoutineAction(useOrgId());
+  const dir = useDirectory();
   const title = routineTitle(r);
   const remove = () =>
     Alert.alert(
@@ -344,7 +346,9 @@ export function useRoutineMenu(r: Routine, onDeleted?: () => void): HeaderAction
       label: t("routines.edit"),
       onPress: () => router.push(editRoutineHref(r.id)),
     });
-  if (r.canManage && !widget)
+  // A copy is a new routine, its copier's: only for who may make one for its agent (`createsRoutinesFor`, ADR 0085
+  // addendum of 2026-11-17), not for its creator alone, who still edits it.
+  if (!widget && createsRoutinesFor(dir.agentById.get(r.agentId)))
     items.push({ icon: "copy", sf: "plus.square.on.square", label: t("routines.duplicate"), onPress: duplicate });
   if (r.canManage && hookUrl)
     items.push({ icon: "link", sf: "link", label: t("routines.copyWebhook"), onPress: () => void copyWebhook() });

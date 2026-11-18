@@ -501,18 +501,23 @@ html:not([data-pointer]) .ap-mi__mission:focus-visible {
   color: var(--ink);
 }
 
+/* A text-only action: the words alone, darker on hover, never a plate behind them. */
 .ap-link {
   align-self: flex-start;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--ink2);
+  line-height: inherit;
   text-decoration: none;
-  border-radius: 8px;
-  padding: 2px 4px;
-  margin: -2px -4px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-cut);
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
 }
 .ap-link:hover {
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  color: var(--ink);
 }
 html:not([data-pointer]) .ap-link:focus-visible {
   outline: none;
@@ -862,16 +867,6 @@ html:not([data-pointer]) .ap-li:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 16px;
-}
-.ap-review__foot button.ap-link {
-  all: unset;
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--ink2);
-}
-.ap-review__foot button.ap-link:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 /* The decision: a bar floating at the bottom of the request (the selection bar's look); the dialog's footer

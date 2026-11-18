@@ -1026,15 +1026,20 @@ export function createContextToolSource(deps: ContextDeps): ToolSource {
   return { name: "context", tools: async (ctx) => inWorkspaceWords(ctx.db, ctx.orgId, tools, personalWords(tools)) };
 }
 
-/** Who accepts a row the person who asked can't, for the agent to tell them (`deciders` in proposals.ts). */
+/**
+ * Who accepts a row the person who asked can't, for the agent to tell them (`deciders` in proposals.ts). Who edits the
+ * agent is its owner, who manages it and who its "Quem pode editar" names (ADR 0085 addendum of 2026-11-17).
+ */
 const decidedBy = (p: Proposal) =>
   p.target === "org_context"
     ? "someone who reviews memory (the org context)"
     : p.target === "agent_instructions"
-      ? "the agent's owner or someone who reviews memory (instructions)"
-      : ownerDecides(p)
-        ? "an admin who manages agents or the agent's owner (apps turned off)"
-        : `an admin who manages agents (${p.target === "agent_role" ? "a role" : "apps"})`;
+      ? "someone who edits the agent or reviews memory (instructions)"
+      : p.target === "agent_role"
+        ? "someone who edits the agent (a role)"
+        : ownerDecides(p)
+          ? "an admin who manages the agent or the agent's owner (apps turned off)"
+          : "an admin who manages the agent (apps)";
 
 /** Memory tools only act on a person's request in the current turn (never on tool, webhook or document text). */
 /** The person behind the run (`authority.ts`); null for a routine's work and unattended runs. */

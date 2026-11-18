@@ -176,7 +176,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
       "Jakie dane zbieramy, co i dokąd wysyłają agenci, kto może widzieć Twój obszar roboczy oraz jakie przysługują Ci prawa.",
     courtesy:
       "Niniejszy dokument jest tłumaczeniem grzecznościowym. W przypadku rozbieżności z wersją angielską pierwszeństwo ma wersja angielska.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -323,6 +323,7 @@ export const legalPl: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Pliki cookie i pamięć lokalna",
         blocks: [
           "Obszar roboczy korzysta wyłącznie z plików cookie i pamięci lokalnej niezbędnych do utrzymania Twojego zalogowania, ochrony formularzy oraz zapamiętania preferencji, takich jak motyw i język. Publiczna witryna agentes.chat zapamiętuje wybrany przez Ciebie język i korzysta z analityki Himetrica (sekcja 2). Nie używamy reklamowych plików cookie ani plików cookie służących do śledzenia między witrynami.",
+          "**Plik cookie polecenia:** gdy otworzysz link polecający do agentes.chat, nasz serwis rozliczeń zapisuje polecenie w jednym pliku cookie w Twojej przeglądarce na 60 dni, aby osoba, która wysłała link, otrzymała polecenie, jeśli wykupisz subskrypcję. W Europejskim Obszarze Gospodarczym, Wielkiej Brytanii i Szwajcarii ustawiamy go dopiero po wyrażeniu przez Ciebie zgody w agentes.chat. Aby zapomnieć polecenie na tym urządzeniu, otwórz https://agentes.chat/pl/privacy?forget-referral#cookies.",
         ],
       },
       {

@@ -15,9 +15,9 @@ import {
   widgetWaitFix,
   widgetWaiting,
 } from "@agenteschat/client";
+import { managesAgent } from "@agenteschat/client/lib/audience";
 import { upcomingAt, whenAt } from "@agenteschat/client/lib/format";
 import { plainInline } from "@agenteschat/client/lib/markdown";
-import { can } from "@agenteschat/client/lib/permissions";
 import { WIDGET_SCHEDULES } from "@agenteschat/ui/widgets/spec";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
@@ -387,11 +387,12 @@ function Detail({ widget: w, refetch }: { widget: WidgetDetail; refetch: () => P
  */
 function WaitFix({ agentId, wait }: { agentId: string; wait: WidgetWait }) {
   const { t } = useTranslation();
-  const { org, orgId } = useOrg();
+  const { orgId } = useOrg();
   const dir = useDirectory();
   const meId = useMeId();
   const owner = dir.anyAgent(agentId)?.ownerUserId === meId;
-  const fix = widgetWaitFix(wait, { admin: can(org, "manage_agents"), owner });
+  // Its budget for who manages the agent (the server's `canManage`); its AI for them and its owner.
+  const fix = widgetWaitFix(wait, { admin: managesAgent(dir.agentById.get(agentId)), owner });
   const watches = useDesktopStatus(orgId, agentId, { enabled: fix === "openComputer" }).isSuccess;
   if (!fix || (fix === "openComputer" && !watches)) return null;
   const go = fix === "openComputer" ? openComputer : fix === "raiseBudget" ? openAgentEdit : openAgentAi;

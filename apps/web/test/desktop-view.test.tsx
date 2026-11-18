@@ -160,9 +160,16 @@ async function backend(desktop: Partial<DesktopStatus>, cloud = false) {
   return { state, api, fake, machines, machine: m, sockets: socketsFor() };
 }
 
+/**
+ * Ada as the server sends her to me, the way the app hands her to the dialog: with what I may do with her (whether I
+ * manage her, `canManage`, ADR 0085 addendum of 2026-11-17).
+ */
+const adaOf = async (b: Awaited<ReturnType<typeof backend>>) =>
+  (await b.api.agents.list(ORG_ID)).find((a) => a.id === ADA_ID) as Agent;
+
 async function dialog(desktop: Partial<DesktopStatus> = RUNNING, cloud = false) {
   const b = await backend(desktop, cloud);
-  const ada = b.state.agents.find((a) => a.id === ADA_ID) as Agent;
+  const ada = await adaOf(b);
   let closed = 0;
   const r = await renderPage(<ComputerDialog agent={ada} open onClose={() => closed++} />, {
     api: b.api,
@@ -357,7 +364,7 @@ describe("the agent's screen in the computer dialog", () => {
     const b = await backend({ ...RUNNING, canControl: false, controlRefusal: "owner_plan" }, true);
     b.state.scopes[ADA_ID] = [...(b.state.scopes[ADA_ID] ?? []), { connectionId: null, scope: "browser:use" }];
     b.fake.settings.set(ADA_ID, { allowedDomains: null, available: true, reason: null, detail: null, machine: null });
-    const ada = b.state.agents.find((a) => a.id === ADA_ID) as Agent;
+    const ada = await adaOf(b);
     await renderPage(<ComputerDialog agent={ada} open onClose={() => {}} />, {
       api: b.api,
       org: true,
@@ -386,7 +393,7 @@ describe("the agent's screen in the computer dialog", () => {
     b.state.roles = (b.state.roles ?? []).map((r) =>
       r.kind === "everyone" ? { ...r, permissions: r.permissions.filter((p) => p !== "own_computers") } : r,
     );
-    const ada = b.state.agents.find((a) => a.id === ADA_ID) as Agent;
+    const ada = await adaOf(b);
     await renderPage(<ComputerDialog agent={ada} open onClose={() => {}} />, {
       api: b.api,
       org: true,
@@ -858,7 +865,7 @@ describe("the agent's screen in the computer dialog", () => {
     const b = await backend(RUNNING);
     const mine = { ...controlOf(ADA_ID, "u-walter"), id: "h-mine" };
     b.fake.handoffs.set(mine.id, mine);
-    const ada = b.state.agents.find((a) => a.id === ADA_ID) as Agent;
+    const ada = await adaOf(b);
     await renderPage(<ComputerDialog agent={ada} open onClose={() => undefined} />, {
       api: b.api,
       org: true,

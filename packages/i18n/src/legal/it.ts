@@ -176,7 +176,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
       "Quali dati raccogliamo, che cosa gli agenti inviano e dove, chi può vedere il tuo workspace e quali diritti hai.",
     courtesy:
       "La presente è una traduzione di cortesia. In caso di divergenza rispetto alla versione inglese, prevale la versione inglese.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -323,6 +323,7 @@ export const legalIt: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookie e archiviazione locale",
         blocks: [
           "Il workspace utilizza solo i cookie e l'archiviazione locale necessari per mantenere l'accesso, proteggere i moduli e ricordare preferenze quali il tema e la lingua. Il sito pubblico agentes.chat ricorda la lingua che hai scelto e utilizza le analisi di Himetrica (Sezione 2). Non utilizziamo cookie pubblicitari né cookie di tracciamento tra siti.",
+          "**Cookie di referral:** quando apri un link di referral verso agentes.chat, il nostro servizio di fatturazione conserva il referral in un cookie nel tuo browser per 60 giorni, così chi ha inviato il link riceve il credito se ti abboni. Nello Spazio economico europeo, nel Regno Unito e in Svizzera lo impostiamo solo dopo che hai dato il consenso su agentes.chat. Per dimenticare il referral su questo dispositivo, apri https://agentes.chat/it/privacy?forget-referral#cookies.",
         ],
       },
       {
