@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import {
   AGENT_WORKER_HOMES,
   ASK_AGAIN,
@@ -467,6 +470,51 @@ describe("secrets are refused to every read tool", () => {
     expect(secretRead("Read", { file_path: "config/token.json" }, system)).toBe(false);
     expect(bash("cat package.json")).toBe(true);
     expect(readOnlyCall("Bash", { command: "cat ../mission-1/notes.md" }, system)).toBe(true);
+  });
+
+  test("Codex's skills and generated images under its account folder are read; the sign-in beside them is not", () => {
+    const root = mkdtempSync(path.join(tmpdir(), "codex-readable-"));
+    try {
+      // The worker's home is a secret folder by name, as in system mode.
+      const home = path.join(root, "agentes-runner-agents/ag-1/accounts/codex/0193dddd");
+      mkdirSync(path.join(home, "skills/.system/imagegen"), { recursive: true });
+      mkdirSync(path.join(home, "generated_images"), { recursive: true });
+      writeFileSync(path.join(home, "auth.json"), "{}");
+      const codex = {
+        cwd: "/w",
+        folders: ["/w"],
+        readable: [path.join(home, "skills"), path.join(home, "generated_images")],
+      };
+      const refused = (command: string) =>
+        expect([command, secretRead("Bash", { command }, codex)]).toEqual([command, true]);
+      const skill = path.join(home, "skills/.system/imagegen/SKILL.md");
+      expect(localVerdict("Bash", { command: `cat ${skill}` }, codex, "work")).toEqual({ behavior: "allow" });
+      expect(localVerdict("Read", { file_path: skill }, codex, "work")).toEqual({ behavior: "allow" });
+      expect(readOnlyCall("Bash", { command: `ls -lt ${home}/generated_images` }, codex)).toBe(true);
+      // A copy into the folder is a write the server decides, no longer a secret refused here.
+      expect(secretRead("Bash", { command: `cp ${home}/generated_images/b.png .` }, codex)).toBe(false);
+      // Without the scope's folders, the same path is still a secret.
+      expect(secretRead("Bash", { command: `cat ${skill}` }, { cwd: "/w", folders: ["/w"] })).toBe(true);
+      // Next door, back out, a secret by its own name, and the variable.
+      refused(`cat ${home}/auth.json`);
+      refused(`cat ${home}/skills/../auth.json`);
+      refused(`cat ${home}/skills/.env`);
+      // A pattern's matches aren't known here (`.[e]nv` would be read as a plain name otherwise).
+      writeFileSync(path.join(home, "skills/.env"), "KEY=1");
+      refused(`cat ${home}/skills/.[e]nv`);
+      refused("ls $CODEX_HOME/generated_images");
+      // A link in the folder: nothing in it is read any more (a recursive read would follow it).
+      symlinkSync(path.join(home, "auth.json"), path.join(home, "generated_images/a.png"));
+      refused(`cat ${home}/generated_images/a.png`);
+      refused(`grep -r token ${home}/generated_images`);
+      // The folder itself a link out: refused too.
+      rmSync(path.join(home, "skills"), { recursive: true });
+      mkdirSync(path.join(root, "elsewhere"));
+      symlinkSync(path.join(root, "elsewhere"), path.join(home, "skills"));
+      refused(`cat ${home}/skills/x`);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("Claude Code's own rules for credential stores match the shell spellings", () => {
