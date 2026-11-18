@@ -398,7 +398,11 @@ describe("Rotinas: each row's last runs as bars", () => {
     await click(bars[1] as HTMLButtonElement);
     await settle(4);
     const panel = screen().getByRole("dialog", { name: "Erros do Sentry" });
-    expect(within(panel).getByRole("tab", { name: /^Execuções/ }).getAttribute("aria-selected")).toBe("true");
+    expect(
+      within(panel)
+        .getByRole("tab", { name: /^Execuções/ })
+        .getAttribute("aria-selected"),
+    ).toBe("true");
   });
 });
 
