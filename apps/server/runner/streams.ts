@@ -5,6 +5,7 @@ import {
   type StreamControl,
 } from "@agenteschat/adapters/machine-protocol";
 import { RunnerError } from "./errors";
+import { openWebSocket } from "./gate";
 import { writeJson } from "./json-file";
 
 /** System mode: what root relayed, in `<runner home>/relayed.json`, for an operator's network guard to read. */
@@ -105,7 +106,7 @@ export function openDataSocket(opts: {
       reject(new RunnerError("internal", "This runtime has no WebSocket client"));
       return;
     }
-    const ws = new WebSocket(opts.url);
+    const ws = openWebSocket(opts.url);
     ws.binaryType = "arraybuffer";
     let ready = false;
     let ended = false;

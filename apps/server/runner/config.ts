@@ -95,6 +95,19 @@ export interface RunnerConfig {
    * that machine (ADR 0036 §5). Dropped by the next pairing.
    */
   previousToken?: string;
+  /**
+   * ADR 0195: what the gate in front of `server` takes from this computer when nobody signs in on it (a Cloudflare
+   * Access service token), `agentes-runner pair --gate …`. Only ever sent to that server's origin.
+   */
+  gate?: StoredGate;
+}
+
+/** A gate's credentials kept for one server (`RunnerConfig.gate`). */
+export interface StoredGate {
+  server: string;
+  kind: "cloudflare-access";
+  clientId: string;
+  clientSecret: string;
 }
 
 export { SYSTEM_RUNNER_HOME } from "@agenteschat/adapters/command-policy";
@@ -194,6 +207,18 @@ export function connectUrl(server: string, socket: "connect" | "stream" = "conne
 const positive = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 1 ? Math.floor(v) : undefined);
 const text = (v: unknown, max = 500) => (typeof v === "string" && v ? v.slice(0, max) : undefined);
 
+/** A string short enough to be what it claims; a secret is never cut short (`text` would). */
+const whole = (v: unknown, max: number): v is string => typeof v === "string" && v.length > 0 && v.length <= max;
+
+/** `gate` as `pair --gate` wrote it; anything else is dropped rather than shown to a server half-formed. */
+function parseGate(v: unknown): StoredGate | undefined {
+  if (typeof v !== "object" || v === null) return undefined;
+  const g = v as Record<string, unknown>;
+  if (g.kind !== "cloudflare-access" || !whole(g.server, 2000)) return undefined;
+  if (!whole(g.clientId, 500) || !whole(g.clientSecret, 4000)) return undefined;
+  return { server: g.server, kind: g.kind, clientId: g.clientId, clientSecret: g.clientSecret };
+}
+
 function parsePaused(v: unknown): RunnerConfig["paused"] {
   if (typeof v !== "object" || v === null) return undefined;
   const { until, by } = v as { until?: unknown; by?: unknown };
@@ -237,6 +262,7 @@ export function normalizeStored(raw: Record<string, unknown>): StoredConfig {
   const range = raw.agentUidRange;
   const uids = Array.isArray(range) && range.length === 2 ? agentUidRange(range[0], range[1]) : null;
   const claudeSharedLogin = parseClaudeSharedLogin(raw.claudeSharedLogin);
+  const gate = parseGate(raw.gate);
   const services = Array.isArray(raw.services)
     ? [...new Set(raw.services.flatMap((s) => (typeof s === "string" ? (parseService(s) ?? []) : [])))]
     : [];
@@ -278,6 +304,7 @@ export function normalizeStored(raw: Record<string, unknown>): StoredConfig {
     ...(services.length ? { services } : {}),
     ...(raw.agentTmpOnDisk === true ? { agentTmpOnDisk: true as const } : {}),
     ...(text(raw.previousToken, 4000) ? { previousToken: text(raw.previousToken, 4000) } : {}),
+    ...(gate ? { gate } : {}),
   };
 }
 

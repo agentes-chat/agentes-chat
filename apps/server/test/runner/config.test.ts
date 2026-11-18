@@ -152,6 +152,20 @@ test("services: what of the computer agents may reach, one TCP or UDP port each,
   expect(normalizeStored({ services: "tcp/11434" })).toEqual({});
 });
 
+test("gate: a service token kept for the server's gate survives a read; a half-formed one is dropped", () => {
+  const gate = {
+    server: "https://chat.example.com",
+    kind: "cloudflare-access" as const,
+    clientId: "id",
+    clientSecret: "s".repeat(64),
+  };
+  expect(normalizeStored({ gate }).gate).toEqual(gate);
+  expect(normalizeStored({ gate: { ...gate, kind: "other" } }).gate).toBeUndefined();
+  expect(normalizeStored({ gate: { ...gate, clientSecret: "" } }).gate).toBeUndefined();
+  expect(normalizeStored({ gate: { ...gate, clientSecret: "s".repeat(5000) } }).gate).toBeUndefined();
+  expect(normalizeStored({ gate: "nope" }).gate).toBeUndefined();
+});
+
 test("pause: until null holds until resumed; an until in the past counts as resumed", () => {
   const now = Date.parse("2026-10-17T12:00:00Z");
   expect(pauseOf(null, now)).toEqual({ paused: false });

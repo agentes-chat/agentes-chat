@@ -9,6 +9,7 @@ import {
   type RunnerInfo,
   type ServerFrame,
 } from "@agenteschat/adapters/machine-protocol";
+import { checkSignIn, openWebSocket } from "./gate";
 import { type HandlerContext, handleRequest, type RequestObserver, RequestRunner } from "./handlers";
 import type { McpBridge } from "./mcp";
 
@@ -36,10 +37,18 @@ export const webSocketDial: Dial = (url, handlers) => {
   if (typeof WebSocket === "undefined") {
     throw new Error("This runtime has no WebSocket client. Use Node.js 22 or newer, or Bun.");
   }
-  const ws = new WebSocket(url);
+  const ws = openWebSocket(url);
   let closed = false;
+  let opened = false;
   const decoder = new TextDecoder();
-  ws.addEventListener("open", () => handlers.onOpen());
+  ws.addEventListener("open", () => {
+    opened = true;
+    handlers.onOpen();
+  });
+  // A socket that closes before it opened shows no status: ask whether a gate in front of the server turned it away.
+  ws.addEventListener("close", () => {
+    if (!opened) void checkSignIn(url);
+  });
   ws.addEventListener("message", (ev) => {
     const data: unknown = ev.data;
     if (typeof data === "string") handlers.onMessage(data);
