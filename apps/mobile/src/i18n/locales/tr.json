@@ -52,6 +52,11 @@
       "notAgentes": "{{host}} bir agentes.chat sunucusu değil. Adresi kontrol edin.",
       "serverTooOld": "{{host}} bu uygulamayla çalışmak için güncellenmeli.",
       "appTooOld": "{{host}} sunucusunu kullanmak için agentes uygulamasını güncelleyin.",
+      "gate": {
+        "on": "{{host}} girişi",
+        "loading": "{{host}} girişi açılıyor",
+        "failed": "{{host}} girişi açılamadı. Bağlantını kontrol edip tekrar dene."
+      },
       "down": {
         "line": "{{host}} yanıt vermedi.",
         "text": "Sunucu kapalı ya da ağınızın dışında olabilir. Tekrar açıldığında uygulama kendiliğinden açılır.",

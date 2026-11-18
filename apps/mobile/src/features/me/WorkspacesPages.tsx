@@ -1,6 +1,6 @@
 import { type Me, type OrgSummary, useApi, useMe } from "@agenteschat/client";
 import { workspaceNotes } from "@agenteschat/client/lib/deletion";
-import { CLOUD_SERVER, checkServer, normalizeServer, serverHost } from "@agenteschat/client/lib/server";
+import { CLOUD_SERVER, normalizeServer, serverHost } from "@agenteschat/client/lib/server";
 import { isPersonal, modeKey } from "@agenteschat/client/lib/workspace-mode";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { addAccount, openWorkspace, problemText } from "@/features/server";
 import { createApi } from "@/lib/api";
+import { checkServerOrGate } from "@/lib/gate";
 import { askNewWorkspace, offersNewWorkspaceHere } from "@/lib/new-workspace";
 import { openOrgs } from "@/lib/org-choice";
 import {
@@ -319,7 +320,9 @@ export function TeamServerPage() {
     if (!server) return setError(t("mobile.auth.server.invalid"));
     setBusy(true);
     setError(null);
-    const check = await checkServer(server);
+    // Behind a gate (ADR 0195 §10): the app moves there, and the gate's sign-in shows over it.
+    const { check, gated } = await checkServerOrGate(server);
+    if (!check.ok && gated) return openWorkspace(server, null);
     if (!check.ok) {
       haptics.warning();
       setError(t(problemText(check.problem, check.server), { host: serverHost(check.server) }));

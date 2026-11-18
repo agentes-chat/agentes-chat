@@ -1,0 +1,17 @@
+// The web views' cookies for a server (ADR 0195 §10): a local Expo module, linked by `expo prebuild` from
+// apps/mobile/modules.
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'chat.agentes'
+version = '1.0.0'
+
+android {
+  namespace "chat.agentes.webcookies"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}

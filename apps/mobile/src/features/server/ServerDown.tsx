@@ -1,16 +1,11 @@
-import {
-  checkServer,
-  isTailnet,
-  type ServerCheck,
-  type ServerProblem,
-  serverHost,
-} from "@agenteschat/client/lib/server";
+import { isTailnet, type ServerCheck, type ServerProblem, serverHost } from "@agenteschat/client/lib/server";
 import { useNetworkState } from "expo-network";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, StyleSheet, View } from "react-native";
 import { signOut } from "@/features/account";
 import { useNow } from "@/features/shared/hooks";
+import { checkServerOrGate } from "@/lib/gate";
 import { SERVER_GIVE_UP_MS, SERVER_STUCK_MS, serverDownOf } from "@/lib/org-choice";
 import { accountLabel, serverUrl, setServer, useServerToReturn } from "@/lib/server";
 import { useOrgGate } from "@/providers/org";
@@ -69,7 +64,8 @@ export function useServerDown(active: boolean): ServerDown | null {
     setCheck(null);
     if (!asking) return;
     let alive = true;
-    void checkServer(serverUrl()).then((c) => {
+    // A gate in front of the server (ADR 0195 §10) shows its own sign-in over this.
+    void checkServerOrGate(serverUrl()).then(({ check: c }) => {
       if (alive) setCheck(c);
     });
     return () => {
@@ -82,7 +78,7 @@ export function useServerDown(active: boolean): ServerDown | null {
   const retry = useCallback(() => {
     setChecking(true);
     setNextRetryAt(Date.now() + RETRY_EVERY_MS);
-    void Promise.all([checkServer(serverUrl()), orgRetry()]).then(([c]) => {
+    void Promise.all([checkServerOrGate(serverUrl()), orgRetry()]).then(([{ check: c }]) => {
       setCheck(c);
       setChecking(false);
     });
