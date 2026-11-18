@@ -10468,7 +10468,8 @@ export const ptBR = {
     priceInvalid: "Use um número, como 0.50",
     context: "{{model}}: janela de contexto",
     contextShort: "Contexto (tokens)",
-    contextHelp: "Contexto: a janela configurada no servidor do modelo, como 32768 no Ollama. Deixe vazio para usar o padrão.",
+    contextHelp:
+      "Contexto: a janela configurada no servidor do modelo, como 32768 no Ollama. Deixe vazio para usar o padrão.",
     contextInvalid: "Use um número inteiro de tokens de 1024 a 10000000, como 32768",
     unpriced: "Um modelo sem preço não custa nada nos orçamentos: só os tokens dele são contados.",
     save: "Salvar e testar",
