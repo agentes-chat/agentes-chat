@@ -78,7 +78,7 @@ async function deleteForGood(orgId: string) {
     .where(eq(schema.organizations.id, orgId));
   expect(await purgeWorkspace({ db: f.db }, orgId)).toBe(true);
 }
-const doc = (title: string) => ({ title, content: { kind: "document" as const, markdown: `# ${title}` } });
+const doc = (title: string) => ({ title, content: { kind: "table" as const, columns: ["file"], rows: [[title]] } });
 
 describe("S3 client against the fake server", () => {
   test("put, get, list, delete and a presigned GET, path-style and virtual-hosted", async () => {
@@ -159,7 +159,9 @@ describe("org storage", () => {
     // Downloads of bucket files are signed by the bucket (and the signature holds).
     const link = await artifactDownload(f.artifactDeps, f.owner.id, f.org.id, after.id);
     expect(link.url.startsWith(`https://s3.example.com/acme-files/agentes/artifacts/${after.id}/v1-`)).toBe(true);
-    expect(await (await f.s3.fetch(link.url, { method: "GET" })).text()).toBe("# Depois");
+    expect(await (await f.s3.fetch(link.url, { method: "GET" })).text()).toBe(
+      JSON.stringify({ columns: ["file"], rows: [["Depois"]] }),
+    );
 
     // Back to platform storage: new files go there; bucket files still read.
     await saveStorage(f.storage, f.owner.id, f.org.id, { kind: "agentes" });

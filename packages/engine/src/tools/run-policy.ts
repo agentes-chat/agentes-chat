@@ -193,6 +193,7 @@ const READS = new Set([
   "get_context",
   "web_search",
   "web_fetch",
+  "image_search",
   "list_dashboards",
   "phone_screenshot",
   "phone_logs",

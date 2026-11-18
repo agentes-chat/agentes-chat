@@ -575,6 +575,13 @@ describe("routines", () => {
       expect(isNoReply(t)).toBe(true);
     for (const t of ["", "Novidade: 3 avaliações.", "NO_REPLY\n\nNovidade: 3 avaliações.", "Sem NO_REPLY aqui"])
       expect(isNoReply(t)).toBe(false);
+    // A long run of marks is read once, at either end or inside the line.
+    const started = performance.now();
+    const marks = "*`".repeat(100_000);
+    expect(isNoReply(`${marks}NO_REPLY.${marks}`)).toBe(true);
+    expect(isNoReply(`${marks}x`)).toBe(false);
+    expect(isNoReply(`NO${marks}_REPLY`)).toBe(false);
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 
   test("event routines run when the event happens, with the event as data kept in the run", async () => {

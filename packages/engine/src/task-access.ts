@@ -2,7 +2,7 @@ import { and, type Executor, eq, isNotNull, rowsOf, type SQL, schema, sql } from
 import { caches } from "./cache";
 import { maySql } from "./permissions";
 
-const { issues, issueAssignees, channels, channelMembers, agents } = schema;
+const { issues, issueAssignees, channels, channelMembers, agents, artifacts } = schema;
 
 /** Who a task or a wiki page is for (ADR 0151): "only me" is a list of one. Administrators always see it. */
 export type Audience = { mode: "everyone" } | { mode: "people"; userIds: string[] };
@@ -37,14 +37,44 @@ export const taskReaderSql = (channelId: SQL, userId: SQL) => sql`exists (
   select 1 from ${issues} ti where ti.conversation_channel_id = ${channelId} and ${taskSeenSql("ti", userId)})`;
 
 /**
- * Whether `userId` reads the channel `channelId`, by the rule of `requireChannelAccess` and `readableChannelIds`: a
- * member, an administrator in a channel (public or private, never a DM), or who sees the task of a task's conversation.
+ * How many files' conversations deep a file may live and still be read where it lives (ADR 0199): a file made in a live
+ * file's conversation is read by who reads that file, and so is that file's own conversation. Past it only a file's
+ * sharing reaches it. The reading rules nest (a file's conversation is read by who reads the file, which may live in
+ * another file's conversation), and this keeps each statement finite.
  */
-export const channelReaderSql = (channelId: SQL, userId: SQL) => sql`(exists (
+export const FILE_CONVERSATION_DEPTH = 1;
+
+/**
+ * A live file's conversation (ADR 0199) is read by whoever reads the file (`fileSeenSql`), never by its own membership:
+ * people are never members of a `file` channel. True when `channelId` is a live file's conversation, the file is not in
+ * the trash and `userId` reads it. `channelId` must not name a column of `artifacts` (the subquery's own row hides it).
+ */
+export const fileConversationReaderSql = (channelId: SQL, userId: SQL, depth = FILE_CONVERSATION_DEPTH): SQL =>
+  sql`exists (select 1 from ${artifacts} where ${artifactCol("conversation_channel_id")} = ${channelId}
+    and ${artifactCol("deleted_at")} is null and ${fileSeenSql(userId, depth)})`;
+
+/**
+ * Whether `userId` reads a conversation no person is a member of, by what it stands for: a task's (ADR 0145), read by
+ * whoever sees the task, or a live file's (ADR 0199), read by whoever reads the file. False for any other channel.
+ */
+export const conversationReaderSql = (channelId: SQL, userId: SQL) =>
+  sql`(${taskReaderSql(channelId, userId)} or ${fileConversationReaderSql(channelId, userId)})`;
+
+/**
+ * Whether `userId` reads the channel `channelId`, by the rule of `requireChannelAccess` and `readableChannelIds`: a
+ * member, an administrator in a channel (public or private, never a DM), who sees the task of a task's conversation,
+ * or who reads the file of a live file's conversation (`depth`: see `FILE_CONVERSATION_DEPTH`).
+ */
+export const channelReaderSql = (channelId: SQL, userId: SQL, depth = FILE_CONVERSATION_DEPTH): SQL => sql`(exists (
     select 1 from ${channelMembers} rm where rm.channel_id = ${channelId} and rm.user_id = ${userId})
   or exists (select 1 from ${channels} rc where rc.id = ${channelId}
     and ((rc.kind = 'channel' and ${maySql(sql`rc.org_id`, userId, "administrator")})
-      or (rc.kind = 'task' and ${taskReaderSql(channelId, userId)}))))`;
+      or (rc.kind = 'task' and ${taskReaderSql(channelId, userId)})${
+        depth > 0
+          ? sql`
+      or (rc.kind = 'file' and ${fileConversationReaderSql(sql`rc.id`, userId, depth - 1)})`
+          : sql``
+      })))`;
 
 /** The people of `orgId` who read the channel `channelId` (`channelReaderSql`), as a subquery of `user_id`. */
 export const channelReadersSql = (orgId: SQL, channelId: SQL) => sql`(select cr.user_id from organization_members cr
@@ -55,7 +85,25 @@ export const channelReadersSql = (orgId: SQL, channelId: SQL) => sql`(select cr.
  * from a room no person reads (a routine's); the people there from a DM or a private channel; from a task's own
  * conversation, who sees that task.
  */
-export async function audienceOfConversation(db: Executor, channelId: string): Promise<Audience> {
+export async function audienceOfConversation(db: Executor, channelId: string, depth = 0): Promise<Audience> {
+  // A live file's conversation (ADR 0199): who reads the file, as where it lives says (its sharing only widens it).
+  const [file] = await db
+    .select({
+      channelId: artifacts.channelId,
+      share: artifacts.share,
+      createdByType: artifacts.createdByType,
+      createdById: artifacts.createdById,
+    })
+    .from(artifacts)
+    .where(eq(artifacts.conversationChannelId, channelId));
+  if (file) {
+    if (file.share === "everyone") return { mode: "everyone" };
+    // A file of the Drive itself not shared with everyone lives with its maker (ADR 0157, amendment 2026-11-17).
+    if (!file.channelId) return { mode: "people", userIds: file.createdByType === "person" ? [file.createdById] : [] };
+    // Files made in each other's conversations go a few levels at most; past them, the narrowest audience.
+    if (depth >= 4) return { mode: "people", userIds: [] };
+    return audienceOfConversation(db, file.channelId, depth + 1);
+  }
   const [c] = await db
     .select({
       kind: channels.kind,
@@ -157,6 +205,17 @@ export async function admitTaskAgents(
 export const artifactCol = (name: string) => sql.raw(`"artifacts"."${name}"`);
 
 /**
+ * Whether `userId` reads a file of the Drive itself (no conversation) where it lives, as a condition over `artifacts`
+ * (ADR 0157, amendment 2026-11-17): its maker and administrators. Its sharing (`fileSharedSql`) widens it, and a new
+ * one is shared with everyone. `userId` may be a column.
+ */
+export function driveKeeperSql(userId: SQL) {
+  const c = artifactCol;
+  return sql<boolean>`((${c("created_by_type")} = 'person' and ${c("created_by_id")} = ${userId})
+    or ${maySql(c("org_id"), userId, "administrator")})`;
+}
+
+/**
  * Whether a file's sharing (ADR 0157) shows it to `userId` past its conversation, as a condition over `artifacts`: the
  * whole workspace, or a list that names them, holds a role of theirs, or them as an administrator. The workspace
  * membership is the caller's check. `userId` may be a column.
@@ -170,13 +229,14 @@ export function fileSharedSql(userId: SQL) {
 }
 
 /**
- * Whether `userId` reads a file at all, where it lives (`channelReaderSql`, or a public channel) or through its
- * sharing, as a condition over `artifacts`. Mirrors `personCanRead` in `artifacts.ts`.
+ * Whether `userId` reads a file at all, where it lives (`channelReaderSql`, or a public channel; for a file of the
+ * Drive itself, `driveKeeperSql`) or through its sharing, as a condition over `artifacts`. Mirrors `personCanRead` in
+ * `artifacts.ts`. `depth`: how many live files' conversations deep where it lives may be (`FILE_CONVERSATION_DEPTH`).
  */
-export function fileSeenSql(userId: SQL) {
+export function fileSeenSql(userId: SQL, depth = FILE_CONVERSATION_DEPTH) {
   const c = artifactCol;
-  return sql<boolean>`(${c("channel_id")} is null or ${fileSharedSql(userId)}
-    or ${channelReaderSql(c("channel_id"), userId)}
+  return sql<boolean>`((${c("channel_id")} is null and ${driveKeeperSql(userId)}) or ${fileSharedSql(userId)}
+    or ${channelReaderSql(c("channel_id"), userId, depth)}
     or exists (select 1 from ${channels} pc where pc.id = ${c("channel_id")} and pc.kind = 'channel'
       and pc.visibility = 'public'))`;
 }

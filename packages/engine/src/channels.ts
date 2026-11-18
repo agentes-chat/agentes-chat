@@ -48,7 +48,13 @@ import {
 import { refuseRightHand } from "./right-hand";
 import { isRoutineRoomKey } from "./routine-brief";
 import { accountInUse, readRefusal, STANDING_COLUMNS } from "./standing";
-import { adminChannelSql, channelReaderSql, channelReadersSql, taskReaderSql } from "./task-access";
+import {
+  adminChannelSql,
+  channelReaderSql,
+  channelReadersSql,
+  fileConversationReaderSql,
+  taskReaderSql,
+} from "./task-access";
 
 const { channels, channelMembers, agents, organizationMembers, organizations, users } = schema;
 
@@ -548,7 +554,8 @@ export async function personReach(db: Database, orgId: string, userId: string) {
 
 /**
  * Which of `channelIds` a person reads, by the rule of `requireChannelAccess`: a member, an administrator in a channel,
- * or a task's reader; archived channels left out. For screens that quote a conversation outside it (run history).
+ * a task's reader, or a live file's reader in its conversation; archived channels left out. For screens that quote a
+ * conversation outside it (run history).
  */
 export async function readableChannelIds(
   db: Executor,
@@ -577,6 +584,8 @@ export async function readableChannelIds(
         or(
           isNotNull(channelMembers.id),
           and(eq(channels.kind, "task"), taskReaderSql(sql`${channels.id}`, sql`${userId}::text`)),
+          // A live file's conversation: whoever reads the file (ADR 0199).
+          and(eq(channels.kind, "file"), fileConversationReaderSql(sql`${channels.id}`, sql`${userId}::text`)),
           adminChannelSql(sql`${orgId}::uuid`, sql`${userId}::text`),
         ),
       ),
@@ -605,6 +614,7 @@ export async function requireChannelAccess(db: Database, userId: string, orgId: 
       memberId: channelMembers.id,
       overrides: channelOverridesSql(organizationMembers.orgId, sql`${channelId}::uuid`, organizationMembers.userId),
       taskReader: sql<boolean>`${channels.kind} = 'task' and ${taskReaderSql(sql`${channelId}::uuid`, sql`${userId}::text`)}`,
+      fileReader: sql<boolean>`${channels.kind} = 'file' and ${fileConversationReaderSql(sql`${channelId}::uuid`, sql`${userId}::text`)}`,
     })
     .from(organizationMembers)
     .innerJoin(organizations, eq(organizations.id, organizationMembers.orgId))
@@ -622,8 +632,13 @@ export async function requireChannelAccess(db: Database, userId: string, orgId: 
   if (!channel || channel.archivedAt) throw new NotFoundError("Channel not found");
   const permissions = resolvePermissions(row.role === "owner", row.keys);
   const reads = row.memberId || (channel.kind === "channel" && permissions.has("administrator"));
-  // A task's conversation is read by whoever sees the task (ADR 0145), always checked again: people are never its members.
-  if (channel.kind === "task" ? !(row.taskReader === true || String(row.taskReader) === "t") : !reads)
+  // A task's conversation is read by whoever sees the task (ADR 0145), a live file's by whoever reads the file (ADR
+  // 0199), always checked again: people are never their members.
+  const conversationReader =
+    channel.kind === "task"
+      ? row.taskReader === true || String(row.taskReader) === "t"
+      : row.fileReader === true || String(row.fileReader) === "t";
+  if (channel.kind === "task" || channel.kind === "file" ? !conversationReader : !reads)
     throw new ForbiddenError("Join this channel first");
   const workspace: Membership = {
     orgId,
@@ -670,7 +685,12 @@ export async function joinChannel(
     .where(and(eq(channels.id, channelId), eq(channels.orgId, orgId)));
   if (!channel) throw new NotFoundError("Channel not found");
   const admin = channel.kind === "channel" && can(membership, "administrator");
-  if (channel.kind === "dm" || (channel.visibility !== "public" && channel.byRole !== true && !admin))
+  // A live file's conversation is read by whoever reads the file, never by membership (ADR 0199 §2).
+  if (
+    channel.kind === "dm" ||
+    channel.kind === "file" ||
+    (channel.visibility !== "public" && channel.byRole !== true && !admin)
+  )
     throw new ForbiddenError("This channel is private");
   // The channel's members column shows them at once (a join from a channel's preview or the browser).
   const joined = async () => {
@@ -794,6 +814,22 @@ export async function addChannelMember(
     .where(and(eq(channels.id, channelId), eq(channels.orgId, orgId), isNull(channels.archivedAt)));
   if (!channel) throw new NotFoundError("Channel not found");
   if (channel.kind === "dm") throw new ValidationError("A direct conversation keeps its participants");
+  // A live file's conversation (ADR 0199 §2): read by whoever reads the file, never by membership (a member would read
+  // it after losing the file, in search and notifications), and agents join it only when they may work on the file
+  // (`admitFileAgents`).
+  if (channel.kind === "file") {
+    throw new ValidationError(
+      "A file's conversation is everyone who reads the file: share the file instead",
+      "channel.file_conversation",
+    );
+  }
+  // A task's conversation the same way (ADR 0145): whoever sees the task reads it; a mention admits agents.
+  if (channel.kind === "task") {
+    throw new ValidationError(
+      "A task's conversation is everyone who sees the task: share the task instead",
+      "channel.task_conversation",
+    );
+  }
   if ("userId" in member) {
     if (!(await managesChannel(db, membership, actorId, channel))) {
       throw new ForbiddenError("Only the channel's creator or an admin can add members", "channel.members_forbidden");

@@ -10,6 +10,8 @@ import type { Wallpaper } from "../lib/wallpaper";
 import type { AudienceChoice } from "../lib/who-sees";
 import type { WikiAccess } from "../lib/wiki";
 import type { WorkAreaAnswer } from "../lib/work-area";
+import type { LiveApi } from "../live/api";
+import type { LiveRefInput } from "../live/types";
 import type {
   SecretToVaultInput,
   VaultConnectInput,
@@ -149,6 +151,7 @@ import type {
   FeedbackFile,
   FeedbackInput,
   FeedbackOffer,
+  FileConversationRef,
   ForeignMailbox,
   FormerAgent,
   GifKey,
@@ -345,6 +348,7 @@ import type {
   ToolDecision,
   TrashedArtifact,
   UndoAllResult,
+  UnreadFile,
   UnreadTask,
   UsageQueue,
   UsageReport,
@@ -1038,6 +1042,12 @@ export interface ApiClient {
          * `message.media_off` (GIFs or stickers off here) or `message.media_not_found`.
          */
         media?: PostMedia;
+        /**
+         * In a live file's conversation (ADR 0199): what the person had selected in the file (the composer's quote
+         * bar). The server adds the file's kind and title and stores `meta.liveRef`; 400 `message.live_ref` for
+         * another file or another conversation.
+         */
+        liveRef?: LiveRefInput;
       },
     ): Promise<Message>;
     reactions(orgId: string, messageId: string): Promise<ReactionCount[]>;
@@ -1542,6 +1552,8 @@ export interface ApiClient {
   };
   /** Boards and widgets (ADR 0135). */
   dashboards: DashboardsApi;
+  /** Spreadsheets, presentations and canvases edited together (ADR 0196), their pictures and Office previews. */
+  live: LiveApi;
   /** Missions (ADR 0029): long work by the agent's executor on a connected computer, in one thread. */
   missions: {
     /** Missions you can see (the Missões tab), most recently changed first, with the counts for the tabs. */
@@ -1841,6 +1853,11 @@ export interface ApiClient {
     page(orgId: string, filters?: ArtifactFilters, cursor?: string): Promise<ArtifactPage>;
     /** One artifact at `version` (default: latest), with content. */
     get(orgId: string, id: string, version?: number): Promise<ArtifactDetail>;
+    /**
+     * A live file's conversation (ADR 0199), made on first use: its channel and thread root, for the chat's routes.
+     * 404 for a file the person doesn't read, 400 `artifact.no_conversation` for a kind without one.
+     */
+    conversation(orgId: string, id: string): Promise<FileConversationRef>;
     /** Keeps a block in the Drive (ADR 0113). */
     keep(orgId: string, id: string): Promise<Artifact>;
     /** Sends what a person picked in a block to the agent that made it, as their own message. */
@@ -1870,11 +1887,14 @@ export interface ApiClient {
     versions(orgId: string, id: string): Promise<ArtifactVersion[]>;
     /** Short-lived signed URL for the stored file. */
     download(orgId: string, id: string, version?: number): Promise<{ url: string; expiresAt: string }>;
-    /** Same-origin URL of the file as an attachment, optionally converted (CSV, .patch, PDF). */
+    /**
+     * Same-origin URL of the file as an attachment, optionally converted (CSV, .patch, PDF, Word; a live file as Excel
+     * or PowerPoint, ADR 0198; a document as Markdown, ADR 0200).
+     */
     fileUrl(
       orgId: string,
       id: string,
-      options?: { version?: number; format?: "csv" | "patch" | "pdf" | "docx" },
+      options?: { version?: number; format?: "csv" | "patch" | "pdf" | "docx" | "xlsx" | "pptx" | "md" },
     ): string;
     create(
       orgId: string,
@@ -2034,6 +2054,8 @@ export interface ApiClient {
     unreadThreads(orgId: string): Promise<number>;
     /** The tasks whose conversation has a reply I haven't read, with the ones that mention me (ADR 0145). */
     unreadTasks?(orgId: string): Promise<UnreadTask[]>;
+    /** The live files whose conversation has a reply I haven't read, with the ones that mention me (ADR 0199). */
+    unreadFiles?(orgId: string): Promise<UnreadFile[]>;
   };
   /** "Trabalhando agora": agent runs in progress in the conversations you are in (any member). */
   working?: {

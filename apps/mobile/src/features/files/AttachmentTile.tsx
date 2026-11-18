@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { Text as RNText, StyleSheet, View } from "react-native";
 import { Icon, type IconName, LineIcon, PressScale, Text } from "@/ui";
 import { MessageText } from "../chat/MessageText";
+import { LiveCover } from "../live-files/shared/LiveCover";
 import { useColors, useOrgId } from "../shared/hooks";
 import { MONO } from "../shared/parts";
 import { extensionOf, type FileRef, fileInfo } from "./logic";
@@ -50,6 +51,9 @@ const KIND_ICON: Record<Exclude<ArtifactContent["kind"], "file">, IconName> = {
   block: "globe",
   poll: "check",
   choices: "check",
+  spreadsheet: "spreadsheet",
+  slides: "slides",
+  canvas: "canvas",
 };
 
 export interface TileFile {
@@ -118,7 +122,7 @@ export function AttachmentTile({
             {failed ? <TypeCover icon="file" label={extensionOf(file.title).toUpperCase()} /> : null}
           </View>
         ) : (
-          <Cover detail={detail} fileId={file.id} />
+          <Cover detail={detail} fileId={file.id} width={width} height={single ? 150 : 104} />
         )}
       </View>
       {picture ? null : (
@@ -154,6 +158,8 @@ function fileIconOf(type: string | undefined): IconName {
     case "pdf":
     case "document":
       return "doc";
+    case "slides":
+      return "slides";
     default:
       return "file";
   }
@@ -169,6 +175,11 @@ function metaOf(t: TFunction, detail: ArtifactDetail, locale: string) {
   }
   const kind = t(`artifacts.kind.${content.kind}`);
   if (content.kind === "table") return `${kind} · ${t("artifacts.rows", { count: content.rows.length })}`;
+  // A live file says how big it is, not its version: it is always as it is now (ADR 0196).
+  if (content.kind === "spreadsheet")
+    return `${kind} · ${t("mobile.live.card.sheets", { count: content.preview.sheets })}`;
+  if (content.kind === "slides") return `${kind} · ${t("mobile.live.card.slides", { count: content.preview.count })}`;
+  if (content.kind === "canvas") return kind;
   if (content.kind === "diff") {
     const total = { added: 0, removed: 0 };
     for (const f of content.files) {
@@ -181,9 +192,23 @@ function metaOf(t: TFunction, detail: ArtifactDetail, locale: string) {
   return `${kind} · ${t("artifacts.version", { version: detail.shownVersion })}`;
 }
 
-function Cover({ detail, fileId }: { detail: ArtifactDetail; fileId: string }) {
+function Cover({
+  detail,
+  fileId,
+  width,
+  height,
+}: {
+  detail: ArtifactDetail;
+  fileId: string;
+  width: number;
+  height: number;
+}) {
   const content = detail.content;
   switch (content.kind) {
+    case "spreadsheet":
+    case "slides":
+    case "canvas":
+      return <LiveCover content={content} width={width} height={height} />;
     case "document":
       return <TextCover markdown={documentStart(content.markdown, COVER_CHARS)} />;
     case "table":

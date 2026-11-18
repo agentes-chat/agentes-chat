@@ -123,7 +123,7 @@ export const learnTags = (agent: {
 // ── Trust ────────────────────────────────────────────────────────────────────
 
 /** Tools whose results are someone else's words: the web, pages, mail. */
-const OUTSIDE_TOOLS = new Set(["web_search", "web_fetch"]);
+const OUTSIDE_TOOLS = new Set(["web_search", "web_fetch", "image_search"]);
 /** The envelopes outside content reaches a model in (MCP and connector answers, pages, mail, databases). */
 const OUTSIDE_MARK = /<\s*(?:external_data|page_content|email_content|database_rows|untrusted_data)\b/i;
 

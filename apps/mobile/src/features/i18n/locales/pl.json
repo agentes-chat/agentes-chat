@@ -1361,6 +1361,9 @@
       "diagram": "Diagram",
       "page": "Strona",
       "text": "Tekst",
+      "spreadsheet": "Arkusz",
+      "slides": "Prezentacja",
+      "canvas": "Tablica",
       "file": "Plik"
     },
     "more": "Więcej opcji",
@@ -1487,6 +1490,9 @@
     "type": {
       "all": "Wszystkie",
       "documents": "Dokumenty",
+      "spreadsheets": "Arkusze",
+      "presentations": "Prezentacje",
+      "canvases": "Tablice",
       "images": "Obrazy",
       "tables": "Tabele",
       "diffs": "Zmiany w kodzie"
@@ -1500,6 +1506,9 @@
       "table": "Tabela",
       "diff": "Zmiana w kodzie",
       "image": "Obraz",
+      "spreadsheet": "Arkusz",
+      "slides": "Prezentacja",
+      "canvas": "Tablica",
       "file": "Plik"
     },
     "by": "{{name}} · {{when}}",
@@ -3100,6 +3109,245 @@
     "audit": {
       "title": "Nic do sprawdzenia",
       "text": "Gdy agent zrobi coś poza rozmową, pojawi się to tutaj."
+    }
+  },
+  "live": {
+    "status": {
+      "opening": "Otwieranie…",
+      "saved": "Zapisano",
+      "saving": "Zapisywanie…",
+      "offline": "Brak połączenia",
+      "offlineKept": "Brak połączenia · zmiany zachowane na tym telefonie",
+      "readOnly": "Tylko do odczytu"
+    },
+    "closed": {
+      "missing": "Ten plik nie istnieje albo nie został ci udostępniony",
+      "signedOut": "Zaloguj się ponownie, aby otworzyć ten plik",
+      "broken": "Tego pliku nie da się otworzyć w aplikacji",
+      "toDrive": "Wróć do Drive"
+    },
+    "menu": {
+      "undo": "Cofnij",
+      "redo": "Ponów"
+    },
+    "here": {
+      "title": "Kto tu jest",
+      "faces_one": "Tu jest jeszcze {{count}}. Zobacz, kto",
+      "faces_few": "Tu jest jeszcze {{count}}. Zobacz, kto",
+      "faces_many": "Tu jest jeszcze {{count}}. Zobacz, kto",
+      "faces_other": "Tu jest jeszcze {{count}}. Zobacz, kto",
+      "group": {
+        "editing": "Edytują",
+        "viewing": "Oglądają"
+      },
+      "editing": "edytuje",
+      "viewing": "ogląda",
+      "editingAt": "edytuje {{where}}",
+      "viewingAt": "w {{where}}",
+      "editingSlide": "edytuje slajd {{n}}",
+      "onSlide": "na slajdzie {{n}}",
+      "editingShapes_one": "edytuje {{count}} element",
+      "editingShapes_few": "edytuje {{count}} elementy",
+      "editingShapes_many": "edytuje {{count}} elementów",
+      "editingShapes_other": "edytuje {{count}} elementu",
+      "followingName": "Śledzisz: {{name}}",
+      "stop": "Zatrzymaj",
+      "alone": "Teraz jesteś tu tylko ty",
+      "aloneHint": "Każdy, kto otworzy ten plik, pojawi się tutaj razem z tym, co robi."
+    },
+    "card": {
+      "sheets_one": "{{count}} karta",
+      "sheets_few": "{{count}} karty",
+      "sheets_many": "{{count}} kart",
+      "sheets_other": "{{count}} karty",
+      "slides_one": "{{count}} slajd",
+      "slides_few": "{{count}} slajdy",
+      "slides_many": "{{count}} slajdów",
+      "slides_other": "{{count}} slajdu",
+      "shapes_one": "{{count}} element",
+      "shapes_few": "{{count}} elementy",
+      "shapes_many": "{{count}} elementów",
+      "shapes_other": "{{count}} elementu"
+    },
+    "sheet": {
+      "edit": "Edytuj",
+      "editHint": "Wpisz w tej komórce",
+      "editing": "Edycja {{cell}}",
+      "placeholder": "Wpisz wartość lub =",
+      "empty": "Pusta",
+      "cancel": "Zostaw bez zmian",
+      "done": "Gotowe",
+      "typeKey": "Wpisz {{key}}",
+      "stats": "Suma {{sum}} · Średnia {{average}} · Liczba {{count}}",
+      "countOnly": "Liczba {{count}}",
+      "cantDo": "Tutaj nie da się tego zrobić",
+      "copied": "Skopiowano",
+      "newSheet": "Nowa karta",
+      "sheetWord": "Arkusz",
+      "duplicateSheet": "Duplikuj kartę",
+      "copyOf": "{{name}} (kopia)",
+      "deleteSheet": "Usuń kartę",
+      "deleteSheetTitle": "Usunąć {{name}}?",
+      "deleteSheetText": "Wszystko na tej karcie zniknie dla wszystkich w pliku. Cofnięcie to przywróci.",
+      "menu": {
+        "copy": "Kopiuj",
+        "paste": "Wklej",
+        "clear": "Wyczyść",
+        "rowsAbove_one": "Wstaw wiersz powyżej",
+        "rowsAbove_few": "Wstaw {{count}} wiersze powyżej",
+        "rowsAbove_many": "Wstaw {{count}} wierszy powyżej",
+        "rowsAbove_other": "Wstaw {{count}} wiersza powyżej",
+        "rowsBelow_one": "Wstaw wiersz poniżej",
+        "rowsBelow_few": "Wstaw {{count}} wiersze poniżej",
+        "rowsBelow_many": "Wstaw {{count}} wierszy poniżej",
+        "rowsBelow_other": "Wstaw {{count}} wiersza poniżej",
+        "colsLeft_one": "Wstaw kolumnę po lewej",
+        "colsLeft_few": "Wstaw {{count}} kolumny po lewej",
+        "colsLeft_many": "Wstaw {{count}} kolumn po lewej",
+        "colsLeft_other": "Wstaw {{count}} kolumny po lewej",
+        "colsRight_one": "Wstaw kolumnę po prawej",
+        "colsRight_few": "Wstaw {{count}} kolumny po prawej",
+        "colsRight_many": "Wstaw {{count}} kolumn po prawej",
+        "colsRight_other": "Wstaw {{count}} kolumny po prawej",
+        "sortUp": "Sortuj od A do Z",
+        "sortDown": "Sortuj od Z do A",
+        "deleteRows_one": "Usuń wiersz",
+        "deleteRows_few": "Usuń {{count}} wiersze",
+        "deleteRows_many": "Usuń {{count}} wierszy",
+        "deleteRows_other": "Usuń {{count}} wiersza",
+        "deleteCols_one": "Usuń kolumnę",
+        "deleteCols_few": "Usuń {{count}} kolumny",
+        "deleteCols_many": "Usuń {{count}} kolumn",
+        "deleteCols_other": "Usuń {{count}} kolumny"
+      },
+      "problem": {
+        "empty": "Wpisz coś po =",
+        "unexpected": "Coś jest nie tak w pobliżu {{text}}",
+        "paren": "Nawias nie jest zamknięty",
+        "quote": "Cudzysłów nie jest zamknięty",
+        "sheetQuote": "Cudzysłów w nazwie karty nie jest zamknięty",
+        "operand": "Brakuje wartości obok znaku",
+        "array": "Ta lista wartości jest niekompletna",
+        "range": "Ten zakres jest nieprawidłowy",
+        "sheet": "Nie ma karty o nazwie {{text}}",
+        "args": "{{fn}} ma złą liczbę wartości",
+        "tooLong": "To jest za długie na komórkę",
+        "tooDeep": "Ta formuła ma za dużo poziomów",
+        "tooFar": "To odwołanie wykracza poza limit arkusza",
+        "limit": "Arkusz osiągnął limit rozmiaru",
+        "merged": "Scalone komórki przeszkadzają",
+        "failed": "Nie udało się. Spróbuj ponownie."
+      }
+    },
+    "slides": {
+      "placeholder": {
+        "title": "Stuknij, aby dodać tytuł",
+        "text": "Stuknij, aby dodać tekst",
+        "image": "Stuknij, aby dodać zdjęcie"
+      },
+      "part": {
+        "title": "Tytuł",
+        "subtitle": "Podtytuł",
+        "body": "Tekst",
+        "caption": "Podpis",
+        "number": "Duża liczba",
+        "quote": "Cytat",
+        "shape": "Tekst w kształcie",
+        "text": "Pole tekstowe",
+        "note": "Notatka"
+      },
+      "openHint": "Otwiera slajd",
+      "editHint": "Edytuje tekst",
+      "place": "Slajd {{n}} z {{count}}",
+      "placeHidden": "Slajd {{n}} z {{count}} · ukryty podczas prezentacji",
+      "deleteTitle": "Usunąć slajd {{n}}?",
+      "deleteText": "Slajd zniknie dla wszystkich w pliku. Cofnięcie go przywróci.",
+      "notesPlaceholder": "Napisz, co powiedzieć przy tym slajdzie",
+      "pickPhoto": "Wybierz zdjęcie",
+      "tools": {
+        "text": "Tekst",
+        "photo": "Zdjęcie",
+        "sending": "Wysyłanie…"
+      }
+    },
+    "text": {
+      "title": "Tekst",
+      "noteTitle": "Notatka",
+      "done": "Gotowe",
+      "placeholder": "Wpisz tekst",
+      "titlePlaceholder": "Wpisz tytuł",
+      "hint": "Każdy wiersz to akapit. To, co wpisujesz, trafia do pliku na bieżąco."
+    },
+    "show": {
+      "nothing": "Wszystkie slajdy są ukryte, więc nie ma czego pokazać.",
+      "upright": "Ustaw telefon pionowo",
+      "sideways": "Obróć telefon poziomo"
+    },
+    "canvas": {
+      "tools": {
+        "label": "Narzędzia",
+        "select": "Zaznacz",
+        "pen": "Pióro",
+        "shapes": "Kształty",
+        "arrow": "Strzałka",
+        "note": "Notatka",
+        "text": "Tekst",
+        "photo": "Zdjęcie",
+        "comment": "Skomentuj"
+      },
+      "shapes": {
+        "rect": "Prostokąt",
+        "ellipse": "Elipsa",
+        "diamond": "Romb",
+        "triangle": "Trójkąt",
+        "star": "Gwiazda",
+        "line": "Linia"
+      },
+      "penHint": "Rysuj palcem. Dwoma palcami przesuwasz tablicę.",
+      "arrowHint": "Przeciągnij z jednego miejsca do drugiego",
+      "commentHint": "Stuknij tam, gdzie chcesz dodać komentarz",
+      "pin": "Komentarz {{n}}, autor: {{name}}",
+      "addToSelection": "Wybierz też to",
+      "emptyText": "Dodaj notatkę lub zdjęcie albo poproś agenta w rozmowie."
+    },
+    "talk": {
+      "start": "Omów {{what}}",
+      "openHint": "Otwiera rozmowę",
+      "placeholder": {
+        "spreadsheet": "Napisz o arkuszu…",
+        "slides": "Napisz o prezentacji…",
+        "canvas": "Napisz o tablicy…",
+        "document": "Napisz o dokumencie…"
+      },
+      "aboutPoint": "Komentarz do miejsca na tablicy",
+      "comment": "Komentarz",
+      "imported": "<0>{{name}}</0> zaimportował(a) z {{file}}",
+      "variationsText": "zrób warianty tego obrazu"
+    },
+    "doc": {
+      "styles": {
+        "paragraph": "Tekst",
+        "h1": "Nagłówek 1",
+        "h2": "Nagłówek 2",
+        "h3": "Nagłówek 3",
+        "quote": "Cytat",
+        "code": "Kod"
+      },
+      "style": "Styl tekstu",
+      "bold": "Pogrubienie",
+      "italic": "Kursywa",
+      "bullets": "Lista punktowana",
+      "numbers": "Lista numerowana",
+      "quote": "Cytat",
+      "link": "Dodaj link",
+      "linkChoose": "Najpierw wybierz słowa do linku",
+      "linkBad": "Ten adres nie może być linkiem",
+      "linkPlaceholder": "Adres linku",
+      "linkApply": "Dodaj link",
+      "placeholder": "Pisz tutaj",
+      "add": "Dodaj akapit",
+      "editHint": "Edytuje tę część",
+      "notHere": "Tę część edytuje się na komputerze"
     }
   },
   "surface": {

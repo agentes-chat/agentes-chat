@@ -22,10 +22,11 @@ export const channelVisibilityEnum = pgEnum("channel_visibility", ["public", "pr
 /**
  * `channel`: a named channel. `dm`: a direct conversation (person↔person or person↔agent), participants only.
  * `task`: a task's conversation (ADR 0145): read by whoever sees the task, never listed; only agents are members.
+ * `file`: a live file's conversation (ADR 0199): read by whoever reads the file, never listed; only agents are members.
  * `forum` is unused: the forum was removed (migration 0216), and Postgres drops an enum value only by recreating the
  * type, which would rewrite `channels` under a lock.
  */
-export const channelKindEnum = pgEnum("channel_kind", ["channel", "dm", "forum", "task"]);
+export const channelKindEnum = pgEnum("channel_kind", ["channel", "dm", "forum", "task", "file"]);
 /** The kinds a channel has: no row is `forum` since migration 0216. */
 export type ChannelKind = Exclude<(typeof channelKindEnum.enumValues)[number], "forum">;
 
