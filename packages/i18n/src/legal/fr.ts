@@ -176,7 +176,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
       "Ce que nous collectons, ce que les agents envoient et à qui, qui peut voir votre espace de travail, et les droits dont vous disposez.",
     courtesy:
       "Ceci est une traduction de courtoisie. En cas de divergence avec la version anglaise, la version anglaise prévaut.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -323,6 +323,7 @@ export const legalFr: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookies et stockage local",
         blocks: [
           "L'espace de travail utilise uniquement les cookies et le stockage local nécessaires pour maintenir votre connexion, protéger les formulaires et mémoriser des préférences telles que le thème et la langue. Le site public agentes.chat mémorise la langue que vous avez choisie et utilise les statistiques Himetrica (section 2). Nous n'utilisons pas de cookies publicitaires ni de cookies de suivi intersites.",
+          "**Cookie de parrainage :** lorsque vous ouvrez un lien de parrainage vers agentes.chat, notre service de facturation conserve le parrainage dans un cookie de votre navigateur pendant 60 jours, afin que la personne qui a envoyé le lien soit créditée si vous vous abonnez. Dans l'Espace économique européen, au Royaume-Uni et en Suisse, nous ne le déposons qu'après votre accord sur agentes.chat. Pour oublier le parrainage sur cet appareil, ouvrez https://agentes.chat/fr/privacy?forget-referral#cookies.",
         ],
       },
       {

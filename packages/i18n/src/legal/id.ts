@@ -176,7 +176,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
       "Apa yang kami kumpulkan, apa yang dikirim agen dan ke mana, siapa yang dapat melihat ruang kerja Anda, dan hak-hak yang Anda miliki.",
     courtesy:
       "Dokumen ini adalah terjemahan yang disediakan semata-mata untuk kemudahan. Apabila terdapat perbedaan dengan versi bahasa Inggris, versi bahasa Inggris yang berlaku.",
-    updated: "2026-11-16",
+    updated: "2026-11-18",
     sections: [
       {
         id: "overview",
@@ -323,6 +323,7 @@ export const legalId: Partial<Record<LegalKind, LegalDocument>> = {
         heading: "14. Cookie dan penyimpanan lokal",
         blocks: [
           "Ruang kerja hanya menggunakan cookie dan penyimpanan lokal yang diperlukan untuk menjaga Anda tetap masuk, melindungi formulir, dan mengingat preferensi seperti tema dan bahasa. Situs publik agentes.chat mengingat bahasa yang Anda pilih dan menggunakan analitik Himetrica (Bagian 2). Kami tidak menggunakan cookie iklan atau pelacakan lintas situs.",
+          "**Cookie referal:** saat Anda membuka tautan referal ke agentes.chat, layanan penagihan kami menyimpan referal tersebut dalam satu cookie di browser Anda selama 60 hari, agar orang yang mengirim tautan mendapat kredit jika Anda berlangganan. Di Wilayah Ekonomi Eropa, Inggris, dan Swiss, kami hanya memasangnya setelah Anda menyetujuinya di agentes.chat. Untuk melupakan referal di perangkat ini, buka https://agentes.chat/id/privacy?forget-referral#cookies.",
         ],
       },
       {
