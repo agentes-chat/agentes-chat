@@ -82,8 +82,10 @@ beforeAll(async () => {
       .returning();
     return r as { id: string };
   };
-  const step = (runId: string, seq: number, at: Date, data: Record<string, unknown>, orgId = org.id) =>
-    db.insert(schema.agentRunSteps).values({ orgId, runId, seq, kind: "error", data, createdAt: at });
+  const step = (runId: string, seq: number, at: Date, data: Record<string, unknown>, orgId = org.id, kind = "error") =>
+    db
+      .insert(schema.agentRunSteps)
+      .values({ orgId, runId, seq, kind: kind as "error" | "context", data, createdAt: at });
   const busy = { reason: "brain_unavailable", code: "busy" };
 
   // A person's ask answered a minute later, with a plan's tokens and a workspace key's.
@@ -139,7 +141,8 @@ beforeAll(async () => {
   await step(routineRun.id, 2, ago(2), { reason: "other" });
   const waiting = await message("person", ago(6));
   const waitingRun = await run(waiting, { createdAt: ago(6), status: "waiting_input" });
-  await step(waitingRun.id, 1, ago(5), busy);
+  // A wait for room is a `context` step now; the routine's above is an `error` one, as older runs kept it.
+  await step(waitingRun.id, 1, ago(5), busy, org.id, "context");
   // No AI, a budget spent, a server error and long work in the background.
   await run(await message("person", ago(4)), { createdAt: ago(4), status: "failed", error: "no_ai" });
   await run(await message("person", ago(4)), { createdAt: ago(4), status: "failed", error: "budget_exceeded" });

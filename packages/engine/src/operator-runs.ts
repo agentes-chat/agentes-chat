@@ -506,6 +506,8 @@ const errorClassSql = (data: SQL) => {
 /** What a long work paused near (`usage_wait` with a `pause`). */
 const PAUSE_SOURCES = ["plan", "budget"] as const;
 const USAGE_WAIT = sql`(${KIND} = 'error' and ${DATA}->>'reason' = 'usage_wait')`;
+/** A wait for room on a busy computer: a `context` step that says why, as an error step would (`executeRun`). */
+const ROOM_WAIT = sql`(${KIND} = 'context' and ${DATA}->>'reason' = 'brain_unavailable')`;
 
 // Each fact is read only from the kind of step that writes it: on another kind the same name may hold text.
 const stepColumns = {
@@ -525,12 +527,12 @@ const stepColumns = {
     boolean | null
   >`case when ${KIND} = 'tool_result' then coalesce(${DATA}->'isError' = 'true'::jsonb, false) end`,
   refusal: sql<string | null>`case when ${KIND} = 'tool_result' then ${DATA}->'data'->>'refusal' end`,
-  code: sql<string | null>`case when ${KIND} = 'error' then ${DATA}->>'code'
+  code: sql<string | null>`case when ${KIND} = 'error' or ${ROOM_WAIT} then ${DATA}->>'code'
     when ${KIND} = 'tool_result' then ${DATA}->'data'->>'code' end`,
   errorClass: sql<ErrorClass | null>`case when ${KIND} = 'tool_result' then ${errorClassSql(sql`${DATA}`)} end`,
   errorStatus: sql<number | null>`case when ${KIND} = 'tool_result' then ${errorStatusSql(sql`${DATA}`)} end`,
   // A context step's: why a run's unread messages were handed on (`handOn`).
-  reason: sql<string | null>`case when ${KIND} = 'error'
+  reason: sql<string | null>`case when ${KIND} = 'error' or ${ROOM_WAIT}
     or (${KIND} = 'context' and ${DATA} ? 'redispatchedMessageIds') then ${DATA}->>'reason' end`,
   // The run a hand-on or a closed catch-up sent its messages to.
   toRunId: sql<string | null>`case when ${KIND} = 'context'
@@ -631,7 +633,8 @@ export async function operatorRunTrace(
   const trail = steps.reverse().map(({ toolUseId, inputHash, pauseSource, pauseUsed, pauseWindow, ...s }) => {
     if (s.kind === "tool_call" && toolUseId) called.set(toolUseId, s.at);
     const since = s.kind === "tool_result" && toolUseId ? called.get(toolUseId) : undefined;
-    const reason = s.kind === "context" ? listedOf(RELEASE_REASONS, s.reason) : codeOf(s.reason);
+    const reason =
+      s.kind === "context" && s.reason !== "brain_unavailable" ? listedOf(RELEASE_REASONS, s.reason) : codeOf(s.reason);
     const paused = listedOf(PAUSE_SOURCES, pauseSource);
     return {
       ...s,

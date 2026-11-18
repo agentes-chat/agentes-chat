@@ -291,7 +291,7 @@ const Trace = z
             .string()
             .nullable()
             .openapi({
-              description: `An error's: \`transient\`, \`provider_outage\`, \`brain_unavailable\`, \`usage_wait\`, \`no_ai\`, \`canceled\`, \`gave_up\`, \`recovered\`, \`interrupted\`… A \`context\` step's that handed the run's unread messages on to another run (\`redispatchedMessageIds\`): why, one of ${RELEASE_REASONS.map((r) => `\`${r}\``).join(", ")}.`,
+              description: `An error's: \`transient\`, \`provider_outage\`, \`brain_unavailable\`, \`usage_wait\`, \`no_ai\`, \`canceled\`, \`gave_up\`, \`recovered\`, \`interrupted\`… A \`context\` step's that waited its turn for a busy computer: \`brain_unavailable\` (its \`code\` \`busy\`; an \`error\` step on older runs). A \`context\` step's that handed the run's unread messages on to another run (\`redispatchedMessageIds\`): why, one of ${RELEASE_REASONS.map((r) => `\`${r}\``).join(", ")}.`,
             }),
           toRunId: z.uuid().nullable().openapi({
             description:

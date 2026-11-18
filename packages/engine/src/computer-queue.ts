@@ -128,20 +128,21 @@ export async function kickRoomQueue(db: Database, machineId: string, at?: Date) 
  * once the spacing is over). Otherwise it is behind: `retryAt` is when it may look again. Behind when a run waiting
  * for room ranks ahead of it (by rank, then the longest wait), or, for agents' work, when another run asked
  * this computer less than `ROOM_ASK_SPACING_MS` ago. A person's turn never waits for the spacing; the runner's
- * memory floor still decides whether it fits.
+ * memory floor still decides whether it fits. `ahead`: how many runs wait in front of it (0 when only the spacing
+ * holds it).
  */
 export async function roomGate(
   db: Database,
   run: { id: string; orgId: string },
   machineId: string,
   place: { rank: RoomRank; since: number },
-): Promise<{ retryAt: number } | null> {
+): Promise<{ retryAt: number; ahead: number } | null> {
   const now = Date.now();
   const rank = place.rank === 2 && place.since < now - ROOM_RANK_AGE_MS ? 1 : place.rank;
   const behind = await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`room:${machineId}`}))`);
-    const [ahead] = await tx
-      .select({ id: agentRuns.id })
+    const [line] = await tx
+      .select({ ahead: sql<number>`count(*)::int` })
       .from(agentRuns)
       .where(
         and(
@@ -149,9 +150,9 @@ export async function roomGate(
           sql`${agentRuns.id} <> ${run.id}`,
           sql`(${rankSql(now)}, ${sinceSql}, ${agentRuns.id}) < (${rank}::int, ${place.since}::bigint, ${run.id}::uuid)`,
         ),
-      )
-      .limit(1);
-    if (ahead) return { retryAt: now + ROOM_BEHIND_RETRY_MS };
+      );
+    const ahead = Number(line?.ahead ?? 0);
+    if (ahead > 0) return { retryAt: now + ROOM_BEHIND_RETRY_MS, ahead };
     if (rank > 0) {
       const [last] = await tx
         .select({ at: sql<string>`max((${agentRuns.transcript}->'roomAsk'->>'at')::bigint)` })
@@ -165,7 +166,7 @@ export async function roomGate(
           ),
         );
       const at = Number(last?.at ?? 0);
-      if (now - at < ROOM_ASK_SPACING_MS) return { retryAt: at + ROOM_ASK_SPACING_MS };
+      if (now - at < ROOM_ASK_SPACING_MS) return { retryAt: at + ROOM_ASK_SPACING_MS, ahead: 0 };
     }
     await tx
       .update(agentRuns)

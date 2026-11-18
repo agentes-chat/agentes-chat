@@ -3726,7 +3726,8 @@ test("no room on the computer: nothing in the chat, the person's message says it
     .select()
     .from(schema.agentRunSteps)
     .where(eq(schema.agentRunSteps.runId, run?.id ?? ""));
-  expect(steps.filter((s) => s.data.reason === "brain_unavailable")).toHaveLength(1);
+  // Waiting its turn is no failure: a `context` step, never an `error` one.
+  expect(steps.filter((s) => s.data.reason === "brain_unavailable").map((s) => s.kind)).toEqual(["context"]);
 
   // Room: the turn runs and the answer comes.
   await drainOutbox(f.db, handlers, { now: new Date(Date.now() + 2 * COMPUTER_BUSY_RETRY_MS + 2_000) });
@@ -4270,6 +4271,17 @@ test("only the head of the computer's line asks it: an agent's run waits behind 
     (j) => j.dedupeKey?.startsWith(`agent_run.execute:${fromAgents.id}:room:`) && j.status === "pending",
   );
   expect(next).toHaveLength(1);
+
+  // One more of the agents' runs lines up behind both: its wait says how many are ahead, and it is no error.
+  const third = await secondRun(f, (await personMessage(f, "@dev e o changelog?")).id, 3);
+  await drainOutbox(f.db, handlers, { maxBatches: 1 });
+  const [wait] = (
+    await f.db.select().from(schema.agentRunSteps).where(eq(schema.agentRunSteps.runId, third.id))
+  ).filter((s) => s.data.reason === "brain_unavailable");
+  expect(wait).toMatchObject({
+    kind: "context",
+    data: { code: "busy", ahead: 2, message: "Waiting in line for the computer: 2 runs ahead." },
+  });
 });
 
 test("background work in the computer's line ranks as asked work: a person's reply turn goes ahead of it", async () => {
