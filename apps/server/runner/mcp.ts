@@ -1569,6 +1569,22 @@ export function codexMcpOverrides(input: { command: string[]; taskId: string }) 
 }
 
 /**
+ * Raw argv for Codex mission settings. Used when Windows starts Codex directly instead of through a shell.
+ */
+export function codexMissionExecutorArgv(input: {
+  command: string[];
+  taskId: string;
+  rules: string;
+  resumed?: boolean;
+}): string[] {
+  const rules = cleanRules(input.rules);
+  return [
+    ...codexMcpOverrides(input).flatMap((o) => ["-c", o]),
+    ...(rules && !input.resumed ? ["-c", `developer_instructions=${JSON.stringify(rules)}`] : []),
+  ];
+}
+
+/**
  * Extra arguments for a mission task's executor. Claude Code: our MCP
  * config (added to the person's own MCP servers: no `--strict-mcp-config`),
  * the permission profile (`--settings`, see `claudePermissionSettings`), in
@@ -1612,8 +1628,5 @@ export function missionExecutorArgs(
       ...(rules ? ["--append-system-prompt", q(rules)] : []),
     ];
   }
-  return [
-    ...codexMcpOverrides(input).flatMap((o) => ["-c", q(o)]),
-    ...(rules && !input.resumed ? ["-c", q(`developer_instructions=${JSON.stringify(rules)}`)] : []),
-  ];
+  return codexMissionExecutorArgv(input).map((arg) => (arg === "-c" ? arg : q(arg)));
 }
