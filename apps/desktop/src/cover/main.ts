@@ -170,20 +170,29 @@ function fade() {
 }
 
 /**
- * A gate's sign-in page loading (cover.rs `compact`): only a small badge in the window's corner says so, and none of
- * the checks run (the page under it is the gate's, not the server's).
+ * Over a gate's sign-in (cover.rs `gate_pill`) the cover is only a pill in the window's corner, and none of the checks
+ * run (the page under it is the gate's, not the server's): `loading` while the next page of the sign-in loads,
+ * `servers` once it is there, with the app's servers to switch to (the server's own page, which has them, isn't there).
  */
-let compact = false;
-function setCompact(on: boolean) {
-  if (compact === on) return;
-  compact = on;
-  root?.toggleAttribute("data-compact", on);
+type Pill = "loading" | "servers";
+let compact: Pill | null = null;
+const serversMenu = () => void invoke("cover_servers_menu").catch(() => {});
+function setCompact(mode: Pill | false) {
+  const next = mode || null;
+  if (compact === next) return;
+  compact = next;
+  if (next) root?.setAttribute("data-compact", next);
+  else root?.removeAttribute("data-compact");
   root?.removeAttribute("data-fading");
-  if (on) buttons([]);
-  say(on ? words.loading : "");
+  if (next) buttons(next === "servers" ? [[words.servers, serversMenu]] : []);
+  say(next === "loading" ? words.loading : "");
 }
 
-const w = window as { __coverShown?: () => void; __coverFade?: () => void; __coverCompact?: (on: boolean) => void };
+const w = window as {
+  __coverShown?: () => void;
+  __coverFade?: () => void;
+  __coverCompact?: (mode: Pill | false) => void;
+};
 w.__coverShown = shown;
 w.__coverFade = fade;
 w.__coverCompact = setCompact;
