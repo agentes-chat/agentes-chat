@@ -433,13 +433,10 @@ export class ClaudeStreamParser {
           if (failure.cause || failure.httpStatus) this.failure = failure;
         }
         const forbidden = this.planKey && ev.error_status === 403;
-        if (
-          ev.subtype === "api_retry" &&
-          !forbidden &&
-          (ev.error === "authentication_failed" || ev.error_status === 401)
-        ) {
-          this.authFailed = true;
-          return { events: [], authRetry: true };
+        if (ev.subtype === "api_retry") {
+          // Only the last retry counts: a later one for another reason got past the sign-in.
+          this.authFailed = !forbidden && (ev.error === "authentication_failed" || ev.error_status === 401);
+          if (this.authFailed) return { events: [], authRetry: true };
         }
         if (ev.subtype === "api_retry" && ev.error === "rate_limit") this.limited = true;
         // Claude Code says `init` as each turn starts (also one it starts by itself).
@@ -469,7 +466,8 @@ export class ClaudeStreamParser {
       }
       case "assistant": {
         if (!main) return { events: [] };
-        if (ev.error === "authentication_failed") this.authFailed = true;
+        // An answer from the model: the sign-in worked, whatever a retry before it said.
+        this.authFailed = ev.error === "authentication_failed";
         if (ev.error === "rate_limit") this.limited = true;
         const content = isObj(ev.message) && Array.isArray(ev.message.content) ? ev.message.content : [];
         // Claude Code's own frame for a provider's error (its `error` word set): its text is the provider's answer.

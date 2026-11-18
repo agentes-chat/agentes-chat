@@ -1,5 +1,6 @@
 import {
   type Agent,
+  ApiError,
   type ArtifactDetail,
   type ArtifactRef,
   type BrowserHandoff,
@@ -387,8 +388,8 @@ const ROWS_WAIT_MS = 200;
  * sees. Once placed it reaches a screen's height (`drawDistance`).
  */
 const OPEN_DRAW_DISTANCE = 250;
-/** Going to a pinned message: at most this many older pages loaded looking for it. */
-const SEEK_MAX_PAGES = 10;
+/** Going to a message: the page read around it (the server's largest). */
+const SEEK_PAGE = 200;
 /** How long the message gone to stays lit. */
 const FLASH_MS = 1600;
 /** How long a photo or file picker takes to cover the screen as it opens (ms). */
@@ -564,6 +565,9 @@ function Chat({
   );
   const [older, setOlder] = useState<Message[]>([]);
   const [olderDone, setOlderDone] = useState(false);
+  // Going to a message far back shows the page around it on its own (`older`), apart from the latest page: newer
+  // pages come as the person scrolls down, until they reach it.
+  const [gap, setGap] = useState(false);
   // Something is pinned here: its lines wait above the first message (`PinnedLines`). Older pages take their pins from
   // it (`pinnedAsListed`): no cache update reaches them.
   const pinsData = usePins(orgId, channelId, member).data;
@@ -574,8 +578,8 @@ function Chat({
       const mine = (top.data ?? []).filter((m) => m.local && m.threadId === threadId);
       return mergeTimeline(threadMessages.data ?? [], [mine]);
     }
-    return mergeTimeline([...olderPinned, ...(top.data ?? [])], []);
-  }, [isThread, threadId, top.data, threadMessages.data, olderPinned]);
+    return mergeTimeline(gap ? olderPinned : [...olderPinned, ...(top.data ?? [])], []);
+  }, [isThread, threadId, top.data, threadMessages.data, olderPinned, gap]);
   // Messages said in the channel itself: a "thinking" row the app guessed hangs off one of them.
   const topIds = useMemo(() => new Set(list.flatMap((m) => (m.threadId ? [] : [m.id]))), [list]);
   // A DM with a person: their face beside my latest message once they read it (live: `channel.read`).
@@ -971,6 +975,12 @@ function Chat({
     return shownRef.current;
   }, [rows, dividerKey]);
   const toEnd = useCallback(() => {
+    // Away from the latest page: back to it.
+    if (gap) {
+      setGap(false);
+      setOlder([]);
+      setOlderDone(false);
+    }
     letGo();
     // Going to the end (a send, the round button) leaves nothing waiting to be read from the top: the room may have
     // shrunk since (the dock grew), and a reply that fit would be taken for a tall one as my message lands.
@@ -978,7 +988,7 @@ function Chat({
     setReadHold(false);
     setAtEnd(true);
     requestAnimationFrame(() => void listRef.current?.scrollToEnd({ animated: true }));
-  }, [letGo]);
+  }, [letGo, gap]);
 
   // The person is at the end of what they were reading (they scrolled there, or the list landed there): the list
   // follows again, and the round button, with nothing below to go to, goes.
@@ -1087,6 +1097,42 @@ function Chat({
   const loadOlder = useCallback(() => {
     if (!olderFailed && !loadingOlder) fetchOlder();
   }, [olderFailed, loadingOlder, fetchOlder]);
+  /** Shows the page around a message: joined to the latest page when they meet, apart (`gap`) when not. */
+  const showAround = useCallback(
+    (page: Message[]) => {
+      const start = top.data?.[0]?.createdAt;
+      const joins = !start || (page.at(-1)?.createdAt ?? "") >= start;
+      setOlder(joins && start ? page.filter((m) => m.createdAt < start) : page);
+      setGap(!joins);
+      setOlderDone(false);
+      setOlderFailed(false);
+    },
+    [top.data],
+  );
+  const fetchingNewer = useRef(false);
+  const loadNewer = useCallback(() => {
+    const newest = older.at(-1);
+    if (!gap || fetchingNewer.current || !newest) return;
+    fetchingNewer.current = true;
+    api.chat
+      .messages(orgId, channelId, { after: newest.createdAt, limit: MESSAGES_PAGE })
+      .then((page) => {
+        const known = new Set(older.map((m) => m.id));
+        const next = [...older, ...page.filter((m) => !known.has(m.id))];
+        const start = top.data?.[0]?.createdAt;
+        const met = page.length < MESSAGES_PAGE || (start !== undefined && (page.at(-1)?.createdAt ?? "") >= start);
+        if (!met) {
+          setOlder(next);
+          return;
+        }
+        showAround(next);
+        setGap(false);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        fetchingNewer.current = false;
+      });
+  }, [api, orgId, channelId, gap, older, top.data, showAround]);
 
   // ── Sending ──
   // Without a connection (no internet, or the server restarting) a message isn't "failed": it waits with a
@@ -1692,12 +1738,12 @@ function Chat({
 
   // ── Pins ──
   const rowsRef = useRef<Row[]>([]);
-  // Going to a message (a pin, `?m=`): found among the rows, or older pages loaded until it is (at most
-  // `SEEK_MAX_PAGES`); then scrolled to and lit for a moment.
+  // Going to a message (a pin, `?m=`): found among the rows, or the page around it read from the server at any
+  // distance; then scrolled to and lit for a moment.
   const [seek, setSeek] = useState<string | null>(focusId);
   const [flashId, setFlashId] = useState<string | null>(null);
-  const seekPages = useRef(0);
-  const seekPressed = useRef(false);
+  // The target whose page was asked for, and whether it came.
+  const [around, setAround] = useState<{ id: string; done: boolean } | null>(null);
   const seekReady = isThread ? threadMessages.isSuccess && !threadMessages.isPlaceholderData : top.isSuccess;
   const seekRefreshing = isThread ? threadMessages.isFetching : top.isFetching;
   useEffect(() => {
@@ -1705,40 +1751,43 @@ function Chat({
     const index = shownRows.findIndex((r) => r.kind === "message" && r.message.id === seek);
     if (index >= 0) {
       setSeek(null);
-      seekPressed.current = false;
       letGo();
       void listRef.current?.scrollToIndex({ index, animated: true, ...aimAt(index, 0.4, "start") });
       setFlashId(seek);
       return;
     }
-    // A page that failed before this search is asked for again (the search is an explicit ask); one that fails while
-    // it looks ends it.
-    const pageFailed = olderFailed && seekPages.current > 0;
-    if (isThread || olderDone || pageFailed || seekPages.current >= SEEK_MAX_PAGES) {
-      // A cached page refreshing may still bring it.
-      if (seekRefreshing) return;
+    const missing = (error?: unknown) => {
       setSeek(null);
       // A page that didn't come says so: the message may well be there.
-      if (pageFailed) toast({ title: t("common.loadFailed"), icon: "x" });
-      else if (seekPressed.current) toast({ title: t("channel.jumpTooFar") });
-      else toast({ title: t("channel.jumpMissing"), icon: "x" });
-      seekPressed.current = false;
+      const gone = error === undefined || (error instanceof ApiError && error.status === 404);
+      toast({ title: gone ? t("channel.jumpMissing") : t("common.loadFailed"), icon: "x" });
+    };
+    // A thread holds all it can show; a page read around it that still doesn't show it: deleted or not visible.
+    if (isThread || (around?.id === seek && around.done)) {
+      // A cached page refreshing may still bring it.
+      if (!seekRefreshing) missing();
       return;
     }
-    if (!loadingOlder) {
-      seekPages.current += 1;
-      fetchOlder();
-    }
+    if (around?.id === seek) return;
+    setAround({ id: seek, done: false });
+    api.chat
+      .messages(orgId, channelId, { around: seek, limit: SEEK_PAGE })
+      .then((page) => {
+        showAround(page);
+        setAround({ id: seek, done: true });
+      })
+      .catch(missing);
   }, [
     seek,
     seekReady,
     seekRefreshing,
     shownRows,
     isThread,
-    olderDone,
-    olderFailed,
-    loadingOlder,
-    fetchOlder,
+    around,
+    api,
+    orgId,
+    channelId,
+    showAround,
     letGo,
     aimAt,
     t,
@@ -1756,8 +1805,7 @@ function Chat({
         router.push(chatHref(channelId, reply.threadId, reply.messageId));
         return;
       }
-      seekPages.current = 0;
-      seekPressed.current = true;
+      setAround(null);
       setSeek(reply.messageId);
     },
     [isThread, channelId],
@@ -1769,7 +1817,7 @@ function Chat({
       router.push(chatHref(channelId, target.threadId, target.messageId));
       return;
     }
-    seekPages.current = 0;
+    setAround(null);
     setSeek(target.messageId);
   };
   // From the conversation's options, the next page of that sheet.
@@ -1778,7 +1826,7 @@ function Chat({
   // sheet behind it; a row goes to the reply that said it.
   const goToReturn = (messageId: string) => {
     sheet.close();
-    seekPages.current = 0;
+    setAround(null);
     setSeek(messageId);
   };
   const openReturns = useLatest(() =>
@@ -1806,7 +1854,7 @@ function Chat({
       router.push(target.href);
       return;
     }
-    seekPages.current = 0;
+    setAround(null);
     setSeek(target.messageId);
   };
   const openSearch = () =>
@@ -2824,8 +2872,7 @@ function Chat({
       meId,
     );
     if (!root) return;
-    seekPages.current = 0;
-    seekPressed.current = true;
+    setAround(null);
     setSeek(root);
   }, [
     showList,
@@ -3050,7 +3097,7 @@ function Chat({
                                   alignItemsAtEnd
                                   // New messages, a reply growing word by word and the working line keep the end in view,
                                   // but only while the person is near it.
-                                  maintainScrollAtEnd={!readHold}
+                                  maintainScrollAtEnd={!readHold && !gap}
                                   maintainScrollAtEndThreshold={STICK_TO_END_THRESHOLD}
                                   // Older pages above and rows changing size keep what is on screen still.
                                   maintainVisibleContentPosition
@@ -3063,6 +3110,7 @@ function Chat({
                                   freeze={freeze}
                                   onReady={onListReady}
                                   onStartReached={loadOlder}
+                                  onEndReached={gap ? loadNewer : undefined}
                                   // A look at the waiting requests' cards and the live rows, once a frame and only while
                                   // there is one.
                                   onScroll={onListScroll}
@@ -3207,7 +3255,7 @@ function Chat({
                 <FarGate
                   far={far}
                   away={!atEnd}
-                  shown={readHold || (!atEnd && (unseen.messages > 0 || unseen.working.length > 0))}
+                  shown={gap || readHold || (!atEnd && (unseen.messages > 0 || unseen.working.length > 0))}
                 >
                   <View style={styles.jumpAt} pointerEvents="box-none">
                     <ToLatest unseen={unseen} onPress={toEnd} />

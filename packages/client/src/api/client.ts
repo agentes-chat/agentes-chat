@@ -1020,7 +1020,7 @@ export interface ApiClient {
     messages(
       orgId: string,
       channelId: string,
-      options?: { threadId?: string; before?: string; limit?: number },
+      options?: { threadId?: string; before?: string; after?: string; around?: string; limit?: number },
     ): Promise<Message[]>;
     post(
       orgId: string,

@@ -395,9 +395,10 @@ export const machineAccounts = pgTable(
 
 /**
  * How NEW Claude sign-ins for all agents are made on computers where each agent is its own OS user, set through
- * the operator API: `setup_token` everywhere, or `cli_login` for the listed workspaces (`selected`) or for all.
- * Elsewhere such a sign-in is always the CLI's own. A connection keeps the method it started with. One row for the
- * whole installation, so no `org_id`; a missing row reads as `setup_token`, `selected`, no workspaces.
+ * the operator API: `setup_token` everywhere, or `cli_login` for the listed workspaces (`selected`), for the listed
+ * ones plus `percent` of the rest (`percent`, by a stable hash of the workspace's id) or for all. Elsewhere such a
+ * sign-in is always the CLI's own. A connection keeps the method it started with. One row for the whole
+ * installation, so no `org_id`; a missing row reads as `setup_token`, `selected`, no workspaces, 0%.
  */
 export const claudeAuthSettings = pgTable(
   "claude_auth_settings",
@@ -406,17 +407,20 @@ export const claudeAuthSettings = pgTable(
     method: text({ enum: ["cli_login", "setup_token"] })
       .notNull()
       .default("setup_token"),
-    rollout: text({ enum: ["selected", "all"] })
+    rollout: text({ enum: ["selected", "percent", "all"] })
       .notNull()
       .default("selected"),
     orgIds: uuid().array().notNull().default(sql`'{}'::uuid[]`),
+    /** With `percent`: the share of workspaces, 0–100, on top of the listed ones. */
+    percent: integer().notNull().default(0),
     /** When it last changed; null: never. */
     changedAt: timestamp({ withTimezone: true }),
   },
   (t) => [
     check("claude_auth_settings_one_row", sql`${t.id} = 1`),
     check("claude_auth_settings_method", sql`${t.method} in ('cli_login', 'setup_token')`),
-    check("claude_auth_settings_rollout", sql`${t.rollout} in ('selected', 'all')`),
+    check("claude_auth_settings_rollout", sql`${t.rollout} in ('selected', 'percent', 'all')`),
+    check("claude_auth_settings_percent", sql`${t.percent} between 0 and 100`),
     check("claude_auth_settings_org_ids", sql`coalesce(cardinality(${t.orgIds}), 0) <= 500`),
   ],
 );

@@ -155,13 +155,13 @@ describe("older pages", () => {
     expect(chat).toContain('older: { height: OLDER_ROW, alignItems: "center", justifyContent: "center" },');
   });
 
-  test("going to a message asks a failed page again once, and gives up on one that fails while it looks", () => {
-    expect(chat).toContain("const pageFailed = olderFailed && seekPages.current > 0;");
-    expect(chat).toContain("if (isThread || olderDone || pageFailed || seekPages.current >= SEEK_MAX_PAGES) {");
-    expect(chat).toContain('if (pageFailed) toast({ title: t("common.loadFailed"), icon: "x" });');
-    // The search's own asks go through even after a failure (the list's own don't).
-    const seek = between(chat, "const pageFailed =", "useEffect(() => {");
-    expect(seek).toContain("seekPages.current += 1;\n      fetchOlder();");
+  test("going to a message reads the page around it at any distance; a failed read says so, a 404 says it's gone", () => {
+    expect(chat).toContain(".messages(orgId, channelId, { around: seek, limit: SEEK_PAGE })");
+    expect(chat).toContain("const gone = error === undefined || (error instanceof ApiError && error.status === 404);");
+    expect(chat).toContain('toast({ title: gone ? t("channel.jumpMissing") : t("common.loadFailed"), icon: "x" });');
+    // Away from the latest page: newer pages as the person scrolls down, never pinned to that end.
+    expect(chat).toContain("onEndReached={gap ? loadNewer : undefined}");
+    expect(chat).toContain("maintainScrollAtEnd={!readHold && !gap}");
   });
 });
 

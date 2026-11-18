@@ -524,8 +524,7 @@ export interface ChannelChrome {
 const sameRuns = (a: LiveRun[], b: LiveRun[]) => a.length === b.length && a.every((r, i) => r === b[i]);
 const sameList = <T,>(a: T[], b: T[]) => a.length === b.length && a.every((r, i) => r === b[i]);
 
-/** Going to a message: how many older pages to look through (the server's largest), and how long it stays lit. */
-const FOCUS_MAX_PAGES = 25;
+/** Going to a message: the page read around it (the server's largest), and how long it stays lit. */
 const FOCUS_PAGE = 200;
 const HIGHLIGHT_MS = 2400;
 /** A scroll within this long after a wheel/touch/key/pointer counts as the person's. */
@@ -1290,6 +1289,10 @@ function ChannelView({
   const [olderState, setOlderState] = useState<"idle" | "loading" | "done">(() =>
     qc.getQueryData<OlderPages>(olderKey)?.done ? "done" : "idle",
   );
+  // Going to a message far back shows the page around it on its own (`older`), apart from the latest page: newer
+  // pages come as the person scrolls down, until they reach it.
+  const [gap, setGap] = useState(false);
+  const [newerLoading, setNewerLoading] = useState(false);
   const anchor = useRef<{ height: number; top: number } | null>(null);
   const loadOlder = (limit = OLDER_PAGE) => {
     // A thread view loads its whole conversation at once.
@@ -1309,12 +1312,42 @@ function ChannelView({
         setOlder((prev) => {
           const known = new Set(prev.map((m) => m.id));
           const next = [...page.filter((m) => !known.has(m.id)), ...prev];
-          qc.setQueryData<OlderPages>(olderKey, { pages: next, done: page.length < limit });
+          if (!gap) qc.setQueryData<OlderPages>(olderKey, { pages: next, done: page.length < limit });
           return next;
         });
         setOlderState(page.length < limit ? "done" : "idle");
       })
       .catch(() => setOlderState("idle"));
+  };
+  /** Shows the page around a message: joined to the latest page when they meet, apart (`gap`) when not. */
+  const showAround = (page: MessageType[]) => {
+    const start = channelMessages.data?.[0]?.createdAt;
+    const joins = !start || (page.at(-1)?.createdAt ?? "") >= start;
+    const kept = joins && start ? page.filter((m) => m.createdAt < start) : page;
+    setOlder(kept);
+    setGap(!joins);
+    setOlderState("idle");
+    qc.setQueryData<OlderPages>(olderKey, { pages: joins ? kept : [], done: false });
+  };
+  const loadNewer = () => {
+    const newest = older.at(-1);
+    if (!gap || newerLoading || !newest) return;
+    setNewerLoading(true);
+    api.chat
+      .messages(org.id, channel.id, { after: newest.createdAt, limit: OLDER_PAGE })
+      .then((page) => {
+        const known = new Set(older.map((m) => m.id));
+        const start = channelMessages.data?.[0]?.createdAt;
+        const met = page.length < OLDER_PAGE || (start !== undefined && (page.at(-1)?.createdAt ?? "") >= start);
+        if (!met) {
+          setOlder([...older, ...page.filter((m) => !known.has(m.id))]);
+          return;
+        }
+        showAround([...older, ...page.filter((m) => !known.has(m.id))]);
+        setGap(false);
+      })
+      .catch(() => undefined)
+      .finally(() => setNewerLoading(false));
   };
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs when older rows were prepended
   useLayoutEffect(() => {
@@ -1338,12 +1371,12 @@ function ChannelView({
   // The channel's messages: only what was said in the channel (agents asked there answer there).
   const channelList = useMemo(() => {
     if (thread) return null;
-    const top = [...older, ...(channelMessages.data ?? [])];
+    const top = gap ? older : [...older, ...(channelMessages.data ?? [])];
     const hidden = hiddenByThreads(threadList, top);
     // My replies from the panel wait in the channel's page until sent: they belong to the thread.
     const visible = top.filter((m) => !m.threadId && !hidden(m));
     return { visible, lines: threadLines };
-  }, [thread, older, channelMessages.data, threadList, threadLines]);
+  }, [thread, older, gap, channelMessages.data, threadList, threadLines]);
   // The channel's threads as the timeline draws them (none in a thread view). Every row reads this context, so it
   // must not change with the messages: a new message or an older page would draw every row again.
   const threadsView = useMemo<ChannelThreadsView | null>(() => {
@@ -1712,6 +1745,12 @@ function ChannelView({
   const previousLastKey = useRef(lastKey);
   /** The person asked for the end (the round button, "Fim da resposta", a correction sent). */
   const toBottom = (smooth = false) => {
+    // Away from the latest page: back to it.
+    if (gap) {
+      setGap(false);
+      setOlder([]);
+      setOlderState("idle");
+    }
     markRead();
     setFar(false);
     const el = scroller.current;
@@ -1989,11 +2028,12 @@ function ChannelView({
     if (stick.current && Date.now() >= autoScrollUntil.current) follow();
   }, [messages.dataUpdatedAt, timeline.length]);
 
-  // `?m=` (or a quote clicked): find the message (paging back up to FOCUS_MAX_PAGES), scroll to it,
-  // highlight it once.
+  // `?m=` (or a quote clicked): the message on screen, or the page around it read from the server at any distance;
+  // scrolled to and lit once.
   const [focusTarget, setFocusTarget] = useState(focusMessageId);
   const [focusDone, setFocusDone] = useState(!focusMessageId);
-  const focusPages = useRef(0);
+  // The target whose page was asked for, and whether it came.
+  const [around, setAround] = useState<{ id: string; done: boolean } | null>(null);
   const jumping = useRef(false);
   const found = focusTarget ? timeline.some((i) => i.kind === "message" && i.message.id === focusTarget) : false;
   // biome-ignore lint/correctness/useExhaustiveDependencies: steps while the timeline grows
@@ -2008,30 +2048,38 @@ function ChannelView({
       highlightMessage(scroller.current, focusTarget);
       return;
     }
-    // A thread view holds all it can show: nothing to page in.
-    if (thread || olderState === "done" || focusPages.current >= FOCUS_MAX_PAGES) {
-      // A cached page refreshing may still bring it.
-      if (messages.isFetching) return;
+    const missing = (error?: unknown) => {
       setFocusDone(true);
+      const text =
+        error === undefined || (error instanceof ApiError && error.status === 404)
+          ? t("channel.jumpMissing")
+          : errorText(t, error);
       // Pressed from here: the person stays where they were.
       if (jumping.current) {
         jumping.current = false;
-        // A quote's original that's gone already says so: only a search hit may be gone by now.
-        if (searchOpen) toast.show(t("channel.jumpMissing"), "error");
-        else toast.show(t("channel.jumpTooFar"));
+        toast.show(text, "error");
         return;
       }
-      // Not here (or too far back): said, and at the bottom as usual.
       stick.current = true;
       toBottom();
-      toast.show(t("channel.jumpMissing"), "error");
+      toast.show(text, "error");
+    };
+    // A thread view holds all it can show; a page read around it that still doesn't show it: deleted or not visible.
+    if (thread || (around?.id === focusTarget && around.done)) {
+      // A cached page refreshing may still bring it.
+      if (!messages.isFetching) missing();
       return;
     }
-    if (olderState === "idle") {
-      focusPages.current += 1;
-      loadOlder(FOCUS_PAGE);
-    }
-  }, [found, focusDone, focusTarget, serverRead, olderState, older.length, messages.isFetching]);
+    if (around?.id === focusTarget) return;
+    setAround({ id: focusTarget, done: false });
+    api.chat
+      .messages(org.id, channel.id, { around: focusTarget, limit: FOCUS_PAGE })
+      .then((page) => {
+        showAround(page);
+        setAround({ id: focusTarget, done: true });
+      })
+      .catch(missing);
+  }, [found, focusDone, focusTarget, serverRead, around, messages.isFetching]);
   /** A quote was clicked: the original on screen, or paged in like `?m=`. */
   const jumpTo = (messageId: string) => {
     if (highlightMessage(scroller.current, messageId)) {
@@ -2039,8 +2087,8 @@ function ChannelView({
       if (!panel) setSearchOpen(false);
       return;
     }
-    focusPages.current = 0;
     jumping.current = true;
+    setAround(null);
     setFocusTarget(messageId);
     setFocusDone(false);
   };
@@ -2671,6 +2719,12 @@ function ChannelView({
                                 letGo();
                                 return;
                               }
+                              // Away from the latest page, its end is not the conversation's: newer pages, never pinned.
+                              if (gap) {
+                                const below = e.currentTarget.scrollHeight - e.currentTarget.scrollTop;
+                                if (byPerson && below - e.currentTarget.clientHeight < 240) loadNewer();
+                                return;
+                              }
                               const near = nearBottom(e.currentTarget);
                               if (!near && (!byPerson || Date.now() < autoScrollUntil.current)) return;
                               // Pinned again only when the person comes back down, not by layout.
@@ -2760,7 +2814,7 @@ function ChannelView({
                                 <Timeline
                                   items={timeline}
                                   ready={serverRead}
-                                  slots={slots}
+                                  slots={gap ? NO_SLOTS : slots}
                                   runKeys={runKeys.current}
                                   divider={divider}
                                   channelId={channel.id}
@@ -2794,7 +2848,7 @@ function ChannelView({
                           </section>
                         </RowsProvider>
                         <ToLatest
-                          shown={!adjustThreadId && (far || pillOn)}
+                          shown={!adjustThreadId && (far || pillOn || gap)}
                           count={unseenSummary.count}
                           mentionsMe={unseenSummary.mentionsMe}
                           label={
@@ -3509,6 +3563,7 @@ const HELD_RECENT_MS = 12 * 60 * 60_000;
 /** Model names for the rows of "Ajustar trecho" (no usage line is shown there). */
 const NO_LABELS = new Map<string, string>();
 const NO_MARKS: ReadonlySet<string> = new Set();
+const NO_SLOTS: RunSlot[] = [];
 
 /** The live run as a message, while it has none (the block's header comes from the run): from when it started. */
 function liveMessageOf(r: LiveRun): MessageType {
