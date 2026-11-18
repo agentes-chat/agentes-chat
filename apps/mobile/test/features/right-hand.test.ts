@@ -254,17 +254,21 @@ test("Configurações lists no section for it: its settings open from its own pr
 
 test("its DM, cards and profile treat it apart through the one shared helper", () => {
   const src = (f: string) => readFileSync(new URL(`../../src/features/${f}`, import.meta.url), "utf8");
-  // No computer in its DM, and its own line; its field says "Mensagem para …" on one line, as every DM's.
+  // Its computer in its DM as any agent's, and its own line; its field says "Mensagem para …" on one line, as every
+  // DM's.
   const chat = src("chat/ChatScreen.tsx");
   expect(chat).toContain("isRightHand(dmAgent)");
   expect(chat).not.toContain('t("rightHand.composerHint")');
-  expect(chat).toMatch(/dmComputer = dmAgentId && !isThread && !rightHand/);
+  expect(chat).toContain("const dmComputer = dmAgentId && !isThread ? { agentId: dmAgentId, onOpen: leavePlace }");
+  expect(chat).toContain("const computerInBar = Boolean(dmAgentId && !isThread && computerWords && !queueInBar);");
   // Never archived or deleted from the phone.
   expect(src("agents/AgentEditScreen.tsx")).toContain("admin && !rightHand");
   // Its profile shows what it may use like any agent's (apps, built-in areas, mailboxes), without the AI row: its AI
   // is each person's, on its settings.
   const profile = src("agents/AgentProfileScreen.tsx");
   expect(profile).toContain("{details ? accessView : null}");
+  // Its computer card on its profile, as any agent's.
+  expect(profile).toContain("{details ? <AgentComputerCard agentId={id} style={styles.computer} /> : null}");
   expect(profile).toContain("const mailboxes = useAgentMailboxes(id, details);");
   expect(profile).toContain("{thinks && !rightHand ? (");
   // No coordinator anywhere on the phone (ADR 0093, superseded by 0137).
