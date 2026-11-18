@@ -113,7 +113,7 @@ describe("an account out of password tries", () => {
     try {
       const { api } = authApi(ACCOUNT);
       const { services } = await renderApp("/login", { api, auth: createBetterAuthClient("http://localhost:3000") });
-      await type("E-mail", "marina@acme.com.br");
+      await type("E-mail", "marina@example.com");
       await press(/^Continuar(?! com)/);
       await type("Senha", "correct horse");
       await press(/^Entrar/);
