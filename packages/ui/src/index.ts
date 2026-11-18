@@ -305,6 +305,7 @@ export {
   planLine,
   planState,
   planWindows,
+  windowAmount,
 } from "./components/PlanMeter";
 export { Popover } from "./components/Popover";
 export { type BadgePresence, PresenceBadge, type PresenceBadgeProps } from "./components/PresenceBadge";

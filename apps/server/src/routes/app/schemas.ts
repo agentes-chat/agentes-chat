@@ -484,6 +484,10 @@ export const PlanWindow = z.object({
   label: z.string().optional().openapi({ description: "`other`: the provider's name for it." }),
   usedPercent: z.number().openapi({ description: "0–100." }),
   resetsAt: z.string().optional(),
+  at: z
+    .string()
+    .optional()
+    .openapi({ description: "When this window was last read, where that is before the reading's `at`." }),
 });
 
 export const PlanUsage = z

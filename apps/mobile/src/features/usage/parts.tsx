@@ -18,6 +18,7 @@ import {
   planState,
   planWindows,
   renewals,
+  windowAmount,
 } from "@agenteschat/ui/plan-state";
 import { Canvas, createPicture, Picture, Skia } from "@shopify/react-native-skia";
 import { type ReactNode, useMemo, useState } from "react";
@@ -151,9 +152,9 @@ export function PlanMeter({
       ) : null}
       {rows.map((w, i) => {
         const name = text.window(w);
-        // A window that reset is empty again: its parts were the old window's.
-        const fresh = !passed(w.resetsAt);
-        const level = planLevel(w.used);
+        // A window that reset is empty again: its parts were the old window's. One read too long ago may have.
+        const fresh = !passed(w.resetsAt) && !w.stale;
+        const level = w.stale ? "ok" : planLevel(w.used);
         const tone = c[PLAN_TONE[level]];
         return (
           <View key={`${w.kind}:${w.label ?? i}`} style={styles.window}>
@@ -162,17 +163,19 @@ export function PlanMeter({
                 {name}
               </Text>
               <Text variant="small" tone="muted" style={[styles.tabular, level !== "ok" && { color: tone }]}>
-                {w.used}%
+                {windowAmount(usage, w, text)}
               </Text>
             </View>
-            <Meter
-              value={w.used}
-              label={name}
-              mark={PLAN_ALMOST}
-              color={tone}
-              {...(w.part !== undefined && fresh ? { part: w.part } : {})}
-              {...(w.segments && fresh ? { segments: w.segments } : {})}
-            />
+            {w.stale ? null : (
+              <Meter
+                value={w.used}
+                label={name}
+                mark={PLAN_ALMOST}
+                color={tone}
+                {...(w.part !== undefined && fresh ? { part: w.part } : {})}
+                {...(w.segments && fresh ? { segments: w.segments } : {})}
+              />
+            )}
             {w.note && fresh ? (
               <Text variant="caption" tone="muted">
                 {w.note}

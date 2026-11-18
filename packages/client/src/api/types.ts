@@ -6370,6 +6370,8 @@ export interface PlanWindow {
   label?: string;
   usedPercent: number;
   resetsAt?: string;
+  /** When this window was last read, where that is before the reading's `at`. */
+  at?: string;
 }
 
 /** A plan's usage limits, as the CLI on its computer said them (`at`); no token is ever read. */
