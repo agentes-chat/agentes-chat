@@ -39,12 +39,15 @@ import type { Gaze } from "@/agent/AgentAvatar";
 import { STORED } from "@/lib/storage";
 import { useOrg } from "@/providers/org";
 import {
+  EmptyState,
   type HeaderAction,
   LargeTitleScreen,
   LIST_PREVIEW,
   LineIcon,
   ListRow,
   PixelOrbit,
+  SCREEN_X,
+  SearchField,
   SectionHeader,
   SkeletonList,
   SwipeRow,
@@ -73,7 +76,7 @@ import { useSectorMenu } from "../team/SectorScreen";
 import { TeamEntry } from "../team/TeamEntry";
 import { ARRIVAL_LOOK_MS, clearArrived, useArrived } from "./arrival";
 import { openAgentDelete } from "./DeleteAgentScreen";
-import { agoOf, freeSections, plainRole, type TeamLine, teamLines } from "./logic";
+import { agoOf, findAgents, freeSections, plainRole, type TeamLine, teamLines } from "./logic";
 import { agoShort, workTitle } from "./work";
 
 /** Rows whose agent moves (a long team stays light). */
@@ -95,7 +98,9 @@ const FACE_IN = FadeIn.duration(280).easing(Easing.bezier(0.23, 1, 0.32, 1));
  * in plain words), split by the workspace's departments when it has some. Each row says its state as text in the
  * state's color (amber only for what waits on you; no badges, no dots), one fact per line, and the face is the state
  * too: running at work, asleep without an AI or while its computer is away. Tapping an agent opens its profile; the
- * bar's "+" creates one; an archived agent restores with a swipe.
+ * bar's "+" creates one; an archived agent restores with a swipe. A search field over the list keeps the agents whose
+ * name, @ or role has the words (as Rotinas' and Drive's), the sections as they are; while it has words the task
+ * manager and Equipe step aside.
  */
 export function AgentsScreen() {
   const { t } = useTranslation();
@@ -126,7 +131,10 @@ export function AgentsScreen() {
       ),
     [statuses],
   );
-  const agents = useMemo(() => dir.agents.filter((a) => listsAgent(org, a)), [dir.agents, org]);
+  const listed = useMemo(() => dir.agents.filter((a) => listsAgent(org, a)), [dir.agents, org]);
+  const [q, setQ] = useState("");
+  const searching = q.trim().length > 0;
+  const agents = useMemo(() => findAgents(listed, q), [listed, q]);
   // The same lines while nothing they come from changes: the rows below are memoized on what each line holds.
   const { waiting, working, free } = useMemo(
     () => teamLines(agents, work, dms.data ?? [], asking, offline, atWork),
@@ -169,10 +177,13 @@ export function AgentsScreen() {
       groups.refetch(),
     ]),
   );
-  const total = agents.length;
+  const total = listed.length;
   // Archived agents have no profile: admins bring them back, or delete them for good (ADR 0082), from here.
   const admin = can(org, "manage_agents");
-  const archived = (useFormerAgents(orgId).data ?? []).filter((a) => admin && !a.deleted);
+  const archived = findAgents(
+    (useFormerAgents(orgId).data ?? []).filter((a) => admin && !a.deleted),
+    q,
+  );
   const restore = useUnarchiveAgent(orgId);
   const toast = useToast();
   const c = useColors();
@@ -223,12 +234,27 @@ export function AgentsScreen() {
       ) : total === 0 ? (
         <FirstUse place="agentsForYou" acts={false} />
       ) : null}
-      {showsManager ? (
+      {total > 0 ? (
+        <View style={styles.search}>
+          <SearchField
+            value={q}
+            onChangeText={setQ}
+            placeholder={t("agentPicker.search")}
+            accessibilityLabel={t("agentPicker.search")}
+            returnKeyType="search"
+            autoCapitalize="none"
+          />
+        </View>
+      ) : null}
+      {searching && agents.length + archived.length === 0 ? (
+        <EmptyState size="inline" title={t("agentPicker.empty", { q: q.trim() })} />
+      ) : null}
+      {showsManager && !searching ? (
         <ManagerRow working={working.length} waiting={waiting.length} onPress={() => router.push("/task-manager")} />
       ) : null}
       {/* Equipe's org chart and channels (ADR 0148). A personal workspace (ADR 0159) keeps it as the last row of You ›
           Work: one person's agents rarely need an org chart in sight. */}
-      {total > 0 && !isPersonal(org) ? <TeamEntry divider={showsManager} /> : null}
+      {total > 0 && !isPersonal(org) && !searching ? <TeamEntry divider={showsManager} /> : null}
       <LayoutAnimationConfig skipEntering>
         {waiting.length > 0 ? (
           <>
@@ -271,6 +297,7 @@ export function AgentsScreen() {
             gazeOf={gazeOf}
             onRoutine={onRoutine}
             now={now}
+            searching={searching}
           />
         ) : null}
         {archived.length > 0 ? (
@@ -359,6 +386,7 @@ function FreeSections({
   gazeOf,
   onRoutine,
   now,
+  searching,
 }: {
   free: TeamLine[];
   groups: AgentGroup[];
@@ -367,6 +395,8 @@ function FreeSections({
   gazeOf: (id: string) => Gaze | undefined;
   onRoutine: ReadonlyMap<string, string>;
   now: number;
+  /** While the search has words, every sector stays open: a match in a collapsed one is in sight. */
+  searching: boolean;
 }) {
   const { t } = useTranslation();
   // A personal workspace's free agents are its person's, not a team (ADR 0159).
@@ -400,7 +430,7 @@ function FreeSections({
             key={group.id}
             title={group.name}
             count={lines.length}
-            collapsed={collapsed.includes(group.id)}
+            collapsed={!searching && collapsed.includes(group.id)}
             onToggle={() => toggle(group.id)}
             {...(manages
               ? { menu: { label: t("agentGroups.options", { name: group.name }), onPress: () => sectorMenu(group) } }
@@ -705,6 +735,7 @@ function useArrival(arriving: boolean, reduced: boolean) {
 }
 
 const styles = StyleSheet.create({
+  search: { paddingHorizontal: SCREEN_X, paddingTop: 4, paddingBottom: 8 },
   // The orbit sits on the line's left, 8 before the words, as the state's mark.
   state: { flexDirection: "row", alignItems: "center", gap: 8, minWidth: 0 },
   medium: { fontWeight: weights.medium },

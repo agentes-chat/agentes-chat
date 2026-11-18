@@ -1065,6 +1065,7 @@ export const featureKeysPtBR = {
       newTask: "Pedir uma tarefa",
       newAgent: "Criar agente",
     },
+    usageKeywords: "cota cotas limite limites uso consumo tokens custo gasto",
   },
   channelRef: {
     list: "Canais",

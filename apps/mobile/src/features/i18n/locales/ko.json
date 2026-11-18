@@ -947,7 +947,8 @@
       "newConversation": "새 채팅",
       "newTask": "작업 요청",
       "newAgent": "에이전트 만들기"
-    }
+    },
+    "usageKeywords": "할당량 한도 제한 사용량 토큰 비용 지출"
   },
   "channelRef": {
     "list": "채널",

@@ -947,7 +947,8 @@
       "newConversation": "Obrolan baru",
       "newTask": "Minta tugas",
       "newAgent": "Buat agen"
-    }
+    },
+    "usageKeywords": "kuota batas limit penggunaan pemakaian token biaya pengeluaran"
   },
   "channelRef": {
     "list": "Kanal",

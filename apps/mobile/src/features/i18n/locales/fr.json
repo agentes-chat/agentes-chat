@@ -1093,7 +1093,8 @@
       "newConversation": "Nouvelle discussion",
       "newTask": "Demander une tâche",
       "newAgent": "Créer un agent"
-    }
+    },
+    "usageKeywords": "quota quotas limite limites utilisation consommation jetons coût dépenses"
   },
   "channelRef": {
     "list": "Canaux",

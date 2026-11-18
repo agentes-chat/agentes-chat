@@ -1166,7 +1166,8 @@
       "newConversation": "Nowy czat",
       "newTask": "Poproś o zadanie",
       "newAgent": "Utwórz agenta"
-    }
+    },
+    "usageKeywords": "limit limity przydział użycie zużycie tokeny koszt wydatki"
   },
   "channelRef": {
     "list": "Kanały",

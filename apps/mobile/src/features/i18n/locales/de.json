@@ -1020,7 +1020,8 @@
       "newConversation": "Neuer Chat",
       "newTask": "Aufgabe anfordern",
       "newAgent": "Agent erstellen"
-    }
+    },
+    "usageKeywords": "Kontingent Kontingente Limit Limits Nutzung Verbrauch Tokens Kosten Ausgaben"
   },
   "channelRef": {
     "list": "Kanäle",

@@ -1093,7 +1093,8 @@
       "newConversation": "Nuevo chat",
       "newTask": "Pedir una tarea",
       "newAgent": "Crear agente"
-    }
+    },
+    "usageKeywords": "cuota cuotas límite límites uso consumo tokens coste gasto"
   },
   "channelRef": {
     "list": "Canales",

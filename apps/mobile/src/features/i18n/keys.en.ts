@@ -1087,6 +1087,8 @@ export const featureKeysEn = {
       newTask: "Ask for a task",
       newAgent: "Create agent",
     },
+    /** More words that find AI and usage among Search's places (each one apart, never shown). */
+    usageKeywords: "quota quotas limit limits usage tokens cost spending",
   },
   channelRef: {
     list: "Channels",

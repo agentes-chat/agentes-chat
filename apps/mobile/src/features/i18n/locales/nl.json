@@ -1020,7 +1020,8 @@
       "newConversation": "Nieuw gesprek",
       "newTask": "Een taak vragen",
       "newAgent": "Agent aanmaken"
-    }
+    },
+    "usageKeywords": "quotum quota limiet limieten gebruik verbruik tokens kosten uitgaven"
   },
   "channelRef": {
     "list": "Kanalen",

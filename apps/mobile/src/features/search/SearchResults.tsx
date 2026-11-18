@@ -1,9 +1,9 @@
-import { useChannels, useDms, useSearch } from "@agenteschat/client";
+import { useChannels, useDms, useSearch, useWikiTree } from "@agenteschat/client";
 import { hitText } from "@agenteschat/client/lib/media";
 import { previewBody } from "@agenteschat/client/lib/message-body";
 import { makesAgents } from "@agenteschat/client/lib/permissions";
 import { searchTerms } from "@agenteschat/client/lib/search-filters";
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { StyleSheet, View } from "react-native";
 import { useOrg } from "@/providers/org";
@@ -16,14 +16,16 @@ import { LoadFailed } from "../shared/FirstUse";
 import { useDirectory, useOrgId, useWhen } from "../shared/hooks";
 import { previewOf } from "../shared/logic";
 import { ActionList, Tile } from "../shared/parts";
+import { destinations, findDestinations } from "./destinations";
 import { hitHref, isEmpty, SEARCH_KINDS, type SearchAction, searchResults } from "./logic";
 import { RESULT_LEAD } from "./SearchFilters";
 
 const ACTION_ICON = { newConversation: "compose", newTask: "target", newAgent: "agent" } as const;
 
 /**
- * Busca, under the field of the search tab (the phone's ⌘K): the actions with no words, then the results grouped
- * (Conversas, Ações do time, Mensagens, Arquivos), each group's count on its header and the words looked for lit in
+ * Busca, under the field of the search tab (the phone's ⌘K): the actions with no words, the places it goes to ("Ir
+ * para": the app's screens, the settings this person opens, the wiki's pages), then the results grouped (Conversas,
+ * Ações do time, Mensagens, Arquivos), each group's count on its header and the words looked for lit in
  * the lines. A message opens its conversation at that message; a file opens in the app's own viewer. While the
  * results come, rows of their shape stand in.
  */
@@ -32,10 +34,16 @@ export function SearchResults({ q }: { q: string }) {
   const orgId = useOrgId();
   const dir = useDirectory();
   const when = useWhen();
-  const createsAgents = makesAgents(useOrg().org);
+  const { org } = useOrg();
+  const createsAgents = makesAgents(org);
   const channels = useChannels(orgId);
   const dms = useDms(orgId);
   const hits = useSearch(orgId, q, SEARCH_KINDS);
+  const words = Boolean(q.trim());
+  // The wiki's titles only once there are words (as the web's palette, only while it is open).
+  const wiki = useWikiTree(orgId, words);
+  const all = useMemo(() => destinations(t, org, wiki.data ?? []), [t, org, wiki.data]);
+  const places = findDestinations(q, all);
   const labels: Record<SearchAction, string> = {
     newConversation: t("mobile.find.action.newConversation"),
     newTask: t("mobile.find.action.newTask"),
@@ -59,7 +67,6 @@ export function SearchResults({ q }: { q: string }) {
   // The app's own viewer (a document, an image), never the browser: a picture's name opens it straight in the pictures.
   const openFileNow = useOpenFile();
   const openHit = (id: string, title: string) => void openFileNow({ id, title });
-  const words = Boolean(q.trim());
   const terms = searchTerms(q);
   // The server's results didn't come: said so with a retry, never as "nothing found".
   const failed = words && hits.isError && !hits.data;
@@ -75,6 +82,21 @@ export function SearchResults({ q }: { q: string }) {
                 icon: ACTION_ICON[a],
                 label: labels[a],
                 onPress: () => runAction(a),
+              }))}
+            />
+          </Group>
+        ) : null}
+        {places.length > 0 ? (
+          <Group title={t("palette.goTo")}>
+            <ActionList
+              items={places.map((d) => ({
+                key: d.key,
+                icon: d.icon,
+                label: d.label,
+                marks: terms,
+                oneLine: true,
+                hint: d.sub,
+                onPress: () => (d.tab ? router.navigate(d.href as never) : router.push(d.href as never)),
               }))}
             />
           </Group>
@@ -201,7 +223,7 @@ export function SearchResults({ q }: { q: string }) {
         ) : null}
         {words && hits.isLoading ? <SkeletonList rows={3} /> : null}
         {failed ? <LoadFailed onRetry={() => void hits.refetch()} /> : null}
-        {words && !failed && isEmpty(r) && !hits.isFetching ? (
+        {words && !failed && isEmpty(r) && places.length === 0 && !hits.isFetching ? (
           <EmptyState size="inline" title={t("mobile.find.nothing", { q: q.trim() })} />
         ) : null}
       </View>

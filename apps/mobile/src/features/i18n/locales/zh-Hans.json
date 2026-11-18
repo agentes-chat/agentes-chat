@@ -947,7 +947,8 @@
       "newConversation": "新建聊天",
       "newTask": "布置任务",
       "newAgent": "创建智能体"
-    }
+    },
+    "usageKeywords": "配额 额度 限额 限制 用量 使用量 令牌 成本 费用"
   },
   "channelRef": {
     "list": "频道",

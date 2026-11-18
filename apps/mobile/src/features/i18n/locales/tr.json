@@ -1020,7 +1020,8 @@
       "newConversation": "Yeni sohbet",
       "newTask": "Görev iste",
       "newAgent": "Ajan oluştur"
-    }
+    },
+    "usageKeywords": "kota kotalar limit limitler kullanım tüketim token maliyet harcama"
   },
   "channelRef": {
     "list": "Kanallar",

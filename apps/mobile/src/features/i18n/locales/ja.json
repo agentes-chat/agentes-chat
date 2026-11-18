@@ -947,7 +947,8 @@
       "newConversation": "新しいチャット",
       "newTask": "タスクを頼む",
       "newAgent": "エージェントを作成"
-    }
+    },
+    "usageKeywords": "クォータ 上限 制限 使用量 利用量 トークン コスト 費用"
   },
   "channelRef": {
     "list": "チャンネル",
